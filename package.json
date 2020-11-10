@@ -1,0 +1,27 @@
+{
+  "name": "maloja-spotify-scrobbler",
+  "version": "0.1.0",
+  "description": "",
+  "type": "module",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "engines": {
+    "node": ">=14.0.0",
+    "npm": ">=6.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/FoxxMD/maloja-spotify-scrobbler.git"
+  },
+  "author": "",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/FoxxMD/maloja-spotify-scrobbler/issues"
+  },
+  "homepage": "https://github.com/FoxxMD/maloja-spotify-scrobbler#readme",
+  "dependencies": {
+    "spotify-web-api-node": "^5.0.0"
+  }
+}
