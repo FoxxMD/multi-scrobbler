@@ -31,7 +31,7 @@ export async function readText(path) {
 }
 
 export async function writeFile(path, text) {
-   // await promises.access(path, constants.W_OK | constants.O_CREAT);
+    // await promises.access(path, constants.W_OK | constants.O_CREAT);
     await promises.writeFile(path, text, 'utf8');
 
     // return new Promise((resolve, reject) => {
@@ -59,14 +59,30 @@ export const formatDate = (d = new Date()) => {
 export function hook_stream(stream, callback) {
     var old_write = stream.write
 
-    stream.write = (function(write) {
-        return function(string, encoding, fd) {
+    stream.write = (function (write) {
+        return function (string, encoding, fd) {
             write.apply(stream, arguments)  // comments this line if you don't want output in the console
             callback(string, encoding, fd)
         }
     })(stream.write)
 
-    return function() {
+    return function () {
         stream.write = old_write
     }
+}
+
+export const buildTrackString = (obj) => {
+    const {
+        track: {
+            artists = [],
+            name,
+            id,
+            external_urls: {
+                spotify,
+            } = {}
+        } = {},
+        played_at
+    } = obj;
+    let artistString = artists.reduce((acc, curr) => acc.concat(curr.name), []).join(' / ');
+    return `${artistString} - ${name}, played at ${played_at}`
 }
