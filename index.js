@@ -4,6 +4,7 @@ import express from 'express';
 import open from 'open';
 import {readJson, sleep, writeFile, buildTrackString, consoleToLog} from "./utils.js";
 import SpotifyWebApi from "spotify-web-api-node";
+import MalojaScrobbler from "./clients/MalojaScrobbler.js";
 
 const scopes = ['user-read-recently-played', 'user-read-currently-playing'];
 const state = 'random';
@@ -39,7 +40,7 @@ try {
 
         // first thing, if user wants to log to file set it up now
         if (logPath !== false) {
-            const logPathPrefix = typeof logPath === 'string' ? logPath : process.cwd();
+            const logPathPrefix = typeof logPath === 'string' ? logPath : `${process.cwd()}/logs`;
             consoleToLog(logPathPrefix);
         }
 
@@ -74,7 +75,7 @@ try {
 
         const {token = accessToken, refreshToken: rt = refreshToken} = spotifyCreds;
 
-        if (accessToken === undefined) {
+        if (token === undefined) {
             if (clientId === undefined) {
                 throw new Error('ClientId not defined');
             }
@@ -108,7 +109,7 @@ try {
                 const tokenResponse = await spotifyApi.authorizationCodeGrant(code);
                 spotifyApi.setAccessToken(tokenResponse.body['access_token']);
                 spotifyApi.setRefreshToken(tokenResponse.body['refresh_token']);
-                await writeFile('creds.json', JSON.stringify({
+                await writeFile('spotifyCreds.json', JSON.stringify({
                     token: tokenResponse.body['access_token'],
                     refreshToken: tokenResponse.body['refresh_token']
                 }));
@@ -118,7 +119,7 @@ try {
             }
         });
 
-        if (accessToken === undefined) {
+        if (token === undefined) {
             console.log('[INFO] No access token found, attempting to open spotify authorization url');
             const url = spotifyApi.createAuthorizeURL(scopes, state);
             try {
@@ -141,32 +142,55 @@ try {
 
 const initSpotify = async function (spotifyApi, interval = 60, clients = []) {
     while (true) {
-        const data = await spotifyApi.getMyRecentlyPlayedTracks({
-            limit: 20
-        });
-        let newLastScrobble = undefined;
+        let data = {};
+        try {
+            data = await spotifyApi.getMyRecentlyPlayedTracks({
+                limit: 20
+            });
+        } catch (e) {
+            if(e.statusCode === 401) {
+                console.log('[INFO] Access token was not valid, attempting to refresh');
+                await spotifyApi.refreshAccessToken();
+                data = await spotifyApi.getMyRecentlyPlayedTracks({
+                    limit: 20
+                });
+            } else {
+                throw e;
+            }
+        }
+        let newLastPLayedAt = undefined;
+        const now = new Date();
         for (const playObj of data.body.items) {
-            const {track, played_at} = playObj;
+            const {track: { name: trackName }, played_at} = playObj;
             const playDate = new Date(played_at);
             // compare play time to most recent track played_at scrobble
             if (playDate.getTime() > lastTrackPlayedAt.getTime()) {
                 // TODO make sure the server hasn't already scrobbled this
-                console.log(`[INFO] Scrobbling Track:  ${buildTrackString(playObj)}`);
+                console.log(`[INFO] New Track:  ${buildTrackString(playObj)}`);
                 // so we always get just the most recent played_at
-                if (newLastScrobble === undefined) {
-                    newLastScrobble = playDate;
+                if (newLastPLayedAt === undefined) {
+                    newLastPLayedAt = playDate;
+                }
+                for(const client of clients) {
+                   if(client.scrobblesLastCheckedAt().getTime() < now.getTime()) {
+                       await client.refreshScrobbles();
+                   }
+                   if(!client.alreadyScrobbled(trackName)) {
+                        await client.scrobble(playObj);
+                   }
                 }
             } else {
                 break;
             }
-            if (newLastScrobble !== undefined) {
-                lastTrackPlayedAt = newLastScrobble;
+            if (newLastPLayedAt !== undefined) {
+                lastTrackPlayedAt = newLastPLayedAt;
             }
         }
         // sleep for 1 minute
         await sleep(interval * 1000);
     }
 };
+
 
 const createClients = async function (clientConfigs = [], configDir = '.') {
     const clients = [];
@@ -209,7 +233,7 @@ const createClients = async function (clientConfigs = [], configDir = '.') {
                     console.log('[WARN] Maloja api key not found in config');
                     continue;
                 }
-                clients.push(malojaConfig);
+                clients.push(new MalojaScrobbler(malojaConfig));
                 break;
             default:
                 break;
