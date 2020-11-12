@@ -2,36 +2,22 @@ import fs from "fs";
 import {addAsync} from '@awaitjs/express';
 import express from 'express';
 import open from 'open';
-import {readJson, formatDate, sleep, writeFile, hook_stream, buildTrackString} from "./utils.js";
+import {readJson, sleep, writeFile, buildTrackString, consoleToLog} from "./utils.js";
 import SpotifyWebApi from "spotify-web-api-node";
 
 const scopes = ['user-read-recently-played', 'user-read-currently-playing'];
 const state = 'random';
 let lastTrackPlayedAt = new Date();
 
-let logStream;
-try {
-    logStream = fs.createWriteStream(`log-${formatDate()}.txt`, {flags: 'a'});
-} catch (e) {
-    console.error('Could not open log file for writing');
-    console.error(e);
-}
-
-if (logStream !== undefined) {
-    hook_stream(process.stdout, function (string, encoding, fd) {
-        logStream.write(string, encoding)
-    });
-    hook_stream(process.stderr, function (string, encoding, fd) {
-        logStream.write(string, encoding)
-    })
-}
+const configDir = process.env.CONFIG_DIR || `${process.cwd()}/config`;
+const configLocation = process.env.CONFIG_PATH || `${configDir}/config.json`;
 
 const app = addAsync(express());
 
 try {
     (async function () {
 
-        const configLocation = process.env.CONFIGDIR || './config.json';
+        // try to read a configuration file
         let config = {};
         try {
             config = await readJson(configLocation);
@@ -40,44 +26,83 @@ try {
             console.error(e);
         }
 
-        let creds = {};
-        try {
-            creds = await readJson('./creds.json');
-        } catch (e) {
-            console.log('[WARN] Current access token was parsable or file does not exist (this could be normal)');
-        }
-
-        const {token = process.env.ACCESSTOKEN, refreshToken: rt = process.env.REFRESHTOKEN} = creds;
-
+        // setup defaults for other configs and general config
         const {
-            accessToken = token,
-            clientId = process.env.CLIENTID,
-            clientSecret = process.env.CLIENTSECRET,
-            redirectUri = process.env.REDIRECTURI,
-            refreshToken = rt,
+            logPath = process.env.LOG_PATH || true,
+            interval = 60,
             port = process.env.PORT ?? 9078,
-            callbackUrl = process.env.CALLBACKURL ?? 'callback',
+            spotify: spotifyConfigRaw = process.env.SPOTIFY_CONFIG_PATH || `${configDir}/spotify.json`,
+            clients = [],
         } = config || {};
 
-        if (clientId === undefined && accessToken === undefined) {
-            throw new Error('ClientId not defined');
+        const localUrl = `http://localhost:${port}`;
+
+        // first thing, if user wants to log to file set it up now
+        if (logPath !== false) {
+            const logPathPrefix = typeof logPath === 'string' ? logPath : process.cwd();
+            consoleToLog(logPathPrefix);
         }
-        if (clientSecret === undefined && accessToken === undefined) {
-            throw new Error('ClientSecret not defined');
+
+        let spotifyCreds = {};
+        try {
+            spotifyCreds = await readJson('./spotifyCreds.json');
+        } catch (e) {
+            console.log('[WARN] Current spotify access token was not parsable or file does not exist (this could be normal)');
         }
-        if (redirectUri === undefined && accessToken === undefined) {
-            throw new Error('Redirect URI not defined');
+
+        let spotifyConfig = spotifyConfigRaw;
+        if (typeof spotifyConfigRaw === 'string') {
+            try {
+                spotifyConfig = await readJson(spotifyConfigRaw);
+            } catch (e) {
+                console.warn('[WARN] Could not read spotify config file');
+                console.error(e);
+            }
+        }
+
+        const {
+            accessToken = process.env.SPOTIFY_ACCESS_TOKEN,
+            clientId = process.env.SPOTIFY_CLIENT_ID,
+            clientSecret = process.env.SPOTIFY_CLIENT_SECRET,
+            redirectUri = process.env.SPOTIFY_REDIRECT_URI,
+            refreshToken = process.env.SPOTIFY_REFRESH_TOKEN,
+            callbackPath = process.env.SPOTIFY_RELATIVE_CALLBACK_URI ?? 'callback',
+        } = spotifyConfig;
+
+        const rdUri = redirectUri || `${localUrl}/${callbackPath}`;
+
+
+        const {token = accessToken, refreshToken: rt = refreshToken} = spotifyCreds;
+
+        if (accessToken === undefined) {
+            if (clientId === undefined) {
+                throw new Error('ClientId not defined');
+            }
+            if (clientSecret === undefined) {
+                throw new Error('ClientSecret not defined');
+            }
         }
 
         const spotifyApi = new SpotifyWebApi({
             clientId,
             clientSecret,
-            accessToken,
-            redirectUri,
-            refreshToken
+            accessToken: token,
+            redirectUri: rdUri,
+            refreshToken: rt,
         });
 
-        app.getAsync(`/${callbackUrl}`, async function (req, res, next) {
+        const scrobbleClients = await createClients(clients, configDir);
+        if (scrobbleClients.length === 0) {
+            throw new Error('No scrobble clients were configured');
+        }
+
+
+        app.getAsync('/authSpotify', async function (req, res) {
+            console.log('[INFO] Redirecting to spotify authorization url');
+            res.redirect(spotifyApi.createAuthorizeURL(scopes, state));
+        });
+
+        app.getAsync(`/${callbackPath}`, async function (req, res, next) {
             const {error, code} = req.query;
             if (error === undefined) {
                 const tokenResponse = await spotifyApi.authorizationCodeGrant(code);
@@ -87,29 +112,34 @@ try {
                     token: tokenResponse.body['access_token'],
                     refreshToken: tokenResponse.body['refresh_token']
                 }));
-                initSpotify(spotifyApi);
+                initSpotify(spotifyApi, interval, scrobbleClients);
             } else {
                 throw new Error('User denied oauth access');
             }
         });
 
         if (accessToken === undefined) {
+            console.log('[INFO] No access token found, attempting to open spotify authorization url');
             const url = spotifyApi.createAuthorizeURL(scopes, state);
-            await open(url);
+            try {
+                await open(url);
+            } catch (e) {
+                // could not open browser or some other issue (maybe it does not exist? could be on docker)
+                console.log(`[WARN] Could not open browser! Open ${localUrl}/spotifyAuth to continue`);
+            }
         } else {
-            initSpotify(spotifyApi)
+            initSpotify(spotifyApi, interval, scrobbleClients)
         }
 
+        console.log(`[INFO] Server started at ${localUrl}`);
         const server = await app.listen(port)
-
-
     }());
 } catch (e) {
     console.log('[ERROR] Exited with uncaught error');
     console.error(e);
 }
 
-const initSpotify = async function (spotifyApi) {
+const initSpotify = async function (spotifyApi, interval = 60, clients = []) {
     while (true) {
         const data = await spotifyApi.getMyRecentlyPlayedTracks({
             limit: 20
@@ -134,6 +164,56 @@ const initSpotify = async function (spotifyApi) {
             }
         }
         // sleep for 1 minute
-        await sleep(60000);
+        await sleep(interval * 1000);
     }
 };
+
+const createClients = async function (clientConfigs = [], configDir = '.') {
+    const clients = [];
+    for (const config of clientConfigs) {
+        const dataType = typeof config;
+        if (!['object', 'string'].includes(dataType)) {
+            throw new Error('All client configs must be objects or strings');
+        }
+        const clientType = dataType === 'string' ? config : config.type;
+        switch (clientType) {
+            case 'maloja':
+                let data = `${configDir}/maloja.json`;
+                if (dataType === 'object') {
+                    const {data: dataProp = process.env.MALOJA_CONFIG_PATH || `${configDir}/maloja.json`} = config;
+                    data = dataProp;
+                }
+                let malojaConfig;
+                if (typeof data === 'string') {
+                    try {
+                        malojaConfig = await readJson(data);
+                    } catch (e) {
+                        console.log('[WARN] Maloja config was not parsable or file does not exist');
+                    }
+                } else {
+                    malojaConfig = data;
+                }
+                const {
+                    url = process.env.MALOJA_URL,
+                    apiKey = process.env.MALOJA_API_KEY
+                } = malojaConfig;
+                if (url === undefined && apiKey === undefined) {
+                    // the user probably didn't set anything up for this client at all, don't log
+                    continue;
+                }
+                if (url === undefined) {
+                    console.log('[WARN] Maloja url not found in config');
+                    continue;
+                }
+                if (apiKey === undefined) {
+                    console.log('[WARN] Maloja api key not found in config');
+                    continue;
+                }
+                clients.push(malojaConfig);
+                break;
+            default:
+                break;
+        }
+    }
+    return clients;
+}
