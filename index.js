@@ -67,10 +67,9 @@ try {
             clientSecret = process.env.SPOTIFY_CLIENT_SECRET,
             redirectUri = process.env.SPOTIFY_REDIRECT_URI,
             refreshToken = process.env.SPOTIFY_REFRESH_TOKEN,
-            callbackPath = process.env.SPOTIFY_RELATIVE_CALLBACK_URI ?? 'callback',
         } = spotifyConfig;
 
-        const rdUri = redirectUri || `${localUrl}/${callbackPath}`;
+        const rdUri = redirectUri || `${localUrl}/callback`;
 
 
         const {token = accessToken, refreshToken: rt = refreshToken} = spotifyCreds;
@@ -103,7 +102,7 @@ try {
             res.redirect(spotifyApi.createAuthorizeURL(scopes, state));
         });
 
-        app.getAsync(`/${callbackPath}`, async function (req, res, next) {
+        app.getAsync(`/callback`, async function (req, res, next) {
             const {error, code} = req.query;
             if (error === undefined) {
                 const tokenResponse = await spotifyApi.authorizationCodeGrant(code);
