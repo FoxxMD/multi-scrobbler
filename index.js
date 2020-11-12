@@ -112,7 +112,9 @@ try {
                     token: tokenResponse.body['access_token'],
                     refreshToken: tokenResponse.body['refresh_token']
                 }));
+                console.log('[INFO] Got auth code from callback!');
                 initSpotify(spotifyApi, interval, scrobbleClients);
+                return res.send('OK');
             } else {
                 throw new Error('User denied oauth access');
             }
@@ -140,6 +142,7 @@ try {
 }
 
 const initSpotify = async function (spotifyApi, interval = 60, clients = []) {
+    console.log('[INFO] Starting spotify polling');
     while (true) {
         let data = {};
         try {
