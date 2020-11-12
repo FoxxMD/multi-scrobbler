@@ -50,8 +50,7 @@ export function sleep(ms) {
 }
 
 export const formatDate = (d = new Date()) => {
-    return ("0" + d.getDate()).slice(-2) + "-" + ("0" + (d.getMonth() + 1)).slice(-2) + "-" +
-        d.getFullYear();
+    return d.toISOString();
 }
 
 
@@ -68,6 +67,25 @@ export function hook_stream(stream, callback) {
 
     return function () {
         stream.write = old_write
+    }
+}
+
+export const consoleToLog = (logPath) => {
+    let logStream;
+    try {
+        logStream = fs.createWriteStream(`${logPath}/scrobbleLog-${formatDate()}.txt`, {flags: 'a'});
+    } catch (e) {
+        console.error('Could not open log file for writing');
+        console.error(e);
+    }
+
+    if (logStream !== undefined) {
+        hook_stream(process.stdout, function (string, encoding, fd) {
+            logStream.write(string, encoding)
+        });
+        hook_stream(process.stderr, function (string, encoding, fd) {
+            logStream.write(string, encoding)
+        })
     }
 }
 
