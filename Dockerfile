@@ -19,6 +19,8 @@ RUN mkdir -p $config_dir
 VOLUME $config_dir
 ENV CONFIG_DIR=$config_dir
 
-EXPOSE 9078
+ARG webPort=9078
+ENV PORT=$webPort
+EXPOSE $PORT
 
 CMD [ "node", "index.js" ]
