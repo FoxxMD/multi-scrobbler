@@ -208,11 +208,16 @@ const pollSpotify = async function (spotifyApi, interval = 60, clients = []) {
                 if (e.statusCode === 401) {
                     logger.info('Access token was not valid, attempting to refresh', {label: 'Spotify'});
                     const tokenResponse = await spotifyApi.refreshAccessToken();
-                    spotifyApi.setAccessToken(tokenResponse.body['access_token']);
-                    spotifyApi.setRefreshToken(tokenResponse.body['refresh_token']);
+                    const {body: {
+                        access_token,
+                        // spotify may return a new refresh token
+                        // if it doesn't then continue to use the last refresh token we received
+                        refresh_token = spotifyApi.getRefreshToken(),
+                    } = {}} = tokenResponse;
+                    spotifyApi.setAccessToken(access_token);
                     await writeFile('spotifyCreds.json', JSON.stringify({
-                        token: tokenResponse.body['access_token'],
-                        refreshToken: tokenResponse.body['refresh_token']
+                        token: access_token,
+                        refreshToken: refresh_token,
                     }));
                     data = await spotifyApi.getMyRecentlyPlayedTracks({
                         limit: 20
