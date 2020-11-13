@@ -224,7 +224,7 @@ const pollSpotify = async function (spotifyApi, interval = 60, clients = []) {
             let newLastPLayedAt = undefined;
             const now = new Date();
             for (const playObj of data.body.items) {
-                const {track: {name: trackName}, played_at} = playObj;
+                const {track: {name: trackName, duration_ms }, played_at} = playObj;
                 const playDate = new Date(played_at);
                 // compare play time to most recent track played_at scrobble
                 if (playDate.getTime() > lastTrackPlayedAt.getTime()) {
@@ -238,14 +238,14 @@ const pollSpotify = async function (spotifyApi, interval = 60, clients = []) {
                         // because the interval check was so close to the play date we are going to delay client calls for a few secs
                         // this way we don't accidentally scrobble ahead of any other clients (we always want to be behind so we can check for dups)
                         // additionally -- it should be ok to have this in the for loop because played_at will only decrease (be further in the past) so we should only hit this once, hopefully
-                        console.info('Track is close to polling interval! Delaying scrobble clients refresh by 5 seconds so other clients have time to scrobble first', {label: 'Spotify'});
-                        await sleep(5 * 1000);
+                        logger.info('Track is close to polling interval! Delaying scrobble clients refresh by 10 seconds so other clients have time to scrobble first', {label: 'Spotify'});
+                        await sleep(10 * 1000);
                     }
                     for (const client of clients) {
                         if (closeToInterval || client.scrobblesLastCheckedAt().getTime() < now.getTime()) {
                             await client.refreshScrobbles();
                         }
-                        if (!client.alreadyScrobbled(trackName, playDate)) {
+                        if (!client.alreadyScrobbled(trackName, playDate, duration_ms / 1000)) {
                             await client.scrobble(playObj);
                         }
                     }

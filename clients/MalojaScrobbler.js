@@ -13,17 +13,26 @@ export default class MalojaScrobbler extends ScrobbleClient {
         this.lastScrobbleCheck = new Date();
     }
 
-    alreadyScrobbled = (title, playDate) => {
+    alreadyScrobbled = (title, playDate, duration) => {
         const playUnix = playDate.getTime() / 1000;
+        const lowerTitle = title.toLocaleLowerCase();
         return this.recentScrobbles.some((x) => {
-            const {time: mtime, title: mtitle} = x;
-            // will only count as an existing scrobble if scrobble time and play time are less than 30 seconds apart
-            const scrobblePlayDiff = Math.abs(playUnix - mtime);
-            if (title === mtitle) {
-                if (scrobblePlayDiff < 30) {
+            const {time: scrobbleTime, title: scrobbleTitle} = x;
+            const lowerScrobbleTitle = scrobbleTitle.toLocaleLowerCase();
+            if (lowerTitle.includes(lowerScrobbleTitle) || lowerScrobbleTitle.includes(lowerTitle)) {
+                // check if scrobble time is same as play date (when the track finished playing AKA entered recent tracks)
+                let scrobblePlayDiff = Math.abs(playUnix - scrobbleTime);
+                if (scrobblePlayDiff < 10) {
+                    this.logger.debug(`Scrobble with same name found and the play (finish time) vs. scrobble time diff was smaller than 10 seconds`, {label: this.name});
                     return true;
                 }
-                this.logger.debug(`Scrobble with same name found but play-scrobble time diff was larger than 30 seconds (${scrobblePlayDiff.toFixed(0)}s)`, {label: this.name});
+                // also need to check that scrobble time isn't the BEGINNING of the track
+                let scrobblePlayStartDiff = Math.abs(playUnix - (scrobbleTime - duration));
+                if (scrobblePlayStartDiff < 10) {
+                    this.logger.debug(`Scrobble with same name found and the play (start time) vs. scrobble time diff was smaller than 10 seconds`, {label: this.name});
+                    return true;
+                }
+                this.logger.debug(`Scrobble with same name found but the start/finish times vs scrobble time diffs were too large to consider dups (Start Diff ${scrobblePlayStartDiff}s) (End Diff ${scrobblePlayDiff}s)`, {label: this.name});
                 return false;
             }
             return false;
