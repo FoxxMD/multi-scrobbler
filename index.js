@@ -49,6 +49,8 @@ const app = addAsync(express());
 try {
     (async function () {
 
+        let spotifyAsyncFunc = null;
+
         // try to read a configuration file
         let config = {};
         try {
@@ -144,6 +146,11 @@ try {
             res.redirect(spotifyApi.createAuthorizeURL(scopes, state));
         });
 
+        app.postAsync('/pollSpotify', async function (req, res) {
+            spotifyAsyncFunc = pollSpotify(spotifyApi, interval, scrobbleClients);
+            res.send('OK');
+        });
+
         app.getAsync(`/callback`, async function (req, res, next) {
             const {error, code} = req.query;
             if (error === undefined) {
@@ -155,7 +162,7 @@ try {
                     refreshToken: tokenResponse.body['refresh_token']
                 }));
                 logger.info('Got auth code from callback!');
-                initSpotify(spotifyApi, interval, scrobbleClients);
+                spotifyAsyncFunc = pollSpotify(spotifyApi, interval, scrobbleClients);
                 return res.send('OK');
             } else {
                 throw new Error('User denied oauth access');
@@ -172,7 +179,7 @@ try {
                 logger.alert(`Could not open browser! Open ${localUrl}/spotifyAuth to continue`);
             }
         } else {
-            initSpotify(spotifyApi, interval, scrobbleClients)
+            spotifyAsyncFunc = pollSpotify(spotifyApi, interval, scrobbleClients)
         }
 
         logger.info(`Server started at ${localUrl}`);
@@ -183,62 +190,68 @@ try {
     logger.error(e);
 }
 
-const initSpotify = async function (spotifyApi, interval = 60, clients = []) {
-    logger.info('Starting spotify polling');
-    while (true) {
-        let data = {};
-        logger.debug('Refreshing recently played', {label: 'Spotify'})
-        try {
-            data = await spotifyApi.getMyRecentlyPlayedTracks({
-                limit: 20
-            });
-        } catch (e) {
-            if (e.statusCode === 401) {
-                logger.info('Access token was not valid, attempting to refresh', {label: 'Spotify'});
-                const tokenResponse = await spotifyApi.refreshAccessToken();
-                spotifyApi.setAccessToken(tokenResponse.body['access_token']);
-                spotifyApi.setRefreshToken(tokenResponse.body['refresh_token']);
-                await writeFile('spotifyCreds.json', JSON.stringify({
-                    token: tokenResponse.body['access_token'],
-                    refreshToken: tokenResponse.body['refresh_token']
-                }));
+const pollSpotify = async function (spotifyApi, interval = 60, clients = []) {
+    logger.info('Starting spotify polling', {label: 'Spotify'});
+    try {
+        while (true) {
+            let data = {};
+            logger.debug('Refreshing recently played', {label: 'Spotify'})
+            try {
                 data = await spotifyApi.getMyRecentlyPlayedTracks({
                     limit: 20
                 });
-            } else {
-                throw e;
-            }
-        }
-        let newLastPLayedAt = undefined;
-        const now = new Date();
-        for (const playObj of data.body.items) {
-            const {track: {name: trackName}, played_at} = playObj;
-            const playDate = new Date(played_at);
-            // compare play time to most recent track played_at scrobble
-            if (playDate.getTime() > lastTrackPlayedAt.getTime()) {
-                logger.info(`New Track:  ${buildTrackString(playObj)}`, {label: 'Spotify'});
-                // so we always get just the most recent played_at
-                if (newLastPLayedAt === undefined) {
-                    newLastPLayedAt = playDate;
+            } catch (e) {
+                if (e.statusCode === 401) {
+                    logger.info('Access token was not valid, attempting to refresh', {label: 'Spotify'});
+                    const tokenResponse = await spotifyApi.refreshAccessToken();
+                    spotifyApi.setAccessToken(tokenResponse.body['access_token']);
+                    spotifyApi.setRefreshToken(tokenResponse.body['refresh_token']);
+                    await writeFile('spotifyCreds.json', JSON.stringify({
+                        token: tokenResponse.body['access_token'],
+                        refreshToken: tokenResponse.body['refresh_token']
+                    }));
+                    data = await spotifyApi.getMyRecentlyPlayedTracks({
+                        limit: 20
+                    });
+                } else {
+                    throw e;
                 }
-                for (const client of clients) {
-                    if (client.scrobblesLastCheckedAt().getTime() < now.getTime()) {
-                        await client.refreshScrobbles();
+            }
+            let newLastPLayedAt = undefined;
+            const now = new Date();
+            for (const playObj of data.body.items) {
+                const {track: {name: trackName}, played_at} = playObj;
+                const playDate = new Date(played_at);
+                // compare play time to most recent track played_at scrobble
+                if (playDate.getTime() > lastTrackPlayedAt.getTime()) {
+                    logger.info(`New Track => ${buildTrackString(playObj)}`, {label: 'Spotify'});
+                    // so we always get just the most recent played_at
+                    if (newLastPLayedAt === undefined) {
+                        newLastPLayedAt = playDate;
                     }
-                    if (!client.alreadyScrobbled(trackName)) {
-                        await client.scrobble(playObj);
+                    for (const client of clients) {
+                        if (client.scrobblesLastCheckedAt().getTime() < now.getTime()) {
+                            await client.refreshScrobbles();
+                        }
+                        // TODO check client scrobble time against played_at time
+                        if (!client.alreadyScrobbled(trackName)) {
+                            await client.scrobble(playObj);
+                        }
                     }
+                } else {
+                    break;
                 }
-            } else {
-                break;
+                if (newLastPLayedAt !== undefined) {
+                    lastTrackPlayedAt = newLastPLayedAt;
+                }
             }
-            if (newLastPLayedAt !== undefined) {
-                lastTrackPlayedAt = newLastPLayedAt;
-            }
+            // sleep for interval
+            logger.debug(`Sleeping for interval (${interval}s)`, {label: 'Spotify'});
+            await sleep(interval * 1000);
         }
-        // sleep for interval
-        logger.debug(`Sleeping for interval (${interval}s)`, {label: 'Spotify'});
-        await sleep(interval * 1000);
+    } catch (e) {
+        logger.error('Error occurred while in spotify polling loop', {label: 'Spotify'});
+        logger.error(e, {label: 'Spotify'});
     }
 };
 
