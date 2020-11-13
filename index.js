@@ -1,10 +1,41 @@
 import fs from "fs";
 import {addAsync} from '@awaitjs/express';
 import express from 'express';
+import winston from 'winston';
+import {Writable} from 'stream';
+import 'winston-daily-rotate-file';
 import open from 'open';
-import {readJson, sleep, writeFile, buildTrackString, consoleToLog} from "./utils.js";
+import {readJson, sleep, writeFile, buildTrackString} from "./utils.js";
 import SpotifyWebApi from "spotify-web-api-node";
 import MalojaScrobbler from "./clients/MalojaScrobbler.js";
+
+const {format, createLogger, transports} = winston;
+const {combine, printf, timestamp} = format;
+
+let output = []
+const stream = new Writable()
+stream._write = (chunk, encoding, next) => {
+    output.unshift(chunk.toString());
+    output = output.slice(0, 51);
+    next()
+}
+const streamTransport = new winston.transports.Stream({stream})
+
+const myFormat = printf(({level, message, label = 'App', timestamp}) => {
+    return `${timestamp} [${label}] ${level}: ${message}`;
+});
+
+const logger = createLogger({
+    level: 'debug',
+    format: combine(
+        timestamp(),
+        myFormat
+    ),
+    transports: [
+        new transports.Console(),
+        streamTransport,
+    ]
+});
 
 const scopes = ['user-read-recently-played', 'user-read-currently-playing'];
 const state = 'random';
@@ -23,13 +54,13 @@ try {
         try {
             config = await readJson(configLocation);
         } catch (e) {
-            console.warn('[WARN] Could not read config file');
-            console.error(e);
+            logger.warn('Could not read config file');
+            logger.error(e);
         }
 
         // setup defaults for other configs and general config
         const {
-            logPath = process.env.LOG_PATH || true,
+            logPath: logPathRaw = process.env.LOG_PATH || true,
             interval = 60,
             port = process.env.PORT ?? 9078,
             spotify: spotifyConfigRaw = process.env.SPOTIFY_CONFIG_PATH || `${configDir}/spotify.json`,
@@ -39,16 +70,27 @@ try {
         const localUrl = `http://localhost:${port}`;
 
         // first thing, if user wants to log to file set it up now
-        if (logPath !== false) {
-            const logPathPrefix = typeof logPath === 'string' ? logPath : `${process.cwd()}/logs`;
-            consoleToLog(logPathPrefix);
+        if (logPathRaw !== false) {
+            let logPath = `${process.cwd()}/logs`;
+            if (typeof logPathRaw === 'string') {
+                logPath = logPathRaw;
+            }
+            logger.add(new winston.transports.DailyRotateFile({
+                level: 'info', // don't need to add a bunch of noise to files
+                dirname: logPath,
+                createSymlink: true,
+                symlinkName: 'scrobble-current.log',
+                filename: 'scrobble-%DATE%.log',
+                datePattern: 'YYYY-MM-DD',
+                maxSize: '5m'
+            }))
         }
 
         let spotifyCreds = {};
         try {
             spotifyCreds = await readJson('./spotifyCreds.json');
         } catch (e) {
-            console.log('[WARN] Current spotify access token was not parsable or file does not exist (this could be normal)');
+            logger.warn('Current spotify access token was not parsable or file does not exist (this could be normal)');
         }
 
         let spotifyConfig = spotifyConfigRaw;
@@ -56,8 +98,8 @@ try {
             try {
                 spotifyConfig = await readJson(spotifyConfigRaw);
             } catch (e) {
-                console.warn('[WARN] Could not read spotify config file');
-                console.error(e);
+                logger.warn('Could not read spotify config file');
+                logger.error(e);
             }
         }
 
@@ -98,7 +140,7 @@ try {
 
 
         app.getAsync('/authSpotify', async function (req, res) {
-            console.log('[INFO] Redirecting to spotify authorization url');
+            logger.info('Redirecting to spotify authorization url');
             res.redirect(spotifyApi.createAuthorizeURL(scopes, state));
         });
 
@@ -112,7 +154,7 @@ try {
                     token: tokenResponse.body['access_token'],
                     refreshToken: tokenResponse.body['refresh_token']
                 }));
-                console.log('[INFO] Got auth code from callback!');
+                logger.info('Got auth code from callback!');
                 initSpotify(spotifyApi, interval, scrobbleClients);
                 return res.send('OK');
             } else {
@@ -121,38 +163,45 @@ try {
         });
 
         if (token === undefined) {
-            console.log('[INFO] No access token found, attempting to open spotify authorization url');
+            logger.info('No access token found, attempting to open spotify authorization url');
             const url = spotifyApi.createAuthorizeURL(scopes, state);
             try {
                 await open(url);
             } catch (e) {
                 // could not open browser or some other issue (maybe it does not exist? could be on docker)
-                console.log(`[WARN] Could not open browser! Open ${localUrl}/spotifyAuth to continue`);
+                logger.alert(`Could not open browser! Open ${localUrl}/spotifyAuth to continue`);
             }
         } else {
             initSpotify(spotifyApi, interval, scrobbleClients)
         }
 
-        console.log(`[INFO] Server started at ${localUrl}`);
+        logger.info(`Server started at ${localUrl}`);
         const server = await app.listen(port)
     }());
 } catch (e) {
-    console.log('[ERROR] Exited with uncaught error');
-    console.error(e);
+    logger.error('Exited with uncaught error');
+    logger.error(e);
 }
 
 const initSpotify = async function (spotifyApi, interval = 60, clients = []) {
-    console.log('[INFO] Starting spotify polling');
+    logger.info('Starting spotify polling');
     while (true) {
         let data = {};
+        logger.debug('Refreshing recently played', {label: 'Spotify'})
         try {
             data = await spotifyApi.getMyRecentlyPlayedTracks({
                 limit: 20
             });
         } catch (e) {
-            if(e.statusCode === 401) {
-                console.log('[INFO] Access token was not valid, attempting to refresh');
-                await spotifyApi.refreshAccessToken();
+            if (e.statusCode === 401) {
+                logger.info('Access token was not valid, attempting to refresh', {label: 'Spotify'});
+                const tokenResponse = await spotifyApi.refreshAccessToken();
+                spotifyApi.setAccessToken(tokenResponse.body['access_token']);
+                spotifyApi.setRefreshToken(tokenResponse.body['refresh_token']);
+                await writeFile('spotifyCreds.json', JSON.stringify({
+                    token: tokenResponse.body['access_token'],
+                    refreshToken: tokenResponse.body['refresh_token']
+                }));
                 data = await spotifyApi.getMyRecentlyPlayedTracks({
                     limit: 20
                 });
@@ -163,23 +212,22 @@ const initSpotify = async function (spotifyApi, interval = 60, clients = []) {
         let newLastPLayedAt = undefined;
         const now = new Date();
         for (const playObj of data.body.items) {
-            const {track: { name: trackName }, played_at} = playObj;
+            const {track: {name: trackName}, played_at} = playObj;
             const playDate = new Date(played_at);
             // compare play time to most recent track played_at scrobble
             if (playDate.getTime() > lastTrackPlayedAt.getTime()) {
-                // TODO make sure the server hasn't already scrobbled this
-                console.log(`[INFO] New Track:  ${buildTrackString(playObj)}`);
+                logger.info(`New Track:  ${buildTrackString(playObj)}`, {label: 'Spotify'});
                 // so we always get just the most recent played_at
                 if (newLastPLayedAt === undefined) {
                     newLastPLayedAt = playDate;
                 }
-                for(const client of clients) {
-                   if(client.scrobblesLastCheckedAt().getTime() < now.getTime()) {
-                       await client.refreshScrobbles();
-                   }
-                   if(!client.alreadyScrobbled(trackName)) {
+                for (const client of clients) {
+                    if (client.scrobblesLastCheckedAt().getTime() < now.getTime()) {
+                        await client.refreshScrobbles();
+                    }
+                    if (!client.alreadyScrobbled(trackName)) {
                         await client.scrobble(playObj);
-                   }
+                    }
                 }
             } else {
                 break;
@@ -188,7 +236,8 @@ const initSpotify = async function (spotifyApi, interval = 60, clients = []) {
                 lastTrackPlayedAt = newLastPLayedAt;
             }
         }
-        // sleep for 1 minute
+        // sleep for interval
+        logger.debug(`Sleeping for interval (${interval}s)`, {label: 'Spotify'});
         await sleep(interval * 1000);
     }
 };
@@ -214,7 +263,7 @@ const createClients = async function (clientConfigs = [], configDir = '.') {
                     try {
                         malojaConfig = await readJson(data);
                     } catch (e) {
-                        console.log('[WARN] Maloja config was not parsable or file does not exist');
+                        logger.warn('Maloja config was not parsable or file does not exist');
                     }
                 } else {
                     malojaConfig = data;
@@ -228,14 +277,14 @@ const createClients = async function (clientConfigs = [], configDir = '.') {
                     continue;
                 }
                 if (url === undefined) {
-                    console.log('[WARN] Maloja url not found in config');
+                    logger.warn('Maloja url not found in config');
                     continue;
                 }
                 if (apiKey === undefined) {
-                    console.log('[WARN] Maloja api key not found in config');
+                    logger.warn('Maloja api key not found in config');
                     continue;
                 }
-                clients.push(new MalojaScrobbler(malojaConfig));
+                clients.push(new MalojaScrobbler(logger, malojaConfig));
                 break;
             default:
                 break;

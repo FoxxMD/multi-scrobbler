@@ -27,6 +27,8 @@
     "express": "^4.17.1",
     "open": "^7.3.0",
     "spotify-web-api-node": "^5.0.0",
-    "superagent": "^6.1.0"
+    "superagent": "^6.1.0",
+    "winston": "^3.3.3",
+    "winston-daily-rotate-file": "^4.5.0"
   }
 }

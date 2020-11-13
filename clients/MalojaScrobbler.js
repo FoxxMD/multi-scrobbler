@@ -4,7 +4,7 @@ import format from 'date-fns/format/index.js';
 
 export default class MalojaScrobbler extends ScrobbleClient {
 
-    name = 'maloja';
+    name = 'Maloja';
 
     refreshScrobbles = async () => {
         const {url} = this.config;
@@ -48,10 +48,10 @@ export default class MalojaScrobbler extends ScrobbleClient {
                     key: apiKey,
                     time: time.getTime() / 1000
                 });
-            console.log('[INFO] Scrobbled to Maloja');
+            this.logger.info('Scrobbled', { label: this.name });
         } catch (e) {
-            console.error('[ERROR] Error while scrobbling to Maloja');
-            console.log(e);
+            this.logger.error('Error while scrobbling', { label: this.name });
+            this.logger.log(e);
         }
 
         return true;

@@ -7,8 +7,10 @@ export default class ScrobbleClient {
     lastScrobbleCheck = new Date();
 
     config;
+    logger;
 
-    constructor(config = {}) {
+    constructor(logger, config = {}) {
+        this.logger = logger;
         this.config = config;
     }
 
