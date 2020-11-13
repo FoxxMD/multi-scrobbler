@@ -13,12 +13,20 @@ export default class MalojaScrobbler extends ScrobbleClient {
         this.lastScrobbleCheck = new Date();
     }
 
-    alreadyScrobbled = (title) => {
-        const d = new Date();
-        const now = d.getTime() / 1000;
+    alreadyScrobbled = (title, playDate) => {
+        const playUnix = playDate.getTime() / 1000;
         return this.recentScrobbles.some((x) => {
             const {time: mtime, title: mtitle} = x;
-            return title === mtitle && now - mtime < 30;
+            // will only count as an existing scrobble if scrobble time and play time are less than 30 seconds apart
+            const scrobblePlayDiff = Math.abs(playUnix - mtime);
+            if (title === mtitle) {
+                if (scrobblePlayDiff < 30) {
+                    return true;
+                }
+                this.logger.debug(`Scrobble with same name found but play-scrobble time diff was larger than 30 seconds (${scrobblePlayDiff.toFixed(0)}s)`, {label: this.name});
+                return false;
+            }
+            return false;
         })
     }
 
@@ -48,9 +56,9 @@ export default class MalojaScrobbler extends ScrobbleClient {
                     key: apiKey,
                     time: time.getTime() / 1000
                 });
-            this.logger.info('Scrobbled', { label: this.name });
+            this.logger.info('Scrobbled', {label: this.name});
         } catch (e) {
-            this.logger.error('Error while scrobbling', { label: this.name });
+            this.logger.error('Error while scrobbling', {label: this.name});
             this.logger.log(e);
         }
 

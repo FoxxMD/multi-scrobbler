@@ -88,6 +88,10 @@ try {
             }))
         }
 
+        if (interval < 15) {
+            console.warn('Interval should be above 30 seconds...😬');
+        }
+
         let spotifyCreds = {};
         try {
             spotifyCreds = await readJson('./spotifyCreds.json');
@@ -229,12 +233,19 @@ const pollSpotify = async function (spotifyApi, interval = 60, clients = []) {
                     if (newLastPLayedAt === undefined) {
                         newLastPLayedAt = playDate;
                     }
+                    const closeToInterval = Math.abs(now.getTime() - playDate.getTime()) / 1000 < 5;
+                    if (closeToInterval) {
+                        // because the interval check was so close to the play date we are going to delay client calls for a few secs
+                        // this way we don't accidentally scrobble ahead of any other clients (we always want to be behind so we can check for dups)
+                        // additionally -- it should be ok to have this in the for loop because played_at will only decrease (be further in the past) so we should only hit this once, hopefully
+                        console.info('Track is close to polling interval! Delaying scrobble clients refresh by 5 seconds so other clients have time to scrobble first', {label: 'Spotify'});
+                        await sleep(5 * 1000);
+                    }
                     for (const client of clients) {
-                        if (client.scrobblesLastCheckedAt().getTime() < now.getTime()) {
+                        if (closeToInterval || client.scrobblesLastCheckedAt().getTime() < now.getTime()) {
                             await client.refreshScrobbles();
                         }
-                        // TODO check client scrobble time against played_at time
-                        if (!client.alreadyScrobbled(trackName)) {
+                        if (!client.alreadyScrobbled(trackName, playDate)) {
                             await client.scrobble(playObj);
                         }
                     }
