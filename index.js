@@ -4,7 +4,6 @@ import express from 'express';
 import winston from 'winston';
 import {Writable} from 'stream';
 import 'winston-daily-rotate-file';
-import open from 'open';
 import {readJson, sleep, writeFile, buildTrackString} from "./utils.js";
 import SpotifyWebApi from "spotify-web-api-node";
 import MalojaScrobbler from "./clients/MalojaScrobbler.js";
@@ -174,19 +173,13 @@ try {
         });
 
         if (token === undefined) {
-            logger.info('No access token found, attempting to open spotify authorization url');
-            const url = spotifyApi.createAuthorizeURL(scopes, state);
-            try {
-                await open(url);
-            } catch (e) {
-                // could not open browser or some other issue (maybe it does not exist? could be on docker)
-                logger.alert(`Could not open browser! Open ${localUrl}/spotifyAuth to continue`);
-            }
+            logger.info('No access token found');
+            logger.info(`Open ${localUrl}/authSpotify to continue`);
         } else {
             spotifyAsyncFunc = pollSpotify(spotifyApi, interval, scrobbleClients)
+            logger.info(`Server started at ${localUrl}`);
         }
 
-        logger.info(`Server started at ${localUrl}`);
         const server = await app.listen(port)
     }());
 } catch (e) {
