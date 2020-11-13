@@ -52,12 +52,32 @@ Environment Variables
 
 ## Usage
 
+Output is provided to stdout/stderr as well as file if specified in configuration.
+
+On first startup you may need to authroize Spotify by visiting a callback URL. The default url to open is:
+
+```
+https://localhost:9078/authSpotify
+```
+
+### Running Directly
+
 ```
 node index.js
 ```
 
-Output is provided to stdout/stderr as well as file if specified in configuration
+### Docker
 
+[Docker repository](https://hub.docker.com/repository/docker/foxxmd/spotify-scrobbler)
+```
+foxxmd/spotify-scrobbler:latest
+```
+
+Minimal configuration requires you to bind a host directory for the configuration directory in the container:
+
+```
+docker run ... -v /path/on/host/config:/home/node/config ...
+```
 
 ## License
 
