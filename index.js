@@ -18,7 +18,10 @@ stream._write = (chunk, encoding, next) => {
     output = output.slice(0, 51);
     next()
 }
-const streamTransport = new winston.transports.Stream({stream})
+const streamTransport = new winston.transports.Stream({
+    stream,
+    level: process.env.LOG_LEVEL || 'info',
+})
 
 const logPath = process.env.LOG_DIR || `${process.cwd()}/logs`;
 const port = process.env.PORT ?? 9078;
@@ -35,13 +38,16 @@ const logger = createLogger({
         myFormat
     ),
     transports: [
-        new transports.Console(),
+        new transports.Console({
+            level: process.env.LOG_LEVEL || 'info',
+        }),
         streamTransport,
     ]
 });
 
 if (typeof logPath === 'string') {
     logger.add(new winston.transports.DailyRotateFile({
+        level: process.env.LOG_LEVEL || 'info',
         dirname: logPath,
         createSymlink: true,
         symlinkName: 'scrobble-current.log',
@@ -53,7 +59,7 @@ if (typeof logPath === 'string') {
 
 const scopes = ['user-read-recently-played', 'user-read-currently-playing'];
 const state = 'random';
-let lastTrackPlayedAt = new Date();
+let lastTrackPlayedAt = undefined;
 
 const configDir = process.env.CONFIG_DIR || `${process.cwd()}/config`;
 const workingCredentialsPath = `${configDir}/currentCreds.json`;
@@ -182,6 +188,7 @@ try {
 const pollSpotify = async function (spotifyApi, interval = 60, clients = []) {
     logger.info('Starting spotify polling', {label: 'Spotify'});
     try {
+        let checkCount = 0;
         while (true) {
             let data = {};
             logger.debug('Refreshing recently played', {label: 'Spotify'})
@@ -191,33 +198,45 @@ const pollSpotify = async function (spotifyApi, interval = 60, clients = []) {
                 });
             } catch (e) {
                 if (e.statusCode === 401) {
-                    logger.info('Access token was not valid, attempting to refresh', {label: 'Spotify'});
-                    const tokenResponse = await spotifyApi.refreshAccessToken();
-                    const {
-                        body: {
-                            access_token,
-                            // spotify may return a new refresh token
-                            // if it doesn't then continue to use the last refresh token we received
-                            refresh_token = spotifyApi.getRefreshToken(),
-                        } = {}
-                    } = tokenResponse;
-                    spotifyApi.setAccessToken(access_token);
-                    await writeFile(workingCredentialsPath, JSON.stringify({
-                        token: access_token,
-                        refreshToken: refresh_token,
-                    }));
-                    data = await spotifyApi.getMyRecentlyPlayedTracks({
-                        limit: 20
-                    });
+                    if (spotifyApi.getRefreshToken() === undefined) {
+                        throw new Error('Access token was not valid and no refresh token was present, bailing out of polling')
+                    }
+                    logger.debug('Access token was not valid, attempting to refresh', {label: 'Spotify'});
+                    try {
+                        const tokenResponse = await spotifyApi.refreshAccessToken();
+                        const {
+                            body: {
+                                access_token,
+                                // spotify may return a new refresh token
+                                // if it doesn't then continue to use the last refresh token we received
+                                refresh_token = spotifyApi.getRefreshToken(),
+                            } = {}
+                        } = tokenResponse;
+                        spotifyApi.setAccessToken(access_token);
+                        await writeFile(workingCredentialsPath, JSON.stringify({
+                            token: access_token,
+                            refreshToken: refresh_token,
+                        }));
+                        data = await spotifyApi.getMyRecentlyPlayedTracks({
+                            limit: 20
+                        });
+                    } catch (err) {
+                        logger.error('Refreshing access token encountered an error', {label: 'Spotify'});
+                        throw err;
+                    }
                 } else {
                     throw e;
                 }
             }
+            checkCount++;
             let newLastPLayedAt = undefined;
             const now = new Date();
             for (const playObj of data.body.items) {
                 const {track: {name: trackName, duration_ms}, played_at} = playObj;
                 const playDate = new Date(played_at);
+                if (lastTrackPlayedAt === undefined) {
+                    lastTrackPlayedAt = playDate;
+                }
                 // compare play time to most recent track played_at scrobble
                 if (playDate.getTime() > lastTrackPlayedAt.getTime()) {
                     logger.info(`New Track => ${buildTrackString(playObj)}`, {label: 'Spotify'});
@@ -248,9 +267,22 @@ const pollSpotify = async function (spotifyApi, interval = 60, clients = []) {
                     lastTrackPlayedAt = newLastPLayedAt;
                 }
             }
+            let sleepTime = interval;
+            // don't need to do back off calc if interval is 10 minutes or greater since its already pretty light on API calls
+            // and don't want to back off if we just started the app
+            if (checkCount > 5 && sleepTime < 600) {
+                const lastPlayToNowSecs = Math.abs(now.getTime() - lastTrackPlayedAt.getTime()) / 1000;
+                // back off if last play was longer than 10 minutes ago
+                const backoffThreshold = Math.min((interval * 10), 600);
+                if (lastPlayToNowSecs >= backoffThreshold) {
+                    // back off to a maximum of 5 minutes
+                    sleepTime = Math.min(interval * 5, 300);
+                }
+            }
+
             // sleep for interval
-            logger.debug(`Sleeping for interval (${interval}s)`, {label: 'Spotify'});
-            await sleep(interval * 1000);
+            logger.debug(`Sleeping for interval (${sleepTime}s)`, {label: 'Spotify'});
+            await sleep(sleepTime * 1000);
         }
     } catch (e) {
         logger.error('Error occurred while in spotify polling loop', {label: 'Spotify'});

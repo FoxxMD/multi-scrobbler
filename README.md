@@ -2,6 +2,11 @@
 
 A single-user, javascript app to scrobble your recent plays to [Maloja](https://github.com/krateng/maloja) (and other clients, eventually)
 
+* Includes convenience web server for authorizing your spotify app
+* Persists obtained credentials to file
+* Automatically refreshes authorization for unattended use
+* Implements back off behavior if no listening activity is detected after an interval (after 10 minutes of idle it will back off to a maximum of 5 minutes between checks)
+
 ## Installation
 
 
