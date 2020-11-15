@@ -26,7 +26,7 @@ foxxmd/spotify-scrobbler:latest
 
 All configuration is done through json files or environment variables. Reference the [examples in the config folder](https://github.com/FoxxMD/spotify-scrobbler/tree/master/config) more detailed explanations and structure.
 
-**A property from a json config will override the environmental variable.**
+**A property from a json config will override the corresponding environmental variable.**
 
 ### General
 
@@ -46,8 +46,7 @@ To access your Spotify history you must [register an application](https://develo
 
 [Spotify config example](https://github.com/FoxxMD/spotify-scrobbler/blob/master/config/spotify.json.example)
 
-All variables have a config file equivalent which will overwrite the ENV variable if present. 
-
+All variables have a config file equivalent which will overwrite the ENV variable if present (so config file is not required if ENVs present)
 
 | Environmental Variable     | Required? |            Default             |                    Description                     |
 |----------------------------|-----------|----------------------------------|----------------------------------------------------|
@@ -61,12 +60,13 @@ The app will automatically obtain new access/refresh token if needed and possibl
 
 ## Setup Scrobble Clients
 
+At least one client (the only one right now...) must be setup in order for the app to work. Client configurations can alternatively be configred in the main `config.json` configuration (see configuration example linked in **General** setup)
+
 ### Maloja
 
 [Maloja config example](https://github.com/FoxxMD/spotify-scrobbler/blob/master/config/maloja.json.example)
 
-All variables have a config file equivalent which will overwrite the ENV variable if present. 
-
+All variables have a config file equivalent which will overwrite the ENV variable if present (so config file is not required if ENVs present)
 
 | Environmental Variable | Required? | Default |          Description          |
 |----------------------------|-----------|---------|-------------------------------|
@@ -77,7 +77,7 @@ All variables have a config file equivalent which will overwrite the ENV variabl
 
 Output is provided to stdout/stderr as well as file if specified in configuration.
 
-On first startup you may need to authroize Spotify by visiting a callback URL. The default url to open is:
+On first startup you may need to authorize Spotify by visiting a callback URL. The default url to open is:
 
 ```
 https://localhost:9078/authSpotify

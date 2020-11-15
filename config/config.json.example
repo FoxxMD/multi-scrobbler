@@ -1,15 +1,12 @@
 {
   "interval": 60,       // optional, number of seconds to wait before checking spotify for new tracks
-  "spotify": {},        // optional, may specify config here instead of in CONFIG_DIR/spotify.json
+  "spotify": {},        // optional, may specify config here, or in CONFIG_DIR/spotify.json, or as ENV vars
 
-                        // array of clients to scrobble to
-  "clients": [
-    "maloja",           // if a json config file of the same name is in CONFIG_DIR then only specify client as a string
-
-    {                   // otherwise specify client config as an object:
+  "clients": [          // may specify clients as objects, or in CONFIG_DIR/{clientType}.json, or as ENV vars
+                                                              // EX CONFIG_DIR/maloja.json
+    {
       "type": "maloja", // client name
       "data": {}        // config data
     },
-
   ]
 }

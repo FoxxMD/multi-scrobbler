@@ -69,8 +69,7 @@ try {
         try {
             config = await readJson(`${configDir}/config.json`);
         } catch (e) {
-            logger.warn('Could not read config file');
-            logger.error(e);
+            logger.info('No config file or could not be read (normal if using ENV vars only)');
         }
 
         // setup defaults for other configs and general config
@@ -96,8 +95,7 @@ try {
             try {
                 spotifyConfig = await readJson(`${configDir}/spotify.json`);
             } catch (e) {
-                logger.warn('Could not read spotify config file');
-                logger.error(e);
+                logger.warn('No spotify config file or could not be read (normal if using ENV vars only)');
             }
         }
 
@@ -262,30 +260,34 @@ const pollSpotify = async function (spotifyApi, interval = 60, clients = []) {
 
 const createClients = async function (clientConfigs = [], configDir = '.') {
     const clients = [];
-    if (!clientConfigs.every(x => ['object', 'string'].includes(typeof x))) {
-        throw new Error('All client configs must be objects or strings');
+    if (!clientConfigs.every(x => typeof x === 'object')) {
+        throw new Error('All client from config json must be objects');
     }
-    for (const config of clientConfigs) {
-        const isString = typeof config === 'string';
-        let clientConfig = !isString ? config.data : {};
+    for (const clientType of ['maloja']) {
 
-        switch ((isString ? config : config.type)) {
+        let clientConfig = {};
+
+        switch (clientType) {
             case 'maloja':
-                if (isString) {
+                clientConfig = clientConfigs.find(x => x.type === 'maloja') || {
+                    url: process.env.MALOJA_URL,
+                    apiKey: process.env.MALOJA_API_KEY
+                };
+
+                if (Object.values(clientConfig).every(x => x === undefined)) {
                     try {
                         clientConfig = await readJson(`${configDir}/maloja.json`);
                     } catch (e) {
-                        logger.warn('Maloja config was not parsable or file does not exist');
+                        // no config exists, skip this client
+                        continue;
                     }
                 }
+
                 const {
-                    url = process.env.MALOJA_URL,
-                    apiKey = process.env.MALOJA_API_KEY
+                    url,
+                    apiKey
                 } = clientConfig;
-                if (url === undefined && apiKey === undefined) {
-                    // the user probably didn't set anything up for this client at all, don't log
-                    continue;
-                }
+
                 if (url === undefined) {
                     logger.warn('Maloja url not found in config');
                     continue;
