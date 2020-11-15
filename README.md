@@ -103,7 +103,7 @@ node index.js
 EX 
 
 ```
-docker run ... -v /path/on/host/config:/home/node/config ...
+docker run ... -v /path/on/host/config:/home/node/app/config ...
 ```
 
 ## License
