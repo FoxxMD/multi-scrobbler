@@ -1,4 +1,4 @@
 {
   "url": "https://domain.tld", // the base url of your maloja installation
-  "apiKey": "string" // your maloja api key
+  "apiKey": "string"           // your maloja api key
 }

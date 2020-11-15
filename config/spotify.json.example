@@ -1,6 +1,5 @@
 {
-  "clientId": "string", // spotify client id
-  "clientSecret": "string", // spotify client secret
-  "redirectUri": "http://localhost:9078/callback", // optional, spotify callback url. useful if this installation is behind a reverse proxy
-  "callbackPath": "callback" // optional, if redirectUri does not end with /callback then must specify path here
+  "clientId": "string",                             // spotify client id
+  "clientSecret": "string",                         // spotify client secret
+  "redirectUri": "http://localhost:9078/callback",  // optional, spotify redirect URI. Specify only if not the default. URI must end in "callback"
 }

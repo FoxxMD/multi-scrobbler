@@ -19,6 +19,11 @@ RUN mkdir -p $config_dir
 VOLUME $config_dir
 ENV CONFIG_DIR=$config_dir
 
+ARG log_dir=/home/node/logs
+RUN mkdir -p $log_dir
+VOLUME $log_dir
+ENV LOG_DIR=$log_dir
+
 ARG webPort=9078
 ENV PORT=$webPort
 EXPOSE $PORT

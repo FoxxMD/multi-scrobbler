@@ -1,23 +1,15 @@
 {
-  // string specifies a directory location to log to.
-  // boolean FALSE means do not log to file
-  // boolean TRUE means log to working directory
-  "logPath": true, // optional
-  "interval": 60, // optional, number of seconds to wait before checking spotify for new tracks
-  "port": 9078, // optional, port for server to start on
-  "spotify": 'object or string', // can specify full spotify config object here OR a string location of json file OR do not include to use config dir location
-  // array of client configurations
+  "interval": 60,       // optional, number of seconds to wait before checking spotify for new tracks
+  "spotify": {},        // optional, may specify config here instead of in CONFIG_DIR/spotify.json
+
+                        // array of clients to scrobble to
   "clients": [
-    {
+    "maloja",           // if a json config file of the same name is in CONFIG_DIR then only specify client as a string
+
+    {                   // otherwise specify client config as an object:
       "type": "maloja", // client name
-      "data": "/someLocation/aFile.json" // location to look for json configuration in
+      "data": {}        // config data
     },
-    {
-      "type": "maloja", // client name
-      "data": {
-        // client configuration can also be an object
-      }
-    },
-    "maloja" // client can also be just the type if the configuration is located in the default configuration directory
+
   ]
 }

@@ -20,24 +20,28 @@ All configuration is done through json files or environment variables. Reference
 
 [JSON config example](https://github.com/FoxxMD/spotify-scrobbler/blob/master/config/config.json.example)
 
-Environment Variables
-* CONFIG_DIR - Default `./config` - Sets configuration directory to look for all other configuration files (if they are not specified)
-* CONFIG_PATH - Default `CONFIG_DIR/config.json`
-* LOG_PATH - Default `true` - If `false` no logs will be written. If `string` will be the directory logs are written to
-* PORT - Default 9078 - Port to run web server on (for authentication callbacks)
+These environmental variables do not have a config file equivalent (to make Docker configuration easier)
 
+| Environmental Variable | Required? |   Default    |                                        Description                                        |
+|----------------------------|-----------|--------------|-------------------------------------------------------------------------------------------|
+| `CONFIG_DIR`               |         - | `CWD/config` | Directory to look for all other configuration files                                       |
+| `LOG_PATH`                 |         - | `CWD/logs`   | If `false` no logs will be written. If `string` will be the directory logs are written to |
+| `PORT`                     |         - | 9078         | Port to run web server on                                                                 |
 
 ### Spotify
 
 [Spotify config example](https://github.com/FoxxMD/spotify-scrobbler/blob/master/config/spotify.json.example)
 
-Environment Variables
-* SPOTIFY_CONFIG_PATH - Optional, defaults to `CONFIG_DIR/spotify.json`
-* SPOTIFY_CLIENT_ID - **Required**
-* SPOTIFY_CLIENT_SECRET - **Required**
-* SPOTIFY_ACCESS_TOKEN - Optional if client/secret provided
-* SPOTIFY_REFRESH_TOKEN - Optional if client/secret provided
-* SPOTIFY_REDIRECT_URI - Optional, default is `http://localhost:{port}/callback`
+All variables have a config file equivalent which will overwrite the ENV variable if present. 
+
+
+| Environmental Variable     | Required? |            Default             |                    Description                     |
+|----------------------------|-----------|----------------------------------|----------------------------------------------------|
+| `SPOTIFY_CLIENT_ID`        | Yes       |                                  |                                                    |
+| `SPOTIFY_CLIENT_SECRET`    | Yes       |                                  |                                                    |
+| `SPOTIFY_ACCESS_TOKEN`     | -         |                                  | Must include either this token or client id/secret |
+| `SPOTIFY_REFRESH_TOKEN`    |           |                                  |                                                    |
+| `SPOTIFY_REDIRECT_URI`     |           | `http://localhost:{PORT}/callback` | URI must end in `callback`                         |
 
 The app will automatically obtain new access/refresh token if needed and possible. These will override values from configuration.
 
@@ -45,10 +49,15 @@ The app will automatically obtain new access/refresh token if needed and possibl
 
 [Maloja config example](https://github.com/FoxxMD/spotify-scrobbler/blob/master/config/maloja.json.example)
 
-Environment Variables
-* MALOJA_CONFIG_PATH - Optional, defaults to `CONFIG_DIR/maloja.json`
-* MALOJA_URL - **Required** - Base Url of your Maloja installation
-* MALOJA_API_KEY - **Required** - Api Key for scrobbling
+All variables have a config file equivalent which will overwrite the ENV variable if present. 
+
+
+| Environmental Variable | Required? | Default |          Description          |
+|----------------------------|-----------|---------|-------------------------------|
+| `MALOJA_URL`               | Yes       |         | Base URL of your installation |
+| `MALOJA_API_KEY`           | Yes       |         | Api Key                       |
+
+
 
 ## Usage
 
