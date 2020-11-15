@@ -21,6 +21,7 @@ npm install
 foxxmd/spotify-scrobbler:latest
 ```
 
+The `CONFIG_DIR` and `LOG_DIR` environmental variables are also configurable as docker env variables in order to specify the path to mount to in the container.
 
 ## Setup App and Spotify
 
@@ -39,6 +40,8 @@ These environmental variables do not have a config file equivalent (to make Dock
 | `CONFIG_DIR`               |         - | `CWD/config` | Directory to look for all other configuration files                                       |
 | `LOG_PATH`                 |         - | `CWD/logs`   | If `false` no logs will be written. If `string` will be the directory logs are written to |
 | `PORT`                     |         - | 9078         | Port to run web server on                                                                 |
+
+**The app must have permission to write to `CONFIG_DIR` in order to store the current spotify access token.**
 
 ### Spotify
 

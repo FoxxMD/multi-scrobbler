@@ -56,6 +56,7 @@ const state = 'random';
 let lastTrackPlayedAt = new Date();
 
 const configDir = process.env.CONFIG_DIR || `${process.cwd()}/config`;
+const workingCredentialsPath = `${configDir}/currentCreds.json`;
 
 const app = addAsync(express());
 
@@ -85,7 +86,7 @@ try {
 
         let spotifyCreds = {};
         try {
-            spotifyCreds = await readJson('./spotifyCreds.json');
+            spotifyCreds = await readJson(workingCredentialsPath);
         } catch (e) {
             logger.warn('Current spotify access token was not parsable or file does not exist (this could be normal)');
         }
@@ -151,7 +152,7 @@ try {
                 const tokenResponse = await spotifyApi.authorizationCodeGrant(code);
                 spotifyApi.setAccessToken(tokenResponse.body['access_token']);
                 spotifyApi.setRefreshToken(tokenResponse.body['refresh_token']);
-                await writeFile('spotifyCreds.json', JSON.stringify({
+                await writeFile(workingCredentialsPath, JSON.stringify({
                     token: tokenResponse.body['access_token'],
                     refreshToken: tokenResponse.body['refresh_token']
                 }));
@@ -201,7 +202,7 @@ const pollSpotify = async function (spotifyApi, interval = 60, clients = []) {
                         } = {}
                     } = tokenResponse;
                     spotifyApi.setAccessToken(access_token);
-                    await writeFile('spotifyCreds.json', JSON.stringify({
+                    await writeFile(workingCredentialsPath, JSON.stringify({
                         token: access_token,
                         refreshToken: refresh_token,
                     }));

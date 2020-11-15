@@ -5,5 +5,8 @@ Dockerfile
 .dockerignore
 .gitignore
 .git
-spotifyCreds.json
+config/currentCreds.json
 *.log
+config/maloja.json
+config/spotify.json
+config/config.json
