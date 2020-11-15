@@ -94,11 +94,13 @@ node index.js
 
 ### Docker
 
-All required variables can be passed through environmental variables (see above)
+| Environmental Variable |  Type  |         Default         |
+|------------------------|--------|-------------------------|
+| `CONFIG_DIR`           | Volume | `/home/node/app/config` |
+| `LOG_DIR`              | Volume | `/home/node/app/logs`   |
+| `PORT`                 | Port   | 9078                    |
 
-or
-
-mount a directory on the host machine containing your JSON configs to the config directory:
+EX 
 
 ```
 docker run ... -v /path/on/host/config:/home/node/config ...
