@@ -4,13 +4,25 @@ A single-user, javascript app to scrobble your recent plays to [Maloja](https://
 
 ## Installation
 
+
+### Locally
+
 Clone this repository somewhere and then install from the working directory
 
 ```bash
 npm install
 ```
 
-## Setup/Configuration
+### Docker
+
+[Dockerhub link](https://hub.docker.com/repository/docker/foxxmd/spotify-scrobbler)
+
+```
+foxxmd/spotify-scrobbler:latest
+```
+
+
+## Setup App and Spotify
 
 All configuration is done through json files or environment variables. Reference the [examples in the config folder](https://github.com/FoxxMD/spotify-scrobbler/tree/master/config) more detailed explanations and structure.
 
@@ -30,6 +42,8 @@ These environmental variables do not have a config file equivalent (to make Dock
 
 ### Spotify
 
+To access your Spotify history you must [register an application](https://developer.spotify.com/dashboard) to get a Client ID/Secret. Make sure to also whitelist your redirect URI in the application settings.
+
 [Spotify config example](https://github.com/FoxxMD/spotify-scrobbler/blob/master/config/spotify.json.example)
 
 All variables have a config file equivalent which will overwrite the ENV variable if present. 
@@ -40,10 +54,12 @@ All variables have a config file equivalent which will overwrite the ENV variabl
 | `SPOTIFY_CLIENT_ID`        | Yes       |                                  |                                                    |
 | `SPOTIFY_CLIENT_SECRET`    | Yes       |                                  |                                                    |
 | `SPOTIFY_ACCESS_TOKEN`     | -         |                                  | Must include either this token or client id/secret |
-| `SPOTIFY_REFRESH_TOKEN`    |           |                                  |                                                    |
-| `SPOTIFY_REDIRECT_URI`     |           | `http://localhost:{PORT}/callback` | URI must end in `callback`                         |
+| `SPOTIFY_REFRESH_TOKEN`    | -         |                                  |                                                    |
+| `SPOTIFY_REDIRECT_URI`     | -         | `http://localhost:{PORT}/callback` | URI must end in `callback`                         |
 
 The app will automatically obtain new access/refresh token if needed and possible. These will override values from configuration.
+
+## Setup Scrobble Clients
 
 ### Maloja
 
@@ -56,8 +72,6 @@ All variables have a config file equivalent which will overwrite the ENV variabl
 |----------------------------|-----------|---------|-------------------------------|
 | `MALOJA_URL`               | Yes       |         | Base URL of your installation |
 | `MALOJA_API_KEY`           | Yes       |         | Api Key                       |
-
-
 
 ## Usage
 
@@ -77,12 +91,11 @@ node index.js
 
 ### Docker
 
-[Docker repository](https://hub.docker.com/repository/docker/foxxmd/spotify-scrobbler)
-```
-foxxmd/spotify-scrobbler:latest
-```
+All required variables can be passed through environmental variables (see above)
 
-Minimal configuration requires you to bind a host directory for the configuration directory in the container:
+or
+
+mount a directory on the host machine containing your JSON configs to the config directory:
 
 ```
 docker run ... -v /path/on/host/config:/home/node/config ...
