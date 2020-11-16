@@ -23,7 +23,7 @@
   "homepage": "https://github.com/FoxxMD/maloja-spotify-scrobbler#readme",
   "dependencies": {
     "@awaitjs/express": "^0.6.3",
-    "date-fns": "^2.16.1",
+    "dayjs": "^1.9.6",
     "ejs": "^3.1.5",
     "express": "^4.17.1",
     "spotify-web-api-node": "^5.0.0",

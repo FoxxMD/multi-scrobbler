@@ -1,4 +1,8 @@
 import fs, {promises, constants} from "fs";
+import dayjs from 'dayjs';
+import utc from 'dayjs/plugin/utc.js';
+
+dayjs.extend(utc);
 
 export async function readJson(path) {
     await promises.access(path, constants.R_OK);
@@ -62,5 +66,5 @@ export const buildTrackString = (obj) => {
         played_at
     } = obj;
     let artistString = artists.reduce((acc, curr) => acc.concat(curr.name), []).join(' / ');
-    return `${artistString} - ${name}, played at ${played_at}`
+    return `${artistString} - ${name}, played at ${dayjs(played_at).local().format()}`
 }

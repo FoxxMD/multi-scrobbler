@@ -2,11 +2,15 @@ import fs from "fs";
 import {addAsync} from '@awaitjs/express';
 import express from 'express';
 import winston from 'winston';
+import dayjs from 'dayjs';
+import utc from 'dayjs/plugin/utc.js';
 import {Writable} from 'stream';
 import 'winston-daily-rotate-file';
 import {readJson, sleep, writeFile, buildTrackString} from "./utils.js";
 import SpotifyWebApi from "spotify-web-api-node";
 import MalojaScrobbler from "./clients/MalojaScrobbler.js";
+
+dayjs.extend(utc)
 
 const {format, createLogger, transports} = winston;
 const {combine, printf, timestamp} = format;
@@ -34,7 +38,11 @@ const myFormat = printf(({level, message, label = 'App', timestamp}) => {
 const logger = createLogger({
     level: process.env.LOG_LEVEL || 'info',
     format: combine(
-        timestamp(),
+        timestamp(
+            {
+                format: () => dayjs().local().format(),
+            }
+        ),
         myFormat
     ),
     transports: [

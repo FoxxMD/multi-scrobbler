@@ -1,6 +1,6 @@
 import ScrobbleClient from "./ScrobbleClient.js";
 import request from 'superagent';
-import format from 'date-fns/format/index.js';
+import dayjs from 'dayjs';
 
 export default class MalojaScrobbler extends ScrobbleClient {
 
@@ -8,7 +8,8 @@ export default class MalojaScrobbler extends ScrobbleClient {
 
     refreshScrobbles = async () => {
         const {url} = this.config;
-        const resp = await request.get(`${url}/apis/mlj_1/scrobbles?since=${format(new Date(), 'yyyy/MM/dd')}&to=${format(new Date(), 'yyyy/MM/dd')}`)
+        const today = dayjs().format('YYYY/MM/DD');
+        const resp = await request.get(`${url}/apis/mlj_1/scrobbles?since=${today}&to=${today}`);
         this.recentScrobbles = resp.body.list.slice(0, 10);
         this.lastScrobbleCheck = new Date();
     }
