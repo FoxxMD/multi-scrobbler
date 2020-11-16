@@ -9,7 +9,7 @@ export default class MalojaScrobbler extends ScrobbleClient {
     refreshScrobbles = async () => {
         const {url} = this.config;
         const today = dayjs().format('YYYY/MM/DD');
-        const resp = await request.get(`${url}/apis/mlj_1/scrobbles?since=${today}&to=${today}`);
+        const resp = await request.get(`${url}/apis/mlj_1/scrobbles?since=${today}&to=${today}&max=15`);
         this.recentScrobbles = resp.body.list.slice(0, 10);
         this.lastScrobbleCheck = new Date();
     }
