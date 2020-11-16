@@ -10,3 +10,4 @@ config/currentCreds.json
 config/maloja.json
 config/spotify.json
 config/config.json
+/examples

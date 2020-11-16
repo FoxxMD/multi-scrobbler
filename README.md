@@ -10,6 +10,7 @@ A single-user, javascript app to scrobble your recent plays to [Maloja](https://
 * Persists obtained credentials to file
 * Automatically refreshes authorization for unattended use
 * Implements back off behavior if no listening activity is detected after an interval (after 10 minutes of idle it will back off to a maximum of 5 minutes between checks)
+* Displays running status and buffered log through web server
 
 ## Installation
 
@@ -91,6 +92,8 @@ On first startup you may need to authorize Spotify by visiting a callback URL. T
 https://localhost:9078/authSpotify
 ```
 
+Connection status and a buffered log of the last 50 events can be viewed at the root url: `https://localhost:9078`
+
 ### Running Directly
 
 ```
@@ -105,11 +108,9 @@ node index.js
 | `LOG_DIR`              | Volume | `/home/node/app/logs`   |
 | `PORT`                 | Port   | 9078                    |
 
-EX 
+## Examples
 
-```
-docker run ... -v /path/on/host/config:/home/node/app/config ...
-```
+[See minimal configuration examples in the examples folder](https://github.com/FoxxMD/spotify-scrobbler/tree/master/examples)
 
 ## License
 
