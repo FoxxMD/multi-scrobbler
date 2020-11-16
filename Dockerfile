@@ -1,5 +1,9 @@
 FROM node:fermium-alpine3.10
 
+ENV TZ=Etc/GMT
+
+RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
+
 RUN mkdir -p /home/node/app/node_modules && chown -R node:node /home/node
 
 WORKDIR /home/node/app
@@ -8,7 +12,7 @@ COPY package*.json ./
 
 USER node
 
-RUN npm install
+RUN npm install --production
 
 COPY --chown=node:node . .
 

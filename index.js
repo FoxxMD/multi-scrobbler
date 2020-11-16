@@ -14,7 +14,7 @@ const {combine, printf, timestamp} = format;
 let output = []
 const stream = new Writable()
 stream._write = (chunk, encoding, next) => {
-    output.unshift(chunk.toString());
+    output.unshift(chunk.toString().replace('\n', ''));
     output = output.slice(0, 51);
     next()
 }
@@ -141,6 +141,13 @@ try {
             throw new Error('No scrobble clients were configured');
         }
 
+        app.getAsync('/', async function (req, res) {
+            res.render('status', {
+                status: spotifyAsyncFunc !== null ? 'Connected' : 'Awaiting Authorization',
+                authUrl: spotifyAsyncFunc !== null ? null : `${localUrl}/authSpotify`,
+                logs: output
+            });
+        })
 
         app.getAsync('/authSpotify', async function (req, res) {
             logger.info('Redirecting to spotify authorization url');
@@ -178,6 +185,8 @@ try {
             logger.info(`Server started at ${localUrl}`);
         }
 
+        app.set('views', './views');
+        app.set('view engine', 'ejs');
         const server = await app.listen(port)
     }());
 } catch (e) {
