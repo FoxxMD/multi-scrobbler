@@ -33,7 +33,7 @@ export default class MalojaScrobbler extends ScrobbleClient {
                     this.logger.debug(`Scrobble with same name found and the play (start time) vs. scrobble time diff was smaller than 10 seconds`, {label: this.name});
                     return true;
                 }
-                this.logger.debug(`Scrobble with same name found but the start/finish times vs scrobble time diffs were too large to consider dups (Start Diff ${scrobblePlayStartDiff}s) (End Diff ${scrobblePlayDiff}s)`, {label: this.name});
+                this.logger.debug(`Scrobble with same name found but the start/finish times vs scrobble time diffs were too large to consider dups (Start Diff ${scrobblePlayStartDiff.toFixed(0)}s) (End Diff ${scrobblePlayDiff.toFixed(0)}s)`, {label: this.name});
                 return false;
             }
             return false;
