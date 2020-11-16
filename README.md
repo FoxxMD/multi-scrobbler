@@ -1,5 +1,9 @@
 # spotify-scrobbler
 
+[![Latest Release](https://img.shields.io/github/v/release/foxxmd/spotify-scrobbler)](https://github.com/FoxxMD/spotify-scrobbler/releases)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Docker Pulls](https://img.shields.io/docker/pulls/foxxmd/spotify-scrobbler)](https://hub.docker.com/repository/docker/foxxmd/spotify-scrobbler)
+
 A single-user, javascript app to scrobble your recent plays to [Maloja](https://github.com/krateng/maloja) (and other clients, eventually)
 
 * Includes convenience web server for authorizing your spotify app
