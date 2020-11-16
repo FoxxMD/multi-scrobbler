@@ -22,15 +22,11 @@ Clone this repository somewhere and then install from the working directory
 npm install
 ```
 
-### Docker
-
-[Dockerhub link](https://hub.docker.com/repository/docker/foxxmd/spotify-scrobbler)
+### [Dockerhub](https://hub.docker.com/repository/docker/foxxmd/spotify-scrobbler)
 
 ```
 foxxmd/spotify-scrobbler:latest
 ```
-
-The `CONFIG_DIR` and `LOG_DIR` environmental variables are also configurable as docker env variables in order to specify the path to mount to in the container.
 
 ## Setup App and Spotify
 
