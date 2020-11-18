@@ -1,6 +1,8 @@
-Tracks played on [Plex](https://plex.tv/) can be scrobbled by using a [Tautulli](https://tautulli.com/) notification agent with a webhook.
+Tracks played on [Plex](https://plex.tv/) can be scrobbled either by:
+ * A [Tautulli](https://tautulli.com/) notification agent with a webhook.
+ * Using Plex [Webhooks](https://support.plex.tv/articles/115002267687-webhooks) (restricted to Plex Pass users)
 
-# How To
+# Using Tautulli
 
 ## Create a new Notification Agent
 
@@ -45,3 +47,12 @@ Expand the **Watched** dropdown and add the following code block to the **JSON D
 **Click the Save button to finish.**
 
 Your agent is now configured and ready to scrobble.
+
+# Using Plex Webhooks
+
+* Navigate to your **Account/Settings** and find the **Webhooks** page
+* Click **Add Webhook**
+* URL -- `http://localhost:9078/plex` (substitute your domain if different than the default)
+* **Save Changes**
+
+Plex is now configured to scrobble.

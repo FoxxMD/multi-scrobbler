@@ -12,10 +12,15 @@
         <li><b>Status: <%= tautulli.status %></b></li>
         <li>Tracks Discovered (since app started): <%= tautulli.discovered %></li>
     </ul>
+    <h2>Plex Webhook</h2>
+    <ul>
+        <li><b>Status: <%= plex.status %></b></li>
+        <li>Tracks Discovered (since app started): <%= plex.discovered %></li>
+    </ul>
     <h2>Log (Last 50, most recent first)</h2>
-    <pre>
-        <% logs.forEach(function (logEntry){ %>
-        <%=logEntry%><% }) %>
-    </pre>
+<pre>
+<% logs.forEach(function (logEntry){ %>
+<%=logEntry%><% }) %>
+</pre>
 </body>
 </html>

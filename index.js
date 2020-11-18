@@ -1,15 +1,20 @@
 import {addAsync} from '@awaitjs/express';
 import express from 'express';
 import bodyParser from 'body-parser';
+import multer from 'multer';
 import winston from 'winston';
 import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc.js';
 import {Writable} from 'stream';
 import 'winston-daily-rotate-file';
-import {readJson, writeFile } from "./utils.js";
+import {readJson, writeFile} from "./utils.js";
 import Clients from './clients/ScrobbleClients.js';
 import SpotifySource from "./sources/SpotifySource.js";
 import TautulliSource from "./sources/TautulliSource.js";
+import PlexSource from "./sources/PlexSource.js";
+
+const storage = multer.memoryStorage()
+const upload = multer({storage: storage})
 
 dayjs.extend(utc)
 
@@ -93,16 +98,22 @@ try {
             clients = [],
         } = config || {};
 
-        const spotifySource = new SpotifySource(logger, {configDir, localUrl});
-        await spotifySource.buildSpotifyApi(spotify);
-
+        /*
+        * setup clients
+        * */
         const scrobbleClients = new Clients(logger);
         await scrobbleClients.buildClients(clients, configDir);
         if (scrobbleClients.clients.length === 0) {
             logger.warn('No scrobble clients were configured')
         }
 
+        /*
+        * setup sources
+        * */
+        const spotifySource = new SpotifySource(logger, {configDir, localUrl});
+        await spotifySource.buildSpotifyApi(spotify);
         const tautulliSource = new TautulliSource(logger, scrobbleClients);
+        const plexSource = new PlexSource(logger, scrobbleClients);
 
         app.getAsync('/', async function (req, res) {
             res.render('status', {
@@ -114,12 +125,28 @@ try {
                     status: tautulliSource.discoveredTracks > 0 ? 'Received Data' : 'Awaiting Data',
                     discovered: tautulliSource.discoveredTracks,
                 },
+                plex: {
+                    status: plexSource.discoveredTracks > 0 ? 'Received Data' : 'Awaiting Data',
+                    discovered: plexSource.discoveredTracks,
+                },
                 logs: output
             });
         })
 
         app.postAsync('/tautulli', async function (req, res) {
             await tautulliSource.handle(req);
+            res.send('OK');
+        });
+
+        app.postAsync('/plex', upload.any(), async function (req, res) {
+            const {
+                body: {
+                    payload
+                } = {}
+            } = req;
+            if (payload !== undefined) {
+                await plexSource.handle(JSON.parse(payload));
+            }
             res.send('OK');
         });
 

@@ -11,7 +11,8 @@ A single-user, javascript app to scrobble your recent plays to [Maloja](https://
 * Spotify - Persists obtained credentials to file
 * Spotify - Automatically refreshes authorization for unattended use
 * Spotify - Implements back off behavior if no listening activity is detected after an interval (after 10 minutes of idle it will back off to a maximum of 5 minutes between checks)
-* [Tautulli](https://tautulli.com/) - Scrobble endpoint using notification webhook
+* [Tautulli](https://tautulli.com) - Scrobble endpoint using notification agents
+* [Plex](https://plex.tv) - Scrobble endpoint using [Webhooks](https://support.plex.tv/articles/115002267687-webhooks)
 
 ## Installation
 
@@ -71,10 +72,13 @@ All variables have a config file equivalent which will overwrite the ENV variabl
 
 The app will automatically obtain new access/refresh token if needed and possible. These will override values from configuration.
 
-#### [Tautulli](https://tautulli.com/)
+#### [Tautulli](https://tautulli.com)
 
-No setup is required in the app. Check the [instructions](https://github.com/FoxxMD/multi-scrobbler/blob/master/docs/tautulli.md) on how to setup a notification agent to scrobble your plays.
+No setup is required in the app. Check the [instructions](https://github.com/FoxxMD/multi-scrobbler/blob/master/docs/plex.md) on how to setup a notification agent to scrobble your plays.
 
+#### [Plex](https://plex.tv)
+
+No setup is required in the app. Check the [instructions](https://github.com/FoxxMD/multi-scrobbler/blob/master/docs/plex.md) on how to setup a [webhooks](https://support.plex.tv/articles/115002267687-webhooks) to scrobble your plays.
 
 ### Scrobble Clients
 
