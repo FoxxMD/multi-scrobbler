@@ -21,7 +21,7 @@ docker run -e "SPOTIFY_CLIENT_ID=yourId" -e "SPOTIFY_CLIENT_SECRET=yourSecret" -
 
 ## Using Configuration
 
-Reference the [example json configs.](https://github.com/FoxxMD/spotify-scrobbler/tree/master/config)
+Reference the [example json configs.](https://github.com/FoxxMD/multi-scrobbler/tree/master/config)
 
 ### Local
 

@@ -1,8 +1,8 @@
 # multi-scrobbler
 
-[![Latest Release](https://img.shields.io/github/v/release/foxxmd/spotify-scrobbler)](https://github.com/FoxxMD/spotify-scrobbler/releases)
+[![Latest Release](https://img.shields.io/github/v/release/foxxmd/multi-scrobbler)](https://github.com/FoxxMD/multi-scrobbler/releases)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Docker Pulls](https://img.shields.io/docker/pulls/foxxmd/spotify-scrobbler)](https://hub.docker.com/repository/docker/foxxmd/spotify-scrobbler)
+[![Docker Pulls](https://img.shields.io/docker/pulls/foxxmd/multi-scrobbler)](https://hub.docker.com/repository/docker/foxxmd/multi-scrobbler)
 
 A single-user, javascript app to scrobble your recent plays to [Maloja](https://github.com/krateng/maloja) (and other clients, eventually)
 
@@ -24,21 +24,21 @@ Clone this repository somewhere and then install from the working directory
 npm install
 ```
 
-### [Dockerhub](https://hub.docker.com/repository/docker/foxxmd/spotify-scrobbler)
+### [Dockerhub](https://hub.docker.com/repository/docker/foxxmd/multi-scrobbler)
 
 ```
-foxxmd/spotify-scrobbler:latest
+foxxmd/multi-scrobbler:latest
 ```
 
-## Setup App and Spotify
+## Setup
 
-All configuration is done through json files or environment variables. Reference the [examples in the config folder](https://github.com/FoxxMD/spotify-scrobbler/tree/master/config) more detailed explanations and structure.
+All configuration is done through json files or environment variables. Reference the [examples in the config folder](https://github.com/FoxxMD/multi-scrobbler/tree/master/config) more detailed explanations and structure.
 
 **A property from a json config will override the corresponding environmental variable.**
 
-### General
+### App (General)
 
-[JSON config example](https://github.com/FoxxMD/spotify-scrobbler/blob/master/config/config.json.example)
+[JSON config example](https://github.com/FoxxMD/multi-scrobbler/blob/master/config/config.json.example)
 
 These environmental variables do not have a config file equivalent (to make Docker configuration easier)
 
@@ -50,11 +50,14 @@ These environmental variables do not have a config file equivalent (to make Dock
 
 **The app must have permission to write to `CONFIG_DIR` in order to store the current spotify access token.**
 
-### Spotify
+
+### Sources (Where Music Plays Come From)
+
+#### Spotify
 
 To access your Spotify history you must [register an application](https://developer.spotify.com/dashboard) to get a Client ID/Secret. Make sure to also whitelist your redirect URI in the application settings.
 
-[Spotify config example](https://github.com/FoxxMD/spotify-scrobbler/blob/master/config/spotify.json.example)
+[Spotify config example](https://github.com/FoxxMD/multi-scrobbler/blob/master/config/spotify.json.example)
 
 All variables have a config file equivalent which will overwrite the ENV variable if present (so config file is not required if ENVs present)
 
@@ -68,18 +71,18 @@ All variables have a config file equivalent which will overwrite the ENV variabl
 
 The app will automatically obtain new access/refresh token if needed and possible. These will override values from configuration.
 
-### [Tautulli](https://tautulli.com/)
+#### [Tautulli](https://tautulli.com/)
 
-No setup is required in the app. Check the [instructions](https://github.com/FoxxMD/spotify-scrobbler/blob/master/docs/tautulli.md) on how to setup a notification agent to scrobble your plays.
+No setup is required in the app. Check the [instructions](https://github.com/FoxxMD/multi-scrobbler/blob/master/docs/tautulli.md) on how to setup a notification agent to scrobble your plays.
 
 
-## Setup Scrobble Clients
+### Scrobble Clients
 
-At least one client (the only one right now...) must be setup in order for the app to work. Client configurations can alternatively be configured in the main `config.json` configuration (see configuration example linked in **General** setup)
+At least one client (the only one right now...) must be setup in order for the app to work. Client configurations can alternatively be configured in the main [`config.json`](https://github.com/FoxxMD/multi-scrobbler/blob/master/config/config.json.example) configuration
 
-### Maloja
+#### Maloja
 
-[Maloja config example](https://github.com/FoxxMD/spotify-scrobbler/blob/master/config/maloja.json.example)
+[Maloja config example](https://github.com/FoxxMD/multi-scrobbler/blob/master/config/maloja.json.example)
 
 All variables have a config file equivalent which will overwrite the ENV variable if present (so config file is not required if ENVs present)
 
@@ -116,7 +119,7 @@ node index.js
 
 ## Examples
 
-[See minimal configuration in the examples doc](https://github.com/FoxxMD/spotify-scrobbler/tree/master/docs/examples.md)
+[See minimal configuration in the examples doc](https://github.com/FoxxMD/multi-scrobbler/tree/master/docs/examples.md)
 
 ## License
 
