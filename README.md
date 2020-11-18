@@ -6,11 +6,12 @@
 
 A single-user, javascript app to scrobble your recent plays to [Maloja](https://github.com/krateng/maloja) (and other clients, eventually)
 
-* Includes convenience web server for authorizing your spotify app
-* Persists obtained credentials to file
-* Automatically refreshes authorization for unattended use
-* Implements back off behavior if no listening activity is detected after an interval (after 10 minutes of idle it will back off to a maximum of 5 minutes between checks)
 * Displays running status and buffered log through web server
+* Spotify - Authorize your app through the web server
+* Spotify - Persists obtained credentials to file
+* Spotify - Automatically refreshes authorization for unattended use
+* Spotify - Implements back off behavior if no listening activity is detected after an interval (after 10 minutes of idle it will back off to a maximum of 5 minutes between checks)
+* [Tautulli](https://tautulli.com/) - Scrobble endpoint using notification webhook
 
 ## Installation
 
@@ -67,9 +68,14 @@ All variables have a config file equivalent which will overwrite the ENV variabl
 
 The app will automatically obtain new access/refresh token if needed and possible. These will override values from configuration.
 
+### [Tautulli](https://tautulli.com/)
+
+No setup is required in the app. Check the [instructions](https://github.com/FoxxMD/spotify-scrobbler/blob/master/docs/tautulli.md) on how to setup a notification agent to scrobble your plays.
+
+
 ## Setup Scrobble Clients
 
-At least one client (the only one right now...) must be setup in order for the app to work. Client configurations can alternatively be configred in the main `config.json` configuration (see configuration example linked in **General** setup)
+At least one client (the only one right now...) must be setup in order for the app to work. Client configurations can alternatively be configured in the main `config.json` configuration (see configuration example linked in **General** setup)
 
 ### Maloja
 
@@ -110,7 +116,7 @@ node index.js
 
 ## Examples
 
-[See minimal configuration examples in the examples folder](https://github.com/FoxxMD/spotify-scrobbler/tree/master/examples)
+[See minimal configuration in the examples doc](https://github.com/FoxxMD/spotify-scrobbler/tree/master/docs/examples.md)
 
 ## License
 
