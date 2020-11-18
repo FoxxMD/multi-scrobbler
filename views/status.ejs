@@ -1,13 +1,21 @@
 <html>
 <body>
-<h2>Status: <%= status %><b></b></h2>
-<% if (authUrl) { %>
-    Visit <a target="_blank" href="<%= authUrl %>">Redirect URL to start polling</a>
-<% } %>
-<h2>Log (Last 50, most recent first)</h2>
-<pre>
-    <% logs.forEach(function (logEntry){ %>
-    <%=logEntry%><% }) %>
-</pre>
+    <h2>Spotify</h2>
+    <ul>
+        <li><b>Status: <%= spotify.status === true ? 'Running' : 'Idle' %></b></li>
+        <li>Tracks Discovered (since app started): <%= spotify.discovered %></li>
+        <li>Click <a target="_blank" href="authSpotify">to re-authenticate and restart polling</a></li>
+        <li>Click <a target="_blank" href="pollSpotify">to restart polling</a></li>
+    </ul>
+    <h2>Tautulli</h2>
+    <ul>
+        <li><b>Status: <%= tautulli.status %></b></li>
+        <li>Tracks Discovered (since app started): <%= tautulli.discovered %></li>
+    </ul>
+    <h2>Log (Last 50, most recent first)</h2>
+    <pre>
+        <% logs.forEach(function (logEntry){ %>
+        <%=logEntry%><% }) %>
+    </pre>
 </body>
 </html>

@@ -1,22 +1,38 @@
-import ScrobbleClient from "./ScrobbleClient.js";
+import AbstractScrobbleClient from "./AbstractScrobbleClient.js";
 import request from 'superagent';
 import dayjs from 'dayjs';
 
-export default class MalojaScrobbler extends ScrobbleClient {
+export default class MalojaScrobbler extends AbstractScrobbleClient {
 
     name = 'Maloja';
 
     refreshScrobbles = async () => {
-        const {url} = this.config;
-        const today = dayjs().format('YYYY/MM/DD');
-        const resp = await request.get(`${url}/apis/mlj_1/scrobbles?since=${today}&to=${today}&max=15`);
-        this.recentScrobbles = resp.body.list.slice(0, 10);
-        this.lastScrobbleCheck = new Date();
+        if (this.refreshEnabled) {
+            const {url} = this.config;
+            const today = dayjs().format('YYYY/MM/DD');
+            const resp = await request.get(`${url}/apis/mlj_1/scrobbles?since=${today}&to=${today}&max=15`);
+            this.recentScrobbles = resp.body.list.slice(0, 10);
+        }
+        this.lastScrobbleCheck = dayjs();
     }
 
-    alreadyScrobbled = (title, playDate, duration) => {
-        const playUnix = playDate.getTime() / 1000;
-        const lowerTitle = title.toLocaleLowerCase();
+    alreadyScrobbled = (playObj) => {
+        if (false === this.checkExistingScrobbles) {
+            return false;
+        }
+
+        const {
+            data: {
+                track,
+                playDate
+            } = {},
+            meta: {
+                trackLength,
+            } = {},
+        } = playObj;
+
+        const playUnix = playDate.unix();
+        const lowerTitle = track.toLocaleLowerCase();
         return this.recentScrobbles.some((x) => {
             const {time: scrobbleTime, title: scrobbleTitle} = x;
             const lowerScrobbleTitle = scrobbleTitle.toLocaleLowerCase();
@@ -28,7 +44,7 @@ export default class MalojaScrobbler extends ScrobbleClient {
                     return true;
                 }
                 // also need to check that scrobble time isn't the BEGINNING of the track
-                let scrobblePlayStartDiff = Math.abs(playUnix - (scrobbleTime - duration));
+                let scrobblePlayStartDiff = Math.abs(playUnix - (scrobbleTime - trackLength));
                 if (scrobblePlayStartDiff < 10) {
                     this.logger.debug(`Scrobble with same name found and the play (start time) vs. scrobble time diff was smaller than 10 seconds`, {label: this.name});
                     return true;
@@ -44,27 +60,23 @@ export default class MalojaScrobbler extends ScrobbleClient {
         const {url, apiKey} = this.config;
 
         const {
-            track: {
-                artists = [],
-                name,
-                id,
-                external_urls: {
-                    spotify,
-                } = {}
-            } = {},
-            played_at
+            data: {
+                artist,
+                album,
+                track,
+                playDate
+            } = {}
         } = playObj;
 
-        let artistString = artists.reduce((acc, curr) => acc.concat(curr.name), []).join(',');
-        const time = new Date(played_at);
         try {
             await request.post(`${url}/apis/mlj_1/newscrobble`)
                 .type('json')
                 .send({
-                    artist: artistString,
-                    title: name,
+                    artist,
+                    title: track,
+                    album,
                     key: apiKey,
-                    time: time.getTime() / 1000
+                    time: playDate.unix(),
                 });
             this.logger.info('Scrobbled', {label: this.name});
         } catch (e) {

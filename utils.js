@@ -53,18 +53,64 @@ export function sleep(ms) {
     return new Promise(resolve => setTimeout(resolve, ms));
 }
 
-export const buildTrackString = (obj) => {
+export const buildTrackString = (playObj) => {
     const {
-        track: {
-            artists = [],
-            name,
-            id,
-            external_urls: {
-                spotify,
-            } = {}
-        } = {},
-        played_at
-    } = obj;
-    let artistString = artists.reduce((acc, curr) => acc.concat(curr.name), []).join(' / ');
-    return `${artistString} - ${name}, played at ${dayjs(played_at).local().format()}`
+        data: {
+            artist,
+            album,
+            track,
+            playDate
+        } = {}
+    } = playObj;
+
+    return `${artist} - ${track}, played at ${playDate.local().format()}`
+}
+
+
+/*
+* Code below this comes from https://github.com/samthor/promises
+* I'm not using the package because the package type isn't module or something
+* */
+
+const noop = () => {};
+
+export function resolvable() {
+    let resolve;
+    const promise = new Promise((r) => resolve = r);
+    return {promise, resolve};
+}
+
+async function toPromise(t) {
+    return t;
+}
+
+export const takeoverSymbol = Object.seal({});
+
+const abortSymbol = Object.seal({});  // distinct from takeoverSymbol so folks can't return it
+
+export function makeSingle(generator) {
+    let previousPromise;
+    let previousResolve = noop;
+
+    return async function(...args) {
+        previousResolve(abortSymbol);
+        ({promise: previousPromise, resolve: previousResolve} = resolvable());
+        const localSinglePromise = previousPromise;
+
+        const iter = generator(...args);
+        let resumeValue;
+        for (;;) {
+            const n = iter.next(resumeValue);
+            if (n.done) {
+                return n.value;  // final return value of passed generator
+            }
+
+            // whatever the generator yielded, _now_ run await on it
+            resumeValue = await Promise.race([toPromise(n.value), localSinglePromise]);
+            if (resumeValue === abortSymbol) {
+                return takeoverSymbol;
+            }
+            // next loop, we give resumeValue back to the generator
+        }
+    };
 }

@@ -1,5 +1,4 @@
 {
-  "interval": 60,       // optional, number of seconds to wait before checking spotify for new tracks
   "spotify": {},        // optional, may specify config here, or in CONFIG_DIR/spotify.json, or as ENV vars
 
   "clients": [          // may specify clients as objects, or in CONFIG_DIR/{clientType}.json, or as ENV vars
