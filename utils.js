@@ -106,9 +106,13 @@ export function makeSingle(generator) {
             }
 
             // whatever the generator yielded, _now_ run await on it
-            resumeValue = await Promise.race([toPromise(n.value), localSinglePromise]);
-            if (resumeValue === abortSymbol) {
-                return takeoverSymbol;
+            try {
+                resumeValue = await Promise.race([toPromise(n.value), localSinglePromise]);
+                if (resumeValue === abortSymbol) {
+                    return takeoverSymbol;
+                }
+            } catch(e) {
+                resumeValue = e;
             }
             // next loop, we give resumeValue back to the generator
         }
