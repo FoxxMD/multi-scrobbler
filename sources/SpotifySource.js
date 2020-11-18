@@ -151,40 +151,43 @@ const pollSpotify = function* (logger, spotifyApi, interval = 60, credsPath, cli
     while (true) {
         let data = {};
         logger.debug('Refreshing recently played', {label: 'Spotify'})
-        try {
-            data = yield spotifyApi.getMyRecentlyPlayedTracks({
-                limit: 20
-            });
-        } catch (e) {
-            if (e.statusCode === 401) {
+        data = yield spotifyApi.getMyRecentlyPlayedTracks({
+            limit: 20
+        });
+        if (data instanceof Error) {
+            if (data.statusCode === 401) {
                 if (spotifyApi.getRefreshToken() === undefined) {
-                    throw new Error('Access token was not valid and no refresh token was present, bailing out of polling')
+                    logger.error('Access token was not valid and no refresh token was present, bailing out of polling', {label: 'Spotify'});
+                    return Promise.resolve();
                 }
                 logger.debug('Access token was not valid, attempting to refresh', {label: 'Spotify'});
-                try {
-                    const tokenResponse = yield spotifyApi.refreshAccessToken();
-                    const {
-                        body: {
-                            access_token,
-                            // spotify may return a new refresh token
-                            // if it doesn't then continue to use the last refresh token we received
-                            refresh_token = spotifyApi.getRefreshToken(),
-                        } = {}
-                    } = tokenResponse;
-                    spotifyApi.setAccessToken(access_token);
-                    yield writeFile(credsPath, JSON.stringify({
-                        token: access_token,
-                        refreshToken: refresh_token,
-                    }));
-                    data = yield spotifyApi.getMyRecentlyPlayedTracks({
-                        limit: 20
-                    });
-                } catch (err) {
+
+                const tokenResponse = yield spotifyApi.refreshAccessToken();
+                const {
+                    body: {
+                        access_token,
+                        // spotify may return a new refresh token
+                        // if it doesn't then continue to use the last refresh token we received
+                        refresh_token = spotifyApi.getRefreshToken(),
+                    } = {}
+                } = tokenResponse;
+                spotifyApi.setAccessToken(access_token);
+                yield writeFile(credsPath, JSON.stringify({
+                    token: access_token,
+                    refreshToken: refresh_token,
+                }));
+                data = yield spotifyApi.getMyRecentlyPlayedTracks({
+                    limit: 20
+                });
+                if (data instanceof Error) {
                     logger.error('Refreshing access token encountered an error', {label: 'Spotify'});
-                    throw err;
+                    logger.error(data, {label: 'Spotify'});
+                    return Promise.resolve(data);
                 }
             } else {
-                throw e;
+                logger.error('Refreshing access token encountered an error', {label: 'Spotify'});
+                logger.error(data, {label: 'Spotify'});
+                return Promise.reject(data);
             }
         }
         checkCount++;
@@ -212,7 +215,10 @@ const pollSpotify = function* (logger, spotifyApi, interval = 60, credsPath, cli
                     logger.info('Track is close to polling interval! Delaying scrobble clients refresh by 10 seconds so other clients have time to scrobble first', {label: 'Spotify'});
                     yield sleep(10 * 1000);
                 }
-                yield clients.scrobble(playObj, {forceRefresh: closeToInterval})
+                const scrobbleResult = yield clients.scrobble(playObj, {forceRefresh: closeToInterval});
+                if (scrobbleResult instanceof Error) {
+                    return Promise.reject(scrobbleResult);
+                }
             } else {
                 break;
             }
