@@ -33,13 +33,13 @@ foxxmd/multi-scrobbler:latest
 
 ## Setup
 
-All configuration is done through json files or environment variables. Reference the [examples in the config folder](https://github.com/FoxxMD/multi-scrobbler/tree/master/config) more detailed explanations and structure.
+All configuration is done through json files or environment variables. Reference the [examples in the config folder](config) more detailed explanations and structure.
 
 **A property from a json config will override the corresponding environmental variable.**
 
 ### App (General)
 
-[JSON config example](https://github.com/FoxxMD/multi-scrobbler/blob/master/config/config.json.example)
+[JSON config example](config/config.json.example)
 
 These environmental variables do not have a config file equivalent (to make Docker configuration easier)
 
@@ -58,7 +58,7 @@ These environmental variables do not have a config file equivalent (to make Dock
 
 To access your Spotify history you must [register an application](https://developer.spotify.com/dashboard) to get a Client ID/Secret. Make sure to also whitelist your redirect URI in the application settings.
 
-[Spotify config example](https://github.com/FoxxMD/multi-scrobbler/blob/master/config/spotify.json.example)
+[Spotify config example](config/spotify.json.example)
 
 All variables have a config file equivalent which will overwrite the ENV variable if present (so config file is not required if ENVs present)
 
@@ -80,7 +80,7 @@ Check the [instructions](docs/plex.md) on how to setup a [webhooks](https://supp
 
 | Environmental Variable | Required | Default |                   Description                   |
 |------------------------|----------|---------|-------------------------------------------------|
-| PLEX_USER              |        - |         | The username of the user to scrobble tracks for |
+| PLEX_USER              |        - |         | The username of the user to scrobble tracks for. No user specified means all tracks by all users will be scrobbled. |
 
 #### [Tautulli](https://tautulli.com)
 
@@ -94,7 +94,7 @@ At least one client (the only one right now...) must be setup in order for the a
 
 #### Maloja
 
-[Maloja config example](https://github.com/FoxxMD/multi-scrobbler/blob/master/config/maloja.json.example)
+[Maloja config example](config/maloja.json.example)
 
 All variables have a config file equivalent which will overwrite the ENV variable if present (so config file is not required if ENVs present)
 
@@ -105,15 +105,18 @@ All variables have a config file equivalent which will overwrite the ENV variabl
 
 ## Usage
 
-Output is provided to stdout/stderr as well as file if specified in configuration.
+A status page with statistics and recent logs can found at
 
-On first startup you may need to authorize Spotify by visiting a callback URL. The default url to open is:
+```
+https://localhost:9078
+```
+Output is also provided to stdout/stderr as well as file if specified in configuration.
+
+On first startup you may need to authorize Spotify by visiting the callback URL (which can also be accessed from the status page)
 
 ```
 https://localhost:9078/authSpotify
 ```
-
-Connection status and a buffered log of the last 50 events can be viewed at the root url: `https://localhost:9078`
 
 ### Running Directly
 
@@ -131,7 +134,7 @@ node index.js
 
 ## Examples
 
-[See minimal configuration in the examples doc](https://github.com/FoxxMD/multi-scrobbler/tree/master/docs/examples.md)
+[See minimal configuration in the examples doc](docs/examples.md)
 
 ## License
 
