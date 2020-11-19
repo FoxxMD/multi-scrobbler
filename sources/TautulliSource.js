@@ -1,5 +1,5 @@
 import dayjs from "dayjs";
-import {buildTrackString} from "../utils.js";
+import {buildTrackString, readJson} from "../utils.js";
 
 export default class TautulliSource {
 
@@ -7,12 +7,27 @@ export default class TautulliSource {
 
     logger;
     clients;
+    user;
 
     discoveredTracks = 0;
 
-    constructor(logger, clients) {
+    async constructor(logger, clients, {configDir, config} = {}) {
         this.logger = logger;
         this.clients = clients;
+
+        let configData = config;
+        if (config === undefined) {
+            try {
+                configData = await readJson(`${configDir}/plex.json`);
+            } catch (e) {
+                // no config exists, skip this client
+            }
+        }
+        const {
+            user = process.env.PLEX_USER,
+        } = configData || {};
+
+        this.user = user;
     }
 
     static formatPlayObj(obj) {
@@ -25,6 +40,7 @@ export default class TautulliSource {
             title,
             library_name,
             duration,
+            username,
         } = obj;
         let artist = artist_name;
         if (track_artist !== undefined && track_artist !== artist_name) {
@@ -41,6 +57,7 @@ export default class TautulliSource {
                 title,
                 library: library_name,
                 mediaType: media_type,
+                user: username,
                 trackLength: duration,
             }
         }
@@ -48,7 +65,25 @@ export default class TautulliSource {
 
     handle = async (req) => {
         const playObj = TautulliSource.formatPlayObj(req.body);
-        const {meta: {mediaType, title}} = playObj;
+        const {meta: {mediaType, title, user}} = playObj;
+
+        if (this.user !== undefined && user !== undefined) {
+            if (Array.isArray(this.user)) {
+                if (this.user.includes(user)) {
+                    this.logger.debug(`Will not scrobble webhook event because specified user was not part of user array`, {
+                        user,
+                        label: this.name
+                    })
+                    return;
+                }
+            } else if (this.user === user) {
+                this.logger.debug(`Will not scrobble webhook event because specified user was not found`, {
+                    user,
+                    label: this.name
+                })
+                return;
+            }
+        }
         if (mediaType !== 'track') {
             this.logger.warn(`Webhook posted a non-music media type (${mediaType}), not scrobbling this. Item: ${title}`, {label: this.name});
         } else {

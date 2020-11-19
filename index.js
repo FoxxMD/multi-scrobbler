@@ -95,6 +95,7 @@ try {
         // setup defaults for other configs and general config
         const {
             spotify,
+            plex,
             clients = [],
         } = config || {};
 
@@ -112,8 +113,8 @@ try {
         * */
         const spotifySource = new SpotifySource(logger, {configDir, localUrl});
         await spotifySource.buildSpotifyApi(spotify);
-        const tautulliSource = new TautulliSource(logger, scrobbleClients);
-        const plexSource = new PlexSource(logger, scrobbleClients);
+        const tautulliSource = await new TautulliSource(logger, scrobbleClients, {configDir, config: plex});
+        const plexSource = await new PlexSource(logger, scrobbleClients, {configDir, config: plex});
 
         app.getAsync('/', async function (req, res) {
             res.render('status', {

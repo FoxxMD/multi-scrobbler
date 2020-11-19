@@ -40,7 +40,8 @@ Expand the **Watched** dropdown and add the following code block to the **JSON D
 "album_name": "{album_name}",
 "media_type": "{media_type}",
 "title":  "{title}",
-"duration": "{duration}"
+"duration": "{duration}",
+"username": "{username}"
 }
 ```
 
