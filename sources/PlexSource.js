@@ -64,7 +64,7 @@ export default class PlexSource {
                     })
                     return;
                 }
-            } else if (this.user === user) {
+            } else if (this.user !== user) {
                 this.logger.debug(`Will not scrobble webhook event because specified user was not found`, {
                     user,
                     label: this.name
