@@ -1,0 +1,4 @@
+{
+  "user": "username@email.com",                           // user may be a single username
+  "user": ["username@gmail.com","anotherUser@gmail.com"]  // or it may be an array of usernames
+}

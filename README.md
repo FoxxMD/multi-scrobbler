@@ -72,13 +72,21 @@ All variables have a config file equivalent which will overwrite the ENV variabl
 
 The app will automatically obtain new access/refresh token if needed and possible. These will override values from configuration.
 
-#### [Tautulli](https://tautulli.com)
-
-No setup is required in the app. Check the [instructions](https://github.com/FoxxMD/multi-scrobbler/blob/master/docs/plex.md) on how to setup a notification agent to scrobble your plays.
-
 #### [Plex](https://plex.tv)
 
-No setup is required in the app. Check the [instructions](https://github.com/FoxxMD/multi-scrobbler/blob/master/docs/plex.md) on how to setup a [webhooks](https://support.plex.tv/articles/115002267687-webhooks) to scrobble your plays.
+Check the [instructions](docs/plex.md) on how to setup a [webhooks](https://support.plex.tv/articles/115002267687-webhooks) to scrobble your plays.
+
+[Plex config example](config/plex.json.example)
+
+| Environmental Variable | Required | Default |                   Description                   |
+|------------------------|----------|---------|-------------------------------------------------|
+| PLEX_USER              |        - |         | The username of the user to scrobble tracks for |
+
+#### [Tautulli](https://tautulli.com)
+
+Check the [instructions](docs/plex.md) on how to setup a notification agent to scrobble your plays.
+
+**Environmental variables and config file is the same as Plex**
 
 ### Scrobble Clients
 
