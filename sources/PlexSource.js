@@ -11,25 +11,11 @@ export default class PlexSource {
 
     discoveredTracks = 0;
 
-    async constructor(logger, clients, {configDir, config} = {}) {
+    constructor(logger, clients, { user = process.env.PLEX_USER } = {}) {
         this.logger = logger;
         this.clients = clients;
-
-        let configData = config;
-        if (config === undefined) {
-            try {
-                configData = await readJson(`${configDir}/plex.json`);
-            } catch (e) {
-                // no config exists, skip this client
-            }
-        }
-        const {
-            user = process.env.PLEX_USER,
-        } = configData || {};
-
         this.user = user;
     }
-
 
     static formatPlayObj(obj) {
         const {

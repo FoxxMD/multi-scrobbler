@@ -95,7 +95,7 @@ try {
         // setup defaults for other configs and general config
         const {
             spotify,
-            plex,
+            plex = {},
             clients = [],
         } = config || {};
 
@@ -113,8 +113,16 @@ try {
         * */
         const spotifySource = new SpotifySource(logger, {configDir, localUrl});
         await spotifySource.buildSpotifyApi(spotify);
-        const tautulliSource = await new TautulliSource(logger, scrobbleClients, {configDir, config: plex});
-        const plexSource = await new PlexSource(logger, scrobbleClients, {configDir, config: plex});
+
+        let plexJson = {};
+        try {
+            plexJson = await readJson(`${configDir}/plex.json`);
+        } catch (e) {
+            // no config exists but that's ok
+        }
+
+        const tautulliSource = await new TautulliSource(logger, scrobbleClients, {...plex, ...plexJson});
+        const plexSource = await new PlexSource(logger, scrobbleClients, {...plex, ...plexJson});
 
         app.getAsync('/', async function (req, res) {
             res.render('status', {
