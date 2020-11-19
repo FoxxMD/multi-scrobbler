@@ -15,7 +15,7 @@ Tracks played on [Plex](https://plex.tv/) can be scrobbled either by:
 The below sections correspond with the tabs available in the notification agent configuration popup.
 
 ### Configuration
-* Webhook URL -- `http://localhost:9078/tautuilli` (substitute your domain if different than the default)
+* Webhook URL -- `http://localhost:9078/tautulli` (substitute your domain if different than the default)
 * Webhook Method -- POST
 
 ### Triggers
