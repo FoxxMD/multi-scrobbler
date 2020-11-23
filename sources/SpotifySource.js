@@ -202,6 +202,7 @@ const pollSpotify = function* (logger, spotifyApi, interval = 60, credsPath, cli
             }
             // compare play time to most recent track played_at scrobble
             if (playDate.unix() > lastTrackPlayedAt.unix()) {
+                checkCount = 0;
                 newTracksFound = true;
                 logger.info(`New Track => ${buildTrackString(playObj)}`, {label: 'Spotify'});
                 emitter.emit('spotifyTrackDiscovered', playObj);
