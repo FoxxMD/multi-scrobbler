@@ -85,7 +85,7 @@ export default class SpotifySource {
             redirectUri = process.env.SPOTIFY_REDIRECT_URI,
             refreshToken = process.env.SPOTIFY_REFRESH_TOKEN,
             interval = 60,
-        } = spotifyConfig;
+        } = spotifyConfig || {};
 
         if (interval < 15) {
             console.warn('Interval should be above 30 seconds...😬');
