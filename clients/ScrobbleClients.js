@@ -59,11 +59,11 @@ export default class ScrobbleClients {
         this.clients = clients;
     }
 
-    scrobble = async (playObjs, options = {}) => {
+    scrobble = async (playObjs = [], options = {}) => {
         const {
             forceRefresh = false,
             checkTime = dayjs(),
-            newTracksFromSource = [],
+            newTracksFromSource = playObjs.map(x => buildTrackString(x)),
             source,
         } = options;
 

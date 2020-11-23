@@ -77,7 +77,7 @@ export default class PlexSource {
         } else {
             this.logger.info(`New Track => ${buildTrackString(playObj)}`, {label: this.name});
             try {
-                await this.clients.scrobble(playObj);
+                await this.clients.scrobble([playObj], { source: this.name } );
                 // only gets hit if we scrobbled ok
                 this.discoveredTracks++;
             } catch (e) {
