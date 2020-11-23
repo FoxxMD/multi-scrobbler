@@ -192,6 +192,7 @@ const pollSpotify = function* (logger, spotifyApi, interval = 60, credsPath, cli
         }
         checkCount++;
         let newLastPLayedAt = undefined;
+        let newTracksFound = false;
         const now = dayjs();
         for (const playData of data.body.items) {
             const playObj = SpotifySource.formatPlayObj(playData);
@@ -201,6 +202,7 @@ const pollSpotify = function* (logger, spotifyApi, interval = 60, credsPath, cli
             }
             // compare play time to most recent track played_at scrobble
             if (playDate.unix() > lastTrackPlayedAt.unix()) {
+                newTracksFound = true;
                 logger.info(`New Track => ${buildTrackString(playObj)}`, {label: 'Spotify'});
                 emitter.emit('spotifyTrackDiscovered', playObj);
                 // so we always get just the most recent played_at
@@ -225,6 +227,11 @@ const pollSpotify = function* (logger, spotifyApi, interval = 60, credsPath, cli
             if (newLastPLayedAt !== undefined) {
                 lastTrackPlayedAt = newLastPLayedAt;
             }
+        }
+        if(newTracksFound === false) {
+            const lastFoundTrack = data.body.items.slice(-1)[0];
+            const playObj = SpotifySource.formatPlayObj(lastFoundTrack);
+            logger.debug(`No new tracks found. Last track returned from Spotify was ${buildTrackString(playObj)}`);
         }
         let sleepTime = interval;
         // don't need to do back off calc if interval is 10 minutes or greater since its already pretty light on API calls
