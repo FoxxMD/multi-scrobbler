@@ -11,6 +11,7 @@ export default class SpotifySource {
     localUrl;
     workingCredsPath;
     configDir;
+    name = 'Spotify';
 
     spotifyPoller;
     pollerRunning = false;
@@ -106,16 +107,16 @@ export default class SpotifySource {
         }
 
         if (Object.values(apiConfig).every(x => x === undefined)) {
-            this.logger.info('No values found for Spotify configuration, assuming user does not want to set it up', {label: 'Spotify'});
+            this.logger.info('No values found for Spotify configuration, assuming user does not want to set it up', {label: this.name});
         } else {
             if (token === undefined) {
                 let ready = true;
                 if (clientId === undefined) {
-                    this.logger.warn('No access token exists and clientId is not defined', {label: 'Spotify'});
+                    this.logger.warn('No access token exists and clientId is not defined', {label: this.name});
                     ready = false;
                 }
                 if (clientSecret === undefined) {
-                    this.logger.warn('No access token exists and clientSecret is not defined', {label: 'Spotify'})
+                    this.logger.warn('No access token exists and clientSecret is not defined', {label: this.name})
                     ready = false;
                 }
                 if (ready === false) {
@@ -129,14 +130,14 @@ export default class SpotifySource {
 
     pollSpotify = (clients) => {
         if (this.spotifyApi === undefined) {
-            this.logger.warn('Cannot poll spotify without valid credentials configuration', {label: 'Spotify'})
+            this.logger.warn('Cannot poll spotify without valid credentials configuration', {label: this.name})
             return;
         }
         this.pollerRunning = true;
         return this.spotifyPoller(this.logger, this.spotifyApi, this.interval, this.workingCredsPath, clients, this.emitter)
             .catch((e) => {
-                this.logger.error('Error occurred while polling spotify, polling has been stopped', {label: 'Spotify'});
-                this.logger.error(e, {label: 'Spotify'});
+                this.logger.error('Error occurred while polling spotify, polling has been stopped', {label: this.name});
+                this.logger.error(e, {label: this.name});
             })
             .finally(() => {
                 this.pollerRunning = false;
@@ -191,11 +192,15 @@ const pollSpotify = function* (logger, spotifyApi, interval = 60, credsPath, cli
             }
         }
         checkCount++;
-        let newLastPLayedAt = undefined;
+        let newLastPlayedAt = undefined;
         let newTracksFound = false;
+        let closeToInterval = false;
+        const tracksToCheck = [];
+        const newTracks = [];
         const now = dayjs();
         for (const playData of data.body.items) {
             const playObj = SpotifySource.formatPlayObj(playData);
+            tracksToCheck.push(playObj);
             const {data: {playDate} = {}} = playObj;
             if (lastTrackPlayedAt === undefined) {
                 lastTrackPlayedAt = playDate;
@@ -205,12 +210,13 @@ const pollSpotify = function* (logger, spotifyApi, interval = 60, credsPath, cli
                 checkCount = 0;
                 newTracksFound = true;
                 logger.info(`New Track => ${buildTrackString(playObj)}`, {label: 'Spotify'});
+                newTracks.push(buildTrackString(playObj));
                 emitter.emit('spotifyTrackDiscovered', playObj);
                 // so we always get just the most recent played_at
-                if (newLastPLayedAt === undefined) {
-                    newLastPLayedAt = playDate;
+                if (newLastPlayedAt === undefined) {
+                    newLastPlayedAt = playDate;
                 }
-                const closeToInterval = Math.abs(now.unix() - playDate.unix()) < 5;
+                closeToInterval = Math.abs(now.unix() - playDate.unix()) < 5;
                 if (closeToInterval) {
                     // because the interval check was so close to the play date we are going to delay client calls for a few secs
                     // this way we don't accidentally scrobble ahead of any other clients (we always want to be behind so we can check for dups)
@@ -218,22 +224,27 @@ const pollSpotify = function* (logger, spotifyApi, interval = 60, credsPath, cli
                     logger.info('Track is close to polling interval! Delaying scrobble clients refresh by 10 seconds so other clients have time to scrobble first', {label: 'Spotify'});
                     yield sleep(10 * 1000);
                 }
-                const scrobbleResult = yield clients.scrobble(playObj, {forceRefresh: closeToInterval});
-                if (scrobbleResult instanceof Error) {
-                    return Promise.reject(scrobbleResult);
-                }
-            } else {
-                break;
             }
-            if (newLastPLayedAt !== undefined) {
-                lastTrackPlayedAt = newLastPLayedAt;
+            if (newLastPlayedAt !== undefined) {
+                lastTrackPlayedAt = newLastPlayedAt;
             }
         }
         if(newTracksFound === false) {
             const lastFoundTrack = data.body.items.slice(-1)[0];
             const playObj = SpotifySource.formatPlayObj(lastFoundTrack);
-            logger.debug(`No new tracks found. Last track returned from Spotify was ${buildTrackString(playObj)}`);
+            logger.debug(`No new tracks found. Last track returned was ${buildTrackString(playObj)}`, {label: 'Spotify'});
         }
+
+        const scrobbleResult = yield clients.scrobble(tracksToCheck, { forceRefresh: closeToInterval, newTracksFromSource: newTracks, source: 'Spotify' });
+        if (scrobbleResult instanceof Error) {
+            return Promise.reject(scrobbleResult);
+        } else if(scrobbleResult.length > 0) {
+            checkCount = 0;
+            for(const t of scrobbleResult) {
+                emitter.emit('spotifyTrackDiscovered', t);
+            }
+        }
+        
         let sleepTime = interval;
         // don't need to do back off calc if interval is 10 minutes or greater since its already pretty light on API calls
         // and don't want to back off if we just started the app

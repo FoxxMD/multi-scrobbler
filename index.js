@@ -5,6 +5,7 @@ import multer from 'multer';
 import winston from 'winston';
 import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc.js';
+import isBetween from 'dayjs/plugin/isBetween.js';
 import {Writable} from 'stream';
 import 'winston-daily-rotate-file';
 import {readJson, writeFile} from "./utils.js";
@@ -17,6 +18,7 @@ const storage = multer.memoryStorage()
 const upload = multer({storage: storage})
 
 dayjs.extend(utc)
+dayjs.extend(isBetween);
 
 const {format, createLogger, transports} = winston;
 const {combine, printf, timestamp} = format;

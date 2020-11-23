@@ -1,5 +1,5 @@
 import dayjs from "dayjs";
-import {readJson} from "../utils.js";
+import {buildTrackString, readJson} from "../utils.js";
 import MalojaScrobbler from "./MalojaScrobbler.js";
 
 export default class ScrobbleClients {
@@ -59,19 +59,27 @@ export default class ScrobbleClients {
         this.clients = clients;
     }
 
-    scrobble = async (playObj, options = {}) => {
+    scrobble = async (playObjs, options = {}) => {
         const {
             forceRefresh = false,
             checkTime = dayjs(),
+            newTracksFromSource = [],
+            source,
         } = options;
+
+        const tracksScrobbled = [];
 
         for (const client of this.clients) {
             if (forceRefresh || client.scrobblesLastCheckedAt().unix() < checkTime.unix()) {
                 await client.refreshScrobbles();
             }
-            if (!client.alreadyScrobbled(playObj)) {
-                await client.scrobble(playObj);
+            for(const playObj of playObjs) {
+                if (client.inValidTimeframe(playObj.data.playDate) && !client.alreadyScrobbled(playObj)) {
+                    tracksScrobbled.push(playObj);
+                    await client.scrobble(playObj, { foundInSourceDiff: newTracksFromSource.some(x => x === buildTrackString(playObj)), source });
+                }
             }
         }
+        return tracksScrobbled;
     }
 }

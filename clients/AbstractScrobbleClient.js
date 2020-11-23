@@ -5,6 +5,8 @@ export default class AbstractScrobbleClient {
     name;
 
     recentScrobbles = [];
+    newestScrobbleTime;
+    oldestScrobbleTime = dayjs();
 
     lastScrobbleCheck = dayjs();
     refreshEnabled;
@@ -26,5 +28,10 @@ export default class AbstractScrobbleClient {
 
     scrobblesLastCheckedAt = () => {
         return this.lastScrobbleCheck;
+    }
+
+    inValidTimeframe = (playDate) => {
+        const newest = this.newestScrobbleTime ?? dayjs();
+        return playDate.isBetween(this.oldestScrobbleTime, newest);
     }
 }

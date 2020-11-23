@@ -1,6 +1,7 @@
 import AbstractScrobbleClient from "./AbstractScrobbleClient.js";
 import request from 'superagent';
 import dayjs from 'dayjs';
+import {buildTrackString} from "../utils.js";
 
 export default class MalojaScrobbler extends AbstractScrobbleClient {
 
@@ -10,8 +11,10 @@ export default class MalojaScrobbler extends AbstractScrobbleClient {
         if (this.refreshEnabled) {
             const {url} = this.config;
             const today = dayjs().format('YYYY/MM/DD');
-            const resp = await request.get(`${url}/apis/mlj_1/scrobbles?since=${today}&to=${today}&max=15`);
-            this.recentScrobbles = resp.body.list.slice(0, 10);
+            const resp = await request.get(`${url}/apis/mlj_1/scrobbles?since=${today}&to=${today}&max=50`);
+            this.recentScrobbles = resp.body.list;
+            this.newestScrobbleTime = dayjs.unix(this.recentScrobbles.slice(0,1)[0].time);
+            this.oldestScrobbleTime = dayjs.unix(this.recentScrobbles.slice(-1)[0].time);
         }
         this.lastScrobbleCheck = dayjs();
     }
@@ -40,23 +43,23 @@ export default class MalojaScrobbler extends AbstractScrobbleClient {
                 // check if scrobble time is same as play date (when the track finished playing AKA entered recent tracks)
                 let scrobblePlayDiff = Math.abs(playUnix - scrobbleTime);
                 if (scrobblePlayDiff < 10) {
-                    this.logger.debug(`Scrobble with same name found and the play (finish time) vs. scrobble time diff was smaller than 10 seconds`, {label: this.name});
+                    // this.logger.debug(`Scrobble with same name (${scrobbleTitle}) found and the play (finish time) vs. scrobble time diff was smaller than 10 seconds`, {label: this.name});
                     return true;
                 }
                 // also need to check that scrobble time isn't the BEGINNING of the track
                 let scrobblePlayStartDiff = Math.abs(playUnix - (scrobbleTime - trackLength));
                 if (scrobblePlayStartDiff < 10) {
-                    this.logger.debug(`Scrobble with same name found and the play (start time) vs. scrobble time diff was smaller than 10 seconds`, {label: this.name});
+                   // this.logger.debug(`Scrobble with same name (${scrobbleTitle}) found and the play (start time) vs. scrobble time diff was smaller than 10 seconds`, {label: this.name});
                     return true;
                 }
-                this.logger.debug(`Scrobble with same name found but the start/finish times vs scrobble time diffs were too large to consider dups (Start Diff ${scrobblePlayStartDiff.toFixed(0)}s) (End Diff ${scrobblePlayDiff.toFixed(0)}s)`, {label: this.name});
+                // this.logger.debug(`Scrobble with same name (${scrobbleTitle}) found but the start/finish times vs scrobble time diffs were too large to consider dups (Start Diff ${scrobblePlayStartDiff.toFixed(0)}s) (End Diff ${scrobblePlayDiff.toFixed(0)}s)`, {label: this.name});
                 return false;
             }
             return false;
-        })
+        });
     }
 
-    scrobble = async (playObj) => {
+    scrobble = async (playObj, {foundInSourceDiff = false, source}) => {
         const {url, apiKey} = this.config;
 
         const {
@@ -78,9 +81,13 @@ export default class MalojaScrobbler extends AbstractScrobbleClient {
                     key: apiKey,
                     time: playDate.unix(),
                 });
-            this.logger.info('Scrobbled', {label: this.name});
+            if(foundInSourceDiff) {
+                this.logger.info(`Scrobbled Newly Found Track (${source}): ${buildTrackString(playObj)}`, {label: this.name});
+            } else {
+                this.logger.info(`Scrobbled Backlogged Track (${source}): ${buildTrackString(playObj)}`, {label: this.name});
+            }
         } catch (e) {
-            this.logger.error('Error while scrobbling', {label: this.name});
+            this.logger.error('Error while scrobbling', {label: this.name, playInfo: buildTrackString(playObj)});
             this.logger.log(e);
         }
 
