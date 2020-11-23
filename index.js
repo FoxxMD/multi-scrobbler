@@ -30,7 +30,6 @@ stream._write = (chunk, encoding, next) => {
 }
 const streamTransport = new winston.transports.Stream({
     stream,
-    level: process.env.LOG_LEVEL || 'info',
 })
 
 const logConfig = {
@@ -59,8 +58,7 @@ const logger = createLogger({
         myFormat
     ),
     transports: [
-        new transports.Console({
-        }),
+        new transports.Console(),
         streamTransport,
     ]
 });
