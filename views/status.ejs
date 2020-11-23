@@ -1,4 +1,17 @@
 <html>
+<head>
+<style>
+    small {
+        display: block;
+    }
+    .bold {
+        font-weight: bold;
+    }
+    .capitalize {
+        text-transform: capitalize;
+    }
+</style>
+</head>
 <body>
     <h2>Spotify</h2>
     <ul>
@@ -17,9 +30,14 @@
         <li><b>Status: <%= plex.status %></b></li>
         <li>Tracks Discovered (since app started): <%= plex.discovered %></li>
     </ul>
-    <h2>Log (Last 50, most recent first)</h2>
+    <h2>Log (Most Recent)</h2>
+    <ul>
+        <li>Level : <%- logs.level %> </li>
+        <li>Sort  : <%- logs.sort %></li>
+        <li>Limit : <%- logs.limit %></li>
+    </ul>
 <pre>
-<% logs.forEach(function (logEntry){ %>
+<% logs.output.forEach(function (logEntry){ %>
 <%=logEntry%><% }) %>
 </pre>
 </body>

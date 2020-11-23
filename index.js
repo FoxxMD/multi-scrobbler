@@ -25,7 +25,7 @@ let output = []
 const stream = new Writable()
 stream._write = (chunk, encoding, next) => {
     output.unshift(chunk.toString().replace('\n', ''));
-    output = output.slice(0, 51);
+    output = output.slice(0, 101);
     next()
 }
 const streamTransport = new winston.transports.Stream({
@@ -33,6 +33,13 @@ const streamTransport = new winston.transports.Stream({
     level: process.env.LOG_LEVEL || 'info',
 })
 
+const logConfig = {
+    level: process.env.LOG_LEVEL || 'info',
+    sort: 'descending',
+    limit: 50,
+}
+
+const availableLevels = ['info','debug'];
 const logPath = process.env.LOG_DIR || `${process.cwd()}/logs`;
 const port = process.env.PORT ?? 9078;
 const localUrl = `http://localhost:${port}`;
@@ -42,7 +49,7 @@ const myFormat = printf(({level, message, label = 'App', timestamp}) => {
 });
 
 const logger = createLogger({
-    level: process.env.LOG_LEVEL || 'info',
+    level: logConfig.level,
     format: combine(
         timestamp(
             {
@@ -53,7 +60,6 @@ const logger = createLogger({
     ),
     transports: [
         new transports.Console({
-            level: process.env.LOG_LEVEL || 'info',
         }),
         streamTransport,
     ]
@@ -61,7 +67,6 @@ const logger = createLogger({
 
 if (typeof logPath === 'string') {
     logger.add(new winston.transports.DailyRotateFile({
-        level: process.env.LOG_LEVEL || 'info',
         dirname: logPath,
         createSymlink: true,
         symlinkName: 'scrobble-current.log',
@@ -125,6 +130,10 @@ try {
         const plexSource = await new PlexSource(logger, scrobbleClients, {...plex, ...plexJson});
 
         app.getAsync('/', async function (req, res) {
+            let slicedLog = output.slice(0, logConfig.limit + 1);
+            if(logConfig.sort === 'ascending') {
+                slicedLog.reverse();
+            }
             res.render('status', {
                 spotify: {
                     status: spotifySource.pollerRunning,
@@ -138,7 +147,12 @@ try {
                     status: plexSource.discoveredTracks > 0 ? 'Received Data' : 'Awaiting Data',
                     discovered: plexSource.discoveredTracks,
                 },
-                logs: output
+                logs: {
+                    output: slicedLog,
+                    limit: [10,20,50,100].map(x => `<a class="capitalize ${logConfig.limit === x ? 'bold' : ''}" href="logs/settings/update?limit=${x}">${x}</a>`).join(' | '),
+                    sort: ['ascending', 'descending'].map(x => `<a class="capitalize ${logConfig.sort === x ? 'bold' : ''}" href="logs/settings/update?sort=${x}">${x}</a>`).join(' | '),
+                    level: availableLevels.map(x => `<a class="capitalize ${logConfig.level === x ? 'bold' : ''}" href="logs/settings/update?level=${x}">${x}</a>`).join(' | ')
+                }
             });
         })
 
@@ -166,6 +180,25 @@ try {
 
         app.getAsync('/pollSpotify', async function (req, res) {
             spotifySource.pollSpotify(scrobbleClients);
+            res.send('OK');
+        });
+
+        app.getAsync('/logs/settings/update', async function (req, res) {
+            const e = req.query;
+            for(const [setting, val] of Object.entries(req.query)) {
+                switch(setting) {
+                    case 'limit':
+                        logConfig.limit = Number.parseInt(val);
+                        break;
+                    case 'sort':
+                        logConfig.sort = val;
+                        break;
+                    case 'level':
+                        logConfig.level = val;
+                        logger.level = val;
+                        break;
+                }
+            }
             res.send('OK');
         });
 
