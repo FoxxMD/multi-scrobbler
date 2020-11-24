@@ -1,5 +1,5 @@
 import dayjs from "dayjs";
-import {buildTrackString, readJson} from "../utils.js";
+import {createLabelledLogger, readJson} from "../utils.js";
 import MalojaScrobbler from "./MalojaScrobbler.js";
 
 export default class ScrobbleClients {
@@ -7,8 +7,8 @@ export default class ScrobbleClients {
     clients;
     logger;
 
-    constructor(logger, clients = []) {
-        this.logger = logger;
+    constructor(clients = []) {
+        this.logger = createLabelledLogger();
         this.clients = clients;
     }
 
@@ -50,7 +50,7 @@ export default class ScrobbleClients {
                         this.logger.warn('Maloja api key not found in config');
                         continue;
                     }
-                    clients.push(new MalojaScrobbler(this.logger, clientConfig));
+                    clients.push(new MalojaScrobbler(clientConfig));
                     break;
                 default:
                     break;

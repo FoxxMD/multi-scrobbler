@@ -1,11 +1,14 @@
 import AbstractScrobbleClient from "./AbstractScrobbleClient.js";
 import request from 'superagent';
 import dayjs from 'dayjs';
-import {buildTrackString, sortByPlayDate} from "../utils.js";
+import {buildTrackString, createLabelledLogger, sortByPlayDate} from "../utils.js";
 
 export default class MalojaScrobbler extends AbstractScrobbleClient {
 
-    name = 'Maloja';
+    constructor(config = {}, options = {}) {
+        super(config, options);
+        this.logger = createLabelledLogger('maloja', 'Maloja');
+    }
 
     static formatPlayObj(obj) {
         const {
@@ -70,14 +73,14 @@ export default class MalojaScrobbler extends AbstractScrobbleClient {
                 // check if scrobble time is same as play date (when the track finished playing AKA entered recent tracks)
                 let scrobblePlayDiff = Math.abs(playDate.unix() - scrobbleTime.unix());
                 if (scrobblePlayDiff < 10) {
-                    //this.logger.debug(`Scrobble with same name (${scrobbleTitle}) found and the play (finish time) vs. scrobble time diff was smaller than 10 seconds`, {label: this.name});
+                    //this.logger.debug(`Scrobble with same name (${scrobbleTitle}) found and the play (finish time) vs. scrobble time diff was smaller than 10 seconds`);
                     return true;
                 }
                 // also need to check that scrobble time isn't the BEGINNING of the track -- if the source supports durations
                 if (trackLength !== undefined) {
                     scrobblePlayStartDiff = Math.abs(playDate.unix() - (scrobbleTime.unix() - trackLength));
                     if (scrobblePlayStartDiff < 10) {
-                        //this.logger.debug(`Scrobble with same name (${scrobbleTitle}) found and the play (start time) vs. scrobble time diff was smaller than 10 seconds`, {label: this.name});
+                        //this.logger.debug(`Scrobble with same name (${scrobbleTitle}) found and the play (start time) vs. scrobble time diff was smaller than 10 seconds`);
                         return true;
                     }
                 }
@@ -92,9 +95,9 @@ export default class MalojaScrobbler extends AbstractScrobbleClient {
             return false;
         });
         if (existingScrobble && largeDiffs.length > 0) {
-            this.logger.debug('Scrobbles with same name detected but play diff and scrobble diffs were too large to consider dups.', {label: this.name});
+            this.logger.debug('Scrobbles with same name detected but play diff and scrobble diffs were too large to consider dups.');
             for (const diff of largeDiffs) {
-                this.logger.debug(`Scrobble: ${diff.title} | Played At ${playDate.local().format()} | End Diff ${diff.endTimeDiff.toFixed(0)}s | Start Diff ${diff.startTimeDiff === undefined ? 'N/A' : `${diff.startTimeDiff.toFixed(0)}s`}`, {label: this.name});
+                this.logger.debug(`Scrobble: ${diff.title} | Played At ${playDate.local().format()} | End Diff ${diff.endTimeDiff.toFixed(0)}s | Start Diff ${diff.startTimeDiff === undefined ? 'N/A' : `${diff.startTimeDiff.toFixed(0)}s`}`);
             }
         }
         return existingScrobble;
@@ -127,9 +130,9 @@ export default class MalojaScrobbler extends AbstractScrobbleClient {
                     time: playDate.unix(),
                 });
             if (newFromSource) {
-                this.logger.info(`Scrobbled Newly Found Track (${source}): ${buildTrackString(playObj)}`, {label: this.name});
+                this.logger.info(`Scrobbled Newly Found Track (${source}): ${buildTrackString(playObj)}`);
             } else {
-                this.logger.info(`Scrobbled Backlogged Track (${source}): ${buildTrackString(playObj)}`, {label: this.name});
+                this.logger.info(`Scrobbled Backlogged Track (${source}): ${buildTrackString(playObj)}`);
             }
         } catch (e) {
             this.logger.error('Error while scrobbling', {label: this.name, playInfo: buildTrackString(playObj)});

@@ -1,6 +1,10 @@
 import fs, {promises, constants} from "fs";
 import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc.js';
+import winston from "winston";
+
+const {format } = winston;
+const {combine, printf, timestamp, padLevels, label, splat } = format;
 
 dayjs.extend(utc);
 
@@ -69,6 +73,43 @@ export const buildTrackString = (playObj) => {
 // sorts playObj formatted objects by playDate in ascending (oldest first) order
 export const sortByPlayDate = (a, b) => a.data.playDate.isAfter(b.data.playDate) ? 1 : -1;
 
+const s = splat();
+//const SPLAT = Symbol.for('splat')
+
+let longestLabel = 3;
+export const defaultFormat = printf(({level, message, label = 'App', timestamp, /*[SPLAT]: splatInfo = {}, ...rest*/}) => {
+    if(label.length > longestLabel) {
+        longestLabel = label.length;
+    }
+    return `${timestamp} ${level.padEnd(7)}: [${label.padEnd(longestLabel)}] ${message}`;
+});
+
+export const labelledFormat = (labelName = 'App') => {
+    const l = label({ label: labelName, message: false });
+    return combine(
+        timestamp(
+            {
+                format: () => dayjs().local().format(),
+            }
+        ),
+        l,
+        s,
+        defaultFormat,
+    );
+}
+
+export const createLabelledLogger = (name = 'default', label = 'App') => {
+    if(winston.loggers.has(name)) {
+        return winston.loggers.get(name);
+    }
+    const def = winston.loggers.get('default');
+    winston.loggers.add(name, {
+        transports: def.transports,
+        level: def.level,
+        format: labelledFormat(label)
+    });
+    return winston.loggers.get(name);
+}
 
 /*
 * Code below this comes from https://github.com/samthor/promises

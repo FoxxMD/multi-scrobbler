@@ -1,9 +1,7 @@
 import dayjs from "dayjs";
-import {buildTrackString, readJson} from "../utils.js";
+import {buildTrackString, createLabelledLogger} from "../utils.js";
 
 export default class PlexSource {
-
-    name = 'Plex';
 
     logger;
     clients;
@@ -11,10 +9,9 @@ export default class PlexSource {
 
     discoveredTracks = 0;
 
-    constructor(logger, clients, {user = process.env.PLEX_USER} = {}, name = 'Plex') {
-        this.logger = logger;
+    constructor(clients, {user = process.env.PLEX_USER} = {}, {name: loggerName = 'plex', label = 'Plex'} = {}) {
+        this.logger = createLabelledLogger(loggerName, label);
         this.clients = clients;
-        this.name = name;
 
         if (user === undefined || user === null) {
             this.users = undefined;
@@ -25,9 +22,9 @@ export default class PlexSource {
         }
 
         if (this.users === undefined) {
-            this.logger.warn('Initialized with no users specified! Tracks from all users will be scrobbled.', {label: this.name});
+            this.logger.warn('Initialized with no users specified! Tracks from all users will be scrobbled.');
         } else {
-            this.logger.info(`Initialized with allowed users: ${this.users.join(', ')}`, {label: this.name});
+            this.logger.info(`Initialized with allowed users: ${this.users.join(', ')}`);
         }
     }
 
@@ -65,17 +62,17 @@ export default class PlexSource {
         const {meta: {mediaType, title, event, user}} = playObj;
 
         if (this.users !== undefined && user !== undefined && !this.users.includes(user)) {
-            this.logger.debug(`Will not scrobble webhook event because author was not an allowed user: ${user}`, {label: this.name})
+            this.logger.debug(`Will not scrobble webhook event because author was not an allowed user: ${user}`)
             return false;
         }
 
         if (event !== 'media.scrobble') {
-            this.logger.debug(`Will not scrobble webhook event because it is not media.scrobble (${event})`, { label: this.name })
+            this.logger.debug(`Will not scrobble webhook event because it is not media.scrobble (${event})`)
             return false;
         }
 
         if (mediaType !== 'track') {
-            this.logger.debug(`Will not scrobble webhook event because media type was not a track (${mediaType}). Item: ${title}`, {label: this.name});
+            this.logger.debug(`Will not scrobble webhook event because media type was not a track (${mediaType}). Item: ${title}`);
             return false;
         }
 
@@ -87,14 +84,14 @@ export default class PlexSource {
             return;
         }
 
-        this.logger.info(`New Track => ${buildTrackString(playObj)}`, {label: this.name});
+        this.logger.info(`New Track => ${buildTrackString(playObj)}`);
         try {
             await this.clients.scrobble(playObj);
             // only gets hit if we scrobbled ok
             this.discoveredTracks++;
         } catch (e) {
-            this.logger.error('Encountered error while scrobbling', {label: this.name})
-            this.logger.error(e, {label: this.name})
+            this.logger.error('Encountered error while scrobbling')
+            this.logger.error(e)
         }
     }
 }

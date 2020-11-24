@@ -1,6 +1,14 @@
 import dayjs from "dayjs";
 import {EventEmitter} from "events";
-import {buildTrackString, readJson, sleep, writeFile, makeSingle, sortByPlayDate} from "../utils.js";
+import {
+    buildTrackString,
+    readJson,
+    sleep,
+    writeFile,
+    makeSingle,
+    sortByPlayDate,
+    createLabelledLogger
+} from "../utils.js";
 import SpotifyWebApi from "spotify-web-api-node";
 
 const scopes = ['user-read-recently-played', 'user-read-currently-playing'];
@@ -14,7 +22,6 @@ export default class SpotifySource {
     localUrl;
     workingCredsPath;
     configDir;
-    name = 'Spotify';
 
     spotifyPoller;
     pollerRunning = false;
@@ -22,8 +29,8 @@ export default class SpotifySource {
     emitter;
     discoveredTracks = 0;
 
-    constructor(logger, config = {}) {
-        this.logger = logger;
+    constructor(config = {}) {
+        this.logger = createLabelledLogger('spotify', 'Spotify');
         const {
             localUrl,
             configDir,
@@ -112,16 +119,16 @@ export default class SpotifySource {
         }
 
         if (Object.values(apiConfig).every(x => x === undefined)) {
-            this.logger.info('No values found for Spotify configuration, assuming user does not want to set it up', {label: this.name});
+            this.logger.info('No values found for Spotify configuration, assuming user does not want to set it up');
         } else {
             if (token === undefined) {
                 let ready = true;
                 if (clientId === undefined) {
-                    this.logger.warn('No access token exists and clientId is not defined', {label: this.name});
+                    this.logger.warn('No access token exists and clientId is not defined');
                     ready = false;
                 }
                 if (clientSecret === undefined) {
-                    this.logger.warn('No access token exists and clientSecret is not defined', {label: this.name})
+                    this.logger.warn('No access token exists and clientSecret is not defined')
                     ready = false;
                 }
                 if (ready === false) {
@@ -157,14 +164,14 @@ export default class SpotifySource {
 
     pollSpotify = (clients) => {
         if (this.spotifyApi === undefined) {
-            this.logger.warn('Cannot poll spotify without valid credentials configuration', {label: this.name})
+            this.logger.warn('Cannot poll spotify without valid credentials configuration')
             return;
         }
         this.pollerRunning = true;
         return this.spotifyPoller(this.logger, this.spotifyApi, this.interval, this.workingCredsPath, clients, this.emitter)
             .catch((e) => {
-                this.logger.error('Error occurred while polling spotify, polling has been stopped', {label: this.name});
-                this.logger.error(e, {label: this.name});
+                this.logger.error('Error occurred while polling spotify, polling has been stopped');
+                this.logger.error(e);
             })
             .finally(() => {
                 this.pollerRunning = false;
@@ -173,22 +180,22 @@ export default class SpotifySource {
 }
 
 const pollSpotify = function* (logger, spotifyApi, interval = 60, credsPath, clients, emitter) {
-    logger.info('Starting spotify polling', {label: 'Spotify'});
+    logger.info('Starting spotify polling');
     let lastTrackPlayedAt = dayjs();
     let checkCount = 0;
     while (true) {
         let data = {};
-        logger.debug('Refreshing recently played', {label: 'Spotify'})
+        logger.debug('Refreshing recently played')
         data = yield spotifyApi.getMyRecentlyPlayedTracks({
             limit: 20
         });
         if (data instanceof Error) {
             if (data.statusCode === 401) {
                 if (spotifyApi.getRefreshToken() === undefined) {
-                    logger.error('Access token was not valid and no refresh token was present, bailing out of polling', {label: 'Spotify'});
+                    logger.error('Access token was not valid and no refresh token was present, bailing out of polling');
                     return Promise.resolve();
                 }
-                logger.debug('Access token was not valid, attempting to refresh', {label: 'Spotify'});
+                logger.debug('Access token was not valid, attempting to refresh');
 
                 const tokenResponse = yield spotifyApi.refreshAccessToken();
                 const {
@@ -208,12 +215,12 @@ const pollSpotify = function* (logger, spotifyApi, interval = 60, credsPath, cli
                     limit: 20
                 });
                 if (data instanceof Error) {
-                    logger.error('Refreshing access token encountered an error', {label: 'Spotify'});
+                    logger.error('Refreshing access token encountered an error');
                     logger.error(data, {label: 'Spotify'});
                     return Promise.resolve(data);
                 }
             } else {
-                logger.error('Refreshing access token encountered an error', {label: 'Spotify'});
+                logger.error('Refreshing access token encountered an error');
                 logger.error(data, {label: 'Spotify'});
                 return Promise.reject(data);
             }
@@ -228,7 +235,7 @@ const pollSpotify = function* (logger, spotifyApi, interval = 60, credsPath, cli
             const {data: {playDate} = {}} = playObj;
             if (playDate.unix() > lastTrackPlayedAt.unix()) {
                 newTracksFound = true;
-                logger.info(`New Track => ${buildTrackString(playObj)}`, {label: 'Spotify'});
+                logger.info(`New Track => ${buildTrackString(playObj)}`);
 
                 if (closeToInterval === false) {
                     closeToInterval = Math.abs(now.unix() - playDate.unix()) < 5;
@@ -251,15 +258,15 @@ const pollSpotify = function* (logger, spotifyApi, interval = 60, credsPath, cli
             // because the interval check was so close to the play date we are going to delay client calls for a few secs
             // this way we don't accidentally scrobble ahead of any other clients (we always want to be behind so we can check for dups)
             // additionally -- it should be ok to have this in the for loop because played_at will only decrease (be further in the past) so we should only hit this once, hopefully
-            logger.info('Track is close to polling interval! Delaying scrobble clients refresh by 10 seconds so other clients have time to scrobble first', {label: 'Spotify'});
+            logger.info('Track is close to polling interval! Delaying scrobble clients refresh by 10 seconds so other clients have time to scrobble first');
             yield sleep(10 * 1000);
         }
 
         if (newTracksFound === false) {
             if (playObjs.length === 0) {
-                logger.debug(`No new tracks found and no tracks returned from API`, {label: 'Spotify'});
+                logger.debug(`No new tracks found and no tracks returned from API`);
             } else {
-                logger.debug(`No new tracks found. Newest track returned was ${buildTrackString(playObjs.slice(-1)[0])}`, {label: 'Spotify'});
+                logger.debug(`No new tracks found. Newest track returned was ${buildTrackString(playObjs.slice(-1)[0])}`);
             }
         } else {
             checkCount = 0;
@@ -289,7 +296,7 @@ const pollSpotify = function* (logger, spotifyApi, interval = 60, credsPath, cli
         }
 
         // sleep for interval
-        logger.debug(`Sleeping for ${sleepTime}s`, {label: 'Spotify'});
+        logger.debug(`Sleeping for ${sleepTime}s`);
         yield sleep(sleepTime * 1000);
     }
 };

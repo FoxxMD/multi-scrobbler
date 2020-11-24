@@ -3,10 +3,8 @@ import PlexSource from "./PlexSource.js";
 
 export default class TautulliSource extends PlexSource {
 
-    name = 'Tautulli';
-
-    constructor(logger, clients, json) {
-        super(logger, clients, json, 'Tautulli');
+    constructor(clients, json) {
+        super(clients, json, {name: 'tautulli', label: 'Tautulli'});
     }
 
     static formatPlayObj(obj, newFromSource = false) {
@@ -48,11 +46,11 @@ export default class TautulliSource extends PlexSource {
         const {meta: {mediaType, title, user}} = playObj;
 
         if (this.users !== undefined && user !== undefined && !this.users.includes(user)) {
-            this.logger.debug(`Will not scrobble webhook event because author was not an allowed user: ${user}`, {label: this.name})
+            this.logger.debug(`Will not scrobble webhook event because author was not an allowed user: ${user}`)
             return false;
         }
         if (mediaType !== 'track') {
-            this.logger.debug(`Will not scrobble webhook event because media type was not a track (${mediaType}). Item: ${title}`, {label: this.name});
+            this.logger.debug(`Will not scrobble webhook event because media type was not a track (${mediaType}). Item: ${title}`);
             return false;
         }
         return true;

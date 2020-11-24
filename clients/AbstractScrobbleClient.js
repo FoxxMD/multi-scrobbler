@@ -1,8 +1,7 @@
 import dayjs from "dayjs";
+import {createLabelledLogger} from "../utils.js";
 
 export default class AbstractScrobbleClient {
-
-    name;
 
     recentScrobbles = [];
     newestScrobbleTime;
@@ -15,8 +14,8 @@ export default class AbstractScrobbleClient {
     config;
     logger;
 
-    constructor(logger, config = {}, options = {}) {
-        this.logger = logger;
+    constructor(config = {}, options = {}) {
+        this.logger = createLabelledLogger('default', 'App');
         this.config = config;
         const {
             refreshEnabled = true,

@@ -8,7 +8,7 @@ import utc from 'dayjs/plugin/utc.js';
 import isBetween from 'dayjs/plugin/isBetween.js';
 import {Writable} from 'stream';
 import 'winston-daily-rotate-file';
-import {readJson, writeFile} from "./utils.js";
+import {labelledFormat, readJson } from "./utils.js";
 import Clients from './clients/ScrobbleClients.js';
 import SpotifySource from "./sources/SpotifySource.js";
 import TautulliSource from "./sources/TautulliSource.js";
@@ -20,8 +20,7 @@ const upload = multer({storage: storage})
 dayjs.extend(utc)
 dayjs.extend(isBetween);
 
-const {format, createLogger, transports} = winston;
-const {combine, printf, timestamp} = format;
+const {transports} = winston;
 
 let output = []
 const stream = new Writable()
@@ -45,36 +44,35 @@ const logPath = process.env.LOG_DIR || `${process.cwd()}/logs`;
 const port = process.env.PORT ?? 9078;
 const localUrl = `http://localhost:${port}`;
 
-const myFormat = printf(({level, message, label = 'App', timestamp}) => {
-    return `${timestamp} [${label}] ${level}: ${message}`;
+const rotateTransport = new winston.transports.DailyRotateFile({
+    dirname: logPath,
+    createSymlink: true,
+    symlinkName: 'scrobble-current.log',
+    filename: 'scrobble-%DATE%.log',
+    datePattern: 'YYYY-MM-DD',
+    maxSize: '5m'
 });
 
-const logger = createLogger({
-    level: logConfig.level,
-    format: combine(
-        timestamp(
-            {
-                format: () => dayjs().local().format(),
-            }
-        ),
-        myFormat
-    ),
-    transports: [
-        new transports.Console(),
-        streamTransport,
-    ]
-});
+const consoleTransport = new transports.Console();
+
+const myTransports = [
+    consoleTransport,
+    streamTransport,
+];
 
 if (typeof logPath === 'string') {
-    logger.add(new winston.transports.DailyRotateFile({
-        dirname: logPath,
-        createSymlink: true,
-        symlinkName: 'scrobble-current.log',
-        filename: 'scrobble-%DATE%.log',
-        datePattern: 'YYYY-MM-DD',
-        maxSize: '5m'
-    }))
+    myTransports.push(rotateTransport);
 }
+
+const loggerOptions = {
+    level: logConfig.level,
+    format: labelledFormat(),
+    transports: myTransports,
+};
+
+winston.loggers.add('default', loggerOptions);
+
+const logger = winston.loggers.get('default');
 
 const configDir = process.env.CONFIG_DIR || `${process.cwd()}/config`;
 
@@ -103,7 +101,7 @@ try {
         /*
         * setup clients
         * */
-        const scrobbleClients = new Clients(logger);
+        const scrobbleClients = new Clients();
         await scrobbleClients.buildClients(clients, configDir);
         if (scrobbleClients.clients.length === 0) {
             logger.warn('No scrobble clients were configured')
@@ -112,7 +110,7 @@ try {
         /*
         * setup sources
         * */
-        const spotifySource = new SpotifySource(logger, {configDir, localUrl});
+        const spotifySource = new SpotifySource({configDir, localUrl});
         await spotifySource.buildSpotifyApi(spotify);
 
         let plexJson = {};
@@ -122,8 +120,8 @@ try {
             // no config exists but that's ok
         }
 
-        const tautulliSource = await new TautulliSource(logger, scrobbleClients, {...plex, ...plexJson});
-        const plexSource = await new PlexSource(logger, scrobbleClients, {...plex, ...plexJson});
+        const tautulliSource = await new TautulliSource(scrobbleClients, {...plex, ...plexJson});
+        const plexSource = await new PlexSource(scrobbleClients, {...plex, ...plexJson});
 
         app.getAsync('/', async function (req, res) {
             let slicedLog = output.slice(0, logConfig.limit + 1);
@@ -191,7 +189,9 @@ try {
                         break;
                     case 'level':
                         logConfig.level = val;
-                        logger.level = val;
+                        for(const [key, logger] of winston.loggers.loggers) {
+                            logger.level = val;
+                        }
                         break;
                 }
             }
