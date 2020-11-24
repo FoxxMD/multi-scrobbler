@@ -157,7 +157,7 @@ try {
         })
 
         app.postAsync('/tautulli', async function (req, res) {
-            await tautulliSource.handle(req);
+            await tautulliSource.handle(TautulliSource.formatPlayObj(req.body, true));
             res.send('OK');
         });
 
@@ -168,7 +168,7 @@ try {
                 } = {}
             } = req;
             if (payload !== undefined) {
-                await plexSource.handle(JSON.parse(payload));
+                await plexSource.handle(PlexSource.formatPlayObj(JSON.parse(payload), true));
             }
             res.send('OK');
         });

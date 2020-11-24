@@ -1,21 +1,9 @@
 import dayjs from "dayjs";
-import {buildTrackString, readJson} from "../utils.js";
+import PlexSource from "./PlexSource";
 
-export default class TautulliSource {
+export default class TautulliSource extends PlexSource {
 
     name = 'Tautulli';
-
-    logger;
-    clients;
-    user;
-
-    discoveredTracks = 0;
-
-    constructor(logger, clients, { user = process.env.PLEX_USER } = {}) {
-        this.logger = logger;
-        this.clients = clients;
-        this.user = user;
-    }
 
     static formatPlayObj(obj, newFromSource = false) {
         const {
@@ -52,39 +40,17 @@ export default class TautulliSource {
         }
     }
 
-    handle = async (req) => {
-        const playObj = TautulliSource.formatPlayObj(req.body, true);
+    isValidEvent = (playObj) => {
         const {meta: {mediaType, title, user}} = playObj;
 
-        if (this.user !== undefined && user !== undefined) {
-            if (Array.isArray(this.user)) {
-                if (this.user.includes(user)) {
-                    this.logger.debug(`Will not scrobble webhook event because specified user was not part of user array`, {
-                        user,
-                        label: this.name
-                    })
-                    return;
-                }
-            } else if (this.user !== user) {
-                this.logger.debug(`Will not scrobble webhook event because specified user was not found`, {
-                    user,
-                    label: this.name
-                })
-                return;
-            }
+        if (this.users !== undefined && user !== undefined && !this.users.includes(user)) {
+            this.logger.debug(`Will not scrobble webhook event because author was not an allowed user: ${user}`, {label: this.name})
+            return false;
         }
         if (mediaType !== 'track') {
-            this.logger.warn(`Webhook posted a non-music media type (${mediaType}), not scrobbling this. Item: ${title}`, {label: this.name});
-        } else {
-            this.logger.info(`New Track => ${buildTrackString(playObj)}`, {label: this.name});
-            try {
-                await this.clients.scrobble(playObj);
-                // only gets hit if we scrobbled ok
-                this.discoveredTracks++;
-            } catch (e) {
-                this.logger.error('Encountered error while scrobbling', {label: this.name})
-                this.logger.error(e, {label: this.name})
-            }
+            this.logger.debug(`Will not scrobble webhook event because media type was not a track (${mediaType}). Item: ${title}`, {label: this.name});
+            return false;
         }
+        return true;
     }
 }
