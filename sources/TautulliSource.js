@@ -1,5 +1,5 @@
 import dayjs from "dayjs";
-import PlexSource from "./PlexSource";
+import PlexSource from "./PlexSource.js";
 
 export default class TautulliSource extends PlexSource {
 
