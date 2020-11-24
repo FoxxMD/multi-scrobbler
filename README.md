@@ -2,7 +2,7 @@
 
 [![Latest Release](https://img.shields.io/github/v/release/foxxmd/multi-scrobbler)](https://github.com/FoxxMD/multi-scrobbler/releases)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Docker Pulls](https://img.shields.io/docker/pulls/foxxmd/multi-scrobbler)](https://hub.docker.com/repository/docker/foxxmd/multi-scrobbler)
+[![Docker Pulls](https://img.shields.io/docker/pulls/foxxmd/multi-scrobbler)](https://hub.docker.com/r/foxxmd/multi-scrobbler)
 
 A single-user, javascript app to scrobble your recent plays to [Maloja](https://github.com/krateng/maloja) (and other clients, eventually)
 
@@ -25,7 +25,7 @@ Clone this repository somewhere and then install from the working directory
 npm install
 ```
 
-### [Dockerhub](https://hub.docker.com/repository/docker/foxxmd/multi-scrobbler)
+### [Dockerhub](https://hub.docker.com/r/foxxmd/multi-scrobbler)
 
 ```
 foxxmd/multi-scrobbler:latest
