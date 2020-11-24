@@ -76,11 +76,7 @@ if (typeof logPath === 'string') {
     }))
 }
 
-const scopes = ['user-read-recently-played', 'user-read-currently-playing'];
-const state = 'random';
-
 const configDir = process.env.CONFIG_DIR || `${process.cwd()}/config`;
-const workingCredentialsPath = `${configDir}/currentCreds.json`;
 
 const app = addAsync(express());
 
@@ -175,7 +171,7 @@ try {
 
         app.getAsync('/authSpotify', async function (req, res) {
             logger.info('Redirecting to spotify authorization url');
-            res.redirect(spotifySource.spotifyApi.createAuthorizeURL(scopes, state));
+            res.redirect(spotifySource.createAuthUrl());
         });
 
         app.getAsync('/pollSpotify', async function (req, res) {
@@ -203,21 +199,15 @@ try {
         });
 
         app.getAsync(/.*callback$/, async function (req, res, next) {
-            const {error, code} = req.query;
-            if (error === undefined) {
-                const tokenResponse = await spotifySource.spotifyApi.authorizationCodeGrant(code);
-                spotifySource.spotifyApi.setAccessToken(tokenResponse.body['access_token']);
-                spotifySource.spotifyApi.setRefreshToken(tokenResponse.body['refresh_token']);
-                await writeFile(workingCredentialsPath, JSON.stringify({
-                    token: tokenResponse.body['access_token'],
-                    refreshToken: tokenResponse.body['refresh_token']
-                }));
-                logger.info('Got auth code from callback!');
+            logger.info('Received auth code callback from Spotify', { label: 'Spotify' });
+            const tokenResult = await spotifySource.handleAuthCodeCallback(req.query);
+            let responseContent = 'OK';
+            if(tokenResult === true) {
                 spotifySource.pollSpotify(scrobbleClients);
-                return res.send('OK');
             } else {
-                throw new Error('User denied oauth access');
+                responseContent = tokenResult;
             }
+            return res.send(responseContent);
         });
 
         if (spotifySource.spotifyApi !== undefined) {

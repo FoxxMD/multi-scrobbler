@@ -3,6 +3,9 @@ import {EventEmitter} from "events";
 import {buildTrackString, readJson, sleep, writeFile, makeSingle, sortByPlayDate} from "../utils.js";
 import SpotifyWebApi from "spotify-web-api-node";
 
+const scopes = ['user-read-recently-played', 'user-read-currently-playing'];
+const state = 'random';
+
 export default class SpotifySource {
 
     logger;
@@ -127,6 +130,28 @@ export default class SpotifySource {
             }
 
             this.spotifyApi = new SpotifyWebApi(apiConfig);
+        }
+    }
+
+    createAuthUrl = () => {
+        return this.spotifyApi.createAuthorizeURL(scopes, state);
+    }
+
+    handleAuthCodeCallback = async ({error, code}) => {
+        if (error === undefined) {
+            const tokenResponse = await this.spotifyApi.authorizationCodeGrant(code);
+            this.spotifyApi.setAccessToken(tokenResponse.body['access_token']);
+            this.spotifyApi.setRefreshToken(tokenResponse.body['refresh_token']);
+            await writeFile(this.workingCredsPath, JSON.stringify({
+                token: tokenResponse.body['access_token'],
+                refreshToken: tokenResponse.body['refresh_token']
+            }));
+            this.logger.info('Got token from code grant authorization!');
+            return true;
+        } else {
+            this.logger.warn('Callback contained an error! User may have denied access?')
+            this.logger.error(error);
+            return error;
         }
     }
 
