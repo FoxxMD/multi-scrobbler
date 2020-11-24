@@ -11,9 +11,10 @@ export default class PlexSource {
 
     discoveredTracks = 0;
 
-    constructor(logger, clients, {user = process.env.PLEX_USER} = {}) {
+    constructor(logger, clients, {user = process.env.PLEX_USER} = {}, name = 'Plex') {
         this.logger = logger;
         this.clients = clients;
+        this.name = name;
 
         if (user === undefined || user === null) {
             this.users = undefined;

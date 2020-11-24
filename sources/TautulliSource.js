@@ -5,6 +5,10 @@ export default class TautulliSource extends PlexSource {
 
     name = 'Tautulli';
 
+    constructor(logger, clients, json) {
+        super(logger, clients, json, 'Tautulli');
+    }
+
     static formatPlayObj(obj, newFromSource = false) {
         const {
             artist_name,
