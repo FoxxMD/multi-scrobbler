@@ -60,6 +60,7 @@ export default class MalojaScrobbler extends AbstractScrobbleClient {
 
         const lowerTitle = track.toLocaleLowerCase();
         const largeDiffs = [];
+        // TODO add a runtime config option for verbose debugging for commented log statements
         const existingScrobble = this.recentScrobbles.find((x) => {
             const {data: {playDate: scrobbleTime, track: scrobbleTitle} = {}} = x;
             const lowerScrobbleTitle = scrobbleTitle.toLocaleLowerCase();
@@ -69,14 +70,14 @@ export default class MalojaScrobbler extends AbstractScrobbleClient {
                 // check if scrobble time is same as play date (when the track finished playing AKA entered recent tracks)
                 let scrobblePlayDiff = Math.abs(playDate.unix() - scrobbleTime.unix());
                 if (scrobblePlayDiff < 10) {
-                    this.logger.debug(`Scrobble with same name (${scrobbleTitle}) found and the play (finish time) vs. scrobble time diff was smaller than 10 seconds`, {label: this.name});
+                    //this.logger.debug(`Scrobble with same name (${scrobbleTitle}) found and the play (finish time) vs. scrobble time diff was smaller than 10 seconds`, {label: this.name});
                     return true;
                 }
                 // also need to check that scrobble time isn't the BEGINNING of the track -- if the source supports durations
                 if (trackLength !== undefined) {
                     scrobblePlayStartDiff = Math.abs(playDate.unix() - (scrobbleTime.unix() - trackLength));
                     if (scrobblePlayStartDiff < 10) {
-                        this.logger.debug(`Scrobble with same name (${scrobbleTitle}) found and the play (start time) vs. scrobble time diff was smaller than 10 seconds`, {label: this.name});
+                        //this.logger.debug(`Scrobble with same name (${scrobbleTitle}) found and the play (start time) vs. scrobble time diff was smaller than 10 seconds`, {label: this.name});
                         return true;
                     }
                 }
