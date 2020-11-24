@@ -66,6 +66,9 @@ export const buildTrackString = (playObj) => {
     return `${artist} - ${track}, played at ${playDate.local().format()}`
 }
 
+// sorts playObj formatted objects by playDate in ascending (oldest first) order
+export const sortByPlayDate = (a, b) => a.data.playDate.isAfter(b.data.playDate) ? 1 : -1;
+
 
 /*
 * Code below this comes from https://github.com/samthor/promises
