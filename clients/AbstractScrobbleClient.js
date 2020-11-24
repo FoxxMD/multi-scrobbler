@@ -30,8 +30,10 @@ export default class AbstractScrobbleClient {
         return this.lastScrobbleCheck;
     }
 
-    inValidTimeframe = (playDate) => {
-        const newest = this.newestScrobbleTime ?? dayjs();
-        return playDate.isBetween(this.oldestScrobbleTime, newest);
+    // time frame is valid as long as the play date for the source track is newer than the oldest play time from the scrobble client
+    // ...this is assuming the scrobble client is returning "most recent" scrobbles
+    timeFrameIsValid = (playDate) => {
+        const oldest = this.oldestScrobbleTime ?? dayjs();
+        return playDate.isAfter(oldest);
     }
 }

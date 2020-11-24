@@ -59,12 +59,11 @@ export default class ScrobbleClients {
         this.clients = clients;
     }
 
-    scrobble = async (playObjs = [], options = {}) => {
+    scrobble = async (data, options = {}) => {
+        const playObjs = Array.isArray(data) ? data : [data];
         const {
             forceRefresh = false,
             checkTime = dayjs(),
-            newTracksFromSource = playObjs.map(x => buildTrackString(x)),
-            source,
         } = options;
 
         const tracksScrobbled = [];
@@ -74,9 +73,9 @@ export default class ScrobbleClients {
                 await client.refreshScrobbles();
             }
             for(const playObj of playObjs) {
-                if (client.inValidTimeframe(playObj.data.playDate) && !client.alreadyScrobbled(playObj)) {
+                if (client.timeFrameIsValid(playObj.data.playDate) && !client.alreadyScrobbled(playObj)) {
                     tracksScrobbled.push(playObj);
-                    await client.scrobble(playObj, { foundInSourceDiff: newTracksFromSource.some(x => x === buildTrackString(playObj)), source });
+                    await client.scrobble(playObj);
                 }
             }
         }

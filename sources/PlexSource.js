@@ -17,7 +17,7 @@ export default class PlexSource {
         this.user = user;
     }
 
-    static formatPlayObj(obj) {
+    static formatPlayObj(obj, newFromSource = false) {
         const {
             event,
             Account: {
@@ -41,20 +41,16 @@ export default class PlexSource {
                 event,
                 mediaType: type,
                 user,
+                source: 'Plex',
+                newFromSource,
             }
         }
     }
 
     handle = async (payload) => {
-        const playObj = PlexSource.formatPlayObj(payload);
+        const playObj = PlexSource.formatPlayObj(payload, true);
         const {meta: {mediaType, title, event, user}} = playObj;
-        if (event !== 'media.scrobble') {
-            this.logger.debug(`Will not scrobble webhook event because it is not media.scrobble: ${event}`, {
-                event,
-                label: this.name
-            })
-            return;
-        }
+
         if (this.user !== undefined && user !== undefined) {
             if (Array.isArray(this.user)) {
                 if (this.user.includes(user)) {
@@ -72,12 +68,21 @@ export default class PlexSource {
                 return;
             }
         }
+
+        if (event !== 'media.scrobble') {
+            this.logger.debug(`Will not scrobble webhook event because it is not media.scrobble: ${event}`, {
+                event,
+                label: this.name
+            })
+            return;
+        }
+
         if (mediaType !== 'track') {
             this.logger.warn(`Webhook posted a non-music media type (${mediaType}), not scrobbling this. Item: ${title}`, {label: this.name});
         } else {
             this.logger.info(`New Track => ${buildTrackString(playObj)}`, {label: this.name});
             try {
-                await this.clients.scrobble([playObj], { source: this.name } );
+                await this.clients.scrobble(playObj);
                 // only gets hit if we scrobbled ok
                 this.discoveredTracks++;
             } catch (e) {

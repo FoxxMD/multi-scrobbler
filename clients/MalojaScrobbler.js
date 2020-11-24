@@ -1,25 +1,49 @@
 import AbstractScrobbleClient from "./AbstractScrobbleClient.js";
 import request from 'superagent';
 import dayjs from 'dayjs';
-import {buildTrackString} from "../utils.js";
+import {buildTrackString, sortByPlayDate} from "../utils.js";
 
 export default class MalojaScrobbler extends AbstractScrobbleClient {
 
     name = 'Maloja';
 
+    static formatPlayObj(obj) {
+        const {
+            artists,
+            title,
+            time,
+        } = obj;
+        let artistString = artists.reduce((acc, curr) => acc.concat(curr.name), []).join(',');
+        return {
+            data: {
+                artist: artistString,
+                track: title,
+                playDate: dayjs.unix(time),
+            },
+            meta: {
+                source: 'Maloja',
+            }
+        }
+    }
+
     refreshScrobbles = async () => {
         if (this.refreshEnabled) {
             const {url} = this.config;
-            const today = dayjs().format('YYYY/MM/DD');
-            const resp = await request.get(`${url}/apis/mlj_1/scrobbles?since=${today}&to=${today}&max=50`);
-            this.recentScrobbles = resp.body.list;
-            this.newestScrobbleTime = dayjs.unix(this.recentScrobbles.slice(0,1)[0].time);
-            this.oldestScrobbleTime = dayjs.unix(this.recentScrobbles.slice(-1)[0].time);
+            const resp = await request.get(`${url}/apis/mlj_1/scrobbles?max=20`);
+            this.recentScrobbles = resp.body.list.map(x => MalojaScrobbler.formatPlayObj(x)).sort(sortByPlayDate);
+            const [{data: {playDate: newestScrobbleTime = dayjs()}} = {}] = this.recentScrobbles.slice(-1);
+            const [{data: {playDate: oldestScrobbleTime = dayjs()}} = {}] = this.recentScrobbles.slice(0, 1);
+            this.newestScrobbleTime = newestScrobbleTime;
+            this.oldestScrobbleTime = oldestScrobbleTime;
         }
         this.lastScrobbleCheck = dayjs();
     }
 
     alreadyScrobbled = (playObj) => {
+        return this.existingScrobble(playObj) !== undefined;
+    }
+
+    existingScrobble = (playObj) => {
         if (false === this.checkExistingScrobbles) {
             return false;
         }
@@ -34,32 +58,48 @@ export default class MalojaScrobbler extends AbstractScrobbleClient {
             } = {},
         } = playObj;
 
-        const playUnix = playDate.unix();
         const lowerTitle = track.toLocaleLowerCase();
-        return this.recentScrobbles.some((x) => {
-            const {time: scrobbleTime, title: scrobbleTitle} = x;
+        const largeDiffs = [];
+        const existingScrobble = this.recentScrobbles.find((x) => {
+            const {data: {playDate: scrobbleTime, track: scrobbleTitle} = {}} = x;
             const lowerScrobbleTitle = scrobbleTitle.toLocaleLowerCase();
             if (lowerTitle.includes(lowerScrobbleTitle) || lowerScrobbleTitle.includes(lowerTitle)) {
+                let scrobblePlayStartDiff;
+
                 // check if scrobble time is same as play date (when the track finished playing AKA entered recent tracks)
-                let scrobblePlayDiff = Math.abs(playUnix - scrobbleTime);
+                let scrobblePlayDiff = Math.abs(playDate.unix() - scrobbleTime.unix());
                 if (scrobblePlayDiff < 10) {
-                    // this.logger.debug(`Scrobble with same name (${scrobbleTitle}) found and the play (finish time) vs. scrobble time diff was smaller than 10 seconds`, {label: this.name});
+                    this.logger.debug(`Scrobble with same name (${scrobbleTitle}) found and the play (finish time) vs. scrobble time diff was smaller than 10 seconds`, {label: this.name});
                     return true;
                 }
-                // also need to check that scrobble time isn't the BEGINNING of the track
-                let scrobblePlayStartDiff = Math.abs(playUnix - (scrobbleTime - trackLength));
-                if (scrobblePlayStartDiff < 10) {
-                   // this.logger.debug(`Scrobble with same name (${scrobbleTitle}) found and the play (start time) vs. scrobble time diff was smaller than 10 seconds`, {label: this.name});
-                    return true;
+                // also need to check that scrobble time isn't the BEGINNING of the track -- if the source supports durations
+                if (trackLength !== undefined) {
+                    scrobblePlayStartDiff = Math.abs(playDate.unix() - (scrobbleTime.unix() - trackLength));
+                    if (scrobblePlayStartDiff < 10) {
+                        this.logger.debug(`Scrobble with same name (${scrobbleTitle}) found and the play (start time) vs. scrobble time diff was smaller than 10 seconds`, {label: this.name});
+                        return true;
+                    }
                 }
-                // this.logger.debug(`Scrobble with same name (${scrobbleTitle}) found but the start/finish times vs scrobble time diffs were too large to consider dups (Start Diff ${scrobblePlayStartDiff.toFixed(0)}s) (End Diff ${scrobblePlayDiff.toFixed(0)}s)`, {label: this.name});
+                largeDiffs.push({
+                    endTimeDiff: scrobblePlayDiff,
+                    startTimeDiff: scrobblePlayStartDiff,
+                    playDate: scrobbleTime,
+                    title: scrobbleTitle,
+                });
                 return false;
             }
             return false;
         });
+        if (existingScrobble && largeDiffs.length > 0) {
+            this.logger.debug('Scrobbles with same name detected but play diff and scrobble diffs were too large to consider dups.', {label: this.name});
+            for (const diff of largeDiffs) {
+                this.logger.debug(`Scrobble: ${diff.title} | Played At ${playDate.local().format()} | End Diff ${diff.endTimeDiff.toFixed(0)}s | Start Diff ${diff.startTimeDiff === undefined ? 'N/A' : `${diff.startTimeDiff.toFixed(0)}s`}`, {label: this.name});
+            }
+        }
+        return existingScrobble;
     }
 
-    scrobble = async (playObj, {foundInSourceDiff = false, source}) => {
+    scrobble = async (playObj) => {
         const {url, apiKey} = this.config;
 
         const {
@@ -68,6 +108,10 @@ export default class MalojaScrobbler extends AbstractScrobbleClient {
                 album,
                 track,
                 playDate
+            } = {},
+            meta: {
+                source,
+                newFromSource = false,
             } = {}
         } = playObj;
 
@@ -81,7 +125,7 @@ export default class MalojaScrobbler extends AbstractScrobbleClient {
                     key: apiKey,
                     time: playDate.unix(),
                 });
-            if(foundInSourceDiff) {
+            if (newFromSource) {
                 this.logger.info(`Scrobbled Newly Found Track (${source}): ${buildTrackString(playObj)}`, {label: this.name});
             } else {
                 this.logger.info(`Scrobbled Backlogged Track (${source}): ${buildTrackString(playObj)}`, {label: this.name});

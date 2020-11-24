@@ -17,7 +17,7 @@ export default class TautulliSource {
         this.user = user;
     }
 
-    static formatPlayObj(obj) {
+    static formatPlayObj(obj, newFromSource = false) {
         const {
             artist_name,
             track_name,
@@ -46,12 +46,14 @@ export default class TautulliSource {
                 mediaType: media_type,
                 user: username,
                 trackLength: duration,
+                source: 'Tautulli',
+                newFromSource,
             }
         }
     }
 
     handle = async (req) => {
-        const playObj = TautulliSource.formatPlayObj(req.body);
+        const playObj = TautulliSource.formatPlayObj(req.body, true);
         const {meta: {mediaType, title, user}} = playObj;
 
         if (this.user !== undefined && user !== undefined) {
@@ -76,7 +78,7 @@ export default class TautulliSource {
         } else {
             this.logger.info(`New Track => ${buildTrackString(playObj)}`, {label: this.name});
             try {
-                await this.clients.scrobble([playObj], { source: this.name });
+                await this.clients.scrobble(playObj);
                 // only gets hit if we scrobbled ok
                 this.discoveredTracks++;
             } catch (e) {
