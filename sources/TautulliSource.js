@@ -43,14 +43,22 @@ export default class TautulliSource extends PlexSource {
     }
 
     isValidEvent = (playObj) => {
-        const {meta: {mediaType, title, user}} = playObj;
+        const {
+            meta: {
+                mediaType, user
+            },
+            data: {
+                artist,
+                track,
+            } = {}
+        } = playObj;
 
         if (this.users !== undefined && user !== undefined && !this.users.includes(user)) {
-            this.logger.debug(`Will not scrobble webhook event because author was not an allowed user: ${user}`)
+            this.logger.debug(`Will not scrobble webhook event because author was not an allowed user: ${user}`, artist, track)
             return false;
         }
         if (mediaType !== 'track') {
-            this.logger.debug(`Will not scrobble webhook event because media type was not a track (${mediaType}). Item: ${title}`);
+            this.logger.debug(`Will not scrobble webhook event because media type was not a track (${mediaType})`, artist, track);
             return false;
         }
         return true;

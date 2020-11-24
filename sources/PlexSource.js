@@ -59,20 +59,28 @@ export default class PlexSource {
     }
 
     isValidEvent = (playObj) => {
-        const {meta: {mediaType, title, event, user}} = playObj;
+        const {
+            meta: {
+                mediaType, event, user
+            },
+            data: {
+                artist,
+                track,
+            } = {}
+        } = playObj;
 
         if (this.users !== undefined && user !== undefined && !this.users.includes(user)) {
-            this.logger.debug(`Will not scrobble webhook event because author was not an allowed user: ${user}`)
+            this.logger.debug(`Will not scrobble webhook event because author was not an allowed user: ${user}`, artist, track)
             return false;
         }
 
         if (event !== 'media.scrobble') {
-            this.logger.debug(`Will not scrobble webhook event because it is not media.scrobble (${event})`)
+            this.logger.debug(`Will not scrobble webhook event because it is not media.scrobble (${event})`, artist, track)
             return false;
         }
 
         if (mediaType !== 'track') {
-            this.logger.debug(`Will not scrobble webhook event because media type was not a track (${mediaType}). Item: ${title}`);
+            this.logger.debug(`Will not scrobble webhook event because media type was not a track (${mediaType})`, artist, track);
             return false;
         }
 
