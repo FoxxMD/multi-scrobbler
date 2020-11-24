@@ -28,6 +28,7 @@
     "ejs": "^3.1.5",
     "express": "^4.17.1",
     "multer": "^1.4.2",
+    "safe-stable-stringify": "^1.1.1",
     "spotify-web-api-node": "^5.0.0",
     "superagent": "^6.1.0",
     "winston": "^3.3.3",

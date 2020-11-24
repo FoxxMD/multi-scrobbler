@@ -2,9 +2,10 @@ import fs, {promises, constants} from "fs";
 import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc.js';
 import winston from "winston";
+import jsonStringify from 'safe-stable-stringify';
 
 const {format } = winston;
-const {combine, printf, timestamp, padLevels, label, splat } = format;
+const {combine, printf, timestamp, padLevels, label, splat, simple} = format;
 
 dayjs.extend(utc);
 
@@ -74,14 +75,16 @@ export const buildTrackString = (playObj) => {
 export const sortByPlayDate = (a, b) => a.data.playDate.isAfter(b.data.playDate) ? 1 : -1;
 
 const s = splat();
-//const SPLAT = Symbol.for('splat')
+const SPLAT = Symbol.for('splat')
 
 let longestLabel = 3;
-export const defaultFormat = printf(({level, message, label = 'App', timestamp, /*[SPLAT]: splatInfo = {}, ...rest*/}) => {
+export const defaultFormat = printf(({level, message, label = 'App', timestamp, [SPLAT] : splatObj}) => {
+    let stringifyValue = splatObj !== undefined ? jsonStringify(splatObj) : '';
     if(label.length > longestLabel) {
         longestLabel = label.length;
     }
-    return `${timestamp} ${level.padEnd(7)}: [${label.padEnd(longestLabel)}] ${message}`;
+
+    return `${timestamp} ${level.padEnd(7)}: [${label.padEnd(longestLabel)}] ${message}${stringifyValue !== '' ? ` ${stringifyValue}` : ''}`;
 });
 
 export const labelledFormat = (labelName = 'App') => {
