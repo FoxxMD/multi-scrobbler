@@ -85,9 +85,9 @@ app.use(bodyParser.json());
         // try to read a configuration file
         let config = {};
         try {
-            config = await readJson(`${configDir}/config.json`);
+            config = await readJson(`${configDir}/config.json`, {throwOnNotFound: false});
         } catch (e) {
-            logger.info('No config file or could not be read (normal if using ENV vars only)');
+            logger.warn('App config file exists but could not be parsed!');
         }
 
         // setup defaults for other configs and general config
@@ -103,7 +103,7 @@ app.use(bodyParser.json());
         const scrobbleClients = new Clients();
         await scrobbleClients.buildClients(clients, configDir);
         if (scrobbleClients.clients.length === 0) {
-            logger.warn('No scrobble clients were configured')
+            logger.warn('No scrobble clients were configured!')
         }
 
         /*
@@ -114,9 +114,9 @@ app.use(bodyParser.json());
 
         let plexJson = {};
         try {
-            plexJson = await readJson(`${configDir}/plex.json`);
+            plexJson = await readJson(`${configDir}/plex.json`, {throwOnNotFound: false});
         } catch (e) {
-            // no config exists but that's ok
+            logger.warn('Plex config file exists could not be parsed!');
         }
 
         const tautulliSource = await new TautulliSource(scrobbleClients, {...plex, ...plexJson});
@@ -167,8 +167,12 @@ app.use(bodyParser.json());
         });
 
         app.getAsync('/authSpotify', async function (req, res) {
-            logger.info('Redirecting to spotify authorization url');
-            res.redirect(spotifySource.createAuthUrl());
+            if(spotifySource.spotifyApi === undefined) {
+                res.status(400).send('Spotify configuration is not valid');
+            } else {
+                logger.info('Redirecting to spotify authorization url');
+                res.redirect(spotifySource.createAuthUrl());
+            }
         });
 
         app.getAsync('/pollSpotify', async function (req, res) {
