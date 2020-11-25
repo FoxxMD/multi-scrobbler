@@ -5,6 +5,8 @@ import {buildTrackString, createLabelledLogger, sortByPlayDate} from "../utils.j
 
 export default class MalojaScrobbler extends AbstractScrobbleClient {
 
+    name = 'Maloja';
+
     constructor(config = {}, options = {}) {
         super(config, options);
         this.logger = createLabelledLogger('maloja', 'Maloja');
@@ -135,8 +137,8 @@ export default class MalojaScrobbler extends AbstractScrobbleClient {
                 this.logger.info(`Scrobbled Backlogged Track (${source}): ${buildTrackString(playObj)}`);
             }
         } catch (e) {
-            this.logger.error('Error while scrobbling', {label: this.name, playInfo: buildTrackString(playObj)});
-            this.logger.log(e);
+            this.logger.error('Error while scrobbling', { playInfo: buildTrackString(playObj) });
+            throw e;
         }
 
         return true;

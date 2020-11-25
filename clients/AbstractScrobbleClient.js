@@ -3,6 +3,8 @@ import {createLabelledLogger} from "../utils.js";
 
 export default class AbstractScrobbleClient {
 
+    name;
+
     recentScrobbles = [];
     newestScrobbleTime;
     oldestScrobbleTime = dayjs();

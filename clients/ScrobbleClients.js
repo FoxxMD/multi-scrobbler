@@ -8,7 +8,7 @@ export default class ScrobbleClients {
     logger;
 
     constructor(clients = []) {
-        this.logger = createLabelledLogger();
+        this.logger = createLabelledLogger('name', 'Scrobblers');
         this.clients = clients;
     }
 
@@ -69,14 +69,19 @@ export default class ScrobbleClients {
         const tracksScrobbled = [];
 
         for (const client of this.clients) {
-            if (forceRefresh || client.scrobblesLastCheckedAt().unix() < checkTime.unix()) {
-                await client.refreshScrobbles();
-            }
-            for(const playObj of playObjs) {
-                if (client.timeFrameIsValid(playObj.data.playDate) && !client.alreadyScrobbled(playObj)) {
-                    tracksScrobbled.push(playObj);
-                    await client.scrobble(playObj);
+            try {
+                if (forceRefresh || client.scrobblesLastCheckedAt().unix() < checkTime.unix()) {
+                    await client.refreshScrobbles();
                 }
+                for (const playObj of playObjs) {
+                    if (client.timeFrameIsValid(playObj.data.playDate) && !client.alreadyScrobbled(playObj)) {
+                        tracksScrobbled.push(playObj);
+                        await client.scrobble(playObj);
+                    }
+                }
+            } catch (e) {
+                this.logger.error(`Encountered error while in scrobble loop for ${client.name}`);
+                this.logger.error(e);
             }
         }
         return tracksScrobbled;
