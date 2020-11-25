@@ -5,7 +5,7 @@ import winston from "winston";
 import jsonStringify from 'safe-stable-stringify';
 
 const {format } = winston;
-const {combine, printf, timestamp, padLevels, label, splat, simple} = format;
+const {combine, printf, timestamp, label, splat, errors } = format;
 
 dayjs.extend(utc);
 
@@ -76,15 +76,28 @@ export const sortByPlayDate = (a, b) => a.data.playDate.isAfter(b.data.playDate)
 
 const s = splat();
 const SPLAT = Symbol.for('splat')
+const errorsFormat = errors({ stack: true });
+const CWD = process.cwd();
 
 let longestLabel = 3;
-export const defaultFormat = printf(({level, message, label = 'App', timestamp, [SPLAT] : splatObj}) => {
+export const defaultFormat = printf(({level, message, label = 'App', timestamp, [SPLAT] : splatObj, stack, ...rest}) => {
     let stringifyValue = splatObj !== undefined ? jsonStringify(splatObj) : '';
     if(label.length > longestLabel) {
         longestLabel = label.length;
     }
+    let msg = message;
+    let stackMsg = '';
+    if(stack !== undefined) {
+        const stackArr = stack.split('\n');
+        msg = stackArr[0];
+        const cleanedStack = stackArr
+            .slice(1) // don't need actual error message since we are showing it as msg
+            .map(x => x.replace(CWD, 'CWD')) // replace file location up to cwd for user privacy
+            .join('\n'); // rejoin with newline to preserve formatting
+        stackMsg = `\n${cleanedStack}`;
+    }
 
-    return `${timestamp} ${level.padEnd(7)}: [${label.padEnd(longestLabel)}] ${message}${stringifyValue !== '' ? ` ${stringifyValue}` : ''}`;
+    return `${timestamp} ${level.padEnd(7)}: [${label.padEnd(longestLabel)}] ${msg}${stringifyValue !== '' ? ` ${stringifyValue}` : ''}${stackMsg}`;
 });
 
 export const labelledFormat = (labelName = 'App') => {
@@ -97,6 +110,7 @@ export const labelledFormat = (labelName = 'App') => {
         ),
         l,
         s,
+        errorsFormat,
         defaultFormat,
     );
 }
