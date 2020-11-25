@@ -92,7 +92,12 @@ export default class ScrobbleClients {
                     await client.refreshScrobbles();
                 }
                 for (const playObj of playObjs) {
-                    if (client.timeFrameIsValid(playObj.data.playDate) && !client.alreadyScrobbled(playObj)) {
+                    const {
+                        meta: {
+                            newFromSource = false,
+                        } = {}
+                    } = playObj;
+                    if (client.timeFrameIsValid(playObj, newFromSource) && !client.alreadyScrobbled(playObj, newFromSource)) {
                         tracksScrobbled.push(playObj);
                         await client.scrobble(playObj);
                     }

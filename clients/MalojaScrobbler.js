@@ -109,16 +109,22 @@ export default class MalojaScrobbler extends AbstractScrobbleClient {
                 } = {},
             } = resp;
             this.recentScrobbles = list.map(x => MalojaScrobbler.formatPlayObj(x)).sort(sortByPlayDate);
-            const [{data: {playDate: newestScrobbleTime = dayjs()} = {}} = {}] = this.recentScrobbles.slice(-1);
-            const [{data: {playDate: oldestScrobbleTime = dayjs()} = {}} = {}] = this.recentScrobbles.slice(0, 1);
-            this.newestScrobbleTime = newestScrobbleTime;
-            this.oldestScrobbleTime = oldestScrobbleTime;
+            if (this.recentScrobbles.length > 0) {
+                const [{data: {playDate: newestScrobbleTime = dayjs()} = {}} = {}] = this.recentScrobbles.slice(-1);
+                const [{data: {playDate: oldestScrobbleTime = dayjs()} = {}} = {}] = this.recentScrobbles.slice(0, 1);
+                this.newestScrobbleTime = newestScrobbleTime;
+                this.oldestScrobbleTime = oldestScrobbleTime;
+            }
         }
         this.lastScrobbleCheck = dayjs();
     }
 
-    alreadyScrobbled = (playObj) => {
-        return this.existingScrobble(playObj) !== undefined;
+    alreadyScrobbled = (playObj, log = false) => {
+        const result = this.existingScrobble(playObj) !== undefined;
+        if (log && result === true) {
+            this.logger.debug(`${buildTrackString(playObj, [])} was already scrobbled`);
+        }
+        return result;
     }
 
     existingScrobble = (playObj) => {

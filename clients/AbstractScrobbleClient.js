@@ -1,5 +1,5 @@
 import dayjs from "dayjs";
-import {createLabelledLogger} from "../utils.js";
+import {buildTrackString, createLabelledLogger} from "../utils.js";
 
 export default class AbstractScrobbleClient {
 
@@ -33,8 +33,16 @@ export default class AbstractScrobbleClient {
 
     // time frame is valid as long as the play date for the source track is newer than the oldest play time from the scrobble client
     // ...this is assuming the scrobble client is returning "most recent" scrobbles
-    timeFrameIsValid = (playDate) => {
-        const oldest = this.oldestScrobbleTime ?? dayjs();
-        return playDate.isAfter(oldest);
+    timeFrameIsValid = (playObj, log = false) => {
+        const {
+            data: {
+                playDate,
+            } = {},
+        } = playObj;
+        const validTime = playDate.isAfter(this.oldestScrobbleTime);
+        if (log && !validTime) {
+            this.logger.debug(`${buildTrackString(playObj)} was in an invalid time frame (played before the oldest scrobble found)`);
+        }
+        return validTime;
     }
 }
