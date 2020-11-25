@@ -4,24 +4,33 @@ import utc from 'dayjs/plugin/utc.js';
 import winston from "winston";
 import jsonStringify from 'safe-stable-stringify';
 
-const {format } = winston;
-const {combine, printf, timestamp, label, splat, errors } = format;
+const {format} = winston;
+const {combine, printf, timestamp, label, splat, errors} = format;
 
 dayjs.extend(utc);
 
-export async function readJson(path) {
-    await promises.access(path, constants.R_OK);
-    const data = await promises.readFile(path);
-    return JSON.parse(data);
-
-    // return new Promise((resolve, reject) => {
-    //     fs.readFile(path, 'utf8', function (err, data) {
-    //         if (err) {
-    //             reject(err);
-    //         }
-    //         resolve(JSON.parse(data));
-    //     });
-    // });
+export async function readJson(path, {logErrors = true, throwOnNotFound = true} = {}) {
+    try {
+        await promises.access(path, constants.R_OK);
+        const data = await promises.readFile(path);
+        return JSON.parse(data);
+    } catch (e) {
+        const {code} = e;
+        if (code === 'ENOENT') {
+            if (throwOnNotFound) {
+                if (logErrors) {
+                    this.logger.warn('No file found at given path', {filePath: path});
+                }
+                throw e;
+            } else {
+                return;
+            }
+        } else if (logErrors) {
+            this.logger.warn(`Encountered error while parsing file`, {filePath: path});
+            this.logger.error(e);
+        }
+        throw e;
+    }
 }
 
 export async function readText(path) {
@@ -76,18 +85,18 @@ export const sortByPlayDate = (a, b) => a.data.playDate.isAfter(b.data.playDate)
 
 const s = splat();
 const SPLAT = Symbol.for('splat')
-const errorsFormat = errors({ stack: true });
+const errorsFormat = errors({stack: true});
 const CWD = process.cwd();
 
 let longestLabel = 3;
-export const defaultFormat = printf(({level, message, label = 'App', timestamp, [SPLAT] : splatObj, stack, ...rest}) => {
+export const defaultFormat = printf(({level, message, label = 'App', timestamp, [SPLAT]: splatObj, stack, ...rest}) => {
     let stringifyValue = splatObj !== undefined ? jsonStringify(splatObj) : '';
-    if(label.length > longestLabel) {
+    if (label.length > longestLabel) {
         longestLabel = label.length;
     }
     let msg = message;
     let stackMsg = '';
-    if(stack !== undefined) {
+    if (stack !== undefined) {
         const stackArr = stack.split('\n');
         msg = stackArr[0];
         const cleanedStack = stackArr
@@ -101,7 +110,7 @@ export const defaultFormat = printf(({level, message, label = 'App', timestamp, 
 });
 
 export const labelledFormat = (labelName = 'App') => {
-    const l = label({ label: labelName, message: false });
+    const l = label({label: labelName, message: false});
     return combine(
         timestamp(
             {
@@ -116,7 +125,7 @@ export const labelledFormat = (labelName = 'App') => {
 }
 
 export const createLabelledLogger = (name = 'default', label = 'App') => {
-    if(winston.loggers.has(name)) {
+    if (winston.loggers.has(name)) {
         return winston.loggers.get(name);
     }
     const def = winston.loggers.get('default');
@@ -133,7 +142,8 @@ export const createLabelledLogger = (name = 'default', label = 'App') => {
 * I'm not using the package because the package type isn't module or something
 * */
 
-const noop = () => {};
+const noop = () => {
+};
 
 export function resolvable() {
     let resolve;
@@ -153,14 +163,14 @@ export function makeSingle(generator) {
     let previousPromise;
     let previousResolve = noop;
 
-    return async function(...args) {
+    return async function (...args) {
         previousResolve(abortSymbol);
         ({promise: previousPromise, resolve: previousResolve} = resolvable());
         const localSinglePromise = previousPromise;
 
         const iter = generator(...args);
         let resumeValue;
-        for (;;) {
+        for (; ;) {
             const n = iter.next(resumeValue);
             if (n.done) {
                 return n.value;  // final return value of passed generator
@@ -172,7 +182,7 @@ export function makeSingle(generator) {
                 if (resumeValue === abortSymbol) {
                     return takeoverSymbol;
                 }
-            } catch(e) {
+            } catch (e) {
                 resumeValue = e;
             }
             // next loop, we give resumeValue back to the generator
