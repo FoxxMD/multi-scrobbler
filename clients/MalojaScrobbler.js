@@ -123,7 +123,7 @@ export default class MalojaScrobbler extends AbstractScrobbleClient {
 
     existingScrobble = (playObj) => {
         if (false === this.checkExistingScrobbles || this.recentScrobbles.length === 0) {
-            return false;
+            return undefined;
         }
 
         const {
