@@ -8,7 +8,7 @@ import utc from 'dayjs/plugin/utc.js';
 import isBetween from 'dayjs/plugin/isBetween.js';
 import {Writable} from 'stream';
 import 'winston-daily-rotate-file';
-import {labelledFormat, readJson } from "./utils.js";
+import {labelledFormat, readJson} from "./utils.js";
 import Clients from './clients/ScrobbleClients.js';
 import SpotifySource from "./sources/SpotifySource.js";
 import TautulliSource from "./sources/TautulliSource.js";
@@ -39,7 +39,7 @@ const logConfig = {
     limit: 50,
 }
 
-const availableLevels = ['info','debug'];
+const availableLevels = ['info', 'debug'];
 const logPath = process.env.LOG_DIR || `${process.cwd()}/logs`;
 const port = process.env.PORT ?? 9078;
 const localUrl = `http://localhost:${port}`;
@@ -80,9 +80,8 @@ const app = addAsync(express());
 
 app.use(bodyParser.json());
 
-try {
-    (async function () {
-
+(async function () {
+    try {
         // try to read a configuration file
         let config = {};
         try {
@@ -125,7 +124,7 @@ try {
 
         app.getAsync('/', async function (req, res) {
             let slicedLog = output.slice(0, logConfig.limit + 1);
-            if(logConfig.sort === 'ascending') {
+            if (logConfig.sort === 'ascending') {
                 slicedLog.reverse();
             }
             res.render('status', {
@@ -143,7 +142,7 @@ try {
                 },
                 logs: {
                     output: slicedLog,
-                    limit: [10,20,50,100].map(x => `<a class="capitalize ${logConfig.limit === x ? 'bold' : ''}" href="logs/settings/update?limit=${x}">${x}</a>`).join(' | '),
+                    limit: [10, 20, 50, 100].map(x => `<a class="capitalize ${logConfig.limit === x ? 'bold' : ''}" href="logs/settings/update?limit=${x}">${x}</a>`).join(' | '),
                     sort: ['ascending', 'descending'].map(x => `<a class="capitalize ${logConfig.sort === x ? 'bold' : ''}" href="logs/settings/update?sort=${x}">${x}</a>`).join(' | '),
                     level: availableLevels.map(x => `<a class="capitalize ${logConfig.level === x ? 'bold' : ''}" href="logs/settings/update?level=${x}">${x}</a>`).join(' | ')
                 }
@@ -179,8 +178,8 @@ try {
 
         app.getAsync('/logs/settings/update', async function (req, res) {
             const e = req.query;
-            for(const [setting, val] of Object.entries(req.query)) {
-                switch(setting) {
+            for (const [setting, val] of Object.entries(req.query)) {
+                switch (setting) {
                     case 'limit':
                         logConfig.limit = Number.parseInt(val);
                         break;
@@ -189,7 +188,7 @@ try {
                         break;
                     case 'level':
                         logConfig.level = val;
-                        for(const [key, logger] of winston.loggers.loggers) {
+                        for (const [key, logger] of winston.loggers.loggers) {
                             logger.level = val;
                         }
                         break;
@@ -199,10 +198,10 @@ try {
         });
 
         app.getAsync(/.*callback$/, async function (req, res, next) {
-            logger.info('Received auth code callback from Spotify', { label: 'Spotify' });
+            logger.info('Received auth code callback from Spotify', {label: 'Spotify'});
             const tokenResult = await spotifySource.handleAuthCodeCallback(req.query);
             let responseContent = 'OK';
-            if(tokenResult === true) {
+            if (tokenResult === true) {
                 spotifySource.pollSpotify(scrobbleClients);
             } else {
                 responseContent = tokenResult;
@@ -222,8 +221,9 @@ try {
         app.set('view engine', 'ejs');
         logger.info(`Server started at ${localUrl}`);
         const server = await app.listen(port)
-    }());
-} catch (e) {
-    logger.error('Exited with uncaught error');
-    logger.error(e);
-}
+    } catch (e) {
+        logger.error('Exited with uncaught error');
+        logger.error(e);
+    }
+}());
+
