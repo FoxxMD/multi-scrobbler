@@ -23,18 +23,26 @@ export default class ScrobbleClients {
 
             switch (clientType) {
                 case 'maloja':
-                    clientConfig = clientConfigs.find(x => x.type === 'maloja') || {
+                    this.logger.debug('Attempting Maloja initialization...');
+                    const configObj = clientConfigs.find((x = {}) => x.type === 'maloja');
+                    const {data} = configObj || {};
+                    clientConfig = data || {
                         url: process.env.MALOJA_URL,
                         apiKey: process.env.MALOJA_API_KEY
                     };
 
                     if (Object.values(clientConfig).every(x => x === undefined)) {
+                        const filePath = `${configDir}/maloja.json`;
                         try {
-                            clientConfig = await readJson(`${configDir}/maloja.json`);
+                            clientConfig = await readJson(filePath, {throwOnNotFound: false});
                         } catch (e) {
-                            // no config exists, skip this client
+                            this.logger.warn(`Maloja config file could not be read, skipping initialization`);
                             continue;
                         }
+                    }
+                    if (clientConfig === undefined) {
+                        this.logger.warn('No config data passed for Maloja and no config file could be found, skipping initialization');
+                        continue;
                     }
 
                     const {
@@ -43,14 +51,20 @@ export default class ScrobbleClients {
                     } = clientConfig;
 
                     if (url === undefined) {
-                        this.logger.warn('Maloja url not found in config');
+                        this.logger.warn('Maloja url not found in config, not initializing');
                         continue;
                     }
                     if (apiKey === undefined) {
-                        this.logger.warn('Maloja api key not found in config');
-                        continue;
+                        this.logger.warn('Maloja api key not found in config! Client will most likely fail when trying to scrobble');
                     }
-                    clients.push(new MalojaScrobbler(clientConfig));
+                    const mj = new MalojaScrobbler(clientConfig);
+                    const testSuccess = await mj.testConnection();
+                    if (testSuccess === false) {
+                        this.logger.warn('Maloja client not initialized due to failure during connection testing');
+                    } else {
+                        this.logger.info('Maloja client initialized');
+                        clients.push(mj);
+                    }
                     break;
                 default:
                     break;
@@ -67,6 +81,10 @@ export default class ScrobbleClients {
         } = options;
 
         const tracksScrobbled = [];
+
+        if (this.clients.length === 0) {
+            this.logger.warn('Cannot scrobble! No clients are configured.');
+        }
 
         for (const client of this.clients) {
             try {

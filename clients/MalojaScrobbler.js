@@ -31,13 +31,86 @@ export default class MalojaScrobbler extends AbstractScrobbleClient {
         }
     }
 
+    callApi = async (req) => {
+        try {
+            return await req;
+        } catch (e) {
+            const {
+                message,
+                response: {
+                    status,
+                    body,
+                    text,
+                } = {},
+                response,
+            } = e;
+            let msg = response !== undefined ? `API Call failed: Server Response => ${message}` : `API Call failed: ${message}`;
+            const responseMeta = body ?? text;
+            this.logger.error(msg, {status, response: responseMeta});
+            throw e;
+        }
+    }
+
+    testConnection = async () => {
+
+        const {url, apiKey} = this.config;
+        try {
+            const serverInfoResp = await this.callApi(request.get(`${url}/apis/mlj_1/serverinfo`));
+            const {
+                body: {
+                    version = [],
+                    versionstring = '',
+                } = {},
+            } = serverInfoResp;
+            if (version.length === 0) {
+                this.logger.error('Server did not respond with a version. Either the base URL is incorrect or this Maloja server is too old :(');
+                return false;
+            }
+            this.logger.info(`Maloja Server Version: ${versionstring}`);
+            if (version[0] < 2 || version[1] < 7) {
+                this.logger.warn('Maloja Server Version is less than 2.7, please upgrade to ensure compatibility');
+            }
+
+            const resp = await this.callApi(request
+                .get(`${url}/apis/mlj_1/test`)
+                .query({key: apiKey}));
+
+            const {
+                status,
+                body: {
+                    status: bodyStatus,
+                } = {},
+                body = {},
+                text = '',
+            } = resp;
+            if (bodyStatus.toLocaleLowerCase() === 'ok') {
+                this.logger.info('Test connection succeeded!');
+                return true;
+            }
+            this.logger.error('Testing connection failed => Server Response body was malformed -- should have returned "status: ok"...is the URL correct?', {
+                status,
+                body,
+                text: text.slice(0, 50)
+            })
+            return false;
+        } catch (e) {
+            this.logger.error('Testing connection failed');
+            return false;
+        }
+    }
+
     refreshScrobbles = async () => {
         if (this.refreshEnabled) {
             const {url} = this.config;
-            const resp = await request.get(`${url}/apis/mlj_1/scrobbles?max=20`);
-            this.recentScrobbles = resp.body.list.map(x => MalojaScrobbler.formatPlayObj(x)).sort(sortByPlayDate);
-            const [{data: {playDate: newestScrobbleTime = dayjs()}} = {}] = this.recentScrobbles.slice(-1);
-            const [{data: {playDate: oldestScrobbleTime = dayjs()}} = {}] = this.recentScrobbles.slice(0, 1);
+            const resp = await this.callApi(request.get(`${url}/apis/mlj_1/scrobbles?max=20`));
+            const {
+                body: {
+                    list = [],
+                } = {},
+            } = resp;
+            this.recentScrobbles = list.map(x => MalojaScrobbler.formatPlayObj(x)).sort(sortByPlayDate);
+            const [{data: {playDate: newestScrobbleTime = dayjs()} = {}} = {}] = this.recentScrobbles.slice(-1);
+            const [{data: {playDate: oldestScrobbleTime = dayjs()} = {}} = {}] = this.recentScrobbles.slice(0, 1);
             this.newestScrobbleTime = newestScrobbleTime;
             this.oldestScrobbleTime = oldestScrobbleTime;
         }
@@ -49,7 +122,7 @@ export default class MalojaScrobbler extends AbstractScrobbleClient {
     }
 
     existingScrobble = (playObj) => {
-        if (false === this.checkExistingScrobbles) {
+        if (false === this.checkExistingScrobbles || this.recentScrobbles.length === 0) {
             return false;
         }
 
@@ -96,7 +169,7 @@ export default class MalojaScrobbler extends AbstractScrobbleClient {
             }
             return false;
         });
-        if (existingScrobble && largeDiffs.length > 0) {
+        if (existingScrobble === undefined && largeDiffs.length > 0) {
             this.logger.debug('Scrobbles with same name detected but play diff and scrobble diffs were too large to consider dups.');
             for (const diff of largeDiffs) {
                 this.logger.debug(`Scrobble: ${diff.title} | Played At ${playDate.local().format()} | End Diff ${diff.endTimeDiff.toFixed(0)}s | Start Diff ${diff.startTimeDiff === undefined ? 'N/A' : `${diff.startTimeDiff.toFixed(0)}s`}`);
@@ -121,8 +194,10 @@ export default class MalojaScrobbler extends AbstractScrobbleClient {
             } = {}
         } = playObj;
 
+        const sType = newFromSource ? 'New' : 'Backlog';
+
         try {
-            await request.post(`${url}/apis/mlj_1/newscrobble`)
+            await this.callApi(request.post(`${url}/apis/mlj_1/newscrobble`)
                 .type('json')
                 .send({
                     artist,
@@ -130,14 +205,14 @@ export default class MalojaScrobbler extends AbstractScrobbleClient {
                     album,
                     key: apiKey,
                     time: playDate.unix(),
-                });
+                }));
             if (newFromSource) {
-                this.logger.info(`Scrobbled Newly Found Track (${source}): ${buildTrackString(playObj)}`);
+                this.logger.info(`Scrobbled (New)     => (${source}) ${buildTrackString(playObj)}`);
             } else {
-                this.logger.info(`Scrobbled Backlogged Track (${source}): ${buildTrackString(playObj)}`);
+                this.logger.info(`Scrobbled (Backlog) => (${source}) ${buildTrackString(playObj)}`);
             }
         } catch (e) {
-            this.logger.error('Error while scrobbling', { playInfo: buildTrackString(playObj) });
+            this.logger.error(`Scrobble Error (${sType})`, {playInfo: buildTrackString(playObj)});
             throw e;
         }
 

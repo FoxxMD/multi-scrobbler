@@ -75,19 +75,21 @@ export default class SpotifySource {
 
     buildSpotifyApi = async (spotifyObj) => {
 
+        this.logger.debug('Initializing Spotify source');
+
         let spotifyCreds = {};
         try {
-            spotifyCreds = await readJson(this.workingCredsPath);
+            spotifyCreds = await readJson(this.workingCredsPath, {throwOnNotFound: false});
         } catch (e) {
-            this.logger.warn('Current spotify access token was not parsable or file does not exist (this could be normal)');
+            this.logger.warn('Current spotify credentials file exists but could not be parsed');
         }
 
         let spotifyConfig = spotifyObj;
         if (spotifyObj === undefined) {
             try {
-                spotifyConfig = await readJson(`${this.configDir}/spotify.json`);
+                spotifyConfig = await readJson(`${this.configDir}/spotify.json`, {throwOnNotFound: false});
             } catch (e) {
-                this.logger.warn('No spotify config file or could not be read (normal if using ENV vars only)');
+                this.logger.warn('Spotify config file exists but could not be parsed');
             }
         }
 
@@ -108,36 +110,51 @@ export default class SpotifySource {
         const rdUri = redirectUri || `${this.localUrl}/callback`;
 
 
-        const {token = accessToken, refreshToken: rt = refreshToken} = spotifyCreds;
+        const {token = accessToken, refreshToken: rt = refreshToken} = spotifyCreds || {};
 
         const apiConfig = {
             clientId,
             clientSecret,
             accessToken: token,
-            redirectUri: rdUri,
             refreshToken: rt,
         }
 
         if (Object.values(apiConfig).every(x => x === undefined)) {
-            this.logger.info('No values found for Spotify configuration, assuming user does not want to set it up');
-        } else {
-            if (token === undefined) {
-                let ready = true;
-                if (clientId === undefined) {
-                    this.logger.warn('No access token exists and clientId is not defined');
-                    ready = false;
-                }
-                if (clientSecret === undefined) {
-                    this.logger.warn('No access token exists and clientSecret is not defined')
-                    ready = false;
-                }
-                if (ready === false) {
-                    return;
-                }
-            }
-
-            this.spotifyApi = new SpotifyWebApi(apiConfig);
+            this.logger.info('No values found for Spotify configuration, skipping initialization');
+            return;
         }
+        apiConfig.redirectUri = rdUri;
+
+        const validationErrors = [];
+
+        if (token === undefined) {
+            if (clientId === undefined) {
+                validationErrors.push('clientId must be defined when access token is not present');
+            }
+            if (clientSecret === undefined) {
+                validationErrors.push('clientSecret must be defined when access token is not present');
+            }
+            if (rdUri === undefined) {
+                validationErrors.push('redirectUri must be defined when access token is not present');
+            }
+            if (validationErrors.length !== 0) {
+                validationErrors.unshift('no access token is defined');
+            }
+        } else if (rt === undefined && (
+            clientId === undefined ||
+            clientSecret === undefined ||
+            rdUri === undefined
+        )) {
+            this.logger.warn('Access token is present but no refresh token is defined and remaining configuration is not sufficient to re-authorize. Without a refresh token API calls will fail after current token is expired.');
+        }
+
+        if (validationErrors.length !== 0) {
+            this.logger.warn(`Spotify configuration was not valid:\n*${validationErrors.join('\n')}`);
+            return;
+        }
+
+        this.logger.info('Spotify source initialized');
+        this.spotifyApi = new SpotifyWebApi(apiConfig);
     }
 
     createAuthUrl = () => {
