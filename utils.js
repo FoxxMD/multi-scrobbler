@@ -67,7 +67,7 @@ export function sleep(ms) {
     return new Promise(resolve => setTimeout(resolve, ms));
 }
 
-export const buildTrackString = (playObj) => {
+export const buildTrackString = (playObj, include = ['time']) => {
     const {
         data: {
             artist,
@@ -77,7 +77,11 @@ export const buildTrackString = (playObj) => {
         } = {}
     } = playObj;
 
-    return `${artist} - ${track}, played at ${playDate.local().format()}`
+    let str = `${artist} - ${track}`;
+    if (include.includes('time')) {
+        str = `${str}, played at ${playDate.local().format()}`
+    }
+    return str;
 }
 
 // sorts playObj formatted objects by playDate in ascending (oldest first) order
