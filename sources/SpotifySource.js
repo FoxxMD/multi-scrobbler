@@ -51,6 +51,9 @@ export default class SpotifySource {
                 name,
                 id,
                 duration_ms,
+                external_urls: {
+                    spotify,
+                } = {}
             } = {},
             played_at
         } = obj;
@@ -65,6 +68,9 @@ export default class SpotifySource {
                 trackLength: duration_ms / 1000,
                 source: 'Spotify',
                 newFromSource,
+                url: {
+                    web: spotify
+                }
             }
         }
     }
@@ -179,13 +185,65 @@ export default class SpotifySource {
         }
     }
 
+    getRecentlyPlayed = async (options = {}) => {
+        const {limit = 20, formatted = false} = options;
+        const func = api => api.getMyRecentlyPlayedTracks({
+            limit
+        });
+        const result = await this.trySpotifyCall(func);
+        if (formatted === true) {
+            return result.body.items.map(x => SpotifySource.formatPlayObj(x)).sort(sortByPlayDate);
+        }
+        return result;
+    }
+
+    trySpotifyCall = async (func) => {
+        try {
+            return await func(this.spotifyApi);
+        } catch (e) {
+            if (e.statusCode === 401) {
+                if (this.spotifyApi.getRefreshToken() === undefined) {
+                    this.logger.error('Access token was not valid and no refresh token was present, bailing out of polling');
+                    return Promise.resolve();
+                }
+                this.logger.debug('Access token was not valid, attempting to refresh');
+
+                const tokenResponse = await this.spotifyApi.refreshAccessToken();
+                const {
+                    body: {
+                        access_token,
+                        // spotify may return a new refresh token
+                        // if it doesn't then continue to use the last refresh token we received
+                        refresh_token = this.spotifyApi.getRefreshToken(),
+                    } = {}
+                } = tokenResponse;
+                this.spotifyApi.setAccessToken(access_token);
+                await writeFile(this.workingCredsPath, JSON.stringify({
+                    token: access_token,
+                    refreshToken: refresh_token,
+                }));
+                try {
+                    return await func(this.spotifyApi);
+                } catch (ee) {
+                    this.logger.error('Refreshing access token encountered an error');
+                    this.logger.error(ee, {label: 'Spotify'});
+                    throw ee;
+                }
+            } else {
+                this.logger.error('Refreshing access token encountered an error');
+                this.logger.error(e, {label: 'Spotify'});
+                throw e;
+            }
+        }
+    }
+
     pollSpotify = (clients) => {
         if (this.spotifyApi === undefined) {
             this.logger.warn('Cannot poll spotify without valid credentials configuration')
             return;
         }
         this.pollerRunning = true;
-        return this.spotifyPoller(this.logger, this.spotifyApi, this.interval, this.workingCredsPath, clients, this.emitter)
+        return this.spotifyPoller(this.logger, this, this.interval, this.workingCredsPath, clients, this.emitter)
             .catch((e) => {
                 this.logger.error('Error occurred while polling spotify, polling has been stopped');
                 this.logger.error(e);
@@ -196,57 +254,21 @@ export default class SpotifySource {
     }
 }
 
-const pollSpotify = function* (logger, spotifyApi, interval = 60, credsPath, clients, emitter) {
+const pollSpotify = function* (logger, source, interval = 60, credsPath, clients, emitter) {
     logger.info('Starting spotify polling');
     let lastTrackPlayedAt = dayjs();
     let checkCount = 0;
     while (true) {
-        let data = {};
+        let playObjs = [];
         logger.debug('Refreshing recently played')
-        data = yield spotifyApi.getMyRecentlyPlayedTracks({
-            limit: 20
-        });
-        if (data instanceof Error) {
-            if (data.statusCode === 401) {
-                if (spotifyApi.getRefreshToken() === undefined) {
-                    logger.error('Access token was not valid and no refresh token was present, bailing out of polling');
-                    return Promise.resolve();
-                }
-                logger.debug('Access token was not valid, attempting to refresh');
-
-                const tokenResponse = yield spotifyApi.refreshAccessToken();
-                const {
-                    body: {
-                        access_token,
-                        // spotify may return a new refresh token
-                        // if it doesn't then continue to use the last refresh token we received
-                        refresh_token = spotifyApi.getRefreshToken(),
-                    } = {}
-                } = tokenResponse;
-                spotifyApi.setAccessToken(access_token);
-                yield writeFile(credsPath, JSON.stringify({
-                    token: access_token,
-                    refreshToken: refresh_token,
-                }));
-                data = yield spotifyApi.getMyRecentlyPlayedTracks({
-                    limit: 20
-                });
-                if (data instanceof Error) {
-                    logger.error('Refreshing access token encountered an error');
-                    logger.error(data, {label: 'Spotify'});
-                    return Promise.resolve(data);
-                }
-            } else {
-                logger.error('Refreshing access token encountered an error');
-                logger.error(data, {label: 'Spotify'});
-                return Promise.reject(data);
-            }
+        playObjs = yield source.getRecentlyPlayed({formatted: true});
+        if (playObjs instanceof Error) {
+            return Promise.reject(playObjs);
         }
         checkCount++;
         let newTracksFound = false;
         let closeToInterval = false;
         const now = dayjs();
-        let playObjs = data.body.items.map(x => SpotifySource.formatPlayObj(x)).sort(sortByPlayDate);
 
         const playInfo = playObjs.reduce((acc, playObj) => {
             const {data: {playDate} = {}} = playObj;
