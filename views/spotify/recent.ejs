@@ -1,0 +1,23 @@
+<html>
+<head>
+<style>
+    small {
+        display: block;
+    }
+    .bold {
+        font-weight: bold;
+    }
+    .capitalize {
+        text-transform: capitalize;
+    }
+</style>
+</head>
+<body>
+    <h2>Spotify Recently Played</h2>
+    <ul>
+        <% plays.forEach(function (play){ %>
+            <li><pre><%-play%></pre></li>
+        <% }) %>
+    </ul>
+</body>
+</html>

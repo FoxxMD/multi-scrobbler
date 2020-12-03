@@ -6,9 +6,10 @@ import winston from 'winston';
 import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc.js';
 import isBetween from 'dayjs/plugin/isBetween.js';
+import relativeTime from 'dayjs/plugin/relativeTime.js';
 import {Writable} from 'stream';
 import 'winston-daily-rotate-file';
-import {labelledFormat, readJson} from "./utils.js";
+import {buildTrackString, labelledFormat, longestString, readJson, truncateStringToLength} from "./utils.js";
 import Clients from './clients/ScrobbleClients.js';
 import SpotifySource from "./sources/SpotifySource.js";
 import TautulliSource from "./sources/TautulliSource.js";
@@ -19,6 +20,7 @@ const upload = multer({storage: storage})
 
 dayjs.extend(utc)
 dayjs.extend(isBetween);
+dayjs.extend(relativeTime);
 
 const {transports} = winston;
 
@@ -167,7 +169,7 @@ app.use(bodyParser.json());
         });
 
         app.getAsync('/authSpotify', async function (req, res) {
-            if(spotifySource.spotifyApi === undefined) {
+            if (spotifySource.spotifyApi === undefined) {
                 res.status(400).send('Spotify configuration is not valid');
             } else {
                 logger.info('Redirecting to spotify authorization url');
@@ -178,6 +180,33 @@ app.use(bodyParser.json());
         app.getAsync('/pollSpotify', async function (req, res) {
             spotifySource.pollSpotify(scrobbleClients);
             res.send('OK');
+        });
+
+        app.getAsync('/spotify/recent', async function (req, res) {
+            const result = await spotifySource.getRecentlyPlayed({formatted: true});
+            const artistTruncFunc = truncateStringToLength(Math.min(30, longestString(result.map(x => x.data.artist))));
+            const trackLength = longestString(result.map(x => x.data.track))
+            const plays = result.map((x) => {
+                const {
+                    meta: {
+                        url: {
+                            web
+                        } = {}
+                    } = {}
+                } = x;
+                const buildOpts = {
+                    include: ['time', 'timeFromNow'],
+                    transformers: {
+                        artist: a => artistTruncFunc(a).padEnd(33),
+                        track: t => t.padEnd(trackLength)
+                    }
+                }
+                if (web !== undefined) {
+                    buildOpts.transformers.track = t => `<a href="${web}">${t}</a>${''.padEnd(Math.max(trackLength - t.length, 0))}`;
+                }
+                return buildTrackString(x, buildOpts);
+            });
+            res.render('spotify/recent', {plays});
         });
 
         app.getAsync('/logs/settings/update', async function (req, res) {
