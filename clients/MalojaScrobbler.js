@@ -1,7 +1,7 @@
 import AbstractScrobbleClient from "./AbstractScrobbleClient.js";
 import request from 'superagent';
 import dayjs from 'dayjs';
-import {buildTrackString, createLabelledLogger, sortByPlayDate} from "../utils.js";
+import {buildTrackString, createLabelledLogger, setIntersection, sortByPlayDate} from "../utils.js";
 
 export default class MalojaScrobbler extends AbstractScrobbleClient {
 
@@ -148,6 +148,7 @@ export default class MalojaScrobbler extends AbstractScrobbleClient {
         const {
             data: {
                 track,
+                artists: sourceArtists = [],
                 playDate
             } = {},
             meta: {
@@ -155,46 +156,75 @@ export default class MalojaScrobbler extends AbstractScrobbleClient {
             } = {},
         } = playObj;
 
-        const lowerTitle = track.toLocaleLowerCase();
+        // One of the ways Maloja cleans track titles is by removing "feat"
+        let lowerTitle = track.toLocaleLowerCase().replace('.feat', '').replace('feat', '');
+        // also remove [artist] from the track if found since that gets removed as well
+        const lowerArtists = sourceArtists.map(x => x.toLocaleLowerCase());
+        lowerTitle = lowerArtists.reduce((acc, curr) => acc.replace(curr, ''), lowerTitle);
+
         const largeDiffs = [];
         // TODO add a runtime config option for verbose debugging for commented log statements
         // TODO check artists as well
         const existingScrobble = this.recentScrobbles.find((x) => {
-            const {data: {playDate: scrobbleTime, track: scrobbleTitle} = {}} = x;
-            const lowerScrobbleTitle = scrobbleTitle.toLocaleLowerCase();
-            if (lowerTitle.includes(lowerScrobbleTitle) || lowerScrobbleTitle.includes(lowerTitle)) {
-                let scrobblePlayStartDiff;
+            const {data: {playDate: scrobbleTime, track: scrobbleTitle, artists = []} = {}} = x;
 
-                // check if scrobble time is same as play date (when the track finished playing AKA entered recent tracks)
-                let scrobblePlayDiff = Math.abs(playDate.unix() - scrobbleTime.unix());
-                if (scrobblePlayDiff < 10) {
-                    //this.logger.debug(`Scrobble with same name (${scrobbleTitle}) found and the play (finish time) vs. scrobble time diff was smaller than 10 seconds`);
+            const lowerScrobbleTitle = scrobbleTitle.toLocaleLowerCase();
+
+            // because of all this replacing we need a more position-agnostic way of comparing titles so use intersection on title split by spaces
+            // and compare against length of scrobble title
+            const lowerTitleTerms = new Set(lowerTitle.split(' '));
+            const commonTerms = setIntersection(new Set(lowerScrobbleTitle.split(' ')), lowerTitleTerms);
+
+            let closeMatch = commonTerms.size/lowerTitleTerms.size >= 0.7;
+
+            let closeTime = false;
+            // check if scrobble time is same as play date (when the track finished playing AKA entered recent tracks)
+            let scrobblePlayDiff = Math.abs(playDate.unix() - scrobbleTime.unix());
+            let scrobblePlayStartDiff;
+            if (scrobblePlayDiff < 10) {
+                //this.logger.debug(`Scrobble with same name (${scrobbleTitle}) found and the play (finish time) vs. scrobble time diff was smaller than 10 seconds`);
+                closeTime = true;
+            }
+            // also need to check that scrobble time isn't the BEGINNING of the track -- if the source supports durations
+            if (closeTime === false && trackLength !== undefined) {
+                scrobblePlayStartDiff = Math.abs(playDate.unix() - (scrobbleTime.unix() - trackLength));
+                if (scrobblePlayStartDiff < 10) {
+                    //this.logger.debug(`Scrobble with same name (${scrobbleTitle}) found and the play (start time) vs. scrobble time diff was smaller than 10 seconds`);
+                    closeTime = true;
+                }
+            }
+
+            // not sure how useful this actually is. its doing the job well and no one is asking for it right now so removing for now
+            // if(closeMatch && !closeTime) {
+            //     largeDiffs.push({
+            //         endTimeDiff: scrobblePlayDiff,
+            //         startTimeDiff: scrobblePlayStartDiff,
+            //         playDate: scrobbleTime,
+            //         title: scrobbleTitle,
+            //     });
+            // }
+
+            if(closeMatch && closeTime) {
+                return true;
+            }
+            if(closeTime) {
+                // if time was close but didn't match title lets relax match slightly to see if it works
+                const relaxedMatch = commonTerms.size/lowerTitleTerms.size >= 0.6;
+                if(relaxedMatch) {
                     return true;
                 }
-                // also need to check that scrobble time isn't the BEGINNING of the track -- if the source supports durations
-                if (trackLength !== undefined) {
-                    scrobblePlayStartDiff = Math.abs(playDate.unix() - (scrobbleTime.unix() - trackLength));
-                    if (scrobblePlayStartDiff < 10) {
-                        //this.logger.debug(`Scrobble with same name (${scrobbleTitle}) found and the play (start time) vs. scrobble time diff was smaller than 10 seconds`);
-                        return true;
-                    }
-                }
-                largeDiffs.push({
-                    endTimeDiff: scrobblePlayDiff,
-                    startTimeDiff: scrobblePlayStartDiff,
-                    playDate: scrobbleTime,
-                    title: scrobbleTitle,
-                });
-                return false;
             }
+
+
+
             return false;
         });
-        if (existingScrobble === undefined && largeDiffs.length > 0) {
-            this.logger.debug('Scrobbles with same name detected but play diff and scrobble diffs were too large to consider dups.');
-            for (const diff of largeDiffs) {
-                this.logger.debug(`Scrobble: ${diff.title} | Played At ${playDate.local().format()} | End Diff ${diff.endTimeDiff.toFixed(0)}s | Start Diff ${diff.startTimeDiff === undefined ? 'N/A' : `${diff.startTimeDiff.toFixed(0)}s`}`);
-            }
-        }
+        // if (existingScrobble === undefined && largeDiffs.length > 0) {
+        //     this.logger.debug('Scrobbles with same name detected but play diff and scrobble diffs were too large to consider dups.');
+        //     for (const diff of largeDiffs) {
+        //         this.logger.debug(`Scrobble: ${diff.title} | Played At ${playDate.local().format()} | End Diff ${diff.endTimeDiff.toFixed(0)}s | Start Diff ${diff.startTimeDiff === undefined ? 'N/A' : `${diff.startTimeDiff.toFixed(0)}s`}`);
+        //     }
+        // }
         return existingScrobble;
     }
 

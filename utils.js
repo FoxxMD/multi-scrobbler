@@ -162,6 +162,16 @@ export const createLabelledLogger = (name = 'default', label = 'App') => {
     return winston.loggers.get(name);
 }
 
+export const setIntersection = (setA, setB) => {
+    let _intersection = new Set()
+    for (let elem of setB) {
+        if (setA.has(elem)) {
+            _intersection.add(elem)
+        }
+    }
+    return _intersection
+}
+
 /*
 * Code below this comes from https://github.com/samthor/promises
 * I'm not using the package because the package type isn't module or something
