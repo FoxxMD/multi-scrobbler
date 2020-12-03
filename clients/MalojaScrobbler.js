@@ -122,7 +122,7 @@ export default class MalojaScrobbler extends AbstractScrobbleClient {
     alreadyScrobbled = (playObj, log = false) => {
         const result = this.existingScrobble(playObj) !== undefined;
         if (log && result === true) {
-            this.logger.debug(`${buildTrackString(playObj, [])} was already scrobbled`);
+            this.logger.debug(`${buildTrackString(playObj, {include: []})} was already scrobbled`);
         }
         return result;
     }

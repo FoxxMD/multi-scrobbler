@@ -67,7 +67,25 @@ export function sleep(ms) {
     return new Promise(resolve => setTimeout(resolve, ms));
 }
 
-export const buildTrackString = (playObj, include = ['time']) => {
+export const longestString = strings => strings.reduce((acc, curr) => curr.length > acc ? curr.length : acc, 0);
+export const truncateStringArrToLength = (length, truncStr = '...') => {
+    const truncater = truncateStringToLength(length, truncStr);
+    return strings => strings.map(truncater);
+}
+export const truncateStringToLength = (length, truncStr = '...') => str => str.length > length ? `${str.slice(0, length)}${truncStr}` : str;
+
+const defaultTransformer = input => input;
+
+export const buildTrackString = (playObj, options = {}) => {
+    const {
+        include = ['time'],
+        transformers: {
+            artist: artistFunc = defaultTransformer,
+            track: trackFunc = defaultTransformer,
+            time: timeFunc = t => t.local().format(),
+            timeFromNow = t => t.local().fromNow(),
+        } = {}
+    } = options;
     const {
         data: {
             artist,
@@ -77,9 +95,12 @@ export const buildTrackString = (playObj, include = ['time']) => {
         } = {}
     } = playObj;
 
-    let str = `${artist} - ${track}`;
+    let str = `${artistFunc(artist)} - ${trackFunc(track)}`;
     if (include.includes('time')) {
-        str = `${str}, played at ${playDate.local().format()}`
+        str = `${str}, played at ${timeFunc(playDate)}`
+    }
+    if(include.includes('timeFromNow')) {
+        str = `${str} (${timeFromNow(playDate)})`
     }
     return str;
 }
