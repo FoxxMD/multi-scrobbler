@@ -19,13 +19,13 @@ export default class TautulliSource extends PlexSource {
             duration,
             username,
         } = obj;
-        let artist = artist_name;
+        let artists = [artist_name];
         if (track_artist !== undefined && track_artist !== artist_name) {
-            artist = `${artist},${track_artist}`;
+            artists.push(track_artist);
         }
         return {
             data: {
-                artist,
+                artists,
                 album: album_name,
                 track: track_name,
                 playDate: dayjs(),
@@ -48,17 +48,17 @@ export default class TautulliSource extends PlexSource {
                 mediaType, user
             },
             data: {
-                artist,
+                artists,
                 track,
             } = {}
         } = playObj;
 
         if (this.users !== undefined && user !== undefined && !this.users.includes(user)) {
-            this.logger.debug(`Will not scrobble webhook event because author was not an allowed user: ${user}`, artist, track)
+            this.logger.debug(`Will not scrobble webhook event because author was not an allowed user: ${user}`, artists, track)
             return false;
         }
         if (mediaType !== 'track') {
-            this.logger.debug(`Will not scrobble webhook event because media type was not a track (${mediaType})`, artist, track);
+            this.logger.debug(`Will not scrobble webhook event because media type was not a track (${mediaType})`, artists, track);
             return false;
         }
         return true;

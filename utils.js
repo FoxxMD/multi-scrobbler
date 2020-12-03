@@ -80,7 +80,7 @@ export const buildTrackString = (playObj, options = {}) => {
     const {
         include = ['time'],
         transformers: {
-            artist: artistFunc = defaultTransformer,
+            artists: artistsFunc = a => a.join(' / '),
             track: trackFunc = defaultTransformer,
             time: timeFunc = t => t.local().format(),
             timeFromNow = t => t.local().fromNow(),
@@ -88,14 +88,14 @@ export const buildTrackString = (playObj, options = {}) => {
     } = options;
     const {
         data: {
-            artist,
+            artists,
             album,
             track,
             playDate
         } = {}
     } = playObj;
 
-    let str = `${artistFunc(artist)} - ${trackFunc(track)}`;
+    let str = `${artistsFunc(artists)} - ${trackFunc(track)}`;
     if (include.includes('time')) {
         str = `${str}, played at ${timeFunc(playDate)}`
     }

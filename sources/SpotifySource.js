@@ -51,17 +51,22 @@ export default class SpotifySource {
                 name,
                 id,
                 duration_ms,
+                album: {
+                    name: albumName,
+                } = {},
                 external_urls: {
                     spotify,
                 } = {}
             } = {},
             played_at
         } = obj;
-        let artistString = artists.reduce((acc, curr) => acc.concat(curr.name), []).join(',');
+        //let artistString = artists.reduce((acc, curr) => acc.concat(curr.name), []).join(',');
         return {
             data: {
-                artist: artistString,
+                artists: artists.map(x => x.name),
+                album: albumName,
                 track: name,
+                duration: duration_ms / 1000,
                 playDate: dayjs(played_at),
             },
             meta: {

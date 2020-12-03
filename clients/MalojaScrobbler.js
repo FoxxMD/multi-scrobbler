@@ -16,13 +16,26 @@ export default class MalojaScrobbler extends AbstractScrobbleClient {
         const {
             artists,
             title,
+            album,
+            duration,
             time,
         } = obj;
-        let artistString = artists.reduce((acc, curr) => acc.concat(curr.name), []).join(',');
+        let artistStrings = artists.reduce((acc, curr) => {
+            let aString;
+            if(typeof curr === 'string') {
+                aString = curr;
+            } else if(typeof curr === 'object') {
+                aString = curr.name;
+            }
+            const aStrings = aString.split(',');
+            return [...acc, ...aStrings];
+        }, []);
         return {
             data: {
-                artist: artistString,
+                artists: [...new Set(artistStrings)],
                 track: title,
+                album,
+                duration,
                 playDate: dayjs.unix(time),
             },
             meta: {
@@ -145,6 +158,7 @@ export default class MalojaScrobbler extends AbstractScrobbleClient {
         const lowerTitle = track.toLocaleLowerCase();
         const largeDiffs = [];
         // TODO add a runtime config option for verbose debugging for commented log statements
+        // TODO check artists as well
         const existingScrobble = this.recentScrobbles.find((x) => {
             const {data: {playDate: scrobbleTime, track: scrobbleTitle} = {}} = x;
             const lowerScrobbleTitle = scrobbleTitle.toLocaleLowerCase();
@@ -189,9 +203,10 @@ export default class MalojaScrobbler extends AbstractScrobbleClient {
 
         const {
             data: {
-                artist,
+                artists,
                 album,
                 track,
+                duration,
                 playDate
             } = {},
             meta: {
@@ -206,7 +221,10 @@ export default class MalojaScrobbler extends AbstractScrobbleClient {
             await this.callApi(request.post(`${url}/apis/mlj_1/newscrobble`)
                 .type('json')
                 .send({
-                    artist,
+                    // maloja seems to detect this deliminator much better than commas
+                    // also less likely artist has a forward slash in their name than a comma
+                    artist: artists.join(' / '),
+                    seconds: duration,
                     title: track,
                     album,
                     key: apiKey,
