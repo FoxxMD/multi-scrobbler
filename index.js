@@ -184,7 +184,7 @@ app.use(bodyParser.json());
 
         app.getAsync('/spotify/recent', async function (req, res) {
             const result = await spotifySource.getRecentlyPlayed({formatted: true});
-            const artistTruncFunc = truncateStringToLength(Math.min(30, longestString(result.map(x => x.data.artist))));
+            const artistTruncFunc = truncateStringToLength(Math.min(40, longestString(result.map(x => x.data.artists.join(' / ')).flat())));
             const trackLength = longestString(result.map(x => x.data.track))
             const plays = result.map((x) => {
                 const {
@@ -197,7 +197,7 @@ app.use(bodyParser.json());
                 const buildOpts = {
                     include: ['time', 'timeFromNow'],
                     transformers: {
-                        artist: a => artistTruncFunc(a).padEnd(33),
+                        artists: a => artistTruncFunc(a.join(' / ')).padEnd(33),
                         track: t => t.padEnd(trackLength)
                     }
                 }
