@@ -10,7 +10,7 @@ export default class ScrobbleClients {
     clientTypes = ['maloja'];
 
     constructor() {
-        this.logger = createLabelledLogger('name', 'Scrobblers');
+        this.logger = createLabelledLogger('scrobblers', 'Scrobblers');
     }
 
     buildClientsFromConfig = async (configDir = undefined) => {

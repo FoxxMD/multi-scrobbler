@@ -16,9 +16,9 @@ export default class AbstractScrobbleClient {
     config;
     logger;
 
-    constructor(name, config = {}, options = {}) {
+    constructor(name = 'Scrobble Client', config = {}, options = {}) {
         this.name = name;
-        this.logger = createLabelledLogger('default', 'App');
+        this.logger = createLabelledLogger(name, name);
         this.config = config;
         const {
             refreshEnabled = true,
