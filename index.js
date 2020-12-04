@@ -96,14 +96,13 @@ app.use(bodyParser.json());
         const {
             spotify,
             plex = {},
-            clients = [],
         } = config || {};
 
         /*
         * setup clients
         * */
         const scrobbleClients = new Clients();
-        await scrobbleClients.buildClients(clients, configDir);
+        await scrobbleClients.buildClientsFromConfig(configDir);
         if (scrobbleClients.clients.length === 0) {
             logger.warn('No scrobble clients were configured!')
         }

@@ -99,7 +99,7 @@ export const buildTrackString = (playObj, options = {}) => {
     if (include.includes('time')) {
         str = `${str}, played at ${timeFunc(playDate)}`
     }
-    if(include.includes('timeFromNow')) {
+    if (include.includes('timeFromNow')) {
         str = `${str} (${timeFromNow(playDate)})`
     }
     return str;
@@ -170,6 +170,32 @@ export const setIntersection = (setA, setB) => {
         }
     }
     return _intersection
+}
+
+export const isValidConfigStructure = (obj, required = {}) => {
+    const {name = false, type = false, data = true} = required;
+    const errs = [];
+    if (obj.type === undefined && type) {
+        errs.push("'type' must be defined");
+    }
+    if (obj.name === undefined && name) {
+        errs.push("'name' must be defined")
+    }
+    if (obj.data === undefined && data) {
+        errs.push("'data' must be defined");
+    }
+    if (errs.length > 0) {
+        return errs;
+    }
+    return true;
+}
+
+export const returnDuplicateStrings = (arr) => {
+    const alreadySeen = [];
+    const dupes = [];
+
+    arr.forEach(str => alreadySeen[str] ? dupes.push(str) : alreadySeen[str] = true);
+    return dupes;
 }
 
 /*

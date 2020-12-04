@@ -16,7 +16,8 @@ export default class AbstractScrobbleClient {
     config;
     logger;
 
-    constructor(config = {}, options = {}) {
+    constructor(name, config = {}, options = {}) {
+        this.name = name;
         this.logger = createLabelledLogger('default', 'App');
         this.config = config;
         const {

@@ -5,10 +5,8 @@ import {buildTrackString, createLabelledLogger, setIntersection, sortByPlayDate}
 
 export default class MalojaScrobbler extends AbstractScrobbleClient {
 
-    name = 'Maloja';
-
-    constructor(config = {}, options = {}) {
-        super(config, options);
+    constructor(name, config = {}, options = {}) {
+        super(name, config, options);
         this.logger = createLabelledLogger('maloja', 'Maloja');
     }
 
