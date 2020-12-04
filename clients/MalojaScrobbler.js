@@ -1,12 +1,19 @@
 import AbstractScrobbleClient from "./AbstractScrobbleClient.js";
 import request from 'superagent';
 import dayjs from 'dayjs';
-import {buildTrackString, createLabelledLogger, setIntersection, sortByPlayDate} from "../utils.js";
+import {buildTrackString, setIntersection, sortByPlayDate} from "../utils.js";
 
 export default class MalojaScrobbler extends AbstractScrobbleClient {
 
     constructor(name, config = {}, options = {}) {
-        super(`Maloja - ${name}`, config, options);
+        super('maloja', name, config, options);
+        const {url, apiKey} = config;
+        if (apiKey === undefined) {
+            this.logger.warn("'apiKey' not found in config! Client will most likely fail when trying to scrobble");
+        }
+        if (url === undefined) {
+            throw new Error("Missing 'url' for Maloja config");
+        }
     }
 
     static formatPlayObj(obj) {
@@ -19,9 +26,9 @@ export default class MalojaScrobbler extends AbstractScrobbleClient {
         } = obj;
         let artistStrings = artists.reduce((acc, curr) => {
             let aString;
-            if(typeof curr === 'string') {
+            if (typeof curr === 'string') {
                 aString = curr;
-            } else if(typeof curr === 'object') {
+            } else if (typeof curr === 'object') {
                 aString = curr.name;
             }
             const aStrings = aString.split(',');
@@ -172,7 +179,7 @@ export default class MalojaScrobbler extends AbstractScrobbleClient {
             const lowerTitleTerms = new Set(lowerTitle.split(' '));
             const commonTerms = setIntersection(new Set(lowerScrobbleTitle.split(' ')), lowerTitleTerms);
 
-            let closeMatch = commonTerms.size/lowerTitleTerms.size >= 0.7;
+            let closeMatch = commonTerms.size / lowerTitleTerms.size >= 0.7;
 
             let closeTime = false;
             // check if scrobble time is same as play date (when the track finished playing AKA entered recent tracks)
@@ -201,17 +208,16 @@ export default class MalojaScrobbler extends AbstractScrobbleClient {
             //     });
             // }
 
-            if(closeMatch && closeTime) {
+            if (closeMatch && closeTime) {
                 return true;
             }
-            if(closeTime) {
+            if (closeTime) {
                 // if time was close but didn't match title lets relax match slightly to see if it works
-                const relaxedMatch = commonTerms.size/lowerTitleTerms.size >= 0.6;
-                if(relaxedMatch) {
+                const relaxedMatch = commonTerms.size / lowerTitleTerms.size >= 0.6;
+                if (relaxedMatch) {
                     return true;
                 }
             }
-
 
 
             return false;

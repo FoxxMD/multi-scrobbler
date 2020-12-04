@@ -1,9 +1,10 @@
 import dayjs from "dayjs";
-import {buildTrackString, createLabelledLogger} from "../utils.js";
+import {buildTrackString, capitalize, createLabelledLogger} from "../utils.js";
 
 export default class AbstractScrobbleClient {
 
     name;
+    type;
 
     recentScrobbles = [];
     newestScrobbleTime;
@@ -16,9 +17,11 @@ export default class AbstractScrobbleClient {
     config;
     logger;
 
-    constructor(name = 'Scrobble Client', config = {}, options = {}) {
+    constructor(type, name, config = {}, options = {}) {
+        this.type = type;
         this.name = name;
-        this.logger = createLabelledLogger(name, name);
+        const identifier = `${capitalize(this.type)} - ${name}`;
+        this.logger = createLabelledLogger(identifier, identifier);
         this.config = config;
         const {
             refreshEnabled = true,

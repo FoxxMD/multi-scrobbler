@@ -198,6 +198,10 @@ export const returnDuplicateStrings = (arr) => {
     return dupes;
 }
 
+export const capitalize = (str) => {
+    return str.charAt(0).toUpperCase() + str.slice(1)
+}
+
 /*
 * Code below this comes from https://github.com/samthor/promises
 * I'm not using the package because the package type isn't module or something

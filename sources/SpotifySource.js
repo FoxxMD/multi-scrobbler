@@ -10,13 +10,13 @@ import {
     createLabelledLogger
 } from "../utils.js";
 import SpotifyWebApi from "spotify-web-api-node";
+import AbstractSource from "./AbstractSource.js";
 
 const scopes = ['user-read-recently-played', 'user-read-currently-playing'];
 const state = 'random';
 
-export default class SpotifySource {
+export default class SpotifySource extends AbstractSource {
 
-    logger;
     spotifyApi;
     interval;
     localUrl;
@@ -29,15 +29,15 @@ export default class SpotifySource {
     emitter;
     discoveredTracks = 0;
 
-    constructor(config = {}) {
-        this.logger = createLabelledLogger('spotify', 'Spotify');
+    constructor(name, config = {}, clients = []) {
+        super('spotify', name, config, clients);
         const {
             localUrl,
             configDir,
         } = config;
 
         this.configDir = configDir;
-        this.workingCredsPath = `${configDir}/currentCreds.json`;
+        this.workingCredsPath = `${configDir}/currentCreds-${name}.json`;
         this.localUrl = localUrl;
         this.spotifyPoller = makeSingle(pollSpotify);
         this.emitter = new EventEmitter();
@@ -84,34 +84,25 @@ export default class SpotifySource {
         this.discoveredTracks++;
     }
 
-    buildSpotifyApi = async (spotifyObj) => {
+    buildSpotifyApi = async () => {
 
-        this.logger.debug('Initializing Spotify source');
+        this.logger.debug('Initializing');
 
         let spotifyCreds = {};
         try {
             spotifyCreds = await readJson(this.workingCredsPath, {throwOnNotFound: false});
         } catch (e) {
-            this.logger.warn('Current spotify credentials file exists but could not be parsed');
-        }
-
-        let spotifyConfig = spotifyObj;
-        if (spotifyObj === undefined) {
-            try {
-                spotifyConfig = await readJson(`${this.configDir}/spotify.json`, {throwOnNotFound: false});
-            } catch (e) {
-                this.logger.warn('Spotify config file exists but could not be parsed');
-            }
+            this.logger.warn('Current spotify credentials file exists but could not be parsed', { path: this.workingCredsPath });
         }
 
         const {
-            accessToken = process.env.SPOTIFY_ACCESS_TOKEN,
-            clientId = process.env.SPOTIFY_CLIENT_ID,
-            clientSecret = process.env.SPOTIFY_CLIENT_SECRET,
-            redirectUri = process.env.SPOTIFY_REDIRECT_URI,
-            refreshToken = process.env.SPOTIFY_REFRESH_TOKEN,
+            accessToken,
+            clientId,
+            clientSecret,
+            redirectUri,
+            refreshToken,
             interval = 60,
-        } = spotifyConfig || {};
+        } = this.config || {};
 
         if (interval < 15) {
             console.warn('Interval should be above 30 seconds...😬');
@@ -160,16 +151,16 @@ export default class SpotifySource {
         }
 
         if (validationErrors.length !== 0) {
-            this.logger.warn(`Spotify configuration was not valid:\n*${validationErrors.join('\n')}`);
-            return;
+            this.logger.warn(`Configuration was not valid:\*${validationErrors.join('\n')}`);
+            throw new Error('Failed to initialize a Spotify source');
         }
 
-        this.logger.info('Spotify source initialized');
+        this.logger.info('Initialized');
         this.spotifyApi = new SpotifyWebApi(apiConfig);
     }
 
     createAuthUrl = () => {
-        return this.spotifyApi.createAuthorizeURL(scopes, state);
+        return this.spotifyApi.createAuthorizeURL(scopes, this.name);
     }
 
     handleAuthCodeCallback = async ({error, code}) => {
@@ -242,13 +233,13 @@ export default class SpotifySource {
         }
     }
 
-    pollSpotify = (clients) => {
+    pollSpotify = (allClients) => {
         if (this.spotifyApi === undefined) {
             this.logger.warn('Cannot poll spotify without valid credentials configuration')
             return;
         }
         this.pollerRunning = true;
-        return this.spotifyPoller(this.logger, this, this.interval, this.workingCredsPath, clients, this.emitter)
+        return this.spotifyPoller(this.logger, this, this.interval, this.workingCredsPath, allClients, this.clients, this.emitter)
             .catch((e) => {
                 this.logger.error('Error occurred while polling spotify, polling has been stopped');
                 this.logger.error(e);
@@ -259,8 +250,8 @@ export default class SpotifySource {
     }
 }
 
-const pollSpotify = function* (logger, source, interval = 60, credsPath, clients, emitter) {
-    logger.info('Starting spotify polling');
+const pollSpotify = function* (logger, source, interval = 60, credsPath, clients, clientsToScrobbleTo = [], emitter) {
+    logger.info('Polling started');
     let lastTrackPlayedAt = dayjs();
     let checkCount = 0;
     while (true) {
@@ -316,7 +307,7 @@ const pollSpotify = function* (logger, source, interval = 60, credsPath, clients
             checkCount = 0;
         }
 
-        const scrobbleResult = yield clients.scrobble(playObjs, {forceRefresh: closeToInterval, source: 'Spotify'});
+        const scrobbleResult = yield clients.scrobble(playObjs, {forceRefresh: closeToInterval, scrobbleTo: clientsToScrobbleTo});
         if (scrobbleResult instanceof Error) {
             return Promise.reject(scrobbleResult);
         } else if (scrobbleResult.length > 0) {

@@ -13,6 +13,10 @@ export default class ScrobbleClients {
         this.logger = createLabelledLogger('scrobblers', 'Scrobblers');
     }
 
+    getByName = (name) => {
+        return this.clients.find(x => x.name === name);
+    }
+
     buildClientsFromConfig = async (configDir = undefined) => {
         let configs = [];
 
@@ -144,20 +148,13 @@ ${sources.join('\n')}`);
         const {type, name, data = {}} = clientConfig;
         switch (type) {
             case 'maloja':
-                const {url, apiKey} = data;
-                this.logger.debug('Attempting Maloja initialization...');
-                if (apiKey === undefined) {
-                    this.logger.warn(`[Config ${name}] Maloja 'apiKey' not found in config! Client will most likely fail when trying to scrobble`);
-                }
-                if (url === undefined) {
-                    throw new Error(`[Config ${name}] Missing 'url' for Maloja config`);
-                }
+                this.logger.debug(`(${name}) Attempting Maloja initialization...`);
                 const mj = new MalojaScrobbler(name, data);
                 const testSuccess = await mj.testConnection();
                 if (testSuccess === false) {
-                    throw new Error('Maloja client not initialized due to failure during connection testing');
+                    throw new Error(`(${name}) Maloja client not initialized due to failure during connection testing`);
                 } else {
-                    this.logger.info('Maloja client initialized');
+                    this.logger.info(`(${name}) Maloja client initialized`);
                     this.clients.push(mj)
                 }
                 break;
@@ -171,6 +168,7 @@ ${sources.join('\n')}`);
         const {
             forceRefresh = false,
             checkTime = dayjs(),
+            scrobbleTo = [],
         } = options;
 
         const tracksScrobbled = [];
@@ -180,6 +178,10 @@ ${sources.join('\n')}`);
         }
 
         for (const client of this.clients) {
+            if (scrobbleTo.length > 0 && !scrobbleTo.includes(client.name)) {
+                this.logger.debug(`Client '${client.name}' was filtered out by source`);
+                continue;
+            }
             try {
                 if (forceRefresh || client.scrobblesLastCheckedAt().unix() < checkTime.unix()) {
                     await client.refreshScrobbles();
