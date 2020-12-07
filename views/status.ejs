@@ -10,27 +10,45 @@
     .capitalize {
         text-transform: capitalize;
     }
+    .facetContainer {
+        flex-wrap: wrap;
+        display: flex;
+    }
+    .facetItem {
+        flex: 1 0 auto;
+    }
+    .disabled {
+        color: currentColor;
+        cursor: not-allowed;
+        opacity: 0.5;
+        text-decoration: none;
+    }
 </style>
 </head>
 <body>
-    <h2>Spotify</h2>
-    <ul>
-        <li><b>Status: <%= spotify.status === true ? 'Running' : 'Idle' %></b></li>
-        <li>Tracks Discovered (since app started): <%= spotify.discovered %></li>
-        <li>Click <a target="_blank" href="spotify/recent">to see recently played tracks returned by Spotify</a></li>
-        <li>Click <a target="_blank" href="authSpotify">to re-authenticate and restart polling</a></li>
-        <li>Click <a target="_blank" href="pollSpotify">to restart polling</a></li>
-    </ul>
-    <h2>Tautulli</h2>
-    <ul>
-        <li><b>Status: <%= tautulli.status %></b></li>
-        <li>Tracks Discovered (since app started): <%= tautulli.discovered %></li>
-    </ul>
-    <h2>Plex Webhook</h2>
-    <ul>
-        <li><b>Status: <%= plex.status %></b></li>
-        <li>Tracks Discovered (since app started): <%= plex.discovered %></li>
-    </ul>
+<h2>Sources</h2>
+<div class="facetContainer">
+    <% sources.forEach(function (source){ %>
+    <div class="facetItem">
+        <h3><%= source.display %> - <%= source.name %></h3>
+        <ul>
+            <li><b>Status: <%= source.status %></b></li>
+            <li>Tracks Discovered (since app started): <%= source.discoveredTracks %></li>
+            <% if (source.type === 'spotify' && source.authed) { %>
+            <li>Click <a target="_blank" href="spotify/recent?name=<%= source.name %>">to see recently played tracks returned by Spotify</a></li>
+            <li>Click <a target="_blank" href="authSpotify?name=<%= source.name %>">to re-authenticate and restart polling</a></li>
+            <li>Click <a target="_blank" href="pollSpotify?name=<%= source.name %>">to restart polling</a></li>
+            <% } %>
+            <% if (source.type === 'spotify' && !source.authed) { %>
+                <li>Click <a class="disabled" target="_blank">to see recently played tracks returned by Spotify</a></li>
+                <li>Click <a target="_blank" href="authSpotify?name=<%= source.name %>">to re-authenticate and restart polling</a></li>
+                <li>Click <a class="disabled" target="_blank">to restart polling</a></li>
+            <% } %>
+        </ul>
+    </div>
+    <% }) %>
+</div>
+
     <h2>Log (Most Recent)</h2>
     <ul>
         <li>Level : <%- logs.level %> </li>

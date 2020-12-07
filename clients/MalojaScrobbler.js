@@ -1,15 +1,21 @@
 import AbstractScrobbleClient from "./AbstractScrobbleClient.js";
 import request from 'superagent';
 import dayjs from 'dayjs';
-import {buildTrackString, createLabelledLogger, setIntersection, sortByPlayDate} from "../utils.js";
+import {buildTrackString, playObjDataMatch, setIntersection, sortByPlayDate, truncateStringToLength} from "../utils.js";
+
+const feat = ["ft.", "ft", "feat.", "feat", "featuring", "Ft.", "Ft", "Feat.", "Feat", "Featuring"];
 
 export default class MalojaScrobbler extends AbstractScrobbleClient {
 
-    name = 'Maloja';
-
-    constructor(config = {}, options = {}) {
-        super(config, options);
-        this.logger = createLabelledLogger('maloja', 'Maloja');
+    constructor(name, config = {}, options = {}) {
+        super('maloja', name, config, options);
+        const {url, apiKey} = config;
+        if (apiKey === undefined) {
+            this.logger.warn("'apiKey' not found in config! Client will most likely fail when trying to scrobble");
+        }
+        if (url === undefined) {
+            throw new Error("Missing 'url' for Maloja config");
+        }
     }
 
     static formatPlayObj(obj) {
@@ -22,9 +28,9 @@ export default class MalojaScrobbler extends AbstractScrobbleClient {
         } = obj;
         let artistStrings = artists.reduce((acc, curr) => {
             let aString;
-            if(typeof curr === 'string') {
+            if (typeof curr === 'string') {
                 aString = curr;
-            } else if(typeof curr === 'object') {
+            } else if (typeof curr === 'object') {
                 aString = curr.name;
             }
             const aStrings = aString.split(',');
@@ -43,6 +49,8 @@ export default class MalojaScrobbler extends AbstractScrobbleClient {
             }
         }
     }
+
+    formatPlayObj = obj => MalojaScrobbler.formatPlayObj(obj);
 
     callApi = async (req) => {
         try {
@@ -114,6 +122,7 @@ export default class MalojaScrobbler extends AbstractScrobbleClient {
 
     refreshScrobbles = async () => {
         if (this.refreshEnabled) {
+            this.logger.debug('Refreshing recent scrobbles');
             const {url} = this.config;
             const resp = await this.callApi(request.get(`${url}/apis/mlj_1/scrobbles?max=20`));
             const {
@@ -127,104 +136,169 @@ export default class MalojaScrobbler extends AbstractScrobbleClient {
                 const [{data: {playDate: oldestScrobbleTime = dayjs()} = {}} = {}] = this.recentScrobbles.slice(0, 1);
                 this.newestScrobbleTime = newestScrobbleTime;
                 this.oldestScrobbleTime = oldestScrobbleTime;
+
+                this.scrobbledPlayObjs = this.scrobbledPlayObjs.filter(x => this.timeFrameIsValid(x.play));
             }
         }
         this.lastScrobbleCheck = dayjs();
     }
 
-    alreadyScrobbled = (playObj, log = false) => {
-        const result = this.existingScrobble(playObj) !== undefined;
-        if (log && result === true) {
-            this.logger.debug(`${buildTrackString(playObj, {include: []})} was already scrobbled`);
-        }
-        return result;
-    }
-
-    existingScrobble = (playObj) => {
-        if (false === this.checkExistingScrobbles || this.recentScrobbles.length === 0) {
-            return undefined;
-        }
-
+    cleanSourceSearchTitle = (playObj) => {
         const {
             data: {
                 track,
                 artists: sourceArtists = [],
-                playDate
-            } = {},
-            meta: {
-                trackLength,
             } = {},
         } = playObj;
-
-        // One of the ways Maloja cleans track titles is by removing "feat"
-        let lowerTitle = track.toLocaleLowerCase().replace('.feat', '').replace('feat', '');
+        let lowerTitle = track.toLocaleLowerCase();
+        lowerTitle = feat.reduce((acc, curr) => acc.replace(curr, ''), lowerTitle);
         // also remove [artist] from the track if found since that gets removed as well
         const lowerArtists = sourceArtists.map(x => x.toLocaleLowerCase());
         lowerTitle = lowerArtists.reduce((acc, curr) => acc.replace(curr, ''), lowerTitle);
 
-        const largeDiffs = [];
-        // TODO add a runtime config option for verbose debugging for commented log statements
-        // TODO check artists as well
-        const existingScrobble = this.recentScrobbles.find((x) => {
-            const {data: {playDate: scrobbleTime, track: scrobbleTitle, artists = []} = {}} = x;
+        // remove any whitespace in parenthesis
+        lowerTitle = lowerTitle.replace("\\s+(?=[^()]*\\))", '')
+            // replace parenthesis
+            .replace('()', '')
+            .replace('( )', '')
+            .trim();
 
-            const lowerScrobbleTitle = scrobbleTitle.toLocaleLowerCase();
+        return lowerTitle;
+    }
 
-            // because of all this replacing we need a more position-agnostic way of comparing titles so use intersection on title split by spaces
-            // and compare against length of scrobble title
-            const lowerTitleTerms = new Set(lowerTitle.split(' '));
-            const commonTerms = setIntersection(new Set(lowerScrobbleTitle.split(' ')), lowerTitleTerms);
+    alreadyScrobbled = (playObj, log = false) => {
+        return this.existingScrobble(playObj, (log || this.verboseOptions.match.onMatch)) !== undefined;
+    }
 
-            let closeMatch = commonTerms.size/lowerTitleTerms.size >= 0.7;
+    existingScrobble = (playObj, logMatch = false) => {
+        const tr = truncateStringToLength(27);
+        const scoreTrackOpts = {include: ['track', 'time'], transformers: {track: t => tr(t).padEnd(30)}};
 
-            let closeTime = false;
-            // check if scrobble time is same as play date (when the track finished playing AKA entered recent tracks)
-            let scrobblePlayDiff = Math.abs(playDate.unix() - scrobbleTime.unix());
-            let scrobblePlayStartDiff;
-            if (scrobblePlayDiff < 10) {
-                //this.logger.debug(`Scrobble with same name (${scrobbleTitle}) found and the play (finish time) vs. scrobble time diff was smaller than 10 seconds`);
-                closeTime = true;
+        // return early if we don't care about checking existing
+        if (false === this.checkExistingScrobbles) {
+            if (this.verboseOptions.match.onNoMatch) {
+                this.logger.debug(`(Existing Check) Source: ${buildTrackString(playObj, scoreTrackOpts)} => No Match because existing scrobble check is FALSE`);
             }
-            // also need to check that scrobble time isn't the BEGINNING of the track -- if the source supports durations
-            if (closeTime === false && trackLength !== undefined) {
-                scrobblePlayStartDiff = Math.abs(playDate.unix() - (scrobbleTime.unix() - trackLength));
-                if (scrobblePlayStartDiff < 10) {
-                    //this.logger.debug(`Scrobble with same name (${scrobbleTitle}) found and the play (start time) vs. scrobble time diff was smaller than 10 seconds`);
+            return undefined;
+        }
+
+        let existingScrobble;
+        let closestMatch = {score: 0, breakdowns: ['None']};
+
+        // then check if we have already recorded this
+        const [existingExactSubmitted, existingDataSubmitted = []] = this.findExistingSubmittedPlayObj(playObj);
+
+        // if we have an submitted play with matching data and play date then we can just return the response from the original scrobble
+        if (existingExactSubmitted !== undefined) {
+            existingScrobble = existingExactSubmitted.scrobble;
+
+            closestMatch = {
+                score: 1,
+                breakdowns: ['Exact Match found in previously successfully scrobbled']
+            }
+        }
+        // if not though then we need to check recent scrobbles from scrobble api.
+        // this will be less accurate than checking existing submitted (obv) but will happen if backlogging or on a fresh server start
+
+        // if no recent scrobbles found then assume we haven't submitted it
+        // (either user doesnt want to check history or there is no history to check!)
+        if (this.recentScrobbles.length === 0) {
+            if (this.verboseOptions.match.onNoMatch) {
+                this.logger.debug(`(Existing Check) ${buildTrackString(playObj, scoreTrackOpts)} => No Match because no recent scrobbles returned from API`);
+            }
+            return undefined;
+        }
+
+        if (existingScrobble === undefined) {
+
+            // we have have found an existing submission but without an exact date
+            // in which case we can check the scrobble api response against recent scrobbles (also from api) for a more accurate comparison
+            const referenceApiScrobbleResponse = existingDataSubmitted.length > 0 ? existingDataSubmitted[0].scrobble : undefined;
+
+            const {
+                data: {
+                    artists: sourceArtists = [],
+                    playDate
+                } = {},
+                meta: {
+                    trackLength,
+                } = {},
+            } = playObj;
+
+            // clean source title so it matches title from the scrobble api response as closely as we can get it
+            let cleanSourceTitle = this.cleanSourceSearchTitle(playObj);
+
+            existingScrobble = this.recentScrobbles.find((x) => {
+
+                const referenceMatch = referenceApiScrobbleResponse !== undefined && playObjDataMatch(x, referenceApiScrobbleResponse);
+
+                const {data: {playDate: scrobbleTime, track: scrobbleTitle, artists = []} = {}} = x;
+
+                let closeTime = false;
+                // check if scrobble time is same as play date (when the track finished playing AKA entered recent tracks)
+                let scrobblePlayDiff = Math.abs(playDate.unix() - scrobbleTime.unix());
+                let scrobblePlayStartDiff;
+                if (scrobblePlayDiff < 10) {
+                    //this.logger.debug(`Scrobble with same name (${scrobbleTitle}) found and the play (finish time) vs. scrobble time diff was smaller than 10 seconds`);
                     closeTime = true;
                 }
-            }
-
-            // not sure how useful this actually is. its doing the job well and no one is asking for it right now so removing for now
-            // if(closeMatch && !closeTime) {
-            //     largeDiffs.push({
-            //         endTimeDiff: scrobblePlayDiff,
-            //         startTimeDiff: scrobblePlayStartDiff,
-            //         playDate: scrobbleTime,
-            //         title: scrobbleTitle,
-            //     });
-            // }
-
-            if(closeMatch && closeTime) {
-                return true;
-            }
-            if(closeTime) {
-                // if time was close but didn't match title lets relax match slightly to see if it works
-                const relaxedMatch = commonTerms.size/lowerTitleTerms.size >= 0.6;
-                if(relaxedMatch) {
-                    return true;
+                // also need to check that scrobble time isn't the BEGINNING of the track -- if the source supports durations
+                if (closeTime === false && trackLength !== undefined) {
+                    scrobblePlayStartDiff = Math.abs(playDate.unix() - (scrobbleTime.unix() - trackLength));
+                    if (scrobblePlayStartDiff < 10) {
+                        //this.logger.debug(`Scrobble with same name (${scrobbleTitle}) found and the play (start time) vs. scrobble time diff was smaller than 10 seconds`);
+                        closeTime = true;
+                    }
                 }
-            }
 
+                let titleMatch;
+                const lowerScrobbleTitle = scrobbleTitle.toLocaleLowerCase().trim();
+                // because of all this replacing we need a more position-agnostic way of comparing titles so use intersection on title split by spaces
+                // and compare against length of scrobble title
+                const sourceTitleTerms = new Set(cleanSourceTitle.split(' ').filter(x => x !== ''));
+                const commonTerms = setIntersection(new Set(lowerScrobbleTitle.split(' ')), sourceTitleTerms);
 
+                titleMatch = commonTerms.size / sourceTitleTerms.size;
 
-            return false;
-        });
-        // if (existingScrobble === undefined && largeDiffs.length > 0) {
-        //     this.logger.debug('Scrobbles with same name detected but play diff and scrobble diffs were too large to consider dups.');
-        //     for (const diff of largeDiffs) {
-        //         this.logger.debug(`Scrobble: ${diff.title} | Played At ${playDate.local().format()} | End Diff ${diff.endTimeDiff.toFixed(0)}s | Start Diff ${diff.startTimeDiff === undefined ? 'N/A' : `${diff.startTimeDiff.toFixed(0)}s`}`);
-        //     }
-        // }
+                let artistMatch;
+                const lowerSourceArtists = sourceArtists.map(x => x.toLocaleLowerCase());
+                const lowerScrobbleArtists = artists.map(x => x.toLocaleLowerCase());
+                artistMatch = setIntersection(new Set(lowerScrobbleArtists), new Set(lowerSourceArtists)).size / artists.length;
+
+                const artistScore = .2 * artistMatch;
+                const titleScore = .3 * titleMatch;
+                const timeScore = .5 * (closeTime ? 1 : 0);
+                const referenceScore = .5 * (referenceMatch ? 1 : 0);
+                const score = artistScore + titleScore + timeScore;
+
+                let scoreBreakdowns = [
+                    `Reference: ${(referenceMatch ? 1 : 0)} * .5 = ${referenceScore.toFixed(2)}`,
+                    `Artist ${artistMatch.toFixed(2)} * .2 = ${artistScore.toFixed(2)}`,
+                    `Title: ${titleMatch.toFixed(2)} * .3 = ${titleScore.toFixed(2)}`,
+                    `Time: ${closeTime ? 1 : 0} * .5 = ${timeScore.toFixed(2)}`,
+                    `Score ${score.toFixed(2)} => ${score >= .7 ? 'Matched!' : 'No Match'}`
+                ];
+
+                const confidence = `Score ${score.toFixed(2)} => ${score >= .7 ? 'Matched!' : 'No Match'}`
+
+                const scoreInfo = {
+                    score,
+                    scrobble: x,
+                    breakdowns: this.verboseOptions.match.confidenceBreakdown ? scoreBreakdowns : [confidence]
+                }
+
+                if (closestMatch.score <= score && score > 0) {
+                    closestMatch = scoreInfo
+                }
+
+                return score >= .7;
+            });
+        }
+
+        if ((existingScrobble !== undefined && this.verboseOptions.match.onMatch) || (existingScrobble === undefined && this.verboseOptions.match.onNoMatch)) {
+            const closestScrobble = closestMatch.scrobble === undefined ? closestMatch.breakdowns.join(' | ') : `Closest Scrobble: ${buildTrackString(closestMatch.scrobble, scoreTrackOpts)} => ${closestMatch.breakdowns.join(' | ')}`;
+            this.logger.debug(`(Existing Check) Source: ${buildTrackString(playObj, scoreTrackOpts)} => ${closestScrobble}`);
+        }
         return existingScrobble;
     }
 
@@ -248,7 +322,7 @@ export default class MalojaScrobbler extends AbstractScrobbleClient {
         const sType = newFromSource ? 'New' : 'Backlog';
 
         try {
-            await this.callApi(request.post(`${url}/apis/mlj_1/newscrobble`)
+            const response = await this.callApi(request.post(`${url}/apis/mlj_1/newscrobble`)
                 .type('json')
                 .send({
                     // maloja seems to detect this deliminator much better than commas
@@ -260,6 +334,7 @@ export default class MalojaScrobbler extends AbstractScrobbleClient {
                     key: apiKey,
                     time: playDate.unix(),
                 }));
+            this.addScrobbledTrack(playObj, response.body.track);
             if (newFromSource) {
                 this.logger.info(`Scrobbled (New)     => (${source}) ${buildTrackString(playObj)}`);
             } else {

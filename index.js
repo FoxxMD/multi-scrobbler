@@ -1,4 +1,4 @@
-import {addAsync} from '@awaitjs/express';
+import {addAsync, Router} from '@awaitjs/express';
 import express from 'express';
 import bodyParser from 'body-parser';
 import multer from 'multer';
@@ -9,9 +9,17 @@ import isBetween from 'dayjs/plugin/isBetween.js';
 import relativeTime from 'dayjs/plugin/relativeTime.js';
 import {Writable} from 'stream';
 import 'winston-daily-rotate-file';
-import {buildTrackString, labelledFormat, longestString, readJson, truncateStringToLength} from "./utils.js";
+import {
+    buildTrackString,
+    capitalize,
+    labelledFormat,
+    longestString,
+    readJson,
+    truncateStringToLength
+} from "./utils.js";
 import Clients from './clients/ScrobbleClients.js';
-import SpotifySource from "./sources/SpotifySource.js";
+import ScrobbleSources from "./sources/ScrobbleSources.js";
+import {makeClientCheckMiddle, makeSourceCheckMiddle} from "./server/middleware.js";
 import TautulliSource from "./sources/TautulliSource.js";
 import PlexSource from "./sources/PlexSource.js";
 
@@ -79,7 +87,9 @@ const logger = winston.loggers.get('default');
 const configDir = process.env.CONFIG_DIR || `${process.cwd()}/config`;
 
 const app = addAsync(express());
+const router = Router();
 
+app.use(router);
 app.use(bodyParser.json());
 
 (async function () {
@@ -95,53 +105,75 @@ app.use(bodyParser.json());
         // setup defaults for other configs and general config
         const {
             spotify,
-            plex = {},
-            clients = [],
+            plex,
         } = config || {};
 
         /*
         * setup clients
         * */
         const scrobbleClients = new Clients();
-        await scrobbleClients.buildClients(clients, configDir);
+        await scrobbleClients.buildClientsFromConfig(configDir);
         if (scrobbleClients.clients.length === 0) {
             logger.warn('No scrobble clients were configured!')
         }
 
-        /*
-        * setup sources
-        * */
-        const spotifySource = new SpotifySource({configDir, localUrl});
-        await spotifySource.buildSpotifyApi(spotify);
-
-        let plexJson = {};
-        try {
-            plexJson = await readJson(`${configDir}/plex.json`, {throwOnNotFound: false});
-        } catch (e) {
-            logger.warn('Plex config file exists could not be parsed!');
+        const scrobbleSources = new ScrobbleSources(localUrl, configDir);
+        let deprecatedConfigs = [];
+        if(spotify !== undefined) {
+            logger.warn(`Using 'spotify' top-level property in config.json is deprecated and will be removed in next major version. Please use 'sources' instead.`)
+            deprecatedConfigs.push({
+                type: 'spotify',
+                name: 'unnamed',
+                source: 'config.json (top level)',
+                mode: 'single',
+                data: spotify
+            });
         }
+        if(plex !== undefined) {
+            logger.warn(`Using 'plex' top-level property in config.json is deprecated and will be removed in next major version. Please use 'sources' instead.`)
+            deprecatedConfigs.push({
+                type: 'plex',
+                name: 'unnamed',
+                source: 'config.json (top level)',
+                mode: 'single',
+                data: plex
+            });
+        }
+        await scrobbleSources.buildSourcesFromConfig(deprecatedConfigs);
 
-        const tautulliSource = await new TautulliSource(scrobbleClients, {...plex, ...plexJson});
-        const plexSource = await new PlexSource(scrobbleClients, {...plex, ...plexJson});
+        const clientCheckMiddle = makeClientCheckMiddle(scrobbleClients);
+        const sourceCheckMiddle = makeSourceCheckMiddle(scrobbleSources);
 
         app.getAsync('/', async function (req, res) {
             let slicedLog = output.slice(0, logConfig.limit + 1);
             if (logConfig.sort === 'ascending') {
                 slicedLog.reverse();
             }
+            const sourceData = scrobbleSources.sources.map((x) => {
+                const {type, discoveredTracks = 0, name} = x;
+                const base = {type, display: capitalize(type), discoveredTracks, name};
+                switch (x.type) {
+                    case 'spotify':
+                        const authed = x.spotifyApi === undefined || x.spotifyApi.getAccessToken() !== undefined;
+                        let status = authed ? 'Yes' : 'Auth Interaction Required';
+                        if(authed) {
+                            status = x.pollerRunning ? 'Running' : 'Idle';
+                        }
+                        return {
+                            ...base,
+                            authed,
+                            status,
+                        }
+                    case 'plex':
+                    case 'tautulli':
+                        return {
+                            ...base,
+                            status: discoveredTracks > 0 ? 'Received Data' : 'Awaiting Data'
+                        }
+                }
+            })
             res.render('status', {
-                spotify: {
-                    status: spotifySource.pollerRunning,
-                    discovered: spotifySource.discoveredTracks,
-                },
-                tautulli: {
-                    status: tautulliSource.discoveredTracks > 0 ? 'Received Data' : 'Awaiting Data',
-                    discovered: tautulliSource.discoveredTracks,
-                },
-                plex: {
-                    status: plexSource.discoveredTracks > 0 ? 'Received Data' : 'Awaiting Data',
-                    discovered: plexSource.discoveredTracks,
-                },
+                sources: sourceData,
                 logs: {
                     output: slicedLog,
                     limit: [10, 20, 50, 100].map(x => `<a class="capitalize ${logConfig.limit === x ? 'bold' : ''}" href="logs/settings/update?limit=${x}">${x}</a>`).join(' | '),
@@ -152,7 +184,29 @@ app.use(bodyParser.json());
         })
 
         app.postAsync('/tautulli', async function (req, res) {
-            await tautulliSource.handle(TautulliSource.formatPlayObj(req.body, true));
+            const payload = TautulliSource.formatPlayObj(req.body, true);
+            // try to get config name from payload
+            if (req.body.scrobblerConfig !== undefined) {
+                const source = scrobbleSources.getByName(req.body.scrobblerConfig);
+                if (source !== undefined) {
+                    if (source.type !== 'tautulli') {
+                        this.logger.warn(`Tautulli event specified a config name but the configured source was not a Tautulli type: ${req.body.scrobblerConfig}`);
+                        return res.send('OK');
+                    } else {
+                        await source.handle(payload, scrobbleClients);
+                        return res.send('OK');
+                    }
+                } else {
+                    this.logger.warn(`Tautulli event specified a config name but no configured source found: ${req.body.scrobblerConfig}`);
+                    return res.send('OK');
+                }
+            }
+            // if none specified we'll iterate through all tautulli sources and hopefully the user has configured them with filters
+            const tSources = scrobbleSources.getByType('tautulli');
+            for (const source of tSources) {
+                await source.handle(payload, scrobbleClients);
+            }
+
             res.send('OK');
         });
 
@@ -163,27 +217,59 @@ app.use(bodyParser.json());
                 } = {}
             } = req;
             if (payload !== undefined) {
-                await plexSource.handle(PlexSource.formatPlayObj(JSON.parse(payload), true));
+                const playObj = PlexSource.formatPlayObj(JSON.parse(payload), true);
+
+                const pSources = scrobbleSources.getByType('plex');
+                for (const source of pSources) {
+                    await source.handle(playObj, scrobbleClients);
+                }
             }
             res.send('OK');
         });
 
+        app.use('/authSpotify', sourceCheckMiddle);
         app.getAsync('/authSpotify', async function (req, res) {
-            if (spotifySource.spotifyApi === undefined) {
+            const {
+                scrobbleSource: source,
+                sourceName: name,
+            } = req;
+
+            if (source.type !== 'spotify') {
+                return res.status(400).send(`Specified source is not spotify (${source.type})`);
+            }
+
+            if (source.spotifyApi === undefined) {
                 res.status(400).send('Spotify configuration is not valid');
             } else {
                 logger.info('Redirecting to spotify authorization url');
-                res.redirect(spotifySource.createAuthUrl());
+                res.redirect(source.createAuthUrl());
             }
         });
 
+        app.use('/pollSpotify', sourceCheckMiddle);
         app.getAsync('/pollSpotify', async function (req, res) {
-            spotifySource.pollSpotify(scrobbleClients);
+            const {
+                scrobbleSource: source,
+            } = req;
+
+            if (source.type !== 'spotify') {
+                return res.status(400).send(`Specified source is not spotify (${source.type})`);
+            }
+
+            source.pollSpotify(scrobbleClients);
             res.send('OK');
         });
 
+        app.use('/spotify/recent', sourceCheckMiddle);
         app.getAsync('/spotify/recent', async function (req, res) {
-            const result = await spotifySource.getRecentlyPlayed({formatted: true});
+            const {
+                scrobbleSource: source,
+            } = req;
+            if (source.type !== 'spotify') {
+                return res.status(400).send(`Specified source is not spotify (${source.type})`);
+            }
+
+            const result = await source.getRecentlyPlayed({formatted: true});
             const artistTruncFunc = truncateStringToLength(Math.min(40, longestString(result.map(x => x.data.artists.join(' / ')).flat())));
             const trackLength = longestString(result.map(x => x.data.track))
             const plays = result.map((x) => {
@@ -206,7 +292,7 @@ app.use(bodyParser.json());
                 }
                 return buildTrackString(x, buildOpts);
             });
-            res.render('spotify/recent', {plays});
+            res.render('spotify/recent', {plays, name: source.name});
         });
 
         app.getAsync('/logs/settings/update', async function (req, res) {
@@ -230,26 +316,38 @@ app.use(bodyParser.json());
             res.send('OK');
         });
 
-        app.getAsync(/.*callback$/, async function (req, res, next) {
+        app.getAsync(/.*callback$/, async function (req, res) {
             logger.info('Received auth code callback from Spotify', {label: 'Spotify'});
-            const tokenResult = await spotifySource.handleAuthCodeCallback(req.query);
+            const {
+                query: {
+                    state
+                } = {}
+            } = req;
+            const source = scrobbleSources.getByName(state);
+            const tokenResult = await source.handleAuthCodeCallback(req.query);
             let responseContent = 'OK';
             if (tokenResult === true) {
-                spotifySource.pollSpotify(scrobbleClients);
+                source.pollSpotify(scrobbleClients);
             } else {
                 responseContent = tokenResult;
             }
             return res.send(responseContent);
         });
 
-        if (spotifySource.spotifyApi !== undefined) {
-            if (spotifySource.spotifyApi.getAccessToken() === undefined) {
-                logger.info('Spotify Api is not ready');
-                logger.info(`Open ${localUrl}/authSpotify to continue`);
-            } else {
-                spotifySource.pollSpotify(scrobbleClients);
+        let anyNotReady = false;
+        for (const spotifySource of scrobbleSources.sources.filter(x => x.type === 'spotify')) {
+            if (spotifySource.spotifyApi !== undefined) {
+                if (spotifySource.spotifyApi.getAccessToken() === undefined) {
+                    anyNotReady = true;
+                } else {
+                    spotifySource.pollSpotify(scrobbleClients);
+                }
             }
         }
+        if (anyNotReady) {
+            logger.info(`Some spotify sources are not ready, open ${localUrl} to continue`);
+        }
+
         app.set('views', './views');
         app.set('view engine', 'ejs');
         logger.info(`Server started at ${localUrl}`);

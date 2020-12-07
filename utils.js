@@ -78,7 +78,7 @@ const defaultTransformer = input => input;
 
 export const buildTrackString = (playObj, options = {}) => {
     const {
-        include = ['time'],
+        include = ['time', 'artist', 'track'],
         transformers: {
             artists: artistsFunc = a => a.join(' / '),
             track: trackFunc = defaultTransformer,
@@ -95,11 +95,21 @@ export const buildTrackString = (playObj, options = {}) => {
         } = {}
     } = playObj;
 
-    let str = `${artistsFunc(artists)} - ${trackFunc(track)}`;
-    if (include.includes('time')) {
-        str = `${str}, played at ${timeFunc(playDate)}`
+    let str = '';
+    if(include.includes('artist')) {
+        str = `${artistsFunc(artists)}`;
     }
-    if(include.includes('timeFromNow')) {
+    if(include.includes('track')) {
+        if(str !== '') {
+            str = `${str} - ${trackFunc(track)}`;
+        } else {
+            str = `${trackFunc(track)}`;
+        }
+    }
+    if (include.includes('time')) {
+        str = `${str} @ ${timeFunc(playDate)}`
+    }
+    if (include.includes('timeFromNow')) {
         str = `${str} (${timeFromNow(playDate)})`
     }
     return str;
@@ -170,6 +180,85 @@ export const setIntersection = (setA, setB) => {
         }
     }
     return _intersection
+}
+
+export const isValidConfigStructure = (obj, required = {}) => {
+    const {name = false, type = false, data = true} = required;
+    const errs = [];
+    if (obj.type === undefined && type) {
+        errs.push("'type' must be defined");
+    }
+    if (obj.name === undefined && name) {
+        errs.push("'name' must be defined")
+    }
+    if (obj.data === undefined && data) {
+        errs.push("'data' must be defined");
+    }
+    if (errs.length > 0) {
+        return errs;
+    }
+    return true;
+}
+
+export const returnDuplicateStrings = (arr) => {
+    const alreadySeen = [];
+    const dupes = [];
+
+    arr.forEach(str => alreadySeen[str] ? dupes.push(str) : alreadySeen[str] = true);
+    return dupes;
+}
+
+export const capitalize = (str) => {
+    return str.charAt(0).toUpperCase() + str.slice(1)
+}
+
+export const playObjDataMatch = (a, b) => {
+    const {
+        data: {
+            artists: aArtists = [],
+            album: aAlbum,
+            track: aTrack,
+        } = {},
+        meta: {
+            source: aSource,
+            sourceId: aSourceId,
+        } = {},
+    } = a;
+
+    const {
+        data: {
+            artists: bArtists = [],
+            album: bAlbum,
+            track: bTrack,
+        } = {},
+        meta: {
+            source: bSource,
+            sourceId: bSourceId,
+        } = {},
+    } = b;
+
+    // if sources are the same and both plays have source ids then we can just compare by id
+    if(aSource === bSource && aSourceId !== undefined && bSourceId !== undefined) {
+        if(aSourceId !== bSourceId) {
+            return false;
+        }
+    }
+
+    if (aTrack !== bTrack) {
+        return false;
+    }
+    if (aAlbum !== bAlbum) {
+        return false;
+    }
+    if (aArtists.length !== bArtists.length) {
+        return false;
+    }
+    // check if every artist from either playObj matches (one way or another) with the artists from the other play obj
+    if (!aArtists.every(x => bArtists.includes(x)) && bArtists.every(x => aArtists.includes(x))) {
+        return false
+    }
+
+    return true;
 }
 
 /*
