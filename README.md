@@ -14,7 +14,7 @@ A single-user, javascript app to scrobble your recent plays to [Maloja](https://
 * [Tautulli](https://tautulli.com) - Scrobble endpoint using notification agents
 * [Plex](https://plex.tv) - Scrobble endpoint using [Webhooks](https://support.plex.tv/articles/115002267687-webhooks)
 
-## Installation
+## Installation And Running
 
 
 ### Locally
@@ -22,119 +22,51 @@ A single-user, javascript app to scrobble your recent plays to [Maloja](https://
 Clone this repository somewhere and then install from the working directory
 
 ```bash
+git clone https://github.com/FoxxMD/multi-scrobbler.git .
+cd multi-scrobbler
 npm install
+node index.js
 ```
 
-### [Dockerhub](https://hub.docker.com/r/foxxmd/multi-scrobbler)
+### [Docker](https://hub.docker.com/r/foxxmd/multi-scrobbler)
 
 ```
-foxxmd/multi-scrobbler:latest
+docker run foxxmd/spotify-scrobbler:latest
 ```
 
 ## Setup
 
-All configuration is done through json files or environment variables. Reference the [examples in the config folder](config) more detailed explanations and structure.
+Some setup is required! See the [configuration](docs/configuration.md) docs for a full reference.
 
-**A property from a json config will override the corresponding environmental variable.**
+### TLDR, Minimal Example
 
-### App (General)
+You want to use multi-scrobbler to scrobble your plays from Spotify to Maloja:
 
-[JSON config example](config/config.json.example)
+#### Local
+```
+SPOTIFY_CLIENT_ID=yourId SPOTIFY_CLIENT_SECRET=yourSecret MALOJA_URL=http://domain.tld MALOJA_API_KEY=1234 node index.js
+```
 
-These environmental variables do not have a config file equivalent (to make Docker configuration easier)
+#### Docker
 
-| Environmental Variable | Required? |   Default    |                                        Description                                        |
-|----------------------------|-----------|--------------|-------------------------------------------------------------------------------------------|
-| `CONFIG_DIR`               |         - | `CWD/config` | Directory to look for all other configuration files                                       |
-| `LOG_PATH`                 |         - | `CWD/logs`   | If `false` no logs will be written. If `string` will be the directory logs are written to |
-| `PORT`                     |         - | 9078         | Port to run web server on                                                                 |
+```
+docker run -e "SPOTIFY_CLIENT_ID=yourId" -e "SPOTIFY_CLIENT_SECRET=yourSecret" -e "MALOJA_URL=http://domain.tld" -e "MALOJA_API_KEY=1234" -v /path/on/host/config:/home/node/app/config foxxmd/spotify-scrobbler
+```
 
-**The app must have permission to write to `CONFIG_DIR` in order to store the current spotify access token.**
+**But I want to use json for configuration?**
 
-
-### Sources (Where Music Plays Come From)
-
-#### Spotify
-
-To access your Spotify history you must [register an application](https://developer.spotify.com/dashboard) to get a Client ID/Secret. Make sure to also whitelist your redirect URI in the application settings.
-
-[Spotify config example](config/spotify.json.example)
-
-All variables have a config file equivalent which will overwrite the ENV variable if present (so config file is not required if ENVs present)
-
-| Environmental Variable     | Required? |            Default             |                    Description                     |
-|----------------------------|-----------|----------------------------------|----------------------------------------------------|
-| `SPOTIFY_CLIENT_ID`        | Yes       |                                  |                                                    |
-| `SPOTIFY_CLIENT_SECRET`    | Yes       |                                  |                                                    |
-| `SPOTIFY_ACCESS_TOKEN`     | -         |                                  | Must include either this token or client id/secret |
-| `SPOTIFY_REFRESH_TOKEN`    | -         |                                  |                                                    |
-| `SPOTIFY_REDIRECT_URI`     | -         | `http://localhost:{PORT}/callback` | URI must end in `callback`                         |
-
-The app will automatically obtain new access/refresh token if needed and possible. These will override values from configuration.
-
-#### [Plex](https://plex.tv)
-
-Check the [instructions](docs/plex.md) on how to setup a [webhooks](https://support.plex.tv/articles/115002267687-webhooks) to scrobble your plays.
-
-[Plex config example](config/plex.json.example)
-
-| Environmental Variable | Required | Default |                   Description                   |
-|------------------------|----------|---------|-------------------------------------------------|
-| PLEX_USER              |        - |         | The username of the user to scrobble tracks for. No user specified means all tracks by all users will be scrobbled. |
-
-#### [Tautulli](https://tautulli.com)
-
-Check the [instructions](docs/plex.md) on how to setup a notification agent to scrobble your plays.
-
-**Environmental variables and config file is the same as Plex**
-
-### Scrobble Clients
-
-At least one client (the only one right now...) must be setup in order for the app to work. Client configurations can alternatively be configured in the main [`config.json`](https://github.com/FoxxMD/multi-scrobbler/blob/master/config/config.json.example) configuration
-
-#### Maloja
-
-[Maloja config example](config/maloja.json.example)
-
-All variables have a config file equivalent which will overwrite the ENV variable if present (so config file is not required if ENVs present)
-
-| Environmental Variable | Required? | Default |          Description          |
-|----------------------------|-----------|---------|-------------------------------|
-| `MALOJA_URL`               | Yes       |         | Base URL of your installation |
-| `MALOJA_API_KEY`           | Yes       |         | Api Key                       |
+Then use [config.json.example](/config/config.json.example) and drop it in your `CONFIG_DIR` directory
 
 ## Usage
 
-A status page with statistics and recent logs can found at
+A status page with statistics, recent logs, and some runtime configuration options can found at
 
 ```
 https://localhost:9078
 ```
 Output is also provided to stdout/stderr as well as file if specified in configuration.
 
-On first startup you may need to authorize Spotify by visiting the callback URL (which can also be accessed from the status page)
-
-```
-https://localhost:9078/authSpotify
-```
-
-### Running Directly
-
-```
-node index.js
-```
-
-### Docker
-
-| Environmental Variable |  Type  |         Default         |
-|------------------------|--------|-------------------------|
-| `CONFIG_DIR`           | Volume | `/home/node/app/config` |
-| `LOG_DIR`              | Volume | `/home/node/app/logs`   |
-| `PORT`                 | Port   | 9078                    |
-
-## Examples
-
-[See minimal configuration in the examples doc](docs/examples.md)
+On first startup you may need to authorize Spotify by visiting the callback URL (which can also be accessed from the status page). Visit the status page above to find the applicable link to trigger this.
 
 ## License
 

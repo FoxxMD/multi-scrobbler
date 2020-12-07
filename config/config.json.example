@@ -1,11 +1,23 @@
 {
-  "spotify": {},        // optional, may specify config here, or in CONFIG_DIR/spotify.json, or as ENV vars
-
-  "clients": [          // may specify clients as objects, or in CONFIG_DIR/{clientType}.json, or as ENV vars
-                                                              // EX CONFIG_DIR/maloja.json
+  "sources": [
     {
-      "type": "maloja", // client name
-      "data": {}        // config data
+      "type": "spotify", // required, source type
+      "clients": ["myConfig"], // optional, a list of Client config names this Source should scrobble to. Using an empty list or not including this property will make this Source scrobble to all Clients.
+      "name": "myConfig", // optional, friendly name for the log
+      "data": { // required, the data for your config
+        "clientId": "example",
+        //...
+      }
+    }
+  ],
+  "clients": [
+    {
+      "type": "maloja", // required, Client type
+      "name": "myConfig", // required, a name to identifier your Client
+      "data": { // required, the data for your config
+        "url": "http://example.com",
+        //...
+      }
     },
   ]
 }

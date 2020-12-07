@@ -1,4 +1,9 @@
-{
-  "url": "https://domain.tld", // the base url of your maloja installation
-  "apiKey": "string"           // your maloja api key
-}
+[
+  {
+    "name": "myMaloja", // required, a name to identify your Client
+    "data": {
+      "url": "https://domain.tld", // the base url of your maloja installation
+      "apiKey": "string" // your maloja api key
+    }
+  }
+]
