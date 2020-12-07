@@ -5,6 +5,7 @@ export default class AbstractSource {
 
     name;
     type;
+    identifier;
 
     config;
     clients;
@@ -13,8 +14,8 @@ export default class AbstractSource {
     constructor(type, name, config = {}, clients = []) {
         this.type = type;
         this.name = name;
-        const identifier = `${capitalize(this.type)} - ${name}`;
-        this.logger = createLabelledLogger(identifier, identifier);
+        this.identifier = `${capitalize(this.type)} - ${name}`;
+        this.logger = createLabelledLogger(this.identifier, this.identifier);
         this.config = config;
         this.clients = clients;
     }
