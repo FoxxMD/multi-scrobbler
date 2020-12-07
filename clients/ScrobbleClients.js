@@ -133,7 +133,7 @@ ${sources.join('\n')}`);
         // just need to re-map unnnamed to default
         const finalConfigs = configs.map(({name = 'unnamed', ...x}) => ({
             ...x,
-            name: name === 'unnamed' ? 'default' : name
+            name
         }));
         for (const c of finalConfigs) {
             await this.addClient(c);
