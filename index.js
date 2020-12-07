@@ -104,8 +104,8 @@ app.use(bodyParser.json());
 
         // setup defaults for other configs and general config
         const {
-            spotify, // TODO support these
-            plex = {},
+            spotify,
+            plex,
         } = config || {};
 
         /*
@@ -118,7 +118,28 @@ app.use(bodyParser.json());
         }
 
         const scrobbleSources = new ScrobbleSources(localUrl, configDir);
-        await scrobbleSources.buildSourcesFromConfig();
+        let deprecatedConfigs = [];
+        if(spotify !== undefined) {
+            logger.warn(`Using 'spotify' top-level property in config.json is deprecated and will be removed in next major version. Please use 'sources' instead.`)
+            deprecatedConfigs.push({
+                type: 'spotify',
+                name: 'unnamed',
+                source: 'config.json (top level)',
+                mode: 'single',
+                data: spotify
+            });
+        }
+        if(plex !== undefined) {
+            logger.warn(`Using 'plex' top-level property in config.json is deprecated and will be removed in next major version. Please use 'sources' instead.`)
+            deprecatedConfigs.push({
+                type: 'plex',
+                name: 'unnamed',
+                source: 'config.json (top level)',
+                mode: 'single',
+                data: plex
+            });
+        }
+        await scrobbleSources.buildSourcesFromConfig(deprecatedConfigs);
 
         const clientCheckMiddle = makeClientCheckMiddle(scrobbleClients);
         const sourceCheckMiddle = makeSourceCheckMiddle(scrobbleSources);
