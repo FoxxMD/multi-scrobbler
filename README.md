@@ -31,7 +31,7 @@ node index.js
 ### [Docker](https://hub.docker.com/r/foxxmd/multi-scrobbler)
 
 ```
-docker run foxxmd/spotify-scrobbler:latest
+foxxmd/spotify-scrobbler:latest
 ```
 
 ## Setup
@@ -43,13 +43,13 @@ Some setup is required! See the [configuration](docs/configuration.md) docs for 
 You want to use multi-scrobbler to scrobble your plays from Spotify to Maloja:
 
 #### Local
-```
+```bash
 SPOTIFY_CLIENT_ID=yourId SPOTIFY_CLIENT_SECRET=yourSecret MALOJA_URL=http://domain.tld MALOJA_API_KEY=1234 node index.js
 ```
 
 #### Docker
 
-```
+```bash
 docker run -e "SPOTIFY_CLIENT_ID=yourId" -e "SPOTIFY_CLIENT_SECRET=yourSecret" -e "MALOJA_URL=http://domain.tld" -e "MALOJA_API_KEY=1234" -v /path/on/host/config:/home/node/app/config foxxmd/spotify-scrobbler
 ```
 
@@ -59,7 +59,7 @@ Then use [config.json.example](/config/config.json.example) and drop it in your 
 
 ## Usage
 
-A status page with statistics, recent logs, and some runtime configuration options can found at
+A status page with statistics, recent logs, and some runtime configuration options can be found at
 
 ```
 https://localhost:9078

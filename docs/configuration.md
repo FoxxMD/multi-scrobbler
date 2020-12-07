@@ -26,21 +26,23 @@ All configurations can be configured through:
 
 ```json
 // in config.json
-...
+//...
 "sources": [
   {
     "name": "myConfig",
     "type": "spotify",
-    "clients": ['myMalojaClient'],
+    "clients": ["myMalojaClient"],
     "data": {
         "clientId": "anExample",
-        ...
+        //...
     }
   }
 ]
 ```
 
-### ENV-Based or Multi User?
+See [config.json.example](../config/config.json.example) for a full example of this.
+
+### ENV-Based or JSON-Based?
 
 multi-scrobbler can be configured differently depending on how you will use it. See which use-case fits you the best and then use that approach when setting up each configuration:
 
