@@ -24,20 +24,24 @@ All configurations can be configured through:
 * individual **json** files for each source/client type found in the `CONFIG_DIR` directory IE `config/spotify.json`
 * or through the main `config.json` (also found in `CONFIG_DIR` directory) using the `clients` or `sources` property under `data`:
 
-```json
+```json5
 // in config.json
-//...
-"sources": [
-  {
-    "name": "myConfig",
-    "type": "spotify",
-    "clients": ["myMalojaClient"],
-    "data": {
-        "clientId": "anExample",
+{
+  //...
+  "sources": [
+    {
+      "name": "myConfig",
+      "type": "spotify",
+      "clients": [
+        "myMalojaClient"
+      ],
+      "data": {
+        "clientId": "anExample"
         //...
+      }
     }
-  }
-]
+  ]
+}
 ```
 
 See [config.json.example](../config/config.json.example) for a full example of this.
@@ -50,7 +54,7 @@ multi-scrobbler can be configured differently depending on how you will use it. 
 
 * You are the only person for whom the application is scrobbling
 * You may have many sources (Plex, Spotify, Tautulli...) but you only have one of each type of source
-* You have only scrobble client
+* You have only one scrobble client
 * **Easier for small setups. Difficult for larger, multi-sourced setups (may want to switch to json)**
 * **Will not work for multi-user setups**
 
