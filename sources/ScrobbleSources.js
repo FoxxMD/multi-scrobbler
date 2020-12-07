@@ -26,8 +26,8 @@ export default class ScrobbleSources {
         return this.sources.filter(x => x.type === type);
     }
 
-    buildSourcesFromConfig = async () => {
-        let configs = [];
+    buildSourcesFromConfig = async (additionalConfigs = []) => {
+        let configs = additionalConfigs;
 
         let configFile;
         try {
@@ -146,31 +146,34 @@ export default class ScrobbleSources {
             throw new Error('Could not build sources due to above errors');
         }
 
-        // all client configs are minimally valid
-        // now check that names are unique
-        const nameGroupedConfigs = configs.reduce((acc, curr) => {
-            const {name = 'unnamed'} = curr;
-            const {[name]: n = []} = acc;
-            return {...acc, [name]: [...n, curr]};
+        // finally! all configs are valid, structurally, and can now be passed to addClient
+        // do a last check that names (within each type) are unique and warn if not, but add anyways
+        const typeGroupedConfigs = configs.reduce((acc, curr) => {
+            const {type} = curr;
+            const {[type]: t = []} = acc;
+            return {...acc, [type]: [...t, curr]};
         }, {});
-        for (const [name, configs] of Object.entries(nameGroupedConfigs)) {
-            if (configs.length > 1) {
-                const sources = configs.map(c => `Config object from ${c.source} of type [${c.type}]`);
-                this.logger.warn(`Source configs have naming conflicts -- the following configs have the same name "${name}":\n\n${sources.join('\n')}\n`);
-                if (name === 'unnamed') {
-                    this.logger.info('HINT: "unnamed" configs occur when using ENVs, if a multi-user mode config does not have a "name" property, or if a config is built in single-user mode');
+        // only need to warn if dup names PER TYPE
+        for (const [type, typedConfigs] of Object.entries(typeGroupedConfigs)) {
+            const nameGroupedConfigs = typedConfigs.reduce((acc, curr) => {
+                const {name = 'unnamed'} = curr;
+                const {[name]: n = []} = acc;
+                return {...acc, [name]: [...n, curr]};
+            }, {});
+            for (const [name, namedConfigs] of Object.entries(nameGroupedConfigs)) {
+                let tempNamedConfigs = namedConfigs;
+                if (namedConfigs.length > 1) {
+                    const sources = namedConfigs.map(c => `Config object from ${c.source} of type [${c.type}]`);
+                    this.logger.warn(`Source configs have naming conflicts -- the following configs have the same name "${name}":\n\n${sources.join('\n')}\n`);
+                    if (name === 'unnamed') {
+                        this.logger.info('HINT: "unnamed" configs occur when using ENVs, if a multi-user mode config does not have a "name" property, or if a config is built in single-user mode');
+                    }
+                    tempNamedConfigs = tempNamedConfigs.map(({name = 'unnamed', ...x},i) => ({...x, name: `${name}${i+1}`}));
+                }
+                for(const c of tempNamedConfigs) {
+                    await this.addSource(c);
                 }
             }
-        }
-
-        // finally! all configs are valid, structurally, and can now be passed to addClient
-        // just need to re-map unnnamed to default
-        const finalConfigs = configs.map(({name = 'unnamed', ...x}) => ({
-            ...x,
-            name: name === 'unnamed' ? 'default' : name
-        }));
-        for (const c of finalConfigs) {
-            await this.addSource(c);
         }
     }
 
