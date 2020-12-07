@@ -154,9 +154,15 @@ app.use(bodyParser.json());
                 const base = {type, display: capitalize(type), discoveredTracks, name};
                 switch (x.type) {
                     case 'spotify':
+                        const authed = x.spotifyApi === undefined || x.spotifyApi.getAccessToken() !== undefined;
+                        let status = authed ? 'Yes' : 'Auth Interaction Required';
+                        if(authed) {
+                            status = x.pollerRunning ? 'Running' : 'Idle';
+                        }
                         return {
                             ...base,
-                            status: x.pollerRunning ? 'Running' : 'Idle',
+                            authed,
+                            status,
                         }
                     case 'plex':
                     case 'tautulli':

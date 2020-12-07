@@ -17,6 +17,12 @@
     .facetItem {
         flex: 1 0 auto;
     }
+    .disabled {
+        color: currentColor;
+        cursor: not-allowed;
+        opacity: 0.5;
+        text-decoration: none;
+    }
 </style>
 </head>
 <body>
@@ -28,10 +34,15 @@
         <ul>
             <li><b>Status: <%= source.status %></b></li>
             <li>Tracks Discovered (since app started): <%= source.discoveredTracks %></li>
-            <% if (source.type === 'spotify') { %>
+            <% if (source.type === 'spotify' && source.authed) { %>
             <li>Click <a target="_blank" href="spotify/recent?name=<%= source.name %>">to see recently played tracks returned by Spotify</a></li>
             <li>Click <a target="_blank" href="authSpotify?name=<%= source.name %>">to re-authenticate and restart polling</a></li>
             <li>Click <a target="_blank" href="pollSpotify?name=<%= source.name %>">to restart polling</a></li>
+            <% } %>
+            <% if (source.type === 'spotify' && !source.authed) { %>
+                <li>Click <a class="disabled" target="_blank">to see recently played tracks returned by Spotify</a></li>
+                <li>Click <a target="_blank" href="authSpotify?name=<%= source.name %>">to re-authenticate and restart polling</a></li>
+                <li>Click <a class="disabled" target="_blank">to restart polling</a></li>
             <% } %>
         </ul>
     </div>
