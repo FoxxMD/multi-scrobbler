@@ -202,6 +202,55 @@ export const capitalize = (str) => {
     return str.charAt(0).toUpperCase() + str.slice(1)
 }
 
+export const playObjDataMatch = (a, b) => {
+    const {
+        data: {
+            artists: aArtists = [],
+            album: aAlbum,
+            track: aTrack,
+        } = {},
+        meta: {
+            source: aSource,
+            sourceId: aSourceId,
+        } = {},
+    } = a;
+
+    const {
+        data: {
+            artists: bArtists = [],
+            album: bAlbum,
+            track: bTrack,
+        } = {},
+        meta: {
+            source: bSource,
+            sourceId: bSourceId,
+        } = {},
+    } = b;
+
+    // if sources are the same and both plays have source ids then we can just compare by id
+    if(aSource === bSource && aSourceId !== undefined && bSourceId !== undefined) {
+        if(aSourceId !== bSourceId) {
+            return false;
+        }
+    }
+
+    if (aTrack !== bTrack) {
+        return false;
+    }
+    if (aAlbum !== bAlbum) {
+        return false;
+    }
+    if (aArtists.length !== bArtists.length) {
+        return false;
+    }
+    // check if every artist from either playObj matches (one way or another) with the artists from the other play obj
+    if (!aArtists.every(x => bArtists.includes(x)) && bArtists.every(x => aArtists.includes(x))) {
+        return false
+    }
+
+    return true;
+}
+
 /*
 * Code below this comes from https://github.com/samthor/promises
 * I'm not using the package because the package type isn't module or something
