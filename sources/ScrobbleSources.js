@@ -162,14 +162,15 @@ export default class ScrobbleSources {
             }, {});
             for (const [name, namedConfigs] of Object.entries(nameGroupedConfigs)) {
                 let tempNamedConfigs = namedConfigs;
-                if (namedConfigs.length > 1) {
+                const hasDups = namedConfigs.length > 1;
+                if (hasDups) {
                     const sources = namedConfigs.map(c => `Config object from ${c.source} of type [${c.type}]`);
                     this.logger.warn(`Source configs have naming conflicts -- the following configs have the same name "${name}":\n\n${sources.join('\n')}\n`);
                     if (name === 'unnamed') {
                         this.logger.info('HINT: "unnamed" configs occur when using ENVs, if a multi-user mode config does not have a "name" property, or if a config is built in single-user mode');
                     }
-                    tempNamedConfigs = tempNamedConfigs.map(({name = 'unnamed', ...x},i) => ({...x, name: `${name}${i+1}`}));
                 }
+                tempNamedConfigs = tempNamedConfigs.map(({name = 'unnamed', ...x},i) => ({...x, name: hasDups ? `${name}${i+1}` : name}));
                 for(const c of tempNamedConfigs) {
                     await this.addSource(c);
                 }
