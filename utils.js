@@ -78,7 +78,7 @@ const defaultTransformer = input => input;
 
 export const buildTrackString = (playObj, options = {}) => {
     const {
-        include = ['time'],
+        include = ['time', 'artist', 'track'],
         transformers: {
             artists: artistsFunc = a => a.join(' / '),
             track: trackFunc = defaultTransformer,
@@ -95,9 +95,19 @@ export const buildTrackString = (playObj, options = {}) => {
         } = {}
     } = playObj;
 
-    let str = `${artistsFunc(artists)} - ${trackFunc(track)}`;
+    let str = '';
+    if(include.includes('artist')) {
+        str = `${artistsFunc(artists)}`;
+    }
+    if(include.includes('track')) {
+        if(str !== '') {
+            str = `${str} - ${trackFunc(track)}`;
+        } else {
+            str = `${trackFunc(track)}`;
+        }
+    }
     if (include.includes('time')) {
-        str = `${str}, played at ${timeFunc(playDate)}`
+        str = `${str} @ ${timeFunc(playDate)}`
     }
     if (include.includes('timeFromNow')) {
         str = `${str} (${timeFromNow(playDate)})`
