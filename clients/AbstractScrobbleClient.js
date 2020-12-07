@@ -98,7 +98,7 @@ export default class AbstractScrobbleClient {
 
     findExistingSubmittedPlayObj = (playObj) => {
         const {
-            track: {
+            data: {
                 playDate
             } = {},
         } = playObj;
@@ -112,9 +112,9 @@ export default class AbstractScrobbleClient {
         const matchPlayDate = dtInvariantMatches.find((x) => {
             const {
                 play: {
-                    track: {
+                    data: {
                         playDate: sPlayDate
-                    } = {},
+                    } = {}
                 } = {},
             } = x;
             return playDate.isSame(sPlayDate);
