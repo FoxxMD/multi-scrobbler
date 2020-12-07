@@ -1,5 +1,5 @@
 import dayjs from "dayjs";
-import {buildTrackString, capitalize, createLabelledLogger} from "../utils.js";
+import {buildTrackString, capitalize, createLabelledLogger, playObjDataMatch} from "../utils.js";
 
 export default class AbstractScrobbleClient {
 
@@ -7,32 +7,64 @@ export default class AbstractScrobbleClient {
     type;
 
     recentScrobbles = [];
+    scrobbledPlayObjs = [];
     newestScrobbleTime;
     oldestScrobbleTime = dayjs();
 
     lastScrobbleCheck = dayjs();
     refreshEnabled;
     checkExistingScrobbles;
+    verboseOptions;
 
     config;
     logger;
 
-    constructor(type, name, config = {}, options = {}) {
+    constructor(type, name, config = {}) {
         this.type = type;
         this.name = name;
         const identifier = `${capitalize(this.type)} - ${name}`;
         this.logger = createLabelledLogger(identifier, identifier);
-        this.config = config;
+
         const {
-            refreshEnabled = true,
-            checkExistingScrobbles = true,
-        } = options;
+            options: {
+                refreshEnabled = true,
+                checkExistingScrobbles = true,
+                verbose = {},
+            } = {},
+            ...rest
+        } = config;
+        this.config = rest;
         this.refreshEnabled = refreshEnabled;
         this.checkExistingScrobbles = checkExistingScrobbles;
+
+        const {
+            match: {
+                onNoMatch = false,
+                onMatch = false,
+                confidenceBreakdown = false,
+            } = {},
+            ...vRest
+        } = verbose
+        if (onMatch || onNoMatch) {
+            this.logger.warn('Setting verbose matching may produce noisy logs! Use with care.');
+        }
+        this.verboseOptions = {
+            ...vRest,
+            match: {
+                onNoMatch,
+                onMatch,
+                confidenceBreakdown
+            }
+        };
     }
 
     scrobblesLastCheckedAt = () => {
         return this.lastScrobbleCheck;
+    }
+
+    formatPlayObj = obj => {
+        this.logger.warn('formatPlayObj should be defined by concrete class!');
+        return obj;
     }
 
     // time frame is valid as long as the play date for the source track is newer than the oldest play time from the scrobble client
@@ -48,5 +80,46 @@ export default class AbstractScrobbleClient {
             this.logger.debug(`${buildTrackString(playObj)} was in an invalid time frame (played before the oldest scrobble found)`);
         }
         return validTime;
+    }
+
+    addScrobbledTrack = (playObj, scrobbleResp) => {
+        this.scrobbledPlayObjs.push({play: playObj, scrobble: this.formatPlayObj(scrobbleResp)});
+    }
+
+    cleanSourceSearchTitle = (playObj) => {
+        const {
+            data: {
+                track,
+            } = {},
+        } = playObj;
+
+        return track;
+    };
+
+    findExistingSubmittedPlayObj = (playObj) => {
+        const {
+            track: {
+                playDate
+            } = {},
+        } = playObj;
+
+        const dtInvariantMatches = this.scrobbledPlayObjs.filter(x => playObjDataMatch(playObj, x.play));
+
+        if (dtInvariantMatches.length === 0) {
+            return [undefined, undefined];
+        }
+
+        const matchPlayDate = dtInvariantMatches.find((x) => {
+            const {
+                play: {
+                    track: {
+                        playDate: sPlayDate
+                    } = {},
+                } = {},
+            } = x;
+            return playDate.isSame(sPlayDate);
+        });
+
+        return [matchPlayDate, dtInvariantMatches];
     }
 }
