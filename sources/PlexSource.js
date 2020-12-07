@@ -47,10 +47,9 @@ export default class PlexSource extends AbstractSource {
         }
 
         if (user === undefined && libraries === undefined && servers === undefined) {
-            this.logger.warn('Initialized with no filters! All tracks from all users on all servers and libraries will be scrobbled.');
+            this.logger.warn('Initialized, but with no filters! All tracks from all users on all servers and libraries will be scrobbled.');
         } else {
-            this.logger.info('Initialized');
-            this.logger.info(`...with the following filters => Users: ${this.users === undefined ? 'N/A' : this.users.join(', ')} | Libraries: ${this.libraries === undefined ? 'N/A' : this.libraries.join(', ')} | Servers: ${this.servers === undefined ? 'N/A' : this.servers.join(', ')}`);
+            this.logger.info(`Initialized with the following filters => Users: ${this.users === undefined ? 'N/A' : this.users.join(', ')} | Libraries: ${this.libraries === undefined ? 'N/A' : this.libraries.join(', ')} | Servers: ${this.servers === undefined ? 'N/A' : this.servers.join(', ')}`);
         }
     }
 
