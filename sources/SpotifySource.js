@@ -72,6 +72,7 @@ export default class SpotifySource extends AbstractSource {
             meta: {
                 trackLength: duration_ms / 1000,
                 source: 'Spotify',
+                sourceId: id,
                 newFromSource,
                 url: {
                     web: spotify
