@@ -165,7 +165,7 @@ export default class PlexSource extends AbstractSource {
 
         this.logger.info(`New Track => ${buildTrackString(playObj)}`);
         try {
-            await allClients.scrobble(playObj, {scrobbleTo: this.clients});
+            await allClients.scrobble(playObj, {scrobbleTo: this.clients, scrobbleFrom: this.identifier});
             // only gets hit if we scrobbled ok
             this.discoveredTracks++;
         } catch (e) {

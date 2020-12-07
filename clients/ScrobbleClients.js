@@ -169,6 +169,7 @@ ${sources.join('\n')}`);
             forceRefresh = false,
             checkTime = dayjs(),
             scrobbleTo = [],
+            scrobbleFrom = 'source',
         } = options;
 
         const tracksScrobbled = [];
@@ -179,7 +180,7 @@ ${sources.join('\n')}`);
 
         for (const client of this.clients) {
             if (scrobbleTo.length > 0 && !scrobbleTo.includes(client.name)) {
-                this.logger.debug(`Client '${client.name}' was filtered out by source`);
+                this.logger.debug(`Client '${client.name}' was filtered out by '${scrobbleFrom}'`);
                 continue;
             }
             try {

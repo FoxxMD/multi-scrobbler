@@ -240,7 +240,7 @@ export default class SpotifySource extends AbstractSource {
             return;
         }
         this.pollerRunning = true;
-        return this.spotifyPoller(this.logger, this, this.interval, this.workingCredsPath, allClients, this.clients, this.emitter)
+        return this.spotifyPoller(this.logger, this, this.interval, this.workingCredsPath, allClients, this.clients, this.identifier, this.emitter)
             .catch((e) => {
                 this.logger.error('Error occurred while polling spotify, polling has been stopped');
                 this.logger.error(e);
@@ -251,7 +251,7 @@ export default class SpotifySource extends AbstractSource {
     }
 }
 
-const pollSpotify = function* (logger, source, interval = 60, credsPath, clients, clientsToScrobbleTo = [], emitter) {
+const pollSpotify = function* (logger, source, interval = 60, credsPath, clients, clientsToScrobbleTo = [], scrobbleFrom, emitter) {
     logger.info('Polling started');
     let lastTrackPlayedAt = dayjs();
     let checkCount = 0;
@@ -308,7 +308,7 @@ const pollSpotify = function* (logger, source, interval = 60, credsPath, clients
             checkCount = 0;
         }
 
-        const scrobbleResult = yield clients.scrobble(playObjs, {forceRefresh: closeToInterval, scrobbleTo: clientsToScrobbleTo});
+        const scrobbleResult = yield clients.scrobble(playObjs, {forceRefresh: closeToInterval, scrobbleFrom, scrobbleTo: clientsToScrobbleTo});
         if (scrobbleResult instanceof Error) {
             return Promise.reject(scrobbleResult);
         } else if (scrobbleResult.length > 0) {
