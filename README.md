@@ -57,6 +57,10 @@ docker run -e "SPOTIFY_CLIENT_ID=yourId" -e "SPOTIFY_CLIENT_SECRET=yourSecret" -
 
 Then use [config.json.example](/config/config.json.example) and drop it in your `CONFIG_DIR` directory
 
+**Is there an example configuration using everything?**
+
+Yes, check out the [kitchen sink example](/docs/kitchensink.md)
+
 ## Usage
 
 A status page with statistics, recent logs, and some runtime configuration options can be found at
