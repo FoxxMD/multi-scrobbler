@@ -1,14 +1,14 @@
 [
   {
-    "name": "default", // optional, friendly name for logs
-    "clients": [], // optional, list of scrobble clients (by config name) that this source should scrobble to. Using an empty list or not including this property will make this source scrobble to all clients.
+    "name": "default",                                // optional, friendly name for logs
+    "clients": [],                                    // optional, list of scrobble clients (by config name) that this source should scrobble to. Using an empty list or not including this property will make this source scrobble to all clients.
     "data": {
-      "clientId": "string", // spotify client id -- required if not providing access token
-      "clientSecret": "string", // spotify client secret -- required if not providing access token
-      "accessToken": "string", // spotify access token -- required if not providing client id/secret
-      "refreshToken": "string", // spotify refresh token -- recommended to provide if not providing client id/secret
-      "redirectUri": "http://localhost:9078/callback", // spotify redirect URI -- required only if not the default shown here. URI must end in "callback"
-      "interval": 60 // optional, how long to wait before calling spotify for new tracks
+      "clientId": "string",                           // spotify client id -- required if not providing access token
+      "clientSecret": "string",                       // spotify client secret -- required if not providing access token
+      "accessToken": "string",                        // spotify access token -- required if not providing client id/secret
+      "refreshToken": "string",                       // spotify refresh token -- recommended to provide if not providing client id/secret
+      "redirectUri": "http://localhost:9078/callback",// spotify redirect URI -- required only if not the default shown here. URI must end in "callback"
+      "interval": 60                                  // optional, how long to wait before calling spotify for new tracks
     }
   }
 ]

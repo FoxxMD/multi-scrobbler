@@ -1,9 +1,9 @@
 [
   {
-    "name": "myMaloja", // required, a name to identify your Client
+    "name": "myMaloja",            // required, a name to identify your Client
     "data": {
-      "url": "https://domain.tld", // the base url of your maloja installation
-      "apiKey": "string" // your maloja api key
+      "url": "https://domain.tld", // required, the base url of your maloja installation
+      "apiKey": "string"           // required, your maloja api key
     }
   }
 ]

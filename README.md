@@ -4,17 +4,21 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Docker Pulls](https://img.shields.io/docker/pulls/foxxmd/multi-scrobbler)](https://hub.docker.com/r/foxxmd/multi-scrobbler)
 
-A single-user, javascript app to scrobble your recent plays to [Maloja](https://github.com/krateng/maloja) (and other clients, eventually)
+A javascript app to scrobble plays from multiple sources to [Maloja](https://github.com/krateng/maloja) (and other clients, eventually!)
 
-* Displays running status and buffered log through web server
-* Spotify - Authorize your app through the web server
-* Spotify - Persists obtained credentials to file
-* Spotify - Automatically refreshes authorization for unattended use
-* Spotify - Implements back off behavior if no listening activity is detected after an interval (after 10 minutes of idle it will back off to a maximum of 5 minutes between checks)
-* [Tautulli](https://tautulli.com) - Scrobble endpoint using notification agents
-* [Plex](https://plex.tv) - Scrobble endpoint using [Webhooks](https://support.plex.tv/articles/115002267687-webhooks)
+* Supports scrobbling from [Spotify](/docs/configuration.md#spotify), [Plex](/docs/configuration.md#plex), and [Tautulli](/docs/configuration.md#tautulli)
+* Supports configuring for single or multiple users (scrobbling for your friends and family!)
+* Web server interface for stats, basic control, and detailed logs
+* Smart handling of credentials (persistent, authorization through app)
+* Easy configuration through ENVs or JSON
+* Built for Docker and unattended use!
 
-## Installation And Running
+**Why should I use this over a browser extension and/or mobile app scrobbler?**
+
+* **Platform independent** -- Because multi-scrobbler communicates directly with service APIs it will scrobble everything you play regardless of where you play it. No more need for apps on every platform you use!
+* **Open-source** -- Get peace of mind knowing exactly how your personal data is being handled.
+
+## Installation
 
 
 ### Locally
@@ -25,7 +29,6 @@ Clone this repository somewhere and then install from the working directory
 git clone https://github.com/FoxxMD/multi-scrobbler.git .
 cd multi-scrobbler
 npm install
-node index.js
 ```
 
 ### [Docker](https://hub.docker.com/r/foxxmd/multi-scrobbler)

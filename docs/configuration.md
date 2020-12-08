@@ -44,7 +44,7 @@ All configurations can be configured through:
 }
 ```
 
-See [config.json.example](../config/config.json.example) for a full example of this.
+See [config.json.example](../config/config.json.example) for a short example of this or check out [the kitchen sink example](kitchensink.md).
 
 ### ENV-Based or JSON-Based?
 
@@ -73,7 +73,7 @@ doing everything in ENV-based configurations.**
 
 # Sources
 
-## Spotify
+## [Spotify](https://www.spotify.com)
 
 To access your Spotify history you must [register an application](https://developer.spotify.com/dashboard) to get a
 Client ID/Secret. Make sure to also whitelist your redirect URI in the application settings.

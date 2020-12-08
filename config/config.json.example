@@ -1,10 +1,10 @@
 {
   "sources": [
     {
-      "type": "spotify", // required, source type
-      "clients": ["myConfig"], // optional, a list of Client config names this Source should scrobble to. Using an empty list or not including this property will make this Source scrobble to all Clients.
-      "name": "mySpotifySource", // optional, friendly name for the log
-      "data": { // required, the data for your config
+      "type": "spotify",          // required, source type
+      "clients": ["myConfig"],    // optional, a list of Client config names this Source should scrobble to. Using an empty list or not including this property will make this Source scrobble to all Clients.
+      "name": "mySpotifySource",  // optional, friendly name for the log
+      "data": {                   // required, the data for your config
         "clientId": "example",
         //...
       }
@@ -12,9 +12,9 @@
   ],
   "clients": [
     {
-      "type": "maloja", // required, Client type
-      "name": "myConfig", // required, a name to identifier your Client
-      "data": { // required, the data for your config
+      "type": "maloja",           // required, Client type
+      "name": "myConfig",         // required, a name to identifier your Client
+      "data": {                   // required, the data for your config
         "url": "http://example.com",
         //...
       }
