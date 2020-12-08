@@ -208,6 +208,7 @@ export default class ScrobbleSources {
                 const ssSource = new SubsonicSource(name, data, clients);
                 await ssSource.testConnection();
                 this.logger.info(`(${name}) Subsonic source initialized`);
+                this.sources.push(ssSource);
                 break;
             default:
                 break;
