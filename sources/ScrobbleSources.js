@@ -2,6 +2,7 @@ import {createLabelledLogger, isValidConfigStructure, readJson} from "../utils.j
 import SpotifySource from "./SpotifySource.js";
 import PlexSource from "./PlexSource.js";
 import TautulliSource from "./TautulliSource.js";
+import {SubsonicSource} from "./SubsonicSource.js";
 
 export default class ScrobbleSources {
 
@@ -10,7 +11,7 @@ export default class ScrobbleSources {
     configDir;
     localUrl;
 
-    sourceTypes = ['spotify', 'plex', 'tautulli'];
+    sourceTypes = ['spotify', 'plex', 'tautulli', 'subsonic'];
 
     constructor(localUrl, configDir = process.cwd()) {
         this.configDir = configDir;
@@ -201,6 +202,12 @@ export default class ScrobbleSources {
             case 'tautulli':
                 const tautulliSource = await new TautulliSource(name, data, clients);
                 this.sources.push(tautulliSource);
+                break;
+            case 'subsonic':
+                this.logger.debug(`(${name}) Initializing Subsonic source`);
+                const ssSource = new SubsonicSource(name, data, clients);
+                await ssSource.testConnection();
+                this.logger.info(`(${name}) Subsonic source initialized`);
                 break;
             default:
                 break;
