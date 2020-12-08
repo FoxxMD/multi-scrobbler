@@ -13,8 +13,10 @@
 </style>
 </head>
 <body>
-    <h2>Spotify Recently Played (<%= name %>)</h2>
-This list was returned from the Spotify Api <b>now.</b> Sometimes Spotify "backlogs" user activity so your recent tracks may not show up for minutes (or hours). ¯\_(ツ)_/¯
+    <h2>Recently Played (<%= name %>)</h2>
+    <% if (sourceType === 'spotify') { %>
+        This list was returned from the Spotify Api <b>now.</b> Sometimes Spotify "backlogs" user activity so your recent tracks may not show up for minutes (or hours). ¯\_(ツ)_/¯
+    <% } %>
     <ul>
         <% plays.forEach(function (play){ %>
             <li><pre><%-play%></pre></li>

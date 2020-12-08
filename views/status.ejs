@@ -33,16 +33,13 @@
         <h3><%= source.display %> - <%= source.name %></h3>
         <ul>
             <li><b>Status: <%= source.status %></b></li>
-            <li>Tracks Discovered (since app started): <%= source.discoveredTracks %></li>
-            <% if (source.type === 'spotify' && source.authed) { %>
-            <li>Click <a target="_blank" href="spotify/recent?name=<%= source.name %>">to see recently played tracks returned by Spotify</a></li>
-            <li>Click <a target="_blank" href="authSpotify?name=<%= source.name %>">to re-authenticate and restart polling</a></li>
-            <li>Click <a target="_blank" href="pollSpotify?name=<%= source.name %>">to restart polling</a></li>
-            <% } %>
-            <% if (source.type === 'spotify' && !source.authed) { %>
-                <li>Click <a class="disabled" target="_blank">to see recently played tracks returned by Spotify</a></li>
-                <li>Click <a target="_blank" href="authSpotify?name=<%= source.name %>">to re-authenticate and restart polling</a></li>
-                <li>Click <a class="disabled" target="_blank">to restart polling</a></li>
+            <li>Tracks Discovered (since app started): <%= source.tracksDiscovered %></li>
+            <% if (source.canPoll === true) { %>
+            <li>Click <a target="_blank" <% if (!source.hasAuth || source.authed) { %> href="recent?name=<%= source.name %>&type=<%= source.type %>" <% } else { %>class="disabled"<% } %>>to see recently played tracks returned by API</a></li>
+                <% if (source.hasAuth) { %>
+            <li>Click <a target="_blank" href="auth?name=<%= source.name %>&type=<%= source.type %>">to (re)authenticate and (re)start polling</a></li>
+                <% } %>
+            <li>Click <a target="_blank" <% if (!source.hasAuth || source.authed) { %> href="poll?name=<%= source.name %>&type=<%= source.type %>" <% } else { %>class="disabled"<% } %>>to restart polling</a></li>
             <% } %>
         </ul>
     </div>

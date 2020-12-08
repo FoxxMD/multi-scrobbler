@@ -163,6 +163,11 @@ ${sources.join('\n')}`);
         }
     }
 
+    /**
+     * @param {*} data
+     * @param {{scrobbleFrom, scrobbleTo, forceRefresh: boolean}|{scrobbleFrom, scrobbleTo}} options
+     * @returns {Array}
+     */
     scrobble = async (data, options = {}) => {
         const playObjs = Array.isArray(data) ? data : [data];
         const {

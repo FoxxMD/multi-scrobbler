@@ -7,8 +7,6 @@ export default class PlexSource extends AbstractSource {
     libraries;
     servers;
 
-    discoveredTracks = 0;
-
     constructor(name, config, clients, type = 'plex') {
         super(type, name, config, clients);
         const {user, libraries, servers} = config
@@ -47,9 +45,9 @@ export default class PlexSource extends AbstractSource {
         }
 
         if (user === undefined && libraries === undefined && servers === undefined) {
-            this.logger.warn('Initialized, but with no filters! All tracks from all users on all servers and libraries will be scrobbled.');
+            this.logger.warn('Initializing, but with no filters! All tracks from all users on all servers and libraries will be scrobbled.');
         } else {
-            this.logger.info(`Initialized with the following filters => Users: ${this.users === undefined ? 'N/A' : this.users.join(', ')} | Libraries: ${this.libraries === undefined ? 'N/A' : this.libraries.join(', ')} | Servers: ${this.servers === undefined ? 'N/A' : this.servers.join(', ')}`);
+            this.logger.info(`Initializing with the following filters => Users: ${this.users === undefined ? 'N/A' : this.users.join(', ')} | Libraries: ${this.libraries === undefined ? 'N/A' : this.libraries.join(', ')} | Servers: ${this.servers === undefined ? 'N/A' : this.servers.join(', ')}`);
         }
     }
 
@@ -166,7 +164,7 @@ export default class PlexSource extends AbstractSource {
         try {
             await allClients.scrobble(playObj, {scrobbleTo: this.clients, scrobbleFrom: this.identifier});
             // only gets hit if we scrobbled ok
-            this.discoveredTracks++;
+            this.tracksDiscovered++;
         } catch (e) {
             this.logger.error('Encountered error while scrobbling')
             this.logger.error(e)

@@ -1,13 +1,8 @@
 import dayjs from "dayjs";
-import {EventEmitter} from "events";
 import {
-    buildTrackString,
     readJson,
-    sleep,
     writeFile,
-    makeSingle,
     sortByPlayDate,
-    createLabelledLogger
 } from "../utils.js";
 import SpotifyWebApi from "spotify-web-api-node";
 import AbstractSource from "./AbstractSource.js";
@@ -18,30 +13,28 @@ const state = 'random';
 export default class SpotifySource extends AbstractSource {
 
     spotifyApi;
-    interval;
     localUrl;
     workingCredsPath;
     configDir;
-
-    spotifyPoller;
-    pollerRunning = false;
-
-    emitter;
-    discoveredTracks = 0;
 
     constructor(name, config = {}, clients = []) {
         super('spotify', name, config, clients);
         const {
             localUrl,
             configDir,
+            interval = 60,
         } = config;
+
+        if (interval < 15) {
+            this.logger.warn('Interval should be above 30 seconds...😬');
+        }
+
+        this.config.interval = interval;
 
         this.configDir = configDir;
         this.workingCredsPath = `${configDir}/currentCreds-${name}.json`;
         this.localUrl = localUrl;
-        this.spotifyPoller = makeSingle(pollSpotify);
-        this.emitter = new EventEmitter();
-        this.emitter.addListener('spotifyTrackDiscovered', this.handleDiscoveredTrack);
+        this.canPoll = true;
     }
 
     static formatPlayObj(obj, newFromSource = false) {
@@ -81,13 +74,7 @@ export default class SpotifySource extends AbstractSource {
         }
     }
 
-    handleDiscoveredTrack = (e) => {
-        this.discoveredTracks++;
-    }
-
     buildSpotifyApi = async () => {
-
-        this.logger.debug('Initializing');
 
         let spotifyCreds = {};
         try {
@@ -102,13 +89,7 @@ export default class SpotifySource extends AbstractSource {
             clientSecret,
             redirectUri,
             refreshToken,
-            interval = 60,
         } = this.config || {};
-
-        if (interval < 15) {
-            console.warn('Interval should be above 30 seconds...😬');
-        }
-        this.interval = interval;
 
         const rdUri = redirectUri || `${this.localUrl}/callback`;
 
@@ -156,7 +137,6 @@ export default class SpotifySource extends AbstractSource {
             throw new Error('Failed to initialize a Spotify source');
         }
 
-        this.logger.info('Initialized');
         this.spotifyApi = new SpotifyWebApi(apiConfig);
     }
 
@@ -187,21 +167,20 @@ export default class SpotifySource extends AbstractSource {
         const func = api => api.getMyRecentlyPlayedTracks({
             limit
         });
-        const result = await this.trySpotifyCall(func);
+        const result = await this.callApi(func);
         if (formatted === true) {
             return result.body.items.map(x => SpotifySource.formatPlayObj(x)).sort(sortByPlayDate);
         }
         return result;
     }
 
-    trySpotifyCall = async (func) => {
+    callApi = async (func) => {
         try {
             return await func(this.spotifyApi);
         } catch (e) {
             if (e.statusCode === 401) {
                 if (this.spotifyApi.getRefreshToken() === undefined) {
-                    this.logger.error('Access token was not valid and no refresh token was present, bailing out of polling');
-                    return Promise.resolve();
+                    throw new Error('Access token was not valid and no refresh token was present')
                 }
                 this.logger.debug('Access token was not valid, attempting to refresh');
 
@@ -234,105 +213,11 @@ export default class SpotifySource extends AbstractSource {
         }
     }
 
-    pollSpotify = (allClients) => {
+    poll = async (allClients) => {
         if (this.spotifyApi === undefined) {
             this.logger.warn('Cannot poll spotify without valid credentials configuration')
             return;
         }
-        this.pollerRunning = true;
-        return this.spotifyPoller(this.logger, this, this.interval, this.workingCredsPath, allClients, this.clients, this.identifier, this.emitter)
-            .catch((e) => {
-                this.logger.error('Error occurred while polling spotify, polling has been stopped');
-                this.logger.error(e);
-            })
-            .finally(() => {
-                this.pollerRunning = false;
-            });
+        await this.startPolling(allClients);
     }
 }
-
-const pollSpotify = function* (logger, source, interval = 60, credsPath, clients, clientsToScrobbleTo = [], scrobbleFrom, emitter) {
-    logger.info('Polling started');
-    let lastTrackPlayedAt = dayjs();
-    let checkCount = 0;
-    while (true) {
-        let playObjs = [];
-        logger.debug('Refreshing recently played')
-        playObjs = yield source.getRecentlyPlayed({formatted: true});
-        if (playObjs instanceof Error) {
-            return Promise.reject(playObjs);
-        }
-        checkCount++;
-        let newTracksFound = false;
-        let closeToInterval = false;
-        const now = dayjs();
-
-        const playInfo = playObjs.reduce((acc, playObj) => {
-            const {data: {playDate} = {}} = playObj;
-            if (playDate.unix() > lastTrackPlayedAt.unix()) {
-                newTracksFound = true;
-                logger.info(`New Track => ${buildTrackString(playObj)}`);
-
-                if (closeToInterval === false) {
-                    closeToInterval = Math.abs(now.unix() - playDate.unix()) < 5;
-                }
-
-                return {
-                    plays: [...acc.plays, {...playObj, meta: {...playObj.meta, newFromSource: true}}],
-                    lastTrackPlayedAt: playDate
-                }
-            }
-            return {
-                ...acc,
-                plays: [...acc.plays, playObj]
-            }
-        }, {plays: [], lastTrackPlayedAt});
-        playObjs = playInfo.plays;
-        lastTrackPlayedAt = playInfo.lastTrackPlayedAt;
-
-        if (closeToInterval) {
-            // because the interval check was so close to the play date we are going to delay client calls for a few secs
-            // this way we don't accidentally scrobble ahead of any other clients (we always want to be behind so we can check for dups)
-            // additionally -- it should be ok to have this in the for loop because played_at will only decrease (be further in the past) so we should only hit this once, hopefully
-            logger.info('Track is close to polling interval! Delaying scrobble clients refresh by 10 seconds so other clients have time to scrobble first');
-            yield sleep(10 * 1000);
-        }
-
-        if (newTracksFound === false) {
-            if (playObjs.length === 0) {
-                logger.debug(`No new tracks found and no tracks returned from API`);
-            } else {
-                logger.debug(`No new tracks found. Newest track returned was ${buildTrackString(playObjs.slice(-1)[0])}`);
-            }
-        } else {
-            checkCount = 0;
-        }
-
-        const scrobbleResult = yield clients.scrobble(playObjs, {forceRefresh: closeToInterval, scrobbleFrom, scrobbleTo: clientsToScrobbleTo});
-        if (scrobbleResult instanceof Error) {
-            return Promise.reject(scrobbleResult);
-        } else if (scrobbleResult.length > 0) {
-            checkCount = 0;
-            for (const t of scrobbleResult) {
-                emitter.emit('spotifyTrackDiscovered', t);
-            }
-        }
-
-        let sleepTime = interval;
-        // don't need to do back off calc if interval is 10 minutes or greater since its already pretty light on API calls
-        // and don't want to back off if we just started the app
-        if (checkCount > 5 && sleepTime < 600) {
-            const lastPlayToNowSecs = Math.abs(now.unix() - lastTrackPlayedAt.unix());
-            // back off if last play was longer than 10 minutes ago
-            const backoffThreshold = Math.min((interval * 10), 600);
-            if (lastPlayToNowSecs >= backoffThreshold) {
-                // back off to a maximum of 5 minutes
-                sleepTime = Math.min(interval * 5, 300);
-            }
-        }
-
-        // sleep for interval
-        logger.debug(`Sleeping for ${sleepTime}s`);
-        yield sleep(sleepTime * 1000);
-    }
-};

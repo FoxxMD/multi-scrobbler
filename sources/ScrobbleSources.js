@@ -27,6 +27,10 @@ export default class ScrobbleSources {
         return this.sources.filter(x => x.type === type);
     }
 
+    getByNameAndType = (name, type) => {
+        return this.sources.find(x => x.name === name && x.type === type);
+    }
+
     buildSourcesFromConfig = async (additionalConfigs = []) => {
         let configs = additionalConfigs;
 
@@ -185,6 +189,7 @@ export default class ScrobbleSources {
             throw new Error(`Config object from ${clientConfig.source || 'unknown'} with name [${clientConfig.name || 'unnamed'}] of type [${clientConfig.type || 'unknown'}] has errors: ${isValidConfig.join(' | ')}`)
         }
         const {type, name, clients = [], data = {}} = clientConfig;
+        this.logger.debug(`(${name}) Initializing ${type} source`);
         switch (type) {
             case 'spotify':
                 const spotifySource = new SpotifySource(name, {
@@ -204,14 +209,13 @@ export default class ScrobbleSources {
                 this.sources.push(tautulliSource);
                 break;
             case 'subsonic':
-                this.logger.debug(`(${name}) Initializing Subsonic source`);
                 const ssSource = new SubsonicSource(name, data, clients);
                 await ssSource.testConnection();
-                this.logger.info(`(${name}) Subsonic source initialized`);
                 this.sources.push(ssSource);
                 break;
             default:
                 break;
         }
+        this.logger.info(`(${name}) ${type} source initialized`);
     }
 }

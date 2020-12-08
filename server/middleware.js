@@ -1,7 +1,8 @@
 export const makeSourceCheckMiddle = sources => (req, res, next) => {
     const {
         query: {
-            name
+            name,
+            type
         } = {}
     } = req;
 
@@ -9,10 +10,10 @@ export const makeSourceCheckMiddle = sources => (req, res, next) => {
         return res.status(404).send('Source name must be defined');
     }
 
-    const source = sources.getByName(name);
+    const source = sources.getByNameAndType(name, type);
 
     if (source === undefined) {
-        return res.status(404).send(`No source with the name: ${name}`);
+        return res.status(404).send(`No source with the name [${name}] and type [${type}`);
     }
 
     req.sourceName = name;

@@ -14,7 +14,7 @@ import {
     capitalize,
     labelledFormat,
     longestString,
-    readJson,
+    readJson, sleep,
     truncateStringToLength
 } from "./utils.js";
 import Clients from './clients/ScrobbleClients.js';
@@ -150,26 +150,24 @@ app.use(bodyParser.json());
                 slicedLog.reverse();
             }
             const sourceData = scrobbleSources.sources.map((x) => {
-                const {type, discoveredTracks = 0, name} = x;
-                const base = {type, display: capitalize(type), discoveredTracks, name};
+                const {type, tracksDiscovered = 0, name, canPoll = false, polling = false} = x;
+                const base = {type, display: capitalize(type), tracksDiscovered, name, canPoll, hasAuth: false};
+                if(canPoll) {
+                    base.status = polling ? 'Running' : 'Idle';
+                } else {
+                    base.status = tracksDiscovered > 0 ? 'Received Data' : 'Awaiting Data'
+                }
                 switch (x.type) {
                     case 'spotify':
                         const authed = x.spotifyApi === undefined || x.spotifyApi.getAccessToken() !== undefined;
-                        let status = authed ? 'Yes' : 'Auth Interaction Required';
-                        if(authed) {
-                            status = x.pollerRunning ? 'Running' : 'Idle';
-                        }
                         return {
                             ...base,
+                            hasAuth: true,
                             authed,
-                            status,
+                            status: authed ? base.status : 'Auth Interaction Required' ,
                         }
-                    case 'plex':
-                    case 'tautulli':
-                        return {
-                            ...base,
-                            status: discoveredTracks > 0 ? 'Received Data' : 'Awaiting Data'
-                        }
+                    default:
+                        return base;
                 }
             })
             res.render('status', {
@@ -227,8 +225,8 @@ app.use(bodyParser.json());
             res.send('OK');
         });
 
-        app.use('/authSpotify', sourceCheckMiddle);
-        app.getAsync('/authSpotify', async function (req, res) {
+        app.use('/auth', sourceCheckMiddle);
+        app.getAsync('/auth', async function (req, res) {
             const {
                 scrobbleSource: source,
                 sourceName: name,
@@ -246,27 +244,27 @@ app.use(bodyParser.json());
             }
         });
 
-        app.use('/pollSpotify', sourceCheckMiddle);
-        app.getAsync('/pollSpotify', async function (req, res) {
+        app.use('/poll', sourceCheckMiddle);
+        app.getAsync('/poll', async function (req, res) {
             const {
                 scrobbleSource: source,
             } = req;
 
-            if (source.type !== 'spotify') {
-                return res.status(400).send(`Specified source is not spotify (${source.type})`);
+            if (!source.canPoll) {
+                return res.status(400).send(`Specified source cannot poll (${source.type})`);
             }
 
-            source.pollSpotify(scrobbleClients);
+            source.poll(scrobbleClients);
             res.send('OK');
         });
 
-        app.use('/spotify/recent', sourceCheckMiddle);
-        app.getAsync('/spotify/recent', async function (req, res) {
+        app.use('/recent', sourceCheckMiddle);
+        app.getAsync('/recent', async function (req, res) {
             const {
                 scrobbleSource: source,
             } = req;
-            if (source.type !== 'spotify') {
-                return res.status(400).send(`Specified source is not spotify (${source.type})`);
+            if (!source.canPoll) {
+                return res.status(400).send(`Specified source cannot retrieve recent plays (${source.type})`);
             }
 
             const result = await source.getRecentlyPlayed({formatted: true});
@@ -281,7 +279,7 @@ app.use(bodyParser.json());
                     } = {}
                 } = x;
                 const buildOpts = {
-                    include: ['time', 'timeFromNow'],
+                    include: ['time', 'timeFromNow', 'track', 'artist'],
                     transformers: {
                         artists: a => artistTruncFunc(a.join(' / ')).padEnd(33),
                         track: t => t.padEnd(trackLength)
@@ -292,7 +290,7 @@ app.use(bodyParser.json());
                 }
                 return buildTrackString(x, buildOpts);
             });
-            res.render('spotify/recent', {plays, name: source.name});
+            res.render('recent', {plays, name: source.name, sourceType: source.type});
         });
 
         app.getAsync('/logs/settings/update', async function (req, res) {
@@ -327,7 +325,7 @@ app.use(bodyParser.json());
             const tokenResult = await source.handleAuthCodeCallback(req.query);
             let responseContent = 'OK';
             if (tokenResult === true) {
-                source.pollSpotify(scrobbleClients);
+                source.poll(scrobbleClients);
             } else {
                 responseContent = tokenResult;
             }
@@ -335,17 +333,26 @@ app.use(bodyParser.json());
         });
 
         let anyNotReady = false;
-        for (const spotifySource of scrobbleSources.sources.filter(x => x.type === 'spotify')) {
-            if (spotifySource.spotifyApi !== undefined) {
-                if (spotifySource.spotifyApi.getAccessToken() === undefined) {
-                    anyNotReady = true;
-                } else {
-                    spotifySource.pollSpotify(scrobbleClients);
-                }
+        for(const source of scrobbleSources.sources.filter(x => x.canPoll === true)) {
+            await sleep(1500); // stagger polling by 1.5 seconds so that log messages for each source don't get mixed up
+            switch(source.type) {
+                case 'spotify':
+                    if (source.spotifyApi !== undefined) {
+                        if (source.spotifyApi.getAccessToken() === undefined) {
+                            anyNotReady = true;
+                        } else {
+                            source.poll(scrobbleClients);
+                        }
+                    }
+                    break;
+                default:
+                    if(source.poll !== undefined) {
+                        source.poll(scrobbleClients);
+                    }
             }
         }
         if (anyNotReady) {
-            logger.info(`Some spotify sources are not ready, open ${localUrl} to continue`);
+            logger.info(`Some sources are not ready, open ${localUrl} to continue`);
         }
 
         app.set('views', './views');
