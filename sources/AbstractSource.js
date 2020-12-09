@@ -28,6 +28,13 @@ export default class AbstractSource {
         return [];
     }
 
+    // by default if the track was recently played it is valid
+    // this is useful for sources where the track doesn't have complete information like Subsonic
+    // TODO make this more descriptive? or move it elsewhere
+    recentlyPlayedTrackIsValid = (playObj) => {
+        return true;
+    }
+
     poll = async (allClients) => {
         await this.startPolling(allClients);
     }
@@ -58,24 +65,27 @@ export default class AbstractSource {
                 const now = dayjs();
 
                 const playInfo = playObjs.reduce((acc, playObj) => {
-                    const {data: {playDate} = {}} = playObj;
-                    if (playDate.unix() > lastTrackPlayedAt.unix()) {
-                        newTracksFound = true;
-                        this.logger.info(`New Track => ${buildTrackString(playObj)}`);
+                    if(this.recentlyPlayedTrackIsValid(playObj)) {
+                        const {data: {playDate} = {}} = playObj;
+                        if (playDate.unix() > lastTrackPlayedAt.unix()) {
+                            newTracksFound = true;
+                            this.logger.info(`New Track => ${buildTrackString(playObj)}`);
 
-                        if (closeToInterval === false) {
-                            closeToInterval = Math.abs(now.unix() - playDate.unix()) < 5;
+                            if (closeToInterval === false) {
+                                closeToInterval = Math.abs(now.unix() - playDate.unix()) < 5;
+                            }
+
+                            return {
+                                plays: [...acc.plays, {...playObj, meta: {...playObj.meta, newFromSource: true}}],
+                                lastTrackPlayedAt: playDate
+                            }
                         }
-
                         return {
-                            plays: [...acc.plays, {...playObj, meta: {...playObj.meta, newFromSource: true}}],
-                            lastTrackPlayedAt: playDate
+                            ...acc,
+                            plays: [...acc.plays, playObj]
                         }
                     }
-                    return {
-                        ...acc,
-                        plays: [...acc.plays, playObj]
-                    }
+                    return acc;
                 }, {plays: [], lastTrackPlayedAt});
                 playObjs = playInfo.plays;
                 lastTrackPlayedAt = playInfo.lastTrackPlayedAt;

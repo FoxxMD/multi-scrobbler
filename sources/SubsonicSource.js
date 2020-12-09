@@ -2,7 +2,10 @@ import AbstractSource from "./AbstractSource.js";
 import request from 'superagent';
 import crypto from 'crypto';
 import dayjs from "dayjs";
-import {buildTrackString, sleep} from "../utils.js";
+import isSameOrAfter from "dayjs/plugin/isSameOrAfter.js";
+import {buildTrackString} from "../utils.js";
+
+dayjs.extend(isSameOrAfter);
 
 export class SubsonicSource extends AbstractSource {
 
@@ -47,6 +50,16 @@ export class SubsonicSource extends AbstractSource {
                 newFromSource,
             }
         }
+    }
+
+    recentlyPlayedTrackIsValid = (playObj) => {
+        const {data: {playDate} = {}} = playObj;
+        // want to make sure that the track has been played for at least one minute (according to subsonic api)
+        const isValid = dayjs().startOf('minute').subtract(1, 'minute').isSameOrAfter(playDate);
+        if (!isValid) {
+            this.logger.debug(`${buildTrackString(playObj, {include: ['artist', 'track']})} recently played but not valid b/c it has not been playing for >= 1 minute`);
+        }
+        return isValid;
     }
 
     callApi = async (req) => {
