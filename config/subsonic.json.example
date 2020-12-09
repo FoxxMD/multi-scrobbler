@@ -1,0 +1,10 @@
+[
+  {
+    "name": "default",                        // optional, friendly name for logs
+    "data": {
+      "url": "http://localhost:4040/airsonic",// required, the url you would visit to listen to music on the web
+      "user": "yourUser",                     // required, username to login with
+      "password": "yourPassword"              // required, password to login with
+    }
+  }
+]

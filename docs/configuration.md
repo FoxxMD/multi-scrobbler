@@ -120,6 +120,28 @@ Check the [instructions](plex.md) on how to setup a notification agent.
 
 See [`tautulli.json.example`](../config/tautulli.json.example)
 
+## [Subsonic](http://www.subsonic.org/)
+
+Can use this source for any application that implements the [Subsonic API](http://www.subsonic.org/pages/api.jsp) (such as [Airsonic](https://airsonic.github.io/))
+
+**Known Issues:**
+* "Time played at" is somewhat inaccurate since the api only reports "played X minutes ago" so...
+  * All scrobble times are therefore "on the minute" and you may experience occasional duplicate scrobbles
+  * "played X minutes ago" sometimes is also not reported correctly
+* Multiple artists are reported as one value and cannot be separated
+
+### ENV-Based
+
+| Environmental Variable     | Required? |            Default             |                    Description                     |
+|----------------------------|-----------|----------------------------------|----------------------------------------------------|
+| `SUBSONIC_USER`        | Yes       |                                  |                                                    |
+| `SUBSONIC_PASSWORD`    | Yes       |                                  |                                                    |
+| `SUBSONIC_URL`     | Yes         |                                  | Base url of your subsonic-api server |
+
+### JSON-Based
+
+See [`subsonic.json.example`](../config/subsonic.json.example)
+
 # Clients
 
 ## [Maloja](https://github.com/krateng/maloja)

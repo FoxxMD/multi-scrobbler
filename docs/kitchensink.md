@@ -5,6 +5,7 @@ Scenario:
 * You want to scrobble plays for yourself (Foxx), Fred, and Mary
 * Each person has their own Maloja server
 * Each person has their own Spotify account
+* You have your own Airsonic (subsonic) server you to scrobble from
 * Fred has his own Spotify application and provides you with just his access and refresh token because he doesn't trust you (wtf Fred)
 * Fred has a Plex server and wants to scrobble everything he plays
 * Mary uses Fred's Plex server but only wants to scrobble her plays from the `podcast` library
@@ -69,7 +70,17 @@ Using just one config file located at `CONFIG_DIR/config.json`:
       "data": {
         "libraries": ["party"],
       }
-    }
+    },
+    {
+      "type": "subsonic",
+      "name": "foxxAirsonic",
+      "clients": ["foxxMaloja"],
+      "data": {
+        "user": "foxx",
+        "password": "foxxPassword",
+        "url": "https://airsonic.foxx.example"
+      }
+    },
   ],
   "clients": [
     {

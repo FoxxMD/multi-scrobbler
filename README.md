@@ -6,7 +6,10 @@
 
 A javascript app to scrobble plays from multiple sources to [Maloja](https://github.com/krateng/maloja) (and other clients, eventually!)
 
-* Supports scrobbling from [Spotify](/docs/configuration.md#spotify), [Plex](/docs/configuration.md#plex), and [Tautulli](/docs/configuration.md#tautulli)
+* Supports scrobbling for many sources
+  * [Spotify](/docs/configuration.md#spotify)
+  * [Plex](/docs/configuration.md#plex) or [Tautulli](/docs/configuration.md#tautulli)
+  * [Subsonic-compatible APIs](/docs/configuration.md#subsonic) (like [Airsonic](https://airsonic.github.io/))
 * Supports configuring for single or multiple users (scrobbling for your friends and family!)
 * Web server interface for stats, basic control, and detailed logs
 * Smart handling of credentials (persistent, authorization through app)
