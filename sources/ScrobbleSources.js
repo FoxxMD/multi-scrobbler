@@ -107,7 +107,7 @@ export default class ScrobbleSources {
                         password: process.env.SUBSONIC_PASSWORD,
                         url: process.env.SUBSONIC_URL,
                     };
-                    if (!Object.values(s).every(x => x === undefined)) {
+                    if (!Object.values(sub).every(x => x === undefined)) {
                         configs.push({
                             type: 'subsonic',
                             name: 'unnamed',
