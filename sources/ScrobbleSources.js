@@ -101,6 +101,22 @@ export default class ScrobbleSources {
                         })
                     }
                     break;
+                case 'subsonic':
+                    const sub = {
+                        user: process.env.SUBSONIC_USER,
+                        password: process.env.SUBSONIC_PASSWORD,
+                        url: process.env.SUBSONIC_URL,
+                    };
+                    if (!Object.values(s).every(x => x === undefined)) {
+                        configs.push({
+                            type: 'subsonic',
+                            name: 'unnamed',
+                            source: 'ENV',
+                            mode: 'single',
+                            data: sub
+                        })
+                    }
+                    break;
                 default:
                     break;
             }
@@ -175,8 +191,11 @@ export default class ScrobbleSources {
                         this.logger.info('HINT: "unnamed" configs occur when using ENVs, if a multi-user mode config does not have a "name" property, or if a config is built in single-user mode');
                     }
                 }
-                tempNamedConfigs = tempNamedConfigs.map(({name = 'unnamed', ...x},i) => ({...x, name: hasDups ? `${name}${i+1}` : name}));
-                for(const c of tempNamedConfigs) {
+                tempNamedConfigs = tempNamedConfigs.map(({name = 'unnamed', ...x}, i) => ({
+                    ...x,
+                    name: hasDups ? `${name}${i + 1}` : name
+                }));
+                for (const c of tempNamedConfigs) {
                     await this.addSource(c);
                 }
             }

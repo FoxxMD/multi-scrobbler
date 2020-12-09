@@ -12,13 +12,16 @@ export class SubsonicSource extends AbstractSource {
     constructor(name, config = {}, clients = []) {
         super('subsonic', name, config, clients);
 
-        const {user, password} = this.config;
+        const {user, password, url} = this.config;
 
         if (user === undefined) {
             throw new Error(`Cannot setup Subsonic source, 'user' is not defined`);
         }
         if (password === undefined) {
             throw new Error(`Cannot setup Subsonic source, 'password' is not defined`);
+        }
+        if (url === undefined) {
+            throw new Error(`Cannot setup Subsonic source, 'url' is not defined`);
         }
 
         this.canPoll = true;
