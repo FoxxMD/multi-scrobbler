@@ -101,6 +101,9 @@ export default class AbstractScrobbleClient {
             data: {
                 playDate
             } = {},
+            meta: {
+                source,
+            } = {}
         } = playObj;
 
         const dtInvariantMatches = this.scrobbledPlayObjs.filter(x => playObjDataMatch(playObj, x.play));
@@ -114,9 +117,16 @@ export default class AbstractScrobbleClient {
                 play: {
                     data: {
                         playDate: sPlayDate
-                    } = {}
+                    } = {},
+                    meta: {
+                        source: playSource
+                    } = {},
                 } = {},
             } = x;
+            // need to account for inaccurate DT from subsonic
+            if(source === 'Subsonic' && playSource === 'Subsonic') {
+                return playDate.isSame(sPlayDate) || playDate.diff(sPlayDate, 'minute') <= 1;
+            }
             return playDate.isSame(sPlayDate);
         });
 

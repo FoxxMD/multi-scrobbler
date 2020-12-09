@@ -222,6 +222,7 @@ export default class MalojaScrobbler extends AbstractScrobbleClient {
                 } = {},
                 meta: {
                     trackLength,
+                    source,
                 } = {},
             } = playObj;
 
@@ -234,18 +235,19 @@ export default class MalojaScrobbler extends AbstractScrobbleClient {
 
                 const {data: {playDate: scrobbleTime, track: scrobbleTitle, artists = []} = {}} = x;
 
+                const playDiffThreshold = source === 'Subsonic' ? 60 : 10;
                 let closeTime = false;
                 // check if scrobble time is same as play date (when the track finished playing AKA entered recent tracks)
                 let scrobblePlayDiff = Math.abs(playDate.unix() - scrobbleTime.unix());
                 let scrobblePlayStartDiff;
-                if (scrobblePlayDiff < 10) {
+                if (scrobblePlayDiff <= playDiffThreshold) {
                     //this.logger.debug(`Scrobble with same name (${scrobbleTitle}) found and the play (finish time) vs. scrobble time diff was smaller than 10 seconds`);
                     closeTime = true;
                 }
                 // also need to check that scrobble time isn't the BEGINNING of the track -- if the source supports durations
                 if (closeTime === false && trackLength !== undefined) {
                     scrobblePlayStartDiff = Math.abs(playDate.unix() - (scrobbleTime.unix() - trackLength));
-                    if (scrobblePlayStartDiff < 10) {
+                    if (scrobblePlayStartDiff <= playDiffThreshold) {
                         //this.logger.debug(`Scrobble with same name (${scrobbleTitle}) found and the play (start time) vs. scrobble time diff was smaller than 10 seconds`);
                         closeTime = true;
                     }
@@ -334,7 +336,15 @@ export default class MalojaScrobbler extends AbstractScrobbleClient {
                     key: apiKey,
                     time: playDate.unix(),
                 }));
-            this.addScrobbledTrack(playObj, response.body.track);
+            const {body: {
+                track: {
+                    time: mTime = playDate.unix(),
+                    duration: mDuration = duration,
+                    album: mAlbum = album,
+                    ...rest
+                }
+            } = {}} = response;
+            this.addScrobbledTrack(playObj, {...rest, album: mAlbum, time: mTime, duration: mDuration});
             if (newFromSource) {
                 this.logger.info(`Scrobbled (New)     => (${source}) ${buildTrackString(playObj)}`);
             } else {
