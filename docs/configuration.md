@@ -129,6 +129,7 @@ Can use this source for any application that implements the [Subsonic API](http:
   * All scrobble times are therefore "on the minute" and you may experience occasional duplicate scrobbles
   * "played X minutes ago" sometimes is also not reported correctly
 * Multiple artists are reported as one value and cannot be separated
+* If using [Airsonic Advanced](https://github.com/airsonic-advanced/airsonic-advanced) the password used (under **Credentials**) must be **Decodable**  
 
 ### ENV-Based
 
