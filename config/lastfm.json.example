@@ -4,6 +4,8 @@
     "data": {
       "apiKey": "string",                                        // required, Lastfm api key
       "secret": "string",                                        // required, Lastfm shared secret
+      "session": "string",                                       // optional, session id returned from a complete auth flow.
+                                                                 //   if not specified will be generated during authentication
       "redirectUri": "http://localhost:9078/lastfm/callback"     // optional, if not different than this default
                                                                  //   callback for auth. Must have "lastfm/callback" in the url somewhere
     }
