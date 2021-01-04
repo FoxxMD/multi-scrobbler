@@ -143,6 +143,26 @@ Can use this source for any application that implements the [Subsonic API](http:
 
 See [`subsonic.json.example`](../config/subsonic.json.example)
 
+## Jellyfin
+
+```json
+{
+  "NotificationType": "{{NotificationType}}",
+  "Name": "{{Name}}",
+  "Overview": "{{Overview}}",
+  "Username": "{{Username}}",
+  "UserId": "{{UserId}}",
+  "UtcTimestamp": "{{UtcTimestamp}}",
+  "Runtime": "{{RunTime}}",
+  "PlaybackPosition": "{{PlaybackPosition}}",
+  "ItemType": "{{ItemType}}",
+  "ItemId": "{{ItemId}}",
+  "ServerName": "{{ServerName}}",
+  "ServerVersion": "{{ServerVersion}}",
+  "PlayedToCompletion": "{{PlayedToCompletion}}"
+}
+```
+
 # Clients
 
 ## [Maloja](https://github.com/krateng/maloja)

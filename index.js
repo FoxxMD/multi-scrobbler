@@ -225,6 +225,16 @@ app.use(bodyParser.json());
             res.send('OK');
         });
 
+        app.postAsync('/jellyfin', async function (req, res) {
+            const f = 1;
+            const {
+                body: {
+                    payload
+                } = {}
+            } = req;
+            res.send('OK');
+        });
+
         app.use('/auth', sourceCheckMiddle);
         app.getAsync('/auth', async function (req, res) {
             const {
