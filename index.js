@@ -119,7 +119,7 @@ app.use(bodyParser.json());
 
         const scrobbleSources = new ScrobbleSources(localUrl, configDir);
         let deprecatedConfigs = [];
-        if(spotify !== undefined) {
+        if (spotify !== undefined) {
             logger.warn(`Using 'spotify' top-level property in config.json is deprecated and will be removed in next major version. Please use 'sources' instead.`)
             deprecatedConfigs.push({
                 type: 'spotify',
@@ -129,7 +129,7 @@ app.use(bodyParser.json());
                 data: spotify
             });
         }
-        if(plex !== undefined) {
+        if (plex !== undefined) {
             logger.warn(`Using 'plex' top-level property in config.json is deprecated and will be removed in next major version. Please use 'sources' instead.`)
             deprecatedConfigs.push({
                 type: 'plex',
@@ -152,7 +152,7 @@ app.use(bodyParser.json());
             const sourceData = scrobbleSources.sources.map((x) => {
                 const {type, tracksDiscovered = 0, name, canPoll = false, polling = false} = x;
                 const base = {type, display: capitalize(type), tracksDiscovered, name, canPoll, hasAuth: false};
-                if(canPoll) {
+                if (canPoll) {
                     base.status = polling ? 'Running' : 'Idle';
                 } else {
                     base.status = tracksDiscovered > 0 ? 'Received Data' : 'Awaiting Data'
@@ -164,7 +164,7 @@ app.use(bodyParser.json());
                             ...base,
                             hasAuth: true,
                             authed,
-                            status: authed ? base.status : 'Auth Interaction Required' ,
+                            status: authed ? base.status : 'Auth Interaction Required',
                         }
                     default:
                         return base;
@@ -187,7 +187,7 @@ app.use(bodyParser.json());
                             ...base,
                             hasAuth: true,
                             authed,
-                            status: authed ? base.status : 'Auth Interaction Required' ,
+                            status: authed ? base.status : 'Auth Interaction Required',
                         }
                     default:
                         return base;
@@ -255,7 +255,7 @@ app.use(bodyParser.json());
                 scrobbleClient,
             } = req;
 
-            switch(scrobbleClient.type) {
+            switch (scrobbleClient.type) {
                 case 'lastfm':
                     res.redirect(scrobbleClient.getAuthUrl());
                     break;
@@ -271,7 +271,7 @@ app.use(bodyParser.json());
                 sourceName: name,
             } = req;
 
-            switch(source.type) {
+            switch (source.type) {
                 case 'spotify':
                     if (source.spotifyApi === undefined) {
                         res.status(400).send('Spotify configuration is not valid');
@@ -361,15 +361,20 @@ app.use(bodyParser.json());
                     state
                 } = {}
             } = req;
-            if(req.url.includes('lastfm')) {
+            if (req.url.includes('lastfm')) {
                 const {
                     query: {
                         token
                     } = {}
                 } = req;
                 const client = scrobbleClients.getByName(state);
-                await client.authenticate(token);
-                await client.initialize();
+                try {
+                    await client.authenticate(token);
+                    await client.initialize();
+                    return res.send('OK');
+                } catch (e) {
+                    return res.send(e.message);
+                }
             } else {
                 logger.info('Received auth code callback from Spotify', {label: 'Spotify'});
                 const source = scrobbleSources.getByName(state);
@@ -385,9 +390,9 @@ app.use(bodyParser.json());
         });
 
         let anyNotReady = false;
-        for(const source of scrobbleSources.sources.filter(x => x.canPoll === true)) {
+        for (const source of scrobbleSources.sources.filter(x => x.canPoll === true)) {
             await sleep(1500); // stagger polling by 1.5 seconds so that log messages for each source don't get mixed up
-            switch(source.type) {
+            switch (source.type) {
                 case 'spotify':
                     if (source.spotifyApi !== undefined) {
                         if (source.spotifyApi.getAccessToken() === undefined) {
@@ -398,7 +403,7 @@ app.use(bodyParser.json());
                     }
                     break;
                 default:
-                    if(source.poll !== undefined) {
+                    if (source.poll !== undefined) {
                         source.poll(scrobbleClients);
                     }
             }
