@@ -6,6 +6,7 @@ Scenario:
 * Each person has their own Maloja server
 * Each person has their own Spotify account
 * You have your own Airsonic (subsonic) server you to scrobble from
+* Mary has her own Last.fm account she also wants to scrobble to
 * Fred has his own Spotify application and provides you with just his access and refresh token because he doesn't trust you (wtf Fred)
 * Fred has a Plex server and wants to scrobble everything he plays
 * Mary uses Fred's Plex server but only wants to scrobble her plays from the `podcast` library
@@ -106,6 +107,14 @@ Using just one config file located at `CONFIG_DIR/config.json`:
         "url": "https://maloja.mary.example",
         "apiKey": "maryApiKey"
       }
+    },
+    {
+      "type": "lastfm",
+      "name": "maryLFM",
+      "data": {
+        "apiKey": "maryApiKey",
+        "secret": "marySecret",
+      }
     }
   ]
 }
@@ -202,3 +211,18 @@ In `CONFIG_DIR/maloja.json`:
   }
 ]
 ```
+
+In `CONFIG_DIR/lastfm.json`:
+
+```json5
+[
+  {
+    "name": "maryLFM",
+    "data": {
+      "apiKey": "maryApiKey",
+      "secret": "marySecret",
+    }
+  }
+]
+```
+

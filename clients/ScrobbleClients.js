@@ -59,6 +59,23 @@ export default class ScrobbleClients {
                         })
                     }
                     break;
+                case 'lastfm':
+                    const lfm = {
+                        apiKey: process.env.LASTFM_API_KEY,
+                        secret: process.env.LASTFM_SECRET,
+                        redirectUri: process.env.LASTFM_REDIRECT_URI,
+                        session: process.env.LASTFM_SESSION,
+                    };
+                    if (!Object.values(lfm).every(x => x === undefined)) {
+                        configs.push({
+                            type: 'lastfm',
+                            name: 'unnamed',
+                            source: 'ENV',
+                            mode: 'single',
+                            data: lfm
+                        })
+                    }
+                    break;
                 default:
                     break;
             }

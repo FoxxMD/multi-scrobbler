@@ -1,0 +1,11 @@
+[
+  {
+    "name": "myLastFm",                                          // required, a name to identify your Client
+    "data": {
+      "apiKey": "string",                                        // required, Lastfm api key
+      "secret": "string",                                        // required, Lastfm shared secret
+      "redirectUri": "http://localhost:9078/lastfm/callback"     // optional, if not different than this default
+                                                                 //   callback for auth. Must have "lastfm/callback" in the url somewhere
+    }
+  }
+]
