@@ -111,8 +111,8 @@ app.use(bodyParser.json());
         /*
         * setup clients
         * */
-        const scrobbleClients = new Clients();
-        await scrobbleClients.buildClientsFromConfig(configDir);
+        const scrobbleClients = new Clients(configDir);
+        await scrobbleClients.buildClientsFromConfig();
         if (scrobbleClients.clients.length === 0) {
             logger.warn('No scrobble clients were configured!')
         }
@@ -169,9 +169,33 @@ app.use(bodyParser.json());
                     default:
                         return base;
                 }
+            });
+            const clientData = scrobbleClients.clients.map((x) => {
+                const {type, scrobbledPlayObjs = [], name} = x;
+                const base = {
+                    type,
+                    display: capitalize(type),
+                    tracksDiscovered: scrobbledPlayObjs.length,
+                    name,
+                    hasAuth: false,
+                    status: scrobbledPlayObjs.length > 0 ? 'Received Data' : 'Awaiting Data'
+                };
+                switch (x.type) {
+                    case 'lastfm':
+                        const authed = x.initialized;
+                        return {
+                            ...base,
+                            hasAuth: true,
+                            authed,
+                            status: authed ? base.status : 'Auth Interaction Required' ,
+                        }
+                    default:
+                        return base;
+                }
             })
             res.render('status', {
                 sources: sourceData,
+                clients: clientData,
                 logs: {
                     output: slicedLog,
                     limit: [10, 20, 50, 100].map(x => `<a class="capitalize ${logConfig.limit === x ? 'bold' : ''}" href="logs/settings/update?limit=${x}">${x}</a>`).join(' | '),
@@ -225,22 +249,39 @@ app.use(bodyParser.json());
             res.send('OK');
         });
 
-        app.use('/auth', sourceCheckMiddle);
-        app.getAsync('/auth', async function (req, res) {
+        app.use('/client/auth', clientCheckMiddle);
+        app.getAsync('/client/auth', async function (req, res) {
+            const {
+                scrobbleClient,
+            } = req;
+
+            switch(scrobbleClient.type) {
+                case 'lastfm':
+                    res.redirect(scrobbleClient.getAuthUrl());
+                    break;
+                default:
+                    return res.status(400).send(`Specified client does not have auth implemented (${scrobbleClient.type})`);
+            }
+        });
+
+        app.use('/source/auth', sourceCheckMiddle);
+        app.getAsync('/source/auth', async function (req, res) {
             const {
                 scrobbleSource: source,
                 sourceName: name,
             } = req;
 
-            if (source.type !== 'spotify') {
-                return res.status(400).send(`Specified source is not spotify (${source.type})`);
-            }
-
-            if (source.spotifyApi === undefined) {
-                res.status(400).send('Spotify configuration is not valid');
-            } else {
-                logger.info('Redirecting to spotify authorization url');
-                res.redirect(source.createAuthUrl());
+            switch(source.type) {
+                case 'spotify':
+                    if (source.spotifyApi === undefined) {
+                        res.status(400).send('Spotify configuration is not valid');
+                    } else {
+                        logger.info('Redirecting to spotify authorization url');
+                        res.redirect(source.createAuthUrl());
+                    }
+                    break;
+                default:
+                    return res.status(400).send(`Specified source does not have auth implemented (${source.type})`);
             }
         });
 
@@ -315,21 +356,32 @@ app.use(bodyParser.json());
         });
 
         app.getAsync(/.*callback$/, async function (req, res) {
-            logger.info('Received auth code callback from Spotify', {label: 'Spotify'});
             const {
                 query: {
                     state
                 } = {}
             } = req;
-            const source = scrobbleSources.getByName(state);
-            const tokenResult = await source.handleAuthCodeCallback(req.query);
-            let responseContent = 'OK';
-            if (tokenResult === true) {
-                source.poll(scrobbleClients);
+            if(req.url.includes('lastfm')) {
+                const {
+                    query: {
+                        token
+                    } = {}
+                } = req;
+                const client = scrobbleClients.getByName(state);
+                await client.authenticate(token);
+                await client.initialize();
             } else {
-                responseContent = tokenResult;
+                logger.info('Received auth code callback from Spotify', {label: 'Spotify'});
+                const source = scrobbleSources.getByName(state);
+                const tokenResult = await source.handleAuthCodeCallback(req.query);
+                let responseContent = 'OK';
+                if (tokenResult === true) {
+                    source.poll(scrobbleClients);
+                } else {
+                    responseContent = tokenResult;
+                }
+                return res.send(responseContent);
             }
-            return res.send(responseContent);
         });
 
         let anyNotReady = false;

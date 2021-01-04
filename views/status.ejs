@@ -37,12 +37,27 @@
             <% if (source.canPoll === true) { %>
             <li>Click <a target="_blank" <% if (!source.hasAuth || source.authed) { %> href="recent?name=<%= source.name %>&type=<%= source.type %>" <% } else { %>class="disabled"<% } %>>to see recently played tracks returned by API</a></li>
                 <% if (source.hasAuth) { %>
-            <li>Click <a target="_blank" href="auth?name=<%= source.name %>&type=<%= source.type %>">to (re)authenticate and (re)start polling</a></li>
+            <li>Click <a target="_blank" href="source/auth?name=<%= source.name %>&type=<%= source.type %>">to (re)authenticate and (re)start polling</a></li>
                 <% } %>
             <li>Click <a target="_blank" <% if (!source.hasAuth || source.authed) { %> href="poll?name=<%= source.name %>&type=<%= source.type %>" <% } else { %>class="disabled"<% } %>>to restart polling</a></li>
             <% } %>
         </ul>
     </div>
+    <% }) %>
+</div>
+<h2>Clients</h2>
+<div class="facetContainer">
+    <% clients.forEach(function (client){ %>
+        <div class="facetItem">
+            <h3><%= client.display %> - <%= client.name %></h3>
+            <ul>
+                <li><b>Status: <%= client.status %></b></li>
+                <li>Tracks Scrobbled (since app started): <%= client.tracksDiscovered %></li>
+                <% if (client.hasAuth) { %>
+                    <li>Click <a target="_blank" href="client/auth?name=<%= client.name %>&type=<%= client.type %>">to (re)authenticate or initialize</a></li>
+                <% } %>
+            </ul>
+        </div>
     <% }) %>
 </div>
 
