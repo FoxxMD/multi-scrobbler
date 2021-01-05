@@ -82,7 +82,7 @@ export default class LastfmScrobbler extends AbstractScrobbleClient {
                 message,
             } = e;
             // for now check for exceptional errors by matching error code text
-            const retryError = retryErrors.find(x => message.include(x));
+            const retryError = retryErrors.find(x => message.includes(x));
             if(undefined !== retryError) {
                 if(tries <= 2) {
                     const delay = tries * 3;
