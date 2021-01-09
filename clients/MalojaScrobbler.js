@@ -3,7 +3,7 @@ import request from 'superagent';
 import dayjs from 'dayjs';
 import {buildTrackString, playObjDataMatch, setIntersection, sortByPlayDate, truncateStringToLength} from "../utils.js";
 
-const feat = ["ft.", "ft", "feat.", "feat", "featuring", "Ft.", "Ft", "Feat.", "Feat", "Featuring"];
+const feat = ["ft.", "ft", "feat.", "feat", "featuring", "Ft.", "Ft", "Feat.", "Feat", "Featuring", "FT.", "FT", "FEAT.", "FEAT", "FEATURING"];
 
 export default class MalojaScrobbler extends AbstractScrobbleClient {
 
