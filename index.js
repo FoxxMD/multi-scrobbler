@@ -171,14 +171,14 @@ app.use(bodyParser.json());
                 }
             });
             const clientData = scrobbleClients.clients.map((x) => {
-                const {type, scrobbledPlayObjs = [], name} = x;
+                const {type, tracksScrobbled = 0, name} = x;
                 const base = {
                     type,
                     display: capitalize(type),
-                    tracksDiscovered: scrobbledPlayObjs.length,
+                    tracksDiscovered: tracksScrobbled,
                     name,
                     hasAuth: false,
-                    status: scrobbledPlayObjs.length > 0 ? 'Received Data' : 'Awaiting Data'
+                    status: tracksScrobbled > 0 ? 'Received Data' : 'Awaiting Data'
                 };
                 switch (x.type) {
                     case 'lastfm':

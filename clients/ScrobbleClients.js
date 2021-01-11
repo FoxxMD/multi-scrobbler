@@ -241,6 +241,7 @@ ${sources.join('\n')}`);
                         } = playObj;
                         if (client.timeFrameIsValid(playObj, newFromSource) && !client.alreadyScrobbled(playObj, newFromSource)) {
                             await client.scrobble(playObj)
+                            client.tracksScrobbled++;
                             tracksScrobbled.push(playObj);
                         }
                     } catch(e) {

@@ -11,6 +11,7 @@ export default class AbstractScrobbleClient {
     scrobbledPlayObjs = [];
     newestScrobbleTime;
     oldestScrobbleTime = dayjs();
+    tracksScrobbled = 0;
 
     lastScrobbleCheck = dayjs();
     refreshEnabled;
