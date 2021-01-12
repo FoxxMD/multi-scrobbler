@@ -1,5 +1,11 @@
 import dayjs from "dayjs";
-import {createLabelledLogger, isValidConfigStructure, readJson, returnDuplicateStrings} from "../utils.js";
+import {
+    createLabelledLogger,
+    isValidConfigStructure,
+    playObjDataMatch,
+    readJson,
+    returnDuplicateStrings
+} from "../utils.js";
 import MalojaScrobbler from "./MalojaScrobbler.js";
 import LastfmScrobbler from "./LastfmScrobbler.js";
 
@@ -242,7 +248,11 @@ ${sources.join('\n')}`);
                         if (client.timeFrameIsValid(playObj, newFromSource) && !client.alreadyScrobbled(playObj, newFromSource)) {
                             await client.scrobble(playObj)
                             client.tracksScrobbled++;
-                            tracksScrobbled.push(playObj);
+                            // since this is what we return to the source only add to tracksScrobbled if not already in array
+                            // (source should only know that a track was scrobbled (binary) -- doesn't care if it was scrobbled more than once
+                            if(!tracksScrobbled.some(x => playObjDataMatch(x, playObj) && x.data.playDate === playObj.data.playDate)) {
+                                tracksScrobbled.push(playObj);
+                            }
                         }
                     } catch(e) {
                         this.logger.error(`Encountered error while in scrobble loop for ${client.name}`);
