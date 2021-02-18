@@ -1,7 +1,15 @@
 import AbstractScrobbleClient from "./AbstractScrobbleClient.js";
 import request from 'superagent';
 import dayjs from 'dayjs';
-import {buildTrackString, playObjDataMatch, setIntersection, sortByPlayDate, truncateStringToLength} from "../utils.js";
+import {
+    buildTrackString,
+    playObjDataMatch,
+    setIntersection,
+    sleep,
+    sortByPlayDate,
+    truncateStringToLength,
+    parseRetryAfterSecsFromObj
+} from "../utils.js";
 
 const feat = ["ft.", "ft", "feat.", "feat", "featuring", "Ft.", "Ft", "Feat.", "Feat", "Featuring"];
 
@@ -52,10 +60,21 @@ export default class MalojaScrobbler extends AbstractScrobbleClient {
 
     formatPlayObj = obj => MalojaScrobbler.formatPlayObj(obj);
 
-    callApi = async (req) => {
+    callApi = async (req, retries = 0) => {
+        const {
+            maxRequestRetries = 1,
+            retryMultiplier = 1.5
+        } = this.config;
+
         try {
             return await req;
         } catch (e) {
+            if(retries < maxRequestRetries) {
+                const retryAfter = parseRetryAfterSecsFromObj(e) ?? (retryMultiplier * (retries + 1));
+                this.logger.warn(`Request failed but retries (${retries}) less than max (${maxRequestRetries}), retrying request after ${retryAfter} seconds...`);
+                await sleep(retryAfter * 1000);
+                return await this.callApi(req, retries + 1)
+            }
             const {
                 message,
                 response: {

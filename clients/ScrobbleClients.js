@@ -35,8 +35,13 @@ export default class ScrobbleClients {
         } catch (e) {
             throw new Error('config.json could not be parsed');
         }
+        let clientDefaults = {};
         if (configFile !== undefined) {
-            const {clients: mainConfigClientConfigs = []} = configFile;
+            const {
+                clients: mainConfigClientConfigs = [],
+                clientDefaults: cd = {},
+            } = configFile;
+            clientDefaults = cd;
             if (!mainConfigClientConfigs.every(x => x !== null && typeof x === 'object')) {
                 throw new Error('All clients from config.json must be objects');
             }
@@ -162,16 +167,18 @@ ${sources.join('\n')}`);
             name
         }));
         for (const c of finalConfigs) {
-            await this.addClient(c);
+            await this.addClient(c, clientDefaults);
         }
     }
 
-    addClient = async (clientConfig) => {
+    addClient = async (clientConfig, defaults = {}) => {
         const isValidConfig = isValidConfigStructure(clientConfig, {name: true, data: true, type: true});
         if (isValidConfig !== true) {
             throw new Error(`Config object from ${clientConfig.source || 'unknown'} with name [${clientConfig.name || 'unnamed'}] of type [${clientConfig.type || 'unknown'}] has errors: ${isValidConfig.join(' | ')}`)
         }
-        const {type, name, data = {}} = clientConfig;
+        const {type, name, data: d = {}} = clientConfig;
+        // add defaults
+        const data = {...defaults, ...d};
         switch (type) {
             case 'maloja':
                 this.logger.debug(`(${name}) Attempting Maloja initialization...`);

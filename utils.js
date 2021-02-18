@@ -3,6 +3,10 @@ import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc.js';
 import winston from "winston";
 import jsonStringify from 'safe-stable-stringify';
+import SpotifyWebApi from "spotify-web-api-node";
+import { Response } from 'superagent';
+
+const {TimeoutError, WebapiError} = SpotifyWebApi;
 
 const {format} = winston;
 const {combine, printf, timestamp, label, splat, errors} = format;
@@ -259,4 +263,69 @@ export const playObjDataMatch = (a, b) => {
     }
 
     return true;
+}
+
+export const parseRetryAfterSecsFromObj = (err) => {
+
+    let raVal;
+
+    if (err instanceof TimeoutError) {
+        return undefined;
+    }
+    if (err instanceof WebapiError || err instanceof Response) {
+        const {headers = {}} = err;
+        raVal = headers['retry-after']
+    }
+    // if (err instanceof Response) {
+    //     const {headers = {}} = err;
+    //     raVal = headers['retry-after']
+    // }
+    const {
+        response: {
+            headers, // returned in superagent error
+        } = {},
+        retryAfter: ra // possible custom property we have set
+    } = err;
+
+    if (ra !== undefined) {
+        raVal = ra;
+    } else if (headers !== null && typeof headers === 'object') {
+        raVal = headers['retry-after'];
+    }
+
+    if (raVal === undefined || raVal === null) {
+        return raVal;
+    }
+
+    // first try to parse as float
+    let retryAfter = Number.parseFloat(raVal);
+    if (!isNaN(retryAfter)) {
+        return retryAfter; // got a number!
+    }
+    // try to parse as date
+    retryAfter = dayjs(retryAfter);
+    if (!dayjs.isDayjs(retryAfter)) {
+        return undefined; // could not parse string if not in ISO 8601 format
+    }
+    // otherwise we got a date! now get the difference the specified retry-after date and now in seconds
+    const diff = retryAfter.diff(dayjs(), 'second');
+
+    if (diff <= 0) {
+        // if diff is in the past returned undefined as its irrelevant now
+        return undefined;
+    }
+
+    return diff;
+}
+
+export const spreadDelay = (retries, multiplier) => {
+    if(retries === 0) {
+        return [];
+    }
+    let r;
+    let s = [];
+    for(r = 0; r < retries; r++) {
+        s.push(((r+1) * multiplier) * 1000);
+    }
+    return s;
 }

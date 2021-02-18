@@ -40,8 +40,13 @@ export default class ScrobbleSources {
         } catch (e) {
             throw new Error('config.json could not be parsed');
         }
+        let sourceDefaults = {};
         if (configFile !== undefined) {
-            const {sources: mainConfigSourcesConfigs = []} = configFile;
+            const {
+                sources: mainConfigSourcesConfigs = [],
+                sourceDefaults: sd = {},
+            } = configFile;
+            sourceDefaults = sd;
             if (!mainConfigSourcesConfigs.every(x => x !== null && typeof x === 'object')) {
                 throw new Error('All sources from config.json must be objects');
             }
@@ -196,18 +201,20 @@ export default class ScrobbleSources {
                     name: hasDups ? `${name}${i + 1}` : name
                 }));
                 for (const c of tempNamedConfigs) {
-                    await this.addSource(c);
+                    await this.addSource(c, sourceDefaults);
                 }
             }
         }
     }
 
-    addSource = async (clientConfig) => {
+    addSource = async (clientConfig, defaults = {}) => {
         const isValidConfig = isValidConfigStructure(clientConfig, {name: true, data: true, type: true});
         if (isValidConfig !== true) {
             throw new Error(`Config object from ${clientConfig.source || 'unknown'} with name [${clientConfig.name || 'unnamed'}] of type [${clientConfig.type || 'unknown'}] has errors: ${isValidConfig.join(' | ')}`)
         }
-        const {type, name, clients = [], data = {}} = clientConfig;
+        const {type, name, clients = [], data: d = {}} = clientConfig;
+        // add defaults
+        const data = {...defaults, ...d};
         this.logger.debug(`(${name}) Initializing ${type} source`);
         switch (type) {
             case 'spotify':

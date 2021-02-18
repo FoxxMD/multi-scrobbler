@@ -3,7 +3,7 @@ import request from 'superagent';
 import crypto from 'crypto';
 import dayjs from "dayjs";
 import isSameOrAfter from "dayjs/plugin/isSameOrAfter.js";
-import {buildTrackString} from "../utils.js";
+import {buildTrackString, parseRetryAfterSecsFromObj, sleep} from "../utils.js";
 
 dayjs.extend(isSameOrAfter);
 
@@ -65,8 +65,13 @@ export class SubsonicSource extends AbstractSource {
         return isValid;
     }
 
-    callApi = async (req) => {
-        const {user, password} = this.config;
+    callApi = async (req, retries = 0) => {
+        const {
+            user,
+            password,
+            maxRequestRetries = 1,
+            retryMultiplier = 1.5
+        } = this.config;
 
         const salt = await crypto.randomBytes(10).toString('hex');
         const hash = crypto.createHash('md5').update(`${password}${salt}`).digest('hex')
@@ -77,7 +82,7 @@ export class SubsonicSource extends AbstractSource {
             v: '1.15.0',
             c: `multi-scrobbler - ${this.name}`,
             f: 'json'
-        })
+        });
         try {
             const resp = await req;
             const {
@@ -95,6 +100,12 @@ export class SubsonicSource extends AbstractSource {
             }
             return ssResp;
         } catch (e) {
+            if(retries < maxRequestRetries) {
+                const retryAfter = parseRetryAfterSecsFromObj(e) ?? (retryMultiplier * (retries + 1));
+                this.logger.warn(`Request failed but retries (${retries}) less than max (${maxRequestRetries}), retrying request after ${retryAfter} seconds...`);
+                await sleep(retryAfter * 1000);
+                return await this.callApi(req, retries + 1)
+            }
             const {
                 message,
                 response: {

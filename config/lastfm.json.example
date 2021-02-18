@@ -8,6 +8,7 @@
                                                                  //   if not specified will be generated during authentication
       "redirectUri": "http://localhost:9078/lastfm/callback"     // optional, if not different than this default
                                                                  //   callback for auth. Must have "lastfm/callback" in the url somewhere
+      // ALSO see config.json.example for default properties that can be overridden here (in clientDefaults)
     }
   }
 ]

@@ -8,7 +8,8 @@
       "accessToken": "string",                        // spotify access token -- required if not providing client id/secret
       "refreshToken": "string",                       // spotify refresh token -- recommended to provide if not providing client id/secret
       "redirectUri": "http://localhost:9078/callback",// spotify redirect URI -- required only if not the default shown here. URI must end in "callback"
-      "interval": 60                                  // optional, how long to wait before calling spotify for new tracks
+      "interval": 60,                                 // optional, how long to wait before calling spotify for new tracks
+      // ALSO see config.json.example for default properties that can be overridden here (in sourceDefaults)
     }
   }
 ]

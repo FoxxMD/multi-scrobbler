@@ -4,6 +4,7 @@
     "data": {
       "url": "https://domain.tld", // required, the base url of your maloja installation
       "apiKey": "string"           // required, your maloja api key
+      // ALSO see config.json.example for default properties that can be overridden here (in clientDefaults)
     }
   }
 ]
