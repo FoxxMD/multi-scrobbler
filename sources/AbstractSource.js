@@ -172,6 +172,7 @@ export default class AbstractSource {
             this.logger.error('Error occurred while polling');
             this.logger.error(e);
             this.polling = false;
+            throw e;
         }
     }
 }
