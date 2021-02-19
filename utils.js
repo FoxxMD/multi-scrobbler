@@ -3,10 +3,8 @@ import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc.js';
 import winston from "winston";
 import jsonStringify from 'safe-stable-stringify';
-import SpotifyWebApi from "spotify-web-api-node";
+import { TimeoutError, WebapiError } from "spotify-web-api-node/src/response-error.js";
 import { Response } from 'superagent';
-
-const {TimeoutError, WebapiError} = SpotifyWebApi;
 
 const {format} = winston;
 const {combine, printf, timestamp, label, splat, errors} = format;
