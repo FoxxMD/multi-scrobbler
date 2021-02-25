@@ -1,7 +1,7 @@
 {
-  "name": "maloja-spotify-scrobbler",
+  "name": "multi-scrobbler",
   "version": "0.1.0",
-  "description": "",
+  "description": "scrobble plays from multiple sources to multiple clients",
   "type": "module",
   "main": "index.js",
   "scripts": {
@@ -13,14 +13,14 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/FoxxMD/maloja-spotify-scrobbler.git"
+    "url": "git+https://github.com/FoxxMD/multi-scrobbler.git"
   },
   "author": "",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/FoxxMD/maloja-spotify-scrobbler/issues"
+    "url": "https://github.com/FoxxMD/multi-scrobbler/issues"
   },
-  "homepage": "https://github.com/FoxxMD/maloja-spotify-scrobbler#readme",
+  "homepage": "https://github.com/FoxxMD/multi-scrobbler#readme",
   "dependencies": {
     "@awaitjs/express": "^0.6.3",
     "body-parser": "^1.19.0",
