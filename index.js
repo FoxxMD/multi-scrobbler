@@ -35,7 +35,12 @@ const {transports} = winston;
 let output = []
 const stream = new Writable()
 stream._write = (chunk, encoding, next) => {
-    output.unshift(chunk.toString().replace('\n', ''));
+    let formatString = chunk.toString().replace('\n', '<br />')
+    .replace(/(debug)/gi, '<span class="warn text-pink-400">$1</span>')
+    .replace(/(warn)/gi, '<span class="warn text-blue-400">$1</span>')
+    .replace(/(info)/gi, '<span class="info text-yellow-500">$1</span>')
+    .replace(/(error)/gi, '<span class="error text-red-400">$1</span>')
+    output.unshift(formatString);
     output = output.slice(0, 101);
     next()
 }
