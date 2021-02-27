@@ -42,7 +42,7 @@ npm install
 ### [Docker](https://hub.docker.com/r/foxxmd/multi-scrobbler)
 
 ```
-foxxmd/spotify-scrobbler:latest
+foxxmd/multi-scrobbler:latest
 ```
 
 ## Setup
@@ -61,7 +61,7 @@ SPOTIFY_CLIENT_ID=yourId SPOTIFY_CLIENT_SECRET=yourSecret MALOJA_URL=http://doma
 #### Docker
 
 ```bash
-docker run -e "SPOTIFY_CLIENT_ID=yourId" -e "SPOTIFY_CLIENT_SECRET=yourSecret" -e "MALOJA_URL=http://domain.tld" -e "MALOJA_API_KEY=1234" -v /path/on/host/config:/home/node/app/config foxxmd/spotify-scrobbler
+docker run -e "SPOTIFY_CLIENT_ID=yourId" -e "SPOTIFY_CLIENT_SECRET=yourSecret" -e "MALOJA_URL=http://domain.tld" -e "MALOJA_API_KEY=1234" -v /path/on/host/config:/home/node/app/config foxxmd/multi-scrobbler
 ```
 
 **But I want to use json for configuration?**
