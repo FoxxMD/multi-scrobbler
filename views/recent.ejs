@@ -51,10 +51,14 @@
         let toggleSwitch = document.querySelector('#toggle-switch');
         toggleSwitch.addEventListener('change', (event) => {
             document.body.classList.toggle('dark')
+            toggleSwitch.checked ? localStorage.setItem('ms-dark', 'yes') : localStorage.setItem('ms-dark', 'no')
         });
         if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
-            document.body.classList.add('dark')
-            toggleSwitch.checked = true
+            if (localStorage.getItem('ms-dark') === 'yes') {
+                document.body.classList.add('dark')
+                toggleSwitch.checked = true
+                localStorage.setItem('ms-dark', 'yes')
+            }
         }
     </script>
 </body>
