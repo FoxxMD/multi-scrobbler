@@ -1,75 +1,107 @@
 <html>
 <head>
-<style>
-    small {
-        display: block;
-    }
-    .bold {
-        font-weight: bold;
-    }
-    .capitalize {
-        text-transform: capitalize;
-    }
-    .facetContainer {
-        flex-wrap: wrap;
-        display: flex;
-    }
-    .facetItem {
-        flex: 1 0 auto;
-    }
-    .disabled {
-        color: currentColor;
-        cursor: not-allowed;
-        opacity: 0.5;
-        text-decoration: none;
-    }
-</style>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/tailwindcss/2.0.3/tailwind.min.css" integrity="sha512-wl80ucxCRpLkfaCnbM88y4AxnutbGk327762eM9E/rRTvY/ZGAHWMZrYUq66VQBYMIYDFpDdJAOGSLyIPHZ2IQ==" crossorigin="anonymous" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/tailwindcss/2.0.3/tailwind-dark.min.css" integrity="sha512-WvyKyiVHgInX5UQt67447ExtRRZG/8GUijaq1MpqTNYp8wY4/EJOG5bI80sRp/5crDy4Z6bBUydZI2OFV3Vbtg==" crossorigin="anonymous" />
+    <script type="module" src="https://cdn.jsdelivr.net/npm/@catalyst-elements/catalyst-toggle-switch@0.7.0/catalyst-toggle-switch.min.js"></script>
+    <style>
+        a {
+            text-decoration: underline;
+        }
+    </style>
+    <title>Multi Scrobbler</title>
 </head>
-<body>
-<h2>Sources</h2>
-<div class="facetContainer">
-    <% sources.forEach(function (source){ %>
-    <div class="facetItem">
-        <h3><%= source.display %> - <%= source.name %></h3>
-        <ul>
-            <li><b>Status: <%= source.status %></b></li>
-            <li>Tracks Discovered (since app started): <%= source.tracksDiscovered %></li>
-            <% if (source.canPoll === true) { %>
-            <li>Click <a target="_blank" <% if (!source.hasAuth || source.authed) { %> href="recent?name=<%= source.name %>&type=<%= source.type %>" <% } else { %>class="disabled"<% } %>>to see recently played tracks returned by API</a></li>
-                <% if (source.hasAuth) { %>
-            <li>Click <a target="_blank" href="source/auth?name=<%= source.name %>&type=<%= source.type %>">to (re)authenticate and (re)start polling</a></li>
-                <% } %>
-            <li>Click <a target="_blank" <% if (!source.hasAuth || source.authed) { %> href="poll?name=<%= source.name %>&type=<%= source.type %>" <% } else { %>class="disabled"<% } %>>to restart polling</a></li>
-            <% } %>
-        </ul>
-    </div>
-    <% }) %>
-</div>
-<h2>Clients</h2>
-<div class="facetContainer">
-    <% clients.forEach(function (client){ %>
-        <div class="facetItem">
-            <h3><%= client.display %> - <%= client.name %></h3>
-            <ul>
-                <li><b>Status: <%= client.status %></b></li>
-                <li>Tracks Scrobbled (since app started): <%= client.tracksDiscovered %></li>
-                <% if (client.hasAuth) { %>
-                    <li>Click <a target="_blank" href="client/auth?name=<%= client.name %>&type=<%= client.type %>">to (re)authenticate or initialize</a></li>
-                <% } %>
-            </ul>
+<body class="">
+<script>localStorage.getItem('ms-dark') === 'yes' ? document.body.classList.add('dark') : document.body.classList.remove('dark')</script>
+<div class="min-w-screen min-h-screen bg-gray-100 bg-gray-100 dark:bg-gray-800 font-sans">
+    <div class="space-x-4 p-6 md:px-10 md:py-6 leading-6 font-semibold bg-gray-800 text-white">
+        <div class="container mx-auto">
+            <div class="flex items-center justify-between">
+                <a href="/" class="flex items-center flex-grow no-underline">
+                    <img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyODkuNTUgMTM1LjE3Ij48ZGVmcz48c3R5bGU+LmNscy0xe2ZpbGw6IzNkNTNhNDt9LmNscy0ye2ZpbGw6I2ZmZjt9PC9zdHlsZT48L2RlZnM+PGcgaWQ9IkxheWVyXzEiIGRhdGEtbmFtZT0iTGF5ZXIgMSI+PHBhdGggY2xhc3M9ImNscy0xIiBkPSJNMTI5Ljg3LDE3My4zNCwzOS4zOCwyNjMuODNaIiB0cmFuc2Zvcm09InRyYW5zbGF0ZSgtMTYuOTkgLTE1MSkiLz48cGF0aCBjbGFzcz0iY2xzLTIiIGQ9Ik0xMTQsMTU3LjQzbC03OS4zOSw3OS40LTExLjEsMTEuMDljLTguMzMsOC4zNC04Ljk1LDIzLjYsMCwzMS44MnMyMi45Myw4LjksMzEuODIsMGw3OS40LTc5LjM5LDExLjA5LTExLjFjOC4zMy04LjMzLDktMjMuNiwwLTMxLjgycy0yMi45My04Ljg5LTMxLjgyLDBsLTc5LjM5LDc5LjQtMTEuMSwxMS4wOWMtOC4zMyw4LjM0LTguOTUsMjMuNiwwLDMxLjgyczIyLjkzLDguOSwzMS44MiwwbDc5LjQtNzkuMzksMTEuMDktMTEuMWM4LjMzLTguMzMsOS0yMy42LDAtMzEuODJTMTIyLjg1LDE0OC41NCwxMTQsMTU3LjQzWiIgdHJhbnNmb3JtPSJ0cmFuc2xhdGUoLTE2Ljk5IC0xNTEpIi8+PC9nPjxnIGlkPSJMYXllcl8xX2NvcHkiIGRhdGEtbmFtZT0iTGF5ZXIgMSBjb3B5Ij48cGF0aCBjbGFzcz0iY2xzLTIiIGQ9Ik0xOTEuODgsMTU3LjQzbC03OS40LDc5LjQtMTEuMSwxMS4wOWMtOC4zMyw4LjM0LTguOTUsMjMuNiwwLDMxLjgyczIyLjkzLDguOSwzMS44MiwwbDc5LjQtNzkuMzksMTEuMS0xMS4xYzguMzMtOC4zMyw5LTIzLjYsMC0zMS44MnMtMjIuOTMtOC44OS0zMS44MiwwbC03OS40LDc5LjQtMTEuMSwxMS4wOWMtOC4zMyw4LjM0LTguOTUsMjMuNiwwLDMxLjgyczIyLjkzLDguOSwzMS44MiwwbDc5LjQtNzkuMzksMTEuMS0xMS4xYzguMzMtOC4zMyw5LTIzLjYsMC0zMS44MlMyMDAuNzcsMTQ4LjU0LDE5MS44OCwxNTcuNDNaIiB0cmFuc2Zvcm09InRyYW5zbGF0ZSgtMTYuOTkgLTE1MSkiLz48L2c+PGcgaWQ9IkxheWVyXzFfY29weV8yIiBkYXRhLW5hbWU9IkxheWVyIDEgY29weSAyIj48cGF0aCBjbGFzcz0iY2xzLTIiIGQ9Ik0yNjguMjMsMTU3LjQzbC0yOC43NywyOC43OGMtOC4zNCw4LjMzLTksMjMuNiwwLDMxLjgyczIyLjkyLDguODksMzEuODIsMGwyOC43Ny0yOC43OGM4LjMzLTguMzMsOS0yMy42LDAtMzEuODJzLTIyLjkzLTguODktMzEuODIsMGwtMjguNzcsMjguNzhjLTguMzQsOC4zMy05LDIzLjYsMCwzMS44MnMyMi45Miw4Ljg5LDMxLjgyLDBsMjguNzctMjguNzhjOC4zMy04LjMzLDktMjMuNiwwLTMxLjgyUzI3Ny4xMiwxNDguNTQsMjY4LjIzLDE1Ny40M1oiIHRyYW5zZm9ybT0idHJhbnNsYXRlKC0xNi45OSAtMTUxKSIvPjwvZz48ZyBpZD0iTGF5ZXJfMV9jb3B5XzMiIGRhdGEtbmFtZT0iTGF5ZXIgMSBjb3B5IDMiPjxwYXRoIGNsYXNzPSJjbHMtMiIgZD0iTTIwMy40OSwyMjIuMTcsMTc5LjEsMjQ2LjU2Yy04LjMzLDguMzQtOC45NSwyMy42LDAsMzEuODJzMjIuOTMsOC45LDMxLjgyLDBMMjM1LjMxLDI1NGM4LjM0LTguMzMsOS0yMy42LDAtMzEuODJzLTIyLjkyLTguODktMzEuODIsMEwxNzkuMSwyNDYuNTZjLTguMzMsOC4zNC04Ljk1LDIzLjYsMCwzMS44MnMyMi45Myw4LjksMzEuODIsMEwyMzUuMzEsMjU0YzguMzQtOC4zMyw5LTIzLjYsMC0zMS44MlMyMTIuMzksMjEzLjI4LDIwMy40OSwyMjIuMTdaIiB0cmFuc2Zvcm09InRyYW5zbGF0ZSgtMTYuOTkgLTE1MSkiLz48L2c+PC9zdmc+" style="max-width:100px; max-height:30px;"/>
+                    <span class="px-4 break-normal">
+                        Multi Scrobbler
+                    </span>
+                </a>
+                <div>
+                    Dark mode <catalyst-toggle-switch id="toggle-switch"></catalyst-toggle-switch>
+                </div>
+            </div>
         </div>
-    <% }) %>
+    </div>
+    <div class="container mx-auto">
+        <div class="grid md:grid-cols-3 gap-3 ">
+            <% sources.forEach(function (source){ %>
+            <div class="bg-white shadow-md rounded my-6 dark:bg-gray-500 dark:text-white">
+                <div class="space-x-4 p-6 md:px-10 md:py-6 leading-6 font-semibold bg-gray-300 dark:bg-gray-700 dark:text-white">
+                    <h3><%= source.display %> - <%= source.name %></h3>
+                </div>
+                <div class="p-6 md:px-10 md:py-6">
+                    <div><b>Status: <%= source.status %></b></div>
+                    <div>Tracks Discovered (since app started): <%= source.tracksDiscovered %></div>
+                    <% if (source.canPoll === true) { %>
+                    <div><a target="_blank" <% if (!source.hasAuth || source.authed) { %> href="recent?name=<%= source.name %>&type=<%= source.type %>" <% } else { %>class="disabled"<% } %>>See recently played tracks returned by API</a></div>
+                        <% if (source.hasAuth) { %>
+                    <div><a target="_blank" href="source/auth?name=<%= source.name %>&type=<%= source.type %>">(Re)authenticate and (re)start polling</a></div>
+                        <% } %>
+                    <div><a target="_blank" <% if (!source.hasAuth || source.authed) { %> href="poll?name=<%= source.name %>&type=<%= source.type %>" <% } else { %>class="disabled"<% } %>>Restart polling</a></div>
+                    <% } %>
+                </div>
+            </div>
+            <% }) %>
+        </div>
+        <div class="grid md:grid-cols-3 gap-3">
+            <% clients.forEach(function (client){ %>
+                <div class="bg-white shadow-md rounded my-6 px-4 py-4 dark:bg-gray-500 dark:text-white">
+                    <div class="space-x-4 p-6 md:px-10 md:py-6 leading-6 font-semibold bg-gray-300 dark:bg-gray-700 dark:text-white">
+                        <h3><%= client.display %> - <%= client.name %></h3>
+                    </div>
+                    <div class="p-6 md:px-10 md:py-6">
+                        <ul>
+                            <div><b>Status: <%= client.status %></b></div>
+                            <div>Tracks Scrobbled (since app started): <%= client.tracksDiscovered %></div>
+                            <% if (client.hasAuth) { %>
+                                <div>Click <a target="_blank" href="client/auth?name=<%= client.name %>&type=<%= client.type %>">to (re)authenticate or initialize</a></div>
+                            <% } %>
+                        </ul>
+                    </div>
+                </div>
+            <% }) %>
+        </div>
+        <div class="grid ">
+            <div class="bg-white shadow-md rounded my-6 dark:bg-gray-500 dark:text-white">
+                <div class="space-x-4 p-6 md:px-10 md:py-6 leading-6 font-semibold bg-gray-300 dark:bg-gray-700 dark:text-white">
+                    <h2>Log (Most Recent)</h2>
+                </div>
+                <div class="p-6 md:px-10 md:py-6">
+                    <div>Level : <%- logs.level %> </div>
+                    <div>Sort  : <%- logs.sort %></div>
+                    <div>Limit : <%- logs.limit %></div>
+                    <br />
+                    <% logs.output.forEach(function (logEntry){ %>
+                        <%-logEntry%>
+                    <% }) %>
+                </div>
+                <div class="w-full flex-auto flex min-h-0 overflow-auto">
+                    <div class="w-full relative flex-auto">
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
 </div>
-
-    <h2>Log (Most Recent)</h2>
-    <ul>
-        <li>Level : <%- logs.level %> </li>
-        <li>Sort  : <%- logs.sort %></li>
-        <li>Limit : <%- logs.limit %></li>
-    </ul>
-<pre>
-<% logs.output.forEach(function (logEntry){ %>
-<%=logEntry%><% }) %>
-</pre>
+<script>
+    let toggleSwitch = document.querySelector('#toggle-switch');
+    toggleSwitch.addEventListener('change', (event) => {
+        document.body.classList.toggle('dark')
+        toggleSwitch.checked ? localStorage.setItem('ms-dark', 'yes') : localStorage.setItem('ms-dark', 'no')
+    });
+    if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+        if (localStorage.getItem('ms-dark') === 'yes') {
+            document.body.classList.add('dark')
+            toggleSwitch.checked = true
+            localStorage.setItem('ms-dark', 'yes')
+        }
+    }
+</script>
 </body>
 </html>
