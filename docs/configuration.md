@@ -145,23 +145,17 @@ See [`subsonic.json.example`](../config/subsonic.json.example)
 
 ## Jellyfin
 
-```json
-{
-  "NotificationType": "{{NotificationType}}",
-  "Name": "{{Name}}",
-  "Overview": "{{Overview}}",
-  "Username": "{{Username}}",
-  "UserId": "{{UserId}}",
-  "UtcTimestamp": "{{UtcTimestamp}}",
-  "Runtime": "{{RunTime}}",
-  "PlaybackPosition": "{{PlaybackPosition}}",
-  "ItemType": "{{ItemType}}",
-  "ItemId": "{{ItemId}}",
-  "ServerName": "{{ServerName}}",
-  "ServerVersion": "{{ServerVersion}}",
-  "PlayedToCompletion": "{{PlayedToCompletion}}"
-}
-```
+Must be using Jellyfin 10.7 or greater
+
+* Add the [Webhook Plugin](https://github.com/crobibero/jellyfin-plugin-webhook) repository to your plugins, then restart your server
+* In the Webhook settings:
+  * `Add Generic Destination`
+  * In the new `Generic` dropdown:
+    * Webhook Url: `http://localhost:9078/jellyfin`
+    * Notification Type: `Playback Progress`
+    * Item Type: `Songs`
+    * Check `Send All Properties`
+  * Save
 
 # Clients
 

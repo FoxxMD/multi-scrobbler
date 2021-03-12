@@ -254,13 +254,19 @@ app.use(bodyParser.json());
             res.send('OK');
         });
 
-        app.postAsync('/jellyfin', async function (req, res) {
-            const f = 1;
+        // webhook plugin sends json with context type text/utf-8 so we need to parse it differently
+        const jellyfinJsonParser = bodyParser.json({type: 'text/*'});
+        app.postAsync('/jellyfin', jellyfinJsonParser, async function (req, res) {
+            // actually do this in JellyfinSource but keeping this here for now to remember
             const {
-                body: {
-                    payload
-                } = {}
-            } = req;
+                ItemType,
+            } = req.body;
+            if(ItemType !== 'Audio') {
+                res.send('OK');
+            } else {
+
+            }
+            console.log(req.body);
             res.send('OK');
         });
 
