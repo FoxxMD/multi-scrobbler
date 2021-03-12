@@ -35,7 +35,12 @@ const {transports} = winston;
 let output = []
 const stream = new Writable()
 stream._write = (chunk, encoding, next) => {
-    output.unshift(chunk.toString().replace('\n', ''));
+    let formatString = chunk.toString().replace('\n', '<br />')
+    .replace(/(debug)/gi, '<span class="debug text-pink-400">$1</span>')
+    .replace(/(warn)/gi, '<span class="warn text-blue-400">$1</span>')
+    .replace(/(info)/gi, '<span class="info text-yellow-500">$1</span>')
+    .replace(/(error)/gi, '<span class="error text-red-400">$1</span>')
+    output.unshift(formatString);
     output = output.slice(0, 101);
     next()
 }
@@ -111,15 +116,15 @@ app.use(bodyParser.json());
         /*
         * setup clients
         * */
-        const scrobbleClients = new Clients();
-        await scrobbleClients.buildClientsFromConfig(configDir);
+        const scrobbleClients = new Clients(configDir);
+        await scrobbleClients.buildClientsFromConfig();
         if (scrobbleClients.clients.length === 0) {
             logger.warn('No scrobble clients were configured!')
         }
 
         const scrobbleSources = new ScrobbleSources(localUrl, configDir);
         let deprecatedConfigs = [];
-        if(spotify !== undefined) {
+        if (spotify !== undefined) {
             logger.warn(`Using 'spotify' top-level property in config.json is deprecated and will be removed in next major version. Please use 'sources' instead.`)
             deprecatedConfigs.push({
                 type: 'spotify',
@@ -129,7 +134,7 @@ app.use(bodyParser.json());
                 data: spotify
             });
         }
-        if(plex !== undefined) {
+        if (plex !== undefined) {
             logger.warn(`Using 'plex' top-level property in config.json is deprecated and will be removed in next major version. Please use 'sources' instead.`)
             deprecatedConfigs.push({
                 type: 'plex',
@@ -152,7 +157,7 @@ app.use(bodyParser.json());
             const sourceData = scrobbleSources.sources.map((x) => {
                 const {type, tracksDiscovered = 0, name, canPoll = false, polling = false} = x;
                 const base = {type, display: capitalize(type), tracksDiscovered, name, canPoll, hasAuth: false};
-                if(canPoll) {
+                if (canPoll) {
                     base.status = polling ? 'Running' : 'Idle';
                 } else {
                     base.status = tracksDiscovered > 0 ? 'Received Data' : 'Awaiting Data'
@@ -164,7 +169,30 @@ app.use(bodyParser.json());
                             ...base,
                             hasAuth: true,
                             authed,
-                            status: authed ? base.status : 'Auth Interaction Required' ,
+                            status: authed ? base.status : 'Auth Interaction Required',
+                        }
+                    default:
+                        return base;
+                }
+            });
+            const clientData = scrobbleClients.clients.map((x) => {
+                const {type, tracksScrobbled = 0, name} = x;
+                const base = {
+                    type,
+                    display: capitalize(type),
+                    tracksDiscovered: tracksScrobbled,
+                    name,
+                    hasAuth: false,
+                    status: tracksScrobbled > 0 ? 'Received Data' : 'Awaiting Data'
+                };
+                switch (x.type) {
+                    case 'lastfm':
+                        const authed = x.initialized;
+                        return {
+                            ...base,
+                            hasAuth: true,
+                            authed,
+                            status: authed ? base.status : 'Auth Interaction Required',
                         }
                     default:
                         return base;
@@ -172,11 +200,12 @@ app.use(bodyParser.json());
             })
             res.render('status', {
                 sources: sourceData,
+                clients: clientData,
                 logs: {
                     output: slicedLog,
-                    limit: [10, 20, 50, 100].map(x => `<a class="capitalize ${logConfig.limit === x ? 'bold' : ''}" href="logs/settings/update?limit=${x}">${x}</a>`).join(' | '),
-                    sort: ['ascending', 'descending'].map(x => `<a class="capitalize ${logConfig.sort === x ? 'bold' : ''}" href="logs/settings/update?sort=${x}">${x}</a>`).join(' | '),
-                    level: availableLevels.map(x => `<a class="capitalize ${logConfig.level === x ? 'bold' : ''}" href="logs/settings/update?level=${x}">${x}</a>`).join(' | ')
+                    limit: [10, 20, 50, 100].map(x => `<a class="capitalize ${logConfig.limit === x ? 'font-bold no-underline pointer-events-none' : ''}" href="logs/settings/update?limit=${x}">${x}</a>`).join(' | '),
+                    sort: ['ascending', 'descending'].map(x => `<a class="capitalize ${logConfig.sort === x ? 'font-bold no-underline pointer-events-none' : ''}" href="logs/settings/update?sort=${x}">${x}</a>`).join(' | '),
+                    level: availableLevels.map(x => `<a class="capitalize ${logConfig.level === x ? 'font-bold no-underline pointer-events-none' : ''}" href="logs/settings/update?level=${x}">${x}</a>`).join(' | ')
                 }
             });
         })
@@ -235,22 +264,39 @@ app.use(bodyParser.json());
             res.send('OK');
         });
 
-        app.use('/auth', sourceCheckMiddle);
-        app.getAsync('/auth', async function (req, res) {
+        app.use('/client/auth', clientCheckMiddle);
+        app.getAsync('/client/auth', async function (req, res) {
+            const {
+                scrobbleClient,
+            } = req;
+
+            switch (scrobbleClient.type) {
+                case 'lastfm':
+                    res.redirect(scrobbleClient.getAuthUrl());
+                    break;
+                default:
+                    return res.status(400).send(`Specified client does not have auth implemented (${scrobbleClient.type})`);
+            }
+        });
+
+        app.use('/source/auth', sourceCheckMiddle);
+        app.getAsync('/source/auth', async function (req, res) {
             const {
                 scrobbleSource: source,
                 sourceName: name,
             } = req;
 
-            if (source.type !== 'spotify') {
-                return res.status(400).send(`Specified source is not spotify (${source.type})`);
-            }
-
-            if (source.spotifyApi === undefined) {
-                res.status(400).send('Spotify configuration is not valid');
-            } else {
-                logger.info('Redirecting to spotify authorization url');
-                res.redirect(source.createAuthUrl());
+            switch (source.type) {
+                case 'spotify':
+                    if (source.spotifyApi === undefined) {
+                        res.status(400).send('Spotify configuration is not valid');
+                    } else {
+                        logger.info('Redirecting to spotify authorization url');
+                        res.redirect(source.createAuthUrl());
+                    }
+                    break;
+                default:
+                    return res.status(400).send(`Specified source does not have auth implemented (${source.type})`);
             }
         });
 
@@ -325,27 +371,43 @@ app.use(bodyParser.json());
         });
 
         app.getAsync(/.*callback$/, async function (req, res) {
-            logger.info('Received auth code callback from Spotify', {label: 'Spotify'});
             const {
                 query: {
                     state
                 } = {}
             } = req;
-            const source = scrobbleSources.getByName(state);
-            const tokenResult = await source.handleAuthCodeCallback(req.query);
-            let responseContent = 'OK';
-            if (tokenResult === true) {
-                source.poll(scrobbleClients);
+            if (req.url.includes('lastfm')) {
+                const {
+                    query: {
+                        token
+                    } = {}
+                } = req;
+                const client = scrobbleClients.getByName(state);
+                try {
+                    await client.authenticate(token);
+                    await client.initialize();
+                    return res.send('OK');
+                } catch (e) {
+                    return res.send(e.message);
+                }
             } else {
-                responseContent = tokenResult;
+                logger.info('Received auth code callback from Spotify', {label: 'Spotify'});
+                const source = scrobbleSources.getByName(state);
+                const tokenResult = await source.handleAuthCodeCallback(req.query);
+                let responseContent = 'OK';
+                if (tokenResult === true) {
+                    source.poll(scrobbleClients);
+                } else {
+                    responseContent = tokenResult;
+                }
+                return res.send(responseContent);
             }
-            return res.send(responseContent);
         });
 
         let anyNotReady = false;
-        for(const source of scrobbleSources.sources.filter(x => x.canPoll === true)) {
+        for (const source of scrobbleSources.sources.filter(x => x.canPoll === true)) {
             await sleep(1500); // stagger polling by 1.5 seconds so that log messages for each source don't get mixed up
-            switch(source.type) {
+            switch (source.type) {
                 case 'spotify':
                     if (source.spotifyApi !== undefined) {
                         if (source.spotifyApi.getAccessToken() === undefined) {
@@ -356,7 +418,7 @@ app.use(bodyParser.json());
                     }
                     break;
                 default:
-                    if(source.poll !== undefined) {
+                    if (source.poll !== undefined) {
                         source.poll(scrobbleClients);
                     }
             }

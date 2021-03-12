@@ -1,49 +1,63 @@
 import AbstractScrobbleClient from "./AbstractScrobbleClient.js";
-import request from 'superagent';
 import dayjs from 'dayjs';
+import LastFm from 'lastfm-node-client';
 import {
-    buildTrackString,
+    buildTrackString, parseRetryAfterSecsFromObj,
     playObjDataMatch,
-    setIntersection,
-    sleep,
+    readJson,
+    setIntersection, sleep,
     sortByPlayDate,
-    truncateStringToLength,
-    parseRetryAfterSecsFromObj
+    truncateStringToLength, writeFile
 } from "../utils.js";
 
-const feat = ["ft.", "ft", "feat.", "feat", "featuring", "Ft.", "Ft", "Feat.", "Feat", "Featuring"];
+const badErrors = [
+    'api key suspended',
+    'invalid session key',
+    'invalid api key',
+    'authentication failed'
+];
 
-export default class MalojaScrobbler extends AbstractScrobbleClient {
+const retryErrors = [
+    'operation failed',
+    'service offline',
+    'temporarily unavailable',
+    'rate limit'
+]
+
+export default class LastfmScrobbler extends AbstractScrobbleClient {
+
+    client;
+    redirectUri;
+    workingCredsPath;
+    initialized = false;
+    user;
 
     constructor(name, config = {}, options = {}) {
-        super('maloja', name, config, options);
-        const {url, apiKey} = config;
+        super('lastfm', name, config, options);
+        const {redirectUri, apiKey, secret, session, configDir} = config;
+        this.redirectUri = `${redirectUri}?state=${name}`;
         if (apiKey === undefined) {
             this.logger.warn("'apiKey' not found in config! Client will most likely fail when trying to scrobble");
         }
-        if (url === undefined) {
-            throw new Error("Missing 'url' for Maloja config");
-        }
+        this.workingCredsPath = `${configDir}/currentCreds-lastfm-${name}.json`;
+        this.client = new LastFm(apiKey, secret, session);
     }
 
     static formatPlayObj(obj) {
         const {
-            artists,
-            title,
-            album,
+            artist: {
+                '#text': artists
+            },
+            name: title,
+            album: {
+                '#text': album,
+            },
             duration,
-            time,
+            date: {
+                uts: time,
+            },
         } = obj;
-        let artistStrings = artists.reduce((acc, curr) => {
-            let aString;
-            if (typeof curr === 'string') {
-                aString = curr;
-            } else if (typeof curr === 'object') {
-                aString = curr.name;
-            }
-            const aStrings = aString.split(',');
-            return [...acc, ...aStrings];
-        }, []);
+        let artistStrings = artists.split(',');
         return {
             data: {
                 artists: [...new Set(artistStrings)],
@@ -53,87 +67,90 @@ export default class MalojaScrobbler extends AbstractScrobbleClient {
                 playDate: dayjs.unix(time),
             },
             meta: {
-                source: 'Maloja',
+                source: 'Lastfm',
             }
         }
     }
 
-    formatPlayObj = obj => MalojaScrobbler.formatPlayObj(obj);
+    formatPlayObj = obj => LastfmScrobbler.formatPlayObj(obj);
 
-    callApi = async (req, retries = 0) => {
+    callApi = async (func, retries = 0) => {
         const {
-            maxRequestRetries = 1,
+            maxRequestRetries = 2,
             retryMultiplier = 1.5
         } = this.config;
 
         try {
-            return await req;
+            return await func(this.client);
         } catch (e) {
-            if(retries < maxRequestRetries) {
-                const retryAfter = parseRetryAfterSecsFromObj(e) ?? (retryMultiplier * (retries + 1));
-                this.logger.warn(`Request failed but retries (${retries}) less than max (${maxRequestRetries}), retrying request after ${retryAfter} seconds...`);
-                await sleep(retryAfter * 1000);
-                return await this.callApi(req, retries + 1)
-            }
             const {
                 message,
-                response: {
-                    status,
-                    body,
-                    text,
-                } = {},
-                response,
             } = e;
-            let msg = response !== undefined ? `API Call failed: Server Response => ${message}` : `API Call failed: ${message}`;
-            const responseMeta = body ?? text;
-            this.logger.error(msg, {status, response: responseMeta});
+            // for now check for exceptional errors by matching error code text
+            const retryError = retryErrors.find(x => message.toLocaleLowerCase().includes(x));
+            if(undefined !== retryError) {
+                if(retries < maxRequestRetries) {
+                    const delay = (retries + 1) * retryMultiplier;
+                    this.logger.warn(`API call was not good but recoverable (${retryError}), retrying in ${delay} seconds...`);
+                    await sleep(delay * 1000);
+                    return this.callApi(func, retries + 1);
+                } else {
+                    this.logger.warn('Could not recover!');
+                    throw e;
+                }
+            }
+
             throw e;
         }
     }
 
-    testConnection = async () => {
+    getAuthUrl = () => {
+        const redir = `${this.config.redirectUri}?state=${this.name}`;
+        return `http://www.last.fm/api/auth/?api_key=${this.config.apiKey}&cb=${encodeURIComponent(redir)}`
+    }
 
-        const {url, apiKey} = this.config;
+    authenticate = async (token) => {
+        const sessionRes = await this.client.authGetSession({token});
+        const {
+            session: {
+                key: sessionKey,
+                name, // username
+            } = {}
+        } = sessionRes;
+        this.client.sessionKey = sessionKey;
+
+        await writeFile(this.workingCredsPath, JSON.stringify({
+            sessionKey,
+        }));
+    }
+
+    initialize = async () => {
+
         try {
-            const serverInfoResp = await this.callApi(request.get(`${url}/apis/mlj_1/serverinfo`));
-            const {
-                body: {
-                    version = [],
-                    versionstring = '',
-                } = {},
-            } = serverInfoResp;
-            if (version.length === 0) {
-                this.logger.error('Server did not respond with a version. Either the base URL is incorrect or this Maloja server is too old :(');
-                return false;
+            const creds = await readJson(this.workingCredsPath, {throwOnNotFound: false});
+            const {sessionKey} = creds || {};
+            if (this.client.sessionKey === undefined && sessionKey !== undefined) {
+                this.client.sessionKey = sessionKey;
             }
-            this.logger.info(`Maloja Server Version: ${versionstring}`);
-            if (version[0] < 2 || version[1] < 7) {
-                this.logger.warn('Maloja Server Version is less than 2.7, please upgrade to ensure compatibility');
-            }
+        } catch (e) {
+            this.logger.warn('Current lastfm credentials file exists but could not be parsed', {path: this.workingCredsPath});
+        }
 
-            const resp = await this.callApi(request
-                .get(`${url}/apis/mlj_1/test`)
-                .query({key: apiKey}));
-
+        if (this.client.sessionKey === undefined) {
+            this.logger.info('No session key found. User interaction for authentication required.');
+            return;
+        }
+        try {
+            const infoResp = await this.callApi(client => client.userGetInfo());
             const {
-                status,
-                body: {
-                    status: bodyStatus,
-                } = {},
-                body = {},
-                text = '',
-            } = resp;
-            if (bodyStatus.toLocaleLowerCase() === 'ok') {
-                this.logger.info('Test connection succeeded!');
-                this.initialized = true;
-                return true;
-            }
-            this.logger.error('Testing connection failed => Server Response body was malformed -- should have returned "status: ok"...is the URL correct?', {
-                status,
-                body,
-                text: text.slice(0, 50)
-            });
-            return false;
+                user: {
+                    name,
+                } = {}
+            } = infoResp;
+            this.user = name;
+            this.initialized = true;
+            this.logger.info(`Client authorized for user ${name}`)
+            return true;
         } catch (e) {
             this.logger.error('Testing connection failed');
             return false;
@@ -143,14 +160,13 @@ export default class MalojaScrobbler extends AbstractScrobbleClient {
     refreshScrobbles = async () => {
         if (this.refreshEnabled) {
             this.logger.debug('Refreshing recent scrobbles');
-            const {url} = this.config;
-            const resp = await this.callApi(request.get(`${url}/apis/mlj_1/scrobbles?max=20`));
+            const resp = await this.callApi(client => client.userGetRecentTracks({user: this.user, limit: 20}));
             const {
-                body: {
-                    list = [],
-                } = {},
+                recenttracks: {
+                    track: list = [],
+                }
             } = resp;
-            this.recentScrobbles = list.map(x => MalojaScrobbler.formatPlayObj(x)).sort(sortByPlayDate);
+            this.recentScrobbles = list.map(x => LastfmScrobbler.formatPlayObj(x)).sort(sortByPlayDate);
             if (this.recentScrobbles.length > 0) {
                 const [{data: {playDate: newestScrobbleTime = dayjs()} = {}} = {}] = this.recentScrobbles.slice(-1);
                 const [{data: {playDate: oldestScrobbleTime = dayjs()} = {}} = {}] = this.recentScrobbles.slice(0, 1);
@@ -167,23 +183,9 @@ export default class MalojaScrobbler extends AbstractScrobbleClient {
         const {
             data: {
                 track,
-                artists: sourceArtists = [],
             } = {},
         } = playObj;
-        let lowerTitle = track.toLocaleLowerCase();
-        lowerTitle = feat.reduce((acc, curr) => acc.replace(curr, ''), lowerTitle);
-        // also remove [artist] from the track if found since that gets removed as well
-        const lowerArtists = sourceArtists.map(x => x.toLocaleLowerCase());
-        lowerTitle = lowerArtists.reduce((acc, curr) => acc.replace(curr, ''), lowerTitle);
-
-        // remove any whitespace in parenthesis
-        lowerTitle = lowerTitle.replace("\\s+(?=[^()]*\\))", '')
-            // replace parenthesis
-            .replace('()', '')
-            .replace('( )', '')
-            .trim();
-
-        return lowerTitle;
+        return track.toLocaleLowerCase().trim();
     }
 
     alreadyScrobbled = (playObj, log = false) => {
@@ -325,8 +327,6 @@ export default class MalojaScrobbler extends AbstractScrobbleClient {
     }
 
     scrobble = async (playObj) => {
-        const {url, apiKey} = this.config;
-
         const {
             data: {
                 artists,
@@ -335,6 +335,7 @@ export default class MalojaScrobbler extends AbstractScrobbleClient {
                 duration,
                 playDate
             } = {},
+            data = {},
             meta: {
                 source,
                 newFromSource = false,
@@ -344,32 +345,49 @@ export default class MalojaScrobbler extends AbstractScrobbleClient {
         const sType = newFromSource ? 'New' : 'Backlog';
 
         try {
-            const response = await this.callApi(request.post(`${url}/apis/mlj_1/newscrobble`)
-                .type('json')
-                .send({
-                    // maloja seems to detect this deliminator much better than commas
-                    // also less likely artist has a forward slash in their name than a comma
-                    artist: artists.join(' / '),
-                    seconds: duration,
-                    title: track,
+            const response = await this.callApi(client => client.trackScrobble(
+                {
+                    artist: artists.join(', '),
+                    duration,
+                    track,
                     album,
-                    key: apiKey,
-                    time: playDate.unix(),
+                    timestamp: playDate.unix(),
                 }));
-            const {body: {
-                track: {
-                    time: mTime = playDate.unix(),
-                    duration: mDuration = duration,
-                    album: mAlbum = album,
-                    ...rest
-                }
-            } = {}} = response;
-            this.addScrobbledTrack(playObj, {...rest, album: mAlbum, time: mTime, duration: mDuration});
+            const {
+                scrobbles: {
+                    '@attr': {
+                        accepted = 0,
+                        ignored = 0,
+                        code,
+                    },
+                    scrobble: {
+                        track: {
+                           '#text': trackName,
+                        } = {},
+                        timestamp,
+                        ignoredMessage: {
+                            code: ignoreCode,
+                            '#text': ignoreMsg,
+                        } = {},
+                        ...rest
+                    } = {}
+                } = {},
+            } = response;
+            if(code === 5) {
+                this.initialized = false;
+                throw new Error('Service reported daily scrobble limit exceeded! 😬 Disabling client');
+            }
+            this.addScrobbledTrack(playObj, {...rest, date: { uts: timestamp}, name: trackName});
             if (newFromSource) {
                 this.logger.info(`Scrobbled (New)     => (${source}) ${buildTrackString(playObj)}`);
             } else {
                 this.logger.info(`Scrobbled (Backlog) => (${source}) ${buildTrackString(playObj)}`);
             }
+            if(ignoreMsg !== '') {
+                this.logger.warn(`Service ignored this scrobble 😬 => (Code ${ignoreCode}) ${ignoreMsg}`)
+            }
+            // last fm has rate limits but i can't find a specific example of what that limit is. going to default to 1 scrobble/sec to be safe
+            await sleep(1000);
         } catch (e) {
             this.logger.error(`Scrobble Error (${sType})`, {playInfo: buildTrackString(playObj)});
             throw e;

@@ -4,12 +4,15 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Docker Pulls](https://img.shields.io/docker/pulls/foxxmd/multi-scrobbler)](https://hub.docker.com/r/foxxmd/multi-scrobbler)
 
-A javascript app to scrobble plays from multiple sources to [Maloja](https://github.com/krateng/maloja) (and other clients, eventually!)
+A javascript app to scrobble plays from multiple sources to [Maloja](https://github.com/krateng/maloja), [Last.fm](https://www.last.fm), and other clients (eventually!)
 
 * Supports scrobbling for many sources
   * [Spotify](/docs/configuration.md#spotify)
   * [Plex](/docs/configuration.md#plex) or [Tautulli](/docs/configuration.md#tautulli)
   * [Subsonic-compatible APIs](/docs/configuration.md#subsonic) (like [Airsonic](https://airsonic.github.io/))
+* Supports scrobbling to many clients
+  * [Maloja](/docs/configuration.md#maloja)
+  * [Last.fm](/docs/configuration.md#lastfm)
 * Supports configuring for single or multiple users (scrobbling for your friends and family!)
 * Web server interface for stats, basic control, and detailed logs
 * Smart handling of credentials (persistent, authorization through app)
@@ -20,6 +23,8 @@ A javascript app to scrobble plays from multiple sources to [Maloja](https://git
 
 * **Platform independent** -- Because multi-scrobbler communicates directly with service APIs it will scrobble everything you play regardless of where you play it. No more need for apps on every platform you use!
 * **Open-source** -- Get peace of mind knowing exactly how your personal data is being handled.
+* **Consolidate play sources** -- Scrobble from many sources to one client with ease and without duplicating tracks.
+* **Manage scrobbling for others** -- Scrobble for your friends and family without any setup on their part. Easily silo sources to specific clients to keep plays separate.
 
 ## Installation
 
@@ -37,7 +42,7 @@ npm install
 ### [Docker](https://hub.docker.com/r/foxxmd/multi-scrobbler)
 
 ```
-foxxmd/spotify-scrobbler:latest
+foxxmd/multi-scrobbler:latest
 ```
 
 ## Setup
@@ -56,7 +61,7 @@ SPOTIFY_CLIENT_ID=yourId SPOTIFY_CLIENT_SECRET=yourSecret MALOJA_URL=http://doma
 #### Docker
 
 ```bash
-docker run -e "SPOTIFY_CLIENT_ID=yourId" -e "SPOTIFY_CLIENT_SECRET=yourSecret" -e "MALOJA_URL=http://domain.tld" -e "MALOJA_API_KEY=1234" -v /path/on/host/config:/home/node/app/config foxxmd/spotify-scrobbler
+docker run -e "SPOTIFY_CLIENT_ID=yourId" -e "SPOTIFY_CLIENT_SECRET=yourSecret" -e "MALOJA_URL=http://domain.tld" -e "MALOJA_API_KEY=1234" -v /path/on/host/config:/home/node/app/config foxxmd/multi-scrobbler
 ```
 
 **But I want to use json for configuration?**

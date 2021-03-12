@@ -2,7 +2,7 @@ import dayjs from "dayjs";
 import {
     readJson,
     writeFile,
-    sortByPlayDate,
+    sortByPlayDate, sleep, parseRetryAfterSecsFromObj,
 } from "../utils.js";
 import SpotifyWebApi from "spotify-web-api-node";
 import AbstractSource from "./AbstractSource.js";
@@ -174,7 +174,11 @@ export default class SpotifySource extends AbstractSource {
         return result;
     }
 
-    callApi = async (func) => {
+    callApi = async (func, retries = 0) => {
+        const {
+            maxRequestRetries = 1,
+            retryMultiplier = 2,
+        } = this.config;
         try {
             return await func(this.spotifyApi);
         } catch (e) {
@@ -205,8 +209,13 @@ export default class SpotifySource extends AbstractSource {
                     this.logger.error(ee, {label: 'Spotify'});
                     throw ee;
                 }
+            } else if(maxRequestRetries > retries) {
+                const retryAfter = parseRetryAfterSecsFromObj(e) ?? (retryMultiplier * (retries + 1));
+                this.logger.warn(`Request failed but retries (${retries}) less than max (${maxRequestRetries}), retrying request after ${retryAfter} seconds...`);
+                await sleep(retryAfter * 1000);
+                return this.callApi(func, retries + 1);
             } else {
-                this.logger.error('Refreshing access token encountered an error');
+                this.logger.error(`Request failed on retry (${retries}) with no more retries permitted (max ${maxRequestRetries})`);
                 this.logger.error(e, {label: 'Spotify'});
                 throw e;
             }

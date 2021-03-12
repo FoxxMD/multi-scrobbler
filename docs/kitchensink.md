@@ -6,6 +6,7 @@ Scenario:
 * Each person has their own Maloja server
 * Each person has their own Spotify account
 * You have your own Airsonic (subsonic) server you to scrobble from
+* Mary has her own Last.fm account she also wants to scrobble to
 * Fred has his own Spotify application and provides you with just his access and refresh token because he doesn't trust you (wtf Fred)
 * Fred has a Plex server and wants to scrobble everything he plays
 * Mary uses Fred's Plex server but only wants to scrobble her plays from the `podcast` library
@@ -17,6 +18,15 @@ Using just one config file located at `CONFIG_DIR/config.json`:
 
 ```json5
 {
+  "sourceDefaults": {
+    "maxPollRetries": 0,          // optional, default # of automatic polling restarts on error. can be overridden by property in individual config
+    "maxRequestRetries": 1,       // optional, default # of http request retries a source can make before error is thrown. can be overridden by property in individual config
+    "retryMultiplier": 1.5,       // optional, default retry delay multiplier (retry attempt * multiplier = # of seconds to wait before retrying). can be overridden by property in individual config
+  },
+  "clientDefaults": {
+    "maxRequestRetries": 1,       // optional, default # of http request retries a client can make before error is thrown. can be overridden by property in individual config
+    "retryMultiplier": 1.5,       // optional, default retry delay multiplier (retry attempt * multiplier = # of seconds to wait before retrying). can be overridden by property in individual config
+  },
   "sources": [
     {
       "type": "spotify",
@@ -25,6 +35,7 @@ Using just one config file located at `CONFIG_DIR/config.json`:
       "data": {
         "clientId": "foxxSpotifyAppId", 
         "clientSecret": "foxxSpotifyAppSecret",
+        "maxRequestRetries": 2,  // override default max retries because spotify can...spotty
       }
     },
     {
@@ -105,6 +116,14 @@ Using just one config file located at `CONFIG_DIR/config.json`:
       "data": {
         "url": "https://maloja.mary.example",
         "apiKey": "maryApiKey"
+      }
+    },
+    {
+      "type": "lastfm",
+      "name": "maryLFM",
+      "data": {
+        "apiKey": "maryApiKey",
+        "secret": "marySecret",
       }
     }
   ]
@@ -202,3 +221,18 @@ In `CONFIG_DIR/maloja.json`:
   }
 ]
 ```
+
+In `CONFIG_DIR/lastfm.json`:
+
+```json5
+[
+  {
+    "name": "maryLFM",
+    "data": {
+      "apiKey": "maryApiKey",
+      "secret": "marySecret",
+    }
+  }
+]
+```
+

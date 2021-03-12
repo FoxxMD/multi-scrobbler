@@ -1,15 +1,24 @@
 import dayjs from "dayjs";
-import {createLabelledLogger, isValidConfigStructure, readJson, returnDuplicateStrings} from "../utils.js";
+import {
+    createLabelledLogger,
+    isValidConfigStructure,
+    playObjDataMatch,
+    readJson,
+    returnDuplicateStrings
+} from "../utils.js";
 import MalojaScrobbler from "./MalojaScrobbler.js";
+import LastfmScrobbler from "./LastfmScrobbler.js";
 
 export default class ScrobbleClients {
 
     clients = [];
     logger;
+    configDir;
 
-    clientTypes = ['maloja'];
+    clientTypes = ['maloja','lastfm'];
 
-    constructor() {
+    constructor(configDir) {
+        this.configDir = configDir;
         this.logger = createLabelledLogger('scrobblers', 'Scrobblers');
     }
 
@@ -17,17 +26,22 @@ export default class ScrobbleClients {
         return this.clients.find(x => x.name === name);
     }
 
-    buildClientsFromConfig = async (configDir = undefined) => {
+    buildClientsFromConfig = async () => {
         let configs = [];
 
         let configFile;
         try {
-            configFile = await readJson(`${configDir}/config.json`, {throwOnNotFound: false});
+            configFile = await readJson(`${this.configDir}/config.json`, {throwOnNotFound: false});
         } catch (e) {
             throw new Error('config.json could not be parsed');
         }
+        let clientDefaults = {};
         if (configFile !== undefined) {
-            const {clients: mainConfigClientConfigs = []} = configFile;
+            const {
+                clients: mainConfigClientConfigs = [],
+                clientDefaults: cd = {},
+            } = configFile;
+            clientDefaults = cd;
             if (!mainConfigClientConfigs.every(x => x !== null && typeof x === 'object')) {
                 throw new Error('All clients from config.json must be objects');
             }
@@ -56,12 +70,29 @@ export default class ScrobbleClients {
                         })
                     }
                     break;
+                case 'lastfm':
+                    const lfm = {
+                        apiKey: process.env.LASTFM_API_KEY,
+                        secret: process.env.LASTFM_SECRET,
+                        redirectUri: process.env.LASTFM_REDIRECT_URI,
+                        session: process.env.LASTFM_SESSION,
+                    };
+                    if (!Object.values(lfm).every(x => x === undefined)) {
+                        configs.push({
+                            type: 'lastfm',
+                            name: 'unnamed',
+                            source: 'ENV',
+                            mode: 'single',
+                            data: lfm
+                        })
+                    }
+                    break;
                 default:
                     break;
             }
             let rawClientConfigs;
             try {
-                rawClientConfigs = await readJson(`${configDir}/${clientType}.json`, {throwOnNotFound: false});
+                rawClientConfigs = await readJson(`${this.configDir}/${clientType}.json`, {throwOnNotFound: false});
             } catch (e) {
                 throw new Error(`${clientType}.json config file could not be parsed`);
             }
@@ -136,16 +167,18 @@ ${sources.join('\n')}`);
             name
         }));
         for (const c of finalConfigs) {
-            await this.addClient(c);
+            await this.addClient(c, clientDefaults);
         }
     }
 
-    addClient = async (clientConfig) => {
+    addClient = async (clientConfig, defaults = {}) => {
         const isValidConfig = isValidConfigStructure(clientConfig, {name: true, data: true, type: true});
         if (isValidConfig !== true) {
             throw new Error(`Config object from ${clientConfig.source || 'unknown'} with name [${clientConfig.name || 'unnamed'}] of type [${clientConfig.type || 'unknown'}] has errors: ${isValidConfig.join(' | ')}`)
         }
-        const {type, name, data = {}} = clientConfig;
+        const {type, name, data: d = {}} = clientConfig;
+        // add defaults
+        const data = {...defaults, ...d};
         switch (type) {
             case 'maloja':
                 this.logger.debug(`(${name}) Attempting Maloja initialization...`);
@@ -156,6 +189,17 @@ ${sources.join('\n')}`);
                 } else {
                     this.logger.info(`(${name}) Maloja client initialized`);
                     this.clients.push(mj)
+                }
+                break;
+            case 'lastfm':
+                this.logger.debug(`(${name}) Attempting Lastfm initialization...`);
+                const lfm = new LastfmScrobbler(name, {...data, configDir: this.configDir});
+                try {
+                    await lfm.initialize()
+                    this.logger.info(`(${name}) Lastfm client initialized`);
+                    this.clients.push(lfm)
+                } catch(e) {
+                    this.logger.info(`(${name}) Could not initialize Lastfm client`)
                 }
                 break;
             default:
@@ -188,25 +232,44 @@ ${sources.join('\n')}`);
                 this.logger.debug(`Client '${client.name}' was filtered out by '${scrobbleFrom}'`);
                 continue;
             }
-            try {
+            if(client.initialized === false) {
+                this.logger.debug(`Client '${client.name}' is not yet initialized (check authorization?)`);
+                continue;
+            }
+
                 if (forceRefresh || client.scrobblesLastCheckedAt().unix() < checkTime.unix()) {
-                    await client.refreshScrobbles();
-                }
-                for (const playObj of playObjs) {
-                    const {
-                        meta: {
-                            newFromSource = false,
-                        } = {}
-                    } = playObj;
-                    if (client.timeFrameIsValid(playObj, newFromSource) && !client.alreadyScrobbled(playObj, newFromSource)) {
-                        tracksScrobbled.push(playObj);
-                        await client.scrobble(playObj);
+                    try {
+                        await client.refreshScrobbles();
+                    } catch(e) {
+                        this.logger.error(`Encountered error while refreshing scrobbles for ${client.name}`);
+                        this.logger.error(e);
                     }
                 }
-            } catch (e) {
-                this.logger.error(`Encountered error while in scrobble loop for ${client.name}`);
-                this.logger.error(e);
-            }
+                for (const playObj of playObjs) {
+                    try {
+                        const {
+                            meta: {
+                                newFromSource = false,
+                            } = {}
+                        } = playObj;
+                        if (client.timeFrameIsValid(playObj, newFromSource) && !client.alreadyScrobbled(playObj, newFromSource)) {
+                            await client.scrobble(playObj)
+                            client.tracksScrobbled++;
+                            // since this is what we return to the source only add to tracksScrobbled if not already in array
+                            // (source should only know that a track was scrobbled (binary) -- doesn't care if it was scrobbled more than once
+                            if(!tracksScrobbled.some(x => playObjDataMatch(x, playObj) && x.data.playDate === playObj.data.playDate)) {
+                                tracksScrobbled.push(playObj);
+                            }
+                        }
+                    } catch(e) {
+                        this.logger.error(`Encountered error while in scrobble loop for ${client.name}`);
+                        this.logger.error(e);
+                        // for now just stop scrobbling plays for this client and move on. the client should deal with logging the issue
+                        if(e.continueScrobbling !== true) {
+                            break;
+                        }
+                    }
+                }
         }
         return tracksScrobbled;
     }

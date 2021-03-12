@@ -13,6 +13,7 @@ export default class AbstractSource {
 
     canPoll = false;
     polling = false;
+    pollRetries = 0;
     tracksDiscovered = 0;
 
     constructor(type, name, config = {}, clients = []) {
@@ -39,10 +40,38 @@ export default class AbstractSource {
         await this.startPolling(allClients);
     }
 
+    startPolling = async (allClients) => {
+        // reset poll attempts if already previously run
+        this.pollRetries = 0;
+
+        const {
+            maxPollRetries = 0,
+            retryMultiplier = 1.5,
+        } = this.config;
+
+        // can't have negative retries!
+        const maxRetries = Math.max(0, maxPollRetries);
+
+        while (this.pollRetries <= maxRetries) {
+            try {
+                await this.doPolling(allClients);
+            } catch (e) {
+                if (this.pollRetries < maxRetries) {
+                    const delayFor = (this.pollRetries + 1) * retryMultiplier;
+                    this.logger.info(`Poll reties (${this.pollRetries}) less than max poll retries (${maxRetries}), restarting polling after ${delayFor} second delay...`);
+                    await sleep((delayFor) * 1000);
+                } else {
+                    this.logger.warn(`Poll retries (${this.pollRetries}) equal to max poll retries (${maxRetries}), stopping polling!`);
+                }
+                this.pollRetries++;
+            }
+        }
+    }
+
     /**
      * @param {ScrobbleClients} allClients
      */
-    startPolling = async (allClients) => {
+    doPolling = async (allClients) => {
         if (this.polling === true) {
             return;
         }
@@ -143,6 +172,7 @@ export default class AbstractSource {
             this.logger.error('Error occurred while polling');
             this.logger.error(e);
             this.polling = false;
+            throw e;
         }
     }
 }

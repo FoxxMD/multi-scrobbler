@@ -1,7 +1,7 @@
 {
-  "name": "maloja-spotify-scrobbler",
+  "name": "multi-scrobbler",
   "version": "0.1.0",
-  "description": "",
+  "description": "scrobble plays from multiple sources to multiple clients",
   "type": "module",
   "main": "index.js",
   "scripts": {
@@ -13,23 +13,24 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/FoxxMD/maloja-spotify-scrobbler.git"
+    "url": "git+https://github.com/FoxxMD/multi-scrobbler.git"
   },
   "author": "",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/FoxxMD/maloja-spotify-scrobbler/issues"
+    "url": "https://github.com/FoxxMD/multi-scrobbler/issues"
   },
-  "homepage": "https://github.com/FoxxMD/maloja-spotify-scrobbler#readme",
+  "homepage": "https://github.com/FoxxMD/multi-scrobbler#readme",
   "dependencies": {
     "@awaitjs/express": "^0.6.3",
     "body-parser": "^1.19.0",
-    "dayjs": "^1.9.6",
-    "ejs": "^3.1.5",
+    "dayjs": "^1.10.4",
+    "ejs": "^3.1.6",
     "express": "^4.17.1",
+    "lastfm-node-client": "^2.2.0",
     "multer": "^1.4.2",
     "safe-stable-stringify": "^1.1.1",
-    "spotify-web-api-node": "^5.0.0",
+    "spotify-web-api-node": "^5.0.2",
     "superagent": "^6.1.0",
     "winston": "^3.3.3",
     "winston-daily-rotate-file": "^4.5.0"

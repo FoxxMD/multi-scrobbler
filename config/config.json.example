@@ -1,4 +1,13 @@
 {
+  "sourceDefaults": {
+    "maxPollRetries": 0,          // optional, default # of automatic polling restarts on error. can be overridden by property in individual config
+    "maxRequestRetries": 1,       // optional, default # of http request retries a source can make before error is thrown. can be overridden by property in individual config
+    "retryMultiplier": 1.5,       // optional, default retry delay multiplier (retry attempt * multiplier = # of seconds to wait before retrying). can be overridden by property in individual config
+  },
+  "clientDefaults": {
+    "maxRequestRetries": 1,       // optional, default # of http request retries a client can make before error is thrown. can be overridden by property in individual config
+    "retryMultiplier": 1.5,       // optional, default retry delay multiplier (retry attempt * multiplier = # of seconds to wait before retrying). can be overridden by property in individual config
+  },
   "sources": [
     {
       "type": "spotify",          // required, source type
