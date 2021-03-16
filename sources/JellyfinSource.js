@@ -33,7 +33,7 @@ export default class JellyfinSource extends MemorySource {
             this.servers = this.servers.map(x => x.toLocaleLowerCase())
         }
 
-        if (user === undefined && servers === undefined) {
+        if (users === undefined && servers === undefined) {
             this.logger.warn('Initializing, but with no filters! All tracks from all users on all servers will be scrobbled.');
         } else {
             this.logger.info(`Initializing with the following filters => Users: ${this.users === undefined ? 'N/A' : this.users.join(', ')} | Servers: ${this.servers === undefined ? 'N/A' : this.servers.join(', ')}`);
