@@ -46,7 +46,9 @@ export default class LastfmScrobbler extends AbstractScrobbleClient {
     static formatPlayObj(obj) {
         const {
             artist: {
-                '#text': artists
+                // last.fm doesn't seem consistent with which of these properties it returns...
+                '#text': artists,
+                name: artistName,
             },
             name: title,
             album: {
@@ -55,19 +57,30 @@ export default class LastfmScrobbler extends AbstractScrobbleClient {
             duration,
             date: {
                 uts: time,
-            },
+            } = {},
+            '@attr': {
+                nowplaying = 'false',
+            } = {},
+            url,
+            mbid,
         } = obj;
-        let artistStrings = artists.split(',');
+        // arbitrary decision yikes
+        let artistStrings = artists !== undefined ? artists.split(',') : [artistName];
         return {
             data: {
                 artists: [...new Set(artistStrings)],
                 track: title,
                 album,
                 duration,
-                playDate: dayjs.unix(time),
+                playDate: time !== undefined ? dayjs.unix(time) : undefined,
             },
             meta: {
+                nowPlaying: nowplaying === 'true',
+                mbid,
                 source: 'Lastfm',
+                url: {
+                    web: url,
+                }
             }
         }
     }
@@ -160,13 +173,43 @@ export default class LastfmScrobbler extends AbstractScrobbleClient {
     refreshScrobbles = async () => {
         if (this.refreshEnabled) {
             this.logger.debug('Refreshing recent scrobbles');
-            const resp = await this.callApi(client => client.userGetRecentTracks({user: this.user, limit: 20}));
+            const resp = await this.callApi(client => client.userGetRecentTracks({user: this.user, limit: 20, extended: true}));
             const {
                 recenttracks: {
                     track: list = [],
                 }
             } = resp;
-            this.recentScrobbles = list.map(x => LastfmScrobbler.formatPlayObj(x)).sort(sortByPlayDate);
+            this.recentScrobbles = list.reduce((acc, x) => {
+                try {
+                    const formatted = LastfmScrobbler.formatPlayObj(x);
+                    const {
+                        data: {
+                            track,
+                            playDate,
+                        },
+                        meta: {
+                            mbid,
+                            nowPlaying,
+                        }
+                    } = formatted;
+                    if(nowPlaying === true) {
+                        // if the track is "now playing" it doesn't get a timestamp so we can't determine when it started playing
+                        // and don't want to accidentally count the same track at different timestamps by artificially assigning it 'now' as a timestamp
+                        // so we'll just ignore it in the context of recent tracks since really we only want "tracks that have already finished being played" anyway
+                        this.logger.debug("Ignoring 'now playing' track returned from Last.fm client", {track, mbid});
+                        return acc;
+                    } else if(playDate === undefined) {
+                        this.logger.warn(`Last.fm recently scrobbled track did not contain a timestamp, omitting from time frame check`, {track, mbid});
+                        return acc;
+                    }
+                    return acc.concat(formatted);
+                } catch (e) {
+                    this.logger.warn('Failed to format Last.fm recently scrobbled track, omitting from time frame check', {error: e.message});
+                    this.logger.debug('Full api response object:');
+                    this.logger.debug(x);
+                    return acc;
+                }
+            }, []).sort(sortByPlayDate);
             if (this.recentScrobbles.length > 0) {
                 const [{data: {playDate: newestScrobbleTime = dayjs()} = {}} = {}] = this.recentScrobbles.slice(-1);
                 const [{data: {playDate: oldestScrobbleTime = dayjs()} = {}} = {}] = this.recentScrobbles.slice(0, 1);
