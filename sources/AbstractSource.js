@@ -80,6 +80,7 @@ export default class AbstractSource {
         this.logger.info('Polling started');
         let lastTrackPlayedAt = this.instantiatedAt;
         let checkCount = 0;
+        let checksOverThreshold = 0;
         try {
             this.polling = true;
             while (true) {
@@ -137,12 +138,13 @@ export default class AbstractSource {
                     }
                 } else {
                     checkCount = 0;
+                    checksOverThreshold = 0;
                 }
 
                 // use the source instantiation time or the last track play time to determine if we should refresh clients..
                 // we only need to refresh clients when the source has "newer" information otherwise we're just refreshing clients for no reason
                 const scrobbleResult = await allClients.scrobble(playObjs, {
-                    checkTime: lastTrackPlayedAt.add(5, 's'),
+                    checkTime: lastTrackPlayedAt.add(2, 's'),
                     forceRefresh: closeToInterval,
                     scrobbleFrom: this.identifier,
                     scrobbleTo: this.clients
@@ -153,19 +155,16 @@ export default class AbstractSource {
                     this.tracksDiscovered += scrobbleResult.length;
                 }
 
-                const {interval = 30} = this.config;
+                const {interval = 30, checkActiveFor = 300, maxSleep = 300} = this.config;
 
                 let sleepTime = interval;
-                // don't need to do back off calc if interval is 10 minutes or greater since its already pretty light on API calls
+                // don't need to do back off calc if interval is 5 minutes or greater since its already pretty light on API calls
                 // and don't want to back off if we just started the app
-                if (checkCount > 5 && sleepTime < 600) {
-                    const lastPlayToNowSecs = Math.abs(now.unix() - lastTrackPlayedAt.unix());
-                    // back off if last play was longer than 10 minutes ago
-                    const backoffThreshold = Math.min((interval * 10), 600);
-                    if (lastPlayToNowSecs >= backoffThreshold) {
-                        // back off to a maximum of 5 minutes
-                        sleepTime = Math.min(interval * 5, 300);
-                    }
+                const activeThreshold = lastTrackPlayedAt.add(checkActiveFor, 's');
+                if (activeThreshold.isBefore(dayjs()) && sleepTime < 300) {
+                    checksOverThreshold++;
+                    const backoffMultiplier = Math.min(checksOverThreshold, 1000) * 1.5;
+                    sleepTime = Math.min(interval * backoffMultiplier, maxSleep);
                 }
 
                 // sleep for interval
