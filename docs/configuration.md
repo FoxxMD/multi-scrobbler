@@ -143,7 +143,7 @@ Can use this source for any application that implements the [Subsonic API](http:
 
 See [`subsonic.json.example`](../config/subsonic.json.example)
 
-## Jellyfin
+## [Jellyfin](https://jellyfin.org/)
 
 Must be using Jellyfin 10.7 or greater
 
@@ -156,6 +156,17 @@ Must be using Jellyfin 10.7 or greater
     * Item Type: `Songs`
     * Check `Send All Properties`
   * Save
+
+### ENV-Based
+
+| Environmental Variable | Required? | Default | Description                                                       |
+|------------------------|-----------|---------|-------------------------------------------------------------------|
+| `JELLYFIN_USER`        |           |         | Comma-separated list of usernames (from Jellyfin) to scrobble for |
+| `JELLYFIN_SERVER`      |           |         | Comma-separated list of Jellyfin server names to scrobble from    |
+
+### JSON-Based
+
+See [`jellyfin.json.example`](../config/jellyfin.json.example)
 
 # Clients
 

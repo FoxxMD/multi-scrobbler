@@ -7,6 +7,7 @@ import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc.js';
 import isBetween from 'dayjs/plugin/isBetween.js';
 import relativeTime from 'dayjs/plugin/relativeTime.js';
+import duration from 'dayjs/plugin/duration.js';
 import {Writable} from 'stream';
 import 'winston-daily-rotate-file';
 import {
@@ -22,6 +23,7 @@ import ScrobbleSources from "./sources/ScrobbleSources.js";
 import {makeClientCheckMiddle, makeSourceCheckMiddle} from "./server/middleware.js";
 import TautulliSource from "./sources/TautulliSource.js";
 import PlexSource from "./sources/PlexSource.js";
+import JellyfinSource from "./sources/JellyfinSource.js";
 
 const storage = multer.memoryStorage()
 const upload = multer({storage: storage})
@@ -29,6 +31,7 @@ const upload = multer({storage: storage})
 dayjs.extend(utc)
 dayjs.extend(isBetween);
 dayjs.extend(relativeTime);
+dayjs.extend(duration);
 
 const {transports} = winston;
 
@@ -257,16 +260,11 @@ app.use(bodyParser.json());
         // webhook plugin sends json with context type text/utf-8 so we need to parse it differently
         const jellyfinJsonParser = bodyParser.json({type: 'text/*'});
         app.postAsync('/jellyfin', jellyfinJsonParser, async function (req, res) {
-            // actually do this in JellyfinSource but keeping this here for now to remember
-            const {
-                ItemType,
-            } = req.body;
-            if(ItemType !== 'Audio') {
-                res.send('OK');
-            } else {
-
+            const playObj = JellyfinSource.formatPlayObj(req.body, true);
+            const pSources = scrobbleSources.getByType('jellyfin');
+            for (const source of pSources) {
+                await source.handle(playObj, scrobbleClients);
             }
-            console.log(req.body);
             res.send('OK');
         });
 

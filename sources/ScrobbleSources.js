@@ -3,6 +3,7 @@ import SpotifySource from "./SpotifySource.js";
 import PlexSource from "./PlexSource.js";
 import TautulliSource from "./TautulliSource.js";
 import {SubsonicSource} from "./SubsonicSource.js";
+import JellyfinSource from "./JellyfinSource.js";
 
 export default class ScrobbleSources {
 
@@ -11,7 +12,7 @@ export default class ScrobbleSources {
     configDir;
     localUrl;
 
-    sourceTypes = ['spotify', 'plex', 'tautulli', 'subsonic'];
+    sourceTypes = ['spotify', 'plex', 'tautulli', 'subsonic', 'jellyfin'];
 
     constructor(localUrl, configDir = process.cwd()) {
         this.configDir = configDir;
@@ -119,6 +120,21 @@ export default class ScrobbleSources {
                             source: 'ENV',
                             mode: 'single',
                             data: sub
+                        })
+                    }
+                    break;
+                case 'jellyfin':
+                    const j = {
+                        user: process.env.JELLYFIN_USER,
+                        server: process.env.JELLYFIN_SERVER,
+                    };
+                    if (!Object.values(j).every(x => x === undefined)) {
+                        configs.push({
+                            type: 'jellyfin',
+                            name: 'unnamed',
+                            source: 'ENV',
+                            mode: 'single',
+                            data: j
                         })
                     }
                     break;
@@ -238,6 +254,10 @@ export default class ScrobbleSources {
                 const ssSource = new SubsonicSource(name, data, clients);
                 await ssSource.testConnection();
                 this.sources.push(ssSource);
+                break;
+            case 'jellyfin':
+                const jellyfinSource = await new JellyfinSource(name, data, clients);
+                this.sources.push(jellyfinSource);
                 break;
             default:
                 break;

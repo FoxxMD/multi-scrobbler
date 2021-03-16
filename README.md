@@ -10,6 +10,7 @@ A javascript app to scrobble plays from multiple sources to [Maloja](https://git
   * [Spotify](/docs/configuration.md#spotify)
   * [Plex](/docs/configuration.md#plex) or [Tautulli](/docs/configuration.md#tautulli)
   * [Subsonic-compatible APIs](/docs/configuration.md#subsonic) (like [Airsonic](https://airsonic.github.io/))
+  * [Jellyfin](/docs/configuration.md#jellyfin)
 * Supports scrobbling to many clients
   * [Maloja](/docs/configuration.md#maloja)
   * [Last.fm](/docs/configuration.md#lastfm)
