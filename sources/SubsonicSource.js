@@ -4,13 +4,16 @@ import crypto from 'crypto';
 import dayjs from "dayjs";
 import isSameOrAfter from "dayjs/plugin/isSameOrAfter.js";
 import {buildTrackString, parseRetryAfterSecsFromObj, sleep} from "../utils.js";
+import MemorySource from "./MemorySource.js";
 
 dayjs.extend(isSameOrAfter);
 
-export class SubsonicSource extends AbstractSource {
+export class SubsonicSource extends MemorySource {
 
     constructor(name, config = {}, clients = []) {
-        super('subsonic', name, config, clients);
+        // default to quick interval so we can get a decently accurate nowPlaying
+        const subsonicConfig = {interval: 10, maxSleep: 30, ...config};
+        super('subsonic', name, subsonicConfig, clients);
 
         const {user, password, url} = this.config;
 
@@ -53,16 +56,6 @@ export class SubsonicSource extends AbstractSource {
                 newFromSource,
             }
         }
-    }
-
-    recentlyPlayedTrackIsValid = (playObj) => {
-        const {data: {playDate} = {}} = playObj;
-        // want to make sure that the track has been played for at least one minute (according to subsonic api)
-        const isValid = dayjs().startOf('minute').subtract(1, 'minute').isSameOrAfter(playDate);
-        if (!isValid) {
-            this.logger.debug(`${buildTrackString(playObj, {include: ['artist', 'track']})} recently played but not valid b/c it has not been playing for >= 1 minute`);
-        }
-        return isValid;
     }
 
     callApi = async (req, retries = 0) => {
@@ -150,6 +143,6 @@ export class SubsonicSource extends AbstractSource {
                 entry = []
             } = {}
         } = resp;
-        return entry.map(x => formatted ? SubsonicSource.formatPlayObj(x) : x)
+        return this.processRecentPlays(entry.map(x => formatted ? SubsonicSource.formatPlayObj(x) : x));
     }
 }
