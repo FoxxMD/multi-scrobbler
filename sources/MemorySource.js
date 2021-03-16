@@ -26,7 +26,7 @@ export default class MemorySource extends AbstractSource {
             this.candidateRecentlyPlayed = lockedPlays;
         } else {
             // otherwise determine new tracks (not found in prior candidates)
-            const newTracks = lockedPlays.filter(x => this.candidateRecentlyPlayed.some(y => !playObjDataMatch(y, x)));
+            const newTracks = lockedPlays.filter(x => this.candidateRecentlyPlayed.every(y => !playObjDataMatch(y, x)));
             // filter prior candidates based on new recently played
             this.candidateRecentlyPlayed = this.candidateRecentlyPlayed.filter(x => lockedPlays.some(y => playObjDataMatch(x, y)));
             // and then combine still playing with new tracks
