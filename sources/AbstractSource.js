@@ -10,6 +10,7 @@ export default class AbstractSource {
     config;
     clients;
     logger;
+    instantiatedAt;
 
     canPoll = false;
     polling = false;
@@ -23,6 +24,7 @@ export default class AbstractSource {
         this.logger = createLabelledLogger(this.identifier, this.identifier);
         this.config = config;
         this.clients = clients;
+        this.instantiatedAt = dayjs();
     }
 
     getRecentlyPlayed = async (options = {}) => {
@@ -76,7 +78,7 @@ export default class AbstractSource {
             return;
         }
         this.logger.info('Polling started');
-        let lastTrackPlayedAt = dayjs();
+        let lastTrackPlayedAt = this.instantiatedAt;
         let checkCount = 0;
         try {
             this.polling = true;
@@ -137,7 +139,10 @@ export default class AbstractSource {
                     checkCount = 0;
                 }
 
+                // use the source instantiation time or the last track play time to determine if we should refresh clients..
+                // we only need to refresh clients when the source has "newer" information otherwise we're just refreshing clients for no reason
                 const scrobbleResult = await allClients.scrobble(playObjs, {
+                    checkTime: lastTrackPlayedAt.add(5, 's'),
                     forceRefresh: closeToInterval,
                     scrobbleFrom: this.identifier,
                     scrobbleTo: this.clients
