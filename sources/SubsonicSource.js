@@ -143,6 +143,7 @@ export class SubsonicSource extends MemorySource {
                 entry = []
             } = {}
         } = resp;
-        return this.processRecentPlays(entry.map(x => formatted ? SubsonicSource.formatPlayObj(x) : x));
+        this.processRecentPlays(entry.map(x => formatted ? SubsonicSource.formatPlayObj(x) : x));
+        return this.statefulRecentlyPlayed;
     }
 }

@@ -16,6 +16,7 @@ export default class MemorySource extends AbstractSource {
 
     processRecentPlays = (plays) => {
 
+        let newStatefulPlays = [];
         // first format new plays with locked play date
         const lockedPlays = plays.map((p) => {
                     const {data: {playDate, ...restData}, ...rest} = p;
@@ -42,6 +43,7 @@ export default class MemorySource extends AbstractSource {
                     let stPrefix = `(Stateful Play) ${buildTrackString(candidate, {include: ['artist', 'track']})}`;
                     if(matchingRecent === undefined) {
                         this.logger.debug(`${stPrefix} added after being seen for 30 seconds and not matching any prior plays`);
+                        newStatefulPlays.push(candidate);
                         this.statefulRecentlyPlayed.push(candidate);
                     } else {
                         const {data: { playDate, duration }} = candidate;
@@ -50,11 +52,13 @@ export default class MemorySource extends AbstractSource {
                             if(duration !== undefined) {
                                 if(playDate.isAfter(rplayDate.add(duration, 's'))) {
                                     this.logger.debug(`${stPrefix} added after being seen for 30 seconds and having a different timestamp than a prior play`);
+                                    newStatefulPlays.push(candidate);
                                     this.statefulRecentlyPlayed.push(candidate);
                                 }
                             } else if(!playObjDataMatch(this.statefulRecentlyPlayed[0], candidate)) {
                                 // if most recent stateful play is not this track we'll add it
                                 this.logger.debug(`${stPrefix} added after being seen for 30 seconds. Matched other recent play but could not determine time frame due to missing duration. Allowed due to not being last played track.`);
+                                newStatefulPlays.push(candidate);
                                 this.statefulRecentlyPlayed.push(candidate);
                             }
                         }
@@ -63,7 +67,7 @@ export default class MemorySource extends AbstractSource {
             }
             this.statefulRecentlyPlayed.sort(sortByPlayDate);
         }
-        return this.statefulRecentlyPlayed;
+        return newStatefulPlays;
     }
 
     recentlyPlayedTrackIsValid = (playObj) => {
