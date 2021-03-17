@@ -27,6 +27,8 @@ A javascript app to scrobble plays from multiple sources to [Maloja](https://git
 * **Consolidate play sources** -- Scrobble from many sources to one client with ease and without duplicating tracks.
 * **Manage scrobbling for others** -- Scrobble for your friends and family without any setup on their part. Easily silo sources to specific clients to keep plays separate.
 
+<img src="/assets/status-ui.jpg" width="800">
+
 ## Installation
 
 
