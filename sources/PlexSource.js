@@ -1,4 +1,5 @@
-import dayjs from "dayjs";
+import dayjs from "dayjs";import LastFm from "lastfm-node-client";
+import LastfmScrobbler from '../clients/LastfmScrobbler.js';
 import {buildTrackString} from "../utils.js";
 import AbstractSource from "./AbstractSource.js";
 

@@ -26,6 +26,10 @@ export default class ScrobbleClients {
         return this.clients.find(x => x.name === name);
     }
 
+    getByType = (type) => {
+        return this.clients.filter(x => x.type === type);
+    }
+
     buildClientsFromConfig = async () => {
         let configs = [];
 
@@ -47,11 +51,16 @@ export default class ScrobbleClients {
             }
             for (const c of mainConfigClientConfigs) {
                 const {name = 'unnamed'} = c;
-                configs.push({...c, name, source: 'config.json'});
+                configs.push({...c,
+                    name,
+                    source: 'config.json',
+                    configureAs: 'client', //override user value
+                });
             }
         }
 
         for (const clientType of this.clientTypes) {
+            let defaultConfigureAs = 'client';
             switch (clientType) {
                 case 'maloja':
                     // env builder for single user mode
@@ -114,9 +123,12 @@ export default class ScrobbleClients {
                     if (m === null || typeof m !== 'object') {
                         throw new Error(`All top-level data from ${clientType}.json must be an object or array of objects`);
                     }
-                    m.source = `${clientType}.json`;
-                    m.type = clientType;
-                    configs.push(m);
+                    const {configureAs = defaultConfigureAs} = m;
+                    if(configureAs === 'client') {
+                        m.source = `${clientType}.json`;
+                        m.type = clientType;
+                        configs.push(m);
+                    }
                 }
             }
         }

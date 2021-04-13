@@ -4,6 +4,7 @@ import PlexSource from "./PlexSource.js";
 import TautulliSource from "./TautulliSource.js";
 import {SubsonicSource} from "./SubsonicSource.js";
 import JellyfinSource from "./JellyfinSource.js";
+import LastfmSource from "./LastfmSource.js";
 
 export default class ScrobbleSources {
 
@@ -12,7 +13,7 @@ export default class ScrobbleSources {
     configDir;
     localUrl;
 
-    sourceTypes = ['spotify', 'plex', 'tautulli', 'subsonic', 'jellyfin'];
+    sourceTypes = ['spotify', 'plex', 'tautulli', 'subsonic', 'jellyfin', 'lastfm'];
 
     constructor(localUrl, configDir = process.cwd()) {
         this.configDir = configDir;
@@ -53,11 +54,16 @@ export default class ScrobbleSources {
             }
             for (const c of mainConfigSourcesConfigs) {
                 const {name = 'unnamed'} = c;
-                configs.push({...c, name, source: 'config.json'});
+                configs.push({...c,
+                    name,
+                    source: 'config.json',
+                    configureAs: 'source' // override user value
+                });
             }
         }
 
         for (let sourceType of this.sourceTypes) {
+            let defaultConfigureAs = 'source';
             // env builder for single user mode
             switch (sourceType) {
                 case 'spotify':
@@ -138,6 +144,9 @@ export default class ScrobbleSources {
                         })
                     }
                     break;
+                case 'lastfm':
+                    defaultConfigureAs = 'client';
+                    break;
                 default:
                     break;
             }
@@ -165,9 +174,12 @@ export default class ScrobbleSources {
                     if (m === null || typeof m !== 'object') {
                         throw new Error(`All top-level data from ${sourceType}.json must be an object or array of objects`);
                     }
-                    m.source = `${sourceType}.json`;
-                    m.type = sourceType;
-                    configs.push(m);
+                    const {configureAs = defaultConfigureAs} = m;
+                    if(configureAs === 'source') {
+                        m.source = `${sourceType}.json`;
+                        m.type = sourceType;
+                        configs.push(m);
+                    }
                 }
             }
         }
@@ -258,6 +270,11 @@ export default class ScrobbleSources {
             case 'jellyfin':
                 const jellyfinSource = await new JellyfinSource(name, data, clients);
                 this.sources.push(jellyfinSource);
+                break;
+            case 'lastfm':
+                const lastfmSource = await new LastfmSource(name, {...data, configDir: this.configDir}, clients);
+                await lastfmSource.initialize();
+                this.sources.push(lastfmSource);
                 break;
             default:
                 break;

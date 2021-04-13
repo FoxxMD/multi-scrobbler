@@ -24,7 +24,7 @@ export default class AbstractScrobbleClient {
     constructor(type, name, config = {}) {
         this.type = type;
         this.name = name;
-        const identifier = `${capitalize(this.type)} - ${name}`;
+        const identifier = `Client ${capitalize(this.type)} - ${name}`;
         this.logger = createLabelledLogger(identifier, identifier);
 
         const {

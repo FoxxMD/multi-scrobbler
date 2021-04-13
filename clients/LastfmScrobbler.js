@@ -1,179 +1,36 @@
 import AbstractScrobbleClient from "./AbstractScrobbleClient.js";
 import dayjs from 'dayjs';
-import LastFm from 'lastfm-node-client';
+
 import {
-    buildTrackString, parseRetryAfterSecsFromObj,
+    buildTrackString,
     playObjDataMatch,
-    readJson,
     setIntersection, sleep,
     sortByPlayDate,
-    truncateStringToLength, writeFile
+    truncateStringToLength,
 } from "../utils.js";
-
-const badErrors = [
-    'api key suspended',
-    'invalid session key',
-    'invalid api key',
-    'authentication failed'
-];
-
-const retryErrors = [
-    'operation failed',
-    'service offline',
-    'temporarily unavailable',
-    'rate limit'
-]
+import LastfmApiClient from "../apis/LastfmApiClient.js";
 
 export default class LastfmScrobbler extends AbstractScrobbleClient {
 
-    client;
-    redirectUri;
-    workingCredsPath;
+    api;
     initialized = false;
-    user;
 
     constructor(name, config = {}, options = {}) {
         super('lastfm', name, config, options);
-        const {redirectUri, apiKey, secret, session, configDir} = config;
-        this.redirectUri = `${redirectUri}?state=${name}`;
-        if (apiKey === undefined) {
-            this.logger.warn("'apiKey' not found in config! Client will most likely fail when trying to scrobble");
-        }
-        this.workingCredsPath = `${configDir}/currentCreds-lastfm-${name}.json`;
-        this.client = new LastFm(apiKey, secret, session);
+        this.api = new LastfmApiClient(name, config, options)
     }
 
-    static formatPlayObj(obj) {
-        const {
-            artist: {
-                // last.fm doesn't seem consistent with which of these properties it returns...
-                '#text': artists,
-                name: artistName,
-            },
-            name: title,
-            album: {
-                '#text': album,
-            },
-            duration,
-            date: {
-                uts: time,
-            } = {},
-            '@attr': {
-                nowplaying = 'false',
-            } = {},
-            url,
-            mbid,
-        } = obj;
-        // arbitrary decision yikes
-        let artistStrings = artists !== undefined ? artists.split(',') : [artistName];
-        return {
-            data: {
-                artists: [...new Set(artistStrings)],
-                track: title,
-                album,
-                duration,
-                playDate: time !== undefined ? dayjs.unix(time) : undefined,
-            },
-            meta: {
-                nowPlaying: nowplaying === 'true',
-                mbid,
-                source: 'Lastfm',
-                url: {
-                    web: url,
-                }
-            }
-        }
-    }
-
-    formatPlayObj = obj => LastfmScrobbler.formatPlayObj(obj);
-
-    callApi = async (func, retries = 0) => {
-        const {
-            maxRequestRetries = 2,
-            retryMultiplier = 1.5
-        } = this.config;
-
-        try {
-            return await func(this.client);
-        } catch (e) {
-            const {
-                message,
-            } = e;
-            // for now check for exceptional errors by matching error code text
-            const retryError = retryErrors.find(x => message.toLocaleLowerCase().includes(x));
-            if(undefined !== retryError) {
-                if(retries < maxRequestRetries) {
-                    const delay = (retries + 1) * retryMultiplier;
-                    this.logger.warn(`API call was not good but recoverable (${retryError}), retrying in ${delay} seconds...`);
-                    await sleep(delay * 1000);
-                    return this.callApi(func, retries + 1);
-                } else {
-                    this.logger.warn('Could not recover!');
-                    throw e;
-                }
-            }
-
-            throw e;
-        }
-    }
-
-    getAuthUrl = () => {
-        const redir = `${this.config.redirectUri}?state=${this.name}`;
-        return `http://www.last.fm/api/auth/?api_key=${this.config.apiKey}&cb=${encodeURIComponent(redir)}`
-    }
-
-    authenticate = async (token) => {
-        const sessionRes = await this.client.authGetSession({token});
-        const {
-            session: {
-                key: sessionKey,
-                name, // username
-            } = {}
-        } = sessionRes;
-        this.client.sessionKey = sessionKey;
-
-        await writeFile(this.workingCredsPath, JSON.stringify({
-            sessionKey,
-        }));
-    }
+    formatPlayObj = obj => LastfmApiClient.formatPlayObj(obj);
 
     initialize = async () => {
-
-        try {
-            const creds = await readJson(this.workingCredsPath, {throwOnNotFound: false});
-            const {sessionKey} = creds || {};
-            if (this.client.sessionKey === undefined && sessionKey !== undefined) {
-                this.client.sessionKey = sessionKey;
-            }
-        } catch (e) {
-            this.logger.warn('Current lastfm credentials file exists but could not be parsed', {path: this.workingCredsPath});
-        }
-
-        if (this.client.sessionKey === undefined) {
-            this.logger.info('No session key found. User interaction for authentication required.');
-            return;
-        }
-        try {
-            const infoResp = await this.callApi(client => client.userGetInfo());
-            const {
-                user: {
-                    name,
-                } = {}
-            } = infoResp;
-            this.user = name;
-            this.initialized = true;
-            this.logger.info(`Client authorized for user ${name}`)
-            return true;
-        } catch (e) {
-            this.logger.error('Testing connection failed');
-            return false;
-        }
+        this.initialized = await this.api.initialize();
+        return this.initialized;
     }
 
     refreshScrobbles = async () => {
         if (this.refreshEnabled) {
             this.logger.debug('Refreshing recent scrobbles');
-            const resp = await this.callApi(client => client.userGetRecentTracks({user: this.user, limit: 20, extended: true}));
+            const resp = await this.api.callApi(client => client.userGetRecentTracks({user: this.api.user, limit: 20, extended: true}));
             const {
                 recenttracks: {
                     track: list = [],
@@ -181,7 +38,7 @@ export default class LastfmScrobbler extends AbstractScrobbleClient {
             } = resp;
             this.recentScrobbles = list.reduce((acc, x) => {
                 try {
-                    const formatted = LastfmScrobbler.formatPlayObj(x);
+                    const formatted = LastfmApiClient.formatPlayObj(x);
                     const {
                         data: {
                             track,
@@ -388,7 +245,7 @@ export default class LastfmScrobbler extends AbstractScrobbleClient {
         const sType = newFromSource ? 'New' : 'Backlog';
 
         try {
-            const response = await this.callApi(client => client.trackScrobble(
+            const response = await this.api.callApi(client => client.trackScrobble(
                 {
                     artist: artists.join(', '),
                     duration,

@@ -152,6 +152,17 @@ app.use(bodyParser.json());
         const clientCheckMiddle = makeClientCheckMiddle(scrobbleClients);
         const sourceCheckMiddle = makeSourceCheckMiddle(scrobbleSources);
 
+        // check ambiguous client/source types like this for now
+        // TODO in next major version require usage of config.json with client/source explicit? IDK
+        const lastfmSources = scrobbleSources.getByType('lastfm');
+        const lastfmScrobbles = scrobbleClients.getByType('lastfm');
+
+        const scrobblerNames = lastfmScrobbles.map(x => x.name);
+        const nameColl = lastfmSources.filter(x => scrobblerNames.includes(x.name));
+        if(nameColl.length > 0) {
+            logger.warn(`Last.FM source and clients have same names [${nameColl.map(x => x.name).join(',')}] -- this may cause issues`);
+        }
+
         app.getAsync('/', async function (req, res) {
             let slicedLog = output.slice(0, logConfig.limit + 1);
             if (logConfig.sort === 'ascending') {
@@ -173,6 +184,13 @@ app.use(bodyParser.json());
                             hasAuth: true,
                             authed,
                             status: authed ? base.status : 'Auth Interaction Required',
+                        }
+                    case 'lastfm':
+                        return {
+                            ...base,
+                            hasAuth: true,
+                            authed: x.initialized,
+                            status: x.initialized ? base.status : 'Auth Interaction Required',
                         }
                     default:
                         return base;
@@ -276,7 +294,7 @@ app.use(bodyParser.json());
 
             switch (scrobbleClient.type) {
                 case 'lastfm':
-                    res.redirect(scrobbleClient.getAuthUrl());
+                    res.redirect(scrobbleClient.api.getAuthUrl());
                     break;
                 default:
                     return res.status(400).send(`Specified client does not have auth implemented (${scrobbleClient.type})`);
@@ -298,6 +316,9 @@ app.use(bodyParser.json());
                         logger.info('Redirecting to spotify authorization url');
                         res.redirect(source.createAuthUrl());
                     }
+                    break;
+                case 'lastfm':
+                    res.redirect(source.api.getAuthUrl());
                     break;
                 default:
                     return res.status(400).send(`Specified source does not have auth implemented (${source.type})`);
@@ -386,10 +407,13 @@ app.use(bodyParser.json());
                         token
                     } = {}
                 } = req;
-                const client = scrobbleClients.getByName(state);
+                let entity = scrobbleClients.getByName(state);
+                if(entity === undefined) {
+                    entity = scrobbleSources.getByName(state);
+                }
                 try {
-                    await client.authenticate(token);
-                    await client.initialize();
+                    await entity.api.authenticate(token);
+                    await entity.initialize();
                     return res.send('OK');
                 } catch (e) {
                     return res.send(e.message);
@@ -419,6 +443,11 @@ app.use(bodyParser.json());
                         } else {
                             source.poll(scrobbleClients);
                         }
+                    }
+                    break;
+                case 'lastfm':
+                    if(source.initialized === true) {
+                        source.poll(scrobbleClients);
                     }
                     break;
                 default:
