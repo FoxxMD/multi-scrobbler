@@ -132,13 +132,17 @@ export default class LastfmApiClient extends AbstractApiClient {
             if (this.client.sessionKey === undefined && sessionKey !== undefined) {
                 this.client.sessionKey = sessionKey;
             }
+            return true;
         } catch (e) {
             this.logger.warn('Current lastfm credentials file exists but could not be parsed', {path: this.workingCredsPath});
+            return false;
         }
+    }
 
+    testAuth = async () => {
         if (this.client.sessionKey === undefined) {
             this.logger.info('No session key found. User interaction for authentication required.');
-            return;
+            return false;
         }
         try {
             const infoResp = await this.callApi(client => client.userGetInfo());
@@ -152,8 +156,8 @@ export default class LastfmApiClient extends AbstractApiClient {
             this.logger.info(`Client authorized for user ${name}`)
             return true;
         } catch (e) {
-            this.logger.error('Testing connection failed');
-            return false;
+            this.logger.error('Testing auth failed');
+            throw e;
         }
     }
 

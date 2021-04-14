@@ -14,6 +14,8 @@ export default class LastfmScrobbler extends AbstractScrobbleClient {
 
     api;
     initialized = false;
+    requiresAuth = true;
+    requiresAuthInteraction = true;
 
     constructor(name, config = {}, options = {}) {
         super('lastfm', name, config, options);
@@ -25,6 +27,17 @@ export default class LastfmScrobbler extends AbstractScrobbleClient {
     initialize = async () => {
         this.initialized = await this.api.initialize();
         return this.initialized;
+    }
+
+    testAuth = async () => {
+        try {
+            this.authed = await this.api.testAuth();
+        } catch (e) {
+            this.logger.error('Could not successfully communicate with Last.fm API');
+            this.logger.error(e);
+            this.authed = false;
+        }
+        return this.authed;
     }
 
     refreshScrobbles = async () => {

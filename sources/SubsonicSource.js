@@ -10,6 +10,8 @@ dayjs.extend(isSameOrAfter);
 
 export class SubsonicSource extends MemorySource {
 
+    requiresAuth = true;
+
     constructor(name, config = {}, clients = []) {
         // default to quick interval so we can get a decently accurate nowPlaying
         const subsonicConfig = {interval: 10, maxSleep: 30, ...config};
@@ -124,14 +126,34 @@ export class SubsonicSource extends MemorySource {
         }
     }
 
-    testConnection = async () => {
+    initialize = async () => {
+        const {url} = this.config;
+        try {
+            await request.get(`${url}/`);
+            this.logger.info('Subsonic Connection: ok');
+            this.initialized = true;
+        } catch (e) {
+            if(e.status !== undefined && e.status !== 404) {
+                this.logger.info('Subsonic Connection: ok');
+                // we at least got a response!
+                this.initialized = true;
+            }
+        }
+
+        return this.initialized;
+    }
+
+    testAuth= async () => {
         const {url} = this.config;
         try {
             await this.callApi(request.get(`${url}/rest/ping`));
+            this.authed = true;
             this.logger.info('Subsonic API Status: ok');
         } catch (e) {
-            this.logger.error(e);
+            this.authed = false;
         }
+
+        return this.authed;
     }
 
     getRecentlyPlayed = async (options = {}) => {

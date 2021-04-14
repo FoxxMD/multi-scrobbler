@@ -6,6 +6,9 @@ export default class AbstractScrobbleClient {
     name;
     type;
     initialized = false;
+    requiresAuth = false;
+    requiresAuthInteraction = false;
+    authed = false;
 
     recentScrobbles = [];
     scrobbledPlayObjs = [];
@@ -58,6 +61,17 @@ export default class AbstractScrobbleClient {
                 confidenceBreakdown
             }
         };
+    }
+
+    // default init function, should be overridden if init stage is required
+    initialize = async () => {
+        this.initialized = true;
+        return this.initialized;
+    }
+
+    // default init function, should be overridden if auth stage is required
+    testAuth = async () => {
+        return this.authed;
     }
 
     scrobblesLastCheckedAt = () => {

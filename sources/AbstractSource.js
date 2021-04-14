@@ -11,6 +11,10 @@ export default class AbstractSource {
     clients;
     logger;
     instantiatedAt;
+    initialized = false;
+    requiresAuth = false;
+    requiresAuthInteraction = false;
+    authed = false;
 
     canPoll = false;
     polling = false;
@@ -25,6 +29,17 @@ export default class AbstractSource {
         this.config = config;
         this.clients = clients;
         this.instantiatedAt = dayjs();
+    }
+
+    // default init function, should be overridden if init stage is required
+    initialize = async () => {
+        this.initialized = true;
+        return this.initialized;
+    }
+
+    // default init function, should be overridden if auth stage is required
+    testAuth = async () => {
+        return this.authed;
     }
 
     getRecentlyPlayed = async (options = {}) => {
@@ -43,6 +58,10 @@ export default class AbstractSource {
     }
 
     startPolling = async (allClients) => {
+        if(this.requiresAuthInteraction && !this.authed) {
+            this.logger.error('Cannot start polling because user interaction is required for authentication');
+            return;
+        }
         // reset poll attempts if already previously run
         this.pollRetries = 0;
 

@@ -209,6 +209,7 @@ export default class ScrobbleSources {
             const isValid = isValidConfigStructure(c, {type: true, data: true});
             if (isValid !== true) {
                 this.logger.error(`Source config from ${c.source} with name [${c.name || 'unnamed'}] of type [${c.type || 'unknown'}] will not be used because it has structural errors: ${isValid.join(' | ')}`);
+                return acc;
             }
             return acc.concat(c);
         }, []);
@@ -261,42 +262,66 @@ export default class ScrobbleSources {
         const {type, name, clients = [], data: d = {}} = clientConfig;
         // add defaults
         const data = {...defaults, ...d};
-        this.logger.debug(`(${name}) Initializing ${type} source`);
+        this.logger.debug(`(${name}) Constructing ${type} source`);
+        let newSource;
         switch (type) {
             case 'spotify':
-                const spotifySource = new SpotifySource(name, {
+                newSource = new SpotifySource(name, {
                     ...data,
                     localUrl: this.localUrl,
                     configDir: this.configDir
                 }, clients);
-                await spotifySource.buildSpotifyApi();
-                this.sources.push(spotifySource);
                 break;
             case 'plex':
-                const plexSource = await new PlexSource(name, data, clients);
-                this.sources.push(plexSource);
+                newSource = await new PlexSource(name, data, clients);
                 break;
             case 'tautulli':
-                const tautulliSource = await new TautulliSource(name, data, clients);
-                this.sources.push(tautulliSource);
+                newSource = await new TautulliSource(name, data, clients);
                 break;
             case 'subsonic':
-                const ssSource = new SubsonicSource(name, data, clients);
-                await ssSource.testConnection();
-                this.sources.push(ssSource);
+                newSource = new SubsonicSource(name, data, clients);
                 break;
             case 'jellyfin':
-                const jellyfinSource = await new JellyfinSource(name, data, clients);
-                this.sources.push(jellyfinSource);
+                newSource = await new JellyfinSource(name, data, clients);
                 break;
             case 'lastfm':
-                const lastfmSource = await new LastfmSource(name, {...data, configDir: this.configDir}, clients);
-                await lastfmSource.initialize();
-                this.sources.push(lastfmSource);
+                newSource = await new LastfmSource(name, {...data, configDir: this.configDir}, clients);
                 break;
             default:
                 break;
         }
-        this.logger.info(`(${name}) ${type} source initialized`);
+
+        if(newSource === undefined) {
+            // really shouldn't get here!
+            throw new Error(`Source of type ${type} was not recognized??`);
+        }
+        if(newSource.initialized === false) {
+            this.logger.debug(`(${name}) Attempting ${type} initialization...`);
+            if (await newSource.initialize() === false) {
+                this.logger.error(`(${name}) ${type} source failed to initialize. Source needs to be successfully initialized before activity capture can begin.`);
+                return;
+            } else {
+                this.logger.info(`(${name}) ${type} source initialized`);
+            }
+        } else {
+            this.logger.info(`(${name}) ${type} source initialized`);
+        }
+
+        if(newSource.requiresAuth && !newSource.authed) {
+            this.logger.debug(`(${name}) Checking ${type} source auth...`);
+            let success;
+            try {
+                success = await newSource.testAuth();
+            } catch (e) {
+                success = false;
+            }
+            if(!success) {
+                this.logger.warn(`(${name}) ${type} source auth failed.`);
+            } else {
+                this.logger.info(`(${name}) ${type} source auth OK`);
+            }
+        }
+
+        this.sources.push(newSource);
     }
 }

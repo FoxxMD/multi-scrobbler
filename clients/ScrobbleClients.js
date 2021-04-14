@@ -208,32 +208,46 @@ ${sources.join('\n')}`);
         const {type, name, data: d = {}} = clientConfig;
         // add defaults
         const data = {...defaults, ...d};
+        let newClient;
+        this.logger.debug(`(${name}) Constructing ${type} client...`);
         switch (type) {
             case 'maloja':
-                this.logger.debug(`(${name}) Attempting Maloja initialization...`);
-                const mj = new MalojaScrobbler(name, data);
-                const testSuccess = await mj.testConnection();
-                if (testSuccess === false) {
-                    this.logger.error(`(${name}) Maloja client not initialized due to failure during connection testing. Client needs to be successfully initialized before scrobbling.`);
-                } else {
-                    this.logger.info(`(${name}) Maloja client initialized`);
-                }
-                this.clients.push(mj);
+                newClient = new MalojaScrobbler(name, data);
                 break;
             case 'lastfm':
-                this.logger.debug(`(${name}) Attempting Lastfm initialization...`);
-                const lfm = new LastfmScrobbler(name, {...data, configDir: this.configDir});
-                try {
-                    await lfm.initialize()
-                    this.logger.info(`(${name}) Lastfm client initialized`);
-                } catch(e) {
-                    this.logger.info(`(${name}) Could not initialize Lastfm client. Client needs to be successfully initialized before scrobbling.`)
-                }
-                this.clients.push(lfm);
+                newClient = new LastfmScrobbler(name, {...data, configDir: this.configDir});
                 break;
             default:
                 break;
         }
+
+        if(newClient === undefined) {
+            // really shouldn't get here!
+            throw new Error(`Client of type ${type} was not recognized??`);
+        }
+        if(newClient.initialized === false) {
+            this.logger.debug(`(${name}) Attempting ${type} initialization...`);
+            if (await newClient.initialize() === false) {
+                this.logger.error(`(${name}) ${type} client failed to initialize. Client needs to be successfully initialized before scrobbling.`);
+            } else {
+                this.logger.info(`(${name}) ${type} client initialized`);
+            }
+        }
+        if(newClient.requiresAuth && !newClient.authed) {
+            this.logger.debug(`(${name}) Checking ${type} client auth...`);
+            let success;
+            try {
+                success = await newClient.testAuth();
+            } catch (e) {
+                success = false;
+            }
+            if(!success) {
+                this.logger.warn(`(${name}) ${type} client auth failed.`);
+            } else {
+                this.logger.warn(`(${name}) ${type} client auth OK`);
+            }
+        }
+        this.clients.push(newClient);
     }
 
     /**
@@ -262,7 +276,11 @@ ${sources.join('\n')}`);
                 continue;
             }
             if(client.initialized === false) {
-                this.logger.debug(`Client '${client.name}' is not yet initialized (check authorization?)`);
+                this.logger.warn(`Cannot scrobble to Client '${client.name}' because it is not yet initialized`);
+                continue;
+            }
+            if(client.requiresAuthInteraction === true && !client.authed) {
+                this.logger.warn(`Cannot scrobble to Client '${client.name}' because user interaction is required for authentication`);
                 continue;
             }
 

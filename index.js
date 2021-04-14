@@ -167,56 +167,64 @@ app.use(bodyParser.json());
             if (logConfig.sort === 'ascending') {
                 slicedLog.reverse();
             }
+            // TODO links for re-trying auth and variables for signalling it (and API recently played)
             const sourceData = scrobbleSources.sources.map((x) => {
-                const {type, tracksDiscovered = 0, name, canPoll = false, polling = false} = x;
-                const base = {type, display: capitalize(type), tracksDiscovered, name, canPoll, hasAuth: false};
-                if (canPoll) {
+                const {
+                    type,
+                    tracksDiscovered = 0,
+                    name,
+                    canPoll = false,
+                    polling = false,
+                    initialized = false,
+                    requiresAuth = false,
+                    requiresAuthInteraction = false,
+                    authed = false,
+                } = x;
+                const base = {
+                    type,
+                    display: capitalize(type),
+                    tracksDiscovered,
+                    name,
+                    canPoll,
+                    hasAuth: requiresAuth,
+                    hasAuthInteraction: requiresAuthInteraction,
+                };
+                if(!initialized) {
+                    base.status = 'Not Initialized';
+                } else if(requiresAuth && !authed) {
+                    base.status = requiresAuthInteraction ? 'Auth Interaction Required' : 'Authentication Failed Or Not Attempted'
+                } else if(canPoll) {
                     base.status = polling ? 'Running' : 'Idle';
                 } else {
                     base.status = tracksDiscovered > 0 ? 'Received Data' : 'Awaiting Data'
                 }
-                switch (x.type) {
-                    case 'spotify':
-                        const authed = x.spotifyApi === undefined || x.spotifyApi.getAccessToken() !== undefined;
-                        return {
-                            ...base,
-                            hasAuth: true,
-                            authed,
-                            status: authed ? base.status : 'Auth Interaction Required',
-                        }
-                    case 'lastfm':
-                        return {
-                            ...base,
-                            hasAuth: true,
-                            authed: x.initialized,
-                            status: x.initialized ? base.status : 'Auth Interaction Required',
-                        }
-                    default:
-                        return base;
-                }
+                return base;
             });
             const clientData = scrobbleClients.clients.map((x) => {
-                const {type, tracksScrobbled = 0, name} = x;
+                const {
+                    type,
+                    tracksScrobbled = 0,
+                    name,
+                    initialized = false,
+                    requiresAuth = false,
+                    requiresAuthInteraction = false,
+                    authed = false,
+                } = x;
                 const base = {
                     type,
                     display: capitalize(type),
                     tracksDiscovered: tracksScrobbled,
                     name,
-                    hasAuth: false,
-                    status: tracksScrobbled > 0 ? 'Received Data' : 'Awaiting Data'
+                    hasAuth: requiresAuth,
                 };
-                switch (x.type) {
-                    case 'lastfm':
-                        const authed = x.initialized;
-                        return {
-                            ...base,
-                            hasAuth: true,
-                            authed,
-                            status: authed ? base.status : 'Auth Interaction Required',
-                        }
-                    default:
-                        return base;
+                if(!initialized) {
+                    base.status = 'Not Initialized';
+                } else if(requiresAuth && !authed) {
+                    base.status = requiresAuthInteraction ? 'Auth Interaction Required' : 'Authentication Failed Or Not Attempted'
+                } else {
+                    base.status = tracksScrobbled > 0 ? 'Received Data' : 'Awaiting Data';
                 }
+                return base;
             })
             res.render('status', {
                 sources: sourceData,

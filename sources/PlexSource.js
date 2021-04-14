@@ -50,6 +50,7 @@ export default class PlexSource extends AbstractSource {
         } else {
             this.logger.info(`Initializing with the following filters => Users: ${this.users === undefined ? 'N/A' : this.users.join(', ')} | Libraries: ${this.libraries === undefined ? 'N/A' : this.libraries.join(', ')} | Servers: ${this.servers === undefined ? 'N/A' : this.servers.join(', ')}`);
         }
+        this.initialized = true;
     }
 
     static formatPlayObj(obj, newFromSource = false) {
