@@ -37,6 +37,7 @@ export default class ScrobbleClients {
         try {
             configFile = await readJson(`${this.configDir}/config.json`, {throwOnNotFound: false});
         } catch (e) {
+            // think this should stay as show-stopper since config could include important defaults (delay, retries) we don't want to ignore
             throw new Error('config.json could not be parsed');
         }
         let clientDefaults = {};
@@ -46,10 +47,18 @@ export default class ScrobbleClients {
                 clientDefaults: cd = {},
             } = configFile;
             clientDefaults = cd;
-            if (!mainConfigClientConfigs.every(x => x !== null && typeof x === 'object')) {
-                throw new Error('All clients from config.json must be objects');
-            }
-            for (const c of mainConfigClientConfigs) {
+            const validMainConfigs = mainConfigClientConfigs.reduce((acc, curr, i) => {
+                if(curr === null) {
+                    this.logger.error(`The client config entry at index ${i} in config.json is null but should be an object, will not parse`);
+                    return acc;
+                }
+                if(typeof curr !== 'object') {
+                    this.logger.error(`The client config entry at index ${i} in config.json should be an object, will not parse`);
+                    return acc;
+                }
+                return acc.concat(curr);
+            }, []);
+            for (const c of validMainConfigs) {
                 const {name = 'unnamed'} = c;
                 configs.push({...c,
                     name,
@@ -103,25 +112,36 @@ export default class ScrobbleClients {
             try {
                 rawClientConfigs = await readJson(`${this.configDir}/${clientType}.json`, {throwOnNotFound: false});
             } catch (e) {
-                throw new Error(`${clientType}.json config file could not be parsed`);
+                this.logger.error(`${clientType}.json config file could not be parsed`);
+                continue;
             }
             if (rawClientConfigs !== undefined) {
                 let clientConfigs = [];
                 if (Array.isArray(rawClientConfigs)) {
                     clientConfigs = rawClientConfigs;
-                } else if (rawClientConfigs === null || typeof rawClientConfigs === 'object') {
+                } else if(rawClientConfigs === null) {
+                    this.logger.error(`${clientType}.json contained no data`);
+                    continue;
+                } else if (typeof rawClientConfigs === 'object') {
                     // backwards compatibility, assuming its single-user mode
+                    this.logger.warn(`DEPRECATED: Starting in 0.4 configurations in all [type].json files (${clientType}.json) must be in an array.`);
                     if (rawClientConfigs.data === undefined) {
                         clientConfigs = [{data: rawClientConfigs, mode: 'single', name: 'unnamed'}];
                     } else {
                         clientConfigs = [rawClientConfigs];
                     }
                 } else {
-                    throw new Error(`All top level data from ${clientType}.json must be an object or array of objects`);
+                    this.logger.error(`All top level data from ${clientType}.json must be an array of objects, will not parse configs from file`);
+                    continue;
                 }
-                for (const m of clientConfigs) {
-                    if (m === null || typeof m !== 'object') {
-                        throw new Error(`All top-level data from ${clientType}.json must be an object or array of objects`);
+                for (const [i,m] of clientConfigs.entries()) {
+                    if(m === null) {
+                        this.logger.error(`The config entry at index ${i} from ${clientType}.json is null`);
+                        continue;
+                    }
+                    if (typeof m !== 'object') {
+                        this.logger.error(`The config entry at index ${i} from ${clientType}.json was not an object, skipping`, m);
+                        continue;
                     }
                     const {configureAs = defaultConfigureAs} = m;
                     if(configureAs === 'client') {
@@ -134,47 +154,39 @@ export default class ScrobbleClients {
         }
 
         // we have all possible client configurations so we'll check they are minimally valid
-        const configErrors = configs.reduce((acc, c) => {
+        const validConfigs = configs.reduce((acc, c) => {
             const isValid = isValidConfigStructure(c, {type: true, data: true});
             if (isValid !== true) {
-                const msg = `Client config from ${c.source} with name [${c.name || 'unnamed'}] of type [${c.type || 'unknown'}] has errors: ${isValid.join(' | ')}`;
-                return acc.concat(msg);
+                this.logger.error(`Client config from ${c.source} with name [${c.name || 'unnamed'}] of type [${c.type || 'unknown'}] will not be used because it has errors: ${isValid.join(' | ')}`);
+                return acc;
             }
-            return acc;
+            return acc.concat(c);
         }, []);
-        if (configErrors.length > 0) {
-            for (const m of configErrors) {
-                this.logger.error(m);
-            }
-            throw new Error('Could not build clients due to above errors');
-        }
 
         // all client configs are minimally valid
         // now check that names are unique
-        const nameGroupedConfigs = configs.reduce((acc, curr) => {
+        const nameGroupedConfigs = validConfigs.reduce((acc, curr) => {
             const {name = 'unnamed'} = curr;
             const {[name]: n = []} = acc;
             return {...acc, [name]: [...n, curr]};
         }, {});
-        let nameErrors = false;
+        let noConflictConfigs = [];
         for (const [name, configs] of Object.entries(nameGroupedConfigs)) {
             if (configs.length > 1) {
                 const sources = configs.map(c => `Config object from ${c.source} of type [${c.type}]`);
-                this.logger.error(`Client config naming conflicts -- the following configs have the same name "${name}": 
+                this.logger.error(`The following clients will not be built because of config naming conflicts (they have the same name of "${name}"): 
 ${sources.join('\n')}`);
-                nameErrors = true;
                 if (name === 'unnamed') {
                     this.logger.info('HINT: "unnamed" configs occur when using ENVs, if a multi-user mode config does not have a "name" property, or if a config is built in single-user mode');
                 }
+            } else {
+                noConflictConfigs = [...noConflictConfigs, ...configs];
             }
-        }
-        if (nameErrors) {
-            throw new Error('Could not build clients due to naming conflicts');
         }
 
         // finally! all configs are valid, structurally, and can now be passed to addClient
         // just need to re-map unnnamed to default
-        const finalConfigs = configs.map(({name = 'unnamed', ...x}) => ({
+        const finalConfigs = noConflictConfigs.map(({name = 'unnamed', ...x}) => ({
             ...x,
             name
         }));
@@ -197,11 +209,11 @@ ${sources.join('\n')}`);
                 const mj = new MalojaScrobbler(name, data);
                 const testSuccess = await mj.testConnection();
                 if (testSuccess === false) {
-                    throw new Error(`(${name}) Maloja client not initialized due to failure during connection testing`);
+                    this.logger.error(`(${name}) Maloja client not initialized due to failure during connection testing. Client needs to be successfully initialized before scrobbling.`);
                 } else {
                     this.logger.info(`(${name}) Maloja client initialized`);
-                    this.clients.push(mj)
                 }
+                this.clients.push(mj);
                 break;
             case 'lastfm':
                 this.logger.debug(`(${name}) Attempting Lastfm initialization...`);
@@ -209,10 +221,10 @@ ${sources.join('\n')}`);
                 try {
                     await lfm.initialize()
                     this.logger.info(`(${name}) Lastfm client initialized`);
-                    this.clients.push(lfm)
                 } catch(e) {
-                    this.logger.info(`(${name}) Could not initialize Lastfm client`)
+                    this.logger.info(`(${name}) Could not initialize Lastfm client. Client needs to be successfully initialized before scrobbling.`)
                 }
+                this.clients.push(lfm);
                 break;
             default:
                 break;

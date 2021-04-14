@@ -128,7 +128,7 @@ app.use(bodyParser.json());
         const scrobbleSources = new ScrobbleSources(localUrl, configDir);
         let deprecatedConfigs = [];
         if (spotify !== undefined) {
-            logger.warn(`Using 'spotify' top-level property in config.json is deprecated and will be removed in next major version. Please use 'sources' instead.`)
+            logger.warn(`DEPRECATED: Using 'spotify' top-level property in config.json will be removed in next major version (0.4). Please use 'sources' instead.`)
             deprecatedConfigs.push({
                 type: 'spotify',
                 name: 'unnamed',
@@ -138,7 +138,7 @@ app.use(bodyParser.json());
             });
         }
         if (plex !== undefined) {
-            logger.warn(`Using 'plex' top-level property in config.json is deprecated and will be removed in next major version. Please use 'sources' instead.`)
+            logger.warn(`DEPRECATED: Using 'plex' top-level property in config.json will be removed in next major version (0.4). Please use 'sources' instead.`)
             deprecatedConfigs.push({
                 type: 'plex',
                 name: 'unnamed',
@@ -153,7 +153,6 @@ app.use(bodyParser.json());
         const sourceCheckMiddle = makeSourceCheckMiddle(scrobbleSources);
 
         // check ambiguous client/source types like this for now
-        // TODO in next major version require usage of config.json with client/source explicit? IDK
         const lastfmSources = scrobbleSources.getByType('lastfm');
         const lastfmScrobbles = scrobbleClients.getByType('lastfm');
 
