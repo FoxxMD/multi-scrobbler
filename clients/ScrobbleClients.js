@@ -157,7 +157,7 @@ export default class ScrobbleClients {
         const validConfigs = configs.reduce((acc, c) => {
             const isValid = isValidConfigStructure(c, {type: true, data: true});
             if (isValid !== true) {
-                this.logger.error(`Client config from ${c.source} with name [${c.name || 'unnamed'}] of type [${c.type || 'unknown'}] will not be used because it has errors: ${isValid.join(' | ')}`);
+                this.logger.error(`Client config from ${c.source} with name [${c.name || 'unnamed'}] of type [${c.type || 'unknown'}] will not be used because it has structural errors: ${isValid.join(' | ')}`);
                 return acc;
             }
             return acc.concat(c);
@@ -191,7 +191,12 @@ ${sources.join('\n')}`);
             name
         }));
         for (const c of finalConfigs) {
-            await this.addClient(c, clientDefaults);
+            try {
+                await this.addClient(c, clientDefaults);
+            } catch(e) {
+                this.logger.error(`Client ${c.name} was not added because it had unrecoverable errors`);
+                this.logger.error(e);
+            }
         }
     }
 
