@@ -11,7 +11,7 @@ export default class JellyfinSource extends MemorySource {
         super(type, name, config, clients);
         const {users, servers} = config
 
-        if (users === undefined || user === null) {
+        if (users === undefined || users === null) {
             this.users = undefined;
         } else {
             if (!Array.isArray(users)) {
