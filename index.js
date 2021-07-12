@@ -128,7 +128,7 @@ app.use(bodyParser.json());
         const scrobbleSources = new ScrobbleSources(localUrl, configDir);
         let deprecatedConfigs = [];
         if (spotify !== undefined) {
-            logger.warn(`Using 'spotify' top-level property in config.json is deprecated and will be removed in next major version. Please use 'sources' instead.`)
+            logger.warn(`DEPRECATED: Using 'spotify' top-level property in config.json will be removed in next major version (0.4). Please use 'sources' instead.`)
             deprecatedConfigs.push({
                 type: 'spotify',
                 name: 'unnamed',
@@ -138,7 +138,7 @@ app.use(bodyParser.json());
             });
         }
         if (plex !== undefined) {
-            logger.warn(`Using 'plex' top-level property in config.json is deprecated and will be removed in next major version. Please use 'sources' instead.`)
+            logger.warn(`DEPRECATED: Using 'plex' top-level property in config.json will be removed in next major version (0.4). Please use 'sources' instead.`)
             deprecatedConfigs.push({
                 type: 'plex',
                 name: 'unnamed',
@@ -152,54 +152,79 @@ app.use(bodyParser.json());
         const clientCheckMiddle = makeClientCheckMiddle(scrobbleClients);
         const sourceCheckMiddle = makeSourceCheckMiddle(scrobbleSources);
 
+        // check ambiguous client/source types like this for now
+        const lastfmSources = scrobbleSources.getByType('lastfm');
+        const lastfmScrobbles = scrobbleClients.getByType('lastfm');
+
+        const scrobblerNames = lastfmScrobbles.map(x => x.name);
+        const nameColl = lastfmSources.filter(x => scrobblerNames.includes(x.name));
+        if(nameColl.length > 0) {
+            logger.warn(`Last.FM source and clients have same names [${nameColl.map(x => x.name).join(',')}] -- this may cause issues`);
+        }
+
         app.getAsync('/', async function (req, res) {
             let slicedLog = output.slice(0, logConfig.limit + 1);
             if (logConfig.sort === 'ascending') {
                 slicedLog.reverse();
             }
+            // TODO links for re-trying auth and variables for signalling it (and API recently played)
             const sourceData = scrobbleSources.sources.map((x) => {
-                const {type, tracksDiscovered = 0, name, canPoll = false, polling = false} = x;
-                const base = {type, display: capitalize(type), tracksDiscovered, name, canPoll, hasAuth: false};
-                if (canPoll) {
+                const {
+                    type,
+                    tracksDiscovered = 0,
+                    name,
+                    canPoll = false,
+                    polling = false,
+                    initialized = false,
+                    requiresAuth = false,
+                    requiresAuthInteraction = false,
+                    authed = false,
+                } = x;
+                const base = {
+                    type,
+                    display: capitalize(type),
+                    tracksDiscovered,
+                    name,
+                    canPoll,
+                    hasAuth: requiresAuth,
+                    hasAuthInteraction: requiresAuthInteraction,
+                };
+                if(!initialized) {
+                    base.status = 'Not Initialized';
+                } else if(requiresAuth && !authed) {
+                    base.status = requiresAuthInteraction ? 'Auth Interaction Required' : 'Authentication Failed Or Not Attempted'
+                } else if(canPoll) {
                     base.status = polling ? 'Running' : 'Idle';
                 } else {
                     base.status = tracksDiscovered > 0 ? 'Received Data' : 'Awaiting Data'
                 }
-                switch (x.type) {
-                    case 'spotify':
-                        const authed = x.spotifyApi === undefined || x.spotifyApi.getAccessToken() !== undefined;
-                        return {
-                            ...base,
-                            hasAuth: true,
-                            authed,
-                            status: authed ? base.status : 'Auth Interaction Required',
-                        }
-                    default:
-                        return base;
-                }
+                return base;
             });
             const clientData = scrobbleClients.clients.map((x) => {
-                const {type, tracksScrobbled = 0, name} = x;
+                const {
+                    type,
+                    tracksScrobbled = 0,
+                    name,
+                    initialized = false,
+                    requiresAuth = false,
+                    requiresAuthInteraction = false,
+                    authed = false,
+                } = x;
                 const base = {
                     type,
                     display: capitalize(type),
                     tracksDiscovered: tracksScrobbled,
                     name,
-                    hasAuth: false,
-                    status: tracksScrobbled > 0 ? 'Received Data' : 'Awaiting Data'
+                    hasAuth: requiresAuth,
                 };
-                switch (x.type) {
-                    case 'lastfm':
-                        const authed = x.initialized;
-                        return {
-                            ...base,
-                            hasAuth: true,
-                            authed,
-                            status: authed ? base.status : 'Auth Interaction Required',
-                        }
-                    default:
-                        return base;
+                if(!initialized) {
+                    base.status = 'Not Initialized';
+                } else if(requiresAuth && !authed) {
+                    base.status = requiresAuthInteraction ? 'Auth Interaction Required' : 'Authentication Failed Or Not Attempted'
+                } else {
+                    base.status = tracksScrobbled > 0 ? 'Received Data' : 'Awaiting Data';
                 }
+                return base;
             })
             res.render('status', {
                 sources: sourceData,
@@ -276,7 +301,7 @@ app.use(bodyParser.json());
 
             switch (scrobbleClient.type) {
                 case 'lastfm':
-                    res.redirect(scrobbleClient.getAuthUrl());
+                    res.redirect(scrobbleClient.api.getAuthUrl());
                     break;
                 default:
                     return res.status(400).send(`Specified client does not have auth implemented (${scrobbleClient.type})`);
@@ -298,6 +323,9 @@ app.use(bodyParser.json());
                         logger.info('Redirecting to spotify authorization url');
                         res.redirect(source.createAuthUrl());
                     }
+                    break;
+                case 'lastfm':
+                    res.redirect(source.api.getAuthUrl());
                     break;
                 default:
                     return res.status(400).send(`Specified source does not have auth implemented (${source.type})`);
@@ -386,10 +414,13 @@ app.use(bodyParser.json());
                         token
                     } = {}
                 } = req;
-                const client = scrobbleClients.getByName(state);
+                let entity = scrobbleClients.getByName(state);
+                if(entity === undefined) {
+                    entity = scrobbleSources.getByName(state);
+                }
                 try {
-                    await client.authenticate(token);
-                    await client.initialize();
+                    await entity.api.authenticate(token);
+                    await entity.initialize();
                     return res.send('OK');
                 } catch (e) {
                     return res.send(e.message);
@@ -419,6 +450,11 @@ app.use(bodyParser.json());
                         } else {
                             source.poll(scrobbleClients);
                         }
+                    }
+                    break;
+                case 'lastfm':
+                    if(source.initialized === true) {
+                        source.poll(scrobbleClients);
                     }
                     break;
                 default:

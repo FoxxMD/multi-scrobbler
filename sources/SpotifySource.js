@@ -17,6 +17,9 @@ export default class SpotifySource extends AbstractSource {
     workingCredsPath;
     configDir;
 
+    requiresAuth = true;
+    requiresAuthInteraction = true;
+
     constructor(name, config = {}, clients = []) {
         super('spotify', name, config, clients);
         const {
@@ -138,6 +141,25 @@ export default class SpotifySource extends AbstractSource {
         }
 
         this.spotifyApi = new SpotifyWebApi(apiConfig);
+    }
+
+    initialize = async () => {
+        if(this.spotifyApi === undefined) {
+            await this.buildSpotifyApi();
+        }
+        this.initialized = true;
+        return this.initialized;
+    }
+
+    testAuth = async () => {
+        try {
+            await this.callApi((api => api.getMe()));
+            this.authed = true;
+        } catch (e) {
+            this.logger.error('Could not successfully communicate with Spotify API');
+            this.authed = false;
+        }
+        return this.authed;
     }
 
     createAuthUrl = () => {

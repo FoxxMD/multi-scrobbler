@@ -4,6 +4,7 @@ import PlexSource from "./PlexSource.js";
 import TautulliSource from "./TautulliSource.js";
 import {SubsonicSource} from "./SubsonicSource.js";
 import JellyfinSource from "./JellyfinSource.js";
+import LastfmSource from "./LastfmSource.js";
 
 export default class ScrobbleSources {
 
@@ -12,7 +13,7 @@ export default class ScrobbleSources {
     configDir;
     localUrl;
 
-    sourceTypes = ['spotify', 'plex', 'tautulli', 'subsonic', 'jellyfin'];
+    sourceTypes = ['spotify', 'plex', 'tautulli', 'subsonic', 'jellyfin', 'lastfm'];
 
     constructor(localUrl, configDir = process.cwd()) {
         this.configDir = configDir;
@@ -48,16 +49,29 @@ export default class ScrobbleSources {
                 sourceDefaults: sd = {},
             } = configFile;
             sourceDefaults = sd;
-            if (!mainConfigSourcesConfigs.every(x => x !== null && typeof x === 'object')) {
-                throw new Error('All sources from config.json must be objects');
-            }
-            for (const c of mainConfigSourcesConfigs) {
+            const validMainConfigs = mainConfigSourcesConfigs.reduce((acc, curr, i) => {
+                if(curr === null) {
+                    this.logger.error(`The source config entry at index ${i} in config.json is null but should be an object, will not parse`);
+                    return acc;
+                }
+                if(typeof curr !== 'object') {
+                    this.logger.error(`The source config entry at index ${i} in config.json should be an object, will not parse`);
+                    return acc;
+                }
+                return acc.concat(curr);
+            }, []);
+            for (const c of validMainConfigs) {
                 const {name = 'unnamed'} = c;
-                configs.push({...c, name, source: 'config.json'});
+                configs.push({...c,
+                    name,
+                    source: 'config.json',
+                    configureAs: 'source' // override user value
+                });
             }
         }
 
         for (let sourceType of this.sourceTypes) {
+            let defaultConfigureAs = 'source';
             // env builder for single user mode
             switch (sourceType) {
                 case 'spotify':
@@ -138,6 +152,10 @@ export default class ScrobbleSources {
                         })
                     }
                     break;
+                case 'lastfm':
+                    // sane default for lastfm is that user want to scrobble TO it, not FROM it -- this is also existing behavior
+                    defaultConfigureAs = 'client';
+                    break;
                 default:
                     break;
             }
@@ -145,52 +163,60 @@ export default class ScrobbleSources {
             try {
                 rawSourceConfigs = await readJson(`${this.configDir}/${sourceType}.json`, {throwOnNotFound: false});
             } catch (e) {
-                throw new Error(`${sourceType}.json config file could not be parsed`);
+                this.logger.error(`${sourceType}.json config file could not be parsed`);
+                continue;
             }
             if (rawSourceConfigs !== undefined) {
                 let sourceConfigs = [];
                 if (Array.isArray(rawSourceConfigs)) {
                     sourceConfigs = rawSourceConfigs;
-                } else if (rawSourceConfigs === null || typeof rawSourceConfigs === 'object') {
+                } else if (rawSourceConfigs === null) {
+                    this.logger.error(`${sourceType}.json contained no data`);
+                    continue;
+                } else if (typeof rawSourceConfigs === 'object') {
                     // backwards compatibility, assuming its single-user mode
+                    this.logger.warn(`DEPRECATED: Starting in 0.4 configurations in all [type].json files (${sourceType}.json) must be in an array.`);
                     if (rawSourceConfigs.data === undefined) {
                         sourceConfigs = [{data: rawSourceConfigs, mode: 'single', name: 'unnamed'}];
                     } else {
                         sourceConfigs = [rawSourceConfigs];
                     }
                 } else {
-                    throw new Error(`All top level data from ${sourceType}.json must be an object or array of objects`);
+                    this.logger.error(`All top level data from ${sourceType}.json must be an array of objects, will not parse configs from file`);
+                    continue;
                 }
-                for (const m of sourceConfigs) {
-                    if (m === null || typeof m !== 'object') {
-                        throw new Error(`All top-level data from ${sourceType}.json must be an object or array of objects`);
+                for (const [i,m] of sourceConfigs.entries()) {
+                    if(m === null) {
+                        this.logger.error(`The config entry at index ${i} from ${sourceType}.json is null`);
+                        continue;
                     }
-                    m.source = `${sourceType}.json`;
-                    m.type = sourceType;
-                    configs.push(m);
+                    if (typeof m !== 'object') {
+                        this.logger.error(`The config entry at index ${i} from ${sourceType}.json was not an object, skipping`, m);
+                        continue;
+                    }
+                    const {configureAs = defaultConfigureAs} = m;
+                    if(configureAs === 'source') {
+                        m.source = `${sourceType}.json`;
+                        m.type = sourceType;
+                        configs.push(m);
+                    }
                 }
             }
         }
 
         // we have all possible configurations so we'll check they are minimally valid
-        const configErrors = configs.reduce((acc, c) => {
+        const validConfigs = configs.reduce((acc, c) => {
             const isValid = isValidConfigStructure(c, {type: true, data: true});
             if (isValid !== true) {
-                const msg = `Source config from ${c.source} with name [${c.name || 'unnamed'}] of type [${c.type || 'unknown'}] has errors: ${isValid.join(' | ')}`;
-                return acc.concat(msg);
+                this.logger.error(`Source config from ${c.source} with name [${c.name || 'unnamed'}] of type [${c.type || 'unknown'}] will not be used because it has structural errors: ${isValid.join(' | ')}`);
+                return acc;
             }
-            return acc;
+            return acc.concat(c);
         }, []);
-        if (configErrors.length > 0) {
-            for (const m of configErrors) {
-                this.logger.error(m);
-            }
-            throw new Error('Could not build sources due to above errors');
-        }
 
         // finally! all configs are valid, structurally, and can now be passed to addClient
         // do a last check that names (within each type) are unique and warn if not, but add anyways
-        const typeGroupedConfigs = configs.reduce((acc, curr) => {
+        const typeGroupedConfigs = validConfigs.reduce((acc, curr) => {
             const {type} = curr;
             const {[type]: t = []} = acc;
             return {...acc, [type]: [...t, curr]};
@@ -217,7 +243,12 @@ export default class ScrobbleSources {
                     name: hasDups ? `${name}${i + 1}` : name
                 }));
                 for (const c of tempNamedConfigs) {
-                    await this.addSource(c, sourceDefaults);
+                    try {
+                        await this.addSource(c, sourceDefaults);
+                    } catch(e) {
+                        this.logger.error(`Source ${c.name} of type ${c.type} was not added because of unrecoverable errors`);
+                        this.logger.error(e);
+                    }
                 }
             }
         }
@@ -231,37 +262,66 @@ export default class ScrobbleSources {
         const {type, name, clients = [], data: d = {}} = clientConfig;
         // add defaults
         const data = {...defaults, ...d};
-        this.logger.debug(`(${name}) Initializing ${type} source`);
+        this.logger.debug(`(${name}) Constructing ${type} source`);
+        let newSource;
         switch (type) {
             case 'spotify':
-                const spotifySource = new SpotifySource(name, {
+                newSource = new SpotifySource(name, {
                     ...data,
                     localUrl: this.localUrl,
                     configDir: this.configDir
                 }, clients);
-                await spotifySource.buildSpotifyApi();
-                this.sources.push(spotifySource);
                 break;
             case 'plex':
-                const plexSource = await new PlexSource(name, data, clients);
-                this.sources.push(plexSource);
+                newSource = await new PlexSource(name, data, clients);
                 break;
             case 'tautulli':
-                const tautulliSource = await new TautulliSource(name, data, clients);
-                this.sources.push(tautulliSource);
+                newSource = await new TautulliSource(name, data, clients);
                 break;
             case 'subsonic':
-                const ssSource = new SubsonicSource(name, data, clients);
-                await ssSource.testConnection();
-                this.sources.push(ssSource);
+                newSource = new SubsonicSource(name, data, clients);
                 break;
             case 'jellyfin':
-                const jellyfinSource = await new JellyfinSource(name, data, clients);
-                this.sources.push(jellyfinSource);
+                newSource = await new JellyfinSource(name, data, clients);
+                break;
+            case 'lastfm':
+                newSource = await new LastfmSource(name, {...data, configDir: this.configDir}, clients);
                 break;
             default:
                 break;
         }
-        this.logger.info(`(${name}) ${type} source initialized`);
+
+        if(newSource === undefined) {
+            // really shouldn't get here!
+            throw new Error(`Source of type ${type} was not recognized??`);
+        }
+        if(newSource.initialized === false) {
+            this.logger.debug(`(${name}) Attempting ${type} initialization...`);
+            if (await newSource.initialize() === false) {
+                this.logger.error(`(${name}) ${type} source failed to initialize. Source needs to be successfully initialized before activity capture can begin.`);
+                return;
+            } else {
+                this.logger.info(`(${name}) ${type} source initialized`);
+            }
+        } else {
+            this.logger.info(`(${name}) ${type} source initialized`);
+        }
+
+        if(newSource.requiresAuth && !newSource.authed) {
+            this.logger.debug(`(${name}) Checking ${type} source auth...`);
+            let success;
+            try {
+                success = await newSource.testAuth();
+            } catch (e) {
+                success = false;
+            }
+            if(!success) {
+                this.logger.warn(`(${name}) ${type} source auth failed.`);
+            } else {
+                this.logger.info(`(${name}) ${type} source auth OK`);
+            }
+        }
+
+        this.sources.push(newSource);
     }
 }

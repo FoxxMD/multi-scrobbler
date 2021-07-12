@@ -37,7 +37,7 @@
             <% sources.forEach(function (source){ %>
             <div class="bg-white shadow-md rounded my-6 dark:bg-gray-500 dark:text-white">
                 <div class="space-x-4 p-6 md:px-10 md:py-6 leading-6 font-semibold bg-gray-300 dark:bg-gray-700 dark:text-white">
-                    <h3><%= source.display %> - <%= source.name %></h3>
+                    <h3>(Source) <%= source.display %> - <%= source.name %></h3>
                 </div>
                 <div class="p-6 md:px-10 md:py-6">
                     <div><b>Status: <%= source.status %></b></div>
@@ -57,7 +57,7 @@
             <% clients.forEach(function (client){ %>
                 <div class="bg-white shadow-md rounded my-6 dark:bg-gray-500 dark:text-white">
                     <div class="space-x-4 p-6 md:px-10 md:py-6 leading-6 font-semibold bg-gray-300 dark:bg-gray-700 dark:text-white">
-                        <h3><%= client.display %> - <%= client.name %></h3>
+                        <h3>(Client) <%= client.display %> - <%= client.name %></h3>
                     </div>
                     <div class="p-6 md:px-10 md:py-6">
                         <ul>

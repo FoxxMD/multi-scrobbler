@@ -168,6 +168,18 @@ Must be using Jellyfin 10.7 or greater
 
 See [`jellyfin.json.example`](../config/jellyfin.json.example)
 
+## [Last.fm (Source)](https://www.last.fm)
+
+See the [Last.fm (Client)](#lastfm) setup for registration instructions.
+
+### ENV-Based
+
+No support for ENV based for Last.fm as a client (only source)
+
+### JSON-Based
+
+See [`lastfm.json.example`](../config/lastfm.json.example), change `configureAs` to `source`.
+
 # Clients
 
 ## [Maloja](https://github.com/krateng/maloja)

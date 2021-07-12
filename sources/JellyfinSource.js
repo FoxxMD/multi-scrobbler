@@ -11,7 +11,7 @@ export default class JellyfinSource extends MemorySource {
         super(type, name, config, clients);
         const {users, servers} = config
 
-        if (users === undefined || user === null) {
+        if (users === undefined || users === null) {
             this.users = undefined;
         } else {
             if (!Array.isArray(users)) {
@@ -38,6 +38,7 @@ export default class JellyfinSource extends MemorySource {
         } else {
             this.logger.info(`Initializing with the following filters => Users: ${this.users === undefined ? 'N/A' : this.users.join(', ')} | Servers: ${this.servers === undefined ? 'N/A' : this.servers.join(', ')}`);
         }
+        this.initialized = true;
     }
 
     static formatPlayObj(obj, newFromSource = false) {

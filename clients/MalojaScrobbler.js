@@ -15,6 +15,8 @@ const feat = ["ft.", "ft", "feat.", "feat", "featuring", "Ft.", "Ft", "Feat.", "
 
 export default class MalojaScrobbler extends AbstractScrobbleClient {
 
+    requiresAuth = true;
+
     constructor(name, config = {}, options = {}) {
         super('maloja', name, config, options);
         const {url, apiKey} = config;
@@ -93,24 +95,50 @@ export default class MalojaScrobbler extends AbstractScrobbleClient {
 
     testConnection = async () => {
 
-        const {url, apiKey} = this.config;
+        const {url} = this.config;
         try {
             const serverInfoResp = await this.callApi(request.get(`${url}/apis/mlj_1/serverinfo`));
             const {
+                statusCode,
                 body: {
                     version = [],
                     versionstring = '',
                 } = {},
             } = serverInfoResp;
-            if (version.length === 0) {
-                this.logger.error('Server did not respond with a version. Either the base URL is incorrect or this Maloja server is too old :(');
+
+            if (statusCode >= 300) {
+                this.logger.info('Test connection failed');
                 return false;
             }
-            this.logger.info(`Maloja Server Version: ${versionstring}`);
-            if (version[0] < 2 || version[1] < 7) {
-                this.logger.warn('Maloja Server Version is less than 2.7, please upgrade to ensure compatibility');
-            }
 
+            this.logger.info('Test connection succeeded!');
+
+            if (version.length === 0) {
+                this.logger.warn('Server did not respond with a version. Either the base URL is incorrect or this Maloja server is too old :(');
+            } else {
+                this.logger.info(`Maloja Server Version: ${versionstring}`);
+                if (version[0] < 2 || version[1] < 7) {
+                    this.logger.warn('Maloja Server Version is less than 2.7, please upgrade to ensure compatibility');
+                }
+            }
+            return true;
+        } catch (e) {
+            this.logger.error('Testing connection failed');
+            this.logger.error(e);
+            return false;
+        }
+    }
+
+    initialize = async () => {
+        // just checking that we can get a connection
+        this.initialized = await this.testConnection();
+        return this.initialized;
+    }
+
+    testAuth = async (withKey = true) => {
+
+        const {url, apiKey} = this.config;
+        try {
             const resp = await this.callApi(request
                 .get(`${url}/apis/mlj_1/test`)
                 .query({key: apiKey}));
@@ -124,20 +152,22 @@ export default class MalojaScrobbler extends AbstractScrobbleClient {
                 text = '',
             } = resp;
             if (bodyStatus.toLocaleLowerCase() === 'ok') {
-                this.logger.info('Test connection succeeded!');
-                this.initialized = true;
-                return true;
+                this.logger.info('Auth test passed!');
+                this.authed = true;
+            } else {
+                this.authed = false;
+                this.logger.error('Testing connection failed => Server Response body was malformed -- should have returned "status: ok"...is the URL correct?', {
+                    status,
+                    body,
+                    text: text.slice(0, 50)
+                });
             }
-            this.logger.error('Testing connection failed => Server Response body was malformed -- should have returned "status: ok"...is the URL correct?', {
-                status,
-                body,
-                text: text.slice(0, 50)
-            });
-            return false;
         } catch (e) {
-            this.logger.error('Testing connection failed');
-            return false;
+            this.logger.error('Auth test failed');
+            this.logger.error(e);
+            this.authed = false;
         }
+        return this.authed;
     }
 
     refreshScrobbles = async () => {

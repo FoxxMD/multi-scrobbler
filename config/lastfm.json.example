@@ -1,6 +1,8 @@
 [
   {
-    "name": "myLastFm",                                          // required, a name to identify your Client
+    "name": "myLastFm",                                          // [As Client/Source] required if configured as "client", a name to identify your Client/Source
+    "configureAs": "client",                                     // optional and default to "client", set to "source" to use this configuration as a Source
+    "clients": [],                                               // [As Source] optional, list of scrobble Clients (by config name) that this Source should scrobble to. Using an empty list or not including this property will make this Source scrobble to all Clients.
     "data": {
       "apiKey": "string",                                        // required, Lastfm api key
       "secret": "string",                                        // required, Lastfm shared secret

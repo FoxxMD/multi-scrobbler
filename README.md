@@ -11,6 +11,7 @@ A javascript app to scrobble plays from multiple sources to [Maloja](https://git
   * [Plex](/docs/configuration.md#plex) or [Tautulli](/docs/configuration.md#tautulli)
   * [Subsonic-compatible APIs](/docs/configuration.md#subsonic) (like [Airsonic](https://airsonic.github.io/))
   * [Jellyfin](/docs/configuration.md#jellyfin)
+  * [Last.fm](/docs/configuration.md#lastfm-source)
 * Supports scrobbling to many clients
   * [Maloja](/docs/configuration.md#maloja)
   * [Last.fm](/docs/configuration.md#lastfm)
@@ -26,6 +27,10 @@ A javascript app to scrobble plays from multiple sources to [Maloja](https://git
 * **Open-source** -- Get peace of mind knowing exactly how your personal data is being handled.
 * **Consolidate play sources** -- Scrobble from many sources to one client with ease and without duplicating tracks.
 * **Manage scrobbling for others** -- Scrobble for your friends and family without any setup on their part. Easily silo sources to specific clients to keep plays separate.
+
+**But I already scrobble my music to Last.fm, is multi-scrobbler for me?**
+
+Yes! You can use [Last.fm as a Source](/docs/configuration.md#lastfm-source) to mirror scrobbles from your Last.fm profile to Maloja. That way you can keep your current scrobble setup as-is but still get the benefit of capturing your data to a self-hosted location.
 
 <img src="/assets/status-ui.jpg" width="800">
 
