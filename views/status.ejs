@@ -81,9 +81,11 @@
                     <div>Sort  : <%- logs.sort %></div>
                     <div>Limit : <%- logs.limit %></div>
                     <br />
-                    <% logs.output.forEach(function (logEntry){ %>
-                        <%-logEntry%>
-                    <% }) %>
+                    <div class="logs">
+                        <% logs.output.forEach(function (logEntry){ %>
+                            <%-logEntry%>
+                        <% }) %>
+                    </div>
                 </div>
                 <div class="w-full flex-auto flex min-h-0 overflow-auto">
                     <div class="w-full relative flex-auto">
@@ -106,6 +108,16 @@
             localStorage.setItem('ms-dark', 'yes')
         }
     }
+</script>
+
+<script src="https://cdn.socket.io/3.1.3/socket.io.min.js" integrity="sha384-cPwlPLvBTa3sKAgddT6krw0cJat7egBga3DJepJyrLl4Q9/5WLra3rrnMcyTyOnh" crossorigin="anonymous"></script>
+<script>
+    let socket = io();
+    socket.on("connect", () => {
+        socket.on("log", data => {
+            document.querySelector('.logs').innerHTML = data
+        });
+    });
 </script>
 </body>
 </html>

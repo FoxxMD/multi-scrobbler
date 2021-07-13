@@ -24,6 +24,8 @@ import {makeClientCheckMiddle, makeSourceCheckMiddle} from "./server/middleware.
 import TautulliSource from "./sources/TautulliSource.js";
 import PlexSource from "./sources/PlexSource.js";
 import JellyfinSource from "./sources/JellyfinSource.js";
+import { Server } from "socket.io";
+import fs from "fs";
 
 const storage = multer.memoryStorage()
 const upload = multer({storage: storage})
@@ -471,6 +473,15 @@ app.use(bodyParser.json());
         app.set('view engine', 'ejs');
         logger.info(`Server started at ${localUrl}`);
         const server = await app.listen(port)
+
+        const io = new Server(server);
+        fs.watch("logs/scrobble-current.log", (eventType, filename) => {
+            let slicedLog = output.slice(0, logConfig.limit + 1);
+            if (logConfig.sort === 'ascending') {
+                slicedLog.reverse();
+            }
+            io.emit('log', slicedLog);
+        });
     } catch (e) {
         logger.error('Exited with uncaught error');
         logger.error(e);
