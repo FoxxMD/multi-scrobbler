@@ -24,6 +24,8 @@ import {makeClientCheckMiddle, makeSourceCheckMiddle} from "./server/middleware.
 import TautulliSource from "./sources/TautulliSource.js";
 import PlexSource from "./sources/PlexSource.js";
 import JellyfinSource from "./sources/JellyfinSource.js";
+import { Server } from "socket.io";
+import fs from "fs";
 
 const storage = multer.memoryStorage()
 const upload = multer({storage: storage})
@@ -39,10 +41,10 @@ let output = []
 const stream = new Writable()
 stream._write = (chunk, encoding, next) => {
     let formatString = chunk.toString().replace('\n', '<br />')
-    .replace(/(debug)\s.+:/gi, '<span class="debug text-pink-400">$1: </span>')
-    .replace(/(warn)\s.+:/gi, '<span class="warn text-blue-400">$1: </span>')
-    .replace(/(info)\s.+:/gi, '<span class="info text-yellow-500">$1: </span>')
-    .replace(/(error)\s.+:/gi, '<span class="error text-red-400">$1: </span>')
+    .replace(/(debug)\s/gi, '<span class="debug text-pink-400">$1 </span>')
+    .replace(/(warn)\s/gi, '<span class="warn text-blue-400">$1 </span>')
+    .replace(/(info)\s/gi, '<span class="info text-yellow-500">$1 </span>')
+    .replace(/(error)\s/gi, '<span class="error text-red-400">$1 </span>')
     output.unshift(formatString);
     output = output.slice(0, 101);
     next()
@@ -471,6 +473,15 @@ app.use(bodyParser.json());
         app.set('view engine', 'ejs');
         logger.info(`Server started at ${localUrl}`);
         const server = await app.listen(port)
+
+        const io = new Server(server);
+        fs.watch("logs/scrobble-current.log", (eventType, filename) => {
+            let slicedLog = output.slice(0, logConfig.limit + 1);
+            if (logConfig.sort === 'ascending') {
+                slicedLog.reverse();
+            }
+            io.emit('log', slicedLog);
+        });
     } catch (e) {
         logger.error('Exited with uncaught error');
         logger.error(e);
