@@ -115,7 +115,7 @@
     let socket = io();
     socket.on("connect", () => {
         socket.on("log", data => {
-            document.querySelector('.logs').innerHTML = data
+            document.querySelector('.logs').innerHTML = data.join().replaceAll(/<br\s*\/?>\,/g,'<br />')
         });
     });
 </script>
