@@ -96,6 +96,7 @@
     </div>
 </div>
 <script>
+    window.sort = 'desc';
     let toggleSwitch = document.querySelector('#toggle-switch');
     toggleSwitch.addEventListener('change', (event) => {
         document.body.classList.toggle('dark')
@@ -144,9 +145,11 @@
             fetch(e.target.href).then(req => {
                 if (req.ok) {
                     if (e.target.dataset.sort === 'descending') {
+                        window.sort = 'desc';
                         document.querySelector('[data-sort="ascending"]').classList.remove('font-bold', 'no-underline', 'pointer-events-none')
                         document.querySelector('[data-sort="descending"]').classList.add('font-bold', 'no-underline', 'pointer-events-none')
                     } else {
+                        window.sort = 'asc';
                         document.querySelector('[data-sort="descending"]').classList.remove('font-bold', 'no-underline', 'pointer-events-none')
                         document.querySelector('[data-sort="ascending"]').classList.add('font-bold', 'no-underline', 'pointer-events-none')
                     }
@@ -177,8 +180,12 @@
     });
     socket.on("connect", () => {
         socket.on("log", data => {
-            document.querySelector('.logs').innerHTML = data.join().replaceAll(/<br\s*\/?>\,/g,'<br />')
+            const currLogs = document.querySelector('.logs').innerHTML;
+            document.querySelector('.logs').innerHTML  = window.sort === 'desc' ? data.concat(currLogs) : currLogs.concat(data)
         });
+        socket.on("logClear", data => {
+            document.querySelector('.logs').innerHTML = data.join().replaceAll(/<br\s*\/?>\,/g,'<br />');
+        })
     });
 </script>
 </body>

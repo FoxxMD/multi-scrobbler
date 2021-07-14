@@ -34,6 +34,16 @@ dayjs.extend(isBetween);
 dayjs.extend(relativeTime);
 dayjs.extend(duration);
 
+const app = addAsync(express());
+const router = Router();
+
+const port = process.env.PORT ?? 9078;
+const server = await app.listen(port)
+const io = new Server(server);
+
+app.use(router);
+app.use(bodyParser.json());
+
 const {transports} = winston;
 
 let output = []
@@ -46,7 +56,8 @@ stream._write = (chunk, encoding, next) => {
     .replace(/(error)\s/gi, '<span class="error text-red-400">$1 </span>')
     output.unshift(formatString);
     output = output.slice(0, 101);
-    next()
+    io.emit('log', formatString);
+    next();
 }
 const streamTransport = new winston.transports.Stream({
     stream,
@@ -60,7 +71,6 @@ const logConfig = {
 
 const availableLevels = ['info', 'debug'];
 const logPath = process.env.LOG_DIR || `${process.cwd()}/logs`;
-const port = process.env.PORT ?? 9078;
 const localUrl = `http://localhost:${port}`;
 
 const rotateTransport = new winston.transports.DailyRotateFile({
@@ -94,15 +104,6 @@ winston.loggers.add('default', loggerOptions);
 const logger = winston.loggers.get('default');
 
 const configDir = process.env.CONFIG_DIR || `${process.cwd()}/config`;
-
-const app = addAsync(express());
-const router = Router();
-
-const server = await app.listen(port)
-const io = new Server(server);
-
-app.use(router);
-app.use(bodyParser.json());
 
 (async function () {
     try {
@@ -407,8 +408,8 @@ app.use(bodyParser.json());
             if (logConfig.sort === 'ascending') {
                 slicedLog.reverse();
             }
-            io.emit('log', slicedLog);
             res.send('OK');
+            io.emit('logClear', slicedLog);
         });
 
         app.getAsync(/.*callback$/, async function (req, res) {
@@ -480,14 +481,6 @@ app.use(bodyParser.json());
         app.set('view engine', 'ejs');
         logger.info(`Server started at ${localUrl}`);
 
-        // Check every 10 seconds and push logs to front end
-        setInterval(() => {
-            let slicedLog = output.slice(0, logConfig.limit + 1);
-            if (logConfig.sort === 'ascending') {
-                slicedLog.reverse();
-            }
-            io.emit('log', slicedLog);
-        }, 10000); // Check every 10 seconds
     } catch (e) {
         logger.error('Exited with uncaught error');
         logger.error(e);
