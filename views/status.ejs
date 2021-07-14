@@ -108,11 +108,73 @@
             localStorage.setItem('ms-dark', 'yes')
         }
     }
+    
+    document.querySelector('.log-info').addEventListener('click', e => {
+        e.preventDefault()
+        fetch(e.target.href).then(req => {
+            if (req.ok) {
+                e.target.classList.add('font-bold', 'no-underline', 'pointer-events-none')
+                document.querySelector('.log-debug').classList.remove('font-bold', 'no-underline', 'pointer-events-none')
+            }
+        })
+    })
+
+    // log click
+    document.querySelectorAll('[data-log]').forEach(el => {
+        el.addEventListener('click', e => {
+            e.preventDefault()
+            fetch(e.target.href).then(req => {
+                if (req.ok) {
+                    if (e.target.dataset.log === 'info') {
+                        document.querySelector('[data-log="debug"]').classList.remove('font-bold', 'no-underline', 'pointer-events-none')
+                        document.querySelector('[data-log="info"]').classList.add('font-bold', 'no-underline', 'pointer-events-none')
+                    } else {
+                        document.querySelector('[data-log="info"]').classList.remove('font-bold', 'no-underline', 'pointer-events-none')
+                        document.querySelector('[data-log="debug"]').classList.add('font-bold', 'no-underline', 'pointer-events-none')
+                    }
+                }
+            })
+        })
+    })
+
+    // sort click
+    document.querySelectorAll('[data-sort]').forEach(el => {
+        el.addEventListener('click', e => {
+            e.preventDefault()
+            fetch(e.target.href).then(req => {
+                if (req.ok) {
+                    if (e.target.dataset.sort === 'descending') {
+                        document.querySelector('[data-sort="ascending"]').classList.remove('font-bold', 'no-underline', 'pointer-events-none')
+                        document.querySelector('[data-sort="descending"]').classList.add('font-bold', 'no-underline', 'pointer-events-none')
+                    } else {
+                        document.querySelector('[data-sort="descending"]').classList.remove('font-bold', 'no-underline', 'pointer-events-none')
+                        document.querySelector('[data-sort="ascending"]').classList.add('font-bold', 'no-underline', 'pointer-events-none')
+                    }
+                }
+            })
+        })
+    })
+    // sort click
+    document.querySelectorAll('[data-limit]').forEach(el => {
+        el.addEventListener('click', e => {
+            e.preventDefault()
+            fetch(e.target.href).then(req => {
+                if (req.ok) {
+                    document.querySelectorAll('[data-limit]').forEach(el => {
+                        el.classList.remove('font-bold', 'no-underline', 'pointer-events-none')
+                        e.target.classList.add('font-bold', 'no-underline', 'pointer-events-none')
+                    })
+                }
+            })
+        })
+    })
 </script>
 
 <script src="https://cdn.socket.io/3.1.3/socket.io.min.js" integrity="sha384-cPwlPLvBTa3sKAgddT6krw0cJat7egBga3DJepJyrLl4Q9/5WLra3rrnMcyTyOnh" crossorigin="anonymous"></script>
 <script>
-    let socket = io();
+    let socket = io({
+        reconnectionAttempts: 5, // bail after 5 attempts
+    });
     socket.on("connect", () => {
         socket.on("log", data => {
             document.querySelector('.logs').innerHTML = data.join().replaceAll(/<br\s*\/?>\,/g,'<br />')

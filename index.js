@@ -25,7 +25,6 @@ import TautulliSource from "./sources/TautulliSource.js";
 import PlexSource from "./sources/PlexSource.js";
 import JellyfinSource from "./sources/JellyfinSource.js";
 import { Server } from "socket.io";
-import fs from "fs";
 
 const storage = multer.memoryStorage()
 const upload = multer({storage: storage})
@@ -98,6 +97,9 @@ const configDir = process.env.CONFIG_DIR || `${process.cwd()}/config`;
 
 const app = addAsync(express());
 const router = Router();
+
+const server = await app.listen(port)
+const io = new Server(server);
 
 app.use(router);
 app.use(bodyParser.json());
@@ -233,9 +235,9 @@ app.use(bodyParser.json());
                 clients: clientData,
                 logs: {
                     output: slicedLog,
-                    limit: [10, 20, 50, 100].map(x => `<a class="capitalize ${logConfig.limit === x ? 'font-bold no-underline pointer-events-none' : ''}" href="logs/settings/update?limit=${x}">${x}</a>`).join(' | '),
-                    sort: ['ascending', 'descending'].map(x => `<a class="capitalize ${logConfig.sort === x ? 'font-bold no-underline pointer-events-none' : ''}" href="logs/settings/update?sort=${x}">${x}</a>`).join(' | '),
-                    level: availableLevels.map(x => `<a class="capitalize ${logConfig.level === x ? 'font-bold no-underline pointer-events-none' : ''}" href="logs/settings/update?level=${x}">${x}</a>`).join(' | ')
+                    limit: [10, 20, 50, 100].map(x => `<a class="capitalize ${logConfig.limit === x ? 'font-bold no-underline pointer-events-none' : ''}" data-limit="${x}" href="logs/settings/update?limit=${x}">${x}</a>`).join(' | '),
+                    sort: ['ascending', 'descending'].map(x => `<a class="capitalize ${logConfig.sort === x ? 'font-bold no-underline pointer-events-none' : ''}" data-sort="${x}" href="logs/settings/update?sort=${x}">${x}</a>`).join(' | '),
+                    level: availableLevels.map(x => `<a class="capitalize log-${x} ${logConfig.level === x ? `font-bold no-underline pointer-events-none` : ''}" data-log="${x}" href="logs/settings/update?level=${x}">${x}</a>`).join(' | ')
                 }
             });
         })
@@ -401,6 +403,11 @@ app.use(bodyParser.json());
                         break;
                 }
             }
+            let slicedLog = output.slice(0, logConfig.limit + 1);
+            if (logConfig.sort === 'ascending') {
+                slicedLog.reverse();
+            }
+            io.emit('log', slicedLog);
             res.send('OK');
         });
 
@@ -472,16 +479,15 @@ app.use(bodyParser.json());
         app.set('views', './views');
         app.set('view engine', 'ejs');
         logger.info(`Server started at ${localUrl}`);
-        const server = await app.listen(port)
 
-        const io = new Server(server);
-        fs.watch("logs/scrobble-current.log", (eventType, filename) => {
+        // Check every 10 seconds and push logs to front end
+        setInterval(() => {
             let slicedLog = output.slice(0, logConfig.limit + 1);
             if (logConfig.sort === 'ascending') {
                 slicedLog.reverse();
             }
             io.emit('log', slicedLog);
-        });
+        }, 10000); // Check every 10 seconds
     } catch (e) {
         logger.error('Exited with uncaught error');
         logger.error(e);
