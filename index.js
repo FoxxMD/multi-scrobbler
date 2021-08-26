@@ -193,6 +193,7 @@ const configDir = process.env.CONFIG_DIR || `${process.cwd()}/config`;
                     canPoll,
                     hasAuth: requiresAuth,
                     hasAuthInteraction: requiresAuthInteraction,
+                    authed,
                 };
                 if(!initialized) {
                     base.status = 'Not Initialized';
