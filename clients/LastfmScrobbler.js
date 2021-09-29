@@ -296,8 +296,8 @@ export default class LastfmScrobbler extends AbstractScrobbleClient {
             } else {
                 this.logger.info(`Scrobbled (Backlog) => (${source}) ${buildTrackString(playObj)}`);
             }
-            if(ignoreMsg !== '') {
-                this.logger.warn(`Service ignored this scrobble 😬 => (Code ${ignoreCode}) ${ignoreMsg}`)
+            if(ignored > 0) {
+                this.logger.warn(`Service ignored this scrobble 😬 => (Code ${ignoreCode}) ${(ignoreMsg === '' ? '(No error message returned)' : ignoreMsg)} -- See https://www.last.fm/api/errorcodes for more information`);
             }
             // last fm has rate limits but i can't find a specific example of what that limit is. going to default to 1 scrobble/sec to be safe
             await sleep(1000);
