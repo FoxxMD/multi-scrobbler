@@ -3,7 +3,7 @@ import dayjs from 'dayjs';
 
 import {
     buildTrackString,
-    playObjDataMatch,
+    playObjDataMatch, removeUndefinedKeys,
     setIntersection, sleep,
     sortByPlayDate,
     truncateStringToLength,
@@ -259,13 +259,19 @@ export default class LastfmScrobbler extends AbstractScrobbleClient {
 
         try {
             const response = await this.api.callApi(client => client.trackScrobble(
-                {
+                // i don't know if its lastfm-node-client building the request params incorrectly
+                // or the last.fm api not handling the params correctly...
+                //
+                // ...but in either case if any of the below properties is undefined (possibly also null??)
+                // then last.fm responds with an IGNORED scrobble and error code 1 (totally unhelpful)
+                // so remove all undefined keys from the object before passing to the api client
+                removeUndefinedKeys({
                     artist: artists.join(', '),
                     duration,
                     track,
                     album,
                     timestamp: playDate.unix(),
-                }));
+                })));
             const {
                 scrobbles: {
                     '@attr': {

@@ -327,3 +327,25 @@ export const spreadDelay = (retries, multiplier) => {
     }
     return s;
 }
+
+export const removeUndefinedKeys = (obj) => {
+    let newObj = {};
+    Object.keys(obj).forEach((key) => {
+        if(Array.isArray(obj[key])) {
+            newObj[key] = obj[key];
+        } else if (obj[key] === Object(obj[key])) {
+            newObj[key] = removeUndefinedKeys(obj[key]);
+        } else if (obj[key] !== undefined) {
+            newObj[key] = obj[key];
+        }
+    });
+    if(Object.keys(newObj).length === 0) {
+        return undefined;
+    }
+    Object.keys(newObj).forEach(key => {
+        if(newObj[key] === undefined || (null !== newObj[key] && typeof newObj[key] === 'object' && Object.keys(newObj[key]).length === 0)) {
+            delete newObj[key]
+        }
+    });
+    return newObj;
+}
