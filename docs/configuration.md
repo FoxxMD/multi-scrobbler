@@ -194,6 +194,10 @@ After application creation you should have credentials displayed in the "My Apps
 * **Secret Key**
 * **Redirect URL** (if not the default)
 
+### If no access token is provided...
+
+After starting multi-scrobbler with credentials in-place open the dashboard (`http://localhost:9078`) and find your Deezer source. Click **(Re)authenticate and (re)start polling** to start the login process. After login is complete polling will begin automatically.
+
 ### ENV-Based
 
 | Environmental Variable     | Required? |            Default             |                    Description                     |
