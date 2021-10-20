@@ -180,6 +180,33 @@ No support for ENV based for Last.fm as a client (only source)
 
 See [`lastfm.json.example`](../config/lastfm.json.example), change `configureAs` to `source`.
 
+## [Deezer](https://deezer.com/)
+
+Create a new application at [Deezer Developers](https://developers.deezer.com/myapps)
+
+* Application Domain must be the same as your multi-scrobbler domain. Default is `localhost:9078`
+* Redirect URL must end in `deezer/callback`
+  * Default would be `http://localhost:9078/deezer/callback`
+
+After application creation you should have credentials displayed in the "My Apps" dashboard. You will need:
+
+* **Application ID**
+* **Secret Key**
+* **Redirect URL** (if not the default)
+
+### ENV-Based
+
+| Environmental Variable     | Required? |            Default             |                    Description                     |
+|----------------------------|-----------|----------------------------------|----------------------------------------------------|
+| `DEEZER_CLIENT_ID`        | Yes       |                                  |  Your **Application ID**                            |
+| `DEEZER_CLIENT_SECRET`    | Yes       |                                  |  Your **Secret Key**                                |
+| `DEEZER_ACCESS_TOKEN`     | No         |                                  | Must include either this token or client id/secret |
+| `DEEZER_REDIRECT_URI`     | No         | `http://localhost:{PORT}/deezer/callback` | URI must end in `deezer/callback`         |
+
+### JSON-Based
+
+See [`deezer.json.example`](../config/deezer.json.example)
+
 # Clients
 
 ## [Maloja](https://github.com/krateng/maloja)

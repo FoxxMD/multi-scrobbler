@@ -5,6 +5,7 @@ import TautulliSource from "./TautulliSource.js";
 import {SubsonicSource} from "./SubsonicSource.js";
 import JellyfinSource from "./JellyfinSource.js";
 import LastfmSource from "./LastfmSource.js";
+import DeezerSource from "./DeezerSource.js";
 
 export default class ScrobbleSources {
 
@@ -13,7 +14,7 @@ export default class ScrobbleSources {
     configDir;
     localUrl;
 
-    sourceTypes = ['spotify', 'plex', 'tautulli', 'subsonic', 'jellyfin', 'lastfm'];
+    sourceTypes = ['spotify', 'plex', 'tautulli', 'subsonic', 'jellyfin', 'lastfm', 'deezer'];
 
     constructor(localUrl, configDir = process.cwd()) {
         this.configDir = configDir;
@@ -156,6 +157,14 @@ export default class ScrobbleSources {
                     // sane default for lastfm is that user want to scrobble TO it, not FROM it -- this is also existing behavior
                     defaultConfigureAs = 'client';
                     break;
+                case 'deezer':
+                    const d = {
+                        clientId: process.env.DEEZER_APP_ID,
+                        clientSecret: process.env.DEEZER_SECRET_KEY,
+                        redirectUri: process.env.DEEZER_REDIRECT_URI,
+                        accessToken: process.env.DEEZER_ACCESS_TOKEN,
+                    };
+                    break;
                 default:
                     break;
             }
@@ -286,6 +295,13 @@ export default class ScrobbleSources {
                 break;
             case 'lastfm':
                 newSource = await new LastfmSource(name, {...data, configDir: this.configDir}, clients);
+                break;
+            case 'deezer':
+                newSource = await new DeezerSource(name, {
+                    ...data,
+                    localUrl: this.localUrl,
+                    configDir: this.configDir
+                }, clients);
                 break;
             default:
                 break;

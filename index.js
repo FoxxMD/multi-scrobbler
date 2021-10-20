@@ -8,6 +8,8 @@ import utc from 'dayjs/plugin/utc.js';
 import isBetween from 'dayjs/plugin/isBetween.js';
 import relativeTime from 'dayjs/plugin/relativeTime.js';
 import duration from 'dayjs/plugin/duration.js';
+import passport from 'passport';
+import session from 'express-session';
 import {Writable} from 'stream';
 import 'winston-daily-rotate-file';
 import {
@@ -43,6 +45,10 @@ const io = new Server(server);
 
 app.use(router);
 app.use(bodyParser.json());
+
+app.use(session({secret: 'keyboard cat'}));
+app.use(passport.initialize());
+app.use(passport.session());
 
 const {transports} = winston;
 
@@ -165,6 +171,12 @@ const configDir = process.env.CONFIG_DIR || `${process.cwd()}/config`;
         const nameColl = lastfmSources.filter(x => scrobblerNames.includes(x.name));
         if(nameColl.length > 0) {
             logger.warn(`Last.FM source and clients have same names [${nameColl.map(x => x.name).join(',')}] -- this may cause issues`);
+        }
+
+        // initialize deezer strategies
+        const deezerSources = scrobbleSources.getByType('deezer');
+        for(const d of deezerSources) {
+            passport.use(`deezer-${d.name}`, d.generatePassportStrategy());
         }
 
         app.getAsync('/', async function (req, res) {
@@ -315,7 +327,7 @@ const configDir = process.env.CONFIG_DIR || `${process.cwd()}/config`;
         });
 
         app.use('/source/auth', sourceCheckMiddle);
-        app.getAsync('/source/auth', async function (req, res) {
+        app.getAsync('/source/auth', async function (req, res, next) {
             const {
                 scrobbleSource: source,
                 sourceName: name,
@@ -333,6 +345,9 @@ const configDir = process.env.CONFIG_DIR || `${process.cwd()}/config`;
                 case 'lastfm':
                     res.redirect(source.api.getAuthUrl());
                     break;
+                case 'deezer':
+                    req.session.deezerSource = name;
+                    return passport.authenticate(`deezer-${source.name}`)(req,res,next);
                 default:
                     return res.status(400).send(`Specified source does not have auth implemented (${source.type})`);
             }
@@ -413,7 +428,29 @@ const configDir = process.env.CONFIG_DIR || `${process.cwd()}/config`;
             io.emit('logClear', slicedLog);
         });
 
-        app.getAsync(/.*callback$/, async function (req, res) {
+        // something about the deezer passport strategy makes express continue with the response even though it should wait for accesstoken callback and userprofile fetching
+        // so to get around this add an additional middleware that loops/sleeps until we should have fetched everything ¯\_(ツ)_/¯
+        app.getAsync(/.*deezer\/callback*$/, function (req, res, next) {
+            const entity = scrobbleSources.getByName(req.session.deezerSource);
+            const passportFunc = passport.authenticate(`deezer-${entity.name}`, {session: false});
+            return passportFunc(req, res, next);
+        }, async function (req, res) {
+            let entity = scrobbleSources.getByName(req.session.deezerSource);
+            for(let i = 0; i < 3; i++) {
+                if(entity.error !== undefined) {
+                    return res.send('Error with deezer credentials storage');
+                } else if(entity.config.accessToken !== undefined) {
+                    // start polling
+                    entity.poll(entity.clients)
+                    return res.redirect('/');
+                } else {
+                    await sleep(1500);
+                }
+            }
+            res.send('Waited too long for credentials to store. Try restarting polling.');
+        });
+
+        app.getAsync(/.*callback$/, async function (req, res, next) {
             const {
                 query: {
                     state
