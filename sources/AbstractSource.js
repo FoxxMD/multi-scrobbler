@@ -160,14 +160,18 @@ export default class AbstractSource {
                     checksOverThreshold = 0;
                 }
 
-                // use the source instantiation time or the last track play time to determine if we should refresh clients..
-                // we only need to refresh clients when the source has "newer" information otherwise we're just refreshing clients for no reason
-                const scrobbleResult = await allClients.scrobble(playObjs, {
-                    checkTime: lastTrackPlayedAt.add(2, 's'),
-                    forceRefresh: closeToInterval,
-                    scrobbleFrom: this.identifier,
-                    scrobbleTo: this.clients
-                });
+                let scrobbleResult = [];
+
+                if(playObjs.length > 0) {
+                    // use the source instantiation time or the last track play time to determine if we should refresh clients...
+                    // we only need to refresh clients when the source has "newer" information otherwise we're just refreshing clients for no reason
+                    scrobbleResult = await allClients.scrobble(playObjs, {
+                        checkTime: lastTrackPlayedAt.add(2, 's'),
+                        forceRefresh: closeToInterval,
+                        scrobbleFrom: this.identifier,
+                        scrobbleTo: this.clients
+                    });
+                }
 
                 if (scrobbleResult.length > 0) {
                     checkCount = 0;
