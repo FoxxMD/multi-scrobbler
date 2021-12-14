@@ -66,12 +66,17 @@ export default class AbstractScrobbleClient {
     // default init function, should be overridden if init stage is required
     initialize = async () => {
         this.initialized = true;
+        this.ready = true;
         return this.initialized;
     }
 
     // default init function, should be overridden if auth stage is required
     testAuth = async () => {
         return this.authed;
+    }
+
+    isReady = async () => {
+        return this.initialized && (!this.requiresAuth || (this.requiresAuth && this.authed));
     }
 
     scrobblesLastCheckedAt = () => {

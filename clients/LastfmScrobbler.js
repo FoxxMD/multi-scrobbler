@@ -13,7 +13,6 @@ import LastfmApiClient from "../apis/LastfmApiClient.js";
 export default class LastfmScrobbler extends AbstractScrobbleClient {
 
     api;
-    initialized = false;
     requiresAuth = true;
     requiresAuthInteraction = true;
 

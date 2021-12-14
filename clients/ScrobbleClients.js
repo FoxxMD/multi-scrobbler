@@ -279,44 +279,55 @@ ${sources.join('\n')}`);
                 this.logger.warn(`Cannot scrobble to Client '${client.name}' because it is not yet initialized`);
                 continue;
             }
-            if(client.requiresAuthInteraction === true && !client.authed) {
-                this.logger.warn(`Cannot scrobble to Client '${client.name}' because user interaction is required for authentication`);
+
+            if(client.requiresAuth && !client.authed) {
+                if (client.requiresAuthInteraction) {
+                    this.logger.warn(`Cannot scrobble to Client '${client.name}' because user interaction is required for authentication`);
+                    continue;
+                } else if (!(await client.testAuth())) {
+                    this.logger.warn(`Cannot scrobble to Client '${client.name}' because auth test failed`);
+                    continue;
+                }
+            }
+
+            if(!(await client.isReady())) {
+                this.logger.warn(`Cannot scrobble to Client '${client.name}' because it is not ready`);
                 continue;
             }
 
-                if (forceRefresh || client.scrobblesLastCheckedAt().unix() < checkTime.unix()) {
-                    try {
-                        await client.refreshScrobbles();
-                    } catch(e) {
-                        this.logger.error(`Encountered error while refreshing scrobbles for ${client.name}`);
-                        this.logger.error(e);
-                    }
+            if (forceRefresh || client.scrobblesLastCheckedAt().unix() < checkTime.unix()) {
+                try {
+                    await client.refreshScrobbles();
+                } catch(e) {
+                    this.logger.error(`Encountered error while refreshing scrobbles for ${client.name}`);
+                    this.logger.error(e);
                 }
-                for (const playObj of playObjs) {
-                    try {
-                        const {
-                            meta: {
-                                newFromSource = false,
-                            } = {}
-                        } = playObj;
-                        if (client.timeFrameIsValid(playObj, newFromSource) && !client.alreadyScrobbled(playObj, newFromSource)) {
-                            await client.scrobble(playObj)
-                            client.tracksScrobbled++;
-                            // since this is what we return to the source only add to tracksScrobbled if not already in array
-                            // (source should only know that a track was scrobbled (binary) -- doesn't care if it was scrobbled more than once
-                            if(!tracksScrobbled.some(x => playObjDataMatch(x, playObj) && x.data.playDate === playObj.data.playDate)) {
-                                tracksScrobbled.push(playObj);
-                            }
-                        }
-                    } catch(e) {
-                        this.logger.error(`Encountered error while in scrobble loop for ${client.name}`);
-                        this.logger.error(e);
-                        // for now just stop scrobbling plays for this client and move on. the client should deal with logging the issue
-                        if(e.continueScrobbling !== true) {
-                            break;
+            }
+            for (const playObj of playObjs) {
+                try {
+                    const {
+                        meta: {
+                            newFromSource = false,
+                        } = {}
+                    } = playObj;
+                    if (client.timeFrameIsValid(playObj, newFromSource) && !client.alreadyScrobbled(playObj, newFromSource)) {
+                        await client.scrobble(playObj)
+                        client.tracksScrobbled++;
+                        // since this is what we return to the source only add to tracksScrobbled if not already in array
+                        // (source should only know that a track was scrobbled (binary) -- doesn't care if it was scrobbled more than once
+                        if(!tracksScrobbled.some(x => playObjDataMatch(x, playObj) && x.data.playDate === playObj.data.playDate)) {
+                            tracksScrobbled.push(playObj);
                         }
                     }
+                } catch(e) {
+                    this.logger.error(`Encountered error while in scrobble loop for ${client.name}`);
+                    this.logger.error(e);
+                    // for now just stop scrobbling plays for this client and move on. the client should deal with logging the issue
+                    if(e.continueScrobbling !== true) {
+                        break;
+                    }
                 }
+            }
         }
         return tracksScrobbled;
     }
