@@ -16,6 +16,7 @@ const feat = ["ft.", "ft", "feat.", "feat", "featuring", "Ft.", "Ft", "Feat.", "
 export default class MalojaScrobbler extends AbstractScrobbleClient {
 
     requiresAuth = true;
+    ready = false;
 
     constructor(name, config = {}, options = {}) {
         super('maloja', name, config, options);
@@ -107,14 +108,14 @@ export default class MalojaScrobbler extends AbstractScrobbleClient {
             } = serverInfoResp;
 
             if (statusCode >= 300) {
-                this.logger.info('Test connection failed');
+                this.logger.info(`Communication test not OK! HTTP Status => Expected: 200 | Received: ${statusCode}`);
                 return false;
             }
 
-            this.logger.info('Test connection succeeded!');
+            this.logger.info('Communication test succeeded.');
 
             if (version.length === 0) {
-                this.logger.warn('Server did not respond with a version. Either the base URL is incorrect or this Maloja server is too old :(');
+                this.logger.warn('Server did not respond with a version. Either the base URL is incorrect or this Maloja server is too old. multi-scrobbler will most likely not work with this server.');
             } else {
                 this.logger.info(`Maloja Server Version: ${versionstring}`);
                 if (version[0] < 2 || version[1] < 7) {
@@ -123,9 +124,45 @@ export default class MalojaScrobbler extends AbstractScrobbleClient {
             }
             return true;
         } catch (e) {
-            this.logger.error('Testing connection failed');
+            this.logger.error('Communication test failed');
             this.logger.error(e);
             return false;
+        }
+    }
+
+    testHealth = async () => {
+
+        const {url} = this.config;
+        try {
+            const serverInfoResp = await this.callApi(request.get(`${url}/apis/mlj_1/serverinfo`), {maxRequestRetries: 0});
+            const {
+                statusCode,
+                body: {
+                    db_status: {
+                        healthy = false,
+                        rebuildinprogress = false,
+                        complete = false,
+                    }
+                } = {},
+            } = serverInfoResp;
+
+            if (statusCode >= 300) {
+                return [false, `Server responded with NOT OK status: ${statusCode}`];
+            }
+
+            if(rebuildinprogress) {
+                return [false, 'Server is rebuilding database'];
+            }
+
+            if(!healthy) {
+                return [false, 'Server responded that it is not healthy'];
+            }
+
+            return [true];
+        } catch (e) {
+            this.logger.error('Unexpected error encountered while testing server health');
+            this.logger.error(e);
+            throw e;
         }
     }
 
@@ -135,8 +172,14 @@ export default class MalojaScrobbler extends AbstractScrobbleClient {
         return this.initialized;
     }
 
-    testAuth = async (withKey = true) => {
+    testAuth = async () => {
 
+        // can remove once https://github.com/krateng/maloja/pull/92 is merged
+        if(!(await this.isReady())) {
+            this.logger.error(`Could not test auth because server is not ready`);
+            this.authed = false;
+            return this.authed;
+        }
         const {url, apiKey} = this.config;
         try {
             const resp = await this.callApi(request
@@ -170,9 +213,32 @@ export default class MalojaScrobbler extends AbstractScrobbleClient {
         return this.authed;
     }
 
+    isReady = async () => {
+        if (this.ready) {
+            return this.ready;
+        }
+
+        try {
+            const [isHealthy, status] = await this.testHealth();
+            if (!isHealthy) {
+                this.logger.error(`Server is not ready: ${status}`);
+                this.ready = false;
+                return this.ready;
+            }
+            this.logger.info('Server reported database is built and status is healthy');
+            this.ready = true;
+            return this.ready;
+        } catch (e) {
+            this.logger.error(`Testing server health failed due to an unexpected error`);
+            this.ready = false;
+            return this.ready;
+        }
+    }
+
     refreshScrobbles = async () => {
         if (this.refreshEnabled) {
             this.logger.debug('Refreshing recent scrobbles');
+            debugger;
             const {url} = this.config;
             const resp = await this.callApi(request.get(`${url}/apis/mlj_1/scrobbles?max=20`));
             const {
