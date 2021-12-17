@@ -1,6 +1,7 @@
 import AbstractScrobbleClient from "./AbstractScrobbleClient.js";
 import request from 'superagent';
 import dayjs from 'dayjs';
+import compareVersions from 'compare-versions';
 import {
     buildTrackString,
     playObjDataMatch,
@@ -17,6 +18,7 @@ export default class MalojaScrobbler extends AbstractScrobbleClient {
 
     requiresAuth = true;
     ready = false;
+    serverVersion;
 
     constructor(name, config = {}, options = {}) {
         super('maloja', name, config, options);
@@ -118,7 +120,8 @@ export default class MalojaScrobbler extends AbstractScrobbleClient {
                 this.logger.warn('Server did not respond with a version. Either the base URL is incorrect or this Maloja server is too old. multi-scrobbler will most likely not work with this server.');
             } else {
                 this.logger.info(`Maloja Server Version: ${versionstring}`);
-                if (version[0] < 2 || version[1] < 7) {
+                this.serverVersion = versionstring;
+                if(compareVersions(versionstring, '2.7.0') < 0) {
                     this.logger.warn('Maloja Server Version is less than 2.7, please upgrade to ensure compatibility');
                 }
             }
@@ -174,12 +177,6 @@ export default class MalojaScrobbler extends AbstractScrobbleClient {
 
     testAuth = async () => {
 
-        // can remove once https://github.com/krateng/maloja/pull/92 is merged
-        if(!(await this.isReady())) {
-            this.logger.error(`Could not test auth because server is not ready`);
-            this.authed = false;
-            return this.authed;
-        }
         const {url, apiKey} = this.config;
         try {
             const resp = await this.callApi(request
@@ -206,6 +203,17 @@ export default class MalojaScrobbler extends AbstractScrobbleClient {
                 });
             }
         } catch (e) {
+            if(e.status === 403) {
+                // may be an older version that doesn't support auth readiness before db upgrade
+                // and if it was before api was accessible during db build then test would fail during testConnection()
+                if(compareVersions(this.serverVersion, '2.12.19') < 0) {
+                    if(!(await this.isReady())) {
+                        this.logger.error(`Could not test auth because server is not ready`);
+                        this.authed = false;
+                        return this.authed;
+                    }
+                }
+            }
             this.logger.error('Auth test failed');
             this.logger.error(e);
             this.authed = false;
