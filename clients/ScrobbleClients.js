@@ -244,7 +244,7 @@ ${sources.join('\n')}`);
             if(!success) {
                 this.logger.warn(`(${name}) ${type} client auth failed.`);
             } else {
-                this.logger.warn(`(${name}) ${type} client auth OK`);
+                this.logger.info(`(${name}) ${type} client auth OK`);
             }
         }
         this.clients.push(newClient);

@@ -31,14 +31,51 @@ export default class MalojaScrobbler extends AbstractScrobbleClient {
         }
     }
 
-    static formatPlayObj(obj) {
-        const {
-            artists,
+    static formatPlayObj(obj, serverVersion = undefined) {
+        let artists,
             title,
             album,
             duration,
-            time,
-        } = obj;
+            time;
+
+        if(serverVersion === undefined || compareVersions(serverVersion, '3.0.0') >= 0) {
+            // scrobble data structure changed for v3
+            const {
+                // when the track was scrobbled
+                time: mTime,
+                track: {
+                    artists: mArtists,
+                    title: mTitle,
+                    album: {
+                        name: mAlbum,
+                        artists: albumArtists
+                    } = {},
+                    // length of the track
+                    length: mLength,
+                } = {},
+                // how long the track was listened to before it was scrobbled
+                duration: mDuration,
+            } = obj;
+            artists = mArtists;
+            time = mTime;
+            title = mTitle;
+            duration = mDuration;
+            album = mAlbum;
+        } else {
+            // scrobble data structure for v2 and below
+            const {
+                artists: mArtists,
+                title: mTitle,
+                album: mAlbum,
+                duration: mDuration,
+                time: mTime,
+            } = obj;
+            artists = mArtists;
+            title = mTitle;
+            album = mAlbum;
+            duration = mDuration;
+            time = mTime;
+        }
         let artistStrings = artists.reduce((acc, curr) => {
             let aString;
             if (typeof curr === 'string') {
@@ -63,7 +100,7 @@ export default class MalojaScrobbler extends AbstractScrobbleClient {
         }
     }
 
-    formatPlayObj = obj => MalojaScrobbler.formatPlayObj(obj);
+    formatPlayObj = obj => MalojaScrobbler.formatPlayObj(obj, this.serverVersion);
 
     callApi = async (req, retries = 0) => {
         const {
@@ -246,7 +283,6 @@ export default class MalojaScrobbler extends AbstractScrobbleClient {
     refreshScrobbles = async () => {
         if (this.refreshEnabled) {
             this.logger.debug('Refreshing recent scrobbles');
-            debugger;
             const {url} = this.config;
             const resp = await this.callApi(request.get(`${url}/apis/mlj_1/scrobbles?max=20`));
             const {
@@ -254,7 +290,7 @@ export default class MalojaScrobbler extends AbstractScrobbleClient {
                     list = [],
                 } = {},
             } = resp;
-            this.recentScrobbles = list.map(x => MalojaScrobbler.formatPlayObj(x)).sort(sortByPlayDate);
+            this.recentScrobbles = list.map(x => this.formatPlayObj(x)).sort(sortByPlayDate);
             if (this.recentScrobbles.length > 0) {
                 const [{data: {playDate: newestScrobbleTime = dayjs()} = {}} = {}] = this.recentScrobbles.slice(-1);
                 const [{data: {playDate: oldestScrobbleTime = dayjs()} = {}} = {}] = this.recentScrobbles.slice(0, 1);
@@ -460,15 +496,43 @@ export default class MalojaScrobbler extends AbstractScrobbleClient {
                     key: apiKey,
                     time: playDate.unix(),
                 }));
-            const {body: {
-                track: {
-                    time: mTime = playDate.unix(),
-                    duration: mDuration = duration,
-                    album: mAlbum = album,
-                    ...rest
+
+            let scrobbleResponse = {};
+
+            if(this.serverVersion === undefined || compareVersions(this.serverVersion, '3.0.0') >= 0) {
+                const {
+                    body: {
+                    track,
+                } = {}
+                } = response;
+                scrobbleResponse = {
+                    time: playDate.unix(),
+                    track: {
+                        ...track,
+                        length: duration
+                    },
                 }
-            } = {}} = response;
-            this.addScrobbledTrack(playObj, {...rest, album: mAlbum, time: mTime, duration: mDuration});
+                if(album !== undefined) {
+                    const {
+                        album: malojaAlbum = {},
+                    } = track;
+                    scrobbleResponse.track.album = {
+                        ...malojaAlbum,
+                        name: album
+                    }
+                }
+            } else {
+                const {body: {
+                    track: {
+                        time: mTime = playDate.unix(),
+                        duration: mDuration = duration,
+                        album: mAlbum = album,
+                        ...rest
+                    }
+                } = {}} = response;
+                scrobbleResponse = {...rest, album: mAlbum, time: mTime, duration: mDuration};
+            }
+            this.addScrobbledTrack(playObj, scrobbleResponse);
             if (newFromSource) {
                 this.logger.info(`Scrobbled (New)     => (${source}) ${buildTrackString(playObj)}`);
             } else {
