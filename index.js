@@ -46,7 +46,7 @@ const io = new Server(server);
 app.use(router);
 app.use(bodyParser.json());
 
-app.use(session({secret: 'keyboard cat'}));
+app.use(session({secret: 'keyboard cat', resave: false, saveUninitialized: false}));
 app.use(passport.initialize());
 app.use(passport.session());
 
