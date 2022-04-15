@@ -484,18 +484,28 @@ export default class MalojaScrobbler extends AbstractScrobbleClient {
         const sType = newFromSource ? 'New' : 'Backlog';
 
         try {
+
+            const scrobbleData = {
+                title: track,
+                album,
+                key: apiKey,
+                time: playDate.unix(),
+            };
+
+            // 3.0.3 has a BC for something (maybe seconds => length ?) -- see #42 in repo
+            if(this.serverVersion === undefined || compareVersions(this.serverVersion, '3.0.2') > 0) {
+                scrobbleData.artists = artists;
+                scrobbleData.length = duration;
+            } else {
+                // maloja seems to detect this deliminator much better than commas
+                // also less likely artist has a forward slash in their name than a comma
+                scrobbleData.artist = artists.join(' / ');
+                scrobbleData.seconds = duration;
+            }
+
             const response = await this.callApi(request.post(`${url}/apis/mlj_1/newscrobble`)
                 .type('json')
-                .send({
-                    // maloja seems to detect this deliminator much better than commas
-                    // also less likely artist has a forward slash in their name than a comma
-                    artist: artists.join(' / '),
-                    seconds: duration,
-                    title: track,
-                    album,
-                    key: apiKey,
-                    time: playDate.unix(),
-                }));
+                .send(scrobbleData));
 
             let scrobbleResponse = {};
 
