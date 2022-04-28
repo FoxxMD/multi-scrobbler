@@ -483,17 +483,16 @@ export default class MalojaScrobbler extends AbstractScrobbleClient {
 
         const sType = newFromSource ? 'New' : 'Backlog';
 
+        const scrobbleData = {
+            title: track,
+            album,
+            key: apiKey,
+            time: playDate.unix(),
+            // https://github.com/FoxxMD/multi-scrobbler/issues/42#issuecomment-1100184135
+            length: duration,
+        };
+
         try {
-
-            const scrobbleData = {
-                title: track,
-                album,
-                key: apiKey,
-                time: playDate.unix(),
-                // https://github.com/FoxxMD/multi-scrobbler/issues/42#issuecomment-1100184135
-                length: duration,
-            };
-
             // 3.0.3 has a BC for something (maybe seconds => length ?) -- see #42 in repo
             if(this.serverVersion === undefined || compareVersions(this.serverVersion, '3.0.2') > 0) {
                 scrobbleData.artists = artists;
@@ -548,8 +547,9 @@ export default class MalojaScrobbler extends AbstractScrobbleClient {
             } else {
                 this.logger.info(`Scrobbled (Backlog) => (${source}) ${buildTrackString(playObj)}`);
             }
+            this.logger.debug('Payload:', scrobbleData);
         } catch (e) {
-            this.logger.error(`Scrobble Error (${sType})`, {playInfo: buildTrackString(playObj)});
+            this.logger.error(`Scrobble Error (${sType})`, {playInfo: buildTrackString(playObj), payload: scrobbleData});
             throw e;
         }
 

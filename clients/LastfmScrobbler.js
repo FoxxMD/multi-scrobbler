@@ -256,21 +256,24 @@ export default class LastfmScrobbler extends AbstractScrobbleClient {
 
         const sType = newFromSource ? 'New' : 'Backlog';
 
+        const rawPayload = {
+            artist: artists.join(', '),
+            duration,
+            track,
+            album,
+            timestamp: playDate.unix(),
+        };
+        // i don't know if its lastfm-node-client building the request params incorrectly
+        // or the last.fm api not handling the params correctly...
+        //
+        // ...but in either case if any of the below properties is undefined (possibly also null??)
+        // then last.fm responds with an IGNORED scrobble and error code 1 (totally unhelpful)
+        // so remove all undefined keys from the object before passing to the api client
+        const scrobblePayload = removeUndefinedKeys(rawPayload);
+
         try {
             const response = await this.api.callApi(client => client.trackScrobble(
-                // i don't know if its lastfm-node-client building the request params incorrectly
-                // or the last.fm api not handling the params correctly...
-                //
-                // ...but in either case if any of the below properties is undefined (possibly also null??)
-                // then last.fm responds with an IGNORED scrobble and error code 1 (totally unhelpful)
-                // so remove all undefined keys from the object before passing to the api client
-                removeUndefinedKeys({
-                    artist: artists.join(', '),
-                    duration,
-                    track,
-                    album,
-                    timestamp: playDate.unix(),
-                })));
+                scrobblePayload));
             const {
                 scrobbles: {
                     '@attr': {
@@ -302,13 +305,16 @@ export default class LastfmScrobbler extends AbstractScrobbleClient {
                 this.logger.info(`Scrobbled (Backlog) => (${source}) ${buildTrackString(playObj)}`);
             }
             if(ignored > 0) {
-                this.logger.warn(`Service ignored this scrobble 😬 => (Code ${ignoreCode}) ${(ignoreMsg === '' ? '(No error message returned)' : ignoreMsg)} -- See https://www.last.fm/api/errorcodes for more information`);
+                this.logger.warn(`Service ignored this scrobble 😬 => (Code ${ignoreCode}) ${(ignoreMsg === '' ? '(No error message returned)' : ignoreMsg)} -- See https://www.last.fm/api/errorcodes for more information`, {payload: scrobblePayload});
             }
+
             // last fm has rate limits but i can't find a specific example of what that limit is. going to default to 1 scrobble/sec to be safe
             await sleep(1000);
         } catch (e) {
-            this.logger.error(`Scrobble Error (${sType})`, {playInfo: buildTrackString(playObj)});
+            this.logger.error(`Scrobble Error (${sType})`, {playInfo: buildTrackString(playObj), payload: scrobblePayload});
             throw e;
+        } finally {
+            this.logger.debug('Raw Payload: ', rawPayload);
         }
 
         return true;
