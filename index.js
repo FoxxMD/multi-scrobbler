@@ -284,13 +284,8 @@ const configDir = process.env.CONFIG_DIR || `${process.cwd()}/config`;
         });
 
         app.postAsync('/plex', upload.any(), async function (req, res) {
-            const {
-                body: {
-                    payload
-                } = {}
-            } = req;
-            if (payload !== undefined) {
-                const playObj = PlexSource.formatPlayObj(JSON.parse(payload), true);
+            if (req.body !== undefined) {
+                const playObj = PlexSource.formatPlayObj(req.body, true);
 
                 const pSources = scrobbleSources.getByType('plex');
                 for (const source of pSources) {
