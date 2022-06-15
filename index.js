@@ -286,22 +286,23 @@ const configDir = process.env.CONFIG_DIR || `${process.cwd()}/config`;
         app.postAsync('/plex', plexMiddle, async function (req, res) {
             const { payload } = req;
             if(payload === undefined) {
+
                 plexLog.warn('Received a request without any data');
-                res.send('OK');
-            }
 
-            const playObj = PlexSource.formatPlayObj(payload, true);
+            } else {
+                const playObj = PlexSource.formatPlayObj(payload, true);
 
-            const pSources = scrobbleSources.getByType('plex');
-            if(pSources.length === 0) {
-                plexLog.warn('Received valid Plex webhook payload but no Plex sources are configured');
+                const pSources = scrobbleSources.getByType('plex');
+                if(pSources.length === 0) {
+                    plexLog.warn('Received valid Plex webhook payload but no Plex sources are configured');
+                }
+
+                for (const source of pSources) {
+                    await source.handle(playObj, scrobbleClients);
+                }
             }
 
             res.send('OK');
-
-            for (const source of pSources) {
-                await source.handle(playObj, scrobbleClients);
-            }
         });
 
         // webhook plugin sends json with context type text/utf-8 so we need to parse it differently
