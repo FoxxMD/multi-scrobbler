@@ -1,7 +1,6 @@
 import {addAsync, Router} from '@awaitjs/express';
 import express from 'express';
 import bodyParser from 'body-parser';
-import multer from 'multer';
 import winston from 'winston';
 import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc.js';
@@ -12,9 +11,11 @@ import passport from 'passport';
 import session from 'express-session';
 import {Writable} from 'stream';
 import 'winston-daily-rotate-file';
+import formidable from 'formidable';
+import concatStream from 'concat-stream';
 import {
     buildTrackString,
-    capitalize,
+    capitalize, createLabelledLogger,
     labelledFormat,
     longestString,
     readJson, sleep,
@@ -24,12 +25,9 @@ import Clients from './clients/ScrobbleClients.js';
 import ScrobbleSources from "./sources/ScrobbleSources.js";
 import {makeClientCheckMiddle, makeSourceCheckMiddle} from "./server/middleware.js";
 import TautulliSource from "./sources/TautulliSource.js";
-import PlexSource from "./sources/PlexSource.js";
+import PlexSource, {plexRequestMiddle} from "./sources/PlexSource.js";
 import JellyfinSource from "./sources/JellyfinSource.js";
 import { Server } from "socket.io";
-
-const storage = multer.memoryStorage()
-const upload = multer({storage: storage})
 
 dayjs.extend(utc)
 dayjs.extend(isBetween);
@@ -283,21 +281,27 @@ const configDir = process.env.CONFIG_DIR || `${process.cwd()}/config`;
             res.send('OK');
         });
 
-        app.postAsync('/plex', upload.any(), async function (req, res) {
-            const {
-                body: {
-                    payload
-                } = {}
-            } = req;
-            if (payload !== undefined) {
-                const playObj = PlexSource.formatPlayObj(JSON.parse(payload), true);
-
-                const pSources = scrobbleSources.getByType('plex');
-                for (const source of pSources) {
-                    await source.handle(playObj, scrobbleClients);
-                }
+        const plexMiddle = plexRequestMiddle();
+        const plexLog = createLabelledLogger('plexReq', 'Plex Request');
+        app.postAsync('/plex', plexMiddle, async function (req, res) {
+            const { payload } = req;
+            if(payload === undefined) {
+                plexLog.warn('Received a request without any data');
+                res.send('OK');
             }
+
+            const playObj = PlexSource.formatPlayObj(payload, true);
+
+            const pSources = scrobbleSources.getByType('plex');
+            if(pSources.length === 0) {
+                plexLog.warn('Received valid Plex webhook payload but no Plex sources are configured');
+            }
+
             res.send('OK');
+
+            for (const source of pSources) {
+                await source.handle(playObj, scrobbleClients);
+            }
         });
 
         // webhook plugin sends json with context type text/utf-8 so we need to parse it differently

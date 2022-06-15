@@ -1,7 +1,9 @@
 import dayjs from "dayjs";import LastFm from "lastfm-node-client";
 import LastfmScrobbler from '../clients/LastfmScrobbler.js';
-import {buildTrackString} from "../utils.js";
+import {buildTrackString, createLabelledLogger} from "../utils.js";
 import AbstractSource from "./AbstractSource.js";
+import formidable from 'formidable';
+import concatStream from 'concat-stream';
 
 export default class PlexSource extends AbstractSource {
     users;
@@ -106,7 +108,7 @@ export default class PlexSource extends AbstractSource {
             if (user === undefined) {
                 this.logger.warn(`Config defined users but payload contained no user info${hint}`);
             } else if (!this.users.includes(user.toLocaleLowerCase())) {
-                this.logger.debug(`Will not scrobble event because author was not an allowed user: ${user}`, {
+                this.logger.verbose(`Will not scrobble event because author was not an allowed user: ${user}`, {
                     artists,
                     track
                 })
@@ -115,7 +117,7 @@ export default class PlexSource extends AbstractSource {
         }
 
         if (event !== undefined && event !== 'media.scrobble') {
-            this.logger.debug(`Will not scrobble event because it is not media.scrobble (${event})`, {
+            this.logger.verbose(`Will not scrobble event because it is not media.scrobble (${event})`, {
                 artists,
                 track
             })
@@ -123,7 +125,7 @@ export default class PlexSource extends AbstractSource {
         }
 
         if (mediaType !== 'track') {
-            this.logger.debug(`Will not scrobble event because media type was not a track (${mediaType})`, {
+            this.logger.verbose(`Will not scrobble event because media type was not a track (${mediaType})`, {
                 artists,
                 track
             });
@@ -134,7 +136,7 @@ export default class PlexSource extends AbstractSource {
             if (library === undefined) {
                 this.logger.warn(`Config defined libraries but payload contained no library info${hint}`);
             } else if (!this.libraries.includes(library.toLocaleLowerCase())) {
-                this.logger.debug(`Will not scrobble event because library was not on allowed list: ${library}`, {
+                this.logger.verbose(`Will not scrobble event because library was not on allowed list: ${library}`, {
                     artists,
                     track
                 })
@@ -146,7 +148,7 @@ export default class PlexSource extends AbstractSource {
             if (server === undefined) {
                 this.logger.warn(`Config defined server but payload contained no server info${hint}`);
             } else if (!this.servers.includes(server.toLocaleLowerCase())) {
-                this.logger.debug(`Will not scrobble event because server was not on allowed list: ${server}`, {
+                this.logger.verbose(`Will not scrobble event because server was not on allowed list: ${server}`, {
                     artists,
                     track
                 })
@@ -171,5 +173,87 @@ export default class PlexSource extends AbstractSource {
             this.logger.error('Encountered error while scrobbling')
             this.logger.error(e)
         }
+    }
+}
+
+export const plexRequestMiddle = () => {
+
+    const plexLog = createLabelledLogger('plexReq', 'Plex Request');
+
+    return async (req, res, next) => {
+
+        const form = formidable({
+            allowEmptyFiles: true,
+            multiples: true,
+            fileWriteStreamHandler: (file) => {
+                return concatStream((data) => {
+                    file.buffer = data;
+                })
+            }
+        });
+        form.on('progress', (received, expected) => {
+            plexLog.debug(`Received ${received} bytes of expected ${expected}`);
+        });
+        form.on('error', (err) => {
+            plexLog.error(err);
+        })
+        form.on('aborted', () => {
+            plexLog.warn('Request aborted')
+        })
+        form.on('end', () => {
+            plexLog.debug('Received end of form data from Plex');
+        });
+        form.on('fileBegin', (formname, file) => {
+            plexLog.debug(`File Begin: ${formname}`);
+        });
+        form.on('file', (formname,) => {
+            plexLog.debug(`File Recieved: ${formname}`);
+        });
+
+
+        plexLog.debug('Receiving request from Plex...');
+
+        return new Promise((resolve, reject) => {
+            form.parse(req, (err, fields, files) => {
+                if (err) {
+                    plexLog.error('Error occurred while parsing formdata');
+                    plexLog.error(err);
+                    next(err);
+                    reject(err);
+                    return;
+                }
+
+                let validFile = null;
+                for (const namedFiles of Object.values(files)) {
+                    for(const file of namedFiles) {
+                        if (file.mimetype.includes('json')) {
+                            validFile = file;
+                            break;
+                        }
+                    }
+                }
+                if (validFile === null) {
+                    const err = new Error(`No files parsed from formdata had a mimetype that included 'json'. Found files:\n ${Object.entries(files).map(([k, v]) => `${k}: ${v.mimetype}`).join('\n')}`);
+                    plexLog.error(err);
+                    next(err);
+                    reject(err);
+                    return;
+                }
+
+                const payloadRaw = validFile.buffer.toString();
+                let payload = null;
+                try {
+                    payload = JSON.parse(payloadRaw);
+                    req.payload = payload;
+                    next();
+                    resolve();
+                } catch (e) {
+                    plexLog.error(`Error occurred while trying to parse Plex file payload to json. Raw text:\n${payloadRaw}`);
+                    plexLog.error(e);
+                    next(e);
+                    reject(e);
+                }
+            });
+        });
     }
 }
