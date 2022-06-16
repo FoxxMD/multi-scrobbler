@@ -9,6 +9,7 @@ import {
     truncateStringToLength,
 } from "../utils.js";
 import LastfmApiClient from "../apis/LastfmApiClient.js";
+import {INITIALIZING} from "../common/index.js";
 
 export default class LastfmScrobbler extends AbstractScrobbleClient {
 
@@ -24,6 +25,7 @@ export default class LastfmScrobbler extends AbstractScrobbleClient {
     formatPlayObj = obj => LastfmApiClient.formatPlayObj(obj);
 
     initialize = async () => {
+        this.initialized = INITIALIZING;
         this.initialized = await this.api.initialize();
         return this.initialized;
     }
@@ -100,7 +102,7 @@ export default class LastfmScrobbler extends AbstractScrobbleClient {
         return track.toLocaleLowerCase().trim();
     }
 
-    alreadyScrobbled = (playObj, log = false) => {
+    alreadyScrobbled = async (playObj, log = false) => {
         return this.existingScrobble(playObj, (log || this.verboseOptions.match.onMatch)) !== undefined;
     }
 

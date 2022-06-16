@@ -1,11 +1,14 @@
 import dayjs from "dayjs";
 import {buildTrackString, capitalize, createLabelledLogger, playObjDataMatch} from "../utils.js";
+import {INITIALIZED, INITIALIZING, NOT_INITIALIZED} from "../common/index.js";
 
 export default class AbstractScrobbleClient {
 
     name;
     type;
-    initialized = false;
+
+    #initState = NOT_INITIALIZED;
+
     requiresAuth = false;
     requiresAuthInteraction = false;
     authed = false;
@@ -63,11 +66,28 @@ export default class AbstractScrobbleClient {
         };
     }
 
+    get initialized() {
+        return this.#initState === INITIALIZED;
+    }
+
+   set initialized(val) {
+        if(val === INITIALIZING) {
+            this.#initState = INITIALIZING;
+        } else if(val === true || val === INITIALIZED) {
+            this.#initState = INITIALIZED;
+        } else {
+            this.#initState = NOT_INITIALIZED;
+        }
+   }
+
+   get initializing() {
+        return this.#initState === INITIALIZING;
+   }
+
     // default init function, should be overridden if init stage is required
     initialize = async () => {
         this.initialized = true;
-        this.ready = true;
-        return this.initialized;
+        return true;
     }
 
     // default init function, should be overridden if auth stage is required
@@ -77,6 +97,15 @@ export default class AbstractScrobbleClient {
 
     isReady = async () => {
         return this.initialized && (!this.requiresAuth || (this.requiresAuth && this.authed));
+    }
+
+    refreshScrobbles = async () => {
+        this.logger.debug('Scrobbler does not have refresh function implemented!');
+    }
+
+    alreadyScrobbled = async () => {
+        this.logger.debug('Scrobbler does not have alreadyScrobbled check implemented!');
+        return false;
     }
 
     scrobblesLastCheckedAt = () => {

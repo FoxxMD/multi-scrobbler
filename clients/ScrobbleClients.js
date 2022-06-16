@@ -11,6 +11,7 @@ import LastfmScrobbler from "./LastfmScrobbler.js";
 
 export default class ScrobbleClients {
 
+    /** @type AbstractScrobbleClient[] */
     clients = [];
     logger;
     configDir;
@@ -275,9 +276,15 @@ ${sources.join('\n')}`);
                 this.logger.debug(`Client '${client.name}' was filtered out by '${scrobbleFrom}'`);
                 continue;
             }
-            if(client.initialized === false) {
-                this.logger.warn(`Cannot scrobble to Client '${client.name}' because it is not yet initialized`);
-                continue;
+            if(!client.initialized) {
+                if(client.initializing) {
+                    this.logger.warn(`Cannot scrobble to Client '${client.name}' because it is still initializing`);
+                    continue;
+                }
+                if(!(await client.initialize())) {
+                    this.logger.warn(`Cannot scrobble to Client '${client.name}' because it could not be initialized`);
+                    continue;
+                }
             }
 
             if(client.requiresAuth && !client.authed) {
@@ -310,7 +317,7 @@ ${sources.join('\n')}`);
                             newFromSource = false,
                         } = {}
                     } = playObj;
-                    if (client.timeFrameIsValid(playObj, newFromSource) && !client.alreadyScrobbled(playObj, newFromSource)) {
+                    if (client.timeFrameIsValid(playObj, newFromSource) && !(await client.alreadyScrobbled(playObj, newFromSource))) {
                         await client.scrobble(playObj)
                         client.tracksScrobbled++;
                         // since this is what we return to the source only add to tracksScrobbled if not already in array

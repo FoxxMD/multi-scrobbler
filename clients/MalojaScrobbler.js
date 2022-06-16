@@ -11,13 +11,14 @@ import {
     truncateStringToLength,
     parseRetryAfterSecsFromObj
 } from "../utils.js";
+import {INITIALIZING} from "../common/index.js";
 
 const feat = ["ft.", "ft", "feat.", "feat", "featuring", "Ft.", "Ft", "Feat.", "Feat", "Featuring"];
 
 export default class MalojaScrobbler extends AbstractScrobbleClient {
 
     requiresAuth = true;
-    ready = false;
+    serverIsHealthy = false;
     serverVersion;
 
     constructor(name, config = {}, options = {}) {
@@ -208,6 +209,7 @@ export default class MalojaScrobbler extends AbstractScrobbleClient {
 
     initialize = async () => {
         // just checking that we can get a connection
+        this.initialized = INITIALIZING;
         this.initialized = await this.testConnection();
         return this.initialized;
     }
@@ -259,25 +261,24 @@ export default class MalojaScrobbler extends AbstractScrobbleClient {
     }
 
     isReady = async () => {
-        if (this.ready) {
-            return this.ready;
+        if (this.serverIsHealthy) {
+            return true;
         }
 
         try {
             const [isHealthy, status] = await this.testHealth();
             if (!isHealthy) {
                 this.logger.error(`Server is not ready: ${status}`);
-                this.ready = false;
-                return this.ready;
+                this.serverIsHealthy = false;
+            } else {
+                this.logger.info('Server reported database is built and status is healthy');
+                this.serverIsHealthy = true;
             }
-            this.logger.info('Server reported database is built and status is healthy');
-            this.ready = true;
-            return this.ready;
         } catch (e) {
             this.logger.error(`Testing server health failed due to an unexpected error`);
-            this.ready = false;
-            return this.ready;
+            this.serverIsHealthy = false;
         }
+        return this.serverIsHealthy
     }
 
     refreshScrobbles = async () => {
@@ -326,7 +327,7 @@ export default class MalojaScrobbler extends AbstractScrobbleClient {
         return lowerTitle;
     }
 
-    alreadyScrobbled = (playObj, log = false) => {
+    alreadyScrobbled = async (playObj, log = false) => {
         return this.existingScrobble(playObj, (log || this.verboseOptions.match.onMatch)) !== undefined;
     }
 
