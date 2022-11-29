@@ -45,7 +45,7 @@ export default class JellyfinSource extends MemorySource {
         const {
             ServerId,
             ServerName,
-            Username,
+            NotificationUsername,
             UserId,
             NotificationType,
             UtcTimestamp,
@@ -76,7 +76,7 @@ export default class JellyfinSource extends MemorySource {
                 event: NotificationType,
                 mediaType: ItemType,
                 sourceId: ItemId,
-                user: Username,
+                user: NotificationUsername,
                 server: ServerName,
                 source: 'Jellyfin',
                 newFromSource,
@@ -97,7 +97,7 @@ export default class JellyfinSource extends MemorySource {
 
         if (this.users !== undefined) {
             if (user === undefined) {
-                this.logger.warn(`Config defined users but payload contained no user info${hint}`);
+                this.logger.warn(`Config defined users but payload contained no user info`);
             } else if (!this.users.includes(user.toLocaleLowerCase())) {
                 this.logger.debug(`Will not scrobble event because author was not an allowed user: ${user}`, {
                     artists,
