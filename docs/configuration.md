@@ -170,7 +170,7 @@ See [`jellyfin.json.example`](../config/jellyfin.json.example)
 
 ## [Last.fm (Source)](https://www.last.fm)
 
-See the [Last.fm (Client)](#lastfm) setup for registration instructions.
+See the [Last.fm (Client)](#lastfm) setup for registration instructions. You may need to disable "Hide recent listening information" on your [privacy page](https://www.last.fm/settings/privacy) for this to work.
 
 ### ENV-Based
 
