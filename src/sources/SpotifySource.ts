@@ -4,6 +4,7 @@ import {
     writeFile,
     sortByPlayDate, sleep, parseRetryAfterSecsFromObj,
 } from "../utils.js";
+// @ts-expect-error TS(7016): Could not find a declaration file for module 'spot... Remove this comment to see the full error message
 import SpotifyWebApi from "spotify-web-api-node";
 import AbstractSource from "./AbstractSource.js";
 
@@ -12,7 +13,7 @@ const state = 'random';
 
 export default class SpotifySource extends AbstractSource {
 
-    spotifyApi;
+    spotifyApi: any;
     localUrl;
     workingCredsPath;
     configDir;
@@ -20,11 +21,14 @@ export default class SpotifySource extends AbstractSource {
     requiresAuth = true;
     requiresAuthInteraction = true;
 
-    constructor(name, config = {}, clients = []) {
+    constructor(name: any, config = {}, clients = []) {
         super('spotify', name, config, clients);
         const {
+            // @ts-expect-error TS(2339): Property 'localUrl' does not exist on type '{}'.
             localUrl,
+            // @ts-expect-error TS(2339): Property 'configDir' does not exist on type '{}'.
             configDir,
+            // @ts-expect-error TS(2339): Property 'interval' does not exist on type '{}'.
             interval = 60,
         } = config;
 
@@ -32,6 +36,7 @@ export default class SpotifySource extends AbstractSource {
             this.logger.warn('Interval should be above 30 seconds...😬');
         }
 
+        // @ts-expect-error TS(2339): Property 'interval' does not exist on type '{}'.
         this.config.interval = interval;
 
         this.configDir = configDir;
@@ -40,17 +45,22 @@ export default class SpotifySource extends AbstractSource {
         this.canPoll = true;
     }
 
-    static formatPlayObj(obj, newFromSource = false) {
+    static formatPlayObj(obj: any, newFromSource = false) {
         const {
             track: {
                 artists = [],
+                // @ts-expect-error TS(2525): Initializer provides no value for this binding ele... Remove this comment to see the full error message
                 name,
+                // @ts-expect-error TS(2525): Initializer provides no value for this binding ele... Remove this comment to see the full error message
                 id,
+                // @ts-expect-error TS(2525): Initializer provides no value for this binding ele... Remove this comment to see the full error message
                 duration_ms,
                 album: {
+                    // @ts-expect-error TS(2525): Initializer provides no value for this binding ele... Remove this comment to see the full error message
                     name: albumName,
                 } = {},
                 external_urls: {
+                    // @ts-expect-error TS(2525): Initializer provides no value for this binding ele... Remove this comment to see the full error message
                     spotify,
                 } = {}
             } = {},
@@ -59,7 +69,7 @@ export default class SpotifySource extends AbstractSource {
         //let artistString = artists.reduce((acc, curr) => acc.concat(curr.name), []).join(',');
         return {
             data: {
-                artists: artists.map(x => x.name),
+                artists: artists.map((x: any) => x.name),
                 album: albumName,
                 track: name,
                 duration: duration_ms / 1000,
@@ -74,7 +84,7 @@ export default class SpotifySource extends AbstractSource {
                     web: spotify
                 }
             }
-        }
+        };
     }
 
     buildSpotifyApi = async () => {
@@ -87,16 +97,22 @@ export default class SpotifySource extends AbstractSource {
         }
 
         const {
+            // @ts-expect-error TS(2339): Property 'accessToken' does not exist on type '{}'... Remove this comment to see the full error message
             accessToken,
+            // @ts-expect-error TS(2339): Property 'clientId' does not exist on type '{}'.
             clientId,
+            // @ts-expect-error TS(2339): Property 'clientSecret' does not exist on type '{}... Remove this comment to see the full error message
             clientSecret,
+            // @ts-expect-error TS(2339): Property 'redirectUri' does not exist on type '{}'... Remove this comment to see the full error message
             redirectUri,
+            // @ts-expect-error TS(2339): Property 'refreshToken' does not exist on type '{}... Remove this comment to see the full error message
             refreshToken,
         } = this.config || {};
 
         const rdUri = redirectUri || `${this.localUrl}/callback`;
 
 
+        // @ts-expect-error TS(2339): Property 'token' does not exist on type '{}'.
         const {token = accessToken, refreshToken: rt = refreshToken} = spotifyCreds || {};
 
         const apiConfig = {
@@ -110,6 +126,7 @@ export default class SpotifySource extends AbstractSource {
             this.logger.info('No values found for Spotify configuration, skipping initialization');
             return;
         }
+        // @ts-expect-error TS(2339): Property 'redirectUri' does not exist on type '{ c... Remove this comment to see the full error message
         apiConfig.redirectUri = rdUri;
 
         const validationErrors = [];
@@ -153,7 +170,7 @@ export default class SpotifySource extends AbstractSource {
 
     testAuth = async () => {
         try {
-            await this.callApi((api => api.getMe()));
+            await this.callApi(((api: any) => api.getMe()));
             this.authed = true;
         } catch (e) {
             this.logger.error('Could not successfully communicate with Spotify API');
@@ -166,7 +183,10 @@ export default class SpotifySource extends AbstractSource {
         return this.spotifyApi.createAuthorizeURL(scopes, this.name);
     }
 
-    handleAuthCodeCallback = async ({error, code}) => {
+    handleAuthCodeCallback = async ({
+        error,
+        code
+    }: any) => {
         if (error === undefined) {
             const tokenResponse = await this.spotifyApi.authorizationCodeGrant(code);
             this.spotifyApi.setAccessToken(tokenResponse.body['access_token']);
@@ -185,25 +205,30 @@ export default class SpotifySource extends AbstractSource {
     }
 
     getRecentlyPlayed = async (options = {}) => {
+        // @ts-expect-error TS(2339): Property 'limit' does not exist on type '{}'.
         const {limit = 20, formatted = false} = options;
-        const func = api => api.getMyRecentlyPlayedTracks({
+        const func = (api: any) => api.getMyRecentlyPlayedTracks({
             limit
         });
         const result = await this.callApi(func);
         if (formatted === true) {
-            return result.body.items.map(x => SpotifySource.formatPlayObj(x)).sort(sortByPlayDate);
+            return result.body.items.map((x: any) => SpotifySource.formatPlayObj(x)).sort(sortByPlayDate);
         }
         return result;
     }
 
-    callApi = async (func, retries = 0) => {
+    // @ts-expect-error TS(7024): Function implicitly has return type 'any' because ... Remove this comment to see the full error message
+    callApi = async (func: any, retries = 0) => {
         const {
+            // @ts-expect-error TS(2339): Property 'maxRequestRetries' does not exist on typ... Remove this comment to see the full error message
             maxRequestRetries = 1,
+            // @ts-expect-error TS(2339): Property 'retryMultiplier' does not exist on type ... Remove this comment to see the full error message
             retryMultiplier = 2,
         } = this.config;
         try {
             return await func(this.spotifyApi);
         } catch (e) {
+            // @ts-expect-error TS(2571): Object is of type 'unknown'.
             if (e.statusCode === 401) {
                 if (this.spotifyApi.getRefreshToken() === undefined) {
                     throw new Error('Access token was not valid and no refresh token was present')
@@ -213,6 +238,7 @@ export default class SpotifySource extends AbstractSource {
                 const tokenResponse = await this.spotifyApi.refreshAccessToken();
                 const {
                     body: {
+                        // @ts-expect-error TS(2525): Initializer provides no value for this binding ele... Remove this comment to see the full error message
                         access_token,
                         // spotify may return a new refresh token
                         // if it doesn't then continue to use the last refresh token we received
@@ -228,6 +254,7 @@ export default class SpotifySource extends AbstractSource {
                     return await func(this.spotifyApi);
                 } catch (ee) {
                     this.logger.error('Refreshing access token encountered an error');
+                    // @ts-expect-error TS(2769): No overload matches this call.
                     this.logger.error(ee, {label: 'Spotify'});
                     throw ee;
                 }
@@ -238,13 +265,14 @@ export default class SpotifySource extends AbstractSource {
                 return this.callApi(func, retries + 1);
             } else {
                 this.logger.error(`Request failed on retry (${retries}) with no more retries permitted (max ${maxRequestRetries})`);
+                // @ts-expect-error TS(2769): No overload matches this call.
                 this.logger.error(e, {label: 'Spotify'});
                 throw e;
             }
         }
     }
 
-    poll = async (allClients) => {
+    poll = async (allClients: any) => {
         if (this.spotifyApi === undefined) {
             this.logger.warn('Cannot poll spotify without valid credentials configuration')
             return;

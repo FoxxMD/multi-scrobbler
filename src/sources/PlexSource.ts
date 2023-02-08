@@ -1,16 +1,22 @@
+// @ts-expect-error TS(7016): Could not find a declaration file for module 'last... Remove this comment to see the full error message
 import dayjs from "dayjs";import LastFm from "lastfm-node-client";
 import LastfmScrobbler from '../clients/LastfmScrobbler.js';
 import {buildTrackString, createLabelledLogger} from "../utils.js";
 import AbstractSource from "./AbstractSource.js";
+// @ts-expect-error TS(7016): Could not find a declaration file for module 'form... Remove this comment to see the full error message
 import formidable from 'formidable';
+// @ts-expect-error TS(7016): Could not find a declaration file for module 'conc... Remove this comment to see the full error message
 import concatStream from 'concat-stream';
 
 export default class PlexSource extends AbstractSource {
+    // @ts-expect-error TS(7022): 'users' implicitly has type 'any' because it does ... Remove this comment to see the full error message
     users;
+    // @ts-expect-error TS(7022): 'libraries' implicitly has type 'any' because it d... Remove this comment to see the full error message
     libraries;
+    // @ts-expect-error TS(7022): 'servers' implicitly has type 'any' because it doe... Remove this comment to see the full error message
     servers;
 
-    constructor(name, config, clients, type = 'plex') {
+    constructor(name: any, config: any, clients: any, type = 'plex') {
         super(type, name, config, clients);
         const {user, libraries, servers} = config
 
@@ -22,7 +28,7 @@ export default class PlexSource extends AbstractSource {
             } else {
                 this.users = user;
             }
-            this.users = this.users.map(x => x.toLocaleLowerCase())
+            this.users = this.users.map((x: any) => x.toLocaleLowerCase())
         }
 
         if (libraries === undefined || libraries === null) {
@@ -33,7 +39,7 @@ export default class PlexSource extends AbstractSource {
             } else {
                 this.libraries = libraries;
             }
-            this.libraries = this.libraries.map(x => x.toLocaleLowerCase())
+            this.libraries = this.libraries.map((x: any) => x.toLocaleLowerCase())
         }
 
         if (servers === undefined || servers === null) {
@@ -44,7 +50,7 @@ export default class PlexSource extends AbstractSource {
             } else {
                 this.servers = servers;
             }
-            this.servers = this.servers.map(x => x.toLocaleLowerCase())
+            this.servers = this.servers.map((x: any) => x.toLocaleLowerCase())
         }
 
         if (user === undefined && libraries === undefined && servers === undefined) {
@@ -55,20 +61,27 @@ export default class PlexSource extends AbstractSource {
         this.initialized = true;
     }
 
-    static formatPlayObj(obj, newFromSource = false) {
+    static formatPlayObj(obj: any, newFromSource = false) {
         const {
             event,
             Account: {
+                // @ts-expect-error TS(2525): Initializer provides no value for this binding ele... Remove this comment to see the full error message
                 title: user,
             } = {},
             Metadata: {
+                // @ts-expect-error TS(2525): Initializer provides no value for this binding ele... Remove this comment to see the full error message
                 type,
+                // @ts-expect-error TS(2525): Initializer provides no value for this binding ele... Remove this comment to see the full error message
                 title: track,
+                // @ts-expect-error TS(2525): Initializer provides no value for this binding ele... Remove this comment to see the full error message
                 parentTitle: album,
+                // @ts-expect-error TS(2525): Initializer provides no value for this binding ele... Remove this comment to see the full error message
                 grandparentTitle: artist,
+                // @ts-expect-error TS(2525): Initializer provides no value for this binding ele... Remove this comment to see the full error message
                 librarySectionTitle: library
             } = {},
             Server: {
+                // @ts-expect-error TS(2525): Initializer provides no value for this binding ele... Remove this comment to see the full error message
                 title: server
             } = {},
         } = obj;
@@ -91,13 +104,15 @@ export default class PlexSource extends AbstractSource {
         }
     }
 
-    isValidEvent = (playObj) => {
+    isValidEvent = (playObj: any) => {
         const {
             meta: {
                 mediaType, event, user, library, server
             },
             data: {
+                // @ts-expect-error TS(2525): Initializer provides no value for this binding ele... Remove this comment to see the full error message
                 artists,
+                // @ts-expect-error TS(2525): Initializer provides no value for this binding ele... Remove this comment to see the full error message
                 track,
             } = {}
         } = playObj;
@@ -159,7 +174,7 @@ export default class PlexSource extends AbstractSource {
         return true;
     }
 
-    handle = async (playObj, allClients) => {
+    handle = async (playObj: any, allClients: any) => {
         if (!this.isValidEvent(playObj)) {
             return;
         }
@@ -180,21 +195,21 @@ export const plexRequestMiddle = () => {
 
     const plexLog = createLabelledLogger('plexReq', 'Plex Request');
 
-    return async (req, res, next) => {
+    return async (req: any, res: any, next: any) => {
 
         const form = formidable({
             allowEmptyFiles: true,
             multiples: true,
-            fileWriteStreamHandler: (file) => {
-                return concatStream((data) => {
+            fileWriteStreamHandler: (file: any) => {
+                return concatStream((data: any) => {
                     file.buffer = data;
-                })
+                });
             }
         });
-        form.on('progress', (received, expected) => {
+        form.on('progress', (received: any, expected: any) => {
             plexLog.debug(`Received ${received} bytes of expected ${expected}`);
         });
-        form.on('error', (err) => {
+        form.on('error', (err: any) => {
             plexLog.error(err);
         })
         form.on('aborted', () => {
@@ -203,10 +218,10 @@ export const plexRequestMiddle = () => {
         form.on('end', () => {
             plexLog.debug('Received end of form data from Plex');
         });
-        form.on('fileBegin', (formname, file) => {
+        form.on('fileBegin', (formname: any, file: any) => {
             plexLog.debug(`File Begin: ${formname}`);
         });
-        form.on('file', (formname,) => {
+        form.on('file', (formname: any) => {
             plexLog.debug(`File Recieved: ${formname}`);
         });
 
@@ -214,7 +229,7 @@ export const plexRequestMiddle = () => {
         plexLog.debug('Receiving request from Plex...');
 
         return new Promise((resolve, reject) => {
-            form.parse(req, (err, fields, files) => {
+            form.parse(req, (err: any, fields: any, files: any) => {
                 if (err) {
                     plexLog.error('Error occurred while parsing formdata');
                     plexLog.error(err);
@@ -225,6 +240,7 @@ export const plexRequestMiddle = () => {
 
                 let validFile = null;
                 for (const namedFiles of Object.values(files)) {
+                    // @ts-expect-error TS(2571): Object is of type 'unknown'.
                     for(const file of namedFiles) {
                         if (file.mimetype.includes('json')) {
                             validFile = file;
@@ -233,6 +249,7 @@ export const plexRequestMiddle = () => {
                     }
                 }
                 if (validFile === null) {
+                    // @ts-expect-error TS(2571): Object is of type 'unknown'.
                     const err = new Error(`No files parsed from formdata had a mimetype that included 'json'. Found files:\n ${Object.entries(files).map(([k, v]) => `${k}: ${v.mimetype}`).join('\n')}`);
                     plexLog.error(err);
                     next(err);
@@ -246,6 +263,7 @@ export const plexRequestMiddle = () => {
                     payload = JSON.parse(payloadRaw);
                     req.payload = payload;
                     next();
+                    // @ts-expect-error TS(2794): Expected 1 arguments, but got 0. Did you forget to... Remove this comment to see the full error message
                     resolve();
                 } catch (e) {
                     plexLog.error(`Error occurred while trying to parse Plex file payload to json. Raw text:\n${payloadRaw}`);
@@ -255,5 +273,5 @@ export const plexRequestMiddle = () => {
                 }
             });
         });
-    }
+    };
 }

@@ -1,4 +1,5 @@
 import AbstractSource from "./AbstractSource.js";
+// @ts-expect-error TS(7016): Could not find a declaration file for module 'supe... Remove this comment to see the full error message
 import request from 'superagent';
 import crypto from 'crypto';
 import dayjs from "dayjs";
@@ -12,11 +13,12 @@ export class SubsonicSource extends MemorySource {
 
     requiresAuth = true;
 
-    constructor(name, config = {}, clients = []) {
+    constructor(name: any, config = {}, clients = []) {
         // default to quick interval so we can get a decently accurate nowPlaying
         const subsonicConfig = {interval: 10, maxSleep: 30, ...config};
         super('subsonic', name, subsonicConfig, clients);
 
+        // @ts-expect-error TS(2339): Property 'user' does not exist on type '{}'.
         const {user, password, url} = this.config;
 
         if (user === undefined) {
@@ -32,7 +34,7 @@ export class SubsonicSource extends MemorySource {
         this.canPoll = true;
     }
 
-    static formatPlayObj(obj, newFromSource = false) {
+    static formatPlayObj(obj: any, newFromSource = false) {
         const {
             id,
             title,
@@ -60,11 +62,16 @@ export class SubsonicSource extends MemorySource {
         }
     }
 
-    callApi = async (req, retries = 0) => {
+    // @ts-expect-error TS(7024): Function implicitly has return type 'any' because ... Remove this comment to see the full error message
+    callApi = async (req: any, retries = 0) => {
         const {
+            // @ts-expect-error TS(2339): Property 'user' does not exist on type '{}'.
             user,
+            // @ts-expect-error TS(2339): Property 'password' does not exist on type '{}'.
             password,
+            // @ts-expect-error TS(2339): Property 'maxRequestRetries' does not exist on typ... Remove this comment to see the full error message
             maxRequestRetries = 1,
+            // @ts-expect-error TS(2339): Property 'retryMultiplier' does not exist on type ... Remove this comment to see the full error message
             retryMultiplier = 1.5
         } = this.config;
 
@@ -90,6 +97,7 @@ export class SubsonicSource extends MemorySource {
             } = resp;
             if (status === 'failed') {
                 const err = new Error('Subsonic API returned an error');
+                // @ts-expect-error TS(2339): Property 'response' does not exist on type 'Error'... Remove this comment to see the full error message
                 err.response = resp;
                 throw  err;
             }
@@ -102,21 +110,30 @@ export class SubsonicSource extends MemorySource {
                 return await this.callApi(req, retries + 1)
             }
             const {
+                // @ts-expect-error TS(2339): Property 'message' does not exist on type 'unknown... Remove this comment to see the full error message
                 message,
+                // @ts-expect-error TS(2339): Property 'response' does not exist on type 'unknow... Remove this comment to see the full error message
                 response: {
+                    // @ts-expect-error TS(2525): Initializer provides no value for this binding ele... Remove this comment to see the full error message
                     status,
                     body: {
                         "subsonic-response": {
+                            // @ts-expect-error TS(2525): Initializer provides no value for this binding ele... Remove this comment to see the full error message
                             status: ssStatus,
                             error: {
+                                // @ts-expect-error TS(2525): Initializer provides no value for this binding ele... Remove this comment to see the full error message
                                 code,
+                                // @ts-expect-error TS(2525): Initializer provides no value for this binding ele... Remove this comment to see the full error message
                                 message: ssMessage,
                             } = {},
                         } = {},
+                        // @ts-expect-error TS(2525): Initializer provides no value for this binding ele... Remove this comment to see the full error message
                         "subsonic-response": ssResp
                     } = {},
+                    // @ts-expect-error TS(2525): Initializer provides no value for this binding ele... Remove this comment to see the full error message
                     text,
                 } = {},
+                // @ts-expect-error TS(2339): Property 'response' does not exist on type 'unknow... Remove this comment to see the full error message
                 response,
             } = e;
             let msg = response !== undefined ? `API Call failed: Server Response => ${ssMessage}` : `API Call failed: ${message}`;
@@ -127,12 +144,14 @@ export class SubsonicSource extends MemorySource {
     }
 
     initialize = async () => {
+        // @ts-expect-error TS(2339): Property 'url' does not exist on type '{}'.
         const {url} = this.config;
         try {
             await request.get(`${url}/`);
             this.logger.info('Subsonic Connection: ok');
             this.initialized = true;
         } catch (e) {
+            // @ts-expect-error TS(2571): Object is of type 'unknown'.
             if(e.status !== undefined && e.status !== 404) {
                 this.logger.info('Subsonic Connection: ok');
                 // we at least got a response!
@@ -144,6 +163,7 @@ export class SubsonicSource extends MemorySource {
     }
 
     testAuth= async () => {
+        // @ts-expect-error TS(2339): Property 'url' does not exist on type '{}'.
         const {url} = this.config;
         try {
             await this.callApi(request.get(`${url}/rest/ping`));
@@ -157,7 +177,9 @@ export class SubsonicSource extends MemorySource {
     }
 
     getRecentlyPlayed = async (options = {}) => {
+        // @ts-expect-error TS(2339): Property 'formatted' does not exist on type '{}'.
         const {formatted = false} = options;
+        // @ts-expect-error TS(2339): Property 'url' does not exist on type '{}'.
         const {url} = this.config;
         const resp = await this.callApi(request.get(`${url}/rest/getNowPlaying`));
         const {
@@ -165,7 +187,7 @@ export class SubsonicSource extends MemorySource {
                 entry = []
             } = {}
         } = resp;
-        this.processRecentPlays(entry.map(x => formatted ? SubsonicSource.formatPlayObj(x) : x));
+        this.processRecentPlays(entry.map((x: any) => formatted ? SubsonicSource.formatPlayObj(x) : x));
         return this.statefulRecentlyPlayed;
     }
 }

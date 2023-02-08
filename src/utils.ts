@@ -3,7 +3,9 @@ import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc.js';
 import winston from "winston";
 import jsonStringify from 'safe-stable-stringify';
+// @ts-expect-error TS(7016): Could not find a declaration file for module 'spot... Remove this comment to see the full error message
 import { TimeoutError, WebapiError } from "spotify-web-api-node/src/response-error.js";
+// @ts-expect-error TS(7016): Could not find a declaration file for module 'supe... Remove this comment to see the full error message
 import { Response } from 'superagent';
 
 const {format} = winston;
@@ -11,12 +13,14 @@ const {combine, printf, timestamp, label, splat, errors} = format;
 
 dayjs.extend(utc);
 
-export async function readJson(path, {logErrors = true, throwOnNotFound = true} = {}) {
+export async function readJson(this: any, path: any, {logErrors = true, throwOnNotFound = true} = {}) {
     try {
         await promises.access(path, constants.R_OK);
         const data = await promises.readFile(path);
+        // @ts-expect-error TS(2345): Argument of type 'Buffer' is not assignable to par... Remove this comment to see the full error message
         return JSON.parse(data);
     } catch (e) {
+        // @ts-expect-error TS(2339): Property 'code' does not exist on type 'unknown'.
         const {code} = e;
         if (code === 'ENOENT') {
             if (throwOnNotFound) {
@@ -35,7 +39,7 @@ export async function readJson(path, {logErrors = true, throwOnNotFound = true} 
     }
 }
 
-export async function readText(path) {
+export async function readText(path: any) {
     await promises.access(path, constants.R_OK);
     const data = await promises.readFile(path);
     return data.toString();
@@ -50,7 +54,7 @@ export async function readText(path) {
     // });
 }
 
-export async function writeFile(path, text) {
+export async function writeFile(path: any, text: any) {
     // await promises.access(path, constants.W_OK | constants.O_CREAT);
     await promises.writeFile(path, text, 'utf8');
 
@@ -65,37 +69,44 @@ export async function writeFile(path, text) {
 }
 
 
-export function sleep(ms) {
+export function sleep(ms: any) {
     return new Promise(resolve => setTimeout(resolve, ms));
 }
 
-export const longestString = strings => strings.reduce((acc, curr) => curr.length > acc ? curr.length : acc, 0);
-export const truncateStringArrToLength = (length, truncStr = '...') => {
+export const longestString = (strings: any) => strings.reduce((acc: any, curr: any) => curr.length > acc ? curr.length : acc, 0);
+export const truncateStringArrToLength = (length: any, truncStr = '...') => {
     const truncater = truncateStringToLength(length, truncStr);
-    return strings => strings.map(truncater);
+    return (strings: any) => strings.map(truncater);
 }
-export const truncateStringToLength = (length, truncStr = '...') => str => str.length > length ? `${str.slice(0, length)}${truncStr}` : str;
+export const truncateStringToLength = (length: any, truncStr = '...') => (str: any) => str.length > length ? `${str.slice(0, length)}${truncStr}` : str;
 
-const defaultTransformer = input => input;
+const defaultTransformer = (input: any) => input;
 
-export const buildTrackString = (playObj, options = {}) => {
+export const buildTrackString = (playObj: any, options = {}) => {
     const {
+        // @ts-expect-error TS(2339): Property 'include' does not exist on type '{}'.
         include = ['time', 'artist', 'track'],
+        // @ts-expect-error TS(2339): Property 'transformers' does not exist on type '{}... Remove this comment to see the full error message
         transformers: {
-            artists: artistsFunc = a => a.join(' / '),
+            artists: artistsFunc = (a: any) => a.join(' / '),
             track: trackFunc = defaultTransformer,
-            time: timeFunc = t => t.local().format(),
-            timeFromNow = t => t.local().fromNow(),
+            time: timeFunc = (t: any) => t.local().format(),
+            timeFromNow = (t: any) => t.local().fromNow(),
         } = {}
     } = options;
     const {
         data: {
+            // @ts-expect-error TS(2525): Initializer provides no value for this binding ele... Remove this comment to see the full error message
             artists,
+            // @ts-expect-error TS(2525): Initializer provides no value for this binding ele... Remove this comment to see the full error message
             album,
+            // @ts-expect-error TS(2525): Initializer provides no value for this binding ele... Remove this comment to see the full error message
             track,
+            // @ts-expect-error TS(2525): Initializer provides no value for this binding ele... Remove this comment to see the full error message
             playDate
         } = {},
         meta: {
+            // @ts-expect-error TS(2525): Initializer provides no value for this binding ele... Remove this comment to see the full error message
             sourceId
         } = {},
     } = playObj;
@@ -124,7 +135,7 @@ export const buildTrackString = (playObj, options = {}) => {
 }
 
 // sorts playObj formatted objects by playDate in ascending (oldest first) order
-export const sortByPlayDate = (a, b) => a.data.playDate.isAfter(b.data.playDate) ? 1 : -1;
+export const sortByPlayDate = (a: any, b: any) => a.data.playDate.isAfter(b.data.playDate) ? 1 : -1;
 
 const s = splat();
 const SPLAT = Symbol.for('splat')
@@ -144,7 +155,7 @@ export const defaultFormat = printf(({level, message, label = 'App', timestamp, 
         msg = stackArr[0];
         const cleanedStack = stackArr
             .slice(1) // don't need actual error message since we are showing it as msg
-            .map(x => x.replace(CWD, 'CWD')) // replace file location up to cwd for user privacy
+            .map((x: any) => x.replace(CWD, 'CWD')) // replace file location up to cwd for user privacy
             .join('\n'); // rejoin with newline to preserve formatting
         stackMsg = `\n${cleanedStack}`;
     }
@@ -180,7 +191,7 @@ export const createLabelledLogger = (name = 'default', label = 'App') => {
     return winston.loggers.get(name);
 }
 
-export const setIntersection = (setA, setB) => {
+export const setIntersection = (setA: any, setB: any) => {
     let _intersection = new Set()
     for (let elem of setB) {
         if (setA.has(elem)) {
@@ -190,7 +201,8 @@ export const setIntersection = (setA, setB) => {
     return _intersection
 }
 
-export const isValidConfigStructure = (obj, required = {}) => {
+export const isValidConfigStructure = (obj: any, required = {}) => {
+    // @ts-expect-error TS(2339): Property 'name' does not exist on type '{}'.
     const {name = false, type = false, data = true} = required;
     const errs = [];
     if (obj.type === undefined && type) {
@@ -208,15 +220,15 @@ export const isValidConfigStructure = (obj, required = {}) => {
     return true;
 }
 
-export const returnDuplicateStrings = (arr) => {
-    const alreadySeen = [];
-    const dupes = [];
+export const returnDuplicateStrings = (arr: any) => {
+    const alreadySeen: any = [];
+    const dupes: any = [];
 
-    arr.forEach(str => alreadySeen[str] ? dupes.push(str) : alreadySeen[str] = true);
+    arr.forEach((str: any) => alreadySeen[str] ? dupes.push(str) : alreadySeen[str] = true);
     return dupes;
 }
 
-export const capitalize = (str) => {
+export const capitalize = (str: any) => {
     return str.charAt(0).toUpperCase() + str.slice(1)
 }
 /**
@@ -225,15 +237,19 @@ export const capitalize = (str) => {
  * Checks sources and source ID's (unique identifiers) first then
  * Checks track, album, and artists in that order
  * */
-export const playObjDataMatch = (a, b) => {
+export const playObjDataMatch = (a: any, b: any) => {
     const {
         data: {
             artists: aArtists = [],
+            // @ts-expect-error TS(2525): Initializer provides no value for this binding ele... Remove this comment to see the full error message
             album: aAlbum,
+            // @ts-expect-error TS(2525): Initializer provides no value for this binding ele... Remove this comment to see the full error message
             track: aTrack,
         } = {},
         meta: {
+            // @ts-expect-error TS(2525): Initializer provides no value for this binding ele... Remove this comment to see the full error message
             source: aSource,
+            // @ts-expect-error TS(2525): Initializer provides no value for this binding ele... Remove this comment to see the full error message
             sourceId: aSourceId,
         } = {},
     } = a;
@@ -241,11 +257,15 @@ export const playObjDataMatch = (a, b) => {
     const {
         data: {
             artists: bArtists = [],
+            // @ts-expect-error TS(2525): Initializer provides no value for this binding ele... Remove this comment to see the full error message
             album: bAlbum,
+            // @ts-expect-error TS(2525): Initializer provides no value for this binding ele... Remove this comment to see the full error message
             track: bTrack,
         } = {},
         meta: {
+            // @ts-expect-error TS(2525): Initializer provides no value for this binding ele... Remove this comment to see the full error message
             source: bSource,
+            // @ts-expect-error TS(2525): Initializer provides no value for this binding ele... Remove this comment to see the full error message
             sourceId: bSourceId,
         } = {},
     } = b;
@@ -267,14 +287,14 @@ export const playObjDataMatch = (a, b) => {
         return false;
     }
     // check if every artist from either playObj matches (one way or another) with the artists from the other play obj
-    if (!aArtists.every(x => bArtists.includes(x)) && bArtists.every(x => aArtists.includes(x))) {
+    if (!aArtists.every((x: any) => bArtists.includes(x)) && bArtists.every((x: any) => aArtists.includes(x))) {
         return false
     }
 
     return true;
 }
 
-export const parseRetryAfterSecsFromObj = (err) => {
+export const parseRetryAfterSecsFromObj = (err: any) => {
 
     let raVal;
 
@@ -291,6 +311,7 @@ export const parseRetryAfterSecsFromObj = (err) => {
     // }
     const {
         response: {
+            // @ts-expect-error TS(2525): Initializer provides no value for this binding ele... Remove this comment to see the full error message
             headers, // returned in superagent error
         } = {},
         retryAfter: ra // possible custom property we have set
@@ -312,6 +333,7 @@ export const parseRetryAfterSecsFromObj = (err) => {
         return retryAfter; // got a number!
     }
     // try to parse as date
+    // @ts-expect-error TS(2322): Type 'Dayjs' is not assignable to type 'number'.
     retryAfter = dayjs(retryAfter);
     if (!dayjs.isDayjs(retryAfter)) {
         return undefined; // could not parse string if not in ISO 8601 format
@@ -327,7 +349,7 @@ export const parseRetryAfterSecsFromObj = (err) => {
     return diff;
 }
 
-export const spreadDelay = (retries, multiplier) => {
+export const spreadDelay = (retries: any, multiplier: any) => {
     if(retries === 0) {
         return [];
     }
@@ -339,14 +361,17 @@ export const spreadDelay = (retries, multiplier) => {
     return s;
 }
 
-export const removeUndefinedKeys = (obj) => {
+export const removeUndefinedKeys = (obj: any) => {
     let newObj = {};
     Object.keys(obj).forEach((key) => {
         if(Array.isArray(obj[key])) {
+            // @ts-expect-error TS(7053): Element implicitly has an 'any' type because expre... Remove this comment to see the full error message
             newObj[key] = obj[key];
         } else if (obj[key] === Object(obj[key])) {
+            // @ts-expect-error TS(7053): Element implicitly has an 'any' type because expre... Remove this comment to see the full error message
             newObj[key] = removeUndefinedKeys(obj[key]);
         } else if (obj[key] !== undefined) {
+            // @ts-expect-error TS(7053): Element implicitly has an 'any' type because expre... Remove this comment to see the full error message
             newObj[key] = obj[key];
         }
     });
@@ -354,14 +379,16 @@ export const removeUndefinedKeys = (obj) => {
         return undefined;
     }
     Object.keys(newObj).forEach(key => {
+        // @ts-expect-error TS(7053): Element implicitly has an 'any' type because expre... Remove this comment to see the full error message
         if(newObj[key] === undefined || (null !== newObj[key] && typeof newObj[key] === 'object' && Object.keys(newObj[key]).length === 0)) {
+            // @ts-expect-error TS(7053): Element implicitly has an 'any' type because expre... Remove this comment to see the full error message
             delete newObj[key]
         }
     });
     return newObj;
 }
 
-export const parseDurationFromTimestamp = (timestamp) => {
+export const parseDurationFromTimestamp = (timestamp: any) => {
     if (timestamp === null || timestamp === undefined) {
         return undefined;
     }

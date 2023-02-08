@@ -21,7 +21,7 @@ export default class AbstractSource {
     pollRetries = 0;
     tracksDiscovered = 0;
 
-    constructor(type, name, config = {}, clients = []) {
+    constructor(type: any, name: any, config = {}, clients = []) {
         this.type = type;
         this.name = name;
         this.identifier = `Source - ${capitalize(this.type)} - ${name}`;
@@ -49,15 +49,15 @@ export default class AbstractSource {
     // by default if the track was recently played it is valid
     // this is useful for sources where the track doesn't have complete information like Subsonic
     // TODO make this more descriptive? or move it elsewhere
-    recentlyPlayedTrackIsValid = (playObj) => {
+    recentlyPlayedTrackIsValid = (playObj: any) => {
         return true;
     }
 
-    poll = async (allClients) => {
+    poll = async (allClients: any) => {
         await this.startPolling(allClients);
     }
 
-    startPolling = async (allClients) => {
+    startPolling = async (allClients: any) => {
         if(this.requiresAuthInteraction && !this.authed) {
             this.logger.error('Cannot start polling because user interaction is required for authentication');
             return;
@@ -66,7 +66,9 @@ export default class AbstractSource {
         this.pollRetries = 0;
 
         const {
+            // @ts-expect-error TS(2339): Property 'maxPollRetries' does not exist on type '... Remove this comment to see the full error message
             maxPollRetries = 0,
+            // @ts-expect-error TS(2339): Property 'retryMultiplier' does not exist on type ... Remove this comment to see the full error message
             retryMultiplier = 1.5,
         } = this.config;
 
@@ -92,7 +94,7 @@ export default class AbstractSource {
     /**
      * @param {ScrobbleClients} allClients
      */
-    doPolling = async (allClients) => {
+    doPolling = async (allClients: any) => {
         if (this.polling === true) {
             return;
         }
@@ -103,6 +105,7 @@ export default class AbstractSource {
         try {
             this.polling = true;
             while (true) {
+                // @ts-expect-error TS(2367): This condition will always return 'false' since th... Remove this comment to see the full error message
                 if(this.polling === false) {
                     this.logger.info('Stopped polling due to user input');
                     break;
@@ -115,18 +118,24 @@ export default class AbstractSource {
                 let closeToInterval = false;
                 const now = dayjs();
 
+                // @ts-expect-error TS(2769): No overload matches this call.
                 const playInfo = playObjs.reduce((acc, playObj) => {
                     if(this.recentlyPlayedTrackIsValid(playObj)) {
-                        const {data: {playDate} = {}} = playObj;
+                        const {data: {
+                            playDate
+                        }: any = {}} = playObj;
+                        // @ts-expect-error TS(2339): Property 'unix' does not exist on type 'never'.
                         if (playDate.unix() > lastTrackPlayedAt.unix()) {
                             newTracksFound = true;
                             this.logger.info(`New Track => ${buildTrackString(playObj)}`);
 
                             if (closeToInterval === false) {
+                                // @ts-expect-error TS(2339): Property 'unix' does not exist on type 'never'.
                                 closeToInterval = Math.abs(now.unix() - playDate.unix()) < 5;
                             }
 
                             return {
+                                // @ts-expect-error TS(2698): Spread types may only be created from object types... Remove this comment to see the full error message
                                 plays: [...acc.plays, {...playObj, meta: {...playObj.meta, newFromSource: true}}],
                                 lastTrackPlayedAt: playDate
                             }
@@ -138,7 +147,9 @@ export default class AbstractSource {
                     }
                     return acc;
                 }, {plays: [], lastTrackPlayedAt});
+                // @ts-expect-error TS(2339): Property 'plays' does not exist on type 'never'.
                 playObjs = playInfo.plays;
+                // @ts-expect-error TS(2339): Property 'lastTrackPlayedAt' does not exist on typ... Remove this comment to see the full error message
                 lastTrackPlayedAt = playInfo.lastTrackPlayedAt;
 
                 if (closeToInterval) {
@@ -178,6 +189,7 @@ export default class AbstractSource {
                     this.tracksDiscovered += scrobbleResult.length;
                 }
 
+                // @ts-expect-error TS(2339): Property 'interval' does not exist on type '{}'.
                 const {interval = 30, checkActiveFor = 300, maxSleep = 300} = this.config;
 
                 let sleepTime = interval;

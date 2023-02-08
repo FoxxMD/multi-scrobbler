@@ -16,21 +16,24 @@ export default class ScrobbleSources {
 
     sourceTypes = ['spotify', 'plex', 'tautulli', 'subsonic', 'jellyfin', 'lastfm', 'deezer'];
 
-    constructor(localUrl, configDir = process.cwd()) {
+    constructor(localUrl: any, configDir = process.cwd()) {
         this.configDir = configDir;
         this.localUrl = localUrl;
         this.logger = createLabelledLogger('sources', 'Sources');
     }
 
-    getByName = (name) => {
+    getByName = (name: any) => {
+        // @ts-expect-error TS(2339): Property 'name' does not exist on type 'never'.
         return this.sources.find(x => x.name === name);
     }
 
-    getByType = (type) => {
+    getByType = (type: any) => {
+        // @ts-expect-error TS(2339): Property 'type' does not exist on type 'never'.
         return this.sources.filter(x => x.type === type);
     }
 
-    getByNameAndType = (name, type) => {
+    getByNameAndType = (name: any, type: any) => {
+        // @ts-expect-error TS(2339): Property 'name' does not exist on type 'never'.
         return this.sources.find(x => x.name === name && x.type === type);
     }
 
@@ -50,7 +53,7 @@ export default class ScrobbleSources {
                 sourceDefaults: sd = {},
             } = configFile;
             sourceDefaults = sd;
-            const validMainConfigs = mainConfigSourcesConfigs.reduce((acc, curr, i) => {
+            const validMainConfigs = mainConfigSourcesConfigs.reduce((acc: any, curr: any, i: any) => {
                 if(curr === null) {
                     this.logger.error(`The source config entry at index ${i} in config.json is null but should be an object, will not parse`);
                     return acc;
@@ -64,8 +67,11 @@ export default class ScrobbleSources {
             for (const c of validMainConfigs) {
                 const {name = 'unnamed'} = c;
                 configs.push({...c,
+                    // @ts-expect-error TS(2322): Type 'any' is not assignable to type 'never'.
                     name,
+                    // @ts-expect-error TS(2322): Type 'string' is not assignable to type 'never'.
                     source: 'config.json',
+                    // @ts-expect-error TS(2322): Type 'string' is not assignable to type 'never'.
                     configureAs: 'source' // override user value
                 });
             }
@@ -85,10 +91,15 @@ export default class ScrobbleSources {
                     };
                     if (!Object.values(s).every(x => x === undefined)) {
                         configs.push({
+                            // @ts-expect-error TS(2322): Type 'string' is not assignable to type 'never'.
                             type: 'spotify',
+                            // @ts-expect-error TS(2322): Type 'string' is not assignable to type 'never'.
                             name: 'unnamed',
+                            // @ts-expect-error TS(2322): Type 'string' is not assignable to type 'never'.
                             source: 'ENV',
+                            // @ts-expect-error TS(2322): Type 'string' is not assignable to type 'never'.
                             mode: 'single',
+                            // @ts-expect-error TS(2322): Type '{ accessToken: string | undefined; clientId:... Remove this comment to see the full error message
                             data: s
                         })
                     }
@@ -100,10 +111,15 @@ export default class ScrobbleSources {
                     };
                     if (!Object.values(t).every(x => x === undefined)) {
                         configs.push({
+                            // @ts-expect-error TS(2322): Type 'string' is not assignable to type 'never'.
                             type: 'tautulli',
+                            // @ts-expect-error TS(2322): Type 'string' is not assignable to type 'never'.
                             name: 'unnamed',
+                            // @ts-expect-error TS(2322): Type 'string' is not assignable to type 'never'.
                             source: 'ENV',
+                            // @ts-expect-error TS(2322): Type 'string' is not assignable to type 'never'.
                             mode: 'single',
+                            // @ts-expect-error TS(2322): Type '{ user: string | undefined; }' is not assign... Remove this comment to see the full error message
                             data: t
                         })
                     }
@@ -114,10 +130,15 @@ export default class ScrobbleSources {
                     };
                     if (!Object.values(p).every(x => x === undefined)) {
                         configs.push({
+                            // @ts-expect-error TS(2322): Type 'string' is not assignable to type 'never'.
                             type: 'plex',
+                            // @ts-expect-error TS(2322): Type 'string' is not assignable to type 'never'.
                             name: 'unnamed',
+                            // @ts-expect-error TS(2322): Type 'string' is not assignable to type 'never'.
                             source: 'ENV',
+                            // @ts-expect-error TS(2322): Type 'string' is not assignable to type 'never'.
                             mode: 'single',
+                            // @ts-expect-error TS(2322): Type '{ user: string | undefined; }' is not assign... Remove this comment to see the full error message
                             data: p
                         })
                     }
@@ -130,10 +151,15 @@ export default class ScrobbleSources {
                     };
                     if (!Object.values(sub).every(x => x === undefined)) {
                         configs.push({
+                            // @ts-expect-error TS(2322): Type 'string' is not assignable to type 'never'.
                             type: 'subsonic',
+                            // @ts-expect-error TS(2322): Type 'string' is not assignable to type 'never'.
                             name: 'unnamed',
+                            // @ts-expect-error TS(2322): Type 'string' is not assignable to type 'never'.
                             source: 'ENV',
+                            // @ts-expect-error TS(2322): Type 'string' is not assignable to type 'never'.
                             mode: 'single',
+                            // @ts-expect-error TS(2322): Type '{ user: string | undefined; password: string... Remove this comment to see the full error message
                             data: sub
                         })
                     }
@@ -145,10 +171,15 @@ export default class ScrobbleSources {
                     };
                     if (!Object.values(j).every(x => x === undefined)) {
                         configs.push({
+                            // @ts-expect-error TS(2322): Type 'string' is not assignable to type 'never'.
                             type: 'jellyfin',
+                            // @ts-expect-error TS(2322): Type 'string' is not assignable to type 'never'.
                             name: 'unnamed',
+                            // @ts-expect-error TS(2322): Type 'string' is not assignable to type 'never'.
                             source: 'ENV',
+                            // @ts-expect-error TS(2322): Type 'string' is not assignable to type 'never'.
                             mode: 'single',
+                            // @ts-expect-error TS(2322): Type '{ user: string | undefined; server: string |... Remove this comment to see the full error message
                             data: j
                         })
                     }
@@ -207,6 +238,7 @@ export default class ScrobbleSources {
                     if(configureAs === 'source') {
                         m.source = `${sourceType}.json`;
                         m.type = sourceType;
+                        // @ts-expect-error TS(2345): Argument of type 'any' is not assignable to parame... Remove this comment to see the full error message
                         configs.push(m);
                     }
                 }
@@ -217,6 +249,7 @@ export default class ScrobbleSources {
         const validConfigs = configs.reduce((acc, c) => {
             const isValid = isValidConfigStructure(c, {type: true, data: true});
             if (isValid !== true) {
+                // @ts-expect-error TS(2339): Property 'source' does not exist on type 'never'.
                 this.logger.error(`Source config from ${c.source} with name [${c.name || 'unnamed'}] of type [${c.type || 'unknown'}] will not be used because it has structural errors: ${isValid.join(' | ')}`);
                 return acc;
             }
@@ -232,25 +265,30 @@ export default class ScrobbleSources {
         }, {});
         // only need to warn if dup names PER TYPE
         for (const [type, typedConfigs] of Object.entries(typeGroupedConfigs)) {
-            const nameGroupedConfigs = typedConfigs.reduce((acc, curr) => {
+            // @ts-expect-error TS(2571): Object is of type 'unknown'.
+            const nameGroupedConfigs = typedConfigs.reduce((acc: any, curr: any) => {
                 const {name = 'unnamed'} = curr;
                 const {[name]: n = []} = acc;
                 return {...acc, [name]: [...n, curr]};
             }, {});
             for (const [name, namedConfigs] of Object.entries(nameGroupedConfigs)) {
                 let tempNamedConfigs = namedConfigs;
+                // @ts-expect-error TS(2571): Object is of type 'unknown'.
                 const hasDups = namedConfigs.length > 1;
                 if (hasDups) {
-                    const sources = namedConfigs.map(c => `Config object from ${c.source} of type [${c.type}]`);
+                    // @ts-expect-error TS(2571): Object is of type 'unknown'.
+                    const sources = namedConfigs.map((c: any) => `Config object from ${c.source} of type [${c.type}]`);
                     this.logger.warn(`Source configs have naming conflicts -- the following configs have the same name "${name}":\n\n${sources.join('\n')}\n`);
                     if (name === 'unnamed') {
                         this.logger.info('HINT: "unnamed" configs occur when using ENVs, if a multi-user mode config does not have a "name" property, or if a config is built in single-user mode');
                     }
                 }
+                // @ts-expect-error TS(2571): Object is of type 'unknown'.
                 tempNamedConfigs = tempNamedConfigs.map(({name = 'unnamed', ...x}, i) => ({
                     ...x,
                     name: hasDups ? `${name}${i + 1}` : name
                 }));
+                // @ts-expect-error TS(2571): Object is of type 'unknown'.
                 for (const c of tempNamedConfigs) {
                     try {
                         await this.addSource(c, sourceDefaults);
@@ -263,7 +301,7 @@ export default class ScrobbleSources {
         }
     }
 
-    addSource = async (clientConfig, defaults = {}) => {
+    addSource = async (clientConfig: any, defaults = {}) => {
         const isValidConfig = isValidConfigStructure(clientConfig, {name: true, data: true, type: true});
         if (isValidConfig !== true) {
             throw new Error(`Config object from ${clientConfig.source || 'unknown'} with name [${clientConfig.name || 'unnamed'}] of type [${clientConfig.type || 'unknown'}] has errors: ${isValidConfig.join(' | ')}`)
@@ -313,7 +351,7 @@ export default class ScrobbleSources {
         }
         if(newSource.initialized === false) {
             this.logger.debug(`(${name}) Attempting ${type} initialization...`);
-            if (await newSource.initialize() === false) {
+            if ((await newSource.initialize()) === false) {
                 this.logger.error(`(${name}) ${type} source failed to initialize. Source needs to be successfully initialized before activity capture can begin.`);
                 return;
             } else {
@@ -338,6 +376,7 @@ export default class ScrobbleSources {
             }
         }
 
+        // @ts-expect-error TS(2345): Argument of type 'SpotifySource | PlexSource | Sub... Remove this comment to see the full error message
         this.sources.push(newSource);
     }
 }

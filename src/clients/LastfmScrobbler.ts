@@ -17,14 +17,16 @@ export default class LastfmScrobbler extends AbstractScrobbleClient {
     requiresAuth = true;
     requiresAuthInteraction = true;
 
-    constructor(name, config = {}, options = {}) {
+    constructor(name: any, config = {}, options = {}) {
+        // @ts-expect-error TS(2554): Expected 2-3 arguments, but got 4.
         super('lastfm', name, config, options);
         this.api = new LastfmApiClient(name, config, options)
     }
 
-    formatPlayObj = obj => LastfmApiClient.formatPlayObj(obj);
+    formatPlayObj = (obj: any) => LastfmApiClient.formatPlayObj(obj);
 
     initialize = async () => {
+        // @ts-expect-error TS(2322): Type 'number' is not assignable to type 'boolean'.
         this.initialized = INITIALIZING;
         this.initialized = await this.api.initialize();
         return this.initialized;
@@ -44,13 +46,13 @@ export default class LastfmScrobbler extends AbstractScrobbleClient {
     refreshScrobbles = async () => {
         if (this.refreshEnabled) {
             this.logger.debug('Refreshing recent scrobbles');
-            const resp = await this.api.callApi(client => client.userGetRecentTracks({user: this.api.user, limit: 20, extended: true}));
+            const resp = await this.api.callApi((client: any) => client.userGetRecentTracks({user: this.api.user, limit: 20, extended: true}));
             const {
                 recenttracks: {
                     track: list = [],
                 }
             } = resp;
-            this.recentScrobbles = list.reduce((acc, x) => {
+            this.recentScrobbles = list.reduce((acc: any, x: any) => {
                 try {
                     const formatted = LastfmApiClient.formatPlayObj(x);
                     const {
@@ -75,6 +77,7 @@ export default class LastfmScrobbler extends AbstractScrobbleClient {
                     }
                     return acc.concat(formatted);
                 } catch (e) {
+                    // @ts-expect-error TS(2571): Object is of type 'unknown'.
                     this.logger.warn('Failed to format Last.fm recently scrobbled track, omitting from time frame check', {error: e.message});
                     this.logger.debug('Full api response object:');
                     this.logger.debug(x);
@@ -87,28 +90,31 @@ export default class LastfmScrobbler extends AbstractScrobbleClient {
                 this.newestScrobbleTime = newestScrobbleTime;
                 this.oldestScrobbleTime = oldestScrobbleTime;
 
+                // @ts-expect-error TS(2339): Property 'play' does not exist on type 'never'.
                 this.scrobbledPlayObjs = this.scrobbledPlayObjs.filter(x => this.timeFrameIsValid(x.play));
             }
         }
         this.lastScrobbleCheck = dayjs();
     }
 
-    cleanSourceSearchTitle = (playObj) => {
+    cleanSourceSearchTitle = (playObj: any) => {
         const {
             data: {
+                // @ts-expect-error TS(2525): Initializer provides no value for this binding ele... Remove this comment to see the full error message
                 track,
             } = {},
         } = playObj;
         return track.toLocaleLowerCase().trim();
     }
 
-    alreadyScrobbled = async (playObj, log = false) => {
+    // @ts-expect-error TS(2416): Property 'alreadyScrobbled' in type 'LastfmScrobbl... Remove this comment to see the full error message
+    alreadyScrobbled = async (playObj: any, log = false) => {
         return this.existingScrobble(playObj, (log || this.verboseOptions.match.onMatch)) !== undefined;
     }
 
-    existingScrobble = (playObj, logMatch = false) => {
+    existingScrobble = (playObj: any, logMatch = false) => {
         const tr = truncateStringToLength(27);
-        const scoreTrackOpts = {include: ['track', 'time'], transformers: {track: t => tr(t).padEnd(30)}};
+        const scoreTrackOpts = {include: ['track', 'time'], transformers: {track: (t: any) => tr(t).padEnd(30)}};
 
         // return early if we don't care about checking existing
         if (false === this.checkExistingScrobbles) {
@@ -126,6 +132,7 @@ export default class LastfmScrobbler extends AbstractScrobbleClient {
 
         // if we have an submitted play with matching data and play date then we can just return the response from the original scrobble
         if (existingExactSubmitted !== undefined) {
+            // @ts-expect-error TS(2339): Property 'scrobble' does not exist on type 'never[... Remove this comment to see the full error message
             existingScrobble = existingExactSubmitted.scrobble;
 
             closestMatch = {
@@ -149,15 +156,19 @@ export default class LastfmScrobbler extends AbstractScrobbleClient {
 
             // we have have found an existing submission but without an exact date
             // in which case we can check the scrobble api response against recent scrobbles (also from api) for a more accurate comparison
+            // @ts-expect-error TS(2339): Property 'scrobble' does not exist on type 'never'... Remove this comment to see the full error message
             const referenceApiScrobbleResponse = existingDataSubmitted.length > 0 ? existingDataSubmitted[0].scrobble : undefined;
 
             const {
                 data: {
                     artists: sourceArtists = [],
+                    // @ts-expect-error TS(2525): Initializer provides no value for this binding ele... Remove this comment to see the full error message
                     playDate
                 } = {},
                 meta: {
+                    // @ts-expect-error TS(2525): Initializer provides no value for this binding ele... Remove this comment to see the full error message
                     trackLength,
+                    // @ts-expect-error TS(2525): Initializer provides no value for this binding ele... Remove this comment to see the full error message
                     source,
                 } = {},
             } = playObj;
@@ -169,6 +180,7 @@ export default class LastfmScrobbler extends AbstractScrobbleClient {
 
                 const referenceMatch = referenceApiScrobbleResponse !== undefined && playObjDataMatch(x, referenceApiScrobbleResponse);
 
+                // @ts-expect-error TS(2525): Initializer provides no value for this binding ele... Remove this comment to see the full error message
                 const {data: {playDate: scrobbleTime, track: scrobbleTitle, artists = []} = {}} = x;
 
                 const playDiffThreshold = source === 'Subsonic' ? 60 : 10;
@@ -193,13 +205,14 @@ export default class LastfmScrobbler extends AbstractScrobbleClient {
                 const lowerScrobbleTitle = scrobbleTitle.toLocaleLowerCase().trim();
                 // because of all this replacing we need a more position-agnostic way of comparing titles so use intersection on title split by spaces
                 // and compare against length of scrobble title
-                const sourceTitleTerms = new Set(cleanSourceTitle.split(' ').filter(x => x !== ''));
+                const sourceTitleTerms = new Set(cleanSourceTitle.split(' ').filter((x: any) => x !== ''));
                 const commonTerms = setIntersection(new Set(lowerScrobbleTitle.split(' ')), sourceTitleTerms);
 
                 titleMatch = commonTerms.size / sourceTitleTerms.size;
 
                 let artistMatch;
-                const lowerSourceArtists = sourceArtists.map(x => x.toLocaleLowerCase());
+                const lowerSourceArtists = sourceArtists.map((x: any) => x.toLocaleLowerCase());
+                // @ts-expect-error TS(2339): Property 'toLocaleLowerCase' does not exist on typ... Remove this comment to see the full error message
                 const lowerScrobbleArtists = artists.map(x => x.toLocaleLowerCase());
                 artistMatch = setIntersection(new Set(lowerScrobbleArtists), new Set(lowerSourceArtists)).size / artists.length;
 
@@ -234,23 +247,30 @@ export default class LastfmScrobbler extends AbstractScrobbleClient {
         }
 
         if ((existingScrobble !== undefined && this.verboseOptions.match.onMatch) || (existingScrobble === undefined && this.verboseOptions.match.onNoMatch)) {
+            // @ts-expect-error TS(2339): Property 'scrobble' does not exist on type '{ scor... Remove this comment to see the full error message
             const closestScrobble = closestMatch.scrobble === undefined ? closestMatch.breakdowns.join(' | ') : `Closest Scrobble: ${buildTrackString(closestMatch.scrobble, scoreTrackOpts)} => ${closestMatch.breakdowns.join(' | ')}`;
             this.logger.debug(`(Existing Check) Source: ${buildTrackString(playObj, scoreTrackOpts)} => ${closestScrobble}`);
         }
         return existingScrobble;
     }
 
-    scrobble = async (playObj) => {
+    scrobble = async (playObj: any) => {
         const {
             data: {
+                // @ts-expect-error TS(2525): Initializer provides no value for this binding ele... Remove this comment to see the full error message
                 artists,
+                // @ts-expect-error TS(2525): Initializer provides no value for this binding ele... Remove this comment to see the full error message
                 album,
+                // @ts-expect-error TS(2525): Initializer provides no value for this binding ele... Remove this comment to see the full error message
                 track,
+                // @ts-expect-error TS(2525): Initializer provides no value for this binding ele... Remove this comment to see the full error message
                 duration,
+                // @ts-expect-error TS(2525): Initializer provides no value for this binding ele... Remove this comment to see the full error message
                 playDate
             } = {},
             data = {},
             meta: {
+                // @ts-expect-error TS(2525): Initializer provides no value for this binding ele... Remove this comment to see the full error message
                 source,
                 newFromSource = false,
             } = {}
@@ -274,10 +294,11 @@ export default class LastfmScrobbler extends AbstractScrobbleClient {
         const scrobblePayload = removeUndefinedKeys(rawPayload);
 
         try {
-            const response = await this.api.callApi(client => client.trackScrobble(
+            const response = await this.api.callApi((client: any) => client.trackScrobble(
                 scrobblePayload));
             const {
                 scrobbles: {
+                    // @ts-expect-error TS(2525): Initializer provides no value for this binding ele... Remove this comment to see the full error message
                     '@attr': {
                         accepted = 0,
                         ignored = 0,
@@ -285,11 +306,15 @@ export default class LastfmScrobbler extends AbstractScrobbleClient {
                     },
                     scrobble: {
                         track: {
+                           // @ts-expect-error TS(2525): Initializer provides no value for this binding ele... Remove this comment to see the full error message
                            '#text': trackName,
                         } = {},
+                        // @ts-expect-error TS(2525): Initializer provides no value for this binding ele... Remove this comment to see the full error message
                         timestamp,
                         ignoredMessage: {
+                            // @ts-expect-error TS(2525): Initializer provides no value for this binding ele... Remove this comment to see the full error message
                             code: ignoreCode,
+                            // @ts-expect-error TS(2525): Initializer provides no value for this binding ele... Remove this comment to see the full error message
                             '#text': ignoreMsg,
                         } = {},
                         ...rest

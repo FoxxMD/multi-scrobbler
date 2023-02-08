@@ -1,5 +1,7 @@
+// @ts-expect-error TS(7016): Could not find a declaration file for module 'supe... Remove this comment to see the full error message
 import request from 'superagent';
 import {parseRetryAfterSecsFromObj, readJson, sleep, sortByPlayDate, writeFile} from "../utils.js";
+// @ts-expect-error TS(7016): Could not find a declaration file for module 'pass... Remove this comment to see the full error message
 import {Strategy as DeezerStrategy} from 'passport-deezer';
 import AbstractSource from "./AbstractSource.js";
 import dayjs from "dayjs";
@@ -9,18 +11,21 @@ export default class DeezerSource extends AbstractSource {
     localUrl;
     workingCredsPath;
     configDir;
-    error;
+    error: any;
 
     requiresAuth = true;
     requiresAuthInteraction = true;
 
     baseUrl = 'https://api.deezer.com';
 
-    constructor(name, config = {}, clients = []) {
+    constructor(name: any, config = {}, clients = []) {
         super('deezer', name, config, clients);
         const {
+            // @ts-expect-error TS(2339): Property 'localUrl' does not exist on type '{}'.
             localUrl,
+            // @ts-expect-error TS(2339): Property 'configDir' does not exist on type '{}'.
             configDir,
+            // @ts-expect-error TS(2339): Property 'interval' does not exist on type '{}'.
             interval = 60,
         } = config;
 
@@ -28,6 +33,7 @@ export default class DeezerSource extends AbstractSource {
             this.logger.warn('Interval should be above 30 seconds...😬');
         }
 
+        // @ts-expect-error TS(2339): Property 'interval' does not exist on type '{}'.
         this.config.interval = interval;
 
         this.configDir = configDir;
@@ -36,10 +42,11 @@ export default class DeezerSource extends AbstractSource {
         this.canPoll = true;
     }
 
-    static formatPlayObj(obj, newFromSource = false) {
+    static formatPlayObj(obj: any, newFromSource = false) {
         const {
             title: name,
             artist: {
+                // @ts-expect-error TS(2525): Initializer provides no value for this binding ele... Remove this comment to see the full error message
                 name: artistName,
             } = {},
             duration,
@@ -47,6 +54,7 @@ export default class DeezerSource extends AbstractSource {
             id,
             link,
             album: {
+                // @ts-expect-error TS(2525): Initializer provides no value for this binding ele... Remove this comment to see the full error message
                 title: albumName,
             } = {},
         } = obj;
@@ -73,13 +81,17 @@ export default class DeezerSource extends AbstractSource {
     initialize = async () => {
         try {
             const credFile = await readJson(this.workingCredsPath, {throwOnNotFound: false});
+            // @ts-expect-error TS(2339): Property 'accessToken' does not exist on type '{}'... Remove this comment to see the full error message
             this.config.accessToken = credFile.accessToken;
         } catch (e) {
             this.logger.warn('Current deezer credentials file exists but could not be parsed', { path: this.workingCredsPath });
         }
+        // @ts-expect-error TS(2339): Property 'accessToken' does not exist on type '{}'... Remove this comment to see the full error message
         if(this.config.accessToken === undefined) {
+            // @ts-expect-error TS(2339): Property 'clientId' does not exist on type '{}'.
             if(this.config.clientId === undefined) {
                 throw new Error('clientId must be defined when accessToken is not present');
+            // @ts-expect-error TS(2339): Property 'clientSecret' does not exist on type '{}... Remove this comment to see the full error message
             } else if(this.config.clientSecret === undefined) {
                 throw new Error('clientSecret must be defined when accessToken is not present');
             }
@@ -100,21 +112,26 @@ export default class DeezerSource extends AbstractSource {
     }
 
     getRecentlyPlayed = async (options = {}) => {
+        // @ts-expect-error TS(2339): Property 'formatted' does not exist on type '{}'.
         const {formatted = false} = options;
         const resp = await this.callApi(request.get(`${this.baseUrl}/user/me/history`));
         if(formatted) {
-            return resp.data.map(x => DeezerSource.formatPlayObj(x)).sort(sortByPlayDate)
+            return resp.data.map((x: any) => DeezerSource.formatPlayObj(x)).sort(sortByPlayDate);
         }
         return resp.data;
     }
 
-    callApi = async (req, retries = 0) => {
+    // @ts-expect-error TS(7024): Function implicitly has return type 'any' because ... Remove this comment to see the full error message
+    callApi = async (req: any, retries = 0) => {
         const {
+            // @ts-expect-error TS(2339): Property 'maxRequestRetries' does not exist on typ... Remove this comment to see the full error message
             maxRequestRetries = 1,
+            // @ts-expect-error TS(2339): Property 'retryMultiplier' does not exist on type ... Remove this comment to see the full error message
             retryMultiplier = 1.5
         } = this.config;
 
         req.query({
+            // @ts-expect-error TS(2339): Property 'accessToken' does not exist on type '{}'... Remove this comment to see the full error message
             access_token: this.config.accessToken,
             output: 'json'
            });
@@ -123,13 +140,17 @@ export default class DeezerSource extends AbstractSource {
             const {
                 body = {},
                 body: {
+                    // @ts-expect-error TS(2525): Initializer provides no value for this binding ele... Remove this comment to see the full error message
                     error,
                 } = {}
             } = resp;
             if (error !== undefined) {
                 const err = new Error(error.message);
+                // @ts-expect-error TS(2339): Property 'type' does not exist on type 'Error'.
                 err.type = error.type;
+                // @ts-expect-error TS(2339): Property 'code' does not exist on type 'Error'.
                 err.code = error.code;
+                // @ts-expect-error TS(2339): Property 'response' does not exist on type 'Error'... Remove this comment to see the full error message
                 err.response = resp;
                 throw  err;
             }
@@ -142,21 +163,30 @@ export default class DeezerSource extends AbstractSource {
                 return await this.callApi(req, retries + 1)
             }
             const {
+                // @ts-expect-error TS(2339): Property 'message' does not exist on type 'unknown... Remove this comment to see the full error message
                 message,
+                // @ts-expect-error TS(2339): Property 'response' does not exist on type 'unknow... Remove this comment to see the full error message
                 response: {
+                    // @ts-expect-error TS(2525): Initializer provides no value for this binding ele... Remove this comment to see the full error message
                     status,
                     body: {
                         "subsonic-response": {
+                            // @ts-expect-error TS(2525): Initializer provides no value for this binding ele... Remove this comment to see the full error message
                             status: ssStatus,
                             error: {
+                                // @ts-expect-error TS(2525): Initializer provides no value for this binding ele... Remove this comment to see the full error message
                                 code,
+                                // @ts-expect-error TS(2525): Initializer provides no value for this binding ele... Remove this comment to see the full error message
                                 message: ssMessage,
                             } = {},
                         } = {},
+                        // @ts-expect-error TS(2525): Initializer provides no value for this binding ele... Remove this comment to see the full error message
                         "subsonic-response": ssResp
                     } = {},
+                    // @ts-expect-error TS(2525): Initializer provides no value for this binding ele... Remove this comment to see the full error message
                     text,
                 } = {},
+                // @ts-expect-error TS(2339): Property 'response' does not exist on type 'unknow... Remove this comment to see the full error message
                 response,
             } = e;
             let msg = response !== undefined ? `API Call failed: Server Response => ${ssMessage}` : `API Call failed: ${message}`;
@@ -168,11 +198,14 @@ export default class DeezerSource extends AbstractSource {
 
     generatePassportStrategy = () => {
         return new DeezerStrategy({
+            // @ts-expect-error TS(2339): Property 'clientId' does not exist on type '{}'.
             clientID: this.config.clientId,
+            // @ts-expect-error TS(2339): Property 'clientSecret' does not exist on type '{}... Remove this comment to see the full error message
             clientSecret: this.config.clientSecret,
+            // @ts-expect-error TS(2339): Property 'redirectUri' does not exist on type '{}'... Remove this comment to see the full error message
             callbackURL: this.config.redirectUri || `${this.localUrl}/deezer/callback`,
             scope: ['listening_history','offline_access'],
-        }, (accessToken, refreshToken, profile, done) => {
+        }, (accessToken: any, refreshToken: any, profile: any, done: any) => {
                 // return done(null, {
                 //     accessToken,
                 //     refreshToken,
@@ -191,7 +224,7 @@ export default class DeezerSource extends AbstractSource {
         });
     }
 
-    handleAuthCodeCallback = async (res) => {
+    handleAuthCodeCallback = async (res: any) => {
         const {error, accessToken, id, displayName} = res;
         if (error === undefined) {
             await writeFile(this.workingCredsPath, JSON.stringify({
@@ -199,6 +232,7 @@ export default class DeezerSource extends AbstractSource {
                 id,
                 displayName,
             }));
+            // @ts-expect-error TS(2339): Property 'accessToken' does not exist on type '{}'... Remove this comment to see the full error message
             this.config.accessToken = accessToken;
             this.logger.info('Got token Deezer SDK callback!');
             return true;

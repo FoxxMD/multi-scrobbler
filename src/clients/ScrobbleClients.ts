@@ -18,16 +18,18 @@ export default class ScrobbleClients {
 
     clientTypes = ['maloja','lastfm'];
 
-    constructor(configDir) {
+    constructor(configDir: any) {
         this.configDir = configDir;
         this.logger = createLabelledLogger('scrobblers', 'Scrobblers');
     }
 
-    getByName = (name) => {
+    getByName = (name: any) => {
+        // @ts-expect-error TS(2339): Property 'name' does not exist on type 'never'.
         return this.clients.find(x => x.name === name);
     }
 
-    getByType = (type) => {
+    getByType = (type: any) => {
+        // @ts-expect-error TS(2339): Property 'type' does not exist on type 'never'.
         return this.clients.filter(x => x.type === type);
     }
 
@@ -48,7 +50,7 @@ export default class ScrobbleClients {
                 clientDefaults: cd = {},
             } = configFile;
             clientDefaults = cd;
-            const validMainConfigs = mainConfigClientConfigs.reduce((acc, curr, i) => {
+            const validMainConfigs = mainConfigClientConfigs.reduce((acc: any, curr: any, i: any) => {
                 if(curr === null) {
                     this.logger.error(`The client config entry at index ${i} in config.json is null but should be an object, will not parse`);
                     return acc;
@@ -166,21 +168,24 @@ export default class ScrobbleClients {
 
         // all client configs are minimally valid
         // now check that names are unique
-        const nameGroupedConfigs = validConfigs.reduce((acc, curr) => {
+        const nameGroupedConfigs = validConfigs.reduce((acc: any, curr: any) => {
             const {name = 'unnamed'} = curr;
             const {[name]: n = []} = acc;
             return {...acc, [name]: [...n, curr]};
         }, {});
-        let noConflictConfigs = [];
+        let noConflictConfigs: any = [];
         for (const [name, configs] of Object.entries(nameGroupedConfigs)) {
+            // @ts-expect-error TS(2571): Object is of type 'unknown'.
             if (configs.length > 1) {
-                const sources = configs.map(c => `Config object from ${c.source} of type [${c.type}]`);
+                // @ts-expect-error TS(2571): Object is of type 'unknown'.
+                const sources = configs.map((c: any) => `Config object from ${c.source} of type [${c.type}]`);
                 this.logger.error(`The following clients will not be built because of config naming conflicts (they have the same name of "${name}"): 
 ${sources.join('\n')}`);
                 if (name === 'unnamed') {
                     this.logger.info('HINT: "unnamed" configs occur when using ENVs, if a multi-user mode config does not have a "name" property, or if a config is built in single-user mode');
                 }
             } else {
+                // @ts-expect-error TS(2488): Type 'unknown' must have a '[Symbol.iterator]()' m... Remove this comment to see the full error message
                 noConflictConfigs = [...noConflictConfigs, ...configs];
             }
         }
@@ -201,7 +206,7 @@ ${sources.join('\n')}`);
         }
     }
 
-    addClient = async (clientConfig, defaults = {}) => {
+    addClient = async (clientConfig: any, defaults = {}) => {
         const isValidConfig = isValidConfigStructure(clientConfig, {name: true, data: true, type: true});
         if (isValidConfig !== true) {
             throw new Error(`Config object from ${clientConfig.source || 'unknown'} with name [${clientConfig.name || 'unnamed'}] of type [${clientConfig.type || 'unknown'}] has errors: ${isValidConfig.join(' | ')}`)
@@ -228,7 +233,7 @@ ${sources.join('\n')}`);
         }
         if(newClient.initialized === false) {
             this.logger.debug(`(${name}) Attempting ${type} initialization...`);
-            if (await newClient.initialize() === false) {
+            if ((await newClient.initialize()) === false) {
                 this.logger.error(`(${name}) ${type} client failed to initialize. Client needs to be successfully initialized before scrobbling.`);
             } else {
                 this.logger.info(`(${name}) ${type} client initialized`);
@@ -248,6 +253,7 @@ ${sources.join('\n')}`);
                 this.logger.info(`(${name}) ${type} client auth OK`);
             }
         }
+        // @ts-expect-error TS(2345): Argument of type 'MalojaScrobbler | LastfmScrobble... Remove this comment to see the full error message
         this.clients.push(newClient);
     }
 
@@ -256,56 +262,77 @@ ${sources.join('\n')}`);
      * @param {{scrobbleFrom, scrobbleTo, forceRefresh: boolean}|{scrobbleFrom, scrobbleTo}} options
      * @returns {Array}
      */
-    scrobble = async (data, options = {}) => {
+    scrobble = async (data: any, options = {}) => {
         const playObjs = Array.isArray(data) ? data : [data];
         const {
+            // @ts-expect-error TS(2339): Property 'forceRefresh' does not exist on type '{}... Remove this comment to see the full error message
             forceRefresh = false,
+            // @ts-expect-error TS(2339): Property 'checkTime' does not exist on type '{}'.
             checkTime = dayjs(),
+            // @ts-expect-error TS(2339): Property 'scrobbleTo' does not exist on type '{}'.
             scrobbleTo = [],
+            // @ts-expect-error TS(2339): Property 'scrobbleFrom' does not exist on type '{}... Remove this comment to see the full error message
             scrobbleFrom = 'source',
         } = options;
 
-        const tracksScrobbled = [];
+        const tracksScrobbled: any = [];
 
         if (this.clients.length === 0) {
             this.logger.warn('Cannot scrobble! No clients are configured.');
         }
 
         for (const client of this.clients) {
+            // @ts-expect-error TS(2339): Property 'name' does not exist on type 'never'.
             if (scrobbleTo.length > 0 && !scrobbleTo.includes(client.name)) {
+                // @ts-expect-error TS(2339): Property 'name' does not exist on type 'never'.
                 this.logger.debug(`Client '${client.name}' was filtered out by '${scrobbleFrom}'`);
                 continue;
             }
+            // @ts-expect-error TS(2339): Property 'initialized' does not exist on type 'nev... Remove this comment to see the full error message
             if(!client.initialized) {
+                // @ts-expect-error TS(2339): Property 'initializing' does not exist on type 'ne... Remove this comment to see the full error message
                 if(client.initializing) {
+                    // @ts-expect-error TS(2339): Property 'name' does not exist on type 'never'.
                     this.logger.warn(`Cannot scrobble to Client '${client.name}' because it is still initializing`);
                     continue;
                 }
+                // @ts-expect-error TS(2339): Property 'initialize' does not exist on type 'neve... Remove this comment to see the full error message
                 if(!(await client.initialize())) {
+                    // @ts-expect-error TS(2339): Property 'name' does not exist on type 'never'.
                     this.logger.warn(`Cannot scrobble to Client '${client.name}' because it could not be initialized`);
                     continue;
                 }
             }
 
+            // @ts-expect-error TS(2339): Property 'requiresAuth' does not exist on type 'ne... Remove this comment to see the full error message
             if(client.requiresAuth && !client.authed) {
+                // @ts-expect-error TS(2339): Property 'requiresAuthInteraction' does not exist ... Remove this comment to see the full error message
                 if (client.requiresAuthInteraction) {
+                    // @ts-expect-error TS(2339): Property 'name' does not exist on type 'never'.
                     this.logger.warn(`Cannot scrobble to Client '${client.name}' because user interaction is required for authentication`);
                     continue;
+                // @ts-expect-error TS(2339): Property 'testAuth' does not exist on type 'never'... Remove this comment to see the full error message
                 } else if (!(await client.testAuth())) {
+                    // @ts-expect-error TS(2339): Property 'name' does not exist on type 'never'.
                     this.logger.warn(`Cannot scrobble to Client '${client.name}' because auth test failed`);
                     continue;
                 }
             }
 
+            // @ts-expect-error TS(2339): Property 'isReady' does not exist on type 'never'.
             if(!(await client.isReady())) {
+                // @ts-expect-error TS(2339): Property 'name' does not exist on type 'never'.
                 this.logger.warn(`Cannot scrobble to Client '${client.name}' because it is not ready`);
                 continue;
             }
 
+            // @ts-expect-error TS(2339): Property 'scrobblesLastCheckedAt' does not exist o... Remove this comment to see the full error message
             if (forceRefresh || client.scrobblesLastCheckedAt().unix() < checkTime.unix()) {
                 try {
+                    // @ts-expect-error TS(2339): Property 'refreshScrobbles' does not exist on type... Remove this comment to see the full error message
                     await client.refreshScrobbles();
                 } catch(e) {
+                    // @ts-expect-error TS(2339): Property 'name' does not exist on type 'never'.
                     this.logger.error(`Encountered error while refreshing scrobbles for ${client.name}`);
                     this.logger.error(e);
                 }
@@ -317,19 +344,25 @@ ${sources.join('\n')}`);
                             newFromSource = false,
                         } = {}
                     } = playObj;
+                    // @ts-expect-error TS(2339): Property 'timeFrameIsValid' does not exist on type... Remove this comment to see the full error message
                     if (client.timeFrameIsValid(playObj, newFromSource) && !(await client.alreadyScrobbled(playObj, newFromSource))) {
+                        // @ts-expect-error TS(2339): Property 'scrobble' does not exist on type 'never'... Remove this comment to see the full error message
                         await client.scrobble(playObj)
+                        // @ts-expect-error TS(2339): Property 'tracksScrobbled' does not exist on type ... Remove this comment to see the full error message
                         client.tracksScrobbled++;
                         // since this is what we return to the source only add to tracksScrobbled if not already in array
                         // (source should only know that a track was scrobbled (binary) -- doesn't care if it was scrobbled more than once
+                        // @ts-expect-error TS(7006): Parameter 'x' implicitly has an 'any' type.
                         if(!tracksScrobbled.some(x => playObjDataMatch(x, playObj) && x.data.playDate === playObj.data.playDate)) {
                             tracksScrobbled.push(playObj);
                         }
                     }
                 } catch(e) {
+                    // @ts-expect-error TS(2339): Property 'name' does not exist on type 'never'.
                     this.logger.error(`Encountered error while in scrobble loop for ${client.name}`);
                     this.logger.error(e);
                     // for now just stop scrobbling plays for this client and move on. the client should deal with logging the issue
+                    // @ts-expect-error TS(2571): Object is of type 'unknown'.
                     if(e.continueScrobbling !== true) {
                         break;
                     }

@@ -1,7 +1,9 @@
-export const makeSourceCheckMiddle = sources => (req, res, next) => {
+export const makeSourceCheckMiddle = (sources: any) => (req: any, res: any, next: any) => {
     const {
         query: {
+            // @ts-expect-error TS(2525): Initializer provides no value for this binding ele... Remove this comment to see the full error message
             name,
+            // @ts-expect-error TS(2525): Initializer provides no value for this binding ele... Remove this comment to see the full error message
             type
         } = {}
     } = req;
@@ -21,9 +23,10 @@ export const makeSourceCheckMiddle = sources => (req, res, next) => {
     next();
 }
 
-export const makeClientCheckMiddle = clients => (req, res, next) => {
+export const makeClientCheckMiddle = (clients: any) => (req: any, res: any, next: any) => {
     const {
         query: {
+            // @ts-expect-error TS(2525): Initializer provides no value for this binding ele... Remove this comment to see the full error message
             name
         } = {}
     } = req;

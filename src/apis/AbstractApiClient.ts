@@ -9,11 +9,11 @@ export default class AbstractApiClient {
     options;
     logger;
 
-    client;
-    workingCredsPath;
-    redirectUri;
+    client: any;
+    workingCredsPath: any;
+    redirectUri: any;
 
-    constructor(type, name, config = {}, options = {}) {
+    constructor(type: any, name: any, config = {}, options = {}) {
         this.type = type;
         this.name = name;
         const identifier = `API - ${capitalize(this.type)} - ${name}`;
@@ -22,7 +22,7 @@ export default class AbstractApiClient {
         this.options = options;
     }
 
-    static formatPlayObj = obj => {
+    static formatPlayObj = (obj: any) => {
         throw new Error('should be overridden');
     }
 }

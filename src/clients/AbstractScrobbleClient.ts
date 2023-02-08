@@ -15,7 +15,7 @@ export default class AbstractScrobbleClient {
 
     recentScrobbles = [];
     scrobbledPlayObjs = [];
-    newestScrobbleTime;
+    newestScrobbleTime: any;
     oldestScrobbleTime = dayjs();
     tracksScrobbled = 0;
 
@@ -27,13 +27,14 @@ export default class AbstractScrobbleClient {
     config;
     logger;
 
-    constructor(type, name, config = {}) {
+    constructor(type: any, name: any, config = {}) {
         this.type = type;
         this.name = name;
         const identifier = `Client ${capitalize(this.type)} - ${name}`;
         this.logger = createLabelledLogger(identifier, identifier);
 
         const {
+            // @ts-expect-error TS(2339): Property 'options' does not exist on type '{}'.
             options: {
                 refreshEnabled = true,
                 checkExistingScrobbles = true,
@@ -71,8 +72,10 @@ export default class AbstractScrobbleClient {
     }
 
    set initialized(val) {
+        // @ts-expect-error TS(2367): This condition will always return 'false' since th... Remove this comment to see the full error message
         if(val === INITIALIZING) {
             this.#initState = INITIALIZING;
+        // @ts-expect-error TS(2367): This condition will always return 'false' since th... Remove this comment to see the full error message
         } else if(val === true || val === INITIALIZED) {
             this.#initState = INITIALIZED;
         } else {
@@ -112,16 +115,17 @@ export default class AbstractScrobbleClient {
         return this.lastScrobbleCheck;
     }
 
-    formatPlayObj = obj => {
+    formatPlayObj = (obj: any) => {
         this.logger.warn('formatPlayObj should be defined by concrete class!');
         return obj;
     }
 
     // time frame is valid as long as the play date for the source track is newer than the oldest play time from the scrobble client
     // ...this is assuming the scrobble client is returning "most recent" scrobbles
-    timeFrameIsValid = (playObj, log = false) => {
+    timeFrameIsValid = (playObj: any, log = false) => {
         const {
             data: {
+                // @ts-expect-error TS(2525): Initializer provides no value for this binding ele... Remove this comment to see the full error message
                 playDate,
             } = {},
         } = playObj;
@@ -132,13 +136,15 @@ export default class AbstractScrobbleClient {
         return validTime;
     }
 
-    addScrobbledTrack = (playObj, scrobbleResp) => {
+    addScrobbledTrack = (playObj: any, scrobbleResp: any) => {
+        // @ts-expect-error TS(2322): Type 'any' is not assignable to type 'never'.
         this.scrobbledPlayObjs.push({play: playObj, scrobble: this.formatPlayObj(scrobbleResp)});
     }
 
-    cleanSourceSearchTitle = (playObj) => {
+    cleanSourceSearchTitle = (playObj: any) => {
         const {
             data: {
+                // @ts-expect-error TS(2525): Initializer provides no value for this binding ele... Remove this comment to see the full error message
                 track,
             } = {},
         } = playObj;
@@ -146,16 +152,19 @@ export default class AbstractScrobbleClient {
         return track;
     };
 
-    findExistingSubmittedPlayObj = (playObj) => {
+    findExistingSubmittedPlayObj = (playObj: any) => {
         const {
             data: {
+                // @ts-expect-error TS(2525): Initializer provides no value for this binding ele... Remove this comment to see the full error message
                 playDate
             } = {},
             meta: {
+                // @ts-expect-error TS(2525): Initializer provides no value for this binding ele... Remove this comment to see the full error message
                 source,
             } = {}
         } = playObj;
 
+        // @ts-expect-error TS(2339): Property 'play' does not exist on type 'never'.
         const dtInvariantMatches = this.scrobbledPlayObjs.filter(x => playObjDataMatch(playObj, x.play));
 
         if (dtInvariantMatches.length === 0) {
@@ -166,9 +175,11 @@ export default class AbstractScrobbleClient {
             const {
                 play: {
                     data: {
+                        // @ts-expect-error TS(2525): Initializer provides no value for this binding ele... Remove this comment to see the full error message
                         playDate: sPlayDate
                     } = {},
                     meta: {
+                        // @ts-expect-error TS(2525): Initializer provides no value for this binding ele... Remove this comment to see the full error message
                         source: playSource
                     } = {},
                 } = {},

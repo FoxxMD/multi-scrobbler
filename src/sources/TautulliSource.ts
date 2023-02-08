@@ -1,13 +1,14 @@
 import dayjs from "dayjs";
 import PlexSource from "./PlexSource.js";
 
+// @ts-expect-error TS(2417): Class static side 'typeof TautulliSource' incorrec... Remove this comment to see the full error message
 export default class TautulliSource extends PlexSource {
 
-    constructor(name, config, clients) {
+    constructor(name: any, config: any, clients: any) {
         super(name, config, clients, 'tautulli');
     }
 
-    static formatPlayObj(obj, newFromSource = false) {
+    static formatPlayObj(obj: any, newFromSource = false) {
         const {
             artist_name,
             track_name,

@@ -8,13 +8,13 @@ export default class LastfmSource extends AbstractSource {
     requiresAuth = true;
     requiresAuthInteraction = true;
 
-    constructor(name, config = {}, clients = []) {
+    constructor(name: any, config = {}, clients = []) {
         super('lastfm', name, config, clients);
         this.canPoll = true;
         this.api = new LastfmApiClient(name, config);
     }
 
-    static formatPlayObj(obj) {
+    static formatPlayObj(obj: any) {
         return LastfmApiClient.formatPlayObj(obj);
     }
 
@@ -36,15 +36,16 @@ export default class LastfmSource extends AbstractSource {
 
 
     getRecentlyPlayed = async(options = {}) => {
+        // @ts-expect-error TS(2339): Property 'limit' does not exist on type '{}'.
         const {limit = 20, formatted = false} = options;
-        const resp = await this.api.callApi(client => client.userGetRecentTracks({user: this.api.user, limit, extended: true}));
+        const resp = await this.api.callApi((client: any) => client.userGetRecentTracks({user: this.api.user, limit, extended: true}));
         const {
             recenttracks: {
                 track: list = [],
             }
         } = resp;
 
-        return list.reduce((acc, x) => {
+        return list.reduce((acc: any, x: any) => {
             try {
                 const formatted = LastfmApiClient.formatPlayObj(x);
                 const {
@@ -69,6 +70,7 @@ export default class LastfmSource extends AbstractSource {
                 }
                 return acc.concat(formatted);
             } catch (e) {
+                // @ts-expect-error TS(2571): Object is of type 'unknown'.
                 this.logger.warn('Failed to format Last.fm recently scrobbled track, omitting from time frame check', {error: e.message});
                 this.logger.debug('Full api response object:');
                 this.logger.debug(x);

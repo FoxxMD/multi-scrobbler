@@ -11,7 +11,9 @@ import passport from 'passport';
 import session from 'express-session';
 import {Writable} from 'stream';
 import 'winston-daily-rotate-file';
+// @ts-expect-error TS(7016): Could not find a declaration file for module 'form... Remove this comment to see the full error message
 import formidable from 'formidable';
+// @ts-expect-error TS(7016): Could not find a declaration file for module 'conc... Remove this comment to see the full error message
 import concatStream from 'concat-stream';
 import {
     buildTrackString,
@@ -40,6 +42,7 @@ const app = addAsync(express());
 const router = Router();
 
 const port = process.env.PORT ?? 9078;
+// @ts-expect-error TS(1378): Top-level 'await' expressions are only allowed whe... Remove this comment to see the full error message
 const server = await app.listen(port)
 const io = new Server(server);
 
@@ -52,7 +55,7 @@ app.use(passport.session());
 
 const {transports} = winston;
 
-let output = []
+let output: any = []
 const stream = new Writable()
 stream._write = (chunk, encoding, next) => {
     let formatString = chunk.toString().replace('\n', '<br />')
@@ -96,6 +99,7 @@ const myTransports = [
 ];
 
 if (typeof logPath === 'string') {
+    // @ts-expect-error TS(2345): Argument of type 'DailyRotateFile' is not assignab... Remove this comment to see the full error message
     myTransports.push(rotateTransport);
 }
 
@@ -123,7 +127,9 @@ const configDir = process.env.CONFIG_DIR || path.resolve(projectDir, `./config`)
 
         // setup defaults for other configs and general config
         const {
+            // @ts-expect-error TS(2339): Property 'spotify' does not exist on type '{}'.
             spotify,
+            // @ts-expect-error TS(2339): Property 'plex' does not exist on type '{}'.
             plex,
         } = config || {};
 
@@ -158,6 +164,7 @@ const configDir = process.env.CONFIG_DIR || path.resolve(projectDir, `./config`)
                 data: plex
             });
         }
+        // @ts-expect-error TS(2345): Argument of type '{ type: string; name: string; so... Remove this comment to see the full error message
         await scrobbleSources.buildSourcesFromConfig(deprecatedConfigs);
 
         const clientCheckMiddle = makeClientCheckMiddle(scrobbleClients);
@@ -167,15 +174,19 @@ const configDir = process.env.CONFIG_DIR || path.resolve(projectDir, `./config`)
         const lastfmSources = scrobbleSources.getByType('lastfm');
         const lastfmScrobbles = scrobbleClients.getByType('lastfm');
 
+        // @ts-expect-error TS(2339): Property 'name' does not exist on type 'never'.
         const scrobblerNames = lastfmScrobbles.map(x => x.name);
+        // @ts-expect-error TS(2339): Property 'name' does not exist on type 'never'.
         const nameColl = lastfmSources.filter(x => scrobblerNames.includes(x.name));
         if(nameColl.length > 0) {
+            // @ts-expect-error TS(2339): Property 'name' does not exist on type 'never'.
             logger.warn(`Last.FM source and clients have same names [${nameColl.map(x => x.name).join(',')}] -- this may cause issues`);
         }
 
         // initialize deezer strategies
         const deezerSources = scrobbleSources.getByType('deezer');
         for(const d of deezerSources) {
+            // @ts-expect-error TS(2339): Property 'name' does not exist on type 'never'.
             passport.use(`deezer-${d.name}`, d.generatePassportStrategy());
         }
 
@@ -208,12 +219,16 @@ const configDir = process.env.CONFIG_DIR || path.resolve(projectDir, `./config`)
                     authed,
                 };
                 if(!initialized) {
+                    // @ts-expect-error TS(2339): Property 'status' does not exist on type '{ type: ... Remove this comment to see the full error message
                     base.status = 'Not Initialized';
                 } else if(requiresAuth && !authed) {
+                    // @ts-expect-error TS(2339): Property 'status' does not exist on type '{ type: ... Remove this comment to see the full error message
                     base.status = requiresAuthInteraction ? 'Auth Interaction Required' : 'Authentication Failed Or Not Attempted'
                 } else if(canPoll) {
+                    // @ts-expect-error TS(2339): Property 'status' does not exist on type '{ type: ... Remove this comment to see the full error message
                     base.status = polling ? 'Running' : 'Idle';
                 } else {
+                    // @ts-expect-error TS(2339): Property 'status' does not exist on type '{ type: ... Remove this comment to see the full error message
                     base.status = tracksDiscovered > 0 ? 'Received Data' : 'Awaiting Data'
                 }
                 return base;
@@ -236,10 +251,13 @@ const configDir = process.env.CONFIG_DIR || path.resolve(projectDir, `./config`)
                     hasAuth: requiresAuth,
                 };
                 if(!initialized) {
+                    // @ts-expect-error TS(2339): Property 'status' does not exist on type '{ type: ... Remove this comment to see the full error message
                     base.status = 'Not Initialized';
                 } else if(requiresAuth && !authed) {
+                    // @ts-expect-error TS(2339): Property 'status' does not exist on type '{ type: ... Remove this comment to see the full error message
                     base.status = requiresAuthInteraction ? 'Auth Interaction Required' : 'Authentication Failed Or Not Attempted'
                 } else {
+                    // @ts-expect-error TS(2339): Property 'status' does not exist on type '{ type: ... Remove this comment to see the full error message
                     base.status = tracksScrobbled > 0 ? 'Received Data' : 'Awaiting Data';
                 }
                 return base;
@@ -256,16 +274,18 @@ const configDir = process.env.CONFIG_DIR || path.resolve(projectDir, `./config`)
             });
         })
 
-        app.postAsync('/tautulli', async function (req, res) {
+        app.postAsync('/tautulli', async function(this: any, req, res) {
             const payload = TautulliSource.formatPlayObj(req.body, true);
             // try to get config name from payload
             if (req.body.scrobblerConfig !== undefined) {
                 const source = scrobbleSources.getByName(req.body.scrobblerConfig);
                 if (source !== undefined) {
+                    // @ts-expect-error TS(2339): Property 'type' does not exist on type 'never'.
                     if (source.type !== 'tautulli') {
                         this.logger.warn(`Tautulli event specified a config name but the configured source was not a Tautulli type: ${req.body.scrobblerConfig}`);
                         return res.send('OK');
                     } else {
+                        // @ts-expect-error TS(2339): Property 'handle' does not exist on type 'never'.
                         await source.handle(payload, scrobbleClients);
                         return res.send('OK');
                     }
@@ -277,6 +297,7 @@ const configDir = process.env.CONFIG_DIR || path.resolve(projectDir, `./config`)
             // if none specified we'll iterate through all tautulli sources and hopefully the user has configured them with filters
             const tSources = scrobbleSources.getByType('tautulli');
             for (const source of tSources) {
+                // @ts-expect-error TS(2339): Property 'handle' does not exist on type 'never'.
                 await source.handle(payload, scrobbleClients);
             }
 
@@ -286,6 +307,7 @@ const configDir = process.env.CONFIG_DIR || path.resolve(projectDir, `./config`)
         const plexMiddle = plexRequestMiddle();
         const plexLog = createLabelledLogger('plexReq', 'Plex Request');
         app.postAsync('/plex', plexMiddle, async function (req, res) {
+            // @ts-expect-error TS(2339): Property 'payload' does not exist on type 'Request... Remove this comment to see the full error message
             const { payload } = req;
             if(payload === undefined) {
 
@@ -300,6 +322,7 @@ const configDir = process.env.CONFIG_DIR || path.resolve(projectDir, `./config`)
                 }
 
                 for (const source of pSources) {
+                    // @ts-expect-error TS(2339): Property 'handle' does not exist on type 'never'.
                     await source.handle(playObj, scrobbleClients);
                 }
             }
@@ -313,6 +336,7 @@ const configDir = process.env.CONFIG_DIR || path.resolve(projectDir, `./config`)
             const playObj = JellyfinSource.formatPlayObj(req.body, true);
             const pSources = scrobbleSources.getByType('jellyfin');
             for (const source of pSources) {
+                // @ts-expect-error TS(2339): Property 'handle' does not exist on type 'never'.
                 await source.handle(playObj, scrobbleClients);
             }
             res.send('OK');
@@ -321,6 +345,7 @@ const configDir = process.env.CONFIG_DIR || path.resolve(projectDir, `./config`)
         app.use('/client/auth', clientCheckMiddle);
         app.getAsync('/client/auth', async function (req, res) {
             const {
+                // @ts-expect-error TS(2339): Property 'scrobbleClient' does not exist on type '... Remove this comment to see the full error message
                 scrobbleClient,
             } = req;
 
@@ -336,7 +361,9 @@ const configDir = process.env.CONFIG_DIR || path.resolve(projectDir, `./config`)
         app.use('/source/auth', sourceCheckMiddle);
         app.getAsync('/source/auth', async function (req, res, next) {
             const {
+                // @ts-expect-error TS(2339): Property 'scrobbleSource' does not exist on type '... Remove this comment to see the full error message
                 scrobbleSource: source,
+                // @ts-expect-error TS(2339): Property 'sourceName' does not exist on type 'Requ... Remove this comment to see the full error message
                 sourceName: name,
             } = req;
 
@@ -353,6 +380,7 @@ const configDir = process.env.CONFIG_DIR || path.resolve(projectDir, `./config`)
                     res.redirect(source.api.getAuthUrl());
                     break;
                 case 'deezer':
+                    // @ts-expect-error TS(2339): Property 'deezerSource' does not exist on type 'Se... Remove this comment to see the full error message
                     req.session.deezerSource = name;
                     return passport.authenticate(`deezer-${source.name}`)(req,res,next);
                 default:
@@ -363,6 +391,7 @@ const configDir = process.env.CONFIG_DIR || path.resolve(projectDir, `./config`)
         app.use('/poll', sourceCheckMiddle);
         app.getAsync('/poll', async function (req, res) {
             const {
+                // @ts-expect-error TS(2339): Property 'scrobbleSource' does not exist on type '... Remove this comment to see the full error message
                 scrobbleSource: source,
             } = req;
 
@@ -377,6 +406,7 @@ const configDir = process.env.CONFIG_DIR || path.resolve(projectDir, `./config`)
         app.use('/recent', sourceCheckMiddle);
         app.getAsync('/recent', async function (req, res) {
             const {
+                // @ts-expect-error TS(2339): Property 'scrobbleSource' does not exist on type '... Remove this comment to see the full error message
                 scrobbleSource: source,
             } = req;
             if (!source.canPoll) {
@@ -384,12 +414,13 @@ const configDir = process.env.CONFIG_DIR || path.resolve(projectDir, `./config`)
             }
 
             const result = await source.getRecentlyPlayed({formatted: true});
-            const artistTruncFunc = truncateStringToLength(Math.min(40, longestString(result.map(x => x.data.artists.join(' / ')).flat())));
-            const trackLength = longestString(result.map(x => x.data.track))
-            const plays = result.map((x) => {
+            const artistTruncFunc = truncateStringToLength(Math.min(40, longestString(result.map((x: any) => x.data.artists.join(' / ')).flat())));
+            const trackLength = longestString(result.map((x: any) => x.data.track))
+            const plays = result.map((x: any) => {
                 const {
                     meta: {
                         url: {
+                            // @ts-expect-error TS(2525): Initializer provides no value for this binding ele... Remove this comment to see the full error message
                             web
                         } = {}
                     } = {}
@@ -397,8 +428,8 @@ const configDir = process.env.CONFIG_DIR || path.resolve(projectDir, `./config`)
                 const buildOpts = {
                     include: ['time', 'timeFromNow', 'track', 'artist'],
                     transformers: {
-                        artists: a => artistTruncFunc(a.join(' / ')).padEnd(33),
-                        track: t => t.padEnd(trackLength)
+                        artists: (a: any) => artistTruncFunc(a.join(' / ')).padEnd(33),
+                        track: (t: any) => t.padEnd(trackLength)
                     }
                 }
                 if (web !== undefined) {
@@ -414,14 +445,18 @@ const configDir = process.env.CONFIG_DIR || path.resolve(projectDir, `./config`)
             for (const [setting, val] of Object.entries(req.query)) {
                 switch (setting) {
                     case 'limit':
+                        // @ts-expect-error TS(2345): Argument of type 'string | ParsedQs | string[] | P... Remove this comment to see the full error message
                         logConfig.limit = Number.parseInt(val);
                         break;
                     case 'sort':
+                        // @ts-expect-error TS(2322): Type 'string | ParsedQs | string[] | ParsedQs[] | ... Remove this comment to see the full error message
                         logConfig.sort = val;
                         break;
                     case 'level':
+                        // @ts-expect-error TS(2322): Type 'string | ParsedQs | string[] | ParsedQs[] | ... Remove this comment to see the full error message
                         logConfig.level = val;
                         for (const [key, logger] of winston.loggers.loggers) {
+                            // @ts-expect-error TS(2322): Type 'string | ParsedQs | string[] | ParsedQs[] | ... Remove this comment to see the full error message
                             logger.level = val;
                         }
                         break;
@@ -438,16 +473,22 @@ const configDir = process.env.CONFIG_DIR || path.resolve(projectDir, `./config`)
         // something about the deezer passport strategy makes express continue with the response even though it should wait for accesstoken callback and userprofile fetching
         // so to get around this add an additional middleware that loops/sleeps until we should have fetched everything ¯\_(ツ)_/¯
         app.getAsync(/.*deezer\/callback*$/, function (req, res, next) {
+            // @ts-expect-error TS(2339): Property 'deezerSource' does not exist on type 'Se... Remove this comment to see the full error message
             const entity = scrobbleSources.getByName(req.session.deezerSource);
+            // @ts-expect-error TS(2532): Object is possibly 'undefined'.
             const passportFunc = passport.authenticate(`deezer-${entity.name}`, {session: false});
             return passportFunc(req, res, next);
         }, async function (req, res) {
+            // @ts-expect-error TS(2339): Property 'deezerSource' does not exist on type 'Se... Remove this comment to see the full error message
             let entity = scrobbleSources.getByName(req.session.deezerSource);
             for(let i = 0; i < 3; i++) {
+                // @ts-expect-error TS(2532): Object is possibly 'undefined'.
                 if(entity.error !== undefined) {
                     return res.send('Error with deezer credentials storage');
+                // @ts-expect-error TS(2532): Object is possibly 'undefined'.
                 } else if(entity.config.accessToken !== undefined) {
                     // start polling
+                    // @ts-expect-error TS(2532): Object is possibly 'undefined'.
                     entity.poll(entity.clients)
                     return res.redirect('/');
                 } else {
@@ -474,10 +515,13 @@ const configDir = process.env.CONFIG_DIR || path.resolve(projectDir, `./config`)
                     entity = scrobbleSources.getByName(state);
                 }
                 try {
+                    // @ts-expect-error TS(2532): Object is possibly 'undefined'.
                     await entity.api.authenticate(token);
+                    // @ts-expect-error TS(2532): Object is possibly 'undefined'.
                     await entity.initialize();
                     return res.send('OK');
                 } catch (e) {
+                    // @ts-expect-error TS(2571): Object is of type 'unknown'.
                     return res.send(e.message);
                 }
             } else {
@@ -485,10 +529,13 @@ const configDir = process.env.CONFIG_DIR || path.resolve(projectDir, `./config`)
                 // but eventually should update all source callbacks to url specific URLS to avoid ambiguity...
                 // wish we could use state param to identify name/source but not all auth strategies and auth provides may provide access to that
                 logger.info('Received auth code callback from Spotify', {label: 'Spotify'});
+                // @ts-expect-error TS(2554): Expected 1 arguments, but got 2.
                 const source = scrobbleSources.getByName(state, 'spotify');
+                // @ts-expect-error TS(2532): Object is possibly 'undefined'.
                 const tokenResult = await source.handleAuthCodeCallback(req.query);
                 let responseContent = 'OK';
                 if (tokenResult === true) {
+                    // @ts-expect-error TS(2532): Object is possibly 'undefined'.
                     source.poll(scrobbleClients);
                 } else {
                     responseContent = tokenResult;
@@ -506,25 +553,34 @@ const configDir = process.env.CONFIG_DIR || path.resolve(projectDir, `./config`)
         });
 
         let anyNotReady = false;
+        // @ts-expect-error TS(2339): Property 'canPoll' does not exist on type 'never'.
         for (const source of scrobbleSources.sources.filter(x => x.canPoll === true)) {
             await sleep(1500); // stagger polling by 1.5 seconds so that log messages for each source don't get mixed up
+            // @ts-expect-error TS(2339): Property 'type' does not exist on type 'never'.
             switch (source.type) {
                 case 'spotify':
+                    // @ts-expect-error TS(2339): Property 'spotifyApi' does not exist on type 'neve... Remove this comment to see the full error message
                     if (source.spotifyApi !== undefined) {
+                        // @ts-expect-error TS(2339): Property 'spotifyApi' does not exist on type 'neve... Remove this comment to see the full error message
                         if (source.spotifyApi.getAccessToken() === undefined) {
                             anyNotReady = true;
                         } else {
+                            // @ts-expect-error TS(2339): Property 'poll' does not exist on type 'never'.
                             source.poll(scrobbleClients);
                         }
                     }
                     break;
                 case 'lastfm':
+                    // @ts-expect-error TS(2339): Property 'initialized' does not exist on type 'nev... Remove this comment to see the full error message
                     if(source.initialized === true) {
+                        // @ts-expect-error TS(2339): Property 'poll' does not exist on type 'never'.
                         source.poll(scrobbleClients);
                     }
                     break;
                 default:
+                    // @ts-expect-error TS(2339): Property 'poll' does not exist on type 'never'.
                     if (source.poll !== undefined) {
+                        // @ts-expect-error TS(2339): Property 'poll' does not exist on type 'never'.
                         source.poll(scrobbleClients);
                     }
             }

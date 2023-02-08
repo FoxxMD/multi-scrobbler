@@ -1,3 +1,4 @@
+// @ts-expect-error TS(7016): Could not find a declaration file for module 'last... Remove this comment to see the full error message
 import LastFm from "lastfm-node-client";
 import AbstractApiClient from "./AbstractApiClient.js";
 import dayjs from "dayjs";
@@ -17,12 +18,14 @@ const retryErrors = [
     'rate limit'
 ]
 
+// @ts-expect-error TS(2417): Class static side 'typeof LastfmApiClient' incorre... Remove this comment to see the full error message
 export default class LastfmApiClient extends AbstractApiClient {
 
-    user;
+    user: any;
 
-    constructor(name, config = {}, options = {}) {
+    constructor(name: any, config = {}, options = {}) {
         super('lastfm', name, config, options);
+        // @ts-expect-error TS(2339): Property 'redirectUri' does not exist on type '{}'... Remove this comment to see the full error message
         const {redirectUri, apiKey, secret, session, configDir} = config;
         this.redirectUri = `${redirectUri}?state=${name}`;
         if (apiKey === undefined) {
@@ -32,7 +35,7 @@ export default class LastfmApiClient extends AbstractApiClient {
         this.client = new LastFm(apiKey, secret, session);
     }
 
-    static formatPlayObj = obj => {
+    static formatPlayObj = (obj: any) => {
         const {
             artist: {
                 // last.fm doesn't seem consistent with which of these properties it returns...
@@ -45,6 +48,7 @@ export default class LastfmApiClient extends AbstractApiClient {
             },
             duration,
             date: {
+                // @ts-expect-error TS(2525): Initializer provides no value for this binding ele... Remove this comment to see the full error message
                 uts: time,
             } = {},
             '@attr': {
@@ -74,9 +78,12 @@ export default class LastfmApiClient extends AbstractApiClient {
         }
     }
 
-    callApi = async (func, retries = 0) => {
+    // @ts-expect-error TS(7024): Function implicitly has return type 'any' because ... Remove this comment to see the full error message
+    callApi = async (func: any, retries = 0) => {
         const {
+            // @ts-expect-error TS(2339): Property 'maxRequestRetries' does not exist on typ... Remove this comment to see the full error message
             maxRequestRetries = 2,
+            // @ts-expect-error TS(2339): Property 'retryMultiplier' does not exist on type ... Remove this comment to see the full error message
             retryMultiplier = 1.5
         } = this.config;
 
@@ -84,6 +91,7 @@ export default class LastfmApiClient extends AbstractApiClient {
             return await func(this.client);
         } catch (e) {
             const {
+                // @ts-expect-error TS(2339): Property 'message' does not exist on type 'unknown... Remove this comment to see the full error message
                 message,
             } = e;
             // for now check for exceptional errors by matching error code text
@@ -105,15 +113,19 @@ export default class LastfmApiClient extends AbstractApiClient {
     }
 
     getAuthUrl = () => {
+        // @ts-expect-error TS(2339): Property 'redirectUri' does not exist on type '{}'... Remove this comment to see the full error message
         const redir = `${this.config.redirectUri}?state=${this.name}`;
+        // @ts-expect-error TS(2339): Property 'apiKey' does not exist on type '{}'.
         return `http://www.last.fm/api/auth/?api_key=${this.config.apiKey}&cb=${encodeURIComponent(redir)}`
     }
 
-    authenticate = async (token) => {
+    authenticate = async (token: any) => {
         const sessionRes = await this.client.authGetSession({token});
         const {
             session: {
+                // @ts-expect-error TS(2525): Initializer provides no value for this binding ele... Remove this comment to see the full error message
                 key: sessionKey,
+                // @ts-expect-error TS(2525): Initializer provides no value for this binding ele... Remove this comment to see the full error message
                 name, // username
             } = {}
         } = sessionRes;
@@ -145,9 +157,10 @@ export default class LastfmApiClient extends AbstractApiClient {
             return false;
         }
         try {
-            const infoResp = await this.callApi(client => client.userGetInfo());
+            const infoResp = await this.callApi((client: any) => client.userGetInfo());
             const {
                 user: {
+                    // @ts-expect-error TS(2525): Initializer provides no value for this binding ele... Remove this comment to see the full error message
                     name,
                 } = {}
             } = infoResp;

@@ -1,4 +1,5 @@
 import AbstractScrobbleClient from "./AbstractScrobbleClient.js";
+// @ts-expect-error TS(7016): Could not find a declaration file for module 'supe... Remove this comment to see the full error message
 import request from 'superagent';
 import dayjs from 'dayjs';
 import compareVersions from 'compare-versions';
@@ -19,10 +20,12 @@ export default class MalojaScrobbler extends AbstractScrobbleClient {
 
     requiresAuth = true;
     serverIsHealthy = false;
-    serverVersion;
+    serverVersion: any;
 
-    constructor(name, config = {}, options = {}) {
+    constructor(name: any, config = {}, options = {}) {
+        // @ts-expect-error TS(2554): Expected 2-3 arguments, but got 4.
         super('maloja', name, config, options);
+        // @ts-expect-error TS(2339): Property 'url' does not exist on type '{}'.
         const {url, apiKey} = config;
         if (apiKey === undefined) {
             this.logger.warn("'apiKey' not found in config! Client will most likely fail when trying to scrobble");
@@ -32,7 +35,7 @@ export default class MalojaScrobbler extends AbstractScrobbleClient {
         }
     }
 
-    static formatPlayObj(obj, serverVersion = undefined) {
+    static formatPlayObj(obj: any, serverVersion = undefined) {
         let artists,
             title,
             album,
@@ -45,13 +48,18 @@ export default class MalojaScrobbler extends AbstractScrobbleClient {
                 // when the track was scrobbled
                 time: mTime,
                 track: {
+                    // @ts-expect-error TS(2525): Initializer provides no value for this binding ele... Remove this comment to see the full error message
                     artists: mArtists,
+                    // @ts-expect-error TS(2525): Initializer provides no value for this binding ele... Remove this comment to see the full error message
                     title: mTitle,
                     album: {
+                        // @ts-expect-error TS(2525): Initializer provides no value for this binding ele... Remove this comment to see the full error message
                         name: mAlbum,
+                        // @ts-expect-error TS(2525): Initializer provides no value for this binding ele... Remove this comment to see the full error message
                         artists: albumArtists
                     } = {},
                     // length of the track
+                    // @ts-expect-error TS(2525): Initializer provides no value for this binding ele... Remove this comment to see the full error message
                     length: mLength,
                 } = {},
                 // how long the track was listened to before it was scrobbled
@@ -77,7 +85,7 @@ export default class MalojaScrobbler extends AbstractScrobbleClient {
             duration = mDuration;
             time = mTime;
         }
-        let artistStrings = artists.reduce((acc, curr) => {
+        let artistStrings = artists.reduce((acc: any, curr: any) => {
             let aString;
             if (typeof curr === 'string') {
                 aString = curr;
@@ -101,11 +109,14 @@ export default class MalojaScrobbler extends AbstractScrobbleClient {
         }
     }
 
-    formatPlayObj = obj => MalojaScrobbler.formatPlayObj(obj, this.serverVersion);
+    formatPlayObj = (obj: any) => MalojaScrobbler.formatPlayObj(obj, this.serverVersion);
 
-    callApi = async (req, retries = 0) => {
+    // @ts-expect-error TS(7024): Function implicitly has return type 'any' because ... Remove this comment to see the full error message
+    callApi = async (req: any, retries = 0) => {
         const {
+            // @ts-expect-error TS(2339): Property 'maxRequestRetries' does not exist on typ... Remove this comment to see the full error message
             maxRequestRetries = 1,
+            // @ts-expect-error TS(2339): Property 'retryMultiplier' does not exist on type ... Remove this comment to see the full error message
             retryMultiplier = 1.5
         } = this.config;
 
@@ -119,12 +130,18 @@ export default class MalojaScrobbler extends AbstractScrobbleClient {
                 return await this.callApi(req, retries + 1)
             }
             const {
+                // @ts-expect-error TS(2339): Property 'message' does not exist on type 'unknown... Remove this comment to see the full error message
                 message,
+                // @ts-expect-error TS(2339): Property 'response' does not exist on type 'unknow... Remove this comment to see the full error message
                 response: {
+                    // @ts-expect-error TS(2525): Initializer provides no value for this binding ele... Remove this comment to see the full error message
                     status,
+                    // @ts-expect-error TS(2525): Initializer provides no value for this binding ele... Remove this comment to see the full error message
                     body,
+                    // @ts-expect-error TS(2525): Initializer provides no value for this binding ele... Remove this comment to see the full error message
                     text,
                 } = {},
+                // @ts-expect-error TS(2339): Property 'response' does not exist on type 'unknow... Remove this comment to see the full error message
                 response,
             } = e;
             let msg = response !== undefined ? `API Call failed: Server Response => ${message}` : `API Call failed: ${message}`;
@@ -136,6 +153,7 @@ export default class MalojaScrobbler extends AbstractScrobbleClient {
 
     testConnection = async () => {
 
+        // @ts-expect-error TS(2339): Property 'url' does not exist on type '{}'.
         const {url} = this.config;
         try {
             const serverInfoResp = await this.callApi(request.get(`${url}/apis/mlj_1/serverinfo`));
@@ -173,12 +191,15 @@ export default class MalojaScrobbler extends AbstractScrobbleClient {
 
     testHealth = async () => {
 
+        // @ts-expect-error TS(2339): Property 'url' does not exist on type '{}'.
         const {url} = this.config;
         try {
+            // @ts-expect-error TS(2345): Argument of type '{ maxRequestRetries: number; }' ... Remove this comment to see the full error message
             const serverInfoResp = await this.callApi(request.get(`${url}/apis/mlj_1/serverinfo`), {maxRequestRetries: 0});
             const {
                 statusCode,
                 body: {
+                    // @ts-expect-error TS(2525): Initializer provides no value for this binding ele... Remove this comment to see the full error message
                     db_status: {
                         healthy = false,
                         rebuildinprogress = false,
@@ -209,6 +230,7 @@ export default class MalojaScrobbler extends AbstractScrobbleClient {
 
     initialize = async () => {
         // just checking that we can get a connection
+        // @ts-expect-error TS(2322): Type 'number' is not assignable to type 'boolean'.
         this.initialized = INITIALIZING;
         this.initialized = await this.testConnection();
         return this.initialized;
@@ -216,6 +238,7 @@ export default class MalojaScrobbler extends AbstractScrobbleClient {
 
     testAuth = async () => {
 
+        // @ts-expect-error TS(2339): Property 'url' does not exist on type '{}'.
         const {url, apiKey} = this.config;
         try {
             const resp = await this.callApi(request
@@ -225,6 +248,7 @@ export default class MalojaScrobbler extends AbstractScrobbleClient {
             const {
                 status,
                 body: {
+                    // @ts-expect-error TS(2525): Initializer provides no value for this binding ele... Remove this comment to see the full error message
                     status: bodyStatus,
                 } = {},
                 body = {},
@@ -242,6 +266,7 @@ export default class MalojaScrobbler extends AbstractScrobbleClient {
                 });
             }
         } catch (e) {
+            // @ts-expect-error TS(2571): Object is of type 'unknown'.
             if(e.status === 403) {
                 // may be an older version that doesn't support auth readiness before db upgrade
                 // and if it was before api was accessible during db build then test would fail during testConnection()
@@ -284,6 +309,7 @@ export default class MalojaScrobbler extends AbstractScrobbleClient {
     refreshScrobbles = async () => {
         if (this.refreshEnabled) {
             this.logger.debug('Refreshing recent scrobbles');
+            // @ts-expect-error TS(2339): Property 'url' does not exist on type '{}'.
             const {url} = this.config;
             const resp = await this.callApi(request.get(`${url}/apis/mlj_1/scrobbles?max=20`));
             const {
@@ -291,22 +317,24 @@ export default class MalojaScrobbler extends AbstractScrobbleClient {
                     list = [],
                 } = {},
             } = resp;
-            this.recentScrobbles = list.map(x => this.formatPlayObj(x)).sort(sortByPlayDate);
+            this.recentScrobbles = list.map((x: any) => this.formatPlayObj(x)).sort(sortByPlayDate);
             if (this.recentScrobbles.length > 0) {
                 const [{data: {playDate: newestScrobbleTime = dayjs()} = {}} = {}] = this.recentScrobbles.slice(-1);
                 const [{data: {playDate: oldestScrobbleTime = dayjs()} = {}} = {}] = this.recentScrobbles.slice(0, 1);
                 this.newestScrobbleTime = newestScrobbleTime;
                 this.oldestScrobbleTime = oldestScrobbleTime;
 
+                // @ts-expect-error TS(2339): Property 'play' does not exist on type 'never'.
                 this.scrobbledPlayObjs = this.scrobbledPlayObjs.filter(x => this.timeFrameIsValid(x.play));
             }
         }
         this.lastScrobbleCheck = dayjs();
     }
 
-    cleanSourceSearchTitle = (playObj) => {
+    cleanSourceSearchTitle = (playObj: any) => {
         const {
             data: {
+                // @ts-expect-error TS(2525): Initializer provides no value for this binding ele... Remove this comment to see the full error message
                 track,
                 artists: sourceArtists = [],
             } = {},
@@ -314,8 +342,8 @@ export default class MalojaScrobbler extends AbstractScrobbleClient {
         let lowerTitle = track.toLocaleLowerCase();
         lowerTitle = feat.reduce((acc, curr) => acc.replace(curr, ''), lowerTitle);
         // also remove [artist] from the track if found since that gets removed as well
-        const lowerArtists = sourceArtists.map(x => x.toLocaleLowerCase());
-        lowerTitle = lowerArtists.reduce((acc, curr) => acc.replace(curr, ''), lowerTitle);
+        const lowerArtists = sourceArtists.map((x: any) => x.toLocaleLowerCase());
+        lowerTitle = lowerArtists.reduce((acc: any, curr: any) => acc.replace(curr, ''), lowerTitle);
 
         // remove any whitespace in parenthesis
         lowerTitle = lowerTitle.replace("\\s+(?=[^()]*\\))", '')
@@ -327,13 +355,14 @@ export default class MalojaScrobbler extends AbstractScrobbleClient {
         return lowerTitle;
     }
 
-    alreadyScrobbled = async (playObj, log = false) => {
+    // @ts-expect-error TS(2416): Property 'alreadyScrobbled' in type 'MalojaScrobbl... Remove this comment to see the full error message
+    alreadyScrobbled = async (playObj: any, log = false) => {
         return this.existingScrobble(playObj, (log || this.verboseOptions.match.onMatch)) !== undefined;
     }
 
-    existingScrobble = (playObj, logMatch = false) => {
+    existingScrobble = (playObj: any, logMatch = false) => {
         const tr = truncateStringToLength(27);
-        const scoreTrackOpts = {include: ['track', 'time'], transformers: {track: t => tr(t).padEnd(30)}};
+        const scoreTrackOpts = {include: ['track', 'time'], transformers: {track: (t: any) => tr(t).padEnd(30)}};
 
         // return early if we don't care about checking existing
         if (false === this.checkExistingScrobbles) {
@@ -351,6 +380,7 @@ export default class MalojaScrobbler extends AbstractScrobbleClient {
 
         // if we have an submitted play with matching data and play date then we can just return the response from the original scrobble
         if (existingExactSubmitted !== undefined) {
+            // @ts-expect-error TS(2339): Property 'scrobble' does not exist on type 'never[... Remove this comment to see the full error message
             existingScrobble = existingExactSubmitted.scrobble;
 
             closestMatch = {
@@ -374,15 +404,19 @@ export default class MalojaScrobbler extends AbstractScrobbleClient {
 
             // we have have found an existing submission but without an exact date
             // in which case we can check the scrobble api response against recent scrobbles (also from api) for a more accurate comparison
+            // @ts-expect-error TS(2339): Property 'scrobble' does not exist on type 'never'... Remove this comment to see the full error message
             const referenceApiScrobbleResponse = existingDataSubmitted.length > 0 ? existingDataSubmitted[0].scrobble : undefined;
 
             const {
                 data: {
                     artists: sourceArtists = [],
+                    // @ts-expect-error TS(2525): Initializer provides no value for this binding ele... Remove this comment to see the full error message
                     playDate
                 } = {},
                 meta: {
+                    // @ts-expect-error TS(2525): Initializer provides no value for this binding ele... Remove this comment to see the full error message
                     trackLength,
+                    // @ts-expect-error TS(2525): Initializer provides no value for this binding ele... Remove this comment to see the full error message
                     source,
                 } = {},
             } = playObj;
@@ -394,6 +428,7 @@ export default class MalojaScrobbler extends AbstractScrobbleClient {
 
                 const referenceMatch = referenceApiScrobbleResponse !== undefined && playObjDataMatch(x, referenceApiScrobbleResponse);
 
+                // @ts-expect-error TS(2525): Initializer provides no value for this binding ele... Remove this comment to see the full error message
                 const {data: {playDate: scrobbleTime, track: scrobbleTitle, artists = []} = {}} = x;
 
                 const playDiffThreshold = source === 'Subsonic' ? 60 : 10;
@@ -418,13 +453,14 @@ export default class MalojaScrobbler extends AbstractScrobbleClient {
                 const lowerScrobbleTitle = scrobbleTitle.toLocaleLowerCase().trim();
                 // because of all this replacing we need a more position-agnostic way of comparing titles so use intersection on title split by spaces
                 // and compare against length of scrobble title
-                const sourceTitleTerms = new Set(cleanSourceTitle.split(' ').filter(x => x !== ''));
+                const sourceTitleTerms = new Set(cleanSourceTitle.split(' ').filter((x: any) => x !== ''));
                 const commonTerms = setIntersection(new Set(lowerScrobbleTitle.split(' ')), sourceTitleTerms);
 
                 titleMatch = commonTerms.size / sourceTitleTerms.size;
 
                 let artistMatch;
-                const lowerSourceArtists = sourceArtists.map(x => x.toLocaleLowerCase());
+                const lowerSourceArtists = sourceArtists.map((x: any) => x.toLocaleLowerCase());
+                // @ts-expect-error TS(2339): Property 'toLocaleLowerCase' does not exist on typ... Remove this comment to see the full error message
                 const lowerScrobbleArtists = artists.map(x => x.toLocaleLowerCase());
                 artistMatch = setIntersection(new Set(lowerScrobbleArtists), new Set(lowerSourceArtists)).size / artists.length;
 
@@ -459,24 +495,32 @@ export default class MalojaScrobbler extends AbstractScrobbleClient {
         }
 
         if ((existingScrobble !== undefined && this.verboseOptions.match.onMatch) || (existingScrobble === undefined && this.verboseOptions.match.onNoMatch)) {
+            // @ts-expect-error TS(2339): Property 'scrobble' does not exist on type '{ scor... Remove this comment to see the full error message
             const closestScrobble = closestMatch.scrobble === undefined ? closestMatch.breakdowns.join(' | ') : `Closest Scrobble: ${buildTrackString(closestMatch.scrobble, scoreTrackOpts)} => ${closestMatch.breakdowns.join(' | ')}`;
             this.logger.debug(`(Existing Check) Source: ${buildTrackString(playObj, scoreTrackOpts)} => ${closestScrobble}`);
         }
         return existingScrobble;
     }
 
-    scrobble = async (playObj) => {
+    scrobble = async (playObj: any) => {
+        // @ts-expect-error TS(2339): Property 'url' does not exist on type '{}'.
         const {url, apiKey} = this.config;
 
         const {
             data: {
+                // @ts-expect-error TS(2525): Initializer provides no value for this binding ele... Remove this comment to see the full error message
                 artists,
+                // @ts-expect-error TS(2525): Initializer provides no value for this binding ele... Remove this comment to see the full error message
                 album,
+                // @ts-expect-error TS(2525): Initializer provides no value for this binding ele... Remove this comment to see the full error message
                 track,
+                // @ts-expect-error TS(2525): Initializer provides no value for this binding ele... Remove this comment to see the full error message
                 duration,
+                // @ts-expect-error TS(2525): Initializer provides no value for this binding ele... Remove this comment to see the full error message
                 playDate
             } = {},
             meta: {
+                // @ts-expect-error TS(2525): Initializer provides no value for this binding ele... Remove this comment to see the full error message
                 source,
                 newFromSource = false,
             } = {}
@@ -496,10 +540,12 @@ export default class MalojaScrobbler extends AbstractScrobbleClient {
         try {
             // 3.0.3 has a BC for something (maybe seconds => length ?) -- see #42 in repo
             if(this.serverVersion === undefined || compareVersions(this.serverVersion, '3.0.2') > 0) {
+                // @ts-expect-error TS(2339): Property 'artists' does not exist on type '{ title... Remove this comment to see the full error message
                 scrobbleData.artists = artists;
             } else {
                 // maloja seems to detect this deliminator much better than commas
                 // also less likely artist has a forward slash in their name than a comma
+                // @ts-expect-error TS(2339): Property 'artist' does not exist on type '{ title:... Remove this comment to see the full error message
                 scrobbleData.artist = artists.join(' / ');
             }
 
@@ -512,6 +558,7 @@ export default class MalojaScrobbler extends AbstractScrobbleClient {
             if(this.serverVersion === undefined || compareVersions(this.serverVersion, '3.0.0') >= 0) {
                 const {
                     body: {
+                    // @ts-expect-error TS(2525): Initializer provides no value for this binding ele... Remove this comment to see the full error message
                     track,
                 } = {}
                 } = response;
@@ -526,6 +573,7 @@ export default class MalojaScrobbler extends AbstractScrobbleClient {
                     const {
                         album: malojaAlbum = {},
                     } = track;
+                    // @ts-expect-error TS(2339): Property 'track' does not exist on type '{}'.
                     scrobbleResponse.track.album = {
                         ...malojaAlbum,
                         name: album
@@ -533,6 +581,7 @@ export default class MalojaScrobbler extends AbstractScrobbleClient {
                 }
             } else {
                 const {body: {
+                    // @ts-expect-error TS(2525): Initializer provides no value for this binding ele... Remove this comment to see the full error message
                     track: {
                         time: mTime = playDate.unix(),
                         duration: mDuration = duration,

@@ -4,12 +4,14 @@ import {buildTrackString, parseDurationFromTimestamp} from "../utils.js";
 
 
 export default class JellyfinSource extends MemorySource {
+    // @ts-expect-error TS(7022): 'users' implicitly has type 'any' because it does ... Remove this comment to see the full error message
     users;
+    // @ts-expect-error TS(7022): 'servers' implicitly has type 'any' because it doe... Remove this comment to see the full error message
     servers;
 
     seenServers = {};
 
-    constructor(name, config, clients, type = 'jellyfin') {
+    constructor(name: any, config: any, clients: any, type = 'jellyfin') {
         super(type, name, config, clients);
         const {users, servers} = config
 
@@ -21,7 +23,7 @@ export default class JellyfinSource extends MemorySource {
             } else {
                 this.users = users;
             }
-            this.users = this.users.map(x => x.toLocaleLowerCase())
+            this.users = this.users.map((x: any) => x.toLocaleLowerCase())
         }
 
         if (servers === undefined || servers === null) {
@@ -32,7 +34,7 @@ export default class JellyfinSource extends MemorySource {
             } else {
                 this.servers = servers;
             }
-            this.servers = this.servers.map(x => x.toLocaleLowerCase())
+            this.servers = this.servers.map((x: any) => x.toLocaleLowerCase())
         }
 
         if (users === undefined && servers === undefined) {
@@ -43,7 +45,7 @@ export default class JellyfinSource extends MemorySource {
         this.initialized = true;
     }
 
-    static formatPlayObj(obj, newFromSource = false) {
+    static formatPlayObj(obj: any, newFromSource = false) {
         const {
             ServerId,
             ServerName,
@@ -85,13 +87,15 @@ export default class JellyfinSource extends MemorySource {
         }
     }
 
-    isValidEvent = (playObj) => {
+    isValidEvent = (playObj: any) => {
         const {
             meta: {
                 mediaType, event, user, server
             },
             data: {
+                // @ts-expect-error TS(2525): Initializer provides no value for this binding ele... Remove this comment to see the full error message
                 artists,
+                // @ts-expect-error TS(2525): Initializer provides no value for this binding ele... Remove this comment to see the full error message
                 track,
             } = {}
         } = playObj;
@@ -139,8 +143,10 @@ export default class JellyfinSource extends MemorySource {
         return this.statefulRecentlyPlayed;
     }
 
-    handle = async (playObj, allClients) => {
+    handle = async (playObj: any, allClients: any) => {
+        // @ts-expect-error TS(7053): Element implicitly has an 'any' type because expre... Remove this comment to see the full error message
         if(this.seenServers[playObj.meta.server] === undefined) {
+            // @ts-expect-error TS(7053): Element implicitly has an 'any' type because expre... Remove this comment to see the full error message
             this.seenServers[playObj.meta.server] = playObj.meta.sourceVersion;
             this.logger.info(`Received data from server ${playObj.meta.server} (Version ${playObj.meta.sourceVersion}) for the first time.`);
         }
@@ -158,6 +164,7 @@ export default class JellyfinSource extends MemorySource {
             const recent = await this.getRecentlyPlayed();
             const newestPlay = recent[recent.length - 1];
             try {
+                // @ts-expect-error TS(2339): Property 'data' does not exist on type 'never'.
                 await allClients.scrobble(newPlays, {scrobbleTo: this.clients, scrobbleFrom: this.identifier, checkTime: newestPlay.data.playDate});
                 // only gets hit if we scrobbled ok
                 this.tracksDiscovered++;
