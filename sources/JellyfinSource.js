@@ -1,11 +1,13 @@
 import MemorySource from "./MemorySource.js";
 import dayjs from "dayjs";
-import {buildTrackString} from "../utils.js";
+import {buildTrackString, parseDurationFromTimestamp} from "../utils.js";
 
 
 export default class JellyfinSource extends MemorySource {
     users;
     servers;
+
+    seenServers = {};
 
     constructor(name, config, clients, type = 'jellyfin') {
         super(type, name, config, clients);
@@ -45,6 +47,7 @@ export default class JellyfinSource extends MemorySource {
         const {
             ServerId,
             ServerName,
+            ServerVersion,
             NotificationUsername,
             UserId,
             NotificationType,
@@ -55,21 +58,17 @@ export default class JellyfinSource extends MemorySource {
             RunTime,
             ItemId,
             ItemType,
+            PlaybackPosition,
         } = obj;
 
-        const parsedRuntime = RunTime.split(':');
-        const dur = dayjs.duration({
-            hours: Number.parseInt(parsedRuntime[0]),
-            minutes: Number.parseInt(parsedRuntime[1]),
-            seconds: Number.parseInt(parsedRuntime[2])
-        });
+        const dur = parseDurationFromTimestamp(RunTime);
 
         return {
             data: {
                 artists: [Artist],
                 album: Album,
                 track: Name,
-                duration: dur.as('seconds'),
+                duration: dur !== undefined ? dur.as('seconds') : undefined,
                 playDate: dayjs(),
             },
             meta: {
@@ -80,6 +79,8 @@ export default class JellyfinSource extends MemorySource {
                 server: ServerName,
                 source: 'Jellyfin',
                 newFromSource,
+                playbackPosition: parseDurationFromTimestamp(PlaybackPosition),
+                sourceVersion: ServerVersion
             }
         }
     }
@@ -139,6 +140,10 @@ export default class JellyfinSource extends MemorySource {
     }
 
     handle = async (playObj, allClients) => {
+        if(this.seenServers[playObj.meta.server] === undefined) {
+            this.seenServers[playObj.meta.server] = playObj.meta.sourceVersion;
+            this.logger.info(`Received data from server ${playObj.meta.server} (Version ${playObj.meta.sourceVersion}) for the first time.`);
+        }
         if (!this.isValidEvent(playObj)) {
             return;
         }

@@ -94,27 +94,33 @@ export const buildTrackString = (playObj, options = {}) => {
             album,
             track,
             playDate
-        } = {}
+        } = {},
+        meta: {
+            sourceId
+        } = {},
     } = playObj;
 
-    let str = '';
+    const strParts = [];
+    if(include.includes('sourceId') && sourceId !== undefined) {
+        strParts.push(`(${sourceId})`);
+    }
     if(include.includes('artist')) {
-        str = `${artistsFunc(artists)}`;
+        strParts.push(`${artistsFunc(artists)}`)
     }
     if(include.includes('track')) {
-        if(str !== '') {
-            str = `${str} - ${trackFunc(track)}`;
+        if(strParts.length > 0) {
+            strParts.push(`- ${trackFunc(track)}`);
         } else {
-            str = `${trackFunc(track)}`;
+            strParts.push(`${trackFunc(track)}`);
         }
     }
     if (include.includes('time')) {
-        str = `${str} @ ${timeFunc(playDate)}`
+        strParts.push(`@ ${timeFunc(playDate)}`);
     }
     if (include.includes('timeFromNow')) {
-        str = `${str} (${timeFromNow(playDate)})`
+        strParts.push(`(${timeFromNow(playDate)})`)
     }
-    return str;
+    return strParts.join(' ');
 }
 
 // sorts playObj formatted objects by playDate in ascending (oldest first) order
@@ -213,7 +219,12 @@ export const returnDuplicateStrings = (arr) => {
 export const capitalize = (str) => {
     return str.charAt(0).toUpperCase() + str.slice(1)
 }
-
+/**
+ * Check if two play objects are the same by comparing non time-related data using most-to-least specific/confidence
+ *
+ * Checks sources and source ID's (unique identifiers) first then
+ * Checks track, album, and artists in that order
+ * */
 export const playObjDataMatch = (a, b) => {
     const {
         data: {
@@ -348,4 +359,46 @@ export const removeUndefinedKeys = (obj) => {
         }
     });
     return newObj;
+}
+
+export const parseDurationFromTimestamp = (timestamp) => {
+    if (timestamp === null || timestamp === undefined) {
+        return undefined;
+    }
+    if (!(typeof timestamp === 'string')) {
+        throw new Error('Timestamp must be a string');
+    }
+    if (timestamp.trim() === '') {
+        return undefined;
+    }
+    const parsedRuntime = timestamp.split(':');
+    let hours = '0',
+        minutes = '0',
+        seconds = '0',
+        milli = '0';
+
+    switch (parsedRuntime.length) {
+        case 3:
+            hours = parsedRuntime[0];
+            minutes = parsedRuntime[1];
+            seconds = parsedRuntime[2];
+            break;
+        case 2:
+            minutes = parsedRuntime[0];
+            seconds = parsedRuntime[1];
+            break;
+        case 1:
+            seconds = parsedRuntime[0];
+    }
+    const splitSec = seconds.split('.');
+    if (splitSec.length > 1) {
+        seconds = splitSec[0];
+        milli = splitSec[1];
+    }
+    return dayjs.duration({
+        hours: Number.parseInt(hours),
+        minutes: Number.parseInt(minutes),
+        seconds: Number.parseInt(seconds),
+        milliseconds: Number.parseInt(milli)
+    });
 }
