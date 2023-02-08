@@ -147,8 +147,11 @@ See [`subsonic.json.example`](../config/subsonic.json.example)
 
 Must be using Jellyfin 10.7 or greater
 
-* Add the [Webhook Plugin](https://github.com/crobibero/jellyfin-plugin-webhook) repository to your plugins, then restart your server
-* In the Webhook settings:
+* In the Jellyfin desktop web UI Navigate to -> Administration -> Dashboard -> Plugins -> Catalog
+  * Under Notifications -> **Webhook** -> Install, then restart your server
+* Navigate back to -> Administration -> Dashboard -> Plugins -> My Plugins -> Webhook
+  * Click "..." -> Settings
+* In Webhook settings:
   * `Add Generic Destination`
   * In the new `Generic` dropdown:
     * Webhook Url: `http://localhost:9078/jellyfin`
