@@ -120,3 +120,5 @@ dist
 *.json
 *.txt
 .idea/
+
+!tsconfig.json
