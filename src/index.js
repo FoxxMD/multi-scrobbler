@@ -28,6 +28,8 @@ import TautulliSource from "./sources/TautulliSource.js";
 import PlexSource, {plexRequestMiddle} from "./sources/PlexSource.js";
 import JellyfinSource from "./sources/JellyfinSource.js";
 import { Server } from "socket.io";
+import path from "path";
+import {projectDir} from "./common/index.js";
 
 dayjs.extend(utc)
 dayjs.extend(isBetween);
@@ -74,7 +76,7 @@ const logConfig = {
 }
 
 const availableLevels = ['info', 'debug'];
-const logPath = process.env.LOG_DIR || `${process.cwd()}/logs`;
+const logPath = process.env.LOG_DIR || path.resolve(projectDir, `./logs`);
 const localUrl = `http://localhost:${port}`;
 
 const rotateTransport = new winston.transports.DailyRotateFile({
@@ -107,7 +109,7 @@ winston.loggers.add('default', loggerOptions);
 
 const logger = winston.loggers.get('default');
 
-const configDir = process.env.CONFIG_DIR || `${process.cwd()}/config`;
+const configDir = process.env.CONFIG_DIR || path.resolve(projectDir, `./config`);
 
 (async function () {
     try {
@@ -531,7 +533,7 @@ const configDir = process.env.CONFIG_DIR || `${process.cwd()}/config`;
             logger.info(`Some sources are not ready, open ${localUrl} to continue`);
         }
 
-        app.set('views', './views');
+        app.set('views', path.resolve(projectDir, 'src/views'));
         app.set('view engine', 'ejs');
         logger.info(`Server started at ${localUrl}`);
 
