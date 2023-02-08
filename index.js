@@ -495,6 +495,14 @@ const configDir = process.env.CONFIG_DIR || `${process.cwd()}/config`;
             }
         });
 
+        app.useAsync(async function (req, res) {
+            const remote = req.connection.remoteAddress;
+            const proxyRemote = req.headers["x-forwarded-for"];
+            const ua = req.headers["user-agent"];
+            logger.debug(`Server received ${req.method} request from ${remote}${proxyRemote !== undefined ? ` (${proxyRemote})` : ''}${ua !== undefined ? ` (UA: ${ua})` : ''} to unknown route: ${req.url}`);
+            return res.sendStatus(404);
+        });
+
         let anyNotReady = false;
         for (const source of scrobbleSources.sources.filter(x => x.canPoll === true)) {
             await sleep(1500); // stagger polling by 1.5 seconds so that log messages for each source don't get mixed up
