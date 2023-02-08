@@ -4,7 +4,7 @@ import dayjs from "dayjs";
 
 export default class MemorySource extends AbstractSource {
     /*
-    * MemorySource uses its own state to maintain a list of recently played tracks and determine if a track if valid.
+    * MemorySource uses its own state to maintain a list of recently played tracks and determine if a track is valid.
     * This is necessary for any source that
     *  * doesn't have its own source of truth for "recently played" or
     *  * that does not return "started at" and "duration" timestamps for recent plays or
@@ -24,12 +24,26 @@ export default class MemorySource extends AbstractSource {
         })
         // if no candidates exist new plays are new candidates
         if(this.candidateRecentlyPlayed.length === 0) {
+            for(const p of lockedPlays) {
+                this.logger.debug(`No prior candidate recent plays! Adding new locked plays: ${buildTrackString(p, {include: ['sourceId', 'artist', 'track']})}`);
+            }
             this.candidateRecentlyPlayed = lockedPlays;
         } else {
             // otherwise determine new tracks (not found in prior candidates)
             const newTracks = lockedPlays.filter(x => this.candidateRecentlyPlayed.every(y => !playObjDataMatch(y, x)));
+            if(newTracks.length > 0) {
+                for(const p of newTracks) {
+                    this.logger.debug(`New play found that does not match existing candidates will be added: ${buildTrackString(p, {include: ['sourceId', 'artist', 'track']})}`);
+                }
+            }
             // filter prior candidates based on new recently played
-            this.candidateRecentlyPlayed = this.candidateRecentlyPlayed.filter(x => lockedPlays.some(y => playObjDataMatch(x, y)));
+            this.candidateRecentlyPlayed = this.candidateRecentlyPlayed.filter(x => {
+                const candidateMatchedLocked = lockedPlays.some(y => playObjDataMatch(x, y));
+                if(!candidateMatchedLocked) {
+                    this.logger.debug(`Existing candidate not found in locked plays will be removed: ${buildTrackString(x, {include: ['sourceId', 'artist', 'track']})}`);
+                }
+                return candidateMatchedLocked;
+            });
             // and then combine still playing with new tracks
             this.candidateRecentlyPlayed = this.candidateRecentlyPlayed.concat(newTracks);
             this.candidateRecentlyPlayed.sort(sortByPlayDate);
@@ -40,7 +54,7 @@ export default class MemorySource extends AbstractSource {
                     // a prior candidate has been playing for more than 30 seconds, time to check statefuls
 
                     const matchingRecent = this.statefulRecentlyPlayed.find(x => playObjDataMatch(x, candidate));
-                    let stPrefix = `(Stateful Play) ${buildTrackString(candidate, {include: ['artist', 'track']})}`;
+                    let stPrefix = `(Stateful Play) ${buildTrackString(candidate, {include: ['sourceId', 'artist', 'track']})}`;
                     if(matchingRecent === undefined) {
                         this.logger.debug(`${stPrefix} added after being seen for 30 seconds and not matching any prior plays`);
                         newStatefulPlays.push(candidate);
