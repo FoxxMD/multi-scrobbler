@@ -1,0 +1,31 @@
+{
+  "sourceDefaults": {
+    "maxPollRetries": 0,
+    "maxRequestRetries": 1,
+    "retryMultiplier": 1.5
+  },
+  "clientDefaults": {
+    "maxRequestRetries": 1,
+    "retryMultiplier": 1.5
+  },
+  "sources": [
+    {
+      "type": "tautulli",
+      "name": "myTautulli",
+      "clients": ["myLFM"],
+      "data": {
+        "user": ["myName"]
+      }
+    }
+  ],
+  "clients": [
+    {
+      "type": "lastfm",
+      "name": "myLFM",
+      "data": {
+        "apiKey": "xxxxxxxxxxx",
+        "secret": "xxxxxxxxxxx"
+      }
+    }
+  ]
+}
