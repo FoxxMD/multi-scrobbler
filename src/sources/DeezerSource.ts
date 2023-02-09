@@ -1,7 +1,7 @@
 import request from 'superagent';
 import {parseRetryAfterSecsFromObj, readJson, sleep, sortByPlayDate, writeFile} from "../utils.js";
 import {Strategy as DeezerStrategy} from 'passport-deezer';
-import AbstractSource from "./AbstractSource.js";
+import AbstractSource, {RecentlyPlayedOptions} from "./AbstractSource.js";
 import dayjs from "dayjs";
 import {DeezerSourceConfig} from "../common/infrastructure/config/source/deezer.js";
 import {InternalConfig, PlayObject} from "../common/infrastructure/Atomic.js";
@@ -75,18 +75,14 @@ export default class DeezerSource extends AbstractSource {
     initialize = async () => {
         try {
             const credFile = await readJson(this.workingCredsPath, {throwOnNotFound: false});
-            // @ts-expect-error TS(2339): Property 'accessToken' does not exist on type '{}'... Remove this comment to see the full error message
-            this.config.accessToken = credFile.accessToken;
+            this.config.data.accessToken = credFile.accessToken;
         } catch (e) {
             this.logger.warn('Current deezer credentials file exists but could not be parsed', { path: this.workingCredsPath });
         }
-        // @ts-expect-error TS(2339): Property 'accessToken' does not exist on type '{}'... Remove this comment to see the full error message
-        if(this.config.accessToken === undefined) {
-            // @ts-expect-error TS(2339): Property 'clientId' does not exist on type '{}'.
-            if(this.config.clientId === undefined) {
+        if(this.config.data.accessToken === undefined) {
+            if(this.config.data.clientId === undefined) {
                 throw new Error('clientId must be defined when accessToken is not present');
-            // @ts-expect-error TS(2339): Property 'clientSecret' does not exist on type '{}... Remove this comment to see the full error message
-            } else if(this.config.clientSecret === undefined) {
+            } else if(this.config.data.clientSecret === undefined) {
                 throw new Error('clientSecret must be defined when accessToken is not present');
             }
         }
@@ -105,8 +101,7 @@ export default class DeezerSource extends AbstractSource {
         return this.authed;
     }
 
-    getRecentlyPlayed = async (options = {}) => {
-        // @ts-expect-error TS(2339): Property 'formatted' does not exist on type '{}'.
+    getRecentlyPlayed = async (options: RecentlyPlayedOptions = {}) => {
         const {formatted = false} = options;
         const resp = await this.callApi(request.get(`${this.baseUrl}/user/me/history`));
         if(formatted) {
@@ -117,15 +112,12 @@ export default class DeezerSource extends AbstractSource {
 
     callApi = async (req: any, retries = 0) => {
         const {
-            // @ts-expect-error TS(2339): Property 'maxRequestRetries' does not exist on typ... Remove this comment to see the full error message
             maxRequestRetries = 1,
-            // @ts-expect-error TS(2339): Property 'retryMultiplier' does not exist on type ... Remove this comment to see the full error message
             retryMultiplier = 1.5
-        } = this.config;
+        } = this.config.data;
 
         req.query({
-            // @ts-expect-error TS(2339): Property 'accessToken' does not exist on type '{}'... Remove this comment to see the full error message
-            access_token: this.config.accessToken,
+            access_token: this.config.data.accessToken,
             output: 'json'
            });
         try {
@@ -188,12 +180,9 @@ export default class DeezerSource extends AbstractSource {
 
     generatePassportStrategy = () => {
         return new DeezerStrategy({
-            // @ts-expect-error TS(2339): Property 'clientId' does not exist on type '{}'.
-            clientID: this.config.clientId,
-            // @ts-expect-error TS(2339): Property 'clientSecret' does not exist on type '{}... Remove this comment to see the full error message
-            clientSecret: this.config.clientSecret,
-            // @ts-expect-error TS(2339): Property 'redirectUri' does not exist on type '{}'... Remove this comment to see the full error message
-            callbackURL: this.config.redirectUri || `${this.localUrl}/deezer/callback`,
+            clientID: this.config.data.clientId,
+            clientSecret: this.config.data.clientSecret,
+            callbackURL: this.config.data.redirectUri || `${this.localUrl}/deezer/callback`,
             scope: ['listening_history','offline_access'],
         }, (accessToken: any, refreshToken: any, profile: any, done: any) => {
                 // return done(null, {
@@ -222,8 +211,7 @@ export default class DeezerSource extends AbstractSource {
                 id,
                 displayName,
             }));
-            // @ts-expect-error TS(2339): Property 'accessToken' does not exist on type '{}'... Remove this comment to see the full error message
-            this.config.accessToken = accessToken;
+            this.config.data.accessToken = accessToken;
             this.logger.info('Got token Deezer SDK callback!');
             return true;
         } else {
