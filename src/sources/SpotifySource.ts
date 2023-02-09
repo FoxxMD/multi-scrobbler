@@ -5,16 +5,17 @@ import {
     sortByPlayDate, sleep, parseRetryAfterSecsFromObj,
 } from "../utils.js";
 import SpotifyWebApi from "spotify-web-api-node";
-import AbstractSource from "./AbstractSource.js";
+import AbstractSource, {RecentlyPlayedOptions} from "./AbstractSource.js";
 import {SpotifySourceConfig} from "../common/infrastructure/config/source/spotify.js";
 import {InternalConfig, PlayObject} from "../common/infrastructure/Atomic.js";
+import PlayHistoryObject = SpotifyApi.PlayHistoryObject;
 
 const scopes = ['user-read-recently-played', 'user-read-currently-playing'];
 const state = 'random';
 
 export default class SpotifySource extends AbstractSource {
 
-    spotifyApi: any;
+    spotifyApi: SpotifyWebApi;
     workingCredsPath: string;
 
     requiresAuth = true;
@@ -40,22 +41,17 @@ export default class SpotifySource extends AbstractSource {
         this.canPoll = true;
     }
 
-    static formatPlayObj(obj: any, newFromSource = false): PlayObject {
+    static formatPlayObj(obj: PlayHistoryObject, newFromSource = false): PlayObject {
         const {
             track: {
                 artists = [],
-                // @ts-expect-error TS(2525): Initializer provides no value for this binding ele... Remove this comment to see the full error message
                 name,
-                // @ts-expect-error TS(2525): Initializer provides no value for this binding ele... Remove this comment to see the full error message
                 id,
-                // @ts-expect-error TS(2525): Initializer provides no value for this binding ele... Remove this comment to see the full error message
                 duration_ms,
                 album: {
-                    // @ts-expect-error TS(2525): Initializer provides no value for this binding ele... Remove this comment to see the full error message
                     name: albumName,
                 } = {},
                 external_urls: {
-                    // @ts-expect-error TS(2525): Initializer provides no value for this binding ele... Remove this comment to see the full error message
                     spotify,
                 } = {}
             } = {},
@@ -145,7 +141,7 @@ export default class SpotifySource extends AbstractSource {
 
     testAuth = async () => {
         try {
-            await this.callApi(((api: any) => api.getMe()));
+            await this.callApi<ReturnType<typeof this.spotifyApi.getMe>>(((api: any) => api.getMe()));
             this.authed = true;
         } catch (e) {
             this.logger.error('Could not successfully communicate with Spotify API');
@@ -179,20 +175,16 @@ export default class SpotifySource extends AbstractSource {
         }
     }
 
-    getRecentlyPlayed = async (options = {}) => {
-        // @ts-expect-error TS(2339): Property 'limit' does not exist on type '{}'.
-        const {limit = 20, formatted = false} = options;
-        const func = (api: any) => api.getMyRecentlyPlayedTracks({
+    getRecentlyPlayed = async (options: RecentlyPlayedOptions = {}) => {
+        const {limit = 20} = options;
+        const func = (api: SpotifyWebApi) => api.getMyRecentlyPlayedTracks({
             limit
         });
-        const result = await this.callApi(func);
-        if (formatted === true) {
-            return result.body.items.map((x: any) => SpotifySource.formatPlayObj(x)).sort(sortByPlayDate);
-        }
-        return result;
+        const result = await this.callApi<ReturnType<typeof this.spotifyApi.getMyRecentlyPlayedTracks>>(func);
+        return result.body.items.map((x: any) => SpotifySource.formatPlayObj(x)).sort(sortByPlayDate);
     }
 
-    callApi = async (func: any, retries = 0) => {
+    callApi = async <T>(func: (api: SpotifyWebApi) => Promise<any>, retries = 0): Promise<T> => {
         const {
             maxRequestRetries = 1,
             retryMultiplier = 2,
@@ -209,7 +201,6 @@ export default class SpotifySource extends AbstractSource {
                 const tokenResponse = await this.spotifyApi.refreshAccessToken();
                 const {
                     body: {
-                        // @ts-expect-error TS(2525): Initializer provides no value for this binding ele... Remove this comment to see the full error message
                         access_token,
                         // spotify may return a new refresh token
                         // if it doesn't then continue to use the last refresh token we received
