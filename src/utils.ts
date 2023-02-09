@@ -1,9 +1,8 @@
-import fs, {promises, constants} from "fs";
+import {promises, constants} from "fs";
 import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc.js';
 import winston, {Logger} from "winston";
-import jsonStringify from 'safe-stable-stringify';
-// @ts-expect-error TS(7016): Could not find a declaration file for module 'spot... Remove this comment to see the full error message
+import stringify from 'safe-stable-stringify';
 import { TimeoutError, WebapiError } from "spotify-web-api-node/src/response-error.js";
 import { Response } from 'superagent';
 import Ajv, {Schema} from 'ajv';
@@ -20,7 +19,6 @@ export async function readJson(this: any, path: any, {logErrors = true, throwOnN
         // @ts-expect-error TS(2345): Argument of type 'Buffer' is not assignable to par... Remove this comment to see the full error message
         return JSON.parse(data);
     } catch (e) {
-        // @ts-expect-error TS(2339): Property 'code' does not exist on type 'unknown'.
         const {code} = e;
         if (code === 'ENOENT') {
             if (throwOnNotFound) {
@@ -144,7 +142,7 @@ const CWD = process.cwd();
 
 let longestLabel = 3;
 export const defaultFormat = printf(({level, message, label = 'App', timestamp, [SPLAT]: splatObj, stack, ...rest}) => {
-    let stringifyValue = splatObj !== undefined ? jsonStringify(splatObj) : '';
+    let stringifyValue = splatObj !== undefined ? stringify.default(splatObj) : '';
     if (label.length > longestLabel) {
         longestLabel = label.length;
     }
@@ -427,8 +425,8 @@ export const parseDurationFromTimestamp = (timestamp: any) => {
     });
 }
 
-export const createAjvFactory = (logger: Logger): Ajv => {
-    const validator =  new Ajv({logger: logger, verbose: true, strict: "log", allowUnionTypes: true});
+export const createAjvFactory = (logger: Logger): Ajv.default => {
+    const validator =  new Ajv.default({logger: logger, verbose: true, strict: "log", allowUnionTypes: true});
     // https://ajv.js.org/strict-mode.html#unknown-keywords
     validator.addKeyword('deprecationMessage');
     return validator;

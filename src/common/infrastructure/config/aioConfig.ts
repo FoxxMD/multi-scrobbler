@@ -1,7 +1,7 @@
-import {SourceRetryOptions} from "./source";
-import {RequestRetryOptions} from "./common";
-import {SourceAIOConfig} from "./source/sources";
-import {ClientAIOConfig} from "./client/clients";
+import {SourceRetryOptions} from "./source/index.js";
+import {RequestRetryOptions} from "./common.js";
+import {SourceAIOConfig} from "./source/sources.js";
+import {ClientAIOConfig} from "./client/clients.js";
 
 export interface AIOConfig {
     sourceDefaults?: SourceRetryOptions

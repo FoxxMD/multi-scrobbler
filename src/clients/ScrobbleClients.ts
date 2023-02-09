@@ -6,16 +6,16 @@ import {
     playObjDataMatch,
     readJson,
     returnDuplicateStrings, validateJson
-} from "../utils";
-import MalojaScrobbler from "./MalojaScrobbler";
-import LastfmScrobbler from "./LastfmScrobbler";
-import {clientTypes, ConfigMeta} from "../common/infrastructure/Atomic";
-import {AIOConfig} from "../common/infrastructure/config/aioConfig";
-import * as aioSchema from '../common/schema/aio.json';
-import * as clientSchema from '../common/schema/client.json';
-import {ClientAIOConfig, ClientConfig} from "../common/infrastructure/config/client/clients";
-import {MalojaClientConfig} from "../common/infrastructure/config/client/maloja";
-import {LastfmClientConfig} from "../common/infrastructure/config/client/lastfm";
+} from "../utils.js";
+import MalojaScrobbler from "./MalojaScrobbler.js";
+import LastfmScrobbler from "./LastfmScrobbler.js";
+import {clientTypes, ConfigMeta} from "../common/infrastructure/Atomic.js";
+import {AIOConfig} from "../common/infrastructure/config/aioConfig.js";
+import * as aioSchema from '../common/schema/aio.json' assert {type: "json"};
+import * as clientSchema from '../common/schema/client.json' assert {type: "json"};
+import {ClientAIOConfig, ClientConfig} from "../common/infrastructure/config/client/clients.js";
+import {MalojaClientConfig} from "../common/infrastructure/config/client/maloja.js";
+import {LastfmClientConfig} from "../common/infrastructure/config/client/lastfm.js";
 
 type groupedNamedConfigs = {[key: string]: ParsedConfig[]};
 
@@ -93,6 +93,7 @@ export default class ScrobbleClients {
                             name: 'unnamed',
                             source: 'ENV',
                             mode: 'single',
+                            configureAs: 'client',
                             data: {
                                 url,
                                 // @ts-ignore
@@ -114,6 +115,7 @@ export default class ScrobbleClients {
                             name: 'unnamed',
                             source: 'ENV',
                             mode: 'single',
+                            configureAs: 'client',
                             // @ts-ignore
                             data: lfm
                         })
@@ -348,7 +350,6 @@ ${sources.join('\n')}`);
                         client.tracksScrobbled++;
                         // since this is what we return to the source only add to tracksScrobbled if not already in array
                         // (source should only know that a track was scrobbled (binary) -- doesn't care if it was scrobbled more than once
-                        // @ts-expect-error TS(7006): Parameter 'x' implicitly has an 'any' type.
                         if(!tracksScrobbled.some(x => playObjDataMatch(x, playObj) && x.data.playDate === playObj.data.playDate)) {
                             tracksScrobbled.push(playObj);
                         }
@@ -357,7 +358,6 @@ ${sources.join('\n')}`);
                     this.logger.error(`Encountered error while in scrobble loop for ${client.name}`);
                     this.logger.error(e);
                     // for now just stop scrobbling plays for this client and move on. the client should deal with logging the issue
-                    // @ts-expect-error TS(2571): Object is of type 'unknown'.
                     if(e.continueScrobbling !== true) {
                         break;
                     }

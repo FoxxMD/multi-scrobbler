@@ -1,4 +1,4 @@
-import {CommonSourceConfig, CommonSourceData} from "./index";
+import {CommonSourceConfig, CommonSourceData} from "./index.js";
 
 export interface JellySourceConfig extends CommonSourceConfig {
     data: CommonSourceData & {

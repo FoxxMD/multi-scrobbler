@@ -1,4 +1,4 @@
-import {CommonConfig, CommonData, RequestRetryOptions} from "../common";
+import {CommonConfig, CommonData, RequestRetryOptions} from "../common.js";
 
 export interface SourceRetryOptions extends RequestRetryOptions {
     /**

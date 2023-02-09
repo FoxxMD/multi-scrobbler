@@ -20,17 +20,17 @@ import {
     truncateStringToLength
 } from "./utils.js";
 
-import ScrobbleSources from "./sources/ScrobbleSources";
-import {makeClientCheckMiddle, makeSourceCheckMiddle} from "./server/middleware";
-import TautulliSource from "./sources/TautulliSource";
-import PlexSource, {plexRequestMiddle} from "./sources/PlexSource";
-import JellyfinSource from "./sources/JellyfinSource";
+import ScrobbleSources from "./sources/ScrobbleSources.js";
+import {makeClientCheckMiddle, makeSourceCheckMiddle} from "./server/middleware.js";
+import TautulliSource from "./sources/TautulliSource.js";
+import PlexSource, {plexRequestMiddle} from "./sources/PlexSource.js";
+import JellyfinSource from "./sources/JellyfinSource.js";
 import { Server } from "socket.io";
-import path from "path";
-import {projectDir} from "./common/index";
-import LastfmApiClient from "./apis/LastfmApiClient";
-import LastfmSource from "./sources/LastfmSource";
-import LastfmScrobbler from "./clients/LastfmScrobbler";
+import * as path from "path";
+import {projectDir} from "./common/index.js";
+import LastfmApiClient from "./apis/LastfmApiClient.js";
+import LastfmSource from "./sources/LastfmSource.js";
+import LastfmScrobbler from "./clients/LastfmScrobbler.js";
 import ScrobbleClients from "./clients/ScrobbleClients.js";
 
 
@@ -445,7 +445,6 @@ const configDir = process.env.CONFIG_DIR || path.resolve(projectDir, `./config`)
         app.getAsync(/.*deezer\/callback*$/, function (req, res, next) {
             // @ts-expect-error TS(2339): Property 'deezerSource' does not exist on type 'Se... Remove this comment to see the full error message
             const entity = scrobbleSources.getByName(req.session.deezerSource);
-            // @ts-expect-error TS(2532): Object is possibly 'undefined'.
             const passportFunc = passport.authenticate(`deezer-${entity.name}`, {session: false});
             return passportFunc(req, res, next);
         }, async function (req, res) {
@@ -458,7 +457,6 @@ const configDir = process.env.CONFIG_DIR || path.resolve(projectDir, `./config`)
                 // @ts-expect-error TS(2532): Object is possibly 'undefined'.
                 } else if(entity.config.accessToken !== undefined) {
                     // start polling
-                    // @ts-expect-error TS(2532): Object is possibly 'undefined'.
                     entity.poll(entity.clients)
                     return res.redirect('/');
                 } else {
@@ -489,7 +487,6 @@ const configDir = process.env.CONFIG_DIR || path.resolve(projectDir, `./config`)
                     await entity.initialize();
                     return res.send('OK');
                 } catch (e) {
-                    // @ts-expect-error TS(2571): Object is of type 'unknown'.
                     return res.send(e.message);
                 }
             } else {
@@ -503,7 +500,6 @@ const configDir = process.env.CONFIG_DIR || path.resolve(projectDir, `./config`)
                 const tokenResult = await source.handleAuthCodeCallback(req.query);
                 let responseContent = 'OK';
                 if (tokenResult === true) {
-                    // @ts-expect-error TS(2532): Object is possibly 'undefined'.
                     source.poll(scrobbleClients);
                 } else {
                     responseContent = tokenResult;

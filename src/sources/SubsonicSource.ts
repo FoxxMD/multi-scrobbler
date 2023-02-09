@@ -1,11 +1,11 @@
 import request from 'superagent';
-import crypto from 'crypto';
+import * as crypto from 'crypto';
 import dayjs from "dayjs";
 import isSameOrAfter from "dayjs/plugin/isSameOrAfter.js";
-import {buildTrackString, parseRetryAfterSecsFromObj, sleep} from "../utils";
-import MemorySource from "./MemorySource";
-import {SubSonicSourceConfig} from "../common/infrastructure/config/source/subsonic";
-import {InternalConfig, PlayObject} from "../common/infrastructure/Atomic";
+import {buildTrackString, parseRetryAfterSecsFromObj, sleep} from "../utils.js";
+import MemorySource from "./MemorySource.js";
+import {SubSonicSourceConfig} from "../common/infrastructure/config/source/subsonic.js";
+import {InternalConfig, PlayObject} from "../common/infrastructure/Atomic.js";
 
 dayjs.extend(isSameOrAfter);
 
@@ -72,7 +72,6 @@ export class SubsonicSource extends MemorySource {
         }
     }
 
-    // @ts-expect-error TS(7024): Function implicitly has return type 'any' because ... Remove this comment to see the full error message
     callApi = async (req: any, retries = 0) => {
         const {
             // @ts-expect-error TS(2339): Property 'user' does not exist on type '{}'.
@@ -120,9 +119,7 @@ export class SubsonicSource extends MemorySource {
                 return await this.callApi(req, retries + 1)
             }
             const {
-                // @ts-expect-error TS(2339): Property 'message' does not exist on type 'unknown... Remove this comment to see the full error message
                 message,
-                // @ts-expect-error TS(2339): Property 'response' does not exist on type 'unknow... Remove this comment to see the full error message
                 response: {
                     // @ts-expect-error TS(2525): Initializer provides no value for this binding ele... Remove this comment to see the full error message
                     status,
@@ -143,7 +140,6 @@ export class SubsonicSource extends MemorySource {
                     // @ts-expect-error TS(2525): Initializer provides no value for this binding ele... Remove this comment to see the full error message
                     text,
                 } = {},
-                // @ts-expect-error TS(2339): Property 'response' does not exist on type 'unknow... Remove this comment to see the full error message
                 response,
             } = e;
             let msg = response !== undefined ? `API Call failed: Server Response => ${ssMessage}` : `API Call failed: ${message}`;
@@ -161,7 +157,6 @@ export class SubsonicSource extends MemorySource {
             this.logger.info('Subsonic Connection: ok');
             this.initialized = true;
         } catch (e) {
-            // @ts-expect-error TS(2571): Object is of type 'unknown'.
             if(e.status !== undefined && e.status !== 404) {
                 this.logger.info('Subsonic Connection: ok');
                 // we at least got a response!

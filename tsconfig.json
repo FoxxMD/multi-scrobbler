@@ -1,10 +1,10 @@
 {
-  "extends": "@tsconfig/node18/tsconfig.json",
   "compilerOptions": {
     "sourceMap": true,
     "resolveJsonModule": true,
     "emitDecoratorMetadata": true,
     "experimentalDecorators": true,
+    "esModuleInterop": false,
 
     "module": "NodeNext",
     "typeRoots": [

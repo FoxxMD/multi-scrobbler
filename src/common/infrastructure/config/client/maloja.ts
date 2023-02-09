@@ -1,4 +1,4 @@
-import {CommonClientConfig, CommonClientData} from "./index";
+import {CommonClientConfig, CommonClientData} from "./index.js";
 
 export interface MalojaClientConfig extends CommonClientConfig {
     data: CommonClientData & {

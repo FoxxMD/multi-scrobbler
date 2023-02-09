@@ -1,17 +1,14 @@
 import dayjs from "dayjs";
-import {buildTrackString, createLabelledLogger} from "../utils";
-import AbstractSource from "./AbstractSource";
+import {buildTrackString, createLabelledLogger} from "../utils.js";
+import AbstractSource from "./AbstractSource.js";
 import formidable from 'formidable';
 import concatStream from 'concat-stream';
-import {PlexSourceConfig} from "../common/infrastructure/config/source/plex";
-import {InternalConfig, PlayObject, SourceType} from "../common/infrastructure/Atomic";
+import {PlexSourceConfig} from "../common/infrastructure/config/source/plex.js";
+import {InternalConfig, PlayObject, SourceType} from "../common/infrastructure/Atomic.js";
 
 export default class PlexSource extends AbstractSource {
-    // @ts-expect-error TS(7022): 'users' implicitly has type 'any' because it does ... Remove this comment to see the full error message
     users;
-    // @ts-expect-error TS(7022): 'libraries' implicitly has type 'any' because it d... Remove this comment to see the full error message
     libraries;
-    // @ts-expect-error TS(7022): 'servers' implicitly has type 'any' because it doe... Remove this comment to see the full error message
     servers;
 
     declare config: PlexSourceConfig;

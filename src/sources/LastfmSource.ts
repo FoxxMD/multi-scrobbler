@@ -1,13 +1,13 @@
-import AbstractSource from "./AbstractSource";
-import LastfmApiClient from "../apis/LastfmApiClient";
-import {sortByPlayDate} from "../utils";
-import {LastfmClientConfig} from "../common/infrastructure/config/client/lastfm";
-import {InternalConfig, PlayObject} from "../common/infrastructure/Atomic";
+import AbstractSource from "./AbstractSource.js";
+import LastfmApiClient from "../apis/LastfmApiClient.js";
+import {sortByPlayDate} from "../utils.js";
+import {LastfmClientConfig} from "../common/infrastructure/config/client/lastfm.js";
+import {InternalConfig, PlayObject} from "../common/infrastructure/Atomic.js";
 import {UserGetRecentTracksResponse} from "lastfm-node-client";
 
 export default class LastfmSource extends AbstractSource {
 
-    api;
+    api: LastfmApiClient;
     requiresAuth = true;
     requiresAuthInteraction = true;
 
@@ -75,7 +75,6 @@ export default class LastfmSource extends AbstractSource {
                 }
                 return acc.concat(formatted);
             } catch (e) {
-                // @ts-expect-error TS(2571): Object is of type 'unknown'.
                 this.logger.warn('Failed to format Last.fm recently scrobbled track, omitting from time frame check', {error: e.message});
                 this.logger.debug('Full api response object:');
                 this.logger.debug(x);

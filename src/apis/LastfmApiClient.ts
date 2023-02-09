@@ -1,9 +1,9 @@
 import LastFm, {AuthGetSessionResponse, TrackObject, UserGetInfoResponse} from "lastfm-node-client";
 import AbstractApiClient from "./AbstractApiClient.js";
 import dayjs from "dayjs";
-import {readJson, sleep, writeFile} from "../utils";
-import {PlayObject} from "../common/infrastructure/Atomic";
-import {LastfmData} from "../common/infrastructure/config/client/lastfm";
+import {readJson, sleep, writeFile} from "../utils.js";
+import {PlayObject} from "../common/infrastructure/Atomic.js";
+import {LastfmData} from "../common/infrastructure/config/client/lastfm.js";
 
 const badErrors = [
     'api key suspended',
@@ -89,7 +89,6 @@ export default class LastfmApiClient extends AbstractApiClient {
             return await func(this.client) as T;
         } catch (e) {
             const {
-                // @ts-expect-error TS(2339): Property 'message' does not exist on type 'unknown... Remove this comment to see the full error message
                 message,
             } = e;
             // for now check for exceptional errors by matching error code text

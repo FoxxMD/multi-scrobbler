@@ -1,7 +1,7 @@
 import dayjs from "dayjs";
-import PlexSource from "./PlexSource";
-import {TautulliSourceConfig} from "../common/infrastructure/config/source/tautulli";
-import {InternalConfig, PlayObject} from "../common/infrastructure/Atomic";
+import PlexSource from "./PlexSource.js";
+import {TautulliSourceConfig} from "../common/infrastructure/config/source/tautulli.js";
+import {InternalConfig, PlayObject} from "../common/infrastructure/Atomic.js";
 
 export default class TautulliSource extends PlexSource {
 

@@ -1,0 +1,437 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "anyOf": [
+        {
+            "$ref": "#/definitions/SpotifySourceConfig"
+        },
+        {
+            "$ref": "#/definitions/PlexSourceConfig"
+        },
+        {
+            "$ref": "#/definitions/TautulliSourceConfig"
+        },
+        {
+            "$ref": "#/definitions/DeezerSourceConfig"
+        },
+        {
+            "$ref": "#/definitions/SubSonicSourceConfig"
+        },
+        {
+            "$ref": "#/definitions/JellySourceConfig"
+        },
+        {
+            "$ref": "#/definitions/LastfmSourceConfig"
+        }
+    ],
+    "definitions": {
+        "CommonSourceData": {
+            "properties": {
+                "maxPollRetries": {
+                    "default": 0,
+                    "description": "default # of automatic polling restarts on error",
+                    "type": "number"
+                },
+                "maxRequestRetries": {
+                    "default": 1,
+                    "description": "default # of http request retries a source can make before error is thrown",
+                    "type": "number"
+                },
+                "options": {
+                    "$ref": "#/definitions/Record<string,any>"
+                },
+                "retryMultiplier": {
+                    "default": 1.5,
+                    "description": "default retry delay multiplier (retry attempt * multiplier = # of seconds to wait before retrying)",
+                    "type": "number"
+                }
+            },
+            "type": "object"
+        },
+        "DeezerData": {
+            "properties": {
+                "clientId": {
+                    "description": "deezer client id",
+                    "type": "string"
+                },
+                "clientSecret": {
+                    "description": "deezer client secret",
+                    "type": "string"
+                },
+                "interval": {
+                    "default": 60,
+                    "description": "optional, how long to wait before calling spotify for new tracks (in seconds)",
+                    "type": "number"
+                },
+                "maxPollRetries": {
+                    "default": 0,
+                    "description": "default # of automatic polling restarts on error",
+                    "type": "number"
+                },
+                "maxRequestRetries": {
+                    "default": 1,
+                    "description": "default # of http request retries a source can make before error is thrown",
+                    "type": "number"
+                },
+                "options": {
+                    "$ref": "#/definitions/Record<string,any>"
+                },
+                "redirectUri": {
+                    "default": "http://localhost:9078/deezer/callback",
+                    "description": "deezer redirect URI -- required only if not the default shown here. URI must end in \"callback\"",
+                    "type": "string"
+                },
+                "retryMultiplier": {
+                    "default": 1.5,
+                    "description": "default retry delay multiplier (retry attempt * multiplier = # of seconds to wait before retrying)",
+                    "type": "number"
+                }
+            },
+            "required": [
+                "clientId",
+                "clientSecret",
+                "redirectUri"
+            ],
+            "type": "object"
+        },
+        "DeezerSourceConfig": {
+            "properties": {
+                "clients": {
+                    "description": "Restrict scrobbling tracks played from this source to Clients with names from this list",
+                    "items": {
+                        "type": "string"
+                    },
+                    "type": "array"
+                },
+                "data": {
+                    "$ref": "#/definitions/DeezerData"
+                },
+                "name": {
+                    "description": "Unique identifier for this source.",
+                    "type": "string"
+                }
+            },
+            "required": [
+                "data"
+            ],
+            "type": "object"
+        },
+        "JellySourceConfig": {
+            "properties": {
+                "clients": {
+                    "description": "Restrict scrobbling tracks played from this source to Clients with names from this list",
+                    "items": {
+                        "type": "string"
+                    },
+                    "type": "array"
+                },
+                "data": {
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/CommonSourceData"
+                        },
+                        {
+                            "properties": {
+                                "servers": {
+                                    "description": "optional list of servers to scrobble tracks from\n\nIf none are provided tracks from all servers will be scrobbled",
+                                    "type": "string"
+                                },
+                                "user": {
+                                    "description": "optional list of users to scrobble tracks from\n\nIf none are provided tracks from all users will be scrobbled",
+                                    "type": "string"
+                                }
+                            },
+                            "type": "object"
+                        }
+                    ]
+                },
+                "name": {
+                    "description": "Unique identifier for this source.",
+                    "type": "string"
+                }
+            },
+            "required": [
+                "data"
+            ],
+            "type": "object"
+        },
+        "LastfmData": {
+            "properties": {
+                "apiKey": {
+                    "description": "API Key generated from Last.fm account",
+                    "type": "string"
+                },
+                "redirectUri": {
+                    "default": "http://localhost:9078/lastfm/callback",
+                    "description": "Optional URI to use for callback. Specify this if callback should be different than the default. MUST have \"lastfm/callback\" in the URL somewhere.",
+                    "type": "string"
+                },
+                "secret": {
+                    "description": "Secret generated from Last.fm account",
+                    "type": "string"
+                },
+                "session": {
+                    "description": "Optional session id returned from a completed auth flow",
+                    "type": "string"
+                }
+            },
+            "required": [
+                "apiKey",
+                "secret"
+            ],
+            "type": "object"
+        },
+        "LastfmSourceConfig": {
+            "properties": {
+                "clients": {
+                    "description": "Restrict scrobbling tracks played from this source to Clients with names from this list",
+                    "items": {
+                        "type": "string"
+                    },
+                    "type": "array"
+                },
+                "configureAs": {
+                    "enum": [
+                        "source"
+                    ],
+                    "type": "string"
+                },
+                "data": {
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/CommonSourceData"
+                        },
+                        {
+                            "$ref": "#/definitions/LastfmData"
+                        }
+                    ]
+                },
+                "name": {
+                    "description": "Unique identifier for this source.",
+                    "type": "string"
+                }
+            },
+            "required": [
+                "data"
+            ],
+            "type": "object"
+        },
+        "PlexSourceConfig": {
+            "properties": {
+                "clients": {
+                    "description": "Restrict scrobbling tracks played from this source to Clients with names from this list",
+                    "items": {
+                        "type": "string"
+                    },
+                    "type": "array"
+                },
+                "data": {
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/CommonSourceData"
+                        },
+                        {
+                            "properties": {
+                                "libraries": {
+                                    "description": "optional list of libraries to scrobble tracks from\n\nIf none are provided tracks from all libraries will be scrobbled",
+                                    "type": "string"
+                                },
+                                "servers": {
+                                    "description": "optional list of servers to scrobble tracks from\n\nIf none are provided tracks from all servers will be scrobbled",
+                                    "type": "string"
+                                },
+                                "user": {
+                                    "description": "optional list of users to scrobble tracks from\n\nIf none are provided tracks from all users will be scrobbled",
+                                    "type": "string"
+                                }
+                            },
+                            "type": "object"
+                        }
+                    ]
+                },
+                "name": {
+                    "description": "Unique identifier for this source.",
+                    "type": "string"
+                }
+            },
+            "required": [
+                "data"
+            ],
+            "type": "object"
+        },
+        "Record<string,any>": {
+            "type": "object"
+        },
+        "SpotifySourceConfig": {
+            "properties": {
+                "clients": {
+                    "description": "Restrict scrobbling tracks played from this source to Clients with names from this list",
+                    "items": {
+                        "type": "string"
+                    },
+                    "type": "array"
+                },
+                "data": {
+                    "$ref": "#/definitions/SpotifySourceData"
+                },
+                "name": {
+                    "description": "Unique identifier for this source.",
+                    "type": "string"
+                }
+            },
+            "required": [
+                "data"
+            ],
+            "type": "object"
+        },
+        "SpotifySourceData": {
+            "properties": {
+                "clientId": {
+                    "description": "spotify client id",
+                    "type": "string"
+                },
+                "clientSecret": {
+                    "description": "spotify client secret",
+                    "type": "string"
+                },
+                "interval": {
+                    "default": 60,
+                    "description": "optional, how long to wait before calling spotify for new tracks (in seconds)",
+                    "type": "number"
+                },
+                "maxPollRetries": {
+                    "default": 0,
+                    "description": "default # of automatic polling restarts on error",
+                    "type": "number"
+                },
+                "maxRequestRetries": {
+                    "default": 1,
+                    "description": "default # of http request retries a source can make before error is thrown",
+                    "type": "number"
+                },
+                "options": {
+                    "$ref": "#/definitions/Record<string,any>"
+                },
+                "redirectUri": {
+                    "default": "http://localhost:9078/callback",
+                    "description": "spotify redirect URI -- required only if not the default shown here. URI must end in \"callback\"",
+                    "type": "string"
+                },
+                "retryMultiplier": {
+                    "default": 1.5,
+                    "description": "default retry delay multiplier (retry attempt * multiplier = # of seconds to wait before retrying)",
+                    "type": "number"
+                }
+            },
+            "required": [
+                "clientId",
+                "clientSecret",
+                "redirectUri"
+            ],
+            "type": "object"
+        },
+        "SubSonicSourceConfig": {
+            "properties": {
+                "clients": {
+                    "description": "Restrict scrobbling tracks played from this source to Clients with names from this list",
+                    "items": {
+                        "type": "string"
+                    },
+                    "type": "array"
+                },
+                "data": {
+                    "$ref": "#/definitions/SubsonicData"
+                },
+                "name": {
+                    "description": "Unique identifier for this source.",
+                    "type": "string"
+                }
+            },
+            "required": [
+                "data"
+            ],
+            "type": "object"
+        },
+        "SubsonicData": {
+            "properties": {
+                "maxPollRetries": {
+                    "default": 0,
+                    "description": "default # of automatic polling restarts on error",
+                    "type": "number"
+                },
+                "maxRequestRetries": {
+                    "default": 1,
+                    "description": "default # of http request retries a source can make before error is thrown",
+                    "type": "number"
+                },
+                "options": {
+                    "$ref": "#/definitions/Record<string,any>"
+                },
+                "password": {
+                    "type": "string"
+                },
+                "retryMultiplier": {
+                    "default": 1.5,
+                    "description": "default retry delay multiplier (retry attempt * multiplier = # of seconds to wait before retrying)",
+                    "type": "number"
+                },
+                "url": {
+                    "description": "URL of the subsonic media server to query",
+                    "type": "string"
+                },
+                "user": {
+                    "type": "string"
+                }
+            },
+            "required": [
+                "password",
+                "url",
+                "user"
+            ],
+            "type": "object"
+        },
+        "TautulliSourceConfig": {
+            "properties": {
+                "clients": {
+                    "description": "Restrict scrobbling tracks played from this source to Clients with names from this list",
+                    "items": {
+                        "type": "string"
+                    },
+                    "type": "array"
+                },
+                "data": {
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/CommonSourceData"
+                        },
+                        {
+                            "properties": {
+                                "libraries": {
+                                    "description": "optional list of libraries to scrobble tracks from\n\nIf none are provided tracks from all libraries will be scrobbled",
+                                    "type": "string"
+                                },
+                                "servers": {
+                                    "description": "optional list of servers to scrobble tracks from\n\nIf none are provided tracks from all servers will be scrobbled",
+                                    "type": "string"
+                                },
+                                "user": {
+                                    "description": "optional list of users to scrobble tracks from\n\nIf none are provided tracks from all users will be scrobbled",
+                                    "type": "string"
+                                }
+                            },
+                            "type": "object"
+                        }
+                    ]
+                },
+                "name": {
+                    "description": "Unique identifier for this source.",
+                    "type": "string"
+                }
+            },
+            "required": [
+                "data"
+            ],
+            "type": "object"
+        }
+    }
+}
+

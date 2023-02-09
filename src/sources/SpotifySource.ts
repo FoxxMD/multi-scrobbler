@@ -3,12 +3,11 @@ import {
     readJson,
     writeFile,
     sortByPlayDate, sleep, parseRetryAfterSecsFromObj,
-} from "../utils";
-// @ts-expect-error TS(7016): Could not find a declaration file for module 'spot... Remove this comment to see the full error message
+} from "../utils.js";
 import SpotifyWebApi from "spotify-web-api-node";
-import AbstractSource from "./AbstractSource";
-import {SpotifySourceConfig} from "../common/infrastructure/config/source/spotify";
-import {InternalConfig, PlayObject} from "../common/infrastructure/Atomic";
+import AbstractSource from "./AbstractSource.js";
+import {SpotifySourceConfig} from "../common/infrastructure/config/source/spotify.js";
+import {InternalConfig, PlayObject} from "../common/infrastructure/Atomic.js";
 
 const scopes = ['user-read-recently-played', 'user-read-currently-playing'];
 const state = 'random';
@@ -214,7 +213,6 @@ export default class SpotifySource extends AbstractSource {
         return result;
     }
 
-    // @ts-expect-error TS(7024): Function implicitly has return type 'any' because ... Remove this comment to see the full error message
     callApi = async (func: any, retries = 0) => {
         const {
             // @ts-expect-error TS(2339): Property 'maxRequestRetries' does not exist on typ... Remove this comment to see the full error message
@@ -225,7 +223,6 @@ export default class SpotifySource extends AbstractSource {
         try {
             return await func(this.spotifyApi);
         } catch (e) {
-            // @ts-expect-error TS(2571): Object is of type 'unknown'.
             if (e.statusCode === 401) {
                 if (this.spotifyApi.getRefreshToken() === undefined) {
                     throw new Error('Access token was not valid and no refresh token was present')
@@ -251,7 +248,6 @@ export default class SpotifySource extends AbstractSource {
                     return await func(this.spotifyApi);
                 } catch (ee) {
                     this.logger.error('Refreshing access token encountered an error');
-                    // @ts-expect-error TS(2769): No overload matches this call.
                     this.logger.error(ee, {label: 'Spotify'});
                     throw ee;
                 }
@@ -262,7 +258,6 @@ export default class SpotifySource extends AbstractSource {
                 return this.callApi(func, retries + 1);
             } else {
                 this.logger.error(`Request failed on retry (${retries}) with no more retries permitted (max ${maxRequestRetries})`);
-                // @ts-expect-error TS(2769): No overload matches this call.
                 this.logger.error(e, {label: 'Spotify'});
                 throw e;
             }

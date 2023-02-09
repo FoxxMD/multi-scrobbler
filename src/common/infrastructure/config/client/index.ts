@@ -1,4 +1,4 @@
-import {CommonConfig, CommonData} from "../common";
+import {CommonConfig, CommonData} from "../common.js";
 
 export interface MatchLoggingOptions {
     onNoMatch?: boolean

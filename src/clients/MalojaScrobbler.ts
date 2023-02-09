@@ -1,4 +1,4 @@
-import AbstractScrobbleClient from "./AbstractScrobbleClient";
+import AbstractScrobbleClient from "./AbstractScrobbleClient.js";
 import request from 'superagent';
 import dayjs from 'dayjs';
 import compareVersions from 'compare-versions';
@@ -10,9 +10,9 @@ import {
     sortByPlayDate,
     truncateStringToLength,
     parseRetryAfterSecsFromObj
-} from "../utils";
-import {INITIALIZING} from "../common/infrastructure/Atomic";
-import {MalojaClientConfig} from "../common/infrastructure/config/client/maloja";
+} from "../utils.js";
+import {INITIALIZING} from "../common/infrastructure/Atomic.js";
+import {MalojaClientConfig} from "../common/infrastructure/config/client/maloja.js";
 
 const feat = ["ft.", "ft", "feat.", "feat", "featuring", "Ft.", "Ft", "Feat.", "Feat", "Featuring"];
 
@@ -113,7 +113,6 @@ export default class MalojaScrobbler extends AbstractScrobbleClient {
 
     formatPlayObj = (obj: any) => MalojaScrobbler.formatPlayObj(obj, this.serverVersion);
 
-    // @ts-expect-error TS(7024): Function implicitly has return type 'any' because ... Remove this comment to see the full error message
     callApi = async (req: any, retries = 0) => {
         const {
             // @ts-expect-error TS(2339): Property 'maxRequestRetries' does not exist on typ... Remove this comment to see the full error message
@@ -132,9 +131,7 @@ export default class MalojaScrobbler extends AbstractScrobbleClient {
                 return await this.callApi(req, retries + 1)
             }
             const {
-                // @ts-expect-error TS(2339): Property 'message' does not exist on type 'unknown... Remove this comment to see the full error message
                 message,
-                // @ts-expect-error TS(2339): Property 'response' does not exist on type 'unknow... Remove this comment to see the full error message
                 response: {
                     // @ts-expect-error TS(2525): Initializer provides no value for this binding ele... Remove this comment to see the full error message
                     status,
@@ -143,7 +140,6 @@ export default class MalojaScrobbler extends AbstractScrobbleClient {
                     // @ts-expect-error TS(2525): Initializer provides no value for this binding ele... Remove this comment to see the full error message
                     text,
                 } = {},
-                // @ts-expect-error TS(2339): Property 'response' does not exist on type 'unknow... Remove this comment to see the full error message
                 response,
             } = e;
             let msg = response !== undefined ? `API Call failed: Server Response => ${message}` : `API Call failed: ${message}`;
@@ -268,7 +264,6 @@ export default class MalojaScrobbler extends AbstractScrobbleClient {
                 });
             }
         } catch (e) {
-            // @ts-expect-error TS(2571): Object is of type 'unknown'.
             if(e.status === 403) {
                 // may be an older version that doesn't support auth readiness before db upgrade
                 // and if it was before api was accessible during db build then test would fail during testConnection()
@@ -326,7 +321,6 @@ export default class MalojaScrobbler extends AbstractScrobbleClient {
                 this.newestScrobbleTime = newestScrobbleTime;
                 this.oldestScrobbleTime = oldestScrobbleTime;
 
-                // @ts-expect-error TS(2339): Property 'play' does not exist on type 'never'.
                 this.scrobbledPlayObjs = this.scrobbledPlayObjs.filter(x => this.timeFrameIsValid(x.play));
             }
         }
@@ -382,7 +376,6 @@ export default class MalojaScrobbler extends AbstractScrobbleClient {
 
         // if we have an submitted play with matching data and play date then we can just return the response from the original scrobble
         if (existingExactSubmitted !== undefined) {
-            // @ts-expect-error TS(2339): Property 'scrobble' does not exist on type 'never[... Remove this comment to see the full error message
             existingScrobble = existingExactSubmitted.scrobble;
 
             closestMatch = {
@@ -406,7 +399,6 @@ export default class MalojaScrobbler extends AbstractScrobbleClient {
 
             // we have have found an existing submission but without an exact date
             // in which case we can check the scrobble api response against recent scrobbles (also from api) for a more accurate comparison
-            // @ts-expect-error TS(2339): Property 'scrobble' does not exist on type 'never'... Remove this comment to see the full error message
             const referenceApiScrobbleResponse = existingDataSubmitted.length > 0 ? existingDataSubmitted[0].scrobble : undefined;
 
             const {
@@ -462,7 +454,6 @@ export default class MalojaScrobbler extends AbstractScrobbleClient {
 
                 let artistMatch;
                 const lowerSourceArtists = sourceArtists.map((x: any) => x.toLocaleLowerCase());
-                // @ts-expect-error TS(2339): Property 'toLocaleLowerCase' does not exist on typ... Remove this comment to see the full error message
                 const lowerScrobbleArtists = artists.map(x => x.toLocaleLowerCase());
                 artistMatch = setIntersection(new Set(lowerScrobbleArtists), new Set(lowerSourceArtists)).size / artists.length;
 

@@ -1,14 +1,12 @@
-import MemorySource from "./MemorySource";
+import MemorySource from "./MemorySource.js";
 import dayjs from "dayjs";
-import {buildTrackString, parseDurationFromTimestamp} from "../utils";
-import {JellySourceConfig} from "../common/infrastructure/config/source/jellyfin";
-import {InternalConfig, PlayObject} from "../common/infrastructure/Atomic";
+import {buildTrackString, parseDurationFromTimestamp} from "../utils.js";
+import {JellySourceConfig} from "../common/infrastructure/config/source/jellyfin.js";
+import {InternalConfig, PlayObject} from "../common/infrastructure/Atomic.js";
 
 
 export default class JellyfinSource extends MemorySource {
-    // @ts-expect-error TS(7022): 'users' implicitly has type 'any' because it does ... Remove this comment to see the full error message
     users;
-    // @ts-expect-error TS(7022): 'servers' implicitly has type 'any' because it doe... Remove this comment to see the full error message
     servers;
 
     seenServers = {};
@@ -148,9 +146,7 @@ export default class JellyfinSource extends MemorySource {
     }
 
     handle = async (playObj: any, allClients: any) => {
-        // @ts-expect-error TS(7053): Element implicitly has an 'any' type because expre... Remove this comment to see the full error message
         if(this.seenServers[playObj.meta.server] === undefined) {
-            // @ts-expect-error TS(7053): Element implicitly has an 'any' type because expre... Remove this comment to see the full error message
             this.seenServers[playObj.meta.server] = playObj.meta.sourceVersion;
             this.logger.info(`Received data from server ${playObj.meta.server} (Version ${playObj.meta.sourceVersion}) for the first time.`);
         }
@@ -168,7 +164,6 @@ export default class JellyfinSource extends MemorySource {
             const recent = await this.getRecentlyPlayed();
             const newestPlay = recent[recent.length - 1];
             try {
-                // @ts-expect-error TS(2339): Property 'data' does not exist on type 'never'.
                 await allClients.scrobble(newPlays, {scrobbleTo: this.clients, scrobbleFrom: this.identifier, checkTime: newestPlay.data.playDate});
                 // only gets hit if we scrobbled ok
                 this.tracksDiscovered++;

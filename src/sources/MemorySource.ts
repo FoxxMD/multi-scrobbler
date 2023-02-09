@@ -1,5 +1,5 @@
 import AbstractSource from "./AbstractSource.js";
-import {playObjDataMatch, sortByPlayDate, buildTrackString} from "../utils";
+import {playObjDataMatch, sortByPlayDate, buildTrackString} from "../utils.js";
 import dayjs from "dayjs";
 
 export default class MemorySource extends AbstractSource {
@@ -50,7 +50,6 @@ export default class MemorySource extends AbstractSource {
 
             for(const candidate of this.candidateRecentlyPlayed) {
                 const {data: {playDate, track}} = candidate;
-                // @ts-expect-error TS(2339): Property 'isBefore' does not exist on type 'never'... Remove this comment to see the full error message
                 if(playDate.isBefore(dayjs().subtract(30, 's'))) {
                     // a prior candidate has been playing for more than 30 seconds, time to check statefuls
 
@@ -63,10 +62,8 @@ export default class MemorySource extends AbstractSource {
                     } else {
                         const {data: { playDate, duration }} = candidate;
                         const {data: { playDate: rplayDate }} = matchingRecent;
-                        // @ts-expect-error TS(2339): Property 'isSame' does not exist on type 'never'.
                         if(!playDate.isSame(rplayDate)) {
                             if(duration !== undefined) {
-                                // @ts-expect-error TS(2339): Property 'isAfter' does not exist on type 'never'.
                                 if(playDate.isAfter(rplayDate.add(duration, 's'))) {
                                     this.logger.debug(`${stPrefix} added after being seen for 30 seconds and having a different timestamp than a prior play`);
                                     newStatefulPlays.push(candidate);

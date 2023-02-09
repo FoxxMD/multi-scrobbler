@@ -1,9 +1,9 @@
 import dayjs, {Dayjs} from "dayjs";
-import {buildTrackString, capitalize, createLabelledLogger, playObjDataMatch} from "../utils";
-import {ClientType, INITIALIZED, INITIALIZING, InitState, NOT_INITIALIZED} from "../common/infrastructure/Atomic";
+import {buildTrackString, capitalize, createLabelledLogger, playObjDataMatch} from "../utils.js";
+import {ClientType, INITIALIZED, INITIALIZING, InitState, NOT_INITIALIZED} from "../common/infrastructure/Atomic.js";
 import {Logger} from "winston";
-import {CommonClientConfig} from "../common/infrastructure/config/client";
-import {ClientConfig} from "../common/infrastructure/config/client/clients";
+import {CommonClientConfig} from "../common/infrastructure/config/client/index.js";
+import {ClientConfig} from "../common/infrastructure/config/client/clients.js";
 
 export default abstract class AbstractScrobbleClient {
 
@@ -140,7 +140,6 @@ export default abstract class AbstractScrobbleClient {
     }
 
     addScrobbledTrack = (playObj: any, scrobbleResp: any) => {
-        // @ts-expect-error TS(2322): Type 'any' is not assignable to type 'never'.
         this.scrobbledPlayObjs.push({play: playObj, scrobble: this.formatPlayObj(scrobbleResp)});
     }
 
@@ -167,7 +166,6 @@ export default abstract class AbstractScrobbleClient {
             } = {}
         } = playObj;
 
-        // @ts-expect-error TS(2339): Property 'play' does not exist on type 'never'.
         const dtInvariantMatches = this.scrobbledPlayObjs.filter(x => playObjDataMatch(playObj, x.play));
 
         if (dtInvariantMatches.length === 0) {

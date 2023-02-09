@@ -1,8 +1,8 @@
 import dayjs, {Dayjs} from "dayjs";
-import {buildTrackString, capitalize, createLabelledLogger, sleep} from "../utils";
-import {InternalConfig, PlayObject, SourceType} from "../common/infrastructure/Atomic";
+import {buildTrackString, capitalize, createLabelledLogger, sleep} from "../utils.js";
+import {InternalConfig, PlayObject, SourceType} from "../common/infrastructure/Atomic.js";
 import {Logger} from "winston";
-import {SourceConfig} from "../common/infrastructure/config/source/sources";
+import {SourceConfig} from "../common/infrastructure/config/source/sources.js";
 
 export default abstract class AbstractSource {
 
@@ -128,20 +128,17 @@ export default abstract class AbstractSource {
                 let closeToInterval = false;
                 const now = dayjs();
 
-                // @ts-expect-error TS(2769): No overload matches this call.
                 const playInfo = playObjs.reduce((acc, playObj) => {
                     if(this.recentlyPlayedTrackIsValid(playObj)) {
                         const {data: {
                             playDate
                         } = {}
                         } = playObj;
-                        // @ts-expect-error TS(2339): Property 'unix' does not exist on type 'never'.
                         if (playDate.unix() > lastTrackPlayedAt.unix()) {
                             newTracksFound = true;
                             this.logger.info(`New Track => ${buildTrackString(playObj)}`);
 
                             if (closeToInterval === false) {
-                                // @ts-expect-error TS(2339): Property 'unix' does not exist on type 'never'.
                                 closeToInterval = Math.abs(now.unix() - playDate.unix()) < 5;
                             }
 
@@ -157,9 +154,7 @@ export default abstract class AbstractSource {
                     }
                     return acc;
                 }, {plays: [], lastTrackPlayedAt});
-                // @ts-expect-error TS(2339): Property 'plays' does not exist on type 'never'.
                 playObjs = playInfo.plays;
-                // @ts-expect-error TS(2339): Property 'lastTrackPlayedAt' does not exist on typ... Remove this comment to see the full error message
                 lastTrackPlayedAt = playInfo.lastTrackPlayedAt;
 
                 if (closeToInterval) {

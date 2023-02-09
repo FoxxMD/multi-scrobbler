@@ -1,6 +1,6 @@
-import {capitalize, createLabelledLogger} from "../utils";
+import {capitalize, createLabelledLogger} from "../utils.js";
 import {Logger} from "winston";
-import {PlayObject} from "../common/infrastructure/Atomic";
+import {PlayObject} from "../common/infrastructure/Atomic.js";
 
 export default abstract class AbstractApiClient {
     name: string;

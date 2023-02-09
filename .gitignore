@@ -122,4 +122,7 @@ dist
 .idea/
 
 !tsconfig.json
-!./src/schema/*.json
+!src/common/infrastructure/schema/*.json
+
+src/**/**.js
+src/**/**.js.map
