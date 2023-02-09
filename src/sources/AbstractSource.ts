@@ -4,6 +4,11 @@ import {InternalConfig, PlayObject, SourceType} from "../common/infrastructure/A
 import {Logger} from "winston";
 import {SourceConfig} from "../common/infrastructure/config/source/sources.js";
 
+export interface RecentlyPlayedOptions {
+    limit?: number
+    formatted?: boolean
+}
+
 export default abstract class AbstractSource {
 
     name: string;
@@ -52,7 +57,7 @@ export default abstract class AbstractSource {
         return this.authed;
     }
 
-    getRecentlyPlayed = async (options = {}): Promise<PlayObject[]> => {
+    getRecentlyPlayed = async (options: RecentlyPlayedOptions = {}): Promise<PlayObject[]> => {
         return [];
     }
 
