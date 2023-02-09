@@ -1,4 +1,4 @@
-import AbstractScrobbleClient from "./AbstractScrobbleClient.js";
+import AbstractScrobbleClient from "./AbstractScrobbleClient";
 import dayjs from 'dayjs';
 
 import {
@@ -7,9 +7,11 @@ import {
     setIntersection, sleep,
     sortByPlayDate,
     truncateStringToLength,
-} from "../utils.js";
-import LastfmApiClient from "../apis/LastfmApiClient.js";
-import {INITIALIZING} from "../common/index.js";
+} from "../utils";
+import LastfmApiClient from "../apis/LastfmApiClient";
+import {INITIALIZING} from "../common/infrastructure/Atomic";
+import {LastfmClientConfig} from "../common/infrastructure/config/client/lastfm";
+import {TrackScrobbleResponse, UserGetRecentTracksResponse} from "lastfm-node-client";
 
 export default class LastfmScrobbler extends AbstractScrobbleClient {
 
@@ -17,10 +19,12 @@ export default class LastfmScrobbler extends AbstractScrobbleClient {
     requiresAuth = true;
     requiresAuthInteraction = true;
 
-    constructor(name: any, config = {}, options = {}) {
+    declare config: LastfmClientConfig;
+
+    constructor(name: any, config: LastfmClientConfig, options = {}) {
         // @ts-expect-error TS(2554): Expected 2-3 arguments, but got 4.
         super('lastfm', name, config, options);
-        this.api = new LastfmApiClient(name, config, options)
+        this.api = new LastfmApiClient(name, config.data, options)
     }
 
     formatPlayObj = (obj: any) => LastfmApiClient.formatPlayObj(obj);
@@ -46,7 +50,7 @@ export default class LastfmScrobbler extends AbstractScrobbleClient {
     refreshScrobbles = async () => {
         if (this.refreshEnabled) {
             this.logger.debug('Refreshing recent scrobbles');
-            const resp = await this.api.callApi((client: any) => client.userGetRecentTracks({user: this.api.user, limit: 20, extended: true}));
+            const resp = await this.api.callApi<UserGetRecentTracksResponse>((client: any) => client.userGetRecentTracks({user: this.api.user, limit: 20, extended: true}));
             const {
                 recenttracks: {
                     track: list = [],
@@ -294,22 +298,20 @@ export default class LastfmScrobbler extends AbstractScrobbleClient {
         const scrobblePayload = removeUndefinedKeys(rawPayload);
 
         try {
-            const response = await this.api.callApi((client: any) => client.trackScrobble(
+            const response = await this.api.callApi<TrackScrobbleResponse>((client: any) => client.trackScrobble(
                 scrobblePayload));
             const {
                 scrobbles: {
-                    // @ts-expect-error TS(2525): Initializer provides no value for this binding ele... Remove this comment to see the full error message
                     '@attr': {
                         accepted = 0,
                         ignored = 0,
-                        code,
-                    },
+                        code = undefined,
+                    } = {},
                     scrobble: {
                         track: {
                            // @ts-expect-error TS(2525): Initializer provides no value for this binding ele... Remove this comment to see the full error message
                            '#text': trackName,
                         } = {},
-                        // @ts-expect-error TS(2525): Initializer provides no value for this binding ele... Remove this comment to see the full error message
                         timestamp,
                         ignoredMessage: {
                             // @ts-expect-error TS(2525): Initializer provides no value for this binding ele... Remove this comment to see the full error message

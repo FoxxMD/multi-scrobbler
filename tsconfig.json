@@ -5,9 +5,12 @@
     "resolveJsonModule": true,
     "emitDecoratorMetadata": true,
     "experimentalDecorators": true,
+
+    "module": "NodeNext",
     "typeRoots": [
       "./node_modules/@types",
-    ]
+      "./src/common/infrastructure/typings"
+    ],
   },
   "include": [
     "**/*.ts",

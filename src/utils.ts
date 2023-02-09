@@ -1,12 +1,12 @@
 import fs, {promises, constants} from "fs";
 import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc.js';
-import winston from "winston";
+import winston, {Logger} from "winston";
 import jsonStringify from 'safe-stable-stringify';
 // @ts-expect-error TS(7016): Could not find a declaration file for module 'spot... Remove this comment to see the full error message
 import { TimeoutError, WebapiError } from "spotify-web-api-node/src/response-error.js";
-// @ts-expect-error TS(7016): Could not find a declaration file for module 'supe... Remove this comment to see the full error message
 import { Response } from 'superagent';
+import Ajv, {Schema} from 'ajv';
 
 const {format} = winston;
 const {combine, printf, timestamp, label, splat, errors} = format;
@@ -178,7 +178,7 @@ export const labelledFormat = (labelName = 'App') => {
     );
 }
 
-export const createLabelledLogger = (name = 'default', label = 'App') => {
+export const createLabelledLogger = (name = 'default', label = 'App'): Logger => {
     if (winston.loggers.has(name)) {
         return winston.loggers.get(name);
     }
@@ -301,6 +301,7 @@ export const parseRetryAfterSecsFromObj = (err: any) => {
     if (err instanceof TimeoutError) {
         return undefined;
     }
+    // @ts-ignore
     if (err instanceof WebapiError || err instanceof Response) {
         const {headers = {}} = err;
         raVal = headers['retry-after']
@@ -361,17 +362,14 @@ export const spreadDelay = (retries: any, multiplier: any) => {
     return s;
 }
 
-export const removeUndefinedKeys = (obj: any) => {
-    let newObj = {};
+export const removeUndefinedKeys = <T extends Record<string, any>>(obj: T): T | undefined => {
+    let newObj: any = {};
     Object.keys(obj).forEach((key) => {
         if(Array.isArray(obj[key])) {
-            // @ts-expect-error TS(7053): Element implicitly has an 'any' type because expre... Remove this comment to see the full error message
             newObj[key] = obj[key];
         } else if (obj[key] === Object(obj[key])) {
-            // @ts-expect-error TS(7053): Element implicitly has an 'any' type because expre... Remove this comment to see the full error message
             newObj[key] = removeUndefinedKeys(obj[key]);
         } else if (obj[key] !== undefined) {
-            // @ts-expect-error TS(7053): Element implicitly has an 'any' type because expre... Remove this comment to see the full error message
             newObj[key] = obj[key];
         }
     });
@@ -379,12 +377,11 @@ export const removeUndefinedKeys = (obj: any) => {
         return undefined;
     }
     Object.keys(newObj).forEach(key => {
-        // @ts-expect-error TS(7053): Element implicitly has an 'any' type because expre... Remove this comment to see the full error message
         if(newObj[key] === undefined || (null !== newObj[key] && typeof newObj[key] === 'object' && Object.keys(newObj[key]).length === 0)) {
-            // @ts-expect-error TS(7053): Element implicitly has an 'any' type because expre... Remove this comment to see the full error message
             delete newObj[key]
         }
     });
+    //Object.keys(newObj).forEach(key => newObj[key] === undefined || newObj[key] && delete newObj[key])
     return newObj;
 }
 
@@ -428,4 +425,62 @@ export const parseDurationFromTimestamp = (timestamp: any) => {
         seconds: Number.parseInt(seconds),
         milliseconds: Number.parseInt(milli)
     });
+}
+
+export const createAjvFactory = (logger: Logger): Ajv => {
+    const validator =  new Ajv({logger: logger, verbose: true, strict: "log", allowUnionTypes: true});
+    // https://ajv.js.org/strict-mode.html#unknown-keywords
+    validator.addKeyword('deprecationMessage');
+    return validator;
+}
+
+export const validateJson = <T>(config: object, schema: Schema, logger: Logger): T => {
+    const ajv = createAjvFactory(logger);
+    const valid = ajv.validate(schema, config);
+    if (valid) {
+        return config as unknown as T;
+    } else {
+        logger.error('Json config was not valid. Please use schema to check validity.', {leaf: 'Config'});
+        if (Array.isArray(ajv.errors)) {
+            for (const err of ajv.errors) {
+                let parts = [
+                    `At: ${err.dataPath}`,
+                ];
+                let data;
+                if (typeof err.data === 'string') {
+                    data = err.data;
+                } else if (err.data !== null && typeof err.data === 'object' && (err.data as any).name !== undefined) {
+                    data = `Object named '${(err.data as any).name}'`;
+                }
+                if (data !== undefined) {
+                    parts.push(`Data: ${data}`);
+                }
+                let suffix = '';
+                // @ts-ignore
+                if (err.params.allowedValues !== undefined) {
+                    // @ts-ignore
+                    suffix = err.params.allowedValues.join(', ');
+                    suffix = ` [${suffix}]`;
+                }
+                parts.push(`${err.keyword}: ${err.schemaPath} => ${err.message}${suffix}`);
+
+                // if we have a reference in the description parse it out so we can log it here for context
+                if (err.parentSchema !== undefined && err.parentSchema.description !== undefined) {
+                    const desc = err.parentSchema.description as string;
+                    const seeIndex = desc.indexOf('[See]');
+                    if (seeIndex !== -1) {
+                        let newLineIndex: number | undefined = desc.indexOf('\n', seeIndex);
+                        if (newLineIndex === -1) {
+                            newLineIndex = undefined;
+                        }
+                        const seeFragment = desc.slice(seeIndex + 5, newLineIndex);
+                        parts.push(`See:${seeFragment}`);
+                    }
+                }
+
+                logger.error(`Schema Error:\r\n${parts.join('\r\n')}`, {leaf: 'Config'});
+            }
+        }
+        throw new Error('Config schema validity failure');
+    }
 }

@@ -1,6 +1,8 @@
-import MemorySource from "./MemorySource.js";
+import MemorySource from "./MemorySource";
 import dayjs from "dayjs";
-import {buildTrackString, parseDurationFromTimestamp} from "../utils.js";
+import {buildTrackString, parseDurationFromTimestamp} from "../utils";
+import {JellySourceConfig} from "../common/infrastructure/config/source/jellyfin";
+import {InternalConfig, PlayObject} from "../common/infrastructure/Atomic";
 
 
 export default class JellyfinSource extends MemorySource {
@@ -11,9 +13,11 @@ export default class JellyfinSource extends MemorySource {
 
     seenServers = {};
 
-    constructor(name: any, config: any, clients: any, type = 'jellyfin') {
-        super(type, name, config, clients);
-        const {users, servers} = config
+    declare config: JellySourceConfig;
+
+    constructor(name: any, config: JellySourceConfig, internal: InternalConfig) {
+        super('jellyfin', name, config, internal);
+        const {data: {users, servers} = {}} = config;
 
         if (users === undefined || users === null) {
             this.users = undefined;
@@ -45,7 +49,7 @@ export default class JellyfinSource extends MemorySource {
         this.initialized = true;
     }
 
-    static formatPlayObj(obj: any, newFromSource = false) {
+    static formatPlayObj(obj: any, newFromSource = false): PlayObject {
         const {
             ServerId,
             ServerName,

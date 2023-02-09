@@ -1,6 +1,9 @@
-import AbstractSource from "./AbstractSource.js";
-import LastfmApiClient from "../apis/LastfmApiClient.js";
-import {sortByPlayDate} from "../utils.js";
+import AbstractSource from "./AbstractSource";
+import LastfmApiClient from "../apis/LastfmApiClient";
+import {sortByPlayDate} from "../utils";
+import {LastfmClientConfig} from "../common/infrastructure/config/client/lastfm";
+import {InternalConfig, PlayObject} from "../common/infrastructure/Atomic";
+import {UserGetRecentTracksResponse} from "lastfm-node-client";
 
 export default class LastfmSource extends AbstractSource {
 
@@ -8,13 +11,15 @@ export default class LastfmSource extends AbstractSource {
     requiresAuth = true;
     requiresAuthInteraction = true;
 
-    constructor(name: any, config = {}, clients = []) {
-        super('lastfm', name, config, clients);
+    declare config: LastfmClientConfig;
+
+    constructor(name: any, config: LastfmClientConfig, internal: InternalConfig) {
+        super('lastfm', name, config, internal);
         this.canPoll = true;
-        this.api = new LastfmApiClient(name, config);
+        this.api = new LastfmApiClient(name, config.data);
     }
 
-    static formatPlayObj(obj: any) {
+    static formatPlayObj(obj: any): PlayObject {
         return LastfmApiClient.formatPlayObj(obj);
     }
 
@@ -38,7 +43,7 @@ export default class LastfmSource extends AbstractSource {
     getRecentlyPlayed = async(options = {}) => {
         // @ts-expect-error TS(2339): Property 'limit' does not exist on type '{}'.
         const {limit = 20, formatted = false} = options;
-        const resp = await this.api.callApi((client: any) => client.userGetRecentTracks({user: this.api.user, limit, extended: true}));
+        const resp = await this.api.callApi<UserGetRecentTracksResponse>((client: any) => client.userGetRecentTracks({user: this.api.user, limit, extended: true}));
         const {
             recenttracks: {
                 track: list = [],

@@ -122,3 +122,4 @@ dist
 .idea/
 
 !tsconfig.json
+!./src/schema/*.json

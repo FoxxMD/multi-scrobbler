@@ -1,22 +1,32 @@
 import dayjs from "dayjs";
 import {
+    createAjvFactory,
     createLabelledLogger,
     isValidConfigStructure,
     playObjDataMatch,
     readJson,
-    returnDuplicateStrings
-} from "../utils.js";
-import MalojaScrobbler from "./MalojaScrobbler.js";
-import LastfmScrobbler from "./LastfmScrobbler.js";
+    returnDuplicateStrings, validateJson
+} from "../utils";
+import MalojaScrobbler from "./MalojaScrobbler";
+import LastfmScrobbler from "./LastfmScrobbler";
+import {clientTypes, ConfigMeta} from "../common/infrastructure/Atomic";
+import {AIOConfig} from "../common/infrastructure/config/aioConfig";
+import * as aioSchema from '../common/schema/aio.json';
+import * as clientSchema from '../common/schema/client.json';
+import {ClientAIOConfig, ClientConfig} from "../common/infrastructure/config/client/clients";
+import {MalojaClientConfig} from "../common/infrastructure/config/client/maloja";
+import {LastfmClientConfig} from "../common/infrastructure/config/client/lastfm";
+
+type groupedNamedConfigs = {[key: string]: ParsedConfig[]};
+
+type ParsedConfig = ClientAIOConfig & ConfigMeta;
 
 export default class ScrobbleClients {
 
     /** @type AbstractScrobbleClient[] */
-    clients = [];
+    clients: (MalojaScrobbler | LastfmScrobbler)[] = [];
     logger;
     configDir;
-
-    clientTypes = ['maloja','lastfm'];
 
     constructor(configDir: any) {
         this.configDir = configDir;
@@ -24,17 +34,15 @@ export default class ScrobbleClients {
     }
 
     getByName = (name: any) => {
-        // @ts-expect-error TS(2339): Property 'name' does not exist on type 'never'.
         return this.clients.find(x => x.name === name);
     }
 
     getByType = (type: any) => {
-        // @ts-expect-error TS(2339): Property 'type' does not exist on type 'never'.
         return this.clients.filter(x => x.type === type);
     }
 
     buildClientsFromConfig = async () => {
-        let configs = [];
+        let configs: ParsedConfig[] = [];
 
         let configFile;
         try {
@@ -45,23 +53,24 @@ export default class ScrobbleClients {
         }
         let clientDefaults = {};
         if (configFile !== undefined) {
+            const aioConfig = validateJson<AIOConfig>(configFile, aioSchema, this.logger);
             const {
                 clients: mainConfigClientConfigs = [],
                 clientDefaults: cd = {},
-            } = configFile;
+            } = aioConfig;
             clientDefaults = cd;
-            const validMainConfigs = mainConfigClientConfigs.reduce((acc: any, curr: any, i: any) => {
-                if(curr === null) {
-                    this.logger.error(`The client config entry at index ${i} in config.json is null but should be an object, will not parse`);
-                    return acc;
-                }
-                if(typeof curr !== 'object') {
-                    this.logger.error(`The client config entry at index ${i} in config.json should be an object, will not parse`);
-                    return acc;
-                }
-                return acc.concat(curr);
-            }, []);
-            for (const c of validMainConfigs) {
+            // const validMainConfigs = mainConfigClientConfigs.reduce((acc: any, curr: any, i: any) => {
+            //     if(curr === null) {
+            //         this.logger.error(`The client config entry at index ${i} in config.json is null but should be an object, will not parse`);
+            //         return acc;
+            //     }
+            //     if(typeof curr !== 'object') {
+            //         this.logger.error(`The client config entry at index ${i} in config.json should be an object, will not parse`);
+            //         return acc;
+            //     }
+            //     return acc.concat(curr);
+            // }, []);
+            for (const c of mainConfigClientConfigs) {
                 const {name = 'unnamed'} = c;
                 configs.push({...c,
                     name,
@@ -71,7 +80,7 @@ export default class ScrobbleClients {
             }
         }
 
-        for (const clientType of this.clientTypes) {
+        for (const clientType of clientTypes) {
             let defaultConfigureAs = 'client';
             switch (clientType) {
                 case 'maloja':
@@ -86,6 +95,7 @@ export default class ScrobbleClients {
                             mode: 'single',
                             data: {
                                 url,
+                                // @ts-ignore
                                 apiKey
                             }
                         })
@@ -104,6 +114,7 @@ export default class ScrobbleClients {
                             name: 'unnamed',
                             source: 'ENV',
                             mode: 'single',
+                            // @ts-ignore
                             data: lfm
                         })
                     }
@@ -119,25 +130,34 @@ export default class ScrobbleClients {
                 continue;
             }
             if (rawClientConfigs !== undefined) {
-                let clientConfigs = [];
+                let clientConfigs: ParsedConfig[] = [];
                 if (Array.isArray(rawClientConfigs)) {
                     clientConfigs = rawClientConfigs;
                 } else if(rawClientConfigs === null) {
                     this.logger.error(`${clientType}.json contained no data`);
                     continue;
-                } else if (typeof rawClientConfigs === 'object') {
-                    // backwards compatibility, assuming its single-user mode
-                    this.logger.warn(`DEPRECATED: Starting in 0.4 configurations in all [type].json files (${clientType}.json) must be in an array.`);
-                    if (rawClientConfigs.data === undefined) {
-                        clientConfigs = [{data: rawClientConfigs, mode: 'single', name: 'unnamed'}];
-                    } else {
-                        clientConfigs = [rawClientConfigs];
-                    }
                 } else {
                     this.logger.error(`All top level data from ${clientType}.json must be an array of objects, will not parse configs from file`);
                     continue;
                 }
-                for (const [i,m] of clientConfigs.entries()) {
+                for(const [i,rawConf] of rawClientConfigs.entries()) {
+                    try {
+                        const validConfig = validateJson<ClientConfig>(rawConf, clientSchema, this.logger);
+                        // @ts-ignore
+                        const {configureAs = defaultConfigureAs} = validConfig;
+                        if (configureAs === 'client') {
+                            const parsedConfig: ParsedConfig = {
+                                ...rawConf,
+                                source: `${clientType}.json`,
+                                type: clientType
+                            }
+                            configs.push(parsedConfig);
+                        }
+                    } catch (e: any) {
+                        this.logger.error(`The config entry at index ${i} from ${clientType}.json was not valid`);
+                    }
+                }
+/*                for (const [i,m] of clientConfigs.entries()) {
                     if(m === null) {
                         this.logger.error(`The config entry at index ${i} from ${clientType}.json is null`);
                         continue;
@@ -152,32 +172,30 @@ export default class ScrobbleClients {
                         m.type = clientType;
                         configs.push(m);
                     }
-                }
+                }*/
             }
         }
 
         // we have all possible client configurations so we'll check they are minimally valid
-        const validConfigs = configs.reduce((acc, c) => {
+        /*const validConfigs = configs.reduce((acc, c) => {
             const isValid = isValidConfigStructure(c, {type: true, data: true});
             if (isValid !== true) {
                 this.logger.error(`Client config from ${c.source} with name [${c.name || 'unnamed'}] of type [${c.type || 'unknown'}] will not be used because it has structural errors: ${isValid.join(' | ')}`);
                 return acc;
             }
             return acc.concat(c);
-        }, []);
+        }, []);*/
 
         // all client configs are minimally valid
         // now check that names are unique
-        const nameGroupedConfigs = validConfigs.reduce((acc: any, curr: any) => {
+        const nameGroupedConfigs = configs.reduce((acc: groupedNamedConfigs, curr: ParsedConfig) => {
             const {name = 'unnamed'} = curr;
             const {[name]: n = []} = acc;
             return {...acc, [name]: [...n, curr]};
         }, {});
-        let noConflictConfigs: any = [];
+        let noConflictConfigs: ParsedConfig[] = [];
         for (const [name, configs] of Object.entries(nameGroupedConfigs)) {
-            // @ts-expect-error TS(2571): Object is of type 'unknown'.
             if (configs.length > 1) {
-                // @ts-expect-error TS(2571): Object is of type 'unknown'.
                 const sources = configs.map((c: any) => `Config object from ${c.source} of type [${c.type}]`);
                 this.logger.error(`The following clients will not be built because of config naming conflicts (they have the same name of "${name}"): 
 ${sources.join('\n')}`);
@@ -185,14 +203,13 @@ ${sources.join('\n')}`);
                     this.logger.info('HINT: "unnamed" configs occur when using ENVs, if a multi-user mode config does not have a "name" property, or if a config is built in single-user mode');
                 }
             } else {
-                // @ts-expect-error TS(2488): Type 'unknown' must have a '[Symbol.iterator]()' m... Remove this comment to see the full error message
                 noConflictConfigs = [...noConflictConfigs, ...configs];
             }
         }
 
         // finally! all configs are valid, structurally, and can now be passed to addClient
         // just need to re-map unnnamed to default
-        const finalConfigs = noConflictConfigs.map(({name = 'unnamed', ...x}) => ({
+        const finalConfigs: ParsedConfig[] = noConflictConfigs.map(({name = 'unnamed', ...x}) => ({
             ...x,
             name
         }));
@@ -206,11 +223,11 @@ ${sources.join('\n')}`);
         }
     }
 
-    addClient = async (clientConfig: any, defaults = {}) => {
-        const isValidConfig = isValidConfigStructure(clientConfig, {name: true, data: true, type: true});
+    addClient = async (clientConfig: ParsedConfig, defaults = {}) => {
+/*        const isValidConfig = isValidConfigStructure(clientConfig, {name: true, data: true, type: true});
         if (isValidConfig !== true) {
             throw new Error(`Config object from ${clientConfig.source || 'unknown'} with name [${clientConfig.name || 'unnamed'}] of type [${clientConfig.type || 'unknown'}] has errors: ${isValidConfig.join(' | ')}`)
-        }
+        }*/
         const {type, name, data: d = {}} = clientConfig;
         // add defaults
         const data = {...defaults, ...d};
@@ -218,10 +235,10 @@ ${sources.join('\n')}`);
         this.logger.debug(`(${name}) Constructing ${type} client...`);
         switch (type) {
             case 'maloja':
-                newClient = new MalojaScrobbler(name, data);
+                newClient = new MalojaScrobbler(name, ({...clientConfig, data} as unknown as MalojaClientConfig));
                 break;
             case 'lastfm':
-                newClient = new LastfmScrobbler(name, {...data, configDir: this.configDir});
+                newClient = new LastfmScrobbler(name, {...clientConfig, data: {configDir: this.configDir, data} } as unknown as LastfmClientConfig );
                 break;
             default:
                 break;
@@ -253,7 +270,6 @@ ${sources.join('\n')}`);
                 this.logger.info(`(${name}) ${type} client auth OK`);
             }
         }
-        // @ts-expect-error TS(2345): Argument of type 'MalojaScrobbler | LastfmScrobble... Remove this comment to see the full error message
         this.clients.push(newClient);
     }
 
@@ -282,57 +298,40 @@ ${sources.join('\n')}`);
         }
 
         for (const client of this.clients) {
-            // @ts-expect-error TS(2339): Property 'name' does not exist on type 'never'.
             if (scrobbleTo.length > 0 && !scrobbleTo.includes(client.name)) {
-                // @ts-expect-error TS(2339): Property 'name' does not exist on type 'never'.
                 this.logger.debug(`Client '${client.name}' was filtered out by '${scrobbleFrom}'`);
                 continue;
             }
-            // @ts-expect-error TS(2339): Property 'initialized' does not exist on type 'nev... Remove this comment to see the full error message
             if(!client.initialized) {
-                // @ts-expect-error TS(2339): Property 'initializing' does not exist on type 'ne... Remove this comment to see the full error message
                 if(client.initializing) {
-                    // @ts-expect-error TS(2339): Property 'name' does not exist on type 'never'.
                     this.logger.warn(`Cannot scrobble to Client '${client.name}' because it is still initializing`);
                     continue;
                 }
-                // @ts-expect-error TS(2339): Property 'initialize' does not exist on type 'neve... Remove this comment to see the full error message
                 if(!(await client.initialize())) {
-                    // @ts-expect-error TS(2339): Property 'name' does not exist on type 'never'.
                     this.logger.warn(`Cannot scrobble to Client '${client.name}' because it could not be initialized`);
                     continue;
                 }
             }
 
-            // @ts-expect-error TS(2339): Property 'requiresAuth' does not exist on type 'ne... Remove this comment to see the full error message
             if(client.requiresAuth && !client.authed) {
-                // @ts-expect-error TS(2339): Property 'requiresAuthInteraction' does not exist ... Remove this comment to see the full error message
                 if (client.requiresAuthInteraction) {
-                    // @ts-expect-error TS(2339): Property 'name' does not exist on type 'never'.
                     this.logger.warn(`Cannot scrobble to Client '${client.name}' because user interaction is required for authentication`);
                     continue;
-                // @ts-expect-error TS(2339): Property 'testAuth' does not exist on type 'never'... Remove this comment to see the full error message
                 } else if (!(await client.testAuth())) {
-                    // @ts-expect-error TS(2339): Property 'name' does not exist on type 'never'.
                     this.logger.warn(`Cannot scrobble to Client '${client.name}' because auth test failed`);
                     continue;
                 }
             }
 
-            // @ts-expect-error TS(2339): Property 'isReady' does not exist on type 'never'.
             if(!(await client.isReady())) {
-                // @ts-expect-error TS(2339): Property 'name' does not exist on type 'never'.
                 this.logger.warn(`Cannot scrobble to Client '${client.name}' because it is not ready`);
                 continue;
             }
 
-            // @ts-expect-error TS(2339): Property 'scrobblesLastCheckedAt' does not exist o... Remove this comment to see the full error message
             if (forceRefresh || client.scrobblesLastCheckedAt().unix() < checkTime.unix()) {
                 try {
-                    // @ts-expect-error TS(2339): Property 'refreshScrobbles' does not exist on type... Remove this comment to see the full error message
                     await client.refreshScrobbles();
                 } catch(e) {
-                    // @ts-expect-error TS(2339): Property 'name' does not exist on type 'never'.
                     this.logger.error(`Encountered error while refreshing scrobbles for ${client.name}`);
                     this.logger.error(e);
                 }
@@ -344,11 +343,8 @@ ${sources.join('\n')}`);
                             newFromSource = false,
                         } = {}
                     } = playObj;
-                    // @ts-expect-error TS(2339): Property 'timeFrameIsValid' does not exist on type... Remove this comment to see the full error message
                     if (client.timeFrameIsValid(playObj, newFromSource) && !(await client.alreadyScrobbled(playObj, newFromSource))) {
-                        // @ts-expect-error TS(2339): Property 'scrobble' does not exist on type 'never'... Remove this comment to see the full error message
                         await client.scrobble(playObj)
-                        // @ts-expect-error TS(2339): Property 'tracksScrobbled' does not exist on type ... Remove this comment to see the full error message
                         client.tracksScrobbled++;
                         // since this is what we return to the source only add to tracksScrobbled if not already in array
                         // (source should only know that a track was scrobbled (binary) -- doesn't care if it was scrobbled more than once
@@ -358,7 +354,6 @@ ${sources.join('\n')}`);
                         }
                     }
                 } catch(e) {
-                    // @ts-expect-error TS(2339): Property 'name' does not exist on type 'never'.
                     this.logger.error(`Encountered error while in scrobble loop for ${client.name}`);
                     this.logger.error(e);
                     // for now just stop scrobbling plays for this client and move on. the client should deal with logging the issue

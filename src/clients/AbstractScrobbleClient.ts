@@ -1,33 +1,36 @@
-import dayjs from "dayjs";
-import {buildTrackString, capitalize, createLabelledLogger, playObjDataMatch} from "../utils.js";
-import {INITIALIZED, INITIALIZING, NOT_INITIALIZED} from "../common/index.js";
+import dayjs, {Dayjs} from "dayjs";
+import {buildTrackString, capitalize, createLabelledLogger, playObjDataMatch} from "../utils";
+import {ClientType, INITIALIZED, INITIALIZING, InitState, NOT_INITIALIZED} from "../common/infrastructure/Atomic";
+import {Logger} from "winston";
+import {CommonClientConfig} from "../common/infrastructure/config/client";
+import {ClientConfig} from "../common/infrastructure/config/client/clients";
 
-export default class AbstractScrobbleClient {
+export default abstract class AbstractScrobbleClient {
 
-    name;
-    type;
+    name: string;
+    type: ClientType;
 
-    #initState = NOT_INITIALIZED;
+    #initState: InitState = NOT_INITIALIZED;
 
-    requiresAuth = false;
-    requiresAuthInteraction = false;
-    authed = false;
+    requiresAuth: boolean = false;
+    requiresAuthInteraction: boolean = false;
+    authed: boolean = false;
 
     recentScrobbles = [];
     scrobbledPlayObjs = [];
-    newestScrobbleTime: any;
-    oldestScrobbleTime = dayjs();
-    tracksScrobbled = 0;
+    newestScrobbleTime?: Dayjs
+    oldestScrobbleTime: Dayjs = dayjs();
+    tracksScrobbled: number = 0;
 
-    lastScrobbleCheck = dayjs();
-    refreshEnabled;
-    checkExistingScrobbles;
+    lastScrobbleCheck: Dayjs = dayjs();
+    refreshEnabled: boolean;
+    checkExistingScrobbles: boolean;
     verboseOptions;
 
-    config;
-    logger;
+    config: CommonClientConfig;
+    logger: Logger;
 
-    constructor(type: any, name: any, config = {}) {
+    constructor(type: any, name: any, config: CommonClientConfig) {
         this.type = type;
         this.name = name;
         const identifier = `Client ${capitalize(this.type)} - ${name}`;

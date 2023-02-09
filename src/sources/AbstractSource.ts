@@ -1,27 +1,35 @@
-import dayjs from "dayjs";
-import {buildTrackString, capitalize, createLabelledLogger, sleep} from "../utils.js";
+import dayjs, {Dayjs} from "dayjs";
+import {buildTrackString, capitalize, createLabelledLogger, sleep} from "../utils";
+import {InternalConfig, PlayObject, SourceType} from "../common/infrastructure/Atomic";
+import {Logger} from "winston";
+import {SourceConfig} from "../common/infrastructure/config/source/sources";
 
-export default class AbstractSource {
+export default abstract class AbstractSource {
 
-    name;
-    type;
-    identifier;
+    name: string;
+    type: SourceType;
+    identifier: string;
 
-    config;
-    clients;
-    logger;
-    instantiatedAt;
-    initialized = false;
-    requiresAuth = false;
-    requiresAuthInteraction = false;
-    authed = false;
+    config: SourceConfig;
+    clients: string[];
+    logger: Logger;
+    instantiatedAt: Dayjs;
+    initialized: boolean = false;
+    requiresAuth: boolean = false;
+    requiresAuthInteraction: boolean = false;
+    authed: boolean = false;
 
-    canPoll = false;
-    polling = false;
-    pollRetries = 0;
-    tracksDiscovered = 0;
+    localUrl: string;
 
-    constructor(type: any, name: any, config = {}, clients = []) {
+    configDir: string;
+
+    canPoll: boolean = false;
+    polling: boolean = false;
+    pollRetries: number = 0;
+    tracksDiscovered: number = 0;
+
+    constructor(type: SourceType, name: string, config: SourceConfig, internal: InternalConfig) {
+        const {clients = [] } = config;
         this.type = type;
         this.name = name;
         this.identifier = `Source - ${capitalize(this.type)} - ${name}`;
@@ -29,6 +37,8 @@ export default class AbstractSource {
         this.config = config;
         this.clients = clients;
         this.instantiatedAt = dayjs();
+        this.localUrl = internal.localUrl;
+        this.configDir = internal.configDir;
     }
 
     // default init function, should be overridden if init stage is required
@@ -42,7 +52,7 @@ export default class AbstractSource {
         return this.authed;
     }
 
-    getRecentlyPlayed = async (options = {}) => {
+    getRecentlyPlayed = async (options = {}): Promise<PlayObject[]> => {
         return [];
     }
 
@@ -66,11 +76,11 @@ export default class AbstractSource {
         this.pollRetries = 0;
 
         const {
-            // @ts-expect-error TS(2339): Property 'maxPollRetries' does not exist on type '... Remove this comment to see the full error message
-            maxPollRetries = 0,
-            // @ts-expect-error TS(2339): Property 'retryMultiplier' does not exist on type ... Remove this comment to see the full error message
-            retryMultiplier = 1.5,
-        } = this.config;
+            data: {
+                maxPollRetries = 0,
+                retryMultiplier = 1.5,
+            } = {},
+        } = this.config.data;
 
         // can't have negative retries!
         const maxRetries = Math.max(0, maxPollRetries);
@@ -110,7 +120,7 @@ export default class AbstractSource {
                     this.logger.info('Stopped polling due to user input');
                     break;
                 }
-                let playObjs = [];
+                let playObjs: PlayObject[] = [];
                 this.logger.debug('Refreshing recently played')
                 playObjs = await this.getRecentlyPlayed({formatted: true});
                 checkCount++;
@@ -123,7 +133,8 @@ export default class AbstractSource {
                     if(this.recentlyPlayedTrackIsValid(playObj)) {
                         const {data: {
                             playDate
-                        }: any = {}} = playObj;
+                        } = {}
+                        } = playObj;
                         // @ts-expect-error TS(2339): Property 'unix' does not exist on type 'never'.
                         if (playDate.unix() > lastTrackPlayedAt.unix()) {
                             newTracksFound = true;
@@ -135,7 +146,6 @@ export default class AbstractSource {
                             }
 
                             return {
-                                // @ts-expect-error TS(2698): Spread types may only be created from object types... Remove this comment to see the full error message
                                 plays: [...acc.plays, {...playObj, meta: {...playObj.meta, newFromSource: true}}],
                                 lastTrackPlayedAt: playDate
                             }

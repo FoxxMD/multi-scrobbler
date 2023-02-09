@@ -1,12 +1,10 @@
-// @ts-expect-error TS(7016): Could not find a declaration file for module 'last... Remove this comment to see the full error message
-import dayjs from "dayjs";import LastFm from "lastfm-node-client";
-import LastfmScrobbler from '../clients/LastfmScrobbler.js';
-import {buildTrackString, createLabelledLogger} from "../utils.js";
-import AbstractSource from "./AbstractSource.js";
-// @ts-expect-error TS(7016): Could not find a declaration file for module 'form... Remove this comment to see the full error message
+import dayjs from "dayjs";
+import {buildTrackString, createLabelledLogger} from "../utils";
+import AbstractSource from "./AbstractSource";
 import formidable from 'formidable';
-// @ts-expect-error TS(7016): Could not find a declaration file for module 'conc... Remove this comment to see the full error message
 import concatStream from 'concat-stream';
+import {PlexSourceConfig} from "../common/infrastructure/config/source/plex";
+import {InternalConfig, PlayObject, SourceType} from "../common/infrastructure/Atomic";
 
 export default class PlexSource extends AbstractSource {
     // @ts-expect-error TS(7022): 'users' implicitly has type 'any' because it does ... Remove this comment to see the full error message
@@ -16,9 +14,11 @@ export default class PlexSource extends AbstractSource {
     // @ts-expect-error TS(7022): 'servers' implicitly has type 'any' because it doe... Remove this comment to see the full error message
     servers;
 
-    constructor(name: any, config: any, clients: any, type = 'plex') {
-        super(type, name, config, clients);
-        const {user, libraries, servers} = config
+    declare config: PlexSourceConfig;
+
+    constructor(name: any, config: PlexSourceConfig, internal: InternalConfig, type: SourceType = 'plex') {
+        super(type, name, config, internal);
+        const {data: {user, libraries, servers} = {}} = config
 
         if (user === undefined || user === null) {
             this.users = undefined;
@@ -61,7 +61,7 @@ export default class PlexSource extends AbstractSource {
         this.initialized = true;
     }
 
-    static formatPlayObj(obj: any, newFromSource = false) {
+    static formatPlayObj(obj: any, newFromSource = false): PlayObject {
         const {
             event,
             Account: {
@@ -200,6 +200,8 @@ export const plexRequestMiddle = () => {
         const form = formidable({
             allowEmptyFiles: true,
             multiples: true,
+            // issue with typings https://github.com/node-formidable/formidable/issues/821
+            // @ts-ignore
             fileWriteStreamHandler: (file: any) => {
                 return concatStream((data: any) => {
                     file.buffer = data;

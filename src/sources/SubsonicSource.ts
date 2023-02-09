@@ -1,11 +1,11 @@
-import AbstractSource from "./AbstractSource.js";
-// @ts-expect-error TS(7016): Could not find a declaration file for module 'supe... Remove this comment to see the full error message
 import request from 'superagent';
 import crypto from 'crypto';
 import dayjs from "dayjs";
 import isSameOrAfter from "dayjs/plugin/isSameOrAfter.js";
-import {buildTrackString, parseRetryAfterSecsFromObj, sleep} from "../utils.js";
-import MemorySource from "./MemorySource.js";
+import {buildTrackString, parseRetryAfterSecsFromObj, sleep} from "../utils";
+import MemorySource from "./MemorySource";
+import {SubSonicSourceConfig} from "../common/infrastructure/config/source/subsonic";
+import {InternalConfig, PlayObject} from "../common/infrastructure/Atomic";
 
 dayjs.extend(isSameOrAfter);
 
@@ -13,13 +13,23 @@ export class SubsonicSource extends MemorySource {
 
     requiresAuth = true;
 
-    constructor(name: any, config = {}, clients = []) {
-        // default to quick interval so we can get a decently accurate nowPlaying
-        const subsonicConfig = {interval: 10, maxSleep: 30, ...config};
-        super('subsonic', name, subsonicConfig, clients);
+    declare config: SubSonicSourceConfig;
 
-        // @ts-expect-error TS(2339): Property 'user' does not exist on type '{}'.
-        const {user, password, url} = this.config;
+    constructor(name: any, config: SubSonicSourceConfig, internal: InternalConfig) {
+        // default to quick interval so we can get a decently accurate nowPlaying
+        const {
+            data: {
+                // @ts-ignore
+                interval = 10,
+                // @ts-ignore
+                maxSleep = 30,
+                ...restData
+            } = {}
+        } = config;
+        const subsonicConfig = {...config, data: {...restData, internal, maxSleep}};
+        super('subsonic', name, subsonicConfig, internal);
+
+        const {data: {user, password, url} = {}} = this.config;
 
         if (user === undefined) {
             throw new Error(`Cannot setup Subsonic source, 'user' is not defined`);
@@ -34,7 +44,7 @@ export class SubsonicSource extends MemorySource {
         this.canPoll = true;
     }
 
-    static formatPlayObj(obj: any, newFromSource = false) {
+    static formatPlayObj(obj: any, newFromSource = false): PlayObject {
         const {
             id,
             title,

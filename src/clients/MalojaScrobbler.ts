@@ -1,5 +1,4 @@
-import AbstractScrobbleClient from "./AbstractScrobbleClient.js";
-// @ts-expect-error TS(7016): Could not find a declaration file for module 'supe... Remove this comment to see the full error message
+import AbstractScrobbleClient from "./AbstractScrobbleClient";
 import request from 'superagent';
 import dayjs from 'dayjs';
 import compareVersions from 'compare-versions';
@@ -11,8 +10,9 @@ import {
     sortByPlayDate,
     truncateStringToLength,
     parseRetryAfterSecsFromObj
-} from "../utils.js";
-import {INITIALIZING} from "../common/index.js";
+} from "../utils";
+import {INITIALIZING} from "../common/infrastructure/Atomic";
+import {MalojaClientConfig} from "../common/infrastructure/config/client/maloja";
 
 const feat = ["ft.", "ft", "feat.", "feat", "featuring", "Ft.", "Ft", "Feat.", "Feat", "Featuring"];
 
@@ -22,7 +22,9 @@ export default class MalojaScrobbler extends AbstractScrobbleClient {
     serverIsHealthy = false;
     serverVersion: any;
 
-    constructor(name: any, config = {}, options = {}) {
+    declare config: MalojaClientConfig
+
+    constructor(name: any, config: MalojaClientConfig, options = {}) {
         // @ts-expect-error TS(2554): Expected 2-3 arguments, but got 4.
         super('maloja', name, config, options);
         // @ts-expect-error TS(2339): Property 'url' does not exist on type '{}'.

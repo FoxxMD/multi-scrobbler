@@ -1,5 +1,5 @@
 import AbstractSource from "./AbstractSource.js";
-import {playObjDataMatch, sortByPlayDate, buildTrackString} from "../utils.js";
+import {playObjDataMatch, sortByPlayDate, buildTrackString} from "../utils";
 import dayjs from "dayjs";
 
 export default class MemorySource extends AbstractSource {

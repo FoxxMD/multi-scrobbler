@@ -3,10 +3,12 @@ import {
     readJson,
     writeFile,
     sortByPlayDate, sleep, parseRetryAfterSecsFromObj,
-} from "../utils.js";
+} from "../utils";
 // @ts-expect-error TS(7016): Could not find a declaration file for module 'spot... Remove this comment to see the full error message
 import SpotifyWebApi from "spotify-web-api-node";
-import AbstractSource from "./AbstractSource.js";
+import AbstractSource from "./AbstractSource";
+import {SpotifySourceConfig} from "../common/infrastructure/config/source/spotify";
+import {InternalConfig, PlayObject} from "../common/infrastructure/Atomic";
 
 const scopes = ['user-read-recently-played', 'user-read-currently-playing'];
 const state = 'random';
@@ -14,22 +16,19 @@ const state = 'random';
 export default class SpotifySource extends AbstractSource {
 
     spotifyApi: any;
-    localUrl;
-    workingCredsPath;
-    configDir;
+    workingCredsPath: string;
 
     requiresAuth = true;
     requiresAuthInteraction = true;
 
-    constructor(name: any, config = {}, clients = []) {
-        super('spotify', name, config, clients);
+    declare config: SpotifySourceConfig;
+
+    constructor(name: any, config: SpotifySourceConfig, internal: InternalConfig) {
+        super('spotify', name, config, internal);
         const {
-            // @ts-expect-error TS(2339): Property 'localUrl' does not exist on type '{}'.
-            localUrl,
-            // @ts-expect-error TS(2339): Property 'configDir' does not exist on type '{}'.
-            configDir,
-            // @ts-expect-error TS(2339): Property 'interval' does not exist on type '{}'.
-            interval = 60,
+            data: {
+                interval = 60,
+            } = {}
         } = config;
 
         if (interval < 15) {
@@ -39,13 +38,11 @@ export default class SpotifySource extends AbstractSource {
         // @ts-expect-error TS(2339): Property 'interval' does not exist on type '{}'.
         this.config.interval = interval;
 
-        this.configDir = configDir;
-        this.workingCredsPath = `${configDir}/currentCreds-${name}.json`;
-        this.localUrl = localUrl;
+        this.workingCredsPath = `${this.configDir}/currentCreds-${name}.json`;
         this.canPoll = true;
     }
 
-    static formatPlayObj(obj: any, newFromSource = false) {
+    static formatPlayObj(obj: any, newFromSource = false): PlayObject {
         const {
             track: {
                 artists = [],

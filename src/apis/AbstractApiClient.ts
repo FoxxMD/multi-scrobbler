@@ -1,17 +1,19 @@
-import {capitalize, createLabelledLogger} from "../utils.js";
+import {capitalize, createLabelledLogger} from "../utils";
+import {Logger} from "winston";
+import {PlayObject} from "../common/infrastructure/Atomic";
 
-export default class AbstractApiClient {
-    name;
-    type;
-    initialized = false;
+export default abstract class AbstractApiClient {
+    name: string;
+    type: string;
+    initialized: boolean = false;
 
-    config;
-    options;
-    logger;
+    config: object;
+    options: object;
+    logger: Logger;
 
     client: any;
-    workingCredsPath: any;
-    redirectUri: any;
+    workingCredsPath?: string;
+    redirectUri?: string;
 
     constructor(type: any, name: any, config = {}, options = {}) {
         this.type = type;
@@ -22,7 +24,7 @@ export default class AbstractApiClient {
         this.options = options;
     }
 
-    static formatPlayObj = (obj: any) => {
+    static formatPlayObj = (obj: any): PlayObject => {
         throw new Error('should be overridden');
     }
 }

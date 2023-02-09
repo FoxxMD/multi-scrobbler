@@ -1,44 +1,61 @@
-import {createLabelledLogger, isValidConfigStructure, readJson} from "../utils.js";
-import SpotifySource from "./SpotifySource.js";
-import PlexSource from "./PlexSource.js";
-import TautulliSource from "./TautulliSource.js";
-import {SubsonicSource} from "./SubsonicSource.js";
-import JellyfinSource from "./JellyfinSource.js";
-import LastfmSource from "./LastfmSource.js";
-import DeezerSource from "./DeezerSource.js";
+import {createLabelledLogger, isValidConfigStructure, readJson, validateJson} from "../utils";
+import SpotifySource from "./SpotifySource";
+import PlexSource from "./PlexSource";
+import TautulliSource from "./TautulliSource";
+import {SubsonicSource} from "./SubsonicSource";
+import JellyfinSource from "./JellyfinSource";
+import LastfmSource from "./LastfmSource";
+import DeezerSource from "./DeezerSource";
+import {ConfigMeta, InternalConfig, SourceType, sourceTypes} from "../common/infrastructure/Atomic";
+import {configDir as defaultConfigDir} from "../common";
+import {Logger} from "winston";
+import {SourceAIOConfig, SourceConfig} from "../common/infrastructure/config/source/sources";
+import {DeezerData, DeezerSourceConfig} from "../common/infrastructure/config/source/deezer";
+import {LastfmClientConfig} from "../common/infrastructure/config/client/lastfm";
+import {JellySourceConfig} from "../common/infrastructure/config/source/jellyfin";
+import {SubsonicData, SubSonicSourceConfig} from "../common/infrastructure/config/source/subsonic";
+import {TautulliSourceConfig} from "../common/infrastructure/config/source/tautulli";
+import {PlexSourceConfig} from "../common/infrastructure/config/source/plex";
+import {SpotifySourceConfig, SpotifySourceData} from "../common/infrastructure/config/source/spotify";
+import AbstractSource from "./AbstractSource";
+import {AIOConfig} from "../common/infrastructure/config/aioConfig";
+import * as aioSchema from "../common/schema/aio.json";
+import {CommonSourceData} from "../common/infrastructure/config/source";
+import {ClientConfig} from "../common/infrastructure/config/client/clients";
+import * as clientSchema from "../common/schema/client.json";
+import {LastfmSourceConfig} from "../common/infrastructure/config/source/lastfm";
+
+type groupedNamedConfigs = {[key: string]: ParsedConfig[]};
+
+type ParsedConfig = SourceAIOConfig & ConfigMeta;
 
 export default class ScrobbleSources {
 
-    sources = [];
-    logger;
-    configDir;
-    localUrl;
+    sources: AbstractSource[] = [];
+    logger: Logger;
+    configDir: string;
+    localUrl: string;
 
-    sourceTypes = ['spotify', 'plex', 'tautulli', 'subsonic', 'jellyfin', 'lastfm', 'deezer'];
-
-    constructor(localUrl: any, configDir = process.cwd()) {
+    constructor(localUrl: string, configDir: string = defaultConfigDir) {
         this.configDir = configDir;
         this.localUrl = localUrl;
         this.logger = createLabelledLogger('sources', 'Sources');
     }
 
     getByName = (name: any) => {
-        // @ts-expect-error TS(2339): Property 'name' does not exist on type 'never'.
         return this.sources.find(x => x.name === name);
     }
 
     getByType = (type: any) => {
-        // @ts-expect-error TS(2339): Property 'type' does not exist on type 'never'.
         return this.sources.filter(x => x.type === type);
     }
 
-    getByNameAndType = (name: any, type: any) => {
-        // @ts-expect-error TS(2339): Property 'name' does not exist on type 'never'.
+    getByNameAndType = (name: string, type: SourceType) => {
         return this.sources.find(x => x.name === name && x.type === type);
     }
 
-    buildSourcesFromConfig = async (additionalConfigs = []) => {
-        let configs = additionalConfigs;
+    buildSourcesFromConfig = async (additionalConfigs: ParsedConfig[] = []) => {
+        let configs: ParsedConfig[] = additionalConfigs;
 
         let configFile;
         try {
@@ -48,12 +65,13 @@ export default class ScrobbleSources {
         }
         let sourceDefaults = {};
         if (configFile !== undefined) {
+            const aioConfig = validateJson<AIOConfig>(configFile, aioSchema, this.logger);
             const {
                 sources: mainConfigSourcesConfigs = [],
                 sourceDefaults: sd = {},
-            } = configFile;
+            } = aioConfig;
             sourceDefaults = sd;
-            const validMainConfigs = mainConfigSourcesConfigs.reduce((acc: any, curr: any, i: any) => {
+/*            const validMainConfigs = mainConfigSourcesConfigs.reduce((acc: any, curr: any, i: any) => {
                 if(curr === null) {
                     this.logger.error(`The source config entry at index ${i} in config.json is null but should be an object, will not parse`);
                     return acc;
@@ -63,21 +81,18 @@ export default class ScrobbleSources {
                     return acc;
                 }
                 return acc.concat(curr);
-            }, []);
-            for (const c of validMainConfigs) {
+            }, []);*/
+            for (const c of mainConfigSourcesConfigs) {
                 const {name = 'unnamed'} = c;
                 configs.push({...c,
-                    // @ts-expect-error TS(2322): Type 'any' is not assignable to type 'never'.
                     name,
-                    // @ts-expect-error TS(2322): Type 'string' is not assignable to type 'never'.
                     source: 'config.json',
-                    // @ts-expect-error TS(2322): Type 'string' is not assignable to type 'never'.
                     configureAs: 'source' // override user value
                 });
             }
         }
 
-        for (let sourceType of this.sourceTypes) {
+        for (let sourceType of sourceTypes) {
             let defaultConfigureAs = 'source';
             // env builder for single user mode
             switch (sourceType) {
@@ -89,18 +104,14 @@ export default class ScrobbleSources {
                         redirectUri: process.env.SPOTIFY_REDIRECT_URI,
                         refreshToken: process.env.SPOTIFY_REFRESH_TOKEN,
                     };
-                    if (!Object.values(s).every(x => x === undefined)) {
+                    if (!Object.values(s).every(x => x === undefined && x !== null)) {
                         configs.push({
-                            // @ts-expect-error TS(2322): Type 'string' is not assignable to type 'never'.
                             type: 'spotify',
-                            // @ts-expect-error TS(2322): Type 'string' is not assignable to type 'never'.
                             name: 'unnamed',
-                            // @ts-expect-error TS(2322): Type 'string' is not assignable to type 'never'.
                             source: 'ENV',
-                            // @ts-expect-error TS(2322): Type 'string' is not assignable to type 'never'.
                             mode: 'single',
-                            // @ts-expect-error TS(2322): Type '{ accessToken: string | undefined; clientId:... Remove this comment to see the full error message
-                            data: s
+                            configureAs: defaultConfigureAs,
+                            data: s as SpotifySourceData
                         })
                     }
                     break;
@@ -111,15 +122,11 @@ export default class ScrobbleSources {
                     };
                     if (!Object.values(t).every(x => x === undefined)) {
                         configs.push({
-                            // @ts-expect-error TS(2322): Type 'string' is not assignable to type 'never'.
                             type: 'tautulli',
-                            // @ts-expect-error TS(2322): Type 'string' is not assignable to type 'never'.
                             name: 'unnamed',
-                            // @ts-expect-error TS(2322): Type 'string' is not assignable to type 'never'.
                             source: 'ENV',
-                            // @ts-expect-error TS(2322): Type 'string' is not assignable to type 'never'.
                             mode: 'single',
-                            // @ts-expect-error TS(2322): Type '{ user: string | undefined; }' is not assign... Remove this comment to see the full error message
+                            configureAs: defaultConfigureAs,
                             data: t
                         })
                     }
@@ -130,15 +137,11 @@ export default class ScrobbleSources {
                     };
                     if (!Object.values(p).every(x => x === undefined)) {
                         configs.push({
-                            // @ts-expect-error TS(2322): Type 'string' is not assignable to type 'never'.
                             type: 'plex',
-                            // @ts-expect-error TS(2322): Type 'string' is not assignable to type 'never'.
                             name: 'unnamed',
-                            // @ts-expect-error TS(2322): Type 'string' is not assignable to type 'never'.
                             source: 'ENV',
-                            // @ts-expect-error TS(2322): Type 'string' is not assignable to type 'never'.
                             mode: 'single',
-                            // @ts-expect-error TS(2322): Type '{ user: string | undefined; }' is not assign... Remove this comment to see the full error message
+                            configureAs: defaultConfigureAs,
                             data: p
                         })
                     }
@@ -151,16 +154,12 @@ export default class ScrobbleSources {
                     };
                     if (!Object.values(sub).every(x => x === undefined)) {
                         configs.push({
-                            // @ts-expect-error TS(2322): Type 'string' is not assignable to type 'never'.
                             type: 'subsonic',
-                            // @ts-expect-error TS(2322): Type 'string' is not assignable to type 'never'.
                             name: 'unnamed',
-                            // @ts-expect-error TS(2322): Type 'string' is not assignable to type 'never'.
                             source: 'ENV',
-                            // @ts-expect-error TS(2322): Type 'string' is not assignable to type 'never'.
                             mode: 'single',
-                            // @ts-expect-error TS(2322): Type '{ user: string | undefined; password: string... Remove this comment to see the full error message
-                            data: sub
+                            configureAs: defaultConfigureAs,
+                            data: sub as SubsonicData
                         })
                     }
                     break;
@@ -171,15 +170,11 @@ export default class ScrobbleSources {
                     };
                     if (!Object.values(j).every(x => x === undefined)) {
                         configs.push({
-                            // @ts-expect-error TS(2322): Type 'string' is not assignable to type 'never'.
                             type: 'jellyfin',
-                            // @ts-expect-error TS(2322): Type 'string' is not assignable to type 'never'.
                             name: 'unnamed',
-                            // @ts-expect-error TS(2322): Type 'string' is not assignable to type 'never'.
                             source: 'ENV',
-                            // @ts-expect-error TS(2322): Type 'string' is not assignable to type 'never'.
                             mode: 'single',
-                            // @ts-expect-error TS(2322): Type '{ user: string | undefined; server: string |... Remove this comment to see the full error message
+                            configureAs: defaultConfigureAs,
                             data: j
                         })
                     }
@@ -189,12 +184,19 @@ export default class ScrobbleSources {
                     defaultConfigureAs = 'client';
                     break;
                 case 'deezer':
-                    const d = {
-                        clientId: process.env.DEEZER_APP_ID,
-                        clientSecret: process.env.DEEZER_SECRET_KEY,
-                        redirectUri: process.env.DEEZER_REDIRECT_URI,
-                        accessToken: process.env.DEEZER_ACCESS_TOKEN,
-                    };
+                    configs.push({
+                        type: 'deezer',
+                        name: 'unnamed',
+                        source: 'ENV',
+                        mode: 'single',
+                        configureAs: defaultConfigureAs,
+                        data: {
+                            clientId: process.env.DEEZER_APP_ID,
+                            clientSecret: process.env.DEEZER_SECRET_KEY,
+                            redirectUri: process.env.DEEZER_REDIRECT_URI,
+                            accessToken: process.env.DEEZER_ACCESS_TOKEN,
+                        } as DeezerData
+                    });
                     break;
                 default:
                     break;
@@ -207,46 +209,38 @@ export default class ScrobbleSources {
                 continue;
             }
             if (rawSourceConfigs !== undefined) {
-                let sourceConfigs = [];
+                let sourceConfigs: ParsedConfig[] = [];
                 if (Array.isArray(rawSourceConfigs)) {
                     sourceConfigs = rawSourceConfigs;
                 } else if (rawSourceConfigs === null) {
                     this.logger.error(`${sourceType}.json contained no data`);
                     continue;
-                } else if (typeof rawSourceConfigs === 'object') {
-                    // backwards compatibility, assuming its single-user mode
-                    this.logger.warn(`DEPRECATED: Starting in 0.4 configurations in all [type].json files (${sourceType}.json) must be in an array.`);
-                    if (rawSourceConfigs.data === undefined) {
-                        sourceConfigs = [{data: rawSourceConfigs, mode: 'single', name: 'unnamed'}];
-                    } else {
-                        sourceConfigs = [rawSourceConfigs];
-                    }
                 } else {
                     this.logger.error(`All top level data from ${sourceType}.json must be an array of objects, will not parse configs from file`);
                     continue;
                 }
-                for (const [i,m] of sourceConfigs.entries()) {
-                    if(m === null) {
-                        this.logger.error(`The config entry at index ${i} from ${sourceType}.json is null`);
-                        continue;
-                    }
-                    if (typeof m !== 'object') {
-                        this.logger.error(`The config entry at index ${i} from ${sourceType}.json was not an object, skipping`, m);
-                        continue;
-                    }
-                    const {configureAs = defaultConfigureAs} = m;
-                    if(configureAs === 'source') {
-                        m.source = `${sourceType}.json`;
-                        m.type = sourceType;
-                        // @ts-expect-error TS(2345): Argument of type 'any' is not assignable to parame... Remove this comment to see the full error message
-                        configs.push(m);
+                for (const [i,rawConf] of sourceConfigs.entries()) {
+                    try {
+                        const validConfig = validateJson<SourceConfig>(rawConf, clientSchema, this.logger);
+
+                        if(sourceType !== 'lastfm' || ((validConfig as LastfmSourceConfig).configureAs === 'source')) {
+                            // @ts-ignore
+                            const parsedConfig: ParsedConfig = {
+                                ...rawConf,
+                                source: `${sourceType}.json`,
+                                type: sourceType
+                            }
+                            configs.push(parsedConfig);
+                        }
+                    } catch (e: any) {
+                        this.logger.error(`The config entry at index ${i} from ${sourceType}.json was not valid`);
                     }
                 }
             }
         }
 
         // we have all possible configurations so we'll check they are minimally valid
-        const validConfigs = configs.reduce((acc, c) => {
+/*        const validConfigs = configs.reduce((acc, c) => {
             const isValid = isValidConfigStructure(c, {type: true, data: true});
             if (isValid !== true) {
                 // @ts-expect-error TS(2339): Property 'source' does not exist on type 'never'.
@@ -254,18 +248,17 @@ export default class ScrobbleSources {
                 return acc;
             }
             return acc.concat(c);
-        }, []);
+        }, []);*/
 
         // finally! all configs are valid, structurally, and can now be passed to addClient
         // do a last check that names (within each type) are unique and warn if not, but add anyways
-        const typeGroupedConfigs = validConfigs.reduce((acc, curr) => {
+        const typeGroupedConfigs = configs.reduce((acc: groupedNamedConfigs, curr: ParsedConfig) => {
             const {type} = curr;
             const {[type]: t = []} = acc;
             return {...acc, [type]: [...t, curr]};
         }, {});
         // only need to warn if dup names PER TYPE
         for (const [type, typedConfigs] of Object.entries(typeGroupedConfigs)) {
-            // @ts-expect-error TS(2571): Object is of type 'unknown'.
             const nameGroupedConfigs = typedConfigs.reduce((acc: any, curr: any) => {
                 const {name = 'unnamed'} = curr;
                 const {[name]: n = []} = acc;
@@ -302,44 +295,45 @@ export default class ScrobbleSources {
     }
 
     addSource = async (clientConfig: any, defaults = {}) => {
-        const isValidConfig = isValidConfigStructure(clientConfig, {name: true, data: true, type: true});
-        if (isValidConfig !== true) {
-            throw new Error(`Config object from ${clientConfig.source || 'unknown'} with name [${clientConfig.name || 'unnamed'}] of type [${clientConfig.type || 'unknown'}] has errors: ${isValidConfig.join(' | ')}`)
-        }
-        const {type, name, clients = [], data: d = {}} = clientConfig;
+        // const isValidConfig = isValidConfigStructure(clientConfig, {name: true, data: true, type: true});
+        // if (isValidConfig !== true) {
+        //     throw new Error(`Config object from ${clientConfig.source || 'unknown'} with name [${clientConfig.name || 'unnamed'}] of type [${clientConfig.type || 'unknown'}] has errors: ${isValidConfig.join(' | ')}`)
+        // }
+
+        const internal: InternalConfig = {
+            localUrl: this.localUrl,
+            configDir: this.configDir
+        };
+
+        const {type, name, data: d = {}} = clientConfig;
+
         // add defaults
         const data = {...defaults, ...d};
+        const compositeConfig: SourceConfig = {...clientConfig, data};
+
         this.logger.debug(`(${name}) Constructing ${type} source`);
         let newSource;
         switch (type) {
             case 'spotify':
-                newSource = new SpotifySource(name, {
-                    ...data,
-                    localUrl: this.localUrl,
-                    configDir: this.configDir
-                }, clients);
+                newSource = new SpotifySource(name, compositeConfig as SpotifySourceConfig, internal);
                 break;
             case 'plex':
-                newSource = await new PlexSource(name, data, clients);
+                newSource = await new PlexSource(name, compositeConfig as PlexSourceConfig, internal);
                 break;
             case 'tautulli':
-                newSource = await new TautulliSource(name, data, clients);
+                newSource = await new TautulliSource(name, compositeConfig as TautulliSourceConfig, internal);
                 break;
             case 'subsonic':
-                newSource = new SubsonicSource(name, data, clients);
+                newSource = new SubsonicSource(name, compositeConfig as SubSonicSourceConfig, internal);
                 break;
             case 'jellyfin':
-                newSource = await new JellyfinSource(name, data, clients);
+                newSource = await new JellyfinSource(name, compositeConfig as JellySourceConfig, internal);
                 break;
             case 'lastfm':
-                newSource = await new LastfmSource(name, {...data, configDir: this.configDir}, clients);
+                newSource = await new LastfmSource(name, compositeConfig as LastfmClientConfig, internal);
                 break;
             case 'deezer':
-                newSource = await new DeezerSource(name, {
-                    ...data,
-                    localUrl: this.localUrl,
-                    configDir: this.configDir
-                }, clients);
+                newSource = await new DeezerSource(name, compositeConfig as DeezerSourceConfig, internal);
                 break;
             default:
                 break;
@@ -376,7 +370,6 @@ export default class ScrobbleSources {
             }
         }
 
-        // @ts-expect-error TS(2345): Argument of type 'SpotifySource | PlexSource | Sub... Remove this comment to see the full error message
         this.sources.push(newSource);
     }
 }

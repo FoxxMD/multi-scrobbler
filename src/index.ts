@@ -11,10 +11,6 @@ import passport from 'passport';
 import session from 'express-session';
 import {Writable} from 'stream';
 import 'winston-daily-rotate-file';
-// @ts-expect-error TS(7016): Could not find a declaration file for module 'form... Remove this comment to see the full error message
-import formidable from 'formidable';
-// @ts-expect-error TS(7016): Could not find a declaration file for module 'conc... Remove this comment to see the full error message
-import concatStream from 'concat-stream';
 import {
     buildTrackString,
     capitalize, createLabelledLogger,
@@ -23,15 +19,20 @@ import {
     readJson, sleep,
     truncateStringToLength
 } from "./utils.js";
-import Clients from './clients/ScrobbleClients.js';
-import ScrobbleSources from "./sources/ScrobbleSources.js";
-import {makeClientCheckMiddle, makeSourceCheckMiddle} from "./server/middleware.js";
-import TautulliSource from "./sources/TautulliSource.js";
-import PlexSource, {plexRequestMiddle} from "./sources/PlexSource.js";
-import JellyfinSource from "./sources/JellyfinSource.js";
+
+import ScrobbleSources from "./sources/ScrobbleSources";
+import {makeClientCheckMiddle, makeSourceCheckMiddle} from "./server/middleware";
+import TautulliSource from "./sources/TautulliSource";
+import PlexSource, {plexRequestMiddle} from "./sources/PlexSource";
+import JellyfinSource from "./sources/JellyfinSource";
 import { Server } from "socket.io";
 import path from "path";
-import {projectDir} from "./common/index.js";
+import {projectDir} from "./common/index";
+import LastfmApiClient from "./apis/LastfmApiClient";
+import LastfmSource from "./sources/LastfmSource";
+import LastfmScrobbler from "./clients/LastfmScrobbler";
+import ScrobbleClients from "./clients/ScrobbleClients.js";
+
 
 dayjs.extend(utc)
 dayjs.extend(isBetween);
@@ -42,7 +43,9 @@ const app = addAsync(express());
 const router = Router();
 
 const port = process.env.PORT ?? 9078;
-// @ts-expect-error TS(1378): Top-level 'await' expressions are only allowed whe... Remove this comment to see the full error message
+
+(async function () {
+
 const server = await app.listen(port)
 const io = new Server(server);
 
@@ -115,7 +118,7 @@ const logger = winston.loggers.get('default');
 
 const configDir = process.env.CONFIG_DIR || path.resolve(projectDir, `./config`);
 
-(async function () {
+
     try {
         // try to read a configuration file
         let config = {};
@@ -125,45 +128,16 @@ const configDir = process.env.CONFIG_DIR || path.resolve(projectDir, `./config`)
             logger.warn('App config file exists but could not be parsed!');
         }
 
-        // setup defaults for other configs and general config
-        const {
-            // @ts-expect-error TS(2339): Property 'spotify' does not exist on type '{}'.
-            spotify,
-            // @ts-expect-error TS(2339): Property 'plex' does not exist on type '{}'.
-            plex,
-        } = config || {};
-
         /*
         * setup clients
         * */
-        const scrobbleClients = new Clients(configDir);
+        const scrobbleClients = new ScrobbleClients(configDir);
         await scrobbleClients.buildClientsFromConfig();
         if (scrobbleClients.clients.length === 0) {
             logger.warn('No scrobble clients were configured!')
         }
 
         const scrobbleSources = new ScrobbleSources(localUrl, configDir);
-        let deprecatedConfigs = [];
-        if (spotify !== undefined) {
-            logger.warn(`DEPRECATED: Using 'spotify' top-level property in config.json will be removed in next major version (0.4). Please use 'sources' instead.`)
-            deprecatedConfigs.push({
-                type: 'spotify',
-                name: 'unnamed',
-                source: 'config.json (top level)',
-                mode: 'single',
-                data: spotify
-            });
-        }
-        if (plex !== undefined) {
-            logger.warn(`DEPRECATED: Using 'plex' top-level property in config.json will be removed in next major version (0.4). Please use 'sources' instead.`)
-            deprecatedConfigs.push({
-                type: 'plex',
-                name: 'unnamed',
-                source: 'config.json (top level)',
-                mode: 'single',
-                data: plex
-            });
-        }
         // @ts-expect-error TS(2345): Argument of type '{ type: string; name: string; so... Remove this comment to see the full error message
         await scrobbleSources.buildSourcesFromConfig(deprecatedConfigs);
 
@@ -174,12 +148,9 @@ const configDir = process.env.CONFIG_DIR || path.resolve(projectDir, `./config`)
         const lastfmSources = scrobbleSources.getByType('lastfm');
         const lastfmScrobbles = scrobbleClients.getByType('lastfm');
 
-        // @ts-expect-error TS(2339): Property 'name' does not exist on type 'never'.
         const scrobblerNames = lastfmScrobbles.map(x => x.name);
-        // @ts-expect-error TS(2339): Property 'name' does not exist on type 'never'.
         const nameColl = lastfmSources.filter(x => scrobblerNames.includes(x.name));
         if(nameColl.length > 0) {
-            // @ts-expect-error TS(2339): Property 'name' does not exist on type 'never'.
             logger.warn(`Last.FM source and clients have same names [${nameColl.map(x => x.name).join(',')}] -- this may cause issues`);
         }
 
@@ -280,7 +251,6 @@ const configDir = process.env.CONFIG_DIR || path.resolve(projectDir, `./config`)
             if (req.body.scrobblerConfig !== undefined) {
                 const source = scrobbleSources.getByName(req.body.scrobblerConfig);
                 if (source !== undefined) {
-                    // @ts-expect-error TS(2339): Property 'type' does not exist on type 'never'.
                     if (source.type !== 'tautulli') {
                         this.logger.warn(`Tautulli event specified a config name but the configured source was not a Tautulli type: ${req.body.scrobblerConfig}`);
                         return res.send('OK');
@@ -510,14 +480,12 @@ const configDir = process.env.CONFIG_DIR || path.resolve(projectDir, `./config`)
                         token
                     } = {}
                 } = req;
-                let entity = scrobbleClients.getByName(state);
+                let entity: LastfmScrobbler | LastfmSource | undefined = scrobbleClients.getByName(state) as (LastfmScrobbler | undefined);
                 if(entity === undefined) {
-                    entity = scrobbleSources.getByName(state);
+                    entity = scrobbleSources.getByName(state) as LastfmSource;
                 }
                 try {
-                    // @ts-expect-error TS(2532): Object is possibly 'undefined'.
                     await entity.api.authenticate(token);
-                    // @ts-expect-error TS(2532): Object is possibly 'undefined'.
                     await entity.initialize();
                     return res.send('OK');
                 } catch (e) {
@@ -553,10 +521,8 @@ const configDir = process.env.CONFIG_DIR || path.resolve(projectDir, `./config`)
         });
 
         let anyNotReady = false;
-        // @ts-expect-error TS(2339): Property 'canPoll' does not exist on type 'never'.
         for (const source of scrobbleSources.sources.filter(x => x.canPoll === true)) {
             await sleep(1500); // stagger polling by 1.5 seconds so that log messages for each source don't get mixed up
-            // @ts-expect-error TS(2339): Property 'type' does not exist on type 'never'.
             switch (source.type) {
                 case 'spotify':
                     // @ts-expect-error TS(2339): Property 'spotifyApi' does not exist on type 'neve... Remove this comment to see the full error message
@@ -565,22 +531,17 @@ const configDir = process.env.CONFIG_DIR || path.resolve(projectDir, `./config`)
                         if (source.spotifyApi.getAccessToken() === undefined) {
                             anyNotReady = true;
                         } else {
-                            // @ts-expect-error TS(2339): Property 'poll' does not exist on type 'never'.
                             source.poll(scrobbleClients);
                         }
                     }
                     break;
                 case 'lastfm':
-                    // @ts-expect-error TS(2339): Property 'initialized' does not exist on type 'nev... Remove this comment to see the full error message
                     if(source.initialized === true) {
-                        // @ts-expect-error TS(2339): Property 'poll' does not exist on type 'never'.
                         source.poll(scrobbleClients);
                     }
                     break;
                 default:
-                    // @ts-expect-error TS(2339): Property 'poll' does not exist on type 'never'.
                     if (source.poll !== undefined) {
-                        // @ts-expect-error TS(2339): Property 'poll' does not exist on type 'never'.
                         source.poll(scrobbleClients);
                     }
             }

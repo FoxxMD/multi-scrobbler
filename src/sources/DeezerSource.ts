@@ -1,16 +1,14 @@
-// @ts-expect-error TS(7016): Could not find a declaration file for module 'supe... Remove this comment to see the full error message
 import request from 'superagent';
-import {parseRetryAfterSecsFromObj, readJson, sleep, sortByPlayDate, writeFile} from "../utils.js";
+import {parseRetryAfterSecsFromObj, readJson, sleep, sortByPlayDate, writeFile} from "../utils";
 // @ts-expect-error TS(7016): Could not find a declaration file for module 'pass... Remove this comment to see the full error message
 import {Strategy as DeezerStrategy} from 'passport-deezer';
-import AbstractSource from "./AbstractSource.js";
+import AbstractSource from "./AbstractSource";
 import dayjs from "dayjs";
+import {DeezerSourceConfig} from "../common/infrastructure/config/source/deezer";
+import {InternalConfig, PlayObject} from "../common/infrastructure/Atomic";
 
 export default class DeezerSource extends AbstractSource {
-
-    localUrl;
     workingCredsPath;
-    configDir;
     error: any;
 
     requiresAuth = true;
@@ -18,15 +16,14 @@ export default class DeezerSource extends AbstractSource {
 
     baseUrl = 'https://api.deezer.com';
 
-    constructor(name: any, config = {}, clients = []) {
-        super('deezer', name, config, clients);
+    declare config: DeezerSourceConfig;
+
+    constructor(name: any, config: DeezerSourceConfig, internal: InternalConfig) {
+        super('deezer', name, config, internal);
         const {
-            // @ts-expect-error TS(2339): Property 'localUrl' does not exist on type '{}'.
-            localUrl,
-            // @ts-expect-error TS(2339): Property 'configDir' does not exist on type '{}'.
-            configDir,
-            // @ts-expect-error TS(2339): Property 'interval' does not exist on type '{}'.
-            interval = 60,
+            data: {
+                interval = 60,
+            } = {},
         } = config;
 
         if (interval < 15) {
@@ -36,13 +33,11 @@ export default class DeezerSource extends AbstractSource {
         // @ts-expect-error TS(2339): Property 'interval' does not exist on type '{}'.
         this.config.interval = interval;
 
-        this.configDir = configDir;
-        this.workingCredsPath = `${configDir}/currentCreds-${name}.json`;
-        this.localUrl = localUrl;
+        this.workingCredsPath = `${this.configDir}/currentCreds-${name}.json`;
         this.canPoll = true;
     }
 
-    static formatPlayObj(obj: any, newFromSource = false) {
+    static formatPlayObj(obj: any, newFromSource = false): PlayObject {
         const {
             title: name,
             artist: {
