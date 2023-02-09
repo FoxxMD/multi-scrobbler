@@ -58,3 +58,73 @@ export interface PlayObject {
     data: PlayData,
     meta: PlayMeta
 }
+
+export interface TrackStringOptions {
+    include?: ('time' | 'artist' | 'track' | 'timeFromNow' | 'sourceId')[]
+    transformers?: {
+        artists?: (a: string[]) => string
+        track?: (t: string) => string
+        time?: (t: Dayjs) => string
+        timeFromNow?: (t: Dayjs) => string
+    }
+}
+
+export interface ScrobbledPlayObject {
+    play: PlayObject
+    scrobble: PlayObject
+}
+
+export interface MalojaV2ScrobbleData {
+    artists: string[]
+    title: string
+    album: string
+    /**
+     * Length of the track
+     * */
+    duration: number
+    /**
+     * unix timestamp (seconds) scrobble was made at
+     * */
+    time: number
+}
+
+export interface MalojaV3ScrobbleData {
+    /**
+     * unix timestamp (seconds) scrobble was made at
+     * */
+    time: number
+    track: {
+        artists: string[]
+        title: string
+        album?: {
+            name: string
+            artists: string[]
+        }
+        /**
+         * length of the track
+         * */
+        length: number
+    }
+    /**
+     * how long the track was listened to before it was scrobbled
+     * */
+    duration: number
+}
+
+export type MalojaScrobbleData = MalojaV2ScrobbleData | MalojaV3ScrobbleData;
+
+export interface MalojaScrobbleRequestData {
+    key: string
+    title: string
+    album: string
+    time: number
+    length: number
+}
+
+export interface MalojaScrobbleV2RequestData extends MalojaScrobbleRequestData {
+    artist: string
+}
+
+export interface MalojaScrobbleV3RequestData extends MalojaScrobbleRequestData {
+    artists: string[]
+}

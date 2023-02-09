@@ -1,15 +1,14 @@
-import dayjs from "dayjs";
+import dayjs, {Dayjs} from "dayjs";
 import {
     createAjvFactory,
     createLabelledLogger,
-    isValidConfigStructure,
     playObjDataMatch,
     readJson,
     returnDuplicateStrings, validateJson
 } from "../utils.js";
 import MalojaScrobbler from "./MalojaScrobbler.js";
 import LastfmScrobbler from "./LastfmScrobbler.js";
-import {clientTypes, ConfigMeta} from "../common/infrastructure/Atomic.js";
+import {clientTypes, ConfigMeta, PlayObject} from "../common/infrastructure/Atomic.js";
 import {AIOConfig} from "../common/infrastructure/config/aioConfig.js";
 import * as aioSchema from '../common/schema/aio.json' assert {type: "json"};
 import * as clientSchema from '../common/schema/client.json' assert {type: "json"};
@@ -280,16 +279,12 @@ ${sources.join('\n')}`);
      * @param {{scrobbleFrom, scrobbleTo, forceRefresh: boolean}|{scrobbleFrom, scrobbleTo}} options
      * @returns {Array}
      */
-    scrobble = async (data: any, options = {}) => {
+    scrobble = async (data: (PlayObject | PlayObject[]), options: {forceRefresh?: boolean, checkTime?: Dayjs, scrobbleTo?: string[], scrobbleFrom?: string} = {}) => {
         const playObjs = Array.isArray(data) ? data : [data];
         const {
-            // @ts-expect-error TS(2339): Property 'forceRefresh' does not exist on type '{}... Remove this comment to see the full error message
             forceRefresh = false,
-            // @ts-expect-error TS(2339): Property 'checkTime' does not exist on type '{}'.
             checkTime = dayjs(),
-            // @ts-expect-error TS(2339): Property 'scrobbleTo' does not exist on type '{}'.
             scrobbleTo = [],
-            // @ts-expect-error TS(2339): Property 'scrobbleFrom' does not exist on type '{}... Remove this comment to see the full error message
             scrobbleFrom = 'source',
         } = options;
 

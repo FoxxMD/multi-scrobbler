@@ -1,11 +1,12 @@
 import {promises, constants} from "fs";
-import dayjs from 'dayjs';
+import dayjs, {Dayjs} from 'dayjs';
 import utc from 'dayjs/plugin/utc.js';
 import winston, {Logger} from "winston";
 import stringify from 'safe-stable-stringify';
 import { TimeoutError, WebapiError } from "spotify-web-api-node/src/response-error.js";
 import { Response } from 'superagent';
 import Ajv, {Schema} from 'ajv';
+import {PlayObject, TrackStringOptions} from "./common/infrastructure/Atomic.js";
 
 const {format} = winston;
 const {combine, printf, timestamp, label, splat, errors} = format;
@@ -16,8 +17,7 @@ export async function readJson(this: any, path: any, {logErrors = true, throwOnN
     try {
         await promises.access(path, constants.R_OK);
         const data = await promises.readFile(path);
-        // @ts-expect-error TS(2345): Argument of type 'Buffer' is not assignable to par... Remove this comment to see the full error message
-        return JSON.parse(data);
+        return JSON.parse(data as unknown as string);
     } catch (e) {
         const {code} = e;
         if (code === 'ENOENT') {
@@ -80,31 +80,24 @@ export const truncateStringToLength = (length: any, truncStr = '...') => (str: a
 
 const defaultTransformer = (input: any) => input;
 
-export const buildTrackString = (playObj: any, options = {}) => {
+export const buildTrackString = (playObj: PlayObject, options: TrackStringOptions = {}) => {
     const {
-        // @ts-expect-error TS(2339): Property 'include' does not exist on type '{}'.
         include = ['time', 'artist', 'track'],
-        // @ts-expect-error TS(2339): Property 'transformers' does not exist on type '{}... Remove this comment to see the full error message
         transformers: {
-            artists: artistsFunc = (a: any) => a.join(' / '),
+            artists: artistsFunc = (a: string[]) => a.join(' / '),
             track: trackFunc = defaultTransformer,
-            time: timeFunc = (t: any) => t.local().format(),
-            timeFromNow = (t: any) => t.local().fromNow(),
+            time: timeFunc = (t: Dayjs) => t.local().format(),
+            timeFromNow = (t: Dayjs) => t.local().fromNow(),
         } = {}
     } = options;
     const {
         data: {
-            // @ts-expect-error TS(2525): Initializer provides no value for this binding ele... Remove this comment to see the full error message
             artists,
-            // @ts-expect-error TS(2525): Initializer provides no value for this binding ele... Remove this comment to see the full error message
             album,
-            // @ts-expect-error TS(2525): Initializer provides no value for this binding ele... Remove this comment to see the full error message
             track,
-            // @ts-expect-error TS(2525): Initializer provides no value for this binding ele... Remove this comment to see the full error message
             playDate
         } = {},
         meta: {
-            // @ts-expect-error TS(2525): Initializer provides no value for this binding ele... Remove this comment to see the full error message
             sourceId
         } = {},
     } = playObj;
@@ -199,25 +192,6 @@ export const setIntersection = (setA: any, setB: any) => {
     return _intersection
 }
 
-export const isValidConfigStructure = (obj: any, required = {}) => {
-    // @ts-expect-error TS(2339): Property 'name' does not exist on type '{}'.
-    const {name = false, type = false, data = true} = required;
-    const errs = [];
-    if (obj.type === undefined && type) {
-        errs.push("'type' must be defined");
-    }
-    if (obj.name === undefined && name) {
-        errs.push("'name' must be defined")
-    }
-    if (obj.data === undefined && data) {
-        errs.push("'data' must be defined");
-    }
-    if (errs.length > 0) {
-        return errs;
-    }
-    return true;
-}
-
 export const returnDuplicateStrings = (arr: any) => {
     const alreadySeen: any = [];
     const dupes: any = [];
@@ -235,19 +209,15 @@ export const capitalize = (str: any) => {
  * Checks sources and source ID's (unique identifiers) first then
  * Checks track, album, and artists in that order
  * */
-export const playObjDataMatch = (a: any, b: any) => {
+export const playObjDataMatch = (a: PlayObject, b: PlayObject) => {
     const {
         data: {
             artists: aArtists = [],
-            // @ts-expect-error TS(2525): Initializer provides no value for this binding ele... Remove this comment to see the full error message
             album: aAlbum,
-            // @ts-expect-error TS(2525): Initializer provides no value for this binding ele... Remove this comment to see the full error message
             track: aTrack,
         } = {},
         meta: {
-            // @ts-expect-error TS(2525): Initializer provides no value for this binding ele... Remove this comment to see the full error message
             source: aSource,
-            // @ts-expect-error TS(2525): Initializer provides no value for this binding ele... Remove this comment to see the full error message
             sourceId: aSourceId,
         } = {},
     } = a;
@@ -255,15 +225,11 @@ export const playObjDataMatch = (a: any, b: any) => {
     const {
         data: {
             artists: bArtists = [],
-            // @ts-expect-error TS(2525): Initializer provides no value for this binding ele... Remove this comment to see the full error message
             album: bAlbum,
-            // @ts-expect-error TS(2525): Initializer provides no value for this binding ele... Remove this comment to see the full error message
             track: bTrack,
         } = {},
         meta: {
-            // @ts-expect-error TS(2525): Initializer provides no value for this binding ele... Remove this comment to see the full error message
             source: bSource,
-            // @ts-expect-error TS(2525): Initializer provides no value for this binding ele... Remove this comment to see the full error message
             sourceId: bSourceId,
         } = {},
     } = b;
@@ -332,7 +298,7 @@ export const parseRetryAfterSecsFromObj = (err: any) => {
         return retryAfter; // got a number!
     }
     // try to parse as date
-    // @ts-expect-error TS(2322): Type 'Dayjs' is not assignable to type 'number'.
+    // @ts-ignore
     retryAfter = dayjs(retryAfter);
     if (!dayjs.isDayjs(retryAfter)) {
         return undefined; // could not parse string if not in ISO 8601 format

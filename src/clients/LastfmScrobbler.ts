@@ -9,7 +9,7 @@ import {
     truncateStringToLength,
 } from "../utils.js";
 import LastfmApiClient from "../apis/LastfmApiClient.js";
-import {INITIALIZING} from "../common/infrastructure/Atomic.js";
+import {INITIALIZING, PlayObject, TrackStringOptions} from "../common/infrastructure/Atomic.js";
 import {LastfmClientConfig} from "../common/infrastructure/config/client/lastfm.js";
 import {TrackScrobbleResponse, UserGetRecentTracksResponse} from "lastfm-node-client";
 
@@ -22,8 +22,7 @@ export default class LastfmScrobbler extends AbstractScrobbleClient {
     declare config: LastfmClientConfig;
 
     constructor(name: any, config: LastfmClientConfig, options = {}) {
-        // @ts-expect-error TS(2554): Expected 2-3 arguments, but got 4.
-        super('lastfm', name, config, options);
+        super('lastfm', name, config);
         this.api = new LastfmApiClient(name, config.data, options)
     }
 
@@ -99,24 +98,22 @@ export default class LastfmScrobbler extends AbstractScrobbleClient {
         this.lastScrobbleCheck = dayjs();
     }
 
-    cleanSourceSearchTitle = (playObj: any) => {
+    cleanSourceSearchTitle = (playObj: PlayObject) => {
         const {
             data: {
-                // @ts-expect-error TS(2525): Initializer provides no value for this binding ele... Remove this comment to see the full error message
                 track,
             } = {},
         } = playObj;
         return track.toLocaleLowerCase().trim();
     }
 
-    // @ts-expect-error TS(2416): Property 'alreadyScrobbled' in type 'LastfmScrobbl... Remove this comment to see the full error message
-    alreadyScrobbled = async (playObj: any, log = false) => {
+    alreadyScrobbled = async (playObj: PlayObject, log = false) => {
         return this.existingScrobble(playObj, (log || this.verboseOptions.match.onMatch)) !== undefined;
     }
 
-    existingScrobble = (playObj: any, logMatch = false) => {
+    existingScrobble = (playObj: PlayObject, logMatch = false) => {
         const tr = truncateStringToLength(27);
-        const scoreTrackOpts = {include: ['track', 'time'], transformers: {track: (t: any) => tr(t).padEnd(30)}};
+        const scoreTrackOpts: TrackStringOptions = {include: ['track', 'time'], transformers: {track: (t: any) => tr(t).padEnd(30)}};
 
         // return early if we don't care about checking existing
         if (false === this.checkExistingScrobbles) {
@@ -127,7 +124,7 @@ export default class LastfmScrobbler extends AbstractScrobbleClient {
         }
 
         let existingScrobble;
-        let closestMatch = {score: 0, breakdowns: ['None']};
+        let closestMatch: {score: number, breakdowns: string[], scrobble?: PlayObject} = {score: 0, breakdowns: ['None']};
 
         // then check if we have already recorded this
         const [existingExactSubmitted, existingDataSubmitted = []] = this.findExistingSubmittedPlayObj(playObj);
@@ -162,13 +159,10 @@ export default class LastfmScrobbler extends AbstractScrobbleClient {
             const {
                 data: {
                     artists: sourceArtists = [],
-                    // @ts-expect-error TS(2525): Initializer provides no value for this binding ele... Remove this comment to see the full error message
                     playDate
                 } = {},
                 meta: {
-                    // @ts-expect-error TS(2525): Initializer provides no value for this binding ele... Remove this comment to see the full error message
                     trackLength,
-                    // @ts-expect-error TS(2525): Initializer provides no value for this binding ele... Remove this comment to see the full error message
                     source,
                 } = {},
             } = playObj;
@@ -180,7 +174,6 @@ export default class LastfmScrobbler extends AbstractScrobbleClient {
 
                 const referenceMatch = referenceApiScrobbleResponse !== undefined && playObjDataMatch(x, referenceApiScrobbleResponse);
 
-                // @ts-expect-error TS(2525): Initializer provides no value for this binding ele... Remove this comment to see the full error message
                 const {data: {playDate: scrobbleTime, track: scrobbleTitle, artists = []} = {}} = x;
 
                 const playDiffThreshold = source === 'Subsonic' ? 60 : 10;
@@ -246,30 +239,23 @@ export default class LastfmScrobbler extends AbstractScrobbleClient {
         }
 
         if ((existingScrobble !== undefined && this.verboseOptions.match.onMatch) || (existingScrobble === undefined && this.verboseOptions.match.onNoMatch)) {
-            // @ts-expect-error TS(2339): Property 'scrobble' does not exist on type '{ scor... Remove this comment to see the full error message
             const closestScrobble = closestMatch.scrobble === undefined ? closestMatch.breakdowns.join(' | ') : `Closest Scrobble: ${buildTrackString(closestMatch.scrobble, scoreTrackOpts)} => ${closestMatch.breakdowns.join(' | ')}`;
             this.logger.debug(`(Existing Check) Source: ${buildTrackString(playObj, scoreTrackOpts)} => ${closestScrobble}`);
         }
         return existingScrobble;
     }
 
-    scrobble = async (playObj: any) => {
+    scrobble = async (playObj: PlayObject) => {
         const {
             data: {
-                // @ts-expect-error TS(2525): Initializer provides no value for this binding ele... Remove this comment to see the full error message
                 artists,
-                // @ts-expect-error TS(2525): Initializer provides no value for this binding ele... Remove this comment to see the full error message
                 album,
-                // @ts-expect-error TS(2525): Initializer provides no value for this binding ele... Remove this comment to see the full error message
                 track,
-                // @ts-expect-error TS(2525): Initializer provides no value for this binding ele... Remove this comment to see the full error message
                 duration,
-                // @ts-expect-error TS(2525): Initializer provides no value for this binding ele... Remove this comment to see the full error message
                 playDate
             } = {},
             data = {},
             meta: {
-                // @ts-expect-error TS(2525): Initializer provides no value for this binding ele... Remove this comment to see the full error message
                 source,
                 newFromSource = false,
             } = {}

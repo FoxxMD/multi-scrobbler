@@ -1,6 +1,7 @@
 import {CommonClientConfig, CommonClientData} from "./index.js";
+import {RequestRetryOptions} from "../common.js";
 
-export interface LastfmData {
+export interface LastfmData extends RequestRetryOptions {
     /**
      * API Key generated from Last.fm account
      * */

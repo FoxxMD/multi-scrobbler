@@ -1,4 +1,4 @@
-import {createLabelledLogger, isValidConfigStructure, readJson, validateJson} from "../utils.js";
+import {createLabelledLogger, readJson, validateJson} from "../utils.js";
 import SpotifySource from "./SpotifySource.js";
 import PlexSource from "./PlexSource.js";
 import TautulliSource from "./TautulliSource.js";

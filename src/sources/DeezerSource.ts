@@ -29,8 +29,7 @@ export default class DeezerSource extends AbstractSource {
             this.logger.warn('Interval should be above 30 seconds...😬');
         }
 
-        // @ts-expect-error TS(2339): Property 'interval' does not exist on type '{}'.
-        this.config.interval = interval;
+        this.config.data.interval = interval;
 
         this.workingCredsPath = `${this.configDir}/currentCreds-${name}.json`;
         this.canPoll = true;

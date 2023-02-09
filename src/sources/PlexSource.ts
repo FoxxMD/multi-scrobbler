@@ -101,15 +101,13 @@ export default class PlexSource extends AbstractSource {
         }
     }
 
-    isValidEvent = (playObj: any) => {
+    isValidEvent = (playObj: PlayObject) => {
         const {
             meta: {
                 mediaType, event, user, library, server
             },
             data: {
-                // @ts-expect-error TS(2525): Initializer provides no value for this binding ele... Remove this comment to see the full error message
                 artists,
-                // @ts-expect-error TS(2525): Initializer provides no value for this binding ele... Remove this comment to see the full error message
                 track,
             } = {}
         } = playObj;

@@ -1,4 +1,4 @@
-import AbstractSource from "./AbstractSource.js";
+import AbstractSource, {RecentlyPlayedOptions} from "./AbstractSource.js";
 import LastfmApiClient from "../apis/LastfmApiClient.js";
 import {sortByPlayDate} from "../utils.js";
 import {LastfmClientConfig} from "../common/infrastructure/config/client/lastfm.js";
@@ -40,9 +40,8 @@ export default class LastfmSource extends AbstractSource {
     }
 
 
-    getRecentlyPlayed = async(options = {}) => {
-        // @ts-expect-error TS(2339): Property 'limit' does not exist on type '{}'.
-        const {limit = 20, formatted = false} = options;
+    getRecentlyPlayed = async(options: RecentlyPlayedOptions = {}) => {
+        const {limit = 20} = options;
         const resp = await this.api.callApi<UserGetRecentTracksResponse>((client: any) => client.userGetRecentTracks({user: this.api.user, limit, extended: true}));
         const {
             recenttracks: {

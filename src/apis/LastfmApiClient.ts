@@ -22,6 +22,7 @@ const retryErrors = [
 export default class LastfmApiClient extends AbstractApiClient {
 
     user?: string;
+    declare config: LastfmData;
 
     constructor(name: any, config: Partial<LastfmData>, options = {}) {
         super('lastfm', name, config, options);
@@ -79,9 +80,7 @@ export default class LastfmApiClient extends AbstractApiClient {
 
     callApi = async <T>(func: any, retries = 0): Promise<T> => {
         const {
-            // @ts-expect-error TS(2339): Property 'maxRequestRetries' does not exist on typ... Remove this comment to see the full error message
             maxRequestRetries = 2,
-            // @ts-expect-error TS(2339): Property 'retryMultiplier' does not exist on type ... Remove this comment to see the full error message
             retryMultiplier = 1.5
         } = this.config;
 
@@ -110,9 +109,7 @@ export default class LastfmApiClient extends AbstractApiClient {
     }
 
     getAuthUrl = () => {
-        // @ts-expect-error TS(2339): Property 'redirectUri' does not exist on type '{}'... Remove this comment to see the full error message
         const redir = `${this.config.redirectUri}?state=${this.name}`;
-        // @ts-expect-error TS(2339): Property 'apiKey' does not exist on type '{}'.
         return `http://www.last.fm/api/auth/?api_key=${this.config.apiKey}&cb=${encodeURIComponent(redir)}`
     }
 

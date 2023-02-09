@@ -1,6 +1,13 @@
 import dayjs, {Dayjs} from "dayjs";
 import {buildTrackString, capitalize, createLabelledLogger, playObjDataMatch} from "../utils.js";
-import {ClientType, INITIALIZED, INITIALIZING, InitState, NOT_INITIALIZED} from "../common/infrastructure/Atomic.js";
+import {
+    ClientType,
+    INITIALIZED,
+    INITIALIZING,
+    InitState,
+    NOT_INITIALIZED,
+    PlayObject, ScrobbledPlayObject
+} from "../common/infrastructure/Atomic.js";
 import {Logger} from "winston";
 import {CommonClientConfig} from "../common/infrastructure/config/client/index.js";
 import {ClientConfig} from "../common/infrastructure/config/client/clients.js";
@@ -16,8 +23,8 @@ export default abstract class AbstractScrobbleClient {
     requiresAuthInteraction: boolean = false;
     authed: boolean = false;
 
-    recentScrobbles = [];
-    scrobbledPlayObjs = [];
+    recentScrobbles: PlayObject[] = [];
+    scrobbledPlayObjs: ScrobbledPlayObject[] = [];
     newestScrobbleTime?: Dayjs
     oldestScrobbleTime: Dayjs = dayjs();
     tracksScrobbled: number = 0;
@@ -37,15 +44,15 @@ export default abstract class AbstractScrobbleClient {
         this.logger = createLabelledLogger(identifier, identifier);
 
         const {
-            // @ts-expect-error TS(2339): Property 'options' does not exist on type '{}'.
-            options: {
-                refreshEnabled = true,
-                checkExistingScrobbles = true,
-                verbose = {},
-            } = {},
-            ...rest
+            data: {
+                options: {
+                    refreshEnabled = true,
+                    checkExistingScrobbles = true,
+                    verbose = {},
+                } = {},
+            },
         } = config;
-        this.config = rest;
+        this.config = config;
         this.refreshEnabled = refreshEnabled;
         this.checkExistingScrobbles = checkExistingScrobbles;
 
@@ -109,7 +116,7 @@ export default abstract class AbstractScrobbleClient {
         this.logger.debug('Scrobbler does not have refresh function implemented!');
     }
 
-    alreadyScrobbled = async () => {
+    alreadyScrobbled = async (playObj: PlayObject, log = false) => {
         this.logger.debug('Scrobbler does not have alreadyScrobbled check implemented!');
         return false;
     }
@@ -143,10 +150,9 @@ export default abstract class AbstractScrobbleClient {
         this.scrobbledPlayObjs.push({play: playObj, scrobble: this.formatPlayObj(scrobbleResp)});
     }
 
-    cleanSourceSearchTitle = (playObj: any) => {
+    cleanSourceSearchTitle = (playObj: PlayObject) => {
         const {
             data: {
-                // @ts-expect-error TS(2525): Initializer provides no value for this binding ele... Remove this comment to see the full error message
                 track,
             } = {},
         } = playObj;
@@ -154,14 +160,12 @@ export default abstract class AbstractScrobbleClient {
         return track;
     };
 
-    findExistingSubmittedPlayObj = (playObj: any) => {
+    findExistingSubmittedPlayObj = (playObj: PlayObject): ([undefined, undefined] | [ScrobbledPlayObject, ScrobbledPlayObject[]]) => {
         const {
             data: {
-                // @ts-expect-error TS(2525): Initializer provides no value for this binding ele... Remove this comment to see the full error message
                 playDate
             } = {},
             meta: {
-                // @ts-expect-error TS(2525): Initializer provides no value for this binding ele... Remove this comment to see the full error message
                 source,
             } = {}
         } = playObj;
@@ -172,15 +176,13 @@ export default abstract class AbstractScrobbleClient {
             return [undefined, undefined];
         }
 
-        const matchPlayDate = dtInvariantMatches.find((x) => {
+        const matchPlayDate = dtInvariantMatches.find((x: ScrobbledPlayObject) => {
             const {
                 play: {
                     data: {
-                        // @ts-expect-error TS(2525): Initializer provides no value for this binding ele... Remove this comment to see the full error message
                         playDate: sPlayDate
                     } = {},
                     meta: {
-                        // @ts-expect-error TS(2525): Initializer provides no value for this binding ele... Remove this comment to see the full error message
                         source: playSource
                     } = {},
                 } = {},
