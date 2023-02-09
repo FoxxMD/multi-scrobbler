@@ -52,6 +52,7 @@
     "safe-stable-stringify": "^1.1.1",
     "socket.io": "^4.1.3",
     "spotify-web-api-node": "^5.0.2",
+    "subsonic-api": "^1.1.0",
     "superagent": "^6.1.0",
     "triple-beam": "^1.3.0",
     "winston": "^3.3.3",

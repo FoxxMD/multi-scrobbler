@@ -6,6 +6,9 @@ import {buildTrackString, parseRetryAfterSecsFromObj, sleep} from "../utils.js";
 import MemorySource from "./MemorySource.js";
 import {SubSonicSourceConfig} from "../common/infrastructure/config/source/subsonic.js";
 import {InternalConfig, PlayObject} from "../common/infrastructure/Atomic.js";
+import {RecentlyPlayedOptions} from "./AbstractSource.js";
+import Subsonic from 'subsonic-api';
+// TODO replace homebrew api with subsonic-api
 
 dayjs.extend(isSameOrAfter);
 
@@ -74,15 +77,12 @@ export class SubsonicSource extends MemorySource {
 
     callApi = async (req: any, retries = 0) => {
         const {
-            // @ts-expect-error TS(2339): Property 'user' does not exist on type '{}'.
             user,
-            // @ts-expect-error TS(2339): Property 'password' does not exist on type '{}'.
             password,
-            // @ts-expect-error TS(2339): Property 'maxRequestRetries' does not exist on typ... Remove this comment to see the full error message
             maxRequestRetries = 1,
-            // @ts-expect-error TS(2339): Property 'retryMultiplier' does not exist on type ... Remove this comment to see the full error message
             retryMultiplier = 1.5
-        } = this.config;
+        } = this.config.data;
+
 
         const salt = await crypto.randomBytes(10).toString('hex');
         const hash = crypto.createHash('md5').update(`${password}${salt}`).digest('hex')
@@ -150,8 +150,7 @@ export class SubsonicSource extends MemorySource {
     }
 
     initialize = async () => {
-        // @ts-expect-error TS(2339): Property 'url' does not exist on type '{}'.
-        const {url} = this.config;
+        const {url} = this.config.data;
         try {
             await request.get(`${url}/`);
             this.logger.info('Subsonic Connection: ok');
@@ -168,8 +167,7 @@ export class SubsonicSource extends MemorySource {
     }
 
     testAuth= async () => {
-        // @ts-expect-error TS(2339): Property 'url' does not exist on type '{}'.
-        const {url} = this.config;
+        const {url} = this.config.data;
         try {
             await this.callApi(request.get(`${url}/rest/ping`));
             this.authed = true;
@@ -181,11 +179,9 @@ export class SubsonicSource extends MemorySource {
         return this.authed;
     }
 
-    getRecentlyPlayed = async (options = {}) => {
-        // @ts-expect-error TS(2339): Property 'formatted' does not exist on type '{}'.
+    getRecentlyPlayed = async (options: RecentlyPlayedOptions = {}) => {
         const {formatted = false} = options;
-        // @ts-expect-error TS(2339): Property 'url' does not exist on type '{}'.
-        const {url} = this.config;
+        const {url} = this.config.data;
         const resp = await this.callApi(request.get(`${url}/rest/getNowPlaying`));
         const {
             nowPlaying: {
