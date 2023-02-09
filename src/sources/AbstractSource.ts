@@ -199,8 +199,7 @@ export default abstract class AbstractSource {
                     this.tracksDiscovered += scrobbleResult.length;
                 }
 
-                // @ts-expect-error TS(2339): Property 'interval' does not exist on type '{}'.
-                const {interval = 30, checkActiveFor = 300, maxSleep = 300} = this.config;
+                const {interval = 30, checkActiveFor = 300, maxSleep = 300} = this.config.data;
 
                 let sleepTime = interval;
                 // don't need to do back off calc if interval is 5 minutes or greater since its already pretty light on API calls
