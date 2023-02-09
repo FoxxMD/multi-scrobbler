@@ -184,19 +184,22 @@ export default class ScrobbleSources {
                     defaultConfigureAs = 'client';
                     break;
                 case 'deezer':
-                    configs.push({
-                        type: 'deezer',
-                        name: 'unnamed',
-                        source: 'ENV',
-                        mode: 'single',
-                        configureAs: defaultConfigureAs,
-                        data: {
-                            clientId: process.env.DEEZER_APP_ID,
-                            clientSecret: process.env.DEEZER_SECRET_KEY,
-                            redirectUri: process.env.DEEZER_REDIRECT_URI,
-                            accessToken: process.env.DEEZER_ACCESS_TOKEN,
-                        } as DeezerData
-                    });
+                    const d = {
+                        clientId: process.env.DEEZER_APP_ID,
+                        clientSecret: process.env.DEEZER_SECRET_KEY,
+                        redirectUri: process.env.DEEZER_REDIRECT_URI,
+                        accessToken: process.env.DEEZER_ACCESS_TOKEN,
+                    };
+                    if (!Object.values(d).every(x => x === undefined)) {
+                        configs.push({
+                            type: 'deezer',
+                            name: 'unnamed',
+                            source: 'ENV',
+                            mode: 'single',
+                            configureAs: defaultConfigureAs,
+                            data: d as DeezerData
+                        });
+                    }
                     break;
                 default:
                     break;

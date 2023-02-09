@@ -138,8 +138,7 @@ const configDir = process.env.CONFIG_DIR || path.resolve(projectDir, `./config`)
         }
 
         const scrobbleSources = new ScrobbleSources(localUrl, configDir);
-        // @ts-expect-error TS(2345): Argument of type '{ type: string; name: string; so... Remove this comment to see the full error message
-        await scrobbleSources.buildSourcesFromConfig(deprecatedConfigs);
+        await scrobbleSources.buildSourcesFromConfig();
 
         const clientCheckMiddle = makeClientCheckMiddle(scrobbleClients);
         const sourceCheckMiddle = makeSourceCheckMiddle(scrobbleSources);

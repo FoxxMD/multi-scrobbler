@@ -24,11 +24,9 @@ export default class MalojaScrobbler extends AbstractScrobbleClient {
 
     declare config: MalojaClientConfig
 
-    constructor(name: any, config: MalojaClientConfig, options = {}) {
-        // @ts-expect-error TS(2554): Expected 2-3 arguments, but got 4.
-        super('maloja', name, config, options);
-        // @ts-expect-error TS(2339): Property 'url' does not exist on type '{}'.
-        const {url, apiKey} = config;
+    constructor(name: any, config: MalojaClientConfig) {
+        super('maloja', name, config);
+        const {url, apiKey} = config.data;
         if (apiKey === undefined) {
             this.logger.warn("'apiKey' not found in config! Client will most likely fail when trying to scrobble");
         }
@@ -115,11 +113,9 @@ export default class MalojaScrobbler extends AbstractScrobbleClient {
 
     callApi = async (req: any, retries = 0) => {
         const {
-            // @ts-expect-error TS(2339): Property 'maxRequestRetries' does not exist on typ... Remove this comment to see the full error message
             maxRequestRetries = 1,
-            // @ts-expect-error TS(2339): Property 'retryMultiplier' does not exist on type ... Remove this comment to see the full error message
             retryMultiplier = 1.5
-        } = this.config;
+        } = this.config.data;
 
         try {
             return await req;
@@ -151,8 +147,7 @@ export default class MalojaScrobbler extends AbstractScrobbleClient {
 
     testConnection = async () => {
 
-        // @ts-expect-error TS(2339): Property 'url' does not exist on type '{}'.
-        const {url} = this.config;
+        const {url} = this.config.data;
         try {
             const serverInfoResp = await this.callApi(request.get(`${url}/apis/mlj_1/serverinfo`));
             const {
@@ -189,8 +184,7 @@ export default class MalojaScrobbler extends AbstractScrobbleClient {
 
     testHealth = async () => {
 
-        // @ts-expect-error TS(2339): Property 'url' does not exist on type '{}'.
-        const {url} = this.config;
+        const {url} = this.config.data;
         try {
             // @ts-expect-error TS(2345): Argument of type '{ maxRequestRetries: number; }' ... Remove this comment to see the full error message
             const serverInfoResp = await this.callApi(request.get(`${url}/apis/mlj_1/serverinfo`), {maxRequestRetries: 0});
@@ -236,8 +230,7 @@ export default class MalojaScrobbler extends AbstractScrobbleClient {
 
     testAuth = async () => {
 
-        // @ts-expect-error TS(2339): Property 'url' does not exist on type '{}'.
-        const {url, apiKey} = this.config;
+        const {url, apiKey} = this.config.data;
         try {
             const resp = await this.callApi(request
                 .get(`${url}/apis/mlj_1/test`)
@@ -306,8 +299,7 @@ export default class MalojaScrobbler extends AbstractScrobbleClient {
     refreshScrobbles = async () => {
         if (this.refreshEnabled) {
             this.logger.debug('Refreshing recent scrobbles');
-            // @ts-expect-error TS(2339): Property 'url' does not exist on type '{}'.
-            const {url} = this.config;
+            const {url} = this.config.data;
             const resp = await this.callApi(request.get(`${url}/apis/mlj_1/scrobbles?max=20`));
             const {
                 body: {
@@ -496,8 +488,7 @@ export default class MalojaScrobbler extends AbstractScrobbleClient {
     }
 
     scrobble = async (playObj: any) => {
-        // @ts-expect-error TS(2339): Property 'url' does not exist on type '{}'.
-        const {url, apiKey} = this.config;
+        const {url, apiKey} = this.config.data;
 
         const {
             data: {

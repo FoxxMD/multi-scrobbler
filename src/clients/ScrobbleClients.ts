@@ -240,7 +240,7 @@ ${sources.join('\n')}`);
                 newClient = new MalojaScrobbler(name, ({...clientConfig, data} as unknown as MalojaClientConfig));
                 break;
             case 'lastfm':
-                newClient = new LastfmScrobbler(name, {...clientConfig, data: {configDir: this.configDir, data} } as unknown as LastfmClientConfig );
+                newClient = new LastfmScrobbler(name, {...clientConfig, data: {configDir: this.configDir, ...data} } as unknown as LastfmClientConfig );
                 break;
             default:
                 break;
