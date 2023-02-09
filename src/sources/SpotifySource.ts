@@ -34,8 +34,7 @@ export default class SpotifySource extends AbstractSource {
             this.logger.warn('Interval should be above 30 seconds...😬');
         }
 
-        // @ts-expect-error TS(2339): Property 'interval' does not exist on type '{}'.
-        this.config.interval = interval;
+        this.config.data.interval = interval;
 
         this.workingCredsPath = `${this.configDir}/currentCreds-${name}.json`;
         this.canPoll = true;
@@ -87,35 +86,26 @@ export default class SpotifySource extends AbstractSource {
 
         let spotifyCreds = {};
         try {
-            spotifyCreds = await readJson(this.workingCredsPath, {throwOnNotFound: false});
+            spotifyCreds = await readJson(this.workingCredsPath, {throwOnNotFound: false}) as any;
         } catch (e) {
             this.logger.warn('Current spotify credentials file exists but could not be parsed', { path: this.workingCredsPath });
         }
 
+        const {token: accessToken = undefined, refreshToken = undefined} = (spotifyCreds || {}) as any;
+
         const {
-            // @ts-expect-error TS(2339): Property 'accessToken' does not exist on type '{}'... Remove this comment to see the full error message
-            accessToken,
-            // @ts-expect-error TS(2339): Property 'clientId' does not exist on type '{}'.
             clientId,
-            // @ts-expect-error TS(2339): Property 'clientSecret' does not exist on type '{}... Remove this comment to see the full error message
             clientSecret,
-            // @ts-expect-error TS(2339): Property 'redirectUri' does not exist on type '{}'... Remove this comment to see the full error message
             redirectUri,
-            // @ts-expect-error TS(2339): Property 'refreshToken' does not exist on type '{}... Remove this comment to see the full error message
-            refreshToken,
-        } = this.config || {};
+        } = this.config.data || {};
 
         const rdUri = redirectUri || `${this.localUrl}/callback`;
-
-
-        // @ts-expect-error TS(2339): Property 'token' does not exist on type '{}'.
-        const {token = accessToken, refreshToken: rt = refreshToken} = spotifyCreds || {};
 
         const apiConfig = {
             clientId,
             clientSecret,
-            accessToken: token,
-            refreshToken: rt,
+            accessToken,
+            refreshToken,
         }
 
         if (Object.values(apiConfig).every(x => x === undefined)) {
@@ -127,25 +117,14 @@ export default class SpotifySource extends AbstractSource {
 
         const validationErrors = [];
 
-        if (token === undefined) {
-            if (clientId === undefined) {
-                validationErrors.push('clientId must be defined when access token is not present');
-            }
-            if (clientSecret === undefined) {
-                validationErrors.push('clientSecret must be defined when access token is not present');
-            }
-            if (rdUri === undefined) {
-                validationErrors.push('redirectUri must be defined when access token is not present');
-            }
-            if (validationErrors.length !== 0) {
-                validationErrors.unshift('no access token is defined');
-            }
-        } else if (rt === undefined && (
-            clientId === undefined ||
-            clientSecret === undefined ||
-            rdUri === undefined
-        )) {
-            this.logger.warn('Access token is present but no refresh token is defined and remaining configuration is not sufficient to re-authorize. Without a refresh token API calls will fail after current token is expired.');
+        if (clientId === undefined) {
+            validationErrors.push('clientId must be defined');
+        }
+        if (clientSecret === undefined) {
+            validationErrors.push('clientSecret must be defined');
+        }
+        if (rdUri === undefined) {
+            validationErrors.push('redirectUri must be defined');
         }
 
         if (validationErrors.length !== 0) {
@@ -215,11 +194,9 @@ export default class SpotifySource extends AbstractSource {
 
     callApi = async (func: any, retries = 0) => {
         const {
-            // @ts-expect-error TS(2339): Property 'maxRequestRetries' does not exist on typ... Remove this comment to see the full error message
             maxRequestRetries = 1,
-            // @ts-expect-error TS(2339): Property 'retryMultiplier' does not exist on type ... Remove this comment to see the full error message
             retryMultiplier = 2,
-        } = this.config;
+        } = this.config.data;
         try {
             return await func(this.spotifyApi);
         } catch (e) {
