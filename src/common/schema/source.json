@@ -2,52 +2,68 @@
     "$schema": "http://json-schema.org/draft-07/schema#",
     "anyOf": [
         {
-            "$ref": "#/definitions/SpotifySourceConfig"
+            "$ref": "#/definitions/import(\"/home/foxx/code/multi-scrobbler/src/common/infrastructure/config/source/spotify\",{assert:{\"resolution-mode\":\"import\"}}).SpotifySourceConfig"
         },
         {
-            "$ref": "#/definitions/PlexSourceConfig"
+            "$ref": "#/definitions/import(\"/home/foxx/code/multi-scrobbler/src/common/infrastructure/config/source/plex\",{assert:{\"resolution-mode\":\"import\"}}).PlexSourceConfig"
         },
         {
-            "$ref": "#/definitions/TautulliSourceConfig"
+            "$ref": "#/definitions/import(\"/home/foxx/code/multi-scrobbler/src/common/infrastructure/config/source/tautulli\",{assert:{\"resolution-mode\":\"import\"}}).TautulliSourceConfig"
         },
         {
-            "$ref": "#/definitions/DeezerSourceConfig"
+            "$ref": "#/definitions/import(\"/home/foxx/code/multi-scrobbler/src/common/infrastructure/config/source/deezer\",{assert:{\"resolution-mode\":\"import\"}}).DeezerSourceConfig"
         },
         {
-            "$ref": "#/definitions/SubSonicSourceConfig"
+            "$ref": "#/definitions/import(\"/home/foxx/code/multi-scrobbler/src/common/infrastructure/config/source/subsonic\",{assert:{\"resolution-mode\":\"import\"}}).SubSonicSourceConfig"
         },
         {
-            "$ref": "#/definitions/JellySourceConfig"
+            "$ref": "#/definitions/import(\"/home/foxx/code/multi-scrobbler/src/common/infrastructure/config/source/jellyfin\",{assert:{\"resolution-mode\":\"import\"}}).JellySourceConfig"
         },
         {
-            "$ref": "#/definitions/LastfmSourceConfig"
+            "$ref": "#/definitions/import(\"/home/foxx/code/multi-scrobbler/src/common/infrastructure/config/source/lastfm\",{assert:{\"resolution-mode\":\"import\"}}).LastfmSourceConfig"
         }
     ],
     "definitions": {
-        "CommonSourceData": {
+        "Record<string,any>": {
+            "type": "object"
+        },
+        "import(\"/home/foxx/code/multi-scrobbler/src/common/infrastructure/config/client/lastfm\",{assert:{\"resolution-mode\":\"import\"}}).LastfmData": {
             "properties": {
-                "maxPollRetries": {
-                    "default": 0,
-                    "description": "default # of automatic polling restarts on error",
-                    "type": "number"
+                "apiKey": {
+                    "description": "API Key generated from Last.fm account",
+                    "type": "string"
                 },
                 "maxRequestRetries": {
                     "default": 1,
                     "description": "default # of http request retries a source can make before error is thrown",
                     "type": "number"
                 },
-                "options": {
-                    "$ref": "#/definitions/Record<string,any>"
+                "redirectUri": {
+                    "default": "http://localhost:9078/lastfm/callback",
+                    "description": "Optional URI to use for callback. Specify this if callback should be different than the default. MUST have \"lastfm/callback\" in the URL somewhere.",
+                    "type": "string"
                 },
                 "retryMultiplier": {
                     "default": 1.5,
                     "description": "default retry delay multiplier (retry attempt * multiplier = # of seconds to wait before retrying)",
                     "type": "number"
+                },
+                "secret": {
+                    "description": "Secret generated from Last.fm account",
+                    "type": "string"
+                },
+                "session": {
+                    "description": "Optional session id returned from a completed auth flow",
+                    "type": "string"
                 }
             },
+            "required": [
+                "apiKey",
+                "secret"
+            ],
             "type": "object"
         },
-        "DeezerData": {
+        "import(\"/home/foxx/code/multi-scrobbler/src/common/infrastructure/config/source/deezer\",{assert:{\"resolution-mode\":\"import\"}}).DeezerData": {
             "properties": {
                 "clientId": {
                     "description": "deezer client id",
@@ -93,7 +109,7 @@
             ],
             "type": "object"
         },
-        "DeezerSourceConfig": {
+        "import(\"/home/foxx/code/multi-scrobbler/src/common/infrastructure/config/source/deezer\",{assert:{\"resolution-mode\":\"import\"}}).DeezerSourceConfig": {
             "properties": {
                 "clients": {
                     "description": "Restrict scrobbling tracks played from this source to Clients with names from this list",
@@ -103,7 +119,7 @@
                     "type": "array"
                 },
                 "data": {
-                    "$ref": "#/definitions/DeezerData"
+                    "$ref": "#/definitions/import(\"/home/foxx/code/multi-scrobbler/src/common/infrastructure/config/source/deezer\",{assert:{\"resolution-mode\":\"import\"}}).DeezerData"
                 },
                 "name": {
                     "description": "Unique identifier for this source.",
@@ -115,7 +131,30 @@
             ],
             "type": "object"
         },
-        "JellySourceConfig": {
+        "import(\"/home/foxx/code/multi-scrobbler/src/common/infrastructure/config/source/index\",{assert:{\"resolution-mode\":\"import\"}}).CommonSourceData": {
+            "properties": {
+                "maxPollRetries": {
+                    "default": 0,
+                    "description": "default # of automatic polling restarts on error",
+                    "type": "number"
+                },
+                "maxRequestRetries": {
+                    "default": 1,
+                    "description": "default # of http request retries a source can make before error is thrown",
+                    "type": "number"
+                },
+                "options": {
+                    "$ref": "#/definitions/Record<string,any>"
+                },
+                "retryMultiplier": {
+                    "default": 1.5,
+                    "description": "default retry delay multiplier (retry attempt * multiplier = # of seconds to wait before retrying)",
+                    "type": "number"
+                }
+            },
+            "type": "object"
+        },
+        "import(\"/home/foxx/code/multi-scrobbler/src/common/infrastructure/config/source/jellyfin\",{assert:{\"resolution-mode\":\"import\"}}).JellySourceConfig": {
             "properties": {
                 "clients": {
                     "description": "Restrict scrobbling tracks played from this source to Clients with names from this list",
@@ -127,7 +166,7 @@
                 "data": {
                     "allOf": [
                         {
-                            "$ref": "#/definitions/CommonSourceData"
+                            "$ref": "#/definitions/import(\"/home/foxx/code/multi-scrobbler/src/common/infrastructure/config/source/index\",{assert:{\"resolution-mode\":\"import\"}}).CommonSourceData"
                         },
                         {
                             "properties": {
@@ -154,33 +193,7 @@
             ],
             "type": "object"
         },
-        "LastfmData": {
-            "properties": {
-                "apiKey": {
-                    "description": "API Key generated from Last.fm account",
-                    "type": "string"
-                },
-                "redirectUri": {
-                    "default": "http://localhost:9078/lastfm/callback",
-                    "description": "Optional URI to use for callback. Specify this if callback should be different than the default. MUST have \"lastfm/callback\" in the URL somewhere.",
-                    "type": "string"
-                },
-                "secret": {
-                    "description": "Secret generated from Last.fm account",
-                    "type": "string"
-                },
-                "session": {
-                    "description": "Optional session id returned from a completed auth flow",
-                    "type": "string"
-                }
-            },
-            "required": [
-                "apiKey",
-                "secret"
-            ],
-            "type": "object"
-        },
-        "LastfmSourceConfig": {
+        "import(\"/home/foxx/code/multi-scrobbler/src/common/infrastructure/config/source/lastfm\",{assert:{\"resolution-mode\":\"import\"}}).LastfmSourceConfig": {
             "properties": {
                 "clients": {
                     "description": "Restrict scrobbling tracks played from this source to Clients with names from this list",
@@ -198,10 +211,10 @@
                 "data": {
                     "allOf": [
                         {
-                            "$ref": "#/definitions/CommonSourceData"
+                            "$ref": "#/definitions/import(\"/home/foxx/code/multi-scrobbler/src/common/infrastructure/config/source/index\",{assert:{\"resolution-mode\":\"import\"}}).CommonSourceData"
                         },
                         {
-                            "$ref": "#/definitions/LastfmData"
+                            "$ref": "#/definitions/import(\"/home/foxx/code/multi-scrobbler/src/common/infrastructure/config/client/lastfm\",{assert:{\"resolution-mode\":\"import\"}}).LastfmData"
                         }
                     ]
                 },
@@ -215,7 +228,7 @@
             ],
             "type": "object"
         },
-        "PlexSourceConfig": {
+        "import(\"/home/foxx/code/multi-scrobbler/src/common/infrastructure/config/source/plex\",{assert:{\"resolution-mode\":\"import\"}}).PlexSourceConfig": {
             "properties": {
                 "clients": {
                     "description": "Restrict scrobbling tracks played from this source to Clients with names from this list",
@@ -227,7 +240,7 @@
                 "data": {
                     "allOf": [
                         {
-                            "$ref": "#/definitions/CommonSourceData"
+                            "$ref": "#/definitions/import(\"/home/foxx/code/multi-scrobbler/src/common/infrastructure/config/source/index\",{assert:{\"resolution-mode\":\"import\"}}).CommonSourceData"
                         },
                         {
                             "properties": {
@@ -258,10 +271,7 @@
             ],
             "type": "object"
         },
-        "Record<string,any>": {
-            "type": "object"
-        },
-        "SpotifySourceConfig": {
+        "import(\"/home/foxx/code/multi-scrobbler/src/common/infrastructure/config/source/spotify\",{assert:{\"resolution-mode\":\"import\"}}).SpotifySourceConfig": {
             "properties": {
                 "clients": {
                     "description": "Restrict scrobbling tracks played from this source to Clients with names from this list",
@@ -271,7 +281,7 @@
                     "type": "array"
                 },
                 "data": {
-                    "$ref": "#/definitions/SpotifySourceData"
+                    "$ref": "#/definitions/import(\"/home/foxx/code/multi-scrobbler/src/common/infrastructure/config/source/spotify\",{assert:{\"resolution-mode\":\"import\"}}).SpotifySourceData"
                 },
                 "name": {
                     "description": "Unique identifier for this source.",
@@ -283,7 +293,7 @@
             ],
             "type": "object"
         },
-        "SpotifySourceData": {
+        "import(\"/home/foxx/code/multi-scrobbler/src/common/infrastructure/config/source/spotify\",{assert:{\"resolution-mode\":\"import\"}}).SpotifySourceData": {
             "properties": {
                 "clientId": {
                     "description": "spotify client id",
@@ -329,7 +339,7 @@
             ],
             "type": "object"
         },
-        "SubSonicSourceConfig": {
+        "import(\"/home/foxx/code/multi-scrobbler/src/common/infrastructure/config/source/subsonic\",{assert:{\"resolution-mode\":\"import\"}}).SubSonicSourceConfig": {
             "properties": {
                 "clients": {
                     "description": "Restrict scrobbling tracks played from this source to Clients with names from this list",
@@ -339,7 +349,7 @@
                     "type": "array"
                 },
                 "data": {
-                    "$ref": "#/definitions/SubsonicData"
+                    "$ref": "#/definitions/import(\"/home/foxx/code/multi-scrobbler/src/common/infrastructure/config/source/subsonic\",{assert:{\"resolution-mode\":\"import\"}}).SubsonicData"
                 },
                 "name": {
                     "description": "Unique identifier for this source.",
@@ -351,7 +361,7 @@
             ],
             "type": "object"
         },
-        "SubsonicData": {
+        "import(\"/home/foxx/code/multi-scrobbler/src/common/infrastructure/config/source/subsonic\",{assert:{\"resolution-mode\":\"import\"}}).SubsonicData": {
             "properties": {
                 "maxPollRetries": {
                     "default": 0,
@@ -389,7 +399,7 @@
             ],
             "type": "object"
         },
-        "TautulliSourceConfig": {
+        "import(\"/home/foxx/code/multi-scrobbler/src/common/infrastructure/config/source/tautulli\",{assert:{\"resolution-mode\":\"import\"}}).TautulliSourceConfig": {
             "properties": {
                 "clients": {
                     "description": "Restrict scrobbling tracks played from this source to Clients with names from this list",
@@ -401,7 +411,7 @@
                 "data": {
                     "allOf": [
                         {
-                            "$ref": "#/definitions/CommonSourceData"
+                            "$ref": "#/definitions/import(\"/home/foxx/code/multi-scrobbler/src/common/infrastructure/config/source/index\",{assert:{\"resolution-mode\":\"import\"}}).CommonSourceData"
                         },
                         {
                             "properties": {

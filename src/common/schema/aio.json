@@ -1,7 +1,20 @@
 {
     "$schema": "http://json-schema.org/draft-07/schema#",
     "definitions": {
-        "CommonClientData": {
+        "Record<string,any>": {
+            "type": "object"
+        },
+        "import(\"/home/foxx/code/multi-scrobbler/src/common/infrastructure/config/client/clients\",{assert:{\"resolution-mode\":\"import\"}}).ClientAIOConfig": {
+            "anyOf": [
+                {
+                    "$ref": "#/definitions/import(\"/home/foxx/code/multi-scrobbler/src/common/infrastructure/config/client/lastfm\",{assert:{\"resolution-mode\":\"import\"}}).LastfmClientAIOConfig"
+                },
+                {
+                    "$ref": "#/definitions/import(\"/home/foxx/code/multi-scrobbler/src/common/infrastructure/config/client/maloja\",{assert:{\"resolution-mode\":\"import\"}}).MalojaClientAIOConfig"
+                }
+            ]
+        },
+        "import(\"/home/foxx/code/multi-scrobbler/src/common/infrastructure/config/client/index\",{assert:{\"resolution-mode\":\"import\"}}).CommonClientData": {
             "properties": {
                 "maxRequestRetries": {
                     "default": 1,
@@ -19,7 +32,7 @@
                         "verbose": {
                             "properties": {
                                 "match": {
-                                    "$ref": "#/definitions/MatchLoggingOptions"
+                                    "$ref": "#/definitions/import(\"/home/foxx/code/multi-scrobbler/src/common/infrastructure/config/client/index\",{assert:{\"resolution-mode\":\"import\"}}).MatchLoggingOptions"
                                 }
                             },
                             "type": "object"
@@ -35,20 +48,143 @@
             },
             "type": "object"
         },
-        "CommonSourceData": {
+        "import(\"/home/foxx/code/multi-scrobbler/src/common/infrastructure/config/client/index\",{assert:{\"resolution-mode\":\"import\"}}).MatchLoggingOptions": {
             "properties": {
-                "maxPollRetries": {
-                    "default": 0,
-                    "description": "default # of automatic polling restarts on error",
-                    "type": "number"
+                "confidenceBreakdown": {
+                    "type": "boolean"
+                },
+                "onMatch": {
+                    "type": "boolean"
+                },
+                "onNoMatch": {
+                    "type": "boolean"
+                }
+            },
+            "type": "object"
+        },
+        "import(\"/home/foxx/code/multi-scrobbler/src/common/infrastructure/config/client/lastfm\",{assert:{\"resolution-mode\":\"import\"}}).LastfmClientAIOConfig": {
+            "properties": {
+                "configureAs": {
+                    "enum": [
+                        "client",
+                        "source"
+                    ],
+                    "type": "string"
+                },
+                "data": {
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/import(\"/home/foxx/code/multi-scrobbler/src/common/infrastructure/config/client/index\",{assert:{\"resolution-mode\":\"import\"}}).CommonClientData"
+                        },
+                        {
+                            "$ref": "#/definitions/import(\"/home/foxx/code/multi-scrobbler/src/common/infrastructure/config/client/lastfm\",{assert:{\"resolution-mode\":\"import\"}}).LastfmData"
+                        }
+                    ]
+                },
+                "name": {
+                    "description": "Unique identifier for this client. Used with sources to restrict where scrobbles are sent.",
+                    "type": "string"
+                },
+                "type": {
+                    "enum": [
+                        "lastfm"
+                    ],
+                    "type": "string"
+                }
+            },
+            "required": [
+                "data",
+                "name",
+                "type"
+            ],
+            "type": "object"
+        },
+        "import(\"/home/foxx/code/multi-scrobbler/src/common/infrastructure/config/client/lastfm\",{assert:{\"resolution-mode\":\"import\"}}).LastfmData": {
+            "properties": {
+                "apiKey": {
+                    "description": "API Key generated from Last.fm account",
+                    "type": "string"
                 },
                 "maxRequestRetries": {
                     "default": 1,
                     "description": "default # of http request retries a source can make before error is thrown",
                     "type": "number"
                 },
-                "options": {
-                    "$ref": "#/definitions/Record<string,any>"
+                "redirectUri": {
+                    "default": "http://localhost:9078/lastfm/callback",
+                    "description": "Optional URI to use for callback. Specify this if callback should be different than the default. MUST have \"lastfm/callback\" in the URL somewhere.",
+                    "type": "string"
+                },
+                "retryMultiplier": {
+                    "default": 1.5,
+                    "description": "default retry delay multiplier (retry attempt * multiplier = # of seconds to wait before retrying)",
+                    "type": "number"
+                },
+                "secret": {
+                    "description": "Secret generated from Last.fm account",
+                    "type": "string"
+                },
+                "session": {
+                    "description": "Optional session id returned from a completed auth flow",
+                    "type": "string"
+                }
+            },
+            "required": [
+                "apiKey",
+                "secret"
+            ],
+            "type": "object"
+        },
+        "import(\"/home/foxx/code/multi-scrobbler/src/common/infrastructure/config/client/maloja\",{assert:{\"resolution-mode\":\"import\"}}).MalojaClientAIOConfig": {
+            "properties": {
+                "data": {
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/import(\"/home/foxx/code/multi-scrobbler/src/common/infrastructure/config/client/index\",{assert:{\"resolution-mode\":\"import\"}}).CommonClientData"
+                        },
+                        {
+                            "properties": {
+                                "apiKey": {
+                                    "description": "API Key for Maloja server",
+                                    "type": "string"
+                                },
+                                "url": {
+                                    "description": "URL for maloja server",
+                                    "type": "string"
+                                }
+                            },
+                            "required": [
+                                "apiKey",
+                                "url"
+                            ],
+                            "type": "object"
+                        }
+                    ]
+                },
+                "name": {
+                    "description": "Unique identifier for this client. Used with sources to restrict where scrobbles are sent.",
+                    "type": "string"
+                },
+                "type": {
+                    "enum": [
+                        "maloja"
+                    ],
+                    "type": "string"
+                }
+            },
+            "required": [
+                "data",
+                "name",
+                "type"
+            ],
+            "type": "object"
+        },
+        "import(\"/home/foxx/code/multi-scrobbler/src/common/infrastructure/config/common\",{assert:{\"resolution-mode\":\"import\"}}).RequestRetryOptions": {
+            "properties": {
+                "maxRequestRetries": {
+                    "default": 1,
+                    "description": "default # of http request retries a source can make before error is thrown",
+                    "type": "number"
                 },
                 "retryMultiplier": {
                     "default": 1.5,
@@ -58,7 +194,7 @@
             },
             "type": "object"
         },
-        "DeezerData": {
+        "import(\"/home/foxx/code/multi-scrobbler/src/common/infrastructure/config/source/deezer\",{assert:{\"resolution-mode\":\"import\"}}).DeezerData": {
             "properties": {
                 "clientId": {
                     "description": "deezer client id",
@@ -104,7 +240,7 @@
             ],
             "type": "object"
         },
-        "DeezerSourceAIOConfig": {
+        "import(\"/home/foxx/code/multi-scrobbler/src/common/infrastructure/config/source/deezer\",{assert:{\"resolution-mode\":\"import\"}}).DeezerSourceAIOConfig": {
             "properties": {
                 "clients": {
                     "description": "Restrict scrobbling tracks played from this source to Clients with names from this list",
@@ -114,7 +250,7 @@
                     "type": "array"
                 },
                 "data": {
-                    "$ref": "#/definitions/DeezerData"
+                    "$ref": "#/definitions/import(\"/home/foxx/code/multi-scrobbler/src/common/infrastructure/config/source/deezer\",{assert:{\"resolution-mode\":\"import\"}}).DeezerData"
                 },
                 "name": {
                     "description": "Unique identifier for this source.",
@@ -133,7 +269,50 @@
             ],
             "type": "object"
         },
-        "JellySourceAIOConfig": {
+        "import(\"/home/foxx/code/multi-scrobbler/src/common/infrastructure/config/source/index\",{assert:{\"resolution-mode\":\"import\"}}).CommonSourceData": {
+            "properties": {
+                "maxPollRetries": {
+                    "default": 0,
+                    "description": "default # of automatic polling restarts on error",
+                    "type": "number"
+                },
+                "maxRequestRetries": {
+                    "default": 1,
+                    "description": "default # of http request retries a source can make before error is thrown",
+                    "type": "number"
+                },
+                "options": {
+                    "$ref": "#/definitions/Record<string,any>"
+                },
+                "retryMultiplier": {
+                    "default": 1.5,
+                    "description": "default retry delay multiplier (retry attempt * multiplier = # of seconds to wait before retrying)",
+                    "type": "number"
+                }
+            },
+            "type": "object"
+        },
+        "import(\"/home/foxx/code/multi-scrobbler/src/common/infrastructure/config/source/index\",{assert:{\"resolution-mode\":\"import\"}}).SourceRetryOptions": {
+            "properties": {
+                "maxPollRetries": {
+                    "default": 0,
+                    "description": "default # of automatic polling restarts on error",
+                    "type": "number"
+                },
+                "maxRequestRetries": {
+                    "default": 1,
+                    "description": "default # of http request retries a source can make before error is thrown",
+                    "type": "number"
+                },
+                "retryMultiplier": {
+                    "default": 1.5,
+                    "description": "default retry delay multiplier (retry attempt * multiplier = # of seconds to wait before retrying)",
+                    "type": "number"
+                }
+            },
+            "type": "object"
+        },
+        "import(\"/home/foxx/code/multi-scrobbler/src/common/infrastructure/config/source/jellyfin\",{assert:{\"resolution-mode\":\"import\"}}).JellySourceAIOConfig": {
             "properties": {
                 "clients": {
                     "description": "Restrict scrobbling tracks played from this source to Clients with names from this list",
@@ -145,7 +324,7 @@
                 "data": {
                     "allOf": [
                         {
-                            "$ref": "#/definitions/CommonSourceData"
+                            "$ref": "#/definitions/import(\"/home/foxx/code/multi-scrobbler/src/common/infrastructure/config/source/index\",{assert:{\"resolution-mode\":\"import\"}}).CommonSourceData"
                         },
                         {
                             "properties": {
@@ -179,7 +358,7 @@
             ],
             "type": "object"
         },
-        "LastFmSouceAIOConfig": {
+        "import(\"/home/foxx/code/multi-scrobbler/src/common/infrastructure/config/source/lastfm\",{assert:{\"resolution-mode\":\"import\"}}).LastFmSouceAIOConfig": {
             "properties": {
                 "clients": {
                     "description": "Restrict scrobbling tracks played from this source to Clients with names from this list",
@@ -197,10 +376,10 @@
                 "data": {
                     "allOf": [
                         {
-                            "$ref": "#/definitions/CommonSourceData"
+                            "$ref": "#/definitions/import(\"/home/foxx/code/multi-scrobbler/src/common/infrastructure/config/source/index\",{assert:{\"resolution-mode\":\"import\"}}).CommonSourceData"
                         },
                         {
-                            "$ref": "#/definitions/LastfmData"
+                            "$ref": "#/definitions/import(\"/home/foxx/code/multi-scrobbler/src/common/infrastructure/config/client/lastfm\",{assert:{\"resolution-mode\":\"import\"}}).LastfmData"
                         }
                     ]
                 },
@@ -221,128 +400,7 @@
             ],
             "type": "object"
         },
-        "LastfmClientAIOConfig": {
-            "properties": {
-                "configureAs": {
-                    "enum": [
-                        "client",
-                        "source"
-                    ],
-                    "type": "string"
-                },
-                "data": {
-                    "allOf": [
-                        {
-                            "$ref": "#/definitions/CommonClientData"
-                        },
-                        {
-                            "$ref": "#/definitions/LastfmData"
-                        }
-                    ]
-                },
-                "name": {
-                    "description": "Unique identifier for this client. Used with sources to restrict where scrobbles are sent.",
-                    "type": "string"
-                },
-                "type": {
-                    "enum": [
-                        "lastfm"
-                    ],
-                    "type": "string"
-                }
-            },
-            "required": [
-                "data",
-                "name",
-                "type"
-            ],
-            "type": "object"
-        },
-        "LastfmData": {
-            "properties": {
-                "apiKey": {
-                    "description": "API Key generated from Last.fm account",
-                    "type": "string"
-                },
-                "redirectUri": {
-                    "default": "http://localhost:9078/lastfm/callback",
-                    "description": "Optional URI to use for callback. Specify this if callback should be different than the default. MUST have \"lastfm/callback\" in the URL somewhere.",
-                    "type": "string"
-                },
-                "secret": {
-                    "description": "Secret generated from Last.fm account",
-                    "type": "string"
-                },
-                "session": {
-                    "description": "Optional session id returned from a completed auth flow",
-                    "type": "string"
-                }
-            },
-            "required": [
-                "apiKey",
-                "secret"
-            ],
-            "type": "object"
-        },
-        "MalojaClientAIOConfig": {
-            "properties": {
-                "data": {
-                    "allOf": [
-                        {
-                            "$ref": "#/definitions/CommonClientData"
-                        },
-                        {
-                            "properties": {
-                                "apiKey": {
-                                    "description": "API Key for Maloja server",
-                                    "type": "string"
-                                },
-                                "url": {
-                                    "description": "URL for maloja server",
-                                    "type": "string"
-                                }
-                            },
-                            "required": [
-                                "apiKey",
-                                "url"
-                            ],
-                            "type": "object"
-                        }
-                    ]
-                },
-                "name": {
-                    "description": "Unique identifier for this client. Used with sources to restrict where scrobbles are sent.",
-                    "type": "string"
-                },
-                "type": {
-                    "enum": [
-                        "maloja"
-                    ],
-                    "type": "string"
-                }
-            },
-            "required": [
-                "data",
-                "name",
-                "type"
-            ],
-            "type": "object"
-        },
-        "MatchLoggingOptions": {
-            "properties": {
-                "confidenceBreakdown": {
-                    "type": "boolean"
-                },
-                "onMatch": {
-                    "type": "boolean"
-                },
-                "onNoMatch": {
-                    "type": "boolean"
-                }
-            },
-            "type": "object"
-        },
-        "PlexSourceAIOConfig": {
+        "import(\"/home/foxx/code/multi-scrobbler/src/common/infrastructure/config/source/plex\",{assert:{\"resolution-mode\":\"import\"}}).PlexSourceAIOConfig": {
             "properties": {
                 "clients": {
                     "description": "Restrict scrobbling tracks played from this source to Clients with names from this list",
@@ -354,7 +412,7 @@
                 "data": {
                     "allOf": [
                         {
-                            "$ref": "#/definitions/CommonSourceData"
+                            "$ref": "#/definitions/import(\"/home/foxx/code/multi-scrobbler/src/common/infrastructure/config/source/index\",{assert:{\"resolution-mode\":\"import\"}}).CommonSourceData"
                         },
                         {
                             "properties": {
@@ -392,45 +450,32 @@
             ],
             "type": "object"
         },
-        "Record<string,any>": {
-            "type": "object"
-        },
-        "RequestRetryOptions": {
-            "properties": {
-                "maxRequestRetries": {
-                    "default": 1,
-                    "description": "default # of http request retries a source can make before error is thrown",
-                    "type": "number"
+        "import(\"/home/foxx/code/multi-scrobbler/src/common/infrastructure/config/source/sources\",{assert:{\"resolution-mode\":\"import\"}}).SourceAIOConfig": {
+            "anyOf": [
+                {
+                    "$ref": "#/definitions/import(\"/home/foxx/code/multi-scrobbler/src/common/infrastructure/config/source/spotify\",{assert:{\"resolution-mode\":\"import\"}}).SpotifySourceAIOConfig"
                 },
-                "retryMultiplier": {
-                    "default": 1.5,
-                    "description": "default retry delay multiplier (retry attempt * multiplier = # of seconds to wait before retrying)",
-                    "type": "number"
+                {
+                    "$ref": "#/definitions/import(\"/home/foxx/code/multi-scrobbler/src/common/infrastructure/config/source/plex\",{assert:{\"resolution-mode\":\"import\"}}).PlexSourceAIOConfig"
+                },
+                {
+                    "$ref": "#/definitions/import(\"/home/foxx/code/multi-scrobbler/src/common/infrastructure/config/source/tautulli\",{assert:{\"resolution-mode\":\"import\"}}).TautulliSourceAIOConfig"
+                },
+                {
+                    "$ref": "#/definitions/import(\"/home/foxx/code/multi-scrobbler/src/common/infrastructure/config/source/deezer\",{assert:{\"resolution-mode\":\"import\"}}).DeezerSourceAIOConfig"
+                },
+                {
+                    "$ref": "#/definitions/import(\"/home/foxx/code/multi-scrobbler/src/common/infrastructure/config/source/subsonic\",{assert:{\"resolution-mode\":\"import\"}}).SubsonicSourceAIOConfig"
+                },
+                {
+                    "$ref": "#/definitions/import(\"/home/foxx/code/multi-scrobbler/src/common/infrastructure/config/source/jellyfin\",{assert:{\"resolution-mode\":\"import\"}}).JellySourceAIOConfig"
+                },
+                {
+                    "$ref": "#/definitions/import(\"/home/foxx/code/multi-scrobbler/src/common/infrastructure/config/source/lastfm\",{assert:{\"resolution-mode\":\"import\"}}).LastFmSouceAIOConfig"
                 }
-            },
-            "type": "object"
+            ]
         },
-        "SourceRetryOptions": {
-            "properties": {
-                "maxPollRetries": {
-                    "default": 0,
-                    "description": "default # of automatic polling restarts on error",
-                    "type": "number"
-                },
-                "maxRequestRetries": {
-                    "default": 1,
-                    "description": "default # of http request retries a source can make before error is thrown",
-                    "type": "number"
-                },
-                "retryMultiplier": {
-                    "default": 1.5,
-                    "description": "default retry delay multiplier (retry attempt * multiplier = # of seconds to wait before retrying)",
-                    "type": "number"
-                }
-            },
-            "type": "object"
-        },
-        "SpotifySourceAIOConfig": {
+        "import(\"/home/foxx/code/multi-scrobbler/src/common/infrastructure/config/source/spotify\",{assert:{\"resolution-mode\":\"import\"}}).SpotifySourceAIOConfig": {
             "properties": {
                 "clients": {
                     "description": "Restrict scrobbling tracks played from this source to Clients with names from this list",
@@ -440,7 +485,7 @@
                     "type": "array"
                 },
                 "data": {
-                    "$ref": "#/definitions/SpotifySourceData"
+                    "$ref": "#/definitions/import(\"/home/foxx/code/multi-scrobbler/src/common/infrastructure/config/source/spotify\",{assert:{\"resolution-mode\":\"import\"}}).SpotifySourceData"
                 },
                 "name": {
                     "description": "Unique identifier for this source.",
@@ -459,7 +504,7 @@
             ],
             "type": "object"
         },
-        "SpotifySourceData": {
+        "import(\"/home/foxx/code/multi-scrobbler/src/common/infrastructure/config/source/spotify\",{assert:{\"resolution-mode\":\"import\"}}).SpotifySourceData": {
             "properties": {
                 "clientId": {
                     "description": "spotify client id",
@@ -505,7 +550,7 @@
             ],
             "type": "object"
         },
-        "SubsonicData": {
+        "import(\"/home/foxx/code/multi-scrobbler/src/common/infrastructure/config/source/subsonic\",{assert:{\"resolution-mode\":\"import\"}}).SubsonicData": {
             "properties": {
                 "maxPollRetries": {
                     "default": 0,
@@ -543,7 +588,7 @@
             ],
             "type": "object"
         },
-        "SubsonicSourceAIOConfig": {
+        "import(\"/home/foxx/code/multi-scrobbler/src/common/infrastructure/config/source/subsonic\",{assert:{\"resolution-mode\":\"import\"}}).SubsonicSourceAIOConfig": {
             "properties": {
                 "clients": {
                     "description": "Restrict scrobbling tracks played from this source to Clients with names from this list",
@@ -553,7 +598,7 @@
                     "type": "array"
                 },
                 "data": {
-                    "$ref": "#/definitions/SubsonicData"
+                    "$ref": "#/definitions/import(\"/home/foxx/code/multi-scrobbler/src/common/infrastructure/config/source/subsonic\",{assert:{\"resolution-mode\":\"import\"}}).SubsonicData"
                 },
                 "name": {
                     "description": "Unique identifier for this source.",
@@ -572,7 +617,7 @@
             ],
             "type": "object"
         },
-        "TautulliSourceAIOConfig": {
+        "import(\"/home/foxx/code/multi-scrobbler/src/common/infrastructure/config/source/tautulli\",{assert:{\"resolution-mode\":\"import\"}}).TautulliSourceAIOConfig": {
             "properties": {
                 "clients": {
                     "description": "Restrict scrobbling tracks played from this source to Clients with names from this list",
@@ -584,7 +629,7 @@
                 "data": {
                     "allOf": [
                         {
-                            "$ref": "#/definitions/CommonSourceData"
+                            "$ref": "#/definitions/import(\"/home/foxx/code/multi-scrobbler/src/common/infrastructure/config/source/index\",{assert:{\"resolution-mode\":\"import\"}}).CommonSourceData"
                         },
                         {
                             "properties": {
@@ -625,49 +670,20 @@
     },
     "properties": {
         "clientDefaults": {
-            "$ref": "#/definitions/RequestRetryOptions"
+            "$ref": "#/definitions/import(\"/home/foxx/code/multi-scrobbler/src/common/infrastructure/config/common\",{assert:{\"resolution-mode\":\"import\"}}).RequestRetryOptions"
         },
         "clients": {
             "items": {
-                "anyOf": [
-                    {
-                        "$ref": "#/definitions/MalojaClientAIOConfig"
-                    },
-                    {
-                        "$ref": "#/definitions/LastfmClientAIOConfig"
-                    }
-                ]
+                "$ref": "#/definitions/import(\"/home/foxx/code/multi-scrobbler/src/common/infrastructure/config/client/clients\",{assert:{\"resolution-mode\":\"import\"}}).ClientAIOConfig"
             },
             "type": "array"
         },
         "sourceDefaults": {
-            "$ref": "#/definitions/SourceRetryOptions"
+            "$ref": "#/definitions/import(\"/home/foxx/code/multi-scrobbler/src/common/infrastructure/config/source/index\",{assert:{\"resolution-mode\":\"import\"}}).SourceRetryOptions"
         },
         "sources": {
             "items": {
-                "anyOf": [
-                    {
-                        "$ref": "#/definitions/SpotifySourceAIOConfig"
-                    },
-                    {
-                        "$ref": "#/definitions/PlexSourceAIOConfig"
-                    },
-                    {
-                        "$ref": "#/definitions/TautulliSourceAIOConfig"
-                    },
-                    {
-                        "$ref": "#/definitions/DeezerSourceAIOConfig"
-                    },
-                    {
-                        "$ref": "#/definitions/SubsonicSourceAIOConfig"
-                    },
-                    {
-                        "$ref": "#/definitions/JellySourceAIOConfig"
-                    },
-                    {
-                        "$ref": "#/definitions/LastFmSouceAIOConfig"
-                    }
-                ]
+                "$ref": "#/definitions/import(\"/home/foxx/code/multi-scrobbler/src/common/infrastructure/config/source/sources\",{assert:{\"resolution-mode\":\"import\"}}).SourceAIOConfig"
             },
             "type": "array"
         }

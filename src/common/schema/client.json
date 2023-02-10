@@ -2,14 +2,14 @@
     "$schema": "http://json-schema.org/draft-07/schema#",
     "anyOf": [
         {
-            "$ref": "#/definitions/MalojaClientConfig"
+            "$ref": "#/definitions/import(\"/home/foxx/code/multi-scrobbler/src/common/infrastructure/config/client/lastfm\",{assert:{\"resolution-mode\":\"import\"}}).LastfmClientConfig"
         },
         {
-            "$ref": "#/definitions/LastfmClientConfig"
+            "$ref": "#/definitions/import(\"/home/foxx/code/multi-scrobbler/src/common/infrastructure/config/client/maloja\",{assert:{\"resolution-mode\":\"import\"}}).MalojaClientConfig"
         }
     ],
     "definitions": {
-        "CommonClientData": {
+        "import(\"/home/foxx/code/multi-scrobbler/src/common/infrastructure/config/client/index\",{assert:{\"resolution-mode\":\"import\"}}).CommonClientData": {
             "properties": {
                 "maxRequestRetries": {
                     "default": 1,
@@ -27,7 +27,7 @@
                         "verbose": {
                             "properties": {
                                 "match": {
-                                    "$ref": "#/definitions/MatchLoggingOptions"
+                                    "$ref": "#/definitions/import(\"/home/foxx/code/multi-scrobbler/src/common/infrastructure/config/client/index\",{assert:{\"resolution-mode\":\"import\"}}).MatchLoggingOptions"
                                 }
                             },
                             "type": "object"
@@ -43,7 +43,21 @@
             },
             "type": "object"
         },
-        "LastfmClientConfig": {
+        "import(\"/home/foxx/code/multi-scrobbler/src/common/infrastructure/config/client/index\",{assert:{\"resolution-mode\":\"import\"}}).MatchLoggingOptions": {
+            "properties": {
+                "confidenceBreakdown": {
+                    "type": "boolean"
+                },
+                "onMatch": {
+                    "type": "boolean"
+                },
+                "onNoMatch": {
+                    "type": "boolean"
+                }
+            },
+            "type": "object"
+        },
+        "import(\"/home/foxx/code/multi-scrobbler/src/common/infrastructure/config/client/lastfm\",{assert:{\"resolution-mode\":\"import\"}}).LastfmClientConfig": {
             "properties": {
                 "configureAs": {
                     "enum": [
@@ -55,10 +69,10 @@
                 "data": {
                     "allOf": [
                         {
-                            "$ref": "#/definitions/CommonClientData"
+                            "$ref": "#/definitions/import(\"/home/foxx/code/multi-scrobbler/src/common/infrastructure/config/client/index\",{assert:{\"resolution-mode\":\"import\"}}).CommonClientData"
                         },
                         {
-                            "$ref": "#/definitions/LastfmData"
+                            "$ref": "#/definitions/import(\"/home/foxx/code/multi-scrobbler/src/common/infrastructure/config/client/lastfm\",{assert:{\"resolution-mode\":\"import\"}}).LastfmData"
                         }
                     ]
                 },
@@ -73,16 +87,26 @@
             ],
             "type": "object"
         },
-        "LastfmData": {
+        "import(\"/home/foxx/code/multi-scrobbler/src/common/infrastructure/config/client/lastfm\",{assert:{\"resolution-mode\":\"import\"}}).LastfmData": {
             "properties": {
                 "apiKey": {
                     "description": "API Key generated from Last.fm account",
                     "type": "string"
                 },
+                "maxRequestRetries": {
+                    "default": 1,
+                    "description": "default # of http request retries a source can make before error is thrown",
+                    "type": "number"
+                },
                 "redirectUri": {
                     "default": "http://localhost:9078/lastfm/callback",
                     "description": "Optional URI to use for callback. Specify this if callback should be different than the default. MUST have \"lastfm/callback\" in the URL somewhere.",
                     "type": "string"
+                },
+                "retryMultiplier": {
+                    "default": 1.5,
+                    "description": "default retry delay multiplier (retry attempt * multiplier = # of seconds to wait before retrying)",
+                    "type": "number"
                 },
                 "secret": {
                     "description": "Secret generated from Last.fm account",
@@ -99,12 +123,12 @@
             ],
             "type": "object"
         },
-        "MalojaClientConfig": {
+        "import(\"/home/foxx/code/multi-scrobbler/src/common/infrastructure/config/client/maloja\",{assert:{\"resolution-mode\":\"import\"}}).MalojaClientConfig": {
             "properties": {
                 "data": {
                     "allOf": [
                         {
-                            "$ref": "#/definitions/CommonClientData"
+                            "$ref": "#/definitions/import(\"/home/foxx/code/multi-scrobbler/src/common/infrastructure/config/client/index\",{assert:{\"resolution-mode\":\"import\"}}).CommonClientData"
                         },
                         {
                             "properties": {
@@ -134,20 +158,6 @@
                 "data",
                 "name"
             ],
-            "type": "object"
-        },
-        "MatchLoggingOptions": {
-            "properties": {
-                "confidenceBreakdown": {
-                    "type": "boolean"
-                },
-                "onMatch": {
-                    "type": "boolean"
-                },
-                "onNoMatch": {
-                    "type": "boolean"
-                }
-            },
             "type": "object"
         }
     }
