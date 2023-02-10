@@ -1,0 +1,19 @@
+multi-scrobbler:
+  image: foxxmd/multi-scrobbler
+  container_name: multi-scrobbler
+  environment:
+    - TZ=Etc/GMT # Specify timezone from TZ Database name found here https://en.wikipedia.org/wiki/List_of_tz_database_time_zones
+    #- SPOTIFY_CLIENT_ID=
+    #- SPOTIFY_CLIENT_SECRET=
+    #- SPOTIFY_REDIRECT_URI=http://multi-scrobbler-host-IP:9078/callback ## Need to be whitelisted in Spotify dashboard and is used for creating the connection first time
+    #- MALOJA_URL=http://maloja:42010
+    #- MALOJA_API_KEY=
+    #- PUID=1000 # required if running docker on linux host, see main README Docker setup instructions
+    #- PGID=1000 # required if running docker on linux host, see main README Docker setup instructions
+  volumes:
+    - /path_on_host/multi-scrobbler-config:/config
+  #networks:
+  #  - (optional to add container to the same bridge network that maloja is inside to be able to use docker internal networking & dns to resolve and connect to maloja URL via http://maloja:port)
+  ports:
+    - 9078:9078 # first port is the HOST port multi-scrobbler will serve UI on
+  restart: unless-stopped
