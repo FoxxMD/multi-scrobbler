@@ -12,7 +12,7 @@ import {Logger} from "winston";
 import {SourceAIOConfig, SourceConfig} from "../common/infrastructure/config/source/sources.js";
 import {DeezerData, DeezerSourceConfig} from "../common/infrastructure/config/source/deezer.js";
 import {LastfmClientConfig} from "../common/infrastructure/config/client/lastfm.js";
-import {JellySourceConfig} from "../common/infrastructure/config/source/jellyfin.js";
+import {JellyData, JellySourceConfig} from "../common/infrastructure/config/source/jellyfin.js";
 import {SubsonicData, SubSonicSourceConfig} from "../common/infrastructure/config/source/subsonic.js";
 import {TautulliSourceConfig} from "../common/infrastructure/config/source/tautulli.js";
 import {PlexSourceConfig} from "../common/infrastructure/config/source/plex.js";
@@ -164,9 +164,9 @@ export default class ScrobbleSources {
                     }
                     break;
                 case 'jellyfin':
-                    const j = {
-                        user: process.env.JELLYFIN_USER,
-                        server: process.env.JELLYFIN_SERVER,
+                    const j: JellyData = {
+                        users: process.env.JELLYFIN_USER,
+                        servers: process.env.JELLYFIN_SERVER,
                     };
                     if (!Object.values(j).every(x => x === undefined)) {
                         configs.push({

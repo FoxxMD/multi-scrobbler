@@ -21,7 +21,7 @@ export default class JellyfinSource extends MemorySource {
             this.users = undefined;
         } else {
             if (!Array.isArray(users)) {
-                this.users = [users];
+                this.users = users.split(',')
             } else {
                 this.users = users;
             }
@@ -32,7 +32,7 @@ export default class JellyfinSource extends MemorySource {
             this.servers = undefined;
         } else {
             if (!Array.isArray(servers)) {
-                this.servers = [servers];
+                this.servers = servers.split(',')
             } else {
                 this.servers = servers;
             }
