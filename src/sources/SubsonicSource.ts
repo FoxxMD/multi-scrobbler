@@ -7,8 +7,6 @@ import MemorySource from "./MemorySource.js";
 import {SubSonicSourceConfig} from "../common/infrastructure/config/source/subsonic.js";
 import {InternalConfig, PlayObject} from "../common/infrastructure/Atomic.js";
 import {RecentlyPlayedOptions} from "./AbstractSource.js";
-import Subsonic from 'subsonic-api';
-// TODO replace homebrew api with subsonic-api
 
 dayjs.extend(isSameOrAfter);
 
