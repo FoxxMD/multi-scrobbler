@@ -86,7 +86,10 @@ const logConfig = {
 }
 
 const availableLevels = ['info', 'debug'];
-const logPath = process.env.LOG_DIR || path.resolve(projectDir, `./logs`);
+let logPath = path.resolve(projectDir, `./logs`);
+if(typeof process.env.CONFIG_DIR === 'string') {
+    logPath = path.resolve(process.env.CONFIG_DIR, './logs');
+}
 const localUrl = `http://localhost:${port}`;
 
 const rotateTransport = new winston.transports.DailyRotateFile({
