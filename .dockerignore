@@ -4,10 +4,11 @@ npm-debug.log
 Dockerfile
 .dockerignore
 .gitignore
+.github
 .git
-config/currentCreds.json
 *.log
-config/maloja.json
-config/spotify.json
-config/config.json
+.idea
+config/*.json
+config/*.bak
 /docs
+/logs

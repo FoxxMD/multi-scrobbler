@@ -117,12 +117,9 @@ dist
 .yarn/install-state.gz
 .pnp.*
 
-*.json
+config/*.json
 *.txt
 .idea/
-
-!tsconfig.json
-!src/common/infrastructure/schema/*.json
 
 src/**/**.js
 src/**/**.js.map

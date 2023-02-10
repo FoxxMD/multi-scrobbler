@@ -1,0 +1,9 @@
+#!/usr/bin/with-contenv bash
+
+# used https://github.com/linuxserver/docker-plex as a template
+
+# NODE_ARGS can be passed by ENV in docker command like "docker run foxxmd/context-mod -e NODE_ARGS=--optimize_for_size"
+
+exec \
+	s6-setuidgid abc \
+	/usr/local/bin/node $NODE_ARGS /app/src/index.js run
