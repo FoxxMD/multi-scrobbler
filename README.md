@@ -106,7 +106,7 @@ To get the UID and GID for the current user run these commands from a terminal:
 ##### Examples
 
 ```bash
-docker run -e "SPOTIFY_CLIENT_ID=yourId" -e "SPOTIFY_CLIENT_SECRET=yourSecret" -e "MALOJA_URL=http://domain.tld" -e "MALOJA_API_KEY=1234" -e "PUID=1000" -e "PGID=1000" -p 9078:9078 -v /path/on/host/config:/home/node/app/config foxxmd/multi-scrobbler
+docker run -e "SPOTIFY_CLIENT_ID=yourId" -e "SPOTIFY_CLIENT_SECRET=yourSecret" -e "MALOJA_URL=http://domain.tld" -e "MALOJA_API_KEY=1234" -e "PUID=1000" -e "PGID=1000" -p 9078:9078 -v /path/on/host/config:/config foxxmd/multi-scrobbler
 ```
 
 See the [docker-compose.yml](/docker-compose.yml) file for how to use with docker-compose.
