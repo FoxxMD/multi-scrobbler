@@ -4,15 +4,17 @@
 
 POPULATE_EXAMPLES=false
 
-echo "Config Directory: ${CONFIG_DIR}"
+echo "-------------------------------------"
+echo -e "Setting up multi-scrobbler config directory based on CONFIG_DIR env: ${CONFIG_DIR}\n"
+
 # make config folder if it does not exist
 if [ ! -d "${CONFIG_DIR}" ]; then
-  echo "${CONFIG_DIR} does not exist! Creating..."
+  echo "Directory does not exist! Creating..."
   POPULATE_EXAMPLES=true
   mkdir -p "${CONFIG_DIR}"
 else
   if [ "$(ls -A ${CONFIG_DIR})" ]; then
-       echo "${CONFIG_DIR} is not empty, not creating examples"
+       echo "Directory is not empty, not creating examples."
     else
       POPULATE_EXAMPLES=true
     fi
@@ -20,9 +22,12 @@ fi
 
 # add example configs
 if [ "$POPULATE_EXAMPLES" = true ]; then
-  echo "${CONFIG_DIR} is empty, adding examples..."
+  echo "Directory is empty, adding examples..."
   cp -r /app/config/. "${CONFIG_DIR}"/
 fi
 
 # permissions
+echo "chown'ing directory to ensure correct permissions."
 chown -R abc:abc "${CONFIG_DIR}"
+echo "Done!"
+echo -e "-------------------------------------\n"

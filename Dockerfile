@@ -2,8 +2,8 @@ FROM lsiobase/alpine:3.17 as base
 
 ENV TZ=Etc/GMT
 
-# borrowed from node/alpine:3.15
-# https://github.com/nodejs/docker-node/blob/main/16/alpine3.15/Dockerfile
+# borrowed from node/alpine:3.17
+# https://github.com/nodejs/docker-node/blob/main/18/alpine3.17/Dockerfile
 #
 # Start of node docker stuff
 #
