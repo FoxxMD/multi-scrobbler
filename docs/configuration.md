@@ -179,8 +179,6 @@ Client ID/Secret. Make sure to also whitelist your redirect URI in the applicati
 |----------------------------|-----------|----------------------------------|----------------------------------------------------|
 | `SPOTIFY_CLIENT_ID`        | Yes       |                                  |                                                    |
 | `SPOTIFY_CLIENT_SECRET`    | Yes       |                                  |                                                    |
-| `SPOTIFY_ACCESS_TOKEN`     | No         |                                  | Must include either this token or client id/secret |
-| `SPOTIFY_REFRESH_TOKEN`    | No         |                                  | If using access token this is also recommended      |
 | `SPOTIFY_REDIRECT_URI`     | No         | `http://localhost:9078/callback` | URI must end in `callback`                         |
 
 ### JSON-Based
@@ -302,7 +300,6 @@ After starting multi-scrobbler with credentials in-place open the dashboard (`ht
 |----------------------------|-----------|-----------------------------------------|----------------------------------------------------|
 | `DEEZER_CLIENT_ID`        | Yes       |                                         |  Your **Application ID**                            |
 | `DEEZER_CLIENT_SECRET`    | Yes       |                                         |  Your **Secret Key**                                |
-| `DEEZER_ACCESS_TOKEN`     | No         |                                         | Must include either this token or client id/secret |
 | `DEEZER_REDIRECT_URI`     | No         | `http://localhost:9078/deezer/callback` | URI must end in `deezer/callback`         |
 
 ### JSON-Based
