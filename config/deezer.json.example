@@ -3,8 +3,8 @@
     "name": "FoxxMDeezer",
     "clients": [],                                           // optional, list of scrobble clients (by config name) that this source should scrobble to. Using an empty list or not including this property will make this source scrobble to all clients.
     "data": {
-      "clientId": "string",                                  // deezer APPLICATION ID -- required if not providing access token
-      "clientSecret": "string",                              // deezer SECRET KEY -- required if not providing access token
+      "clientId": "string",                                  // deezer APPLICATION ID
+      "clientSecret": "string",                              // deezer SECRET KEY
       "redirectUri": "http://localhost:9078/deezer/callback",// deezer redirect URI -- required only if not the default shown here. URI must end in "deezer/callback"
       "interval": 60,                                        // optional, how long to wait before calling spotify for new tracks
       // ALSO see config.json.example for default properties that can be overridden here (in sourceDefaults)
