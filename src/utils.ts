@@ -3,6 +3,7 @@ import dayjs, {Dayjs} from 'dayjs';
 import utc from 'dayjs/plugin/utc.js';
 import winston, {Logger} from "winston";
 import stringify from 'safe-stable-stringify';
+import JSON5 from 'json5';
 import { TimeoutError, WebapiError } from "spotify-web-api-node/src/response-error.js";
 import { Response } from 'superagent';
 import Ajv, {Schema} from 'ajv';
@@ -17,7 +18,7 @@ export async function readJson(this: any, path: any, {logErrors = true, throwOnN
     try {
         await promises.access(path, constants.R_OK);
         const data = await promises.readFile(path);
-        return JSON.parse(data as unknown as string);
+        return JSON5.parse(data as unknown as string);
     } catch (e) {
         const {code} = e;
         if (code === 'ENOENT') {

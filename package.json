@@ -45,6 +45,7 @@
     "express": "^4.17.1",
     "express-session": "^1.17.2",
     "formidable": "^3.2.4",
+    "json5": "^2.2.3",
     "lastfm-node-client": "^2.2.0",
     "passport": "^0.5.0",
     "passport-deezer": "^0.2.0",
@@ -79,7 +80,7 @@
   },
   "overrides": {
     "spotify-web-api-node": {
-        "superagent": "$superagent"
+      "superagent": "$superagent"
     }
   }
 }
