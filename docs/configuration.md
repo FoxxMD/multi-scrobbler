@@ -35,7 +35,7 @@
 
 # Configuration Overview
 
-[**Sources** and **Clients**](/README.md#how-does-multi-scrobbler--ms--work) are configured using environmental (ENV) variables and/or json files.
+[**Sources** and **Clients**](/README.md#how-does-multi-scrobbler-ms-work) are configured using environmental (ENV) variables and/or json files.
 
 **MS will parse configuration from both configuration types.** You can mix and match configurations but it is generally better to stick to one or the other.
 
