@@ -1,28 +1,93 @@
-# General
+* [Configuration Overview](#configuration-overview)
+  * [ENV-Based Configuration](#env-based-configuration)
+  * [File-Based Configuration](#file-based-configuration)
+    * [All-in-One File Configuration](#all-in-one-file-configuration)
+    * [Specific File Configuration](#specific-file-configuration)
+* [Source Configurations](#source-configurations)
+  * [Spotify](#spotify)
+    * [ENV-Based](#env-based)
+    * [JSON-Based](#json-based)
+  * [Plex](#plex)
+    * [ENV-Based](#env-based-1)
+    * [JSON-Based](#json-based-1)
+  * [Tautulli](#tautulli)
+    * [ENV-Based](#env-based-2)
+    * [JSON-Based](#json-based-2)
+  * [Subsonic](#subsonic)
+    * [ENV-Based](#env-based-3)
+    * [JSON-Based](#json-based-3)
+  * [Jellyfin](#jellyfin)
+    * [ENV-Based](#env-based-4)
+    * [JSON-Based](#json-based-4)
+  * [Last.fm (Source)](#lastfm--source-)
+    * [ENV-Based](#env-based-5)
+    * [JSON-Based](#json-based-5)
+  * [Deezer](#deezer)
+    * [ENV-Based](#env-based-6)
+    * [JSON-Based](#json-based-6)
+* [Client Configurations](#client-configurations)
+  * [Maloja](#maloja)
+    * [ENV-Based](#env-based-7)
+    * [JSON-Based](#json-based-7)
+  * [Last.fm](#lastfm)
+    * [ENV-Based](#env-based-8)
+    * [JSON-Based](#json-based-8)
 
-General configuration options. These must be set through environmental variables because they affect initial startup of
-the app. **These variables are also available to Docker containers.**
+# Configuration Overview
 
-| Environmental Variable | Required? |   Default    |                                        Description                                        |
-|----------------------------|-----------|--------------|-------------------------------------------------------------------------------------------|
-| `CONFIG_DIR`               |         No | `CWD/config` | Directory to look for all other configuration files                                       |
-| `LOG_PATH`                 |         No | `CWD/logs`   | If `false` no logs will be written. If `string` will be the directory logs are written to |
-| `PORT`                     |         No | 9078         | Port to run web server on                                                                 |
+[**Sources** and **Clients**](/README.md#how-does-multi-scrobbler--ms--work) are configured using environmental (ENV) variables and/or json files.
 
-**The app must have permission to write to `CONFIG_DIR` in order to store the current spotify access token.**
+**MS will parse configuration from both configuration types.** You can mix and match configurations but it is generally better to stick to one or the other.
 
+## ENV-Based Configuration
 
-# Sources and (Scrobble) Clients
+This is done by passing environmental variables and so does not require any files to run MS.
 
-The app has two types of configurations:
+* Using a docker container EX `docker run -e "SPOTIFY_CLIENT_ID=yourId" -e "SPOTIFY_CLIENT_SECRET=yourSecret" ...`
+* Using a local installations by exporting variables before running MS EX `SPOTIFY_CLIENT_ID=yourId SPOTIFY_CLIENT_SECRET=yourSecret node index.js`
 
-* **Sources** -- Where plays are parsed from
-* **Clients** -- Scrobble clients that plays are scrobbled to
+Use ENV-based configuration if:
 
-All configurations can be configured through:
-* environmental variables
-* individual **json** files for each source/client type found in the `CONFIG_DIR` directory IE `config/spotify.json`
-* or through the main `config.json` (also found in `CONFIG_DIR` directory) using the `clients` or `sources` property under `data`:
+* You are the only person for whom MS is scrobbling for
+* You have a very simple setup for MS such as one scrobble [Client](/README.md#client) and one [Source](/README.md#source) IE Plex -> Maloja
+
+## File-Based Configuration
+
+MS will parse configuration files located in the directory specified by the `CONFIG_DIR` environmental variable. This variable defaults to:
+
+* Local installation -> `PROJECT_DIR/config`
+* Docker -> `/config` (in the container) -- see the [install docs](/docs/installation.md#docker) for how to configure this correctly
+
+Use File-based configuration if:
+
+* You have many [Sources](/README.md#source)
+* You have many of each type of **Source** you want to scrobble from IE 2x Plex accounts, 3x Spotify accounts, 1x
+  Funkwhale...
+* You have more than one scrobble **Client** you want to scrobble to IE multiple Maloja servers
+* You want only some **Sources** to scrobble to some **Clients** IE Fred's Spotify account scrobbles to Fred's Maloja
+    server, but not Mary's Maloja server
+
+File-based configurations located in the `CONFIG_DIR` directory can be parsed from
+
+* an **all-in-one** config file named `config.json` that contains information for all Sources and Clients and/or
+* many **specific** files named based on the client/source to configure IE `plex.json` `spotify.json`
+
+There are **example configurations** for all Source/Client types and AIO config located in the [/config](/config) directory of this project. These can be used as-is by renaming them to `.json`.
+For docker installations these examples are copied to your configuration directory on first-time use.
+
+There is also a [**kitchensink example**](/docs/kitchensink.md) that provides examples of using all sources/clients in a complex configuration.
+
+### All-in-One File Configuration
+
+Example directory structure:
+
+```
+/CONFIG_DIR
+  config.json
+```
+
+<details>
+<summary>Config Example</summary>
 
 ```json5
 // in config.json
@@ -40,38 +105,68 @@ All configurations can be configured through:
         //...
       }
     }
+  ],
+  "clients": [
+    {
+      "name": "myFirstMalojaClient",
+      "type": "maloja",
+      "data": {
+        "url": "http://myMalojaServer.example",
+        // ...
+      }
+    }
   ]
 }
 ```
 
-See [config.json.example](../config/config.json.example) for a short example of this or check out [the kitchen sink example](kitchensink.md).
+</details>
 
-### ENV-Based or JSON-Based?
+`config.json` can also be used to set default behavior for all sources/clients using `sourceDefaults` and `clientDefaults` properties.
 
-multi-scrobbler can be configured differently depending on how you will use it. See which use-case fits you the best and then use that approach when setting up each configuration:
+See [config.json.example](/config/config.json.example) for an annotated example or check out [the kitchen sink example](kitchensink.md).
 
-#### ENV-Based (Single User)
+### Specific File Configuration
 
-* You are the only person for whom the application is scrobbling
-* You may have many sources (Plex, Spotify, Tautulli...) but you only have one of each type of source
-* You have only one scrobble client
-* **Easier for small setups. Difficult for larger, multi-sourced setups (may want to switch to json)**
-* **Will not work for multi-user setups**
+Each file is named by the **type** of the Client/Source found in below sections. Each file as an **array** of that type of Client/Source.
 
-#### JSON-Based (Multi User)
+Example directory structure:
 
-* You are a single user but want to set up many sources
-* You want to use multi-scrobbler to scrobble for yourself and others IE family, friends, etc.
-* You may have many of each type of **Source** you want to scrobble from IE 2x Plex accounts, 3x Spotify accounts, 1x
-  Funkwhale...
-* You have more than one scrobble **Client** you want to scrobble to IE multiple Maloja servers, one for each person
-* You want only some **Sources** to scrobble to some **Clients** IE Fred's Spotify account scrobbles to Fred's Maloja
-  server, but not Mary's Maloja server
+```
+/CONFIG_DIR
+  plex.json
+  spotify.json
+  maloja.json
+```
 
-Note: While you may mix and match configuration approaches it is recommended to **only use ENV-based configs if you are
-doing everything in ENV-based configurations.**
+<details>
+<summary>Config Example</summary>
 
-# Sources
+```json5
+// in maloja.json
+[
+  {
+    "name": "myFirstMalojaClient",
+    "data": {
+      "url": "http://myMalojaServer.example",
+      "apiKey": "myKey"
+    }
+  },
+  {
+    "name": "mySecondMalojaClient",
+    "data": {
+      "url": "http://my2ndMalojaServer.example",
+      "apiKey": "myKey"
+    }
+  }
+]
+
+```
+
+</details>
+
+See the [/config](/config) directory of this project for examples of each type of config file or reference specific files below.
+
+# Source Configurations
 
 ## [Spotify](https://www.spotify.com)
 
@@ -80,17 +175,17 @@ Client ID/Secret. Make sure to also whitelist your redirect URI in the applicati
 
 ### ENV-Based
 
-| Environmental Variable     | Required? |            Default             |                    Description                     |
+| Environmental Variable     | Required? | Default                          |                    Description                     |
 |----------------------------|-----------|----------------------------------|----------------------------------------------------|
 | `SPOTIFY_CLIENT_ID`        | Yes       |                                  |                                                    |
 | `SPOTIFY_CLIENT_SECRET`    | Yes       |                                  |                                                    |
 | `SPOTIFY_ACCESS_TOKEN`     | No         |                                  | Must include either this token or client id/secret |
 | `SPOTIFY_REFRESH_TOKEN`    | No         |                                  | If using access token this is also recommended      |
-| `SPOTIFY_REDIRECT_URI`     | No         | `http://localhost:{PORT}/callback` | URI must end in `callback`                         |
+| `SPOTIFY_REDIRECT_URI`     | No         | `http://localhost:9078/callback` | URI must end in `callback`                         |
 
 ### JSON-Based
 
-See [`spotify.json.example`](../config/spotify.json.example)
+See [`spotify.json.example`](/config/spotify.json.example)
 
 ## [Plex](https://plex.tv)
 
@@ -104,7 +199,7 @@ Check the [instructions](plex.md) on how to setup a [webhooks](https://support.p
 
 ### JSON-Based
 
-See [`plex.json.example`](../config/plex.json.example)
+See [`plex.json.example`](/config/plex.json.example)
 
 ## [Tautulli](https://tautulli.com)
 
@@ -118,7 +213,7 @@ Check the [instructions](plex.md) on how to setup a notification agent.
 
 ### JSON-Based
 
-See [`tautulli.json.example`](../config/tautulli.json.example)
+See [`tautulli.json.example`](/config/tautulli.json.example)
 
 ## [Subsonic](http://www.subsonic.org/)
 
@@ -141,7 +236,7 @@ Can use this source for any application that implements the [Subsonic API](http:
 
 ### JSON-Based
 
-See [`subsonic.json.example`](../config/subsonic.json.example)
+See [`subsonic.json.example`](/config/subsonic.json.example)
 
 ## [Jellyfin](https://jellyfin.org/)
 
@@ -169,7 +264,7 @@ Must be using Jellyfin 10.7 or greater
 
 ### JSON-Based
 
-See [`jellyfin.json.example`](../config/jellyfin.json.example)
+See [`jellyfin.json.example`](/config/jellyfin.json.example)
 
 ## [Last.fm (Source)](https://www.last.fm)
 
@@ -181,7 +276,7 @@ No support for ENV based for Last.fm as a client (only source)
 
 ### JSON-Based
 
-See [`lastfm.json.example`](../config/lastfm.json.example), change `configureAs` to `source`.
+See [`lastfm.json.example`](/config/lastfm.json.example), change `configureAs` to `source`.
 
 ## [Deezer](https://deezer.com/)
 
@@ -197,24 +292,24 @@ After application creation you should have credentials displayed in the "My Apps
 * **Secret Key**
 * **Redirect URL** (if not the default)
 
-### If no access token is provided...
+**If no access token is provided...**
 
 After starting multi-scrobbler with credentials in-place open the dashboard (`http://localhost:9078`) and find your Deezer source. Click **(Re)authenticate and (re)start polling** to start the login process. After login is complete polling will begin automatically.
 
 ### ENV-Based
 
-| Environmental Variable     | Required? |            Default             |                    Description                     |
-|----------------------------|-----------|----------------------------------|----------------------------------------------------|
-| `DEEZER_CLIENT_ID`        | Yes       |                                  |  Your **Application ID**                            |
-| `DEEZER_CLIENT_SECRET`    | Yes       |                                  |  Your **Secret Key**                                |
-| `DEEZER_ACCESS_TOKEN`     | No         |                                  | Must include either this token or client id/secret |
-| `DEEZER_REDIRECT_URI`     | No         | `http://localhost:{PORT}/deezer/callback` | URI must end in `deezer/callback`         |
+| Environmental Variable     | Required? | Default                                 |                    Description                     |
+|----------------------------|-----------|-----------------------------------------|----------------------------------------------------|
+| `DEEZER_CLIENT_ID`        | Yes       |                                         |  Your **Application ID**                            |
+| `DEEZER_CLIENT_SECRET`    | Yes       |                                         |  Your **Secret Key**                                |
+| `DEEZER_ACCESS_TOKEN`     | No         |                                         | Must include either this token or client id/secret |
+| `DEEZER_REDIRECT_URI`     | No         | `http://localhost:9078/deezer/callback` | URI must end in `deezer/callback`         |
 
 ### JSON-Based
 
-See [`deezer.json.example`](../config/deezer.json.example)
+See [`deezer.json.example`](/config/deezer.json.example)
 
-# Clients
+# Client Configurations
 
 ## [Maloja](https://github.com/krateng/maloja)
 
@@ -227,7 +322,7 @@ See [`deezer.json.example`](../config/deezer.json.example)
 
 ### JSON-Based
 
-See [`maloja.json.example`](../config/maloja.json.example)
+See [`maloja.json.example`](/config/maloja.json.example)
 
 ## [Last.fm](https://www.last.fm)
 
@@ -241,13 +336,13 @@ or replace `localhost:9078` with your own base URL
 
 ### ENV-Based
 
-| Environmental Variable | Required? | Default |          Description          |
-|----------------------------|-----------|---------|-------------------------------|
-| `LASTFM_API_KEY`           | Yes       |         | Api Key from your API Account |
-| `LASTFM_SECRET`            | Yes       |         | Shared secret from your API Account |
-| `LASTFM_REDIRECT_URI`      | No        | `http://localhost:{PORT}/lastfm/callback`        | Url to use for authentication. Must include `lastfm/callback` somewhere in it |
-| `LASTFM_SESSION`           | No        |         | Session id. Will be generated by authentication flow if not provided.                       |
+| Environmental Variable | Required? | Default                                 |          Description          |
+|----------------------------|-----------|-----------------------------------------|-------------------------------|
+| `LASTFM_API_KEY`           | Yes       |                                         | Api Key from your API Account |
+| `LASTFM_SECRET`            | Yes       |                                         | Shared secret from your API Account |
+| `LASTFM_REDIRECT_URI`      | No        | `http://localhost:9078/lastfm/callback` | Url to use for authentication. Must include `lastfm/callback` somewhere in it |
+| `LASTFM_SESSION`           | No        |                                         | Session id. Will be generated by authentication flow if not provided.                       |
 
 ### JSON-Based
 
-See [`lastfm.json.example`](../config/lastfm.json.example)
+See [`lastfm.json.example`](/config/lastfm.json.example)
