@@ -7,53 +7,41 @@ import {PlexSourceConfig} from "../common/infrastructure/config/source/plex.js";
 import {InternalConfig, PlayObject, SourceType} from "../common/infrastructure/Atomic.js";
 
 export default class PlexSource extends AbstractSource {
-    users;
-    libraries;
-    servers;
+    users: string[];
+    libraries: string[];
+    servers: string[];
 
     declare config: PlexSourceConfig;
 
     constructor(name: any, config: PlexSourceConfig, internal: InternalConfig, type: SourceType = 'plex') {
         super(type, name, config, internal);
-        const {data: {user, libraries, servers} = {}} = config
+        const {data: {user = [], libraries = [], servers = []} = {}} = config
 
-        if (user === undefined || user === null) {
-            this.users = undefined;
+        if (!Array.isArray(user)) {
+            this.users = [user];
         } else {
-            if (!Array.isArray(user)) {
-                this.users = [user];
-            } else {
-                this.users = user;
-            }
-            this.users = this.users.map((x: any) => x.toLocaleLowerCase())
+            this.users = user;
         }
+        this.users = this.users.map((x: any) => x.toLocaleLowerCase())
 
-        if (libraries === undefined || libraries === null) {
-            this.libraries = undefined;
+        if (!Array.isArray(libraries)) {
+            this.libraries = [libraries];
         } else {
-            if (!Array.isArray(libraries)) {
-                this.libraries = [libraries];
-            } else {
-                this.libraries = libraries;
-            }
-            this.libraries = this.libraries.map((x: any) => x.toLocaleLowerCase())
+            this.libraries = libraries;
         }
+        this.libraries = this.libraries.map((x: any) => x.toLocaleLowerCase())
 
-        if (servers === undefined || servers === null) {
-            this.servers = undefined;
+        if (!Array.isArray(servers)) {
+            this.servers = [servers];
         } else {
-            if (!Array.isArray(servers)) {
-                this.servers = [servers];
-            } else {
-                this.servers = servers;
-            }
-            this.servers = this.servers.map((x: any) => x.toLocaleLowerCase())
+            this.servers = servers;
         }
+        this.servers = this.servers.map((x: any) => x.toLocaleLowerCase())
 
-        if (user === undefined && libraries === undefined && servers === undefined) {
+        if (this.users.length === 0 && this.libraries.length === 0 && this.servers.length === 0) {
             this.logger.warn('Initializing, but with no filters! All tracks from all users on all servers and libraries will be scrobbled.');
         } else {
-            this.logger.info(`Initializing with the following filters => Users: ${this.users === undefined ? 'N/A' : this.users.join(', ')} | Libraries: ${this.libraries === undefined ? 'N/A' : this.libraries.join(', ')} | Servers: ${this.servers === undefined ? 'N/A' : this.servers.join(', ')}`);
+            this.logger.info(`Initializing with the following filters => Users: ${this.users.length === 0 ? 'N/A' : this.users.join(', ')} | Libraries: ${this.libraries.length === 0 ? 'N/A' : this.libraries.join(', ')} | Servers: ${this.servers.length === 0 ? 'N/A' : this.servers.join(', ')}`);
         }
         this.initialized = true;
     }
@@ -114,7 +102,7 @@ export default class PlexSource extends AbstractSource {
 
         const hint = this.type === 'tautulli' ? ' (Check notification agent json data configuration)' : '';
 
-        if (this.users !== undefined) {
+        if (this.users.length !== 0) {
             if (user === undefined) {
                 this.logger.warn(`Config defined users but payload contained no user info${hint}`);
             } else if (!this.users.includes(user.toLocaleLowerCase())) {
@@ -142,7 +130,7 @@ export default class PlexSource extends AbstractSource {
             return false;
         }
 
-        if (this.libraries !== undefined) {
+        if (this.libraries.length !== 0) {
             if (library === undefined) {
                 this.logger.warn(`Config defined libraries but payload contained no library info${hint}`);
             } else if (!this.libraries.includes(library.toLocaleLowerCase())) {
@@ -154,7 +142,7 @@ export default class PlexSource extends AbstractSource {
             }
         }
 
-        if (this.servers !== undefined) {
+        if (this.servers.length !== 0) {
             if (server === undefined) {
                 this.logger.warn(`Config defined server but payload contained no server info${hint}`);
             } else if (!this.servers.includes(server.toLocaleLowerCase())) {

@@ -7,19 +7,19 @@ export interface PlexSourceConfig extends CommonSourceConfig {
          *
          * If none are provided tracks from all users will be scrobbled
          * */
-        user?: string
+        user?: string | string[]
         /**
          * optional list of libraries to scrobble tracks from
          *
          * If none are provided tracks from all libraries will be scrobbled
          * */
-        libraries?: string
+        libraries?: string | string[]
         /**
          * optional list of servers to scrobble tracks from
          *
          * If none are provided tracks from all servers will be scrobbled
          * */
-        servers?: string
+        servers?: string | string[]
     }
 }
 
