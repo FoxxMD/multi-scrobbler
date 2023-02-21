@@ -6,32 +6,32 @@
 * [Source Configurations](#source-configurations)
   * [Spotify](#spotify)
     * [ENV-Based](#env-based)
-    * [JSON-Based](#json-based)
+    * [File-Based](#file-based)
   * [Plex](#plex)
     * [ENV-Based](#env-based-1)
-    * [JSON-Based](#json-based-1)
+    * [File-Based](#file-based-1)
   * [Tautulli](#tautulli)
     * [ENV-Based](#env-based-2)
-    * [JSON-Based](#json-based-2)
+    * [File-Based](#file-based-2)
   * [Subsonic](#subsonic)
     * [ENV-Based](#env-based-3)
-    * [JSON-Based](#json-based-3)
+    * [File-Based](#file-based-3)
   * [Jellyfin](#jellyfin)
     * [ENV-Based](#env-based-4)
-    * [JSON-Based](#json-based-4)
+    * [File-Based](#file-based-4)
   * [Last.fm (Source)](#lastfm--source-)
     * [ENV-Based](#env-based-5)
-    * [JSON-Based](#json-based-5)
+    * [File-Based](#file-based-5)
   * [Deezer](#deezer)
     * [ENV-Based](#env-based-6)
-    * [JSON-Based](#json-based-6)
+    * [File-Based](#file-based-6)
 * [Client Configurations](#client-configurations)
   * [Maloja](#maloja)
     * [ENV-Based](#env-based-7)
-    * [JSON-Based](#json-based-7)
+    * [File-Based](#file-based-7)
   * [Last.fm](#lastfm)
     * [ENV-Based](#env-based-8)
-    * [JSON-Based](#json-based-8)
+    * [File-Based](#file-based-8)
 
 # Configuration Overview
 
@@ -183,7 +183,7 @@ Client ID/Secret. Make sure to also whitelist your redirect URI in the applicati
 | `SPOTIFY_CLIENT_SECRET`    | Yes       |                                  |                                                    |
 | `SPOTIFY_REDIRECT_URI`     | No         | `http://localhost:9078/callback` | URI must end in `callback`                         |
 
-### JSON-Based
+### File-Based
 
 See [`spotify.json.example`](/config/spotify.json.example) or [explore the schema with an example and live editor/validator](https://json-schema.app/view/%23/%23%2Fdefinitions%2FSpotifySourceConfig?url=https%3A%2F%2Fraw.githubusercontent.com%2FFoxxMD%2Fmulti-scrobbler%2Fdevelop%2Fsrc%2Fcommon%2Fschema%2Fsource.json)
 
@@ -197,7 +197,7 @@ Check the [instructions](plex.md) on how to setup a [webhooks](https://support.p
 |------------------------|----------|---------|-------------------------------------------------|
 | `PLEX_USER`              |        No |         | The a comma-delimited list of usernames to scrobble tracks for. No usernames specified means all tracks by all users will be scrobbled. |
 
-### JSON-Based
+### File-Based
 
 See [`plex.json.example`](/config/plex.json.example) or [explore the schema with an example and live editor/validator](https://json-schema.app/view/%23/%23%2Fdefinitions%2FPlexSourceConfig?url=https%3A%2F%2Fraw.githubusercontent.com%2FFoxxMD%2Fmulti-scrobbler%2Fdevelop%2Fsrc%2Fcommon%2Fschema%2Fsource.json)
 
@@ -211,7 +211,7 @@ Check the [instructions](plex.md) on how to setup a notification agent.
 |------------------------|----------|---------|-------------------------------------------------|
 | `TAUTULLI_USER`              |        No |         | The a comma-delimited list of usernames to scrobble tracks for. No usernames specified means all tracks by all users will be scrobbled. |
 
-### JSON-Based
+### File-Based
 
 See [`tautulli.json.example`](/config/tautulli.json.example) or [explore the schema with an example and live editor/validator](https://json-schema.app/view/%23/%23%2Fdefinitions%2FTautulliSourceConfig?url=https%3A%2F%2Fraw.githubusercontent.com%2FFoxxMD%2Fmulti-scrobbler%2Fdevelop%2Fsrc%2Fcommon%2Fschema%2Fsource.json)
 
@@ -234,7 +234,7 @@ Can use this source for any application that implements the [Subsonic API](http:
 | `SUBSONIC_PASSWORD`    | Yes       |                                  |                                                    |
 | `SUBSONIC_URL`     | Yes         |                                  | Base url of your subsonic-api server |
 
-### JSON-Based
+### File-Based
 
 See [`subsonic.json.example`](/config/subsonic.json.example) or [explore the schema with an example and live editor/validator](https://json-schema.app/view/%23/%23%2Fdefinitions%2FSubSonicSourceConfig?url=https%3A%2F%2Fraw.githubusercontent.com%2FFoxxMD%2Fmulti-scrobbler%2Fdevelop%2Fsrc%2Fcommon%2Fschema%2Fsource.json)
 
@@ -262,7 +262,7 @@ Must be using Jellyfin 10.7 or greater
 | `JELLYFIN_USER`        |           |         | Comma-separated list of usernames (from Jellyfin) to scrobble for |
 | `JELLYFIN_SERVER`      |           |         | Comma-separated list of Jellyfin server names to scrobble from    |
 
-### JSON-Based
+### File-Based
 
 See [`jellyfin.json.example`](/config/jellyfin.json.example) or [explore the schema with an example and live editor/validator](https://json-schema.app/view/%23/%23%2Fdefinitions%2FJellySourceConfig?url=https%3A%2F%2Fraw.githubusercontent.com%2FFoxxMD%2Fmulti-scrobbler%2Fdevelop%2Fsrc%2Fcommon%2Fschema%2Fsource.json)
 
@@ -274,7 +274,7 @@ See the [Last.fm (Client)](#lastfm) setup for registration instructions.
 
 No support for ENV based for Last.fm as a client (only source)
 
-### JSON-Based
+### File-Based
 
 See [`lastfm.json.example`](/config/lastfm.json.example), change `configureAs` to `source`. Or [explore the schema with an example and live editor/validator](https://json-schema.app/view/%23/%23%2Fdefinitions%2FLastfmSourceConfig?url=https%3A%2F%2Fraw.githubusercontent.com%2FFoxxMD%2Fmulti-scrobbler%2Fdevelop%2Fsrc%2Fcommon%2Fschema%2Fsource.json)
 
@@ -304,7 +304,7 @@ After starting multi-scrobbler with credentials in-place open the dashboard (`ht
 | `DEEZER_CLIENT_SECRET`    | Yes       |                                         |  Your **Secret Key**                                |
 | `DEEZER_REDIRECT_URI`     | No         | `http://localhost:9078/deezer/callback` | URI must end in `deezer/callback`         |
 
-### JSON-Based
+### File-Based
 
 See [`deezer.json.example`](/config/deezer.json.example) or [explore the schema with an example and live editor/validator](https://json-schema.app/view/%23/%23%2Fdefinitions%2FDeezerSourceConfig?url=https%3A%2F%2Fraw.githubusercontent.com%2FFoxxMD%2Fmulti-scrobbler%2Fdevelop%2Fsrc%2Fcommon%2Fschema%2Fsource.json)
 
@@ -319,7 +319,7 @@ See [`deezer.json.example`](/config/deezer.json.example) or [explore the schema 
 | `MALOJA_URL`               | Yes       |         | Base URL of your installation |
 | `MALOJA_API_KEY`           | Yes       |         | Api Key                       |
 
-### JSON-Based
+### File-Based
 
 See [`maloja.json.example`](/config/maloja.json.example) or [explore the schema with an example and live editor/validator](https://json-schema.app/view/%23/%23%2Fdefinitions%2FMalojaClientConfig?url=https%3A%2F%2Fraw.githubusercontent.com%2FFoxxMD%2Fmulti-scrobbler%2Fdevelop%2Fsrc%2Fcommon%2Fschema%2Fclient.json)
 
@@ -342,6 +342,6 @@ or replace `localhost:9078` with your own base URL
 | `LASTFM_REDIRECT_URI`      | No        | `http://localhost:9078/lastfm/callback` | Url to use for authentication. Must include `lastfm/callback` somewhere in it |
 | `LASTFM_SESSION`           | No        |                                         | Session id. Will be generated by authentication flow if not provided.                       |
 
-### JSON-Based
+### File-Based
 
 See [`lastfm.json.example`](/config/lastfm.json.example) or [explore the schema with an example and live editor/validator](https://json-schema.app/view/%23/%23%2Fdefinitions%2FLastfmClientConfig?url=https%3A%2F%2Fraw.githubusercontent.com%2FFoxxMD%2Fmulti-scrobbler%2Fdevelop%2Fsrc%2Fcommon%2Fschema%2Fclient.json)
