@@ -1,10 +1,10 @@
 [
   {
-    "name": "default",                                        // optional, friendly name for logs
-    "clients": [],                                            // optional, list of scrobble clients (by config name) that this source should scrobble to. Using an empty list or not including this property will make this source scrobble to all clients.
+    "name": "MyJellyfin",
+    "clients": [],
     "data": {
-      "users": ["FoxxMD"],                                     // optional, list of users to scrobble tracks for
-      "servers": ["myServer","anotherServer"]                 // optional, list of servers to scrobble tracks from
+      "users": ["FoxxMD"],
+      "servers": ["myServer","anotherServer"]
     }
   }
 ]

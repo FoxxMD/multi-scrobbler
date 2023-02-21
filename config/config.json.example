@@ -1,32 +1,33 @@
 {
   "sourceDefaults": {
-    "maxPollRetries": 0,          // optional, default # of automatic polling restarts on error. can be overridden by property in individual config
-    "maxRequestRetries": 1,       // optional, default # of http request retries a source can make before error is thrown. can be overridden by property in individual config
-    "retryMultiplier": 1.5,       // optional, default retry delay multiplier (retry attempt * multiplier = # of seconds to wait before retrying). can be overridden by property in individual config
+    "maxPollRetries": 0,
+    "maxRequestRetries": 1,
+    "retryMultiplier": 1.5
   },
   "clientDefaults": {
-    "maxRequestRetries": 1,       // optional, default # of http request retries a client can make before error is thrown. can be overridden by property in individual config
-    "retryMultiplier": 1.5,       // optional, default retry delay multiplier (retry attempt * multiplier = # of seconds to wait before retrying). can be overridden by property in individual config
+    "maxRequestRetries": 1,
+    "retryMultiplier": 1.5
   },
   "sources": [
     {
-      "type": "spotify",          // required, source type
-      "clients": ["myConfig"],    // optional, a list of Client config names this Source should scrobble to. Using an empty list or not including this property will make this Source scrobble to all Clients.
-      "name": "mySpotifySource",  // optional, friendly name for the log
-      "data": {                   // required, the data for your config
-        "clientId": "example",
-        //...
+      "type": "spotify",
+      "clients": ["myConfig"],
+      "name": "mySpotifySource",
+      "data": {
+      "clientId": "a89cba1569901a0671d5a9875fed4be1",
+      "clientSecret": "ec42e09d5ae0ee0f0816ca151008412a",
+      "redirectUri": "http://localhost:9078/callback"
       }
     }
   ],
   "clients": [
     {
-      "type": "maloja",           // required, Client type
-      "name": "myConfig",         // required, a name to identifier your Client
-      "data": {                   // required, the data for your config
-        "url": "http://example.com",
-        //...
+      "type": "maloja",
+      "name": "myConfig",
+      "data": {
+        "url": "http://localhost:42010",
+        "apiKey": "myMalojaKey"
       }
-    },
+    }
   ]
 }

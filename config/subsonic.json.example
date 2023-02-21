@@ -1,11 +1,10 @@
 [
   {
-    "name": "default",                        // optional, friendly name for logs
+    "name": "MySubsonic",
     "data": {
-      "url": "http://localhost:4040/airsonic",// required, the url you would visit to listen to music on the web
-      "user": "yourUser",                     // required, username to login with
-      "password": "yourPassword",             // required, password to login with
-      // ALSO see config.json.example for default properties that can be overridden here (in sourceDefaults)
+      "url": "http://localhost:4040/airsonic",
+      "user": "yourUser",
+      "password": "yourPassword",
     }
   }
 ]
