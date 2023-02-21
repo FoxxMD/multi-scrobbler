@@ -8,5 +8,5 @@ These are **NOT** exhaustive examples. You should consult the  **configuration**
 
 Documentation at
 
-* [include docs](/docs/configuration.md)
+* [internal docs](/docs/configuration.md)
 * External Link: https://github.com/FoxxMD/multi-scrobbler/blob/master/docs/configuration.md
