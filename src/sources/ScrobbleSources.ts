@@ -19,10 +19,8 @@ import {PlexSourceConfig} from "../common/infrastructure/config/source/plex.js";
 import {SpotifySourceConfig, SpotifySourceData} from "../common/infrastructure/config/source/spotify.js";
 import AbstractSource from "./AbstractSource.js";
 import {AIOConfig} from "../common/infrastructure/config/aioConfig.js";
-import * as aioSchema from "../common/schema/aio.json" assert {type: "json"};
-import {CommonSourceData} from "../common/infrastructure/config/source/index.js";
-import {ClientConfig} from "../common/infrastructure/config/client/clients.js";
-import * as clientSchema from "../common/schema/client.json" assert {type: "json"};
+import * as aioSchema from "../common/schema/aio-source.json";
+import * as sourceSchema from "../common/schema/source.json";
 import {LastfmSourceConfig} from "../common/infrastructure/config/source/lastfm.js";
 
 type groupedNamedConfigs = {[key: string]: ParsedConfig[]};
@@ -224,7 +222,7 @@ export default class ScrobbleSources {
                 }
                 for (const [i,rawConf] of sourceConfigs.entries()) {
                     try {
-                        const validConfig = validateJson<SourceConfig>(rawConf, clientSchema, this.logger);
+                        const validConfig = validateJson<SourceConfig>(rawConf, sourceSchema, this.logger);
 
                         if(sourceType !== 'lastfm' || ((validConfig as LastfmSourceConfig).configureAs === 'source')) {
                             // @ts-ignore

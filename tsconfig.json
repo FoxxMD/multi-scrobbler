@@ -4,9 +4,11 @@
     "resolveJsonModule": true,
     "emitDecoratorMetadata": true,
     "experimentalDecorators": true,
-    "esModuleInterop": false,
+    "lib": ["es2020"],
+    "module": "commonjs",
+    "target": "es2020",
+    "esModuleInterop": true,
 
-    "module": "NodeNext",
     "typeRoots": [
       "./node_modules/@types",
       "./src/common/infrastructure/typings"

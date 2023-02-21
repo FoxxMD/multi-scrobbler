@@ -136,7 +136,7 @@ const CWD = process.cwd();
 
 let longestLabel = 3;
 export const defaultFormat = printf(({level, message, label = 'App', timestamp, [SPLAT]: splatObj, stack, ...rest}) => {
-    let stringifyValue = splatObj !== undefined ? stringify.default(splatObj) : '';
+    let stringifyValue = splatObj !== undefined ? stringify(splatObj) : '';
     if (label.length > longestLabel) {
         longestLabel = label.length;
     }
@@ -392,8 +392,8 @@ export const parseDurationFromTimestamp = (timestamp: any) => {
     });
 }
 
-export const createAjvFactory = (logger: Logger): Ajv.default => {
-    const validator =  new Ajv.default({logger: logger, verbose: true, strict: "log", allowUnionTypes: true});
+export const createAjvFactory = (logger: Logger): Ajv => {
+    const validator =  new Ajv({logger: logger, verbose: true, strict: "log", allowUnionTypes: true});
     // https://ajv.js.org/strict-mode.html#unknown-keywords
     validator.addKeyword('deprecationMessage');
     return validator;

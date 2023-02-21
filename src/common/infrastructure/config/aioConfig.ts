@@ -9,3 +9,13 @@ export interface AIOConfig {
     sources?: SourceAIOConfig[]
     clients?: ClientAIOConfig[]
 }
+
+export interface AIOClientConfig {
+    clientDefaults?: RequestRetryOptions
+    clients?: ClientAIOConfig[]
+}
+
+export interface AIOSourceConfig {
+    sourceDefaults?: SourceRetryOptions
+    sources?: SourceAIOConfig[]
+}

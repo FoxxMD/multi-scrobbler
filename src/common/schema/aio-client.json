@@ -1,14 +1,16 @@
 {
     "$schema": "http://json-schema.org/draft-07/schema#",
-    "anyOf": [
-        {
-            "$ref": "#/definitions/LastfmClientConfig"
-        },
-        {
-            "$ref": "#/definitions/MalojaClientConfig"
-        }
-    ],
     "definitions": {
+        "ClientAIOConfig": {
+            "anyOf": [
+                {
+                    "$ref": "#/definitions/LastfmClientAIOConfig"
+                },
+                {
+                    "$ref": "#/definitions/MalojaClientAIOConfig"
+                }
+            ]
+        },
         "CommonClientData": {
             "properties": {
                 "maxRequestRetries": {
@@ -43,7 +45,7 @@
             },
             "type": "object"
         },
-        "LastfmClientConfig": {
+        "LastfmClientAIOConfig": {
             "properties": {
                 "configureAs": {
                     "enum": [
@@ -65,11 +67,18 @@
                 "name": {
                     "description": "Unique identifier for this client. Used with sources to restrict where scrobbles are sent.",
                     "type": "string"
+                },
+                "type": {
+                    "enum": [
+                        "lastfm"
+                    ],
+                    "type": "string"
                 }
             },
             "required": [
                 "data",
-                "name"
+                "name",
+                "type"
             ],
             "type": "object"
         },
@@ -109,7 +118,7 @@
             ],
             "type": "object"
         },
-        "MalojaClientConfig": {
+        "MalojaClientAIOConfig": {
             "properties": {
                 "data": {
                     "$ref": "#/definitions/MalojaClientData"
@@ -117,11 +126,18 @@
                 "name": {
                     "description": "Unique identifier for this client. Used with sources to restrict where scrobbles are sent.",
                     "type": "string"
+                },
+                "type": {
+                    "enum": [
+                        "maloja"
+                    ],
+                    "type": "string"
                 }
             },
             "required": [
                 "data",
-                "name"
+                "name",
+                "type"
             ],
             "type": "object"
         },
@@ -184,7 +200,34 @@
                 }
             },
             "type": "object"
+        },
+        "RequestRetryOptions": {
+            "properties": {
+                "maxRequestRetries": {
+                    "default": 1,
+                    "description": "default # of http request retries a source can make before error is thrown",
+                    "type": "number"
+                },
+                "retryMultiplier": {
+                    "default": 1.5,
+                    "description": "default retry delay multiplier (retry attempt * multiplier = # of seconds to wait before retrying)",
+                    "type": "number"
+                }
+            },
+            "type": "object"
         }
-    }
+    },
+    "properties": {
+        "clientDefaults": {
+            "$ref": "#/definitions/RequestRetryOptions"
+        },
+        "clients": {
+            "items": {
+                "$ref": "#/definitions/ClientAIOConfig"
+            },
+            "type": "array"
+        }
+    },
+    "type": "object"
 }
 

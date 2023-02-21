@@ -3,15 +3,16 @@
   "version": "0.4.0",
   "description": "scrobble plays from multiple sources to multiple clients",
   "main": "src/index.js",
-  "type": "module",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "build": "tsc",
     "start": "node src/index.js",
-    "schema": "npm run -s schema-aio & npm run -s schema-sources & npm run -s schema-client",
+    "schema": "npm run -s schema-aio & npm run -s schema-sources & npm run -s schema-client & npm run -s schema-aiosource & npm run -s schema-aioclient",
     "schema-client": "typescript-json-schema tsconfig.json ClientConfig --out src/common/schema/client.json --required --tsNodeRegister --refs --validationKeywords deprecationMessage",
     "schema-sources": "typescript-json-schema tsconfig.json SourceConfig --out src/common/schema/source.json --required --tsNodeRegister --refs --validationKeywords deprecationMessage",
-    "schema-aio": "typescript-json-schema tsconfig.json AIOConfig --out src/common/schema/aio.json --required --tsNodeRegister --refs --validationKeywords deprecationMessage"
+    "schema-aio": "typescript-json-schema tsconfig.json AIOConfig --out src/common/schema/aio.json --required --tsNodeRegister --refs --validationKeywords deprecationMessage",
+    "schema-aiosource": "typescript-json-schema tsconfig.json AIOSourceConfig --out src/common/schema/aio-source.json --required --tsNodeRegister --refs --validationKeywords deprecationMessage",
+    "schema-aioclient": "typescript-json-schema tsconfig.json AIOClientConfig --out src/common/schema/aio-client.json --required --tsNodeRegister --refs --validationKeywords deprecationMessage"
   },
   "exports": {
     ".": {
@@ -44,10 +45,10 @@
     "es6-error": "^4.1.1",
     "express": "^4.17.1",
     "express-session": "^1.17.2",
-    "formidable": "^3.2.4",
+    "formidable": "^2.1",
     "json5": "^2.2.3",
     "lastfm-node-client": "^2.2.0",
-    "passport": "^0.5.0",
+    "passport": "^0.6.0",
     "passport-deezer": "^0.2.0",
     "pony-cause": "^1.1.1",
     "safe-stable-stringify": "^1.1.1",
@@ -68,7 +69,7 @@
     "@types/express-session": "^1.17.4",
     "@types/formidable": "^2.0.5",
     "@types/node": "^18.0.0",
-    "@types/passport": "^1.0.7",
+    "@types/passport": "^1.0.12",
     "@types/spotify-web-api-node": "^5.0.7",
     "@types/superagent": "^4.1.16",
     "@types/triple-beam": "^1.3.2",

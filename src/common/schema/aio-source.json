@@ -1,28 +1,5 @@
 {
     "$schema": "http://json-schema.org/draft-07/schema#",
-    "anyOf": [
-        {
-            "$ref": "#/definitions/SpotifySourceConfig"
-        },
-        {
-            "$ref": "#/definitions/PlexSourceConfig"
-        },
-        {
-            "$ref": "#/definitions/TautulliSourceConfig"
-        },
-        {
-            "$ref": "#/definitions/DeezerSourceConfig"
-        },
-        {
-            "$ref": "#/definitions/SubSonicSourceConfig"
-        },
-        {
-            "$ref": "#/definitions/JellySourceConfig"
-        },
-        {
-            "$ref": "#/definitions/LastfmSourceConfig"
-        }
-    ],
     "definitions": {
         "CommonSourceData": {
             "properties": {
@@ -93,7 +70,7 @@
             ],
             "type": "object"
         },
-        "DeezerSourceConfig": {
+        "DeezerSourceAIOConfig": {
             "properties": {
                 "clients": {
                     "description": "Restrict scrobbling tracks played from this source to Clients with names from this list",
@@ -108,10 +85,17 @@
                 "name": {
                     "description": "Unique identifier for this source.",
                     "type": "string"
+                },
+                "type": {
+                    "enum": [
+                        "deezer"
+                    ],
+                    "type": "string"
                 }
             },
             "required": [
-                "data"
+                "data",
+                "type"
             ],
             "type": "object"
         },
@@ -166,7 +150,7 @@
             },
             "type": "object"
         },
-        "JellySourceConfig": {
+        "JellySourceAIOConfig": {
             "properties": {
                 "clients": {
                     "description": "Restrict scrobbling tracks played from this source to Clients with names from this list",
@@ -181,10 +165,59 @@
                 "name": {
                     "description": "Unique identifier for this source.",
                     "type": "string"
+                },
+                "type": {
+                    "enum": [
+                        "jellyfin"
+                    ],
+                    "type": "string"
                 }
             },
             "required": [
-                "data"
+                "data",
+                "type"
+            ],
+            "type": "object"
+        },
+        "LastFmSouceAIOConfig": {
+            "properties": {
+                "clients": {
+                    "description": "Restrict scrobbling tracks played from this source to Clients with names from this list",
+                    "items": {
+                        "type": "string"
+                    },
+                    "type": "array"
+                },
+                "configureAs": {
+                    "enum": [
+                        "source"
+                    ],
+                    "type": "string"
+                },
+                "data": {
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/CommonSourceData"
+                        },
+                        {
+                            "$ref": "#/definitions/LastfmData"
+                        }
+                    ]
+                },
+                "name": {
+                    "description": "Unique identifier for this source.",
+                    "type": "string"
+                },
+                "type": {
+                    "enum": [
+                        "lastfm"
+                    ],
+                    "type": "string"
+                }
+            },
+            "required": [
+                "data",
+                "type"
             ],
             "type": "object"
         },
@@ -224,42 +257,7 @@
             ],
             "type": "object"
         },
-        "LastfmSourceConfig": {
-            "properties": {
-                "clients": {
-                    "description": "Restrict scrobbling tracks played from this source to Clients with names from this list",
-                    "items": {
-                        "type": "string"
-                    },
-                    "type": "array"
-                },
-                "configureAs": {
-                    "enum": [
-                        "source"
-                    ],
-                    "type": "string"
-                },
-                "data": {
-                    "allOf": [
-                        {
-                            "$ref": "#/definitions/CommonSourceData"
-                        },
-                        {
-                            "$ref": "#/definitions/LastfmData"
-                        }
-                    ]
-                },
-                "name": {
-                    "description": "Unique identifier for this source.",
-                    "type": "string"
-                }
-            },
-            "required": [
-                "data"
-            ],
-            "type": "object"
-        },
-        "PlexSourceConfig": {
+        "PlexSourceAIOConfig": {
             "properties": {
                 "clients": {
                     "description": "Restrict scrobbling tracks played from this source to Clients with names from this list",
@@ -325,17 +323,69 @@
                 "name": {
                     "description": "Unique identifier for this source.",
                     "type": "string"
+                },
+                "type": {
+                    "enum": [
+                        "plex"
+                    ],
+                    "type": "string"
                 }
             },
             "required": [
-                "data"
+                "data",
+                "type"
             ],
             "type": "object"
         },
         "Record<string,any>": {
             "type": "object"
         },
-        "SpotifySourceConfig": {
+        "SourceAIOConfig": {
+            "anyOf": [
+                {
+                    "$ref": "#/definitions/SpotifySourceAIOConfig"
+                },
+                {
+                    "$ref": "#/definitions/PlexSourceAIOConfig"
+                },
+                {
+                    "$ref": "#/definitions/TautulliSourceAIOConfig"
+                },
+                {
+                    "$ref": "#/definitions/DeezerSourceAIOConfig"
+                },
+                {
+                    "$ref": "#/definitions/SubsonicSourceAIOConfig"
+                },
+                {
+                    "$ref": "#/definitions/JellySourceAIOConfig"
+                },
+                {
+                    "$ref": "#/definitions/LastFmSouceAIOConfig"
+                }
+            ]
+        },
+        "SourceRetryOptions": {
+            "properties": {
+                "maxPollRetries": {
+                    "default": 0,
+                    "description": "default # of automatic polling restarts on error",
+                    "type": "number"
+                },
+                "maxRequestRetries": {
+                    "default": 1,
+                    "description": "default # of http request retries a source can make before error is thrown",
+                    "type": "number"
+                },
+                "retryMultiplier": {
+                    "default": 1.5,
+                    "description": "default retry delay multiplier (retry attempt * multiplier = # of seconds to wait before retrying)",
+                    "type": "number"
+                }
+            },
+            "type": "object"
+        },
+        "SpotifySourceAIOConfig": {
             "properties": {
                 "clients": {
                     "description": "Restrict scrobbling tracks played from this source to Clients with names from this list",
@@ -350,10 +400,17 @@
                 "name": {
                     "description": "Unique identifier for this source.",
                     "type": "string"
+                },
+                "type": {
+                    "enum": [
+                        "spotify"
+                    ],
+                    "type": "string"
                 }
             },
             "required": [
-                "data"
+                "data",
+                "type"
             ],
             "type": "object"
         },
@@ -403,28 +460,6 @@
             ],
             "type": "object"
         },
-        "SubSonicSourceConfig": {
-            "properties": {
-                "clients": {
-                    "description": "Restrict scrobbling tracks played from this source to Clients with names from this list",
-                    "items": {
-                        "type": "string"
-                    },
-                    "type": "array"
-                },
-                "data": {
-                    "$ref": "#/definitions/SubsonicData"
-                },
-                "name": {
-                    "description": "Unique identifier for this source.",
-                    "type": "string"
-                }
-            },
-            "required": [
-                "data"
-            ],
-            "type": "object"
-        },
         "SubsonicData": {
             "properties": {
                 "maxPollRetries": {
@@ -463,7 +498,36 @@
             ],
             "type": "object"
         },
-        "TautulliSourceConfig": {
+        "SubsonicSourceAIOConfig": {
+            "properties": {
+                "clients": {
+                    "description": "Restrict scrobbling tracks played from this source to Clients with names from this list",
+                    "items": {
+                        "type": "string"
+                    },
+                    "type": "array"
+                },
+                "data": {
+                    "$ref": "#/definitions/SubsonicData"
+                },
+                "name": {
+                    "description": "Unique identifier for this source.",
+                    "type": "string"
+                },
+                "type": {
+                    "enum": [
+                        "subsonic"
+                    ],
+                    "type": "string"
+                }
+            },
+            "required": [
+                "data",
+                "type"
+            ],
+            "type": "object"
+        },
+        "TautulliSourceAIOConfig": {
             "properties": {
                 "clients": {
                     "description": "Restrict scrobbling tracks played from this source to Clients with names from this list",
@@ -529,13 +593,32 @@
                 "name": {
                     "description": "Unique identifier for this source.",
                     "type": "string"
+                },
+                "type": {
+                    "enum": [
+                        "tautulli"
+                    ],
+                    "type": "string"
                 }
             },
             "required": [
-                "data"
+                "data",
+                "type"
             ],
             "type": "object"
         }
-    }
+    },
+    "properties": {
+        "sourceDefaults": {
+            "$ref": "#/definitions/SourceRetryOptions"
+        },
+        "sources": {
+            "items": {
+                "$ref": "#/definitions/SourceAIOConfig"
+            },
+            "type": "array"
+        }
+    },
+    "type": "object"
 }
 
