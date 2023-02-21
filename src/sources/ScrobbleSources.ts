@@ -216,8 +216,10 @@ export default class ScrobbleSources {
                 } else if (rawSourceConfigs === null) {
                     this.logger.error(`${sourceType}.json contained no data`);
                     continue;
+                } else if (typeof rawSourceConfigs === 'object') {
+                    sourceConfigs = [rawSourceConfigs];
                 } else {
-                    this.logger.error(`All top level data from ${sourceType}.json must be an array of objects, will not parse configs from file`);
+                    this.logger.error(`All top level data from ${sourceType}.json must be an object or an array of objects, will not parse configs from file`);
                     continue;
                 }
                 for (const [i,rawConf] of sourceConfigs.entries()) {

@@ -137,8 +137,10 @@ export default class ScrobbleClients {
                 } else if(rawClientConfigs === null) {
                     this.logger.error(`${clientType}.json contained no data`);
                     continue;
+                } else if(typeof rawClientConfigs === 'object') {
+                    clientConfigs = [rawClientConfigs];
                 } else {
-                    this.logger.error(`All top level data from ${clientType}.json must be an array of objects, will not parse configs from file`);
+                    this.logger.error(`All top level data from ${clientType}.json must be an object or an array of objects, will not parse configs from file`);
                     continue;
                 }
                 for(const [i,rawConf] of rawClientConfigs.entries()) {
