@@ -7,9 +7,9 @@
     "test": "echo \"Error: no test specified\" && exit 1",
     "build": "tsc",
     "start": "node src/index.js",
-    "schema": "npm run -s schema-aio & npm run -s schema-sources & npm run -s schema-client & npm run -s schema-aiosource & npm run -s schema-aioclient",
+    "schema": "npm run -s schema-aio & npm run -s schema-source & npm run -s schema-client & npm run -s schema-aiosource & npm run -s schema-aioclient",
     "schema-client": "typescript-json-schema tsconfig.json ClientConfig --out src/common/schema/client.json --required --tsNodeRegister --refs --validationKeywords deprecationMessage",
-    "schema-sources": "typescript-json-schema tsconfig.json SourceConfig --out src/common/schema/source.json --required --tsNodeRegister --refs --validationKeywords deprecationMessage",
+    "schema-source": "typescript-json-schema tsconfig.json SourceConfig --out src/common/schema/source.json --required --tsNodeRegister --refs --validationKeywords deprecationMessage",
     "schema-aio": "typescript-json-schema tsconfig.json AIOConfig --out src/common/schema/aio.json --required --tsNodeRegister --refs --validationKeywords deprecationMessage",
     "schema-aiosource": "typescript-json-schema tsconfig.json AIOSourceConfig --out src/common/schema/aio-source.json --required --tsNodeRegister --refs --validationKeywords deprecationMessage",
     "schema-aioclient": "typescript-json-schema tsconfig.json AIOClientConfig --out src/common/schema/aio-client.json --required --tsNodeRegister --refs --validationKeywords deprecationMessage"

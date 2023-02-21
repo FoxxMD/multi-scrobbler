@@ -63,9 +63,14 @@
         "LastfmClientConfig": {
             "properties": {
                 "configureAs": {
+                    "default": "client",
+                    "description": "Should always be `client` when using LastFM as a client",
                     "enum": [
                         "client",
                         "source"
+                    ],
+                    "examples": [
+                        "client"
                     ],
                     "type": "string"
                 },

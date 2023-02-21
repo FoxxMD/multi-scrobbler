@@ -79,6 +79,8 @@ There is also a [**kitchensink example**](/docs/kitchensink.md) that provides ex
 
 ### All-in-One File Configuration
 
+[**Explore the schema for this configuration, along with an example generator and validator, here**](https://json-schema.app/view/%23?url=https%3A%2F%2Fraw.githubusercontent.com%2FFoxxMD%2Fmulti-scrobbler%2Fdevelop%2Fsrc%2Fcommon%2Fschema%2Faio.json)
+
 Example directory structure:
 
 ```
@@ -183,7 +185,7 @@ Client ID/Secret. Make sure to also whitelist your redirect URI in the applicati
 
 ### JSON-Based
 
-See [`spotify.json.example`](/config/spotify.json.example)
+See [`spotify.json.example`](/config/spotify.json.example) or [explore the schema with an example and live editor/validator](https://json-schema.app/view/%23/%23%2Fdefinitions%2FSpotifySourceConfig?url=https%3A%2F%2Fraw.githubusercontent.com%2FFoxxMD%2Fmulti-scrobbler%2Fdevelop%2Fsrc%2Fcommon%2Fschema%2Fsource.json)
 
 ## [Plex](https://plex.tv)
 
@@ -197,7 +199,7 @@ Check the [instructions](plex.md) on how to setup a [webhooks](https://support.p
 
 ### JSON-Based
 
-See [`plex.json.example`](/config/plex.json.example)
+See [`plex.json.example`](/config/plex.json.example) or [explore the schema with an example and live editor/validator](https://json-schema.app/view/%23/%23%2Fdefinitions%2FPlexSourceConfig?url=https%3A%2F%2Fraw.githubusercontent.com%2FFoxxMD%2Fmulti-scrobbler%2Fdevelop%2Fsrc%2Fcommon%2Fschema%2Fsource.json)
 
 ## [Tautulli](https://tautulli.com)
 
@@ -211,7 +213,7 @@ Check the [instructions](plex.md) on how to setup a notification agent.
 
 ### JSON-Based
 
-See [`tautulli.json.example`](/config/tautulli.json.example)
+See [`tautulli.json.example`](/config/tautulli.json.example) or [explore the schema with an example and live editor/validator](https://json-schema.app/view/%23/%23%2Fdefinitions%2FTautulliSourceConfig?url=https%3A%2F%2Fraw.githubusercontent.com%2FFoxxMD%2Fmulti-scrobbler%2Fdevelop%2Fsrc%2Fcommon%2Fschema%2Fsource.json)
 
 ## [Subsonic](http://www.subsonic.org/)
 
@@ -234,7 +236,7 @@ Can use this source for any application that implements the [Subsonic API](http:
 
 ### JSON-Based
 
-See [`subsonic.json.example`](/config/subsonic.json.example)
+See [`subsonic.json.example`](/config/subsonic.json.example) or [explore the schema with an example and live editor/validator](https://json-schema.app/view/%23/%23%2Fdefinitions%2FSubSonicSourceConfig?url=https%3A%2F%2Fraw.githubusercontent.com%2FFoxxMD%2Fmulti-scrobbler%2Fdevelop%2Fsrc%2Fcommon%2Fschema%2Fsource.json)
 
 ## [Jellyfin](https://jellyfin.org/)
 
@@ -262,7 +264,7 @@ Must be using Jellyfin 10.7 or greater
 
 ### JSON-Based
 
-See [`jellyfin.json.example`](/config/jellyfin.json.example)
+See [`jellyfin.json.example`](/config/jellyfin.json.example) or [explore the schema with an example and live editor/validator](https://json-schema.app/view/%23/%23%2Fdefinitions%2FJellySourceConfig?url=https%3A%2F%2Fraw.githubusercontent.com%2FFoxxMD%2Fmulti-scrobbler%2Fdevelop%2Fsrc%2Fcommon%2Fschema%2Fsource.json)
 
 ## [Last.fm (Source)](https://www.last.fm)
 
@@ -274,7 +276,7 @@ No support for ENV based for Last.fm as a client (only source)
 
 ### JSON-Based
 
-See [`lastfm.json.example`](/config/lastfm.json.example), change `configureAs` to `source`.
+See [`lastfm.json.example`](/config/lastfm.json.example), change `configureAs` to `source`. Or [explore the schema with an example and live editor/validator](https://json-schema.app/view/%23/%23%2Fdefinitions%2FLastfmSourceConfig?url=https%3A%2F%2Fraw.githubusercontent.com%2FFoxxMD%2Fmulti-scrobbler%2Fdevelop%2Fsrc%2Fcommon%2Fschema%2Fsource.json)
 
 ## [Deezer](https://deezer.com/)
 
@@ -304,7 +306,7 @@ After starting multi-scrobbler with credentials in-place open the dashboard (`ht
 
 ### JSON-Based
 
-See [`deezer.json.example`](/config/deezer.json.example)
+See [`deezer.json.example`](/config/deezer.json.example) or [explore the schema with an example and live editor/validator](https://json-schema.app/view/%23/%23%2Fdefinitions%2FDeezerSourceConfig?url=https%3A%2F%2Fraw.githubusercontent.com%2FFoxxMD%2Fmulti-scrobbler%2Fdevelop%2Fsrc%2Fcommon%2Fschema%2Fsource.json)
 
 # Client Configurations
 
@@ -319,7 +321,7 @@ See [`deezer.json.example`](/config/deezer.json.example)
 
 ### JSON-Based
 
-See [`maloja.json.example`](/config/maloja.json.example)
+See [`maloja.json.example`](/config/maloja.json.example) or [explore the schema with an example and live editor/validator](https://json-schema.app/view/%23/%23%2Fdefinitions%2FMalojaClientConfig?url=https%3A%2F%2Fraw.githubusercontent.com%2FFoxxMD%2Fmulti-scrobbler%2Fdevelop%2Fsrc%2Fcommon%2Fschema%2Fclient.json)
 
 ## [Last.fm](https://www.last.fm)
 
@@ -342,4 +344,4 @@ or replace `localhost:9078` with your own base URL
 
 ### JSON-Based
 
-See [`lastfm.json.example`](/config/lastfm.json.example)
+See [`lastfm.json.example`](/config/lastfm.json.example) or [explore the schema with an example and live editor/validator](https://json-schema.app/view/%23/%23%2Fdefinitions%2FLastfmClientConfig?url=https%3A%2F%2Fraw.githubusercontent.com%2FFoxxMD%2Fmulti-scrobbler%2Fdevelop%2Fsrc%2Fcommon%2Fschema%2Fclient.json)

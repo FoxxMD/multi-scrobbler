@@ -28,6 +28,12 @@ export interface LastfmData extends RequestRetryOptions {
 }
 
 export interface LastfmClientConfig extends CommonClientConfig {
+    /**
+     * Should always be `client` when using LastFM as a client
+     *
+     * @default client
+     * @examples ["client"]
+     * */
     configureAs?: 'client' | 'source'
     data: CommonClientData & LastfmData
 }
