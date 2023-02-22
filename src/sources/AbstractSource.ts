@@ -64,7 +64,7 @@ export default abstract class AbstractSource {
     // by default if the track was recently played it is valid
     // this is useful for sources where the track doesn't have complete information like Subsonic
     // TODO make this more descriptive? or move it elsewhere
-    recentlyPlayedTrackIsValid = (playObj: any) => {
+    recentlyPlayedTrackIsValid = (playObj: PlayObject) => {
         return true;
     }
 

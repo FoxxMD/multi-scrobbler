@@ -22,6 +22,8 @@ import {AIOConfig} from "../common/infrastructure/config/aioConfig.js";
 import * as aioSchema from "../common/schema/aio-source.json";
 import * as sourceSchema from "../common/schema/source.json";
 import {LastfmSourceConfig} from "../common/infrastructure/config/source/lastfm.js";
+import YTMusicSource from "./YTMusicSource.js";
+import {YTMusicSourceConfig} from "../common/infrastructure/config/source/ytmusic.js";
 
 type groupedNamedConfigs = {[key: string]: ParsedConfig[]};
 
@@ -338,6 +340,8 @@ export default class ScrobbleSources {
             case 'deezer':
                 newSource = await new DeezerSource(name, compositeConfig as DeezerSourceConfig, internal);
                 break;
+            case 'ytmusic':
+                newSource = await new YTMusicSource(name, compositeConfig as YTMusicSourceConfig, internal);
             default:
                 break;
         }

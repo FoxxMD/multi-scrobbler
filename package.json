@@ -60,7 +60,8 @@
     "winston-daily-rotate-file": "^4.5.0",
     "winston-duplex": "^0.1.1",
     "winston-null": "^2.0.0",
-    "winston-transport": "^4.4.0"
+    "winston-transport": "^4.4.0",
+    "youtube-music-ts-api": "git+https://github.com/FoxxMD/youtube-music-ts-api.git#libraryHistoryDist"
   },
   "devDependencies": {
     "@tsconfig/node18": "^1.0.1",

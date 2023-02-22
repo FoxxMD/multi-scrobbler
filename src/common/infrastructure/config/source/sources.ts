@@ -5,7 +5,8 @@ import {DeezerSourceAIOConfig, DeezerSourceConfig} from "./deezer.js";
 import {SubsonicSourceAIOConfig, SubSonicSourceConfig} from "./subsonic.js";
 import {JellySourceAIOConfig, JellySourceConfig} from "./jellyfin.js";
 import {LastFmSouceAIOConfig, LastfmSourceConfig} from "./lastfm.js";
+import {YTMusicSourceAIOConfig, YTMusicSourceConfig} from "./ytmusic.js";
 
-export type SourceConfig = SpotifySourceConfig | PlexSourceConfig | TautulliSourceConfig | DeezerSourceConfig | SubSonicSourceConfig | JellySourceConfig | LastfmSourceConfig;
+export type SourceConfig = SpotifySourceConfig | PlexSourceConfig | TautulliSourceConfig | DeezerSourceConfig | SubSonicSourceConfig | JellySourceConfig | LastfmSourceConfig | YTMusicSourceConfig;
 
-export type SourceAIOConfig = SpotifySourceAIOConfig | PlexSourceAIOConfig | TautulliSourceAIOConfig | DeezerSourceAIOConfig | SubsonicSourceAIOConfig | JellySourceAIOConfig | LastFmSouceAIOConfig;
+export type SourceAIOConfig = SpotifySourceAIOConfig | PlexSourceAIOConfig | TautulliSourceAIOConfig | DeezerSourceAIOConfig | SubsonicSourceAIOConfig | JellySourceAIOConfig | LastFmSouceAIOConfig | YTMusicSourceAIOConfig;
