@@ -77,6 +77,10 @@ Output is also provided to stdout/stderr as well as file if specified in configu
 
 On first startup you may need to authorize Spotify and/or Last.fm by visiting the callback URL (which can also be accessed from the status page). Visit the status page above to find the applicable link to trigger this.
 
+## Help/FAQ
+
+Having issues with connections or configuration? Check the [FAQ](/docs/FAQ.md) before creating an issue!
+
 ## License
 
 MIT

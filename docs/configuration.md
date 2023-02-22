@@ -39,6 +39,8 @@
 
 **MS will parse configuration from both configuration types.** You can mix and match configurations but it is generally better to stick to one or the other.
 
+TIP: Check the [**FAQ**](/docs/FAQ.md) if you have any issues after configuration!
+
 ## ENV-Based Configuration
 
 This is done by passing environmental variables and so does not require any files to run MS.
