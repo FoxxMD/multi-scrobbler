@@ -20,8 +20,10 @@ export default class TautulliSource extends PlexSource {
             title,
             library_name,
             server,
+            version,
             duration,
             username,
+            library
         } = obj;
         let artists = [artist_name];
         if (track_artist !== undefined && track_artist !== artist_name) {
@@ -37,8 +39,9 @@ export default class TautulliSource extends PlexSource {
             },
             meta: {
                 title,
-                library: library_name,
+                library: library_name ?? library,
                 server,
+                sourceVersion: version,
                 mediaType: media_type,
                 user: username,
                 trackLength: duration,
