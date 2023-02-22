@@ -37,10 +37,12 @@ export abstract class IngressNotifier {
             notifs.push(`${!newRemote && requestNotif === undefined ? `${remoteHostStr(req)} ` : ''}${sourceNotif}`);
         }
 
-        if (requestNotif !== undefined || sourceValid === false) {
-            this.logger.warn(notifs.join(' | '));
-        } else {
-            this.logger.info(notifs.join(' | '))
+        if(notifs.length > 0) {
+            if (requestNotif !== undefined || sourceValid === false) {
+                this.logger.warn(notifs.join(' | '));
+            } else {
+                this.logger.info(notifs.join(' | '))
+            }
         }
     }
 
