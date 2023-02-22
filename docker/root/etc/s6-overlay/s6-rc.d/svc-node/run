@@ -1,0 +1,8 @@
+#!/usr/bin/with-contenv bash
+
+# used https://github.com/linuxserver/docker-wikijs/blob/master/root/etc/s6-overlay/s6-rc.d/svc-wikijs/run as a template
+
+# NODE_ARGS can be passed by ENV in docker command like "docker run foxxmd/multi-scrobbler -e NODE_ARGS=--optimize_for_size"
+echo -e "\nmulti-scrobbler is starting!"
+exec \
+	  s6-setuidgid abc /usr/bin/node $NODE_ARGS /app/src/index.js run

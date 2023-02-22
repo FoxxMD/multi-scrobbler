@@ -11,6 +11,7 @@ Scenario:
 * Fred has a Plex server and wants to scrobble everything he plays
 * Mary uses Fred's Plex server but only wants to scrobble her plays from the `podcast` library
 * The three of you have a shared library on Plex called `party` that you only play when you are hanging out. You want plays from that library to be scrobbled to everyone's servers.
+* Fred also has his own Jellyfin server and wants to scrobble everything he plays
 
 ### All-in-one Config
 
@@ -83,6 +84,14 @@ Using just one config file located at `CONFIG_DIR/config.json`:
       }
     },
     {
+      "type": "jellyfin",
+      "name": "FredJelly",
+      // omitting clients (or making it empty) will make this Source scrobble to all Clients
+      "data": {
+        "user": ["fred@email.com"]
+      }
+    },
+    {
       "type": "subsonic",
       "name": "foxxAirsonic",
       "clients": ["foxxMaloja"],
@@ -124,6 +133,7 @@ Using just one config file located at `CONFIG_DIR/config.json`:
       "data": {
         "apiKey": "maryApiKey",
         "secret": "marySecret",
+        "redirectUri": "http://localhost:9078/lastfm/callback"
       }
     }
   ]
@@ -143,7 +153,7 @@ In `CONFIG_DIR/spotify.json`:
     "clients": ["foxxMaloja"],
     "data": {
       "clientId": "foxxSpotifyAppId",
-      "clientSecret": "foxxSpotifyAppSecret",
+      "clientSecret": "foxxSpotifyAppSecret"
     }
   },
   {
@@ -151,7 +161,7 @@ In `CONFIG_DIR/spotify.json`:
     "clients": ["maryMaloja"],
     "data": {
       "clientId": "foxxSpotifyAppId",
-      "clientSecret": "foxxSpotifyAppSecret",
+      "clientSecret": "foxxSpotifyAppSecret"
     }
   },
   {
@@ -160,7 +170,7 @@ In `CONFIG_DIR/spotify.json`:
     "data": {
       "accessToken": "fredsToken",
       "refreshToken": "fredsRefreshToken",
-      "interval": 120,
+      "interval": 120
     }
   },
 ]
@@ -188,7 +198,20 @@ In `CONFIG_DIR/plex.json`
   {
     "name": "partyPlex",
     "data": {
-      "libraries": ["party"],
+      "libraries": ["party"]
+    }
+  }
+]
+```
+
+In `CONFIG_DIR/jellyfin.json`
+
+```json5
+[
+  {
+    "name": "FredJelly",
+    "data": {
+      "user": ["fred@email.com"]
     }
   }
 ]
@@ -231,6 +254,7 @@ In `CONFIG_DIR/lastfm.json`:
     "data": {
       "apiKey": "maryApiKey",
       "secret": "marySecret",
+      "redirectUri": "http://localhost:9078/lastfm/callback"
     }
   }
 ]

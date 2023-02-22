@@ -1,35 +1,54 @@
-FROM node:fermium-alpine3.10
+FROM lsiobase/alpine:3.17 as base
 
 ENV TZ=Etc/GMT
 
+RUN \
+  echo "**** install build packages ****" && \
+  apk add --no-cache \
+    alpine-base \
+    git \
+    nodejs \
+    npm \
+    openssh && \
+  echo "**** cleanup ****" && \
+  rm -rf \
+    /root/.cache \
+    /tmp/*
+
 RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
 
-RUN mkdir -p /home/node/app/node_modules && chown -R node:node /home/node
+ARG data_dir=/config
+VOLUME $data_dir
+ENV CONFIG_DIR=$data_dir
 
-WORKDIR /home/node/app
+COPY docker/root/ /
 
-COPY package*.json ./
+WORKDIR /app
 
-USER node
+FROM base as build
 
-RUN npm install --production
+# copy NPM dependencies and install
+COPY --chown=abc:abc package*.json ./
+COPY --chown=abc:abc tsconfig.json .
 
-COPY --chown=node:node . .
+RUN npm install
 
-ENV NPM_CONFIG_LOGLEVEL debug
+COPY --chown=abc:abc . /app
 
-ARG config_dir=/home/node/config
-RUN mkdir -p $config_dir
-VOLUME $config_dir
-ENV CONFIG_DIR=$config_dir
+RUN npm run build && rm -rf node_modules
 
-ARG log_dir=/home/node/logs
-RUN mkdir -p $log_dir
-VOLUME $log_dir
-ENV LOG_DIR=$log_dir
+FROM base as app
+
+COPY --from=build --chown=abc:abc /app /app
+
+ENV NODE_ENV="production"
+
+RUN npm install --omit=dev \
+    && npm cache clean --force \
+    && chown abc:abc node_modules \
+    && rm -rf node_modules/ts-node \
+    && rm -rf node_modules/typescript
 
 ARG webPort=9078
 ENV PORT=$webPort
 EXPOSE $PORT
-
-CMD [ "node", "index.js" ]
