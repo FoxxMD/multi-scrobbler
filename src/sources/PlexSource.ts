@@ -224,13 +224,11 @@ export const plexRequestMiddle = () => {
                 }
 
                 let validFile = null;
-                for (const namedFiles of Object.values(files)) {
+                for (const namedFile of Object.values(files)) {
                     // @ts-expect-error TS(2571): Object is of type 'unknown'.
-                    for(const file of namedFiles) {
-                        if (file.mimetype.includes('json')) {
-                            validFile = file;
-                            break;
-                        }
+                    if (namedFile.mimetype.includes('json')) {
+                        validFile = namedFile;
+                        break;
                     }
                 }
                 if (validFile === null) {

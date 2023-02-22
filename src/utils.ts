@@ -7,7 +7,8 @@ import JSON5 from 'json5';
 import { TimeoutError, WebapiError } from "spotify-web-api-node/src/response-error.js";
 import { Response } from 'superagent';
 import Ajv, {Schema} from 'ajv';
-import {PlayObject, TrackStringOptions} from "./common/infrastructure/Atomic.js";
+import {PlayObject, RemoteIdentityParts, TrackStringOptions} from "./common/infrastructure/Atomic.js";
+import {Request} from "express";
 
 const {format} = winston;
 const {combine, printf, timestamp, label, splat, errors} = format;
@@ -448,4 +449,18 @@ export const validateJson = <T>(config: object, schema: Schema, logger: Logger):
         }
         throw new Error('Config schema validity failure');
     }
+}
+
+export const remoteHostIdentifiers = (req: Request): RemoteIdentityParts => {
+    const remote = req.connection.remoteAddress;
+    const proxyRemote = Array.isArray(req.headers["x-forwarded-for"]) ? req.headers["x-forwarded-for"][0] : req.headers["x-forwarded-for"];
+    const ua = req.headers["user-agent"];
+
+    return {host: remote, proxy: proxyRemote, agent: ua};
+}
+
+export const remoteHostStr = (req: Request): string => {
+    const {host, proxy, agent} = remoteHostIdentifiers(req);
+
+    return `${host}${proxy !== undefined ? ` (${proxy})` : ''}${agent !== undefined ? ` (UA: ${agent})` : ''}`;
 }

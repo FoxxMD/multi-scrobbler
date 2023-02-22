@@ -9,8 +9,6 @@ export default class JellyfinSource extends MemorySource {
     users;
     servers;
 
-    seenServers = {};
-
     declare config: JellySourceConfig;
 
     constructor(name: any, config: JellySourceConfig, internal: InternalConfig) {
@@ -144,10 +142,6 @@ export default class JellyfinSource extends MemorySource {
     }
 
     handle = async (playObj: any, allClients: any) => {
-        if(this.seenServers[playObj.meta.server] === undefined) {
-            this.seenServers[playObj.meta.server] = playObj.meta.sourceVersion;
-            this.logger.info(`Received data from server ${playObj.meta.server} (Version ${playObj.meta.sourceVersion}) for the first time.`);
-        }
         if (!this.isValidEvent(playObj)) {
             return;
         }

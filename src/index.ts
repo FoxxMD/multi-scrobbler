@@ -36,6 +36,9 @@ import DeezerSource from "./sources/DeezerSource.js";
 import AbstractSource from "./sources/AbstractSource.js";
 import {PlayObject, TrackStringOptions} from "./common/infrastructure/Atomic.js";
 import SpotifySource from "./sources/SpotifySource.js";
+import {JellyfinNotifier} from "./sources/ingressNotifiers/JellyfinNotifier.js";
+import {PlexNotifier} from "./sources/ingressNotifiers/PlexNotifier.js";
+import {TautulliNotifier} from "./sources/ingressNotifiers/TautulliNotifier.js";
 
 
 dayjs.extend(utc)
@@ -245,7 +248,10 @@ const configDir = process.env.CONFIG_DIR || path.resolve(projectDir, `./config`)
             });
         })
 
+        const tauIngress = new TautulliNotifier();
         app.postAsync('/tautulli', async function(this: any, req, res) {
+            tauIngress.trackIngress(req, false);
+
             const payload = TautulliSource.formatPlayObj(req.body, true);
             // try to get config name from payload
             if (req.body.scrobblerConfig !== undefined) {
@@ -276,13 +282,19 @@ const configDir = process.env.CONFIG_DIR || path.resolve(projectDir, `./config`)
 
         const plexMiddle = plexRequestMiddle();
         const plexLog = createLabelledLogger('plexReq', 'Plex Request');
-        app.postAsync('/plex', plexMiddle, async function (req, res) {
+        const plexIngress = new PlexNotifier();
+        app.postAsync('/plex',
+            async function (req, res, next) {
+                // track request before parsing body to ensure we at least log that something is happening
+                // (in the event body parsing does not work or request is not POST/PATCH)
+                plexIngress.trackIngress(req, true);
+                next();
+            },
+            plexMiddle, async function (req, res) {
+            plexIngress.trackIngress(req, false);
+
             const { payload } = req as any;
-            if(payload === undefined) {
-
-                plexLog.warn('Received a request without any data');
-
-            } else {
+            if(payload !== undefined) {
                 const playObj = PlexSource.formatPlayObj(payload, true);
 
                 const pSources = scrobbleSources.getByType('plex') as PlexSource[];
@@ -300,7 +312,17 @@ const configDir = process.env.CONFIG_DIR || path.resolve(projectDir, `./config`)
 
         // webhook plugin sends json with context type text/utf-8 so we need to parse it differently
         const jellyfinJsonParser = bodyParser.json({type: 'text/*'});
-        app.postAsync('/jellyfin', jellyfinJsonParser, async function (req, res) {
+        const jellyIngress = new JellyfinNotifier();
+        app.postAsync('/jellyfin',
+            async function (req, res, next) {
+                // track request before parsing body to ensure we at least log that something is happening
+                // (in the event body parsing does not work or request is not POST/PATCH)
+                jellyIngress.trackIngress(req, true);
+                next();
+            },
+            jellyfinJsonParser, async function (req, res) {
+            jellyIngress.trackIngress(req, false);
+
             const playObj = JellyfinSource.formatPlayObj(req.body, true);
             const pSources = scrobbleSources.getByType('jellyfin') as JellyfinSource[];
             for (const source of pSources) {

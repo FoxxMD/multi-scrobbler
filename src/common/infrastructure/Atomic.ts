@@ -128,3 +128,9 @@ export interface MalojaScrobbleV2RequestData extends MalojaScrobbleRequestData {
 export interface MalojaScrobbleV3RequestData extends MalojaScrobbleRequestData {
     artists: string[]
 }
+
+export interface RemoteIdentityParts {
+    host: string,
+    proxy: string | undefined,
+    agent: string | undefined
+}
