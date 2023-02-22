@@ -84,4 +84,4 @@ If you see something like this in your logs:
 2023-02-19T10:05:42-06:00 error  : [App] Error: config.json could not be parsed
 ```
 
-It means the JSON in your configuration file is not valid. Copy and paste your configuration into a site like [JSONLine](https://jsonlint.com/) to find out where errors you have and fix them.
+It means the JSON in your configuration file is not valid. Copy and paste your configuration into a site like [JSONLint](https://jsonlint.com/) to find out where errors you have and fix them.
