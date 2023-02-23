@@ -401,7 +401,7 @@ const configDir = process.env.CONFIG_DIR || path.resolve(projectDir, `./config`)
                 return res.status(400).send(`Specified source cannot retrieve recent plays (${source.type})`);
             }
 
-            const result = await (source as AbstractSource).getRecentlyPlayed({formatted: true});
+            const result = await (source as AbstractSource).getRecentlyPlayed({formatted: true, display: true});
             const artistTruncFunc = truncateStringToLength(Math.min(40, longestString(result.map((x: any) => x.data.artists.join(' / ')).flat())));
             const trackLength = longestString(result.map((x: any) => x.data.track))
             const plays = result.map((x: PlayObject) => {

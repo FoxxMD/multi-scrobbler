@@ -95,6 +95,8 @@ export default class YTMusicSource extends AbstractSource {
      * Get the last 20 recently played tracks
      * */
     getRecentlyPlayed = async (options: RecentlyPlayedOptions = {}) => {
+        const { display = false } = options;
+        
         const playlistDetail = await this.getLibraryHistory();
         const plays = playlistDetail.tracks.map((x) => YTMusicSource.formatPlayObj(x, false)).slice(0, 20);
         if(this.polling === false) {
@@ -142,8 +144,14 @@ export default class YTMusicSource extends AbstractSource {
                 this.recentlyPlayed = newPlays.concat(this.recentlyPlayed).slice(0, 20);
             }
         }
-
-        return this.recentlyPlayed.filter(x => x.meta.newFromSource);
+        
+        if(!display) {
+            // used by MS for newely monitored tracks where we know the play date
+            return this.recentlyPlayed.filter(x => x.meta.newFromSource);
+        }
+        // used by UI for returning all results
+        return this.recentlyPlayed;
+        
     }
 
     testAuth = async () => {

@@ -93,8 +93,8 @@ export const buildTrackString = (playObj: PlayObject, options: TrackStringOption
         transformers: {
             artists: artistsFunc = (a: string[]) => a.join(' / '),
             track: trackFunc = defaultTransformer,
-            time: timeFunc = (t: Dayjs) => t.local().format(),
-            timeFromNow = (t: Dayjs) => t.local().fromNow(),
+            time: timeFunc = (t: Dayjs | undefined) => t === undefined ? 'N/A' : t.local().format(),
+            timeFromNow = (t: Dayjs | undefined) => t === undefined ? undefined : t.local().fromNow(),
         } = {}
     } = options;
     const {
@@ -127,7 +127,11 @@ export const buildTrackString = (playObj: PlayObject, options: TrackStringOption
         strParts.push(`@ ${timeFunc(playDate)}`);
     }
     if (include.includes('timeFromNow')) {
-        strParts.push(`(${timeFromNow(playDate)})`)
+        const tfn = timeFromNow(playDate);
+        if(tfn !== undefined) {
+            strParts.push(`(${tfn})`)
+        }
+
     }
     return strParts.join(' ');
 }

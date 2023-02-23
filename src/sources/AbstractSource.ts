@@ -7,6 +7,8 @@ import {SourceConfig} from "../common/infrastructure/config/source/sources.js";
 export interface RecentlyPlayedOptions {
     limit?: number
     formatted?: boolean
+
+    display?: boolean
 }
 
 export default abstract class AbstractSource {
