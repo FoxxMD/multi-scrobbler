@@ -159,6 +159,13 @@ export default class YTMusicSource extends AbstractSource {
             await this.getRecentlyPlayed();
             this.authed = true;
         } catch (e) {
+            if(e.message.includes('Status code: 401')) {
+                let hint = 'Verify your cookie and authUser are correct.';
+                if(this.config.data.authUser === undefined) {
+                    hint = `${hint} TIP: 'authUser' is not defined your credentials. If you are using Chrome to retrieve credentials from music.youtube.com make sure the value from the 'X-Goog-AuthUser' is used as 'authUser'.`;
+                }
+                this.logger.error(`Authentication failed with the given credentials. ${hint} | Error => ${e.message}`);
+            }
             this.authed = false;
         }
         return this.authed;
