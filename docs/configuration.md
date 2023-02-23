@@ -5,33 +5,16 @@
     * [Specific File Configuration](#specific-file-configuration)
 * [Source Configurations](#source-configurations)
   * [Spotify](#spotify)
-    * [ENV-Based](#env-based)
-    * [File-Based](#file-based)
   * [Plex](#plex)
-    * [ENV-Based](#env-based-1)
-    * [File-Based](#file-based-1)
   * [Tautulli](#tautulli)
-    * [ENV-Based](#env-based-2)
-    * [File-Based](#file-based-2)
   * [Subsonic](#subsonic)
-    * [ENV-Based](#env-based-3)
-    * [File-Based](#file-based-3)
   * [Jellyfin](#jellyfin)
-    * [ENV-Based](#env-based-4)
-    * [File-Based](#file-based-4)
   * [Last.fm (Source)](#lastfm--source-)
-    * [ENV-Based](#env-based-5)
-    * [File-Based](#file-based-5)
   * [Deezer](#deezer)
-    * [ENV-Based](#env-based-6)
-    * [File-Based](#file-based-6)
+  * [Youtube Music](#youtube-music)
 * [Client Configurations](#client-configurations)
   * [Maloja](#maloja)
-    * [ENV-Based](#env-based-7)
-    * [File-Based](#file-based-7)
   * [Last.fm](#lastfm)
-    * [ENV-Based](#env-based-8)
-    * [File-Based](#file-based-8)
 
 # Configuration Overview
 
@@ -309,6 +292,33 @@ After starting multi-scrobbler with credentials in-place open the dashboard (`ht
 ### File-Based
 
 See [`deezer.json.example`](/config/deezer.json.example) or [explore the schema with an example and live editor/validator](https://json-schema.app/view/%23/%23%2Fdefinitions%2FDeezerSourceConfig?url=https%3A%2F%2Fraw.githubusercontent.com%2FFoxxMD%2Fmulti-scrobbler%2Fdevelop%2Fsrc%2Fcommon%2Fschema%2Fsource.json)
+
+## [Youtube Music](https://music.youtube.com)
+
+Credentials for YT Music are obtained from a browser request to https://music.youtube.com **once you are logged in.** [Specific requirements are here and summarized below:](https://github.com/nickp10/youtube-music-ts-api/blob/master/DOCUMENTATION.md#authenticate)
+
+* Open a new tab
+* Open the developer tools (Ctrl-Shift-I) and select the “Network” tab 
+* Go to https://music.youtube.com and ensure you are logged in 
+
+Then...
+
+1. Find and select an authenticated POST request. The simplest way is to filter by /browse using the search bar of the developer tools. If you don’t see the request, try scrolling down a bit or clicking on the library button in the top bar.
+2. **Make sure **Headers** pane is selected and open
+3. In the **Request Headers** section find and copy the **entire value** found after `Cookie:` and use this as the `cookie` value in your multi-scrobbler config
+4. If present, in the **Request Headers** section find and copy the number found in `X-google-AuthUser` and use this as the value for `authUser` in your multi-scrobbler config
+
+![Google Headers](/docs/google-header.jpg)
+
+NOTES:
+
+* YT Music authentication is "browser based" which means your credentials may expire after a (long?) period of time OR if you log out of https://music.youtube.com. In the event this happens just repeat the steps above to get new credentials.
+* Communication to YT Music is **unofficial** and not supported or endorsed by Google. This means that **this integration may stop working at any time** if Google decides to change how YT Music works in the browser.
+
+### File-Based
+
+See [`ytmusic.json.example`](/config/ytmusic.json.example) or [explore the schema with an example and live editor/validator](https://json-schema.app/view/%23/%23%2Fdefinitions%2FYTMusicSourceConfig?url=https%3A%2F%2Fraw.githubusercontent.com%2FFoxxMD%2Fmulti-scrobbler%2Fdevelop%2Fsrc%2Fcommon%2Fschema%2Fsource.json)
+
 
 # Client Configurations
 

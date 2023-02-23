@@ -6,6 +6,7 @@ Scenario:
 * Each person has their own Maloja server
 * Each person has their own Spotify account
 * You have your own Airsonic (subsonic) server you to scrobble from
+* You have your own Youtube Music account you want to scrobble from
 * Mary has her own Last.fm account she also wants to scrobble to
 * Fred has his own Spotify application and provides you with just his access and refresh token because he doesn't trust you (wtf Fred)
 * Fred has a Plex server and wants to scrobble everything he plays
@@ -99,6 +100,15 @@ Using just one config file located at `CONFIG_DIR/config.json`:
         "user": "foxx",
         "password": "foxxPassword",
         "url": "https://airsonic.foxx.example"
+      }
+    },
+    {
+      "type": "ytmusic",
+      "name": "foxxYoutube",
+      "clients": ["foxxMaloja"],
+      "data": {
+        "cookie": "__Secure-3PAPISID=3AxsXpy0MKGu75Qb/AkISXGqOnSDn1jEKn; DEVICE_INFO=ChxOekU0Tmpjek5EWTBPRGd3TlRBMk16QXpNdz09EJbS8Z0GGJbS8Z0G; ...",
+        "authUser": 1
       }
     },
   ],
@@ -212,6 +222,22 @@ In `CONFIG_DIR/jellyfin.json`
     "name": "FredJelly",
     "data": {
       "user": ["fred@email.com"]
+    }
+  }
+]
+```
+
+In `CONFIG_DIR/ytmusic.json`
+
+```json5
+[
+  {
+    "type": "ytmusic",
+    "name": "foxxYoutube",
+    "clients": ["foxxMaloja"],
+    "data": {
+      "cookie": "__Secure-3PAPISID=3AxsXpy0MKGu75Qb/AkISXGqOnSDn1jEKn; DEVICE_INFO=ChxOekU0Tmpjek5EWTBPRGd3TlRBMk16QXpNdz09EJbS8Z0GGJbS8Z0G; ...",
+      "authUser": 1
     }
   }
 ]
