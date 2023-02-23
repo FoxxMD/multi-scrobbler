@@ -61,7 +61,7 @@
     "winston-duplex": "^0.1.1",
     "winston-null": "^2.0.0",
     "winston-transport": "^4.4.0",
-    "youtube-music-ts-api": "git+https://github.com/FoxxMD/youtube-music-ts-api.git#libraryHistoryDist"
+    "youtube-music-ts-api": "^1.4.1"
   },
   "devDependencies": {
     "@tsconfig/node18": "^1.0.1",

@@ -7,7 +7,12 @@ import JSON5 from 'json5';
 import { TimeoutError, WebapiError } from "spotify-web-api-node/src/response-error.js";
 import { Response } from 'superagent';
 import Ajv, {Schema} from 'ajv';
-import {PlayObject, RemoteIdentityParts, TrackStringOptions} from "./common/infrastructure/Atomic.js";
+import {
+    lowGranularitySources,
+    PlayObject,
+    RemoteIdentityParts,
+    TrackStringOptions
+} from "./common/infrastructure/Atomic.js";
 import {Request} from "express";
 
 const {format} = winston;
@@ -463,4 +468,50 @@ export const remoteHostStr = (req: Request): string => {
     const {host, proxy, agent} = remoteHostIdentifiers(req);
 
     return `${host}${proxy !== undefined ? ` (${proxy})` : ''}${agent !== undefined ? ` (UA: ${agent})` : ''}`;
+}
+
+export const closePlayDate = (existingPlay: PlayObject, newPlay: PlayObject, diffThreshold?: number): boolean => {
+
+    const {
+        meta:{
+            source,
+        },
+        data: {
+            playDate: existingPlayDate,
+            duration: existingDuration,
+        }
+    } = existingPlay;
+
+    const {
+        data: {
+            playDate: newPlayDate,
+            duration: newDuration,
+        }
+    } = newPlay;
+
+    // cant compare!
+    if(existingPlayDate === undefined || newPlayDate === undefined) {
+        return false;
+    }
+
+    let playDiffThreshold = diffThreshold;
+    if(playDiffThreshold === undefined) {
+        playDiffThreshold = lowGranularitySources.some(x => x.toLocaleLowerCase() === source) ? 60 : 10;
+    }
+    let closeTime = false;
+    // check if existing play time is same as new play date (when the track finished playing AKA entered recent tracks)
+    let scrobblePlayDiff = Math.abs(existingPlayDate.unix() - newPlayDate.unix());
+    let scrobblePlayStartDiff;
+    if (scrobblePlayDiff <= playDiffThreshold) {
+        closeTime = true;
+    }
+    // also need to check that scrobble time isn't the BEGINNING of the track -- if the source supports durations
+    if (closeTime === false && newDuration !== undefined) {
+        scrobblePlayStartDiff = Math.abs(existingPlayDate.unix() - (newPlayDate.unix() - newDuration));
+        if (scrobblePlayStartDiff <= playDiffThreshold) {
+            closeTime = true;
+        }
+    }
+
+    return closeTime;
 }

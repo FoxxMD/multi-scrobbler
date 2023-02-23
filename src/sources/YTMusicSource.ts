@@ -1,22 +1,21 @@
 import YouTubeMusic from "youtube-music-ts-api";
 
 import AbstractSource, {RecentlyPlayedOptions} from "./AbstractSource.js";
-import {SourceConfig} from "../common/infrastructure/config/source/sources.js";
 import {InternalConfig, PlayObject} from "../common/infrastructure/Atomic.js";
 import {IYouTubeMusicAuthenticated} from "youtube-music-ts-api/interfaces-primary";
 import dayjs from "dayjs";
-import {parseDurationFromTimestamp} from "../utils.js";
-import duration from "dayjs/plugin/duration.js";
+import {parseDurationFromTimestamp, playObjDataMatch} from "../utils.js";
 import {ITrackDetail} from "youtube-music-ts-api/interfaces-supplementary";
-import MemorySource from "./MemorySource.js";
 import {YTMusicSourceConfig} from "../common/infrastructure/config/source/ytmusic.js";
 
-export default class YTMusicSource extends MemorySource {
+export default class YTMusicSource extends AbstractSource {
     apiInstance?: IYouTubeMusicAuthenticated
 
     requiresAuth = true;
 
     declare config: YTMusicSourceConfig
+
+    recentlyPlayed: PlayObject[] = [];
 
     constructor(name: string, config: YTMusicSourceConfig, internal: InternalConfig) {
         super('ytmusic', name, config, internal);
@@ -81,9 +80,70 @@ export default class YTMusicSource extends MemorySource {
         return this.apiInstance;
     }
 
+    protected getLibraryHistory = async () => {
+        // internally for this call YT returns a *list* of playlists with decreasing granularity from most recent to least recent like this:
+        // * Today
+        // * Yesterday
+        // * ....
+        // * January 2023
+        //
+        // the playlist returned can therefore change abruptly IE MS started yesterday and new music listened to today -> "today" playlist is cleared
+      return await (await this.api()).getLibraryHistory();
+    }
+
+    /**
+     * Get the last 20 recently played tracks
+     * */
     getRecentlyPlayed = async (options: RecentlyPlayedOptions = {}) => {
-        const plays = await (await this.api()).getLibraryHistory();
-        return plays.tracks.map((x) => YTMusicSource.formatPlayObj(x, false));
+        const playlistDetail = await this.getLibraryHistory();
+        const plays = playlistDetail.tracks.map((x) => YTMusicSource.formatPlayObj(x, false)).slice(0, 20);
+        if(this.polling === false) {
+            this.recentlyPlayed = plays;
+        } else {
+            let newPlays: PlayObject[] = [];
+
+            // iterate through each play until we find one that matched the "newest" from the recently played
+            for (const [i, value] of plays.entries()) {
+                if (this.recentlyPlayed.length === 0) {
+                    // playlist was empty when we started, nothing to compare to so all tracks are new
+                    newPlays.push(value);
+                } else if (this.recentlyPlayed.length !== plays.length) { // if there is a difference in list length we need to check for consecutive repeat tracks as well
+                    const match = playObjDataMatch(value, this.recentlyPlayed[0]);
+                    if (!match) {
+                        newPlays.push(value)
+                    } else if (match && playObjDataMatch(plays[i + 1], this.recentlyPlayed[0])) { // if it matches but next ALSO matches the current it's a repeat "new"
+                        // check if repeated track
+                        newPlays.push(value)
+                    } else {
+                        break;
+                    }
+                } else if (!playObjDataMatch(value, this.recentlyPlayed[0])) {
+                    // if the newest doesn't match a play then the play is new
+                    newPlays.push(value);
+                } else {
+                    // otherwise we're back known plays
+                    break;
+                }
+            }
+
+            if(newPlays.length > 0) {
+                newPlays = newPlays.map((x) => {
+                    return {
+                        data: {
+                            ...x.data,
+                            playDate: dayjs().startOf('minute')
+                        },
+                        meta: {
+                            ...x.meta,
+                            newFromSource: true
+                        }
+                    }
+                });
+                this.recentlyPlayed = newPlays.concat(this.recentlyPlayed).slice(0, 20);
+            }
+        }
+
+        return this.recentlyPlayed.filter(x => x.meta.newFromSource);
     }
 
     testAuth = async () => {
@@ -94,5 +154,11 @@ export default class YTMusicSource extends MemorySource {
             this.authed = false;
         }
         return this.authed;
+    }
+
+    poll = async (allClients: any) => {
+        this.logger.verbose('Hydrating initial recently played tracks for reference.');
+        await this.getRecentlyPlayed();
+        await this.startPolling(allClients);
     }
 }
