@@ -141,7 +141,18 @@
                     "type": "number"
                 },
                 "options": {
-                    "$ref": "#/definitions/Record<string,any>"
+                    "description": "Additional options for jellyfin logging and tuning",
+                    "properties": {
+                        "logPayload": {
+                            "default": false,
+                            "description": "Log raw Jellyfin webhook payload to debug",
+                            "examples": [
+                                false
+                            ],
+                            "type": "boolean"
+                        }
+                    },
+                    "type": "object"
                 },
                 "retryMultiplier": {
                     "default": 1.5,

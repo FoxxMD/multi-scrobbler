@@ -328,6 +328,22 @@ const configDir = process.env.CONFIG_DIR || path.resolve(projectDir, `./config`)
 
             const playObj = JellyfinSource.formatPlayObj({...req.body, connectionId}, true);
             const pSources = scrobbleSources.getByType('jellyfin') as JellyfinSource[];
+            if(pSources.length === 0) {
+                logger.warn('Received Jellyfin connection but no Jellyfin sources are configured');
+            }
+                const logPayload = pSources.some(x => {
+                    const {
+                        data: {
+                            options: {
+                                logPayload = false
+                            } = {}
+                        } = {},
+                    } = x.config;
+                    return logPayload;
+                });
+            if(logPayload) {
+                logger.debug(`[Jellyfin] Logging payload due to at least one Jellyfin source having 'logPayload: true`, req.body);
+            }
             for (const source of pSources) {
                 await source.handle(playObj, scrobbleClients);
             }
