@@ -14,7 +14,7 @@ export class Notifiers {
 
     logger: Logger;
 
-    webhooks: AbstractWebhookNotifier[];
+    webhooks: AbstractWebhookNotifier[] = [];
 
     constructor() {
         this.logger = createLabelledLogger('Notifiers', 'Notifiers');
