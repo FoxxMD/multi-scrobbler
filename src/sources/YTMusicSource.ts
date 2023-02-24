@@ -7,6 +7,7 @@ import dayjs from "dayjs";
 import {parseDurationFromTimestamp, playObjDataMatch} from "../utils.js";
 import {ITrackDetail} from "youtube-music-ts-api/interfaces-supplementary";
 import {YTMusicSourceConfig} from "../common/infrastructure/config/source/ytmusic.js";
+import {Notifiers} from "../notifier/Notifiers.js";
 
 export default class YTMusicSource extends AbstractSource {
     apiInstance?: IYouTubeMusicAuthenticated
@@ -17,8 +18,8 @@ export default class YTMusicSource extends AbstractSource {
 
     recentlyPlayed: PlayObject[] = [];
 
-    constructor(name: string, config: YTMusicSourceConfig, internal: InternalConfig) {
-        super('ytmusic', name, config, internal);
+    constructor(name: string, config: YTMusicSourceConfig, internal: InternalConfig, notifier: Notifiers) {
+        super('ytmusic', name, config, internal, notifier);
         this.canPoll = true;
     }
 

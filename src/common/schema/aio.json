@@ -164,6 +164,49 @@
             ],
             "type": "object"
         },
+        "GotifyConfig": {
+            "properties": {
+                "name": {
+                    "description": "A friendly name used to identify webhook config in logs",
+                    "type": "string"
+                },
+                "priorities": {
+                    "$ref": "#/definitions/PrioritiesConfig",
+                    "description": "Priority of messages\n\n* Info -> 5\n* Warn -> 7\n* Error -> 10"
+                },
+                "token": {
+                    "description": "The token created for this Application in Gotify",
+                    "examples": [
+                        "AQZI58fA.rfSZbm"
+                    ],
+                    "type": "string"
+                },
+                "type": {
+                    "description": "Webhook type. Valid values are:\n\n* gotify\n* ntfy",
+                    "enum": [
+                        "gotify",
+                        "ntfy"
+                    ],
+                    "examples": [
+                        "gotify"
+                    ],
+                    "type": "string"
+                },
+                "url": {
+                    "description": "The URL of the Gotify server. Same URL that would be used to reach the Gotify UI",
+                    "examples": [
+                        "http://192.168.0.100:8078"
+                    ],
+                    "type": "string"
+                }
+            },
+            "required": [
+                "token",
+                "type",
+                "url"
+            ],
+            "type": "object"
+        },
         "JellyData": {
             "properties": {
                 "maxPollRetries": {
@@ -612,6 +655,54 @@
             },
             "type": "object"
         },
+        "NtfyConfig": {
+            "properties": {
+                "name": {
+                    "description": "A friendly name used to identify webhook config in logs",
+                    "type": "string"
+                },
+                "password": {
+                    "description": "Required if topic is protected",
+                    "type": "string"
+                },
+                "priorities": {
+                    "$ref": "#/definitions/PrioritiesConfig",
+                    "description": "Priority of messages\n\n* Info -> 3\n* Warn -> 4\n* Error -> 5"
+                },
+                "topic": {
+                    "description": "The topic mutli-scrobbler should POST to",
+                    "type": "string"
+                },
+                "type": {
+                    "description": "Webhook type. Valid values are:\n\n* gotify\n* ntfy",
+                    "enum": [
+                        "gotify",
+                        "ntfy"
+                    ],
+                    "examples": [
+                        "gotify"
+                    ],
+                    "type": "string"
+                },
+                "url": {
+                    "description": "The URL of the Ntfy server",
+                    "examples": [
+                        "http://192.168.0.100:8078"
+                    ],
+                    "type": "string"
+                },
+                "username": {
+                    "description": "Required if topic is protected",
+                    "type": "string"
+                }
+            },
+            "required": [
+                "topic",
+                "type",
+                "url"
+            ],
+            "type": "object"
+        },
         "PlexSourceAIOConfig": {
             "properties": {
                 "clients": {
@@ -736,6 +827,34 @@
                     ]
                 }
             },
+            "type": "object"
+        },
+        "PrioritiesConfig": {
+            "properties": {
+                "error": {
+                    "examples": [
+                        10
+                    ],
+                    "type": "number"
+                },
+                "info": {
+                    "examples": [
+                        5
+                    ],
+                    "type": "number"
+                },
+                "warn": {
+                    "examples": [
+                        7
+                    ],
+                    "type": "number"
+                }
+            },
+            "required": [
+                "error",
+                "info",
+                "warn"
+            ],
             "type": "object"
         },
         "Record<string,any>": {
@@ -1046,6 +1165,16 @@
             ],
             "type": "object"
         },
+        "WebhookConfig": {
+            "anyOf": [
+                {
+                    "$ref": "#/definitions/GotifyConfig"
+                },
+                {
+                    "$ref": "#/definitions/NtfyConfig"
+                }
+            ]
+        },
         "YTMusicData": {
             "properties": {
                 "authUser": {
@@ -1144,6 +1273,12 @@
         "sources": {
             "items": {
                 "$ref": "#/definitions/SourceAIOConfig"
+            },
+            "type": "array"
+        },
+        "webhooks": {
+            "items": {
+                "$ref": "#/definitions/WebhookConfig"
             },
             "type": "array"
         }

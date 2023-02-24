@@ -15,6 +15,7 @@ import * as clientSchema from '../common/schema/client.json';
 import {ClientAIOConfig, ClientConfig} from "../common/infrastructure/config/client/clients.js";
 import {MalojaClientConfig} from "../common/infrastructure/config/client/maloja.js";
 import {LastfmClientConfig} from "../common/infrastructure/config/client/lastfm.js";
+import {Notifiers} from "../notifier/Notifiers.js";
 
 type groupedNamedConfigs = {[key: string]: ParsedConfig[]};
 
@@ -40,7 +41,7 @@ export default class ScrobbleClients {
         return this.clients.filter(x => x.type === type);
     }
 
-    buildClientsFromConfig = async () => {
+    buildClientsFromConfig = async (notifier: Notifiers) => {
         let configs: ParsedConfig[] = [];
 
         let configFile;
@@ -218,7 +219,7 @@ ${sources.join('\n')}`);
         }));
         for (const c of finalConfigs) {
             try {
-                await this.addClient(c, clientDefaults);
+                await this.addClient(c, clientDefaults, notifier);
             } catch(e) {
                 this.logger.error(`Client ${c.name} was not added because it had unrecoverable errors`);
                 this.logger.error(e);
@@ -226,7 +227,7 @@ ${sources.join('\n')}`);
         }
     }
 
-    addClient = async (clientConfig: ParsedConfig, defaults = {}) => {
+    addClient = async (clientConfig: ParsedConfig, defaults = {}, notifier: Notifiers) => {
 /*        const isValidConfig = isValidConfigStructure(clientConfig, {name: true, data: true, type: true});
         if (isValidConfig !== true) {
             throw new Error(`Config object from ${clientConfig.source || 'unknown'} with name [${clientConfig.name || 'unnamed'}] of type [${clientConfig.type || 'unknown'}] has errors: ${isValidConfig.join(' | ')}`)
@@ -238,10 +239,10 @@ ${sources.join('\n')}`);
         this.logger.debug(`(${name}) Constructing ${type} client...`);
         switch (type) {
             case 'maloja':
-                newClient = new MalojaScrobbler(name, ({...clientConfig, data} as unknown as MalojaClientConfig));
+                newClient = new MalojaScrobbler(name, ({...clientConfig, data} as unknown as MalojaClientConfig), notifier);
                 break;
             case 'lastfm':
-                newClient = new LastfmScrobbler(name, {...clientConfig, data: {configDir: this.configDir, ...data} } as unknown as LastfmClientConfig );
+                newClient = new LastfmScrobbler(name, {...clientConfig, data: {configDir: this.configDir, ...data} } as unknown as LastfmClientConfig, {}, notifier);
                 break;
             default:
                 break;

@@ -9,7 +9,7 @@ import {
     sleep,
     sortByPlayDate,
     truncateStringToLength,
-    parseRetryAfterSecsFromObj
+    parseRetryAfterSecsFromObj, capitalize
 } from "../utils.js";
 import {
     INITIALIZING,
@@ -23,6 +23,7 @@ import {
     TrackStringOptions
 } from "../common/infrastructure/Atomic.js";
 import {MalojaClientConfig} from "../common/infrastructure/config/client/maloja.js";
+import {Notifiers} from "../notifier/Notifiers.js";
 
 const feat = ["ft.", "ft", "feat.", "feat", "featuring", "Ft.", "Ft", "Feat.", "Feat", "Featuring"];
 
@@ -34,8 +35,8 @@ export default class MalojaScrobbler extends AbstractScrobbleClient {
 
     declare config: MalojaClientConfig
 
-    constructor(name: any, config: MalojaClientConfig) {
-        super('maloja', name, config);
+    constructor(name: any, config: MalojaClientConfig, notifier: Notifiers) {
+        super('maloja', name, config, notifier);
         const {url, apiKey} = config.data;
         if (apiKey === undefined) {
             this.logger.warn("'apiKey' not found in config! Client will most likely fail when trying to scrobble");
@@ -572,6 +573,7 @@ export default class MalojaScrobbler extends AbstractScrobbleClient {
             }
             this.logger.debug('Payload:', scrobbleData);
         } catch (e) {
+            await this.notifier.notify({title: `${capitalize(this.type)} - ${this.name} Scrobble Error`, message: `Failed to scrobble => ${buildTrackString(playObj)} | Error: ${e.message}`, priority: 'error'});
             this.logger.error(`Scrobble Error (${sType})`, {playInfo: buildTrackString(playObj), payload: scrobbleData});
             throw e;
         }

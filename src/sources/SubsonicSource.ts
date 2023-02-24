@@ -7,6 +7,7 @@ import MemorySource from "./MemorySource.js";
 import {SubSonicSourceConfig} from "../common/infrastructure/config/source/subsonic.js";
 import {InternalConfig, PlayObject} from "../common/infrastructure/Atomic.js";
 import {RecentlyPlayedOptions} from "./AbstractSource.js";
+import {Notifiers} from "../notifier/Notifiers.js";
 
 dayjs.extend(isSameOrAfter);
 
@@ -16,7 +17,7 @@ export class SubsonicSource extends MemorySource {
 
     declare config: SubSonicSourceConfig;
 
-    constructor(name: any, config: SubSonicSourceConfig, internal: InternalConfig) {
+    constructor(name: any, config: SubSonicSourceConfig, internal: InternalConfig, notifier: Notifiers) {
         // default to quick interval so we can get a decently accurate nowPlaying
         const {
             data: {
@@ -28,7 +29,7 @@ export class SubsonicSource extends MemorySource {
             } = {}
         } = config;
         const subsonicConfig = {...config, data: {...restData, internal, maxSleep}};
-        super('subsonic', name, subsonicConfig, internal);
+        super('subsonic', name, subsonicConfig, internal, notifier);
 
         const {data: {user, password, url} = {}} = this.config;
 

@@ -24,6 +24,7 @@ import * as sourceSchema from "../common/schema/source.json";
 import {LastfmSourceConfig} from "../common/infrastructure/config/source/lastfm.js";
 import YTMusicSource from "./YTMusicSource.js";
 import {YTMusicSourceConfig} from "../common/infrastructure/config/source/ytmusic.js";
+import {Notifiers} from "../notifier/Notifiers.js";
 
 type groupedNamedConfigs = {[key: string]: ParsedConfig[]};
 
@@ -54,7 +55,7 @@ export default class ScrobbleSources {
         return this.sources.find(x => x.name === name && x.type === type);
     }
 
-    buildSourcesFromConfig = async (additionalConfigs: ParsedConfig[] = []) => {
+    buildSourcesFromConfig = async (additionalConfigs: ParsedConfig[] = [], notifier: Notifiers) => {
         let configs: ParsedConfig[] = additionalConfigs;
 
         let configFile;
@@ -289,7 +290,7 @@ export default class ScrobbleSources {
                 // @ts-expect-error TS(2571): Object is of type 'unknown'.
                 for (const c of tempNamedConfigs) {
                     try {
-                        await this.addSource(c, sourceDefaults);
+                        await this.addSource(c, sourceDefaults, notifier);
                     } catch(e) {
                         this.logger.error(`Source ${c.name} of type ${c.type} was not added because of unrecoverable errors`);
                         this.logger.error(e);
@@ -299,7 +300,7 @@ export default class ScrobbleSources {
         }
     }
 
-    addSource = async (clientConfig: any, defaults = {}) => {
+    addSource = async (clientConfig: any, defaults = {}, notifier: Notifiers) => {
         // const isValidConfig = isValidConfigStructure(clientConfig, {name: true, data: true, type: true});
         // if (isValidConfig !== true) {
         //     throw new Error(`Config object from ${clientConfig.source || 'unknown'} with name [${clientConfig.name || 'unnamed'}] of type [${clientConfig.type || 'unknown'}] has errors: ${isValidConfig.join(' | ')}`)
@@ -320,28 +321,28 @@ export default class ScrobbleSources {
         let newSource;
         switch (type) {
             case 'spotify':
-                newSource = new SpotifySource(name, compositeConfig as SpotifySourceConfig, internal);
+                newSource = new SpotifySource(name, compositeConfig as SpotifySourceConfig, internal, notifier);
                 break;
             case 'plex':
-                newSource = await new PlexSource(name, compositeConfig as PlexSourceConfig, internal);
+                newSource = await new PlexSource(name, compositeConfig as PlexSourceConfig, internal, 'plex', notifier);
                 break;
             case 'tautulli':
-                newSource = await new TautulliSource(name, compositeConfig as TautulliSourceConfig, internal);
+                newSource = await new TautulliSource(name, compositeConfig as TautulliSourceConfig, internal, notifier);
                 break;
             case 'subsonic':
-                newSource = new SubsonicSource(name, compositeConfig as SubSonicSourceConfig, internal);
+                newSource = new SubsonicSource(name, compositeConfig as SubSonicSourceConfig, internal, notifier);
                 break;
             case 'jellyfin':
-                newSource = await new JellyfinSource(name, compositeConfig as JellySourceConfig, internal);
+                newSource = await new JellyfinSource(name, compositeConfig as JellySourceConfig, internal, notifier);
                 break;
             case 'lastfm':
-                newSource = await new LastfmSource(name, compositeConfig as LastfmClientConfig, internal);
+                newSource = await new LastfmSource(name, compositeConfig as LastfmClientConfig, internal, notifier);
                 break;
             case 'deezer':
-                newSource = await new DeezerSource(name, compositeConfig as DeezerSourceConfig, internal);
+                newSource = await new DeezerSource(name, compositeConfig as DeezerSourceConfig, internal, notifier);
                 break;
             case 'ytmusic':
-                newSource = await new YTMusicSource(name, compositeConfig as YTMusicSourceConfig, internal);
+                newSource = await new YTMusicSource(name, compositeConfig as YTMusicSourceConfig, internal, notifier);
             default:
                 break;
         }

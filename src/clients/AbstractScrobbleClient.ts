@@ -11,6 +11,7 @@ import {
 import {Logger} from "winston";
 import {CommonClientConfig} from "../common/infrastructure/config/client/index.js";
 import {ClientConfig} from "../common/infrastructure/config/client/clients.js";
+import {Notifiers} from "../notifier/Notifiers.js";
 
 export default abstract class AbstractScrobbleClient {
 
@@ -37,11 +38,14 @@ export default abstract class AbstractScrobbleClient {
     config: CommonClientConfig;
     logger: Logger;
 
-    constructor(type: any, name: any, config: CommonClientConfig) {
+    notifier: Notifiers;
+
+    constructor(type: any, name: any, config: CommonClientConfig, notifier: Notifiers) {
         this.type = type;
         this.name = name;
         const identifier = `Client ${capitalize(this.type)} - ${name}`;
         this.logger = createLabelledLogger(identifier, identifier);
+        this.notifier = notifier;
 
         const {
             data: {

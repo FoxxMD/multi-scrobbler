@@ -39,6 +39,8 @@ import SpotifySource from "./sources/SpotifySource.js";
 import {JellyfinNotifier} from "./sources/ingressNotifiers/JellyfinNotifier.js";
 import {PlexNotifier} from "./sources/ingressNotifiers/PlexNotifier.js";
 import {TautulliNotifier} from "./sources/ingressNotifiers/TautulliNotifier.js";
+import {Notifiers} from "./notifier/Notifiers.js";
+import {AIOConfig} from "./common/infrastructure/config/aioConfig.js";
 
 
 dayjs.extend(utc)
@@ -138,17 +140,24 @@ const configDir = process.env.CONFIG_DIR || path.resolve(projectDir, `./config`)
             logger.warn('App config file exists but could not be parsed!');
         }
 
+        const notifiers = new Notifiers();
+        const {
+            webhooks = []
+        } = (config || {}) as AIOConfig;
+
+        await notifiers.buildWebhooks(webhooks)
+
         /*
         * setup clients
         * */
         const scrobbleClients = new ScrobbleClients(configDir);
-        await scrobbleClients.buildClientsFromConfig();
+        await scrobbleClients.buildClientsFromConfig(notifiers);
         if (scrobbleClients.clients.length === 0) {
             logger.warn('No scrobble clients were configured!')
         }
 
         const scrobbleSources = new ScrobbleSources(localUrl, configDir);
-        await scrobbleSources.buildSourcesFromConfig();
+        await scrobbleSources.buildSourcesFromConfig([], notifiers);
 
         const clientCheckMiddle = makeClientCheckMiddle(scrobbleClients);
         const sourceCheckMiddle = makeSourceCheckMiddle(scrobbleSources);

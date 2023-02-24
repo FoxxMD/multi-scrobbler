@@ -3,6 +3,7 @@ import dayjs from "dayjs";
 import {buildTrackString, parseDurationFromTimestamp} from "../utils.js";
 import {JellySourceConfig} from "../common/infrastructure/config/source/jellyfin.js";
 import {InternalConfig, PlayObject} from "../common/infrastructure/Atomic.js";
+import {Notifiers} from "../notifier/Notifiers.js";
 
 
 export default class JellyfinSource extends MemorySource {
@@ -11,8 +12,8 @@ export default class JellyfinSource extends MemorySource {
 
     declare config: JellySourceConfig;
 
-    constructor(name: any, config: JellySourceConfig, internal: InternalConfig) {
-        super('jellyfin', name, config, internal);
+    constructor(name: any, config: JellySourceConfig, internal: InternalConfig, notifier: Notifiers) {
+        super('jellyfin', name, config, internal, notifier);
         const {data: {users, servers} = {}} = config;
 
         if (users === undefined || users === null) {

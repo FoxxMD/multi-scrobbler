@@ -3,6 +3,7 @@ import {buildTrackString, capitalize, createLabelledLogger, sleep} from "../util
 import {InternalConfig, PlayObject, SourceType} from "../common/infrastructure/Atomic.js";
 import {Logger} from "winston";
 import {SourceConfig} from "../common/infrastructure/config/source/sources.js";
+import {Notifiers} from "../notifier/Notifiers.js";
 
 export interface RecentlyPlayedOptions {
     limit?: number
@@ -20,6 +21,7 @@ export default abstract class AbstractSource {
     config: SourceConfig;
     clients: string[];
     logger: Logger;
+    notifier: Notifiers;
     instantiatedAt: Dayjs;
     initialized: boolean = false;
     requiresAuth: boolean = false;
@@ -35,12 +37,13 @@ export default abstract class AbstractSource {
     pollRetries: number = 0;
     tracksDiscovered: number = 0;
 
-    constructor(type: SourceType, name: string, config: SourceConfig, internal: InternalConfig) {
+    constructor(type: SourceType, name: string, config: SourceConfig, internal: InternalConfig, notifiers: Notifiers) {
         const {clients = [] } = config;
         this.type = type;
         this.name = name;
         this.identifier = `Source - ${capitalize(this.type)} - ${name}`;
         this.logger = createLabelledLogger(this.identifier, this.identifier);
+        this.notifier = notifiers;
         this.config = config;
         this.clients = clients;
         this.instantiatedAt = dayjs();
@@ -76,6 +79,7 @@ export default abstract class AbstractSource {
 
     startPolling = async (allClients: any) => {
         if(this.requiresAuthInteraction && !this.authed) {
+            await this.notifier.notify({title: `${this.identifier} Polling`, message: 'Cannot start polling because user interaction is required for authentication', priority: 'error'});
             this.logger.error('Cannot start polling because user interaction is required for authentication');
             return;
         }
@@ -98,10 +102,12 @@ export default abstract class AbstractSource {
             } catch (e) {
                 if (this.pollRetries < maxRetries) {
                     const delayFor = (this.pollRetries + 1) * retryMultiplier;
-                    this.logger.info(`Poll reties (${this.pollRetries}) less than max poll retries (${maxRetries}), restarting polling after ${delayFor} second delay...`);
+                    this.logger.info(`Poll retries (${this.pollRetries}) less than max poll retries (${maxRetries}), restarting polling after ${delayFor} second delay...`);
+                    await this.notifier.notify({title: `${this.identifier} Polling`, message: `Encountered error while polling but retries (${this.pollRetries}) are less than max poll retries (${maxRetries}), restarting polling after ${delayFor} second delay. | Error: ${e.message}`, priority: 'warn'});
                     await sleep((delayFor) * 1000);
                 } else {
                     this.logger.warn(`Poll retries (${this.pollRetries}) equal to max poll retries (${maxRetries}), stopping polling!`);
+                    await this.notifier.notify({title: `${this.identifier} Polling`, message: `Encountered error while polling and retries (${this.pollRetries}) are equal to max poll retries (${maxRetries}), stopping polling!. | Error: ${e.message}`, priority: 'error'});
                 }
                 this.pollRetries++;
             }
@@ -116,6 +122,7 @@ export default abstract class AbstractSource {
             return;
         }
         this.logger.info('Polling started');
+        this.notifier.notify({title: `${this.identifier} Polling`, message: 'Polling Started', priority: 'info'});
         let lastTrackPlayedAt = this.instantiatedAt;
         let checkCount = 0;
         let checksOverThreshold = 0;

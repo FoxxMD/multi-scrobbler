@@ -4,6 +4,7 @@ import {sortByPlayDate} from "../utils.js";
 import {LastfmClientConfig} from "../common/infrastructure/config/client/lastfm.js";
 import {InternalConfig, PlayObject} from "../common/infrastructure/Atomic.js";
 import {UserGetRecentTracksResponse} from "lastfm-node-client";
+import {Notifiers} from "../notifier/Notifiers.js";
 
 export default class LastfmSource extends AbstractSource {
 
@@ -13,8 +14,8 @@ export default class LastfmSource extends AbstractSource {
 
     declare config: LastfmClientConfig;
 
-    constructor(name: any, config: LastfmClientConfig, internal: InternalConfig) {
-        super('lastfm', name, config, internal);
+    constructor(name: any, config: LastfmClientConfig, internal: InternalConfig, notifier: Notifiers) {
+        super('lastfm', name, config, internal, notifier);
         this.canPoll = true;
         this.api = new LastfmApiClient(name, config.data);
     }
