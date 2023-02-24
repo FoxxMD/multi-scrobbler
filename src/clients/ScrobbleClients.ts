@@ -16,6 +16,7 @@ import {ClientAIOConfig, ClientConfig} from "../common/infrastructure/config/cli
 import {MalojaClientConfig} from "../common/infrastructure/config/client/maloja.js";
 import {LastfmClientConfig} from "../common/infrastructure/config/client/lastfm.js";
 import {Notifiers} from "../notifier/Notifiers.js";
+import AbstractScrobbleClient from "./AbstractScrobbleClient.js";
 
 type groupedNamedConfigs = {[key: string]: ParsedConfig[]};
 
@@ -39,6 +40,30 @@ export default class ScrobbleClients {
 
     getByType = (type: any) => {
         return this.clients.filter(x => x.type === type);
+    }
+
+    async getStatusSummary(type?: string, name?: string): Promise<[boolean, string[]]> {
+        let clients: AbstractScrobbleClient[];
+
+        const messages: string[] = [];
+        let clientsReady = true;
+
+        if(type !== undefined) {
+            clients = this.getByType(type);
+        } else if(name !== undefined) {
+            clients = [this.getByName(name)];
+        } else {
+            clients = this.clients;
+        }
+
+        for(const client of clients) {
+            if(!await client.isReady()) {
+                clientsReady = false;
+                messages.push(`Client ${client.type} - ${client.name} is not ready.`);
+            }
+        }
+
+        return [clientsReady, messages];
     }
 
     buildClientsFromConfig = async (notifier: Notifiers) => {

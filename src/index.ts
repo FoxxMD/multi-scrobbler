@@ -545,6 +545,19 @@ const configDir = process.env.CONFIG_DIR || path.resolve(projectDir, `./config`)
             }
         });
 
+        app.getAsync('/health', async function (req, res) {
+            const {
+                type,
+                name
+            } = req.query;
+
+            const [sourcesReady, sourceMessages] = await scrobbleSources.getStatusSummary(type as string|undefined, name as string|undefined);
+            const [clientsReady, clientMessages] = await scrobbleClients.getStatusSummary(type as string|undefined, name as string|undefined);
+
+
+            return res.status((clientsReady && sourcesReady) ? 200 : 500).json({messages: sourceMessages.concat(clientMessages)});
+        });
+
         app.useAsync(async function (req, res) {
             const remote = req.connection.remoteAddress;
             const proxyRemote = req.headers["x-forwarded-for"];

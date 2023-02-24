@@ -55,6 +55,33 @@ export default class ScrobbleSources {
         return this.sources.find(x => x.name === name && x.type === type);
     }
 
+    async getStatusSummary(type?: string, name?: string): Promise<[boolean, string[]]> {
+        let sources: AbstractSource[]
+        let sourcesReady = true;
+        let messages: string[] = [];
+
+        if(type !== undefined) {
+            sources = this.getByType(type);
+        } else if(name !== undefined) {
+            sources = [this.getByName(name)];
+        } else {
+            sources = this.sources;
+        }
+
+        for(const source of sources) {
+            if(source.requiresAuth && !source.authed) {
+                sourcesReady = false;
+                messages.push(`Source ${source.type} - ${source.name} requires authentication.`);
+            }
+            if(source.canPoll && !source.polling) {
+                sourcesReady = false;
+                messages.push(`Source ${source.type} - ${source.name} is not polling.`);
+            }
+        }
+
+        return [sourcesReady, messages];
+    }
+
     buildSourcesFromConfig = async (additionalConfigs: ParsedConfig[] = [], notifier: Notifiers) => {
         let configs: ParsedConfig[] = additionalConfigs;
 
