@@ -24,6 +24,7 @@ export default class LastfmScrobbler extends AbstractScrobbleClient {
 
     constructor(name: any, config: LastfmClientConfig, options = {}, notifier: Notifiers) {
         super('lastfm', name, config, notifier);
+        // @ts-ignore
         this.api = new LastfmApiClient(name, config.data, options)
     }
 
