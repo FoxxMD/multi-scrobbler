@@ -16,7 +16,7 @@ import {
     capitalize, createLabelledLogger,
     labelledFormat,
     longestString,
-    readJson, sleep,
+    readJson, remoteHostIdentifiers, sleep,
     truncateStringToLength
 } from "./utils.js";
 
@@ -323,7 +323,10 @@ const configDir = process.env.CONFIG_DIR || path.resolve(projectDir, `./config`)
             jellyfinJsonParser, async function (req, res) {
             jellyIngress.trackIngress(req, false);
 
-            const playObj = JellyfinSource.formatPlayObj(req.body, true);
+            const parts = remoteHostIdentifiers(req);
+            const connectionId = `${parts.host}-${parts.proxy ?? ''}`;
+
+            const playObj = JellyfinSource.formatPlayObj({...req.body, connectionId}, true);
             const pSources = scrobbleSources.getByType('jellyfin') as JellyfinSource[];
             for (const source of pSources) {
                 await source.handle(playObj, scrobbleClients);
