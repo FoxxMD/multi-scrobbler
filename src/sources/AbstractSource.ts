@@ -87,7 +87,7 @@ export default abstract class AbstractSource {
                 maxPollRetries = 0,
                 retryMultiplier = 1.5,
             } = {},
-        } = this.config.data;
+        } = this.config;
 
         // can't have negative retries!
         const maxRetries = Math.max(0, maxPollRetries);
