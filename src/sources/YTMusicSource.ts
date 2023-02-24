@@ -89,7 +89,11 @@ export default class YTMusicSource extends AbstractSource {
         // * January 2023
         //
         // the playlist returned can therefore change abruptly IE MS started yesterday and new music listened to today -> "today" playlist is cleared
-      return await (await this.api()).getLibraryHistory();
+        try {
+            return await (await this.api()).getLibraryHistory();
+        } catch (e) {
+            return {};
+        }
     }
 
     /**
@@ -173,8 +177,10 @@ export default class YTMusicSource extends AbstractSource {
     }
 
     poll = async (allClients: any) => {
-        this.logger.verbose('Hydrating initial recently played tracks for reference.');
-        await this.getRecentlyPlayed();
+        if(this.authed) {
+            this.logger.verbose('Hydrating initial recently played tracks for reference.');
+            await this.getRecentlyPlayed();
+        }
         await this.startPolling(allClients);
     }
 }
