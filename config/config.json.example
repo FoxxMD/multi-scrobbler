@@ -14,9 +14,9 @@
       "clients": ["myConfig"],
       "name": "mySpotifySource",
       "data": {
-      "clientId": "a89cba1569901a0671d5a9875fed4be1",
-      "clientSecret": "ec42e09d5ae0ee0f0816ca151008412a",
-      "redirectUri": "http://localhost:9078/callback"
+        "clientId": "a89cba1569901a0671d5a9875fed4be1",
+        "clientSecret": "ec42e09d5ae0ee0f0816ca151008412a",
+        "redirectUri": "http://localhost:9078/callback"
       }
     }
   ],
@@ -27,6 +27,32 @@
       "data": {
         "url": "http://localhost:42010",
         "apiKey": "myMalojaKey"
+      }
+    }
+  ],
+  "webhooks": [
+    {
+      "name": "FirstGotifyServer",
+      "type": "gotify",
+      "url": "http://localhost:8070",
+      "token": "MyGotifyToken",
+      "priorities": {
+        "info": 5,
+        "warn": 7,
+        "error": 10
+      }
+    },
+    {
+      "type": "ntfy",
+      "name": "MyNtfyFriendlyNameForLogs",
+      "url": "http://localhost:9991",
+      "topic": "MyMultiScrobblerTopic",
+      "username": "Optional",
+      "password": "Optional",
+      "priorities": {
+        "info": 3,
+        "warn": 4,
+        "error": 5
       }
     }
   ]

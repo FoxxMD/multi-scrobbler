@@ -17,6 +17,7 @@ A javascript app to scrobble plays from multiple sources to [Maloja](https://git
 * Supports scrobbling to many clients
   * [Maloja](/docs/configuration.md#maloja)
   * [Last.fm](/docs/configuration.md#lastfm)
+* Monitor status of sources and clients using [webhooks (Gotify or Ntfy)](/docs/configuration.md#webhook-configurations) or [healthcheck endpoint](/docs/configuration.md#health-endpoint)
 * Supports configuring for single or multiple users (scrobbling for your friends and family!)
 * Web server interface for stats, basic control, and detailed logs
 * Smart handling of credentials (persistent, authorization through app)

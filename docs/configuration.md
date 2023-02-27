@@ -15,6 +15,9 @@
 * [Client Configurations](#client-configurations)
   * [Maloja](#maloja)
   * [Last.fm](#lastfm)
+* [Monitoring](#monitoring)
+  * [Webhooks](#webhook-configurations)
+  * [Health Endpoint](#health-endpoint)
 
 # Configuration Overview
 
@@ -357,3 +360,105 @@ or replace `localhost:9078` with your own base URL
 ### File-Based
 
 See [`lastfm.json.example`](/config/lastfm.json.example) or [explore the schema with an example and live editor/validator](https://json-schema.app/view/%23/%23%2Fdefinitions%2FLastfmClientConfig?url=https%3A%2F%2Fraw.githubusercontent.com%2FFoxxMD%2Fmulti-scrobbler%2Fdevelop%2Fsrc%2Fcommon%2Fschema%2Fclient.json)
+
+# Monitoring
+
+multi-scrobbler supports some common webhooks and a healthcheck endpoint in order to monitor Sources and Clients for errors.
+
+## Webhook Configurations
+
+Webhooks will **push** a notification to your configured servers on these events:
+
+* Source polling started 
+* Source polling retry
+* Source polling stopped on error 
+* Scrobble client scrobble failure
+
+Webhooks are configured in the main [config.json](#all-in-one-file-configuration) file under the `webhook` top-level property. Multiple webhooks may be configured for each webhook type. EX:
+
+```json
+{
+  "sources": [
+    ...
+  ],
+  "clients": [
+    ...
+  ],
+  "webhooks": [
+    {
+      "name": "FirstGotifyServer",
+      "type": "gotify",
+      "url": "http://192.168.0.100:8070",
+      "token": "abcd"
+    }, 
+    {
+      "name": "SecondGotifyServer",
+      "type": "gotify",
+      ...
+    },
+    {
+      "name": "NtfyServerOne",
+      "type": "ntfy",
+      ...
+    },
+    ...
+  ]
+}
+```
+
+### [Gotify](https://gotify.net/)
+
+Refer to the [config schema for GotifyConfig](https://json-schema.app/view/%23/%23%2Fdefinitions%2FGotifyConfig?url=https%3A%2F%2Fraw.githubusercontent.com%2FFoxxMD%2Fmulti-scrobbler%2Fdevelop%2Fsrc%2Fcommon%2Fschema%2Faio.json)
+
+multi-scrobbler optionally supports setting message notification priority via `info` `warn` and `error` mappings.
+
+EX
+
+```json
+{
+  "type": "gotify",
+  "name": "MyGotifyFriendlyNameForLogs",
+  "url": "http://192.168.0.100:8070",
+  "token": "AQZI58fA.rfSZbm",
+  "priorities": {
+    "info": 5,
+    "warn": 7,
+    "error": 10
+  }
+}
+```
+
+### [Ntfy](https://ntfy.sh/)
+
+Refer to the [config schema for NtfyConfig](https://json-schema.app/view/%23/%23%2Fdefinitions%2FNtfyConfig?url=https%3A%2F%2Fraw.githubusercontent.com%2FFoxxMD%2Fmulti-scrobbler%2Fdevelop%2Fsrc%2Fcommon%2Fschema%2Faio.json)
+
+multi-scrobbler optionally supports setting message notification priority via `info` `warn` and `error` mappings.
+
+EX
+
+```json
+{
+  "type": "ntfy",
+  "name": "MyNtfyFriendlyNameForLogs",
+  "url": "http://192.168.0.100:9991",
+  "topic": "RvOwKJ1XtIVMXGLR",
+  "username": "Optional",
+  "password": "Optional",
+  "priorities": {
+    "info": 3,
+    "warn": 4,
+    "error": 5
+  }
+}
+```
+
+## Health Endpoint
+
+An endpoint for monitoring the health of sources/clients is available at GET `http://YourMultiScrobblerDomain/health`
+
+* Returns `200 OK` when **everything** is working or `500 Internal Server Error` if **anything** is not 
+* The plain url (`/health`) aggregates status of **all clients/sources** -- so any failing client/source will make status return 500 
+  * Use query params `type` or `name` to restrict client/sources aggregated IE `/health?type=spotify` or `/health?name=MyMaloja`
+* On 500 the response returns a JSON payload with `messages` array that describes any issues
+  * For any clients/sources that require authentication `/health` will return 500 if they are **not authenticated** 
+  * For sources that poll (spotify, yt music, subsonic) `/health` will 500 if they are **not polling**
