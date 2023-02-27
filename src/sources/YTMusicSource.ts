@@ -5,7 +5,7 @@ import {InternalConfig, PlayObject} from "../common/infrastructure/Atomic.js";
 import {IYouTubeMusicAuthenticated} from "youtube-music-ts-api/interfaces-primary";
 import dayjs from "dayjs";
 import {parseDurationFromTimestamp, playObjDataMatch} from "../utils.js";
-import {ITrackDetail} from "youtube-music-ts-api/interfaces-supplementary";
+import {IPlaylistDetail, ITrackDetail} from "youtube-music-ts-api/interfaces-supplementary";
 import {YTMusicSourceConfig} from "../common/infrastructure/config/source/ytmusic.js";
 import {Notifiers} from "../notifier/Notifiers.js";
 
@@ -81,7 +81,7 @@ export default class YTMusicSource extends AbstractSource {
         return this.apiInstance;
     }
 
-    protected getLibraryHistory = async () => {
+    protected getLibraryHistory = async (): Promise<IPlaylistDetail> => {
         // internally for this call YT returns a *list* of playlists with decreasing granularity from most recent to least recent like this:
         // * Today
         // * Yesterday
@@ -90,9 +90,10 @@ export default class YTMusicSource extends AbstractSource {
         //
         // the playlist returned can therefore change abruptly IE MS started yesterday and new music listened to today -> "today" playlist is cleared
         try {
-            return await (await this.api()).getLibraryHistory();
+            const playlist = await (await this.api()).getLibraryHistory();
+            return {tracks: [], ...playlist};
         } catch (e) {
-            return {};
+            throw e;
         }
     }
 
@@ -101,8 +102,13 @@ export default class YTMusicSource extends AbstractSource {
      * */
     getRecentlyPlayed = async (options: RecentlyPlayedOptions = {}) => {
         const { display = false } = options;
-        
-        const playlistDetail = await this.getLibraryHistory();
+
+        let playlistDetail: IPlaylistDetail;
+        try {
+            playlistDetail = await this.getLibraryHistory();
+        } catch (e) {
+            throw e;
+        }
         const plays = playlistDetail.tracks.map((x) => YTMusicSource.formatPlayObj(x, false)).slice(0, 20);
         if(this.polling === false) {
             this.recentlyPlayed = plays;
