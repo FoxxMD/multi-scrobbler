@@ -1,6 +1,6 @@
 import {AbstractWebhookNotifier} from "./AbstractWebhookNotifier.js";
 import {GotifyConfig, PrioritiesConfig, WebhookPayload} from "../common/infrastructure/config/health/webhooks.js";
-import gotify from 'gotify';
+import {gotify} from 'gotify';
 
 export class GotifyWebhookNotifier extends AbstractWebhookNotifier {
 
@@ -26,7 +26,7 @@ export class GotifyWebhookNotifier extends AbstractWebhookNotifier {
 
     notify = async (payload: WebhookPayload) => {
         try {
-            await gotify.gotify({
+            await gotify({
                 server: this.config.url,
                 app: this.config.token,
                 message: payload.message,
