@@ -80,11 +80,11 @@ export default abstract class AbstractSource {
     startPolling = async (allClients: any) => {
         if(this.requiresAuth && !this.authed) {
             if(this.requiresAuthInteraction) {
-                await this.notifier.notify({title: `${this.identifier} Polling`, message: 'Cannot start polling because user interaction is required for authentication', priority: 'error'});
+                await this.notifier.notify({title: `${this.identifier} - Polling Error`, message: 'Cannot start polling because user interaction is required for authentication', priority: 'error'});
                 this.logger.error('Cannot start polling because user interaction is required for authentication');
             } else {
-                await this.notifier.notify({title: `${this.identifier} Polling`, message: 'Cannot start polling because source does not have authentication.', priority: 'error'});
-                this.logger.error('Cannot start polling because source does not have authentication.');
+                await this.notifier.notify({title: `${this.identifier} - Polling Error`, message: 'Cannot start polling because source does not have authentication.', priority: 'error'});
+                this.logger.error('Cannot start polling because source is not authenticated correctly.');
             }
             return;
         }
@@ -108,11 +108,11 @@ export default abstract class AbstractSource {
                 if (this.pollRetries < maxRetries) {
                     const delayFor = (this.pollRetries + 1) * retryMultiplier;
                     this.logger.info(`Poll retries (${this.pollRetries}) less than max poll retries (${maxRetries}), restarting polling after ${delayFor} second delay...`);
-                    await this.notifier.notify({title: `${this.identifier} Polling`, message: `Encountered error while polling but retries (${this.pollRetries}) are less than max poll retries (${maxRetries}), restarting polling after ${delayFor} second delay. | Error: ${e.message}`, priority: 'warn'});
+                    await this.notifier.notify({title: `${this.identifier} - Polling Retry`, message: `Encountered error while polling but retries (${this.pollRetries}) are less than max poll retries (${maxRetries}), restarting polling after ${delayFor} second delay. | Error: ${e.message}`, priority: 'warn'});
                     await sleep((delayFor) * 1000);
                 } else {
                     this.logger.warn(`Poll retries (${this.pollRetries}) equal to max poll retries (${maxRetries}), stopping polling!`);
-                    await this.notifier.notify({title: `${this.identifier} Polling`, message: `Encountered error while polling and retries (${this.pollRetries}) are equal to max poll retries (${maxRetries}), stopping polling!. | Error: ${e.message}`, priority: 'error'});
+                    await this.notifier.notify({title: `${this.identifier} - Polling Error`, message: `Encountered error while polling and retries (${this.pollRetries}) are equal to max poll retries (${maxRetries}), stopping polling!. | Error: ${e.message}`, priority: 'error'});
                 }
                 this.pollRetries++;
             }
@@ -127,7 +127,7 @@ export default abstract class AbstractSource {
             return;
         }
         this.logger.info('Polling started');
-        this.notifier.notify({title: `${this.identifier} Polling`, message: 'Polling Started', priority: 'info'});
+        this.notifier.notify({title: `${this.identifier} - Polling Started`, message: 'Polling Started', priority: 'info'});
         let lastTrackPlayedAt = this.instantiatedAt;
         let checkCount = 0;
         let checksOverThreshold = 0;
