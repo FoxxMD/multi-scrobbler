@@ -36,6 +36,9 @@ export class Notifiers {
                     continue;
             }
             await webhook.initialize();
+            if(webhook.initialized) {
+                await webhook.testAuth();
+            }
             this.webhooks.push(webhook);
         }
     }

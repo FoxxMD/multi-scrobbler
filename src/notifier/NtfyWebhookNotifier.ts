@@ -5,6 +5,7 @@ import {
     WebhookPayload
 } from "../common/infrastructure/config/health/webhooks.js";
 import {publish} from 'ntfy';
+import request from "superagent";
 
 export class NtfyWebhookNotifier extends AbstractWebhookNotifier {
 
@@ -28,7 +29,29 @@ export class NtfyWebhookNotifier extends AbstractWebhookNotifier {
 
     }
 
-    notify = async (payload: WebhookPayload) => {
+    initialize = async () => {
+        // check url is correct
+        try {
+            const url = this.config.url;
+            const resp = await request.get(`${url}/v1/health`);
+            if(resp.body !== undefined && typeof resp.body === 'object') {
+                const {health} = resp.body;
+                if(health === false) {
+                    this.logger.error('Found Ntfy server but it responded that it was not ready.')
+                    return;
+                }
+            } else {
+                this.logger.error(`Found Ntfy server but expected a response with 'health' in payload. Found => ${resp.body}`);
+                return;
+            }
+            this.logger.info('Initialized. Found Ntfy server');
+            this.initialized = true;
+        } catch (e) {
+            this.logger.error(`Failed to contact Ntfy server | Error: ${e.message}`);
+        }
+    }
+
+    doNotify = async (payload: WebhookPayload) => {
         try {
             let authorization = {};
             if (this.config.username !== undefined) {

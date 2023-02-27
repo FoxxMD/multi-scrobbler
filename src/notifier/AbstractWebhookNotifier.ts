@@ -8,6 +8,8 @@ export abstract class AbstractWebhookNotifier {
     logger: Logger;
 
     initialized: boolean = false;
+    requiresAuth: boolean = false;
+    authed: boolean = false;
 
     protected constructor(type: string, defaultName: string, config: GotifyConfig | NtfyConfig) {
         this.config = config;
@@ -20,5 +22,20 @@ export abstract class AbstractWebhookNotifier {
         this.logger.verbose('Initialized');
     }
 
-    abstract notify: (payload: WebhookPayload) => Promise<any>;
+    testAuth = async () => {
+        return;
+    }
+
+    notify = async (payload: WebhookPayload) =>  {
+        if(!this.initialized) {
+            this.logger.debug('Will not use notifier because it is not initialized.');
+            return;
+        }
+        if(this.requiresAuth && !this.authed) {
+            this.logger.debug('Will not use notifier because it is not correctly authenticated.');
+            return;
+        }
+        return await this.doNotify(payload);
+    }
+    abstract doNotify: (payload: WebhookPayload) => Promise<any>;
 }
