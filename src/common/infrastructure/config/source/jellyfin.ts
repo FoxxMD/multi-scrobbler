@@ -17,6 +17,19 @@ export interface JellyData extends CommonSourceData {
      * @examples [["MyServerName1"]]
      * */
     servers?: string | string[]
+
+    /**
+     * Additional options for jellyfin logging and tuning
+     * */
+    options?: {
+        /**
+         * Log raw Jellyfin webhook payload to debug
+         *
+         * @default false
+         * @examples [false]
+         * */
+        logPayload?: boolean
+    }
 }
 
 export interface JellySourceConfig extends CommonSourceConfig {

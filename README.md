@@ -11,11 +11,13 @@ A javascript app to scrobble plays from multiple sources to [Maloja](https://git
   * [Plex](/docs/configuration.md#plex) or [Tautulli](/docs/configuration.md#tautulli)
   * [Subsonic-compatible APIs](/docs/configuration.md#subsonic) (like [Airsonic](https://airsonic.github.io/))
   * [Jellyfin](/docs/configuration.md#jellyfin)
+  * [Youtube Music](/docs/configuration.md#youtube-music)
   * [Last.fm](/docs/configuration.md#lastfm-source)
   * [Deezer](/docs/configuration.md#deezer)
 * Supports scrobbling to many clients
   * [Maloja](/docs/configuration.md#maloja)
   * [Last.fm](/docs/configuration.md#lastfm)
+* Monitor status of sources and clients using [webhooks (Gotify or Ntfy)](/docs/configuration.md#webhook-configurations) or [healthcheck endpoint](/docs/configuration.md#health-endpoint)
 * Supports configuring for single or multiple users (scrobbling for your friends and family!)
 * Web server interface for stats, basic control, and detailed logs
 * Smart handling of credentials (persistent, authorization through app)

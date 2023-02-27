@@ -2,12 +2,13 @@ import dayjs from "dayjs";
 import PlexSource from "./PlexSource.js";
 import {TautulliSourceConfig} from "../common/infrastructure/config/source/tautulli.js";
 import {InternalConfig, PlayObject} from "../common/infrastructure/Atomic.js";
+import {Notifiers} from "../notifier/Notifiers.js";
 
 export default class TautulliSource extends PlexSource {
 
     declare config: TautulliSourceConfig;
-    constructor(name: any, config: TautulliSourceConfig, internal: InternalConfig) {
-        super(name, config, internal, 'tautulli');
+    constructor(name: any, config: TautulliSourceConfig, internal: InternalConfig, notifier: Notifiers) {
+        super(name, config, internal, 'tautulli', notifier);
     }
 
     static formatPlayObj(obj: any, newFromSource = false): PlayObject {

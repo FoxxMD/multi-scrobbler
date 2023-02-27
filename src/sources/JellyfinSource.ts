@@ -3,6 +3,7 @@ import dayjs from "dayjs";
 import {buildTrackString, parseDurationFromTimestamp} from "../utils.js";
 import {JellySourceConfig} from "../common/infrastructure/config/source/jellyfin.js";
 import {InternalConfig, PlayObject} from "../common/infrastructure/Atomic.js";
+import {Notifiers} from "../notifier/Notifiers.js";
 
 
 export default class JellyfinSource extends MemorySource {
@@ -11,8 +12,8 @@ export default class JellyfinSource extends MemorySource {
 
     declare config: JellySourceConfig;
 
-    constructor(name: any, config: JellySourceConfig, internal: InternalConfig) {
-        super('jellyfin', name, config, internal);
+    constructor(name: any, config: JellySourceConfig, internal: InternalConfig, notifier: Notifiers) {
+        super('jellyfin', name, config, internal, notifier);
         const {data: {users, servers} = {}} = config;
 
         if (users === undefined || users === null) {
@@ -61,13 +62,27 @@ export default class JellyfinSource extends MemorySource {
             ItemId,
             ItemType,
             PlaybackPosition,
+            connectionId,
         } = obj;
 
         const dur = parseDurationFromTimestamp(RunTime);
 
+        let server = ServerName;
+        if(server === undefined || server === '') {
+            server = ServerId;
+        }
+        if(server === undefined  || server === '') {
+            server = connectionId;
+        }
+
+        let artists = [];
+        if(Artist !== undefined) {
+            artists = [Artist];
+        }
+
         return {
             data: {
-                artists: [Artist],
+                artists,
                 album: Album,
                 track: Name,
                 duration: dur !== undefined ? dur.as('seconds') : undefined,
@@ -77,8 +92,8 @@ export default class JellyfinSource extends MemorySource {
                 event: NotificationType,
                 mediaType: ItemType,
                 sourceId: ItemId,
-                user: NotificationUsername,
-                server: ServerName,
+                user: NotificationUsername ?? UserId,
+                server,
                 source: 'Jellyfin',
                 newFromSource,
                 playbackPosition: parseDurationFromTimestamp(PlaybackPosition),
@@ -98,40 +113,36 @@ export default class JellyfinSource extends MemorySource {
             } = {}
         } = playObj;
 
-        if (this.users !== undefined) {
-            if (user === undefined) {
-                this.logger.warn(`Config defined users but payload contained no user info`);
-            } else if (!this.users.includes(user.toLocaleLowerCase())) {
-                this.logger.debug(`Will not scrobble event because author was not an allowed user: ${user}`, {
-                    artists,
-                    track
-                })
-                return false;
-            }
-        }
-
         if (event !== undefined && !['PlaybackProgress','PlaybackStarted'].includes(event)) {
-            this.logger.debug(`Will not scrobble event because it is not media.scrobble (${event})`, {
-                artists,
-                track
-            })
+            this.logger.debug(`Will not scrobble event because event type is not PlaybackProgress or PlaybackStarted, found event: ${event}`)
             return false;
         }
 
         if (mediaType !== 'Audio') {
-            this.logger.debug(`Will not scrobble event because media type was not 'Audio' (${mediaType})`, {
-                artists,
+            this.logger.debug(`Will not scrobble event because media type was not 'Audio', found type: ${mediaType}`, {
                 track
             });
             return false;
         }
 
         if (this.servers !== undefined && !this.servers.includes(server.toLocaleLowerCase())) {
-            this.logger.debug(`Will not scrobble event because server was not on allowed list: ${server}`, {
-                artists,
+            this.logger.warn(`Will not scrobble event because server was not on allowed list, found server: ${server}`, {
                 track
             })
             return false;
+        }
+
+        if (this.users !== undefined) {
+            if (user === undefined) {
+                this.logger.warn(`Will not scrobble event because config defined users but payload contained no user info`);
+                return false;
+            } else if (!this.users.includes(user.toLocaleLowerCase())) {
+                this.logger.warn(`Will not scrobble event because author was not an allowed user: ${user}`, {
+                    artists,
+                    track
+                })
+                return false;
+            }
         }
 
         return true;

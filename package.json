@@ -46,8 +46,10 @@
     "express": "^4.17.1",
     "express-session": "^1.17.2",
     "formidable": "^2.1",
+    "gotify": "^1.1.0",
     "json5": "^2.2.3",
     "lastfm-node-client": "^2.2.0",
+    "ntfy": "^1.0.5",
     "passport": "^0.6.0",
     "passport-deezer": "^0.2.0",
     "pony-cause": "^1.1.1",
@@ -60,7 +62,8 @@
     "winston-daily-rotate-file": "^4.5.0",
     "winston-duplex": "^0.1.1",
     "winston-null": "^2.0.0",
-    "winston-transport": "^4.4.0"
+    "winston-transport": "^4.4.0",
+    "youtube-music-ts-api": "^1.4.1"
   },
   "devDependencies": {
     "@tsconfig/node18": "^1.0.1",

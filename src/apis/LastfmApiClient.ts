@@ -24,9 +24,8 @@ export default class LastfmApiClient extends AbstractApiClient {
     user?: string;
     declare config: LastfmData;
 
-    constructor(name: any, config: Partial<LastfmData>, options = {}) {
+    constructor(name: any, config: Partial<LastfmData> & {configDir: string}, options = {}) {
         super('lastfm', name, config, options);
-        // @ts-expect-error TS(2339): Property 'redirectUri' does not exist on type '{}'... Remove this comment to see the full error message
         const {redirectUri, apiKey, secret, session, configDir} = config;
         this.redirectUri = `${redirectUri}?state=${name}`;
         if (apiKey === undefined) {

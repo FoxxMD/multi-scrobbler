@@ -5,33 +5,19 @@
     * [Specific File Configuration](#specific-file-configuration)
 * [Source Configurations](#source-configurations)
   * [Spotify](#spotify)
-    * [ENV-Based](#env-based)
-    * [File-Based](#file-based)
   * [Plex](#plex)
-    * [ENV-Based](#env-based-1)
-    * [File-Based](#file-based-1)
   * [Tautulli](#tautulli)
-    * [ENV-Based](#env-based-2)
-    * [File-Based](#file-based-2)
   * [Subsonic](#subsonic)
-    * [ENV-Based](#env-based-3)
-    * [File-Based](#file-based-3)
   * [Jellyfin](#jellyfin)
-    * [ENV-Based](#env-based-4)
-    * [File-Based](#file-based-4)
   * [Last.fm (Source)](#lastfm--source-)
-    * [ENV-Based](#env-based-5)
-    * [File-Based](#file-based-5)
   * [Deezer](#deezer)
-    * [ENV-Based](#env-based-6)
-    * [File-Based](#file-based-6)
+  * [Youtube Music](#youtube-music)
 * [Client Configurations](#client-configurations)
   * [Maloja](#maloja)
-    * [ENV-Based](#env-based-7)
-    * [File-Based](#file-based-7)
   * [Last.fm](#lastfm)
-    * [ENV-Based](#env-based-8)
-    * [File-Based](#file-based-8)
+* [Monitoring](#monitoring)
+  * [Webhooks](#webhook-configurations)
+  * [Health Endpoint](#health-endpoint)
 
 # Configuration Overview
 
@@ -310,6 +296,33 @@ After starting multi-scrobbler with credentials in-place open the dashboard (`ht
 
 See [`deezer.json.example`](/config/deezer.json.example) or [explore the schema with an example and live editor/validator](https://json-schema.app/view/%23/%23%2Fdefinitions%2FDeezerSourceConfig?url=https%3A%2F%2Fraw.githubusercontent.com%2FFoxxMD%2Fmulti-scrobbler%2Fdevelop%2Fsrc%2Fcommon%2Fschema%2Fsource.json)
 
+## [Youtube Music](https://music.youtube.com)
+
+Credentials for YT Music are obtained from a browser request to https://music.youtube.com **once you are logged in.** [Specific requirements are here and summarized below:](https://github.com/nickp10/youtube-music-ts-api/blob/master/DOCUMENTATION.md#authenticate)
+
+* Open a new tab
+* Open the developer tools (Ctrl-Shift-I) and select the “Network” tab 
+* Go to https://music.youtube.com and ensure you are logged in 
+
+Then...
+
+1. Find and select an authenticated POST request. The simplest way is to filter by /browse using the search bar of the developer tools. If you don’t see the request, try scrolling down a bit or clicking on the library button in the top bar.
+2. **Make sure **Headers** pane is selected and open
+3. In the **Request Headers** section find and copy the **entire value** found after `Cookie:` and use this as the `cookie` value in your multi-scrobbler config
+4. If present, in the **Request Headers** section find and copy the number found in `X-google-AuthUser` and use this as the value for `authUser` in your multi-scrobbler config
+
+![Google Headers](/docs/google-header.jpg)
+
+NOTES:
+
+* YT Music authentication is "browser based" which means your credentials may expire after a (long?) period of time OR if you log out of https://music.youtube.com. In the event this happens just repeat the steps above to get new credentials.
+* Communication to YT Music is **unofficial** and not supported or endorsed by Google. This means that **this integration may stop working at any time** if Google decides to change how YT Music works in the browser.
+
+### File-Based
+
+See [`ytmusic.json.example`](/config/ytmusic.json.example) or [explore the schema with an example and live editor/validator](https://json-schema.app/view/%23/%23%2Fdefinitions%2FYTMusicSourceConfig?url=https%3A%2F%2Fraw.githubusercontent.com%2FFoxxMD%2Fmulti-scrobbler%2Fdevelop%2Fsrc%2Fcommon%2Fschema%2Fsource.json)
+
+
 # Client Configurations
 
 ## [Maloja](https://github.com/krateng/maloja)
@@ -347,3 +360,105 @@ or replace `localhost:9078` with your own base URL
 ### File-Based
 
 See [`lastfm.json.example`](/config/lastfm.json.example) or [explore the schema with an example and live editor/validator](https://json-schema.app/view/%23/%23%2Fdefinitions%2FLastfmClientConfig?url=https%3A%2F%2Fraw.githubusercontent.com%2FFoxxMD%2Fmulti-scrobbler%2Fdevelop%2Fsrc%2Fcommon%2Fschema%2Fclient.json)
+
+# Monitoring
+
+multi-scrobbler supports some common webhooks and a healthcheck endpoint in order to monitor Sources and Clients for errors.
+
+## Webhook Configurations
+
+Webhooks will **push** a notification to your configured servers on these events:
+
+* Source polling started 
+* Source polling retry
+* Source polling stopped on error 
+* Scrobble client scrobble failure
+
+Webhooks are configured in the main [config.json](#all-in-one-file-configuration) file under the `webhook` top-level property. Multiple webhooks may be configured for each webhook type. EX:
+
+```json
+{
+  "sources": [
+    ...
+  ],
+  "clients": [
+    ...
+  ],
+  "webhooks": [
+    {
+      "name": "FirstGotifyServer",
+      "type": "gotify",
+      "url": "http://192.168.0.100:8070",
+      "token": "abcd"
+    }, 
+    {
+      "name": "SecondGotifyServer",
+      "type": "gotify",
+      ...
+    },
+    {
+      "name": "NtfyServerOne",
+      "type": "ntfy",
+      ...
+    },
+    ...
+  ]
+}
+```
+
+### [Gotify](https://gotify.net/)
+
+Refer to the [config schema for GotifyConfig](https://json-schema.app/view/%23/%23%2Fdefinitions%2FGotifyConfig?url=https%3A%2F%2Fraw.githubusercontent.com%2FFoxxMD%2Fmulti-scrobbler%2Fdevelop%2Fsrc%2Fcommon%2Fschema%2Faio.json)
+
+multi-scrobbler optionally supports setting message notification priority via `info` `warn` and `error` mappings.
+
+EX
+
+```json
+{
+  "type": "gotify",
+  "name": "MyGotifyFriendlyNameForLogs",
+  "url": "http://192.168.0.100:8070",
+  "token": "AQZI58fA.rfSZbm",
+  "priorities": {
+    "info": 5,
+    "warn": 7,
+    "error": 10
+  }
+}
+```
+
+### [Ntfy](https://ntfy.sh/)
+
+Refer to the [config schema for NtfyConfig](https://json-schema.app/view/%23/%23%2Fdefinitions%2FNtfyConfig?url=https%3A%2F%2Fraw.githubusercontent.com%2FFoxxMD%2Fmulti-scrobbler%2Fdevelop%2Fsrc%2Fcommon%2Fschema%2Faio.json)
+
+multi-scrobbler optionally supports setting message notification priority via `info` `warn` and `error` mappings.
+
+EX
+
+```json
+{
+  "type": "ntfy",
+  "name": "MyNtfyFriendlyNameForLogs",
+  "url": "http://192.168.0.100:9991",
+  "topic": "RvOwKJ1XtIVMXGLR",
+  "username": "Optional",
+  "password": "Optional",
+  "priorities": {
+    "info": 3,
+    "warn": 4,
+    "error": 5
+  }
+}
+```
+
+## Health Endpoint
+
+An endpoint for monitoring the health of sources/clients is available at GET `http://YourMultiScrobblerDomain/health`
+
+* Returns `200 OK` when **everything** is working or `500 Internal Server Error` if **anything** is not 
+* The plain url (`/health`) aggregates status of **all clients/sources** -- so any failing client/source will make status return 500 
+  * Use query params `type` or `name` to restrict client/sources aggregated IE `/health?type=spotify` or `/health?name=MyMaloja`
+* On 500 the response returns a JSON payload with `messages` array that describes any issues
+  * For any clients/sources that require authentication `/health` will return 500 if they are **not authenticated** 
+  * For sources that poll (spotify, yt music, subsonic) `/health` will 500 if they are **not polling**

@@ -2,7 +2,7 @@ import AbstractScrobbleClient from "./AbstractScrobbleClient.js";
 import dayjs from 'dayjs';
 
 import {
-    buildTrackString,
+    buildTrackString, capitalize,
     playObjDataMatch, removeUndefinedKeys,
     setIntersection, sleep,
     sortByPlayDate,
@@ -12,6 +12,7 @@ import LastfmApiClient from "../apis/LastfmApiClient.js";
 import {INITIALIZING, PlayObject, TrackStringOptions} from "../common/infrastructure/Atomic.js";
 import {LastfmClientConfig} from "../common/infrastructure/config/client/lastfm.js";
 import {TrackScrobbleResponse, UserGetRecentTracksResponse} from "lastfm-node-client";
+import {Notifiers} from "../notifier/Notifiers.js";
 
 export default class LastfmScrobbler extends AbstractScrobbleClient {
 
@@ -21,8 +22,9 @@ export default class LastfmScrobbler extends AbstractScrobbleClient {
 
     declare config: LastfmClientConfig;
 
-    constructor(name: any, config: LastfmClientConfig, options = {}) {
-        super('lastfm', name, config);
+    constructor(name: any, config: LastfmClientConfig, options = {}, notifier: Notifiers) {
+        super('lastfm', name, config, notifier);
+        // @ts-ignore
         this.api = new LastfmApiClient(name, config.data, options)
     }
 
@@ -312,12 +314,14 @@ export default class LastfmScrobbler extends AbstractScrobbleClient {
                 this.logger.info(`Scrobbled (Backlog) => (${source}) ${buildTrackString(playObj)}`);
             }
             if(ignored > 0) {
+                await this.notifier.notify({title: `Client - ${capitalize(this.type)} - ${this.name} - Scrobble Error`, message: `Failed to scrobble => ${buildTrackString(playObj)} | Error: Service ignored this scrobble 😬 => (Code ${ignoreCode}) ${(ignoreMsg === '' ? '(No error message returned)' : ignoreMsg)}`, priority: 'warn'});
                 this.logger.warn(`Service ignored this scrobble 😬 => (Code ${ignoreCode}) ${(ignoreMsg === '' ? '(No error message returned)' : ignoreMsg)} -- See https://www.last.fm/api/errorcodes for more information`, {payload: scrobblePayload});
             }
 
             // last fm has rate limits but i can't find a specific example of what that limit is. going to default to 1 scrobble/sec to be safe
             await sleep(1000);
         } catch (e) {
+            await this.notifier.notify({title: `Client - ${capitalize(this.type)} - ${this.name} - Scrobble Error`, message: `Failed to scrobble => ${buildTrackString(playObj)} | Error: ${e.message}`, priority: 'error'});
             this.logger.error(`Scrobble Error (${sType})`, {playInfo: buildTrackString(playObj), payload: scrobblePayload});
             throw e;
         } finally {

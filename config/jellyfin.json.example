@@ -4,7 +4,10 @@
     "clients": [],
     "data": {
       "users": ["FoxxMD"],
-      "servers": ["myServer","anotherServer"]
+      "servers": ["myServer","anotherServer"],
+      "options": {
+        "logPayload": false
+      }
     }
   }
 ]

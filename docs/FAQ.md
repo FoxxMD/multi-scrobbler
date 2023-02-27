@@ -1,6 +1,13 @@
+* [Connection Issues](#connection-issues)
+  * [Plex/Tautulli/Jellyfin don't connect](#plextautullijellyfin-dont-connect)
+  * [Jellyfin has warnings about undefined or missing data](#jellyfin-has-warnings-about-undefined-or-missing-data)
+  * [Spotify/Deezer/LastFM won't authenticate](#spotifydeezerlastfm-wont-authenticate)
+* [Configuration Issues](#configuration-issues)
+  * [Config could not be parsed](#config-could-not-be-parsed)
+
 # Connection Issues
 
-## Plex/Tautulli/Jellyfin don't work
+## Plex/Tautulli/Jellyfin don't connect
 
 These three [sources](/README.md#source) are **ingress-based** which means that multi-scrobbler waits for the Plex/Tautulli/Jellyfin server to contact multi-scrobbler, as opposed to multi-scrobbler contacting the server.
 
@@ -58,6 +65,34 @@ Check the command-line output of the application or docker logs.
 ##### Jellyfin
 
 Administration -> Dashboard -> Advanced -> Logs
+
+## Jellyfin has warnings about undefined or missing data
+
+Make sure you have 
+* [Configured the webhook plugin correctly](/docs/configuration.md#jellyfin)
+  * Checked the **Send All Properties(ignores template)** option in the webhook settings and **Saved**
+
+multi-scrobbler is known to work on Jellyfin `10.8.9` with Webhook version `11.0.0.0`.
+
+You can verify the payload sent from the webhook by modifying your jellyfin configuration to include `logPayload: true` which will output the raw payload to DEBUG level logging:
+
+```json
+[
+  {
+    "name": "MyJellyfin",
+    "clients": [],
+    "data": {
+      "users": ["FoxxMD"],
+      "options": {
+        "logPayload": true
+      }
+    }
+  }
+]
+```
+
+If your issue persists and you open an Issue for it please include the raw payload logs in your report.
+
 
 ## Spotify/Deezer/LastFM won't authenticate
 

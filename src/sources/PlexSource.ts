@@ -5,6 +5,7 @@ import formidable from 'formidable';
 import concatStream from 'concat-stream';
 import {PlexSourceConfig} from "../common/infrastructure/config/source/plex.js";
 import {InternalConfig, PlayObject, SourceType} from "../common/infrastructure/Atomic.js";
+import {Notifiers} from "../notifier/Notifiers.js";
 
 export default class PlexSource extends AbstractSource {
     users: string[];
@@ -13,8 +14,8 @@ export default class PlexSource extends AbstractSource {
 
     declare config: PlexSourceConfig;
 
-    constructor(name: any, config: PlexSourceConfig, internal: InternalConfig, type: SourceType = 'plex') {
-        super(type, name, config, internal);
+    constructor(name: any, config: PlexSourceConfig, internal: InternalConfig, type: SourceType = 'plex', notifier: Notifiers) {
+        super(type, name, config, internal, notifier);
         const {data: {user = [], libraries = [], servers = []} = {}} = config
 
         if (!Array.isArray(user)) {

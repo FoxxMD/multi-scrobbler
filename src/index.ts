@@ -16,7 +16,7 @@ import {
     capitalize, createLabelledLogger,
     labelledFormat,
     longestString,
-    readJson, sleep,
+    readJson, remoteHostIdentifiers, sleep,
     truncateStringToLength
 } from "./utils.js";
 
@@ -39,6 +39,8 @@ import SpotifySource from "./sources/SpotifySource.js";
 import {JellyfinNotifier} from "./sources/ingressNotifiers/JellyfinNotifier.js";
 import {PlexNotifier} from "./sources/ingressNotifiers/PlexNotifier.js";
 import {TautulliNotifier} from "./sources/ingressNotifiers/TautulliNotifier.js";
+import {Notifiers} from "./notifier/Notifiers.js";
+import {AIOConfig} from "./common/infrastructure/config/aioConfig.js";
 
 
 dayjs.extend(utc)
@@ -138,17 +140,24 @@ const configDir = process.env.CONFIG_DIR || path.resolve(projectDir, `./config`)
             logger.warn('App config file exists but could not be parsed!');
         }
 
+        const notifiers = new Notifiers();
+        const {
+            webhooks = []
+        } = (config || {}) as AIOConfig;
+
+        await notifiers.buildWebhooks(webhooks)
+
         /*
         * setup clients
         * */
         const scrobbleClients = new ScrobbleClients(configDir);
-        await scrobbleClients.buildClientsFromConfig();
+        await scrobbleClients.buildClientsFromConfig(notifiers);
         if (scrobbleClients.clients.length === 0) {
             logger.warn('No scrobble clients were configured!')
         }
 
         const scrobbleSources = new ScrobbleSources(localUrl, configDir);
-        await scrobbleSources.buildSourcesFromConfig();
+        await scrobbleSources.buildSourcesFromConfig([], notifiers);
 
         const clientCheckMiddle = makeClientCheckMiddle(scrobbleClients);
         const sourceCheckMiddle = makeSourceCheckMiddle(scrobbleSources);
@@ -323,8 +332,27 @@ const configDir = process.env.CONFIG_DIR || path.resolve(projectDir, `./config`)
             jellyfinJsonParser, async function (req, res) {
             jellyIngress.trackIngress(req, false);
 
-            const playObj = JellyfinSource.formatPlayObj(req.body, true);
+            const parts = remoteHostIdentifiers(req);
+            const connectionId = `${parts.host}-${parts.proxy ?? ''}`;
+
+            const playObj = JellyfinSource.formatPlayObj({...req.body, connectionId}, true);
             const pSources = scrobbleSources.getByType('jellyfin') as JellyfinSource[];
+            if(pSources.length === 0) {
+                logger.warn('Received Jellyfin connection but no Jellyfin sources are configured');
+            }
+                const logPayload = pSources.some(x => {
+                    const {
+                        data: {
+                            options: {
+                                logPayload = false
+                            } = {}
+                        } = {},
+                    } = x.config;
+                    return logPayload;
+                });
+            if(logPayload) {
+                logger.debug(`[Jellyfin] Logging payload due to at least one Jellyfin source having 'logPayload: true`, req.body);
+            }
             for (const source of pSources) {
                 await source.handle(playObj, scrobbleClients);
             }
@@ -401,7 +429,7 @@ const configDir = process.env.CONFIG_DIR || path.resolve(projectDir, `./config`)
                 return res.status(400).send(`Specified source cannot retrieve recent plays (${source.type})`);
             }
 
-            const result = await (source as AbstractSource).getRecentlyPlayed({formatted: true});
+            const result = await (source as AbstractSource).getRecentlyPlayed({formatted: true, display: true});
             const artistTruncFunc = truncateStringToLength(Math.min(40, longestString(result.map((x: any) => x.data.artists.join(' / ')).flat())));
             const trackLength = longestString(result.map((x: any) => x.data.track))
             const plays = result.map((x: PlayObject) => {
@@ -515,6 +543,19 @@ const configDir = process.env.CONFIG_DIR || path.resolve(projectDir, `./config`)
                 }
                 return res.send(responseContent);
             }
+        });
+
+        app.getAsync('/health', async function (req, res) {
+            const {
+                type,
+                name
+            } = req.query;
+
+            const [sourcesReady, sourceMessages] = await scrobbleSources.getStatusSummary(type as string|undefined, name as string|undefined);
+            const [clientsReady, clientMessages] = await scrobbleClients.getStatusSummary(type as string|undefined, name as string|undefined);
+
+
+            return res.status((clientsReady && sourcesReady) ? 200 : 500).json({messages: sourceMessages.concat(clientMessages)});
         });
 
         app.useAsync(async function (req, res) {
