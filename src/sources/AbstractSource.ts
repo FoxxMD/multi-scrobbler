@@ -78,9 +78,14 @@ export default abstract class AbstractSource {
     }
 
     startPolling = async (allClients: any) => {
-        if(this.requiresAuthInteraction && !this.authed) {
-            await this.notifier.notify({title: `${this.identifier} Polling`, message: 'Cannot start polling because user interaction is required for authentication', priority: 'error'});
-            this.logger.error('Cannot start polling because user interaction is required for authentication');
+        if(this.requiresAuth && !this.authed) {
+            if(this.requiresAuthInteraction) {
+                await this.notifier.notify({title: `${this.identifier} Polling`, message: 'Cannot start polling because user interaction is required for authentication', priority: 'error'});
+                this.logger.error('Cannot start polling because user interaction is required for authentication');
+            } else {
+                await this.notifier.notify({title: `${this.identifier} Polling`, message: 'Cannot start polling because source does not have authentication.', priority: 'error'});
+                this.logger.error('Cannot start polling because source does not have authentication.');
+            }
             return;
         }
         // reset poll attempts if already previously run
