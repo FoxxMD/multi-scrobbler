@@ -1,11 +1,13 @@
 import dayjs from "dayjs";
-import {buildTrackString, createLabelledLogger} from "../utils.js";
+import {buildTrackString, combinePartsToString, createLabelledLogger, truncateStringToLength} from "../utils.js";
 import AbstractSource from "./AbstractSource.js";
 import formidable from 'formidable';
 import concatStream from 'concat-stream';
 import {PlexSourceConfig} from "../common/infrastructure/config/source/plex.js";
 import {InternalConfig, PlayObject, SourceType} from "../common/infrastructure/Atomic.js";
 import {Notifiers} from "../notifier/Notifiers.js";
+
+const shortDeviceId = truncateStringToLength(10, '');
 
 export default class PlexSource extends AbstractSource {
     users: string[];
@@ -70,6 +72,10 @@ export default class PlexSource extends AbstractSource {
                 // @ts-expect-error TS(2525): Initializer provides no value for this binding ele... Remove this comment to see the full error message
                 title: server
             } = {},
+            Player: {
+                title,
+                uuid,
+            }
         } = obj;
         return {
             data: {
@@ -86,6 +92,7 @@ export default class PlexSource extends AbstractSource {
                 server,
                 source: 'Plex',
                 newFromSource,
+                deviceId: combinePartsToString([shortDeviceId(uuid), title])
             }
         }
     }

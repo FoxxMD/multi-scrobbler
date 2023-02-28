@@ -35,7 +35,13 @@ export interface PlayData {
     artists?: string[]
     album?: string
     track?: string
+    /**
+     * The length of the track, in seconds
+     * */
     duration?: number
+    /**
+     * The date the track was played at
+     * */
     playDate?: Dayjs
 }
 
@@ -45,6 +51,11 @@ export interface PlayMeta {
      * Unique ID for this track, given by the Source
      * */
     trackId?: string
+
+    /**
+     * Atomic ID for this instance of played tracked IE a unique ID for "this track played at this time"
+     * */
+    playId?: string
     newFromSource?: boolean
     url?: {
         web: string
@@ -54,6 +65,14 @@ export interface PlayMeta {
     mediaType?: string
     server?: string
     library?: string
+    /**
+     * The position the "player" is at in the track at the time the play was reported, in seconds
+     * */
+    trackProgressPosition?: number
+    /**
+     * A unique identifier for the device playing this track
+     * */
+    deviceId?: string
 
     [key: string]: any
 }

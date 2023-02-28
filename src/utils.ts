@@ -519,3 +519,46 @@ export const closePlayDate = (existingPlay: PlayObject, newPlay: PlayObject, dif
 
     return closeTime;
 }
+
+export const combinePartsToString = (parts: any[], glue: string = '-'): string | undefined => {
+    const cleanParts: string[] = [];
+    for (const part of parts) {
+        if (part === null || part === undefined) {
+            continue;
+        }
+        if (Array.isArray(part)) {
+            const nestedParts = combinePartsToString(part, glue);
+            if (nestedParts !== undefined) {
+                cleanParts.push(nestedParts);
+            }
+        } else if (typeof part === 'object') {
+            // hope this works
+            cleanParts.push(JSON.stringify(part));
+        } else if(typeof part === 'string') {
+            if(part.trim() !== '') {
+                cleanParts.push(part);
+            }
+        } else {
+            cleanParts.push(part.toString());
+        }
+    }
+    if (cleanParts.length > 0) {
+        return cleanParts.join(glue);
+    }
+    return undefined;
+}
+
+/**
+ * Remove duplicates based on trackId, deviceId, and play date
+ * */
+export const removeDuplicates = (plays: PlayObject[]): PlayObject[] => {
+    return plays.reduce((acc: PlayObject[], currPlay: PlayObject) => {
+        if(currPlay.meta.trackId !== undefined && currPlay.meta.deviceId !== undefined && currPlay.data.playDate !== undefined) {
+            if(acc.some((x: PlayObject) => x.meta.trackId === currPlay.meta.trackId && x.meta.deviceId === currPlay.meta.deviceId && x.data.playDate.isSame(currPlay.data.playDate, 'minute'))) {
+                // don't add current play to list if we find an existing that matches track, device, and play date
+                return acc;
+            }
+        }
+        return acc.concat(currPlay);
+    }, []);
+}

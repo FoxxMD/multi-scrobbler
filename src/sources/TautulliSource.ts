@@ -3,6 +3,9 @@ import PlexSource from "./PlexSource.js";
 import {TautulliSourceConfig} from "../common/infrastructure/config/source/tautulli.js";
 import {InternalConfig, PlayObject} from "../common/infrastructure/Atomic.js";
 import {Notifiers} from "../notifier/Notifiers.js";
+import {combinePartsToString, truncateStringToLength} from "../utils.js";
+
+const shortDeviceId = truncateStringToLength(10, '');
 
 export default class TautulliSource extends PlexSource {
 
@@ -24,11 +27,22 @@ export default class TautulliSource extends PlexSource {
             version,
             duration,
             username,
-            library
-        } = obj;
+            library,
+            machine_id = '',
+            session_key,
+            action,
+            platform,
+            device,
+            player,
+        } = obj.body;
         let artists = [artist_name];
         if (track_artist !== undefined && track_artist !== artist_name) {
             artists.push(track_artist);
+        }
+        if(action === undefined) {
+            //TODO why does TS think logger doesn't exist?
+            // @ts-ignore
+            this.logger.warn(`Payload did contain property 'action', assuming it should be 'watched'`);
         }
         return {
             data: {
@@ -40,6 +54,7 @@ export default class TautulliSource extends PlexSource {
             },
             meta: {
                 title,
+                event: action === 'watched' ? 'media.scrobble' : action,
                 library: library_name ?? library,
                 server,
                 sourceVersion: version,
@@ -47,6 +62,7 @@ export default class TautulliSource extends PlexSource {
                 user: username,
                 source: 'Tautulli',
                 newFromSource,
+                deviceId: combinePartsToString([shortDeviceId(machine_id), session_key, player])
             }
         }
     }

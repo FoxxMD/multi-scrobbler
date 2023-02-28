@@ -2,7 +2,7 @@ import request from 'superagent';
 import * as crypto from 'crypto';
 import dayjs from "dayjs";
 import isSameOrAfter from "dayjs/plugin/isSameOrAfter.js";
-import {buildTrackString, parseRetryAfterSecsFromObj, sleep} from "../utils.js";
+import {buildTrackString, parseRetryAfterSecsFromObj, removeDuplicates, sleep} from "../utils.js";
 import MemorySource from "./MemorySource.js";
 import {SubSonicSourceConfig} from "../common/infrastructure/config/source/subsonic.js";
 import {InternalConfig, PlayObject} from "../common/infrastructure/Atomic.js";
@@ -54,6 +54,8 @@ export class SubsonicSource extends MemorySource {
             artist,
             duration, // seconds
             minutesAgo,
+            playerId,
+            username,
         } = obj;
         return {
             data: {
@@ -69,6 +71,8 @@ export class SubsonicSource extends MemorySource {
                 source: 'Subsonic',
                 trackId: id,
                 newFromSource,
+                user: username,
+                deviceId: playerId
             }
         }
     }
@@ -186,7 +190,9 @@ export class SubsonicSource extends MemorySource {
                 entry = []
             } = {}
         } = resp;
-        this.processRecentPlays(entry.map((x: any) => formatted ? SubsonicSource.formatPlayObj(x) : x));
+        // sometimes subsonic sources will return the same track as being played twice on the same player, need to remove this so we don't duplicate plays
+        const deduped = removeDuplicates(entry.map(SubsonicSource.formatPlayObj));
+        this.processRecentPlays(deduped);
         return this.statefulRecentlyPlayed;
     }
 }

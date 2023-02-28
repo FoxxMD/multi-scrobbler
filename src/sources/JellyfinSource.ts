@@ -1,10 +1,11 @@
 import MemorySource from "./MemorySource.js";
 import dayjs from "dayjs";
-import {buildTrackString, parseDurationFromTimestamp} from "../utils.js";
+import {buildTrackString, combinePartsToString, parseDurationFromTimestamp, truncateStringToLength} from "../utils.js";
 import {JellySourceConfig} from "../common/infrastructure/config/source/jellyfin.js";
 import {InternalConfig, PlayObject} from "../common/infrastructure/Atomic.js";
 import {Notifiers} from "../notifier/Notifiers.js";
 
+const shortDeviceId = truncateStringToLength(10, '');
 
 export default class JellyfinSource extends MemorySource {
     users;
@@ -63,6 +64,9 @@ export default class JellyfinSource extends MemorySource {
             ItemType,
             PlaybackPosition,
             connectionId,
+            DeviceId = '',
+            DeviceName,
+            ClientName,
         } = obj;
 
         const dur = parseDurationFromTimestamp(RunTime);
@@ -96,8 +100,9 @@ export default class JellyfinSource extends MemorySource {
                 server,
                 source: 'Jellyfin',
                 newFromSource,
-                playbackPosition: parseDurationFromTimestamp(PlaybackPosition),
-                sourceVersion: ServerVersion
+                trackProgressPosition: parseDurationFromTimestamp(PlaybackPosition).asSeconds(),
+                sourceVersion: ServerVersion,
+                deviceId: combinePartsToString([shortDeviceId(DeviceId), DeviceName])
             }
         }
     }

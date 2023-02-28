@@ -1,6 +1,7 @@
 import AbstractSource from "./AbstractSource.js";
 import {playObjDataMatch, sortByPlayDate, buildTrackString} from "../utils.js";
 import dayjs from "dayjs";
+import {PlayObject} from "../common/infrastructure/Atomic.js";
 
 export default class MemorySource extends AbstractSource {
     /*
@@ -14,7 +15,7 @@ export default class MemorySource extends AbstractSource {
     statefulRecentlyPlayed = [];
     candidateRecentlyPlayed = [];
 
-    processRecentPlays = (plays: any) => {
+    processRecentPlays = (plays: PlayObject[]) => {
 
         let newStatefulPlays: any = [];
         // first format new plays with locked play date
