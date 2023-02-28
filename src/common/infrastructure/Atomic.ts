@@ -47,7 +47,6 @@ export interface PlayMeta {
         web: string
         [key: string]: string
     }
-    trackLength?: number
     user?: string
     mediaType?: string
     server?: string

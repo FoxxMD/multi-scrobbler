@@ -55,7 +55,6 @@ export default class YTMusicSource extends AbstractSource {
                 playDate: newFromSource ? dayjs().startOf('minute') : undefined,
             },
             meta: {
-                trackLength: duration,
                 source: 'YTMusic',
                 sourceId: id,
                 newFromSource,

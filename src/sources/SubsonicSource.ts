@@ -66,7 +66,6 @@ export class SubsonicSource extends MemorySource {
                 playDate: minutesAgo === 0 ? dayjs().startOf('minute') : dayjs().startOf('minute').subtract(minutesAgo, 'minute'),
             },
             meta: {
-                trackLength: duration,
                 source: 'Subsonic',
                 sourceId: id,
                 newFromSource,

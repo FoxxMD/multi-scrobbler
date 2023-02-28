@@ -45,7 +45,6 @@ export default class TautulliSource extends PlexSource {
                 sourceVersion: version,
                 mediaType: media_type,
                 user: username,
-                trackLength: duration,
                 source: 'Tautulli',
                 newFromSource,
             }

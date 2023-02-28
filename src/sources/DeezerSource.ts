@@ -61,7 +61,6 @@ export default class DeezerSource extends AbstractSource {
                 playDate: dayjs(timestamp * 1000),
             },
             meta: {
-                trackLength: duration,
                 source: 'Deezer',
                 sourceId: id,
                 newFromSource,

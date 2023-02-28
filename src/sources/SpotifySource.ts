@@ -68,7 +68,6 @@ export default class SpotifySource extends AbstractSource {
                 playDate: dayjs(played_at),
             },
             meta: {
-                trackLength: duration_ms / 1000,
                 source: 'Spotify',
                 sourceId: id,
                 newFromSource,
