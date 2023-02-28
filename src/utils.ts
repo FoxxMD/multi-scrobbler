@@ -105,13 +105,13 @@ export const buildTrackString = (playObj: PlayObject, options: TrackStringOption
             playDate
         } = {},
         meta: {
-            sourceId
+            trackId
         } = {},
     } = playObj;
 
     const strParts = [];
-    if(include.includes('sourceId') && sourceId !== undefined) {
-        strParts.push(`(${sourceId})`);
+    if(include.includes('trackId') && trackId !== undefined) {
+        strParts.push(`(${trackId})`);
     }
     if(include.includes('artist')) {
         strParts.push(`${artistsFunc(artists)}`)
@@ -229,7 +229,7 @@ export const playObjDataMatch = (a: PlayObject, b: PlayObject) => {
         } = {},
         meta: {
             source: aSource,
-            sourceId: aSourceId,
+            trackId: atrackId,
         } = {},
     } = a;
 
@@ -241,13 +241,13 @@ export const playObjDataMatch = (a: PlayObject, b: PlayObject) => {
         } = {},
         meta: {
             source: bSource,
-            sourceId: bSourceId,
+            trackId: btrackId,
         } = {},
     } = b;
 
     // if sources are the same and both plays have source ids then we can just compare by id
-    if(aSource === bSource && aSourceId !== undefined && bSourceId !== undefined) {
-        if(aSourceId !== bSourceId) {
+    if(aSource === bSource && atrackId !== undefined && btrackId !== undefined) {
+        if(atrackId !== btrackId) {
             return false;
         }
     }

@@ -25,7 +25,7 @@ export default class MemorySource extends AbstractSource {
         // if no candidates exist new plays are new candidates
         if(this.candidateRecentlyPlayed.length === 0) {
             for(const p of lockedPlays) {
-                this.logger.debug(`No prior candidate recent plays! Adding new locked plays: ${buildTrackString(p, {include: ['sourceId', 'artist', 'track']})}`);
+                this.logger.debug(`No prior candidate recent plays! Adding new locked plays: ${buildTrackString(p, {include: ['trackId', 'artist', 'track']})}`);
             }
             this.candidateRecentlyPlayed = lockedPlays;
         } else {
@@ -33,14 +33,14 @@ export default class MemorySource extends AbstractSource {
             const newTracks = lockedPlays.filter((x: any) => this.candidateRecentlyPlayed.every(y => !playObjDataMatch(y, x)));
             if(newTracks.length > 0) {
                 for(const p of newTracks) {
-                    this.logger.debug(`New play found that does not match existing candidates will be added: ${buildTrackString(p, {include: ['sourceId', 'artist', 'track']})}`);
+                    this.logger.debug(`New play found that does not match existing candidates will be added: ${buildTrackString(p, {include: ['trackId', 'artist', 'track']})}`);
                 }
             }
             // filter prior candidates based on new recently played
             this.candidateRecentlyPlayed = this.candidateRecentlyPlayed.filter(x => {
                 const candidateMatchedLocked = lockedPlays.some((y: any) => playObjDataMatch(x, y));
                 if(!candidateMatchedLocked) {
-                    this.logger.debug(`Existing candidate not found in locked plays will be removed: ${buildTrackString(x, {include: ['sourceId', 'artist', 'track']})}`);
+                    this.logger.debug(`Existing candidate not found in locked plays will be removed: ${buildTrackString(x, {include: ['trackId', 'artist', 'track']})}`);
                 }
                 return candidateMatchedLocked;
             });
@@ -54,7 +54,7 @@ export default class MemorySource extends AbstractSource {
                     // a prior candidate has been playing for more than 30 seconds, time to check statefuls
 
                     const matchingRecent = this.statefulRecentlyPlayed.find(x => playObjDataMatch(x, candidate));
-                    let stPrefix = `(Stateful Play) ${buildTrackString(candidate, {include: ['sourceId', 'artist', 'track']})}`;
+                    let stPrefix = `(Stateful Play) ${buildTrackString(candidate, {include: ['trackId', 'artist', 'track']})}`;
                     if(matchingRecent === undefined) {
                         this.logger.debug(`${stPrefix} added after being seen for 30 seconds and not matching any prior plays`);
                         newStatefulPlays.push(candidate);

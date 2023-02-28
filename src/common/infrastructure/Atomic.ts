@@ -41,7 +41,10 @@ export interface PlayData {
 
 export interface PlayMeta {
     source?: string
-    sourceId?: string
+    /**
+     * Unique ID for this track, given by the Source
+     * */
+    trackId?: string
     newFromSource?: boolean
     url?: {
         web: string
@@ -61,7 +64,7 @@ export interface PlayObject {
 }
 
 export interface TrackStringOptions {
-    include?: ('time' | 'artist' | 'track' | 'timeFromNow' | 'sourceId')[]
+    include?: ('time' | 'artist' | 'track' | 'timeFromNow' | 'trackId')[]
     transformers?: {
         artists?: (a: string[]) => string
         track?: (t: string) => string

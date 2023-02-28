@@ -69,7 +69,7 @@ export default class SpotifySource extends AbstractSource {
             },
             meta: {
                 source: 'Spotify',
-                sourceId: id,
+                trackId: id,
                 newFromSource,
                 url: {
                     web: spotify

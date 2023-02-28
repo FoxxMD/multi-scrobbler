@@ -91,7 +91,7 @@ export default class JellyfinSource extends MemorySource {
             meta: {
                 event: NotificationType,
                 mediaType: ItemType,
-                sourceId: ItemId,
+                trackId: ItemId,
                 user: NotificationUsername ?? UserId,
                 server,
                 source: 'Jellyfin',

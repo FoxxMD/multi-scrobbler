@@ -62,7 +62,7 @@ export default class DeezerSource extends AbstractSource {
             },
             meta: {
                 source: 'Deezer',
-                sourceId: id,
+                trackId: id,
                 newFromSource,
                 url: {
                     web: link

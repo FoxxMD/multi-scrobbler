@@ -56,7 +56,7 @@ export default class YTMusicSource extends AbstractSource {
             },
             meta: {
                 source: 'YTMusic',
-                sourceId: id,
+                trackId: id,
                 newFromSource,
             }
         }

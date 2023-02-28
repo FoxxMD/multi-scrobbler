@@ -67,7 +67,7 @@ export class SubsonicSource extends MemorySource {
             },
             meta: {
                 source: 'Subsonic',
-                sourceId: id,
+                trackId: id,
                 newFromSource,
             }
         }
