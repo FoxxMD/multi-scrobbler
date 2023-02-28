@@ -82,6 +82,12 @@ export interface PlayObject {
     meta: PlayMeta
 }
 
+export interface ProgressAwarePlayObject extends PlayObject {
+    meta: PlayMeta & {
+        initialTrackProgressPosition?: number
+    }
+}
+
 export interface TrackStringOptions {
     include?: ('time' | 'artist' | 'track' | 'timeFromNow' | 'trackId')[]
     transformers?: {

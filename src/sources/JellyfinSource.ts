@@ -100,7 +100,7 @@ export default class JellyfinSource extends MemorySource {
                 server,
                 source: 'Jellyfin',
                 newFromSource,
-                trackProgressPosition: parseDurationFromTimestamp(PlaybackPosition).asSeconds(),
+                trackProgressPosition: PlaybackPosition !== undefined ? parseDurationFromTimestamp(PlaybackPosition).asSeconds() : undefined,
                 sourceVersion: ServerVersion,
                 deviceId: combinePartsToString([shortDeviceId(DeviceId), DeviceName])
             }
@@ -154,7 +154,7 @@ export default class JellyfinSource extends MemorySource {
     }
 
     getRecentlyPlayed = async (options = {}) => {
-        return this.statefulRecentlyPlayed;
+        return this.getFlatStatefulRecentlyPlayed();
     }
 
     handle = async (playObj: any, allClients: any) => {

@@ -5,11 +5,10 @@ import winston, {Logger} from "winston";
 import stringify from 'safe-stable-stringify';
 import JSON5 from 'json5';
 import { TimeoutError, WebapiError } from "spotify-web-api-node/src/response-error.js";
-import { Response } from 'superagent';
 import Ajv, {Schema} from 'ajv';
 import {
     lowGranularitySources,
-    PlayObject,
+    PlayObject, ProgressAwarePlayObject,
     RemoteIdentityParts,
     TrackStringOptions
 } from "./common/infrastructure/Atomic.js";
@@ -276,8 +275,8 @@ export const parseRetryAfterSecsFromObj = (err: any) => {
     if (err instanceof TimeoutError) {
         return undefined;
     }
-    // @ts-ignore
-    if (err instanceof WebapiError || err instanceof Response) {
+
+    if (err instanceof WebapiError || 'headers' in err) {
         const {headers = {}} = err;
         raVal = headers['retry-after']
     }
@@ -561,4 +560,15 @@ export const removeDuplicates = (plays: PlayObject[]): PlayObject[] => {
         }
         return acc.concat(currPlay);
     }, []);
+}
+
+export const toProgressAwarePlayObject = (play: PlayObject): ProgressAwarePlayObject => {
+    return {...play, meta: {...play.meta, initialTrackProgressPosition: play.meta.trackProgressPosition}};
+}
+
+export const getProgress = (initial: ProgressAwarePlayObject, curr: PlayObject): number | undefined => {
+    if(initial.meta.initialTrackProgressPosition !== undefined && curr.meta.trackProgressPosition !== undefined) {
+        return Math.abs(curr.meta.trackProgressPosition - initial.meta.initialTrackProgressPosition);
+    }
+    return undefined;
 }

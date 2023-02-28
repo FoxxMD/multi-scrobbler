@@ -1,7 +1,11 @@
 import AbstractSource from "./AbstractSource.js";
-import {playObjDataMatch, sortByPlayDate, buildTrackString} from "../utils.js";
+import {playObjDataMatch, sortByPlayDate, buildTrackString, toProgressAwarePlayObject, getProgress} from "../utils.js";
 import dayjs from "dayjs";
-import {PlayObject} from "../common/infrastructure/Atomic.js";
+import {PlayObject, ProgressAwarePlayObject} from "../common/infrastructure/Atomic.js";
+
+export type GroupedPlays = Map<string, ProgressAwarePlayObject[]>;
+
+const genGroupId = (play: PlayObject) => `${play.meta.deviceId ?? 'NoDevice'}-${play.meta.user ?? 'SingleUser'}`;
 
 export default class MemorySource extends AbstractSource {
     /*
@@ -12,75 +16,133 @@ export default class MemorySource extends AbstractSource {
     *  * where these timestamps don't have enough granularity (IE second accuracy)
     * such as subsonic and jellyfin */
 
-    statefulRecentlyPlayed = [];
-    candidateRecentlyPlayed = [];
+    /**
+     * Tracks we are tracked that we are confident qualified as being played based on:
+     *
+     * - MS saw the track for the first time while it was running/polling
+     * - Continued to see this same track through consecutive polling/ingress events for AT LEAST 30 seconds
+     *   - If the play info contains playback position data we also check if that has progressed at least 30 seconds
+     *
+     * These are tracks that are actually used by the source to scrobble to clients
+     * */
+    statefulRecentlyPlayed: GroupedPlays = new Map();
+    /**
+     * Tracks that are actively being tracked (discovered from source recently) to see if they will "qualify" as being played.
+     *
+     * Once a track qualifies it is added to statefuls.
+     * */
+    candidateRecentlyPlayed: GroupedPlays = new Map();
+
+    getFlatStatefulRecentlyPlayed = (): PlayObject[] => {
+        return Array.from(this.statefulRecentlyPlayed.values()).flat();
+    }
 
     processRecentPlays = (plays: PlayObject[]) => {
 
-        let newStatefulPlays: any = [];
-        // first format new plays with locked play date
-        const lockedPlays = plays.map((p: any) => {
+        let newStatefulPlays: PlayObject[] = [];
+        // first format new plays with locked play date IE the first time we have "seen" this track
+        const flatLockedPlays = plays.map((p: any) => {
                     const {data: {playDate, ...restData}, ...rest} = p;
                     return {data: {...restData, playDate: dayjs()}, ...rest};
-        })
-        // if no candidates exist new plays are new candidates
-        if(this.candidateRecentlyPlayed.length === 0) {
-            for(const p of lockedPlays) {
-                this.logger.debug(`No prior candidate recent plays! Adding new locked plays: ${buildTrackString(p, {include: ['trackId', 'artist', 'track']})}`);
-            }
-            this.candidateRecentlyPlayed = lockedPlays;
-        } else {
-            // otherwise determine new tracks (not found in prior candidates)
-            const newTracks = lockedPlays.filter((x: any) => this.candidateRecentlyPlayed.every(y => !playObjDataMatch(y, x)));
-            if(newTracks.length > 0) {
-                for(const p of newTracks) {
-                    this.logger.debug(`New play found that does not match existing candidates will be added: ${buildTrackString(p, {include: ['trackId', 'artist', 'track']})}`);
-                }
-            }
-            // filter prior candidates based on new recently played
-            this.candidateRecentlyPlayed = this.candidateRecentlyPlayed.filter(x => {
-                const candidateMatchedLocked = lockedPlays.some((y: any) => playObjDataMatch(x, y));
-                if(!candidateMatchedLocked) {
-                    this.logger.debug(`Existing candidate not found in locked plays will be removed: ${buildTrackString(x, {include: ['trackId', 'artist', 'track']})}`);
-                }
-                return candidateMatchedLocked;
-            });
-            // and then combine still playing with new tracks
-            this.candidateRecentlyPlayed = this.candidateRecentlyPlayed.concat(newTracks);
-            this.candidateRecentlyPlayed.sort(sortByPlayDate);
+        });
+        // group by device-user
+        const groupedLockedPlays = flatLockedPlays.reduce((acc: GroupedPlays, curr: ProgressAwarePlayObject) => {
+            const id = genGroupId(curr);
+            acc.set(id, (acc.get(id) ?? []).concat(curr));
+            return acc;
+        }, new Map());
 
-            for(const candidate of this.candidateRecentlyPlayed) {
-                const {data: {playDate, track}} = candidate;
-                if(playDate.isBefore(dayjs().subtract(30, 's'))) {
-                    // a prior candidate has been playing for more than 30 seconds, time to check statefuls
+        for(const [groupId, lockedPlays] of groupedLockedPlays.entries()) {
+            let cRecentlyPlayed = this.candidateRecentlyPlayed.get(groupId) ?? [];
+            // if no candidates exist new plays are new candidates
+            if(cRecentlyPlayed.length === 0) {
+                this.logger.debug(`[Platform ${groupId}] No prior candidate recent plays!`)
+                const progressAware: ProgressAwarePlayObject[] = [];
+                for(const p of lockedPlays) {
+                    progressAware.push(toProgressAwarePlayObject(p));
+                    this.logger.debug(`[Platform ${groupId}] Adding new locked play: ${buildTrackString(p, {include: ['trackId', 'artist', 'track']})}`);
+                }
+                this.candidateRecentlyPlayed.set(groupId, progressAware)
+            } else {
+                // otherwise determine new tracks (not found in prior candidates)
+                const newTracks = lockedPlays.filter((x: any) => cRecentlyPlayed.every(y => !playObjDataMatch(y, x)));
+                const newProgressAwareTracks: ProgressAwarePlayObject[] = [];
+                if(newTracks.length > 0) {
+                    this.logger.debug(`[Platform ${groupId}] New plays found that do not match existing candidates.`)
+                    for(const p of newTracks) {
+                        this.logger.debug(`[Platform ${groupId}] Adding new locked play: ${buildTrackString(p, {include: ['trackId', 'artist', 'track']})}`);
+                        newProgressAwareTracks.push(toProgressAwarePlayObject(p));
+                    }
+                }
+                // filter prior candidates based on new recently played
+                cRecentlyPlayed = cRecentlyPlayed.filter(x => {
+                    const candidateMatchedLocked = lockedPlays.some((y: any) => playObjDataMatch(x, y));
+                    if(!candidateMatchedLocked) {
+                        this.logger.debug(`[Platform ${groupId}] Existing candidate not found in locked plays will be removed: ${buildTrackString(x, {include: ['trackId', 'artist', 'track']})}`);
+                    }
+                    return candidateMatchedLocked;
+                });
+                // and then combine still playing with new tracks
+                cRecentlyPlayed = cRecentlyPlayed.concat(newProgressAwareTracks);
+                cRecentlyPlayed.sort(sortByPlayDate);
 
-                    const matchingRecent = this.statefulRecentlyPlayed.find(x => playObjDataMatch(x, candidate));
-                    let stPrefix = `(Stateful Play) ${buildTrackString(candidate, {include: ['trackId', 'artist', 'track']})}`;
-                    if(matchingRecent === undefined) {
-                        this.logger.debug(`${stPrefix} added after being seen for 30 seconds and not matching any prior plays`);
-                        newStatefulPlays.push(candidate);
-                        this.statefulRecentlyPlayed.push(candidate);
-                    } else {
-                        const {data: { playDate, duration }} = candidate;
-                        const {data: { playDate: rplayDate }} = matchingRecent;
-                        if(!playDate.isSame(rplayDate)) {
-                            if(duration !== undefined) {
-                                if(playDate.isAfter(rplayDate.add(duration, 's'))) {
-                                    this.logger.debug(`${stPrefix} added after being seen for 30 seconds and having a different timestamp than a prior play`);
-                                    newStatefulPlays.push(candidate);
-                                    this.statefulRecentlyPlayed.push(candidate);
+                this.candidateRecentlyPlayed.set(groupId, cRecentlyPlayed);
+
+                const sRecentlyPlayed = this.statefulRecentlyPlayed.get(groupId) ?? [];
+
+                // now we check if all candidates pass tests for having been tracked long enough:
+                // * Has been tracked for at least 30 seconds
+                // * If it has playback position data then it must also have progressed at least 30 seconds since our initial tracking data
+                for(const candidate of cRecentlyPlayed) {
+                    const {data: {playDate, track}} = candidate;
+                    const firstSeenValid = playDate.isBefore(dayjs().subtract(30, 's'));
+                    let progressValid = firstSeenValid;
+                    if (firstSeenValid) {
+                        // check if we can get progress as well
+                        const matchingLockedPlay = lockedPlays.find(x => playObjDataMatch(x, candidate));
+                        // this should always be found but checking just in case
+                        if (matchingLockedPlay !== undefined) {
+                            const progress = getProgress(candidate, matchingLockedPlay);
+                            if (progress !== undefined) {
+                                if (progress < 30) {
+                                    progressValid = false;
                                 }
-                            } else if(!playObjDataMatch(this.statefulRecentlyPlayed[0], candidate)) {
-                                // if most recent stateful play is not this track we'll add it
-                                this.logger.debug(`${stPrefix} added after being seen for 30 seconds. Matched other recent play but could not determine time frame due to missing duration. Allowed due to not being last played track.`);
-                                newStatefulPlays.push(candidate);
-                                this.statefulRecentlyPlayed.push(candidate);
+                            }
+                        }
+                    }
+
+                    if(firstSeenValid && progressValid) {
+                        // a prior candidate has been playing for more than 30 seconds and passed progress test, time to check statefuls
+
+                        const matchingRecent = sRecentlyPlayed.find(x => playObjDataMatch(x, candidate));
+                        let stPrefix = `[Platform ${groupId}] (Stateful Play) ${buildTrackString(candidate, {include: ['trackId', 'artist', 'track']})}`;
+                        if(matchingRecent === undefined) {
+                            this.logger.debug(`${stPrefix} added after being seen for 30 seconds and not matching any prior plays`);
+                            newStatefulPlays.push(candidate);
+                            sRecentlyPlayed.push(candidate);
+                        } else {
+                            const {data: { playDate, duration }} = candidate;
+                            const {data: { playDate: rplayDate }} = matchingRecent;
+                            if(!playDate.isSame(rplayDate)) {
+                                if(duration !== undefined) {
+                                    if(playDate.isAfter(rplayDate.add(duration, 's'))) {
+                                        this.logger.debug(`${stPrefix} added after being seen for 30 seconds and having a different timestamp than a prior play`);
+                                        newStatefulPlays.push(candidate);
+                                        sRecentlyPlayed.push(candidate);
+                                    }
+                                } else if(!playObjDataMatch(sRecentlyPlayed[0], candidate)) {
+                                    // if most recent stateful play is not this track we'll add it
+                                    this.logger.debug(`${stPrefix} added after being seen for 30 seconds. Matched other recent play but could not determine time frame due to missing duration. Allowed due to not being last played track.`);
+                                    newStatefulPlays.push(candidate);
+                                    sRecentlyPlayed.push(candidate);
+                                }
                             }
                         }
                     }
                 }
+                sRecentlyPlayed.sort(sortByPlayDate);
+                this.statefulRecentlyPlayed.set(groupId, sRecentlyPlayed);
             }
-            this.statefulRecentlyPlayed.sort(sortByPlayDate);
         }
         return newStatefulPlays;
     }

@@ -192,7 +192,6 @@ export class SubsonicSource extends MemorySource {
         } = resp;
         // sometimes subsonic sources will return the same track as being played twice on the same player, need to remove this so we don't duplicate plays
         const deduped = removeDuplicates(entry.map(SubsonicSource.formatPlayObj));
-        this.processRecentPlays(deduped);
-        return this.statefulRecentlyPlayed;
+        return this.processRecentPlays(deduped);
     }
 }
