@@ -41,6 +41,7 @@
     "compare-versions": "^4.1.2",
     "concat-stream": "^2.0.0",
     "dayjs": "^1.10.4",
+    "dbus-next": "^0.10.2",
     "ejs": "^3.1.6",
     "es6-error": "^4.1.1",
     "express": "^4.17.1",
