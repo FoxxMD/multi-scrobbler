@@ -12,6 +12,7 @@
   * [Last.fm (Source)](#lastfm--source-)
   * [Deezer](#deezer)
   * [Youtube Music](#youtube-music)
+  * [MPRIS (Linux Desktop)](#mpris)
 * [Client Configurations](#client-configurations)
   * [Maloja](#maloja)
   * [Last.fm](#lastfm)
@@ -321,6 +322,30 @@ NOTES:
 ### File-Based
 
 See [`ytmusic.json.example`](/config/ytmusic.json.example) or [explore the schema with an example and live editor/validator](https://json-schema.app/view/%23/%23%2Fdefinitions%2FYTMusicSourceConfig?url=https%3A%2F%2Fraw.githubusercontent.com%2FFoxxMD%2Fmulti-scrobbler%2Fdevelop%2Fsrc%2Fcommon%2Fschema%2Fsource.json)
+
+## [MPRIS](https://specifications.freedesktop.org/mpris-spec/latest/)
+
+MPRIS is a standard interface for communicating with Music Players on **linux operating systems.**
+
+If you run Linux and have a notification tray that shows what media you are listening to, you likely have access to MPRIS.
+
+![Notification Tray](/assets/mpris.jpg)
+
+multi-scrobbler can listen to this interface and scrobble tracks played by **any media player** that communicates to the operating system with MPRIS.
+
+**NOTE:** multi-scrobbler needs to be running as a [**Local Installation**](/docs/installation.md#local) in order to use MPRIS. This cannot be used from docker.
+
+### ENV-Based
+
+| Environmental Variable | Required? | Default | Description                                                                      |
+|------------------------|-----------|---------|----------------------------------------------------------------------------------|
+| MPRIS_ENABLE           | No        |         | Use MPRIS as a Source (useful when you don't need any other options)             |
+| MPRIS_BLACKLIST        | No        |         | Comma-delimited list of player names not to scrobble from                        |
+| MPRIS_WHITELIST        | No        |         | Comma-delimited list of players names to ONLY scrobble from. Overrides blacklist |
+
+### File-Based
+
+See [`mpris.json.example`](/config/mpris.json.example) or [explore the schema with an example and live editor/validator](https://json-schema.app/view/%23/%23%2Fdefinitions%2FMPRISSourceConfig?url=https%3A%2F%2Fraw.githubusercontent.com%2FFoxxMD%2Fmulti-scrobbler%2Fdevelop%2Fsrc%2Fcommon%2Fschema%2Fclient.json)
 
 
 # Client Configurations

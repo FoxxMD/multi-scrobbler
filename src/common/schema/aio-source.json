@@ -328,6 +328,113 @@
             ],
             "type": "object"
         },
+        "MPRISData": {
+            "properties": {
+                "blacklist": {
+                    "anyOf": [
+                        {
+                            "items": {
+                                "type": "string"
+                            },
+                            "type": "array"
+                        },
+                        {
+                            "type": "string"
+                        }
+                    ],
+                    "description": "DO NOT scrobble from any players that START WITH these values, case-insensitive",
+                    "examples": [
+                        [
+                            "spotify",
+                            "vlc"
+                        ]
+                    ]
+                },
+                "maxPollRetries": {
+                    "default": 0,
+                    "description": "default # of automatic polling restarts on error",
+                    "examples": [
+                        1
+                    ],
+                    "type": "number"
+                },
+                "maxRequestRetries": {
+                    "default": 1,
+                    "description": "default # of http request retries a source can make before error is thrown",
+                    "examples": [
+                        1
+                    ],
+                    "type": "number"
+                },
+                "options": {
+                    "$ref": "#/definitions/Record<string,any>"
+                },
+                "retryMultiplier": {
+                    "default": 1.5,
+                    "description": "default retry delay multiplier (retry attempt * multiplier = # of seconds to wait before retrying)",
+                    "examples": [
+                        1.5
+                    ],
+                    "type": "number"
+                },
+                "whitelist": {
+                    "anyOf": [
+                        {
+                            "items": {
+                                "type": "string"
+                            },
+                            "type": "array"
+                        },
+                        {
+                            "type": "string"
+                        }
+                    ],
+                    "description": "ONLY from any players that START WITH these values, case-insensitive\n\nIf whitelist is present then blacklist is ignored",
+                    "examples": [
+                        [
+                            "spotify",
+                            "vlc"
+                        ]
+                    ]
+                }
+            },
+            "type": "object"
+        },
+        "MPRISSourceAIOConfig": {
+            "properties": {
+                "clients": {
+                    "description": "Restrict scrobbling tracks played from this source to Clients with names from this list. If list is empty is not present Source scrobbles to all configured Clients.",
+                    "examples": [
+                        [
+                            "MyMalojaConfigName",
+                            "MyLastFMConfigName"
+                        ]
+                    ],
+                    "items": {
+                        "type": "string"
+                    },
+                    "type": "array"
+                },
+                "data": {
+                    "$ref": "#/definitions/MPRISData"
+                },
+                "name": {
+                    "description": "Unique identifier for this source.",
+                    "type": "string"
+                },
+                "type": {
+                    "enum": [
+                        "mpris"
+                    ],
+                    "type": "string"
+                }
+            },
+            "required": [
+                "data",
+                "type"
+            ],
+            "type": "object"
+        },
         "PlexSourceAIOConfig": {
             "properties": {
                 "clients": {
@@ -482,6 +589,9 @@
                 },
                 {
                     "$ref": "#/definitions/YTMusicSourceAIOConfig"
+                },
+                {
+                    "$ref": "#/definitions/MPRISSourceAIOConfig"
                 }
             ]
         },

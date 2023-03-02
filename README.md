@@ -14,6 +14,7 @@ A javascript app to scrobble plays from multiple sources to [Maloja](https://git
   * [Youtube Music](/docs/configuration.md#youtube-music)
   * [Last.fm](/docs/configuration.md#lastfm-source)
   * [Deezer](/docs/configuration.md#deezer)
+  * [MPRIS (Linux Desktop)](/docs/configuration.md#mpris)
 * Supports scrobbling to many clients
   * [Maloja](/docs/configuration.md#maloja)
   * [Last.fm](/docs/configuration.md#lastfm)

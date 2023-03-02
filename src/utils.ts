@@ -572,3 +572,19 @@ export const getProgress = (initial: ProgressAwarePlayObject, curr: PlayObject):
     }
     return undefined;
 }
+
+export function parseBool(value: any, prev: any = false): boolean {
+    let usedVal = value;
+    if (value === undefined || value === '') {
+        usedVal = prev;
+    }
+    if(usedVal === undefined || usedVal === '') {
+        return false;
+    }
+    if (typeof usedVal === 'string') {
+        return usedVal === 'true';
+    } else if (typeof usedVal === 'boolean') {
+        return usedVal;
+    }
+    throw new Error('Not a boolean value.');
+}

@@ -1,4 +1,4 @@
-import {createLabelledLogger, readJson, validateJson} from "../utils.js";
+import {createLabelledLogger, parseBool, readJson, validateJson} from "../utils.js";
 import SpotifySource from "./SpotifySource.js";
 import PlexSource from "./PlexSource.js";
 import TautulliSource from "./TautulliSource.js";
@@ -25,6 +25,8 @@ import {LastfmSourceConfig} from "../common/infrastructure/config/source/lastfm.
 import YTMusicSource from "./YTMusicSource.js";
 import {YTMusicSourceConfig} from "../common/infrastructure/config/source/ytmusic.js";
 import {Notifiers} from "../notifier/Notifiers.js";
+import {MPRISData, MPRISSourceConfig} from "../common/infrastructure/config/source/mpris.js";
+import {MPRISSource} from "./MPRISSource.js";
 
 type groupedNamedConfigs = {[key: string]: ParsedConfig[]};
 
@@ -229,6 +231,23 @@ export default class ScrobbleSources {
                         });
                     }
                     break;
+                case 'mpris':
+                    const shouldUse = parseBool(process.env.MPRIS_ENABLE);
+                    const mp = {
+                        blacklist: process.env.MPRIS_BLACKLIST,
+                        whitelist: process.env.MPRIS_WHITELIST
+                    }
+                    if (!Object.values(mp).every(x => x === undefined) || shouldUse) {
+                        configs.push({
+                            type: 'mpris',
+                            name: 'unnamed',
+                            source: 'ENV',
+                            mode: 'single',
+                            configureAs: defaultConfigureAs,
+                            data: mp as MPRISData
+                        });
+                    }
+                    break;
                 default:
                     break;
             }
@@ -370,6 +389,10 @@ export default class ScrobbleSources {
                 break;
             case 'ytmusic':
                 newSource = await new YTMusicSource(name, compositeConfig as YTMusicSourceConfig, internal, notifier);
+                break;
+            case 'mpris':
+                newSource = await new MPRISSource(name, compositeConfig as MPRISSourceConfig, internal, notifier);
+                break;
             default:
                 break;
         }
