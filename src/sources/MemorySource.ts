@@ -34,14 +34,17 @@ export default class MemorySource extends AbstractSource {
     candidateRecentlyPlayed: GroupedPlays = new Map();
 
     getFlatStatefulRecentlyPlayed = (): PlayObject[] => {
-        return Array.from(this.statefulRecentlyPlayed.values()).flat();
+        return Array.from(this.statefulRecentlyPlayed.values()).flat().sort(sortByPlayDate);
     }
 
-    processRecentPlays = (plays: PlayObject[]) => {
+    processRecentPlays = (plays: PlayObject[], useExistingPlayDate = false) => {
 
         let newStatefulPlays: PlayObject[] = [];
-        // first format new plays with locked play date IE the first time we have "seen" this track
-        const flatLockedPlays = plays.map((p: any) => {
+        // if we can't trust existing play dates (like for subsonic where there is no timestamp) then
+        // we format new plays with locked play date IE the first time we have "seen" this track
+
+        // -- otherwise, for sources like Spotify that accurately report when track started to play, we can use existing dates
+        const flatLockedPlays = useExistingPlayDate ? plays : plays.map((p: any) => {
                     const {data: {playDate, ...restData}, ...rest} = p;
                     return {data: {...restData, playDate: dayjs()}, ...rest};
         });
@@ -144,7 +147,8 @@ export default class MemorySource extends AbstractSource {
                 this.statefulRecentlyPlayed.set(groupId, sRecentlyPlayed);
             }
         }
-        return newStatefulPlays;
+        return this.getFlatStatefulRecentlyPlayed();
+        //return newStatefulPlays;
     }
 
     recentlyPlayedTrackIsValid = (playObj: any) => {

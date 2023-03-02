@@ -2,7 +2,7 @@ import dayjs from "dayjs";
 import {
     readJson,
     writeFile,
-    sortByPlayDate, sleep, parseRetryAfterSecsFromObj,
+    sortByPlayDate, sleep, parseRetryAfterSecsFromObj, buildTrackString, truncateStringToLength, combinePartsToString,
 } from "../utils.js";
 import SpotifyWebApi from "spotify-web-api-node";
 import AbstractSource, {RecentlyPlayedOptions} from "./AbstractSource.js";
@@ -14,11 +14,15 @@ import CurrentlyPlayingObject = SpotifyApi.CurrentlyPlayingObject;
 import TrackObjectFull = SpotifyApi.TrackObjectFull;
 import ArtistObjectSimplified = SpotifyApi.ArtistObjectSimplified;
 import AlbumObjectSimplified = SpotifyApi.AlbumObjectSimplified;
+import UserDevice = SpotifyApi.UserDevice;
+import MemorySource from "./MemorySource.js";
 
 const scopes = ['user-read-recently-played', 'user-read-currently-playing', 'user-read-playback-state', 'user-read-playback-position'];
 const state = 'random';
 
-export default class SpotifySource extends AbstractSource {
+const shortDeviceId = truncateStringToLength(10, '');
+
+export default class SpotifySource extends MemorySource {
 
     spotifyApi: SpotifyWebApi;
     workingCredsPath: string;
@@ -26,18 +30,20 @@ export default class SpotifySource extends AbstractSource {
     requiresAuth = true;
     requiresAuthInteraction = true;
 
+    canGetState = false;
+
     declare config: SpotifySourceConfig;
 
     constructor(name: any, config: SpotifySourceConfig, internal: InternalConfig, notifier: Notifiers) {
         super('spotify', name, config, internal, notifier);
         const {
             data: {
-                interval = 60,
+                interval = 30,
             } = {}
         } = config;
 
         if (interval < 15) {
-            this.logger.warn('Interval should be above 30 seconds...😬');
+            this.logger.warn('Interval should be 15 seconds or above...😬');
         }
 
         this.config.data.interval = interval;
@@ -55,6 +61,7 @@ export default class SpotifySource extends AbstractSource {
         let id: string;
         let url: string;
         let playbackPosition: number | undefined;
+        let deviceId: string | undefined;
 
 
         if (asPlayHistoryObject(obj)) {
@@ -86,6 +93,10 @@ export default class SpotifySource extends AbstractSource {
                 is_playing,
                 progress_ms,
                 timestamp,
+                device: {
+                    id: deviceIdentifier,
+                    name: deviceName
+                },
                 item,
             } = obj;
             const {
@@ -107,6 +118,7 @@ export default class SpotifySource extends AbstractSource {
             album = a;
             url = spotify;
             playbackPosition = progress_ms / 1000;
+            deviceId = combinePartsToString([shortDeviceId(deviceIdentifier), deviceName]);
 
         } else {
             throw new Error('Could not determine format of spotify response data');
@@ -123,6 +135,7 @@ export default class SpotifySource extends AbstractSource {
                 playDate: dayjs(played_at),
             },
             meta: {
+                deviceId,
                 source: 'Spotify',
                 trackId: id,
                 trackProgressPosition: playbackPosition,
@@ -232,6 +245,26 @@ export default class SpotifySource extends AbstractSource {
     }
 
     getRecentlyPlayed = async (options: RecentlyPlayedOptions = {}) => {
+        const plays: PlayObject[] = [];
+        if(this.canGetState) {
+            const state = await this.getCurrentPlaybackState();
+            if(state.play !== undefined) {
+                if(state.device.is_private_session) {
+                    this.logger.debug(`Will not track play on Device ${state.device.name} because it is a private session: ${buildTrackString(state.play)}`);
+                } else {
+                    plays.push(state.play);
+                }
+            }
+        } else {
+            const currPlay = await this.getNowPlaying();
+            if(currPlay !== undefined) {
+                plays.push(currPlay);
+            }
+        }
+        return this.processRecentPlays(plays, true);
+    }
+
+    getPlayHistory = async (options: RecentlyPlayedOptions = {}) => {
         const {limit = 20} = options;
         const func = (api: SpotifyWebApi) => api.getMyRecentlyPlayedTracks({
             limit
@@ -245,22 +278,36 @@ export default class SpotifySource extends AbstractSource {
         const playingRes = await this.callApi<ReturnType<typeof this.spotifyApi.getMyCurrentPlayingTrack>>(func);
 
         const {body: {item}} = playingRes;
-        if(item !== undefined) {
-           const play = SpotifySource.formatPlayObj(playingRes.body);
-           return play;
+        if(item !== undefined && item !== null) {
+           return SpotifySource.formatPlayObj(playingRes.body, true);
         }
         return undefined;
     }
 
-    getCurrentPlaybackState = async () => {
-        const funcState = (api: SpotifyWebApi) => api.getMyCurrentPlaybackState();
-        return await this.callApi<ReturnType<typeof this.spotifyApi.getMyCurrentPlaybackState>>(funcState);
+    getCurrentPlaybackState = async (logError = true): Promise<{device?: UserDevice, play?: PlayObject}> => {
+        try {
+            const funcState = (api: SpotifyWebApi) => api.getMyCurrentPlaybackState();
+            const res = await this.callApi<ReturnType<typeof this.spotifyApi.getMyCurrentPlaybackState>>(funcState);
+            const {body: {
+                device,
+                item
+            } = {}} = res;
+            return {
+                device: device === null ? undefined : device,
+                play: item !== null && item !== undefined ? SpotifySource.formatPlayObj(res.body, true) : undefined
+            }
+        } catch (e) {
+            if(logError) {
+                this.logger.error(`Error occurred while trying to retrieve current playback state: ${e.message}`);
+            }
+            throw e;
+        }
     }
 
-    getDevices = async () => {
+/*    getDevices = async () => {
         const funcDevice = (api: SpotifyWebApi) => api.getMyDevices();
         return await this.callApi<ReturnType<typeof this.spotifyApi.getMyDevices>>(funcDevice);
-    }
+    }*/
 
     callApi = async <T>(func: (api: SpotifyWebApi) => Promise<any>, retries = 0): Promise<T> => {
         const {
@@ -315,7 +362,24 @@ export default class SpotifySource extends AbstractSource {
             this.logger.warn('Cannot poll spotify without valid credentials configuration')
             return;
         }
-        await this.getNowPlaying();
+
+        // test capabilities
+        try {
+            await this.getCurrentPlaybackState(false);
+            this.canGetState = true;
+        } catch (e) {
+            this.logger.warn('multi-scrobbler does not have sufficient permissions to access Spotify API "Get Playback State". MS will continue to work but accuracy for determining if/when a track played from a Spotify Connect device (smart device controlled through Spotify app) may be degraded. To fix this re-authenticate MS with Spotify and restart polling.');
+        }
+
+        this.logger.info('Checking recently played API for tracks to backlog...');
+        const backlogPlays = await this.getPlayHistory({formatted: true});
+        const {
+            lastTrackPlayedAt: lastPlayed,
+            scrobbleResult,
+            newTracksFound: newTracks
+        } = await this.ingestPlays(backlogPlays, allClients, this.instantiatedAt);
+        this.logger.info('Backlog complete.');
+
         await this.startPolling(allClients);
     }
 }
