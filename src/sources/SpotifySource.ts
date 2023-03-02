@@ -10,8 +10,12 @@ import {SpotifySourceConfig} from "../common/infrastructure/config/source/spotif
 import {InternalConfig, PlayObject} from "../common/infrastructure/Atomic.js";
 import PlayHistoryObject = SpotifyApi.PlayHistoryObject;
 import {Notifiers} from "../notifier/Notifiers.js";
+import CurrentlyPlayingObject = SpotifyApi.CurrentlyPlayingObject;
+import TrackObjectFull = SpotifyApi.TrackObjectFull;
+import ArtistObjectSimplified = SpotifyApi.ArtistObjectSimplified;
+import AlbumObjectSimplified = SpotifyApi.AlbumObjectSimplified;
 
-const scopes = ['user-read-recently-played', 'user-read-currently-playing'];
+const scopes = ['user-read-recently-played', 'user-read-currently-playing', 'user-read-playback-state', 'user-read-playback-position'];
 const state = 'random';
 
 export default class SpotifySource extends AbstractSource {
@@ -42,23 +46,74 @@ export default class SpotifySource extends AbstractSource {
         this.canPoll = true;
     }
 
-    static formatPlayObj(obj: PlayHistoryObject, newFromSource = false): PlayObject {
-        const {
-            track: {
-                artists = [],
-                name,
-                id,
-                duration_ms,
-                album: {
-                    name: albumName,
-                } = {},
+    static formatPlayObj(obj: object, newFromSource = false): PlayObject {
+        let artists: ArtistObjectSimplified[];
+        let album: AlbumObjectSimplified;
+        let name: string;
+        let duration_ms: number;
+        let played_at: string;
+        let id: string;
+        let url: string;
+        let playbackPosition: number | undefined;
+
+
+        if (asPlayHistoryObject(obj)) {
+            const {
+                track,
+                played_at: pa
+            } = obj;
+            const {
+                artists: art = [],
+                name: n,
+                id: i,
+                duration_ms: dm,
+                album: a,
                 external_urls: {
                     spotify,
                 } = {}
-            } = {},
-            played_at
-        } = obj;
-        //let artistString = artists.reduce((acc, curr) => acc.concat(curr.name), []).join(',');
+            } = track;
+
+            played_at = pa;
+            artists = art;
+            name = n;
+            id = i;
+            duration_ms = dm;
+            album = a;
+            url = spotify;
+
+        } else if (asCurrentlyPlayingObject(obj)) {
+            const {
+                is_playing,
+                progress_ms,
+                timestamp,
+                item,
+            } = obj;
+            const {
+                artists: art,
+                name: n,
+                id: i,
+                duration_ms: dm,
+                album: a,
+                external_urls: {
+                    spotify,
+                } = {}
+            } = item as TrackObjectFull;
+
+            played_at = dayjs(timestamp).toISOString();
+            artists = art;
+            name = n;
+            id = i;
+            duration_ms = dm;
+            album = a;
+            url = spotify;
+            playbackPosition = progress_ms / 1000;
+
+        } else {
+            throw new Error('Could not determine format of spotify response data');
+        }
+
+        const {name: albumName} = album || {};
+
         return {
             data: {
                 artists: artists.map((x: any) => x.name),
@@ -70,9 +125,10 @@ export default class SpotifySource extends AbstractSource {
             meta: {
                 source: 'Spotify',
                 trackId: id,
+                trackProgressPosition: playbackPosition,
                 newFromSource,
                 url: {
-                    web: spotify
+                    web: url
                 }
             }
         };
@@ -184,6 +240,28 @@ export default class SpotifySource extends AbstractSource {
         return result.body.items.map((x: any) => SpotifySource.formatPlayObj(x)).sort(sortByPlayDate);
     }
 
+    getNowPlaying = async () => {
+        const func = (api: SpotifyWebApi) => api.getMyCurrentPlayingTrack();
+        const playingRes = await this.callApi<ReturnType<typeof this.spotifyApi.getMyCurrentPlayingTrack>>(func);
+
+        const {body: {item}} = playingRes;
+        if(item !== undefined) {
+           const play = SpotifySource.formatPlayObj(playingRes.body);
+           return play;
+        }
+        return undefined;
+    }
+
+    getCurrentPlaybackState = async () => {
+        const funcState = (api: SpotifyWebApi) => api.getMyCurrentPlaybackState();
+        return await this.callApi<ReturnType<typeof this.spotifyApi.getMyCurrentPlaybackState>>(funcState);
+    }
+
+    getDevices = async () => {
+        const funcDevice = (api: SpotifyWebApi) => api.getMyDevices();
+        return await this.callApi<ReturnType<typeof this.spotifyApi.getMyDevices>>(funcDevice);
+    }
+
     callApi = async <T>(func: (api: SpotifyWebApi) => Promise<any>, retries = 0): Promise<T> => {
         const {
             maxRequestRetries = 1,
@@ -237,6 +315,15 @@ export default class SpotifySource extends AbstractSource {
             this.logger.warn('Cannot poll spotify without valid credentials configuration')
             return;
         }
+        await this.getNowPlaying();
         await this.startPolling(allClients);
     }
+}
+
+const asPlayHistoryObject = (obj: object): obj is PlayHistoryObject => {
+    return 'played_at' in obj;
+}
+
+const asCurrentlyPlayingObject = (obj: object): obj is CurrentlyPlayingObject => {
+    return 'is_playing' in obj;
 }
