@@ -21,14 +21,12 @@ export class SubsonicSource extends MemorySource {
         // default to quick interval so we can get a decently accurate nowPlaying
         const {
             data: {
-                // @ts-ignore
                 interval = 10,
-                // @ts-ignore
-                maxSleep = 30,
+                maxInterval = 30,
                 ...restData
             } = {}
         } = config;
-        const subsonicConfig = {...config, data: {...restData, internal, maxSleep}};
+        const subsonicConfig = {...config, data: {...restData, internal, maxInterval}};
         super('subsonic', name, subsonicConfig, internal, notifier);
 
         const {data: {user, password, url} = {}} = this.config;

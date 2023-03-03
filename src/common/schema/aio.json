@@ -1100,8 +1100,16 @@
                     "type": "string"
                 },
                 "interval": {
+                    "default": 30,
+                    "description": "How long to wait before polling the source API for new tracks (in seconds)\n\nIt is unlikely you should need to change this unless you scrobble many very short tracks often\n\nReading:\n* https://developer.spotify.com/documentation/web-api/guides/rate-limits/\n* https://medium.com/mendix/limiting-your-amount-of-calls-in-mendix-most-of-the-time-rest-835dde55b10e\n  * The rate limit is ~180 req/min",
+                    "examples": [
+                        30
+                    ],
+                    "type": "number"
+                },
+                "maxInterval": {
                     "default": 60,
-                    "description": "optional, how long to wait before calling spotify for new tracks (in seconds)",
+                    "description": "When there has been no new activity from the Source API multi-scrobbler will gradually increase the wait time between polling up to this value (in seconds)",
                     "examples": [
                         60
                     ],
@@ -1152,6 +1160,22 @@
         },
         "SubsonicData": {
             "properties": {
+                "interval": {
+                    "default": 10,
+                    "description": "How long to wait before polling the source API for new tracks (in seconds)",
+                    "examples": [
+                        10
+                    ],
+                    "type": "number"
+                },
+                "maxInterval": {
+                    "default": 30,
+                    "description": "When there has been no new activity from the Source API multi-scrobbler will gradually increase the wait time between polling up to this value (in seconds)",
+                    "examples": [
+                        30
+                    ],
+                    "type": "number"
+                },
                 "maxPollRetries": {
                     "default": 0,
                     "description": "default # of automatic polling restarts on error",
@@ -1297,6 +1321,22 @@
                         "VISITOR_INFO1_LIVE=jMp2xA1Xz2_PbVc; __Secure-3PAPISID=3AxsXpy0M/AkISpjek; ..."
                     ],
                     "type": "string"
+                },
+                "interval": {
+                    "default": 30,
+                    "description": "How long to wait before polling the source API for new tracks (in seconds)",
+                    "examples": [
+                        30
+                    ],
+                    "type": "number"
+                },
+                "maxInterval": {
+                    "default": 60,
+                    "description": "When there has been no new activity from the Source API multi-scrobbler will gradually increase the wait time between polling up to this value (in seconds)",
+                    "examples": [
+                        60
+                    ],
+                    "type": "number"
                 },
                 "maxPollRetries": {
                     "default": 0,

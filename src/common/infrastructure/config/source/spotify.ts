@@ -1,6 +1,7 @@
 import {CommonSourceConfig, CommonSourceData} from "./index.js";
+import {PollingOptions} from "../common.js";
 
-export interface SpotifySourceData extends CommonSourceData {
+export interface SpotifySourceData extends CommonSourceData, PollingOptions {
     /**
      * spotify client id
      *
@@ -21,10 +22,17 @@ export interface SpotifySourceData extends CommonSourceData {
      * */
     redirectUri: string
     /**
-     * optional, how long to wait before calling spotify for new tracks (in seconds)
+     * How long to wait before polling the source API for new tracks (in seconds)
      *
-     * @default 60
-     * @examples [60]
+     * It is unlikely you should need to change this unless you scrobble many very short tracks often
+     *
+     * Reading:
+     * * https://developer.spotify.com/documentation/web-api/guides/rate-limits/
+     * * https://medium.com/mendix/limiting-your-amount-of-calls-in-mendix-most-of-the-time-rest-835dde55b10e
+     *   * The rate limit is ~180 req/min
+     *
+     * @default 30
+     * @examples [30]
      * */
     interval?: number
 }

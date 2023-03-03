@@ -1,6 +1,7 @@
 import {CommonSourceConfig, CommonSourceData} from "./index.js";
+import {PollingOptions} from "../common.js";
 
-export interface YTMusicData extends CommonSourceData {
+export interface YTMusicData extends CommonSourceData, PollingOptions {
     /**
      * The cookie retrieved from the Request Headers of music.youtube.com after logging in.
      *

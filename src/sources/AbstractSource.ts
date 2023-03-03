@@ -131,6 +131,11 @@ export default abstract class AbstractSource {
         let lastTrackPlayedAt = this.instantiatedAt;
         let checkCount = 0;
         let checksOverThreshold = 0;
+
+        const {interval = 30, checkActiveFor = 300, maxInterval = 60} = this.config.data;
+        const maxBackoff = maxInterval - interval;
+        let sleepTime = interval;
+
         try {
             this.polling = true;
             while (true) {
@@ -161,20 +166,24 @@ export default abstract class AbstractSource {
                     this.tracksDiscovered += scrobbleResult.length;
                 }
 
-                const {interval = 30, checkActiveFor = 300, maxSleep = 300} = this.config.data;
-
-                let sleepTime = interval;
-                // don't need to do back off calc if interval is 5 minutes or greater since its already pretty light on API calls
-                // and don't want to back off if we just started the app
                 const activeThreshold = lastTrackPlayedAt.add(checkActiveFor, 's');
-                if (activeThreshold.isBefore(dayjs()) && sleepTime < 300) {
+                const inactiveFor = dayjs.duration(Math.abs(activeThreshold.diff(dayjs(), 'millisecond'))).humanize(false);
+                if (activeThreshold.isBefore(dayjs())) {
                     checksOverThreshold++;
-                    const backoffMultiplier = Math.min(checksOverThreshold, 1000) * 1.5;
-                    sleepTime = Math.min(interval * backoffMultiplier, maxSleep);
+                    if(sleepTime < maxInterval) {
+                        const checkVal = Math.min(checksOverThreshold, 1000);
+                        const backoff = Math.round(Math.max(Math.min(Math.min(checkVal, 1000) * 2 * (1.1 * checkVal), maxBackoff), 5));
+                        sleepTime = interval + backoff;
+                        this.logger.debug(`Last activity was at ${lastTrackPlayedAt.format()} which is ${inactiveFor} outside of active polling period of (last activity + ${checkActiveFor} seconds). Will sleep for interval ${interval} + ${backoff} seconds.`);
+                    } else {
+                        this.logger.debug(`Last activity was at ${lastTrackPlayedAt.format()} which is ${inactiveFor} outside of active polling period of (last activity + ${checkActiveFor} seconds). Will sleep for max interval ${maxInterval} seconds.`);
+                    }
+                } else {
+                    sleepTime = interval;
+                    this.logger.debug(`Last activity was at ${lastTrackPlayedAt.format()}. Will sleep for interval ${sleepTime} seconds.`);
                 }
 
-                // sleep for interval
-                this.logger.debug(`Sleeping for ${sleepTime}s`);
+                this.logger.verbose(`Sleeping for ${sleepTime}s`);
                 await sleep(sleepTime * 1000);
 
             }
