@@ -46,6 +46,7 @@
     "es6-error": "^4.1.1",
     "express": "^4.17.1",
     "express-session": "^1.17.2",
+    "fixed-size-list": "^0.3.0",
     "formidable": "^2.1",
     "gotify": "^1.1.0",
     "iti": "^0.6.0",
