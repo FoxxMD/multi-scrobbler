@@ -28,10 +28,8 @@ import JellyfinSource from "./sources/JellyfinSource.js";
 import { Server } from "socket.io";
 import * as path from "path";
 import {projectDir} from "./common/index.js";
-import LastfmApiClient from "./apis/LastfmApiClient.js";
 import LastfmSource from "./sources/LastfmSource.js";
 import LastfmScrobbler from "./clients/LastfmScrobbler.js";
-import ScrobbleClients from "./clients/ScrobbleClients.js";
 import DeezerSource from "./sources/DeezerSource.js";
 import AbstractSource from "./sources/AbstractSource.js";
 import {PlayObject, TrackStringOptions} from "./common/infrastructure/Atomic.js";
@@ -39,8 +37,8 @@ import SpotifySource from "./sources/SpotifySource.js";
 import {JellyfinNotifier} from "./sources/ingressNotifiers/JellyfinNotifier.js";
 import {PlexNotifier} from "./sources/ingressNotifiers/PlexNotifier.js";
 import {TautulliNotifier} from "./sources/ingressNotifiers/TautulliNotifier.js";
-import {Notifiers} from "./notifier/Notifiers.js";
 import {AIOConfig} from "./common/infrastructure/config/aioConfig.js";
+import root from "./ioc.js";
 
 
 dayjs.extend(utc)
@@ -140,24 +138,25 @@ const configDir = process.env.CONFIG_DIR || path.resolve(projectDir, `./config`)
             logger.warn('App config file exists but could not be parsed!');
         }
 
-        const notifiers = new Notifiers();
+        const notifiers = root.get('notifiers');
         const {
             webhooks = []
         } = (config || {}) as AIOConfig;
 
-        await notifiers.buildWebhooks(webhooks)
+        await notifiers.buildWebhooks(webhooks);
+
 
         /*
         * setup clients
         * */
-        const scrobbleClients = new ScrobbleClients(configDir);
+        const scrobbleClients = root.get('clients');
         await scrobbleClients.buildClientsFromConfig(notifiers);
         if (scrobbleClients.clients.length === 0) {
             logger.warn('No scrobble clients were configured!')
         }
 
-        const scrobbleSources = new ScrobbleSources(localUrl, configDir);
-        await scrobbleSources.buildSourcesFromConfig([], notifiers);
+        const scrobbleSources = root.get('sources');//new ScrobbleSources(localUrl, configDir);
+        await scrobbleSources.buildSourcesFromConfig([]);
 
         const clientCheckMiddle = makeClientCheckMiddle(scrobbleClients);
         const sourceCheckMiddle = makeSourceCheckMiddle(scrobbleSources);
@@ -271,7 +270,7 @@ const configDir = process.env.CONFIG_DIR || path.resolve(projectDir, `./config`)
                         return res.send('OK');
                     } else {
                         // @ts-expect-error TS(2339): Property 'handle' does not exist on type 'never'.
-                        await source.handle(payload, scrobbleClients);
+                        await source.handle(payload);
                         return res.send('OK');
                     }
                 } else {
@@ -283,7 +282,7 @@ const configDir = process.env.CONFIG_DIR || path.resolve(projectDir, `./config`)
             const tSources = scrobbleSources.getByType('tautulli');
             for (const source of tSources) {
                 // @ts-expect-error TS(2339): Property 'handle' does not exist on type 'never'.
-                await source.handle(payload, scrobbleClients);
+                await source.handle(payload);
             }
 
             res.send('OK');
@@ -312,7 +311,7 @@ const configDir = process.env.CONFIG_DIR || path.resolve(projectDir, `./config`)
                 }
 
                 for (const source of pSources) {
-                    await source.handle(playObj, scrobbleClients);
+                    await source.handle(playObj);
                 }
             }
 
@@ -354,7 +353,7 @@ const configDir = process.env.CONFIG_DIR || path.resolve(projectDir, `./config`)
                 logger.debug(`[Jellyfin] Logging payload due to at least one Jellyfin source having 'logPayload: true`, req.body);
             }
             for (const source of pSources) {
-                await source.handle(playObj, scrobbleClients);
+                await source.handle(playObj);
             }
             res.send('OK');
         });
@@ -415,7 +414,7 @@ const configDir = process.env.CONFIG_DIR || path.resolve(projectDir, `./config`)
                 return res.status(400).send(`Specified source cannot poll (${source.type})`);
             }
 
-            source.poll(scrobbleClients);
+            source.poll();
             res.send('OK');
         });
 
@@ -496,7 +495,7 @@ const configDir = process.env.CONFIG_DIR || path.resolve(projectDir, `./config`)
                     return res.send('Error with deezer credentials storage');
                 } else if(entity.config.data.accessToken !== undefined) {
                     // start polling
-                    entity.poll(entity.clients)
+                    entity.poll()
                     return res.redirect('/');
                 } else {
                     await sleep(1500);
@@ -537,7 +536,7 @@ const configDir = process.env.CONFIG_DIR || path.resolve(projectDir, `./config`)
                 const tokenResult = await source.handleAuthCodeCallback(req.query);
                 let responseContent = 'OK';
                 if (tokenResult === true) {
-                    source.poll(scrobbleClients);
+                    source.poll();
                 } else {
                     responseContent = tokenResult;
                 }
@@ -575,18 +574,18 @@ const configDir = process.env.CONFIG_DIR || path.resolve(projectDir, `./config`)
                         if ((source as SpotifySource).spotifyApi.getAccessToken() === undefined) {
                             anyNotReady = true;
                         } else {
-                            (source as SpotifySource).poll(scrobbleClients);
+                            (source as SpotifySource).poll();
                         }
                     }
                     break;
                 case 'lastfm':
                     if(source.initialized === true) {
-                        source.poll(scrobbleClients);
+                        source.poll();
                     }
                     break;
                 default:
                     if (source.poll !== undefined) {
-                        source.poll(scrobbleClients);
+                        source.poll();
                     }
             }
         }

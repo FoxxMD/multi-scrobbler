@@ -48,6 +48,7 @@
     "express-session": "^1.17.2",
     "formidable": "^2.1",
     "gotify": "^1.1.0",
+    "iti": "^0.6.0",
     "json5": "^2.2.3",
     "lastfm-node-client": "^2.2.0",
     "ntfy": "^1.0.5",

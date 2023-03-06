@@ -5,7 +5,7 @@ import AbstractSource, {RecentlyPlayedOptions} from "./AbstractSource.js";
 import dayjs from "dayjs";
 import {DeezerSourceConfig} from "../common/infrastructure/config/source/deezer.js";
 import {InternalConfig, PlayObject} from "../common/infrastructure/Atomic.js";
-import {Notifiers} from "../notifier/Notifiers.js";
+import EventEmitter from "events";
 
 export default class DeezerSource extends AbstractSource {
     workingCredsPath;
@@ -18,8 +18,8 @@ export default class DeezerSource extends AbstractSource {
 
     declare config: DeezerSourceConfig;
 
-    constructor(name: any, config: DeezerSourceConfig, internal: InternalConfig, notifier: Notifiers) {
-        super('deezer', name, config, internal, notifier);
+    constructor(name: any, config: DeezerSourceConfig, internal: InternalConfig, emitter: EventEmitter) {
+        super('deezer', name, config, internal, emitter);
         const {
             data: {
                 interval = 60,

@@ -5,7 +5,7 @@ import formidable from 'formidable';
 import concatStream from 'concat-stream';
 import {PlexSourceConfig} from "../common/infrastructure/config/source/plex.js";
 import {InternalConfig, PlayObject, SourceType} from "../common/infrastructure/Atomic.js";
-import {Notifiers} from "../notifier/Notifiers.js";
+import EventEmitter from "events";
 
 const shortDeviceId = truncateStringToLength(10, '');
 
@@ -16,8 +16,8 @@ export default class PlexSource extends AbstractSource {
 
     declare config: PlexSourceConfig;
 
-    constructor(name: any, config: PlexSourceConfig, internal: InternalConfig, type: SourceType = 'plex', notifier: Notifiers) {
-        super(type, name, config, internal, notifier);
+    constructor(name: any, config: PlexSourceConfig, internal: InternalConfig, type: SourceType = 'plex',emitter: EventEmitter) {
+        super(type, name, config, internal, emitter);
         const {data: {user = [], libraries = [], servers = []} = {}} = config
 
         if (!Array.isArray(user)) {
@@ -165,14 +165,15 @@ export default class PlexSource extends AbstractSource {
         return true;
     }
 
-    handle = async (playObj: any, allClients: any) => {
+    handle = async (playObj: any) => {
         if (!this.isValidEvent(playObj)) {
             return;
         }
 
         this.logger.info(`New Track => ${buildTrackString(playObj)}`);
         try {
-            await allClients.scrobble(playObj, {scrobbleTo: this.clients, scrobbleFrom: this.identifier});
+            this.scrobble([playObj]);
+            //await root.get('clients').scrobble(playObj, {scrobbleTo: this.clients, scrobbleFrom: this.identifier});
             // only gets hit if we scrobbled ok
             this.tracksDiscovered++;
         } catch (e) {

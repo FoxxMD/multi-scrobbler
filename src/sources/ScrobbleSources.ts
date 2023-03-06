@@ -24,9 +24,9 @@ import * as sourceSchema from "../common/schema/source.json";
 import {LastfmSourceConfig} from "../common/infrastructure/config/source/lastfm.js";
 import YTMusicSource from "./YTMusicSource.js";
 import {YTMusicSourceConfig} from "../common/infrastructure/config/source/ytmusic.js";
-import {Notifiers} from "../notifier/Notifiers.js";
 import {MPRISData, MPRISSourceConfig} from "../common/infrastructure/config/source/mpris.js";
 import {MPRISSource} from "./MPRISSource.js";
+import EventEmitter from "events";
 
 type groupedNamedConfigs = {[key: string]: ParsedConfig[]};
 
@@ -39,7 +39,10 @@ export default class ScrobbleSources {
     configDir: string;
     localUrl: string;
 
-    constructor(localUrl: string, configDir: string = defaultConfigDir) {
+    emitter: EventEmitter;
+
+    constructor(emitter: EventEmitter, localUrl: string, configDir: string = defaultConfigDir) {
+        this.emitter = emitter;
         this.configDir = configDir;
         this.localUrl = localUrl;
         this.logger = createLabelledLogger('sources', 'Sources');
@@ -84,7 +87,7 @@ export default class ScrobbleSources {
         return [sourcesReady, messages];
     }
 
-    buildSourcesFromConfig = async (additionalConfigs: ParsedConfig[] = [], notifier: Notifiers) => {
+    buildSourcesFromConfig = async (additionalConfigs: ParsedConfig[] = []) => {
         let configs: ParsedConfig[] = additionalConfigs;
 
         let configFile;
@@ -336,7 +339,7 @@ export default class ScrobbleSources {
                 // @ts-expect-error TS(2571): Object is of type 'unknown'.
                 for (const c of tempNamedConfigs) {
                     try {
-                        await this.addSource(c, sourceDefaults, notifier);
+                        await this.addSource(c, sourceDefaults);
                     } catch(e) {
                         this.logger.error(`Source ${c.name} of type ${c.type} was not added because of unrecoverable errors`);
                         this.logger.error(e);
@@ -346,7 +349,7 @@ export default class ScrobbleSources {
         }
     }
 
-    addSource = async (clientConfig: any, defaults = {}, notifier: Notifiers) => {
+    addSource = async (clientConfig: any, defaults = {}) => {
         // const isValidConfig = isValidConfigStructure(clientConfig, {name: true, data: true, type: true});
         // if (isValidConfig !== true) {
         //     throw new Error(`Config object from ${clientConfig.source || 'unknown'} with name [${clientConfig.name || 'unnamed'}] of type [${clientConfig.type || 'unknown'}] has errors: ${isValidConfig.join(' | ')}`)
@@ -367,31 +370,31 @@ export default class ScrobbleSources {
         let newSource;
         switch (type) {
             case 'spotify':
-                newSource = new SpotifySource(name, compositeConfig as SpotifySourceConfig, internal, notifier);
+                newSource = new SpotifySource(name, compositeConfig as SpotifySourceConfig, internal, this.emitter);
                 break;
             case 'plex':
-                newSource = await new PlexSource(name, compositeConfig as PlexSourceConfig, internal, 'plex', notifier);
+                newSource = await new PlexSource(name, compositeConfig as PlexSourceConfig, internal, 'plex', this.emitter);
                 break;
             case 'tautulli':
-                newSource = await new TautulliSource(name, compositeConfig as TautulliSourceConfig, internal, notifier);
+                newSource = await new TautulliSource(name, compositeConfig as TautulliSourceConfig, internal, this.emitter);
                 break;
             case 'subsonic':
-                newSource = new SubsonicSource(name, compositeConfig as SubSonicSourceConfig, internal, notifier);
+                newSource = new SubsonicSource(name, compositeConfig as SubSonicSourceConfig, internal, this.emitter);
                 break;
             case 'jellyfin':
-                newSource = await new JellyfinSource(name, compositeConfig as JellySourceConfig, internal, notifier);
+                newSource = await new JellyfinSource(name, compositeConfig as JellySourceConfig, internal, this.emitter);
                 break;
             case 'lastfm':
-                newSource = await new LastfmSource(name, compositeConfig as LastfmClientConfig, internal, notifier);
+                newSource = await new LastfmSource(name, compositeConfig as LastfmClientConfig, internal, this.emitter);
                 break;
             case 'deezer':
-                newSource = await new DeezerSource(name, compositeConfig as DeezerSourceConfig, internal, notifier);
+                newSource = await new DeezerSource(name, compositeConfig as DeezerSourceConfig, internal, this.emitter);
                 break;
             case 'ytmusic':
-                newSource = await new YTMusicSource(name, compositeConfig as YTMusicSourceConfig, internal, notifier);
+                newSource = await new YTMusicSource(name, compositeConfig as YTMusicSourceConfig, internal, this.emitter);
                 break;
             case 'mpris':
-                newSource = await new MPRISSource(name, compositeConfig as MPRISSourceConfig, internal, notifier);
+                newSource = await new MPRISSource(name, compositeConfig as MPRISSourceConfig, internal, this.emitter);
                 break;
             default:
                 break;

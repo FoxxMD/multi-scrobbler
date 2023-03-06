@@ -9,7 +9,7 @@ import AbstractSource, {RecentlyPlayedOptions} from "./AbstractSource.js";
 import {SpotifySourceConfig} from "../common/infrastructure/config/source/spotify.js";
 import {InternalConfig, PlayObject} from "../common/infrastructure/Atomic.js";
 import PlayHistoryObject = SpotifyApi.PlayHistoryObject;
-import {Notifiers} from "../notifier/Notifiers.js";
+import EventEmitter from "events";
 
 const scopes = ['user-read-recently-played', 'user-read-currently-playing'];
 const state = 'random';
@@ -24,8 +24,8 @@ export default class SpotifySource extends AbstractSource {
 
     declare config: SpotifySourceConfig;
 
-    constructor(name: any, config: SpotifySourceConfig, internal: InternalConfig, notifier: Notifiers) {
-        super('spotify', name, config, internal, notifier);
+    constructor(name: any, config: SpotifySourceConfig, internal: InternalConfig, emitter: EventEmitter) {
+        super('spotify', name, config, internal, emitter);
         const {
             data: {
                 interval = 60,
@@ -232,11 +232,11 @@ export default class SpotifySource extends AbstractSource {
         }
     }
 
-    poll = async (allClients: any) => {
+    poll = async () => {
         if (this.spotifyApi === undefined) {
             this.logger.warn('Cannot poll spotify without valid credentials configuration')
             return;
         }
-        await this.startPolling(allClients);
+        await this.startPolling();
     }
 }

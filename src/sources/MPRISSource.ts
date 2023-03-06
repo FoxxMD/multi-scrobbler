@@ -9,9 +9,9 @@ import {
 } from "../common/infrastructure/config/source/mpris.js";
 import {InternalConfig, PlayObject} from "../common/infrastructure/Atomic.js";
 import MemorySource from "./MemorySource.js";
-import {Notifiers} from "../notifier/Notifiers.js";
 import {RecentlyPlayedOptions} from "./AbstractSource.js";
 import {removeDuplicates} from "../utils.js";
+import EventEmitter from "events";
 
 
 export class MPRISSource extends MemorySource {
@@ -21,8 +21,8 @@ export class MPRISSource extends MemorySource {
     whitelist: string[] = [];
     blacklist: string[] = [];
 
-    constructor(name: any, config: MPRISSourceConfig, internal: InternalConfig, notifier: Notifiers) {
-        super('mpris', name, config, internal, notifier);
+    constructor(name: any, config: MPRISSourceConfig, internal: InternalConfig, emitter: EventEmitter) {
+        super('mpris', name, config, internal, emitter);
         this.canPoll = true;
 
         const {data: {whitelist = [], blacklist = []} = {}} = config;

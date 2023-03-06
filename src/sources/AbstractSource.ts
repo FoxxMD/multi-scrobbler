@@ -3,7 +3,7 @@ import {buildTrackString, capitalize, createLabelledLogger, sleep} from "../util
 import {InternalConfig, PlayObject, SourceType} from "../common/infrastructure/Atomic.js";
 import {Logger} from "winston";
 import {SourceConfig} from "../common/infrastructure/config/source/sources.js";
-import {Notifiers} from "../notifier/Notifiers.js";
+import {EventEmitter} from "events";
 
 export interface RecentlyPlayedOptions {
     limit?: number
@@ -21,7 +21,6 @@ export default abstract class AbstractSource {
     config: SourceConfig;
     clients: string[];
     logger: Logger;
-    notifier: Notifiers;
     instantiatedAt: Dayjs;
     initialized: boolean = false;
     requiresAuth: boolean = false;
@@ -37,18 +36,20 @@ export default abstract class AbstractSource {
     pollRetries: number = 0;
     tracksDiscovered: number = 0;
 
-    constructor(type: SourceType, name: string, config: SourceConfig, internal: InternalConfig, notifiers: Notifiers) {
+    emitter: EventEmitter;
+
+    constructor(type: SourceType, name: string, config: SourceConfig, internal: InternalConfig, emitter: EventEmitter) {
         const {clients = [] } = config;
         this.type = type;
         this.name = name;
         this.identifier = `Source - ${capitalize(this.type)} - ${name}`;
         this.logger = createLabelledLogger(this.identifier, this.identifier);
-        this.notifier = notifiers;
         this.config = config;
         this.clients = clients;
         this.instantiatedAt = dayjs();
         this.localUrl = internal.localUrl;
         this.configDir = internal.configDir;
+        this.emitter = emitter;
     }
 
     // default init function, should be overridden if init stage is required
@@ -73,17 +74,31 @@ export default abstract class AbstractSource {
         return true;
     }
 
-    poll = async (allClients: any) => {
-        await this.startPolling(allClients);
+    protected scrobble = (plays: PlayObject[], options: { checkTime?: Dayjs, forceRefresh?: boolean } = {}) => {
+        this.emitter.emit('scrobble', {
+            data: plays, options: {
+                ...options,
+                scrobbleFrom: this.identifier,
+                scrobbleTo: this.clients
+            }
+        });
+    }
+    
+    protected notify = (payload) => {
+        this.emitter.emit('notify', payload);
     }
 
-    startPolling = async (allClients: any) => {
+    poll = async () => {
+        await this.startPolling();
+    }
+
+    startPolling = async () => {
         if(this.requiresAuth && !this.authed) {
             if(this.requiresAuthInteraction) {
-                await this.notifier.notify({title: `${this.identifier} - Polling Error`, message: 'Cannot start polling because user interaction is required for authentication', priority: 'error'});
+                this.notify({title: `${this.identifier} - Polling Error`, message: 'Cannot start polling because user interaction is required for authentication', priority: 'error'});
                 this.logger.error('Cannot start polling because user interaction is required for authentication');
             } else {
-                await this.notifier.notify({title: `${this.identifier} - Polling Error`, message: 'Cannot start polling because source does not have authentication.', priority: 'error'});
+                this.notify( {title: `${this.identifier} - Polling Error`, message: 'Cannot start polling because source does not have authentication.', priority: 'error'});
                 this.logger.error('Cannot start polling because source is not authenticated correctly.');
             }
             return;
@@ -103,31 +118,28 @@ export default abstract class AbstractSource {
 
         while (this.pollRetries <= maxRetries) {
             try {
-                await this.doPolling(allClients);
+                await this.doPolling();
             } catch (e) {
                 if (this.pollRetries < maxRetries) {
                     const delayFor = (this.pollRetries + 1) * retryMultiplier;
                     this.logger.info(`Poll retries (${this.pollRetries}) less than max poll retries (${maxRetries}), restarting polling after ${delayFor} second delay...`);
-                    await this.notifier.notify({title: `${this.identifier} - Polling Retry`, message: `Encountered error while polling but retries (${this.pollRetries}) are less than max poll retries (${maxRetries}), restarting polling after ${delayFor} second delay. | Error: ${e.message}`, priority: 'warn'});
+                    this.notify({title: `${this.identifier} - Polling Retry`, message: `Encountered error while polling but retries (${this.pollRetries}) are less than max poll retries (${maxRetries}), restarting polling after ${delayFor} second delay. | Error: ${e.message}`, priority: 'warn'});
                     await sleep((delayFor) * 1000);
                 } else {
                     this.logger.warn(`Poll retries (${this.pollRetries}) equal to max poll retries (${maxRetries}), stopping polling!`);
-                    await this.notifier.notify({title: `${this.identifier} - Polling Error`, message: `Encountered error while polling and retries (${this.pollRetries}) are equal to max poll retries (${maxRetries}), stopping polling!. | Error: ${e.message}`, priority: 'error'});
+                    this.notify({title: `${this.identifier} - Polling Error`, message: `Encountered error while polling and retries (${this.pollRetries}) are equal to max poll retries (${maxRetries}), stopping polling!. | Error: ${e.message}`, priority: 'error'});
                 }
                 this.pollRetries++;
             }
         }
     }
 
-    /**
-     * @param {ScrobbleClients} allClients
-     */
-    doPolling = async (allClients: any) => {
+    doPolling = async () => {
         if (this.polling === true) {
             return;
         }
         this.logger.info('Polling started');
-        this.notifier.notify({title: `${this.identifier} - Polling Started`, message: 'Polling Started', priority: 'info'});
+        this.notify({title: `${this.identifier} - Polling Started`, message: 'Polling Started', priority: 'info'});
         let lastTrackPlayedAt = this.instantiatedAt;
         let checkCount = 0;
         let checksOverThreshold = 0;
@@ -200,18 +212,15 @@ export default abstract class AbstractSource {
                 if(playObjs.length > 0) {
                     // use the source instantiation time or the last track play time to determine if we should refresh clients...
                     // we only need to refresh clients when the source has "newer" information otherwise we're just refreshing clients for no reason
-                    scrobbleResult = await allClients.scrobble(playObjs, {
-                        checkTime: lastTrackPlayedAt.add(2, 's'),
-                        forceRefresh: closeToInterval,
-                        scrobbleFrom: this.identifier,
-                        scrobbleTo: this.clients
-                    });
+                    this.scrobble(playObjs, {checkTime: lastTrackPlayedAt.add(2, 's'),
+                        forceRefresh: closeToInterval});
                 }
 
                 if (scrobbleResult.length > 0) {
                     checkCount = 0;
                     this.tracksDiscovered += scrobbleResult.length;
                 }
+
 
                 const {interval = 30, checkActiveFor = 300, maxSleep = 300} = this.config.data;
 

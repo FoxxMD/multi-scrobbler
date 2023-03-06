@@ -17,6 +17,7 @@ import {MalojaClientConfig} from "../common/infrastructure/config/client/maloja.
 import {LastfmClientConfig} from "../common/infrastructure/config/client/lastfm.js";
 import {Notifiers} from "../notifier/Notifiers.js";
 import AbstractScrobbleClient from "./AbstractScrobbleClient.js";
+import {EventEmitter} from "events";
 
 type groupedNamedConfigs = {[key: string]: ParsedConfig[]};
 
@@ -29,9 +30,19 @@ export default class ScrobbleClients {
     logger;
     configDir;
 
-    constructor(configDir: any) {
+    emitter: EventEmitter;
+
+    sourceEmitter: EventEmitter;
+
+    constructor(emitter: EventEmitter, sourceEmitter: EventEmitter, configDir: any) {
+        this.emitter = emitter;
+        this.sourceEmitter = sourceEmitter;
         this.configDir = configDir;
         this.logger = createLabelledLogger('scrobblers', 'Scrobblers');
+
+        this.sourceEmitter.on('scrobble', async (payload: { data: (PlayObject | PlayObject[]), options: { forceRefresh?: boolean, checkTime?: Dayjs, scrobbleTo?: string[], scrobbleFrom?: string } }) => {
+            await this.scrobble(payload.data, payload.options);
+        });
     }
 
     getByName = (name: any) => {

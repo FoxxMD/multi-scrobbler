@@ -1,4 +1,4 @@
-import {config, Logger} from "winston";
+import {config, format, Logger} from "winston";
 import {createLabelledLogger} from "../utils.js";
 import {
     GotifyConfig,
@@ -9,6 +9,7 @@ import {
 import {AbstractWebhookNotifier} from "./AbstractWebhookNotifier.js";
 import {GotifyWebhookNotifier} from "./GotifyWebhookNotifier.js";
 import {NtfyWebhookNotifier} from "./NtfyWebhookNotifier.js";
+import {EventEmitter} from "events";
 
 export class Notifiers {
 
@@ -16,8 +17,21 @@ export class Notifiers {
 
     webhooks: AbstractWebhookNotifier[] = [];
 
-    constructor() {
+    emitter: EventEmitter;
+
+    clientEmitter: EventEmitter;
+    sourceEmitter: EventEmitter;
+
+    constructor(emitter: EventEmitter, clientEmitter: EventEmitter, sourceEmitter: EventEmitter) {
+        this.emitter = emitter;
+        this.clientEmitter = clientEmitter;
+        this.sourceEmitter = sourceEmitter;
+
         this.logger = createLabelledLogger('Notifiers', 'Notifiers');
+
+        this.sourceEmitter.on('notify', async (payload: WebhookPayload) => {
+            await this.notify(payload);
+        })
     }
 
     buildWebhooks = async (webhookConfigs: WebhookConfig[]) => {

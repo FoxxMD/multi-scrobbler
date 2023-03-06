@@ -7,7 +7,7 @@ import dayjs from "dayjs";
 import {parseDurationFromTimestamp, playObjDataMatch} from "../utils.js";
 import {IPlaylistDetail, ITrackDetail} from "youtube-music-ts-api/interfaces-supplementary";
 import {YTMusicSourceConfig} from "../common/infrastructure/config/source/ytmusic.js";
-import {Notifiers} from "../notifier/Notifiers.js";
+import EventEmitter from "events";
 
 export default class YTMusicSource extends AbstractSource {
     apiInstance?: IYouTubeMusicAuthenticated
@@ -18,8 +18,8 @@ export default class YTMusicSource extends AbstractSource {
 
     recentlyPlayed: PlayObject[] = [];
 
-    constructor(name: string, config: YTMusicSourceConfig, internal: InternalConfig, notifier: Notifiers) {
-        super('ytmusic', name, config, internal, notifier);
+    constructor(name: string, config: YTMusicSourceConfig, internal: InternalConfig, emitter: EventEmitter) {
+        super('ytmusic', name, config, internal, emitter);
         this.canPoll = true;
     }
 
@@ -181,11 +181,11 @@ export default class YTMusicSource extends AbstractSource {
         return this.authed;
     }
 
-    poll = async (allClients: any) => {
+    poll = async () => {
         if(this.authed) {
             this.logger.verbose('Hydrating initial recently played tracks for reference.');
             await this.getRecentlyPlayed();
         }
-        await this.startPolling(allClients);
+        await this.startPolling();
     }
 }

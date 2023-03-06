@@ -3,7 +3,7 @@ import dayjs from "dayjs";
 import {buildTrackString, combinePartsToString, parseDurationFromTimestamp, truncateStringToLength} from "../utils.js";
 import {JellySourceConfig} from "../common/infrastructure/config/source/jellyfin.js";
 import {InternalConfig, PlayObject} from "../common/infrastructure/Atomic.js";
-import {Notifiers} from "../notifier/Notifiers.js";
+import EventEmitter from "events";
 
 const shortDeviceId = truncateStringToLength(10, '');
 
@@ -13,8 +13,8 @@ export default class JellyfinSource extends MemorySource {
 
     declare config: JellySourceConfig;
 
-    constructor(name: any, config: JellySourceConfig, internal: InternalConfig, notifier: Notifiers) {
-        super('jellyfin', name, config, internal, notifier);
+    constructor(name: any, config: JellySourceConfig, internal: InternalConfig, emitter: EventEmitter) {
+        super('jellyfin', name, config, internal, emitter);
         const {data: {users, servers} = {}} = config;
 
         if (users === undefined || users === null) {
@@ -157,7 +157,7 @@ export default class JellyfinSource extends MemorySource {
         return this.getFlatStatefulRecentlyPlayed();
     }
 
-    handle = async (playObj: any, allClients: any) => {
+    handle = async (playObj: any) => {
         if (!this.isValidEvent(playObj)) {
             return;
         }
@@ -172,7 +172,8 @@ export default class JellyfinSource extends MemorySource {
             const recent = await this.getRecentlyPlayed();
             const newestPlay = recent[recent.length - 1];
             try {
-                await allClients.scrobble(newPlays, {scrobbleTo: this.clients, scrobbleFrom: this.identifier, checkTime: newestPlay.data.playDate});
+                this.scrobble(newPlays, {checkTime: newestPlay.data.playDate});
+                //await root.get('clients').scrobble(newPlays, {scrobbleTo: this.clients, scrobbleFrom: this.identifier, checkTime: newestPlay.data.playDate});
                 // only gets hit if we scrobbled ok
                 this.tracksDiscovered++;
             } catch (e) {
