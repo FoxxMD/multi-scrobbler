@@ -127,7 +127,7 @@ export default class YTMusicSource extends AbstractSource {
                     const match = playObjDataMatch(value, this.recentlyPlayed[0]);
                     if (!match) {
                         newPlays.push(value)
-                    } else if (match && playObjDataMatch(plays[i + 1], this.recentlyPlayed[0])) { // if it matches but next ALSO matches the current it's a repeat "new"
+                    } else if (match && plays.length > i + 1 && playObjDataMatch(plays[i + 1], this.recentlyPlayed[0])) { // if it matches but next ALSO matches the current it's a repeat "new"
                         // check if repeated track
                         newPlays.push(value)
                     } else {
@@ -184,6 +184,8 @@ export default class YTMusicSource extends AbstractSource {
         if(this.authed && !this.polling) {
             this.logger.verbose('Hydrating initial recently played tracks for reference.');
             const referencePlays = await this.getRecentlyPlayed();
+            // actual order they were discovered in (oldest to newest)
+            referencePlays.reverse();
             if(this.getFlatRecentlyDiscoveredPlays().length === 0) {
                 // and add to discovered since its empty
                 for(const refPlay of referencePlays) {
