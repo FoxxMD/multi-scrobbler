@@ -2,7 +2,7 @@ import LastFm, {AuthGetSessionResponse, TrackObject, UserGetInfoResponse} from "
 import AbstractApiClient from "./AbstractApiClient.js";
 import dayjs from "dayjs";
 import {readJson, sleep, writeFile} from "../utils.js";
-import {PlayObject} from "../common/infrastructure/Atomic.js";
+import {FormatPlayObjectOptions, PlayObject} from "../common/infrastructure/Atomic.js";
 import {LastfmData} from "../common/infrastructure/config/client/lastfm.js";
 
 const badErrors = [
@@ -35,7 +35,7 @@ export default class LastfmApiClient extends AbstractApiClient {
         this.client = new LastFm(apiKey as string, secret, session);
     }
 
-    static formatPlayObj = (obj: TrackObject): PlayObject => {
+    static formatPlayObj = (obj: TrackObject, options: FormatPlayObjectOptions = {}): PlayObject => {
         const {
             artist: {
                 '#text': artists,

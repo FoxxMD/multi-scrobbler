@@ -1,7 +1,7 @@
 import YouTubeMusic from "youtube-music-ts-api";
 
 import AbstractSource, {RecentlyPlayedOptions} from "./AbstractSource.js";
-import {InternalConfig, PlayObject} from "../common/infrastructure/Atomic.js";
+import {FormatPlayObjectOptions, InternalConfig, PlayObject} from "../common/infrastructure/Atomic.js";
 import {IYouTubeMusicAuthenticated} from "youtube-music-ts-api/interfaces-primary";
 import dayjs from "dayjs";
 import {parseDurationFromTimestamp, playObjDataMatch} from "../utils.js";
@@ -23,7 +23,8 @@ export default class YTMusicSource extends AbstractSource {
         this.canPoll = true;
     }
 
-    static formatPlayObj(obj: ITrackDetail, newFromSource = false): PlayObject {
+    static formatPlayObj(obj: ITrackDetail, options: FormatPlayObjectOptions = {}): PlayObject {
+        const {newFromSource = false} = options;
         const {
             id,
             title,
@@ -111,7 +112,7 @@ export default class YTMusicSource extends AbstractSource {
 
         let newPlays: PlayObject[] = [];
 
-        const plays = playlistDetail.tracks.map((x) => YTMusicSource.formatPlayObj(x, false)).slice(0, 20);
+        const plays = playlistDetail.tracks.map((x) => YTMusicSource.formatPlayObj(x, {newFromSource: false})).slice(0, 20);
         if(this.polling === false) {
             this.recentlyPlayed = plays;
             newPlays = plays;

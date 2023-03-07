@@ -48,6 +48,11 @@ export interface PlayData {
 
 export interface PlayMeta {
     source?: string
+
+    /**
+     * Specifies from what facet/data from the source this play was parsed from IE history, now playing, etc...
+     * */
+    parsedFrom?: string
     /**
      * Unique ID for this track, given by the Source
      * */
@@ -81,6 +86,13 @@ export interface PlayMeta {
 export interface PlayObject {
     data: PlayData,
     meta: PlayMeta
+}
+
+export interface FormatPlayObjectOptions {
+    newFromSource?: boolean
+    parsedFrom?: string
+
+    [key: string]: any
 }
 
 export interface ProgressAwarePlayObject extends PlayObject {

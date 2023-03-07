@@ -1,7 +1,7 @@
 import dayjs from "dayjs";
 import PlexSource from "./PlexSource.js";
 import {TautulliSourceConfig} from "../common/infrastructure/config/source/tautulli.js";
-import {InternalConfig, PlayObject} from "../common/infrastructure/Atomic.js";
+import {FormatPlayObjectOptions, InternalConfig, PlayObject} from "../common/infrastructure/Atomic.js";
 import {combinePartsToString, truncateStringToLength} from "../utils.js";
 import EventEmitter from "events";
 
@@ -14,7 +14,8 @@ export default class TautulliSource extends PlexSource {
         super(name, config, internal, 'tautulli', emitter);
     }
 
-    static formatPlayObj(obj: any, newFromSource = false): PlayObject {
+    static formatPlayObj(obj: any, options: FormatPlayObjectOptions = {}): PlayObject {
+        const {newFromSource = false} = options;
         const {
             artist_name,
             track_name,

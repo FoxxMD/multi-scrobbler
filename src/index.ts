@@ -260,7 +260,7 @@ const configDir = process.env.CONFIG_DIR || path.resolve(projectDir, `./config`)
         app.postAsync('/tautulli', async function(this: any, req, res) {
             tauIngress.trackIngress(req, false);
 
-            const payload = TautulliSource.formatPlayObj(req.body, true);
+            const payload = TautulliSource.formatPlayObj(req.body, {newFromSource: true});
             // try to get config name from payload
             if (req.body.scrobblerConfig !== undefined) {
                 const source = scrobbleSources.getByName(req.body.scrobblerConfig);
@@ -303,7 +303,7 @@ const configDir = process.env.CONFIG_DIR || path.resolve(projectDir, `./config`)
 
             const { payload } = req as any;
             if(payload !== undefined) {
-                const playObj = PlexSource.formatPlayObj(payload, true);
+                const playObj = PlexSource.formatPlayObj(payload, {newFromSource: true});
 
                 const pSources = scrobbleSources.getByType('plex') as PlexSource[];
                 if(pSources.length === 0) {
@@ -334,7 +334,7 @@ const configDir = process.env.CONFIG_DIR || path.resolve(projectDir, `./config`)
             const parts = remoteHostIdentifiers(req);
             const connectionId = `${parts.host}-${parts.proxy ?? ''}`;
 
-            const playObj = JellyfinSource.formatPlayObj({...req.body, connectionId}, true);
+            const playObj = JellyfinSource.formatPlayObj({...req.body, connectionId}, {newFromSource: true});
             const pSources = scrobbleSources.getByType('jellyfin') as JellyfinSource[];
             if(pSources.length === 0) {
                 logger.warn('Received Jellyfin connection but no Jellyfin sources are configured');

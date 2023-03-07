@@ -9,7 +9,12 @@ import {
     truncateStringToLength,
 } from "../utils.js";
 import LastfmApiClient from "../apis/LastfmApiClient.js";
-import {INITIALIZING, PlayObject, TrackStringOptions} from "../common/infrastructure/Atomic.js";
+import {
+    FormatPlayObjectOptions,
+    INITIALIZING,
+    PlayObject,
+    TrackStringOptions
+} from "../common/infrastructure/Atomic.js";
 import {LastfmClientConfig} from "../common/infrastructure/config/client/lastfm.js";
 import {TrackScrobbleResponse, UserGetRecentTracksResponse} from "lastfm-node-client";
 import {Notifiers} from "../notifier/Notifiers.js";
@@ -28,7 +33,7 @@ export default class LastfmScrobbler extends AbstractScrobbleClient {
         this.api = new LastfmApiClient(name, config.data, options)
     }
 
-    formatPlayObj = (obj: any) => LastfmApiClient.formatPlayObj(obj);
+    formatPlayObj = (obj: any, options: FormatPlayObjectOptions = {}) => LastfmApiClient.formatPlayObj(obj, options);
 
     initialize = async () => {
         // @ts-expect-error TS(2322): Type 'number' is not assignable to type 'boolean'.

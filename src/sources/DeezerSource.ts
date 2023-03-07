@@ -4,7 +4,7 @@ import {Strategy as DeezerStrategy} from 'passport-deezer';
 import AbstractSource, {RecentlyPlayedOptions} from "./AbstractSource.js";
 import dayjs from "dayjs";
 import {DeezerSourceConfig} from "../common/infrastructure/config/source/deezer.js";
-import {InternalConfig, PlayObject} from "../common/infrastructure/Atomic.js";
+import {FormatPlayObjectOptions, InternalConfig, PlayObject} from "../common/infrastructure/Atomic.js";
 import EventEmitter from "events";
 
 export default class DeezerSource extends AbstractSource {
@@ -36,7 +36,8 @@ export default class DeezerSource extends AbstractSource {
         this.canPoll = true;
     }
 
-    static formatPlayObj(obj: any, newFromSource = false): PlayObject {
+    static formatPlayObj(obj: any, options: FormatPlayObjectOptions = {}): PlayObject {
+        const {newFromSource = false} = options;
         const {
             title: name,
             artist: {

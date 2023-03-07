@@ -12,6 +12,7 @@ import {
     parseRetryAfterSecsFromObj, capitalize, closePlayDate
 } from "../utils.js";
 import {
+    FormatPlayObjectOptions,
     INITIALIZING,
     MalojaScrobbleData,
     MalojaScrobbleRequestData,
@@ -46,12 +47,14 @@ export default class MalojaScrobbler extends AbstractScrobbleClient {
         }
     }
 
-    static formatPlayObj(obj: MalojaScrobbleData, serverVersion = undefined): PlayObject {
+    static formatPlayObj(obj: MalojaScrobbleData, options: FormatPlayObjectOptions = {}): PlayObject {
         let artists,
             title,
             album,
             duration,
             time;
+
+        const {serverVersion} = options;
 
         if(serverVersion === undefined || compareVersions(serverVersion, '3.0.0') >= 0) {
             // scrobble data structure changed for v3
@@ -115,7 +118,7 @@ export default class MalojaScrobbler extends AbstractScrobbleClient {
         }
     }
 
-    formatPlayObj = (obj: any) => MalojaScrobbler.formatPlayObj(obj, this.serverVersion);
+    formatPlayObj = (obj: any, options: FormatPlayObjectOptions = {}) => MalojaScrobbler.formatPlayObj(obj, {serverVersion: this.serverVersion});
 
     callApi = async (req: any, retries = 0) => {
         const {

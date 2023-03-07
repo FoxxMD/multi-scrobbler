@@ -5,7 +5,7 @@ import isSameOrAfter from "dayjs/plugin/isSameOrAfter.js";
 import {buildTrackString, parseRetryAfterSecsFromObj, removeDuplicates, sleep} from "../utils.js";
 import MemorySource from "./MemorySource.js";
 import {SubSonicSourceConfig} from "../common/infrastructure/config/source/subsonic.js";
-import {InternalConfig, PlayObject} from "../common/infrastructure/Atomic.js";
+import {FormatPlayObjectOptions, InternalConfig, PlayObject} from "../common/infrastructure/Atomic.js";
 import {RecentlyPlayedOptions} from "./AbstractSource.js";
 import EventEmitter from "events";
 
@@ -46,7 +46,8 @@ export class SubsonicSource extends MemorySource {
         this.canPoll = true;
     }
 
-    static formatPlayObj(obj: any, newFromSource = false): PlayObject {
+    static formatPlayObj(obj: any, options: FormatPlayObjectOptions = {}): PlayObject {
+        const {newFromSource = false} = options;
         const {
             id,
             title,

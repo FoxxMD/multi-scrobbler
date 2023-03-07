@@ -7,7 +7,7 @@ import {
     PlaybackStatus, PlayerInfo,
     PROPERTIES_IFACE
 } from "../common/infrastructure/config/source/mpris.js";
-import {InternalConfig, PlayObject} from "../common/infrastructure/Atomic.js";
+import {FormatPlayObjectOptions, InternalConfig, PlayObject} from "../common/infrastructure/Atomic.js";
 import MemorySource from "./MemorySource.js";
 import {RecentlyPlayedOptions} from "./AbstractSource.js";
 import {removeDuplicates} from "../utils.js";
@@ -40,7 +40,8 @@ export class MPRISSource extends MemorySource {
         }
     }
 
-    static formatPlayObj(obj: PlayerInfo, newFromSource = false): PlayObject {
+    static formatPlayObj(obj: PlayerInfo, options: FormatPlayObjectOptions = {}): PlayObject {
+        const {newFromSource = false} = options;
         const {
             name,
             position,

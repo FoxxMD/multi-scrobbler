@@ -4,7 +4,7 @@ import AbstractSource from "./AbstractSource.js";
 import formidable from 'formidable';
 import concatStream from 'concat-stream';
 import {PlexSourceConfig} from "../common/infrastructure/config/source/plex.js";
-import {InternalConfig, PlayObject, SourceType} from "../common/infrastructure/Atomic.js";
+import {FormatPlayObjectOptions, InternalConfig, PlayObject, SourceType} from "../common/infrastructure/Atomic.js";
 import EventEmitter from "events";
 
 const shortDeviceId = truncateStringToLength(10, '');
@@ -51,7 +51,8 @@ export default class PlexSource extends AbstractSource {
         this.initialized = true;
     }
 
-    static formatPlayObj(obj: any, newFromSource = false): PlayObject {
+    static formatPlayObj(obj: any, options: FormatPlayObjectOptions = {}): PlayObject {
+        const {newFromSource = false} = options;
         const {
             event,
             Account: {

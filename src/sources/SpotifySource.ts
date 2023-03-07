@@ -7,7 +7,7 @@ import {
 import SpotifyWebApi from "spotify-web-api-node";
 import AbstractSource, {RecentlyPlayedOptions} from "./AbstractSource.js";
 import {SpotifySourceConfig} from "../common/infrastructure/config/source/spotify.js";
-import {InternalConfig, PlayObject} from "../common/infrastructure/Atomic.js";
+import {FormatPlayObjectOptions, InternalConfig, PlayObject} from "../common/infrastructure/Atomic.js";
 import PlayHistoryObject = SpotifyApi.PlayHistoryObject;
 import EventEmitter from "events";
 import CurrentlyPlayingObject = SpotifyApi.CurrentlyPlayingObject;
@@ -52,7 +52,12 @@ export default class SpotifySource extends MemorySource {
         this.canPoll = true;
     }
 
-    static formatPlayObj(obj: object, newFromSource = false): PlayObject {
+    static formatPlayObj(obj: object, options: FormatPlayObjectOptions = {}): PlayObject {
+
+        const {
+            newFromSource = false
+        } = options;
+
         let artists: ArtistObjectSimplified[];
         let album: AlbumObjectSimplified;
         let name: string;
@@ -279,7 +284,7 @@ export default class SpotifySource extends MemorySource {
 
         const {body: {item}} = playingRes;
         if(item !== undefined && item !== null) {
-           return SpotifySource.formatPlayObj(playingRes.body, true);
+           return SpotifySource.formatPlayObj(playingRes.body, {newFromSource: true});
         }
         return undefined;
     }
@@ -294,7 +299,7 @@ export default class SpotifySource extends MemorySource {
             } = {}} = res;
             return {
                 device: device === null ? undefined : device,
-                play: item !== null && item !== undefined ? SpotifySource.formatPlayObj(res.body, true) : undefined
+                play: item !== null && item !== undefined ? SpotifySource.formatPlayObj(res.body, {newFromSource: true}) : undefined
             }
         } catch (e) {
             if(logError) {

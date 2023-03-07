@@ -2,7 +2,7 @@ import MemorySource from "./MemorySource.js";
 import dayjs from "dayjs";
 import {buildTrackString, combinePartsToString, parseDurationFromTimestamp, truncateStringToLength} from "../utils.js";
 import {JellySourceConfig} from "../common/infrastructure/config/source/jellyfin.js";
-import {InternalConfig, PlayObject} from "../common/infrastructure/Atomic.js";
+import {FormatPlayObjectOptions, InternalConfig, PlayObject} from "../common/infrastructure/Atomic.js";
 import EventEmitter from "events";
 
 const shortDeviceId = truncateStringToLength(10, '');
@@ -49,7 +49,8 @@ export default class JellyfinSource extends MemorySource {
         this.initialized = true;
     }
 
-    static formatPlayObj(obj: any, newFromSource = false): PlayObject {
+    static formatPlayObj(obj: any, options: FormatPlayObjectOptions = {}): PlayObject {
+        const {newFromSource = false} = options;
         const {
             ServerId,
             ServerName,

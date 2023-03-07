@@ -2,7 +2,7 @@ import AbstractSource, {RecentlyPlayedOptions} from "./AbstractSource.js";
 import LastfmApiClient from "../apis/LastfmApiClient.js";
 import {sortByOldestPlayDate} from "../utils.js";
 import {LastfmClientConfig} from "../common/infrastructure/config/client/lastfm.js";
-import {InternalConfig, PlayObject} from "../common/infrastructure/Atomic.js";
+import {FormatPlayObjectOptions, InternalConfig, PlayObject} from "../common/infrastructure/Atomic.js";
 import {UserGetRecentTracksResponse} from "lastfm-node-client";
 import EventEmitter from "events";
 
@@ -20,8 +20,8 @@ export default class LastfmSource extends AbstractSource {
         this.api = new LastfmApiClient(name, {...config.data, configDir: internal.configDir});
     }
 
-    static formatPlayObj(obj: any): PlayObject {
-        return LastfmApiClient.formatPlayObj(obj);
+    static formatPlayObj(obj: any, options: FormatPlayObjectOptions = {}): PlayObject {
+        return LastfmApiClient.formatPlayObj(obj, options);
     }
 
     initialize = async () => {

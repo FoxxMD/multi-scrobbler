@@ -7,7 +7,7 @@ import {
     truncateStringToLength
 } from "../utils.js";
 import {
-    ClientType,
+    ClientType, FormatPlayObjectOptions,
     INITIALIZED,
     INITIALIZING,
     InitState,
@@ -135,7 +135,7 @@ export default abstract class AbstractScrobbleClient {
         return this.lastScrobbleCheck;
     }
 
-    formatPlayObj = (obj: any) => {
+    formatPlayObj = (obj: any, options: FormatPlayObjectOptions = {}) => {
         this.logger.warn('formatPlayObj should be defined by concrete class!');
         return obj;
     }

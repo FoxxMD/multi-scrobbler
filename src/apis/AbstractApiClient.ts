@@ -1,6 +1,6 @@
 import {capitalize, createLabelledLogger} from "../utils.js";
 import {Logger} from "winston";
-import {PlayObject} from "../common/infrastructure/Atomic.js";
+import {FormatPlayObjectOptions, PlayObject} from "../common/infrastructure/Atomic.js";
 
 export default abstract class AbstractApiClient {
     name: string;
@@ -24,7 +24,7 @@ export default abstract class AbstractApiClient {
         this.options = options;
     }
 
-    static formatPlayObj = (obj: any): PlayObject => {
+    static formatPlayObj = (obj: any, options: FormatPlayObjectOptions): PlayObject => {
         throw new Error('should be overridden');
     }
 }
