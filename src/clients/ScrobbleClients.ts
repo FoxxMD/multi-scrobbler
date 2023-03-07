@@ -1,5 +1,6 @@
 import dayjs, {Dayjs} from "dayjs";
 import {
+    buildTrackString,
     createAjvFactory,
     createLabelledLogger,
     playObjDataMatch,
@@ -379,13 +380,21 @@ ${sources.join('\n')}`);
                             newFromSource = false,
                         } = {}
                     } = playObj;
-                    if (client.timeFrameIsValid(playObj, newFromSource) && !(await client.alreadyScrobbled(playObj, newFromSource))) {
+                    const [timeFrameValid, timeFrameValidLog] = client.timeFrameIsValid(playObj);
+                    if(playObj.data.track !== 'Por Supuesto') {
+                        continue;
+                    }
+                    if (timeFrameValid && !(await client.alreadyScrobbled(playObj))) {
                         await client.scrobble(playObj)
                         client.tracksScrobbled++;
                         // since this is what we return to the source only add to tracksScrobbled if not already in array
                         // (source should only know that a track was scrobbled (binary) -- doesn't care if it was scrobbled more than once
                         if(!tracksScrobbled.some(x => playObjDataMatch(x, playObj) && x.data.playDate === playObj.data.playDate)) {
                             tracksScrobbled.push(playObj);
+                        }
+                    } else {
+                        if(!timeFrameValid) {
+                            this.logger.debug(`Will not scrobble ${buildTrackString(playObj)} because it ${timeFrameValidLog}`);
                         }
                     }
                 } catch(e) {
