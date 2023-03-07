@@ -381,9 +381,6 @@ ${sources.join('\n')}`);
                         } = {}
                     } = playObj;
                     const [timeFrameValid, timeFrameValidLog] = client.timeFrameIsValid(playObj);
-                    if(playObj.data.track !== 'Por Supuesto') {
-                        continue;
-                    }
                     if (timeFrameValid && !(await client.alreadyScrobbled(playObj))) {
                         await client.scrobble(playObj)
                         client.tracksScrobbled++;
