@@ -136,7 +136,9 @@ export const buildTrackString = (playObj: PlayObject, options: TrackStringOption
 }
 
 // sorts playObj formatted objects by playDate in ascending (oldest first) order
-export const sortByPlayDate = (a: any, b: any) => a.data.playDate.isAfter(b.data.playDate) ? 1 : -1;
+export const sortByOldestPlayDate = (a: any, b: any) => a.data.playDate.isAfter(b.data.playDate) ? 1 : -1;
+
+export const sortByNewestPlayDate = (a: any, b: any) => a.data.playDate.isAfter(b.data.playDate) ? 1 : -1;
 
 const s = splat();
 const SPLAT = Symbol.for('splat')
@@ -473,7 +475,7 @@ export const remoteHostStr = (req: Request): string => {
     return `${host}${proxy !== undefined ? ` (${proxy})` : ''}${agent !== undefined ? ` (UA: ${agent})` : ''}`;
 }
 
-export const closePlayDate = (existingPlay: PlayObject, newPlay: PlayObject, diffThreshold?: number): boolean => {
+export const closePlayDate = (existingPlay: PlayObject, newPlay: PlayObject, options: { diffThreshold?: number, fuzzyDuration?: boolean} = {}): boolean => {
 
     const {
         meta:{
@@ -492,26 +494,30 @@ export const closePlayDate = (existingPlay: PlayObject, newPlay: PlayObject, dif
         }
     } = newPlay;
 
+    const {
+        diffThreshold = lowGranularitySources.some(x => x.toLocaleLowerCase() === source) ? 60 : 10,
+        fuzzyDuration = false,
+    } = options;
+
     // cant compare!
     if(existingPlayDate === undefined || newPlayDate === undefined) {
         return false;
     }
 
+    const referenceDuration = newDuration ?? existingDuration;
+
     let playDiffThreshold = diffThreshold;
-    if(playDiffThreshold === undefined) {
-        playDiffThreshold = lowGranularitySources.some(x => x.toLocaleLowerCase() === source) ? 60 : 10;
-    }
+
     let closeTime = false;
-    // check if existing play time is same as new play date (when the track finished playing AKA entered recent tracks)
+    // check if existing play time is same as new play date
     let scrobblePlayDiff = Math.abs(existingPlayDate.unix() - newPlayDate.unix());
-    let scrobblePlayStartDiff;
     if (scrobblePlayDiff <= playDiffThreshold) {
         closeTime = true;
     }
-    // also need to check that scrobble time isn't the BEGINNING of the track -- if the source supports durations
-    if (closeTime === false && newDuration !== undefined) {
-        scrobblePlayStartDiff = Math.abs(existingPlayDate.unix() - (newPlayDate.unix() - newDuration));
-        if (scrobblePlayStartDiff <= playDiffThreshold) {
+    // if the source has a duration its possible one play was scrobbled at the beginning of the track and the other at the end
+    // so check if the duration matches the diff between the two play dates
+    if (closeTime === false && referenceDuration !== undefined && fuzzyDuration) {
+        if(Math.abs(scrobblePlayDiff - newDuration) < 10) { // use finer comparison for this
             closeTime = true;
         }
     }
@@ -588,3 +594,5 @@ export function parseBool(value: any, prev: any = false): boolean {
     }
     throw new Error('Not a boolean value.');
 }
+
+export const genGroupId = (play: PlayObject) => `${play.meta.deviceId ?? 'NoDevice'}-${play.meta.user ?? 'SingleUser'}`;
