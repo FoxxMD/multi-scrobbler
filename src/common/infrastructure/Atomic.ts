@@ -1,4 +1,5 @@
 import {Dayjs} from "dayjs";
+import {FixedSizeList} from 'fixed-size-list';
 
 export type SourceType = 'spotify' | 'plex' | 'tautulli' | 'subsonic' | 'jellyfin' | 'lastfm' | 'deezer' | 'ytmusic' | 'mpris';
 export const sourceTypes: SourceType[] = ['spotify', 'plex', 'tautulli', 'subsonic', 'jellyfin', 'lastfm', 'deezer', 'ytmusic', 'mpris'];
@@ -87,6 +88,10 @@ export interface ProgressAwarePlayObject extends PlayObject {
         initialTrackProgressPosition?: number
     }
 }
+
+export type GroupedPlays = Map<string, ProgressAwarePlayObject[]>;
+
+export type GroupedFixedPlays = Map<string, FixedSizeList<ProgressAwarePlayObject>>;
 
 export interface TrackStringOptions {
     include?: ('time' | 'artist' | 'track' | 'timeFromNow' | 'trackId')[]

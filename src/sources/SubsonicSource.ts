@@ -15,6 +15,8 @@ export class SubsonicSource extends MemorySource {
 
     requiresAuth = true;
 
+    multiPlatform: boolean = true;
+
     declare config: SubSonicSourceConfig;
 
     constructor(name: any, config: SubSonicSourceConfig, internal: InternalConfig, emitter: EventEmitter) {

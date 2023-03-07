@@ -1,11 +1,14 @@
 import AbstractSource from "./AbstractSource.js";
-import {playObjDataMatch, sortByPlayDate, buildTrackString, toProgressAwarePlayObject, getProgress} from "../utils.js";
+import {
+    playObjDataMatch,
+    sortByOldestPlayDate,
+    buildTrackString,
+    toProgressAwarePlayObject,
+    getProgress,
+    genGroupId
+} from "../utils.js";
 import dayjs from "dayjs";
-import {PlayObject, ProgressAwarePlayObject} from "../common/infrastructure/Atomic.js";
-
-export type GroupedPlays = Map<string, ProgressAwarePlayObject[]>;
-
-const genGroupId = (play: PlayObject) => `${play.meta.deviceId ?? 'NoDevice'}-${play.meta.user ?? 'SingleUser'}`;
+import {GroupedPlays, PlayObject, ProgressAwarePlayObject} from "../common/infrastructure/Atomic.js";
 
 export default class MemorySource extends AbstractSource {
     /*
@@ -25,7 +28,7 @@ export default class MemorySource extends AbstractSource {
      *
      * These are tracks that are actually used by the source to scrobble to clients
      * */
-    statefulRecentlyPlayed: GroupedPlays = new Map();
+    //statefulRecentlyPlayed: GroupedPlays = new Map();
     /**
      * Tracks that are actively being tracked (discovered from source recently) to see if they will "qualify" as being played.
      *
@@ -33,9 +36,9 @@ export default class MemorySource extends AbstractSource {
      * */
     candidateRecentlyPlayed: GroupedPlays = new Map();
 
-    getFlatStatefulRecentlyPlayed = (): PlayObject[] => {
-        return Array.from(this.statefulRecentlyPlayed.values()).flat().sort(sortByPlayDate);
-    }
+    // getFlatStatefulRecentlyPlayed = (): PlayObject[] => {
+    //     return Array.from(this.statefulRecentlyPlayed.values()).flat().sort(sortByPlayDate);
+    // }
 
     processRecentPlays = (plays: PlayObject[], useExistingPlayDate = false) => {
 
@@ -87,11 +90,11 @@ export default class MemorySource extends AbstractSource {
                 });
                 // and then combine still playing with new tracks
                 cRecentlyPlayed = cRecentlyPlayed.concat(newProgressAwareTracks);
-                cRecentlyPlayed.sort(sortByPlayDate);
+                cRecentlyPlayed.sort(sortByOldestPlayDate);
 
                 this.candidateRecentlyPlayed.set(groupId, cRecentlyPlayed);
 
-                const sRecentlyPlayed = this.statefulRecentlyPlayed.get(groupId) ?? [];
+                //const sRecentlyPlayed = this.statefulRecentlyPlayed.get(groupId) ?? [];
 
                 // now we check if all candidates pass tests for having been tracked long enough:
                 // * Has been tracked for at least 30 seconds
@@ -117,12 +120,12 @@ export default class MemorySource extends AbstractSource {
                     if(firstSeenValid && progressValid) {
                         // a prior candidate has been playing for more than 30 seconds and passed progress test, time to check statefuls
 
-                        const matchingRecent = sRecentlyPlayed.find(x => playObjDataMatch(x, candidate));
+                        const matchingRecent = this.existingDiscovered(candidate); //sRecentlyPlayed.find(x => playObjDataMatch(x, candidate));
                         let stPrefix = `[Platform ${groupId}] (Stateful Play) ${buildTrackString(candidate, {include: ['trackId', 'artist', 'track']})}`;
                         if(matchingRecent === undefined) {
                             this.logger.debug(`${stPrefix} added after being seen for 30 seconds and not matching any prior plays`);
                             newStatefulPlays.push(candidate);
-                            sRecentlyPlayed.push(candidate);
+                            //sRecentlyPlayed.push(candidate);
                         } else {
                             const {data: { playDate, duration }} = candidate;
                             const {data: { playDate: rplayDate }} = matchingRecent;
@@ -131,23 +134,27 @@ export default class MemorySource extends AbstractSource {
                                     if(playDate.isAfter(rplayDate.add(duration, 's'))) {
                                         this.logger.debug(`${stPrefix} added after being seen for 30 seconds and having a different timestamp than a prior play`);
                                         newStatefulPlays.push(candidate);
-                                        sRecentlyPlayed.push(candidate);
+                                        //sRecentlyPlayed.push(candidate);
                                     }
-                                } else if(!playObjDataMatch(sRecentlyPlayed[0], candidate)) {
-                                    // if most recent stateful play is not this track we'll add it
-                                    this.logger.debug(`${stPrefix} added after being seen for 30 seconds. Matched other recent play but could not determine time frame due to missing duration. Allowed due to not being last played track.`);
-                                    newStatefulPlays.push(candidate);
-                                    sRecentlyPlayed.push(candidate);
+                                } else {
+                                    const discoveredPlays = this.getRecentlyDiscoveredPlaysByPlatform(candidate);
+                                    if(discoveredPlays.length === 0 || !playObjDataMatch(discoveredPlays[0], candidate)) {
+                                        // if most recent stateful play is not this track we'll add it
+                                        this.logger.debug(`${stPrefix} added after being seen for 30 seconds. Matched other recent play but could not determine time frame due to missing duration. Allowed due to not being last played track.`);
+                                        newStatefulPlays.push(candidate);
+                                    }
+                                    //sRecentlyPlayed.push(candidate);
                                 }
                             }
                         }
                     }
                 }
-                sRecentlyPlayed.sort(sortByPlayDate);
-                this.statefulRecentlyPlayed.set(groupId, sRecentlyPlayed);
+                //sRecentlyPlayed.sort(sortByPlayDate);
+                //this.statefulRecentlyPlayed.set(groupId, sRecentlyPlayed);
             }
         }
-        return this.getFlatStatefulRecentlyPlayed();
+        return newStatefulPlays;
+        //return this.getFlatStatefulRecentlyPlayed();
         //return newStatefulPlays;
     }
 

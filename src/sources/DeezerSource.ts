@@ -1,5 +1,5 @@
 import request from 'superagent';
-import {parseRetryAfterSecsFromObj, readJson, sleep, sortByPlayDate, writeFile} from "../utils.js";
+import {parseRetryAfterSecsFromObj, readJson, sleep, sortByOldestPlayDate, writeFile} from "../utils.js";
 import {Strategy as DeezerStrategy} from 'passport-deezer';
 import AbstractSource, {RecentlyPlayedOptions} from "./AbstractSource.js";
 import dayjs from "dayjs";
@@ -101,12 +101,8 @@ export default class DeezerSource extends AbstractSource {
     }
 
     getRecentlyPlayed = async (options: RecentlyPlayedOptions = {}) => {
-        const {formatted = false} = options;
         const resp = await this.callApi(request.get(`${this.baseUrl}/user/me/history`));
-        if(formatted) {
-            return resp.data.map((x: any) => DeezerSource.formatPlayObj(x)).sort(sortByPlayDate);
-        }
-        return resp.data;
+        return resp.data.map((x: any) => DeezerSource.formatPlayObj(x)).sort(sortByOldestPlayDate);
     }
 
     callApi = async (req: any, retries = 0) => {

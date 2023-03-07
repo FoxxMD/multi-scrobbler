@@ -11,6 +11,8 @@ export default class JellyfinSource extends MemorySource {
     users;
     servers;
 
+    multiPlatform: boolean = true;
+
     declare config: JellySourceConfig;
 
     constructor(name: any, config: JellySourceConfig, internal: InternalConfig, emitter: EventEmitter) {
@@ -154,7 +156,7 @@ export default class JellyfinSource extends MemorySource {
     }
 
     getRecentlyPlayed = async (options = {}) => {
-        return this.getFlatStatefulRecentlyPlayed();
+        return this.getFlatRecentlyDiscoveredPlays();
     }
 
     handle = async (playObj: any) => {
@@ -164,18 +166,9 @@ export default class JellyfinSource extends MemorySource {
 
         const newPlays = this.processRecentPlays([playObj]);
 
-        for(const p of newPlays) {
-            this.logger.info(`New Track => ${buildTrackString(p)}`);
-        }
-
         if(newPlays.length > 0) {
-            const recent = await this.getRecentlyPlayed();
-            const newestPlay = recent[recent.length - 1];
             try {
-                this.scrobble(newPlays, {checkTime: newestPlay.data.playDate});
-                //await root.get('clients').scrobble(newPlays, {scrobbleTo: this.clients, scrobbleFrom: this.identifier, checkTime: newestPlay.data.playDate});
-                // only gets hit if we scrobbled ok
-                this.tracksDiscovered++;
+                this.scrobble(newPlays);
             } catch (e) {
                 this.logger.error('Encountered error while scrobbling')
                 this.logger.error(e)

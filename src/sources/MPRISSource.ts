@@ -21,6 +21,8 @@ export class MPRISSource extends MemorySource {
     whitelist: string[] = [];
     blacklist: string[] = [];
 
+    multiPlatform: boolean = true;
+
     constructor(name: any, config: MPRISSourceConfig, internal: InternalConfig, emitter: EventEmitter) {
         super('mpris', name, config, internal, emitter);
         this.canPoll = true;

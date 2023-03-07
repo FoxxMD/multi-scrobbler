@@ -1,6 +1,6 @@
 import AbstractSource, {RecentlyPlayedOptions} from "./AbstractSource.js";
 import LastfmApiClient from "../apis/LastfmApiClient.js";
-import {sortByPlayDate} from "../utils.js";
+import {sortByOldestPlayDate} from "../utils.js";
 import {LastfmClientConfig} from "../common/infrastructure/config/client/lastfm.js";
 import {InternalConfig, PlayObject} from "../common/infrastructure/Atomic.js";
 import {UserGetRecentTracksResponse} from "lastfm-node-client";
@@ -80,6 +80,6 @@ export default class LastfmSource extends AbstractSource {
                 this.logger.debug(x);
                 return acc;
             }
-        }, []).sort(sortByPlayDate);
+        }, []).sort(sortByOldestPlayDate);
     }
 }

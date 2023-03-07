@@ -1,9 +1,24 @@
 import dayjs, {Dayjs} from "dayjs";
-import {buildTrackString, capitalize, createLabelledLogger, sleep} from "../utils.js";
-import {InternalConfig, PlayObject, SourceType} from "../common/infrastructure/Atomic.js";
+import {
+    buildTrackString,
+    capitalize, closePlayDate,
+    createLabelledLogger,
+    genGroupId,
+    playObjDataMatch,
+    sleep, sortByNewestPlayDate,
+    sortByOldestPlayDate
+} from "../utils.js";
+import {
+    GroupedFixedPlays,
+    GroupedPlays,
+    InternalConfig,
+    PlayObject, ProgressAwarePlayObject,
+    SourceType
+} from "../common/infrastructure/Atomic.js";
 import {Logger} from "winston";
 import {SourceConfig} from "../common/infrastructure/config/source/sources.js";
 import {EventEmitter} from "events";
+import {FixedSizeList} from "fixed-size-list";
 
 export interface RecentlyPlayedOptions {
     limit?: number
@@ -27,6 +42,8 @@ export default abstract class AbstractSource {
     requiresAuthInteraction: boolean = false;
     authed: boolean = false;
 
+    multiPlatform: boolean = false;
+
     localUrl: string;
 
     configDir: string;
@@ -37,6 +54,8 @@ export default abstract class AbstractSource {
     tracksDiscovered: number = 0;
 
     emitter: EventEmitter;
+
+    protected recentDiscoveredPlays: GroupedFixedPlays = new Map();
 
     constructor(type: SourceType, name: string, config: SourceConfig, internal: InternalConfig, emitter: EventEmitter) {
         const {clients = [] } = config;
@@ -74,14 +93,65 @@ export default abstract class AbstractSource {
         return true;
     }
 
-    protected scrobble = (plays: PlayObject[], options: { checkTime?: Dayjs, forceRefresh?: boolean } = {}) => {
-        this.emitter.emit('scrobble', {
-            data: plays, options: {
-                ...options,
-                scrobbleFrom: this.identifier,
-                scrobbleTo: this.clients
+    protected addPlayToDiscovered = (play: PlayObject) => {
+        const platformId = this.multiPlatform ? genGroupId(play) : 'SingleUser';
+        const list = this.recentDiscoveredPlays.get(platformId) ?? new FixedSizeList<ProgressAwarePlayObject>(30);
+        list.add(play);
+        this.recentDiscoveredPlays.set(platformId, list);
+        this.tracksDiscovered++;
+        this.logger.info(`Discovered => ${buildTrackString(play)}`);
+    }
+
+    getFlatRecentlyDiscoveredPlays = (): PlayObject[] => {
+        return Array.from(this.recentDiscoveredPlays.values()).map(x => x.data).flat(3).sort(sortByNewestPlayDate);
+    }
+
+    getRecentlyDiscoveredPlaysByPlatform = (platformId): PlayObject[] => {
+        const list = this.recentDiscoveredPlays.get(platformId);
+        if (list !== undefined) {
+            const data = [...list.data];
+            data.sort(sortByOldestPlayDate);
+            return data;
+        }
+        return [];
+    }
+
+    existingDiscovered = (play: PlayObject): PlayObject | undefined => {
+        const list = this.getRecentlyDiscoveredPlaysByPlatform(this.multiPlatform ? genGroupId(play) : 'SingleUser');
+        return list.find(x => playObjDataMatch(x, play) && closePlayDate(x, play));
+    }
+
+    alreadyDiscovered = (play: PlayObject): boolean => {
+        return this.existingDiscovered(play) !== undefined;
+    }
+
+
+    protected scrobble = (plays: PlayObject[], options: { forceRefresh?: boolean } = {}) => {
+
+        const newDiscoveredPlays: PlayObject[] = [];
+
+        for(const play of plays) {
+            if(!this.alreadyDiscovered(play)) {
+                this.addPlayToDiscovered(play);
             }
-        });
+            newDiscoveredPlays.push(play);
+        }
+
+        if(newDiscoveredPlays.length > 0) {
+            newDiscoveredPlays.sort(sortByOldestPlayDate);
+
+            this.emitter.emit('scrobble', {
+                data: newDiscoveredPlays,
+                options: {
+                    ...options,
+                    checkTime: newDiscoveredPlays[newDiscoveredPlays.length-1].data.playDate.add(2, 'second'),
+                    scrobbleFrom: this.identifier,
+                    scrobbleTo: this.clients
+                }
+            });
+        }
+
+        return newDiscoveredPlays;
     }
 
     protected notify = (payload) => {
@@ -156,26 +226,34 @@ export default abstract class AbstractSource {
                     this.logger.info('Stopped polling due to user input');
                     break;
                 }
-                let playObjs: PlayObject[] = [];
                 this.logger.debug('Refreshing recently played');
-                playObjs = await this.getRecentlyPlayed({formatted: true});
+                const playObjs = await this.getRecentlyPlayed({formatted: true});
 
-                const {
-                    lastTrackPlayedAt: lastPlayed,
-                    scrobbleResult,
-                    newTracksFound: newTracks
-                } = await this.ingestPlays(playObjs, allClients, lastTrackPlayedAt);
+                let newDiscovered: PlayObject[] = [];
 
-                lastTrackPlayedAt = lastPlayed;
-
-                if(newTracks) {
-                    checkCount = 0;
-                    checksOverThreshold = 0;
+                if(playObjs.length > 0) {
+                    const now = dayjs().unix();
+                    const closeToInterval = playObjs.some(x => now - x.data.playDate.unix() < 5);
+                    if (playObjs.length > 0 && closeToInterval) {
+                        // because the interval check was so close to the play date we are going to delay client calls for a few secs
+                        // this way we don't accidentally scrobble ahead of any other clients (we always want to be behind so we can check for dups)
+                        // additionally -- it should be ok to have this in the for loop because played_at will only decrease (be further in the past) so we should only hit this once, hopefully
+                        this.logger.info('Potential plays were discovered close to polling interval! Delaying scrobble clients refresh by 10 seconds so other clients have time to scrobble first');
+                        await sleep(10 * 1000);
+                    }
+                    newDiscovered = this.scrobble(playObjs,
+                        {
+                            forceRefresh: closeToInterval
+                        });
                 }
 
-                if (scrobbleResult.length > 0) {
+                lastTrackPlayedAt = newDiscovered.length > 0 ? newDiscovered[0].data.playDate : lastTrackPlayedAt;
+
+                if(newDiscovered.length > 0) {
                     checkCount = 0;
-                    this.tracksDiscovered += scrobbleResult.length;
+                    checksOverThreshold = 0;
+                } else {
+                    this.logger.debug(`No new tracks discovered`);
                 }
 
                 const activeThreshold = lastTrackPlayedAt.add(checkActiveFor, 's');
@@ -204,72 +282,6 @@ export default abstract class AbstractSource {
             this.logger.error(e);
             this.polling = false;
             throw e;
-        }
-    }
-
-    protected ingestPlays = async (playObjs: PlayObject[], allClients: any, lastTrackPlayedAt: Dayjs) => {
-        let newTracksFound = false;
-        let closeToInterval = false;
-        const now = dayjs();
-
-        const playInfo = playObjs.reduce((acc, playObj) => {
-            if(this.recentlyPlayedTrackIsValid(playObj)) {
-                const {data: {
-                    playDate
-                } = {}
-                } = playObj;
-                if (playDate.unix() > lastTrackPlayedAt.unix()) {
-                    newTracksFound = true;
-                    this.logger.info(`New Track => ${buildTrackString(playObj)}`);
-
-                    if (closeToInterval === false) {
-                        closeToInterval = Math.abs(now.unix() - playDate.unix()) < 5;
-                    }
-
-                    return {
-                        plays: [...acc.plays, {...playObj, meta: {...playObj.meta, newFromSource: true}}],
-                        lastTrackPlayedAt: playDate
-                    }
-                }
-                return {
-                    ...acc,
-                    plays: [...acc.plays, playObj]
-                }
-            }
-            return acc;
-        }, {plays: [], lastTrackPlayedAt});
-        playObjs = playInfo.plays;
-        lastTrackPlayedAt = playInfo.lastTrackPlayedAt;
-
-        if (playObjs.length > 0 && closeToInterval) {
-            // because the interval check was so close to the play date we are going to delay client calls for a few secs
-            // this way we don't accidentally scrobble ahead of any other clients (we always want to be behind so we can check for dups)
-            // additionally -- it should be ok to have this in the for loop because played_at will only decrease (be further in the past) so we should only hit this once, hopefully
-            this.logger.info('Track is close to polling interval! Delaying scrobble clients refresh by 10 seconds so other clients have time to scrobble first');
-            await sleep(10 * 1000);
-        }
-
-        if (newTracksFound === false) {
-            if (playObjs.length === 0) {
-                this.logger.debug(`No new tracks found`);
-            } else {
-                this.logger.debug(`No new tracks found. Newest track returned was ${buildTrackString(playObjs.slice(-1)[0])}`);
-            }
-        }
-
-        let scrobbleResult = [];
-
-                if(playObjs.length > 0) {
-                    // use the source instantiation time or the last track play time to determine if we should refresh clients...
-                    // we only need to refresh clients when the source has "newer" information otherwise we're just refreshing clients for no reason
-                    this.scrobble(playObjs, {checkTime: lastTrackPlayedAt.add(2, 's'),
-                        forceRefresh: closeToInterval});
-                }
-
-        return {
-            newTracksFound,
-            scrobbleResult,
-            lastTrackPlayedAt
         }
     }
 }

@@ -2,7 +2,7 @@ import dayjs from "dayjs";
 import {
     readJson,
     writeFile,
-    sortByPlayDate, sleep, parseRetryAfterSecsFromObj, buildTrackString, truncateStringToLength, combinePartsToString,
+    sortByOldestPlayDate, sleep, parseRetryAfterSecsFromObj, buildTrackString, truncateStringToLength, combinePartsToString,
 } from "../utils.js";
 import SpotifyWebApi from "spotify-web-api-node";
 import AbstractSource, {RecentlyPlayedOptions} from "./AbstractSource.js";
@@ -270,7 +270,7 @@ export default class SpotifySource extends MemorySource {
             limit
         });
         const result = await this.callApi<ReturnType<typeof this.spotifyApi.getMyRecentlyPlayedTracks>>(func);
-        return result.body.items.map((x: any) => SpotifySource.formatPlayObj(x)).sort(sortByPlayDate);
+        return result.body.items.map((x: any) => SpotifySource.formatPlayObj(x)).sort(sortByOldestPlayDate);
     }
 
     getNowPlaying = async () => {
@@ -373,11 +373,7 @@ export default class SpotifySource extends MemorySource {
 
         this.logger.info('Checking recently played API for tracks to backlog...');
         const backlogPlays = await this.getPlayHistory({formatted: true});
-        const {
-            lastTrackPlayedAt: lastPlayed,
-            scrobbleResult,
-            newTracksFound: newTracks
-        } = await this.ingestPlays(backlogPlays, this.instantiatedAt);
+        this.scrobble(backlogPlays);
         this.logger.info('Backlog complete.');
 
         await this.startPolling();

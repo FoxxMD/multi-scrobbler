@@ -108,11 +108,14 @@ export default class YTMusicSource extends AbstractSource {
         } catch (e) {
             throw e;
         }
+
+        let newPlays: PlayObject[] = [];
+
         const plays = playlistDetail.tracks.map((x) => YTMusicSource.formatPlayObj(x, false)).slice(0, 20);
         if(this.polling === false) {
             this.recentlyPlayed = plays;
+            newPlays = plays;
         } else {
-            let newPlays: PlayObject[] = [];
 
             // iterate through each play until we find one that matched the "newest" from the recently played
             for (const [i, value] of plays.entries()) {
@@ -154,13 +157,8 @@ export default class YTMusicSource extends AbstractSource {
                 this.recentlyPlayed = newPlays.concat(this.recentlyPlayed).slice(0, 20);
             }
         }
-        
-        if(!display) {
-            // used by MS for newely monitored tracks where we know the play date
-            return this.recentlyPlayed.filter(x => x.meta.newFromSource);
-        }
-        // used by UI for returning all results
-        return this.recentlyPlayed;
+
+        return newPlays;
         
     }
 
@@ -182,9 +180,15 @@ export default class YTMusicSource extends AbstractSource {
     }
 
     poll = async () => {
-        if(this.authed) {
+        if(this.authed && !this.polling) {
             this.logger.verbose('Hydrating initial recently played tracks for reference.');
-            await this.getRecentlyPlayed();
+            const referencePlays = await this.getRecentlyPlayed();
+            if(this.getFlatRecentlyDiscoveredPlays().length === 0) {
+                // and add to discovered since its empty
+                for(const refPlay of referencePlays) {
+                    this.addPlayToDiscovered(refPlay);
+                }
+            }
         }
         await this.startPolling();
     }

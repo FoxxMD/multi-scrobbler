@@ -14,6 +14,8 @@ export default class PlexSource extends AbstractSource {
     libraries: string[];
     servers: string[];
 
+    multiPlatform: boolean = true;
+
     declare config: PlexSourceConfig;
 
     constructor(name: any, config: PlexSourceConfig, internal: InternalConfig, type: SourceType = 'plex',emitter: EventEmitter) {
@@ -170,12 +172,8 @@ export default class PlexSource extends AbstractSource {
             return;
         }
 
-        this.logger.info(`New Track => ${buildTrackString(playObj)}`);
         try {
             this.scrobble([playObj]);
-            //await root.get('clients').scrobble(playObj, {scrobbleTo: this.clients, scrobbleFrom: this.identifier});
-            // only gets hit if we scrobbled ok
-            this.tracksDiscovered++;
         } catch (e) {
             this.logger.error('Encountered error while scrobbling')
             this.logger.error(e)
