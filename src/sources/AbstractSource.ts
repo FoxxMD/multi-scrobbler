@@ -37,6 +37,7 @@ export default abstract class AbstractSource {
     clients: string[];
     logger: Logger;
     instantiatedAt: Dayjs;
+    lastActivityAt: Dayjs;
     initialized: boolean = false;
     requiresAuth: boolean = false;
     requiresAuthInteraction: boolean = false;
@@ -66,6 +67,7 @@ export default abstract class AbstractSource {
         this.config = config;
         this.clients = clients;
         this.instantiatedAt = dayjs();
+        this.lastActivityAt = this.instantiatedAt;
         this.localUrl = internal.localUrl;
         this.configDir = internal.configDir;
         this.emitter = emitter;
@@ -210,7 +212,7 @@ export default abstract class AbstractSource {
         }
         this.logger.info('Polling started');
         this.notify({title: `${this.identifier} - Polling Started`, message: 'Polling Started', priority: 'info'});
-        let lastTrackPlayedAt = this.instantiatedAt;
+        this.lastActivityAt = dayjs();
         let checkCount = 0;
         let checksOverThreshold = 0;
 
@@ -221,7 +223,7 @@ export default abstract class AbstractSource {
         try {
             this.polling = true;
             while (true) {
-                // @ts-expect-error TS(2367): This condition will always return 'false' since th... Remove this comment to see the full error message
+                // @ts-ignore
                 if(this.polling === false) {
                     this.logger.info('Stopped polling due to user input');
                     break;
@@ -247,16 +249,17 @@ export default abstract class AbstractSource {
                         });
                 }
 
-                lastTrackPlayedAt = newDiscovered.length > 0 ? newDiscovered[0].data.playDate : lastTrackPlayedAt;
 
                 if(newDiscovered.length > 0) {
+                    // only update date if the play date is after the current activity date (in the case of backlogged plays)
+                    this.lastActivityAt = newDiscovered[0].data.playDate.isAfter(this.lastActivityAt) ? newDiscovered[0].data.playDate : this.lastActivityAt;
                     checkCount = 0;
                     checksOverThreshold = 0;
                 } else {
                     this.logger.debug(`No new tracks discovered`);
                 }
 
-                const activeThreshold = lastTrackPlayedAt.add(checkActiveFor, 's');
+                const activeThreshold = this.lastActivityAt.add(checkActiveFor, 's');
                 const inactiveFor = dayjs.duration(Math.abs(activeThreshold.diff(dayjs(), 'millisecond'))).humanize(false);
                 if (activeThreshold.isBefore(dayjs())) {
                     checksOverThreshold++;
@@ -264,13 +267,13 @@ export default abstract class AbstractSource {
                         const checkVal = Math.min(checksOverThreshold, 1000);
                         const backoff = Math.round(Math.max(Math.min(Math.min(checkVal, 1000) * 2 * (1.1 * checkVal), maxBackoff), 5));
                         sleepTime = interval + backoff;
-                        this.logger.debug(`Last activity was at ${lastTrackPlayedAt.format()} which is ${inactiveFor} outside of active polling period of (last activity + ${checkActiveFor} seconds). Will sleep for interval ${interval} + ${backoff} seconds.`);
+                        this.logger.debug(`Last activity was at ${this.lastActivityAt.format()} which is ${inactiveFor} outside of active polling period of (last activity + ${checkActiveFor} seconds). Will sleep for interval ${interval} + ${backoff} seconds.`);
                     } else {
-                        this.logger.debug(`Last activity was at ${lastTrackPlayedAt.format()} which is ${inactiveFor} outside of active polling period of (last activity + ${checkActiveFor} seconds). Will sleep for max interval ${maxInterval} seconds.`);
+                        this.logger.debug(`Last activity was at ${this.lastActivityAt.format()} which is ${inactiveFor} outside of active polling period of (last activity + ${checkActiveFor} seconds). Will sleep for max interval ${maxInterval} seconds.`);
                     }
                 } else {
                     sleepTime = interval;
-                    this.logger.debug(`Last activity was at ${lastTrackPlayedAt.format()}. Will sleep for interval ${sleepTime} seconds.`);
+                    this.logger.debug(`Last activity was at ${this.lastActivityAt.format()}. Will sleep for interval ${sleepTime} seconds.`);
                 }
 
                 this.logger.verbose(`Sleeping for ${sleepTime}s`);

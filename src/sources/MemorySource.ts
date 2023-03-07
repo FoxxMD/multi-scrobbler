@@ -63,6 +63,9 @@ export default class MemorySource extends AbstractSource {
             // if no candidates exist new plays are new candidates
             if(cRecentlyPlayed.length === 0) {
                 this.logger.debug(`[Platform ${groupId}] No prior candidate recent plays!`)
+                // update activity date here so that polling interval decreases *before* we get a new valid play
+                // so that we don't miss a play due to long polling interval
+                this.lastActivityAt = dayjs();
                 const progressAware: ProgressAwarePlayObject[] = [];
                 for(const p of lockedPlays) {
                     progressAware.push(toProgressAwarePlayObject(p));
@@ -74,6 +77,9 @@ export default class MemorySource extends AbstractSource {
                 const newTracks = lockedPlays.filter((x: any) => cRecentlyPlayed.every(y => !playObjDataMatch(y, x)));
                 const newProgressAwareTracks: ProgressAwarePlayObject[] = [];
                 if(newTracks.length > 0) {
+                    // update activity date here so that polling interval decreases *before* we get a new valid play
+                    // so that we don't miss a play due to long polling interval
+                    this.lastActivityAt = dayjs();
                     this.logger.debug(`[Platform ${groupId}] New plays found that do not match existing candidates.`)
                     for(const p of newTracks) {
                         this.logger.debug(`[Platform ${groupId}] Adding new locked play: ${buildTrackString(p, {include: ['trackId', 'artist', 'track']})}`);
