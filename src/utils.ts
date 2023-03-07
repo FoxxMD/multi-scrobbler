@@ -136,9 +136,51 @@ export const buildTrackString = (playObj: PlayObject, options: TrackStringOption
 }
 
 // sorts playObj formatted objects by playDate in ascending (oldest first) order
-export const sortByOldestPlayDate = (a: any, b: any) => a.data.playDate.isAfter(b.data.playDate) ? 1 : -1;
+export const sortByOldestPlayDate = (a: PlayObject, b: PlayObject) => {
+    const {
+        data: {
+            playDate: aPlayDate
+        } = {}
+    } = a;
+    const {
+        data: {
+            playDate: bPlayDate
+        } = {}
+    } = b;
+    if(aPlayDate === undefined && bPlayDate === undefined) {
+        return 0;
+    }
+    if(aPlayDate === undefined) {
+        return 1;
+    }
+    if(bPlayDate === undefined) {
+        return -1;
+    }
+    return aPlayDate.isAfter(bPlayDate) ? 1 : -1
+};
 
-export const sortByNewestPlayDate = (a: any, b: any) => a.data.playDate.isAfter(b.data.playDate) ? 1 : -1;
+export const sortByNewestPlayDate = (a: PlayObject, b: PlayObject) => {
+    const {
+        data: {
+            playDate: aPlayDate
+        } = {}
+    } = a;
+    const {
+        data: {
+            playDate: bPlayDate
+        } = {}
+    } = b;
+    if(aPlayDate === undefined && bPlayDate === undefined) {
+        return 0;
+    }
+    if(aPlayDate === undefined) {
+        return 1;
+    }
+    if(bPlayDate === undefined) {
+        return -1;
+    }
+    return aPlayDate.isBefore(bPlayDate) ? 1 : -1
+};
 
 const s = splat();
 const SPLAT = Symbol.for('splat')
