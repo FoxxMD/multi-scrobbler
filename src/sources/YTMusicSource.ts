@@ -184,11 +184,12 @@ export default class YTMusicSource extends AbstractSource {
         if(this.authed && !this.polling) {
             this.logger.verbose('Hydrating initial recently played tracks for reference.');
             const referencePlays = await this.getRecentlyPlayed();
+            const reversedPlays = [...referencePlays];
             // actual order they were discovered in (oldest to newest)
-            referencePlays.reverse();
+            reversedPlays.reverse();
             if(this.getFlatRecentlyDiscoveredPlays().length === 0) {
                 // and add to discovered since its empty
-                for(const refPlay of referencePlays) {
+                for(const refPlay of reversedPlays) {
                     this.addPlayToDiscovered(refPlay);
                 }
             }
