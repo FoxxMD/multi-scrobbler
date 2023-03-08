@@ -762,6 +762,127 @@
             },
             "type": "object"
         },
+        "MopidyData": {
+            "properties": {
+                "albumBlacklist": {
+                    "default": [
+                        "Soundcloud"
+                    ],
+                    "description": "Remove album data that matches any case-insensitive string from this list when scrobbling,\n\nFor certain sources (Soundcloud) Mopidy does not have all track info (Album) and will instead use \"Soundcloud\" as the Album name. You can prevent multi-scrobbler from using this bad Album data by adding the fake name to this list. Multi-scrobbler will still scrobble the track, just without the bad data.",
+                    "examples": [
+                        [
+                            "Soundcloud",
+                            "Mixcloud"
+                        ]
+                    ],
+                    "items": {
+                        "type": "string"
+                    },
+                    "type": "array"
+                },
+                "interval": {
+                    "default": 10,
+                    "description": "How long to wait before polling the source API for new tracks (in seconds)",
+                    "examples": [
+                        10
+                    ],
+                    "type": "number"
+                },
+                "maxInterval": {
+                    "default": 30,
+                    "description": "When there has been no new activity from the Source API multi-scrobbler will gradually increase the wait time between polling up to this value (in seconds)",
+                    "examples": [
+                        30
+                    ],
+                    "type": "number"
+                },
+                "maxPollRetries": {
+                    "default": 0,
+                    "description": "default # of automatic polling restarts on error",
+                    "examples": [
+                        1
+                    ],
+                    "type": "number"
+                },
+                "maxRequestRetries": {
+                    "default": 1,
+                    "description": "default # of http request retries a source can make before error is thrown",
+                    "examples": [
+                        1
+                    ],
+                    "type": "number"
+                },
+                "options": {
+                    "$ref": "#/definitions/Record<string,any>"
+                },
+                "retryMultiplier": {
+                    "default": 1.5,
+                    "description": "default retry delay multiplier (retry attempt * multiplier = # of seconds to wait before retrying)",
+                    "examples": [
+                        1.5
+                    ],
+                    "type": "number"
+                },
+                "uriBlacklist": {
+                    "description": "Do not scrobble tracks whose URI STARTS WITH any of these strings, case-insensitive\n\nEX: Don't scrobble tracks from soundcloud by adding 'soundcloud' to this list.\n\nList is ignored if uriWhitelist is used.",
+                    "items": {
+                        "type": "string"
+                    },
+                    "type": "array"
+                },
+                "uriWhitelist": {
+                    "description": "Only scrobble tracks whose URI STARTS WITH any of these strings, case-insensitive\n\nEX: Only scrobble tracks from soundcloud by adding 'soundcloud' to this list.",
+                    "items": {
+                        "type": "string"
+                    },
+                    "type": "array"
+                },
+                "url": {
+                    "default": "ws://localhost:6680/mopidy/ws/",
+                    "description": "URL of the Mopidy HTTP server to connect to\n\nYou MUST have Mopidy-HTTP extension enabled: https://mopidy.com/ext/http\n\nmulti-scrobbler connects to the WebSocket endpoint that ultimately looks like this => `ws://localhost:6680/mopidy/ws/`\n\nThe URL you provide here will have all parts not explicitly defined filled in for you so if these are not the default you must define them.\n\nParts => [default value]\n\n* Protocol => `ws://`\n* Hostname => `localhost`\n* Port => `6680`\n* Path => `/mopidy/ws/`",
+                    "examples": [
+                        "ws://localhost:6680/mopidy/ws/"
+                    ],
+                    "type": "string"
+                }
+            },
+            "type": "object"
+        },
+        "MopidySourceAIOConfig": {
+            "properties": {
+                "clients": {
+                    "description": "Restrict scrobbling tracks played from this source to Clients with names from this list. If list is empty is not present Source scrobbles to all configured Clients.",
+                    "examples": [
+                        [
+                            "MyMalojaConfigName",
+                            "MyLastFMConfigName"
+                        ]
+                    ],
+                    "items": {
+                        "type": "string"
+                    },
+                    "type": "array"
+                },
+                "data": {
+                    "$ref": "#/definitions/MopidyData"
+                },
+                "name": {
+                    "description": "Unique identifier for this source.",
+                    "type": "string"
+                },
+                "type": {
+                    "enum": [
+                        "mopidy"
+                    ],
+                    "type": "string"
+                }
+            },
+            "required": [
+                "data",
+                "type"
+            ],
+            "type": "object"
+        },
         "NtfyConfig": {
             "properties": {
                 "name": {
@@ -1016,6 +1137,9 @@
                 },
                 {
                     "$ref": "#/definitions/MPRISSourceAIOConfig"
+                },
+                {
+                    "$ref": "#/definitions/MopidySourceAIOConfig"
                 }
             ]
         },

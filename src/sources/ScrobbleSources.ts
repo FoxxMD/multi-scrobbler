@@ -27,6 +27,8 @@ import {YTMusicSourceConfig} from "../common/infrastructure/config/source/ytmusi
 import {MPRISData, MPRISSourceConfig} from "../common/infrastructure/config/source/mpris.js";
 import {MPRISSource} from "./MPRISSource.js";
 import EventEmitter from "events";
+import {MopidySource} from "./MopidySource.js";
+import {MopidySourceConfig} from "../common/infrastructure/config/source/mopidy.js";
 
 type groupedNamedConfigs = {[key: string]: ParsedConfig[]};
 
@@ -395,6 +397,9 @@ export default class ScrobbleSources {
                 break;
             case 'mpris':
                 newSource = await new MPRISSource(name, compositeConfig as MPRISSourceConfig, internal, this.emitter);
+                break;
+            case 'mopidy':
+                newSource = await new MopidySource(name, compositeConfig as MopidySourceConfig, internal, this.emitter);
                 break;
             default:
                 break;

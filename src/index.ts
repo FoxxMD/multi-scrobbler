@@ -1,7 +1,7 @@
 import {addAsync, Router} from '@awaitjs/express';
 import express from 'express';
 import bodyParser from 'body-parser';
-import winston from 'winston';
+import winston, {info} from 'winston';
 import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc.js';
 import isBetween from 'dayjs/plugin/isBetween.js';
@@ -10,6 +10,7 @@ import duration from 'dayjs/plugin/duration.js';
 import passport from 'passport';
 import session from 'express-session';
 import {Writable} from 'stream';
+import {NullTransport} from 'winston-null';
 import 'winston-daily-rotate-file';
 import {
     buildTrackString,
@@ -123,6 +124,9 @@ const loggerOptions: winston.LoggerOptions = {
 };
 
 winston.loggers.add('default', loggerOptions);
+
+winston.loggers.add('noop', {transports: [new NullTransport()]});
+
 
 const logger = winston.loggers.get('default');
 

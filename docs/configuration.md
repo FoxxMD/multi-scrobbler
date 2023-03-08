@@ -13,6 +13,7 @@
   * [Deezer](#deezer)
   * [Youtube Music](#youtube-music)
   * [MPRIS (Linux Desktop)](#mpris)
+  * [Mopidy](#mopidy)
 * [Client Configurations](#client-configurations)
   * [Maloja](#maloja)
   * [Last.fm](#lastfm)
@@ -347,6 +348,101 @@ multi-scrobbler can listen to this interface and scrobble tracks played by **any
 
 See [`mpris.json.example`](/config/mpris.json.example) or [explore the schema with an example and live editor/validator](https://json-schema.app/view/%23/%23%2Fdefinitions%2FMPRISSourceConfig?url=https%3A%2F%2Fraw.githubusercontent.com%2FFoxxMD%2Fmulti-scrobbler%2Fdevelop%2Fsrc%2Fcommon%2Fschema%2Fclient.json)
 
+## [Mopidy](https://mopidy.com/)
+
+Mopidy is a headless music server that supports playing music from many [standard and non-standard sources such as Pandora, Bandcamp, and Tunein.](https://mopidy.com/ext/)
+
+multi-scrobbler can scrobble tracks played from any Mopidy backend source, regardless of where you listen to them.
+
+### File-Based
+
+See [`mopidy.json.example`](/config/mopidy.json.example) or [explore the schema with an example and live editor/validator](https://json-schema.app/view/%23/%23%2Fdefinitions%2FMopidySourceConfig?url=https%3A%2F%2Fraw.githubusercontent.com%2FFoxxMD%2Fmulti-scrobbler%2Fdevelop%2Fsrc%2Fcommon%2Fschema%2Fclient.json)
+
+Configuration Options:
+
+##### `url`
+
+The URL used to connect to the Mopidy server. You MUST have [Mopidy-HTTP extension](https://mopidy.com/ext/http) enabled.
+
+If no `url` is provided a default is used which assumes Mopidy is installed on the same server as multi-scrobbler: `ws://localhost:6680/mopidy/ws/`
+
+Make sure the hostname and port number match what is found in the Mopidy configuration file `mopidy.conf`:
+
+```
+...
+
+[http]
+hostname = localhost
+port = 6680
+
+...
+```
+
+The URL used to connect ultimately must be formed like this: `[protocol]://[hostname]:[port]/[path]`
+If any part of this URL is missing multi-scrobbler will use a default value, for your convenience. This also means that if any part of your URL is **not** standard you must explicitly define it.
+
+Part => Default Value
+
+* Protocol => `ws://`
+* Hostname => `localhost`
+* Port => `6680`
+* Path => `/mopidy/ws/`
+
+EX
+
+```json
+{
+  "url": "mopidy.mydomain.com"
+}
+```
+
+MS transforms this to: `ws://mopidy.mydomain.com:6680/mopidy/ws/`
+
+```json
+{
+  "url": "192.168.0.101:3456"
+}
+```
+
+MS transforms this to: `ws://192.168.0.101:3456/mopidy/ws/`
+
+```json
+{
+  "url": "mopidy.mydomain.com:80/MOPWS"
+}
+```
+
+MS transforms this to: `ws://mopidy.mydomain.com:80/MOPWS`
+
+
+#### URI Blacklist/Whitelist
+
+If you wish to disallow or only allow scrobbling from some sources played through Mopidy you can specify these using `uriBlacklist` or `uriWhitelist` in your config. multi-scrobbler will check the list to see if any string matches the START of the `uri` on a track. If whitelist is used then blacklist is ignored. All strings are case-insensitive.
+
+EX:
+
+```json
+{
+  "uriBlacklist": ["soundcloud"]
+}
+```
+
+Will prevent multi-scrobbler from scrobbling any Mopidy track that start with a `uri` like `soundcloud:song:MySong-1234`
+
+#### Album Blacklist
+
+For certain sources (Soundcloud) Mopidy does not have all track info (Album) and will instead use "Soundcloud" as the Album name. You can prevent multi-scrobbler from using this bad Album data by adding the fake Album name to this list. Multi-scrobbler will still scrobble the track, just without the bad data. All strings are case-insensitive.
+
+EX:
+
+```json
+{
+  "albumBlacklist": ["SoundCloud", "Mixcloud"]
+}
+```
+
+If a track would be scrobbled like `Album: Soundcloud, Track: My Cool Track, Artist: A Cool Artist` 
+then multi-scrobbler will instead scrobble  `Track: My Cool Track, Artist: A Cool Artist`
 
 # Client Configurations
 
