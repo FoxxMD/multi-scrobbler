@@ -356,7 +356,7 @@ multi-scrobbler can scrobble tracks played from any Mopidy backend source, regar
 
 ### File-Based
 
-See [`mopidy.json.example`](/config/mopidy.json.example) or [explore the schema with an example and live editor/validator](https://json-schema.app/view/%23/%23%2Fdefinitions%2FMopidySourceConfig?url=https%3A%2F%2Fraw.githubusercontent.com%2FFoxxMD%2Fmulti-scrobbler%2Fdevelop%2Fsrc%2Fcommon%2Fschema%2Fclient.json)
+See [`mopidy.json.example`](/config/mopidy.json.example) or [explore the schema with an example and live editor/validator](https://json-schema.app/view/%23%2Fdefinitions%2FMopidySourceConfig/%23%2Fdefinitions%2FMopidyData?url=https%3A%2F%2Fraw.githubusercontent.com%2FFoxxMD%2Fmulti-scrobbler%2Fdevelop%2Fsrc%2Fcommon%2Fschema%2Fsource.json)
 
 Configuration Options:
 
