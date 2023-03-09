@@ -180,19 +180,21 @@ export class MopidySource extends MemorySource {
         const currTrack = await this.client.playback.getCurrentTrack();
         const playback = await this.client.playback.getTimePosition();
 
-        let play: PlayObject | undefined = this.formatPlayObj(currTrack, {trackProgressPosition: playback});
+        let play: PlayObject | undefined = currTrack === null ? undefined : this.formatPlayObj(currTrack, {trackProgressPosition: playback});
 
-        if (this.uriWhitelist.length > 0) {
-            const match = this.uriWhitelist.find(x => currTrack.uri.includes(x));
-            if (match === undefined) {
-                this.logger.debug(`URI for currently playing (${currTrack.uri}) did not match any in whitelist. Will not track play ${buildTrackString(play)}`);
-                play = undefined;
-            }
-        } else if (this.uriBlacklist.length > 0) {
-            const match = this.uriWhitelist.find(x => currTrack.uri.includes(x));
-            if (match !== undefined) {
-                this.logger.debug(`URI for currently playing (${currTrack.uri}) matched from blacklist (${match}). Will not track play ${buildTrackString(play)}`);
-                play = undefined;
+        if(play !== undefined) {
+            if (this.uriWhitelist.length > 0) {
+                const match = this.uriWhitelist.find(x => currTrack.uri.includes(x));
+                if (match === undefined) {
+                    this.logger.debug(`URI for currently playing (${currTrack.uri}) did not match any in whitelist. Will not track play ${buildTrackString(play)}`);
+                    play = undefined;
+                }
+            } else if (this.uriBlacklist.length > 0) {
+                const match = this.uriWhitelist.find(x => currTrack.uri.includes(x));
+                if (match !== undefined) {
+                    this.logger.debug(`URI for currently playing (${currTrack.uri}) matched from blacklist (${match}). Will not track play ${buildTrackString(play)}`);
+                    play = undefined;
+                }
             }
         }
 
