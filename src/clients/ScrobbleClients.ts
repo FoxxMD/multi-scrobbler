@@ -2,7 +2,7 @@ import dayjs, {Dayjs} from "dayjs";
 import {
     buildTrackString,
     createAjvFactory,
-    createLabelledLogger,
+    mergeArr,
     playObjDataMatch,
     readJson,
     returnDuplicateStrings, validateJson
@@ -19,6 +19,7 @@ import {LastfmClientConfig} from "../common/infrastructure/config/client/lastfm.
 import {Notifiers} from "../notifier/Notifiers.js";
 import AbstractScrobbleClient from "./AbstractScrobbleClient.js";
 import {EventEmitter} from "events";
+import winston from "winston";
 
 type groupedNamedConfigs = {[key: string]: ParsedConfig[]};
 
@@ -39,7 +40,7 @@ export default class ScrobbleClients {
         this.emitter = emitter;
         this.sourceEmitter = sourceEmitter;
         this.configDir = configDir;
-        this.logger = createLabelledLogger('scrobblers', 'Scrobblers');
+        this.logger = winston.loggers.get('app').child({labels: ['Scrobblers']}, mergeArr);
 
         this.sourceEmitter.on('scrobble', async (payload: { data: (PlayObject | PlayObject[]), options: { forceRefresh?: boolean, checkTime?: Dayjs, scrobbleTo?: string[], scrobbleFrom?: string } }) => {
             await this.scrobble(payload.data, payload.options);
@@ -273,13 +274,13 @@ ${sources.join('\n')}`);
         // add defaults
         const data = {...defaults, ...d};
         let newClient;
-        this.logger.debug(`(${name}) Constructing ${type} client...`);
+        this.logger.debug(`Constructing ${type} (${name}) client...`);
         switch (type) {
             case 'maloja':
-                newClient = new MalojaScrobbler(name, ({...clientConfig, data} as unknown as MalojaClientConfig), notifier);
+                newClient = new MalojaScrobbler(name, ({...clientConfig, data} as unknown as MalojaClientConfig), notifier, this.logger);
                 break;
             case 'lastfm':
-                newClient = new LastfmScrobbler(name, {...clientConfig, data: {configDir: this.configDir, ...data} } as unknown as LastfmClientConfig, {}, notifier);
+                newClient = new LastfmScrobbler(name, {...clientConfig, data: {configDir: this.configDir, ...data} } as unknown as LastfmClientConfig, {}, notifier, this.logger);
                 break;
             default:
                 break;
@@ -290,15 +291,15 @@ ${sources.join('\n')}`);
             throw new Error(`Client of type ${type} was not recognized??`);
         }
         if(newClient.initialized === false) {
-            this.logger.debug(`(${name}) Attempting ${type} initialization...`);
+            this.logger.debug(`Attempting ${type} (${name}) initialization...`);
             if ((await newClient.initialize()) === false) {
-                this.logger.error(`(${name}) ${type} client failed to initialize. Client needs to be successfully initialized before scrobbling.`);
+                this.logger.error(`${type} (${name}) client failed to initialize. Client needs to be successfully initialized before scrobbling.`);
             } else {
-                this.logger.info(`(${name}) ${type} client initialized`);
+                this.logger.info(`${type} (${name}) client initialized`);
             }
         }
         if(newClient.requiresAuth && !newClient.authed) {
-            this.logger.debug(`(${name}) Checking ${type} client auth...`);
+            this.logger.debug(`Checking ${type} (${name}) client auth...`);
             let success;
             try {
                 success = await newClient.testAuth();
@@ -306,9 +307,9 @@ ${sources.join('\n')}`);
                 success = false;
             }
             if(!success) {
-                this.logger.warn(`(${name}) ${type} client auth failed.`);
+                this.logger.warn(`${type} (${name}) client auth failed.`);
             } else {
-                this.logger.info(`(${name}) ${type} client auth OK`);
+                this.logger.info(`${type} (${name}) client auth OK`);
             }
         }
         this.clients.push(newClient);

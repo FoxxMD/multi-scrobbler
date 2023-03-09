@@ -1,5 +1,5 @@
-import {config, format, Logger} from "winston";
-import {createLabelledLogger} from "../utils.js";
+import winston, {config, format, Logger} from "winston";
+import {mergeArr} from "../utils.js";
 import {
     GotifyConfig,
     NtfyConfig,
@@ -27,7 +27,7 @@ export class Notifiers {
         this.clientEmitter = clientEmitter;
         this.sourceEmitter = sourceEmitter;
 
-        this.logger = createLabelledLogger('Notifiers', 'Notifiers');
+        this.logger = winston.loggers.get('app').child({labels: ['Notifiers']}, mergeArr);
 
         this.sourceEmitter.on('notify', async (payload: WebhookPayload) => {
             await this.notify(payload);
@@ -40,10 +40,10 @@ export class Notifiers {
             const defaultName = `Config ${i}`
             switch (config.type) {
                 case 'gotify':
-                    webhook = new GotifyWebhookNotifier(defaultName, config as GotifyConfig);
+                    webhook = new GotifyWebhookNotifier(defaultName, config as GotifyConfig, this.logger);
                     break;
                 case 'ntfy':
-                    webhook = new NtfyWebhookNotifier(defaultName, config as NtfyConfig);
+                    webhook = new NtfyWebhookNotifier(defaultName, config as NtfyConfig, this.logger);
                     break;
                 default:
                     this.logger.error(`'${config.type}' is not a valid webhook type`);

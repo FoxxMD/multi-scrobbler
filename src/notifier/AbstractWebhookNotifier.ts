@@ -1,6 +1,6 @@
 import {GotifyConfig, NtfyConfig, WebhookPayload} from "../common/infrastructure/config/health/webhooks.js";
 import {Logger} from "winston";
-import {createLabelledLogger} from "../utils.js";
+import {mergeArr} from "../utils.js";
 
 export abstract class AbstractWebhookNotifier {
 
@@ -11,10 +11,10 @@ export abstract class AbstractWebhookNotifier {
     requiresAuth: boolean = false;
     authed: boolean = false;
 
-    protected constructor(type: string, defaultName: string, config: GotifyConfig | NtfyConfig) {
+    protected constructor(type: string, defaultName: string, config: GotifyConfig | NtfyConfig, logger: Logger) {
         this.config = config;
         const label = `${type} - ${config.name ?? defaultName}`
-        this.logger = createLabelledLogger(label, label);
+        this.logger = logger.child({labels: [label]}, mergeArr);
     }
 
     initialize = async () => {

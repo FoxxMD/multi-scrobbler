@@ -1,4 +1,4 @@
-import {createLabelledLogger, parseBool, readJson, validateJson} from "../utils.js";
+import {mergeArr, parseBool, readJson, validateJson} from "../utils.js";
 import SpotifySource from "./SpotifySource.js";
 import PlexSource from "./PlexSource.js";
 import TautulliSource from "./TautulliSource.js";
@@ -8,7 +8,7 @@ import LastfmSource from "./LastfmSource.js";
 import DeezerSource from "./DeezerSource.js";
 import {ConfigMeta, InternalConfig, SourceType, sourceTypes} from "../common/infrastructure/Atomic.js";
 import {configDir as defaultConfigDir} from "../common/index.js";
-import {Logger} from "winston";
+import winston, {Logger} from "winston";
 import {SourceAIOConfig, SourceConfig} from "../common/infrastructure/config/source/sources.js";
 import {DeezerData, DeezerSourceConfig} from "../common/infrastructure/config/source/deezer.js";
 import {LastfmClientConfig} from "../common/infrastructure/config/client/lastfm.js";
@@ -47,7 +47,7 @@ export default class ScrobbleSources {
         this.emitter = emitter;
         this.configDir = configDir;
         this.localUrl = localUrl;
-        this.logger = createLabelledLogger('sources', 'Sources');
+        this.logger = winston.loggers.get('app').child({labels: ['Sources']}, mergeArr);
     }
 
     getByName = (name: any) => {
@@ -359,7 +359,8 @@ export default class ScrobbleSources {
 
         const internal: InternalConfig = {
             localUrl: this.localUrl,
-            configDir: this.configDir
+            configDir: this.configDir,
+            logger: this.logger
         };
 
         const {type, name, data: d = {}} = clientConfig;
@@ -410,19 +411,19 @@ export default class ScrobbleSources {
             throw new Error(`Source of type ${type} was not recognized??`);
         }
         if(newSource.initialized === false) {
-            this.logger.debug(`(${name}) Attempting ${type} initialization...`);
+            this.logger.debug(`Attempting ${type} (${name}) initialization...`);
             if ((await newSource.initialize()) === false) {
-                this.logger.error(`(${name}) ${type} source failed to initialize. Source needs to be successfully initialized before activity capture can begin.`);
+                this.logger.error(`${type} (${name}) source failed to initialize. Source needs to be successfully initialized before activity capture can begin.`);
                 return;
             } else {
-                this.logger.info(`(${name}) ${type} source initialized`);
+                this.logger.info(`${type} (${name}) source initialized`);
             }
         } else {
-            this.logger.info(`(${name}) ${type} source initialized`);
+            this.logger.info(`${type} (${name}) source initialized`);
         }
 
         if(newSource.requiresAuth && !newSource.authed) {
-            this.logger.debug(`(${name}) Checking ${type} source auth...`);
+            this.logger.debug(`Checking ${type} (${name}) source auth...`);
             let success;
             try {
                 success = await newSource.testAuth();
@@ -430,9 +431,9 @@ export default class ScrobbleSources {
                 success = false;
             }
             if(!success) {
-                this.logger.warn(`(${name}) ${type} source auth failed.`);
+                this.logger.warn(`${type} (${name}) source auth failed.`);
             } else {
-                this.logger.info(`(${name}) ${type} source auth OK`);
+                this.logger.info(`${type} (${name}) source auth OK`);
             }
         }
 

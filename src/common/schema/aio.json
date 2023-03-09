@@ -529,6 +529,45 @@
             ],
             "type": "object"
         },
+        "LogLevel": {
+            "enum": [
+                "debug",
+                "error",
+                "info",
+                "verbose",
+                "warn"
+            ],
+            "type": "string"
+        },
+        "LogOptions": {
+            "properties": {
+                "console": {
+                    "$ref": "#/definitions/LogLevel",
+                    "description": "Specify the minimum log level streamed to the console (or docker container)"
+                },
+                "file": {
+                    "description": "Specify the minimum log level to output to rotating files. If `false` no log files will be created.",
+                    "enum": [
+                        "debug",
+                        "error",
+                        false,
+                        "info",
+                        "verbose",
+                        "warn"
+                    ]
+                },
+                "level": {
+                    "$ref": "#/definitions/LogLevel",
+                    "default": "'info'",
+                    "description": "Specify the minimum log level for all log outputs without their own level specified.\n\nDefaults to env `LOG_LEVEL` or `info` if not specified."
+                },
+                "stream": {
+                    "$ref": "#/definitions/LogLevel",
+                    "description": "Specify the minimum log level streamed to the UI"
+                }
+            },
+            "type": "object"
+        },
         "MPRISData": {
             "properties": {
                 "blacklist": {
@@ -1540,6 +1579,9 @@
                 "$ref": "#/definitions/ClientAIOConfig"
             },
             "type": "array"
+        },
+        "logging": {
+            "$ref": "#/definitions/LogOptions"
         },
         "sourceDefaults": {
             "$ref": "#/definitions/SourceRetryOptions"

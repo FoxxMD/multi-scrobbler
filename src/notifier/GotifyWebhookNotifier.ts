@@ -3,6 +3,7 @@ import {GotifyConfig, PrioritiesConfig, WebhookPayload} from "../common/infrastr
 import {gotify} from 'gotify';
 import request from 'superagent';
 import {HTTPError} from "got";
+import {Logger} from "winston";
 
 export class GotifyWebhookNotifier extends AbstractWebhookNotifier {
 
@@ -10,8 +11,8 @@ export class GotifyWebhookNotifier extends AbstractWebhookNotifier {
 
     priorities: PrioritiesConfig;
 
-    constructor(defaultName: string, config: GotifyConfig) {
-        super('Gotify', defaultName, config);
+    constructor(defaultName: string, config: GotifyConfig, logger: Logger) {
+        super('Gotify', defaultName, config, logger);
         this.requiresAuth = true;
         const {
             info = 5,

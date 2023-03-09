@@ -1,8 +1,7 @@
-import {promises, constants} from "fs";
+import {promises, constants, accessSync} from "fs";
 import dayjs, {Dayjs} from 'dayjs';
 import utc from 'dayjs/plugin/utc.js';
-import winston, {Logger} from "winston";
-import stringify from 'safe-stable-stringify';
+import {Logger} from "winston";
 import JSON5 from 'json5';
 import { TimeoutError, WebapiError } from "spotify-web-api-node/src/response-error.js";
 import Ajv, {Schema} from 'ajv';
@@ -13,9 +12,8 @@ import {
     TrackStringOptions
 } from "./common/infrastructure/Atomic.js";
 import {Request} from "express";
-
-const {format} = winston;
-const {combine, printf, timestamp, label, splat, errors} = format;
+import pathUtil from "path";
+import {ErrorWithCause} from "pony-cause";
 
 dayjs.extend(utc);
 
@@ -181,60 +179,6 @@ export const sortByNewestPlayDate = (a: PlayObject, b: PlayObject) => {
     }
     return aPlayDate.isBefore(bPlayDate) ? 1 : -1
 };
-
-const s = splat();
-const SPLAT = Symbol.for('splat')
-const errorsFormat = errors({stack: true});
-const CWD = process.cwd();
-
-let longestLabel = 3;
-export const defaultFormat = printf(({level, message, label = 'App', timestamp, [SPLAT]: splatObj, stack, ...rest}) => {
-    let stringifyValue = splatObj !== undefined ? stringify(splatObj) : '';
-    if (label.length > longestLabel) {
-        longestLabel = label.length;
-    }
-    let msg = message;
-    let stackMsg = '';
-    if (stack !== undefined) {
-        const stackArr = stack.split('\n');
-        msg = stackArr[0];
-        const cleanedStack = stackArr
-            .slice(1) // don't need actual error message since we are showing it as msg
-            .map((x: any) => x.replace(CWD, 'CWD')) // replace file location up to cwd for user privacy
-            .join('\n'); // rejoin with newline to preserve formatting
-        stackMsg = `\n${cleanedStack}`;
-    }
-
-    return `${timestamp} ${level.padEnd(7)}: [${label.padEnd(longestLabel)}] ${msg}${stringifyValue !== '' ? ` ${stringifyValue}` : ''}${stackMsg}`;
-});
-
-export const labelledFormat = (labelName = 'App') => {
-    const l = label({label: labelName, message: false});
-    return combine(
-        timestamp(
-            {
-                format: () => dayjs().local().format(),
-            }
-        ),
-        l,
-        s,
-        errorsFormat,
-        defaultFormat,
-    );
-}
-
-export const createLabelledLogger = (name = 'default', label = 'App'): Logger => {
-    if (winston.loggers.has(name)) {
-        return winston.loggers.get(name);
-    }
-    const def = winston.loggers.get('default');
-    winston.loggers.add(name, {
-        transports: def.transports,
-        level: def.level,
-        format: labelledFormat(label)
-    });
-    return winston.loggers.get(name);
-}
 
 export const setIntersection = (setA: any, setB: any) => {
     let _intersection = new Set()
@@ -638,3 +582,39 @@ export function parseBool(value: any, prev: any = false): boolean {
 }
 
 export const genGroupId = (play: PlayObject) => `${play.meta.deviceId ?? 'NoDevice'}-${play.meta.user ?? 'SingleUser'}`;
+
+export const fileOrDirectoryIsWriteable = (location: string) => {
+    const pathInfo = pathUtil.parse(location);
+    const isDir = pathInfo.ext === '';
+    try {
+        accessSync(location, constants.R_OK | constants.W_OK);
+        return true;
+    } catch (err: any) {
+        const {code} = err;
+        if (code === 'ENOENT') {
+            // file doesn't exist, see if we can write to directory in which case we are good
+            try {
+                accessSync(pathInfo.dir, constants.R_OK | constants.W_OK)
+                // we can write to dir
+                return true;
+            } catch (accessError: any) {
+                if(accessError.code === 'EACCES') {
+                    // also can't access directory :(
+                    throw new Error(`No ${isDir ? 'directory' : 'file'} exists at ${location} and application does not have permission to write to the parent directory`);
+                } else {
+                    throw new ErrorWithCause(`No ${isDir ? 'directory' : 'file'} exists at ${location} and application is unable to access the parent directory due to a system error`, {cause: accessError});
+                }
+            }
+        } else if(code === 'EACCES') {
+            throw new Error(`${isDir ? 'Directory' : 'File'} exists at ${location} but application does not have permission to write to it.`);
+        } else {
+            throw new ErrorWithCause(`${isDir ? 'Directory' : 'File'} exists at ${location} but application is unable to access it due to a system error`, {cause: err});
+        }
+    }
+}
+
+export const mergeArr = (objValue: [], srcValue: []): (any[] | undefined) => {
+    if (Array.isArray(objValue)) {
+        return objValue.concat(srcValue);
+    }
+}

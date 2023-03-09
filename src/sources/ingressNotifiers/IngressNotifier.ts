@@ -1,5 +1,5 @@
-import {Logger} from "winston";
-import {createLabelledLogger, remoteHostIdentifiers, remoteHostStr} from "../../utils.js";
+import winston, {Logger} from "winston";
+import {mergeArr, remoteHostIdentifiers, remoteHostStr} from "../../utils.js";
 import {Request} from "express";
 import {RemoteIdentityParts} from "../../common/infrastructure/Atomic.js";
 
@@ -13,8 +13,7 @@ export abstract class IngressNotifier {
 
     protected constructor(name: string) {
         this.identifier = name;
-        const label = `Ingress - ${name}`;
-        this.logger = createLabelledLogger(label, label);
+        this.logger =  winston.loggers.get('app').child({labels: ['Ingress', name]}, mergeArr);
     }
 
     public trackIngress(req: Request, isRaw: boolean) {

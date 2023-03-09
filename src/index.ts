@@ -1,7 +1,7 @@
 import {addAsync, Router} from '@awaitjs/express';
 import express from 'express';
 import bodyParser from 'body-parser';
-import winston, {info} from 'winston';
+import winston, {info, Logger} from 'winston';
 import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc.js';
 import isBetween from 'dayjs/plugin/isBetween.js';
@@ -10,36 +10,37 @@ import duration from 'dayjs/plugin/duration.js';
 import passport from 'passport';
 import session from 'express-session';
 import {Writable} from 'stream';
-import {NullTransport} from 'winston-null';
-import 'winston-daily-rotate-file';
+//import {NullTransport} from 'winston-null';
+//import 'winston-daily-rotate-file';
 import {
     buildTrackString,
-    capitalize, createLabelledLogger,
-    labelledFormat,
-    longestString,
-    readJson, remoteHostIdentifiers, sleep,
+    capitalize,
+    longestString, mergeArr,
+    readJson,
+    remoteHostIdentifiers,
+    sleep,
     truncateStringToLength
 } from "./utils.js";
-
-import ScrobbleSources from "./sources/ScrobbleSources.js";
 import {makeClientCheckMiddle, makeSourceCheckMiddle} from "./server/middleware.js";
 import TautulliSource from "./sources/TautulliSource.js";
 import PlexSource, {plexRequestMiddle} from "./sources/PlexSource.js";
 import JellyfinSource from "./sources/JellyfinSource.js";
-import { Server } from "socket.io";
+import {Server} from "socket.io";
 import * as path from "path";
 import {projectDir} from "./common/index.js";
 import LastfmSource from "./sources/LastfmSource.js";
 import LastfmScrobbler from "./clients/LastfmScrobbler.js";
 import DeezerSource from "./sources/DeezerSource.js";
 import AbstractSource from "./sources/AbstractSource.js";
-import {PlayObject, TrackStringOptions} from "./common/infrastructure/Atomic.js";
+import {LogInfo, LogLevel, PlayObject, TrackStringOptions} from "./common/infrastructure/Atomic.js";
 import SpotifySource from "./sources/SpotifySource.js";
 import {JellyfinNotifier} from "./sources/ingressNotifiers/JellyfinNotifier.js";
 import {PlexNotifier} from "./sources/ingressNotifiers/PlexNotifier.js";
 import {TautulliNotifier} from "./sources/ingressNotifiers/TautulliNotifier.js";
 import {AIOConfig} from "./common/infrastructure/config/aioConfig.js";
-import root from "./ioc.js";
+import createRoot from "./ioc.js";
+import {formatLogToHtml, getLogger, isLogLineMinLevel} from "./common/logging.js";
+import {MESSAGE} from "triple-beam";
 
 
 dayjs.extend(utc)
@@ -66,8 +67,8 @@ app.use(passport.session());
 
 const {transports} = winston;
 
-let output: any = []
-const stream = new Writable()
+let output: LogInfo[] = []
+/*const stream = new Writable()
 stream._write = (chunk, encoding, next) => {
     let formatString = chunk.toString().replace('\n', '<br />')
     .replace(/(debug)\s/gi, '<span class="debug text-pink-400">$1 </span>')
@@ -78,19 +79,13 @@ stream._write = (chunk, encoding, next) => {
     output = output.slice(0, 101);
     io.emit('log', formatString);
     next();
-}
-const streamTransport = new winston.transports.Stream({
+}*/
+/*const streamTransport = new winston.transports.Stream({
     stream,
-})
+})*/
 
-const logConfig = {
-    level: process.env.LOG_LEVEL || 'info',
-    sort: 'descending',
-    limit: 50,
-}
 
-const availableLevels = ['info', 'debug'];
-let logPath = path.resolve(projectDir, `./logs`);
+/*let logPath = path.resolve(projectDir, `./logs`);
 if(typeof process.env.CONFIG_DIR === 'string') {
     logPath = path.resolve(process.env.CONFIG_DIR, './logs');
 }
@@ -125,29 +120,61 @@ const loggerOptions: winston.LoggerOptions = {
 
 winston.loggers.add('default', loggerOptions);
 
-winston.loggers.add('noop', {transports: [new NullTransport()]});
+winston.loggers.add('noop', {transports: [new NullTransport()]});*/
 
 
-const logger = winston.loggers.get('default');
+const initLogger = getLogger({}, 'init');
+initLogger.stream().on('log', (log: LogInfo) => {
+    output.unshift(log);
+    output = output.slice(0, 301);
+    io.emit('log', formatLogToHtml(log[MESSAGE]));
+});
+
+let logger: Logger; // = winston.loggers.get('default');
 
 const configDir = process.env.CONFIG_DIR || path.resolve(projectDir, `./config`);
 
 
     try {
         // try to read a configuration file
+        let appConfigFail = false;
         let config = {};
         try {
             config = await readJson(`${configDir}/config.json`, {throwOnNotFound: false});
         } catch (e) {
-            logger.warn('App config file exists but could not be parsed!');
+            appConfigFail = true;
         }
 
-        const notifiers = root.get('notifiers');
         const {
-            webhooks = []
+            webhooks = [],
+            logging = {},
         } = (config || {}) as AIOConfig;
 
+        const logConfig: {level: LogLevel, sort: string, limit: number} = {
+            level: logging.level || (process.env.LOG_LEVEL || 'info') as LogLevel,
+            sort: 'descending',
+            limit: 50,
+        }
+
+        logger = getLogger(logging, 'app');
+        logger.stream().on('log', (log: LogInfo) => {
+            output.unshift(log);
+            output = output.slice(0, 301);
+            if(isLogLineMinLevel(log, logConfig.level)) {
+                io.emit('log', formatLogToHtml(log[MESSAGE]));
+            }
+        });
+
+        if(appConfigFail) {
+            logger.warn('App config file exists but could not be parsed!');
+        }
+        const root = createRoot();
+        const localUrl = root.get('localUrl');
+
+        const notifiers = root.get('notifiers');
         await notifiers.buildWebhooks(webhooks);
+
+        const availableLevels = ['error', 'warn', 'info', 'verbose', 'debug'];
 
 
         /*
@@ -182,7 +209,7 @@ const configDir = process.env.CONFIG_DIR || path.resolve(projectDir, `./config`)
         }
 
         app.getAsync('/', async function (req, res) {
-            let slicedLog = output.slice(0, logConfig.limit + 1);
+            let slicedLog = output.filter(x => isLogLineMinLevel(x, logConfig.level)).slice(0, logConfig.limit + 1).map(x => formatLogToHtml(x[MESSAGE]));
             if (logConfig.sort === 'ascending') {
                 slicedLog.reverse();
             }
@@ -255,7 +282,7 @@ const configDir = process.env.CONFIG_DIR || path.resolve(projectDir, `./config`)
                     output: slicedLog,
                     limit: [10, 20, 50, 100].map(x => `<a class="capitalize ${logConfig.limit === x ? 'font-bold no-underline pointer-events-none' : ''}" data-limit="${x}" href="logs/settings/update?limit=${x}">${x}</a>`).join(' | '),
                     sort: ['ascending', 'descending'].map(x => `<a class="capitalize ${logConfig.sort === x ? 'font-bold no-underline pointer-events-none' : ''}" data-sort="${x}" href="logs/settings/update?sort=${x}">${x}</a>`).join(' | '),
-                    level: availableLevels.map(x => `<a class="capitalize log-${x} ${logConfig.level === x ? `font-bold no-underline pointer-events-none` : ''}" data-log="${x}" href="logs/settings/update?level=${x}">${x}</a>`).join(' | ')
+                    level: availableLevels.map(x => `<a class="capitalize log-level log-${x} ${logConfig.level === x ? `font-bold no-underline pointer-events-none` : ''}" data-log="${x}" href="logs/settings/update?level=${x}">${x}</a>`).join(' | ')
                 }
             });
         })
@@ -293,7 +320,7 @@ const configDir = process.env.CONFIG_DIR || path.resolve(projectDir, `./config`)
         });
 
         const plexMiddle = plexRequestMiddle();
-        const plexLog = createLabelledLogger('plexReq', 'Plex Request');
+        const plexLog = logger.child({labels: ['Plex Request']}, mergeArr);
         const plexIngress = new PlexNotifier();
         app.postAsync('/plex',
             async function (req, res, next) {
@@ -469,14 +496,14 @@ const configDir = process.env.CONFIG_DIR || path.resolve(projectDir, `./config`)
                         logConfig.sort = val as string;
                         break;
                     case 'level':
-                        logConfig.level = val as string;
-                        for (const [key, logger] of winston.loggers.loggers) {
-                            logger.level = val as string;
-                        }
+                        logConfig.level = val as LogLevel;
+                        // for (const [key, logger] of winston.loggers.loggers) {
+                        //     logger.level = val as string;
+                        // }
                         break;
                 }
             }
-            let slicedLog = output.slice(0, logConfig.limit + 1);
+            let slicedLog = output.filter(x => isLogLineMinLevel(x, logConfig.level)).slice(0, logConfig.limit + 1).map(x => formatLogToHtml(x[MESSAGE]));
             if (logConfig.sort === 'ascending') {
                 slicedLog.reverse();
             }

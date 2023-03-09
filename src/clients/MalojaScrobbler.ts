@@ -25,6 +25,7 @@ import {
 } from "../common/infrastructure/Atomic.js";
 import {MalojaClientConfig} from "../common/infrastructure/config/client/maloja.js";
 import {Notifiers} from "../notifier/Notifiers.js";
+import {Logger} from "winston";
 
 const feat = ["ft.", "ft", "feat.", "feat", "featuring", "Ft.", "Ft", "Feat.", "Feat", "Featuring"];
 
@@ -36,8 +37,8 @@ export default class MalojaScrobbler extends AbstractScrobbleClient {
 
     declare config: MalojaClientConfig
 
-    constructor(name: any, config: MalojaClientConfig, notifier: Notifiers) {
-        super('maloja', name, config, notifier);
+    constructor(name: any, config: MalojaClientConfig, notifier: Notifiers, logger: Logger) {
+        super('maloja', name, config, notifier, logger);
         const {url, apiKey} = config.data;
         if (apiKey === undefined) {
             this.logger.warn("'apiKey' not found in config! Client will most likely fail when trying to scrobble");

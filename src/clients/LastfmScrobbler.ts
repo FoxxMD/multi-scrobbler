@@ -18,6 +18,7 @@ import {
 import {LastfmClientConfig} from "../common/infrastructure/config/client/lastfm.js";
 import {TrackScrobbleResponse, UserGetRecentTracksResponse} from "lastfm-node-client";
 import {Notifiers} from "../notifier/Notifiers.js";
+import {Logger} from "winston";
 
 export default class LastfmScrobbler extends AbstractScrobbleClient {
 
@@ -27,8 +28,8 @@ export default class LastfmScrobbler extends AbstractScrobbleClient {
 
     declare config: LastfmClientConfig;
 
-    constructor(name: any, config: LastfmClientConfig, options = {}, notifier: Notifiers) {
-        super('lastfm', name, config, notifier);
+    constructor(name: any, config: LastfmClientConfig, options = {}, notifier: Notifiers, logger: Logger) {
+        super('lastfm', name, config, notifier, logger);
         // @ts-ignore
         this.api = new LastfmApiClient(name, config.data, options)
     }

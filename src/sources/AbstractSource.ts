@@ -2,8 +2,7 @@ import dayjs, {Dayjs} from "dayjs";
 import {
     buildTrackString,
     capitalize, closePlayDate,
-    createLabelledLogger,
-    genGroupId,
+    genGroupId, mergeArr,
     playObjDataMatch,
     sleep, sortByNewestPlayDate,
     sortByOldestPlayDate
@@ -63,7 +62,7 @@ export default abstract class AbstractSource {
         this.type = type;
         this.name = name;
         this.identifier = `Source - ${capitalize(this.type)} - ${name}`;
-        this.logger = createLabelledLogger(this.identifier, this.identifier);
+        this.logger = internal.logger.child({labels: [`${capitalize(this.type)} - ${name}`]}, mergeArr);
         this.config = config;
         this.clients = clients;
         this.instantiatedAt = dayjs();

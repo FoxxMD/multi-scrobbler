@@ -2,7 +2,7 @@ import dayjs, {Dayjs} from "dayjs";
 import {
     buildTrackString,
     capitalize, closePlayDate,
-    createLabelledLogger,
+    mergeArr,
     playObjDataMatch, setIntersection,
     truncateStringToLength
 } from "../utils.js";
@@ -14,7 +14,7 @@ import {
     NOT_INITIALIZED,
     PlayObject, ScrobbledPlayObject, TrackStringOptions
 } from "../common/infrastructure/Atomic.js";
-import {Logger} from "winston";
+import winston, {Logger} from "winston";
 import {CommonClientConfig} from "../common/infrastructure/config/client/index.js";
 import {ClientConfig} from "../common/infrastructure/config/client/clients.js";
 import {Notifiers} from "../notifier/Notifiers.js";
@@ -46,11 +46,11 @@ export default abstract class AbstractScrobbleClient {
 
     notifier: Notifiers;
 
-    constructor(type: any, name: any, config: CommonClientConfig, notifier: Notifiers) {
+    constructor(type: any, name: any, config: CommonClientConfig, notifier: Notifiers, logger: Logger) {
         this.type = type;
         this.name = name;
         const identifier = `Client ${capitalize(this.type)} - ${name}`;
-        this.logger = createLabelledLogger(identifier, identifier);
+        this.logger = logger.child({labels: [identifier]}, mergeArr);
         this.notifier = notifier;
 
         const {

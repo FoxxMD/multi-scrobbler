@@ -6,6 +6,7 @@ import {
 } from "../common/infrastructure/config/health/webhooks.js";
 import {publish} from 'ntfy';
 import request from "superagent";
+import {Logger} from "winston";
 
 export class NtfyWebhookNotifier extends AbstractWebhookNotifier {
 
@@ -13,8 +14,8 @@ export class NtfyWebhookNotifier extends AbstractWebhookNotifier {
 
     priorities: PrioritiesConfig;
 
-    constructor(defaultName: string, config: NtfyConfig) {
-        super('Ntfy', defaultName, config);
+    constructor(defaultName: string, config: NtfyConfig, logger: Logger) {
+        super('Ntfy', defaultName, config, logger);
         const {
             info = 3,
             warn = 4,
