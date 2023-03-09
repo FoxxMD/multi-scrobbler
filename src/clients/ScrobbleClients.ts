@@ -337,32 +337,32 @@ ${sources.join('\n')}`);
 
         for (const client of this.clients) {
             if (scrobbleTo.length > 0 && !scrobbleTo.includes(client.name)) {
-                this.logger.debug(`Client '${client.name}' was filtered out by '${scrobbleFrom}'`);
+                client.logger.debug(`Client was filtered out by Source '${scrobbleFrom}'`);
                 continue;
             }
             if(!client.initialized) {
                 if(client.initializing) {
-                    this.logger.warn(`Cannot scrobble to Client '${client.name}' because it is still initializing`);
+                    client.logger.warn(`Cannot scrobble because it is still initializing`);
                     continue;
                 }
                 if(!(await client.initialize())) {
-                    this.logger.warn(`Cannot scrobble to Client '${client.name}' because it could not be initialized`);
+                    client.logger.warn(`Cannot scrobble because it could not be initialized`);
                     continue;
                 }
             }
 
             if(client.requiresAuth && !client.authed) {
                 if (client.requiresAuthInteraction) {
-                    this.logger.warn(`Cannot scrobble to Client '${client.name}' because user interaction is required for authentication`);
+                    client.logger.warn(`Cannot scrobble because user interaction is required for authentication`);
                     continue;
                 } else if (!(await client.testAuth())) {
-                    this.logger.warn(`Cannot scrobble to Client '${client.name}' because auth test failed`);
+                    client.logger.warn(`Cannot scrobble because auth test failed`);
                     continue;
                 }
             }
 
             if(!(await client.isReady())) {
-                this.logger.warn(`Cannot scrobble to Client '${client.name}' because it is not ready`);
+                client.logger.warn(`Cannot scrobble because it is not ready`);
                 continue;
             }
 
@@ -370,7 +370,7 @@ ${sources.join('\n')}`);
                 try {
                     await client.refreshScrobbles();
                 } catch(e) {
-                    this.logger.error(`Encountered error while refreshing scrobbles for ${client.name}`);
+                    client.logger.error(`Encountered error while refreshing scrobbles`);
                     this.logger.error(e);
                 }
             }
@@ -392,12 +392,12 @@ ${sources.join('\n')}`);
                         }
                     } else {
                         if(!timeFrameValid) {
-                            this.logger.debug(`Will not scrobble ${buildTrackString(playObj)} because it ${timeFrameValidLog}`);
+                            client.logger.debug(`Will not scrobble ${buildTrackString(playObj)} from Source '${scrobbleFrom}' because it ${timeFrameValidLog}`);
                         }
                     }
                 } catch(e) {
-                    this.logger.error(`Encountered error while in scrobble loop for ${client.name}`);
-                    this.logger.error(e);
+                    client.logger.error(`Encountered error while in scrobble loop`);
+                    client.logger.error(e);
                     // for now just stop scrobbling plays for this client and move on. the client should deal with logging the issue
                     if(e.continueScrobbling !== true) {
                         break;
