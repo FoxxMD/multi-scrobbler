@@ -1,7 +1,7 @@
 import {addAsync, Router} from '@awaitjs/express';
 import express from 'express';
 import bodyParser from 'body-parser';
-import winston, {info, Logger} from 'winston';
+import {Logger} from 'winston';
 import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc.js';
 import isBetween from 'dayjs/plugin/isBetween.js';
@@ -9,9 +9,7 @@ import relativeTime from 'dayjs/plugin/relativeTime.js';
 import duration from 'dayjs/plugin/duration.js';
 import passport from 'passport';
 import session from 'express-session';
-import {Writable} from 'stream';
-//import {NullTransport} from 'winston-null';
-//import 'winston-daily-rotate-file';
+
 import {
     buildTrackString,
     capitalize,
@@ -65,63 +63,7 @@ app.use(session({secret: 'keyboard cat', resave: false, saveUninitialized: false
 app.use(passport.initialize());
 app.use(passport.session());
 
-const {transports} = winston;
-
 let output: LogInfo[] = []
-/*const stream = new Writable()
-stream._write = (chunk, encoding, next) => {
-    let formatString = chunk.toString().replace('\n', '<br />')
-    .replace(/(debug)\s/gi, '<span class="debug text-pink-400">$1 </span>')
-    .replace(/(warn)\s/gi, '<span class="warn text-blue-400">$1 </span>')
-    .replace(/(info)\s/gi, '<span class="info text-yellow-500">$1 </span>')
-    .replace(/(error)\s/gi, '<span class="error text-red-400">$1 </span>')
-    output.unshift(formatString);
-    output = output.slice(0, 101);
-    io.emit('log', formatString);
-    next();
-}*/
-/*const streamTransport = new winston.transports.Stream({
-    stream,
-})*/
-
-
-/*let logPath = path.resolve(projectDir, `./logs`);
-if(typeof process.env.CONFIG_DIR === 'string') {
-    logPath = path.resolve(process.env.CONFIG_DIR, './logs');
-}
-const localUrl = `http://localhost:${port}`;
-
-const rotateTransport = new winston.transports.DailyRotateFile({
-    dirname: logPath,
-    createSymlink: true,
-    symlinkName: 'scrobble-current.log',
-    filename: 'scrobble-%DATE%.log',
-    datePattern: 'YYYY-MM-DD',
-    maxSize: '5m'
-});
-
-const consoleTransport = new transports.Console();
-
-const myTransports = [
-    consoleTransport,
-    streamTransport,
-];
-
-if (typeof logPath === 'string') {
-    // @ts-ignore
-    myTransports.push(rotateTransport);
-}
-
-const loggerOptions: winston.LoggerOptions = {
-    level: logConfig.level,
-    format: labelledFormat(),
-    transports: myTransports,
-};
-
-winston.loggers.add('default', loggerOptions);
-
-winston.loggers.add('noop', {transports: [new NullTransport()]});*/
-
 
 const initLogger = getLogger({}, 'init');
 initLogger.stream().on('log', (log: LogInfo) => {
@@ -130,7 +72,7 @@ initLogger.stream().on('log', (log: LogInfo) => {
     io.emit('log', formatLogToHtml(log[MESSAGE]));
 });
 
-let logger: Logger; // = winston.loggers.get('default');
+let logger: Logger;
 
 const configDir = process.env.CONFIG_DIR || path.resolve(projectDir, `./config`);
 
