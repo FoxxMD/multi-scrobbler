@@ -38,7 +38,7 @@ export default class ListenbrainzScrobbler extends AbstractScrobbleClient {
         this.api = new ListenbrainzApiClient(name, config.data);
     }
 
-    formatPlayObj = (obj: any, options: FormatPlayObjectOptions = {}) => LastfmApiClient.formatPlayObj(obj, options);
+    formatPlayObj = (obj: any, options: FormatPlayObjectOptions = {}) => ListenbrainzApiClient.formatPlayObj(obj, options);
 
     initialize = async () => {
         // @ts-expect-error TS(2322): Type 'number' is not assignable to type 'boolean'.
@@ -73,7 +73,7 @@ export default class ListenbrainzScrobbler extends AbstractScrobbleClient {
     refreshScrobbles = async () => {
         if (this.refreshEnabled) {
             this.logger.debug('Refreshing recent scrobbles');
-            const resp = await this.api.getUserListens(this.config.data.username);
+            const resp = await this.api.getRecentlyPlayed();
             this.recentScrobbles = resp.sort(sortByOldestPlayDate);
             if (this.recentScrobbles.length > 0) {
                 const [{data: {playDate: newestScrobbleTime = dayjs()} = {}} = {}] = this.recentScrobbles.slice(-1);
@@ -99,12 +99,12 @@ export default class ListenbrainzScrobbler extends AbstractScrobbleClient {
             } = {}
         } = playObj;
 
-        let rawPayload = {listen_type: 'single', payload: [ListenbrainzApiClient.playToListen(playObj)]};
+        let rawPayload = {listen_type: 'single', payload: [ListenbrainzApiClient.playToListenPayload(playObj)]};
 
         try {
             const resp = await this.api.submitListen(playObj);
             rawPayload = resp;
-            this.addScrobbledTrack(playObj, ListenbrainzApiClient.playToListen(playObj));
+            this.addScrobbledTrack(playObj, playObj);
             if (newFromSource) {
                 this.logger.info(`Scrobbled (New)     => (${source}) ${buildTrackString(playObj)}`);
             } else {
