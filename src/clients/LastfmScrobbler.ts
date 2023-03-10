@@ -57,7 +57,7 @@ export default class LastfmScrobbler extends AbstractScrobbleClient {
     refreshScrobbles = async () => {
         if (this.refreshEnabled) {
             this.logger.debug('Refreshing recent scrobbles');
-            const resp = await this.api.callApi<UserGetRecentTracksResponse>((client: any) => client.userGetRecentTracks({user: this.api.user, limit: 20, extended: true}));
+            const resp = await this.api.callApi<UserGetRecentTracksResponse>((client: any) => client.userGetRecentTracks({user: this.api.user, limit: 40, extended: true}));
             const {
                 recenttracks: {
                     track: list = [],
@@ -94,6 +94,7 @@ export default class LastfmScrobbler extends AbstractScrobbleClient {
                     return acc;
                 }
             }, []).sort(sortByOldestPlayDate);
+            this.logger.debug(`Found ${this.recentScrobbles.length} recent scrobbles`);
             if (this.recentScrobbles.length > 0) {
                 const [{data: {playDate: newestScrobbleTime = dayjs()} = {}} = {}] = this.recentScrobbles.slice(-1);
                 const [{data: {playDate: oldestScrobbleTime = dayjs()} = {}} = {}] = this.recentScrobbles.slice(0, 1);

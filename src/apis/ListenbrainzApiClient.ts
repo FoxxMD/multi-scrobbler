@@ -160,7 +160,9 @@ export class ListenbrainzApiClient extends AbstractApiClient {
                     response: 15000, // wait 15 seconds before timeout if server doesn't response at all
                     deadline: 30000 // wait 30 seconds overall for request to complete
                 })
-                .query({count: 25}));
+                .query({
+                    count: 40
+                }));
             const {body: {payload}} = resp as any;
             return payload as ListensResponse;
         } catch (e) {

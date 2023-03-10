@@ -74,6 +74,7 @@ export default class ListenbrainzScrobbler extends AbstractScrobbleClient {
         if (this.refreshEnabled) {
             this.logger.debug('Refreshing recent scrobbles');
             const resp = await this.api.getRecentlyPlayed();
+            this.logger.debug(`Found ${resp.length} recent scrobbles`);
             this.recentScrobbles = resp.sort(sortByOldestPlayDate);
             if (this.recentScrobbles.length > 0) {
                 const [{data: {playDate: newestScrobbleTime = dayjs()} = {}} = {}] = this.recentScrobbles.slice(-1);

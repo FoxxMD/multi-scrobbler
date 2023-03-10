@@ -309,12 +309,13 @@ export default class MalojaScrobbler extends AbstractScrobbleClient {
         if (this.refreshEnabled) {
             this.logger.debug('Refreshing recent scrobbles');
             const {url} = this.config.data;
-            const resp = await this.callApi(request.get(`${url}/apis/mlj_1/scrobbles?max=20`));
+            const resp = await this.callApi(request.get(`${url}/apis/mlj_1/scrobbles?max=40`));
             const {
                 body: {
                     list = [],
                 } = {},
             } = resp;
+            this.logger.debug(`Found ${list.length} recent scrobbles`);
             this.recentScrobbles = list.map((x: any) => this.formatPlayObj(x)).sort(sortByOldestPlayDate);
             if (this.recentScrobbles.length > 0) {
                 const [{data: {playDate: newestScrobbleTime = dayjs()} = {}} = {}] = this.recentScrobbles.slice(-1);
