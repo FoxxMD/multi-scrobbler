@@ -300,16 +300,16 @@ export default abstract class AbstractScrobbleClient {
         // if not though then we need to check recent scrobbles from scrobble api.
         // this will be less accurate than checking existing submitted (obv) but will happen if backlogging or on a fresh server start
 
-        // if no recent scrobbles found then assume we haven't submitted it
-        // (either user doesnt want to check history or there is no history to check!)
-        if (this.recentScrobbles.length === 0) {
-            if (this.verboseOptions.match.onNoMatch) {
-                this.logger.debug(`(Existing Check) ${buildTrackString(playObj, scoreTrackOpts)} => No Match because no recent scrobbles returned from API`);
-            }
-            return undefined;
-        }
-
         if (existingScrobble === undefined) {
+
+            // if no recent scrobbles found then assume we haven't submitted it
+            // (either user doesnt want to check history or there is no history to check!)
+            if (this.recentScrobbles.length === 0) {
+                if (this.verboseOptions.match.onNoMatch) {
+                    this.logger.debug(`(Existing Check) ${buildTrackString(playObj, scoreTrackOpts)} => No Match because no recent scrobbles returned from API`);
+                }
+                return undefined;
+            }
 
             // we have have found an existing submission but without an exact date
             // in which case we can check the scrobble api response against recent scrobbles (also from api) for a more accurate comparison
