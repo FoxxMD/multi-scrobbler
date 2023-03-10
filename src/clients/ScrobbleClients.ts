@@ -22,6 +22,7 @@ import {EventEmitter} from "events";
 import winston from "winston";
 import ListenbrainzScrobbler from "./ListenbrainzScrobbler.js";
 import {ListenBrainzClientConfig} from "../common/infrastructure/config/client/listenbrainz.js";
+import {ErrorWithCause} from "pony-cause";
 
 type groupedNamedConfigs = {[key: string]: ParsedConfig[]};
 
@@ -419,8 +420,7 @@ ${sources.join('\n')}`);
                         }
                     }
                 } catch(e) {
-                    client.logger.error(`Encountered error while in scrobble loop`);
-                    client.logger.error(e);
+                    client.logger.error(new ErrorWithCause(`Encountered error while in scrobble loop`, {cause: e}));
                     // for now just stop scrobbling plays for this client and move on. the client should deal with logging the issue
                     if(e.continueScrobbling !== true) {
                         break;

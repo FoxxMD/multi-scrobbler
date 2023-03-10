@@ -124,10 +124,10 @@ export default class ListenbrainzScrobbler extends AbstractScrobbleClient {
                 }
             }
             await this.notifier.notify({title: `Client - ${capitalize(this.type)} - ${this.name} - Scrobble Error`, message: `Failed to scrobble => ${buildTrackString(playObj)} | Error: ${message}`, priority: 'error'});
-            this.logger.error(`Failed to scrobble => ${message} | payload => ${JSON.stringify(rawPayload)}`);
+            this.logger.error(`Failed to scrobble => ${message}`, {payload: rawPayload});
             throw e;
         } finally {
-            this.logger.debug(`Raw Payload:  ${JSON.stringify(rawPayload)}`);
+            this.logger.debug(`Raw Payload:`, {rawPayload});
         }
 
         return true;

@@ -442,11 +442,12 @@ export default class MalojaScrobbler extends AbstractScrobbleClient {
             } else {
                 this.logger.info(`Scrobbled (Backlog) => (${source}) ${buildTrackString(playObj)}`);
             }
-            this.logger.debug('Payload:', scrobbleData);
         } catch (e) {
             await this.notifier.notify({title: `Client - ${capitalize(this.type)} - ${this.name} - Scrobble Error`, message: `Failed to scrobble => ${buildTrackString(playObj)} | Error: ${e.message}`, priority: 'error'});
             this.logger.error(`Scrobble Error (${sType})`, {playInfo: buildTrackString(playObj), payload: scrobbleData});
             throw e;
+        } finally {
+            this.logger.debug('Raw Payload:', scrobbleData);
         }
 
         return true;

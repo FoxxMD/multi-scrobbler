@@ -4,11 +4,14 @@ import winston, {format, Logger} from "winston";
 import {DuplexTransport} from "winston-duplex";
 import {asLogOptions, LogConfig, LogInfo, LogLevel, LogOptions} from "./infrastructure/Atomic.js";
 import process from "process";
-import {fileOrDirectoryIsWriteable} from "../utils.js";
-import {ErrorWithCause} from "pony-cause";
+import {fileOrDirectoryIsWriteable, truncateStringToLength} from "../utils.js";
+import {ErrorWithCause, stackWithCauses} from "pony-cause";
 import {NullTransport} from 'winston-null';
 import 'winston-daily-rotate-file';
 import dayjs from "dayjs";
+import stringify from 'safe-stable-stringify';
+import {SPLAT, LEVEL, MESSAGE} from 'triple-beam';
+import {Symbol} from "typescript-json-schema";
 
 const {combine, printf, timestamp, label, splat, errors} = format;
 
@@ -117,25 +120,28 @@ export const formatLogToHtml = (chunk: any) => {
     return line;
 }
 
+const levelSymbol = Symbol.for('level');
 const s = splat();
-const SPLAT = Symbol.for('splat')
-const errorsFormat = errors({stack: true});
+//const errorsFormat = errors({stack: true});
 const CWD = process.cwd();
 
-let longestLabel = 3;
+const causeKeys = ['name',  'cause']
+
 export const defaultFormat = (defaultLabel = 'App') => printf(({
+                                                                   label,
+                                                                   [levelSymbol]: levelSym,
                                                                    level,
                                                                    message,
                                                                    labels = [defaultLabel],
                                                                    leaf,
                                                                    timestamp,
                                                                    durationMs,
-                                                                   // @ts-ignore
                                                                    [SPLAT]: splatObj,
                                                                    stack,
                                                                    ...rest
                                                                }) => {
-    let stringifyValue = splatObj !== undefined ? JSON.stringify(splatObj) : '';
+    const keys = Object.keys(rest);
+    let stringifyValue = keys.length > 0 && !keys.every(x => causeKeys.some(y => y == x)) ? stringify(rest) : '';
     let msg = message;
     let stackMsg = '';
     if (stack !== undefined) {
@@ -172,7 +178,7 @@ export const labelledFormat = (labelName = 'App') => {
         ),
         l,
         s,
-        errorsFormat,
+        errorAwareFormat,
         defaultFormat(labelName),
     );
 }
@@ -207,4 +213,129 @@ export const isLogLineMinLevel = (log: string | LogInfo, minLevelText: LogLevel)
         level = logLevels[lineLevelMatch];
     }
     return level <= minLevel;
+}
+
+const isProbablyError = (val: any, explicitErrorName?: string) => {
+    if(typeof val !== 'object' || val === null) {
+        return false;
+    }
+    const {name, stack} = val;
+    if(explicitErrorName !== undefined) {
+        if(name !== undefined && name.toLowerCase().includes(explicitErrorName)) {
+            return true;
+        }
+        if(stack !== undefined && stack.trim().toLowerCase().indexOf(explicitErrorName.toLowerCase()) === 0) {
+            return true;
+        }
+        return false;
+    } else if(stack !== undefined) {
+        return true;
+    } else if(name !== undefined && name.toLowerCase().includes('error')) {
+        return true;
+    }
+
+    return false;
+}
+
+const errorAwareFormat = {
+    transform: (einfo: any, {stack = true}: any = {}) => {
+
+        // because winston logger.child() re-assigns its input to an object ALWAYS the object we recieve here will never actually be of type Error
+        const includeStack = stack && (!isProbablyError(einfo, 'simpleerror') && !isProbablyError(einfo.message, 'simpleerror'));
+
+        if (!isProbablyError(einfo.message) && !isProbablyError(einfo)) {
+            return einfo;
+        }
+
+        let info: any = {};
+
+        if (isProbablyError(einfo)) {
+            const tinfo = transformError(einfo);
+            info = Object.assign({}, tinfo, {
+                // @ts-ignore
+                level: einfo.level,
+                // @ts-ignore
+                [LEVEL]: einfo[LEVEL] || einfo.level,
+                message: tinfo.message,
+                // @ts-ignore
+                [MESSAGE]: tinfo[MESSAGE] || tinfo.message
+            });
+            if(includeStack) {
+                // so we have to create a dummy error and re-assign all error properties from our info object to it so we can get a proper stack trace
+                const dummyErr = new ErrorWithCause('');
+                const names = Object.getOwnPropertyNames(tinfo);
+                for(const k of names) {
+                    if(dummyErr.hasOwnProperty(k) || k === 'cause') {
+                        // @ts-ignore
+                        dummyErr[k] = tinfo[k];
+                    }
+                }
+                // @ts-ignore
+                info.stack = stackWithCauses(dummyErr);
+            }
+        } else {
+            const err = transformError(einfo.message);
+            info = Object.assign({}, einfo, err);
+            // @ts-ignore
+            info.message = err.message;
+            // @ts-ignore
+            info[MESSAGE] = err.message;
+
+            if(includeStack) {
+                const dummyErr = new ErrorWithCause('');
+                // Error properties are not enumerable
+                // https://stackoverflow.com/a/18278145/1469797
+                const names = Object.getOwnPropertyNames(err);
+                for(const k of names) {
+                    if(dummyErr.hasOwnProperty(k) || k === 'cause') {
+                        // @ts-ignore
+                        dummyErr[k] = err[k];
+                    }
+                }
+                // @ts-ignore
+                info.stack = stackWithCauses(dummyErr);
+            }
+        }
+
+        // remove redundant message from stack and make stack causes easier to read
+        if(info.stack !== undefined) {
+            let cleanedStack = info.stack.replace(info.message, '');
+            cleanedStack = `${cleanedStack}`;
+            cleanedStack = cleanedStack.replaceAll('caused by:', '\ncaused by:');
+            info.stack = cleanedStack;
+        }
+
+        return info;
+    }
+}
+
+export const transformError = (err: Error): any => _transformError(err, new Set());
+
+const _transformError = (err: Error, seen: Set<Error>) => {
+    if (!err || !isProbablyError(err)) {
+        return '';
+    }
+    if (seen.has(err)) {
+        return err;
+    }
+
+    try {
+
+        // @ts-ignore
+        let mOpts = err.matchOptions ?? matchOptions;
+
+        // @ts-ignore
+        const cause = err.cause as unknown;
+
+        if (cause !== undefined && cause instanceof Error) {
+            // @ts-ignore
+            err.cause = _transformError(cause, seen, mOpts);
+        }
+
+        return err;
+    } catch (e: any) {
+        // oops :(
+        // we're gonna swallow silently instead of reporting to avoid any infinite nesting and hopefully the original error looks funny enough to provide clues as to what to fix here
+        return err;
+    }
 }
