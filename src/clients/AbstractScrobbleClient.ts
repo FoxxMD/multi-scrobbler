@@ -18,6 +18,7 @@ import winston, {Logger} from "winston";
 import {CommonClientConfig} from "../common/infrastructure/config/client/index.js";
 import {ClientConfig} from "../common/infrastructure/config/client/clients.js";
 import {Notifiers} from "../notifier/Notifiers.js";
+import {FixedSizeList} from 'fixed-size-list';
 
 export default abstract class AbstractScrobbleClient {
 
@@ -26,12 +27,14 @@ export default abstract class AbstractScrobbleClient {
 
     #initState: InitState = NOT_INITIALIZED;
 
+    protected MAX_STORED_SCROBBLES = 40;
+
     requiresAuth: boolean = false;
     requiresAuthInteraction: boolean = false;
     authed: boolean = false;
 
     recentScrobbles: PlayObject[] = [];
-    scrobbledPlayObjs: ScrobbledPlayObject[] = [];
+    scrobbledPlayObjs: FixedSizeList<ScrobbledPlayObject>;
     newestScrobbleTime?: Dayjs
     oldestScrobbleTime: Dayjs = dayjs();
     tracksScrobbled: number = 0;
@@ -52,6 +55,8 @@ export default abstract class AbstractScrobbleClient {
         const identifier = `Client ${capitalize(this.type)} - ${name}`;
         this.logger = logger.child({labels: [identifier]}, mergeArr);
         this.notifier = notifier;
+
+        this.scrobbledPlayObjs = new FixedSizeList<ScrobbledPlayObject>(this.MAX_STORED_SCROBBLES);
 
         const {
             data: {
@@ -159,7 +164,11 @@ export default abstract class AbstractScrobbleClient {
     }
 
     addScrobbledTrack = (playObj: PlayObject, scrobbledPlay: PlayObject) => {
-        this.scrobbledPlayObjs.push({play: playObj, scrobble: scrobbledPlay});
+        this.scrobbledPlayObjs.add({play: playObj, scrobble: scrobbledPlay});
+    }
+
+    filterScrobbledTracks = () => {
+        this.scrobbledPlayObjs = new FixedSizeList<ScrobbledPlayObject>(this.MAX_STORED_SCROBBLES, this.scrobbledPlayObjs.data.filter(x => this.timeFrameIsValid(x.play)[0])) ;
     }
 
     cleanSourceSearchTitle = (playObj: PlayObject) => {
@@ -182,7 +191,7 @@ export default abstract class AbstractScrobbleClient {
             } = {}
         } = playObj;
 
-        const dtInvariantMatches = this.scrobbledPlayObjs.filter(x => playObjDataMatch(playObj, x.play));
+        const dtInvariantMatches = this.scrobbledPlayObjs.data.filter(x => playObjDataMatch(playObj, x.play));
 
         if (dtInvariantMatches.length === 0) {
             return [undefined, undefined];

@@ -150,7 +150,7 @@ export class ListenbrainzApiClient extends AbstractApiClient {
         }
     }
 
-    getUserListens = async (user?: string): Promise<ListensResponse> => {
+    getUserListens = async (maxTracks: number, user?: string): Promise<ListensResponse> => {
         try {
 
             const resp = await this.callApi(request
@@ -161,7 +161,7 @@ export class ListenbrainzApiClient extends AbstractApiClient {
                     deadline: 30000 // wait 30 seconds overall for request to complete
                 })
                 .query({
-                    count: 40
+                    count: maxTracks
                 }));
             const {body: {payload}} = resp as any;
             return payload as ListensResponse;
@@ -170,9 +170,9 @@ export class ListenbrainzApiClient extends AbstractApiClient {
         }
     }
 
-    getRecentlyPlayed = async (user?: string): Promise<PlayObject[]> => {
+    getRecentlyPlayed = async (maxTracks: number, user?: string): Promise<PlayObject[]> => {
         try {
-            const resp = await this.getUserListens(user);
+            const resp = await this.getUserListens(maxTracks, user);
             return resp.listens.map(x => ListenbrainzApiClient.listenResponseToPlay(x));
         } catch (e) {
             this.logger.error(`Error encountered while getting User listens | Error =>  ${e.message}`);

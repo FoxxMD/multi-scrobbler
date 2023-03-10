@@ -12,7 +12,7 @@ import LastfmApiClient from "../apis/LastfmApiClient.js";
 import {
     FormatPlayObjectOptions,
     INITIALIZING,
-    PlayObject,
+    PlayObject, ScrobbledPlayObject,
     TrackStringOptions
 } from "../common/infrastructure/Atomic.js";
 import {LastfmClientConfig} from "../common/infrastructure/config/client/lastfm.js";
@@ -57,7 +57,7 @@ export default class LastfmScrobbler extends AbstractScrobbleClient {
     refreshScrobbles = async () => {
         if (this.refreshEnabled) {
             this.logger.debug('Refreshing recent scrobbles');
-            const resp = await this.api.callApi<UserGetRecentTracksResponse>((client: any) => client.userGetRecentTracks({user: this.api.user, limit: 40, extended: true}));
+            const resp = await this.api.callApi<UserGetRecentTracksResponse>((client: any) => client.userGetRecentTracks({user: this.api.user, limit: this.MAX_STORED_SCROBBLES, extended: true}));
             const {
                 recenttracks: {
                     track: list = [],
@@ -101,7 +101,7 @@ export default class LastfmScrobbler extends AbstractScrobbleClient {
                 this.newestScrobbleTime = newestScrobbleTime;
                 this.oldestScrobbleTime = oldestScrobbleTime;
 
-                this.scrobbledPlayObjs = this.scrobbledPlayObjs.filter(x => this.timeFrameIsValid(x.play)[0]);
+                this.filterScrobbledTracks();
             }
         }
         this.lastScrobbleCheck = dayjs();

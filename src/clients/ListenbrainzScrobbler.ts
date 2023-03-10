@@ -73,7 +73,7 @@ export default class ListenbrainzScrobbler extends AbstractScrobbleClient {
     refreshScrobbles = async () => {
         if (this.refreshEnabled) {
             this.logger.debug('Refreshing recent scrobbles');
-            const resp = await this.api.getRecentlyPlayed();
+            const resp = await this.api.getRecentlyPlayed(this.MAX_STORED_SCROBBLES);
             this.logger.debug(`Found ${resp.length} recent scrobbles`);
             this.recentScrobbles = resp.sort(sortByOldestPlayDate);
             if (this.recentScrobbles.length > 0) {
@@ -82,7 +82,7 @@ export default class ListenbrainzScrobbler extends AbstractScrobbleClient {
                 this.newestScrobbleTime = newestScrobbleTime;
                 this.oldestScrobbleTime = oldestScrobbleTime;
 
-                this.scrobbledPlayObjs = this.scrobbledPlayObjs.filter(x => this.timeFrameIsValid(x.play)[0]);
+                this.filterScrobbledTracks();
             }
         }
         this.lastScrobbleCheck = dayjs();

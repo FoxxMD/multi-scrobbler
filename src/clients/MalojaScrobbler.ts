@@ -309,7 +309,7 @@ export default class MalojaScrobbler extends AbstractScrobbleClient {
         if (this.refreshEnabled) {
             this.logger.debug('Refreshing recent scrobbles');
             const {url} = this.config.data;
-            const resp = await this.callApi(request.get(`${url}/apis/mlj_1/scrobbles?max=40`));
+            const resp = await this.callApi(request.get(`${url}/apis/mlj_1/scrobbles?max=${this.MAX_STORED_SCROBBLES}`));
             const {
                 body: {
                     list = [],
@@ -323,7 +323,7 @@ export default class MalojaScrobbler extends AbstractScrobbleClient {
                 this.newestScrobbleTime = newestScrobbleTime;
                 this.oldestScrobbleTime = oldestScrobbleTime;
 
-                this.scrobbledPlayObjs = this.scrobbledPlayObjs.filter(x => this.timeFrameIsValid(x.play)[0]);
+                this.filterScrobbledTracks();
             }
         }
         this.lastScrobbleCheck = dayjs();
@@ -359,7 +359,6 @@ export default class MalojaScrobbler extends AbstractScrobbleClient {
     scrobble = async (playObj: PlayObject) => {
         const {url, apiKey} = this.config.data;
 
-        return true;
         const {
             data: {
                 artists,
