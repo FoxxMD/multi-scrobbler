@@ -36,7 +36,7 @@ export default abstract class AbstractScrobbleClient {
     recentScrobbles: PlayObject[] = [];
     scrobbledPlayObjs: FixedSizeList<ScrobbledPlayObject>;
     newestScrobbleTime?: Dayjs
-    oldestScrobbleTime: Dayjs = dayjs();
+    oldestScrobbleTime?: Dayjs
     tracksScrobbled: number = 0;
 
     lastScrobbleCheck: Dayjs = dayjs(0)
@@ -147,10 +147,14 @@ export default abstract class AbstractScrobbleClient {
 
     // time frame is valid as long as the play date for the source track is newer than the oldest play time from the scrobble client
     // ...this is assuming the scrobble client is returning "most recent" scrobbles
-    timeFrameIsValid = (playObj: any) => {
+    timeFrameIsValid = (playObj: PlayObject) => {
+
+        if(this.oldestScrobbleTime === undefined) {
+            return [true, ''];
+        }
+
         const {
             data: {
-                // @ts-expect-error TS(2525): Initializer provides no value for this binding ele... Remove this comment to see the full error message
                 playDate,
             } = {},
         } = playObj;
