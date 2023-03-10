@@ -1,12 +1,42 @@
 import AbstractApiClient from "./AbstractApiClient.js";
 import request, {Request} from 'superagent';
 import {ListenBrainzClientData} from "../common/infrastructure/config/client/listenbrainz.js";
-import {PlayObject} from "../common/infrastructure/Atomic.js";
+import {FormatPlayObjectOptions, PlayObject} from "../common/infrastructure/Atomic.js";
 import dayjs from "dayjs";
 
-export interface ListenPayload {
-    count: number;
-    listens: Listen[];
+
+export interface ArtistMBIDMapping {
+    artist_credit_name: string
+    artist_mbid: string
+    join_phrase: string
+}
+
+export interface MinimumTrack {
+    artist_name: string;
+    track_name: string;
+    release_name?: string;
+}
+
+export interface AdditionalTrackInfo {
+    artist_mbids?: string[]
+    release_mbid?: string
+    release_group_mbid?: string
+    recording_mbid?: string
+    submission_client?: string
+    submission_client_version?: string
+    spotify_id?: string
+    media_player?: string
+    media_player_version?: string
+
+    music_service?: string
+    music_service_name?: string
+    origin_url?: string
+    tags?: string[]
+    duration?: number
+
+    duration_ms?: number
+    track_mbid?: string
+    work_mbids?: string[]
 }
 
 export interface Track {
@@ -23,10 +53,49 @@ export interface Track {
     duration?: number
 }
 
-export interface Listen {
+export interface AdditionalTrackInfoResponse extends AdditionalTrackInfo {
+    recording_msid?: string
+}
+
+export interface TrackPayload extends MinimumTrack {
+    additional_info?: AdditionalTrackInfo
+}
+
+export interface ListenPayload {
     listened_at: Date | number;
     recording_msid?: string;
-    track_metadata: Track;
+    track_metadata: TrackPayload;
+}
+
+export interface SubmitPayload {
+    listen_type: 'single',
+    payload: [ListenPayload]
+}
+
+export interface TrackResponse extends MinimumTrack {
+    duration: number
+    additional_info: AdditionalTrackInfoResponse
+    mbid_mapping: {
+        artist_mbids?: string[]
+        artists?: ArtistMBIDMapping[]
+        caa_id?: number
+        caa_release_mbid?: string
+        recording_mbid?: string
+        release_mbid?: string
+    }
+}
+
+export interface ListensResponse {
+    count: number;
+    listens: ListenResponse[];
+}
+
+export interface ListenResponse {
+
+    inserted_at: number
+    listened_at: number;
+    recording_msid?: string;
+    track_metadata: TrackResponse;
 }
 
 export class ListenbrainzApiClient extends AbstractApiClient {
@@ -81,43 +150,30 @@ export class ListenbrainzApiClient extends AbstractApiClient {
         }
     }
 
-    getUserListens = async (user?: string): Promise<PlayObject[]> => {
+    getUserListens = async (user?: string): Promise<ListensResponse> => {
         try {
 
             const resp = await this.callApi(request.get(`${this.url}1/user/${user ?? this.config.username}/listens`).query({count: 25}));
             const {body: {payload}} = resp as any;
-
-            let response: ListenPayload = {
-                count: payload.count,
-                listens: payload.listens.map((i: any) => {
-                    let listen: Listen = {
-                        listened_at: i.listened_at,
-                        recording_msid: i.recording_msid,
-                        track_metadata: {
-                            artist_name: i.track_metadata.artist_name,
-                            track_name: i.track_metadata.track_name,
-                            release_name: i.track_metadata.additional_info.release_name,
-                            artist_mbids: i.track_metadata.additional_info.artist_mbids,
-                            artist_msid: i.track_metadata.additional_info.artist_msid,
-                            recording_mbid: i.track_metadata.additional_info.recording_mbid,
-                            release_mbid: i.track_metadata.additional_info.release_mbid,
-                            release_msid: i.track_metadata.additional_info.release_msid,
-                            tags: i.track_metadata.additional_info.tags,
-                        },
-                    }
-                    return listen;
-                })
-            }
-
-            return response.listens.map(x => ListenbrainzApiClient.listenToPlay(x));
+            return payload as ListensResponse;
         } catch (e) {
+            throw e;
+        }
+    }
+
+    getRecentlyPlayed = async (user?: string): Promise<PlayObject[]> => {
+        try {
+            const resp = await this.getUserListens(user);
+            return resp.listens.map(x => ListenbrainzApiClient.listenResponseToPlay(x));
+        } catch (e) {
+            this.logger.error(`Error encountered while getting User listens | Error =>  ${e.message}`);
             return [];
         }
     }
 
     submitListen = async (play: PlayObject) => {
         try {
-            const listenPayload = {listen_type: 'single', payload: [ListenbrainzApiClient.playToListen(play)]};
+            const listenPayload: SubmitPayload = {listen_type: 'single', payload: [ListenbrainzApiClient.playToListenPayload(play)]};
             await this.callApi(request.post(`${this.url}1/submit-listens`).type('json').send(listenPayload));
             return listenPayload;
         } catch (e) {
@@ -125,31 +181,71 @@ export class ListenbrainzApiClient extends AbstractApiClient {
         }
     }
 
-    static playToListen = (play: PlayObject): Listen => {
+    static playToListenPayload = (play: PlayObject): ListenPayload => {
         return {
             listened_at: (play.data.playDate ?? dayjs()).unix(),
             track_metadata: {
                 artist_name: play.data.artists[0],
                 track_name: play.data.track,
-                duration: play.data.duration !== undefined ? Math.round(play.data.duration) : undefined
+                additional_info: {
+                    duration: play.data.duration !== undefined ? Math.round(play.data.duration) : undefined
+                }
             }
         }
     }
 
-    static listenToPlay = (listen: Listen): PlayObject => {
-        const {listened_at, recording_msid, track_metadata} = listen;
+    static listenResponseToPlay = (listen: ListenResponse): PlayObject => {
+        const {
+            listened_at,
+            recording_msid,
+            track_metadata: {
+                track_name,
+                artist_name,
+                release_name,
+                duration,
+                additional_info: {
+                    recording_msid: aRecordingMsid,
+                    recording_mbid: aRecordingMbid,
+                    duration: aDuration,
+                    duration_ms: aDurationMs,
+                } = {},
+                mbid_mapping: {
+                    artists: artistMappings = [],
+                    recording_mbid: mRecordingMbid
+                } = {}
+            } = {}
+        } = listen;
+
+        const playId = recording_msid ?? aRecordingMsid;
+        const trackId = aRecordingMbid ?? mRecordingMbid;
+        let dur = duration ?? aDuration;
+        if (dur === undefined && aDurationMs !== undefined) {
+            dur = Math.round(aDurationMs / 1000);
+        }
+
+        let artists: string[] = [artist_name];
+        if (artistMappings.length > 0) {
+            const secondaryArtists = artistMappings.filter(x => x.artist_credit_name !== artist_name);
+            artists = artists.concat(secondaryArtists.map(x => x.artist_credit_name));
+        }
+
         return {
             data: {
-                playDate: dayjs(listened_at),
-                track: track_metadata.track_name,
-                artists: [track_metadata.artist_name],
-                album: track_metadata.release_name,
-                duration: track_metadata.duration
+                playDate: dayjs.unix(listened_at),
+                track: track_name,
+                artists: artists,
+                album: release_name,
+                duration: dur
             },
             meta: {
                 source: 'listenbrainz',
-                trackId: recording_msid
+                trackId,
+                playId
             }
         }
+    }
+
+    static formatPlayObj = (obj: any, options: FormatPlayObjectOptions): PlayObject => {
+        return ListenbrainzApiClient.listenResponseToPlay(obj);
     }
 }
