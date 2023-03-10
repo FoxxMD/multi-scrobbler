@@ -1,19 +1,22 @@
 import MemorySource from "./MemorySource.js";
 import dayjs from "dayjs";
-import {buildTrackString, parseDurationFromTimestamp} from "../utils.js";
+import {buildTrackString, combinePartsToString, parseDurationFromTimestamp, truncateStringToLength} from "../utils.js";
 import {JellySourceConfig} from "../common/infrastructure/config/source/jellyfin.js";
-import {InternalConfig, PlayObject} from "../common/infrastructure/Atomic.js";
-import {Notifiers} from "../notifier/Notifiers.js";
+import {FormatPlayObjectOptions, InternalConfig, PlayObject} from "../common/infrastructure/Atomic.js";
+import EventEmitter from "events";
 
+const shortDeviceId = truncateStringToLength(10, '');
 
 export default class JellyfinSource extends MemorySource {
     users;
     servers;
 
+    multiPlatform: boolean = true;
+
     declare config: JellySourceConfig;
 
-    constructor(name: any, config: JellySourceConfig, internal: InternalConfig, notifier: Notifiers) {
-        super('jellyfin', name, config, internal, notifier);
+    constructor(name: any, config: JellySourceConfig, internal: InternalConfig, emitter: EventEmitter) {
+        super('jellyfin', name, config, internal, emitter);
         const {data: {users, servers} = {}} = config;
 
         if (users === undefined || users === null) {
@@ -46,7 +49,8 @@ export default class JellyfinSource extends MemorySource {
         this.initialized = true;
     }
 
-    static formatPlayObj(obj: any, newFromSource = false): PlayObject {
+    static formatPlayObj(obj: any, options: FormatPlayObjectOptions = {}): PlayObject {
+        const {newFromSource = false} = options;
         const {
             ServerId,
             ServerName,
@@ -63,6 +67,9 @@ export default class JellyfinSource extends MemorySource {
             ItemType,
             PlaybackPosition,
             connectionId,
+            DeviceId = '',
+            DeviceName,
+            ClientName,
         } = obj;
 
         const dur = parseDurationFromTimestamp(RunTime);
@@ -91,13 +98,14 @@ export default class JellyfinSource extends MemorySource {
             meta: {
                 event: NotificationType,
                 mediaType: ItemType,
-                sourceId: ItemId,
+                trackId: ItemId,
                 user: NotificationUsername ?? UserId,
                 server,
                 source: 'Jellyfin',
                 newFromSource,
-                playbackPosition: parseDurationFromTimestamp(PlaybackPosition),
-                sourceVersion: ServerVersion
+                trackProgressPosition: PlaybackPosition !== undefined ? parseDurationFromTimestamp(PlaybackPosition).asSeconds() : undefined,
+                sourceVersion: ServerVersion,
+                deviceId: combinePartsToString([shortDeviceId(DeviceId), DeviceName])
             }
         }
     }
@@ -149,27 +157,19 @@ export default class JellyfinSource extends MemorySource {
     }
 
     getRecentlyPlayed = async (options = {}) => {
-        return this.statefulRecentlyPlayed;
+        return this.getFlatRecentlyDiscoveredPlays();
     }
 
-    handle = async (playObj: any, allClients: any) => {
+    handle = async (playObj: any) => {
         if (!this.isValidEvent(playObj)) {
             return;
         }
 
         const newPlays = this.processRecentPlays([playObj]);
 
-        for(const p of newPlays) {
-            this.logger.info(`New Track => ${buildTrackString(p)}`);
-        }
-
         if(newPlays.length > 0) {
-            const recent = await this.getRecentlyPlayed();
-            const newestPlay = recent[recent.length - 1];
             try {
-                await allClients.scrobble(newPlays, {scrobbleTo: this.clients, scrobbleFrom: this.identifier, checkTime: newestPlay.data.playDate});
-                // only gets hit if we scrobbled ok
-                this.tracksDiscovered++;
+                this.scrobble(newPlays);
             } catch (e) {
                 this.logger.error('Encountered error while scrobbling')
                 this.logger.error(e)

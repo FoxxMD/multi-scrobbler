@@ -1,10 +1,10 @@
 import AbstractSource, {RecentlyPlayedOptions} from "./AbstractSource.js";
 import LastfmApiClient from "../apis/LastfmApiClient.js";
-import {sortByPlayDate} from "../utils.js";
+import {sortByOldestPlayDate} from "../utils.js";
 import {LastfmClientConfig} from "../common/infrastructure/config/client/lastfm.js";
-import {InternalConfig, PlayObject} from "../common/infrastructure/Atomic.js";
+import {FormatPlayObjectOptions, InternalConfig, PlayObject} from "../common/infrastructure/Atomic.js";
 import {UserGetRecentTracksResponse} from "lastfm-node-client";
-import {Notifiers} from "../notifier/Notifiers.js";
+import EventEmitter from "events";
 
 export default class LastfmSource extends AbstractSource {
 
@@ -14,14 +14,14 @@ export default class LastfmSource extends AbstractSource {
 
     declare config: LastfmClientConfig;
 
-    constructor(name: any, config: LastfmClientConfig, internal: InternalConfig, notifier: Notifiers) {
-        super('lastfm', name, config, internal, notifier);
+    constructor(name: any, config: LastfmClientConfig, internal: InternalConfig, emitter: EventEmitter) {
+        super('lastfm', name, config, internal, emitter);
         this.canPoll = true;
         this.api = new LastfmApiClient(name, {...config.data, configDir: internal.configDir});
     }
 
-    static formatPlayObj(obj: any): PlayObject {
-        return LastfmApiClient.formatPlayObj(obj);
+    static formatPlayObj(obj: any, options: FormatPlayObjectOptions = {}): PlayObject {
+        return LastfmApiClient.formatPlayObj(obj, options);
     }
 
     initialize = async () => {
@@ -80,6 +80,6 @@ export default class LastfmSource extends AbstractSource {
                 this.logger.debug(x);
                 return acc;
             }
-        }, []).sort(sortByPlayDate);
+        }, []).sort(sortByOldestPlayDate);
     }
 }

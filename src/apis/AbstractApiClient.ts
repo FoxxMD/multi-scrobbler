@@ -1,6 +1,7 @@
-import {capitalize, createLabelledLogger} from "../utils.js";
+import {capitalize, mergeArr} from "../utils.js";
 import {Logger} from "winston";
-import {PlayObject} from "../common/infrastructure/Atomic.js";
+import {FormatPlayObjectOptions, PlayObject} from "../common/infrastructure/Atomic.js";
+import winston from 'winston';
 
 export default abstract class AbstractApiClient {
     name: string;
@@ -19,12 +20,12 @@ export default abstract class AbstractApiClient {
         this.type = type;
         this.name = name;
         const identifier = `API - ${capitalize(this.type)} - ${name}`;
-        this.logger = createLabelledLogger(identifier, identifier);
+        this.logger = winston.loggers.get('app').child({labels: [identifier]}, mergeArr);
         this.config = config;
         this.options = options;
     }
 
-    static formatPlayObj = (obj: any): PlayObject => {
+    static formatPlayObj = (obj: any, options: FormatPlayObjectOptions): PlayObject => {
         throw new Error('should be overridden');
     }
 }

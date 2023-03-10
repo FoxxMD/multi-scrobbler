@@ -18,7 +18,7 @@ export class PlexNotifier extends IngressNotifier {
 
             }
 
-            const playObj = PlexSource.formatPlayObj(payload, true);
+            const playObj = PlexSource.formatPlayObj(payload, {newFromSource: true});
 
             if(playObj.meta.server === undefined) {
                 return [false, `Payload from Plex did not contain server info! Check Plex logs for any errors.`];

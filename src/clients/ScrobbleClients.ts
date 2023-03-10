@@ -1,7 +1,8 @@
 import dayjs, {Dayjs} from "dayjs";
 import {
+    buildTrackString,
     createAjvFactory,
-    createLabelledLogger,
+    mergeArr,
     playObjDataMatch,
     readJson,
     returnDuplicateStrings, validateJson
@@ -17,6 +18,11 @@ import {MalojaClientConfig} from "../common/infrastructure/config/client/maloja.
 import {LastfmClientConfig} from "../common/infrastructure/config/client/lastfm.js";
 import {Notifiers} from "../notifier/Notifiers.js";
 import AbstractScrobbleClient from "./AbstractScrobbleClient.js";
+import {EventEmitter} from "events";
+import winston from "winston";
+import ListenbrainzScrobbler from "./ListenbrainzScrobbler.js";
+import {ListenBrainzClientConfig} from "../common/infrastructure/config/client/listenbrainz.js";
+import {ErrorWithCause} from "pony-cause";
 
 type groupedNamedConfigs = {[key: string]: ParsedConfig[]};
 
@@ -29,9 +35,19 @@ export default class ScrobbleClients {
     logger;
     configDir;
 
-    constructor(configDir: any) {
+    emitter: EventEmitter;
+
+    sourceEmitter: EventEmitter;
+
+    constructor(emitter: EventEmitter, sourceEmitter: EventEmitter, configDir: any) {
+        this.emitter = emitter;
+        this.sourceEmitter = sourceEmitter;
         this.configDir = configDir;
-        this.logger = createLabelledLogger('scrobblers', 'Scrobblers');
+        this.logger = winston.loggers.get('app').child({labels: ['Scrobblers']}, mergeArr);
+
+        this.sourceEmitter.on('scrobble', async (payload: { data: (PlayObject | PlayObject[]), options: { forceRefresh?: boolean, checkTime?: Dayjs, scrobbleTo?: string[], scrobbleFrom?: string } }) => {
+            await this.scrobble(payload.data, payload.options);
+        });
     }
 
     getByName = (name: any) => {
@@ -115,7 +131,7 @@ export default class ScrobbleClients {
                     if (url !== undefined || apiKey !== undefined) {
                         configs.push({
                             type: 'maloja',
-                            name: 'unnamed',
+                            name: 'unnamed-mlj',
                             source: 'ENV',
                             mode: 'single',
                             configureAs: 'client',
@@ -137,12 +153,30 @@ export default class ScrobbleClients {
                     if (!Object.values(lfm).every(x => x === undefined)) {
                         configs.push({
                             type: 'lastfm',
-                            name: 'unnamed',
+                            name: 'unnamed-lfm',
                             source: 'ENV',
                             mode: 'single',
                             configureAs: 'client',
                             // @ts-ignore
                             data: lfm
+                        })
+                    }
+                    break;
+                case 'listenbrainz':
+                    const lz = {
+                        url: process.env.LZ_URL,
+                        token: process.env.LZ_TOKEN,
+                        username: process.env.LZ_USER
+                    };
+                    if (!Object.values(lz).every(x => x === undefined)) {
+                        configs.push({
+                            type: 'listenbrainz',
+                            name: 'unnamed-lz',
+                            source: 'ENV',
+                            mode: 'single',
+                            configureAs: 'client',
+                            // @ts-ignore
+                            data: lz
                         })
                     }
                     break;
@@ -261,13 +295,16 @@ ${sources.join('\n')}`);
         // add defaults
         const data = {...defaults, ...d};
         let newClient;
-        this.logger.debug(`(${name}) Constructing ${type} client...`);
+        this.logger.debug(`Constructing ${type} (${name}) client...`);
         switch (type) {
             case 'maloja':
-                newClient = new MalojaScrobbler(name, ({...clientConfig, data} as unknown as MalojaClientConfig), notifier);
+                newClient = new MalojaScrobbler(name, ({...clientConfig, data} as unknown as MalojaClientConfig), notifier, this.logger);
                 break;
             case 'lastfm':
-                newClient = new LastfmScrobbler(name, {...clientConfig, data: {configDir: this.configDir, ...data} } as unknown as LastfmClientConfig, {}, notifier);
+                newClient = new LastfmScrobbler(name, {...clientConfig, data: {configDir: this.configDir, ...data} } as unknown as LastfmClientConfig, {}, notifier, this.logger);
+                break;
+            case 'listenbrainz':
+                newClient = new ListenbrainzScrobbler(name, {...clientConfig, data: {configDir: this.configDir, ...data} } as unknown as ListenBrainzClientConfig, {}, notifier, this.logger);
                 break;
             default:
                 break;
@@ -278,15 +315,15 @@ ${sources.join('\n')}`);
             throw new Error(`Client of type ${type} was not recognized??`);
         }
         if(newClient.initialized === false) {
-            this.logger.debug(`(${name}) Attempting ${type} initialization...`);
+            this.logger.debug(`Attempting ${type} (${name}) initialization...`);
             if ((await newClient.initialize()) === false) {
-                this.logger.error(`(${name}) ${type} client failed to initialize. Client needs to be successfully initialized before scrobbling.`);
+                this.logger.error(`${type} (${name}) client failed to initialize. Client needs to be successfully initialized before scrobbling.`);
             } else {
-                this.logger.info(`(${name}) ${type} client initialized`);
+                this.logger.info(`${type} (${name}) client initialized`);
             }
         }
         if(newClient.requiresAuth && !newClient.authed) {
-            this.logger.debug(`(${name}) Checking ${type} client auth...`);
+            this.logger.debug(`Checking ${type} (${name}) client auth...`);
             let success;
             try {
                 success = await newClient.testAuth();
@@ -294,9 +331,9 @@ ${sources.join('\n')}`);
                 success = false;
             }
             if(!success) {
-                this.logger.warn(`(${name}) ${type} client auth failed.`);
+                this.logger.warn(`${type} (${name}) client auth failed.`);
             } else {
-                this.logger.info(`(${name}) ${type} client auth OK`);
+                this.logger.info(`${type} (${name}) client auth OK`);
             }
         }
         this.clients.push(newClient);
@@ -324,32 +361,32 @@ ${sources.join('\n')}`);
 
         for (const client of this.clients) {
             if (scrobbleTo.length > 0 && !scrobbleTo.includes(client.name)) {
-                this.logger.debug(`Client '${client.name}' was filtered out by '${scrobbleFrom}'`);
+                client.logger.debug(`Client was filtered out by Source '${scrobbleFrom}'`);
                 continue;
             }
             if(!client.initialized) {
                 if(client.initializing) {
-                    this.logger.warn(`Cannot scrobble to Client '${client.name}' because it is still initializing`);
+                    client.logger.warn(`Cannot scrobble because it is still initializing`);
                     continue;
                 }
                 if(!(await client.initialize())) {
-                    this.logger.warn(`Cannot scrobble to Client '${client.name}' because it could not be initialized`);
+                    client.logger.warn(`Cannot scrobble because it could not be initialized`);
                     continue;
                 }
             }
 
             if(client.requiresAuth && !client.authed) {
                 if (client.requiresAuthInteraction) {
-                    this.logger.warn(`Cannot scrobble to Client '${client.name}' because user interaction is required for authentication`);
+                    client.logger.warn(`Cannot scrobble because user interaction is required for authentication`);
                     continue;
                 } else if (!(await client.testAuth())) {
-                    this.logger.warn(`Cannot scrobble to Client '${client.name}' because auth test failed`);
+                    client.logger.warn(`Cannot scrobble because auth test failed`);
                     continue;
                 }
             }
 
             if(!(await client.isReady())) {
-                this.logger.warn(`Cannot scrobble to Client '${client.name}' because it is not ready`);
+                client.logger.warn(`Cannot scrobble because it is not ready`);
                 continue;
             }
 
@@ -357,7 +394,7 @@ ${sources.join('\n')}`);
                 try {
                     await client.refreshScrobbles();
                 } catch(e) {
-                    this.logger.error(`Encountered error while refreshing scrobbles for ${client.name}`);
+                    client.logger.error(`Encountered error while refreshing scrobbles`);
                     this.logger.error(e);
                 }
             }
@@ -368,7 +405,8 @@ ${sources.join('\n')}`);
                             newFromSource = false,
                         } = {}
                     } = playObj;
-                    if (client.timeFrameIsValid(playObj, newFromSource) && !(await client.alreadyScrobbled(playObj, newFromSource))) {
+                    const [timeFrameValid, timeFrameValidLog] = client.timeFrameIsValid(playObj);
+                    if (timeFrameValid && !(await client.alreadyScrobbled(playObj))) {
                         await client.scrobble(playObj)
                         client.tracksScrobbled++;
                         // since this is what we return to the source only add to tracksScrobbled if not already in array
@@ -376,10 +414,13 @@ ${sources.join('\n')}`);
                         if(!tracksScrobbled.some(x => playObjDataMatch(x, playObj) && x.data.playDate === playObj.data.playDate)) {
                             tracksScrobbled.push(playObj);
                         }
+                    } else {
+                        if(!timeFrameValid) {
+                            client.logger.debug(`Will not scrobble ${buildTrackString(playObj)} from Source '${scrobbleFrom}' because it ${timeFrameValidLog}`);
+                        }
                     }
                 } catch(e) {
-                    this.logger.error(`Encountered error while in scrobble loop for ${client.name}`);
-                    this.logger.error(e);
+                    client.logger.error(new ErrorWithCause(`Encountered error while in scrobble loop`, {cause: e}));
                     // for now just stop scrobbling plays for this client and move on. the client should deal with logging the issue
                     if(e.continueScrobbling !== true) {
                         break;

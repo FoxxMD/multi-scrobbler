@@ -12,7 +12,7 @@ export class TautulliNotifier extends IngressNotifier {
     seenServers: string[] = [];
     notifyBySource(req: Request, isRaw: boolean): [boolean, (string | undefined)] {
         if(!isRaw) {
-            const playObj = TautulliSource.formatPlayObj(req, true);
+            const playObj = TautulliSource.formatPlayObj(req, {newFromSource: true});
 
             if(!this.seenServers.includes(playObj.meta.server)) {
                 this.seenServers.push(playObj.meta.server);

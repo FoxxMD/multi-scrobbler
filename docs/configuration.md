@@ -10,11 +10,15 @@
   * [Subsonic](#subsonic)
   * [Jellyfin](#jellyfin)
   * [Last.fm (Source)](#lastfm--source-)
+  * [Listenbrainz (Source)](#listenbrainz--source-)
   * [Deezer](#deezer)
   * [Youtube Music](#youtube-music)
+  * [MPRIS (Linux Desktop)](#mpris)
+  * [Mopidy](#mopidy)
 * [Client Configurations](#client-configurations)
   * [Maloja](#maloja)
   * [Last.fm](#lastfm)
+  * [Listenbrainz](#listenbrainz)
 * [Monitoring](#monitoring)
   * [Webhooks](#webhook-configurations)
   * [Health Endpoint](#health-endpoint)
@@ -266,6 +270,20 @@ No support for ENV based for Last.fm as a client (only source)
 
 See [`lastfm.json.example`](/config/lastfm.json.example), change `configureAs` to `source`. Or [explore the schema with an example and live editor/validator](https://json-schema.app/view/%23/%23%2Fdefinitions%2FLastfmSourceConfig?url=https%3A%2F%2Fraw.githubusercontent.com%2FFoxxMD%2Fmulti-scrobbler%2Fdevelop%2Fsrc%2Fcommon%2Fschema%2Fsource.json)
 
+# [Listenbrainz (Source)](https://listenbrainz.org)
+
+You will need to run your own Listenbrainz server or have an account [on the official instance](https://listenbrainz.org/login/)
+
+On your [profile page](https://listenbrainz.org/profile/) find your **User Token** to use in the configuration.
+
+**NOTE:** You cannot use ENV variables shown in the [Listenbrainz Client config](#listenbrainz) -- multi-scrobbler assumes Listenbrainz ENVs are always used for the **client** configuration. You must use the file-based config from below to setup Listenbrainz as a Source.
+
+### File-Based
+
+See [`listenbrainz.json.example`](/config/listenbrainz.json.example) or [explore the schema with an example and live editor/validator](https://json-schema.app/view/%23%2Fdefinitions%2FListenBrainzSourceConfig?url=https%3A%2F%2Fraw.githubusercontent.com%2FFoxxMD%2Fmulti-scrobbler%2Fdevelop%2Fsrc%2Fcommon%2Fschema%2Fsource.json)
+
+**Change `configureAs` to `source`**
+
 ## [Deezer](https://deezer.com/)
 
 Create a new application at [Deezer Developers](https://developers.deezer.com/myapps)
@@ -322,6 +340,125 @@ NOTES:
 
 See [`ytmusic.json.example`](/config/ytmusic.json.example) or [explore the schema with an example and live editor/validator](https://json-schema.app/view/%23/%23%2Fdefinitions%2FYTMusicSourceConfig?url=https%3A%2F%2Fraw.githubusercontent.com%2FFoxxMD%2Fmulti-scrobbler%2Fdevelop%2Fsrc%2Fcommon%2Fschema%2Fsource.json)
 
+## [MPRIS](https://specifications.freedesktop.org/mpris-spec/latest/)
+
+MPRIS is a standard interface for communicating with Music Players on **linux operating systems.**
+
+If you run Linux and have a notification tray that shows what media you are listening to, you likely have access to MPRIS.
+
+![Notification Tray](/assets/mpris.jpg)
+
+multi-scrobbler can listen to this interface and scrobble tracks played by **any media player** that communicates to the operating system with MPRIS.
+
+**NOTE:** multi-scrobbler needs to be running as a [**Local Installation**](/docs/installation.md#local) in order to use MPRIS. This cannot be used from docker.
+
+### ENV-Based
+
+| Environmental Variable | Required? | Default | Description                                                                      |
+|------------------------|-----------|---------|----------------------------------------------------------------------------------|
+| MPRIS_ENABLE           | No        |         | Use MPRIS as a Source (useful when you don't need any other options)             |
+| MPRIS_BLACKLIST        | No        |         | Comma-delimited list of player names not to scrobble from                        |
+| MPRIS_WHITELIST        | No        |         | Comma-delimited list of players names to ONLY scrobble from. Overrides blacklist |
+
+### File-Based
+
+See [`mpris.json.example`](/config/mpris.json.example) or [explore the schema with an example and live editor/validator](https://json-schema.app/view/%23%2Fdefinitions%2FMPRISSourceConfig?url=https%3A%2F%2Fraw.githubusercontent.com%2FFoxxMD%2Fmulti-scrobbler%2Fdevelop%2Fsrc%2Fcommon%2Fschema%2Fsource.json)
+
+## [Mopidy](https://mopidy.com/)
+
+Mopidy is a headless music server that supports playing music from many [standard and non-standard sources such as Pandora, Bandcamp, and Tunein.](https://mopidy.com/ext/)
+
+multi-scrobbler can scrobble tracks played from any Mopidy backend source, regardless of where you listen to them.
+
+### File-Based
+
+See [`mopidy.json.example`](/config/mopidy.json.example) or [explore the schema with an example and live editor/validator](https://json-schema.app/view/%23%2Fdefinitions%2FMopidySourceConfig/%23%2Fdefinitions%2FMopidyData?url=https%3A%2F%2Fraw.githubusercontent.com%2FFoxxMD%2Fmulti-scrobbler%2Fdevelop%2Fsrc%2Fcommon%2Fschema%2Fsource.json)
+
+Configuration Options:
+
+##### `url`
+
+The URL used to connect to the Mopidy server. You MUST have [Mopidy-HTTP extension](https://mopidy.com/ext/http) enabled.
+
+If no `url` is provided a default is used which assumes Mopidy is installed on the same server as multi-scrobbler: `ws://localhost:6680/mopidy/ws/`
+
+Make sure the hostname and port number match what is found in the Mopidy configuration file `mopidy.conf`:
+
+```
+...
+
+[http]
+hostname = localhost
+port = 6680
+
+...
+```
+
+The URL used to connect ultimately must be formed like this: `[protocol]://[hostname]:[port]/[path]`
+If any part of this URL is missing multi-scrobbler will use a default value, for your convenience. This also means that if any part of your URL is **not** standard you must explicitly define it.
+
+Part => Default Value
+
+* Protocol => `ws://`
+* Hostname => `localhost`
+* Port => `6680`
+* Path => `/mopidy/ws/`
+
+EX
+
+```json
+{
+  "url": "mopidy.mydomain.com"
+}
+```
+
+MS transforms this to: `ws://mopidy.mydomain.com:6680/mopidy/ws/`
+
+```json
+{
+  "url": "192.168.0.101:3456"
+}
+```
+
+MS transforms this to: `ws://192.168.0.101:3456/mopidy/ws/`
+
+```json
+{
+  "url": "mopidy.mydomain.com:80/MOPWS"
+}
+```
+
+MS transforms this to: `ws://mopidy.mydomain.com:80/MOPWS`
+
+
+#### URI Blacklist/Whitelist
+
+If you wish to disallow or only allow scrobbling from some sources played through Mopidy you can specify these using `uriBlacklist` or `uriWhitelist` in your config. multi-scrobbler will check the list to see if any string matches the START of the `uri` on a track. If whitelist is used then blacklist is ignored. All strings are case-insensitive.
+
+EX:
+
+```json
+{
+  "uriBlacklist": ["soundcloud"]
+}
+```
+
+Will prevent multi-scrobbler from scrobbling any Mopidy track that start with a `uri` like `soundcloud:song:MySong-1234`
+
+#### Album Blacklist
+
+For certain sources (Soundcloud) Mopidy does not have all track info (Album) and will instead use "Soundcloud" as the Album name. You can prevent multi-scrobbler from using this bad Album data by adding the fake Album name to this list. Multi-scrobbler will still scrobble the track, just without the bad data. All strings are case-insensitive.
+
+EX:
+
+```json
+{
+  "albumBlacklist": ["SoundCloud", "Mixcloud"]
+}
+```
+
+If a track would be scrobbled like `Album: Soundcloud, Track: My Cool Track, Artist: A Cool Artist` 
+then multi-scrobbler will instead scrobble  `Track: My Cool Track, Artist: A Cool Artist`
 
 # Client Configurations
 
@@ -360,6 +497,25 @@ or replace `localhost:9078` with your own base URL
 ### File-Based
 
 See [`lastfm.json.example`](/config/lastfm.json.example) or [explore the schema with an example and live editor/validator](https://json-schema.app/view/%23/%23%2Fdefinitions%2FLastfmClientConfig?url=https%3A%2F%2Fraw.githubusercontent.com%2FFoxxMD%2Fmulti-scrobbler%2Fdevelop%2Fsrc%2Fcommon%2Fschema%2Fclient.json)
+
+## [Listenbrainz](https://listenbrainz.org)
+
+You will need to run your own Listenbrainz server or have an account [on the official instance](https://listenbrainz.org/login/)
+
+On your [profile page](https://listenbrainz.org/profile/) find your **User Token** to use in the configuration.
+
+### ENV-Based
+
+
+| Environmental Variable | Required? |            Default            |           Description           |
+|------------------------|-----------|-------------------------------|---------------------------------|
+| LZ_TOKEN               | Yes       |                               | User token from your LZ profile |
+| LZ_USER                | Yes       |                               | Your LZ username                |
+| LZ_URL                 | No        | https://api.listenbrainz.org/ | The base URL for the LZ server  |
+
+### File-Based
+
+See [`listenbrainz.json.example`](/config/listenbrainz.json.example) or [explore the schema with an example and live editor/validator](https://json-schema.app/view/%23%2Fdefinitions%2FListenBrainzClientConfig?url=https%3A%2F%2Fraw.githubusercontent.com%2FFoxxMD%2Fmulti-scrobbler%2Fdevelop%2Fsrc%2Fcommon%2Fschema%2Fclient.json)
 
 # Monitoring
 

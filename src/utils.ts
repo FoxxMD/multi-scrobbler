@@ -1,22 +1,19 @@
-import {promises, constants} from "fs";
+import {promises, constants, accessSync} from "fs";
 import dayjs, {Dayjs} from 'dayjs';
 import utc from 'dayjs/plugin/utc.js';
-import winston, {Logger} from "winston";
-import stringify from 'safe-stable-stringify';
+import {Logger} from "winston";
 import JSON5 from 'json5';
 import { TimeoutError, WebapiError } from "spotify-web-api-node/src/response-error.js";
-import { Response } from 'superagent';
 import Ajv, {Schema} from 'ajv';
 import {
     lowGranularitySources,
-    PlayObject,
+    PlayObject, ProgressAwarePlayObject,
     RemoteIdentityParts,
     TrackStringOptions
 } from "./common/infrastructure/Atomic.js";
 import {Request} from "express";
-
-const {format} = winston;
-const {combine, printf, timestamp, label, splat, errors} = format;
+import pathUtil from "path";
+import {ErrorWithCause} from "pony-cause";
 
 dayjs.extend(utc);
 
@@ -105,13 +102,13 @@ export const buildTrackString = (playObj: PlayObject, options: TrackStringOption
             playDate
         } = {},
         meta: {
-            sourceId
+            trackId
         } = {},
     } = playObj;
 
     const strParts = [];
-    if(include.includes('sourceId') && sourceId !== undefined) {
-        strParts.push(`(${sourceId})`);
+    if(include.includes('trackId') && trackId !== undefined) {
+        strParts.push(`(${trackId})`);
     }
     if(include.includes('artist')) {
         strParts.push(`${artistsFunc(artists)}`)
@@ -137,61 +134,51 @@ export const buildTrackString = (playObj: PlayObject, options: TrackStringOption
 }
 
 // sorts playObj formatted objects by playDate in ascending (oldest first) order
-export const sortByPlayDate = (a: any, b: any) => a.data.playDate.isAfter(b.data.playDate) ? 1 : -1;
-
-const s = splat();
-const SPLAT = Symbol.for('splat')
-const errorsFormat = errors({stack: true});
-const CWD = process.cwd();
-
-let longestLabel = 3;
-export const defaultFormat = printf(({level, message, label = 'App', timestamp, [SPLAT]: splatObj, stack, ...rest}) => {
-    let stringifyValue = splatObj !== undefined ? stringify(splatObj) : '';
-    if (label.length > longestLabel) {
-        longestLabel = label.length;
+export const sortByOldestPlayDate = (a: PlayObject, b: PlayObject) => {
+    const {
+        data: {
+            playDate: aPlayDate
+        } = {}
+    } = a;
+    const {
+        data: {
+            playDate: bPlayDate
+        } = {}
+    } = b;
+    if(aPlayDate === undefined && bPlayDate === undefined) {
+        return 0;
     }
-    let msg = message;
-    let stackMsg = '';
-    if (stack !== undefined) {
-        const stackArr = stack.split('\n');
-        msg = stackArr[0];
-        const cleanedStack = stackArr
-            .slice(1) // don't need actual error message since we are showing it as msg
-            .map((x: any) => x.replace(CWD, 'CWD')) // replace file location up to cwd for user privacy
-            .join('\n'); // rejoin with newline to preserve formatting
-        stackMsg = `\n${cleanedStack}`;
+    if(aPlayDate === undefined) {
+        return 1;
     }
-
-    return `${timestamp} ${level.padEnd(7)}: [${label.padEnd(longestLabel)}] ${msg}${stringifyValue !== '' ? ` ${stringifyValue}` : ''}${stackMsg}`;
-});
-
-export const labelledFormat = (labelName = 'App') => {
-    const l = label({label: labelName, message: false});
-    return combine(
-        timestamp(
-            {
-                format: () => dayjs().local().format(),
-            }
-        ),
-        l,
-        s,
-        errorsFormat,
-        defaultFormat,
-    );
-}
-
-export const createLabelledLogger = (name = 'default', label = 'App'): Logger => {
-    if (winston.loggers.has(name)) {
-        return winston.loggers.get(name);
+    if(bPlayDate === undefined) {
+        return -1;
     }
-    const def = winston.loggers.get('default');
-    winston.loggers.add(name, {
-        transports: def.transports,
-        level: def.level,
-        format: labelledFormat(label)
-    });
-    return winston.loggers.get(name);
-}
+    return aPlayDate.isAfter(bPlayDate) ? 1 : -1
+};
+
+export const sortByNewestPlayDate = (a: PlayObject, b: PlayObject) => {
+    const {
+        data: {
+            playDate: aPlayDate
+        } = {}
+    } = a;
+    const {
+        data: {
+            playDate: bPlayDate
+        } = {}
+    } = b;
+    if(aPlayDate === undefined && bPlayDate === undefined) {
+        return 0;
+    }
+    if(aPlayDate === undefined) {
+        return 1;
+    }
+    if(bPlayDate === undefined) {
+        return -1;
+    }
+    return aPlayDate.isBefore(bPlayDate) ? 1 : -1
+};
 
 export const setIntersection = (setA: any, setB: any) => {
     let _intersection = new Set()
@@ -229,7 +216,7 @@ export const playObjDataMatch = (a: PlayObject, b: PlayObject) => {
         } = {},
         meta: {
             source: aSource,
-            sourceId: aSourceId,
+            trackId: atrackId,
         } = {},
     } = a;
 
@@ -241,13 +228,13 @@ export const playObjDataMatch = (a: PlayObject, b: PlayObject) => {
         } = {},
         meta: {
             source: bSource,
-            sourceId: bSourceId,
+            trackId: btrackId,
         } = {},
     } = b;
 
     // if sources are the same and both plays have source ids then we can just compare by id
-    if(aSource === bSource && aSourceId !== undefined && bSourceId !== undefined) {
-        if(aSourceId !== bSourceId) {
+    if(aSource === bSource && atrackId !== undefined && btrackId !== undefined) {
+        if(atrackId !== btrackId) {
             return false;
         }
     }
@@ -276,8 +263,8 @@ export const parseRetryAfterSecsFromObj = (err: any) => {
     if (err instanceof TimeoutError) {
         return undefined;
     }
-    // @ts-ignore
-    if (err instanceof WebapiError || err instanceof Response) {
+
+    if (err instanceof WebapiError || 'headers' in err) {
         const {headers = {}} = err;
         raVal = headers['retry-after']
     }
@@ -474,7 +461,7 @@ export const remoteHostStr = (req: Request): string => {
     return `${host}${proxy !== undefined ? ` (${proxy})` : ''}${agent !== undefined ? ` (UA: ${agent})` : ''}`;
 }
 
-export const closePlayDate = (existingPlay: PlayObject, newPlay: PlayObject, diffThreshold?: number): boolean => {
+export const closePlayDate = (existingPlay: PlayObject, newPlay: PlayObject, options: { diffThreshold?: number, fuzzyDuration?: boolean} = {}): boolean => {
 
     const {
         meta:{
@@ -493,29 +480,141 @@ export const closePlayDate = (existingPlay: PlayObject, newPlay: PlayObject, dif
         }
     } = newPlay;
 
+    const {
+        diffThreshold = lowGranularitySources.some(x => x.toLocaleLowerCase() === source) ? 60 : 10,
+        fuzzyDuration = false,
+    } = options;
+
     // cant compare!
     if(existingPlayDate === undefined || newPlayDate === undefined) {
         return false;
     }
 
+    const referenceDuration = newDuration ?? existingDuration;
+
     let playDiffThreshold = diffThreshold;
-    if(playDiffThreshold === undefined) {
-        playDiffThreshold = lowGranularitySources.some(x => x.toLocaleLowerCase() === source) ? 60 : 10;
-    }
+
     let closeTime = false;
-    // check if existing play time is same as new play date (when the track finished playing AKA entered recent tracks)
+    // check if existing play time is same as new play date
     let scrobblePlayDiff = Math.abs(existingPlayDate.unix() - newPlayDate.unix());
-    let scrobblePlayStartDiff;
     if (scrobblePlayDiff <= playDiffThreshold) {
         closeTime = true;
     }
-    // also need to check that scrobble time isn't the BEGINNING of the track -- if the source supports durations
-    if (closeTime === false && newDuration !== undefined) {
-        scrobblePlayStartDiff = Math.abs(existingPlayDate.unix() - (newPlayDate.unix() - newDuration));
-        if (scrobblePlayStartDiff <= playDiffThreshold) {
+    // if the source has a duration its possible one play was scrobbled at the beginning of the track and the other at the end
+    // so check if the duration matches the diff between the two play dates
+    if (closeTime === false && referenceDuration !== undefined && fuzzyDuration) {
+        if(Math.abs(scrobblePlayDiff - newDuration) < 10) { // use finer comparison for this
             closeTime = true;
         }
     }
 
     return closeTime;
+}
+
+export const combinePartsToString = (parts: any[], glue: string = '-'): string | undefined => {
+    const cleanParts: string[] = [];
+    for (const part of parts) {
+        if (part === null || part === undefined) {
+            continue;
+        }
+        if (Array.isArray(part)) {
+            const nestedParts = combinePartsToString(part, glue);
+            if (nestedParts !== undefined) {
+                cleanParts.push(nestedParts);
+            }
+        } else if (typeof part === 'object') {
+            // hope this works
+            cleanParts.push(JSON.stringify(part));
+        } else if(typeof part === 'string') {
+            if(part.trim() !== '') {
+                cleanParts.push(part);
+            }
+        } else {
+            cleanParts.push(part.toString());
+        }
+    }
+    if (cleanParts.length > 0) {
+        return cleanParts.join(glue);
+    }
+    return undefined;
+}
+
+/**
+ * Remove duplicates based on trackId, deviceId, and play date
+ * */
+export const removeDuplicates = (plays: PlayObject[]): PlayObject[] => {
+    return plays.reduce((acc: PlayObject[], currPlay: PlayObject) => {
+        if(currPlay.meta.trackId !== undefined && currPlay.meta.deviceId !== undefined && currPlay.data.playDate !== undefined) {
+            if(acc.some((x: PlayObject) => x.meta.trackId === currPlay.meta.trackId && x.meta.deviceId === currPlay.meta.deviceId && x.data.playDate.isSame(currPlay.data.playDate, 'minute'))) {
+                // don't add current play to list if we find an existing that matches track, device, and play date
+                return acc;
+            }
+        }
+        return acc.concat(currPlay);
+    }, []);
+}
+
+export const toProgressAwarePlayObject = (play: PlayObject): ProgressAwarePlayObject => {
+    return {...play, meta: {...play.meta, initialTrackProgressPosition: play.meta.trackProgressPosition}};
+}
+
+export const getProgress = (initial: ProgressAwarePlayObject, curr: PlayObject): number | undefined => {
+    if(initial.meta.initialTrackProgressPosition !== undefined && curr.meta.trackProgressPosition !== undefined) {
+        return Math.abs(curr.meta.trackProgressPosition - initial.meta.initialTrackProgressPosition);
+    }
+    return undefined;
+}
+
+export function parseBool(value: any, prev: any = false): boolean {
+    let usedVal = value;
+    if (value === undefined || value === '') {
+        usedVal = prev;
+    }
+    if(usedVal === undefined || usedVal === '') {
+        return false;
+    }
+    if (typeof usedVal === 'string') {
+        return usedVal === 'true';
+    } else if (typeof usedVal === 'boolean') {
+        return usedVal;
+    }
+    throw new Error('Not a boolean value.');
+}
+
+export const genGroupId = (play: PlayObject) => `${play.meta.deviceId ?? 'NoDevice'}-${play.meta.user ?? 'SingleUser'}`;
+
+export const fileOrDirectoryIsWriteable = (location: string) => {
+    const pathInfo = pathUtil.parse(location);
+    const isDir = pathInfo.ext === '';
+    try {
+        accessSync(location, constants.R_OK | constants.W_OK);
+        return true;
+    } catch (err: any) {
+        const {code} = err;
+        if (code === 'ENOENT') {
+            // file doesn't exist, see if we can write to directory in which case we are good
+            try {
+                accessSync(pathInfo.dir, constants.R_OK | constants.W_OK)
+                // we can write to dir
+                return true;
+            } catch (accessError: any) {
+                if(accessError.code === 'EACCES') {
+                    // also can't access directory :(
+                    throw new Error(`No ${isDir ? 'directory' : 'file'} exists at ${location} and application does not have permission to write to the parent directory`);
+                } else {
+                    throw new ErrorWithCause(`No ${isDir ? 'directory' : 'file'} exists at ${location} and application is unable to access the parent directory due to a system error`, {cause: accessError});
+                }
+            }
+        } else if(code === 'EACCES') {
+            throw new Error(`${isDir ? 'Directory' : 'File'} exists at ${location} but application does not have permission to write to it.`);
+        } else {
+            throw new ErrorWithCause(`${isDir ? 'Directory' : 'File'} exists at ${location} but application is unable to access it due to a system error`, {cause: err});
+        }
+    }
+}
+
+export const mergeArr = (objValue: [], srcValue: []): (any[] | undefined) => {
+    if (Array.isArray(objValue)) {
+        return objValue.concat(srcValue);
+    }
 }

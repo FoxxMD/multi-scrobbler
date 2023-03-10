@@ -1,5 +1,5 @@
-import {config, Logger} from "winston";
-import {createLabelledLogger} from "../utils.js";
+import winston, {config, format, Logger} from "winston";
+import {mergeArr} from "../utils.js";
 import {
     GotifyConfig,
     NtfyConfig,
@@ -9,6 +9,7 @@ import {
 import {AbstractWebhookNotifier} from "./AbstractWebhookNotifier.js";
 import {GotifyWebhookNotifier} from "./GotifyWebhookNotifier.js";
 import {NtfyWebhookNotifier} from "./NtfyWebhookNotifier.js";
+import {EventEmitter} from "events";
 
 export class Notifiers {
 
@@ -16,8 +17,21 @@ export class Notifiers {
 
     webhooks: AbstractWebhookNotifier[] = [];
 
-    constructor() {
-        this.logger = createLabelledLogger('Notifiers', 'Notifiers');
+    emitter: EventEmitter;
+
+    clientEmitter: EventEmitter;
+    sourceEmitter: EventEmitter;
+
+    constructor(emitter: EventEmitter, clientEmitter: EventEmitter, sourceEmitter: EventEmitter) {
+        this.emitter = emitter;
+        this.clientEmitter = clientEmitter;
+        this.sourceEmitter = sourceEmitter;
+
+        this.logger = winston.loggers.get('app').child({labels: ['Notifiers']}, mergeArr);
+
+        this.sourceEmitter.on('notify', async (payload: WebhookPayload) => {
+            await this.notify(payload);
+        })
     }
 
     buildWebhooks = async (webhookConfigs: WebhookConfig[]) => {
@@ -26,10 +40,10 @@ export class Notifiers {
             const defaultName = `Config ${i}`
             switch (config.type) {
                 case 'gotify':
-                    webhook = new GotifyWebhookNotifier(defaultName, config as GotifyConfig);
+                    webhook = new GotifyWebhookNotifier(defaultName, config as GotifyConfig, this.logger);
                     break;
                 case 'ntfy':
-                    webhook = new NtfyWebhookNotifier(defaultName, config as NtfyConfig);
+                    webhook = new NtfyWebhookNotifier(defaultName, config as NtfyConfig, this.logger);
                     break;
                 default:
                     this.logger.error(`'${config.type}' is not a valid webhook type`);

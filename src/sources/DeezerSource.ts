@@ -1,11 +1,11 @@
 import request from 'superagent';
-import {parseRetryAfterSecsFromObj, readJson, sleep, sortByPlayDate, writeFile} from "../utils.js";
+import {parseRetryAfterSecsFromObj, readJson, sleep, sortByOldestPlayDate, writeFile} from "../utils.js";
 import {Strategy as DeezerStrategy} from 'passport-deezer';
 import AbstractSource, {RecentlyPlayedOptions} from "./AbstractSource.js";
 import dayjs from "dayjs";
 import {DeezerSourceConfig} from "../common/infrastructure/config/source/deezer.js";
-import {InternalConfig, PlayObject} from "../common/infrastructure/Atomic.js";
-import {Notifiers} from "../notifier/Notifiers.js";
+import {FormatPlayObjectOptions, InternalConfig, PlayObject} from "../common/infrastructure/Atomic.js";
+import EventEmitter from "events";
 
 export default class DeezerSource extends AbstractSource {
     workingCredsPath;
@@ -18,8 +18,8 @@ export default class DeezerSource extends AbstractSource {
 
     declare config: DeezerSourceConfig;
 
-    constructor(name: any, config: DeezerSourceConfig, internal: InternalConfig, notifier: Notifiers) {
-        super('deezer', name, config, internal, notifier);
+    constructor(name: any, config: DeezerSourceConfig, internal: InternalConfig, emitter: EventEmitter) {
+        super('deezer', name, config, internal, emitter);
         const {
             data: {
                 interval = 60,
@@ -36,7 +36,8 @@ export default class DeezerSource extends AbstractSource {
         this.canPoll = true;
     }
 
-    static formatPlayObj(obj: any, newFromSource = false): PlayObject {
+    static formatPlayObj(obj: any, options: FormatPlayObjectOptions = {}): PlayObject {
+        const {newFromSource = false} = options;
         const {
             title: name,
             artist: {
@@ -61,9 +62,8 @@ export default class DeezerSource extends AbstractSource {
                 playDate: dayjs(timestamp * 1000),
             },
             meta: {
-                trackLength: duration,
                 source: 'Deezer',
-                sourceId: id,
+                trackId: id,
                 newFromSource,
                 url: {
                     web: link
@@ -102,12 +102,8 @@ export default class DeezerSource extends AbstractSource {
     }
 
     getRecentlyPlayed = async (options: RecentlyPlayedOptions = {}) => {
-        const {formatted = false} = options;
         const resp = await this.callApi(request.get(`${this.baseUrl}/user/me/history`));
-        if(formatted) {
-            return resp.data.map((x: any) => DeezerSource.formatPlayObj(x)).sort(sortByPlayDate);
-        }
-        return resp.data;
+        return resp.data.map((x: any) => DeezerSource.formatPlayObj(x)).sort(sortByOldestPlayDate);
     }
 
     callApi = async (req: any, retries = 0) => {

@@ -1,21 +1,31 @@
 import dayjs from "dayjs";
-import {buildTrackString, createLabelledLogger} from "../utils.js";
+import {
+    buildTrackString,
+    combinePartsToString,
+    mergeArr,
+    truncateStringToLength
+} from "../utils.js";
 import AbstractSource from "./AbstractSource.js";
 import formidable from 'formidable';
 import concatStream from 'concat-stream';
 import {PlexSourceConfig} from "../common/infrastructure/config/source/plex.js";
-import {InternalConfig, PlayObject, SourceType} from "../common/infrastructure/Atomic.js";
-import {Notifiers} from "../notifier/Notifiers.js";
+import {FormatPlayObjectOptions, InternalConfig, PlayObject, SourceType} from "../common/infrastructure/Atomic.js";
+import EventEmitter from "events";
+import winston from "winston";
+
+const shortDeviceId = truncateStringToLength(10, '');
 
 export default class PlexSource extends AbstractSource {
     users: string[];
     libraries: string[];
     servers: string[];
 
+    multiPlatform: boolean = true;
+
     declare config: PlexSourceConfig;
 
-    constructor(name: any, config: PlexSourceConfig, internal: InternalConfig, type: SourceType = 'plex', notifier: Notifiers) {
-        super(type, name, config, internal, notifier);
+    constructor(name: any, config: PlexSourceConfig, internal: InternalConfig, type: SourceType = 'plex',emitter: EventEmitter) {
+        super(type, name, config, internal, emitter);
         const {data: {user = [], libraries = [], servers = []} = {}} = config
 
         if (!Array.isArray(user)) {
@@ -47,7 +57,8 @@ export default class PlexSource extends AbstractSource {
         this.initialized = true;
     }
 
-    static formatPlayObj(obj: any, newFromSource = false): PlayObject {
+    static formatPlayObj(obj: any, options: FormatPlayObjectOptions = {}): PlayObject {
+        const {newFromSource = false} = options;
         const {
             event,
             Account: {
@@ -70,6 +81,10 @@ export default class PlexSource extends AbstractSource {
                 // @ts-expect-error TS(2525): Initializer provides no value for this binding ele... Remove this comment to see the full error message
                 title: server
             } = {},
+            Player: {
+                title,
+                uuid,
+            }
         } = obj;
         return {
             data: {
@@ -86,6 +101,7 @@ export default class PlexSource extends AbstractSource {
                 server,
                 source: 'Plex',
                 newFromSource,
+                deviceId: combinePartsToString([shortDeviceId(uuid), title])
             }
         }
     }
@@ -158,16 +174,13 @@ export default class PlexSource extends AbstractSource {
         return true;
     }
 
-    handle = async (playObj: any, allClients: any) => {
+    handle = async (playObj: any) => {
         if (!this.isValidEvent(playObj)) {
             return;
         }
 
-        this.logger.info(`New Track => ${buildTrackString(playObj)}`);
         try {
-            await allClients.scrobble(playObj, {scrobbleTo: this.clients, scrobbleFrom: this.identifier});
-            // only gets hit if we scrobbled ok
-            this.tracksDiscovered++;
+            this.scrobble([playObj]);
         } catch (e) {
             this.logger.error('Encountered error while scrobbling')
             this.logger.error(e)
@@ -177,7 +190,7 @@ export default class PlexSource extends AbstractSource {
 
 export const plexRequestMiddle = () => {
 
-    const plexLog = createLabelledLogger('plexReq', 'Plex Request');
+    const plexLog = winston.loggers.get('app').child({labels: ['Plex Request']}, mergeArr);
 
     return async (req: any, res: any, next: any) => {
 

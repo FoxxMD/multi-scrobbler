@@ -1,4 +1,4 @@
-import {createLabelledLogger, readJson, validateJson} from "../utils.js";
+import {mergeArr, parseBool, readJson, validateJson} from "../utils.js";
 import SpotifySource from "./SpotifySource.js";
 import PlexSource from "./PlexSource.js";
 import TautulliSource from "./TautulliSource.js";
@@ -8,7 +8,7 @@ import LastfmSource from "./LastfmSource.js";
 import DeezerSource from "./DeezerSource.js";
 import {ConfigMeta, InternalConfig, SourceType, sourceTypes} from "../common/infrastructure/Atomic.js";
 import {configDir as defaultConfigDir} from "../common/index.js";
-import {Logger} from "winston";
+import winston, {Logger} from "winston";
 import {SourceAIOConfig, SourceConfig} from "../common/infrastructure/config/source/sources.js";
 import {DeezerData, DeezerSourceConfig} from "../common/infrastructure/config/source/deezer.js";
 import {LastfmClientConfig} from "../common/infrastructure/config/client/lastfm.js";
@@ -24,7 +24,13 @@ import * as sourceSchema from "../common/schema/source.json";
 import {LastfmSourceConfig} from "../common/infrastructure/config/source/lastfm.js";
 import YTMusicSource from "./YTMusicSource.js";
 import {YTMusicSourceConfig} from "../common/infrastructure/config/source/ytmusic.js";
-import {Notifiers} from "../notifier/Notifiers.js";
+import {MPRISData, MPRISSourceConfig} from "../common/infrastructure/config/source/mpris.js";
+import {MPRISSource} from "./MPRISSource.js";
+import EventEmitter from "events";
+import {MopidySource} from "./MopidySource.js";
+import {MopidySourceConfig} from "../common/infrastructure/config/source/mopidy.js";
+import ListenbrainzSource from "./ListenbrainzSource.js";
+import {ListenBrainzSourceConfig} from "../common/infrastructure/config/source/listenbrainz.js";
 
 type groupedNamedConfigs = {[key: string]: ParsedConfig[]};
 
@@ -37,10 +43,13 @@ export default class ScrobbleSources {
     configDir: string;
     localUrl: string;
 
-    constructor(localUrl: string, configDir: string = defaultConfigDir) {
+    emitter: EventEmitter;
+
+    constructor(emitter: EventEmitter, localUrl: string, configDir: string = defaultConfigDir) {
+        this.emitter = emitter;
         this.configDir = configDir;
         this.localUrl = localUrl;
-        this.logger = createLabelledLogger('sources', 'Sources');
+        this.logger = winston.loggers.get('app').child({labels: ['Sources']}, mergeArr);
     }
 
     getByName = (name: any) => {
@@ -82,7 +91,7 @@ export default class ScrobbleSources {
         return [sourcesReady, messages];
     }
 
-    buildSourcesFromConfig = async (additionalConfigs: ParsedConfig[] = [], notifier: Notifiers) => {
+    buildSourcesFromConfig = async (additionalConfigs: ParsedConfig[] = []) => {
         let configs: ParsedConfig[] = additionalConfigs;
 
         let configFile;
@@ -229,6 +238,27 @@ export default class ScrobbleSources {
                         });
                     }
                     break;
+                case 'mpris':
+                    const shouldUse = parseBool(process.env.MPRIS_ENABLE);
+                    const mp = {
+                        blacklist: process.env.MPRIS_BLACKLIST,
+                        whitelist: process.env.MPRIS_WHITELIST
+                    }
+                    if (!Object.values(mp).every(x => x === undefined) || shouldUse) {
+                        configs.push({
+                            type: 'mpris',
+                            name: 'unnamed',
+                            source: 'ENV',
+                            mode: 'single',
+                            configureAs: defaultConfigureAs,
+                            data: mp as MPRISData
+                        });
+                    }
+                    break;
+                case 'listenbrainz':
+                    // sane default for lastfm is that user want to scrobble TO it, not FROM it -- this is also existing behavior
+                    defaultConfigureAs = 'client';
+                    break;
                 default:
                     break;
             }
@@ -256,14 +286,25 @@ export default class ScrobbleSources {
                     try {
                         const validConfig = validateJson<SourceConfig>(rawConf, sourceSchema, this.logger);
 
-                        if(sourceType !== 'lastfm' || ((validConfig as LastfmSourceConfig).configureAs === 'source')) {
-                            // @ts-ignore
-                            const parsedConfig: ParsedConfig = {
-                                ...rawConf,
-                                source: `${sourceType}.json`,
-                                type: sourceType
-                            }
+                        // @ts-ignore
+                        const parsedConfig: ParsedConfig = {
+                            ...rawConf,
+                            source: `${sourceType}.json`,
+                            type: sourceType
+                        }
+
+                        if(!['lastfm','listenbrainz'].includes(sourceType) || ((validConfig as LastfmSourceConfig | ListenBrainzSourceConfig).configureAs === 'source')) {
                             configs.push(parsedConfig);
+                        } else {
+                            if('configureAs' in validConfig) {
+                                if(validConfig.configureAs === 'source') {
+                                    configs.push(parsedConfig);
+                                } else {
+                                    this.logger.debug(`${sourceType} has 'configureAs: client' so will skip adding as a source`);
+                                }
+                            } else {
+                                this.logger.debug(`${sourceType} did not have 'configureAs' specified! Assuming 'client' so will skip adding as a source`);
+                            }
                         }
                     } catch (e: any) {
                         this.logger.error(`The config entry at index ${i} from ${sourceType}.json was not valid`);
@@ -317,7 +358,7 @@ export default class ScrobbleSources {
                 // @ts-expect-error TS(2571): Object is of type 'unknown'.
                 for (const c of tempNamedConfigs) {
                     try {
-                        await this.addSource(c, sourceDefaults, notifier);
+                        await this.addSource(c, sourceDefaults);
                     } catch(e) {
                         this.logger.error(`Source ${c.name} of type ${c.type} was not added because of unrecoverable errors`);
                         this.logger.error(e);
@@ -327,7 +368,7 @@ export default class ScrobbleSources {
         }
     }
 
-    addSource = async (clientConfig: any, defaults = {}, notifier: Notifiers) => {
+    addSource = async (clientConfig: any, defaults = {}) => {
         // const isValidConfig = isValidConfigStructure(clientConfig, {name: true, data: true, type: true});
         // if (isValidConfig !== true) {
         //     throw new Error(`Config object from ${clientConfig.source || 'unknown'} with name [${clientConfig.name || 'unnamed'}] of type [${clientConfig.type || 'unknown'}] has errors: ${isValidConfig.join(' | ')}`)
@@ -335,7 +376,8 @@ export default class ScrobbleSources {
 
         const internal: InternalConfig = {
             localUrl: this.localUrl,
-            configDir: this.configDir
+            configDir: this.configDir,
+            logger: this.logger
         };
 
         const {type, name, data: d = {}} = clientConfig;
@@ -348,28 +390,38 @@ export default class ScrobbleSources {
         let newSource;
         switch (type) {
             case 'spotify':
-                newSource = new SpotifySource(name, compositeConfig as SpotifySourceConfig, internal, notifier);
+                newSource = new SpotifySource(name, compositeConfig as SpotifySourceConfig, internal, this.emitter);
                 break;
             case 'plex':
-                newSource = await new PlexSource(name, compositeConfig as PlexSourceConfig, internal, 'plex', notifier);
+                newSource = await new PlexSource(name, compositeConfig as PlexSourceConfig, internal, 'plex', this.emitter);
                 break;
             case 'tautulli':
-                newSource = await new TautulliSource(name, compositeConfig as TautulliSourceConfig, internal, notifier);
+                newSource = await new TautulliSource(name, compositeConfig as TautulliSourceConfig, internal, this.emitter);
                 break;
             case 'subsonic':
-                newSource = new SubsonicSource(name, compositeConfig as SubSonicSourceConfig, internal, notifier);
+                newSource = new SubsonicSource(name, compositeConfig as SubSonicSourceConfig, internal, this.emitter);
                 break;
             case 'jellyfin':
-                newSource = await new JellyfinSource(name, compositeConfig as JellySourceConfig, internal, notifier);
+                newSource = await new JellyfinSource(name, compositeConfig as JellySourceConfig, internal, this.emitter);
                 break;
             case 'lastfm':
-                newSource = await new LastfmSource(name, compositeConfig as LastfmClientConfig, internal, notifier);
+                newSource = await new LastfmSource(name, compositeConfig as LastfmClientConfig, internal, this.emitter);
                 break;
             case 'deezer':
-                newSource = await new DeezerSource(name, compositeConfig as DeezerSourceConfig, internal, notifier);
+                newSource = await new DeezerSource(name, compositeConfig as DeezerSourceConfig, internal, this.emitter);
                 break;
             case 'ytmusic':
-                newSource = await new YTMusicSource(name, compositeConfig as YTMusicSourceConfig, internal, notifier);
+                newSource = await new YTMusicSource(name, compositeConfig as YTMusicSourceConfig, internal, this.emitter);
+                break;
+            case 'mpris':
+                newSource = await new MPRISSource(name, compositeConfig as MPRISSourceConfig, internal, this.emitter);
+                break;
+            case 'mopidy':
+                newSource = await new MopidySource(name, compositeConfig as MopidySourceConfig, internal, this.emitter);
+                break;
+            case 'listenbrainz':
+                newSource = await new ListenbrainzSource(name, compositeConfig as ListenBrainzSourceConfig, internal, this.emitter);
+                break;
             default:
                 break;
         }
@@ -379,19 +431,19 @@ export default class ScrobbleSources {
             throw new Error(`Source of type ${type} was not recognized??`);
         }
         if(newSource.initialized === false) {
-            this.logger.debug(`(${name}) Attempting ${type} initialization...`);
+            this.logger.debug(`Attempting ${type} (${name}) initialization...`);
             if ((await newSource.initialize()) === false) {
-                this.logger.error(`(${name}) ${type} source failed to initialize. Source needs to be successfully initialized before activity capture can begin.`);
+                this.logger.error(`${type} (${name}) source failed to initialize. Source needs to be successfully initialized before activity capture can begin.`);
                 return;
             } else {
-                this.logger.info(`(${name}) ${type} source initialized`);
+                this.logger.info(`${type} (${name}) source initialized`);
             }
         } else {
-            this.logger.info(`(${name}) ${type} source initialized`);
+            this.logger.info(`${type} (${name}) source initialized`);
         }
 
         if(newSource.requiresAuth && !newSource.authed) {
-            this.logger.debug(`(${name}) Checking ${type} source auth...`);
+            this.logger.debug(`Checking ${type} (${name}) source auth...`);
             let success;
             try {
                 success = await newSource.testAuth();
@@ -399,9 +451,9 @@ export default class ScrobbleSources {
                 success = false;
             }
             if(!success) {
-                this.logger.warn(`(${name}) ${type} source auth failed.`);
+                this.logger.warn(`${type} (${name}) source auth failed.`);
             } else {
-                this.logger.info(`(${name}) ${type} source auth OK`);
+                this.logger.info(`${type} (${name}) source auth OK`);
             }
         }
 

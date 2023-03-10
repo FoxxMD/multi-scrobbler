@@ -1,0 +1,11 @@
+[
+  {
+    "name": "MyMopidy",
+    "data": {
+      "url": "localhost",
+      "uriBlacklist": [],
+      "uriWhitelist": [],
+      "albumBlacklist": []
+    }
+  }
+]

@@ -1,7 +1,7 @@
 import {addAsync, Router} from '@awaitjs/express';
 import express from 'express';
 import bodyParser from 'body-parser';
-import winston from 'winston';
+import {Logger} from 'winston';
 import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc.js';
 import isBetween from 'dayjs/plugin/isBetween.js';
@@ -9,38 +9,36 @@ import relativeTime from 'dayjs/plugin/relativeTime.js';
 import duration from 'dayjs/plugin/duration.js';
 import passport from 'passport';
 import session from 'express-session';
-import {Writable} from 'stream';
-import 'winston-daily-rotate-file';
+
 import {
     buildTrackString,
-    capitalize, createLabelledLogger,
-    labelledFormat,
-    longestString,
-    readJson, remoteHostIdentifiers, sleep,
+    capitalize,
+    longestString, mergeArr,
+    readJson,
+    remoteHostIdentifiers,
+    sleep,
     truncateStringToLength
 } from "./utils.js";
-
-import ScrobbleSources from "./sources/ScrobbleSources.js";
 import {makeClientCheckMiddle, makeSourceCheckMiddle} from "./server/middleware.js";
 import TautulliSource from "./sources/TautulliSource.js";
 import PlexSource, {plexRequestMiddle} from "./sources/PlexSource.js";
 import JellyfinSource from "./sources/JellyfinSource.js";
-import { Server } from "socket.io";
+import {Server} from "socket.io";
 import * as path from "path";
 import {projectDir} from "./common/index.js";
-import LastfmApiClient from "./apis/LastfmApiClient.js";
 import LastfmSource from "./sources/LastfmSource.js";
 import LastfmScrobbler from "./clients/LastfmScrobbler.js";
-import ScrobbleClients from "./clients/ScrobbleClients.js";
 import DeezerSource from "./sources/DeezerSource.js";
 import AbstractSource from "./sources/AbstractSource.js";
-import {PlayObject, TrackStringOptions} from "./common/infrastructure/Atomic.js";
+import {LogInfo, LogLevel, PlayObject, TrackStringOptions} from "./common/infrastructure/Atomic.js";
 import SpotifySource from "./sources/SpotifySource.js";
 import {JellyfinNotifier} from "./sources/ingressNotifiers/JellyfinNotifier.js";
 import {PlexNotifier} from "./sources/ingressNotifiers/PlexNotifier.js";
 import {TautulliNotifier} from "./sources/ingressNotifiers/TautulliNotifier.js";
-import {Notifiers} from "./notifier/Notifiers.js";
 import {AIOConfig} from "./common/infrastructure/config/aioConfig.js";
+import createRoot from "./ioc.js";
+import {formatLogToHtml, getLogger, isLogLineMinLevel} from "./common/logging.js";
+import {MESSAGE} from "triple-beam";
 
 
 dayjs.extend(utc)
@@ -65,99 +63,73 @@ app.use(session({secret: 'keyboard cat', resave: false, saveUninitialized: false
 app.use(passport.initialize());
 app.use(passport.session());
 
-const {transports} = winston;
+let output: LogInfo[] = []
 
-let output: any = []
-const stream = new Writable()
-stream._write = (chunk, encoding, next) => {
-    let formatString = chunk.toString().replace('\n', '<br />')
-    .replace(/(debug)\s/gi, '<span class="debug text-pink-400">$1 </span>')
-    .replace(/(warn)\s/gi, '<span class="warn text-blue-400">$1 </span>')
-    .replace(/(info)\s/gi, '<span class="info text-yellow-500">$1 </span>')
-    .replace(/(error)\s/gi, '<span class="error text-red-400">$1 </span>')
-    output.unshift(formatString);
-    output = output.slice(0, 101);
-    io.emit('log', formatString);
-    next();
-}
-const streamTransport = new winston.transports.Stream({
-    stream,
-})
-
-const logConfig = {
-    level: process.env.LOG_LEVEL || 'info',
-    sort: 'descending',
-    limit: 50,
-}
-
-const availableLevels = ['info', 'debug'];
-let logPath = path.resolve(projectDir, `./logs`);
-if(typeof process.env.CONFIG_DIR === 'string') {
-    logPath = path.resolve(process.env.CONFIG_DIR, './logs');
-}
-const localUrl = `http://localhost:${port}`;
-
-const rotateTransport = new winston.transports.DailyRotateFile({
-    dirname: logPath,
-    createSymlink: true,
-    symlinkName: 'scrobble-current.log',
-    filename: 'scrobble-%DATE%.log',
-    datePattern: 'YYYY-MM-DD',
-    maxSize: '5m'
+const initLogger = getLogger({}, 'init');
+initLogger.stream().on('log', (log: LogInfo) => {
+    output.unshift(log);
+    output = output.slice(0, 301);
+    io.emit('log', formatLogToHtml(log[MESSAGE]));
 });
 
-const consoleTransport = new transports.Console();
-
-const myTransports = [
-    consoleTransport,
-    streamTransport,
-];
-
-if (typeof logPath === 'string') {
-    // @ts-ignore
-    myTransports.push(rotateTransport);
-}
-
-const loggerOptions: winston.LoggerOptions = {
-    level: logConfig.level,
-    format: labelledFormat(),
-    transports: myTransports,
-};
-
-winston.loggers.add('default', loggerOptions);
-
-const logger = winston.loggers.get('default');
+let logger: Logger;
 
 const configDir = process.env.CONFIG_DIR || path.resolve(projectDir, `./config`);
 
 
     try {
         // try to read a configuration file
+        let appConfigFail = false;
         let config = {};
         try {
             config = await readJson(`${configDir}/config.json`, {throwOnNotFound: false});
         } catch (e) {
-            logger.warn('App config file exists but could not be parsed!');
+            appConfigFail = true;
         }
 
-        const notifiers = new Notifiers();
         const {
-            webhooks = []
+            webhooks = [],
+            logging = {},
         } = (config || {}) as AIOConfig;
 
-        await notifiers.buildWebhooks(webhooks)
+        const logConfig: {level: LogLevel, sort: string, limit: number} = {
+            level: logging.level || (process.env.LOG_LEVEL || 'info') as LogLevel,
+            sort: 'descending',
+            limit: 50,
+        }
+
+        logger = getLogger(logging, 'app');
+        logger.stream().on('log', (log: LogInfo) => {
+            output.unshift(log);
+            output = output.slice(0, 301);
+            if(isLogLineMinLevel(log, logConfig.level)) {
+                io.emit('log', formatLogToHtml(log[MESSAGE]));
+            }
+        });
+
+        if(appConfigFail) {
+            logger.warn('App config file exists but could not be parsed!');
+        }
+        const root = createRoot();
+        const localUrl = root.get('localUrl');
+
+        const notifiers = root.get('notifiers');
+        await notifiers.buildWebhooks(webhooks);
+
+        const availableLevels = ['error', 'warn', 'info', 'verbose', 'debug'];
+
 
         /*
         * setup clients
         * */
-        const scrobbleClients = new ScrobbleClients(configDir);
+        const scrobbleClients = root.get('clients');
         await scrobbleClients.buildClientsFromConfig(notifiers);
         if (scrobbleClients.clients.length === 0) {
             logger.warn('No scrobble clients were configured!')
         }
 
-        const scrobbleSources = new ScrobbleSources(localUrl, configDir);
-        await scrobbleSources.buildSourcesFromConfig([], notifiers);
+        const scrobbleSources = root.get('sources');//new ScrobbleSources(localUrl, configDir);
+        await scrobbleSources.buildSourcesFromConfig([]);
 
         const clientCheckMiddle = makeClientCheckMiddle(scrobbleClients);
         const sourceCheckMiddle = makeSourceCheckMiddle(scrobbleSources);
@@ -179,7 +151,7 @@ const configDir = process.env.CONFIG_DIR || path.resolve(projectDir, `./config`)
         }
 
         app.getAsync('/', async function (req, res) {
-            let slicedLog = output.slice(0, logConfig.limit + 1);
+            let slicedLog = output.filter(x => isLogLineMinLevel(x, logConfig.level)).slice(0, logConfig.limit + 1).map(x => formatLogToHtml(x[MESSAGE]));
             if (logConfig.sort === 'ascending') {
                 slicedLog.reverse();
             }
@@ -252,7 +224,7 @@ const configDir = process.env.CONFIG_DIR || path.resolve(projectDir, `./config`)
                     output: slicedLog,
                     limit: [10, 20, 50, 100].map(x => `<a class="capitalize ${logConfig.limit === x ? 'font-bold no-underline pointer-events-none' : ''}" data-limit="${x}" href="logs/settings/update?limit=${x}">${x}</a>`).join(' | '),
                     sort: ['ascending', 'descending'].map(x => `<a class="capitalize ${logConfig.sort === x ? 'font-bold no-underline pointer-events-none' : ''}" data-sort="${x}" href="logs/settings/update?sort=${x}">${x}</a>`).join(' | '),
-                    level: availableLevels.map(x => `<a class="capitalize log-${x} ${logConfig.level === x ? `font-bold no-underline pointer-events-none` : ''}" data-log="${x}" href="logs/settings/update?level=${x}">${x}</a>`).join(' | ')
+                    level: availableLevels.map(x => `<a class="capitalize log-level log-${x} ${logConfig.level === x ? `font-bold no-underline pointer-events-none` : ''}" data-log="${x}" href="logs/settings/update?level=${x}">${x}</a>`).join(' | ')
                 }
             });
         })
@@ -261,7 +233,7 @@ const configDir = process.env.CONFIG_DIR || path.resolve(projectDir, `./config`)
         app.postAsync('/tautulli', async function(this: any, req, res) {
             tauIngress.trackIngress(req, false);
 
-            const payload = TautulliSource.formatPlayObj(req.body, true);
+            const payload = TautulliSource.formatPlayObj(req.body, {newFromSource: true});
             // try to get config name from payload
             if (req.body.scrobblerConfig !== undefined) {
                 const source = scrobbleSources.getByName(req.body.scrobblerConfig);
@@ -271,7 +243,7 @@ const configDir = process.env.CONFIG_DIR || path.resolve(projectDir, `./config`)
                         return res.send('OK');
                     } else {
                         // @ts-expect-error TS(2339): Property 'handle' does not exist on type 'never'.
-                        await source.handle(payload, scrobbleClients);
+                        await source.handle(payload);
                         return res.send('OK');
                     }
                 } else {
@@ -283,14 +255,14 @@ const configDir = process.env.CONFIG_DIR || path.resolve(projectDir, `./config`)
             const tSources = scrobbleSources.getByType('tautulli');
             for (const source of tSources) {
                 // @ts-expect-error TS(2339): Property 'handle' does not exist on type 'never'.
-                await source.handle(payload, scrobbleClients);
+                await source.handle(payload);
             }
 
             res.send('OK');
         });
 
         const plexMiddle = plexRequestMiddle();
-        const plexLog = createLabelledLogger('plexReq', 'Plex Request');
+        const plexLog = logger.child({labels: ['Plex Request']}, mergeArr);
         const plexIngress = new PlexNotifier();
         app.postAsync('/plex',
             async function (req, res, next) {
@@ -304,7 +276,7 @@ const configDir = process.env.CONFIG_DIR || path.resolve(projectDir, `./config`)
 
             const { payload } = req as any;
             if(payload !== undefined) {
-                const playObj = PlexSource.formatPlayObj(payload, true);
+                const playObj = PlexSource.formatPlayObj(payload, {newFromSource: true});
 
                 const pSources = scrobbleSources.getByType('plex') as PlexSource[];
                 if(pSources.length === 0) {
@@ -312,7 +284,7 @@ const configDir = process.env.CONFIG_DIR || path.resolve(projectDir, `./config`)
                 }
 
                 for (const source of pSources) {
-                    await source.handle(playObj, scrobbleClients);
+                    await source.handle(playObj);
                 }
             }
 
@@ -335,7 +307,7 @@ const configDir = process.env.CONFIG_DIR || path.resolve(projectDir, `./config`)
             const parts = remoteHostIdentifiers(req);
             const connectionId = `${parts.host}-${parts.proxy ?? ''}`;
 
-            const playObj = JellyfinSource.formatPlayObj({...req.body, connectionId}, true);
+            const playObj = JellyfinSource.formatPlayObj({...req.body, connectionId}, {newFromSource: true});
             const pSources = scrobbleSources.getByType('jellyfin') as JellyfinSource[];
             if(pSources.length === 0) {
                 logger.warn('Received Jellyfin connection but no Jellyfin sources are configured');
@@ -354,7 +326,7 @@ const configDir = process.env.CONFIG_DIR || path.resolve(projectDir, `./config`)
                 logger.debug(`[Jellyfin] Logging payload due to at least one Jellyfin source having 'logPayload: true`, req.body);
             }
             for (const source of pSources) {
-                await source.handle(playObj, scrobbleClients);
+                await source.handle(playObj);
             }
             res.send('OK');
         });
@@ -415,7 +387,7 @@ const configDir = process.env.CONFIG_DIR || path.resolve(projectDir, `./config`)
                 return res.status(400).send(`Specified source cannot poll (${source.type})`);
             }
 
-            source.poll(scrobbleClients);
+            source.poll();
             res.send('OK');
         });
 
@@ -429,7 +401,7 @@ const configDir = process.env.CONFIG_DIR || path.resolve(projectDir, `./config`)
                 return res.status(400).send(`Specified source cannot retrieve recent plays (${source.type})`);
             }
 
-            const result = await (source as AbstractSource).getRecentlyPlayed({formatted: true, display: true});
+            const result = (source as AbstractSource).getFlatRecentlyDiscoveredPlays();
             const artistTruncFunc = truncateStringToLength(Math.min(40, longestString(result.map((x: any) => x.data.artists.join(' / ')).flat())));
             const trackLength = longestString(result.map((x: any) => x.data.track))
             const plays = result.map((x: PlayObject) => {
@@ -466,14 +438,14 @@ const configDir = process.env.CONFIG_DIR || path.resolve(projectDir, `./config`)
                         logConfig.sort = val as string;
                         break;
                     case 'level':
-                        logConfig.level = val as string;
-                        for (const [key, logger] of winston.loggers.loggers) {
-                            logger.level = val as string;
-                        }
+                        logConfig.level = val as LogLevel;
+                        // for (const [key, logger] of winston.loggers.loggers) {
+                        //     logger.level = val as string;
+                        // }
                         break;
                 }
             }
-            let slicedLog = output.slice(0, logConfig.limit + 1);
+            let slicedLog = output.filter(x => isLogLineMinLevel(x, logConfig.level)).slice(0, logConfig.limit + 1).map(x => formatLogToHtml(x[MESSAGE]));
             if (logConfig.sort === 'ascending') {
                 slicedLog.reverse();
             }
@@ -496,7 +468,7 @@ const configDir = process.env.CONFIG_DIR || path.resolve(projectDir, `./config`)
                     return res.send('Error with deezer credentials storage');
                 } else if(entity.config.data.accessToken !== undefined) {
                     // start polling
-                    entity.poll(entity.clients)
+                    entity.poll()
                     return res.redirect('/');
                 } else {
                     await sleep(1500);
@@ -537,7 +509,7 @@ const configDir = process.env.CONFIG_DIR || path.resolve(projectDir, `./config`)
                 const tokenResult = await source.handleAuthCodeCallback(req.query);
                 let responseContent = 'OK';
                 if (tokenResult === true) {
-                    source.poll(scrobbleClients);
+                    source.poll();
                 } else {
                     responseContent = tokenResult;
                 }
@@ -575,18 +547,18 @@ const configDir = process.env.CONFIG_DIR || path.resolve(projectDir, `./config`)
                         if ((source as SpotifySource).spotifyApi.getAccessToken() === undefined) {
                             anyNotReady = true;
                         } else {
-                            (source as SpotifySource).poll(scrobbleClients);
+                            (source as SpotifySource).poll();
                         }
                     }
                     break;
                 case 'lastfm':
                     if(source.initialized === true) {
-                        source.poll(scrobbleClients);
+                        source.poll();
                     }
                     break;
                 default:
                     if (source.poll !== undefined) {
-                        source.poll(scrobbleClients);
+                        source.poll();
                     }
             }
         }

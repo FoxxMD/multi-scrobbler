@@ -1,13 +1,13 @@
 import YouTubeMusic from "youtube-music-ts-api";
 
 import AbstractSource, {RecentlyPlayedOptions} from "./AbstractSource.js";
-import {InternalConfig, PlayObject} from "../common/infrastructure/Atomic.js";
+import {FormatPlayObjectOptions, InternalConfig, PlayObject} from "../common/infrastructure/Atomic.js";
 import {IYouTubeMusicAuthenticated} from "youtube-music-ts-api/interfaces-primary";
 import dayjs from "dayjs";
 import {parseDurationFromTimestamp, playObjDataMatch} from "../utils.js";
 import {IPlaylistDetail, ITrackDetail} from "youtube-music-ts-api/interfaces-supplementary";
 import {YTMusicSourceConfig} from "../common/infrastructure/config/source/ytmusic.js";
-import {Notifiers} from "../notifier/Notifiers.js";
+import EventEmitter from "events";
 
 export default class YTMusicSource extends AbstractSource {
     apiInstance?: IYouTubeMusicAuthenticated
@@ -18,12 +18,13 @@ export default class YTMusicSource extends AbstractSource {
 
     recentlyPlayed: PlayObject[] = [];
 
-    constructor(name: string, config: YTMusicSourceConfig, internal: InternalConfig, notifier: Notifiers) {
-        super('ytmusic', name, config, internal, notifier);
+    constructor(name: string, config: YTMusicSourceConfig, internal: InternalConfig, emitter: EventEmitter) {
+        super('ytmusic', name, config, internal, emitter);
         this.canPoll = true;
     }
 
-    static formatPlayObj(obj: ITrackDetail, newFromSource = false): PlayObject {
+    static formatPlayObj(obj: ITrackDetail, options: FormatPlayObjectOptions = {}): PlayObject {
+        const {newFromSource = false} = options;
         const {
             id,
             title,
@@ -55,9 +56,8 @@ export default class YTMusicSource extends AbstractSource {
                 playDate: newFromSource ? dayjs().startOf('minute') : undefined,
             },
             meta: {
-                trackLength: duration,
                 source: 'YTMusic',
-                sourceId: id,
+                trackId: id,
                 newFromSource,
             }
         }
@@ -109,11 +109,14 @@ export default class YTMusicSource extends AbstractSource {
         } catch (e) {
             throw e;
         }
-        const plays = playlistDetail.tracks.map((x) => YTMusicSource.formatPlayObj(x, false)).slice(0, 20);
+
+        let newPlays: PlayObject[] = [];
+
+        const plays = playlistDetail.tracks.map((x) => YTMusicSource.formatPlayObj(x, {newFromSource: false})).slice(0, 20);
         if(this.polling === false) {
             this.recentlyPlayed = plays;
+            newPlays = plays;
         } else {
-            let newPlays: PlayObject[] = [];
 
             // iterate through each play until we find one that matched the "newest" from the recently played
             for (const [i, value] of plays.entries()) {
@@ -124,7 +127,7 @@ export default class YTMusicSource extends AbstractSource {
                     const match = playObjDataMatch(value, this.recentlyPlayed[0]);
                     if (!match) {
                         newPlays.push(value)
-                    } else if (match && playObjDataMatch(plays[i + 1], this.recentlyPlayed[0])) { // if it matches but next ALSO matches the current it's a repeat "new"
+                    } else if (match && plays.length > i + 1 && playObjDataMatch(plays[i + 1], this.recentlyPlayed[0])) { // if it matches but next ALSO matches the current it's a repeat "new"
                         // check if repeated track
                         newPlays.push(value)
                     } else {
@@ -155,13 +158,8 @@ export default class YTMusicSource extends AbstractSource {
                 this.recentlyPlayed = newPlays.concat(this.recentlyPlayed).slice(0, 20);
             }
         }
-        
-        if(!display) {
-            // used by MS for newely monitored tracks where we know the play date
-            return this.recentlyPlayed.filter(x => x.meta.newFromSource);
-        }
-        // used by UI for returning all results
-        return this.recentlyPlayed;
+
+        return newPlays;
         
     }
 
@@ -182,11 +180,20 @@ export default class YTMusicSource extends AbstractSource {
         return this.authed;
     }
 
-    poll = async (allClients: any) => {
-        if(this.authed) {
+    poll = async () => {
+        if(this.authed && !this.polling) {
             this.logger.verbose('Hydrating initial recently played tracks for reference.');
-            await this.getRecentlyPlayed();
+            const referencePlays = await this.getRecentlyPlayed();
+            const reversedPlays = [...referencePlays];
+            // actual order they were discovered in (oldest to newest)
+            reversedPlays.reverse();
+            if(this.getFlatRecentlyDiscoveredPlays().length === 0) {
+                // and add to discovered since its empty
+                for(const refPlay of reversedPlays) {
+                    this.addPlayToDiscovered(refPlay);
+                }
+            }
         }
-        await this.startPolling(allClients);
+        await this.startPolling();
     }
 }

@@ -2,12 +2,12 @@ import request from 'superagent';
 import * as crypto from 'crypto';
 import dayjs from "dayjs";
 import isSameOrAfter from "dayjs/plugin/isSameOrAfter.js";
-import {buildTrackString, parseRetryAfterSecsFromObj, sleep} from "../utils.js";
+import {buildTrackString, parseRetryAfterSecsFromObj, removeDuplicates, sleep} from "../utils.js";
 import MemorySource from "./MemorySource.js";
 import {SubSonicSourceConfig} from "../common/infrastructure/config/source/subsonic.js";
-import {InternalConfig, PlayObject} from "../common/infrastructure/Atomic.js";
+import {FormatPlayObjectOptions, InternalConfig, PlayObject} from "../common/infrastructure/Atomic.js";
 import {RecentlyPlayedOptions} from "./AbstractSource.js";
-import {Notifiers} from "../notifier/Notifiers.js";
+import EventEmitter from "events";
 
 dayjs.extend(isSameOrAfter);
 
@@ -15,21 +15,21 @@ export class SubsonicSource extends MemorySource {
 
     requiresAuth = true;
 
+    multiPlatform: boolean = true;
+
     declare config: SubSonicSourceConfig;
 
-    constructor(name: any, config: SubSonicSourceConfig, internal: InternalConfig, notifier: Notifiers) {
+    constructor(name: any, config: SubSonicSourceConfig, internal: InternalConfig, emitter: EventEmitter) {
         // default to quick interval so we can get a decently accurate nowPlaying
         const {
             data: {
-                // @ts-ignore
                 interval = 10,
-                // @ts-ignore
-                maxSleep = 30,
+                maxInterval = 30,
                 ...restData
             } = {}
         } = config;
-        const subsonicConfig = {...config, data: {...restData, internal, maxSleep}};
-        super('subsonic', name, subsonicConfig, internal, notifier);
+        const subsonicConfig = {...config, data: {...restData, internal, maxInterval}};
+        super('subsonic', name, subsonicConfig, internal,emitter);
 
         const {data: {user, password, url} = {}} = this.config;
 
@@ -46,7 +46,8 @@ export class SubsonicSource extends MemorySource {
         this.canPoll = true;
     }
 
-    static formatPlayObj(obj: any, newFromSource = false): PlayObject {
+    static formatPlayObj(obj: any, options: FormatPlayObjectOptions = {}): PlayObject {
+        const {newFromSource = false} = options;
         const {
             id,
             title,
@@ -54,6 +55,8 @@ export class SubsonicSource extends MemorySource {
             artist,
             duration, // seconds
             minutesAgo,
+            playerId,
+            username,
         } = obj;
         return {
             data: {
@@ -66,10 +69,11 @@ export class SubsonicSource extends MemorySource {
                 playDate: minutesAgo === 0 ? dayjs().startOf('minute') : dayjs().startOf('minute').subtract(minutesAgo, 'minute'),
             },
             meta: {
-                trackLength: duration,
                 source: 'Subsonic',
-                sourceId: id,
+                trackId: id,
                 newFromSource,
+                user: username,
+                deviceId: playerId
             }
         }
     }
@@ -187,7 +191,8 @@ export class SubsonicSource extends MemorySource {
                 entry = []
             } = {}
         } = resp;
-        this.processRecentPlays(entry.map((x: any) => formatted ? SubsonicSource.formatPlayObj(x) : x));
-        return this.statefulRecentlyPlayed;
+        // sometimes subsonic sources will return the same track as being played twice on the same player, need to remove this so we don't duplicate plays
+        const deduped = removeDuplicates(entry.map(SubsonicSource.formatPlayObj));
+        return this.processRecentPlays(deduped);
     }
 }

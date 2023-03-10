@@ -4,36 +4,40 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Docker Pulls](https://img.shields.io/docker/pulls/foxxmd/multi-scrobbler)](https://hub.docker.com/r/foxxmd/multi-scrobbler)
 
-A javascript app to scrobble plays from multiple sources to [Maloja](https://github.com/krateng/maloja), [Last.fm](https://www.last.fm), and other clients (eventually!)
+A javascript app to scrobble music you listened to, to [Maloja](https://github.com/krateng/maloja), [Last.fm](https://www.last.fm), and [ListenBrainz](https://listenbrainz.org)
 
-* Supports scrobbling for many sources
+* Supports scrobbling from many **Sources**
   * [Spotify](/docs/configuration.md#spotify)
   * [Plex](/docs/configuration.md#plex) or [Tautulli](/docs/configuration.md#tautulli)
   * [Subsonic-compatible APIs](/docs/configuration.md#subsonic) (like [Airsonic](https://airsonic.github.io/))
   * [Jellyfin](/docs/configuration.md#jellyfin)
   * [Youtube Music](/docs/configuration.md#youtube-music)
   * [Last.fm](/docs/configuration.md#lastfm-source)
+  * [ListenBrainz](/docs/configuration.md#listenbrainz--source-)
   * [Deezer](/docs/configuration.md#deezer)
-* Supports scrobbling to many clients
+  * [MPRIS (Linux Desktop)](/docs/configuration.md#mpris)
+  * [Mopidy](/docs/configuration.md#mopidy)
+* Supports scrobbling to many **Clients**
   * [Maloja](/docs/configuration.md#maloja)
   * [Last.fm](/docs/configuration.md#lastfm)
-* Monitor status of sources and clients using [webhooks (Gotify or Ntfy)](/docs/configuration.md#webhook-configurations) or [healthcheck endpoint](/docs/configuration.md#health-endpoint)
+  * [ListenBrainz](/docs/configuration.md#listenbrainz)
+* Monitor status of Sources and Clients using [webhooks (Gotify or Ntfy)](/docs/configuration.md#webhook-configurations) or [healthcheck endpoint](/docs/configuration.md#health-endpoint)
 * Supports configuring for single or multiple users (scrobbling for your friends and family!)
 * Web server interface for stats, basic control, and detailed logs
 * Smart handling of credentials (persistent, authorization through app)
 * Easy configuration through ENVs or JSON
-* Built for Docker and unattended use!
+* Docker images for x86/ARM
 
 **Why should I use this over a browser extension and/or mobile app scrobbler?**
 
 * **Platform independent** -- Because multi-scrobbler communicates directly with service APIs it will scrobble everything you play regardless of where you play it. No more need for apps on every platform you use!
 * **Open-source** -- Get peace of mind knowing exactly how your personal data is being handled.
-* **Consolidate play sources** -- Scrobble from many sources to one client with ease and without duplicating tracks.
+* **Track your activity regardless of where you listen** -- Scrobble from many Sources to one Client with ease and without duplicating tracks.
 * **Manage scrobbling for others** -- Scrobble for your friends and family without any setup on their part. Easily silo sources to specific clients to keep plays separate.
 
-**But I already scrobble my music to Last.fm, is multi-scrobbler for me?**
+**But I already scrobble my music to Last.fm/ListenBrainz, is multi-scrobbler for me?**
 
-Yes! You can use [Last.fm as a **Source**](/docs/configuration.md#lastfm--source-) to mirror scrobbles from your Last.fm profile to Maloja. That way you can keep your current scrobble setup as-is but still get the benefit of capturing your data to a self-hosted location.
+Yes! You can use [Last.fm as a **Source**](/docs/configuration.md#lastfm--source-) or [Listenbrainz as a **Source**](/docs/configuration.md#listenbrainz--source-) to forward scrobbles from your profile to any other Client! That way you can keep your current scrobble setup as-is but still get the benefit of capturing your data to a self-hosted location.
 
 <img src="/assets/status-ui.jpg" width="800">
 
@@ -43,7 +47,7 @@ You set up configurations for one or more **Sources** and one or more **Clients*
 
 ### Source
 
-A **Source** is a data source that contains information about tracks you are playing like a music player or platform. Examples are **Spotify, Jellyfin, Plex, Airsonic**, etc...
+A **Source** is a data source that contains information about tracks you are playing like a music player or platform. Examples are **Spotify, Jellyfin, Plex, Youtube Music, Airsonic**, etc...
 
 Source configurations consist of:
 

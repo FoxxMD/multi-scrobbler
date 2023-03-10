@@ -6,7 +6,10 @@ import {SubsonicSourceAIOConfig, SubSonicSourceConfig} from "./subsonic.js";
 import {JellySourceAIOConfig, JellySourceConfig} from "./jellyfin.js";
 import {LastFmSouceAIOConfig, LastfmSourceConfig} from "./lastfm.js";
 import {YTMusicSourceAIOConfig, YTMusicSourceConfig} from "./ytmusic.js";
+import {MPRISSourceAIOConfig, MPRISSourceConfig} from "./mpris.js";
+import {MopidySourceAIOConfig, MopidySourceConfig} from "./mopidy.js";
+import {ListenBrainzSourceAIOConfig, ListenBrainzSourceConfig} from "./listenbrainz.js";
 
-export type SourceConfig = SpotifySourceConfig | PlexSourceConfig | TautulliSourceConfig | DeezerSourceConfig | SubSonicSourceConfig | JellySourceConfig | LastfmSourceConfig | YTMusicSourceConfig;
+export type SourceConfig = SpotifySourceConfig | PlexSourceConfig | TautulliSourceConfig | DeezerSourceConfig | SubSonicSourceConfig | JellySourceConfig | LastfmSourceConfig | YTMusicSourceConfig | MPRISSourceConfig | MopidySourceConfig | ListenBrainzSourceConfig;
 
-export type SourceAIOConfig = SpotifySourceAIOConfig | PlexSourceAIOConfig | TautulliSourceAIOConfig | DeezerSourceAIOConfig | SubsonicSourceAIOConfig | JellySourceAIOConfig | LastFmSouceAIOConfig | YTMusicSourceAIOConfig;
+export type SourceAIOConfig = SpotifySourceAIOConfig | PlexSourceAIOConfig | TautulliSourceAIOConfig | DeezerSourceAIOConfig | SubsonicSourceAIOConfig | JellySourceAIOConfig | LastFmSouceAIOConfig | YTMusicSourceAIOConfig | MPRISSourceAIOConfig | MopidySourceAIOConfig | ListenBrainzSourceAIOConfig;

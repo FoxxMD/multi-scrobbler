@@ -38,9 +38,6 @@
                         <h3>Recently Played (<%= name %>)</h3>
                     </div>
                     <div class="p-6 md:px-10 md:py-6">
-                        <% if (sourceType === 'spotify') { %>
-                            This list was returned from the Spotify Api <b>now.</b> Sometimes Spotify "backlogs" user activity so your recent tracks may not show up for minutes (or hours). ¯\_(ツ)_/¯
-                        <% } %>
                         <ul>
                             <% plays.forEach(function (play){ %>
                                 <li><%-play%></li>

@@ -44,7 +44,13 @@ Expand the **Watched** dropdown and add the following code block to the **JSON D
 "username": "{username}",
 "server": "{server_name}",
 "version": "{server_version}",
-"library": "{library_name}"
+"library": "{library_name}",
+"player": "{player}",
+"device": "{device}",
+"platform": "{platform}",
+"action": "{action}",
+"machine_id": "{machine_id}",
+"session_key": "{session_key}"
 }
 ```
 
