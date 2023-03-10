@@ -8,8 +8,8 @@ export const sourceTypes: SourceType[] = ['spotify', 'plex', 'tautulli', 'subson
 
 export const lowGranularitySources: SourceType[] = ['subsonic','ytmusic'];
 
-export type ClientType = 'maloja' | 'lastfm';
-export const clientTypes: ClientType[] = ['maloja', 'lastfm'];
+export type ClientType = 'maloja' | 'lastfm' | 'listenbrainz';
+export const clientTypes: ClientType[] = ['maloja', 'lastfm', 'listenbrainz'];
 
 export type InitState = 0 | 1 | 2;
 export const NOT_INITIALIZED: InitState = 0;

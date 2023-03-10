@@ -20,7 +20,7 @@ export default abstract class AbstractApiClient {
         this.type = type;
         this.name = name;
         const identifier = `API - ${capitalize(this.type)} - ${name}`;
-        this.logger = winston.loggers.get('app').child({labels: identifier}, mergeArr);
+        this.logger = winston.loggers.get('app').child({labels: [identifier]}, mergeArr);
         this.config = config;
         this.options = options;
     }

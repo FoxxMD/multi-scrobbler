@@ -4,7 +4,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Docker Pulls](https://img.shields.io/docker/pulls/foxxmd/multi-scrobbler)](https://hub.docker.com/r/foxxmd/multi-scrobbler)
 
-A javascript app to scrobble plays from multiple sources to [Maloja](https://github.com/krateng/maloja), [Last.fm](https://www.last.fm), and other clients (eventually!)
+A javascript app to scrobble plays from multiple sources to [Maloja](https://github.com/krateng/maloja), [Last.fm](https://www.last.fm), and other clients
 
 * Supports scrobbling for many sources
   * [Spotify](/docs/configuration.md#spotify)
@@ -19,6 +19,7 @@ A javascript app to scrobble plays from multiple sources to [Maloja](https://git
 * Supports scrobbling to many clients
   * [Maloja](/docs/configuration.md#maloja)
   * [Last.fm](/docs/configuration.md#lastfm)
+  * [Listenbrainz](/docs/configuration.md#listenbrainz)
 * Monitor status of sources and clients using [webhooks (Gotify or Ntfy)](/docs/configuration.md#webhook-configurations) or [healthcheck endpoint](/docs/configuration.md#health-endpoint)
 * Supports configuring for single or multiple users (scrobbling for your friends and family!)
 * Web server interface for stats, basic control, and detailed logs

@@ -20,6 +20,8 @@ import {Notifiers} from "../notifier/Notifiers.js";
 import AbstractScrobbleClient from "./AbstractScrobbleClient.js";
 import {EventEmitter} from "events";
 import winston from "winston";
+import ListenbrainzScrobbler from "./ListenbrainzScrobbler.js";
+import {ListenBrainzClientConfig} from "../common/infrastructure/config/client/listenbrainz.js";
 
 type groupedNamedConfigs = {[key: string]: ParsedConfig[]};
 
@@ -128,7 +130,7 @@ export default class ScrobbleClients {
                     if (url !== undefined || apiKey !== undefined) {
                         configs.push({
                             type: 'maloja',
-                            name: 'unnamed',
+                            name: 'unnamed-mlj',
                             source: 'ENV',
                             mode: 'single',
                             configureAs: 'client',
@@ -150,12 +152,30 @@ export default class ScrobbleClients {
                     if (!Object.values(lfm).every(x => x === undefined)) {
                         configs.push({
                             type: 'lastfm',
-                            name: 'unnamed',
+                            name: 'unnamed-lfm',
                             source: 'ENV',
                             mode: 'single',
                             configureAs: 'client',
                             // @ts-ignore
                             data: lfm
+                        })
+                    }
+                    break;
+                case 'listenbrainz':
+                    const lz = {
+                        url: process.env.LZ_URL,
+                        token: process.env.LZ_TOKEN,
+                        username: process.env.LZ_USER
+                    };
+                    if (!Object.values(lz).every(x => x === undefined)) {
+                        configs.push({
+                            type: 'listenbrainz',
+                            name: 'unnamed-lz',
+                            source: 'ENV',
+                            mode: 'single',
+                            configureAs: 'client',
+                            // @ts-ignore
+                            data: lz
                         })
                     }
                     break;
@@ -281,6 +301,9 @@ ${sources.join('\n')}`);
                 break;
             case 'lastfm':
                 newClient = new LastfmScrobbler(name, {...clientConfig, data: {configDir: this.configDir, ...data} } as unknown as LastfmClientConfig, {}, notifier, this.logger);
+                break;
+            case 'listenbrainz':
+                newClient = new ListenbrainzScrobbler(name, {...clientConfig, data: {configDir: this.configDir, ...data} } as unknown as ListenBrainzClientConfig, {}, notifier, this.logger);
                 break;
             default:
                 break;
