@@ -31,6 +31,8 @@ SPOTIFY_CLIENT_ID=yourId SPOTIFY_CLIENT_SECRET=yourSecret MALOJA_URL="http://dom
 
 ## [Docker](https://hub.docker.com/r/foxxmd/multi-scrobbler)
 
+Cross-platform images are built for x86 (Intel/AMD) and ARM (IE Raspberry Pi)
+
 ```
 foxxmd/multi-scrobbler:latest
 ```

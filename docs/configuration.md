@@ -280,7 +280,7 @@ On your [profile page](https://listenbrainz.org/profile/) find your **User Token
 
 ### File-Based
 
-See [`listenbrainz.json.example`](/config/listenbrainz.json.example) or [explore the schema with an example and live editor/validator](https://json-schema.app/view/%23/%23%2Fdefinitions%2FListenbrainzClientConfig?url=https%3A%2F%2Fraw.githubusercontent.com%2FFoxxMD%2Fmulti-scrobbler%2Fdevelop%2Fsrc%2Fcommon%2Fschema%2Fclient.json)
+See [`listenbrainz.json.example`](/config/listenbrainz.json.example) or [explore the schema with an example and live editor/validator](https://json-schema.app/view/%23%2Fdefinitions%2FListenBrainzSourceConfig?url=https%3A%2F%2Fraw.githubusercontent.com%2FFoxxMD%2Fmulti-scrobbler%2Fdevelop%2Fsrc%2Fcommon%2Fschema%2Fsource.json)
 
 **Change `configureAs` to `source`**
 
@@ -515,7 +515,7 @@ On your [profile page](https://listenbrainz.org/profile/) find your **User Token
 
 ### File-Based
 
-See [`listenbrainz.json.example`](/config/listenbrainz.json.example) or [explore the schema with an example and live editor/validator](https://json-schema.app/view/%23/%23%2Fdefinitions%2FListenbrainzClientConfig?url=https%3A%2F%2Fraw.githubusercontent.com%2FFoxxMD%2Fmulti-scrobbler%2Fdevelop%2Fsrc%2Fcommon%2Fschema%2Fclient.json)
+See [`listenbrainz.json.example`](/config/listenbrainz.json.example) or [explore the schema with an example and live editor/validator](https://json-schema.app/view/%23%2Fdefinitions%2FListenBrainzClientConfig?url=https%3A%2F%2Fraw.githubusercontent.com%2FFoxxMD%2Fmulti-scrobbler%2Fdevelop%2Fsrc%2Fcommon%2Fschema%2Fclient.json)
 
 # Monitoring
 
