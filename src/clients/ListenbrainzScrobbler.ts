@@ -30,11 +30,6 @@ export default class ListenbrainzScrobbler extends AbstractScrobbleClient {
 
     constructor(name: any, config: ListenBrainzClientConfig, options = {}, notifier: Notifiers, logger: Logger) {
         super('listenbrainz', name, config, notifier, logger);
-        const {
-            data: {
-                url
-            } = {}
-        } = config;
         this.api = new ListenbrainzApiClient(name, config.data);
     }
 
@@ -63,7 +58,7 @@ export default class ListenbrainzScrobbler extends AbstractScrobbleClient {
         try {
             this.authed = await this.api.testAuth();
         } catch (e) {
-            this.logger.error('Could not successfully communicate with Last.fm API');
+            this.logger.error('Could not successfully communicate with Listenbrainz API');
             this.logger.error(e);
             this.authed = false;
         }

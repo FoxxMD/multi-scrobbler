@@ -10,6 +10,7 @@
   * [Subsonic](#subsonic)
   * [Jellyfin](#jellyfin)
   * [Last.fm (Source)](#lastfm--source-)
+  * [Listenbrainz (Source)](#listenbrainz--source-)
   * [Deezer](#deezer)
   * [Youtube Music](#youtube-music)
   * [MPRIS (Linux Desktop)](#mpris)
@@ -269,6 +270,20 @@ No support for ENV based for Last.fm as a client (only source)
 
 See [`lastfm.json.example`](/config/lastfm.json.example), change `configureAs` to `source`. Or [explore the schema with an example and live editor/validator](https://json-schema.app/view/%23/%23%2Fdefinitions%2FLastfmSourceConfig?url=https%3A%2F%2Fraw.githubusercontent.com%2FFoxxMD%2Fmulti-scrobbler%2Fdevelop%2Fsrc%2Fcommon%2Fschema%2Fsource.json)
 
+# [Listenbrainz (Source)](https://listenbrainz.org)
+
+You will need to run your own Listenbrainz server or have an account [on the official instance](https://listenbrainz.org/login/)
+
+On your [profile page](https://listenbrainz.org/profile/) find your **User Token** to use in the configuration.
+
+**NOTE:** You cannot use ENV variables shown in the [Listenbrainz Client config](#listenbrainz) -- multi-scrobbler assumes Listenbrainz ENVs are always used for the **client** configuration. You must use the file-based config from below to setup Listenbrainz as a Source.
+
+### File-Based
+
+See [`listenbrainz.json.example`](/config/listenbrainz.json.example) or [explore the schema with an example and live editor/validator](https://json-schema.app/view/%23/%23%2Fdefinitions%2FListenbrainzClientConfig?url=https%3A%2F%2Fraw.githubusercontent.com%2FFoxxMD%2Fmulti-scrobbler%2Fdevelop%2Fsrc%2Fcommon%2Fschema%2Fclient.json)
+
+**Change `configureAs` to `source`**
+
 ## [Deezer](https://deezer.com/)
 
 Create a new application at [Deezer Developers](https://developers.deezer.com/myapps)
@@ -347,7 +362,7 @@ multi-scrobbler can listen to this interface and scrobble tracks played by **any
 
 ### File-Based
 
-See [`mpris.json.example`](/config/mpris.json.example) or [explore the schema with an example and live editor/validator](https://json-schema.app/view/%23/%23%2Fdefinitions%2FMPRISSourceConfig?url=https%3A%2F%2Fraw.githubusercontent.com%2FFoxxMD%2Fmulti-scrobbler%2Fdevelop%2Fsrc%2Fcommon%2Fschema%2Fclient.json)
+See [`mpris.json.example`](/config/mpris.json.example) or [explore the schema with an example and live editor/validator](https://json-schema.app/view/%23%2Fdefinitions%2FMPRISSourceConfig?url=https%3A%2F%2Fraw.githubusercontent.com%2FFoxxMD%2Fmulti-scrobbler%2Fdevelop%2Fsrc%2Fcommon%2Fschema%2Fsource.json)
 
 ## [Mopidy](https://mopidy.com/)
 

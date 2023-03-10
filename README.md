@@ -13,6 +13,7 @@ A javascript app to scrobble plays from multiple sources to [Maloja](https://git
   * [Jellyfin](/docs/configuration.md#jellyfin)
   * [Youtube Music](/docs/configuration.md#youtube-music)
   * [Last.fm](/docs/configuration.md#lastfm-source)
+  * [Listenbrainz](/docs/configuration.md#listenbrainz--source-)
   * [Deezer](/docs/configuration.md#deezer)
   * [MPRIS (Linux Desktop)](/docs/configuration.md#mpris)
   * [Mopidy](/docs/configuration.md#mopidy)

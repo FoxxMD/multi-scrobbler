@@ -8,7 +8,8 @@ import {LastFmSouceAIOConfig, LastfmSourceConfig} from "./lastfm.js";
 import {YTMusicSourceAIOConfig, YTMusicSourceConfig} from "./ytmusic.js";
 import {MPRISSourceAIOConfig, MPRISSourceConfig} from "./mpris.js";
 import {MopidySourceAIOConfig, MopidySourceConfig} from "./mopidy.js";
+import {ListenBrainzSourceAIOConfig, ListenBrainzSourceConfig} from "./listenbrainz.js";
 
-export type SourceConfig = SpotifySourceConfig | PlexSourceConfig | TautulliSourceConfig | DeezerSourceConfig | SubSonicSourceConfig | JellySourceConfig | LastfmSourceConfig | YTMusicSourceConfig | MPRISSourceConfig | MopidySourceConfig;
+export type SourceConfig = SpotifySourceConfig | PlexSourceConfig | TautulliSourceConfig | DeezerSourceConfig | SubSonicSourceConfig | JellySourceConfig | LastfmSourceConfig | YTMusicSourceConfig | MPRISSourceConfig | MopidySourceConfig | ListenBrainzSourceConfig;
 
-export type SourceAIOConfig = SpotifySourceAIOConfig | PlexSourceAIOConfig | TautulliSourceAIOConfig | DeezerSourceAIOConfig | SubsonicSourceAIOConfig | JellySourceAIOConfig | LastFmSouceAIOConfig | YTMusicSourceAIOConfig | MPRISSourceAIOConfig | MopidySourceAIOConfig;
+export type SourceAIOConfig = SpotifySourceAIOConfig | PlexSourceAIOConfig | TautulliSourceAIOConfig | DeezerSourceAIOConfig | SubsonicSourceAIOConfig | JellySourceAIOConfig | LastFmSouceAIOConfig | YTMusicSourceAIOConfig | MPRISSourceAIOConfig | MopidySourceAIOConfig | ListenBrainzSourceAIOConfig;

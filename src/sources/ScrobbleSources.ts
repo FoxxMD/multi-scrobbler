@@ -29,6 +29,8 @@ import {MPRISSource} from "./MPRISSource.js";
 import EventEmitter from "events";
 import {MopidySource} from "./MopidySource.js";
 import {MopidySourceConfig} from "../common/infrastructure/config/source/mopidy.js";
+import ListenbrainzSource from "./ListenbrainzSource.js";
+import {ListenBrainzSourceConfig} from "../common/infrastructure/config/source/listenbrainz.js";
 
 type groupedNamedConfigs = {[key: string]: ParsedConfig[]};
 
@@ -253,6 +255,10 @@ export default class ScrobbleSources {
                         });
                     }
                     break;
+                case 'listenbrainz':
+                    // sane default for lastfm is that user want to scrobble TO it, not FROM it -- this is also existing behavior
+                    defaultConfigureAs = 'client';
+                    break;
                 default:
                     break;
             }
@@ -280,14 +286,25 @@ export default class ScrobbleSources {
                     try {
                         const validConfig = validateJson<SourceConfig>(rawConf, sourceSchema, this.logger);
 
-                        if(sourceType !== 'lastfm' || ((validConfig as LastfmSourceConfig).configureAs === 'source')) {
-                            // @ts-ignore
-                            const parsedConfig: ParsedConfig = {
-                                ...rawConf,
-                                source: `${sourceType}.json`,
-                                type: sourceType
-                            }
+                        // @ts-ignore
+                        const parsedConfig: ParsedConfig = {
+                            ...rawConf,
+                            source: `${sourceType}.json`,
+                            type: sourceType
+                        }
+
+                        if(!['lastfm','listenbrainz'].includes(sourceType) || ((validConfig as LastfmSourceConfig | ListenBrainzSourceConfig).configureAs === 'source')) {
                             configs.push(parsedConfig);
+                        } else {
+                            if('configureAs' in validConfig) {
+                                if(validConfig.configureAs === 'source') {
+                                    configs.push(parsedConfig);
+                                } else {
+                                    this.logger.debug(`${sourceType} has 'configureAs: client' so will skip adding as a source`);
+                                }
+                            } else {
+                                this.logger.debug(`${sourceType} did not have 'configureAs' specified! Assuming 'client' so will skip adding as a source`);
+                            }
                         }
                     } catch (e: any) {
                         this.logger.error(`The config entry at index ${i} from ${sourceType}.json was not valid`);
@@ -401,6 +418,9 @@ export default class ScrobbleSources {
                 break;
             case 'mopidy':
                 newSource = await new MopidySource(name, compositeConfig as MopidySourceConfig, internal, this.emitter);
+                break;
+            case 'listenbrainz':
+                newSource = await new ListenbrainzSource(name, compositeConfig as ListenBrainzSourceConfig, internal, this.emitter);
                 break;
             default:
                 break;

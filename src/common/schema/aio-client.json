@@ -7,10 +7,10 @@
                     "$ref": "#/definitions/LastfmClientAIOConfig"
                 },
                 {
-                    "$ref": "#/definitions/MalojaClientAIOConfig"
+                    "$ref": "#/definitions/ListenBrainzClientAIOConfig"
                 },
                 {
-                    "$ref": "#/definitions/ListenBrainzClientAIOConfig"
+                    "$ref": "#/definitions/MalojaClientAIOConfig"
                 }
             ]
         },
@@ -164,6 +164,18 @@
         },
         "ListenBrainzClientAIOConfig": {
             "properties": {
+                "configureAs": {
+                    "default": "client",
+                    "description": "Should always be `client` when using Listenbrainz as a client",
+                    "enum": [
+                        "client",
+                        "source"
+                    ],
+                    "examples": [
+                        "client"
+                    ],
+                    "type": "string"
+                },
                 "data": {
                     "$ref": "#/definitions/ListenBrainzClientData",
                     "description": "Specific data required to configure this client"

@@ -5,10 +5,10 @@
             "$ref": "#/definitions/LastfmClientConfig"
         },
         {
-            "$ref": "#/definitions/MalojaClientConfig"
+            "$ref": "#/definitions/ListenBrainzClientConfig"
         },
         {
-            "$ref": "#/definitions/ListenBrainzClientConfig"
+            "$ref": "#/definitions/MalojaClientConfig"
         }
     ],
     "definitions": {
@@ -155,6 +155,18 @@
         },
         "ListenBrainzClientConfig": {
             "properties": {
+                "configureAs": {
+                    "default": "client",
+                    "description": "Should always be `client` when using Listenbrainz as a client",
+                    "enum": [
+                        "client",
+                        "source"
+                    ],
+                    "examples": [
+                        "client"
+                    ],
+                    "type": "string"
+                },
                 "data": {
                     "$ref": "#/definitions/ListenBrainzClientData",
                     "description": "Specific data required to configure this client"
