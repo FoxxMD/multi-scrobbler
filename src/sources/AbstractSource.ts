@@ -134,8 +134,8 @@ export default abstract class AbstractSource {
         for(const play of plays) {
             if(!this.alreadyDiscovered(play)) {
                 this.addPlayToDiscovered(play);
+                newDiscoveredPlays.push(play);
             }
-            newDiscoveredPlays.push(play);
         }
 
         if(newDiscoveredPlays.length > 0) {
