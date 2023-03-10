@@ -153,7 +153,14 @@ export class ListenbrainzApiClient extends AbstractApiClient {
     getUserListens = async (user?: string): Promise<ListensResponse> => {
         try {
 
-            const resp = await this.callApi(request.get(`${this.url}1/user/${user ?? this.config.username}/listens`).query({count: 25}));
+            const resp = await this.callApi(request
+                .get(`${this.url}1/user/${user ?? this.config.username}/listens`)
+                // this endpoint can take forever, sometimes, and we want to make sure we timeout in a reasonable amount of time for polling sources to continue trying to scrobble
+                .timeout({
+                    response: 15000, // wait 15 seconds before timeout if server doesn't response at all
+                    deadline: 30000 // wait 30 seconds overall for request to complete
+                })
+                .query({count: 25}));
             const {body: {payload}} = resp as any;
             return payload as ListensResponse;
         } catch (e) {
