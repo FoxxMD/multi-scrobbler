@@ -436,7 +436,7 @@ export default class MalojaScrobbler extends AbstractScrobbleClient {
                 } = {}} = response;
                 scrobbleResponse = {...rest, album: mAlbum, time: mTime, duration: mDuration};
             }
-            this.addScrobbledTrack(playObj, scrobbleResponse);
+            this.addScrobbledTrack(playObj, this.formatPlayObj(scrobbleResponse));
             if (newFromSource) {
                 this.logger.info(`Scrobbled (New)     => (${source}) ${buildTrackString(playObj)}`);
             } else {

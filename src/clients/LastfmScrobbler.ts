@@ -179,7 +179,7 @@ export default class LastfmScrobbler extends AbstractScrobbleClient {
                 this.initialized = false;
                 throw new Error('Service reported daily scrobble limit exceeded! 😬 Disabling client');
             }
-            this.addScrobbledTrack(playObj, {...rest, date: { uts: timestamp}, name: trackName});
+            this.addScrobbledTrack(playObj, this.formatPlayObj({...rest, date: { uts: timestamp}, name: trackName}));
             if (newFromSource) {
                 this.logger.info(`Scrobbled (New)     => (${source}) ${buildTrackString(playObj)}`);
             } else {

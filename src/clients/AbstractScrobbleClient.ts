@@ -158,8 +158,8 @@ export default abstract class AbstractScrobbleClient {
         return [validTime, log]
     }
 
-    addScrobbledTrack = (playObj: any, scrobbleResp: any) => {
-        this.scrobbledPlayObjs.push({play: playObj, scrobble: this.formatPlayObj(scrobbleResp)});
+    addScrobbledTrack = (playObj: PlayObject, scrobbledPlay: PlayObject) => {
+        this.scrobbledPlayObjs.push({play: playObj, scrobble: scrobbledPlay});
     }
 
     cleanSourceSearchTitle = (playObj: PlayObject) => {
