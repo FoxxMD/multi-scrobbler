@@ -15,6 +15,7 @@
   * [Youtube Music](#youtube-music)
   * [MPRIS (Linux Desktop)](#mpris)
   * [Mopidy](#mopidy)
+  * [JRiver](#jriver)
 * [Client Configurations](#client-configurations)
   * [Maloja](#maloja)
   * [Last.fm](#lastfm)
