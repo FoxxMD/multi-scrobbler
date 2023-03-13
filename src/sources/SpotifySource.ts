@@ -349,7 +349,7 @@ export default class SpotifySource extends MemorySource {
                     return await func(this.spotifyApi);
                 } catch (ee) {
                     this.logger.error('Refreshing access token encountered an error');
-                    this.logger.error(ee, {label: 'Spotify'});
+                    this.logger.error(ee);
                     throw ee;
                 }
             } else if(maxRequestRetries > retries) {
