@@ -40,6 +40,7 @@ export default class SpotifySource extends MemorySource {
         const {
             data: {
                 interval = 30,
+                maxPollRetries = 5
             } = {}
         } = config;
 
@@ -48,6 +49,7 @@ export default class SpotifySource extends MemorySource {
         }
 
         this.config.data.interval = interval;
+        this.config.data.maxPollRetries = maxPollRetries;
 
         this.workingCredsPath = `${this.configDir}/currentCreds-${name}.json`;
         this.canPoll = true;
