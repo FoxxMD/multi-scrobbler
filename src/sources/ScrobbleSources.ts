@@ -31,6 +31,8 @@ import {MopidySource} from "./MopidySource.js";
 import {MopidySourceConfig} from "../common/infrastructure/config/source/mopidy.js";
 import ListenbrainzSource from "./ListenbrainzSource.js";
 import {ListenBrainzSourceConfig} from "../common/infrastructure/config/source/listenbrainz.js";
+import {JRiverSource} from "./JRiverSource.js";
+import {JRiverData, JRiverSourceConfig} from "../common/infrastructure/config/source/jriver.js";
 
 type groupedNamedConfigs = {[key: string]: ParsedConfig[]};
 
@@ -259,6 +261,23 @@ export default class ScrobbleSources {
                     // sane default for lastfm is that user want to scrobble TO it, not FROM it -- this is also existing behavior
                     defaultConfigureAs = 'client';
                     break;
+                case 'jriver':
+                    const jr = {
+                        url: process.env.JRIVER_URL,
+                        username: process.env.JRIVER_USER,
+                        password: process.env.JRIVER_PASSWORD
+                    }
+                    if (!Object.values(jr).every(x => x === undefined)) {
+                        configs.push({
+                            type: 'jriver',
+                            name: 'unnamed',
+                            source: 'ENV',
+                            mode: 'single',
+                            configureAs: defaultConfigureAs,
+                            data: jr as JRiverData
+                        });
+                    }
+                    break;
                 default:
                     break;
             }
@@ -421,6 +440,9 @@ export default class ScrobbleSources {
                 break;
             case 'listenbrainz':
                 newSource = await new ListenbrainzSource(name, compositeConfig as ListenBrainzSourceConfig, internal, this.emitter);
+                break;
+            case 'jriver':
+                newSource = await new JRiverSource(name, compositeConfig as JRiverSourceConfig, internal, this.emitter);
                 break;
             default:
                 break;
