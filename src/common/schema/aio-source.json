@@ -26,10 +26,10 @@
                     "type": "number"
                 },
                 "maxPollRetries": {
-                    "default": 0,
+                    "default": 5,
                     "description": "default # of automatic polling restarts on error",
                     "examples": [
-                        1
+                        5
                     ],
                     "type": "number"
                 },
@@ -122,10 +122,10 @@
                     "type": "number"
                 },
                 "maxPollRetries": {
-                    "default": 0,
+                    "default": 5,
                     "description": "default # of automatic polling restarts on error",
                     "examples": [
-                        1
+                        5
                     ],
                     "type": "number"
                 },
@@ -208,10 +208,10 @@
         "JellyData": {
             "properties": {
                 "maxPollRetries": {
-                    "default": 0,
+                    "default": 5,
                     "description": "default # of automatic polling restarts on error",
                     "examples": [
-                        1
+                        5
                     ],
                     "type": "number"
                 },
@@ -378,10 +378,10 @@
                     "type": "string"
                 },
                 "maxPollRetries": {
-                    "default": 0,
+                    "default": 5,
                     "description": "default # of automatic polling restarts on error",
                     "examples": [
-                        1
+                        5
                     ],
                     "type": "number"
                 },
@@ -479,10 +479,10 @@
         "ListenBrainzSourceData": {
             "properties": {
                 "maxPollRetries": {
-                    "default": 0,
+                    "default": 5,
                     "description": "default # of automatic polling restarts on error",
                     "examples": [
-                        1
+                        5
                     ],
                     "type": "number"
                 },
@@ -554,10 +554,10 @@
                     ]
                 },
                 "maxPollRetries": {
-                    "default": 0,
+                    "default": 5,
                     "description": "default # of automatic polling restarts on error",
                     "examples": [
-                        1
+                        5
                     ],
                     "type": "number"
                 },
@@ -673,10 +673,10 @@
                     "type": "number"
                 },
                 "maxPollRetries": {
-                    "default": 0,
+                    "default": 5,
                     "description": "default # of automatic polling restarts on error",
                     "examples": [
-                        1
+                        5
                     ],
                     "type": "number"
                 },
@@ -817,10 +817,10 @@
                     ]
                 },
                 "maxPollRetries": {
-                    "default": 0,
+                    "default": 5,
                     "description": "default # of automatic polling restarts on error",
                     "examples": [
-                        1
+                        5
                     ],
                     "type": "number"
                 },
@@ -931,10 +931,10 @@
         "SourceRetryOptions": {
             "properties": {
                 "maxPollRetries": {
-                    "default": 0,
+                    "default": 5,
                     "description": "default # of automatic polling restarts on error",
                     "examples": [
-                        1
+                        5
                     ],
                     "type": "number"
                 },
@@ -1025,10 +1025,10 @@
                     "type": "number"
                 },
                 "maxPollRetries": {
-                    "default": 0,
+                    "default": 5,
                     "description": "default # of automatic polling restarts on error",
                     "examples": [
-                        1
+                        5
                     ],
                     "type": "number"
                 },
@@ -1086,10 +1086,10 @@
                     "type": "number"
                 },
                 "maxPollRetries": {
-                    "default": 0,
+                    "default": 5,
                     "description": "default # of automatic polling restarts on error",
                     "examples": [
-                        1
+                        5
                     ],
                     "type": "number"
                 },
@@ -1238,10 +1238,10 @@
                     "type": "number"
                 },
                 "maxPollRetries": {
-                    "default": 0,
+                    "default": 5,
                     "description": "default # of automatic polling restarts on error",
                     "examples": [
-                        1
+                        5
                     ],
                     "type": "number"
                 },
