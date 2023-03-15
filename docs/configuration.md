@@ -535,7 +535,7 @@ See [`jriver.json.example`](/config/jriver.json.example) or [explore the schema 
 
 ## [Kodi](https://kodi.tv/)
 
-In order for multi-scrobbler to communicate with JRiver you must have the [Web Interface](https://kodi.wiki/view/Web_interface) enabled. This can can be in the Kodi GUI:
+In order for multi-scrobbler to communicate with Kodi you must have the [Web Interface](https://kodi.wiki/view/Web_interface) enabled. This can can be in the Kodi GUI:
 
 * Settings -> Services -> Control
   * Check `Allow remote control via HTTP`
@@ -543,7 +543,7 @@ In order for multi-scrobbler to communicate with JRiver you must have the [Web I
 
 #### URL
 
-If you do not provide a URL then a default is used which assumes JRiver is installed on the same server as multi-scrobbler: `http://localhost:8080/jsonrpc`
+If you do not provide a URL then a default is used which assumes Kodi is installed on the same server as multi-scrobbler: `http://localhost:8080/jsonrpc`
 
 * Make sure the port number matches what is found in **Port** in the [Control](#kodi) section mentioned above.
 * If your installation is on the same machine but you cannot connect using `localhost` try `0.0.0.0` instead.
