@@ -17,6 +17,7 @@ A javascript app to scrobble music you listened to, to [Maloja](https://github.c
   * [Deezer](/docs/configuration.md#deezer)
   * [MPRIS (Linux Desktop)](/docs/configuration.md#mpris)
   * [Mopidy](/docs/configuration.md#mopidy)
+  * [JRiver](/docs/configuration.md#jriver)
 * Supports scrobbling to many **Clients**
   * [Maloja](/docs/configuration.md#maloja)
   * [Last.fm](/docs/configuration.md#lastfm)

@@ -14,6 +14,8 @@ import {
 import {Request} from "express";
 import pathUtil from "path";
 import {ErrorWithCause} from "pony-cause";
+import backoffStrategies from '@kenyip/backoff-strategies';
+import bstrat from "@kenyip/backoff-strategies";
 
 dayjs.extend(utc);
 
@@ -617,4 +619,18 @@ export const mergeArr = (objValue: [], srcValue: []): (any[] | undefined) => {
     if (Array.isArray(objValue)) {
         return objValue.concat(srcValue);
     }
+}
+
+export const pollingBackoff = (attempt: number, scaleFactor: number = 1): number => {
+
+    const backoffStrat = backoffStrategies({
+        delay: 1000,
+        strategy: "exponential",
+        jitter: true,
+        minimumDelay: 1000,
+        scaleFactor
+    });
+
+    // first attempt delay is never enough so always add + 1
+    return Math.round(backoffStrat(attempt + 1) / 1000);
 }

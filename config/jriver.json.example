@@ -1,0 +1,10 @@
+[
+  {
+    "name": "MyJriver",
+    "data": {
+      "url": "0.0.0.0",
+      "username": "auser",
+      "password": "apassword"
+    }
+  }
+]

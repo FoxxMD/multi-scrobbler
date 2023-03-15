@@ -52,7 +52,7 @@ export default abstract class AbstractScrobbleClient {
     constructor(type: any, name: any, config: CommonClientConfig, notifier: Notifiers, logger: Logger) {
         this.type = type;
         this.name = name;
-        const identifier = `Client ${capitalize(this.type)} - ${name}`;
+        const identifier = `${capitalize(this.type)} - ${name}`;
         this.logger = logger.child({labels: [identifier]}, mergeArr);
         this.notifier = notifier;
 

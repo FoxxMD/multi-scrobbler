@@ -3,7 +3,7 @@ import {
     buildTrackString,
     capitalize, closePlayDate,
     genGroupId, mergeArr,
-    playObjDataMatch,
+    playObjDataMatch, pollingBackoff,
     sleep, sortByNewestPlayDate,
     sortByOldestPlayDate
 } from "../utils.js";
@@ -179,8 +179,8 @@ export default abstract class AbstractSource {
 
         const {
             data: {
-                maxPollRetries = 0,
-                retryMultiplier = 1.5,
+                maxPollRetries = 5,
+                retryMultiplier = 1,
             } = {},
         } = this.config;
 
@@ -192,7 +192,7 @@ export default abstract class AbstractSource {
                 await this.doPolling();
             } catch (e) {
                 if (this.pollRetries < maxRetries) {
-                    const delayFor = (this.pollRetries + 1) * retryMultiplier;
+                    const delayFor = pollingBackoff(this.pollRetries + 1, retryMultiplier);
                     this.logger.info(`Poll retries (${this.pollRetries}) less than max poll retries (${maxRetries}), restarting polling after ${delayFor} second delay...`);
                     this.notify({title: `${this.identifier} - Polling Retry`, message: `Encountered error while polling but retries (${this.pollRetries}) are less than max poll retries (${maxRetries}), restarting polling after ${delayFor} second delay. | Error: ${e.message}`, priority: 'warn'});
                     await sleep((delayFor) * 1000);

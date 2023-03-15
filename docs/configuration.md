@@ -15,6 +15,7 @@
   * [Youtube Music](#youtube-music)
   * [MPRIS (Linux Desktop)](#mpris)
   * [Mopidy](#mopidy)
+  * [JRiver](#jriver)
 * [Client Configurations](#client-configurations)
   * [Maloja](#maloja)
   * [Last.fm](#lastfm)
@@ -270,7 +271,7 @@ No support for ENV based for Last.fm as a client (only source)
 
 See [`lastfm.json.example`](/config/lastfm.json.example), change `configureAs` to `source`. Or [explore the schema with an example and live editor/validator](https://json-schema.app/view/%23/%23%2Fdefinitions%2FLastfmSourceConfig?url=https%3A%2F%2Fraw.githubusercontent.com%2FFoxxMD%2Fmulti-scrobbler%2Fdevelop%2Fsrc%2Fcommon%2Fschema%2Fsource.json)
 
-# [Listenbrainz (Source)](https://listenbrainz.org)
+## [Listenbrainz (Source)](https://listenbrainz.org)
 
 You will need to run your own Listenbrainz server or have an account [on the official instance](https://listenbrainz.org/login/)
 
@@ -404,7 +405,8 @@ Part => Default Value
 * Port => `6680`
 * Path => `/mopidy/ws/`
 
-EX
+<details>
+<summary>URL Transform Examples</summary>
 
 ```json
 {
@@ -429,6 +431,8 @@ MS transforms this to: `ws://192.168.0.101:3456/mopidy/ws/`
 ```
 
 MS transforms this to: `ws://mopidy.mydomain.com:80/MOPWS`
+
+</details>
 
 
 #### URI Blacklist/Whitelist
@@ -459,6 +463,74 @@ EX:
 
 If a track would be scrobbled like `Album: Soundcloud, Track: My Cool Track, Artist: A Cool Artist` 
 then multi-scrobbler will instead scrobble  `Track: My Cool Track, Artist: A Cool Artist`
+
+## [JRiver](https://jriver.com/)
+
+In order for multi-scrobbler to communicate with JRiver you must have [Web Server Interface](https://wiki.jriver.com/index.php/Web_Service_Interface#Documentation_of_Functions) enabled. This can can be in the JRiver GUI:
+
+* Tools -> Options -> Media Network
+  * Check `Use Media Network to share this library...`
+  * If you have `Authentication` checked you will need to provide the **Username** and **Password** in the ENV/File configuration below.
+
+#### URL
+
+If you do not provide a URL then a default is used which assumes JRiver is installed on the same server as multi-scrobbler: `http://localhost:52199/MCWS/v1/`
+
+* Make sure the port number matches what is found in `Advanced` section in the [Media Network](#jriver) options.
+* If your installation is on the same machine but you cannot connect using `localhost` try `0.0.0.0` instead.
+
+The URL used to connect ultimately must be formed like this: `[protocol]://[hostname]:[port]/[path]`
+If any part of this URL is missing multi-scrobbler will use a default value, for your convenience. This also means that if any part of your URL is **not** standard you must explicitly define it.
+
+Part => Default Value
+
+* Protocol => `http://`
+* Hostname => `localhost`
+* Port => `52199`
+* Path => `/MCWS/v1/`
+
+<details>
+<summary>URL Transform Examples</summary>
+
+```json
+{
+  "url": "jriver.mydomain.com"
+}
+```
+
+MS transforms this to: `http://jriver.mydomain.com:52199/MCWS/v1/`
+
+```json
+{
+  "url": "192.168.0.101:3456"
+}
+```
+
+MS transforms this to: `http://192.168.0.101:3456/MCWS/v1/`
+
+```json
+{
+  "url": "mydomain.com:80/jriverReverse/MCWS/v1/"
+}
+```
+
+MS transforms this to: `http://mydomain.com:80/jriverReverse/MCWS/v1/`
+
+</details>
+
+### ENV-Based
+
+
+| Environmental Variable | Required |             Default             |                  Description                   |
+|------------------------|----------|---------------------------------|------------------------------------------------|
+| JRIVER_URL             | Yes      | http://localhost:52199/MCWS/v1/ | The URL of the JRiver server                   |
+| JRIVER_USERNAME        | No       |                                 | If authentication is enabled, the username set |
+| JRIVER_PASSWORD        | No       |                                 | If authenticated is enabled, the password set  |
+
+
+### File-Based
+
+See [`jriver.json.example`](/config/jriver.json.example) or [explore the schema with an example and live editor/validator](https://json-schema.app/view/%23%2Fdefinitions%2FJRiverSourceConfig/%23%2Fdefinitions%2FJRiverData?url=https%3A%2F%2Fraw.githubusercontent.com%2FFoxxMD%2Fmulti-scrobbler%2Fdevelop%2Fsrc%2Fcommon%2Fschema%2Fsource.json)
 
 # Client Configurations
 

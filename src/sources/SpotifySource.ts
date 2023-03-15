@@ -16,6 +16,7 @@ import ArtistObjectSimplified = SpotifyApi.ArtistObjectSimplified;
 import AlbumObjectSimplified = SpotifyApi.AlbumObjectSimplified;
 import UserDevice = SpotifyApi.UserDevice;
 import MemorySource from "./MemorySource.js";
+import {ErrorWithCause} from "pony-cause";
 
 const scopes = ['user-read-recently-played', 'user-read-currently-playing', 'user-read-playback-state', 'user-read-playback-position'];
 const state = 'random';
@@ -218,7 +219,7 @@ export default class SpotifySource extends MemorySource {
             await this.callApi<ReturnType<typeof this.spotifyApi.getMe>>(((api: any) => api.getMe()));
             this.authed = true;
         } catch (e) {
-            this.logger.error('Could not successfully communicate with Spotify API');
+            this.logger.error(new ErrorWithCause('Could not successfully communicate with Spotify API', {cause: e}));
             this.authed = false;
         }
         return this.authed;
@@ -346,7 +347,7 @@ export default class SpotifySource extends MemorySource {
                     return await func(this.spotifyApi);
                 } catch (ee) {
                     this.logger.error('Refreshing access token encountered an error');
-                    this.logger.error(ee, {label: 'Spotify'});
+                    this.logger.error(ee);
                     throw ee;
                 }
             } else if(maxRequestRetries > retries) {
@@ -356,8 +357,9 @@ export default class SpotifySource extends MemorySource {
                 return this.callApi(func, retries + 1);
             } else {
                 this.logger.error(`Request failed on retry (${retries}) with no more retries permitted (max ${maxRequestRetries})`);
-                this.logger.error(e, {label: 'Spotify'});
-                throw e;
+                const error = new ErrorWithCause(`Request failed on retry (${retries}) with no more retries permitted (max ${maxRequestRetries})`, {cause: e});
+                this.logger.error(error);
+                throw error;
             }
         }
     }

@@ -4,8 +4,8 @@ export interface SourceRetryOptions extends RequestRetryOptions {
     /**
      * default # of automatic polling restarts on error
      *
-     * @default 0
-     * @examples [1]
+     * @default 5
+     * @examples [5]
      * */
     maxPollRetries?: number
 }
