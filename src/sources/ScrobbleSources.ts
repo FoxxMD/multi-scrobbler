@@ -33,6 +33,8 @@ import ListenbrainzSource from "./ListenbrainzSource.js";
 import {ListenBrainzSourceConfig} from "../common/infrastructure/config/source/listenbrainz.js";
 import {JRiverSource} from "./JRiverSource.js";
 import {JRiverData, JRiverSourceConfig} from "../common/infrastructure/config/source/jriver.js";
+import {KodiSource} from "./KodiSource.js";
+import {KodiData, KodiSourceConfig} from "../common/infrastructure/config/source/kodi.js";
 
 type groupedNamedConfigs = {[key: string]: ParsedConfig[]};
 
@@ -278,6 +280,23 @@ export default class ScrobbleSources {
                         });
                     }
                     break;
+                case 'kodi':
+                    const ko = {
+                        url: process.env.KODI_URL,
+                        username: process.env.KODI_USER,
+                        password: process.env.KODI_PASSWORD
+                    }
+                    if (!Object.values(ko).every(x => x === undefined)) {
+                        configs.push({
+                            type: 'kodi',
+                            name: 'unnamed',
+                            source: 'ENV',
+                            mode: 'single',
+                            configureAs: defaultConfigureAs,
+                            data: ko as KodiData
+                        });
+                    }
+                    break;
                 default:
                     break;
             }
@@ -443,6 +462,9 @@ export default class ScrobbleSources {
                 break;
             case 'jriver':
                 newSource = await new JRiverSource(name, compositeConfig as JRiverSourceConfig, internal, this.emitter);
+                break;
+            case 'kodi':
+                newSource = await new KodiSource(name, compositeConfig as KodiSourceConfig, internal, this.emitter);
                 break;
             default:
                 break;

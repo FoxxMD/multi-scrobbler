@@ -16,6 +16,7 @@
   * [MPRIS (Linux Desktop)](#mpris)
   * [Mopidy](#mopidy)
   * [JRiver](#jriver)
+  * [Kodi](#kodi)
 * [Client Configurations](#client-configurations)
   * [Maloja](#maloja)
   * [Last.fm](#lastfm)
@@ -531,6 +532,74 @@ MS transforms this to: `http://mydomain.com:80/jriverReverse/MCWS/v1/`
 ### File-Based
 
 See [`jriver.json.example`](/config/jriver.json.example) or [explore the schema with an example and live editor/validator](https://json-schema.app/view/%23%2Fdefinitions%2FJRiverSourceConfig/%23%2Fdefinitions%2FJRiverData?url=https%3A%2F%2Fraw.githubusercontent.com%2FFoxxMD%2Fmulti-scrobbler%2Fdevelop%2Fsrc%2Fcommon%2Fschema%2Fsource.json)
+
+## [Kodi](https://kodi.tv/)
+
+In order for multi-scrobbler to communicate with JRiver you must have the [Web Interface](https://kodi.wiki/view/Web_interface) enabled. This can can be in the Kodi GUI:
+
+* Settings -> Services -> Control
+  * Check `Allow remote control via HTTP`
+  * Ensure you have a **Username** and **Password** set, you will need to provide them in the ENV/File configuration below.
+
+#### URL
+
+If you do not provide a URL then a default is used which assumes JRiver is installed on the same server as multi-scrobbler: `http://localhost:8080/jsonrpc`
+
+* Make sure the port number matches what is found in **Port** in the [Control](#kodi) section mentioned above.
+* If your installation is on the same machine but you cannot connect using `localhost` try `0.0.0.0` instead.
+
+The URL used to connect ultimately must be formed like this: `[protocol]://[hostname]:[port]/[path]`
+If any part of this URL is missing multi-scrobbler will use a default value, for your convenience. This also means that if any part of your URL is **not** standard you must explicitly define it.
+
+Part => Default Value
+
+* Protocol => `http://`
+* Hostname => `localhost`
+* Port => `8080`
+* Path => `/jsonrpc`
+
+<details>
+<summary>URL Transform Examples</summary>
+
+```json
+{
+  "url": "kodi.mydomain.com"
+}
+```
+
+MS transforms this to: `http://kodi.mydomain.com:8080/jsonrpc`
+
+```json
+{
+  "url": "192.168.0.101:3456"
+}
+```
+
+MS transforms this to: `http://192.168.0.101:3456/jsonprc`
+
+```json
+{
+  "url": "mydomain.com:80/kodiReverse/jsonrpc"
+}
+```
+
+MS transforms this to: `http://mydomain.com:80/kodiReverse/jsonrpc`
+
+</details>
+
+### ENV-Based
+
+
+| Environmental Variable | Required | Default                       | Description                |
+|------------------------|----------|-------------------------------|----------------------------|
+| KODI_URL               | Yes      | http://localhost:8080/jsonrpc | The URL of the Kodi server |
+| KODI_USERNAME          | No       |                               | The username set           |
+| KODI_PASSWORD          | No       |                               | The password set           |
+
+
+### File-Based
+
+See [`kodi.json.example`](/config/kodi.json.example) or [explore the schema with an example and live editor/validator](https://json-schema.app/view/%23%2Fdefinitions%2FKodiSourceConfig/%23%2Fdefinitions%2FKodiData?url=https%3A%2F%2Fraw.githubusercontent.com%2FFoxxMD%2Fmulti-scrobbler%2Fdevelop%2Fsrc%2Fcommon%2Fschema%2Fsource.json)
 
 # Client Configurations
 
