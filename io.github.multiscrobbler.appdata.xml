@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="service">
+    <id>io.github.foxxmd.multiscrobbler</id>
+
+    <name>multi-scrobbler</name>
+    <summary>Scrobbles music from many sources to many clients</summary>
+
+    <metadata_license>MIT</metadata_license>
+    <project_license>MIT</project_license>
+
+    <description>
+        <p>
+            Scrobbles music from many sources (spotify, mpris, deezer, jellyfin, etc..) to many clients (last.fm, maloja, listenbrainz)
+        </p>
+    </description>
+
+    <launchable type="service">multi-scrobbler</launchable>
+
+    <icon type="stock">multi-scrobbler</icon>
+
+    <categories>
+        <category>Utility</category>
+    </categories>
+</component>

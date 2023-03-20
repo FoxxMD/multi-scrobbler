@@ -12,3 +12,5 @@ config/*.json
 config/*.bak
 /docs
 /logs
+.flatpak-builder
+generated-sources.json

@@ -1,0 +1,53 @@
+app-id: io.github.foxxmd.multiscrobbler
+runtime: org.freedesktop.Platform
+runtime-version: '22.08'
+sdk: org.freedesktop.Sdk
+command: multiscrobbler
+finish-args:
+  - --own-name=org.mpris.MediaPlayer2.*
+  - --talk-name=org.gnome.SessionManager
+sdk-extensions:
+  - org.freedesktop.Sdk.Extension.node18
+modules:
+  - name: multiscrobbler
+    buildsystem: simple
+    build-options:
+      append-path: /usr/lib/sdk/node18/bin
+      env:
+        XDG_CACHE_HOME: /run/build/multiscrobbler/flatpak-node/cache
+        npm_config_cache: /run/build/multiscrobbler/flatpak-node/npm-cache
+        npm_config_nodedir: /usr/lib/sdk/node18
+        npm_config_offline: 'true'
+    build-commands:
+      # Install npm dependencies
+      - npm install --offline
+      #- ./node_modules/.bin/tsc
+      - install -Dm755 ../run.sh /app/bin/multiscrobbler
+    subdir: main
+    sources:
+      - type: git
+        url: https://github.com/FoxxMD/multi-scrobbler
+        tag: 0.4.4
+        dest: main
+      # Wrapper to launch the app
+      - type: script
+        dest-filename: run.sh
+        commands:
+          - export CONFIG_DIR=/etc
+          - npm run start
+      - type: file
+        path: io.github.multiscrobbler.appdata.xml
+      - generated-sources.json
+
+# https://docs.flatpak.org/en/latest/electron.html
+# generated-sources from flatpak-node-generator not working? may be due to git source for winston
+# TODO systemd
+
+# potential references
+# https://github.com/flathub/com.sindresorhus.Caprine/blob/master/com.sindresorhus.Caprine.yaml
+# https://github.com/flathub/com.github.rssguard/blob/master/com.github.rssguard.yaml
+# https://github.com/Lunarequest/moderndeck-flatpak/blob/mistress/com.dangeredwolf.ModernDeck.yaml
+# https://github.com/flatpak/flatpak-builder-tools/tree/1fa8efca4d4e533e0add783a7c455ae35fdf7624/node ?
+
+#permission
+# https://github.com/flathub/io.mpv.Mpv/blob/master/io.mpv.Mpv.yml#LL9
