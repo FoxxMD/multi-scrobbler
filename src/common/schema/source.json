@@ -36,6 +36,9 @@
         },
         {
             "$ref": "#/definitions/JRiverSourceConfig"
+        },
+        {
+            "$ref": "#/definitions/KodiSourceConfig"
         }
     ],
     "definitions": {
@@ -328,6 +331,103 @@
                 },
                 "data": {
                     "$ref": "#/definitions/JellyData"
+                },
+                "name": {
+                    "description": "Unique identifier for this source.",
+                    "type": "string"
+                }
+            },
+            "required": [
+                "data"
+            ],
+            "type": "object"
+        },
+        "KodiData": {
+            "properties": {
+                "interval": {
+                    "default": 30,
+                    "description": "How long to wait before polling the source API for new tracks (in seconds)",
+                    "examples": [
+                        30
+                    ],
+                    "type": "number"
+                },
+                "maxInterval": {
+                    "default": 60,
+                    "description": "When there has been no new activity from the Source API multi-scrobbler will gradually increase the wait time between polling up to this value (in seconds)",
+                    "examples": [
+                        60
+                    ],
+                    "type": "number"
+                },
+                "maxPollRetries": {
+                    "default": 5,
+                    "description": "default # of automatic polling restarts on error",
+                    "examples": [
+                        5
+                    ],
+                    "type": "number"
+                },
+                "maxRequestRetries": {
+                    "default": 1,
+                    "description": "default # of http request retries a source can make before error is thrown",
+                    "examples": [
+                        1
+                    ],
+                    "type": "number"
+                },
+                "options": {
+                    "$ref": "#/definitions/Record<string,any>"
+                },
+                "password": {
+                    "description": "The password set for Remote Control via Web Sever",
+                    "type": "string"
+                },
+                "retryMultiplier": {
+                    "default": 1.5,
+                    "description": "default retry delay multiplier (retry attempt * multiplier = # of seconds to wait before retrying)",
+                    "examples": [
+                        1.5
+                    ],
+                    "type": "number"
+                },
+                "url": {
+                    "default": "http://localhost:8080/jsonrpc",
+                    "description": "URL of the Kodi HTTP server to connect to\n\nmulti-scrobbler connects to the Web Service Interface endpoint that ultimately looks like this => `http://yourDomain:8080/jsonrpc`\n\nThe URL you provide here will have all parts not explicitly defined filled in for you so if these are not the default you must define them.\n\nParts => [default value]\n\n* Protocol => `http://`\n* Hostname => `localhost`\n* Port => `8080`\n* Path => `/jsonrpc`",
+                    "examples": [
+                        "http://localhost:8080/jsonrpc"
+                    ],
+                    "type": "string"
+                },
+                "username": {
+                    "description": "The username set for Remote Control via Web Sever",
+                    "type": "string"
+                }
+            },
+            "required": [
+                "password",
+                "url",
+                "username"
+            ],
+            "type": "object"
+        },
+        "KodiSourceConfig": {
+            "properties": {
+                "clients": {
+                    "description": "Restrict scrobbling tracks played from this source to Clients with names from this list. If list is empty is not present Source scrobbles to all configured Clients.",
+                    "examples": [
+                        [
+                            "MyMalojaConfigName",
+                            "MyLastFMConfigName"
+                        ]
+                    ],
+                    "items": {
+                        "type": "string"
+                    },
+                    "type": "array"
+                },
+                "data": {
+                    "$ref": "#/definitions/KodiData"
                 },
                 "name": {
                     "description": "Unique identifier for this source.",

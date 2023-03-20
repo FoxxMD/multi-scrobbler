@@ -1,0 +1,10 @@
+[
+  {
+    "name": "MyKodi",
+    "data": {
+      "url": "http://localhost:8080/jsonrpc",
+      "username": "myUser",
+      "password": "myPassword"
+    }
+  }
+]
