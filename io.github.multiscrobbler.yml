@@ -6,6 +6,7 @@ command: multiscrobbler
 finish-args:
   - --own-name=org.mpris.MediaPlayer2.*
   - --talk-name=org.gnome.SessionManager
+  - --share=network
 sdk-extensions:
   - org.freedesktop.Sdk.Extension.node18
 modules:
@@ -43,7 +44,7 @@ modules:
         dest-filename: run.sh
         commands:
           - export CONFIG_DIR=/etc
-          - npm run start
+          - node src/index.js
       - type: file
         path: io.github.multiscrobbler.appdata.xml
       - generated-sources.json
