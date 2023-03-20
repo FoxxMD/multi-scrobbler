@@ -20,14 +20,23 @@ modules:
         npm_config_offline: 'true'
     build-commands:
       # Install npm dependencies
-      - npm install --offline
+      # reference https://github.com/flatpak/flatpak-builder-tools/issues/103
+      - HOME=$PWD yarn config --offline set yarn-offline-mirror $FLATPAK_BUILDER_BUILDDIR/flatpak-node/yarn-mirror
+      - yarn --offline
       #- ./node_modules/.bin/tsc
       - install -Dm755 ../run.sh /app/bin/multiscrobbler
     subdir: main
     sources:
-      - type: git
-        url: https://github.com/FoxxMD/multi-scrobbler
-        tag: 0.4.4
+#      - type: git
+#        url: https://github.com/FoxxMD/multi-scrobbler
+#        tag: 0.4.4
+#        dest: main
+      - type: dir
+        path: '.'
+        skip:
+          - '.flatpak-builder'
+          - 'node_modules'
+          - 'logs'
         dest: main
       # Wrapper to launch the app
       - type: script
