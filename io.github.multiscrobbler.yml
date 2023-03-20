@@ -24,7 +24,14 @@ modules:
       # reference https://github.com/flatpak/flatpak-builder-tools/issues/103
       - HOME=$PWD yarn config --offline set yarn-offline-mirror $FLATPAK_BUILDER_BUILDDIR/flatpak-node/yarn-mirror
       - yarn --offline
+      # makes node and npm available?
+      - mkdir -p /app/bin /app/lib /app/lib/src
+      - cp -a /usr/lib/sdk/node18/bin/{node,npm} /app/bin
+      - cp -a /usr/lib/sdk/node18/lib/* /app/lib
+      - rm -r /app/lib/node_modules/npm/{docs,man}
       #- ./node_modules/.bin/tsc
+      - cp -r node_modules/* /app/lib/node_modules
+      - cp -r src/* /app/lib/src
       - install -Dm755 ../run.sh /app/bin/multiscrobbler
     subdir: main
     sources:
@@ -44,7 +51,8 @@ modules:
         dest-filename: run.sh
         commands:
           - export CONFIG_DIR=/etc
-          - node src/index.js
+          # can't seem to figure this out
+          - cd /app/lib && node src/index.js
       - type: file
         path: io.github.multiscrobbler.appdata.xml
       - generated-sources.json
@@ -57,7 +65,11 @@ modules:
 # https://github.com/flathub/com.sindresorhus.Caprine/blob/master/com.sindresorhus.Caprine.yaml
 # https://github.com/flathub/com.github.rssguard/blob/master/com.github.rssguard.yaml
 # https://github.com/Lunarequest/moderndeck-flatpak/blob/mistress/com.dangeredwolf.ModernDeck.yaml
-# https://github.com/flatpak/flatpak-builder-tools/tree/1fa8efca4d4e533e0add783a7c455ae35fdf7624/node ?
 
 #permission
 # https://github.com/flathub/io.mpv.Mpv/blob/master/io.mpv.Mpv.yml#LL9
+
+
+# flatpak-node-generator yarn yarn.lock
+# flatpak-builder ~/flatms io.github.multiscrobbler.yml --force-clean
+# flatpak run io.github.foxxmd.multiscrobbler
