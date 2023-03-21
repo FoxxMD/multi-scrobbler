@@ -4,9 +4,9 @@ runtime-version: '22.08'
 sdk: org.freedesktop.Sdk
 command: multiscrobbler
 finish-args:
-  - --own-name=org.mpris.MediaPlayer2.*
-  - --talk-name=org.gnome.SessionManager
   - --share=network
+  # used for access to MPRIS
+  - --socket=session-bus
 sdk-extensions:
   - org.freedesktop.Sdk.Extension.node18
 modules:
