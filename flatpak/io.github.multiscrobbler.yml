@@ -1,4 +1,4 @@
-app-id: io.github.foxxmd.multiscrobbler
+app-id: io.github.multiscrobbler
 runtime: org.freedesktop.Platform
 runtime-version: '22.08'
 sdk: org.freedesktop.Sdk
@@ -32,6 +32,8 @@ modules:
       #- ./node_modules/.bin/tsc
       - cp -r node_modules/* /app/lib/node_modules
       - cp -r src/* /app/lib/src
+      # not a desktop app (for now) so don't include this
+      #- install -Dm644 ../${FLATPAK_ID}.metainfo.xml /app/share/metainfo/${FLATPAK_ID}.metainfo.xml
       - install -Dm755 ../run.sh /app/bin/multiscrobbler
     subdir: main
     sources:
@@ -52,8 +54,9 @@ modules:
         commands:
           - export CONFIG_DIR=$XDG_CONFIG_HOME
           - cd /app/lib && node src/index.js
-      - type: file
-        path: io.github.multiscrobbler.appdata.xml
+      # not a desktop app (for now) so don't include this
+#      - type: file
+#        path: io.github.multiscrobbler.metainfo.xml
       - generated-sources.json
 
 # https://docs.flatpak.org/en/latest/electron.html
