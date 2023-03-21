@@ -19,7 +19,7 @@ import bstrat from "@kenyip/backoff-strategies";
 
 dayjs.extend(utc);
 
-export async function readJson(this: any, path: any, {logErrors = true, throwOnNotFound = true} = {}) {
+export async function readJson(this: any, path: any, {throwOnNotFound = true} = {}) {
     try {
         await promises.access(path, constants.R_OK);
         const data = await promises.readFile(path);
@@ -28,18 +28,12 @@ export async function readJson(this: any, path: any, {logErrors = true, throwOnN
         const {code} = e;
         if (code === 'ENOENT') {
             if (throwOnNotFound) {
-                if (logErrors) {
-                    this.logger.warn('No file found at given path', {filePath: path});
-                }
-                throw e;
+                throw new ErrorWithCause(`No file found at given path: ${path}`, {cause: e});
             } else {
                 return;
             }
-        } else if (logErrors) {
-            this.logger.warn(`Encountered error while parsing file`, {filePath: path});
-            this.logger.error(e);
         }
-        throw e;
+        throw new ErrorWithCause(`Encountered error while parsing file: ${path}`, {cause: e})
     }
 }
 
