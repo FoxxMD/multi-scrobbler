@@ -48,6 +48,16 @@ export interface PlayData {
      * The date the track was played at
      * */
     playDate?: Dayjs
+
+    meta?: {
+        brainz?: {
+            artist?: string
+            albumArtist?: string
+            album?: string
+            track?: string
+            releaseGroup?: string
+        }
+    }
 }
 
 export interface PlayMeta {
