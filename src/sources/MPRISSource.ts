@@ -12,6 +12,7 @@ import MemorySource from "./MemorySource.js";
 import {RecentlyPlayedOptions} from "./AbstractSource.js";
 import {removeDuplicates} from "../utils.js";
 import EventEmitter from "events";
+import {ErrorWithCause} from "pony-cause";
 
 
 export class MPRISSource extends MemorySource {
@@ -109,41 +110,63 @@ export class MPRISSource extends MemorySource {
         const playerInfos: PlayerInfo[] = [];
 
         for (const playerName of list) {
-            let obj = await bus.getProxyObject(playerName, MPRIS_PATH);
-
             const plainPlayerName = playerName.replace('org.mpris.MediaPlayer2.', '');
-            //let player = obj.getInterface(MPRIS_IFACE);
-            let props = obj.getInterface(PROPERTIES_IFACE);
+            try {
+                let obj = await bus.getProxyObject(playerName, MPRIS_PATH);
 
-            const pos = await this.getPlayerPosition(props);
-            const status = await this.getPlayerStatus(props);
-            if (status === PLAYBACK_STATUS_STOPPED && activeOnly) {
-                continue;
+                //let player = obj.getInterface(MPRIS_IFACE);
+                let props = obj.getInterface(PROPERTIES_IFACE);
+
+                // may not always have position available! can fallback to undefined for this
+                let pos: number | undefined;
+                try {
+                    pos = await this.getPlayerPosition(props);
+                } catch (e) {
+                    this.logger.warn(`Could not get Position info for player ${plainPlayerName}`);
+                }
+                const status = await this.getPlayerStatus(props);
+                if (status === PLAYBACK_STATUS_STOPPED && activeOnly) {
+                    continue;
+                }
+                const metadata = await this.getPlayerMetadata(props);
+                playerInfos.push({
+                    name: plainPlayerName,
+                    status,
+                    position: pos,
+                    metadata
+                });
+            } catch (e) {
+                this.logger.warn(new ErrorWithCause(`Could not parse D-bus info for player ${plainPlayerName}`, {cause: e}));
             }
-            const metadata = await this.getPlayerMetadata(props);
-            playerInfos.push({
-                name: plainPlayerName,
-                status,
-                position: pos,
-                metadata
-            });
         }
         return playerInfos;
     }
 
     protected getPlayerPosition = async (props: ClientInterface): Promise<number> => {
-        const pos = await props.Get(MPRIS_IFACE, 'Position');
-        return dayjs.duration({milliseconds: Number(pos.value / 1000n)}).asSeconds();
+        try {
+            const pos = await props.Get(MPRIS_IFACE, 'Position');
+            return dayjs.duration({milliseconds: Number(pos.value / 1000n)}).asSeconds();
+        } catch(e) {
+            throw new ErrorWithCause('Could not get player Position', {cause: e});
+        }
     }
 
     protected getPlayerStatus = async (props: ClientInterface): Promise<PlaybackStatus> => {
-        const status = await props.Get(MPRIS_IFACE, 'PlaybackStatus');
-        return status.value as PlaybackStatus;
+        try {
+            const status = await props.Get(MPRIS_IFACE, 'PlaybackStatus');
+            return status.value as PlaybackStatus;
+        } catch (e) {
+            throw new ErrorWithCause('Could not get player PlaybackStatus', {cause: e})
+        }
     }
 
     protected getPlayerMetadata = async (props: ClientInterface): Promise<MPRISMetadata> => {
-        const metadata = await props.Get(MPRIS_IFACE, 'Metadata');
-        return this.metadataToPlain(metadata.value);
+        try {
+            const metadata = await props.Get(MPRIS_IFACE, 'Metadata');
+            return this.metadataToPlain(metadata.value);
+        } catch(e) {
+            throw new ErrorWithCause('Could not get player Metadata', {cause: e});
+        }
     }
 
     metadataToPlain = (metadataVariant): MPRISMetadata => {
