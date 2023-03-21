@@ -21,10 +21,8 @@ modules:
         npm_config_offline: 'true'
     build-commands:
       # Install npm dependencies
-      # reference https://github.com/flatpak/flatpak-builder-tools/issues/103
-      - HOME=$PWD yarn config --offline set yarn-offline-mirror $FLATPAK_BUILDER_BUILDDIR/flatpak-node/yarn-mirror
-      - yarn --offline
-      # makes node and npm available?
+      - npm install --offline
+      # makes node and npm available
       - mkdir -p /app/bin /app/lib /app/lib/src
       - cp -a /usr/lib/sdk/node18/bin/{node,npm} /app/bin
       - cp -a /usr/lib/sdk/node18/lib/* /app/lib
@@ -42,7 +40,7 @@ modules:
 #        tag: 0.4.4
 #        dest: main
       - type: dir
-        path: '.'
+        path: '..'
         skip:
           - '.flatpak-builder'
           - 'node_modules'
