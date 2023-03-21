@@ -28,22 +28,6 @@
     enabled "2.0.x"
     kuler "^2.0.0"
 
-"@foxxmd/winston@^3.3.3":
-  version "3.3.3"
-  resolved "https://registry.yarnpkg.com/@foxxmd/winston/-/winston-3.3.3.tgz#75e8f3dba2ff8aed7ad9dd3075fbc4c28dcd5419"
-  integrity sha512-Q9K5jHb/Ncrx17MuqUDNKvmV/pDv9y3+ZVi79wonPJUX/bqAlHETKNSb1MdDvaX7Cr8PecBqXHPC3I52Oz66Vw==
-  dependencies:
-    "@dabh/diagnostics" "^2.0.2"
-    async "^3.1.0"
-    is-stream "^2.0.0"
-    lodash.mergewith "^4.6.2"
-    logform "^2.2.0"
-    one-time "^1.0.0"
-    readable-stream "^3.4.0"
-    stack-trace "0.0.x"
-    triple-beam "^1.3.0"
-    winston-transport "^4.4.0"
-
 "@jridgewell/resolve-uri@^3.0.3":
   version "3.1.0"
   resolved "https://registry.yarnpkg.com/@jridgewell/resolve-uri/-/resolve-uri-3.1.0.tgz#2203b118c157721addfe69d47b70465463066d78"
@@ -2695,6 +2679,21 @@ winston@^3:
     stack-trace "0.0.x"
     triple-beam "^1.3.0"
     winston-transport "^4.5.0"
+
+"winston@github:FoxxMD/winston#fbab8de969ecee578981c77846156c7f43b5f01e":
+  version "3.3.3"
+  resolved "https://codeload.github.com/FoxxMD/winston/tar.gz/fbab8de969ecee578981c77846156c7f43b5f01e"
+  dependencies:
+    "@dabh/diagnostics" "^2.0.2"
+    async "^3.1.0"
+    is-stream "^2.0.0"
+    lodash.mergewith "^4.6.2"
+    logform "^2.2.0"
+    one-time "^1.0.0"
+    readable-stream "^3.4.0"
+    stack-trace "0.0.x"
+    triple-beam "^1.3.0"
+    winston-transport "^4.4.0"
 
 wrap-ansi@^7.0.0:
   version "7.0.0"
