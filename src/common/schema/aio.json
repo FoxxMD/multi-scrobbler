@@ -2015,6 +2015,14 @@
         "logging": {
             "$ref": "#/definitions/LogOptions"
         },
+        "port": {
+            "default": 9078,
+            "description": "Set the port the multi-scrobbler UI will be served from",
+            "examples": [
+                9078
+            ],
+            "type": "number"
+        },
         "sourceDefaults": {
             "$ref": "#/definitions/SourceRetryOptions"
         },

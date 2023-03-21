@@ -13,6 +13,14 @@ export interface AIOConfig {
 
     webhooks?: WebhookConfig[]
 
+    /**
+     * Set the port the multi-scrobbler UI will be served from
+     *
+     * @default 9078
+     * @examples [9078]
+     * */
+    port?: number
+
     logging?: LogOptions
 }
 
