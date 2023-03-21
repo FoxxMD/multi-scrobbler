@@ -16,7 +16,7 @@ import {
     TrackStringOptions
 } from "../common/infrastructure/Atomic.js";
 import {Notifiers} from "../notifier/Notifiers.js";
-import {Logger} from "winston";
+import {Logger} from '@foxxmd/winston';
 import {ListenBrainzClientConfig} from "../common/infrastructure/config/client/listenbrainz.js";
 import {ListenbrainzApiClient} from "../apis/ListenbrainzApiClient.js";
 

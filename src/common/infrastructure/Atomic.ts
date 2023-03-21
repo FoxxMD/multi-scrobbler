@@ -1,7 +1,7 @@
 import {Dayjs} from "dayjs";
 import {FixedSizeList} from 'fixed-size-list';
 import {MESSAGE} from 'triple-beam';
-import {Logger} from "winston";
+import {Logger} from '@foxxmd/winston';
 
 export type SourceType = 'spotify' | 'plex' | 'tautulli' | 'subsonic' | 'jellyfin' | 'lastfm' | 'deezer' | 'ytmusic' | 'mpris' | 'mopidy' | 'listenbrainz' | 'jriver' | 'kodi';
 export const sourceTypes: SourceType[] = ['spotify', 'plex', 'tautulli', 'subsonic', 'jellyfin', 'lastfm', 'deezer', 'ytmusic', 'mpris', 'mopidy', 'listenbrainz', 'jriver', 'kodi'];

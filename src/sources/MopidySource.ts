@@ -7,7 +7,7 @@ import {URL} from "url";
 import normalizeUrl from 'normalize-url';
 import {EventEmitter} from "events";
 import pEvent from 'p-event';
-import winston from 'winston';
+import winston from '@foxxmd/winston';
 import {RecentlyPlayedOptions} from "./AbstractSource.js";
 import request from "superagent";
 import {buildTrackString, removeDuplicates} from "../utils.js";

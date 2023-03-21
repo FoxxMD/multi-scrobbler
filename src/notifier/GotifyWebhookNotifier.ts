@@ -3,7 +3,7 @@ import {GotifyConfig, PrioritiesConfig, WebhookPayload} from "../common/infrastr
 import {gotify} from 'gotify';
 import request from 'superagent';
 import {HTTPError} from "got";
-import {Logger} from "winston";
+import {Logger} from '@foxxmd/winston';
 
 export class GotifyWebhookNotifier extends AbstractWebhookNotifier {
 

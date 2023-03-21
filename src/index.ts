@@ -1,7 +1,7 @@
 import {addAsync, Router} from '@awaitjs/express';
 import express from 'express';
 import bodyParser from 'body-parser';
-import {Logger} from 'winston';
+import {Logger} from '@foxxmd/winston';
 import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc.js';
 import isBetween from 'dayjs/plugin/isBetween.js';

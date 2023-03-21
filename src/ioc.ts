@@ -6,7 +6,7 @@ import ScrobbleSources from "./sources/ScrobbleSources.js";
 import {Notifiers} from "./notifier/Notifiers.js";
 import {EventEmitter} from "events";
 import {logPath} from "./common/logging.js";
-import {Container} from "winston";
+import {Container} from '@foxxmd/winston';
 //import ScrobbleClients from "./clients/ScrobbleClients.js";
 
 const configDir = process.env.CONFIG_DIR || path.resolve(projectDir, `./config`);

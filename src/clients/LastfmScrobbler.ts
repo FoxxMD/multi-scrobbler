@@ -18,7 +18,7 @@ import {
 import {LastfmClientConfig} from "../common/infrastructure/config/client/lastfm.js";
 import {TrackScrobbleResponse, UserGetRecentTracksResponse} from "lastfm-node-client";
 import {Notifiers} from "../notifier/Notifiers.js";
-import {Logger} from "winston";
+import {Logger} from '@foxxmd/winston';
 
 export default class LastfmScrobbler extends AbstractScrobbleClient {
 

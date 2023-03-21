@@ -25,7 +25,7 @@ import {
 } from "../common/infrastructure/Atomic.js";
 import {MalojaClientConfig} from "../common/infrastructure/config/client/maloja.js";
 import {Notifiers} from "../notifier/Notifiers.js";
-import {Logger} from "winston";
+import {Logger} from '@foxxmd/winston';
 
 const feat = ["ft.", "ft", "feat.", "feat", "featuring", "Ft.", "Ft", "Feat.", "Feat", "Featuring"];
 

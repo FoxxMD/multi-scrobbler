@@ -1,4 +1,4 @@
-import winston, {Logger} from "winston";
+import winston, {Logger} from '@foxxmd/winston';
 import {mergeArr, remoteHostIdentifiers, remoteHostStr} from "../../utils.js";
 import {Request} from "express";
 import {RemoteIdentityParts} from "../../common/infrastructure/Atomic.js";
