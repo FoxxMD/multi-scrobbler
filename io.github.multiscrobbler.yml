@@ -50,8 +50,7 @@ modules:
       - type: script
         dest-filename: run.sh
         commands:
-          - export CONFIG_DIR=/etc
-          # can't seem to figure this out
+          - export CONFIG_DIR=$XDG_CONFIG_HOME
           - cd /app/lib && node src/index.js
       - type: file
         path: io.github.multiscrobbler.appdata.xml
@@ -71,5 +70,5 @@ modules:
 
 
 # flatpak-node-generator yarn yarn.lock
-# flatpak-builder ~/flatms io.github.multiscrobbler.yml --force-clean
+# flatpak-builder ~/flatms io.github.multiscrobbler.yml --force-clean --install --user
 # flatpak run io.github.foxxmd.multiscrobbler
