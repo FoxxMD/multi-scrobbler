@@ -12,13 +12,11 @@ Install [flatpak-builder](https://docs.flatpak.org/en/latest/first-build.html#bu
 
 Requires python 3.7+, [pip](https://pip.pypa.io/en/stable/)/[pipx](https://pypa.github.io/pipx/)
 
-## 
-
-# 1. Update Project source
+# 2. Update Project source
 
 Set the `branch` `tag` or `commit` to use for MS in the `git` source in [`io.github.multiscrobbler.yml`](/flatpak/io.github.multiscrobbler.yml)
 
-# 2. Use `flatpak-node-generator` to generate sources
+# 3. Use `flatpak-node-generator` to generate sources
 
 First, [make sure `node_modules` is deleted or empty.](https://github.com/flatpak/flatpak-builder-tools/issues/354#issuecomment-1478518442)
 
@@ -30,8 +28,12 @@ flatpak-node-generator npm package-lock.json
 
 Move `generated-sources.json` into [`/flatpak`](/flatpak)
 
-# 3. Build flatpak
+# 4. Build flatpak
 
 From MS project root:
 
-flatpak-builder --repo=/tmp/multi-scrobbler-repo /tmp/multi-scrobbler-build flatpak/io.github.multiscrobbler.yml --force-clean
+```console
+cd flatpak
+flatpak-builder --repo=/home/yourUser/multi-scrobbler-repo /home/yourUser/multi-scrobbler-build io.github.multiscrobbler.yml --force-clean
+```
+Add `--install --user` to have the app installed immediately.

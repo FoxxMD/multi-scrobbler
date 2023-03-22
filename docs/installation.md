@@ -1,10 +1,14 @@
 # Installation
 
-## Local
+# Local
+
+After installation see [service.md](/docs/service.md) to configure multi-scrobbler to run automatically in the background.
+
+## Nodejs
 
 Clone this repository somewhere and then install from the working directory
 
-```bash
+```shell
 git clone https://github.com/FoxxMD/multi-scrobbler.git .
 cd multi-scrobbler
 nvm use # optional, to set correct Node version
@@ -13,23 +17,51 @@ npm build
 npm start
 ```
 
-### Local Usage Examples
+### Usage Examples
 
 * The web UI is served on port `9078`. This can be modified using the `PORT` environmental variable.
 
 #### Using [file-based](/docs/configuration.md#file-based-configuration) configuration
 
-```bash
+```shell
 npm start
 ```
 
 #### Using [env-based](/docs/configuration.md#env-based-configuration) configuration
 
-```bash
+```shell
 SPOTIFY_CLIENT_ID=yourId SPOTIFY_CLIENT_SECRET=yourSecret MALOJA_URL="http://domain.tld" node src/index.js
 ```
 
-## [Docker](https://hub.docker.com/r/foxxmd/multi-scrobbler)
+## Flatpak
+
+**(Coming soon!)**
+
+You must have [Flatpak](https://flatpak.org/) installed on your system.
+
+```shell
+flatpak install flathub io.github.multiscrobbler
+```
+
+### Usage Examples
+
+#### Using [file-based](/docs/configuration.md#file-based-configuration) configuration
+
+The config directory for multi-scrobbler as a flatpak can be found under `/home/YourUser/.var/app/io.githubmultiscrobbler/config`
+
+```shell
+flatpak run io.github.multiscrobbler
+```
+
+#### Using [env-based](/docs/configuration.md#env-based-configuration) configuration
+
+There are a few [options for running flatpak applications with temporary or permanent environmental variables.](https://ardasevinc.dev/launch-flatpak-apps-with-custom-args-and-environment-variables)
+
+```shell
+flatpak run --env=SPOTIFY_CLIENT_ID=yourId --envSPOTIFY_CLIENT_SECRET=yourSecret --env=MALOJA_URL="http://domain.tld" io.github.multiscrobbler
+```
+
+# [Docker](https://hub.docker.com/r/foxxmd/multi-scrobbler)
 
 Cross-platform images are built for x86 (Intel/AMD) and ARM (IE Raspberry Pi)
 
@@ -65,15 +97,15 @@ To get the UID and GID for the current user run these commands from a terminal:
 * `id -u` -- prints UID
 * `id -g` -- prints GID
 
-### Docker Usage Examples
+## Docker Usage Examples
 
-#### Using [env-based](/docs/configuration.md#env-based-configuration) configuration
+### Using [env-based](/docs/configuration.md#env-based-configuration) configuration
 
 ```bash
 docker run -e "SPOTIFY_CLIENT_ID=yourId" -e "SPOTIFY_CLIENT_SECRET=yourSecret" -e "MALOJA_URL=http://domain.tld" -e "MALOJA_API_KEY=1234" -e "PUID=1000" -e "PGID=1000" -p 9078:9078 -v /path/on/host/config:/config foxxmd/multi-scrobbler
 ```
 
-#### Using [file-based](/docs/configuration.md#file-based-configuration) configuration
+### Using [file-based](/docs/configuration.md#file-based-configuration) configuration
 
 ```bash
 docker run -e "PUID=1000" -e "PGID=1000" -p 9078:9078 -v /path/on/host/config:/config foxxmd/multi-scrobbler
