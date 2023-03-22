@@ -64,7 +64,7 @@ app.use(passport.session());
 
 let output: LogInfo[] = []
 
-const initLogger = getLogger({}, 'init');
+const initLogger = getLogger({file: false}, 'init');
 initLogger.stream().on('log', (log: LogInfo) => {
     output.unshift(log);
     output = output.slice(0, 301);
@@ -79,7 +79,7 @@ const configDir = process.env.CONFIG_DIR || path.resolve(projectDir, `./config`)
 
 
     try {
-        initLogger.debug(`Config Dir ENV: ${process.env.CONFIG_DIR}`)
+        initLogger.debug(`Config Dir ENV: ${process.env.CONFIG_DIR} -> Resolved: ${configDir}`)
         // try to read a configuration file
         let appConfigFail: Error | undefined = undefined;
         let config = {};
