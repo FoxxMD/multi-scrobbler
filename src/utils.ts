@@ -6,16 +6,17 @@ import JSON5 from 'json5';
 import { TimeoutError, WebapiError } from "spotify-web-api-node/src/response-error.js";
 import Ajv, {Schema} from 'ajv';
 import {
+    DEFAULT_SCROBBLE_DURATION_THRESHOLD,
     lowGranularitySources,
     PlayObject, ProgressAwarePlayObject,
-    RemoteIdentityParts,
+    RemoteIdentityParts, ScrobbleThresholdResult,
     TrackStringOptions
 } from "./common/infrastructure/Atomic.js";
 import {Request} from "express";
 import pathUtil from "path";
 import {ErrorWithCause} from "pony-cause";
 import backoffStrategies from '@kenyip/backoff-strategies';
-import bstrat from "@kenyip/backoff-strategies";
+import {ScrobbleThresholds} from "./common/infrastructure/config/source/index.js";
 
 dayjs.extend(utc);
 
@@ -556,9 +557,55 @@ export const toProgressAwarePlayObject = (play: PlayObject): ProgressAwarePlayOb
 
 export const getProgress = (initial: ProgressAwarePlayObject, curr: PlayObject): number | undefined => {
     if(initial.meta.initialTrackProgressPosition !== undefined && curr.meta.trackProgressPosition !== undefined) {
-        return Math.abs(curr.meta.trackProgressPosition - initial.meta.initialTrackProgressPosition);
+        return Math.round(Math.abs(curr.meta.trackProgressPosition - initial.meta.initialTrackProgressPosition));
     }
     return undefined;
+}
+
+export const playPassesScrobbleThreshold = (play: PlayObject, thresholds: ScrobbleThresholds): ScrobbleThresholdResult => {
+    const progressed = Math.round(Math.abs(dayjs().diff(play.data.playDate, 's')));
+    return timePassesScrobbleThreshold(thresholds, progressed, play.data.duration);
+}
+
+export const timePassesScrobbleThreshold = (thresholds: ScrobbleThresholds, secondsTracked: number, playDuration?: number): ScrobbleThresholdResult => {
+    let durationPasses = undefined,
+        durationThreshold = (thresholds.duration ?? DEFAULT_SCROBBLE_DURATION_THRESHOLD),
+        percentPasses = undefined,
+        percent: number | undefined = undefined;
+
+    if (thresholds.percent !== undefined && playDuration !== undefined) {
+        percent = (secondsTracked / playDuration) * 100;
+        percentPasses = percent >= thresholds.percent;
+    }
+    if (thresholds.duration !== undefined || percentPasses === undefined) {
+        durationPasses = secondsTracked >= durationThreshold;
+    }
+
+    return {
+        passes: (durationPasses ?? false) || (percentPasses ?? false),
+        duration: {
+            passes: durationPasses,
+            threshold: durationThreshold,
+            value: secondsTracked
+        },
+        percent: {
+            passes: percentPasses,
+            value: percent,
+            threshold: thresholds.percent
+        }
+    }
+}
+
+export const thresholdResultSummary = (result: ScrobbleThresholdResult) => {
+    const parts: string[] = [];
+    if(result.duration.passes !== undefined) {
+        parts.push(`tracked time of ${result.duration.value}s (wanted ${result.duration.threshold}s)`);
+    }
+    if(result.percent.passes !== undefined) {
+        parts.push(`tracked percent of ${(result.percent.value).toFixed(2)}% (wanted ${result.percent.threshold})`)
+    }
+
+    return `${result.passes ? 'met' : 'did not meet'} thresholds with ${parts.join(' and')}`;
 }
 
 export function parseBool(value: any, prev: any = false): boolean {

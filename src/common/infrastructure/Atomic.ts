@@ -245,3 +245,23 @@ export interface LogInfo {
     labels?: string[]
     transport?: string[]
 }
+
+// https://stackoverflow.com/questions/40510611/typescript-interface-require-one-of-two-properties-to-exist#comment116238286_49725198
+export type RequireAtLeastOne<T, R extends keyof T = keyof T> = Omit<T, R> & {   [ P in R ] : Required<Pick<T, P>> & Partial<Omit<T, P>> }[R];
+
+export const DEFAULT_SCROBBLE_DURATION_THRESHOLD: number = 30;
+
+export interface ScrobbleThresholdResult {
+    passes: boolean
+    duration: {
+        passes?: boolean
+        value?: number
+        threshold?: number
+    }
+    percent: {
+        passes?: boolean
+        value?: number
+        threshold?: number
+    }
+
+}

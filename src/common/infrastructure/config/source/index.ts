@@ -10,7 +10,27 @@ export interface SourceRetryOptions extends RequestRetryOptions {
     maxPollRetries?: number
 }
 
+export interface ScrobbleThresholds {
+    /**
+     * The number of seconds before a track should be considered scrobbled.
+     *
+     * @default 30
+     * @examples [30]
+     * */
+    duration?: number
+    /**
+     * The percentage of a track that should have been seen played before it should be scrobbled. Only used if the Source provides information about how long the track is.
+     *
+     * NOTE: This should be used with care when the Source is a "polling" type (has an 'interval' property). If the track is short and the interval is too high MS may ignore the track if percentage is high because it had not "seen" the track for long enough from first discovery, even if you have been playing the track for longer.
+     * */
+    percent?: number
+}
+
 export interface CommonSourceData extends CommonData, SourceRetryOptions {
+    /**
+     * Set thresholds for when multi-scrobbler should consider a tracked play to be "scrobbable". If both duration and percent are defined then if either condition is met the track is scrobbled.
+     * */
+    scrobbleThresholds?: ScrobbleThresholds
 }
 
 export interface CommonSourceConfig extends CommonConfig {
