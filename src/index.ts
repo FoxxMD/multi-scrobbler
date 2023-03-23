@@ -113,6 +113,10 @@ const configDir = process.env.CONFIG_DIR || path.resolve(projectDir, `./config`)
             }
         });
 
+        if(process.env.IS_LOCAL === 'true') {
+            logger.info('multi-scrobbler can be run as a background service! See: https://github.com/FoxxMD/multi-scrobbler/blob/develop/docs/service.md');
+        }
+
         if(appConfigFail !== undefined) {
             logger.warn('App config file exists but could not be parsed!');
             logger.warn(appConfigFail);
