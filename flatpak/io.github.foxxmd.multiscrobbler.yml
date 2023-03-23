@@ -1,4 +1,4 @@
-app-id: io.github.multiscrobbler
+app-id: io.github.foxxmd.multiscrobbler
 runtime: org.freedesktop.Platform
 runtime-version: '22.08'
 sdk: org.freedesktop.Sdk
@@ -53,16 +53,9 @@ modules:
       - install -Dm755 ../run.sh /app/bin/multiscrobbler
     subdir: main
     sources:
-#      - type: git
-#        url: https://github.com/FoxxMD/multi-scrobbler
-#        tag: 0.4.4
-#        dest: main
-      - type: dir
-        path: '..'
-        skip:
-          - '.flatpak-builder'
-          - 'node_modules'
-          - 'logs'
+      - type: git
+        url: https://github.com/FoxxMD/multi-scrobbler
+        commit: ffc826f04de9fe9d9e31bd1b89a4a05fff2699b6
         dest: main
       # Wrapper to launch the app
       - type: script
@@ -85,8 +78,8 @@ modules:
       - type: file
         path: icon.png
       - type: file
-        path: io.github.multiscrobbler.desktop
+        path: io.github.foxxmd.multiscrobbler.desktop
       # not a desktop app (for now) so don't include this
       - type: file
-        path: io.github.multiscrobbler.metainfo.xml
+        path: io.github.foxxmd.multiscrobbler.metainfo.xml
       - generated-sources.json
