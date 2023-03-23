@@ -4,6 +4,9 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Docker Pulls](https://img.shields.io/docker/pulls/foxxmd/multi-scrobbler)](https://hub.docker.com/r/foxxmd/multi-scrobbler)
 
+<img src="/assets/logo.png" align="right"
+alt="ContextMod logo" width="180" height="180">
+
 A javascript app to scrobble music you listened to, to [Maloja](https://github.com/krateng/maloja), [Last.fm](https://www.last.fm), and [ListenBrainz](https://listenbrainz.org)
 
 * Supports scrobbling from many **Sources**
