@@ -40,14 +40,14 @@ SPOTIFY_CLIENT_ID=yourId SPOTIFY_CLIENT_SECRET=yourSecret MALOJA_URL="http://dom
 You must have [Flatpak](https://flatpak.org/) installed on your system.
 
 ```shell
-flatpak install flathub io.github.multiscrobbler
+flatpak install flathub io.github.foxxmd.multiscrobbler
 ```
 
 ### Usage Examples
 
 #### Using [file-based](/docs/configuration.md#file-based-configuration) configuration
 
-The config directory for multi-scrobbler as a flatpak can be found under `/home/YourUser/.var/app/io.githubmultiscrobbler/config`
+The config directory for multi-scrobbler as a flatpak can be found under `/home/YourUser/.var/app/io.github.foxxmd.multiscrobbler/config`
 
 ```shell
 flatpak run io.github.multiscrobbler
@@ -58,7 +58,7 @@ flatpak run io.github.multiscrobbler
 There are a few [options for running flatpak applications with temporary or permanent environmental variables.](https://ardasevinc.dev/launch-flatpak-apps-with-custom-args-and-environment-variables)
 
 ```shell
-flatpak run --env=SPOTIFY_CLIENT_ID=yourId --envSPOTIFY_CLIENT_SECRET=yourSecret --env=MALOJA_URL="http://domain.tld" io.github.multiscrobbler
+flatpak run --env=SPOTIFY_CLIENT_ID=yourId --envSPOTIFY_CLIENT_SECRET=yourSecret --env=MALOJA_URL="http://domain.tld" io.github.foxxmd.multiscrobbler
 ```
 
 # [Docker](https://hub.docker.com/r/foxxmd/multi-scrobbler)

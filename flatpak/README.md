@@ -1,3 +1,5 @@
+NOTE: This steps are for building the flatpak entirely locally, from source. If you want to install the application normally then [get it through flathub](/docs/installation.md#flatpak)
+
 Flatpak build is a little convoluted until someone sets me straight...
 
 # 1. Install Requirements
@@ -14,7 +16,7 @@ Requires python 3.7+, [pip](https://pip.pypa.io/en/stable/)/[pipx](https://pypa.
 
 # 2. Update Project source
 
-Set the `branch` `tag` or `commit` to use for MS in the `git` source in [`io.github.multiscrobbler.yml`](/flatpak/io.github.multiscrobbler.yml)
+Set the `branch` `tag` or `commit` to use for MS in the `git` source in [`io.github.foxxmd.multiscrobbler.yml`](/flatpak/io.github.foxxmd.multiscrobbler.yml)
 
 # 3. Use `flatpak-node-generator` to generate sources
 
@@ -34,6 +36,6 @@ From MS project root:
 
 ```console
 cd flatpak
-flatpak-builder --repo=/home/yourUser/multi-scrobbler-repo /home/yourUser/multi-scrobbler-build io.github.multiscrobbler.yml --force-clean
+flatpak-builder --repo=/home/yourUser/multi-scrobbler-repo /home/yourUser/multi-scrobbler-build io.github.foxxmd.multiscrobbler.yml --force-clean
 ```
 Add `--install --user` to have the app installed immediately.
