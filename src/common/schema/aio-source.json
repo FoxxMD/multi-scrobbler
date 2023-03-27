@@ -59,6 +59,10 @@
                         1.5
                     ],
                     "type": "number"
+                },
+                "scrobbleThresholds": {
+                    "$ref": "#/definitions/ScrobbleThresholds",
+                    "description": "Set thresholds for when multi-scrobbler should consider a tracked play to be \"scrobbable\". If both duration and percent are defined then if either condition is met the track is scrobbled."
                 }
             },
             "required": [
@@ -152,6 +156,10 @@
                     ],
                     "type": "number"
                 },
+                "scrobbleThresholds": {
+                    "$ref": "#/definitions/ScrobbleThresholds",
+                    "description": "Set thresholds for when multi-scrobbler should consider a tracked play to be \"scrobbable\". If both duration and percent are defined then if either condition is met the track is scrobbled."
+                },
                 "url": {
                     "default": "http://localhost:52199/MCWS/v1/",
                     "description": "URL of the JRiver HTTP server to connect to\n\nmulti-scrobbler connects to the Web Service Interface endpoint that ultimately looks like this => `http://yourDomain:52199/MCWS/v1/`\n\nThe URL you provide here will have all parts not explicitly defined filled in for you so if these are not the default you must define them.\n\nParts => [default value]\n\n* Protocol => `http://`\n* Hostname => `localhost`\n* Port => `52199`\n* Path => `/MCWS/v1/`",
@@ -244,6 +252,10 @@
                         1.5
                     ],
                     "type": "number"
+                },
+                "scrobbleThresholds": {
+                    "$ref": "#/definitions/ScrobbleThresholds",
+                    "description": "Set thresholds for when multi-scrobbler should consider a tracked play to be \"scrobbable\". If both duration and percent are defined then if either condition is met the track is scrobbled."
                 },
                 "servers": {
                     "anyOf": [
@@ -370,6 +382,10 @@
                         1.5
                     ],
                     "type": "number"
+                },
+                "scrobbleThresholds": {
+                    "$ref": "#/definitions/ScrobbleThresholds",
+                    "description": "Set thresholds for when multi-scrobbler should consider a tracked play to be \"scrobbable\". If both duration and percent are defined then if either condition is met the track is scrobbled."
                 },
                 "url": {
                     "default": "http://localhost:8080/jsonrpc",
@@ -516,6 +532,10 @@
                     ],
                     "type": "number"
                 },
+                "scrobbleThresholds": {
+                    "$ref": "#/definitions/ScrobbleThresholds",
+                    "description": "Set thresholds for when multi-scrobbler should consider a tracked play to be \"scrobbable\". If both duration and percent are defined then if either condition is met the track is scrobbled."
+                },
                 "secret": {
                     "description": "Secret generated from Last.fm account",
                     "examples": [
@@ -609,6 +629,10 @@
                     ],
                     "type": "number"
                 },
+                "scrobbleThresholds": {
+                    "$ref": "#/definitions/ScrobbleThresholds",
+                    "description": "Set thresholds for when multi-scrobbler should consider a tracked play to be \"scrobbable\". If both duration and percent are defined then if either condition is met the track is scrobbled."
+                },
                 "token": {
                     "description": "User token for the user to scrobble for",
                     "examples": [
@@ -683,6 +707,10 @@
                         1.5
                     ],
                     "type": "number"
+                },
+                "scrobbleThresholds": {
+                    "$ref": "#/definitions/ScrobbleThresholds",
+                    "description": "Set thresholds for when multi-scrobbler should consider a tracked play to be \"scrobbable\". If both duration and percent are defined then if either condition is met the track is scrobbled."
                 },
                 "whitelist": {
                     "anyOf": [
@@ -802,6 +830,10 @@
                         1.5
                     ],
                     "type": "number"
+                },
+                "scrobbleThresholds": {
+                    "$ref": "#/definitions/ScrobbleThresholds",
+                    "description": "Set thresholds for when multi-scrobbler should consider a tracked play to be \"scrobbable\". If both duration and percent are defined then if either condition is met the track is scrobbled."
                 },
                 "uriBlacklist": {
                     "description": "Do not scrobble tracks whose URI STARTS WITH any of these strings, case-insensitive\n\nEX: Don't scrobble tracks from soundcloud by adding 'soundcloud' to this list.\n\nList is ignored if uriWhitelist is used.",
@@ -947,6 +979,10 @@
                     ],
                     "type": "number"
                 },
+                "scrobbleThresholds": {
+                    "$ref": "#/definitions/ScrobbleThresholds",
+                    "description": "Set thresholds for when multi-scrobbler should consider a tracked play to be \"scrobbable\". If both duration and percent are defined then if either condition is met the track is scrobbled."
+                },
                 "servers": {
                     "anyOf": [
                         {
@@ -990,6 +1026,23 @@
             "type": "object"
         },
         "Record<string,any>": {
+            "type": "object"
+        },
+        "ScrobbleThresholds": {
+            "properties": {
+                "duration": {
+                    "default": 30,
+                    "description": "The number of seconds before a track should be considered scrobbled.",
+                    "examples": [
+                        30
+                    ],
+                    "type": "number"
+                },
+                "percent": {
+                    "description": "The percentage of a track that should have been seen played before it should be scrobbled. Only used if the Source provides information about how long the track is.\n\nNOTE: This should be used with care when the Source is a \"polling\" type (has an 'interval' property). If the track is short and the interval is too high MS may ignore the track if percentage is high because it had not \"seen\" the track for long enough from first discovery, even if you have been playing the track for longer.",
+                    "type": "number"
+                }
+            },
             "type": "object"
         },
         "SourceAIOConfig": {
@@ -1165,6 +1218,10 @@
                         1.5
                     ],
                     "type": "number"
+                },
+                "scrobbleThresholds": {
+                    "$ref": "#/definitions/ScrobbleThresholds",
+                    "description": "Set thresholds for when multi-scrobbler should consider a tracked play to be \"scrobbable\". If both duration and percent are defined then if either condition is met the track is scrobbled."
                 }
             },
             "required": [
@@ -1225,6 +1282,10 @@
                         1.5
                     ],
                     "type": "number"
+                },
+                "scrobbleThresholds": {
+                    "$ref": "#/definitions/ScrobbleThresholds",
+                    "description": "Set thresholds for when multi-scrobbler should consider a tracked play to be \"scrobbable\". If both duration and percent are defined then if either condition is met the track is scrobbled."
                 },
                 "url": {
                     "description": "URL of the subsonic media server to query",
@@ -1370,6 +1431,10 @@
                         1.5
                     ],
                     "type": "number"
+                },
+                "scrobbleThresholds": {
+                    "$ref": "#/definitions/ScrobbleThresholds",
+                    "description": "Set thresholds for when multi-scrobbler should consider a tracked play to be \"scrobbable\". If both duration and percent are defined then if either condition is met the track is scrobbled."
                 }
             },
             "required": [

@@ -70,6 +70,11 @@ export default class JellyfinSource extends MemorySource {
             DeviceId = '',
             DeviceName,
             ClientName,
+            Provider_musicbrainzalbumartist,
+            Provider_musicbrainzartist,
+            Provider_musicbrainzalbum,
+            Provider_musicbrainztrack,
+            Provider_musicbrainzreleasegroup
         } = obj;
 
         const dur = parseDurationFromTimestamp(RunTime);
@@ -94,6 +99,15 @@ export default class JellyfinSource extends MemorySource {
                 track: Name,
                 duration: dur !== undefined ? dur.as('seconds') : undefined,
                 playDate: dayjs(),
+                meta: {
+                    brainz: {
+                        artist: Provider_musicbrainzartist,
+                        album: Provider_musicbrainzalbum,
+                        albumArtist: Provider_musicbrainzalbumartist,
+                        track: Provider_musicbrainztrack,
+                        releaseGroup: Provider_musicbrainzreleasegroup
+                    }
+                }
             },
             meta: {
                 event: NotificationType,

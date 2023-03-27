@@ -1,13 +1,13 @@
 import path from "path";
 import {projectDir} from "./index.js";
-import winston, {format, Logger} from "winston";
+import winston, {format, Logger} from '@foxxmd/winston';
 import {DuplexTransport} from "winston-duplex";
 import {asLogOptions, LogConfig, LogInfo, LogLevel, LogOptions} from "./infrastructure/Atomic.js";
 import process from "process";
 import {fileOrDirectoryIsWriteable, truncateStringToLength} from "../utils.js";
 import {ErrorWithCause, stackWithCauses} from "pony-cause";
 import {NullTransport} from 'winston-null';
-import 'winston-daily-rotate-file';
+import DailyRotateFile from 'winston-daily-rotate-file';
 import dayjs from "dayjs";
 import stringify from 'safe-stable-stringify';
 import {SPLAT, LEVEL, MESSAGE} from 'triple-beam';
@@ -66,7 +66,7 @@ export const getLogger = (config: LogConfig = {}, name = 'app'): Logger => {
         ];
 
         if (file !== false) {
-            const rotateTransport = new winston.transports.DailyRotateFile({
+            const rotateTransport = new DailyRotateFile({
                 dirname: logPath,
                 createSymlink: true,
                 symlinkName: 'scrobble-current.log',

@@ -1,4 +1,4 @@
-import winston, {config, format, Logger} from "winston";
+import winston, {config, format, Logger} from '@foxxmd/winston';
 import {mergeArr} from "../utils.js";
 import {
     GotifyConfig,

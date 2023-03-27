@@ -11,7 +11,7 @@ import concatStream from 'concat-stream';
 import {PlexSourceConfig} from "../common/infrastructure/config/source/plex.js";
 import {FormatPlayObjectOptions, InternalConfig, PlayObject, SourceType} from "../common/infrastructure/Atomic.js";
 import EventEmitter from "events";
-import winston from "winston";
+import winston from '@foxxmd/winston';
 
 const shortDeviceId = truncateStringToLength(10, '');
 

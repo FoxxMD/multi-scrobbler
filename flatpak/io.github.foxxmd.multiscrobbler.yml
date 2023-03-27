@@ -1,0 +1,76 @@
+app-id: io.github.foxxmd.multiscrobbler
+runtime: org.freedesktop.Platform
+runtime-version: '22.08'
+sdk: org.freedesktop.Sdk
+command: multiscrobbler
+finish-args:
+  - --share=network
+  # used for access to MPRIS in order to scrobble
+  - --own-name=org.mpris.MediaPlayer2.*
+sdk-extensions:
+  - org.freedesktop.Sdk.Extension.node18
+modules:
+  - name: multiscrobbler
+    buildsystem: simple
+    build-options:
+      append-path: /usr/lib/sdk/node18/bin
+      env:
+        XDG_CACHE_HOME: /run/build/multiscrobbler/flatpak-node/cache
+        npm_config_cache: /run/build/multiscrobbler/flatpak-node/npm-cache
+        npm_config_nodedir: /usr/lib/sdk/node18
+        npm_config_offline: 'true'
+    build-commands:
+      # install npm dependencies
+      - npm install --offline
+
+      # build app
+      - npm run build
+
+      # makes node and npm available
+      - mkdir -p /app/bin /app/lib /app/lib/src
+      - cp -a /usr/lib/sdk/node18/bin/{node,npm} /app/bin
+      - cp -a /usr/lib/sdk/node18/lib/* /app/lib
+      - rm -r /app/lib/node_modules/npm/{docs,man}
+
+      # remove dev dependencies
+      - npm prune --production
+
+      # copy node_modules needed to run app
+      - cp -r node_modules/* /app/lib/node_modules
+
+      # delete typescript files (not needed for running app)
+      - find src/ -name "*.ts" -type f -delete
+
+      # copy app files to runtime dir
+      - cp -r src/* /app/lib/src
+      - cp -r config /app/lib/config
+      - cp flatpak/defaultConfig.json /app/lib/config/config.json
+
+      - install -Dm644 flatpak/${FLATPAK_ID}.desktop /app/share/applications/${FLATPAK_ID}.desktop
+      - install -Dm644 flatpak/icon.png /app/share/icons/hicolor/512x512/apps/${FLATPAK_ID}.png
+      - install -Dm644 flatpak/${FLATPAK_ID}.metainfo.xml /app/share/metainfo/${FLATPAK_ID}.metainfo.xml
+
+      - install -Dm755 ../run.sh /app/bin/multiscrobbler
+    subdir: main
+    sources:
+      - type: git
+        url: https://github.com/FoxxMD/multi-scrobbler
+        commit: 9a578e54a89f87c82ff811bb04257c9b641b199a
+        dest: main
+      # Wrapper to launch the app
+      - type: script
+        dest-filename: run.sh
+        commands:
+          # Run config check and copy examples + default config (disable file logging)
+          - |
+            echo -e "Checking CONFIG_DIR for existing configs: ${XDG_CONFIG_HOME}"
+            if [ "$(ls -A ${XDG_CONFIG_HOME})" ]; then
+              echo "Directory is not empty! Will not add default config/examples"
+            else
+              echo "Directory is empty! Adding default config/examples"
+              cp -r /app/lib/config/. "${XDG_CONFIG_HOME}"/
+              #cp /app/lib/defaultConfig.json $XDG_CONFIG_HOME/config.json
+            fi
+          - cd /app/lib && CONFIG_DIR=$XDG_CONFIG_HOME IS_LOCAL=true node src/index.js
+
+      - generated-sources.json

@@ -1,5 +1,5 @@
 import {GotifyConfig, NtfyConfig, WebhookPayload} from "../common/infrastructure/config/health/webhooks.js";
-import {Logger} from "winston";
+import {Logger} from '@foxxmd/winston';
 import {mergeArr} from "../utils.js";
 
 export abstract class AbstractWebhookNotifier {

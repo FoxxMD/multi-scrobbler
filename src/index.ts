@@ -1,7 +1,7 @@
 import {addAsync, Router} from '@awaitjs/express';
 import express from 'express';
 import bodyParser from 'body-parser';
-import {Logger} from 'winston';
+import {Logger} from '@foxxmd/winston';
 import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc.js';
 import isBetween from 'dayjs/plugin/isBetween.js';
@@ -49,12 +49,11 @@ dayjs.extend(duration);
 const app = addAsync(express());
 const router = Router();
 
-const port = process.env.PORT ?? 9078;
+let envPort = process.env.PORT ?? 9078;
 
 (async function () {
 
-const server = await app.listen(port)
-const io = new Server(server);
+let io: Server | undefined = undefined;
 
 app.use(router);
 app.use(bodyParser.json());
@@ -65,11 +64,13 @@ app.use(passport.session());
 
 let output: LogInfo[] = []
 
-const initLogger = getLogger({}, 'init');
+const initLogger = getLogger({file: false}, 'init');
 initLogger.stream().on('log', (log: LogInfo) => {
     output.unshift(log);
     output = output.slice(0, 301);
-    io.emit('log', formatLogToHtml(log[MESSAGE]));
+    if(io !== undefined) {
+        io.emit('log', formatLogToHtml(log[MESSAGE]));
+    }
 });
 
 let logger: Logger;
@@ -78,19 +79,24 @@ const configDir = process.env.CONFIG_DIR || path.resolve(projectDir, `./config`)
 
 
     try {
+        initLogger.debug(`Config Dir ENV: ${process.env.CONFIG_DIR} -> Resolved: ${configDir}`)
         // try to read a configuration file
-        let appConfigFail = false;
+        let appConfigFail: Error | undefined = undefined;
         let config = {};
         try {
             config = await readJson(`${configDir}/config.json`, {throwOnNotFound: false});
         } catch (e) {
-            appConfigFail = true;
+            appConfigFail = e;
         }
 
         const {
             webhooks = [],
+            port = envPort,
             logging = {},
         } = (config || {}) as AIOConfig;
+
+        const server = await app.listen(port);
+        io = new Server(server);
 
         const logConfig: {level: LogLevel, sort: string, limit: number} = {
             level: logging.level || (process.env.LOG_LEVEL || 'info') as LogLevel,
@@ -107,10 +113,15 @@ const configDir = process.env.CONFIG_DIR || path.resolve(projectDir, `./config`)
             }
         });
 
-        if(appConfigFail) {
-            logger.warn('App config file exists but could not be parsed!');
+        if(process.env.IS_LOCAL === 'true') {
+            logger.info('multi-scrobbler can be run as a background service! See: https://github.com/FoxxMD/multi-scrobbler/blob/develop/docs/service.md');
         }
-        const root = createRoot();
+
+        if(appConfigFail !== undefined) {
+            logger.warn('App config file exists but could not be parsed!');
+            logger.warn(appConfigFail);
+        }
+        const root = createRoot(port);
         const localUrl = root.get('localUrl');
 
         const notifiers = root.get('notifiers');

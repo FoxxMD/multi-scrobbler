@@ -191,13 +191,24 @@ export class ListenbrainzApiClient extends AbstractApiClient {
     }
 
     static playToListenPayload = (play: PlayObject): ListenPayload => {
+        const {
+            data: {
+                meta: {
+                    brainz = {}
+                } = {}
+            }
+        } = play;
         return {
             listened_at: (play.data.playDate ?? dayjs()).unix(),
             track_metadata: {
                 artist_name: play.data.artists[0],
                 track_name: play.data.track,
                 additional_info: {
-                    duration: play.data.duration !== undefined ? Math.round(play.data.duration) : undefined
+                    duration: play.data.duration !== undefined ? Math.round(play.data.duration) : undefined,
+                    track_mbid: brainz.track,
+                    artist_mbids: brainz.artist !== undefined ? [brainz.artist] : undefined,
+                    release_mbid: brainz.album,
+                    release_group_mbid: brainz.releaseGroup
                 }
             }
         }

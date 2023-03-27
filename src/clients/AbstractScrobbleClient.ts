@@ -14,7 +14,7 @@ import {
     NOT_INITIALIZED,
     PlayObject, ScrobbledPlayObject, TrackStringOptions
 } from "../common/infrastructure/Atomic.js";
-import winston, {Logger} from "winston";
+import winston, {Logger} from '@foxxmd/winston';
 import {CommonClientConfig} from "../common/infrastructure/config/client/index.js";
 import {ClientConfig} from "../common/infrastructure/config/client/clients.js";
 import {Notifiers} from "../notifier/Notifiers.js";

@@ -14,7 +14,7 @@ import {
     PlayObject, ProgressAwarePlayObject,
     SourceType
 } from "../common/infrastructure/Atomic.js";
-import {Logger} from "winston";
+import {Logger} from '@foxxmd/winston';
 import {SourceConfig} from "../common/infrastructure/config/source/sources.js";
 import {EventEmitter} from "events";
 import {FixedSizeList} from "fixed-size-list";

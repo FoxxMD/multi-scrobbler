@@ -6,7 +6,7 @@ import {
 } from "../common/infrastructure/config/health/webhooks.js";
 import {publish} from 'ntfy';
 import request from "superagent";
-import {Logger} from "winston";
+import {Logger} from '@foxxmd/winston';
 
 export class NtfyWebhookNotifier extends AbstractWebhookNotifier {
 

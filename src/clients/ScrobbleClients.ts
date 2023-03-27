@@ -19,7 +19,7 @@ import {LastfmClientConfig} from "../common/infrastructure/config/client/lastfm.
 import {Notifiers} from "../notifier/Notifiers.js";
 import AbstractScrobbleClient from "./AbstractScrobbleClient.js";
 import {EventEmitter} from "events";
-import winston from "winston";
+import winston from '@foxxmd/winston';
 import ListenbrainzScrobbler from "./ListenbrainzScrobbler.js";
 import {ListenBrainzClientConfig} from "../common/infrastructure/config/client/listenbrainz.js";
 import {ErrorWithCause} from "pony-cause";

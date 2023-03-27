@@ -5,10 +5,15 @@ import {
     buildTrackString,
     toProgressAwarePlayObject,
     getProgress,
-    genGroupId
+    genGroupId, playPassesScrobbleThreshold, timePassesScrobbleThreshold, thresholdResultSummary
 } from "../utils.js";
 import dayjs from "dayjs";
-import {GroupedPlays, PlayObject, ProgressAwarePlayObject} from "../common/infrastructure/Atomic.js";
+import {
+    GroupedPlays,
+    PlayObject,
+    ProgressAwarePlayObject,
+    ScrobbleThresholdResult
+} from "../common/infrastructure/Atomic.js";
 
 export default class MemorySource extends AbstractSource {
     /*
@@ -41,6 +46,12 @@ export default class MemorySource extends AbstractSource {
     // }
 
     processRecentPlays = (plays: PlayObject[], useExistingPlayDate = false) => {
+
+        const {
+            data: {
+                scrobbleThresholds = {}
+            } = {}
+        } = this.config;
 
         let newStatefulPlays: PlayObject[] = [];
         // if we can't trust existing play dates (like for subsonic where there is no timestamp) then
@@ -103,11 +114,12 @@ export default class MemorySource extends AbstractSource {
                 //const sRecentlyPlayed = this.statefulRecentlyPlayed.get(groupId) ?? [];
 
                 // now we check if all candidates pass tests for having been tracked long enough:
-                // * Has been tracked for at least 30 seconds
-                // * If it has playback position data then it must also have progressed at least 30 seconds since our initial tracking data
+                // * Has been tracked for at least [duration] seconds or [percentage] of track duration
+                // * If it has playback position data then it must also have progressed at least [duration] seconds or [percentage] of track duration progress since our initial tracking data
                 for(const candidate of cRecentlyPlayed) {
-                    const {data: {playDate, track}} = candidate;
-                    const firstSeenValid = playDate.isBefore(dayjs().subtract(30, 's'));
+                    let thresholdResults: ScrobbleThresholdResult;
+                    thresholdResults = playPassesScrobbleThreshold(candidate, scrobbleThresholds);
+                    const {passes: firstSeenValid} = thresholdResults;
                     let progressValid = firstSeenValid;
                     if (firstSeenValid) {
                         // check if we can get progress as well
@@ -116,9 +128,9 @@ export default class MemorySource extends AbstractSource {
                         if (matchingLockedPlay !== undefined) {
                             const progress = getProgress(candidate, matchingLockedPlay);
                             if (progress !== undefined) {
-                                if (progress < 30) {
-                                    progressValid = false;
-                                }
+                                thresholdResults = timePassesScrobbleThreshold(scrobbleThresholds, progress, candidate.data.duration);
+                                const {passes: progressPasses} = thresholdResults;
+                                progressValid = progressPasses;
                             }
                         }
                     }
@@ -129,7 +141,7 @@ export default class MemorySource extends AbstractSource {
                         const matchingRecent = this.existingDiscovered(candidate); //sRecentlyPlayed.find(x => playObjDataMatch(x, candidate));
                         let stPrefix = `[Platform ${groupId}] (Stateful Play) ${buildTrackString(candidate, {include: ['trackId', 'artist', 'track']})}`;
                         if(matchingRecent === undefined) {
-                            this.logger.debug(`${stPrefix} added after being seen for 30 seconds and not matching any prior plays`);
+                            this.logger.debug(`${stPrefix} added after ${thresholdResultSummary(thresholdResults)} and not matching any prior plays`);
                             newStatefulPlays.push(candidate);
                             //sRecentlyPlayed.push(candidate);
                         } else {
@@ -138,7 +150,7 @@ export default class MemorySource extends AbstractSource {
                             if(!playDate.isSame(rplayDate)) {
                                 if(duration !== undefined) {
                                     if(playDate.isAfter(rplayDate.add(duration, 's'))) {
-                                        this.logger.debug(`${stPrefix} added after being seen for 30 seconds and having a different timestamp than a prior play`);
+                                        this.logger.debug(`${stPrefix} added after ${thresholdResultSummary(thresholdResults)} and having a different timestamp than a prior play`);
                                         newStatefulPlays.push(candidate);
                                         //sRecentlyPlayed.push(candidate);
                                     }
@@ -146,7 +158,7 @@ export default class MemorySource extends AbstractSource {
                                     const discoveredPlays = this.getRecentlyDiscoveredPlaysByPlatform(candidate);
                                     if(discoveredPlays.length === 0 || !playObjDataMatch(discoveredPlays[0], candidate)) {
                                         // if most recent stateful play is not this track we'll add it
-                                        this.logger.debug(`${stPrefix} added after being seen for 30 seconds. Matched other recent play but could not determine time frame due to missing duration. Allowed due to not being last played track.`);
+                                        this.logger.debug(`${stPrefix} added after ${thresholdResultSummary(thresholdResults)}. Matched other recent play but could not determine time frame due to missing duration. Allowed due to not being last played track.`);
                                         newStatefulPlays.push(candidate);
                                     }
                                     //sRecentlyPlayed.push(candidate);

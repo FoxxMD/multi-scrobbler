@@ -1,7 +1,7 @@
 import {Dayjs} from "dayjs";
 import {FixedSizeList} from 'fixed-size-list';
 import {MESSAGE} from 'triple-beam';
-import {Logger} from "winston";
+import {Logger} from '@foxxmd/winston';
 
 export type SourceType = 'spotify' | 'plex' | 'tautulli' | 'subsonic' | 'jellyfin' | 'lastfm' | 'deezer' | 'ytmusic' | 'mpris' | 'mopidy' | 'listenbrainz' | 'jriver' | 'kodi';
 export const sourceTypes: SourceType[] = ['spotify', 'plex', 'tautulli', 'subsonic', 'jellyfin', 'lastfm', 'deezer', 'ytmusic', 'mpris', 'mopidy', 'listenbrainz', 'jriver', 'kodi'];
@@ -48,6 +48,16 @@ export interface PlayData {
      * The date the track was played at
      * */
     playDate?: Dayjs
+
+    meta?: {
+        brainz?: {
+            artist?: string
+            albumArtist?: string
+            album?: string
+            track?: string
+            releaseGroup?: string
+        }
+    }
 }
 
 export interface PlayMeta {
@@ -234,4 +244,24 @@ export interface LogInfo {
     timestamp: string
     labels?: string[]
     transport?: string[]
+}
+
+// https://stackoverflow.com/questions/40510611/typescript-interface-require-one-of-two-properties-to-exist#comment116238286_49725198
+export type RequireAtLeastOne<T, R extends keyof T = keyof T> = Omit<T, R> & {   [ P in R ] : Required<Pick<T, P>> & Partial<Omit<T, P>> }[R];
+
+export const DEFAULT_SCROBBLE_DURATION_THRESHOLD: number = 30;
+
+export interface ScrobbleThresholdResult {
+    passes: boolean
+    duration: {
+        passes?: boolean
+        value?: number
+        threshold?: number
+    }
+    percent: {
+        passes?: boolean
+        value?: number
+        threshold?: number
+    }
+
 }

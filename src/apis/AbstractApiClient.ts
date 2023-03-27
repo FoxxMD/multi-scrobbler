@@ -1,7 +1,7 @@
 import {capitalize, mergeArr} from "../utils.js";
-import {Logger} from "winston";
+import {Logger} from '@foxxmd/winston';
 import {FormatPlayObjectOptions, PlayObject} from "../common/infrastructure/Atomic.js";
-import winston from 'winston';
+import winston from '@foxxmd/winston';
 
 export default abstract class AbstractApiClient {
     name: string;

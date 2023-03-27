@@ -6,11 +6,11 @@ import ScrobbleSources from "./sources/ScrobbleSources.js";
 import {Notifiers} from "./notifier/Notifiers.js";
 import {EventEmitter} from "events";
 import {logPath} from "./common/logging.js";
-import {Container} from "winston";
+import {Container} from '@foxxmd/winston';
 //import ScrobbleClients from "./clients/ScrobbleClients.js";
 
 const configDir = process.env.CONFIG_DIR || path.resolve(projectDir, `./config`);
-const port = process.env.PORT ?? 9078;
+//const port = process.env.PORT ?? 9078;
 
 /*let logPath = path.resolve(projectDir, `./logs`);
 if(typeof process.env.CONFIG_DIR === 'string') {
@@ -19,7 +19,7 @@ if(typeof process.env.CONFIG_DIR === 'string') {
 
 //let root: Container;
 
-export const createRoot = () => {
+export const createRoot = (port) => {
     return createContainer().add({
         configDir: configDir,
         logDir: logPath,

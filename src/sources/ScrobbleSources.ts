@@ -8,7 +8,7 @@ import LastfmSource from "./LastfmSource.js";
 import DeezerSource from "./DeezerSource.js";
 import {ConfigMeta, InternalConfig, SourceType, sourceTypes} from "../common/infrastructure/Atomic.js";
 import {configDir as defaultConfigDir} from "../common/index.js";
-import winston, {Logger} from "winston";
+import winston, {Logger} from '@foxxmd/winston';
 import {SourceAIOConfig, SourceConfig} from "../common/infrastructure/config/source/sources.js";
 import {DeezerData, DeezerSourceConfig} from "../common/infrastructure/config/source/deezer.js";
 import {LastfmClientConfig} from "../common/infrastructure/config/client/lastfm.js";
