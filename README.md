@@ -31,7 +31,7 @@ A javascript app to scrobble music you listened to, to [Maloja](https://github.c
 * Web server interface for stats, basic control, and detailed logs
 * Smart handling of credentials (persistent, authorization through app)
 * Easy configuration through ENVs or JSON
-* Docker images for x86/ARM
+* Install using [Docker images for x86/ARM](/docs/installation.md#docker), [flatpak](/docs/installation.md#flatpak), or [locally with NodeJS](/docs/installation.md#nodejs)
 
 **Why should I use this over a browser extension and/or mobile app scrobbler?**
 

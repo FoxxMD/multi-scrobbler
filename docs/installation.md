@@ -35,8 +35,6 @@ SPOTIFY_CLIENT_ID=yourId SPOTIFY_CLIENT_SECRET=yourSecret MALOJA_URL="http://dom
 
 ## Flatpak
 
-**(Coming soon!)**
-
 You must have [Flatpak](https://flatpak.org/) installed on your system.
 
 ```shell
