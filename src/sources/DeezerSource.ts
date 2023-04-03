@@ -102,7 +102,7 @@ export default class DeezerSource extends AbstractSource {
     }
 
     getRecentlyPlayed = async (options: RecentlyPlayedOptions = {}) => {
-        const resp = await this.callApi(request.get(`${this.baseUrl}/user/me/history`));
+        const resp = await this.callApi(request.get(`${this.baseUrl}/user/me/history?limit=20`));
         return resp.data.map((x: any) => DeezerSource.formatPlayObj(x)).sort(sortByOldestPlayDate);
     }
 
