@@ -148,6 +148,14 @@ export interface MalojaV2ScrobbleData {
     time: number
 }
 
+export interface MalojaAlbumData
+{
+    name?: string
+    albumtitle?: string
+    artists: string[]
+}
+
+
 export interface MalojaV3ScrobbleData {
     /**
      * unix timestamp (seconds) scrobble was made at
@@ -156,10 +164,7 @@ export interface MalojaV3ScrobbleData {
     track: {
         artists: string[]
         title: string
-        album?: {
-            name: string
-            artists: string[]
-        }
+        album?: MalojaAlbumData | null
         /**
          * length of the track
          * */

@@ -65,10 +65,7 @@ export default class MalojaScrobbler extends AbstractScrobbleClient {
                 track: {
                     artists: mArtists,
                     title: mTitle,
-                    album: {
-                        name: mAlbum,
-                        artists: albumArtists
-                    } = {},
+                    album: mAlbum,
                     // length of the track
                     length: mLength,
                 } = {},
@@ -79,7 +76,14 @@ export default class MalojaScrobbler extends AbstractScrobbleClient {
             time = mTime;
             title = mTitle;
             duration = mLength;
-            album = mAlbum;
+            if(mAlbum !== null) {
+                const {
+                    albumtitle,
+                    name: mAlbumName,
+                    artists: albumArtists
+                } = mAlbum || {};
+                album = albumtitle ?? mAlbumName;
+            }
         } else {
             // scrobble data structure for v2 and below
             const {
