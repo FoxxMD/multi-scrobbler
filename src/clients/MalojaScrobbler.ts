@@ -14,18 +14,18 @@ import {
 import {
     FormatPlayObjectOptions,
     INITIALIZING,
-    MalojaScrobbleData,
-    MalojaScrobbleRequestData,
-    MalojaScrobbleV2RequestData,
-    MalojaScrobbleV3RequestData,
-    MalojaV2ScrobbleData,
-    MalojaV3ScrobbleData,
     PlayObject,
     TrackStringOptions
 } from "../common/infrastructure/Atomic.js";
 import {MalojaClientConfig} from "../common/infrastructure/config/client/maloja.js";
 import {Notifiers} from "../notifier/Notifiers.js";
 import {Logger} from '@foxxmd/winston';
+import {
+    MalojaScrobbleData,
+    MalojaScrobbleRequestData,
+    MalojaScrobbleV2RequestData,
+    MalojaScrobbleV3RequestData, MalojaScrobbleV3ResponseData, MalojaV2ScrobbleData, MalojaV3ScrobbleData
+} from "../apis/maloja/interfaces";
 
 const feat = ["ft.", "ft", "feat.", "feat", "featuring", "Ft.", "Ft", "Feat.", "Feat", "Featuring"];
 
@@ -388,6 +388,8 @@ export default class MalojaScrobbler extends AbstractScrobbleClient {
             length: duration,
         };
 
+        let responseBody: MalojaScrobbleV3ResponseData;
+
         try {
             // 3.0.3 has a BC for something (maybe seconds => length ?) -- see #42 in repo
             if(this.serverVersion === undefined || compareVersions(this.serverVersion, '3.0.2') > 0) {
@@ -402,53 +404,77 @@ export default class MalojaScrobbler extends AbstractScrobbleClient {
                 .type('json')
                 .send(scrobbleData));
 
-            let scrobbleResponse = {};
+            let scrobbleResponse: any | undefined = undefined,
+                scrobbledPlay: PlayObject;
 
             if(this.serverVersion === undefined || compareVersions(this.serverVersion, '3.0.0') >= 0) {
+                responseBody = response.body;
+                const {
+                    track,
+                    status,
+                    warnings = [],
+                } = responseBody;
+                if(status === 'success') {
+                    if(track !== undefined) {
+                        scrobbleResponse = {
+                            time: playDate.unix(),
+                            track: {
+                                ...track,
+                                length: duration
+                            },
+                        }
+                        if (album !== undefined) {
+                            const {
+                                album: malojaAlbum = {},
+                            } = track;
+                            scrobbleResponse.track.album = {
+                                ...malojaAlbum,
+                                name: album
+                            }
+                        }
+                    }
+                    if(warnings.length > 0) {
+                        for(const w of warnings) {
+                            this.logger.warn(`Maloja Warning: ${w.desc} => ${JSON.stringify(w.value)}`)
+                        }
+                    }
+                } else {
+                    throw new Error(buildErrorString(response));
+                }
+            } else {
                 const {
                     body: {
-                    // @ts-expect-error TS(2525): Initializer provides no value for this binding ele... Remove this comment to see the full error message
-                    track,
-                } = {}
+                        track: {
+                            time: mTime = playDate.unix(),
+                            duration: mDuration = duration,
+                            album: mAlbum = album,
+                            ...rest
+                        } = {}
+                    } = {}
                 } = response;
-                scrobbleResponse = {
-                    time: playDate.unix(),
-                    track: {
-                        ...track,
-                        length: duration
-                    },
-                }
-                if(album !== undefined) {
-                    const {
-                        album: malojaAlbum = {},
-                    } = track;
-                    // @ts-expect-error TS(2339): Property 'track' does not exist on type '{}'.
-                    scrobbleResponse.track.album = {
-                        ...malojaAlbum,
-                        name: album
-                    }
-                }
-            } else {
-                const {body: {
-                    // @ts-expect-error TS(2525): Initializer provides no value for this binding ele... Remove this comment to see the full error message
-                    track: {
-                        time: mTime = playDate.unix(),
-                        duration: mDuration = duration,
-                        album: mAlbum = album,
-                        ...rest
-                    }
-                } = {}} = response;
                 scrobbleResponse = {...rest, album: mAlbum, time: mTime, duration: mDuration};
             }
-            this.addScrobbledTrack(playObj, this.formatPlayObj(scrobbleResponse));
-            if (newFromSource) {
-                this.logger.info(`Scrobbled (New)     => (${source}) ${buildTrackString(playObj)}`);
+            let warning = '';
+            if(scrobbleResponse === undefined) {
+                warning = `WARNING: Maloja did not return track data in scrobble response! Maybe it didn't scrobble correctly??`;
+                scrobbledPlay = playObj;
             } else {
-                this.logger.info(`Scrobbled (Backlog) => (${source}) ${buildTrackString(playObj)}`);
+                scrobbledPlay = this.formatPlayObj(scrobbleResponse)
+            }
+            this.addScrobbledTrack(playObj, scrobbledPlay);
+            const scrobbleInfo = `Scrobbled (${newFromSource ? 'New' : 'Backlog'})     => (${source}) ${buildTrackString(playObj)}`;
+            if(warning !== '') {
+                this.logger.warn(`${scrobbleInfo} | ${warning}`);
+                this.logger.debug(`Response: ${this.logger.debug(JSON.stringify(response.body))}`);
+            } else {
+                this.logger.info(scrobbleInfo);
             }
         } catch (e) {
             await this.notifier.notify({title: `Client - ${capitalize(this.type)} - ${this.name} - Scrobble Error`, message: `Failed to scrobble => ${buildTrackString(playObj)} | Error: ${e.message}`, priority: 'error'});
             this.logger.error(`Scrobble Error (${sType})`, {playInfo: buildTrackString(playObj), payload: scrobbleData});
+            if(responseBody !== undefined) {
+                this.logger.error('Raw Response:', responseBody);
+            }
             throw e;
         } finally {
             this.logger.debug('Raw Payload:', scrobbleData);
@@ -456,4 +482,31 @@ export default class MalojaScrobbler extends AbstractScrobbleClient {
 
         return true;
     }
+}
+
+const buildErrorString = (body: MalojaScrobbleV3ResponseData) => {
+    let valString: string | undefined = undefined;
+    const {
+        status,
+        error: {
+            type,
+            value,
+            desc
+        } = {}
+    } = body;
+    if(value !== undefined && value !== null) {
+        if(typeof value === 'string') {
+            valString = value;
+        } else if(Array.isArray(value)) {
+            valString = value.map(x => {
+                if(typeof x === 'string') {
+                    return x;
+                }
+                return JSON.stringify(x);
+            }).join(', ');
+        } else {
+            valString = JSON.stringify(value);
+        }
+    }
+    return `Maloja API returned ${status} of type ${type} "${desc}"${valString !== undefined ? `: ${valString}` : ''}`;
 }
