@@ -520,6 +520,7 @@ const configDir = process.env.CONFIG_DIR || path.resolve(projectDir, `./config`)
                 const tokenResult = await source.handleAuthCodeCallback(req.query);
                 let responseContent = 'OK';
                 if (tokenResult === true) {
+                    await source.testAuth();
                     source.poll();
                 } else {
                     responseContent = tokenResult;
