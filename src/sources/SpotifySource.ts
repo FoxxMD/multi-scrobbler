@@ -364,12 +364,15 @@ export default class SpotifySource extends MemorySource {
         }
     }
 
-    poll = async () => {
+    onPollPreAuthCheck = async () => {
         if (this.spotifyApi === undefined) {
             this.logger.warn('Cannot poll spotify without valid credentials configuration')
-            return;
+            return false;
         }
+        return true;
+    }
 
+    onPollPostAuthCheck = async () => {
         // test capabilities
         try {
             await this.getCurrentPlaybackState(false);
@@ -378,12 +381,12 @@ export default class SpotifySource extends MemorySource {
             this.logger.warn('multi-scrobbler does not have sufficient permissions to access Spotify API "Get Playback State". MS will continue to work but accuracy for determining if/when a track played from a Spotify Connect device (smart device controlled through Spotify app) may be degraded. To fix this re-authenticate MS with Spotify and restart polling.');
         }
 
+        // and record backlogged tracks
         this.logger.info('Checking recently played API for tracks to backlog...');
         const backlogPlays = await this.getPlayHistory({formatted: true});
         this.scrobble(backlogPlays);
         this.logger.info('Backlog complete.');
-
-        await this.startPolling();
+        return true;
     }
 }
 
