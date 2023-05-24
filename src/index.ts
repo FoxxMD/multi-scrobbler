@@ -244,7 +244,7 @@ const configDir = process.env.CONFIG_DIR || path.resolve(projectDir, `./config`)
         app.postAsync('/tautulli', async function(this: any, req, res) {
             tauIngress.trackIngress(req, false);
 
-            const payload = TautulliSource.formatPlayObj(req.body, {newFromSource: true});
+            const payload = TautulliSource.formatPlayObj(req, {newFromSource: true});
             // try to get config name from payload
             if (req.body.scrobblerConfig !== undefined) {
                 const source = scrobbleSources.getByName(req.body.scrobblerConfig);

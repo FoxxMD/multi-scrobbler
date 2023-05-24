@@ -4,6 +4,7 @@ import {TautulliSourceConfig} from "../common/infrastructure/config/source/tautu
 import {FormatPlayObjectOptions, InternalConfig, PlayObject} from "../common/infrastructure/Atomic.js";
 import {combinePartsToString, truncateStringToLength} from "../utils.js";
 import EventEmitter from "events";
+import {Request} from "express";
 
 const shortDeviceId = truncateStringToLength(10, '');
 
@@ -13,8 +14,7 @@ export default class TautulliSource extends PlexSource {
     constructor(name: any, config: TautulliSourceConfig, internal: InternalConfig, emitter: EventEmitter) {
         super(name, config, internal, 'tautulli', emitter);
     }
-
-    static formatPlayObj(obj: any, options: FormatPlayObjectOptions = {}): PlayObject {
+    static formatPlayObj(obj: Request, options: FormatPlayObjectOptions = {}): PlayObject {
         const {newFromSource = false} = options;
         const {
             artist_name,
