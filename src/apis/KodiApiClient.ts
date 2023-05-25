@@ -53,7 +53,7 @@ export class KodiApiClient extends AbstractApiClient {
         const {
             url = 'http://localhost:8080/jsonrpc'
         } = config;
-        this.url = KodiApiClient.parseConnectionUrl('http://localhost:8080');
+        this.url = KodiApiClient.parseConnectionUrl(url);
         const auth = new Buffer(`${config.username}:${config.password}`).toString('base64');
         this.client = new KodiClient({
             clientType: this.url.protocol.replace(':', '') as ('http' | 'https'),
