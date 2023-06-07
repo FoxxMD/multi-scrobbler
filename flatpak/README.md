@@ -1,6 +1,6 @@
 NOTE: This steps are for building the flatpak entirely locally, from source. If you want to install the application normally then [get it through flathub](/docs/installation.md#flatpak)
 
-Flatpak build is a little convoluted until someone sets me straight...
+The final build repo for the flathub version can be found at [flathub/io.github.foxxmd.multiscrobbler](https://github.com/flathub/io.github.foxxmd.multiscrobbler)
 
 # 1. Install Requirements
 

@@ -159,11 +159,18 @@ export default abstract class AbstractSource {
         this.emitter.emit('notify', payload);
     }
 
-    poll = async () => {
-        await this.startPolling();
+    onPollPreAuthCheck = async (): Promise<boolean> => {
+        return true;
     }
 
-    startPolling = async () => {
+    onPollPostAuthCheck = async (): Promise<boolean> => {
+        return true;
+    }
+
+    poll = async () => {
+        if(!await this.onPollPreAuthCheck()) {
+            return;
+        }
         if(this.requiresAuth && !this.authed) {
             if(this.requiresAuthInteraction) {
                 this.notify({title: `${this.identifier} - Polling Error`, message: 'Cannot start polling because user interaction is required for authentication', priority: 'error'});
@@ -174,6 +181,13 @@ export default abstract class AbstractSource {
             }
             return;
         }
+        if(!await this.onPollPostAuthCheck()) {
+            return;
+        }
+        await this.startPolling();
+    }
+
+    startPolling = async () => {
         // reset poll attempts if already previously run
         this.pollRetries = 0;
 

@@ -22,7 +22,6 @@ export class KodiSource extends MemorySource {
         } = data || {};
         super('kodi', name, {...config, data: {interval, maxInterval, ...rest}}, internal, emitter);
 
-        this.client = new KodiApiClient(name, data);
         this.requiresAuth = true;
         this.canPoll = true;
         this.multiPlatform = true;
@@ -34,6 +33,7 @@ export class KodiSource extends MemorySource {
                 url
             } = {}
         } = this.config;
+        this.client = new KodiApiClient(this.name, this.config.data);
         this.logger.debug(`Config URL: '${url ?? '(None Given)'}' => Normalized: '${this.client.url.toString()}'`)
         this.initialized = true;
         return true;

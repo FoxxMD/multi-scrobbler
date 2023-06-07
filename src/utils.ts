@@ -77,7 +77,13 @@ export const truncateStringArrToLength = (length: any, truncStr = '...') => {
     const truncater = truncateStringToLength(length, truncStr);
     return (strings: any) => strings.map(truncater);
 }
-export const truncateStringToLength = (length: any, truncStr = '...') => (str: any) => str.length > length ? `${str.slice(0, length)}${truncStr}` : str;
+export const truncateStringToLength = (length: any, truncStr = '...') => (val: any = '') =>  {
+    if(val === null) {
+        return '';
+    }
+    const str = typeof val !== 'string' ? val.toString() : val;
+    return str.length > length ? `${str.slice(0, length)}${truncStr}` : str;
+}
 
 const defaultTransformer = (input: any) => input;
 

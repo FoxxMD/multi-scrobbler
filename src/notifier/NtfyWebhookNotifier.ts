@@ -7,6 +7,7 @@ import {
 import {publish} from 'ntfy';
 import request from "superagent";
 import {Logger} from '@foxxmd/winston';
+import {Config} from "ntfy/interfaces";
 
 export class NtfyWebhookNotifier extends AbstractWebhookNotifier {
 
@@ -54,21 +55,20 @@ export class NtfyWebhookNotifier extends AbstractWebhookNotifier {
 
     doNotify = async (payload: WebhookPayload) => {
         try {
-            let authorization = {};
-            if (this.config.username !== undefined) {
-                authorization = {
-                    username: this.config.username,
-                    password: this.config.password,
-                }
-            }
-            await publish({
+            const req: Config = {
                 message: payload.message,
                 topic: this.config.topic,
                 title: payload.title,
                 server: this.config.url,
                 priority: this.priorities[payload.priority],
-                ...authorization,
-            });
+            };
+            if (this.config.username !== undefined) {
+                req.authorization = {
+                    username: this.config.username,
+                    password: this.config.password,
+                }
+            }
+            await publish(req);
             this.logger.debug(`Pushed notification.`);
         } catch (e: any) {
             this.logger.error(`Failed to push notification: ${e.message}`)

@@ -180,8 +180,8 @@ export default class YTMusicSource extends AbstractSource {
         return this.authed;
     }
 
-    poll = async () => {
-        if(this.authed && !this.polling) {
+    onPollPostAuthCheck = async () => {
+        if(!this.polling) {
             this.logger.verbose('Hydrating initial recently played tracks for reference.');
             const referencePlays = await this.getRecentlyPlayed();
             const reversedPlays = [...referencePlays];
@@ -194,6 +194,6 @@ export default class YTMusicSource extends AbstractSource {
                 }
             }
         }
-        await this.startPolling();
+        return true;
     }
 }
