@@ -4,6 +4,9 @@
   * [Spotify/Deezer/LastFM won't authenticate](#spotifydeezerlastfm-wont-authenticate)
 * [Configuration Issues](#configuration-issues)
   * [Config could not be parsed](#config-could-not-be-parsed)
+* [Scrobbling Issues](#scrobbling-issues)
+  * [Last.fm does not scrobble tracks with multiple artists correctly](#lastfm-does-not-scrobble-tracks-with-multiple-artists-correctly)
+  * [Jellyfin does not scrobble tracks with multiple artists correctly](#jellyfin-does-not-scrobble-tracks-with-multiple-artists-correctly)
 
 # Connection Issues
 
@@ -19,7 +22,6 @@ multi-scrobbler will log information about any server that connects to it for th
 2023-02-22T10:55:56-05:00 warn   : [Plex Request    ] Received valid Plex webhook payload but no Plex sources are configured
 ```
 It also logs if a server tries to connect to a URL that it does not recognize:
-
 ```
 2023-02-22T11:16:12-05:00 debug  : [App             ] Server received POST request from ::ffff:192.168.0.140 (UA: PlexMediaServer/1.24.5.5173-8dcc73a59) to unknown route: /plkex
 ```
@@ -120,3 +122,15 @@ If you see something like this in your logs:
 ```
 
 It means the JSON in your configuration file is not valid. Copy and paste your configuration into a site like [JSONLint](https://jsonlint.com/) to find out where errors you have and fix them.
+
+# Scrobbling Issues
+
+## Last.fm does not scrobble tracks with multiple artists correctly
+
+This is a limitation of the [Last.fm API](https://www.last.fm/api/show/track.scrobble) where the **artist** field is only one string and Last.fm does not recognize (play well) with "combined" artists.
+
+Multi-scrobbler works the same was the official Spotify-Last.fm integration works -- it only scrobbles the **first** artist on a multi-artist track.
+
+## Jellyfin does not scrobble tracks with multiple artists correctly
+
+This is a limitation caused by the [Jellyfin webhook plugin](https://github.com/FoxxMD/multi-scrobbler/issues/70#issuecomment-1443804712) only sending the first artist to multi-scrobbler. This issues needs to be [fixed upstream on the Jellyfin webhook repository.](https://github.com/jellyfin/jellyfin-plugin-webhook/issues/166)
