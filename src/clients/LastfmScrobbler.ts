@@ -138,8 +138,15 @@ export default class LastfmScrobbler extends AbstractScrobbleClient {
 
         const sType = newFromSource ? 'New' : 'Backlog';
 
+        let artist: string;
+        if (artists.length === 0) {
+            artist = "";
+        } else {
+            artist = artists[0];
+        }
+
         const rawPayload = {
-            artist: artists.join(', '),
+            artist: artist,
             duration,
             track,
             album,
