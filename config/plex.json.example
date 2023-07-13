@@ -5,7 +5,10 @@
     "data": {
       "user": ["username@gmail.com","anotherUser@gmail.com"],
       "libraries": ["music","my podcasts"],
-      "servers": ["myServer","anotherServer"]
+      "servers": ["myServer","anotherServer"],
+      "options": {
+        "logFilterFailure": "warn"
+      }
     }
   }
 ]

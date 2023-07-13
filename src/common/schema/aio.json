@@ -341,6 +341,18 @@
                 "options": {
                     "description": "Additional options for jellyfin logging and tuning",
                     "properties": {
+                        "logFilterFailure": {
+                            "default": "warn",
+                            "description": "How MS should log when a Jellyfin event fails a defined filter (users/servers)\n\n* `false` => do not log\n* `debug` => log to DEBUG level\n* `warn` => log to WARN level (default)\n\nHint: This is useful if you are sure this source is setup correctly and you have multiple other Jellyfin sources. Set to `debug` or `false` to reduce log noise.",
+                            "enum": [
+                                "debug",
+                                false,
+                                "warn"
+                            ],
+                            "examples": [
+                                "warn"
+                            ]
+                        },
                         "logPayload": {
                             "default": false,
                             "description": "Log raw Jellyfin webhook payload to debug",
@@ -1499,7 +1511,22 @@
                     "type": "number"
                 },
                 "options": {
-                    "$ref": "#/definitions/Record<string,any>"
+                    "description": "Additional options for Plex/Tautulli logging and tuning",
+                    "properties": {
+                        "logFilterFailure": {
+                            "default": "warn",
+                            "description": "How MS should log when a Plex/Tautulli event fails a defined filter (users/servers)\n\n* `false` => do not log\n* `debug` => log to DEBUG level\n* `warn` => log to WARN level (default)\n\nHint: This is useful if you are sure this source is setup correctly and you have multiple other Plex/Tautulli sources. Set to `debug` or `false` to reduce log noise.",
+                            "enum": [
+                                "debug",
+                                false,
+                                "warn"
+                            ],
+                            "examples": [
+                                "warn"
+                            ]
+                        }
+                    },
+                    "type": "object"
                 },
                 "retryMultiplier": {
                     "default": 1.5,
