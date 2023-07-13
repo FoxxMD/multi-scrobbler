@@ -159,8 +159,11 @@ export default class ScrobbleSources {
                 case 'tautulli':
                     const t = {
                         // support this for now
-                        user: process.env.TAUTULLI_USER || process.env.PLEX_USER
+                        user: process.env.TAUTULLI_USER
                     };
+                    if(t.user === undefined) {
+                        t.user = process.env.PLEX_USER;
+                    }
                     if (!Object.values(t).every(x => x === undefined)) {
                         configs.push({
                             type: 'tautulli',
