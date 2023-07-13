@@ -20,6 +20,7 @@
                     "examples": [
                         1
                     ],
+                    "title": "maxRequestRetries",
                     "type": "number"
                 },
                 "options": {
@@ -30,6 +31,7 @@
                             "examples": [
                                 true
                             ],
+                            "title": "checkExistingScrobbles",
                             "type": "boolean"
                         },
                         "refreshEnabled": {
@@ -38,18 +40,22 @@
                             "examples": [
                                 true
                             ],
+                            "title": "refreshEnabled",
                             "type": "boolean"
                         },
                         "verbose": {
                             "description": "Options used for increasing verbosity of logging in MS (used for debugging)",
                             "properties": {
                                 "match": {
-                                    "$ref": "#/definitions/MatchLoggingOptions"
+                                    "$ref": "#/definitions/MatchLoggingOptions",
+                                    "title": "match"
                                 }
                             },
+                            "title": "verbose",
                             "type": "object"
                         }
                     },
+                    "title": "options",
                     "type": "object"
                 },
                 "retryMultiplier": {
@@ -58,9 +64,11 @@
                     "examples": [
                         1.5
                     ],
+                    "title": "retryMultiplier",
                     "type": "number"
                 }
             },
+            "title": "CommonClientData",
             "type": "object"
         },
         "LastfmClientConfig": {
@@ -75,6 +83,7 @@
                     "examples": [
                         "client"
                     ],
+                    "title": "configureAs",
                     "type": "string"
                 },
                 "data": {
@@ -86,13 +95,15 @@
                             "$ref": "#/definitions/LastfmData"
                         }
                     ],
-                    "description": "Specific data required to configure this client"
+                    "description": "Specific data required to configure this client",
+                    "title": "data"
                 },
                 "name": {
                     "description": "Unique identifier for this client. Used with sources to restrict where scrobbles are sent.",
                     "examples": [
                         "MyConfig"
                     ],
+                    "title": "name",
                     "type": "string"
                 }
             },
@@ -100,6 +111,7 @@
                 "data",
                 "name"
             ],
+            "title": "LastfmClientConfig",
             "type": "object"
         },
         "LastfmData": {
@@ -109,6 +121,7 @@
                     "examples": [
                         "787c921a2a2ab42320831aba0c8f2fc2"
                     ],
+                    "title": "apiKey",
                     "type": "string"
                 },
                 "maxRequestRetries": {
@@ -117,6 +130,7 @@
                     "examples": [
                         1
                     ],
+                    "title": "maxRequestRetries",
                     "type": "number"
                 },
                 "redirectUri": {
@@ -125,6 +139,7 @@
                     "examples": [
                         "http://localhost:9078/lastfm/callback"
                     ],
+                    "title": "redirectUri",
                     "type": "string"
                 },
                 "retryMultiplier": {
@@ -133,6 +148,7 @@
                     "examples": [
                         1.5
                     ],
+                    "title": "retryMultiplier",
                     "type": "number"
                 },
                 "secret": {
@@ -140,10 +156,12 @@
                     "examples": [
                         "ec42e09d5ae0ee0f0816ca151008412a"
                     ],
+                    "title": "secret",
                     "type": "string"
                 },
                 "session": {
                     "description": "Optional session id returned from a completed auth flow",
+                    "title": "session",
                     "type": "string"
                 }
             },
@@ -151,6 +169,7 @@
                 "apiKey",
                 "secret"
             ],
+            "title": "LastfmData",
             "type": "object"
         },
         "ListenBrainzClientConfig": {
@@ -165,17 +184,20 @@
                     "examples": [
                         "client"
                     ],
+                    "title": "configureAs",
                     "type": "string"
                 },
                 "data": {
                     "$ref": "#/definitions/ListenBrainzClientData",
-                    "description": "Specific data required to configure this client"
+                    "description": "Specific data required to configure this client",
+                    "title": "data"
                 },
                 "name": {
                     "description": "Unique identifier for this client. Used with sources to restrict where scrobbles are sent.",
                     "examples": [
                         "MyConfig"
                     ],
+                    "title": "name",
                     "type": "string"
                 }
             },
@@ -183,6 +205,7 @@
                 "data",
                 "name"
             ],
+            "title": "ListenBrainzClientConfig",
             "type": "object"
         },
         "ListenBrainzClientData": {
@@ -193,6 +216,7 @@
                     "examples": [
                         1
                     ],
+                    "title": "maxRequestRetries",
                     "type": "number"
                 },
                 "options": {
@@ -203,6 +227,7 @@
                             "examples": [
                                 true
                             ],
+                            "title": "checkExistingScrobbles",
                             "type": "boolean"
                         },
                         "refreshEnabled": {
@@ -211,18 +236,22 @@
                             "examples": [
                                 true
                             ],
+                            "title": "refreshEnabled",
                             "type": "boolean"
                         },
                         "verbose": {
                             "description": "Options used for increasing verbosity of logging in MS (used for debugging)",
                             "properties": {
                                 "match": {
-                                    "$ref": "#/definitions/MatchLoggingOptions"
+                                    "$ref": "#/definitions/MatchLoggingOptions",
+                                    "title": "match"
                                 }
                             },
+                            "title": "verbose",
                             "type": "object"
                         }
                     },
+                    "title": "options",
                     "type": "object"
                 },
                 "retryMultiplier": {
@@ -231,6 +260,7 @@
                     "examples": [
                         1.5
                     ],
+                    "title": "retryMultiplier",
                     "type": "number"
                 },
                 "token": {
@@ -238,6 +268,7 @@
                     "examples": [
                         "6794186bf-1157-4de6-80e5-uvb411f3ea2b"
                     ],
+                    "title": "token",
                     "type": "string"
                 },
                 "url": {
@@ -246,10 +277,12 @@
                     "examples": [
                         "https://api.listenbrainz.org/"
                     ],
+                    "title": "url",
                     "type": "string"
                 },
                 "username": {
                     "description": "Username of the user to scrobble for",
+                    "title": "username",
                     "type": "string"
                 }
             },
@@ -257,19 +290,22 @@
                 "token",
                 "username"
             ],
+            "title": "ListenBrainzClientData",
             "type": "object"
         },
         "MalojaClientConfig": {
             "properties": {
                 "data": {
                     "$ref": "#/definitions/MalojaClientData",
-                    "description": "Specific data required to configure this client"
+                    "description": "Specific data required to configure this client",
+                    "title": "data"
                 },
                 "name": {
                     "description": "Unique identifier for this client. Used with sources to restrict where scrobbles are sent.",
                     "examples": [
                         "MyConfig"
                     ],
+                    "title": "name",
                     "type": "string"
                 }
             },
@@ -277,6 +313,7 @@
                 "data",
                 "name"
             ],
+            "title": "MalojaClientConfig",
             "type": "object"
         },
         "MalojaClientData": {
@@ -286,6 +323,7 @@
                     "examples": [
                         "myApiKey"
                     ],
+                    "title": "apiKey",
                     "type": "string"
                 },
                 "maxRequestRetries": {
@@ -294,6 +332,7 @@
                     "examples": [
                         1
                     ],
+                    "title": "maxRequestRetries",
                     "type": "number"
                 },
                 "options": {
@@ -304,6 +343,7 @@
                             "examples": [
                                 true
                             ],
+                            "title": "checkExistingScrobbles",
                             "type": "boolean"
                         },
                         "refreshEnabled": {
@@ -312,18 +352,22 @@
                             "examples": [
                                 true
                             ],
+                            "title": "refreshEnabled",
                             "type": "boolean"
                         },
                         "verbose": {
                             "description": "Options used for increasing verbosity of logging in MS (used for debugging)",
                             "properties": {
                                 "match": {
-                                    "$ref": "#/definitions/MatchLoggingOptions"
+                                    "$ref": "#/definitions/MatchLoggingOptions",
+                                    "title": "match"
                                 }
                             },
+                            "title": "verbose",
                             "type": "object"
                         }
                     },
+                    "title": "options",
                     "type": "object"
                 },
                 "retryMultiplier": {
@@ -332,6 +376,7 @@
                     "examples": [
                         1.5
                     ],
+                    "title": "retryMultiplier",
                     "type": "number"
                 },
                 "url": {
@@ -339,6 +384,7 @@
                     "examples": [
                         "http://localhost:42010"
                     ],
+                    "title": "url",
                     "type": "string"
                 }
             },
@@ -346,6 +392,7 @@
                 "apiKey",
                 "url"
             ],
+            "title": "MalojaClientData",
             "type": "object"
         },
         "MatchLoggingOptions": {
@@ -357,6 +404,7 @@
                     "examples": [
                         false
                     ],
+                    "title": "confidenceBreakdown",
                     "type": "boolean"
                 },
                 "onMatch": {
@@ -365,6 +413,7 @@
                     "examples": [
                         false
                     ],
+                    "title": "onMatch",
                     "type": "boolean"
                 },
                 "onNoMatch": {
@@ -373,9 +422,11 @@
                     "examples": [
                         false
                     ],
+                    "title": "onNoMatch",
                     "type": "boolean"
                 }
             },
+            "title": "MatchLoggingOptions",
             "type": "object"
         }
     }

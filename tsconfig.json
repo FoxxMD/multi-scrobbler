@@ -23,6 +23,7 @@
     "node_modules",
     "coverage",
     "tests/*.ts",
-    "_site"
+    "_site",
+    "docsite"
   ]
 }
