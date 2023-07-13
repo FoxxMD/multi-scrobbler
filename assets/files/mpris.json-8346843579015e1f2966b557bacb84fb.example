@@ -1,0 +1,9 @@
+[
+  {
+    "name": "ubuntu",
+    "data": {
+      "whitelist": ["vlc", "mpd"],
+      "blacklist": ["spotify"]
+    }
+  }
+]

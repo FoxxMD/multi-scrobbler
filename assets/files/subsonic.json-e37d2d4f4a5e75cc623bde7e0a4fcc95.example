@@ -1,0 +1,10 @@
+[
+  {
+    "name": "MySubsonic",
+    "data": {
+      "url": "http://localhost:4040/airsonic",
+      "user": "yourUser",
+      "password": "yourPassword",
+    }
+  }
+]

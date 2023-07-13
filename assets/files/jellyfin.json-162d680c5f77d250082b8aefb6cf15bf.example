@@ -1,0 +1,14 @@
+[
+  {
+    "name": "MyJellyfin",
+    "clients": [],
+    "data": {
+      "users": ["FoxxMD"],
+      "servers": ["myServer","anotherServer"],
+      "options": {
+        "logPayload": false,
+        "logFilterFailure": "warn"
+      }
+    }
+  }
+]
