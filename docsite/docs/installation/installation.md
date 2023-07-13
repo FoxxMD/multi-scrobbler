@@ -64,7 +64,7 @@ There are a few [options for running flatpak applications with temporary or perm
 flatpak run --env=SPOTIFY_CLIENT_ID=yourId --envSPOTIFY_CLIENT_SECRET=yourSecret --env=MALOJA_URL="http://domain.tld" io.github.foxxmd.multiscrobbler
 ```
 
-# Docker
+## Docker
 
 Cross-platform images are built for x86 (Intel/AMD) and ARM64 (IE Raspberry Pi)
 
