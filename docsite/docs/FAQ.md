@@ -12,7 +12,7 @@
 
 ## Plex/Tautulli/Jellyfin don't connect
 
-These three [sources](/README.md#source) are **ingress-based** which means that multi-scrobbler waits for the Plex/Tautulli/Jellyfin server to contact multi-scrobbler, as opposed to multi-scrobbler contacting the server.
+These three [sources](/#source) are **ingress-based** which means that multi-scrobbler waits for the Plex/Tautulli/Jellyfin server to contact multi-scrobbler, as opposed to multi-scrobbler contacting the server.
 
 multi-scrobbler will log information about any server that connects to it for these three services. In the logs it looks something like this:
 
@@ -44,7 +44,7 @@ Check the output for any additional information.
 
 #### Check Host name and URL
 
-The URLs examples in the [configuration](/docs/configuration.md) documentation assume you are running Plex/Tautulli/Jellyfin on the same server as multi-scrobbler. If these are not the same machine then you need to determine the IP address or domain name that multi-scrobbler is reachable at and use that instead of `localhost` when configuring these sources. **This is likely the same host name that you would use to access the web interface for multi-scrobbler.**
+The URLs examples in the [configuration](configuration/configuration.md) documentation assume you are running Plex/Tautulli/Jellyfin on the same server as multi-scrobbler. If these are not the same machine then you need to determine the IP address or domain name that multi-scrobbler is reachable at and use that instead of `localhost` when configuring these sources. **This is likely the same host name that you would use to access the web interface for multi-scrobbler.**
 
 EX `http://localhost:9078/plex` -> `http://192.168.0.140:9078/plex`
 
@@ -71,7 +71,7 @@ Administration -> Dashboard -> Advanced -> Logs
 ## Jellyfin has warnings about undefined or missing data
 
 Make sure you have 
-* [Configured the webhook plugin correctly](/docs/configuration.md#jellyfin)
+* [Configured the webhook plugin correctly](configuration/configuration.md#jellyfin)
   * Checked the **Send All Properties(ignores template)** option in the webhook settings and **Saved**
 
 multi-scrobbler is known to work on Jellyfin `10.8.9` with Webhook version `11.0.0.0`.

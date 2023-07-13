@@ -19,7 +19,7 @@ const sidebars = {
     {
       type: "link",
       label: "Config Playground",
-      href: "/pages/playground"
+      href: "/playground"
     }
   ],
 

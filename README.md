@@ -10,28 +10,28 @@ alt="multi-scrobbler logo" width="180" height="180">
 A javascript app to scrobble music you listened to, to [Maloja](https://github.com/krateng/maloja), [Last.fm](https://www.last.fm), and [ListenBrainz](https://listenbrainz.org)
 
 * Supports scrobbling from many **Sources**
-  * [Spotify](/docs/configuration.md#spotify)
-  * [Plex](/docs/configuration.md#plex) or [Tautulli](/docs/configuration.md#tautulli)
-  * [Subsonic-compatible APIs](/docs/configuration.md#subsonic) (like [Airsonic](https://airsonic.github.io/))
-  * [Jellyfin](/docs/configuration.md#jellyfin)
-  * [Youtube Music](/docs/configuration.md#youtube-music)
-  * [Last.fm](/docs/configuration.md#lastfm-source)
-  * [ListenBrainz](/docs/configuration.md#listenbrainz--source-)
-  * [Deezer](/docs/configuration.md#deezer)
-  * [MPRIS (Linux Desktop)](/docs/configuration.md#mpris)
-  * [Mopidy](/docs/configuration.md#mopidy)
-  * [JRiver](/docs/configuration.md#jriver)
-  * [Kodi](/docs/configuration.md#kodi)
+  * [Spotify](/docsite/docs/configuration/configuration.md#spotify)
+  * [Plex](/docsite/docs/configuration/configuration.md#plex) or [Tautulli](/docsite/docs/configuration/configuration.md#tautulli)
+  * [Subsonic-compatible APIs](/docsite/docs/configuration/configuration.md#subsonic) (like [Airsonic](https://airsonic.github.io/))
+  * [Jellyfin](/docsite/docs/configuration/configuration.md#jellyfin)
+  * [Youtube Music](/docsite/docs/configuration/configuration.md#youtube-music)
+  * [Last.fm](/docsite/docs/configuration/configuration.md#lastfm-source)
+  * [ListenBrainz](/docsite/docs/configuration/configuration.md#listenbrainz--source-)
+  * [Deezer](/docsite/docs/configuration/configuration.md#deezer)
+  * [MPRIS (Linux Desktop)](/docsite/docs/configuration/configuration.md#mpris)
+  * [Mopidy](/docsite/docs/configuration/configuration.md#mopidy)
+  * [JRiver](/docsite/docs/configuration/configuration.md#jriver)
+  * [Kodi](/docsite/docs/configuration/configuration.md#kodi)
 * Supports scrobbling to many **Clients**
-  * [Maloja](/docs/configuration.md#maloja)
-  * [Last.fm](/docs/configuration.md#lastfm)
-  * [ListenBrainz](/docs/configuration.md#listenbrainz)
-* Monitor status of Sources and Clients using [webhooks (Gotify or Ntfy)](/docs/configuration.md#webhook-configurations) or [healthcheck endpoint](/docs/configuration.md#health-endpoint)
+  * [Maloja](/docsite/docs/configuration/configuration.md#maloja)
+  * [Last.fm](/docsite/docs/configuration/configuration.md#lastfm)
+  * [ListenBrainz](/docsite/docs/configuration/configuration.md#listenbrainz)
+* Monitor status of Sources and Clients using [webhooks (Gotify or Ntfy)](/docsite/docs/configuration/configuration.md#webhook-configurations) or [healthcheck endpoint](/docsite/docs/configuration/configuration.md#health-endpoint)
 * Supports configuring for single or multiple users (scrobbling for your friends and family!)
 * Web server interface for stats, basic control, and detailed logs
 * Smart handling of credentials (persistent, authorization through app)
 * Easy configuration through ENVs or JSON
-* Install using [Docker images for x86/ARM](/docs/installation.md#docker), [flatpak](/docs/installation.md#flatpak), or [locally with NodeJS](/docs/installation.md#nodejs)
+* Install using [Docker images for x86/ARM](/docsite/docs/installation/installation.md#docker), [flatpak](/docsite/docs/installation/installation.md#flatpak), or [locally with NodeJS](/docsite/docs/installation/installation.md#nodejs)
 
 **Why should I use this over a browser extension and/or mobile app scrobbler?**
 
@@ -42,7 +42,7 @@ A javascript app to scrobble music you listened to, to [Maloja](https://github.c
 
 **But I already scrobble my music to Last.fm/ListenBrainz, is multi-scrobbler for me?**
 
-Yes! You can use [Last.fm as a **Source**](/docs/configuration.md#lastfm--source-) or [Listenbrainz as a **Source**](/docs/configuration.md#listenbrainz--source-) to forward scrobbles from your profile to any other Client! That way you can keep your current scrobble setup as-is but still get the benefit of capturing your data to a self-hosted location.
+Yes! You can use [Last.fm as a **Source**](/docsite/docs/configuration/configuration.md#lastfm--source-) or [Listenbrainz as a **Source**](/docsite/docs/configuration/configuration.md#listenbrainz--source-) to forward scrobbles from your profile to any other Client! That way you can keep your current scrobble setup as-is but still get the benefit of capturing your data to a self-hosted location.
 
 <img src="/assets/status-ui.jpg" width="800">
 
@@ -71,11 +71,11 @@ Client configurations consist of:
 
 ## Installation
 
-[See the **Installation** documentation](/docs/installation.md)
+[See the **Installation** documentation](/docsite/docs/installation/installation.md)
 
 ## Configuration
 
-[See the **Configuration** documentation](/docs/configuration.md)
+[See the **Configuration** documentation](/docsite/docs/configuration/configuration.md)
 
 ## Usage
 
@@ -90,7 +90,7 @@ On first startup you may need to authorize Spotify and/or Last.fm by visiting th
 
 ## Help/FAQ
 
-Having issues with connections or configuration? Check the [FAQ](/docs/FAQ.md) before creating an issue!
+Having issues with connections or configuration? Check the [FAQ](/docsite/docs/FAQ.md) before creating an issue!
 
 ## License
 

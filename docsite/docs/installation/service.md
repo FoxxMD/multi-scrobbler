@@ -3,7 +3,7 @@ sidebar_position: 2
 title: 'As a Service'
 ---
 
-If you have multi-scrobbler installed [locally](/docs/installation.md#local) you can enable it to run as a background service when you login.
+If you have multi-scrobbler installed [locally](installation.md#local) you can enable it to run as a background service when you login.
 
 Before running as a service you should run it at least once in the foreground to ensure it can start up correctly!
 
@@ -38,11 +38,11 @@ Restart=no
 WantedBy=default.target
 ```
 
-The above assumes you [installed multi-scrobbler using flatpak](/docs/installation.md#flatpak)
+The above assumes you [installed multi-scrobbler using flatpak](installation.md#flatpak)
 
 ### Node.js Installs
 
-If you are running multi-scrobbler directly with [nodejs from a clone repository directory](/docs/installation.md#nodejs) you should modify the `[Service]`:
+If you are running multi-scrobbler directly with [nodejs from a clone repository directory](installation.md#nodejs) you should modify the `[Service]`:
 
 ```ini
 [Service]
