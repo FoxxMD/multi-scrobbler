@@ -29,7 +29,11 @@ export default class PlexSource extends AbstractSource {
         const {data: {user = [], libraries = [], servers = []} = {}} = config
 
         if (!Array.isArray(user)) {
-            this.users = [user];
+            if(user.trim() === '') {
+                this.users = [];
+            } else {
+                this.users = user.split(',').map(x => x.trim());
+            }
         } else {
             this.users = user;
         }
@@ -123,7 +127,7 @@ export default class PlexSource extends AbstractSource {
             if (user === undefined) {
                 this.logger.warn(`Config defined users but payload contained no user info${hint}`);
             } else if (!this.users.includes(user.toLocaleLowerCase())) {
-                this.logger.verbose(`Will not scrobble event because author was not an allowed user: ${user}`, {
+                this.logger.verbose(`Will not scrobble event because author was not an allowed user. Expected: ${this.users.map(x => `'${x}'`).join(' or ')} | Found: '${user.toLocaleLowerCase()}'`, {
                     artists,
                     track
                 })
@@ -151,7 +155,7 @@ export default class PlexSource extends AbstractSource {
             if (library === undefined) {
                 this.logger.warn(`Config defined libraries but payload contained no library info${hint}`);
             } else if (!this.libraries.includes(library.toLocaleLowerCase())) {
-                this.logger.verbose(`Will not scrobble event because library was not on allowed list: ${library}`, {
+                this.logger.verbose(`Will not scrobble event because library was not an allowed library. Expected: ${this.libraries.map(x => `'${x}'`).join(' or ')} | Found: '${library.toLocaleLowerCase()}'`, {
                     artists,
                     track
                 })
@@ -163,7 +167,7 @@ export default class PlexSource extends AbstractSource {
             if (server === undefined) {
                 this.logger.warn(`Config defined server but payload contained no server info${hint}`);
             } else if (!this.servers.includes(server.toLocaleLowerCase())) {
-                this.logger.verbose(`Will not scrobble event because server was not on allowed list: ${server}`, {
+                this.logger.verbose(`Will not scrobble event because server was not an allowed server. Expected: ${this.servers.map(x => `'${x}'`).join(' or ')} | Found: '${server.toLocaleLowerCase()}'`, {
                     artists,
                     track
                 })
