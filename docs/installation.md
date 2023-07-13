@@ -59,12 +59,18 @@ There are a few [options for running flatpak applications with temporary or perm
 flatpak run --env=SPOTIFY_CLIENT_ID=yourId --envSPOTIFY_CLIENT_SECRET=yourSecret --env=MALOJA_URL="http://domain.tld" io.github.foxxmd.multiscrobbler
 ```
 
-# [Docker](https://hub.docker.com/r/foxxmd/multi-scrobbler)
+# Docker
 
-Cross-platform images are built for x86 (Intel/AMD) and ARM (IE Raspberry Pi)
+Cross-platform images are built for x86 (Intel/AMD) and ARM64 (IE Raspberry Pi)
 
+[Dockerhub](https://hub.docker.com/r/foxxmd/multi-scrobbler)
 ```
-foxxmd/multi-scrobbler:latest
+docker.io/foxxmd/multi-scrobbler:latest
+```
+
+[Github Packages](https://github.com/FoxxMD/multi-scrobbler/pkgs/container/multi-scrobbler)
+```
+ghcr.io/foxxmd/multi-scrobbler:latest
 ```
 
 Or use the provided [docker-compose.yml](/docker-compose.yml) after modifying it to fit your configuration.
