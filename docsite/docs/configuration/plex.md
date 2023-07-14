@@ -1,3 +1,8 @@
+---
+sidebar_position: 2
+title: Plex/Tautulli
+---
+
 Tracks played on [Plex](https://plex.tv/) can be scrobbled either by:
  * A [Tautulli](https://tautulli.com/) notification agent with a webhook.
  * Using Plex [Webhooks](https://support.plex.tv/articles/115002267687-webhooks) (restricted to Plex Pass users)

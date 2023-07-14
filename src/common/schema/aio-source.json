@@ -8,6 +8,7 @@
                     "examples": [
                         "a89cba1569901a0671d5a9875fed4be1"
                     ],
+                    "title": "clientId",
                     "type": "string"
                 },
                 "clientSecret": {
@@ -15,6 +16,7 @@
                     "examples": [
                         "ec42e09d5ae0ee0f0816ca151008412a"
                     ],
+                    "title": "clientSecret",
                     "type": "string"
                 },
                 "interval": {
@@ -23,6 +25,7 @@
                     "examples": [
                         60
                     ],
+                    "title": "interval",
                     "type": "number"
                 },
                 "maxPollRetries": {
@@ -31,6 +34,7 @@
                     "examples": [
                         5
                     ],
+                    "title": "maxPollRetries",
                     "type": "number"
                 },
                 "maxRequestRetries": {
@@ -39,10 +43,12 @@
                     "examples": [
                         1
                     ],
+                    "title": "maxRequestRetries",
                     "type": "number"
                 },
                 "options": {
-                    "$ref": "#/definitions/Record<string,any>"
+                    "$ref": "#/definitions/Record<string,any>",
+                    "title": "options"
                 },
                 "redirectUri": {
                     "default": "http://localhost:9078/deezer/callback",
@@ -50,6 +56,7 @@
                     "examples": [
                         "http://localhost:9078/deezer/callback"
                     ],
+                    "title": "redirectUri",
                     "type": "string"
                 },
                 "retryMultiplier": {
@@ -58,11 +65,13 @@
                     "examples": [
                         1.5
                     ],
+                    "title": "retryMultiplier",
                     "type": "number"
                 },
                 "scrobbleThresholds": {
                     "$ref": "#/definitions/ScrobbleThresholds",
-                    "description": "Set thresholds for when multi-scrobbler should consider a tracked play to be \"scrobbable\". If both duration and percent are defined then if either condition is met the track is scrobbled."
+                    "description": "Set thresholds for when multi-scrobbler should consider a tracked play to be \"scrobbable\". If both duration and percent are defined then if either condition is met the track is scrobbled.",
+                    "title": "scrobbleThresholds"
                 }
             },
             "required": [
@@ -70,6 +79,7 @@
                 "clientSecret",
                 "redirectUri"
             ],
+            "title": "DeezerData",
             "type": "object"
         },
         "DeezerSourceAIOConfig": {
@@ -85,19 +95,23 @@
                     "items": {
                         "type": "string"
                     },
+                    "title": "clients",
                     "type": "array"
                 },
                 "data": {
-                    "$ref": "#/definitions/DeezerData"
+                    "$ref": "#/definitions/DeezerData",
+                    "title": "data"
                 },
                 "name": {
                     "description": "Unique identifier for this source.",
+                    "title": "name",
                     "type": "string"
                 },
                 "type": {
                     "enum": [
                         "deezer"
                     ],
+                    "title": "type",
                     "type": "string"
                 }
             },
@@ -105,6 +119,7 @@
                 "data",
                 "type"
             ],
+            "title": "DeezerSourceAIOConfig",
             "type": "object"
         },
         "JRiverData": {
@@ -115,6 +130,7 @@
                     "examples": [
                         30
                     ],
+                    "title": "interval",
                     "type": "number"
                 },
                 "maxInterval": {
@@ -123,6 +139,7 @@
                     "examples": [
                         60
                     ],
+                    "title": "maxInterval",
                     "type": "number"
                 },
                 "maxPollRetries": {
@@ -131,6 +148,7 @@
                     "examples": [
                         5
                     ],
+                    "title": "maxPollRetries",
                     "type": "number"
                 },
                 "maxRequestRetries": {
@@ -139,13 +157,16 @@
                     "examples": [
                         1
                     ],
+                    "title": "maxRequestRetries",
                     "type": "number"
                 },
                 "options": {
-                    "$ref": "#/definitions/Record<string,any>"
+                    "$ref": "#/definitions/Record<string,any>",
+                    "title": "options"
                 },
                 "password": {
                     "description": "If you have enabled authentication, the password you set",
+                    "title": "password",
                     "type": "string"
                 },
                 "retryMultiplier": {
@@ -154,11 +175,13 @@
                     "examples": [
                         1.5
                     ],
+                    "title": "retryMultiplier",
                     "type": "number"
                 },
                 "scrobbleThresholds": {
                     "$ref": "#/definitions/ScrobbleThresholds",
-                    "description": "Set thresholds for when multi-scrobbler should consider a tracked play to be \"scrobbable\". If both duration and percent are defined then if either condition is met the track is scrobbled."
+                    "description": "Set thresholds for when multi-scrobbler should consider a tracked play to be \"scrobbable\". If both duration and percent are defined then if either condition is met the track is scrobbled.",
+                    "title": "scrobbleThresholds"
                 },
                 "url": {
                     "default": "http://localhost:52199/MCWS/v1/",
@@ -166,16 +189,19 @@
                     "examples": [
                         "http://localhost:52199/MCWS/v1/"
                     ],
+                    "title": "url",
                     "type": "string"
                 },
                 "username": {
                     "description": "If you have enabled authentication, the username you set",
+                    "title": "username",
                     "type": "string"
                 }
             },
             "required": [
                 "url"
             ],
+            "title": "JRiverData",
             "type": "object"
         },
         "JRiverSourceAIOConfig": {
@@ -191,19 +217,23 @@
                     "items": {
                         "type": "string"
                     },
+                    "title": "clients",
                     "type": "array"
                 },
                 "data": {
-                    "$ref": "#/definitions/JRiverData"
+                    "$ref": "#/definitions/JRiverData",
+                    "title": "data"
                 },
                 "name": {
                     "description": "Unique identifier for this source.",
+                    "title": "name",
                     "type": "string"
                 },
                 "type": {
                     "enum": [
                         "jriver"
                     ],
+                    "title": "type",
                     "type": "string"
                 }
             },
@@ -211,6 +241,7 @@
                 "data",
                 "type"
             ],
+            "title": "JRiverSourceAIOConfig",
             "type": "object"
         },
         "JellyData": {
@@ -221,6 +252,7 @@
                     "examples": [
                         5
                     ],
+                    "title": "maxPollRetries",
                     "type": "number"
                 },
                 "maxRequestRetries": {
@@ -229,6 +261,7 @@
                     "examples": [
                         1
                     ],
+                    "title": "maxRequestRetries",
                     "type": "number"
                 },
                 "options": {
@@ -244,7 +277,8 @@
                             ],
                             "examples": [
                                 "warn"
-                            ]
+                            ],
+                            "title": "logFilterFailure"
                         },
                         "logPayload": {
                             "default": false,
@@ -252,9 +286,11 @@
                             "examples": [
                                 false
                             ],
+                            "title": "logPayload",
                             "type": "boolean"
                         }
                     },
+                    "title": "options",
                     "type": "object"
                 },
                 "retryMultiplier": {
@@ -263,11 +299,13 @@
                     "examples": [
                         1.5
                     ],
+                    "title": "retryMultiplier",
                     "type": "number"
                 },
                 "scrobbleThresholds": {
                     "$ref": "#/definitions/ScrobbleThresholds",
-                    "description": "Set thresholds for when multi-scrobbler should consider a tracked play to be \"scrobbable\". If both duration and percent are defined then if either condition is met the track is scrobbled."
+                    "description": "Set thresholds for when multi-scrobbler should consider a tracked play to be \"scrobbable\". If both duration and percent are defined then if either condition is met the track is scrobbled.",
+                    "title": "scrobbleThresholds"
                 },
                 "servers": {
                     "anyOf": [
@@ -286,7 +324,8 @@
                         [
                             "MyServerName1"
                         ]
-                    ]
+                    ],
+                    "title": "servers"
                 },
                 "users": {
                     "anyOf": [
@@ -306,9 +345,11 @@
                             "MyUser1",
                             "MyUser2"
                         ]
-                    ]
+                    ],
+                    "title": "users"
                 }
             },
+            "title": "JellyData",
             "type": "object"
         },
         "JellySourceAIOConfig": {
@@ -324,19 +365,23 @@
                     "items": {
                         "type": "string"
                     },
+                    "title": "clients",
                     "type": "array"
                 },
                 "data": {
-                    "$ref": "#/definitions/JellyData"
+                    "$ref": "#/definitions/JellyData",
+                    "title": "data"
                 },
                 "name": {
                     "description": "Unique identifier for this source.",
+                    "title": "name",
                     "type": "string"
                 },
                 "type": {
                     "enum": [
                         "jellyfin"
                     ],
+                    "title": "type",
                     "type": "string"
                 }
             },
@@ -344,6 +389,7 @@
                 "data",
                 "type"
             ],
+            "title": "JellySourceAIOConfig",
             "type": "object"
         },
         "KodiData": {
@@ -354,6 +400,7 @@
                     "examples": [
                         30
                     ],
+                    "title": "interval",
                     "type": "number"
                 },
                 "maxInterval": {
@@ -362,6 +409,7 @@
                     "examples": [
                         60
                     ],
+                    "title": "maxInterval",
                     "type": "number"
                 },
                 "maxPollRetries": {
@@ -370,6 +418,7 @@
                     "examples": [
                         5
                     ],
+                    "title": "maxPollRetries",
                     "type": "number"
                 },
                 "maxRequestRetries": {
@@ -378,13 +427,16 @@
                     "examples": [
                         1
                     ],
+                    "title": "maxRequestRetries",
                     "type": "number"
                 },
                 "options": {
-                    "$ref": "#/definitions/Record<string,any>"
+                    "$ref": "#/definitions/Record<string,any>",
+                    "title": "options"
                 },
                 "password": {
                     "description": "The password set for Remote Control via Web Sever",
+                    "title": "password",
                     "type": "string"
                 },
                 "retryMultiplier": {
@@ -393,11 +445,13 @@
                     "examples": [
                         1.5
                     ],
+                    "title": "retryMultiplier",
                     "type": "number"
                 },
                 "scrobbleThresholds": {
                     "$ref": "#/definitions/ScrobbleThresholds",
-                    "description": "Set thresholds for when multi-scrobbler should consider a tracked play to be \"scrobbable\". If both duration and percent are defined then if either condition is met the track is scrobbled."
+                    "description": "Set thresholds for when multi-scrobbler should consider a tracked play to be \"scrobbable\". If both duration and percent are defined then if either condition is met the track is scrobbled.",
+                    "title": "scrobbleThresholds"
                 },
                 "url": {
                     "default": "http://localhost:8080/jsonrpc",
@@ -405,10 +459,12 @@
                     "examples": [
                         "http://localhost:8080/jsonrpc"
                     ],
+                    "title": "url",
                     "type": "string"
                 },
                 "username": {
                     "description": "The username set for Remote Control via Web Sever",
+                    "title": "username",
                     "type": "string"
                 }
             },
@@ -417,6 +473,7 @@
                 "url",
                 "username"
             ],
+            "title": "KodiData",
             "type": "object"
         },
         "KodiSourceAIOConfig": {
@@ -432,19 +489,23 @@
                     "items": {
                         "type": "string"
                     },
+                    "title": "clients",
                     "type": "array"
                 },
                 "data": {
-                    "$ref": "#/definitions/KodiData"
+                    "$ref": "#/definitions/KodiData",
+                    "title": "data"
                 },
                 "name": {
                     "description": "Unique identifier for this source.",
+                    "title": "name",
                     "type": "string"
                 },
                 "type": {
                     "enum": [
                         "kodi"
                     ],
+                    "title": "type",
                     "type": "string"
                 }
             },
@@ -452,6 +513,7 @@
                 "data",
                 "type"
             ],
+            "title": "KodiSourceAIOConfig",
             "type": "object"
         },
         "LastFmSouceAIOConfig": {
@@ -467,6 +529,7 @@
                     "items": {
                         "type": "string"
                     },
+                    "title": "clients",
                     "type": "array"
                 },
                 "configureAs": {
@@ -478,19 +541,23 @@
                     "examples": [
                         "source"
                     ],
+                    "title": "configureAs",
                     "type": "string"
                 },
                 "data": {
-                    "$ref": "#/definitions/LastFmSourceData"
+                    "$ref": "#/definitions/LastFmSourceData",
+                    "title": "data"
                 },
                 "name": {
                     "description": "Unique identifier for this source.",
+                    "title": "name",
                     "type": "string"
                 },
                 "type": {
                     "enum": [
                         "lastfm"
                     ],
+                    "title": "type",
                     "type": "string"
                 }
             },
@@ -498,6 +565,7 @@
                 "data",
                 "type"
             ],
+            "title": "LastFmSouceAIOConfig",
             "type": "object"
         },
         "LastFmSourceData": {
@@ -507,6 +575,7 @@
                     "examples": [
                         "787c921a2a2ab42320831aba0c8f2fc2"
                     ],
+                    "title": "apiKey",
                     "type": "string"
                 },
                 "maxPollRetries": {
@@ -515,6 +584,7 @@
                     "examples": [
                         5
                     ],
+                    "title": "maxPollRetries",
                     "type": "number"
                 },
                 "maxRequestRetries": {
@@ -523,10 +593,12 @@
                     "examples": [
                         1
                     ],
+                    "title": "maxRequestRetries",
                     "type": "number"
                 },
                 "options": {
-                    "$ref": "#/definitions/Record<string,any>"
+                    "$ref": "#/definitions/Record<string,any>",
+                    "title": "options"
                 },
                 "redirectUri": {
                     "default": "http://localhost:9078/lastfm/callback",
@@ -534,6 +606,7 @@
                     "examples": [
                         "http://localhost:9078/lastfm/callback"
                     ],
+                    "title": "redirectUri",
                     "type": "string"
                 },
                 "retryMultiplier": {
@@ -542,21 +615,25 @@
                     "examples": [
                         1.5
                     ],
+                    "title": "retryMultiplier",
                     "type": "number"
                 },
                 "scrobbleThresholds": {
                     "$ref": "#/definitions/ScrobbleThresholds",
-                    "description": "Set thresholds for when multi-scrobbler should consider a tracked play to be \"scrobbable\". If both duration and percent are defined then if either condition is met the track is scrobbled."
+                    "description": "Set thresholds for when multi-scrobbler should consider a tracked play to be \"scrobbable\". If both duration and percent are defined then if either condition is met the track is scrobbled.",
+                    "title": "scrobbleThresholds"
                 },
                 "secret": {
                     "description": "Secret generated from Last.fm account",
                     "examples": [
                         "ec42e09d5ae0ee0f0816ca151008412a"
                     ],
+                    "title": "secret",
                     "type": "string"
                 },
                 "session": {
                     "description": "Optional session id returned from a completed auth flow",
+                    "title": "session",
                     "type": "string"
                 }
             },
@@ -564,6 +641,7 @@
                 "apiKey",
                 "secret"
             ],
+            "title": "LastFmSourceData",
             "type": "object"
         },
         "ListenBrainzSourceAIOConfig": {
@@ -579,6 +657,7 @@
                     "items": {
                         "type": "string"
                     },
+                    "title": "clients",
                     "type": "array"
                 },
                 "configureAs": {
@@ -590,19 +669,23 @@
                     "examples": [
                         "source"
                     ],
+                    "title": "configureAs",
                     "type": "string"
                 },
                 "data": {
-                    "$ref": "#/definitions/ListenBrainzSourceData"
+                    "$ref": "#/definitions/ListenBrainzSourceData",
+                    "title": "data"
                 },
                 "name": {
                     "description": "Unique identifier for this source.",
+                    "title": "name",
                     "type": "string"
                 },
                 "type": {
                     "enum": [
                         "listenbrainz"
                     ],
+                    "title": "type",
                     "type": "string"
                 }
             },
@@ -610,6 +693,7 @@
                 "data",
                 "type"
             ],
+            "title": "ListenBrainzSourceAIOConfig",
             "type": "object"
         },
         "ListenBrainzSourceData": {
@@ -620,6 +704,7 @@
                     "examples": [
                         5
                     ],
+                    "title": "maxPollRetries",
                     "type": "number"
                 },
                 "maxRequestRetries": {
@@ -628,10 +713,12 @@
                     "examples": [
                         1
                     ],
+                    "title": "maxRequestRetries",
                     "type": "number"
                 },
                 "options": {
-                    "$ref": "#/definitions/Record<string,any>"
+                    "$ref": "#/definitions/Record<string,any>",
+                    "title": "options"
                 },
                 "retryMultiplier": {
                     "default": 1.5,
@@ -639,17 +726,20 @@
                     "examples": [
                         1.5
                     ],
+                    "title": "retryMultiplier",
                     "type": "number"
                 },
                 "scrobbleThresholds": {
                     "$ref": "#/definitions/ScrobbleThresholds",
-                    "description": "Set thresholds for when multi-scrobbler should consider a tracked play to be \"scrobbable\". If both duration and percent are defined then if either condition is met the track is scrobbled."
+                    "description": "Set thresholds for when multi-scrobbler should consider a tracked play to be \"scrobbable\". If both duration and percent are defined then if either condition is met the track is scrobbled.",
+                    "title": "scrobbleThresholds"
                 },
                 "token": {
                     "description": "User token for the user to scrobble for",
                     "examples": [
                         "6794186bf-1157-4de6-80e5-uvb411f3ea2b"
                     ],
+                    "title": "token",
                     "type": "string"
                 },
                 "url": {
@@ -658,10 +748,12 @@
                     "examples": [
                         "https://api.listenbrainz.org/"
                     ],
+                    "title": "url",
                     "type": "string"
                 },
                 "username": {
                     "description": "Username of the user to scrobble for",
+                    "title": "username",
                     "type": "string"
                 }
             },
@@ -669,6 +761,7 @@
                 "token",
                 "username"
             ],
+            "title": "ListenBrainzSourceData",
             "type": "object"
         },
         "MPRISData": {
@@ -691,7 +784,8 @@
                             "spotify",
                             "vlc"
                         ]
-                    ]
+                    ],
+                    "title": "blacklist"
                 },
                 "maxPollRetries": {
                     "default": 5,
@@ -699,6 +793,7 @@
                     "examples": [
                         5
                     ],
+                    "title": "maxPollRetries",
                     "type": "number"
                 },
                 "maxRequestRetries": {
@@ -707,10 +802,12 @@
                     "examples": [
                         1
                     ],
+                    "title": "maxRequestRetries",
                     "type": "number"
                 },
                 "options": {
-                    "$ref": "#/definitions/Record<string,any>"
+                    "$ref": "#/definitions/Record<string,any>",
+                    "title": "options"
                 },
                 "retryMultiplier": {
                     "default": 1.5,
@@ -718,11 +815,13 @@
                     "examples": [
                         1.5
                     ],
+                    "title": "retryMultiplier",
                     "type": "number"
                 },
                 "scrobbleThresholds": {
                     "$ref": "#/definitions/ScrobbleThresholds",
-                    "description": "Set thresholds for when multi-scrobbler should consider a tracked play to be \"scrobbable\". If both duration and percent are defined then if either condition is met the track is scrobbled."
+                    "description": "Set thresholds for when multi-scrobbler should consider a tracked play to be \"scrobbable\". If both duration and percent are defined then if either condition is met the track is scrobbled.",
+                    "title": "scrobbleThresholds"
                 },
                 "whitelist": {
                     "anyOf": [
@@ -742,9 +841,11 @@
                             "spotify",
                             "vlc"
                         ]
-                    ]
+                    ],
+                    "title": "whitelist"
                 }
             },
+            "title": "MPRISData",
             "type": "object"
         },
         "MPRISSourceAIOConfig": {
@@ -760,19 +861,23 @@
                     "items": {
                         "type": "string"
                     },
+                    "title": "clients",
                     "type": "array"
                 },
                 "data": {
-                    "$ref": "#/definitions/MPRISData"
+                    "$ref": "#/definitions/MPRISData",
+                    "title": "data"
                 },
                 "name": {
                     "description": "Unique identifier for this source.",
+                    "title": "name",
                     "type": "string"
                 },
                 "type": {
                     "enum": [
                         "mpris"
                     ],
+                    "title": "type",
                     "type": "string"
                 }
             },
@@ -780,6 +885,7 @@
                 "data",
                 "type"
             ],
+            "title": "MPRISSourceAIOConfig",
             "type": "object"
         },
         "MopidyData": {
@@ -798,6 +904,7 @@
                     "items": {
                         "type": "string"
                     },
+                    "title": "albumBlacklist",
                     "type": "array"
                 },
                 "interval": {
@@ -806,6 +913,7 @@
                     "examples": [
                         10
                     ],
+                    "title": "interval",
                     "type": "number"
                 },
                 "maxInterval": {
@@ -814,6 +922,7 @@
                     "examples": [
                         30
                     ],
+                    "title": "maxInterval",
                     "type": "number"
                 },
                 "maxPollRetries": {
@@ -822,6 +931,7 @@
                     "examples": [
                         5
                     ],
+                    "title": "maxPollRetries",
                     "type": "number"
                 },
                 "maxRequestRetries": {
@@ -830,10 +940,12 @@
                     "examples": [
                         1
                     ],
+                    "title": "maxRequestRetries",
                     "type": "number"
                 },
                 "options": {
-                    "$ref": "#/definitions/Record<string,any>"
+                    "$ref": "#/definitions/Record<string,any>",
+                    "title": "options"
                 },
                 "retryMultiplier": {
                     "default": 1.5,
@@ -841,17 +953,20 @@
                     "examples": [
                         1.5
                     ],
+                    "title": "retryMultiplier",
                     "type": "number"
                 },
                 "scrobbleThresholds": {
                     "$ref": "#/definitions/ScrobbleThresholds",
-                    "description": "Set thresholds for when multi-scrobbler should consider a tracked play to be \"scrobbable\". If both duration and percent are defined then if either condition is met the track is scrobbled."
+                    "description": "Set thresholds for when multi-scrobbler should consider a tracked play to be \"scrobbable\". If both duration and percent are defined then if either condition is met the track is scrobbled.",
+                    "title": "scrobbleThresholds"
                 },
                 "uriBlacklist": {
                     "description": "Do not scrobble tracks whose URI STARTS WITH any of these strings, case-insensitive\n\nEX: Don't scrobble tracks from soundcloud by adding 'soundcloud' to this list.\n\nList is ignored if uriWhitelist is used.",
                     "items": {
                         "type": "string"
                     },
+                    "title": "uriBlacklist",
                     "type": "array"
                 },
                 "uriWhitelist": {
@@ -859,6 +974,7 @@
                     "items": {
                         "type": "string"
                     },
+                    "title": "uriWhitelist",
                     "type": "array"
                 },
                 "url": {
@@ -867,9 +983,11 @@
                     "examples": [
                         "ws://localhost:6680/mopidy/ws/"
                     ],
+                    "title": "url",
                     "type": "string"
                 }
             },
+            "title": "MopidyData",
             "type": "object"
         },
         "MopidySourceAIOConfig": {
@@ -885,19 +1003,23 @@
                     "items": {
                         "type": "string"
                     },
+                    "title": "clients",
                     "type": "array"
                 },
                 "data": {
-                    "$ref": "#/definitions/MopidyData"
+                    "$ref": "#/definitions/MopidyData",
+                    "title": "data"
                 },
                 "name": {
                     "description": "Unique identifier for this source.",
+                    "title": "name",
                     "type": "string"
                 },
                 "type": {
                     "enum": [
                         "mopidy"
                     ],
+                    "title": "type",
                     "type": "string"
                 }
             },
@@ -905,6 +1027,7 @@
                 "data",
                 "type"
             ],
+            "title": "MopidySourceAIOConfig",
             "type": "object"
         },
         "PlexSourceAIOConfig": {
@@ -920,19 +1043,23 @@
                     "items": {
                         "type": "string"
                     },
+                    "title": "clients",
                     "type": "array"
                 },
                 "data": {
-                    "$ref": "#/definitions/PlexSourceData"
+                    "$ref": "#/definitions/PlexSourceData",
+                    "title": "data"
                 },
                 "name": {
                     "description": "Unique identifier for this source.",
+                    "title": "name",
                     "type": "string"
                 },
                 "type": {
                     "enum": [
                         "plex"
                     ],
+                    "title": "type",
                     "type": "string"
                 }
             },
@@ -940,6 +1067,7 @@
                 "data",
                 "type"
             ],
+            "title": "PlexSourceAIOConfig",
             "type": "object"
         },
         "PlexSourceData": {
@@ -962,7 +1090,8 @@
                             "Audio",
                             "Music"
                         ]
-                    ]
+                    ],
+                    "title": "libraries"
                 },
                 "maxPollRetries": {
                     "default": 5,
@@ -970,6 +1099,7 @@
                     "examples": [
                         5
                     ],
+                    "title": "maxPollRetries",
                     "type": "number"
                 },
                 "maxRequestRetries": {
@@ -978,6 +1108,7 @@
                     "examples": [
                         1
                     ],
+                    "title": "maxRequestRetries",
                     "type": "number"
                 },
                 "options": {
@@ -993,9 +1124,11 @@
                             ],
                             "examples": [
                                 "warn"
-                            ]
+                            ],
+                            "title": "logFilterFailure"
                         }
                     },
+                    "title": "options",
                     "type": "object"
                 },
                 "retryMultiplier": {
@@ -1004,11 +1137,13 @@
                     "examples": [
                         1.5
                     ],
+                    "title": "retryMultiplier",
                     "type": "number"
                 },
                 "scrobbleThresholds": {
                     "$ref": "#/definitions/ScrobbleThresholds",
-                    "description": "Set thresholds for when multi-scrobbler should consider a tracked play to be \"scrobbable\". If both duration and percent are defined then if either condition is met the track is scrobbled."
+                    "description": "Set thresholds for when multi-scrobbler should consider a tracked play to be \"scrobbable\". If both duration and percent are defined then if either condition is met the track is scrobbled.",
+                    "title": "scrobbleThresholds"
                 },
                 "servers": {
                     "anyOf": [
@@ -1027,7 +1162,8 @@
                         [
                             "MyServerName"
                         ]
-                    ]
+                    ],
+                    "title": "servers"
                 },
                 "user": {
                     "anyOf": [
@@ -1047,12 +1183,15 @@
                             "MyUser1",
                             "MyUser2"
                         ]
-                    ]
+                    ],
+                    "title": "user"
                 }
             },
+            "title": "PlexSourceData",
             "type": "object"
         },
         "Record<string,any>": {
+            "title": "Record<string,any>",
             "type": "object"
         },
         "ScrobbleThresholds": {
@@ -1063,13 +1202,16 @@
                     "examples": [
                         30
                     ],
+                    "title": "duration",
                     "type": "number"
                 },
                 "percent": {
                     "description": "The percentage of a track that should have been seen played before it should be scrobbled. Only used if the Source provides information about how long the track is.\n\nNOTE: This should be used with care when the Source is a \"polling\" type (has an 'interval' property). If the track is short and the interval is too high MS may ignore the track if percentage is high because it had not \"seen\" the track for long enough from first discovery, even if you have been playing the track for longer.",
+                    "title": "percent",
                     "type": "number"
                 }
             },
+            "title": "ScrobbleThresholds",
             "type": "object"
         },
         "SourceAIOConfig": {
@@ -1113,7 +1255,8 @@
                 {
                     "$ref": "#/definitions/KodiSourceAIOConfig"
                 }
-            ]
+            ],
+            "title": "SourceAIOConfig"
         },
         "SourceRetryOptions": {
             "properties": {
@@ -1123,6 +1266,7 @@
                     "examples": [
                         5
                     ],
+                    "title": "maxPollRetries",
                     "type": "number"
                 },
                 "maxRequestRetries": {
@@ -1131,6 +1275,7 @@
                     "examples": [
                         1
                     ],
+                    "title": "maxRequestRetries",
                     "type": "number"
                 },
                 "retryMultiplier": {
@@ -1139,9 +1284,11 @@
                     "examples": [
                         1.5
                     ],
+                    "title": "retryMultiplier",
                     "type": "number"
                 }
             },
+            "title": "SourceRetryOptions",
             "type": "object"
         },
         "SpotifySourceAIOConfig": {
@@ -1157,19 +1304,23 @@
                     "items": {
                         "type": "string"
                     },
+                    "title": "clients",
                     "type": "array"
                 },
                 "data": {
-                    "$ref": "#/definitions/SpotifySourceData"
+                    "$ref": "#/definitions/SpotifySourceData",
+                    "title": "data"
                 },
                 "name": {
                     "description": "Unique identifier for this source.",
+                    "title": "name",
                     "type": "string"
                 },
                 "type": {
                     "enum": [
                         "spotify"
                     ],
+                    "title": "type",
                     "type": "string"
                 }
             },
@@ -1177,6 +1328,7 @@
                 "data",
                 "type"
             ],
+            "title": "SpotifySourceAIOConfig",
             "type": "object"
         },
         "SpotifySourceData": {
@@ -1186,6 +1338,7 @@
                     "examples": [
                         "787c921a2a2ab42320831aba0c8f2fc2"
                     ],
+                    "title": "clientId",
                     "type": "string"
                 },
                 "clientSecret": {
@@ -1193,6 +1346,7 @@
                     "examples": [
                         "ec42e09d5ae0ee0f0816ca151008412a"
                     ],
+                    "title": "clientSecret",
                     "type": "string"
                 },
                 "interval": {
@@ -1201,6 +1355,7 @@
                     "examples": [
                         30
                     ],
+                    "title": "interval",
                     "type": "number"
                 },
                 "maxInterval": {
@@ -1209,6 +1364,7 @@
                     "examples": [
                         60
                     ],
+                    "title": "maxInterval",
                     "type": "number"
                 },
                 "maxPollRetries": {
@@ -1217,6 +1373,7 @@
                     "examples": [
                         5
                     ],
+                    "title": "maxPollRetries",
                     "type": "number"
                 },
                 "maxRequestRetries": {
@@ -1225,10 +1382,12 @@
                     "examples": [
                         1
                     ],
+                    "title": "maxRequestRetries",
                     "type": "number"
                 },
                 "options": {
-                    "$ref": "#/definitions/Record<string,any>"
+                    "$ref": "#/definitions/Record<string,any>",
+                    "title": "options"
                 },
                 "redirectUri": {
                     "default": "http://localhost:9078/callback",
@@ -1236,6 +1395,7 @@
                     "examples": [
                         "http://localhost:9078/callback"
                     ],
+                    "title": "redirectUri",
                     "type": "string"
                 },
                 "retryMultiplier": {
@@ -1244,11 +1404,13 @@
                     "examples": [
                         1.5
                     ],
+                    "title": "retryMultiplier",
                     "type": "number"
                 },
                 "scrobbleThresholds": {
                     "$ref": "#/definitions/ScrobbleThresholds",
-                    "description": "Set thresholds for when multi-scrobbler should consider a tracked play to be \"scrobbable\". If both duration and percent are defined then if either condition is met the track is scrobbled."
+                    "description": "Set thresholds for when multi-scrobbler should consider a tracked play to be \"scrobbable\". If both duration and percent are defined then if either condition is met the track is scrobbled.",
+                    "title": "scrobbleThresholds"
                 }
             },
             "required": [
@@ -1256,6 +1418,7 @@
                 "clientSecret",
                 "redirectUri"
             ],
+            "title": "SpotifySourceData",
             "type": "object"
         },
         "SubsonicData": {
@@ -1266,6 +1429,7 @@
                     "examples": [
                         10
                     ],
+                    "title": "interval",
                     "type": "number"
                 },
                 "maxInterval": {
@@ -1274,6 +1438,7 @@
                     "examples": [
                         30
                     ],
+                    "title": "maxInterval",
                     "type": "number"
                 },
                 "maxPollRetries": {
@@ -1282,6 +1447,7 @@
                     "examples": [
                         5
                     ],
+                    "title": "maxPollRetries",
                     "type": "number"
                 },
                 "maxRequestRetries": {
@@ -1290,16 +1456,19 @@
                     "examples": [
                         1
                     ],
+                    "title": "maxRequestRetries",
                     "type": "number"
                 },
                 "options": {
-                    "$ref": "#/definitions/Record<string,any>"
+                    "$ref": "#/definitions/Record<string,any>",
+                    "title": "options"
                 },
                 "password": {
                     "description": "Password for the user to login to the server with",
                     "examples": [
                         "MyPassword"
                     ],
+                    "title": "password",
                     "type": "string"
                 },
                 "retryMultiplier": {
@@ -1308,21 +1477,25 @@
                     "examples": [
                         1.5
                     ],
+                    "title": "retryMultiplier",
                     "type": "number"
                 },
                 "scrobbleThresholds": {
                     "$ref": "#/definitions/ScrobbleThresholds",
-                    "description": "Set thresholds for when multi-scrobbler should consider a tracked play to be \"scrobbable\". If both duration and percent are defined then if either condition is met the track is scrobbled."
+                    "description": "Set thresholds for when multi-scrobbler should consider a tracked play to be \"scrobbable\". If both duration and percent are defined then if either condition is met the track is scrobbled.",
+                    "title": "scrobbleThresholds"
                 },
                 "url": {
                     "description": "URL of the subsonic media server to query",
                     "examples": [
                         "http://airsonic.local"
                     ],
+                    "title": "url",
                     "type": "string"
                 },
                 "user": {
                     "description": "Username to login to the server with",
+                    "title": "user",
                     "type": "string"
                 }
             },
@@ -1331,6 +1504,7 @@
                 "url",
                 "user"
             ],
+            "title": "SubsonicData",
             "type": "object"
         },
         "SubsonicSourceAIOConfig": {
@@ -1346,19 +1520,23 @@
                     "items": {
                         "type": "string"
                     },
+                    "title": "clients",
                     "type": "array"
                 },
                 "data": {
-                    "$ref": "#/definitions/SubsonicData"
+                    "$ref": "#/definitions/SubsonicData",
+                    "title": "data"
                 },
                 "name": {
                     "description": "Unique identifier for this source.",
+                    "title": "name",
                     "type": "string"
                 },
                 "type": {
                     "enum": [
                         "subsonic"
                     ],
+                    "title": "type",
                     "type": "string"
                 }
             },
@@ -1366,6 +1544,7 @@
                 "data",
                 "type"
             ],
+            "title": "SubsonicSourceAIOConfig",
             "type": "object"
         },
         "TautulliSourceAIOConfig": {
@@ -1381,19 +1560,23 @@
                     "items": {
                         "type": "string"
                     },
+                    "title": "clients",
                     "type": "array"
                 },
                 "data": {
-                    "$ref": "#/definitions/PlexSourceData"
+                    "$ref": "#/definitions/PlexSourceData",
+                    "title": "data"
                 },
                 "name": {
                     "description": "Unique identifier for this source.",
+                    "title": "name",
                     "type": "string"
                 },
                 "type": {
                     "enum": [
                         "tautulli"
                     ],
+                    "title": "type",
                     "type": "string"
                 }
             },
@@ -1401,12 +1584,14 @@
                 "data",
                 "type"
             ],
+            "title": "TautulliSourceAIOConfig",
             "type": "object"
         },
         "YTMusicData": {
             "properties": {
                 "authUser": {
                     "description": "If the 'X-Goog-AuthUser' header is present in the Request Headers for music.youtube.com it must also be included",
+                    "title": "authUser",
                     "type": "number"
                 },
                 "cookie": {
@@ -1414,6 +1599,7 @@
                     "examples": [
                         "VISITOR_INFO1_LIVE=jMp2xA1Xz2_PbVc; __Secure-3PAPISID=3AxsXpy0M/AkISpjek; ..."
                     ],
+                    "title": "cookie",
                     "type": "string"
                 },
                 "interval": {
@@ -1422,6 +1608,7 @@
                     "examples": [
                         30
                     ],
+                    "title": "interval",
                     "type": "number"
                 },
                 "maxInterval": {
@@ -1430,6 +1617,7 @@
                     "examples": [
                         60
                     ],
+                    "title": "maxInterval",
                     "type": "number"
                 },
                 "maxPollRetries": {
@@ -1438,6 +1626,7 @@
                     "examples": [
                         5
                     ],
+                    "title": "maxPollRetries",
                     "type": "number"
                 },
                 "maxRequestRetries": {
@@ -1446,10 +1635,12 @@
                     "examples": [
                         1
                     ],
+                    "title": "maxRequestRetries",
                     "type": "number"
                 },
                 "options": {
-                    "$ref": "#/definitions/Record<string,any>"
+                    "$ref": "#/definitions/Record<string,any>",
+                    "title": "options"
                 },
                 "retryMultiplier": {
                     "default": 1.5,
@@ -1457,16 +1648,19 @@
                     "examples": [
                         1.5
                     ],
+                    "title": "retryMultiplier",
                     "type": "number"
                 },
                 "scrobbleThresholds": {
                     "$ref": "#/definitions/ScrobbleThresholds",
-                    "description": "Set thresholds for when multi-scrobbler should consider a tracked play to be \"scrobbable\". If both duration and percent are defined then if either condition is met the track is scrobbled."
+                    "description": "Set thresholds for when multi-scrobbler should consider a tracked play to be \"scrobbable\". If both duration and percent are defined then if either condition is met the track is scrobbled.",
+                    "title": "scrobbleThresholds"
                 }
             },
             "required": [
                 "cookie"
             ],
+            "title": "YTMusicData",
             "type": "object"
         },
         "YTMusicSourceAIOConfig": {
@@ -1482,19 +1676,23 @@
                     "items": {
                         "type": "string"
                     },
+                    "title": "clients",
                     "type": "array"
                 },
                 "data": {
-                    "$ref": "#/definitions/YTMusicData"
+                    "$ref": "#/definitions/YTMusicData",
+                    "title": "data"
                 },
                 "name": {
                     "description": "Unique identifier for this source.",
+                    "title": "name",
                     "type": "string"
                 },
                 "type": {
                     "enum": [
                         "ytmusic"
                     ],
+                    "title": "type",
                     "type": "string"
                 }
             },
@@ -1502,17 +1700,20 @@
                 "data",
                 "type"
             ],
+            "title": "YTMusicSourceAIOConfig",
             "type": "object"
         }
     },
     "properties": {
         "sourceDefaults": {
-            "$ref": "#/definitions/SourceRetryOptions"
+            "$ref": "#/definitions/SourceRetryOptions",
+            "title": "sourceDefaults"
         },
         "sources": {
             "items": {
                 "$ref": "#/definitions/SourceAIOConfig"
             },
+            "title": "sources",
             "type": "array"
         }
     },

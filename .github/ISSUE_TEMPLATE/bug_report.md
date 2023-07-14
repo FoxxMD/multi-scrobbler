@@ -7,7 +7,7 @@ assignees: ''
 
 ---
 
-[Please check the FAQ](https://github.com/FoxxMD/multi-scrobbler/blob/master/docs/FAQ.md) before submitting a bug report.
+[Please check the FAQ](https://github.com/FoxxMD/multi-scrobbler/blob/master/docsite/docs/FAQ.md) before submitting a bug report.
 
 **Describe the bug**
 A clear and concise description of what the bug is.
@@ -23,7 +23,7 @@ Steps to reproduce the behavior:
 A clear and concise description of what you expected to happen.
 
 **Logs**
-If possible reproduce the issue with [debug logging ON](https://github.com/FoxxMD/multi-scrobbler/blob/master/docs/FAQ.md#turn-on-debug-logging)
+If possible reproduce the issue with [debug logging ON](https://github.com/FoxxMD/multi-scrobbler/blob/master/docsite/docs/FAQ.md#turn-on-debug-logging)
 
 ```
 Copy and paste as much log data as possible related to this issue here.
