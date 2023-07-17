@@ -17,28 +17,52 @@ export default class JellyfinSource extends MemorySource {
 
     constructor(name: any, config: JellySourceConfig, internal: InternalConfig, emitter: EventEmitter) {
         super('jellyfin', name, config, internal, emitter);
-        const {data: {users, servers} = {}} = config;
+        const {
+            data: {
+            users,
+            servers,
+            options: {
+                logFilterFailure = 'warn'
+                } = {}
+            } = {}
+        } = config;
+
+        if(logFilterFailure !== false && !['debug', 'warn'].includes(logFilterFailure)) {
+            this.logger.warn(`logFilterFailure value of '${logFilterFailure.toString()}' is NOT VALID. Logging will not occur if filters fail. You should fix this.`);
+        }
 
         if (users === undefined || users === null) {
             this.users = undefined;
         } else {
             if (!Array.isArray(users)) {
-                this.users = users.split(',')
+                if(users.trim() === '') {
+                    this.users = undefined;
+                } else {
+                    this.users = users.split(',').map(x => x.trim());
+                }
             } else {
                 this.users = users;
             }
-            this.users = this.users.map((x: any) => x.toLocaleLowerCase())
+            if(this.users !== undefined) {
+                this.users = this.users.map((x: any) => x.toLocaleLowerCase())
+            }
         }
 
         if (servers === undefined || servers === null) {
             this.servers = undefined;
         } else {
             if (!Array.isArray(servers)) {
-                this.servers = servers.split(',')
+                if(servers.trim() === '') {
+                    this.servers = undefined;
+                } else {
+                    this.servers = servers.split(',').map(x => x.trim());
+                }
             } else {
                 this.servers = servers;
             }
-            this.servers = this.servers.map((x: any) => x.toLocaleLowerCase())
+            if(this.servers !== undefined) {
+                this.servers = this.servers.map((x: any) => x.toLocaleLowerCase());
+            }
         }
 
         if (users === undefined && servers === undefined) {
@@ -124,6 +148,22 @@ export default class JellyfinSource extends MemorySource {
         }
     }
 
+    protected logFilterFailure = (str: string, meta?: any) => {
+        const {
+            data: {
+                options: {
+                    logFilterFailure = 'warn'
+                } = {}
+            } = {}
+        } = this.config;
+
+        if(logFilterFailure === false || !['warn','debug'].includes(logFilterFailure)) {
+            return false;
+        }
+
+        this.logger[logFilterFailure](str, meta);
+    }
+
     isValidEvent = (playObj: PlayObject) => {
         const {
             meta: {
@@ -148,7 +188,7 @@ export default class JellyfinSource extends MemorySource {
         }
 
         if (this.servers !== undefined && !this.servers.includes(server.toLocaleLowerCase())) {
-            this.logger.warn(`Will not scrobble event because server was not on allowed list, found server: ${server}`, {
+            this.logFilterFailure(`Will not scrobble event because server was not an allowed server. Expected: ${this.servers.map(x => `'${x}'`).join(' or ')} | Found: '${server.toLocaleLowerCase()}'`, {
                 track
             })
             return false;
@@ -156,10 +196,10 @@ export default class JellyfinSource extends MemorySource {
 
         if (this.users !== undefined) {
             if (user === undefined) {
-                this.logger.warn(`Will not scrobble event because config defined users but payload contained no user info`);
+                this.logFilterFailure(`Will not scrobble event because config defined users but payload contained no user info`);
                 return false;
             } else if (!this.users.includes(user.toLocaleLowerCase())) {
-                this.logger.warn(`Will not scrobble event because author was not an allowed user: ${user}`, {
+                this.logFilterFailure(`Will not scrobble event because author was not an allowed user. Expected: ${this.users.map(x => `'${x}'`).join(' or ')} | Found: '${user.toLocaleLowerCase()}'`, {
                     artists,
                     track
                 })

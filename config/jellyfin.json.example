@@ -6,7 +6,8 @@
       "users": ["FoxxMD"],
       "servers": ["myServer","anotherServer"],
       "options": {
-        "logPayload": false
+        "logPayload": false,
+        "logFilterFailure": "warn"
       }
     }
   }

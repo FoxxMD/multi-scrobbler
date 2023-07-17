@@ -26,10 +26,27 @@ export default class PlexSource extends AbstractSource {
 
     constructor(name: any, config: PlexSourceConfig, internal: InternalConfig, type: SourceType = 'plex',emitter: EventEmitter) {
         super(type, name, config, internal, emitter);
-        const {data: {user = [], libraries = [], servers = []} = {}} = config
+        const {
+            data: {
+                user = [],
+                libraries = [],
+                servers = [],
+                options: {
+                    logFilterFailure = 'warn'
+                } = {}
+            } = {},
+        } = config
+
+        if(logFilterFailure !== false && !['debug', 'warn'].includes(logFilterFailure)) {
+            this.logger.warn(`logFilterFailure value of '${logFilterFailure.toString()}' is NOT VALID. Logging will not occur if filters fail. You should fix this.`);
+        }
 
         if (!Array.isArray(user)) {
-            this.users = [user];
+            if(user.trim() === '') {
+                this.users = [];
+            } else {
+                this.users = user.split(',').map(x => x.trim());
+            }
         } else {
             this.users = user;
         }
@@ -106,6 +123,22 @@ export default class PlexSource extends AbstractSource {
         }
     }
 
+    protected logFilterFailure = (str: string, meta?: any) => {
+        const {
+            data: {
+                options: {
+                    logFilterFailure = 'warn'
+                } = {}
+            } = {}
+        } = this.config;
+
+        if(logFilterFailure === false || !['warn','debug'].includes(logFilterFailure)) {
+            return false;
+        }
+
+        this.logger[logFilterFailure](str, meta);
+    }
+
     isValidEvent = (playObj: PlayObject) => {
         const {
             meta: {
@@ -119,20 +152,8 @@ export default class PlexSource extends AbstractSource {
 
         const hint = this.type === 'tautulli' ? ' (Check notification agent json data configuration)' : '';
 
-        if (this.users.length !== 0) {
-            if (user === undefined) {
-                this.logger.warn(`Config defined users but payload contained no user info${hint}`);
-            } else if (!this.users.includes(user.toLocaleLowerCase())) {
-                this.logger.verbose(`Will not scrobble event because author was not an allowed user: ${user}`, {
-                    artists,
-                    track
-                })
-                return false;
-            }
-        }
-
         if (event !== undefined && event !== 'media.scrobble') {
-            this.logger.verbose(`Will not scrobble event because it is not media.scrobble (${event})`, {
+            this.logger.debug(`Will not scrobble event because it is not media.scrobble (${event})`, {
                 artists,
                 track
             })
@@ -140,18 +161,30 @@ export default class PlexSource extends AbstractSource {
         }
 
         if (mediaType !== 'track') {
-            this.logger.verbose(`Will not scrobble event because media type was not a track (${mediaType})`, {
+            this.logger.debug(`Will not scrobble event because media type was not a track (${mediaType})`, {
                 artists,
                 track
             });
             return false;
         }
 
+        if (this.users.length !== 0) {
+            if (user === undefined) {
+                this.logFilterFailure(`Config defined users but payload contained no user info${hint}`);
+            } else if (!this.users.includes(user.toLocaleLowerCase())) {
+                this.logFilterFailure(`Will not scrobble event because author was not an allowed user. Expected: ${this.users.map(x => `'${x}'`).join(' or ')} | Found: '${user.toLocaleLowerCase()}'`, {
+                    artists,
+                    track
+                })
+                return false;
+            }
+        }
+
         if (this.libraries.length !== 0) {
             if (library === undefined) {
-                this.logger.warn(`Config defined libraries but payload contained no library info${hint}`);
+                this.logFilterFailure(`Config defined libraries but payload contained no library info${hint}`);
             } else if (!this.libraries.includes(library.toLocaleLowerCase())) {
-                this.logger.verbose(`Will not scrobble event because library was not on allowed list: ${library}`, {
+                this.logFilterFailure(`Will not scrobble event because library was not an allowed library. Expected: ${this.libraries.map(x => `'${x}'`).join(' or ')} | Found: '${library.toLocaleLowerCase()}'`, {
                     artists,
                     track
                 })
@@ -161,9 +194,9 @@ export default class PlexSource extends AbstractSource {
 
         if (this.servers.length !== 0) {
             if (server === undefined) {
-                this.logger.warn(`Config defined server but payload contained no server info${hint}`);
+                this.logFilterFailure(`Config defined server but payload contained no server info${hint}`);
             } else if (!this.servers.includes(server.toLocaleLowerCase())) {
-                this.logger.verbose(`Will not scrobble event because server was not on allowed list: ${server}`, {
+                this.logFilterFailure(`Will not scrobble event because server was not an allowed server. Expected: ${this.servers.map(x => `'${x}'`).join(' or ')} | Found: '${server.toLocaleLowerCase()}'`, {
                     artists,
                     track
                 })

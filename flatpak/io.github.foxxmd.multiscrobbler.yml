@@ -48,6 +48,7 @@ modules:
 
       - install -Dm644 flatpak/${FLATPAK_ID}.desktop /app/share/applications/${FLATPAK_ID}.desktop
       - install -Dm644 flatpak/icon.png /app/share/icons/hicolor/512x512/apps/${FLATPAK_ID}.png
+      - install -Dm644 assets/icon.svg /app/share/icons/hicolor/scalable/apps/${FLATPAK_ID}.svg
       - install -Dm644 flatpak/${FLATPAK_ID}.metainfo.xml /app/share/metainfo/${FLATPAK_ID}.metainfo.xml
 
       - install -Dm755 ../run.sh /app/bin/multiscrobbler
@@ -56,7 +57,7 @@ modules:
       - type: git
         url: https://github.com/FoxxMD/multi-scrobbler
         tag: 0.4.6
-        commit: 5e905eae1798482dbcef504500d26a028c2e15cb
+        commit: b90ea039245491767baeefc53966b0350016aa4d
         dest: main
       # Wrapper to launch the app
       - type: script

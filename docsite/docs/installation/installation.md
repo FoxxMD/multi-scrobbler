@@ -1,8 +1,13 @@
+---
+sidebar_position: 1
+title: 'Overview'
+---
+
 # Installation
 
 # Local
 
-After installation see [service.md](/docs/service.md) to configure multi-scrobbler to run automatically in the background.
+After installation see [service.md](service.md) to configure multi-scrobbler to run automatically in the background.
 
 ## Nodejs
 
@@ -21,13 +26,13 @@ npm start
 
 * The web UI is served on port `9078`. This can be modified using the `PORT` environmental variable.
 
-#### Using [file-based](/docs/configuration.md#file-based-configuration) configuration
+#### Using [file-based](../configuration/configuration.md#file-based-configuration) configuration
 
 ```shell
 npm start
 ```
 
-#### Using [env-based](/docs/configuration.md#env-based-configuration) configuration
+#### Using [env-based](../configuration/configuration.md#env-based-configuration) configuration
 
 ```shell
 SPOTIFY_CLIENT_ID=yourId SPOTIFY_CLIENT_SECRET=yourSecret MALOJA_URL="http://domain.tld" node src/index.js
@@ -43,7 +48,7 @@ flatpak install flathub io.github.foxxmd.multiscrobbler
 
 ### Usage Examples
 
-#### Using [file-based](/docs/configuration.md#file-based-configuration) configuration
+#### Using [file-based](../configuration/configuration.md#file-based-configuration) configuration
 
 The config directory for multi-scrobbler as a flatpak can be found under `/home/YourUser/.var/app/io.github.foxxmd.multiscrobbler/config`
 
@@ -51,7 +56,7 @@ The config directory for multi-scrobbler as a flatpak can be found under `/home/
 flatpak run io.github.multiscrobbler
 ```
 
-#### Using [env-based](/docs/configuration.md#env-based-configuration) configuration
+#### Using [env-based](../configuration/configuration.md#env-based-configuration) configuration
 
 There are a few [options for running flatpak applications with temporary or permanent environmental variables.](https://ardasevinc.dev/launch-flatpak-apps-with-custom-args-and-environment-variables)
 
@@ -59,15 +64,21 @@ There are a few [options for running flatpak applications with temporary or perm
 flatpak run --env=SPOTIFY_CLIENT_ID=yourId --envSPOTIFY_CLIENT_SECRET=yourSecret --env=MALOJA_URL="http://domain.tld" io.github.foxxmd.multiscrobbler
 ```
 
-# [Docker](https://hub.docker.com/r/foxxmd/multi-scrobbler)
+## Docker
 
-Cross-platform images are built for x86 (Intel/AMD) and ARM (IE Raspberry Pi)
+Cross-platform images are built for x86 (Intel/AMD) and ARM64 (IE Raspberry Pi)
 
+[Dockerhub](https://hub.docker.com/r/foxxmd/multi-scrobbler)
 ```
-foxxmd/multi-scrobbler:latest
+docker.io/foxxmd/multi-scrobbler:latest
 ```
 
-Or use the provided [docker-compose.yml](/docker-compose.yml) after modifying it to fit your configuration.
+[Github Packages](https://github.com/FoxxMD/multi-scrobbler/pkgs/container/multi-scrobbler)
+```
+ghcr.io/foxxmd/multi-scrobbler:latest
+```
+
+Or use the provided [docker-compose.yml](../../../docker-compose.yml) after modifying it to fit your configuration.
 
 Recommended configuration steps for docker or docker-compose usage:
 
@@ -97,16 +108,16 @@ To get the UID and GID for the current user run these commands from a terminal:
 
 ## Docker Usage Examples
 
-### Using [env-based](/docs/configuration.md#env-based-configuration) configuration
+### Using [env-based](../configuration/configuration.md#env-based-configuration) configuration
 
 ```bash
 docker run -e "SPOTIFY_CLIENT_ID=yourId" -e "SPOTIFY_CLIENT_SECRET=yourSecret" -e "MALOJA_URL=http://domain.tld" -e "MALOJA_API_KEY=1234" -e "PUID=1000" -e "PGID=1000" -p 9078:9078 -v /path/on/host/config:/config foxxmd/multi-scrobbler
 ```
 
-### Using [file-based](/docs/configuration.md#file-based-configuration) configuration
+### Using [file-based](../configuration/configuration.md#file-based-configuration) configuration
 
 ```bash
 docker run -e "PUID=1000" -e "PGID=1000" -p 9078:9078 -v /path/on/host/config:/config foxxmd/multi-scrobbler
 ```
 
-See the [docker-compose.yml](/docker-compose.yml) file for how to use with docker-compose.
+See the [docker-compose.yml](../../../docker-compose.yml) file for how to use with docker-compose.

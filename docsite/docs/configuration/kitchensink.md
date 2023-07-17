@@ -1,3 +1,8 @@
+---
+sidebar_position: 3
+title: Kitchen Sink
+---
+
 # Example Config using all Possible Features
 
 Scenario: 
