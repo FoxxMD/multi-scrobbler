@@ -125,7 +125,7 @@ Example directory structure:
 
 `config.json` can also be used to set default behavior for all sources/clients using `sourceDefaults` and `clientDefaults` properties.
 
-See [config.json.example](../../../config/config.json.example) for an annotated example or check out [the kitchen sink example](kitchensink.md).
+See [config.json.example](https://github.com/FoxxMD/multi-scrobbler/blob/master/config/config.json.example) for an annotated example or check out [the kitchen sink example](kitchensink.md).
 
 ### Specific File Configuration
 
@@ -166,7 +166,7 @@ Example directory structure:
 
 </details>
 
-See the [/config](https://github.com/FoxxMD/multi-scrobbler/tree/master/config) directory of this project for examples of each type of config file or reference specific files below.
+See the [/config](https://github.com/FoxxMD/multi-scrobbler/blob/master/config) directory of this project for examples of each type of config file or reference specific files below.
 
 # Source Configurations
 
@@ -185,7 +185,7 @@ Client ID/Secret. Make sure to also whitelist your redirect URI in the applicati
 
 ### File-Based
 
-See [`spotify.json.example`](../../../config/spotify.json.example) or [explore the schema with an example and live editor/validator](https://json-schema.app/view/%23/%23%2Fdefinitions%2FSpotifySourceConfig?url=https%3A%2F%2Fraw.githubusercontent.com%2FFoxxMD%2Fmulti-scrobbler%2Fdevelop%2Fsrc%2Fcommon%2Fschema%2Fsource.json)
+See [`spotify.json.example`](https://github.com/FoxxMD/multi-scrobbler/blob/master/config/spotify.json.example) or [explore the schema with an example and live editor/validator](https://json-schema.app/view/%23/%23%2Fdefinitions%2FSpotifySourceConfig?url=https%3A%2F%2Fraw.githubusercontent.com%2FFoxxMD%2Fmulti-scrobbler%2Fdevelop%2Fsrc%2Fcommon%2Fschema%2Fsource.json)
 
 ## [Plex](https://plex.tv)
 
@@ -199,7 +199,7 @@ Check the [instructions](plex.md) on how to setup a [webhooks](https://support.p
 
 ### File-Based
 
-See [`plex.json.example`](../../../config/plex.json.example) or [explore the schema with an example and live editor/validator](https://json-schema.app/view/%23/%23%2Fdefinitions%2FPlexSourceConfig?url=https%3A%2F%2Fraw.githubusercontent.com%2FFoxxMD%2Fmulti-scrobbler%2Fdevelop%2Fsrc%2Fcommon%2Fschema%2Fsource.json)
+See [`plex.json.example`](https://github.com/FoxxMD/multi-scrobbler/blob/master/config/plex.json.example) or [explore the schema with an example and live editor/validator](https://json-schema.app/view/%23/%23%2Fdefinitions%2FPlexSourceConfig?url=https%3A%2F%2Fraw.githubusercontent.com%2FFoxxMD%2Fmulti-scrobbler%2Fdevelop%2Fsrc%2Fcommon%2Fschema%2Fsource.json)
 
 ## [Tautulli](https://tautulli.com)
 
@@ -213,7 +213,7 @@ Check the [instructions](plex.md) on how to setup a notification agent.
 
 ### File-Based
 
-See [`tautulli.json.example`](../../../config/tautulli.json.example) or [explore the schema with an example and live editor/validator](https://json-schema.app/view/%23/%23%2Fdefinitions%2FTautulliSourceConfig?url=https%3A%2F%2Fraw.githubusercontent.com%2FFoxxMD%2Fmulti-scrobbler%2Fdevelop%2Fsrc%2Fcommon%2Fschema%2Fsource.json)
+See [`tautulli.json.example`](https://github.com/FoxxMD/multi-scrobbler/blob/master/config/tautulli.json.example) or [explore the schema with an example and live editor/validator](https://json-schema.app/view/%23/%23%2Fdefinitions%2FTautulliSourceConfig?url=https%3A%2F%2Fraw.githubusercontent.com%2FFoxxMD%2Fmulti-scrobbler%2Fdevelop%2Fsrc%2Fcommon%2Fschema%2Fsource.json)
 
 ## [Subsonic](http://www.subsonic.org/)
 
@@ -236,7 +236,7 @@ Can use this source for any application that implements the [Subsonic API](http:
 
 ### File-Based
 
-See [`subsonic.json.example`](../../../config/subsonic.json.example) or [explore the schema with an example and live editor/validator](https://json-schema.app/view/%23/%23%2Fdefinitions%2FSubSonicSourceConfig?url=https%3A%2F%2Fraw.githubusercontent.com%2FFoxxMD%2Fmulti-scrobbler%2Fdevelop%2Fsrc%2Fcommon%2Fschema%2Fsource.json)
+See [`subsonic.json.example`](https://github.com/FoxxMD/multi-scrobbler/blob/master/config/subsonic.json.example) or [explore the schema with an example and live editor/validator](https://json-schema.app/view/%23/%23%2Fdefinitions%2FSubSonicSourceConfig?url=https%3A%2F%2Fraw.githubusercontent.com%2FFoxxMD%2Fmulti-scrobbler%2Fdevelop%2Fsrc%2Fcommon%2Fschema%2Fsource.json)
 
 ## [Jellyfin](https://jellyfin.org/)
 
@@ -264,7 +264,7 @@ Must be using Jellyfin 10.7 or greater
 
 ### File-Based
 
-See [`jellyfin.json.example`](../../../config/jellyfin.json.example) or [explore the schema with an example and live editor/validator](https://json-schema.app/view/%23/%23%2Fdefinitions%2FJellySourceConfig?url=https%3A%2F%2Fraw.githubusercontent.com%2FFoxxMD%2Fmulti-scrobbler%2Fdevelop%2Fsrc%2Fcommon%2Fschema%2Fsource.json)
+See [`jellyfin.json.example`](https://github.com/FoxxMD/multi-scrobbler/blob/master/config/jellyfin.json.example) or [explore the schema with an example and live editor/validator](https://json-schema.app/view/%23/%23%2Fdefinitions%2FJellySourceConfig?url=https%3A%2F%2Fraw.githubusercontent.com%2FFoxxMD%2Fmulti-scrobbler%2Fdevelop%2Fsrc%2Fcommon%2Fschema%2Fsource.json)
 
 ## [Last.fm (Source)](https://www.last.fm)
 
@@ -276,7 +276,7 @@ No support for ENV based for Last.fm as a client (only source)
 
 ### File-Based
 
-See [`lastfm.json.example`](../../../config/lastfm.json.example), change `configureAs` to `source`. Or [explore the schema with an example and live editor/validator](https://json-schema.app/view/%23/%23%2Fdefinitions%2FLastfmSourceConfig?url=https%3A%2F%2Fraw.githubusercontent.com%2FFoxxMD%2Fmulti-scrobbler%2Fdevelop%2Fsrc%2Fcommon%2Fschema%2Fsource.json)
+See [`lastfm.json.example`](https://github.com/FoxxMD/multi-scrobbler/blob/master/config/lastfm.json.example), change `configureAs` to `source`. Or [explore the schema with an example and live editor/validator](https://json-schema.app/view/%23/%23%2Fdefinitions%2FLastfmSourceConfig?url=https%3A%2F%2Fraw.githubusercontent.com%2FFoxxMD%2Fmulti-scrobbler%2Fdevelop%2Fsrc%2Fcommon%2Fschema%2Fsource.json)
 
 ## [Listenbrainz (Source)](https://listenbrainz.org)
 
@@ -288,7 +288,7 @@ On your [profile page](https://listenbrainz.org/profile/) find your **User Token
 
 ### File-Based
 
-See [`listenbrainz.json.example`](../../../config/listenbrainz.json.example) or [explore the schema with an example and live editor/validator](https://json-schema.app/view/%23%2Fdefinitions%2FListenBrainzSourceConfig?url=https%3A%2F%2Fraw.githubusercontent.com%2FFoxxMD%2Fmulti-scrobbler%2Fdevelop%2Fsrc%2Fcommon%2Fschema%2Fsource.json)
+See [`listenbrainz.json.example`](https://github.com/FoxxMD/multi-scrobbler/blob/master/config/listenbrainz.json.example) or [explore the schema with an example and live editor/validator](https://json-schema.app/view/%23%2Fdefinitions%2FListenBrainzSourceConfig?url=https%3A%2F%2Fraw.githubusercontent.com%2FFoxxMD%2Fmulti-scrobbler%2Fdevelop%2Fsrc%2Fcommon%2Fschema%2Fsource.json)
 
 **Change `configureAs` to `source`**
 
@@ -320,7 +320,7 @@ After starting multi-scrobbler with credentials in-place open the dashboard (`ht
 
 ### File-Based
 
-See [`deezer.json.example`](../../../config/deezer.json.example) or [explore the schema with an example and live editor/validator](https://json-schema.app/view/%23/%23%2Fdefinitions%2FDeezerSourceConfig?url=https%3A%2F%2Fraw.githubusercontent.com%2FFoxxMD%2Fmulti-scrobbler%2Fdevelop%2Fsrc%2Fcommon%2Fschema%2Fsource.json)
+See [`deezer.json.example`](https://github.com/FoxxMD/multi-scrobbler/blob/master/config/deezer.json.example) or [explore the schema with an example and live editor/validator](https://json-schema.app/view/%23/%23%2Fdefinitions%2FDeezerSourceConfig?url=https%3A%2F%2Fraw.githubusercontent.com%2FFoxxMD%2Fmulti-scrobbler%2Fdevelop%2Fsrc%2Fcommon%2Fschema%2Fsource.json)
 
 ## [Youtube Music](https://music.youtube.com)
 
@@ -346,7 +346,7 @@ NOTES:
 
 ### File-Based
 
-See [`ytmusic.json.example`](../../../config/ytmusic.json.example) or [explore the schema with an example and live editor/validator](https://json-schema.app/view/%23/%23%2Fdefinitions%2FYTMusicSourceConfig?url=https%3A%2F%2Fraw.githubusercontent.com%2FFoxxMD%2Fmulti-scrobbler%2Fdevelop%2Fsrc%2Fcommon%2Fschema%2Fsource.json)
+See [`ytmusic.json.example`](https://github.com/FoxxMD/multi-scrobbler/blob/master/config/ytmusic.json.example) or [explore the schema with an example and live editor/validator](https://json-schema.app/view/%23/%23%2Fdefinitions%2FYTMusicSourceConfig?url=https%3A%2F%2Fraw.githubusercontent.com%2FFoxxMD%2Fmulti-scrobbler%2Fdevelop%2Fsrc%2Fcommon%2Fschema%2Fsource.json)
 
 ## [MPRIS](https://specifications.freedesktop.org/mpris-spec/latest/)
 
@@ -370,7 +370,7 @@ multi-scrobbler can listen to this interface and scrobble tracks played by **any
 
 ### File-Based
 
-See [`mpris.json.example`](../../../config/mpris.json.example) or [explore the schema with an example and live editor/validator](https://json-schema.app/view/%23%2Fdefinitions%2FMPRISSourceConfig?url=https%3A%2F%2Fraw.githubusercontent.com%2FFoxxMD%2Fmulti-scrobbler%2Fdevelop%2Fsrc%2Fcommon%2Fschema%2Fsource.json)
+See [`mpris.json.example`](https://github.com/FoxxMD/multi-scrobbler/blob/master/config/mpris.json.example) or [explore the schema with an example and live editor/validator](https://json-schema.app/view/%23%2Fdefinitions%2FMPRISSourceConfig?url=https%3A%2F%2Fraw.githubusercontent.com%2FFoxxMD%2Fmulti-scrobbler%2Fdevelop%2Fsrc%2Fcommon%2Fschema%2Fsource.json)
 
 ## [Mopidy](https://mopidy.com/)
 
@@ -380,7 +380,7 @@ multi-scrobbler can scrobble tracks played from any Mopidy backend source, regar
 
 ### File-Based
 
-See [`mopidy.json.example`](../../../config/mopidy.json.example) or [explore the schema with an example and live editor/validator](https://json-schema.app/view/%23%2Fdefinitions%2FMopidySourceConfig/%23%2Fdefinitions%2FMopidyData?url=https%3A%2F%2Fraw.githubusercontent.com%2FFoxxMD%2Fmulti-scrobbler%2Fdevelop%2Fsrc%2Fcommon%2Fschema%2Fsource.json)
+See [`mopidy.json.example`](https://github.com/FoxxMD/multi-scrobbler/blob/master/config/mopidy.json.example) or [explore the schema with an example and live editor/validator](https://json-schema.app/view/%23%2Fdefinitions%2FMopidySourceConfig/%23%2Fdefinitions%2FMopidyData?url=https%3A%2F%2Fraw.githubusercontent.com%2FFoxxMD%2Fmulti-scrobbler%2Fdevelop%2Fsrc%2Fcommon%2Fschema%2Fsource.json)
 
 Configuration Options:
 
@@ -537,7 +537,7 @@ MS transforms this to: `http://mydomain.com:80/jriverReverse/MCWS/v1/`
 
 ### File-Based
 
-See [`jriver.json.example`](../../../config/jriver.json.example) or [explore the schema with an example and live editor/validator](https://json-schema.app/view/%23%2Fdefinitions%2FJRiverSourceConfig/%23%2Fdefinitions%2FJRiverData?url=https%3A%2F%2Fraw.githubusercontent.com%2FFoxxMD%2Fmulti-scrobbler%2Fdevelop%2Fsrc%2Fcommon%2Fschema%2Fsource.json)
+See [`jriver.json.example`](https://github.com/FoxxMD/multi-scrobbler/blob/master/config/jriver.json.example) or [explore the schema with an example and live editor/validator](https://json-schema.app/view/%23%2Fdefinitions%2FJRiverSourceConfig/%23%2Fdefinitions%2FJRiverData?url=https%3A%2F%2Fraw.githubusercontent.com%2FFoxxMD%2Fmulti-scrobbler%2Fdevelop%2Fsrc%2Fcommon%2Fschema%2Fsource.json)
 
 ## [Kodi](https://kodi.tv/)
 
@@ -605,7 +605,7 @@ MS transforms this to: `http://mydomain.com:80/kodiReverse/jsonrpc`
 
 ### File-Based
 
-See [`kodi.json.example`](../../../config/kodi.json.example) or [explore the schema with an example and live editor/validator](https://json-schema.app/view/%23%2Fdefinitions%2FKodiSourceConfig/%23%2Fdefinitions%2FKodiData?url=https%3A%2F%2Fraw.githubusercontent.com%2FFoxxMD%2Fmulti-scrobbler%2Fdevelop%2Fsrc%2Fcommon%2Fschema%2Fsource.json)
+See [`kodi.json.example`](https://github.com/FoxxMD/multi-scrobbler/blob/master/config/kodi.json.example) or [explore the schema with an example and live editor/validator](https://json-schema.app/view/%23%2Fdefinitions%2FKodiSourceConfig/%23%2Fdefinitions%2FKodiData?url=https%3A%2F%2Fraw.githubusercontent.com%2FFoxxMD%2Fmulti-scrobbler%2Fdevelop%2Fsrc%2Fcommon%2Fschema%2Fsource.json)
 
 # Client Configurations
 
@@ -620,7 +620,7 @@ See [`kodi.json.example`](../../../config/kodi.json.example) or [explore the sch
 
 ### File-Based
 
-See [`maloja.json.example`](../../../config/maloja.json.example) or [explore the schema with an example and live editor/validator](https://json-schema.app/view/%23/%23%2Fdefinitions%2FMalojaClientConfig?url=https%3A%2F%2Fraw.githubusercontent.com%2FFoxxMD%2Fmulti-scrobbler%2Fdevelop%2Fsrc%2Fcommon%2Fschema%2Fclient.json)
+See [`maloja.json.example`](https://github.com/FoxxMD/multi-scrobbler/blob/master/config/maloja.json.example) or [explore the schema with an example and live editor/validator](https://json-schema.app/view/%23/%23%2Fdefinitions%2FMalojaClientConfig?url=https%3A%2F%2Fraw.githubusercontent.com%2FFoxxMD%2Fmulti-scrobbler%2Fdevelop%2Fsrc%2Fcommon%2Fschema%2Fclient.json)
 
 ## [Last.fm](https://www.last.fm)
 
@@ -643,7 +643,7 @@ or replace `localhost:9078` with your own base URL
 
 ### File-Based
 
-See [`lastfm.json.example`](../../../config/lastfm.json.example) or [explore the schema with an example and live editor/validator](https://json-schema.app/view/%23/%23%2Fdefinitions%2FLastfmClientConfig?url=https%3A%2F%2Fraw.githubusercontent.com%2FFoxxMD%2Fmulti-scrobbler%2Fdevelop%2Fsrc%2Fcommon%2Fschema%2Fclient.json)
+See [`lastfm.json.example`](https://github.com/FoxxMD/multi-scrobbler/blob/master/config/lastfm.json.example) or [explore the schema with an example and live editor/validator](https://json-schema.app/view/%23/%23%2Fdefinitions%2FLastfmClientConfig?url=https%3A%2F%2Fraw.githubusercontent.com%2FFoxxMD%2Fmulti-scrobbler%2Fdevelop%2Fsrc%2Fcommon%2Fschema%2Fclient.json)
 
 ## [Listenbrainz](https://listenbrainz.org)
 
@@ -662,7 +662,7 @@ On your [profile page](https://listenbrainz.org/profile/) find your **User Token
 
 ### File-Based
 
-See [`listenbrainz.json.example`](../../../config/listenbrainz.json.example) or [explore the schema with an example and live editor/validator](https://json-schema.app/view/%23%2Fdefinitions%2FListenBrainzClientConfig?url=https%3A%2F%2Fraw.githubusercontent.com%2FFoxxMD%2Fmulti-scrobbler%2Fdevelop%2Fsrc%2Fcommon%2Fschema%2Fclient.json)
+See [`listenbrainz.json.example`](https://github.com/FoxxMD/multi-scrobbler/blob/master/config/listenbrainz.json.example) or [explore the schema with an example and live editor/validator](https://json-schema.app/view/%23%2Fdefinitions%2FListenBrainzClientConfig?url=https%3A%2F%2Fraw.githubusercontent.com%2FFoxxMD%2Fmulti-scrobbler%2Fdevelop%2Fsrc%2Fcommon%2Fschema%2Fclient.json)
 
 # Monitoring
 
@@ -679,13 +679,13 @@ Webhooks will **push** a notification to your configured servers on these events
 
 Webhooks are configured in the main [config.json](#all-in-one-file-configuration) file under the `webhook` top-level property. Multiple webhooks may be configured for each webhook type. EX:
 
-```json
+```json5
 {
   "sources": [
-    ...
+    //...
   ],
   "clients": [
-    ...
+    //...
   ],
   "webhooks": [
     {
@@ -697,14 +697,14 @@ Webhooks are configured in the main [config.json](#all-in-one-file-configuration
     {
       "name": "SecondGotifyServer",
       "type": "gotify",
-      ...
+      //...
     },
     {
       "name": "NtfyServerOne",
       "type": "ntfy",
-      ...
+      //...
     },
-    ...
+    //...
   ]
 }
 ```
