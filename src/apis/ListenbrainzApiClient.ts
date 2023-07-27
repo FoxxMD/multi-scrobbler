@@ -3,6 +3,7 @@ import request, {Request} from 'superagent';
 import {ListenBrainzClientData} from "../common/infrastructure/config/client/listenbrainz.js";
 import {FormatPlayObjectOptions, PlayObject} from "../common/infrastructure/Atomic.js";
 import dayjs from "dayjs";
+import {normalizeStr, unique, uniqueNormalizedStrArr} from "../utils.js";
 
 
 export interface ArtistMBIDMapping {
@@ -76,6 +77,7 @@ export interface TrackResponse extends MinimumTrack {
     duration: number
     additional_info: AdditionalTrackInfoResponse
     mbid_mapping: {
+        recording_name?: string
         artist_mbids?: string[]
         artists?: ArtistMBIDMapping[]
         caa_id?: number
@@ -230,6 +232,7 @@ export class ListenbrainzApiClient extends AbstractApiClient {
                     duration_ms: aDurationMs,
                 } = {},
                 mbid_mapping: {
+                    recording_name,
                     artists: artistMappings = [],
                     recording_mbid: mRecordingMbid
                 } = {}
@@ -244,9 +247,38 @@ export class ListenbrainzApiClient extends AbstractApiClient {
         }
 
         let artists: string[] = [artist_name];
-        if (artistMappings.length > 0) {
-            const secondaryArtists = artistMappings.filter(x => x.artist_credit_name !== artist_name);
-            artists = artists.concat(secondaryArtists.map(x => x.artist_credit_name));
+        const mappedArtists = artistMappings.length > 0 ? artistMappings.map(x => x.artist_credit_name) : [];
+
+        if (mappedArtists.length > 0 && recording_name !== undefined) {
+
+            /* LB doesn't return a confidence level when it matches a listen to a mbid_mapping
+             *
+             *...it definitely exists because it can be seen by going to your listen history https://listenbrainz.org/user/MYUSER
+             * -- matches with little confidence have a muted confidence and those that are confident are bolded,
+             * but this information is not included in the listen payload :(
+             *
+             * so we need to do a crude heuristic here to determine if the mbid_mapping actually matches what our listen recorded
+             * and if it doesn't then we drop mapping artist
+             * */
+
+            // first verify track name matches mapped track name
+            if(normalizeStr(track_name) === normalizeStr(recording_name)) {
+
+                const normalizedRecordedArtist = normalizeStr(artist_name);
+
+                // next verify that one of the mapped artists matches our recorded artist name
+                const mappedMatchedArtist = mappedArtists.find(x => normalizeStr(x) === normalizedRecordedArtist);
+                if(mappedMatchedArtist !== undefined) {
+                    // we'll now use the mapped artist value instead of our recorded value since its most likely "more correct" in capitalization/accents/etc.
+                    artists = [mappedMatchedArtist];
+
+                    // finally, add any secondary artists
+                    const secondaryArtists = mappedArtists.filter(x => x !== mappedMatchedArtist);
+                    if(secondaryArtists.length > 0) {
+                        artists = artists.concat(secondaryArtists);
+                    }
+                }
+            }
         }
 
         return {

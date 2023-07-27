@@ -193,6 +193,26 @@ export const setIntersection = (setA: any, setB: any) => {
     return _intersection
 }
 
+export const unique = <T>(arr: T[]): T[] => {
+    return Array.from(new Set(arr))
+}
+
+export const PUNCTUATION_WHITESPACE_REGEX = new RegExp(/[^\w\d]/g);
+export const uniqueNormalizedStrArr = (arr: string[]): string[] => {
+    return arr.reduce((acc: string[], curr) => {
+        const normalizedCurr = normalizeStr(curr)
+        if (!acc.some(x => normalizeStr(x) === normalizedCurr)) {
+            return acc.concat(curr);
+        }
+        return acc;
+    }, []);
+}
+
+// https://stackoverflow.com/a/37511463/1469797
+export const normalizeStr = (str: string): string => {
+    return str.normalize('NFD').replace(/[\u0300-\u036f]/g, "").replace(PUNCTUATION_WHITESPACE_REGEX, '').toLocaleLowerCase();
+}
+
 export const returnDuplicateStrings = (arr: any) => {
     const alreadySeen: any = [];
     const dupes: any = [];
