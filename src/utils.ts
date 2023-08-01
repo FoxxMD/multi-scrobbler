@@ -8,7 +8,7 @@ import Ajv, {Schema} from 'ajv';
 import {
     DEFAULT_SCROBBLE_DURATION_THRESHOLD,
     lowGranularitySources,
-    PlayObject, ProgressAwarePlayObject,
+    PlayObject, ProgressAwarePlayObject, RegExResult,
     RemoteIdentityParts, ScrobbleThresholdResult,
     TrackStringOptions
 } from "./common/infrastructure/Atomic.js";
@@ -700,4 +700,79 @@ export const pollingBackoff = (attempt: number, scaleFactor: number = 1): number
 
     // first attempt delay is never enough so always add + 1
     return Math.round(backoffStrat(attempt + 1) / 1000);
+}
+
+export const SECONDARY_ARTISTS_SECTION_REGEX = new RegExp(/^(?<primary>[^(\[]*)?(?<secondarySection>[(\[]?(?<joiner>ft\.?|feat\.?|featuring|vs\.?) (?<secondaryArtists>[^)\]]*)(?:[)\]]|\s*)$)/i);
+// export const SECONDARY_ARTISTS_REGEX = new RegExp(//ig);
+export const parseCredits = (str: string) => {
+    let primary: string | undefined;
+    let secondary: string[] = [];
+    const results = parseRegexSingleOrFail(SECONDARY_ARTISTS_SECTION_REGEX, str);
+    if(results !== undefined) {
+        primary = results.named.primary !== undefined ? results.named.primary.trim() : undefined;
+        secondary = parseStringList(results.named.secondaryArtists as string)
+        return {
+            primary,
+            secondary
+        };
+    }
+    return undefined;
+}
+
+export const parseStringList = (str: string, delimiters: string[] = [',', '&', '/', '\\']): string[] => {
+    return delimiters.reduce((acc: string[], curr: string) => {
+        const explodedStrings = acc.map(x => x.split(curr));
+        return explodedStrings.flat(1);
+    }, [str]).map(x => x.trim());
+}
+
+export const parseRegex = (reg: RegExp, val: string): RegExResult[] | undefined => {
+
+    if (reg.global) {
+        const g = Array.from(val.matchAll(reg));
+        if (g.length === 0) {
+            return undefined;
+        }
+        return g.map(x => {
+            return {
+                match: x[0],
+                index: x.index,
+                groups: x.slice(1),
+                named: x.groups || {},
+            } as RegExResult;
+        });
+    }
+
+    const m = val.match(reg)
+    if (m === null) {
+        return undefined;
+    }
+    return [{
+        match: m[0],
+        index: m.index as number,
+        groups: m.slice(1),
+        named: m.groups || {}
+    }];
+}
+
+export const parseRegexSingleOrFail = (reg: RegExp, val: string): RegExResult | undefined => {
+    const results = parseRegex(reg, val);
+    if (results !== undefined) {
+        if (results.length > 1) {
+            throw new ErrorWithCause(`Expected Regex to match once but got ${results.length} results. Either Regex must NOT be global (using 'g' flag) or parsed value must only match regex once. Given: ${val} || Regex: ${reg.toString()}`);
+        }
+        return results[0];
+    }
+    return undefined;
+}
+
+export const containsDelimiters = (str: string) => {
+    return null !== str.match(/[,&\/\\]+/i);
+}
+
+export const intersect = (a: Array<any>, b: Array<any>) => {
+    const setA = new Set(a);
+    const setB = new Set(b);
+    const intersection = new Set([...setA].filter(x => setB.has(x)));
+    return Array.from(intersection);
 }

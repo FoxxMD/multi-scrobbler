@@ -3,7 +3,14 @@ import request, {Request} from 'superagent';
 import {ListenBrainzClientData} from "../common/infrastructure/config/client/listenbrainz.js";
 import {FormatPlayObjectOptions, PlayObject} from "../common/infrastructure/Atomic.js";
 import dayjs from "dayjs";
-import {normalizeStr, unique, uniqueNormalizedStrArr} from "../utils.js";
+import {
+    containsDelimiters,
+    normalizeStr,
+    parseCredits,
+    parseStringList,
+    unique,
+    uniqueNormalizedStrArr
+} from "../utils.js";
 
 
 export interface ArtistMBIDMapping {
@@ -246,7 +253,26 @@ export class ListenbrainzApiClient extends AbstractApiClient {
             dur = Math.round(aDurationMs / 1000);
         }
 
+        let normalTrackName = track_name;
         let artists: string[] = [artist_name];
+        let primaryArtist = artist_name;
+        // try to normalize user-submitted artists
+        const parsedUserArtists = parseCredits(artist_name);
+        if(parsedUserArtists !== undefined) {
+            if(parsedUserArtists.primary !== undefined) {
+                primaryArtist = parsedUserArtists.primary;
+                artists.push(parsedUserArtists.primary);
+            }
+            artists = artists.concat(parsedUserArtists.secondary);
+        }
+        const parsedTrackArtists = parseCredits(track_name);
+        if(parsedTrackArtists !== undefined) {
+            // if we found "ft. something" in track string then we now have a "real" track name and more artists
+            normalTrackName = parsedTrackArtists.primary;
+            artists = artists.concat(parsedTrackArtists.secondary)
+        }
+        artists = uniqueNormalizedStrArr(artists);
+
         const mappedArtists = artistMappings.length > 0 ? artistMappings.map(x => x.artist_credit_name) : [];
 
         if (mappedArtists.length > 0 && recording_name !== undefined) {
@@ -261,10 +287,15 @@ export class ListenbrainzApiClient extends AbstractApiClient {
              * and if it doesn't then we drop mapping artist
              * */
 
-            // first verify track name matches mapped track name
-            if(normalizeStr(track_name) === normalizeStr(recording_name)) {
+            // if(!mappedArtists.some(x => containsDelimiters(x))) {
+            //     // we can probably break down submitted artists even more since we can be reasonably sure they shouldn't delims?
+            //     artists = uniqueNormalizedStrArr(artists.map(x => parseStringList(x)).flat(1));
+            // }
 
-                const normalizedRecordedArtist = normalizeStr(artist_name);
+            // first verify track name matches mapped track name
+            if(normalizeStr(normalTrackName) === normalizeStr(recording_name)) {
+
+                const normalizedRecordedArtist = normalizeStr(artists[0]); // normalizeStr(artist_name);
 
                 // next verify that one of the mapped artists matches our recorded artist name
                 const mappedMatchedArtist = mappedArtists.find(x => normalizeStr(x) === normalizedRecordedArtist);
@@ -284,7 +315,7 @@ export class ListenbrainzApiClient extends AbstractApiClient {
         return {
             data: {
                 playDate: dayjs.unix(listened_at),
-                track: track_name,
+                track: normalTrackName,
                 artists: artists,
                 album: release_name,
                 duration: dur

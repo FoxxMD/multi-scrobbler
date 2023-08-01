@@ -211,3 +211,14 @@ export interface ScrobbleThresholdResult {
     }
 
 }
+
+export interface RegExResult {
+    match: string,
+    groups: string[],
+    index: number
+    named: NamedGroup
+}
+
+export interface NamedGroup {
+    [name: string]: any
+}
