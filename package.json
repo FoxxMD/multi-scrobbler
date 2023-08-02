@@ -73,7 +73,7 @@
     "winston-null": "^2.0.0",
     "winston-transport": "^4.4.0",
     "xml2js": "^0.4.23",
-    "youtube-music-ts-api": "^1.4.1"
+    "youtube-music-ts-api": "github:FoxxMD/youtube-music-ts-api#libraryHistoryImprovements-dist"
   },
   "devDependencies": {
     "@tsconfig/node18": "^1.0.1",
@@ -90,9 +90,9 @@
     "ts-essentials": "^9.1.2",
     "ts-node": "^10.7.0",
     "tsconfig-paths": "^3.13.0",
+    "typedoc": "^0.23.28",
     "typescript": "^4.9.5",
-    "typescript-json-schema": "~0.55",
-    "typedoc": "^0.23.28"
+    "typescript-json-schema": "~0.55"
   },
   "overrides": {
     "spotify-web-api-node": {
