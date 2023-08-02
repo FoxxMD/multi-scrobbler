@@ -4,7 +4,7 @@ import {ListenBrainzClientData} from "../common/infrastructure/config/client/lis
 import {FormatPlayObjectOptions, PlayObject} from "../common/infrastructure/Atomic.js";
 import dayjs from "dayjs";
 import {
-    containsDelimiters,
+    containsDelimiters, findDelimiters,
     normalizeStr,
     parseCredits,
     parseStringList,
@@ -253,27 +253,38 @@ export class ListenbrainzApiClient extends AbstractApiClient {
             dur = Math.round(aDurationMs / 1000);
         }
 
+        const mappedArtists = artistMappings.length > 0 ? artistMappings.map(x => x.artist_credit_name) : [];
+
+        // when parsing artists from title/artist submitted values we want to ignore any delimiters that are found in the "official" mapped artists from LZ
+        // so we don't accidentally split an artist that has a delim in their name
+        let ignoreDelims: string[] | undefined;
+        if(mappedArtists.length > 0) {
+            const found = unique(mappedArtists.reduce((acc, curr) => {
+                const found = findDelimiters(curr) ?? [];
+                return acc.concat(found);
+            }, []));
+            if(found.length > 0) {
+                ignoreDelims = found;
+            }
+        }
+
         let normalTrackName = track_name;
         let artists: string[] = [artist_name];
-        let primaryArtist = artist_name;
         // try to normalize user-submitted artists
-        const parsedUserArtists = parseCredits(artist_name);
+        const parsedUserArtists = parseCredits(artist_name, ignoreDelims);
         if(parsedUserArtists !== undefined) {
             if(parsedUserArtists.primary !== undefined) {
-                primaryArtist = parsedUserArtists.primary;
                 artists.push(parsedUserArtists.primary);
             }
             artists = artists.concat(parsedUserArtists.secondary);
         }
-        const parsedTrackArtists = parseCredits(track_name);
+        const parsedTrackArtists = parseCredits(track_name, ignoreDelims);
         if(parsedTrackArtists !== undefined) {
             // if we found "ft. something" in track string then we now have a "real" track name and more artists
             normalTrackName = parsedTrackArtists.primary;
             artists = artists.concat(parsedTrackArtists.secondary)
         }
         artists = uniqueNormalizedStrArr(artists);
-
-        const mappedArtists = artistMappings.length > 0 ? artistMappings.map(x => x.artist_credit_name) : [];
 
         if (mappedArtists.length > 0 && recording_name !== undefined) {
 
@@ -287,15 +298,10 @@ export class ListenbrainzApiClient extends AbstractApiClient {
              * and if it doesn't then we drop mapping artist
              * */
 
-            // if(!mappedArtists.some(x => containsDelimiters(x))) {
-            //     // we can probably break down submitted artists even more since we can be reasonably sure they shouldn't delims?
-            //     artists = uniqueNormalizedStrArr(artists.map(x => parseStringList(x)).flat(1));
-            // }
-
             // first verify track name matches mapped track name
             if(normalizeStr(normalTrackName) === normalizeStr(recording_name)) {
 
-                const normalizedRecordedArtist = normalizeStr(artists[0]); // normalizeStr(artist_name);
+                const normalizedRecordedArtist = normalizeStr(artists[0]);
 
                 // next verify that one of the mapped artists matches our recorded artist name
                 const mappedMatchedArtist = mappedArtists.find(x => normalizeStr(x) === normalizedRecordedArtist);

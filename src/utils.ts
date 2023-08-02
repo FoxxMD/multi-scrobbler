@@ -704,13 +704,19 @@ export const pollingBackoff = (attempt: number, scaleFactor: number = 1): number
 
 export const SECONDARY_ARTISTS_SECTION_REGEX = new RegExp(/^(?<primary>[^(\[]*)?(?<secondarySection>[(\[]?(?<joiner>ft\.?|feat\.?|featuring|vs\.?) (?<secondaryArtists>[^)\]]*)(?:[)\]]|\s*)$)/i);
 // export const SECONDARY_ARTISTS_REGEX = new RegExp(//ig);
-export const parseCredits = (str: string) => {
+export const parseCredits = (str: string, ignoreDelimiters?: boolean | string[]) => {
     let primary: string | undefined;
     let secondary: string[] = [];
     const results = parseRegexSingleOrFail(SECONDARY_ARTISTS_SECTION_REGEX, str);
     if(results !== undefined) {
         primary = results.named.primary !== undefined ? results.named.primary.trim() : undefined;
-        secondary = parseStringList(results.named.secondaryArtists as string)
+        let delims: string[] | undefined;
+        if(Array.isArray(ignoreDelimiters)) {
+            delims = ignoreDelimiters;
+        } else if(ignoreDelimiters === true) {
+            delims = [];
+        }
+        secondary = parseStringList(results.named.secondaryArtists as string, delims)
         return {
             primary,
             secondary
@@ -720,6 +726,9 @@ export const parseCredits = (str: string) => {
 }
 
 export const parseStringList = (str: string, delimiters: string[] = [',', '&', '/', '\\']): string[] => {
+    if(delimiters.length === 0) {
+        return [str];
+    }
     return delimiters.reduce((acc: string[], curr: string) => {
         const explodedStrings = acc.map(x => x.split(curr));
         return explodedStrings.flat(1);
@@ -768,6 +777,19 @@ export const parseRegexSingleOrFail = (reg: RegExp, val: string): RegExResult | 
 
 export const containsDelimiters = (str: string) => {
     return null !== str.match(/[,&\/\\]+/i);
+}
+
+export const findDelimiters = (str: string) => {
+    const found: string[] = [];
+    for(const d of [',','&','\/','\\']) {
+        if(str.indexOf(d) !== -1) {
+            found.push(d);
+        }
+    }
+    if(found.length === 0) {
+        return undefined;
+    }
+    return found;
 }
 
 export const intersect = (a: Array<any>, b: Array<any>) => {
