@@ -15,3 +15,5 @@ config/*.bak
 .flatpak-builder
 flatpak/generated-sources.json
 flatpak/.flatpak-builder
+docsite/build
+docsite/node_modules
