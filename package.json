@@ -6,14 +6,17 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "build": "tsc",
-    "start": "node src/index.js",
+    "start": "concurrently -c \"auto\" --names \"server,client\" \"npm:server\" \"npm:client\"",
+    "server": "node src/index.js",
+    "client": "node start-client.js",
     "schema": "npm run -s schema-aio & npm run -s schema-source & npm run -s schema-client & npm run -s schema-aiosource & npm run -s schema-aioclient",
     "schema-client": "typescript-json-schema tsconfig.json ClientConfig --out src/common/schema/client.json --required --titles --tsNodeRegister --refs --validationKeywords deprecationMessage",
     "schema-source": "typescript-json-schema tsconfig.json SourceConfig --out src/common/schema/source.json --required --titles --tsNodeRegister --refs --validationKeywords deprecationMessage",
     "schema-aio": "typescript-json-schema tsconfig.json AIOConfig --out src/common/schema/aio.json --required --titles --tsNodeRegister --refs --validationKeywords deprecationMessage",
     "schema-aiosource": "typescript-json-schema tsconfig.json AIOSourceConfig --out src/common/schema/aio-source.json --titles --required --tsNodeRegister --refs --validationKeywords deprecationMessage",
     "schema-aioclient": "typescript-json-schema tsconfig.json AIOClientConfig --out src/common/schema/aio-client.json --titles --required --tsNodeRegister --refs --validationKeywords deprecationMessage",
-    "typedoc": "typedoc"
+    "typedoc": "typedoc",
+    "postinstall": "patch-package"
   },
   "exports": {
     ".": {
@@ -35,6 +38,10 @@
     "url": "https://github.com/FoxxMD/multi-scrobbler/issues"
   },
   "homepage": "https://github.com/FoxxMD/multi-scrobbler#readme",
+  "private": true,
+  "workspaces": [
+    "web"
+  ],
   "dependencies": {
     "@awaitjs/express": "^0.6.3",
     "@foxxmd/winston": "3.3.31",
@@ -43,8 +50,9 @@
     "body-parser": "^1.19.0",
     "compare-versions": "^4.1.2",
     "concat-stream": "^2.0.0",
+    "concurrently": "^8.2.0",
     "dayjs": "^1.10.4",
-    "dbus-next": "^0.10.2",
+    "dbus-next": "0.10.2",
     "ejs": "^3.1.6",
     "es6-error": "^4.1.1",
     "express": "^4.17.1",
@@ -58,7 +66,7 @@
     "lastfm-node-client": "^2.2.0",
     "mopidy": "^1.3.0",
     "normalize-url": "^6.1.0",
-    "ntfy": "^1.0.5",
+    "ntfy": "1.0.5",
     "p-event": "^4.2.0",
     "passport": "^0.6.0",
     "passport-deezer": "^0.2.0",
@@ -87,6 +95,7 @@
     "@types/superagent": "^4.1.16",
     "@types/triple-beam": "^1.3.2",
     "@types/xml2js": "^0.4.11",
+    "patch-package": "^8.0.0",
     "ts-essentials": "^9.1.2",
     "ts-node": "^10.7.0",
     "tsconfig-paths": "^3.13.0",

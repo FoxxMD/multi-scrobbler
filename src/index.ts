@@ -49,7 +49,7 @@ dayjs.extend(duration);
 const app = addAsync(express());
 const router = Router();
 
-let envPort = process.env.PORT ?? 9078;
+let envPort = process.env.PORT ?? 9079;
 
 (async function () {
 
@@ -161,7 +161,7 @@ const configDir = process.env.CONFIG_DIR || path.resolve(projectDir, `./config`)
             passport.use(`deezer-${d.name}`, d.generatePassportStrategy());
         }
 
-        app.getAsync('/', async function (req, res) {
+        app.getAsync('/dashboard', async function (req, res) {
             let slicedLog = output.filter(x => isLogLineMinLevel(x, logConfig.level)).slice(0, logConfig.limit + 1).map(x => formatLogToHtml(x[MESSAGE]));
             if (logConfig.sort === 'ascending') {
                 slicedLog.reverse();
