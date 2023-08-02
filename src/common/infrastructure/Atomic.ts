@@ -2,6 +2,8 @@ import {Dayjs} from "dayjs";
 import {FixedSizeList} from 'fixed-size-list';
 import {MESSAGE} from 'triple-beam';
 import {Logger} from '@foxxmd/winston';
+import {Request, Response} from "express";
+import {NextFunction, ParamsDictionary, Query} from "express-serve-static-core";
 
 export type SourceType = 'spotify' | 'plex' | 'tautulli' | 'subsonic' | 'jellyfin' | 'lastfm' | 'deezer' | 'ytmusic' | 'mpris' | 'mopidy' | 'listenbrainz' | 'jriver' | 'kodi';
 export const sourceTypes: SourceType[] = ['spotify', 'plex', 'tautulli', 'subsonic', 'jellyfin', 'lastfm', 'deezer', 'ytmusic', 'mpris', 'mopidy', 'listenbrainz', 'jriver', 'kodi'];
@@ -222,3 +224,7 @@ export interface RegExResult {
 export interface NamedGroup {
     [name: string]: any
 }
+
+export type ExpressRequest = Request<ParamsDictionary, any, any, Query, Record<string, any>>;
+export type ExpressResponse = Response<any, Record<string, any>>;
+export type ExpressHandler = (req: ExpressRequest, res: ExpressResponse, next: NextFunction) => Promise<void | Response<any, Record<string, any>>>

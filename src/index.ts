@@ -1,5 +1,5 @@
 import {addAsync, Router} from '@awaitjs/express';
-import express from 'express';
+import express, {Request, Response} from 'express';
 import bodyParser from 'body-parser';
 import {Logger} from '@foxxmd/winston';
 import dayjs from 'dayjs';
@@ -30,7 +30,13 @@ import LastfmSource from "./sources/LastfmSource.js";
 import LastfmScrobbler from "./clients/LastfmScrobbler.js";
 import DeezerSource from "./sources/DeezerSource.js";
 import AbstractSource from "./sources/AbstractSource.js";
-import {LogInfo, LogLevel, PlayObject, TrackStringOptions} from "./common/infrastructure/Atomic.js";
+import {
+    ExpressHandler,
+    LogInfo,
+    LogLevel,
+    PlayObject,
+    TrackStringOptions
+} from "./common/infrastructure/Atomic.js";
 import SpotifySource from "./sources/SpotifySource.js";
 import {JellyfinNotifier} from "./sources/ingressNotifiers/JellyfinNotifier.js";
 import {PlexNotifier} from "./sources/ingressNotifiers/PlexNotifier.js";
@@ -241,7 +247,7 @@ const configDir = process.env.CONFIG_DIR || path.resolve(projectDir, `./config`)
         })
 
         const tauIngress = new TautulliNotifier();
-        app.postAsync('/tautulli', async function(this: any, req, res) {
+        const tautulliIngressRoute: ExpressHandler = async function(this: any, req, res) {
             tauIngress.trackIngress(req, false);
 
             const payload = TautulliSource.formatPlayObj(req, {newFromSource: true});
@@ -270,19 +276,23 @@ const configDir = process.env.CONFIG_DIR || path.resolve(projectDir, `./config`)
             }
 
             res.send('OK');
+        };
+
+        app.postAsync('/tautulli', async function(req, res)  {
+            res.redirect(307, 'api/plex/tautulli');
         });
+        app.postAsync('/api/tautulli/ingress', tautulliIngressRoute);
 
         const plexMiddle = plexRequestMiddle();
         const plexLog = logger.child({labels: ['Plex Request']}, mergeArr);
         const plexIngress = new PlexNotifier();
-        app.postAsync('/plex',
-            async function (req, res, next) {
+        const plexIngressMiddle: ExpressHandler = async function (req, res, next) {
                 // track request before parsing body to ensure we at least log that something is happening
                 // (in the event body parsing does not work or request is not POST/PATCH)
                 plexIngress.trackIngress(req, true);
                 next();
-            },
-            plexMiddle, async function (req, res) {
+            };
+        const plexIngressRoute: ExpressHandler = async function (req, res) {
             plexIngress.trackIngress(req, false);
 
             const { payload } = req as any;
@@ -300,12 +310,20 @@ const configDir = process.env.CONFIG_DIR || path.resolve(projectDir, `./config`)
             }
 
             res.send('OK');
+        };
+        app.postAsync('/plex', async function(req, res)  {
+            res.redirect(307, 'api/plex/ingress');
         });
+        app.postAsync('/api/plex/ingress', plexIngressMiddle, plexMiddle, plexIngressRoute);
+
 
         // webhook plugin sends json with context type text/utf-8 so we need to parse it differently
         const jellyfinJsonParser = bodyParser.json({type: 'text/*'});
         const jellyIngress = new JellyfinNotifier();
-        app.postAsync('/jellyfin',
+        app.postAsync('/jellyfin', async function(req, res)  {
+           res.redirect(307, 'api/jellyfin/ingress');
+        });
+        app.postAsync('/api/jellyfin/ingress',
             async function (req, res, next) {
                 // track request before parsing body to ensure we at least log that something is happening
                 // (in the event body parsing does not work or request is not POST/PATCH)
@@ -342,8 +360,8 @@ const configDir = process.env.CONFIG_DIR || path.resolve(projectDir, `./config`)
             res.send('OK');
         });
 
-        app.use('/client/auth', clientCheckMiddle);
-        app.getAsync('/client/auth', async function (req, res) {
+        app.use('/api/client/auth', clientCheckMiddle);
+        app.getAsync('/api/client/auth', async function (req, res) {
             const {
                 scrobbleClient,
             } = req as any;
@@ -357,8 +375,8 @@ const configDir = process.env.CONFIG_DIR || path.resolve(projectDir, `./config`)
             }
         });
 
-        app.use('/source/auth', sourceCheckMiddle);
-        app.getAsync('/source/auth', async function (req, res, next) {
+        app.use('/api/source/auth', sourceCheckMiddle);
+        app.getAsync('/api/source/auth', async function (req, res, next) {
             const {
                 // @ts-expect-error TS(2339): Property 'scrobbleSource' does not exist on type '... Remove this comment to see the full error message
                 scrobbleSource: source,
@@ -387,8 +405,8 @@ const configDir = process.env.CONFIG_DIR || path.resolve(projectDir, `./config`)
             }
         });
 
-        app.use('/poll', sourceCheckMiddle);
-        app.getAsync('/poll', async function (req, res) {
+        app.use('/api/poll', sourceCheckMiddle);
+        app.getAsync('/api/poll', async function (req, res) {
             const {
                 // @ts-expect-error TS(2339): Property 'scrobbleSource' does not exist on type '... Remove this comment to see the full error message
                 scrobbleSource: source,
@@ -402,8 +420,8 @@ const configDir = process.env.CONFIG_DIR || path.resolve(projectDir, `./config`)
             res.send('OK');
         });
 
-        app.use('/recent', sourceCheckMiddle);
-        app.getAsync('/recent', async function (req, res) {
+        app.use('/api/recent', sourceCheckMiddle);
+        app.getAsync('/api/recent', async function (req, res) {
             const {
                 // @ts-expect-error TS(2339): Property 'scrobbleSource' does not exist on type '... Remove this comment to see the full error message
                 scrobbleSource: source,
@@ -467,6 +485,9 @@ const configDir = process.env.CONFIG_DIR || path.resolve(projectDir, `./config`)
         // something about the deezer passport strategy makes express continue with the response even though it should wait for accesstoken callback and userprofile fetching
         // so to get around this add an additional middleware that loops/sleeps until we should have fetched everything ¯\_(ツ)_/¯
         app.getAsync(/.*deezer\/callback*$/, function (req, res, next) {
+            if(req.url.indexOf('/api') !== 0) {
+                return res.redirect(307, `/api${req.url}`);
+            }
             // @ts-expect-error TS(2339): Property 'deezerSource' does not exist on type 'Se... Remove this comment to see the full error message
             const entity = scrobbleSources.getByName(req.session.deezerSource as string);
             const passportFunc = passport.authenticate(`deezer-${entity.name}`, {session: false});
@@ -489,6 +510,9 @@ const configDir = process.env.CONFIG_DIR || path.resolve(projectDir, `./config`)
         });
 
         app.getAsync(/.*callback$/, async function (req, res, next) {
+            if(req.url.indexOf('/api') !== 0) {
+                return res.redirect(307, `/api${req.url}`);
+            }
             const {
                 query: {
                     state
@@ -529,7 +553,11 @@ const configDir = process.env.CONFIG_DIR || path.resolve(projectDir, `./config`)
             }
         });
 
-        app.getAsync('/health', async function (req, res) {
+
+        app.getAsync('/health', async function(req, res)  {
+            return res.redirect(307, `/api/${req.url.slice(1)}`);
+        });
+        app.getAsync('/api/health', async function (req, res) {
             const {
                 type,
                 name
