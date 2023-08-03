@@ -1,3 +1,7 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
 body {
   margin: 0;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
@@ -10,4 +14,34 @@ body {
 code {
   font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
     monospace;
+}
+
+a {
+  text-decoration: underline;
+}
+.loading {
+  height: 35px;
+  fill: black;
+  display: none;
+}
+.connected .loading {
+  display: inline;
+}
+.dark .loading {
+  fill: white;
+}
+.blue {
+  color: rgb(97, 175, 239)
+}
+.red {
+  color: rgb(255 123 133);
+}
+.green {
+  color: rgb(170 255 109);
+}
+.purple {
+  color: rgb(224 124 253);
+}
+.yellow {
+  color: rgb(253 198 94);
 }

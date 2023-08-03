@@ -1,7 +1,7 @@
 import {addAsync, Router} from '@awaitjs/express';
 import express, {Request, Response} from 'express';
 import bodyParser from 'body-parser';
-import {Logger} from '@foxxmd/winston';
+import {Container, Logger} from '@foxxmd/winston';
 import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc.js';
 import isBetween from 'dayjs/plugin/isBetween.js';
@@ -9,6 +9,7 @@ import relativeTime from 'dayjs/plugin/relativeTime.js';
 import duration from 'dayjs/plugin/duration.js';
 import passport from 'passport';
 import session from 'express-session';
+import {createSession} from 'better-sse';
 
 import {
     buildTrackString,
@@ -42,9 +43,11 @@ import {JellyfinNotifier} from "./sources/ingressNotifiers/JellyfinNotifier.js";
 import {PlexNotifier} from "./sources/ingressNotifiers/PlexNotifier.js";
 import {TautulliNotifier} from "./sources/ingressNotifiers/TautulliNotifier.js";
 import {AIOConfig} from "./common/infrastructure/config/aioConfig.js";
-import createRoot from "./ioc.js";
+import {getRoot} from "./ioc.js";
 import {formatLogToHtml, getLogger, isLogLineMinLevel} from "./common/logging.js";
 import {MESSAGE} from "triple-beam";
+import {setupApi} from "./server/api.js";
+import {Transform} from "stream";
 
 
 dayjs.extend(utc)
@@ -102,6 +105,7 @@ const configDir = process.env.CONFIG_DIR || path.resolve(projectDir, `./config`)
         } = (config || {}) as AIOConfig;
 
         const server = await app.listen(port);
+
         io = new Server(server);
 
         const logConfig: {level: LogLevel, sort: string, limit: number} = {
@@ -110,13 +114,35 @@ const configDir = process.env.CONFIG_DIR || path.resolve(projectDir, `./config`)
             limit: 50,
         }
 
+
+        let logObjectStream: Transform;
+        try {
+            logObjectStream = new Transform({
+                transform(chunk, e, cb) {
+                    cb(null, chunk)
+                },
+                objectMode: true,
+                allowHalfOpen: true
+            })
+        } catch (e) {
+            console.log(e);
+        }
+
         logger = getLogger(logging, 'app');
         logger.stream().on('log', (log: LogInfo) => {
             output.unshift(log);
             output = output.slice(0, 301);
             if(isLogLineMinLevel(log, logConfig.level)) {
+                //sse.send(log, 'logee');
+                logObjectStream.write({message: log[MESSAGE], level: log.level});
                 io.emit('log', formatLogToHtml(log[MESSAGE]));
             }
+        });
+
+
+        app.get('/logs/stream', async (req, res) => {
+            const session = await createSession(req, res);
+            await session.stream(logObjectStream);
         });
 
         if(process.env.IS_LOCAL === 'true') {
@@ -127,7 +153,7 @@ const configDir = process.env.CONFIG_DIR || path.resolve(projectDir, `./config`)
             logger.warn('App config file exists but could not be parsed!');
             logger.warn(appConfigFail);
         }
-        const root = createRoot(port);
+        const root = getRoot(port);
         const localUrl = root.get('localUrl');
 
         const notifiers = root.get('notifiers');
@@ -166,6 +192,8 @@ const configDir = process.env.CONFIG_DIR || path.resolve(projectDir, `./config`)
         for(const d of deezerSources) {
             passport.use(`deezer-${d.name}`, d.generatePassportStrategy());
         }
+
+        setupApi(app);
 
         app.getAsync('/dashboard', async function (req, res) {
             let slicedLog = output.filter(x => isLogLineMinLevel(x, logConfig.level)).slice(0, logConfig.limit + 1).map(x => formatLogToHtml(x[MESSAGE]));

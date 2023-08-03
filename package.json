@@ -16,7 +16,8 @@
     "schema-aiosource": "typescript-json-schema tsconfig.json AIOSourceConfig --out src/common/schema/aio-source.json --titles --required --tsNodeRegister --refs --validationKeywords deprecationMessage",
     "schema-aioclient": "typescript-json-schema tsconfig.json AIOClientConfig --out src/common/schema/aio-client.json --titles --required --tsNodeRegister --refs --validationKeywords deprecationMessage",
     "typedoc": "typedoc",
-    "postinstall": "patch-package"
+    "postinstall": "patch-package",
+    "circular": "madge --circular --extensions ts src/index.ts"
   },
   "exports": {
     ".": {
@@ -47,6 +48,7 @@
     "@foxxmd/winston": "3.3.31",
     "@kenyip/backoff-strategies": "^1.0.4",
     "ajv": "^7.2.4",
+    "better-sse": "^0.8.0",
     "body-parser": "^1.19.0",
     "compare-versions": "^4.1.2",
     "concat-stream": "^2.0.0",
