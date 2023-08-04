@@ -1,23 +1,25 @@
 import dayjs, {Dayjs} from "dayjs";
 import {
     buildTrackString,
-    capitalize, closePlayDate,
-    genGroupId, mergeArr,
+    capitalize, closePlayDate, genGroupId,
+    genGroupIdStr, mergeArr,
     playObjDataMatch, pollingBackoff,
     sleep, sortByNewestPlayDate,
     sortByOldestPlayDate
 } from "../utils.js";
 import {
+    DeviceId,
     GroupedFixedPlays,
     GroupedPlays,
-    InternalConfig,
-    PlayObject, ProgressAwarePlayObject,
+    InternalConfig, NO_DEVICE, NO_USER,
+    PlayObject, PlayPlatformId, PlayUserId, ProgressAwarePlayObject, SINGLE_USER_PLATFORM_ID,
     SourceType
 } from "../common/infrastructure/Atomic.js";
 import {Logger} from '@foxxmd/winston';
 import {SourceConfig} from "../common/infrastructure/config/source/sources.js";
 import {EventEmitter} from "events";
 import {FixedSizeList} from "fixed-size-list";
+import TupleMap from "../common/TupleMap.js";
 
 export interface RecentlyPlayedOptions {
     limit?: number
@@ -55,7 +57,7 @@ export default abstract class AbstractSource {
 
     emitter: EventEmitter;
 
-    protected recentDiscoveredPlays: GroupedFixedPlays = new Map();
+    protected recentDiscoveredPlays: GroupedFixedPlays = new TupleMap<DeviceId, PlayUserId, FixedSizeList<ProgressAwarePlayObject>>();
 
     constructor(type: SourceType, name: string, config: SourceConfig, internal: InternalConfig, emitter: EventEmitter) {
         const {clients = [] } = config;
@@ -95,7 +97,7 @@ export default abstract class AbstractSource {
     }
 
     protected addPlayToDiscovered = (play: PlayObject) => {
-        const platformId = this.multiPlatform ? genGroupId(play) : 'SingleUser';
+        const platformId = this.multiPlatform ? genGroupId(play) : SINGLE_USER_PLATFORM_ID;
         const list = this.recentDiscoveredPlays.get(platformId) ?? new FixedSizeList<ProgressAwarePlayObject>(30);
         list.add(play);
         this.recentDiscoveredPlays.set(platformId, list);
@@ -104,10 +106,11 @@ export default abstract class AbstractSource {
     }
 
     getFlatRecentlyDiscoveredPlays = (): PlayObject[] => {
+        // @ts-ignore
         return Array.from(this.recentDiscoveredPlays.values()).map(x => x.data).flat(3).sort(sortByNewestPlayDate);
     }
 
-    getRecentlyDiscoveredPlaysByPlatform = (platformId): PlayObject[] => {
+    getRecentlyDiscoveredPlaysByPlatform = (platformId: PlayPlatformId): PlayObject[] => {
         const list = this.recentDiscoveredPlays.get(platformId);
         if (list !== undefined) {
             const data = [...list.data];
@@ -117,22 +120,44 @@ export default abstract class AbstractSource {
         return [];
     }
 
-    existingDiscovered = (play: PlayObject): PlayObject | undefined => {
-        const list = this.getRecentlyDiscoveredPlaysByPlatform(this.multiPlatform ? genGroupId(play) : 'SingleUser');
-        return list.find(x => playObjDataMatch(x, play) && closePlayDate(x, play));
+    existingDiscovered = (play: PlayObject, opts: {checkAll?: boolean} = {}): PlayObject | undefined => {
+        let lists: PlayObject[][] = [];
+        if(opts.checkAll !== true) {
+            lists.push(this.getRecentlyDiscoveredPlaysByPlatform(this.multiPlatform ? genGroupId(play) : SINGLE_USER_PLATFORM_ID));
+        } else {
+            // get as many as we can, optionally filtering by user
+            this.recentDiscoveredPlays.forEach((list, platformId) => {
+                if(play.meta.user !== undefined) {
+                    if(platformId[1] === NO_USER || platformId[1] === play.meta.user) {
+                        lists.push(this.getRecentlyDiscoveredPlaysByPlatform(platformId));
+                    }
+                } else {
+                    lists.push(this.getRecentlyDiscoveredPlaysByPlatform(platformId));
+                }
+            });
+        }
+        for(const list of lists) {
+            const existing = list.find(x => playObjDataMatch(x, play) && closePlayDate(x, play));
+            if(existing) {
+                return existing;
+            }
+        }
+        return undefined;
+        //const list = this.getRecentlyDiscoveredPlaysByPlatform(this.multiPlatform ? genGroupId(play) : SINGLE_USER_PLATFORM_ID);
+        //return list.find(x => playObjDataMatch(x, play) && closePlayDate(x, play));
     }
 
-    alreadyDiscovered = (play: PlayObject): boolean => {
-        return this.existingDiscovered(play) !== undefined;
+    alreadyDiscovered = (play: PlayObject, opts: {checkAll?: boolean} = {}): boolean => {
+        return this.existingDiscovered(play, opts) !== undefined;
     }
 
 
-    protected scrobble = (plays: PlayObject[], options: { forceRefresh?: boolean } = {}) => {
+    protected scrobble = (plays: PlayObject[], options: { forceRefresh?: boolean, checkAll?: boolean } = {}) => {
 
         const newDiscoveredPlays: PlayObject[] = [];
 
         for(const play of plays) {
-            if(!this.alreadyDiscovered(play)) {
+            if(!this.alreadyDiscovered(play, options)) {
                 this.addPlayToDiscovered(play);
                 newDiscoveredPlays.push(play);
             }

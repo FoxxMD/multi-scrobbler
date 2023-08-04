@@ -2,6 +2,7 @@ import {Dayjs} from "dayjs";
 import {FixedSizeList} from 'fixed-size-list';
 import {MESSAGE} from 'triple-beam';
 import {Logger} from '@foxxmd/winston';
+import TupleMap from "../TupleMap.js";
 
 export type SourceType = 'spotify' | 'plex' | 'tautulli' | 'subsonic' | 'jellyfin' | 'lastfm' | 'deezer' | 'ytmusic' | 'mpris' | 'mopidy' | 'listenbrainz' | 'jriver' | 'kodi';
 export const sourceTypes: SourceType[] = ['spotify', 'plex', 'tautulli', 'subsonic', 'jellyfin', 'lastfm', 'deezer', 'ytmusic', 'mpris', 'mopidy', 'listenbrainz', 'jriver', 'kodi'];
@@ -114,10 +115,18 @@ export interface ProgressAwarePlayObject extends PlayObject {
         initialTrackProgressPosition?: number
     }
 }
+export type DeviceId = string;
+export type PlayUserId = string;
+export type PlayPlatformId = [DeviceId, PlayUserId];
 
-export type GroupedPlays = Map<string, ProgressAwarePlayObject[]>;
+export type GroupedPlays = TupleMap<DeviceId,PlayUserId,ProgressAwarePlayObject[]>;
 
-export type GroupedFixedPlays = Map<string, FixedSizeList<ProgressAwarePlayObject>>;
+export type GroupedFixedPlays = TupleMap<DeviceId,PlayUserId,FixedSizeList<ProgressAwarePlayObject>>;
+
+export const NO_DEVICE = 'NoDevice';
+export const NO_USER = 'SingleUser';
+
+export const SINGLE_USER_PLATFORM_ID: PlayPlatformId = [NO_DEVICE, NO_USER];
 
 export interface TrackStringOptions {
     include?: ('time' | 'artist' | 'track' | 'timeFromNow' | 'trackId')[]

@@ -24,6 +24,7 @@
     "coverage",
     "tests/*.ts",
     "_site",
-    "docsite"
+    "docsite",
+    "web"
   ]
 }

@@ -75,6 +75,7 @@ export default class JellyfinSource extends MemorySource {
 
     static formatPlayObj(obj: any, options: FormatPlayObjectOptions = {}): PlayObject {
         const {newFromSource = false} = options;
+        let nfs = newFromSource;
         const {
             ServerId,
             ServerName,
@@ -82,7 +83,10 @@ export default class JellyfinSource extends MemorySource {
             NotificationUsername,
             UserId,
             NotificationType,
+            SaveReason,
+            Played,
             UtcTimestamp,
+            LastPlayedDate,
             Album,
             Artist,
             Name,
@@ -116,13 +120,43 @@ export default class JellyfinSource extends MemorySource {
             artists = [Artist];
         }
 
+        let eventReason = SaveReason;
+        let playDate = dayjs();
+        if(NotificationType === 'UserDataSaved' && SaveReason === 'PlaybackFinished' && LastPlayedDate !== undefined) {
+            nfs = false;
+            playDate = dayjs(LastPlayedDate);
+            if(Played !== true) {
+                eventReason = 'PlaybackFinished-NOTPLAYED'
+            } else {
+                // need to check play timestamp vs. current for sanity
+                const sanityShort = dayjs().diff(playDate, 'seconds') < 30;
+                if(sanityShort) {
+                    // if last played ts was less than 30 seconds ago its too early to scrobble (skipped track, essentially)
+                    eventReason = 'PlaybackFinished-PLAYTOOSHORT'
+                } else if (dur !== undefined) {
+                    // since we want to use UserDataSaved for offline *only* a reasonable assumption to make is that
+                    // the last played date + track duration = AT LEAST a little before NO
+                    // IE offline for 15 minutes -> played 2:00 track -> played ts is either 15 or 13 minutes ago, but not like 2 seconds ago
+                    // -- so if we see a diff of only a few (10 for some buffer) seconds its likely either Jellyfin or a Jellyfin client is reporting
+                    // last played date ONLINE and from the start of the track instead of the last (when PlaybackFinished actually occurred)
+                    const lastPlayedAndDur = playDate.add(dur.as('seconds'), 'seconds');
+                   const diffPlayedDuration = dayjs().diff(lastPlayedAndDur, 'seconds');
+                    // TODO at least one PlayBackFinished SaveReason from symphonium is returning local time but with Z (UTC) timezone
+                    // which makes this filtering not work at all
+                   if(diffPlayedDuration < 10) {
+                       eventReason = 'PlaybackFinished-PLAYTOORECENT';
+                   }
+                }
+            }
+        }
+
         return {
             data: {
                 artists,
                 album: Album,
                 track: Name,
                 duration: dur !== undefined ? dur.as('seconds') : undefined,
-                playDate: dayjs(),
+                playDate,
                 meta: {
                     brainz: {
                         artist: Provider_musicbrainzartist,
@@ -135,12 +169,13 @@ export default class JellyfinSource extends MemorySource {
             },
             meta: {
                 event: NotificationType,
+                eventReason,
                 mediaType: ItemType,
                 trackId: ItemId,
                 user: NotificationUsername ?? UserId,
                 server,
                 source: 'Jellyfin',
-                newFromSource,
+                newFromSource: nfs,
                 trackProgressPosition: PlaybackPosition !== undefined ? parseDurationFromTimestamp(PlaybackPosition).asSeconds() : undefined,
                 sourceVersion: ServerVersion,
                 deviceId: combinePartsToString([shortDeviceId(DeviceId), DeviceName])
@@ -167,7 +202,7 @@ export default class JellyfinSource extends MemorySource {
     isValidEvent = (playObj: PlayObject) => {
         const {
             meta: {
-                mediaType, event, user, server
+                mediaType, event, user, server, eventReason
             },
             data: {
                 artists,
@@ -175,10 +210,16 @@ export default class JellyfinSource extends MemorySource {
             } = {}
         } = playObj;
 
-        if (event !== undefined && !['PlaybackProgress','PlaybackStarted'].includes(event)) {
-            this.logger.debug(`Will not scrobble event because event type is not PlaybackProgress or PlaybackStarted, found event: ${event}`)
+        if (event !== undefined && !['PlaybackProgress','PlaybackStarted', 'UserDataSaved'].includes(event)) {
+            this.logger.debug(`Will not scrobble event because event type is not PlaybackProgress, PlaybackStarted or UserDataSaved - found event: ${event}`)
             return false;
         }
+
+        if (event !== undefined && event === 'UserDataSaved' && eventReason !== 'PlaybackFinished') {
+            this.logger.debug(`Will not scrobble event because event type of 'UserDataSaved' did not have a valid SaveReason of 'PlaybackFinished' - found reason: ${eventReason}`)
+            return false;
+        }
+
 
         if (mediaType !== 'Audio') {
             this.logger.debug(`Will not scrobble event because media type was not 'Audio', found type: ${mediaType}`, {
@@ -214,16 +255,23 @@ export default class JellyfinSource extends MemorySource {
         return this.getFlatRecentlyDiscoveredPlays();
     }
 
-    handle = async (playObj: any) => {
+    handle = async (playObj: PlayObject) => {
         if (!this.isValidEvent(playObj)) {
             return;
         }
 
-        const newPlays = this.processRecentPlays([playObj]);
+        const scrobbleOpts = {checkAll: false};
+        let newPlays: PlayObject[] = [];
+        if(playObj.meta.event === 'UserDataSaved' && playObj.meta.eventReason === 'PlaybackFinished') {
+            newPlays = [playObj];
+            scrobbleOpts.checkAll = true;
+        } else {
+            newPlays = this.processRecentPlays([playObj]);
+        }
 
         if(newPlays.length > 0) {
             try {
-                this.scrobble(newPlays);
+                this.scrobble(newPlays, scrobbleOpts);
             } catch (e) {
                 this.logger.error('Encountered error while scrobbling')
                 this.logger.error(e)

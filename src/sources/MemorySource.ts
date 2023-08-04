@@ -5,16 +5,17 @@ import {
     buildTrackString,
     toProgressAwarePlayObject,
     getProgress,
-    genGroupId, playPassesScrobbleThreshold, timePassesScrobbleThreshold, thresholdResultSummary
+    genGroupIdStr, playPassesScrobbleThreshold, timePassesScrobbleThreshold, thresholdResultSummary, genGroupId
 } from "../utils.js";
 import dayjs from "dayjs";
 import {
+    DeviceId,
     GroupedPlays,
-    PlayObject,
+    PlayObject, PlayUserId,
     ProgressAwarePlayObject,
     ScrobbleThresholdResult
 } from "../common/infrastructure/Atomic.js";
-
+import TupleMap from "../common/TupleMap.js";
 export default class MemorySource extends AbstractSource {
     /*
     * MemorySource uses its own state to maintain a list of recently played tracks and determine if a track is valid.
@@ -39,7 +40,7 @@ export default class MemorySource extends AbstractSource {
      *
      * Once a track qualifies it is added to statefuls.
      * */
-    candidateRecentlyPlayed: GroupedPlays = new Map();
+    candidateRecentlyPlayed: GroupedPlays = new TupleMap<DeviceId, PlayUserId, ProgressAwarePlayObject[]>
 
     // getFlatStatefulRecentlyPlayed = (): PlayObject[] => {
     //     return Array.from(this.statefulRecentlyPlayed.values()).flat().sort(sortByPlayDate);
@@ -70,17 +71,18 @@ export default class MemorySource extends AbstractSource {
         }, new Map());
 
         for(const [groupId, lockedPlays] of groupedLockedPlays.entries()) {
+            const groupIdStr = `${groupId[0]}-${groupId[1]}`;
             let cRecentlyPlayed = this.candidateRecentlyPlayed.get(groupId) ?? [];
             // if no candidates exist new plays are new candidates
             if(cRecentlyPlayed.length === 0) {
-                this.logger.debug(`[Platform ${groupId}] No prior candidate recent plays!`)
+                this.logger.debug(`[Platform ${groupIdStr}] No prior candidate recent plays!`)
                 // update activity date here so that polling interval decreases *before* we get a new valid play
                 // so that we don't miss a play due to long polling interval
                 this.lastActivityAt = dayjs();
                 const progressAware: ProgressAwarePlayObject[] = [];
                 for(const p of lockedPlays) {
                     progressAware.push(toProgressAwarePlayObject(p));
-                    this.logger.debug(`[Platform ${groupId}] Adding new locked play: ${buildTrackString(p, {include: ['trackId', 'artist', 'track']})}`);
+                    this.logger.debug(`[Platform ${groupIdStr}] Adding new locked play: ${buildTrackString(p, {include: ['trackId', 'artist', 'track']})}`);
                 }
                 this.candidateRecentlyPlayed.set(groupId, progressAware)
             } else {
@@ -91,9 +93,9 @@ export default class MemorySource extends AbstractSource {
                     // update activity date here so that polling interval decreases *before* we get a new valid play
                     // so that we don't miss a play due to long polling interval
                     this.lastActivityAt = dayjs();
-                    this.logger.debug(`[Platform ${groupId}] New plays found that do not match existing candidates.`)
+                    this.logger.debug(`[Platform ${groupIdStr}] New plays found that do not match existing candidates.`)
                     for(const p of newTracks) {
-                        this.logger.debug(`[Platform ${groupId}] Adding new locked play: ${buildTrackString(p, {include: ['trackId', 'artist', 'track']})}`);
+                        this.logger.debug(`[Platform ${groupIdStr}] Adding new locked play: ${buildTrackString(p, {include: ['trackId', 'artist', 'track']})}`);
                         newProgressAwareTracks.push(toProgressAwarePlayObject(p));
                     }
                 }
@@ -101,7 +103,7 @@ export default class MemorySource extends AbstractSource {
                 cRecentlyPlayed = cRecentlyPlayed.filter(x => {
                     const candidateMatchedLocked = lockedPlays.some((y: any) => playObjDataMatch(x, y));
                     if(!candidateMatchedLocked) {
-                        this.logger.debug(`[Platform ${groupId}] Existing candidate not found in locked plays will be removed: ${buildTrackString(x, {include: ['trackId', 'artist', 'track']})}`);
+                        this.logger.debug(`[Platform ${groupIdStr}] Existing candidate not found in locked plays will be removed: ${buildTrackString(x, {include: ['trackId', 'artist', 'track']})}`);
                     }
                     return candidateMatchedLocked;
                 });
@@ -155,7 +157,7 @@ export default class MemorySource extends AbstractSource {
                                         //sRecentlyPlayed.push(candidate);
                                     }
                                 } else {
-                                    const discoveredPlays = this.getRecentlyDiscoveredPlaysByPlatform(candidate);
+                                    const discoveredPlays = this.getRecentlyDiscoveredPlaysByPlatform(genGroupId(candidate));
                                     if(discoveredPlays.length === 0 || !playObjDataMatch(discoveredPlays[0], candidate)) {
                                         // if most recent stateful play is not this track we'll add it
                                         this.logger.debug(`${stPrefix} added after ${thresholdResultSummary(thresholdResults)}. Matched other recent play but could not determine time frame due to missing duration. Allowed due to not being last played track.`);

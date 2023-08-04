@@ -7,8 +7,8 @@ import { TimeoutError, WebapiError } from "spotify-web-api-node/src/response-err
 import Ajv, {Schema} from 'ajv';
 import {
     DEFAULT_SCROBBLE_DURATION_THRESHOLD,
-    lowGranularitySources,
-    PlayObject, ProgressAwarePlayObject, RegExResult,
+    lowGranularitySources, NO_DEVICE, NO_USER,
+    PlayObject, PlayPlatformId, ProgressAwarePlayObject, RegExResult,
     RemoteIdentityParts, ScrobbleThresholdResult,
     TrackStringOptions
 } from "./common/infrastructure/Atomic.js";
@@ -650,7 +650,11 @@ export function parseBool(value: any, prev: any = false): boolean {
     throw new Error('Not a boolean value.');
 }
 
-export const genGroupId = (play: PlayObject) => `${play.meta.deviceId ?? 'NoDevice'}-${play.meta.user ?? 'SingleUser'}`;
+export const genGroupIdStr = (play: PlayObject) => {
+    const groupId = genGroupId(play);
+    return `${groupId[0]}-${groupId[1]}`;
+};
+export const genGroupId = (play: PlayObject): PlayPlatformId => [play.meta.deviceId ?? NO_DEVICE, play.meta.user ?? NO_USER];
 
 export const fileOrDirectoryIsWriteable = (location: string) => {
     const pathInfo = pathUtil.parse(location);
