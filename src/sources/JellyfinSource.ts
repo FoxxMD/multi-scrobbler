@@ -1,6 +1,12 @@
 import MemorySource from "./MemorySource.js";
 import dayjs from "dayjs";
-import {buildTrackString, combinePartsToString, parseDurationFromTimestamp, truncateStringToLength} from "../utils.js";
+import {
+    buildTrackString, closePlayDate,
+    combinePartsToString,
+    parseDurationFromTimestamp,
+    playObjDataMatch,
+    truncateStringToLength
+} from "../utils.js";
 import {JellySourceConfig} from "../common/infrastructure/config/source/jellyfin.js";
 import {FormatPlayObjectOptions, InternalConfig, PlayObject} from "../common/infrastructure/Atomic.js";
 import EventEmitter from "events";
@@ -122,31 +128,12 @@ export default class JellyfinSource extends MemorySource {
 
         let eventReason = SaveReason;
         let playDate = dayjs();
+        // JELLYFIN WEB -> LastPlayedDate = time when track stopped being played
         if(NotificationType === 'UserDataSaved' && SaveReason === 'PlaybackFinished' && LastPlayedDate !== undefined) {
             nfs = false;
             playDate = dayjs(LastPlayedDate);
             if(Played !== true) {
                 eventReason = 'PlaybackFinished-NOTPLAYED'
-            } else {
-                // need to check play timestamp vs. current for sanity
-                const sanityShort = dayjs().diff(playDate, 'seconds') < 30;
-                if(sanityShort) {
-                    // if last played ts was less than 30 seconds ago its too early to scrobble (skipped track, essentially)
-                    eventReason = 'PlaybackFinished-PLAYTOOSHORT'
-                } else if (dur !== undefined) {
-                    // since we want to use UserDataSaved for offline *only* a reasonable assumption to make is that
-                    // the last played date + track duration = AT LEAST a little before NO
-                    // IE offline for 15 minutes -> played 2:00 track -> played ts is either 15 or 13 minutes ago, but not like 2 seconds ago
-                    // -- so if we see a diff of only a few (10 for some buffer) seconds its likely either Jellyfin or a Jellyfin client is reporting
-                    // last played date ONLINE and from the start of the track instead of the last (when PlaybackFinished actually occurred)
-                    const lastPlayedAndDur = playDate.add(dur.as('seconds'), 'seconds');
-                   const diffPlayedDuration = dayjs().diff(lastPlayedAndDur, 'seconds');
-                    // TODO at least one PlayBackFinished SaveReason from symphonium is returning local time but with Z (UTC) timezone
-                    // which makes this filtering not work at all
-                   if(diffPlayedDuration < 10) {
-                       eventReason = 'PlaybackFinished-PLAYTOORECENT';
-                   }
-                }
             }
         }
 
@@ -210,6 +197,13 @@ export default class JellyfinSource extends MemorySource {
             } = {}
         } = playObj;
 
+        if (mediaType !== 'Audio') {
+            this.logger.debug(`Will not scrobble event because media type was not 'Audio', found type: ${mediaType}`, {
+                track
+            });
+            return false;
+        }
+
         if (event !== undefined && !['PlaybackProgress','PlaybackStarted', 'UserDataSaved'].includes(event)) {
             this.logger.debug(`Will not scrobble event because event type is not PlaybackProgress, PlaybackStarted or UserDataSaved - found event: ${event}`)
             return false;
@@ -217,14 +211,6 @@ export default class JellyfinSource extends MemorySource {
 
         if (event !== undefined && event === 'UserDataSaved' && eventReason !== 'PlaybackFinished') {
             this.logger.debug(`Will not scrobble event because event type of 'UserDataSaved' did not have a valid SaveReason of 'PlaybackFinished' - found reason: ${eventReason}`)
-            return false;
-        }
-
-
-        if (mediaType !== 'Audio') {
-            this.logger.debug(`Will not scrobble event because media type was not 'Audio', found type: ${mediaType}`, {
-                track
-            });
             return false;
         }
 
@@ -262,9 +248,57 @@ export default class JellyfinSource extends MemorySource {
 
         const scrobbleOpts = {checkAll: false};
         let newPlays: PlayObject[] = [];
+
         if(playObj.meta.event === 'UserDataSaved' && playObj.meta.eventReason === 'PlaybackFinished') {
+
+            const trackId = buildTrackString(playObj, {include: ['artist', 'track', 'trackId']});
+
+            // sometimes jellyfin sends UserDataSaved payload with a LastPlayedDate that uses local time but accidentally includes a UTC offset (Z)
+            // we need to check if playDate with local offset is the same (to within a second or two)?
+            const now = dayjs();
+            const localOffset = dayjs().utcOffset();
+            const offsetDate = playObj.data.playDate.add(localOffset * -1, 'minutes');
+            const offsetDiff = now.diff(offsetDate, 'seconds');
+            if(offsetDiff < 5) {
+                this.logger.warn(`Play with event UserDataSaved-PlaybackFinished has a playDate that is likely local time with incorrect UTC offset. It has been corrected. => ${trackId}`);
+                playObj.data.playDate = offsetDate;
+            }
+
+            const existingTracked = this.getFlatCandidateRecentlyPlayed().some(x => playObjDataMatch(playObj, x));
+            if(existingTracked) {
+                this.logger.debug(`Will not scrobble Play with event UserDataSaved-PlaybackFinished because it has already been tracked => ${trackId}`);
+                return;
+            }
+
+            // if last played ts was less than 30 seconds ago it's too early to scrobble (skipped track, essentially)
+            const finishedToNow = dayjs().diff(playObj.data.playDate, 'seconds');
+            if(finishedToNow < 30) {
+                this.logger.debug(`Will not scrobble Play with event UserDataSaved-PlaybackFinished because it took place too recently (${finishedToNow}s) => ${trackId}`);
+                return;
+            }
+
+            if(playObj.data.duration !== undefined) {
+                // since we want to use UserDataSaved for offline *only* a reasonable assumption to make is that
+                // the last played date + track duration = AT LEAST a little before NOW
+                // IE offline for 15 minutes -> played 2:00 track -> played ts is either 15 or 13 minutes ago, but not like 2 seconds ago
+                // -- so if we see a diff of only a few (10 for some buffer) seconds it's likely either Jellyfin or a Jellyfin client is reporting
+                // last played date while ONLINE and from the start of the track instead of the last (when PlaybackFinished actually occurred)
+                const lastPlayedAndDur = playObj.data.playDate.add(playObj.data.duration, 'seconds');
+                const diffPlayedDuration = dayjs().diff(lastPlayedAndDur, 'seconds');
+                // TODO at least one PlayBackFinished SaveReason from symphonium is returning local time but with Z (UTC) timezone
+                // which makes this filtering not work at all
+                if(diffPlayedDuration < 10) {
+                    this.logger.debug(`Will not scrobble Play with event UserDataSaved-PlaybackFinished because it is likely from online client (play date + track duration = ~now) => ${trackId}`);
+                    return;
+                }
+            }
+
+
+            // good confidence this play object is from an offline event in which case we want to immediately scrobble it
+            // or we have already discovered this play (so it won't be re-scrobbled)
             newPlays = [playObj];
             scrobbleOpts.checkAll = true;
+
         } else {
             newPlays = this.processRecentPlays([playObj]);
         }

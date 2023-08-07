@@ -148,7 +148,8 @@ export default abstract class AbstractSource {
     }
 
     alreadyDiscovered = (play: PlayObject, opts: {checkAll?: boolean} = {}): boolean => {
-        return this.existingDiscovered(play, opts) !== undefined;
+        const existing = this.existingDiscovered(play, opts);
+        return existing !== undefined;
     }
 
 

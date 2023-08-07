@@ -315,6 +315,8 @@ const configDir = process.env.CONFIG_DIR || path.resolve(projectDir, `./config`)
             jellyfinJsonParser, async function (req, res) {
             jellyIngress.trackIngress(req, false);
 
+            res.send('OK');
+
             const parts = remoteHostIdentifiers(req);
             const connectionId = `${parts.host}-${parts.proxy ?? ''}`;
 
@@ -339,7 +341,6 @@ const configDir = process.env.CONFIG_DIR || path.resolve(projectDir, `./config`)
             for (const source of pSources) {
                 await source.handle(playObj);
             }
-            res.send('OK');
         });
 
         app.use('/client/auth', clientCheckMiddle);

@@ -42,9 +42,10 @@ export default class MemorySource extends AbstractSource {
      * */
     candidateRecentlyPlayed: GroupedPlays = new TupleMap<DeviceId, PlayUserId, ProgressAwarePlayObject[]>
 
-    // getFlatStatefulRecentlyPlayed = (): PlayObject[] => {
-    //     return Array.from(this.statefulRecentlyPlayed.values()).flat().sort(sortByPlayDate);
-    // }
+    getFlatCandidateRecentlyPlayed = (): PlayObject[] => {
+        // TODO sort?
+        return Array.from(this.candidateRecentlyPlayed.values()).flat();
+    }
 
     processRecentPlays = (plays: PlayObject[], useExistingPlayDate = false) => {
 
@@ -182,3 +183,7 @@ export default class MemorySource extends AbstractSource {
         return playObj.data.playDate.isBefore(dayjs().subtract(30, 's'));
     }
 }
+function sortByPlayDate(a: ProgressAwarePlayObject, b: ProgressAwarePlayObject): number {
+    throw new Error("Function not implemented.");
+}
+
