@@ -1,5 +1,5 @@
 import MemorySource from "./MemorySource.js";
-import dayjs from "dayjs";
+import dayjs, {Dayjs} from "dayjs";
 import {
     buildTrackString, closePlayDate,
     combinePartsToString,
@@ -257,9 +257,15 @@ export default class JellyfinSource extends MemorySource {
             // we need to check if playDate with local offset is the same (to within a second or two)?
             const now = dayjs();
             const localOffset = dayjs().utcOffset();
-            const offsetDate = playObj.data.playDate.add(localOffset * -1, 'minutes');
-            const offsetDiff = now.diff(offsetDate, 'seconds');
-            if(offsetDiff < 5) {
+            const offsetBackDate = playObj.data.playDate.add(localOffset * -1, 'minutes');
+            const offsetForwardDate = playObj.data.playDate.add(localOffset * -1, 'minutes');
+            let offsetDate: Dayjs;
+            if(Math.abs(now.diff(offsetBackDate, 'seconds')) < 5) {
+                offsetDate = offsetBackDate;
+            } else if (Math.abs(now.diff(offsetForwardDate, 'seconds')) < 5) {
+                offsetDate = offsetForwardDate;
+            }
+            if(offsetDate !== undefined) {
                 this.logger.warn(`Play with event UserDataSaved-PlaybackFinished has a playDate that is likely local time with incorrect UTC offset. It has been corrected. => ${trackId}`);
                 playObj.data.playDate = offsetDate;
             }
