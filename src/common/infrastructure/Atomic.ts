@@ -31,13 +31,23 @@ export interface InternalConfig {
     logger: Logger
 }
 
+export type ReportedPlayerStatus = 'playing' | 'stopped' | 'paused' | 'unknown';
+export const REPORTED_PLAYER_STATUSES = {
+    playing: 'playing' as ReportedPlayerStatus,
+    stopped: 'stopped' as ReportedPlayerStatus,
+    paused: 'paused' as ReportedPlayerStatus,
+    unknown: 'unknown' as ReportedPlayerStatus
+}
+
 export interface ConfigMeta {
     source: string
     mode?: string
     configureAs: string
 }
 
-export interface PlayData {
+export type ListenRange = [Dayjs, Dayjs]
+
+export interface TrackData {
     artists?: string[]
     album?: string
     track?: string
@@ -45,10 +55,6 @@ export interface PlayData {
      * The length of the track, in seconds
      * */
     duration?: number
-    /**
-     * The date the track was played at
-     * */
-    playDate?: Dayjs
 
     meta?: {
         brainz?: {
@@ -59,6 +65,16 @@ export interface PlayData {
             releaseGroup?: string
         }
     }
+}
+
+export interface PlayData extends TrackData {
+    /**
+     * The date the track was played at
+     * */
+    playDate?: Dayjs
+    /** Number of seconds the track was listened to */
+    listenedFor?: number
+    listenRanges?: ListenRange[]
 }
 
 export interface PlayMeta {
