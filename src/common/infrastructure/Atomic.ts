@@ -3,6 +3,7 @@ import {FixedSizeList} from 'fixed-size-list';
 import {MESSAGE} from 'triple-beam';
 import {Logger} from '@foxxmd/winston';
 import TupleMap from "../TupleMap.js";
+import is from "@sindresorhus/is";
 
 export type SourceType = 'spotify' | 'plex' | 'tautulli' | 'subsonic' | 'jellyfin' | 'lastfm' | 'deezer' | 'ytmusic' | 'mpris' | 'mopidy' | 'listenbrainz' | 'jriver' | 'kodi';
 export const sourceTypes: SourceType[] = ['spotify', 'plex', 'tautulli', 'subsonic', 'jellyfin', 'lastfm', 'deezer', 'ytmusic', 'mpris', 'mopidy', 'listenbrainz', 'jriver', 'kodi'];
@@ -39,13 +40,39 @@ export const REPORTED_PLAYER_STATUSES = {
     unknown: 'unknown' as ReportedPlayerStatus
 }
 
+export type CalculatedPlayerStatus = ReportedPlayerStatus | 'stale' | 'orphaned';
+export const CALCULATED_PLAYER_STATUSES = {
+    ...REPORTED_PLAYER_STATUSES,
+    stale: 'stale' as CalculatedPlayerStatus,
+    orphaned: 'orphaned' as CalculatedPlayerStatus,
+}
+
 export interface ConfigMeta {
     source: string
     mode?: string
     configureAs: string
 }
 
-export type ListenRange = [Dayjs, Dayjs]
+export type SourceData = (PlayObject | PlayerStateData);
+
+export interface PlayerStateData {
+    platformId: PlayPlatformId
+    play: PlayObject
+    status?: ReportedPlayerStatus
+    position?: number
+    timestamp?: Dayjs
+}
+
+export const asPlayerStateData = (obj: object): obj is PlayerStateData => {
+    return 'platformId' in obj && 'play' in obj;
+}
+
+export interface PlayProgress {
+    timestamp: Dayjs
+    position?: number
+    positionPercent?: number
+}
+export type ListenRange = [PlayProgress, PlayProgress]
 
 export interface TrackData {
     artists?: string[]
@@ -246,4 +273,16 @@ export interface RegExResult {
 
 export interface NamedGroup {
     [name: string]: any
+}
+
+export interface numberFormatOptions {
+    toFixed: number,
+    defaultVal?: any,
+    prefix?: string,
+    suffix?: string,
+    round?: {
+        type?: string,
+        enable: boolean,
+        indicate?: boolean,
+    }
 }

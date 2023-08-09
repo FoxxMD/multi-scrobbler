@@ -8,8 +8,11 @@ import {
     truncateStringToLength
 } from "../utils.js";
 import {JellySourceConfig} from "../common/infrastructure/config/source/jellyfin.js";
-import {FormatPlayObjectOptions, InternalConfig, PlayObject} from "../common/infrastructure/Atomic.js";
+import {FormatPlayObjectOptions, InternalConfig, PlayObject, PlayPlatformId} from "../common/infrastructure/Atomic.js";
 import EventEmitter from "events";
+import {PlayerStateOptions} from "./PlayerState/AbstractPlayerState.js";
+import {Logger} from "@foxxmd/winston";
+import {JellyfinPlayerState} from "./PlayerState/JellyfinPlayerState.js";
 
 const shortDeviceId = truncateStringToLength(10, '');
 
@@ -306,7 +309,7 @@ export default class JellyfinSource extends MemorySource {
             scrobbleOpts.checkAll = true;
 
         } else {
-            newPlays = this.processRecentPlays([playObj]);
+            newPlays = this.processRecentPlaysNew([playObj]);
         }
 
         if(newPlays.length > 0) {
@@ -317,5 +320,9 @@ export default class JellyfinSource extends MemorySource {
                 this.logger.error(e)
             }
         }
+    }
+
+    getNewPlayer = (logger: Logger, id: PlayPlatformId, opts: PlayerStateOptions) => {
+        return new JellyfinPlayerState(logger, id, opts);
     }
 }

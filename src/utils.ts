@@ -6,8 +6,9 @@ import JSON5 from 'json5';
 import { TimeoutError, WebapiError } from "spotify-web-api-node/src/response-error.js";
 import Ajv, {Schema} from 'ajv';
 import {
+    asPlayerStateData,
     DEFAULT_SCROBBLE_DURATION_THRESHOLD,
-    lowGranularitySources, NO_DEVICE, NO_USER,
+    lowGranularitySources, NO_DEVICE, NO_USER, numberFormatOptions, PlayerStateData,
     PlayObject, PlayPlatformId, ProgressAwarePlayObject, RegExResult,
     RemoteIdentityParts, ScrobbleThresholdResult,
     TrackStringOptions
@@ -650,11 +651,21 @@ export function parseBool(value: any, prev: any = false): boolean {
     throw new Error('Not a boolean value.');
 }
 
-export const genGroupIdStr = (play: PlayObject) => {
+export const genGroupIdStrFromPlay = (play: PlayObject) => {
     const groupId = genGroupId(play);
-    return `${groupId[0]}-${groupId[1]}`;
+    return genGroupIdStr(groupId);
 };
+export const genGroupIdStr = (id: PlayPlatformId) => {
+    return `${id[0]}-${id[1]}`;
+}
 export const genGroupId = (play: PlayObject): PlayPlatformId => [play.meta.deviceId ?? NO_DEVICE, play.meta.user ?? NO_USER];
+
+export const getPlatformIdFromData = (data: PlayObject | PlayerStateData) => {
+    if(asPlayerStateData(data)) {
+        return data.platformId;
+    }
+    return genGroupId(data);
+}
 
 export const fileOrDirectoryIsWriteable = (location: string) => {
     const pathInfo = pathUtil.parse(location);
@@ -802,3 +813,58 @@ export const intersect = (a: Array<any>, b: Array<any>) => {
     const intersection = new Set([...setA].filter(x => setB.has(x)));
     return Array.from(intersection);
 }
+
+/**
+ * https://github.com/Mw3y/Text-ProgressBar/blob/master/ProgressBar.js
+ * */
+export const progressBar = (value: number, maxValue: number, size: number) => {
+    const percentage = value / maxValue; // Calculate the percentage of the bar
+    const progress = Math.round((size * percentage)); // Calculate the number of square caracters to fill the progress side.
+    const emptyProgress = size - progress; // Calculate the number of dash caracters to fill the empty progress side.
+
+    const progressText = '▇'.repeat(progress); // Repeat is creating a string with progress * caracters in it
+    const emptyProgressText = '—'.repeat(emptyProgress); // Repeat is creating a string with empty progress * caracters in it
+    const percentageText = Math.round(percentage * 100) + '%'; // Displaying the percentage of the bar
+
+    const bar = `[${progressText}${emptyProgressText}]${percentageText}`;
+    return bar;
+};
+
+export const formatNumber = (val: number | string, options?: numberFormatOptions) => {
+    const {
+        toFixed = 2,
+        defaultVal = null,
+        prefix = '',
+        suffix = '',
+        round,
+    } = options || {};
+    let parsedVal = typeof val === 'number' ? val : Number.parseFloat(val);
+    if (Number.isNaN(parsedVal)) {
+        return defaultVal;
+    }
+    if(!Number.isFinite(val)) {
+        return 'Infinite';
+    }
+    let prefixStr = prefix;
+    const {enable = false, indicate = true, type = 'round'} = round || {};
+    if (enable && !Number.isInteger(parsedVal)) {
+        switch (type) {
+            case 'round':
+                parsedVal = Math.round(parsedVal);
+                break;
+            case 'ceil':
+                parsedVal = Math.ceil(parsedVal);
+                break;
+            case 'floor':
+                parsedVal = Math.floor(parsedVal);
+        }
+        if (indicate) {
+            prefixStr = `~${prefix}`;
+        }
+    }
+    const localeString = parsedVal.toLocaleString(undefined, {
+        minimumFractionDigits: toFixed,
+        maximumFractionDigits: toFixed,
+    });
+    return `${prefixStr}${localeString}${suffix}`;
+};

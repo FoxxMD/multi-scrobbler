@@ -1,6 +1,12 @@
 import MemorySource from "./MemorySource.js";
 import {MopidySourceConfig} from "../common/infrastructure/config/source/mopidy.js";
-import {FormatPlayObjectOptions, InternalConfig, PlayObject} from "../common/infrastructure/Atomic.js";
+import {
+    FormatPlayObjectOptions,
+    InternalConfig,
+    PlayerStateData,
+    PlayObject,
+    SINGLE_USER_PLATFORM_ID
+} from "../common/infrastructure/Atomic.js";
 import dayjs from "dayjs";
 import Mopidy, {models} from "mopidy";
 import {URL} from "url";
@@ -177,6 +183,7 @@ export class MopidySource extends MemorySource {
             return [];
         }
 
+        const state = await this.client.playback.getState();
         const currTrack = await this.client.playback.getCurrentTrack();
         const playback = await this.client.playback.getTimePosition();
 
@@ -198,7 +205,13 @@ export class MopidySource extends MemorySource {
             }
         }
 
-        return this.processRecentPlays(play === undefined ? [] : [play]);
+        const playerState: PlayerStateData = {
+            platformId: SINGLE_USER_PLATFORM_ID,
+            status: state,
+            play
+        }
+
+        return this.processRecentPlaysNew([playerState]);
     }
 
 }

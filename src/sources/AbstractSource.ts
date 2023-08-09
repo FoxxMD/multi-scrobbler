@@ -2,7 +2,7 @@ import dayjs, {Dayjs} from "dayjs";
 import {
     buildTrackString,
     capitalize, closePlayDate, genGroupId,
-    genGroupIdStr, mergeArr,
+    genGroupIdStrFromPlay, mergeArr,
     playObjDataMatch, pollingBackoff,
     sleep, sortByNewestPlayDate,
     sortByOldestPlayDate

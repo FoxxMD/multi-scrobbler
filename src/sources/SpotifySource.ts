@@ -7,7 +7,13 @@ import {
 import SpotifyWebApi from "spotify-web-api-node";
 import AbstractSource, {RecentlyPlayedOptions} from "./AbstractSource.js";
 import {SpotifySourceConfig} from "../common/infrastructure/config/source/spotify.js";
-import {FormatPlayObjectOptions, InternalConfig, PlayObject} from "../common/infrastructure/Atomic.js";
+import {
+    FormatPlayObjectOptions,
+    InternalConfig,
+    NO_USER,
+    PlayerStateData,
+    PlayObject, ReportedPlayerStatus, SourceData
+} from "../common/infrastructure/Atomic.js";
 import PlayHistoryObject = SpotifyApi.PlayHistoryObject;
 import EventEmitter from "events";
 import CurrentlyPlayingObject = SpotifyApi.CurrentlyPlayingObject;
@@ -39,12 +45,12 @@ export default class SpotifySource extends MemorySource {
         super('spotify', name, config, internal, emitter);
         const {
             data: {
-                interval = 30,
+                interval = 15,
             } = {}
         } = config;
 
-        if (interval < 15) {
-            this.logger.warn('Interval should be 15 seconds or above...😬');
+        if (interval < 5) {
+            this.logger.warn('Interval should be 5 seconds or above...😬 preferably 15');
         }
 
         this.config.data.interval = interval;
@@ -251,14 +257,14 @@ export default class SpotifySource extends MemorySource {
     }
 
     getRecentlyPlayed = async (options: RecentlyPlayedOptions = {}) => {
-        const plays: PlayObject[] = [];
+        const plays: SourceData[] = [];
         if(this.canGetState) {
             const state = await this.getCurrentPlaybackState();
-            if(state.play !== undefined) {
+            if(state.playerState !== undefined) {
                 if(state.device.is_private_session) {
-                    this.logger.debug(`Will not track play on Device ${state.device.name} because it is a private session: ${buildTrackString(state.play)}`);
+                    this.logger.debug(`Will not track play on Device ${state.device.name} because it is a private session: ${buildTrackString(state.playerState.play)}`);
                 } else {
-                    plays.push(state.play);
+                    plays.push(state.playerState);
                 }
             }
         } else {
@@ -267,7 +273,7 @@ export default class SpotifySource extends MemorySource {
                 plays.push(currPlay);
             }
         }
-        return this.processRecentPlays(plays, true);
+        return this.processRecentPlaysNew(plays);
     }
 
     getPlayHistory = async (options: RecentlyPlayedOptions = {}) => {
@@ -290,18 +296,39 @@ export default class SpotifySource extends MemorySource {
         return undefined;
     }
 
-    getCurrentPlaybackState = async (logError = true): Promise<{device?: UserDevice, play?: PlayObject}> => {
+    getCurrentPlaybackState = async (logError = true): Promise<{device?: UserDevice, playerState?: PlayerStateData}> => {
         try {
             const funcState = (api: SpotifyWebApi) => api.getMyCurrentPlaybackState();
             const res = await this.callApi<ReturnType<typeof this.spotifyApi.getMyCurrentPlaybackState>>(funcState);
-            const {body: {
-                device,
-                item
-            } = {}} = res;
-            return {
-                device: device === null ? undefined : device,
-                play: item !== null && item !== undefined ? SpotifySource.formatPlayObj(res.body, {newFromSource: true}) : undefined
+            const {
+                body: {
+                    device,
+                    item,
+                    is_playing,
+                    timestamp,
+                    progress_ms,
+                } = {}
+            } = res;
+            if(device !== undefined) {
+                let status: ReportedPlayerStatus = 'stopped';
+                if(is_playing) {
+                    status = 'playing';
+                } else if(item !== null && item !== undefined) {
+                    status = 'paused';
+                }
+                return {
+                    device,
+                    playerState: {
+                        platformId: [combinePartsToString([shortDeviceId(device.id), device.name]), NO_USER],
+                        status,
+                        play: item !== null && item !== undefined ? SpotifySource.formatPlayObj(res.body, {newFromSource: true}) : undefined,
+                        timestamp: dayjs(timestamp),
+                        position: progress_ms !== null && progress_ms !== undefined ? progress_ms / 1000 : undefined,
+                    }
+                }
             }
+
+            return {};
         } catch (e) {
             if(logError) {
                 this.logger.error(`Error occurred while trying to retrieve current playback state: ${e.message}`);
