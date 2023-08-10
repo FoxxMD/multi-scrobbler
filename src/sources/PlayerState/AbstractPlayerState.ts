@@ -122,7 +122,7 @@ export abstract class AbstractPlayerState {
 
         if (this.currentPlay !== undefined) {
             if (!playObjDataMatch(this.currentPlay, play)/* || (true !== false)*/) { // TODO check new play date and listen range to see if they intersect
-                this.logger.debug(`Incoming play state does not match existing state, removing existing: ${buildTrackString(this.currentPlay, {include: ['trackId', 'artist', 'track']})}`)
+                this.logger.debug(`Incoming play state (${buildTrackString(play, {include: ['trackId', 'artist', 'track']})}) does not match existing state, removing existing: ${buildTrackString(this.currentPlay, {include: ['trackId', 'artist', 'track']})}`)
                 this.currentListenSessionEnd();
                 const played = this.getPlayedObject();
                 this.setCurrentPlay(play);
@@ -162,16 +162,23 @@ export abstract class AbstractPlayerState {
         this.currentListenSessionEnd();
     }
 
-    getPlayedObject(): PlayObject {
-        return {
-            data: {
-                ...this.currentPlay.data,
-                playDate: this.playFirstSeenAt,
-                listenedFor: this.getListenDuration(),
-                listenRanges: this.listenRanges
-            },
-            meta: this.currentPlay.meta
+    getPlayedObject(): PlayObject | undefined {
+        if(this.currentPlay !== undefined) {
+            let ranges = [...this.listenRanges];
+            if (this.currentListenRange !== undefined) {
+                ranges.push(this.currentListenRange);
+            }
+            return {
+                data: {
+                    ...this.currentPlay.data,
+                    playDate: this.playFirstSeenAt,
+                    listenedFor: this.getListenDuration(),
+                    listenRanges: ranges
+                },
+                meta: this.currentPlay.meta
+            }
         }
+        return undefined;
     }
 
     getListenDuration() {
