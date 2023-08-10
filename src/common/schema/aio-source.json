@@ -1,6 +1,43 @@
 {
     "$schema": "http://json-schema.org/draft-07/schema#",
     "definitions": {
+        "CommonSourceOptions": {
+            "properties": {
+                "logFilterFailure": {
+                    "default": "warn",
+                    "description": "If this source has INGRESS to MS and has filters this determines how MS logs when a payload (event) fails a defined filter (IE users/servers/library filters)\n\n* `false` => do not log\n* `debug` => log to DEBUG level\n* `warn` => log to WARN level (default)\n\nHint: This is useful if you are sure this source is setup correctly and you have multiple other sources. Set to `debug` or `false` to reduce log noise.",
+                    "enum": [
+                        "debug",
+                        false,
+                        "warn"
+                    ],
+                    "examples": [
+                        "warn"
+                    ],
+                    "title": "logFilterFailure"
+                },
+                "logPayload": {
+                    "default": false,
+                    "description": "If this source has INGRESS to MS (sends a payload, rather than MS GETTING requesting a payload)\nthen setting this option to true will make MS log the payload JSON to DEBUG output",
+                    "examples": [
+                        false
+                    ],
+                    "title": "logPayload",
+                    "type": "boolean"
+                },
+                "logPlayerState": {
+                    "default": false,
+                    "description": "For Sources that track Player State (currently playing) this logs a simple player state/summary to DEBUG output",
+                    "examples": [
+                        "false"
+                    ],
+                    "title": "logPlayerState",
+                    "type": "boolean"
+                }
+            },
+            "title": "CommonSourceOptions",
+            "type": "object"
+        },
         "DeezerData": {
             "properties": {
                 "clientId": {
@@ -106,6 +143,10 @@
                     "description": "Unique identifier for this source.",
                     "title": "name",
                     "type": "string"
+                },
+                "options": {
+                    "$ref": "#/definitions/CommonSourceOptions",
+                    "title": "options"
                 },
                 "type": {
                     "enum": [
@@ -228,6 +269,10 @@
                     "description": "Unique identifier for this source.",
                     "title": "name",
                     "type": "string"
+                },
+                "options": {
+                    "$ref": "#/definitions/CommonSourceOptions",
+                    "title": "options"
                 },
                 "type": {
                     "enum": [
@@ -377,6 +422,10 @@
                     "title": "name",
                     "type": "string"
                 },
+                "options": {
+                    "$ref": "#/definitions/CommonSourceOptions",
+                    "title": "options"
+                },
                 "type": {
                     "enum": [
                         "jellyfin"
@@ -501,6 +550,10 @@
                     "title": "name",
                     "type": "string"
                 },
+                "options": {
+                    "$ref": "#/definitions/CommonSourceOptions",
+                    "title": "options"
+                },
                 "type": {
                     "enum": [
                         "kodi"
@@ -552,6 +605,10 @@
                     "description": "Unique identifier for this source.",
                     "title": "name",
                     "type": "string"
+                },
+                "options": {
+                    "$ref": "#/definitions/CommonSourceOptions",
+                    "title": "options"
                 },
                 "type": {
                     "enum": [
@@ -680,6 +737,10 @@
                     "description": "Unique identifier for this source.",
                     "title": "name",
                     "type": "string"
+                },
+                "options": {
+                    "$ref": "#/definitions/CommonSourceOptions",
+                    "title": "options"
                 },
                 "type": {
                     "enum": [
@@ -873,6 +934,10 @@
                     "title": "name",
                     "type": "string"
                 },
+                "options": {
+                    "$ref": "#/definitions/CommonSourceOptions",
+                    "title": "options"
+                },
                 "type": {
                     "enum": [
                         "mpris"
@@ -1015,6 +1080,10 @@
                     "title": "name",
                     "type": "string"
                 },
+                "options": {
+                    "$ref": "#/definitions/CommonSourceOptions",
+                    "title": "options"
+                },
                 "type": {
                     "enum": [
                         "mopidy"
@@ -1054,6 +1123,10 @@
                     "description": "Unique identifier for this source.",
                     "title": "name",
                     "type": "string"
+                },
+                "options": {
+                    "$ref": "#/definitions/CommonSourceOptions",
+                    "title": "options"
                 },
                 "type": {
                     "enum": [
@@ -1316,6 +1389,10 @@
                     "title": "name",
                     "type": "string"
                 },
+                "options": {
+                    "$ref": "#/definitions/CommonSourceOptions",
+                    "title": "options"
+                },
                 "type": {
                     "enum": [
                         "spotify"
@@ -1532,6 +1609,10 @@
                     "title": "name",
                     "type": "string"
                 },
+                "options": {
+                    "$ref": "#/definitions/CommonSourceOptions",
+                    "title": "options"
+                },
                 "type": {
                     "enum": [
                         "subsonic"
@@ -1571,6 +1652,10 @@
                     "description": "Unique identifier for this source.",
                     "title": "name",
                     "type": "string"
+                },
+                "options": {
+                    "$ref": "#/definitions/CommonSourceOptions",
+                    "title": "options"
                 },
                 "type": {
                     "enum": [
@@ -1687,6 +1772,10 @@
                     "description": "Unique identifier for this source.",
                     "title": "name",
                     "type": "string"
+                },
+                "options": {
+                    "$ref": "#/definitions/CommonSourceOptions",
+                    "title": "options"
                 },
                 "type": {
                     "enum": [

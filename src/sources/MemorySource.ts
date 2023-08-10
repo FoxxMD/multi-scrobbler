@@ -148,7 +148,9 @@ export default class MemorySource extends AbstractSource {
                     deadPlatformIds.push(player.platformIdStr);
                 }
             }
-            player.logSummary();
+            if(this.config.options?.logPlayerState === true) {
+                player.logSummary();
+            }
         }
         for (const deadId of deadPlatformIds) {
             this.players.delete(deadId);
