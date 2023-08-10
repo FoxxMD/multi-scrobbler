@@ -1,7 +1,7 @@
 import dayjs, {Dayjs} from "dayjs";
 import {
     buildTrackString,
-    capitalize, closePlayDate, genGroupId,
+    capitalize, isPlayTemporallyClose, genGroupId,
     genGroupIdStrFromPlay, mergeArr,
     playObjDataMatch, pollingBackoff,
     sleep, sortByNewestPlayDate,
@@ -137,7 +137,7 @@ export default abstract class AbstractSource {
             });
         }
         for(const list of lists) {
-            const existing = list.find(x => playObjDataMatch(x, play) && closePlayDate(x, play));
+            const existing = list.find(x => playObjDataMatch(x, play) && isPlayTemporallyClose(x, play));
             if(existing) {
                 return existing;
             }

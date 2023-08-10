@@ -341,10 +341,10 @@ const configDir = process.env.CONFIG_DIR || path.resolve(projectDir, `./config`)
                 const logPayload = pSources.some(x => {
                     const {
                         data: {
-                            options: {
-                                logPayload = parseBool(process.env.DEBUG_MODE)
-                            } = {}
                         } = {},
+                        options: {
+                            logPayload = parseBool(process.env.DEBUG_MODE)
+                        } = {}
                     } = x.config;
                     return logPayload;
                 });

@@ -1,7 +1,7 @@
 import dayjs, {Dayjs} from "dayjs";
 import {
     buildTrackString,
-    capitalize, closePlayDate,
+    capitalize, isPlayTemporallyClose,
     mergeArr,
     playObjDataMatch, setIntersection,
     truncateStringToLength
@@ -223,10 +223,10 @@ export default abstract class AbstractScrobbleClient {
     }
 
     protected compareExistingScrobbleTime = (existing: PlayObject, candidate: PlayObject): [boolean, boolean?] => {
-        let closeTime = closePlayDate(existing, candidate);
+        let closeTime = isPlayTemporallyClose(existing, candidate);
         let fuzzyTime = false;
         if(!closeTime) {
-            fuzzyTime = closePlayDate(existing, candidate, {fuzzyDuration: true});
+            fuzzyTime = isPlayTemporallyClose(existing, candidate, {fuzzyDuration: true});
         }
         return [closeTime, fuzzyTime];
     }

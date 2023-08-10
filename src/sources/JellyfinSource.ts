@@ -1,11 +1,11 @@
 import MemorySource from "./MemorySource.js";
 import dayjs, {Dayjs} from "dayjs";
 import {
-    buildTrackString, closePlayDate,
+    buildTrackString, isPlayTemporallyClose,
     combinePartsToString, parseBool,
     parseDurationFromTimestamp,
     playObjDataMatch,
-    truncateStringToLength
+    truncateStringToLength, comparePlayTemporally, temporalPlayComparisonSummary, doubleReturnNewline
 } from "../utils.js";
 import {JellySourceConfig} from "../common/infrastructure/config/source/jellyfin.js";
 import {FormatPlayObjectOptions, InternalConfig, PlayObject, PlayPlatformId} from "../common/infrastructure/Atomic.js";
@@ -254,7 +254,7 @@ export default class JellyfinSource extends MemorySource {
 
         if(playObj.meta.event === 'UserDataSaved' && playObj.meta.eventReason === 'PlaybackFinished') {
 
-            const trackId = buildTrackString(playObj, {include: ['artist', 'track', 'trackId']});
+            const trackId = buildTrackString(playObj, {include: ['artist', 'track']});
 
             // sometimes jellyfin sends UserDataSaved payload with a LastPlayedDate that uses local time but accidentally includes a UTC offset (Z)
             // we need to check if playDate with local offset is the same (to within a second or two)?
@@ -276,8 +276,17 @@ export default class JellyfinSource extends MemorySource {
             let existingTracked: PlayObject;
             for(const [platformIdStr, player] of this.players) {
                 const currPlay = player.getPlayedObject();
-                if(currPlay !== undefined && closePlayDate(currPlay, playObj)) {
-                    existingTracked = currPlay;
+                if(currPlay !== undefined && playObjDataMatch(currPlay, playObj)) {
+                    const temporalResult = comparePlayTemporally(currPlay, playObj);
+                    if(parseBool(process.env.DEBUG_MODE)) {
+                        player.logger.debug(doubleReturnNewline`
+                        Play with event UserDataSaved-PlaybackFinished matched => ${trackId}
+                        
+                        Temporal Comparison => ${temporalPlayComparisonSummary(temporalResult, currPlay, playObj)}`);
+                    }
+                    if(temporalResult.close) {
+                        existingTracked = currPlay;
+                    }
                     break;
                 }
             }

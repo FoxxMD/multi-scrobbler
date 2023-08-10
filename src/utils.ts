@@ -7,7 +7,7 @@ import { TimeoutError, WebapiError } from "spotify-web-api-node/src/response-err
 import Ajv, {Schema} from 'ajv';
 import {
     asPlayerStateData,
-    DEFAULT_SCROBBLE_DURATION_THRESHOLD,
+    DEFAULT_SCROBBLE_DURATION_THRESHOLD, ListenRange,
     lowGranularitySources, NO_DEVICE, NO_USER, numberFormatOptions, PlayerStateData,
     PlayObject, PlayPlatformId, ProgressAwarePlayObject, RegExResult,
     RemoteIdentityParts, ScrobbleThresholdResult,
@@ -18,6 +18,16 @@ import pathUtil from "path";
 import {ErrorWithCause} from "pony-cause";
 import backoffStrategies from '@kenyip/backoff-strategies';
 import {ScrobbleThresholds} from "./common/infrastructure/config/source/index.js";
+import {
+    oneLineTrim,
+    replaceResultTransformer,
+    stripIndentTransformer,
+    TemplateTag,
+    trimResultTransformer
+} from 'common-tags';
+import is from "@sindresorhus/is";
+import date = is.date;
+import {Duration} from "dayjs/plugin/duration.js";
 
 dayjs.extend(utc);
 
@@ -485,7 +495,53 @@ export const remoteHostStr = (req: Request): string => {
     return `${host}${proxy !== undefined ? ` (${proxy})` : ''}${agent !== undefined ? ` (UA: ${agent})` : ''}`;
 }
 
-export const closePlayDate = (existingPlay: PlayObject, newPlay: PlayObject, options: { diffThreshold?: number, fuzzyDuration?: boolean, useListRanges?: boolean} = {}): boolean => {
+export const isPlayTemporallyClose = (existingPlay: PlayObject, candidatePlay: PlayObject, options: { diffThreshold?: number, fuzzyDuration?: boolean, useListRanges?: boolean} = {}): boolean => {
+    return comparePlayTemporally(existingPlay, candidatePlay, options).close;
+}
+
+export interface TemporalPlayComparison {
+    close: boolean
+    date?: {
+        threshold: number
+        diff: number
+        fuzzyDiff?: number
+    }
+    range?: false | ListenRange
+}
+
+export const temporalPlayComparisonSummary = (data: TemporalPlayComparison, existingPlay?: PlayObject, candidatePlay?: PlayObject) => {
+    const parts: string[] = [];
+    if (existingPlay !== undefined && candidatePlay !== undefined) {
+        if (existingPlay.data.playDate.isSame(candidatePlay.data.playDate, 'day')) {
+            parts.push(`Existing: ${existingPlay.data.playDate.format('HH:mm:ssZ')} - Candidate: ${candidatePlay.data.playDate.format('HH:mm:ssZ')}`);
+        } else {
+            parts.push(`Existing: ${existingPlay.data.playDate.toISOString()} - Candidate: ${candidatePlay.data.playDate.toISOString()}`);
+        }
+    }
+    parts.push(`Close: ${data.close ? 'YES' : 'NO'}`);
+    if (data.date !== undefined) {
+        parts.push(`Play Diff: ${formatNumber(data.date.diff, {toFixed: 0})}s (Needed <${data.date.threshold}s)`)
+    }
+    if (data.date.fuzzyDiff !== undefined) {
+        parts.push(`Fuzzy Diff: ${formatNumber(data.date.fuzzyDiff, {toFixed: 0})}s (Needed <10s)`);
+    }
+    if (data.range !== undefined) {
+        if (data.range === false) {
+            parts.push('Candidate not played during Existing tracked listening');
+        } else {
+            parts.push(`Candidate played during tracked listening range from existing: ${data.range[0].timestamp.format('HH:mm:ssZ')} => ${data.range[1].timestamp.format('HH:mm:ssZ')}`);
+        }
+    } else {
+        parts.push('One or both Plays did not have have tracked listening to compare');
+    }
+    return parts.join(' | ');
+}
+
+export const comparePlayTemporally = (existingPlay: PlayObject, candidatePlay: PlayObject, options: { diffThreshold?: number, fuzzyDuration?: boolean, useListRanges?: boolean} = {}): TemporalPlayComparison => {
+
+    const result: TemporalPlayComparison = {
+        close: false
+    };
 
     const {
         meta:{
@@ -504,7 +560,7 @@ export const closePlayDate = (existingPlay: PlayObject, newPlay: PlayObject, opt
             duration: newDuration,
             listenRanges: newRanges,
         }
-    } = newPlay;
+    } = candidatePlay;
 
     const {
         diffThreshold = lowGranularitySources.some(x => x.toLocaleLowerCase() === source) ? 60 : 10,
@@ -514,42 +570,51 @@ export const closePlayDate = (existingPlay: PlayObject, newPlay: PlayObject, opt
 
     // cant compare!
     if(existingPlayDate === undefined || newPlayDate === undefined) {
-        return false;
+        return result;
     }
 
     const referenceDuration = newDuration ?? existingDuration;
 
     let playDiffThreshold = diffThreshold;
 
-    let listenRangeIntersects = false;
-    let closeTime = false;
     // check if existing play time is same as new play date
     let scrobblePlayDiff = Math.abs(existingPlayDate.unix() - newPlayDate.unix());
+    result.date = {
+        threshold: diffThreshold,
+        diff: scrobblePlayDiff
+    };
+
     if (scrobblePlayDiff <= playDiffThreshold) {
-        closeTime = true;
+        result.close = true;
     }
 
-    if(useListRanges && closeTime === false && existingRanges !== undefined) {
+    if(useListRanges && existingRanges !== undefined) {
         // since we know when the existing track was listened to
         // we can check if the new track play date took place while the existing one was being listened to
         // which would indicate (assuming same source) the new track is a duplicate
         for(const range of existingRanges) {
             if(newPlayDate.isBetween(range[0].timestamp, range[1].timestamp)) {
-                listenRangeIntersects = true;
+                result.range = range;
+                result.close = true;
                 break;
             }
+        }
+        if(result.range === undefined) {
+            result.range = false;
         }
     }
 
     // if the source has a duration its possible one play was scrobbled at the beginning of the track and the other at the end
     // so check if the duration matches the diff between the two play dates
-    if (listenRangeIntersects === false && closeTime === false && referenceDuration !== undefined && fuzzyDuration) {
-        if(Math.abs(scrobblePlayDiff - newDuration) < 10) { // TODO use finer comparison for this?
-            closeTime = true;
+    if (result.close === false && referenceDuration !== undefined && fuzzyDuration) {
+        const fuzzyDiff = Math.abs(scrobblePlayDiff - newDuration);
+        result.date.fuzzyDiff = fuzzyDiff;
+        if(fuzzyDiff < 10) { // TODO use finer comparison for this?
+            result.close = true;
         }
     }
 
-    return closeTime;
+    return result;
 }
 
 export const combinePartsToString = (parts: any[], glue: string = '-'): string | undefined => {
@@ -885,3 +950,51 @@ export const formatNumber = (val: number | string, options?: numberFormatOptions
     });
     return `${prefixStr}${localeString}${suffix}`;
 };
+
+export const durationToNormalizedTime = (dur: Duration): { hours: number, minutes: number, seconds: number } => {
+    const totalSeconds = dur.asSeconds();
+
+    const hours = Math.floor(totalSeconds / 3600);
+    const minutes = Math.floor((totalSeconds - (hours * 3600)) / 60);
+    const seconds = totalSeconds - (hours * 3600) - (minutes * 60);
+
+    return {
+        hours,
+        minutes,
+        seconds
+    };
+}
+
+// https://github.com/zspecza/common-tags/issues/176#issuecomment-1650242734
+export const doubleReturnNewline = new TemplateTag(
+    stripIndentTransformer('all'),
+    // remove instances of single line breaks
+    replaceResultTransformer(/(?<=.)\n(?!\n+)/g, ''),
+    // replace instances of two or more line breaks with one line break
+    replaceResultTransformer(/(?<=.)\n{2,}/g, '\n'),
+    trimResultTransformer(),
+);
+
+export const durationToTimestamp = (dur: Duration): string => {
+    const nTime = durationToNormalizedTime(dur);
+
+    const parts: string[] = [];
+    if (nTime.hours !== 0) {
+        parts.push(nTime.hours.toString().padStart(2, "0"));
+    }
+    parts.push(nTime.minutes.toString().padStart(2, "0"));
+    parts.push(nTime.seconds.toString().padStart(2, "0"));
+    return parts.join(':');
+}
+
+export const durationToHuman = (dur: Duration): string => {
+    const nTime = durationToNormalizedTime(dur);
+
+    const parts: string[] = [];
+    if (nTime.hours !== 0) {
+        parts.push(`${nTime.hours}hr`);
+    }
+    parts.push(`${nTime.minutes}min`);
+    parts.push(`${nTime.seconds}sec`);
+    return parts.join(' ');
+}
