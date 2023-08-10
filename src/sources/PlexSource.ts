@@ -254,7 +254,7 @@ export const plexRequestMiddle = () => {
             plexLog.debug(`File Begin: ${formname}`);
         });
         form.on('file', (formname: any) => {
-            plexLog.debug(`File Recieved: ${formname}`);
+            plexLog.debug(`File Received: ${formname}`);
         });
 
 

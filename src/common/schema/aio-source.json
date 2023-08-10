@@ -29,7 +29,7 @@
                     "default": false,
                     "description": "For Sources that track Player State (currently playing) this logs a simple player state/summary to DEBUG output",
                     "examples": [
-                        "false"
+                        false
                     ],
                     "title": "logPlayerState",
                     "type": "boolean"

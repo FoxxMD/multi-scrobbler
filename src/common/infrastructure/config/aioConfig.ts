@@ -29,6 +29,18 @@ export interface AIOConfig {
     port?: number
 
     logging?: LogOptions
+
+    /**
+     * Enables ALL relevant logging and debug options for all sources/clients, when none are defined.
+     *
+     * This is a convenience shortcut for enabling all output needed to troubleshoot an issue and does not need to be on for normal operation.
+     *
+     * It can also be enabled with the environmental variable DEBUG_MODE=true
+     *
+     * @default false
+     * @examples [false]
+     * */
+    debugMode?: boolean
 }
 
 export interface AIOClientConfig {

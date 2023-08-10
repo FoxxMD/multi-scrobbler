@@ -2,7 +2,7 @@ import MemorySource from "./MemorySource.js";
 import dayjs, {Dayjs} from "dayjs";
 import {
     buildTrackString, closePlayDate,
-    combinePartsToString,
+    combinePartsToString, parseBool,
     parseDurationFromTimestamp,
     playObjDataMatch,
     truncateStringToLength
@@ -31,7 +31,7 @@ export default class JellyfinSource extends MemorySource {
             users,
             servers,
             options: {
-                logFilterFailure = 'warn'
+                logFilterFailure =  (parseBool(process.env.DEBUG_MODE) ? 'debug' : 'warn')
                 } = {}
             } = {}
         } = config;
@@ -177,7 +177,7 @@ export default class JellyfinSource extends MemorySource {
         const {
             data: {
                 options: {
-                    logFilterFailure = 'warn'
+                    logFilterFailure = (parseBool(process.env.DEBUG_MODE) ? 'debug' : 'warn')
                 } = {}
             } = {}
         } = this.config;

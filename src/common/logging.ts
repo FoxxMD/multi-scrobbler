@@ -4,7 +4,7 @@ import winston, {format, Logger} from '@foxxmd/winston';
 import {DuplexTransport} from "winston-duplex";
 import {asLogOptions, LogConfig, LogInfo, LogLevel, LogOptions} from "./infrastructure/Atomic.js";
 import process from "process";
-import {fileOrDirectoryIsWriteable, truncateStringToLength} from "../utils.js";
+import {fileOrDirectoryIsWriteable, parseBool, truncateStringToLength} from "../utils.js";
 import {ErrorWithCause, stackWithCauses} from "pony-cause";
 import {NullTransport} from 'winston-null';
 import DailyRotateFile from 'winston-daily-rotate-file';
@@ -38,7 +38,7 @@ export const getLogger = (config: LogConfig = {}, name = 'app'): Logger => {
         }
 
         const {level: configLevel} = options;
-        const defaultLevel = process.env.LOG_LEVEL || 'info';
+        const defaultLevel = process.env.LOG_LEVEL || (parseBool(process.env.DEBUG_MODE) ? 'debug' : 'info');
         const {
             level = configLevel || defaultLevel,
             file = configLevel || defaultLevel,

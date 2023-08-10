@@ -661,11 +661,11 @@ export function parseBool(value: any, prev: any = false): boolean {
         return false;
     }
     if (typeof usedVal === 'string') {
-        return usedVal === 'true';
+        return ['1','true','yes'].includes(usedVal.toLocaleLowerCase().trim());
     } else if (typeof usedVal === 'boolean') {
         return usedVal;
     }
-    throw new Error('Not a boolean value.');
+    throw new Error(`'${value.toString()}' is not a boolean value.`);
 }
 
 export const genGroupIdStrFromPlay = (play: PlayObject) => {

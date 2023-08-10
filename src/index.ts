@@ -13,7 +13,7 @@ import session from 'express-session';
 import {
     buildTrackString,
     capitalize,
-    longestString, mergeArr,
+    longestString, mergeArr, parseBool,
     readJson,
     remoteHostIdentifiers,
     sleep,
@@ -93,7 +93,17 @@ const configDir = process.env.CONFIG_DIR || path.resolve(projectDir, `./config`)
             webhooks = [],
             port = envPort,
             logging = {},
+            debugMode,
         } = (config || {}) as AIOConfig;
+
+        if (process.env.DEBUG_MODE === undefined && debugMode !== undefined) {
+            process.env.DEBUG_MODE = debugMode.toString();
+        }
+        if(process.env.DEBUG_MODE !== undefined) {
+            // make sure value is legit
+            const b = parseBool(process.env.DEBUG_MODE);
+            process.env.DEBUG_MODE = b.toString();
+        }
 
         const server = await app.listen(port);
         io = new Server(server);
@@ -253,6 +263,9 @@ const configDir = process.env.CONFIG_DIR || path.resolve(projectDir, `./config`)
                         this.logger.warn(`Tautulli event specified a config name but the configured source was not a Tautulli type: ${req.body.scrobblerConfig}`);
                         return res.send('OK');
                     } else {
+                        if((source.config.options?.logPayload ?? parseBool(process.env.DEBUG_MODE)) === true) {
+                            source.logger.debug(`Received Payload`, req.body);
+                        }
                         // @ts-expect-error TS(2339): Property 'handle' does not exist on type 'never'.
                         await source.handle(payload);
                         return res.send('OK');
@@ -329,7 +342,7 @@ const configDir = process.env.CONFIG_DIR || path.resolve(projectDir, `./config`)
                     const {
                         data: {
                             options: {
-                                logPayload = false
+                                logPayload = parseBool(process.env.DEBUG_MODE)
                             } = {}
                         } = {},
                     } = x.config;

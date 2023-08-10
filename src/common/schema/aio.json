@@ -102,7 +102,7 @@
                     "default": false,
                     "description": "For Sources that track Player State (currently playing) this logs a simple player state/summary to DEBUG output",
                     "examples": [
-                        "false"
+                        false
                     ],
                     "title": "logPlayerState",
                     "type": "boolean"
@@ -2485,6 +2485,15 @@
             },
             "title": "clients",
             "type": "array"
+        },
+        "debugMode": {
+            "default": false,
+            "description": "Enables ALL relevant logging and debug options for all sources/clients, when none are defined.\n\nThis is a convenience shortcut for enabling all output needed to troubleshoot an issue and does not need to be on for normal operation.\n\nIt can also be enabled with the environmental variable DEBUG_MODE=true",
+            "examples": [
+                false
+            ],
+            "title": "debugMode",
+            "type": "boolean"
         },
         "logging": {
             "$ref": "#/definitions/LogOptions",

@@ -54,7 +54,7 @@ export interface CommonSourceOptions {
      * For Sources that track Player State (currently playing) this logs a simple player state/summary to DEBUG output
      *
      * @default false
-     * @examples ["false"]
+     * @examples [false]
      * */
     logPlayerState?: boolean
 }
