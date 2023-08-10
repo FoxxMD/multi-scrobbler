@@ -273,8 +273,15 @@ export default class JellyfinSource extends MemorySource {
                 playObj.data.playDate = offsetDate;
             }
 
-            const existingTracked = this.getFlatCandidateRecentlyPlayed().some(x => playObjDataMatch(playObj, x));
-            if(existingTracked) {
+            let existingTracked: PlayObject;
+            for(const [platformIdStr, player] of this.players) {
+                const currPlay = player.getPlayedObject();
+                if(currPlay !== undefined && closePlayDate(currPlay, playObj)) {
+                    existingTracked = currPlay;
+                    break;
+                }
+            }
+            if(existingTracked !== undefined) {
                 this.logger.debug(`Will not scrobble Play with event UserDataSaved-PlaybackFinished because it has already been tracked => ${trackId}`);
                 return;
             }
