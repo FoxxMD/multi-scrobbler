@@ -7,6 +7,7 @@ import utc from 'dayjs/plugin/utc.js';
 import isBetween from 'dayjs/plugin/isBetween.js';
 import relativeTime from 'dayjs/plugin/relativeTime.js';
 import duration from 'dayjs/plugin/duration.js';
+import timezone from 'dayjs/plugin/timezone.js';
 import passport from 'passport';
 import session from 'express-session';
 
@@ -45,6 +46,7 @@ dayjs.extend(utc)
 dayjs.extend(isBetween);
 dayjs.extend(relativeTime);
 dayjs.extend(duration);
+dayjs.extend(timezone);
 
 const app = addAsync(express());
 const router = Router();

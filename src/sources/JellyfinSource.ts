@@ -134,6 +134,7 @@ export default class JellyfinSource extends MemorySource {
         // JELLYFIN WEB -> LastPlayedDate = time when track stopped being played
         if(NotificationType === 'UserDataSaved' && SaveReason === 'PlaybackFinished' && LastPlayedDate !== undefined) {
             nfs = false;
+
             playDate = dayjs(LastPlayedDate);
             if(Played !== true) {
                 eventReason = 'PlaybackFinished-NOTPLAYED'
@@ -257,16 +258,22 @@ export default class JellyfinSource extends MemorySource {
             const trackId = buildTrackString(playObj, {include: ['artist', 'track']});
 
             // sometimes jellyfin sends UserDataSaved payload with a LastPlayedDate that uses local time but accidentally includes a UTC offset (Z)
-            // we need to check if playDate with local offset is the same (to within a second or two)?
+            // we need to check if playDate with local offset is the same (to within 10 seconds to allow symphonium to report)
             const now = dayjs();
+            let offsetDate: Dayjs = undefined;
             const localOffset = dayjs().utcOffset();
-            const offsetBackDate = playObj.data.playDate.add(localOffset * -1, 'minutes');
-            const offsetForwardDate = playObj.data.playDate.add(localOffset * -1, 'minutes');
-            let offsetDate: Dayjs;
-            if(Math.abs(now.diff(offsetBackDate, 'seconds')) < 5) {
-                offsetDate = offsetBackDate;
-            } else if (Math.abs(now.diff(offsetForwardDate, 'seconds')) < 5) {
-                offsetDate = offsetForwardDate;
+            if(localOffset < 0) {
+                const offsetBackDate = playObj.data.playDate.subtract(Math.abs(localOffset), 'minutes');
+                if(Math.abs(now.diff(offsetBackDate, 'seconds')) < 5) {
+                    offsetDate = offsetBackDate;
+                }
+            }
+            if(offsetDate === undefined) {
+                const tz = dayjs.tz.guess();
+                const normalizedDate = dayjs(playObj.data.playDate.utc().tz('Etc/UTC').tz(tz, true).toISOString())
+                if(Math.abs(now.diff(normalizedDate, 'seconds')) < 12) {
+                    offsetDate = normalizedDate;
+                }
             }
             if(offsetDate !== undefined) {
                 this.logger.warn(`Play with event UserDataSaved-PlaybackFinished has a playDate that is likely local time with incorrect UTC offset. It has been corrected. => ${trackId}`);
