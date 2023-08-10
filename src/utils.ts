@@ -485,7 +485,7 @@ export const remoteHostStr = (req: Request): string => {
     return `${host}${proxy !== undefined ? ` (${proxy})` : ''}${agent !== undefined ? ` (UA: ${agent})` : ''}`;
 }
 
-export const closePlayDate = (existingPlay: PlayObject, newPlay: PlayObject, options: { diffThreshold?: number, fuzzyDuration?: boolean} = {}): boolean => {
+export const closePlayDate = (existingPlay: PlayObject, newPlay: PlayObject, options: { diffThreshold?: number, fuzzyDuration?: boolean, useListRanges?: boolean} = {}): boolean => {
 
     const {
         meta:{
@@ -494,6 +494,7 @@ export const closePlayDate = (existingPlay: PlayObject, newPlay: PlayObject, opt
         data: {
             playDate: existingPlayDate,
             duration: existingDuration,
+            listenRanges: existingRanges,
         }
     } = existingPlay;
 
@@ -501,12 +502,14 @@ export const closePlayDate = (existingPlay: PlayObject, newPlay: PlayObject, opt
         data: {
             playDate: newPlayDate,
             duration: newDuration,
+            listenRanges: newRanges,
         }
     } = newPlay;
 
     const {
         diffThreshold = lowGranularitySources.some(x => x.toLocaleLowerCase() === source) ? 60 : 10,
         fuzzyDuration = false,
+        useListRanges = true,
     } = options;
 
     // cant compare!
@@ -518,16 +521,30 @@ export const closePlayDate = (existingPlay: PlayObject, newPlay: PlayObject, opt
 
     let playDiffThreshold = diffThreshold;
 
+    let listenRangeIntersects = false;
     let closeTime = false;
     // check if existing play time is same as new play date
     let scrobblePlayDiff = Math.abs(existingPlayDate.unix() - newPlayDate.unix());
     if (scrobblePlayDiff <= playDiffThreshold) {
         closeTime = true;
     }
+
+    if(useListRanges && closeTime === false && existingRanges !== undefined) {
+        // since we know when the existing track was listened to
+        // we can check if the new track play date took place while the existing one was being listened to
+        // which would indicate (assuming same source) the new track is a duplicate
+        for(const range of existingRanges) {
+            if(newPlayDate.isBetween(range[0].timestamp, range[1].timestamp)) {
+                listenRangeIntersects = true;
+                break;
+            }
+        }
+    }
+
     // if the source has a duration its possible one play was scrobbled at the beginning of the track and the other at the end
     // so check if the duration matches the diff between the two play dates
-    if (closeTime === false && referenceDuration !== undefined && fuzzyDuration) {
-        if(Math.abs(scrobblePlayDiff - newDuration) < 10) { // use finer comparison for this
+    if (listenRangeIntersects === false && closeTime === false && referenceDuration !== undefined && fuzzyDuration) {
+        if(Math.abs(scrobblePlayDiff - newDuration) < 10) { // TODO use finer comparison for this?
             closeTime = true;
         }
     }
