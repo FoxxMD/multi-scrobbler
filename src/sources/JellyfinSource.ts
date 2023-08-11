@@ -16,6 +16,8 @@ import {JellyfinPlayerState} from "./PlayerState/JellyfinPlayerState.js";
 
 const shortDeviceId = truncateStringToLength(10, '');
 
+const TZ_OFFSET_PRESENT_THRESHOLD = 12;
+
 export default class JellyfinSource extends MemorySource {
     users;
     servers;
@@ -258,27 +260,26 @@ export default class JellyfinSource extends MemorySource {
             const trackId = buildTrackString(playObj, {include: ['artist', 'track']});
 
             // sometimes jellyfin sends UserDataSaved payload with a LastPlayedDate that uses local time but accidentally includes a UTC offset (Z)
-            // we need to check if playDate with local offset is the same (to within 10 seconds to allow symphonium to report)
             const now = dayjs();
-            let offsetDate: Dayjs = undefined;
-            const localOffset = dayjs().utcOffset();
-            if(localOffset < 0) {
-                const offsetBackDate = playObj.data.playDate.subtract(Math.abs(localOffset), 'minutes');
-                if(Math.abs(now.diff(offsetBackDate, 'seconds')) < 5) {
-                    offsetDate = offsetBackDate;
-                }
+
+            const tz = dayjs.tz.guess();
+            // so convert to UTC (corrects hour offset)
+            // and then convert BACK to local but keep corrected time
+            // then parse as new date from ISO string so dayjs has no knowledge of tz conversion
+            const normalizedDate = dayjs(playObj.data.playDate.utc().tz('Etc/UTC').tz(tz, true).toISOString());
+            const oneHour = now.add(1, 'hour');
+
+            // if timestamp was from the future (tz offset is positive) we know the new one is correct
+            if(playObj.data.playDate.isSameOrAfter(oneHour)) {
+                playObj.data.playDate = normalizedDate;
+                this.logger.warn(`Play with event UserDataSaved-PlaybackFinished has a playDate that is from the future (${playObj.data.playDate.diff(now, 'minutes')} minutes from now). This is likely a local time with incorrect UTC offset and has been corrected. => ${trackId}`);
             }
-            if(offsetDate === undefined) {
-                const tz = dayjs.tz.guess();
-                const normalizedDate = dayjs(playObj.data.playDate.utc().tz('Etc/UTC').tz(tz, true).toISOString())
-                if(Math.abs(now.diff(normalizedDate, 'seconds')) < 12) {
-                    offsetDate = normalizedDate;
-                }
+            // if the timestamp is super close to the current time its likely the jellyfin client is online and this is the current track that just finished (not offline)
+            else if(Math.abs(now.diff(normalizedDate, 'seconds')) < TZ_OFFSET_PRESENT_THRESHOLD) {
+                playObj.data.playDate = normalizedDate;
+                this.logger.warn(`Play with event UserDataSaved-PlaybackFinished has a playDate that when timezone offset adjusted is only ${Math.abs(now.diff(normalizedDate, 'seconds'))}s from now. This is likely a local time with incorrect UTC offset and has been corrected. => ${trackId}`);
             }
-            if(offsetDate !== undefined) {
-                this.logger.warn(`Play with event UserDataSaved-PlaybackFinished has a playDate that is likely local time with incorrect UTC offset. It has been corrected. => ${trackId}`);
-                playObj.data.playDate = offsetDate;
-            }
+            // unfortunately there's nothing(?) that can be done accurately detect and correct real offline play dates when the timezone offset is negative (in the past)
 
             let existingTracked: PlayObject;
             for(const [platformIdStr, player] of this.players) {
@@ -303,7 +304,7 @@ export default class JellyfinSource extends MemorySource {
             }
 
             // if last played ts was less than 30 seconds ago it's too early to scrobble (skipped track, essentially)
-            const finishedToNow = dayjs().diff(playObj.data.playDate, 'seconds');
+            const finishedToNow = now.diff(playObj.data.playDate, 'seconds');
             if(finishedToNow < 30) {
                 this.logger.debug(`Will not scrobble Play with event UserDataSaved-PlaybackFinished because it took place too recently (${finishedToNow}s) => ${trackId}`);
                 return;
@@ -316,7 +317,7 @@ export default class JellyfinSource extends MemorySource {
                 // -- so if we see a diff of only a few (10 for some buffer) seconds it's likely either Jellyfin or a Jellyfin client is reporting
                 // last played date while ONLINE and from the start of the track instead of the last (when PlaybackFinished actually occurred)
                 const lastPlayedAndDur = playObj.data.playDate.add(playObj.data.duration, 'seconds');
-                const diffPlayedDuration = dayjs().diff(lastPlayedAndDur, 'seconds');
+                const diffPlayedDuration = now.diff(lastPlayedAndDur, 'seconds');
                 // TODO at least one PlayBackFinished SaveReason from symphonium is returning local time but with Z (UTC) timezone
                 // which makes this filtering not work at all
                 if(diffPlayedDuration < 10) {
