@@ -25,6 +25,7 @@ export default class JellyfinSource extends MemorySource {
     multiPlatform: boolean = true;
 
     declare config: JellySourceConfig;
+    userDataWarn: boolean = false;
 
     constructor(name: any, config: JellySourceConfig, internal: InternalConfig, emitter: EventEmitter) {
         super('jellyfin', name, config, internal, emitter);
@@ -255,7 +256,18 @@ export default class JellyfinSource extends MemorySource {
         const scrobbleOpts = {checkAll: false};
         let newPlays: PlayObject[] = [];
 
+        //https://github.com/FoxxMD/multi-scrobbler/issues/87
         if(playObj.meta.event === 'UserDataSaved' && playObj.meta.eventReason === 'PlaybackFinished') {
+
+            if(this.userDataWarn === false) {
+                this.logger.warn('!!!!!!!!!!WARNING!!!!!!!!!!');
+                this.logger.warn(`You have enabled 'UserDataSaved' notification type for the Jellyfin webhook plugin.`);
+                this.logger.warn(`This notification's behavior is EXTREMELY bugged and you are likely to see duplicate scrobbles, missed scrobbles, and scrobbles with the wrong timestamp.`);
+                this.logger.warn(`This is caused by Jellyfin/plugin behavior that CANNOT be fixed by multi-scrobbler. See here for more context: https://github.com/FoxxMD/multi-scrobbler/issues/87`);
+                this.logger.warn(`You WILL NOT receive any support for issues/behavior caused by using the 'UserDataSaved' notification type. USE AT YOUR OWN RISK.`);
+                this.logger.warn('!!!!!!!!!!WARNING!!!!!!!!!!');
+                this.userDataWarn = true;
+            }
 
             const trackId = buildTrackString(playObj, {include: ['artist', 'track']});
 
@@ -305,7 +317,7 @@ export default class JellyfinSource extends MemorySource {
 
             // if last played ts was less than 30 seconds ago it's too early to scrobble (skipped track, essentially)
             const finishedToNow = now.diff(playObj.data.playDate, 'seconds');
-            if(finishedToNow < 30) {
+            if(Math.abs(finishedToNow) < 30) {
                 this.logger.debug(`Will not scrobble Play with event UserDataSaved-PlaybackFinished because it took place too recently (${finishedToNow}s) => ${trackId}`);
                 return;
             }
