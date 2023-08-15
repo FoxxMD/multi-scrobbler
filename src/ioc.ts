@@ -17,9 +17,9 @@ if(typeof process.env.CONFIG_DIR === 'string') {
     logPath = path.resolve(process.env.CONFIG_DIR, './logs');
 }*/
 
-//let root: Container;
+let root: ReturnType<typeof createRoot>;
 
-export const createRoot = (port) => {
+const createRoot = (port: number | string) => {
     return createContainer().add({
         configDir: configDir,
         logDir: logPath,
@@ -34,6 +34,11 @@ export const createRoot = (port) => {
     }));
 }
 
-
+export const getRoot = (port?: number | string) => {
+    if(root === undefined) {
+        root = createRoot(port);
+    }
+    return root;
+}
 
 export default createRoot;

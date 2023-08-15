@@ -4,6 +4,8 @@ import {MESSAGE} from 'triple-beam';
 import {Logger} from '@foxxmd/winston';
 import TupleMap from "../TupleMap.js";
 import is from "@sindresorhus/is";
+import {Request, Response} from "express";
+import {NextFunction, ParamsDictionary, Query} from "express-serve-static-core";
 
 export type SourceType = 'spotify' | 'plex' | 'tautulli' | 'subsonic' | 'jellyfin' | 'lastfm' | 'deezer' | 'ytmusic' | 'mpris' | 'mopidy' | 'listenbrainz' | 'jriver' | 'kodi';
 export const sourceTypes: SourceType[] = ['spotify', 'plex', 'tautulli', 'subsonic', 'jellyfin', 'lastfm', 'deezer', 'ytmusic', 'mpris', 'mopidy', 'listenbrainz', 'jriver', 'kodi'];
@@ -273,6 +275,31 @@ export interface RegExResult {
 
 export interface NamedGroup {
     [name: string]: any
+}
+
+export type ExpressRequest = Request<ParamsDictionary, any, any, Query, Record<string, any>>;
+export type ExpressResponse = Response<any, Record<string, any>>;
+export type ExpressHandler = (req: ExpressRequest, res: ExpressResponse, next: NextFunction) => Promise<void | Response<any, Record<string, any>>>
+
+export interface SourceStatusData {
+    status: string;
+    type: "spotify" | "plex" | "tautulli" | "subsonic" | "jellyfin" | "lastfm" | "deezer" | "ytmusic" | "mpris" | "mopidy" | "listenbrainz" | "jriver" | "kodi";
+    display: string;
+    tracksDiscovered: number;
+    name: string;
+    canPoll: boolean;
+    hasAuth: boolean;
+    hasAuthInteraction: boolean;
+    authed: boolean;
+}
+
+export interface ClientStatusData {
+    status: string;
+    type: "maloja" | "lastfm" | "listenbrainz";
+    display: string;
+    tracksDiscovered: number;
+    name: string;
+    hasAuth: boolean;
 }
 
 export interface numberFormatOptions {
