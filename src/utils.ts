@@ -1,32 +1,33 @@
-import {promises, constants, accessSync} from "fs";
-import dayjs, {Dayjs} from 'dayjs';
+import {accessSync, constants, promises} from "fs";
+import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc.js';
 import {Logger} from '@foxxmd/winston';
 import JSON5 from 'json5';
-import { TimeoutError, WebapiError } from "spotify-web-api-node/src/response-error.js";
+import {TimeoutError, WebapiError} from "spotify-web-api-node/src/response-error.js";
 import Ajv, {Schema} from 'ajv';
 import {
     asPlayerStateData,
-    DEFAULT_SCROBBLE_DURATION_THRESHOLD, ListenRange,
-    lowGranularitySources, NO_DEVICE, NO_USER, numberFormatOptions, PlayerStateData,
-    PlayObject, PlayPlatformId, ProgressAwarePlayObject, RegExResult,
-    RemoteIdentityParts, ScrobbleThresholdResult,
-    TrackStringOptions
+    DEFAULT_SCROBBLE_DURATION_THRESHOLD,
+    ListenRange,
+    lowGranularitySources,
+    NO_DEVICE,
+    NO_USER,
+    numberFormatOptions,
+    PlayerStateData,
+    PlayObject,
+    PlayPlatformId,
+    ProgressAwarePlayObject,
+    RegExResult,
+    RemoteIdentityParts,
+    ScrobbleThresholdResult
 } from "./common/infrastructure/Atomic.js";
 import {Request} from "express";
 import pathUtil from "path";
 import {ErrorWithCause} from "pony-cause";
 import backoffStrategies from '@kenyip/backoff-strategies';
 import {ScrobbleThresholds} from "./common/infrastructure/config/source/index.js";
-import {
-    oneLineTrim,
-    replaceResultTransformer,
-    stripIndentTransformer,
-    TemplateTag,
-    trimResultTransformer
-} from 'common-tags';
+import {replaceResultTransformer, stripIndentTransformer, TemplateTag, trimResultTransformer} from 'common-tags';
 import is from "@sindresorhus/is";
-import date = is.date;
 import {Duration} from "dayjs/plugin/duration.js";
 
 dayjs.extend(utc);
@@ -81,70 +82,6 @@ export async function writeFile(path: any, text: any) {
 
 export function sleep(ms: any) {
     return new Promise(resolve => setTimeout(resolve, ms));
-}
-
-export const longestString = (strings: any) => strings.reduce((acc: any, curr: any) => curr.length > acc ? curr.length : acc, 0);
-export const truncateStringArrToLength = (length: any, truncStr = '...') => {
-    const truncater = truncateStringToLength(length, truncStr);
-    return (strings: any) => strings.map(truncater);
-}
-export const truncateStringToLength = (length: any, truncStr = '...') => (val: any = '') =>  {
-    if(val === null) {
-        return '';
-    }
-    const str = typeof val !== 'string' ? val.toString() : val;
-    return str.length > length ? `${str.slice(0, length)}${truncStr}` : str;
-}
-
-const defaultTransformer = (input: any) => input;
-
-export const buildTrackString = (playObj: PlayObject, options: TrackStringOptions = {}) => {
-    const {
-        include = ['time', 'artist', 'track'],
-        transformers: {
-            artists: artistsFunc = (a: string[]) => a.join(' / '),
-            track: trackFunc = defaultTransformer,
-            time: timeFunc = (t: Dayjs | undefined) => t === undefined ? 'N/A' : t.local().format(),
-            timeFromNow = (t: Dayjs | undefined) => t === undefined ? undefined : t.local().fromNow(),
-        } = {}
-    } = options;
-    const {
-        data: {
-            artists,
-            album,
-            track,
-            playDate
-        } = {},
-        meta: {
-            trackId
-        } = {},
-    } = playObj;
-
-    const strParts = [];
-    if(include.includes('trackId') && trackId !== undefined) {
-        strParts.push(`(${trackId})`);
-    }
-    if(include.includes('artist')) {
-        strParts.push(`${artistsFunc(artists)}`)
-    }
-    if(include.includes('track')) {
-        if(strParts.length > 0) {
-            strParts.push(`- ${trackFunc(track)}`);
-        } else {
-            strParts.push(`${trackFunc(track)}`);
-        }
-    }
-    if (include.includes('time')) {
-        strParts.push(`@ ${timeFunc(playDate)}`);
-    }
-    if (include.includes('timeFromNow')) {
-        const tfn = timeFromNow(playDate);
-        if(tfn !== undefined) {
-            strParts.push(`(${tfn})`)
-        }
-
-    }
-    return strParts.join(' ');
 }
 
 // sorts playObj formatted objects by playDate in ascending (oldest first) order

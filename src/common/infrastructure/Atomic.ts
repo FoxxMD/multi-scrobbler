@@ -173,13 +173,14 @@ export const NO_USER = 'SingleUser';
 
 export const SINGLE_USER_PLATFORM_ID: PlayPlatformId = [NO_DEVICE, NO_USER];
 
-export interface TrackStringOptions {
+export interface TrackStringOptions<T = string> {
     include?: ('time' | 'artist' | 'track' | 'timeFromNow' | 'trackId')[]
     transformers?: {
-        artists?: (a: string[]) => string
-        track?: (t: string) => string
-        time?: (t: Dayjs) => string
-        timeFromNow?: (t: Dayjs) => string
+        artists?: (a: string[]) => T | string
+        track?: (t: string, hasExistingParts?: boolean) => T | string
+        time?: (t: Dayjs) => T | string
+        timeFromNow?: (t: Dayjs) => T  | string
+        reducer?: (arr: (T|string)[]) => T //(acc: T, curr: T | string) => T
     }
 }
 

@@ -1,11 +1,11 @@
 import MemorySource from "./MemorySource.js";
 import dayjs, {Dayjs} from "dayjs";
 import {
-    buildTrackString, isPlayTemporallyClose,
+    isPlayTemporallyClose,
     combinePartsToString, parseBool,
     parseDurationFromTimestamp,
     playObjDataMatch,
-    truncateStringToLength, comparePlayTemporally, temporalPlayComparisonSummary, doubleReturnNewline
+    comparePlayTemporally, temporalPlayComparisonSummary, doubleReturnNewline
 } from "../utils.js";
 import {JellySourceConfig} from "../common/infrastructure/config/source/jellyfin.js";
 import {FormatPlayObjectOptions, InternalConfig, PlayObject, PlayPlatformId} from "../common/infrastructure/Atomic.js";
@@ -13,6 +13,7 @@ import EventEmitter from "events";
 import {PlayerStateOptions} from "./PlayerState/AbstractPlayerState.js";
 import {Logger} from "@foxxmd/winston";
 import {JellyfinPlayerState} from "./PlayerState/JellyfinPlayerState.js";
+import {buildTrackString, truncateStringToLength} from "../utils/StringUtils.js";
 
 const shortDeviceId = truncateStringToLength(10, '');
 

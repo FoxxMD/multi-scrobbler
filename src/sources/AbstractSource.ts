@@ -1,6 +1,5 @@
 import dayjs, {Dayjs} from "dayjs";
 import {
-    buildTrackString,
     capitalize, isPlayTemporallyClose, genGroupId,
     genGroupIdStrFromPlay, mergeArr,
     playObjDataMatch, pollingBackoff,
@@ -20,6 +19,7 @@ import {SourceConfig} from "../common/infrastructure/config/source/sources.js";
 import {EventEmitter} from "events";
 import {FixedSizeList} from "fixed-size-list";
 import TupleMap from "../common/TupleMap.js";
+import {buildTrackString} from "../utils/StringUtils.js";
 
 export interface RecentlyPlayedOptions {
     limit?: number

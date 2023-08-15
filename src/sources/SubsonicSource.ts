@@ -2,12 +2,13 @@ import request from 'superagent';
 import * as crypto from 'crypto';
 import dayjs from "dayjs";
 import isSameOrAfter from "dayjs/plugin/isSameOrAfter.js";
-import {buildTrackString, parseRetryAfterSecsFromObj, removeDuplicates, sleep} from "../utils.js";
+import {parseRetryAfterSecsFromObj, removeDuplicates, sleep} from "../utils.js";
 import MemorySource from "./MemorySource.js";
 import {SubSonicSourceConfig} from "../common/infrastructure/config/source/subsonic.js";
 import {FormatPlayObjectOptions, InternalConfig, PlayObject} from "../common/infrastructure/Atomic.js";
 import {RecentlyPlayedOptions} from "./AbstractSource.js";
 import EventEmitter from "events";
+import {buildTrackString} from "../utils/StringUtils.js";
 
 dayjs.extend(isSameOrAfter);
 

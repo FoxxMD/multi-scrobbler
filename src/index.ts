@@ -13,13 +13,11 @@ import session from 'express-session';
 import {createSession} from 'better-sse';
 
 import {
-    buildTrackString,
     capitalize,
-    longestString, mergeArr, parseBool,
+    mergeArr, parseBool,
     readJson,
     remoteHostIdentifiers,
-    sleep,
-    truncateStringToLength
+    sleep
 } from "./utils.js";
 import {makeClientCheckMiddle, makeSourceCheckMiddle} from "./server/middleware.js";
 import TautulliSource from "./sources/TautulliSource.js";
@@ -49,6 +47,7 @@ import {formatLogToHtml, getLogger, isLogLineMinLevel} from "./common/logging.js
 import {MESSAGE} from "triple-beam";
 import {setupApi} from "./server/api.js";
 import {Transform} from "stream";
+import {buildTrackString, longestString, truncateStringToLength} from "./utils/StringUtils.js";
 
 
 dayjs.extend(utc)

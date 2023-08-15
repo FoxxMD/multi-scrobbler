@@ -1,9 +1,7 @@
 import dayjs from "dayjs";
 import {
-    buildTrackString,
     combinePartsToString,
-    mergeArr,
-    truncateStringToLength
+    mergeArr
 } from "../utils.js";
 import AbstractSource from "./AbstractSource.js";
 import formidable from 'formidable';
@@ -12,6 +10,7 @@ import {PlexSourceConfig} from "../common/infrastructure/config/source/plex.js";
 import {FormatPlayObjectOptions, InternalConfig, PlayObject, SourceType} from "../common/infrastructure/Atomic.js";
 import EventEmitter from "events";
 import winston from '@foxxmd/winston';
+import {buildTrackString, truncateStringToLength} from "../utils/StringUtils.js";
 
 const shortDeviceId = truncateStringToLength(10, '');
 

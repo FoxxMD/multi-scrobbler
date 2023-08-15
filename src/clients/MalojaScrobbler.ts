@@ -3,12 +3,10 @@ import request from 'superagent';
 import dayjs from 'dayjs';
 import compareVersions from 'compare-versions';
 import {
-    buildTrackString,
     playObjDataMatch,
     setIntersection,
     sleep,
     sortByOldestPlayDate,
-    truncateStringToLength,
     parseRetryAfterSecsFromObj, capitalize, isPlayTemporallyClose
 } from "../utils.js";
 import {
@@ -26,6 +24,7 @@ import {
     MalojaScrobbleV2RequestData,
     MalojaScrobbleV3RequestData, MalojaScrobbleV3ResponseData, MalojaV2ScrobbleData, MalojaV3ScrobbleData
 } from "../apis/maloja/interfaces";
+import {buildTrackString, truncateStringToLength} from "../utils/StringUtils.js";
 
 const feat = ["ft.", "ft", "feat.", "feat", "featuring", "Ft.", "Ft", "Feat.", "Feat", "Featuring"];
 

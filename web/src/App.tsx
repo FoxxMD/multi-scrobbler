@@ -1,11 +1,27 @@
 import React from 'react';
 import logo from './logo.svg';
+import * as ReactDOM from "react-dom/client";
+import {
+    createBrowserRouter,
+    RouterProvider,
+} from "react-router-dom";
 import './App.css';
-import StatusSection from "./status/StatusSection";
 
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import LogsSection from "./logs/LogsSection";
 const queryClient = new QueryClient()
+import Dashboard from "./dashboard/dashboard";
+import RecentPage from "./recent/RecentPage";
+
+const router = createBrowserRouter([
+    {
+        path: "/",
+        element: <Dashboard />,
+    },
+    {
+        path: "/recent",
+        element: <RecentPage />,
+    },
+]);
 
 function App() {
   return (
@@ -24,8 +40,7 @@ function App() {
           </div>
         </div>
         <div className="container mx-auto">
-          <StatusSection/>
-            <LogsSection/>
+            <RouterProvider router={router}/>
         </div>
       </div>
       </QueryClientProvider>

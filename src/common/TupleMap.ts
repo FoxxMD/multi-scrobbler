@@ -33,9 +33,9 @@ class TupleMap<X,Y,Z> {
         return this.map.values();
     }
 
-    forEach(callbackfn: (value: Z, key: [X, Y], map: Map<[X, Y], Z>) => void, thisArg?: any): void {
+    forEach(callbackfn: (value: Z, key: [X, Y], map: Map<string, Z>) => void, thisArg?: any): void {
         this.map.forEach((value, key) => {
-            callbackfn.call(thisArg, value, JSON.parse(key), this);
+            callbackfn.call(thisArg, value, JSON.parse(key), this.map);
         });
     }
 }

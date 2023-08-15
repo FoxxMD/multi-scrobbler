@@ -2,7 +2,6 @@ import AbstractSource from "./AbstractSource.js";
 import {
     playObjDataMatch,
     sortByOldestPlayDate,
-    buildTrackString,
     toProgressAwarePlayObject,
     getProgress,
     genGroupIdStrFromPlay,
@@ -25,6 +24,7 @@ import TupleMap from "../common/TupleMap.js";
 import {AbstractPlayerState, PlayerStateOptions} from "./PlayerState/AbstractPlayerState.js";
 import {GenericPlayerState} from "./PlayerState/GenericPlayerState.js";
 import {Logger} from "@foxxmd/winston";
+import {buildTrackString} from "../utils/StringUtils.js";
 
 export default class MemorySource extends AbstractSource {
     /*

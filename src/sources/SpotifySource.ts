@@ -2,7 +2,7 @@ import dayjs from "dayjs";
 import {
     readJson,
     writeFile,
-    sortByOldestPlayDate, sleep, parseRetryAfterSecsFromObj, buildTrackString, truncateStringToLength, combinePartsToString,
+    sortByOldestPlayDate, sleep, parseRetryAfterSecsFromObj, combinePartsToString,
 } from "../utils.js";
 import SpotifyWebApi from "spotify-web-api-node";
 import AbstractSource, {RecentlyPlayedOptions} from "./AbstractSource.js";
@@ -23,6 +23,7 @@ import AlbumObjectSimplified = SpotifyApi.AlbumObjectSimplified;
 import UserDevice = SpotifyApi.UserDevice;
 import MemorySource from "./MemorySource.js";
 import {ErrorWithCause} from "pony-cause";
+import {buildTrackString, truncateStringToLength} from "../utils/StringUtils.js";
 
 const scopes = ['user-read-recently-played', 'user-read-currently-playing', 'user-read-playback-state', 'user-read-playback-position'];
 const state = 'random';

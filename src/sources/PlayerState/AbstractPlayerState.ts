@@ -8,9 +8,10 @@ import {
     ReportedPlayerStatus
 } from "../../common/infrastructure/Atomic.js";
 import dayjs, {Dayjs} from "dayjs";
-import {buildTrackString, formatNumber, genGroupIdStr, playObjDataMatch, progressBar} from "../../utils.js";
+import {formatNumber, genGroupIdStr, playObjDataMatch, progressBar} from "../../utils.js";
 import {Logger} from "@foxxmd/winston";
 import {ListenProgress} from "./ListenProgress.js";
+import {buildTrackString} from "../../utils/StringUtils.js";
 
 export interface PlayerStateIntervals {
     staleInterval?: number

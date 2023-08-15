@@ -16,8 +16,9 @@ import pEvent from 'p-event';
 import winston from '@foxxmd/winston';
 import {RecentlyPlayedOptions} from "./AbstractSource.js";
 import request from "superagent";
-import {buildTrackString, removeDuplicates} from "../utils.js";
+import {removeDuplicates} from "../utils.js";
 import {SubsonicSource} from "./SubsonicSource.js";
+import {buildTrackString} from "../utils/StringUtils.js";
 
 export class MopidySource extends MemorySource {
     declare config: MopidySourceConfig;

@@ -2,11 +2,11 @@ import AbstractScrobbleClient from "./AbstractScrobbleClient.js";
 import dayjs from 'dayjs';
 
 import {
-    buildTrackString, capitalize,
+    capitalize,
     playObjDataMatch, removeUndefinedKeys,
     setIntersection, sleep,
     sortByOldestPlayDate,
-    truncateStringToLength,
+
 } from "../utils.js";
 import LastfmApiClient from "../apis/LastfmApiClient.js";
 import {
@@ -19,6 +19,7 @@ import {LastfmClientConfig} from "../common/infrastructure/config/client/lastfm.
 import {TrackScrobbleResponse, UserGetRecentTracksResponse} from "lastfm-node-client";
 import {Notifiers} from "../notifier/Notifiers.js";
 import {Logger} from '@foxxmd/winston';
+import {buildTrackString, truncateStringToLength} from "../utils/StringUtils.js";
 
 export default class LastfmScrobbler extends AbstractScrobbleClient {
 

@@ -2,11 +2,11 @@ import dayjs from 'dayjs';
 
 import AbstractScrobbleClient from "./AbstractScrobbleClient.js";
 import {
-    buildTrackString, capitalize,
+    capitalize,
     playObjDataMatch, removeUndefinedKeys,
     setIntersection, sleep,
     sortByOldestPlayDate,
-    truncateStringToLength,
+
 } from "../utils.js";
 import LastfmApiClient from "../apis/LastfmApiClient.js";
 import {
@@ -19,6 +19,7 @@ import {Notifiers} from "../notifier/Notifiers.js";
 import {Logger} from '@foxxmd/winston';
 import {ListenBrainzClientConfig} from "../common/infrastructure/config/client/listenbrainz.js";
 import {ListenbrainzApiClient} from "../apis/ListenbrainzApiClient.js";
+import {buildTrackString, truncateStringToLength} from "../utils/StringUtils.js";
 
 export default class ListenbrainzScrobbler extends AbstractScrobbleClient {
 

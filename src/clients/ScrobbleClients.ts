@@ -1,6 +1,5 @@
 import dayjs, {Dayjs} from "dayjs";
 import {
-    buildTrackString,
     createAjvFactory,
     mergeArr,
     playObjDataMatch,
@@ -23,6 +22,7 @@ import winston from '@foxxmd/winston';
 import ListenbrainzScrobbler from "./ListenbrainzScrobbler.js";
 import {ListenBrainzClientConfig} from "../common/infrastructure/config/client/listenbrainz.js";
 import {ErrorWithCause} from "pony-cause";
+import {buildTrackString} from "../utils/StringUtils.js";
 
 type groupedNamedConfigs = {[key: string]: ParsedConfig[]};
 
