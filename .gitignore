@@ -129,3 +129,4 @@ src/**/**.js.map
 flatpak/generated-sources.json
 
 build
+!setupProxy.js
