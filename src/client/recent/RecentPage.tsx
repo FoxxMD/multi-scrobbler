@@ -5,11 +5,16 @@ import {
 import ky from "ky";
 import PlayDisplay from "../components/PlayDisplay";
 import {JsonPlayObject} from "../../core/Atomic.js";
+import {useSearchParams} from "react-router-dom";
+
+const showWebLinks = {includeWeb: true};
 
 const recent = () => {
-    const {isLoading, isSuccess, isError, data, error} = useQuery({
-        queryKey: ['recent?name=default&type=spotify'], queryFn: async () => {
-            return await ky.get('/api/recent?name=default&type=spotify').json() as JsonPlayObject[]
+    let [searchParams, setSearchParams] = useSearchParams();
+    const {isLoading, isSuccess, isError, data = [], error} = useQuery({
+        queryKey: [`recent?${searchParams.toString()}`], queryFn: async () => {
+            const res = await ky.get(`/api/recent?${searchParams.toString()}`).json() as JsonPlayObject[];
+            return res.map((x, index) => ({...x, index: index + 1})) as (JsonPlayObject & {index: number})[];
         }
     });
 
@@ -21,7 +26,7 @@ const recent = () => {
                     </h2>
                 </div>
                 <div className="p-6 md:px-10 md:py-6">
-                    <ul>{data.map(x => <li key={x.data.track}><PlayDisplay data={x}/></li>)}</ul>
+                    <ul>{data.map(x => <li key={x.index}><PlayDisplay data={x} buildOptions={showWebLinks}/></li>)}</ul>
                 </div>
             </div>
         </div>

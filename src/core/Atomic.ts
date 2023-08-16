@@ -25,7 +25,7 @@ export interface TrackStringOptions<T = string> {
     include?: ('time' | 'artist' | 'track' | 'timeFromNow' | 'trackId')[]
     transformers?: {
         artists?: (a: string[]) => T | string
-        track?: (t: string, hasExistingParts?: boolean) => T | string
+        track?: (t: string,data: AmbPlayObject, hasExistingParts?: boolean) => T | string
         time?: (t: Dayjs) => T | string
         timeFromNow?: (t: Dayjs) => T | string
         reducer?: (arr: (T | string)[]) => T //(acc: T, curr: T | string) => T

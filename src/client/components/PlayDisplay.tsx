@@ -1,7 +1,8 @@
 import React, {Fragment, PropsWithChildren, ReactElement} from 'react';
 
 import {JsonPlayObject, TrackStringOptions} from "../../core/Atomic.js";
-import {buildTrackString, buildTrackStringReactOptions} from "../../core/StringUtils.js";
+import {buildTrackString} from "../../core/StringUtils";
+import {buildTrackStringReactOptions} from "../utils/index";
 
 interface PlayObjectProps {
     data: JsonPlayObject
@@ -25,11 +26,16 @@ const PlayDisplay = (props: PlayObjectProps) => {
 
     const bOpts: TrackStringOptions<ReactElement> = {
         ...restBuild,
-        // @ts-ignore
         transformers: {
             ...buildTrackStringReactOptions.transformers,
             ...transformers,
-            track: (t, hasExistingParts) => includeWeb ? <>{hasExistingParts ? '- ' : ''}<a>${t}</a></> : <>{hasExistingParts ? '- ' : ''}t</>
+            track: (t, data, hasExistingParts) => {
+                const existingPartPrefix = hasExistingParts ? `- ` : '';
+                if(includeWeb && data.meta.url?.web !== undefined) {
+                    return <Fragment key="web">{existingPartPrefix}<a href={data.meta.url.web}>{t}</a></Fragment>
+                }
+                return <Fragment key="web">{existingPartPrefix}{t}</Fragment>;
+            }
         }
     }
 

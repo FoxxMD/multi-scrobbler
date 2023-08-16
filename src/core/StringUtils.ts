@@ -1,5 +1,5 @@
 import dayjs, {Dayjs} from "dayjs";
-import React, {ReactElement} from "react";
+import React, {createElement, ReactElement} from "react";
 import utc from "dayjs/plugin/utc.js";
 import isBetween from "dayjs/plugin/isBetween.js";
 import relativeTime from "dayjs/plugin/relativeTime.js";
@@ -25,7 +25,7 @@ export const truncateStringToLength = (length: any, truncStr = '...') => (val: a
     const str = typeof val !== 'string' ? val.toString() : val;
     return str.length > length ? `${str.slice(0, length)}${truncStr}` : str;
 }
-export const defaultTrackTransformer = (input: any, hasExistingParts: boolean = false) => hasExistingParts ? `- ${input}` : input;
+export const defaultTrackTransformer = (input: any, data: AmbPlayObject, hasExistingParts: boolean = false) => hasExistingParts ? `- ${input}` : input;
 export const defaultReducer = (acc, curr) => `${acc} ${curr}`;
 export const defaultArtistFunc = (a: string[]) => a.join(' / ');
 export const defaultTimeFunc = (t: Dayjs | undefined) => t === undefined ? '@ N/A' : `@ ${t.local().format()}`;
@@ -69,7 +69,7 @@ export const buildTrackString = <T = string>(playObj: AmbPlayObject, options: Tr
         strParts.push(artistsFunc(artists))
     }
     if (include.includes('track')) {
-        strParts.push(trackFunc(track, strParts.length > 0));
+        strParts.push(trackFunc(track, playObj, strParts.length > 0));
     }
     if (include.includes('time')) {
         strParts.push(timeFunc(pd));
@@ -83,13 +83,4 @@ export const buildTrackString = <T = string>(playObj: AmbPlayObject, options: Tr
     }
     // @ts-ignore
     return reducer(strParts); //strParts.join(' ');
-}
-export const buildTrackStringReactOptions: TrackStringOptions<ReactElement> = {
-    transformers: {
-        ...defaultBuildTrackStringTransformers,
-        reducer: arr => {
-            const allFrags = arr.map(x => typeof x === 'string' ? React.createElement("span", null, x) : x);
-            return React.createElement("span", null, allFrags);
-        }
-    }
 }

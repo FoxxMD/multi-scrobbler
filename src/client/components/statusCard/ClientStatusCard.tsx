@@ -26,9 +26,7 @@ const ClientStatusCard = (props: ClientStatusCardData) => {
     }
     return (
         <StatusCardSkeleton loading={loading} header={header}>
-            <div className="p-6 md:px-10 md:py-6">
                 {body}
-            </div>
         </StatusCardSkeleton>
     );
 }

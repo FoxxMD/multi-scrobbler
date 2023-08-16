@@ -10,17 +10,17 @@ import './App.css';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 const queryClient = new QueryClient()
 import Dashboard from "./dashboard/dashboard";
-//import RecentPage from "./recent/RecentPage";
+import RecentPage from "./recent/RecentPage";
 
 const router = createBrowserRouter([
     {
         path: "/",
         element: <Dashboard />,
     },
-/*    {
+    {
         path: "/recent",
         element: <RecentPage />,
-    },*/
+    },
 ]);
 
 function App() {
