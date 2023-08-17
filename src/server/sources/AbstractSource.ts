@@ -53,6 +53,7 @@ export default abstract class AbstractSource {
 
     canPoll: boolean = false;
     polling: boolean = false;
+    userPollingStopSignal: undefined | any;
     pollRetries: number = 0;
     tracksDiscovered: number = 0;
 
@@ -228,9 +229,17 @@ export default abstract class AbstractSource {
         // can't have negative retries!
         const maxRetries = Math.max(0, maxPollRetries);
 
+        if(this.polling === true) {
+            this.logger.warn(`Already polling! Polling needs to be stopped before it can be started`);
+            return;
+        }
+
         while (this.pollRetries <= maxRetries) {
             try {
-                await this.doPolling();
+                const res = await this.doPolling();
+                if(res === true) {
+                    break;
+                }
             } catch (e) {
                 if (this.pollRetries < maxRetries) {
                     const delayFor = pollingBackoff(this.pollRetries + 1, retryMultiplier);
@@ -246,9 +255,38 @@ export default abstract class AbstractSource {
         }
     }
 
-    doPolling = async () => {
-        if (this.polling === true) {
+    tryStopPolling = async () => {
+        if(this.polling === false) {
+            this.logger.warn(`Polling is already stopped!`);
             return;
+        }
+        this.userPollingStopSignal = true;
+        let secsPassed = 0;
+        while(this.userPollingStopSignal !== undefined && secsPassed < 10) {
+            await sleep(2000);
+            secsPassed += 2;
+            this.logger.verbose(`Waiting for polling stop signal to be acknowledged (waited ${secsPassed}s)`);
+        }
+        if(this.userPollingStopSignal !== undefined) {
+            this.logger.warn('Could not stop polling! Or polling signal was lost :(');
+            return false;
+        }
+        return true;
+    }
+
+    protected doStopPolling = (reason?: string) => {
+        this.polling = false;
+        this.userPollingStopSignal = undefined;
+        if(reason !== undefined) {
+            this.logger.info(`Stopped polling due to: ${reason}`);
+        }
+    }
+
+    protected shouldStopPolling = () => this.polling === false || this.userPollingStopSignal !== undefined;
+
+    protected doPolling = async (): Promise<true | undefined> => {
+        if (this.polling === true) {
+            return true;
         }
         this.logger.info('Polling started');
         this.notify({title: `${this.identifier} - Polling Started`, message: 'Polling Started', priority: 'info'});
@@ -262,12 +300,7 @@ export default abstract class AbstractSource {
 
         try {
             this.polling = true;
-            while (true) {
-                // @ts-ignore
-                if(this.polling === false) {
-                    this.logger.info('Stopped polling due to user input');
-                    break;
-                }
+            while (!this.shouldStopPolling()) {
                 this.logger.debug('Refreshing recently played');
                 const playObjs = await this.getRecentlyPlayed({formatted: true});
 
@@ -307,18 +340,25 @@ export default abstract class AbstractSource {
                         const checkVal = Math.min(checksOverThreshold, 1000);
                         const backoff = Math.round(Math.max(Math.min(Math.min(checkVal, 1000) * 2 * (1.1 * checkVal), maxBackoff), 5));
                         sleepTime = interval + backoff;
-                        this.logger.debug(`Last activity was at ${this.lastActivityAt.format()} which is ${inactiveFor} outside of active polling period of (last activity + ${checkActiveFor} seconds). Will sleep for interval ${interval} + ${backoff} seconds.`);
+                        this.logger.debug(`Last activity was at ${this.lastActivityAt.format()} which is ${inactiveFor} outside of active polling period of (last activity + ${checkActiveFor} seconds). Will check again in interval ${interval} + ${backoff} seconds.`);
                     } else {
-                        this.logger.debug(`Last activity was at ${this.lastActivityAt.format()} which is ${inactiveFor} outside of active polling period of (last activity + ${checkActiveFor} seconds). Will sleep for max interval ${maxInterval} seconds.`);
+                        this.logger.debug(`Last activity was at ${this.lastActivityAt.format()} which is ${inactiveFor} outside of active polling period of (last activity + ${checkActiveFor} seconds). Will check again in max interval ${maxInterval} seconds.`);
                     }
                 } else {
                     sleepTime = interval;
-                    this.logger.debug(`Last activity was at ${this.lastActivityAt.format()}. Will sleep for interval ${sleepTime} seconds.`);
+                    this.logger.debug(`Last activity was at ${this.lastActivityAt.format()}. Will check again in interval ${sleepTime} seconds.`);
                 }
 
                 this.logger.verbose(`Sleeping for ${sleepTime}s`);
-                await sleep(sleepTime * 1000);
+                const wakeUpAt = dayjs().add(sleepTime, 'seconds');
+                while(!this.shouldStopPolling() && dayjs().isBefore(wakeUpAt)) {
+                    // check for polling status every 2 seconds and wait till wake up time
+                    await sleep(2000);
+                }
 
+            }
+            if(this.shouldStopPolling()) {
+                this.doStopPolling(this.userPollingStopSignal !== undefined ?  'user input' : undefined);
             }
         } catch (e) {
             this.logger.error('Error occurred while polling');

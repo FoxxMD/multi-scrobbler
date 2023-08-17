@@ -17,6 +17,7 @@ import {setupJellyfinRoutes} from "./jellyfinRoutes.js";
 import {setupDeezerRoutes} from "./deezerRoutes.js";
 import {setupAuthRoutes} from "./auth.js";
 import path from "path";
+import {source} from "common-tags";
 
 const buildDir = path.join(process.cwd() + "/build");
 
@@ -165,17 +166,21 @@ export const setupApi = (app: ExpressWithAsync, logger: Logger, initialLogOutput
 
     app.use('/api/poll', sourceCheckMiddle);
     app.getAsync('/api/poll', async function (req, res) {
-        const {
-            // @ts-expect-error TS(2339): Property 'scrobbleSource' does not exist on type '... Remove this comment to see the full error message
-            scrobbleSource: source,
-        } = req;
+        // @ts-expect-error TS(2339): Property 'scrobbleSource' does not exist on type '... Remove this comment to see the full error message
+        const source = req.scrobbleSource as AbstractSource;
 
         if (!source.canPoll) {
             return res.status(400).send(`Specified source cannot poll (${source.type})`);
         }
 
-        source.poll();
-        return res.status(200).send('OK');
+        res.status(200).send('OK');
+        if(source.polling) {
+            source.logger.info('Source is already polling! Restarting polling...');
+            const stopRes = await source.tryStopPolling();
+            if(stopRes === true) {
+                source.startPolling();
+            }
+        }
     });
 
     app.getAsync('/health', async function(req, res)  {
