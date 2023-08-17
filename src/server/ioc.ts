@@ -1,11 +1,11 @@
 import {createContainer} from "iti";
 import path from "path";
-import {projectDir} from "./common/index.js";
-import ScrobbleClients from "./clients/ScrobbleClients.js";
-import ScrobbleSources from "./sources/ScrobbleSources.js";
-import {Notifiers} from "./notifier/Notifiers.js";
+import {projectDir} from "./common/index";
+import ScrobbleClients from "./clients/ScrobbleClients";
+import ScrobbleSources from "./sources/ScrobbleSources";
+import {Notifiers} from "./notifier/Notifiers";
 import {EventEmitter} from "events";
-import {logPath} from "./common/logging.js";
+import {logPath} from "./common/logging";
 import {Container} from '@foxxmd/winston';
 //import ScrobbleClients from "./clients/ScrobbleClients.js";
 

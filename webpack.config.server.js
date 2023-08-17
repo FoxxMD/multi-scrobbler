@@ -9,7 +9,7 @@ const entry = { server: "./src/server/index.ts" };
 module.exports = {
     mode: process.env.NODE_ENV ? process.env.NODE_ENV : "development",
     target: "node",
-    devtool: "inline-source-map",
+    devtool: "source-map",
     entry: entry,
     output: {
         path: path.resolve(__dirname, "build"),

@@ -1,5 +1,5 @@
 import {mergeArr, parseBool, readJson, validateJson} from "../utils.js";
-import SpotifySource from "./SpotifySource.js";
+import SpotifySource from "./SpotifySource";
 import PlexSource from "./PlexSource.js";
 import TautulliSource from "./TautulliSource.js";
 import {SubsonicSource} from "./SubsonicSource.js";

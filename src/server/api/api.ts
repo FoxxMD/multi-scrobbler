@@ -1,27 +1,24 @@
 import {ExpressWithAsync} from "@awaitjs/express";
-import {getRoot} from "../ioc.js";
+import {getRoot} from "../ioc";
 import {capitalize} from "../utils.js";
-import {makeClientCheckMiddle, makeSourceCheckMiddle} from "./middleware.js";
-import AbstractSource from "../sources/AbstractSource.js";
+import {makeClientCheckMiddle, makeSourceCheckMiddle} from "./middleware";
+import AbstractSource from "../sources/AbstractSource";
 import {
     ClientStatusData,
     LogInfo, LogInfoJson,
     LogLevel, LogOutputConfig,
-    PlayObject,
     SourceStatusData,
-    TrackStringOptions
 } from "../../core/Atomic.js";
-import {buildTrackString, longestString, truncateStringToLength} from "../../core/StringUtils.js";
 import {Logger} from "@foxxmd/winston";
-import {formatLogToHtml, isLogLineMinLevel} from "../common/logging.js";
+import {formatLogToHtml, isLogLineMinLevel} from "../common/logging";
 import {MESSAGE} from "triple-beam";
 import {Transform} from "stream";
 import {createSession} from "better-sse";
-import {setupTautulliRoutes} from "./tautulliRoutes.js";
-import {setupPlexRoutes} from "./plexRoutes.js";
-import {setupJellyfinRoutes} from "./jellyfinRoutes.js";
-import {setupDeezerRoutes} from "./deezerRoutes.js";
-import {setupAuthRoutes} from "./auth.js";
+import {setupTautulliRoutes} from "./tautulliRoutes";
+import {setupPlexRoutes} from "./plexRoutes";
+import {setupJellyfinRoutes} from "./jellyfinRoutes";
+import {setupDeezerRoutes} from "./deezerRoutes";
+import {setupAuthRoutes} from "./auth";
 import path from "path";
 import {source} from "common-tags";
 
@@ -91,7 +88,9 @@ export const setupApi = (app: ExpressWithAsync, logger: Logger, initialLogOutput
 
     app.getAsync('/api/status', async (req, res, next) => {
 
-        const sourceData = scrobbleSources.sources.map((x) => {
+        const ss = root.get('sources');
+
+        const sourceData = ss.sources.map((x) => {
             const {
                 type,
                 tracksDiscovered = 0,

@@ -10,28 +10,25 @@ import duration from 'dayjs/plugin/duration.js';
 import timezone from 'dayjs/plugin/timezone.js';
 import passport from 'passport';
 import session from 'express-session';
-import {createSession} from 'better-sse';
 
 import {
-    capitalize,
-    mergeArr, parseBool,
+    parseBool,
     readJson,
-    remoteHostIdentifiers,
     sleep
-} from "./utils.js";
+} from "./utils";
 import {Server} from "socket.io";
 import * as path from "path";
-import {projectDir} from "./common/index.js";
+import {projectDir} from "./common/index";
 import {
     ExpressHandler
 } from "./common/infrastructure/Atomic.js";
-import SpotifySource from "./sources/SpotifySource.js";
-import {AIOConfig} from "./common/infrastructure/config/aioConfig.js";
-import {getRoot} from "./ioc.js";
-import {formatLogToHtml, getLogger, isLogLineMinLevel} from "./common/logging.js";
+import SpotifySource from "./sources/SpotifySource";
+import {AIOConfig} from "./common/infrastructure/config/aioConfig";
+import {getRoot} from "./ioc";
+import {formatLogToHtml, getLogger, isLogLineMinLevel} from "./common/logging";
 import {MESSAGE} from "triple-beam";
-import {setupApi} from "./api/api.js";
-import {LogInfo, LogLevel} from "../core/Atomic.js";
+import {setupApi} from "./api/api";
+import {LogInfo, LogLevel} from "../core/Atomic";
 
 const buildDir = path.join(process.cwd() + "/build");
 
@@ -150,9 +147,6 @@ const configDir = process.env.CONFIG_DIR || path.resolve(projectDir, `./config`)
         const scrobbleSources = root.get('sources');//new ScrobbleSources(localUrl, configDir);
         await scrobbleSources.buildSourcesFromConfig([]);
 
-        //const clientCheckMiddle = makeClientCheckMiddle(scrobbleClients);
-        //const sourceCheckMiddle = makeSourceCheckMiddle(scrobbleSources);
-
         // check ambiguous client/source types like this for now
         const lastfmSources = scrobbleSources.getByType('lastfm');
         const lastfmScrobbles = scrobbleClients.getByType('lastfm');
@@ -162,40 +156,6 @@ const configDir = process.env.CONFIG_DIR || path.resolve(projectDir, `./config`)
         if(nameColl.length > 0) {
             logger.warn(`Last.FM source and clients have same names [${nameColl.map(x => x.name).join(',')}] -- this may cause issues`);
         }
-
-        // app.getAsync('/logs/settings/update', async function (req, res) {
-        //     const e = req.query;
-        //     for (const [setting, val] of Object.entries(req.query)) {
-        //         switch (setting) {
-        //             case 'limit':
-        //                 logConfig.limit = Number.parseInt(val as string);
-        //                 break;
-        //             case 'sort':
-        //                 logConfig.sort = val as string;
-        //                 break;
-        //             case 'level':
-        //                 logConfig.level = val as LogLevel;
-        //                 // for (const [key, logger] of winston.loggers.loggers) {
-        //                 //     logger.level = val as string;
-        //                 // }
-        //                 break;
-        //         }
-        //     }
-        //     let slicedLog = output.filter(x => isLogLineMinLevel(x, logConfig.level)).slice(0, logConfig.limit + 1).map(x => formatLogToHtml(x[MESSAGE]));
-        //     if (logConfig.sort === 'ascending') {
-        //         slicedLog.reverse();
-        //     }
-        //     res.send('OK');
-        //     io.emit('logClear', slicedLog);
-        // });
-
-        // app.useAsync(async function (req, res) {
-        //     const remote = req.connection.remoteAddress;
-        //     const proxyRemote = req.headers["x-forwarded-for"];
-        //     const ua = req.headers["user-agent"];
-        //     logger.debug(`Server received ${req.method} request from ${remote}${proxyRemote !== undefined ? ` (${proxyRemote})` : ''}${ua !== undefined ? ` (UA: ${ua})` : ''} to unknown route: ${req.url}`);
-        //     return res.sendStatus(404);
-        // });
 
         let anyNotReady = false;
         for (const source of scrobbleSources.sources.filter(x => x.canPoll === true)) {
