@@ -241,20 +241,24 @@ export default class SpotifySource extends MemorySource {
         error,
         code
     }: any) => {
-        if (error === undefined) {
-            const tokenResponse = await this.spotifyApi.authorizationCodeGrant(code);
-            this.spotifyApi.setAccessToken(tokenResponse.body['access_token']);
-            this.spotifyApi.setRefreshToken(tokenResponse.body['refresh_token']);
-            await writeFile(this.workingCredsPath, JSON.stringify({
-                token: tokenResponse.body['access_token'],
-                refreshToken: tokenResponse.body['refresh_token']
-            }));
-            this.logger.info('Got token from code grant authorization!');
-            return true;
-        } else {
-            this.logger.warn('Callback contained an error! User may have denied access?')
-            this.logger.error(error);
-            return error;
+        try {
+            if (error === undefined) {
+                const tokenResponse = await this.spotifyApi.authorizationCodeGrant(code);
+                this.spotifyApi.setAccessToken(tokenResponse.body['access_token']);
+                this.spotifyApi.setRefreshToken(tokenResponse.body['refresh_token']);
+                await writeFile(this.workingCredsPath, JSON.stringify({
+                    token: tokenResponse.body['access_token'],
+                    refreshToken: tokenResponse.body['refresh_token']
+                }));
+                this.logger.info('Got token from code grant authorization!');
+                return true;
+            } else {
+                this.logger.warn('Callback contained an error! User may have denied access?')
+                this.logger.error(error);
+                return error;
+            }
+        } catch (e) {
+            throw e;
         }
     }
 

@@ -44,6 +44,7 @@ const SourceStatusCard = (props: SourceStatusCardData) => {
             <div><b>Status: {status}</b></div>
             <div>Tracks Discovered (since app started): {tracksDiscovered}</div>
             {canPoll && (!hasAuth || authed) ? <div><Link to={`/recent?type=${type}&name=${name}`}>See recently played tracks returned by API</Link></div> : null}
+            {canPoll && hasAuth ? <a target="_blank" href={`/api/source/auth?name=${name}&type=${type}`}>(Re)authenticate and (re)start polling</a> : null}
             {canPoll && (!hasAuth || authed) ? <div onClick={poll} className="cursor-pointer underline">Restart Polling</div> : null}
         </Fragment>);
     }

@@ -66,7 +66,11 @@ export async function readText(path: any) {
 
 export async function writeFile(path: any, text: any) {
     // await promises.access(path, constants.W_OK | constants.O_CREAT);
-    await promises.writeFile(path, text, 'utf8');
+    try {
+        await promises.writeFile(path, text, 'utf8');
+    } catch (e) {
+        throw e;
+    }
 
     // return new Promise((resolve, reject) => {
     //     fs.readFile(path, 'utf8', function (err, data) {
