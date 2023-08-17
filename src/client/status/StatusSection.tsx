@@ -12,7 +12,8 @@ const StatusSection = () => {
     const {isLoading, isSuccess, isError, data, error} = useQuery({
         queryKey: ['status'], queryFn: async () => {
             return await ky.get('/api/status').json() as { sources: SourceStatusData[], clients: ClientStatusData[] }
-        }
+        },
+        refetchOnWindowFocus: false,
     });
 
     return (
