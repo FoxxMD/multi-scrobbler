@@ -1,4 +1,6 @@
-export const makeSourceCheckMiddle = (sources: any) => (req: any, res: any, next: any) => {
+import {ExpressHandler} from "../common/infrastructure/Atomic.js";
+
+export const makeSourceCheckMiddle = (sources: any): ExpressHandler => (req: any, res: any, next: any) => {
     const {
         query: {
             // @ts-expect-error TS(2525): Initializer provides no value for this binding ele... Remove this comment to see the full error message
@@ -23,7 +25,7 @@ export const makeSourceCheckMiddle = (sources: any) => (req: any, res: any, next
     next();
 }
 
-export const makeClientCheckMiddle = (clients: any) => (req: any, res: any, next: any) => {
+export const makeClientCheckMiddle = (clients: any): ExpressHandler => (req: any, res: any, next: any) => {
     const {
         query: {
             // @ts-expect-error TS(2525): Initializer provides no value for this binding ele... Remove this comment to see the full error message

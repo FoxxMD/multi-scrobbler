@@ -4,17 +4,20 @@ import {
 } from '@tanstack/react-query'
 import ky from "ky";
 import PlayDisplay from "../components/PlayDisplay";
-import {JsonPlayObject} from "../../core/Atomic.js";
+import {JsonPlayObject, recentIncludes} from "../../core/Atomic.js";
 import {useSearchParams} from "react-router-dom";
 
-const showWebLinks = {includeWeb: true};
+const displayOpts = {
+    include: recentIncludes,
+    includeWeb: true
+}
 
 const recent = () => {
     let [searchParams, setSearchParams] = useSearchParams();
     const {isLoading, isSuccess, isError, data = [], error} = useQuery({
         queryKey: [`recent?${searchParams.toString()}`], queryFn: async () => {
             const res = await ky.get(`/api/recent?${searchParams.toString()}`).json() as JsonPlayObject[];
-            return res.map((x, index) => ({...x, index: index + 1})) as (JsonPlayObject & {index: number})[];
+            return res.map((x, index) => ({...x, index: index + 1})) as (JsonPlayObject & { index: number })[];
         }
     });
 
@@ -26,7 +29,7 @@ const recent = () => {
                     </h2>
                 </div>
                 <div className="p-6 md:px-10 md:py-6">
-                    <ul>{data.map(x => <li key={x.index}><PlayDisplay data={x} buildOptions={showWebLinks}/></li>)}</ul>
+                    <ul>{data.map(x => <li key={x.index}><PlayDisplay data={x} buildOptions={displayOpts}/></li>)}</ul>
                 </div>
             </div>
         </div>

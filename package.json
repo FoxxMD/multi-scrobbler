@@ -18,7 +18,7 @@
     "dev": "concurrently -p name -c \"yellow,magenta,blue\" -n \"webpack-server,nodemon-server,CRA\" \"yarn dev:server:webpack\" \"yarn dev:server:nodemon\" \"yarn dev:client\"",
     "dev:client": "wait-on -l tcp:9079 && BROWSER=none react-scripts start",
     "dev:server": "concurrently -p name -c \"yellow,magenta\" -n \"webpack-server,nodemon-server\" \"yarn dev:server:webpack\" \"yarn dev:server:nodemon\"",
-    "dev:server:webpack": "webpack --config webpack.config.server.js --watch",
+    "dev:server:webpack": "webpack --config webpack.config.server.js",
     "dev:server:nodemon": "rm -f build/server.js && wait-on -l build/server.js && nodemon build/server.js",
     "build": "yarn build:client && yarn build:server",
     "build:client": "react-scripts build",

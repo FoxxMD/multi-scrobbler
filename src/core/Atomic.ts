@@ -21,8 +21,11 @@ export interface ClientStatusData {
     hasAuth: boolean;
 }
 
+export type PlayObjectIncludeTypes = 'time' | 'artist' | 'track' | 'timeFromNow' | 'trackId';
+export const recentIncludes: PlayObjectIncludeTypes[] = ['time', 'timeFromNow', 'track', 'artist'];
+
 export interface TrackStringOptions<T = string> {
-    include?: ('time' | 'artist' | 'track' | 'timeFromNow' | 'trackId')[]
+    include?: PlayObjectIncludeTypes[]
     transformers?: {
         artists?: (a: string[]) => T | string
         track?: (t: string,data: AmbPlayObject, hasExistingParts?: boolean) => T | string
