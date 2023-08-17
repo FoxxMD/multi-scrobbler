@@ -3,10 +3,16 @@ import {getRoot} from "../ioc.js";
 import {capitalize} from "../utils.js";
 import {makeClientCheckMiddle, makeSourceCheckMiddle} from "./middleware.js";
 import AbstractSource from "../sources/AbstractSource.js";
-import {ClientStatusData, PlayObject, SourceStatusData, TrackStringOptions} from "../../core/Atomic.js";
+import {
+    ClientStatusData,
+    LogInfo, LogInfoJson,
+    LogLevel, LogOutputConfig,
+    PlayObject,
+    SourceStatusData,
+    TrackStringOptions
+} from "../../core/Atomic.js";
 import {buildTrackString, longestString, truncateStringToLength} from "../../core/StringUtils.js";
 import {Logger} from "@foxxmd/winston";
-import {LogInfo, LogLevel} from "../common/infrastructure/Atomic.js";
 import {formatLogToHtml, isLogLineMinLevel} from "../common/logging.js";
 import {MESSAGE} from "triple-beam";
 import {Transform} from "stream";
@@ -51,7 +57,7 @@ export const setupApi = (app: ExpressWithAsync, logger: Logger, initialLogOutput
         }
     });
 
-    const logConfig: {level: LogLevel, sort: string, limit: number} = {
+    const logConfig: LogOutputConfig = {
         level: logger.level as LogLevel || (process.env.LOG_LEVEL || 'info') as LogLevel,
         sort: 'descending',
         limit: 50,
@@ -63,17 +69,18 @@ export const setupApi = (app: ExpressWithAsync, logger: Logger, initialLogOutput
     const clientCheckMiddle = makeClientCheckMiddle(scrobbleClients);
     const sourceCheckMiddle = makeSourceCheckMiddle(scrobbleSources);
 
-    app.get('/logs/stream', async (req, res) => {
+    app.get('/api/logs/stream', async (req, res) => {
         const session = await createSession(req, res);
         await session.stream(logObjectStream);
     });
 
-    app.get('/logs', async (req, res) => {
+    app.get('/api/logs', async (req, res) => {
         let slicedLog = output.filter(x => isLogLineMinLevel(x, logConfig.level)).slice(0, logConfig.limit + 1);
         if (logConfig.sort === 'ascending') {
             slicedLog.reverse();
         }
-        return res.json({data: slicedLog, settings: logConfig});
+        const jsonLogs: LogInfoJson[] = slicedLog.map(x => ({...x, formattedMessage: x[MESSAGE]}));
+        return res.json({data: jsonLogs, settings: logConfig});
     });
 
     setupTautulliRoutes(app, logger, scrobbleSources);

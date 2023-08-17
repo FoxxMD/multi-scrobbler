@@ -5,7 +5,6 @@ import {ClientStatusData, SourceStatusData} from "../../../core/Atomic";
 import {Link} from "react-router-dom";
 import {QueryClient} from "@tanstack/react-query";
 import ky from "ky";
-import {header} from "typedoc/dist/lib/output/themes/default/partials/header.js";
 
 export interface SourceStatusCardData extends StatusCardSkeletonData {
     loading?: boolean

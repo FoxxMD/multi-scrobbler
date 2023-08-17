@@ -1,4 +1,5 @@
 import {Dayjs} from "dayjs";
+import {MESSAGE} from "triple-beam";
 
 export interface SourceStatusData {
     status: string;
@@ -125,4 +126,26 @@ export interface JsonPlayObject extends AmbPlayObject {
 
 export interface ObjectPlayData extends PlayData {
     playDate?: Dayjs
+}
+
+export type LogLevel = "error" | "warn" | "info" | "verbose" | "debug";
+export const logLevels = ['error', 'warn', 'info', 'verbose', 'debug'];
+
+export interface LogInfo {
+    message: string
+    [MESSAGE]: string,
+    level: string
+    timestamp: string
+    labels?: string[]
+    transport?: string[]
+}
+
+export interface LogOutputConfig {
+    level: LogLevel,
+    sort: string,
+    limit: number
+}
+
+export interface LogInfoJson extends LogInfo {
+    formattedMessage: string
 }

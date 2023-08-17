@@ -1,11 +1,10 @@
 import {Dayjs} from "dayjs";
 import {FixedSizeList} from 'fixed-size-list';
-import {MESSAGE} from 'triple-beam';
 import {Logger} from '@foxxmd/winston';
 import TupleMap from "../TupleMap.js";
 import {Request, Response} from "express";
 import {NextFunction, ParamsDictionary, Query} from "express-serve-static-core";
-import {PlayMeta, PlayObject} from "../../../core/Atomic.js";
+import {LogLevel, logLevels, PlayMeta, PlayObject} from "../../../core/Atomic.js";
 
 export type SourceType = 'spotify' | 'plex' | 'tautulli' | 'subsonic' | 'jellyfin' | 'lastfm' | 'deezer' | 'ytmusic' | 'mpris' | 'mopidy' | 'listenbrainz' | 'jriver' | 'kodi';
 export const sourceTypes: SourceType[] = ['spotify', 'plex', 'tautulli', 'subsonic', 'jellyfin', 'lastfm', 'deezer', 'ytmusic', 'mpris', 'mopidy', 'listenbrainz', 'jriver', 'kodi'];
@@ -106,9 +105,6 @@ export interface RemoteIdentityParts {
     agent: string | undefined
 }
 
-export type LogLevel = "error" | "warn" | "info" | "verbose" | "debug";
-export const logLevels = ['error', 'warn', 'info', 'verbose', 'debug'];
-
 export interface LogConfig {
     level?: string
     file?: string | false
@@ -146,15 +142,6 @@ export const asLogOptions = (obj: LogConfig = {}): obj is LogOptions => {
         }
         return val === undefined || val === false || logLevels.includes(val.toLocaleLowerCase());
     });
-}
-
-export interface LogInfo {
-    message: string
-    [MESSAGE]: string,
-    level: string
-    timestamp: string
-    labels?: string[]
-    transport?: string[]
 }
 
 // https://stackoverflow.com/questions/40510611/typescript-interface-require-one-of-two-properties-to-exist#comment116238286_49725198
