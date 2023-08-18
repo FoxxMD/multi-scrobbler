@@ -213,25 +213,5 @@
         })
     })
 </script>
-
-<script src="https://cdn.socket.io/3.1.3/socket.io.min.js" integrity="sha384-cPwlPLvBTa3sKAgddT6krw0cJat7egBga3DJepJyrLl4Q9/5WLra3rrnMcyTyOnh" crossorigin="anonymous"></script>
-<script>
-    let socket = io({
-        reconnectionAttempts: 5, // bail after 5 attempts
-    });
-    socket.on("connect", () => {
-        document.body.classList.add('connected')
-        socket.on("log", data => {
-            const currLogs = document.querySelector('.logs').innerHTML;
-            document.querySelector('.logs').innerHTML  = window.sort === 'desc' ? data.concat(currLogs) : currLogs.concat(data)
-        });
-        socket.on("logClear", data => {
-            document.querySelector('.logs').innerHTML = data.join().replaceAll(/<br\s*\/?>\,/g,'<br />');
-        })
-    });
-    socket.on('disconnect', () => {
-        document.body.classList.remove('connected');
-    });
-</script>
 </body>
 </html>

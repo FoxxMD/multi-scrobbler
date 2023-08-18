@@ -16,7 +16,6 @@ import {
     readJson,
     sleep
 } from "./utils";
-import {Server} from "socket.io";
 import * as path from "path";
 import {projectDir} from "./common/index";
 import { ExpressHandler } from "./common/infrastructure/Atomic";

@@ -24,6 +24,8 @@ ENV CONFIG_DIR=$data_dir
 
 COPY docker/root/ /
 
+RUN npm install -g patch-package
+
 WORKDIR /app
 
 FROM base as build
@@ -51,6 +53,8 @@ FROM base as app
 COPY --chown=abc:abc package*.json ./
 COPY --chown=abc:abc patches ./patches
 COPY --from=build --chown=abc:abc /app/build /app/build
+COPY --from=base /usr/local/bin /usr/local/bin
+COPY --from=base /usr/local/lib /usr/local/lib
 
 ENV NODE_ENV="production"
 #
