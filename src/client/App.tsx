@@ -3,7 +3,7 @@ import logo from './logo.svg';
 import * as ReactDOM from "react-dom/client";
 import {
     createBrowserRouter,
-    RouterProvider,
+    RouterProvider, useLocation,
 } from "react-router-dom";
 import './App.css';
 
@@ -11,6 +11,16 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 const queryClient = new QueryClient()
 import Dashboard from "./dashboard/dashboard";
 import RecentPage from "./recent/RecentPage";
+
+function NoMatch() {
+    let location = useLocation();
+
+    return (
+        <div>
+                No page for <code>{location.pathname}</code> exists!
+        </div>
+    );
+}
 
 const router = createBrowserRouter([
     {
@@ -21,6 +31,10 @@ const router = createBrowserRouter([
         path: "/recent",
         element: <RecentPage />,
     },
+    {
+        path: "*",
+        element: <NoMatch/>
+    }
 ]);
 
 function App() {
