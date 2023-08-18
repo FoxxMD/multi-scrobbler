@@ -1,26 +1,36 @@
 import dayjs, {Dayjs} from "dayjs";
 import {
-    capitalize, isPlayTemporallyClose, genGroupId,
-    genGroupIdStrFromPlay, mergeArr,
-    playObjDataMatch, pollingBackoff,
-    sleep, sortByNewestPlayDate,
-    sortByOldestPlayDate
-} from "../utils.js";
+    capitalize,
+    isPlayTemporallyClose,
+    genGroupId,
+    genGroupIdStrFromPlay,
+    mergeArr,
+    playObjDataMatch,
+    pollingBackoff,
+    sleep,
+    sortByNewestPlayDate,
+    sortByOldestPlayDate,
+} from "../utils";
 import {
     DeviceId,
     GroupedFixedPlays,
     GroupedPlays,
-    InternalConfig, NO_DEVICE, NO_USER,
-    PlayPlatformId, PlayUserId, ProgressAwarePlayObject, SINGLE_USER_PLATFORM_ID,
-    SourceType
-} from "../common/infrastructure/Atomic.js";
+    InternalConfig,
+    NO_DEVICE,
+    NO_USER,
+    PlayPlatformId,
+    PlayUserId,
+    ProgressAwarePlayObject,
+    SINGLE_USER_PLATFORM_ID,
+    SourceType,
+} from "../common/infrastructure/Atomic";
 import {Logger} from '@foxxmd/winston';
-import {SourceConfig} from "../common/infrastructure/config/source/sources.js";
+import { SourceConfig } from "../common/infrastructure/config/source/sources";
 import {EventEmitter} from "events";
 import {FixedSizeList} from "fixed-size-list";
-import TupleMap from "../common/TupleMap.js";
-import {PlayObject} from "../../core/Atomic.js";
-import {buildTrackString} from "../../core/StringUtils.js";
+import TupleMap from "../common/TupleMap";
+import { PlayObject } from "../../core/Atomic";
+import { buildTrackString } from "../../core/StringUtils";
 
 export interface RecentlyPlayedOptions {
     limit?: number
@@ -196,7 +206,7 @@ export default abstract class AbstractSource {
     }
 
     poll = async () => {
-        if(!await this.onPollPreAuthCheck()) {
+        if(!(await this.onPollPreAuthCheck())) {
             return;
         }
         if(this.requiresAuth && !this.authed) {
@@ -209,7 +219,7 @@ export default abstract class AbstractSource {
             }
             return;
         }
-        if(!await this.onPollPostAuthCheck()) {
+        if(!(await this.onPollPostAuthCheck())) {
             return;
         }
         await this.startPolling();

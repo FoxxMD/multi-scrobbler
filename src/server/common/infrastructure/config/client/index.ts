@@ -1,4 +1,4 @@
-import {CommonConfig, CommonData} from "../common.js";
+import { CommonConfig, CommonData } from "../common";
 
 /**
  * Scrobble matching (between new source track and existing client scrobbles) logging options. Used for debugging.

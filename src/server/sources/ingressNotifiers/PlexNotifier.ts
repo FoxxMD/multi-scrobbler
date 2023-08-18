@@ -1,6 +1,6 @@
-import {IngressNotifier} from "./IngressNotifier.js";
+import { IngressNotifier } from "./IngressNotifier";
 import {Request} from "express";
-import PlexSource from "../PlexSource.js";
+import PlexSource from "../PlexSource";
 
 export class PlexNotifier extends IngressNotifier {
 

@@ -1,7 +1,7 @@
-import {IngressNotifier} from "./IngressNotifier.js";
+import { IngressNotifier } from "./IngressNotifier";
 import {Request} from "express";
-import JellyfinSource from "../JellyfinSource.js";
-import {remoteHostIdentifiers, remoteHostStr} from "../../utils.js";
+import JellyfinSource from "../JellyfinSource";
+import { remoteHostIdentifiers, remoteHostStr } from "../../utils";
 
 export class JellyfinNotifier extends IngressNotifier {
 

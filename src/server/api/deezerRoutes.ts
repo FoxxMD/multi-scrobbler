@@ -1,11 +1,11 @@
-import {ExpressHandler} from "../common/infrastructure/Atomic.js";
-import {mergeArr, parseBool, sleep} from "../utils.js";
+import { ExpressHandler } from "../common/infrastructure/Atomic";
+import { mergeArr, parseBool, sleep } from "../utils";
 import {ExpressWithAsync} from "@awaitjs/express";
 import {Logger} from "@foxxmd/winston";
-import ScrobbleSources from "../sources/ScrobbleSources.js";
-import PlexSource, {plexRequestMiddle} from "../sources/PlexSource.js";
-import {PlexNotifier} from "../sources/ingressNotifiers/PlexNotifier.js";
-import DeezerSource from "../sources/DeezerSource.js";
+import ScrobbleSources from "../sources/ScrobbleSources";
+import PlexSource, { plexRequestMiddle } from "../sources/PlexSource";
+import { PlexNotifier } from "../sources/ingressNotifiers/PlexNotifier";
+import DeezerSource from "../sources/DeezerSource";
 import passport from "passport";
 
 export const setupDeezerRoutes = (app: ExpressWithAsync, logger: Logger, scrobbleSources: ScrobbleSources) => {

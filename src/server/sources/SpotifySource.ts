@@ -2,18 +2,22 @@ import dayjs from "dayjs";
 import {
     readJson,
     writeFile,
-    sortByOldestPlayDate, sleep, parseRetryAfterSecsFromObj, combinePartsToString,
-} from "../utils.js";
+    sortByOldestPlayDate,
+    sleep,
+    parseRetryAfterSecsFromObj,
+    combinePartsToString,
+} from "../utils";
 import SpotifyWebApi from "spotify-web-api-node";
-import AbstractSource, {RecentlyPlayedOptions} from "./AbstractSource.js";
-import {SpotifySourceConfig} from "../common/infrastructure/config/source/spotify.js";
+import AbstractSource, { RecentlyPlayedOptions } from "./AbstractSource";
+import { SpotifySourceConfig } from "../common/infrastructure/config/source/spotify";
 import {
     FormatPlayObjectOptions,
     InternalConfig,
     NO_USER,
     PlayerStateData,
-    ReportedPlayerStatus, SourceData
-} from "../common/infrastructure/Atomic.js";
+    ReportedPlayerStatus,
+    SourceData,
+} from "../common/infrastructure/Atomic";
 import PlayHistoryObject = SpotifyApi.PlayHistoryObject;
 import EventEmitter from "events";
 import CurrentlyPlayingObject = SpotifyApi.CurrentlyPlayingObject;
@@ -21,10 +25,10 @@ import TrackObjectFull = SpotifyApi.TrackObjectFull;
 import ArtistObjectSimplified = SpotifyApi.ArtistObjectSimplified;
 import AlbumObjectSimplified = SpotifyApi.AlbumObjectSimplified;
 import UserDevice = SpotifyApi.UserDevice;
-import MemorySource from "./MemorySource.js";
+import MemorySource from "./MemorySource";
 import {ErrorWithCause} from "pony-cause";
-import {PlayObject} from "../../core/Atomic.js";
-import {buildTrackString, truncateStringToLength} from "../../core/StringUtils.js";
+import { PlayObject } from "../../core/Atomic";
+import { buildTrackString, truncateStringToLength } from "../../core/StringUtils";
 
 const scopes = ['user-read-recently-played', 'user-read-currently-playing', 'user-read-playback-state', 'user-read-playback-position'];
 const state = 'random';

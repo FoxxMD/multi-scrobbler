@@ -1,24 +1,22 @@
 import dayjs from 'dayjs';
 
-import AbstractScrobbleClient from "./AbstractScrobbleClient.js";
+import AbstractScrobbleClient from "./AbstractScrobbleClient";
 import {
     capitalize,
-    playObjDataMatch, removeUndefinedKeys,
-    setIntersection, sleep,
+    playObjDataMatch,
+    removeUndefinedKeys,
+    setIntersection,
+    sleep,
     sortByOldestPlayDate,
-
-} from "../utils.js";
-import LastfmApiClient from "../apis/LastfmApiClient.js";
-import {
-    FormatPlayObjectOptions,
-    INITIALIZING
-} from "../common/infrastructure/Atomic.js";
-import {Notifiers} from "../notifier/Notifiers.js";
+} from "../utils";
+import LastfmApiClient from "../apis/LastfmApiClient";
+import { FormatPlayObjectOptions, INITIALIZING } from "../common/infrastructure/Atomic";
+import { Notifiers } from "../notifier/Notifiers";
 import {Logger} from '@foxxmd/winston';
-import {ListenBrainzClientConfig} from "../common/infrastructure/config/client/listenbrainz.js";
-import {ListenbrainzApiClient} from "../apis/ListenbrainzApiClient.js";
-import {PlayObject, TrackStringOptions} from "../../core/Atomic.js";
-import {buildTrackString} from "../../core/StringUtils.js";
+import { ListenBrainzClientConfig } from "../common/infrastructure/config/client/listenbrainz";
+import { ListenbrainzApiClient } from "../apis/ListenbrainzApiClient";
+import { PlayObject, TrackStringOptions } from "../../core/Atomic";
+import { buildTrackString } from "../../core/StringUtils";
 
 export default class ListenbrainzScrobbler extends AbstractScrobbleClient {
 
@@ -84,7 +82,7 @@ export default class ListenbrainzScrobbler extends AbstractScrobbleClient {
     }
 
     alreadyScrobbled = async (playObj: PlayObject, log = false) => {
-        return await this.existingScrobble(playObj) !== undefined;
+        return (await this.existingScrobble(playObj)) !== undefined;
     }
 
     scrobble = async (playObj: PlayObject) => {

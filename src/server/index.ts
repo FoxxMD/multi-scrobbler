@@ -19,15 +19,13 @@ import {
 import {Server} from "socket.io";
 import * as path from "path";
 import {projectDir} from "./common/index";
-import {
-    ExpressHandler
-} from "./common/infrastructure/Atomic.js";
+import { ExpressHandler } from "./common/infrastructure/Atomic";
 import SpotifySource from "./sources/SpotifySource";
-import {AIOConfig} from "./common/infrastructure/config/aioConfig.js";
-import {getRoot} from "./ioc.js";
+import { AIOConfig } from "./common/infrastructure/config/aioConfig";
+import { getRoot } from "./ioc";
 import {formatLogToHtml, getLogger, isLogLineMinLevel} from "./common/logging";
 import {MESSAGE} from "triple-beam";
-import {setupApi} from "./api/api.js";
+import { setupApi } from "./api/api";
 import {LogInfo, LogLevel} from "../core/Atomic";
 
 const buildDir = path.join(process.cwd() + "/build");

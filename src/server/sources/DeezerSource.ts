@@ -1,12 +1,18 @@
 import request from 'superagent';
-import {parseRetryAfterSecsFromObj, readJson, sleep, sortByOldestPlayDate, writeFile} from "../utils.js";
+import {
+    parseRetryAfterSecsFromObj,
+    readJson,
+    sleep,
+    sortByOldestPlayDate,
+    writeFile,
+} from "../utils";
 import {Strategy as DeezerStrategy} from 'passport-deezer';
-import AbstractSource, {RecentlyPlayedOptions} from "./AbstractSource.js";
+import AbstractSource, { RecentlyPlayedOptions } from "./AbstractSource";
 import dayjs from "dayjs";
-import {DeezerSourceConfig} from "../common/infrastructure/config/source/deezer.js";
-import {FormatPlayObjectOptions, InternalConfig} from "../common/infrastructure/Atomic.js";
+import { DeezerSourceConfig } from "../common/infrastructure/config/source/deezer";
+import { FormatPlayObjectOptions, InternalConfig } from "../common/infrastructure/Atomic";
 import EventEmitter from "events";
-import {PlayObject} from "../../core/Atomic.js";
+import { PlayObject } from "../../core/Atomic";
 
 export default class DeezerSource extends AbstractSource {
     workingCredsPath;

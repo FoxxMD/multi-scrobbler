@@ -1,4 +1,4 @@
-import AbstractScrobbleClient from "./AbstractScrobbleClient.js";
+import AbstractScrobbleClient from "./AbstractScrobbleClient";
 import request from 'superagent';
 import dayjs from 'dayjs';
 import compareVersions from 'compare-versions';
@@ -7,14 +7,13 @@ import {
     setIntersection,
     sleep,
     sortByOldestPlayDate,
-    parseRetryAfterSecsFromObj, capitalize, isPlayTemporallyClose
-} from "../utils.js";
-import {
-    FormatPlayObjectOptions,
-    INITIALIZING
-} from "../common/infrastructure/Atomic.js";
-import {MalojaClientConfig} from "../common/infrastructure/config/client/maloja.js";
-import {Notifiers} from "../notifier/Notifiers.js";
+    parseRetryAfterSecsFromObj,
+    capitalize,
+    isPlayTemporallyClose,
+} from "../utils";
+import { FormatPlayObjectOptions, INITIALIZING } from "../common/infrastructure/Atomic";
+import { MalojaClientConfig } from "../common/infrastructure/config/client/maloja";
+import { Notifiers } from "../notifier/Notifiers";
 import {Logger} from '@foxxmd/winston';
 import {
     MalojaScrobbleData,
@@ -22,8 +21,8 @@ import {
     MalojaScrobbleV2RequestData,
     MalojaScrobbleV3RequestData, MalojaScrobbleV3ResponseData, MalojaV2ScrobbleData, MalojaV3ScrobbleData
 } from "../apis/maloja/interfaces";
-import {PlayObject, TrackStringOptions} from "../../core/Atomic.js";
-import {buildTrackString} from "../../core/StringUtils.js";
+import { PlayObject, TrackStringOptions } from "../../core/Atomic";
+import { buildTrackString } from "../../core/StringUtils";
 
 const feat = ["ft.", "ft", "feat.", "feat", "featuring", "Ft.", "Ft", "Feat.", "Feat", "Featuring"];
 
@@ -355,7 +354,7 @@ export default class MalojaScrobbler extends AbstractScrobbleClient {
     }
 
     alreadyScrobbled = async (playObj: any, log = false) => {
-        return await this.existingScrobble(playObj) !== undefined;
+        return (await this.existingScrobble(playObj)) !== undefined;
     }
 
     scrobble = async (playObj: PlayObject) => {

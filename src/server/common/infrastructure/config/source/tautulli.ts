@@ -1,4 +1,4 @@
-import {PlexSourceConfig} from "./plex.js";
+import { PlexSourceConfig } from "./plex";
 
 export interface TautulliSourceConfig extends PlexSourceConfig {
 }

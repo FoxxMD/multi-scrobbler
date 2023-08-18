@@ -4,26 +4,27 @@ import {
     mergeArr,
     playObjDataMatch,
     readJson,
-    returnDuplicateStrings, validateJson
-} from "../utils.js";
-import MalojaScrobbler from "./MalojaScrobbler.js";
-import LastfmScrobbler from "./LastfmScrobbler.js";
-import {clientTypes, ConfigMeta} from "../common/infrastructure/Atomic.js";
-import {AIOConfig} from "../common/infrastructure/config/aioConfig.js";
+    returnDuplicateStrings,
+    validateJson,
+} from "../utils";
+import MalojaScrobbler from "./MalojaScrobbler";
+import LastfmScrobbler from "./LastfmScrobbler";
+import { clientTypes, ConfigMeta } from "../common/infrastructure/Atomic";
+import { AIOConfig } from "../common/infrastructure/config/aioConfig";
 import * as aioSchema from '../common/schema/aio-client.json';
 import * as clientSchema from '../common/schema/client.json';
-import {ClientAIOConfig, ClientConfig} from "../common/infrastructure/config/client/clients.js";
-import {MalojaClientConfig} from "../common/infrastructure/config/client/maloja.js";
-import {LastfmClientConfig} from "../common/infrastructure/config/client/lastfm.js";
-import {Notifiers} from "../notifier/Notifiers.js";
-import AbstractScrobbleClient from "./AbstractScrobbleClient.js";
+import { ClientAIOConfig, ClientConfig } from "../common/infrastructure/config/client/clients";
+import { MalojaClientConfig } from "../common/infrastructure/config/client/maloja";
+import { LastfmClientConfig } from "../common/infrastructure/config/client/lastfm";
+import { Notifiers } from "../notifier/Notifiers";
+import AbstractScrobbleClient from "./AbstractScrobbleClient";
 import {EventEmitter} from "events";
 import winston from '@foxxmd/winston';
-import ListenbrainzScrobbler from "./ListenbrainzScrobbler.js";
-import {ListenBrainzClientConfig} from "../common/infrastructure/config/client/listenbrainz.js";
+import ListenbrainzScrobbler from "./ListenbrainzScrobbler";
+import { ListenBrainzClientConfig } from "../common/infrastructure/config/client/listenbrainz";
 import {ErrorWithCause} from "pony-cause";
-import {PlayObject} from "../../core/Atomic.js";
-import {buildTrackString} from "../../core/StringUtils.js";
+import { PlayObject } from "../../core/Atomic";
+import { buildTrackString } from "../../core/StringUtils";
 
 type groupedNamedConfigs = {[key: string]: ParsedConfig[]};
 
@@ -74,7 +75,7 @@ export default class ScrobbleClients {
         }
 
         for(const client of clients) {
-            if(!await client.isReady()) {
+            if(!(await client.isReady())) {
                 clientsReady = false;
                 messages.push(`Client ${client.type} - ${client.name} is not ready.`);
             }

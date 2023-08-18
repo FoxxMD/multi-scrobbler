@@ -1,20 +1,23 @@
-import MemorySource from "./MemorySource.js";
+import MemorySource from "./MemorySource";
 import dayjs, {Dayjs} from "dayjs";
 import {
     isPlayTemporallyClose,
-    combinePartsToString, parseBool,
+    combinePartsToString,
+    parseBool,
     parseDurationFromTimestamp,
     playObjDataMatch,
-    comparePlayTemporally, temporalPlayComparisonSummary, doubleReturnNewline
-} from "../utils.js";
-import {JellySourceConfig} from "../common/infrastructure/config/source/jellyfin.js";
-import {FormatPlayObjectOptions, InternalConfig, PlayPlatformId} from "../common/infrastructure/Atomic.js";
+    comparePlayTemporally,
+    temporalPlayComparisonSummary,
+    doubleReturnNewline,
+} from "../utils";
+import { JellySourceConfig } from "../common/infrastructure/config/source/jellyfin";
+import { FormatPlayObjectOptions, InternalConfig, PlayPlatformId } from "../common/infrastructure/Atomic";
 import EventEmitter from "events";
-import {PlayerStateOptions} from "./PlayerState/AbstractPlayerState.js";
+import { PlayerStateOptions } from "./PlayerState/AbstractPlayerState";
 import {Logger} from "@foxxmd/winston";
-import {JellyfinPlayerState} from "./PlayerState/JellyfinPlayerState.js";
-import {PlayObject} from "../../core/Atomic.js";
-import {buildTrackString, truncateStringToLength} from "../../core/StringUtils.js";
+import { JellyfinPlayerState } from "./PlayerState/JellyfinPlayerState";
+import { PlayObject } from "../../core/Atomic";
+import { buildTrackString, truncateStringToLength } from "../../core/StringUtils";
 
 const shortDeviceId = truncateStringToLength(10, '');
 

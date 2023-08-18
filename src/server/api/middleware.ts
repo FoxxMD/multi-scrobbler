@@ -1,4 +1,4 @@
-import {ExpressHandler} from "../common/infrastructure/Atomic.js";
+import { ExpressHandler } from "../common/infrastructure/Atomic";
 
 export const makeSourceCheckMiddle = (sources: any): ExpressHandler => (req: any, res: any, next: any) => {
     const {

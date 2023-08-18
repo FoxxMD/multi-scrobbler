@@ -1,17 +1,17 @@
 import path from "path";
-import {projectDir} from "./index.js";
+import { projectDir } from "./index";
 import winston, {format, Logger} from '@foxxmd/winston';
 import {DuplexTransport} from "winston-duplex";
-import {asLogOptions, LogConfig, LogOptions} from "./infrastructure/Atomic.js";
+import { asLogOptions, LogConfig, LogOptions } from "./infrastructure/Atomic";
 import process from "process";
-import {fileOrDirectoryIsWriteable, parseBool} from "../utils.js";
+import { fileOrDirectoryIsWriteable, parseBool } from "../utils";
 import {ErrorWithCause, stackWithCauses} from "pony-cause";
 import {NullTransport} from 'winston-null';
 import DailyRotateFile from 'winston-daily-rotate-file';
 import dayjs from "dayjs";
 import stringify from 'safe-stable-stringify';
 import {SPLAT, LEVEL, MESSAGE} from 'triple-beam';
-import {LogInfo, LogLevel} from "../../core/Atomic.js";
+import { LogInfo, LogLevel } from "../../core/Atomic";
 
 const {combine, printf, timestamp, label, splat, errors} = format;
 

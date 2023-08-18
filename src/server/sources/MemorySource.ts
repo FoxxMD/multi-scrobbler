@@ -1,4 +1,4 @@
-import AbstractSource from "./AbstractSource.js";
+import AbstractSource from "./AbstractSource";
 import {
     playObjDataMatch,
     sortByOldestPlayDate,
@@ -9,23 +9,26 @@ import {
     timePassesScrobbleThreshold,
     thresholdResultSummary,
     genGroupId,
-    genGroupIdStr, getPlatformIdFromData
-} from "../utils.js";
+    genGroupIdStr,
+    getPlatformIdFromData,
+} from "../utils";
 import dayjs from "dayjs";
 import {
     asPlayerStateData,
     DeviceId,
-    GroupedPlays, PlayerStateData,
-    PlayPlatformId, PlayUserId,
+    GroupedPlays,
+    PlayerStateData,
+    PlayPlatformId,
+    PlayUserId,
     ProgressAwarePlayObject,
-    ScrobbleThresholdResult
-} from "../common/infrastructure/Atomic.js";
-import TupleMap from "../common/TupleMap.js";
-import {AbstractPlayerState, PlayerStateOptions} from "./PlayerState/AbstractPlayerState.js";
-import {GenericPlayerState} from "./PlayerState/GenericPlayerState.js";
+    ScrobbleThresholdResult,
+} from "../common/infrastructure/Atomic";
+import TupleMap from "../common/TupleMap";
+import { AbstractPlayerState, PlayerStateOptions } from "./PlayerState/AbstractPlayerState";
+import { GenericPlayerState } from "./PlayerState/GenericPlayerState";
 import {Logger} from "@foxxmd/winston";
-import {PlayObject} from "../../core/Atomic.js";
-import {buildTrackString} from "../../core/StringUtils.js";
+import { PlayObject } from "../../core/Atomic";
+import { buildTrackString } from "../../core/StringUtils";
 
 export default class MemorySource extends AbstractSource {
     /*

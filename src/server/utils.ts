@@ -17,17 +17,17 @@ import {
     ProgressAwarePlayObject,
     RegExResult,
     RemoteIdentityParts,
-    ScrobbleThresholdResult
-} from "./common/infrastructure/Atomic.js";
+    ScrobbleThresholdResult,
+} from "./common/infrastructure/Atomic";
 import {Request} from "express";
 import pathUtil from "path";
 import {ErrorWithCause} from "pony-cause";
 import backoffStrategies from '@kenyip/backoff-strategies';
-import {ScrobbleThresholds} from "./common/infrastructure/config/source/index.js";
+import { ScrobbleThresholds } from "./common/infrastructure/config/source/index";
 import {replaceResultTransformer, stripIndentTransformer, TemplateTag, trimResultTransformer} from 'common-tags';
 import is from "@sindresorhus/is";
 import {Duration} from "dayjs/plugin/duration.js";
-import {ListenRange, PlayObject} from "../core/Atomic.js";
+import { ListenRange, PlayObject } from "../core/Atomic";
 
 dayjs.extend(utc);
 

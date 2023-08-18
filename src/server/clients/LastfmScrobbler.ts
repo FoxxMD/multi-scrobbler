@@ -1,25 +1,22 @@
-import AbstractScrobbleClient from "./AbstractScrobbleClient.js";
+import AbstractScrobbleClient from "./AbstractScrobbleClient";
 import dayjs from 'dayjs';
 
 import {
     capitalize,
-    playObjDataMatch, removeUndefinedKeys,
-    setIntersection, sleep,
+    playObjDataMatch,
+    removeUndefinedKeys,
+    setIntersection,
+    sleep,
     sortByOldestPlayDate,
-
-} from "../utils.js";
-import LastfmApiClient from "../apis/LastfmApiClient.js";
-import {
-    FormatPlayObjectOptions,
-    INITIALIZING,
-    ScrobbledPlayObject
-} from "../common/infrastructure/Atomic.js";
-import {LastfmClientConfig} from "../common/infrastructure/config/client/lastfm.js";
+} from "../utils";
+import LastfmApiClient from "../apis/LastfmApiClient";
+import { FormatPlayObjectOptions, INITIALIZING, ScrobbledPlayObject } from "../common/infrastructure/Atomic";
+import { LastfmClientConfig } from "../common/infrastructure/config/client/lastfm";
 import {TrackScrobbleResponse, UserGetRecentTracksResponse} from "lastfm-node-client";
-import {Notifiers} from "../notifier/Notifiers.js";
+import { Notifiers } from "../notifier/Notifiers";
 import {Logger} from '@foxxmd/winston';
-import {PlayObject, TrackStringOptions} from "../../core/Atomic.js";
-import {buildTrackString} from "../../core/StringUtils.js";
+import { PlayObject, TrackStringOptions } from "../../core/Atomic";
+import { buildTrackString } from "../../core/StringUtils";
 
 export default class LastfmScrobbler extends AbstractScrobbleClient {
 
@@ -118,7 +115,7 @@ export default class LastfmScrobbler extends AbstractScrobbleClient {
     }
 
     alreadyScrobbled = async (playObj: PlayObject, log = false) => {
-        return await this.existingScrobble(playObj) !== undefined;
+        return (await this.existingScrobble(playObj)) !== undefined;
     }
 
     scrobble = async (playObj: PlayObject) => {

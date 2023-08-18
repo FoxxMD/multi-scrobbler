@@ -1,5 +1,5 @@
-import {AbstractWebhookNotifier} from "./AbstractWebhookNotifier.js";
-import {GotifyConfig, PrioritiesConfig, WebhookPayload} from "../common/infrastructure/config/health/webhooks.js";
+import { AbstractWebhookNotifier } from "./AbstractWebhookNotifier";
+import { GotifyConfig, PrioritiesConfig, WebhookPayload } from "../common/infrastructure/config/health/webhooks";
 import {gotify} from 'gotify';
 import request from 'superagent';
 import {HTTPError} from "got";

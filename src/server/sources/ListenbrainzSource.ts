@@ -1,8 +1,8 @@
-import AbstractSource, {RecentlyPlayedOptions} from "./AbstractSource.js";
-import {FormatPlayObjectOptions, INITIALIZING, InternalConfig} from "../common/infrastructure/Atomic.js";
+import AbstractSource, { RecentlyPlayedOptions } from "./AbstractSource";
+import { FormatPlayObjectOptions, INITIALIZING, InternalConfig } from "../common/infrastructure/Atomic";
 import EventEmitter from "events";
-import {ListenBrainzSourceConfig} from "../common/infrastructure/config/source/listenbrainz.js";
-import {ListenbrainzApiClient} from "../apis/ListenbrainzApiClient.js";
+import { ListenBrainzSourceConfig } from "../common/infrastructure/config/source/listenbrainz";
+import { ListenbrainzApiClient } from "../apis/ListenbrainzApiClient";
 
 export default class ListenbrainzSource extends AbstractSource {
 

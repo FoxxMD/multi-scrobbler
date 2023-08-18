@@ -1,17 +1,18 @@
-import AbstractApiClient from "./AbstractApiClient.js";
+import AbstractApiClient from "./AbstractApiClient";
 import request, {Request} from 'superagent';
-import {ListenBrainzClientData} from "../common/infrastructure/config/client/listenbrainz.js";
-import {FormatPlayObjectOptions} from "../common/infrastructure/Atomic.js";
+import { ListenBrainzClientData } from "../common/infrastructure/config/client/listenbrainz";
+import { FormatPlayObjectOptions } from "../common/infrastructure/Atomic";
 import dayjs from "dayjs";
 import {
-    containsDelimiters, findDelimiters,
+    containsDelimiters,
+    findDelimiters,
     normalizeStr,
     parseCredits,
     parseStringList,
     unique,
-    uniqueNormalizedStrArr
-} from "../utils.js";
-import {PlayObject} from "../../core/Atomic.js";
+    uniqueNormalizedStrArr,
+} from "../utils";
+import { PlayObject } from "../../core/Atomic";
 
 
 export interface ArtistMBIDMapping {

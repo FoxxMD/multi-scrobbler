@@ -1,8 +1,8 @@
-import {GenericPlayerState} from "./GenericPlayerState.js";
+import { GenericPlayerState } from "./GenericPlayerState";
 import {Logger} from "@foxxmd/winston";
-import {PlayPlatformId, ReportedPlayerStatus} from "../../common/infrastructure/Atomic.js";
-import {PlayerStateOptions} from "./AbstractPlayerState.js";
-import {PlayObject} from "../../../core/Atomic.js";
+import { PlayPlatformId, ReportedPlayerStatus } from "../../common/infrastructure/Atomic";
+import { PlayerStateOptions } from "./AbstractPlayerState";
+import { PlayObject } from "../../../core/Atomic";
 
 export class JellyfinPlayerState extends GenericPlayerState {
     constructor(logger: Logger, platformId: PlayPlatformId, opts?: PlayerStateOptions) {

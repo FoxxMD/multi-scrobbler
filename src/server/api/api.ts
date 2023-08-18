@@ -1,14 +1,16 @@
 import {ExpressWithAsync} from "@awaitjs/express";
 import {getRoot} from "../ioc";
-import {capitalize} from "../utils.js";
+import { capitalize } from "../utils";
 import {makeClientCheckMiddle, makeSourceCheckMiddle} from "./middleware";
 import AbstractSource from "../sources/AbstractSource";
 import {
     ClientStatusData,
-    LogInfo, LogInfoJson,
-    LogLevel, LogOutputConfig,
+    LogInfo,
+    LogInfoJson,
+    LogLevel,
+    LogOutputConfig,
     SourceStatusData,
-} from "../../core/Atomic.js";
+} from "../../core/Atomic";
 import {Logger} from "@foxxmd/winston";
 import {formatLogToHtml, isLogLineMinLevel} from "../common/logging";
 import {MESSAGE} from "triple-beam";

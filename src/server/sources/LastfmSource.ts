@@ -1,11 +1,11 @@
-import AbstractSource, {RecentlyPlayedOptions} from "./AbstractSource.js";
-import LastfmApiClient from "../apis/LastfmApiClient.js";
-import {sortByOldestPlayDate} from "../utils.js";
-import {LastfmClientConfig} from "../common/infrastructure/config/client/lastfm.js";
-import {FormatPlayObjectOptions, InternalConfig} from "../common/infrastructure/Atomic.js";
+import AbstractSource, { RecentlyPlayedOptions } from "./AbstractSource";
+import LastfmApiClient from "../apis/LastfmApiClient";
+import { sortByOldestPlayDate } from "../utils";
+import { LastfmClientConfig } from "../common/infrastructure/config/client/lastfm";
+import { FormatPlayObjectOptions, InternalConfig } from "../common/infrastructure/Atomic";
 import {UserGetRecentTracksResponse} from "lastfm-node-client";
 import EventEmitter from "events";
-import {PlayObject} from "../../core/Atomic.js";
+import { PlayObject } from "../../core/Atomic";
 
 export default class LastfmSource extends AbstractSource {
 

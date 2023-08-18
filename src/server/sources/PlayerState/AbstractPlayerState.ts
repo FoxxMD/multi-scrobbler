@@ -3,14 +3,14 @@ import {
     CalculatedPlayerStatus,
     PlayPlatformId,
     REPORTED_PLAYER_STATUSES,
-    ReportedPlayerStatus
-} from "../../common/infrastructure/Atomic.js";
+    ReportedPlayerStatus,
+} from "../../common/infrastructure/Atomic";
 import dayjs, {Dayjs} from "dayjs";
-import {formatNumber, genGroupIdStr, playObjDataMatch, progressBar} from "../../utils.js";
+import { formatNumber, genGroupIdStr, playObjDataMatch, progressBar } from "../../utils";
 import {Logger} from "@foxxmd/winston";
-import {ListenProgress} from "./ListenProgress.js";
-import {ListenRange, PlayData, PlayObject} from "../../../core/Atomic.js";
-import {buildTrackString} from "../../../core/StringUtils.js";
+import { ListenProgress } from "./ListenProgress";
+import { ListenRange, PlayData, PlayObject } from "../../../core/Atomic";
+import { buildTrackString } from "../../../core/StringUtils";
 
 export interface PlayerStateIntervals {
     staleInterval?: number

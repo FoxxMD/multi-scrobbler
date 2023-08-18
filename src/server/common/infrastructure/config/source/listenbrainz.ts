@@ -1,5 +1,5 @@
-import {CommonSourceConfig, CommonSourceData} from "./index.js";
-import {ListenBrainzData} from "../client/listenbrainz.js";
+import { CommonSourceConfig, CommonSourceData } from "./index";
+import { ListenBrainzData } from "../client/listenbrainz";
 
 export interface ListenBrainzSourceData extends ListenBrainzData, CommonSourceData {
 }

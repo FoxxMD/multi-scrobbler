@@ -1,24 +1,27 @@
 import dayjs, {Dayjs} from "dayjs";
 import {
-    capitalize, isPlayTemporallyClose,
+    capitalize,
+    isPlayTemporallyClose,
     mergeArr,
-    playObjDataMatch, setIntersection
-} from "../utils.js";
+    playObjDataMatch,
+    setIntersection,
+} from "../utils";
 import {
-    ClientType, FormatPlayObjectOptions,
+    ClientType,
+    FormatPlayObjectOptions,
     INITIALIZED,
     INITIALIZING,
     InitState,
     NOT_INITIALIZED,
-    ScrobbledPlayObject
-} from "../common/infrastructure/Atomic.js";
+    ScrobbledPlayObject,
+} from "../common/infrastructure/Atomic";
 import winston, {Logger} from '@foxxmd/winston';
-import {CommonClientConfig} from "../common/infrastructure/config/client/index.js";
-import {ClientConfig} from "../common/infrastructure/config/client/clients.js";
-import {Notifiers} from "../notifier/Notifiers.js";
+import { CommonClientConfig } from "../common/infrastructure/config/client/index";
+import { ClientConfig } from "../common/infrastructure/config/client/clients";
+import { Notifiers } from "../notifier/Notifiers";
 import {FixedSizeList} from 'fixed-size-list';
-import {PlayObject, TrackStringOptions} from "../../core/Atomic.js";
-import {buildTrackString, truncateStringToLength} from "../../core/StringUtils.js";
+import { PlayObject, TrackStringOptions } from "../../core/Atomic";
+import { buildTrackString, truncateStringToLength } from "../../core/StringUtils";
 
 export default abstract class AbstractScrobbleClient {
 

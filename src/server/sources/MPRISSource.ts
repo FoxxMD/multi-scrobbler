@@ -3,17 +3,20 @@ import dayjs from "dayjs";
 import {
     MPRIS_IFACE,
     MPRIS_PATH,
-    MPRISMetadata, MPRISSourceConfig, PLAYBACK_STATUS_STOPPED,
-    PlaybackStatus, PlayerInfo,
-    PROPERTIES_IFACE
-} from "../common/infrastructure/config/source/mpris.js";
-import {FormatPlayObjectOptions, InternalConfig} from "../common/infrastructure/Atomic.js";
-import MemorySource from "./MemorySource.js";
-import {RecentlyPlayedOptions} from "./AbstractSource.js";
-import {removeDuplicates} from "../utils.js";
+    MPRISMetadata,
+    MPRISSourceConfig,
+    PLAYBACK_STATUS_STOPPED,
+    PlaybackStatus,
+    PlayerInfo,
+    PROPERTIES_IFACE,
+} from "../common/infrastructure/config/source/mpris";
+import { FormatPlayObjectOptions, InternalConfig } from "../common/infrastructure/Atomic";
+import MemorySource from "./MemorySource";
+import { RecentlyPlayedOptions } from "./AbstractSource";
+import { removeDuplicates } from "../utils";
 import EventEmitter from "events";
 import {ErrorWithCause} from "pony-cause";
-import {PlayObject} from "../../core/Atomic.js";
+import { PlayObject } from "../../core/Atomic";
 
 
 export class MPRISSource extends MemorySource {

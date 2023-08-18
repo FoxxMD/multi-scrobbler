@@ -1,5 +1,5 @@
-import {CommonSourceConfig, CommonSourceData} from "./index.js";
-import {PollingOptions} from "../common.js";
+import { CommonSourceConfig, CommonSourceData } from "./index";
+import { PollingOptions } from "../common";
 
 export interface MopidyData extends CommonSourceData, PollingOptions {
     /**

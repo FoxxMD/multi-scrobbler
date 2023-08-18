@@ -1,7 +1,7 @@
 import winston, {Logger} from '@foxxmd/winston';
-import {mergeArr, remoteHostIdentifiers, remoteHostStr} from "../../utils.js";
+import { mergeArr, remoteHostIdentifiers, remoteHostStr } from "../../utils";
 import {Request} from "express";
-import {RemoteIdentityParts} from "../../common/infrastructure/Atomic.js";
+import { RemoteIdentityParts } from "../../common/infrastructure/Atomic";
 
 
 export abstract class IngressNotifier {
