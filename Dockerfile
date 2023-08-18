@@ -66,7 +66,8 @@ RUN npm install --omit=dev \
     && npm cache clean --force \
     && chown abc:abc node_modules \
     && rm -rf node_modules/ts-node \
-    && rm -rf node_modules/typescript
+    && rm -rf node_modules/typescript \
+    && rm -rf node_modules/@types
 
 ARG webPort=9078
 ENV PORT=$webPort
