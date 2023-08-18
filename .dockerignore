@@ -18,3 +18,4 @@ flatpak/.flatpak-builder
 docsite/build
 docsite/node_modules
 build
+yarn.lock
