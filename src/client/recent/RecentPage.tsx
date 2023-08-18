@@ -29,6 +29,7 @@ const recent = () => {
                     </h2>
                 </div>
                 <div className="p-6 md:px-10 md:py-6">
+                    {isSuccess && !isLoading && data.length === 0 ? 'No recently played tracks!' : null}
                     <ul>{data.map(x => <li key={x.index}><PlayDisplay data={x} buildOptions={displayOpts}/></li>)}</ul>
                 </div>
             </div>
