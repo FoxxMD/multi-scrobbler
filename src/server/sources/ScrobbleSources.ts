@@ -35,7 +35,7 @@ import { JRiverSource } from "./JRiverSource";
 import { JRiverData, JRiverSourceConfig } from "../common/infrastructure/config/source/jriver";
 import { KodiSource } from "./KodiSource";
 import { KodiData, KodiSourceConfig } from "../common/infrastructure/config/source/kodi";
-import {WildcardEmitter} from "../common/WildcardEmitter.js";
+import { WildcardEmitter } from "../common/WildcardEmitter";
 
 type groupedNamedConfigs = {[key: string]: ParsedConfig[]};
 

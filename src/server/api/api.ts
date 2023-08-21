@@ -23,7 +23,7 @@ import {setupDeezerRoutes} from "./deezerRoutes";
 import {setupAuthRoutes} from "./auth";
 import path from "path";
 import {source} from "common-tags";
-import {ExpressHandler} from "../common/infrastructure/Atomic.js";
+import { ExpressHandler } from "../common/infrastructure/Atomic";
 
 const buildDir = path.join(process.cwd() + "/build");
 

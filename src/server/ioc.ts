@@ -7,7 +7,7 @@ import {Notifiers} from "./notifier/Notifiers";
 import {EventEmitter} from "events";
 import {logPath} from "./common/logging";
 import {Container} from '@foxxmd/winston';
-import {WildcardEmitter} from "./common/WildcardEmitter.js";
+import { WildcardEmitter } from "./common/WildcardEmitter";
 //import ScrobbleClients from "./clients/ScrobbleClients.js";
 
 const configDir = process.env.CONFIG_DIR || path.resolve(projectDir, `./config`);

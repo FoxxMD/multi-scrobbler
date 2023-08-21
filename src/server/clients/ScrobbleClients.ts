@@ -25,7 +25,7 @@ import { ListenBrainzClientConfig } from "../common/infrastructure/config/client
 import {ErrorWithCause} from "pony-cause";
 import { PlayObject } from "../../core/Atomic";
 import { buildTrackString } from "../../core/StringUtils";
-import {WildcardEmitter} from "../common/WildcardEmitter.js";
+import { WildcardEmitter } from "../common/WildcardEmitter";
 
 type groupedNamedConfigs = {[key: string]: ParsedConfig[]};
 
