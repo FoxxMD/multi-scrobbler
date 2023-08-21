@@ -5,7 +5,7 @@ import {useEventSource, useEventSourceListener} from "@react-nano/use-event-sour
 import LogLine from "./LogLine";
 import {useGetLogsQuery, useLazySetLevelQuery, logsApi} from "./logsApi";
 import {connect, ConnectedProps} from "react-redux";
-import {RootState} from "../store.js";
+import {RootState} from "../store";
 
 let logBuffer: { message: string, id: string, level: string }[] = [];
 

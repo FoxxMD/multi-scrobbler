@@ -5,7 +5,7 @@ import isBetween from "dayjs/plugin/isBetween.js";
 import relativeTime from "dayjs/plugin/relativeTime.js";
 import duration from "dayjs/plugin/duration.js";
 import timezone from "dayjs/plugin/timezone.js";
-import {AmbPlayObject, TrackStringOptions} from "./Atomic.js";
+import {AmbPlayObject, TrackStringOptions} from "./Atomic";
 
 dayjs.extend(utc)
 dayjs.extend(isBetween);

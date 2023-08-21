@@ -6,9 +6,8 @@ import {
     createSlice
 } from '@reduxjs/toolkit'
 import { Api } from '@reduxjs/toolkit/query/react';
-import {FulfilledAction} from "@reduxjs/toolkit/dist/query/core/buildThunks.js";
 import {statusApi} from "./statusApi";
-import {ClientStatusData, SourceStatusData} from "../../core/Atomic.js";
+import {ClientStatusData, SourceStatusData} from "../../core/Atomic";
 
 export interface ApiEventPayload {
     type: string,

@@ -1,6 +1,6 @@
-import {TrackStringOptions} from "../../core/Atomic.js";
+import {TrackStringOptions} from "../../core/Atomic";
 import React, {ReactElement, Fragment} from "react";
-import {defaultBuildTrackStringTransformers} from "../../core/StringUtils.js";
+import {defaultBuildTrackStringTransformers} from "../../core/StringUtils";
 
 export const buildTrackStringReactOptions: TrackStringOptions<ReactElement> = {
     transformers: {
