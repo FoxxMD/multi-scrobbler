@@ -58,7 +58,7 @@ export const setupApi = (app: ExpressWithAsync, logger: Logger, initialLogOutput
 
     logger.stream().on('log', (log: LogInfo) => {
         output.unshift(log);
-        output = output.slice(0, 301);
+        output = output.slice(0, 501);
         if(isLogLineMinLevel(log, logConfig.level)) {
             logObjectStream.write({message: log[MESSAGE], level: log.level});
         }
