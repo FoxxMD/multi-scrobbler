@@ -1,5 +1,5 @@
-import AbstractApiClient from "./AbstractApiClient.js";
-import {JRiverData} from "../common/infrastructure/config/source/jriver.js";
+import AbstractApiClient from "./AbstractApiClient";
+import {JRiverData} from "../common/infrastructure/config/source/jriver";
 import request, {Request, Response} from 'superagent';
 import xml2js from 'xml2js';
 import {ErrorWithCause} from "pony-cause";
