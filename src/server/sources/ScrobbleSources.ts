@@ -35,6 +35,7 @@ import { JRiverSource } from "./JRiverSource";
 import { JRiverData, JRiverSourceConfig } from "../common/infrastructure/config/source/jriver";
 import { KodiSource } from "./KodiSource";
 import { KodiData, KodiSourceConfig } from "../common/infrastructure/config/source/kodi";
+import {WildcardEmitter} from "../common/WildcardEmitter.js";
 
 type groupedNamedConfigs = {[key: string]: ParsedConfig[]};
 
@@ -47,7 +48,7 @@ export default class ScrobbleSources {
     configDir: string;
     localUrl: string;
 
-    emitter: EventEmitter;
+    emitter: WildcardEmitter;
 
     constructor(emitter: EventEmitter, localUrl: string, configDir: string = defaultConfigDir) {
         this.emitter = emitter;

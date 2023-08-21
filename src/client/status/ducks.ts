@@ -10,6 +10,13 @@ import {FulfilledAction} from "@reduxjs/toolkit/dist/query/core/buildThunks.js";
 import {statusApi} from "./statusApi";
 import {ClientStatusData, SourceStatusData} from "../../core/Atomic.js";
 
+export interface ApiEventPayload {
+    type: string,
+    name: string,
+    event: string,
+    [key: string]: any
+}
+
 const sourceAdapter = createEntityAdapter<SourceStatusData>({
     // Assume IDs are stored in a field other than `book.id`
     selectId: (data) => `${data.type}-${data.name}`,
@@ -37,6 +44,12 @@ const sourceSlice = createSlice({
                     sourceAdapter.setAll(state, action.payload.sources);
                 }
             )
+            .addMatcher(
+                (action) => sourceUpdate.match(action) && action.payload.event === 'discovered',
+                (state, action) => {
+                    state.entities[action.payload.id].tracksDiscovered = state.entities[action.payload.id].tracksDiscovered + 1;
+                }
+            )
     }
 });
 const clientSlice = createSlice({
@@ -53,19 +66,31 @@ const clientSlice = createSlice({
                     clientAdapter.setAll(state, action.payload.sources);
                 }
             )
+            .addMatcher(
+                (action) => clientUpdate.match(action) && action.payload.event === 'scrobble',
+                (state, action) => {
+                    state.entities[action.payload.id].tracksDiscovered = state.entities[action.payload.id].tracksDiscovered + 1;
+                }
+            )
     }
 });
 
-// const initialState = {clients: [], sources: []};
-// const statusReducer = createReducer(initialState, (builder) => {
-//    builder
-//        .addMatcher(
-//        (action) => statusApi.endpoints.getStatus.matchFulfilled(action),
-//        (state, action) => {
-//            state.clients = action.payload.clients ?? [];
-//            state.sources = action.payload.sources ?? [];
-//        }
-//    )
-// });
+export const sourceUpdate = createAction('source/update', (payload: ApiEventPayload) => {
+    return {
+        payload: {
+            id: `${payload.type}-${payload.name}`,
+            ...payload
+        }
+    }
+});
+
+export const clientUpdate = createAction('client/update', (payload: ApiEventPayload) => {
+    return {
+        payload: {
+            id: `${payload.type}-${payload.name}`,
+            ...payload
+        }
+    }
+});
 
 export {sourceSlice, clientSlice, sourceAdapter, clientAdapter};

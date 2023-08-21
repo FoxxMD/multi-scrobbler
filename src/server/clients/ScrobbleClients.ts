@@ -25,6 +25,7 @@ import { ListenBrainzClientConfig } from "../common/infrastructure/config/client
 import {ErrorWithCause} from "pony-cause";
 import { PlayObject } from "../../core/Atomic";
 import { buildTrackString } from "../../core/StringUtils";
+import {WildcardEmitter} from "../common/WildcardEmitter.js";
 
 type groupedNamedConfigs = {[key: string]: ParsedConfig[]};
 
@@ -37,17 +38,17 @@ export default class ScrobbleClients {
     logger;
     configDir;
 
-    emitter: EventEmitter;
+    emitter: WildcardEmitter;
 
-    sourceEmitter: EventEmitter;
+    sourceEmitter: WildcardEmitter;
 
-    constructor(emitter: EventEmitter, sourceEmitter: EventEmitter, configDir: any) {
+    constructor(emitter: WildcardEmitter, sourceEmitter: WildcardEmitter, configDir: any) {
         this.emitter = emitter;
         this.sourceEmitter = sourceEmitter;
         this.configDir = configDir;
         this.logger = winston.loggers.get('app').child({labels: ['Scrobblers']}, mergeArr);
 
-        this.sourceEmitter.on('scrobble', async (payload: { data: (PlayObject | PlayObject[]), options: { forceRefresh?: boolean, checkTime?: Dayjs, scrobbleTo?: string[], scrobbleFrom?: string } }) => {
+        this.sourceEmitter.on('discoveredToScrobble', async (payload: { data: (PlayObject | PlayObject[]), options: { forceRefresh?: boolean, checkTime?: Dayjs, scrobbleTo?: string[], scrobbleFrom?: string } }) => {
             await this.scrobble(payload.data, payload.options);
         });
     }
@@ -300,13 +301,13 @@ ${sources.join('\n')}`);
         this.logger.debug(`Constructing ${type} (${name}) client...`);
         switch (type) {
             case 'maloja':
-                newClient = new MalojaScrobbler(name, ({...clientConfig, data} as unknown as MalojaClientConfig), notifier, this.logger);
+                newClient = new MalojaScrobbler(name, ({...clientConfig, data} as unknown as MalojaClientConfig), notifier, this.emitter, this.logger);
                 break;
             case 'lastfm':
-                newClient = new LastfmScrobbler(name, {...clientConfig, data: {configDir: this.configDir, ...data} } as unknown as LastfmClientConfig, {}, notifier, this.logger);
+                newClient = new LastfmScrobbler(name, {...clientConfig, data: {configDir: this.configDir, ...data} } as unknown as LastfmClientConfig, {}, notifier, this.emitter, this.logger);
                 break;
             case 'listenbrainz':
-                newClient = new ListenbrainzScrobbler(name, {...clientConfig, data: {configDir: this.configDir, ...data} } as unknown as ListenBrainzClientConfig, {}, notifier, this.logger);
+                newClient = new ListenbrainzScrobbler(name, {...clientConfig, data: {configDir: this.configDir, ...data} } as unknown as ListenBrainzClientConfig, {}, notifier, this.emitter, this.logger);
                 break;
             default:
                 break;
@@ -409,6 +410,7 @@ ${sources.join('\n')}`);
                     } = playObj;
                     const [timeFrameValid, timeFrameValidLog] = client.timeFrameIsValid(playObj);
                     if (timeFrameValid && !(await client.alreadyScrobbled(playObj))) {
+                        client.emitEvent('scrobble', {play: playObj});
                         await client.scrobble(playObj)
                         client.tracksScrobbled++;
                         // since this is what we return to the source only add to tracksScrobbled if not already in array

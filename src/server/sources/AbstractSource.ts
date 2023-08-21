@@ -115,6 +115,7 @@ export default abstract class AbstractSource {
         this.recentDiscoveredPlays.set(platformId, list);
         this.tracksDiscovered++;
         this.logger.info(`Discovered => ${buildTrackString(play)}`);
+        this.emitEvent('discovered', {play});
     }
 
     getFlatRecentlyDiscoveredPlays = (): PlayObject[] => {
@@ -179,7 +180,7 @@ export default abstract class AbstractSource {
         if(newDiscoveredPlays.length > 0) {
             newDiscoveredPlays.sort(sortByOldestPlayDate);
 
-            this.emitter.emit('scrobble', {
+            this.emitter.emit('discoveredToScrobble', {
                 data: newDiscoveredPlays,
                 options: {
                     ...options,
@@ -376,5 +377,14 @@ export default abstract class AbstractSource {
             this.polling = false;
             throw e;
         }
+    }
+
+    public emitEvent = (eventName: string, payload: object) => {
+        this.emitter.emit(eventName, {
+            ...payload,
+            type: this.type,
+            name: this.name,
+            from: 'source'
+        });
     }
 }

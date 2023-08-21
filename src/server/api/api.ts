@@ -105,6 +105,15 @@ export const setupApi = (app: ExpressWithAsync, logger: Logger, initialLogOutput
         return res.json({data: jsonLogs, settings: logConfig});
     });
 
+    app.get('/api/events', async (req, res) => {
+        const session = await createSession(req, res);
+        scrobbleSources.emitter.on('*', (payload: any, eventName: string) => {
+            if(payload.from !== undefined) {
+                session.push({...payload.data, event: eventName}, payload.from);
+            }
+        });
+    });
+
     setupTautulliRoutes(app, logger, scrobbleSources);
     setupPlexRoutes(app, logger, scrobbleSources);
     setupJellyfinRoutes(app, logger, scrobbleSources);

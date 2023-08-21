@@ -17,6 +17,7 @@ import { Notifiers } from "../notifier/Notifiers";
 import {Logger} from '@foxxmd/winston';
 import { PlayObject, TrackStringOptions } from "../../core/Atomic";
 import { buildTrackString } from "../../core/StringUtils";
+import EventEmitter from "events";
 
 export default class LastfmScrobbler extends AbstractScrobbleClient {
 
@@ -26,8 +27,8 @@ export default class LastfmScrobbler extends AbstractScrobbleClient {
 
     declare config: LastfmClientConfig;
 
-    constructor(name: any, config: LastfmClientConfig, options = {}, notifier: Notifiers, logger: Logger) {
-        super('lastfm', name, config, notifier, logger);
+    constructor(name: any, config: LastfmClientConfig, options = {}, notifier: Notifiers, emitter: EventEmitter, logger: Logger) {
+        super('lastfm', name, config, notifier, emitter, logger);
         // @ts-ignore
         this.api = new LastfmApiClient(name, config.data, options)
     }

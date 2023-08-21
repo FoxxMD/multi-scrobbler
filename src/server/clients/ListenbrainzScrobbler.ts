@@ -17,6 +17,7 @@ import { ListenBrainzClientConfig } from "../common/infrastructure/config/client
 import { ListenbrainzApiClient } from "../apis/ListenbrainzApiClient";
 import { PlayObject, TrackStringOptions } from "../../core/Atomic";
 import { buildTrackString } from "../../core/StringUtils";
+import EventEmitter from "events";
 
 export default class ListenbrainzScrobbler extends AbstractScrobbleClient {
 
@@ -26,8 +27,8 @@ export default class ListenbrainzScrobbler extends AbstractScrobbleClient {
 
     declare config: ListenBrainzClientConfig;
 
-    constructor(name: any, config: ListenBrainzClientConfig, options = {}, notifier: Notifiers, logger: Logger) {
-        super('listenbrainz', name, config, notifier, logger);
+    constructor(name: any, config: ListenBrainzClientConfig, options = {}, notifier: Notifiers, emitter: EventEmitter, logger: Logger) {
+        super('listenbrainz', name, config, notifier, emitter, logger);
         this.api = new ListenbrainzApiClient(name, config.data);
     }
 

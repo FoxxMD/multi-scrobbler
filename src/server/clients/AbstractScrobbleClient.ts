@@ -22,6 +22,7 @@ import { Notifiers } from "../notifier/Notifiers";
 import {FixedSizeList} from 'fixed-size-list';
 import { PlayObject, TrackStringOptions } from "../../core/Atomic";
 import { buildTrackString, truncateStringToLength } from "../../core/StringUtils";
+import EventEmitter from "events";
 
 export default abstract class AbstractScrobbleClient {
 
@@ -51,13 +52,15 @@ export default abstract class AbstractScrobbleClient {
     logger: Logger;
 
     notifier: Notifiers;
+    emitter: EventEmitter;
 
-    constructor(type: any, name: any, config: CommonClientConfig, notifier: Notifiers, logger: Logger) {
+    constructor(type: any, name: any, config: CommonClientConfig, notifier: Notifiers, emitter: EventEmitter, logger: Logger) {
         this.type = type;
         this.name = name;
         const identifier = `${capitalize(this.type)} - ${name}`;
         this.logger = logger.child({labels: [identifier]}, mergeArr);
         this.notifier = notifier;
+        this.emitter = emitter;
 
         this.scrobbledPlayObjs = new FixedSizeList<ScrobbledPlayObject>(this.MAX_STORED_SCROBBLES);
 
@@ -367,5 +370,16 @@ export default abstract class AbstractScrobbleClient {
             this.logger.debug(`(Existing Check) Source: ${buildTrackString(playObj, scoreTrackOpts)} => ${closestScrobble}`);
         }
         return existingScrobble;
+    }
+
+    public abstract scrobble(playObj: PlayObject): Promise<boolean>
+
+    public emitEvent = (eventName: string, payload: object) => {
+        this.emitter.emit(eventName, {
+            ...payload,
+            type: this.type,
+            name: this.name,
+            from: 'client'
+        });
     }
 }

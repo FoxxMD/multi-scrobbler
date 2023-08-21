@@ -7,6 +7,7 @@ import {Notifiers} from "./notifier/Notifiers";
 import {EventEmitter} from "events";
 import {logPath} from "./common/logging";
 import {Container} from '@foxxmd/winston';
+import {WildcardEmitter} from "./common/WildcardEmitter.js";
 //import ScrobbleClients from "./clients/ScrobbleClients.js";
 
 const configDir = process.env.CONFIG_DIR || path.resolve(projectDir, `./config`);
@@ -24,8 +25,8 @@ const createRoot = (port: number | string) => {
         configDir: configDir,
         logDir: logPath,
         localUrl: `http://localhost:${port}`,
-        clientEmitter: () => new EventEmitter(),
-        sourceEmitter: () => new EventEmitter(),
+        clientEmitter: () => new WildcardEmitter(),
+        sourceEmitter: () => new WildcardEmitter(),
         notifierEmitter: () => new EventEmitter(),
     }).add((items) => ({
         clients: () => new ScrobbleClients(items.clientEmitter, items.sourceEmitter, items.configDir),
