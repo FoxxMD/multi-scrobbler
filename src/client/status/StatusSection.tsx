@@ -1,34 +1,38 @@
 import React, {Fragment} from 'react';
-import {
-    useQuery,
-} from '@tanstack/react-query'
-import ky from "ky";
+import {connect, ConnectedProps} from "react-redux";
 import StatusCardSkeleton from "../components/statusCard/StatusCardSkeleton";
 import SourceStatusCard from "../components/statusCard/SourceStatusCard";
 import ClientStatusCard from "../components/statusCard/ClientStatusCard";
-import {ClientStatusData, SourceStatusData} from "../../core/Atomic";
-
-const StatusSection = () => {
-    const {isLoading, isSuccess, isError, data, error} = useQuery({
-        queryKey: ['status'], queryFn: async () => {
-            return await ky.get('/api/status').json() as { sources: SourceStatusData[], clients: ClientStatusData[] }
-        },
-        refetchOnWindowFocus: false,
-    });
+import {useGetStatusQuery} from "./statusApi";
+import {clientAdapter, sourceAdapter} from "./ducks";
+import {RootState} from "../store";
+const StatusSection = (props: PropsFromRedux) => {
+    const {data, error, isLoading} = useGetStatusQuery(undefined);
 
     return (
         <Fragment>
             <div className="grid md:grid-cols-3 gap-3">
                 {isLoading ? <StatusCardSkeleton loading={isLoading}/> : undefined}
-                {isSuccess ? data.sources.map(x => <SourceStatusCard key={`${x.display}-${x.name}`} loading={isLoading}
-                                                                     data={x}/>) : undefined}
+                {props.sourceIds.map(x => <SourceStatusCard id={x} key={x}/>)}
             </div>
             <div className="grid md:grid-cols-3 gap-3">
-                {isSuccess ? data.clients.map(x => <ClientStatusCard key={`${x.display}-${x.name}`} loading={isLoading}
-                                                                     data={x}/>) : undefined}
+                {!isLoading ? props.clientIds.map(x => <ClientStatusCard id={x} key={x}/>) : null}
             </div>
         </Fragment>
     );
 }
 
-export default StatusSection;
+const simpleSourceSelectors = sourceAdapter.getSelectors();
+const simpleClientSelectors = clientAdapter.getSelectors();
+const mapStateToProps = (state: RootState) => {
+    return {
+        sourceIds: simpleSourceSelectors.selectIds(state.sources),
+        clientIds: simpleClientSelectors.selectIds(state.clients),
+    }
+}
+
+const connector = connect(mapStateToProps);
+
+type PropsFromRedux = ConnectedProps<typeof connector>
+
+export default connector(StatusSection);

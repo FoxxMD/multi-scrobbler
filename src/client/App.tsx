@@ -5,10 +5,9 @@ import {
     createBrowserRouter,
     RouterProvider, useLocation,
 } from "react-router-dom";
+import { Provider } from 'react-redux'
 import './App.css';
-
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-const queryClient = new QueryClient()
+import {store} from './store';
 import Dashboard from "./dashboard/dashboard";
 import RecentPage from "./recent/RecentPage";
 
@@ -39,7 +38,7 @@ const router = createBrowserRouter([
 
 function App() {
   return (
-      <QueryClientProvider client={queryClient}>
+      <Provider store={store}>
       <div className="min-w-screen min-h-screen bg-gray-800 font-sans text-white">
         <div className="space-x-4 p-6 md:px-10 md:py-6 leading-6 font-semibold bg-gray-800 text-white">
           <div className="container mx-auto">
@@ -57,7 +56,7 @@ function App() {
             <RouterProvider router={router}/>
         </div>
       </div>
-      </QueryClientProvider>
+      </Provider>
   );
 }
 

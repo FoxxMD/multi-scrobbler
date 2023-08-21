@@ -1,17 +1,14 @@
 import React, {Fragment, useCallback} from 'react';
 import StatusCardSkeleton, {StatusCardSkeletonData} from "./StatusCardSkeleton";
 import SkeletonParagraph from "../skeleton/SkeletonParagraph";
-import {ClientStatusData, SourceStatusData} from "../../../core/Atomic";
 import {Link} from "react-router-dom";
-import {QueryClient} from "@tanstack/react-query";
-import ky from "ky";
+import {sourceAdapter} from "../../status/ducks";
+import {RootState} from "../../store";
+import {connect, ConnectedProps} from "react-redux";
 
-export interface SourceStatusCardData extends StatusCardSkeletonData {
+export interface SourceStatusCardData extends StatusCardSkeletonData, PropsFromRedux {
     loading?: boolean
-    data?: SourceStatusData
 }
-
-const queryClient = new QueryClient();
 
 const SourceStatusCard = (props: SourceStatusCardData) => {
     const {
@@ -21,9 +18,10 @@ const SourceStatusCard = (props: SourceStatusCardData) => {
     let header: string | undefined = undefined;
     let body = <SkeletonParagraph/>;
     const poll = useCallback(async () => {
-        await queryClient.fetchQuery(['poll', data.type, data.name], async () => {
-                return await ky.get('/api/poll', {searchParams: {type: data.type, name: data.name}});
-        })
+        const params = new URLSearchParams({type: data.type, name: data.name});
+        await fetch(`/api/poll?${params}`, {
+            method: 'GET',
+        });
     },[data]);
     if(data !== undefined)
     {
@@ -56,4 +54,14 @@ const SourceStatusCard = (props: SourceStatusCardData) => {
     );
 }
 
-export default SourceStatusCard;
+const simpleSelectors = sourceAdapter.getSelectors();
+
+const mapStateToProps = (state: RootState, props) => ({
+    data: simpleSelectors.selectById(state.sources, props.id)
+});
+
+const connector = connect(mapStateToProps);
+
+type PropsFromRedux = ConnectedProps<typeof connector>
+
+export default connector(SourceStatusCard);

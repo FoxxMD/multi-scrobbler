@@ -1,15 +1,13 @@
-import React, {useState, useCallback} from 'react';
+import React, {useState, useCallback, useEffect} from 'react';
 import './LogsSection.css';
 import {FixedSizeList} from "fixed-size-list";
 import {useEventSource, useEventSourceListener} from "@react-nano/use-event-source";
 import LogLine from "./LogLine";
-import {QueryClient, useQuery} from "@tanstack/react-query";
-import ky from "ky";
-import {LogInfoJson, LogOutputConfig} from "../../core/Atomic.js";
+import {useGetLogsQuery, useLazySetLevelQuery, logsApi} from "./logsApi";
+import {connect, ConnectedProps} from "react-redux";
+import {RootState} from "../store.js";
 
 let logBuffer: { message: string, id: string, level: string }[] = [];
-
-const queryClient = new QueryClient();
 
 interface MinLogInfo {
     message: string,
@@ -35,29 +33,27 @@ const LogLevelButton = (props: LogLevelButtonProps) => {
     return <span onClick={click} className={className}>{name.toUpperCase()}</span>;
 }
 
-const LogsSection = () => {
+const LogsSection = (props: PropsFromRedux) => {
+    const {
+        logs,
+        settings,
+    } = props;
+
     const [logList, setLogList] = useState(logBuffer);
     const [logLevel, setLogLevel] = useState('debug')
-    const {isLoading, isSuccess, isError, data, error} = useQuery({
-        queryKey: ['logs'],
-        queryFn: async () => {
-            return await ky.get('api/logs').json() as { data: LogInfoJson[], settings: LogOutputConfig }
-        },
-        refetchOnWindowFocus: false,
-    });
-    if (!isLoading && isSuccess && data !== undefined && logList.length === 0) {
-        list = createFixedList(data.settings.limit, data.data.map((x, index) => ({...x, message: x.formattedMessage, id: index.toString()})));
+
+    useGetLogsQuery(undefined);
+
+    useEffect(() => {
+        list = createFixedList(settings.limit, logs.map((x, index) => ({...x, message: x.formattedMessage, id: index.toString()})));
         setLogList(Array.from(list.data));
-        setLogLevel(data.settings.level);
-    }
+        setLogLevel(settings.level);
+    }, [logs, settings, setLogList, setLogLevel]);
+
+    const [setLevel] = useLazySetLevelQuery();
 
     const fetchLevel = useCallback(async (val) => {
-        const res = await queryClient.fetchQuery(['logLevel', val], async () => {
-            return await ky.put('/api/logs', {json: {level: val}}).json() as { data: LogInfoJson[], settings: LogOutputConfig };
-        });
-        setLogLevel(val);
-        list = createFixedList(res.settings.limit, res.data.map((x, index) => ({...x, message: x.formattedMessage, id: index.toString()})));
-        setLogList(Array.from(list.data));
+        setLevel(val);
     }, [setLogLevel]);
 
     const [eventSource, eventSourceStatus] = useEventSource("api/logs/stream", false);
@@ -115,4 +111,13 @@ const LogsSection = () => {
     );
 }
 
-export default LogsSection;
+const mapStateToProps = (state: RootState) => ({
+    logs: state.logs.data,
+    settings: state.logs.settings
+});
+
+type PropsFromRedux = ConnectedProps<typeof connector>
+
+const connector = connect(mapStateToProps);
+
+export default connector(LogsSection);

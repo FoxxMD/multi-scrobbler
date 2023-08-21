@@ -1,12 +1,13 @@
 import React, {Fragment} from 'react';
 import StatusCardSkeleton, {StatusCardSkeletonData} from "./StatusCardSkeleton";
 import SkeletonParagraph from "../skeleton/SkeletonParagraph";
-import {ClientStatusData} from "../../../core/Atomic";
-import {type} from "os";
+import {clientAdapter} from "../../status/ducks";
+import {RootState} from "../../store";
+import {connect, ConnectedProps} from "react-redux";
 
-export interface ClientStatusCardData extends StatusCardSkeletonData {
+export interface ClientStatusCardData extends StatusCardSkeletonData, PropsFromRedux {
     loading?: boolean
-    data?: ClientStatusData
+    key: any
 }
 
 const ClientStatusCard = (props: ClientStatusCardData) => {
@@ -38,4 +39,14 @@ const ClientStatusCard = (props: ClientStatusCardData) => {
     );
 }
 
-export default ClientStatusCard;
+const simpleSelectors = clientAdapter.getSelectors();
+
+const mapStateToProps = (state: RootState, props) => ({
+    data: simpleSelectors.selectById(state.clients, props.id)
+});
+
+const connector = connect(mapStateToProps);
+
+type PropsFromRedux = ConnectedProps<typeof connector>
+
+export default connector(ClientStatusCard);

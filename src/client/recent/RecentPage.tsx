@@ -1,11 +1,8 @@
-import React, {Fragment, useState} from 'react';
-import {
-    useQuery,
-} from '@tanstack/react-query'
-import ky from "ky";
+import React from 'react';
 import PlayDisplay from "../components/PlayDisplay";
-import {JsonPlayObject, recentIncludes} from "../../core/Atomic.js";
+import {recentIncludes} from "../../core/Atomic";
 import {useSearchParams} from "react-router-dom";
+import {useGetRecentQuery} from "./recentDucks";
 
 const displayOpts = {
     include: recentIncludes,
@@ -14,12 +11,7 @@ const displayOpts = {
 
 const recent = () => {
     let [searchParams, setSearchParams] = useSearchParams();
-    const {isLoading, isSuccess, isError, data = [], error} = useQuery({
-        queryKey: [`recent?${searchParams.toString()}`], queryFn: async () => {
-            const res = await ky.get(`/api/recent?${searchParams.toString()}`).json() as JsonPlayObject[];
-            return res.map((x, index) => ({...x, index: index + 1})) as (JsonPlayObject & { index: number })[];
-        }
-    });
+    const { data = [], error, isLoading, isSuccess} = useGetRecentQuery({name: searchParams.get('name'), type: searchParams.get('type')});
 
     return (
         <div className="grid ">
