@@ -23,6 +23,7 @@ import {setupDeezerRoutes} from "./deezerRoutes";
 import {setupAuthRoutes} from "./auth";
 import path from "path";
 import {source} from "common-tags";
+import {ExpressHandler} from "../common/infrastructure/Atomic.js";
 
 const buildDir = path.join(process.cwd() + "/build");
 
@@ -33,6 +34,14 @@ const availableLevels = ['error', 'warn', 'info', 'verbose', 'debug'];
 export const setupApi = (app: ExpressWithAsync, logger: Logger, initialLogOutput: LogInfo[] = []) => {
     output = initialLogOutput;
     const root = getRoot();
+
+    //let logWebLevel: LogLevel = logger.level as LogLevel || (process.env.LOG_LEVEL || 'info') as LogLevel;
+
+    const logConfig: LogOutputConfig = {
+        level: logger.level as LogLevel || (process.env.LOG_LEVEL || 'info') as LogLevel,
+        sort: 'descending',
+        limit: 50,
+    }
 
     let logObjectStream: Transform;
     try {
@@ -50,17 +59,10 @@ export const setupApi = (app: ExpressWithAsync, logger: Logger, initialLogOutput
     logger.stream().on('log', (log: LogInfo) => {
         output.unshift(log);
         output = output.slice(0, 301);
-        if(isLogLineMinLevel(log, logger.level as LogLevel)) {
-            //sse.send(log, 'logee');
+        if(isLogLineMinLevel(log, logConfig.level)) {
             logObjectStream.write({message: log[MESSAGE], level: log.level});
         }
     });
-
-    const logConfig: LogOutputConfig = {
-        level: logger.level as LogLevel || (process.env.LOG_LEVEL || 'info') as LogLevel,
-        sort: 'descending',
-        limit: 50,
-    }
 
     const scrobbleSources = root.get('sources');
     const scrobbleClients = root.get('clients');
@@ -68,16 +70,37 @@ export const setupApi = (app: ExpressWithAsync, logger: Logger, initialLogOutput
     const clientCheckMiddle = makeClientCheckMiddle(scrobbleClients);
     const sourceCheckMiddle = makeSourceCheckMiddle(scrobbleSources);
 
-    app.get('/api/logs/stream', async (req, res) => {
+    const setLogWebLevel: ExpressHandler = async (req, res, next) => {
+        // @ts-ignore
+        const sessionLevel: LogLevel | undefined = req.session.logLevel as LogLevel | undefined;
+        if(sessionLevel !== undefined && logConfig.level !== sessionLevel) {
+            logConfig.level = sessionLevel;
+        }
+        next();
+    }
+
+    app.get('/api/logs/stream', setLogWebLevel, async (req, res) => {
         const session = await createSession(req, res);
         await session.stream(logObjectStream);
     });
 
-    app.get('/api/logs', async (req, res) => {
+    app.get('/api/logs', setLogWebLevel, async (req, res) => {
         let slicedLog = output.filter(x => isLogLineMinLevel(x, logConfig.level)).slice(0, logConfig.limit + 1);
         if (logConfig.sort === 'ascending') {
             slicedLog.reverse();
         }
+        const jsonLogs: LogInfoJson[] = slicedLog.map(x => ({...x, formattedMessage: x[MESSAGE]}));
+        return res.json({data: jsonLogs, settings: logConfig});
+    });
+
+    app.put('/api/logs', async (req, res) => {
+        logConfig.level = req.body.level as LogLevel;
+        let slicedLog = output.filter(x => isLogLineMinLevel(x, logConfig.level)).slice(0, logConfig.limit + 1);
+        if (logConfig.sort === 'ascending') {
+            slicedLog.reverse();
+        }
+        // @ts-ignore
+        req.session.logLevel = logConfig.level;
         const jsonLogs: LogInfoJson[] = slicedLog.map(x => ({...x, formattedMessage: x[MESSAGE]}));
         return res.json({data: jsonLogs, settings: logConfig});
     });
