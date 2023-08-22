@@ -360,32 +360,42 @@ export default class SpotifySource extends MemorySource {
         try {
             return await func(this.spotifyApi);
         } catch (e) {
+            const spotifyError = new ErrorWithCause('Spotify API call failed', {cause: e});
             if (e.statusCode === 401) {
                 if (this.spotifyApi.getRefreshToken() === undefined) {
                     throw new Error('Access token was not valid and no refresh token was present')
                 }
                 this.logger.debug('Access token was not valid, attempting to refresh');
 
-                const tokenResponse = await this.spotifyApi.refreshAccessToken();
-                const {
-                    body: {
-                        access_token,
-                        // spotify may return a new refresh token
-                        // if it doesn't then continue to use the last refresh token we received
-                        refresh_token = this.spotifyApi.getRefreshToken(),
-                    } = {}
-                } = tokenResponse;
-                this.spotifyApi.setAccessToken(access_token);
-                await writeFile(this.workingCredsPath, JSON.stringify({
-                    token: access_token,
-                    refreshToken: refresh_token,
-                }));
+                try {
+                    const tokenResponse = await this.spotifyApi.refreshAccessToken();
+                    const {
+                        body: {
+                            access_token,
+                            // spotify may return a new refresh token
+                            // if it doesn't then continue to use the last refresh token we received
+                            refresh_token = this.spotifyApi.getRefreshToken(),
+                        } = {}
+                    } = tokenResponse;
+                    this.spotifyApi.setAccessToken(access_token);
+                    await writeFile(this.workingCredsPath, JSON.stringify({
+                        token: access_token,
+                        refreshToken: refresh_token,
+                    }));
+                } catch (refreshError) {
+                    const error = new ErrorWithCause('Refreshing access token encountered an error', {cause: refreshError});
+                    this.logger.error(error);
+                    this.logger.error(spotifyError);
+                    throw error;
+                }
+
                 try {
                     return await func(this.spotifyApi);
                 } catch (ee) {
-                    this.logger.error('Refreshing access token encountered an error');
-                    this.logger.error(ee);
-                    throw ee;
+                    const secondSpotifyError = new ErrorWithCause('Spotify API call failed even after refreshing token', {cause: ee});
+                    this.logger.error(secondSpotifyError);
+                    this.logger.error(spotifyError);
+                    throw secondSpotifyError;
                 }
             } else if(maxRequestRetries > retries) {
                 const retryAfter = parseRetryAfterSecsFromObj(e) ?? (retryMultiplier * (retries + 1));
