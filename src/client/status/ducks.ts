@@ -62,7 +62,7 @@ const clientSlice = createSlice({
             .addMatcher(
                 (action) => statusApi.endpoints.getStatus.matchFulfilled(action),
                 (state, action) => {
-                    clientAdapter.setAll(state, action.payload.sources);
+                    clientAdapter.setAll(state, action.payload.clients);
                 }
             )
             .addMatcher(
