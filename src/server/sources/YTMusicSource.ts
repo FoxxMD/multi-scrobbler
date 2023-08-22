@@ -1,11 +1,14 @@
-import YouTubeMusic from "youtube-music-ts-api";
+// @ts-ignore
+import YouTubeMusic from "@foxxmd/youtube-music-ts-api";
 
 import AbstractSource, { RecentlyPlayedOptions } from "./AbstractSource";
 import { FormatPlayObjectOptions, InternalConfig } from "../common/infrastructure/Atomic";
-import {IYouTubeMusicAuthenticated} from "youtube-music-ts-api/interfaces-primary";
+// @ts-ignore
+import {IYouTubeMusicAuthenticated} from "@foxxmd/youtube-music-ts-api/interfaces-primary";
 import dayjs from "dayjs";
 import { parseDurationFromTimestamp, playObjDataMatch } from "../utils";
-import {IPlaylistDetail, ITrackDetail} from "youtube-music-ts-api/interfaces-supplementary";
+// @ts-ignore
+import {IPlaylistDetail, ITrackDetail} from "@foxxmd/youtube-music-ts-api/interfaces-supplementary";
 import { YTMusicSourceConfig } from "../common/infrastructure/config/source/ytmusic";
 import EventEmitter from "events";
 import { PlayObject } from "../../core/Atomic";
