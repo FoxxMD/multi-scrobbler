@@ -1,0 +1,42 @@
+[
+  {
+    "data": {
+      "inserted_at": 1692478586,
+      "listened_at": 1692478549,
+      "recording_msid": "0b15859f-ffdb-489c-aa49-4d7aa46bb349",
+      "track_metadata": {
+        "additional_info": {
+          "duration": 275,
+          "recording_msid": "0b15859f-ffdb-489c-aa49-4d7aa46bb349"
+        },
+        "artist_name": "Hiatus Kaiyote",
+        "mbid_mapping": {
+          "artist_mbids": [
+            "55c03773-59ea-4d4e-9057-87c2ecab005d"
+          ],
+          "artists": [
+            {
+              "artist_credit_name": "Hiatus Kaiyote",
+              "artist_mbid": "55c03773-59ea-4d4e-9057-87c2ecab005d",
+              "join_phrase": ""
+            }
+          ],
+          "caa_id": 9068009686,
+          "caa_release_mbid": "09fade80-bd8a-4c08-9a00-cf1dcc7bc91c",
+          "recording_mbid": "8b7aa332-d926-4922-8ef7-d572cfe7cefb",
+          "recording_name": "Nakamarra",
+          "release_mbid": "eea9b341-fc77-4ea0-ac78-bc80db95e5af"
+        },
+        "track_name": "Nakamarra (feat. Q-Tip)"
+      },
+      "user_name": "FoxxMD"
+    },
+    "expected": {
+      "artists": [
+        "Hiatus Kaiyote",
+        "Q-Tip"
+      ],
+      "track": "Nakamarra"
+    }
+  }
+]

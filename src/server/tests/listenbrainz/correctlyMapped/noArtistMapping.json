@@ -1,0 +1,22 @@
+[
+  {
+    "data": {
+      "inserted_at": 1692667538,
+      "listened_at": 1692664065,
+      "recording_msid": "0cf587c3-3d7e-42f0-80dd-44c64de30481",
+      "track_metadata": {
+        "additional_info": {
+          "duration": 236,
+          "recording_msid": "0cf587c3-3d7e-42f0-80dd-44c64de30481"
+        },
+        "artist_name": "Mariana Zwarg",
+        "track_name": "Samba de Avedøre"
+      },
+      "user_name": "FoxxMD"
+    },
+    "expected": {
+      "artists": ["Mariana Zwarg"],
+      "track": "Samba de Avedøre"
+    }
+  }
+]

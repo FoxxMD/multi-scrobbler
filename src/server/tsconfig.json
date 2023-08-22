@@ -12,7 +12,7 @@
     "typeRoots": [
       "../../node_modules/@types",
       "../../src/common/infrastructure/typings"
-    ],
+    ]
   },
   "include": [
     "**/*.ts",

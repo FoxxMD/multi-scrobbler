@@ -190,3 +190,10 @@ export interface numberFormatOptions {
         indicate?: boolean,
     }
 }
+
+export interface StringComparisonOptions {
+    lengthWeight?: number,
+    transforms?: ((str: string) => string)[]
+}
+
+export const DELIMITERS = [',','&','\/','\\'];

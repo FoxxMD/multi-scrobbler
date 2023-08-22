@@ -1,7 +1,7 @@
 import AbstractApiClient from "./AbstractApiClient";
 import request, {Request} from 'superagent';
 import { ListenBrainzClientData } from "../common/infrastructure/config/client/listenbrainz";
-import { FormatPlayObjectOptions } from "../common/infrastructure/Atomic";
+import {DELIMITERS, FormatPlayObjectOptions} from "../common/infrastructure/Atomic";
 import dayjs from "dayjs";
 import {
     containsDelimiters,
@@ -228,18 +228,9 @@ export class ListenbrainzApiClient extends AbstractApiClient {
     static listenResponseToPlay = (listen: ListenResponse): PlayObject => {
         const {
             listened_at,
-            recording_msid,
             track_metadata: {
                 track_name,
                 artist_name,
-                release_name,
-                duration,
-                additional_info: {
-                    recording_msid: aRecordingMsid,
-                    recording_mbid: aRecordingMbid,
-                    duration: aDuration,
-                    duration_ms: aDurationMs,
-                } = {},
                 mbid_mapping: {
                     recording_name,
                     artists: artistMappings = [],
@@ -248,39 +239,34 @@ export class ListenbrainzApiClient extends AbstractApiClient {
             } = {}
         } = listen;
 
-        const playId = recording_msid ?? aRecordingMsid;
-        const trackId = aRecordingMbid ?? mRecordingMbid;
-        let dur = duration ?? aDuration;
-        if (dur === undefined && aDurationMs !== undefined) {
-            dur = Math.round(aDurationMs / 1000);
-        }
+        const naivePlay = ListenbrainzApiClient.listenResponseToNaivePlay(listen);
 
         const mappedArtists = artistMappings.length > 0 ? artistMappings.map(x => x.artist_credit_name) : [];
 
         // when parsing artists from title/artist submitted values we want to ignore any delimiters that are found in the "official" mapped artists from LZ
         // so we don't accidentally split an artist that has a delim in their name
-        let ignoreDelims: string[] | undefined;
+        let delimitersToUse: string[] | undefined;
         if(mappedArtists.length > 0) {
             const found = unique(mappedArtists.reduce((acc, curr) => {
                 const found = findDelimiters(curr) ?? [];
                 return acc.concat(found);
             }, []));
             if(found.length > 0) {
-                ignoreDelims = found;
+                delimitersToUse = DELIMITERS.filter(x => !found.includes(x));
             }
         }
 
         let normalTrackName = track_name;
         let artists: string[] = [artist_name];
         // try to normalize user-submitted artists
-        const parsedUserArtists = parseCredits(artist_name, ignoreDelims);
+        const parsedUserArtists = parseCredits(artist_name, delimitersToUse);
         if(parsedUserArtists !== undefined) {
             if(parsedUserArtists.primary !== undefined) {
                 artists.push(parsedUserArtists.primary);
             }
             artists = artists.concat(parsedUserArtists.secondary);
         }
-        const parsedTrackArtists = parseCredits(track_name, ignoreDelims);
+        const parsedTrackArtists = parseCredits(track_name, delimitersToUse);
         if(parsedTrackArtists !== undefined) {
             // if we found "ft. something" in track string then we now have a "real" track name and more artists
             normalTrackName = parsedTrackArtists.primary;
@@ -319,6 +305,69 @@ export class ListenbrainzApiClient extends AbstractApiClient {
                 }
             }
         }
+
+        return {
+            data: {
+                playDate: dayjs.unix(listened_at),
+                track: normalTrackName,
+                artists: artists,
+                album: naivePlay.data.album,
+                duration: naivePlay.data.duration
+            },
+            meta: naivePlay.meta
+        }
+    }
+
+    /**
+     * Try to parse true artists and track name without using MB information
+     * */
+    static listenResponseToNaivePlay = (listen: ListenResponse): PlayObject => {
+        const {
+            listened_at,
+            recording_msid,
+            track_metadata: {
+                track_name,
+                artist_name,
+                release_name,
+                duration,
+                additional_info: {
+                    recording_msid: aRecordingMsid,
+                    recording_mbid: aRecordingMbid,
+                    duration: aDuration,
+                    duration_ms: aDurationMs,
+                } = {},
+                mbid_mapping: {
+                    recording_mbid: mRecordingMbid
+                } = {}
+            } = {}
+        } = listen;
+
+        const playId = recording_msid ?? aRecordingMsid;
+        const trackId = aRecordingMbid ?? mRecordingMbid;
+        let dur = duration ?? aDuration;
+        if (dur === undefined && aDurationMs !== undefined) {
+            dur = Math.round(aDurationMs / 1000);
+        }
+
+        let normalTrackName = track_name;
+        let artists: string[] = [artist_name];
+
+        // since we aren't using MB mappings we should be conservative and assume artist string with & are proper names (not joiner)
+        const parsedArtists = parseCredits(artist_name, [',', '/', '\\']);
+        if (parsedArtists !== undefined) {
+            if (parsedArtists.primary !== undefined) {
+                artists.push(parsedArtists.primary);
+            }
+            artists = artists.concat(parsedArtists.secondary);
+        }
+        // use all delimiters when trying to find artists in track name
+        const parsedTrackArtists = parseCredits(track_name);
+        if (parsedTrackArtists !== undefined) {
+            // if we found "ft. something" in track string then we now have a "real" track name and more artists
+            normalTrackName = parsedTrackArtists.primary;
+            artists = artists.concat(parsedTrackArtists.secondary)
+        }
+        artists = uniqueNormalizedStrArr(artists);
 
         return {
             data: {

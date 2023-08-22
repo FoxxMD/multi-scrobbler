@@ -1,0 +1,140 @@
+[
+  {
+    "data": {
+      "inserted_at": 1692499763,
+      "listened_at": 1692499702,
+      "recording_msid": "ac51d464-597e-447f-a09c-db5ef08c7e84",
+      "track_metadata": {
+        "additional_info": {
+          "recording_msid": "ac51d464-597e-447f-a09c-db5ef08c7e84"
+        },
+        "artist_name": "Tyler, The Creator",
+        "mbid_mapping": {
+          "artist_mbids": [
+            "f6beac20-5dfe-4d1f-ae02-0b0a740aafd6",
+            "127d8614-0876-4408-886c-6f110b047a78",
+            "7bd66c18-cb33-49aa-9279-140acedbdb49"
+          ],
+          "artists": [
+            {
+              "artist_credit_name": "Tyler, the Creator",
+              "artist_mbid": "f6beac20-5dfe-4d1f-ae02-0b0a740aafd6",
+              "join_phrase": " feat. "
+            },
+            {
+              "artist_credit_name": "YoungBoy Never Broke Again",
+              "artist_mbid": "127d8614-0876-4408-886c-6f110b047a78",
+              "join_phrase": " & "
+            },
+            {
+              "artist_credit_name": "Ty Dolla $ign",
+              "artist_mbid": "7bd66c18-cb33-49aa-9279-140acedbdb49",
+              "join_phrase": ""
+            }
+          ],
+          "caa_id": 29709457239,
+          "caa_release_mbid": "0d8d50e3-6899-4bad-8780-3713f2b87e10",
+          "recording_mbid": "17d17b76-0436-4755-8c12-840bc02eb90d",
+          "recording_name": "WUSYANAME",
+          "release_mbid": "eb18ac0a-bb14-424d-8fc8-c11303bcefde"
+        },
+        "track_name": "WUSYANAME (feat. Youngboy Never Broke Again & Ty Dolla $ign)"
+      },
+      "user_name": "kinescou"
+    },
+    "expected": {
+      "artists": [
+        "Tyler, the Creator",
+        "YoungBoy Never Broke Again",
+        "Ty Dolla $ign"
+      ],
+      "track": "WUSYANAME"
+    }
+  },
+  {
+    "data": {
+      "inserted_at": 1692498743,
+      "listened_at": 1692498622,
+      "recording_msid": "7b360a67-9a73-4614-93d2-55f4edeaa84c",
+      "track_metadata": {
+        "additional_info": {
+          "recording_msid": "7b360a67-9a73-4614-93d2-55f4edeaa84c"
+        },
+        "artist_name": "Childish Gambino",
+        "mbid_mapping": {
+          "artist_mbids": [
+            "7fb57fba-a6ef-44c2-abab-2fa3bdee607e"
+          ],
+          "artists": [
+            {
+              "artist_credit_name": "Childish Gambino",
+              "artist_mbid": "7fb57fba-a6ef-44c2-abab-2fa3bdee607e",
+              "join_phrase": ""
+            }
+          ],
+          "caa_id": 27054334529,
+          "caa_release_mbid": "a4d03311-be77-45fb-b7da-4c968d4cf970",
+          "recording_mbid": "d4328eb0-9f94-456e-a16b-67cc6faf8ab0",
+          "recording_name": "12.38",
+          "release_mbid": "a4d03311-be77-45fb-b7da-4c968d4cf970"
+        },
+        "track_name": "12.38 (feat. 21 Savage, Ink & Kadhja Bonet)"
+      },
+      "user_name": "kinescou"
+    },
+    "expected": {
+      "artists": [
+        "Childish Gambino",
+        "21 Savage",
+        "Ink",
+        "Kadhja Bonet"
+      ],
+      "track": "12.38"
+    }
+  },
+  {
+    "data": {
+      "inserted_at": 1692495538,
+      "listened_at": 1692495417,
+      "recording_msid": "e95e5f68-870b-43b8-907c-21a93a4c3e74",
+      "track_metadata": {
+        "additional_info": {
+          "recording_msid": "e95e5f68-870b-43b8-907c-21a93a4c3e74"
+        },
+        "artist_name": "Childish Gambino",
+        "mbid_mapping": {
+          "artist_mbids": [
+            "7fb57fba-a6ef-44c2-abab-2fa3bdee607e",
+            "f4fdbb4c-e4b7-47a0-b83b-d91bbfcfa387"
+          ],
+          "artists": [
+            {
+              "artist_credit_name": "Childish Gambino",
+              "artist_mbid": "7fb57fba-a6ef-44c2-abab-2fa3bdee607e",
+              "join_phrase": " & "
+            },
+            {
+              "artist_credit_name": "Ariana Grande",
+              "artist_mbid": "f4fdbb4c-e4b7-47a0-b83b-d91bbfcfa387",
+              "join_phrase": ""
+            }
+          ],
+          "caa_id": 27054334529,
+          "caa_release_mbid": "a4d03311-be77-45fb-b7da-4c968d4cf970",
+          "recording_mbid": "56c2c33a-84ea-4eaf-a905-346ff9a13ccb",
+          "recording_name": "Time",
+          "release_mbid": "f5a7a3e9-af69-4328-a025-73bbcbf046da"
+        },
+        "track_name": "Time (feat. Ariana Grande)"
+      },
+      "user_name": "kinescou"
+    },
+    "expected": {
+      "artists": [
+        "Childish Gambino",
+        "Ariana Grande"
+      ],
+      "track": "Time"
+    }
+  }
+]

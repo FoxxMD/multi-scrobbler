@@ -1,0 +1,350 @@
+[
+  {
+    "data": {
+      "inserted_at": 1692500499,
+      "listened_at": 1692500382,
+      "recording_msid": "13361419-2627-4cb4-a9fc-2fa9b2c28dcb",
+      "track_metadata": {
+        "additional_info": {
+          "recording_msid": "13361419-2627-4cb4-a9fc-2fa9b2c28dcb"
+        },
+        "artist_name": "Metro Boomin, Swae Lee, Lil Wayne, Offset",
+        "mbid_mapping": {
+          "artist_mbids": [
+            "59db3d82-86ea-451f-881f-dffc8ec387c9",
+            "a17ce9c3-8f6f-4dcc-a1b7-2a04ab9e31f0",
+            "ac9a487a-d9d2-4f27-bb23-0f4686488345",
+            "92631c53-91ed-48f5-a09d-a104ba69cdc7"
+          ],
+          "artists": [
+            {
+              "artist_credit_name": "Metro Boomin",
+              "artist_mbid": "59db3d82-86ea-451f-881f-dffc8ec387c9",
+              "join_phrase": ", "
+            },
+            {
+              "artist_credit_name": "Swae Lee",
+              "artist_mbid": "a17ce9c3-8f6f-4dcc-a1b7-2a04ab9e31f0",
+              "join_phrase": ", "
+            },
+            {
+              "artist_credit_name": "Lil Wayne",
+              "artist_mbid": "ac9a487a-d9d2-4f27-bb23-0f4686488345",
+              "join_phrase": " & "
+            },
+            {
+              "artist_credit_name": "Offset",
+              "artist_mbid": "92631c53-91ed-48f5-a09d-a104ba69cdc7",
+              "join_phrase": ""
+            }
+          ],
+          "recording_mbid": "342481a2-5f52-4a51-97e2-9eab2cba19dc",
+          "recording_name": "Annihilate"
+        },
+        "track_name": "Annihilate"
+      },
+      "user_name": "kinescou"
+    },
+    "expected": {
+      "artists": [
+        "Metro Boomin",
+        "Swae Lee",
+        "Lil Wayne",
+        "Offset"
+      ],
+      "track": "Annihilate"
+    }
+  },
+  {
+    "data": {
+      "inserted_at": 1692496923,
+      "listened_at": 1692496803,
+      "recording_msid": "6ef24e6d-0d5e-484a-b454-544a6c413961",
+      "track_metadata": {
+        "additional_info": {
+          "recording_msid": "6ef24e6d-0d5e-484a-b454-544a6c413961"
+        },
+        "artist_name": "Metro Boomin, James Blake",
+        "mbid_mapping": {
+          "artist_mbids": [
+            "59db3d82-86ea-451f-881f-dffc8ec387c9",
+            "8dc08b1f-e393-4f85-a5dd-300f7693a8b8"
+          ],
+          "artists": [
+            {
+              "artist_credit_name": "Metro Boomin",
+              "artist_mbid": "59db3d82-86ea-451f-881f-dffc8ec387c9",
+              "join_phrase": " & "
+            },
+            {
+              "artist_credit_name": "James Blake",
+              "artist_mbid": "8dc08b1f-e393-4f85-a5dd-300f7693a8b8",
+              "join_phrase": ""
+            }
+          ],
+          "recording_mbid": "ecea309c-fefc-4834-9f61-2817341ded96",
+          "recording_name": "Hummingbird"
+        },
+        "track_name": "Hummingbird"
+      },
+      "user_name": "kinescou"
+    },
+    "expected": {
+      "artists": [
+        "Metro Boomin",
+        "James Blake"
+      ],
+      "track": "Hummingbird"
+    }
+  },
+  {
+    "data": {
+      "inserted_at": 1690613553,
+      "listened_at": 1690613539,
+      "recording_msid": "0b28cb03-ddb2-4694-b424-0dda55909e8c",
+      "track_metadata": {
+        "additional_info": {
+          "recording_msid": "0b28cb03-ddb2-4694-b424-0dda55909e8c"
+        },
+        "artist_name": "Childish Gambino, Ariana Grande",
+        "mbid_mapping": {
+          "artist_mbids": [
+            "7fb57fba-a6ef-44c2-abab-2fa3bdee607e",
+            "f4fdbb4c-e4b7-47a0-b83b-d91bbfcfa387"
+          ],
+          "artists": [
+            {
+              "artist_credit_name": "Childish Gambino",
+              "artist_mbid": "7fb57fba-a6ef-44c2-abab-2fa3bdee607e",
+              "join_phrase": " & "
+            },
+            {
+              "artist_credit_name": "Ariana Grande",
+              "artist_mbid": "f4fdbb4c-e4b7-47a0-b83b-d91bbfcfa387",
+              "join_phrase": ""
+            }
+          ],
+          "caa_id": 27054334529,
+          "caa_release_mbid": "a4d03311-be77-45fb-b7da-4c968d4cf970",
+          "recording_mbid": "56c2c33a-84ea-4eaf-a905-346ff9a13ccb",
+          "recording_name": "Time",
+          "release_mbid": "f5a7a3e9-af69-4328-a025-73bbcbf046da"
+        },
+        "release_name": "3.15.20",
+        "track_name": "Time"
+      },
+      "user_name": "kinescou"
+    },
+    "expected": {
+      "artists": ["Childish Gambino", "Ariana Grande"],
+      "track": "Time"
+    }
+  },
+  {
+    "data": {
+      "inserted_at": 1690612677,
+      "listened_at": 1690612556,
+      "recording_msid": "194d82c4-b925-42c5-9614-fabcb5952fc2",
+      "track_metadata": {
+        "additional_info": {
+          "recording_msid": "194d82c4-b925-42c5-9614-fabcb5952fc2"
+        },
+        "artist_name": "Childish Gambino, 21 Savage, Ink, Kadhja Bonet",
+        "mbid_mapping": {
+          "artist_mbids": [
+            "7fb57fba-a6ef-44c2-abab-2fa3bdee607e"
+          ],
+          "artists": [
+            {
+              "artist_credit_name": "Childish Gambino",
+              "artist_mbid": "7fb57fba-a6ef-44c2-abab-2fa3bdee607e",
+              "join_phrase": ""
+            }
+          ],
+          "caa_id": 27054334529,
+          "caa_release_mbid": "a4d03311-be77-45fb-b7da-4c968d4cf970",
+          "recording_mbid": "d4328eb0-9f94-456e-a16b-67cc6faf8ab0",
+          "recording_name": "12.38",
+          "release_mbid": "a4d03311-be77-45fb-b7da-4c968d4cf970"
+        },
+        "release_name": "3.15.20",
+        "track_name": "12.38"
+      },
+      "user_name": "kinescou"
+    },
+    "expected": {
+      "artists": [
+        "Childish Gambino",
+        "21 Savage",
+        "Ink",
+        "Kadhja Bonet"
+      ],
+      "track": "12.38"
+    }
+  },
+  {
+    "data": {
+      "inserted_at": 1692492303,
+      "listened_at": 1690244439,
+      "recording_msid": "c3de26e8-29cd-4998-b2fb-cee51a0c7116",
+      "track_metadata": {
+        "additional_info": {
+          "recording_mbid": "00fa8eb1-7fa9-49cc-aa38-46be3606cd37",
+          "recording_msid": "c3de26e8-29cd-4998-b2fb-cee51a0c7116",
+          "release_mbid": "72a73259-c593-4503-a889-9bf1b5e10874",
+          "submission_client": "listenbrainz web"
+        },
+        "artist_name": "Metro Boomin, Don Toliver & Wizkid feat. BEAM & Toian",
+        "mbid_mapping": {
+          "artist_mbids": [
+            "59db3d82-86ea-451f-881f-dffc8ec387c9",
+            "a0723a3c-4135-438e-85c5-012712144ede",
+            "efc5d365-a448-4e2f-9b5f-4a7c84be725c",
+            "247e81d2-a299-4fdb-8180-268545368b0c",
+            "12f7362f-d361-431b-a6b3-59f114c8508c"
+          ],
+          "artists": [
+            {
+              "artist_credit_name": "Metro Boomin",
+              "artist_mbid": "59db3d82-86ea-451f-881f-dffc8ec387c9",
+              "join_phrase": ", "
+            },
+            {
+              "artist_credit_name": "Don Toliver",
+              "artist_mbid": "a0723a3c-4135-438e-85c5-012712144ede",
+              "join_phrase": " & "
+            },
+            {
+              "artist_credit_name": "Wizkid",
+              "artist_mbid": "efc5d365-a448-4e2f-9b5f-4a7c84be725c",
+              "join_phrase": " feat. "
+            },
+            {
+              "artist_credit_name": "BEAM",
+              "artist_mbid": "247e81d2-a299-4fdb-8180-268545368b0c",
+              "join_phrase": " & "
+            },
+            {
+              "artist_credit_name": "Toian",
+              "artist_mbid": "12f7362f-d361-431b-a6b3-59f114c8508c",
+              "join_phrase": ""
+            }
+          ],
+          "caa_id": 35843656763,
+          "caa_release_mbid": "0f014a1e-5ad7-44b2-a7c7-e33308538201",
+          "recording_mbid": "00fa8eb1-7fa9-49cc-aa38-46be3606cd37",
+          "recording_name": "Link Up (Spider‐Verse remix)",
+          "release_mbid": "72a73259-c593-4503-a889-9bf1b5e10874"
+        },
+        "release_name": "METRO BOOMIN PRESENTS SPIDER‐MAN: ACROSS THE SPIDER‐VERSE: SOUNDTRACK FROM AND INSPIRED BY THE MOTION PICTURE",
+        "track_name": "Link Up (Spider‐Verse remix)"
+      },
+      "user_name": "kinescou"
+    },
+    "expected": {
+      "artists": ["Metro Boomin", "Don Toliver", "Wizkid", "BEAM", "Toian"],
+      "track": "Link Up (Spider‐Verse remix)"
+    }
+  },
+  {
+    "data": {
+      "inserted_at": 1692501925,
+      "listened_at": 1692501764,
+      "recording_msid": "27f3afa4-dddc-4ffc-bdfb-ed938ef41835",
+      "track_metadata": {
+        "additional_info": {
+          "artist_mbids": [
+            "59db3d82-86ea-451f-881f-dffc8ec387c9",
+            "8dc08b1f-e393-4f85-a5dd-300f7693a8b8"
+          ],
+          "recording_mbid": "ecea309c-fefc-4834-9f61-2817341ded96",
+          "recording_msid": "27f3afa4-dddc-4ffc-bdfb-ed938ef41835",
+          "release_mbid": "deab8f51-b954-475e-a008-99861675a0a5",
+          "track_mbid": "7fd3cfa1-368f-4ed9-b28a-711fb175f8f2"
+        },
+        "artist_name": "Metro Boomin & James Blake",
+        "mbid_mapping": {
+          "artist_mbids": [
+            "59db3d82-86ea-451f-881f-dffc8ec387c9",
+            "8dc08b1f-e393-4f85-a5dd-300f7693a8b8"
+          ],
+          "artists": [
+            {
+              "artist_credit_name": "Metro Boomin",
+              "artist_mbid": "59db3d82-86ea-451f-881f-dffc8ec387c9",
+              "join_phrase": " & "
+            },
+            {
+              "artist_credit_name": "James Blake",
+              "artist_mbid": "8dc08b1f-e393-4f85-a5dd-300f7693a8b8",
+              "join_phrase": ""
+            }
+          ],
+          "recording_mbid": "ecea309c-fefc-4834-9f61-2817341ded96",
+          "recording_name": "Hummingbird"
+        },
+        "track_name": "Hummingbird"
+      },
+      "user_name": "kinescou"
+    },
+    "expected": {
+      "artists": [
+        "Metro Boomin",
+        "James Blake"
+      ],
+      "track": "Hummingbird"
+    }
+  },
+  {
+    "data": {
+      "inserted_at": 1692501605,
+      "listened_at": 1692501501,
+      "recording_msid": "66a8ab86-b23a-4ed0-af4f-9c32a392c457",
+      "track_metadata": {
+        "additional_info": {
+          "artist_mbids": [
+            "92631c53-91ed-48f5-a09d-a104ba69cdc7",
+            "d616b606-cf6a-4b6e-ab0f-e253b8db6610"
+          ],
+          "recording_mbid": "4688f34f-d3fb-44f5-a724-93b15ce8cc92",
+          "recording_msid": "66a8ab86-b23a-4ed0-af4f-9c32a392c457",
+          "release_mbid": "deab8f51-b954-475e-a008-99861675a0a5",
+          "track_mbid": "4efabc15-2a07-42f1-bfbc-25c2c12ebcf3"
+        },
+        "artist_name": "Offset & JID",
+        "mbid_mapping": {
+          "artist_mbids": [
+            "92631c53-91ed-48f5-a09d-a104ba69cdc7",
+            "d616b606-cf6a-4b6e-ab0f-e253b8db6610"
+          ],
+          "artists": [
+            {
+              "artist_credit_name": "Offset",
+              "artist_mbid": "92631c53-91ed-48f5-a09d-a104ba69cdc7",
+              "join_phrase": " & "
+            },
+            {
+              "artist_credit_name": "JID",
+              "artist_mbid": "d616b606-cf6a-4b6e-ab0f-e253b8db6610",
+              "join_phrase": ""
+            }
+          ],
+          "caa_id": 35816827255,
+          "caa_release_mbid": "72a73259-c593-4503-a889-9bf1b5e10874",
+          "recording_mbid": "4688f34f-d3fb-44f5-a724-93b15ce8cc92",
+          "recording_name": "Danger (Spider)",
+          "release_mbid": "72a73259-c593-4503-a889-9bf1b5e10874"
+        },
+        "track_name": "Danger (Spider)"
+      },
+      "user_name": "kinescou"
+    },
+    "expected": {
+      "artists": [
+        "Offset",
+        "JID"
+      ],
+      "track": "Danger (Spider)"
+    }
+  }
+]

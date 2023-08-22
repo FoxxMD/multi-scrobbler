@@ -1,0 +1,113 @@
+[
+  {
+    "data": {
+      "inserted_at": 1692053420,
+      "listened_at": 1692053370,
+      "recording_msid": "9ec294ad-ad44-4fff-bbd5-29823e46776c",
+      "track_metadata": {
+        "additional_info": {
+          "duration": 246,
+          "recording_msid": "9ec294ad-ad44-4fff-bbd5-29823e46776c"
+        },
+        "artist_name": "The Manhattan Transfer",
+        "mbid_mapping": {
+          "artist_mbids": [
+            "02390d49-c321-479b-b6f4-cd76f32fb887"
+          ],
+          "artists": [
+            {
+              "artist_credit_name": "The Manhattan Transfer",
+              "artist_mbid": "02390d49-c321-479b-b6f4-cd76f32fb887",
+              "join_phrase": ""
+            }
+          ],
+          "caa_id": 25434696757,
+          "caa_release_mbid": "f4392399-9b41-4f57-802e-f6ff6f8ae01c",
+          "recording_mbid": "2c5e388d-b7dc-4280-b09c-5ac8e42b5948",
+          "recording_name": "The Zoo Blues (Asa)",
+          "release_mbid": "f4392399-9b41-4f57-802e-f6ff6f8ae01c"
+        },
+        "track_name": "The Zoo Blues"
+      },
+      "user_name": "FoxxMD"
+    },
+    "expected": {
+      "artists": ["The Manhattan Transfer"],
+      "track": "The Zoo Blues (Asa)"
+    }
+  },
+  {
+    "data": {
+      "inserted_at": 1691853880,
+      "listened_at": 1691853845,
+      "recording_msid": "149bf614-4328-4f84-a9e9-03f50b87bbde",
+      "track_metadata": {
+        "additional_info": {
+          "duration": 277,
+          "recording_msid": "149bf614-4328-4f84-a9e9-03f50b87bbde"
+        },
+        "artist_name": "Vaults",
+        "mbid_mapping": {
+          "artist_mbids": [
+            "577f9388-d382-4fd4-804c-e58e8527928b"
+          ],
+          "artists": [
+            {
+              "artist_credit_name": "Vaults",
+              "artist_mbid": "577f9388-d382-4fd4-804c-e58e8527928b",
+              "join_phrase": ""
+            }
+          ],
+          "caa_id": 20865212353,
+          "caa_release_mbid": "e6d53805-4ec0-492d-aa13-96fd124b5793",
+          "recording_mbid": "7faf3194-c4d3-4eb5-9130-735e6018f937",
+          "recording_name": "Midnight River (Memtrix remix)",
+          "release_mbid": "e6d53805-4ec0-492d-aa13-96fd124b5793"
+        },
+        "track_name": "Midnight River - Memtrix Remix"
+      },
+      "user_name": "FoxxMD"
+    },
+    "expected": {
+      "artists": ["Vaults"],
+      "track": "Midnight River (Memtrix remix)"
+    }
+  },
+  {
+    "data": {
+      "inserted_at": 1691339515,
+      "listened_at": 1691339445,
+      "recording_msid": "39507044-ce90-49d9-9cd7-7185f894045c",
+      "track_metadata": {
+        "additional_info": {
+          "duration": 193,
+          "recording_msid": "39507044-ce90-49d9-9cd7-7185f894045c"
+        },
+        "artist_name": "Mike Bahía",
+        "mbid_mapping": {
+          "artist_mbids": [
+            "e9f46bd3-9c4d-4a9b-98fa-0e288d7f9107"
+          ],
+          "artists": [
+            {
+              "artist_credit_name": "Mike Bahía",
+              "artist_mbid": "e9f46bd3-9c4d-4a9b-98fa-0e288d7f9107",
+              "join_phrase": ""
+            }
+          ],
+          "caa_id": 34604699874,
+          "caa_release_mbid": "2271f238-495d-4f91-aebe-d309874d5b64",
+          "recording_mbid": "2c6e7201-e76e-41af-b16b-1518678aaaf7",
+          "recording_name": "De qué manera",
+          "release_mbid": "2271f238-495d-4f91-aebe-d309874d5b64"
+        },
+        "track_name": "De Qué Manera"
+      },
+      "user_name": "FoxxMD"
+    },
+    "expected": {
+      "artists": ["Mike Bahía"],
+      "track": "De qué manera"
+    }
+  }
+]

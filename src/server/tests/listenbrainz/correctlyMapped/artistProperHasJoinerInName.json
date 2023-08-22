@@ -1,0 +1,215 @@
+[
+  {
+    "data": {
+      "inserted_at": 1692499763,
+      "listened_at": 1692499702,
+      "recording_msid": "ac51d464-597e-447f-a09c-db5ef08c7e84",
+      "track_metadata": {
+        "additional_info": {
+          "recording_msid": "ac51d464-597e-447f-a09c-db5ef08c7e84"
+        },
+        "artist_name": "Tyler, The Creator",
+        "mbid_mapping": {
+          "artist_mbids": [
+            "f6beac20-5dfe-4d1f-ae02-0b0a740aafd6",
+            "127d8614-0876-4408-886c-6f110b047a78",
+            "7bd66c18-cb33-49aa-9279-140acedbdb49"
+          ],
+          "artists": [
+            {
+              "artist_credit_name": "Tyler, the Creator",
+              "artist_mbid": "f6beac20-5dfe-4d1f-ae02-0b0a740aafd6",
+              "join_phrase": " feat. "
+            },
+            {
+              "artist_credit_name": "YoungBoy Never Broke Again",
+              "artist_mbid": "127d8614-0876-4408-886c-6f110b047a78",
+              "join_phrase": " & "
+            },
+            {
+              "artist_credit_name": "Ty Dolla $ign",
+              "artist_mbid": "7bd66c18-cb33-49aa-9279-140acedbdb49",
+              "join_phrase": ""
+            }
+          ],
+          "caa_id": 29709457239,
+          "caa_release_mbid": "0d8d50e3-6899-4bad-8780-3713f2b87e10",
+          "recording_mbid": "17d17b76-0436-4755-8c12-840bc02eb90d",
+          "recording_name": "WUSYANAME",
+          "release_mbid": "eb18ac0a-bb14-424d-8fc8-c11303bcefde"
+        },
+        "track_name": "WUSYANAME (feat. Youngboy Never Broke Again & Ty Dolla $ign)"
+      },
+      "user_name": "kinescou"
+    },
+    "expected": {
+      "artists": [
+        "Tyler, the Creator",
+        "YoungBoy Never Broke Again",
+        "Ty Dolla $ign"
+      ],
+      "track": "WUSYANAME"
+    }
+  },
+  {
+    "data": {
+      "inserted_at": 1692667531,
+      "listened_at": 1692656009,
+      "recording_msid": "8f61a5ad-1a4b-42f8-ab02-e601e8612efb",
+      "track_metadata": {
+        "additional_info": {
+          "duration": 190,
+          "recording_msid": "8f61a5ad-1a4b-42f8-ab02-e601e8612efb"
+        },
+        "artist_name": "Polo & Pan",
+        "mbid_mapping": {
+          "artist_mbids": [
+            "1d9ec7ea-0fa4-41d9-917b-723c735ebbfe"
+          ],
+          "artists": [
+            {
+              "artist_credit_name": "Polo & Pan",
+              "artist_mbid": "1d9ec7ea-0fa4-41d9-917b-723c735ebbfe",
+              "join_phrase": ""
+            }
+          ],
+          "caa_id": 16791744445,
+          "caa_release_mbid": "f906cf78-f0cb-4633-9f8c-e431d40fc16c",
+          "recording_mbid": "e6a15126-1c96-4891-b639-5e4e73a0c4d5",
+          "recording_name": "Nana",
+          "release_mbid": "f906cf78-f0cb-4633-9f8c-e431d40fc16c"
+        },
+        "track_name": "Nana"
+      },
+      "user_name": "FoxxMD"
+    },
+    "expected": {
+      "artists": ["Polo & Pan"],
+      "track": "Nana"
+    }
+  },
+  {
+    "data": {
+      "inserted_at": 1692648046,
+      "listened_at": 1692648009,
+      "recording_msid": "eacf150e-24e8-4f0c-b4d2-f3c353fbcd07",
+      "track_metadata": {
+        "additional_info": {
+          "duration": 197,
+          "recording_msid": "eacf150e-24e8-4f0c-b4d2-f3c353fbcd07"
+        },
+        "artist_name": "Durand Jones & The Indications",
+        "mbid_mapping": {
+          "artist_mbids": [
+            "5da8d9b1-af89-43a3-a519-8e32ec21e7f5"
+          ],
+          "artists": [
+            {
+              "artist_credit_name": "Durand Jones & the Indications",
+              "artist_mbid": "5da8d9b1-af89-43a3-a519-8e32ec21e7f5",
+              "join_phrase": ""
+            }
+          ],
+          "caa_id": 27932897371,
+          "caa_release_mbid": "91d0364b-937a-4fc0-b190-a8599b9eead0",
+          "recording_mbid": "1cc7f319-12af-44ff-b13f-89bf46256291",
+          "recording_name": "Sea Gets Hotter",
+          "release_mbid": "2c4c4e15-6d4b-47c8-be33-27cb2f2f0846"
+        },
+        "track_name": "Sea Gets Hotter"
+      },
+      "user_name": "FoxxMD"
+    },
+    "expected": {
+      "artists": ["Durand Jones & the Indications"],
+      "track": "Sea Gets Hotter"
+    }
+  },
+  {
+    "data": {
+      "inserted_at": 1692498458,
+      "listened_at": 1692498428,
+      "recording_msid": "77dfd1c3-03bb-4e46-a79d-2cbe45a31e7a",
+      "track_metadata": {
+        "additional_info": {
+          "recording_msid": "77dfd1c3-03bb-4e46-a79d-2cbe45a31e7a"
+        },
+        "artist_name": "Tyler, The Creator",
+        "mbid_mapping": {
+          "artist_mbids": [
+            "f6beac20-5dfe-4d1f-ae02-0b0a740aafd6",
+            "ba3c51a4-1b8f-4acb-81ea-c5e45a26ea88",
+            "64cf2188-8d8e-48ae-8df7-cb4c69b8be25",
+            "36e48ef8-85e7-4381-96ed-a33bf91fb167",
+            "6932c76e-77a9-4775-a710-47aefb3a015b",
+            "f25f9434-6977-48ad-848e-22234d00d1c3",
+            "f57d8a69-ed3c-4d18-8bce-0083b162fae6",
+            "f183f98c-117b-445d-a836-f2c141174e92"
+          ],
+          "artists": [
+            {
+              "artist_credit_name": "Tyler, the Creator",
+              "artist_mbid": "f6beac20-5dfe-4d1f-ae02-0b0a740aafd6",
+              "join_phrase": " feat. "
+            },
+            {
+              "artist_credit_name": "Na’kel",
+              "artist_mbid": "ba3c51a4-1b8f-4acb-81ea-c5e45a26ea88",
+              "join_phrase": ", "
+            },
+            {
+              "artist_credit_name": "Jasper Dolphin",
+              "artist_mbid": "64cf2188-8d8e-48ae-8df7-cb4c69b8be25",
+              "join_phrase": ", "
+            },
+            {
+              "artist_credit_name": "Lucas",
+              "artist_mbid": "36e48ef8-85e7-4381-96ed-a33bf91fb167",
+              "join_phrase": ", "
+            },
+            {
+              "artist_credit_name": "L-Boy",
+              "artist_mbid": "6932c76e-77a9-4775-a710-47aefb3a015b",
+              "join_phrase": ", "
+            },
+            {
+              "artist_credit_name": "Taco",
+              "artist_mbid": "f25f9434-6977-48ad-848e-22234d00d1c3",
+              "join_phrase": ", "
+            },
+            {
+              "artist_credit_name": "Left Brain",
+              "artist_mbid": "f57d8a69-ed3c-4d18-8bce-0083b162fae6",
+              "join_phrase": " & "
+            },
+            {
+              "artist_credit_name": "Lee Spielman",
+              "artist_mbid": "f183f98c-117b-445d-a836-f2c141174e92",
+              "join_phrase": ""
+            }
+          ],
+          "caa_id": 4782040435,
+          "caa_release_mbid": "1fc4529e-5a5f-49d1-a907-2c0af4fdf08f",
+          "recording_mbid": "af68dccc-67bf-4eea-8c78-d7e405549b89",
+          "recording_name": "Trashwang",
+          "release_mbid": "8197aa13-c9b8-48ce-aa64-d43cfab0482a"
+        },
+        "track_name": "Trashwang (feat. Na' kel, Jasper Dolphin, Lucas & L-Boy)"
+      },
+      "user_name": "kinescou"
+    },
+    "expected": {
+      "artists": [
+        "Tyler, the Creator",
+        "Na’kel",
+        "Jasper Dolphin",
+        "Lucas",
+        "L-Boy",
+        "Taco",
+        "Left Brain",
+        "Lee Spielman"
+      ],
+      "track": "Trashwang"
+    }
+  }
+]

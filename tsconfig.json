@@ -25,7 +25,8 @@
     "src"
   ],
   "exclude": [
-    "web",
-    "src/server"
+    "src/server",
+    "coverage",
+    "docsite"
   ],
 }

@@ -5,9 +5,10 @@ import {Logger} from '@foxxmd/winston';
 import JSON5 from 'json5';
 import {TimeoutError, WebapiError} from "spotify-web-api-node/src/response-error.js";
 import Ajv, {Schema} from 'ajv';
+import stringSimilarity from 'string-similarity';
 import {
     asPlayerStateData,
-    DEFAULT_SCROBBLE_DURATION_THRESHOLD,
+    DEFAULT_SCROBBLE_DURATION_THRESHOLD, DELIMITERS,
     lowGranularitySources,
     NO_DEVICE,
     NO_USER,
@@ -17,7 +18,7 @@ import {
     ProgressAwarePlayObject,
     RegExResult,
     RemoteIdentityParts,
-    ScrobbleThresholdResult,
+    ScrobbleThresholdResult, StringComparisonOptions,
 } from "./common/infrastructure/Atomic";
 import {Request} from "express";
 import pathUtil from "path";
@@ -28,6 +29,8 @@ import {replaceResultTransformer, stripIndentTransformer, TemplateTag, trimResul
 import is from "@sindresorhus/is";
 import {Duration} from "dayjs/plugin/duration.js";
 import { ListenRange, PlayObject } from "../core/Atomic";
+import calculateCosineSimilarity from "./utils/stringMatching/CosineSimilarity";
+import levenSimilarity from "./utils/stringMatching/levenSimilarity";
 
 dayjs.extend(utc);
 
@@ -170,6 +173,49 @@ export const returnDuplicateStrings = (arr: any) => {
 
     arr.forEach((str: any) => alreadySeen[str] ? dupes.push(str) : alreadySeen[str] = true);
     return dupes;
+}
+
+const sentenceLengthWeight = (length: number) => {
+    // thanks jordan :')
+    // constants are black magic
+    return (Math.log(length) / 0.20) - 5;
+}
+
+
+export const stringSameness = (valA: string, valB: string, options?: StringComparisonOptions) => {
+
+    const {
+        transforms = [normalizeStr],
+    } = options || {};
+
+    const cleanA = transforms.reduce((acc, curr) => curr(acc), valA);
+    const cleanB = transforms.reduce((acc, curr) => curr(acc), valB);
+
+    const shortest = cleanA.length > cleanB.length ? cleanB : cleanA;
+
+    // Dice's Coefficient
+    const dice = stringSimilarity.compareTwoStrings(cleanA, cleanB) * 100;
+    // Cosine similarity
+    const cosine = calculateCosineSimilarity(cleanA, cleanB) * 100;
+    // Levenshtein distance
+    const [levenDistance, levenSimilarPercent] = levenSimilarity(cleanA, cleanB);
+
+    // use shortest sentence for weight
+    const weightScore = sentenceLengthWeight(shortest.length);
+
+    // take average score
+    const highScore = (dice + cosine + levenSimilarPercent) / 3;
+    // weight score can be a max of 15
+    const highScoreWeighted = highScore + Math.min(weightScore, 15);
+    return {
+        scores: {
+            dice,
+            cosine,
+            leven: levenSimilarPercent
+        },
+        highScore,
+        highScoreWeighted,
+    }
 }
 
 export const capitalize = (str: any) => {
@@ -741,16 +787,16 @@ export const pollingBackoff = (attempt: number, scaleFactor: number = 1): number
 
 export const SECONDARY_ARTISTS_SECTION_REGEX = new RegExp(/^(?<primary>[^(\[]*)?(?<secondarySection>[(\[]?(?<joiner>ft\.?|feat\.?|featuring|vs\.?) (?<secondaryArtists>[^)\]]*)(?:[)\]]|\s*)$)/i);
 // export const SECONDARY_ARTISTS_REGEX = new RegExp(//ig);
-export const parseCredits = (str: string, ignoreDelimiters?: boolean | string[]) => {
+export const parseCredits = (str: string, delimiters?: boolean | string[]) => {
     let primary: string | undefined;
     let secondary: string[] = [];
     const results = parseRegexSingleOrFail(SECONDARY_ARTISTS_SECTION_REGEX, str);
     if(results !== undefined) {
         primary = results.named.primary !== undefined ? results.named.primary.trim() : undefined;
         let delims: string[] | undefined;
-        if(Array.isArray(ignoreDelimiters)) {
-            delims = ignoreDelimiters;
-        } else if(ignoreDelimiters === true) {
+        if(Array.isArray(delimiters)) {
+            delims = delimiters;
+        } else if(delimiters === false) {
             delims = [];
         }
         secondary = parseStringList(results.named.secondaryArtists as string, delims)
@@ -818,7 +864,7 @@ export const containsDelimiters = (str: string) => {
 
 export const findDelimiters = (str: string) => {
     const found: string[] = [];
-    for(const d of [',','&','\/','\\']) {
+    for(const d of DELIMITERS) {
         if(str.indexOf(d) !== -1) {
             found.push(d);
         }
