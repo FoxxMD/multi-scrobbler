@@ -785,9 +785,16 @@ export const pollingBackoff = (attempt: number, scaleFactor: number = 1): number
     return Math.round(backoffStrat(attempt + 1) / 1000);
 }
 
+export interface PlayCredits {
+    primary: string
+    secondary?: string[]
+}
 export const SECONDARY_ARTISTS_SECTION_REGEX = new RegExp(/^(?<primary>[^(\[]*)?(?<secondarySection>[(\[]?(?<joiner>ft\.?|feat\.?|featuring|vs\.?) (?<secondaryArtists>[^)\]]*)(?:[)\]]|\s*)$)/i);
 // export const SECONDARY_ARTISTS_REGEX = new RegExp(//ig);
-export const parseCredits = (str: string, delimiters?: boolean | string[]) => {
+export const parseCredits = (str: string, delimiters?: boolean | string[]): PlayCredits => {
+    if(str.trim() === '') {
+        return undefined;
+    }
     let primary: string | undefined;
     let secondary: string[] = [];
     const results = parseRegexSingleOrFail(SECONDARY_ARTISTS_SECTION_REGEX, str);
@@ -807,6 +814,44 @@ export const parseCredits = (str: string, delimiters?: boolean | string[]) => {
     }
     return undefined;
 }
+
+export const parseArtistCredits = (str: string, delimiters?: boolean | string[]): PlayCredits | undefined => {
+    if(str.trim() === '') {
+        return undefined;
+    }
+    let delims: string[] | undefined;
+    if(Array.isArray(delimiters)) {
+        delims = delimiters;
+    } else if(delimiters === false) {
+        delims = [];
+    }
+    const withJoiner = parseCredits(str, delimiters);
+    if(withJoiner !== undefined) {
+        // all this does is make sure and "ft" or parenthesis/brackets are separated --
+        // it doesn't also separate primary artists so do that now
+        const primaries = parseStringList(withJoiner.primary, delims);
+        if(primaries.length > 1) {
+            return {
+                primary: primaries[0],
+                secondary: primaries.slice(1).concat(withJoiner.secondary)
+            }
+        }
+        return withJoiner;
+    }
+    // likely this is a plain string with just delims
+    const artists = parseStringList(str, delims);
+    if(artists.length > 1) {
+        return {
+            primary: artists[0],
+            secondary: artists.slice(1)
+        }
+    }
+    return {
+        primary: artists[0]
+    }
+}
+
+export const parseTrackCredits = (str: string, delimiters?: boolean | string[]): PlayCredits | undefined => parseCredits(str, delimiters);
 
 export const parseStringList = (str: string, delimiters: string[] = [',', '&', '/', '\\']): string[] => {
     if(delimiters.length === 0) {

@@ -30,7 +30,7 @@ describe('Listenbrainz Listen Parsing', function () {
             for(const test of noArtistMapping as unknown as LZTestFixture[]) {
                 const play = ListenbrainzApiClient.listenResponseToPlay(test.data);
                 assert.equal(play.data.track, test.expected.track);
-                assert.sameDeepMembers(test.expected.artists, play.data.artists);
+                assert.sameDeepMembers(play.data.artists, test.expected.artists);
             }
         });
 
@@ -38,7 +38,7 @@ describe('Listenbrainz Listen Parsing', function () {
             for(const test of veryWrong as unknown as LZTestFixture[]) {
                 const play = ListenbrainzApiClient.listenResponseToPlay(test.data);
                 assert.equal(play.data.track, test.expected.track);
-                assert.sameDeepMembers(test.expected.artists, play.data.artists);
+                assert.sameDeepMembers( play.data.artists, test.expected.artists);
             }
         });
 
@@ -46,7 +46,7 @@ describe('Listenbrainz Listen Parsing', function () {
             for(const test of incorrectMultiArtistsTrackName as unknown as LZTestFixture[]) {
                 const play = ListenbrainzApiClient.listenResponseToPlay(test.data);
                 assert.equal(play.data.track, test.expected.track);
-                assert.sameDeepMembers(test.expected.artists, play.data.artists);
+                assert.sameDeepMembers(play.data.artists, test.expected.artists);
             }
         });
     })
@@ -58,7 +58,7 @@ describe('Listenbrainz Listen Parsing', function () {
             for(const test of slightlyDifferentNames as unknown as LZTestFixture[]) {
                 const play = ListenbrainzApiClient.listenResponseToPlay(test.data);
                 assert.equal(play.data.track, test.expected.track);
-                assert.sameDeepMembers(test.expected.artists, play.data.artists);
+                assert.sameDeepMembers(play.data.artists, test.expected.artists);
             }
         });
 
@@ -66,7 +66,7 @@ describe('Listenbrainz Listen Parsing', function () {
             for(const test of multiMappedArtistsWithSingleUserArtist as unknown as LZTestFixture[]) {
                 const play = ListenbrainzApiClient.listenResponseToPlay(test.data);
                 assert.equal(play.data.track, test.expected.track);
-                assert.sameDeepMembers(test.expected.artists, play.data.artists);
+                assert.sameDeepMembers(play.data.artists, test.expected.artists);
             }
         });
 
@@ -74,7 +74,7 @@ describe('Listenbrainz Listen Parsing', function () {
             for(const test of artistWithProperJoiner as unknown as LZTestFixture[]) {
                 const play = ListenbrainzApiClient.listenResponseToPlay(test.data);
                 assert.equal(play.data.track, test.expected.track);
-                assert.sameDeepMembers(test.expected.artists, play.data.artists);
+                assert.sameDeepMembers( play.data.artists, test.expected.artists);
             }
         });
 
@@ -82,7 +82,7 @@ describe('Listenbrainz Listen Parsing', function () {
             for(const test of multiArtistInArtistName as unknown as LZTestFixture[]) {
                 const play = ListenbrainzApiClient.listenResponseToPlay(test.data);
                 assert.equal(play.data.track, test.expected.track);
-                assert.sameDeepMembers(test.expected.artists, play.data.artists);
+                assert.sameDeepMembers(play.data.artists, test.expected.artists);
             }
         });
 
@@ -90,7 +90,7 @@ describe('Listenbrainz Listen Parsing', function () {
             for(const test of multiArtistsInTrackName as unknown as LZTestFixture[]) {
                 const play = ListenbrainzApiClient.listenResponseToPlay(test.data);
                 assert.equal(play.data.track, test.expected.track);
-                assert.sameDeepMembers(test.expected.artists, play.data.artists);
+                assert.sameDeepMembers( play.data.artists, test.expected.artists);
             }
         });
 
@@ -98,7 +98,7 @@ describe('Listenbrainz Listen Parsing', function () {
             for(const test of normalizedValues as unknown as LZTestFixture[]) {
                 const play = ListenbrainzApiClient.listenResponseToPlay(test.data);
                 assert.equal(play.data.track, test.expected.track);
-                assert.sameDeepMembers(test.expected.artists, play.data.artists);
+                assert.sameDeepMembers( play.data.artists, test.expected.artists);
             }
         });
     });
