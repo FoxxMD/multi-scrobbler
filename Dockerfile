@@ -44,6 +44,9 @@ RUN npm install
 
 COPY --chown=abc:abc . /app
 
+# need to set before build so server/client build is optimized and has constants (if needed)
+ENV NODE_ENV=production
+
 RUN npm run build && rm -rf node_modules
 #RUN yarn run build && rm -rf node_modules
 
@@ -56,7 +59,8 @@ COPY --from=build --chown=abc:abc /app/build /app/build
 COPY --from=base /usr/local/bin /usr/local/bin
 COPY --from=base /usr/local/lib /usr/local/lib
 
-ENV NODE_ENV="production"
+ENV NODE_ENV=production
+ENV IS_DOCKER=true
 #
 #RUN yarn global add patch-package \
 #    && yarn install --production=true \

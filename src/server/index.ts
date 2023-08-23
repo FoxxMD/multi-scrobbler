@@ -1,7 +1,7 @@
 import {addAsync, Router} from '@awaitjs/express';
-import express, {Request, Response} from 'express';
+import express from 'express';
 import bodyParser from 'body-parser';
-import {Container, Logger} from '@foxxmd/winston';
+import {Logger} from '@foxxmd/winston';
 import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc.js';
 import isBetween from 'dayjs/plugin/isBetween.js';
@@ -10,22 +10,21 @@ import duration from 'dayjs/plugin/duration.js';
 import timezone from 'dayjs/plugin/timezone.js';
 import passport from 'passport';
 import session from 'express-session';
-
 import {
+    getAddress,
     parseBool,
     readJson,
     sleep
 } from "./utils";
 import * as path from "path";
 import {projectDir} from "./common/index";
-import { ExpressHandler } from "./common/infrastructure/Atomic";
 import SpotifySource from "./sources/SpotifySource";
 import { AIOConfig } from "./common/infrastructure/config/aioConfig";
 import { getRoot } from "./ioc";
-import {formatLogToHtml, getLogger, isLogLineMinLevel} from "./common/logging";
-import {MESSAGE} from "triple-beam";
+import {getLogger} from "./common/logging";
 import { setupApi } from "./api/api";
-import {LogInfo, LogLevel} from "../core/Atomic";
+import {LogInfo} from "../core/Atomic";
+import {stripIndents} from "common-tags";
 
 const buildDir = path.join(process.cwd() + "/build");
 
@@ -39,11 +38,14 @@ dayjs.extend(timezone);
 const app = addAsync(express());
 const router = Router();
 
-let envPort = process.env.PORT ?? 9079;
+const isProd = process.env.NODE_ENV !== undefined && (process.env.NODE_ENV === 'production' || process.env.NODE_ENV === 'prod');
+
+const apiPort = process.env.API_PORT ?? 9079;
+const mainPort = process.env.PORT ?? 3000;
+
+let envPort = isProd ? mainPort : apiPort;
 
 (async function () {
-
-//let io: Server | undefined = undefined;
 
 app.use(router);
 app.use(bodyParser.json());
@@ -65,16 +67,11 @@ const initLogger = getLogger({file: false}, 'init');
 initLogger.stream().on('log', (log: LogInfo) => {
     output.unshift(log);
     output = output.slice(0, 301);
-    // if(io !== undefined) {
-    //     io.emit('log', formatLogToHtml(log[MESSAGE]));
-    // }
 });
 
 let logger: Logger;
 
-const f = projectDir;
 const configDir = process.env.CONFIG_DIR || path.resolve(projectDir, `./config`);
-
 
     try {
         initLogger.debug(`Config Dir ENV: ${process.env.CONFIG_DIR} -> Resolved: ${configDir}`)
@@ -105,14 +102,6 @@ const configDir = process.env.CONFIG_DIR || path.resolve(projectDir, `./config`)
 
         app.listen(port);
         const root = getRoot(port);
-
-        //io = new Server(server);
-
-        // const logConfig: {level: LogLevel, sort: string, limit: number} = {
-        //     level: logger.level as LogLevel || (process.env.LOG_LEVEL || 'info') as LogLevel,
-        //     sort: 'descending',
-        //     limit: 50,
-        // }
 
         logger = getLogger(logging, 'app');
 
@@ -183,12 +172,45 @@ const configDir = process.env.CONFIG_DIR || path.resolve(projectDir, `./config`)
         }
 
         app.get("/*", function (req, res) {
+            if(!isProd) {
+                logger.warn(`In development environment this path (on port ${apiPort}) does nothing. You most likely want port ${mainPort}`)
+            }
             res.sendFile(path.join(buildDir, "index.html"));
         });
 
         app.set('views', path.resolve(projectDir, 'src/views'));
         app.set('view engine', 'ejs');
-        logger.info(`Server started at ${localUrl}`);
+
+
+        const addy = getAddress();
+        const addresses: string[] = [];
+        let dockerHint = '';
+        if(parseBool(process.env.IS_DOCKER) && addy.v4 !== undefined && addy.v4.includes('172')) {
+            dockerHint = stripIndents`
+            --- HINT ---
+            MS is likely being run in a container with BRIDGE networking which means the above addresses are not accessible from outside this container.
+            To ensure the container is accessible make sure you have mapped the *container* port ${port} to a *host* port. https://foxxmd.github.io/multi-scrobbler/docs/installation#networking
+            The container will then be accessible at http://HOST_MACHINE_IP:HOST_PORT
+            --- HINT ---
+            `;
+        }
+        for(const [k, v] of Object.entries(addy)) {
+            if(v !== undefined) {
+                switch(k) {
+                    case 'host':
+                    case 'v4':
+                        addresses.push(`---> ${k === 'host' ? 'Local'.padEnd(14, ' ') : 'Network'.padEnd(14, ' ')} http://${v}:${port}`);
+                        break;
+                    case 'v6':
+                        addresses.push(`---> Network (IPv6) http://[${v}]:${port}`);
+                }
+            }
+        }
+        const start = stripIndents`\n
+        ${isProd ? 'Server' : 'API Backend'} started:
+        ${addresses.join('\n')}${dockerHint !== '' ? `\n${dockerHint}` : ''}`
+
+        logger.info(start);
 
     } catch (e) {
         logger.error('Exited with uncaught error');

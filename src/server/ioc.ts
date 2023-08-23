@@ -25,6 +25,7 @@ const createRoot = (port: number | string) => {
         configDir: configDir,
         logDir: logPath,
         localUrl: `http://localhost:${port}`,
+        isProd: process.env.NODE_ENV !== undefined && (process.env.NODE_ENV === 'production' || process.env.NODE_ENV === 'prod'),
         clientEmitter: () => new WildcardEmitter(),
         sourceEmitter: () => new WildcardEmitter(),
         notifierEmitter: () => new EventEmitter(),

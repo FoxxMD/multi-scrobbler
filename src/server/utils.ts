@@ -27,6 +27,7 @@ import { ScrobbleThresholds } from "./common/infrastructure/config/source/index"
 import {replaceResultTransformer, stripIndentTransformer, TemplateTag, trimResultTransformer} from 'common-tags';
 import {Duration} from "dayjs/plugin/duration.js";
 import { ListenRange, PlayObject } from "../core/Atomic";
+import address from "address";
 dayjs.extend(utc);
 
 export async function readJson(this: any, path: any, {throwOnNotFound = true} = {}) {
@@ -986,4 +987,27 @@ export const durationToHuman = (dur: Duration): string => {
     parts.push(`${nTime.minutes}min`);
     parts.push(`${nTime.seconds}sec`);
     return parts.join(' ');
+}
+export const getAddress = (host = '0.0.0.0', logger?: Logger): { v4?: string, v6?: string, host: string } => {
+    const local = host = '0.0.0.0' || host === '::' ? 'localhost' : host;
+    let v4: string,
+        v6: string;
+    try {
+        v4 = address.ip();
+        v6 = address.ipv6();
+    } catch (e) {
+        if (process.env.DEBUG_MODE === 'true') {
+            if (logger !== undefined) {
+                logger.warn(new ErrorWithCause('Could not get machine IP address', {cause: e}));
+            } else {
+                console.warn('Could not get machine IP address');
+                console.warn(e);
+            }
+        }
+    }
+    return {
+        host: local,
+        v4,
+        v6
+    };
 }

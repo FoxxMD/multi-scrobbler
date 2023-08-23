@@ -7,7 +7,7 @@ const nodeExternals = require("webpack-node-externals");
 const entry = { server: "./src/server/index.ts" };
 
 module.exports = {
-    mode: process.env.NODE_ENV ? process.env.NODE_ENV : "development",
+    mode: process.env.NODE_ENV !== undefined ? process.env.NODE_ENV : "development",
     target: "node",
     devtool: "source-map",
     entry: entry,

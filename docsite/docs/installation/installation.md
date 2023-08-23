@@ -18,18 +18,18 @@ git clone https://github.com/FoxxMD/multi-scrobbler.git .
 cd multi-scrobbler
 nvm use # optional, to set correct Node version
 npm install
-npm build
-npm start
+npm run build
+npm run start
 ```
 
 ### Usage Examples
 
-* The web UI is served on port `9078`. This can be modified using the `PORT` environmental variable.
+* The web UI and API is served on port `9078`. This can be modified using the `PORT` environmental variable.
 
 #### Using [file-based](../configuration/configuration.md#file-based-configuration) configuration
 
 ```shell
-npm start
+npm run start
 ```
 
 #### Using [env-based](../configuration/configuration.md#env-based-configuration) configuration
@@ -82,12 +82,24 @@ Or use the provided [docker-compose.yml](../../../docker-compose.yml) after modi
 
 Recommended configuration steps for docker or docker-compose usage:
 
-* If you must **bind a host directory into the container for storing configurations and credentials:**
-    * [Using `-v` method for docker](https://docs.docker.com/storage/bind-mounts/#start-a-container-with-a-bind-mount): `-v /path/on/host/config:/config`
-    * [Using docker-compose](https://docs.docker.com/compose/compose-file/compose-file-v3/#short-syntax-3): `- /path/on/host/config:/config`
-* (Optionally) map the web UI port in the container **9078** to the host
-    * With [docker](https://docs.docker.com/engine/reference/commandline/run/#publish): `-p 9078:9078` (first port is the port on the host to use)
-    * With [docker-compose](https://docs.docker.com/compose/compose-file/compose-file-v3/#short-syntax-1): `- "9078:9078"`
+#### Storage
+
+You **must** bind a host directory into the container for storing configurations and credentials. Otherwise these will be lost when the container is updated.
+
+* [Using `-v` method for docker](https://docs.docker.com/storage/bind-mounts/#start-a-container-with-a-bind-mount): `-v /path/on/host/config:/config`
+* [Using docker-compose](https://docs.docker.com/compose/compose-file/compose-file-v3/#short-syntax-3): `- /path/on/host/config:/config`
+
+#### Networking
+
+If you are using a [bridge network](https://www.appsdeveloperblog.com/docker-networking-bridging-host-and-overlay/) (default docker setup) you **must** map a port to the container in order to access the dashboard and use MS with some sources (Plex, Jellyfin).
+
+The default container port is `9078`. To map container to host port:
+
+* With [docker](https://docs.docker.com/engine/reference/commandline/run/#publish): `-p 9078:9078` (first port is the port on the host to use)
+* With [docker-compose](https://docs.docker.com/compose/compose-file/compose-file-v3/#short-syntax-1): `- "9078:9078"`
+
+#### Other
+
 * (Optionally) set the [timezone](https://en.wikipedia.org/wiki/List_of_tz_database_time_zones) for the container using the environmental variable `TZ` ([docker](https://docs.docker.com/engine/reference/commandline/run/#env)) ([docker-compose](https://docs.docker.com/compose/compose-file/compose-file-v3/#environment))
 
 ### Linux Host
