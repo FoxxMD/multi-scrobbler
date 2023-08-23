@@ -191,9 +191,4 @@ export interface numberFormatOptions {
     }
 }
 
-export interface StringComparisonOptions {
-    lengthWeight?: number,
-    transforms?: ((str: string) => string)[]
-}
-
 export const DELIMITERS = [',','&','\/','\\'];

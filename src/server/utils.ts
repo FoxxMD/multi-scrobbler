@@ -5,7 +5,6 @@ import {Logger} from '@foxxmd/winston';
 import JSON5 from 'json5';
 import {TimeoutError, WebapiError} from "spotify-web-api-node/src/response-error.js";
 import Ajv, {Schema} from 'ajv';
-import stringSimilarity from 'string-similarity';
 import {
     asPlayerStateData,
     DEFAULT_SCROBBLE_DURATION_THRESHOLD, DELIMITERS,
@@ -18,7 +17,7 @@ import {
     ProgressAwarePlayObject,
     RegExResult,
     RemoteIdentityParts,
-    ScrobbleThresholdResult, StringComparisonOptions,
+    ScrobbleThresholdResult,
 } from "./common/infrastructure/Atomic";
 import {Request} from "express";
 import pathUtil from "path";
@@ -26,12 +25,8 @@ import {ErrorWithCause} from "pony-cause";
 import backoffStrategies from '@kenyip/backoff-strategies';
 import { ScrobbleThresholds } from "./common/infrastructure/config/source/index";
 import {replaceResultTransformer, stripIndentTransformer, TemplateTag, trimResultTransformer} from 'common-tags';
-import is from "@sindresorhus/is";
 import {Duration} from "dayjs/plugin/duration.js";
 import { ListenRange, PlayObject } from "../core/Atomic";
-import calculateCosineSimilarity from "./utils/stringMatching/CosineSimilarity";
-import levenSimilarity from "./utils/stringMatching/levenSimilarity";
-
 dayjs.extend(utc);
 
 export async function readJson(this: any, path: any, {throwOnNotFound = true} = {}) {
@@ -179,43 +174,6 @@ const sentenceLengthWeight = (length: number) => {
     // thanks jordan :')
     // constants are black magic
     return (Math.log(length) / 0.20) - 5;
-}
-
-
-export const stringSameness = (valA: string, valB: string, options?: StringComparisonOptions) => {
-
-    const {
-        transforms = [normalizeStr],
-    } = options || {};
-
-    const cleanA = transforms.reduce((acc, curr) => curr(acc), valA);
-    const cleanB = transforms.reduce((acc, curr) => curr(acc), valB);
-
-    const shortest = cleanA.length > cleanB.length ? cleanB : cleanA;
-
-    // Dice's Coefficient
-    const dice = stringSimilarity.compareTwoStrings(cleanA, cleanB) * 100;
-    // Cosine similarity
-    const cosine = calculateCosineSimilarity(cleanA, cleanB) * 100;
-    // Levenshtein distance
-    const [levenDistance, levenSimilarPercent] = levenSimilarity(cleanA, cleanB);
-
-    // use shortest sentence for weight
-    const weightScore = sentenceLengthWeight(shortest.length);
-
-    // take average score
-    const highScore = (dice + cosine + levenSimilarPercent) / 3;
-    // weight score can be a max of 15
-    const highScoreWeighted = highScore + Math.min(weightScore, 15);
-    return {
-        scores: {
-            dice,
-            cosine,
-            leven: levenSimilarPercent
-        },
-        highScore,
-        highScoreWeighted,
-    }
 }
 
 export const capitalize = (str: any) => {

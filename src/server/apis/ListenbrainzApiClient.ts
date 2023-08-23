@@ -3,12 +3,13 @@ import request, {Request} from 'superagent';
 import { ListenBrainzClientData } from "../common/infrastructure/config/client/listenbrainz";
 import {DELIMITERS, FormatPlayObjectOptions} from "../common/infrastructure/Atomic";
 import dayjs from "dayjs";
+import { stringSameness } from '@foxxmd/string-sameness';
 import {
     containsDelimiters,
     findDelimiters,
     normalizeStr, parseArtistCredits,
     parseCredits,
-    parseStringList, parseTrackCredits, stringSameness,
+    parseStringList, parseTrackCredits,
     unique,
     uniqueNormalizedStrArr,
 } from "../utils";
