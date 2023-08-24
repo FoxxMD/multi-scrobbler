@@ -8,6 +8,7 @@
     "module": "commonjs",
     "target": "es2020",
     "esModuleInterop": true,
+    "skipLibCheck": true,
 
     "typeRoots": [
       "../../node_modules/@types",
@@ -23,7 +24,7 @@
   "exclude": [
     "../../node_modules",
     "../../coverage",
-    "../../tests/*.ts",
+    "./tests/**/*",
     "../../_site",
     "../../docsite",
     "../../build",
