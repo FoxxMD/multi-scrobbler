@@ -4,11 +4,11 @@
     "clients": [],
     "data": {
       "users": ["FoxxMD"],
-      "servers": ["myServer","anotherServer"],
-      "options": {
-        "logPayload": false,
-        "logFilterFailure": "warn"
-      }
+      "servers": ["myServer","anotherServer"]
+    },
+    "options": {
+      "logPayload": false,
+      "logFilterFailure": "warn"
     }
   }
 ]
