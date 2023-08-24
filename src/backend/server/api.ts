@@ -12,7 +12,7 @@ import {
     SourceStatusData,
 } from "../../core/Atomic";
 import {Logger} from "@foxxmd/winston";
-import {formatLogToHtml, isLogLineMinLevel} from "../common/logging";
+import {formatLogToHtml, getLogger, isLogLineMinLevel} from "../common/logging";
 import {MESSAGE} from "triple-beam";
 import {Transform} from "stream";
 import {createSession} from "better-sse";
@@ -21,11 +21,7 @@ import {setupPlexRoutes} from "./plexRoutes";
 import {setupJellyfinRoutes} from "./jellyfinRoutes";
 import {setupDeezerRoutes} from "./deezerRoutes";
 import {setupAuthRoutes} from "./auth";
-import path from "path";
-import {source} from "common-tags";
 import { ExpressHandler } from "../common/infrastructure/Atomic";
-
-const buildDir = path.join(process.cwd() + "/build");
 
 let output: LogInfo[] = []
 
@@ -56,7 +52,8 @@ export const setupApi = (app: ExpressWithAsync, logger: Logger, initialLogOutput
         console.log(e);
     }
 
-    logger.stream().on('log', (log: LogInfo) => {
+    const appLogger = getLogger({}, 'app');
+    appLogger.stream().on('log', (log: LogInfo) => {
         output.unshift(log);
         output = output.slice(0, 501);
         if(isLogLineMinLevel(log, logConfig.level)) {

@@ -3,8 +3,8 @@ import {Logger} from "@foxxmd/winston";
 import ScrobbleSources from "../sources/ScrobbleSources";
 import passport from "passport";
 import { ExpressHandler } from "../common/infrastructure/Atomic";
-import ScrobbleClients from "../clients/ScrobbleClients";
-import LastfmScrobbler from "../clients/LastfmScrobbler";
+import ScrobbleClients from "../scrobblers/ScrobbleClients";
+import LastfmScrobbler from "../scrobblers/LastfmScrobbler";
 import LastfmSource from "../sources/LastfmSource";
 import SpotifySource from "../sources/SpotifySource";
 

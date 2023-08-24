@@ -20,7 +20,7 @@ import {
     MalojaScrobbleRequestData,
     MalojaScrobbleV2RequestData,
     MalojaScrobbleV3RequestData, MalojaScrobbleV3ResponseData, MalojaV2ScrobbleData, MalojaV3ScrobbleData
-} from "../apis/maloja/interfaces";
+} from "../common/vendor/maloja/interfaces";
 import { PlayObject, TrackStringOptions } from "../../core/Atomic";
 import { buildTrackString } from "../../core/StringUtils";
 import EventEmitter from "events";

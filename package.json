@@ -22,7 +22,7 @@
     "build:client": "react-scripts build",
     "build:server": "webpack --config webpack.config.server.js",
     "start": "node build/server.js",
-    "fileEndings": "jscodeshift --transformFrom js --transformTo none --importTypes relative --extensions=ts --parser tsx --transform codeshift/transform.ts src/server"
+    "fileEndings": "jscodeshift --transformFrom js --transformTo none --importTypes relative --extensions=ts --parser tsx --transform codeshift/transform.ts src/backend"
   },
   "exports": {
     ".": {
@@ -64,7 +64,6 @@
     "concat-stream": "^2.0.0",
     "dayjs": "^1.10.4",
     "dbus-next": "0.10.2",
-    "ejs": "^3.1.6",
     "es6-error": "^4.1.1",
     "express": "^4.17.1",
     "express-session": "^1.17.2",

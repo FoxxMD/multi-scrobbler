@@ -9,12 +9,12 @@ import {
     sleep,
     sortByOldestPlayDate,
 } from "../utils";
-import LastfmApiClient from "../apis/LastfmApiClient";
+import LastfmApiClient from "../common/vendor/LastfmApiClient";
 import { FormatPlayObjectOptions, INITIALIZING } from "../common/infrastructure/Atomic";
 import { Notifiers } from "../notifier/Notifiers";
 import {Logger} from '@foxxmd/winston';
 import { ListenBrainzClientConfig } from "../common/infrastructure/config/client/listenbrainz";
-import { ListenbrainzApiClient } from "../apis/ListenbrainzApiClient";
+import { ListenbrainzApiClient } from "../common/vendor/ListenbrainzApiClient";
 import { PlayObject, TrackStringOptions } from "../../core/Atomic";
 import { buildTrackString } from "../../core/StringUtils";
 import EventEmitter from "events";

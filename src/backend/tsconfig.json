@@ -17,15 +17,16 @@
   "include": [
     "**/*.ts",
     "**/*.tsx",
-    "**/*.js"
+    "**/*.js",
+    "../core/**/*.ts"
   ],
   "exclude": [
-    "../../web",
     "../../node_modules",
     "../../coverage",
     "../../tests/*.ts",
     "../../_site",
     "../../docsite",
-    "../../build", "../client"
+    "../../build",
+    "../client"
   ]
 }

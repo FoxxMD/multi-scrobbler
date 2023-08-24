@@ -3,7 +3,7 @@ import { FormatPlayObjectOptions, InternalConfig } from "../common/infrastructur
 import {EventEmitter} from "events";
 import { RecentlyPlayedOptions } from "./AbstractSource";
 import { KodiSourceConfig } from "../common/infrastructure/config/source/kodi";
-import { KodiApiClient } from "../apis/KodiApiClient";
+import { KodiApiClient } from "../common/vendor/KodiApiClient";
 import { PlayObject } from "../../core/Atomic";
 
 export class KodiSource extends MemorySource {

@@ -13,7 +13,7 @@ import slightlyDifferentNames from './listenbrainz/correctlyMapped/trackNameSlig
 import incorrectMultiArtistsTrackName from './listenbrainz/incorrectlyMapped/multiArtistsInTrackName.json';
 import veryWrong from './listenbrainz/incorrectlyMapped/veryWrong.json';
 
-import {ListenbrainzApiClient, ListenResponse} from "../apis/ListenbrainzApiClient";
+import {ListenbrainzApiClient, ListenResponse} from "../common/vendor/ListenbrainzApiClient";
 
 interface ExpectedResults {
     artists: string[]

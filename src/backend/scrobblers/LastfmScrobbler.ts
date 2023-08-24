@@ -9,7 +9,7 @@ import {
     sleep,
     sortByOldestPlayDate,
 } from "../utils";
-import LastfmApiClient from "../apis/LastfmApiClient";
+import LastfmApiClient from "../common/vendor/LastfmApiClient";
 import { FormatPlayObjectOptions, INITIALIZING, ScrobbledPlayObject } from "../common/infrastructure/Atomic";
 import { LastfmClientConfig } from "../common/infrastructure/config/client/lastfm";
 import {TrackScrobbleResponse, UserGetRecentTracksResponse} from "lastfm-node-client";

@@ -2,16 +2,16 @@
   "extends": "@istanbuljs/nyc-config-typescript",
   "exclude": [
     "node_modules/",
-    "**/src/server/common/schema/**",
-    "**/src/server/tests/**",
+    "**/src/backend/common/schema/**",
+    "**/src/backend/tests/**",
     "register.js",
     "**/src/server/**/*.d.ts",
     "**/src/client/**"
   ],
   "include": [
-    "**/src/server/**/*.ts",
-    "**/src/**/server/*.js",
-    "**/src/**/server/*.js.map"
+    "**/src/backend/**/*.ts",
+    "**/src/**/backend/*.js",
+    "**/src/**/backend/*.js.map"
   ],
   "extension": [
     ".ts"

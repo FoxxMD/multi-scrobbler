@@ -5,10 +5,10 @@
 
 const tsNode = require('ts-node');
 const tsConfigPaths = require('tsconfig-paths');
-const mainTSConfig = require('./src/server/tsconfig.json');
+const mainTSConfig = require('./src/backend/tsconfig.json');
 
 tsConfigPaths.register({
-    baseUrl: './src/server/tests',
+    baseUrl: './src/backend/tests',
     paths: {
         ...mainTSConfig.compilerOptions.paths,
     }
@@ -17,5 +17,5 @@ tsConfigPaths.register({
 tsNode.register({
     files: true,
     transpileOnly: true,
-    project: './src/server/tsconfig.json'
+    project: './src/backend/tsconfig.json'
 });

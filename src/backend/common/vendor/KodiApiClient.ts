@@ -1,13 +1,13 @@
 import AbstractApiClient from "./AbstractApiClient";
 import {ErrorWithCause} from "pony-cause";
-import { KodiData } from "../common/infrastructure/config/source/kodi";
+import { KodiData } from "../infrastructure/config/source/kodi";
 import { KodiClient } from 'kodi-api'
 import normalizeUrl from "normalize-url";
 import {URL} from "url";
-import { RecentlyPlayedOptions } from "../sources/AbstractSource";
-import { FormatPlayObjectOptions } from "../common/infrastructure/Atomic";
+import { RecentlyPlayedOptions } from "../../sources/AbstractSource";
+import { FormatPlayObjectOptions } from "../infrastructure/Atomic";
 import dayjs from "dayjs";
-import { PlayObject } from "../../core/Atomic";
+import { PlayObject } from "../../../core/Atomic";
 
 interface KodiDuration {
     hours: number

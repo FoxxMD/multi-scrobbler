@@ -2,7 +2,7 @@ import AbstractSource, { RecentlyPlayedOptions } from "./AbstractSource";
 import { FormatPlayObjectOptions, INITIALIZING, InternalConfig } from "../common/infrastructure/Atomic";
 import EventEmitter from "events";
 import { ListenBrainzSourceConfig } from "../common/infrastructure/config/source/listenbrainz";
-import { ListenbrainzApiClient } from "../apis/ListenbrainzApiClient";
+import { ListenbrainzApiClient } from "../common/vendor/ListenbrainzApiClient";
 
 export default class ListenbrainzSource extends AbstractSource {
 

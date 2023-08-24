@@ -1,20 +1,22 @@
 import AbstractApiClient from "./AbstractApiClient";
 import request, {Request} from 'superagent';
-import { ListenBrainzClientData } from "../common/infrastructure/config/client/listenbrainz";
-import {DELIMITERS, FormatPlayObjectOptions} from "../common/infrastructure/Atomic";
+import { ListenBrainzClientData } from "../infrastructure/config/client/listenbrainz";
+import { DELIMITERS, FormatPlayObjectOptions } from "../infrastructure/Atomic";
 import dayjs from "dayjs";
 import { stringSameness } from '@foxxmd/string-sameness';
 import {
     containsDelimiters,
     findDelimiters,
-    normalizeStr, parseArtistCredits,
+    normalizeStr,
+    parseArtistCredits,
     parseCredits,
-    parseStringList, parseTrackCredits,
+    parseStringList,
+    parseTrackCredits,
     unique,
     uniqueNormalizedStrArr,
-} from "../utils";
-import { PlayObject } from "../../core/Atomic";
-import {slice} from "../../core/StringUtils";
+} from "../../utils";
+import { PlayObject } from "../../../core/Atomic";
+import { slice } from "../../../core/StringUtils";
 
 
 export interface ArtistMBIDMapping {

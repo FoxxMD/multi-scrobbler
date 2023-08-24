@@ -1,5 +1,5 @@
 import AbstractSource, { RecentlyPlayedOptions } from "./AbstractSource";
-import LastfmApiClient from "../apis/LastfmApiClient";
+import LastfmApiClient from "../common/vendor/LastfmApiClient";
 import { sortByOldestPlayDate } from "../utils";
 import { LastfmClientConfig } from "../common/infrastructure/config/client/lastfm";
 import { FormatPlayObjectOptions, InternalConfig } from "../common/infrastructure/Atomic";

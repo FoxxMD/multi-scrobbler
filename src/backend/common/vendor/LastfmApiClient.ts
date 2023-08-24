@@ -1,10 +1,10 @@
 import LastFm, {AuthGetSessionResponse, TrackObject, UserGetInfoResponse} from "lastfm-node-client";
 import AbstractApiClient from "./AbstractApiClient";
 import dayjs from "dayjs";
-import { readJson, sleep, writeFile } from "../utils";
-import { FormatPlayObjectOptions } from "../common/infrastructure/Atomic";
-import { LastfmData } from "../common/infrastructure/config/client/lastfm";
-import { PlayObject } from "../../core/Atomic";
+import { readJson, sleep, writeFile } from "../../utils";
+import { FormatPlayObjectOptions } from "../infrastructure/Atomic";
+import { LastfmData } from "../infrastructure/config/client/lastfm";
+import { PlayObject } from "../../../core/Atomic";
 
 const badErrors = [
     'api key suspended',
