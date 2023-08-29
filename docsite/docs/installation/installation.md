@@ -53,7 +53,7 @@ flatpak install flathub io.github.foxxmd.multiscrobbler
 The config directory for multi-scrobbler as a flatpak can be found under `/home/YourUser/.var/app/io.github.foxxmd.multiscrobbler/config`
 
 ```shell
-flatpak run io.github.multiscrobbler
+flatpak run io.github.foxxmd.multiscrobbler
 ```
 
 #### Using [env-based](../configuration/configuration.md#env-based-configuration) configuration

@@ -24,7 +24,7 @@ First, [make sure `node_modules` is deleted or empty.](https://github.com/flatpa
 
 Then, from MS project root:
 
-```
+```shell
 flatpak-node-generator npm package-lock.json
 ```
 
@@ -34,8 +34,15 @@ Move `generated-sources.json` into [`/flatpak`](/flatpak)
 
 From MS project root:
 
-```console
+```shell
 cd flatpak
 flatpak-builder --repo=/home/yourUser/multi-scrobbler-repo /home/yourUser/multi-scrobbler-build io.github.foxxmd.multiscrobbler.yml --force-clean
 ```
 Add `--install --user` to have the app installed immediately.
+# 5. Run (Locally)
+
+If built with `--install --user` you can now run MS using the command
+
+```shell
+flatpak run -u io.github.foxxmd.multiscrobbler
+```
