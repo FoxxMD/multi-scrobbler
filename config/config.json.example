@@ -1,8 +1,18 @@
 {
+  "debugMode": false,
   "sourceDefaults": {
-    "maxPollRetries": 0,
+    "maxPollRetries": 1,
     "maxRequestRetries": 1,
-    "retryMultiplier": 1.5
+    "retryMultiplier": 1.5,
+    "scrobbleThresholds": {
+      "duration": 30,
+      "percent": 50
+    },
+    "options": {
+      "logPayload": false,
+      "logFilterFailure": "warn",
+      "logPlayerState": false
+    }
   },
   "clientDefaults": {
     "maxRequestRetries": 1,

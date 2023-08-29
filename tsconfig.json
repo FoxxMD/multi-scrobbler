@@ -1,29 +1,33 @@
 {
   "compilerOptions": {
-    "sourceMap": true,
-    "resolveJsonModule": true,
-    "emitDecoratorMetadata": true,
-    "experimentalDecorators": true,
-    "lib": ["es2020", "dom"],
-    "module": "commonjs",
-    "target": "es2020",
-    "esModuleInterop": true,
-
-    "typeRoots": [
-      "./node_modules/@types",
-      "./src/common/infrastructure/typings"
+    "target": "es5",
+    "lib": [
+      "dom",
+      "dom.iterable",
+      "esnext"
     ],
+    "allowJs": true,
+    "skipLibCheck": true,
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
+    "strict": false,
+    "forceConsistentCasingInFileNames": true,
+    "noFallthroughCasesInSwitch": true,
+    "module": "esnext",
+    "moduleResolution": "node",
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "noEmit": true,
+    "jsx": "react-jsx",
+    "sourceMap": true,
   },
   "include": [
-    "**/*.ts",
-    "**/*.tsx",
-    "**/*.js"
+    "src"
   ],
   "exclude": [
-    "node_modules",
+    "src/backend",
     "coverage",
-    "tests/*.ts",
-    "_site",
-    "docsite"
-  ]
+    "docsite",
+    "build"
+  ],
 }

@@ -1,0 +1,189 @@
+[
+  {
+    "data": {
+      "inserted_at": 1692501400,
+      "listened_at": 1692501276,
+      "recording_msid": "6f3f43c1-fccc-46a6-8013-b60d34635404",
+      "track_metadata": {
+        "additional_info": {
+          "artist_mbids": [
+            "59db3d82-86ea-451f-881f-dffc8ec387c9",
+            "48262e82-db9f-4a92-b650-dfef979b73ec",
+            "8837b875-3689-4646-b3fd-d8b53815c7a8"
+          ],
+          "recording_mbid": "74914082-c716-4ddb-832b-dfdc7a4ddd49",
+          "recording_msid": "6f3f43c1-fccc-46a6-8013-b60d34635404",
+          "release_mbid": "deab8f51-b954-475e-a008-99861675a0a5",
+          "track_mbid": "8dfc37bd-4006-42ff-b382-17b77942c53b"
+        },
+        "artist_name": "Metro Boomin",
+        "mbid_mapping": {
+          "artist_mbids": [
+            "59db3d82-86ea-451f-881f-dffc8ec387c9",
+            "48262e82-db9f-4a92-b650-dfef979b73ec",
+            "8837b875-3689-4646-b3fd-d8b53815c7a8"
+          ],
+          "artists": [
+            {
+              "artist_credit_name": "Metro Boomin",
+              "artist_mbid": "59db3d82-86ea-451f-881f-dffc8ec387c9",
+              "join_phrase": ", "
+            },
+            {
+              "artist_credit_name": "Future",
+              "artist_mbid": "48262e82-db9f-4a92-b650-dfef979b73ec",
+              "join_phrase": " & "
+            },
+            {
+              "artist_credit_name": "Lil Uzi Vert",
+              "artist_mbid": "8837b875-3689-4646-b3fd-d8b53815c7a8",
+              "join_phrase": ""
+            }
+          ],
+          "caa_id": 35816827255,
+          "caa_release_mbid": "72a73259-c593-4503-a889-9bf1b5e10874",
+          "recording_mbid": "74914082-c716-4ddb-832b-dfdc7a4ddd49",
+          "recording_name": "All the Way Live",
+          "release_mbid": "72a73259-c593-4503-a889-9bf1b5e10874"
+        },
+        "track_name": "All the Way Live"
+      },
+      "user_name": "kinescou"
+    },
+    "expected": {
+      "artists": [
+        "Metro Boomin",
+        "Future",
+        "Lil Uzi Vert"
+      ],
+      "track": "All the Way Live"
+    }
+  },
+  {
+    "data": {
+      "inserted_at": 1692501154,
+      "listened_at": 1692501026,
+      "recording_msid": "e238dfbc-9dca-4b3b-bca3-6549aa950241",
+      "track_metadata": {
+        "additional_info": {
+          "artist_mbids": [
+            "59db3d82-86ea-451f-881f-dffc8ec387c9",
+            "25b7b584-d952-4662-a8b9-dd8cdfbfeb64",
+            "46c72926-ae72-4e89-a709-047c40c42558"
+          ],
+          "recording_mbid": "12f377a0-a2f6-4085-82cd-c7d7cf561a03",
+          "recording_msid": "e238dfbc-9dca-4b3b-bca3-6549aa950241",
+          "release_mbid": "deab8f51-b954-475e-a008-99861675a0a5",
+          "track_mbid": "2f8a93e8-2dfc-4c22-9de2-f60e0776ee2b"
+        },
+        "artist_name": "Metro Boomin",
+        "mbid_mapping": {
+          "artist_mbids": [
+            "59db3d82-86ea-451f-881f-dffc8ec387c9",
+            "25b7b584-d952-4662-a8b9-dd8cdfbfeb64",
+            "46c72926-ae72-4e89-a709-047c40c42558"
+          ],
+          "artists": [
+            {
+              "artist_credit_name": "Metro Boomin",
+              "artist_mbid": "59db3d82-86ea-451f-881f-dffc8ec387c9",
+              "join_phrase": ", "
+            },
+            {
+              "artist_credit_name": "A$AP Rocky",
+              "artist_mbid": "25b7b584-d952-4662-a8b9-dd8cdfbfeb64",
+              "join_phrase": " & "
+            },
+            {
+              "artist_credit_name": "Roisee",
+              "artist_mbid": "46c72926-ae72-4e89-a709-047c40c42558",
+              "join_phrase": ""
+            }
+          ],
+          "recording_mbid": "12f377a0-a2f6-4085-82cd-c7d7cf561a03",
+          "recording_name": "Am I Dreaming"
+        },
+        "track_name": "Am I Dreaming"
+      },
+      "user_name": "kinescou"
+    },
+    "expected": {
+      "artists": [
+        "Metro Boomin",
+        "A$AP Rocky",
+        "Roisee"
+      ],
+      "track": "Am I Dreaming"
+    }
+  },
+  {
+    "data": {
+      "inserted_at": 1690613820,
+      "listened_at": 1690244445,
+      "recording_msid": "7d031d87-5a7e-4d9d-8dc1-dec88fc7c6d0",
+      "track_metadata": {
+        "additional_info": {
+          "artist_mbids": [
+            "59db3d82-86ea-451f-881f-dffc8ec387c9",
+            "a0723a3c-4135-438e-85c5-012712144ede",
+            "efc5d365-a448-4e2f-9b5f-4a7c84be725c",
+            "247e81d2-a299-4fdb-8180-268545368b0c",
+            "12f7362f-d361-431b-a6b3-59f114c8508c"
+          ],
+          "recording_mbid": "00fa8eb1-7fa9-49cc-aa38-46be3606cd37",
+          "recording_msid": "7d031d87-5a7e-4d9d-8dc1-dec88fc7c6d0",
+          "release_mbid": "deab8f51-b954-475e-a008-99861675a0a5",
+          "track_mbid": "2e7996e9-a79f-4d97-95ec-e5adf1f78d2f"
+        },
+        "artist_name": "Metro Boomin",
+        "mbid_mapping": {
+          "artist_mbids": [
+            "59db3d82-86ea-451f-881f-dffc8ec387c9",
+            "a0723a3c-4135-438e-85c5-012712144ede",
+            "efc5d365-a448-4e2f-9b5f-4a7c84be725c",
+            "247e81d2-a299-4fdb-8180-268545368b0c",
+            "12f7362f-d361-431b-a6b3-59f114c8508c"
+          ],
+          "artists": [
+            {
+              "artist_credit_name": "Metro Boomin",
+              "artist_mbid": "59db3d82-86ea-451f-881f-dffc8ec387c9",
+              "join_phrase": ", "
+            },
+            {
+              "artist_credit_name": "Don Toliver",
+              "artist_mbid": "a0723a3c-4135-438e-85c5-012712144ede",
+              "join_phrase": " & "
+            },
+            {
+              "artist_credit_name": "Wizkid",
+              "artist_mbid": "efc5d365-a448-4e2f-9b5f-4a7c84be725c",
+              "join_phrase": " feat. "
+            },
+            {
+              "artist_credit_name": "BEAM",
+              "artist_mbid": "247e81d2-a299-4fdb-8180-268545368b0c",
+              "join_phrase": " & "
+            },
+            {
+              "artist_credit_name": "Toian",
+              "artist_mbid": "12f7362f-d361-431b-a6b3-59f114c8508c",
+              "join_phrase": ""
+            }
+          ],
+          "caa_id": 35843656763,
+          "caa_release_mbid": "0f014a1e-5ad7-44b2-a7c7-e33308538201",
+          "recording_mbid": "00fa8eb1-7fa9-49cc-aa38-46be3606cd37",
+          "recording_name": "Link Up (Spider‐Verse remix)",
+          "release_mbid": "72a73259-c593-4503-a889-9bf1b5e10874"
+        },
+        "track_name": "Link Up (Spider‐Verse remix)"
+      },
+      "user_name": "kinescou"
+    },
+    "expected": {
+      "artists": ["Metro Boomin", "Don Toliver", "Wizkid", "BEAM", "Toian"],
+      "track": "Link Up (Spider‐Verse remix)"
+    }
+  }
+]

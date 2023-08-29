@@ -1,0 +1,4 @@
+{
+  "require": ["./register.js", "source-map-support/register"],
+  "reporter": "dot"
+}

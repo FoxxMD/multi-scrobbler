@@ -1,0 +1,80 @@
+[
+  {
+    "data": {
+      "inserted_at": 1692667531,
+      "listened_at": 1692656009,
+      "recording_msid": "8f61a5ad-1a4b-42f8-ab02-e601e8612efb",
+      "track_metadata": {
+        "additional_info": {
+          "duration": 190,
+          "recording_msid": "8f61a5ad-1a4b-42f8-ab02-e601e8612efb"
+        },
+        "artist_name": "Polo & Pan",
+        "mbid_mapping": {
+          "artist_mbids": [
+            "1d9ec7ea-0fa4-41d9-917b-723c735ebbfe"
+          ],
+          "artists": [
+            {
+              "artist_credit_name": "Polo & Pan",
+              "artist_mbid": "1d9ec7ea-0fa4-41d9-917b-723c735ebbfe",
+              "join_phrase": ""
+            }
+          ],
+          "caa_id": 16791744445,
+          "caa_release_mbid": "f906cf78-f0cb-4633-9f8c-e431d40fc16c",
+          "recording_mbid": "e6a15126-1c96-4891-b639-5e4e73a0c4d5",
+          "recording_name": "Nanä",
+          "release_mbid": "f906cf78-f0cb-4633-9f8c-e431d40fc16c"
+        },
+        "track_name": "Nanã"
+      },
+      "user_name": "FoxxMD"
+    },
+    "expected": {
+      "artists": [
+        "Polo & Pan"
+      ],
+      "track": "Nanä"
+    }
+  },
+  {
+    "data": {
+      "inserted_at": 1692647350,
+      "listened_at": 1692647313,
+      "recording_msid": "9f2f8473-23b7-4d61-a1a6-e4dc8ea75a99",
+      "track_metadata": {
+        "additional_info": {
+          "duration": 95,
+          "recording_msid": "9f2f8473-23b7-4d61-a1a6-e4dc8ea75a99"
+        },
+        "artist_name": "Dina Ögon",
+        "mbid_mapping": {
+          "artist_mbids": [
+            "dd682352-d506-4d75-90cc-ff8daa0af05a"
+          ],
+          "artists": [
+            {
+              "artist_credit_name": "Dina ögon",
+              "artist_mbid": "dd682352-d506-4d75-90cc-ff8daa0af05a",
+              "join_phrase": ""
+            }
+          ],
+          "caa_id": 35186352832,
+          "caa_release_mbid": "d5f4dcfb-3895-429f-a2be-181d9f363b57",
+          "recording_mbid": "fd0279f4-dcdd-4789-ab90-329f83fe5eb3",
+          "recording_name": "Docka kväll",
+          "release_mbid": "d5f4dcfb-3895-429f-a2be-181d9f363b57"
+        },
+        "track_name": "Docka kväll"
+      },
+      "user_name": "FoxxMD"
+    },
+    "expected": {
+      "artists": [
+        "Dina ögon"
+      ],
+      "track": "Docka kväll"
+    }
+  }
+]

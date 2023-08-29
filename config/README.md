@@ -9,4 +9,4 @@ These are **NOT** exhaustive examples. You should consult the  **configuration**
 Documentation at
 
 * [internal docs](../docsite/docs/configuration/configuration.md)
-* External Link: https://github.com/FoxxMD/multi-scrobbler/blob/master/docsite/docs/configuration/configuration.md
+* External Link: https://foxxmd.github.io/multi-scrobbler/docs/configuration

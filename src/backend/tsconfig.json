@@ -1,0 +1,33 @@
+{
+  "compilerOptions": {
+    "sourceMap": true,
+    "resolveJsonModule": true,
+    "emitDecoratorMetadata": true,
+    "experimentalDecorators": true,
+    "lib": ["es2020", "dom"],
+    "module": "commonjs",
+    "target": "es2020",
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+
+    "typeRoots": [
+      "../../node_modules/@types",
+      "../../src/common/infrastructure/typings"
+    ]
+  },
+  "include": [
+    "**/*.ts",
+    "**/*.tsx",
+    "**/*.js",
+    "../core/**/*.ts"
+  ],
+  "exclude": [
+    "../../node_modules",
+    "../../coverage",
+    "./tests/**/*",
+    "../../_site",
+    "../../docsite",
+    "../../build",
+    "../client"
+  ]
+}
