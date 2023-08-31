@@ -12,7 +12,7 @@ export const setupJellyfinRoutes = (app: ExpressWithAsync, logger: Logger, scrob
     const jellyfinJsonParser = bodyParser.json({type: 'text/*'});
     const jellyIngress = new JellyfinNotifier();
     app.postAsync('/jellyfin', async function(req, res)  {
-        res.redirect(307, 'api/jellyfin/ingress');
+        res.redirect(307, '/api/jellyfin/ingress');
     });
     app.postAsync('/api/jellyfin/ingress',
         async function (req, res, next) {

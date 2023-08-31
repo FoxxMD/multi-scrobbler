@@ -44,7 +44,7 @@ export const setupTautulliRoutes = (app: ExpressWithAsync, logger: Logger, scrob
     };
 
     app.postAsync('/tautulli', async function(req, res)  {
-        res.redirect(307, 'api/plex/tautulli');
+        res.redirect(307, '/api/tautulli/ingress');
     });
     app.postAsync('/api/tautulli/ingress', tautulliIngressRoute);
 }
