@@ -1,6 +1,6 @@
 {
   "name": "multi-scrobbler",
-  "version": "0.5.0",
+  "version": "0.5.1",
   "description": "scrobble plays from multiple sources to multiple clients",
   "scripts": {
     "schema": "npm run -s schema-aio & npm run -s schema-source & npm run -s schema-client & npm run -s schema-aiosource & npm run -s schema-aioclient",
