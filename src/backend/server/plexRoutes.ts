@@ -37,7 +37,7 @@ export const setupPlexRoutes = (app: ExpressWithAsync, logger: Logger, scrobbleS
         res.send('OK');
     };
     app.postAsync('/plex', async function (req, res) {
-        res.redirect(307, 'api/plex/ingress');
+        res.redirect(307, '/api/plex/ingress');
     });
     app.postAsync('/api/plex/ingress', plexIngressMiddle, plexMiddle, plexIngressRoute);
 }
