@@ -140,7 +140,7 @@ const configDir = process.env.CONFIG_DIR || path.resolve(projectDir, `./config`)
         }
 
         scheduler.addSimpleIntervalJob(new SimpleIntervalJob({
-            minutes: 1,
+            minutes: 20,
             runImmediately: false
         }, createHeartbeatTask(scrobbleSources, logger)));
         logger.info('Scheduler started.');
