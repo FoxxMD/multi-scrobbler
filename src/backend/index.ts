@@ -19,7 +19,7 @@ import {getLogger} from "./common/logging";
 import {LogInfo} from "../core/Atomic";
 import {initServer} from "./server/index";
 import {SimpleIntervalJob, ToadScheduler} from "toad-scheduler";
-import {createHeartbeatTask} from "./tasks/heartbeat.js";
+import {createHeartbeatTask} from "./tasks/heartbeat";
 
 
 dayjs.extend(utc)
