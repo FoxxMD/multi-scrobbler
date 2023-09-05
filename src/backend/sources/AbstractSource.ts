@@ -92,6 +92,10 @@ export default abstract class AbstractSource {
         return this.initialized;
     }
 
+    authGated = () => {
+        return this.requiresAuth && !this.authed;
+    }
+
     // default init function, should be overridden if auth stage is required
     testAuth = async () => {
         return this.authed;
@@ -210,7 +214,7 @@ export default abstract class AbstractSource {
         if(!(await this.onPollPreAuthCheck())) {
             return;
         }
-        if(this.requiresAuth && !this.authed) {
+        if(this.authGated()) {
             if(this.requiresAuthInteraction) {
                 this.notify({title: `${this.identifier} - Polling Error`, message: 'Cannot start polling because user interaction is required for authentication', priority: 'error'});
                 this.logger.error('Cannot start polling because user interaction is required for authentication');
@@ -245,10 +249,11 @@ export default abstract class AbstractSource {
             return;
         }
 
-        while (this.pollRetries <= maxRetries) {
+        let pollRes: boolean | undefined = undefined;
+        while (pollRes === undefined && this.pollRetries <= maxRetries) {
             try {
-                const res = await this.doPolling();
-                if(res === true) {
+                pollRes = await this.doPolling();
+                if(pollRes === true) {
                     break;
                 }
             } catch (e) {
@@ -285,12 +290,10 @@ export default abstract class AbstractSource {
         return true;
     }
 
-    protected doStopPolling = (reason?: string) => {
+    protected doStopPolling = (reason: string = 'system') => {
         this.polling = false;
         this.userPollingStopSignal = undefined;
-        if(reason !== undefined) {
-            this.logger.info(`Stopped polling due to: ${reason}`);
-        }
+        this.logger.info(`Stopped polling due to: ${reason}`);
     }
 
     protected shouldStopPolling = () => this.polling === false || this.userPollingStopSignal !== undefined;
@@ -370,6 +373,7 @@ export default abstract class AbstractSource {
             }
             if(this.shouldStopPolling()) {
                 this.doStopPolling(this.userPollingStopSignal !== undefined ?  'user input' : undefined);
+                return true;
             }
         } catch (e) {
             this.logger.error('Error occurred while polling');

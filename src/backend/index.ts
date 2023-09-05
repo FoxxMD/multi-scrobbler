@@ -18,6 +18,8 @@ import { getRoot } from "./ioc";
 import {getLogger} from "./common/logging";
 import {LogInfo} from "../core/Atomic";
 import {initServer} from "./server/index";
+import {SimpleIntervalJob, ToadScheduler} from "toad-scheduler";
+import {createHeartbeatTask} from "./tasks/heartbeat.js";
 
 
 dayjs.extend(utc)
@@ -27,6 +29,8 @@ dayjs.extend(duration);
 dayjs.extend(timezone);
 
 (async function () {
+
+const scheduler = new ToadScheduler()
 
 let output: LogInfo[] = []
 
@@ -134,6 +138,12 @@ const configDir = process.env.CONFIG_DIR || path.resolve(projectDir, `./config`)
         if (anyNotReady) {
             logger.info(`Some sources are not ready, open the dashboard to continue`);
         }
+
+        scheduler.addSimpleIntervalJob(new SimpleIntervalJob({
+            minutes: 1,
+            runImmediately: false
+        }, createHeartbeatTask(scrobbleSources, logger)));
+        logger.info('Scheduler started.');
 
     } catch (e) {
         logger.error('Exited with uncaught error');
