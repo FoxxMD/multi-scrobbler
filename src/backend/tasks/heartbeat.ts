@@ -1,8 +1,8 @@
 import {config, Logger} from "@foxxmd/winston";
-import {mergeArr} from "../utils.js";
+import {mergeArr} from "../utils";
 import {AsyncTask} from "toad-scheduler";
 import {PromisePool} from "@supercharge/promise-pool";
-import ScrobbleSources from "../sources/ScrobbleSources.js";
+import ScrobbleSources from "../sources/ScrobbleSources";
 
 export const createHeartbeatTask = (sources: ScrobbleSources, parentLogger: Logger) => {
     const logger = parentLogger.child({labels: ['Heartbeat']}, mergeArr);
