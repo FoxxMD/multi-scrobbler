@@ -1,0 +1,40 @@
+@use './playerBase.scss';
+$spacing: 1.5rem;
+$primary: #00ACC1;
+
+
+.controls {
+  display: flex;
+  justify-content: space-around;
+  align-items: center;
+  height: $spacing*2.5;
+  text-align: center;
+  background: $primary;
+
+  .button {
+    height: 100%;
+    width: $spacing*2.5;
+    border: 0;
+    border-radius: 0;
+    transition: background 250ms;
+    box-shadow: none !important;
+    background: transparent;
+    color: white;
+
+    &:hover {
+      background: lighten($primary, 4%);
+    }
+
+    &.play {
+      font-size: 1.6rem;
+    }
+
+    &.like.is-liked {
+      background: #F06292;
+    }
+
+    .icon {
+      //transition: transform 150ms;
+    }
+  }
+}
