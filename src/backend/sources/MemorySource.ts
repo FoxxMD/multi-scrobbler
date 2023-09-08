@@ -165,8 +165,8 @@ export default class MemorySource extends AbstractSource {
             }
             if(this.config.options?.logPlayerState === true) {
                 player.logSummary();
-                this.emitEvent('playerUpdate', player.getApiState());
             }
+            this.emitEvent('playerUpdate', player.getApiState());
         }
         for (const deadId of deadPlatformIds) {
             this.players.delete(deadId);
