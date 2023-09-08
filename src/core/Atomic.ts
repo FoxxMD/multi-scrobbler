@@ -11,6 +11,7 @@ export interface SourceStatusData {
     hasAuth: boolean;
     hasAuthInteraction: boolean;
     authed: boolean;
+    players: Record<string, SourcePlayerJson>
 }
 
 export interface ClientStatusData {
@@ -148,4 +149,24 @@ export interface LogOutputConfig {
 
 export interface LogInfoJson extends LogInfo {
     formattedMessage: string
+}
+
+export interface SourcePlayerObj {
+    platformId: string,
+    play: PlayObject,
+    playFirstSeenAt: string,
+    playLastUpdatedAt: string,
+    playerLastUpdatedAt: string
+    position?: number
+    listenedDuration: number
+    status: {
+        reported: string
+        calculated: string
+        stale: boolean
+        orphaned: boolean
+    }
+}
+
+export interface SourcePlayerJson extends Omit<SourcePlayerObj, 'play'> {
+    play: JsonPlayObject
 }

@@ -383,12 +383,12 @@ export default abstract class AbstractSource {
         }
     }
 
-    public emitEvent = (eventName: string, payload: object) => {
+    public emitEvent = (eventName: string, payload: object = {}) => {
         this.emitter.emit(eventName, {
-            ...payload,
             type: this.type,
             name: this.name,
-            from: 'source'
+            from: 'source',
+            data: payload,
         });
     }
 }

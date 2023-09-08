@@ -9,7 +9,7 @@ import dayjs, {Dayjs} from "dayjs";
 import { formatNumber, genGroupIdStr, playObjDataMatch, progressBar } from "../../utils";
 import {Logger} from "@foxxmd/winston";
 import { ListenProgress } from "./ListenProgress";
-import { ListenRange, PlayData, PlayObject } from "../../../core/Atomic";
+import {ListenRange, PlayData, PlayObject, SourcePlayerObj} from "../../../core/Atomic";
 import { buildTrackString } from "../../../core/StringUtils";
 
 export interface PlayerStateIntervals {
@@ -273,5 +273,23 @@ export abstract class AbstractPlayerState {
 
     logSummary() {
         this.logger.debug(this.textSummary());
+    }
+
+    getApiState(): SourcePlayerObj {
+        return {
+            platformId: this.platformIdStr,
+            play: this.getPlayedObject(),
+            playLastUpdatedAt: this.playLastUpdatedAt.toISOString(),
+            playFirstSeenAt: this.playFirstSeenAt.toISOString(),
+            playerLastUpdatedAt: this.stateLastUpdatedAt.toISOString(),
+            position: this.currentListenRange !== undefined && this.currentListenRange[1].position !== undefined ? this.currentListenRange[1].position : undefined,
+            listenedDuration: this.getListenDuration(),
+            status: {
+                reported: this.reportedStatus,
+                calculated: this.calculatedStatus,
+                stale: this.isUpdateStale(),
+                orphaned: this.isOrphaned()
+            }
+        }
     }
 }

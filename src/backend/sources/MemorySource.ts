@@ -27,7 +27,7 @@ import TupleMap from "../common/TupleMap";
 import { AbstractPlayerState, PlayerStateOptions } from "./PlayerState/AbstractPlayerState";
 import { GenericPlayerState } from "./PlayerState/GenericPlayerState";
 import {Logger} from "@foxxmd/winston";
-import { PlayObject } from "../../core/Atomic";
+import {PlayObject, SourcePlayerObj} from "../../core/Atomic";
 import { buildTrackString } from "../../core/StringUtils";
 
 export default class MemorySource extends AbstractSource {
@@ -57,6 +57,17 @@ export default class MemorySource extends AbstractSource {
     candidateRecentlyPlayed: GroupedPlays = new TupleMap<DeviceId, PlayUserId, ProgressAwarePlayObject[]>
 
     players: Map<string, AbstractPlayerState> = new Map();
+
+    playersToObject = (): Record<string, SourcePlayerObj> => {
+        if(this.players.size === 0) {
+            return {};
+        }
+        const record: Record<string, SourcePlayerObj> = {};
+        for(const [k,v] of this.players.entries()) {
+            record[k] = v.getApiState();
+        }
+        return record;
+    }
 
     getFlatCandidateRecentlyPlayed = (): PlayObject[] => {
         // TODO sort?
@@ -154,6 +165,7 @@ export default class MemorySource extends AbstractSource {
             }
             if(this.config.options?.logPlayerState === true) {
                 player.logSummary();
+                this.emitEvent('playerUpdate', player.getApiState());
             }
         }
         for (const deadId of deadPlatformIds) {

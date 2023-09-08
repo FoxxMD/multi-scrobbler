@@ -22,6 +22,7 @@ import {setupJellyfinRoutes} from "./jellyfinRoutes";
 import {setupDeezerRoutes} from "./deezerRoutes";
 import {setupAuthRoutes} from "./auth";
 import { ExpressHandler } from "../common/infrastructure/Atomic";
+import MemorySource from "../sources/MemorySource.js";
 
 let output: LogInfo[] = []
 
@@ -106,7 +107,7 @@ export const setupApi = (app: ExpressWithAsync, logger: Logger, initialLogOutput
         const session = await createSession(req, res);
         scrobbleSources.emitter.on('*', (payload: any, eventName: string) => {
             if(payload.from !== undefined) {
-                session.push({...payload.data, event: eventName}, payload.from);
+                session.push({event: eventName, ...payload}, payload.from);
             }
         });
     });
@@ -143,6 +144,7 @@ export const setupApi = (app: ExpressWithAsync, logger: Logger, initialLogOutput
                 hasAuth: requiresAuth,
                 hasAuthInteraction: requiresAuthInteraction,
                 authed,
+                players: x instanceof MemorySource ? x.playersToObject() : {}
             };
             if (!initialized) {
                 base.status = 'Not Initialized';

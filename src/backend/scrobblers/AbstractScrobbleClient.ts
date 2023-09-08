@@ -376,7 +376,7 @@ export default abstract class AbstractScrobbleClient {
 
     public emitEvent = (eventName: string, payload: object) => {
         this.emitter.emit(eventName, {
-            ...payload,
+            data: payload,
             type: this.type,
             name: this.name,
             from: 'client'
