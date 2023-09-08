@@ -1,17 +1,39 @@
 @use './playerBase.scss';
-$spacing: 1.5rem;
+$spacing: 0.5rem;
 $primary: #00ACC1;
 
 
 .player {
   color: black;
   overflow: hidden;
-  max-width: 90%;
+  //max-width: 90%;
   max-height: 90vh;
   //min-height: 487px;
-  border-radius: 5px;
+  border-radius: 2px;
   background: white;
-  box-shadow: 0 10px 20px rgba(0,0,0,0.19), 0 6px 6px rgba(0,0,0,0.23);
+  //box-shadow: 0 10px 20px rgba(0,0,0,0.19), 0 6px 6px rgba(0,0,0,0.23);
+
+  &__wrapper {
+    position: relative;
+  }
+
+  .toggle-playlist {
+    position: absolute;
+    top: $spacing/2;
+    right: $spacing/0.5;
+    border: 0;
+    outline: 0;
+    background: transparent;
+    text-shadow: rgba(black, 0.75) 0 0 5px;
+    box-shadow: none !important;
+    color: white !important;
+    z-index: 1;
+    transition: all 500ms;
+
+    [class*="is-sliding"] & {
+      opacity: 0;
+    }
+  }
 
   &__bg {
     position: fixed;
@@ -88,6 +110,7 @@ $primary: #00ACC1;
   &__body {
     text-align: center;
     padding: $spacing;
+    //position: relative;
     transition: all 250ms;
 
     [class*="is-sliding"] & {

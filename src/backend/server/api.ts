@@ -144,7 +144,7 @@ export const setupApi = (app: ExpressWithAsync, logger: Logger, initialLogOutput
                 hasAuth: requiresAuth,
                 hasAuthInteraction: requiresAuthInteraction,
                 authed,
-                players: x instanceof MemorySource ? x.playersToObject() : {}
+                players: 'players' in x ? (x as MemorySource).playersToObject() : {}
             };
             if (!initialized) {
                 base.status = 'Not Initialized';

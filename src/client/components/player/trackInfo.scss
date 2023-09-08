@@ -3,15 +3,31 @@ $primary: #00ACC1;
 
 
 .playlist {
+  color: white;
+  font-size:0.80rem;
   position: absolute;
   top: 0;
   bottom: 0;
   left: 0;
   right: 0;
-  padding: $spacing;
-  padding-right: $spacing*2;
-  overflow: auto;
-  background: #263238;
+  padding: $spacing/1.7;
+  padding-right: $spacing/1.5;
+  //overflow: auto;
+  //background: #282c34;
+
+  .playlist_body {
+    display: flex;
+    flex-wrap: wrap;
+
+    .full {
+      width: 100%;
+      flex: 100%;
+    }
+    .half {
+      width: 100%;
+      flex: 50%;
+    }
+  }
 
   &__item.media {
     align-items: center;
