@@ -275,6 +275,22 @@ export abstract class AbstractPlayerState {
         this.logger.debug(this.textSummary());
     }
 
+    getPosition() {
+        if(this.calculatedStatus === 'stopped') {
+            return undefined;
+        }
+        let lastRange: [ListenProgress, ListenProgress] | undefined;
+        if(this.currentListenRange !== undefined) {
+            lastRange = this.currentListenRange;
+        } else if(this.listenRanges.length > 0) {
+            lastRange = this.listenRanges[this.listenRanges.length - 1];
+        }
+        if(lastRange === undefined || lastRange[1] === undefined || lastRange[1].position === undefined) {
+            return undefined;
+        }
+        return lastRange[1].position;
+    }
+
     getApiState(): SourcePlayerObj {
         return {
             platformId: this.platformIdStr,
@@ -282,7 +298,7 @@ export abstract class AbstractPlayerState {
             playLastUpdatedAt: this.playLastUpdatedAt.toISOString(),
             playFirstSeenAt: this.playFirstSeenAt.toISOString(),
             playerLastUpdatedAt: this.stateLastUpdatedAt.toISOString(),
-            position: this.currentListenRange !== undefined && this.currentListenRange[1].position !== undefined ? this.currentListenRange[1].position : undefined,
+            position: this.getPosition(),
             listenedDuration: this.getListenDuration(),
             status: {
                 reported: this.reportedStatus,
