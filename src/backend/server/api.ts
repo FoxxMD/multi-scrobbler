@@ -1,6 +1,5 @@
 import {ExpressWithAsync} from "@awaitjs/express";
 import {getRoot} from "../ioc";
-import { capitalize } from "../utils";
 import {makeClientCheckMiddle, makeSourceCheckMiddle} from "./middleware";
 import AbstractSource from "../sources/AbstractSource";
 import {
@@ -22,7 +21,8 @@ import {setupJellyfinRoutes} from "./jellyfinRoutes";
 import {setupDeezerRoutes} from "./deezerRoutes";
 import {setupAuthRoutes} from "./auth";
 import { ExpressHandler } from "../common/infrastructure/Atomic";
-import MemorySource from "../sources/MemorySource.js";
+import MemorySource from "../sources/MemorySource";
+import {capitalize} from "../../core/StringUtils";
 
 let output: LogInfo[] = []
 

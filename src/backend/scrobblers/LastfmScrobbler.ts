@@ -2,7 +2,6 @@ import AbstractScrobbleClient from "./AbstractScrobbleClient";
 import dayjs from 'dayjs';
 
 import {
-    capitalize,
     playObjDataMatch,
     removeUndefinedKeys,
     setIntersection,
@@ -16,7 +15,7 @@ import {TrackScrobbleResponse, UserGetRecentTracksResponse} from "lastfm-node-cl
 import { Notifiers } from "../notifier/Notifiers";
 import {Logger} from '@foxxmd/winston';
 import { PlayObject, TrackStringOptions } from "../../core/Atomic";
-import { buildTrackString } from "../../core/StringUtils";
+import {buildTrackString, capitalize} from "../../core/StringUtils";
 import EventEmitter from "events";
 
 export default class LastfmScrobbler extends AbstractScrobbleClient {

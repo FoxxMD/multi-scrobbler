@@ -6,6 +6,8 @@ import PlayerInfo from "./PlayerInfo";
 import {FontAwesomeIcon} from "@fortawesome/react-fontawesome";
 import {faBars, faTimes} from '@fortawesome/free-solid-svg-icons'
 
+import {capitalize} from "../../../core/StringUtils";
+
 export interface PlayerProps {
     data: SourcePlayerJson
 }
@@ -30,10 +32,26 @@ const Player = (props: PlayerProps) => {
                 track = '???',
                 artists = ['???'],
                 duration = 0
-            } = {}
+            } = {},
         } = {},
-        play
+        play,
+        listenedDuration,
+        status: {
+            calculated = '???',
+            reported,
+            stale,
+            orphaned
+        }
     } = data;
+
+    let durPer = null;
+    if(duration !== undefined && duration !== null) {
+        if(listenedDuration === 0) {
+            durPer = ' (0%)';
+        } else {
+            durPer = ` (${((listenedDuration/duration) * 100).toFixed(0)}%)`;
+        }
+    }
 
     const [viewMode, setViewMode] = useState('player');
 
@@ -61,6 +79,10 @@ const Player = (props: PlayerProps) => {
                     <p className="title">{track}</p>
                     <p className="subtitle">{artists.join(' / ')}</p>
                     <PlayerTimestamp duration={duration} current={data.position || 0} />
+                    <div className="flex">
+                        <p className="stats flex-1 text-left">Status: {capitalize(calculated)}</p>
+                        <p className="stats flex-1 text-right">Listened: {listenedDuration.toFixed(0)}s{durPer}</p>
+                    </div>
                 </section>
                     <PlayerInfo data={data} isVisible={viewMode === 'playlist'} />
                 </div>

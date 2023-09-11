@@ -8,7 +8,6 @@ import {
     sleep,
     sortByOldestPlayDate,
     parseRetryAfterSecsFromObj,
-    capitalize,
     isPlayTemporallyClose,
 } from "../utils";
 import { FormatPlayObjectOptions, INITIALIZING } from "../common/infrastructure/Atomic";
@@ -22,7 +21,7 @@ import {
     MalojaScrobbleV3RequestData, MalojaScrobbleV3ResponseData, MalojaV2ScrobbleData, MalojaV3ScrobbleData
 } from "../common/vendor/maloja/interfaces";
 import { PlayObject, TrackStringOptions } from "../../core/Atomic";
-import { buildTrackString } from "../../core/StringUtils";
+import {buildTrackString, capitalize} from "../../core/StringUtils";
 import EventEmitter from "events";
 
 const feat = ["ft.", "ft", "feat.", "feat", "featuring", "Ft.", "Ft", "Feat.", "Feat", "Featuring"];

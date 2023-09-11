@@ -1,6 +1,5 @@
 import dayjs, {Dayjs} from "dayjs";
 import {
-    capitalize,
     isPlayTemporallyClose,
     mergeArr,
     playObjDataMatch,
@@ -21,7 +20,7 @@ import { ClientConfig } from "../common/infrastructure/config/client/clients";
 import { Notifiers } from "../notifier/Notifiers";
 import {FixedSizeList} from 'fixed-size-list';
 import { PlayObject, TrackStringOptions } from "../../core/Atomic";
-import { buildTrackString, truncateStringToLength } from "../../core/StringUtils";
+import {buildTrackString, capitalize, truncateStringToLength} from "../../core/StringUtils";
 import EventEmitter from "events";
 
 export default abstract class AbstractScrobbleClient {

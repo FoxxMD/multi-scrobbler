@@ -13,7 +13,11 @@ const PlayerInfo = (props: PlayerInfoProps) => {
         data,
         data: {
             play,
-        } = {}
+            status: {
+                calculated,
+                reported
+            }
+        } = {},
     } = props;
 
     let isHidden = "";
@@ -33,6 +37,7 @@ const PlayerInfo = (props: PlayerInfoProps) => {
                 <div className="full">Player Updated: <small>{data.playerLastUpdatedAt}</small></div>
                 <div className="full">Track Seen: <small>{data.playFirstSeenAt}</small></div>
                 <div className="full">Track Updated: <small>{data.playLastUpdatedAt}</small></div>
+                <div className="full">Status: <small>Calculated -&gt; {calculated.toUpperCase()} | Reported -&gt; {reported.toUpperCase()} </small></div>
             </div>
         </div>
     );

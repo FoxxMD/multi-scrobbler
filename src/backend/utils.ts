@@ -7,7 +7,8 @@ import {TimeoutError, WebapiError} from "spotify-web-api-node/src/response-error
 import Ajv, {Schema} from 'ajv';
 import {
     asPlayerStateData,
-    DEFAULT_SCROBBLE_DURATION_THRESHOLD, DELIMITERS,
+    DEFAULT_SCROBBLE_DURATION_THRESHOLD,
+    DELIMITERS,
     lowGranularitySources,
     NO_DEVICE,
     NO_USER,
@@ -23,11 +24,12 @@ import {Request} from "express";
 import pathUtil from "path";
 import {ErrorWithCause} from "pony-cause";
 import backoffStrategies from '@kenyip/backoff-strategies';
-import { ScrobbleThresholds } from "./common/infrastructure/config/source/index";
+import {ScrobbleThresholds} from "./common/infrastructure/config/source/index";
 import {replaceResultTransformer, stripIndentTransformer, TemplateTag, trimResultTransformer} from 'common-tags';
 import {Duration} from "dayjs/plugin/duration.js";
-import { ListenRange, PlayObject } from "../core/Atomic";
+import {ListenRange, PlayObject} from "../core/Atomic";
 import address from "address";
+
 dayjs.extend(utc);
 
 export async function readJson(this: any, path: any, {throwOnNotFound = true} = {}) {
@@ -177,9 +179,6 @@ const sentenceLengthWeight = (length: number) => {
     return (Math.log(length) / 0.20) - 5;
 }
 
-export const capitalize = (str: any) => {
-    return str.charAt(0).toUpperCase() + str.slice(1)
-}
 /**
  * Check if two play objects are the same by comparing non time-related data using most-to-least specific/confidence
  *
