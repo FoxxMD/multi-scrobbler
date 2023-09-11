@@ -218,7 +218,7 @@ export class MPRISSource extends MemorySource {
         if(options.display === true) {
             return deduped;
         }
-        return this.processRecentPlaysNew(deduped);
+        return this.processRecentPlays(deduped);
     }
 }
 

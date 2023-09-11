@@ -141,7 +141,7 @@ export class JRiverSource extends MemorySource {
             }
         }
 
-        return this.processRecentPlaysNew(play);
+        return this.processRecentPlays(play);
     }
 
 }

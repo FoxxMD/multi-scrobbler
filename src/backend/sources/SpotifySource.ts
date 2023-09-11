@@ -283,7 +283,7 @@ export default class SpotifySource extends MemorySource {
                 plays.push(currPlay);
             }
         }
-        return this.processRecentPlaysNew(plays);
+        return this.processRecentPlays(plays);
     }
 
     getPlayHistory = async (options: RecentlyPlayedOptions = {}) => {
