@@ -4,7 +4,6 @@ import {
     sortByOldestPlayDate,
     toProgressAwarePlayObject,
     getProgress,
-    genGroupIdStrFromPlay,
     playPassesScrobbleThreshold,
     timePassesScrobbleThreshold,
     thresholdResultSummary,
@@ -16,12 +15,12 @@ import dayjs from "dayjs";
 import {
     asPlayerStateData,
     DeviceId,
-    GroupedPlays,
+    GroupedPlays, InternalConfig,
     PlayerStateData,
     PlayPlatformId,
     PlayUserId,
     ProgressAwarePlayObject,
-    ScrobbleThresholdResult,
+    ScrobbleThresholdResult, SourceType,
 } from "../common/infrastructure/Atomic";
 import TupleMap from "../common/TupleMap";
 import { AbstractPlayerState, PlayerStateOptions } from "./PlayerState/AbstractPlayerState";
@@ -29,6 +28,10 @@ import { GenericPlayerState } from "./PlayerState/GenericPlayerState";
 import {Logger} from "@foxxmd/winston";
 import {PlayObject, SourcePlayerObj} from "../../core/Atomic";
 import { buildTrackString } from "../../core/StringUtils";
+import {SimpleIntervalJob, Task, ToadScheduler} from "toad-scheduler";
+import {SourceConfig} from "../common/infrastructure/config/source/sources";
+import {EventEmitter} from "events";
+import objectHash from 'object-hash';
 
 export default class MemorySource extends AbstractSource {
     /*
@@ -57,6 +60,43 @@ export default class MemorySource extends AbstractSource {
     candidateRecentlyPlayed: GroupedPlays = new TupleMap<DeviceId, PlayUserId, ProgressAwarePlayObject[]>
 
     players: Map<string, AbstractPlayerState> = new Map();
+    playerState: Map<string, string> = new Map();
+
+    scheduler: ToadScheduler = new ToadScheduler();
+
+    constructor(type: SourceType, name: string, config: SourceConfig, internal: InternalConfig, emitter: EventEmitter) {
+        super(type, name, config, internal, emitter);
+        this.scheduler.addSimpleIntervalJob(new SimpleIntervalJob({seconds: 15}, new Task('Player Cleanup', () => {
+            this.cleanupPlayers();
+        })));
+    }
+
+    cleanupPlayers = () => {
+        const deadPlatformIds: string[] = [];
+        for (const [key, player] of this.players.entries()) {
+            // no communication from the source was received for this player
+            const isStale = player.checkStale();
+            if (isStale && player.checkOrphaned() && player.isDead()) {
+                player.logger.debug(`Removed after being orphaned for ${dayjs.duration(player.stateIntervalOptions.orphanedInterval, 'seconds').asMinutes()} minutes`);
+                deadPlatformIds.push(player.platformIdStr);
+                this.emitEvent('playerDelete', {platformId: player.platformIdStr});
+            } else if (isStale) {
+                const state = player.getApiState();
+                // @ts-ignore
+                const stateHash = objectHash.sha1(state);
+                if(stateHash !== this.playerState.get(key)) {
+                    this.playerState.set(key, stateHash);
+                    this.emitEvent('playerUpdate', state);
+                }
+                if(this.config.options?.logPlayerState === true) {
+                    player.logSummary();
+                }
+            }
+        }
+        for (const deadId of deadPlatformIds) {
+            this.deletePlayer(deadId);
+        }
+    }
 
     playersToObject = (): Record<string, SourcePlayerObj> => {
         if(this.players.size === 0) {
@@ -78,6 +118,20 @@ export default class MemorySource extends AbstractSource {
         return new GenericPlayerState(logger, id, opts);
     }
 
+    setNewPlayer = (idStr: string, logger: Logger, id: PlayPlatformId, opts: PlayerStateOptions = {}) => {
+        this.players.set(idStr, this.getNewPlayer(this.logger, id, {
+            staleInterval: (this.config.data.interval ?? 30) * 3,
+            orphanedInterval: (this.config.data.maxInterval ?? 60) * 5,
+            ...opts
+        }));
+        this.playerState.set(idStr, '');
+    }
+
+    deletePlayer = (id: string) => {
+        this.players.delete(id);
+        this.playerState.delete(id);
+    }
+
     processRecentPlaysNew = (datas: (PlayObject | PlayerStateData)[]) => {
 
         const {
@@ -89,20 +143,15 @@ export default class MemorySource extends AbstractSource {
         const newStatefulPlays: PlayObject[] = [];
 
         // create any new players from incoming data
-        //const incomingPlatformIds: PlayPlatformId[] = [];
         for (const data of datas) {
             const id = getPlatformIdFromData(data);
             const idStr = genGroupIdStr(id);
             if (!this.players.has(idStr)) {
-                //incomingPlatformIds.push(id);
-                this.players.set(idStr, this.getNewPlayer(this.logger, id, {
-                    staleInterval: (this.config.data.interval ?? 30) * 3,
-                    orphanedInterval: (this.config.data.maxInterval ?? 60) * 5
-                }));
+                this.setNewPlayer(idStr, this.logger, id);
             }
         }
 
-        const deadPlatformIds: string[] = [];
+        //const deadPlatformIds: string[] = [];
 
         for (const [key, player] of this.players.entries()) {
 
@@ -155,21 +204,15 @@ export default class MemorySource extends AbstractSource {
                         }
                     }
                 }
-            } else {
-                // no communication from the source was received for this player
-                player.checkStale();
-                if (player.checkOrphaned() && player.isDead()) {
-                    player.logger.debug(`Removed after being orphaned for ${dayjs.duration(player.stateIntervalOptions.orphanedInterval, 'seconds').asMinutes()} minutes`);
-                    deadPlatformIds.push(player.platformIdStr);
+
+                if(this.config.options?.logPlayerState === true) {
+                    player.logSummary();
                 }
+                const apiState = player.getApiState();
+                // @ts-ignore
+                this.playerState.set(key, objectHash.sha1(apiState))
+                this.emitEvent('playerUpdate', apiState);
             }
-            if(this.config.options?.logPlayerState === true) {
-                player.logSummary();
-            }
-            this.emitEvent('playerUpdate', player.getApiState());
-        }
-        for (const deadId of deadPlatformIds) {
-            this.players.delete(deadId);
         }
 
         return newStatefulPlays;
