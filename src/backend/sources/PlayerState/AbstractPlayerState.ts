@@ -62,7 +62,7 @@ export abstract class AbstractPlayerState {
 
     checkStale() {
         const isStale = this.isUpdateStale();
-        if (isStale && this.calculatedStatus !== CALCULATED_PLAYER_STATUSES.stale) {
+        if (isStale && ![CALCULATED_PLAYER_STATUSES.stale, CALCULATED_PLAYER_STATUSES.orphaned].includes(this.calculatedStatus)) {
             this.calculatedStatus = CALCULATED_PLAYER_STATUSES.stale;
             this.logger.debug(`Stale after no Play updates for ${Math.abs(dayjs().diff(this.playLastUpdatedAt, 'seconds'))} seconds`);
             // end current listening sessions
@@ -76,7 +76,7 @@ export abstract class AbstractPlayerState {
     }
 
     isDead() {
-        return dayjs().diff(this.stateLastUpdatedAt, 'minutes') >= this.stateIntervalOptions.orphanedInterval * 2;
+        return dayjs().diff(this.stateLastUpdatedAt, 'seconds') >= this.stateIntervalOptions.orphanedInterval * 2;
     }
 
     checkOrphaned() {
