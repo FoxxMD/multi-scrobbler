@@ -53,6 +53,11 @@ const sourceSlice = createSlice({
             (state, action) => {
                 const playerState = action.payload.data as SourcePlayerJson;
                 state.entities[action.payload.id].players[playerState.platformId] = playerState;
+            }).addMatcher(
+            (action) => sourceUpdate.match(action) && action.payload.event === 'playerDelete',
+            (state, action) => {
+                const playerState = action.payload.data as {platformId: string};
+                delete state.entities[action.payload.id].players[playerState.platformId];
             }
         )
     }
