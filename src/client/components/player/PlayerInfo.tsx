@@ -1,6 +1,7 @@
 import React, {Fragment} from 'react';
 import './trackInfo.scss';
 import {SourcePlayerJson} from "../../../core/Atomic";
+import {isoToHuman} from "../../utils/index";
 
 export interface PlayerInfoProps {
     data: SourcePlayerJson
@@ -34,9 +35,9 @@ const PlayerInfo = (props: PlayerInfoProps) => {
         <div className={["playlist", isHidden, 'bg-gray-600'].join(' ')}>
             <div className="playlist_body">
                 <div className="full">Player ID: <small>{data.platformId}</small></div>
-                <div className="full">Player Updated: <small>{data.playerLastUpdatedAt}</small></div>
-                <div className="full">Track Seen: <small>{data.playFirstSeenAt}</small></div>
-                <div className="full">Track Updated: <small>{data.playLastUpdatedAt}</small></div>
+                <div className="full">Player Updated: <small>{isoToHuman(data.playerLastUpdatedAt, {includeRelative: true})}</small></div>
+                <div className="full">Track Seen: <small>{isoToHuman(data.playFirstSeenAt, {includeRelative: true})}</small></div>
+                <div className="full">Track Updated: <small>{isoToHuman(data.playLastUpdatedAt, {includeRelative: true})}</small></div>
                 <div className="full">Status: <small>Calculated -&gt; {calculated.toUpperCase()} | Reported -&gt; {reported.toUpperCase()} </small></div>
             </div>
         </div>
