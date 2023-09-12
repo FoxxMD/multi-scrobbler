@@ -28,8 +28,8 @@ export const parseLogLine = (line: string) => {
         return undefined;
     }
     return {
-        timestamp: match.groups.timestamp,
-        level: match.groups.level,
-        message: match.groups.message
+        timestamp: match[1],
+        level: match[2],
+        message: match[3]
     }
 }
