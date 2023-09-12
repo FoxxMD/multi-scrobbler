@@ -25,6 +25,7 @@ import MemorySource from "../sources/MemorySource";
 import {capitalize} from "../../core/StringUtils";
 import {source} from "common-tags";
 import AbstractScrobbleClient from "../scrobblers/AbstractScrobbleClient.js";
+import {sortByNewestPlayDate} from "../utils.js";
 
 let output: LogInfo[] = []
 
@@ -218,7 +219,7 @@ export const setupApi = (app: ExpressWithAsync, logger: Logger, initialLogOutput
 
         let result: PlayObject[] = [];
         if (client !== undefined) {
-            result = (client as AbstractScrobbleClient).getScrobbledPlays();
+            result = [...(client as AbstractScrobbleClient).getScrobbledPlays()].sort(sortByNewestPlayDate);
         }
 
         return res.json(result);
