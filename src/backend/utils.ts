@@ -748,7 +748,22 @@ export interface PlayCredits {
     primary: string
     secondary?: string[]
 }
-export const SECONDARY_ARTISTS_SECTION_REGEX = new RegExp(/^(?<primary>[^(\[]*)?(?<secondarySection>[(\[]?(?<joiner>ft\.?|feat\.?|featuring|vs\.?) (?<secondaryArtists>[^)\]]*)(?:[)\]]|\s*)$)/i);
+/**
+ * For matching the most common track/artist pattern that has a joiner
+ *
+ * Primary ft. 2nd Artist, 3rd Artist
+ * Primary (2nd Artist)
+ * Primary [featuring 2nd Artist]
+ *
+ * ____
+ *
+ *  => Primary may or may not exist
+ *    => Primary must not have an opening character ( [
+ * => Secondaries may or may not have an opening character ( [
+ *   => MUST begin with joiner ft. feat. featuring with vs.
+ *   => May have closing character ) ]
+ * */
+export const SECONDARY_ARTISTS_SECTION_REGEX = new RegExp(/^(?<primary>[^(\[]*)?(?<secondarySection>[(\[]?(?<joiner>\Wft\.?|\Wfeat\.?|featuring|\Wvs\.?) (?<secondaryArtists>[^)\]]*)(?:[)\]]|\s*)$)/i);
 // export const SECONDARY_ARTISTS_REGEX = new RegExp(//ig);
 export const parseCredits = (str: string, delimiters?: boolean | string[]): PlayCredits => {
     if(str.trim() === '') {

@@ -1,5 +1,56 @@
 [
   {
+    "data":  {
+      "track_metadata": {
+        "track_name": "Instant Crush (feat. Julian Casablancas)",
+        "artist_name": "Daft Punk",
+        "release_name": "Random Access Memories",
+        "additional_info": {
+          "duration": 338,
+          "origin_url": "https://music.youtube.com/watch?v=khnokW3Mw24",
+          "submission_client": "Web Scrobbler",
+          "music_service_name": "YouTube Music",
+          "submission_client_version": "3.1.0",
+          "recording_msid": "878c787e-5dd4-42b4-9c2b-1b53baec7e8b"
+        },
+        "mbid_mapping": {
+          "recording_mbid": "dbc0da50-4bc6-4230-9e7b-136b5dc2b31a",
+          "recording_name": "Instant Crush",
+          "release_mbid": "bbfc83ad-826f-4957-893d-a808105c828b",
+          "artists": [
+            {
+              "artist_mbid": "056e4f3e-d505-4dad-8ec1-d04f521cbb56",
+              "artist_credit_name": "Daft Punk",
+              "join_phrase": " feat. "
+            },
+            {
+              "artist_mbid": "c5ce487b-0462-444e-a184-4de0fef7e028",
+              "artist_credit_name": "Julian Casablancas",
+              "join_phrase": ""
+            }
+          ],
+          "artist_mbids": [
+            "056e4f3e-d505-4dad-8ec1-d04f521cbb56",
+            "c5ce487b-0462-444e-a184-4de0fef7e028"
+          ],
+          "caa_id": 32554171842,
+          "caa_release_mbid": "5000a285-b67e-4cfc-b54b-2b98f1810d2e"
+        }
+      },
+      "listened_at": 1694479888,
+      "recording_msid": "878c787e-5dd4-42b4-9c2b-1b53baec7e8b",
+      "user_name": "kinescou",
+      "inserted_at": 1694480058
+    },
+    "expected": {
+      "artists": [
+        "Daft Punk",
+        "Julian Casablancas"
+      ],
+      "track": "Instant Crush"
+    }
+  },
+  {
     "data": {
       "inserted_at": 1692499763,
       "listened_at": 1692499702,
