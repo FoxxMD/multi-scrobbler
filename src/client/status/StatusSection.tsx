@@ -26,7 +26,7 @@ const StatusSection = (props: PropsFromRedux) => {
 
     return (
         <Fragment>
-            <div className="grid md:grid-cols-3 gap-3">
+            <div className="grid md:grid-cols-3 gap-5 grid-flow-dense">
                 {isLoading ? <StatusCardSkeleton loading={isLoading}/> : undefined}
                 {props.sourceIds.map(x => <SourceStatusCard id={x} key={x}/>)}
             </div>

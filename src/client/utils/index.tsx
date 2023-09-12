@@ -20,3 +20,16 @@ export const buildTrackStringReactOptions: TrackStringOptions<ReactElement> = {
         }
     }
 }
+
+const LOG_LINE_REGEX = new RegExp(/(?<timestamp>\S+)\s+(?<level>\w+)\s*:\s*(?<message>.*)/);
+export const parseLogLine = (line: string) => {
+    const match = line.match(LOG_LINE_REGEX);
+    if (match === null) {
+        return undefined;
+    }
+    return {
+        timestamp: match.groups.timestamp,
+        level: match.groups.level,
+        message: match.groups.message
+    }
+}

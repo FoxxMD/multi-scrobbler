@@ -16,10 +16,10 @@ const StatusCardSkeleton = (props: PropsWithChildren<StatusCardSkeletonData>) =>
 
     return (
         <div className="shadow-md rounded my-6 bg-gray-500">
-            <div className="space-x-4 p-6 md:px-10 md:py-6 leading-6 font-semibold bg-gray-700">
+            <div className="p-3 font-semibold bg-gray-700">
                 <h3>{loading || header === undefined ? <SkeletonTitle/> : header}</h3>
             </div>
-            <div className="p-6 md:px-10">
+            <div className="p-3">
                 {loading ? <SkeletonParagraph/> : children}
             </div>
         </div>

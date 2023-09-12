@@ -6,3 +6,9 @@
     fill: white;
     display: none;
 }
+.line {
+    display: block;
+    white-space: pre-wrap;
+    font-size: 0.675rem;
+    line-height: 0.9rem;
+}
