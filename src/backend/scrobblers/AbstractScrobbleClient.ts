@@ -180,6 +180,10 @@ export default abstract class AbstractScrobbleClient {
         this.scrobbledPlayObjs = new FixedSizeList<ScrobbledPlayObject>(this.MAX_STORED_SCROBBLES, this.scrobbledPlayObjs.data.filter(x => this.timeFrameIsValid(x.play)[0])) ;
     }
 
+    getScrobbledPlays = () => {
+        return this.scrobbledPlayObjs.data.map(x => x.scrobble);
+    }
+
     cleanSourceSearchTitle = (playObj: PlayObject) => {
         const {
             data: {

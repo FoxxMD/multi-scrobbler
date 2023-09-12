@@ -4,6 +4,7 @@ import SkeletonParagraph from "../skeleton/SkeletonParagraph";
 import {clientAdapter} from "../../status/ducks";
 import {RootState} from "../../store";
 import {connect, ConnectedProps} from "react-redux";
+import {Link} from "react-router-dom";
 
 export interface ClientStatusCardData extends StatusCardSkeletonData, PropsFromRedux {
     loading?: boolean
@@ -27,14 +28,18 @@ const ClientStatusCard = (props: ClientStatusCardData) => {
         const {
             hasAuth,
             name,
-            type
+            type,
+            authed,
+            initialized
         } = data;
         if(type === 'lastfm' || type === 'listenbrainz')
         header = `${display} (Client)`;
 
+        const scrobbled = initialized && (!hasAuth || (hasAuth && authed)) ? <Link to={`/scrobbled?type=${type}&name=${name}`}>Tracks Scrobbled</Link> : <span>Tracks Scrobbled</span>
+
         // TODO links
         body = (<Fragment>
-            <div>Tracks Scrobbled: {data.tracksDiscovered}</div>
+            <div>{scrobbled}: {data.tracksDiscovered}</div>
             {hasAuth ? <a target="_blank" href={`/api/source/auth?name=${name}&type=${type}`}>(Re)authenticate or initialize</a> : null}
         </Fragment>);
     }

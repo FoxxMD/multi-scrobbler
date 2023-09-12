@@ -21,6 +21,9 @@ export interface ClientStatusData {
     tracksDiscovered: number;
     name: string;
     hasAuth: boolean;
+    hasAuthInteraction: boolean;
+    authed: boolean;
+    initialized: boolean;
 }
 
 export type PlayObjectIncludeTypes = 'time' | 'artist' | 'track' | 'timeFromNow' | 'trackId';
