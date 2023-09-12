@@ -53,7 +53,7 @@ const SourceStatusCard = (props: SourceStatusCardData) => {
         // TODO links
         body = (<div className="statusCardBody">
             {platformIds.map(x => <Player key={x} data={players[x]}/>)}
-            <div>Tracks Discovered (since app started): {tracksDiscovered}</div>
+            <div>Tracks Discovered: {tracksDiscovered}</div>
             {canPoll && (!hasAuth || authed) ? <div><Link to={`/recent?type=${type}&name=${name}`}>See recently played tracks returned by API</Link></div> : null}
             {canPoll && hasAuthInteraction ? <a target="_blank" href={`/api/source/auth?name=${name}&type=${type}`}>(Re)authenticate and (re)start polling</a> : null}
             {canPoll && (!hasAuth || authed) ? <div onClick={poll} className="cursor-pointer underline">Restart Polling</div> : null}

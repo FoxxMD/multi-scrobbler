@@ -34,7 +34,7 @@ const ClientStatusCard = (props: ClientStatusCardData) => {
 
         // TODO links
         body = (<Fragment>
-            <div>Tracks Scrobbled (since app started): {data.tracksDiscovered}</div>
+            <div>Tracks Scrobbled: {data.tracksDiscovered}</div>
             {hasAuth ? <a target="_blank" href={`/api/source/auth?name=${name}&type=${type}`}>(Re)authenticate or initialize</a> : null}
         </Fragment>);
     }
