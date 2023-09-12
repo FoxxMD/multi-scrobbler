@@ -69,7 +69,6 @@ const Player = (props: PlayerProps) => {
     }, [viewMode, setViewMode]);
 
     return (
-        <div>
             <article className={["player", "mb-2"].join(' ')}>
                 <div className="player__wrapper">
                     <button className="button toggle-playlist" onClick={toggleViewMode}>
@@ -87,7 +86,6 @@ const Player = (props: PlayerProps) => {
                     <PlayerInfo data={data} isVisible={viewMode === 'playlist'} />
                 </div>
             </article>
-        </div>
     );
 }
 
