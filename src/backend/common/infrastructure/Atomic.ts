@@ -147,7 +147,21 @@ export const asLogOptions = (obj: LogConfig = {}): obj is LogOptions => {
 // https://stackoverflow.com/questions/40510611/typescript-interface-require-one-of-two-properties-to-exist#comment116238286_49725198
 export type RequireAtLeastOne<T, R extends keyof T = keyof T> = Omit<T, R> & {   [ P in R ] : Required<Pick<T, P>> & Partial<Omit<T, P>> }[R];
 
-export const DEFAULT_SCROBBLE_DURATION_THRESHOLD: number = 30;
+/**
+ * https://www.last.fm/api/scrobbling (When is a scrobble a scrobble?)
+ * https://github.com/krateng/maloja/blob/master/API.md#scrobbling-guideline
+ * */
+export const DEFAULT_SCROBBLE_DURATION_THRESHOLD: number = 240;
+/**
+ * https://www.last.fm/api/scrobbling (When is a scrobble a scrobble?)
+ * https://github.com/krateng/maloja/blob/master/API.md#scrobbling-guideline
+ * */
+export const DEFAULT_SCROBBLE_PERCENT_THRESHOLD: number = 50;
+
+export const DEFAULT_POLLING_INTERVAL: number = 10;
+export const DEFAULT_POLLING_MAX_INTERVAL = 30;
+
+export const DEFAULT_RETRY_MULTIPLIER: number = 1.5;
 
 export interface ScrobbleThresholdResult {
     passes: boolean

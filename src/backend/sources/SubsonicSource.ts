@@ -5,7 +5,7 @@ import isSameOrAfter from "dayjs/plugin/isSameOrAfter.js";
 import { parseRetryAfterSecsFromObj, removeDuplicates, sleep } from "../utils";
 import MemorySource from "./MemorySource";
 import { SubSonicSourceConfig } from "../common/infrastructure/config/source/subsonic";
-import { FormatPlayObjectOptions, InternalConfig } from "../common/infrastructure/Atomic";
+import {DEFAULT_RETRY_MULTIPLIER, FormatPlayObjectOptions, InternalConfig} from "../common/infrastructure/Atomic";
 import { RecentlyPlayedOptions } from "./AbstractSource";
 import EventEmitter from "events";
 import { PlayObject } from "../../core/Atomic";
@@ -24,12 +24,10 @@ export class SubsonicSource extends MemorySource {
         // default to quick interval so we can get a decently accurate nowPlaying
         const {
             data: {
-                interval = 10,
-                maxInterval = 30,
                 ...restData
             } = {}
         } = config;
-        const subsonicConfig = {...config, data: {...restData, internal, maxInterval}};
+        const subsonicConfig = {...config, data: {...restData}};
         super('subsonic', name, subsonicConfig, internal,emitter);
 
         const {data: {user, password, url} = {}} = this.config;
@@ -84,7 +82,7 @@ export class SubsonicSource extends MemorySource {
             user,
             password,
             maxRequestRetries = 1,
-            retryMultiplier = 1.5
+            retryMultiplier = DEFAULT_RETRY_MULTIPLIER
         } = this.config.data;
 
 
@@ -194,6 +192,6 @@ export class SubsonicSource extends MemorySource {
         } = resp;
         // sometimes subsonic sources will return the same track as being played twice on the same player, need to remove this so we don't duplicate plays
         const deduped = removeDuplicates(entry.map(SubsonicSource.formatPlayObj));
-        return this.processRecentPlaysNew(deduped);
+        return this.processRecentPlays(deduped);
     }
 }

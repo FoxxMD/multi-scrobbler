@@ -1,0 +1,10 @@
+$spacing: 1.5rem;
+$primary: #00ACC1;
+
+.button {
+  &:active {
+    > .icon {
+      transform: scale(0.85);
+    }
+  }
+}

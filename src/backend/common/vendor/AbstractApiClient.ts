@@ -1,8 +1,9 @@
-import { capitalize, mergeArr } from "../../utils";
+import { mergeArr } from "../../utils";
 import {Logger} from '@foxxmd/winston';
 import { FormatPlayObjectOptions } from "../infrastructure/Atomic";
 import winston from '@foxxmd/winston';
 import { PlayObject } from "../../../core/Atomic";
+import {capitalize} from "../../../core/StringUtils";
 
 export default abstract class AbstractApiClient {
     name: string;

@@ -350,7 +350,7 @@ export default class JellyfinSource extends MemorySource {
             scrobbleOpts.checkAll = true;
 
         } else {
-            newPlays = this.processRecentPlaysNew([playObj]);
+            newPlays = this.processRecentPlays([playObj]);
         }
 
         if(newPlays.length > 0) {

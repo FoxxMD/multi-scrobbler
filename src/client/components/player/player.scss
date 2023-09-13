@@ -1,0 +1,140 @@
+@use './playerBase.scss';
+$spacing: 0.5rem;
+$primary: #00ACC1;
+
+
+.player {
+  color: black;
+  overflow: hidden;
+  //max-width: 90%;
+  max-height: 90vh;
+  //min-height: 487px;
+  border-radius: 2px;
+  background: white;
+  //box-shadow: 0 10px 20px rgba(0,0,0,0.19), 0 6px 6px rgba(0,0,0,0.23);
+
+  &__wrapper {
+    position: relative;
+  }
+
+  .toggle-playlist {
+    position: absolute;
+    top: $spacing/2;
+    right: $spacing/0.5;
+    border: 0;
+    outline: 0;
+    background: transparent;
+    text-shadow: rgba(black, 0.75) 0 0 5px;
+    box-shadow: none !important;
+    color: white !important;
+    z-index: 1;
+    transition: all 500ms;
+
+    [class*="is-sliding"] & {
+      opacity: 0;
+    }
+  }
+
+  &__bg {
+    position: fixed;
+    top: -40px;
+    right: -40px;
+    bottom: -40px;
+    left: -40px;
+    background-size: cover;
+    background-position: center;
+    filter: blur(20px);
+    z-index: -2;
+
+    &:after {
+      content: "";
+      position: absolute;
+      top: -40px;
+      right: -40px;
+      bottom: -40px;
+      left: -40px;
+      background: rgba(#263238, 0.8);
+      transition: background 1s;
+
+      [class*="is-sliding"] & {
+        background: rgba(#263238, 1);
+      }
+    }
+
+    &.prev,
+    &.next {
+      opacity: 0;
+      z-index: -1;
+    }
+  }
+
+  &__head {
+    padding: $spacing/2 $spacing;
+  }
+
+  &__art {
+    position: relative;
+    padding-bottom: 100%;
+    width: 100%;
+    border-bottom: 1px solid #ECEFF1;
+    background: darken(#263238, 10%);
+
+    .is-sliding-next & {
+      transform: translate(-100%, 0);
+      transition: transform 500ms ease-in-out;
+    }
+
+    .is-sliding-prev & {
+      transform: translate(100%, 0);
+      transition: transform 500ms ease-in-out;
+    }
+
+    > img {
+      position: absolute;
+      top: 0;
+      left: 0;
+      display: block;
+      width: 100%;
+      margin: 0 auto;
+
+      &.prev {
+        left: -100%;
+      }
+
+      &.next {
+        left: 100%;
+      }
+    }
+  }
+
+  &__body {
+    text-align: center;
+    padding: $spacing;
+    //position: relative;
+    transition: all 250ms;
+
+    [class*="is-sliding"] & {
+      opacity: 0;
+      transform: scale(0.95);
+    }
+
+    .stats {
+      font-size: 0.75rem;
+    }
+
+    .title {
+      position: relative;
+      width: 100%;
+      font-size: 1.2rem;
+      white-space: nowrap;
+    }
+
+    .subtitle {
+      font-size: 0.75rem;
+      color: #90A4AE;
+      padding-top: $spacing/4;
+      margin-bottom: $spacing;
+      text-transform: uppercase;
+    }
+  }
+}

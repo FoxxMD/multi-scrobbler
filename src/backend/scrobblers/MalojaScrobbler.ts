@@ -8,10 +8,9 @@ import {
     sleep,
     sortByOldestPlayDate,
     parseRetryAfterSecsFromObj,
-    capitalize,
     isPlayTemporallyClose,
 } from "../utils";
-import { FormatPlayObjectOptions, INITIALIZING } from "../common/infrastructure/Atomic";
+import {DEFAULT_RETRY_MULTIPLIER, FormatPlayObjectOptions, INITIALIZING} from "../common/infrastructure/Atomic";
 import { MalojaClientConfig } from "../common/infrastructure/config/client/maloja";
 import { Notifiers } from "../notifier/Notifiers";
 import {Logger} from '@foxxmd/winston';
@@ -22,8 +21,9 @@ import {
     MalojaScrobbleV3RequestData, MalojaScrobbleV3ResponseData, MalojaV2ScrobbleData, MalojaV3ScrobbleData
 } from "../common/vendor/maloja/interfaces";
 import { PlayObject, TrackStringOptions } from "../../core/Atomic";
-import { buildTrackString } from "../../core/StringUtils";
+import {buildTrackString, capitalize} from "../../core/StringUtils";
 import EventEmitter from "events";
+import normalizeUrl from "normalize-url";
 
 const feat = ["ft.", "ft", "feat.", "feat", "featuring", "Ft.", "Ft", "Feat.", "Feat", "Featuring"];
 
@@ -32,6 +32,7 @@ export default class MalojaScrobbler extends AbstractScrobbleClient {
     requiresAuth = true;
     serverIsHealthy = false;
     serverVersion: any;
+    webUrl: string;
 
     declare config: MalojaClientConfig
 
@@ -44,6 +45,7 @@ export default class MalojaScrobbler extends AbstractScrobbleClient {
         if (url === undefined) {
             throw new Error("Missing 'url' for Maloja config");
         }
+        this.webUrl = normalizeUrl(url);
     }
 
     static formatPlayObj(obj: MalojaScrobbleData, options: FormatPlayObjectOptions = {}): PlayObject {
@@ -53,7 +55,7 @@ export default class MalojaScrobbler extends AbstractScrobbleClient {
             duration,
             time;
 
-        const {serverVersion} = options;
+        const {serverVersion, url} = options;
 
         if(serverVersion === undefined || compareVersions(serverVersion, '3.0.0') >= 0) {
             // scrobble data structure changed for v3
@@ -107,6 +109,7 @@ export default class MalojaScrobbler extends AbstractScrobbleClient {
             const aStrings = aString.split(',');
             return [...acc, ...aStrings];
         }, []);
+        const urlParams = new URLSearchParams([['artist', artists[0]], ['title', title]]);
         return {
             data: {
                 artists: [...new Set(artistStrings)] as string[],
@@ -117,16 +120,19 @@ export default class MalojaScrobbler extends AbstractScrobbleClient {
             },
             meta: {
                 source: 'Maloja',
+                url: {
+                    web: `${url}/track?${urlParams.toString()}`
+                }
             }
         }
     }
 
-    formatPlayObj = (obj: any, options: FormatPlayObjectOptions = {}) => MalojaScrobbler.formatPlayObj(obj, {serverVersion: this.serverVersion});
+    formatPlayObj = (obj: any, options: FormatPlayObjectOptions = {}) => MalojaScrobbler.formatPlayObj(obj, {serverVersion: this.serverVersion, url: this.webUrl});
 
     callApi = async (req: any, retries = 0) => {
         const {
             maxRequestRetries = 1,
-            retryMultiplier = 1.5
+            retryMultiplier = DEFAULT_RETRY_MULTIPLIER
         } = this.config.data;
 
         try {

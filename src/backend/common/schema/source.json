@@ -199,19 +199,19 @@
         "JRiverData": {
             "properties": {
                 "interval": {
-                    "default": 30,
+                    "default": 10,
                     "description": "How long to wait before polling the source API for new tracks (in seconds)",
                     "examples": [
-                        30
+                        10
                     ],
                     "title": "interval",
                     "type": "number"
                 },
                 "maxInterval": {
-                    "default": 60,
+                    "default": 30,
                     "description": "When there has been no new activity from the Source API multi-scrobbler will gradually increase the wait time between polling up to this value (in seconds)",
                     "examples": [
-                        60
+                        30
                     ],
                     "title": "maxInterval",
                     "type": "number"
@@ -461,19 +461,19 @@
         "KodiData": {
             "properties": {
                 "interval": {
-                    "default": 30,
+                    "default": 10,
                     "description": "How long to wait before polling the source API for new tracks (in seconds)",
                     "examples": [
-                        30
+                        10
                     ],
                     "title": "interval",
                     "type": "number"
                 },
                 "maxInterval": {
-                    "default": 60,
+                    "default": 30,
                     "description": "When there has been no new activity from the Source API multi-scrobbler will gradually increase the wait time between polling up to this value (in seconds)",
                     "examples": [
-                        60
+                        30
                     ],
                     "title": "maxInterval",
                     "type": "number"
@@ -1239,16 +1239,20 @@
         "ScrobbleThresholds": {
             "properties": {
                 "duration": {
-                    "default": 30,
-                    "description": "The number of seconds before a track should be considered scrobbled.",
+                    "default": 240,
+                    "description": "The number of seconds a track has been listened to before it should be considered scrobbled.\n\nSet to null to disable.",
                     "examples": [
-                        30
+                        240
                     ],
                     "title": "duration",
                     "type": "number"
                 },
                 "percent": {
-                    "description": "The percentage of a track that should have been seen played before it should be scrobbled. Only used if the Source provides information about how long the track is.\n\nNOTE: This should be used with care when the Source is a \"polling\" type (has an 'interval' property). If the track is short and the interval is too high MS may ignore the track if percentage is high because it had not \"seen\" the track for long enough from first discovery, even if you have been playing the track for longer.",
+                    "default": 50,
+                    "description": "The percentage (as an integer) of a track that should have been seen played before it should be scrobbled. Only used if the Source provides information about how long the track is.\n\nSet to null to disable.\n\nNOTE: This should be used with care when the Source is a \"polling\" type (has an 'interval' property). If the track is short and the interval is too high MS may ignore the track if percentage is high because it had not \"seen\" the track for long enough from first discovery, even if you have been playing the track for longer.",
+                    "examples": [
+                        50
+                    ],
                     "title": "percent",
                     "type": "number"
                 }
@@ -1311,19 +1315,19 @@
                     "type": "string"
                 },
                 "interval": {
-                    "default": 30,
-                    "description": "How long to wait before polling the source API for new tracks (in seconds)\n\nIt is unlikely you should need to change this unless you scrobble many very short tracks often\n\nReading:\n* https://developer.spotify.com/documentation/web-api/guides/rate-limits/\n* https://medium.com/mendix/limiting-your-amount-of-calls-in-mendix-most-of-the-time-rest-835dde55b10e\n  * The rate limit is ~180 req/min",
+                    "default": 10,
+                    "description": "How long to wait before polling the source API for new tracks (in seconds)\n\nIt is unlikely you should need to change this unless you scrobble many very short tracks often\n\nReading:\n* https://developer.spotify.com/documentation/web-api/guides/rate-limits/\n* https://medium.com/mendix/limiting-your-amount-of-calls-in-mendix-most-of-the-time-rest-835dde55b10e\n  * Rate limit may ~180 req/min\n* https://community.spotify.com/t5/Spotify-for-Developers/Web-API-ratelimit/m-p/5503150/highlight/true#M7930\n  * Informally indicated as 20 req/sec? Probably for burstiness",
                     "examples": [
-                        30
+                        10
                     ],
                     "title": "interval",
                     "type": "number"
                 },
                 "maxInterval": {
-                    "default": 60,
+                    "default": 30,
                     "description": "When there has been no new activity from the Source API multi-scrobbler will gradually increase the wait time between polling up to this value (in seconds)",
                     "examples": [
-                        60
+                        30
                     ],
                     "title": "maxInterval",
                     "type": "number"
@@ -1556,19 +1560,19 @@
                     "type": "string"
                 },
                 "interval": {
-                    "default": 30,
+                    "default": 10,
                     "description": "How long to wait before polling the source API for new tracks (in seconds)",
                     "examples": [
-                        30
+                        10
                     ],
                     "title": "interval",
                     "type": "number"
                 },
                 "maxInterval": {
-                    "default": 60,
+                    "default": 30,
                     "description": "When there has been no new activity from the Source API multi-scrobbler will gradually increase the wait time between polling up to this value (in seconds)",
                     "examples": [
-                        60
+                        30
                     ],
                     "title": "maxInterval",
                     "type": "number"

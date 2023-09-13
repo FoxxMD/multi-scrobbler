@@ -1,0 +1,78 @@
+$spacing: 1.5rem;
+$primary: #00ACC1;
+
+
+.playlist {
+  color: white;
+  font-size:0.80rem;
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  padding: $spacing/1.7;
+  padding-right: $spacing/1.5;
+  //overflow: auto;
+  //background: #282c34;
+
+  .playlist_body {
+    display: flex;
+    flex-wrap: wrap;
+
+    .full {
+      width: 100%;
+      flex: 100%;
+    }
+    .half {
+      width: 100%;
+      flex: 50%;
+    }
+  }
+
+  &__item.media {
+    align-items: center;
+    border-top: 2px solid #37474F;
+
+    &:first-child {
+      border-top: 0;
+    }
+
+    .title,
+    .subtitle {
+      white-space: nowrap;
+      max-width: 100%;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .title {
+      font-size: 0.85rem;
+      color: #B0BEC5;
+    }
+
+    .subtitle {
+      margin-top: -$spacing/2;
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      color: #607D8B
+    }
+  }
+}
+
+.toggle-playlist {
+  position: absolute;
+  top: $spacing/2;
+  right: $spacing/2;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  text-shadow: rgba(black, 0.75) 0 0 5px;
+  box-shadow: none !important;
+  color: white !important;
+  z-index: 1;
+  transition: all 500ms;
+
+  [class*="is-sliding"] & {
+    opacity: 0;
+  }
+}

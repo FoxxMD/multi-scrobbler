@@ -1,6 +1,5 @@
 import dayjs, {Dayjs} from "dayjs";
 import {
-    capitalize,
     isPlayTemporallyClose,
     mergeArr,
     playObjDataMatch,
@@ -21,7 +20,7 @@ import { ClientConfig } from "../common/infrastructure/config/client/clients";
 import { Notifiers } from "../notifier/Notifiers";
 import {FixedSizeList} from 'fixed-size-list';
 import { PlayObject, TrackStringOptions } from "../../core/Atomic";
-import { buildTrackString, truncateStringToLength } from "../../core/StringUtils";
+import {buildTrackString, capitalize, truncateStringToLength} from "../../core/StringUtils";
 import EventEmitter from "events";
 
 export default abstract class AbstractScrobbleClient {
@@ -179,6 +178,10 @@ export default abstract class AbstractScrobbleClient {
 
     filterScrobbledTracks = () => {
         this.scrobbledPlayObjs = new FixedSizeList<ScrobbledPlayObject>(this.MAX_STORED_SCROBBLES, this.scrobbledPlayObjs.data.filter(x => this.timeFrameIsValid(x.play)[0])) ;
+    }
+
+    getScrobbledPlays = () => {
+        return this.scrobbledPlayObjs.data.map(x => x.scrobble);
     }
 
     cleanSourceSearchTitle = (playObj: PlayObject) => {
@@ -376,7 +379,7 @@ export default abstract class AbstractScrobbleClient {
 
     public emitEvent = (eventName: string, payload: object) => {
         this.emitter.emit(eventName, {
-            ...payload,
+            data: payload,
             type: this.type,
             name: this.name,
             from: 'client'

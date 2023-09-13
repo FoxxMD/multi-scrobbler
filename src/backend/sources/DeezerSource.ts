@@ -10,7 +10,7 @@ import {Strategy as DeezerStrategy} from 'passport-deezer';
 import AbstractSource, { RecentlyPlayedOptions } from "./AbstractSource";
 import dayjs from "dayjs";
 import { DeezerSourceConfig } from "../common/infrastructure/config/source/deezer";
-import { FormatPlayObjectOptions, InternalConfig } from "../common/infrastructure/Atomic";
+import {DEFAULT_RETRY_MULTIPLIER, FormatPlayObjectOptions, InternalConfig} from "../common/infrastructure/Atomic";
 import EventEmitter from "events";
 import { PlayObject } from "../../core/Atomic";
 
@@ -116,7 +116,7 @@ export default class DeezerSource extends AbstractSource {
     callApi = async (req: any, retries = 0) => {
         const {
             maxRequestRetries = 1,
-            retryMultiplier = 1.5
+            retryMultiplier = DEFAULT_RETRY_MULTIPLIER
         } = this.config.data;
 
         req.query({

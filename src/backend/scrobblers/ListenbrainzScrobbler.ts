@@ -2,7 +2,6 @@ import dayjs from 'dayjs';
 
 import AbstractScrobbleClient from "./AbstractScrobbleClient";
 import {
-    capitalize,
     playObjDataMatch,
     removeUndefinedKeys,
     setIntersection,
@@ -16,7 +15,7 @@ import {Logger} from '@foxxmd/winston';
 import { ListenBrainzClientConfig } from "../common/infrastructure/config/client/listenbrainz";
 import { ListenbrainzApiClient } from "../common/vendor/ListenbrainzApiClient";
 import { PlayObject, TrackStringOptions } from "../../core/Atomic";
-import { buildTrackString } from "../../core/StringUtils";
+import {buildTrackString, capitalize} from "../../core/StringUtils";
 import EventEmitter from "events";
 
 export default class ListenbrainzScrobbler extends AbstractScrobbleClient {

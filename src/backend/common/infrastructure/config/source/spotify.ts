@@ -29,10 +29,12 @@ export interface SpotifySourceData extends CommonSourceData, PollingOptions {
      * Reading:
      * * https://developer.spotify.com/documentation/web-api/guides/rate-limits/
      * * https://medium.com/mendix/limiting-your-amount-of-calls-in-mendix-most-of-the-time-rest-835dde55b10e
-     *   * The rate limit is ~180 req/min
+     *   * Rate limit may ~180 req/min
+     * * https://community.spotify.com/t5/Spotify-for-Developers/Web-API-ratelimit/m-p/5503150/highlight/true#M7930
+     *   * Informally indicated as 20 req/sec? Probably for burstiness
      *
-     * @default 30
-     * @examples [30]
+     * @default 10
+     * @examples [10]
      * */
     interval?: number
 }

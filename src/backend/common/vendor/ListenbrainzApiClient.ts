@@ -1,7 +1,7 @@
 import AbstractApiClient from "./AbstractApiClient";
 import request, {Request} from 'superagent';
 import { ListenBrainzClientData } from "../infrastructure/config/client/listenbrainz";
-import { DELIMITERS, FormatPlayObjectOptions } from "../infrastructure/Atomic";
+import {DEFAULT_RETRY_MULTIPLIER, DELIMITERS, FormatPlayObjectOptions} from "../infrastructure/Atomic";
 import dayjs from "dayjs";
 import { stringSameness } from '@foxxmd/string-sameness';
 import {
@@ -130,7 +130,7 @@ export class ListenbrainzApiClient extends AbstractApiClient {
     callApi = async <T>(req: Request, retries = 0): Promise<T> => {
         const {
             maxRequestRetries = 2,
-            retryMultiplier = 1.5
+            retryMultiplier = DEFAULT_RETRY_MULTIPLIER
         } = this.config;
 
         try {

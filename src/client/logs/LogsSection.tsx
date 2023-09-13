@@ -60,7 +60,7 @@ const LogsSection = (props: PropsFromRedux) => {
     useEventSourceListener(eventSource, ['messsage', 'stream'], evt => {
         const data = JSON.parse(evt.data);
         // @ts-ignore
-        list.add({message: data.message, id: evt.lastEventId});
+        list.add({message: data.message, id: evt.lastEventId, level: data.level});
         setLogList(Array.from(list.data));
         //console.log(evt);
     }, [setLogList]);
@@ -69,7 +69,7 @@ const LogsSection = (props: PropsFromRedux) => {
     return (
         <div className="grid ">
             <div className="shadow-md rounded my-6 bg-gray-500 text-white">
-                <div className="space-x-4 p-6 md:px-10 md:py-6 leading-6 font-semibold bg-gray-700 text-white">
+                <div className="p-3 font-semibold bg-gray-700 text-white">
                     <h2>Log (Most Recent)
                         {/*https://codepen.io/nikhil8krishnan/pen/rVoXJa*/}
                         <svg className="loading connected" version="1.1" id="L9" xmlns="http://www.w3.org/2000/svg"
@@ -90,13 +90,13 @@ const LogsSection = (props: PropsFromRedux) => {
                         </svg>
                     </h2>
                 </div>
-                <div className="p-6 md:px-10 md:py-6">
+                <div className="p-6">
                     <div>Level : <LogLevelButton name="debug" active={logLevel === 'debug'} onClick={fetchLevel}/> |
                         <LogLevelButton name="verbose" active={logLevel === 'verbose'} onClick={fetchLevel}/> |
                         <LogLevelButton name="info" active={logLevel === 'info'} onClick={fetchLevel}/>
                     </div>
                     <br/>
-                    <div className="logs">
+                    <div className="logs font-mono">
                         {
                             logList.map(x => <LogLine key={x.id} level={x.level} message={x.message}/>)
                         }

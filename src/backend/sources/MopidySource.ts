@@ -39,11 +39,9 @@ export class MopidySource extends MemorySource {
             albumBlacklist = ['Soundcloud'],
             uriWhitelist = [],
             uriBlacklist = [],
-            interval = 10,
-            maxInterval = 30,
             ...rest
         } = data;
-        super('mopidy', name, {...config, data: {interval, maxInterval, ...rest}}, internal, emitter);
+        super('mopidy', name, {...config, data: {...rest}}, internal, emitter);
 
         this.albumBlacklist = albumBlacklist.map(x => x.toLocaleLowerCase());
         this.uriWhitelist = uriWhitelist.map(x => x.toLocaleLowerCase());
@@ -209,7 +207,7 @@ export class MopidySource extends MemorySource {
             play
         }
 
-        return this.processRecentPlaysNew([playerState]);
+        return this.processRecentPlays([playerState]);
     }
 
 }

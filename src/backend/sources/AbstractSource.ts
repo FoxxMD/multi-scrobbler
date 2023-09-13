@@ -1,6 +1,5 @@
 import dayjs, {Dayjs} from "dayjs";
 import {
-    capitalize,
     isPlayTemporallyClose,
     genGroupId,
     genGroupIdStrFromPlay,
@@ -12,6 +11,7 @@ import {
     sortByOldestPlayDate,
 } from "../utils";
 import {
+    DEFAULT_POLLING_INTERVAL, DEFAULT_POLLING_MAX_INTERVAL, DEFAULT_RETRY_MULTIPLIER,
     DeviceId,
     GroupedFixedPlays,
     GroupedPlays,
@@ -30,7 +30,7 @@ import {EventEmitter} from "events";
 import {FixedSizeList} from "fixed-size-list";
 import TupleMap from "../common/TupleMap";
 import { PlayObject } from "../../core/Atomic";
-import { buildTrackString } from "../../core/StringUtils";
+import {buildTrackString, capitalize} from "../../core/StringUtils";
 
 export interface RecentlyPlayedOptions {
     limit?: number
@@ -237,7 +237,7 @@ export default abstract class AbstractSource {
         const {
             data: {
                 maxPollRetries = 5,
-                retryMultiplier = 1,
+                retryMultiplier = DEFAULT_RETRY_MULTIPLIER,
             } = {},
         } = this.config;
 
@@ -308,7 +308,7 @@ export default abstract class AbstractSource {
         let checkCount = 0;
         let checksOverThreshold = 0;
 
-        const {interval = 30, checkActiveFor = 300, maxInterval = 60} = this.config.data;
+        const {interval = DEFAULT_POLLING_INTERVAL, checkActiveFor = 300, maxInterval = DEFAULT_POLLING_MAX_INTERVAL} = this.config.data;
         const maxBackoff = maxInterval - interval;
         let sleepTime = interval;
 
@@ -383,12 +383,12 @@ export default abstract class AbstractSource {
         }
     }
 
-    public emitEvent = (eventName: string, payload: object) => {
+    public emitEvent = (eventName: string, payload: object = {}) => {
         this.emitter.emit(eventName, {
-            ...payload,
             type: this.type,
             name: this.name,
-            from: 'source'
+            from: 'source',
+            data: payload,
         });
     }
 }

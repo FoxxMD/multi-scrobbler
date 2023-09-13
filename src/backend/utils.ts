@@ -7,7 +7,8 @@ import {TimeoutError, WebapiError} from "spotify-web-api-node/src/response-error
 import Ajv, {Schema} from 'ajv';
 import {
     asPlayerStateData,
-    DEFAULT_SCROBBLE_DURATION_THRESHOLD, DELIMITERS,
+    DEFAULT_SCROBBLE_DURATION_THRESHOLD, DEFAULT_SCROBBLE_PERCENT_THRESHOLD,
+    DELIMITERS,
     lowGranularitySources,
     NO_DEVICE,
     NO_USER,
@@ -23,11 +24,12 @@ import {Request} from "express";
 import pathUtil from "path";
 import {ErrorWithCause} from "pony-cause";
 import backoffStrategies from '@kenyip/backoff-strategies';
-import { ScrobbleThresholds } from "./common/infrastructure/config/source/index";
+import {ScrobbleThresholds} from "./common/infrastructure/config/source/index";
 import {replaceResultTransformer, stripIndentTransformer, TemplateTag, trimResultTransformer} from 'common-tags';
 import {Duration} from "dayjs/plugin/duration.js";
-import { ListenRange, PlayObject } from "../core/Atomic";
+import {ListenRange, PlayObject} from "../core/Atomic";
 import address from "address";
+
 dayjs.extend(utc);
 
 export async function readJson(this: any, path: any, {throwOnNotFound = true} = {}) {
@@ -177,9 +179,6 @@ const sentenceLengthWeight = (length: number) => {
     return (Math.log(length) / 0.20) - 5;
 }
 
-export const capitalize = (str: any) => {
-    return str.charAt(0).toUpperCase() + str.slice(1)
-}
 /**
  * Check if two play objects are the same by comparing non time-related data using most-to-least specific/confidence
  *
@@ -623,15 +622,16 @@ export const playPassesScrobbleThreshold = (play: PlayObject, thresholds: Scrobb
 
 export const timePassesScrobbleThreshold = (thresholds: ScrobbleThresholds, secondsTracked: number, playDuration?: number): ScrobbleThresholdResult => {
     let durationPasses = undefined,
-        durationThreshold = (thresholds.duration ?? DEFAULT_SCROBBLE_DURATION_THRESHOLD),
+        durationThreshold: number | null = thresholds.duration ?? DEFAULT_SCROBBLE_DURATION_THRESHOLD,
         percentPasses = undefined,
-        percent: number | undefined = undefined;
+        percentThreshold: number | null = thresholds.percent ?? DEFAULT_SCROBBLE_PERCENT_THRESHOLD,
+        percent: number | undefined;
 
-    if (thresholds.percent !== undefined && playDuration !== undefined) {
-        percent = (secondsTracked / playDuration) * 100;
-        percentPasses = percent >= thresholds.percent;
+    if (percentThreshold !== null && playDuration !== undefined && playDuration !== 0) {
+        percent = Math.round(((secondsTracked / playDuration) * 100));
+        percentPasses = percent >= percentThreshold;
     }
-    if (thresholds.duration !== undefined || percentPasses === undefined) {
+    if (durationThreshold !== null || percentPasses === undefined) {
         durationPasses = secondsTracked >= durationThreshold;
     }
 
@@ -645,7 +645,7 @@ export const timePassesScrobbleThreshold = (thresholds: ScrobbleThresholds, seco
         percent: {
             passes: percentPasses,
             value: percent,
-            threshold: thresholds.percent
+            threshold: percentThreshold
         }
     }
 }
@@ -656,7 +656,7 @@ export const thresholdResultSummary = (result: ScrobbleThresholdResult) => {
         parts.push(`tracked time of ${result.duration.value}s (wanted ${result.duration.threshold}s)`);
     }
     if(result.percent.passes !== undefined) {
-        parts.push(`tracked percent of ${(result.percent.value).toFixed(2)}% (wanted ${result.percent.threshold})`)
+        parts.push(`tracked percent of ${(result.percent.value).toFixed(2)}% (wanted ${result.percent.threshold}%)`)
     }
 
     return `${result.passes ? 'met' : 'did not meet'} thresholds with ${parts.join(' and')}`;

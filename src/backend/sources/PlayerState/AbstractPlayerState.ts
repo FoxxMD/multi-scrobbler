@@ -9,7 +9,7 @@ import dayjs, {Dayjs} from "dayjs";
 import { formatNumber, genGroupIdStr, playObjDataMatch, progressBar } from "../../utils";
 import {Logger} from "@foxxmd/winston";
 import { ListenProgress } from "./ListenProgress";
-import { ListenRange, PlayData, PlayObject } from "../../../core/Atomic";
+import {ListenRange, PlayData, PlayObject, SourcePlayerObj} from "../../../core/Atomic";
 import { buildTrackString } from "../../../core/StringUtils";
 
 export interface PlayerStateIntervals {
@@ -62,7 +62,7 @@ export abstract class AbstractPlayerState {
 
     checkStale() {
         const isStale = this.isUpdateStale();
-        if (isStale && this.calculatedStatus !== CALCULATED_PLAYER_STATUSES.stale) {
+        if (isStale && ![CALCULATED_PLAYER_STATUSES.stale, CALCULATED_PLAYER_STATUSES.orphaned].includes(this.calculatedStatus)) {
             this.calculatedStatus = CALCULATED_PLAYER_STATUSES.stale;
             this.logger.debug(`Stale after no Play updates for ${Math.abs(dayjs().diff(this.playLastUpdatedAt, 'seconds'))} seconds`);
             // end current listening sessions
@@ -76,7 +76,7 @@ export abstract class AbstractPlayerState {
     }
 
     isDead() {
-        return dayjs().diff(this.stateLastUpdatedAt, 'minutes') >= this.stateIntervalOptions.orphanedInterval * 2;
+        return dayjs().diff(this.stateLastUpdatedAt, 'seconds') >= this.stateIntervalOptions.orphanedInterval * 2;
     }
 
     checkOrphaned() {
@@ -273,5 +273,39 @@ export abstract class AbstractPlayerState {
 
     logSummary() {
         this.logger.debug(this.textSummary());
+    }
+
+    getPosition() {
+        if(this.calculatedStatus === 'stopped') {
+            return undefined;
+        }
+        let lastRange: [ListenProgress, ListenProgress] | undefined;
+        if(this.currentListenRange !== undefined) {
+            lastRange = this.currentListenRange;
+        } else if(this.listenRanges.length > 0) {
+            lastRange = this.listenRanges[this.listenRanges.length - 1];
+        }
+        if(lastRange === undefined || lastRange[1] === undefined || lastRange[1].position === undefined) {
+            return undefined;
+        }
+        return lastRange[1].position;
+    }
+
+    getApiState(): SourcePlayerObj {
+        return {
+            platformId: this.platformIdStr,
+            play: this.getPlayedObject(),
+            playLastUpdatedAt: this.playLastUpdatedAt.toISOString(),
+            playFirstSeenAt: this.playFirstSeenAt.toISOString(),
+            playerLastUpdatedAt: this.stateLastUpdatedAt.toISOString(),
+            position: this.getPosition(),
+            listenedDuration: this.getListenDuration(),
+            status: {
+                reported: this.reportedStatus,
+                calculated: this.calculatedStatus,
+                stale: this.isUpdateStale(),
+                orphaned: this.isOrphaned()
+            }
+        }
     }
 }
