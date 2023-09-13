@@ -24,7 +24,8 @@ ENV CONFIG_DIR=$data_dir
 
 COPY docker/root/ /
 
-RUN npm install -g patch-package
+RUN npm install -g patch-package \
+    && chown -R root:root /usr/local/lib/node_modules/patch-package
 
 WORKDIR /app
 
@@ -39,7 +40,8 @@ COPY --chown=abc:abc package*.json tsconfig.json ./
 COPY --chown=abc:abc patches ./patches
 
 
-RUN npm install
+RUN npm install \
+    && chown -R root:root node_modules
 #RUN yarn install
 
 COPY --chown=abc:abc . /app
@@ -72,7 +74,7 @@ ENV IS_DOCKER=true
 
 RUN npm install --omit=dev \
     && npm cache clean --force \
-    && chown abc:abc node_modules \
+    && chown -R abc:abc node_modules \
     && rm -rf node_modules/ts-node \
     && rm -rf node_modules/typescript \
     && rm -rf node_modules/@types
