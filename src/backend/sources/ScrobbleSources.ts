@@ -430,7 +430,7 @@ export default class ScrobbleSources {
         const compositeConfig: SourceConfig = {...clientConfig, data, options: {...defaultOptions, ...clientOptions}};
 
         this.logger.debug(`(${name}) Constructing ${type} source`);
-        let newSource;
+        let newSource: AbstractSource;
         switch (type) {
             case 'spotify':
                 newSource = new SpotifySource(name, compositeConfig as SpotifySourceConfig, internal, this.emitter);
