@@ -24,8 +24,8 @@ import {ExpressHandler, ScrobbledPlayObject} from "../common/infrastructure/Atom
 import MemorySource from "../sources/MemorySource";
 import {capitalize} from "../../core/StringUtils";
 import {source} from "common-tags";
-import AbstractScrobbleClient from "../scrobblers/AbstractScrobbleClient.js";
-import {sortByNewestPlayDate} from "../utils.js";
+import AbstractScrobbleClient from "../scrobblers/AbstractScrobbleClient";
+import {sortByNewestPlayDate} from "../utils";
 
 let output: LogInfo[] = []
 

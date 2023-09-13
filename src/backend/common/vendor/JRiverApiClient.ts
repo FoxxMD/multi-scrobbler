@@ -3,7 +3,7 @@ import {JRiverData} from "../infrastructure/config/source/jriver";
 import request, {Request, Response} from 'superagent';
 import xml2js from 'xml2js';
 import {ErrorWithCause} from "pony-cause";
-import {DEFAULT_RETRY_MULTIPLIER} from "../infrastructure/Atomic.js";
+import {DEFAULT_RETRY_MULTIPLIER} from "../infrastructure/Atomic";
 
 const parser = new xml2js.Parser({'async': true});
 

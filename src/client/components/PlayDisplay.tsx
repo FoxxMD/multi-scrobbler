@@ -1,6 +1,6 @@
 import React, {Fragment, PropsWithChildren, ReactElement} from 'react';
 
-import {JsonPlayObject, TrackStringOptions} from "../../core/Atomic.js";
+import {JsonPlayObject, TrackStringOptions} from "../../core/Atomic";
 import {buildTrackString} from "../../core/StringUtils";
 import {buildTrackStringReactOptions} from "../utils/index";
 
