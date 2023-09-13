@@ -1,4 +1,4 @@
-FROM lsiobase/alpine:3.17 as base
+FROM lsiobase/alpine:3.18 as base
 
 ENV TZ=Etc/GMT
 
