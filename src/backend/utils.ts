@@ -7,7 +7,7 @@ import {TimeoutError, WebapiError} from "spotify-web-api-node/src/response-error
 import Ajv, {Schema} from 'ajv';
 import {
     asPlayerStateData,
-    DEFAULT_SCROBBLE_DURATION_THRESHOLD,
+    DEFAULT_SCROBBLE_DURATION_THRESHOLD, DEFAULT_SCROBBLE_PERCENT_THRESHOLD,
     DELIMITERS,
     lowGranularitySources,
     NO_DEVICE,
@@ -622,15 +622,16 @@ export const playPassesScrobbleThreshold = (play: PlayObject, thresholds: Scrobb
 
 export const timePassesScrobbleThreshold = (thresholds: ScrobbleThresholds, secondsTracked: number, playDuration?: number): ScrobbleThresholdResult => {
     let durationPasses = undefined,
-        durationThreshold = (thresholds.duration ?? DEFAULT_SCROBBLE_DURATION_THRESHOLD),
+        durationThreshold: number | null = thresholds.duration ?? DEFAULT_SCROBBLE_DURATION_THRESHOLD,
         percentPasses = undefined,
-        percent: number | undefined = undefined;
+        percentThreshold: number | null = thresholds.percent ?? DEFAULT_SCROBBLE_PERCENT_THRESHOLD,
+        percent: number | undefined;
 
-    if (thresholds.percent !== undefined && playDuration !== undefined) {
-        percent = (secondsTracked / playDuration) * 100;
-        percentPasses = percent >= thresholds.percent;
+    if (percentThreshold !== null && playDuration !== undefined && playDuration !== 0) {
+        percent = Math.round(((secondsTracked / playDuration) * 100));
+        percentPasses = percent >= percentThreshold;
     }
-    if (thresholds.duration !== undefined || percentPasses === undefined) {
+    if (durationThreshold !== null || percentPasses === undefined) {
         durationPasses = secondsTracked >= durationThreshold;
     }
 
@@ -644,7 +645,7 @@ export const timePassesScrobbleThreshold = (thresholds: ScrobbleThresholds, seco
         percent: {
             passes: percentPasses,
             value: percent,
-            threshold: thresholds.percent
+            threshold: percentThreshold
         }
     }
 }
@@ -655,7 +656,7 @@ export const thresholdResultSummary = (result: ScrobbleThresholdResult) => {
         parts.push(`tracked time of ${result.duration.value}s (wanted ${result.duration.threshold}s)`);
     }
     if(result.percent.passes !== undefined) {
-        parts.push(`tracked percent of ${(result.percent.value).toFixed(2)}% (wanted ${result.percent.threshold})`)
+        parts.push(`tracked percent of ${(result.percent.value).toFixed(2)}% (wanted ${result.percent.threshold}%)`)
     }
 
     return `${result.passes ? 'met' : 'did not meet'} thresholds with ${parts.join(' and')}`;

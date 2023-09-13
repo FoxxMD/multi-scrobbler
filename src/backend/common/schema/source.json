@@ -1239,16 +1239,20 @@
         "ScrobbleThresholds": {
             "properties": {
                 "duration": {
-                    "default": 30,
-                    "description": "The number of seconds before a track should be considered scrobbled.",
+                    "default": 240,
+                    "description": "The number of seconds a track has been listened to before it should be considered scrobbled.\n\nSet to null to disable.",
                     "examples": [
-                        30
+                        240
                     ],
                     "title": "duration",
                     "type": "number"
                 },
                 "percent": {
-                    "description": "The percentage of a track that should have been seen played before it should be scrobbled. Only used if the Source provides information about how long the track is.\n\nNOTE: This should be used with care when the Source is a \"polling\" type (has an 'interval' property). If the track is short and the interval is too high MS may ignore the track if percentage is high because it had not \"seen\" the track for long enough from first discovery, even if you have been playing the track for longer.",
+                    "default": 50,
+                    "description": "The percentage (as an integer) of a track that should have been seen played before it should be scrobbled. Only used if the Source provides information about how long the track is.\n\nSet to null to disable.\n\nNOTE: This should be used with care when the Source is a \"polling\" type (has an 'interval' property). If the track is short and the interval is too high MS may ignore the track if percentage is high because it had not \"seen\" the track for long enough from first discovery, even if you have been playing the track for longer.",
+                    "examples": [
+                        50
+                    ],
                     "title": "percent",
                     "type": "number"
                 }
