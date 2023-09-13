@@ -3,6 +3,7 @@ import {JRiverData} from "../infrastructure/config/source/jriver";
 import request, {Request, Response} from 'superagent';
 import xml2js from 'xml2js';
 import {ErrorWithCause} from "pony-cause";
+import {DEFAULT_RETRY_MULTIPLIER} from "../infrastructure/Atomic.js";
 
 const parser = new xml2js.Parser({'async': true});
 
@@ -107,7 +108,7 @@ export class JRiverApiClient extends AbstractApiClient {
     callApi = async <T>(req: Request, retries = 0): Promise<Response & {body: T}> => {
         const {
             maxRequestRetries = 2,
-            retryMultiplier = 1.5
+            retryMultiplier = DEFAULT_RETRY_MULTIPLIER
         } = this.config;
 
         if (this.token !== undefined) {

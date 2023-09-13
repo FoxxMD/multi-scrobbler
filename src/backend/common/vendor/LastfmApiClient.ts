@@ -2,7 +2,7 @@ import LastFm, {AuthGetSessionResponse, TrackObject, UserGetInfoResponse} from "
 import AbstractApiClient from "./AbstractApiClient";
 import dayjs from "dayjs";
 import { readJson, sleep, writeFile } from "../../utils";
-import { FormatPlayObjectOptions } from "../infrastructure/Atomic";
+import {DEFAULT_RETRY_MULTIPLIER, FormatPlayObjectOptions} from "../infrastructure/Atomic";
 import { LastfmData } from "../infrastructure/config/client/lastfm";
 import { PlayObject } from "../../../core/Atomic";
 
@@ -81,7 +81,7 @@ export default class LastfmApiClient extends AbstractApiClient {
     callApi = async <T>(func: any, retries = 0): Promise<T> => {
         const {
             maxRequestRetries = 2,
-            retryMultiplier = 1.5
+            retryMultiplier = DEFAULT_RETRY_MULTIPLIER
         } = this.config;
 
         try {

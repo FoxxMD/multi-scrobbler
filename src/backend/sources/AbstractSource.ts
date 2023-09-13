@@ -11,7 +11,7 @@ import {
     sortByOldestPlayDate,
 } from "../utils";
 import {
-    DEFAULT_POLLING_INTERVAL, DEFAULT_POLLING_MAX_INTERVAL,
+    DEFAULT_POLLING_INTERVAL, DEFAULT_POLLING_MAX_INTERVAL, DEFAULT_RETRY_MULTIPLIER,
     DeviceId,
     GroupedFixedPlays,
     GroupedPlays,
@@ -237,7 +237,7 @@ export default abstract class AbstractSource {
         const {
             data: {
                 maxPollRetries = 5,
-                retryMultiplier = 1,
+                retryMultiplier = DEFAULT_RETRY_MULTIPLIER,
             } = {},
         } = this.config;
 

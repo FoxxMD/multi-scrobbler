@@ -161,6 +161,8 @@ export const DEFAULT_SCROBBLE_PERCENT_THRESHOLD: number = 50;
 export const DEFAULT_POLLING_INTERVAL: number = 10;
 export const DEFAULT_POLLING_MAX_INTERVAL = 30;
 
+export const DEFAULT_RETRY_MULTIPLIER: number = 1.5;
+
 export interface ScrobbleThresholdResult {
     passes: boolean
     duration: {

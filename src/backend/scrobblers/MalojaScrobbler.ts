@@ -10,7 +10,7 @@ import {
     parseRetryAfterSecsFromObj,
     isPlayTemporallyClose,
 } from "../utils";
-import { FormatPlayObjectOptions, INITIALIZING } from "../common/infrastructure/Atomic";
+import {DEFAULT_RETRY_MULTIPLIER, FormatPlayObjectOptions, INITIALIZING} from "../common/infrastructure/Atomic";
 import { MalojaClientConfig } from "../common/infrastructure/config/client/maloja";
 import { Notifiers } from "../notifier/Notifiers";
 import {Logger} from '@foxxmd/winston';
@@ -132,7 +132,7 @@ export default class MalojaScrobbler extends AbstractScrobbleClient {
     callApi = async (req: any, retries = 0) => {
         const {
             maxRequestRetries = 1,
-            retryMultiplier = 1.5
+            retryMultiplier = DEFAULT_RETRY_MULTIPLIER
         } = this.config.data;
 
         try {
