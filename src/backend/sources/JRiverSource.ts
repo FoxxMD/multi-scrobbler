@@ -22,11 +22,9 @@ export class JRiverSource extends MemorySource {
             data,
         } = config;
         const {
-            interval = 10,
-            maxInterval = 30,
             ...rest
         } = data || {};
-        super('jriver', name, {...config, data: {interval, maxInterval, ...rest}}, internal, emitter);
+        super('jriver', name, {...config, data: {...rest}}, internal, emitter);
 
         const {
             data: {

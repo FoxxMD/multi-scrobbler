@@ -11,6 +11,7 @@ import SpotifyWebApi from "spotify-web-api-node";
 import AbstractSource, { RecentlyPlayedOptions } from "./AbstractSource";
 import { SpotifySourceConfig } from "../common/infrastructure/config/source/spotify";
 import {
+    DEFAULT_POLLING_INTERVAL,
     FormatPlayObjectOptions,
     InternalConfig,
     NO_USER,
@@ -51,15 +52,13 @@ export default class SpotifySource extends MemorySource {
         super('spotify', name, config, internal, emitter);
         const {
             data: {
-                interval = 15,
+                interval = DEFAULT_POLLING_INTERVAL,
             } = {}
         } = config;
 
         if (interval < 5) {
-            this.logger.warn('Interval should be 5 seconds or above...😬 preferably 15');
+            this.logger.warn('Interval should probably be 5 seconds or above! Spotify may return 429 response (too many requests)');
         }
-
-        this.config.data.interval = interval;
 
         this.workingCredsPath = `${this.configDir}/currentCreds-${name}.json`;
         this.canPoll = true;

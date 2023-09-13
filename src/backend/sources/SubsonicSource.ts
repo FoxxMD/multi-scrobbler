@@ -24,12 +24,10 @@ export class SubsonicSource extends MemorySource {
         // default to quick interval so we can get a decently accurate nowPlaying
         const {
             data: {
-                interval = 10,
-                maxInterval = 30,
                 ...restData
             } = {}
         } = config;
-        const subsonicConfig = {...config, data: {...restData, internal, maxInterval}};
+        const subsonicConfig = {...config, data: {...restData}};
         super('subsonic', name, subsonicConfig, internal,emitter);
 
         const {data: {user, password, url} = {}} = this.config;

@@ -17,11 +17,9 @@ export class KodiSource extends MemorySource {
             data,
         } = config;
         const {
-            interval = 10,
-            maxInterval = 30,
             ...rest
         } = data || {};
-        super('kodi', name, {...config, data: {interval, maxInterval, ...rest}}, internal, emitter);
+        super('kodi', name, {...config, data: {...rest}}, internal, emitter);
 
         this.requiresAuth = true;
         this.canPoll = true;

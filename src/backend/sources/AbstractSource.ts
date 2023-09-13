@@ -11,6 +11,7 @@ import {
     sortByOldestPlayDate,
 } from "../utils";
 import {
+    DEFAULT_POLLING_INTERVAL, DEFAULT_POLLING_MAX_INTERVAL,
     DeviceId,
     GroupedFixedPlays,
     GroupedPlays,
@@ -307,7 +308,7 @@ export default abstract class AbstractSource {
         let checkCount = 0;
         let checksOverThreshold = 0;
 
-        const {interval = 30, checkActiveFor = 300, maxInterval = 60} = this.config.data;
+        const {interval = DEFAULT_POLLING_INTERVAL, checkActiveFor = 300, maxInterval = DEFAULT_POLLING_MAX_INTERVAL} = this.config.data;
         const maxBackoff = maxInterval - interval;
         let sleepTime = interval;
 
