@@ -52,7 +52,8 @@ export const initServer = async (parentLogger: Logger, initialOutput: LogInfo[] 
             res.sendFile(path.join(buildDir, "index.html"));
         });
 
-        app.listen(port);
+        const backendPort = isProd ? port : apiPort;
+        app.listen(backendPort);
 
         const addy = getAddress();
         const addresses: string[] = [];
@@ -71,10 +72,10 @@ export const initServer = async (parentLogger: Logger, initialOutput: LogInfo[] 
                 switch (k) {
                     case 'host':
                     case 'v4':
-                        addresses.push(`---> ${k === 'host' ? 'Local'.padEnd(14, ' ') : 'Network'.padEnd(14, ' ')} http://${v}:${port}`);
+                        addresses.push(`---> ${k === 'host' ? 'Local'.padEnd(14, ' ') : 'Network'.padEnd(14, ' ')} http://${v}:${backendPort}`);
                         break;
                     case 'v6':
-                        addresses.push(`---> Network (IPv6) http://[${v}]:${port}`);
+                        addresses.push(`---> Network (IPv6) http://[${v}]:${backendPort}`);
                 }
             }
         }

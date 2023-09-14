@@ -1,15 +1,12 @@
 import {createContainer} from "iti";
 import path from "path";
-import {projectDir} from "./common/index";
+import {configDir, projectDir} from "./common/index";
 import ScrobbleClients from "./scrobblers/ScrobbleClients";
 import ScrobbleSources from "./sources/ScrobbleSources";
 import {Notifiers} from "./notifier/Notifiers";
 import {EventEmitter} from "events";
 import {logPath} from "./common/logging";
-import {Container} from '@foxxmd/winston';
 import { WildcardEmitter } from "./common/WildcardEmitter";
-
-const configDir = process.env.CONFIG_DIR || path.resolve(projectDir, `./config`);
 //const port = process.env.PORT ?? 9078;
 
 /*let logPath = path.resolve(projectDir, `./logs`);
@@ -20,28 +17,33 @@ if(typeof process.env.CONFIG_DIR === 'string') {
 let root: ReturnType<typeof createRoot>;
 
 const createRoot = (port: number | string | undefined) => {
+    const configDir = process.env.CONFIG_DIR || path.resolve(projectDir, `./config`);
+    const envPort = process.env.PORT;
     return createContainer().add({
         configDir: configDir,
         logDir: logPath,
-        localUrl: `http://localhost:${port}`,
+        //localUrl: `http://localhost:${port}`,
         isProd: process.env.NODE_ENV !== undefined && (process.env.NODE_ENV === 'production' || process.env.NODE_ENV === 'prod'),
         configPort: port,
         apiPort: process.env.API_PORT ?? 9079,
-        mainPort: process.env.PORT ?? 3000,
+        mainPort: envPort ?? 3000,
         clientEmitter: () => new WildcardEmitter(),
         sourceEmitter: () => new WildcardEmitter(),
         notifierEmitter: () => new EventEmitter(),
-    }).add((items) => ({
-        clients: () => new ScrobbleClients(items.clientEmitter, items.sourceEmitter, items.configDir),
-        sources: () => new ScrobbleSources(items.sourceEmitter, items.localUrl, items.configDir),
-        notifiers: () => new Notifiers(items.notifierEmitter, items.clientEmitter, items.sourceEmitter),
-        port: () => {
-            if(items.configPort !== undefined) {
-                return items.configPort;
-            }
-            return items.isProd ? items.mainPort : items.apiPort;
+    }).add((items) => {
+        let usedPort = items.configPort ?? envPort;
+        if (usedPort === undefined) {
+            usedPort = items.isProd ? items.mainPort : items.apiPort;
         }
-    }));
+        const localUrl = `http://localhost:${items.mainPort}`;
+        return {
+            port: usedPort,
+            clients: () => new ScrobbleClients(items.clientEmitter, items.sourceEmitter, localUrl, items.configDir),
+            sources: () => new ScrobbleSources(items.sourceEmitter, localUrl, items.configDir),
+            notifiers: () => new Notifiers(items.notifierEmitter, items.clientEmitter, items.sourceEmitter),
+            localUrl,
+        }
+    });
 }
 
 export const getRoot = (port?: number | string) => {
