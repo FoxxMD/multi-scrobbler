@@ -19,7 +19,7 @@ import { LastfmClientConfig } from "../common/infrastructure/config/client/lastf
 import { Notifiers } from "../notifier/Notifiers";
 import AbstractScrobbleClient from "./AbstractScrobbleClient";
 import {EventEmitter} from "events";
-import winston from '@foxxmd/winston';
+import winston, {Logger} from '@foxxmd/winston';
 import ListenbrainzScrobbler from "./ListenbrainzScrobbler";
 import { ListenBrainzClientConfig } from "../common/infrastructure/config/client/listenbrainz";
 import {ErrorWithCause} from "pony-cause";
@@ -35,17 +35,19 @@ export default class ScrobbleClients {
 
     /** @type AbstractScrobbleClient[] */
     clients: (MalojaScrobbler | LastfmScrobbler)[] = [];
-    logger;
-    configDir;
+    logger: Logger;
+    configDir: string;
+    localUrl: string;
 
     emitter: WildcardEmitter;
 
     sourceEmitter: WildcardEmitter;
 
-    constructor(emitter: WildcardEmitter, sourceEmitter: WildcardEmitter, configDir: any) {
+    constructor(emitter: WildcardEmitter, sourceEmitter: WildcardEmitter, localUrl: string, configDir: string) {
         this.emitter = emitter;
         this.sourceEmitter = sourceEmitter;
         this.configDir = configDir;
+        this.localUrl = localUrl;
         this.logger = winston.loggers.get('app').child({labels: ['Scrobblers']}, mergeArr);
 
         this.sourceEmitter.on('discoveredToScrobble', async (payload: { data: (PlayObject | PlayObject[]), options: { forceRefresh?: boolean, checkTime?: Dayjs, scrobbleTo?: string[], scrobbleFrom?: string } }) => {
@@ -161,7 +163,7 @@ export default class ScrobbleClients {
                             mode: 'single',
                             configureAs: 'client',
                             // @ts-ignore
-                            data: lfm
+                            data: {...lfm, redirectUri: lfm.redirectUri ?? `${this.localUrl}/lastfm/callback`}
                         })
                     }
                     break;
