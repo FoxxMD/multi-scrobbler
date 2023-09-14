@@ -20,7 +20,7 @@
     "dev:server:nodemon": "rm -f build/server.js && wait-on -l build/server.js && nodemon build/server.js",
     "build": "npm run -s build:client && npm run -s build:server",
     "build:client": "NODE_ENV=production react-scripts build",
-    "build:server": "NODE_ENV=production webpack --config webpack.config.server.js",
+    "build:server": "webpack --env production --config webpack.config.server.js",
     "start": "node build/server.js",
     "fileEndings": "jscodeshift --transformFrom js --transformTo none --importTypes relative --extensions=ts --parser tsx --transform codeshift/transform.ts src/backend"
   },
