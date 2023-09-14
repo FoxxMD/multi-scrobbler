@@ -19,8 +19,8 @@
     "dev:server:webpack": "webpack --config webpack.config.server.js",
     "dev:server:nodemon": "rm -f build/server.js && wait-on -l build/server.js && nodemon build/server.js",
     "build": "npm run -s build:client && npm run -s build:server",
-    "build:client": "react-scripts build",
-    "build:server": "webpack --config webpack.config.server.js",
+    "build:client": "NODE_ENV=production react-scripts build",
+    "build:server": "NODE_ENV=production webpack --config webpack.config.server.js",
     "start": "node build/server.js",
     "fileEndings": "jscodeshift --transformFrom js --transformTo none --importTypes relative --extensions=ts --parser tsx --transform codeshift/transform.ts src/backend"
   },
@@ -66,6 +66,7 @@
     "concat-stream": "^2.0.0",
     "dayjs": "^1.10.4",
     "dbus-next": "0.10.2",
+    "dotenv": "^10.0.0",
     "es6-error": "^4.1.1",
     "express": "^4.17.1",
     "express-session": "^1.17.2",

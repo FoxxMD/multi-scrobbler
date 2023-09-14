@@ -1,3 +1,4 @@
+import 'dotenv/config';
 import {Logger} from '@foxxmd/winston';
 import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc.js';
