@@ -11,10 +11,10 @@ import passport from "passport";
 export const setupDeezerRoutes = (app: ExpressWithAsync, logger: Logger, scrobbleSources: ScrobbleSources) => {
 
     // initialize deezer strategies
-    const deezerSources = scrobbleSources.getByType('deezer') as DeezerSource[];
-    for(const d of deezerSources) {
-        passport.use(`deezer-${d.name}`, d.generatePassportStrategy());
-    }
+    // const deezerSources = scrobbleSources.getByType('deezer') as DeezerSource[];
+    // for(const d of deezerSources) {
+    //     passport.use(`deezer-${d.name}`, d.generatePassportStrategy());
+    // }
 
     // something about the deezer passport strategy makes express continue with the response even though it should wait for accesstoken callback and userprofile fetching
     // so to get around this add an additional middleware that loops/sleeps until we should have fetched everything ¯\_(ツ)_/¯
@@ -34,6 +34,7 @@ export const setupDeezerRoutes = (app: ExpressWithAsync, logger: Logger, scrobbl
                 return res.send('Error with deezer credentials storage');
             } else if(entity.config.data.accessToken !== undefined) {
                 // start polling
+                await entity.testAuth();
                 entity.poll()
                 return res.redirect('/');
             } else {

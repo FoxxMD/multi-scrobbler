@@ -230,8 +230,8 @@ export default class ScrobbleSources {
                     break;
                 case 'deezer':
                     const d = {
-                        clientId: process.env.DEEZER_APP_ID,
-                        clientSecret: process.env.DEEZER_SECRET_KEY,
+                        clientId: process.env.DEEZER_CLIENT_ID,
+                        clientSecret: process.env.DEEZER_CLIENT_SECRET,
                         redirectUri: process.env.DEEZER_REDIRECT_URI,
                         accessToken: process.env.DEEZER_ACCESS_TOKEN,
                     };

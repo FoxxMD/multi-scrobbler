@@ -1,4 +1,5 @@
 import request from 'superagent';
+import passport from "passport";
 import {
     parseRetryAfterSecsFromObj,
     readJson,
@@ -99,6 +100,7 @@ export default class DeezerSource extends AbstractSource {
             this.logger.info(`Redirect URL that will be used on auth callback: '${this.redirectUri}'`);
         }
         this.initialized = true;
+        passport.use(`deezer-${this.name}`, this.generatePassportStrategy());
         return this.initialized;
     }
 
