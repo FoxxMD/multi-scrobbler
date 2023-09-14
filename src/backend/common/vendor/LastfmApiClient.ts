@@ -25,10 +25,10 @@ export default class LastfmApiClient extends AbstractApiClient {
     user?: string;
     declare config: LastfmData;
 
-    constructor(name: any, config: Partial<LastfmData> & {configDir: string}, options = {}) {
+    constructor(name: any, config: Partial<LastfmData> & {configDir: string, localUrl: string}, options = {}) {
         super('lastfm', name, config, options);
         const {redirectUri, apiKey, secret, session, configDir} = config;
-        this.redirectUri = `${redirectUri}?state=${name}`;
+        this.redirectUri = `${redirectUri ?? `${config.localUrl}/lastfm/callback`}?state=${name}`;
         if (apiKey === undefined) {
             this.logger.warn("'apiKey' not found in config!");
         }
@@ -109,8 +109,7 @@ export default class LastfmApiClient extends AbstractApiClient {
     }
 
     getAuthUrl = () => {
-        const redir = `${this.config.redirectUri}?state=${this.name}`;
-        return `http://www.last.fm/api/auth/?api_key=${this.config.apiKey}&cb=${encodeURIComponent(redir)}`
+        return `http://www.last.fm/api/auth/?api_key=${this.config.apiKey}&cb=${encodeURIComponent(this.redirectUri)}`
     }
 
     authenticate = async (token: any) => {
@@ -146,6 +145,7 @@ export default class LastfmApiClient extends AbstractApiClient {
     testAuth = async () => {
         if (this.client.sessionKey === undefined) {
             this.logger.info('No session key found. User interaction for authentication required.');
+            this.logger.info(`Redirect URL that will be used on auth callback: '${this.redirectUri}'`);
             return false;
         }
         try {

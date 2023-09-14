@@ -22,6 +22,7 @@ export default class DeezerSource extends AbstractSource {
     requiresAuthInteraction = true;
 
     baseUrl = 'https://api.deezer.com';
+    redirectUri: string;
 
     declare config: DeezerSourceConfig;
 
@@ -30,6 +31,7 @@ export default class DeezerSource extends AbstractSource {
         const {
             data: {
                 interval = 60,
+                redirectUri,
             } = {},
         } = config;
 
@@ -38,6 +40,7 @@ export default class DeezerSource extends AbstractSource {
         }
 
         this.config.data.interval = interval;
+        this.redirectUri = redirectUri || `${this.localUrl}/deezer/callback`;
 
         this.workingCredsPath = `${this.configDir}/currentCreds-${name}.json`;
         this.canPoll = true;
@@ -92,6 +95,8 @@ export default class DeezerSource extends AbstractSource {
             } else if(this.config.data.clientSecret === undefined) {
                 throw new Error('clientSecret must be defined when accessToken is not present');
             }
+            this.logger.info(`No access token is present. User interaction for authentication is required.`);
+            this.logger.info(`Redirect URL that will be used on auth callback: '${this.redirectUri}'`);
         }
         this.initialized = true;
         return this.initialized;
@@ -185,7 +190,7 @@ export default class DeezerSource extends AbstractSource {
         return new DeezerStrategy({
             clientID: this.config.data.clientId,
             clientSecret: this.config.data.clientSecret,
-            callbackURL: this.config.data.redirectUri || `${this.localUrl}/deezer/callback`,
+            callbackURL: this.redirectUri,
             scope: ['listening_history','offline_access'],
         }, (accessToken: any, refreshToken: any, profile: any, done: any) => {
                 // return done(null, {

@@ -58,7 +58,6 @@ const configDir = process.env.CONFIG_DIR || path.resolve(projectDir, `./config`)
 
         const {
             webhooks = [],
-            port,
             logging = {},
             debugMode,
         } = (config || {}) as AIOConfig;
@@ -72,7 +71,7 @@ const configDir = process.env.CONFIG_DIR || path.resolve(projectDir, `./config`)
             process.env.DEBUG_MODE = b.toString();
         }
 
-        const root = getRoot(port);
+        const root = getRoot(config);
 
         logger = getLogger(logging, 'app');
 

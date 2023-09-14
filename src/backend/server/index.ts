@@ -11,6 +11,7 @@ import { setupApi } from "./api";
 import { getAddress, mergeArr, parseBool } from "../utils";
 import {stripIndents} from "common-tags";
 import {ErrorWithCause} from "pony-cause";
+import {or} from "ajv/dist/compile/codegen/index.js";
 
 const buildDir = path.join(process.cwd() + "/build");
 
@@ -42,6 +43,8 @@ export const initServer = async (parentLogger: Logger, initialOutput: LogInfo[] 
         const apiPort = root.get('apiPort');
         const mainPort = root.get('mainPort');
         const port = root.get('port');
+        const local = root.get('localUrl');
+        const localDefined = root.get('hasDefinedBaseUrl');
 
         setupApi(app, logger, initialOutput);
 
@@ -63,7 +66,7 @@ export const initServer = async (parentLogger: Logger, initialOutput: LogInfo[] 
             --- HINT ---
             MS is likely being run in a container with BRIDGE networking which means the above addresses are not accessible from outside this container.
             To ensure the container is accessible make sure you have mapped the *container* port ${port} to a *host* port. https://foxxmd.github.io/multi-scrobbler/docs/installation#networking
-            The container will then be accessible at http://HOST_MACHINE_IP:HOST_PORT
+            The container will then be accessible at http://HOST_MACHINE_IP:HOST_PORT${localDefined ? ` (or ${local} since you defined this!)` : ''}
             --- HINT ---
             `;
         }
@@ -84,6 +87,10 @@ export const initServer = async (parentLogger: Logger, initialOutput: LogInfo[] 
         ${addresses.join('\n')}${dockerHint !== '' ? `\n${dockerHint}` : ''}`
 
         logger.info(start);
+
+        if(localDefined) {
+            logger.info(`User-defined base URL for UI and redirect URLs (spotify, deezer, lastfm): ${local}`)
+        }
     } catch (e) {
         logger.error(new ErrorWithCause('Server crashed with uncaught exception', {cause: e}));
     }

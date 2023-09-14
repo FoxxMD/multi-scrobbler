@@ -168,6 +168,21 @@ Example directory structure:
 
 See the [/config](https://github.com/FoxxMD/multi-scrobbler/blob/master/config) directory of this project for examples of each type of config file or reference specific files below.
 
+# Application Options
+
+These options affect multi-scrobbler's behavior and are not specific to any source/client.
+
+#### Base URL
+
+Defines the URL that is used to generate default redirect URLs for authentication on [spotify](#spotify), [lastfm](#lastfm), and [deezer](#deezer) -- as well as some logging hints.
+
+* Default => `http://localhost`
+* Set with [ENV](#env-based-configuration) `BASE_URL` or `baseUrl` [all-in-one configuration](#all-in-one-file-configuration)
+
+EX: Lastfm Redirect Url is `BASE_URL:PORT/lastfm/callback` -- Set `BASE_URL=http://192.168.0.101` => Redirect URL is `http://192.168.0.101:9078/lastfm/callback` (when no other redirectUri is specified for [lastfm configuration](#lastfm))
+
+Useful when running with [docker](../installation/installation.md#docker) so that you do not need to specify redirect URLs for each configuration.
+
 # Source Configurations
 
 ## [Spotify](https://www.spotify.com)

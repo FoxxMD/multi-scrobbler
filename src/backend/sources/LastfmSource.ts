@@ -18,7 +18,7 @@ export default class LastfmSource extends AbstractSource {
     constructor(name: any, config: LastfmClientConfig, internal: InternalConfig, emitter: EventEmitter) {
         super('lastfm', name, config, internal, emitter);
         this.canPoll = true;
-        this.api = new LastfmApiClient(name, {...config.data, configDir: internal.configDir});
+        this.api = new LastfmApiClient(name, {...config.data, configDir: internal.configDir, localUrl: internal.localUrl});
     }
 
     static formatPlayObj(obj: any, options: FormatPlayObjectOptions = {}): PlayObject {

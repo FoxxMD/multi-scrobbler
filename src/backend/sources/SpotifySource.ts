@@ -214,6 +214,11 @@ export default class SpotifySource extends MemorySource {
             throw new Error('Failed to initialize a Spotify source');
         }
 
+        if(accessToken === undefined || refreshToken === undefined) {
+            this.logger.info(`No access or refresh token is present. User interaction for authentication is required.`);
+            this.logger.info(`Redirect URL that will be used on auth callback: '${rdUri}'`);
+        }
+
         this.spotifyApi = new SpotifyWebApi(apiConfig);
     }
 
@@ -227,6 +232,10 @@ export default class SpotifySource extends MemorySource {
 
     testAuth = async () => {
         try {
+            if(undefined === this.spotifyApi.getAccessToken()) {
+                this.authed = false;
+                return;
+            }
             await this.callApi<ReturnType<typeof this.spotifyApi.getMe>>(((api: any) => api.getMe()));
             this.authed = true;
         } catch (e) {

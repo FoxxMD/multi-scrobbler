@@ -8,6 +8,7 @@
     "maxRequestRetries": 1,
     "retryMultiplier": 1.5
   },
+  "baseUrl": "http://localhost",
   "sources": [
     {
       "type": "spotify",

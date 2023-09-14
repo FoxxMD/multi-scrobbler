@@ -28,6 +28,20 @@ export interface AIOConfig {
      * */
     port?: number
 
+    /**
+     * Set the Base URL the application should assume the UI is served from.
+     *
+     * This will affect how default redirect URLs are generated (spotify, lastfm, deezer) and some logging messages.
+     *
+     * It will NOT set the actual interface/IP that the application is listening on.
+     *
+     * This can also be set using the BASE_URL environmental variable.
+     *
+     * @default "http://localhost"
+     * @examples ["http://localhost", "http://192.168.0.101", "https://ms.myDomain.tld"]
+     * */
+    baseUrl?: string
+
     logging?: LogOptions
 
     /**
