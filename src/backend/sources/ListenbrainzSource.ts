@@ -3,7 +3,7 @@ import { FormatPlayObjectOptions, INITIALIZING, InternalConfig } from "../common
 import EventEmitter from "events";
 import { ListenBrainzSourceConfig } from "../common/infrastructure/config/source/listenbrainz";
 import { ListenbrainzApiClient } from "../common/vendor/ListenbrainzApiClient";
-import MemorySource from "./MemorySource.js";
+import MemorySource from "./MemorySource";
 
 export default class ListenbrainzSource extends MemorySource {
 

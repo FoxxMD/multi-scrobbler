@@ -588,6 +588,24 @@
                     "title": "apiKey",
                     "type": "string"
                 },
+                "interval": {
+                    "default": 10,
+                    "description": "How long to wait before polling the source API for new tracks (in seconds)",
+                    "examples": [
+                        10
+                    ],
+                    "title": "interval",
+                    "type": "number"
+                },
+                "maxInterval": {
+                    "default": 30,
+                    "description": "When there has been no new activity from the Source API multi-scrobbler will gradually increase the wait time between polling up to this value (in seconds)",
+                    "examples": [
+                        30
+                    ],
+                    "title": "maxInterval",
+                    "type": "number"
+                },
                 "maxPollRetries": {
                     "default": 5,
                     "description": "default # of automatic polling restarts on error",

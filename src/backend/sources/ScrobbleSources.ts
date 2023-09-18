@@ -448,7 +448,7 @@ export default class ScrobbleSources {
                 newSource = await new JellyfinSource(name, compositeConfig as JellySourceConfig, internal, this.emitter);
                 break;
             case 'lastfm':
-                newSource = await new LastfmSource(name, compositeConfig as LastfmClientConfig, internal, this.emitter);
+                newSource = await new LastfmSource(name, compositeConfig as LastfmSourceConfig, internal, this.emitter);
                 break;
             case 'deezer':
                 newSource = await new DeezerSource(name, compositeConfig as DeezerSourceConfig, internal, this.emitter);

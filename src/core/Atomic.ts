@@ -112,6 +112,8 @@ export interface PlayMeta {
      * */
     deviceId?: string
 
+    nowPlaying?: boolean
+
     [key: string]: any
 }
 
