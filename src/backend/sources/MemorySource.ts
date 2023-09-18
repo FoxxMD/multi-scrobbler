@@ -34,6 +34,9 @@ import {EventEmitter} from "events";
 import objectHash from 'object-hash';
 
 export default class MemorySource extends AbstractSource {
+
+    playerSourceOfTruth: boolean = true;
+
     /*
     * MemorySource uses its own state to maintain a list of recently played tracks and determine if a track is valid.
     * This is necessary for any source that
@@ -159,7 +162,9 @@ export default class MemorySource extends AbstractSource {
                         const matchingRecent = this.existingDiscovered(candidate); //sRecentlyPlayed.find(x => playObjDataMatch(x, candidate));
                         let stPrefix = `${buildTrackString(candidate, {include: ['trackId', 'artist', 'track']})}`;
                         if (matchingRecent === undefined) {
-                            player.logger.debug(`${stPrefix} added after ${thresholdResultSummary(thresholdResults)} and not matching any prior plays`);
+                            if(this.playerSourceOfTruth) {
+                                player.logger.debug(`${stPrefix} added after ${thresholdResultSummary(thresholdResults)} and not matching any prior plays`);
+                            }
                             newStatefulPlays.push(candidate);
                         } else {
                             const {data: {playDate, duration}} = candidate;
@@ -167,14 +172,18 @@ export default class MemorySource extends AbstractSource {
                             if (!playDate.isSame(rplayDate)) {
                                 if (duration !== undefined) {
                                     if (playDate.isAfter(rplayDate.add(duration, 's'))) {
-                                        player.logger.debug(`${stPrefix} added after ${thresholdResultSummary(thresholdResults)} and having a different timestamp than a prior play`);
+                                        if(this.playerSourceOfTruth) {
+                                            player.logger.debug(`${stPrefix} added after ${thresholdResultSummary(thresholdResults)} and having a different timestamp than a prior play`);
+                                        }
                                         newStatefulPlays.push(candidate);
                                     }
                                 } else {
                                     const discoveredPlays = this.getRecentlyDiscoveredPlaysByPlatform(genGroupId(candidate));
                                     if (discoveredPlays.length === 0 || !playObjDataMatch(discoveredPlays[0], candidate)) {
                                         // if most recent stateful play is not this track we'll add it
-                                        player.logger.debug(`${stPrefix} added after ${thresholdResultSummary(thresholdResults)}. Matched other recent play but could not determine time frame due to missing duration. Allowed due to not being last played track.`);
+                                        if(this.playerSourceOfTruth) {
+                                            player.logger.debug(`${stPrefix} added after ${thresholdResultSummary(thresholdResults)}. Matched other recent play but could not determine time frame due to missing duration. Allowed due to not being last played track.`);
+                                        }
                                         newStatefulPlays.push(candidate);
                                     }
                                 }
