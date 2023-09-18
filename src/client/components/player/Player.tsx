@@ -45,7 +45,7 @@ const Player = (props: PlayerProps) => {
     } = data;
 
     let durPer = null;
-    if(duration !== undefined && duration !== null) {
+    if(duration !== undefined && duration !== null && duration !== 0) {
         if(listenedDuration === 0) {
             durPer = ' (0%)';
         } else {
