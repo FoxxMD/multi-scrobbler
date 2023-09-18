@@ -21,7 +21,6 @@ export class SubsonicSource extends MemorySource {
     declare config: SubSonicSourceConfig;
 
     constructor(name: any, config: SubSonicSourceConfig, internal: InternalConfig, emitter: EventEmitter) {
-        // default to quick interval so we can get a decently accurate nowPlaying
         const {
             data: {
                 ...restData

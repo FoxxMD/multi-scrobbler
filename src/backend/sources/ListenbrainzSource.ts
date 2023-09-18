@@ -3,8 +3,9 @@ import { FormatPlayObjectOptions, INITIALIZING, InternalConfig } from "../common
 import EventEmitter from "events";
 import { ListenBrainzSourceConfig } from "../common/infrastructure/config/source/listenbrainz";
 import { ListenbrainzApiClient } from "../common/vendor/ListenbrainzApiClient";
+import MemorySource from "./MemorySource.js";
 
-export default class ListenbrainzSource extends AbstractSource {
+export default class ListenbrainzSource extends MemorySource {
 
     api: ListenbrainzApiClient;
     requiresAuth = true;
@@ -13,9 +14,17 @@ export default class ListenbrainzSource extends AbstractSource {
     declare config: ListenBrainzSourceConfig;
 
     constructor(name: any, config: ListenBrainzSourceConfig, internal: InternalConfig, emitter: EventEmitter) {
-        super('listenbrainz', name, config, internal, emitter);
+        const {
+            data: {
+                interval = 15,
+                maxInterval = 60,
+                ...restData
+            } = {}
+        } = config;
+        super('listenbrainz', name, {...config, data: {interval, maxInterval, ...restData}}, internal, emitter);
         this.canPoll = true;
         this.api = new ListenbrainzApiClient(name, config.data);
+        this.playerSourceOfTruth = false;
     }
 
     static formatPlayObj = (obj: any, options: FormatPlayObjectOptions = {}) => ListenbrainzApiClient.formatPlayObj(obj, options);
@@ -52,6 +61,8 @@ export default class ListenbrainzSource extends AbstractSource {
 
     getRecentlyPlayed = async(options: RecentlyPlayedOptions = {}) => {
         const {limit = 20} = options;
+        const now = await this.api.getPlayingNow();
+        this.processRecentPlays(now.listens.map(x => ListenbrainzSource.formatPlayObj(x)));
         return await this.api.getRecentlyPlayed(limit);
     }
 }

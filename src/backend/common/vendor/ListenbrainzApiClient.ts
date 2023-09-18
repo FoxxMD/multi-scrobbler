@@ -5,6 +5,7 @@ import {DEFAULT_RETRY_MULTIPLIER, DELIMITERS, FormatPlayObjectOptions} from "../
 import dayjs from "dayjs";
 import { stringSameness } from '@foxxmd/string-sameness';
 import {
+    combinePartsToString,
     containsDelimiters,
     findDelimiters,
     normalizeStr,
@@ -185,9 +186,30 @@ export class ListenbrainzApiClient extends AbstractApiClient {
         }
     }
 
+    getPlayingNow = async (user?: string): Promise<ListensResponse> => {
+        try {
+
+            const resp = await this.callApi(request
+                .get(`${this.url}1/user/${user ?? this.config.username}/playing-now`)
+                // this endpoint can take forever, sometimes, and we want to make sure we timeout in a reasonable amount of time for polling sources to continue trying to scrobble
+                .timeout({
+                    response: 15000, // wait 15 seconds before timeout if server doesn't response at all
+                    deadline: 30000 // wait 30 seconds overall for request to complete
+                }));
+            const {body: {payload}} = resp as any;
+            // const data = payload as ListensResponse;
+            // if(data.listens.length > 0) {}
+            // return data.listens[0];
+            return payload as ListensResponse;
+        } catch (e) {
+            throw e;
+        }
+    }
+
     getRecentlyPlayed = async (maxTracks: number, user?: string): Promise<PlayObject[]> => {
         try {
             const resp = await this.getUserListens(maxTracks, user);
+            const now = await this.getPlayingNow(user);
             return resp.listens.map(x => ListenbrainzApiClient.listenResponseToPlay(x));
         } catch (e) {
             this.logger.error(`Error encountered while getting User listens | Error =>  ${e.message}`);
@@ -464,6 +486,10 @@ export class ListenbrainzApiClient extends AbstractApiClient {
                     recording_mbid: aRecordingMbid,
                     duration: aDuration,
                     duration_ms: aDurationMs,
+                    music_service_name,
+                    music_service,
+                    submission_client,
+                    submission_client_version
                 } = {},
                 mbid_mapping: {
                     recording_mbid: mRecordingMbid
@@ -509,7 +535,8 @@ export class ListenbrainzApiClient extends AbstractApiClient {
             meta: {
                 source: 'listenbrainz',
                 trackId,
-                playId
+                playId,
+                deviceId: combinePartsToString([music_service_name ?? music_service, submission_client, submission_client_version])
             }
         }
     }
