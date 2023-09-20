@@ -212,6 +212,15 @@
                     "$ref": "#/definitions/DeezerData",
                     "title": "data"
                 },
+                "enable": {
+                    "default": true,
+                    "description": "Should MS use this client/source? Defaults to true",
+                    "examples": [
+                        true
+                    ],
+                    "title": "enable",
+                    "type": "boolean"
+                },
                 "name": {
                     "description": "Unique identifier for this source.",
                     "title": "name",
@@ -387,6 +396,15 @@
                     "$ref": "#/definitions/JRiverData",
                     "title": "data"
                 },
+                "enable": {
+                    "default": true,
+                    "description": "Should MS use this client/source? Defaults to true",
+                    "examples": [
+                        true
+                    ],
+                    "title": "enable",
+                    "type": "boolean"
+                },
                 "name": {
                     "description": "Unique identifier for this source.",
                     "title": "name",
@@ -539,6 +557,15 @@
                     "$ref": "#/definitions/JellyData",
                     "title": "data"
                 },
+                "enable": {
+                    "default": true,
+                    "description": "Should MS use this client/source? Defaults to true",
+                    "examples": [
+                        true
+                    ],
+                    "title": "enable",
+                    "type": "boolean"
+                },
                 "name": {
                     "description": "Unique identifier for this source.",
                     "title": "name",
@@ -667,6 +694,15 @@
                     "$ref": "#/definitions/KodiData",
                     "title": "data"
                 },
+                "enable": {
+                    "default": true,
+                    "description": "Should MS use this client/source? Defaults to true",
+                    "examples": [
+                        true
+                    ],
+                    "title": "enable",
+                    "type": "boolean"
+                },
                 "name": {
                     "description": "Unique identifier for this source.",
                     "title": "name",
@@ -722,6 +758,15 @@
                 "data": {
                     "$ref": "#/definitions/LastFmSourceData",
                     "title": "data"
+                },
+                "enable": {
+                    "default": true,
+                    "description": "Should MS use this client/source? Defaults to true",
+                    "examples": [
+                        true
+                    ],
+                    "title": "enable",
+                    "type": "boolean"
                 },
                 "name": {
                     "description": "Unique identifier for this source.",
@@ -868,6 +913,15 @@
                     "description": "Specific data required to configure this client",
                     "title": "data"
                 },
+                "enable": {
+                    "default": true,
+                    "description": "Should MS use this client/source? Defaults to true",
+                    "examples": [
+                        true
+                    ],
+                    "title": "enable",
+                    "type": "boolean"
+                },
                 "name": {
                     "description": "Unique identifier for this client. Used with sources to restrict where scrobbles are sent.",
                     "examples": [
@@ -969,6 +1023,15 @@
                     "$ref": "#/definitions/ListenBrainzClientData",
                     "description": "Specific data required to configure this client",
                     "title": "data"
+                },
+                "enable": {
+                    "default": true,
+                    "description": "Should MS use this client/source? Defaults to true",
+                    "examples": [
+                        true
+                    ],
+                    "title": "enable",
+                    "type": "boolean"
                 },
                 "name": {
                     "description": "Unique identifier for this client. Used with sources to restrict where scrobbles are sent.",
@@ -1110,6 +1173,15 @@
                 "data": {
                     "$ref": "#/definitions/ListenBrainzSourceData",
                     "title": "data"
+                },
+                "enable": {
+                    "default": true,
+                    "description": "Should MS use this client/source? Defaults to true",
+                    "examples": [
+                        true
+                    ],
+                    "title": "enable",
+                    "type": "boolean"
                 },
                 "name": {
                     "description": "Unique identifier for this source.",
@@ -1370,6 +1442,15 @@
                     "$ref": "#/definitions/MPRISData",
                     "title": "data"
                 },
+                "enable": {
+                    "default": true,
+                    "description": "Should MS use this client/source? Defaults to true",
+                    "examples": [
+                        true
+                    ],
+                    "title": "enable",
+                    "type": "boolean"
+                },
                 "name": {
                     "description": "Unique identifier for this source.",
                     "title": "name",
@@ -1400,6 +1481,15 @@
                     "$ref": "#/definitions/MalojaClientData",
                     "description": "Specific data required to configure this client",
                     "title": "data"
+                },
+                "enable": {
+                    "default": true,
+                    "description": "Should MS use this client/source? Defaults to true",
+                    "examples": [
+                        true
+                    ],
+                    "title": "enable",
+                    "type": "boolean"
                 },
                 "name": {
                     "description": "Unique identifier for this client. Used with sources to restrict where scrobbles are sent.",
@@ -1660,6 +1750,15 @@
                     "$ref": "#/definitions/MopidyData",
                     "title": "data"
                 },
+                "enable": {
+                    "default": true,
+                    "description": "Should MS use this client/source? Defaults to true",
+                    "examples": [
+                        true
+                    ],
+                    "title": "enable",
+                    "type": "boolean"
+                },
                 "name": {
                     "description": "Unique identifier for this source.",
                     "title": "name",
@@ -1759,6 +1858,15 @@
                 "data": {
                     "$ref": "#/definitions/PlexSourceData",
                     "title": "data"
+                },
+                "enable": {
+                    "default": true,
+                    "description": "Should MS use this client/source? Defaults to true",
+                    "examples": [
+                        true
+                    ],
+                    "title": "enable",
+                    "type": "boolean"
                 },
                 "name": {
                     "description": "Unique identifier for this source.",
@@ -2094,6 +2202,15 @@
                     "$ref": "#/definitions/SpotifySourceData",
                     "title": "data"
                 },
+                "enable": {
+                    "default": true,
+                    "description": "Should MS use this client/source? Defaults to true",
+                    "examples": [
+                        true
+                    ],
+                    "title": "enable",
+                    "type": "boolean"
+                },
                 "name": {
                     "description": "Unique identifier for this source.",
                     "title": "name",
@@ -2314,6 +2431,15 @@
                     "$ref": "#/definitions/SubsonicData",
                     "title": "data"
                 },
+                "enable": {
+                    "default": true,
+                    "description": "Should MS use this client/source? Defaults to true",
+                    "examples": [
+                        true
+                    ],
+                    "title": "enable",
+                    "type": "boolean"
+                },
                 "name": {
                     "description": "Unique identifier for this source.",
                     "title": "name",
@@ -2357,6 +2483,15 @@
                 "data": {
                     "$ref": "#/definitions/PlexSourceData",
                     "title": "data"
+                },
+                "enable": {
+                    "default": true,
+                    "description": "Should MS use this client/source? Defaults to true",
+                    "examples": [
+                        true
+                    ],
+                    "title": "enable",
+                    "type": "boolean"
                 },
                 "name": {
                     "description": "Unique identifier for this source.",
@@ -2488,6 +2623,15 @@
                 "data": {
                     "$ref": "#/definitions/YTMusicData",
                     "title": "data"
+                },
+                "enable": {
+                    "default": true,
+                    "description": "Should MS use this client/source? Defaults to true",
+                    "examples": [
+                        true
+                    ],
+                    "title": "enable",
+                    "type": "boolean"
                 },
                 "name": {
                     "description": "Unique identifier for this source.",

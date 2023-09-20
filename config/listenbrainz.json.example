@@ -1,6 +1,7 @@
 [
   {
     "name": "brainz",
+    "enable": true,
     "configureAs": "client",
     "data": {
       "token": "029b081ba-9156-4pe7-88e5-3be671f5ea2b",

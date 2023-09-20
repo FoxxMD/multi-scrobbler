@@ -1,6 +1,7 @@
 [
   {
     "name": "FoxxMDeezer",
+    "enable": true,
     "clients": [],
     "data": {
       "clientId": "a89cba1569901a0671d5a9875fed4be1",

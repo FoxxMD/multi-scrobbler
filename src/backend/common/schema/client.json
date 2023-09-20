@@ -98,6 +98,15 @@
                     "description": "Specific data required to configure this client",
                     "title": "data"
                 },
+                "enable": {
+                    "default": true,
+                    "description": "Should MS use this client/source? Defaults to true",
+                    "examples": [
+                        true
+                    ],
+                    "title": "enable",
+                    "type": "boolean"
+                },
                 "name": {
                     "description": "Unique identifier for this client. Used with sources to restrict where scrobbles are sent.",
                     "examples": [
@@ -191,6 +200,15 @@
                     "$ref": "#/definitions/ListenBrainzClientData",
                     "description": "Specific data required to configure this client",
                     "title": "data"
+                },
+                "enable": {
+                    "default": true,
+                    "description": "Should MS use this client/source? Defaults to true",
+                    "examples": [
+                        true
+                    ],
+                    "title": "enable",
+                    "type": "boolean"
                 },
                 "name": {
                     "description": "Unique identifier for this client. Used with sources to restrict where scrobbles are sent.",
@@ -299,6 +317,15 @@
                     "$ref": "#/definitions/MalojaClientData",
                     "description": "Specific data required to configure this client",
                     "title": "data"
+                },
+                "enable": {
+                    "default": true,
+                    "description": "Should MS use this client/source? Defaults to true",
+                    "examples": [
+                        true
+                    ],
+                    "title": "enable",
+                    "type": "boolean"
                 },
                 "name": {
                     "description": "Unique identifier for this client. Used with sources to restrict where scrobbles are sent.",

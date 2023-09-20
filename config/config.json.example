@@ -21,6 +21,7 @@
   "sources": [
     {
       "type": "spotify",
+      "enable": true,
       "clients": ["myConfig"],
       "name": "mySpotifySource",
       "data": {
@@ -33,6 +34,7 @@
   "clients": [
     {
       "type": "maloja",
+      "enable": true,
       "name": "myConfig",
       "data": {
         "url": "http://localhost:42010",

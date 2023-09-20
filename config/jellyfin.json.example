@@ -1,6 +1,7 @@
 [
   {
     "name": "MyJellyfin",
+    "enable": true,
     "clients": [],
     "data": {
       "users": ["FoxxMD"],

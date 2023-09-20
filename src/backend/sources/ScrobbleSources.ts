@@ -410,7 +410,7 @@ export default class ScrobbleSources {
         }
     }
 
-    addSource = async (clientConfig: any, defaults: SourceDefaults = {}) => {
+    addSource = async (clientConfig: ParsedConfig, defaults: SourceDefaults = {}) => {
         // const isValidConfig = isValidConfigStructure(clientConfig, {name: true, data: true, type: true});
         // if (isValidConfig !== true) {
         //     throw new Error(`Config object from ${clientConfig.source || 'unknown'} with name [${clientConfig.name || 'unnamed'}] of type [${clientConfig.type || 'unknown'}] has errors: ${isValidConfig.join(' | ')}`)
@@ -422,7 +422,12 @@ export default class ScrobbleSources {
             logger: this.logger
         };
 
-        const {type, name, data: d = {}, options: clientOptions = {}} = clientConfig;
+        const {type, name, data: d = {}, enable = true, options: clientOptions = {}} = clientConfig;
+
+        if(enable === false) {
+            this.logger.warn(`${type} (${name}) source was disabled by config`);
+            return;
+        }
 
         // add defaults
         const {options: defaultOptions = {}, ...restDefaults} = defaults;

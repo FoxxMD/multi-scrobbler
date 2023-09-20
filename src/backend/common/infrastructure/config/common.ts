@@ -1,6 +1,13 @@
 export interface CommonConfig {
     name?: string
     data?: CommonData
+    /**
+     * Should MS use this client/source? Defaults to true
+     *
+     * @default true
+     * @examples [true]
+     * */
+    enable?: boolean
 }
 
 export interface CommonData {

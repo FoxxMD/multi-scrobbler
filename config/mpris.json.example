@@ -1,6 +1,7 @@
 [
   {
     "name": "ubuntu",
+    "enable": true,
     "data": {
       "whitelist": ["vlc", "mpd"],
       "blacklist": ["spotify"]

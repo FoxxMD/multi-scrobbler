@@ -296,7 +296,13 @@ ${sources.join('\n')}`);
         if (isValidConfig !== true) {
             throw new Error(`Config object from ${clientConfig.source || 'unknown'} with name [${clientConfig.name || 'unnamed'}] of type [${clientConfig.type || 'unknown'}] has errors: ${isValidConfig.join(' | ')}`)
         }*/
-        const {type, name, data: d = {}} = clientConfig;
+        const {type, name, enable = true, data: d = {}} = clientConfig;
+
+        if(enable === false) {
+            this.logger.warn(`${type} (${name}) client was disabled by config`);
+            return;
+        }
+
         // add defaults
         const data = {...defaults, ...d};
         let newClient;

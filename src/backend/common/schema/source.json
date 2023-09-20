@@ -180,6 +180,15 @@
                     "$ref": "#/definitions/DeezerData",
                     "title": "data"
                 },
+                "enable": {
+                    "default": true,
+                    "description": "Should MS use this client/source? Defaults to true",
+                    "examples": [
+                        true
+                    ],
+                    "title": "enable",
+                    "type": "boolean"
+                },
                 "name": {
                     "description": "Unique identifier for this source.",
                     "title": "name",
@@ -297,6 +306,15 @@
                 "data": {
                     "$ref": "#/definitions/JRiverData",
                     "title": "data"
+                },
+                "enable": {
+                    "default": true,
+                    "description": "Should MS use this client/source? Defaults to true",
+                    "examples": [
+                        true
+                    ],
+                    "title": "enable",
+                    "type": "boolean"
                 },
                 "name": {
                     "description": "Unique identifier for this source.",
@@ -442,6 +460,15 @@
                     "$ref": "#/definitions/JellyData",
                     "title": "data"
                 },
+                "enable": {
+                    "default": true,
+                    "description": "Should MS use this client/source? Defaults to true",
+                    "examples": [
+                        true
+                    ],
+                    "title": "enable",
+                    "type": "boolean"
+                },
                 "name": {
                     "description": "Unique identifier for this source.",
                     "title": "name",
@@ -561,6 +588,15 @@
                 "data": {
                     "$ref": "#/definitions/KodiData",
                     "title": "data"
+                },
+                "enable": {
+                    "default": true,
+                    "description": "Should MS use this client/source? Defaults to true",
+                    "examples": [
+                        true
+                    ],
+                    "title": "enable",
+                    "type": "boolean"
                 },
                 "name": {
                     "description": "Unique identifier for this source.",
@@ -704,6 +740,15 @@
                     "$ref": "#/definitions/LastFmSourceData",
                     "title": "data"
                 },
+                "enable": {
+                    "default": true,
+                    "description": "Should MS use this client/source? Defaults to true",
+                    "examples": [
+                        true
+                    ],
+                    "title": "enable",
+                    "type": "boolean"
+                },
                 "name": {
                     "description": "Unique identifier for this source.",
                     "title": "name",
@@ -751,6 +796,15 @@
                 "data": {
                     "$ref": "#/definitions/ListenBrainzSourceData",
                     "title": "data"
+                },
+                "enable": {
+                    "default": true,
+                    "description": "Should MS use this client/source? Defaults to true",
+                    "examples": [
+                        true
+                    ],
+                    "title": "enable",
+                    "type": "boolean"
                 },
                 "name": {
                     "description": "Unique identifier for this source.",
@@ -958,6 +1012,15 @@
                     "$ref": "#/definitions/MPRISData",
                     "title": "data"
                 },
+                "enable": {
+                    "default": true,
+                    "description": "Should MS use this client/source? Defaults to true",
+                    "examples": [
+                        true
+                    ],
+                    "title": "enable",
+                    "type": "boolean"
+                },
                 "name": {
                     "description": "Unique identifier for this source.",
                     "title": "name",
@@ -1096,6 +1159,15 @@
                     "$ref": "#/definitions/MopidyData",
                     "title": "data"
                 },
+                "enable": {
+                    "default": true,
+                    "description": "Should MS use this client/source? Defaults to true",
+                    "examples": [
+                        true
+                    ],
+                    "title": "enable",
+                    "type": "boolean"
+                },
                 "name": {
                     "description": "Unique identifier for this source.",
                     "title": "name",
@@ -1131,6 +1203,15 @@
                 "data": {
                     "$ref": "#/definitions/PlexSourceData",
                     "title": "data"
+                },
+                "enable": {
+                    "default": true,
+                    "description": "Should MS use this client/source? Defaults to true",
+                    "examples": [
+                        true
+                    ],
+                    "title": "enable",
+                    "type": "boolean"
                 },
                 "name": {
                     "description": "Unique identifier for this source.",
@@ -1316,6 +1397,15 @@
                     "$ref": "#/definitions/SpotifySourceData",
                     "title": "data"
                 },
+                "enable": {
+                    "default": true,
+                    "description": "Should MS use this client/source? Defaults to true",
+                    "examples": [
+                        true
+                    ],
+                    "title": "enable",
+                    "type": "boolean"
+                },
                 "name": {
                     "description": "Unique identifier for this source.",
                     "title": "name",
@@ -1442,6 +1532,15 @@
                     "$ref": "#/definitions/SubsonicData",
                     "title": "data"
                 },
+                "enable": {
+                    "default": true,
+                    "description": "Should MS use this client/source? Defaults to true",
+                    "examples": [
+                        true
+                    ],
+                    "title": "enable",
+                    "type": "boolean"
+                },
                 "name": {
                     "description": "Unique identifier for this source.",
                     "title": "name",
@@ -1564,6 +1663,15 @@
                     "$ref": "#/definitions/PlexSourceData",
                     "title": "data"
                 },
+                "enable": {
+                    "default": true,
+                    "description": "Should MS use this client/source? Defaults to true",
+                    "examples": [
+                        true
+                    ],
+                    "title": "enable",
+                    "type": "boolean"
+                },
                 "name": {
                     "description": "Unique identifier for this source.",
                     "title": "name",
@@ -1675,6 +1783,15 @@
                 "data": {
                     "$ref": "#/definitions/YTMusicData",
                     "title": "data"
+                },
+                "enable": {
+                    "default": true,
+                    "description": "Should MS use this client/source? Defaults to true",
+                    "examples": [
+                        true
+                    ],
+                    "title": "enable",
+                    "type": "boolean"
                 },
                 "name": {
                     "description": "Unique identifier for this source.",
