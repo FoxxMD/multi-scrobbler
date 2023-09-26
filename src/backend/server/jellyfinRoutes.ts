@@ -9,7 +9,14 @@ import JellyfinSource from "../sources/JellyfinSource";
 export const setupJellyfinRoutes = (app: ExpressWithAsync, logger: Logger, scrobbleSources: ScrobbleSources) => {
 
     // webhook plugin sends json with context type text/utf-8 so we need to parse it differently
-    const jellyfinJsonParser = bodyParser.json({type: ['text/*', 'application/json']});
+    const jellyfinJsonParser = bodyParser.json({
+        type: ['text/*', 'application/json'],
+        // verify: function(req, res, buf, encoding) {
+        //     // get rawBody
+        //     // @ts-ignore
+        //     req.rawBody = buf.toString();
+        // }
+    });
     const jellyIngress = new JellyfinNotifier();
     app.postAsync('/jellyfin', async function(req, res)  {
         res.redirect(307, '/api/jellyfin/ingress');
@@ -34,9 +41,9 @@ export const setupJellyfinRoutes = (app: ExpressWithAsync, logger: Logger, scrob
                     return;
                 }
                 if(length === undefined) {
-                    logger.warn(`Jellyfin is not sending a well-formatted request. It does not have valid headers (application/json - text/*) OR it is missing content-length header: Content-Type => ${req.header('content-type')} | Length => ${length}`);
+                    logger.warn(`Jellyfin is not sending a well-formatted request. It does not have valid headers (application/json - text/*) OR it is missing content-length header: Content-Type => '${req.header('content-type')}' | Length => ${length}`);
                 } else {
-                    logger.warn(`Jellyfin is not sending a request with valid headers. Content-Type must be either application/json or a text/* wildcard (like text/plain) -- given: Content-Type => ${req.header('content-type')}`);
+                    logger.warn(`Jellyfin is not sending a request with valid headers. Content-Type must be either application/json or a text/* wildcard (like text/plain) -- given: Content-Type => '${req.header('content-type')}'`);
                 }
                 res.status(400).send('Invalid Content-Type. Must be either application/json or a text wildcard (like text/plain)');
                 return;
