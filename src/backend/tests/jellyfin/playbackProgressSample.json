@@ -1,0 +1,64 @@
+[
+  {
+    "data": {
+      "ServerId": "6c41d884a9c1490f8fd0863e04d75a69",
+      "ServerName": "maine",
+      "ServerVersion": "10.8.10",
+      "ServerUrl": "<redacted>",
+      "NotificationType": "PlaybackProgress",
+      "Timestamp": "2023-09-26T11:18:17.8399513-03:00",
+      "UtcTimestamp": "2023-09-26T14:18:17.8399533Z",
+      "Name": "Brother Madonna",
+      "Overview": "",
+      "Tagline": "",
+      "ItemId": "514941104216969e74a8d87fc7893ad5",
+      "ItemType": "Audio",
+      "RunTimeTicks": 926533312,
+      "RunTime": "00:01:32",
+      "Year": 2008,
+      "Album": "I Kind of Really Want to Make Love to You",
+      "Artist": "Kitsune\u00B2",
+      "Provider_musicbrainzalbumartist": "6e659357-5963-4daf-a634-a3596893f3d7",
+      "Provider_musicbrainzartist": "6e659357-5963-4daf-a634-a3596893f3d7",
+      "Provider_musicbrainzalbum": "7c10f8a5-669f-4ff6-bb88-de59846c0e0c",
+      "Provider_musicbrainzreleasegroup": "85c9ae8b-13e4-4fbf-9f09-5e405039772c",
+      "Provider_musicbrainztrack": "3c2c1f40-b22e-360e-a29a-1b1610190a8c",
+      "Audio_0_Title": "FLAC - Stereo",
+      "Audio_0_Type": "Audio",
+      "Audio_0_Language": null,
+      "Audio_0_Codec": "flac",
+      "Audio_0_Channels": 2,
+      "Audio_0_Bitrate": 917349,
+      "Audio_0_SampleRate": 44100,
+      "Audio_0_Default": false,
+      "PlaybackPositionTicks": 640000000,
+      "PlaybackPosition": "00:01:04",
+      "MediaSourceId": "514941104216969e74a8d87fc7893ad5",
+      "IsPaused": false,
+      "IsAutomated": true,
+      "DeviceId": "BC9311B570ABE4BD71EEEC0856A448AD",
+      "DeviceName": "samsung SM-S901E",
+      "ClientName": "Android",
+      "NotificationUsername": "Tabitha",
+      "UserId": "6d23c30c5e9d4ec6a66db6b05b63e516"
+    },
+    "expected": {
+      "data": {
+        "track": "Brother Madonna",
+        "artists": ["Kitsune²"],
+        "album": "I Kind of Really Want to Make Love to You",
+        "duration": 92
+      },
+      "meta": {
+        "source": "Jellyfin",
+        "event": "PlaybackProgress",
+        "mediaType": "Audio",
+        "trackId": "514941104216969e74a8d87fc7893ad5",
+        "user": "Tabitha",
+        "sourceVersion": "10.8.10",
+        "deviceId": "BC9311B570-samsung SM-S901E",
+        "trackProgressPosition": 64
+      }
+    }
+  }
+]
