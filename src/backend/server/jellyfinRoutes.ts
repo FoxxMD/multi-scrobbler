@@ -5,7 +5,6 @@ import ScrobbleSources from "../sources/ScrobbleSources";
 import bodyParser from "body-parser";
 import { JellyfinNotifier } from "../sources/ingressNotifiers/JellyfinNotifier";
 import JellyfinSource from "../sources/JellyfinSource";
-import {ExpressRequest} from "../common/infrastructure/Atomic.js";
 
 export const setupJellyfinRoutes = (app: ExpressWithAsync, logger: Logger, scrobbleSources: ScrobbleSources) => {
 
