@@ -6,13 +6,14 @@ import {
     setIntersection, sortByOldestPlayDate,
 } from "../utils";
 import {
-    ClientType,
+    ARTIST_WEIGHT,
+    ClientType, DUP_SCORE_THRESHOLD,
     FormatPlayObjectOptions,
     INITIALIZED,
     INITIALIZING,
     InitState,
-    NOT_INITIALIZED,
-    ScrobbledPlayObject,
+    NOT_INITIALIZED, REFERENCE_WEIGHT,
+    ScrobbledPlayObject, TIME_WEIGHT, TITLE_WEIGHT,
 } from "../common/infrastructure/Atomic";
 import winston, {Logger} from '@foxxmd/winston';
 import { CommonClientConfig } from "../common/infrastructure/config/client/index";
@@ -22,6 +23,7 @@ import {FixedSizeList} from 'fixed-size-list';
 import { PlayObject, TrackStringOptions } from "../../core/Atomic";
 import {buildTrackString, capitalize, truncateStringToLength} from "../../core/StringUtils";
 import EventEmitter from "events";
+import {compareScrobbleTracks} from "../utils/StringUtils";
 
 export default abstract class AbstractScrobbleClient {
 
@@ -246,24 +248,7 @@ export default abstract class AbstractScrobbleClient {
         return [closeTime, fuzzyTime];
     }
     protected compareExistingScrobbleTitle = (existing: PlayObject, candidate: PlayObject): number => {
-
-        const {
-            data: {
-                track: scrobbleTitle,
-            } = {},
-        } = existing;
-
-        let cleanSourceTitle = this.cleanSourceSearchTitle(candidate);
-
-        let titleMatch;
-        const lowerScrobbleTitle = scrobbleTitle.toLocaleLowerCase().trim();
-        // because of all this replacing we need a more position-agnostic way of comparing titles so use intersection on title split by spaces
-        // and compare against length of scrobble title
-        const sourceTitleTerms = new Set(cleanSourceTitle.split(' ').filter((x: any) => x !== ''));
-        const commonTerms = setIntersection(new Set(lowerScrobbleTitle.split(' ')), sourceTitleTerms);
-
-        titleMatch = commonTerms.size / sourceTitleTerms.size;
-        return titleMatch;
+        return Math.min(compareScrobbleTracks(existing, candidate)/100, 1);
     }
 
     protected compareExistingScrobbleArtist = (existing: PlayObject, candidate: PlayObject): number => {
@@ -345,21 +330,21 @@ export default abstract class AbstractScrobbleClient {
 
                 const artistMatch = this.compareExistingScrobbleArtist(x, playObj);
 
-                const artistScore = .2 * artistMatch;
-                const titleScore = .3 * titleMatch;
-                const timeScore = .5 * (closeTime ? 1 : (fuzzyTime ? 0.5 : 0));
-                const referenceScore = .5 * (referenceMatch ? 1 : 0);
+                const artistScore = ARTIST_WEIGHT * artistMatch;
+                const titleScore = TITLE_WEIGHT * titleMatch;
+                const timeScore = TIME_WEIGHT * (closeTime ? 1 : (fuzzyTime ? 0.5 : 0));
+                const referenceScore = REFERENCE_WEIGHT * (referenceMatch ? 1 : 0);
                 const score = artistScore + titleScore + timeScore;
 
                 let scoreBreakdowns = [
-                    `Reference: ${(referenceMatch ? 1 : 0)} * .5 = ${referenceScore.toFixed(2)}`,
-                    `Artist ${artistMatch.toFixed(2)} * .2 = ${artistScore.toFixed(2)}`,
-                    `Title: ${titleMatch.toFixed(2)} * .3 = ${titleScore.toFixed(2)}`,
-                    `Time: ${closeTime ? 1 : 0} * .5 = ${timeScore.toFixed(2)}`,
-                    `Score ${score.toFixed(2)} => ${score >= .7 ? 'Matched!' : 'No Match'}`
+                    `Reference: ${(referenceMatch ? 1 : 0)} * ${REFERENCE_WEIGHT} = ${referenceScore.toFixed(2)}`,
+                    `Artist ${artistMatch.toFixed(2)} * ${ARTIST_WEIGHT} = ${artistScore.toFixed(2)}`,
+                    `Title: ${titleMatch.toFixed(2)} * ${TITLE_WEIGHT} = ${titleScore.toFixed(2)}`,
+                    `Time: ${closeTime ? 1 : (fuzzyTime ? 0.5 : 0)} * ${TIME_WEIGHT} = ${timeScore.toFixed(2)}`,
+                    `Score ${score.toFixed(2)} => ${score >= DUP_SCORE_THRESHOLD ? 'Matched!' : 'No Match'}`
                 ];
 
-                const confidence = `Score ${score.toFixed(2)} => ${score >= .7 ? 'Matched!' : 'No Match'}`
+                const confidence = `Score ${score.toFixed(2)} => ${score >= DUP_SCORE_THRESHOLD ? 'Matched!' : 'No Match'}`
 
                 const scoreInfo = {
                     score,
@@ -372,7 +357,7 @@ export default abstract class AbstractScrobbleClient {
                     closestMatch = scoreInfo
                 }
 
-                return score >= .7;
+                return score >= DUP_SCORE_THRESHOLD;
             });
         }
 
