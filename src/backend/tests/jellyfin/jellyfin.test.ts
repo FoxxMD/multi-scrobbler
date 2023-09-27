@@ -1,11 +1,11 @@
 import {describe, it} from 'mocha';
 import {assert} from 'chai';
-import samplePayload from './jellyfin/playbackProgressSample.json';
+import samplePayload from './playbackProgressSample.json';
 
-import JellyfinSource from "../sources/JellyfinSource";
+import JellyfinSource from "../../sources/JellyfinSource";
 import EventEmitter from "events";
-import {getLogger} from "../common/logging";
-import {JsonPlayObject, PlayObject} from "../../core/Atomic";
+import {getLogger} from "../../common/logging";
+import {JsonPlayObject, PlayObject} from "../../../core/Atomic";
 
 const dataAsFixture = (data: any): TestFixture => {
     return data as TestFixture;
