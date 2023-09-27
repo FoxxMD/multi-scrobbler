@@ -324,7 +324,7 @@ export default class MalojaScrobbler extends AbstractScrobbleClient {
                 } = {},
             } = resp;
             this.logger.debug(`Found ${list.length} recent scrobbles`);
-            this.recentScrobbles = list.map((x: any) => this.formatPlayObj(x)).sort(sortByOldestPlayDate);
+            this.recentScrobbles = list.map((x: any) => this.formatPlayObj(x));
             if (this.recentScrobbles.length > 0) {
                 const [{data: {playDate: newestScrobbleTime = dayjs()} = {}} = {}] = this.recentScrobbles.slice(-1);
                 const [{data: {playDate: oldestScrobbleTime = dayjs()} = {}} = {}] = this.recentScrobbles.slice(0, 1);

@@ -3,7 +3,7 @@ import {
     isPlayTemporallyClose,
     mergeArr,
     playObjDataMatch,
-    setIntersection,
+    setIntersection, sortByOldestPlayDate,
 } from "../utils";
 import {
     ClientType,
@@ -36,7 +36,7 @@ export default abstract class AbstractScrobbleClient {
     requiresAuthInteraction: boolean = false;
     authed: boolean = false;
 
-    recentScrobbles: PlayObject[] = [];
+    #recentScrobblesList: PlayObject[] = [];
     scrobbledPlayObjs: FixedSizeList<ScrobbledPlayObject>;
     newestScrobbleTime?: Dayjs
     oldestScrobbleTime?: Dayjs
@@ -97,6 +97,16 @@ export default abstract class AbstractScrobbleClient {
         };
     }
 
+    set recentScrobbles(scrobbles: PlayObject[]) {
+        const sorted = [...scrobbles];
+        sorted.sort(sortByOldestPlayDate);
+        this.#recentScrobblesList = sorted;
+    }
+
+    get recentScrobbles() {
+        return this.#recentScrobblesList;
+    }
+
     get initialized() {
         return this.#initState === INITIALIZED;
     }
@@ -136,11 +146,7 @@ export default abstract class AbstractScrobbleClient {
         this.logger.debug('Scrobbler does not have refresh function implemented!');
     }
 
-    alreadyScrobbled = async (playObj: PlayObject, log = false) => {
-        this.logger.debug('Scrobbler does not have alreadyScrobbled check implemented!');
-        return false;
-    }
-
+    public abstract alreadyScrobbled(playObj: PlayObject, log?: boolean): Promise<boolean>;
     scrobblesLastCheckedAt = () => {
         return this.lastScrobbleCheck;
     }

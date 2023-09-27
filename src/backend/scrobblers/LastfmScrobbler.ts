@@ -91,7 +91,7 @@ export default class LastfmScrobbler extends AbstractScrobbleClient {
                     this.logger.debug(x);
                     return acc;
                 }
-            }, []).sort(sortByOldestPlayDate);
+            }, []);
             this.logger.debug(`Found ${this.recentScrobbles.length} recent scrobbles`);
             if (this.recentScrobbles.length > 0) {
                 const [{data: {playDate: newestScrobbleTime = dayjs()} = {}} = {}] = this.recentScrobbles.slice(-1);
