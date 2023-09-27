@@ -7,8 +7,8 @@ import {TimeoutError, WebapiError} from "spotify-web-api-node/src/response-error
 import Ajv, {Schema} from 'ajv';
 import {
     asPlayerStateData,
-    DEFAULT_SCROBBLE_DURATION_THRESHOLD, DEFAULT_SCROBBLE_PERCENT_THRESHOLD,
-    DELIMITERS,
+    DEFAULT_SCROBBLE_DURATION_THRESHOLD,
+    DEFAULT_SCROBBLE_PERCENT_THRESHOLD,
     lowGranularitySources,
     NO_DEVICE,
     NO_USER,
@@ -24,7 +24,7 @@ import {Request} from "express";
 import pathUtil from "path";
 import {ErrorWithCause} from "pony-cause";
 import backoffStrategies from '@kenyip/backoff-strategies';
-import {ScrobbleThresholds} from "./common/infrastructure/config/source/index";
+import {ScrobbleThresholds} from "./common/infrastructure/config/source";
 import {replaceResultTransformer, stripIndentTransformer, TemplateTag, trimResultTransformer} from 'common-tags';
 import {Duration} from "dayjs/plugin/duration.js";
 import {ListenRange, PlayObject} from "../core/Atomic";
@@ -147,22 +147,6 @@ export const setIntersection = (setA: any, setB: any) => {
 
 export const unique = <T>(arr: T[]): T[] => {
     return Array.from(new Set(arr))
-}
-
-export const PUNCTUATION_WHITESPACE_REGEX = new RegExp(/[^\w\d]/g);
-export const uniqueNormalizedStrArr = (arr: string[]): string[] => {
-    return arr.reduce((acc: string[], curr) => {
-        const normalizedCurr = normalizeStr(curr)
-        if (!acc.some(x => normalizeStr(x) === normalizedCurr)) {
-            return acc.concat(curr);
-        }
-        return acc;
-    }, []);
-}
-
-// https://stackoverflow.com/a/37511463/1469797
-export const normalizeStr = (str: string): string => {
-    return str.normalize('NFD').replace(/[\u0300-\u036f]/g, "").replace(PUNCTUATION_WHITESPACE_REGEX, '').toLocaleLowerCase();
 }
 
 export const returnDuplicateStrings = (arr: any) => {
@@ -744,99 +728,6 @@ export const pollingBackoff = (attempt: number, scaleFactor: number = 1): number
     return Math.round(backoffStrat(attempt + 1) / 1000);
 }
 
-export interface PlayCredits {
-    primary: string
-    secondary?: string[]
-}
-/**
- * For matching the most common track/artist pattern that has a joiner
- *
- * Primary ft. 2nd Artist, 3rd Artist
- * Primary (2nd Artist)
- * Primary [featuring 2nd Artist]
- *
- * ____
- *
- *  => Primary may or may not exist
- *    => Primary must not have an opening character ( [
- * => Secondaries may or may not have an opening character ( [
- *   => MUST begin with joiner ft. feat. featuring with vs.
- *   => May have closing character ) ]
- * */
-export const SECONDARY_ARTISTS_SECTION_REGEX = new RegExp(/^(?<primary>[^(\[]*)?(?<secondarySection>[(\[]?(?<joiner>\Wft\.?|\Wfeat\.?|featuring|\Wvs\.?) (?<secondaryArtists>[^)\]]*)(?:[)\]]|\s*)$)/i);
-// export const SECONDARY_ARTISTS_REGEX = new RegExp(//ig);
-export const parseCredits = (str: string, delimiters?: boolean | string[]): PlayCredits => {
-    if(str.trim() === '') {
-        return undefined;
-    }
-    let primary: string | undefined;
-    let secondary: string[] = [];
-    const results = parseRegexSingleOrFail(SECONDARY_ARTISTS_SECTION_REGEX, str);
-    if(results !== undefined) {
-        primary = results.named.primary !== undefined ? results.named.primary.trim() : undefined;
-        let delims: string[] | undefined;
-        if(Array.isArray(delimiters)) {
-            delims = delimiters;
-        } else if(delimiters === false) {
-            delims = [];
-        }
-        secondary = parseStringList(results.named.secondaryArtists as string, delims)
-        return {
-            primary,
-            secondary
-        };
-    }
-    return undefined;
-}
-
-export const parseArtistCredits = (str: string, delimiters?: boolean | string[]): PlayCredits | undefined => {
-    if(str.trim() === '') {
-        return undefined;
-    }
-    let delims: string[] | undefined;
-    if(Array.isArray(delimiters)) {
-        delims = delimiters;
-    } else if(delimiters === false) {
-        delims = [];
-    }
-    const withJoiner = parseCredits(str, delimiters);
-    if(withJoiner !== undefined) {
-        // all this does is make sure and "ft" or parenthesis/brackets are separated --
-        // it doesn't also separate primary artists so do that now
-        const primaries = parseStringList(withJoiner.primary, delims);
-        if(primaries.length > 1) {
-            return {
-                primary: primaries[0],
-                secondary: primaries.slice(1).concat(withJoiner.secondary)
-            }
-        }
-        return withJoiner;
-    }
-    // likely this is a plain string with just delims
-    const artists = parseStringList(str, delims);
-    if(artists.length > 1) {
-        return {
-            primary: artists[0],
-            secondary: artists.slice(1)
-        }
-    }
-    return {
-        primary: artists[0]
-    }
-}
-
-export const parseTrackCredits = (str: string, delimiters?: boolean | string[]): PlayCredits | undefined => parseCredits(str, delimiters);
-
-export const parseStringList = (str: string, delimiters: string[] = [',', '&', '/', '\\']): string[] => {
-    if(delimiters.length === 0) {
-        return [str];
-    }
-    return delimiters.reduce((acc: string[], curr: string) => {
-        const explodedStrings = acc.map(x => x.split(curr));
-        return explodedStrings.flat(1);
-    }, [str]).map(x => x.trim());
-}
-
 export const parseRegex = (reg: RegExp, val: string): RegExResult[] | undefined => {
 
     if (reg.global) {
@@ -875,23 +766,6 @@ export const parseRegexSingleOrFail = (reg: RegExp, val: string): RegExResult | 
         return results[0];
     }
     return undefined;
-}
-
-export const containsDelimiters = (str: string) => {
-    return null !== str.match(/[,&\/\\]+/i);
-}
-
-export const findDelimiters = (str: string) => {
-    const found: string[] = [];
-    for(const d of DELIMITERS) {
-        if(str.indexOf(d) !== -1) {
-            found.push(d);
-        }
-    }
-    if(found.length === 0) {
-        return undefined;
-    }
-    return found;
 }
 
 export const intersect = (a: Array<any>, b: Array<any>) => {
