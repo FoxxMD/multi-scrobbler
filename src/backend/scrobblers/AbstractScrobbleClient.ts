@@ -70,7 +70,7 @@ export default abstract class AbstractScrobbleClient {
                     checkExistingScrobbles = true,
                     verbose = {},
                 } = {},
-            },
+            } = {},
         } = config;
         this.config = config;
         this.refreshEnabled = refreshEnabled;
