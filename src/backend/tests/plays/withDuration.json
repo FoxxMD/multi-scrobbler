@@ -1,0 +1,70 @@
+[
+  {
+    "data": {
+      "artists": [
+        "Kaidi Tatham"
+      ],
+      "track": "Fricassee",
+      "duration": 305,
+      "playDate": "2023-09-20T14:32:39.000Z"
+    },
+    "meta": {
+      "source": "Maloja"
+    }
+  },
+  {
+    "data": {
+      "artists": [
+        "Kuna Maze"
+      ],
+      "track": "Jimbo",
+      "duration": 255,
+      "playDate": "2023-09-20T14:46:00.000Z"
+    },
+    "meta": {
+      "source": "Maloja"
+    }
+  },
+  {
+    "data": {
+      "artists": [
+        "Norman Person",
+        "Shamek Farrah"
+      ],
+      "track": "Aisha",
+      "duration": 559,
+      "playDate": "2023-09-20T15:10:09.000Z"
+    },
+    "meta": {
+      "source": "Maloja"
+    }
+  },
+  {
+    "data": {
+      "artists": [
+        "Cheo Feliciano"
+      ],
+      "track": "Aprieta (Oye Cómo Va)",
+      "duration": 195,
+      "playDate": "2023-09-20T15:38:12.000Z"
+    },
+    "meta": {
+      "source": "Maloja"
+    }
+  },
+  {
+    "data": {
+      "artists": [
+        "A Collection of Boogie",
+        "Jazz Funk",
+        "Disco with Mehdi El"
+      ],
+      "track": "Aquil",
+      "duration": 3072,
+      "playDate": "2023-09-20T17:55:05.000Z"
+    },
+    "meta": {
+      "source": "Maloja"
+    }
+  }
+]

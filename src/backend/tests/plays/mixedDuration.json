@@ -1,0 +1,70 @@
+[
+  {
+    "data": {
+      "artists": [
+        "Menagerie"
+      ],
+      "track": "Danieda's Dance",
+      "duration": null,
+      "playDate": "2023-09-18T19:00:25.000Z"
+    },
+    "meta": {
+      "source": "Maloja"
+    }
+  },
+  {
+    "data": {
+      "artists": [
+        "Dan Tenor City",
+        "Ricoh",
+        "Tom Funk"
+      ],
+      "track": "Close To The Source",
+      "duration": null,
+      "playDate": "2023-09-18T20:17:58.000Z"
+    },
+    "meta": {
+      "source": "Maloja"
+    }
+  },
+  {
+    "data": {
+      "artists": [
+        "medline"
+      ],
+      "track": "Run For Cover",
+      "duration": 300,
+      "playDate": "2023-09-20T14:02:05.000Z"
+    },
+    "meta": {
+      "source": "Maloja"
+    }
+  },
+  {
+    "data": {
+      "artists": [
+        "King Owusu",
+        "Zeitgeist Freedom Energy Exchange"
+      ],
+      "track": "Obana",
+      "duration": null,
+      "playDate": "2023-09-20T14:07:02.000Z"
+    },
+    "meta": {
+      "source": "Maloja"
+    }
+  },
+  {
+    "data": {
+      "artists": [
+        "Noro Morales"
+      ],
+      "track": "Mississippi Mambo",
+      "duration": 159,
+      "playDate": "2023-09-20T17:49:26.000Z"
+    },
+    "meta": {
+      "source": "Maloja"
+    }
+  }
+]
