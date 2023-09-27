@@ -271,7 +271,7 @@ export default abstract class AbstractScrobbleClient {
             data: {
                 artists: sourceArtists = [],
             } = {},
-        } = candidate;
+        } = existing;
         const {
             data: {
                 artists = [],
