@@ -298,7 +298,7 @@ export default abstract class AbstractScrobbleClient {
         }
 
         let existingScrobble;
-        let closestMatch: {score: number, breakdowns: string[], scrobble?: PlayObject} = {score: 0, breakdowns: ['None']};
+        let closestMatch: {score: number, breakdowns: string[], confidence: string, scrobble?: PlayObject} = {score: 0, breakdowns: [], confidence: 'None'};
 
         // then check if we have already recorded this
         const [existingExactSubmitted, existingDataSubmitted = []] = this.findExistingSubmittedPlayObj(playObj);
@@ -309,7 +309,8 @@ export default abstract class AbstractScrobbleClient {
 
             closestMatch = {
                 score: 1,
-                breakdowns: ['Exact Match found in previously successfully scrobbled']
+                breakdowns: [],
+                confidence: 'Exact Match found in previously successfully scrobbled'
             }
         }
         // if not though then we need to check recent scrobbles from scrobble api.
@@ -363,7 +364,8 @@ export default abstract class AbstractScrobbleClient {
                 const scoreInfo = {
                     score,
                     scrobble: x,
-                    breakdowns: this.verboseOptions.match.confidenceBreakdown ? scoreBreakdowns : [confidence]
+                    confidence,
+                    breakdowns: scoreBreakdowns
                 }
 
                 if (closestMatch.score <= score && score > 0) {
@@ -375,8 +377,12 @@ export default abstract class AbstractScrobbleClient {
         }
 
         if ((existingScrobble !== undefined && this.verboseOptions.match.onMatch) || (existingScrobble === undefined && this.verboseOptions.match.onNoMatch)) {
-            const closestScrobble = closestMatch.scrobble === undefined ? closestMatch.breakdowns.join(' | ') : `Closest Scrobble: ${buildTrackString(closestMatch.scrobble, scoreTrackOpts)} => ${closestMatch.breakdowns.join(' | ')}`;
+            const closestScrobble = `Closest Scrobble: ${buildTrackString(closestMatch.scrobble, scoreTrackOpts)} => ${closestMatch.confidence}`;
             this.logger.debug(`(Existing Check) Source: ${buildTrackString(playObj, scoreTrackOpts)} => ${closestScrobble}`);
+            if (this.verboseOptions.match.confidenceBreakdown === true) {
+                this.logger.debug(`Breakdown:
+${closestMatch.breakdowns.join('\n')}`);
+            }
         }
         return existingScrobble;
     }
