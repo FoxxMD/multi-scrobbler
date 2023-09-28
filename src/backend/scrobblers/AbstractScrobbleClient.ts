@@ -257,7 +257,7 @@ export default abstract class AbstractScrobbleClient {
 
     existingScrobble = async (playObj: PlayObject) => {
         const tr = truncateStringToLength(27);
-        const scoreTrackOpts: TrackStringOptions = {include: ['track', 'time'], transformers: {track: (t: any) => tr(t).padEnd(30)}};
+        const scoreTrackOpts: TrackStringOptions = {include: ['track', 'artist', 'time'], transformers: {track: (t: any, data, existing) => `${existing ? '- ': ''}${tr(t)}`}};
 
         // return early if we don't care about checking existing
         if (false === this.checkExistingScrobbles) {

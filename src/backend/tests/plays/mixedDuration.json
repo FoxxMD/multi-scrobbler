@@ -2,11 +2,11 @@
   {
     "data": {
       "artists": [
-        "Menagerie"
+        "Kaidi Tatham"
       ],
-      "track": "Danieda's Dance",
-      "duration": null,
-      "playDate": "2023-09-18T19:00:25.000Z"
+      "track": "Fricassee",
+      "duration": 305,
+      "playDate": "2023-09-20T14:32:39.000Z"
     },
     "meta": {
       "source": "Maloja"
@@ -15,13 +15,10 @@
   {
     "data": {
       "artists": [
-        "Dan Tenor City",
-        "Ricoh",
-        "Tom Funk"
+        "Kuna Maze"
       ],
-      "track": "Close To The Source",
-      "duration": null,
-      "playDate": "2023-09-18T20:17:58.000Z"
+      "track": "Jimbó",
+      "playDate": "2023-09-20T14:46:00.000Z"
     },
     "meta": {
       "source": "Maloja"
@@ -30,11 +27,12 @@
   {
     "data": {
       "artists": [
-        "medline"
+        "Norman Person",
+        "Shamek Farrah"
       ],
-      "track": "Run For Cover",
-      "duration": 300,
-      "playDate": "2023-09-20T14:02:05.000Z"
+      "track": "Aisha",
+      "duration": 559,
+      "playDate": "2023-09-20T15:10:09.000Z"
     },
     "meta": {
       "source": "Maloja"
@@ -43,12 +41,12 @@
   {
     "data": {
       "artists": [
-        "King Owusu",
-        "Zeitgeist Freedom Energy Exchange"
+        "Frédéric Chopin",
+        "Krystian Zimerman"
       ],
-      "track": "Obana",
-      "duration": null,
-      "playDate": "2023-09-20T14:07:02.000Z"
+      "track": "Ballade No. 4 in F Minor, Op. 52",
+      "duration": 575,
+      "playDate": "2023-09-20T15:17:12.000Z"
     },
     "meta": {
       "source": "Maloja"
@@ -57,11 +55,63 @@
   {
     "data": {
       "artists": [
-        "Noro Morales"
+        "Cheo Feliciano"
       ],
-      "track": "Mississippi Mambo",
-      "duration": 159,
-      "playDate": "2023-09-20T17:49:26.000Z"
+      "track": "Aprieta (Oye Cómo Va)",
+      "playDate": "2023-09-20T15:38:12.000Z"
+    },
+    "meta": {
+      "source": "Maloja"
+    }
+  },
+  {
+    "data": {
+      "artists": [
+        "Pink Floyd"
+      ],
+      "track": "Another Brick in the Wall, Pt. 1",
+      "playDate": "2023-09-20T15:39:12.000Z"
+    },
+    "meta": {
+      "source": "Maloja"
+    }
+  },
+  {
+    "data": {
+      "artists": [
+        "Frédéric Chopin",
+        "Krystian Zimerman"
+      ],
+      "track": "Ballade No. 1 in G Minor, Op. 23",
+      "duration": 575,
+      "playDate": "2023-09-20T15:41:12.000Z"
+    },
+    "meta": {
+      "source": "Maloja"
+    }
+  },
+  {
+    "data": {
+      "artists": [
+        "A Collection of Boogie",
+        "Jazz Funk",
+        "Disco with Mehdi El"
+      ],
+      "track": "Aquil",
+      "playDate": "2023-09-20T17:55:05.000Z"
+    },
+    "meta": {
+      "source": "Maloja"
+    }
+  },
+  {
+    "data": {
+      "artists": [
+        "Outkast"
+      ],
+      "track": "Da Art of Storytellin' (Pt. 1)",
+      "duration": 422,
+      "playDate": "2023-09-20T15:39:12.000Z"
     },
     "meta": {
       "source": "Maloja"
