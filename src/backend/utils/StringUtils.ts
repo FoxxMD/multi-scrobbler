@@ -149,7 +149,7 @@ export const compareScrobbleTracks = (existing: PlayObject, candidate: PlayObjec
         }
     } = candidate;
 
-    return compareNormalizedStrings(existingTrack, candidateTrack).highScoreWeighted;
+    return compareNormalizedStrings(existingTrack, candidateTrack).highScore;
 }
 
 export const compareScrobbleArtists = (existing: PlayObject, candidate: PlayObject): number => {
@@ -165,7 +165,7 @@ export const compareScrobbleArtists = (existing: PlayObject, candidate: PlayObje
         }
     } = candidate;
 
-    return compareNormalizedStrings(existingArtists.reduce((acc, curr) => `${acc} ${curr}`, ''), candidateArtists.reduce((acc, curr) => `${acc} ${curr}`, '')).highScoreWeighted;
+    return compareNormalizedStrings(existingArtists.reduce((acc, curr) => `${acc} ${curr}`, ''), candidateArtists.reduce((acc, curr) => `${acc} ${curr}`, '')).highScore;
 }
 
 export const compareNormalizedStrings = (existing: string, candidate: string): StringSamenessResult => {
