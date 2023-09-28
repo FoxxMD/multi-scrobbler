@@ -152,6 +152,22 @@ export const compareScrobbleTracks = (existing: PlayObject, candidate: PlayObjec
     return compareNormalizedStrings(existingTrack, candidateTrack).highScoreWeighted;
 }
 
+export const compareScrobbleArtists = (existing: PlayObject, candidate: PlayObject): number => {
+    const {
+        data: {
+            artists: existingArtists = [],
+        } = {},
+    } = existing;
+
+    const {
+        data: {
+            artists: candidateArtists = [],
+        }
+    } = candidate;
+
+    return compareNormalizedStrings(existingArtists.reduce((acc, curr) => `${acc} ${curr}`, ''), candidateArtists.reduce((acc, curr) => `${acc} ${curr}`, '')).highScoreWeighted;
+}
+
 export const compareNormalizedStrings = (existing: string, candidate: string): StringSamenessResult => {
 
     const normalExisting = normalizeStr(existing, {keepSingleWhitespace: true});

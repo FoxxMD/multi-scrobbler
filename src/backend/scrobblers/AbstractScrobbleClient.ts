@@ -23,7 +23,7 @@ import {FixedSizeList} from 'fixed-size-list';
 import { PlayObject, TrackStringOptions } from "../../core/Atomic";
 import {buildTrackString, capitalize, truncateStringToLength} from "../../core/StringUtils";
 import EventEmitter from "events";
-import {compareScrobbleTracks} from "../utils/StringUtils";
+import {compareScrobbleArtists, compareScrobbleTracks} from "../utils/StringUtils";
 
 export default abstract class AbstractScrobbleClient {
 
@@ -252,22 +252,7 @@ export default abstract class AbstractScrobbleClient {
     }
 
     protected compareExistingScrobbleArtist = (existing: PlayObject, candidate: PlayObject): number => {
-        const {
-            data: {
-                artists: sourceArtists = [],
-            } = {},
-        } = existing;
-        const {
-            data: {
-                artists = [],
-            } = {},
-        } = candidate;
-        let artistMatch;
-        const lowerSourceArtists = sourceArtists.map((x: any) => x.toLocaleLowerCase());
-        const lowerScrobbleArtists = artists.map(x => x.toLocaleLowerCase());
-        artistMatch = setIntersection(new Set(lowerScrobbleArtists), new Set(lowerSourceArtists)).size / artists.length;
-
-        return artistMatch;
+        return Math.min(compareScrobbleArtists(existing, candidate)/100, 1)
     }
 
     existingScrobble = async (playObj: PlayObject) => {
