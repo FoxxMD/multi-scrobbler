@@ -103,30 +103,33 @@ describe('When scrobble track/artist/album matches existing but is a new scrobbl
         assert.isFalse(await testScrobbler.alreadyScrobbled(timeOffNeg));
     });
 
-    it('A track with continuity to the previous track is not detected as a duplicate', async function () {
+    describe('When existing has duration', function () {
+        it('A track with continuity to the previous track is not detected as a duplicate', async function () {
 
-        testScrobbler.recentScrobbles = normalizedWithDur;
+            testScrobbler.recentScrobbles = normalizedWithDur;
 
-        const brickPt1 = normalizedWithDur.find(x => x.data.track.includes('Another Brick'));
-        const brickPt2 = clone(brickPt1);
-        brickPt2.data.track = 'Another Brick in the Wall, Pt. 2';
-        brickPt2.data.playDate = brickPt1.data.playDate.add(brickPt1.data.duration + 1, 'seconds');
-        assert.isFalse(await testScrobbler.alreadyScrobbled(brickPt2));
+            const brickPt1 = normalizedWithDur.find(x => x.data.track.includes('Another Brick'));
+            const brickPt2 = clone(brickPt1);
+            brickPt2.data.track = 'Another Brick in the Wall, Pt. 2';
+            brickPt2.data.playDate = brickPt1.data.playDate.add(brickPt1.data.duration + 1, 'seconds');
+            assert.isFalse(await testScrobbler.alreadyScrobbled(brickPt2));
 
-        const story1 = normalizedWithDur.find(x => x.data.track.includes('Da Art of'));
-        const story2 = clone(story1);
-        story2.data.track = `Da Art of Storytellin' (Pt. 2)`;
-        story2.data.playDate = story2.data.playDate.add(story1.data.duration + 1, 'seconds');
+            const story1 = normalizedWithDur.find(x => x.data.track.includes('Da Art of'));
+            const story2 = clone(story1);
+            story2.data.track = `Da Art of Storytellin' (Pt. 2)`;
+            story2.data.playDate = story2.data.playDate.add(story1.data.duration + 1, 'seconds');
 
-        assert.isFalse(await testScrobbler.alreadyScrobbled(story2));
+            assert.isFalse(await testScrobbler.alreadyScrobbled(story2));
 
-        const ballad1 = normalizedWithDur.find(x => x.data.track.includes('Ballade No. 1'));
-        const ballad2 = clone(ballad1);
-        ballad2.data.track = `Ballade No. 2 in G Minor, Op. 27`;
-        ballad2.data.playDate = ballad2.data.playDate.add(ballad1.data.duration + 1, 'seconds');
+            const ballad1 = normalizedWithDur.find(x => x.data.track.includes('Ballade No. 1'));
+            const ballad2 = clone(ballad1);
+            ballad2.data.track = `Ballade No. 2 in G Minor, Op. 27`;
+            ballad2.data.playDate = ballad2.data.playDate.add(ballad1.data.duration + 1, 'seconds');
 
-        assert.isFalse(await testScrobbler.alreadyScrobbled(ballad2));
+            assert.isFalse(await testScrobbler.alreadyScrobbled(ballad2));
+        });
     });
+
 });
 
 describe('When scrobble is a duplicate (title/artists/album)', function () {
@@ -162,7 +165,7 @@ describe('When scrobble is a duplicate (title/artists/album)', function () {
 
     it('Is detected as duplicate when artist/title differences are from unicode normalization', async function () {
         testScrobbler.recentScrobbles = normalizedWithDur;
-        const ref = normalizedWithDur[1];
+        const ref = normalizedWithDur.find(x => x.data.track === 'Jimbó');
 
         const diffPlay = clone(ref);
         diffPlay.data.playDate = diffPlay.data.playDate.add(9, 's');
@@ -196,6 +199,19 @@ describe('When scrobble is a duplicate (title/artists/album)', function () {
 
         assert.isTrue(await testScrobbler.alreadyScrobbled(timeOffPos));
         assert.isTrue(await testScrobbler.alreadyScrobbled(timeOffNeg));
+    });
+
+    it('Is detected as duplicate when title is exact, artist is similar, and time is similar', async function () {
+        testScrobbler.recentScrobbles = normalizedWithDur;
+        const ref = normalizedWithDur[3];
+
+        const diffPlay = clone(ref);
+        diffPlay.data.playDate = diffPlay.data.playDate.add(3, 's');
+        diffPlay.data.artists = [diffPlay.data.artists[0]]
+        assert.isTrue(await testScrobbler.alreadyScrobbled(diffPlay));
+
+        diffPlay.data.artists = [ref.data.artists[1]]
+        assert.isTrue(await testScrobbler.alreadyScrobbled(diffPlay));
     });
 
     describe('When existing has duration', function () {
