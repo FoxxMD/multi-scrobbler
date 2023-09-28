@@ -214,7 +214,7 @@ describe('When scrobble is a duplicate (title/artists/album)', function () {
         assert.isTrue(await testScrobbler.alreadyScrobbled(diffPlay));
     });
 
-    describe('When existing has duration', function () {
+    describe('When at least one play has duration', function () {
 
         it('Is detected as duplicate when play date is close to the end of an existing scrobble', async function () {
 
@@ -222,6 +222,16 @@ describe('When scrobble is a duplicate (title/artists/album)', function () {
 
             const timeEnd = clone(normalizedWithDur[normalizedWithMixedDur.length - 1]);
             timeEnd.data.playDate = timeEnd.data.playDate.add(timeEnd.data.duration, 's');
+
+            assert.isTrue(await testScrobbler.alreadyScrobbled(timeEnd));
+
+            // only one has duration
+            timeEnd.data.duration = undefined;
+
+            assert.isTrue(await testScrobbler.alreadyScrobbled(timeEnd));
+
+            // only one has duration
+            timeEnd.data.duration = undefined;
 
             assert.isTrue(await testScrobbler.alreadyScrobbled(timeEnd));
         });

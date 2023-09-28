@@ -535,7 +535,7 @@ export const comparePlayTemporally = (existingPlay: PlayObject, candidatePlay: P
     // if the source has a duration its possible one play was scrobbled at the beginning of the track and the other at the end
     // so check if the duration matches the diff between the two play dates
     if (result.close === false && referenceDuration !== undefined && fuzzyDuration) {
-        const fuzzyDiff = Math.abs(scrobblePlayDiff - newDuration);
+        const fuzzyDiff = Math.abs(scrobblePlayDiff - referenceDuration);
         result.date.fuzzyDiff = fuzzyDiff;
         if(fuzzyDiff < 10) { // TODO use finer comparison for this?
             result.close = true;
