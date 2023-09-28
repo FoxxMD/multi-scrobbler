@@ -154,8 +154,11 @@ export default class MemorySource extends AbstractSource {
 
                 const [currPlay, prevPlay] = asPlayerStateData(incomingData) ? player.setState(incomingData.status, incomingData.play) : player.setState(undefined, incomingData);
                 const candidate = prevPlay !== undefined ? prevPlay : currPlay;
+                const playChanged = prevPlay !== undefined;
 
-                if (candidate !== undefined) {
+                // wait to discover play until it is stale or current play has changed
+                // so that our discovered track has an accurate "listenedFor" count
+                if (candidate !== undefined && (playChanged || player.isUpdateStale())) {
                     const thresholdResults = timePassesScrobbleThreshold(scrobbleThresholds, candidate.data.listenedFor, candidate.data.duration);
 
                     if (thresholdResults.passes) {
