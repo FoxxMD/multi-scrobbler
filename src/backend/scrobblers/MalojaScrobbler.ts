@@ -373,7 +373,8 @@ export default class MalojaScrobbler extends AbstractScrobbleClient {
                 album,
                 track,
                 duration,
-                playDate
+                playDate,
+                listenedFor
             } = {},
             meta: {
                 source,
@@ -391,6 +392,9 @@ export default class MalojaScrobbler extends AbstractScrobbleClient {
             // https://github.com/FoxxMD/multi-scrobbler/issues/42#issuecomment-1100184135
             length: duration,
         };
+        if(listenedFor !== undefined && listenedFor > 0) {
+            scrobbleData.duration = listenedFor;
+        }
 
         let responseBody: MalojaScrobbleV3ResponseData;
 
