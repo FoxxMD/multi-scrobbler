@@ -22,7 +22,7 @@ export const uniqueNormalizedStrArr = (arr: string[]): string[] => {
 }
 // https://stackoverflow.com/a/37511463/1469797
 export const normalizeStr = (str: string, options?: {keepSingleWhitespace?: boolean}): string => {
-    const {keepSingleWhitespace = false} = options;
+    const {keepSingleWhitespace = false} = options || {};
     const normal = str.normalize('NFD').replace(/[\u0300-\u036f]/g, "");
     if(!keepSingleWhitespace) {
         return normal.replace(PUNCTUATION_WHITESPACE_REGEX, '').toLocaleLowerCase();
