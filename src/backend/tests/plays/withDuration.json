@@ -42,11 +42,52 @@
   {
     "data": {
       "artists": [
+        "Frédéric Chopin",
+        "Krystian Zimerman"
+      ],
+      "track": "Ballade No. 4 in F Minor, Op. 52",
+      "duration": 575,
+      "playDate": "2023-09-20T15:17:12.000Z"
+    },
+    "meta": {
+      "source": "Maloja"
+    }
+  },
+  {
+    "data": {
+      "artists": [
         "Cheo Feliciano"
       ],
       "track": "Aprieta (Oye Cómo Va)",
       "duration": 195,
       "playDate": "2023-09-20T15:38:12.000Z"
+    },
+    "meta": {
+      "source": "Maloja"
+    }
+  },
+  {
+    "data": {
+      "artists": [
+        "Pink Floyd"
+      ],
+      "track": "Another Brick in the Wall, Pt. 1",
+      "duration": 192,
+      "playDate": "2023-09-20T15:39:12.000Z"
+    },
+    "meta": {
+      "source": "Maloja"
+    }
+  },
+  {
+    "data": {
+      "artists": [
+        "Frédéric Chopin",
+        "Krystian Zimerman"
+      ],
+      "track": "Ballade No. 1 in G Minor, Op. 23",
+      "duration": 575,
+      "playDate": "2023-09-20T15:41:12.000Z"
     },
     "meta": {
       "source": "Maloja"
@@ -62,6 +103,19 @@
       "track": "Aquil",
       "duration": 3072,
       "playDate": "2023-09-20T17:55:05.000Z"
+    },
+    "meta": {
+      "source": "Maloja"
+    }
+  },
+  {
+    "data": {
+      "artists": [
+        "Outkast"
+      ],
+      "track": "Da Art of Storytellin' (Pt. 1)",
+      "duration": 422,
+      "playDate": "2023-09-20T15:39:12.000Z"
     },
     "meta": {
       "source": "Maloja"

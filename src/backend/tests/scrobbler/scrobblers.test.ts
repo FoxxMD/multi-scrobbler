@@ -43,7 +43,7 @@ describe('When scrobble is unique', function () {
         testScrobbler.recentScrobbles = normalizedWithDur;
 
         const newScrobble = generatePlay({
-            playDate: normalizedWithDur[normalizedWithDur.length - 2].data.playDate.add(3, 'seconds')
+            playDate: normalizedWithDur[normalizedWithDur.length - 3].data.playDate.add(3, 'seconds')
         });
 
         assert.isFalse(await testScrobbler.alreadyScrobbled(newScrobble));
@@ -52,7 +52,7 @@ describe('When scrobble is unique', function () {
 
 describe('When scrobble track/artist/album matches existing but is a new scrobble', function () {
 
-    it('Is not detected as duplicate when artist is same but track is different (similar time)', async function () {
+    it('Is not detected as duplicate when artist is same, time is similar, but track is different', async function () {
 
         testScrobbler.recentScrobbles = normalizedWithDur;
 
@@ -63,7 +63,7 @@ describe('When scrobble track/artist/album matches existing but is a new scrobbl
         assert.isFalse(await testScrobbler.alreadyScrobbled(diffPlay));
     });
 
-    it('Is not detected as duplicate when track is same but artist is different (similar time)', async function () {
+    it('Is not detected as duplicate when track is same, time is similar, but artist is different', async function () {
 
         testScrobbler.recentScrobbles = normalizedWithDur;
 
@@ -101,6 +101,31 @@ describe('When scrobble track/artist/album matches existing but is a new scrobbl
 
         assert.isFalse(await testScrobbler.alreadyScrobbled(timeOffPos));
         assert.isFalse(await testScrobbler.alreadyScrobbled(timeOffNeg));
+    });
+
+    it('A track with continuity to the previous track is not detected as a duplicate', async function () {
+
+        testScrobbler.recentScrobbles = normalizedWithDur;
+
+        const brickPt1 = normalizedWithDur.find(x => x.data.track.includes('Another Brick'));
+        const brickPt2 = clone(brickPt1);
+        brickPt2.data.track = 'Another Brick in the Wall, Pt. 2';
+        brickPt2.data.playDate = brickPt1.data.playDate.add(brickPt1.data.duration + 1, 'seconds');
+        assert.isFalse(await testScrobbler.alreadyScrobbled(brickPt2));
+
+        const story1 = normalizedWithDur.find(x => x.data.track.includes('Da Art of'));
+        const story2 = clone(story1);
+        story2.data.track = `Da Art of Storytellin' (Pt. 2)`;
+        story2.data.playDate = story2.data.playDate.add(story1.data.duration + 1, 'seconds');
+
+        assert.isFalse(await testScrobbler.alreadyScrobbled(story2));
+
+        const ballad1 = normalizedWithDur.find(x => x.data.track.includes('Ballade No. 1'));
+        const ballad2 = clone(ballad1);
+        ballad2.data.track = `Ballade No. 2 in G Minor, Op. 27`;
+        ballad2.data.playDate = ballad2.data.playDate.add(ballad1.data.duration + 1, 'seconds');
+
+        assert.isFalse(await testScrobbler.alreadyScrobbled(ballad2));
     });
 });
 
