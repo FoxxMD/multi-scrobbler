@@ -212,6 +212,14 @@ describe('When scrobble is a duplicate (title/artists/album)', function () {
 
         diffPlay.data.artists = [ref.data.artists[1]]
         assert.isTrue(await testScrobbler.alreadyScrobbled(diffPlay));
+
+
+        const son = normalizedWithMixedDur.find(x => x.data.track === 'Sonora')
+
+        const sonDiffPlay = clone(son);
+        sonDiffPlay.data.playDate = sonDiffPlay.data.playDate.subtract(son.data.duration + 1, 's');
+        sonDiffPlay.data.artists = [sonDiffPlay.data.artists[1]]
+        assert.isTrue(await testScrobbler.alreadyScrobbled(sonDiffPlay));
     });
 
     describe('When at least one play has duration', function () {

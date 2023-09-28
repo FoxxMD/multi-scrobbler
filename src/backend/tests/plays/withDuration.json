@@ -56,6 +56,20 @@
   {
     "data": {
       "artists": [
+        "Nidia Gongora",
+        "The Bongo Hop"
+      ],
+      "track": "Sonora",
+      "duration": 327,
+      "playDate": "2023-09-27T20:02:17.000Z"
+    },
+    "meta": {
+      "source": "Maloja"
+    }
+  },
+  {
+    "data": {
+      "artists": [
         "Cheo Feliciano"
       ],
       "track": "Aprieta (Oye Cómo Va)",

@@ -900,3 +900,18 @@ export const getAddress = (host = '0.0.0.0', logger?: Logger): { v4?: string, v6
         v6
     };
 }
+
+export const comparingMultipleArtists = (existing: PlayObject, candidate: PlayObject): boolean => {
+    const {
+        data: {
+            artists: eArtists = [],
+        } = {}
+    } = existing;
+    const {
+        data: {
+            artists: cArtists = [],
+        } = {}
+    } = candidate;
+
+    return eArtists.length > 1 || cArtists.length > 1;
+}

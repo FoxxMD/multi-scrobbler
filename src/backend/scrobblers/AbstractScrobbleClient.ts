@@ -1,5 +1,6 @@
 import dayjs, {Dayjs} from "dayjs";
 import {
+    comparingMultipleArtists,
     isPlayTemporallyClose,
     mergeArr,
     playObjDataMatch,
@@ -23,7 +24,7 @@ import {FixedSizeList} from 'fixed-size-list';
 import { PlayObject, TrackStringOptions } from "../../core/Atomic";
 import {buildTrackString, capitalize, truncateStringToLength} from "../../core/StringUtils";
 import EventEmitter from "events";
-import {compareScrobbleArtists, compareScrobbleTracks} from "../utils/StringUtils";
+import {compareScrobbleArtists, compareScrobbleTracks, normalizeStr} from "../utils/StringUtils";
 
 export default abstract class AbstractScrobbleClient {
 
@@ -251,8 +252,22 @@ export default abstract class AbstractScrobbleClient {
         return Math.min(compareScrobbleTracks(existing, candidate)/100, 1);
     }
 
-    protected compareExistingScrobbleArtist = (existing: PlayObject, candidate: PlayObject): number => {
-        return Math.min(compareScrobbleArtists(existing, candidate)/100, 1)
+    protected compareExistingScrobbleArtist = (existing: PlayObject, candidate: PlayObject): [number, number] => {
+        const {
+            data: {
+                artists: existingArtists = [],
+            } = {}
+        } = existing;
+        const {
+            data: {
+                artists: candidateArtists = [],
+            } = {}
+        } = candidate;
+        const normExisting = existingArtists.map(x => normalizeStr(x, {keepSingleWhitespace: true}));
+        const candidateExisting = candidateArtists.map(x => normalizeStr(x, {keepSingleWhitespace: true}));
+
+        const wholeMatches = setIntersection(new Set(normExisting), new Set(candidateExisting)).size;
+        return [Math.min(compareScrobbleArtists(existing, candidate)/100, 1), wholeMatches]
     }
 
     existingScrobble = async (playObj: PlayObject) => {
@@ -297,35 +312,58 @@ export default abstract class AbstractScrobbleClient {
                 return undefined;
             }
 
-            // we have have found an existing submission but without an exact date
+            // we have found an existing submission but without an exact date
             // in which case we can check the scrobble api response against recent scrobbles (also from api) for a more accurate comparison
             const referenceApiScrobbleResponse = existingDataSubmitted.length > 0 ? existingDataSubmitted[0].scrobble : undefined;
 
-            // clean source title so it matches title from the scrobble api response as closely as we can get it
-            let cleanSourceTitle = this.cleanSourceSearchTitle(playObj);
-
             existingScrobble = this.recentScrobbles.find((x) => {
 
-                const referenceMatch = referenceApiScrobbleResponse !== undefined && playObjDataMatch(x, referenceApiScrobbleResponse);
+                //const referenceMatch = referenceApiScrobbleResponse !== undefined && playObjDataMatch(x, referenceApiScrobbleResponse);
 
 
                 const [closeTime, fuzzyTime = false] = this.compareExistingScrobbleTime(x, playObj);
+                const timeMatch = (closeTime ? 1 : (fuzzyTime ? 0.6 : 0));
 
                 const titleMatch = this.compareExistingScrobbleTitle(x, playObj);
 
-                const artistMatch = this.compareExistingScrobbleArtist(x, playObj);
+                const [artistMatch, wholeMatches] = this.compareExistingScrobbleArtist(x, playObj);
 
-                const artistScore = ARTIST_WEIGHT * artistMatch;
+                let artistScore = ARTIST_WEIGHT * artistMatch;
                 const titleScore = TITLE_WEIGHT * titleMatch;
-                const timeScore = TIME_WEIGHT * (closeTime ? 1 : (fuzzyTime ? 0.6 : 0));
-                const referenceScore = REFERENCE_WEIGHT * (referenceMatch ? 1 : 0);
-                const score = artistScore + titleScore + timeScore;
+                const timeScore = TIME_WEIGHT * timeMatch;
+                //const referenceScore = REFERENCE_WEIGHT * (referenceMatch ? 1 : 0);
+                let score = artistScore + titleScore + timeScore;
+
+                let artistWholeMatchBonus = 0;
+                let artistBreakdown =  `Artist: ${artistMatch.toFixed(2)} * ${ARTIST_WEIGHT} = ${artistScore.toFixed(2)}`;
+
+                if(score < 1 && timeMatch > 0 && titleMatch > 0.98 && artistMatch > 0.1 && wholeMatches > 0 && comparingMultipleArtists(x, playObj)) {
+                    // address scenario where:
+                    // * title is very close
+                    // * time falls within plausible dup range
+                    // * artist is not totally different
+                    // * AND score is still not high enough for a dup
+                    //
+                    // if we detect the plays have multiple artists and we have at least one whole match (stricter comparison than regular score)
+                    // then bump artist score a little to see if it gets it over the fence
+                    //
+                    // EX: Source: The Bongo Hop - Sonora @ 2023-09-28T10:54:06-04:00 => Closest Scrobble: Nidia Gongora / The Bongo Hop - Sonora @ 2023-09-28T10:59:34-04:00 => Score 0.83 => No Match
+                    // one play is only returning primary artist, and timestamp is at beginning instead of end of play
+
+                    const scoreBonus = artistMatch * 0.5;
+                    const scoreGapBonus = (1 - artistMatch) * 0.75;
+                    // use the smallest bump or 0.1
+                    artistWholeMatchBonus = Math.max(scoreBonus, scoreGapBonus, 0.1);
+                    artistScore = (ARTIST_WEIGHT + 0.05) * (artistMatch + artistWholeMatchBonus);
+                    score = artistScore + titleScore + timeScore;
+                    artistBreakdown = `Artist: (${artistMatch.toFixed(2)} + Whole Match Bonus ${artistWholeMatchBonus.toFixed(2)}) * (${ARTIST_WEIGHT} + Whole Match Bonus 0.05) = ${artistScore.toFixed(2)}`;
+                }
 
                 let scoreBreakdowns = [
-                    `Reference: ${(referenceMatch ? 1 : 0)} * ${REFERENCE_WEIGHT} = ${referenceScore.toFixed(2)}`,
-                    `Artist ${artistMatch.toFixed(2)} * ${ARTIST_WEIGHT} = ${artistScore.toFixed(2)}`,
+                    //`Reference: ${(referenceMatch ? 1 : 0)} * ${REFERENCE_WEIGHT} = ${referenceScore.toFixed(2)}`,
+                    artistBreakdown,
                     `Title: ${titleMatch.toFixed(2)} * ${TITLE_WEIGHT} = ${titleScore.toFixed(2)}`,
-                    `Time: ${closeTime ? 1 : (fuzzyTime ? 0.5 : 0)} * ${TIME_WEIGHT} = ${timeScore.toFixed(2)}`,
+                    `Time: ${timeMatch} * ${TIME_WEIGHT} = ${timeScore.toFixed(2)}`,
                     `Score ${score.toFixed(2)} => ${score >= DUP_SCORE_THRESHOLD ? 'Matched!' : 'No Match'}`
                 ];
 
