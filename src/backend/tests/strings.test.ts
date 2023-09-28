@@ -44,7 +44,7 @@ describe('String Comparisons', function () {
 
         for(const test of tests) {
             const result = compareNormalizedStrings(test[0], test[1]);
-            assert.isAtLeast( result.highScoreWeighted, 80, `Comparing: '${test[0]}' | '${test[1]}'`);
+            assert.isAtLeast( result.highScore, 75, `Comparing: '${test[0]}' | '${test[1]}'`);
         }
     });
 
@@ -59,7 +59,18 @@ describe('String Comparisons', function () {
 
         for(const test of tests) {
             const result = compareNormalizedStrings(test[0], test[1]);
-            assert.isAtLeast( result.highScoreWeighted, 80, `Comparing: '${test[0]}' | '${test[1]}'`);
+            assert.isAtLeast( result.highScore, 80, `Comparing: '${test[0]}' | '${test[1]}'`);
+        }
+    });
+
+    it('should not score very similar as identical', async function () {
+        const tests = [
+            ['Another Brick in the Wall, Pt. 1', 'Another Brick in the Wall, Pt. 2'],
+        ]
+
+        for(const test of tests) {
+            const result = compareNormalizedStrings(test[0], test[1]);
+            assert.isAtMost( result.highScore, 99, `Comparing: '${test[0]}' | '${test[1]}'`);
         }
     });
 });

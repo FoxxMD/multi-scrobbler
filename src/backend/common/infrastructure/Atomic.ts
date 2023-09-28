@@ -207,8 +207,8 @@ export interface numberFormatOptions {
 
 export const DELIMITERS = [',','&','\/','\\'];
 
-export const DUP_SCORE_THRESHOLD = 0.7;
-export const ARTIST_WEIGHT = 0.2;
-export const TITLE_WEIGHT = 0.3;
+export const ARTIST_WEIGHT = 0.3;
+export const TITLE_WEIGHT = 0.4;
 export const TIME_WEIGHT = 0.5;
 export const REFERENCE_WEIGHT = 0.5;
+export const DUP_SCORE_THRESHOLD = 1;

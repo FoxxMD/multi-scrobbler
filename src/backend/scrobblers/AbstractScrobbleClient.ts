@@ -317,7 +317,7 @@ export default abstract class AbstractScrobbleClient {
 
                 const artistScore = ARTIST_WEIGHT * artistMatch;
                 const titleScore = TITLE_WEIGHT * titleMatch;
-                const timeScore = TIME_WEIGHT * (closeTime ? 1 : (fuzzyTime ? 0.5 : 0));
+                const timeScore = TIME_WEIGHT * (closeTime ? 1 : (fuzzyTime ? 0.6 : 0));
                 const referenceScore = REFERENCE_WEIGHT * (referenceMatch ? 1 : 0);
                 const score = artistScore + titleScore + timeScore;
 
