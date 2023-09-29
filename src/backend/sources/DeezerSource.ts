@@ -45,6 +45,7 @@ export default class DeezerSource extends AbstractSource {
 
         this.workingCredsPath = `${this.configDir}/currentCreds-${name}.json`;
         this.canPoll = true;
+        this.canBacklog = true;
     }
 
     static formatPlayObj(obj: any, options: FormatPlayObjectOptions = {}): PlayObject {
@@ -230,5 +231,9 @@ export default class DeezerSource extends AbstractSource {
             this.logger.error(error);
             return error;
         }
+    }
+
+    protected getBackloggedPlays = async () => {
+        return await this.getRecentlyPlayed({formatted: true});
     }
 }

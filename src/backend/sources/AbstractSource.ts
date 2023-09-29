@@ -63,6 +63,7 @@ export default abstract class AbstractSource {
 
     canPoll: boolean = false;
     polling: boolean = false;
+    canBacklog: boolean = false;
     userPollingStopSignal: undefined | any;
     pollRetries: number = 0;
     tracksDiscovered: number = 0;
@@ -169,9 +170,7 @@ export default abstract class AbstractSource {
         return existing !== undefined;
     }
 
-
-    protected scrobble = (plays: PlayObject[], options: { forceRefresh?: boolean, checkAll?: boolean } = {}) => {
-
+    discover = (plays: PlayObject[], options: { checkAll?: boolean, [key: string]: any } = {}): PlayObject[] => {
         const newDiscoveredPlays: PlayObject[] = [];
 
         for(const play of plays) {
@@ -181,9 +180,16 @@ export default abstract class AbstractSource {
             }
         }
 
+        newDiscoveredPlays.sort(sortByOldestPlayDate);
+
+        return newDiscoveredPlays;
+    }
+
+
+    protected scrobble = (newDiscoveredPlays: PlayObject[], options: { forceRefresh?: boolean, [key: string]: any } = {}) => {
+
         if(newDiscoveredPlays.length > 0) {
             newDiscoveredPlays.sort(sortByOldestPlayDate);
-
             this.emitter.emit('discoveredToScrobble', {
                 data: newDiscoveredPlays,
                 options: {
@@ -194,8 +200,37 @@ export default abstract class AbstractSource {
                 }
             });
         }
+    }
 
-        return newDiscoveredPlays;
+    protected processBacklog = async () => {
+        if (this.canBacklog) {
+            this.logger.info('Discovering backlogged tracks from recently played API...');
+            const backlogPlays = await this.getBackloggedPlays();
+            const discovered = this.discover(backlogPlays);
+
+            const {
+                options: {
+                    scrobbleBacklog = true
+                } = {}
+            } = this.config;
+
+            if (scrobbleBacklog) {
+                if (discovered.length > 0) {
+                    this.logger.info('Scrobbling backlogged tracks...');
+                    this.scrobble(discovered);
+                    this.logger.info('Backlog scrobbling complete.');
+                } else {
+                    this.logger.info('All tracks already discovered!');
+                }
+            } else {
+                this.logger.info('Backlog scrobbling is disabled by config, skipping...');
+            }
+        }
+    }
+
+    protected getBackloggedPlays = async (): Promise<PlayObject[]> => {
+        this.logger.debug('Backlogging not implemented');
+        return [];
     }
 
     protected notify = (payload) => {
@@ -227,6 +262,8 @@ export default abstract class AbstractSource {
         if(!(await this.onPollPostAuthCheck())) {
             return;
         }
+        await this.processBacklog();
+
         await this.startPolling();
     }
 
@@ -330,7 +367,8 @@ export default abstract class AbstractSource {
                         this.logger.info('Potential plays were discovered close to polling interval! Delaying scrobble clients refresh by 10 seconds so other clients have time to scrobble first');
                         await sleep(10 * 1000);
                     }
-                    newDiscovered = this.scrobble(playObjs,
+                    newDiscovered = this.discover(playObjs);
+                    this.scrobble(newDiscovered,
                         {
                             forceRefresh: closeToInterval
                         });

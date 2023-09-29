@@ -23,6 +23,7 @@ export default class ListenbrainzSource extends MemorySource {
         } = config;
         super('listenbrainz', name, {...config, data: {interval, maxInterval, ...restData}}, internal, emitter);
         this.canPoll = true;
+        this.canBacklog = true;
         this.api = new ListenbrainzApiClient(name, config.data);
         this.playerSourceOfTruth = false;
     }
@@ -64,5 +65,9 @@ export default class ListenbrainzSource extends MemorySource {
         const now = await this.api.getPlayingNow();
         this.processRecentPlays(now.listens.map(x => ListenbrainzSource.formatPlayObj(x)));
         return await this.api.getRecentlyPlayed(limit);
+    }
+
+    protected getBackloggedPlays = async () => {
+        return await this.getRecentlyPlayed({formatted: true});
     }
 }

@@ -70,6 +70,19 @@ export interface CommonSourceOptions {
      * @examples [false]
      * */
     logPlayerState?: boolean
+
+    /**
+     * If this source
+     *
+     * * supports fetching a listen history
+     * * and this option is enabled
+     *
+     * then on startup MS will attempt to scrobble the recent listens from that history
+     *
+     * @default true
+     * @examples [true, false]
+     * */
+    scrobbleBacklog?: boolean
 }
 
 export interface CommonSourceData extends CommonData, SourceRetryOptions {

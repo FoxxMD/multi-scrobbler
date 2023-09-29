@@ -27,6 +27,7 @@ export default class LastfmSource extends MemorySource {
         } = config;
         super('lastfm', name, {...config, data: {interval, maxInterval, ...restData}}, internal, emitter);
         this.canPoll = true;
+        this.canBacklog = true;
         this.api = new LastfmApiClient(name, {...config.data, configDir: internal.configDir, localUrl: internal.localUrl});
         this.playerSourceOfTruth = false;
     }
@@ -97,5 +98,9 @@ export default class LastfmSource extends MemorySource {
         const now = plays.filter(x => x.meta.nowPlaying === true);
         this.processRecentPlays(now);
         return history;
+    }
+
+    protected getBackloggedPlays = async () => {
+        return await this.getRecentlyPlayed({formatted: true});
     }
 }

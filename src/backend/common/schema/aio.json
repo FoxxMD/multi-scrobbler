@@ -106,6 +106,16 @@
                     ],
                     "title": "logPlayerState",
                     "type": "boolean"
+                },
+                "scrobbleBacklog": {
+                    "default": true,
+                    "description": "If this source\n\n* supports fetching a listen history\n* and this option is enabled\n\nthen on startup MS will attempt to scrobble the recent listens from that history",
+                    "examples": [
+                        true,
+                        false
+                    ],
+                    "title": "scrobbleBacklog",
+                    "type": "boolean"
                 }
             },
             "title": "CommonSourceOptions",
