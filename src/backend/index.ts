@@ -20,7 +20,8 @@ import {getLogger} from "./common/logging";
 import {LogInfo} from "../core/Atomic";
 import {initServer} from "./server/index";
 import {SimpleIntervalJob, ToadScheduler} from "toad-scheduler";
-import {createHeartbeatTask} from "./tasks/heartbeat";
+import {createHeartbeatSourcesTask} from "./tasks/heartbeatSources";
+import {createHeartbeatClientsTask} from "./tasks/heartbeatClients";
 
 
 dayjs.extend(utc)
@@ -147,7 +148,11 @@ const configDir = process.env.CONFIG_DIR || path.resolve(projectDir, `./config`)
         scheduler.addSimpleIntervalJob(new SimpleIntervalJob({
             minutes: 20,
             runImmediately: false
-        }, createHeartbeatTask(scrobbleSources, logger)));
+        }, createHeartbeatSourcesTask(scrobbleSources, logger)));
+        scheduler.addSimpleIntervalJob(new SimpleIntervalJob({
+            minutes: 20,
+            runImmediately: false
+        }, createHeartbeatClientsTask(scrobbleClients, logger)));
         logger.info('Scheduler started.');
 
     } catch (e) {

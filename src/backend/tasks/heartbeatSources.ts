@@ -4,8 +4,8 @@ import {AsyncTask} from "toad-scheduler";
 import {PromisePool} from "@supercharge/promise-pool";
 import ScrobbleSources from "../sources/ScrobbleSources";
 
-export const createHeartbeatTask = (sources: ScrobbleSources, parentLogger: Logger) => {
-    const logger = parentLogger.child({labels: ['Heartbeat']}, mergeArr);
+export const createHeartbeatSourcesTask = (sources: ScrobbleSources, parentLogger: Logger) => {
+    const logger = parentLogger.child({labels: ['Heartbeat', 'Sources']}, mergeArr);
 
     return new AsyncTask(
         'Heartbeat',
