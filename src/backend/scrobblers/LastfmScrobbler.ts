@@ -17,6 +17,7 @@ import {Logger} from '@foxxmd/winston';
 import { PlayObject, TrackStringOptions } from "../../core/Atomic";
 import {buildTrackString, capitalize} from "../../core/StringUtils";
 import EventEmitter from "events";
+import {UpstreamError} from "../common/errors/UpstreamError";
 
 export default class LastfmScrobbler extends AbstractScrobbleClient {
 
@@ -185,9 +186,8 @@ export default class LastfmScrobbler extends AbstractScrobbleClient {
             } = response;
             if(code === 5) {
                 this.initialized = false;
-                throw new Error('Service reported daily scrobble limit exceeded! 😬 Disabling client');
+                throw new UpstreamError('LastFM API reported daily scrobble limit exceeded! 😬 Disabling client', {showStopper: true});
             }
-            this.addScrobbledTrack(playObj, this.formatPlayObj({...rest, date: { uts: timestamp}, name: trackName}));
             if (newFromSource) {
                 this.logger.info(`Scrobbled (New)     => (${source}) ${buildTrackString(playObj)}`);
             } else {
@@ -196,18 +196,22 @@ export default class LastfmScrobbler extends AbstractScrobbleClient {
             if(ignored > 0) {
                 await this.notifier.notify({title: `Client - ${capitalize(this.type)} - ${this.name} - Scrobble Error`, message: `Failed to scrobble => ${buildTrackString(playObj)} | Error: Service ignored this scrobble 😬 => (Code ${ignoreCode}) ${(ignoreMsg === '' ? '(No error message returned)' : ignoreMsg)}`, priority: 'warn'});
                 this.logger.warn(`Service ignored this scrobble 😬 => (Code ${ignoreCode}) ${(ignoreMsg === '' ? '(No error message returned)' : ignoreMsg)} -- See https://www.last.fm/api/errorcodes for more information`, {payload: scrobblePayload});
+                throw new UpstreamError('LastFM ignored scrobble', {showStopper: false});
             }
 
+            return this.formatPlayObj({...rest, date: { uts: timestamp}, name: trackName});
             // last fm has rate limits but i can't find a specific example of what that limit is. going to default to 1 scrobble/sec to be safe
-            await sleep(1000);
+            //await sleep(1000);
         } catch (e) {
             await this.notifier.notify({title: `Client - ${capitalize(this.type)} - ${this.name} - Scrobble Error`, message: `Failed to scrobble => ${buildTrackString(playObj)} | Error: ${e.message}`, priority: 'error'});
             this.logger.error(`Scrobble Error (${sType})`, {playInfo: buildTrackString(playObj), payload: scrobblePayload});
-            throw e;
+            if(!(e instanceof UpstreamError)) {
+                throw new UpstreamError('Error received from LastFM API', {cause: e, showStopper: true});
+            } else {
+                throw e;
+            }
         } finally {
             this.logger.debug('Raw Payload: ', rawPayload);
         }
-
-        return true;
     }
 }

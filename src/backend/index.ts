@@ -135,6 +135,11 @@ const configDir = process.env.CONFIG_DIR || path.resolve(projectDir, `./config`)
                     }
             }
         }
+        for(const client of scrobbleClients.clients) {
+            if((await client.isReady())) {
+                client.initScrobbleMonitoring();
+            }
+        }
         if (anyNotReady) {
             logger.info(`Some sources are not ready, open the dashboard to continue`);
         }

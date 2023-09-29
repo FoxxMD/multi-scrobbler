@@ -212,3 +212,8 @@ export const TITLE_WEIGHT = 0.4;
 export const TIME_WEIGHT = 0.5;
 export const REFERENCE_WEIGHT = 0.5;
 export const DUP_SCORE_THRESHOLD = 1;
+
+export interface SourceScrobble {
+    source: string
+    play: PlayObject
+}

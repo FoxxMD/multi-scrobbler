@@ -3,18 +3,18 @@ import {
     comparingMultipleArtists,
     isPlayTemporallyClose,
     mergeArr,
-    playObjDataMatch,
-    setIntersection, sortByOldestPlayDate,
+    playObjDataMatch, pollingBackoff,
+    setIntersection, sleep, sortByOldestPlayDate,
 } from "../utils";
 import {
     ARTIST_WEIGHT,
-    ClientType, DUP_SCORE_THRESHOLD,
+    ClientType, DEFAULT_RETRY_MULTIPLIER, DUP_SCORE_THRESHOLD,
     FormatPlayObjectOptions,
     INITIALIZED,
     INITIALIZING,
     InitState,
     NOT_INITIALIZED, REFERENCE_WEIGHT,
-    ScrobbledPlayObject, TIME_WEIGHT, TITLE_WEIGHT,
+    ScrobbledPlayObject, SourceScrobble, TIME_WEIGHT, TITLE_WEIGHT,
 } from "../common/infrastructure/Atomic";
 import winston, {Logger} from '@foxxmd/winston';
 import { CommonClientConfig } from "../common/infrastructure/config/client/index";
@@ -25,11 +25,15 @@ import { PlayObject, TrackStringOptions } from "../../core/Atomic";
 import {buildTrackString, capitalize, truncateStringToLength} from "../../core/StringUtils";
 import EventEmitter from "events";
 import {compareScrobbleArtists, compareScrobbleTracks, normalizeStr} from "../utils/StringUtils";
+import {UpstreamError} from "../common/errors/UpstreamError";
+import {nanoid} from "nanoid";
+import {ErrorWithCause} from "pony-cause";
 
 export default abstract class AbstractScrobbleClient {
 
     name: string;
     type: ClientType;
+    identifier: string;
 
     #initState: InitState = NOT_INITIALIZED;
 
@@ -50,6 +54,12 @@ export default abstract class AbstractScrobbleClient {
     checkExistingScrobbles: boolean;
     verboseOptions;
 
+    scrobbleRetries: number =  0;
+    scrobbling: boolean = false;
+    userScrobblingStopSignal: undefined | any;
+    queuedScrobbles: (SourceScrobble & {id: string})[] = [];
+    deadLetterScrobbles: (SourceScrobble & {id: string, retries: number})[] = [];
+
     config: CommonClientConfig;
     logger: Logger;
 
@@ -59,8 +69,8 @@ export default abstract class AbstractScrobbleClient {
     constructor(type: any, name: any, config: CommonClientConfig, notifier: Notifiers, emitter: EventEmitter, logger: Logger) {
         this.type = type;
         this.name = name;
-        const identifier = `${capitalize(this.type)} - ${name}`;
-        this.logger = logger.child({labels: [identifier]}, mergeArr);
+        this.identifier = `${capitalize(this.type)} - ${name}`;
+        this.logger = logger.child({labels: [this.identifier]}, mergeArr);
         this.notifier = notifier;
         this.emitter = emitter;
 
@@ -183,6 +193,7 @@ export default abstract class AbstractScrobbleClient {
 
     addScrobbledTrack = (playObj: PlayObject, scrobbledPlay: PlayObject) => {
         this.scrobbledPlayObjs.add({play: playObj, scrobble: scrobbledPlay});
+        this.tracksScrobbled++;
     }
 
     filterScrobbledTracks = () => {
@@ -395,7 +406,186 @@ ${closestMatch.breakdowns.join('\n')}`);
         return existingScrobble;
     }
 
-    public abstract scrobble(playObj: PlayObject): Promise<boolean>
+    public abstract scrobble(playObj: PlayObject): Promise<PlayObject>
+    
+    initScrobbleMonitoring = async () => {
+        if(!this.initialized) {
+            if(this.initializing) {
+                this.logger.warn(`Cannot start scrobble processing because client is still initializing`);
+                return;
+            }
+            if(!(await this.initialize())) {
+                this.logger.warn(`Cannot start scrobble processing because client could not be initialized`);
+                return;
+            }
+        }
+
+        if(this.requiresAuth && !this.authed) {
+            if (this.requiresAuthInteraction) {
+                this.logger.warn(`Cannot start scrobble processing because user interaction is required for authentication`);
+                return;
+            } else if (!(await this.testAuth())) {
+                this.logger.warn(`Cannot start scrobble processing because auth test failed`);
+                return;
+            }
+        }
+
+        if(!(await this.isReady())) {
+            this.logger.warn(`Cannot start scrobble processing because client is not ready`);
+            return;
+        }
+
+        await this.startScrobbling();
+    }
+
+    startScrobbling = async () => {
+        // reset poll attempts if already previously run
+        this.scrobbleRetries = 0;
+
+        const {
+            data: {
+                maxPollRetries = 5,
+                retryMultiplier = DEFAULT_RETRY_MULTIPLIER,
+            } = {},
+        } = this.config;
+
+        // can't have negative retries!
+        const maxRetries = Math.max(0, maxPollRetries);
+
+        if(this.scrobbling === true) {
+            this.logger.warn(`Already scrobble processing! Processing needs to be stopped before it can be started`);
+            return;
+        }
+
+        let pollRes: boolean | undefined = undefined;
+        while (pollRes === undefined && this.scrobbleRetries <= maxRetries) {
+            try {
+                pollRes = await this.doProcessing();
+                if(pollRes === true) {
+                    break;
+                }
+            } catch (e) {
+                if(!this.initialized) {
+                    this.logger.warn('Stopping scrobble processing due to client no longer being initialized.');
+                    await this.notifier.notify({title: `Client - ${this.identifier} - Processing Error`, message: `Encountered error while scrobble processing and client is no longer initialized, stopping processing!. | Error: ${e.message}`, priority: 'error'});
+                    break;
+                } else if (this.requiresAuth && !this.authed) {
+                    this.logger.warn('Stopping scrobble processing due to client no longer being authenticated.');
+                    await this.notifier.notify({title: `Client - ${this.identifier} - Processing Error`, message: `Encountered error while scrobble processing and client is no longer authenticated, stopping processing!. | Error: ${e.message}`, priority: 'error'});
+                    break;
+                } else if (this.scrobbleRetries < maxRetries) {
+                    const delayFor = pollingBackoff(this.scrobbleRetries + 1, retryMultiplier);
+                    this.logger.info(`Scrobble processing retries (${this.scrobbleRetries}) less than max processing retries (${maxRetries}), restarting processing after ${delayFor} second delay...`);
+                    await this.notifier.notify({title: `Client - ${this.name} - Processing Retry`, message: `Encountered error while polling but retries (${this.scrobbleRetries}) are less than max poll retries (${maxRetries}), restarting processing after ${delayFor} second delay. | Error: ${e.message}`, priority: 'warn'});
+                    await sleep((delayFor) * 1000);
+                } else {
+                    this.logger.warn(`Scrobble processing retries (${this.scrobbleRetries}) equal to max processing retries (${maxRetries}), stopping processing!`);
+                    await this.notifier.notify({title: `Client - ${this.identifier} - Processing Error`, message: `Encountered error while scrobble processing and retries (${this.scrobbleRetries}) are equal to max processing retries (${maxRetries}), stopping processing!. | Error: ${e.message}`, priority: 'error'});
+                }
+                this.scrobbleRetries++;
+            }
+        }
+    }
+
+    tryStopScrobbling = async () => {
+        if(this.scrobbling === false) {
+            this.logger.warn(`Polling is already stopped!`);
+            return;
+        }
+        this.userScrobblingStopSignal = true;
+        let secsPassed = 0;
+        while(this.userScrobblingStopSignal !== undefined && secsPassed < 10) {
+            await sleep(2000);
+            secsPassed += 2;
+            this.logger.verbose(`Waiting for scrobble processing stop signal to be acknowledged (waited ${secsPassed}s)`);
+        }
+        if(this.userScrobblingStopSignal !== undefined) {
+            this.logger.warn('Could not stop scrobble processing! Or signal was lost :(');
+            return false;
+        }
+        return true;
+    }
+
+    protected doStopScrobbling = (reason: string = 'system') => {
+        this.scrobbling = false;
+        this.userScrobblingStopSignal = undefined;
+        this.logger.info(`Stopped scrobble processing due to: ${reason}`);
+    }
+
+    protected shouldStopScrobbleProcessing = () => this.scrobbling === false || this.userScrobblingStopSignal !== undefined;
+
+    protected doProcessing = async (): Promise<true | undefined> => {
+        if (this.scrobbling === true) {
+            return true;
+        }
+        this.logger.info('Scrobble processing started');
+
+        try {
+            this.scrobbling = true;
+            while (!this.shouldStopScrobbleProcessing()) {
+                while (this.queuedScrobbles.length > 0) {
+                    if (this.lastScrobbleCheck.unix() < this.getLatestQueuePlayDate().unix()) {
+                        await this.refreshScrobbles();
+                    }
+                    const currQueuedPlay = this.queuedScrobbles[0];
+                    const [timeFrameValid, timeFrameValidLog] = this.timeFrameIsValid(currQueuedPlay.play);
+                    if (timeFrameValid && !(await this.alreadyScrobbled(currQueuedPlay.play))) {
+                        try {
+                            const scrobbledPlay = await this.scrobble(currQueuedPlay.play);
+                            this.emitEvent('scrobble', {play: currQueuedPlay.play});
+                            this.addScrobbledTrack(currQueuedPlay.play, scrobbledPlay);
+                        } catch (e) {
+                            if (e instanceof UpstreamError && e.showStopper === false) {
+                                this.addDeadLetterScrobble(currQueuedPlay);
+                                this.logger.warn(`Could not scrobble ${buildTrackString(currQueuedPlay.play)} from Source '${currQueuedPlay.source}' but error was not show stopping. Adding scrobble to Dead Letter Queue and will retry on next heartbeat.`);
+                            } else {
+                                const processError = new ErrorWithCause('Error occurred while trying to scrobble', {cause: e});
+                                //this.logger.error(processError);
+                                throw processError;
+                            }
+                        } finally {
+                            await sleep(1000);
+                        }
+                    } else if (!timeFrameValid) {
+                        this.logger.debug(`Will not scrobble ${buildTrackString(currQueuedPlay.play)} from Source '${currQueuedPlay.source}' because it ${timeFrameValidLog}`);
+                    }
+                    // processing play may have changed index while we were scrobbling
+                    const pIndex = this.queuedScrobbles.findIndex(x => x.id === currQueuedPlay.id);
+                    if (pIndex !== -1) {
+                        this.queuedScrobbles.splice(pIndex, 1);
+                    }
+                }
+                await sleep(2000);
+            }
+            if (this.shouldStopScrobbleProcessing()) {
+                this.doStopScrobbling(this.userScrobblingStopSignal !== undefined ? 'user input' : undefined);
+                return true;
+            }
+        } catch (e) {
+            this.logger.error('Scrobble processing interrupted');
+            this.logger.error(e);
+            this.scrobbling = false;
+            throw e;
+        }
+    }
+
+    protected getLatestQueuePlayDate = () => {
+        if (this.queuedScrobbles.length === 0) {
+            return undefined;
+        }
+        return this.queuedScrobbles[this.queuedScrobbles.length - 1].play.data.playDate;
+    }
+
+    queueScrobble = (play: PlayObject, source: string) => {
+        this.queuedScrobbles.push({id: nanoid(), source, play});
+        this.queuedScrobbles.sort((a, b) => sortByOldestPlayDate(a.play, b.play));
+    }
+
+    protected addDeadLetterScrobble = (data: SourceScrobble & { id?: string, retries?: number }) => {
+        this.deadLetterScrobbles.push({id: nanoid(), retries: 0, ...data});
+        this.deadLetterScrobbles.sort((a, b) => sortByOldestPlayDate(a.play, b.play));
+    }
+
 
     public emitEvent = (eventName: string, payload: object) => {
         this.emitter.emit(eventName, {

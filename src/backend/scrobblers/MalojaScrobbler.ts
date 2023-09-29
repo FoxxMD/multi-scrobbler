@@ -24,6 +24,7 @@ import { PlayObject, TrackStringOptions } from "../../core/Atomic";
 import {buildTrackString, capitalize} from "../../core/StringUtils";
 import EventEmitter from "events";
 import normalizeUrl from "normalize-url";
+import {UpstreamError} from "../common/errors/UpstreamError";
 
 const feat = ["ft.", "ft", "feat.", "feat", "featuring", "Ft.", "Ft", "Feat.", "Feat", "Featuring"];
 
@@ -447,7 +448,7 @@ export default class MalojaScrobbler extends AbstractScrobbleClient {
                         }
                     }
                 } else {
-                    throw new Error(buildErrorString(response));
+                    throw new UpstreamError(buildErrorString(response), {showStopper: true});
                 }
             } else {
                 const {
@@ -469,7 +470,6 @@ export default class MalojaScrobbler extends AbstractScrobbleClient {
             } else {
                 scrobbledPlay = this.formatPlayObj(scrobbleResponse)
             }
-            this.addScrobbledTrack(playObj, scrobbledPlay);
             const scrobbleInfo = `Scrobbled (${newFromSource ? 'New' : 'Backlog'})     => (${source}) ${buildTrackString(playObj)}`;
             if(warning !== '') {
                 this.logger.warn(`${scrobbleInfo} | ${warning}`);
@@ -477,6 +477,7 @@ export default class MalojaScrobbler extends AbstractScrobbleClient {
             } else {
                 this.logger.info(scrobbleInfo);
             }
+            return scrobbledPlay;
         } catch (e) {
             await this.notifier.notify({title: `Client - ${capitalize(this.type)} - ${this.name} - Scrobble Error`, message: `Failed to scrobble => ${buildTrackString(playObj)} | Error: ${e.message}`, priority: 'error'});
             this.logger.error(`Scrobble Error (${sType})`, {playInfo: buildTrackString(playObj), payload: scrobbleData});
@@ -487,8 +488,6 @@ export default class MalojaScrobbler extends AbstractScrobbleClient {
         } finally {
             this.logger.debug('Raw Payload:', scrobbleData);
         }
-
-        return true;
     }
 }
 
