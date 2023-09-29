@@ -63,6 +63,14 @@ export interface CommonClientData extends CommonData {
 
             match?: MatchLoggingOptions
         }
+
+        /**
+         * Number of times MS should automatically retry scrobbles in dead letter queue
+         *
+         * @default 1
+         * @examples [1]
+         * */
+        deadLetterRetries?: boolean
     }
 }
 

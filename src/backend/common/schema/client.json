@@ -34,6 +34,15 @@
                             "title": "checkExistingScrobbles",
                             "type": "boolean"
                         },
+                        "deadLetterRetries": {
+                            "default": 1,
+                            "description": "Number of times MS should automatically retry scrobbles in dead letter queue",
+                            "examples": [
+                                1
+                            ],
+                            "title": "deadLetterRetries",
+                            "type": "boolean"
+                        },
                         "refreshEnabled": {
                             "default": true,
                             "description": "Try to get fresh scrobble history from client when tracks to be scrobbled are newer than the last scrobble found in client history",
@@ -248,6 +257,15 @@
                             "title": "checkExistingScrobbles",
                             "type": "boolean"
                         },
+                        "deadLetterRetries": {
+                            "default": 1,
+                            "description": "Number of times MS should automatically retry scrobbles in dead letter queue",
+                            "examples": [
+                                1
+                            ],
+                            "title": "deadLetterRetries",
+                            "type": "boolean"
+                        },
                         "refreshEnabled": {
                             "default": true,
                             "description": "Try to get fresh scrobble history from client when tracks to be scrobbled are newer than the last scrobble found in client history",
@@ -371,6 +389,15 @@
                                 true
                             ],
                             "title": "checkExistingScrobbles",
+                            "type": "boolean"
+                        },
+                        "deadLetterRetries": {
+                            "default": 1,
+                            "description": "Number of times MS should automatically retry scrobbles in dead letter queue",
+                            "examples": [
+                                1
+                            ],
+                            "title": "deadLetterRetries",
                             "type": "boolean"
                         },
                         "refreshEnabled": {

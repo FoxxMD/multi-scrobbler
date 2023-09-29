@@ -28,6 +28,7 @@ import {compareScrobbleArtists, compareScrobbleTracks, normalizeStr} from "../ut
 import {UpstreamError} from "../common/errors/UpstreamError";
 import {nanoid} from "nanoid";
 import {ErrorWithCause} from "pony-cause";
+import {de} from "@faker-js/faker";
 
 export default abstract class AbstractScrobbleClient {
 
@@ -203,16 +204,6 @@ export default abstract class AbstractScrobbleClient {
     getScrobbledPlays = () => {
         return this.scrobbledPlayObjs.data.map(x => x.scrobble);
     }
-
-    cleanSourceSearchTitle = (playObj: PlayObject) => {
-        const {
-            data: {
-                track,
-            } = {},
-        } = playObj;
-
-        return track.toLocaleLowerCase().trim();
-    };
 
     findExistingSubmittedPlayObj = (playObj: PlayObject): ([undefined, undefined] | [ScrobbledPlayObject, ScrobbledPlayObject[]]) => {
         const {
@@ -567,6 +558,81 @@ ${closestMatch.breakdowns.join('\n')}`);
             this.scrobbling = false;
             throw e;
         }
+    }
+
+    processDeadLetterQueue = async (attemptWithRetries?: number) => {
+
+        if (this.deadLetterScrobbles.length === 0) {
+            return;
+        }
+
+        const {
+            options: {
+                deadLetterRetries = 1
+            } = {}
+        } = this.config.data;
+
+        const retries = attemptWithRetries ?? deadLetterRetries;
+
+        const processable = this.deadLetterScrobbles.filter(x => x.retries < retries);
+        this.logger.info(`${processable.length} of ${this.deadLetterScrobbles.length} dead scrobbles have less than ${retries} retries, ${processable.length === 0 ? 'will skip processing.': 'processing now...'}`, {leaf: 'Dead Letter'});
+        if (processable.length === 0) {
+            return;
+        }
+
+        const idsToRemove = [];
+        for (const deadScrobble of this.deadLetterScrobbles) {
+            if (deadScrobble.retries < retries) {
+                const scrobbled = await this.processDeadLetterScrobble(deadScrobble.id);
+                if (scrobbled) {
+                    idsToRemove.push(deadScrobble.id);
+                }
+            }
+        }
+        if (idsToRemove.length > 0) {
+            this.deadLetterScrobbles = this.deadLetterScrobbles.filter(x => !idsToRemove.includes(x.id));
+            this.logger.info(`Removed ${idsToRemove.length} scrobbles from dead letter queue`, {leaf: 'Dead Letter'});
+        }
+    }
+
+    processDeadLetterScrobble = async (id: string) => {
+        if (!(await this.isReady())) {
+            this.logger.warn('Cannot process dead letter scrobble because client is not ready.', {leaf: 'Dead Letter'});
+            return;
+        }
+        const deadScrobbleIndex = this.deadLetterScrobbles.findIndex(x => x.id === id);
+        const deadScrobble = this.deadLetterScrobbles[deadScrobbleIndex];
+        if (this.lastScrobbleCheck.unix() < this.getLatestQueuePlayDate().unix()) {
+            await this.refreshScrobbles();
+        }
+        const [timeFrameValid, timeFrameValidLog] = this.timeFrameIsValid(deadScrobble.play);
+        if (timeFrameValid && !(await this.alreadyScrobbled(deadScrobble.play))) {
+            try {
+                const scrobbledPlay = await this.scrobble(deadScrobble.play);
+                this.emitEvent('scrobble', {play: deadScrobble.play});
+                this.addScrobbledTrack(deadScrobble.play, scrobbledPlay);
+            } catch (e) {
+                deadScrobble.retries++;
+                this.logger.error(`Could not scrobble ${buildTrackString(deadScrobble.play)} from Source '${deadScrobble.source}' due to error`, {leaf: 'Dead Letter'});
+                this.logger.error(e);
+                this.deadLetterScrobbles[deadScrobbleIndex] = deadScrobble;
+                return false;
+            } finally {
+                await sleep(1000);
+            }
+        } else if (!timeFrameValid) {
+            this.logger.debug(`Will not scrobble ${buildTrackString(deadScrobble.play)} from Source '${deadScrobble.source}' because it ${timeFrameValidLog}`, {leaf: 'Dead Letter'});
+        }
+        return true;
+    }
+
+    removeDeadLetterScrobble = (id: string) => {
+        const index = this.deadLetterScrobbles.findIndex(x => x.id === id);
+        if (index === -1) {
+            this.logger.warn(`No scrobble found with ID ${id}`, {leaf: 'Dead Letter'});
+        }
+        this.logger.debug(`Removed scrobble ${buildTrackString(this.deadLetterScrobbles[index].play)} from queue`, {leaf: 'Dead Letter'});
+        this.deadLetterScrobbles.splice(index, 1);
     }
 
     protected getLatestQueuePlayDate = () => {
