@@ -222,25 +222,12 @@ export default abstract class AbstractScrobbleClient {
         const dtInvariantMatches = this.scrobbledPlayObjs.data.filter(x => playObjDataMatch(playObj, x.play));
 
         if (dtInvariantMatches.length === 0) {
-            return [undefined, undefined];
+            return [undefined, []];
         }
 
         const matchPlayDate = dtInvariantMatches.find((x: ScrobbledPlayObject) => {
-            const {
-                play: {
-                    data: {
-                        playDate: sPlayDate
-                    } = {},
-                    meta: {
-                        source: playSource
-                    } = {},
-                } = {},
-            } = x;
-            // need to account for inaccurate DT from subsonic
-            if(source === 'Subsonic' && playSource === 'Subsonic') {
-                return playDate.isSame(sPlayDate) || playDate.diff(sPlayDate, 'minute') <= 1;
-            }
-            return playDate.isSame(sPlayDate);
+            const [closeTime, fuzzyTime = false] = this.compareExistingScrobbleTime(x.play, playObj);
+            return closeTime;
         });
 
         return [matchPlayDate, dtInvariantMatches];
@@ -300,8 +287,9 @@ export default abstract class AbstractScrobbleClient {
 
             closestMatch = {
                 score: 1,
+                scrobble: existingScrobble,
                 breakdowns: [],
-                confidence: 'Exact Match found in previously successfully scrobbled'
+                confidence: 'Exact Match found in previously successfully scrobbled plays'
             }
         }
         // if not though then we need to check recent scrobbles from scrobble api.
