@@ -365,7 +365,7 @@ export default class MalojaScrobbler extends AbstractScrobbleClient {
         return (await this.existingScrobble(playObj)) !== undefined;
     }
 
-    scrobble = async (playObj: PlayObject) => {
+    doScrobble = async (playObj: PlayObject) => {
         const {url, apiKey} = this.config.data;
 
         const {

@@ -119,7 +119,7 @@ export default class LastfmScrobbler extends AbstractScrobbleClient {
         return (await this.existingScrobble(playObj)) !== undefined;
     }
 
-    scrobble = async (playObj: PlayObject) => {
+    doScrobble = async (playObj: PlayObject) => {
         const {
             data: {
                 artists,

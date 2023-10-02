@@ -86,7 +86,7 @@ export default class ListenbrainzScrobbler extends AbstractScrobbleClient {
         return (await this.existingScrobble(playObj)) !== undefined;
     }
 
-    scrobble = async (playObj: PlayObject) => {
+    doScrobble = async (playObj: PlayObject) => {
         const {
             meta: {
                 source,

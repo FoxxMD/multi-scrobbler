@@ -12,8 +12,8 @@ export class TestScrobbler extends AbstractScrobbleClient {
         super('test', 'Test', {name: 'test'}, notifier, new EventEmitter(), logger);
     }
 
-    scrobble(playObj: PlayObject): Promise<boolean> {
-        return Promise.resolve(true);
+    doScrobble(playObj: PlayObject): Promise<PlayObject> {
+        return Promise.resolve(playObj);
     }
 
     alreadyScrobbled = async (playObj: PlayObject, log?: boolean): Promise<boolean> => {

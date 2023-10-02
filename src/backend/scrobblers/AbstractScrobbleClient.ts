@@ -29,6 +29,7 @@ import {UpstreamError} from "../common/errors/UpstreamError";
 import {nanoid} from "nanoid";
 import {ErrorWithCause} from "pony-cause";
 import {de} from "@faker-js/faker";
+import {del} from "superagent";
 
 export default abstract class AbstractScrobbleClient {
 
@@ -51,10 +52,13 @@ export default abstract class AbstractScrobbleClient {
     tracksScrobbled: number = 0;
 
     lastScrobbleCheck: Dayjs = dayjs(0)
+    lastScrobbleAttempt: Dayjs = dayjs(0)
     refreshEnabled: boolean;
     checkExistingScrobbles: boolean;
     verboseOptions;
 
+    scrobbleDelay: number = 1000;
+    scrobbleSleep: number = 2000;
     scrobbleRetries: number =  0;
     scrobbling: boolean = false;
     userScrobblingStopSignal: undefined | any;
@@ -397,7 +401,25 @@ ${closestMatch.breakdowns.join('\n')}`);
         return existingScrobble;
     }
 
-    public abstract scrobble(playObj: PlayObject): Promise<PlayObject>
+    public scrobble = async (playObj: PlayObject, opts?: { delay?: number | false }): Promise<PlayObject> => {
+        const {delay} = opts || {};
+        const scrobbleDelay = delay === undefined ? this.scrobbleDelay : (delay === false ? 0 : delay);
+        if (scrobbleDelay !== 0) {
+            const lastScrobbleDiff = dayjs().diff(this.lastScrobbleAttempt, 'ms');
+            const remainingDelay = scrobbleDelay - lastScrobbleDiff;
+            if (remainingDelay > 0) {
+                this.logger.debug(`Waiting ${remainingDelay}ms to scrobble so time passed since previous scrobble is at least ${scrobbleDelay}ms`);
+                await sleep(scrobbleDelay);
+            }
+        }
+        try {
+            return this.doScrobble(playObj);
+        } finally {
+            this.lastScrobbleAttempt = dayjs();
+        }
+    }
+
+    protected abstract doScrobble(playObj: PlayObject): Promise<PlayObject>
     
     initScrobbleMonitoring = async () => {
         if(!this.initialized) {
@@ -534,8 +556,6 @@ ${closestMatch.breakdowns.join('\n')}`);
                                 //this.logger.error(processError);
                                 throw processError;
                             }
-                        } finally {
-                            await sleep(1000);
                         }
                     } else if (!timeFrameValid) {
                         this.logger.debug(`Will not scrobble ${buildTrackString(currQueuedPlay.play)} from Source '${currQueuedPlay.source}' because it ${timeFrameValidLog}`);
@@ -546,7 +566,7 @@ ${closestMatch.breakdowns.join('\n')}`);
                         this.queuedScrobbles.splice(pIndex, 1);
                     }
                 }
-                await sleep(2000);
+                await sleep(this.scrobbleSleep);
             }
             if (this.shouldStopScrobbleProcessing()) {
                 this.doStopScrobbling(this.userScrobblingStopSignal !== undefined ? 'user input' : undefined);
@@ -642,8 +662,11 @@ ${closestMatch.breakdowns.join('\n')}`);
         return this.queuedScrobbles[this.queuedScrobbles.length - 1].play.data.playDate;
     }
 
-    queueScrobble = (play: PlayObject, source: string) => {
-        this.queuedScrobbles.push({id: nanoid(), source, play});
+    queueScrobble = (data: PlayObject | PlayObject[], source: string) => {
+        const plays = Array.isArray(data) ? data : [data];
+        for(const p of plays) {
+            this.queuedScrobbles.push({id: nanoid(), source, play: p});
+        }
         this.queuedScrobbles.sort((a, b) => sortByOldestPlayDate(a.play, b.play));
     }
 
