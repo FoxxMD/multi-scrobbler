@@ -643,7 +643,7 @@ export const thresholdResultSummary = (result: ScrobbleThresholdResult) => {
         parts.push(`tracked percent of ${(result.percent.value).toFixed(2)}% (wanted ${result.percent.threshold}%)`)
     }
 
-    return `${result.passes ? 'met' : 'did not meet'} thresholds with ${parts.join(' and')}`;
+    return `${result.passes ? 'met' : 'did not meet'} thresholds with ${parts.join(' and ')}`;
 }
 
 export function parseBool(value: any, prev: any = false): boolean {

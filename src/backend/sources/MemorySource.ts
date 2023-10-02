@@ -159,11 +159,11 @@ export default class MemorySource extends AbstractSource {
                 // wait to discover play until it is stale or current play has changed
                 // so that our discovered track has an accurate "listenedFor" count
                 if (candidate !== undefined && (playChanged || player.isUpdateStale())) {
+                    let stPrefix = `${buildTrackString(candidate, {include: ['trackId', 'artist', 'track']})}`;
                     const thresholdResults = timePassesScrobbleThreshold(scrobbleThresholds, candidate.data.listenedFor, candidate.data.duration);
 
                     if (thresholdResults.passes) {
                         const matchingRecent = this.existingDiscovered(candidate); //sRecentlyPlayed.find(x => playObjDataMatch(x, candidate));
-                        let stPrefix = `${buildTrackString(candidate, {include: ['trackId', 'artist', 'track']})}`;
                         if (matchingRecent === undefined) {
                             if(this.playerSourceOfTruth) {
                                 player.logger.debug(`${stPrefix} added after ${thresholdResultSummary(thresholdResults)} and not matching any prior plays`);
@@ -192,6 +192,8 @@ export default class MemorySource extends AbstractSource {
                                 }
                             }
                         }
+                    } else if(playChanged) {
+                        player.logger.verbose(`${stPrefix} not added because ${thresholdResultSummary(thresholdResults)}.`);
                     }
                 }
 
