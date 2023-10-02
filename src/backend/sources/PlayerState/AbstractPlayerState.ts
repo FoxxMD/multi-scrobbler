@@ -133,7 +133,20 @@ export abstract class AbstractPlayerState {
             } else if (status !== undefined && !AbstractPlayerState.isProgressStatus(status)) {
                 this.currentListenSessionEnd();
                 this.calculatedStatus = this.reportedStatus;
+            } else if (this.isSessionRepeat(play.meta.trackProgressPosition)) {
+                // if we detect the track has been restarted end listen session and treat as a new play
+                this.currentListenSessionEnd();
+                const played = this.getPlayedObject();
+                this.currentPlay.data.playDate = dayjs();
+                this.currentListenSessionContinue(play.meta.trackProgressPosition);
+                return [this.getPlayedObject(), played];
             } else {
+                const seekedPos = this.isPositionSeeked(play.meta.trackProgressPosition);
+                if (seekedPos !== false) {
+                    this.logger.debug(`Detected player was seeked ${seekedPos.toFixed(2)}s, starting new listen range`);
+                    // if player has been seeked start a new listen range so our numbers don't get all screwy
+                    this.currentListenSessionEnd();
+                }
                 this.currentListenSessionContinue(play.meta.trackProgressPosition);
             }
         } else {
@@ -181,7 +194,7 @@ export abstract class AbstractPlayerState {
         return undefined;
     }
 
-    getListenDuration() {
+    getListenDuration(){
         let listenDur: number = 0;
         let ranges = [...this.listenRanges];
         if (this.currentListenRange !== undefined) {
@@ -230,6 +243,93 @@ export abstract class AbstractPlayerState {
             this.listenRanges.push(this.currentListenRange);
         }
         this.currentListenRange = undefined;
+    }
+
+    isCurrentRangeInitial() {
+        if(this.currentListenRange === undefined) {
+            return true;
+        }
+        if(this.currentListenRange[0].position !== undefined && this.currentListenRange[1].position !== undefined) {
+            return this.currentListenRange[0].position === this.currentListenRange[1].position;
+        }
+        return this.currentListenRange[0].timestamp.isSame(this.currentListenRange[1].timestamp);
+    }
+
+    isCurrentRangePositional() {
+        if(this.currentListenRange === undefined) {
+            return false;
+        }
+        return this.currentListenRange[0].position !== undefined && this.currentListenRange[1].position !== undefined;
+    }
+
+    isPositionSeeked(position?: number) {
+        if (position === undefined || this.isCurrentRangeInitial() || !this.isCurrentRangePositional()) {
+            return false;
+        }
+        // if (new) position is earlier than last stored position then the user has seeked backwards on the player
+        if (position < this.currentListenRange[1].position) {
+            return position - this.currentListenRange[1].position;
+        }
+        // if (new) position is more than a reasonable number of ms ahead of real time than they have seeked forwards on the player
+        const realTimeDiff = dayjs().diff(this.currentListenRange[1].timestamp, 'ms');
+        const positionDiff = (position - this.currentListenRange[1].position) * 1000;
+        // if user is more than 2.5 seconds ahead of real time
+        if (positionDiff - realTimeDiff > 2500) {
+            return position - this.currentListenRange[1].position;
+        }
+
+        return false;
+    }
+
+    isSessionRepeat(position?: number) {
+        const seekPos = this.isPositionSeeked(position);
+        if (seekPos === false || seekPos > 0) {
+            return false;
+        }
+        let repeatHint = `New Position (${position})`;
+        const trackDur = this.currentPlay.data.duration;
+        // user is within 10 seconds or 10% of start of track
+        const closeStartNum = position <= 12;
+        if(closeStartNum) {
+            repeatHint = `${repeatHint} is within 12 seconds of track start`;
+        }
+        const closeStartPer = (trackDur !== undefined && ((position / trackDur) <= 0.15));
+        if(!closeStartNum && closeStartPer) {
+            repeatHint = `${repeatHint} is within 15% of track start (${formatNumber((position/trackDur)*100)}%).`;
+        }
+        if (closeStartNum || closeStartPer) {
+            // user has played at least 2 minutes or 50% of track
+            const playerDur = this.getListenDuration();
+            const closeDurNum = playerDur >= 120;
+            if(closeDurNum) {
+                repeatHint = `${repeatHint} and listened to more than 120s (${playerDur}s)`
+            }
+            const closeDurPer = (trackDur !== undefined && (playerDur / trackDur) >= 0.5);
+            if(!closeDurNum && closeDurPer) {
+                repeatHint = `${repeatHint} and listened to more than 50% (${formatNumber((playerDur/trackDur)*100)}%).`
+            }
+            if (closeDurNum || closeDurPer) {
+                this.logger.debug(repeatHint);
+                return true;
+            }
+            if (trackDur !== undefined) {
+                const lastPos = this.currentListenRange[1].position;
+                // or last position is within 10 seconds (or 10%) of end of track
+                const nearEndNum = (trackDur - lastPos < 12);
+                if(nearEndNum) {
+                    repeatHint = `${repeatHint} and previous position was within 12 seconds of track end.`;
+                }
+                const nearEndPos = ((lastPos / trackDur) < 0.15);
+                if(!nearEndNum && nearEndPos) {
+                    repeatHint = `${repeatHint} and previous position was within 15% of track end (${formatNumber((lastPos/trackDur)*100)}%)`;
+                }
+                if(nearEndNum || nearEndPos) {
+                    this.logger.debug(repeatHint);
+                    return true;
+                }
+            }
+        }
+        return false;
     }
 
     setCurrentPlay(play: PlayObject, status?: ReportedPlayerStatus) {

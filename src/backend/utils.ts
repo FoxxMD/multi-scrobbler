@@ -637,7 +637,7 @@ export const timePassesScrobbleThreshold = (thresholds: ScrobbleThresholds, seco
 export const thresholdResultSummary = (result: ScrobbleThresholdResult) => {
     const parts: string[] = [];
     if(result.duration.passes !== undefined) {
-        parts.push(`tracked time of ${result.duration.value}s (wanted ${result.duration.threshold}s)`);
+        parts.push(`tracked time of ${result.duration.value.toFixed(2)}s (wanted ${result.duration.threshold}s)`);
     }
     if(result.percent.passes !== undefined) {
         parts.push(`tracked percent of ${(result.percent.value).toFixed(2)}% (wanted ${result.percent.threshold}%)`)
