@@ -12,6 +12,17 @@ export interface SourceStatusCardData extends StatusCardSkeletonData, PropsFromR
     loading?: boolean
 }
 
+const statusToStatusType = (status: string) => {
+    const lower = status.toLowerCase();
+    if(lower.includes('running') || lower.includes('polling') || lower.includes('data')) {
+        return 'active';
+    }
+    if(lower.includes('idle')) {
+        return 'warn';
+    }
+    return 'error';
+}
+
 const SourceStatusCard = (props: SourceStatusCardData) => {
     const {
         loading = false,
@@ -61,7 +72,7 @@ const SourceStatusCard = (props: SourceStatusCardData) => {
         </div>);
     }
     return (
-        <StatusCardSkeleton loading={loading} title={header} subtitle={name} status={status}>
+        <StatusCardSkeleton loading={loading} title={header} subtitle={name} status={status} statusType={statusToStatusType(status)}>
                 {body}
         </StatusCardSkeleton>
     );

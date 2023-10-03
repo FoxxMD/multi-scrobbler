@@ -157,7 +157,7 @@ export const setupApi = (app: ExpressWithAsync, logger: Logger, initialLogOutput
             } else if (requiresAuth && !authed) {
                 base.status = requiresAuthInteraction ? 'Auth Interaction Required' : 'Authentication Failed Or Not Attempted'
             } else if (canPoll) {
-                base.status = polling ? 'Running' : 'Idle';
+                base.status = polling ? 'Polling' : 'Idle';
             } else {
                 base.status = tracksDiscovered > 0 ? 'Received Data' : 'Awaiting Data'
             }
@@ -173,6 +173,7 @@ export const setupApi = (app: ExpressWithAsync, logger: Logger, initialLogOutput
                 requiresAuth = false,
                 requiresAuthInteraction = false,
                 authed = false,
+                scrobbling = false,
             } = x;
             const base: ClientStatusData = {
                 status: '',
@@ -190,7 +191,7 @@ export const setupApi = (app: ExpressWithAsync, logger: Logger, initialLogOutput
             } else if (requiresAuth && !authed) {
                 base.status = requiresAuthInteraction ? 'Auth Interaction Required' : 'Authentication Failed Or Not Attempted'
             } else {
-                base.status = tracksScrobbled > 0 ? 'Received Data' : 'Awaiting Data';
+                base.status = scrobbling ? 'Running' : 'Idle';
             }
             return base;
         });

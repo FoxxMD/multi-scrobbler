@@ -11,6 +11,17 @@ export interface ClientStatusCardData extends StatusCardSkeletonData, PropsFromR
     key: any
 }
 
+const statusToStatusType = (status: string) => {
+    const lower = status.toLowerCase();
+    if(lower.includes('running') || lower.includes('data')) {
+        return 'active';
+    }
+    if(lower.includes('idle')) {
+        return 'warn';
+    }
+    return 'error';
+}
+
 const ClientStatusCard = (props: ClientStatusCardData) => {
     const {
         loading = false,
@@ -44,7 +55,7 @@ const ClientStatusCard = (props: ClientStatusCardData) => {
         </Fragment>);
     }
     return (
-        <StatusCardSkeleton loading={loading} title={header} subtitle={name} status={status}>
+        <StatusCardSkeleton loading={loading} title={header} subtitle={name} status={status} statusType={statusToStatusType(status)}>
                 {body}
         </StatusCardSkeleton>
     );

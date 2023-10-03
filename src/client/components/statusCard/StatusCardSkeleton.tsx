@@ -1,6 +1,7 @@
 import React, {PropsWithChildren} from 'react';
 import SkeletonTitle from "../skeleton/SkeletonTitle";
 import SkeletonParagraph from "../skeleton/SkeletonParagraph";
+import StatusIndicator, {StatusType} from "../StatusIndicator";
 
 export interface StatusCardSkeletonData {
     loading?: boolean
@@ -8,6 +9,7 @@ export interface StatusCardSkeletonData {
     title?: string
     subtitle?: string
     status?: string
+    statusType?: StatusType
 }
 
 const StatusCardSkeleton = (props: PropsWithChildren<StatusCardSkeletonData>) => {
@@ -15,6 +17,7 @@ const StatusCardSkeleton = (props: PropsWithChildren<StatusCardSkeletonData>) =>
         loading,
         header,
         status = null,
+        statusType,
         title,
         subtitle,
         children
@@ -31,7 +34,7 @@ const StatusCardSkeleton = (props: PropsWithChildren<StatusCardSkeletonData>) =>
                         {title ? <div className="font-semibold">{title}</div> : null}
                         {subtitle ? <div className="text-sm">{subtitle}</div> : null}
                     </div>
-                    <div className="flex-auto text-right">{status}</div>
+                    <div className="flex items-center text-right">{status}<StatusIndicator type={statusType}/></div>
                 </div>
             </div>
             <div className="p-3">
