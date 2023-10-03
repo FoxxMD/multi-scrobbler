@@ -270,6 +270,8 @@ Must be using Jellyfin 10.7 or greater
     * Check `Send All Properties`
   * Save
 
+If you see errors in the MS logs regarding `missing headers` when using Jellyfin [see this workaround.](../FAQ.md#jellyfin-has-warnings-about-missing-headers)
+
 ### ENV-Based
 
 | Environmental Variable | Required? | Default | Description                                                       |
