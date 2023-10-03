@@ -159,7 +159,7 @@ export const setupApi = (app: ExpressWithAsync, logger: Logger, initialLogOutput
             } else if (canPoll) {
                 base.status = polling ? 'Polling' : 'Idle';
             } else {
-                base.status = tracksDiscovered > 0 ? 'Received Data' : 'Awaiting Data'
+                base.status = !x.instantiatedAt.isSame(x.lastActivityAt) ? 'Received Data' : 'Awaiting Data';
             }
             return base;
         });
