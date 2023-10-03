@@ -27,7 +27,7 @@ import backoffStrategies from '@kenyip/backoff-strategies';
 import {ScrobbleThresholds} from "./common/infrastructure/config/source";
 import {replaceResultTransformer, stripIndentTransformer, TemplateTag, trimResultTransformer} from 'common-tags';
 import {Duration} from "dayjs/plugin/duration.js";
-import {ListenRange, PlayObject} from "../core/Atomic";
+import {ListenRangeData, PlayObject} from "../core/Atomic";
 import address from "address";
 
 dayjs.extend(utc);
@@ -434,7 +434,7 @@ export interface TemporalPlayComparison {
         diff: number
         fuzzyDiff?: number
     }
-    range?: false | ListenRange
+    range?: false | ListenRangeData
 }
 
 export const temporalPlayComparisonSummary = (data: TemporalPlayComparison, existingPlay?: PlayObject, candidatePlay?: PlayObject) => {
@@ -521,7 +521,7 @@ export const comparePlayTemporally = (existingPlay: PlayObject, candidatePlay: P
         // we can check if the new track play date took place while the existing one was being listened to
         // which would indicate (assuming same source) the new track is a duplicate
         for(const range of existingRanges) {
-            if(newPlayDate.isBetween(range[0].timestamp, range[1].timestamp)) {
+            if(newPlayDate.isBetween(range.start.timestamp, range.end.timestamp)) {
                 result.range = range;
                 result.close = true;
                 break;

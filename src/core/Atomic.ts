@@ -1,5 +1,6 @@
 import {Dayjs} from "dayjs";
 import {MESSAGE} from "triple-beam";
+import {ListenProgress} from "../backend/sources/PlayerState/ListenProgress";
 
 export interface SourceStatusData {
     status: string;
@@ -46,7 +47,10 @@ export interface PlayProgress {
     positionPercent?: number
 }
 
-export type ListenRange = [PlayProgress, PlayProgress]
+export interface ListenRangeData {
+    start: ListenProgress
+    end: ListenProgress
+}
 
 export interface TrackData {
     artists?: string[]
@@ -75,7 +79,7 @@ export interface PlayData extends TrackData {
     playDate?: Dayjs | string
     /** Number of seconds the track was listened to */
     listenedFor?: number
-    listenRanges?: ListenRange[]
+    listenRanges?: ListenRangeData[]
 }
 
 export interface PlayMeta {

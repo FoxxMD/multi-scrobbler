@@ -9,8 +9,10 @@ import dayjs, {Dayjs} from "dayjs";
 import { formatNumber, genGroupIdStr, playObjDataMatch, progressBar } from "../../utils";
 import {Logger} from "@foxxmd/winston";
 import { ListenProgress } from "./ListenProgress";
-import {ListenRange, PlayData, PlayObject, SourcePlayerObj} from "../../../core/Atomic";
+import {PlayObject, SourcePlayerObj} from "../../../core/Atomic";
 import { buildTrackString } from "../../../core/StringUtils";
+import {ListenRange} from "./ListenRange";
+import {start} from "repl";
 
 export interface PlayerStateIntervals {
     staleInterval?: number
@@ -29,8 +31,8 @@ export abstract class AbstractPlayerState {
     currentPlay?: PlayObject
     playFirstSeenAt?: Dayjs
     playLastUpdatedAt?: Dayjs
-    currentListenRange?: [ListenProgress, ListenProgress]
-    listenRanges: [ListenProgress, ListenProgress][] = [];
+    currentListenRange?: ListenRange
+    listenRanges: ListenRange[]
     createdAt: Dayjs = dayjs();
     stateLastUpdatedAt: Dayjs = dayjs();
 
@@ -141,12 +143,15 @@ export abstract class AbstractPlayerState {
                 this.currentListenSessionContinue(play.meta.trackProgressPosition);
                 return [this.getPlayedObject(), played];
             } else {
-                const seekedPos = this.isPositionSeeked(play.meta.trackProgressPosition);
-                if (seekedPos !== false) {
-                    this.logger.debug(`Detected player was seeked ${seekedPos.toFixed(2)}s, starting new listen range`);
-                    // if player has been seeked start a new listen range so our numbers don't get all screwy
-                    this.currentListenSessionEnd();
+                if(this.currentListenRange !== undefined) {
+                    const [isSeeked, seekedPos] = this.currentListenRange.seeked(play.meta.trackProgressPosition);
+                    if (isSeeked !== false) {
+                        this.logger.debug(`Detected player was seeked ${seekedPos.toFixed(2)}s, starting new listen range`);
+                        // if player has been seeked start a new listen range so our numbers don't get all screwy
+                        this.currentListenSessionEnd();
+                    }
                 }
+
                 this.currentListenSessionContinue(play.meta.trackProgressPosition);
             }
         } else {
@@ -200,8 +205,8 @@ export abstract class AbstractPlayerState {
         if (this.currentListenRange !== undefined) {
             ranges.push(this.currentListenRange);
         }
-        for (const [start, end] of ranges) {
-            listenDur += start.getDuration(end);
+        for (const range of ranges) {
+            listenDur += range.getDuration();
         }
         return listenDur;
     }
@@ -210,11 +215,11 @@ export abstract class AbstractPlayerState {
         const now = dayjs();
         if (this.currentListenRange === undefined) {
             this.logger.debug('Started new Player listen range.');
-            this.currentListenRange = [new ListenProgress(now, position), new ListenProgress(now, position)];
+            this.currentListenRange = new ListenRange(new ListenProgress(undefined, position));
         } else {
-            const newEndProgress = new ListenProgress(now, position);
-            if (position !== undefined && this.currentListenRange[1].position !== undefined) {
-                const oldEndProgress = this.currentListenRange[1];
+            const oldEndProgress = this.currentListenRange.end;
+            const newEndProgress = new ListenProgress(undefined, position);
+            if (position !== undefined && oldEndProgress !== undefined) {
                 if (position === oldEndProgress.position && !['paused', 'stopped'].includes(this.calculatedStatus)) {
                     this.calculatedStatus = this.reportedStatus === 'stopped' ? CALCULATED_PLAYER_STATUSES.stopped : CALCULATED_PLAYER_STATUSES.paused;
                     if (this.reportedStatus !== this.calculatedStatus) {
@@ -233,57 +238,24 @@ export abstract class AbstractPlayerState {
             } else {
                 this.calculatedStatus = CALCULATED_PLAYER_STATUSES.playing;
             }
-            this.currentListenRange = [this.currentListenRange[0], newEndProgress];
+            this.currentListenRange.setRangeEnd(newEndProgress);
         }
     }
 
     currentListenSessionEnd() {
-        if (this.currentListenRange !== undefined && this.currentListenRange[0].getDuration(this.currentListenRange[1]) !== 0) {
+        if (this.currentListenRange !== undefined && this.currentListenRange.getDuration() !== 0) {
             this.logger.debug('Ended current Player listen range.')
             this.listenRanges.push(this.currentListenRange);
         }
         this.currentListenRange = undefined;
     }
 
-    isCurrentRangeInitial() {
-        if(this.currentListenRange === undefined) {
-            return true;
-        }
-        if(this.currentListenRange[0].position !== undefined && this.currentListenRange[1].position !== undefined) {
-            return this.currentListenRange[0].position === this.currentListenRange[1].position;
-        }
-        return this.currentListenRange[0].timestamp.isSame(this.currentListenRange[1].timestamp);
-    }
-
-    isCurrentRangePositional() {
-        if(this.currentListenRange === undefined) {
-            return false;
-        }
-        return this.currentListenRange[0].position !== undefined && this.currentListenRange[1].position !== undefined;
-    }
-
-    isPositionSeeked(position?: number) {
-        if (position === undefined || this.isCurrentRangeInitial() || !this.isCurrentRangePositional()) {
-            return false;
-        }
-        // if (new) position is earlier than last stored position then the user has seeked backwards on the player
-        if (position < this.currentListenRange[1].position) {
-            return position - this.currentListenRange[1].position;
-        }
-        // if (new) position is more than a reasonable number of ms ahead of real time than they have seeked forwards on the player
-        const realTimeDiff = dayjs().diff(this.currentListenRange[1].timestamp, 'ms');
-        const positionDiff = (position - this.currentListenRange[1].position) * 1000;
-        // if user is more than 2.5 seconds ahead of real time
-        if (positionDiff - realTimeDiff > 2500) {
-            return position - this.currentListenRange[1].position;
-        }
-
-        return false;
-    }
-
     isSessionRepeat(position?: number) {
-        const seekPos = this.isPositionSeeked(position);
-        if (seekPos === false || seekPos > 0) {
+        if(this.currentListenRange === undefined) {
+            return false;
+        }
+        const [isSeeked, seekPos] = this.currentListenRange.seeked(position);
+        if (isSeeked === false || seekPos > 0) {
             return false;
         }
         let repeatHint = `New Position (${position})`;
@@ -313,7 +285,7 @@ export abstract class AbstractPlayerState {
                 return true;
             }
             if (trackDur !== undefined) {
-                const lastPos = this.currentListenRange[1].position;
+                const lastPos = this.currentListenRange.end.position;
                 // or last position is within 10 seconds (or 10%) of end of track
                 const nearEndNum = (trackDur - lastPos < 12);
                 if(nearEndNum) {
@@ -357,8 +329,8 @@ export abstract class AbstractPlayerState {
         }
         parts.push(`Reported: ${this.reportedStatus.toUpperCase()} | Calculated: ${this.calculatedStatus.toUpperCase()} | Stale: ${this.isUpdateStale() ? 'Yes' : 'No'} | Orphaned: ${this.isOrphaned() ? 'Yes' : 'No'} | Last Update: ${this.stateLastUpdatedAt.toISOString()}`);
         let progress = '';
-        if (this.currentListenRange !== undefined && this.currentListenRange[1].position !== undefined && this.currentPlay.data.duration !== undefined) {
-            progress = `${progressBar(this.currentListenRange[1].position / this.currentPlay.data.duration, 1, 15)} ${formatNumber(this.currentListenRange[1].position, {toFixed: 0})}/${formatNumber(this.currentPlay.data.duration, {toFixed: 0})}s | `;
+        if (this.currentListenRange !== undefined && this.currentListenRange.end.position !== undefined && this.currentPlay.data.duration !== undefined) {
+            progress = `${progressBar(this.currentListenRange.end.position / this.currentPlay.data.duration, 1, 15)} ${formatNumber(this.currentListenRange.end.position, {toFixed: 0})}/${formatNumber(this.currentPlay.data.duration, {toFixed: 0})}s | `;
         }
         let listenedPercent = '';
         if (this.currentPlay !== undefined && this.currentPlay.data.duration !== undefined) {
@@ -379,16 +351,16 @@ export abstract class AbstractPlayerState {
         if(this.calculatedStatus === 'stopped') {
             return undefined;
         }
-        let lastRange: [ListenProgress, ListenProgress] | undefined;
+        let lastRange: ListenRange | undefined;
         if(this.currentListenRange !== undefined) {
             lastRange = this.currentListenRange;
         } else if(this.listenRanges.length > 0) {
             lastRange = this.listenRanges[this.listenRanges.length - 1];
         }
-        if(lastRange === undefined || lastRange[1] === undefined || lastRange[1].position === undefined) {
+        if(lastRange === undefined || lastRange.end === undefined || lastRange.end.position === undefined) {
             return undefined;
         }
-        return lastRange[1].position;
+        return lastRange.end.position;
     }
 
     getApiState(): SourcePlayerObj {
