@@ -26,7 +26,7 @@ export class ListenRange implements ListenRangeData {
         return this.start.timestamp.isSame(this.end.timestamp);
     }
 
-    seeked(position?: number): [boolean, number?] {
+    seeked(position?: number, reportedTS: Dayjs = dayjs()): [boolean, number?] {
         if (position === undefined || this.isInitial() || !this.isPositional()) {
             return [false];
         }
@@ -36,7 +36,7 @@ export class ListenRange implements ListenRangeData {
         }
 
         // if (new) position is more than a reasonable number of ms ahead of real time than they have seeked forwards on the player
-        const realTimeDiff = dayjs().diff(this.end.timestamp, 'ms');
+        const realTimeDiff = Math.max(0, reportedTS.diff(this.end.timestamp, 'ms')); // 0 max used so TS from testing doesn't cause "backward" diff
         const positionDiff = (position - this.end.position) * 1000;
         // if user is more than 2.5 seconds ahead of real time
         if (positionDiff - realTimeDiff > 2500) {
