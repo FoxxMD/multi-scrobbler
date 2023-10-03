@@ -12,7 +12,7 @@ A javascript app to scrobble music you listened to, to [Maloja](https://github.c
 * Supports scrobbling from many **Sources**
   * [Spotify](/docsite/docs/configuration/configuration.md#spotify)
   * [Plex](/docsite/docs/configuration/configuration.md#plex) or [Tautulli](/docsite/docs/configuration/configuration.md#tautulli)
-  * [Subsonic-compatible APIs](/docsite/docs/configuration/configuration.md#subsonic) (like [Airsonic](https://airsonic.github.io/))
+  * [Subsonic-compatible APIs](/docsite/docs/configuration/configuration.md#subsonic) (like [Airsonic](https://airsonic.github.io/) and [Navidrome](https://www.navidrome.org/))
   * [Jellyfin](/docsite/docs/configuration/configuration.md#jellyfin)
   * [Youtube Music](/docsite/docs/configuration/configuration.md#youtube-music)
   * [Last.fm](/docsite/docs/configuration/configuration.md#lastfm-source)

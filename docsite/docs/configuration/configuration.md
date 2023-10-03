@@ -232,7 +232,7 @@ See [`tautulli.json.example`](https://github.com/FoxxMD/multi-scrobbler/blob/mas
 
 ## [Subsonic](http://www.subsonic.org/)
 
-Can use this source for any application that implements the [Subsonic API](http://www.subsonic.org/pages/api.jsp) (such as [Airsonic](https://airsonic.github.io/))
+Can use this source for any application that implements the [Subsonic API](http://www.subsonic.org/pages/api.jsp) and supports the [`getNowPlaying`](http://www.subsonic.org/pages/api.jsp#getNowPlaying) endpoint (such as [Airsonic](https://airsonic.github.io/) and [Navidrome](https://www.navidrome.org/))
 
 **Known Issues:**
 * "Time played at" is somewhat inaccurate since the api only reports "played X minutes ago" so...
