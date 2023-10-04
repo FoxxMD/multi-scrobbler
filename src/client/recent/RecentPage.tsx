@@ -11,16 +11,21 @@ const displayOpts = {
 
 const recent = () => {
     let [searchParams, setSearchParams] = useSearchParams();
-    const { data = [], error, isLoading, isSuccess} = useGetRecentQuery({name: searchParams.get('name'), type: searchParams.get('type')});
+    const {
+        data = [],
+        error,
+        isLoading,
+        isSuccess
+    } = useGetRecentQuery({name: searchParams.get('name'), type: searchParams.get('type')});
 
     return (
-        <div className="grid ">
-            <div className="shadow-md rounded my-6 bg-gray-500 text-white">
-                <div className="space-x-4 p-6 md:px-10 md:py-6 leading-6 font-semibold bg-gray-700 text-white">
+        <div className="grid">
+            <div className="shadow-md rounded bg-gray-500 text-white">
+                <div className="p-3 font-semibold bg-gray-700 text-white">
                     <h2>Recently Played
                     </h2>
                 </div>
-                <div className="p-6 md:px-10 md:py-6">
+                <div className="p-5">
                     {isSuccess && !isLoading && data.length === 0 ? 'No recently played tracks!' : null}
                     <ul>{data.map(x => <li key={x.index}><PlayDisplay data={x} buildOptions={displayOpts}/></li>)}</ul>
                 </div>

@@ -7,7 +7,8 @@ import {TimeoutError, WebapiError} from "spotify-web-api-node/src/response-error
 import Ajv, {Schema} from 'ajv';
 import {
     asPlayerStateData,
-    DEFAULT_SCROBBLE_DURATION_THRESHOLD, DELIMITERS,
+    DEFAULT_SCROBBLE_DURATION_THRESHOLD,
+    DEFAULT_SCROBBLE_PERCENT_THRESHOLD,
     lowGranularitySources,
     NO_DEVICE,
     NO_USER,
@@ -23,11 +24,12 @@ import {Request} from "express";
 import pathUtil from "path";
 import {ErrorWithCause} from "pony-cause";
 import backoffStrategies from '@kenyip/backoff-strategies';
-import { ScrobbleThresholds } from "./common/infrastructure/config/source/index";
+import {ScrobbleThresholds} from "./common/infrastructure/config/source";
 import {replaceResultTransformer, stripIndentTransformer, TemplateTag, trimResultTransformer} from 'common-tags';
 import {Duration} from "dayjs/plugin/duration.js";
-import { ListenRange, PlayObject } from "../core/Atomic";
+import {ListenRangeData, PlayObject} from "../core/Atomic";
 import address from "address";
+
 dayjs.extend(utc);
 
 export async function readJson(this: any, path: any, {throwOnNotFound = true} = {}) {
@@ -147,22 +149,6 @@ export const unique = <T>(arr: T[]): T[] => {
     return Array.from(new Set(arr))
 }
 
-export const PUNCTUATION_WHITESPACE_REGEX = new RegExp(/[^\w\d]/g);
-export const uniqueNormalizedStrArr = (arr: string[]): string[] => {
-    return arr.reduce((acc: string[], curr) => {
-        const normalizedCurr = normalizeStr(curr)
-        if (!acc.some(x => normalizeStr(x) === normalizedCurr)) {
-            return acc.concat(curr);
-        }
-        return acc;
-    }, []);
-}
-
-// https://stackoverflow.com/a/37511463/1469797
-export const normalizeStr = (str: string): string => {
-    return str.normalize('NFD').replace(/[\u0300-\u036f]/g, "").replace(PUNCTUATION_WHITESPACE_REGEX, '').toLocaleLowerCase();
-}
-
 export const returnDuplicateStrings = (arr: any) => {
     const alreadySeen: any = [];
     const dupes: any = [];
@@ -177,9 +163,6 @@ const sentenceLengthWeight = (length: number) => {
     return (Math.log(length) / 0.20) - 5;
 }
 
-export const capitalize = (str: any) => {
-    return str.charAt(0).toUpperCase() + str.slice(1)
-}
 /**
  * Check if two play objects are the same by comparing non time-related data using most-to-least specific/confidence
  *
@@ -451,7 +434,7 @@ export interface TemporalPlayComparison {
         diff: number
         fuzzyDiff?: number
     }
-    range?: false | ListenRange
+    range?: false | ListenRangeData
 }
 
 export const temporalPlayComparisonSummary = (data: TemporalPlayComparison, existingPlay?: PlayObject, candidatePlay?: PlayObject) => {
@@ -538,7 +521,7 @@ export const comparePlayTemporally = (existingPlay: PlayObject, candidatePlay: P
         // we can check if the new track play date took place while the existing one was being listened to
         // which would indicate (assuming same source) the new track is a duplicate
         for(const range of existingRanges) {
-            if(newPlayDate.isBetween(range[0].timestamp, range[1].timestamp)) {
+            if(newPlayDate.isBetween(range.start.timestamp, range.end.timestamp)) {
                 result.range = range;
                 result.close = true;
                 break;
@@ -552,7 +535,7 @@ export const comparePlayTemporally = (existingPlay: PlayObject, candidatePlay: P
     // if the source has a duration its possible one play was scrobbled at the beginning of the track and the other at the end
     // so check if the duration matches the diff between the two play dates
     if (result.close === false && referenceDuration !== undefined && fuzzyDuration) {
-        const fuzzyDiff = Math.abs(scrobblePlayDiff - newDuration);
+        const fuzzyDiff = Math.abs(scrobblePlayDiff - referenceDuration);
         result.date.fuzzyDiff = fuzzyDiff;
         if(fuzzyDiff < 10) { // TODO use finer comparison for this?
             result.close = true;
@@ -623,15 +606,16 @@ export const playPassesScrobbleThreshold = (play: PlayObject, thresholds: Scrobb
 
 export const timePassesScrobbleThreshold = (thresholds: ScrobbleThresholds, secondsTracked: number, playDuration?: number): ScrobbleThresholdResult => {
     let durationPasses = undefined,
-        durationThreshold = (thresholds.duration ?? DEFAULT_SCROBBLE_DURATION_THRESHOLD),
+        durationThreshold: number | null = thresholds.duration ?? DEFAULT_SCROBBLE_DURATION_THRESHOLD,
         percentPasses = undefined,
-        percent: number | undefined = undefined;
+        percentThreshold: number | null = thresholds.percent ?? DEFAULT_SCROBBLE_PERCENT_THRESHOLD,
+        percent: number | undefined;
 
-    if (thresholds.percent !== undefined && playDuration !== undefined) {
-        percent = (secondsTracked / playDuration) * 100;
-        percentPasses = percent >= thresholds.percent;
+    if (percentThreshold !== null && playDuration !== undefined && playDuration !== 0) {
+        percent = Math.round(((secondsTracked / playDuration) * 100));
+        percentPasses = percent >= percentThreshold;
     }
-    if (thresholds.duration !== undefined || percentPasses === undefined) {
+    if (durationThreshold !== null || percentPasses === undefined) {
         durationPasses = secondsTracked >= durationThreshold;
     }
 
@@ -645,7 +629,7 @@ export const timePassesScrobbleThreshold = (thresholds: ScrobbleThresholds, seco
         percent: {
             passes: percentPasses,
             value: percent,
-            threshold: thresholds.percent
+            threshold: percentThreshold
         }
     }
 }
@@ -653,13 +637,13 @@ export const timePassesScrobbleThreshold = (thresholds: ScrobbleThresholds, seco
 export const thresholdResultSummary = (result: ScrobbleThresholdResult) => {
     const parts: string[] = [];
     if(result.duration.passes !== undefined) {
-        parts.push(`tracked time of ${result.duration.value}s (wanted ${result.duration.threshold}s)`);
+        parts.push(`tracked time of ${result.duration.value.toFixed(2)}s (wanted ${result.duration.threshold}s)`);
     }
     if(result.percent.passes !== undefined) {
-        parts.push(`tracked percent of ${(result.percent.value).toFixed(2)}% (wanted ${result.percent.threshold})`)
+        parts.push(`tracked percent of ${(result.percent.value).toFixed(2)}% (wanted ${result.percent.threshold}%)`)
     }
 
-    return `${result.passes ? 'met' : 'did not meet'} thresholds with ${parts.join(' and')}`;
+    return `${result.passes ? 'met' : 'did not meet'} thresholds with ${parts.join(' and ')}`;
 }
 
 export function parseBool(value: any, prev: any = false): boolean {
@@ -744,99 +728,6 @@ export const pollingBackoff = (attempt: number, scaleFactor: number = 1): number
     return Math.round(backoffStrat(attempt + 1) / 1000);
 }
 
-export interface PlayCredits {
-    primary: string
-    secondary?: string[]
-}
-/**
- * For matching the most common track/artist pattern that has a joiner
- *
- * Primary ft. 2nd Artist, 3rd Artist
- * Primary (2nd Artist)
- * Primary [featuring 2nd Artist]
- *
- * ____
- *
- *  => Primary may or may not exist
- *    => Primary must not have an opening character ( [
- * => Secondaries may or may not have an opening character ( [
- *   => MUST begin with joiner ft. feat. featuring with vs.
- *   => May have closing character ) ]
- * */
-export const SECONDARY_ARTISTS_SECTION_REGEX = new RegExp(/^(?<primary>[^(\[]*)?(?<secondarySection>[(\[]?(?<joiner>\Wft\.?|\Wfeat\.?|featuring|\Wvs\.?) (?<secondaryArtists>[^)\]]*)(?:[)\]]|\s*)$)/i);
-// export const SECONDARY_ARTISTS_REGEX = new RegExp(//ig);
-export const parseCredits = (str: string, delimiters?: boolean | string[]): PlayCredits => {
-    if(str.trim() === '') {
-        return undefined;
-    }
-    let primary: string | undefined;
-    let secondary: string[] = [];
-    const results = parseRegexSingleOrFail(SECONDARY_ARTISTS_SECTION_REGEX, str);
-    if(results !== undefined) {
-        primary = results.named.primary !== undefined ? results.named.primary.trim() : undefined;
-        let delims: string[] | undefined;
-        if(Array.isArray(delimiters)) {
-            delims = delimiters;
-        } else if(delimiters === false) {
-            delims = [];
-        }
-        secondary = parseStringList(results.named.secondaryArtists as string, delims)
-        return {
-            primary,
-            secondary
-        };
-    }
-    return undefined;
-}
-
-export const parseArtistCredits = (str: string, delimiters?: boolean | string[]): PlayCredits | undefined => {
-    if(str.trim() === '') {
-        return undefined;
-    }
-    let delims: string[] | undefined;
-    if(Array.isArray(delimiters)) {
-        delims = delimiters;
-    } else if(delimiters === false) {
-        delims = [];
-    }
-    const withJoiner = parseCredits(str, delimiters);
-    if(withJoiner !== undefined) {
-        // all this does is make sure and "ft" or parenthesis/brackets are separated --
-        // it doesn't also separate primary artists so do that now
-        const primaries = parseStringList(withJoiner.primary, delims);
-        if(primaries.length > 1) {
-            return {
-                primary: primaries[0],
-                secondary: primaries.slice(1).concat(withJoiner.secondary)
-            }
-        }
-        return withJoiner;
-    }
-    // likely this is a plain string with just delims
-    const artists = parseStringList(str, delims);
-    if(artists.length > 1) {
-        return {
-            primary: artists[0],
-            secondary: artists.slice(1)
-        }
-    }
-    return {
-        primary: artists[0]
-    }
-}
-
-export const parseTrackCredits = (str: string, delimiters?: boolean | string[]): PlayCredits | undefined => parseCredits(str, delimiters);
-
-export const parseStringList = (str: string, delimiters: string[] = [',', '&', '/', '\\']): string[] => {
-    if(delimiters.length === 0) {
-        return [str];
-    }
-    return delimiters.reduce((acc: string[], curr: string) => {
-        const explodedStrings = acc.map(x => x.split(curr));
-        return explodedStrings.flat(1);
-    }, [str]).map(x => x.trim());
-}
-
 export const parseRegex = (reg: RegExp, val: string): RegExResult[] | undefined => {
 
     if (reg.global) {
@@ -875,23 +766,6 @@ export const parseRegexSingleOrFail = (reg: RegExp, val: string): RegExResult | 
         return results[0];
     }
     return undefined;
-}
-
-export const containsDelimiters = (str: string) => {
-    return null !== str.match(/[,&\/\\]+/i);
-}
-
-export const findDelimiters = (str: string) => {
-    const found: string[] = [];
-    for(const d of DELIMITERS) {
-        if(str.indexOf(d) !== -1) {
-            found.push(d);
-        }
-    }
-    if(found.length === 0) {
-        return undefined;
-    }
-    return found;
 }
 
 export const intersect = (a: Array<any>, b: Array<any>) => {
@@ -1025,4 +899,19 @@ export const getAddress = (host = '0.0.0.0', logger?: Logger): { v4?: string, v6
         v4,
         v6
     };
+}
+
+export const comparingMultipleArtists = (existing: PlayObject, candidate: PlayObject): boolean => {
+    const {
+        data: {
+            artists: eArtists = [],
+        } = {}
+    } = existing;
+    const {
+        data: {
+            artists: cArtists = [],
+        } = {}
+    } = candidate;
+
+    return eArtists.length > 1 || cArtists.length > 1;
 }

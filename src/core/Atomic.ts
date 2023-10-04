@@ -1,5 +1,6 @@
 import {Dayjs} from "dayjs";
 import {MESSAGE} from "triple-beam";
+import {ListenProgress} from "../backend/sources/PlayerState/ListenProgress";
 
 export interface SourceStatusData {
     status: string;
@@ -11,6 +12,7 @@ export interface SourceStatusData {
     hasAuth: boolean;
     hasAuthInteraction: boolean;
     authed: boolean;
+    players: Record<string, SourcePlayerJson>
 }
 
 export interface ClientStatusData {
@@ -20,6 +22,9 @@ export interface ClientStatusData {
     tracksDiscovered: number;
     name: string;
     hasAuth: boolean;
+    hasAuthInteraction: boolean;
+    authed: boolean;
+    initialized: boolean;
 }
 
 export type PlayObjectIncludeTypes = 'time' | 'artist' | 'track' | 'timeFromNow' | 'trackId';
@@ -42,7 +47,10 @@ export interface PlayProgress {
     positionPercent?: number
 }
 
-export type ListenRange = [PlayProgress, PlayProgress]
+export interface ListenRangeData {
+    start: ListenProgress
+    end: ListenProgress
+}
 
 export interface TrackData {
     artists?: string[]
@@ -71,7 +79,7 @@ export interface PlayData extends TrackData {
     playDate?: Dayjs | string
     /** Number of seconds the track was listened to */
     listenedFor?: number
-    listenRanges?: ListenRange[]
+    listenRanges?: ListenRangeData[]
 }
 
 export interface PlayMeta {
@@ -107,6 +115,8 @@ export interface PlayMeta {
      * A unique identifier for the device playing this track
      * */
     deviceId?: string
+
+    nowPlaying?: boolean
 
     [key: string]: any
 }
@@ -148,4 +158,24 @@ export interface LogOutputConfig {
 
 export interface LogInfoJson extends LogInfo {
     formattedMessage: string
+}
+
+export interface SourcePlayerObj {
+    platformId: string,
+    play: PlayObject,
+    playFirstSeenAt: string,
+    playLastUpdatedAt: string,
+    playerLastUpdatedAt: string
+    position?: number
+    listenedDuration: number
+    status: {
+        reported: string
+        calculated: string
+        stale: boolean
+        orphaned: boolean
+    }
+}
+
+export interface SourcePlayerJson extends Omit<SourcePlayerObj, 'play'> {
+    play: JsonPlayObject
 }

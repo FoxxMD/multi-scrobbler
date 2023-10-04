@@ -12,7 +12,7 @@ A javascript app to scrobble music you listened to, to [Maloja](https://github.c
 * Supports scrobbling from many **Sources**
   * [Spotify](/docsite/docs/configuration/configuration.md#spotify)
   * [Plex](/docsite/docs/configuration/configuration.md#plex) or [Tautulli](/docsite/docs/configuration/configuration.md#tautulli)
-  * [Subsonic-compatible APIs](/docsite/docs/configuration/configuration.md#subsonic) (like [Airsonic](https://airsonic.github.io/))
+  * [Subsonic-compatible APIs](/docsite/docs/configuration/configuration.md#subsonic) (like [Airsonic](https://airsonic.github.io/) and [Navidrome](https://www.navidrome.org/))
   * [Jellyfin](/docsite/docs/configuration/configuration.md#jellyfin)
   * [Youtube Music](/docsite/docs/configuration/configuration.md#youtube-music)
   * [Last.fm](/docsite/docs/configuration/configuration.md#lastfm-source)
@@ -44,7 +44,7 @@ A javascript app to scrobble music you listened to, to [Maloja](https://github.c
 
 Yes! You can use [Last.fm as a **Source**](/docsite/docs/configuration/configuration.md#lastfm--source-) or [Listenbrainz as a **Source**](/docsite/docs/configuration/configuration.md#listenbrainz--source-) to forward scrobbles from your profile to any other Client! That way you can keep your current scrobble setup as-is but still get the benefit of capturing your data to a self-hosted location.
 
-<img src="/assets/status-ui.jpg" width="800">
+<img src="/assets/status-ui.png" width="800">
 
 ## How Does multi-scrobbler (MS) Work?
 

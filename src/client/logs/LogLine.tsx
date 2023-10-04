@@ -1,4 +1,5 @@
 import React, {PropsWithChildren} from 'react';
+import {parseLogLine} from "../utils/index";
 
 const breakSymbol = '<br />';
 
@@ -26,7 +27,12 @@ const getClass = (level: string) => {
     }
 }
 const LogLine = (props: PropsWithChildren<{level: string, message: string}>) => {
-    return <div style={{display: 'block'}} dangerouslySetInnerHTML={{__html: replaceLevel(props.message)}}/>
+    const lineParts = parseLogLine(props.message);
+    const level = props.level ?? lineParts.level;
+    const levelClass = getClass(level);
+    return (
+        <div className="line">{lineParts.timestamp} <span className={levelClass}>{level.padEnd(7, ' ')}</span> : {lineParts.message}</div>
+    )
 };
 
 export default LogLine;

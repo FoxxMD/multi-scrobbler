@@ -1,0 +1,46 @@
+@use './playerBase.scss';
+$spacing: 1.5rem;
+$primary: #556a77;
+
+
+.timestamp {
+  position: relative;
+  width: 100%;
+  height: $spacing;
+
+  &__progress,
+  &__current,
+  &__total {
+    position: absolute;
+    top: 0;
+    font-size: 0.75rem;
+  }
+
+  &__progress {
+    position: relative;
+    top: $spacing/4;
+    left: 50%;
+    height: $spacing/4;
+    width: calc(100% - #{$spacing*3});
+    transform: translate(-50%, 0);
+    border-radius: 5px;
+    overflow: hidden;
+    background: #ECEFF1;
+
+    > div {
+      position: absolute;
+      top: 0;
+      left: 0;
+      bottom: 0;
+      background: $primary;
+    }
+  }
+
+  &__current {
+    left: 0;
+  }
+
+  &__total {
+    right: 0;
+  }
+}

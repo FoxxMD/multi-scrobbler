@@ -1,5 +1,4 @@
 import dayjs, {Dayjs} from "dayjs";
-import React, {createElement, ReactElement} from "react";
 import utc from "dayjs/plugin/utc.js";
 import isBetween from "dayjs/plugin/isBetween.js";
 import relativeTime from "dayjs/plugin/relativeTime.js";
@@ -95,4 +94,7 @@ export const slice = (str: string, index: number, count: number, add?: string): 
     }
 
     return str.slice(0, index) + (add || "") + str.slice(index + count);
+}
+export const capitalize = (str: any) => {
+    return str.charAt(0).toUpperCase() + str.slice(1)
 }

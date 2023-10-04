@@ -1,7 +1,8 @@
 import { CommonSourceConfig, CommonSourceData } from "./index";
 import { ListenBrainzData } from "../client/listenbrainz";
+import {PollingOptions} from "../common";
 
-export interface ListenBrainzSourceData extends ListenBrainzData, CommonSourceData {
+export interface ListenBrainzSourceData extends ListenBrainzData, CommonSourceData, PollingOptions {
 }
 
 export interface ListenBrainzSourceConfig extends CommonSourceConfig {

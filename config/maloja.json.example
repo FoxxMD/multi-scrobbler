@@ -1,6 +1,7 @@
 [
   {
     "name": "myMaloja",
+    "enable": true,
     "data": {
       "url": "http://localhost:42010",
       "apiKey": "myMalojaKey"

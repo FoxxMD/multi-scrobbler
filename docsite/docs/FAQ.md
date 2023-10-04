@@ -1,6 +1,7 @@
 * [Connection Issues](#connection-issues)
   * [Plex/Tautulli/Jellyfin don't connect](#plextautullijellyfin-dont-connect)
   * [Jellyfin has warnings about undefined or missing data](#jellyfin-has-warnings-about-undefined-or-missing-data)
+  * [Jellyfin has warnings about missing headers](#jellyfin-has-warnings-about-missing-headers)
   * [Spotify/Deezer/LastFM won't authenticate](#spotifydeezerlastfm-wont-authenticate)
 * [Configuration Issues](#configuration-issues)
   * [Config could not be parsed](#config-could-not-be-parsed)
@@ -95,6 +96,22 @@ You can verify the payload sent from the webhook by modifying your jellyfin conf
 
 If your issue persists and you open an Issue for it please include the raw payload logs in your report.
 
+## Jellyfin has warnings about missing headers
+
+If you experience issues trying to scrobble with Jellyfin and find this in your MS logs
+
+```
+[API] Jellyfin is not sending a request with valid headers...
+```
+
+A workaround that may fix this:
+
+* In Webhook settings:
+  * [In the webhook you have already configured...](configuration/configuration.md#jellyfin)
+    * Add Request Header...
+      * **Key:** `Content-Type`
+      * **Value:** `application/json`
+  * Then Save
 
 ## Spotify/Deezer/LastFM won't authenticate
 

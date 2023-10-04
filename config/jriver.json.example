@@ -1,6 +1,7 @@
 [
   {
     "name": "MyJriver",
+    "enable": true,
     "data": {
       "url": "0.0.0.0",
       "username": "auser",

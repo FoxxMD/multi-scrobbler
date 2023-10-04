@@ -1,6 +1,7 @@
 [
   {
     "name": "MyMopidy",
+    "enable": true,
     "data": {
       "url": "localhost",
       "uriBlacklist": [],

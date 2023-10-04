@@ -11,6 +11,7 @@ import SpotifyWebApi from "spotify-web-api-node";
 import AbstractSource, { RecentlyPlayedOptions } from "./AbstractSource";
 import { SpotifySourceConfig } from "../common/infrastructure/config/source/spotify";
 import {
+    DEFAULT_POLLING_INTERVAL,
     FormatPlayObjectOptions,
     InternalConfig,
     NO_USER,
@@ -51,18 +52,17 @@ export default class SpotifySource extends MemorySource {
         super('spotify', name, config, internal, emitter);
         const {
             data: {
-                interval = 15,
+                interval = DEFAULT_POLLING_INTERVAL,
             } = {}
         } = config;
 
         if (interval < 5) {
-            this.logger.warn('Interval should be 5 seconds or above...😬 preferably 15');
+            this.logger.warn('Interval should probably be 5 seconds or above! Spotify may return 429 response (too many requests)');
         }
-
-        this.config.data.interval = interval;
 
         this.workingCredsPath = `${this.configDir}/currentCreds-${name}.json`;
         this.canPoll = true;
+        this.canBacklog = true;
     }
 
     static formatPlayObj(obj: object, options: FormatPlayObjectOptions = {}): PlayObject {
@@ -215,6 +215,11 @@ export default class SpotifySource extends MemorySource {
             throw new Error('Failed to initialize a Spotify source');
         }
 
+        if(accessToken === undefined || refreshToken === undefined) {
+            this.logger.info(`No access or refresh token is present. User interaction for authentication is required.`);
+            this.logger.info(`Redirect URL that will be used on auth callback: '${rdUri}'`);
+        }
+
         this.spotifyApi = new SpotifyWebApi(apiConfig);
     }
 
@@ -228,6 +233,10 @@ export default class SpotifySource extends MemorySource {
 
     testAuth = async () => {
         try {
+            if(undefined === this.spotifyApi.getAccessToken()) {
+                this.authed = false;
+                return;
+            }
             await this.callApi<ReturnType<typeof this.spotifyApi.getMe>>(((api: any) => api.getMe()));
             this.authed = true;
         } catch (e) {
@@ -283,7 +292,7 @@ export default class SpotifySource extends MemorySource {
                 plays.push(currPlay);
             }
         }
-        return this.processRecentPlaysNew(plays);
+        return this.processRecentPlays(plays);
     }
 
     getPlayHistory = async (options: RecentlyPlayedOptions = {}) => {
@@ -428,12 +437,11 @@ export default class SpotifySource extends MemorySource {
             this.logger.warn('multi-scrobbler does not have sufficient permissions to access Spotify API "Get Playback State". MS will continue to work but accuracy for determining if/when a track played from a Spotify Connect device (smart device controlled through Spotify app) may be degraded. To fix this re-authenticate MS with Spotify and restart polling.');
         }
 
-        // and record backlogged tracks
-        this.logger.info('Checking recently played API for tracks to backlog...');
-        const backlogPlays = await this.getPlayHistory({formatted: true});
-        this.scrobble(backlogPlays);
-        this.logger.info('Backlog complete.');
         return true;
+    }
+
+    protected getBackloggedPlays = async () => {
+        return await this.getPlayHistory({formatted: true});
     }
 }
 

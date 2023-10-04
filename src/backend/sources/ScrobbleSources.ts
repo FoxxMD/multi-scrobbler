@@ -230,8 +230,8 @@ export default class ScrobbleSources {
                     break;
                 case 'deezer':
                     const d = {
-                        clientId: process.env.DEEZER_APP_ID,
-                        clientSecret: process.env.DEEZER_SECRET_KEY,
+                        clientId: process.env.DEEZER_CLIENT_ID,
+                        clientSecret: process.env.DEEZER_CLIENT_SECRET,
                         redirectUri: process.env.DEEZER_REDIRECT_URI,
                         accessToken: process.env.DEEZER_ACCESS_TOKEN,
                     };
@@ -410,7 +410,7 @@ export default class ScrobbleSources {
         }
     }
 
-    addSource = async (clientConfig: any, defaults: SourceDefaults = {}) => {
+    addSource = async (clientConfig: ParsedConfig, defaults: SourceDefaults = {}) => {
         // const isValidConfig = isValidConfigStructure(clientConfig, {name: true, data: true, type: true});
         // if (isValidConfig !== true) {
         //     throw new Error(`Config object from ${clientConfig.source || 'unknown'} with name [${clientConfig.name || 'unnamed'}] of type [${clientConfig.type || 'unknown'}] has errors: ${isValidConfig.join(' | ')}`)
@@ -422,7 +422,12 @@ export default class ScrobbleSources {
             logger: this.logger
         };
 
-        const {type, name, data: d = {}, options: clientOptions = {}} = clientConfig;
+        const {type, name, data: d = {}, enable = true, options: clientOptions = {}} = clientConfig;
+
+        if(enable === false) {
+            this.logger.warn(`${type} (${name}) source was disabled by config`);
+            return;
+        }
 
         // add defaults
         const {options: defaultOptions = {}, ...restDefaults} = defaults;
@@ -448,7 +453,7 @@ export default class ScrobbleSources {
                 newSource = await new JellyfinSource(name, compositeConfig as JellySourceConfig, internal, this.emitter);
                 break;
             case 'lastfm':
-                newSource = await new LastfmSource(name, compositeConfig as LastfmClientConfig, internal, this.emitter);
+                newSource = await new LastfmSource(name, compositeConfig as LastfmSourceConfig, internal, this.emitter);
                 break;
             case 'deezer':
                 newSource = await new DeezerSource(name, compositeConfig as DeezerSourceConfig, internal, this.emitter);

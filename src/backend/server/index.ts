@@ -42,6 +42,8 @@ export const initServer = async (parentLogger: Logger, initialOutput: LogInfo[] 
         const apiPort = root.get('apiPort');
         const mainPort = root.get('mainPort');
         const port = root.get('port');
+        const local = root.get('localUrl');
+        const localDefined = root.get('hasDefinedBaseUrl');
 
         setupApi(app, logger, initialOutput);
 
@@ -52,7 +54,8 @@ export const initServer = async (parentLogger: Logger, initialOutput: LogInfo[] 
             res.sendFile(path.join(buildDir, "index.html"));
         });
 
-        app.listen(port);
+        const backendPort = isProd ? port : apiPort;
+        app.listen(backendPort);
 
         const addy = getAddress();
         const addresses: string[] = [];
@@ -62,7 +65,7 @@ export const initServer = async (parentLogger: Logger, initialOutput: LogInfo[] 
             --- HINT ---
             MS is likely being run in a container with BRIDGE networking which means the above addresses are not accessible from outside this container.
             To ensure the container is accessible make sure you have mapped the *container* port ${port} to a *host* port. https://foxxmd.github.io/multi-scrobbler/docs/installation#networking
-            The container will then be accessible at http://HOST_MACHINE_IP:HOST_PORT
+            The container will then be accessible at http://HOST_MACHINE_IP:HOST_PORT${localDefined ? ` (or ${local} since you defined this!)` : ''}
             --- HINT ---
             `;
         }
@@ -71,10 +74,10 @@ export const initServer = async (parentLogger: Logger, initialOutput: LogInfo[] 
                 switch (k) {
                     case 'host':
                     case 'v4':
-                        addresses.push(`---> ${k === 'host' ? 'Local'.padEnd(14, ' ') : 'Network'.padEnd(14, ' ')} http://${v}:${port}`);
+                        addresses.push(`---> ${k === 'host' ? 'Local'.padEnd(14, ' ') : 'Network'.padEnd(14, ' ')} http://${v}:${backendPort}`);
                         break;
                     case 'v6':
-                        addresses.push(`---> Network (IPv6) http://[${v}]:${port}`);
+                        addresses.push(`---> Network (IPv6) http://[${v}]:${backendPort}`);
                 }
             }
         }
@@ -83,6 +86,10 @@ export const initServer = async (parentLogger: Logger, initialOutput: LogInfo[] 
         ${addresses.join('\n')}${dockerHint !== '' ? `\n${dockerHint}` : ''}`
 
         logger.info(start);
+
+        if(localDefined) {
+            logger.info(`User-defined base URL for UI and redirect URLs (spotify, deezer, lastfm): ${local}`)
+        }
     } catch (e) {
         logger.error(new ErrorWithCause('Server crashed with uncaught exception', {cause: e}));
     }

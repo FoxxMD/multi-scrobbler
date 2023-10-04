@@ -2,7 +2,6 @@ import dayjs from 'dayjs';
 
 import AbstractScrobbleClient from "./AbstractScrobbleClient";
 import {
-    capitalize,
     playObjDataMatch,
     removeUndefinedKeys,
     setIntersection,
@@ -16,8 +15,9 @@ import {Logger} from '@foxxmd/winston';
 import { ListenBrainzClientConfig } from "../common/infrastructure/config/client/listenbrainz";
 import { ListenbrainzApiClient } from "../common/vendor/ListenbrainzApiClient";
 import { PlayObject, TrackStringOptions } from "../../core/Atomic";
-import { buildTrackString } from "../../core/StringUtils";
+import {buildTrackString, capitalize} from "../../core/StringUtils";
 import EventEmitter from "events";
+import {UpstreamError} from "../common/errors/UpstreamError";
 
 export default class ListenbrainzScrobbler extends AbstractScrobbleClient {
 
@@ -69,7 +69,7 @@ export default class ListenbrainzScrobbler extends AbstractScrobbleClient {
             this.logger.debug('Refreshing recent scrobbles');
             const resp = await this.api.getRecentlyPlayed(this.MAX_STORED_SCROBBLES);
             this.logger.debug(`Found ${resp.length} recent scrobbles`);
-            this.recentScrobbles = resp.sort(sortByOldestPlayDate);
+            this.recentScrobbles = resp;
             if (this.recentScrobbles.length > 0) {
                 const [{data: {playDate: newestScrobbleTime = dayjs()} = {}} = {}] = this.recentScrobbles.slice(-1);
                 const [{data: {playDate: oldestScrobbleTime = dayjs()} = {}} = {}] = this.recentScrobbles.slice(0, 1);
@@ -86,7 +86,7 @@ export default class ListenbrainzScrobbler extends AbstractScrobbleClient {
         return (await this.existingScrobble(playObj)) !== undefined;
     }
 
-    scrobble = async (playObj: PlayObject) => {
+    doScrobble = async (playObj: PlayObject) => {
         const {
             meta: {
                 source,
@@ -99,15 +99,15 @@ export default class ListenbrainzScrobbler extends AbstractScrobbleClient {
         try {
             const resp = await this.api.submitListen(playObj);
             rawPayload = resp;
-            this.addScrobbledTrack(playObj, playObj);
+
             if (newFromSource) {
                 this.logger.info(`Scrobbled (New)     => (${source}) ${buildTrackString(playObj)}`);
             } else {
                 this.logger.info(`Scrobbled (Backlog) => (${source}) ${buildTrackString(playObj)}`);
             }
-
             // last fm has rate limits but i can't find a specific example of what that limit is. going to default to 1 scrobble/sec to be safe
-            await sleep(1000);
+            //await sleep(1000);
+            return playObj;
         } catch (e) {
             let message = e.message;
             if(e.response !== undefined) {
@@ -119,11 +119,9 @@ export default class ListenbrainzScrobbler extends AbstractScrobbleClient {
             }
             await this.notifier.notify({title: `Client - ${capitalize(this.type)} - ${this.name} - Scrobble Error`, message: `Failed to scrobble => ${buildTrackString(playObj)} | Error: ${message}`, priority: 'error'});
             this.logger.error(`Failed to scrobble => ${message}`, {payload: rawPayload});
-            throw e;
+            throw new UpstreamError(`Error received from Listenbrainz API: ${message}`, {cause: e, showStopper: true});
         } finally {
             this.logger.debug(`Raw Payload:`, {rawPayload});
         }
-
-        return true;
     }
 }

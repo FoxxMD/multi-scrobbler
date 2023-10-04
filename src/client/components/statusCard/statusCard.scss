@@ -1,0 +1,7 @@
+.statusCardBody {
+  article {
+    &:last-of-type {
+      margin-bottom: 1rem;
+    }
+  }
+}

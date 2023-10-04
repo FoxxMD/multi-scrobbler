@@ -19,7 +19,7 @@ import { LastfmClientConfig } from "../common/infrastructure/config/client/lastf
 import { Notifiers } from "../notifier/Notifiers";
 import AbstractScrobbleClient from "./AbstractScrobbleClient";
 import {EventEmitter} from "events";
-import winston from '@foxxmd/winston';
+import winston, {Logger} from '@foxxmd/winston';
 import ListenbrainzScrobbler from "./ListenbrainzScrobbler";
 import { ListenBrainzClientConfig } from "../common/infrastructure/config/client/listenbrainz";
 import {ErrorWithCause} from "pony-cause";
@@ -35,17 +35,19 @@ export default class ScrobbleClients {
 
     /** @type AbstractScrobbleClient[] */
     clients: (MalojaScrobbler | LastfmScrobbler)[] = [];
-    logger;
-    configDir;
+    logger: Logger;
+    configDir: string;
+    localUrl: string;
 
     emitter: WildcardEmitter;
 
     sourceEmitter: WildcardEmitter;
 
-    constructor(emitter: WildcardEmitter, sourceEmitter: WildcardEmitter, configDir: any) {
+    constructor(emitter: WildcardEmitter, sourceEmitter: WildcardEmitter, localUrl: string, configDir: string) {
         this.emitter = emitter;
         this.sourceEmitter = sourceEmitter;
         this.configDir = configDir;
+        this.localUrl = localUrl;
         this.logger = winston.loggers.get('app').child({labels: ['Scrobblers']}, mergeArr);
 
         this.sourceEmitter.on('discoveredToScrobble', async (payload: { data: (PlayObject | PlayObject[]), options: { forceRefresh?: boolean, checkTime?: Dayjs, scrobbleTo?: string[], scrobbleFrom?: string } }) => {
@@ -161,7 +163,7 @@ export default class ScrobbleClients {
                             mode: 'single',
                             configureAs: 'client',
                             // @ts-ignore
-                            data: lfm
+                            data: {...lfm, redirectUri: lfm.redirectUri ?? `${this.localUrl}/lastfm/callback`}
                         })
                     }
                     break;
@@ -294,7 +296,13 @@ ${sources.join('\n')}`);
         if (isValidConfig !== true) {
             throw new Error(`Config object from ${clientConfig.source || 'unknown'} with name [${clientConfig.name || 'unnamed'}] of type [${clientConfig.type || 'unknown'}] has errors: ${isValidConfig.join(' | ')}`)
         }*/
-        const {type, name, data: d = {}} = clientConfig;
+        const {type, name, enable = true, data: d = {}} = clientConfig;
+
+        if(enable === false) {
+            this.logger.warn(`${type} (${name}) client was disabled by config`);
+            return;
+        }
+
         // add defaults
         const data = {...defaults, ...d};
         let newClient;
@@ -356,8 +364,6 @@ ${sources.join('\n')}`);
             scrobbleFrom = 'source',
         } = options;
 
-        const tracksScrobbled: any = [];
-
         if (this.clients.length === 0) {
             this.logger.warn('Cannot scrobble! No clients are configured.');
         }
@@ -367,71 +373,9 @@ ${sources.join('\n')}`);
                 client.logger.debug(`Client was filtered out by Source '${scrobbleFrom}'`);
                 continue;
             }
-            if(!client.initialized) {
-                if(client.initializing) {
-                    client.logger.warn(`Cannot scrobble because it is still initializing`);
-                    continue;
-                }
-                if(!(await client.initialize())) {
-                    client.logger.warn(`Cannot scrobble because it could not be initialized`);
-                    continue;
-                }
-            }
-
-            if(client.requiresAuth && !client.authed) {
-                if (client.requiresAuthInteraction) {
-                    client.logger.warn(`Cannot scrobble because user interaction is required for authentication`);
-                    continue;
-                } else if (!(await client.testAuth())) {
-                    client.logger.warn(`Cannot scrobble because auth test failed`);
-                    continue;
-                }
-            }
-
-            if(!(await client.isReady())) {
-                client.logger.warn(`Cannot scrobble because it is not ready`);
-                continue;
-            }
-
-            if (forceRefresh || client.scrobblesLastCheckedAt().unix() < checkTime.unix()) {
-                try {
-                    await client.refreshScrobbles();
-                } catch(e) {
-                    client.logger.error(`Encountered error while refreshing scrobbles`);
-                    this.logger.error(e);
-                }
-            }
             for (const playObj of playObjs) {
-                try {
-                    const {
-                        meta: {
-                            newFromSource = false,
-                        } = {}
-                    } = playObj;
-                    const [timeFrameValid, timeFrameValidLog] = client.timeFrameIsValid(playObj);
-                    if (timeFrameValid && !(await client.alreadyScrobbled(playObj))) {
-                        client.emitEvent('scrobble', {play: playObj});
-                        await client.scrobble(playObj)
-                        client.tracksScrobbled++;
-                        // since this is what we return to the source only add to tracksScrobbled if not already in array
-                        // (source should only know that a track was scrobbled (binary) -- doesn't care if it was scrobbled more than once
-                        if(!tracksScrobbled.some(x => playObjDataMatch(x, playObj) && x.data.playDate === playObj.data.playDate)) {
-                            tracksScrobbled.push(playObj);
-                        }
-                    } else {
-                        if(!timeFrameValid) {
-                            client.logger.debug(`Will not scrobble ${buildTrackString(playObj)} from Source '${scrobbleFrom}' because it ${timeFrameValidLog}`);
-                        }
-                    }
-                } catch(e) {
-                    client.logger.error(new ErrorWithCause(`Encountered error while in scrobble loop`, {cause: e}));
-                    // for now just stop scrobbling plays for this client and move on. the client should deal with logging the issue
-                    if(e.continueScrobbling !== true) {
-                        break;
-                    }
-                }
+                client.queueScrobble(playObj, scrobbleFrom);
             }
         }
-        return tracksScrobbled;
     }
 }

@@ -1,3 +1,4 @@
+import 'dotenv/config';
 import {Logger} from '@foxxmd/winston';
 import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc.js';
@@ -19,7 +20,8 @@ import {getLogger} from "./common/logging";
 import {LogInfo} from "../core/Atomic";
 import {initServer} from "./server/index";
 import {SimpleIntervalJob, ToadScheduler} from "toad-scheduler";
-import {createHeartbeatTask} from "./tasks/heartbeat";
+import {createHeartbeatSourcesTask} from "./tasks/heartbeatSources";
+import {createHeartbeatClientsTask} from "./tasks/heartbeatClients";
 
 
 dayjs.extend(utc)
@@ -57,7 +59,6 @@ const configDir = process.env.CONFIG_DIR || path.resolve(projectDir, `./config`)
 
         const {
             webhooks = [],
-            port,
             logging = {},
             debugMode,
         } = (config || {}) as AIOConfig;
@@ -71,7 +72,7 @@ const configDir = process.env.CONFIG_DIR || path.resolve(projectDir, `./config`)
             process.env.DEBUG_MODE = b.toString();
         }
 
-        const root = getRoot(port);
+        const root = getRoot(config);
 
         logger = getLogger(logging, 'app');
 
@@ -135,6 +136,11 @@ const configDir = process.env.CONFIG_DIR || path.resolve(projectDir, `./config`)
                     }
             }
         }
+        for(const client of scrobbleClients.clients) {
+            if((await client.isReady())) {
+                client.initScrobbleMonitoring();
+            }
+        }
         if (anyNotReady) {
             logger.info(`Some sources are not ready, open the dashboard to continue`);
         }
@@ -142,7 +148,11 @@ const configDir = process.env.CONFIG_DIR || path.resolve(projectDir, `./config`)
         scheduler.addSimpleIntervalJob(new SimpleIntervalJob({
             minutes: 20,
             runImmediately: false
-        }, createHeartbeatTask(scrobbleSources, logger)));
+        }, createHeartbeatSourcesTask(scrobbleSources, logger)));
+        scheduler.addSimpleIntervalJob(new SimpleIntervalJob({
+            minutes: 20,
+            runImmediately: false
+        }, createHeartbeatClientsTask(scrobbleClients, logger)));
         logger.info('Scheduler started.');
 
     } catch (e) {

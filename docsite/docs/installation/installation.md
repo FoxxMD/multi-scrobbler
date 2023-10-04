@@ -84,7 +84,7 @@ Recommended configuration steps for docker or docker-compose usage:
 
 #### Storage
 
-You **must** bind a host directory into the container for storing configurations and credentials. Otherwise these will be lost when the container is updated.
+You **must** bind a host directory into the container for storing configurations and credentials. Otherwise, these will be lost when the container is updated.
 
 * [Using `-v` method for docker](https://docs.docker.com/storage/bind-mounts/#start-a-container-with-a-bind-mount): `-v /path/on/host/config:/config`
 * [Using docker-compose](https://docs.docker.com/compose/compose-file/compose-file-v3/#short-syntax-3): `- /path/on/host/config:/config`
@@ -97,6 +97,20 @@ The default container port is `9078`. To map container to host port:
 
 * With [docker](https://docs.docker.com/engine/reference/commandline/run/#publish): `-p 9078:9078` (first port is the port on the host to use)
 * With [docker-compose](https://docs.docker.com/compose/compose-file/compose-file-v3/#short-syntax-1): `- "9078:9078"`
+
+##### Base URL
+
+Optionally, when
+
+* using a [Source or Client](../configuration/configuration.md) that has a "Redirect URI" that you have not explicitly defined
+* and
+  * using a bridge network or
+  * installing MS on a different machine than the one used to view the dashboard
+
+set the [Base URL](../configuration/configuration.md#base-url) as the IP of the host machine. (This is the IP you would use to view the dashboard in a browser)
+
+* With docker: `-e BASE_URL="http://hostMachineIP"` (first port is the port on the host to use)
+* With docker-compose: [see comments in docker-compose.yml](../../../docker-compose.yml)
 
 #### Other
 
@@ -119,6 +133,8 @@ To get the UID and GID for the current user run these commands from a terminal:
 * `id -g` -- prints GID
 
 ## Docker Usage Examples
+
+If installing on a different machine make sure all redirect URIs are defined or that you have set a [Base URL](#base-url).
 
 ### Using [env-based](../configuration/configuration.md#env-based-configuration) configuration
 

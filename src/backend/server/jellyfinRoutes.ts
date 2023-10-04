@@ -9,7 +9,14 @@ import JellyfinSource from "../sources/JellyfinSource";
 export const setupJellyfinRoutes = (app: ExpressWithAsync, logger: Logger, scrobbleSources: ScrobbleSources) => {
 
     // webhook plugin sends json with context type text/utf-8 so we need to parse it differently
-    const jellyfinJsonParser = bodyParser.json({type: 'text/*'});
+    const jellyfinJsonParser = bodyParser.json({
+        type: ['text/*', 'application/json'],
+        // verify: function(req, res, buf, encoding) {
+        //     // get rawBody
+        //     // @ts-ignore
+        //     req.rawBody = buf.toString();
+        // }
+    });
     const jellyIngress = new JellyfinNotifier();
     app.postAsync('/jellyfin', async function(req, res)  {
         res.redirect(307, '/api/jellyfin/ingress');
@@ -25,6 +32,22 @@ export const setupJellyfinRoutes = (app: ExpressWithAsync, logger: Logger, scrob
             jellyIngress.trackIngress(req, false);
 
             res.send('OK');
+
+            const bodyEmpty = req.body === undefined || req.body === null || (typeof req.body === 'object' && Object.keys(req.body).length === 0);
+            if(bodyEmpty) {
+                const length = req.header('content-length') !== undefined ? Number.parseInt(req.header('content-length')) : undefined;
+                // can't think of a way a user would send an empty body for a webhook payload but if they meant to do it don't spam them with errors...
+                if(length === 0) {
+                    return;
+                }
+                if(length === undefined) {
+                    logger.warn(`Jellyfin is not sending a well-formatted request. It does not have valid headers (application/json - text/*) OR it is missing content-length header: Content-Type => '${req.header('content-type')}' | Length => ${length}`);
+                } else {
+                    logger.warn(`Jellyfin is not sending a request with valid headers. Content-Type must be either application/json or a text/* wildcard (like text/plain) -- given: Content-Type => '${req.header('content-type')}'`);
+                }
+                res.status(400).send('Invalid Content-Type. Must be either application/json or a text wildcard (like text/plain)');
+                return;
+            }
 
             const parts = remoteHostIdentifiers(req);
             const connectionId = `${parts.host}-${parts.proxy ?? ''}`;

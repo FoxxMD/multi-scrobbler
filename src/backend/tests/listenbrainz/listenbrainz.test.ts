@@ -1,19 +1,19 @@
 import {describe, it} from 'mocha';
 import {assert} from 'chai';
 // correct mappings
-import multiArtistInArtistName from './listenbrainz/correctlyMapped/multiArtistInArtistName.json';
-import multiArtistsInTrackName from './listenbrainz/correctlyMapped/multiArtistInTrackName.json';
-import noArtistMapping from './listenbrainz/correctlyMapped/noArtistMapping.json';
-import multiMappedArtistsWithSingleUserArtist from './listenbrainz/correctlyMapped/multiArtistMappingWithSingleRecordedArtist.json';
-import artistWithProperJoiner from './listenbrainz/correctlyMapped/artistProperHasJoinerInName.json';
-import normalizedValues from './listenbrainz/correctlyMapped/normalizedName.json';
-import slightlyDifferentNames from './listenbrainz/correctlyMapped/trackNameSlightlyDifferent.json';
+import multiArtistInArtistName from './correctlyMapped/multiArtistInArtistName.json';
+import multiArtistsInTrackName from './correctlyMapped/multiArtistInTrackName.json';
+import noArtistMapping from './correctlyMapped/noArtistMapping.json';
+import multiMappedArtistsWithSingleUserArtist from './correctlyMapped/multiArtistMappingWithSingleRecordedArtist.json';
+import artistWithProperJoiner from './correctlyMapped/artistProperHasJoinerInName.json';
+import normalizedValues from './correctlyMapped/normalizedName.json';
+import slightlyDifferentNames from './correctlyMapped/trackNameSlightlyDifferent.json';
 
 // incorrect mappings
-import incorrectMultiArtistsTrackName from './listenbrainz/incorrectlyMapped/multiArtistsInTrackName.json';
-import veryWrong from './listenbrainz/incorrectlyMapped/veryWrong.json';
+import incorrectMultiArtistsTrackName from './incorrectlyMapped/multiArtistsInTrackName.json';
+import veryWrong from './incorrectlyMapped/veryWrong.json';
 
-import {ListenbrainzApiClient, ListenResponse} from "../common/vendor/ListenbrainzApiClient";
+import {ListenbrainzApiClient, ListenResponse} from "../../common/vendor/ListenbrainzApiClient";
 
 interface ExpectedResults {
     artists: string[]

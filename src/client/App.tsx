@@ -10,6 +10,7 @@ import './App.css';
 import {store} from './store';
 import Dashboard from "./dashboard/dashboard";
 import RecentPage from "./recent/RecentPage";
+import ScrobbledPage from "./scrobbled/ScrobbledPage";
 
 function NoMatch() {
     let location = useLocation();
@@ -29,6 +30,10 @@ const router = createBrowserRouter([
     {
         path: "/recent",
         element: <RecentPage />,
+    },
+    {
+        path: "/scrobbled",
+        element: <ScrobbledPage />,
     },
     {
         path: "*",

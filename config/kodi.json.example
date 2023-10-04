@@ -1,6 +1,7 @@
 [
   {
     "name": "MyKodi",
+    "enable": true,
     "data": {
       "url": "http://localhost:8080/jsonrpc",
       "username": "myUser",

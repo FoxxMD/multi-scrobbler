@@ -1,6 +1,7 @@
 [
   {
     "name": "MyPlex",
+    "enable": true,
     "clients": [],
     "data": {
       "user": ["username@gmail.com","anotherUser@gmail.com"],

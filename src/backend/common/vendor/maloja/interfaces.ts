@@ -41,19 +41,32 @@ export interface MalojaV3ScrobbleData {
 export type MalojaScrobbleData = MalojaV2ScrobbleData | MalojaV3ScrobbleData;
 
 export interface MalojaScrobbleRequestData {
+    /** The auth key used to scrobble */
     key: string
+    /** name of the track */
     title: string
-    album: string
+    /** name of the album */
+    album?: string
+    /** unix timestamp of when the track was scrobbled*/
     time: number
-    length: number
+    /** length of the track in seconds */
+    length?: number
+    /** number of seconds the track was listened to */
+    duration?: number
 }
 
 export interface MalojaScrobbleV2RequestData extends MalojaScrobbleRequestData {
+    /** comma-separated list of artists for this track */
     artist: string
 }
 
 export interface MalojaScrobbleV3RequestData extends MalojaScrobbleRequestData {
+    /** a list of artists for this track */
     artists: string[]
+    /** a list of artists for the album the track is on */
+    albumartists: string[]
+    /** skip server-side metadata parsing */
+    nofix?: boolean
 }
 
 interface MalojaScrobbleWarning {

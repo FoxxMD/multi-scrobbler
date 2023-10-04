@@ -1,6 +1,7 @@
 [
   {
     "name": "myLastFm",
+    "enable": true,
     "configureAs": "client",
     "data": {
       "apiKey": "a89cba1569901a0671d5a9875fed4be1",

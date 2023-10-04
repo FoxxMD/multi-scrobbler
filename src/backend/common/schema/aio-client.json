@@ -37,6 +37,15 @@
                             "title": "checkExistingScrobbles",
                             "type": "boolean"
                         },
+                        "deadLetterRetries": {
+                            "default": 1,
+                            "description": "Number of times MS should automatically retry scrobbles in dead letter queue",
+                            "examples": [
+                                1
+                            ],
+                            "title": "deadLetterRetries",
+                            "type": "boolean"
+                        },
                         "refreshEnabled": {
                             "default": true,
                             "description": "Try to get fresh scrobble history from client when tracks to be scrobbled are newer than the last scrobble found in client history",
@@ -100,6 +109,15 @@
                     ],
                     "description": "Specific data required to configure this client",
                     "title": "data"
+                },
+                "enable": {
+                    "default": true,
+                    "description": "Should MS use this client/source? Defaults to true",
+                    "examples": [
+                        true
+                    ],
+                    "title": "enable",
+                    "type": "boolean"
                 },
                 "name": {
                     "description": "Unique identifier for this client. Used with sources to restrict where scrobbles are sent.",
@@ -203,6 +221,15 @@
                     "description": "Specific data required to configure this client",
                     "title": "data"
                 },
+                "enable": {
+                    "default": true,
+                    "description": "Should MS use this client/source? Defaults to true",
+                    "examples": [
+                        true
+                    ],
+                    "title": "enable",
+                    "type": "boolean"
+                },
                 "name": {
                     "description": "Unique identifier for this client. Used with sources to restrict where scrobbles are sent.",
                     "examples": [
@@ -247,6 +274,15 @@
                                 true
                             ],
                             "title": "checkExistingScrobbles",
+                            "type": "boolean"
+                        },
+                        "deadLetterRetries": {
+                            "default": 1,
+                            "description": "Number of times MS should automatically retry scrobbles in dead letter queue",
+                            "examples": [
+                                1
+                            ],
+                            "title": "deadLetterRetries",
                             "type": "boolean"
                         },
                         "refreshEnabled": {
@@ -319,6 +355,15 @@
                     "description": "Specific data required to configure this client",
                     "title": "data"
                 },
+                "enable": {
+                    "default": true,
+                    "description": "Should MS use this client/source? Defaults to true",
+                    "examples": [
+                        true
+                    ],
+                    "title": "enable",
+                    "type": "boolean"
+                },
                 "name": {
                     "description": "Unique identifier for this client. Used with sources to restrict where scrobbles are sent.",
                     "examples": [
@@ -371,6 +416,15 @@
                                 true
                             ],
                             "title": "checkExistingScrobbles",
+                            "type": "boolean"
+                        },
+                        "deadLetterRetries": {
+                            "default": 1,
+                            "description": "Number of times MS should automatically retry scrobbles in dead letter queue",
+                            "examples": [
+                                1
+                            ],
+                            "title": "deadLetterRetries",
                             "type": "boolean"
                         },
                         "refreshEnabled": {

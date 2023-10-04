@@ -12,18 +12,31 @@ export interface SourceRetryOptions extends RequestRetryOptions {
 
 export interface ScrobbleThresholds {
     /**
-     * The number of seconds before a track should be considered scrobbled.
+     * The number of seconds a track has been listened to before it should be considered scrobbled.
      *
-     * @default 30
-     * @examples [30]
+     * Set to null to disable.
+     *
+     * @see https://www.last.fm/api/scrobbling (When is a scrobble a scrobble?)
+     * @seehttps://github.com/krateng/maloja/blob/master/API.md#scrobbling-guideline
+     *
+     * @default 240
+     * @examples [240]
      * */
-    duration?: number
+    duration?: number | null
     /**
-     * The percentage of a track that should have been seen played before it should be scrobbled. Only used if the Source provides information about how long the track is.
+     * The percentage (as an integer) of a track that should have been seen played before it should be scrobbled. Only used if the Source provides information about how long the track is.
+     *
+     * Set to null to disable.
      *
      * NOTE: This should be used with care when the Source is a "polling" type (has an 'interval' property). If the track is short and the interval is too high MS may ignore the track if percentage is high because it had not "seen" the track for long enough from first discovery, even if you have been playing the track for longer.
+     *
+     * @see https://www.last.fm/api/scrobbling (When is a scrobble a scrobble?)
+     * @see https://github.com/krateng/maloja/blob/master/API.md#scrobbling-guideline
+     *
+     * @default 50
+     * @examples [50]
      * */
-    percent?: number
+    percent?: number | null
 }
 
 export interface CommonSourceOptions {
@@ -57,6 +70,19 @@ export interface CommonSourceOptions {
      * @examples [false]
      * */
     logPlayerState?: boolean
+
+    /**
+     * If this source
+     *
+     * * supports fetching a listen history
+     * * and this option is enabled
+     *
+     * then on startup MS will attempt to scrobble the recent listens from that history
+     *
+     * @default true
+     * @examples [true, false]
+     * */
+    scrobbleBacklog?: boolean
 }
 
 export interface CommonSourceData extends CommonData, SourceRetryOptions {

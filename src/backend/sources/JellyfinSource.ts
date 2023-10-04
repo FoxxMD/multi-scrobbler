@@ -350,12 +350,13 @@ export default class JellyfinSource extends MemorySource {
             scrobbleOpts.checkAll = true;
 
         } else {
-            newPlays = this.processRecentPlaysNew([playObj]);
+            newPlays = this.processRecentPlays([playObj]);
         }
 
         if(newPlays.length > 0) {
             try {
-                this.scrobble(newPlays, scrobbleOpts);
+                const discovered = this.discover(newPlays, scrobbleOpts);
+                this.scrobble(discovered);
             } catch (e) {
                 this.logger.error('Encountered error while scrobbling')
                 this.logger.error(e)

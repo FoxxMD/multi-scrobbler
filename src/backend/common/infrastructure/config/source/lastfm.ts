@@ -1,7 +1,8 @@
 import { LastfmData } from "../client/lastfm";
 import { CommonSourceConfig, CommonSourceData } from "./index";
+import {PollingOptions} from "../common";
 
-export interface LastFmSourceData extends CommonSourceData, LastfmData{}
+export interface LastFmSourceData extends CommonSourceData, PollingOptions, LastfmData{}
 
 export interface LastfmSourceConfig extends CommonSourceConfig {
     /**

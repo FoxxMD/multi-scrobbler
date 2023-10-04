@@ -7,7 +7,7 @@ import {
 } from '@reduxjs/toolkit'
 import { Api } from '@reduxjs/toolkit/query/react';
 import {statusApi} from "./statusApi";
-import {ClientStatusData, SourceStatusData} from "../../core/Atomic";
+import {ClientStatusData, SourcePlayerJson, SourceStatusData} from "../../core/Atomic";
 
 export interface ApiEventPayload {
     type: string,
@@ -48,7 +48,18 @@ const sourceSlice = createSlice({
                 (state, action) => {
                     state.entities[action.payload.id].tracksDiscovered = state.entities[action.payload.id].tracksDiscovered + 1;
                 }
-            )
+            ).addMatcher(
+            (action) => sourceUpdate.match(action) && action.payload.event === 'playerUpdate',
+            (state, action) => {
+                const playerState = action.payload.data as SourcePlayerJson;
+                state.entities[action.payload.id].players[playerState.platformId] = playerState;
+            }).addMatcher(
+            (action) => sourceUpdate.match(action) && action.payload.event === 'playerDelete',
+            (state, action) => {
+                const playerState = action.payload.data as {platformId: string};
+                delete state.entities[action.payload.id].players[playerState.platformId];
+            }
+        )
     }
 });
 const clientSlice = createSlice({

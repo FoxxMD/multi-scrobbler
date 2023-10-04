@@ -1,4 +1,5 @@
 import request from 'superagent';
+import passport from "passport";
 import {
     parseRetryAfterSecsFromObj,
     readJson,
@@ -10,7 +11,7 @@ import {Strategy as DeezerStrategy} from 'passport-deezer';
 import AbstractSource, { RecentlyPlayedOptions } from "./AbstractSource";
 import dayjs from "dayjs";
 import { DeezerSourceConfig } from "../common/infrastructure/config/source/deezer";
-import { FormatPlayObjectOptions, InternalConfig } from "../common/infrastructure/Atomic";
+import {DEFAULT_RETRY_MULTIPLIER, FormatPlayObjectOptions, InternalConfig} from "../common/infrastructure/Atomic";
 import EventEmitter from "events";
 import { PlayObject } from "../../core/Atomic";
 
@@ -22,6 +23,7 @@ export default class DeezerSource extends AbstractSource {
     requiresAuthInteraction = true;
 
     baseUrl = 'https://api.deezer.com';
+    redirectUri: string;
 
     declare config: DeezerSourceConfig;
 
@@ -30,6 +32,7 @@ export default class DeezerSource extends AbstractSource {
         const {
             data: {
                 interval = 60,
+                redirectUri,
             } = {},
         } = config;
 
@@ -38,9 +41,11 @@ export default class DeezerSource extends AbstractSource {
         }
 
         this.config.data.interval = interval;
+        this.redirectUri = redirectUri || `${this.localUrl}/deezer/callback`;
 
         this.workingCredsPath = `${this.configDir}/currentCreds-${name}.json`;
         this.canPoll = true;
+        this.canBacklog = true;
     }
 
     static formatPlayObj(obj: any, options: FormatPlayObjectOptions = {}): PlayObject {
@@ -92,8 +97,11 @@ export default class DeezerSource extends AbstractSource {
             } else if(this.config.data.clientSecret === undefined) {
                 throw new Error('clientSecret must be defined when accessToken is not present');
             }
+            this.logger.info(`No access token is present. User interaction for authentication is required.`);
+            this.logger.info(`Redirect URL that will be used on auth callback: '${this.redirectUri}'`);
         }
         this.initialized = true;
+        passport.use(`deezer-${this.name}`, this.generatePassportStrategy());
         return this.initialized;
     }
 
@@ -116,7 +124,7 @@ export default class DeezerSource extends AbstractSource {
     callApi = async (req: any, retries = 0) => {
         const {
             maxRequestRetries = 1,
-            retryMultiplier = 1.5
+            retryMultiplier = DEFAULT_RETRY_MULTIPLIER
         } = this.config.data;
 
         req.query({
@@ -185,7 +193,7 @@ export default class DeezerSource extends AbstractSource {
         return new DeezerStrategy({
             clientID: this.config.data.clientId,
             clientSecret: this.config.data.clientSecret,
-            callbackURL: this.config.data.redirectUri || `${this.localUrl}/deezer/callback`,
+            callbackURL: this.redirectUri,
             scope: ['listening_history','offline_access'],
         }, (accessToken: any, refreshToken: any, profile: any, done: any) => {
                 // return done(null, {
@@ -223,5 +231,9 @@ export default class DeezerSource extends AbstractSource {
             this.logger.error(error);
             return error;
         }
+    }
+
+    protected getBackloggedPlays = async () => {
+        return await this.getRecentlyPlayed({formatted: true});
     }
 }
