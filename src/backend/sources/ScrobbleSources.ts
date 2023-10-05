@@ -36,6 +36,8 @@ import { JRiverData, JRiverSourceConfig } from "../common/infrastructure/config/
 import { KodiSource } from "./KodiSource";
 import { KodiData, KodiSourceConfig } from "../common/infrastructure/config/source/kodi";
 import { WildcardEmitter } from "../common/WildcardEmitter";
+import {WebScrobblerSource} from "./WebScrobblerSource";
+import {WebScrobblerSourceConfig} from "../common/infrastructure/config/source/webscrobbler";
 
 type groupedNamedConfigs = {[key: string]: ParsedConfig[]};
 
@@ -301,6 +303,26 @@ export default class ScrobbleSources {
                         });
                     }
                     break;
+                case 'webscrobbler':
+                    const wsShouldUse = parseBool(process.env.WEBSCROBBLER_ENABLE);
+                    const ws = {
+                        blacklist: process.env.WEBSCROBBLER_BLACKLIST,
+                        whitelist: process.env.WEBSCROBBLER_WHITELIST
+                    }
+                    if (!Object.values(mp).every(x => x === undefined) || wsShouldUse) {
+                        configs.push({
+                            type: 'webscrobbler',
+                            name: 'unnamed',
+                            source: 'ENV',
+                            mode: 'single',
+                            configureAs: defaultConfigureAs,
+                            data: {
+                                blacklist: ws.blacklist !== undefined ? ws.blacklist.split(',') : [],
+                                whitelist: ws.whitelist !== undefined ? ws.whitelist.split(',') : [],
+                            }
+                        });
+                    }
+                    break;
                 default:
                     break;
             }
@@ -475,6 +497,9 @@ export default class ScrobbleSources {
                 break;
             case 'kodi':
                 newSource = await new KodiSource(name, compositeConfig as KodiSourceConfig, internal, this.emitter);
+                break;
+            case 'webscrobbler':
+                newSource = await new WebScrobblerSource(name, compositeConfig as WebScrobblerSourceConfig, internal, this.emitter);
                 break;
             default:
                 break;

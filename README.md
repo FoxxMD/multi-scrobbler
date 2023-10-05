@@ -14,6 +14,7 @@ A javascript app to scrobble music you listened to, to [Maloja](https://github.c
   * [Plex](/docsite/docs/configuration/configuration.md#plex) or [Tautulli](/docsite/docs/configuration/configuration.md#tautulli)
   * [Subsonic-compatible APIs](/docsite/docs/configuration/configuration.md#subsonic) (like [Airsonic](https://airsonic.github.io/) and [Navidrome](https://www.navidrome.org/))
   * [Jellyfin](/docsite/docs/configuration/configuration.md#jellyfin)
+  * [WebScrobbler](/docsite/docs/configuration/configuration.md#webscrobbler)
   * [Youtube Music](/docsite/docs/configuration/configuration.md#youtube-music)
   * [Last.fm](/docsite/docs/configuration/configuration.md#lastfm-source)
   * [ListenBrainz](/docsite/docs/configuration/configuration.md#listenbrainz--source-)

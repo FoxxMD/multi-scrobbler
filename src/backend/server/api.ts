@@ -26,6 +26,8 @@ import {capitalize} from "../../core/StringUtils";
 import {source} from "common-tags";
 import AbstractScrobbleClient from "../scrobblers/AbstractScrobbleClient";
 import {sortByNewestPlayDate} from "../utils";
+import bodyParser from "body-parser";
+import {setupWebscrobblerRoutes} from "./webscrobblerRoutes";
 
 let output: LogInfo[] = []
 
@@ -122,7 +124,18 @@ export const setupApi = (app: ExpressWithAsync, logger: Logger, initialLogOutput
     setupPlexRoutes(app, logger, scrobbleSources);
     setupJellyfinRoutes(app, logger, scrobbleSources);
     setupDeezerRoutes(app, logger, scrobbleSources);
+    setupWebscrobblerRoutes(app, logger, scrobbleSources);
     setupAuthRoutes(app, logger, sourceRequiredMiddle, clientRequiredMiddle, scrobbleSources, scrobbleClients);
+
+    app.putAsync('/api/webscrobbler', bodyParser.json({type: ['text/*', 'application/json']}), async (req, res) => {
+        logger.info(req.body);
+        res.sendStatus(200);
+    });
+
+    app.getAsync('/api/webscrobbler', bodyParser.json({type: ['text/*', 'application/json']}), async (req, res) => {
+        logger.info(req.body);
+        res.sendStatus(200);
+    });
 
     app.getAsync('/api/status', async (req, res, next) => {
 

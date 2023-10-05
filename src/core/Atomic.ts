@@ -4,7 +4,7 @@ import {ListenProgress} from "../backend/sources/PlayerState/ListenProgress";
 
 export interface SourceStatusData {
     status: string;
-    type: "spotify" | "plex" | "tautulli" | "subsonic" | "jellyfin" | "lastfm" | "deezer" | "ytmusic" | "mpris" | "mopidy" | "listenbrainz" | "jriver" | "kodi";
+    type: "spotify" | "plex" | "tautulli" | "subsonic" | "jellyfin" | "lastfm" | "deezer" | "ytmusic" | "mpris" | "mopidy" | "listenbrainz" | "jriver" | "kodi" | 'webscrobbler';
     display: string;
     tracksDiscovered: number;
     name: string;
@@ -101,6 +101,7 @@ export interface PlayMeta {
     newFromSource?: boolean
     url?: {
         web: string
+        origin?: string
         [key: string]: string
     }
     user?: string

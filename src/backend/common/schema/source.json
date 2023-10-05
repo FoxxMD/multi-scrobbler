@@ -39,6 +39,9 @@
         },
         {
             "$ref": "#/definitions/KodiSourceConfig"
+        },
+        {
+            "$ref": "#/definitions/WebScrobblerSourceConfig"
         }
     ],
     "definitions": {
@@ -1696,6 +1699,162 @@
                 "data"
             ],
             "title": "TautulliSourceConfig",
+            "type": "object"
+        },
+        "WebScrobblerData": {
+            "properties": {
+                "blacklist": {
+                    "anyOf": [
+                        {
+                            "items": {
+                                "type": "string"
+                            },
+                            "type": "array"
+                        },
+                        {
+                            "type": "string"
+                        }
+                    ],
+                    "description": "Block scrobbling from specific WebScrobbler Connectors",
+                    "examples": [
+                        [
+                            "youtube"
+                        ]
+                    ],
+                    "title": "blacklist"
+                },
+                "maxPollRetries": {
+                    "default": 5,
+                    "description": "default # of automatic polling restarts on error",
+                    "examples": [
+                        5
+                    ],
+                    "title": "maxPollRetries",
+                    "type": "number"
+                },
+                "maxRequestRetries": {
+                    "default": 1,
+                    "description": "default # of http request retries a source can make before error is thrown",
+                    "examples": [
+                        1
+                    ],
+                    "title": "maxRequestRetries",
+                    "type": "number"
+                },
+                "options": {
+                    "description": "Additional options for WebScrobbler logging and tuning",
+                    "properties": {
+                        "logFilterFailure": {
+                            "default": "warn",
+                            "description": "How MS should log when a WebScrobbler event fails a defined filter\n\n* `false` => do not log\n* `debug` => log to DEBUG level\n* `warn` => log to WARN level (default)",
+                            "enum": [
+                                "debug",
+                                false,
+                                "warn"
+                            ],
+                            "examples": [
+                                "warn"
+                            ],
+                            "title": "logFilterFailure"
+                        },
+                        "logPayload": {
+                            "default": false,
+                            "description": "Log raw WebScrobbler webhook payload to debug",
+                            "examples": [
+                                false
+                            ],
+                            "title": "logPayload",
+                            "type": "boolean"
+                        }
+                    },
+                    "title": "options",
+                    "type": "object"
+                },
+                "retryMultiplier": {
+                    "default": 1.5,
+                    "description": "default retry delay multiplier (retry attempt * multiplier = # of seconds to wait before retrying)",
+                    "examples": [
+                        1.5
+                    ],
+                    "title": "retryMultiplier",
+                    "type": "number"
+                },
+                "scrobbleThresholds": {
+                    "$ref": "#/definitions/ScrobbleThresholds",
+                    "description": "Set thresholds for when multi-scrobbler should consider a tracked play to be \"scrobbable\". If both duration and percent are defined then if either condition is met the track is scrobbled.",
+                    "title": "scrobbleThresholds"
+                },
+                "slug": {
+                    "description": "The URL ending that should be used to identify scrobbles for this source\n\nIn WebScrobbler's Webhook you must set an 'API URL'. All MS WebScrobbler sources must start like:\n\nhttp://localhost:9078/api/webscrobbler\n\nIf you are using multiple WebScrobbler sources (scrobbles for many users) you must use a slug to match Sources with each users extension.\n\nExample:\n\n* slug: 'usera' => API URL: http://localhost:9078/api/webscrobbler/usera\n* slug: 'userb' => API URL: http://localhost:9078/api/webscrobbler/userb\n\nIf no slug is found from an extension's incoming webhook event the first WebScrobbler source without a slug will be used",
+                    "title": "slug",
+                    "type": "string"
+                },
+                "whitelist": {
+                    "anyOf": [
+                        {
+                            "items": {
+                                "type": "string"
+                            },
+                            "type": "array"
+                        },
+                        {
+                            "type": "string"
+                        }
+                    ],
+                    "description": "Only allow scrobbling from specific WebScrobbler Connectors",
+                    "examples": [
+                        [
+                            "mixcloud",
+                            "soundcloud",
+                            "bandcamp"
+                        ]
+                    ],
+                    "title": "whitelist"
+                }
+            },
+            "title": "WebScrobblerData",
+            "type": "object"
+        },
+        "WebScrobblerSourceConfig": {
+            "properties": {
+                "clients": {
+                    "description": "Restrict scrobbling tracks played from this source to Clients with names from this list. If list is empty is not present Source scrobbles to all configured Clients.",
+                    "examples": [
+                        [
+                            "MyMalojaConfigName",
+                            "MyLastFMConfigName"
+                        ]
+                    ],
+                    "items": {
+                        "type": "string"
+                    },
+                    "title": "clients",
+                    "type": "array"
+                },
+                "data": {
+                    "$ref": "#/definitions/WebScrobblerData",
+                    "title": "data"
+                },
+                "enable": {
+                    "default": true,
+                    "description": "Should MS use this client/source? Defaults to true",
+                    "examples": [
+                        true
+                    ],
+                    "title": "enable",
+                    "type": "boolean"
+                },
+                "name": {
+                    "description": "Unique identifier for this source.",
+                    "title": "name",
+                    "type": "string"
+                },
+                "options": {
+                    "$ref": "#/definitions/CommonSourceOptions",
+                    "title": "options"
+                }
+            },
+            "title": "WebScrobblerSourceConfig",
             "type": "object"
         },
         "YTMusicData": {

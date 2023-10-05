@@ -24,6 +24,7 @@ title: Overview
   * [Mopidy](#mopidy)
   * [JRiver](#jriver)
   * [Kodi](#kodi)
+  * [WebScrobbler](#webscrobbler)
 * [Client Configurations](#client-configurations)
   * [Maloja](#maloja)
   * [Last.fm](#lastfm)
@@ -623,6 +624,65 @@ MS transforms this to: `http://mydomain.com:80/kodiReverse/jsonrpc`
 ### File-Based
 
 See [`kodi.json.example`](https://github.com/FoxxMD/multi-scrobbler/blob/master/config/kodi.json.example) or [explore the schema with an example and live editor/validator](https://json-schema.app/view/%23%2Fdefinitions%2FKodiSourceConfig/%23%2Fdefinitions%2FKodiData?url=https%3A%2F%2Fraw.githubusercontent.com%2FFoxxMD%2Fmulti-scrobbler%2Fdevelop%2Fsrc%2Fcommon%2Fschema%2Fsource.json)
+
+## [WebScrobbler](https://web-scrobbler.com/)
+
+After installing the extension open the preferences/settings for it:
+
+* Under **Accounts**
+  * **Add Webhook**
+    * API URL: `http://localhost:9078/api/webscrobbler`
+    * Application name: `(whatever you want)`
+
+Reload the extension after adding the webhook.
+
+#### Multiple Users
+
+If you would like use multiple WebScrobbler sources they can be matched using a **slug** at the end of the **API URL.** This requires using [a file-based config.](#file-based-configuration)
+
+Example:
+
+In `webscrobbler.json`
+
+```json
+[
+  {
+    "name": "aUserWS",
+    "clients": [
+      "client1Maloja"
+    ],
+    "data": {
+      "slug": "usera" 
+    }
+  },
+  {
+    "name": "bUserWS",
+    "clients": [
+      "client2Maloja"
+    ],
+    "data": {
+      "slug": "userb"
+    }
+  }
+]
+```
+
+* To use `aUserWS` source set **API URL** to `http://localhost:9078/api/webscrobbler/usera`
+* To use `bUserWS` source set **API URL** to `http://localhost:9078/api/webscrobbler/userb`
+
+Note: `http://localhost:9078/api/webscrobbler` is matched with the first source that _that does not have a slug defined._
+
+### ENV-Based
+
+| Environmental Variable | Required? | Default | Description                                                              |
+|------------------------|-----------|---------|--------------------------------------------------------------------------|
+| WS_ENABLE              | No        |         | Set to 'true' to enable WS without needing to define other ENVs          |
+| WS_WHITELIST           | No        |         | Only scrobble from these WebScrobbler Connectors. Comma-delimited list   |
+| WS_BLACKLIST           | No        |         | Do not scrobble from these WebScrobbler Connectors. Comma-delimited list |
+
+### File-Based
+
+See [`webscrobbler.json.example`](https://github.com/FoxxMD/multi-scrobbler/blob/master/config/webscrobbler.json.example) or [explore the schema with an example and live editor/validator](https://json-schema.app/view/%23%2Fdefinitions%2FWebScrobblerSourceConfig/%23%2Fdefinitions%2FWebScrobblerData?url=https%3A%2F%2Fraw.githubusercontent.com%2FFoxxMD%2Fmulti-scrobbler%2Fdevelop%2Fsrc%2Fcommon%2Fschema%2Fsource.json)
 
 # Client Configurations
 
