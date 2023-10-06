@@ -636,6 +636,10 @@ After installing the extension open the preferences/settings for it:
 
 Reload the extension after adding the webhook.
 
+* **On Firefox** - Only FQNs (domain.tld), `localhost`, and `127.0.0.1` are supported for API URL due to [firefox requiring https](https://github.com/web-scrobbler/web-scrobbler/issues/4183#issuecomment-1749222006)
+* **On Chromium-based Browsers** - Any domain will work for API URL
+* All Other browsers are untested
+
 #### Multiple Users
 
 If you would like use multiple WebScrobbler sources they can be matched using a **slug** at the end of the **API URL.** This requires using [a file-based config.](#file-based-configuration)

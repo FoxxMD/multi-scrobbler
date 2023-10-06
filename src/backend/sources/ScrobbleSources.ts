@@ -309,7 +309,7 @@ export default class ScrobbleSources {
                         blacklist: process.env.WEBSCROBBLER_BLACKLIST,
                         whitelist: process.env.WEBSCROBBLER_WHITELIST
                     }
-                    if (!Object.values(mp).every(x => x === undefined) || wsShouldUse) {
+                    if (!Object.values(ws).every(x => x === undefined) || wsShouldUse) {
                         configs.push({
                             type: 'webscrobbler',
                             name: 'unnamed',
