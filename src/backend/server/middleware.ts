@@ -50,13 +50,19 @@ export const makeClientCheckMiddle = (clients: any) => (required: boolean): Expr
     next();
 }
 
-export const nonEmptyBody = (logger: Logger, origin: string = 'Origin'): ExpressHandler => async (req, res, next) => {
+export const nonEmptyBody = (logger: Logger, origin: string = 'Origin', allowExplicitEmpty = true): ExpressHandler => async (req, res, next) => {
     const bodyEmpty = req.body === undefined || req.body === null || (typeof req.body === 'object' && Object.keys(req.body).length === 0);
     if (bodyEmpty) {
         const length = req.header('content-length') !== undefined ? Number.parseInt(req.header('content-length')) : undefined;
-        // can't think of a way a user would send an empty body for a payload but if they meant to do it don't spam them with errors...
+        //  if the user *meant* to send empty what should we do?
         if (length === 0) {
-            return;
+            if(allowExplicitEmpty) {
+                return next();
+            } else {
+                logger.warn(`${origin} should not be sending an empty body! Content-Type => '${req.header('content-type')}' | Length => ${length}`);
+                res.status(400).send('Body should not be empty');
+                return;
+            }
         }
         if (length === undefined) {
             logger.warn(`${origin} is not sending a well-formatted request. It does not have valid headers (application/json - text/*) OR it is missing content-length header: Content-Type => '${req.header('content-type')}' | Length => ${length}`);

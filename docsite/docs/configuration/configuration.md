@@ -310,6 +310,60 @@ See [`listenbrainz.json.example`](https://github.com/FoxxMD/multi-scrobbler/blob
 
 **Change `configureAs` to `source`**
 
+## [Listenbrainz (Endpoint Source)]
+
+Unlike the regular [Listenbrainz Source](#listenbrainz--source-), which pulls scrobbles from your Listenbrainz.org profile, this source allows you to MS **as the Listenbrainz endpoint instead of sending scrobbles to Listenbrainz.org**
+
+You can then forward the scrobble MS receives to any configured [Client.](#client-configurations)
+
+Example:
+
+* You use a music player that [supports scrobbling to Listenbrainz](https://listenbrainz.org/add-data/) and setting the Listenbrainz URL (like Navidrome)
+* You enable Listenbrainz scrobbling for Navidrome. Then, set the Listenbrainz URL to point to MS instead of LZ
+  * On Navidrome set the ENV `ND_LISTENBRAINZ_BASEURL=http://localhost:9078/api/listenbrainz`
+* Now Navidrome sends scrobbles to MS instead of LZ, and MS forwards them to any configured clients you have setup
+
+#### Configuration
+
+##### URL
+
+A **slug** can be defined to tell MS what the ending of the LZ URL should look like, in order to match it with a LZ source.
+
+If you do not define a slug (default configuration) then MS will listen for LS scrobbles at:
+
+```
+http://localhost:9078/api/listenbrainz
+http://localhost:9078/api/listenbrainz/1/
+http://localhost:9078/api/listenbrainz/1/submit-listens
+```
+
+Slugs are useful if you will have multiple Listenbrainz Endpoint sources (like for multiple users or for restricting scrobbling to specific clients)
+
+EX:
+
+* Slug: `mySlugA`
+  * `http://localhost:9078/api/listenbrainz/mySlugA`
+  * `http://localhost:9078/api/listenbrainz/mySlugA/1/`
+  * `http://localhost:9078/api/listenbrainz/mySlugA/1/submit-listens`
+
+Slugs can only be used with **File-Based** configuration
+
+##### Authentication
+
+You may optionally include an Authentication Token to help MS match a LZ scrobble to a source. Tokens are not required but if your source has one present then MS will not match an incoming LZ scrobble request unless it has a matching token.
+
+Tokens can be only be used with **File-Based** configuration
+
+### File-Based
+
+See [`endpointlz.json.example`](https://github.com/FoxxMD/multi-scrobbler/blob/master/config/endpointlz.json.example) or [explore the schema with an example and live editor/validator](https://json-schema.app/view/%23%2Fdefinitions%2FListenBrainzSourceConfig?url=https%3A%2F%2Fraw.githubusercontent.com%2FFoxxMD%2Fmulti-scrobbler%2Fdevelop%2Fsrc%2Fcommon%2Fschema%2Fsource.json)
+
+### ENV-Based
+
+| Environmental Variable | Required? | Default | Description                                                              |
+|------------------------|-----------|---------|--------------------------------------------------------------------------|
+| LZENDPOINT_ENABLE      | No        |         | Set to 'true' to enable an LZ Endpoint source with default configuration |
+
 ## [Deezer](https://deezer.com/)
 
 Create a new application at [Deezer Developers](https://developers.deezer.com/myapps)

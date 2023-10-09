@@ -32,31 +32,6 @@ export interface WebScrobblerData extends CommonSourceData {
      * @examples [["mixcloud","soundcloud","bandcamp"]]
      * */
     whitelist?: string | string[]
-
-    /**
-     * Additional options for WebScrobbler logging and tuning
-     * */
-    options?: {
-        /**
-         * Log raw WebScrobbler webhook payload to debug
-         *
-         * @default false
-         * @examples [false]
-         * */
-        logPayload?: boolean
-
-        /**
-         * How MS should log when a WebScrobbler event fails a defined filter
-         *
-         * * `false` => do not log
-         * * `debug` => log to DEBUG level
-         * * `warn` => log to WARN level (default)
-         *
-         * @default warn
-         * @examples ["warn"]
-         * */
-        logFilterFailure?: false | 'debug' | 'warn'
-    }
 }
 
 export interface WebScrobblerSourceConfig extends CommonSourceConfig {

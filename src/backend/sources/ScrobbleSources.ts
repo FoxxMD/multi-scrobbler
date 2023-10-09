@@ -38,6 +38,8 @@ import { KodiData, KodiSourceConfig } from "../common/infrastructure/config/sour
 import { WildcardEmitter } from "../common/WildcardEmitter";
 import {WebScrobblerSource} from "./WebScrobblerSource";
 import {WebScrobblerSourceConfig} from "../common/infrastructure/config/source/webscrobbler";
+import {EndpointListenbrainzSource} from "./EndpointListenbrainzSource";
+import {ListenbrainzEndpointConfig} from "../common/infrastructure/config/source/endpointlz";
 
 type groupedNamedConfigs = {[key: string]: ParsedConfig[]};
 
@@ -323,6 +325,20 @@ export default class ScrobbleSources {
                         });
                     }
                     break;
+                case 'endpointlz':
+                    const lzShouldUse = parseBool(process.env.LZENDPOINT_ENABLE);
+                    if (lzShouldUse) {
+                        configs.push({
+                            type: 'endpointlz',
+                            name: 'unnamed',
+                            source: 'ENV',
+                            mode: 'single',
+                            configureAs: defaultConfigureAs,
+                            data: {
+                            }
+                        });
+                    }
+                    break;
                 default:
                     break;
             }
@@ -500,6 +516,9 @@ export default class ScrobbleSources {
                 break;
             case 'webscrobbler':
                 newSource = await new WebScrobblerSource(name, compositeConfig as WebScrobblerSourceConfig, internal, this.emitter);
+                break;
+            case 'endpointlz':
+                newSource = await new EndpointListenbrainzSource(name, compositeConfig as ListenbrainzEndpointConfig, internal, this.emitter);
                 break;
             default:
                 break;
