@@ -11,6 +11,7 @@ import {store} from './store';
 import Dashboard from "./dashboard/dashboard";
 import RecentPage from "./recent/RecentPage";
 import ScrobbledPage from "./scrobbled/ScrobbledPage";
+import DeadPage from "./deadLetter/DeadPage";
 
 function NoMatch() {
     let location = useLocation();
@@ -34,6 +35,10 @@ const router = createBrowserRouter([
     {
         path: "/scrobbled",
         element: <ScrobbledPage />,
+    },
+    {
+        path: "/dead",
+        element: <DeadPage />,
     },
     {
         path: "*",

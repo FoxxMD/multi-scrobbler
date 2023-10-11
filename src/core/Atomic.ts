@@ -20,6 +20,7 @@ export interface ClientStatusData {
     type: "maloja" | "lastfm" | "listenbrainz";
     display: string;
     tracksDiscovered: number;
+    deadLetterScrobbles: number
     name: string;
     hasAuth: boolean;
     hasAuthInteraction: boolean;
@@ -132,10 +133,14 @@ export interface PlayObject extends AmbPlayObject {
 }
 
 export interface JsonPlayObject extends AmbPlayObject {
-    playDate?: string
+    data: JsonPlayData
 }
 
 export interface ObjectPlayData extends PlayData {
+    playDate?: Dayjs
+}
+
+export interface JsonPlayData extends PlayData {
     playDate?: Dayjs
 }
 
@@ -179,4 +184,19 @@ export interface SourcePlayerObj {
 
 export interface SourcePlayerJson extends Omit<SourcePlayerObj, 'play'> {
     play: JsonPlayObject
+}
+
+export interface SourceScrobble<PlayType> {
+    source: string
+    play: PlayType
+}
+
+export interface QueuedScrobble<PlayType> extends SourceScrobble<PlayType> {
+    id: string
+}
+
+export interface DeadLetterScrobble<PlayType, RetryType = Dayjs> extends QueuedScrobble<PlayType> {
+    id: string
+    retries: number
+    lastRetry?: RetryType
 }
