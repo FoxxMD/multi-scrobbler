@@ -60,6 +60,7 @@
     "ajv": "^7.2.4",
     "better-sse": "^0.8.0",
     "body-parser": "^1.19.0",
+    "clsx": "^2.0.0",
     "common-tags": "^1.8.2",
     "compare-versions": "^4.1.2",
     "concat-stream": "^2.0.0",

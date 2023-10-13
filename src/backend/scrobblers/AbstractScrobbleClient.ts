@@ -27,7 +27,7 @@ import EventEmitter from "events";
 import {compareScrobbleArtists, compareScrobbleTracks, normalizeStr} from "../utils/StringUtils";
 import {UpstreamError} from "../common/errors/UpstreamError";
 import {nanoid} from "nanoid";
-import {ErrorWithCause} from "pony-cause";
+import {ErrorWithCause, messageWithCauses} from "pony-cause";
 import {de} from "@faker-js/faker";
 import {del} from "superagent";
 
@@ -537,8 +537,8 @@ ${closestMatch.breakdowns.join('\n')}`);
                             this.addScrobbledTrack(currQueuedPlay.play, scrobbledPlay);
                         } catch (e) {
                             if (e instanceof UpstreamError && e.showStopper === false) {
-                                this.addDeadLetterScrobble(currQueuedPlay);
-                                this.logger.warn(`Could not scrobble ${buildTrackString(currQueuedPlay.play)} from Source '${currQueuedPlay.source}' but error was not show stopping. Adding scrobble to Dead Letter Queue and will retry on next heartbeat.`);
+                                this.addDeadLetterScrobble(currQueuedPlay, e);
+                                this.logger.warn(new ErrorWithCause(`Could not scrobble ${buildTrackString(currQueuedPlay.play)} from Source '${currQueuedPlay.source}' but error was not show stopping. Adding scrobble to Dead Letter Queue and will retry on next heartbeat.`, {cause: e}));
                             } else {
                                 const processError = new ErrorWithCause('Error occurred while trying to scrobble', {cause: e});
                                 //this.logger.error(processError);
@@ -621,9 +621,9 @@ ${closestMatch.breakdowns.join('\n')}`);
                 this.addScrobbledTrack(deadScrobble.play, scrobbledPlay);
             } catch (e) {
                 deadScrobble.retries++;
+                deadScrobble.error = messageWithCauses(e);
                 deadScrobble.lastRetry = dayjs();
-                this.logger.error(`Could not scrobble ${buildTrackString(deadScrobble.play)} from Source '${deadScrobble.source}' due to error`, {leaf: 'Dead Letter'});
-                this.logger.error(e);
+                this.logger.error(new ErrorWithCause(`Could not scrobble ${buildTrackString(deadScrobble.play)} from Source '${deadScrobble.source}' due to error`, {cause: e}));
                 this.deadLetterScrobbles[deadScrobbleIndex] = deadScrobble;
                 return [false, deadScrobble];
             } finally {
@@ -663,8 +663,14 @@ ${closestMatch.breakdowns.join('\n')}`);
         this.queuedScrobbles.sort((a, b) => sortByOldestPlayDate(a.play, b.play));
     }
 
-    protected addDeadLetterScrobble = (data: QueuedScrobble<PlayObject>) => {
-        this.deadLetterScrobbles.push({id: nanoid(), retries: 0, ...data});
+    protected addDeadLetterScrobble = (data: QueuedScrobble<PlayObject>, error: (Error | string) = 'Unspecified error') => {
+        let eString = '';
+        if(typeof error === 'string') {
+            eString = error;
+        } else {
+            eString = messageWithCauses(error);
+        }
+        this.deadLetterScrobbles.push({id: nanoid(), retries: 0, error: eString, ...data});
         this.deadLetterScrobbles.sort((a, b) => sortByOldestPlayDate(a.play, b.play));
     }
 

@@ -199,4 +199,5 @@ export interface DeadLetterScrobble<PlayType, RetryType = Dayjs> extends QueuedS
     id: string
     retries: number
     lastRetry?: RetryType
+    error: string
 }
