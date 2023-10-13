@@ -64,6 +64,12 @@ export const deadSlice = createSlice({
     },
     extraReducers: (builder) => {
         builder.addMatcher(
+            (action) => deadApi.endpoints.getDead.matchPending(action),
+            (state, action) => {
+                state = deadAdapter.getInitialState();
+            }
+        )
+        builder.addMatcher(
             (action) => deadApi.endpoints.getDead.matchFulfilled(action),
             (state, action) => {
                 deadAdapter.setAll(state, action.payload);

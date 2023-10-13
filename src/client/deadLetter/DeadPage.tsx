@@ -19,15 +19,7 @@ const displayOpts = {
 const dead = (props: PropsFromRedux) => {
     const {
         data = [],
-        clearDeadLetter
     } = props;
-
-    useEffect(() => {
-        return () => {
-            console.log('clearing dead letter');
-            clearDeadLetter();
-        }
-    }, []);
 
     let [searchParams, setSearchParams] = useSearchParams();
     const {
