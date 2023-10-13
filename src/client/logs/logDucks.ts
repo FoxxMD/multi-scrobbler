@@ -12,9 +12,9 @@ const initialState: LogsState = {data: [], settings: {level: 'debug', sort: 'asc
 const logsReducer = createReducer(initialState, (builder) => {
    builder
        .addMatcher(
-       (action) => logsApi.endpoints.getLogs.matchFulfilled(action) || logsApi.endpoints.setLevel.matchFulfilled(action),
+       (action) => logsApi.endpoints.getLogs.matchFulfilled(action) || logsApi.endpoints.setLogSettings.matchFulfilled(action),
        (state, action) => {
-           state.data = action.payload.data.slice(0, 50);
+           state.data = action.payload.data.slice(0, action.payload.settings.limit + 1);
            state.settings = action.payload.settings;
        }
    )

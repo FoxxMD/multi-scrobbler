@@ -148,6 +148,7 @@ export type LogLevel = "error" | "warn" | "info" | "verbose" | "debug";
 export const logLevels = ['error', 'warn', 'info', 'verbose', 'debug'];
 
 export interface LogInfo {
+    id: number
     message: string
     [MESSAGE]: string,
     level: string

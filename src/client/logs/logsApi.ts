@@ -8,14 +8,14 @@ export const logsApi = createApi({
         getLogs: builder.query<{ data: LogInfoJson[], settings: LogOutputConfig }, undefined>({
             query: () => `logs`,
         }),
-        setLevel: builder.query<{ data: LogInfoJson[], settings: LogOutputConfig }, string>({
-            query: (level) => ({
+        setLogSettings: builder.query<{ data: LogInfoJson[], settings: LogOutputConfig }, object>({
+            query: (settings) => ({
                 url: '/logs',
                 method: 'PUT',
-                body: {level}
+                body: settings
             })
         }),
     }),
 });
 
-export const { useGetLogsQuery, useLazySetLevelQuery } = logsApi;
+export const { useGetLogsQuery, useLazySetLogSettingsQuery } = logsApi;
