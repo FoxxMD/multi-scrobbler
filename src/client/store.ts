@@ -7,7 +7,7 @@ import {logsReducer} from "./logs/logDucks";
 import {logsApi} from "./logs/logsApi";
 import {recentApi} from "./recent/recentDucks";
 import {scrobbledApi} from "./scrobbled/scrobbledDucks";
-import {deadApi} from "./deadLetter/deadLetterDucks";
+import {deadApi, deadSlice} from "./deadLetter/deadLetterDucks";
 
 export const store = configureStore({
     reducer: {
@@ -20,6 +20,7 @@ export const store = configureStore({
         //parts: statusReducer
         clients: clientSlice.reducer,
         sources: sourceSlice.reducer,
+        deadLetter: deadSlice.reducer,
         logs: logsReducer
     },
     // Adding the api middleware enables caching, invalidation, polling,

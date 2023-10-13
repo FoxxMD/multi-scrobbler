@@ -1,34 +1,40 @@
-import React, {useCallback} from 'react';
+import React, {useCallback, useEffect} from 'react';
 import PlayDisplay from "../components/PlayDisplay";
 import {recentIncludes} from "../../core/Atomic";
 import {useSearchParams} from "react-router-dom";
 import {
     useGetDeadQuery,
-    //useLazyProcessDeadSingleQuery,
-    //useLazyRemoveDeadSingleQuery,
     useRemoveDeadSingleMutation,
-    useProcessDeadSingleMutation
+    useProcessDeadSingleMutation, deadAdapter, clearDead
 } from "./deadLetterDucks";
 import dayjs from "dayjs";
-import {Simulate} from "react-dom/test-utils";
-import click = Simulate.click;
+import {RootState} from "../store";
+import {connect, ConnectedProps} from "react-redux";
 
 const displayOpts = {
     include: recentIncludes,
     includeWeb: true
 }
 
-const dead = () => {
-    let [searchParams, setSearchParams] = useSearchParams();
+const dead = (props: PropsFromRedux) => {
     const {
         data = [],
-        error,
+        clearDeadLetter
+    } = props;
+
+    useEffect(() => {
+        return () => {
+            console.log('clearing dead letter');
+            clearDeadLetter();
+        }
+    }, []);
+
+    let [searchParams, setSearchParams] = useSearchParams();
+    const {
         isLoading,
         isSuccess
     } = useGetDeadQuery({name: searchParams.get('name'), type: searchParams.get('type')});
 
-    // const [removeDeadFetch] = useLazyRemoveDeadSingleQuery();
-    // const [retryDeadFetch] = useLazyProcessDeadSingleQuery();
     const [removeDeadFetch] = useRemoveDeadSingleMutation();
     const [retryDeadFetch] = useProcessDeadSingleMutation();
 
@@ -58,4 +64,22 @@ const dead = () => {
     );
 }
 
-export default dead;
+const deadSelectors = deadAdapter.getSelectors();
+
+const mapStateToProps = (state: RootState) => {
+    return {
+        data: deadSelectors.selectAll(state.deadLetter)
+    }
+}
+
+const mapDispatchToProps = (dispatch) => {
+    return {
+        clearDeadLetter: () => dispatch(clearDead())
+    }
+}
+
+const connector = connect(mapStateToProps, mapDispatchToProps);
+
+type PropsFromRedux = ConnectedProps<typeof connector>
+
+export default connector(dead);

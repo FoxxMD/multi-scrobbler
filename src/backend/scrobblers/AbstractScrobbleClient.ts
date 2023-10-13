@@ -401,8 +401,7 @@ ${closestMatch.breakdowns.join('\n')}`);
             }
         }
         try {
-            throw new UpstreamError('a test', {showStopper: false});
-            //return this.doScrobble(playObj);
+            return this.doScrobble(playObj);
         } finally {
             this.lastScrobbleAttempt = dayjs();
         }
