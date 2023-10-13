@@ -254,13 +254,13 @@ export const setupApi = (app: ExpressWithAsync, logger: Logger, initialLogOutput
         const deadScrobble = (client as AbstractScrobbleClient).deadLetterScrobbles.find(x => x.id === deadId);
 
         if(deadScrobble === undefined) {
-            return res.sendStatus(400);
+            return res.status(404).send();
         }
 
         const [scrobbled, dead] = await (client as AbstractScrobbleClient).processDeadLetterScrobble(deadId);
 
         if(scrobbled) {
-            return res.sendStatus(200);
+            return res.status(200).send();
         }
 
         return res.json(dead);
@@ -280,11 +280,11 @@ export const setupApi = (app: ExpressWithAsync, logger: Logger, initialLogOutput
         const deadScrobble = (client as AbstractScrobbleClient).deadLetterScrobbles.find(x => x.id === deadId);
 
         if(deadScrobble === undefined) {
-            return res.sendStatus(400);
+            return res.status(404).send();
         }
 
         (client as AbstractScrobbleClient).removeDeadLetterScrobble(deadId);
-        return res.sendStatus(200);
+        return res.status(200).send();
     });
 
     app.getAsync('/api/scrobbled', clientMiddleFunc(false), async (req, res, next) => {
