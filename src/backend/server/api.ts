@@ -262,10 +262,20 @@ export const setupApi = (app: ExpressWithAsync, logger: Logger, initialLogOutput
             scrobbleClient: client,
         } = req;
 
-        let result: DeadLetterScrobble<PlayObject>[] = [];
-        if (client !== undefined) {
-            result = (client as AbstractScrobbleClient).deadLetterScrobbles;
-        }
+        let result: DeadLetterScrobble<PlayObject>[] = (client as AbstractScrobbleClient).deadLetterScrobbles;
+
+        return res.json(result);
+    });
+
+    app.putAsync('/api/dead', clientMiddleFunc(true), async (req, res, next) => {
+        const {
+            // @ts-expect-error TS(2339): Property 'scrobbleSource' does not exist on type '... Remove this comment to see the full error message
+            scrobbleClient: client,
+        } = req;
+
+        await (client as AbstractScrobbleClient).processDeadLetterQueue(1000);
+
+        let result: DeadLetterScrobble<PlayObject>[] = (client as AbstractScrobbleClient).deadLetterScrobbles;
 
         return res.json(result);
     });
@@ -294,6 +304,17 @@ export const setupApi = (app: ExpressWithAsync, logger: Logger, initialLogOutput
         }
 
         return res.json(dead);
+    });
+
+    app.deleteAsync('/api/dead', clientMiddleFunc(true), async (req, res, next) => {
+        const {
+            // @ts-expect-error TS(2339): Property 'scrobbleSource' does not exist on type '... Remove this comment to see the full error message
+            scrobbleClient: client,
+        } = req;
+
+        (client as AbstractScrobbleClient).removeDeadLetterScrobbles();
+
+        return res.json([]);
     });
 
     app.deleteAsync('/api/dead/:id', clientMiddleFunc(true), async (req, res, next) => {

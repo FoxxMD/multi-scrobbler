@@ -1,6 +1,5 @@
 import {createApi, fetchBaseQuery} from "@reduxjs/toolkit/dist/query/react/index";
 import {DeadLetterScrobble, JsonPlayObject} from "../../core/Atomic";
-import {id} from "common-tags";
 import {createAction, createEntityAdapter, createSlice} from "@reduxjs/toolkit";
 
 type DeadResponse = DeadLetterScrobble<JsonPlayObject, string>[];
@@ -11,6 +10,17 @@ export const deadApi = createApi({
     endpoints: (builder) => ({
         getDead: builder.query<DeadResponse, { name: string, type: string }>({
             query: (params) => `dead?name=${params.name}&type=${params.type}`,
+            providesTags: ['DeadLetters']
+        }),
+        processDead: builder.query<DeadResponse, { name: string, type: string }>({
+            query: (params) => ({
+                url: `dead`,
+                method: 'PUT',
+                params: {
+                    name: params.name,
+                    type: params.type
+                }
+            }),
             providesTags: ['DeadLetters']
         }),
         processDeadSingle: builder.mutation<DeadLetterScrobble<JsonPlayObject, string> | undefined, {
@@ -26,6 +36,17 @@ export const deadApi = createApi({
                     type: params.type
                 }
             })
+        }),
+        removeDead: builder.query<DeadResponse, { name: string, type: string }>({
+            query: (params) => ({
+                url: `dead`,
+                method: 'DELETE',
+                params: {
+                    name: params.name,
+                    type: params.type
+                }
+            }),
+            providesTags: ['DeadLetters']
         }),
         removeDeadSingle: builder.mutation<DeadLetterScrobble<JsonPlayObject, string> | undefined, {
             name: string,
@@ -70,7 +91,7 @@ export const deadSlice = createSlice({
             }
         )
         builder.addMatcher(
-            (action) => deadApi.endpoints.getDead.matchFulfilled(action),
+            (action) => deadApi.endpoints.getDead.matchFulfilled(action) || deadApi.endpoints.processDead.matchFulfilled(action) || deadApi.endpoints.removeDead.matchFulfilled(action),
             (state, action) => {
                 deadAdapter.setAll(state, action.payload);
             }
@@ -103,4 +124,4 @@ export const deadSlice = createSlice({
 
 export const clearDead = createAction('clearDead');
 
-export const {useGetDeadQuery, useProcessDeadSingleMutation, useRemoveDeadSingleMutation} = deadApi;
+export const {useGetDeadQuery, useProcessDeadSingleMutation, useRemoveDeadSingleMutation, useLazyProcessDeadQuery, useLazyRemoveDeadQuery} = deadApi;

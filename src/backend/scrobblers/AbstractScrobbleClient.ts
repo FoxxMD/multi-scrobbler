@@ -646,8 +646,13 @@ ${closestMatch.breakdowns.join('\n')}`);
         if (index === -1) {
             this.logger.warn(`No scrobble found with ID ${id}`, {leaf: 'Dead Letter'});
         }
-        this.logger.debug(`Removed scrobble ${buildTrackString(this.deadLetterScrobbles[index].play)} from queue`, {leaf: 'Dead Letter'});
+        this.logger.info(`Removed scrobble ${buildTrackString(this.deadLetterScrobbles[index].play)} from queue`, {leaf: 'Dead Letter'});
         this.deadLetterScrobbles.splice(index, 1);
+    }
+
+    removeDeadLetterScrobbles = () => {
+        this.deadLetterScrobbles = [];
+        this.logger.info('Removed all scrobbles from queue', {leaf: 'Dead Letter'});
     }
 
     protected getLatestQueuePlayDate = () => {

@@ -5,11 +5,16 @@ import {useSearchParams} from "react-router-dom";
 import {
     useGetDeadQuery,
     useRemoveDeadSingleMutation,
-    useProcessDeadSingleMutation, deadAdapter, clearDead
+    useProcessDeadSingleMutation,
+    useLazyProcessDeadQuery,
+    useLazyRemoveDeadQuery,
+    deadAdapter,
+    clearDead,
 } from "./deadLetterDucks";
 import dayjs from "dayjs";
 import {RootState} from "../store";
 import {connect, ConnectedProps} from "react-redux";
+import {id} from "common-tags";
 
 const displayOpts = {
     include: recentIncludes,
@@ -29,15 +34,20 @@ const dead = (props: PropsFromRedux) => {
 
     const [removeDeadFetch, removeResult] = useRemoveDeadSingleMutation();
     const [retryDeadFetch, processResult] = useProcessDeadSingleMutation();
+    const [removeAllDeadFetch] = useLazyRemoveDeadQuery();
+    const [retryAllDeadFetch] = useLazyProcessDeadQuery();
 
     const retryDead = useCallback((id: string) => retryDeadFetch({name: searchParams.get('name'), type: searchParams.get('type'), id}), [retryDeadFetch, searchParams]);
     const removeDead = useCallback((id: string) => removeDeadFetch({name: searchParams.get('name'), type: searchParams.get('type'), id}), [removeDeadFetch, searchParams]);
+    const removeAllDead = useCallback(() => removeAllDeadFetch({name: searchParams.get('name'), type: searchParams.get('type')}), [removeAllDeadFetch, searchParams]);
+    const retryAllDead = useCallback(() => retryAllDeadFetch({name: searchParams.get('name'), type: searchParams.get('type')}), [retryAllDeadFetch, searchParams]);
 
     return (
         <div className="grid">
             <div className="shadow-md rounded bg-gray-500 text-white">
                 <div className="p-3 font-semibold bg-gray-700 text-white">
-                    <h2>Failed Scrobbles
+                    <h2><span className="mr-1">Failed Scrobbles -</span> <span onClick={() => retryAllDead()} className="capitalize underline cursor-pointer max-w-fit">Retry All</span>
+                        <span className="mx-2">|</span> <span onClick={() => removeAllDead()} className="capitalize underline cursor-pointer max-w-fit">Remove All</span>
                     </h2>
                 </div>
                 <div className="p-5">
@@ -46,7 +56,7 @@ const dead = (props: PropsFromRedux) => {
                         <div className="text-lg"><PlayDisplay data={x.play} buildOptions={displayOpts}/></div>
                         <div><span className="font-semibold">Source</span>:{x.source.replace('Source -', '')}</div>
                         <div><span className="font-semibold">Retries</span>: {x.retries}</div>
-                        <div><span className="font-semibold">Last Retried</span>: {x.lastRetry === undefined ? 'Never' : dayjs.duration(dayjs().diff(dayjs(x.lastRetry))).humanize(true)}</div>
+                        <div><span className="font-semibold">Last Retried</span>: {x.lastRetry === undefined ? 'Never' : dayjs.duration(dayjs(x.lastRetry).diff(dayjs())).humanize(true)}</div>
                         <div><span className="font-semibold">Error</span>: <span className="font-mono text-sm">{x.error}</span></div>
                         <div onClick={() => retryDead(x.id)} className="capitalize underline cursor-pointer max-w-fit">Retry</div>
                         <div onClick={() => removeDead(x.id)} className="capitalize underline cursor-pointer max-w-fit">Remove</div>
