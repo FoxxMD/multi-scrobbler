@@ -19,8 +19,9 @@ export interface ClientStatusData {
     status: string;
     type: "maloja" | "lastfm" | "listenbrainz";
     display: string;
-    tracksDiscovered: number;
+    scrobbled: number;
     deadLetterScrobbles: number
+    queued: number
     name: string;
     hasAuth: boolean;
     hasAuthInteraction: boolean;

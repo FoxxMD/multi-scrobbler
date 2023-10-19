@@ -31,7 +31,8 @@ const ClientStatusCard = (props: ClientStatusCardData) => {
             type,
             display,
             status,
-            tracksDiscovered = 0,
+            scrobbled: scrobbledCount = 0,
+            queued = 0,
             deadLetterScrobbles = 0
         } = {}
     } = props;
@@ -52,7 +53,8 @@ const ClientStatusCard = (props: ClientStatusCardData) => {
 
         // TODO links
         body = (<Fragment>
-            <div>{scrobbled}: {tracksDiscovered}</div>
+            <div>{scrobbled}: {scrobbledCount}</div>
+            <div>Queued Scrobbles: {queued}</div>
             <div><Link to={`/dead?type=${type}&name=${name}`}>Failed Scrobbles</Link>: {deadLetterScrobbles}</div>
             {hasAuth ? <a target="_blank" href={`/api/client/auth?name=${name}&type=${type}`}>(Re)authenticate or initialize</a> : null}
         </Fragment>);

@@ -47,7 +47,7 @@ const sourceSlice = createSlice({
                 (action) => sourceUpdate.match(action) && action.payload.event === 'discovered',
                 (state, action) => {
                     if(state.entities[action.payload.id] !== undefined) {
-                        state.entities[action.payload.id].tracksDiscovered = state.entities[action.payload.id].tracksDiscovered + 1;
+                        state.entities[action.payload.id].tracksDiscovered++;
                     }
                 }
             ).addMatcher(
@@ -94,7 +94,7 @@ const clientSlice = createSlice({
                 (action) => clientUpdate.match(action) && action.payload.event === 'scrobble',
                 (state, action) => {
                     if(state.entities[action.payload.id] !== undefined) {
-                        state.entities[action.payload.id].tracksDiscovered = state.entities[action.payload.id].tracksDiscovered + 1;
+                        state.entities[action.payload.id].scrobbled++;
                     }
                 }
             )
@@ -102,7 +102,7 @@ const clientSlice = createSlice({
                 (action) => clientUpdate.match(action) && action.payload.event === 'deadLetter',
                 (state, action) => {
                     if(state.entities[action.payload.id] !== undefined) {
-                        state.entities[action.payload.id].deadLetterScrobbles = state.entities[action.payload.id].deadLetterScrobbles + 1;
+                        state.entities[action.payload.id].deadLetterScrobbles++;
                     }
                 }
             )
@@ -111,6 +111,22 @@ const clientSlice = createSlice({
                 (state, action) => {
                     if(state.entities[action.payload.id] !== undefined) {
                         state.entities[action.payload.id].status = action.payload.data.status;
+                    }
+                }
+            )
+            .addMatcher(
+                (action) => clientUpdate.match(action) && action.payload.event === 'scrobbleQueued',
+                (state, action) => {
+                    if(state.entities[action.payload.id] !== undefined) {
+                        state.entities[action.payload.id].queued++;
+                    }
+                }
+            )
+            .addMatcher(
+                (action) => clientUpdate.match(action) && action.payload.event === 'scrobbleDequeued',
+                (state, action) => {
+                    if(state.entities[action.payload.id] !== undefined) {
+                        state.entities[action.payload.id].queued--;
                     }
                 }
             )

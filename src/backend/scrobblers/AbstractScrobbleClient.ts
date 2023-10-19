@@ -553,6 +553,7 @@ ${closestMatch.breakdowns.join('\n')}`);
                     // processing play may have changed index while we were scrobbling
                     const pIndex = this.queuedScrobbles.findIndex(x => x.id === currQueuedPlay.id);
                     if (pIndex !== -1) {
+                        this.emitEvent('scrobbleDequeued', {queuedScrobble: currQueuedPlay})
                         this.queuedScrobbles.splice(pIndex, 1);
                     }
                 }
@@ -668,7 +669,9 @@ ${closestMatch.breakdowns.join('\n')}`);
     queueScrobble = (data: PlayObject | PlayObject[], source: string) => {
         const plays = Array.isArray(data) ? data : [data];
         for(const p of plays) {
-            this.queuedScrobbles.push({id: nanoid(), source, play: p});
+            const queuedPlay = {id: nanoid(), source, play: p}
+            this.emitEvent('scrobbleQueued', {queuedPlay: queuedPlay});
+            this.queuedScrobbles.push(queuedPlay);
         }
         this.queuedScrobbles.sort((a, b) => sortByOldestPlayDate(a.play, b.play));
     }

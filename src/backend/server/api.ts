@@ -227,13 +227,14 @@ export const setupApi = (app: ExpressWithAsync, logger: Logger, initialLogOutput
                 status: '',
                 type,
                 display: capitalize(type),
-                tracksDiscovered: tracksScrobbled,
+                scrobbled: tracksScrobbled,
                 name,
                 hasAuth: requiresAuth,
                 hasAuthInteraction: requiresAuthInteraction,
                 authed,
                 initialized,
-                deadLetterScrobbles: x.deadLetterScrobbles.length
+                deadLetterScrobbles: x.deadLetterScrobbles.length,
+                queued: x.queuedScrobbles.length
             };
             if (!initialized) {
                 base.status = 'Not Initialized';
