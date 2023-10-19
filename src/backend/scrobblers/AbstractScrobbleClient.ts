@@ -677,8 +677,10 @@ ${closestMatch.breakdowns.join('\n')}`);
         } else {
             eString = messageWithCauses(error);
         }
-        this.deadLetterScrobbles.push({id: nanoid(), retries: 0, error: eString, ...data});
+        const deadData = {id: nanoid(), retries: 0, error: eString, ...data};
+        this.deadLetterScrobbles.push(deadData);
         this.deadLetterScrobbles.sort((a, b) => sortByOldestPlayDate(a.play, b.play));
+        this.emitEvent('deadLetter', {dead: deadData});
     }
 
 

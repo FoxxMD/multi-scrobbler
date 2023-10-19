@@ -5,13 +5,15 @@ import {
     createBrowserRouter,
     RouterProvider, useLocation,
 } from "react-router-dom";
-import { Provider } from 'react-redux'
+import {connect, ConnectedProps, Provider} from 'react-redux'
 import './App.css';
 import {store} from './store';
 import Dashboard from "./dashboard/dashboard";
 import RecentPage from "./recent/RecentPage";
 import ScrobbledPage from "./scrobbled/ScrobbledPage";
 import DeadPage from "./deadLetter/DeadPage";
+import {clientUpdate, sourceUpdate} from "./status/ducks";
+import {useEventSource, useEventSourceListener} from "@react-nano/use-event-source";
 
 function NoMatch() {
     let location = useLocation();
@@ -46,6 +48,38 @@ const router = createBrowserRouter([
     }
 ]);
 
+const mapDispatchToProps = (dispatch) => {
+    return {
+        updateSource: (payload) => dispatch(sourceUpdate(payload)),
+        updateClient: (payload) => dispatch(clientUpdate(payload))
+    }
+}
+
+const connector = connect(null, mapDispatchToProps);
+
+type PropsFromRedux = ConnectedProps<typeof connector>;
+
+const Global = (props: PropsFromRedux) => {
+    const {
+        updateSource,
+        updateClient
+    } = props;
+
+    const [sourceEventSource, eventSourceStatus] = useEventSource("api/events", false);
+    useEventSourceListener(sourceEventSource, ['source', 'client'], evt => {
+        const data = JSON.parse(evt.data);
+        if(data.from === 'source') {
+            updateSource(data);
+        } else if(data.from === 'client') {
+            updateClient(data);
+        }
+    }, [updateSource, updateClient]);
+
+    return <span/>;
+}
+
+const ConnectedGlobal = connector(Global);
+
 function App() {
   return (
       <Provider store={store}>
@@ -63,6 +97,7 @@ function App() {
           </div>
         </div>
         <div className="container mx-auto">
+            <ConnectedGlobal/>
             <RouterProvider router={router}/>
         </div>
       </div>

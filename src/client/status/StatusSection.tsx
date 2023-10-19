@@ -4,25 +4,12 @@ import StatusCardSkeleton from "../components/statusCard/StatusCardSkeleton";
 import SourceStatusCard from "../components/statusCard/SourceStatusCard";
 import ClientStatusCard from "../components/statusCard/ClientStatusCard";
 import {useGetStatusQuery} from "./statusApi";
-import {clientAdapter, clientUpdate, sourceAdapter, sourceUpdate} from "./ducks";
+import {clientAdapter, sourceAdapter} from "./ducks";
 import {RootState} from "../store";
-import {useEventSource, useEventSourceListener} from "@react-nano/use-event-source";
 const StatusSection = (props: PropsFromRedux) => {
     const {
-        updateSource,
-        updateClient
     } = props;
     const {data, error, isLoading} = useGetStatusQuery(undefined);
-
-    const [sourceEventSource, eventSourceStatus] = useEventSource("api/events", false);
-    useEventSourceListener(sourceEventSource, ['source', 'client'], evt => {
-        const data = JSON.parse(evt.data);
-        if(data.from === 'source') {
-            updateSource(data);
-        } else if(data.from === 'client') {
-            updateClient(data);
-        }
-    }, [updateSource]);
 
     return (
         <Fragment>
@@ -48,8 +35,6 @@ const mapStateToProps = (state: RootState) => {
 
 const mapDispatchToProps = (dispatch) => {
     return {
-        updateSource: (payload) => dispatch(sourceUpdate(payload)),
-        updateClient: (payload) => dispatch(clientUpdate(payload))
     }
 }
 

@@ -1,6 +1,7 @@
 import {createApi, fetchBaseQuery} from "@reduxjs/toolkit/dist/query/react/index";
 import {DeadLetterScrobble, JsonPlayObject} from "../../core/Atomic";
 import {createAction, createEntityAdapter, createSlice} from "@reduxjs/toolkit";
+import {ApiEventPayload, clientUpdate} from "../status/ducks";
 
 type DeadResponse = DeadLetterScrobble<JsonPlayObject, string>[];
 export const deadApi = createApi({
@@ -119,6 +120,12 @@ export const deadSlice = createSlice({
                     state = deadAdapter.getInitialState();
                 }
             )
+            /*.addMatcher(
+                (action) => clientUpdate.match(action) && action.payload.event === 'deadLetter',
+                (state, action) => {
+                    state.entities[(action.payload as ApiEventPayload).data.dead.id] = (action.payload as ApiEventPayload).data.dead;
+                }
+            )*/
     }
 });
 
