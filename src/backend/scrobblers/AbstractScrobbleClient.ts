@@ -510,6 +510,7 @@ ${closestMatch.breakdowns.join('\n')}`);
     protected doStopScrobbling = (reason: string = 'system') => {
         this.scrobbling = false;
         this.userScrobblingStopSignal = undefined;
+        this.emitEvent('statusChange', {status: 'Idle'});
         this.logger.info(`Stopped scrobble processing due to: ${reason}`);
     }
 
@@ -520,6 +521,7 @@ ${closestMatch.breakdowns.join('\n')}`);
             return true;
         }
         this.logger.info('Scrobble processing started');
+        this.emitEvent('statusChange', {status: 'Running'});
 
         try {
             this.scrobbling = true;
@@ -563,6 +565,7 @@ ${closestMatch.breakdowns.join('\n')}`);
         } catch (e) {
             this.logger.error('Scrobble processing interrupted');
             this.logger.error(e);
+            this.emitEvent('statusChange', {status: 'Idle'});
             this.scrobbling = false;
             throw e;
         }

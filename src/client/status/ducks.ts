@@ -66,6 +66,14 @@ const sourceSlice = createSlice({
                 }
             }
         )
+            .addMatcher(
+                (action) => sourceUpdate.match(action) && action.payload.event === 'statusChange',
+                (state, action) => {
+                    if(state.entities[action.payload.id] !== undefined) {
+                        state.entities[action.payload.id].status = action.payload.data.status;
+                    }
+                }
+            )
     }
 });
 const clientSlice = createSlice({
@@ -95,6 +103,14 @@ const clientSlice = createSlice({
                 (state, action) => {
                     if(state.entities[action.payload.id] !== undefined) {
                         state.entities[action.payload.id].deadLetterScrobbles = state.entities[action.payload.id].deadLetterScrobbles + 1;
+                    }
+                }
+            )
+            .addMatcher(
+                (action) => clientUpdate.match(action) && action.payload.event === 'statusChange',
+                (state, action) => {
+                    if(state.entities[action.payload.id] !== undefined) {
+                        state.entities[action.payload.id].status = action.payload.data.status;
                     }
                 }
             )
