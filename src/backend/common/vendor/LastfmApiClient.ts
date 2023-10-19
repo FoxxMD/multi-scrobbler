@@ -144,7 +144,7 @@ export default class LastfmApiClient extends AbstractApiClient {
 
     testAuth = async () => {
         if (this.client.sessionKey === undefined) {
-            this.logger.info('No session key found. User interaction for authentication required.');
+            this.logger.warn('No session key found. User interaction for authentication required.');
             this.logger.info(`Redirect URL that will be used on auth callback: '${this.redirectUri}'`);
             return false;
         }

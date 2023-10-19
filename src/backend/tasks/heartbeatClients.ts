@@ -24,7 +24,7 @@ export const createHeartbeatClientsTask = (clients: ScrobbleClients, parentLogge
                         return 0;
                     }
                 }).then(({results, errors}) => {
-                    logger.info(`Checked Dead letter queue for ${clients.clients.length} clients.`);
+                    logger.verbose(`Checked Dead letter queue for ${clients.clients.length} clients.`);
                     const restarted = results.reduce((acc, curr) => acc += curr, 0);
                     if (restarted > 0) {
                         logger.info(`Attempted to restart ${restarted} clients that were not processing scrobbles.`);

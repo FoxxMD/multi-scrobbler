@@ -583,10 +583,12 @@ ${closestMatch.breakdowns.join('\n')}`);
         const retries = attemptWithRetries ?? deadLetterRetries;
 
         const processable = this.deadLetterScrobbles.filter(x => x.retries < retries);
-        this.logger.info(`${processable.length} of ${this.deadLetterScrobbles.length} dead scrobbles have less than ${retries} retries, ${processable.length === 0 ? 'will skip processing.': 'processing now...'}`, {leaf: 'Dead Letter'});
+        const queueStatus = `${processable.length} of ${this.deadLetterScrobbles.length} dead scrobbles have less than ${retries} retries, ${processable.length === 0 ? 'will skip processing.': 'processing now...'}`;
         if (processable.length === 0) {
+            this.logger.verbose(queueStatus, {leaf: 'Dead Letter'});
             return;
         }
+        this.logger.info(queueStatus, {leaf: 'Dead Letter'});
 
         const removedIds = [];
         for (const deadScrobble of this.deadLetterScrobbles) {
