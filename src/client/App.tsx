@@ -99,6 +99,7 @@ function App() {
         <div className="container mx-auto">
             <ConnectedGlobal/>
             <RouterProvider router={router}/>
+            v{process.env.VERSION ?? 'unknown'}
         </div>
       </div>
       </Provider>

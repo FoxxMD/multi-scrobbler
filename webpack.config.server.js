@@ -1,5 +1,21 @@
 const path = require("path");
 const nodeExternals = require("webpack-node-externals");
+const fs = require('fs');
+const {DefinePlugin} = require('webpack');
+
+if(process.env.VERSION === undefined) {
+    let version = 'unknown';
+
+    if(fs.existsSync('./package.json')) {
+        const package = fs.readFileSync('./package.json');
+        version = JSON.parse(package).version || 'unknown';
+    } else if(fs.existsSync('./package-lock.json')) {
+        const packageLock = fs.readFileSync('./package-lock.json');
+        version = JSON.parse(packageLock).version || 'unknown';
+    }
+    process.env.VERSION = version;
+}
+
 
 // Used this article to get CRA and express backed to co-exist on same port for both dev/prod
 // https://spin.atomicobject.com/2020/08/17/cra-express-share-code/
@@ -29,6 +45,11 @@ module.exports = (env) => {
         resolve: {
             extensions: [".ts", ".tsx", ".js"],
         },
+        plugins: [
+            new DefinePlugin({
+                VERSION: process.env.VERSION
+            })
+        ],
         // don't compile node_modules
         externals: [nodeExternals()],
         module: {
