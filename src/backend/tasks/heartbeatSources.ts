@@ -21,7 +21,7 @@ export const createHeartbeatSourcesTask = (sources: ScrobbleSources, parentLogge
                     }
                     return 0;
                 }).then(({results, errors}) => {
-                    logger.info(`Checked ${sources.sources.length} sources for restart signals.`);
+                    logger.verbose(`Checked ${sources.sources.length} sources for restart signals.`);
                     const restarted = results.reduce((acc, curr) => acc += curr, 0);
                     if (restarted > 0) {
                         logger.info(`Attempted to restart ${restarted} sources that were not polling.`);

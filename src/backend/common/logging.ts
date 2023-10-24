@@ -138,6 +138,7 @@ export const defaultFormat = (defaultLabel = 'App') => printf(({
                                                                    durationMs,
                                                                    [SPLAT]: splatObj,
                                                                    stack,
+                                                                   id,
                                                                    ...rest
                                                                }) => {
     const keys = Object.keys(rest);
@@ -168,6 +169,9 @@ export const defaultFormat = (defaultLabel = 'App') => printf(({
     return `${timestamp} ${level.padEnd(8)}: ${labelContent} ${msg}${stringifyValue !== '' ? ` ${stringifyValue}` : ''}${stackMsg}`;
 });
 
+// https://knowyourmeme.com/memes/cereal-guy
+// this number will never overflow
+let seqId: number = 0;
 export const labelledFormat = (labelName = 'App') => {
     const l = label({label: labelName, message: false});
     return combine(
@@ -176,6 +180,13 @@ export const labelledFormat = (labelName = 'App') => {
                 format: () => dayjs().local().format(),
             }
         ),
+        {
+            transform: (info, opts) => {
+                info.id = seqId;
+                seqId++;
+                return info;
+            }
+        },
         l,
         s,
         errorAwareFormat,
@@ -213,6 +224,10 @@ export const isLogLineMinLevel = (log: string | LogInfo, minLevelText: LogLevel)
         level = logLevels[lineLevelMatch];
     }
     return level <= minLevel;
+}
+
+export const isLogLevelMinLevel = (levelStr: LogLevel, minLevelStr: LogLevel): boolean => {
+    return logLevels[levelStr] <= logLevels[minLevelStr];
 }
 
 const isProbablyError = (val: any, explicitErrorName?: string) => {

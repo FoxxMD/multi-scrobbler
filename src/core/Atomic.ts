@@ -4,7 +4,7 @@ import {ListenProgress} from "../backend/sources/PlayerState/ListenProgress";
 
 export interface SourceStatusData {
     status: string;
-    type: "spotify" | "plex" | "tautulli" | "subsonic" | "jellyfin" | "lastfm" | "deezer" | "ytmusic" | "mpris" | "mopidy" | "listenbrainz" | "jriver" | "kodi";
+    type: "spotify" | "plex" | "tautulli" | "subsonic" | "jellyfin" | "lastfm" | "deezer" | "ytmusic" | "mpris" | "mopidy" | "listenbrainz" | "jriver" | "kodi" | 'webscrobbler';
     display: string;
     tracksDiscovered: number;
     name: string;
@@ -19,7 +19,9 @@ export interface ClientStatusData {
     status: string;
     type: "maloja" | "lastfm" | "listenbrainz";
     display: string;
-    tracksDiscovered: number;
+    scrobbled: number;
+    deadLetterScrobbles: number
+    queued: number
     name: string;
     hasAuth: boolean;
     hasAuthInteraction: boolean;
@@ -101,6 +103,7 @@ export interface PlayMeta {
     newFromSource?: boolean
     url?: {
         web: string
+        origin?: string
         [key: string]: string
     }
     user?: string
@@ -131,10 +134,14 @@ export interface PlayObject extends AmbPlayObject {
 }
 
 export interface JsonPlayObject extends AmbPlayObject {
-    playDate?: string
+    data: JsonPlayData
 }
 
 export interface ObjectPlayData extends PlayData {
+    playDate?: Dayjs
+}
+
+export interface JsonPlayData extends PlayData {
     playDate?: Dayjs
 }
 
@@ -142,6 +149,7 @@ export type LogLevel = "error" | "warn" | "info" | "verbose" | "debug";
 export const logLevels = ['error', 'warn', 'info', 'verbose', 'debug'];
 
 export interface LogInfo {
+    id: number
     message: string
     [MESSAGE]: string,
     level: string
@@ -178,4 +186,20 @@ export interface SourcePlayerObj {
 
 export interface SourcePlayerJson extends Omit<SourcePlayerObj, 'play'> {
     play: JsonPlayObject
+}
+
+export interface SourceScrobble<PlayType> {
+    source: string
+    play: PlayType
+}
+
+export interface QueuedScrobble<PlayType> extends SourceScrobble<PlayType> {
+    id: string
+}
+
+export interface DeadLetterScrobble<PlayType, RetryType = Dayjs> extends QueuedScrobble<PlayType> {
+    id: string
+    retries: number
+    lastRetry?: RetryType
+    error: string
 }

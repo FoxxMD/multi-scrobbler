@@ -4,10 +4,10 @@ import {Logger} from '@foxxmd/winston';
 import TupleMap from "../TupleMap";
 import {Request, Response} from "express";
 import {NextFunction, ParamsDictionary, Query} from "express-serve-static-core";
-import { LogLevel, logLevels, PlayMeta, PlayObject } from "../../../core/Atomic";
+import {LogLevel, logLevels, PlayMeta, PlayObject} from "../../../core/Atomic";
 
-export type SourceType = 'spotify' | 'plex' | 'tautulli' | 'subsonic' | 'jellyfin' | 'lastfm' | 'deezer' | 'ytmusic' | 'mpris' | 'mopidy' | 'listenbrainz' | 'jriver' | 'kodi';
-export const sourceTypes: SourceType[] = ['spotify', 'plex', 'tautulli', 'subsonic', 'jellyfin', 'lastfm', 'deezer', 'ytmusic', 'mpris', 'mopidy', 'listenbrainz', 'jriver', 'kodi'];
+export type SourceType = 'spotify' | 'plex' | 'tautulli' | 'subsonic' | 'jellyfin' | 'lastfm' | 'deezer' | 'ytmusic' | 'mpris' | 'mopidy' | 'listenbrainz' | 'jriver' | 'kodi' | 'webscrobbler';
+export const sourceTypes: SourceType[] = ['spotify', 'plex', 'tautulli', 'subsonic', 'jellyfin', 'lastfm', 'deezer', 'ytmusic', 'mpris', 'mopidy', 'listenbrainz', 'jriver', 'kodi', 'webscrobbler'];
 
 export const lowGranularitySources: SourceType[] = ['subsonic','ytmusic'];
 
@@ -213,7 +213,3 @@ export const TIME_WEIGHT = 0.5;
 export const REFERENCE_WEIGHT = 0.5;
 export const DUP_SCORE_THRESHOLD = 1;
 
-export interface SourceScrobble {
-    source: string
-    play: PlayObject
-}

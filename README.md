@@ -14,6 +14,7 @@ A javascript app to scrobble music you listened to, to [Maloja](https://github.c
   * [Plex](/docsite/docs/configuration/configuration.md#plex) or [Tautulli](/docsite/docs/configuration/configuration.md#tautulli)
   * [Subsonic-compatible APIs](/docsite/docs/configuration/configuration.md#subsonic) (like [Airsonic](https://airsonic.github.io/) and [Navidrome](https://www.navidrome.org/))
   * [Jellyfin](/docsite/docs/configuration/configuration.md#jellyfin)
+  * [WebScrobbler](/docsite/docs/configuration/configuration.md#webscrobbler)
   * [Youtube Music](/docsite/docs/configuration/configuration.md#youtube-music)
   * [Last.fm](/docsite/docs/configuration/configuration.md#lastfm-source)
   * [ListenBrainz](/docsite/docs/configuration/configuration.md#listenbrainz--source-)
@@ -29,6 +30,7 @@ A javascript app to scrobble music you listened to, to [Maloja](https://github.c
 * Monitor status of Sources and Clients using [webhooks (Gotify or Ntfy)](/docsite/docs/configuration/configuration.md#webhook-configurations) or [healthcheck endpoint](/docsite/docs/configuration/configuration.md#health-endpoint)
 * Supports configuring for single or multiple users (scrobbling for your friends and family!)
 * Web server interface for stats, basic control, and detailed logs
+* Graceful network and client failure handling (queued scrobbles that auto-retry)
 * Smart handling of credentials (persistent, authorization through app)
 * Easy configuration through ENVs or JSON
 * Install using [Docker images for x86/ARM](/docsite/docs/installation/installation.md#docker), [flatpak](/docsite/docs/installation/installation.md#flatpak), or [locally with NodeJS](/docsite/docs/installation/installation.md#nodejs)

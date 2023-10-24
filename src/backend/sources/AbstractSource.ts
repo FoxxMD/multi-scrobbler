@@ -330,6 +330,7 @@ export default abstract class AbstractSource {
     protected doStopPolling = (reason: string = 'system') => {
         this.polling = false;
         this.userPollingStopSignal = undefined;
+        this.emitEvent('statusChange', {status: 'Idle'});
         this.logger.info(`Stopped polling due to: ${reason}`);
     }
 
@@ -340,6 +341,7 @@ export default abstract class AbstractSource {
             return true;
         }
         this.logger.info('Polling started');
+        this.emitEvent('statusChange', {status: 'Running'});
         this.notify({title: `${this.identifier} - Polling Started`, message: 'Polling Started', priority: 'info'});
         this.lastActivityAt = dayjs();
         let checkCount = 0;
@@ -416,6 +418,7 @@ export default abstract class AbstractSource {
         } catch (e) {
             this.logger.error('Error occurred while polling');
             this.logger.error(e);
+            this.emitEvent('statusChange', {status: 'Idle'});
             this.polling = false;
             throw e;
         }

@@ -1,0 +1,10 @@
+[
+  {
+    "name": "MyWebScrobbler",
+    "slug": null,
+    "data": {
+      "whitelist": [],
+      "blacklist": []
+    }
+  }
+]

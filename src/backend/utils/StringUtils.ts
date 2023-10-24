@@ -210,3 +210,7 @@ export const compareNormalizedStrings = (existing: string, candidate: string): S
 
     return stringSameness(normalExisting, orderedCandidateString, {transforms: [], strategies: [levenStrategy, diceStrategy]});
 }
+
+export const getUrlSlug = (path: string) => {
+
+}
