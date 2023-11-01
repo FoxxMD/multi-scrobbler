@@ -5,6 +5,7 @@ import { readJson, sleep, writeFile } from "../../utils";
 import {DEFAULT_RETRY_MULTIPLIER, FormatPlayObjectOptions} from "../infrastructure/Atomic";
 import { LastfmData } from "../infrastructure/config/client/lastfm";
 import { PlayObject } from "../../../core/Atomic";
+import {isNodeNetworkException} from "../errors/NodeErrors";
 
 const badErrors = [
     'api key suspended',
@@ -161,6 +162,9 @@ export default class LastfmApiClient extends AbstractApiClient {
             return true;
         } catch (e) {
             this.logger.error('Testing auth failed');
+            if(isNodeNetworkException(e)) {
+                this.logger.error('Could not communicate with Last.fm API');
+            }
             throw e;
         }
     }

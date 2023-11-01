@@ -8,6 +8,8 @@ import { PlayObject } from "../../core/Atomic";
 import MemorySource from "./MemorySource";
 import {LastfmSourceConfig} from "../common/infrastructure/config/source/lastfm";
 import dayjs from "dayjs";
+import {isNodeNetworkException} from "../common/errors/NodeErrors";
+import {ErrorWithCause} from "pony-cause";
 
 export default class LastfmSource extends MemorySource {
 
@@ -41,15 +43,12 @@ export default class LastfmSource extends MemorySource {
         return this.initialized;
     }
 
-    testAuth = async () => {
+    doAuthentication = async () => {
         try {
-            this.authed = await this.api.testAuth();
+            return await this.api.testAuth();
         } catch (e) {
-            this.logger.error('Could not successfully communicate with Last.fm API');
-            this.logger.error(e);
-            this.authed = false;
+            throw e;
         }
-        return this.authed;
     }
 
 

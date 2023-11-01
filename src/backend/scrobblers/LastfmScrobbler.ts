@@ -18,6 +18,7 @@ import { PlayObject, TrackStringOptions } from "../../core/Atomic";
 import {buildTrackString, capitalize} from "../../core/StringUtils";
 import EventEmitter from "events";
 import {UpstreamError} from "../common/errors/UpstreamError";
+import {isNodeNetworkException} from "../common/errors/NodeErrors";
 
 export default class LastfmScrobbler extends AbstractScrobbleClient {
 
@@ -42,15 +43,15 @@ export default class LastfmScrobbler extends AbstractScrobbleClient {
         return this.initialized;
     }
 
-    testAuth = async () => {
+    doAuthentication = async () => {
         try {
-            this.authed = await this.api.testAuth();
+            return await this.api.testAuth();
         } catch (e) {
-            this.logger.error('Could not successfully communicate with Last.fm API');
-            this.logger.error(e);
-            this.authed = false;
+            if(isNodeNetworkException(e)) {
+                this.logger.error('Could not communicate with Last.fm API');
+            }
+            throw e;
         }
-        return this.authed;
     }
 
     refreshScrobbles = async () => {

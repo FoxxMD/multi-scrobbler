@@ -246,7 +246,7 @@ export default class MalojaScrobbler extends AbstractScrobbleClient {
         return this.initialized;
     }
 
-    testAuth = async () => {
+    doAuthentication = async () => {
 
         const {url, apiKey} = this.config.data;
         try {
@@ -265,14 +265,14 @@ export default class MalojaScrobbler extends AbstractScrobbleClient {
             } = resp;
             if (bodyStatus.toLocaleLowerCase() === 'ok') {
                 this.logger.info('Auth test passed!');
-                this.authed = true;
+                return;
             } else {
-                this.authed = false;
                 this.logger.error('Testing connection failed => Server Response body was malformed -- should have returned "status: ok"...is the URL correct?', {
                     status,
                     body,
                     text: text.slice(0, 50)
                 });
+                return false;
             }
         } catch (e) {
             if(e.status === 403) {
@@ -280,17 +280,12 @@ export default class MalojaScrobbler extends AbstractScrobbleClient {
                 // and if it was before api was accessible during db build then test would fail during testConnection()
                 if(compareVersions(this.serverVersion, '2.12.19') < 0) {
                     if(!(await this.isReady())) {
-                        this.logger.error(`Could not test auth because server is not ready`);
-                        this.authed = false;
-                        return this.authed;
+                        throw new UpstreamError(`Could not test auth because server is not ready`, {showStopper: false});
                     }
                 }
             }
-            this.logger.error('Auth test failed');
-            this.logger.error(e);
-            this.authed = false;
+            throw e;
         }
-        return this.authed;
     }
 
     isReady = async () => {

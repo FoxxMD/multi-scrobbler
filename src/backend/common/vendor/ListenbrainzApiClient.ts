@@ -159,7 +159,7 @@ export class ListenbrainzApiClient extends AbstractApiClient {
             const resp = await this.callApi(request.get(`${this.url}1/validate-token`));
             return true;
         } catch (e) {
-            return false;
+            throw e;
         }
     }
 

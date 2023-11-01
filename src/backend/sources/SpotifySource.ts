@@ -30,6 +30,7 @@ import MemorySource from "./MemorySource";
 import {ErrorWithCause} from "pony-cause";
 import { PlayObject } from "../../core/Atomic";
 import { buildTrackString, truncateStringToLength } from "../../core/StringUtils";
+import {isNodeNetworkException} from "../common/errors/NodeErrors";
 
 const scopes = ['user-read-recently-played', 'user-read-currently-playing', 'user-read-playback-state', 'user-read-playback-position'];
 const state = 'random';
@@ -231,19 +232,22 @@ export default class SpotifySource extends MemorySource {
         return this.initialized;
     }
 
-    testAuth = async () => {
+    doAuthentication = async () => {
         try {
             if(undefined === this.spotifyApi.getAccessToken()) {
-                this.authed = false;
-                return;
+                return false;
             }
             await this.callApi<ReturnType<typeof this.spotifyApi.getMe>>(((api: any) => api.getMe()));
-            this.authed = true;
+            return true;
         } catch (e) {
-            this.logger.error(new ErrorWithCause('Could not successfully communicate with Spotify API', {cause: e}));
-            this.authed = false;
+            if(isNodeNetworkException(e)) {
+                this.logger.error('Could not communicate with Spotify API');
+            }
+            // this.authFailure = !(e instanceof ErrorWithCause && e.cause !== undefined && isNodeNetworkException(e.cause));
+            // this.logger.error(new ErrorWithCause('Could not successfully communicate with Spotify API', {cause: e}));
+            // this.authed = false;
+            throw e;
         }
-        return this.authed;
     }
 
     createAuthUrl = () => {

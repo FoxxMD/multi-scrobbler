@@ -1,13 +1,13 @@
 import dayjs, {Dayjs} from "dayjs";
 import {
-    comparingMultipleArtists,
+    comparingMultipleArtists, findCauseByFunc,
     isPlayTemporallyClose,
     mergeArr,
     playObjDataMatch, pollingBackoff,
     setIntersection, sleep, sortByOldestPlayDate,
 } from "../utils";
 import {
-    ARTIST_WEIGHT,
+    ARTIST_WEIGHT, Authenticatable,
     ClientType, DEFAULT_RETRY_MULTIPLIER, DUP_SCORE_THRESHOLD,
     FormatPlayObjectOptions,
     INITIALIZED,
@@ -30,8 +30,9 @@ import {nanoid} from "nanoid";
 import {ErrorWithCause, messageWithCauses} from "pony-cause";
 import {de} from "@faker-js/faker";
 import {del} from "superagent";
+import {isNodeNetworkException} from "../common/errors/NodeErrors";
 
-export default abstract class AbstractScrobbleClient {
+export default abstract class AbstractScrobbleClient implements Authenticatable {
 
     name: string;
     type: ClientType;
@@ -44,6 +45,7 @@ export default abstract class AbstractScrobbleClient {
     requiresAuth: boolean = false;
     requiresAuthInteraction: boolean = false;
     authed: boolean = false;
+    authFailure?: boolean;
 
     #recentScrobblesList: PlayObject[] = [];
     scrobbledPlayObjs: FixedSizeList<ScrobbledPlayObject>;
@@ -151,13 +153,34 @@ export default abstract class AbstractScrobbleClient {
         return true;
     }
 
-    // default init function, should be overridden if auth stage is required
-    testAuth = async () => {
+    authGated = () => {
+        return this.requiresAuth && !this.authed;
+    }
+
+    canTryAuth = () => {
+        return this.authGated() && this.authFailure !== true;
+    }
+
+    protected doAuthentication = async (): Promise<boolean> => {
         return this.authed;
     }
 
+    // default init function, should be overridden if auth stage is required
+    testAuth = async () => {
+        try {
+            this.authed = await this.doAuthentication();
+            this.authFailure = !this.authed;
+        } catch (e) {
+            // only signal as auth failure if error was NOT a node network error
+            this.authFailure = findCauseByFunc(e, isNodeNetworkException) === undefined;
+            this.authed = false;
+            this.logger.error(`Authentication test failed!${this.authFailure === false ? ' Due to a network issue. Will retry authentication on next heartbeat.' : ''}`);
+            this.logger.error(e);
+        }
+    }
+
     isReady = async () => {
-        return this.initialized && (!this.requiresAuth || (this.requiresAuth && this.authed));
+        return this.initialized && !this.authGated();
     }
 
     refreshScrobbles = async () => {
@@ -421,12 +444,18 @@ ${closestMatch.breakdowns.join('\n')}`);
             }
         }
 
-        if(this.requiresAuth && !this.authed) {
-            if (this.requiresAuthInteraction) {
+        if(this.authGated()) {
+            if(this.canTryAuth()) {
+                await this.testAuth();
+                if(!this.authed) {
+                    this.logger.warn(`Cannot start scrobble processing because auth test failed`);
+                    return;
+                }
+            } else if (this.requiresAuthInteraction) {
                 this.logger.warn(`Cannot start scrobble processing because user interaction is required for authentication`);
                 return;
-            } else if (!(await this.testAuth())) {
-                this.logger.warn(`Cannot start scrobble processing because auth test failed`);
+            } else {
+                this.logger.warn(`Cannot start scrobble processing because client needs to be reauthenticated.`);
                 return;
             }
         }

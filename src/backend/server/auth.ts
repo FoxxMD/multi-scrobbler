@@ -76,7 +76,7 @@ export const setupAuthRoutes = (app: ExpressWithAsync, logger: Logger, sourceMid
             try {
                 await entity.api.authenticate(token);
                 await entity.initialize();
-                await entity.testAuth();
+                await entity.doAuthentication();
                 return res.send('OK');
             } catch (e) {
                 return res.send(e.message);
@@ -90,7 +90,7 @@ export const setupAuthRoutes = (app: ExpressWithAsync, logger: Logger, sourceMid
             const tokenResult = await source.handleAuthCodeCallback(req.query);
             let responseContent = 'OK';
             if (tokenResult === true) {
-                await source.testAuth();
+                await source.doAuthentication();
                 source.poll();
             } else {
                 responseContent = tokenResult;

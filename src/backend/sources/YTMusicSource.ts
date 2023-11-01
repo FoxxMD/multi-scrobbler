@@ -166,10 +166,10 @@ export default class YTMusicSource extends AbstractSource {
         
     }
 
-    testAuth = async () => {
+    doAuthentication = async () => {
         try {
             await this.getRecentlyPlayed();
-            this.authed = true;
+            return true;
         } catch (e) {
             if(e.message.includes('Status code: 401')) {
                 let hint = 'Verify your cookie and authUser are correct.';
@@ -178,9 +178,8 @@ export default class YTMusicSource extends AbstractSource {
                 }
                 this.logger.error(`Authentication failed with the given credentials. ${hint} | Error => ${e.message}`);
             }
-            this.authed = false;
+            throw e;
         }
-        return this.authed;
     }
 
     onPollPostAuthCheck = async () => {

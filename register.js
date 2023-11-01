@@ -6,6 +6,7 @@
 const tsNode = require('ts-node');
 const tsConfigPaths = require('tsconfig-paths');
 const mainTSConfig = require('./src/backend/tsconfig.json');
+const {parseBool} = require("./src/backend/utils");
 
 tsConfigPaths.register({
     baseUrl: './src/backend/tests',
@@ -19,3 +20,6 @@ tsNode.register({
     transpileOnly: true,
     project: './src/backend/tsconfig.json'
 });
+
+process.env.CONSOLE_LEVEL = parseBool(process.env.DEBUG_MODE) ? undefined : 'false';
+process.env.FILE_LEVEL = 'false';

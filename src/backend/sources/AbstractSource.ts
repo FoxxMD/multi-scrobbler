@@ -8,9 +8,10 @@ import {
     pollingBackoff,
     sleep,
     sortByNewestPlayDate,
-    sortByOldestPlayDate,
+    sortByOldestPlayDate, findCauseByFunc,
 } from "../utils";
 import {
+    Authenticatable,
     DEFAULT_POLLING_INTERVAL, DEFAULT_POLLING_MAX_INTERVAL, DEFAULT_RETRY_MULTIPLIER,
     DeviceId,
     GroupedFixedPlays,
@@ -31,6 +32,7 @@ import {FixedSizeList} from "fixed-size-list";
 import TupleMap from "../common/TupleMap";
 import { PlayObject } from "../../core/Atomic";
 import {buildTrackString, capitalize} from "../../core/StringUtils";
+import {isNodeNetworkException} from "../common/errors/NodeErrors";
 
 export interface RecentlyPlayedOptions {
     limit?: number
@@ -39,7 +41,7 @@ export interface RecentlyPlayedOptions {
     display?: boolean
 }
 
-export default abstract class AbstractSource {
+export default abstract class AbstractSource implements Authenticatable {
 
     name: string;
     type: SourceType;
@@ -51,9 +53,11 @@ export default abstract class AbstractSource {
     instantiatedAt: Dayjs;
     lastActivityAt: Dayjs;
     initialized: boolean = false;
+
     requiresAuth: boolean = false;
     requiresAuthInteraction: boolean = false;
     authed: boolean = false;
+    authFailure?: boolean;
 
     multiPlatform: boolean = false;
 
@@ -97,9 +101,25 @@ export default abstract class AbstractSource {
         return this.requiresAuth && !this.authed;
     }
 
-    // default init function, should be overridden if auth stage is required
-    testAuth = async () => {
+    canTryAuth = () => {
+        return this.authGated() && this.authFailure !== true;
+    }
+
+    protected doAuthentication = async (): Promise<boolean> => {
         return this.authed;
+    }
+
+    testAuth = async () => {
+        try {
+            this.authed = await this.doAuthentication();
+            this.authFailure = !this.authed;
+        } catch (e) {
+            // only signal as auth failure if error was NOT a node network error
+            this.authFailure = findCauseByFunc(e, isNodeNetworkException) === undefined;
+            this.authed = false;
+            this.logger.error(`Authentication test failed!${this.authFailure === false ? ' Due to a network issue. Will retry authentication on next heartbeat.' : ''}`);
+            this.logger.error(e);
+        }
     }
 
     getRecentlyPlayed = async (options: RecentlyPlayedOptions = {}): Promise<PlayObject[]> => {
@@ -250,12 +270,18 @@ export default abstract class AbstractSource {
             return;
         }
         if(this.authGated()) {
-            if(this.requiresAuthInteraction) {
+            if(this.canTryAuth()) {
+                await this.testAuth();
+                if(!this.authed) {
+                    this.notify( {title: `${this.identifier} - Polling Error`, message: 'Cannot start polling because source does not have authentication.', priority: 'error'});
+                    this.logger.error('Cannot start polling because source is not authenticated correctly.');
+                }
+            } else if(this.requiresAuthInteraction) {
                 this.notify({title: `${this.identifier} - Polling Error`, message: 'Cannot start polling because user interaction is required for authentication', priority: 'error'});
                 this.logger.error('Cannot start polling because user interaction is required for authentication');
             } else {
-                this.notify( {title: `${this.identifier} - Polling Error`, message: 'Cannot start polling because source does not have authentication.', priority: 'error'});
-                this.logger.error('Cannot start polling because source is not authenticated correctly.');
+                this.notify( {title: `${this.identifier} - Polling Error`, message: 'Cannot start polling because source authentication previously failed and must be reauthenticated.', priority: 'error'});
+                this.logger.error('Cannot start polling because source authentication previously failed and must be reauthenticated.');
             }
             return;
         }
@@ -431,5 +457,9 @@ export default abstract class AbstractSource {
             from: 'source',
             data: payload,
         });
+    }
+
+    public async destroy() {
+        this.emitter.removeAllListeners();
     }
 }

@@ -49,11 +49,10 @@ export class KodiSource extends MemorySource {
         }*/
     }
 
-    testAuth = async () => {
+    doAuthentication = async () => {
         const resp = await this.client.testAuth();
-        this.authed = resp;
-        this.clientReady = this.authed;
-        return this.authed;
+        this.clientReady = resp;
+        return resp;
     }
 
     static formatPlayObj(obj: any, options: FormatPlayObjectOptions = {}): PlayObject {

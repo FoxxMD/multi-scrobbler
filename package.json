@@ -12,6 +12,7 @@
     "typedoc": "typedoc",
     "circular": "madge --circular --extensions ts src/index.ts",
     "test": "react-scripts test",
+    "test:backend": "mocha --extension ts --reporter spec  --recursive src/backend/tests/scrobbler/**/*.test.ts",
     "eject": "react-scripts eject",
     "dev": "concurrently -p name -c \"yellow,magenta,blue\" -n \"webpack-server,nodemon-server,CRA\" \"npm run dev:server:webpack\" \"npm run dev:server:nodemon\" \"npm run dev:client\"",
     "dev:client": "BROWSER=none react-scripts start",
@@ -141,6 +142,7 @@
     "concurrently": "^8.2.0",
     "jscodeshift": "^0.15.0",
     "mocha": "^9.2.1",
+    "msw": "^2.0.2",
     "nodemon": "^3.0.1",
     "nyc": "^15.1.0",
     "patch-package": "^8.0.0",
@@ -154,7 +156,8 @@
     "typescript": "^4.9.5",
     "typescript-json-schema": "~0.55",
     "webpack-cli": "^5.1.4",
-    "webpack-node-externals": "^3.0.0"
+    "webpack-node-externals": "^3.0.0",
+    "wtfnode": "^0.9.1"
   },
   "browserslist": {
     "production": [

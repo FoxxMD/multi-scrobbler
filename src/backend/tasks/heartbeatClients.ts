@@ -14,7 +14,19 @@ export const createHeartbeatClientsTask = (clients: ScrobbleClients, parentLogge
                 .withConcurrency(1)
                 .for(clients.clients)
                 .process(async (client) => {
-                    if(await client.isReady()) {
+                    const ready = await client.isReady();
+                    const canAuth = client.initialized && client.authGated() && client.canTryAuth();
+                    if(ready || canAuth) {
+                        if(!ready && canAuth) {
+                            client.logger.info('Trying client auth...');
+                            await client.testAuth();
+                            if(!client.authed) {
+                                return 0;
+                            }
+                            if(!(await client.isReady())) {
+                                return 0;
+                            }
+                        }
                         await client.processDeadLetterQueue();
                         if(!client.scrobbling) {
                             client.logger.info('Should be processing scrobbles! Attempting to restart scrobbling...', {leaf: 'Heartbeat'});

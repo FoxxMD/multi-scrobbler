@@ -213,6 +213,11 @@ export default class MemorySource extends AbstractSource {
     recentlyPlayedTrackIsValid = (playObj: any) => {
         return playObj.data.playDate.isBefore(dayjs().subtract(30, 's'));
     }
+
+    public async destroy() {
+        this.scheduler.stop();
+        await super.destroy();
+    }
 }
 
 function sortByPlayDate(a: ProgressAwarePlayObject, b: ProgressAwarePlayObject): number {

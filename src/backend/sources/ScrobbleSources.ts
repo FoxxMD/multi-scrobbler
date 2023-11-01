@@ -521,11 +521,12 @@ export default class ScrobbleSources {
             this.logger.info(`${type} (${name}) source initialized`);
         }
 
-        if(newSource.requiresAuth && !newSource.authed) {
+        if(newSource.authGated()) {
             this.logger.debug(`Checking ${type} (${name}) source auth...`);
             let success;
             try {
-                success = await newSource.testAuth();
+                await newSource.testAuth();
+                success = newSource.authed;
             } catch (e) {
                 success = false;
             }
