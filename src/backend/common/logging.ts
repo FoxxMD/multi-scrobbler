@@ -12,6 +12,7 @@ import dayjs from "dayjs";
 import stringify from 'safe-stable-stringify';
 import {SPLAT, LEVEL, MESSAGE} from 'triple-beam';
 import { LogInfo, LogLevel } from "../../core/Atomic";
+import TransportStream from "winston-transport";
 
 const {combine, printf, timestamp, label, splat, errors} = format;
 
@@ -39,17 +40,22 @@ export const getLogger = (config: LogConfig = {}, name = 'app'): Logger => {
 
         const {level: configLevel} = options;
         const defaultLevel = process.env.LOG_LEVEL || (parseBool(process.env.DEBUG_MODE) ? 'debug' : 'info');
+        let consoleLevel: string | boolean  = process.env.CONSOLE_LEVEL || 'debug';
+        if(consoleLevel === 'false') {
+            consoleLevel = false;
+        }
+        let fileLevel: string | boolean = process.env.FILE_LEVEL || defaultLevel;
+        if(fileLevel === 'false') {
+            fileLevel = false;
+        }
         const {
             level = configLevel || defaultLevel,
-            file = configLevel || defaultLevel,
+            file = configLevel || fileLevel,
             stream = configLevel || 'debug',
-            console = configLevel || 'debug'
+            console = configLevel || consoleLevel
         } = options;
 
-        const consoleTransport = new transports.Console({level: console});
-
-        const myTransports = [
-            consoleTransport,
+        const myTransports: TransportStream[] = [
             new DuplexTransport({
                 stream: {
                     transform(chunk, e, cb) {
@@ -62,8 +68,12 @@ export const getLogger = (config: LogConfig = {}, name = 'app'): Logger => {
                 handleRejections: true,
                 level: stream,
                 dump: false,
-            }),
+            })
         ];
+
+        if(console !== false) {
+            myTransports.push(new transports.Console({level: console}));
+        }
 
         if (file !== false) {
             const rotateTransport = new DailyRotateFile({
