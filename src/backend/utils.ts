@@ -22,7 +22,7 @@ import {
 } from "./common/infrastructure/Atomic";
 import {Request} from "express";
 import pathUtil from "path";
-import {ErrorWithCause} from "pony-cause";
+import {ErrorWithCause, getErrorCause} from "pony-cause";
 import backoffStrategies from '@kenyip/backoff-strategies';
 import {ScrobbleThresholds} from "./common/infrastructure/config/source";
 import {replaceResultTransformer, stripIndentTransformer, TemplateTag, trimResultTransformer} from 'common-tags';
@@ -915,3 +915,31 @@ export const comparingMultipleArtists = (existing: PlayObject, candidate: PlayOb
 
     return eArtists.length > 1 || cArtists.length > 1;
 }
+
+/**
+ * Adapted from https://github.com/voxpelli/pony-cause/blob/main/lib/helpers.js to find cause by truthy function
+ * */
+export const findCauseByFunc = (err: any, func: (e: any) => boolean) => {
+    if (!err || !func) return;
+    if (!(err instanceof Error)) return;
+    if (typeof func !== 'function') {
+        return;
+    }
+
+    /**
+     * Ensures we don't go circular
+     */
+    const seen = new Set<Error>();
+
+    let currentErr: Error | undefined = err;
+
+    while (currentErr && !seen.has(currentErr)) {
+        seen.add(currentErr);
+
+        if (func(currentErr)) {
+            return currentErr;
+        }
+
+        currentErr = getErrorCause(currentErr);
+    }
+};
