@@ -2,13 +2,12 @@ import {DELIMITERS} from "../common/infrastructure/Atomic";
 import {parseRegexSingleOrFail} from "../utils";
 import {PlayObject} from "../../core/Atomic";
 import {stringSameness, StringSamenessResult} from "@foxxmd/string-sameness";
-// @ts-ignore
-import {levenStrategy} from "@foxxmd/string-sameness/strategies/leven"
-// @ts-ignore
-import {diceStrategy} from "@foxxmd/string-sameness/strategies/deice";
+import {strategies} from '@foxxmd/string-sameness';
+
+const {levenStrategy, diceStrategy} = strategies;
 
 export const PUNCTUATION_WHITESPACE_REGEX = new RegExp(/[^\w\d]/g);
-export const PUNCTUATION_REGEX = new RegExp(/[^\w\d\s]/g);
+export const PUNCTUATION_REGEX = new RegExp(/[^\w\s]/g);
 
 export const MULTI_WHITESPACE_REGEX = new RegExp(/\s{2,}/g);
 export const uniqueNormalizedStrArr = (arr: string[]): string[] => {
@@ -209,8 +208,4 @@ export const compareNormalizedStrings = (existing: string, candidate: string): S
     // which makes it inaccurate for small-n sentences and typos
 
     return stringSameness(normalExisting, orderedCandidateString, {transforms: [], strategies: [levenStrategy, diceStrategy]});
-}
-
-export const getUrlSlug = (path: string) => {
-
 }
