@@ -919,7 +919,7 @@ export const comparingMultipleArtists = (existing: PlayObject, candidate: PlayOb
 /**
  * Adapted from https://github.com/voxpelli/pony-cause/blob/main/lib/helpers.js to find cause by truthy function
  * */
-export const findCauseByFunc = (err: any, func: (e: any) => boolean) => {
+export const findCauseByFunc = (err: any, func: (e: Error) => boolean) => {
     if (!err || !func) return;
     if (!(err instanceof Error)) return;
     if (typeof func !== 'function') {

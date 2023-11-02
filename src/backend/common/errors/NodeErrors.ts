@@ -1,5 +1,6 @@
 import {isArbitraryObject} from "../infrastructure/Atomic";
 import ErrnoException = NodeJS.ErrnoException;
+import {findCauseByFunc} from "../../utils";
 
 export type NodeNetworkErrorCode = 'ENOTFOUND' | 'ETIMEDOUT' | 'EAI_AGAIN' | 'ECONNRESET' | 'ECONNREFUSED' | 'ERRADDRINUSE' | 'EADDRNOTAVAIL' | 'ECONNABORTED' | 'EHOSTUNREACH';
 export const NETWORK_ERROR_CODES = ['ENOTFOUND', 'ETIMEDOUT',  'EAI_AGAIN', 'ECONNRESET', 'ECONNREFUSED', 'ERRADDRINUSE', 'EADDRNOTAVAIL', 'ECONNABORTED', 'EHOSTUNREACH'];
@@ -19,4 +20,8 @@ export interface NodeNetworkException extends ErrnoException {
 
 export const isNodeNetworkException = (error: unknown): error is NodeNetworkException => {
     return isErrnoException(error) && NETWORK_ERROR_CODES.includes(error.code);
+}
+
+export const hasNodeNetworkException = (error: unknown): boolean => {
+    return findCauseByFunc(error, isNodeNetworkException) !== undefined;
 }

@@ -1,6 +1,6 @@
 import dayjs, {Dayjs} from "dayjs";
 import {
-    comparingMultipleArtists, findCauseByFunc,
+    comparingMultipleArtists,
     isPlayTemporallyClose,
     mergeArr,
     playObjDataMatch, pollingBackoff,
@@ -16,21 +16,18 @@ import {
     NOT_INITIALIZED, REFERENCE_WEIGHT,
     ScrobbledPlayObject, TIME_WEIGHT, TITLE_WEIGHT,
 } from "../common/infrastructure/Atomic";
-import winston, {Logger} from '@foxxmd/winston';
+import {Logger} from '@foxxmd/winston';
 import { CommonClientConfig } from "../common/infrastructure/config/client/index";
-import { ClientConfig } from "../common/infrastructure/config/client/clients";
 import { Notifiers } from "../notifier/Notifiers";
 import {FixedSizeList} from 'fixed-size-list';
 import {DeadLetterScrobble, PlayObject, QueuedScrobble, SourceScrobble, TrackStringOptions} from "../../core/Atomic";
 import {buildTrackString, capitalize, truncateStringToLength} from "../../core/StringUtils";
 import EventEmitter from "events";
 import {compareScrobbleArtists, compareScrobbleTracks, normalizeStr} from "../utils/StringUtils";
-import {UpstreamError} from "../common/errors/UpstreamError";
+import {hasUpstreamError, UpstreamError} from "../common/errors/UpstreamError";
 import {nanoid} from "nanoid";
 import {ErrorWithCause, messageWithCauses} from "pony-cause";
-import {de} from "@faker-js/faker";
-import {del} from "superagent";
-import {isNodeNetworkException} from "../common/errors/NodeErrors";
+import {hasNodeNetworkException} from "../common/errors/NodeErrors";
 
 export default abstract class AbstractScrobbleClient implements Authenticatable {
 
@@ -171,8 +168,8 @@ export default abstract class AbstractScrobbleClient implements Authenticatable 
             this.authed = await this.doAuthentication();
             this.authFailure = !this.authed;
         } catch (e) {
-            // only signal as auth failure if error was NOT a node network error
-            this.authFailure = findCauseByFunc(e, isNodeNetworkException) === undefined;
+            // only signal as auth failure if error was NOT either a node network error or a non-showstopping upstream error
+            this.authFailure = !(hasNodeNetworkException(e) || hasUpstreamError(e, false));
             this.authed = false;
             this.logger.error(`Authentication test failed!${this.authFailure === false ? ' Due to a network issue. Will retry authentication on next heartbeat.' : ''}`);
             this.logger.error(e);
