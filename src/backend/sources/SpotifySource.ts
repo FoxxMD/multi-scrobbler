@@ -5,7 +5,7 @@ import {
     sortByOldestPlayDate,
     sleep,
     parseRetryAfterSecsFromObj,
-    combinePartsToString,
+    combinePartsToString, findCauseByFunc,
 } from "../utils";
 import SpotifyWebApi from "spotify-web-api-node";
 import AbstractSource, { RecentlyPlayedOptions } from "./AbstractSource";
@@ -13,7 +13,7 @@ import { SpotifySourceConfig } from "../common/infrastructure/config/source/spot
 import {
     DEFAULT_POLLING_INTERVAL,
     FormatPlayObjectOptions,
-    InternalConfig,
+    InternalConfig, NO_DEVICE,
     NO_USER,
     PlayerStateData,
     ReportedPlayerStatus,
@@ -31,6 +31,7 @@ import {ErrorWithCause} from "pony-cause";
 import { PlayObject } from "../../core/Atomic";
 import { buildTrackString, truncateStringToLength } from "../../core/StringUtils";
 import {isNodeNetworkException} from "../common/errors/NodeErrors";
+import {hasUpstreamError, UpstreamError} from "../common/errors/UpstreamError";
 
 const scopes = ['user-read-recently-played', 'user-read-currently-playing', 'user-read-playback-state', 'user-read-playback-position'];
 const state = 'random';
@@ -115,7 +116,7 @@ export default class SpotifySource extends MemorySource {
                 device: {
                     id: deviceIdentifier,
                     name: deviceName
-                },
+                } = {},
                 item,
             } = obj;
             const {
@@ -154,7 +155,7 @@ export default class SpotifySource extends MemorySource {
                 playDate: dayjs(played_at),
             },
             meta: {
-                deviceId,
+                deviceId: deviceId ?? `${NO_DEVICE}-${NO_USER}`,
                 source: 'Spotify',
                 trackId: id,
                 trackProgressPosition: playbackPosition,
@@ -353,10 +354,10 @@ export default class SpotifySource extends MemorySource {
 
             return {};
         } catch (e) {
-            if(logError) {
-                this.logger.error(`Error occurred while trying to retrieve current playback state: ${e.message}`);
+            if(hasApiError(e)) {
+                throw new UpstreamError('Error occurred while trying to retrieve current playback state', {cause: e});
             }
-            throw e;
+            throw new ErrorWithCause('Error occurred while trying to retrieve current playback state', {cause: e});
         }
     }
 
@@ -373,8 +374,8 @@ export default class SpotifySource extends MemorySource {
         try {
             return await func(this.spotifyApi);
         } catch (e) {
-            const spotifyError = new ErrorWithCause('Spotify API call failed', {cause: e});
-            if (e.statusCode === 401) {
+            const spotifyError = new UpstreamError('Spotify API call failed', {cause: e});
+            if (e.statusCode === 401 && !hasApiPermissionError(e)) {
                 if (this.spotifyApi.getRefreshToken() === undefined) {
                     throw new Error('Access token was not valid and no refresh token was present')
                 }
@@ -396,7 +397,7 @@ export default class SpotifySource extends MemorySource {
                         refreshToken: refresh_token,
                     }));
                 } catch (refreshError) {
-                    const error = new ErrorWithCause('Refreshing access token encountered an error', {cause: refreshError});
+                    const error = new UpstreamError('Refreshing access token encountered an error', {cause: refreshError});
                     this.logger.error(error);
                     this.logger.error(spotifyError);
                     throw error;
@@ -405,7 +406,7 @@ export default class SpotifySource extends MemorySource {
                 try {
                     return await func(this.spotifyApi);
                 } catch (ee) {
-                    const secondSpotifyError = new ErrorWithCause('Spotify API call failed even after refreshing token', {cause: ee});
+                    const secondSpotifyError = new UpstreamError('Spotify API call failed even after refreshing token', {cause: ee});
                     this.logger.error(secondSpotifyError);
                     this.logger.error(spotifyError);
                     throw secondSpotifyError;
@@ -416,8 +417,7 @@ export default class SpotifySource extends MemorySource {
                 await sleep(retryAfter * 1000);
                 return this.callApi(func, retries + 1);
             } else {
-                this.logger.error(`Request failed on retry (${retries}) with no more retries permitted (max ${maxRequestRetries})`);
-                const error = new ErrorWithCause(`Request failed on retry (${retries}) with no more retries permitted (max ${maxRequestRetries})`, {cause: e});
+                const error = new UpstreamError(`Request failed on retry (${retries}) with no more retries permitted (max ${maxRequestRetries})`, {cause: e});
                 this.logger.error(error);
                 throw error;
             }
@@ -438,7 +438,16 @@ export default class SpotifySource extends MemorySource {
             await this.getCurrentPlaybackState(false);
             this.canGetState = true;
         } catch (e) {
-            this.logger.warn('multi-scrobbler does not have sufficient permissions to access Spotify API "Get Playback State". MS will continue to work but accuracy for determining if/when a track played from a Spotify Connect device (smart device controlled through Spotify app) may be degraded. To fix this re-authenticate MS with Spotify and restart polling.');
+            if(hasApiPermissionError(e)) {
+                this.logger.warn('multi-scrobbler does not have sufficient permissions to access Spotify API "Get Playback State". MS will continue to work but accuracy for determining if/when a track played from a Spotify Connect device (smart device controlled through Spotify app) may be degraded. To fix this re-authenticate MS with Spotify and restart polling.');
+                this.canGetState = false;
+                return false;
+            } else {
+                if(!hasUpstreamError(e)) {
+                    this.logger.error(e);
+                }
+                return false;
+            }
         }
 
         return true;
@@ -455,4 +464,28 @@ const asPlayHistoryObject = (obj: object): obj is PlayHistoryObject => {
 
 const asCurrentlyPlayingObject = (obj: object): obj is CurrentlyPlayingObject => {
     return 'is_playing' in obj;
+}
+
+const hasApiPermissionError = (e: Error): boolean => {
+    return findCauseByFunc(e, (err) => {
+        return err.message.includes('Permissions missing');
+    }) !== undefined;
+}
+
+const hasApiAuthError = (e: Error): boolean => {
+    return findCauseByFunc(e, (err) => {
+        return err.message.includes('An authentication error occurred');
+    }) !== undefined;
+}
+
+const hasApiTimeoutError = (e: Error): boolean => {
+    return findCauseByFunc(e, (err) => {
+        return err.message.includes('A timeout occurred');
+    }) !== undefined;
+}
+
+const hasApiError = (e: Error): boolean => {
+    return findCauseByFunc(e, (err) => {
+        return err.message.includes('while communicating with Spotify\'s Web API.');
+    }) !== undefined;
 }
