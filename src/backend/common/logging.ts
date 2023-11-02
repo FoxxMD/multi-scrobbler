@@ -135,7 +135,7 @@ const s = splat();
 //const errorsFormat = errors({stack: true});
 const CWD = process.cwd();
 
-const causeKeys = ['name',  'cause']
+const causeKeys = ['name',  'cause', 'showStopper']
 
 export const defaultFormat = (defaultLabel = 'App') => printf(({
                                                                    label,
@@ -149,6 +149,8 @@ export const defaultFormat = (defaultLabel = 'App') => printf(({
                                                                    [SPLAT]: splatObj,
                                                                    stack,
                                                                    id,
+    cause,
+    showStopper,
                                                                    ...rest
                                                                }) => {
     const keys = Object.keys(rest);
