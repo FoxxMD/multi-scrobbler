@@ -33,6 +33,7 @@ import TupleMap from "../common/TupleMap";
 import { PlayObject } from "../../core/Atomic";
 import {buildTrackString, capitalize} from "../../core/StringUtils";
 import {isNodeNetworkException} from "../common/errors/NodeErrors";
+import {ErrorWithCause} from "pony-cause";
 
 export interface RecentlyPlayedOptions {
     limit?: number
@@ -225,7 +226,12 @@ export default abstract class AbstractSource implements Authenticatable {
     protected processBacklog = async () => {
         if (this.canBacklog) {
             this.logger.info('Discovering backlogged tracks from recently played API...');
-            const backlogPlays = await this.getBackloggedPlays();
+            let backlogPlays: PlayObject[] = [];
+            try {
+                backlogPlays = await this.getBackloggedPlays();
+            } catch (e) {
+                throw new ErrorWithCause('Error occurred while fetching backlogged plays', {cause: e});
+            }
             const discovered = this.discover(backlogPlays);
 
             const {
@@ -288,7 +294,17 @@ export default abstract class AbstractSource implements Authenticatable {
         if(!(await this.onPollPostAuthCheck())) {
             return;
         }
-        await this.processBacklog();
+        try {
+            await this.processBacklog();
+        } catch (e) {
+            this.logger.error(new ErrorWithCause('Cannot start polling because error occurred while processing backlog', {cause: e}));
+            this.notify({
+                title: `${this.identifier} - Polling Error`,
+                message: 'Cannot start polling because error occurred while processing backlog.',
+                priority: 'error'
+            });
+            return;
+        }
 
         await this.startPolling();
     }
