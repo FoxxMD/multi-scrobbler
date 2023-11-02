@@ -90,7 +90,7 @@ export const setupAuthRoutes = (app: ExpressWithAsync, logger: Logger, sourceMid
             const tokenResult = await source.handleAuthCodeCallback(req.query);
             let responseContent = 'OK';
             if (tokenResult === true) {
-                await source.doAuthentication();
+                await source.testAuth();
                 source.poll();
             } else {
                 responseContent = tokenResult;
