@@ -265,7 +265,7 @@ export default class MalojaScrobbler extends AbstractScrobbleClient {
             } = resp;
             if (bodyStatus.toLocaleLowerCase() === 'ok') {
                 this.logger.info('Auth test passed!');
-                return;
+                return true;
             } else {
                 this.logger.error('Testing connection failed => Server Response body was malformed -- should have returned "status: ok"...is the URL correct?', {
                     status,
