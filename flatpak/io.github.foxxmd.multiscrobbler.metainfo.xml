@@ -7,8 +7,8 @@
     <launchable type="desktop-id">io.github.foxxmd.multiscrobbler.desktop</launchable>
     <name>multi-scrobbler</name>
     <summary>Scrobbles music from many sources to many clients</summary>
-    <url type="homepage">https://github.com/FoxxMD/multi-scrobbler</url>
-    <url type="help">https://github.com/FoxxMD/multi-scrobbler/blob/flatpak-clean/docs/configuration.md</url>
+    <url type="homepage">https://foxxmd.github.io/multi-scrobbler</url>
+    <url type="help">https://foxxmd.github.io/multi-scrobbler/docs/configuration</url>
     <metadata_license>MIT</metadata_license>
     <project_license>MIT</project_license>
     <description>
@@ -24,6 +24,8 @@
             <li>Deezer</li>
             <li>JRiver</li>
             <li>Kodi</li>
+            <li>Webscrobbler</li>
+            <li>Youtube Music</li>
             <li>MPRIS (linux desktop)</li>
         </ul>
         <p>and consolidate your listens (scrobbles) into one or more scrobbling servers/services:</p>
@@ -37,7 +39,7 @@
     <screenshots>
         <screenshot type="default">
             <caption>Browser-based UI</caption>
-            <image type="source">https://raw.githubusercontent.com/FoxxMD/multi-scrobbler/7b0f5801a1aa728986f440f4c67fe158cecd763d/assets/status-ui.jpg</image>
+            <image type="source">https://raw.githubusercontent.com/FoxxMD/multi-scrobbler/f4256d1084f4bdea2945c03e523af6d0ed89b3ae/assets/status-ui.png</image>
         </screenshot>
     </screenshots>
     <releases>
