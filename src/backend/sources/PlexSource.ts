@@ -89,7 +89,10 @@ export default class PlexSource extends AbstractSource {
                 // @ts-expect-error TS(2525): Initializer provides no value for this binding ele... Remove this comment to see the full error message
                 grandparentTitle: artist,
                 // @ts-expect-error TS(2525): Initializer provides no value for this binding ele... Remove this comment to see the full error message
-                librarySectionTitle: library
+                librarySectionTitle: library,
+                // plex returns the album artist for each track as originalTitle
+                // @ts-expect-error
+                originalTitle: albumArtist
             } = {},
             Server: {
                 // @ts-expect-error TS(2525): Initializer provides no value for this binding ele... Remove this comment to see the full error message
@@ -100,9 +103,21 @@ export default class PlexSource extends AbstractSource {
                 uuid,
             }
         } = obj;
+
+        let artists: string[] = [artist];
+        if(albumArtist !== undefined) {
+            artists.push(albumArtist);
+        }
+        // remove "various artists" "various composers" etc... from artists if there is at least one non-various artist
+        if(artists.length > 0) {
+            const filtered = artists.filter(x => !x.toLocaleLowerCase().includes('various'));
+            if(filtered.length > 0) {
+                artists = filtered;
+            }
+        }
         return {
             data: {
-                artists: [artist],
+                artists,
                 album,
                 track,
                 playDate: dayjs(),
