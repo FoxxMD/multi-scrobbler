@@ -25,6 +25,7 @@ import {buildTrackString, capitalize} from "../../core/StringUtils";
 import EventEmitter from "events";
 import normalizeUrl from "normalize-url";
 import {UpstreamError} from "../common/errors/UpstreamError";
+import {ar} from "@faker-js/faker";
 
 const feat = ["ft.", "ft", "feat.", "feat", "featuring", "Ft.", "Ft", "Feat.", "Feat", "Featuring"];
 
@@ -360,25 +361,21 @@ export default class MalojaScrobbler extends AbstractScrobbleClient {
         return (await this.existingScrobble(playObj)) !== undefined;
     }
 
-    doScrobble = async (playObj: PlayObject) => {
-        const {url, apiKey} = this.config.data;
+    public playToClientPayload(playObj: PlayObject): MalojaScrobbleRequestData {
+
+        const {apiKey} = this.config.data;
 
         const {
             data: {
-                artists,
+                artists = [],
+                albumArtists = [],
                 album,
                 track,
                 duration,
                 playDate,
                 listenedFor
-            } = {},
-            meta: {
-                source,
-                newFromSource = false,
             } = {}
         } = playObj;
-
-        const sType = newFromSource ? 'New' : 'Backlog';
 
         const scrobbleData: MalojaScrobbleRequestData = {
             title: track,
@@ -392,18 +389,43 @@ export default class MalojaScrobbler extends AbstractScrobbleClient {
             scrobbleData.duration = listenedFor;
         }
 
+        // 3.0.3 has a BC for something (maybe seconds => length ?) -- see #42 in repo
+        if(this.serverVersion === undefined || compareVersions(this.serverVersion, '3.0.2') > 0) {
+            (scrobbleData as MalojaScrobbleV3RequestData).artists = artists;
+            if(albumArtists.length > 0) {
+                (scrobbleData as MalojaScrobbleV3RequestData).albumartists = albumArtists;
+            }
+        } else {
+            // maloja seems to detect this deliminator much better than commas
+            // also less likely artist has a forward slash in their name than a comma
+            (scrobbleData as MalojaScrobbleV2RequestData).artist = artists.join(' / ');
+        }
+
+        return scrobbleData;
+    }
+
+    doScrobble = async (playObj: PlayObject) => {
+        const {url, apiKey} = this.config.data;
+
+        const {
+            data: {
+                album,
+                duration,
+                playDate,
+            } = {},
+            meta: {
+                source,
+                newFromSource = false,
+            } = {}
+        } = playObj;
+
+        const sType = newFromSource ? 'New' : 'Backlog';
+
+        const scrobbleData = this.playToClientPayload(playObj);
+
         let responseBody: MalojaScrobbleV3ResponseData;
 
         try {
-            // 3.0.3 has a BC for something (maybe seconds => length ?) -- see #42 in repo
-            if(this.serverVersion === undefined || compareVersions(this.serverVersion, '3.0.2') > 0) {
-                (scrobbleData as MalojaScrobbleV3RequestData).artists = artists;
-            } else {
-                // maloja seems to detect this deliminator much better than commas
-                // also less likely artist has a forward slash in their name than a comma
-                (scrobbleData as MalojaScrobbleV2RequestData).artist = artists.join(' / ');
-            }
-
             const response = await this.callApi(request.post(`${url}/apis/mlj_1/newscrobble`)
                 .type('json')
                 .send(scrobbleData));

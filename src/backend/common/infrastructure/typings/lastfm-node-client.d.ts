@@ -25,6 +25,9 @@ declare module 'lastfm-node-client' {
         album?: string
 
         albumArtist?: string
+
+        /** MusicBrainz track ID */
+        mbid?: string
     }
 
     export interface TrackScrobbleResponse {

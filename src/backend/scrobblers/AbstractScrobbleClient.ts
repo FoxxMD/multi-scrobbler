@@ -428,6 +428,8 @@ ${closestMatch.breakdowns.join('\n')}`);
     }
 
     protected abstract doScrobble(playObj: PlayObject): Promise<PlayObject>
+
+    public abstract playToClientPayload(playObject: PlayObject): object
     
     initScrobbleMonitoring = async () => {
         if(!this.initialized) {

@@ -56,6 +56,7 @@ export interface ListenRangeData {
 
 export interface TrackData {
     artists?: string[]
+    albumArtists?: string[]
     album?: string
     track?: string
     /**

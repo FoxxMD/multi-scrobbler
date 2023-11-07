@@ -11,7 +11,7 @@ import {
 import LastfmApiClient from "../common/vendor/LastfmApiClient";
 import { FormatPlayObjectOptions, INITIALIZING, ScrobbledPlayObject } from "../common/infrastructure/Atomic";
 import { LastfmClientConfig } from "../common/infrastructure/config/client/lastfm";
-import {TrackScrobbleResponse, UserGetRecentTracksResponse} from "lastfm-node-client";
+import {TrackScrobblePayload, TrackScrobbleResponse, UserGetRecentTracksResponse} from "lastfm-node-client";
 import { Notifiers } from "../notifier/Notifiers";
 import {Logger} from '@foxxmd/winston';
 import { PlayObject, TrackStringOptions } from "../../core/Atomic";
@@ -120,23 +120,22 @@ export default class LastfmScrobbler extends AbstractScrobbleClient {
         return (await this.existingScrobble(playObj)) !== undefined;
     }
 
-    doScrobble = async (playObj: PlayObject) => {
+    public playToClientPayload(playObj: PlayObject): TrackScrobblePayload {
         const {
             data: {
-                artists,
+                artists = [],
                 album,
+                albumArtists = [],
                 track,
                 duration,
-                playDate
-            } = {},
-            data = {},
-            meta: {
-                source,
-                newFromSource = false,
+                playDate,
+                meta: {
+                    brainz: {
+                        track: mbid
+                    } = {},
+                } = {}
             } = {}
         } = playObj;
-
-        const sType = newFromSource ? 'New' : 'Backlog';
 
         // LFM does not support multiple artists in scrobble payload
         // https://www.last.fm/api/show/track.scrobble
@@ -147,20 +146,41 @@ export default class LastfmScrobbler extends AbstractScrobbleClient {
             artist = artists[0];
         }
 
-        const rawPayload = {
+        const rawPayload: TrackScrobblePayload = {
             artist: artist,
             duration,
             track,
             album,
             timestamp: playDate.unix(),
+            mbid,
         };
-        // i don't know if its lastfm-node-client building the request params incorrectly
+
+        // LFM does not support multiple artists in scrobble payload
+        // https://www.last.fm/api/show/track.scrobble
+        if (albumArtists.length > 0) {
+            rawPayload.albumArtist = albumArtists[0];
+        }
+
+        // I don't know if its lastfm-node-client building the request params incorrectly
         // or the last.fm api not handling the params correctly...
         //
         // ...but in either case if any of the below properties is undefined (possibly also null??)
         // then last.fm responds with an IGNORED scrobble and error code 1 (totally unhelpful)
         // so remove all undefined keys from the object before passing to the api client
-        const scrobblePayload = removeUndefinedKeys(rawPayload);
+        return removeUndefinedKeys(rawPayload);
+    }
+
+    doScrobble = async (playObj: PlayObject) => {
+        const {
+            meta: {
+                source,
+                newFromSource = false,
+            } = {}
+        } = playObj;
+
+        const sType = newFromSource ? 'New' : 'Backlog';
+
+        const scrobblePayload = this.playToClientPayload(playObj);
 
         try {
             const response = await this.api.callApi<TrackScrobbleResponse>((client: any) => client.trackScrobble(
@@ -212,7 +232,7 @@ export default class LastfmScrobbler extends AbstractScrobbleClient {
                 throw e;
             }
         } finally {
-            this.logger.debug('Raw Payload: ', rawPayload);
+            this.logger.debug('Raw Payload: ', scrobblePayload);
         }
     }
 }
