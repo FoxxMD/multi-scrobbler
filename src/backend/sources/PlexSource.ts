@@ -87,12 +87,13 @@ export default class PlexSource extends AbstractSource {
                 // @ts-expect-error TS(2525): Initializer provides no value for this binding ele... Remove this comment to see the full error message
                 parentTitle: album,
                 // @ts-expect-error TS(2525): Initializer provides no value for this binding ele... Remove this comment to see the full error message
-                grandparentTitle: artist,
+                grandparentTitle: artist, // OR album artist
                 // @ts-expect-error TS(2525): Initializer provides no value for this binding ele... Remove this comment to see the full error message
                 librarySectionTitle: library,
-                // plex returns the album artist for each track as originalTitle
+                // plex returns the track artist as originalTitle (when there is an album artist)
+                // otherwise this is undefined
                 // @ts-expect-error
-                originalTitle: albumArtist
+                originalTitle: trackArtist
             } = {},
             Server: {
                 // @ts-expect-error TS(2525): Initializer provides no value for this binding ele... Remove this comment to see the full error message
@@ -104,20 +105,18 @@ export default class PlexSource extends AbstractSource {
             }
         } = obj;
 
-        let artists: string[] = [artist];
-        if(albumArtist !== undefined) {
-            artists.push(albumArtist);
-        }
-        // remove "various artists" "various composers" etc... from artists if there is at least one non-various artist
-        if(artists.length > 0) {
-            const filtered = artists.filter(x => !x.toLocaleLowerCase().includes('various'));
-            if(filtered.length > 0) {
-                artists = filtered;
-            }
+        let artists: string[] = [];
+        let albumArtists: string[] = [];
+        if(trackArtist !== undefined) {
+            artists.push(trackArtist);
+            albumArtists.push(artist);
+        } else {
+            artists.push(artist);
         }
         return {
             data: {
                 artists,
+                albumArtists,
                 album,
                 track,
                 playDate: dayjs(),

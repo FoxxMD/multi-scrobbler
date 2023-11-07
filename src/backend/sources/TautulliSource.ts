@@ -40,9 +40,13 @@ export default class TautulliSource extends PlexSource {
                 player,
             } = {}
         } = obj;
-        let artists = [artist_name];
+        let artists: string[] = [];
+        let albumArtists: string[] = [];
         if (track_artist !== undefined && track_artist !== artist_name) {
             artists.push(track_artist);
+            albumArtists.push(artist_name);
+        } else {
+            artists.push(artist_name);
         }
         if(action === undefined) {
             //TODO why does TS think logger doesn't exist?
@@ -53,6 +57,7 @@ export default class TautulliSource extends PlexSource {
             data: {
                 artists,
                 album: album_name,
+                albumArtists,
                 track: track_name,
                 duration,
                 playDate: dayjs(),

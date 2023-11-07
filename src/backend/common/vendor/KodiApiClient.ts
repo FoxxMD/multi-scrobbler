@@ -107,6 +107,7 @@ export class KodiApiClient extends AbstractApiClient {
             data: {
                 track: title,
                 album: album,
+                albumArtists: albumartist,
                 artists,
                 duration,
                 playDate: dayjs()

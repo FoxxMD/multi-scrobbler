@@ -42,8 +42,12 @@ export default class YTMusicSource extends AbstractSource {
         if(artistsData !== undefined) {
             artists = artistsData.map(x => x.name) as string[];
         }
+        let albumArtists: string[] = [];
         if(albumData !== undefined) {
             album = albumData.name;
+            if(albumData.artist !== undefined) {
+                albumArtists = [albumData.artist.name];
+            }
         }
         if(durTimestamp !== undefined) {
             const durObj = parseDurationFromTimestamp(durTimestamp);
@@ -52,6 +56,7 @@ export default class YTMusicSource extends AbstractSource {
         return {
             data: {
                 artists,
+                albumArtists,
                 album,
                 track: title,
                 duration,

@@ -67,7 +67,7 @@ export default class SpotifySource extends MemorySource {
         this.canBacklog = true;
     }
 
-    static formatPlayObj(obj: object, options: FormatPlayObjectOptions = {}): PlayObject {
+    static formatPlayObj(obj: PlayHistoryObject | CurrentlyPlayingObject, options: FormatPlayObjectOptions = {}): PlayObject {
 
         const {
             newFromSource = false
@@ -144,11 +144,20 @@ export default class SpotifySource extends MemorySource {
             throw new Error('Could not determine format of spotify response data');
         }
 
-        const {name: albumName} = album || {};
+        const {name: albumName, artists: albumArtists = []} = album || {};
+
+        const trackArtistIds = artists.map(x => x.id);
+        let actualAlbumArtists: ArtistObjectSimplified[] = [];
+        if(albumArtists.filter(x => !trackArtistIds.includes(x.id)).length > 0) {
+            // only include album artists if they are not the EXACT same as the track artists
+            // ...if they aren't the exact same then include all artists, even if they are duplicates of track artists
+            actualAlbumArtists = albumArtists;
+        }
 
         return {
             data: {
-                artists: artists.map((x: any) => x.name),
+                artists: artists.map(x => x.name),
+                albumArtists: actualAlbumArtists.map(x => x.name),
                 album: albumName,
                 track: name,
                 duration: duration_ms / 1000,

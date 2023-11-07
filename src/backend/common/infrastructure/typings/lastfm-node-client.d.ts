@@ -83,10 +83,12 @@ declare module 'lastfm-node-client' {
         artist: {
             '#text': string,
             name: string,
+            mbid: string,
         },
         name: string,
         album: {
             '#text': string,
+            mbid: string
         },
         duration: number,
         date?: {

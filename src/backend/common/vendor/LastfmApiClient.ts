@@ -42,10 +42,12 @@ export default class LastfmApiClient extends AbstractApiClient {
             artist: {
                 '#text': artists,
                 name: artistName,
+                mbid: artistMbid,
             },
             name: title,
             album: {
                 '#text': album,
+                mbid: albumMbid,
             },
             duration,
             date: {
@@ -67,6 +69,13 @@ export default class LastfmApiClient extends AbstractApiClient {
                 album,
                 duration,
                 playDate: time !== undefined ? dayjs.unix(time) : undefined,
+                meta: {
+                    brainz: {
+                        album: albumMbid === '' ? undefined : albumMbid,
+                        artist: artistMbid === '' ? undefined : artistMbid,
+                        track: mbid === '' ? undefined : mbid
+                    }
+                }
             },
             meta: {
                 nowPlaying: nowplaying === 'true',
