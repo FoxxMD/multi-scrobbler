@@ -54,7 +54,12 @@ export default class LastfmSource extends MemorySource {
 
     getRecentlyPlayed = async(options: RecentlyPlayedOptions = {}): Promise<PlayObject[]> => {
         const {limit = 20} = options;
-        const resp = await this.api.callApi<UserGetRecentTracksResponse>((client: any) => client.userGetRecentTracks({user: this.api.user, limit, extended: true}));
+        const resp = await this.api.callApi<UserGetRecentTracksResponse>((client: any) => client.userGetRecentTracks({
+            user: this.api.user,
+            sk: this.api.client.sessionKey,
+            limit,
+            extended: true
+        }));
         const {
             recenttracks: {
                 track: list = [],
