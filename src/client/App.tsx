@@ -90,7 +90,7 @@ function App() {
               <a href="/" className="flex items-center flex-grow no-underline pr-4">
                 <img src="icon.svg" style={{maxWidth: '30px'}}/>
                 <span className="px-4 break-normal">
-                        Multi Scrobbler
+                        Multi Scrobbler <span className="ml-2 text-xs version">v{process.env.REACT_APP_VERSION ?? 'Unknown'}</span>
                     </span>
               </a>
             </div>
@@ -99,7 +99,6 @@ function App() {
         <div className="container mx-auto">
             <ConnectedGlobal/>
             <RouterProvider router={router}/>
-            v{process.env.VERSION ?? 'unknown'}
         </div>
       </div>
       </Provider>

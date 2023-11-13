@@ -8,6 +8,37 @@ import {EventEmitter} from "events";
 import {logPath} from "./common/logging";
 import { WildcardEmitter } from "./common/WildcardEmitter";
 import normalizeUrl from 'normalize-url';
+import fs from 'fs';
+
+let version = 'unknown';
+
+if(process.env.VERSION === undefined) {
+    if(fs.existsSync('./package.json')) {
+        try {
+            const pkg = fs.readFileSync('./package.json') as unknown as string;
+            try {
+                version = JSON.parse(pkg).version || 'unknown'
+            } catch (e) {
+                // don't care
+            }
+        } catch (e) {
+            // don't care
+        }
+    } else if(fs.existsSync('./package-lock.json')) {
+        try {
+            const pkg = fs.readFileSync('./package-lock.json') as unknown as string;
+            try {
+                version = JSON.parse(pkg).version || 'unknown'
+            } catch (e) {
+                // don't care
+            }
+        } catch (e) {
+            // don't care
+        }
+    }
+} else {
+    version = process.env.VERSION;
+}
 
 let root: ReturnType<typeof createRoot>;
 
@@ -24,6 +55,7 @@ const createRoot = (options?: RootOptions) => {
     const configDir = process.env.CONFIG_DIR || path.resolve(projectDir, `./config`);
     const envPort = process.env.PORT;
     return createContainer().add({
+        version,
         configDir: configDir,
         logDir: logPath,
         isProd: process.env.NODE_ENV !== undefined && (process.env.NODE_ENV === 'production' || process.env.NODE_ENV === 'prod'),
