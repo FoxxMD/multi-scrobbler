@@ -44,11 +44,15 @@ export const DAYJS_TIMEZ_FORMAT = 'HH:mm:ssZ';
 export const DAYJS_TIME_FORMAT = 'HH:mm:ss';
 export const DAYJS_DATE_FORMAT = 'YYYY-MM-DD';
 
-export const isoToHuman = (iso: string, opts?: DateFormatOptions) => {
+export const isoToHuman = (iso?: string | null, opts?: DateFormatOptions) => {
     const {
         includeRelative = false,
         includeDate
     } = opts;
+
+    if(iso === undefined || iso === null) {
+        return 'N/A';
+    }
 
     let parts = [];
 

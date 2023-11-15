@@ -172,8 +172,8 @@ export interface LogInfoJson extends LogInfo {
 export interface SourcePlayerObj {
     platformId: string,
     play: PlayObject,
-    playFirstSeenAt: string,
-    playLastUpdatedAt: string,
+    playFirstSeenAt?: string,
+    playLastUpdatedAt?: string,
     playerLastUpdatedAt: string
     position?: number
     listenedDuration: number

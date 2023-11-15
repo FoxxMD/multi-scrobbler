@@ -367,8 +367,8 @@ export abstract class AbstractPlayerState {
         return {
             platformId: this.platformIdStr,
             play: this.getPlayedObject(),
-            playLastUpdatedAt: this.playLastUpdatedAt.toISOString(),
-            playFirstSeenAt: this.playFirstSeenAt.toISOString(),
+            playLastUpdatedAt: this.playLastUpdatedAt !== undefined ? this.playLastUpdatedAt.toISOString() : undefined,
+            playFirstSeenAt: this.playFirstSeenAt !== undefined ? this.playFirstSeenAt.toISOString() : undefined,
             playerLastUpdatedAt: this.stateLastUpdatedAt.toISOString(),
             position: this.getPosition(),
             listenedDuration: this.getListenDuration(),
