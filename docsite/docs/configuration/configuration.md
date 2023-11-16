@@ -191,6 +191,8 @@ Useful when running with [docker](../installation/installation.md#docker) so tha
 To access your Spotify history you must [register an application](https://developer.spotify.com/dashboard) to get a
 Client ID/Secret. Make sure to also whitelist your redirect URI in the application settings.
 
+**NOTE:** If your Spotify player has [Automix](https://community.spotify.com/t5/FAQs/What-is-Automix/ta-p/5257278) enabled and Spotify uses it for your playlist/queue then MS cannot accurately determine when a track will end. This is because the track is "mixed" in your queue with a shorter play time than its actual length and [Spotify does not report this modified play time in its API.](https://community.spotify.com/t5/Spotify-for-Developers/Wrong-duration-ms-of-track-with-Automix/m-p/5429147) This **does not affect MS's ability to scrobble** from Spotify but it will affect the accuracy of the duration MS reports was played.
+
 ### ENV-Based
 
 | Environmental Variable     | Required? | Default                          |                    Description                     |
