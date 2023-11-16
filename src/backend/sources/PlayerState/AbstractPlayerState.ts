@@ -214,7 +214,13 @@ export abstract class AbstractPlayerState {
         const now = dayjs();
         if (this.currentListenRange === undefined) {
             this.logger.debug('Started new Player listen range.');
-            this.currentListenRange = new ListenRange(new ListenProgress(timestamp, position));
+            let usedPosition = position;
+            if(this.calculatedStatus === CALCULATED_PLAYER_STATUSES.playing && position !== undefined && position <= 3) {
+                // likely the player has moved to a new track from a previous track (still calculated as playing)
+                // and polling/network delays means we did not catch absolute beginning of track
+                usedPosition = 1;
+            }
+            this.currentListenRange = new ListenRange(new ListenProgress(timestamp, usedPosition));
         } else {
             const oldEndProgress = this.currentListenRange.end;
             const newEndProgress = new ListenProgress(timestamp, position);
@@ -244,6 +250,19 @@ export abstract class AbstractPlayerState {
     protected currentListenSessionEnd() {
         if (this.currentListenRange !== undefined && this.currentListenRange.getDuration() !== 0) {
             this.logger.debug('Ended current Player listen range.')
+            if(this.calculatedStatus === CALCULATED_PLAYER_STATUSES.playing && this.currentListenRange.isPositional() && !this.currentListenRange.isInitial()) {
+                const {
+                    data: {
+                        duration,
+                    } = {}
+                } = this.currentPlay;
+                if(duration !== undefined && (duration - this.currentListenRange.end.position) < 3) {
+                    // likely the track was listened to until it ended
+                    // but polling interval or network delays caused MS to not get data on the very end
+                    // also...within 3 seconds of ending is close enough to call this complete IMO
+                    this.currentListenRange.end.position = duration;
+                }
+            }
             this.listenRanges.push(this.currentListenRange);
         }
         this.currentListenRange = undefined;
