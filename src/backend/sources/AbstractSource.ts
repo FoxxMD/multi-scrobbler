@@ -8,7 +8,7 @@ import {
     pollingBackoff,
     sleep,
     sortByNewestPlayDate,
-    sortByOldestPlayDate, findCauseByFunc,
+    sortByOldestPlayDate, findCauseByFunc, formatNumber,
 } from "../utils";
 import {
     Authenticatable,
@@ -389,15 +389,18 @@ export default abstract class AbstractSource implements Authenticatable {
         let checkCount = 0;
         let checksOverThreshold = 0;
 
-        const {interval = DEFAULT_POLLING_INTERVAL, checkActiveFor = 300, maxInterval = DEFAULT_POLLING_MAX_INTERVAL} = this.config.data;
-        const maxBackoff = maxInterval - interval;
-        let sleepTime = interval;
+        const {checkActiveFor = 300, maxInterval = DEFAULT_POLLING_MAX_INTERVAL} = this.config.data;
 
         try {
             this.polling = true;
             while (!this.shouldStopPolling()) {
+                const pollFrom = dayjs();
                 this.logger.debug('Refreshing recently played');
                 const playObjs = await this.getRecentlyPlayed({formatted: true});
+
+                const interval = this.getInterval();
+                const maxBackoff = this.getMaxBackoff();
+                let sleepTime = interval;
 
                 let newDiscovered: PlayObject[] = [];
 
@@ -441,15 +444,14 @@ export default abstract class AbstractSource implements Authenticatable {
                         this.logger.debug(`Last activity was at ${this.lastActivityAt.format()} which is ${inactiveFor} outside of active polling period of (last activity + ${checkActiveFor} seconds). Will check again in max interval ${maxInterval} seconds.`);
                     }
                 } else {
-                    sleepTime = interval;
-                    this.logger.debug(`Last activity was at ${this.lastActivityAt.format()}. Will check again in interval ${sleepTime} seconds.`);
+                    this.logger.debug(`Last activity was at ${this.lastActivityAt.format()}. Will check again in interval ${formatNumber(sleepTime)} seconds.`);
                 }
 
-                this.logger.verbose(`Sleeping for ${sleepTime}s`);
-                const wakeUpAt = dayjs().add(sleepTime, 'seconds');
+                this.logger.verbose(`Sleeping for ${formatNumber(sleepTime)}s`);
+                const wakeUpAt = pollFrom.add(sleepTime, 'seconds');
                 while(!this.shouldStopPolling() && dayjs().isBefore(wakeUpAt)) {
-                    // check for polling status every 2 seconds and wait till wake up time
-                    await sleep(2000);
+                    // check for polling status every half second and wait till wake up time
+                    await sleep(500);
                 }
 
             }
@@ -464,6 +466,16 @@ export default abstract class AbstractSource implements Authenticatable {
             this.polling = false;
             throw e;
         }
+    }
+
+    protected getInterval() {
+        const {interval = DEFAULT_POLLING_INTERVAL} = this.config.data;
+        return interval;
+    }
+
+    protected getMaxBackoff() {
+        const {interval = DEFAULT_POLLING_INTERVAL, maxInterval = DEFAULT_POLLING_MAX_INTERVAL} = this.config.data;
+        return maxInterval - interval;
     }
 
     public emitEvent = (eventName: string, payload: object = {}) => {
