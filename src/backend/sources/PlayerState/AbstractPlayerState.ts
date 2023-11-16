@@ -9,10 +9,9 @@ import dayjs, {Dayjs} from "dayjs";
 import { formatNumber, genGroupIdStr, playObjDataMatch, progressBar } from "../../utils";
 import {Logger} from "@foxxmd/winston";
 import { ListenProgress } from "./ListenProgress";
-import {PlayObject, SourcePlayerObj} from "../../../core/Atomic";
+import {PlayObject, Second, SourcePlayerObj} from "../../../core/Atomic";
 import { buildTrackString } from "../../../core/StringUtils";
 import {ListenRange} from "./ListenRange";
-import {start} from "repl";
 
 export interface PlayerStateIntervals {
     staleInterval?: number
@@ -199,7 +198,7 @@ export abstract class AbstractPlayerState {
         return undefined;
     }
 
-    getListenDuration(){
+    getListenDuration(): Second{
         let listenDur: number = 0;
         let ranges = [...this.listenRanges];
         if (this.currentListenRange !== undefined) {
@@ -347,7 +346,7 @@ export abstract class AbstractPlayerState {
         this.logger.debug(this.textSummary());
     }
 
-    protected getPosition() {
+    public getPosition(): Second {
         if(this.calculatedStatus === 'stopped') {
             return undefined;
         }

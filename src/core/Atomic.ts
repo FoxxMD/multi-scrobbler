@@ -175,8 +175,8 @@ export interface SourcePlayerObj {
     playFirstSeenAt?: string,
     playLastUpdatedAt?: string,
     playerLastUpdatedAt: string
-    position?: number
-    listenedDuration: number
+    position?: Second
+    listenedDuration: Second
     status: {
         reported: string
         calculated: string
@@ -204,3 +204,6 @@ export interface DeadLetterScrobble<PlayType, RetryType = Dayjs> extends QueuedS
     lastRetry?: RetryType
     error: string
 }
+
+export type Second = number;
+export type Millisecond = number;

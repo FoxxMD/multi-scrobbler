@@ -3,7 +3,6 @@ import {PlayObject} from "../../../core/Atomic";
 import {getLogger} from "../../common/logging";
 import {Notifiers} from "../../notifier/Notifiers";
 import EventEmitter from "events";
-import {http} from "msw";
 import request from "superagent";
 
 export class TestScrobbler extends AbstractScrobbleClient {
@@ -29,6 +28,10 @@ export class TestScrobbler extends AbstractScrobbleClient {
         } catch (e) {
             throw e;
         }
+    }
+
+    playToClientPayload(playObject: PlayObject): object {
+        return playObject;
     }
 
 }

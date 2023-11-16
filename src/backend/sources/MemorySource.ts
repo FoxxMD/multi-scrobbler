@@ -9,11 +9,11 @@ import {
     thresholdResultSummary,
     genGroupId,
     genGroupIdStr,
-    getPlatformIdFromData,
+    getPlatformIdFromData, formatNumber,
 } from "../utils";
 import dayjs from "dayjs";
 import {
-    asPlayerStateData,
+    asPlayerStateData, CALCULATED_PLAYER_STATUSES,
     DeviceId,
     GroupedPlays, InternalConfig,
     PlayerStateData,
@@ -212,6 +212,42 @@ export default class MemorySource extends AbstractSource {
 
     recentlyPlayedTrackIsValid = (playObj: any) => {
         return playObj.data.playDate.isBefore(dayjs().subtract(30, 's'));
+    }
+
+    protected getInterval(): number {
+        /**
+         * If any player is progressing, reports position, and play has duration
+         * then we can modify polling interval so that we check source data just before track is supposed to end
+         * which will give us more accurate data on when player moves to the next play = better duration reporting to scrobble clients
+         * -- additionally, will have better confidence for fudging 100% duration played
+         * */
+        let interval = super.getInterval();
+        if(this.players.size === 0) {
+            return interval;
+        }
+        let logDecrease: undefined | string;
+        for(const player of this.players.values()) {
+            if(player.calculatedStatus === CALCULATED_PLAYER_STATUSES.playing) {
+                const pos = player.getPosition();
+                if(pos !== undefined && player.currentPlay !== undefined) {
+                    const {
+                        data: {
+                            duration
+                        } = {}
+                    } = player.currentPlay;
+                    const remaining = duration - pos;
+                    if(remaining < interval + 2) {
+                        // interval should be at least 1 second so we don't spam sources when polling
+                        interval = Math.max(1, remaining - 2);
+                        logDecrease = `Temporarily decreasing polling interval to ${formatNumber(interval)}s due to Player ${player.platformIdStr} reporting track duration remaining (${formatNumber(remaining)}s) less than normal interval (${formatNumber(super.getInterval())}s)`;
+                    }
+                }
+            }
+        }
+        if(logDecrease !== undefined) {
+            this.logger.debug(logDecrease);
+        }
+        return interval;
     }
 
     public async destroy() {
