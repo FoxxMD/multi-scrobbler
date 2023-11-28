@@ -60,6 +60,7 @@
       ],
       "track": "Sonora",
       "duration": 327,
+      "listenedFor": 327,
       "playDate": "2023-09-27T20:02:17.000Z"
     },
     "meta": {
@@ -98,6 +99,7 @@
       ],
       "track": "Ballade No. 1 in G Minor, Op. 23",
       "duration": 575,
+      "listenedFor": 570,
       "playDate": "2023-09-20T15:41:12.000Z"
     },
     "meta": {
@@ -112,6 +114,7 @@
         "Disco with Mehdi El"
       ],
       "track": "Aquil",
+      "listenedFor": 300,
       "playDate": "2023-09-20T17:55:05.000Z"
     },
     "meta": {

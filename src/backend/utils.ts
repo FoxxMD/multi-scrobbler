@@ -432,7 +432,8 @@ export interface TemporalPlayComparison {
     date?: {
         threshold: number
         diff: number
-        fuzzyDiff?: number
+        fuzzyDurationDiff?: number
+        fuzzyListenedDiff?: number
     }
     range?: false | ListenRangeData
 }
@@ -450,8 +451,11 @@ export const temporalPlayComparisonSummary = (data: TemporalPlayComparison, exis
     if (data.date !== undefined) {
         parts.push(`Play Diff: ${formatNumber(data.date.diff, {toFixed: 0})}s (Needed <${data.date.threshold}s)`)
     }
-    if (data.date.fuzzyDiff !== undefined) {
-        parts.push(`Fuzzy Diff: ${formatNumber(data.date.fuzzyDiff, {toFixed: 0})}s (Needed <10s)`);
+    if (data.date.fuzzyDurationDiff !== undefined) {
+        parts.push(`Fuzzy Duration Diff: ${formatNumber(data.date.fuzzyDurationDiff, {toFixed: 0})}s (Needed <10s)`);
+    }
+    if (data.date.fuzzyListenedDiff !== undefined) {
+        parts.push(`Fuzzy Listened Diff: ${formatNumber(data.date.fuzzyDurationDiff, {toFixed: 0})}s (Needed <10s)`);
     }
     if (data.range !== undefined) {
         if (data.range === false) {
@@ -479,6 +483,7 @@ export const comparePlayTemporally = (existingPlay: PlayObject, candidatePlay: P
             playDate: existingPlayDate,
             duration: existingDuration,
             listenRanges: existingRanges,
+            listenedFor: existingListenedFor,
         }
     } = existingPlay;
 
@@ -487,6 +492,7 @@ export const comparePlayTemporally = (existingPlay: PlayObject, candidatePlay: P
             playDate: newPlayDate,
             duration: newDuration,
             listenRanges: newRanges,
+            listenedFor: newListenedFor,
         }
     } = candidatePlay;
 
@@ -502,6 +508,7 @@ export const comparePlayTemporally = (existingPlay: PlayObject, candidatePlay: P
     }
 
     const referenceDuration = newDuration ?? existingDuration;
+    const referenceListenedFor = newListenedFor ?? existingListenedFor;
 
     let playDiffThreshold = diffThreshold;
 
@@ -535,9 +542,17 @@ export const comparePlayTemporally = (existingPlay: PlayObject, candidatePlay: P
     // if the source has a duration its possible one play was scrobbled at the beginning of the track and the other at the end
     // so check if the duration matches the diff between the two play dates
     if (result.close === false && referenceDuration !== undefined && fuzzyDuration) {
-        const fuzzyDiff = Math.abs(scrobblePlayDiff - referenceDuration);
-        result.date.fuzzyDiff = fuzzyDiff;
-        if(fuzzyDiff < 10) { // TODO use finer comparison for this?
+        result.date.fuzzyDurationDiff =  Math.abs(scrobblePlayDiff - referenceDuration);
+        if(result.date.fuzzyDurationDiff < 10) { // TODO use finer comparison for this?
+            result.close = true;
+        }
+    }
+    // if the source has listened duration (maloja) it may differ from actual track duration
+    // and its possible (spotify) the candidate play date is set at the end of this duration
+    // so check if there is a close match between candidate play date and source + listened for
+    if(result.close === false && referenceListenedFor !== undefined && fuzzyDuration) {
+        result.date.fuzzyListenedDiff = Math.abs(scrobblePlayDiff - referenceListenedFor);
+        if(result.date.fuzzyListenedDiff < 10) { // TODO use finer comparison for this?
             result.close = true;
         }
     }

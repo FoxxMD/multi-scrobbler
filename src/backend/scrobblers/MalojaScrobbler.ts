@@ -55,7 +55,8 @@ export default class MalojaScrobbler extends AbstractScrobbleClient {
             title,
             album,
             duration,
-            time;
+            time,
+            listenedFor;
 
         const {serverVersion, url} = options;
 
@@ -78,6 +79,7 @@ export default class MalojaScrobbler extends AbstractScrobbleClient {
             time = mTime;
             title = mTitle;
             duration = mLength;
+            listenedFor = mDuration;
             if(mAlbum !== null) {
                 const {
                     albumtitle,
@@ -118,6 +120,7 @@ export default class MalojaScrobbler extends AbstractScrobbleClient {
                 track: title,
                 album,
                 duration,
+                listenedFor,
                 playDate: dayjs.unix(time),
             },
             meta: {

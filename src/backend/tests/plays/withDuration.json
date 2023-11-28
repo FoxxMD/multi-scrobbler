@@ -6,6 +6,7 @@
       ],
       "track": "Fricassee",
       "duration": 305,
+      "listenedFor": 305,
       "playDate": "2023-09-20T14:32:39.000Z"
     },
     "meta": {
@@ -19,6 +20,7 @@
       ],
       "track": "Jimbó",
       "duration": 255,
+      "listenedFor": 254,
       "playDate": "2023-09-20T14:46:00.000Z"
     },
     "meta": {
@@ -33,6 +35,7 @@
       ],
       "track": "Aisha",
       "duration": 559,
+      "listenedFor": 559,
       "playDate": "2023-09-20T15:10:09.000Z"
     },
     "meta": {
@@ -47,6 +50,7 @@
       ],
       "track": "Ballade No. 4 in F Minor, Op. 52",
       "duration": 575,
+      "listenedFor": 550,
       "playDate": "2023-09-20T15:17:12.000Z"
     },
     "meta": {
@@ -61,6 +65,7 @@
       ],
       "track": "Sonora",
       "duration": 327,
+      "listenedFor": 300,
       "playDate": "2023-09-27T20:02:17.000Z"
     },
     "meta": {
@@ -74,6 +79,7 @@
       ],
       "track": "Aprieta (Oye Cómo Va)",
       "duration": 195,
+      "listenedFor": 190,
       "playDate": "2023-09-20T15:38:12.000Z"
     },
     "meta": {
@@ -87,6 +93,7 @@
       ],
       "track": "Another Brick in the Wall, Pt. 1",
       "duration": 192,
+      "listenedFor": 190,
       "playDate": "2023-09-20T15:39:12.000Z"
     },
     "meta": {
@@ -101,6 +108,7 @@
       ],
       "track": "Ballade No. 1 in G Minor, Op. 23",
       "duration": 575,
+      "listenedFor": 560,
       "playDate": "2023-09-20T15:41:12.000Z"
     },
     "meta": {
@@ -116,6 +124,7 @@
       ],
       "track": "Aquil",
       "duration": 3072,
+      "listenedFor": 3000,
       "playDate": "2023-09-20T17:55:05.000Z"
     },
     "meta": {
@@ -129,6 +138,7 @@
       ],
       "track": "Da Art of Storytellin' (Pt. 1)",
       "duration": 422,
+      "listenedFor": 400,
       "playDate": "2023-09-20T15:39:12.000Z"
     },
     "meta": {
