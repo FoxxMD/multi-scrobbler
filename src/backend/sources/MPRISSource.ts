@@ -61,11 +61,19 @@ export class MPRISSource extends MemorySource {
             } = {}
         } = obj;
 
+        let actualAlbumArtists: string[] = [];
+        if(albumArtist.filter(x => !artist.includes(x)).length > 0) {
+            // only include album artists if they are not the EXACT same as the track artists
+            // ...if they aren't the exact same then include all artists, even if they are duplicates of track artists
+            actualAlbumArtists = albumArtist;
+        }
+
         return {
             data: {
                 track: title,
                 album,
-                artists: Array.from(new Set(artist.concat(albumArtist))),
+                artists: artist,
+                albumArtists: actualAlbumArtists,
                 duration: length,
                 playDate: dayjs()
             },

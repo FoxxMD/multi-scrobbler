@@ -7,7 +7,7 @@ import {
     setIntersection, sleep, sortByOldestPlayDate,
 } from "../utils";
 import {
-    ARTIST_WEIGHT,
+    ARTIST_WEIGHT, Authenticatable,
     ClientType, DEFAULT_RETRY_MULTIPLIER, DUP_SCORE_THRESHOLD,
     FormatPlayObjectOptions,
     INITIALIZED,
@@ -16,22 +16,20 @@ import {
     NOT_INITIALIZED, REFERENCE_WEIGHT,
     ScrobbledPlayObject, TIME_WEIGHT, TITLE_WEIGHT,
 } from "../common/infrastructure/Atomic";
-import winston, {Logger} from '@foxxmd/winston';
+import {Logger} from '@foxxmd/winston';
 import { CommonClientConfig } from "../common/infrastructure/config/client/index";
-import { ClientConfig } from "../common/infrastructure/config/client/clients";
 import { Notifiers } from "../notifier/Notifiers";
 import {FixedSizeList} from 'fixed-size-list';
 import {DeadLetterScrobble, PlayObject, QueuedScrobble, SourceScrobble, TrackStringOptions} from "../../core/Atomic";
 import {buildTrackString, capitalize, truncateStringToLength} from "../../core/StringUtils";
 import EventEmitter from "events";
 import {compareScrobbleArtists, compareScrobbleTracks, normalizeStr} from "../utils/StringUtils";
-import {UpstreamError} from "../common/errors/UpstreamError";
+import {hasUpstreamError, UpstreamError} from "../common/errors/UpstreamError";
 import {nanoid} from "nanoid";
 import {ErrorWithCause, messageWithCauses} from "pony-cause";
-import {de} from "@faker-js/faker";
-import {del} from "superagent";
+import {hasNodeNetworkException} from "../common/errors/NodeErrors";
 
-export default abstract class AbstractScrobbleClient {
+export default abstract class AbstractScrobbleClient implements Authenticatable {
 
     name: string;
     type: ClientType;
@@ -44,6 +42,7 @@ export default abstract class AbstractScrobbleClient {
     requiresAuth: boolean = false;
     requiresAuthInteraction: boolean = false;
     authed: boolean = false;
+    authFailure?: boolean;
 
     #recentScrobblesList: PlayObject[] = [];
     scrobbledPlayObjs: FixedSizeList<ScrobbledPlayObject>;
@@ -151,13 +150,34 @@ export default abstract class AbstractScrobbleClient {
         return true;
     }
 
-    // default init function, should be overridden if auth stage is required
-    testAuth = async () => {
+    authGated = () => {
+        return this.requiresAuth && !this.authed;
+    }
+
+    canTryAuth = () => {
+        return this.authGated() && this.authFailure !== true;
+    }
+
+    protected doAuthentication = async (): Promise<boolean> => {
         return this.authed;
     }
 
+    // default init function, should be overridden if auth stage is required
+    testAuth = async () => {
+        try {
+            this.authed = await this.doAuthentication();
+            this.authFailure = !this.authed;
+        } catch (e) {
+            // only signal as auth failure if error was NOT either a node network error or a non-showstopping upstream error
+            this.authFailure = !(hasNodeNetworkException(e) || hasUpstreamError(e, false));
+            this.authed = false;
+            this.logger.error(`Authentication test failed!${this.authFailure === false ? ' Due to a network issue. Will retry authentication on next heartbeat.' : ''}`);
+            this.logger.error(e);
+        }
+    }
+
     isReady = async () => {
-        return this.initialized && (!this.requiresAuth || (this.requiresAuth && this.authed));
+        return this.initialized && !this.authGated();
     }
 
     refreshScrobbles = async () => {
@@ -408,6 +428,8 @@ ${closestMatch.breakdowns.join('\n')}`);
     }
 
     protected abstract doScrobble(playObj: PlayObject): Promise<PlayObject>
+
+    public abstract playToClientPayload(playObject: PlayObject): object
     
     initScrobbleMonitoring = async () => {
         if(!this.initialized) {
@@ -421,12 +443,18 @@ ${closestMatch.breakdowns.join('\n')}`);
             }
         }
 
-        if(this.requiresAuth && !this.authed) {
-            if (this.requiresAuthInteraction) {
+        if(this.authGated()) {
+            if(this.canTryAuth()) {
+                await this.testAuth();
+                if(!this.authed) {
+                    this.logger.warn(`Cannot start scrobble processing because auth test failed`);
+                    return;
+                }
+            } else if (this.requiresAuthInteraction) {
                 this.logger.warn(`Cannot start scrobble processing because user interaction is required for authentication`);
                 return;
-            } else if (!(await this.testAuth())) {
-                this.logger.warn(`Cannot start scrobble processing because auth test failed`);
+            } else {
+                this.logger.warn(`Cannot start scrobble processing because client needs to be reauthenticated.`);
                 return;
             }
         }

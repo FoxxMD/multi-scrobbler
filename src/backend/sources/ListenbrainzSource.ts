@@ -4,6 +4,7 @@ import EventEmitter from "events";
 import { ListenBrainzSourceConfig } from "../common/infrastructure/config/source/listenbrainz";
 import { ListenbrainzApiClient } from "../common/vendor/ListenbrainzApiClient";
 import MemorySource from "./MemorySource";
+import {ErrorWithCause} from "pony-cause";
 
 export default class ListenbrainzSource extends MemorySource {
 
@@ -48,15 +49,13 @@ export default class ListenbrainzSource extends MemorySource {
         return this.initialized;
     }
 
-    testAuth = async () => {
+    doAuthentication = async () => {
         try {
-            this.authed = await this.api.testAuth();
+            return await this.api.testAuth();
         } catch (e) {
-            this.logger.error('Could not successfully communicate with Listenbrainz API');
-            this.logger.error(e);
-            this.authed = false;
+            throw e;
+            //throw new ErrorWithCause('Could not communicate with Listenbrainz API', {cause: e});
         }
-        return this.authed;
     }
 
 

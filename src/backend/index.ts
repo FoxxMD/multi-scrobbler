@@ -73,6 +73,7 @@ const configDir = process.env.CONFIG_DIR || path.resolve(projectDir, `./config`)
         }
 
         const root = getRoot(config);
+        initLogger.info(`Version: ${root.get('version')}`);
 
         logger = getLogger(logging, 'app');
 

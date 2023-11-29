@@ -105,15 +105,13 @@ export default class DeezerSource extends AbstractSource {
         return this.initialized;
     }
 
-    testAuth = async () => {
+    doAuthentication = async () => {
         try {
             await this.callApi(request.get(`${this.baseUrl}/user/me`));
-            this.authed = true;
+            return true;
         } catch (e) {
-            this.logger.error('Could not successfully communicate with Deezer API');
-            this.authed = false;
+            throw e;
         }
-        return this.authed;
     }
 
     getRecentlyPlayed = async (options: RecentlyPlayedOptions = {}) => {

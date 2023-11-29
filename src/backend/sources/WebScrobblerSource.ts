@@ -107,6 +107,7 @@ export class WebScrobblerSource extends MemorySource {
                 track,
                 artists: [artist],
                 album: album === null ? undefined : album,
+                albumArtists: albumArtist === null ? undefined : [albumArtist],
                 playDate: dayjs.unix(startTimestamp),
                 duration: duration === null ? undefined : duration,
                 meta: {

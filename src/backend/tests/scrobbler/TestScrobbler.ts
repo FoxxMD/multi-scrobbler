@@ -3,6 +3,7 @@ import {PlayObject} from "../../../core/Atomic";
 import {getLogger} from "../../common/logging";
 import {Notifiers} from "../../notifier/Notifiers";
 import EventEmitter from "events";
+import request from "superagent";
 
 export class TestScrobbler extends AbstractScrobbleClient {
 
@@ -18,6 +19,19 @@ export class TestScrobbler extends AbstractScrobbleClient {
 
     alreadyScrobbled = async (playObj: PlayObject, log?: boolean): Promise<boolean> => {
         return (await this.existingScrobble(playObj)) !== undefined;
+    }
+
+    doAuthentication = async() => {
+        try {
+            await request.get('http://example.com');
+            return true;
+        } catch (e) {
+            throw e;
+        }
+    }
+
+    playToClientPayload(playObject: PlayObject): object {
+        return playObject;
     }
 
 }

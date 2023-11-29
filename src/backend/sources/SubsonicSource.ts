@@ -167,17 +167,15 @@ export class SubsonicSource extends MemorySource {
         return this.initialized;
     }
 
-    testAuth= async () => {
+    doAuthentication = async () => {
         const {url} = this.config.data;
         try {
             await this.callApi(request.get(`${url}/rest/ping`));
-            this.authed = true;
             this.logger.info('Subsonic API Status: ok');
+            return true;
         } catch (e) {
-            this.authed = false;
+            throw e;
         }
-
-        return this.authed;
     }
 
     getRecentlyPlayed = async (options: RecentlyPlayedOptions = {}) => {

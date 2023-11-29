@@ -42,8 +42,12 @@ export default class YTMusicSource extends AbstractSource {
         if(artistsData !== undefined) {
             artists = artistsData.map(x => x.name) as string[];
         }
+        let albumArtists: string[] = [];
         if(albumData !== undefined) {
             album = albumData.name;
+            if(albumData.artist !== undefined) {
+                albumArtists = [albumData.artist.name];
+            }
         }
         if(durTimestamp !== undefined) {
             const durObj = parseDurationFromTimestamp(durTimestamp);
@@ -52,6 +56,7 @@ export default class YTMusicSource extends AbstractSource {
         return {
             data: {
                 artists,
+                albumArtists,
                 album,
                 track: title,
                 duration,
@@ -166,10 +171,10 @@ export default class YTMusicSource extends AbstractSource {
         
     }
 
-    testAuth = async () => {
+    doAuthentication = async () => {
         try {
             await this.getRecentlyPlayed();
-            this.authed = true;
+            return true;
         } catch (e) {
             if(e.message.includes('Status code: 401')) {
                 let hint = 'Verify your cookie and authUser are correct.';
@@ -178,9 +183,8 @@ export default class YTMusicSource extends AbstractSource {
                 }
                 this.logger.error(`Authentication failed with the given credentials. ${hint} | Error => ${e.message}`);
             }
-            this.authed = false;
+            throw e;
         }
-        return this.authed;
     }
 
     onPollPostAuthCheck = async () => {

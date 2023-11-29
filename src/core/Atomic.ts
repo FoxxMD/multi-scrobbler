@@ -56,6 +56,7 @@ export interface ListenRangeData {
 
 export interface TrackData {
     artists?: string[]
+    albumArtists?: string[]
     album?: string
     track?: string
     /**
@@ -171,11 +172,11 @@ export interface LogInfoJson extends LogInfo {
 export interface SourcePlayerObj {
     platformId: string,
     play: PlayObject,
-    playFirstSeenAt: string,
-    playLastUpdatedAt: string,
+    playFirstSeenAt?: string,
+    playLastUpdatedAt?: string,
     playerLastUpdatedAt: string
-    position?: number
-    listenedDuration: number
+    position?: Second
+    listenedDuration: Second
     status: {
         reported: string
         calculated: string
@@ -203,3 +204,6 @@ export interface DeadLetterScrobble<PlayType, RetryType = Dayjs> extends QueuedS
     lastRetry?: RetryType
     error: string
 }
+
+export type Second = number;
+export type Millisecond = number;

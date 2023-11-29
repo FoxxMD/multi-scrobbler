@@ -76,7 +76,7 @@ export const setupAuthRoutes = (app: ExpressWithAsync, logger: Logger, sourceMid
             try {
                 await entity.api.authenticate(token);
                 await entity.initialize();
-                await entity.testAuth();
+                await entity.doAuthentication();
                 return res.send('OK');
             } catch (e) {
                 return res.send(e.message);

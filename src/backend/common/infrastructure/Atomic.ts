@@ -109,7 +109,7 @@ export interface LogConfig {
     level?: string
     file?: string | false
     stream?: string
-    console?: string
+    console?: string | false
 }
 
 export interface LogOptions {
@@ -132,7 +132,7 @@ export interface LogOptions {
     /**
      * Specify the minimum log level streamed to the console (or docker container)
      * */
-    console?: LogLevel
+    console?: LogLevel | false
 }
 
 export const asLogOptions = (obj: LogConfig = {}): obj is LogOptions => {
@@ -213,3 +213,16 @@ export const TIME_WEIGHT = 0.5;
 export const REFERENCE_WEIGHT = 0.5;
 export const DUP_SCORE_THRESHOLD = 1;
 
+// https://stackoverflow.com/a/70887388/1469797
+export type ArbitraryObject = { [key: string]: unknown; };
+export function isArbitraryObject(potentialObject: unknown): potentialObject is ArbitraryObject {
+    return typeof potentialObject === "object" && potentialObject !== null;
+}
+
+export interface Authenticatable {
+    requiresAuth: boolean
+    requiresAuthInteraction: boolean
+    authed: boolean
+    authFailure?: boolean
+    testAuth: () => Promise<any>
+}

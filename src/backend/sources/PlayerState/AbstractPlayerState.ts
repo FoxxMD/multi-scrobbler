@@ -9,10 +9,9 @@ import dayjs, {Dayjs} from "dayjs";
 import { formatNumber, genGroupIdStr, playObjDataMatch, progressBar } from "../../utils";
 import {Logger} from "@foxxmd/winston";
 import { ListenProgress } from "./ListenProgress";
-import {PlayObject, SourcePlayerObj} from "../../../core/Atomic";
+import {PlayObject, Second, SourcePlayerObj} from "../../../core/Atomic";
 import { buildTrackString } from "../../../core/StringUtils";
 import {ListenRange} from "./ListenRange";
-import {start} from "repl";
 
 export interface PlayerStateIntervals {
     staleInterval?: number
@@ -199,7 +198,7 @@ export abstract class AbstractPlayerState {
         return undefined;
     }
 
-    getListenDuration(){
+    getListenDuration(): Second{
         let listenDur: number = 0;
         let ranges = [...this.listenRanges];
         if (this.currentListenRange !== undefined) {
@@ -215,7 +214,13 @@ export abstract class AbstractPlayerState {
         const now = dayjs();
         if (this.currentListenRange === undefined) {
             this.logger.debug('Started new Player listen range.');
-            this.currentListenRange = new ListenRange(new ListenProgress(timestamp, position));
+            let usedPosition = position;
+            if(this.calculatedStatus === CALCULATED_PLAYER_STATUSES.playing && position !== undefined && position <= 3) {
+                // likely the player has moved to a new track from a previous track (still calculated as playing)
+                // and polling/network delays means we did not catch absolute beginning of track
+                usedPosition = 1;
+            }
+            this.currentListenRange = new ListenRange(new ListenProgress(timestamp, usedPosition));
         } else {
             const oldEndProgress = this.currentListenRange.end;
             const newEndProgress = new ListenProgress(timestamp, position);
@@ -245,6 +250,19 @@ export abstract class AbstractPlayerState {
     protected currentListenSessionEnd() {
         if (this.currentListenRange !== undefined && this.currentListenRange.getDuration() !== 0) {
             this.logger.debug('Ended current Player listen range.')
+            if(this.calculatedStatus === CALCULATED_PLAYER_STATUSES.playing && this.currentListenRange.isPositional() && !this.currentListenRange.isInitial()) {
+                const {
+                    data: {
+                        duration,
+                    } = {}
+                } = this.currentPlay;
+                if(duration !== undefined && (duration - this.currentListenRange.end.position) < 3) {
+                    // likely the track was listened to until it ended
+                    // but polling interval or network delays caused MS to not get data on the very end
+                    // also...within 3 seconds of ending is close enough to call this complete IMO
+                    this.currentListenRange.end.position = duration;
+                }
+            }
             this.listenRanges.push(this.currentListenRange);
         }
         this.currentListenRange = undefined;
@@ -347,7 +365,7 @@ export abstract class AbstractPlayerState {
         this.logger.debug(this.textSummary());
     }
 
-    protected getPosition() {
+    public getPosition(): Second {
         if(this.calculatedStatus === 'stopped') {
             return undefined;
         }
@@ -367,8 +385,8 @@ export abstract class AbstractPlayerState {
         return {
             platformId: this.platformIdStr,
             play: this.getPlayedObject(),
-            playLastUpdatedAt: this.playLastUpdatedAt.toISOString(),
-            playFirstSeenAt: this.playFirstSeenAt.toISOString(),
+            playLastUpdatedAt: this.playLastUpdatedAt !== undefined ? this.playLastUpdatedAt.toISOString() : undefined,
+            playFirstSeenAt: this.playFirstSeenAt !== undefined ? this.playFirstSeenAt.toISOString() : undefined,
             playerLastUpdatedAt: this.stateLastUpdatedAt.toISOString(),
             position: this.getPosition(),
             listenedDuration: this.getListenDuration(),

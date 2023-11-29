@@ -159,7 +159,7 @@ export class ListenbrainzApiClient extends AbstractApiClient {
             const resp = await this.callApi(request.get(`${this.url}1/validate-token`));
             return true;
         } catch (e) {
-            return false;
+            throw e;
         }
     }
 
@@ -227,18 +227,27 @@ export class ListenbrainzApiClient extends AbstractApiClient {
     static playToListenPayload = (play: PlayObject): ListenPayload => {
         const {
             data: {
+                playDate,
+                artists = [],
+                // MB doesn't use this during submission AFAIK
+                // instead it relies on (assumes??) you will submit album/release group/etc where album artist gets credit on an individual release
+                albumArtists = [],
+                album,
+                track,
+                duration,
                 meta: {
                     brainz = {}
                 } = {}
             }
         } = play;
         return {
-            listened_at: (play.data.playDate ?? dayjs()).unix(),
+            listened_at: (playDate ?? dayjs()).unix(),
             track_metadata: {
-                artist_name: play.data.artists[0],
-                track_name: play.data.track,
+                artist_name: artists[0],
+                track_name: track,
+                release_name: album,
                 additional_info: {
-                    duration: play.data.duration !== undefined ? Math.round(play.data.duration) : undefined,
+                    duration: play.data.duration !== undefined ? Math.round(duration) : undefined,
                     track_mbid: brainz.track,
                     artist_mbids: brainz.artist !== undefined ? [brainz.artist] : undefined,
                     release_mbid: brainz.album,

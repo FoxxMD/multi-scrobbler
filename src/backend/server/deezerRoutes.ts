@@ -34,7 +34,7 @@ export const setupDeezerRoutes = (app: ExpressWithAsync, logger: Logger, scrobbl
                 return res.send('Error with deezer credentials storage');
             } else if(entity.config.data.accessToken !== undefined) {
                 // start polling
-                await entity.testAuth();
+                await entity.doAuthentication();
                 entity.poll()
                 return res.redirect('/');
             } else {

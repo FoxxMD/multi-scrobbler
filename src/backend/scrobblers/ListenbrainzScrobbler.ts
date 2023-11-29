@@ -13,11 +13,12 @@ import { FormatPlayObjectOptions, INITIALIZING } from "../common/infrastructure/
 import { Notifiers } from "../notifier/Notifiers";
 import {Logger} from '@foxxmd/winston';
 import { ListenBrainzClientConfig } from "../common/infrastructure/config/client/listenbrainz";
-import { ListenbrainzApiClient } from "../common/vendor/ListenbrainzApiClient";
+import {ListenbrainzApiClient, ListenPayload} from "../common/vendor/ListenbrainzApiClient";
 import { PlayObject, TrackStringOptions } from "../../core/Atomic";
 import {buildTrackString, capitalize} from "../../core/StringUtils";
 import EventEmitter from "events";
 import {UpstreamError} from "../common/errors/UpstreamError";
+import {isNodeNetworkException} from "../common/errors/NodeErrors";
 
 export default class ListenbrainzScrobbler extends AbstractScrobbleClient {
 
@@ -52,16 +53,16 @@ export default class ListenbrainzScrobbler extends AbstractScrobbleClient {
         return this.initialized;
     }
 
-    testAuth = async () => {
+    doAuthentication = async () => {
 
         try {
-            this.authed = await this.api.testAuth();
+            return await this.api.testAuth();
         } catch (e) {
-            this.logger.error('Could not successfully communicate with Listenbrainz API');
-            this.logger.error(e);
-            this.authed = false;
+            if(isNodeNetworkException(e)) {
+                this.logger.error('Could not communicate with Listenbrainz API');
+            }
+            throw e;
         }
-        return this.authed;
     }
 
     refreshScrobbles = async () => {
@@ -86,6 +87,10 @@ export default class ListenbrainzScrobbler extends AbstractScrobbleClient {
         return (await this.existingScrobble(playObj)) !== undefined;
     }
 
+    public playToClientPayload(playObj: PlayObject): ListenPayload {
+        return ListenbrainzApiClient.playToListenPayload(playObj);
+    }
+
     doScrobble = async (playObj: PlayObject) => {
         const {
             meta: {
@@ -94,7 +99,7 @@ export default class ListenbrainzScrobbler extends AbstractScrobbleClient {
             } = {}
         } = playObj;
 
-        let rawPayload = {listen_type: 'single', payload: [ListenbrainzApiClient.playToListenPayload(playObj)]};
+        let rawPayload = {listen_type: 'single', payload: [this.playToClientPayload(playObj)]};
 
         try {
             const resp = await this.api.submitListen(playObj);

@@ -1,6 +1,6 @@
 {
   "name": "multi-scrobbler",
-  "version": "0.6.1",
+  "version": "0.6.2",
   "description": "scrobble plays from multiple sources to multiple clients",
   "scripts": {
     "schema": "npm run -s schema-aio & npm run -s schema-source & npm run -s schema-client & npm run -s schema-aiosource & npm run -s schema-aioclient",
@@ -12,14 +12,15 @@
     "typedoc": "typedoc",
     "circular": "madge --circular --extensions ts src/index.ts",
     "test": "react-scripts test",
+    "test:backend": "mocha --extension ts --reporter spec  --recursive src/backend/tests/scrobbler/**/*.test.ts",
     "eject": "react-scripts eject",
     "dev": "concurrently -p name -c \"yellow,magenta,blue\" -n \"webpack-server,nodemon-server,CRA\" \"npm run dev:server:webpack\" \"npm run dev:server:nodemon\" \"npm run dev:client\"",
-    "dev:client": "BROWSER=none react-scripts start",
+    "dev:client": "BROWSER=none REACT_APP_VERSION=$npm_package_version react-scripts start",
     "dev:server": "concurrently -p name -c \"yellow,magenta\" -n \"webpack-server,nodemon-server\" \"npm run dev:server:webpack\" \"npm run dev:server:nodemon\"",
     "dev:server:webpack": "webpack --config webpack.config.server.js",
     "dev:server:nodemon": "rm -f build/server.js && wait-on -l build/server.js && nodemon build/server.js",
     "build": "npm run -s build:client && npm run -s build:server",
-    "build:client": "NODE_ENV=production react-scripts build",
+    "build:client": "NODE_ENV=production REACT_APP_VERSION=$npm_package_version react-scripts build",
     "build:server": "webpack --env production --config webpack.config.server.js",
     "start": "node build/server.js",
     "fileEndings": "jscodeshift --transformFrom js --transformTo none --importTypes relative --extensions=ts --parser tsx --transform codeshift/transform.ts src/backend"
@@ -50,7 +51,7 @@
     "@fortawesome/fontawesome-svg-core": "^6.4.2",
     "@fortawesome/free-solid-svg-icons": "^6.4.2",
     "@fortawesome/react-fontawesome": "^0.2.0",
-    "@foxxmd/string-sameness": "^0.1.3",
+    "@foxxmd/string-sameness": "^0.2.0",
     "@foxxmd/winston": "3.3.31",
     "@kenyip/backoff-strategies": "^1.0.4",
     "@react-nano/use-event-source": "^0.13.0",
@@ -141,6 +142,7 @@
     "concurrently": "^8.2.0",
     "jscodeshift": "^0.15.0",
     "mocha": "^9.2.1",
+    "msw": "^2.0.2",
     "nodemon": "^3.0.1",
     "nyc": "^15.1.0",
     "patch-package": "^8.0.0",
@@ -154,7 +156,8 @@
     "typescript": "^4.9.5",
     "typescript-json-schema": "~0.55",
     "webpack-cli": "^5.1.4",
-    "webpack-node-externals": "^3.0.0"
+    "webpack-node-externals": "^3.0.0",
+    "wtfnode": "^0.9.1"
   },
   "browserslist": {
     "production": [

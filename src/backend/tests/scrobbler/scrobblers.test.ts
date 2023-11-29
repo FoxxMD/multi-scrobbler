@@ -1,7 +1,8 @@
-import {describe, it} from 'mocha';
+import {describe, it, after, before} from 'mocha';
 import {assert} from 'chai';
 import clone from 'clone';
 import pEvent from 'p-event';
+import { http, HttpResponse } from 'msw';
 
 import withDuration from '../plays/withDuration.json';
 import mixedDuration from '../plays/mixedDuration.json';
@@ -10,6 +11,7 @@ import {TestScrobbler} from "./TestScrobbler";
 import {asPlays, generatePlay, normalizePlays} from "../utils/PlayTestUtils";
 import dayjs from "dayjs";
 import {sleep} from "../../utils";
+import {MockNetworkError, withRequestInterception} from "../utils/networking";
 
 const firstPlayDate = dayjs().subtract(1, 'hour');
 
@@ -28,6 +30,59 @@ testScrobbler.verboseOptions = {
 };
 testScrobbler.lastScrobbleCheck = dayjs().subtract(60, 'seconds');
 
+describe('Networking', function () {
+
+    describe('Authentication', function () {
+        it('Should set as authenticated if doAuthentication does not throw and returns true',
+            withRequestInterception(
+                [
+                    http.get('http://example.com', () => {
+                            // https://github.com/mswjs/msw/issues/1819#issuecomment-1789364174
+                            // already using DOM though, not sure why it doesn't fix itself
+                            // @ts-expect-error
+                            return new HttpResponse(null, {status: 200});
+                        }
+                    )
+                ],
+                async function() {
+                    await testScrobbler.testAuth();
+                    assert.isTrue(testScrobbler.authed);
+                }
+            ));
+
+        it('Should set as unauthenticated with possibility to retry if error is network related',
+            withRequestInterception(
+                [
+                    http.get('http://example.com', () => {
+                            throw new MockNetworkError('EAI_AGAIN');
+                        }
+                    )
+                ],
+                async function() {
+                    await testScrobbler.testAuth();
+                    assert.isFalse(testScrobbler.authed);
+                    assert.isFalse(testScrobbler.authFailure);
+                }
+            ));
+
+        it('Should set as unauthenticated with no possibility to retry if error is not network related',
+            withRequestInterception(
+                [
+                    http.get('http://example.com', () => {
+                            // @ts-expect-error
+                            return HttpResponse.json({error: 'Invalid API Key'}, {status: 401});
+                        }
+                    )
+                ],
+                async function() {
+                    await testScrobbler.testAuth();
+                    assert.isFalse(testScrobbler.authed);
+                    assert.isTrue(testScrobbler.authFailure);
+                }
+            ));
+    });
+});
+
 describe('Detects duplicate and unique scrobbles from client recent history', function () {
 
     describe('When scrobble is unique', function () {
@@ -41,6 +96,7 @@ describe('Detects duplicate and unique scrobbles from client recent history', fu
             });
 
             assert.isFalse(await testScrobbler.alreadyScrobbled(newScrobble));
+            return;
         });
 
         it('It is not detected as duplicate when play date is close to an existing scrobble', async function () {
@@ -260,8 +316,11 @@ describe('Detects duplicate and unique scrobbles from client recent history', fu
 });
 
 describe('Detects duplicate and unique scrobbles using actively tracked scrobbles', function() {
-    testScrobbler.recentScrobbles = normalizedWithMixedDur;
-    testScrobbler.lastScrobbleCheck = dayjs().subtract(60, 'seconds');
+
+    before(function () {
+        testScrobbler.recentScrobbles = normalizedWithMixedDur;
+        testScrobbler.lastScrobbleCheck = dayjs().subtract(60, 'seconds');
+    });
 
     it('Detects a unique play', async function() {
         const newScrobble = generatePlay({
@@ -304,11 +363,13 @@ describe('Detects duplicate and unique scrobbles using actively tracked scrobble
 
 describe('Manages scrobble queue', function() {
 
-    testScrobbler.recentScrobbles = normalizedWithMixedDur;
-    testScrobbler.scrobbleSleep = 500;
-    testScrobbler.scrobbleDelay = 0;
-    testScrobbler.lastScrobbleCheck = dayjs().subtract(60, 'seconds');
-    testScrobbler.initScrobbleMonitoring();
+    before(function() {
+        testScrobbler.recentScrobbles = normalizedWithMixedDur;
+        testScrobbler.scrobbleSleep = 500;
+        testScrobbler.scrobbleDelay = 0;
+        testScrobbler.lastScrobbleCheck = dayjs().subtract(60, 'seconds');
+        testScrobbler.initScrobbleMonitoring();
+    });
 
     it('Scrobbles a uniquely queued play', async function() {
         const newScrobble = generatePlay({
@@ -388,5 +449,10 @@ describe('Manages scrobble queue', function() {
 
         // roughly...
         assert.closeTo(end.diff(initial, 'ms'), 1200, 200);
+    });
+
+    after(async function () {
+       this.timeout(3500);
+       await testScrobbler.tryStopScrobbling()
     });
 });

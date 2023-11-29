@@ -8,6 +8,8 @@ import { PlayObject } from "../../core/Atomic";
 import MemorySource from "./MemorySource";
 import {LastfmSourceConfig} from "../common/infrastructure/config/source/lastfm";
 import dayjs from "dayjs";
+import {isNodeNetworkException} from "../common/errors/NodeErrors";
+import {ErrorWithCause} from "pony-cause";
 
 export default class LastfmSource extends MemorySource {
 
@@ -41,21 +43,23 @@ export default class LastfmSource extends MemorySource {
         return this.initialized;
     }
 
-    testAuth = async () => {
+    doAuthentication = async () => {
         try {
-            this.authed = await this.api.testAuth();
+            return await this.api.testAuth();
         } catch (e) {
-            this.logger.error('Could not successfully communicate with Last.fm API');
-            this.logger.error(e);
-            this.authed = false;
+            throw e;
         }
-        return this.authed;
     }
 
 
     getRecentlyPlayed = async(options: RecentlyPlayedOptions = {}): Promise<PlayObject[]> => {
         const {limit = 20} = options;
-        const resp = await this.api.callApi<UserGetRecentTracksResponse>((client: any) => client.userGetRecentTracks({user: this.api.user, limit, extended: true}));
+        const resp = await this.api.callApi<UserGetRecentTracksResponse>((client: any) => client.userGetRecentTracks({
+            user: this.api.user,
+            sk: this.api.client.sessionKey,
+            limit,
+            extended: true
+        }));
         const {
             recenttracks: {
                 track: list = [],

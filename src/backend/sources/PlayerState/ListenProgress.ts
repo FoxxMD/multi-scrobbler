@@ -1,11 +1,11 @@
 import dayjs, {Dayjs} from "dayjs";
 
-import {PlayProgress} from "../../../core/Atomic";
+import {PlayProgress, Second} from "../../../core/Atomic";
 
 export class ListenProgress implements PlayProgress {
 
     public timestamp: Dayjs;
-    public position?: number;
+    public position?: Second;
     public positionPercent?: number;
 
     constructor(timestamp?: Dayjs, position?: number, positionPercent?: number) {
@@ -14,7 +14,7 @@ export class ListenProgress implements PlayProgress {
         this.positionPercent = positionPercent;
     }
 
-    getDuration(end: ListenProgress) {
+    getDuration(end: ListenProgress): Second {
         if (this.position !== undefined && end.position !== undefined) {
             return end.position - this.position;
         } else {

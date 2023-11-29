@@ -35,7 +35,7 @@ describe('Jellyfin Payload Parsing', function () {
             const play = JellyfinSource.formatPlayObj(fixture.data);
 
             assert.isTrue(jfSource.isValidEvent(play))
+            await jfSource.destroy();
         });
-
     });
 });

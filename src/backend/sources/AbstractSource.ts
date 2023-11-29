@@ -8,9 +8,10 @@ import {
     pollingBackoff,
     sleep,
     sortByNewestPlayDate,
-    sortByOldestPlayDate,
+    sortByOldestPlayDate, findCauseByFunc, formatNumber,
 } from "../utils";
 import {
+    Authenticatable,
     DEFAULT_POLLING_INTERVAL, DEFAULT_POLLING_MAX_INTERVAL, DEFAULT_RETRY_MULTIPLIER,
     DeviceId,
     GroupedFixedPlays,
@@ -31,6 +32,8 @@ import {FixedSizeList} from "fixed-size-list";
 import TupleMap from "../common/TupleMap";
 import { PlayObject } from "../../core/Atomic";
 import {buildTrackString, capitalize} from "../../core/StringUtils";
+import {isNodeNetworkException} from "../common/errors/NodeErrors";
+import {ErrorWithCause} from "pony-cause";
 
 export interface RecentlyPlayedOptions {
     limit?: number
@@ -39,7 +42,7 @@ export interface RecentlyPlayedOptions {
     display?: boolean
 }
 
-export default abstract class AbstractSource {
+export default abstract class AbstractSource implements Authenticatable {
 
     name: string;
     type: SourceType;
@@ -51,9 +54,11 @@ export default abstract class AbstractSource {
     instantiatedAt: Dayjs;
     lastActivityAt: Dayjs;
     initialized: boolean = false;
+
     requiresAuth: boolean = false;
     requiresAuthInteraction: boolean = false;
     authed: boolean = false;
+    authFailure?: boolean;
 
     multiPlatform: boolean = false;
 
@@ -97,9 +102,25 @@ export default abstract class AbstractSource {
         return this.requiresAuth && !this.authed;
     }
 
-    // default init function, should be overridden if auth stage is required
-    testAuth = async () => {
+    canTryAuth = () => {
+        return this.authGated() && this.authFailure !== true;
+    }
+
+    protected doAuthentication = async (): Promise<boolean> => {
         return this.authed;
+    }
+
+    testAuth = async () => {
+        try {
+            this.authed = await this.doAuthentication();
+            this.authFailure = !this.authed;
+        } catch (e) {
+            // only signal as auth failure if error was NOT a node network error
+            this.authFailure = findCauseByFunc(e, isNodeNetworkException) === undefined;
+            this.authed = false;
+            this.logger.error(`Authentication test failed!${this.authFailure === false ? ' Due to a network issue. Will retry authentication on next heartbeat.' : ''}`);
+            this.logger.error(e);
+        }
     }
 
     getRecentlyPlayed = async (options: RecentlyPlayedOptions = {}): Promise<PlayObject[]> => {
@@ -205,7 +226,12 @@ export default abstract class AbstractSource {
     protected processBacklog = async () => {
         if (this.canBacklog) {
             this.logger.info('Discovering backlogged tracks from recently played API...');
-            const backlogPlays = await this.getBackloggedPlays();
+            let backlogPlays: PlayObject[] = [];
+            try {
+                backlogPlays = await this.getBackloggedPlays();
+            } catch (e) {
+                throw new ErrorWithCause('Error occurred while fetching backlogged plays', {cause: e});
+            }
             const discovered = this.discover(backlogPlays);
 
             const {
@@ -250,19 +276,35 @@ export default abstract class AbstractSource {
             return;
         }
         if(this.authGated()) {
-            if(this.requiresAuthInteraction) {
+            if(this.canTryAuth()) {
+                await this.testAuth();
+                if(!this.authed) {
+                    this.notify( {title: `${this.identifier} - Polling Error`, message: 'Cannot start polling because source does not have authentication.', priority: 'error'});
+                    this.logger.error('Cannot start polling because source is not authenticated correctly.');
+                }
+            } else if(this.requiresAuthInteraction) {
                 this.notify({title: `${this.identifier} - Polling Error`, message: 'Cannot start polling because user interaction is required for authentication', priority: 'error'});
                 this.logger.error('Cannot start polling because user interaction is required for authentication');
             } else {
-                this.notify( {title: `${this.identifier} - Polling Error`, message: 'Cannot start polling because source does not have authentication.', priority: 'error'});
-                this.logger.error('Cannot start polling because source is not authenticated correctly.');
+                this.notify( {title: `${this.identifier} - Polling Error`, message: 'Cannot start polling because source authentication previously failed and must be reauthenticated.', priority: 'error'});
+                this.logger.error('Cannot start polling because source authentication previously failed and must be reauthenticated.');
             }
             return;
         }
         if(!(await this.onPollPostAuthCheck())) {
             return;
         }
-        await this.processBacklog();
+        try {
+            await this.processBacklog();
+        } catch (e) {
+            this.logger.error(new ErrorWithCause('Cannot start polling because error occurred while processing backlog', {cause: e}));
+            this.notify({
+                title: `${this.identifier} - Polling Error`,
+                message: 'Cannot start polling because error occurred while processing backlog.',
+                priority: 'error'
+            });
+            return;
+        }
 
         await this.startPolling();
     }
@@ -347,15 +389,18 @@ export default abstract class AbstractSource {
         let checkCount = 0;
         let checksOverThreshold = 0;
 
-        const {interval = DEFAULT_POLLING_INTERVAL, checkActiveFor = 300, maxInterval = DEFAULT_POLLING_MAX_INTERVAL} = this.config.data;
-        const maxBackoff = maxInterval - interval;
-        let sleepTime = interval;
+        const {checkActiveFor = 300, maxInterval = DEFAULT_POLLING_MAX_INTERVAL} = this.config.data;
 
         try {
             this.polling = true;
             while (!this.shouldStopPolling()) {
+                const pollFrom = dayjs();
                 this.logger.debug('Refreshing recently played');
                 const playObjs = await this.getRecentlyPlayed({formatted: true});
+
+                const interval = this.getInterval();
+                const maxBackoff = this.getMaxBackoff();
+                let sleepTime = interval;
 
                 let newDiscovered: PlayObject[] = [];
 
@@ -399,15 +444,14 @@ export default abstract class AbstractSource {
                         this.logger.debug(`Last activity was at ${this.lastActivityAt.format()} which is ${inactiveFor} outside of active polling period of (last activity + ${checkActiveFor} seconds). Will check again in max interval ${maxInterval} seconds.`);
                     }
                 } else {
-                    sleepTime = interval;
-                    this.logger.debug(`Last activity was at ${this.lastActivityAt.format()}. Will check again in interval ${sleepTime} seconds.`);
+                    this.logger.debug(`Last activity was at ${this.lastActivityAt.format()}. Will check again in interval ${formatNumber(sleepTime)} seconds.`);
                 }
 
-                this.logger.verbose(`Sleeping for ${sleepTime}s`);
-                const wakeUpAt = dayjs().add(sleepTime, 'seconds');
+                this.logger.verbose(`Sleeping for ${formatNumber(sleepTime)}s`);
+                const wakeUpAt = pollFrom.add(sleepTime, 'seconds');
                 while(!this.shouldStopPolling() && dayjs().isBefore(wakeUpAt)) {
-                    // check for polling status every 2 seconds and wait till wake up time
-                    await sleep(2000);
+                    // check for polling status every half second and wait till wake up time
+                    await sleep(500);
                 }
 
             }
@@ -424,6 +468,16 @@ export default abstract class AbstractSource {
         }
     }
 
+    protected getInterval() {
+        const {interval = DEFAULT_POLLING_INTERVAL} = this.config.data;
+        return interval;
+    }
+
+    protected getMaxBackoff() {
+        const {interval = DEFAULT_POLLING_INTERVAL, maxInterval = DEFAULT_POLLING_MAX_INTERVAL} = this.config.data;
+        return maxInterval - interval;
+    }
+
     public emitEvent = (eventName: string, payload: object = {}) => {
         this.emitter.emit(eventName, {
             type: this.type,
@@ -431,5 +485,9 @@ export default abstract class AbstractSource {
             from: 'source',
             data: payload,
         });
+    }
+
+    public async destroy() {
+        this.emitter.removeAllListeners();
     }
 }

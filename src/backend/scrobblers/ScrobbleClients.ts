@@ -333,11 +333,12 @@ ${sources.join('\n')}`);
                 this.logger.info(`${type} (${name}) client initialized`);
             }
         }
-        if(newClient.requiresAuth && !newClient.authed) {
+        if(newClient.authGated()) {
             this.logger.debug(`Checking ${type} (${name}) client auth...`);
             let success;
             try {
-                success = await newClient.testAuth();
+                await newClient.testAuth();
+                success = newClient.authed;
             } catch (e) {
                 success = false;
             }
