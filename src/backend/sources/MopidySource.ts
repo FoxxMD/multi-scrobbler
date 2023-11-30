@@ -133,7 +133,7 @@ export class MopidySource extends MemorySource {
             performers = []
         } = obj;
 
-        let artists = artistsVal === null ? [] : artistsVal;
+        let artists: models.Artist[] = artistsVal === null ? [] : artistsVal;
         let album: models.Album = albumVal === null ? {} as models.Album : albumVal;
         if (this.albumBlacklist.length > 0 && album.name !== undefined && this.albumBlacklist.some(x => album.name.toLocaleLowerCase().includes(x))) {
             album = {} as models.Album;
@@ -145,7 +145,7 @@ export class MopidySource extends MemorySource {
             artists: albumArtists = []
         } = album as models.Album;
 
-        let actualAlbumArtists = [];
+        let actualAlbumArtists: models.Artist[] = [];
         if ((artists.length === 0 || artists.every(x => x.name.toLocaleLowerCase().includes('various'))) && albumArtists.length > 0) {
             artists = albumArtists;
         } else {
@@ -162,7 +162,7 @@ export class MopidySource extends MemorySource {
             data: {
                 track: name,
                 album: albumName,
-                albumArtists: actualAlbumArtists,
+                albumArtists: actualAlbumArtists.length > 0 ? actualAlbumArtists.map(x => x.name) : [],
                 artists: artists.length > 0 ? artists.map(x => x.name) : [],
                 duration: Math.round(length / 1000),
                 playDate: dayjs()
