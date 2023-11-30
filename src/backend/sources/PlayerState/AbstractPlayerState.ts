@@ -31,7 +31,7 @@ export abstract class AbstractPlayerState {
     playFirstSeenAt?: Dayjs
     playLastUpdatedAt?: Dayjs
     currentListenRange?: ListenRange
-    listenRanges: ListenRange[]
+    listenRanges: ListenRange[] = [];
     createdAt: Dayjs = dayjs();
     stateLastUpdatedAt: Dayjs = dayjs();
 
