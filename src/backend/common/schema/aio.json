@@ -1335,8 +1335,15 @@
         "LogOptions": {
             "properties": {
                 "console": {
-                    "$ref": "#/definitions/LogLevel",
                     "description": "Specify the minimum log level streamed to the console (or docker container)",
+                    "enum": [
+                        "debug",
+                        "error",
+                        false,
+                        "info",
+                        "verbose",
+                        "warn"
+                    ],
                     "title": "console"
                 },
                 "file": {
