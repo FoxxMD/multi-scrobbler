@@ -678,6 +678,10 @@ In `webscrobbler.json`
 
 Note: `http://localhost:9078/api/webscrobbler` is matched with the first source that _that does not have a slug defined._
 
+##### Connectors Black/Whitelist
+
+MS can be configured to only scrobble, or NOT scrobble, from some WS connectors. Use the name of the website from the [supported websites](https://web-scrobbler.com/) or from the **Connectors** tab in the extension. Note that this **only** affects MS's behavior and does not affect the general connector behavior you have configured within the WebScrobbler extension.
+
 ### ENV-Based
 
 | Environmental Variable | Required? | Default | Description                                                              |
