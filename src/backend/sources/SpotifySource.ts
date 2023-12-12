@@ -295,7 +295,7 @@ export default class SpotifySource extends MemorySource {
             const state = await this.getCurrentPlaybackState();
             if(state.playerState !== undefined) {
                 if(state.device.is_private_session) {
-                    this.logger.debug(`Will not track play on Device ${state.device.name} because it is a private session: ${buildTrackString(state.playerState.play)}`);
+                    this.logger.debug(`Will not track play on Device ${state.device.name} because it is in a private session.`);
                 } else {
                     plays.push(state.playerState);
                 }
