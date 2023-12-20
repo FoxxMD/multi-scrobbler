@@ -80,7 +80,7 @@ const configDir = process.env.CONFIG_DIR || path.resolve(projectDir, `./config`)
         initServer(logger, output);
 
         if(process.env.IS_LOCAL === 'true') {
-            logger.info('multi-scrobbler can be run as a background service! See: https://github.com/FoxxMD/multi-scrobbler/blob/develop/docs/service.md');
+            logger.info('multi-scrobbler can be run as a background service! See: https://foxxmd.github.io/multi-scrobbler/docs/installation/service');
         }
 
         if(appConfigFail !== undefined) {
