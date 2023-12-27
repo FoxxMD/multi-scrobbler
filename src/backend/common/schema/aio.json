@@ -1,6 +1,145 @@
 {
     "$schema": "http://json-schema.org/draft-07/schema#",
     "definitions": {
+        "AppleMusicAIOSourceConfig": {
+            "properties": {
+                "clients": {
+                    "description": "Restrict scrobbling tracks played from this source to Clients with names from this list. If list is empty is not present Source scrobbles to all configured Clients.",
+                    "examples": [
+                        [
+                            "MyMalojaConfigName",
+                            "MyLastFMConfigName"
+                        ]
+                    ],
+                    "items": {
+                        "type": "string"
+                    },
+                    "title": "clients",
+                    "type": "array"
+                },
+                "data": {
+                    "$ref": "#/definitions/AppleMusicData",
+                    "title": "data"
+                },
+                "enable": {
+                    "default": true,
+                    "description": "Should MS use this client/source? Defaults to true",
+                    "examples": [
+                        true
+                    ],
+                    "title": "enable",
+                    "type": "boolean"
+                },
+                "name": {
+                    "description": "Unique identifier for this source.",
+                    "title": "name",
+                    "type": "string"
+                },
+                "options": {
+                    "$ref": "#/definitions/CommonSourceOptions",
+                    "title": "options"
+                },
+                "type": {
+                    "enum": [
+                        "apple"
+                    ],
+                    "title": "type",
+                    "type": "string"
+                }
+            },
+            "required": [
+                "data",
+                "type"
+            ],
+            "title": "AppleMusicAIOSourceConfig",
+            "type": "object"
+        },
+        "AppleMusicData": {
+            "properties": {
+                "endpoint": {
+                    "description": "URL to another MS instance running the apple music source *server*",
+                    "title": "endpoint",
+                    "type": "string"
+                },
+                "interval": {
+                    "default": 10,
+                    "description": "How long to wait before polling the source API for new tracks (in seconds)",
+                    "examples": [
+                        10
+                    ],
+                    "title": "interval",
+                    "type": "number"
+                },
+                "key": {
+                    "description": "Contents of MusicKit private key or a path to the key file\n\nhttps://help.apple.com/developer-account/#/devcdfbb56a3",
+                    "title": "key",
+                    "type": "string"
+                },
+                "keyId": {
+                    "description": "Key identifier (kid) from Developer account",
+                    "title": "keyId",
+                    "type": "string"
+                },
+                "maxInterval": {
+                    "default": 30,
+                    "description": "When there has been no new activity from the Source API multi-scrobbler will gradually increase the wait time between polling up to this value (in seconds)",
+                    "examples": [
+                        30
+                    ],
+                    "title": "maxInterval",
+                    "type": "number"
+                },
+                "maxPollRetries": {
+                    "default": 5,
+                    "description": "default # of automatic polling restarts on error",
+                    "examples": [
+                        5
+                    ],
+                    "title": "maxPollRetries",
+                    "type": "number"
+                },
+                "maxRequestRetries": {
+                    "default": 1,
+                    "description": "default # of http request retries a source can make before error is thrown",
+                    "examples": [
+                        1
+                    ],
+                    "title": "maxRequestRetries",
+                    "type": "number"
+                },
+                "options": {
+                    "$ref": "#/definitions/Record<string,any>",
+                    "title": "options"
+                },
+                "retryMultiplier": {
+                    "default": 1.5,
+                    "description": "default retry delay multiplier (retry attempt * multiplier = # of seconds to wait before retrying)",
+                    "examples": [
+                        1.5
+                    ],
+                    "title": "retryMultiplier",
+                    "type": "number"
+                },
+                "scrobbleThresholds": {
+                    "$ref": "#/definitions/ScrobbleThresholds",
+                    "description": "Set thresholds for when multi-scrobbler should consider a tracked play to be \"scrobbable\". If both duration and percent are defined then if either condition is met the track is scrobbled.",
+                    "title": "scrobbleThresholds"
+                },
+                "teamId": {
+                    "description": "Team Id (tid) from Developer account",
+                    "title": "teamId",
+                    "type": "string"
+                }
+            },
+            "required": [
+                "endpoint",
+                "key",
+                "keyId",
+                "teamId"
+            ],
+            "title": "AppleMusicData",
+            "type": "object"
+        },
         "ClientAIOConfig": {
             "anyOf": [
                 {
@@ -2183,6 +2322,9 @@
                 },
                 {
                     "$ref": "#/definitions/WebScrobblerSourceAIOConfig"
+                },
+                {
+                    "$ref": "#/definitions/AppleMusicAIOSourceConfig"
                 }
             ],
             "title": "SourceAIOConfig"

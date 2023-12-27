@@ -11,6 +11,7 @@ import { setupApi } from "./api";
 import { getAddress, mergeArr, parseBool } from "../utils";
 import {stripIndents} from "common-tags";
 import {ErrorWithCause} from "pony-cause";
+import {projectDir} from "../common";
 
 const buildDir = path.join(process.cwd() + "/build");
 

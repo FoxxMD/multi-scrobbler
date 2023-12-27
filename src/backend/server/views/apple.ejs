@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset=utf-8>
+    <link rel="shortcut icon" href="#" />
+    <title>Apple MusicKit Example</title>
+</head>
+<body>
+<button id="login-btn">Login to Apple Music</button>
+<script src="https://js-cdn.music.apple.com/musickit/v1/musickit.js"></script>
+</body>
+</html>
+<script>
+    // listen for MusicKit Loaded callback
+    document.addEventListener('musickitloaded', () => {
+        // MusicKit global is now defined
+        /***
+         Configure our MusicKit instance with the signed token from server, returns a configured MusicKit Instance
+         https://developer.apple.com/documentation/musickitjs/musickit/musickitinstance
+         ***/
+        const music = MusicKit.configure({
+            developerToken: '<%= token %>',
+            app: {
+                name: 'AppleMusicKitExample',
+                build: '1978.4.1'
+            }
+        });
+
+        document.getElementById('login-btn').addEventListener('click', () => {
+            /***
+             Returns a promise which resolves with a music-user-token when a user successfully authenticates and authorizes
+             https://developer.apple.com/documentation/musickitjs/musickit/musickitinstance/2992701-authorize
+             ***/
+            music.authorize().then(musicUserToken => {
+                console.log(`Authorized, music-user-token: ${musicUserToken}`);
+            });
+        });
+
+        // expose our instance globally for testing
+        window.music = music;
+    });
+</script>

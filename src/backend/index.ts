@@ -22,6 +22,7 @@ import {initServer} from "./server/index";
 import {SimpleIntervalJob, ToadScheduler} from "toad-scheduler";
 import {createHeartbeatSourcesTask} from "./tasks/heartbeatSources";
 import {createHeartbeatClientsTask} from "./tasks/heartbeatClients";
+import {AppleSource} from "./sources/AppleSource";
 
 
 dayjs.extend(utc)
@@ -145,6 +146,12 @@ const configDir = process.env.CONFIG_DIR || path.resolve(projectDir, `./config`)
         if (anyNotReady) {
             logger.info(`Some sources are not ready, open the dashboard to continue`);
         }
+
+        // TODO remove after using for testing
+        //
+        // do something with the authorized apple source api client
+        //const apl = scrobbleSources.getByName('aap') as AppleSource;
+        //const recentPlays = await apl.apiClient.getRecentlyPlayed(20, 0, "songs");
 
         scheduler.addSimpleIntervalJob(new SimpleIntervalJob({
             minutes: 20,

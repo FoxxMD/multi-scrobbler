@@ -38,6 +38,8 @@ import { KodiData, KodiSourceConfig } from "../common/infrastructure/config/sour
 import { WildcardEmitter } from "../common/WildcardEmitter";
 import {WebScrobblerSource} from "./WebScrobblerSource";
 import {WebScrobblerSourceConfig} from "../common/infrastructure/config/source/webscrobbler";
+import {AppleSource} from "./AppleSource";
+import {AppleMusicSourceConfig} from "../common/infrastructure/config/source/apple";
 
 type groupedNamedConfigs = {[key: string]: ParsedConfig[]};
 
@@ -459,6 +461,9 @@ export default class ScrobbleSources {
         this.logger.debug(`(${name}) Constructing ${type} source`);
         let newSource: AbstractSource;
         switch (type) {
+            case 'apple':
+                newSource = new AppleSource(name, compositeConfig as AppleMusicSourceConfig, internal, this.emitter);
+                break;
             case 'spotify':
                 newSource = new SpotifySource(name, compositeConfig as SpotifySourceConfig, internal, this.emitter);
                 break;

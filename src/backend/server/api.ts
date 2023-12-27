@@ -29,6 +29,9 @@ import {sortByNewestPlayDate} from "../utils";
 import bodyParser from "body-parser";
 import {setupWebscrobblerRoutes} from "./webscrobblerRoutes";
 import {FixedSizeList} from 'fixed-size-list';
+import {AppleSource} from "../sources/AppleSource";
+import path from "path";
+import {projectDir} from "../common";
 
 const maxBufferSize = 300;
 const output: {
@@ -407,6 +410,16 @@ export const setupApi = (app: ExpressWithAsync, logger: Logger, initialLogOutput
 
         return res.status((clientsReady && sourcesReady) ? 200 : 500).json({messages: sourceMessages.concat(clientMessages)});
     });
+
+    // TODO remove and refactor to use CRA client
+    // *******
+    app.set('views', path.resolve(projectDir, 'src/backend/server/views'));
+    app.set('view engine', 'ejs');
+    app.getAsync('/api/apple', async function(req, res)  {
+        const apl = scrobbleSources.getByType('apple') as AppleSource[];
+        return res.render('apple', {token: apl[0].generateDeveloperToken()});
+    });
+    // *******
 
     app.useAsync('/api/*', async function (req, res) {
         const remote = req.connection.remoteAddress;
