@@ -26,6 +26,7 @@ import EventEmitter from "events";
 import normalizeUrl from "normalize-url";
 import {UpstreamError} from "../common/errors/UpstreamError";
 import {ar} from "@faker-js/faker";
+import {ErrorWithCause} from "pony-cause";
 
 const feat = ["ft.", "ft", "feat.", "feat", "featuring", "Ft.", "Ft", "Feat.", "Feat", "Featuring"];
 
@@ -199,8 +200,7 @@ export default class MalojaScrobbler extends AbstractScrobbleClient {
             }
             return true;
         } catch (e) {
-            this.logger.error('Communication test failed');
-            this.logger.error(e);
+            this.logger.error(new ErrorWithCause('Communication test failed', {cause: e}));
             return false;
         }
     }
@@ -246,7 +246,13 @@ export default class MalojaScrobbler extends AbstractScrobbleClient {
         // just checking that we can get a connection
         // @ts-expect-error TS(2322): Type 'number' is not assignable to type 'boolean'.
         this.initialized = INITIALIZING;
-        this.initialized = await this.testConnection();
+        const result = await this.testConnection();
+        this.initialized = result;
+        if(result) {
+            this.logger.info('Initialized');
+        } else {
+            this.logger.warn('Could not initialize');
+        }
         return this.initialized;
     }
 

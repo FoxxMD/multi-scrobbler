@@ -98,6 +98,11 @@ const configDir = process.env.CONFIG_DIR || path.resolve(projectDir, `./config`)
         await scrobbleClients.buildClientsFromConfig(notifiers);
         if (scrobbleClients.clients.length === 0) {
             logger.warn('No scrobble clients were configured!')
+        } else {
+            logger.info('Starting scrobble clients...');
+        }
+        for(const client of scrobbleClients.clients) {
+            await client.initScrobbleMonitoring();
         }
 
         const scrobbleSources = root.get('sources');//new ScrobbleSources(localUrl, configDir);
@@ -135,11 +140,6 @@ const configDir = process.env.CONFIG_DIR || path.resolve(projectDir, `./config`)
                     if (source.poll !== undefined) {
                         source.poll();
                     }
-            }
-        }
-        for(const client of scrobbleClients.clients) {
-            if((await client.isReady())) {
-                client.initScrobbleMonitoring();
             }
         }
         if (anyNotReady) {

@@ -39,7 +39,14 @@ export default class LastfmScrobbler extends AbstractScrobbleClient {
     initialize = async () => {
         // @ts-expect-error TS(2322): Type 'number' is not assignable to type 'boolean'.
         this.initialized = INITIALIZING;
-        this.initialized = await this.api.initialize();
+        const result = await this.api.initialize();
+        this.initialized = result;
+        if(result) {
+            this.logger.info('Initialized');
+        } else {
+            this.logger.warn('Could not initialize');
+        }
+
         return this.initialized;
     }
 

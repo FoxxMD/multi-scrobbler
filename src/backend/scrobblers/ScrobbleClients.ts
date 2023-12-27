@@ -325,29 +325,7 @@ ${sources.join('\n')}`);
             // really shouldn't get here!
             throw new Error(`Client of type ${type} was not recognized??`);
         }
-        if(newClient.initialized === false) {
-            this.logger.debug(`Attempting ${type} (${name}) initialization...`);
-            if ((await newClient.initialize()) === false) {
-                this.logger.error(`${type} (${name}) client failed to initialize. Client needs to be successfully initialized before scrobbling.`);
-            } else {
-                this.logger.info(`${type} (${name}) client initialized`);
-            }
-        }
-        if(newClient.authGated()) {
-            this.logger.debug(`Checking ${type} (${name}) client auth...`);
-            let success;
-            try {
-                await newClient.testAuth();
-                success = newClient.authed;
-            } catch (e) {
-                success = false;
-            }
-            if(!success) {
-                this.logger.warn(`${type} (${name}) client auth failed.`);
-            } else {
-                this.logger.info(`${type} (${name}) client auth OK`);
-            }
-        }
+        newClient.logger.info('Client Added');
         this.clients.push(newClient);
     }
 

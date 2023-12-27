@@ -147,6 +147,7 @@ export default abstract class AbstractScrobbleClient implements Authenticatable 
     // default init function, should be overridden if init stage is required
     initialize = async () => {
         this.initialized = true;
+        this.logger.info('Initialized');
         return true;
     }
 
@@ -171,8 +172,7 @@ export default abstract class AbstractScrobbleClient implements Authenticatable 
             // only signal as auth failure if error was NOT either a node network error or a non-showstopping upstream error
             this.authFailure = !(hasNodeNetworkException(e) || hasUpstreamError(e, false));
             this.authed = false;
-            this.logger.error(`Authentication test failed!${this.authFailure === false ? ' Due to a network issue. Will retry authentication on next heartbeat.' : ''}`);
-            this.logger.error(e);
+            this.logger.error(new ErrorWithCause(`Authentication test failed!${this.authFailure === false ? ' Due to a network issue. Will retry authentication on next heartbeat.' : ''}`, {cause: e}));
         }
     }
 
@@ -464,7 +464,10 @@ ${closestMatch.breakdowns.join('\n')}`);
             return;
         }
 
-        await this.startScrobbling();
+        this.startScrobbling().catch((e) => {
+            throw e;
+        });
+        return;
     }
 
     startScrobbling = async () => {
