@@ -465,7 +465,7 @@ ${closestMatch.breakdowns.join('\n')}`);
         }
 
         this.startScrobbling().catch((e) => {
-            throw e;
+            // do nothing, should have already been caught and logged
         });
         return;
     }

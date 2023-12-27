@@ -1,4 +1,4 @@
-import React, {PropsWithChildren} from 'react';
+import React, {PropsWithChildren, ReactElement} from 'react';
 import SkeletonTitle from "../skeleton/SkeletonTitle";
 import SkeletonParagraph from "../skeleton/SkeletonParagraph";
 import StatusIndicator, {StatusType} from "../StatusIndicator";
@@ -8,6 +8,7 @@ export interface StatusCardSkeletonData {
     header?: string
     title?: string
     subtitle?: string
+    subtitleRight?: string | ReactElement
     status?: string
     statusType?: StatusType
 }
@@ -20,6 +21,7 @@ const StatusCardSkeleton = (props: PropsWithChildren<StatusCardSkeletonData>) =>
         statusType,
         title,
         subtitle,
+        subtitleRight,
         children
     } = props || {};
 
@@ -28,13 +30,16 @@ const StatusCardSkeleton = (props: PropsWithChildren<StatusCardSkeletonData>) =>
         <div className="shadow-md rounded bg-gray-500">
             <div className="p-3 bg-gray-700">
                 <SkeletonTitle show={showLoading}/>
-                <div className={`flex ${showLoading ? 'hidden' :''}`}>
+                <div className={`flex ${showLoading ? 'hidden' : ''}`}>
                     <div className="flex-auto text-left">
                         {header ? <div className="font-semibold">{header}</div> : null}
                         {title ? <div className="font-semibold">{title}</div> : null}
                         {subtitle ? <div className="text-sm">{subtitle}</div> : null}
                     </div>
-                    <div className="flex items-center text-right">{status}<StatusIndicator type={statusType}/></div>
+                    <div className="text-right">
+                        <div className="flex items-center text-right">{status}<StatusIndicator type={statusType}/></div>
+                        {subtitleRight ? <div className="text-sm">{subtitleRight}</div> : null}
+                    </div>
                 </div>
             </div>
             <div className="p-3">
