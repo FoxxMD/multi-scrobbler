@@ -15,6 +15,7 @@ import {
     parseTrackCredits,
     uniqueNormalizedStrArr
 } from "../../utils/StringUtils";
+import {UpstreamError} from "../errors/UpstreamError";
 
 
 export interface ArtistMBIDMapping {
@@ -137,7 +138,40 @@ export class ListenbrainzApiClient extends AbstractApiClient {
         } catch (e) {
             const {
                 message,
+                err,
+                status,
+                response: {
+                    body = undefined,
+                    text = undefined,
+                } = {}
             } = e;
+            // TODO check err for network exception
+            if(status !== undefined) {
+                const msgParts = [`(HTTP Status ${status})`];
+                // if the response is 400 then its likely there was an issue with the data we sent rather than an error with the service
+                let showStopper = status !== 400;
+                if(body !== undefined) {
+                    if(typeof body === 'object') {
+                        if('code' in body) {
+                            msgParts.push(`Code ${body.code}`);
+                        }
+                        if('error' in body) {
+                            msgParts.push(`Error => ${body.error}`);
+                        }
+                        if('message' in body) {
+                            msgParts.push(`Message => ${body.error}`);
+                        }
+                        // if('track_metadata' in body) {
+                        //     msgParts.push(`Track Metadata => ${JSON.stringify(body.track_metadata)}`);
+                        // }
+                    } else if(typeof body === 'string') {
+                        msgParts.push(`Response => ${body}`);
+                    }
+                } else if (text !== undefined) {
+                    msgParts.push(`Response => ${text}`);
+                }
+                throw new UpstreamError(`Listenbrainz API Request Failed => ${msgParts.join(' | ')}`, {cause: e, showStopper});
+            }
             throw e;
         }
     }

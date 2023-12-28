@@ -108,17 +108,13 @@ export default class ListenbrainzScrobbler extends AbstractScrobbleClient {
             //await sleep(1000);
             return playObj;
         } catch (e) {
-            let message = e.message;
-            if(e.response !== undefined) {
-                if(e.response.body !== undefined) {
-                    message = e.response.body.messsage;
-                } else if(e.response.text !== undefined) {
-                    message = e.response.text;
-                }
+            await this.notifier.notify({title: `Client - ${capitalize(this.type)} - ${this.name} - Scrobble Error`, message: `Failed to scrobble => ${buildTrackString(playObj)} | Error: ${e.message}`, priority: 'error'});
+            this.logger.error(`Failed to scrobble => ${e.message}`, {payload: rawPayload});
+            if(e instanceof UpstreamError) {
+                throw e;
+            } else {
+                throw new UpstreamError(`Error occurred while making Listenbrainz API request: ${e.message}`, {cause: e, showStopper: true});
             }
-            await this.notifier.notify({title: `Client - ${capitalize(this.type)} - ${this.name} - Scrobble Error`, message: `Failed to scrobble => ${buildTrackString(playObj)} | Error: ${message}`, priority: 'error'});
-            this.logger.error(`Failed to scrobble => ${message}`, {payload: rawPayload});
-            throw new UpstreamError(`Error received from Listenbrainz API: ${message}`, {cause: e, showStopper: true});
         } finally {
             this.logger.debug(`Raw Payload:`, {rawPayload});
         }
