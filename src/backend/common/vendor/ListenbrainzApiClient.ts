@@ -283,7 +283,7 @@ export class ListenbrainzApiClient extends AbstractApiClient {
                 additional_info: {
                     duration: play.data.duration !== undefined ? Math.round(duration) : undefined,
                     track_mbid: brainz.track,
-                    artist_mbids: brainz.artist !== undefined ? [brainz.artist] : undefined,
+                    artist_mbids: brainz.artist,
                     release_mbid: brainz.album,
                     release_group_mbid: brainz.releaseGroup
                 }

@@ -66,7 +66,7 @@ export interface TrackData {
 
     meta?: {
         brainz?: {
-            artist?: string
+            artist?: string[]
             albumArtist?: string
             album?: string
             track?: string

@@ -72,7 +72,7 @@ export default class LastfmApiClient extends AbstractApiClient {
                 meta: {
                     brainz: {
                         album: albumMbid === '' ? undefined : albumMbid,
-                        artist: artistMbid === '' ? undefined : artistMbid,
+                        artist: artistMbid === '' ? undefined : artistMbid.split(','),
                         track: mbid === '' ? undefined : mbid
                     }
                 }

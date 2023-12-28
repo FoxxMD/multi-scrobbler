@@ -158,7 +158,7 @@ export default class JellyfinSource extends MemorySource {
                 playDate,
                 meta: {
                     brainz: {
-                        artist: Provider_musicbrainzartist,
+                        artist: Provider_musicbrainzartist !== undefined ? Provider_musicbrainzartist.split(';') : undefined,
                         album: Provider_musicbrainzalbum,
                         albumArtist: Provider_musicbrainzalbumartist,
                         track: Provider_musicbrainztrack,
