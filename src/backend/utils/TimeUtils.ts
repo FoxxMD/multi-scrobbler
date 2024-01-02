@@ -31,10 +31,10 @@ export const temporalPlayComparisonSummary = (data: TemporalPlayComparison, exis
         parts.push(`Play Diff: ${formatNumber(data.date.diff, {toFixed: 0})}s (Needed <${data.date.threshold}s)`)
     }
     if (data.date.fuzzyDurationDiff !== undefined) {
-        parts.push(`Fuzzy Duration Diff: ${formatNumber(data.date.fuzzyDurationDiff, {toFixed: 0})}s (Needed <10s)`);
+        parts.push(`Fuzzy Duration Diff: ${formatNumber(data.date.fuzzyDurationDiff, {toFixed: 0})}s (Needed <= 10s)`);
     }
     if (data.date.fuzzyListenedDiff !== undefined) {
-        parts.push(`Fuzzy Listened Diff: ${formatNumber(data.date.fuzzyDurationDiff, {toFixed: 0})}s (Needed <10s)`);
+        parts.push(`Fuzzy Listened Diff: ${formatNumber(data.date.fuzzyDurationDiff, {toFixed: 0})}s (Needed <= 10s)`);
     }
     if (data.range !== undefined) {
         if (data.range === false) {
@@ -129,7 +129,7 @@ export const comparePlayTemporally = (existingPlay: PlayObject, candidatePlay: P
     // so check if the duration matches the diff between the two play dates
     if (result.match === TA_NONE && referenceDuration !== undefined) {
         result.date.fuzzyDurationDiff = Math.abs(scrobblePlayDiff - referenceDuration);
-        if (result.date.fuzzyDurationDiff < 10) { // TODO use finer comparison for this?
+        if (result.date.fuzzyDurationDiff <= 10) { // TODO use finer comparison for this?
             result.match = TA_FUZZY;
         }
     }
@@ -138,7 +138,7 @@ export const comparePlayTemporally = (existingPlay: PlayObject, candidatePlay: P
     // so check if there is a close match between candidate play date and source + listened for
     if (result.match === TA_NONE && referenceListenedFor !== undefined && fuzzyDuration) {
         result.date.fuzzyListenedDiff = Math.abs(scrobblePlayDiff - referenceListenedFor);
-        if (result.date.fuzzyListenedDiff < 10) { // TODO use finer comparison for this?
+        if (result.date.fuzzyListenedDiff <= 10) { // TODO use finer comparison for this?
             result.match = TA_FUZZY
         }
     }

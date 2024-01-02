@@ -14,11 +14,14 @@ import {sleep} from "../../utils";
 import {MockNetworkError, withRequestInterception} from "../utils/networking";
 
 const firstPlayDate = dayjs().subtract(1, 'hour');
+const olderFirstPlayDate = dayjs().subtract(4, 'hour');
 
 const withDurPlays = asPlays(withDuration);
 const mixedDurPlays = asPlays(mixedDuration);
 const normalizedWithDur = normalizePlays(withDurPlays, {initialDate: firstPlayDate});
 const normalizedWithMixedDur = normalizePlays(mixedDurPlays, {initialDate: firstPlayDate});
+
+const normalizedWithMixedDurOlder = normalizePlays(mixedDurPlays, {initialDate: olderFirstPlayDate});
 
 const testScrobbler = new TestScrobbler();
 testScrobbler.verboseOptions = {
@@ -237,7 +240,7 @@ describe('Detects duplicate and unique scrobbles from client recent history', fu
             assert.isTrue(await testScrobbler.alreadyScrobbled(diffPlay));
         });
 
-        it('Is detected as duplicate when play date is off by less than 10 seconds (high granularity source)', async function () {
+        it('Is detected as duplicate when play date is off by 10 seconds or less (high granularity source)', async function () {
 
             testScrobbler.recentScrobbles = normalizedWithMixedDur;
 
@@ -249,6 +252,17 @@ describe('Detects duplicate and unique scrobbles from client recent history', fu
 
             assert.isTrue(await testScrobbler.alreadyScrobbled(timeOffPos));
             assert.isTrue(await testScrobbler.alreadyScrobbled(timeOffNeg));
+
+            // 10 seconds fuzzy diff inclusive
+            const son = normalizedWithMixedDurOlder.find(x => x.data.track === 'Sonora')
+            son.data.playDate = dayjs().subtract(1, 'hour').set('minute', 26).set('second', 20);
+            son.data.duration = 267;
+            son.data.listenedFor = undefined;
+            testScrobbler.recentScrobbles = normalizedWithMixedDurOlder.concat(son);
+
+            const offSon = clone(son);
+            offSon.data.playDate = dayjs().subtract(1, 'hour').set('minute', 30).set('second', 37);
+            assert.isTrue(await testScrobbler.alreadyScrobbled(offSon));
         });
 
         it('Is detected as duplicate when play date is off by less than 60 seconds (low granularity source)', async function () {
