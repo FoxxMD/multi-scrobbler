@@ -167,23 +167,55 @@ export const compareScrobbleArtists = (existing: PlayObject, candidate: PlayObje
     return compareNormalizedStrings(existingArtists.reduce((acc, curr) => `${acc} ${curr}`, ''), candidateArtists.reduce((acc, curr) => `${acc} ${curr}`, '')).highScore;
 }
 
+/**
+ * Compare the sameness of two strings after making them token-order independent
+ *
+ * Transform two strings before comparing in order to have as little difference between them as possible:
+ *
+ * * First, normalize (lower case, remove extraneous whitespace, remove punctuation, make all characters standard ANSI) strings and split into tokens
+ * * Second, reorder tokens in the shorter list so that they mirror order of tokens in longer list as closely as possible
+ * * Finally, concat back to strings and compare with sameness strategies
+ *
+ * */
 export const compareNormalizedStrings = (existing: string, candidate: string): StringSamenessResult => {
-
-    const normalExisting = normalizeStr(existing, {keepSingleWhitespace: true});
-    const normalCandidate = normalizeStr(candidate, {keepSingleWhitespace: true});
 
     // there may be scenarios where a track differs in *ordering* of ancillary information between sources
     // EX My Track (feat. Art1, Art2)  -- My Track (feat. Art2 Art1)
-    // so instead of naively comparing the entire track string against the candidate we
-    // * first try to match up all white-space separated tokens
-    // * recombine with closest tokens in order
-    // * then check sameness
+
+    // first remove lower case, extraneous whitespace, punctuation, and replace non-ansi with ansi characters
+    const normalExisting = normalizeStr(existing, {keepSingleWhitespace: true});
+    const normalCandidate = normalizeStr(candidate, {keepSingleWhitespace: true});
+
+    // split by "token"
     const eTokens = normalExisting.split(' ');
     const cTokens = normalCandidate.split(' ');
 
-    const orderedCandidateTokens = eTokens.reduce((acc: { ordered: string[], remaining: string[] }, curr) => {
+
+    let longerTokens: string[],
+        shorterTokens: string[];
+
+    if (eTokens.length > cTokens.length) {
+        longerTokens = eTokens;
+        shorterTokens = cTokens;
+    } else {
+        longerTokens = cTokens;
+        shorterTokens = eTokens;
+    }
+
+    // we will use longest string (token list) as the reducer and order the shorter list to match it
+    // so we don't have to deal with undefined positions in the shorter list
+
+    const orderedCandidateTokens = longerTokens.reduce((acc: { ordered: string[], remaining: string[] }, curr) => {
+        // if we've run out of tokens in the shorter list just return
+        if (acc.remaining.length === 0) {
+            return acc;
+        }
+
+        // on each iteration of tokens in the long list
+        // we iterate through remaining tokens from the shorter list and find the token with the most sameness
+
         let highScore = 0;
-        let highIndex = undefined;
+        let highIndex = 0;
         let index = 0;
         for (const token of acc.remaining) {
             const result = stringSameness(curr, token);
@@ -194,18 +226,28 @@ export const compareNormalizedStrings = (existing: string, candidate: string): S
             index++;
         }
 
+        // then remove the most same token from the remaining short list tokens
         const splicedRemaining = [...acc.remaining];
         splicedRemaining.splice(highIndex, 1);
 
-        return {ordered: acc.ordered.concat(acc.remaining[highIndex]), remaining: splicedRemaining};
-    }, {ordered: [], remaining: cTokens});
+        return {
+            // finally add the most same token to the ordered short list
+            ordered: acc.ordered.concat(acc.remaining[highIndex]),
+            // and return the remaining short list tokens
+            remaining: splicedRemaining
+        };
+    }, {
+        // "ordered" is the result of ordering tokens in the shorter list to match longer token order
+        ordered: [],
+        // remaining is the initial shorter list
+        remaining: shorterTokens
+    });
 
-    const allOrderedCandidateTokens = orderedCandidateTokens.ordered.concat(orderedCandidateTokens.remaining);
-    const orderedCandidateString = allOrderedCandidateTokens.join(' ');
-
-    // since we have already "matched" up words by order we don't want to use cosine strat
+    // since we have already "matched" up tokens by order we don't want to use cosine strat
     // bc it only does comparisons between whole words in a sentence (instead of all letters in a string)
     // which makes it inaccurate for small-n sentences and typos
-
-    return stringSameness(normalExisting, orderedCandidateString, {transforms: [], strategies: [levenStrategy, diceStrategy]});
+    return stringSameness(longerTokens.join(' '), orderedCandidateTokens.ordered.join(' '), {
+        transforms: [],
+        strategies: [levenStrategy, diceStrategy]
+    })
 }

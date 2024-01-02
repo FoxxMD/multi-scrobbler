@@ -285,7 +285,6 @@ describe('Detects duplicate and unique scrobbles from client recent history', fu
 
             const sonDiffPlay = clone(son);
             sonDiffPlay.data.playDate = sonDiffPlay.data.playDate.subtract(son.data.duration + 1, 's');
-            sonDiffPlay.data.artists = [sonDiffPlay.data.artists[1]]
             assert.isTrue(await testScrobbler.alreadyScrobbled(sonDiffPlay));
         });
 

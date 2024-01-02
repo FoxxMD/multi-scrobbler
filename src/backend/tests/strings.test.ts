@@ -73,4 +73,25 @@ describe('String Comparisons', function () {
             assert.isAtMost( result.highScore, 99, `Comparing: '${test[0]}' | '${test[1]}'`);
         }
     });
+
+    it('should handle strings with different lengths', async function () {
+        const tests = [
+            ['The Amazing Bongo Hop', 'The Bongo Hop'],
+        ]
+
+        for(const test of tests) {
+            const result = compareNormalizedStrings(test[0], test[1]);
+            assert.isAtMost( result.highScore, 53, `Comparing: '${test[0]}' | '${test[1]}'`);
+        }
+    });
+
+    it('should be string parameter order invariant', async function () {
+        const longerString = 'Nidia Gongora TEST';
+        const shorterString = 'Nidia Gongora'
+
+        const result1 = compareNormalizedStrings(longerString, shorterString);
+        const result2 = compareNormalizedStrings(shorterString, longerString);
+
+        assert.equal( result1.highScore, result2.highScore, `Comparing: '${longerString}' | '${shorterString}'`);
+    });
 });
