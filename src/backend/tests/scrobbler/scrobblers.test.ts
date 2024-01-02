@@ -339,7 +339,7 @@ describe('Detects duplicate and unique scrobbles from client recent history', fu
 
                 testScrobbler.recentScrobbles = normalizedWithDur;
 
-                const timeEnd = clone(normalizedWithDur[normalizedWithMixedDur.length - 1]);
+                const timeEnd = clone(normalizedWithDur[normalizedWithMixedDur.length - 2]);
                 timeEnd.data.playDate = timeEnd.data.playDate.add(timeEnd.data.duration, 's');
 
                 assert.isTrue(await testScrobbler.alreadyScrobbled(timeEnd));

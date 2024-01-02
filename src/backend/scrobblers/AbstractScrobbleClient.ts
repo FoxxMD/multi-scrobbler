@@ -294,7 +294,7 @@ export default abstract class AbstractScrobbleClient implements Authenticatable 
         // return early if we don't care about checking existing
         if (false === this.checkExistingScrobbles) {
             if (this.verboseOptions.match.onNoMatch) {
-                this.logger.debug(`(Existing Check) Source: ${buildTrackString(playObj, scoreTrackOpts)} => No Match because existing scrobble check is FALSE`);
+                this.logger.debug(`${capitalize(playObj.meta.source ?? 'Source')}: ${buildTrackString(playObj, scoreTrackOpts)} => No Match because existing scrobble check is FALSE`, {leaf: ['Dupe Check']});
             }
             return undefined;
         }
@@ -325,7 +325,7 @@ export default abstract class AbstractScrobbleClient implements Authenticatable 
             // (either user doesnt want to check history or there is no history to check!)
             if (this.recentScrobbles.length === 0) {
                 if (this.verboseOptions.match.onNoMatch) {
-                    this.logger.debug(`(Existing Check) ${buildTrackString(playObj, scoreTrackOpts)} => No Match because no recent scrobbles returned from API`);
+                    this.logger.debug(`${buildTrackString(playObj, scoreTrackOpts)} => No Match because no recent scrobbles returned from API`, {leaf: ['Dupe Check']});
                 }
                 return undefined;
             }
@@ -410,10 +410,10 @@ export default abstract class AbstractScrobbleClient implements Authenticatable 
 
         if ((existingScrobble !== undefined && this.verboseOptions.match.onMatch) || (existingScrobble === undefined && this.verboseOptions.match.onNoMatch)) {
             const closestScrobble = `Closest Scrobble: ${buildTrackString(closestMatch.scrobble, scoreTrackOpts)} => ${closestMatch.confidence}`;
-            this.logger.debug(`(Existing Check) Source: ${buildTrackString(playObj, scoreTrackOpts)} => ${closestScrobble}`);
+            this.logger.debug(`${capitalize(playObj.meta.source ?? 'Source')}: ${buildTrackString(playObj, scoreTrackOpts)} => ${closestScrobble}`, {leaf: ['Dupe Check']});
             if (this.verboseOptions.match.confidenceBreakdown === true) {
                 this.logger.debug(`Breakdown:
-${closestMatch.breakdowns.join('\n')}`);
+${closestMatch.breakdowns.join('\n')}`, {leaf: ['Dupe Check']});
             }
         }
         return existingScrobble;

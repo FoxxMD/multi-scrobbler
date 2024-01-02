@@ -88,7 +88,7 @@ export const generatePlay = (data: ObjectPlayData = {}, meta: PlayMeta = {}): Pl
             ...data
         },
         meta: {
-            source: faker.word.noun(),
+            source: ['Spotify', 'Listenbrainz', 'Lastfm', 'Jellyfin', 'Plex'][faker.number.int({min: 0, max: 4})],
             ...meta,
         }
     }
