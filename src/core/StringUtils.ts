@@ -5,6 +5,7 @@ import relativeTime from "dayjs/plugin/relativeTime.js";
 import duration from "dayjs/plugin/duration.js";
 import timezone from "dayjs/plugin/timezone.js";
 import {AmbPlayObject, TrackStringOptions} from "./Atomic";
+import {str} from "ajv";
 
 dayjs.extend(utc)
 dayjs.extend(isBetween);
@@ -97,4 +98,32 @@ export const slice = (str: string, index: number, count: number, add?: string): 
 }
 export const capitalize = (str: any) => {
     return str.charAt(0).toUpperCase() + str.slice(1)
+}
+
+/**
+ * Split a string-ish variable by a list of deliminators and return the first actually split array or default to returning the string as the first element.
+ *
+ * Returns empty array, or user defined value, if variable is undefined / null / not a string / or an empty string.
+ * */
+export const splitByFirstFound = <T>(str: any, delims = [','], onNotAStringVal: T): string[] | T => {
+    if(str === undefined || str === null || typeof str !== 'string' || str.trim() === '') {
+        return onNotAStringVal;
+    }
+    for(const d of delims) {
+        const split = d.split(d);
+        if(split.length > 1) {
+            return split;
+        }
+    }
+    return [str];
+}
+
+/**
+ * Returns value if it is a non-empty string or returns default value
+ * */
+export const nonEmptyStringOrDefault = <T>(str: any, defaultVal: T = undefined): string | T => {
+    if (str === undefined || str === null || typeof str !== 'string' || str.trim() === '') {
+        return defaultVal;
+    }
+    return str;
 }

@@ -17,7 +17,8 @@ import { PlayerStateOptions } from "./PlayerState/AbstractPlayerState";
 import {Logger} from "@foxxmd/winston";
 import { JellyfinPlayerState } from "./PlayerState/JellyfinPlayerState";
 import { PlayObject } from "../../core/Atomic";
-import { buildTrackString, truncateStringToLength } from "../../core/StringUtils";
+import {buildTrackString, splitByFirstFound, truncateStringToLength} from "../../core/StringUtils";
+import {source} from "common-tags";
 
 const shortDeviceId = truncateStringToLength(10, '');
 
@@ -158,7 +159,7 @@ export default class JellyfinSource extends MemorySource {
                 playDate,
                 meta: {
                     brainz: {
-                        artist: Provider_musicbrainzartist !== undefined ? Provider_musicbrainzartist.split(';') : undefined,
+                        artist: splitByFirstFound<undefined>(Provider_musicbrainzartist, [';'], undefined),
                         album: Provider_musicbrainzalbum,
                         albumArtist: Provider_musicbrainzalbumartist,
                         track: Provider_musicbrainztrack,
