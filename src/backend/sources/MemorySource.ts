@@ -4,8 +4,6 @@ import {
     sortByOldestPlayDate,
     toProgressAwarePlayObject,
     getProgress,
-    playPassesScrobbleThreshold,
-    timePassesScrobbleThreshold,
     thresholdResultSummary,
     genGroupId,
     genGroupIdStr,
@@ -32,6 +30,7 @@ import {SimpleIntervalJob, Task, ToadScheduler} from "toad-scheduler";
 import {SourceConfig} from "../common/infrastructure/config/source/sources";
 import {EventEmitter} from "events";
 import objectHash from 'object-hash';
+import {timePassesScrobbleThreshold} from "../utils/TimeUtils";
 
 export default class MemorySource extends AbstractSource {
 

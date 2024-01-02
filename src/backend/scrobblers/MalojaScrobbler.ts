@@ -3,10 +3,7 @@ import request from 'superagent';
 import dayjs from 'dayjs';
 import compareVersions from 'compare-versions';
 import {
-    playObjDataMatch,
-    setIntersection,
     sleep,
-    sortByOldestPlayDate,
     parseRetryAfterSecsFromObj,
 
 } from "../utils";
@@ -25,9 +22,7 @@ import {buildTrackString, capitalize} from "../../core/StringUtils";
 import EventEmitter from "events";
 import normalizeUrl from "normalize-url";
 import {UpstreamError} from "../common/errors/UpstreamError";
-import {ar} from "@faker-js/faker";
 import {ErrorWithCause} from "pony-cause";
-import {isPlayTemporallyClose} from "../utils/TimeUtils";
 
 const feat = ["ft.", "ft", "feat.", "feat", "featuring", "Ft.", "Ft", "Feat.", "Feat", "Featuring"];
 

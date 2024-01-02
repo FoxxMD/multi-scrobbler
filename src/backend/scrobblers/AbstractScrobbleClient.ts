@@ -19,7 +19,13 @@ import {Logger} from '@foxxmd/winston';
 import { CommonClientConfig } from "../common/infrastructure/config/client/index";
 import { Notifiers } from "../notifier/Notifiers";
 import {FixedSizeList} from 'fixed-size-list';
-import {DeadLetterScrobble, PlayObject, QueuedScrobble, SourceScrobble, TrackStringOptions} from "../../core/Atomic";
+import {
+    DeadLetterScrobble,
+    PlayObject,
+    QueuedScrobble,
+    TA_CLOSE, TA_FUZZY,
+    TrackStringOptions
+} from "../../core/Atomic";
 import {buildTrackString, capitalize, truncateStringToLength} from "../../core/StringUtils";
 import EventEmitter from "events";
 import {compareScrobbleArtists, compareScrobbleTracks, normalizeStr} from "../utils/StringUtils";
@@ -27,7 +33,12 @@ import {hasUpstreamError, UpstreamError} from "../common/errors/UpstreamError";
 import {nanoid} from "nanoid";
 import {ErrorWithCause, messageWithCauses} from "pony-cause";
 import {hasNodeNetworkException} from "../common/errors/NodeErrors";
-import {isPlayTemporallyClose} from "../utils/TimeUtils";
+import {
+    comparePlayTemporally,
+    temporalAccuracyIsAtLeast,
+    temporalAccuracyToString,
+    temporalPlayComparisonSummary
+} from "../utils/TimeUtils";
 
 export default abstract class AbstractScrobbleClient implements Authenticatable {
 
@@ -246,21 +257,13 @@ export default abstract class AbstractScrobbleClient implements Authenticatable 
         }
 
         const matchPlayDate = dtInvariantMatches.find((x: ScrobbledPlayObject) => {
-            const [closeTime, fuzzyTime = false] = this.compareExistingScrobbleTime(x.play, playObj);
-            return closeTime;
+            const temporalComparison = comparePlayTemporally(x.play, playObj);
+            return temporalAccuracyIsAtLeast(TA_CLOSE, temporalComparison.match)
         });
 
         return [matchPlayDate, dtInvariantMatches];
     }
 
-    protected compareExistingScrobbleTime = (existing: PlayObject, candidate: PlayObject): [boolean, boolean?] => {
-        let closeTime = isPlayTemporallyClose(existing, candidate);
-        let fuzzyTime = false;
-        if(!closeTime) {
-            fuzzyTime = isPlayTemporallyClose(existing, candidate, {fuzzyDuration: true});
-        }
-        return [closeTime, fuzzyTime];
-    }
     protected compareExistingScrobbleTitle = (existing: PlayObject, candidate: PlayObject): number => {
         return Math.min(compareScrobbleTracks(existing, candidate)/100, 1);
     }
@@ -335,8 +338,13 @@ export default abstract class AbstractScrobbleClient implements Authenticatable 
                 //const referenceMatch = referenceApiScrobbleResponse !== undefined && playObjDataMatch(x, referenceApiScrobbleResponse);
 
 
-                const [closeTime, fuzzyTime = false] = this.compareExistingScrobbleTime(x, playObj);
-                const timeMatch = (closeTime ? 1 : (fuzzyTime ? 0.6 : 0));
+                const temporalComparison = comparePlayTemporally(x, playObj);
+                let timeMatch = 0;
+                if(temporalAccuracyIsAtLeast(TA_CLOSE, temporalComparison.match)) {
+                    timeMatch = 1;
+                } else if(temporalComparison.match === TA_FUZZY) {
+                    timeMatch = 0.6;
+                }
 
                 const titleMatch = this.compareExistingScrobbleTitle(x, playObj);
 
@@ -377,7 +385,8 @@ export default abstract class AbstractScrobbleClient implements Authenticatable 
                     //`Reference: ${(referenceMatch ? 1 : 0)} * ${REFERENCE_WEIGHT} = ${referenceScore.toFixed(2)}`,
                     artistBreakdown,
                     `Title: ${titleMatch.toFixed(2)} * ${TITLE_WEIGHT} = ${titleScore.toFixed(2)}`,
-                    `Time: ${timeMatch} * ${TIME_WEIGHT} = ${timeScore.toFixed(2)}`,
+                    `Time: (${capitalize(temporalAccuracyToString(temporalComparison.match))}) ${timeMatch} * ${TIME_WEIGHT} = ${timeScore.toFixed(2)}`,
+                    `Time Detail => ${temporalPlayComparisonSummary(temporalComparison, x, playObj)}`,
                     `Score ${score.toFixed(2)} => ${score >= DUP_SCORE_THRESHOLD ? 'Matched!' : 'No Match'}`
                 ];
 

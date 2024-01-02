@@ -7,8 +7,6 @@ import {TimeoutError, WebapiError} from "spotify-web-api-node/src/response-error
 import Ajv, {Schema} from 'ajv';
 import {
     asPlayerStateData,
-    DEFAULT_SCROBBLE_DURATION_THRESHOLD,
-    DEFAULT_SCROBBLE_PERCENT_THRESHOLD,
     NO_DEVICE,
     NO_USER,
     numberFormatOptions,
@@ -23,7 +21,6 @@ import {Request} from "express";
 import pathUtil from "path";
 import {ErrorWithCause, getErrorCause} from "pony-cause";
 import backoffStrategies from '@kenyip/backoff-strategies';
-import {ScrobbleThresholds} from "./common/infrastructure/config/source";
 import {replaceResultTransformer, stripIndentTransformer, TemplateTag, trimResultTransformer} from 'common-tags';
 import {Duration} from "dayjs/plugin/duration.js";
 import {PlayObject} from "../core/Atomic";
@@ -474,41 +471,6 @@ export const getProgress = (initial: ProgressAwarePlayObject, curr: PlayObject):
         return Math.round(Math.abs(curr.meta.trackProgressPosition - initial.meta.initialTrackProgressPosition));
     }
     return undefined;
-}
-
-export const playPassesScrobbleThreshold = (play: PlayObject, thresholds: ScrobbleThresholds): ScrobbleThresholdResult => {
-    const progressed = Math.round(Math.abs(dayjs().diff(play.data.playDate, 's')));
-    return timePassesScrobbleThreshold(thresholds, progressed, play.data.duration);
-}
-
-export const timePassesScrobbleThreshold = (thresholds: ScrobbleThresholds, secondsTracked: number, playDuration?: number): ScrobbleThresholdResult => {
-    let durationPasses = undefined,
-        durationThreshold: number | null = thresholds.duration ?? DEFAULT_SCROBBLE_DURATION_THRESHOLD,
-        percentPasses = undefined,
-        percentThreshold: number | null = thresholds.percent ?? DEFAULT_SCROBBLE_PERCENT_THRESHOLD,
-        percent: number | undefined;
-
-    if (percentThreshold !== null && playDuration !== undefined && playDuration !== 0) {
-        percent = Math.round(((secondsTracked / playDuration) * 100));
-        percentPasses = percent >= percentThreshold;
-    }
-    if (durationThreshold !== null || percentPasses === undefined) {
-        durationPasses = secondsTracked >= durationThreshold;
-    }
-
-    return {
-        passes: (durationPasses ?? false) || (percentPasses ?? false),
-        duration: {
-            passes: durationPasses,
-            threshold: durationThreshold,
-            value: secondsTracked
-        },
-        percent: {
-            passes: percentPasses,
-            value: percent,
-            threshold: percentThreshold
-        }
-    }
 }
 
 export const thresholdResultSummary = (result: ScrobbleThresholdResult) => {

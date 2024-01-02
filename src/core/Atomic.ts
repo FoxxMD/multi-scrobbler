@@ -208,8 +208,15 @@ export interface DeadLetterScrobble<PlayType, RetryType = Dayjs> extends QueuedS
 export type Second = number;
 export type Millisecond = number;
 
+export type TemporalAccuracy = 1 | 2 | 3 | false;
+
+export const TA_EXACT: TemporalAccuracy = 1;
+export const TA_CLOSE: TemporalAccuracy = 2;
+export const TA_FUZZY: TemporalAccuracy = 3;
+export const TA_NONE: TemporalAccuracy = false;
+
 export interface TemporalPlayComparison {
-    close: boolean
+    match: TemporalAccuracy
     date?: {
         threshold: number
         diff: number

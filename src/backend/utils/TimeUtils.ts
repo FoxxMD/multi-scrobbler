@@ -1,14 +1,21 @@
-import {PlayObject, TemporalPlayComparison} from "../../core/Atomic";
-import {lowGranularitySources} from "../common/infrastructure/Atomic";
+import {
+    PlayObject,
+    TA_CLOSE,
+    TA_EXACT,
+    TA_FUZZY,
+    TA_NONE,
+    TemporalAccuracy,
+    TemporalPlayComparison
+} from "../../core/Atomic";
+import {
+    DEFAULT_SCROBBLE_DURATION_THRESHOLD,
+    DEFAULT_SCROBBLE_PERCENT_THRESHOLD,
+    lowGranularitySources,
+    ScrobbleThresholdResult
+} from "../common/infrastructure/Atomic";
 import {formatNumber} from "../utils";
-
-export const isPlayTemporallyClose = (existingPlay: PlayObject, candidatePlay: PlayObject, options: {
-    diffThreshold?: number,
-    fuzzyDuration?: boolean,
-    useListRanges?: boolean
-} = {}): boolean => {
-    return comparePlayTemporally(existingPlay, candidatePlay, options).close;
-}
+import {ScrobbleThresholds} from "../common/infrastructure/config/source";
+import {capitalize} from "../../core/StringUtils";
 
 export const temporalPlayComparisonSummary = (data: TemporalPlayComparison, existingPlay?: PlayObject, candidatePlay?: PlayObject) => {
     const parts: string[] = [];
@@ -19,7 +26,7 @@ export const temporalPlayComparisonSummary = (data: TemporalPlayComparison, exis
             parts.push(`Existing: ${existingPlay.data.playDate.toISOString()} - Candidate: ${candidatePlay.data.playDate.toISOString()}`);
         }
     }
-    parts.push(`Close: ${data.close ? 'YES' : 'NO'}`);
+    parts.push(`Temporal Sameness: ${capitalize(temporalAccuracyToString(data.match))}`);
     if (data.date !== undefined) {
         parts.push(`Play Diff: ${formatNumber(data.date.diff, {toFixed: 0})}s (Needed <${data.date.threshold}s)`)
     }
@@ -33,10 +40,10 @@ export const temporalPlayComparisonSummary = (data: TemporalPlayComparison, exis
         if (data.range === false) {
             parts.push('Candidate not played during Existing tracked listening');
         } else {
-            parts.push(`Candidate played during tracked listening range from existing: ${data.range[0].timestamp.format('HH:mm:ssZ')} => ${data.range[1].timestamp.format('HH:mm:ssZ')}`);
+            parts.push(`Candidate played during tracked listening range from Existing ${data.range[0].timestamp.format('HH:mm:ssZ')} => ${data.range[1].timestamp.format('HH:mm:ssZ')}`);
         }
     } else {
-        parts.push('One or both Plays did not have have tracked listening to compare');
+        parts.push('Range Comparison N/A');
     }
     return parts.join(' | ');
 }
@@ -47,7 +54,7 @@ export const comparePlayTemporally = (existingPlay: PlayObject, candidatePlay: P
 } = {}): TemporalPlayComparison => {
 
     const result: TemporalPlayComparison = {
-        close: false
+        match: TA_NONE
     };
 
     const {
@@ -94,8 +101,10 @@ export const comparePlayTemporally = (existingPlay: PlayObject, candidatePlay: P
         diff: scrobblePlayDiff
     };
 
-    if (scrobblePlayDiff <= playDiffThreshold) {
-        result.close = true;
+    if(scrobblePlayDiff <= 1) {
+        result.match = TA_EXACT;
+    } else if (scrobblePlayDiff <= playDiffThreshold) {
+        result.match = TA_CLOSE;
     }
 
     if (useListRanges && existingRanges !== undefined) {
@@ -105,7 +114,9 @@ export const comparePlayTemporally = (existingPlay: PlayObject, candidatePlay: P
         for (const range of existingRanges) {
             if (newPlayDate.isBetween(range.start.timestamp, range.end.timestamp)) {
                 result.range = range;
-                result.close = true;
+                if(!temporalAccuracyIsAtLeast(TA_CLOSE, result.match)) {
+                    result.match = TA_CLOSE;
+                }
                 break;
             }
         }
@@ -116,21 +127,73 @@ export const comparePlayTemporally = (existingPlay: PlayObject, candidatePlay: P
 
     // if the source has a duration its possible one play was scrobbled at the beginning of the track and the other at the end
     // so check if the duration matches the diff between the two play dates
-    if (result.close === false && referenceDuration !== undefined && fuzzyDuration) {
+    if (result.match === TA_NONE && referenceDuration !== undefined) {
         result.date.fuzzyDurationDiff = Math.abs(scrobblePlayDiff - referenceDuration);
         if (result.date.fuzzyDurationDiff < 10) { // TODO use finer comparison for this?
-            result.close = true;
+            result.match = TA_FUZZY;
         }
     }
     // if the source has listened duration (maloja) it may differ from actual track duration
     // and its possible (spotify) the candidate play date is set at the end of this duration
     // so check if there is a close match between candidate play date and source + listened for
-    if (result.close === false && referenceListenedFor !== undefined && fuzzyDuration) {
+    if (result.match === TA_NONE && referenceListenedFor !== undefined && fuzzyDuration) {
         result.date.fuzzyListenedDiff = Math.abs(scrobblePlayDiff - referenceListenedFor);
         if (result.date.fuzzyListenedDiff < 10) { // TODO use finer comparison for this?
-            result.close = true;
+            result.match = TA_FUZZY
         }
     }
 
     return result;
+}
+export const timePassesScrobbleThreshold = (thresholds: ScrobbleThresholds, secondsTracked: number, playDuration?: number): ScrobbleThresholdResult => {
+    let durationPasses = undefined,
+        durationThreshold: number | null = thresholds.duration ?? DEFAULT_SCROBBLE_DURATION_THRESHOLD,
+        percentPasses = undefined,
+        percentThreshold: number | null = thresholds.percent ?? DEFAULT_SCROBBLE_PERCENT_THRESHOLD,
+        percent: number | undefined;
+
+    if (percentThreshold !== null && playDuration !== undefined && playDuration !== 0) {
+        percent = Math.round(((secondsTracked / playDuration) * 100));
+        percentPasses = percent >= percentThreshold;
+    }
+    if (durationThreshold !== null || percentPasses === undefined) {
+        durationPasses = secondsTracked >= durationThreshold;
+    }
+
+    return {
+        passes: (durationPasses ?? false) || (percentPasses ?? false),
+        duration: {
+            passes: durationPasses,
+            threshold: durationThreshold,
+            value: secondsTracked
+        },
+        percent: {
+            passes: percentPasses,
+            value: percent,
+            threshold: percentThreshold
+        }
+    }
+}
+
+export const temporalAccuracyIsAtLeast = (expected: TemporalAccuracy, found: TemporalAccuracy): boolean => {
+    if(typeof expected === 'number') {
+        if(typeof found === 'number') {
+            return found <= expected;
+        }
+        return false;
+    }
+    return found === false;
+}
+
+export const temporalAccuracyToString = (acc: TemporalAccuracy): string => {
+    switch(acc) {
+        case 1:
+            return 'exact';
+        case 2:
+            return 'close';
+        case 3:
+            return 'fuzzy';
+        case false:
+            return 'no correlation';
+    }
 }

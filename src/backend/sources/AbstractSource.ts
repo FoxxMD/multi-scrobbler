@@ -29,11 +29,11 @@ import { SourceConfig } from "../common/infrastructure/config/source/sources";
 import {EventEmitter} from "events";
 import {FixedSizeList} from "fixed-size-list";
 import TupleMap from "../common/TupleMap";
-import { PlayObject } from "../../core/Atomic";
+import {PlayObject, TA_CLOSE} from "../../core/Atomic";
 import {buildTrackString, capitalize} from "../../core/StringUtils";
 import {isNodeNetworkException} from "../common/errors/NodeErrors";
 import {ErrorWithCause} from "pony-cause";
-import {isPlayTemporallyClose} from "../utils/TimeUtils";
+import {comparePlayTemporally, temporalAccuracyIsAtLeast} from "../utils/TimeUtils";
 
 export interface RecentlyPlayedOptions {
     limit?: number
@@ -176,7 +176,7 @@ export default abstract class AbstractSource implements Authenticatable {
             });
         }
         for(const list of lists) {
-            const existing = list.find(x => playObjDataMatch(x, play) && isPlayTemporallyClose(x, play));
+            const existing = list.find(x => playObjDataMatch(x, play) && temporalAccuracyIsAtLeast(TA_CLOSE, comparePlayTemporally(x, play).match));
             if(existing) {
                 return existing;
             }
