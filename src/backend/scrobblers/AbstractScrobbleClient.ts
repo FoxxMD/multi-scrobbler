@@ -1,7 +1,6 @@
 import dayjs, {Dayjs} from "dayjs";
 import {
     comparingMultipleArtists,
-    isPlayTemporallyClose,
     mergeArr,
     playObjDataMatch, pollingBackoff,
     setIntersection, sleep, sortByOldestPlayDate,
@@ -28,6 +27,7 @@ import {hasUpstreamError, UpstreamError} from "../common/errors/UpstreamError";
 import {nanoid} from "nanoid";
 import {ErrorWithCause, messageWithCauses} from "pony-cause";
 import {hasNodeNetworkException} from "../common/errors/NodeErrors";
+import {isPlayTemporallyClose} from "../utils/TimeUtils";
 
 export default abstract class AbstractScrobbleClient implements Authenticatable {
 

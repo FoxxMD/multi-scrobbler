@@ -1,6 +1,5 @@
 import dayjs, {Dayjs} from "dayjs";
 import {
-    isPlayTemporallyClose,
     genGroupId,
     genGroupIdStrFromPlay,
     mergeArr,
@@ -34,6 +33,7 @@ import { PlayObject } from "../../core/Atomic";
 import {buildTrackString, capitalize} from "../../core/StringUtils";
 import {isNodeNetworkException} from "../common/errors/NodeErrors";
 import {ErrorWithCause} from "pony-cause";
+import {isPlayTemporallyClose} from "../utils/TimeUtils";
 
 export interface RecentlyPlayedOptions {
     limit?: number

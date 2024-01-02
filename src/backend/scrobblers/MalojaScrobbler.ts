@@ -8,7 +8,7 @@ import {
     sleep,
     sortByOldestPlayDate,
     parseRetryAfterSecsFromObj,
-    isPlayTemporallyClose,
+
 } from "../utils";
 import {DEFAULT_RETRY_MULTIPLIER, FormatPlayObjectOptions, INITIALIZING} from "../common/infrastructure/Atomic";
 import { MalojaClientConfig } from "../common/infrastructure/config/client/maloja";
@@ -27,6 +27,7 @@ import normalizeUrl from "normalize-url";
 import {UpstreamError} from "../common/errors/UpstreamError";
 import {ar} from "@faker-js/faker";
 import {ErrorWithCause} from "pony-cause";
+import {isPlayTemporallyClose} from "../utils/TimeUtils";
 
 const feat = ["ft.", "ft", "feat.", "feat", "featuring", "Ft.", "Ft", "Feat.", "Feat", "Featuring"];
 

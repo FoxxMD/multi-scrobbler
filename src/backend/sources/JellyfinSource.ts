@@ -1,13 +1,10 @@
 import MemorySource from "./MemorySource";
 import dayjs, {Dayjs} from "dayjs";
 import {
-    isPlayTemporallyClose,
     combinePartsToString,
     parseBool,
     parseDurationFromTimestamp,
     playObjDataMatch,
-    comparePlayTemporally,
-    temporalPlayComparisonSummary,
     doubleReturnNewline,
 } from "../utils";
 import { JellySourceConfig } from "../common/infrastructure/config/source/jellyfin";
@@ -19,6 +16,7 @@ import { JellyfinPlayerState } from "./PlayerState/JellyfinPlayerState";
 import { PlayObject } from "../../core/Atomic";
 import {buildTrackString, splitByFirstFound, truncateStringToLength} from "../../core/StringUtils";
 import {source} from "common-tags";
+import {comparePlayTemporally, isPlayTemporallyClose, temporalPlayComparisonSummary} from "../utils/TimeUtils";
 
 const shortDeviceId = truncateStringToLength(10, '');
 

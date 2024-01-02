@@ -207,3 +207,14 @@ export interface DeadLetterScrobble<PlayType, RetryType = Dayjs> extends QueuedS
 
 export type Second = number;
 export type Millisecond = number;
+
+export interface TemporalPlayComparison {
+    close: boolean
+    date?: {
+        threshold: number
+        diff: number
+        fuzzyDurationDiff?: number
+        fuzzyListenedDiff?: number
+    }
+    range?: false | ListenRangeData
+}
