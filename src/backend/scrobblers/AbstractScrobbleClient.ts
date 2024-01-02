@@ -265,7 +265,8 @@ export default abstract class AbstractScrobbleClient implements Authenticatable 
     }
 
     protected compareExistingScrobbleTitle = (existing: PlayObject, candidate: PlayObject): number => {
-        return Math.min(compareScrobbleTracks(existing, candidate)/100, 1);
+        const result = compareScrobbleTracks(existing, candidate);
+        return Math.min(result.highScore/100, 1);
     }
 
     protected compareExistingScrobbleArtist = (existing: PlayObject, candidate: PlayObject): [number, number] => {

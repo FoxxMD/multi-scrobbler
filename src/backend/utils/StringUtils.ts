@@ -135,7 +135,7 @@ export const findDelimiters = (str: string) => {
     return found;
 }
 
-export const compareScrobbleTracks = (existing: PlayObject, candidate: PlayObject): number => {
+export const compareScrobbleTracks = (existing: PlayObject, candidate: PlayObject): StringSamenessResult => {
     const {
         data: {
             track: existingTrack,
@@ -148,7 +148,21 @@ export const compareScrobbleTracks = (existing: PlayObject, candidate: PlayObjec
         }
     } = candidate;
 
-    return compareNormalizedStrings(existingTrack, candidateTrack).highScore;
+    // try to remove any joiners based on existing artists
+    const existingCredits = parseTrackCredits(existingTrack);
+    const existingPrimary = existingCredits !== undefined ? existingCredits.primary : existingTrack;
+
+    const candidateCredits = parseTrackCredits(candidateTrack);
+    const candidatePrimary = candidateCredits !== undefined ? candidateCredits.primary : candidateTrack;
+
+    // take whichever score is higher
+    const creditsCleanedTrackSameness = compareNormalizedStrings(existingPrimary, candidatePrimary);
+    const naiveTrackSameness = compareNormalizedStrings(existingTrack, candidateTrack);
+
+    if(creditsCleanedTrackSameness.highScore > naiveTrackSameness.highScore) {
+        return creditsCleanedTrackSameness;
+    }
+    return naiveTrackSameness;
 }
 
 export const compareScrobbleArtists = (existing: PlayObject, candidate: PlayObject): number => {

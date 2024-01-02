@@ -12,6 +12,7 @@ import {asPlays, generatePlay, normalizePlays} from "../utils/PlayTestUtils";
 import dayjs from "dayjs";
 import {sleep} from "../../utils";
 import {MockNetworkError, withRequestInterception} from "../utils/networking";
+import {PlayObject} from "../../../core/Atomic";
 
 const firstPlayDate = dayjs().subtract(1, 'hour');
 const olderFirstPlayDate = dayjs().subtract(4, 'hour');
@@ -300,6 +301,36 @@ describe('Detects duplicate and unique scrobbles from client recent history', fu
             const sonDiffPlay = clone(son);
             sonDiffPlay.data.playDate = sonDiffPlay.data.playDate.subtract(son.data.duration + 1, 's');
             assert.isTrue(await testScrobbler.alreadyScrobbled(sonDiffPlay));
+        });
+
+        it('Is detected as duplicate when artists are included in joiner', async function () {
+            const ref = normalizedWithMixedDurOlder.find(x => x.data.track === 'Freeze Tag');
+            ref.data.playDate = dayjs().subtract(1, 'hour').set('minute', 29).set('second', 26)
+
+            const spotifyPlay: PlayObject = {
+                data: {
+                    artists: [
+                        "Terrace Martin",
+                        "Robert Glasper",
+                        "9th Wonder",
+                        "Kamasi Washington",
+                        "Dinner Party",
+                        "Cordae",
+                        "Phoelix"
+                    ],
+                    album: "Dinner Party: Dessert",
+                    track: "Freeze Tag (feat. Cordae & Phoelix)",
+                    "duration": 191.375,
+                    "playDate": dayjs().subtract(1, 'hour').set('minute', 29).set('second', 27)
+                },
+                meta: {
+                    source: 'Spotify'
+                }
+            }
+
+            testScrobbler.recentScrobbles = normalizedWithMixedDurOlder.concat(ref);
+
+            assert.isTrue(await testScrobbler.alreadyScrobbled(spotifyPlay));
         });
 
         describe('When at least one play has duration', function () {

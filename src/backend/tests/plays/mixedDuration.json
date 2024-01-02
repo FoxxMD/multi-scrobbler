@@ -133,5 +133,24 @@
     "meta": {
       "source": "Maloja"
     }
+  },
+  {
+    "data": {
+      "artists": [
+        "9th Wonder",
+        "Cordae",
+        "Dinner Party",
+        "Kamasi Washington",
+        "Phoelix",
+        "Robert Glasper",
+        "Terrace Martin"
+      ],
+      "track": "Freeze Tag",
+      "album": "Dinner Party: Dessert",
+      "playDate": "2024-01-01T16:29:26.000Z"
+    },
+    "meta": {
+      "source": "Maloja"
+    }
   }
 ]
