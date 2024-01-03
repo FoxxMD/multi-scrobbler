@@ -104,7 +104,7 @@ export abstract class AbstractPlayerState {
         } else if (status !== undefined) {
             if (status === 'stopped' && this.reportedStatus !== 'stopped' && this.currentPlay !== undefined) {
                 this.stopPlayer();
-                const play = this.getPlayedObject();
+                const play = this.getPlayedObject(true);
                 this.clearPlayer();
                 return [play, play];
             }
@@ -125,7 +125,7 @@ export abstract class AbstractPlayerState {
             if (!playObjDataMatch(this.currentPlay, play)/* || (true !== false)*/) { // TODO check new play date and listen range to see if they intersect
                 this.logger.debug(`Incoming play state (${buildTrackString(play, {include: ['trackId', 'artist', 'track']})}) does not match existing state, removing existing: ${buildTrackString(this.currentPlay, {include: ['trackId', 'artist', 'track']})}`)
                 this.currentListenSessionEnd();
-                const played = this.getPlayedObject();
+                const played = this.getPlayedObject(true);
                 this.setCurrentPlay(play, undefined, reportedTS);
                 if (this.calculatedStatus !== CALCULATED_PLAYER_STATUSES.playing) {
                     this.calculatedStatus = CALCULATED_PLAYER_STATUSES.unknown;
@@ -137,7 +137,7 @@ export abstract class AbstractPlayerState {
             } else if (this.isSessionRepeat(play.meta.trackProgressPosition, reportedTS)) {
                 // if we detect the track has been restarted end listen session and treat as a new play
                 this.currentListenSessionEnd();
-                const played = this.getPlayedObject();
+                const played = this.getPlayedObject(true);
                 play.data.playDate = dayjs();
                 this.setCurrentPlay(play, undefined, reportedTS);
                 return [this.getPlayedObject(), played];
@@ -179,18 +179,22 @@ export abstract class AbstractPlayerState {
         this.currentListenSessionEnd();
     }
 
-    getPlayedObject(): PlayObject | undefined {
+    getPlayedObject(completed: boolean = false): PlayObject | undefined {
         if(this.currentPlay !== undefined) {
             let ranges = [...this.listenRanges];
             if (this.currentListenRange !== undefined) {
                 ranges.push(this.currentListenRange);
+            }
+            if(completed) {
+                this.logger.debug('Generating play object with playDateCompleted');
             }
             return {
                 data: {
                     ...this.currentPlay.data,
                     playDate: this.playFirstSeenAt,
                     listenedFor: this.getListenDuration(),
-                    listenRanges: ranges
+                    listenRanges: ranges,
+                    playDateCompleted: completed ? dayjs() : undefined
                 },
                 meta: this.currentPlay.meta
             }

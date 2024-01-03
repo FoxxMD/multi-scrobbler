@@ -1,4 +1,4 @@
-import dayjs from "dayjs";
+import dayjs, {Dayjs} from "dayjs";
 import {
     readJson,
     writeFile,
@@ -28,7 +28,7 @@ import AlbumObjectSimplified = SpotifyApi.AlbumObjectSimplified;
 import UserDevice = SpotifyApi.UserDevice;
 import MemorySource from "./MemorySource";
 import {ErrorWithCause} from "pony-cause";
-import { PlayObject } from "../../core/Atomic";
+import {PlayObject, SCROBBLE_TS_SOC_END, SCROBBLE_TS_SOC_START, ScrobbleTsSOC} from "../../core/Atomic";
 import { buildTrackString, truncateStringToLength } from "../../core/StringUtils";
 import {isNodeNetworkException} from "../common/errors/NodeErrors";
 import {hasUpstreamError, UpstreamError} from "../common/errors/UpstreamError";
@@ -77,11 +77,13 @@ export default class SpotifySource extends MemorySource {
         let album: AlbumObjectSimplified;
         let name: string;
         let duration_ms: number;
-        let played_at: string;
+        let played_at: Dayjs;
+        let playDateCompleted: Dayjs | undefined;
         let id: string;
         let url: string;
         let playbackPosition: number | undefined;
         let deviceId: string | undefined;
+        let scrobbleTsSOC: ScrobbleTsSOC;
 
 
         if (asPlayHistoryObject(obj)) {
@@ -100,7 +102,9 @@ export default class SpotifySource extends MemorySource {
                 } = {}
             } = track;
 
-            played_at = pa;
+            scrobbleTsSOC = SCROBBLE_TS_SOC_END;
+            played_at = dayjs(pa);
+            playDateCompleted = played_at;
             artists = art;
             name = n;
             id = i;
@@ -130,7 +134,8 @@ export default class SpotifySource extends MemorySource {
                 } = {}
             } = item as TrackObjectFull;
 
-            played_at = dayjs(timestamp).toISOString();
+            scrobbleTsSOC = SCROBBLE_TS_SOC_START;
+            played_at = dayjs(timestamp);
             artists = art;
             name = n;
             id = i;
@@ -161,13 +166,15 @@ export default class SpotifySource extends MemorySource {
                 album: albumName,
                 track: name,
                 duration: duration_ms / 1000,
-                playDate: dayjs(played_at),
+                playDate: played_at,
+                playDateCompleted
             },
             meta: {
                 deviceId: deviceId ?? `${NO_DEVICE}-${NO_USER}`,
                 source: 'Spotify',
                 trackId: id,
                 trackProgressPosition: playbackPosition,
+                scrobbleTsSOC,
                 newFromSource,
                 url: {
                     web: url
@@ -306,7 +313,13 @@ export default class SpotifySource extends MemorySource {
                 plays.push(currPlay);
             }
         }
-        return this.processRecentPlays(plays);
+        const newPlays = this.processRecentPlays(plays);
+        // hint that scrobble timestamp source of truth should be when the track ended (player changed tracks)
+        // rather than when we first saw the track
+        //
+        // this is because Spotify play history (getMyRecentlyPlayedTracks) timestamps based on end of play
+        // and when we backlog we want timestamps to be as accurate as possible
+        return newPlays.map(x => ({...x, meta: {...x.meta, scrobbleTsSOC: SCROBBLE_TS_SOC_END}}))
     }
 
     getPlayHistory = async (options: RecentlyPlayedOptions = {}) => {
