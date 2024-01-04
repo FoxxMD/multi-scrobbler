@@ -128,10 +128,16 @@ export default class MemorySource extends AbstractSource {
             const idStr = genGroupIdStr(id);
             if (!this.players.has(idStr)) {
                 this.setNewPlayer(idStr, this.logger, id);
+
+                if(!this.multiPlatform && this.players.size > 1) {
+                    // new platform should have old platform data transferred
+                    const [id,firstPlayer] = Array.from(this.players.entries())[0];
+                    const newPlayer = this.players.get(idStr);
+                    firstPlayer.transferToNewPlayer(newPlayer);
+                    this.deletePlayer(id);
+                }
             }
         }
-
-        //const deadPlatformIds: string[] = [];
 
         for (const [key, player] of this.players.entries()) {
 
