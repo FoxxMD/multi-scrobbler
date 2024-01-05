@@ -26,7 +26,7 @@ export class KodiSource extends MemorySource {
         this.multiPlatform = true;
     }
 
-    initialize = async () => {
+    protected async doBuildInitData(): Promise<boolean | string> {
         const {
             data: {
                 url
@@ -34,19 +34,7 @@ export class KodiSource extends MemorySource {
         } = this.config;
         this.client = new KodiApiClient(this.name, this.config.data);
         this.logger.debug(`Config URL: '${url ?? '(None Given)'}' => Normalized: '${this.client.url.toString()}'`)
-        this.initialized = true;
         return true;
-
-        /*const connected = await this.client.testConnection();
-        if(connected) {
-            //this.logger.info('Connection OK');
-            this.initialized = true;
-            return true;
-        } else {
-            this.logger.error(`Could not connect.`);
-            this.initialized = false;
-            return false;
-        }*/
     }
 
     doAuthentication = async () => {

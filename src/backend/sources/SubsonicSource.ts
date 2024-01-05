@@ -9,6 +9,8 @@ import {DEFAULT_RETRY_MULTIPLIER, FormatPlayObjectOptions, InternalConfig} from 
 import { RecentlyPlayedOptions } from "./AbstractSource";
 import EventEmitter from "events";
 import { PlayObject } from "../../core/Atomic";
+import {isNodeNetworkException} from "../common/errors/NodeErrors";
+import {ErrorWithCause} from "pony-cause";
 
 dayjs.extend(isSameOrAfter);
 
@@ -28,18 +30,6 @@ export class SubsonicSource extends MemorySource {
         } = config;
         const subsonicConfig = {...config, data: {...restData}};
         super('subsonic', name, subsonicConfig, internal,emitter);
-
-        const {data: {user, password, url} = {}} = this.config;
-
-        if (user === undefined) {
-            throw new Error(`Cannot setup Subsonic source, 'user' is not defined`);
-        }
-        if (password === undefined) {
-            throw new Error(`Cannot setup Subsonic source, 'password' is not defined`);
-        }
-        if (url === undefined) {
-            throw new Error(`Cannot setup Subsonic source, 'url' is not defined`);
-        }
 
         this.canPoll = true;
     }
@@ -150,21 +140,54 @@ export class SubsonicSource extends MemorySource {
         }
     }
 
-    initialize = async () => {
+    // initialize = async () => {
+    //     const {url} = this.config.data;
+    //     try {
+    //         await request.get(`${url}/`);
+    //         this.logger.info('Subsonic Connection: ok');
+    //         this.initialized = true;
+    //     } catch (e) {
+    //         if(e.status !== undefined && e.status !== 404) {
+    //             this.logger.info('Subsonic Connection: ok');
+    //             // we at least got a response!
+    //             this.initialized = true;
+    //         }
+    //     }
+    //
+    //     return this.initialized;
+    // }
+
+    protected async doBuildInitData(): Promise<boolean | string> {
+        const {data: {user, password, url} = {}} = this.config;
+
+        if (user === undefined) {
+            throw new Error(`Cannot setup Subsonic source, 'user' is not defined`);
+        }
+        if (password === undefined) {
+            throw new Error(`Cannot setup Subsonic source, 'password' is not defined`);
+        }
+        if (url === undefined) {
+            throw new Error(`Cannot setup Subsonic source, 'url' is not defined`);
+        }
+
+        return true;
+    }
+
+    protected async doCheckConnection(): Promise<boolean> {
         const {url} = this.config.data;
         try {
             await request.get(`${url}/`);
-            this.logger.info('Subsonic Connection: ok');
-            this.initialized = true;
+            this.logger.info('Subsonic Server: reachable');
+            return true;
         } catch (e) {
-            if(e.status !== undefined && e.status !== 404) {
-                this.logger.info('Subsonic Connection: ok');
-                // we at least got a response!
-                this.initialized = true;
+            if(isNodeNetworkException(e)) {
+                throw new ErrorWithCause('Could not communicate with Subsonic server', {cause: e});
+            } else if(e.status >= 500) {
+                throw new ErrorWithCause('Subsonic server returning an unexpected response', {cause: e})
             }
+            this.logger.info('Subsonic Server: reachable');
+            return true;
         }
-
-        return this.initialized;
     }
 
     doAuthentication = async () => {

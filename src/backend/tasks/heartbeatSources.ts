@@ -14,7 +14,7 @@ export const createHeartbeatSourcesTask = (sources: ScrobbleSources, parentLogge
                 .withConcurrency(1)
                 .for(sources.sources)
                 .process(async (source) => {
-                    if (source.initialized && source.canPoll && !source.polling && (!source.authGated() || source.canTryAuth())) {
+                    if (source.isReady() && source.canPoll && !source.polling && (!source.authGated() || source.canTryAuth())) {
                         source.logger.info('Should be polling! Attempting to restart polling...', {leaf: 'Heartbeat'});
                         source.poll();
                         return 1;

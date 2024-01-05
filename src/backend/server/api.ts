@@ -183,7 +183,6 @@ export const setupApi = (app: ExpressWithAsync, logger: Logger, initialLogOutput
                 name,
                 canPoll = false,
                 polling = false,
-                initialized = false,
                 requiresAuth = false,
                 requiresAuthInteraction = false,
                 authed = false,
@@ -200,14 +199,22 @@ export const setupApi = (app: ExpressWithAsync, logger: Logger, initialLogOutput
                 authed,
                 players: 'players' in x ? (x as MemorySource).playersToObject() : {}
             };
-            if (!initialized) {
-                base.status = 'Not Initialized';
-            } else if (requiresAuth && !authed) {
-                base.status = requiresAuthInteraction ? 'Auth Interaction Required' : 'Authentication Failed Or Not Attempted'
-            } else if (canPoll) {
-                base.status = polling ? 'Polling' : 'Idle';
+            if(!x.isReady()) {
+                if(!x.buildOK) {
+                    base.status = 'Initializing Data Failed';
+                } else if(!x.connectionOK) {
+                    base.status = 'Communication Failed';
+                } else if (requiresAuth && !authed) {
+                    base.status = requiresAuthInteraction ? 'Auth Interaction Required' : 'Authentication Failed Or Not Attempted'
+                } else {
+                    base.status = 'Not Ready';
+                }
             } else {
-                base.status = !x.instantiatedAt.isSame(x.lastActivityAt) ? 'Received Data' : 'Awaiting Data';
+                if (canPoll) {
+                    base.status = polling ? 'Polling' : 'Idle';
+                } else {
+                    base.status = !x.instantiatedAt.isSame(x.lastActivityAt) ? 'Received Data' : 'Awaiting Data';
+                }
             }
             return base;
         });

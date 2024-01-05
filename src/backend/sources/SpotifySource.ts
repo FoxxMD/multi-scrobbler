@@ -8,6 +8,7 @@ import {
     combinePartsToString, findCauseByFunc,
 } from "../utils";
 import SpotifyWebApi from "spotify-web-api-node";
+import request from 'superagent';
 import AbstractSource, { RecentlyPlayedOptions } from "./AbstractSource";
 import { SpotifySourceConfig } from "../common/infrastructure/config/source/spotify";
 import {
@@ -241,17 +242,30 @@ export default class SpotifySource extends MemorySource {
         this.spotifyApi = new SpotifyWebApi(apiConfig);
     }
 
-    initialize = async () => {
-        if(this.spotifyApi === undefined) {
-            await this.buildSpotifyApi();
+    protected async doBuildInitData(): Promise<boolean | string> {
+        await this.buildSpotifyApi();
+        return true;
+    }
+
+    protected async doCheckConnection(): Promise<boolean> {
+        try {
+            await request.get('https://api.spotify.com/v1');
+            return true;
+        } catch (e) {
+            if(isNodeNetworkException(e)) {
+                throw new ErrorWithCause('Could not communicate with Spotify API server', {cause: e});
+            }
+            if(e.status >= 500) {
+                throw new ErrorWithCause('Spotify API server returned an unexpected response', { cause: e});
+            }
+            return true;
         }
-        this.initialized = true;
-        return this.initialized;
     }
 
     doAuthentication = async () => {
         try {
             if(undefined === this.spotifyApi.getAccessToken()) {
+                this.logger.warn('Cannot use API until an access token has been received from the authorization flow. See the dashboard.');
                 return false;
             }
             await this.callApi<ReturnType<typeof this.spotifyApi.getMe>>(((api: any) => api.getMe()));

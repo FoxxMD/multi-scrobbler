@@ -53,23 +53,21 @@ export class JRiverSource extends MemorySource {
         return url;
     }
 
-    initialize = async () => {
+    protected async doBuildInitData(): Promise<boolean | string> {
         const {
             data: {
                 url
             } = {}
         } = this.config;
         this.logger.debug(`Config URL: '${url ?? '(None Given)'}' => Normalized: '${this.url.toString()}'`)
+        return true;
+    }
 
-        const connected = await this.client.testConnection();
-        if(connected) {
-            this.logger.info('Connection OK');
-            this.initialized = true;
-            return true;
-        } else {
-            this.logger.error(`Could not connect.`);
-            this.initialized = false;
-            return false;
+    protected async doCheckConnection(): Promise<boolean> {
+        try {
+            return await this.client.testConnection();
+        } catch (e) {
+            throw e;
         }
     }
 

@@ -16,6 +16,7 @@ import winston from '@foxxmd/winston';
 import { RecentlyPlayedOptions } from "./AbstractSource";
 import { PlayObject } from "../../core/Atomic";
 import { buildTrackString } from "../../core/StringUtils";
+import {ErrorWithCause} from "pony-cause";
 
 export class MopidySource extends MemorySource {
     declare config: MopidySourceConfig;
@@ -95,14 +96,17 @@ export class MopidySource extends MemorySource {
         return url;
     }
 
-    initialize = async () => {
+    protected async doBuildInitData(): Promise<boolean | string> {
         const {
             data: {
                 url
             } = {}
         } = this.config;
         this.logger.debug(`Config URL: '${url ?? '(None Given)'}' => Normalized: '${this.url.toString()}'`)
+        return true;
+    }
 
+    protected async doCheckConnection(): Promise<boolean> {
         this.client.connect();
         const res = await Promise.race([
             pEvent(this.client, 'state:online'),
@@ -111,12 +115,10 @@ export class MopidySource extends MemorySource {
         ]);
         if (res === undefined) {
             this.logger.info('Connection OK');
-            this.initialized = true;
             return true;
         } else {
-            this.logger.error(`Could not connect. Error => ${(res as Error).message}`);
             this.client.close();
-            return false;
+            throw new ErrorWithCause(`Could not connect to Mopidy server`, {cause: (res as Error)});
         }
     }
 

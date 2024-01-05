@@ -10,6 +10,7 @@ import {LastfmSourceConfig} from "../common/infrastructure/config/source/lastfm"
 import dayjs from "dayjs";
 import {isNodeNetworkException} from "../common/errors/NodeErrors";
 import {ErrorWithCause} from "pony-cause";
+import request from "superagent";
 
 export default class LastfmSource extends MemorySource {
 
@@ -38,11 +39,28 @@ export default class LastfmSource extends MemorySource {
         return LastfmApiClient.formatPlayObj(obj, options);
     }
 
-    initialize = async () => {
-        this.initialized = await this.api.initialize();
-        return this.initialized;
+    // initialize = async () => {
+    //     this.initialized = await this.api.initialize();
+    //     return this.initialized;
+    // }
+
+    protected async doBuildInitData(): Promise<boolean | string> {
+        return await this.api.initialize();
     }
 
+    protected async doCheckConnection(): Promise<boolean> {
+        try {
+            await request.get('http://ws.audioscrobbler.com/2.0/');
+            return true;
+        } catch (e) {
+            if(isNodeNetworkException(e)) {
+                throw new ErrorWithCause('Could not communicate with Last.fm API server', {cause: e});
+            } else if(e.status >= 500) {
+                throw new ErrorWithCause('Last.fm API server returning an unexpected response', {cause: e})
+            }
+            return true;
+        }
+    }
     doAuthentication = async () => {
         try {
             return await this.api.testAuth();

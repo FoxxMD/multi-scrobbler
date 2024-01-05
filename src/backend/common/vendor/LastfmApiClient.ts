@@ -8,6 +8,7 @@ import { PlayObject } from "../../../core/Atomic";
 import {isNodeNetworkException} from "../errors/NodeErrors";
 import {nonEmptyStringOrDefault, splitByFirstFound} from "../../../core/StringUtils";
 import {source} from "common-tags";
+import {ErrorWithCause} from "pony-cause";
 
 const badErrors = [
     'api key suspended',
@@ -149,8 +150,7 @@ export default class LastfmApiClient extends AbstractApiClient {
             }
             return true;
         } catch (e) {
-            this.logger.warn('Current lastfm credentials file exists but could not be parsed', {path: this.workingCredsPath});
-            return false;
+            throw new ErrorWithCause('Current lastfm credentials file exists but could not be parsed', {cause: e});
         }
     }
 

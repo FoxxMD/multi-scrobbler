@@ -507,36 +507,16 @@ export default class ScrobbleSources {
 
         if(newSource === undefined) {
             // really shouldn't get here!
-            throw new Error(`Source of type ${type} was not recognized??`);
+            this.logger.error(new Error(`Source of type ${type} was not recognized??`));
+            return;
         }
-        if(newSource.initialized === false) {
-            this.logger.debug(`Attempting ${type} (${name}) initialization...`);
+        this.sources.push(newSource);
+        if(!newSource.isReady()) {
             if ((await newSource.initialize()) === false) {
                 this.logger.error(`${type} (${name}) source failed to initialize. Source needs to be successfully initialized before activity capture can begin.`);
-                return;
-            } else {
-                this.logger.info(`${type} (${name}) source initialized`);
             }
         } else {
-            this.logger.info(`${type} (${name}) source initialized`);
+            newSource.logger.info('Fully Initialized!');
         }
-
-        if(newSource.authGated()) {
-            this.logger.debug(`Checking ${type} (${name}) source auth...`);
-            let success;
-            try {
-                await newSource.testAuth();
-                success = newSource.authed;
-            } catch (e) {
-                success = false;
-            }
-            if(!success) {
-                this.logger.warn(`${type} (${name}) source auth failed.`);
-            } else {
-                this.logger.info(`${type} (${name}) source auth OK`);
-            }
-        }
-
-        this.sources.push(newSource);
     }
 }

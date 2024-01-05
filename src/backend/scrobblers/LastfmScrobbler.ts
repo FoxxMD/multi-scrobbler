@@ -20,6 +20,7 @@ import EventEmitter from "events";
 import {UpstreamError} from "../common/errors/UpstreamError";
 import {isNodeNetworkException} from "../common/errors/NodeErrors";
 import {getScrobbleTsSOCDate} from "../utils/TimeUtils";
+import {ErrorWithCause} from "pony-cause";
 
 export default class LastfmScrobbler extends AbstractScrobbleClient {
 
@@ -40,12 +41,13 @@ export default class LastfmScrobbler extends AbstractScrobbleClient {
     initialize = async () => {
         // @ts-expect-error TS(2322): Type 'number' is not assignable to type 'boolean'.
         this.initialized = INITIALIZING;
-        const result = await this.api.initialize();
-        this.initialized = result;
-        if(result) {
+        try {
+            const result = await this.api.initialize();
+            this.initialized = true;
             this.logger.info('Initialized');
-        } else {
-            this.logger.warn('Could not initialize');
+        } catch (e) {
+            this.initialized = false;
+            this.logger.warn(new ErrorWithCause('Initialization failed', {cause: e}));
         }
 
         return this.initialized;

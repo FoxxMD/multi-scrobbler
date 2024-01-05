@@ -53,12 +53,14 @@ export default abstract class AbstractSource implements Authenticatable {
     logger: Logger;
     instantiatedAt: Dayjs;
     lastActivityAt: Dayjs;
-    initialized: boolean = false;
 
     requiresAuth: boolean = false;
     requiresAuthInteraction: boolean = false;
     authed: boolean = false;
     authFailure?: boolean;
+
+    buildOK?: boolean;
+    connectionOK?: boolean;
 
     multiPlatform: boolean = false;
 
@@ -94,8 +96,78 @@ export default abstract class AbstractSource implements Authenticatable {
 
     // default init function, should be overridden if init stage is required
     initialize = async () => {
-        this.initialized = true;
-        return this.initialized;
+        this.logger.debug('Attempting to initialize...');
+        try {
+            await this.buildInitData();
+            await this.checkConnection();
+            await this.testAuth();
+            this.logger.info('Fully Initialized!');
+            return true;
+        } catch(e) {
+            this.logger.error('Initialization failed', {cause: e});
+            return false;
+        }
+    }
+
+    public async buildInitData() {
+        if(this.buildOK) {
+            return;
+        }
+        try {
+            const res = await this.doBuildInitData();
+            if (res === true) {
+                this.logger.debug('Init build succeeded');
+            } else if (typeof res === 'string') {
+                this.logger.debug(`Init build succeeded => ${res}`);
+            }
+            this.buildOK = true;
+        } catch (e) {
+            this.buildOK = false;
+            throw new ErrorWithCause('Building data for initialization failed', {cause: e});
+        }
+    }
+
+    /**
+     * Build any data/config/objects required for this Source to communicate with upstream service
+     *
+     * * Return FALSE if not possible or not required
+     * * Return TRUE if build succeeded
+     * * Return string if build succeeded and should log result
+     * * Throw error on failure
+     * */
+    protected async doBuildInitData(): Promise<boolean | string> {
+        return false;
+    }
+
+    public async checkConnection() {
+        if (this.canPoll) {
+            try {
+                const res = await this.doCheckConnection();
+                if (res === false) {
+                    this.logger.debug('Connection check was not required.');
+                } else if (res === true) {
+                    this.logger.verbose('Connection check succeeded');
+                } else {
+                    this.logger.verbose(`Connection check succeeded => ${res}`);
+                }
+                this.connectionOK = true;
+            } catch (e) {
+                this.connectionOK = false;
+                throw new ErrorWithCause('Communicating with upstream service failed', {cause: e});
+            }
+        }
+    }
+
+    /**
+     * Check Source upstream API/connection to ensure we can communicate
+     *
+     * * Return FALSE if not possible or not required to check
+     * * Return TRUE if communication succeeded
+     * * Return string if communication succeeded and should log result
+     * * Throw error if communication failed
+     * */
+    protected async doCheckConnection(): Promise<boolean> {
+        return false;
     }
 
     authGated = () => {
@@ -111,9 +183,15 @@ export default abstract class AbstractSource implements Authenticatable {
     }
 
     testAuth = async () => {
+        if(!this.requiresAuth) {
+            return;
+        }
+
+        this.logger.debug('Checking Authentication...');
         try {
             this.authed = await this.doAuthentication();
             this.authFailure = !this.authed;
+            this.logger.info(`Auth is ${this.authed ? 'OK' : 'NOT OK'}`)
         } catch (e) {
             // only signal as auth failure if error was NOT a node network error
             this.authFailure = findCauseByFunc(e, isNodeNetworkException) === undefined;
@@ -124,7 +202,8 @@ export default abstract class AbstractSource implements Authenticatable {
     }
 
     public isReady() {
-        return this.initialized && !this.authGated();
+        return this.buildOK && this.connectionOK && !this.authGated();
+        //return this.initialized && !this.authGated();
     }
 
     getRecentlyPlayed = async (options: RecentlyPlayedOptions = {}): Promise<PlayObject[]> => {

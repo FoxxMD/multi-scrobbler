@@ -5,6 +5,8 @@ import { ListenBrainzSourceConfig } from "../common/infrastructure/config/source
 import { ListenbrainzApiClient } from "../common/vendor/ListenbrainzApiClient";
 import MemorySource from "./MemorySource";
 import {ErrorWithCause} from "pony-cause";
+import request from "superagent";
+import {isNodeNetworkException} from "../common/errors/NodeErrors";
 
 export default class ListenbrainzSource extends MemorySource {
 
@@ -31,25 +33,24 @@ export default class ListenbrainzSource extends MemorySource {
 
     static formatPlayObj = (obj: any, options: FormatPlayObjectOptions = {}) => ListenbrainzApiClient.formatPlayObj(obj, options);
 
-    initialize = async () => {
-        // @ts-expect-error TS(2322): Type 'number' is not assignable to type 'boolean'.
-        this.initialized = INITIALIZING;
-        if(this.config.data.token === undefined) {
-            this.logger.error('Must provide a User Token');
-            this.initialized = false;
-        } else {
-            try {
-                await this.api.testConnection();
-                this.initialized = true;
-            } catch (e) {
-                this.logger.error(e);
-                this.initialized = false;
+    protected async doCheckConnection(): Promise<boolean> {
+        try {
+            await request.get(this.api.url);
+            return true;
+        } catch (e) {
+            if(isNodeNetworkException(e)) {
+                throw new ErrorWithCause('Could not communicate with Listenbrainz API server', {cause: e});
+            } else if(e.status !== 410) {
+                throw new ErrorWithCause('Listenbrainz API server returning an unexpected response', {cause: e})
             }
+            return true;
         }
-        return this.initialized;
     }
 
     doAuthentication = async () => {
+        if(this.config.data.token === undefined) {
+            throw new Error('Must provide a User Token in configuration');
+        }
         try {
             return await this.api.testAuth();
         } catch (e) {

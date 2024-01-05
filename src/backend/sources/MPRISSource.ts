@@ -90,15 +90,13 @@ export class MPRISSource extends MemorySource {
         }
     }
 
-    initialize = async () => {
+    protected async doCheckConnection(): Promise<boolean> {
         // test if we can get DBus
         try {
             await this.getDBus();
             return true;
         } catch (e) {
-            this.logger.error('Could not get DBus interface from operating system');
-            this.logger.error(e);
-            return false;
+            throw new ErrorWithCause('Could not get DBus interface from operating system', {cause: e});
         }
     }
 

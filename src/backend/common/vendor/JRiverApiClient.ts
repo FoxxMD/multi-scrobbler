@@ -134,8 +134,7 @@ export class JRiverApiClient extends AbstractApiClient {
             this.logger.verbose(`Found ${data.ProgramName} ${data.ProgramVersion} (${data.FriendlyName})`);
             return true;
         } catch (e) {
-            this.logger.error(new ErrorWithCause('Could not communicate with JRiver server. Verify your server URL is correct.', {cause: e}));
-            return false;
+            throw new ErrorWithCause('Could not communicate with JRiver server. Verify your server URL is correct.', {cause: e});
         }
     }
 
