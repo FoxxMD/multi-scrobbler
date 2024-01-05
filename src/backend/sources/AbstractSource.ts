@@ -123,6 +123,10 @@ export default abstract class AbstractSource implements Authenticatable {
         }
     }
 
+    public isReady() {
+        return this.initialized && !this.authGated();
+    }
+
     getRecentlyPlayed = async (options: RecentlyPlayedOptions = {}): Promise<PlayObject[]> => {
         return [];
     }
