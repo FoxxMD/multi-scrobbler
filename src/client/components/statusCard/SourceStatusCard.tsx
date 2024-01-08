@@ -41,6 +41,7 @@ const SourceStatusCard = (props: SourceStatusCardData) => {
             method: 'GET',
         });
     },[data]);
+    let startSourceElement = null;
     if(data !== undefined)
     {
         const {
@@ -63,16 +64,25 @@ const SourceStatusCard = (props: SourceStatusCardData) => {
 
         const discovered = (!hasAuth || authed) ? <Link to={`/recent?type=${type}&name=${name}`}>Tracks Discovered</Link> : <span>Tracks Discovered</span>;
 
+        if((!hasAuth || authed) && canPoll) {
+            startSourceElement = <div onClick={poll} className="capitalize underline cursor-pointer">{status === 'Polling' ? 'Restart' : 'Start'}</div>
+        }
+
         // TODO links
         body = (<div className="statusCardBody">
             {platformIds.map(x => <Player key={x} data={players[x]}/>)}
             <div>{discovered}: {tracksDiscovered}</div>
-            {canPoll && hasAuthInteraction ? <a target="_blank" href={`/api/source/auth?name=${name}&type=${type}`}>(Re)authenticate and (re)start polling</a> : null}
-            {canPoll && (!hasAuth || authed) ? <div onClick={poll} className="cursor-pointer underline">Restart Polling</div> : null}
+            {canPoll && hasAuthInteraction ? <a target="_blank" href={`/api/source/auth?name=${name}&type=${type}`}>(Re)authenticate</a> : null}
         </div>);
     }
     return (
-        <StatusCardSkeleton loading={loading} title={header} subtitle={name} status={status} statusType={statusToStatusType(status)}>
+        <StatusCardSkeleton
+            loading={loading}
+            title={header}
+            subtitle={name}
+            status={status}
+            subtitleRight={startSourceElement}
+            statusType={statusToStatusType(status)}>
                 {body}
         </StatusCardSkeleton>
     );

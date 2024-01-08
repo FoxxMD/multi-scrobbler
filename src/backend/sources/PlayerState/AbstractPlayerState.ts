@@ -12,6 +12,7 @@ import { ListenProgress } from "./ListenProgress";
 import {PlayObject, Second, SourcePlayerObj} from "../../../core/Atomic";
 import { buildTrackString } from "../../../core/StringUtils";
 import {ListenRange} from "./ListenRange";
+import {id} from "common-tags";
 
 export interface PlayerStateIntervals {
     staleInterval?: number
@@ -104,7 +105,7 @@ export abstract class AbstractPlayerState {
         } else if (status !== undefined) {
             if (status === 'stopped' && this.reportedStatus !== 'stopped' && this.currentPlay !== undefined) {
                 this.stopPlayer();
-                const play = this.getPlayedObject();
+                const play = this.getPlayedObject(true);
                 this.clearPlayer();
                 return [play, play];
             }
@@ -122,11 +123,12 @@ export abstract class AbstractPlayerState {
         }
 
         if (this.currentPlay !== undefined) {
-            if (!playObjDataMatch(this.currentPlay, play)/* || (true !== false)*/) { // TODO check new play date and listen range to see if they intersect
+            const currentPlayMatches = playObjDataMatch(this.currentPlay, play);
+            if (!currentPlayMatches) { // TODO check new play date and listen range to see if they intersect
                 this.logger.debug(`Incoming play state (${buildTrackString(play, {include: ['trackId', 'artist', 'track']})}) does not match existing state, removing existing: ${buildTrackString(this.currentPlay, {include: ['trackId', 'artist', 'track']})}`)
                 this.currentListenSessionEnd();
-                const played = this.getPlayedObject();
-                this.setCurrentPlay(play, undefined, reportedTS);
+                const played = this.getPlayedObject(true);
+                this.setCurrentPlay(play, {reportedTS});
                 if (this.calculatedStatus !== CALCULATED_PLAYER_STATUSES.playing) {
                     this.calculatedStatus = CALCULATED_PLAYER_STATUSES.unknown;
                 }
@@ -137,9 +139,9 @@ export abstract class AbstractPlayerState {
             } else if (this.isSessionRepeat(play.meta.trackProgressPosition, reportedTS)) {
                 // if we detect the track has been restarted end listen session and treat as a new play
                 this.currentListenSessionEnd();
-                const played = this.getPlayedObject();
+                const played = this.getPlayedObject(true);
                 play.data.playDate = dayjs();
-                this.setCurrentPlay(play, undefined, reportedTS);
+                this.setCurrentPlay(play, {reportedTS});
                 return [this.getPlayedObject(), played];
             } else {
                 if(this.currentListenRange !== undefined) {
@@ -179,18 +181,22 @@ export abstract class AbstractPlayerState {
         this.currentListenSessionEnd();
     }
 
-    getPlayedObject(): PlayObject | undefined {
+    public getPlayedObject(completed: boolean = false): PlayObject | undefined {
         if(this.currentPlay !== undefined) {
             let ranges = [...this.listenRanges];
             if (this.currentListenRange !== undefined) {
                 ranges.push(this.currentListenRange);
+            }
+            if(completed) {
+                this.logger.debug('Generating play object with playDateCompleted');
             }
             return {
                 data: {
                     ...this.currentPlay.data,
                     playDate: this.playFirstSeenAt,
                     listenedFor: this.getListenDuration(),
-                    listenRanges: ranges
+                    listenRanges: ranges,
+                    playDateCompleted: completed ? dayjs() : undefined
                 },
                 meta: this.currentPlay.meta
             }
@@ -198,7 +204,7 @@ export abstract class AbstractPlayerState {
         return undefined;
     }
 
-    getListenDuration(): Second{
+    public getListenDuration(): Second{
         let listenDur: number = 0;
         let ranges = [...this.listenRanges];
         if (this.currentListenRange !== undefined) {
@@ -322,7 +328,14 @@ export abstract class AbstractPlayerState {
         return false;
     }
 
-    protected setCurrentPlay(play: PlayObject, status?: ReportedPlayerStatus, reportedTS?: Dayjs) {
+    protected setCurrentPlay(play: PlayObject, options?: CurrentPlayOptions) {
+
+        const {
+            status,
+            reportedTS,
+            listenSessionManaged = true
+        } = options || {};
+
         this.currentPlay = play;
         this.playFirstSeenAt = dayjs();
         this.listenRanges = [];
@@ -334,12 +347,12 @@ export abstract class AbstractPlayerState {
             this.reportedStatus = status;
         }
 
-        if (!['stopped'].includes(this.reportedStatus)) {
+        if (listenSessionManaged && !['stopped'].includes(this.reportedStatus)) {
             this.currentListenSessionContinue(play.meta.trackProgressPosition, reportedTS);
         }
     }
 
-    textSummary() {
+    public textSummary() {
         let parts = [''];
         let play: string;
         if (this.currentPlay !== undefined) {
@@ -361,7 +374,7 @@ export abstract class AbstractPlayerState {
         return parts.join('\n');
     }
 
-    logSummary() {
+    public logSummary() {
         this.logger.debug(this.textSummary());
     }
 
@@ -381,7 +394,7 @@ export abstract class AbstractPlayerState {
         return lastRange.end.position;
     }
 
-    getApiState(): SourcePlayerObj {
+    public getApiState(): SourcePlayerObj {
         return {
             platformId: this.platformIdStr,
             play: this.getPlayedObject(),
@@ -398,4 +411,22 @@ export abstract class AbstractPlayerState {
             }
         }
     }
+
+    public transferToNewPlayer(newPlayer: AbstractPlayerState) {
+        this.logger.debug(`Transferring state to new Player (${newPlayer.platformIdStr})`);
+        newPlayer.calculatedStatus = this.calculatedStatus;
+        if(this.currentPlay !== undefined) {
+            newPlayer.setCurrentPlay(this.currentPlay, {status: this.reportedStatus, listenSessionManaged: false});
+        }
+        newPlayer.currentListenRange = this.currentListenRange;
+        newPlayer.listenRanges = this.listenRanges;
+        newPlayer.playFirstSeenAt = this.playFirstSeenAt;
+        newPlayer.playLastUpdatedAt = this.playLastUpdatedAt;
+    }
+}
+
+export interface CurrentPlayOptions {
+    status?: ReportedPlayerStatus,
+    reportedTS?: Dayjs
+    listenSessionManaged?: boolean
 }

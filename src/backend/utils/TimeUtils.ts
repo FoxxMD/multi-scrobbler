@@ -1,5 +1,5 @@
 import {
-    PlayObject,
+    PlayObject, SCROBBLE_TS_SOC_END, SCROBBLE_TS_SOC_START, ScrobbleTsSOC,
     TA_CLOSE,
     TA_EXACT,
     TA_FUZZY,
@@ -16,6 +16,7 @@ import {
 import {formatNumber} from "../utils";
 import {ScrobbleThresholds} from "../common/infrastructure/config/source";
 import {capitalize} from "../../core/StringUtils";
+import dayjs, {Dayjs} from "dayjs";
 
 export const temporalPlayComparisonSummary = (data: TemporalPlayComparison, existingPlay?: PlayObject, candidatePlay?: PlayObject) => {
     const parts: string[] = [];
@@ -60,23 +61,33 @@ export const comparePlayTemporally = (existingPlay: PlayObject, candidatePlay: P
     const {
         meta: {
             source,
+            //scrobbleTsSOC: existingScrobbleTsSOC = SCROBBLE_TS_SOC_START,
         },
         data: {
-            playDate: existingPlayDate,
+            // playDate: existingPlayDate,
+            // playDateCompleted: existingPlayDateCompleted,
             duration: existingDuration,
             listenRanges: existingRanges,
             listenedFor: existingListenedFor,
         }
     } = existingPlay;
 
+    const [existingTsSOCDate, existingTsSOC] = getScrobbleTsSOCDateWithContext(existingPlay);
+
     const {
+        // meta: {
+        //   scrobbleTsSOC: candidateScrobbleTsSOC = SCROBBLE_TS_SOC_START,
+        // },
         data: {
-            playDate: newPlayDate,
+            // playDate: newPlayDate,
+            // playDateCompleted: candidatePlayDateCompleted,
             duration: newDuration,
             listenRanges: newRanges,
             listenedFor: newListenedFor,
         }
     } = candidatePlay;
+
+    const [candidateTsSOCDate, candidateTsSOC] = getScrobbleTsSOCDateWithContext(candidatePlay);
 
     const {
         diffThreshold = lowGranularitySources.some(x => x.toLocaleLowerCase() === source) ? 60 : 10,
@@ -85,7 +96,7 @@ export const comparePlayTemporally = (existingPlay: PlayObject, candidatePlay: P
     } = options;
 
     // cant compare!
-    if (existingPlayDate === undefined || newPlayDate === undefined) {
+    if (existingTsSOCDate === undefined || candidateTsSOCDate === undefined) {
         return result;
     }
 
@@ -95,7 +106,7 @@ export const comparePlayTemporally = (existingPlay: PlayObject, candidatePlay: P
     let playDiffThreshold = diffThreshold;
 
     // check if existing play time is same as new play date
-    let scrobblePlayDiff = Math.abs(existingPlayDate.unix() - newPlayDate.unix());
+    let scrobblePlayDiff = Math.abs(existingTsSOCDate.unix() - candidateTsSOCDate.unix());
     result.date = {
         threshold: diffThreshold,
         diff: scrobblePlayDiff
@@ -112,7 +123,7 @@ export const comparePlayTemporally = (existingPlay: PlayObject, candidatePlay: P
         // we can check if the new track play date took place while the existing one was being listened to
         // which would indicate (assuming same source) the new track is a duplicate
         for (const range of existingRanges) {
-            if (newPlayDate.isBetween(range.start.timestamp, range.end.timestamp)) {
+            if (candidateTsSOCDate.isBetween(range.start.timestamp, range.end.timestamp)) {
                 result.range = range;
                 if(!temporalAccuracyIsAtLeast(TA_CLOSE, result.match)) {
                     result.match = TA_CLOSE;
@@ -196,4 +207,26 @@ export const temporalAccuracyToString = (acc: TemporalAccuracy): string => {
         case false:
             return 'no correlation';
     }
+}
+
+export const getScrobbleTsSOCDateWithContext = (data: PlayObject): [Dayjs, ScrobbleTsSOC] => {
+    const {
+        meta: {
+            scrobbleTsSOC = SCROBBLE_TS_SOC_START,
+        },
+        data: {
+            playDate = dayjs(),
+            playDateCompleted
+        }
+    } = data;
+
+    if(scrobbleTsSOC === SCROBBLE_TS_SOC_END && playDateCompleted !== undefined) {
+        return [playDateCompleted, SCROBBLE_TS_SOC_END];
+    }
+    return [playDate, SCROBBLE_TS_SOC_START];
+}
+
+export const getScrobbleTsSOCDate = (data: PlayObject): Dayjs => {
+    const [date, _] = getScrobbleTsSOCDateWithContext(data);
+    return date;
 }

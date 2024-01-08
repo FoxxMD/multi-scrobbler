@@ -372,8 +372,10 @@ export const setupApi = (app: ExpressWithAsync, logger: Logger, initialLogOutput
             source.logger.info('Source is already polling! Restarting polling...');
             const stopRes = await source.tryStopPolling();
             if(stopRes === true) {
-                source.startPolling();
+                source.poll();
             }
+        } else {
+            source.poll();
         }
     });
 

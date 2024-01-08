@@ -16,6 +16,7 @@ import {
     uniqueNormalizedStrArr
 } from "../../utils/StringUtils";
 import {UpstreamError} from "../errors/UpstreamError";
+import {getScrobbleTsSOCDate} from "../../utils/TimeUtils";
 
 
 export interface ArtistMBIDMapping {
@@ -275,7 +276,7 @@ export class ListenbrainzApiClient extends AbstractApiClient {
             }
         } = play;
         return {
-            listened_at: (playDate ?? dayjs()).unix(),
+            listened_at: getScrobbleTsSOCDate(play).unix(),
             track_metadata: {
                 artist_name: artists[0],
                 track_name: track,

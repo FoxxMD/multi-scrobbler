@@ -121,25 +121,10 @@ const configDir = process.env.CONFIG_DIR || path.resolve(projectDir, `./config`)
         let anyNotReady = false;
         for (const source of scrobbleSources.sources.filter(x => x.canPoll === true)) {
             await sleep(1500); // stagger polling by 1.5 seconds so that log messages for each source don't get mixed up
-            switch (source.type) {
-                case 'spotify':
-                    if ((source as SpotifySource).spotifyApi !== undefined) {
-                        if ((source as SpotifySource).spotifyApi.getAccessToken() === undefined) {
-                            anyNotReady = true;
-                        } else {
-                            (source as SpotifySource).poll();
-                        }
-                    }
-                    break;
-                case 'lastfm':
-                    if(source.initialized === true) {
-                        source.poll();
-                    }
-                    break;
-                default:
-                    if (source.poll !== undefined) {
-                        source.poll();
-                    }
+            if(source.isReady()) {
+                source.poll();
+            } else {
+                anyNotReady = true;
             }
         }
         if (anyNotReady) {

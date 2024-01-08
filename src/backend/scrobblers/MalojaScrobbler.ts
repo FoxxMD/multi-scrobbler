@@ -23,6 +23,7 @@ import EventEmitter from "events";
 import normalizeUrl from "normalize-url";
 import {UpstreamError} from "../common/errors/UpstreamError";
 import {ErrorWithCause} from "pony-cause";
+import {getScrobbleTsSOCDate, getScrobbleTsSOCDateWithContext} from "../utils/TimeUtils";
 
 const feat = ["ft.", "ft", "feat.", "feat", "featuring", "Ft.", "Ft", "Feat.", "Feat", "Featuring"];
 
@@ -377,16 +378,17 @@ export default class MalojaScrobbler extends AbstractScrobbleClient {
                 album,
                 track,
                 duration,
-                playDate,
                 listenedFor
             } = {}
         } = playObj;
+
+        const [pd, scrobbleTsSOC] = getScrobbleTsSOCDateWithContext(playObj);
 
         const scrobbleData: MalojaScrobbleRequestData = {
             title: track,
             album,
             key: apiKey,
-            time: playDate.unix(),
+            time: pd.unix(),
             // https://github.com/FoxxMD/multi-scrobbler/issues/42#issuecomment-1100184135
             length: duration,
         };
@@ -424,6 +426,8 @@ export default class MalojaScrobbler extends AbstractScrobbleClient {
             } = {}
         } = playObj;
 
+        const pd =  getScrobbleTsSOCDate(playObj);
+
         const sType = newFromSource ? 'New' : 'Backlog';
 
         const scrobbleData = this.playToClientPayload(playObj);
@@ -448,7 +452,7 @@ export default class MalojaScrobbler extends AbstractScrobbleClient {
                 if(status === 'success') {
                     if(track !== undefined) {
                         scrobbleResponse = {
-                            time: playDate.unix(),
+                            time: pd.unix(),
                             track: {
                                 ...track,
                                 length: duration
@@ -476,7 +480,7 @@ export default class MalojaScrobbler extends AbstractScrobbleClient {
                 const {
                     body: {
                         track: {
-                            time: mTime = playDate.unix(),
+                            time: mTime = pd.unix(),
                             duration: mDuration = duration,
                             album: mAlbum = album,
                             ...rest

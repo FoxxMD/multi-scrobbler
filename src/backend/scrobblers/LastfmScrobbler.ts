@@ -19,6 +19,7 @@ import {buildTrackString, capitalize} from "../../core/StringUtils";
 import EventEmitter from "events";
 import {UpstreamError} from "../common/errors/UpstreamError";
 import {isNodeNetworkException} from "../common/errors/NodeErrors";
+import {getScrobbleTsSOCDate} from "../utils/TimeUtils";
 
 export default class LastfmScrobbler extends AbstractScrobbleClient {
 
@@ -163,7 +164,7 @@ export default class LastfmScrobbler extends AbstractScrobbleClient {
             duration,
             track,
             album,
-            timestamp: playDate.unix(),
+            timestamp: getScrobbleTsSOCDate(playObj).unix(),
             mbid,
         };
 
