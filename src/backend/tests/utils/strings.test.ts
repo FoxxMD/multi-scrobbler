@@ -1,7 +1,19 @@
 import {describe, it} from 'mocha';
 import {assert} from 'chai';
-import {compareNormalizedStrings} from "../utils/StringUtils";
+import {compareNormalizedStrings, parseTrackCredits, uniqueNormalizedStrArr} from "../../utils/StringUtils";
+import testData from './playTestData.json';
+import {ExpectedResults} from "./interfaces";
+import {intersect} from "../../utils";
 
+interface PlayTestFixture {
+    caseHints: string[]
+    data: {
+        track: string
+        artists: string[]
+        album?: string
+    }
+    expected: ExpectedResults
+}
 
 describe('String Comparisons', function () {
 
@@ -93,5 +105,23 @@ describe('String Comparisons', function () {
         const result2 = compareNormalizedStrings(shorterString, longerString);
 
         assert.equal( result1.highScore, result2.highScore, `Comparing: '${longerString}' | '${shorterString}'`);
+    });
+});
+
+describe('Play Strings',function () {
+
+    const testFixtures = testData as unknown as PlayTestFixture[];
+    const joinerData = testFixtures.filter(x => intersect(['joiner','track'], x.caseHints).length === 2);
+
+    it('should parse joiners from track title', function() {
+        for(const test of joinerData) {
+            const res = parseTrackCredits(test.data.track);
+            let artists: string[] = [...test.data.artists];
+            if(res.secondary !== undefined) {
+                artists = uniqueNormalizedStrArr([...artists, ...res.secondary]);
+            }
+            assert.equal(res.primaryComposite, test.expected.track);
+            assert.sameDeepMembers(artists, test.expected.artists);
+        }
     });
 });

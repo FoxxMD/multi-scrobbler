@@ -19,11 +19,8 @@ import dayjs from "dayjs";
 import {withRequestInterception} from "../utils/networking";
 import {http, HttpResponse} from "msw";
 import {UpstreamError} from "../../common/errors/UpstreamError";
+import {ExpectedResults} from "../utils/interfaces";
 
-interface ExpectedResults {
-    artists: string[]
-    track: string
-}
 interface LZTestFixture {
     data: ListenResponse
     expected: ExpectedResults

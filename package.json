@@ -12,7 +12,7 @@
     "typedoc": "typedoc",
     "circular": "madge --circular --extensions ts src/index.ts",
     "test": "react-scripts test",
-    "test:backend": "mocha --extension ts --reporter spec  --recursive src/backend/tests/scrobbler/**/*.test.ts",
+    "test:backend": "mocha --extension ts --reporter spec  --recursive src/backend/tests/**/*.test.ts",
     "eject": "react-scripts eject",
     "dev": "concurrently -p name -c \"yellow,magenta,blue\" -n \"webpack-server,nodemon-server,CRA\" \"npm run dev:server:webpack\" \"npm run dev:server:nodemon\" \"npm run dev:client\"",
     "dev:client": "BROWSER=none REACT_APP_VERSION=$npm_package_version react-scripts start",

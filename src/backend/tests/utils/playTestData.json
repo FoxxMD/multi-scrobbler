@@ -1,0 +1,188 @@
+[
+  {
+    "caseHints": [
+      "track",
+      "joiner"
+    ],
+    "data": {
+      "artists": [
+        "Eugene Naumenko"
+      ],
+      "track": "Take-Off feat. Diag",
+      "album": "1000 Years"
+    },
+    "expected": {
+      "artists": [
+        "Eugene Naumenko",
+        "Diag"
+      ],
+      "track": "Take-Off",
+      "album": "1000 Years"
+    }
+  },
+  {
+    "caseHints": [
+      "track",
+      "remix"
+    ],
+    "data": {
+      "artists": [
+        "Djfredse"
+      ],
+      "track": "Anny Sky - Together With You (Djfredse Remix)"
+    },
+    "expected": {
+      "artists": [
+        "Djfredse",
+        "Anny Sky"
+      ],
+      "track": "Together With You (Djfredse Remix)"
+    }
+  },
+  {
+    "caseHints": [
+      "track",
+      "remix",
+      "joiner"
+    ],
+    "data": {
+      "artists": [
+        "Chriss"
+      ],
+      "track": "Criminal mind Ft Akon (Remix Braquer vos têtes)",
+      "album": "Music Is Life"
+    },
+    "expected": {
+      "artists": [
+        "Chriss",
+        "Akon"
+      ],
+      "track": "Criminal mind (Remix Braquer vos têtes)",
+      "album": "Music Is Life"
+    }
+  },
+  {
+    "caseHints": [
+      "track",
+      "joiner"
+    ],
+    "data": {
+      "artists": [
+        "Luis Zunel"
+      ],
+      "track": "Reset my Blues (Featuring Peergynt Lobogris)"
+    },
+    "expected": {
+      "artists": [
+        "Luis Zunel",
+        "Peergynt Lobogris"
+      ],
+      "track": "Reset my Blues"
+    }
+  },
+  {
+    "caseHints": [
+      "track",
+      "joiner"
+    ],
+    "data": {
+      "artists": [
+        "Woochia"
+      ],
+      "track": "La Flaque (feat.Ecstatik)"
+    },
+    "expected": {
+      "artists": [
+        "Woochia",
+        "Ecstatik"
+      ],
+      "track": "La Flaque"
+    }
+  },
+  {
+    "caseHints": [
+      "track",
+      "joiner",
+      "remix"
+    ],
+    "data": {
+      "artists": [
+        "Alicia Keys",
+        "Kaash Paige",
+        "Diamond Platnumz"
+      ],
+      "track": "Wasted Energy (feat. Kaash Paige & Diamond Platnumz) - Remix"
+    },
+    "expected": {
+      "artists": [
+        "Alicia Keys",
+        "Kaash Paige",
+        "Diamond Platnumz"
+      ],
+      "track": "Wasted Energy - Remix"
+    }
+  },
+  {
+    "caseHints": [
+      "track",
+      "joiner"
+    ],
+    "data": {
+      "artists": [
+        "Tyler, the Creator"
+      ],
+      "track": "WUSYANAME (feat. Youngboy Never Broke Again & Ty Dolla $ign)"
+    },
+    "expected": {
+      "artists": [
+        "Tyler, the Creator",
+        "Youngboy Never Broke Again",
+        "Ty Dolla $ign"
+      ],
+      "track": "WUSYANAME"
+    }
+  },
+  {
+    "caseHints": [
+      "track",
+      "joiner"
+    ],
+    "data": {
+      "artists": [
+        "Tyler, the Creator"
+      ],
+      "track": "Trashwang (feat. Na' kel, Jasper Dolphin, Lucas & L-Boy)"
+    },
+    "expected": {
+      "artists": [
+        "Tyler, the Creator",
+        "Na' kel",
+        "Jasper Dolphin",
+        "L-Boy",
+        "Lucas"
+      ],
+      "track": "Trashwang"
+    }
+  },
+  {
+    "caseHints": [
+      "track",
+      "joiner"
+    ],
+    "data": {
+      "artists": [
+        "Childish Gambino"
+      ],
+      "track": "12.38 (feat. 21 Savage, Ink & Kadhja Bonet)"
+    },
+    "expected": {
+      "artists": [
+        "Childish Gambino",
+        "21 Savage",
+        "Ink",
+        "Kadhja Bonet"
+      ],
+      "track": "12.38"
+    }
+  }
+]
