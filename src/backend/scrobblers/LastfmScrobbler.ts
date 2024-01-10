@@ -19,6 +19,7 @@ import {buildTrackString, capitalize} from "../../core/StringUtils";
 import EventEmitter from "events";
 import {UpstreamError} from "../common/errors/UpstreamError";
 import {isNodeNetworkException} from "../common/errors/NodeErrors";
+import {getScrobbleTsSOCDate} from "../utils/TimeUtils";
 
 export default class LastfmScrobbler extends AbstractScrobbleClient {
 
@@ -39,7 +40,14 @@ export default class LastfmScrobbler extends AbstractScrobbleClient {
     initialize = async () => {
         // @ts-expect-error TS(2322): Type 'number' is not assignable to type 'boolean'.
         this.initialized = INITIALIZING;
-        this.initialized = await this.api.initialize();
+        const result = await this.api.initialize();
+        this.initialized = result;
+        if(result) {
+            this.logger.info('Initialized');
+        } else {
+            this.logger.warn('Could not initialize');
+        }
+
         return this.initialized;
     }
 
@@ -156,7 +164,7 @@ export default class LastfmScrobbler extends AbstractScrobbleClient {
             duration,
             track,
             album,
-            timestamp: playDate.unix(),
+            timestamp: getScrobbleTsSOCDate(playObj).unix(),
             mbid,
         };
 

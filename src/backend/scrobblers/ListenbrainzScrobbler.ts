@@ -1,14 +1,6 @@
 import dayjs from 'dayjs';
 
 import AbstractScrobbleClient from "./AbstractScrobbleClient";
-import {
-    playObjDataMatch,
-    removeUndefinedKeys,
-    setIntersection,
-    sleep,
-    sortByOldestPlayDate,
-} from "../utils";
-import LastfmApiClient from "../common/vendor/LastfmApiClient";
 import { FormatPlayObjectOptions, INITIALIZING } from "../common/infrastructure/Atomic";
 import { Notifiers } from "../notifier/Notifiers";
 import {Logger} from '@foxxmd/winston';
@@ -19,6 +11,7 @@ import {buildTrackString, capitalize} from "../../core/StringUtils";
 import EventEmitter from "events";
 import {UpstreamError} from "../common/errors/UpstreamError";
 import {isNodeNetworkException} from "../common/errors/NodeErrors";
+import {ErrorWithCause} from "pony-cause";
 
 export default class ListenbrainzScrobbler extends AbstractScrobbleClient {
 
@@ -39,14 +32,15 @@ export default class ListenbrainzScrobbler extends AbstractScrobbleClient {
         // @ts-expect-error TS(2322): Type 'number' is not assignable to type 'boolean'.
         this.initialized = INITIALIZING;
         if(this.config.data.token === undefined) {
-            this.logger.error('Must provide a User Token');
+            this.logger.error('Could not initialize, must provide a User Token');
             this.initialized = false;
         } else {
             try {
                 await this.api.testConnection();
                 this.initialized = true;
+                this.logger.info('Initialized');
             } catch (e) {
-                this.logger.error(e);
+                this.logger.warn(new ErrorWithCause('Could not initialize', {cause: e}));
                 this.initialized = false;
             }
         }
@@ -114,17 +108,13 @@ export default class ListenbrainzScrobbler extends AbstractScrobbleClient {
             //await sleep(1000);
             return playObj;
         } catch (e) {
-            let message = e.message;
-            if(e.response !== undefined) {
-                if(e.response.body !== undefined) {
-                    message = e.response.body.messsage;
-                } else if(e.response.text !== undefined) {
-                    message = e.response.text;
-                }
+            await this.notifier.notify({title: `Client - ${capitalize(this.type)} - ${this.name} - Scrobble Error`, message: `Failed to scrobble => ${buildTrackString(playObj)} | Error: ${e.message}`, priority: 'error'});
+            this.logger.error(`Failed to scrobble => ${e.message}`, {payload: rawPayload});
+            if(e instanceof UpstreamError) {
+                throw e;
+            } else {
+                throw new UpstreamError(`Error occurred while making Listenbrainz API request: ${e.message}`, {cause: e, showStopper: true});
             }
-            await this.notifier.notify({title: `Client - ${capitalize(this.type)} - ${this.name} - Scrobble Error`, message: `Failed to scrobble => ${buildTrackString(playObj)} | Error: ${message}`, priority: 'error'});
-            this.logger.error(`Failed to scrobble => ${message}`, {payload: rawPayload});
-            throw new UpstreamError(`Error received from Listenbrainz API: ${message}`, {cause: e, showStopper: true});
         } finally {
             this.logger.debug(`Raw Payload:`, {rawPayload});
         }

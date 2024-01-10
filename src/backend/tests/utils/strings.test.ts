@@ -1,7 +1,19 @@
 import {describe, it} from 'mocha';
 import {assert} from 'chai';
-import {compareNormalizedStrings} from "../utils/StringUtils";
+import {compareNormalizedStrings, parseTrackCredits, uniqueNormalizedStrArr} from "../../utils/StringUtils";
+import testData from './playTestData.json';
+import {ExpectedResults} from "./interfaces";
+import {intersect} from "../../utils";
 
+interface PlayTestFixture {
+    caseHints: string[]
+    data: {
+        track: string
+        artists: string[]
+        album?: string
+    }
+    expected: ExpectedResults
+}
 
 describe('String Comparisons', function () {
 
@@ -71,6 +83,45 @@ describe('String Comparisons', function () {
         for(const test of tests) {
             const result = compareNormalizedStrings(test[0], test[1]);
             assert.isAtMost( result.highScore, 99, `Comparing: '${test[0]}' | '${test[1]}'`);
+        }
+    });
+
+    it('should handle strings with different lengths', async function () {
+        const tests = [
+            ['The Amazing Bongo Hop', 'The Bongo Hop'],
+        ]
+
+        for(const test of tests) {
+            const result = compareNormalizedStrings(test[0], test[1]);
+            assert.isAtMost( result.highScore, 53, `Comparing: '${test[0]}' | '${test[1]}'`);
+        }
+    });
+
+    it('should be string parameter order invariant', async function () {
+        const longerString = 'Nidia Gongora TEST';
+        const shorterString = 'Nidia Gongora'
+
+        const result1 = compareNormalizedStrings(longerString, shorterString);
+        const result2 = compareNormalizedStrings(shorterString, longerString);
+
+        assert.equal( result1.highScore, result2.highScore, `Comparing: '${longerString}' | '${shorterString}'`);
+    });
+});
+
+describe('Play Strings',function () {
+
+    const testFixtures = testData as unknown as PlayTestFixture[];
+    const joinerData = testFixtures.filter(x => intersect(['joiner','track'], x.caseHints).length === 2);
+
+    it('should parse joiners from track title', function() {
+        for(const test of joinerData) {
+            const res = parseTrackCredits(test.data.track);
+            let artists: string[] = [...test.data.artists];
+            if(res.secondary !== undefined) {
+                artists = uniqueNormalizedStrArr([...artists, ...res.secondary]);
+            }
+            assert.equal(res.primaryComposite, test.expected.track);
+            assert.sameDeepMembers(artists, test.expected.artists);
         }
     });
 });

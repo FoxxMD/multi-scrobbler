@@ -12,13 +12,17 @@ import {asPlays, generatePlay, normalizePlays} from "../utils/PlayTestUtils";
 import dayjs from "dayjs";
 import {sleep} from "../../utils";
 import {MockNetworkError, withRequestInterception} from "../utils/networking";
+import {PlayObject} from "../../../core/Atomic";
 
 const firstPlayDate = dayjs().subtract(1, 'hour');
+const olderFirstPlayDate = dayjs().subtract(4, 'hour');
 
 const withDurPlays = asPlays(withDuration);
 const mixedDurPlays = asPlays(mixedDuration);
 const normalizedWithDur = normalizePlays(withDurPlays, {initialDate: firstPlayDate});
 const normalizedWithMixedDur = normalizePlays(mixedDurPlays, {initialDate: firstPlayDate});
+
+const normalizedWithMixedDurOlder = normalizePlays(mixedDurPlays, {initialDate: olderFirstPlayDate});
 
 const testScrobbler = new TestScrobbler();
 testScrobbler.verboseOptions = {
@@ -237,7 +241,7 @@ describe('Detects duplicate and unique scrobbles from client recent history', fu
             assert.isTrue(await testScrobbler.alreadyScrobbled(diffPlay));
         });
 
-        it('Is detected as duplicate when play date is off by less than 10 seconds (high granularity source)', async function () {
+        it('Is detected as duplicate when play date is off by 10 seconds or less (high granularity source)', async function () {
 
             testScrobbler.recentScrobbles = normalizedWithMixedDur;
 
@@ -249,6 +253,17 @@ describe('Detects duplicate and unique scrobbles from client recent history', fu
 
             assert.isTrue(await testScrobbler.alreadyScrobbled(timeOffPos));
             assert.isTrue(await testScrobbler.alreadyScrobbled(timeOffNeg));
+
+            // 10 seconds fuzzy diff inclusive
+            const son = normalizedWithMixedDurOlder.find(x => x.data.track === 'Sonora')
+            son.data.playDate = dayjs().subtract(1, 'hour').set('minute', 26).set('second', 20);
+            son.data.duration = 267;
+            son.data.listenedFor = undefined;
+            testScrobbler.recentScrobbles = normalizedWithMixedDurOlder.concat(son);
+
+            const offSon = clone(son);
+            offSon.data.playDate = dayjs().subtract(1, 'hour').set('minute', 30).set('second', 37);
+            assert.isTrue(await testScrobbler.alreadyScrobbled(offSon));
         });
 
         it('Is detected as duplicate when play date is off by less than 60 seconds (low granularity source)', async function () {
@@ -285,8 +300,37 @@ describe('Detects duplicate and unique scrobbles from client recent history', fu
 
             const sonDiffPlay = clone(son);
             sonDiffPlay.data.playDate = sonDiffPlay.data.playDate.subtract(son.data.duration + 1, 's');
-            sonDiffPlay.data.artists = [sonDiffPlay.data.artists[1]]
             assert.isTrue(await testScrobbler.alreadyScrobbled(sonDiffPlay));
+        });
+
+        it('Is detected as duplicate when artists are included in joiner', async function () {
+            const ref = normalizedWithMixedDurOlder.find(x => x.data.track === 'Freeze Tag');
+            ref.data.playDate = dayjs().subtract(1, 'hour').set('minute', 29).set('second', 26)
+
+            const spotifyPlay: PlayObject = {
+                data: {
+                    artists: [
+                        "Terrace Martin",
+                        "Robert Glasper",
+                        "9th Wonder",
+                        "Kamasi Washington",
+                        "Dinner Party",
+                        "Cordae",
+                        "Phoelix"
+                    ],
+                    album: "Dinner Party: Dessert",
+                    track: "Freeze Tag (feat. Cordae & Phoelix)",
+                    "duration": 191.375,
+                    "playDate": dayjs().subtract(1, 'hour').set('minute', 29).set('second', 27)
+                },
+                meta: {
+                    source: 'Spotify'
+                }
+            }
+
+            testScrobbler.recentScrobbles = normalizedWithMixedDurOlder.concat(ref);
+
+            assert.isTrue(await testScrobbler.alreadyScrobbled(spotifyPlay));
         });
 
         describe('When at least one play has duration', function () {
@@ -295,7 +339,7 @@ describe('Detects duplicate and unique scrobbles from client recent history', fu
 
                 testScrobbler.recentScrobbles = normalizedWithDur;
 
-                const timeEnd = clone(normalizedWithDur[normalizedWithMixedDur.length - 1]);
+                const timeEnd = clone(normalizedWithDur[normalizedWithMixedDur.length - 2]);
                 timeEnd.data.playDate = timeEnd.data.playDate.add(timeEnd.data.duration, 's');
 
                 assert.isTrue(await testScrobbler.alreadyScrobbled(timeEnd));

@@ -15,6 +15,8 @@ import {
     parseTrackCredits,
     uniqueNormalizedStrArr
 } from "../../utils/StringUtils";
+import {UpstreamError} from "../errors/UpstreamError";
+import {getScrobbleTsSOCDate} from "../../utils/TimeUtils";
 
 
 export interface ArtistMBIDMapping {
@@ -137,7 +139,40 @@ export class ListenbrainzApiClient extends AbstractApiClient {
         } catch (e) {
             const {
                 message,
+                err,
+                status,
+                response: {
+                    body = undefined,
+                    text = undefined,
+                } = {}
             } = e;
+            // TODO check err for network exception
+            if(status !== undefined) {
+                const msgParts = [`(HTTP Status ${status})`];
+                // if the response is 400 then its likely there was an issue with the data we sent rather than an error with the service
+                let showStopper = status !== 400;
+                if(body !== undefined) {
+                    if(typeof body === 'object') {
+                        if('code' in body) {
+                            msgParts.push(`Code ${body.code}`);
+                        }
+                        if('error' in body) {
+                            msgParts.push(`Error => ${body.error}`);
+                        }
+                        if('message' in body) {
+                            msgParts.push(`Message => ${body.error}`);
+                        }
+                        // if('track_metadata' in body) {
+                        //     msgParts.push(`Track Metadata => ${JSON.stringify(body.track_metadata)}`);
+                        // }
+                    } else if(typeof body === 'string') {
+                        msgParts.push(`Response => ${body}`);
+                    }
+                } else if (text !== undefined) {
+                    msgParts.push(`Response => ${text}`);
+                }
+                throw new UpstreamError(`Listenbrainz API Request Failed => ${msgParts.join(' | ')}`, {cause: e, showStopper});
+            }
             throw e;
         }
     }
@@ -241,7 +276,7 @@ export class ListenbrainzApiClient extends AbstractApiClient {
             }
         } = play;
         return {
-            listened_at: (playDate ?? dayjs()).unix(),
+            listened_at: getScrobbleTsSOCDate(play).unix(),
             track_metadata: {
                 artist_name: artists[0],
                 track_name: track,
@@ -249,7 +284,7 @@ export class ListenbrainzApiClient extends AbstractApiClient {
                 additional_info: {
                     duration: play.data.duration !== undefined ? Math.round(duration) : undefined,
                     track_mbid: brainz.track,
-                    artist_mbids: brainz.artist !== undefined ? [brainz.artist] : undefined,
+                    artist_mbids: brainz.artist,
                     release_mbid: brainz.album,
                     release_group_mbid: brainz.releaseGroup
                 }

@@ -1,13 +1,10 @@
 import MemorySource from "./MemorySource";
 import dayjs, {Dayjs} from "dayjs";
 import {
-    isPlayTemporallyClose,
     combinePartsToString,
     parseBool,
     parseDurationFromTimestamp,
     playObjDataMatch,
-    comparePlayTemporally,
-    temporalPlayComparisonSummary,
     doubleReturnNewline,
 } from "../utils";
 import { JellySourceConfig } from "../common/infrastructure/config/source/jellyfin";
@@ -16,8 +13,14 @@ import EventEmitter from "events";
 import { PlayerStateOptions } from "./PlayerState/AbstractPlayerState";
 import {Logger} from "@foxxmd/winston";
 import { JellyfinPlayerState } from "./PlayerState/JellyfinPlayerState";
-import { PlayObject } from "../../core/Atomic";
-import { buildTrackString, truncateStringToLength } from "../../core/StringUtils";
+import {PlayObject, TA_CLOSE} from "../../core/Atomic";
+import {buildTrackString, splitByFirstFound, truncateStringToLength} from "../../core/StringUtils";
+import {source} from "common-tags";
+import {
+    comparePlayTemporally,
+    temporalAccuracyIsAtLeast,
+    temporalPlayComparisonSummary
+} from "../utils/TimeUtils";
 
 const shortDeviceId = truncateStringToLength(10, '');
 
@@ -158,7 +161,7 @@ export default class JellyfinSource extends MemorySource {
                 playDate,
                 meta: {
                     brainz: {
-                        artist: Provider_musicbrainzartist,
+                        artist: splitByFirstFound<undefined>(Provider_musicbrainzartist, [';'], undefined),
                         album: Provider_musicbrainzalbum,
                         albumArtist: Provider_musicbrainzalbumartist,
                         track: Provider_musicbrainztrack,
@@ -309,7 +312,7 @@ export default class JellyfinSource extends MemorySource {
                         
                         Temporal Comparison => ${temporalPlayComparisonSummary(temporalResult, currPlay, playObj)}`);
                     }
-                    if(temporalResult.close) {
+                    if(temporalAccuracyIsAtLeast(TA_CLOSE,temporalResult.match)) {
                         existingTracked = currPlay;
                     }
                     break;

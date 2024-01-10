@@ -6,6 +6,8 @@ import {DEFAULT_RETRY_MULTIPLIER, FormatPlayObjectOptions} from "../infrastructu
 import { LastfmData } from "../infrastructure/config/client/lastfm";
 import { PlayObject } from "../../../core/Atomic";
 import {isNodeNetworkException} from "../errors/NodeErrors";
+import {nonEmptyStringOrDefault, splitByFirstFound} from "../../../core/StringUtils";
+import {source} from "common-tags";
 
 const badErrors = [
     'api key suspended',
@@ -61,7 +63,7 @@ export default class LastfmApiClient extends AbstractApiClient {
             mbid,
         } = obj;
         // arbitrary decision yikes
-        let artistStrings = artists !== undefined ? artists.split(',') : [artistName];
+        let artistStrings = splitByFirstFound(artists, [','], [artistName]);
         return {
             data: {
                 artists: [...new Set(artistStrings)] as string[],
@@ -71,9 +73,9 @@ export default class LastfmApiClient extends AbstractApiClient {
                 playDate: time !== undefined ? dayjs.unix(time) : undefined,
                 meta: {
                     brainz: {
-                        album: albumMbid === '' ? undefined : albumMbid,
-                        artist: artistMbid === '' ? undefined : artistMbid,
-                        track: mbid === '' ? undefined : mbid
+                        album: nonEmptyStringOrDefault<undefined>(albumMbid),
+                        artist: splitByFirstFound<undefined>(artistMbid, [',',';'], undefined),
+                        track: nonEmptyStringOrDefault<undefined>(mbid)
                     }
                 }
             },

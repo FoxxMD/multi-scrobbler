@@ -39,6 +39,12 @@ export class WebScrobblerSource extends MemorySource {
         };
     }
 
+    initialize = async () => {
+        this.logger.info(`Accepting requests at ${this.localUrl}/api/webscrobbler${this.config.data.slug === undefined ? '' : `/${this.config.data.slug}`}`);
+        this.initialized = true;
+        return this.initialized;
+    }
+
     matchSlug(slug: string | undefined) {
         if (this.config.data.slug === undefined || this.config.data.slug === null) {
             return slug === undefined;

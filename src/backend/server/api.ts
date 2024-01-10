@@ -372,9 +372,26 @@ export const setupApi = (app: ExpressWithAsync, logger: Logger, initialLogOutput
             source.logger.info('Source is already polling! Restarting polling...');
             const stopRes = await source.tryStopPolling();
             if(stopRes === true) {
-                source.startPolling();
+                source.poll();
             }
+        } else {
+            source.poll();
         }
+    });
+
+    app.use('/api/client/init', clientRequiredMiddle);
+    app.postAsync('/api/client/init', async function (req, res) {
+        // @ts-expect-error TS(2339): Property 'scrobbleSource' does not exist on type '... Remove this comment to see the full error message
+        const client = req.scrobbleClient as AbstractScrobbleClient;
+
+        logger.info('Checking (and trying) to stop scrobbler if already running...');
+        if(false === (await client.tryStopScrobbling())) {
+            return res.status(500).send();
+        }
+
+        logger.info('Trying to start scrobbler...');
+        await client.initScrobbleMonitoring();
+        res.status(200).send('OK');
     });
 
     app.getAsync('/health', async function(req, res)  {

@@ -4,8 +4,6 @@ import {
     sortByOldestPlayDate,
     toProgressAwarePlayObject,
     getProgress,
-    playPassesScrobbleThreshold,
-    timePassesScrobbleThreshold,
     thresholdResultSummary,
     genGroupId,
     genGroupIdStr,
@@ -32,6 +30,7 @@ import {SimpleIntervalJob, Task, ToadScheduler} from "toad-scheduler";
 import {SourceConfig} from "../common/infrastructure/config/source/sources";
 import {EventEmitter} from "events";
 import objectHash from 'object-hash';
+import {timePassesScrobbleThreshold} from "../utils/TimeUtils";
 
 export default class MemorySource extends AbstractSource {
 
@@ -58,14 +57,12 @@ export default class MemorySource extends AbstractSource {
     }
 
     cleanupPlayers = () => {
-        const deadPlatformIds: string[] = [];
+        const deadPlatformIds: [string, string?][] = [];
         for (const [key, player] of this.players.entries()) {
             // no communication from the source was received for this player
             const isStale = player.checkStale();
             if (isStale && player.checkOrphaned() && player.isDead()) {
-                player.logger.debug(`Removed after being orphaned for ${dayjs.duration(player.stateIntervalOptions.orphanedInterval, 'seconds').asMinutes()} minutes`);
-                deadPlatformIds.push(player.platformIdStr);
-                this.emitEvent('playerDelete', {platformId: player.platformIdStr});
+                deadPlatformIds.push([player.platformIdStr, `Removed after being orphaned for ${dayjs.duration(player.stateIntervalOptions.orphanedInterval, 'seconds').asMinutes()} minutes`]);
             } else if (isStale) {
                 const state = player.getApiState();
                 // @ts-ignore
@@ -79,8 +76,8 @@ export default class MemorySource extends AbstractSource {
                 }
             }
         }
-        for (const deadId of deadPlatformIds) {
-            this.deletePlayer(deadId);
+        for (const [deadId, reason] of deadPlatformIds) {
+            this.deletePlayer(deadId, reason);
         }
     }
 
@@ -108,9 +105,13 @@ export default class MemorySource extends AbstractSource {
         this.playerState.set(idStr, '');
     }
 
-    deletePlayer = (id: string) => {
+    deletePlayer = (id: string, reason?: string) => {
+        if(reason !== undefined) {
+            this.players.get(id)?.logger.debug(reason);
+        }
         this.players.delete(id);
         this.playerState.delete(id);
+        this.emitEvent('playerDelete', {platformId: id});
     }
 
     processRecentPlays = (datas: (PlayObject | PlayerStateData)[]) => {
@@ -129,10 +130,16 @@ export default class MemorySource extends AbstractSource {
             const idStr = genGroupIdStr(id);
             if (!this.players.has(idStr)) {
                 this.setNewPlayer(idStr, this.logger, id);
+
+                if(!this.multiPlatform && this.players.size > 1) {
+                    // new platform should have old platform data transferred
+                    const [id,firstPlayer] = Array.from(this.players.entries())[0];
+                    const newPlayer = this.players.get(idStr);
+                    firstPlayer.transferToNewPlayer(newPlayer);
+                    this.deletePlayer(id, 'Removed due to player transfer');
+                }
             }
         }
-
-        //const deadPlatformIds: string[] = [];
 
         for (const [key, player] of this.players.entries()) {
 

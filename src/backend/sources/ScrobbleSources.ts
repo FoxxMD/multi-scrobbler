@@ -304,10 +304,10 @@ export default class ScrobbleSources {
                     }
                     break;
                 case 'webscrobbler':
-                    const wsShouldUse = parseBool(process.env.WEBSCROBBLER_ENABLE);
+                    const wsShouldUse = parseBool(process.env.WS_ENABLE);
                     const ws = {
-                        blacklist: process.env.WEBSCROBBLER_BLACKLIST,
-                        whitelist: process.env.WEBSCROBBLER_WHITELIST
+                        blacklist: process.env.WS_BLACKLIST,
+                        whitelist: process.env.WS_WHITELIST
                     }
                     if (!Object.values(ws).every(x => x === undefined) || wsShouldUse) {
                         configs.push({

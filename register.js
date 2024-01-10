@@ -21,5 +21,7 @@ tsNode.register({
     project: './src/backend/tsconfig.json'
 });
 
-process.env.CONSOLE_LEVEL = parseBool(process.env.DEBUG_MODE) ? undefined : 'false';
+if(!parseBool(process.env.DEBUG_MODE)) {
+    process.env.CONSOLE_LEVEL = 'false';
+}
 process.env.FILE_LEVEL = 'false';

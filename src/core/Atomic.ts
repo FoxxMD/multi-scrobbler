@@ -37,7 +37,7 @@ export interface TrackStringOptions<T = string> {
     transformers?: {
         artists?: (a: string[]) => T | string
         track?: (t: string,data: AmbPlayObject, hasExistingParts?: boolean) => T | string
-        time?: (t: Dayjs) => T | string
+        time?: (t: Dayjs, i?: ScrobbleTsSOC) => T | string
         timeFromNow?: (t: Dayjs) => T | string
         reducer?: (arr: (T | string)[]) => T //(acc: T, curr: T | string) => T
     }
@@ -66,7 +66,7 @@ export interface TrackData {
 
     meta?: {
         brainz?: {
-            artist?: string
+            artist?: string[]
             albumArtist?: string
             album?: string
             track?: string
@@ -83,6 +83,7 @@ export interface PlayData extends TrackData {
     /** Number of seconds the track was listened to */
     listenedFor?: number
     listenRanges?: ListenRangeData[]
+    playDateCompleted?: Dayjs | string
 }
 
 export interface PlayMeta {
@@ -122,8 +123,15 @@ export interface PlayMeta {
 
     nowPlaying?: boolean
 
+    scrobbleTsSOC?: ScrobbleTsSOC
+
     [key: string]: any
 }
+
+export type ScrobbleTsSOC = 1 | 2;
+
+export const SCROBBLE_TS_SOC_START: ScrobbleTsSOC = 1;
+export const SCROBBLE_TS_SOC_END: ScrobbleTsSOC = 2;
 
 export interface AmbPlayObject {
     data: PlayData,
@@ -140,10 +148,12 @@ export interface JsonPlayObject extends AmbPlayObject {
 
 export interface ObjectPlayData extends PlayData {
     playDate?: Dayjs
+    playDateCompleted?: Dayjs
 }
 
 export interface JsonPlayData extends PlayData {
     playDate?: Dayjs
+    playDateCompleted?: Dayjs
 }
 
 export type LogLevel = "error" | "warn" | "info" | "verbose" | "debug";
@@ -207,3 +217,21 @@ export interface DeadLetterScrobble<PlayType, RetryType = Dayjs> extends QueuedS
 
 export type Second = number;
 export type Millisecond = number;
+
+export type TemporalAccuracy = 1 | 2 | 3 | false;
+
+export const TA_EXACT: TemporalAccuracy = 1;
+export const TA_CLOSE: TemporalAccuracy = 2;
+export const TA_FUZZY: TemporalAccuracy = 3;
+export const TA_NONE: TemporalAccuracy = false;
+
+export interface TemporalPlayComparison {
+    match: TemporalAccuracy
+    date?: {
+        threshold: number
+        diff: number
+        fuzzyDurationDiff?: number
+        fuzzyListenedDiff?: number
+    }
+    range?: false | ListenRangeData
+}

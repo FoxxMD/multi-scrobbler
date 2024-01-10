@@ -80,7 +80,7 @@ const configDir = process.env.CONFIG_DIR || path.resolve(projectDir, `./config`)
         initServer(logger, output);
 
         if(process.env.IS_LOCAL === 'true') {
-            logger.info('multi-scrobbler can be run as a background service! See: https://github.com/FoxxMD/multi-scrobbler/blob/develop/docs/service.md');
+            logger.info('multi-scrobbler can be run as a background service! See: https://foxxmd.github.io/multi-scrobbler/docs/installation/service');
         }
 
         if(appConfigFail !== undefined) {
@@ -98,6 +98,11 @@ const configDir = process.env.CONFIG_DIR || path.resolve(projectDir, `./config`)
         await scrobbleClients.buildClientsFromConfig(notifiers);
         if (scrobbleClients.clients.length === 0) {
             logger.warn('No scrobble clients were configured!')
+        } else {
+            logger.info('Starting scrobble clients...');
+        }
+        for(const client of scrobbleClients.clients) {
+            await client.initScrobbleMonitoring();
         }
 
         const scrobbleSources = root.get('sources');//new ScrobbleSources(localUrl, configDir);
@@ -116,30 +121,10 @@ const configDir = process.env.CONFIG_DIR || path.resolve(projectDir, `./config`)
         let anyNotReady = false;
         for (const source of scrobbleSources.sources.filter(x => x.canPoll === true)) {
             await sleep(1500); // stagger polling by 1.5 seconds so that log messages for each source don't get mixed up
-            switch (source.type) {
-                case 'spotify':
-                    if ((source as SpotifySource).spotifyApi !== undefined) {
-                        if ((source as SpotifySource).spotifyApi.getAccessToken() === undefined) {
-                            anyNotReady = true;
-                        } else {
-                            (source as SpotifySource).poll();
-                        }
-                    }
-                    break;
-                case 'lastfm':
-                    if(source.initialized === true) {
-                        source.poll();
-                    }
-                    break;
-                default:
-                    if (source.poll !== undefined) {
-                        source.poll();
-                    }
-            }
-        }
-        for(const client of scrobbleClients.clients) {
-            if((await client.isReady())) {
-                client.initScrobbleMonitoring();
+            if(source.isReady()) {
+                source.poll();
+            } else {
+                anyNotReady = true;
             }
         }
         if (anyNotReady) {

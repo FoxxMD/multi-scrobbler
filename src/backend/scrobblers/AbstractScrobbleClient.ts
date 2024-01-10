@@ -1,7 +1,6 @@
 import dayjs, {Dayjs} from "dayjs";
 import {
     comparingMultipleArtists,
-    isPlayTemporallyClose,
     mergeArr,
     playObjDataMatch, pollingBackoff,
     setIntersection, sleep, sortByOldestPlayDate,
@@ -20,7 +19,13 @@ import {Logger} from '@foxxmd/winston';
 import { CommonClientConfig } from "../common/infrastructure/config/client/index";
 import { Notifiers } from "../notifier/Notifiers";
 import {FixedSizeList} from 'fixed-size-list';
-import {DeadLetterScrobble, PlayObject, QueuedScrobble, SourceScrobble, TrackStringOptions} from "../../core/Atomic";
+import {
+    DeadLetterScrobble,
+    PlayObject,
+    QueuedScrobble,
+    TA_CLOSE, TA_FUZZY,
+    TrackStringOptions
+} from "../../core/Atomic";
 import {buildTrackString, capitalize, truncateStringToLength} from "../../core/StringUtils";
 import EventEmitter from "events";
 import {compareScrobbleArtists, compareScrobbleTracks, normalizeStr} from "../utils/StringUtils";
@@ -28,6 +33,12 @@ import {hasUpstreamError, UpstreamError} from "../common/errors/UpstreamError";
 import {nanoid} from "nanoid";
 import {ErrorWithCause, messageWithCauses} from "pony-cause";
 import {hasNodeNetworkException} from "../common/errors/NodeErrors";
+import {
+    comparePlayTemporally,
+    temporalAccuracyIsAtLeast,
+    temporalAccuracyToString,
+    temporalPlayComparisonSummary
+} from "../utils/TimeUtils";
 
 export default abstract class AbstractScrobbleClient implements Authenticatable {
 
@@ -147,6 +158,7 @@ export default abstract class AbstractScrobbleClient implements Authenticatable 
     // default init function, should be overridden if init stage is required
     initialize = async () => {
         this.initialized = true;
+        this.logger.info('Initialized');
         return true;
     }
 
@@ -171,8 +183,7 @@ export default abstract class AbstractScrobbleClient implements Authenticatable 
             // only signal as auth failure if error was NOT either a node network error or a non-showstopping upstream error
             this.authFailure = !(hasNodeNetworkException(e) || hasUpstreamError(e, false));
             this.authed = false;
-            this.logger.error(`Authentication test failed!${this.authFailure === false ? ' Due to a network issue. Will retry authentication on next heartbeat.' : ''}`);
-            this.logger.error(e);
+            this.logger.error(new ErrorWithCause(`Authentication test failed!${this.authFailure === false ? ' Due to a network issue. Will retry authentication on next heartbeat.' : ''}`, {cause: e}));
         }
     }
 
@@ -246,23 +257,16 @@ export default abstract class AbstractScrobbleClient implements Authenticatable 
         }
 
         const matchPlayDate = dtInvariantMatches.find((x: ScrobbledPlayObject) => {
-            const [closeTime, fuzzyTime = false] = this.compareExistingScrobbleTime(x.play, playObj);
-            return closeTime;
+            const temporalComparison = comparePlayTemporally(x.play, playObj);
+            return temporalAccuracyIsAtLeast(TA_CLOSE, temporalComparison.match)
         });
 
         return [matchPlayDate, dtInvariantMatches];
     }
 
-    protected compareExistingScrobbleTime = (existing: PlayObject, candidate: PlayObject): [boolean, boolean?] => {
-        let closeTime = isPlayTemporallyClose(existing, candidate);
-        let fuzzyTime = false;
-        if(!closeTime) {
-            fuzzyTime = isPlayTemporallyClose(existing, candidate, {fuzzyDuration: true});
-        }
-        return [closeTime, fuzzyTime];
-    }
     protected compareExistingScrobbleTitle = (existing: PlayObject, candidate: PlayObject): number => {
-        return Math.min(compareScrobbleTracks(existing, candidate)/100, 1);
+        const result = compareScrobbleTracks(existing, candidate);
+        return Math.min(result.highScore/100, 1);
     }
 
     protected compareExistingScrobbleArtist = (existing: PlayObject, candidate: PlayObject): [number, number] => {
@@ -290,7 +294,7 @@ export default abstract class AbstractScrobbleClient implements Authenticatable 
         // return early if we don't care about checking existing
         if (false === this.checkExistingScrobbles) {
             if (this.verboseOptions.match.onNoMatch) {
-                this.logger.debug(`(Existing Check) Source: ${buildTrackString(playObj, scoreTrackOpts)} => No Match because existing scrobble check is FALSE`);
+                this.logger.debug(`${capitalize(playObj.meta.source ?? 'Source')}: ${buildTrackString(playObj, scoreTrackOpts)} => No Match because existing scrobble check is FALSE`, {leaf: ['Dupe Check']});
             }
             return undefined;
         }
@@ -321,7 +325,7 @@ export default abstract class AbstractScrobbleClient implements Authenticatable 
             // (either user doesnt want to check history or there is no history to check!)
             if (this.recentScrobbles.length === 0) {
                 if (this.verboseOptions.match.onNoMatch) {
-                    this.logger.debug(`(Existing Check) ${buildTrackString(playObj, scoreTrackOpts)} => No Match because no recent scrobbles returned from API`);
+                    this.logger.debug(`${buildTrackString(playObj, scoreTrackOpts)} => No Match because no recent scrobbles returned from API`, {leaf: ['Dupe Check']});
                 }
                 return undefined;
             }
@@ -335,8 +339,13 @@ export default abstract class AbstractScrobbleClient implements Authenticatable 
                 //const referenceMatch = referenceApiScrobbleResponse !== undefined && playObjDataMatch(x, referenceApiScrobbleResponse);
 
 
-                const [closeTime, fuzzyTime = false] = this.compareExistingScrobbleTime(x, playObj);
-                const timeMatch = (closeTime ? 1 : (fuzzyTime ? 0.6 : 0));
+                const temporalComparison = comparePlayTemporally(x, playObj);
+                let timeMatch = 0;
+                if(temporalAccuracyIsAtLeast(TA_CLOSE, temporalComparison.match)) {
+                    timeMatch = 1;
+                } else if(temporalComparison.match === TA_FUZZY) {
+                    timeMatch = 0.6;
+                }
 
                 const titleMatch = this.compareExistingScrobbleTitle(x, playObj);
 
@@ -377,7 +386,8 @@ export default abstract class AbstractScrobbleClient implements Authenticatable 
                     //`Reference: ${(referenceMatch ? 1 : 0)} * ${REFERENCE_WEIGHT} = ${referenceScore.toFixed(2)}`,
                     artistBreakdown,
                     `Title: ${titleMatch.toFixed(2)} * ${TITLE_WEIGHT} = ${titleScore.toFixed(2)}`,
-                    `Time: ${timeMatch} * ${TIME_WEIGHT} = ${timeScore.toFixed(2)}`,
+                    `Time: (${capitalize(temporalAccuracyToString(temporalComparison.match))}) ${timeMatch} * ${TIME_WEIGHT} = ${timeScore.toFixed(2)}`,
+                    `Time Detail => ${temporalPlayComparisonSummary(temporalComparison, x, playObj)}`,
                     `Score ${score.toFixed(2)} => ${score >= DUP_SCORE_THRESHOLD ? 'Matched!' : 'No Match'}`
                 ];
 
@@ -400,10 +410,10 @@ export default abstract class AbstractScrobbleClient implements Authenticatable 
 
         if ((existingScrobble !== undefined && this.verboseOptions.match.onMatch) || (existingScrobble === undefined && this.verboseOptions.match.onNoMatch)) {
             const closestScrobble = `Closest Scrobble: ${buildTrackString(closestMatch.scrobble, scoreTrackOpts)} => ${closestMatch.confidence}`;
-            this.logger.debug(`(Existing Check) Source: ${buildTrackString(playObj, scoreTrackOpts)} => ${closestScrobble}`);
+            this.logger.debug(`${capitalize(playObj.meta.source ?? 'Source')}: ${buildTrackString(playObj, scoreTrackOpts)} => ${closestScrobble}`, {leaf: ['Dupe Check']});
             if (this.verboseOptions.match.confidenceBreakdown === true) {
                 this.logger.debug(`Breakdown:
-${closestMatch.breakdowns.join('\n')}`);
+${closestMatch.breakdowns.join('\n')}`, {leaf: ['Dupe Check']});
             }
         }
         return existingScrobble;
@@ -464,7 +474,10 @@ ${closestMatch.breakdowns.join('\n')}`);
             return;
         }
 
-        await this.startScrobbling();
+        this.startScrobbling().catch((e) => {
+            // do nothing, should have already been caught and logged
+        });
+        return;
     }
 
     startScrobbling = async () => {
