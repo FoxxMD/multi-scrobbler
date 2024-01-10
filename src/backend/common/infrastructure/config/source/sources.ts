@@ -12,8 +12,9 @@ import { ListenBrainzSourceAIOConfig, ListenBrainzSourceConfig } from "./listenb
 import { JRiverSourceAIOConfig, JRiverSourceConfig } from "./jriver";
 import { KodiSourceAIOConfig, KodiSourceConfig } from "./kodi";
 import { WebScrobblerSourceAIOConfig, WebScrobblerSourceConfig } from "./webscrobbler";
+import { ChromecastSourceConfig, ChromecastSourceAIOConfig } from "./chromecast";
 
 
-export type SourceConfig = SpotifySourceConfig | PlexSourceConfig | TautulliSourceConfig | DeezerSourceConfig | SubSonicSourceConfig | JellySourceConfig | LastfmSourceConfig | YTMusicSourceConfig | MPRISSourceConfig | MopidySourceConfig | ListenBrainzSourceConfig | JRiverSourceConfig | KodiSourceConfig | WebScrobblerSourceConfig;
+export type SourceConfig = SpotifySourceConfig | PlexSourceConfig | TautulliSourceConfig | DeezerSourceConfig | SubSonicSourceConfig | JellySourceConfig | LastfmSourceConfig | YTMusicSourceConfig | MPRISSourceConfig | MopidySourceConfig | ListenBrainzSourceConfig | JRiverSourceConfig | KodiSourceConfig | WebScrobblerSourceConfig | ChromecastSourceConfig;
 
-export type SourceAIOConfig = SpotifySourceAIOConfig | PlexSourceAIOConfig | TautulliSourceAIOConfig | DeezerSourceAIOConfig | SubsonicSourceAIOConfig | JellySourceAIOConfig | LastFmSouceAIOConfig | YTMusicSourceAIOConfig | MPRISSourceAIOConfig | MopidySourceAIOConfig | ListenBrainzSourceAIOConfig | JRiverSourceAIOConfig | KodiSourceAIOConfig | WebScrobblerSourceAIOConfig;
+export type SourceAIOConfig = SpotifySourceAIOConfig | PlexSourceAIOConfig | TautulliSourceAIOConfig | DeezerSourceAIOConfig | SubsonicSourceAIOConfig | JellySourceAIOConfig | LastFmSouceAIOConfig | YTMusicSourceAIOConfig | MPRISSourceAIOConfig | MopidySourceAIOConfig | ListenBrainzSourceAIOConfig | JRiverSourceAIOConfig | KodiSourceAIOConfig | WebScrobblerSourceAIOConfig | ChromecastSourceAIOConfig;

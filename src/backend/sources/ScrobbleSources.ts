@@ -38,6 +38,8 @@ import { KodiData, KodiSourceConfig } from "../common/infrastructure/config/sour
 import { WildcardEmitter } from "../common/WildcardEmitter";
 import {WebScrobblerSource} from "./WebScrobblerSource";
 import {WebScrobblerSourceConfig} from "../common/infrastructure/config/source/webscrobbler";
+import {ChromecastSource} from "./ChromecastSource";
+import {ChromecastSourceConfig} from "../common/infrastructure/config/source/chromecast";
 
 type groupedNamedConfigs = {[key: string]: ParsedConfig[]};
 
@@ -500,6 +502,9 @@ export default class ScrobbleSources {
                 break;
             case 'webscrobbler':
                 newSource = await new WebScrobblerSource(name, compositeConfig as WebScrobblerSourceConfig, internal, this.emitter);
+                break;
+            case 'chromecast':
+                newSource = await new ChromecastSource(name, compositeConfig as ChromecastSourceConfig, internal, this.emitter);
                 break;
             default:
                 break;

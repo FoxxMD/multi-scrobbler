@@ -1,0 +1,109 @@
+diff --git a/node_modules/chromecast-client/dist/cjs/src/cast-types/index.d.ts b/node_modules/chromecast-client/dist/cjs/src/cast-types/index.d.ts
+index cbc2af8..adc5e3d 100644
+--- a/node_modules/chromecast-client/dist/cjs/src/cast-types/index.d.ts
++++ b/node_modules/chromecast-client/dist/cjs/src/cast-types/index.d.ts
+@@ -63,7 +63,7 @@ export declare const Application$: z.ZodObject<{
+ }>;
+ export type Application = z.infer<typeof Application$>;
+ export declare const ReceiverStatus$: z.ZodObject<{
+-    applications: z.ZodArray<z.ZodObject<{
++    applications: z.ZodNullable<z.ZodOptional<z.ZodArray<z.ZodObject<{
+         appId: z.ZodString;
+         displayName: z.ZodString;
+         iconUrl: z.ZodNullable<z.ZodOptional<z.ZodString>>;
+@@ -103,7 +103,7 @@ export declare const ReceiverStatus$: z.ZodObject<{
+         }[];
+         sessionId: string;
+         transportId: string;
+-    }>, "many">;
++    }>, "many">>>;
+     volume: z.ZodObject<{
+         controlType: z.ZodEffects<z.ZodEnum<["ATTENUATION", "FIXED", "MASTER"]>, "ATTENUATION" | "FIXED" | "MASTER", unknown>;
+         level: z.ZodNullable<z.ZodOptional<z.ZodNumber>>;
+@@ -127,7 +127,7 @@ export declare const ReceiverStatus$: z.ZodObject<{
+         controlType: "ATTENUATION" | "FIXED" | "MASTER";
+         stepInterval: number;
+     };
+-    applications: {
++    applications?: {
+         iconUrl?: string | null | undefined;
+         isIdleScreen?: boolean | null | undefined;
+         launchedFromCloud?: boolean | null | undefined;
+@@ -147,7 +147,7 @@ export declare const ReceiverStatus$: z.ZodObject<{
+         controlType?: unknown;
+         stepInterval: number;
+     };
+-    applications: {
++    applications?: {
+         iconUrl?: string | null | undefined;
+         isIdleScreen?: boolean | null | undefined;
+         launchedFromCloud?: boolean | null | undefined;
+diff --git a/node_modules/chromecast-client/dist/cjs/src/cast-types/index.js b/node_modules/chromecast-client/dist/cjs/src/cast-types/index.js
+index 33bfb4b..b33cb22 100644
+--- a/node_modules/chromecast-client/dist/cjs/src/cast-types/index.js
++++ b/node_modules/chromecast-client/dist/cjs/src/cast-types/index.js
+@@ -51,7 +51,7 @@ exports.Application$ = zod_1.z.object({
+     transportId: zod_1.z.string(),
+ });
+ exports.ReceiverStatus$ = zod_1.z.object({
+-    applications: zod_1.z.array(exports.Application$),
++    applications: zod_1.z.array(exports.Application$).nullish(),
+     volume: exports.Volume$,
+ });
+ //# sourceMappingURL=index.js.map
+diff --git a/node_modules/chromecast-client/dist/cjs/src/cast-types/media.types.d.ts b/node_modules/chromecast-client/dist/cjs/src/cast-types/media.types.d.ts
+index 53e42b2..6d7518b 100644
+--- a/node_modules/chromecast-client/dist/cjs/src/cast-types/media.types.d.ts
++++ b/node_modules/chromecast-client/dist/cjs/src/cast-types/media.types.d.ts
+@@ -80,7 +80,7 @@ export declare const MediaStatus$: z.ZodObject<{
+     playbackRate: z.ZodNumber;
+     playerState: z.ZodEffects<z.ZodEnum<["IDLE", "PLAYING", "BUFFERING", "PAUSED"]>, "IDLE" | "PLAYING" | "BUFFERING" | "PAUSED", unknown>;
+     supportedMediaCommands: z.ZodNumber;
+-    volume: z.ZodObject<{
++    volume: z.ZodNullable<z.ZodOptional<z.ZodObject<{
+         level: z.ZodNullable<z.ZodOptional<z.ZodNumber>>;
+         muted: z.ZodNullable<z.ZodOptional<z.ZodBoolean>>;
+     }, "strip", z.ZodTypeAny, {
+@@ -89,7 +89,7 @@ export declare const MediaStatus$: z.ZodObject<{
+     }, {
+         level?: number | null | undefined;
+         muted?: boolean | null | undefined;
+-    }>;
++    }>>>;
+ }, "strip", z.ZodTypeAny, {
+     media?: {
+         metadata?: Record<string, unknown> | null | undefined;
+@@ -128,7 +128,7 @@ export declare const MediaStatus$: z.ZodObject<{
+     mediaSessionId: number;
+     playbackRate: number;
+     supportedMediaCommands: number;
+-    volume: {
++    volume?: {
+         level?: number | null | undefined;
+         muted?: boolean | null | undefined;
+     };
+diff --git a/node_modules/chromecast-client/dist/cjs/src/cast-types/media.types.js b/node_modules/chromecast-client/dist/cjs/src/cast-types/media.types.js
+index 2af6558..c85464c 100644
+--- a/node_modules/chromecast-client/dist/cjs/src/cast-types/media.types.js
++++ b/node_modules/chromecast-client/dist/cjs/src/cast-types/media.types.js
+@@ -28,6 +28,6 @@ exports.MediaStatus$ = zod_1.z.object({
+     playbackRate: zod_1.z.number(),
+     playerState: exports.PlayerState$,
+     supportedMediaCommands: zod_1.z.number(),
+-    volume: exports.Volume$,
++    volume: exports.Volume$.nullish(),
+ });
+ //# sourceMappingURL=media.types.js.map
+diff --git a/node_modules/chromecast-client/dist/cjs/src/platform.d.ts b/node_modules/chromecast-client/dist/cjs/src/platform.d.ts
+index 2f9770b..1247d8a 100644
+--- a/node_modules/chromecast-client/dist/cjs/src/platform.d.ts
++++ b/node_modules/chromecast-client/dist/cjs/src/platform.d.ts
+@@ -65,7 +65,7 @@ export declare const createPlatform: (client: PersistentClient) => {
+             controlType: "ATTENUATION" | "FIXED" | "MASTER";
+             stepInterval: number;
+         };
+-        applications: {
++        applications?: {
+             iconUrl?: string | null | undefined;
+             isIdleScreen?: boolean | null | undefined;
+             launchedFromCloud?: boolean | null | undefined;
