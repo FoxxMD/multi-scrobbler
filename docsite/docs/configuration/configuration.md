@@ -25,6 +25,7 @@ title: Overview
   * [JRiver](#jriver)
   * [Kodi](#kodi)
   * [WebScrobbler](#webscrobbler)
+  * [Google Cast (Chromecast)](#google-cast--chromecast-)
 * [Client Configurations](#client-configurations)
   * [Maloja](#maloja)
   * [Last.fm](#lastfm)
@@ -693,6 +694,28 @@ MS can be configured to only scrobble, or NOT scrobble, from some WS connectors.
 ### File-Based
 
 See [`webscrobbler.json.example`](https://github.com/FoxxMD/multi-scrobbler/blob/master/config/webscrobbler.json.example) or [explore the schema with an example and live editor/validator](https://json-schema.app/view/%23%2Fdefinitions%2FWebScrobblerSourceConfig/%23%2Fdefinitions%2FWebScrobblerData?url=https%3A%2F%2Fraw.githubusercontent.com%2FFoxxMD%2Fmulti-scrobbler%2Fmaster%2Fsrc%2Fbackend%2Fcommon%2Fschema%2Fsource.json)
+
+## [Google Cast (Chromecast)](https://www.google.com/chromecast/built-in/)
+
+If your media device can be **Cast** to using this button ![Chromecast Icon](https://upload.wikimedia.org/wikipedia/commons/2/26/Chromecast_cast_button_icon.svg) on your phone/computer then multi-scrobbler can monitor it in order to scrobble music you play.
+
+**Note:** This source relies on common, **basic** music data provided by the cast device which will always be less exhaustive than data parsed from full source integrations. If there is an existing [Source](#source-configurations) it is recommended to configure for it and blacklist the app on Google Cast, rather than relying solely on Google Cast for scrobbling.
+
+The machine and/or container running multi-scrobbler must be configured to allow [mDNS traffic on port 5353/UDP](https://book.hacktricks.xyz/network-services-pentesting/5353-udp-multicast-dns-mdns).
+
+### ENV-Based
+
+| Environmental Variable | Required? | Default |                                     Description                                      |
+|------------------------|-----------|---------|--------------------------------------------------------------------------------------|
+| CC_ENABLE              | No        |         | Set to 'true' to enable Cast monitoring without needing to define other ENVs         |
+| CC_WHITELIST_DEVICES   | No        |         | Only scrobble from these Cast devices. Comma-delimited list. EX mini-home, family-tv |
+| CC_BLACKLIST_DEVICES   | No        |         | Do not scrobble from these Cast devices. Comma-delimited list                        |
+| CC_WHITELIST_APPS      | No        |         | Only scrobble from these casted Apps. Comma-delimited list. EX spotify, pandora      |
+| CC_BLACKLIST_APPS      | No        |         | Do not scrobble from these casted Apps. Comma-delimited list                         |
+
+### File-Based
+
+See [`chromecast.json.example`](https://github.com/FoxxMD/multi-scrobbler/blob/master/config/webscrobbler.json.example) or [explore the schema with an example and live editor/validator](https://json-schema.app/view/%23%2Fdefinitions%2FChromecastSourceConfig/%23%2Fdefinitions%2FChromecastData?url=https%3A%2F%2Fraw.githubusercontent.com%2FFoxxMD%2Fmulti-scrobbler%2Fmaster%2Fsrc%2Fbackend%2Fcommon%2Fschema%2Fsource.json)
 
 # Client Configurations
 

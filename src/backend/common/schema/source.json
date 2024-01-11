@@ -42,9 +42,183 @@
         },
         {
             "$ref": "#/definitions/WebScrobblerSourceConfig"
+        },
+        {
+            "$ref": "#/definitions/ChromecastSourceConfig"
         }
     ],
     "definitions": {
+        "ChromecastData": {
+            "properties": {
+                "blacklistApps": {
+                    "anyOf": [
+                        {
+                            "items": {
+                                "type": "string"
+                            },
+                            "type": "array"
+                        },
+                        {
+                            "type": "string"
+                        }
+                    ],
+                    "description": "DO NOT scrobble from any application that START WITH these values, case-insensitive",
+                    "examples": [
+                        [
+                            "spotify",
+                            "pandora"
+                        ]
+                    ],
+                    "title": "blacklistApps"
+                },
+                "blacklistDevices": {
+                    "anyOf": [
+                        {
+                            "items": {
+                                "type": "string"
+                            },
+                            "type": "array"
+                        },
+                        {
+                            "type": "string"
+                        }
+                    ],
+                    "description": "DO NOT scrobble from any cast devices that START WITH these values, case-insensitive",
+                    "examples": [
+                        [
+                            "home-mini",
+                            "family-tv"
+                        ]
+                    ],
+                    "title": "blacklistDevices"
+                },
+                "maxPollRetries": {
+                    "default": 5,
+                    "description": "default # of automatic polling restarts on error",
+                    "examples": [
+                        5
+                    ],
+                    "title": "maxPollRetries",
+                    "type": "number"
+                },
+                "maxRequestRetries": {
+                    "default": 1,
+                    "description": "default # of http request retries a source can make before error is thrown",
+                    "examples": [
+                        1
+                    ],
+                    "title": "maxRequestRetries",
+                    "type": "number"
+                },
+                "options": {
+                    "$ref": "#/definitions/Record<string,any>",
+                    "title": "options"
+                },
+                "retryMultiplier": {
+                    "default": 1.5,
+                    "description": "default retry delay multiplier (retry attempt * multiplier = # of seconds to wait before retrying)",
+                    "examples": [
+                        1.5
+                    ],
+                    "title": "retryMultiplier",
+                    "type": "number"
+                },
+                "scrobbleThresholds": {
+                    "$ref": "#/definitions/ScrobbleThresholds",
+                    "description": "Set thresholds for when multi-scrobbler should consider a tracked play to be \"scrobbable\". If both duration and percent are defined then if either condition is met the track is scrobbled.",
+                    "title": "scrobbleThresholds"
+                },
+                "whitelistApps": {
+                    "anyOf": [
+                        {
+                            "items": {
+                                "type": "string"
+                            },
+                            "type": "array"
+                        },
+                        {
+                            "type": "string"
+                        }
+                    ],
+                    "description": "ONLY scrobble from any application that START WITH these values, case-insensitive\n\nIf whitelist is present then blacklist is ignored",
+                    "examples": [
+                        [
+                            "spotify",
+                            "pandora"
+                        ]
+                    ],
+                    "title": "whitelistApps"
+                },
+                "whitelistDevices": {
+                    "anyOf": [
+                        {
+                            "items": {
+                                "type": "string"
+                            },
+                            "type": "array"
+                        },
+                        {
+                            "type": "string"
+                        }
+                    ],
+                    "description": "ONLY scrobble from any cast device that START WITH these values, case-insensitive\n\nIf whitelist is present then blacklist is ignored",
+                    "examples": [
+                        [
+                            "home-mini",
+                            "family-tv"
+                        ]
+                    ],
+                    "title": "whitelistDevices"
+                }
+            },
+            "title": "ChromecastData",
+            "type": "object"
+        },
+        "ChromecastSourceConfig": {
+            "properties": {
+                "clients": {
+                    "description": "Restrict scrobbling tracks played from this source to Clients with names from this list. If list is empty is not present Source scrobbles to all configured Clients.",
+                    "examples": [
+                        [
+                            "MyMalojaConfigName",
+                            "MyLastFMConfigName"
+                        ]
+                    ],
+                    "items": {
+                        "type": "string"
+                    },
+                    "title": "clients",
+                    "type": "array"
+                },
+                "data": {
+                    "$ref": "#/definitions/ChromecastData",
+                    "title": "data"
+                },
+                "enable": {
+                    "default": true,
+                    "description": "Should MS use this client/source? Defaults to true",
+                    "examples": [
+                        true
+                    ],
+                    "title": "enable",
+                    "type": "boolean"
+                },
+                "name": {
+                    "description": "Unique identifier for this source.",
+                    "title": "name",
+                    "type": "string"
+                },
+                "options": {
+                    "$ref": "#/definitions/CommonSourceOptions",
+                    "title": "options"
+                }
+            },
+            "required": [
+                "data"
+            ],
+            "title": "ChromecastSourceConfig",
+            "type": "object"
+        },
         "CommonSourceOptions": {
             "properties": {
                 "logFilterFailure": {

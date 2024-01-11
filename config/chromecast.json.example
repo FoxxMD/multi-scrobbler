@@ -1,0 +1,11 @@
+[
+  {
+    "name": "MyCast",
+    "data": {
+      "blacklistedDevices": [],
+      "whitelistedDevices": [],
+      "blacklistedApps": [],
+      "whitelistedApps": []
+    }
+  }
+]
