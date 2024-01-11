@@ -3,53 +3,39 @@ import {ChromecastSourceConfig} from "../common/infrastructure/config/source/chr
 import {
     FormatPlayObjectOptions,
     InternalConfig, NO_USER,
-    PlayerStateData, REPORTED_PLAYER_STATUSES, ReportedPlayerStatus,
-    SINGLE_USER_PLATFORM_ID,
+    PlayerStateData,
     SourceData
 } from "../common/infrastructure/Atomic";
 import {EventEmitter} from "events";
 import Bonjour, {Service} from "bonjour-service";
-import {connect, createPlatform, Application, MediaController, PersistentClient, Media, Result} from "chromecast-client";
+import {MediaController, PersistentClient, Media} from "chromecast-client";
+import {Client as CastClient} from 'castv2';
 import {ErrorWithCause} from "pony-cause";
-import e, {application} from "express";
 import {PlayObject} from "../../core/Atomic";
 import dayjs from "dayjs";
 import {RecentlyPlayedOptions} from "./AbstractSource";
-import {Simulate} from "react-dom/test-utils";
-import play = Simulate.play;
-import {difference, intersect} from "../utils";
-
-type PlatformType = ReturnType<typeof createPlatform>;
-
-interface PlatformApplication {
-    iconUrl?: string | null | undefined;
-    isIdleScreen?: boolean | null | undefined;
-    launchedFromCloud?: boolean | null | undefined;
-    statusText?: string | null | undefined;
-    appId: string;
-    displayName: string;
-    namespaces: {
-        name: string;
-    }[];
-    sessionId: string;
-    transportId: string;
-}
-
-interface PlatformApplicationWithControllers extends PlatformApplication {
-    enabled: boolean
-    controller: MediaController.MediaController
-}
+import {difference, genGroupIdStr, mergeArr} from "../utils";
+import {
+    PlatformApplication,
+    PlatformApplicationWithContext,
+    PlatformType
+} from "../common/vendor/chromecast/interfaces";
+import {
+    chromePlayerStateToReported, genDeviceId,
+    getCurrentPlatformApplications, getMediaStatus,
+    initializeClientPlatform
+} from "../common/vendor/chromecast/ChromecastClientUtils";
+import {Logger} from "@foxxmd/winston";
 
 interface ChromecastDeviceInfo {
     mdns: Service
     client: PersistentClient
+    castv2: CastClient
+    logger: Logger,
+    connected: boolean
+    retries: number
     platform: PlatformType
-    applications: Map<string, PlatformApplicationWithControllers>
-}
-
-interface ChromecastFormatPlayObjectOptions extends FormatPlayObjectOptions {
-    deviceId: string
-    source: string
+    applications: Map<string, PlatformApplicationWithContext>
 }
 
 export class ChromecastSource extends MemorySource {
@@ -79,9 +65,9 @@ export class ChromecastSource extends MemorySource {
             const configData = data[propName] ?? [];
 
             if(!Array.isArray(configData)) {
-                this[propName] = configData.split(',')
+                this[propName] = configData.split(',').map(x => x.toLocaleLowerCase())
             } else {
-                this[propName] = configData;
+                this[propName] = configData.map(x => x.toLocaleLowerCase());
             }
         }
     }
@@ -89,7 +75,7 @@ export class ChromecastSource extends MemorySource {
     initialize = async () => {
         this.logger.info('Listening for Chromecasts...')
         this.bonjour = new Bonjour({}, (err) => {
-            this.logger.error(new ErrorWithCause('Bonjour (mDNS) discovery crashed unexpectedly and will not be able to find new client.', {cause: e}));
+            this.logger.error(new ErrorWithCause('Bonjour (mDNS) discovery crashed unexpectedly and will not be able to find new client.', {cause: err}));
         });
         this.bonjour.find({ type: 'googlecast' }, (service) => {
 
@@ -98,7 +84,7 @@ export class ChromecastSource extends MemorySource {
                 return;
             }
 
-            const discovered = `Found chromecast "${service.name}" at ${service.addresses?.[0]}`;
+            const discovered = `Discovered chromecast "${service.name}" at ${service.addresses?.[0]}`;
             const lowerName = service.name.toLocaleLowerCase();
             if(this.whitelistDevices.length > 0) {
                 const found = this.whitelistDevices.find(x => lowerName.includes(x));
@@ -130,136 +116,227 @@ export class ChromecastSource extends MemorySource {
     }
 
     protected initializeDevice = async (service: Service) => {
-
-        let client: PersistentClient;
         try {
-            client = await connect({host: service.addresses?.[0]});
+            const [castClient, client, platform] = await initializeClientPlatform(service);
+            const applications = new Map<string, PlatformApplicationWithContext>();
+            this.devices.set(service.name, {
+                mdns: service,
+                client,
+                castv2: castClient,
+                connected: true,
+                retries: 0,
+                platform,
+                applications,
+                logger: this.logger.child({labels: [service.name.substring(0, 25)]}, mergeArr),
+            });
+            castClient.on('connect', () => this.handleCastClientEvent(service.name, 'connect'));
+            castClient.on('error', (err) => this.handleCastClientEvent(service.name, 'error', err));
+            castClient.on('close', () => this.handleCastClientEvent(service.name, 'close'));
         } catch (e) {
-            this.logger.error(new ErrorWithCause(`Could not connect to ${service.name}`, {cause: e}));
+            this.logger.error(e);
             return;
         }
-
-        const platform = createPlatform(client);
-
-        const applications = new Map<string, PlatformApplicationWithControllers>();
-
-        this.devices.set(service.name, {mdns: service, client, platform, applications});
     }
 
-    protected getCurrentPlatformApplications = async (platform: PlatformType): Promise<PlatformApplication[]> => {
-        // if(!this.devices.has(name)) {
-        //     throw new Error(`No device with name ${name}`);
-        // }
-        //
-        // const deviceInfo = this.devices.get(name);
-
-        let statusRes: Result<{applications?: PlatformApplication[]}>;
-        try {
-            statusRes = await platform.getStatus()
-        } catch (e) {
-            throw new ErrorWithCause('Unable to fetch platform statuses', {cause: e});
-        }
-
-        let status: {applications?: PlatformApplication[]};
-
-        try {
-            status = statusRes.unwrapAndThrow();
-            if(status.applications === undefined) {
-                return [];
+    protected handleCastClientEvent = (clientName: string, event: string, payload?: any) => {
+            const info = this.devices.get(clientName);
+            if(info === undefined) {
+                return;
             }
-            return status.applications;
-        } catch (e) {
-            throw new ErrorWithCause('Unable to fetch platform statuses', {cause: e});
+            switch(event) {
+                case 'connect':
+                    if(info.connected === false) {
+                        info.logger.verbose(`Reconnected`);
+                    }
+                    info.connected = true;
+                    info.retries = 0;
+                    break;
+                case 'close':
+                    if(info.connected === false) {
+                        info.retries += 1;
+
+                        // TODO make this configurable?
+                        if(info.retries === 6) {
+                            //info.logger.verbose(`Removing device applications after being unreachable for 30 seconds`);
+                            this.removeApplications(clientName, 'Device unreachable for more than 30 seconds');
+                        }
+                    }
+                    info.connected = false;
+                    break;
+                case 'error':
+                    info.logger.error(new ErrorWithCause(`Encountered error in castv2 lib`, {cause: payload as Error}));
+                    break;
+            }
+    }
+
+    protected refreshApplications = async () => {
+        for(const [k, v] of this.devices.entries()) {
+            if(!v.connected) {
+                continue;
+            }
+
+            let apps: PlatformApplication[];
+            try {
+                apps = await getCurrentPlatformApplications(v.platform);
+            } catch (e) {
+                v.logger.warn(new ErrorWithCause('Could not refresh applications', {cause: e}));
+                continue;
+            }
+
+            for(const a of apps) {
+                let storedApp = v.applications.get(a.transportId);
+                if(!storedApp) {
+                    const appName = a.displayName;
+                    let found = `Found Application '${appName}'`;
+                    const appLowerName = appName.toLocaleLowerCase();
+                    let filtered = false;
+                    let valid = true;
+                    if(a.isIdleScreen) {
+                        valid = false;
+                        v.logger.info(`${found} => Not watching because it is the idle screen`);
+                    } else if(!a.namespaces.some(x => x.name === 'urn:x-cast:com.google.cast.media')) {
+                        valid = false;
+                        v.logger.info(`${found} => Not watching because namespace does not support media`);
+                    }
+
+                    if(valid) {
+                        if(this.whitelistApps.length > 0) {
+                            const found = this.whitelistDevices.find(x => appLowerName.includes(x));
+                            if(found !== undefined) {
+                                v.logger.info(`${found} => Watching because it was whitelisted by keyword '${found}'`);
+                            } else {
+                                v.logger.info(`${found} => NOT Watching because no part of its name appeared in whitelistApps`);
+                                filtered = true;
+                            }
+                        } else if(this.blacklistApps.length > 0) {
+                            const found = this.blacklistDevices.find(x => appLowerName.includes(x));
+                            if(found !== undefined) {
+                                v.logger.info(`${found} => NOT Watching because it was blacklisted by keyword '${found}'`);
+                                filtered = true;
+                            } else {
+                                v.logger.info(`${found} => Watching because no part of its name appeared in blacklistApps`);
+                            }
+                        } else {
+                            v.logger.info(`${found} => Watching`);
+                        }
+                    }
+
+                    storedApp = {
+                        ...a,
+                        filtered: filtered,
+                        stale: false,
+                        validAppType: valid,
+                        playerId: genGroupIdStr([genDeviceId(k, a.displayName), NO_USER])
+                    }
+                    v.applications.set(a.transportId, storedApp);
+                } else if(storedApp.stale === true) {
+                    v.logger.verbose(`App ${storedApp.displayName} no longer stale!`);
+                    storedApp.stale = false;
+                    storedApp.staleAt = undefined;
+                }
+            }
+
+            const currApps = apps.map(x => x.transportId);
+            const storedApps = Array.from(v.applications.keys());
+            const storedStale = difference(storedApps, currApps);
+            for(const staleId of storedStale) {
+                const staleApp = v.applications.get(staleId);
+                if(staleApp.filtered || !staleApp.validAppType) {
+                    v.logger.verbose(`App ${staleApp.displayName} became stale and is unused, removing immediately.`);
+                    v.applications.delete(staleId);
+                } else if(!staleApp.stale) {
+                    v.logger.verbose(`App ${staleApp.displayName} became stale`);
+                    staleApp.staleAt = dayjs();
+                    staleApp.stale = true;
+                }
+            }
         }
     }
 
-    protected getMediaStatus = async (controller: MediaController.MediaController, platformName: string, applicationName: string): Promise<[PlayObject, Media.MediaStatus]> => {
-
-        let status: Media.MediaStatus;
-
-        try {
-            const statusRes = await controller.getStatus();
-            status = statusRes.unwrapAndThrow();
-        } catch (e) {
-            throw new ErrorWithCause('Unable to fetch media status', {cause: e});
+    protected removeApplications = (deviceName: string, reason?: string) => {
+        const deviceInfo = this.devices.get(deviceName);
+        if(deviceInfo === undefined) {
+            this.logger.warn(`No device with ${deviceName} exists, no applications to remove.`);
+            return;
         }
+        for(const [tId, app] of deviceInfo.applications) {
+            this.deletePlayer(app.playerId, reason)
+            deviceInfo.applications.delete(tId);
+        }
+    }
 
-        return [ChromecastSource.formatPlayObj(status, {deviceId: `${platformName}-${applicationName}`, source: applicationName}), status];
+    protected pruneStaleApplications = (force: boolean = false) => {
+        for(const [k, v] of this.devices.entries()) {
+            if (!force && !v.connected) {
+                continue;
+            }
+
+            for(const [tId, app] of v.applications.entries()) {
+                if(app.stale && Math.abs(app.staleAt.diff(dayjs(), 's')) > 60) {
+                    v.logger.info(`Removing Application ${app.displayName} due to being stale for 60 seconds`);
+                    this.deletePlayer(app.playerId, 'No updates for 60 seconds');
+                    v.applications.delete(tId);
+                }
+            }
+        }
     }
 
     getRecentlyPlayed = async (options: RecentlyPlayedOptions = {}) => {
         let plays: SourceData[] = [];
 
-        const staleDevices: Map<string, string[]> = new Map();
+        try {
+            await this.refreshApplications();
+        } catch (e) {
+            this.logger.warn(new ErrorWithCause('Could not refresh all applications', {cause: e}));
+        }
 
         for(const [k, v] of this.devices.entries()) {
+            if (!v.connected) {
+                continue;
+            }
+
             try {
 
-                const apps = await this.getCurrentPlatformApplications(v.platform);
-                for(const a of apps) {
-                    let storedApp = v.applications.get(a.transportId);
-                    if(!storedApp) {
-
-                        const appName = a.displayName;
-                        const appLowerName = appName.toLocaleLowerCase();
-                        let enabled = true;
-
-                        if(this.whitelistApps.length > 0) {
-                            const found = this.whitelistDevices.find(x => appLowerName.includes(x));
-                            if(found !== undefined) {
-                                this.logger.info(`Watching ${appName} because it was whitelisted by keyword '${found}'`);
-                            } else {
-                                this.logger.info(`NOT Watching ${appName} because no part of its name appeared in whitelistApps`);
-                                enabled = false;
-                            }
-                        } else if(this.blacklistApps.length > 0) {
-                            const found = this.blacklistDevices.find(x => appLowerName.includes(x));
-                            if(found !== undefined) {
-                                this.logger.info(`NOT Watching ${appName} because it was blacklisted by keyword '${found}'`);
-                                enabled = false;
-                            } else {
-                                this.logger.info(`Watching ${appName} because no part of its name appeared in blacklistDevices`);
-                            }
-                        } else {
-                            this.logger.info(`Watching ${appName}`);
-                        }
-
-                        v.applications.set(a.transportId, {
-                            ...a,
-                            controller: MediaController.createMediaController({client: v.client, destinationId: a.transportId}),
-                            enabled
-                        });
-                        storedApp = v.applications.get(a.transportId);
-                    }
-
-                    if(!storedApp.enabled) {
+                for (const [tId, application] of v.applications.entries()) {
+                    if (!application.validAppType || application.filtered || application.stale) {
                         continue;
                     }
 
+                    if (application.controller === undefined) {
+                        application.controller = MediaController.createMediaController({
+                            client: v.client,
+                            destinationId: application.transportId
+                        });
+                    }
+
+                    let mediaStatus: Media.MediaStatus
                     try {
-                        const [play, mediaStatus] = await this.getMediaStatus(storedApp.controller, v.mdns.name, storedApp.displayName);
-                        const playerState: PlayerStateData = {
-                            platformId: [play.meta.deviceId, NO_USER],
-                            play,
-                            position: play.meta.trackProgressPosition,
-                            status: chromePlayerStateToReported(mediaStatus.playerState)
-                        }
-                        plays.push(playerState);
+                        mediaStatus = await getMediaStatus(application.controller);
                     } catch (e) {
-                        if(e.message.includes('timeout')) {
+                        if (e.message.includes('timed out')) {
                             // application probably no longer exists or media is no longer being played?
-                            this.logger.debug(`Timeout for ${k} - ${storedApp.displayName}, removing from applications`);
-                            v.applications.delete(a.transportId);
+                            this.logger.debug(`Timeout for ${k} - ${application.displayName}`);
+                            //v.applications.delete(application.transportId);
+                            // TODO count timeouts before setting app as stale
+                            continue;
                         } else {
                             throw e;
                         }
                     }
+
+                    const play = ChromecastSource.formatPlayObj(mediaStatus, {
+                        deviceId: genDeviceId(k, application.displayName),
+                        source: application.displayName
+                    });
+
+                    const playerState: PlayerStateData = {
+                        platformId: [play.meta.deviceId, NO_USER],
+                        play,
+                        position: play.meta.trackProgressPosition,
+                        status: chromePlayerStateToReported(mediaStatus.playerState)
+                    }
+                    plays.push(playerState);
                 }
-                // finally remove any stored applications that weren't iterated
-                const currApps = apps.map(x => x.transportId);
-                const storedApps = Array.from(v.applications.keys());
-                const storedStale = difference(storedApps, currApps);
-                staleDevices.set(k, storedStale);
             } catch (e) {
                 this.logger.warn(new ErrorWithCause(`Could not get Player State for ${k}`, {cause: e}))
             }
@@ -267,19 +344,14 @@ export class ChromecastSource extends MemorySource {
 
         const playsToReturn = this.processRecentPlays(plays);
 
-        // TODO change this to store deviceid so we can delete players too
-        for(const [k, storedStale] of staleDevices.entries()) {
-            const v = this.devices.get(k);
-            for(const stale of storedStale) {
-                this.logger.debug(`Removing stale ${k} - ${v.applications.get(stale).displayName}`);
-                v.applications.delete(stale);
-            }
-        }
+        this.pruneStaleApplications();
 
         return playsToReturn;
     }
 
     static formatPlayObj(obj: Media.MediaStatus, options: FormatPlayObjectOptions = {}): PlayObject {
+        // https://developers.google.com/cast/docs/media/messages
+
         const {
             currentTime,
             media: {
@@ -287,6 +359,7 @@ export class ChromecastSource extends MemorySource {
                 metadata: {
                     metadataType,
                     title,
+                    subtitle,
                     songName,
                     artist,
                     artistName,
@@ -297,11 +370,19 @@ export class ChromecastSource extends MemorySource {
             }
         } = obj;
 
-        let artists: string[] = [(artist ?? artistName) as string],
+        let artists: string[] = [],
             albumArtists: string[] = [albumArtist as string],
             track: string = (title ?? songName) as string,
             album: string = (albumNorm ?? albumName) as string,
             mediaType: string = 'unknown';
+
+        if(artist !== undefined) {
+            artists = [artist as string];
+        } else if (artistName !== undefined) {
+            artists = [artistName as string];
+        } else if(subtitle !== undefined) {
+            artists = [subtitle as string];
+        }
 
         const {
             deviceId,
@@ -324,13 +405,10 @@ export class ChromecastSource extends MemorySource {
             case 4:
                 mediaType = 'photo';
                 break;
-            case 5:
-                mediaType = 'audiobook';
-                break;
         }
 
-        let trackProgressPosition: number = 0;
-        if(currentTime > 0 && (duration === undefined || currentTime < (duration + 1))) {
+        let trackProgressPosition: number | undefined;
+        if(currentTime !== undefined && (currentTime > 0 && (duration === undefined || currentTime < (duration + 1)))) {
             trackProgressPosition = currentTime;
         }
 
@@ -350,19 +428,5 @@ export class ChromecastSource extends MemorySource {
                 source
             }
         }
-    }
-}
-
-const chromePlayerStateToReported = (state: string): ReportedPlayerStatus => {
-    switch (state) {
-        case 'PLAYING':
-            return REPORTED_PLAYER_STATUSES.playing;
-        case 'PAUSED':
-        case 'BUFFERING':
-            return REPORTED_PLAYER_STATUSES.paused;
-        case 'IDLE':
-            return REPORTED_PLAYER_STATUSES.stopped;
-        default:
-            return REPORTED_PLAYER_STATUSES.unknown;
     }
 }

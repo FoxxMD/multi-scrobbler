@@ -325,6 +325,30 @@ export default class ScrobbleSources {
                         });
                     }
                     break;
+                case 'chromecast':
+                    const ccShouldUse = parseBool(process.env.CC_ENABLE);
+                    const cc = {
+                        blacklistDevices: process.env.WS_BLACKLIST_DEVICES,
+                        whitelistDevices: process.env.WS_WHITELIST_DEVICES,
+                        blacklistApps: process.env.WS_BLACKLIST_APPS,
+                        whitelistApps: process.env.WS_WHITELIST_APPS
+                    }
+                    if (!Object.values(ws).every(x => x === undefined) || ccShouldUse) {
+                        configs.push({
+                            type: 'chromecast',
+                            name: 'unnamed',
+                            source: 'ENV',
+                            mode: 'single',
+                            configureAs: defaultConfigureAs,
+                            data: {
+                                blacklistDevices: cc.blacklistDevices !== undefined ? cc.blacklistDevices.split(',') : [],
+                                whitelistDevices: cc.whitelistDevices !== undefined ? cc.whitelistDevices.split(',') : [],
+                                blacklistApps: cc.blacklistApps !== undefined ? cc.blacklistApps.split(',') : [],
+                                whitelistApps: cc.whitelistApps !== undefined ? cc.whitelistApps.split(',') : [],
+                            }
+                        });
+                    }
+                    break;
                 default:
                     break;
             }
