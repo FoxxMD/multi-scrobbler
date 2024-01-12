@@ -329,6 +329,10 @@ export class ChromecastSource extends MemorySource {
                         }
                     }
 
+                    if(this.config.options.logPayload) {
+                        this.logger.debug(`Media Status Payload:\n ${JSON.stringify(mediaStatus)}`);
+                    }
+
                     const play = ChromecastSource.formatPlayObj(mediaStatus, {
                         deviceId: genDeviceId(k, application.displayName),
                         source: application.displayName

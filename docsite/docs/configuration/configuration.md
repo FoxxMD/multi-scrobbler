@@ -25,7 +25,7 @@ title: Overview
   * [JRiver](#jriver)
   * [Kodi](#kodi)
   * [WebScrobbler](#webscrobbler)
-  * [Google Cast (Chromecast)](#google-cast--chromecast-)
+  * [Google Cast (Chromecast)](#google-cast--chromecast)
 * [Client Configurations](#client-configurations)
   * [Maloja](#maloja)
   * [Last.fm](#lastfm)
@@ -702,6 +702,28 @@ If your media device can be **Cast** to using this button ![Chromecast Icon](htt
 **Note:** This source relies on common, **basic** music data provided by the cast device which will always be less exhaustive than data parsed from full source integrations. If there is an existing [Source](#source-configurations) it is recommended to configure for it and blacklist the app on Google Cast, rather than relying solely on Google Cast for scrobbling.
 
 The machine and/or container running multi-scrobbler must be configured to allow [mDNS traffic on port 5353/UDP](https://book.hacktricks.xyz/network-services-pentesting/5353-udp-multicast-dns-mdns).
+
+#### Cast Troubleshooting
+
+Please include any/all logs with raw output if there are any errors encountered as this is critical to diagnosing issues.
+
+To diagnose bad/incomplete track information or strange MS player behavior please turn on **payload logging** and include log output of the source running to help diagnose this issue:
+
+```json5
+// in chromecast.json or config.json sources
+[
+  {
+    "name": "MyCast",
+    "type": "chromecast",
+    "data": {
+      //...
+    },
+    "options": {
+      "logPayload": true
+    }
+  }
+]
+```
 
 ### ENV-Based
 
