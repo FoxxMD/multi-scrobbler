@@ -106,6 +106,9 @@ export default class MemorySource extends AbstractSource {
     }
 
     deletePlayer = (id: string, reason?: string) => {
+        if(!this.players.has(id)) {
+            return;
+        }
         if(reason !== undefined) {
             this.players.get(id)?.logger.debug(reason);
         }

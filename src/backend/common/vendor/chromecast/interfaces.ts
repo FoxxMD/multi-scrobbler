@@ -23,6 +23,8 @@ export interface PlatformApplicationWithContext extends PlatformApplication {
     controller?: MediaController.MediaController
     stale: boolean
     staleAt?: Dayjs | undefined
+    badData: boolean
+    badDataAt?: Dayjs | undefined
     validAppType: boolean
     playerId: string
 }

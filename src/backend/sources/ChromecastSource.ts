@@ -230,6 +230,7 @@ export class ChromecastSource extends MemorySource {
                         ...a,
                         filtered: filtered,
                         stale: false,
+                        badData: false,
                         validAppType: valid,
                         playerId: genGroupIdStr([genDeviceId(k, a.displayName), NO_USER])
                     }
@@ -270,7 +271,7 @@ export class ChromecastSource extends MemorySource {
         }
     }
 
-    protected pruneStaleApplications = (force: boolean = false) => {
+    protected pruneApplications = (force: boolean = false) => {
         for(const [k, v] of this.devices.entries()) {
             if (!force && !v.connected) {
                 continue;
@@ -281,6 +282,9 @@ export class ChromecastSource extends MemorySource {
                     v.logger.info(`Removing Application ${app.displayName} due to being stale for 60 seconds`);
                     this.deletePlayer(app.playerId, 'No updates for 60 seconds');
                     v.applications.delete(tId);
+                } else if(app.badData && Math.abs(app.badDataAt.diff(dayjs(), 's')) > 60 && this.players.has(app.playerId)) {
+                    v.logger.info(`Removing Application ${app.displayName} player due to bad data for 60 seconds`);
+                    this.deletePlayer(app.playerId, 'Bad data for 60 seconds');
                 }
             }
         }
@@ -330,13 +334,26 @@ export class ChromecastSource extends MemorySource {
                     }
 
                     if(this.config.options.logPayload) {
-                        this.logger.debug(`Media Status Payload:\n ${JSON.stringify(mediaStatus)}`);
+                        v.logger.debug(`Media Status Payload:\n ${JSON.stringify(mediaStatus)}`);
                     }
 
                     const play = ChromecastSource.formatPlayObj(mediaStatus, {
                         deviceId: genDeviceId(k, application.displayName),
                         source: application.displayName
                     });
+
+                    if(play.data.artists.length === 0 || play.data.track === undefined) {
+                        if(!application.badData) {
+                            v.logger.warn(`Media information for App ${application.displayName} either did not return artists or track. This isn't scrollable! Skipping this update and marking App as having bad data (to be removed after 60 seconds)`);
+                            application.badData = true;
+                            application.badDataAt = dayjs();
+                        }
+                        continue;
+                    } else if(application.badData) {
+                        v.logger.verbose(`Media information for App ${application.displayName} is now valid.`);
+                        application.badData = false;
+                        application.badDataAt = undefined;
+                    }
 
                     const playerState: PlayerStateData = {
                         platformId: [play.meta.deviceId, NO_USER],
@@ -357,7 +374,7 @@ export class ChromecastSource extends MemorySource {
 
         const playsToReturn = this.processRecentPlays(plays);
 
-        this.pruneStaleApplications();
+        this.pruneApplications();
 
         return playsToReturn;
     }
@@ -384,7 +401,7 @@ export class ChromecastSource extends MemorySource {
         } = obj;
 
         let artists: string[] = [],
-            albumArtists: string[] = [albumArtist as string],
+            albumArtists: string[] = [],
             track: string = (title ?? songName) as string,
             album: string = (albumNorm ?? albumName) as string,
             mediaType: string = 'unknown';
@@ -395,6 +412,10 @@ export class ChromecastSource extends MemorySource {
             artists = [artistName as string];
         } else if(subtitle !== undefined) {
             artists = [subtitle as string];
+        }
+
+        if(albumArtist !== undefined) {
+            albumArtists = [albumArtist as string];
         }
 
         const {
