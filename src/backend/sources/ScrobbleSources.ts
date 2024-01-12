@@ -328,12 +328,12 @@ export default class ScrobbleSources {
                 case 'chromecast':
                     const ccShouldUse = parseBool(process.env.CC_ENABLE);
                     const cc = {
-                        blacklistDevices: process.env.WS_BLACKLIST_DEVICES,
-                        whitelistDevices: process.env.WS_WHITELIST_DEVICES,
-                        blacklistApps: process.env.WS_BLACKLIST_APPS,
-                        whitelistApps: process.env.WS_WHITELIST_APPS
+                        blacklistDevices: process.env.CC_BLACKLIST_DEVICES,
+                        whitelistDevices: process.env.CC_WHITELIST_DEVICES,
+                        blacklistApps: process.env.CC_BLACKLIST_APPS,
+                        whitelistApps: process.env.CC_WHITELIST_APPS
                     }
-                    if (!Object.values(ws).every(x => x === undefined) || ccShouldUse) {
+                    if (!Object.values(cc).every(x => x === undefined) || ccShouldUse) {
                         configs.push({
                             type: 'chromecast',
                             name: 'unnamed',
