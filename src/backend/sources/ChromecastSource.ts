@@ -192,7 +192,7 @@ export class ChromecastSource extends MemorySource {
                 let storedApp = v.applications.get(a.transportId);
                 if(!storedApp) {
                     const appName = a.displayName;
-                    let found = `Found Application '${appName}'`;
+                    let found = `Found Application '${appName}-${a.transportId.substring(0, 4)}'`;
                     const appLowerName = appName.toLocaleLowerCase();
                     let filtered = false;
                     let valid = true;
@@ -233,7 +233,7 @@ export class ChromecastSource extends MemorySource {
                         badData: false,
                         validAppType: valid,
                         playerId: genGroupIdStr([genDeviceId(k, a.displayName), NO_USER]),
-                        logger: v.logger.child({labels: [`App ${a.displayName.substring(0, 25)}`]}, mergeArr)
+                        logger: v.logger.child({labels: [`App ${a.displayName.substring(0, 25)}-${a.transportId.substring(0,4)}`]}, mergeArr)
                     }
                     v.applications.set(a.transportId, storedApp);
                 } else if(storedApp.stale === true) {
@@ -280,15 +280,37 @@ export class ChromecastSource extends MemorySource {
                 continue;
             }
 
+            const forDeletion: [string, string][] = [];
+
             for(const [tId, app] of v.applications.entries()) {
                 if(app.stale && Math.abs(app.staleAt.diff(dayjs(), 's')) > 60) {
                     app.logger.info(`Removing due to being stale for 60 seconds`);
-                    this.deletePlayer(app.playerId, 'No updates for 60 seconds');
                     //app.logger.close();
                     v.applications.delete(tId);
+                    forDeletion.push([app.playerId, 'No updates for 60 seconds']);
                 } else if(app.badData && Math.abs(app.badDataAt.diff(dayjs(), 's')) > 60 && this.players.has(app.playerId)) {
-                    app.logger.info(`Removing player due to bad data for 60 seconds`);
-                    this.deletePlayer(app.playerId, 'Bad data for 60 seconds');
+                    forDeletion.push([app.playerId, 'Bad data for 60 seconds']);
+                }
+            }
+            if(forDeletion.length > 0) {
+                // if the cast device disconnected and reconnected (for some reason)
+                // or a user disconnected and then reconnected manually
+                // -- for the same *app*
+                // then the same playerId will exist for two applications that have different destination/session ids
+                // and we don't want to delete the player if another exists that isn't also being deleted
+                for(const [playerId, reason] of forDeletion) {
+                    if(!this.players.has(playerId)) {
+                        // already deleted
+                        continue;
+                    }
+                    const apps = Array.from(v.applications.values());
+                    // check that either all apps with this player id are gone
+                    if(apps.every((x => x.playerId !== playerId))) {
+                        this.deletePlayer(playerId, reason);
+                    }// or that all actually have bad data
+                    else if(!apps.some(x => x.playerId === x.playerId && !x.badData)) {
+                        this.deletePlayer(playerId, reason);
+                    }
                 }
             }
         }
@@ -339,15 +361,18 @@ export class ChromecastSource extends MemorySource {
                     }
 
                     if (this.config.options.logPayload) {
-                        application.logger.debug(`Media Status Payload:\n ${JSON.stringify(mediaStatus)}`);
+                        application.logger.debug(`Media Status Payload:\n ${mediaStatus === undefined || mediaStatus === null ? 'undefined' : JSON.stringify(mediaStatus)}`);
                     }
 
-                    const play = ChromecastSource.formatPlayObj(mediaStatus, {
-                        deviceId: genDeviceId(k, application.displayName),
-                        source: application.displayName
-                    });
+                    let play: PlayObject | undefined;
+                    if(mediaStatus !== undefined && mediaStatus !== null) {
+                       play = ChromecastSource.formatPlayObj(mediaStatus, {
+                            deviceId: genDeviceId(k, application.displayName),
+                            source: application.displayName
+                        });
+                    }
 
-                    if (play.data.artists.length === 0 || play.data.track === undefined) {
+                    if (play === undefined || play.data.artists.length === 0 || play.data.track === undefined) {
                         if (!application.badData) {
                             application.logger.warn(`Media information either did not return artists or track. This isn't scrollable! Skipping this update and marking App as having bad data (to be removed after 60 seconds)`);
                             application.badData = true;
