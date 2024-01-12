@@ -701,7 +701,29 @@ If your media device can be **Cast** to using this button ![Chromecast Icon](htt
 
 **Note:** This source relies on common, **basic** music data provided by the cast device which will always be less exhaustive than data parsed from full source integrations. If there is an existing [Source](#source-configurations) it is recommended to configure for it and blacklist the app on Google Cast, rather than relying solely on Google Cast for scrobbling.
 
-The machine and/or container running multi-scrobbler must be configured to allow [mDNS traffic on port 5353/UDP](https://book.hacktricks.xyz/network-services-pentesting/5353-udp-multicast-dns-mdns).
+#### Networking Requirements
+
+The host machine running multi-scrobbler must be configured to allow [mDNS traffic on port 5353/UDP](https://book.hacktricks.xyz/network-services-pentesting/5353-udp-multicast-dns-mdns).
+
+##### Linux
+
+**Docker**
+
+The host machine must have [avahi-daemon](https://avahi.org/) running to circumvent limitations with DNS resolution due to musl in Alpine. All major linux distributions package avahi and many have it built-in. Once avahi is running you must pass D-Bus and the avahi daemon socket to your container like so:
+
+```
+docker run ... -v /var/run/dbus:/var/run/dbus -v  	/var/run/avahi-daemon/socket:/var/run/avahi-daemon/socket ... foxxmd/multi-scrobbler
+```
+
+**Flatpak**
+
+No additional steps are required.
+
+##### Windows
+
+**Docker**
+
+Unsupported at this time.
 
 #### Cast Troubleshooting
 

@@ -747,6 +747,11 @@ export const getAddress = (host = '0.0.0.0', logger?: Logger): { v4?: string, v6
     };
 }
 
+const IPV4_REGEX = new RegExp(/^((25[0-5]|(2[0-4]|1\d|[1-9]|)\d)\.?\b){4}$/);
+export const isIPv4 = (address: string): boolean => {
+    return parseRegexSingleOrFail(IPV4_REGEX, address) !== undefined;
+}
+
 export const comparingMultipleArtists = (existing: PlayObject, candidate: PlayObject): boolean => {
     const {
         data: {

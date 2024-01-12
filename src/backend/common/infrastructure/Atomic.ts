@@ -226,3 +226,9 @@ export interface Authenticatable {
     authFailure?: boolean
     testAuth: () => Promise<any>
 }
+
+export interface MdnsDeviceInfo {
+    name: string
+    type: string
+    addresses: string[]
+}

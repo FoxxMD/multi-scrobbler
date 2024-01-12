@@ -1,4 +1,4 @@
-import {REPORTED_PLAYER_STATUSES, ReportedPlayerStatus} from "../../infrastructure/Atomic";
+import {MdnsDeviceInfo, REPORTED_PLAYER_STATUSES, ReportedPlayerStatus} from "../../infrastructure/Atomic";
 import {PlatformApplication, PlatformType} from "./interfaces";
 import {connect, createPlatform, Media, MediaController, PersistentClient, Result} from "chromecast-client";
 import {ErrorWithCause} from "pony-cause";
@@ -43,13 +43,13 @@ export const getCurrentPlatformApplications = async (platform: PlatformType): Pr
     }
 }
 
-export const initializeClientPlatform = async (service: Service): Promise<[CastClient, PersistentClient, PlatformType]> => {
+export const initializeClientPlatform = async (device: MdnsDeviceInfo): Promise<[CastClient, PersistentClient, PlatformType]> => {
     let client: PersistentClient;
     let castClient = new CastClient;
     try {
-        client = await connect({host: service.addresses?.[0]});
+        client = await connect({host: device.addresses?.[0]});
     } catch (e) {
-        throw new ErrorWithCause(`Could not connect to ${service.name}`, {cause: e});
+        throw new ErrorWithCause(`Could not connect to ${device.name}`, {cause: e});
     }
 
     const platform = createPlatform(client);

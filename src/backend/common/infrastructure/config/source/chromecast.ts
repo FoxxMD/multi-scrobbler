@@ -32,6 +32,15 @@ export interface ChromecastData extends CommonSourceData {
      * @examples [["spotify","pandora"]]
      * */
     whitelistApps?: string | string[]
+
+    /**
+     * Try to use Avahi and avahi-browse to resolve mDNS devices instead of native mDNS querying
+     *
+     * Useful for docker (alpine) container where mDNS resolution is not yet supported. Avahi socket must be exposed to the container and avahi-tools must be installed.
+     *
+     * @default false
+     * */
+    useAvahi?: boolean
 }
 
 export interface ChromecastSourceConfig extends CommonSourceConfig {

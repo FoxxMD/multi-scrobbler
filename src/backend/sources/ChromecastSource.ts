@@ -2,19 +2,20 @@ import MemorySource from "./MemorySource";
 import {ChromecastSourceConfig} from "../common/infrastructure/config/source/chromecast";
 import {
     FormatPlayObjectOptions,
-    InternalConfig, NO_USER,
+    InternalConfig, MdnsDeviceInfo, NO_USER,
     PlayerStateData,
     SourceData
 } from "../common/infrastructure/Atomic";
 import {EventEmitter} from "events";
-import Bonjour, {Service} from "bonjour-service";
+import {Browser, ServiceType, Service} from '@astronautlabs/mdns';
+import AvahiBrowser from 'avahi-browse';
 import {MediaController, PersistentClient, Media} from "chromecast-client";
 import {Client as CastClient} from 'castv2';
 import {ErrorWithCause, findCauseByReference} from "pony-cause";
 import {PlayObject} from "../../core/Atomic";
 import dayjs from "dayjs";
 import {RecentlyPlayedOptions} from "./AbstractSource";
-import {difference, genGroupIdStr, mergeArr} from "../utils";
+import {difference, genGroupIdStr, isIPv4, mergeArr, parseBool, sleep} from "../utils";
 import {
     PlatformApplication,
     PlatformApplicationWithContext,
@@ -29,7 +30,7 @@ import {Logger} from "@foxxmd/winston";
 import {ContextualValidationError} from "chromecast-client/dist/cjs/src/utils";
 
 interface ChromecastDeviceInfo {
-    mdns: Service
+    mdns: MdnsDeviceInfo
     client: PersistentClient
     castv2: CastClient
     logger: Logger,
@@ -50,7 +51,7 @@ export class ChromecastSource extends MemorySource {
     whitelistApps: string[] = [];
     blacklistApps: string[] = [];
 
-    bonjour?: Bonjour;
+    //bonjour?: Bonjour;
 
     devices: Map<string, ChromecastDeviceInfo> = new Map();
 
@@ -75,64 +76,120 @@ export class ChromecastSource extends MemorySource {
 
     initialize = async () => {
         this.logger.info('Listening for Chromecasts...')
-        this.bonjour = new Bonjour({}, (err) => {
-            this.logger.error(new ErrorWithCause('Bonjour (mDNS) discovery crashed unexpectedly and will not be able to find new client.', {cause: err}));
-        });
-        this.bonjour.find({ type: 'googlecast' }, (service) => {
 
-            if(this.devices.has(service.name)) {
-                this.logger.warn(`Chromecast ${service.name} already found, not adding again.`);
-                return;
-            }
+        const {
+            data: {
+                useAvahi = parseBool(process.env.IS_DOCKER)
+            } = {}
+        } = this.config;
 
-            const discovered = `Discovered chromecast "${service.name}" at ${service.addresses?.[0]}`;
-            const lowerName = service.name.toLocaleLowerCase();
-            if(this.whitelistDevices.length > 0) {
-                const found = this.whitelistDevices.find(x => lowerName.includes(x));
-                if(found !== undefined) {
-                    this.logger.info(`${discovered} => Adding as a player because it was whitelisted by keyword '${found}'`);
-                } else {
-                    this.logger.info(`${discovered} => NOT ADDING as a player because no part of its name appeared in whitelistDevices`);
-                    return;
-                }
-            } else if(this.blacklistDevices.length > 0) {
-                const found = this.blacklistDevices.find(x => lowerName.includes(x));
-                if(found !== undefined) {
-                    this.logger.info(`${discovered} => NOT ADDING as a player because it was blacklisted by keyword '${found}'`);
-                    return;
-                } else {
-                    this.logger.info(`${discovered} => Adding as a player because no part of its name appeared in blacklistDevices`);
-                }
-            } else {
-                this.logger.info(`${discovered} => Adding as a player`);
-            }
-
-            this.initializeDevice(service).catch((e) => {
-                this.logger.error(e);
-            });
-
-        });
+        if(useAvahi) {
+            await this.discoverAvahi();
+        } else {
+            await this.discoverNative();
+        }
         this.initialized = true;
         return true;
     }
 
-    protected initializeDevice = async (service: Service) => {
+    discoverAvahi = async () => {
+        this.logger.debug('Trying discovery with Avahi');
         try {
-            const [castClient, client, platform] = await initializeClientPlatform(service);
+            const browser = new AvahiBrowser('_googlecast._tcp');
+            browser.on(AvahiBrowser.EVENT_SERVICE_UP, async (service) => {
+                this.logger.debug(`Resolved device ${service.target.service_type} - ${service.target.host} - ${service.service_name}`);
+                if(isIPv4(service.target.host)) {
+                    this.initializeDevice({name: service.service_name, addresses: [service.target.host], type: 'googlecast'}).catch((err) => {
+                        this.logger.error(err);
+                    });
+                }
+            });
+            browser.on(AvahiBrowser.EVENT_DNSSD_ERROR, (err) => {
+                throw err;
+            });
+            browser.start();
+        } catch (e) {
+            this.logger.warn(new ErrorWithCause('mDNS device discovery with avahi-browse failed, falling back to native discovery', {cause: e}));
+            this.discoverNative().catch((err) => {
+               this.logger.error(err);
+            });
+        }
+    }
+
+    discoverNative = async () => {
+        this.logger.debug('Trying discovery with native mDNS querying');
+        if(this.config.options.logPayload) {
+            let services: ServiceType[] = [];
+            const testBrowser = new Browser(ServiceType.all())
+                .on('serviceUp', (service: ServiceType) => {
+                    services.push(service)
+                })
+                .start();
+            this.logger.debug('Waiting 1s to gather advertised mdns services...');
+            await sleep(1000);
+            testBrowser.stop();
+            if(services.length === 0) {
+                this.logger.debug('Did not find any mdns services! Do you have port 5353 open?');
+            } else {
+                this.logger.debug(`Found services: ${services.map(x => `${x.name}-${x.protocol}`).join(' ,')}`);
+            }
+        }
+
+        const browser = new Browser('_googlecast._tcp', {resolve: true})
+            .on('serviceUp', (service) => {
+                this.logger.debug(`Resolved device "${service.name}" at ${service.addresses?.[0]}`);
+                this.initializeDevice({name: service.name, addresses: service.addresses, type: 'googlecast'}).catch((e) => {
+                    this.logger.error(e);
+                });
+            })
+            .start();
+    }
+
+    protected initializeDevice = async (device: MdnsDeviceInfo) => {
+
+        if (this.devices.has(device.name)) {
+            this.logger.warn(`Chromecast ${device.name} already found, not adding again.`);
+            return;
+        }
+
+        const discovered = `Discovered chromecast "${device.name}" at ${device.addresses?.[0]}`;
+        const lowerName = device.name.toLocaleLowerCase();
+        if (this.whitelistDevices.length > 0) {
+            const found = this.whitelistDevices.find(x => lowerName.includes(x));
+            if (found !== undefined) {
+                this.logger.info(`${discovered} => Adding as a player because it was whitelisted by keyword '${found}'`);
+            } else {
+                this.logger.info(`${discovered} => NOT ADDING as a player because no part of its name appeared in whitelistDevices`);
+                return;
+            }
+        } else if (this.blacklistDevices.length > 0) {
+            const found = this.blacklistDevices.find(x => lowerName.includes(x));
+            if (found !== undefined) {
+                this.logger.info(`${discovered} => NOT ADDING as a player because it was blacklisted by keyword '${found}'`);
+                return;
+            } else {
+                this.logger.info(`${discovered} => Adding as a player because no part of its name appeared in blacklistDevices`);
+            }
+        } else {
+            this.logger.info(`${discovered} => Adding as a player`);
+        }
+
+        try {
+            const [castClient, client, platform] = await initializeClientPlatform(device);
             const applications = new Map<string, PlatformApplicationWithContext>();
-            this.devices.set(service.name, {
-                mdns: service,
+            this.devices.set(device.name, {
+                mdns: device,
                 client,
                 castv2: castClient,
                 connected: true,
                 retries: 0,
                 platform,
                 applications,
-                logger: this.logger.child({labels: [service.name.substring(0, 25)]}, mergeArr),
+                logger: this.logger.child({labels: [device.name.substring(0, 25)]}, mergeArr),
             });
-            castClient.on('connect', () => this.handleCastClientEvent(service.name, 'connect'));
-            castClient.on('error', (err) => this.handleCastClientEvent(service.name, 'error', err));
-            castClient.on('close', () => this.handleCastClientEvent(service.name, 'close'));
+            castClient.on('connect', () => this.handleCastClientEvent(device.name, 'connect'));
+            castClient.on('error', (err) => this.handleCastClientEvent(device.name, 'error', err));
+            castClient.on('close', () => this.handleCastClientEvent(device.name, 'close'));
         } catch (e) {
             this.logger.error(e);
             return;

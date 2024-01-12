@@ -47,6 +47,7 @@
   "private": true,
   "homepage": ".",
   "dependencies": {
+    "@astronautlabs/mdns": "^1.0.7",
     "@awaitjs/express": "^0.6.3",
     "@fortawesome/fontawesome-svg-core": "^6.4.2",
     "@fortawesome/free-solid-svg-icons": "^6.4.2",
@@ -59,9 +60,9 @@
     "@supercharge/promise-pool": "^3.0.0",
     "address": "^1.2.2",
     "ajv": "^7.2.4",
+    "avahi-browse": "^1.1.4",
     "better-sse": "^0.8.0",
     "body-parser": "^1.19.0",
-    "bonjour-service": "^1.2.1",
     "castv2": "^0.1.10",
     "chromecast-client": "github:foxxmd/chromecast-client#dist",
     "clsx": "^2.0.0",

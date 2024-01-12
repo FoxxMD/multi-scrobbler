@@ -6,6 +6,8 @@ RUN \
   echo "**** install build packages ****" && \
   apk add --no-cache \
     alpine-base \
+    avahi \
+    avahi-tools \
     git \
     nodejs \
     npm \
