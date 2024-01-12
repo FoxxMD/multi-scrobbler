@@ -232,11 +232,12 @@ export class ChromecastSource extends MemorySource {
                         stale: false,
                         badData: false,
                         validAppType: valid,
-                        playerId: genGroupIdStr([genDeviceId(k, a.displayName), NO_USER])
+                        playerId: genGroupIdStr([genDeviceId(k, a.displayName), NO_USER]),
+                        logger: v.logger.child({labels: [`App ${a.displayName.substring(0, 25)}`]}, mergeArr)
                     }
                     v.applications.set(a.transportId, storedApp);
                 } else if(storedApp.stale === true) {
-                    v.logger.verbose(`App ${storedApp.displayName} no longer stale!`);
+                    storedApp.logger.verbose(`No longer stale!`);
                     storedApp.stale = false;
                     storedApp.staleAt = undefined;
                 }
@@ -248,10 +249,11 @@ export class ChromecastSource extends MemorySource {
             for(const staleId of storedStale) {
                 const staleApp = v.applications.get(staleId);
                 if(staleApp.filtered || !staleApp.validAppType) {
-                    v.logger.verbose(`App ${staleApp.displayName} became stale and is unused, removing immediately.`);
+                    staleApp.logger.verbose(`Became stale and is unused, removing immediately.`);
+                    //staleApp.logger.close();
                     v.applications.delete(staleId);
                 } else if(!staleApp.stale) {
-                    v.logger.verbose(`App ${staleApp.displayName} became stale`);
+                    staleApp.logger.verbose(`Became stale`);
                     staleApp.staleAt = dayjs();
                     staleApp.stale = true;
                 }
@@ -267,6 +269,7 @@ export class ChromecastSource extends MemorySource {
         }
         for(const [tId, app] of deviceInfo.applications) {
             this.deletePlayer(app.playerId, reason)
+            //app.logger.close();
             deviceInfo.applications.delete(tId);
         }
     }
@@ -279,11 +282,12 @@ export class ChromecastSource extends MemorySource {
 
             for(const [tId, app] of v.applications.entries()) {
                 if(app.stale && Math.abs(app.staleAt.diff(dayjs(), 's')) > 60) {
-                    v.logger.info(`Removing Application ${app.displayName} due to being stale for 60 seconds`);
+                    app.logger.info(`Removing due to being stale for 60 seconds`);
                     this.deletePlayer(app.playerId, 'No updates for 60 seconds');
+                    //app.logger.close();
                     v.applications.delete(tId);
                 } else if(app.badData && Math.abs(app.badDataAt.diff(dayjs(), 's')) > 60 && this.players.has(app.playerId)) {
-                    v.logger.info(`Removing Application ${app.displayName} player due to bad data for 60 seconds`);
+                    app.logger.info(`Removing player due to bad data for 60 seconds`);
                     this.deletePlayer(app.playerId, 'Bad data for 60 seconds');
                 }
             }
@@ -299,14 +303,15 @@ export class ChromecastSource extends MemorySource {
             this.logger.warn(new ErrorWithCause('Could not refresh all applications', {cause: e}));
         }
 
-        for(const [k, v] of this.devices.entries()) {
+        for (const [k, v] of this.devices.entries()) {
             if (!v.connected) {
                 continue;
             }
 
-            try {
+            for (const [tId, application] of v.applications.entries()) {
 
-                for (const [tId, application] of v.applications.entries()) {
+                try {
+
                     if (!application.validAppType || application.filtered || application.stale) {
                         continue;
                     }
@@ -324,7 +329,7 @@ export class ChromecastSource extends MemorySource {
                     } catch (e) {
                         if (e.message.includes('timed out')) {
                             // application probably no longer exists or media is no longer being played?
-                            this.logger.debug(`Timeout for ${k} - ${application.displayName}`);
+                            v.logger.debug(`Timeout occurred`);
                             //v.applications.delete(application.transportId);
                             // TODO count timeouts before setting app as stale
                             continue;
@@ -333,8 +338,8 @@ export class ChromecastSource extends MemorySource {
                         }
                     }
 
-                    if(this.config.options.logPayload) {
-                        v.logger.debug(`Media Status Payload:\n ${JSON.stringify(mediaStatus)}`);
+                    if (this.config.options.logPayload) {
+                        application.logger.debug(`Media Status Payload:\n ${JSON.stringify(mediaStatus)}`);
                     }
 
                     const play = ChromecastSource.formatPlayObj(mediaStatus, {
@@ -342,15 +347,15 @@ export class ChromecastSource extends MemorySource {
                         source: application.displayName
                     });
 
-                    if(play.data.artists.length === 0 || play.data.track === undefined) {
-                        if(!application.badData) {
-                            v.logger.warn(`Media information for App ${application.displayName} either did not return artists or track. This isn't scrollable! Skipping this update and marking App as having bad data (to be removed after 60 seconds)`);
+                    if (play.data.artists.length === 0 || play.data.track === undefined) {
+                        if (!application.badData) {
+                            application.logger.warn(`Media information either did not return artists or track. This isn't scrollable! Skipping this update and marking App as having bad data (to be removed after 60 seconds)`);
                             application.badData = true;
                             application.badDataAt = dayjs();
                         }
                         continue;
-                    } else if(application.badData) {
-                        v.logger.verbose(`Media information for App ${application.displayName} is now valid.`);
+                    } else if (application.badData) {
+                        application.logger.verbose(`Media information is now valid.`);
                         application.badData = false;
                         application.badDataAt = undefined;
                     }
@@ -362,12 +367,13 @@ export class ChromecastSource extends MemorySource {
                         status: chromePlayerStateToReported(mediaStatus.playerState)
                     }
                     plays.push(playerState);
-                }
-            } catch (e) {
-                this.logger.warn(new ErrorWithCause(`Could not get Player State for ${k}`, {cause: e}))
-                const validationError = findCauseByReference(e, ContextualValidationError);
-                if(validationError && validationError.data !== undefined) {
-                    v.logger.warn(JSON.stringify(validationError.data));
+
+                } catch (e) {
+                    application.logger.warn(new ErrorWithCause(`Could not get Player State`, {cause: e}))
+                    const validationError = findCauseByReference(e, ContextualValidationError);
+                    if (validationError && validationError.data !== undefined) {
+                        application.logger.warn(JSON.stringify(validationError.data));
+                    }
                 }
             }
         }

@@ -2,6 +2,7 @@ import {createPlatform, MediaController, PersistentClient} from "chromecast-clie
 import {Service} from "bonjour-service";
 import {FormatPlayObjectOptions} from "../../infrastructure/Atomic";
 import {Dayjs} from "dayjs";
+import {Logger} from "@foxxmd/winston";
 
 export type PlatformType = ReturnType<typeof createPlatform>;
 export interface PlatformApplication {
@@ -27,6 +28,7 @@ export interface PlatformApplicationWithContext extends PlatformApplication {
     badDataAt?: Dayjs | undefined
     validAppType: boolean
     playerId: string
+    logger: Logger
 }
 
 export interface ChromecastFormatPlayObjectOptions extends FormatPlayObjectOptions {
