@@ -10,7 +10,7 @@ import {EventEmitter} from "events";
 import Bonjour, {Service} from "bonjour-service";
 import {MediaController, PersistentClient, Media} from "chromecast-client";
 import {Client as CastClient} from 'castv2';
-import {ErrorWithCause} from "pony-cause";
+import {ErrorWithCause, findCauseByReference} from "pony-cause";
 import {PlayObject} from "../../core/Atomic";
 import dayjs from "dayjs";
 import {RecentlyPlayedOptions} from "./AbstractSource";
@@ -26,6 +26,7 @@ import {
     initializeClientPlatform
 } from "../common/vendor/chromecast/ChromecastClientUtils";
 import {Logger} from "@foxxmd/winston";
+import {ContextualValidationError} from "chromecast-client/dist/cjs/src/utils";
 
 interface ChromecastDeviceInfo {
     mdns: Service
@@ -180,6 +181,10 @@ export class ChromecastSource extends MemorySource {
                 apps = await getCurrentPlatformApplications(v.platform);
             } catch (e) {
                 v.logger.warn(new ErrorWithCause('Could not refresh applications', {cause: e}));
+                const validationError = findCauseByReference(e, ContextualValidationError);
+                if(validationError && validationError.data !== undefined) {
+                    v.logger.warn(JSON.stringify(validationError.data));
+                }
                 continue;
             }
 
@@ -339,6 +344,10 @@ export class ChromecastSource extends MemorySource {
                 }
             } catch (e) {
                 this.logger.warn(new ErrorWithCause(`Could not get Player State for ${k}`, {cause: e}))
+                const validationError = findCauseByReference(e, ContextualValidationError);
+                if(validationError && validationError.data !== undefined) {
+                    v.logger.warn(JSON.stringify(validationError.data));
+                }
             }
         }
 
