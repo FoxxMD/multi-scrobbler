@@ -51,11 +51,15 @@ modules:
       - install -Dm755 ../run.sh /app/bin/multiscrobbler
     subdir: main
     sources:
+      # use for official releases
       - type: git
         url: https://github.com/FoxxMD/multi-scrobbler
-        branch: REPLACE_ME
-        commit: REPLACE_ME
+        tag: 0.6.3
+        commit: 4bd996eb466137ffc5c3f48305afabde03720525
         dest: main
+      # use if developing locally
+#      - type: dir
+#        path: /home/yourUser/multi-scrobbler
       # Wrapper to launch the app
       - type: script
         dest-filename: run.sh
@@ -70,6 +74,6 @@ modules:
               cp -r /app/lib/config/. "${XDG_CONFIG_HOME}"/
               #cp /app/lib/defaultConfig.json $XDG_CONFIG_HOME/config.json
             fi
-          - cd /app/lib && CONFIG_DIR=$XDG_CONFIG_HOME IS_LOCAL=true NODE_ENV=production node build/server.js
+          - cd /app/lib && CONFIG_DIR=$XDG_CONFIG_HOME LOG_DIR=$XDG_CONFIG_HOME IS_LOCAL=true NODE_ENV=production node build/server.js
 
       - generated-sources.json
