@@ -1,5 +1,5 @@
 import AbstractScrobbleClient from "./AbstractScrobbleClient";
-import request from 'superagent';
+import request, {ResponseError, SuperAgentRequest} from 'superagent';
 import dayjs from 'dayjs';
 import compareVersions from 'compare-versions';
 import {
@@ -12,6 +12,8 @@ import { MalojaClientConfig } from "../common/infrastructure/config/client/maloj
 import { Notifiers } from "../notifier/Notifiers";
 import {Logger} from '@foxxmd/winston';
 import {
+    getMalojaResponseError,
+    isMalojaAPIErrorBody, MalojaResponseV3CommonData,
     MalojaScrobbleData,
     MalojaScrobbleRequestData,
     MalojaScrobbleV2RequestData,
@@ -24,6 +26,9 @@ import normalizeUrl from "normalize-url";
 import {UpstreamError} from "../common/errors/UpstreamError";
 import {ErrorWithCause} from "pony-cause";
 import {getScrobbleTsSOCDate, getScrobbleTsSOCDateWithContext} from "../utils/TimeUtils";
+import e from "express";
+import {isNodeNetworkException} from "../common/errors/NodeErrors";
+import {isSuperAgentResponseError} from "../common/errors/ErrorUtils";
 
 const feat = ["ft.", "ft", "feat.", "feat", "featuring", "Ft.", "Ft", "Feat.", "Feat", "Featuring"];
 
@@ -132,7 +137,7 @@ export default class MalojaScrobbler extends AbstractScrobbleClient {
 
     formatPlayObj = (obj: any, options: FormatPlayObjectOptions = {}) => MalojaScrobbler.formatPlayObj(obj, {serverVersion: this.serverVersion, url: this.webUrl});
 
-    callApi = async (req: any, retries = 0) => {
+    callApi = async (req: SuperAgentRequest, retries = 0) => {
         const {
             maxRequestRetries = 1,
             retryMultiplier = DEFAULT_RETRY_MULTIPLIER
@@ -141,28 +146,32 @@ export default class MalojaScrobbler extends AbstractScrobbleClient {
         try {
             return await req;
         } catch (e) {
-            if(retries < maxRequestRetries) {
-                const retryAfter = parseRetryAfterSecsFromObj(e) ?? (retryMultiplier * (retries + 1));
-                this.logger.warn(`Request failed but retries (${retries}) less than max (${maxRequestRetries}), retrying request after ${retryAfter} seconds...`);
-                await sleep(retryAfter * 1000);
-                return await this.callApi(req, retries + 1)
+            if((isNodeNetworkException(e) || isSuperAgentResponseError(e) && e.timeout)) {
+                if(retries < maxRequestRetries) {
+                    const retryAfter = parseRetryAfterSecsFromObj(e) ?? (retryMultiplier * (retries + 1));
+                    this.logger.warn(`Request failed but retries (${retries}) less than max (${maxRequestRetries}), retrying request after ${retryAfter} seconds...`);
+                    await sleep(retryAfter * 1000);
+                    return await this.callApi(req, retries + 1)
+                } else {
+                    throw new UpstreamError(`Request continued to fail after reach max retries (${maxRequestRetries})`, {cause : e, showStopper: true});
+                }
+            } else if(isSuperAgentResponseError(e)) {
+                const {
+                    message,
+                    response: {
+                        status,
+                        body,
+                    } = {},
+                    response,
+                } = e;
+                if(isMalojaAPIErrorBody(body)) {
+                    throw new UpstreamError(buildErrorString(body), {cause: e})
+                } else {
+                    throw new UpstreamError(`API Call failed (HTTP ${status}) => ${message}`, {cause: e})
+                }
+            } else {
+                throw new ErrorWithCause('Unexpected error occurred during API call', {cause : e});
             }
-            const {
-                message,
-                response: {
-                    // @ts-expect-error TS(2525): Initializer provides no value for this binding ele... Remove this comment to see the full error message
-                    status,
-                    // @ts-expect-error TS(2525): Initializer provides no value for this binding ele... Remove this comment to see the full error message
-                    body,
-                    // @ts-expect-error TS(2525): Initializer provides no value for this binding ele... Remove this comment to see the full error message
-                    text,
-                } = {},
-                response,
-            } = e;
-            let msg = response !== undefined ? `API Call failed: Server Response => ${message}` : `API Call failed: ${message}`;
-            const responseMeta = body ?? text;
-            this.logger.error(msg, {status, response: responseMeta});
-            throw e;
         }
     }
 
@@ -233,8 +242,7 @@ export default class MalojaScrobbler extends AbstractScrobbleClient {
 
             return [true];
         } catch (e) {
-            this.logger.error('Unexpected error encountered while testing server health');
-            this.logger.error(e);
+            this.logger.error(new ErrorWithCause('Unexpected error encountered while testing server health', {cause: e}));
             throw e;
         }
     }
@@ -282,12 +290,14 @@ export default class MalojaScrobbler extends AbstractScrobbleClient {
                 return false;
             }
         } catch (e) {
-            if(e.status === 403) {
-                // may be an older version that doesn't support auth readiness before db upgrade
-                // and if it was before api was accessible during db build then test would fail during testConnection()
-                if(compareVersions(this.serverVersion, '2.12.19') < 0) {
-                    if(!(await this.isReady())) {
-                        throw new UpstreamError(`Could not test auth because server is not ready`, {showStopper: false});
+            if(e instanceof UpstreamError) {
+                if(e.cause.status === 403) {
+                    // may be an older version that doesn't support auth readiness before db upgrade
+                    // and if it was before api was accessible during db build then test would fail during testConnection()
+                    if(compareVersions(this.serverVersion, '2.12.19') < 0) {
+                        if(!(await this.isReady())) {
+                            throw new UpstreamError(`Could not test auth because server is not ready`, {showStopper: false});
+                        }
                     }
                 }
             }
@@ -310,7 +320,7 @@ export default class MalojaScrobbler extends AbstractScrobbleClient {
                 this.serverIsHealthy = true;
             }
         } catch (e) {
-            this.logger.error(`Testing server health failed due to an unexpected error`);
+            this.logger.error(new ErrorWithCause(`Testing server health failed due to an unexpected error`, {cause: e}));
             this.serverIsHealthy = false;
         }
         return this.serverIsHealthy
@@ -474,7 +484,7 @@ export default class MalojaScrobbler extends AbstractScrobbleClient {
                         }
                     }
                 } else {
-                    throw new UpstreamError(buildErrorString(response), {showStopper: true});
+                    throw new UpstreamError(buildErrorString(response), {showStopper: false});
                 }
             } else {
                 const {
@@ -507,8 +517,14 @@ export default class MalojaScrobbler extends AbstractScrobbleClient {
         } catch (e) {
             await this.notifier.notify({title: `Client - ${capitalize(this.type)} - ${this.name} - Scrobble Error`, message: `Failed to scrobble => ${buildTrackString(playObj)} | Error: ${e.message}`, priority: 'error'});
             this.logger.error(`Scrobble Error (${sType})`, {playInfo: buildTrackString(playObj), payload: scrobbleData});
-            if(responseBody !== undefined) {
-                this.logger.error('Raw Response:', responseBody);
+            const responseError = getMalojaResponseError(e);
+            if(responseError !== undefined) {
+                if(responseError.status < 500 && e instanceof UpstreamError) {
+                    e.showStopper = false;
+                }
+                if(responseError.response?.text !== undefined) {
+                    this.logger.error('Raw Response:', { text: responseError.response?.text });
+                }
             }
             throw e;
         } finally {
@@ -517,7 +533,7 @@ export default class MalojaScrobbler extends AbstractScrobbleClient {
     }
 }
 
-const buildErrorString = (body: MalojaScrobbleV3ResponseData) => {
+const buildErrorString = (body: MalojaResponseV3CommonData) => {
     let valString: string | undefined = undefined;
     const {
         status,
