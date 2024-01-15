@@ -1,4 +1,4 @@
-import {createPlatform, MediaController, PersistentClient} from "chromecast-client";
+import {createPlatform, MediaController, PersistentClient} from "@foxxmd/chromecast-client";
 import {Service} from "bonjour-service";
 import {FormatPlayObjectOptions} from "../../infrastructure/Atomic";
 import {Dayjs} from "dayjs";

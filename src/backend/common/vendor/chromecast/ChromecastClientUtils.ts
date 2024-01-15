@@ -1,6 +1,6 @@
 import {MdnsDeviceInfo, REPORTED_PLAYER_STATUSES, ReportedPlayerStatus} from "../../infrastructure/Atomic";
 import {PlatformApplication, PlatformType} from "./interfaces";
-import {connect, createPlatform, Media, MediaController, PersistentClient, Result} from "chromecast-client";
+import {connect, createPlatform, Media, MediaController, PersistentClient, Result} from "@foxxmd/chromecast-client";
 import {ErrorWithCause} from "pony-cause";
 import {Service} from "bonjour-service";
 import {Client as CastClient} from 'castv2';

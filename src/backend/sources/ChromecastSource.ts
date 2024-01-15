@@ -9,7 +9,7 @@ import {
 import {EventEmitter} from "events";
 import {Browser, ServiceType, Service} from '@astronautlabs/mdns';
 import AvahiBrowser from 'avahi-browse';
-import {MediaController, PersistentClient, Media} from "chromecast-client";
+import {MediaController, PersistentClient, Media} from "@foxxmd/chromecast-client";
 import {Client as CastClient} from 'castv2';
 import {ErrorWithCause, findCauseByReference} from "pony-cause";
 import {PlayObject} from "../../core/Atomic";
@@ -27,7 +27,7 @@ import {
     initializeClientPlatform
 } from "../common/vendor/chromecast/ChromecastClientUtils";
 import {Logger} from "@foxxmd/winston";
-import {ContextualValidationError} from "chromecast-client/dist/cjs/src/utils";
+import {ContextualValidationError} from "@foxxmd/chromecast-client/dist/cjs/src/utils";
 
 interface ChromecastDeviceInfo {
     mdns: MdnsDeviceInfo
