@@ -91,15 +91,30 @@ export class ChromecastSource extends MemorySource {
 
         const {
             data: {
-                useAvahi = parseBool(process.env.IS_DOCKER)
+                useAvahi = parseBool(process.env.IS_DOCKER),
+                useAutoDiscovery,
+                devices = []
             } = {}
         } = this.config;
 
-        if(useAvahi) {
-            await this.discoverAvahi();
-        } else {
-            await this.discoverNative();
+        let ad = useAutoDiscovery;
+        if(ad === undefined) {
+            ad = devices.length === 0;
         }
+        if(devices.length > 0) {
+            for(const device of devices) {
+                await this.initializeDevice({name: device.name, addresses: [device.address], type: 'googlecast'});
+            }
+        }
+
+        if(ad) {
+            if(useAvahi) {
+                await this.discoverAvahi();
+            } else {
+                await this.discoverNative();
+            }
+        }
+
         this.initialized = true;
         return true;
     }

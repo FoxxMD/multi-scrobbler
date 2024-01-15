@@ -61,6 +61,28 @@
                     ],
                     "title": "blacklistDevices"
                 },
+                "devices": {
+                    "description": "A list of Google Cast devices to monitor\n\nIf this is used then `useAutoDiscovery` is set to FALSE, if not explicitly set",
+                    "items": {
+                        "properties": {
+                            "address": {
+                                "title": "address",
+                                "type": "string"
+                            },
+                            "name": {
+                                "title": "name",
+                                "type": "string"
+                            }
+                        },
+                        "required": [
+                            "address",
+                            "name"
+                        ],
+                        "type": "object"
+                    },
+                    "title": "devices",
+                    "type": "array"
+                },
                 "forceMediaRecognitionOn": {
                     "description": "Media provided by any App whose name is listed here will ALWAYS be tracked, regardless of the \"media type\" reported\n\nApps will be recognized if they CONTAIN any of these values, case-insensitive",
                     "items": {
@@ -104,6 +126,11 @@
                     "$ref": "#/definitions/ScrobbleThresholds",
                     "description": "Set thresholds for when multi-scrobbler should consider a tracked play to be \"scrobbable\". If both duration and percent are defined then if either condition is met the track is scrobbled.",
                     "title": "scrobbleThresholds"
+                },
+                "useAutoDiscovery": {
+                    "description": "Use mDNS to discovery Google Cast devices on your next automatically?\n\nIf not explicitly set then it is TRUE if `devices` is not set",
+                    "title": "useAutoDiscovery",
+                    "type": "boolean"
                 },
                 "useAvahi": {
                     "default": false,

@@ -43,6 +43,23 @@ export interface ChromecastData extends CommonSourceData {
     useAvahi?: boolean
 
     /**
+     * Use mDNS to discovery Google Cast devices on your next automatically?
+     *
+     * If not explicitly set then it is TRUE if `devices` is not set
+     * */
+    useAutoDiscovery?: boolean | undefined
+
+    /**
+     * A list of Google Cast devices to monitor
+     *
+     * If this is used then `useAutoDiscovery` is set to FALSE, if not explicitly set
+     * */
+    devices?: {
+       name: string
+       address: string
+    }[]
+
+    /**
      * Chromecast Apps report a "media type" in the status info returned for whatever is currently playing
      *
      * * If set to TRUE then Music AND Generic/Unknown media will be tracked for ALL APPS
@@ -61,6 +78,17 @@ export interface ChromecastData extends CommonSourceData {
      * Apps will be recognized if they CONTAIN any of these values, case-insensitive
      * */
     forceMediaRecognitionOn?: string[]
+}
+
+export interface ChromecastDeviceInfo {
+    /**
+     * A friendly name to identify this device
+     * */
+    name: string
+    /**
+     * The IP address of the device
+     * */
+    address: string
 }
 
 export interface ChromecastSourceConfig extends CommonSourceConfig {
