@@ -2,8 +2,9 @@ import {MdnsDeviceInfo, REPORTED_PLAYER_STATUSES, ReportedPlayerStatus} from "..
 import {PlatformApplication, PlatformType} from "./interfaces";
 import {connect, createPlatform, Media, MediaController, PersistentClient, Result} from "@foxxmd/chromecast-client";
 import {ErrorWithCause} from "pony-cause";
-import {Service} from "bonjour-service";
 import {Client as CastClient} from 'castv2';
+import objectHash from "object-hash";
+import {PlayObject} from "../../../../core/Atomic";
 
 export const chromePlayerStateToReported = (state: string): ReportedPlayerStatus => {
     switch (state) {
@@ -71,4 +72,20 @@ export const getMediaStatus = async (controller: MediaController.MediaController
 
 export const genDeviceId = (deviceName: string, appName: string) => {
     return `${deviceName.substring(0, 25)}-${appName.substring(0,25)}`;
+}
+
+export const genPlayHash = (play: PlayObject) => {
+        const {
+            data: {
+                artists,
+                track,
+                album,
+                albumArtists
+            } = {},
+            meta: {
+                mediaType
+            }
+        } = play;
+
+        return objectHash.sha1({artists, track, album, albumArtists, mediaType});
 }

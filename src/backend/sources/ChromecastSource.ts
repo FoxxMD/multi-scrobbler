@@ -24,10 +24,11 @@ import {
 import {
     chromePlayerStateToReported, genDeviceId,
     getCurrentPlatformApplications, getMediaStatus,
-    initializeClientPlatform
+    initializeClientPlatform, genPlayHash
 } from "../common/vendor/chromecast/ChromecastClientUtils";
-import {Logger} from "@foxxmd/winston";
+import {config, Logger} from "@foxxmd/winston";
 import {ContextualValidationError} from "@foxxmd/chromecast-client/dist/cjs/src/utils";
+import {buildTrackString} from "../../core/StringUtils";
 
 interface ChromecastDeviceInfo {
     mdns: MdnsDeviceInfo
@@ -50,6 +51,8 @@ export class ChromecastSource extends MemorySource {
     blacklistDevices: string[] = [];
     whitelistApps: string[] = [];
     blacklistApps: string[] = [];
+    allowUnknownMedia: string[] | boolean;
+    forceMediaRecognitionOn: string[] = [];
 
     //bonjour?: Bonjour;
 
@@ -60,10 +63,13 @@ export class ChromecastSource extends MemorySource {
         this.canPoll = true;
 
         const {
-            data = {}
+            data = {},
+            data: {
+                allowUnknownMedia = false,
+            }
         } = config;
 
-        for(const propName of ['whitelistDevices', 'blacklistDevices', 'whitelistApps', 'blacklistApps']) {
+        for(const propName of ['whitelistDevices', 'blacklistDevices', 'whitelistApps', 'blacklistApps', 'forceMediaRecognitionOn', 'allowUnknownMedia']) {
             const configData = data[propName] ?? [];
 
             if(!Array.isArray(configData)) {
@@ -71,6 +77,12 @@ export class ChromecastSource extends MemorySource {
             } else {
                 this[propName] = configData.map(x => x.toLocaleLowerCase());
             }
+        }
+
+        if(typeof allowUnknownMedia === 'boolean') {
+            this.allowUnknownMedia = allowUnknownMedia
+        } else {
+            this.allowUnknownMedia = allowUnknownMedia.map(x => x.toLocaleLowerCase());
         }
     }
 
@@ -440,6 +452,36 @@ export class ChromecastSource extends MemorySource {
                         application.logger.verbose(`Media information is now valid.`);
                         application.badData = false;
                         application.badDataAt = undefined;
+                    }
+
+                    const playHash = genPlayHash(play);
+                    if (playHash !== application.lastPlayHash) {
+                        application.lastPlayHash = playHash;
+
+                        if (play.meta.mediaType !== 'music') {
+                            const playInfo = buildTrackString(play);
+                            const forcedBy = this.forceMediaRecognitionOn.find(x => application.displayName.toLocaleLowerCase().includes(x));
+                            if (forcedBy !== undefined) {
+                                this.logger.verbose(`${playInfo} has non-music type (${play.meta.mediaType}) but was forced recognized by keyword "${forcedBy}"`);
+                            } else if (play.meta.mediaType === 'unknown') {
+                                if (this.allowUnknownMedia === false) {
+                                    this.logger.verbose(`${playInfo} has 'unknown' media type and allowUnknownMedia=false, will not track`);
+                                    continue;
+                                } else if (Array.isArray(this.allowUnknownMedia)) {
+                                    const allowedBy = this.allowUnknownMedia.find(x => application.displayName.toLocaleLowerCase().includes(x))
+                                    if (allowedBy) {
+                                        this.logger.verbose(`${playInfo} has 'unknown' media type but was allowed by keyword "${allowedBy}" in allowUnknownMedia`);
+                                    } else {
+                                        this.logger.verbose(`${playInfo} has 'unknown' media type and App name was not found in allowUnknownMedia, will not track`);
+                                        continue;
+                                    }
+                                } else {
+                                    this.logger.verbose(`${playInfo} has 'unknown' media type and allowUnknownMedia=true`);
+                                }
+                            } else {
+                                this.logger.verbose(`${playInfo} has non-music type (${play.meta.mediaType}) so will not track`);
+                            }
+                        }
                     }
 
                     const playerState: PlayerStateData = {

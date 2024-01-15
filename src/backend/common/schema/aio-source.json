@@ -3,6 +3,22 @@
     "definitions": {
         "ChromecastData": {
             "properties": {
+                "allowUnknownMedia": {
+                    "anyOf": [
+                        {
+                            "items": {
+                                "type": "string"
+                            },
+                            "type": "array"
+                        },
+                        {
+                            "type": "boolean"
+                        }
+                    ],
+                    "default": false,
+                    "description": "Chromecast Apps report a \"media type\" in the status info returned for whatever is currently playing\n\n* If set to TRUE then Music AND Generic/Unknown media will be tracked for ALL APPS\n* If set to FALSE then only media explicitly typed as Music will be tracked for ALL APPS\n* If set to a list then only Apps whose name contain one of these values, case-insensitive, will have Music AND Generic/Unknown tracked\n\nSee https://developers.google.com/cast/docs/media/messages#MediaInformation \"metadata\" property",
+                    "title": "allowUnknownMedia"
+                },
                 "blacklistApps": {
                     "anyOf": [
                         {
@@ -45,6 +61,14 @@
                     ],
                     "title": "blacklistDevices"
                 },
+                "forceMediaRecognitionOn": {
+                    "description": "Media provided by any App whose name is listed here will ALWAYS be tracked, regardless of the \"media type\" reported\n\nApps will be recognized if they CONTAIN any of these values, case-insensitive",
+                    "items": {
+                        "type": "string"
+                    },
+                    "title": "forceMediaRecognitionOn",
+                    "type": "array"
+                },
                 "maxPollRetries": {
                     "default": 5,
                     "description": "default # of automatic polling restarts on error",
@@ -80,6 +104,12 @@
                     "$ref": "#/definitions/ScrobbleThresholds",
                     "description": "Set thresholds for when multi-scrobbler should consider a tracked play to be \"scrobbable\". If both duration and percent are defined then if either condition is met the track is scrobbled.",
                     "title": "scrobbleThresholds"
+                },
+                "useAvahi": {
+                    "default": false,
+                    "description": "Try to use Avahi and avahi-browse to resolve mDNS devices instead of native mDNS querying\n\nUseful for docker (alpine) container where mDNS resolution is not yet supported. Avahi socket must be exposed to the container and avahi-tools must be installed.",
+                    "title": "useAvahi",
+                    "type": "boolean"
                 },
                 "whitelistApps": {
                     "anyOf": [

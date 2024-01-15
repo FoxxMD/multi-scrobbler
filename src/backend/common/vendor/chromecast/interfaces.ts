@@ -29,6 +29,7 @@ export interface PlatformApplicationWithContext extends PlatformApplication {
     validAppType: boolean
     playerId: string
     logger: Logger
+    lastPlayHash?: string
 }
 
 export interface ChromecastFormatPlayObjectOptions extends FormatPlayObjectOptions {
