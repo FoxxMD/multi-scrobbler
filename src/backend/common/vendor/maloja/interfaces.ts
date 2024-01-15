@@ -98,7 +98,7 @@ export interface MalojaScrobbleV3ResponseData extends MalojaResponseV3CommonData
     warnings?: MalojaScrobbleWarning[]
 }
 
-export const isMalojaAPIErrorBody = (body: unknown): body is MalojaResponseV3CommonData => {
+export const isMalojaAPIErrorBody = (body: any): body is MalojaResponseV3CommonData => {
     return typeof body === 'object'
         && 'status' in body
         && typeof body.status === 'string'
