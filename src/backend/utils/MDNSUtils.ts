@@ -1,7 +1,7 @@
 import {Logger} from "@foxxmd/winston";
 import AvahiBrowser from 'avahi-browse';
 import {MaybeLogger} from "../common/logging";
-import {isIPv4, sleep} from "../utils";
+import {sleep} from "../utils";
 import {ErrorWithCause} from "pony-cause";
 import {MdnsDeviceInfo} from "../common/infrastructure/Atomic";
 import {Browser, Service, ServiceType} from "@astronautlabs/mdns";

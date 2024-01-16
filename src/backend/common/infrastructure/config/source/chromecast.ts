@@ -4,6 +4,8 @@ export interface ChromecastData extends CommonSourceData {
     /**
      * DO NOT scrobble from any cast devices that START WITH these values, case-insensitive
      *
+     * Useful when used with auto discovery
+     *
      * @examples [["home-mini","family-tv"]]
      * */
     blacklistDevices?: string | string[]
@@ -12,6 +14,8 @@ export interface ChromecastData extends CommonSourceData {
      * ONLY scrobble from any cast device that START WITH these values, case-insensitive
      *
      * If whitelist is present then blacklist is ignored
+     *
+     * Useful when used with auto discovery
      *
      * @examples [["home-mini","family-tv"]]
      * */
@@ -54,10 +58,7 @@ export interface ChromecastData extends CommonSourceData {
      *
      * If this is used then `useAutoDiscovery` is set to FALSE, if not explicitly set
      * */
-    devices?: {
-       name: string
-       address: string
-    }[]
+    devices?: ChromecastDeviceInfo[]
 
     /**
      * Chromecast Apps report a "media type" in the status info returned for whatever is currently playing

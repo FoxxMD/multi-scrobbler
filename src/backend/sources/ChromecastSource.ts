@@ -7,8 +7,6 @@ import {
     SourceData
 } from "../common/infrastructure/Atomic";
 import {EventEmitter} from "events";
-import {Browser, ServiceType, Service} from '@astronautlabs/mdns';
-import AvahiBrowser from 'avahi-browse';
 import {MediaController, PersistentClient, Media, connect, createPlatform} from "@foxxmd/chromecast-client";
 import {Client as CastClient} from 'castv2';
 import {ErrorWithCause, findCauseByReference} from "pony-cause";
@@ -67,7 +65,10 @@ export class ChromecastSource extends MemorySource {
             data = {},
             data: {
                 allowUnknownMedia = false,
-            }
+                useAutoDiscovery,
+                devices = [],
+                useAvahi= parseBool(process.env.IS_DOCKER)
+            } = {},
         } = config;
 
         for (const propName of ['whitelistDevices', 'blacklistDevices', 'whitelistApps', 'blacklistApps', 'forceMediaRecognitionOn', 'allowUnknownMedia']) {
@@ -85,46 +86,68 @@ export class ChromecastSource extends MemorySource {
         } else {
             this.allowUnknownMedia = allowUnknownMedia.map(x => x.toLocaleLowerCase());
         }
-    }
-
-    initialize = async () => {
-        this.logger.info('Listening for Chromecasts...')
-
-        const {
-            data: {
-                useAvahi = parseBool(process.env.IS_DOCKER),
-                useAutoDiscovery,
-                devices = []
-            } = {}
-        } = this.config;
 
         let ad = useAutoDiscovery;
         if (ad === undefined) {
+            // if auto discovery is not explicitly defined then it is enabled/disabled based on if devices were manually configured
             ad = devices.length === 0;
         }
-        if (devices.length > 0) {
-            for (const device of devices) {
-                await this.initializeDevice({name: device.name, addresses: [device.address], type: 'googlecast'});
-            }
+        this.config.data = {
+            ...data,
+            useAutoDiscovery: ad,
+            useAvahi
+        }
+        
+    }
+
+    initialize = async () => {
+        this.logger.info('Looking for Chromecasts...')
+
+        const {
+            data: {
+                devices = [],
+                useAutoDiscovery
+            } = {},
+            options: {
+                logPayload = false
+            } = {},
+        } = this.config;
+
+        for (const device of devices) {
+            await this.initializeDevice({name: device.name, addresses: [device.address], type: 'googlecast'});
         }
 
-        if (ad) {
-            if (useAvahi) {
-                this.discoverAvahi(this.config.options?.logPayload === true).catch((err) => {
-                    this.logger.error(new ErrorWithCause('Uncaught error occurred during mDNS discovery via Avahi', {cause: err}));
-                });
-            } else {
-                this.discoverNative(this.config.options?.logPayload === true).catch((err) => {
-                    this.logger.error(new ErrorWithCause('Uncaught error occurred during mDNS discovery', {cause: err}));
-                });
-            }
+        this.discoverDevices(logPayload);
+        if(useAutoDiscovery) {
+            this.logger.debug('Will run mDNS discovery on subsequent heartbeats.')
         }
 
         this.initialized = true;
         return true;
     }
+    
+    discoverDevices = (initial: boolean = false) => {
+        const {
+            data: {
+                useAvahi,
+                useAutoDiscovery,
+            } = {}
+        } = this.config;
 
-    discoverAvahi = async (initial: boolean = false) => {
+        if (useAutoDiscovery) {
+            if (useAvahi) {
+                this.discoverAvahi(initial).catch((err) => {
+                    this.logger.error(new ErrorWithCause('Uncaught error occurred during mDNS discovery via Avahi', {cause: err}));
+                });
+            } else {
+                this.discoverNative(initial).catch((err) => {
+                    this.logger.error(new ErrorWithCause('Uncaught error occurred during mDNS discovery', {cause: err}));
+                });
+            }
+        }
+    }
+
+    protected discoverAvahi = async (initial: boolean = false) => {
         try {
             await discoveryAvahi('_googlecast._tcp', {
                 logger: this.logger,
@@ -138,7 +161,7 @@ export class ChromecastSource extends MemorySource {
         }
     }
 
-    discoverNative = async (initial: boolean = false) => {
+    protected discoverNative = async (initial: boolean = false) => {
         try {
             await discoveryNative('_googlecast._tcp', {
                 logger: this.logger,
@@ -155,7 +178,7 @@ export class ChromecastSource extends MemorySource {
     protected initializeDevice = async (device: MdnsDeviceInfo) => {
 
         if (this.devices.has(device.name)) {
-            this.logger.warn(`Chromecast ${device.name} already found, not adding again.`);
+            this.logger.debug(`Chromecast ${device.name} already found, not adding again.`);
             return;
         }
 
@@ -164,21 +187,21 @@ export class ChromecastSource extends MemorySource {
         if (this.whitelistDevices.length > 0) {
             const found = this.whitelistDevices.find(x => lowerName.includes(x));
             if (found !== undefined) {
-                this.logger.info(`${discovered} => Adding as a player because it was whitelisted by keyword '${found}'`);
+                this.logger.info(`${discovered} => Adding as a device because it was whitelisted by keyword '${found}'`);
             } else {
-                this.logger.info(`${discovered} => NOT ADDING as a player because no part of its name appeared in whitelistDevices`);
+                this.logger.info(`${discovered} => NOT ADDING as a device because no part of its name appeared in whitelistDevices`);
                 return;
             }
         } else if (this.blacklistDevices.length > 0) {
             const found = this.blacklistDevices.find(x => lowerName.includes(x));
             if (found !== undefined) {
-                this.logger.info(`${discovered} => NOT ADDING as a player because it was blacklisted by keyword '${found}'`);
+                this.logger.info(`${discovered} => NOT ADDING as a device because it was blacklisted by keyword '${found}'`);
                 return;
             } else {
-                this.logger.info(`${discovered} => Adding as a player because no part of its name appeared in blacklistDevices`);
+                this.logger.info(`${discovered} => Adding as a device because no part of its name appeared in blacklistDevices`);
             }
         } else {
-            this.logger.info(`${discovered} => Adding as a player`);
+            this.logger.info(`${discovered} => Adding as a device`);
         }
 
         try {

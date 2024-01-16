@@ -3,6 +3,7 @@ import {mergeArr} from "../utils";
 import {AsyncTask} from "toad-scheduler";
 import {PromisePool} from "@supercharge/promise-pool";
 import ScrobbleSources from "../sources/ScrobbleSources";
+import {ChromecastSource} from "../sources/ChromecastSource";
 
 export const createHeartbeatSourcesTask = (sources: ScrobbleSources, parentLogger: Logger) => {
     const logger = parentLogger.child({labels: ['Heartbeat', 'Sources']}, mergeArr);
@@ -14,6 +15,9 @@ export const createHeartbeatSourcesTask = (sources: ScrobbleSources, parentLogge
                 .withConcurrency(1)
                 .for(sources.sources)
                 .process(async (source) => {
+                    if(source.type === 'chromecast') {
+                        (source as ChromecastSource).discoverDevices();
+                    }
                     if (source.initialized && source.canPoll && !source.polling && (!source.authGated() || source.canTryAuth())) {
                         source.logger.info('Should be polling! Attempting to restart polling...', {leaf: 'Heartbeat'});
                         source.poll();

@@ -52,7 +52,7 @@
                             "type": "string"
                         }
                     ],
-                    "description": "DO NOT scrobble from any cast devices that START WITH these values, case-insensitive",
+                    "description": "DO NOT scrobble from any cast devices that START WITH these values, case-insensitive\n\nUseful when used with auto discovery",
                     "examples": [
                         [
                             "home-mini",
@@ -64,21 +64,7 @@
                 "devices": {
                     "description": "A list of Google Cast devices to monitor\n\nIf this is used then `useAutoDiscovery` is set to FALSE, if not explicitly set",
                     "items": {
-                        "properties": {
-                            "address": {
-                                "title": "address",
-                                "type": "string"
-                            },
-                            "name": {
-                                "title": "name",
-                                "type": "string"
-                            }
-                        },
-                        "required": [
-                            "address",
-                            "name"
-                        ],
-                        "type": "object"
+                        "$ref": "#/definitions/ChromecastDeviceInfo"
                     },
                     "title": "devices",
                     "type": "array"
@@ -171,7 +157,7 @@
                             "type": "string"
                         }
                     ],
-                    "description": "ONLY scrobble from any cast device that START WITH these values, case-insensitive\n\nIf whitelist is present then blacklist is ignored",
+                    "description": "ONLY scrobble from any cast device that START WITH these values, case-insensitive\n\nIf whitelist is present then blacklist is ignored\n\nUseful when used with auto discovery",
                     "examples": [
                         [
                             "home-mini",
@@ -182,6 +168,26 @@
                 }
             },
             "title": "ChromecastData",
+            "type": "object"
+        },
+        "ChromecastDeviceInfo": {
+            "properties": {
+                "address": {
+                    "description": "The IP address of the device",
+                    "title": "address",
+                    "type": "string"
+                },
+                "name": {
+                    "description": "A friendly name to identify this device",
+                    "title": "name",
+                    "type": "string"
+                }
+            },
+            "required": [
+                "address",
+                "name"
+            ],
+            "title": "ChromecastDeviceInfo",
             "type": "object"
         },
         "ChromecastSourceAIOConfig": {
