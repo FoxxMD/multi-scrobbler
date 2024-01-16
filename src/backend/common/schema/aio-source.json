@@ -174,11 +174,17 @@
             "properties": {
                 "address": {
                     "description": "The IP address of the device",
+                    "examples": [
+                        "192.168.0.115"
+                    ],
                     "title": "address",
                     "type": "string"
                 },
                 "name": {
                     "description": "A friendly name to identify this device",
+                    "examples": [
+                        "MySmartTV"
+                    ],
                     "title": "name",
                     "type": "string"
                 }

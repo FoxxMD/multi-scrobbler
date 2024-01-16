@@ -701,7 +701,11 @@ If your media device can be **Cast** to using this button ![Chromecast Icon](htt
 
 **Note:** This source relies on common, **basic** music data provided by the cast device which will always be less exhaustive than data parsed from full source integrations. If there is an existing [Source](#source-configurations) it is recommended to configure for it and blacklist the app on Google Cast, rather than relying solely on Google Cast for scrobbling.
 
-#### Networking Requirements
+#### Connecting Devices
+
+Cast devices can be manually configured using [File-based configuration](#file-based-14) OR automatically discovered using **mDNS.**
+
+##### mDNS Discovery
 
 The host machine running multi-scrobbler must be configured to allow [mDNS traffic on port 5353/UDP](https://book.hacktricks.xyz/network-services-pentesting/5353-udp-multicast-dns-mdns).
 
@@ -709,13 +713,13 @@ The host machine running multi-scrobbler must be configured to allow [mDNS traff
 
 **Docker**
 
-The host machine must have [avahi-daemon](https://avahi.org/) running to circumvent limitations with DNS resolution due to musl in Alpine. All major linux distributions package avahi and many have it built-in. Once avahi is running you must pass D-Bus and the avahi daemon socket to your container like so:
+The host machine must have [avahi-daemon](https://avahi.org/) running to circumvent limitations with DNS resolution due to musl in Alpine. Most major linux distributions package avahi and many have it built-in. Once avahi is running you must pass D-Bus and the avahi daemon socket to your container like so:
 
 ```
 docker run ... -v /var/run/dbus:/var/run/dbus -v  	/var/run/avahi-daemon/socket:/var/run/avahi-daemon/socket ... foxxmd/multi-scrobbler
 ```
 
-**Flatpak**
+**Flatpak/Nodejs**
 
 No additional steps are required.
 
@@ -724,6 +728,10 @@ No additional steps are required.
 **Docker**
 
 Unsupported at this time.
+
+**Nodejs**
+
+No additional steps are required.
 
 #### Cast Troubleshooting
 
@@ -749,6 +757,8 @@ To diagnose bad/incomplete track information or strange MS player behavior pleas
 
 ### ENV-Based
 
+Note: [Manually configuring cast device connections](#connecting-devices) is only available through [File-based config.](#file-based-14)
+
 | Environmental Variable | Required? | Default |                                     Description                                      |
 |------------------------|-----------|---------|--------------------------------------------------------------------------------------|
 | CC_ENABLE              | No        |         | Set to 'true' to enable Cast monitoring without needing to define other ENVs         |
@@ -759,7 +769,7 @@ To diagnose bad/incomplete track information or strange MS player behavior pleas
 
 ### File-Based
 
-See [`chromecast.json.example`](https://github.com/FoxxMD/multi-scrobbler/blob/master/config/webscrobbler.json.example) or [explore the schema with an example and live editor/validator](https://json-schema.app/view/%23%2Fdefinitions%2FChromecastSourceConfig/%23%2Fdefinitions%2FChromecastData?url=https%3A%2F%2Fraw.githubusercontent.com%2FFoxxMD%2Fmulti-scrobbler%2Fmaster%2Fsrc%2Fbackend%2Fcommon%2Fschema%2Fsource.json)
+See [`chromecast.json.example`](https://github.com/FoxxMD/multi-scrobbler/blob/master/config/chromecast.json.example) or [explore the schema with an example and live editor/validator](https://json-schema.app/view/%23%2Fdefinitions%2FChromecastSourceConfig/%23%2Fdefinitions%2FChromecastData?url=https%3A%2F%2Fraw.githubusercontent.com%2FFoxxMD%2Fmulti-scrobbler%2Fmaster%2Fsrc%2Fbackend%2Fcommon%2Fschema%2Fsource.json)
 
 # Client Configurations
 

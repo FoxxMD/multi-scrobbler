@@ -84,10 +84,14 @@ export interface ChromecastData extends CommonSourceData {
 export interface ChromecastDeviceInfo {
     /**
      * A friendly name to identify this device
+     *
+     * @examples ["MySmartTV"]
      * */
     name: string
     /**
      * The IP address of the device
+     *
+     * @examples ["192.168.0.115"]
      * */
     address: string
 }
