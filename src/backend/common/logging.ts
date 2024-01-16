@@ -1,10 +1,10 @@
 import path from "path";
 import { projectDir } from "./index";
-import winston, {format, Logger} from '@foxxmd/winston';
+import winston, {format, LeveledLogMethod, Logger} from '@foxxmd/winston';
 import {DuplexTransport} from "winston-duplex";
 import { asLogOptions, LogConfig, LogOptions } from "./infrastructure/Atomic";
 import process from "process";
-import { fileOrDirectoryIsWriteable, parseBool } from "../utils";
+import {fileOrDirectoryIsWriteable, mergeArr, parseBool} from "../utils";
 import {ErrorWithCause, stackWithCauses} from "pony-cause";
 import {NullTransport} from 'winston-null';
 import DailyRotateFile from 'winston-daily-rotate-file';
@@ -110,6 +110,7 @@ export const getLogger = (config: LogConfig = {}, name = 'app'): Logger => {
                 logger.error(e);
             }
         }
+        logger.log
         return logger;
     }
     return winston.loggers.get(name);
@@ -364,5 +365,47 @@ const _transformError = (err: Error, seen: Set<Error>) => {
         // oops :(
         // we're gonna swallow silently instead of reporting to avoid any infinite nesting and hopefully the original error looks funny enough to provide clues as to what to fix here
         return err;
+    }
+}
+
+export class MaybeLogger {
+    logger?: Logger
+
+    constructor(logger?: Logger, label?: string) {
+        if (logger !== undefined && label !== undefined) {
+            this.logger = logger.child({labels: [label]}, mergeArr);
+        } else {
+            this.logger = logger;
+        }
+    }
+
+    public info(first: any, ...rest: any) {
+        if (this.logger) {
+            this.logger.info(first, ...rest);
+        }
+    }
+
+    public debug(first: any, ...rest: any) {
+        if (this.logger) {
+            this.logger.debug(first, ...rest);
+        }
+    }
+
+    public warn(first: any, ...rest: any) {
+        if (this.logger) {
+            this.logger.warn(first, ...rest);
+        }
+    }
+
+    public verbose(first: any, ...rest: any) {
+        if (this.logger) {
+            this.logger.verbose(first, ...rest);
+        }
+    }
+
+    public error(first: any, ...rest: any) {
+        if (this.logger) {
+            this.logger.error(first, ...rest);
+        }
     }
 }

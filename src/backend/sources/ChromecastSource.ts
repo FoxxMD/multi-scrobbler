@@ -29,6 +29,7 @@ import {
 import {config, Logger} from "@foxxmd/winston";
 import {ContextualValidationError} from "@foxxmd/chromecast-client/dist/cjs/src/utils";
 import {buildTrackString} from "../../core/StringUtils";
+import {discoveryAvahi, discoveryNative} from "../utils/MDNSUtils";
 
 interface ChromecastDeviceInfo {
     mdns: MdnsDeviceInfo
@@ -69,17 +70,17 @@ export class ChromecastSource extends MemorySource {
             }
         } = config;
 
-        for(const propName of ['whitelistDevices', 'blacklistDevices', 'whitelistApps', 'blacklistApps', 'forceMediaRecognitionOn', 'allowUnknownMedia']) {
+        for (const propName of ['whitelistDevices', 'blacklistDevices', 'whitelistApps', 'blacklistApps', 'forceMediaRecognitionOn', 'allowUnknownMedia']) {
             const configData = data[propName] ?? [];
 
-            if(!Array.isArray(configData)) {
+            if (!Array.isArray(configData)) {
                 this[propName] = configData.split(',').map(x => x.toLocaleLowerCase())
             } else {
                 this[propName] = configData.map(x => x.toLocaleLowerCase());
             }
         }
 
-        if(typeof allowUnknownMedia === 'boolean') {
+        if (typeof allowUnknownMedia === 'boolean') {
             this.allowUnknownMedia = allowUnknownMedia
         } else {
             this.allowUnknownMedia = allowUnknownMedia.map(x => x.toLocaleLowerCase());
@@ -98,20 +99,24 @@ export class ChromecastSource extends MemorySource {
         } = this.config;
 
         let ad = useAutoDiscovery;
-        if(ad === undefined) {
+        if (ad === undefined) {
             ad = devices.length === 0;
         }
-        if(devices.length > 0) {
-            for(const device of devices) {
+        if (devices.length > 0) {
+            for (const device of devices) {
                 await this.initializeDevice({name: device.name, addresses: [device.address], type: 'googlecast'});
             }
         }
 
-        if(ad) {
-            if(useAvahi) {
-                await this.discoverAvahi();
+        if (ad) {
+            if (useAvahi) {
+                this.discoverAvahi(this.config.options?.logPayload === true).catch((err) => {
+                    this.logger.error(new ErrorWithCause('Uncaught error occurred during mDNS discovery via Avahi', {cause: err}));
+                });
             } else {
-                await this.discoverNative();
+                this.discoverNative(this.config.options?.logPayload === true).catch((err) => {
+                    this.logger.error(new ErrorWithCause('Uncaught error occurred during mDNS discovery', {cause: err}));
+                });
             }
         }
 
@@ -119,59 +124,32 @@ export class ChromecastSource extends MemorySource {
         return true;
     }
 
-    discoverAvahi = async () => {
-        this.logger.debug('Trying discovery with Avahi');
+    discoverAvahi = async (initial: boolean = false) => {
         try {
-            const browser = new AvahiBrowser('_googlecast._tcp');
-            browser.on(AvahiBrowser.EVENT_SERVICE_UP, async (service) => {
-                this.logger.debug(`Discovered device "${service.service_name}" at ${service.target.host}`);
-                if(isIPv4(service.target.host)) {
-                    await this.initializeDevice({name: service.service_name, addresses: [service.target.host], type: 'googlecast'});
-                }
+            await discoveryAvahi('_googlecast._tcp', {
+                logger: this.logger,
+                sanity: initial,
+                onDiscover: (service, raw) => {
+                    this.initializeDevice(service);
+                },
             });
-            browser.on(AvahiBrowser.EVENT_DNSSD_ERROR, (err) => {
-                this.logger.error(new ErrorWithCause('Error occurred while using avahi-browse', {cause: err}));
-            });
-            browser.start();
         } catch (e) {
-            this.logger.warn(new ErrorWithCause('mDNS device discovery with avahi-browse failed, falling back to native discovery', {cause: e}));
-            this.discoverNative().catch((err) => {
-               this.logger.error(err);
-            });
+            this.logger.error(new ErrorWithCause('Uncaught error occurred during mDNS discovery via Avahi', {cause: e}));
         }
     }
 
-    discoverNative = async () => {
-        this.logger.debug('Trying discovery with native mDNS querying');
-        if(this.config.options.logPayload) {
-            let services: ServiceType[] = [];
-            const testBrowser = new Browser(ServiceType.all())
-                .on('serviceUp', (service: ServiceType) => {
-                    services.push(service)
-                })
-                .start();
-            testBrowser.on('error', (err) => {
-                this.logger.error(new ErrorWithCause('Error occurred during mDNS service discovery', {cause: err}));
+    discoverNative = async (initial: boolean = false) => {
+        try {
+            await discoveryNative('_googlecast._tcp', {
+                logger: this.logger,
+                sanity: initial,
+                onDiscover: (service, raw) => {
+                    this.initializeDevice(service);
+                },
             });
-            this.logger.debug('Waiting 1s to gather advertised mdns services...');
-            await sleep(1000);
-            testBrowser.stop();
-            if(services.length === 0) {
-                this.logger.debug('Did not find any mdns services! Do you have port 5353 open?');
-            } else {
-                this.logger.debug(`Found services: ${services.map(x => `${x.name}-${x.protocol}`).join(' ,')}`);
-            }
+        } catch (e) {
+            this.logger.error(new ErrorWithCause('Uncaught error occurred during mDNS discovery', {cause: e}));
         }
-
-        const browser = new Browser('_googlecast._tcp', {resolve: true})
-            .on('serviceUp', async (service) => {
-                this.logger.debug(`Discovered device "${service.name}" at ${service.addresses?.[0]}`);
-                await this.initializeDevice({name: service.name, addresses: service.addresses, type: 'googlecast'});
-            })
-            .start();
-        browser.on('error', (err) => {
-            this.logger.error(new ErrorWithCause('Error occurred during mDNS discovery', {cause: err}));
-        });
     }
 
     protected initializeDevice = async (device: MdnsDeviceInfo) => {
