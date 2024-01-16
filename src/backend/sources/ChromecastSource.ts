@@ -9,7 +9,7 @@ import {
 import {EventEmitter} from "events";
 import {Browser, ServiceType, Service} from '@astronautlabs/mdns';
 import AvahiBrowser from 'avahi-browse';
-import {MediaController, PersistentClient, Media} from "@foxxmd/chromecast-client";
+import {MediaController, PersistentClient, Media, connect, createPlatform} from "@foxxmd/chromecast-client";
 import {Client as CastClient} from 'castv2';
 import {ErrorWithCause, findCauseByReference} from "pony-cause";
 import {PlayObject} from "../../core/Atomic";
@@ -24,7 +24,7 @@ import {
 import {
     chromePlayerStateToReported, genDeviceId,
     getCurrentPlatformApplications, getMediaStatus,
-    initializeClientPlatform, genPlayHash
+    genPlayHash
 } from "../common/vendor/chromecast/ChromecastClientUtils";
 import {config, Logger} from "@foxxmd/winston";
 import {ContextualValidationError} from "@foxxmd/chromecast-client/dist/cjs/src/utils";
@@ -124,15 +124,13 @@ export class ChromecastSource extends MemorySource {
         try {
             const browser = new AvahiBrowser('_googlecast._tcp');
             browser.on(AvahiBrowser.EVENT_SERVICE_UP, async (service) => {
-                this.logger.debug(`Resolved device ${service.target.service_type} - ${service.target.host} - ${service.service_name}`);
+                this.logger.debug(`Discovered device "${service.service_name}" at ${service.target.host}`);
                 if(isIPv4(service.target.host)) {
-                    this.initializeDevice({name: service.service_name, addresses: [service.target.host], type: 'googlecast'}).catch((err) => {
-                        this.logger.error(err);
-                    });
+                    await this.initializeDevice({name: service.service_name, addresses: [service.target.host], type: 'googlecast'});
                 }
             });
             browser.on(AvahiBrowser.EVENT_DNSSD_ERROR, (err) => {
-                throw err;
+                this.logger.error(new ErrorWithCause('Error occurred while using avahi-browse', {cause: err}));
             });
             browser.start();
         } catch (e) {
@@ -152,6 +150,9 @@ export class ChromecastSource extends MemorySource {
                     services.push(service)
                 })
                 .start();
+            testBrowser.on('error', (err) => {
+                this.logger.error(new ErrorWithCause('Error occurred during mDNS service discovery', {cause: err}));
+            });
             this.logger.debug('Waiting 1s to gather advertised mdns services...');
             await sleep(1000);
             testBrowser.stop();
@@ -163,13 +164,14 @@ export class ChromecastSource extends MemorySource {
         }
 
         const browser = new Browser('_googlecast._tcp', {resolve: true})
-            .on('serviceUp', (service) => {
-                this.logger.debug(`Resolved device "${service.name}" at ${service.addresses?.[0]}`);
-                this.initializeDevice({name: service.name, addresses: service.addresses, type: 'googlecast'}).catch((e) => {
-                    this.logger.error(e);
-                });
+            .on('serviceUp', async (service) => {
+                this.logger.debug(`Discovered device "${service.name}" at ${service.addresses?.[0]}`);
+                await this.initializeDevice({name: service.name, addresses: service.addresses, type: 'googlecast'});
             })
             .start();
+        browser.on('error', (err) => {
+            this.logger.error(new ErrorWithCause('Error occurred during mDNS discovery', {cause: err}));
+        });
     }
 
     protected initializeDevice = async (device: MdnsDeviceInfo) => {
@@ -179,7 +181,7 @@ export class ChromecastSource extends MemorySource {
             return;
         }
 
-        const discovered = `Discovered chromecast "${device.name}" at ${device.addresses?.[0]}`;
+        const discovered = `"${device.name}" at ${device.addresses?.[0]}`;
         const lowerName = device.name.toLocaleLowerCase();
         if (this.whitelistDevices.length > 0) {
             const found = this.whitelistDevices.find(x => lowerName.includes(x));
@@ -202,7 +204,8 @@ export class ChromecastSource extends MemorySource {
         }
 
         try {
-            const [castClient, client, platform] = await initializeClientPlatform(device);
+            const [castClient, client, platform] = await this.initializeClientPlatform(device);
+            this.logger.info(`${discovered} => Connected!`);
             const applications = new Map<string, PlatformApplicationWithContext>();
             this.devices.set(device.name, {
                 mdns: device,
@@ -214,22 +217,36 @@ export class ChromecastSource extends MemorySource {
                 applications,
                 logger: this.logger.child({labels: [device.name.substring(0, 25)]}, mergeArr),
             });
-            castClient.on('connect', () => this.handleCastClientEvent(device.name, 'connect'));
-            castClient.on('error', (err) => this.handleCastClientEvent(device.name, 'error', err));
-            castClient.on('close', () => this.handleCastClientEvent(device.name, 'close'));
         } catch (e) {
             this.logger.error(e);
             return;
         }
     }
 
+    protected initializeClientPlatform = async (device: MdnsDeviceInfo): Promise<[CastClient, PersistentClient, PlatformType]> => {
+        let client: PersistentClient;
+        let castClient = new CastClient;
+        castClient.on('connect', () => this.handleCastClientEvent(device.name, 'connect'));
+        castClient.on('error', (err) => this.handleCastClientEvent(device.name, 'error', err));
+        castClient.on('close', () => this.handleCastClientEvent(device.name, 'close'));
+        try {
+            client = await connect({host: device.addresses?.[0], client: castClient});
+        } catch (e) {
+            throw new ErrorWithCause(`Could not connect to ${device.name}`, {cause: e});
+        }
+
+        const platform = createPlatform(client);
+
+        return [castClient, client, platform];
+    }
+
     protected handleCastClientEvent = (clientName: string, event: string, payload?: any) => {
             const info = this.devices.get(clientName);
-            if(info === undefined) {
-                return;
-            }
             switch(event) {
                 case 'connect':
+                    if(info === undefined) {
+                        return;
+                    }
                     if(info.connected === false) {
                         info.logger.verbose(`Reconnected`);
                     }
@@ -237,6 +254,9 @@ export class ChromecastSource extends MemorySource {
                     info.retries = 0;
                     break;
                 case 'close':
+                    if(info === undefined) {
+                        return;
+                    }
                     if(info.connected === false) {
                         info.retries += 1;
 
@@ -249,7 +269,11 @@ export class ChromecastSource extends MemorySource {
                     info.connected = false;
                     break;
                 case 'error':
-                    info.logger.error(new ErrorWithCause(`Encountered error in castv2 lib`, {cause: payload as Error}));
+                    if(info === undefined) {
+                        this.logger.error(new ErrorWithCause(`(${clientName}) Encountered error in castv2 lib`, {cause: payload as Error}));
+                    } else {
+                        info.logger.error(new ErrorWithCause(`Encountered error in castv2 lib`, {cause: payload as Error}));
+                    }
                     break;
             }
     }

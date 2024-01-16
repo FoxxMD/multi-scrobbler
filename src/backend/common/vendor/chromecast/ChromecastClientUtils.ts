@@ -44,20 +44,6 @@ export const getCurrentPlatformApplications = async (platform: PlatformType): Pr
     }
 }
 
-export const initializeClientPlatform = async (device: MdnsDeviceInfo): Promise<[CastClient, PersistentClient, PlatformType]> => {
-    let client: PersistentClient;
-    let castClient = new CastClient;
-    try {
-        client = await connect({host: device.addresses?.[0]});
-    } catch (e) {
-        throw new ErrorWithCause(`Could not connect to ${device.name}`, {cause: e});
-    }
-
-    const platform = createPlatform(client);
-
-    return [castClient, client, platform];
-}
-
 export const getMediaStatus = async (controller: MediaController.MediaController) => {
     let status: Media.MediaStatus;
 
