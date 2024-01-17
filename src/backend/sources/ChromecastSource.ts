@@ -288,11 +288,16 @@ export class ChromecastSource extends MemorySource {
             let apps: PlatformApplication[];
             try {
                 apps = await getCurrentPlatformApplications(v.platform);
+                v.retries = 0;
             } catch (e) {
                 v.logger.warn(new ErrorWithCause('Could not refresh applications', {cause: e}));
                 const validationError = findCauseByReference(e, ContextualValidationError);
                 if(validationError && validationError.data !== undefined) {
                     v.logger.warn(JSON.stringify(validationError.data));
+                }
+                v.retries++;
+                if(v.retries >= 6) {
+                    this.removeApplications(k, 'Unable to refresh application more than 6 times consecutively! If this device comes back online it will be re-added on next heartbeat.');
                 }
                 continue;
             }
