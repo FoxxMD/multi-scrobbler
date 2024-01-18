@@ -12,7 +12,7 @@ import fs from 'fs';
 
 let version = 'unknown';
 
-if(process.env.VERSION === undefined) {
+if(process.env.APP_VERSION === undefined) {
     if(fs.existsSync('./package.json')) {
         try {
             const pkg = fs.readFileSync('./package.json') as unknown as string;
@@ -37,7 +37,7 @@ if(process.env.VERSION === undefined) {
         }
     }
 } else {
-    version = process.env.VERSION;
+    version = process.env.APP_VERSION;
 }
 
 let root: ReturnType<typeof createRoot>;

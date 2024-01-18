@@ -80,6 +80,8 @@ const Global = (props: PropsFromRedux) => {
 
 const ConnectedGlobal = connector(Global);
 
+const version = __APP_VERSION__;
+
 function App() {
   return (
       <Provider store={store}>
@@ -90,7 +92,7 @@ function App() {
               <a href="/" className="flex items-center flex-grow no-underline pr-4">
                 <img src="icon.svg" style={{maxWidth: '30px'}}/>
                 <span className="px-4 break-normal">
-                        Multi Scrobbler <span className="ml-2 text-xs version">v</span>
+                        Multi Scrobbler <span className="ml-2 text-xs version">v{version}</span>
                     </span>
               </a>
             </div>
