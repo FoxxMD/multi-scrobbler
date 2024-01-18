@@ -117,7 +117,6 @@ describe('Listenbrainz Response Behavior', function() {
     it('Should recognize bad requests as non-showstopping',withRequestInterception(
         [
             http.post('https://api.listenbrainz.org/1/submit-listens', () => {
-                // @ts-expect-error
                 return HttpResponse.json({code: 400, error: 'artist_mbids MBID format invalid'}, {status: 400});
             })
         ],

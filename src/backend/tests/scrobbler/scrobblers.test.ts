@@ -43,7 +43,6 @@ describe('Networking', function () {
                     http.get('http://example.com', () => {
                             // https://github.com/mswjs/msw/issues/1819#issuecomment-1789364174
                             // already using DOM though, not sure why it doesn't fix itself
-                            // @ts-expect-error
                             return new HttpResponse(null, {status: 200});
                         }
                     )
@@ -73,7 +72,6 @@ describe('Networking', function () {
             withRequestInterception(
                 [
                     http.get('http://example.com', () => {
-                            // @ts-expect-error
                             return HttpResponse.json({error: 'Invalid API Key'}, {status: 401});
                         }
                     )
