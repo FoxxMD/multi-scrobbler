@@ -18,6 +18,7 @@ import {MESSAGE} from "triple-beam";
 import {Transform} from "stream";
 //import {createSession} from "better-sse";
 import * as bsse from 'better-sse';
+import bsseDef from 'better-sse';
 import { setupTautulliRoutes } from "./tautulliRoutes.js";
 import { setupPlexRoutes } from "./plexRoutes.js";
 import { setupJellyfinRoutes } from "./jellyfinRoutes.js";
@@ -122,7 +123,7 @@ export const setupApi = (app: ExpressWithAsync, logger: Logger, initialLogOutput
     }
 
     app.get('/api/logs/stream', setLogWebSettings, async (req, res) => {
-        const session = await bsse.createSession(req, res);
+        const session = await bsseDef.createSession(req, res);
         await session.stream(logObjectStream);
     });
 
@@ -145,7 +146,7 @@ export const setupApi = (app: ExpressWithAsync, logger: Logger, initialLogOutput
     });
 
     app.get('/api/events', async (req, res) => {
-        const session = await bsse.createSession(req, res);
+        const session = await bsseDef.createSession(req, res);
         scrobbleSources.emitter.on('*', (payload: any, eventName: string) => {
             if(payload.from !== undefined) {
                 session.push({event: eventName, ...payload}, payload.from);
