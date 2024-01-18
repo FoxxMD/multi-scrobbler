@@ -2,11 +2,7 @@
   "compilerOptions": {
     "useDefineForClassFields": true,
     "target": "ESNext",
-    "lib": [
-      "dom",
-      "dom.iterable",
-      "esnext"
-    ],
+    "lib": ["DOM", "DOM.Iterable", "ESNext"],
     "allowJs": false,
     "skipLibCheck": true,
     "esModuleInterop": true,
@@ -24,11 +20,5 @@
   },
   "include": [
     "src"
-  ],
-  "exclude": [
-    "src/backend",
-    "coverage",
-    "docsite",
-    "build"
   ],
 }

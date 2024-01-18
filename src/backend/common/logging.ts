@@ -1,6 +1,7 @@
 import path from "path";
 import { projectDir } from "./index";
-import winston, {format, LeveledLogMethod, Logger} from '@foxxmd/winston';
+import * as winstonNs from '@foxxmd/winston';
+import winstonDef from '@foxxmd/winston';
 import {DuplexTransport} from "winston-duplex";
 import { asLogOptions, LogConfig, LogOptions } from "./infrastructure/Atomic";
 import process from "process";
@@ -13,22 +14,23 @@ import stringify from 'safe-stable-stringify';
 import {SPLAT, LEVEL, MESSAGE} from 'triple-beam';
 import { LogInfo, LogLevel } from "../../core/Atomic";
 import TransportStream from "winston-transport";
+import {format} from 'logform';
 
 const {combine, printf, timestamp, label, splat, errors} = format;
 
-
-const {transports} = winston;
+//const {transports} = winstonNew;
+const {loggers, transports} = winstonDef;
 
 export let logPath = path.resolve(projectDir, `./logs`);
 if (typeof process.env.CONFIG_DIR === 'string') {
     logPath = path.resolve(process.env.CONFIG_DIR, './logs');
 }
 
-winston.loggers.add('noop', {transports: [new NullTransport()]});
+loggers.add('noop', {transports: [new NullTransport()]});
 
-export const getLogger = (config: LogConfig = {}, name = 'app'): Logger => {
+export const getLogger = (config: LogConfig = {}, name = 'app'): winstonNs.Logger => {
 
-    if (!winston.loggers.has(name)) {
+    if (!loggers.has(name)) {
         const errors: (Error | string)[] = [];
 
         let options: LogOptions = {};
@@ -96,15 +98,15 @@ export const getLogger = (config: LogConfig = {}, name = 'app'): Logger => {
             }
         }
 
-        const loggerOptions: winston.LoggerOptions = {
+        const loggerOptions: winstonNs.LoggerOptions = {
             level: level,
             format: labelledFormat(),
             transports: myTransports,
         };
 
-        winston.loggers.add(name, loggerOptions);
+        loggers.add(name, loggerOptions);
 
-        const logger = winston.loggers.get(name);
+        const logger = loggers.get(name);
         if (errors.length > 0) {
             for (const e of errors) {
                 logger.error(e);
@@ -113,7 +115,7 @@ export const getLogger = (config: LogConfig = {}, name = 'app'): Logger => {
         logger.log
         return logger;
     }
-    return winston.loggers.get(name);
+    return loggers.get(name);
 }
 
 const breakSymbol = '<br />';
@@ -369,9 +371,9 @@ const _transformError = (err: Error, seen: Set<Error>) => {
 }
 
 export class MaybeLogger {
-    logger?: Logger
+    logger?: winstonNs.Logger
 
-    constructor(logger?: Logger, label?: string) {
+    constructor(logger?: winstonNs.Logger, label?: string) {
         if (logger !== undefined && label !== undefined) {
             this.logger = logger.child({labels: [label]}, mergeArr);
         } else {

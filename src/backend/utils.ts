@@ -4,7 +4,9 @@ import utc from 'dayjs/plugin/utc.js';
 import {Logger} from '@foxxmd/winston';
 import JSON5 from 'json5';
 import {TimeoutError, WebapiError} from "spotify-web-api-node/src/response-error.js";
-import Ajv, {Schema} from 'ajv';
+import {Schema} from 'ajv';
+import * as AjvNS from 'ajv';
+import Ajv from 'ajv';
 import {
     asPlayerStateData,
     NO_DEVICE,
@@ -26,6 +28,7 @@ import {Duration} from "dayjs/plugin/duration.js";
 import {PlayObject} from "../core/Atomic";
 import address from "address";
 
+//const { default: Ajv } = AjvNS;
 dayjs.extend(utc);
 
 export async function readJson(this: any, path: any, {throwOnNotFound = true} = {}) {
@@ -348,7 +351,7 @@ export const parseDurationFromTimestamp = (timestamp: any) => {
 }
 
 export const createAjvFactory = (logger: Logger): Ajv => {
-    const validator =  new Ajv({logger: logger, verbose: true, strict: "log", allowUnionTypes: true});
+    const validator =  new AjvNS.default({logger: logger, verbose: true, strict: "log", allowUnionTypes: true});
     // https://ajv.js.org/strict-mode.html#unknown-keywords
     validator.addKeyword('deprecationMessage');
     return validator;
@@ -364,7 +367,7 @@ export const validateJson = <T>(config: object, schema: Schema, logger: Logger):
         if (Array.isArray(ajv.errors)) {
             for (const err of ajv.errors) {
                 let parts = [
-                    `At: ${err.dataPath}`,
+                    `At: ${err.instancePath}`,
                 ];
                 let data;
                 if (typeof err.data === 'string') {

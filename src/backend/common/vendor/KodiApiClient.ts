@@ -47,7 +47,7 @@ export class KodiApiClient extends AbstractApiClient {
 
     token?: string;
 
-    client: KodiClient;
+    declare client: KodiClient;
 
     constructor(name: any, config: KodiData, options = {}) {
         super('Kodi', name, config, options);

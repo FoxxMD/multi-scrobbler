@@ -14,7 +14,8 @@ import {Logger} from "@foxxmd/winston";
 import {formatLogToHtml, getLogger, isLogLevelMinLevel, isLogLineMinLevel} from "../common/logging";
 import {MESSAGE} from "triple-beam";
 import {Transform} from "stream";
-import {createSession} from "better-sse";
+//import {createSession} from "better-sse";
+import * as bsse from 'better-sse';
 import {setupTautulliRoutes} from "./tautulliRoutes";
 import {setupPlexRoutes} from "./plexRoutes";
 import {setupJellyfinRoutes} from "./jellyfinRoutes";
@@ -119,7 +120,7 @@ export const setupApi = (app: ExpressWithAsync, logger: Logger, initialLogOutput
     }
 
     app.get('/api/logs/stream', setLogWebSettings, async (req, res) => {
-        const session = await createSession(req, res);
+        const session = await bsse.createSession(req, res);
         await session.stream(logObjectStream);
     });
 
@@ -142,7 +143,7 @@ export const setupApi = (app: ExpressWithAsync, logger: Logger, initialLogOutput
     });
 
     app.get('/api/events', async (req, res) => {
-        const session = await createSession(req, res);
+        const session = await bsse.createSession(req, res);
         scrobbleSources.emitter.on('*', (payload: any, eventName: string) => {
             if(payload.from !== undefined) {
                 session.push({event: eventName, ...payload}, payload.from);
