@@ -1,6 +1,6 @@
 import {ResponseError} from "superagent";
-import {findCauseByFunc} from "../../../utils";
-import {isSuperAgentResponseError} from "../../errors/ErrorUtils";
+import { findCauseByFunc } from "../../../utils.js";
+import { isSuperAgentResponseError } from "../../errors/ErrorUtils.js";
 
 export interface MalojaV2ScrobbleData {
     artists: string[]

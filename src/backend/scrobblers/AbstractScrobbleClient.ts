@@ -2,43 +2,53 @@ import dayjs, {Dayjs} from "dayjs";
 import {
     comparingMultipleArtists,
     mergeArr,
-    playObjDataMatch, pollingBackoff,
-    setIntersection, sleep, sortByOldestPlayDate,
-} from "../utils";
+    playObjDataMatch,
+    pollingBackoff,
+    setIntersection,
+    sleep,
+    sortByOldestPlayDate,
+} from "../utils.js";
 import {
-    ARTIST_WEIGHT, Authenticatable,
-    ClientType, DEFAULT_RETRY_MULTIPLIER, DUP_SCORE_THRESHOLD,
+    ARTIST_WEIGHT,
+    Authenticatable,
+    ClientType,
+    DEFAULT_RETRY_MULTIPLIER,
+    DUP_SCORE_THRESHOLD,
     FormatPlayObjectOptions,
     INITIALIZED,
     INITIALIZING,
     InitState,
-    NOT_INITIALIZED, REFERENCE_WEIGHT,
-    ScrobbledPlayObject, TIME_WEIGHT, TITLE_WEIGHT,
-} from "../common/infrastructure/Atomic";
+    NOT_INITIALIZED,
+    REFERENCE_WEIGHT,
+    ScrobbledPlayObject,
+    TIME_WEIGHT,
+    TITLE_WEIGHT,
+} from "../common/infrastructure/Atomic.js";
 import {Logger} from '@foxxmd/winston';
-import { CommonClientConfig } from "../common/infrastructure/config/client/index";
-import { Notifiers } from "../notifier/Notifiers";
+import { CommonClientConfig } from "../common/infrastructure/config/client/index.js";
+import { Notifiers } from "../notifier/Notifiers.js";
 import {FixedSizeList} from 'fixed-size-list';
 import {
     DeadLetterScrobble,
     PlayObject,
     QueuedScrobble,
-    TA_CLOSE, TA_FUZZY,
-    TrackStringOptions
-} from "../../core/Atomic";
-import {buildTrackString, capitalize, truncateStringToLength} from "../../core/StringUtils";
+    TA_CLOSE,
+    TA_FUZZY,
+    TrackStringOptions,
+} from "../../core/Atomic.js";
+import { buildTrackString, capitalize, truncateStringToLength } from "../../core/StringUtils.js";
 import EventEmitter from "events";
-import {compareScrobbleArtists, compareScrobbleTracks, normalizeStr} from "../utils/StringUtils";
-import {hasUpstreamError, UpstreamError} from "../common/errors/UpstreamError";
+import { compareScrobbleArtists, compareScrobbleTracks, normalizeStr } from "../utils/StringUtils.js";
+import { hasUpstreamError, UpstreamError } from "../common/errors/UpstreamError.js";
 import {nanoid} from "nanoid";
 import {ErrorWithCause, messageWithCauses} from "pony-cause";
-import {hasNodeNetworkException} from "../common/errors/NodeErrors";
+import { hasNodeNetworkException } from "../common/errors/NodeErrors.js";
 import {
     comparePlayTemporally,
     temporalAccuracyIsAtLeast,
     temporalAccuracyToString,
-    temporalPlayComparisonSummary
-} from "../utils/TimeUtils";
+    temporalPlayComparisonSummary,
+} from "../utils/TimeUtils.js";
 
 export default abstract class AbstractScrobbleClient implements Authenticatable {
 

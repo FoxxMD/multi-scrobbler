@@ -1,9 +1,9 @@
 import {describe, it} from 'mocha';
 import {assert} from 'chai';
-import {compareNormalizedStrings, parseTrackCredits, uniqueNormalizedStrArr} from "../../utils/StringUtils";
+import { compareNormalizedStrings, parseTrackCredits, uniqueNormalizedStrArr } from "../../utils/StringUtils.js";
 import testData from './playTestData.json';
-import {ExpectedResults} from "./interfaces";
-import {intersect} from "../../utils";
+import { ExpectedResults } from "./interfaces.js";
+import { intersect } from "../../utils.js";
 
 interface PlayTestFixture {
     caseHints: string[]

@@ -6,22 +6,18 @@ import isBetween from 'dayjs/plugin/isBetween.js';
 import relativeTime from 'dayjs/plugin/relativeTime.js';
 import duration from 'dayjs/plugin/duration.js';
 import timezone from 'dayjs/plugin/timezone.js';
-import {
-    parseBool,
-    readJson,
-    sleep
-} from "./utils";
+import { parseBool, readJson, sleep } from "./utils.js";
 import * as path from "path";
-import {projectDir} from "./common/index";
-import SpotifySource from "./sources/SpotifySource";
-import { AIOConfig } from "./common/infrastructure/config/aioConfig";
-import { getRoot } from "./ioc";
-import {getLogger} from "./common/logging";
-import {LogInfo} from "../core/Atomic";
-import {initServer} from "./server/index";
+import { projectDir } from "./common/index.js";
+import SpotifySource from "./sources/SpotifySource.js";
+import { AIOConfig } from "./common/infrastructure/config/aioConfig.js";
+import { getRoot } from "./ioc.js";
+import { getLogger } from "./common/logging.js";
+import { LogInfo } from "../core/Atomic.js";
+import { initServer } from "./server/index.js";
 import {SimpleIntervalJob, ToadScheduler} from "toad-scheduler";
-import {createHeartbeatSourcesTask} from "./tasks/heartbeatSources";
-import {createHeartbeatClientsTask} from "./tasks/heartbeatClients";
+import { createHeartbeatSourcesTask } from "./tasks/heartbeatSources.js";
+import { createHeartbeatClientsTask } from "./tasks/heartbeatClients.js";
 
 
 dayjs.extend(utc)

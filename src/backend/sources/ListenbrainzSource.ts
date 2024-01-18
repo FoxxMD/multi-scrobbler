@@ -1,9 +1,9 @@
-import AbstractSource, { RecentlyPlayedOptions } from "./AbstractSource";
-import { FormatPlayObjectOptions, INITIALIZING, InternalConfig } from "../common/infrastructure/Atomic";
+import AbstractSource, { RecentlyPlayedOptions } from "./AbstractSource.js";
+import { FormatPlayObjectOptions, INITIALIZING, InternalConfig } from "../common/infrastructure/Atomic.js";
 import EventEmitter from "events";
-import { ListenBrainzSourceConfig } from "../common/infrastructure/config/source/listenbrainz";
-import { ListenbrainzApiClient } from "../common/vendor/ListenbrainzApiClient";
-import MemorySource from "./MemorySource";
+import { ListenBrainzSourceConfig } from "../common/infrastructure/config/source/listenbrainz.js";
+import { ListenbrainzApiClient } from "../common/vendor/ListenbrainzApiClient.js";
+import MemorySource from "./MemorySource.js";
 import {ErrorWithCause} from "pony-cause";
 
 export default class ListenbrainzSource extends MemorySource {

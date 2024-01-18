@@ -1,16 +1,16 @@
 import dayjs from 'dayjs';
 
-import AbstractScrobbleClient from "./AbstractScrobbleClient";
-import { FormatPlayObjectOptions, INITIALIZING } from "../common/infrastructure/Atomic";
-import { Notifiers } from "../notifier/Notifiers";
+import AbstractScrobbleClient from "./AbstractScrobbleClient.js";
+import { FormatPlayObjectOptions, INITIALIZING } from "../common/infrastructure/Atomic.js";
+import { Notifiers } from "../notifier/Notifiers.js";
 import {Logger} from '@foxxmd/winston';
-import { ListenBrainzClientConfig } from "../common/infrastructure/config/client/listenbrainz";
-import {ListenbrainzApiClient, ListenPayload} from "../common/vendor/ListenbrainzApiClient";
-import { PlayObject, TrackStringOptions } from "../../core/Atomic";
-import {buildTrackString, capitalize} from "../../core/StringUtils";
+import { ListenBrainzClientConfig } from "../common/infrastructure/config/client/listenbrainz.js";
+import { ListenbrainzApiClient, ListenPayload } from "../common/vendor/ListenbrainzApiClient.js";
+import { PlayObject, TrackStringOptions } from "../../core/Atomic.js";
+import { buildTrackString, capitalize } from "../../core/StringUtils.js";
 import EventEmitter from "events";
-import {UpstreamError} from "../common/errors/UpstreamError";
-import {isNodeNetworkException} from "../common/errors/NodeErrors";
+import { UpstreamError } from "../common/errors/UpstreamError.js";
+import { isNodeNetworkException } from "../common/errors/NodeErrors.js";
 import {ErrorWithCause} from "pony-cause";
 
 export default class ListenbrainzScrobbler extends AbstractScrobbleClient {

@@ -1,5 +1,5 @@
 import {ErrorWithCause} from "pony-cause";
-import {findCauseByFunc} from "../../utils";
+import { findCauseByFunc } from "../../utils.js";
 
 export class UpstreamError<T = undefined> extends ErrorWithCause<T> {
 

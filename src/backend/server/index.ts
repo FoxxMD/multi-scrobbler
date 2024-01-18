@@ -5,11 +5,11 @@ import bodyParser from 'body-parser';
 import passport from 'passport';
 import session from 'express-session';
 import path from "path";
-import { getRoot } from "../ioc";
+import { getRoot } from "../ioc.js";
 import {Logger} from "@foxxmd/winston";
-import { LogInfo } from "../../core/Atomic";
-import { setupApi } from "./api";
-import { getAddress, mergeArr, parseBool } from "../utils";
+import { LogInfo } from "../../core/Atomic.js";
+import { setupApi } from "./api.js";
+import { getAddress, mergeArr, parseBool } from "../utils.js";
 import {stripIndents} from "common-tags";
 import {ErrorWithCause} from "pony-cause";
 

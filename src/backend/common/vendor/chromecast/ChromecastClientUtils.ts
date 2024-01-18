@@ -1,10 +1,10 @@
-import {MdnsDeviceInfo, REPORTED_PLAYER_STATUSES, ReportedPlayerStatus} from "../../infrastructure/Atomic";
-import {PlatformApplication, PlatformType} from "./interfaces";
+import { MdnsDeviceInfo, REPORTED_PLAYER_STATUSES, ReportedPlayerStatus } from "../../infrastructure/Atomic.js";
+import { PlatformApplication, PlatformType } from "./interfaces.js";
 import {connect, createPlatform, Media, MediaController, PersistentClient, Result} from "@foxxmd/chromecast-client";
 import {ErrorWithCause} from "pony-cause";
 import {Client as CastClient} from 'castv2';
 import objectHash from "object-hash";
-import {PlayObject} from "../../../../core/Atomic";
+import { PlayObject } from "../../../../core/Atomic.js";
 
 export const chromePlayerStateToReported = (state: string): ReportedPlayerStatus => {
     switch (state) {

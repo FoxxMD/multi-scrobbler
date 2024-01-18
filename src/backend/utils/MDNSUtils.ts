@@ -1,9 +1,9 @@
 import {Logger} from "@foxxmd/winston";
 import AvahiBrowser from 'avahi-browse';
-import {MaybeLogger} from "../common/logging";
-import {sleep} from "../utils";
+import { MaybeLogger } from "../common/logging.js";
+import { sleep } from "../utils.js";
 import {ErrorWithCause} from "pony-cause";
-import {MdnsDeviceInfo} from "../common/infrastructure/Atomic";
+import { MdnsDeviceInfo } from "../common/infrastructure/Atomic.js";
 import {Browser, Service, ServiceType} from "@astronautlabs/mdns";
 
 export interface AvahiService {

@@ -1,9 +1,9 @@
-import { mergeArr } from "../../utils";
+import { mergeArr } from "../../utils.js";
 import {Logger} from '@foxxmd/winston';
-import { FormatPlayObjectOptions } from "../infrastructure/Atomic";
+import { FormatPlayObjectOptions } from "../infrastructure/Atomic.js";
 import winston from '@foxxmd/winston';
-import { PlayObject } from "../../../core/Atomic";
-import {capitalize} from "../../../core/StringUtils";
+import { PlayObject } from "../../../core/Atomic.js";
+import { capitalize } from "../../../core/StringUtils.js";
 
 export default abstract class AbstractApiClient {
     name: string;

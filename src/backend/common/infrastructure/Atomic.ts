@@ -1,10 +1,10 @@
 import {Dayjs} from "dayjs";
 import {FixedSizeList} from 'fixed-size-list';
 import {Logger} from '@foxxmd/winston';
-import TupleMap from "../TupleMap";
+import TupleMap from "../TupleMap.js";
 import {Request, Response} from "express";
 import {NextFunction, ParamsDictionary, Query} from "express-serve-static-core";
-import {LogLevel, logLevels, PlayMeta, PlayObject} from "../../../core/Atomic";
+import { LogLevel, logLevels, PlayMeta, PlayObject } from "../../../core/Atomic.js";
 
 export type SourceType = 'spotify' | 'plex' | 'tautulli' | 'subsonic' | 'jellyfin' | 'lastfm' | 'deezer' | 'ytmusic' | 'mpris' | 'mopidy' | 'listenbrainz' | 'jriver' | 'kodi' | 'webscrobbler' | 'chromecast';
 export const sourceTypes: SourceType[] = ['spotify', 'plex', 'tautulli', 'subsonic', 'jellyfin', 'lastfm', 'deezer', 'ytmusic', 'mpris', 'mopidy', 'listenbrainz', 'jriver', 'kodi', 'webscrobbler', 'chromecast'];

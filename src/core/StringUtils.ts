@@ -4,7 +4,7 @@ import isBetween from "dayjs/plugin/isBetween.js";
 import relativeTime from "dayjs/plugin/relativeTime.js";
 import duration from "dayjs/plugin/duration.js";
 import timezone from "dayjs/plugin/timezone.js";
-import {AmbPlayObject, SCROBBLE_TS_SOC_END, SCROBBLE_TS_SOC_START, ScrobbleTsSOC, TrackStringOptions} from "./Atomic";
+import {AmbPlayObject, SCROBBLE_TS_SOC_END, SCROBBLE_TS_SOC_START, ScrobbleTsSOC, TrackStringOptions} from "./Atomic.js";
 
 dayjs.extend(utc)
 dayjs.extend(isBetween);

@@ -1,34 +1,36 @@
 import {ExpressWithAsync} from "@awaitjs/express";
-import {getRoot} from "../ioc";
-import {makeClientCheckMiddle, makeSourceCheckMiddle} from "./middleware";
-import AbstractSource from "../sources/AbstractSource";
+import { getRoot } from "../ioc.js";
+import { makeClientCheckMiddle, makeSourceCheckMiddle } from "./middleware.js";
+import AbstractSource from "../sources/AbstractSource.js";
 import {
-    ClientStatusData, DeadLetterScrobble,
+    ClientStatusData,
+    DeadLetterScrobble,
     LogInfo,
     LogInfoJson,
     LogLevel,
-    LogOutputConfig, PlayObject,
+    LogOutputConfig,
+    PlayObject,
     SourceStatusData,
-} from "../../core/Atomic";
+} from "../../core/Atomic.js";
 import {Logger} from "@foxxmd/winston";
-import {formatLogToHtml, getLogger, isLogLevelMinLevel, isLogLineMinLevel} from "../common/logging";
+import { formatLogToHtml, getLogger, isLogLevelMinLevel, isLogLineMinLevel } from "../common/logging.js";
 import {MESSAGE} from "triple-beam";
 import {Transform} from "stream";
 //import {createSession} from "better-sse";
 import * as bsse from 'better-sse';
-import {setupTautulliRoutes} from "./tautulliRoutes";
-import {setupPlexRoutes} from "./plexRoutes";
-import {setupJellyfinRoutes} from "./jellyfinRoutes";
-import {setupDeezerRoutes} from "./deezerRoutes";
-import {setupAuthRoutes} from "./auth";
-import {ExpressHandler, ScrobbledPlayObject} from "../common/infrastructure/Atomic";
-import MemorySource from "../sources/MemorySource";
-import {capitalize} from "../../core/StringUtils";
+import { setupTautulliRoutes } from "./tautulliRoutes.js";
+import { setupPlexRoutes } from "./plexRoutes.js";
+import { setupJellyfinRoutes } from "./jellyfinRoutes.js";
+import { setupDeezerRoutes } from "./deezerRoutes.js";
+import { setupAuthRoutes } from "./auth.js";
+import { ExpressHandler, ScrobbledPlayObject } from "../common/infrastructure/Atomic.js";
+import MemorySource from "../sources/MemorySource.js";
+import { capitalize } from "../../core/StringUtils.js";
 import {source} from "common-tags";
-import AbstractScrobbleClient from "../scrobblers/AbstractScrobbleClient";
-import {sortByNewestPlayDate} from "../utils";
+import AbstractScrobbleClient from "../scrobblers/AbstractScrobbleClient.js";
+import { sortByNewestPlayDate } from "../utils.js";
 import bodyParser from "body-parser";
-import {setupWebscrobblerRoutes} from "./webscrobblerRoutes";
+import { setupWebscrobblerRoutes } from "./webscrobblerRoutes.js";
 import {FixedSizeList} from 'fixed-size-list';
 
 const maxBufferSize = 300;

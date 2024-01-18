@@ -18,14 +18,14 @@ import {
     RegExResult,
     RemoteIdentityParts,
     ScrobbleThresholdResult,
-} from "./common/infrastructure/Atomic";
+} from "./common/infrastructure/Atomic.js";
 import {Request} from "express";
 import pathUtil from "path";
 import {ErrorWithCause, getErrorCause} from "pony-cause";
 import backoffStrategies from '@kenyip/backoff-strategies';
 import {replaceResultTransformer, stripIndentTransformer, TemplateTag, trimResultTransformer} from 'common-tags';
 import {Duration} from "dayjs/plugin/duration.js";
-import {PlayObject} from "../core/Atomic";
+import { PlayObject } from "../core/Atomic.js";
 import address from "address";
 
 //const { default: Ajv } = AjvNS;
@@ -350,8 +350,8 @@ export const parseDurationFromTimestamp = (timestamp: any) => {
     });
 }
 
-export const createAjvFactory = (logger: Logger): Ajv => {
-    const validator =  new AjvNS.default({logger: logger, verbose: true, strict: "log", allowUnionTypes: true});
+export const createAjvFactory = (logger: Logger): AjvNS.default => {
+    const validator =  new Ajv.default({logger: logger, verbose: true, strict: "log", allowUnionTypes: true});
     // https://ajv.js.org/strict-mode.html#unknown-keywords
     validator.addKeyword('deprecationMessage');
     return validator;

@@ -1,5 +1,5 @@
-import { CommonClientConfig, CommonClientData } from "./index";
-import { RequestRetryOptions } from "../common";
+import { CommonClientConfig, CommonClientData } from "./index.js";
+import { RequestRetryOptions } from "../common.js";
 
 export interface LastfmData extends RequestRetryOptions {
     /**

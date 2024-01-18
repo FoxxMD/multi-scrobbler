@@ -1,10 +1,10 @@
-import { parseBool, remoteHostIdentifiers } from "../utils";
+import { parseBool, remoteHostIdentifiers } from "../utils.js";
 import {ExpressWithAsync} from "@awaitjs/express";
 import {Logger} from "@foxxmd/winston";
-import ScrobbleSources from "../sources/ScrobbleSources";
+import ScrobbleSources from "../sources/ScrobbleSources.js";
 import bodyParser from "body-parser";
-import { JellyfinNotifier } from "../sources/ingressNotifiers/JellyfinNotifier";
-import JellyfinSource from "../sources/JellyfinSource";
+import { JellyfinNotifier } from "../sources/ingressNotifiers/JellyfinNotifier.js";
+import JellyfinSource from "../sources/JellyfinSource.js";
 
 export const setupJellyfinRoutes = (app: ExpressWithAsync, logger: Logger, scrobbleSources: ScrobbleSources) => {
 

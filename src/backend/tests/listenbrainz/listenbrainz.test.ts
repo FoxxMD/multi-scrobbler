@@ -13,13 +13,13 @@ import slightlyDifferentNames from './correctlyMapped/trackNameSlightlyDifferent
 import incorrectMultiArtistsTrackName from './incorrectlyMapped/multiArtistsInTrackName.json';
 import veryWrong from './incorrectlyMapped/veryWrong.json';
 
-import {ListenbrainzApiClient, ListenResponse} from "../../common/vendor/ListenbrainzApiClient";
-import {PlayObject} from "../../../core/Atomic";
+import { ListenbrainzApiClient, ListenResponse } from "../../common/vendor/ListenbrainzApiClient.js";
+import { PlayObject } from "../../../core/Atomic.js";
 import dayjs from "dayjs";
-import {withRequestInterception} from "../utils/networking";
+import { withRequestInterception } from "../utils/networking.js";
 import {http, HttpResponse} from "msw";
-import {UpstreamError} from "../../common/errors/UpstreamError";
-import {ExpectedResults} from "../utils/interfaces";
+import { UpstreamError } from "../../common/errors/UpstreamError.js";
+import { ExpectedResults } from "../utils/interfaces.js";
 
 interface LZTestFixture {
     data: ListenResponse

@@ -1,12 +1,12 @@
 import {createContainer} from "iti";
 import path from "path";
-import {configDir, projectDir} from "./common/index";
-import ScrobbleClients from "./scrobblers/ScrobbleClients";
-import ScrobbleSources from "./sources/ScrobbleSources";
-import {Notifiers} from "./notifier/Notifiers";
+import { configDir, projectDir } from "./common/index.js";
+import ScrobbleClients from "./scrobblers/ScrobbleClients.js";
+import ScrobbleSources from "./sources/ScrobbleSources.js";
+import { Notifiers } from "./notifier/Notifiers.js";
 import {EventEmitter} from "events";
-import {logPath} from "./common/logging";
-import { WildcardEmitter } from "./common/WildcardEmitter";
+import { logPath } from "./common/logging.js";
+import { WildcardEmitter } from "./common/WildcardEmitter.js";
 import normalizeUrl from 'normalize-url';
 import fs from 'fs';
 

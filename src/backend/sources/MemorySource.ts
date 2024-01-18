@@ -1,4 +1,4 @@
-import AbstractSource from "./AbstractSource";
+import AbstractSource from "./AbstractSource.js";
 import {
     playObjDataMatch,
     sortByOldestPlayDate,
@@ -7,30 +7,34 @@ import {
     thresholdResultSummary,
     genGroupId,
     genGroupIdStr,
-    getPlatformIdFromData, formatNumber,
-} from "../utils";
+    getPlatformIdFromData,
+    formatNumber,
+} from "../utils.js";
 import dayjs from "dayjs";
 import {
-    asPlayerStateData, CALCULATED_PLAYER_STATUSES,
+    asPlayerStateData,
+    CALCULATED_PLAYER_STATUSES,
     DeviceId,
-    GroupedPlays, InternalConfig,
+    GroupedPlays,
+    InternalConfig,
     PlayerStateData,
     PlayPlatformId,
     PlayUserId,
     ProgressAwarePlayObject,
-    ScrobbleThresholdResult, SourceType,
-} from "../common/infrastructure/Atomic";
-import TupleMap from "../common/TupleMap";
-import { AbstractPlayerState, PlayerStateOptions } from "./PlayerState/AbstractPlayerState";
-import { GenericPlayerState } from "./PlayerState/GenericPlayerState";
+    ScrobbleThresholdResult,
+    SourceType,
+} from "../common/infrastructure/Atomic.js";
+import TupleMap from "../common/TupleMap.js";
+import { AbstractPlayerState, PlayerStateOptions } from "./PlayerState/AbstractPlayerState.js";
+import { GenericPlayerState } from "./PlayerState/GenericPlayerState.js";
 import {Logger} from "@foxxmd/winston";
-import {PlayObject, SourcePlayerObj} from "../../core/Atomic";
-import { buildTrackString } from "../../core/StringUtils";
+import { PlayObject, SourcePlayerObj } from "../../core/Atomic.js";
+import { buildTrackString } from "../../core/StringUtils.js";
 import {SimpleIntervalJob, Task, ToadScheduler} from "toad-scheduler";
-import {SourceConfig} from "../common/infrastructure/config/source/sources";
+import { SourceConfig } from "../common/infrastructure/config/source/sources.js";
 import {EventEmitter} from "events";
 import objectHash from 'object-hash';
-import {timePassesScrobbleThreshold} from "../utils/TimeUtils";
+import { timePassesScrobbleThreshold } from "../utils/TimeUtils.js";
 
 export default class MemorySource extends AbstractSource {
 

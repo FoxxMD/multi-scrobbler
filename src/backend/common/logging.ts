@@ -1,18 +1,18 @@
 import path from "path";
-import { projectDir } from "./index";
+import { projectDir } from "./index.js";
 import * as winstonNs from '@foxxmd/winston';
 import winstonDef from '@foxxmd/winston';
 import {DuplexTransport} from "winston-duplex";
-import { asLogOptions, LogConfig, LogOptions } from "./infrastructure/Atomic";
+import { asLogOptions, LogConfig, LogOptions } from "./infrastructure/Atomic.js";
 import process from "process";
-import {fileOrDirectoryIsWriteable, mergeArr, parseBool} from "../utils";
+import { fileOrDirectoryIsWriteable, mergeArr, parseBool } from "../utils.js";
 import {ErrorWithCause, stackWithCauses} from "pony-cause";
 import {NullTransport} from 'winston-null';
 import DailyRotateFile from 'winston-daily-rotate-file';
 import dayjs from "dayjs";
 import stringify from 'safe-stable-stringify';
 import {SPLAT, LEVEL, MESSAGE} from 'triple-beam';
-import { LogInfo, LogLevel } from "../../core/Atomic";
+import { LogInfo, LogLevel } from "../../core/Atomic.js";
 import TransportStream from "winston-transport";
 import {format} from 'logform';
 
@@ -157,7 +157,7 @@ export const defaultFormat = (defaultLabel = 'App') => printf(({
                                                                    ...rest
                                                                }) => {
     const keys = Object.keys(rest);
-    let stringifyValue = keys.length > 0 && !keys.every(x => causeKeys.some(y => y == x)) ? stringify(rest) : '';
+    let stringifyValue = keys.length > 0 && !keys.every(x => causeKeys.some(y => y == x)) ? stringify.default(rest) : '';
     let msg = message;
     let stackMsg = '';
     if (stack !== undefined) {

@@ -1,33 +1,33 @@
-import MemorySource from "./MemorySource";
-import {ChromecastSourceConfig} from "../common/infrastructure/config/source/chromecast";
+import MemorySource from "./MemorySource.js";
+import { ChromecastSourceConfig } from "../common/infrastructure/config/source/chromecast.js";
 import {
     FormatPlayObjectOptions,
-    InternalConfig, MdnsDeviceInfo, NO_USER,
+    InternalConfig,
+    MdnsDeviceInfo,
+    NO_USER,
     PlayerStateData,
-    SourceData
-} from "../common/infrastructure/Atomic";
+    SourceData,
+} from "../common/infrastructure/Atomic.js";
 import {EventEmitter} from "events";
 import {MediaController, PersistentClient, Media, connect, createPlatform} from "@foxxmd/chromecast-client";
 import {Client as CastClient} from 'castv2';
 import {ErrorWithCause, findCauseByReference} from "pony-cause";
-import {PlayObject} from "../../core/Atomic";
+import { PlayObject } from "../../core/Atomic.js";
 import dayjs from "dayjs";
-import {RecentlyPlayedOptions} from "./AbstractSource";
-import {difference, genGroupIdStr, isIPv4, mergeArr, parseBool, sleep} from "../utils";
+import { RecentlyPlayedOptions } from "./AbstractSource.js";
+import { difference, genGroupIdStr, isIPv4, mergeArr, parseBool, sleep } from "../utils.js";
+import { PlatformApplication, PlatformApplicationWithContext, PlatformType } from "../common/vendor/chromecast/interfaces.js";
 import {
-    PlatformApplication,
-    PlatformApplicationWithContext,
-    PlatformType
-} from "../common/vendor/chromecast/interfaces";
-import {
-    chromePlayerStateToReported, genDeviceId,
-    getCurrentPlatformApplications, getMediaStatus,
-    genPlayHash
-} from "../common/vendor/chromecast/ChromecastClientUtils";
+    chromePlayerStateToReported,
+    genDeviceId,
+    getCurrentPlatformApplications,
+    getMediaStatus,
+    genPlayHash,
+} from "../common/vendor/chromecast/ChromecastClientUtils.js";
 import {config, Logger} from "@foxxmd/winston";
-import {ContextualValidationError} from "@foxxmd/chromecast-client/dist/cjs/src/utils";
-import {buildTrackString} from "../../core/StringUtils";
-import {discoveryAvahi, discoveryNative} from "../utils/MDNSUtils";
+import {ContextualValidationError} from "@foxxmd/chromecast-client/dist/cjs/src/utils.js";
+import { buildTrackString } from "../../core/StringUtils.js";
+import { discoveryAvahi, discoveryNative } from "../utils/MDNSUtils.js";
 
 interface ChromecastDeviceInfo {
     mdns: MdnsDeviceInfo

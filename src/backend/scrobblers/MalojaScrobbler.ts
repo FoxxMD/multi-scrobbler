@@ -1,34 +1,34 @@
-import AbstractScrobbleClient from "./AbstractScrobbleClient";
+import AbstractScrobbleClient from "./AbstractScrobbleClient.js";
 import request, {ResponseError, SuperAgentRequest} from 'superagent';
 import dayjs from 'dayjs';
 import compareVersions from 'compare-versions';
-import {
-    sleep,
-    parseRetryAfterSecsFromObj,
-
-} from "../utils";
-import {DEFAULT_RETRY_MULTIPLIER, FormatPlayObjectOptions, INITIALIZING} from "../common/infrastructure/Atomic";
-import { MalojaClientConfig } from "../common/infrastructure/config/client/maloja";
-import { Notifiers } from "../notifier/Notifiers";
+import { sleep, parseRetryAfterSecsFromObj } from "../utils.js";
+import { DEFAULT_RETRY_MULTIPLIER, FormatPlayObjectOptions, INITIALIZING } from "../common/infrastructure/Atomic.js";
+import { MalojaClientConfig } from "../common/infrastructure/config/client/maloja.js";
+import { Notifiers } from "../notifier/Notifiers.js";
 import {Logger} from '@foxxmd/winston';
 import {
     getMalojaResponseError,
-    isMalojaAPIErrorBody, MalojaResponseV3CommonData,
+    isMalojaAPIErrorBody,
+    MalojaResponseV3CommonData,
     MalojaScrobbleData,
     MalojaScrobbleRequestData,
     MalojaScrobbleV2RequestData,
-    MalojaScrobbleV3RequestData, MalojaScrobbleV3ResponseData, MalojaV2ScrobbleData, MalojaV3ScrobbleData
-} from "../common/vendor/maloja/interfaces";
-import { PlayObject, TrackStringOptions } from "../../core/Atomic";
-import {buildTrackString, capitalize} from "../../core/StringUtils";
+    MalojaScrobbleV3RequestData,
+    MalojaScrobbleV3ResponseData,
+    MalojaV2ScrobbleData,
+    MalojaV3ScrobbleData,
+} from "../common/vendor/maloja/interfaces.js";
+import { PlayObject, TrackStringOptions } from "../../core/Atomic.js";
+import { buildTrackString, capitalize } from "../../core/StringUtils.js";
 import EventEmitter from "events";
 import normalizeUrl from "normalize-url";
-import {UpstreamError} from "../common/errors/UpstreamError";
+import { UpstreamError } from "../common/errors/UpstreamError.js";
 import {ErrorWithCause} from "pony-cause";
-import {getScrobbleTsSOCDate, getScrobbleTsSOCDateWithContext} from "../utils/TimeUtils";
+import { getScrobbleTsSOCDate, getScrobbleTsSOCDateWithContext } from "../utils/TimeUtils.js";
 import e from "express";
-import {isNodeNetworkException} from "../common/errors/NodeErrors";
-import {isSuperAgentResponseError} from "../common/errors/ErrorUtils";
+import { isNodeNetworkException } from "../common/errors/NodeErrors.js";
+import { isSuperAgentResponseError } from "../common/errors/ErrorUtils.js";
 
 const feat = ["ft.", "ft", "feat.", "feat", "featuring", "Ft.", "Ft", "Feat.", "Feat", "Featuring"];
 
