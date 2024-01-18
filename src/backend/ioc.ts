@@ -49,27 +49,20 @@ export interface RootOptions {
 
 const createRoot = (options?: RootOptions) => {
     const {
-        port,
+        port = 9078,
         baseUrl = process.env.BASE_URL,
     } = options || {};
     const configDir = process.env.CONFIG_DIR || path.resolve(projectDir, `./config`);
-    const envPort = process.env.PORT;
     return createContainer().add({
         version,
         configDir: configDir,
         logDir: logPath,
         isProd: process.env.NODE_ENV !== undefined && (process.env.NODE_ENV === 'production' || process.env.NODE_ENV === 'prod'),
-        configPort: port,
-        apiPort: process.env.API_PORT ?? 9079,
-        mainPort: envPort ?? 3000,
+        port: process.env.PORT ?? port,
         clientEmitter: () => new WildcardEmitter(),
         sourceEmitter: () => new WildcardEmitter(),
         notifierEmitter: () => new EventEmitter(),
     }).add((items) => {
-        let usedPort = items.configPort ?? envPort;
-        if (usedPort === undefined) {
-            usedPort = items.isProd ? items.mainPort : items.apiPort;
-        }
         const base = normalizeUrl(baseUrl ?? 'http://localhost', {removeSingleSlash: true});
         const u = new URL(base);
         let localUrl = u.toString();
@@ -77,7 +70,6 @@ const createRoot = (options?: RootOptions) => {
             localUrl = `${u.origin}:${items.mainPort}`;
         }
         return {
-            port: usedPort,
             clients: () => new ScrobbleClients(items.clientEmitter, items.sourceEmitter, localUrl, items.configDir),
             sources: () => new ScrobbleSources(items.sourceEmitter, localUrl, items.configDir),
             notifiers: () => new Notifiers(items.notifierEmitter, items.clientEmitter, items.sourceEmitter),

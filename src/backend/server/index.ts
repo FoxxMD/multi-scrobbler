@@ -40,23 +40,13 @@ export const initServer = async (parentLogger: Logger, initialOutput: LogInfo[] 
         const root = getRoot();
 
         const isProd = root.get('isProd');
-        const apiPort = root.get('apiPort');
-        const mainPort = root.get('mainPort');
         const port = root.get('port');
         const local = root.get('localUrl');
         const localDefined = root.get('hasDefinedBaseUrl');
 
         setupApi(app, logger, initialOutput);
 
-        // app.get("/*", function (req, res) {
-        //     if (!isProd) {
-        //         logger.warn(`In development environment this path (on port ${apiPort}) does nothing. You most likely want port ${mainPort}`)
-        //     }
-        //     res.sendFile(path.join(buildDir, "index.html"));
-        // });
-
-        const backendPort = isProd ? port : apiPort;
-        const server = app.listen(backendPort);
+        const server = app.listen(port);
         ViteExpress.bind(app, server);
 
         const addy = getAddress();
@@ -76,10 +66,10 @@ export const initServer = async (parentLogger: Logger, initialOutput: LogInfo[] 
                 switch (k) {
                     case 'host':
                     case 'v4':
-                        addresses.push(`---> ${k === 'host' ? 'Local'.padEnd(14, ' ') : 'Network'.padEnd(14, ' ')} http://${v}:${backendPort}`);
+                        addresses.push(`---> ${k === 'host' ? 'Local'.padEnd(14, ' ') : 'Network'.padEnd(14, ' ')} http://${v}:${port}`);
                         break;
                     case 'v6':
-                        addresses.push(`---> Network (IPv6) http://[${v}]:${backendPort}`);
+                        addresses.push(`---> Network (IPv6) http://[${v}]:${port}`);
                 }
             }
         }
