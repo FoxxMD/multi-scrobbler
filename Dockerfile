@@ -59,7 +59,8 @@ FROM base as app
 #COPY --chown=abc:abc package.json yarn.lock ./
 COPY --chown=abc:abc package*.json ./
 COPY --chown=abc:abc patches ./patches
-COPY --from=build --chown=abc:abc /app/build /app/build
+COPY --from=build --chown=abc:abc /app/dist /app/dist
+COPY --from=build --chown=abc:abc /app/src /app/src
 COPY --from=base /usr/local/bin /usr/local/bin
 COPY --from=base /usr/local/lib /usr/local/lib
 
@@ -77,8 +78,6 @@ ENV IS_DOCKER=true
 RUN npm install --omit=dev \
     && npm cache clean --force \
     && chown -R abc:abc node_modules \
-    && rm -rf node_modules/ts-node \
-    && rm -rf node_modules/typescript \
     && rm -rf node_modules/@types
 
 ARG webPort=9078

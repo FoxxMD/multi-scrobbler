@@ -47,6 +47,7 @@ export const initServer = async (parentLogger: Logger, initialOutput: LogInfo[] 
         setupApi(app, logger, initialOutput);
 
         const server = app.listen(port);
+        ViteExpress.config({mode: isProd ? 'production' : 'development'});
         ViteExpress.bind(app, server);
 
         const addy = getAddress();
