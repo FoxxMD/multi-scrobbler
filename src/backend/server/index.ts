@@ -1,5 +1,6 @@
 import {addAsync, Router} from '@awaitjs/express';
 import express from 'express';
+import ViteExpress from "vite-express";
 import bodyParser from 'body-parser';
 import passport from 'passport';
 import session from 'express-session';
@@ -12,7 +13,7 @@ import { getAddress, mergeArr, parseBool } from "../utils";
 import {stripIndents} from "common-tags";
 import {ErrorWithCause} from "pony-cause";
 
-const buildDir = path.join(process.cwd() + "/build");
+//const buildDir = path.join(process.cwd() + "/build");
 
 const app = addAsync(express());
 const router = Router();
@@ -30,7 +31,7 @@ export const initServer = async (parentLogger: Logger, initialOutput: LogInfo[] 
             })
         );
 
-        app.use(express.static(buildDir));
+        //app.use(express.static(buildDir));
 
         app.use(session({secret: 'keyboard cat', resave: false, saveUninitialized: false}));
         app.use(passport.initialize());
@@ -47,15 +48,16 @@ export const initServer = async (parentLogger: Logger, initialOutput: LogInfo[] 
 
         setupApi(app, logger, initialOutput);
 
-        app.get("/*", function (req, res) {
-            if (!isProd) {
-                logger.warn(`In development environment this path (on port ${apiPort}) does nothing. You most likely want port ${mainPort}`)
-            }
-            res.sendFile(path.join(buildDir, "index.html"));
-        });
+        // app.get("/*", function (req, res) {
+        //     if (!isProd) {
+        //         logger.warn(`In development environment this path (on port ${apiPort}) does nothing. You most likely want port ${mainPort}`)
+        //     }
+        //     res.sendFile(path.join(buildDir, "index.html"));
+        // });
 
         const backendPort = isProd ? port : apiPort;
-        app.listen(backendPort);
+        const server = app.listen(backendPort);
+        ViteExpress.bind(app, server);
 
         const addy = getAddress();
         const addresses: string[] = [];
