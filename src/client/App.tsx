@@ -1,8 +1,7 @@
 import React from 'react';
-import logo from './logo.svg';
-import * as ReactDOM from "react-dom/client";
 import {
     createBrowserRouter,
+    createHashRouter, RouteObject,
     RouterProvider, useLocation,
 } from "react-router-dom";
 import {connect, ConnectedProps, Provider} from 'react-redux'
@@ -25,7 +24,7 @@ function NoMatch() {
     );
 }
 
-const router = createBrowserRouter([
+const routes: RouteObject[] = [
     {
         path: "/",
         element: <Dashboard />,
@@ -46,7 +45,14 @@ const router = createBrowserRouter([
         path: "*",
         element: <NoMatch/>
     }
-]);
+];
+
+const genRouter = () => {
+    const useHashRouter = __USE_HASH_ROUTER__ === 'true';
+    return useHashRouter ? createHashRouter(routes) : createBrowserRouter(routes);
+}
+
+const router = genRouter();
 
 const mapDispatchToProps = (dispatch) => {
     return {

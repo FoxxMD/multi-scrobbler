@@ -71,6 +71,9 @@ export const initServer = async (parentLogger: Logger, initialOutput: LogInfo[] 
             }
         }
 
+        if(process.env.USE_HASH_ROUTER === undefined) {
+            process.env.USE_HASH_ROUTER = root.get('isSubPath');
+        }
         ViteExpress.config({mode: isProd ? 'production' : 'development'});
         try {
             ViteExpress.listen(app, port, () => {

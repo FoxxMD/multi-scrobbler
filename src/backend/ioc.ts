@@ -75,7 +75,8 @@ const createRoot = (options?: RootOptions) => {
             sources: () => new ScrobbleSources(items.sourceEmitter, localUrl, items.configDir),
             notifiers: () => new Notifiers(items.notifierEmitter, items.clientEmitter, items.sourceEmitter),
             localUrl,
-            hasDefinedBaseUrl: baseUrl !== undefined
+            hasDefinedBaseUrl: baseUrl !== undefined,
+            isSubPath: u.pathname !== '/' && u.pathname.length > 0
         }
     });
 }

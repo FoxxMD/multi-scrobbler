@@ -6,7 +6,7 @@ import {ApiEventPayload, clientUpdate} from "../status/ducks";
 type DeadResponse = DeadLetterScrobble<JsonPlayObject, string>[];
 export const deadApi = createApi({
     reducerPath: 'deadApi',
-    baseQuery: fetchBaseQuery({baseUrl: '/api/'}),
+    baseQuery: fetchBaseQuery({baseUrl: './api/'}),
     tagTypes: ['DeadLetters'],
     endpoints: (builder) => ({
         getDead: builder.query<DeadResponse, { name: string, type: string }>({
