@@ -10,7 +10,7 @@ import { WildcardEmitter } from "./common/WildcardEmitter.js";
 import normalizeUrl from 'normalize-url';
 import fs from 'fs';
 
-let version = 'unknown';
+let version = 'Unknown';
 
 if(process.env.APP_VERSION === undefined) {
     if(fs.existsSync('./package.json')) {
@@ -36,6 +36,7 @@ if(process.env.APP_VERSION === undefined) {
             // don't care
         }
     }
+    process.env.APP_VERSION = version;
 } else {
     version = process.env.APP_VERSION;
 }

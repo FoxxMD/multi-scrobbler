@@ -8,7 +8,7 @@ export default defineConfig(() => {
             sourcemap: true
         },
         define: {
-            "__APP_VERSION__": JSON.stringify(process.env.APP_VERSION.toString() ?? 'Unknown')
+            "__APP_VERSION__": JSON.stringify((process.env.APP_VERSION ?? 'Unknown').toString())
         }
     };
 });

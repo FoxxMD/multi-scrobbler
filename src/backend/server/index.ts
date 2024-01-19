@@ -46,10 +46,6 @@ export const initServer = async (parentLogger: Logger, initialOutput: LogInfo[] 
 
         setupApi(app, logger, initialOutput);
 
-        const server = app.listen(port);
-        ViteExpress.config({mode: isProd ? 'production' : 'development'});
-        ViteExpress.bind(app, server);
-
         const addy = getAddress();
         const addresses: string[] = [];
         let dockerHint = '';
@@ -74,15 +70,27 @@ export const initServer = async (parentLogger: Logger, initialOutput: LogInfo[] 
                 }
             }
         }
-        const start = stripIndents`\n
-        ${isProd ? 'Server' : 'API Backend'} started:
+
+        ViteExpress.config({mode: isProd ? 'production' : 'development'});
+        try {
+            ViteExpress.listen(app, port, () => {
+                const start = stripIndents`\n
+        Server started:
         ${addresses.join('\n')}${dockerHint !== '' ? `\n${dockerHint}` : ''}`
 
-        logger.info(start);
+                logger.info(start);
 
-        if(localDefined) {
-            logger.info(`User-defined base URL for UI and redirect URLs (spotify, deezer, lastfm): ${local}`)
+                if(localDefined) {
+                    logger.info(`User-defined base URL for UI and redirect URLs (spotify, deezer, lastfm): ${local}`)
+                }
+            }).on('error', (err) => {
+                logger.error(new ErrorWithCause('Server encountered unrecoverable error', {cause: err}));
+                process.exit(1);
+            });
+        } catch (e) {
+            throw new ErrorWithCause('Server encountered unrecoverable error', {cause: e});
         }
+
     } catch (e) {
         logger.error(new ErrorWithCause('Server crashed with uncaught exception', {cause: e}));
     }

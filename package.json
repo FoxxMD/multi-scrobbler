@@ -16,7 +16,7 @@
     "test:backend": "NODE_OPTIONS='--loader tsx' mocha --extension ts --reporter spec  --recursive src/backend/tests/**/*.test.ts",
     "fileEndings": "jscodeshift --transformFrom js --transformTo none --importTypes relative --extensions=ts --parser tsx --transform codeshift/transform.ts src/backend",
     "dev": "APP_VERSION=$npm_package_version nodemon -w src/backend -x tsx src/backend/index.ts",
-    "start": "NODE_ENV=production tsx src/backend/index.ts",
+    "start": "APP_VERSION=$npm_package_version NODE_ENV=production tsx src/backend/index.ts",
     "build": "APP_VERSION=$npm_package_version vite build"
   },
   "exports": {
