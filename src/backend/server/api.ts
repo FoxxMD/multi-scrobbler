@@ -204,9 +204,9 @@ export const setupApi = (app: ExpressWithAsync, logger: Logger, initialLogOutput
                 players: 'players' in x ? (x as MemorySource).playersToObject() : {}
             };
             if(!x.isReady()) {
-                if(!x.buildOK) {
+                if(x.buildOK === false) {
                     base.status = 'Initializing Data Failed';
-                } else if(!x.connectionOK) {
+                } else if(x.connectionOK === false) {
                     base.status = 'Communication Failed';
                 } else if (requiresAuth && !authed) {
                     base.status = requiresAuthInteraction ? 'Auth Interaction Required' : 'Authentication Failed Or Not Attempted'
