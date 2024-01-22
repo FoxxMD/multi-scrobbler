@@ -79,7 +79,8 @@ export default class YTMusicSource extends AbstractSource {
         if(this.apiInstance !== undefined) {
             return this.apiInstance;
         }
-        const ytm = new  YouTubeMusic();
+        // @ts-ignore
+        const ytm = new  YouTubeMusic.default() as YouTubeMusic;
         try {
             this.apiInstance = await ytm.authenticate(this.config.data.cookie, this.config.data.authUser);
         } catch (e: any) {
