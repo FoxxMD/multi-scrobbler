@@ -6,7 +6,7 @@ import { ListenbrainzApiClient } from "../common/vendor/ListenbrainzApiClient.js
 import MemorySource from "./MemorySource.js";
 import {ErrorWithCause} from "pony-cause";
 import request from "superagent";
-import {isNodeNetworkException} from "../common/errors/NodeErrors";
+import {isNodeNetworkException} from "../common/errors/NodeErrors.js";
 
 export default class ListenbrainzSource extends MemorySource {
 
