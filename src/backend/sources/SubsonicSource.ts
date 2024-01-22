@@ -9,7 +9,7 @@ import { DEFAULT_RETRY_MULTIPLIER, FormatPlayObjectOptions, InternalConfig } fro
 import { RecentlyPlayedOptions } from "./AbstractSource.js";
 import EventEmitter from "events";
 import { PlayObject } from "../../core/Atomic.js";
-import {isNodeNetworkException} from "../common/errors/NodeErrors";
+import {isNodeNetworkException} from "../common/errors/NodeErrors.js";
 import {ErrorWithCause} from "pony-cause";
 import {UpstreamError} from "../common/errors/UpstreamError.js";
 import {getSubsonicResponse, SubsonicResponse, SubsonicResponseCommon} from "../common/vendor/subsonic/interfaces.js";
