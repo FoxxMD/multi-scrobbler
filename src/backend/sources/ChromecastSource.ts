@@ -100,7 +100,7 @@ export class ChromecastSource extends MemorySource {
         
     }
 
-    initialize = async () => {
+    doBuildInitData = async () => {
         this.logger.info('Looking for Chromecasts...')
 
         const {
@@ -122,7 +122,6 @@ export class ChromecastSource extends MemorySource {
             this.logger.debug('Will run mDNS discovery on subsequent heartbeats.')
         }
 
-        this.initialized = true;
         return true;
     }
     
