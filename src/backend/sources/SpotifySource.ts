@@ -9,6 +9,7 @@ import {
     findCauseByFunc,
 } from "../utils.js";
 import SpotifyWebApi from "spotify-web-api-node";
+import {AccessToken, AuthorizationCodeWithPKCEStrategy, SpotifyApi} from '@spotify/web-api-ts-sdk';
 import request from 'superagent';
 import AbstractSource, { RecentlyPlayedOptions } from "./AbstractSource.js";
 import { SpotifySourceConfig } from "../common/infrastructure/config/source/spotify.js";
@@ -44,6 +45,7 @@ const shortDeviceId = truncateStringToLength(10, '');
 export default class SpotifySource extends MemorySource {
 
     spotifyApi: SpotifyWebApi;
+    spotifyApiNew?: SpotifyApi
     workingCredsPath: string;
 
     requiresAuth = true;
@@ -195,7 +197,7 @@ export default class SpotifySource extends MemorySource {
             this.logger.warn('Current spotify credentials file exists but could not be parsed', { path: this.workingCredsPath });
         }
 
-        const {token: accessToken = undefined, refreshToken = undefined} = (spotifyCreds || {}) as any;
+        const {token: accessToken = undefined, refreshToken = undefined} = (spotifyCreds || {}) as MSCredentials;
 
         const {
             clientId,
@@ -239,9 +241,10 @@ export default class SpotifySource extends MemorySource {
         if(accessToken === undefined || refreshToken === undefined) {
             this.logger.info(`No access or refresh token is present. User interaction for authentication is required.`);
             this.logger.info(`Redirect URL that will be used on auth callback: '${rdUri}'`);
+            this.spotifyApiNew = new SpotifyApi(new AuthorizationCodeWithPKCEStrategy(clientId, rdUri, scopes));
+        } else {
+            this.spotifyApiNew = SpotifyApi.withAccessToken(clientId, msCredsToAccessToken(spotifyCreds as MSCredentials));
         }
-
-        this.spotifyApi = new SpotifyWebApi(apiConfig);
     }
 
     protected async doBuildInitData(): Promise<true | string | undefined> {
@@ -266,10 +269,11 @@ export default class SpotifySource extends MemorySource {
 
     doAuthentication = async () => {
         try {
-            if(undefined === this.spotifyApi.getAccessToken()) {
+            if(null === (await this.spotifyApiNew.getAccessToken())) {
                 this.logger.warn('Cannot use API until an access token has been received from the authorization flow. See the dashboard.');
                 return false;
             }
+
             await this.callApi<ReturnType<typeof this.spotifyApi.getMe>>(((api: any) => api.getMe()));
             return true;
         } catch (e) {
@@ -284,6 +288,7 @@ export default class SpotifySource extends MemorySource {
     }
 
     createAuthUrl = () => {
+        this.spotifyApiNew.authenticate()
         return this.spotifyApi.createAuthorizeURL(scopes, this.name);
     }
 
@@ -298,7 +303,9 @@ export default class SpotifySource extends MemorySource {
                 this.spotifyApi.setRefreshToken(tokenResponse.body['refresh_token']);
                 await writeFile(this.workingCredsPath, JSON.stringify({
                     token: tokenResponse.body['access_token'],
-                    refreshToken: tokenResponse.body['refresh_token']
+                    refreshToken: tokenResponse.body['refresh_token'],
+                    expiresIn: tokenResponse.body['expires_in'],
+                    grant: tokenResponse.body['token_type']
                 }));
                 this.logger.info('Got token from code grant authorization!');
                 return true;
@@ -360,6 +367,7 @@ export default class SpotifySource extends MemorySource {
 
     getCurrentPlaybackState = async (logError = true): Promise<{device?: UserDevice, playerState?: PlayerStateData}> => {
         try {
+            //const resp = await this.spotifyApiNew.player.getPlaybackState()
             const funcState = (api: SpotifyWebApi) => api.getMyCurrentPlaybackState();
             const res = await this.callApi<ReturnType<typeof this.spotifyApi.getMyCurrentPlaybackState>>(funcState);
             const {
@@ -526,4 +534,29 @@ const hasApiError = (e: Error): boolean => {
     return findCauseByFunc(e, (err) => {
         return err.message.includes('while communicating with Spotify\'s Web API.');
     }) !== undefined;
+}
+
+interface MSCredentials {
+    token: string
+    refreshToken: string
+    expiresIn?: number
+    grant?: string
+}
+
+const msCredsToAccessToken = (data: MSCredentials): AccessToken => {
+    return {
+        access_token: data.token,
+        refresh_token: data.refreshToken,
+        expires_in: data.expiresIn ?? 3600,
+        token_type: data.grant ?? 'Bearer'
+    }
+}
+
+export const accessTokenToMSCreds = (data: AccessToken): MSCredentials => {
+    return {
+        token: data.access_token,
+        refreshToken: data.refresh_token,
+        expiresIn: data.expires_in,
+        grant: data.token_type
+    }
 }

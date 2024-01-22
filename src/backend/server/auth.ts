@@ -55,15 +55,15 @@ export const setupAuthRoutes = (app: ExpressWithAsync, logger: Logger, sourceMid
     });
 
     app.getAsync(/.*callback$/, async function (req, res, next) {
-        if(req.url.indexOf('/api') !== 0) {
-            return res.redirect(307, `/api${req.url}`);
-        }
         const {
             query: {
                 state
             } = {}
         } = req;
         if (req.url.includes('lastfm')) {
+            if(req.url.indexOf('/api') !== 0) {
+                return res.redirect(307, `/api${req.url}`);
+            }
             const {
                 query: {
                     token
@@ -82,6 +82,8 @@ export const setupAuthRoutes = (app: ExpressWithAsync, logger: Logger, sourceMid
                 return res.send(e.message);
             }
         } else {
+            const query = new URLSearchParams(req.query as Record<string, string>).toString();
+            return res.redirect(307, `/${query.trim() !== '' ? `?${query}` : ''}`);
             // TODO right now all sources requiring source interaction are covered by logic branches (deezer above and spotify here)
             // but eventually should update all source callbacks to url specific URLS to avoid ambiguity...
             // wish we could use state param to identify name/source but not all auth strategies and auth provides may provide access to that
