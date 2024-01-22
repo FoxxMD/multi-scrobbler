@@ -108,7 +108,7 @@ export default abstract class AbstractSource implements Authenticatable {
             this.logger.info('Fully Initialized!');
             return true;
         } catch(e) {
-            this.logger.error('Initialization failed', {cause: e});
+            this.logger.error(new ErrorWithCause('Initialization failed', {cause: e}));
             return false;
         }
     }
@@ -200,8 +200,7 @@ export default abstract class AbstractSource implements Authenticatable {
             // only signal as auth failure if error was NOT a node network error
             this.authFailure = findCauseByFunc(e, isNodeNetworkException) === undefined;
             this.authed = false;
-            this.logger.error(`Authentication test failed!${this.authFailure === false ? ' Due to a network issue. Will retry authentication on next heartbeat.' : ''}`);
-            this.logger.error(e);
+            throw new ErrorWithCause(`Authentication test failed!${this.authFailure === false ? ' Due to a network issue. Will retry authentication on next heartbeat.' : ''}`, {cause: e})
         }
     }
 
