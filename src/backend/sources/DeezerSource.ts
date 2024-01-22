@@ -34,6 +34,7 @@ export default class DeezerSource extends AbstractSource {
             data: {
                 interval = 60,
                 redirectUri,
+                ...rest
             } = {},
         } = config;
 
@@ -41,7 +42,13 @@ export default class DeezerSource extends AbstractSource {
             this.logger.warn('Interval should be above 30 seconds...😬');
         }
 
-        this.config.data.interval = interval;
+        // @ts-ignore
+        this.config.data = {
+            ...rest,
+            interval,
+            redirectUri,
+        };
+
         this.redirectUri = redirectUri || `${this.localUrl}/deezer/callback`;
 
         this.workingCredsPath = `${this.configDir}/currentCreds-${name}.json`;
@@ -88,7 +95,11 @@ export default class DeezerSource extends AbstractSource {
     protected async doBuildInitData(): Promise<boolean | string> {
         try {
             const credFile = await readJson(this.workingCredsPath, {throwOnNotFound: false});
-            this.config.data.accessToken = credFile.accessToken;
+            if(credFile !== undefined) {
+                this.config.data.accessToken = credFile.accessToken;
+            } else {
+                this.logger.warn(`No Deezer credentials file found at ${this.workingCredsPath}`);
+            }
         } catch (e) {
             throw new ErrorWithCause('Current deezer credentials file exists but could not be parsed', {cause: e});
         }
