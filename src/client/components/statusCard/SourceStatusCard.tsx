@@ -14,7 +14,7 @@ export interface SourceStatusCardData extends StatusCardSkeletonData, PropsFromR
 
 const statusToStatusType = (status: string) => {
     const lower = status.toLowerCase();
-    if(lower.includes('running') || lower.includes('polling') || lower.includes('data')) {
+    if(lower.includes('running') || lower.includes('polling') || lower.includes('awaiting data')) {
         return 'active';
     }
     if(lower.includes('idle')) {
