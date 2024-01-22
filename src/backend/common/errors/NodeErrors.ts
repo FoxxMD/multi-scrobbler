@@ -23,5 +23,9 @@ export const isNodeNetworkException = (error: unknown): error is NodeNetworkExce
 }
 
 export const hasNodeNetworkException = (error: unknown): boolean => {
-    return findCauseByFunc(error, isNodeNetworkException) !== undefined;
+    return getNodeNetworkException(error) !== undefined;
+}
+
+export const getNodeNetworkException = (error: unknown): Error | undefined => {
+    return findCauseByFunc(error, isNodeNetworkException);
 }
