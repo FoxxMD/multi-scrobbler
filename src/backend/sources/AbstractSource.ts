@@ -7,11 +7,15 @@ import {
     pollingBackoff,
     sleep,
     sortByNewestPlayDate,
-    sortByOldestPlayDate, findCauseByFunc, formatNumber,
-} from "../utils";
+    sortByOldestPlayDate,
+    findCauseByFunc,
+    formatNumber,
+} from "../utils.js";
 import {
     Authenticatable,
-    DEFAULT_POLLING_INTERVAL, DEFAULT_POLLING_MAX_INTERVAL, DEFAULT_RETRY_MULTIPLIER,
+    DEFAULT_POLLING_INTERVAL,
+    DEFAULT_POLLING_MAX_INTERVAL,
+    DEFAULT_RETRY_MULTIPLIER,
     DeviceId,
     GroupedFixedPlays,
     GroupedPlays,
@@ -23,17 +27,17 @@ import {
     ProgressAwarePlayObject,
     SINGLE_USER_PLATFORM_ID,
     SourceType,
-} from "../common/infrastructure/Atomic";
+} from "../common/infrastructure/Atomic.js";
 import {Logger} from '@foxxmd/winston';
-import { SourceConfig } from "../common/infrastructure/config/source/sources";
+import { SourceConfig } from "../common/infrastructure/config/source/sources.js";
 import {EventEmitter} from "events";
 import {FixedSizeList} from "fixed-size-list";
-import TupleMap from "../common/TupleMap";
-import {PlayObject, TA_CLOSE} from "../../core/Atomic";
-import {buildTrackString, capitalize} from "../../core/StringUtils";
-import {isNodeNetworkException} from "../common/errors/NodeErrors";
+import TupleMap from "../common/TupleMap.js";
+import { PlayObject, TA_CLOSE } from "../../core/Atomic.js";
+import { buildTrackString, capitalize } from "../../core/StringUtils.js";
+import { isNodeNetworkException } from "../common/errors/NodeErrors.js";
 import {ErrorWithCause} from "pony-cause";
-import {comparePlayTemporally, temporalAccuracyIsAtLeast} from "../utils/TimeUtils";
+import { comparePlayTemporally, temporalAccuracyIsAtLeast } from "../utils/TimeUtils.js";
 
 export interface RecentlyPlayedOptions {
     limit?: number

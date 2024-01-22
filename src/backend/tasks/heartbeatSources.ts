@@ -1,8 +1,9 @@
 import {config, Logger} from "@foxxmd/winston";
-import {mergeArr} from "../utils";
+import { mergeArr } from "../utils.js";
 import {AsyncTask} from "toad-scheduler";
 import {PromisePool} from "@supercharge/promise-pool";
-import ScrobbleSources from "../sources/ScrobbleSources";
+import ScrobbleSources from "../sources/ScrobbleSources.js";
+import { ChromecastSource } from "../sources/ChromecastSource.js";
 
 export const createHeartbeatSourcesTask = (sources: ScrobbleSources, parentLogger: Logger) => {
     const logger = parentLogger.child({labels: ['Heartbeat', 'Sources']}, mergeArr);
@@ -14,10 +15,15 @@ export const createHeartbeatSourcesTask = (sources: ScrobbleSources, parentLogge
                 .withConcurrency(1)
                 .for(sources.sources)
                 .process(async (source) => {
-                    if (source.isReady() && source.canPoll && !source.polling && (!source.authGated() || source.canTryAuth())) {
-                        source.logger.info('Should be polling! Attempting to restart polling...', {leaf: 'Heartbeat'});
-                        source.poll();
-                        return 1;
+                    if(source.isReady()) {
+                        if(source.type === 'chromecast') {
+                            (source as ChromecastSource).discoverDevices();
+                        }
+                        if (source.canPoll && !source.polling && (!source.authGated() || source.canTryAuth())) {
+                            source.logger.info('Should be polling! Attempting to restart polling...', {leaf: 'Heartbeat'});
+                            source.poll();
+                            return 1;
+                        }
                     }
                     return 0;
                 }).then(({results, errors}) => {

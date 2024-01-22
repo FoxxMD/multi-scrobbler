@@ -1,4 +1,4 @@
-import { ExpressHandler } from "../common/infrastructure/Atomic";
+import { ExpressHandler } from "../common/infrastructure/Atomic.js";
 import {Logger} from "@foxxmd/winston";
 
 export const makeSourceCheckMiddle = (sources: any) => (required: boolean ): ExpressHandler => (req: any, res: any, next: any) => {

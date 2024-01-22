@@ -151,3 +151,9 @@ Multi-scrobbler works the same was the official Spotify-Last.fm integration work
 ## Jellyfin does not scrobble tracks with multiple artists correctly
 
 This is a limitation caused by the [Jellyfin webhook plugin](https://github.com/FoxxMD/multi-scrobbler/issues/70#issuecomment-1443804712) only sending the first artist to multi-scrobbler. This issues needs to be [fixed upstream on the Jellyfin webhook repository.](https://github.com/jellyfin/jellyfin-plugin-webhook/issues/166)
+
+## Chromecast track information is missing/incorrect or MS player has weird times
+
+The Chromecast integration relies on a few common fields in the data it receives from your casting device. Every platform that can cast (Spotify, Pandora, etc...) *should* use these fields the same but there are slight differences between their implementations that may confuse multi-scrobbler. Specific platforms may also return more information in non-common fields that are undocumented.
+
+To diagnose these issues you [**must enable payload logging**](configuration/configuration.md#cast-troubleshooting) for your chromecast Source, run MS, and then include logs with this output from that run. Without the raw data logged from your cast device it will be nearly impossible to resolve your issue.

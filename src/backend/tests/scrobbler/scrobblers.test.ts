@@ -7,12 +7,12 @@ import { http, HttpResponse } from 'msw';
 import withDuration from '../plays/withDuration.json';
 import mixedDuration from '../plays/mixedDuration.json';
 
-import {TestScrobbler} from "./TestScrobbler";
-import {asPlays, generatePlay, normalizePlays} from "../utils/PlayTestUtils";
+import { TestScrobbler } from "./TestScrobbler.js";
+import { asPlays, generatePlay, normalizePlays } from "../utils/PlayTestUtils.js";
 import dayjs from "dayjs";
-import {sleep} from "../../utils";
-import {MockNetworkError, withRequestInterception} from "../utils/networking";
-import {PlayObject} from "../../../core/Atomic";
+import { sleep } from "../../utils.js";
+import { MockNetworkError, withRequestInterception } from "../utils/networking.js";
+import { PlayObject } from "../../../core/Atomic.js";
 
 const firstPlayDate = dayjs().subtract(1, 'hour');
 const olderFirstPlayDate = dayjs().subtract(4, 'hour');
@@ -43,7 +43,6 @@ describe('Networking', function () {
                     http.get('http://example.com', () => {
                             // https://github.com/mswjs/msw/issues/1819#issuecomment-1789364174
                             // already using DOM though, not sure why it doesn't fix itself
-                            // @ts-expect-error
                             return new HttpResponse(null, {status: 200});
                         }
                     )
@@ -73,7 +72,6 @@ describe('Networking', function () {
             withRequestInterception(
                 [
                     http.get('http://example.com', () => {
-                            // @ts-expect-error
                             return HttpResponse.json({error: 'Invalid API Key'}, {status: 401});
                         }
                     )

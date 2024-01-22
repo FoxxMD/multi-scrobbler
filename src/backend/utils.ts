@@ -4,7 +4,9 @@ import utc from 'dayjs/plugin/utc.js';
 import {Logger} from '@foxxmd/winston';
 import JSON5 from 'json5';
 import {TimeoutError, WebapiError} from "spotify-web-api-node/src/response-error.js";
-import Ajv, {Schema} from 'ajv';
+import {Schema} from 'ajv';
+import * as AjvNS from 'ajv';
+import Ajv from 'ajv';
 import {
     asPlayerStateData,
     NO_DEVICE,
@@ -16,16 +18,17 @@ import {
     RegExResult,
     RemoteIdentityParts,
     ScrobbleThresholdResult,
-} from "./common/infrastructure/Atomic";
+} from "./common/infrastructure/Atomic.js";
 import {Request} from "express";
 import pathUtil from "path";
 import {ErrorWithCause, getErrorCause} from "pony-cause";
 import backoffStrategies from '@kenyip/backoff-strategies';
 import {replaceResultTransformer, stripIndentTransformer, TemplateTag, trimResultTransformer} from 'common-tags';
 import {Duration} from "dayjs/plugin/duration.js";
-import {PlayObject} from "../core/Atomic";
+import { PlayObject } from "../core/Atomic.js";
 import address from "address";
 
+//const { default: Ajv } = AjvNS;
 dayjs.extend(utc);
 
 export async function readJson(this: any, path: any, {throwOnNotFound = true} = {}) {
@@ -347,8 +350,8 @@ export const parseDurationFromTimestamp = (timestamp: any) => {
     });
 }
 
-export const createAjvFactory = (logger: Logger): Ajv => {
-    const validator =  new Ajv({logger: logger, verbose: true, strict: "log", allowUnionTypes: true});
+export const createAjvFactory = (logger: Logger): AjvNS.default => {
+    const validator =  new Ajv.default({logger: logger, verbose: true, strict: "log", allowUnionTypes: true});
     // https://ajv.js.org/strict-mode.html#unknown-keywords
     validator.addKeyword('deprecationMessage');
     return validator;
@@ -364,7 +367,7 @@ export const validateJson = <T>(config: object, schema: Schema, logger: Logger):
         if (Array.isArray(ajv.errors)) {
             for (const err of ajv.errors) {
                 let parts = [
-                    `At: ${err.dataPath}`,
+                    `At: ${err.instancePath}`,
                 ];
                 let data;
                 if (typeof err.data === 'string') {
@@ -614,6 +617,13 @@ export const intersect = (a: Array<any>, b: Array<any>) => {
     return Array.from(intersection);
 }
 
+export const difference = (a: Array<any>, b: Array<any>) => {
+    const setA = new Set(a);
+    const setB = new Set(b);
+    const diff = new Set([...setA].filter(x => !setB.has(x)));
+    return Array.from(diff);
+}
+
 /**
  * https://github.com/Mw3y/Text-ProgressBar/blob/master/ProgressBar.js
  * */
@@ -738,6 +748,11 @@ export const getAddress = (host = '0.0.0.0', logger?: Logger): { v4?: string, v6
         v4,
         v6
     };
+}
+
+const IPV4_REGEX = new RegExp(/^((25[0-5]|(2[0-4]|1\d|[1-9]|)\d)\.?\b){4}$/);
+export const isIPv4 = (address: string): boolean => {
+    return parseRegexSingleOrFail(IPV4_REGEX, address) !== undefined;
 }
 
 export const comparingMultipleArtists = (existing: PlayObject, candidate: PlayObject): boolean => {

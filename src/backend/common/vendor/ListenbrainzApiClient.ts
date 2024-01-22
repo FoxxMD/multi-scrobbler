@@ -1,22 +1,22 @@
-import AbstractApiClient from "./AbstractApiClient";
+import AbstractApiClient from "./AbstractApiClient.js";
 import request, {Request} from 'superagent';
-import { ListenBrainzClientData } from "../infrastructure/config/client/listenbrainz";
-import {DEFAULT_RETRY_MULTIPLIER, FormatPlayObjectOptions} from "../infrastructure/Atomic";
+import { ListenBrainzClientData } from "../infrastructure/config/client/listenbrainz.js";
+import { DEFAULT_RETRY_MULTIPLIER, FormatPlayObjectOptions } from "../infrastructure/Atomic.js";
 import dayjs from "dayjs";
 import { stringSameness } from '@foxxmd/string-sameness';
-import {
-    combinePartsToString,
-} from "../../utils";
-import { PlayObject } from "../../../core/Atomic";
-import { slice } from "../../../core/StringUtils";
+import { combinePartsToString } from "../../utils.js";
+import { PlayObject } from "../../../core/Atomic.js";
+import { slice } from "../../../core/StringUtils.js";
 import {
     findDelimiters,
-    normalizeStr, parseArtistCredits, parseCredits,
+    normalizeStr,
+    parseArtistCredits,
+    parseCredits,
     parseTrackCredits,
-    uniqueNormalizedStrArr
-} from "../../utils/StringUtils";
-import {UpstreamError} from "../errors/UpstreamError";
-import {getScrobbleTsSOCDate} from "../../utils/TimeUtils";
+    uniqueNormalizedStrArr,
+} from "../../utils/StringUtils.js";
+import { UpstreamError } from "../errors/UpstreamError.js";
+import { getScrobbleTsSOCDate } from "../../utils/TimeUtils.js";
 
 
 export interface ArtistMBIDMapping {

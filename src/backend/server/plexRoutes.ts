@@ -1,10 +1,10 @@
-import { ExpressHandler } from "../common/infrastructure/Atomic";
-import { mergeArr, parseBool } from "../utils";
+import { ExpressHandler } from "../common/infrastructure/Atomic.js";
+import { mergeArr, parseBool } from "../utils.js";
 import {ExpressWithAsync} from "@awaitjs/express";
 import {Logger} from "@foxxmd/winston";
-import ScrobbleSources from "../sources/ScrobbleSources";
-import PlexSource, { plexRequestMiddle } from "../sources/PlexSource";
-import { PlexNotifier } from "../sources/ingressNotifiers/PlexNotifier";
+import ScrobbleSources from "../sources/ScrobbleSources.js";
+import PlexSource, { plexRequestMiddle } from "../sources/PlexSource.js";
+import { PlexNotifier } from "../sources/ingressNotifiers/PlexNotifier.js";
 
 export const setupPlexRoutes = (app: ExpressWithAsync, logger: Logger, scrobbleSources: ScrobbleSources) => {
 

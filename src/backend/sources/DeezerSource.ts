@@ -6,14 +6,14 @@ import {
     sleep,
     sortByOldestPlayDate,
     writeFile,
-} from "../utils";
+} from "../utils.js";
 import {Strategy as DeezerStrategy} from 'passport-deezer';
-import AbstractSource, { RecentlyPlayedOptions } from "./AbstractSource";
+import AbstractSource, { RecentlyPlayedOptions } from "./AbstractSource.js";
 import dayjs from "dayjs";
-import { DeezerSourceConfig } from "../common/infrastructure/config/source/deezer";
-import {DEFAULT_RETRY_MULTIPLIER, FormatPlayObjectOptions, InternalConfig} from "../common/infrastructure/Atomic";
+import { DeezerSourceConfig } from "../common/infrastructure/config/source/deezer.js";
+import { DEFAULT_RETRY_MULTIPLIER, FormatPlayObjectOptions, InternalConfig } from "../common/infrastructure/Atomic.js";
 import EventEmitter from "events";
-import { PlayObject } from "../../core/Atomic";
+import { PlayObject } from "../../core/Atomic.js";
 import {ErrorWithCause} from "pony-cause";
 
 export default class DeezerSource extends AbstractSource {

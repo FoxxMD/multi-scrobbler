@@ -1,10 +1,10 @@
-import { TautulliNotifier } from "../sources/ingressNotifiers/TautulliNotifier";
-import { ExpressHandler } from "../common/infrastructure/Atomic";
-import TautulliSource from "../sources/TautulliSource";
-import { parseBool } from "../utils";
+import { TautulliNotifier } from "../sources/ingressNotifiers/TautulliNotifier.js";
+import { ExpressHandler } from "../common/infrastructure/Atomic.js";
+import TautulliSource from "../sources/TautulliSource.js";
+import { parseBool } from "../utils.js";
 import {ExpressWithAsync} from "@awaitjs/express";
 import {Logger} from "@foxxmd/winston";
-import ScrobbleSources from "../sources/ScrobbleSources";
+import ScrobbleSources from "../sources/ScrobbleSources.js";
 
 export const setupTautulliRoutes = (app: ExpressWithAsync, logger: Logger, scrobbleSources: ScrobbleSources) => {
 

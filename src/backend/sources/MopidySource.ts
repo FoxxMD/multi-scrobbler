@@ -1,11 +1,11 @@
-import MemorySource from "./MemorySource";
-import { MopidySourceConfig } from "../common/infrastructure/config/source/mopidy";
+import MemorySource from "./MemorySource.js";
+import { MopidySourceConfig } from "../common/infrastructure/config/source/mopidy.js";
 import {
     FormatPlayObjectOptions,
     InternalConfig,
     PlayerStateData,
     SINGLE_USER_PLATFORM_ID,
-} from "../common/infrastructure/Atomic";
+} from "../common/infrastructure/Atomic.js";
 import dayjs from "dayjs";
 import Mopidy, {models} from "mopidy";
 import {URL} from "url";
@@ -13,9 +13,9 @@ import normalizeUrl from 'normalize-url';
 import {EventEmitter} from "events";
 import pEvent from 'p-event';
 import winston from '@foxxmd/winston';
-import { RecentlyPlayedOptions } from "./AbstractSource";
-import { PlayObject } from "../../core/Atomic";
-import { buildTrackString } from "../../core/StringUtils";
+import { RecentlyPlayedOptions } from "./AbstractSource.js";
+import { PlayObject } from "../../core/Atomic.js";
+import { buildTrackString } from "../../core/StringUtils.js";
 import {ErrorWithCause} from "pony-cause";
 
 export class MopidySource extends MemorySource {

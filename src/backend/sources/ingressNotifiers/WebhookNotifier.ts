@@ -1,4 +1,4 @@
-import {IngressNotifier} from "./IngressNotifier";
+import { IngressNotifier } from "./IngressNotifier.js";
 import {Request} from "express";
 import path from "path";
 

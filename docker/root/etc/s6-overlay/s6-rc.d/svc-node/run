@@ -4,6 +4,7 @@
 
 # NODE_ARGS can be passed by ENV in docker command like "docker run foxxmd/multi-scrobbler -e NODE_ARGS=--optimize_for_size"
 echo -e "\nmulti-scrobbler is starting!"
+export NODE_ENV=production
 cd /app || exit
 exec \
-	  s6-setuidgid abc /usr/bin/node $NODE_ARGS /app/build/server.js
+	  s6-setuidgid abc /usr/bin/node $NODE_ARGS /app/node_modules/.bin/tsx /app/src/backend/index.ts

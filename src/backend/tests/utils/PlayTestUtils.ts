@@ -1,4 +1,4 @@
-import {JsonPlayObject, ObjectPlayData, PlayData, PlayMeta, PlayObject} from "../../../core/Atomic";
+import { JsonPlayObject, ObjectPlayData, PlayData, PlayMeta, PlayObject } from "../../../core/Atomic.js";
 import dayjs, {Dayjs} from "dayjs";
 import utc from "dayjs/plugin/utc.js";
 import isBetween from "dayjs/plugin/isBetween.js";

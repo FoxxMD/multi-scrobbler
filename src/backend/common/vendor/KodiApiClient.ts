@@ -1,13 +1,13 @@
-import AbstractApiClient from "./AbstractApiClient";
+import AbstractApiClient from "./AbstractApiClient.js";
 import {ErrorWithCause} from "pony-cause";
-import { KodiData } from "../infrastructure/config/source/kodi";
+import { KodiData } from "../infrastructure/config/source/kodi.js";
 import { KodiClient } from 'kodi-api'
 import normalizeUrl from "normalize-url";
 import {URL} from "url";
-import { RecentlyPlayedOptions } from "../../sources/AbstractSource";
-import { FormatPlayObjectOptions } from "../infrastructure/Atomic";
+import { RecentlyPlayedOptions } from "../../sources/AbstractSource.js";
+import { FormatPlayObjectOptions } from "../infrastructure/Atomic.js";
 import dayjs from "dayjs";
-import { PlayObject } from "../../../core/Atomic";
+import { PlayObject } from "../../../core/Atomic.js";
 
 interface KodiDuration {
     hours: number
@@ -47,7 +47,7 @@ export class KodiApiClient extends AbstractApiClient {
 
     token?: string;
 
-    client: KodiClient;
+    declare client: KodiClient;
 
     constructor(name: any, config: KodiData, options = {}) {
         super('Kodi', name, config, options);

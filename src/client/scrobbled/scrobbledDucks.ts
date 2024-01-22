@@ -4,7 +4,7 @@ import {JsonPlayObject} from "../../core/Atomic";
 type ScrobbledResponse = (JsonPlayObject & { index: number })[];
 export const scrobbledApi = createApi({
     reducerPath: 'scrobbledApi',
-    baseQuery: fetchBaseQuery({ baseUrl: '/api/' }),
+    baseQuery: fetchBaseQuery({ baseUrl: './api/' }),
     endpoints: (builder) => ({
         getRecent: builder.query<ScrobbledResponse, {name: string, type: string}>({
             query: (params) => `scrobbled?name=${params.name}&type=${params.type}`,

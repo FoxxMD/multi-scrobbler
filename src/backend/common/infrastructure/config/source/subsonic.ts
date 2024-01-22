@@ -1,5 +1,5 @@
-import { CommonSourceConfig, CommonSourceData } from "./index";
-import { PollingOptions } from "../common";
+import { CommonSourceConfig, CommonSourceData } from "./index.js";
+import { PollingOptions } from "../common.js";
 
 export interface SubsonicData extends CommonSourceData, PollingOptions {
     /**

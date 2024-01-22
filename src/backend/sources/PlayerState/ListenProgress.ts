@@ -1,6 +1,6 @@
 import dayjs, {Dayjs} from "dayjs";
 
-import {PlayProgress, Second} from "../../../core/Atomic";
+import { PlayProgress, Second } from "../../../core/Atomic.js";
 
 export class ListenProgress implements PlayProgress {
 

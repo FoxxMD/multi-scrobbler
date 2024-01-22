@@ -1,15 +1,10 @@
 import {describe, it} from 'mocha';
 import {assert} from 'chai';
-import {generatePlay} from "../utils/PlayTestUtils";
-import {GenericPlayerState} from "../../sources/PlayerState/GenericPlayerState";
-import {getLogger} from "../../common/logging";
-import {
-    CALCULATED_PLAYER_STATUSES,
-    NO_DEVICE,
-    NO_USER,
-    REPORTED_PLAYER_STATUSES
-} from "../../common/infrastructure/Atomic";
-import {playObjDataMatch} from "../../utils";
+import { generatePlay } from "../utils/PlayTestUtils.js";
+import { GenericPlayerState } from "../../sources/PlayerState/GenericPlayerState.js";
+import { getLogger } from "../../common/logging.js";
+import { CALCULATED_PLAYER_STATUSES, NO_DEVICE, NO_USER, REPORTED_PLAYER_STATUSES } from "../../common/infrastructure/Atomic.js";
+import { playObjDataMatch } from "../../utils.js";
 import dayjs from "dayjs";
 import clone from "clone";
 

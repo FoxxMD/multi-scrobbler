@@ -1,6 +1,6 @@
-import {DELIMITERS} from "../common/infrastructure/Atomic";
-import {parseRegexSingleOrFail} from "../utils";
-import {PlayObject} from "../../core/Atomic";
+import { DELIMITERS } from "../common/infrastructure/Atomic.js";
+import { parseRegexSingleOrFail } from "../utils.js";
+import { PlayObject } from "../../core/Atomic.js";
 import {stringSameness, StringSamenessResult} from "@foxxmd/string-sameness";
 import {strategies} from '@foxxmd/string-sameness';
 
@@ -31,14 +31,59 @@ export const normalizeStr = (str: string, options?: {keepSingleWhitespace?: bool
 
 export interface PlayCredits {
     primary: string
+    primaryComposite: string
     secondary?: string[]
+    suffix?: string
 }
+
+/**
+ * Matches if the secondary string is wrapped in parenthesis-like symbols. Returns joiner, credits, and
+ * suffix = if anything appears after end of wrapped string
+ *
+ * EX (feat. Kaash Paige & Diamond Platnumz) - Remix
+ *     !!!!  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^  *******
+ *
+ *
+ * */
+export const SECONDARY_CAPTURED_REGEX = new RegExp(/[(\[]\s*(?<joiner>ft\.?\W|feat\.?\W|featuring|vs\.?\W)\s*(?<credits>.*)[)\]](?<creditsSuffix>.*)/i);
+
+
+/**
+ * Matches if the secondary string is NOT wrapped in parenthesis-like symbols. Returns joiner, credits, and
+ * suffix = if anything appears wrapped or starting with " - " proceeding string appearing after joiner
+ *
+ * EX feat. Diag
+ *    !!!!  ^^^^
+ *
+ *    Ft Akon, Paige & Djfredse (Remix Braquer vos têtes)
+ *    !! ^^^^^^^^^^^^^^^^^^^^^^ *************************
+ *
+ *    feat. Kaash Paige & Diamond Platnumz - Remix
+ *    !!!!  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ *******
+ *
+ * */
+export const SECONDARY_FREE_REGEX = new RegExp(/^\s*(?<joiner>ft\.?\W|feat\.?\W|featuring|vs\.?\W)\s*(?<credits>(?:.+?(?= - |\s*[(\[]))|(?:.*))(?<creditsSuffix>.*)/i);
+
+const SECONDARY_REGEX_STRATS: RegExp[] = [SECONDARY_CAPTURED_REGEX, SECONDARY_FREE_REGEX];
+
+/**
+ * Matches JUST primary and secondary sections separated by a REQUIRED joiner that can optionally be wrapped in parenthesis-like symbols
+ *
+ * EX
+ *    Criminal mind Ft Akon (Remix Braquer vos têtes)
+ *    ^^^^^^^^^^^^^**********************************
+ *
+ *    Wasted Energy (feat. Kaash Paige & Diamond Platnumz) - Remix
+ *    ^^^^^^^^^^^^^^**********************************************
+ *
+ * */
+export const PRIMARY_SECONDARY_SECTIONS_REGEX = new RegExp(/^(?<primary>.+?)(?<secondary>(?:[(\[]?(?:\Wft\.?|\Wfeat\.?|featuring|\Wvs\.)).*)/i);
 
 /**
  * For matching the most common track/artist pattern that has a joiner
  *
  * Primary ft. 2nd Artist, 3rd Artist
- * Primary (2nd Artist)
+ * Primary (2nd Artist) - Suffix
  * Primary [featuring 2nd Artist]
  *
  * ____
@@ -49,28 +94,44 @@ export interface PlayCredits {
  *   => MUST begin with joiner ft. feat. featuring with vs.
  *   => May have closing character ) ]
  * */
-export const SECONDARY_ARTISTS_SECTION_REGEX = new RegExp(/^(?<primary>[^(\[]*)?(?<secondarySection>[(\[]?(?<joiner>\Wft\.?|\Wfeat\.?|featuring|\Wvs\.?) (?<secondaryArtists>[^)\]]*)(?:[)\]]|\s*)$)/i);
 // export const SECONDARY_ARTISTS_REGEX = new RegExp(//ig);
 export const parseCredits = (str: string, delimiters?: boolean | string[]): PlayCredits => {
     if (str.trim() === '') {
         return undefined;
     }
+
     let primary: string | undefined;
     let secondary: string[] = [];
-    const results = parseRegexSingleOrFail(SECONDARY_ARTISTS_SECTION_REGEX, str);
-    if (results !== undefined) {
-        primary = results.named.primary !== undefined ? results.named.primary.trim() : undefined;
+    let suffix: string | undefined;
+    const results = parseRegexSingleOrFail(PRIMARY_SECONDARY_SECTIONS_REGEX, str);
+    if(results !== undefined) {
+
         let delims: string[] | undefined;
         if (Array.isArray(delimiters)) {
             delims = delimiters;
         } else if (delimiters === false) {
             delims = [];
         }
-        secondary = parseStringList(results.named.secondaryArtists as string, delims)
+
+        primary = results.named.primary.trim();
+        for(const strat of SECONDARY_REGEX_STRATS) {
+            const secCredits = parseRegexSingleOrFail(strat, results.named.secondary);
+            if(secCredits !== undefined) {
+                secondary = parseStringList(secCredits.named.credits as string, delims)
+                suffix = secCredits.named.creditsSuffix;
+                break;
+            }
+        }
+        if(secondary === undefined) {
+            // uh oh, this shouldn't have happened! Return nothing since we don't know how to parse this
+            return undefined;
+        }
         return {
             primary,
-            secondary
-        };
+            primaryComposite: `${primary}${suffix ?? ''}`,
+            secondary,
+            suffix
+        }
     }
     return undefined;
 }
@@ -92,6 +153,7 @@ export const parseArtistCredits = (str: string, delimiters?: boolean | string[])
         if (primaries.length > 1) {
             return {
                 primary: primaries[0],
+                primaryComposite: primaries[0],
                 secondary: primaries.slice(1).concat(withJoiner.secondary)
             }
         }
@@ -102,11 +164,13 @@ export const parseArtistCredits = (str: string, delimiters?: boolean | string[])
     if (artists.length > 1) {
         return {
             primary: artists[0],
+            primaryComposite: artists[0],
             secondary: artists.slice(1)
         }
     }
     return {
-        primary: artists[0]
+        primary: artists[0],
+        primaryComposite: artists[0],
     }
 }
 export const parseTrackCredits = (str: string, delimiters?: boolean | string[]): PlayCredits | undefined => parseCredits(str, delimiters);
@@ -150,10 +214,10 @@ export const compareScrobbleTracks = (existing: PlayObject, candidate: PlayObjec
 
     // try to remove any joiners based on existing artists
     const existingCredits = parseTrackCredits(existingTrack);
-    const existingPrimary = existingCredits !== undefined ? existingCredits.primary : existingTrack;
+    const existingPrimary = existingCredits !== undefined ? existingCredits.primaryComposite : existingTrack;
 
     const candidateCredits = parseTrackCredits(candidateTrack);
-    const candidatePrimary = candidateCredits !== undefined ? candidateCredits.primary : candidateTrack;
+    const candidatePrimary = candidateCredits !== undefined ? candidateCredits.primaryComposite : candidateTrack;
 
     // take whichever score is higher
     const creditsCleanedTrackSameness = compareNormalizedStrings(existingPrimary, candidatePrimary);
