@@ -120,14 +120,14 @@ export default abstract class AbstractSource implements Authenticatable {
         try {
             const res = await this.doBuildInitData();
             if (res === true) {
-                this.logger.debug('Init build succeeded');
+                this.logger.debug('Building required data init succeeded');
             } else if (typeof res === 'string') {
-                this.logger.debug(`Init build succeeded => ${res}`);
+                this.logger.debug(`Building required data init succeeded => ${res}`);
             }
             this.buildOK = true;
         } catch (e) {
             this.buildOK = false;
-            throw new ErrorWithCause('Building data for initialization failed', {cause: e});
+            throw new ErrorWithCause('Building required data for initialization failed', {cause: e});
         }
     }
 
