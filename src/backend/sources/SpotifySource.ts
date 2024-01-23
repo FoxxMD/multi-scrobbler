@@ -298,7 +298,10 @@ export default class SpotifySource extends MemorySource {
                 this.spotifyApi.setRefreshToken(tokenResponse.body['refresh_token']);
                 await writeFile(this.workingCredsPath, JSON.stringify({
                     token: tokenResponse.body['access_token'],
-                    refreshToken: tokenResponse.body['refresh_token']
+                    refreshToken: tokenResponse.body['refresh_token'],
+                    expires: Date.now() + (tokenResponse.body['expires_in'] * 1000),
+                    expiresIn: tokenResponse.body['expires_in'],
+                    grant: tokenResponse.body['token_type']
                 }));
                 this.logger.info('Got token from code grant authorization!');
                 return true;
@@ -427,12 +430,17 @@ export default class SpotifySource extends MemorySource {
                             // spotify may return a new refresh token
                             // if it doesn't then continue to use the last refresh token we received
                             refresh_token = this.spotifyApi.getRefreshToken(),
+                            expires_in,
+                            token_type
                         } = {}
                     } = tokenResponse;
                     this.spotifyApi.setAccessToken(access_token);
                     await writeFile(this.workingCredsPath, JSON.stringify({
                         token: access_token,
                         refreshToken: refresh_token,
+                        expires: Date.now() + (expires_in * 1000),
+                        expiresIn: expires_in,
+                        grant: token_type
                     }));
                 } catch (refreshError) {
                     const error = new UpstreamError('Refreshing access token encountered an error', {cause: refreshError});
