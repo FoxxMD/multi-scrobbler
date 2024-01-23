@@ -28,7 +28,6 @@ import {config, Logger} from "@foxxmd/winston";
 import {ContextualValidationError} from "@foxxmd/chromecast-client/dist/cjs/src/utils.js";
 import { buildTrackString } from "../../core/StringUtils.js";
 import { discoveryAvahi, discoveryNative } from "../utils/MDNSUtils.js";
-import {options} from "superagent";
 
 interface ChromecastDeviceInfo {
     mdns: MdnsDeviceInfo
@@ -114,10 +113,6 @@ export class ChromecastSource extends MemorySource {
             } = {},
         } = this.config;
 
-        for (const device of devices) {
-            await this.initializeDevice({name: device.name, addresses: [device.address], type: 'googlecast'});
-        }
-
         this.discoverDevices(logPayload);
         if(useAutoDiscovery) {
             this.logger.debug('Will run mDNS discovery on subsequent heartbeats.')
@@ -131,8 +126,15 @@ export class ChromecastSource extends MemorySource {
             data: {
                 useAvahi,
                 useAutoDiscovery,
+                devices = [],
             } = {}
         } = this.config;
+
+        for (const device of devices) {
+            this.initializeDevice({name: device.name, addresses: [device.address], type: 'googlecast'}).catch((err) => {
+                this.logger.error(new ErrorWithCause('Uncaught error occurred while connecting to manually configured device', {cause: err}));
+            });
+        }
 
         if (useAutoDiscovery) {
             if (useAvahi) {
@@ -273,6 +275,7 @@ export class ChromecastSource extends MemorySource {
                     if(info === undefined) {
                         this.logger.error(new ErrorWithCause(`(${clientName}) Encountered error in castv2 lib`, {cause: payload as Error}));
                     } else {
+                        info.connected = false;
                         info.logger.error(new ErrorWithCause(`Encountered error in castv2 lib`, {cause: payload as Error}));
                     }
                     break;
@@ -290,14 +293,14 @@ export class ChromecastSource extends MemorySource {
                 apps = await getCurrentPlatformApplications(v.platform);
                 v.retries = 0;
             } catch (e) {
-                v.logger.warn(new ErrorWithCause('Could not refresh applications', {cause: e}));
+                v.logger.warn(new ErrorWithCause(`Could not refresh applications. Will after ${5 - v.retries} retries if error does not resolve itself.`, {cause: e}));
                 const validationError = findCauseByReference(e, ContextualValidationError);
                 if(validationError && validationError.data !== undefined) {
                     v.logger.warn(JSON.stringify(validationError.data));
                 }
                 v.retries++;
-                if(v.retries >= 6) {
-                    this.removeApplications(k, 'Unable to refresh application more than 6 times consecutively! If this device comes back online it will be re-added on next heartbeat.');
+                if(v.retries >= 5) {
+                    this.removeDevice(k, 'Unable to refresh application more than 6 times consecutively! If this device comes back online it will be re-added on next heartbeat.');
                 }
                 continue;
             }
@@ -375,6 +378,17 @@ export class ChromecastSource extends MemorySource {
         }
     }
 
+    protected removeDevice = (deviceName: string, reason?: string) => {
+        this.removeApplications(deviceName, reason);
+        if(reason !== undefined) {
+            this.logger.warn(reason);
+        }
+        const device = this.devices.get(deviceName);
+        device.platform.close();
+        device.client.close();
+        this.devices.delete(deviceName);
+    }
+
     protected removeApplications = (deviceName: string, reason?: string) => {
         const deviceInfo = this.devices.get(deviceName);
         if(deviceInfo === undefined) {
@@ -382,6 +396,7 @@ export class ChromecastSource extends MemorySource {
             return;
         }
         for(const [tId, app] of deviceInfo.applications) {
+            app.controller.dispose();
             this.deletePlayer(app.playerId, reason)
             //app.logger.close();
             deviceInfo.applications.delete(tId);
@@ -390,7 +405,7 @@ export class ChromecastSource extends MemorySource {
 
     protected pruneApplications = (force: boolean = false) => {
         for(const [k, v] of this.devices.entries()) {
-            if (!force && !v.connected) {
+            if (!force && (!v.connected || v.retries > 0)) {
                 continue;
             }
 
@@ -400,6 +415,7 @@ export class ChromecastSource extends MemorySource {
                 if(app.stale && Math.abs(app.staleAt.diff(dayjs(), 's')) > 60) {
                     app.logger.info(`Removing due to being stale for 60 seconds`);
                     //app.logger.close();
+                    app.controller.dispose();
                     v.applications.delete(tId);
                     forDeletion.push([app.playerId, 'No updates for 60 seconds']);
                 } else if(app.badData && Math.abs(app.badDataAt.diff(dayjs(), 's')) > 60 && this.players.has(app.playerId)) {
