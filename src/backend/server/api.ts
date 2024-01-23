@@ -33,6 +33,7 @@ import { sortByNewestPlayDate } from "../utils.js";
 import bodyParser from "body-parser";
 import { setupWebscrobblerRoutes } from "./webscrobblerRoutes.js";
 import {FixedSizeList} from 'fixed-size-list';
+import SpotifySource from "../sources/SpotifySource.js";
 
 const maxBufferSize = 300;
 const output: {
@@ -203,6 +204,12 @@ export const setupApi = (app: ExpressWithAsync, logger: Logger, initialLogOutput
                 authed,
                 players: 'players' in x ? (x as MemorySource).playersToObject() : {}
             };
+            if(type === 'spotify') {
+                base.authData = {
+                    clientId: (x as SpotifySource).config.data.clientId,
+                    redirectUri: (x as SpotifySource).usedRedirectUri
+                }
+            }
             if(!x.isReady()) {
                 if(x.buildOK === false) {
                     base.status = 'Initializing Data Failed';

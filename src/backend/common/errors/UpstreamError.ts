@@ -1,13 +1,13 @@
 import {ErrorWithCause} from "pony-cause";
 import { findCauseByFunc } from "../../utils.js";
-import {Response} from 'superagent';
+import {Response as SuperagentResponse} from 'superagent';
 
 export class UpstreamError<T = undefined> extends ErrorWithCause<T> {
 
     showStopper: boolean = false;
-    response?: Response
+    response?: SuperagentResponse | Response
 
-    constructor(message: string, options?: { cause?: T, showStopper?: boolean, response?: Response } | undefined) {
+    constructor(message: string, options?: { cause?: T, showStopper?: boolean, response?: Response | SuperagentResponse } | undefined) {
         super(message, options);
         const {showStopper = false, response} = options;
         this.showStopper = showStopper;

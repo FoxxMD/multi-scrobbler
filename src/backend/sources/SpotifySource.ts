@@ -9,7 +9,14 @@ import {
     findCauseByFunc,
 } from "../utils.js";
 import SpotifyWebApi from "spotify-web-api-node";
-import {AccessToken, AuthorizationCodeWithPKCEStrategy, SpotifyApi} from '@spotify/web-api-ts-sdk';
+import {
+    AccessToken,
+    AuthorizationCodeWithPKCEStrategy, MaxInt, PlaybackState,
+    SdkOptions,
+    SpotifyApi,
+    UserProfile,
+    RecentlyPlayedTracksPage
+} from '@fostertheweb/spotify-web-sdk';
 import request from 'superagent';
 import AbstractSource, { RecentlyPlayedOptions } from "./AbstractSource.js";
 import { SpotifySourceConfig } from "../common/infrastructure/config/source/spotify.js";
@@ -34,19 +41,19 @@ import MemorySource from "./MemorySource.js";
 import {ErrorWithCause} from "pony-cause";
 import { PlayObject, SCROBBLE_TS_SOC_END, SCROBBLE_TS_SOC_START, ScrobbleTsSOC } from "../../core/Atomic.js";
 import { buildTrackString, truncateStringToLength } from "../../core/StringUtils.js";
-import { isNodeNetworkException } from "../common/errors/NodeErrors.js";
+import {getExceptionWithResponse, isNodeNetworkException} from "../common/errors/NodeErrors.js";
 import { hasUpstreamError, UpstreamError } from "../common/errors/UpstreamError.js";
-
-const scopes = ['user-read-recently-played', 'user-read-currently-playing', 'user-read-playback-state', 'user-read-playback-position'];
-const state = 'random';
+import {MSSpotifyResponseValidator} from "../common/vendor/spotify/SpotifyErrorHandler.js";
+import {FileProvidedAccessTokenStrategy} from "../common/vendor/spotify/FileProvidedAccessTokenStrategy.js";
 
 const shortDeviceId = truncateStringToLength(10, '');
 
 export default class SpotifySource extends MemorySource {
 
-    spotifyApi: SpotifyWebApi;
-    spotifyApiNew?: SpotifyApi
+    spotifyApi?: SpotifyApi
     workingCredsPath: string;
+    workingCreds?: AccessToken;
+    usedRedirectUri: string;
 
     requiresAuth = true;
     requiresAuthInteraction = true;
@@ -60,6 +67,7 @@ export default class SpotifySource extends MemorySource {
         const {
             data: {
                 interval = DEFAULT_POLLING_INTERVAL,
+                redirectUri
             } = {}
         } = config;
 
@@ -70,6 +78,7 @@ export default class SpotifySource extends MemorySource {
         this.workingCredsPath = `${this.configDir}/currentCreds-${name}.json`;
         this.canPoll = true;
         this.canBacklog = true;
+        this.usedRedirectUri = redirectUri || `${this.localUrl}/callback`;
     }
 
     static formatPlayObj(obj: PlayHistoryObject | CurrentlyPlayingObject, options: FormatPlayObjectOptions = {}): PlayObject {
@@ -202,10 +211,7 @@ export default class SpotifySource extends MemorySource {
         const {
             clientId,
             clientSecret,
-            redirectUri,
         } = this.config.data || {};
-
-        const rdUri = redirectUri || `${this.localUrl}/callback`;
 
         const apiConfig = {
             clientId,
@@ -218,8 +224,6 @@ export default class SpotifySource extends MemorySource {
             this.logger.info('No values found for Spotify configuration, skipping initialization');
             return;
         }
-        // @ts-expect-error TS(2339): Property 'redirectUri' does not exist on type '{ c... Remove this comment to see the full error message
-        apiConfig.redirectUri = rdUri;
 
         const validationErrors = [];
 
@@ -229,7 +233,7 @@ export default class SpotifySource extends MemorySource {
         if (clientSecret === undefined) {
             validationErrors.push('clientSecret must be defined');
         }
-        if (rdUri === undefined) {
+        if (this.usedRedirectUri === undefined) {
             validationErrors.push('redirectUri must be defined');
         }
 
@@ -238,12 +242,36 @@ export default class SpotifySource extends MemorySource {
             throw new Error('Failed to initialize a Spotify source');
         }
 
+        const onRefreshToken = async (data: AccessToken) => {
+            try {
+                await writeFile(this.workingCredsPath, JSON.stringify(accessTokenToMSCreds(data)));
+                this.logger.debug('Refreshed access token');
+            } catch (e) {
+                this.logger.warn(new ErrorWithCause('Failed to write refreshed access token to file', {cause: e}));
+            }
+        }
+
+        const sdkOpts: SdkOptions = {
+            responseValidator: new MSSpotifyResponseValidator()
+        }
+
         if(accessToken === undefined || refreshToken === undefined) {
             this.logger.info(`No access or refresh token is present. User interaction for authentication is required.`);
-            this.logger.info(`Redirect URL that will be used on auth callback: '${rdUri}'`);
-            this.spotifyApiNew = new SpotifyApi(new AuthorizationCodeWithPKCEStrategy(clientId, rdUri, scopes));
+            this.logger.info(`Redirect URL that will be used on auth callback: '${this.usedRedirectUri}'`);
         } else {
-            this.spotifyApiNew = SpotifyApi.withAccessToken(clientId, msCredsToAccessToken(spotifyCreds as MSCredentials));
+            this.workingCreds = msCredsToAccessToken(spotifyCreds as MSCredentials);
+            this.spotifyApi = new SpotifyApi(new FileProvidedAccessTokenStrategy(clientId, this.workingCreds, onRefreshToken), sdkOpts);
+            //this.spotifyApi = SpotifyApi.withAccessToken(clientId, msCredsToAccessToken(spotifyCreds as MSCredentials), sdkOpts);
+        }
+    }
+
+    protected setCredentials = async (data: AccessToken) => {
+        try {
+            this.workingCreds = data;
+            await writeFile(this.workingCredsPath, JSON.stringify(accessTokenToMSCreds(data)));
+            this.logger.debug('Wrote new credentials');
+        } catch (e) {
+            this.logger.warn(new ErrorWithCause('Failed to write refreshed crendentials to file', {cause: e}));
         }
     }
 
@@ -269,51 +297,25 @@ export default class SpotifySource extends MemorySource {
 
     doAuthentication = async () => {
         try {
-            if(null === (await this.spotifyApiNew.getAccessToken())) {
+            if(null === (await this.spotifyApi.getAccessToken())) {
                 this.logger.warn('Cannot use API until an access token has been received from the authorization flow. See the dashboard.');
                 return false;
             }
 
-            await this.callApi<ReturnType<typeof this.spotifyApi.getMe>>(((api: any) => api.getMe()));
+            await this.callApi<UserProfile>((api) => api.currentUser.profile());
             return true;
         } catch (e) {
-            if(isNodeNetworkException(e)) {
-                this.logger.error('Could not communicate with Spotify API');
-            }
-            // this.authFailure = !(e instanceof ErrorWithCause && e.cause !== undefined && isNodeNetworkException(e.cause));
-            // this.logger.error(new ErrorWithCause('Could not successfully communicate with Spotify API', {cause: e}));
-            // this.authed = false;
             throw e;
         }
     }
 
-    createAuthUrl = () => {
-        this.spotifyApiNew.authenticate()
-        return this.spotifyApi.createAuthorizeURL(scopes, this.name);
-    }
-
     handleAuthCodeCallback = async ({
-        error,
-        code
+        data,
     }: any) => {
         try {
-            if (error === undefined) {
-                const tokenResponse = await this.spotifyApi.authorizationCodeGrant(code);
-                this.spotifyApi.setAccessToken(tokenResponse.body['access_token']);
-                this.spotifyApi.setRefreshToken(tokenResponse.body['refresh_token']);
-                await writeFile(this.workingCredsPath, JSON.stringify({
-                    token: tokenResponse.body['access_token'],
-                    refreshToken: tokenResponse.body['refresh_token'],
-                    expiresIn: tokenResponse.body['expires_in'],
-                    grant: tokenResponse.body['token_type']
-                }));
-                this.logger.info('Got token from code grant authorization!');
-                return true;
-            } else {
-                this.logger.warn('Callback contained an error! User may have denied access?')
-                this.logger.error(error);
-                return error;
-            }
+            await this.setCredentials(data as AccessToken);
+            await this.buildSpotifyApi();
+            return true;
         } catch (e) {
             throw e;
         }
@@ -347,38 +349,31 @@ export default class SpotifySource extends MemorySource {
 
     getPlayHistory = async (options: RecentlyPlayedOptions = {}) => {
         const {limit = 20} = options;
-        const func = (api: SpotifyWebApi) => api.getMyRecentlyPlayedTracks({
-            limit
-        });
-        const result = await this.callApi<ReturnType<typeof this.spotifyApi.getMyRecentlyPlayedTracks>>(func);
-        return result.body.items.map((x: any) => SpotifySource.formatPlayObj(x)).sort(sortByOldestPlayDate);
+        const result = await this.callApi((api) => api.player.getRecentlyPlayedTracks(limit as MaxInt<50>))
+        return result.items.map((x: any) => SpotifySource.formatPlayObj(x)).sort(sortByOldestPlayDate);
     }
 
     getNowPlaying = async () => {
-        const func = (api: SpotifyWebApi) => api.getMyCurrentPlayingTrack();
-        const playingRes = await this.callApi<ReturnType<typeof this.spotifyApi.getMyCurrentPlayingTrack>>(func);
 
-        const {body: {item}} = playingRes;
-        if(item !== undefined && item !== null) {
-           return SpotifySource.formatPlayObj(playingRes.body, {newFromSource: true});
+        const playingRes = await this.callApi((api) => api.player.getCurrentlyPlayingTrack())
+
+        if(playingRes.item !== undefined && playingRes.item !== null) {
+            // @ts-expect-error
+           return SpotifySource.formatPlayObj(playingRes, {newFromSource: true});
         }
         return undefined;
     }
 
     getCurrentPlaybackState = async (logError = true): Promise<{device?: UserDevice, playerState?: PlayerStateData}> => {
         try {
-            //const resp = await this.spotifyApiNew.player.getPlaybackState()
-            const funcState = (api: SpotifyWebApi) => api.getMyCurrentPlaybackState();
-            const res = await this.callApi<ReturnType<typeof this.spotifyApi.getMyCurrentPlaybackState>>(funcState);
+            const resp = await this.callApi((api) => api.player.getPlaybackState())
             const {
-                body: {
-                    device,
-                    item,
-                    is_playing,
-                    timestamp,
-                    progress_ms,
-                } = {}
-            } = res;
+                device,
+                item,
+                is_playing,
+                timestamp,
+                progress_ms,
+            } = resp;
             if(device !== undefined) {
                 let status: ReportedPlayerStatus = 'stopped';
                 if(is_playing) {
@@ -391,7 +386,8 @@ export default class SpotifySource extends MemorySource {
                     playerState: {
                         platformId: [combinePartsToString([shortDeviceId(device.id), device.name]), NO_USER],
                         status,
-                        play: item !== null && item !== undefined ? SpotifySource.formatPlayObj(res.body, {newFromSource: true}) : undefined,
+                        // @ts-expect-error
+                        play: item !== null && item !== undefined ? SpotifySource.formatPlayObj(resp, {newFromSource: true}) : undefined,
                         timestamp: dayjs(timestamp),
                         position: progress_ms !== null && progress_ms !== undefined ? progress_ms / 1000 : undefined,
                     }
@@ -407,12 +403,7 @@ export default class SpotifySource extends MemorySource {
         }
     }
 
-/*    getDevices = async () => {
-        const funcDevice = (api: SpotifyWebApi) => api.getMyDevices();
-        return await this.callApi<ReturnType<typeof this.spotifyApi.getMyDevices>>(funcDevice);
-    }*/
-
-    callApi = async <T>(func: (api: SpotifyWebApi) => Promise<any>, retries = 0): Promise<T> => {
+    callApi = async <T>(func: (api: SpotifyApi) => Promise<T>, retries = 0): Promise<T> => {
         const {
             maxRequestRetries = 1,
             retryMultiplier = 2,
@@ -420,58 +411,37 @@ export default class SpotifySource extends MemorySource {
         try {
             return await func(this.spotifyApi);
         } catch (e) {
-            const spotifyError = new UpstreamError('Spotify API call failed', {cause: e});
-            if (e.statusCode === 401 && !hasApiPermissionError(e)) {
-                if (this.spotifyApi.getRefreshToken() === undefined) {
-                    throw new Error('Access token was not valid and no refresh token was present')
-                }
-                this.logger.debug('Access token was not valid, attempting to refresh');
-
-                try {
-                    const tokenResponse = await this.spotifyApi.refreshAccessToken();
-                    const {
-                        body: {
-                            access_token,
-                            // spotify may return a new refresh token
-                            // if it doesn't then continue to use the last refresh token we received
-                            refresh_token = this.spotifyApi.getRefreshToken(),
-                        } = {}
-                    } = tokenResponse;
-                    this.spotifyApi.setAccessToken(access_token);
-                    await writeFile(this.workingCredsPath, JSON.stringify({
-                        token: access_token,
-                        refreshToken: refresh_token,
-                    }));
-                } catch (refreshError) {
-                    const error = new UpstreamError('Refreshing access token encountered an error', {cause: refreshError});
+            let spotifyError: UpstreamError | Error | ErrorWithCause;
+            if(e instanceof UpstreamError) {
+                spotifyError = e;
+            } else if(isNodeNetworkException(e)) {
+                spotifyError = new UpstreamError('Could not reach Spotify API server', {cause: e});
+            } else {
+                spotifyError = new ErrorWithCause('Unexpected error occurred in Spotify API library', {cause: e});
+            }
+            const resp = getExceptionWithResponse(spotifyError);
+            if((isNodeNetworkException(e) || (resp !== undefined && !resp.showStopper))) {
+                if(maxRequestRetries > retries) {
+                    const retryAfter = parseRetryAfterSecsFromObj(e) ?? (retryMultiplier * (retries + 1));
+                    this.logger.warn(`Request failed but retries (${retries}) less than max (${maxRequestRetries}), retrying request after ${retryAfter} seconds...`);
+                    await sleep(retryAfter * 1000);
+                    return this.callApi(func, retries + 1);
+                } else {
+                    const error = new UpstreamError(`Request failed on retry (${retries}) with no more retries permitted (max ${maxRequestRetries})`, {cause: spotifyError});
                     this.logger.error(error);
-                    this.logger.error(spotifyError);
                     throw error;
                 }
-
-                try {
-                    return await func(this.spotifyApi);
-                } catch (ee) {
-                    const secondSpotifyError = new UpstreamError('Spotify API call failed even after refreshing token', {cause: ee});
-                    this.logger.error(secondSpotifyError);
-                    this.logger.error(spotifyError);
-                    throw secondSpotifyError;
-                }
-            } else if(maxRequestRetries > retries) {
-                const retryAfter = parseRetryAfterSecsFromObj(e) ?? (retryMultiplier * (retries + 1));
-                this.logger.warn(`Request failed but retries (${retries}) less than max (${maxRequestRetries}), retrying request after ${retryAfter} seconds...`);
-                await sleep(retryAfter * 1000);
-                return this.callApi(func, retries + 1);
             } else {
-                const error = new UpstreamError(`Request failed on retry (${retries}) with no more retries permitted (max ${maxRequestRetries})`, {cause: e});
-                this.logger.error(error);
-                throw error;
+                if(hasApiPermissionError(e)) {
+                    throw new UpstreamError('Spotify API failed likely due to missing permissions. Reauthenticate your client.', {cause: spotifyError});
+                }
+                throw spotifyError;
             }
         }
     }
 
     onPollPreAuthCheck = async () => {
-        if (this.spotifyApi === undefined) {
+        if ((await this.spotifyApi.getAccessToken()) === null) {
             this.logger.warn('Cannot poll spotify without valid credentials configuration')
             return false;
         }
@@ -539,6 +509,7 @@ const hasApiError = (e: Error): boolean => {
 interface MSCredentials {
     token: string
     refreshToken: string
+    expires?: number
     expiresIn?: number
     grant?: string
 }
@@ -547,8 +518,9 @@ const msCredsToAccessToken = (data: MSCredentials): AccessToken => {
     return {
         access_token: data.token,
         refresh_token: data.refreshToken,
-        expires_in: data.expiresIn ?? 3600,
-        token_type: data.grant ?? 'Bearer'
+        expires: data.expires ?? Date.now(),
+        token_type: data.grant ?? 'Bearer',
+        expires_in: data.expiresIn ?? 3600
     }
 }
 
@@ -556,7 +528,8 @@ export const accessTokenToMSCreds = (data: AccessToken): MSCredentials => {
     return {
         token: data.access_token,
         refreshToken: data.refresh_token,
-        expiresIn: data.expires_in,
-        grant: data.token_type
+        expires: Date.now() + (data.expires_in * 1000),
+        grant: data.token_type,
+        expiresIn: data.expires_in
     }
 }

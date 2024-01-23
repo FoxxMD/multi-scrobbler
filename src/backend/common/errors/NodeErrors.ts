@@ -1,6 +1,7 @@
 import { isArbitraryObject } from "../infrastructure/Atomic.js";
 import ErrnoException = NodeJS.ErrnoException;
 import { findCauseByFunc } from "../../utils.js";
+import {UpstreamError} from "./UpstreamError.js";
 
 export type NodeNetworkErrorCode = 'ENOTFOUND' | 'ETIMEDOUT' | 'EAI_AGAIN' | 'ECONNRESET' | 'ECONNREFUSED' | 'ERRADDRINUSE' | 'EADDRNOTAVAIL' | 'ECONNABORTED' | 'EHOSTUNREACH';
 export const NETWORK_ERROR_CODES = ['ENOTFOUND', 'ETIMEDOUT',  'EAI_AGAIN', 'ECONNRESET', 'ECONNREFUSED', 'ERRADDRINUSE', 'EADDRNOTAVAIL', 'ECONNABORTED', 'EHOSTUNREACH'];
@@ -28,4 +29,8 @@ export const hasNodeNetworkException = (error: unknown): boolean => {
 
 export const getNodeNetworkException = (error: unknown): Error | undefined => {
     return findCauseByFunc(error, isNodeNetworkException);
+}
+
+export const getExceptionWithResponse = (error: unknown): UpstreamError | undefined => {
+    return findCauseByFunc(error, (err) => err instanceof UpstreamError && err.response !== undefined) as UpstreamError | undefined;
 }

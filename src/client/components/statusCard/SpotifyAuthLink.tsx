@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, useCallback } from 'react'
-import {AccessToken, AuthorizationCodeWithPKCEStrategy, SdkOptions, SpotifyApi} from "@spotify/web-api-ts-sdk";
+import {AccessToken, AuthorizationCodeWithPKCEStrategy, SdkOptions, SpotifyApi} from "@fostertheweb/spotify-web-sdk";
 
 const scopes = ['user-read-recently-played', 'user-read-currently-playing', 'user-read-playback-state', 'user-read-playback-position'];
 
@@ -26,17 +26,12 @@ export function useSpotify(key: number, name: string, clientId: string, redirect
                 const resp = await internalSdk.authenticate();
 
                 if (resp.authenticated) {
-                    await fetch(`/api/source/auth`, {
+                    await fetch(`/api/source/auth?name=${name}&type=spotify`, {
                         method: 'POST',
                         headers: {
                             'content-type': 'application/json'
                         },
-                        body: {
-                            type: 'spotify',
-                            // @ts-ignore
-                            name: name,
-                            data: resp.accessToken
-                        }
+                        body: JSON.stringify({data: resp.accessToken}),
                     });
                     setSdk(() => internalSdk);
                 }

@@ -3,7 +3,6 @@ import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc.js';
 import {Logger} from '@foxxmd/winston';
 import JSON5 from 'json5';
-import {TimeoutError, WebapiError} from "spotify-web-api-node/src/response-error.js";
 import {Schema} from 'ajv';
 import * as AjvNS from 'ajv';
 import Ajv from 'ajv';
@@ -27,6 +26,7 @@ import {replaceResultTransformer, stripIndentTransformer, TemplateTag, trimResul
 import {Duration} from "dayjs/plugin/duration.js";
 import { PlayObject } from "../core/Atomic.js";
 import address from "address";
+import {isNodeNetworkException} from "./common/errors/NodeErrors.js";
 
 //const { default: Ajv } = AjvNS;
 dayjs.extend(utc);
@@ -221,18 +221,14 @@ export const parseRetryAfterSecsFromObj = (err: any) => {
 
     let raVal;
 
-    if (err instanceof TimeoutError) {
+    if (isNodeNetworkException(err)) {
         return undefined;
     }
 
-    if (err instanceof WebapiError || 'headers' in err) {
+    if ('headers' in err) {
         const {headers = {}} = err;
         raVal = headers['retry-after']
     }
-    // if (err instanceof Response) {
-    //     const {headers = {}} = err;
-    //     raVal = headers['retry-after']
-    // }
     const {
         response: {
             // @ts-expect-error TS(2525): Initializer provides no value for this binding ele... Remove this comment to see the full error message

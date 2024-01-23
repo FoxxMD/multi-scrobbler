@@ -54,6 +54,25 @@ export const setupAuthRoutes = (app: ExpressWithAsync, logger: Logger, sourceMid
         }
     });
 
+    app.postAsync('/api/source/auth', async function (req, res, next) {
+        const {
+            // @ts-expect-error TS(2339): Property 'scrobbleSource' does not exist on type '... Remove this comment to see the full error message
+            scrobbleSource: source,
+            // @ts-expect-error TS(2339): Property 'sourceName' does not exist on type 'Requ... Remove this comment to see the full error message
+            sourceName: name,
+            body: {
+                data = {}
+            } = {}
+        } = req;
+        try {
+            await (source as SpotifySource).handleAuthCodeCallback(req.body);
+            await (source as SpotifySource).testAuth();
+            (source as SpotifySource).poll();
+        } catch (e) {
+            logger.error(e);
+        }
+    });
+
     app.getAsync(/.*callback$/, async function (req, res, next) {
         const {
             query: {
@@ -85,7 +104,7 @@ export const setupAuthRoutes = (app: ExpressWithAsync, logger: Logger, sourceMid
             const query = new URLSearchParams(req.query as Record<string, string>).toString();
             return res.redirect(307, `/${query.trim() !== '' ? `?${query}` : ''}`);
             // TODO right now all sources requiring source interaction are covered by logic branches (deezer above and spotify here)
-            // but eventually should update all source callbacks to url specific URLS to avoid ambiguity...
+/*            // but eventually should update all source callbacks to url specific URLS to avoid ambiguity...
             // wish we could use state param to identify name/source but not all auth strategies and auth provides may provide access to that
             logger.info('Received auth code callback from Spotify', {label: 'Spotify'});
             const source = scrobbleSources.getByNameAndType(state as string, 'spotify') as SpotifySource;
@@ -97,7 +116,7 @@ export const setupAuthRoutes = (app: ExpressWithAsync, logger: Logger, sourceMid
             } else {
                 responseContent = tokenResult;
             }
-            return res.send(responseContent);
+            return res.send(responseContent);*/
         }
     });
 }

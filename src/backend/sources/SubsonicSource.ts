@@ -172,7 +172,7 @@ export class SubsonicSource extends MemorySource {
 
             const subResponseError = getSubsonicResponseFromError(e);
             if(subResponseError !== undefined) {
-                const resp = getSubsonicResponse(subResponseError.response)
+                const resp = getSubsonicResponse(subResponseError.response as Response)
                 this.logger.info(`Subsonic Server reachable: ${identifiersFromResponse(resp)}`);
                 return true;
             }
@@ -218,7 +218,7 @@ export class SubsonicSource extends MemorySource {
 export const getSubsonicResponseFromError = (error: unknown): UpstreamError => {
     return findCauseByFunc(error, (err) => {
         if(err instanceof UpstreamError && err.response !== undefined) {
-            return getSubsonicResponse(err.response) !== undefined;
+            return getSubsonicResponse(err.response as Response) !== undefined;
         }
         return false;
     }) as UpstreamError | undefined;

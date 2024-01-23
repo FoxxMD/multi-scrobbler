@@ -1,5 +1,4 @@
 import React, {Fragment, useCallback} from 'react';
-//import {AuthorizationCodeWithPKCEStrategy, SpotifyApi} from "@spotify/web-api-ts-sdk";
 import StatusCardSkeleton, {StatusCardSkeletonData} from "./StatusCardSkeleton";
 import SkeletonParagraph from "../skeleton/SkeletonParagraph";
 import {Link} from "react-router-dom";
@@ -14,13 +13,6 @@ export interface SourceStatusCardData extends StatusCardSkeletonData, PropsFromR
     loading?: boolean
     onAuthClick?: Function
 }
-
-/*const sdk = new SpotifyApi(new AuthorizationCodeWithPKCEStrategy("a89cfb5169404e0791d5a6475ffd4eb2", "http://localhost:9078", [
-    'user-read-recently-played',
-    'user-read-currently-playing',
-    'user-read-playback-state',
-    'user-read-playback-position'
-]));*/
 
 const statusToStatusType = (status: string) => {
     const lower = status.toLowerCase();
@@ -82,8 +74,12 @@ const SourceStatusCard = (props: SourceStatusCardData) => {
         let authAction = null;
         if(canPoll && hasAuthInteraction) {
             if(type === 'spotify') {
-
-                authAction = <SpotifyAuthLink name={name} clientId="a89cfb5169404e0791d5a6475ffd4eb2" redirectUri={'http://localhost:9078/callback'} />
+                const {
+                    data: {
+                        authData
+                    } = {}
+                } = props;
+                authAction = <SpotifyAuthLink name={name} clientId={authData.clientId} redirectUri={authData.redirectUri} />
             } else {
                 authAction = <a target="_blank" href={`/api/source/auth?name=${name}&type=${type}`}>(Re)authenticate</a>;
             }
@@ -94,7 +90,6 @@ const SourceStatusCard = (props: SourceStatusCardData) => {
         {platformIds.map(x => <Player key={x} data={players[x]}/>)}
             <div>{discovered}: {tracksDiscovered}</div>
             {authAction}
-            {/*{canPoll && hasAuthInteraction ? <a target="_blank" href={`/api/source/auth?name=${name}&type=${type}`}>(Re)authenticate</a> : null}*/}
         </div>);
     }
     return (

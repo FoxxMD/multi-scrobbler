@@ -13,6 +13,7 @@ export interface SourceStatusData {
     hasAuthInteraction: boolean;
     authed: boolean;
     players: Record<string, SourcePlayerJson>
+    authData?: Record<string, any>
 }
 
 export interface ClientStatusData {
