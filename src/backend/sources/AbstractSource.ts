@@ -149,23 +149,21 @@ export default abstract class AbstractSource implements Authenticatable {
     }
 
     public async checkConnection() {
-        if (this.canPoll) {
-            try {
-                const res = await this.doCheckConnection();
-                if (res === undefined) {
-                    this.logger.debug('Connection check was not required.');
-                    this.connectionOK = null;
-                    return;
-                } else if (res === true) {
-                    this.logger.verbose('Connection check succeeded');
-                } else {
-                    this.logger.verbose(`Connection check succeeded => ${res}`);
-                }
-                this.connectionOK = true;
-            } catch (e) {
-                this.connectionOK = false;
-                throw new ErrorWithCause('Communicating with upstream service failed', {cause: e});
+        try {
+            const res = await this.doCheckConnection();
+            if (res === undefined) {
+                this.logger.debug('Connection check was not required.');
+                this.connectionOK = null;
+                return;
+            } else if (res === true) {
+                this.logger.verbose('Connection check succeeded');
+            } else {
+                this.logger.verbose(`Connection check succeeded => ${res}`);
             }
+            this.connectionOK = true;
+        } catch (e) {
+            this.connectionOK = false;
+            throw new ErrorWithCause('Communicating with upstream service failed', {cause: e});
         }
     }
 
