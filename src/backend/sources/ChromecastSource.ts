@@ -405,7 +405,7 @@ export class ChromecastSource extends MemorySource {
 
     protected pruneApplications = (force: boolean = false) => {
         for(const [k, v] of this.devices.entries()) {
-            if (!force && (!v.connected || v.retries > 0)) {
+            if (!force && !v.connected) {
                 continue;
             }
 
@@ -456,7 +456,7 @@ export class ChromecastSource extends MemorySource {
         }
 
         for (const [k, v] of this.devices.entries()) {
-            if (!v.connected) {
+            if (!v.connected || v.retries > 0) {
                 continue;
             }
 
