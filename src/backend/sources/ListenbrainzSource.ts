@@ -33,7 +33,7 @@ export default class ListenbrainzSource extends MemorySource {
 
     static formatPlayObj = (obj: any, options: FormatPlayObjectOptions = {}) => ListenbrainzApiClient.formatPlayObj(obj, options);
 
-    protected async doCheckConnection(): Promise<boolean> {
+    protected async doCheckConnection(): Promise<true | string | undefined> {
         try {
             await request.get(this.api.url);
             return true;

@@ -127,7 +127,7 @@ export class JRiverApiClient extends AbstractApiClient {
         }
     }
 
-    testConnection = async () => {
+    testConnection = async (): Promise<true> => {
         try {
             const resp = await this.callApi<Alive>(request.get(`${this.url}Alive`));
             const {body: { data } = {}} = resp;

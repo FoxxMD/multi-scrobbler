@@ -146,7 +146,7 @@ export class SubsonicSource extends MemorySource {
         }
     }
 
-    protected async doBuildInitData(): Promise<boolean | string> {
+    protected async doBuildInitData(): Promise<true | string | undefined> {
         const {data: {user, password, url} = {}} = this.config;
 
         if (user === undefined) {
@@ -162,7 +162,7 @@ export class SubsonicSource extends MemorySource {
         return true;
     }
 
-    protected async doCheckConnection(): Promise<boolean> {
+    protected async doCheckConnection(): Promise<true | string | undefined> {
         const {url} = this.config.data;
         try {
             const resp = await this.callApi(request.get(`${url}/rest/ping`));

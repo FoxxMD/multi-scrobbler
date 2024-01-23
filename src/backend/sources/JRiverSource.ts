@@ -53,7 +53,7 @@ export class JRiverSource extends MemorySource {
         return url;
     }
 
-    protected async doBuildInitData(): Promise<boolean | string> {
+    protected async doBuildInitData(): Promise<true | string | undefined> {
         const {
             data: {
                 url
@@ -63,7 +63,7 @@ export class JRiverSource extends MemorySource {
         return true;
     }
 
-    protected async doCheckConnection(): Promise<boolean> {
+    protected async doCheckConnection(): Promise<true | string | undefined> {
         try {
             return await this.client.testConnection();
         } catch (e) {

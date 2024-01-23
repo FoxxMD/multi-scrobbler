@@ -96,7 +96,7 @@ export class MopidySource extends MemorySource {
         return url;
     }
 
-    protected async doBuildInitData(): Promise<boolean | string> {
+    protected async doBuildInitData(): Promise<true | string | undefined> {
         const {
             data: {
                 url
@@ -106,7 +106,7 @@ export class MopidySource extends MemorySource {
         return true;
     }
 
-    protected async doCheckConnection(): Promise<boolean> {
+    protected async doCheckConnection(): Promise<true | string | undefined> {
         this.client.connect();
         const res = await Promise.race([
             pEvent(this.client, 'state:online'),

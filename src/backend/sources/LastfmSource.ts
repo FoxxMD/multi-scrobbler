@@ -44,11 +44,11 @@ export default class LastfmSource extends MemorySource {
     //     return this.initialized;
     // }
 
-    protected async doBuildInitData(): Promise<boolean | string> {
+    protected async doBuildInitData(): Promise<true | string | undefined> {
         return await this.api.initialize();
     }
 
-    protected async doCheckConnection(): Promise<boolean> {
+    protected async doCheckConnection():Promise<true | string | undefined> {
         try {
             await request.get('http://ws.audioscrobbler.com/2.0/');
             return true;

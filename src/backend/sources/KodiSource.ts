@@ -26,7 +26,7 @@ export class KodiSource extends MemorySource {
         this.multiPlatform = true;
     }
 
-    protected async doBuildInitData(): Promise<boolean | string> {
+    protected async doBuildInitData(): Promise<true | string | undefined> {
         const {
             data: {
                 url

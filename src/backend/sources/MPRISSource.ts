@@ -90,7 +90,7 @@ export class MPRISSource extends MemorySource {
         }
     }
 
-    protected async doCheckConnection(): Promise<boolean> {
+    protected async doCheckConnection(): Promise<true | string | undefined> {
         // test if we can get DBus
         try {
             await this.getDBus();

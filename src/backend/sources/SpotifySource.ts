@@ -244,12 +244,12 @@ export default class SpotifySource extends MemorySource {
         this.spotifyApi = new SpotifyWebApi(apiConfig);
     }
 
-    protected async doBuildInitData(): Promise<boolean | string> {
+    protected async doBuildInitData(): Promise<true | string | undefined> {
         await this.buildSpotifyApi();
         return true;
     }
 
-    protected async doCheckConnection(): Promise<boolean> {
+    protected async doCheckConnection(): Promise<true | string | undefined> {
         try {
             await request.get('https://api.spotify.com/v1');
             return true;

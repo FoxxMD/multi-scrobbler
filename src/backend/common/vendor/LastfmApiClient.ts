@@ -140,7 +140,7 @@ export default class LastfmApiClient extends AbstractApiClient {
         }));
     }
 
-    initialize = async () => {
+    initialize = async (): Promise<true> => {
 
         try {
             const creds = await readJson(this.workingCredsPath, {throwOnNotFound: false});

@@ -28,6 +28,7 @@ import {config, Logger} from "@foxxmd/winston";
 import {ContextualValidationError} from "@foxxmd/chromecast-client/dist/cjs/src/utils.js";
 import { buildTrackString } from "../../core/StringUtils.js";
 import { discoveryAvahi, discoveryNative } from "../utils/MDNSUtils.js";
+import {options} from "superagent";
 
 interface ChromecastDeviceInfo {
     mdns: MdnsDeviceInfo
@@ -100,7 +101,7 @@ export class ChromecastSource extends MemorySource {
         
     }
 
-    doBuildInitData = async () => {
+    doBuildInitData = async (): Promise<true | string | undefined> => {
         this.logger.info('Looking for Chromecasts...')
 
         const {

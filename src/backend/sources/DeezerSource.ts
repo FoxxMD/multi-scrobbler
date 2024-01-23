@@ -92,7 +92,7 @@ export default class DeezerSource extends AbstractSource {
         }
     }
 
-    protected async doBuildInitData(): Promise<boolean | string> {
+    protected async doBuildInitData(): Promise<true | string | undefined> {
         try {
             const credFile = await readJson(this.workingCredsPath, {throwOnNotFound: false});
             if(credFile !== undefined) {
@@ -115,7 +115,7 @@ export default class DeezerSource extends AbstractSource {
         return true;
     }
 
-    protected async doCheckConnection(): Promise<boolean> {
+    protected async doCheckConnection(): Promise<true | string | undefined> {
         try {
             await request.get('https://api.deezer.com/infos');
             return true;

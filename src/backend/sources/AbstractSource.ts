@@ -63,8 +63,8 @@ export default abstract class AbstractSource implements Authenticatable {
     authed: boolean = false;
     authFailure?: boolean;
 
-    buildOK?: boolean;
-    connectionOK?: boolean;
+    buildOK?: boolean | null;
+    connectionOK?: boolean | null;
 
     multiPlatform: boolean = false;
 
@@ -119,6 +119,11 @@ export default abstract class AbstractSource implements Authenticatable {
         }
         try {
             const res = await this.doBuildInitData();
+            if(res === undefined) {
+                this.buildOK = null;
+                this.logger.debug('No required data to build.');
+                return;
+            }
             if (res === true) {
                 this.logger.debug('Building required data init succeeded');
             } else if (typeof res === 'string') {
@@ -134,21 +139,23 @@ export default abstract class AbstractSource implements Authenticatable {
     /**
      * Build any data/config/objects required for this Source to communicate with upstream service
      *
-     * * Return FALSE if not possible or not required
+     * * Return undefined if not possible or not required
      * * Return TRUE if build succeeded
      * * Return string if build succeeded and should log result
      * * Throw error on failure
      * */
-    protected async doBuildInitData(): Promise<boolean | string> {
-        return false;
+    protected async doBuildInitData(): Promise<true | string | undefined> {
+        return;
     }
 
     public async checkConnection() {
         if (this.canPoll) {
             try {
                 const res = await this.doCheckConnection();
-                if (res === false) {
+                if (res === undefined) {
                     this.logger.debug('Connection check was not required.');
+                    this.connectionOK = null;
+                    return;
                 } else if (res === true) {
                     this.logger.verbose('Connection check succeeded');
                 } else {
@@ -165,13 +172,13 @@ export default abstract class AbstractSource implements Authenticatable {
     /**
      * Check Source upstream API/connection to ensure we can communicate
      *
-     * * Return FALSE if not possible or not required to check
+     * * Return undefined if not possible or not required to check
      * * Return TRUE if communication succeeded
      * * Return string if communication succeeded and should log result
      * * Throw error if communication failed
      * */
-    protected async doCheckConnection(): Promise<boolean> {
-        return false;
+    protected async doCheckConnection(): Promise<true | string | undefined> {
+        return;
     }
 
     authGated = () => {
@@ -205,8 +212,8 @@ export default abstract class AbstractSource implements Authenticatable {
     }
 
     public isReady() {
-        return (this.buildOK === undefined || this.buildOK === true) &&
-            (this.connectionOK === undefined || this.connectionOK === true)
+        return (this.buildOK === null || this.buildOK === true) &&
+            (this.connectionOK === null || this.connectionOK === true)
             && !this.authGated();
     }
 
