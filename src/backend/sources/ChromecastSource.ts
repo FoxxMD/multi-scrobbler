@@ -154,7 +154,7 @@ export class ChromecastSource extends MemorySource {
             await discoveryAvahi('_googlecast._tcp', {
                 logger: this.logger,
                 sanity: initial,
-                onDiscover: (service, raw) => {
+                onDiscover: (service) => {
                     this.initializeDevice(service);
                 },
             });
@@ -168,7 +168,7 @@ export class ChromecastSource extends MemorySource {
             await discoveryNative('_googlecast._tcp', {
                 logger: this.logger,
                 sanity: initial,
-                onDiscover: (service, raw) => {
+                onDiscover: (service) => {
                     this.initializeDevice(service);
                 },
             });
