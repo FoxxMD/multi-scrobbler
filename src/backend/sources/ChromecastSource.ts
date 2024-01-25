@@ -98,8 +98,7 @@ export class ChromecastSource extends MemorySource {
         this.config.data = {
             ...data,
             useAutoDiscovery: ad,
-            useAvahi,
-            interval: 2
+            useAvahi
         }
         
     }
