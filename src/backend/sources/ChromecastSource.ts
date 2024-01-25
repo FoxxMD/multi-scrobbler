@@ -98,7 +98,8 @@ export class ChromecastSource extends MemorySource {
         this.config.data = {
             ...data,
             useAutoDiscovery: ad,
-            useAvahi
+            useAvahi,
+            interval: 2
         }
         
     }
@@ -497,9 +498,37 @@ export class ChromecastSource extends MemorySource {
                             //v.applications.delete(application.transportId);
                             // TODO count timeouts before setting app as stale
                             continue;
-                        } else {
-                            throw e;
                         }
+
+                        const validationError = findCauseByReference(e, ContextualValidationError);
+                        if (validationError && validationError.data !== undefined) {
+                            const  {
+                                status = []
+                            } = validationError.data as Record<string, any>;
+                            if(status[0] !== undefined) {
+                               const {
+                                    media: {
+                                        streamType = undefined
+                                    } = {}
+                                } = status[0] || {};
+                                if(streamType === 'BUFFERED') {
+                                    let maybePlay: PlayObject | undefined;
+                                    try {
+                                        maybePlay = ChromecastSource.formatPlayObj(status[0]);
+                                    } catch (e) {
+                                        // its fine just do error without play string
+                                    }
+                                    application.logger.verbose(`Skipping status for ${maybePlay !== undefined ? buildTrackString(maybePlay) : 'unknown media'} because it is buffering.`);
+                                    if (this.config.options.logPayload) {
+                                        application.logger.debug(`Media Status Payload:\n ${status[0] === undefined || status[0] === null ? 'undefined' : JSON.stringify(status[0])}`);
+                                    }
+                                    continue;
+                                }
+                            }
+                            application.logger.warn(JSON.stringify(validationError.data));
+                        }
+
+                        throw e;
                     }
 
                     if (this.config.options.logPayload) {
@@ -604,7 +633,7 @@ export class ChromecastSource extends MemorySource {
                     albumName,
                     album: albumNorm
                 } = {}
-            }
+            } = {}
         } = obj;
 
         let artists: string[] = [],
