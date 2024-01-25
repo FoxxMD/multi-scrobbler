@@ -43,7 +43,7 @@ export const discoveryAvahi = async (service: string, options?: DiscoveryOptions
 
     const triggerDiscovery = () => {
         for(const [k,v] of services.entries()) {
-            maybeLogger.debug(`Discovered device "${v.name}" with ${v.addresses.length} interfaces - first host seen: ${v.addresses[0]}`);
+            maybeLogger.debug(`Discovered device "${v.name}" with ${v.addresses.length} interfaces`);
             onDiscover(v);
             services.delete(k);
         }
@@ -135,7 +135,7 @@ export const discoveryNative = async (service: string, options?: DiscoveryOption
 
     const browser = new Browser(service, {resolve: true})
         .on('serviceUp', async (service) => {
-            maybeLogger.debug(`Discovered device "${service.name}" with ${service.addresses.length} interfaces -- first host seen: ${service.addresses?.[0]}`);
+            maybeLogger.debug(`Discovered device "${service.name}" with ${service.addresses.length} interfaces`);
             if (onDiscover) {
                 onDiscover({name: service.name, addresses: service.addresses, type: service.service_type});
             }

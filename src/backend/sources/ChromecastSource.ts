@@ -230,20 +230,29 @@ export class ChromecastSource extends MemorySource {
     }
 
     protected initializeClientPlatform = async (device: MdnsDeviceInfo): Promise<[CastClient, PersistentClient, PlatformType]> => {
-        let client: PersistentClient;
-        let castClient = new CastClient;
-        castClient.on('connect', () => this.handleCastClientEvent(device.name, 'connect'));
-        castClient.on('error', (err) => this.handleCastClientEvent(device.name, 'error', err));
-        castClient.on('close', () => this.handleCastClientEvent(device.name, 'close'));
-        try {
-            client = await connect({host: device.addresses?.[0], client: castClient});
-        } catch (e) {
-            throw new ErrorWithCause(`Could not connect to ${device.name}`, {cause: e});
+
+        let index = 0;
+        for(const address of device.addresses) {
+            let client: PersistentClient;
+            let castClient = new CastClient;
+            castClient.on('connect', () => this.handleCastClientEvent(device.name, 'connect'));
+            castClient.on('error', (err) => this.handleCastClientEvent(device.name, 'error', err));
+            castClient.on('close', () => this.handleCastClientEvent(device.name, 'close'));
+            try {
+                client = await connect({host: address, client: castClient});
+            } catch (e) {
+                if(index < device.addresses.length - 1) {
+                    this.logger.warn(new ErrorWithCause(`Could not connect to ${device.name} but more interfaces exist, will attempt next host.`, {cause: e}));
+                    continue;
+                } else {
+                    throw new ErrorWithCause(`Could not connect to ${device.name} and no additional interfaces exist`, {cause: e});
+                }
+            }
+
+            const platform = createPlatform(client);
+
+            return [castClient, client, platform];
         }
-
-        const platform = createPlatform(client);
-
-        return [castClient, client, platform];
     }
 
     protected handleCastClientEvent = (clientName: string, event: string, payload?: any) => {
