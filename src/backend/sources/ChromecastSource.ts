@@ -326,17 +326,17 @@ export class ChromecastSource extends MemorySource {
 
                     if(valid) {
                         if(this.whitelistApps.length > 0) {
-                            const found = this.whitelistDevices.find(x => appLowerName.includes(x));
-                            if(found !== undefined) {
-                                v.logger.info(`${found} => Watching because it was whitelisted by keyword '${found}'`);
+                            const foundWhiteApp = this.whitelistDevices.find(x => appLowerName.includes(x));
+                            if(foundWhiteApp !== undefined) {
+                                v.logger.info(`${found} => Watching because it was whitelisted by keyword '${foundWhiteApp}'`);
                             } else {
                                 v.logger.info(`${found} => NOT Watching because no part of its name appeared in whitelistApps`);
                                 filtered = true;
                             }
                         } else if(this.blacklistApps.length > 0) {
-                            const found = this.blacklistDevices.find(x => appLowerName.includes(x));
-                            if(found !== undefined) {
-                                v.logger.info(`${found} => NOT Watching because it was blacklisted by keyword '${found}'`);
+                            const foundBlackApp = this.blacklistDevices.find(x => appLowerName.includes(x));
+                            if(foundBlackApp !== undefined) {
+                                v.logger.info(`${found} => NOT Watching because it was blacklisted by keyword '${foundBlackApp}'`);
                                 filtered = true;
                             } else {
                                 v.logger.info(`${found} => Watching because no part of its name appeared in blacklistApps`);
