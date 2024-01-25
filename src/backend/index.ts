@@ -18,6 +18,7 @@ import { initServer } from "./server/index.js";
 import {SimpleIntervalJob, ToadScheduler} from "toad-scheduler";
 import { createHeartbeatSourcesTask } from "./tasks/heartbeatSources.js";
 import { createHeartbeatClientsTask } from "./tasks/heartbeatClients.js";
+import {ErrorWithCause} from "pony-cause";
 
 
 dayjs.extend(utc)
@@ -39,6 +40,15 @@ initLogger.stream().on('log', (log: LogInfo) => {
 });
 
 let logger: Logger;
+
+process.on('uncaughtExceptionMonitor', (err, origin) => {
+    const appError = new ErrorWithCause(`Uncaught exception is crashing the app! :( Type: ${origin}`, {cause: err});
+    if(logger !== undefined) {
+        logger.error(appError)
+    } else {
+        initLogger.error(appError);
+    }
+})
 
 const configDir = process.env.CONFIG_DIR || path.resolve(projectDir, `./config`);
 
@@ -138,8 +148,13 @@ const configDir = process.env.CONFIG_DIR || path.resolve(projectDir, `./config`)
         logger.info('Scheduler started.');
 
     } catch (e) {
-        logger.error('Exited with uncaught error');
-        logger.error(e);
+        const appError = new ErrorWithCause('Exited with uncaught error', {cause: e});
+        if(logger !== undefined) {
+            logger.error(appError);
+        } else {
+            initLogger.error(appError);
+        }
+        process.exit(1);
     }
 }());
 

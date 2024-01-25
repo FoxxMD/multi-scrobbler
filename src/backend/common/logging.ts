@@ -66,15 +66,15 @@ export const getLogger = (config: LogConfig = {}, name = 'app'): winstonNs.Logge
                     objectMode: true,
                 },
                 name: 'duplex',
-                handleExceptions: true,
-                handleRejections: true,
                 level: stream,
                 dump: false,
             })
         ];
 
         if(console !== false) {
-            myTransports.push(new transports.Console({level: console}));
+            myTransports.push(new transports.Console({
+                level: console,
+            }));
         }
 
         if (file !== false) {
@@ -85,7 +85,7 @@ export const getLogger = (config: LogConfig = {}, name = 'app'): winstonNs.Logge
                 filename: 'scrobble-%DATE%.log',
                 datePattern: 'YYYY-MM-DD',
                 maxSize: '5m',
-                level: file
+                level: file,
             });
 
             try {
@@ -112,7 +112,6 @@ export const getLogger = (config: LogConfig = {}, name = 'app'): winstonNs.Logge
                 logger.error(e);
             }
         }
-        logger.log
         return logger;
     }
     return loggers.get(name);

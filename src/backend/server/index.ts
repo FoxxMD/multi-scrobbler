@@ -87,14 +87,13 @@ export const initServer = async (parentLogger: Logger, initialOutput: LogInfo[] 
                     logger.info(`User-defined base URL for UI and redirect URLs (spotify, deezer, lastfm): ${local}`)
                 }
             }).on('error', (err) => {
-                logger.error(new ErrorWithCause('Server encountered unrecoverable error', {cause: err}));
-                process.exit(1);
+                throw new ErrorWithCause('Server encountered unrecoverable error', {cause: err});
             });
         } catch (e) {
             throw new ErrorWithCause('Server encountered unrecoverable error', {cause: e});
         }
 
     } catch (e) {
-        logger.error(new ErrorWithCause('Server crashed with uncaught exception', {cause: e}));
+        throw new ErrorWithCause('Server crashed with uncaught exception', {cause: e});
     }
 }
