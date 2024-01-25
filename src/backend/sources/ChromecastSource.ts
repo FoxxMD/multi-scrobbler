@@ -28,6 +28,9 @@ import {config, Logger} from "@foxxmd/winston";
 import {ContextualValidationError} from "@foxxmd/chromecast-client/dist/cjs/src/utils.js";
 import { buildTrackString } from "../../core/StringUtils.js";
 import { discoveryAvahi, discoveryNative } from "../utils/MDNSUtils.js";
+import {MaybeLogger} from "../common/logging.js";
+import e, {application} from "express";
+import {options} from "superagent";
 
 interface ChromecastDeviceInfo {
     mdns: MdnsDeviceInfo
@@ -516,32 +519,36 @@ export class ChromecastSource extends MemorySource {
                     }
 
                     const playHash = genPlayHash(play);
+                    let shouldLogOnUnknown = false;
                     if (playHash !== application.lastPlayHash) {
                         application.lastPlayHash = playHash;
+                        shouldLogOnUnknown = true;
+                    }
+                    // only log the FIRST time we see a play so that we aren't making logs noisy
+                    const unknownLogger = new MaybeLogger(shouldLogOnUnknown ? application.logger : undefined);
 
-                        if (play.meta.mediaType !== 'music') {
-                            const playInfo = buildTrackString(play);
-                            const forcedBy = this.forceMediaRecognitionOn.find(x => application.displayName.toLocaleLowerCase().includes(x));
-                            if (forcedBy !== undefined) {
-                                this.logger.verbose(`${playInfo} has non-music type (${play.meta.mediaType}) but was forced recognized by keyword "${forcedBy}"`);
-                            } else if (play.meta.mediaType === 'unknown') {
-                                if (this.allowUnknownMedia === false) {
-                                    this.logger.verbose(`${playInfo} has 'unknown' media type and allowUnknownMedia=false, will not track`);
-                                    continue;
-                                } else if (Array.isArray(this.allowUnknownMedia)) {
-                                    const allowedBy = this.allowUnknownMedia.find(x => application.displayName.toLocaleLowerCase().includes(x))
-                                    if (allowedBy) {
-                                        this.logger.verbose(`${playInfo} has 'unknown' media type but was allowed by keyword "${allowedBy}" in allowUnknownMedia`);
-                                    } else {
-                                        this.logger.verbose(`${playInfo} has 'unknown' media type and App name was not found in allowUnknownMedia, will not track`);
-                                        continue;
-                                    }
+                    if (play.meta.mediaType !== 'music') {
+                        const playInfo = buildTrackString(play);
+                        const forcedBy = this.forceMediaRecognitionOn.find(x => application.displayName.toLocaleLowerCase().includes(x));
+                        if (forcedBy !== undefined) {
+                            unknownLogger.verbose(`${playInfo} has non-music type (${play.meta.mediaType}) but was forced recognized by keyword "${forcedBy}"`);
+                        } else if (play.meta.mediaType === 'unknown') {
+                            if (this.allowUnknownMedia === false) {
+                                unknownLogger.verbose(`${playInfo} has 'unknown' media type and allowUnknownMedia=false, will not track`);
+                                continue;
+                            } else if (Array.isArray(this.allowUnknownMedia)) {
+                                const allowedBy = this.allowUnknownMedia.find(x => application.displayName.toLocaleLowerCase().includes(x))
+                                if (allowedBy) {
+                                    unknownLogger.verbose(`${playInfo} has 'unknown' media type but was allowed by keyword "${allowedBy}" in allowUnknownMedia`);
                                 } else {
-                                    this.logger.verbose(`${playInfo} has 'unknown' media type and allowUnknownMedia=true`);
+                                    unknownLogger.verbose(`${playInfo} has 'unknown' media type and App name was not found in allowUnknownMedia, will not track`);
+                                    continue;
                                 }
                             } else {
-                                this.logger.verbose(`${playInfo} has non-music type (${play.meta.mediaType}) so will not track`);
+                                unknownLogger.verbose(`${playInfo} has 'unknown' media type and allowUnknownMedia=true`);
                             }
+                        } else {
+                            unknownLogger.verbose(`${playInfo} has non-music type (${play.meta.mediaType}) so will not track`);
                         }
                     }
 
