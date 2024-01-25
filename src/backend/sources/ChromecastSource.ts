@@ -305,7 +305,7 @@ export class ChromecastSource extends MemorySource {
                 apps = await getCurrentPlatformApplications(v.platform);
                 v.retries = 0;
             } catch (e) {
-                v.logger.warn(new ErrorWithCause(`Could not refresh applications. Will after ${5 - v.retries} retries if error does not resolve itself.`, {cause: e}));
+                v.logger.warn(new ErrorWithCause(`Could not refresh applications. Will remove after ${5 - v.retries} retries if error does not resolve itself.`, {cause: e}));
                 const validationError = findCauseByReference(e, ContextualValidationError);
                 if(validationError && validationError.data !== undefined) {
                     v.logger.warn(JSON.stringify(validationError.data));
