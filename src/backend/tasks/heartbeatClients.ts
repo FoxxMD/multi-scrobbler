@@ -10,6 +10,7 @@ export const createHeartbeatClientsTask = (clients: ScrobbleClients, parentLogge
     return new AsyncTask(
         'Heartbeat',
         (): Promise<any> => {
+            logger.verbose('Starting check...');
             return PromisePool
                 .withConcurrency(1)
                 .for(clients.clients)

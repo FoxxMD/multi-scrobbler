@@ -11,6 +11,7 @@ export const createHeartbeatSourcesTask = (sources: ScrobbleSources, parentLogge
     return new AsyncTask(
         'Heartbeat',
         (): Promise<any> => {
+            logger.verbose('Starting check...');
             return PromisePool
                 .withConcurrency(1)
                 .for(sources.sources)
