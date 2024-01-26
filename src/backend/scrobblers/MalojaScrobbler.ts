@@ -200,8 +200,10 @@ export default class MalojaScrobbler extends AbstractScrobbleClient {
             } else {
                 this.logger.info(`Maloja Server Version: ${versionstring}`);
                 this.serverVersion = versionstring;
-                if(compareVersions(versionstring, '2.7.0') < 0) {
-                    this.logger.warn('Maloja Server Version is less than 2.7, please upgrade to ensure compatibility');
+                if(compareVersions(versionstring, '3.0.0') < 0) {
+                    this.logger.warn(`Support for Maloja versions below 3.0.0 is DEPRECATED and will be removed in a future minor release.`);
+                } else if(compareVersions(versionstring, '3.2.0') < 0) {
+                    this.logger.warn(`Maloja versions below 3.2.0 do not support scrobbling albums.`);
                 }
             }
             return true;
