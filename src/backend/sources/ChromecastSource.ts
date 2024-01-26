@@ -51,8 +51,13 @@ export class ChromecastSource extends MemorySource {
 
     whitelistDevices: string[] = [];
     blacklistDevices: string[] = [];
+    // since we check for new devices on every heartbeat we will be discovering blacklisted devices every time since they are never added
+    // track which we've already rejected so we only log to verbose instead of info -- to prevent noise at info level
+    seenRejectedDevices: string[] = [];
+
     whitelistApps: string[] = [];
     blacklistApps: string[] = [];
+
     allowUnknownMedia: string[] | boolean;
     forceMediaRecognitionOn: string[] = [];
 
@@ -194,13 +199,25 @@ export class ChromecastSource extends MemorySource {
             if (found !== undefined) {
                 this.logger.info(`${discovered} => Adding as a device because it was whitelisted by keyword '${found}'`);
             } else {
-                this.logger.info(`${discovered} => NOT ADDING as a device because no part of its name appeared in whitelistDevices`);
+                const msg = `${discovered} => NOT ADDING as a device because no part of its name appeared in whitelistDevices`;
+                if(!this.seenRejectedDevices.includes(device.name)) {
+                    this.seenRejectedDevices.push(device.name);
+                    this.logger.info(msg);
+                } else {
+                    this.logger.verbose(msg);
+                }
                 return;
             }
         } else if (this.blacklistDevices.length > 0) {
             const found = this.blacklistDevices.find(x => lowerName.includes(x));
             if (found !== undefined) {
-                this.logger.info(`${discovered} => NOT ADDING as a device because it was blacklisted by keyword '${found}'`);
+                const msg = `${discovered} => NOT ADDING as a device because it was blacklisted by keyword '${found}'`;
+                if(!this.seenRejectedDevices.includes(device.name)) {
+                    this.seenRejectedDevices.push(device.name);
+                    this.logger.info(msg);
+                } else {
+                    this.logger.verbose(msg);
+                }
                 return;
             } else {
                 this.logger.info(`${discovered} => Adding as a device because no part of its name appeared in blacklistDevices`);
