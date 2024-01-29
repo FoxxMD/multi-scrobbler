@@ -36,7 +36,7 @@ From MS project root:
 
 ```shell
 cd flatpak
-flatpak-builder --repo=/home/yourUser/multi-scrobbler-repo /home/yourUser/multi-scrobbler-build io.github.foxxmd.multiscrobbler.yml --force-clean
+flatpak-builder --repo=/home/yourUser/multi-scrobbler-flatpak/repo --state-dir=/home/yourUser/multi-scrobbler-flatpak/state /home/yourUser/multi-scrobbler-flatpak/build io.github.foxxmd.multiscrobbler.yml --force-clean --install --user
 ```
 Add `--install --user` to have the app installed immediately.
 # 5. Run (Locally)
