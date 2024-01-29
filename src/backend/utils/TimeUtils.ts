@@ -1,21 +1,24 @@
 import {
-    PlayObject, SCROBBLE_TS_SOC_END, SCROBBLE_TS_SOC_START, ScrobbleTsSOC,
+    PlayObject,
+    SCROBBLE_TS_SOC_END,
+    SCROBBLE_TS_SOC_START,
+    ScrobbleTsSOC,
     TA_CLOSE,
     TA_EXACT,
     TA_FUZZY,
     TA_NONE,
     TemporalAccuracy,
-    TemporalPlayComparison
-} from "../../core/Atomic";
+    TemporalPlayComparison,
+} from "../../core/Atomic.js";
 import {
     DEFAULT_SCROBBLE_DURATION_THRESHOLD,
     DEFAULT_SCROBBLE_PERCENT_THRESHOLD,
     lowGranularitySources,
-    ScrobbleThresholdResult
-} from "../common/infrastructure/Atomic";
-import {formatNumber} from "../utils";
-import {ScrobbleThresholds} from "../common/infrastructure/config/source";
-import {capitalize} from "../../core/StringUtils";
+    ScrobbleThresholdResult,
+} from "../common/infrastructure/Atomic.js";
+import { formatNumber } from "../utils.js";
+import { ScrobbleThresholds } from "../common/infrastructure/config/source/index.js";
+import { capitalize } from "../../core/StringUtils.js";
 import dayjs, {Dayjs} from "dayjs";
 
 export const temporalPlayComparisonSummary = (data: TemporalPlayComparison, existingPlay?: PlayObject, candidatePlay?: PlayObject) => {

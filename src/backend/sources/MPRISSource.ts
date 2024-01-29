@@ -9,14 +9,14 @@ import {
     PlaybackStatus,
     PlayerInfo,
     PROPERTIES_IFACE,
-} from "../common/infrastructure/config/source/mpris";
-import { FormatPlayObjectOptions, InternalConfig } from "../common/infrastructure/Atomic";
-import MemorySource from "./MemorySource";
-import { RecentlyPlayedOptions } from "./AbstractSource";
-import { removeDuplicates } from "../utils";
+} from "../common/infrastructure/config/source/mpris.js";
+import { FormatPlayObjectOptions, InternalConfig } from "../common/infrastructure/Atomic.js";
+import MemorySource from "./MemorySource.js";
+import { RecentlyPlayedOptions } from "./AbstractSource.js";
+import { removeDuplicates } from "../utils.js";
 import EventEmitter from "events";
 import {ErrorWithCause} from "pony-cause";
-import { PlayObject } from "../../core/Atomic";
+import { PlayObject } from "../../core/Atomic.js";
 
 
 export class MPRISSource extends MemorySource {
@@ -90,15 +90,13 @@ export class MPRISSource extends MemorySource {
         }
     }
 
-    initialize = async () => {
+    protected async doCheckConnection(): Promise<true | string | undefined> {
         // test if we can get DBus
         try {
             await this.getDBus();
             return true;
         } catch (e) {
-            this.logger.error('Could not get DBus interface from operating system');
-            this.logger.error(e);
-            return false;
+            throw new ErrorWithCause('Could not get DBus interface from operating system', {cause: e});
         }
     }
 

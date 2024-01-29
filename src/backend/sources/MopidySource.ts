@@ -1,11 +1,11 @@
-import MemorySource from "./MemorySource";
-import { MopidySourceConfig } from "../common/infrastructure/config/source/mopidy";
+import MemorySource from "./MemorySource.js";
+import { MopidySourceConfig } from "../common/infrastructure/config/source/mopidy.js";
 import {
     FormatPlayObjectOptions,
     InternalConfig,
     PlayerStateData,
     SINGLE_USER_PLATFORM_ID,
-} from "../common/infrastructure/Atomic";
+} from "../common/infrastructure/Atomic.js";
 import dayjs from "dayjs";
 import Mopidy, {models} from "mopidy";
 import {URL} from "url";
@@ -13,9 +13,10 @@ import normalizeUrl from 'normalize-url';
 import {EventEmitter} from "events";
 import pEvent from 'p-event';
 import winston from '@foxxmd/winston';
-import { RecentlyPlayedOptions } from "./AbstractSource";
-import { PlayObject } from "../../core/Atomic";
-import { buildTrackString } from "../../core/StringUtils";
+import { RecentlyPlayedOptions } from "./AbstractSource.js";
+import { PlayObject } from "../../core/Atomic.js";
+import { buildTrackString } from "../../core/StringUtils.js";
+import {ErrorWithCause} from "pony-cause";
 
 export class MopidySource extends MemorySource {
     declare config: MopidySourceConfig;
@@ -95,14 +96,17 @@ export class MopidySource extends MemorySource {
         return url;
     }
 
-    initialize = async () => {
+    protected async doBuildInitData(): Promise<true | string | undefined> {
         const {
             data: {
                 url
             } = {}
         } = this.config;
         this.logger.debug(`Config URL: '${url ?? '(None Given)'}' => Normalized: '${this.url.toString()}'`)
+        return true;
+    }
 
+    protected async doCheckConnection(): Promise<true | string | undefined> {
         this.client.connect();
         const res = await Promise.race([
             pEvent(this.client, 'state:online'),
@@ -111,12 +115,10 @@ export class MopidySource extends MemorySource {
         ]);
         if (res === undefined) {
             this.logger.info('Connection OK');
-            this.initialized = true;
             return true;
         } else {
-            this.logger.error(`Could not connect. Error => ${(res as Error).message}`);
             this.client.close();
-            return false;
+            throw new ErrorWithCause(`Could not connect to Mopidy server`, {cause: (res as Error)});
         }
     }
 

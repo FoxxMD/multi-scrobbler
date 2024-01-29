@@ -1,14 +1,18 @@
-import request from 'superagent';
+import request, {Request, Response} from 'superagent';
 import * as crypto from 'crypto';
 import dayjs from "dayjs";
 import isSameOrAfter from "dayjs/plugin/isSameOrAfter.js";
-import { parseRetryAfterSecsFromObj, removeDuplicates, sleep } from "../utils";
-import MemorySource from "./MemorySource";
-import { SubSonicSourceConfig } from "../common/infrastructure/config/source/subsonic";
-import {DEFAULT_RETRY_MULTIPLIER, FormatPlayObjectOptions, InternalConfig} from "../common/infrastructure/Atomic";
-import { RecentlyPlayedOptions } from "./AbstractSource";
+import {findCauseByFunc, parseRetryAfterSecsFromObj, removeDuplicates, sleep} from "../utils.js";
+import MemorySource from "./MemorySource.js";
+import { SubSonicSourceConfig } from "../common/infrastructure/config/source/subsonic.js";
+import { DEFAULT_RETRY_MULTIPLIER, FormatPlayObjectOptions, InternalConfig } from "../common/infrastructure/Atomic.js";
+import { RecentlyPlayedOptions } from "./AbstractSource.js";
 import EventEmitter from "events";
-import { PlayObject } from "../../core/Atomic";
+import { PlayObject } from "../../core/Atomic.js";
+import {isNodeNetworkException} from "../common/errors/NodeErrors.js";
+import {ErrorWithCause} from "pony-cause";
+import {UpstreamError} from "../common/errors/UpstreamError.js";
+import {getSubsonicResponse, SubsonicResponse, SubsonicResponseCommon} from "../common/vendor/subsonic/interfaces.js";
 
 dayjs.extend(isSameOrAfter);
 
@@ -28,18 +32,6 @@ export class SubsonicSource extends MemorySource {
         } = config;
         const subsonicConfig = {...config, data: {...restData}};
         super('subsonic', name, subsonicConfig, internal,emitter);
-
-        const {data: {user, password, url} = {}} = this.config;
-
-        if (user === undefined) {
-            throw new Error(`Cannot setup Subsonic source, 'user' is not defined`);
-        }
-        if (password === undefined) {
-            throw new Error(`Cannot setup Subsonic source, 'password' is not defined`);
-        }
-        if (url === undefined) {
-            throw new Error(`Cannot setup Subsonic source, 'url' is not defined`);
-        }
 
         this.canPoll = true;
     }
@@ -76,7 +68,7 @@ export class SubsonicSource extends MemorySource {
         }
     }
 
-    callApi = async (req: any, retries = 0) => {
+    callApi = async <T extends SubsonicResponseCommon = SubsonicResponseCommon>(req: Request, retries = 0): Promise<T> => {
         const {
             user,
             password,
@@ -96,75 +88,105 @@ export class SubsonicSource extends MemorySource {
             f: 'json'
         });
         try {
-            const resp = await req;
+            const resp = await req as SubsonicResponse;
+
+            let errorTxt: string | undefined;
+
             const {
-                body: {
-                    "subsonic-response": {
-                        status,
-                    },
-                    "subsonic-response": ssResp = {}
+                body,
+                status: httpStatus,
+                text,
+                headers: {
+                    ['content-type']: ct = undefined,
                 } = {}
             } = resp;
-            if (status === 'failed') {
-                const err = new Error('Subsonic API returned an error');
-                // @ts-expect-error TS(2339): Property 'response' does not exist on type 'Error'... Remove this comment to see the full error message
-                err.response = resp;
-                throw  err;
+
+            if(ct === undefined || !ct.includes('json')) {
+                errorTxt = `Subsonic Server response (${httpStatus}) was unexpected. Expected content-type to be json but found '${ct}`;
+            } else if(Object.keys(body).length === 0) {
+                errorTxt = `Subsonic Server response (${httpStatus}) was unexpected. Body is empty.`;
             }
+            if(errorTxt !== undefined && text !== undefined) {
+                errorTxt = `${errorTxt} | Text Response Sample: ${text.substring(0, 500)}`;
+            }
+            if(errorTxt !== undefined) {
+                throw new UpstreamError(errorTxt, {showStopper: true});
+            }
+
+            const {
+                "subsonic-response": {
+                    status,
+                },
+                "subsonic-response": ssResp
+            } = body;
+
+            if (status === 'failed') {
+                throw new UpstreamError(`Subsonic API returned an error => ${parseApiResponseErrorToThrowable(resp)}`, {response: resp});
+            }
+
+            // @ts-ignore
             return ssResp;
         } catch (e) {
-            if(retries < maxRequestRetries) {
+            if(e instanceof UpstreamError) {
+                throw e;
+            }
+
+            if((isNodeNetworkException(e) || e.status >= 500) && retries < maxRequestRetries) {
                 const retryAfter = parseRetryAfterSecsFromObj(e) ?? (retryMultiplier * (retries + 1));
                 this.logger.warn(`Request failed but retries (${retries}) less than max (${maxRequestRetries}), retrying request after ${retryAfter} seconds...`);
                 await sleep(retryAfter * 1000);
                 return await this.callApi(req, retries + 1)
             }
-            const {
-                message,
-                response: {
-                    // @ts-expect-error TS(2525): Initializer provides no value for this binding ele... Remove this comment to see the full error message
-                    status,
-                    body: {
-                        "subsonic-response": {
-                            // @ts-expect-error TS(2525): Initializer provides no value for this binding ele... Remove this comment to see the full error message
-                            status: ssStatus,
-                            error: {
-                                // @ts-expect-error TS(2525): Initializer provides no value for this binding ele... Remove this comment to see the full error message
-                                code,
-                                // @ts-expect-error TS(2525): Initializer provides no value for this binding ele... Remove this comment to see the full error message
-                                message: ssMessage,
-                            } = {},
-                        } = {},
-                        // @ts-expect-error TS(2525): Initializer provides no value for this binding ele... Remove this comment to see the full error message
-                        "subsonic-response": ssResp
-                    } = {},
-                    // @ts-expect-error TS(2525): Initializer provides no value for this binding ele... Remove this comment to see the full error message
-                    text,
-                } = {},
-                response,
-            } = e;
-            let msg = response !== undefined ? `API Call failed: Server Response => ${ssMessage}` : `API Call failed: ${message}`;
-            const responseMeta = ssResp ?? text;
-            this.logger.error(msg, {status, response: responseMeta});
-            throw e;
+
+            if(isNodeNetworkException(e)) {
+                throw new UpstreamError('Could not communicate with Subsonic Server', {cause: e, showStopper: true});
+            }
+
+            throw new UpstreamError('Subsonic server response was unexpected', {cause: e});
         }
     }
 
-    initialize = async () => {
-        const {url} = this.config.data;
-        try {
-            await request.get(`${url}/`);
-            this.logger.info('Subsonic Connection: ok');
-            this.initialized = true;
-        } catch (e) {
-            if(e.status !== undefined && e.status !== 404) {
-                this.logger.info('Subsonic Connection: ok');
-                // we at least got a response!
-                this.initialized = true;
-            }
+    protected async doBuildInitData(): Promise<true | string | undefined> {
+        const {data: {user, password, url} = {}} = this.config;
+
+        if (user === undefined) {
+            throw new Error(`Cannot setup Subsonic source, 'user' is not defined`);
+        }
+        if (password === undefined) {
+            throw new Error(`Cannot setup Subsonic source, 'password' is not defined`);
+        }
+        if (url === undefined) {
+            throw new Error(`Cannot setup Subsonic source, 'url' is not defined`);
         }
 
-        return this.initialized;
+        return true;
+    }
+
+    protected async doCheckConnection(): Promise<true | string | undefined> {
+        const {url} = this.config.data;
+        try {
+            const resp = await this.callApi(request.get(`${url}/rest/ping`));
+            this.logger.info(`Subsonic Server reachable: ${identifiersFromResponse(resp)}`);
+            return true;
+        } catch (e) {
+
+            const subResponseError = getSubsonicResponseFromError(e);
+            if(subResponseError !== undefined) {
+                const resp = getSubsonicResponse(subResponseError.response)
+                this.logger.info(`Subsonic Server reachable: ${identifiersFromResponse(resp)}`);
+                return true;
+            }
+
+            if(e instanceof UpstreamError) {
+                throw e;
+            } else if(isNodeNetworkException(e)) {
+                throw new UpstreamError('Could not communicate with Subsonic server', {cause: e});
+            } else if(e.status >= 500) {
+                throw new UpstreamError('Subsonic server returning an unexpected response', {cause: e})
+            } else {
+                throw new ErrorWithCause('Unexpected error occurred', {cause: e})
+            }
+        }
     }
 
     doAuthentication = async () => {
@@ -191,4 +213,66 @@ export class SubsonicSource extends MemorySource {
         const deduped = removeDuplicates(entry.map(SubsonicSource.formatPlayObj));
         return this.processRecentPlays(deduped);
     }
+}
+
+export const getSubsonicResponseFromError = (error: unknown): UpstreamError => {
+    return findCauseByFunc(error, (err) => {
+        if(err instanceof UpstreamError && err.response !== undefined) {
+            return getSubsonicResponse(err.response) !== undefined;
+        }
+        return false;
+    }) as UpstreamError | undefined;
+}
+
+export const parseApiResponseErrorToThrowable = (resp: SubsonicResponse) => {
+    const {
+        status,
+        text,
+        body: {
+            "subsonic-response": {
+                status: ssStatus,
+                version,
+                type,
+                serverVersion,
+                error: {
+                    code,
+                    message: ssMessage,
+                } = {},
+            } = {},
+            "subsonic-response": ssResp = {}
+        } = {},
+        body = {},
+    } = resp;
+    if(Object.keys(ssResp).length > 0) {
+        return `(${identifiersFromResponse(body['subsonic-response'])}) Subsonic Api Response => (${code}) ${ssStatus}: ${ssMessage}`;
+    }
+    if(Object.keys(body).length > 0) {
+        return `Subsonic Server Response => (${status}) ${JSON.stringify(body)}`;
+    }
+    if(text !== undefined && text.trim() !== '') {
+        return `Subsonic Server Response => (${status}) ${text.substring(0, 100)}`;
+    }
+    return `Subsonic Server HTTP Response ${status} (no response content)`;
+}
+
+export const identifiersFromResponse = (data: SubsonicResponseCommon) => {
+    const {
+        version,
+        type,
+        serverVersion,
+    } = data;
+    const identifiers = [];
+    if(type !== undefined) {
+        identifiers.push(type);
+    }
+    if(version !== undefined) {
+        identifiers.push(`v${version}`);
+    }
+    if(serverVersion !== undefined) {
+        identifiers.push(`server v${serverVersion}`);
+    }
+    if(identifiers.length === 0) {
+        return 'No Server Identifiers';
+    }
+    return identifiers.join(' | ');
 }

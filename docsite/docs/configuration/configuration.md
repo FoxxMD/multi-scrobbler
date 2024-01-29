@@ -5,11 +5,14 @@ title: Overview
 
 # Configuration
 
+<!-- TOC -->
 * [Overview](#overview)
   * [ENV-Based Configuration](#env-based-configuration)
   * [File-Based Configuration](#file-based-configuration)
     * [All-in-One File Configuration](#all-in-one-file-configuration)
     * [Specific File Configuration](#specific-file-configuration)
+* [Application Options](#application-options)
+  * [Base URL](#base-url)
 * [Source Configurations](#source-configurations)
   * [Spotify](#spotify)
   * [Plex](#plex)
@@ -20,18 +23,26 @@ title: Overview
   * [Listenbrainz (Source)](#listenbrainz--source-)
   * [Deezer](#deezer)
   * [Youtube Music](#youtube-music)
-  * [MPRIS (Linux Desktop)](#mpris)
+  * [MPRIS](#mpris)
   * [Mopidy](#mopidy)
   * [JRiver](#jriver)
   * [Kodi](#kodi)
   * [WebScrobbler](#webscrobbler)
+      * [Multiple Users](#multiple-users)
+  * [Google Cast (Chromecast)](#google-cast--chromecast-)
+    * [Connecting Devices](#connecting-devices)
+    * [What Media Does MS Scrobble?](#what-media-does-ms-scrobble)
+    * [Cast Troubleshooting](#cast-troubleshooting)
 * [Client Configurations](#client-configurations)
   * [Maloja](#maloja)
   * [Last.fm](#lastfm)
   * [Listenbrainz](#listenbrainz)
 * [Monitoring](#monitoring)
-  * [Webhooks](#webhook-configurations)
+  * [Webhook Configurations](#webhook-configurations)
+    * [Gotify](#gotify)
+    * [Ntfy](#ntfy)
   * [Health Endpoint](#health-endpoint)
+<!-- TOC -->
 
 # Overview
 
@@ -693,6 +704,125 @@ MS can be configured to only scrobble, or NOT scrobble, from some WS connectors.
 ### File-Based
 
 See [`webscrobbler.json.example`](https://github.com/FoxxMD/multi-scrobbler/blob/master/config/webscrobbler.json.example) or [explore the schema with an example and live editor/validator](https://json-schema.app/view/%23%2Fdefinitions%2FWebScrobblerSourceConfig/%23%2Fdefinitions%2FWebScrobblerData?url=https%3A%2F%2Fraw.githubusercontent.com%2FFoxxMD%2Fmulti-scrobbler%2Fmaster%2Fsrc%2Fbackend%2Fcommon%2Fschema%2Fsource.json)
+
+## [Google Cast (Chromecast)](https://www.google.com/chromecast/built-in/)
+
+If your media device can be **Cast** to using this button ![Chromecast Icon](https://upload.wikimedia.org/wikipedia/commons/2/26/Chromecast_cast_button_icon.svg) on your phone/computer then multi-scrobbler can monitor it in order to scrobble music you play.
+
+**Note:** This source relies on common, **basic** music data provided by the cast device which will always be less exhaustive than data parsed from full source integrations. If there is an existing [Source](#source-configurations) it is recommended to configure for it and blacklist the app on Google Cast, rather than relying solely on Google Cast for scrobbling.
+
+### Connecting Devices
+
+Cast devices can be manually configured using [File-based configuration](#file-based-14) OR automatically discovered using **mDNS.**
+
+##### mDNS Discovery
+
+The host machine running multi-scrobbler must be configured to allow [mDNS traffic on port 5353/UDP](https://book.hacktricks.xyz/network-services-pentesting/5353-udp-multicast-dns-mdns).
+
+##### Linux
+
+**Docker**
+
+The host machine must have [avahi-daemon](https://avahi.org/) running to circumvent limitations with DNS resolution due to musl in Alpine. Most major linux distributions package avahi and many have it built-in. Once avahi is running you must pass D-Bus and the avahi daemon socket to your container like so:
+
+```
+docker run ... -v /var/run/dbus:/var/run/dbus -v  	/var/run/avahi-daemon/socket:/var/run/avahi-daemon/socket ... foxxmd/multi-scrobbler
+```
+
+**Flatpak/Nodejs**
+
+No additional steps are required.
+
+##### Windows
+
+**Docker**
+
+Unsupported at this time.
+
+**Nodejs**
+
+No additional steps are required.
+
+### What Media Does MS Scrobble?
+
+Cast devices report what type of media the current activity is [(see `metadata` property here)](https://developers.google.com/cast/docs/media/messages#MediaInformation). The reported type is dependent on the application playing the media to correctly report it, the cast device does not magically know what the media is. If an application does not report a type it is always classified as `unknown`.
+
+**By default, MS will only track media that is reported as `MusicTrack`.**
+
+#### Allow Unknown Media Type
+
+Media with an Unknown (`Generic`) media type can be explicitly allowed by setting `"allowUnknownMedia": true` in the [file-based configuration.](#file-based-14) This can also be configured to only allow unknown media types for specific applications by using a list of application names like:
+
+```json5
+// in chromecast.json or config.json sources
+[
+  {
+    "name": "MyCast",
+    "type": "chromecast",
+    "data": {
+      // only allow unknown if app name contains any of these phrases
+      "allowUnknownMedia": ["smarttube", "default media receiver"]
+    },
+  }
+]
+```
+
+#### Forcing Media Tracking
+
+MS can be forced to track media from an application regardless of media type. This is useful if an application incorrectly reports a media type you are sure should be music. Set `"forceMediaRecognitionOn"` in the [file-based configuration.](#file-based-14) to a list of application names that should always be tracked like:
+
+```json5
+// in chromecast.json or config.json sources
+[
+  {
+    "name": "MyCast",
+    "type": "chromecast",
+    "data": {
+      // media from applications that contains these phrases will always be tracked, regardless of media type reported
+      "forceMediaRecognitionOn": ["smarttube", "default media receiver"]
+    },
+  }
+]
+```
+
+
+### Cast Troubleshooting
+
+Please include any/all logs with raw output if there are any errors encountered as this is critical to diagnosing issues.
+
+To diagnose bad/incomplete track information or strange MS player behavior please turn on **payload logging** and include log output of the source running to help diagnose this issue:
+
+```json5
+// in chromecast.json or config.json sources
+[
+  {
+    "name": "MyCast",
+    "type": "chromecast",
+    "data": {
+      //...
+    },
+    "options": {
+      "logPayload": true
+    }
+  }
+]
+```
+
+### ENV-Based
+
+Note: [Manually configuring cast device connections](#connecting-devices) is only available through [File-based config.](#file-based-14)
+
+| Environmental Variable | Required? | Default |                                     Description                                      |
+|------------------------|-----------|---------|--------------------------------------------------------------------------------------|
+| CC_ENABLE              | No        |         | Set to 'true' to enable Cast monitoring without needing to define other ENVs         |
+| CC_WHITELIST_DEVICES   | No        |         | Only scrobble from these Cast devices. Comma-delimited list. EX mini-home, family-tv |
+| CC_BLACKLIST_DEVICES   | No        |         | Do not scrobble from these Cast devices. Comma-delimited list                        |
+| CC_WHITELIST_APPS      | No        |         | Only scrobble from these casted Apps. Comma-delimited list. EX spotify, pandora      |
+| CC_BLACKLIST_APPS      | No        |         | Do not scrobble from these casted Apps. Comma-delimited list                         |
+
+### File-Based
+
+See [`chromecast.json.example`](https://github.com/FoxxMD/multi-scrobbler/blob/master/config/chromecast.json.example) or [explore the schema with an example and live editor/validator](https://json-schema.app/view/%23%2Fdefinitions%2FChromecastSourceConfig/%23%2Fdefinitions%2FChromecastData?url=https%3A%2F%2Fraw.githubusercontent.com%2FFoxxMD%2Fmulti-scrobbler%2Fmaster%2Fsrc%2Fbackend%2Fcommon%2Fschema%2Fsource.json)
 
 # Client Configurations
 

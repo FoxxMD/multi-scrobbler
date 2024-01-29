@@ -1,8 +1,7 @@
 import React from 'react';
-import logo from './logo.svg';
-import * as ReactDOM from "react-dom/client";
 import {
     createBrowserRouter,
+    createHashRouter, RouteObject,
     RouterProvider, useLocation,
 } from "react-router-dom";
 import {connect, ConnectedProps, Provider} from 'react-redux'
@@ -25,7 +24,7 @@ function NoMatch() {
     );
 }
 
-const router = createBrowserRouter([
+const routes: RouteObject[] = [
     {
         path: "/",
         element: <Dashboard />,
@@ -46,7 +45,14 @@ const router = createBrowserRouter([
         path: "*",
         element: <NoMatch/>
     }
-]);
+];
+
+const genRouter = () => {
+    const useHashRouter = __USE_HASH_ROUTER__ === 'true';
+    return useHashRouter ? createHashRouter(routes) : createBrowserRouter(routes);
+}
+
+const router = genRouter();
 
 const mapDispatchToProps = (dispatch) => {
     return {
@@ -80,6 +86,8 @@ const Global = (props: PropsFromRedux) => {
 
 const ConnectedGlobal = connector(Global);
 
+const version = __APP_VERSION__;
+
 function App() {
   return (
       <Provider store={store}>
@@ -90,7 +98,7 @@ function App() {
               <a href="/" className="flex items-center flex-grow no-underline pr-4">
                 <img src="icon.svg" style={{maxWidth: '30px'}}/>
                 <span className="px-4 break-normal">
-                        Multi Scrobbler <span className="ml-2 text-xs version">v{process.env.REACT_APP_VERSION ?? 'Unknown'}</span>
+                        Multi Scrobbler <span className="ml-2 text-xs version">v{version}</span>
                     </span>
               </a>
             </div>

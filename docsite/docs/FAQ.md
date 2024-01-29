@@ -1,3 +1,4 @@
+<!-- TOC -->
 * [Connection Issues](#connection-issues)
   * [Plex/Tautulli/Jellyfin don't connect](#plextautullijellyfin-dont-connect)
   * [Jellyfin has warnings about undefined or missing data](#jellyfin-has-warnings-about-undefined-or-missing-data)
@@ -8,6 +9,9 @@
 * [Scrobbling Issues](#scrobbling-issues)
   * [Last.fm does not scrobble tracks with multiple artists correctly](#lastfm-does-not-scrobble-tracks-with-multiple-artists-correctly)
   * [Jellyfin does not scrobble tracks with multiple artists correctly](#jellyfin-does-not-scrobble-tracks-with-multiple-artists-correctly)
+  * [Google Cast track information is missing/incorrect or MS player has weird times](#google-cast-track-information-is-missingincorrect-or-ms-player-has-weird-times)
+  * [Google Cast device does not track media](#google-cast-device-does-not-track-media)
+<!-- TOC -->
 
 # Connection Issues
 
@@ -151,3 +155,27 @@ Multi-scrobbler works the same was the official Spotify-Last.fm integration work
 ## Jellyfin does not scrobble tracks with multiple artists correctly
 
 This is a limitation caused by the [Jellyfin webhook plugin](https://github.com/FoxxMD/multi-scrobbler/issues/70#issuecomment-1443804712) only sending the first artist to multi-scrobbler. This issues needs to be [fixed upstream on the Jellyfin webhook repository.](https://github.com/jellyfin/jellyfin-plugin-webhook/issues/166)
+
+## Google Cast track information is missing/incorrect or MS player has weird times
+
+The Google Cast integration relies on a few common fields in the data it receives from your casting device. Every platform that can cast (Spotify, Pandora, etc...) *should* use these fields the same but there are slight differences between their implementations that may confuse multi-scrobbler. Specific platforms may also return more information in non-common fields that are undocumented.
+
+To diagnose these issues you [**must enable payload logging**](configuration/configuration.md#cast-troubleshooting) for your google cast Source, run MS, and then include logs with this output from that run. Without the raw data logged from your cast device it will be nearly impossible to resolve your issue.
+
+## Google Cast device does not track media
+
+It is likely the app playing on the cast device is incorrectly reporting the media type as **not music**. 
+
+MS logs will tell you what type the media is reported as with lines like:
+
+```
+My Artist - Example Track has 'unknown' media type and allowUnknownMedia=false, will not track
+```
+
+Refer to [Allow Unknown Media Type](configuration/configuration.md#allow-unknown-media-type) section to fix this
+
+```
+My Artist - Example Track has 'movie' media type so will not track
+```
+
+Refer to [Force Media Tracking](configuration/configuration.md#forcing-media-tracking) section to fix this

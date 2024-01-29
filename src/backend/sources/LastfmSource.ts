@@ -1,15 +1,16 @@
-import { RecentlyPlayedOptions } from "./AbstractSource";
-import LastfmApiClient from "../common/vendor/LastfmApiClient";
-import { sortByOldestPlayDate } from "../utils";
-import { FormatPlayObjectOptions, InternalConfig } from "../common/infrastructure/Atomic";
+import { RecentlyPlayedOptions } from "./AbstractSource.js";
+import LastfmApiClient from "../common/vendor/LastfmApiClient.js";
+import { sortByOldestPlayDate } from "../utils.js";
+import { FormatPlayObjectOptions, InternalConfig } from "../common/infrastructure/Atomic.js";
 import {TrackObject, UserGetRecentTracksResponse} from "lastfm-node-client";
 import EventEmitter from "events";
-import { PlayObject } from "../../core/Atomic";
-import MemorySource from "./MemorySource";
-import {LastfmSourceConfig} from "../common/infrastructure/config/source/lastfm";
+import { PlayObject } from "../../core/Atomic.js";
+import MemorySource from "./MemorySource.js";
+import { LastfmSourceConfig } from "../common/infrastructure/config/source/lastfm.js";
 import dayjs from "dayjs";
-import {isNodeNetworkException} from "../common/errors/NodeErrors";
+import { isNodeNetworkException } from "../common/errors/NodeErrors.js";
 import {ErrorWithCause} from "pony-cause";
+import request from "superagent";
 
 export default class LastfmSource extends MemorySource {
 
@@ -38,11 +39,28 @@ export default class LastfmSource extends MemorySource {
         return LastfmApiClient.formatPlayObj(obj, options);
     }
 
-    initialize = async () => {
-        this.initialized = await this.api.initialize();
-        return this.initialized;
+    // initialize = async () => {
+    //     this.initialized = await this.api.initialize();
+    //     return this.initialized;
+    // }
+
+    protected async doBuildInitData(): Promise<true | string | undefined> {
+        return await this.api.initialize();
     }
 
+    protected async doCheckConnection():Promise<true | string | undefined> {
+        try {
+            await request.get('http://ws.audioscrobbler.com/2.0/');
+            return true;
+        } catch (e) {
+            if(isNodeNetworkException(e)) {
+                throw new ErrorWithCause('Could not communicate with Last.fm API server', {cause: e});
+            } else if(e.status >= 500) {
+                throw new ErrorWithCause('Last.fm API server returning an unexpected response', {cause: e})
+            }
+            return true;
+        }
+    }
     doAuthentication = async () => {
         try {
             return await this.api.testAuth();

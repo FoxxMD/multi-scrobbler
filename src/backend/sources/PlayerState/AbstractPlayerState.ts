@@ -4,14 +4,14 @@ import {
     PlayPlatformId,
     REPORTED_PLAYER_STATUSES,
     ReportedPlayerStatus,
-} from "../../common/infrastructure/Atomic";
+} from "../../common/infrastructure/Atomic.js";
 import dayjs, {Dayjs} from "dayjs";
-import { formatNumber, genGroupIdStr, playObjDataMatch, progressBar } from "../../utils";
+import { formatNumber, genGroupIdStr, playObjDataMatch, progressBar } from "../../utils.js";
 import {Logger} from "@foxxmd/winston";
-import { ListenProgress } from "./ListenProgress";
-import {PlayObject, Second, SourcePlayerObj} from "../../../core/Atomic";
-import { buildTrackString } from "../../../core/StringUtils";
-import {ListenRange} from "./ListenRange";
+import { ListenProgress } from "./ListenProgress.js";
+import { PlayObject, Second, SourcePlayerObj } from "../../../core/Atomic.js";
+import { buildTrackString } from "../../../core/StringUtils.js";
+import { ListenRange } from "./ListenRange.js";
 import {id} from "common-tags";
 
 export interface PlayerStateIntervals {

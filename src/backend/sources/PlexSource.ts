@@ -1,14 +1,14 @@
 import dayjs from "dayjs";
-import { combinePartsToString, mergeArr } from "../utils";
-import AbstractSource from "./AbstractSource";
+import { combinePartsToString, mergeArr } from "../utils.js";
+import AbstractSource from "./AbstractSource.js";
 import formidable from 'formidable';
 import concatStream from 'concat-stream';
-import { PlexSourceConfig } from "../common/infrastructure/config/source/plex";
-import { FormatPlayObjectOptions, InternalConfig, SourceType } from "../common/infrastructure/Atomic";
+import { PlexSourceConfig } from "../common/infrastructure/config/source/plex.js";
+import { FormatPlayObjectOptions, InternalConfig, SourceType } from "../common/infrastructure/Atomic.js";
 import EventEmitter from "events";
 import winston from '@foxxmd/winston';
-import { PlayObject } from "../../core/Atomic";
-import { truncateStringToLength } from "../../core/StringUtils";
+import { PlayObject } from "../../core/Atomic.js";
+import { truncateStringToLength } from "../../core/StringUtils.js";
 
 const shortDeviceId = truncateStringToLength(10, '');
 
@@ -68,7 +68,6 @@ export default class PlexSource extends AbstractSource {
         } else {
             this.logger.info(`Initializing with the following filters => Users: ${this.users.length === 0 ? 'N/A' : this.users.join(', ')} | Libraries: ${this.libraries.length === 0 ? 'N/A' : this.libraries.join(', ')} | Servers: ${this.servers.length === 0 ? 'N/A' : this.servers.join(', ')}`);
         }
-        this.initialized = true;
     }
 
     static formatPlayObj(obj: any, options: FormatPlayObjectOptions = {}): PlayObject {

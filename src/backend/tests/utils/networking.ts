@@ -1,4 +1,4 @@
-import {NodeNetworkErrorCode, NodeNetworkException} from "../../common/errors/NodeErrors";
+import { NodeNetworkErrorCode, NodeNetworkException } from "../../common/errors/NodeErrors.js";
 import {  setupServer, SetupServer } from 'msw/node';
 
 export class MockNetworkError extends Error implements NodeNetworkException {

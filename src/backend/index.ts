@@ -6,22 +6,19 @@ import isBetween from 'dayjs/plugin/isBetween.js';
 import relativeTime from 'dayjs/plugin/relativeTime.js';
 import duration from 'dayjs/plugin/duration.js';
 import timezone from 'dayjs/plugin/timezone.js';
-import {
-    parseBool,
-    readJson,
-    sleep
-} from "./utils";
+import { parseBool, readJson, sleep } from "./utils.js";
 import * as path from "path";
-import {projectDir} from "./common/index";
-import SpotifySource from "./sources/SpotifySource";
-import { AIOConfig } from "./common/infrastructure/config/aioConfig";
-import { getRoot } from "./ioc";
-import {getLogger} from "./common/logging";
-import {LogInfo} from "../core/Atomic";
-import {initServer} from "./server/index";
+import { projectDir } from "./common/index.js";
+import SpotifySource from "./sources/SpotifySource.js";
+import { AIOConfig } from "./common/infrastructure/config/aioConfig.js";
+import { getRoot } from "./ioc.js";
+import { getLogger } from "./common/logging.js";
+import { LogInfo } from "../core/Atomic.js";
+import { initServer } from "./server/index.js";
 import {SimpleIntervalJob, ToadScheduler} from "toad-scheduler";
-import {createHeartbeatSourcesTask} from "./tasks/heartbeatSources";
-import {createHeartbeatClientsTask} from "./tasks/heartbeatClients";
+import { createHeartbeatSourcesTask } from "./tasks/heartbeatSources.js";
+import { createHeartbeatClientsTask } from "./tasks/heartbeatClients.js";
+import {ErrorWithCause} from "pony-cause";
 
 
 dayjs.extend(utc)
@@ -43,6 +40,15 @@ initLogger.stream().on('log', (log: LogInfo) => {
 });
 
 let logger: Logger;
+
+process.on('uncaughtExceptionMonitor', (err, origin) => {
+    const appError = new ErrorWithCause(`Uncaught exception is crashing the app! :( Type: ${origin}`, {cause: err});
+    if(logger !== undefined) {
+        logger.error(appError)
+    } else {
+        initLogger.error(appError);
+    }
+})
 
 const configDir = process.env.CONFIG_DIR || path.resolve(projectDir, `./config`);
 
@@ -142,8 +148,13 @@ const configDir = process.env.CONFIG_DIR || path.resolve(projectDir, `./config`)
         logger.info('Scheduler started.');
 
     } catch (e) {
-        logger.error('Exited with uncaught error');
-        logger.error(e);
+        const appError = new ErrorWithCause('Exited with uncaught error', {cause: e});
+        if(logger !== undefined) {
+            logger.error(appError);
+        } else {
+            initLogger.error(appError);
+        }
+        process.exit(1);
     }
 }());
 

@@ -1,4 +1,4 @@
-import { CommonConfig, CommonData } from "../common";
+import { CommonConfig, CommonData } from "../common.js";
 
 /**
  * Scrobble matching (between new source track and existing client scrobbles) logging options. Used for debugging.
@@ -70,7 +70,7 @@ export interface CommonClientData extends CommonData {
          * @default 1
          * @examples [1]
          * */
-        deadLetterRetries?: boolean
+        deadLetterRetries?: number
     }
 }
 

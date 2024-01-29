@@ -1,4 +1,4 @@
-import MemorySource from "./MemorySource";
+import MemorySource from "./MemorySource.js";
 import dayjs, {Dayjs} from "dayjs";
 import {
     combinePartsToString,
@@ -6,21 +6,21 @@ import {
     parseDurationFromTimestamp,
     playObjDataMatch,
     doubleReturnNewline,
-} from "../utils";
-import { JellySourceConfig } from "../common/infrastructure/config/source/jellyfin";
-import { FormatPlayObjectOptions, InternalConfig, PlayPlatformId } from "../common/infrastructure/Atomic";
+} from "../utils.js";
+import { JellySourceConfig } from "../common/infrastructure/config/source/jellyfin.js";
+import { FormatPlayObjectOptions, InternalConfig, PlayPlatformId } from "../common/infrastructure/Atomic.js";
 import EventEmitter from "events";
-import { PlayerStateOptions } from "./PlayerState/AbstractPlayerState";
+import { PlayerStateOptions } from "./PlayerState/AbstractPlayerState.js";
 import {Logger} from "@foxxmd/winston";
-import { JellyfinPlayerState } from "./PlayerState/JellyfinPlayerState";
-import {PlayObject, TA_CLOSE} from "../../core/Atomic";
-import {buildTrackString, splitByFirstFound, truncateStringToLength} from "../../core/StringUtils";
+import { JellyfinPlayerState } from "./PlayerState/JellyfinPlayerState.js";
+import { PlayObject, TA_CLOSE } from "../../core/Atomic.js";
+import { buildTrackString, splitByFirstFound, truncateStringToLength } from "../../core/StringUtils.js";
 import {source} from "common-tags";
 import {
     comparePlayTemporally,
     temporalAccuracyIsAtLeast,
-    temporalPlayComparisonSummary
-} from "../utils/TimeUtils";
+    temporalPlayComparisonSummary,
+} from "../utils/TimeUtils.js";
 
 const shortDeviceId = truncateStringToLength(10, '');
 
@@ -90,7 +90,6 @@ export default class JellyfinSource extends MemorySource {
         } else {
             this.logger.info(`Initializing with the following filters => Users: ${this.users === undefined ? 'N/A' : this.users.join(', ')} | Servers: ${this.servers === undefined ? 'N/A' : this.servers.join(', ')}`);
         }
-        this.initialized = true;
     }
 
     static formatPlayObj(obj: any, options: FormatPlayObjectOptions = {}): PlayObject {

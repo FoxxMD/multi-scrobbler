@@ -1,10 +1,10 @@
 import {Dayjs} from "dayjs";
 import {MESSAGE} from "triple-beam";
-import {ListenProgress} from "../backend/sources/PlayerState/ListenProgress";
+import {ListenProgress} from "../backend/sources/PlayerState/ListenProgress.js";
 
 export interface SourceStatusData {
     status: string;
-    type: "spotify" | "plex" | "tautulli" | "subsonic" | "jellyfin" | "lastfm" | "deezer" | "ytmusic" | "mpris" | "mopidy" | "listenbrainz" | "jriver" | "kodi" | 'webscrobbler';
+    type: "spotify" | "plex" | "tautulli" | "subsonic" | "jellyfin" | "lastfm" | "deezer" | "ytmusic" | "mpris" | "mopidy" | "listenbrainz" | "jriver" | "kodi" | 'webscrobbler' | 'chromecast';
     display: string;
     tracksDiscovered: number;
     name: string;

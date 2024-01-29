@@ -1,6 +1,6 @@
-import { MalojaClientAIOConfig, MalojaClientConfig } from "./maloja";
-import { LastfmClientAIOConfig, LastfmClientConfig } from "./lastfm";
-import { ListenBrainzClientAIOConfig, ListenBrainzClientConfig } from "./listenbrainz";
+import { MalojaClientAIOConfig, MalojaClientConfig } from "./maloja.js";
+import { LastfmClientAIOConfig, LastfmClientConfig } from "./lastfm.js";
+import { ListenBrainzClientAIOConfig, ListenBrainzClientConfig } from "./listenbrainz.js";
 
 export type ClientConfig = MalojaClientConfig | LastfmClientConfig | ListenBrainzClientConfig;
 

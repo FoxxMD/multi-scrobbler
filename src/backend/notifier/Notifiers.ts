@@ -1,9 +1,9 @@
 import winston, {config, format, Logger} from '@foxxmd/winston';
-import { mergeArr } from "../utils";
-import { GotifyConfig, NtfyConfig, WebhookConfig, WebhookPayload } from "../common/infrastructure/config/health/webhooks";
-import { AbstractWebhookNotifier } from "./AbstractWebhookNotifier";
-import { GotifyWebhookNotifier } from "./GotifyWebhookNotifier";
-import { NtfyWebhookNotifier } from "./NtfyWebhookNotifier";
+import { mergeArr } from "../utils.js";
+import { GotifyConfig, NtfyConfig, WebhookConfig, WebhookPayload } from "../common/infrastructure/config/health/webhooks.js";
+import { AbstractWebhookNotifier } from "./AbstractWebhookNotifier.js";
+import { GotifyWebhookNotifier } from "./GotifyWebhookNotifier.js";
+import { NtfyWebhookNotifier } from "./NtfyWebhookNotifier.js";
 import {EventEmitter} from "events";
 
 export class Notifiers {

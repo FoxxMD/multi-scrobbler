@@ -1,34 +1,36 @@
 import path from "path";
-import { projectDir } from "./index";
-import winston, {format, Logger} from '@foxxmd/winston';
+import { projectDir } from "./index.js";
+import * as winstonNs from '@foxxmd/winston';
+import winstonDef from '@foxxmd/winston';
 import {DuplexTransport} from "winston-duplex";
-import { asLogOptions, LogConfig, LogOptions } from "./infrastructure/Atomic";
+import { asLogOptions, LogConfig, LogOptions } from "./infrastructure/Atomic.js";
 import process from "process";
-import { fileOrDirectoryIsWriteable, parseBool } from "../utils";
+import { fileOrDirectoryIsWriteable, mergeArr, parseBool } from "../utils.js";
 import {ErrorWithCause, stackWithCauses} from "pony-cause";
 import {NullTransport} from 'winston-null';
 import DailyRotateFile from 'winston-daily-rotate-file';
 import dayjs from "dayjs";
 import stringify from 'safe-stable-stringify';
 import {SPLAT, LEVEL, MESSAGE} from 'triple-beam';
-import { LogInfo, LogLevel } from "../../core/Atomic";
+import { LogInfo, LogLevel } from "../../core/Atomic.js";
 import TransportStream from "winston-transport";
+import {format} from 'logform';
 
 const {combine, printf, timestamp, label, splat, errors} = format;
 
-
-const {transports} = winston;
+//const {transports} = winstonNew;
+const {loggers, transports} = winstonDef;
 
 export let logPath = path.resolve(projectDir, `./logs`);
 if (typeof process.env.CONFIG_DIR === 'string') {
     logPath = path.resolve(process.env.CONFIG_DIR, './logs');
 }
 
-winston.loggers.add('noop', {transports: [new NullTransport()]});
+loggers.add('noop', {transports: [new NullTransport()]});
 
-export const getLogger = (config: LogConfig = {}, name = 'app'): Logger => {
+export const getLogger = (config: LogConfig = {}, name = 'app'): winstonNs.Logger => {
 
-    if (!winston.loggers.has(name)) {
+    if (!loggers.has(name)) {
         const errors: (Error | string)[] = [];
 
         let options: LogOptions = {};
@@ -64,15 +66,15 @@ export const getLogger = (config: LogConfig = {}, name = 'app'): Logger => {
                     objectMode: true,
                 },
                 name: 'duplex',
-                handleExceptions: true,
-                handleRejections: true,
                 level: stream,
                 dump: false,
             })
         ];
 
         if(console !== false) {
-            myTransports.push(new transports.Console({level: console}));
+            myTransports.push(new transports.Console({
+                level: console,
+            }));
         }
 
         if (file !== false) {
@@ -83,7 +85,7 @@ export const getLogger = (config: LogConfig = {}, name = 'app'): Logger => {
                 filename: 'scrobble-%DATE%.log',
                 datePattern: 'YYYY-MM-DD',
                 maxSize: '5m',
-                level: file
+                level: file,
             });
 
             try {
@@ -96,15 +98,15 @@ export const getLogger = (config: LogConfig = {}, name = 'app'): Logger => {
             }
         }
 
-        const loggerOptions: winston.LoggerOptions = {
+        const loggerOptions: winstonNs.LoggerOptions = {
             level: level,
             format: labelledFormat(),
             transports: myTransports,
         };
 
-        winston.loggers.add(name, loggerOptions);
+        loggers.add(name, loggerOptions);
 
-        const logger = winston.loggers.get(name);
+        const logger = loggers.get(name);
         if (errors.length > 0) {
             for (const e of errors) {
                 logger.error(e);
@@ -112,7 +114,7 @@ export const getLogger = (config: LogConfig = {}, name = 'app'): Logger => {
         }
         return logger;
     }
-    return winston.loggers.get(name);
+    return loggers.get(name);
 }
 
 const breakSymbol = '<br />';
@@ -154,7 +156,7 @@ export const defaultFormat = (defaultLabel = 'App') => printf(({
                                                                    ...rest
                                                                }) => {
     const keys = Object.keys(rest);
-    let stringifyValue = keys.length > 0 && !keys.every(x => causeKeys.some(y => y == x)) ? stringify(rest) : '';
+    let stringifyValue = keys.length > 0 && !keys.every(x => causeKeys.some(y => y == x)) ? stringify.default(rest) : '';
     let msg = message;
     let stackMsg = '';
     if (stack !== undefined) {
@@ -364,5 +366,47 @@ const _transformError = (err: Error, seen: Set<Error>) => {
         // oops :(
         // we're gonna swallow silently instead of reporting to avoid any infinite nesting and hopefully the original error looks funny enough to provide clues as to what to fix here
         return err;
+    }
+}
+
+export class MaybeLogger {
+    logger?: winstonNs.Logger
+
+    constructor(logger?: winstonNs.Logger, label?: string) {
+        if (logger !== undefined && label !== undefined) {
+            this.logger = logger.child({labels: [label]}, mergeArr);
+        } else {
+            this.logger = logger;
+        }
+    }
+
+    public info(first: any, ...rest: any) {
+        if (this.logger) {
+            this.logger.info(first, ...rest);
+        }
+    }
+
+    public debug(first: any, ...rest: any) {
+        if (this.logger) {
+            this.logger.debug(first, ...rest);
+        }
+    }
+
+    public warn(first: any, ...rest: any) {
+        if (this.logger) {
+            this.logger.warn(first, ...rest);
+        }
+    }
+
+    public verbose(first: any, ...rest: any) {
+        if (this.logger) {
+            this.logger.verbose(first, ...rest);
+        }
+    }
+
+    public error(first: any, ...rest: any) {
+        if (this.logger) {
+            this.logger.error(first, ...rest);
+        }
     }
 }

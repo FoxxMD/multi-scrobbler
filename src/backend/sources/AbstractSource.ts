@@ -7,11 +7,15 @@ import {
     pollingBackoff,
     sleep,
     sortByNewestPlayDate,
-    sortByOldestPlayDate, findCauseByFunc, formatNumber,
-} from "../utils";
+    sortByOldestPlayDate,
+    findCauseByFunc,
+    formatNumber,
+} from "../utils.js";
 import {
     Authenticatable,
-    DEFAULT_POLLING_INTERVAL, DEFAULT_POLLING_MAX_INTERVAL, DEFAULT_RETRY_MULTIPLIER,
+    DEFAULT_POLLING_INTERVAL,
+    DEFAULT_POLLING_MAX_INTERVAL,
+    DEFAULT_RETRY_MULTIPLIER,
     DeviceId,
     GroupedFixedPlays,
     GroupedPlays,
@@ -23,17 +27,17 @@ import {
     ProgressAwarePlayObject,
     SINGLE_USER_PLATFORM_ID,
     SourceType,
-} from "../common/infrastructure/Atomic";
+} from "../common/infrastructure/Atomic.js";
 import {Logger} from '@foxxmd/winston';
-import { SourceConfig } from "../common/infrastructure/config/source/sources";
+import { SourceConfig } from "../common/infrastructure/config/source/sources.js";
 import {EventEmitter} from "events";
 import {FixedSizeList} from "fixed-size-list";
-import TupleMap from "../common/TupleMap";
-import {PlayObject, TA_CLOSE} from "../../core/Atomic";
-import {buildTrackString, capitalize} from "../../core/StringUtils";
-import {isNodeNetworkException} from "../common/errors/NodeErrors";
+import TupleMap from "../common/TupleMap.js";
+import { PlayObject, TA_CLOSE } from "../../core/Atomic.js";
+import { buildTrackString, capitalize } from "../../core/StringUtils.js";
+import { isNodeNetworkException } from "../common/errors/NodeErrors.js";
 import {ErrorWithCause} from "pony-cause";
-import {comparePlayTemporally, temporalAccuracyIsAtLeast} from "../utils/TimeUtils";
+import { comparePlayTemporally, temporalAccuracyIsAtLeast } from "../utils/TimeUtils.js";
 
 export interface RecentlyPlayedOptions {
     limit?: number
@@ -53,12 +57,14 @@ export default abstract class AbstractSource implements Authenticatable {
     logger: Logger;
     instantiatedAt: Dayjs;
     lastActivityAt: Dayjs;
-    initialized: boolean = false;
 
     requiresAuth: boolean = false;
     requiresAuthInteraction: boolean = false;
     authed: boolean = false;
     authFailure?: boolean;
+
+    buildOK?: boolean | null;
+    connectionOK?: boolean | null;
 
     multiPlatform: boolean = false;
 
@@ -94,8 +100,83 @@ export default abstract class AbstractSource implements Authenticatable {
 
     // default init function, should be overridden if init stage is required
     initialize = async () => {
-        this.initialized = true;
-        return this.initialized;
+        this.logger.debug('Attempting to initialize...');
+        try {
+            await this.buildInitData();
+            await this.checkConnection();
+            await this.testAuth();
+            this.logger.info('Fully Initialized!');
+            return true;
+        } catch(e) {
+            this.logger.error(new ErrorWithCause('Initialization failed', {cause: e}));
+            return false;
+        }
+    }
+
+    public async buildInitData() {
+        if(this.buildOK) {
+            return;
+        }
+        try {
+            const res = await this.doBuildInitData();
+            if(res === undefined) {
+                this.buildOK = null;
+                this.logger.debug('No required data to build.');
+                return;
+            }
+            if (res === true) {
+                this.logger.debug('Building required data init succeeded');
+            } else if (typeof res === 'string') {
+                this.logger.debug(`Building required data init succeeded => ${res}`);
+            }
+            this.buildOK = true;
+        } catch (e) {
+            this.buildOK = false;
+            throw new ErrorWithCause('Building required data for initialization failed', {cause: e});
+        }
+    }
+
+    /**
+     * Build any data/config/objects required for this Source to communicate with upstream service
+     *
+     * * Return undefined if not possible or not required
+     * * Return TRUE if build succeeded
+     * * Return string if build succeeded and should log result
+     * * Throw error on failure
+     * */
+    protected async doBuildInitData(): Promise<true | string | undefined> {
+        return;
+    }
+
+    public async checkConnection() {
+        try {
+            const res = await this.doCheckConnection();
+            if (res === undefined) {
+                this.logger.debug('Connection check was not required.');
+                this.connectionOK = null;
+                return;
+            } else if (res === true) {
+                this.logger.verbose('Connection check succeeded');
+            } else {
+                this.logger.verbose(`Connection check succeeded => ${res}`);
+            }
+            this.connectionOK = true;
+        } catch (e) {
+            this.connectionOK = false;
+            throw new ErrorWithCause('Communicating with upstream service failed', {cause: e});
+        }
+    }
+
+    /**
+     * Check Source upstream API/connection to ensure we can communicate
+     *
+     * * Return undefined if not possible or not required to check
+     * * Return TRUE if communication succeeded
+     * * Return string if communication succeeded and should log result
+     * * Throw error if communication failed
+     * */
+    protected async doCheckConnection(): Promise<true | string | undefined> {
+        return;
     }
 
     authGated = () => {
@@ -111,20 +192,27 @@ export default abstract class AbstractSource implements Authenticatable {
     }
 
     testAuth = async () => {
+        if(!this.requiresAuth) {
+            return;
+        }
+
+        this.logger.debug('Checking Authentication...');
         try {
             this.authed = await this.doAuthentication();
             this.authFailure = !this.authed;
+            this.logger.info(`Auth is ${this.authed ? 'OK' : 'NOT OK'}`)
         } catch (e) {
             // only signal as auth failure if error was NOT a node network error
             this.authFailure = findCauseByFunc(e, isNodeNetworkException) === undefined;
             this.authed = false;
-            this.logger.error(`Authentication test failed!${this.authFailure === false ? ' Due to a network issue. Will retry authentication on next heartbeat.' : ''}`);
-            this.logger.error(e);
+            throw new ErrorWithCause(`Authentication test failed!${this.authFailure === false ? ' Due to a network issue. Will retry authentication on next heartbeat.' : ''}`, {cause: e})
         }
     }
 
     public isReady() {
-        return this.initialized && !this.authGated();
+        return (this.buildOK === null || this.buildOK === true) &&
+            (this.connectionOK === null || this.connectionOK === true)
+            && !this.authGated();
     }
 
     getRecentlyPlayed = async (options: RecentlyPlayedOptions = {}): Promise<PlayObject[]> => {

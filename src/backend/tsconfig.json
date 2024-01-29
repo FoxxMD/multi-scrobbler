@@ -1,14 +1,16 @@
 {
+  "extends": "../../tsconfig.json",
   "compilerOptions": {
-    "sourceMap": true,
-    "resolveJsonModule": true,
+    "target": "ESNext",
     "emitDecoratorMetadata": true,
     "experimentalDecorators": true,
-    "lib": ["es2020", "dom"],
-    "module": "commonjs",
-    "target": "es2020",
+    "allowSyntheticDefaultImports": true,
     "esModuleInterop": true,
-    "skipLibCheck": true,
+    "lib": [
+      "dom",
+      "dom.iterable",
+      "esnext"
+    ],
 
     "typeRoots": [
       "../../node_modules/@types",
@@ -17,8 +19,6 @@
   },
   "include": [
     "**/*.ts",
-    "**/*.tsx",
-    "**/*.js",
     "../core/**/*.ts"
   ],
   "exclude": [

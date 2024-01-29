@@ -1,16 +1,17 @@
-import MemorySource from "./MemorySource";
+import MemorySource from "./MemorySource.js";
 import {
     FormatPlayObjectOptions,
     InternalConfig,
     NO_USER,
-    PlayerStateData, REPORTED_PLAYER_STATUSES,
-    ReportedPlayerStatus
-} from "../common/infrastructure/Atomic";
+    PlayerStateData,
+    REPORTED_PLAYER_STATUSES,
+    ReportedPlayerStatus,
+} from "../common/infrastructure/Atomic.js";
 import EventEmitter from "events";
-import {PlayObject} from "../../core/Atomic";
-import {WebScrobblerHookEvent, WebScrobblerPayload, WebScrobblerSong} from "../common/vendor/webscrobbler/interfaces";
+import { PlayObject } from "../../core/Atomic.js";
+import { WebScrobblerHookEvent, WebScrobblerPayload, WebScrobblerSong } from "../common/vendor/webscrobbler/interfaces.js";
 import dayjs from "dayjs";
-import {WebScrobblerSourceConfig} from "../common/infrastructure/config/source/webscrobbler";
+import { WebScrobblerSourceConfig } from "../common/infrastructure/config/source/webscrobbler.js";
 
 export class WebScrobblerSource extends MemorySource {
 
@@ -39,10 +40,9 @@ export class WebScrobblerSource extends MemorySource {
         };
     }
 
-    initialize = async () => {
+    protected async doBuildInitData(): Promise<true | string | undefined> {
         this.logger.info(`Accepting requests at ${this.localUrl}/api/webscrobbler${this.config.data.slug === undefined ? '' : `/${this.config.data.slug}`}`);
-        this.initialized = true;
-        return this.initialized;
+        return true;
     }
 
     matchSlug(slug: string | undefined) {

@@ -1,13 +1,13 @@
-import MemorySource from "./MemorySource";
-import { FormatPlayObjectOptions, InternalConfig } from "../common/infrastructure/Atomic";
+import MemorySource from "./MemorySource.js";
+import { FormatPlayObjectOptions, InternalConfig } from "../common/infrastructure/Atomic.js";
 import dayjs from "dayjs";
 import {URL} from "url";
 import normalizeUrl from 'normalize-url';
 import {EventEmitter} from "events";
-import { RecentlyPlayedOptions } from "./AbstractSource";
-import { JRiverSourceConfig } from "../common/infrastructure/config/source/jriver";
-import { Info, JRiverApiClient, PLAYER_STATE } from "../common/vendor/JRiverApiClient";
-import { PlayObject } from "../../core/Atomic";
+import { RecentlyPlayedOptions } from "./AbstractSource.js";
+import { JRiverSourceConfig } from "../common/infrastructure/config/source/jriver.js";
+import { Info, JRiverApiClient, PLAYER_STATE } from "../common/vendor/JRiverApiClient.js";
+import { PlayObject } from "../../core/Atomic.js";
 
 export class JRiverSource extends MemorySource {
     declare config: JRiverSourceConfig;
@@ -53,23 +53,21 @@ export class JRiverSource extends MemorySource {
         return url;
     }
 
-    initialize = async () => {
+    protected async doBuildInitData(): Promise<true | string | undefined> {
         const {
             data: {
                 url
             } = {}
         } = this.config;
         this.logger.debug(`Config URL: '${url ?? '(None Given)'}' => Normalized: '${this.url.toString()}'`)
+        return true;
+    }
 
-        const connected = await this.client.testConnection();
-        if(connected) {
-            this.logger.info('Connection OK');
-            this.initialized = true;
-            return true;
-        } else {
-            this.logger.error(`Could not connect.`);
-            this.initialized = false;
-            return false;
+    protected async doCheckConnection(): Promise<true | string | undefined> {
+        try {
+            return await this.client.testConnection();
+        } catch (e) {
+            throw e;
         }
     }
 

@@ -1,4 +1,4 @@
-import AbstractScrobbleClient from "./AbstractScrobbleClient";
+import AbstractScrobbleClient from "./AbstractScrobbleClient.js";
 import dayjs from 'dayjs';
 
 import {
@@ -7,19 +7,20 @@ import {
     setIntersection,
     sleep,
     sortByOldestPlayDate,
-} from "../utils";
-import LastfmApiClient from "../common/vendor/LastfmApiClient";
-import { FormatPlayObjectOptions, INITIALIZING, ScrobbledPlayObject } from "../common/infrastructure/Atomic";
-import { LastfmClientConfig } from "../common/infrastructure/config/client/lastfm";
+} from "../utils.js";
+import LastfmApiClient from "../common/vendor/LastfmApiClient.js";
+import { FormatPlayObjectOptions, INITIALIZING, ScrobbledPlayObject } from "../common/infrastructure/Atomic.js";
+import { LastfmClientConfig } from "../common/infrastructure/config/client/lastfm.js";
 import {TrackScrobblePayload, TrackScrobbleResponse, UserGetRecentTracksResponse} from "lastfm-node-client";
-import { Notifiers } from "../notifier/Notifiers";
+import { Notifiers } from "../notifier/Notifiers.js";
 import {Logger} from '@foxxmd/winston';
-import { PlayObject, TrackStringOptions } from "../../core/Atomic";
-import {buildTrackString, capitalize} from "../../core/StringUtils";
+import { PlayObject, TrackStringOptions } from "../../core/Atomic.js";
+import { buildTrackString, capitalize } from "../../core/StringUtils.js";
 import EventEmitter from "events";
-import {UpstreamError} from "../common/errors/UpstreamError";
-import {isNodeNetworkException} from "../common/errors/NodeErrors";
-import {getScrobbleTsSOCDate} from "../utils/TimeUtils";
+import { UpstreamError } from "../common/errors/UpstreamError.js";
+import { isNodeNetworkException } from "../common/errors/NodeErrors.js";
+import { getScrobbleTsSOCDate } from "../utils/TimeUtils.js";
+import {ErrorWithCause} from "pony-cause";
 
 export default class LastfmScrobbler extends AbstractScrobbleClient {
 
@@ -40,12 +41,13 @@ export default class LastfmScrobbler extends AbstractScrobbleClient {
     initialize = async () => {
         // @ts-expect-error TS(2322): Type 'number' is not assignable to type 'boolean'.
         this.initialized = INITIALIZING;
-        const result = await this.api.initialize();
-        this.initialized = result;
-        if(result) {
+        try {
+            const result = await this.api.initialize();
+            this.initialized = true;
             this.logger.info('Initialized');
-        } else {
-            this.logger.warn('Could not initialize');
+        } catch (e) {
+            this.initialized = false;
+            this.logger.warn(new ErrorWithCause('Initialization failed', {cause: e}));
         }
 
         return this.initialized;

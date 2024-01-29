@@ -3,7 +3,7 @@ import {LogInfoJson, LogOutputConfig} from "../../core/Atomic";
 
 export const logsApi = createApi({
     reducerPath: 'logsApi',
-    baseQuery: fetchBaseQuery({ baseUrl: '/api/' }),
+    baseQuery: fetchBaseQuery({ baseUrl: './api/' }),
     endpoints: (builder) => ({
         getLogs: builder.query<{ data: LogInfoJson[], settings: LogOutputConfig }, undefined>({
             query: () => `logs`,

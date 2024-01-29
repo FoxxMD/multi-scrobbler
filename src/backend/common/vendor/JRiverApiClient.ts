@@ -1,9 +1,9 @@
-import AbstractApiClient from "./AbstractApiClient";
-import {JRiverData} from "../infrastructure/config/source/jriver";
+import AbstractApiClient from "./AbstractApiClient.js";
+import {JRiverData} from "../infrastructure/config/source/jriver.js";
 import request, {Request, Response} from 'superagent';
 import xml2js from 'xml2js';
 import {ErrorWithCause} from "pony-cause";
-import {DEFAULT_RETRY_MULTIPLIER} from "../infrastructure/Atomic";
+import {DEFAULT_RETRY_MULTIPLIER} from "../infrastructure/Atomic.js";
 
 const parser = new xml2js.Parser({'async': true});
 
@@ -127,15 +127,14 @@ export class JRiverApiClient extends AbstractApiClient {
         }
     }
 
-    testConnection = async () => {
+    testConnection = async (): Promise<true> => {
         try {
             const resp = await this.callApi<Alive>(request.get(`${this.url}Alive`));
             const {body: { data } = {}} = resp;
             this.logger.verbose(`Found ${data.ProgramName} ${data.ProgramVersion} (${data.FriendlyName})`);
             return true;
         } catch (e) {
-            this.logger.error(new ErrorWithCause('Could not communicate with JRiver server. Verify your server URL is correct.', {cause: e}));
-            return false;
+            throw new ErrorWithCause('Could not communicate with JRiver server. Verify your server URL is correct.', {cause: e});
         }
     }
 

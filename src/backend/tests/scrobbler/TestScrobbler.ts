@@ -1,7 +1,7 @@
-import AbstractScrobbleClient from "../../scrobblers/AbstractScrobbleClient";
-import {PlayObject} from "../../../core/Atomic";
-import {getLogger} from "../../common/logging";
-import {Notifiers} from "../../notifier/Notifiers";
+import AbstractScrobbleClient from "../../scrobblers/AbstractScrobbleClient.js";
+import { PlayObject } from "../../../core/Atomic.js";
+import { getLogger } from "../../common/logging.js";
+import { Notifiers } from "../../notifier/Notifiers.js";
 import EventEmitter from "events";
 import request from "superagent";
 

@@ -1,10 +1,10 @@
-import MemorySource from "./MemorySource";
-import { FormatPlayObjectOptions, InternalConfig } from "../common/infrastructure/Atomic";
+import MemorySource from "./MemorySource.js";
+import { FormatPlayObjectOptions, InternalConfig } from "../common/infrastructure/Atomic.js";
 import {EventEmitter} from "events";
-import { RecentlyPlayedOptions } from "./AbstractSource";
-import { KodiSourceConfig } from "../common/infrastructure/config/source/kodi";
-import { KodiApiClient } from "../common/vendor/KodiApiClient";
-import { PlayObject } from "../../core/Atomic";
+import { RecentlyPlayedOptions } from "./AbstractSource.js";
+import { KodiSourceConfig } from "../common/infrastructure/config/source/kodi.js";
+import { KodiApiClient } from "../common/vendor/KodiApiClient.js";
+import { PlayObject } from "../../core/Atomic.js";
 
 export class KodiSource extends MemorySource {
     declare config: KodiSourceConfig;
@@ -26,7 +26,7 @@ export class KodiSource extends MemorySource {
         this.multiPlatform = true;
     }
 
-    initialize = async () => {
+    protected async doBuildInitData(): Promise<true | string | undefined> {
         const {
             data: {
                 url
@@ -34,19 +34,7 @@ export class KodiSource extends MemorySource {
         } = this.config;
         this.client = new KodiApiClient(this.name, this.config.data);
         this.logger.debug(`Config URL: '${url ?? '(None Given)'}' => Normalized: '${this.client.url.toString()}'`)
-        this.initialized = true;
         return true;
-
-        /*const connected = await this.client.testConnection();
-        if(connected) {
-            //this.logger.info('Connection OK');
-            this.initialized = true;
-            return true;
-        } else {
-            this.logger.error(`Could not connect.`);
-            this.initialized = false;
-            return false;
-        }*/
     }
 
     doAuthentication = async () => {

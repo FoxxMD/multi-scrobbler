@@ -6,14 +6,15 @@ import {
     sleep,
     sortByOldestPlayDate,
     writeFile,
-} from "../utils";
+} from "../utils.js";
 import {Strategy as DeezerStrategy} from 'passport-deezer';
-import AbstractSource, { RecentlyPlayedOptions } from "./AbstractSource";
+import AbstractSource, { RecentlyPlayedOptions } from "./AbstractSource.js";
 import dayjs from "dayjs";
-import { DeezerSourceConfig } from "../common/infrastructure/config/source/deezer";
-import {DEFAULT_RETRY_MULTIPLIER, FormatPlayObjectOptions, InternalConfig} from "../common/infrastructure/Atomic";
+import { DeezerSourceConfig } from "../common/infrastructure/config/source/deezer.js";
+import { DEFAULT_RETRY_MULTIPLIER, FormatPlayObjectOptions, InternalConfig } from "../common/infrastructure/Atomic.js";
 import EventEmitter from "events";
-import { PlayObject } from "../../core/Atomic";
+import { PlayObject } from "../../core/Atomic.js";
+import {ErrorWithCause} from "pony-cause";
 
 export default class DeezerSource extends AbstractSource {
     workingCredsPath;
@@ -33,6 +34,7 @@ export default class DeezerSource extends AbstractSource {
             data: {
                 interval = 60,
                 redirectUri,
+                ...rest
             } = {},
         } = config;
 
@@ -40,7 +42,13 @@ export default class DeezerSource extends AbstractSource {
             this.logger.warn('Interval should be above 30 seconds...😬');
         }
 
-        this.config.data.interval = interval;
+        // @ts-ignore
+        this.config.data = {
+            ...rest,
+            interval,
+            redirectUri,
+        };
+
         this.redirectUri = redirectUri || `${this.localUrl}/deezer/callback`;
 
         this.workingCredsPath = `${this.configDir}/currentCreds-${name}.json`;
@@ -84,28 +92,43 @@ export default class DeezerSource extends AbstractSource {
         }
     }
 
-    initialize = async () => {
+    protected async doBuildInitData(): Promise<true | string | undefined> {
         try {
             const credFile = await readJson(this.workingCredsPath, {throwOnNotFound: false});
-            this.config.data.accessToken = credFile.accessToken;
+            if(credFile !== undefined) {
+                this.config.data.accessToken = credFile.accessToken;
+            } else {
+                this.logger.warn(`No Deezer credentials file found at ${this.workingCredsPath}`);
+            }
         } catch (e) {
-            this.logger.warn('Current deezer credentials file exists but could not be parsed', { path: this.workingCredsPath });
+            throw new ErrorWithCause('Current deezer credentials file exists but could not be parsed', {cause: e});
         }
-        if(this.config.data.accessToken === undefined) {
-            if(this.config.data.clientId === undefined) {
+        if (this.config.data.accessToken === undefined) {
+            if (this.config.data.clientId === undefined) {
                 throw new Error('clientId must be defined when accessToken is not present');
-            } else if(this.config.data.clientSecret === undefined) {
+            } else if (this.config.data.clientSecret === undefined) {
                 throw new Error('clientSecret must be defined when accessToken is not present');
             }
-            this.logger.info(`No access token is present. User interaction for authentication is required.`);
-            this.logger.info(`Redirect URL that will be used on auth callback: '${this.redirectUri}'`);
         }
-        this.initialized = true;
+        this.logger.info(`Redirect URL that will be used on auth callback: '${this.redirectUri}'`);
         passport.use(`deezer-${this.name}`, this.generatePassportStrategy());
-        return this.initialized;
+        return true;
+    }
+
+    protected async doCheckConnection(): Promise<true | string | undefined> {
+        try {
+            await request.get('https://api.deezer.com/infos');
+            return true;
+        } catch (e) {
+            throw e;
+        }
     }
 
     doAuthentication = async () => {
+        if(this.config.data.accessToken === undefined) {
+            this.logger.warn(`No access token is present. User interaction for authentication is required.`);
+            return false;
+        }
         try {
             await this.callApi(request.get(`${this.baseUrl}/user/me`));
             return true;

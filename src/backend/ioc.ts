@@ -1,18 +1,18 @@
 import {createContainer} from "iti";
 import path from "path";
-import {configDir, projectDir} from "./common/index";
-import ScrobbleClients from "./scrobblers/ScrobbleClients";
-import ScrobbleSources from "./sources/ScrobbleSources";
-import {Notifiers} from "./notifier/Notifiers";
+import { configDir, projectDir } from "./common/index.js";
+import ScrobbleClients from "./scrobblers/ScrobbleClients.js";
+import ScrobbleSources from "./sources/ScrobbleSources.js";
+import { Notifiers } from "./notifier/Notifiers.js";
 import {EventEmitter} from "events";
-import {logPath} from "./common/logging";
-import { WildcardEmitter } from "./common/WildcardEmitter";
+import { logPath } from "./common/logging.js";
+import { WildcardEmitter } from "./common/WildcardEmitter.js";
 import normalizeUrl from 'normalize-url';
 import fs from 'fs';
 
-let version = 'unknown';
+let version = 'Unknown';
 
-if(process.env.VERSION === undefined) {
+if(process.env.APP_VERSION === undefined) {
     if(fs.existsSync('./package.json')) {
         try {
             const pkg = fs.readFileSync('./package.json') as unknown as string;
@@ -36,8 +36,9 @@ if(process.env.VERSION === undefined) {
             // don't care
         }
     }
+    process.env.APP_VERSION = version;
 } else {
-    version = process.env.VERSION;
+    version = process.env.APP_VERSION;
 }
 
 let root: ReturnType<typeof createRoot>;
@@ -49,27 +50,20 @@ export interface RootOptions {
 
 const createRoot = (options?: RootOptions) => {
     const {
-        port,
+        port = 9078,
         baseUrl = process.env.BASE_URL,
     } = options || {};
     const configDir = process.env.CONFIG_DIR || path.resolve(projectDir, `./config`);
-    const envPort = process.env.PORT;
     return createContainer().add({
         version,
         configDir: configDir,
         logDir: logPath,
         isProd: process.env.NODE_ENV !== undefined && (process.env.NODE_ENV === 'production' || process.env.NODE_ENV === 'prod'),
-        configPort: port,
-        apiPort: process.env.API_PORT ?? 9079,
-        mainPort: envPort ?? 3000,
+        port: process.env.PORT ?? port,
         clientEmitter: () => new WildcardEmitter(),
         sourceEmitter: () => new WildcardEmitter(),
         notifierEmitter: () => new EventEmitter(),
     }).add((items) => {
-        let usedPort = items.configPort ?? envPort;
-        if (usedPort === undefined) {
-            usedPort = items.isProd ? items.mainPort : items.apiPort;
-        }
         const base = normalizeUrl(baseUrl ?? 'http://localhost', {removeSingleSlash: true});
         const u = new URL(base);
         let localUrl = u.toString();
@@ -77,12 +71,12 @@ const createRoot = (options?: RootOptions) => {
             localUrl = `${u.origin}:${items.mainPort}`;
         }
         return {
-            port: usedPort,
             clients: () => new ScrobbleClients(items.clientEmitter, items.sourceEmitter, localUrl, items.configDir),
             sources: () => new ScrobbleSources(items.sourceEmitter, localUrl, items.configDir),
             notifiers: () => new Notifiers(items.notifierEmitter, items.clientEmitter, items.sourceEmitter),
             localUrl,
-            hasDefinedBaseUrl: baseUrl !== undefined
+            hasDefinedBaseUrl: baseUrl !== undefined,
+            isSubPath: u.pathname !== '/' && u.pathname.length > 0
         }
     });
 }

@@ -5,20 +5,23 @@ import {
     sortByOldestPlayDate,
     sleep,
     parseRetryAfterSecsFromObj,
-    combinePartsToString, findCauseByFunc,
-} from "../utils";
+    combinePartsToString,
+    findCauseByFunc,
+} from "../utils.js";
 import SpotifyWebApi from "spotify-web-api-node";
-import AbstractSource, { RecentlyPlayedOptions } from "./AbstractSource";
-import { SpotifySourceConfig } from "../common/infrastructure/config/source/spotify";
+import request from 'superagent';
+import AbstractSource, { RecentlyPlayedOptions } from "./AbstractSource.js";
+import { SpotifySourceConfig } from "../common/infrastructure/config/source/spotify.js";
 import {
     DEFAULT_POLLING_INTERVAL,
     FormatPlayObjectOptions,
-    InternalConfig, NO_DEVICE,
+    InternalConfig,
+    NO_DEVICE,
     NO_USER,
     PlayerStateData,
     ReportedPlayerStatus,
     SourceData,
-} from "../common/infrastructure/Atomic";
+} from "../common/infrastructure/Atomic.js";
 import PlayHistoryObject = SpotifyApi.PlayHistoryObject;
 import EventEmitter from "events";
 import CurrentlyPlayingObject = SpotifyApi.CurrentlyPlayingObject;
@@ -26,12 +29,12 @@ import TrackObjectFull = SpotifyApi.TrackObjectFull;
 import ArtistObjectSimplified = SpotifyApi.ArtistObjectSimplified;
 import AlbumObjectSimplified = SpotifyApi.AlbumObjectSimplified;
 import UserDevice = SpotifyApi.UserDevice;
-import MemorySource from "./MemorySource";
+import MemorySource from "./MemorySource.js";
 import {ErrorWithCause} from "pony-cause";
-import {PlayObject, SCROBBLE_TS_SOC_END, SCROBBLE_TS_SOC_START, ScrobbleTsSOC} from "../../core/Atomic";
-import { buildTrackString, truncateStringToLength } from "../../core/StringUtils";
-import {isNodeNetworkException} from "../common/errors/NodeErrors";
-import {hasUpstreamError, UpstreamError} from "../common/errors/UpstreamError";
+import { PlayObject, SCROBBLE_TS_SOC_END, SCROBBLE_TS_SOC_START, ScrobbleTsSOC } from "../../core/Atomic.js";
+import { buildTrackString, truncateStringToLength } from "../../core/StringUtils.js";
+import { isNodeNetworkException } from "../common/errors/NodeErrors.js";
+import { hasUpstreamError, UpstreamError } from "../common/errors/UpstreamError.js";
 
 const scopes = ['user-read-recently-played', 'user-read-currently-playing', 'user-read-playback-state', 'user-read-playback-position'];
 const state = 'random';
@@ -241,17 +244,30 @@ export default class SpotifySource extends MemorySource {
         this.spotifyApi = new SpotifyWebApi(apiConfig);
     }
 
-    initialize = async () => {
-        if(this.spotifyApi === undefined) {
-            await this.buildSpotifyApi();
+    protected async doBuildInitData(): Promise<true | string | undefined> {
+        await this.buildSpotifyApi();
+        return true;
+    }
+
+    protected async doCheckConnection(): Promise<true | string | undefined> {
+        try {
+            await request.get('https://api.spotify.com/v1');
+            return true;
+        } catch (e) {
+            if(isNodeNetworkException(e)) {
+                throw new ErrorWithCause('Could not communicate with Spotify API server', {cause: e});
+            }
+            if(e.status >= 500) {
+                throw new ErrorWithCause('Spotify API server returned an unexpected response', { cause: e});
+            }
+            return true;
         }
-        this.initialized = true;
-        return this.initialized;
     }
 
     doAuthentication = async () => {
         try {
             if(undefined === this.spotifyApi.getAccessToken()) {
+                this.logger.warn('Cannot use API until an access token has been received from the authorization flow. See the dashboard.');
                 return false;
             }
             await this.callApi<ReturnType<typeof this.spotifyApi.getMe>>(((api: any) => api.getMe()));
@@ -282,7 +298,10 @@ export default class SpotifySource extends MemorySource {
                 this.spotifyApi.setRefreshToken(tokenResponse.body['refresh_token']);
                 await writeFile(this.workingCredsPath, JSON.stringify({
                     token: tokenResponse.body['access_token'],
-                    refreshToken: tokenResponse.body['refresh_token']
+                    refreshToken: tokenResponse.body['refresh_token'],
+                    expires: Date.now() + (tokenResponse.body['expires_in'] * 1000),
+                    expiresIn: tokenResponse.body['expires_in'],
+                    grant: tokenResponse.body['token_type']
                 }));
                 this.logger.info('Got token from code grant authorization!');
                 return true;
@@ -411,12 +430,17 @@ export default class SpotifySource extends MemorySource {
                             // spotify may return a new refresh token
                             // if it doesn't then continue to use the last refresh token we received
                             refresh_token = this.spotifyApi.getRefreshToken(),
+                            expires_in,
+                            token_type
                         } = {}
                     } = tokenResponse;
                     this.spotifyApi.setAccessToken(access_token);
                     await writeFile(this.workingCredsPath, JSON.stringify({
                         token: access_token,
                         refreshToken: refresh_token,
+                        expires: Date.now() + (expires_in * 1000),
+                        expiresIn: expires_in,
+                        grant: token_type
                     }));
                 } catch (refreshError) {
                     const error = new UpstreamError('Refreshing access token encountered an error', {cause: refreshError});

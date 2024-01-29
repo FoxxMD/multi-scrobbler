@@ -1,6 +1,6 @@
-import {DELIMITERS} from "../common/infrastructure/Atomic";
-import {parseRegexSingleOrFail} from "../utils";
-import {PlayObject} from "../../core/Atomic";
+import { DELIMITERS } from "../common/infrastructure/Atomic.js";
+import { parseRegexSingleOrFail } from "../utils.js";
+import { PlayObject } from "../../core/Atomic.js";
 import {stringSameness, StringSamenessResult} from "@foxxmd/string-sameness";
 import {strategies} from '@foxxmd/string-sameness';
 

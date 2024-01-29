@@ -1,13 +1,14 @@
 import LastFm, {AuthGetSessionResponse, TrackObject, UserGetInfoResponse} from "lastfm-node-client";
-import AbstractApiClient from "./AbstractApiClient";
+import AbstractApiClient from "./AbstractApiClient.js";
 import dayjs from "dayjs";
-import { readJson, sleep, writeFile } from "../../utils";
-import {DEFAULT_RETRY_MULTIPLIER, FormatPlayObjectOptions} from "../infrastructure/Atomic";
-import { LastfmData } from "../infrastructure/config/client/lastfm";
-import { PlayObject } from "../../../core/Atomic";
-import {isNodeNetworkException} from "../errors/NodeErrors";
-import {nonEmptyStringOrDefault, splitByFirstFound} from "../../../core/StringUtils";
+import { readJson, sleep, writeFile } from "../../utils.js";
+import { DEFAULT_RETRY_MULTIPLIER, FormatPlayObjectOptions } from "../infrastructure/Atomic.js";
+import { LastfmData } from "../infrastructure/config/client/lastfm.js";
+import { PlayObject } from "../../../core/Atomic.js";
+import { isNodeNetworkException } from "../errors/NodeErrors.js";
+import { nonEmptyStringOrDefault, splitByFirstFound } from "../../../core/StringUtils.js";
 import {source} from "common-tags";
+import {ErrorWithCause} from "pony-cause";
 
 const badErrors = [
     'api key suspended',
@@ -139,7 +140,7 @@ export default class LastfmApiClient extends AbstractApiClient {
         }));
     }
 
-    initialize = async () => {
+    initialize = async (): Promise<true> => {
 
         try {
             const creds = await readJson(this.workingCredsPath, {throwOnNotFound: false});
@@ -149,8 +150,7 @@ export default class LastfmApiClient extends AbstractApiClient {
             }
             return true;
         } catch (e) {
-            this.logger.warn('Current lastfm credentials file exists but could not be parsed', {path: this.workingCredsPath});
-            return false;
+            throw new ErrorWithCause('Current lastfm credentials file exists but could not be parsed', {cause: e});
         }
     }
 
