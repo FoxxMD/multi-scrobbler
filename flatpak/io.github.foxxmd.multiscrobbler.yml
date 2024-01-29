@@ -60,6 +60,7 @@ modules:
       # use if developing locally
 #      - type: dir
 #        path: /home/yourUser/multi-scrobbler
+#        dest: main
       # Wrapper to launch the app
       - type: script
         dest-filename: run.sh
