@@ -46,7 +46,7 @@
     "@fortawesome/fontawesome-svg-core": "^6.4.2",
     "@fortawesome/free-solid-svg-icons": "^6.4.2",
     "@fortawesome/react-fontawesome": "^0.2.0",
-    "@foxxmd/chromecast-client": "^1.0.1",
+    "@foxxmd/chromecast-client": "^1.0.4",
     "@foxxmd/string-sameness": "^0.2.0",
     "@foxxmd/winston": "3.3.31",
     "@kenyip/backoff-strategies": "^1.0.4",
