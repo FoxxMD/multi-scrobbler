@@ -1,14 +1,22 @@
-import LastFm, {AuthGetSessionResponse, TrackObject, UserGetInfoResponse} from "lastfm-node-client";
+import LastFm, {
+    AuthGetSessionResponse,
+    NowPlayingResponse,
+    TrackObject,
+    TrackScrobblePayload,
+    UserGetInfoResponse
+} from "lastfm-node-client";
 import AbstractApiClient from "./AbstractApiClient.js";
 import dayjs from "dayjs";
-import { readJson, sleep, writeFile } from "../../utils.js";
+import {readJson, removeUndefinedKeys, sleep, writeFile} from "../../utils.js";
 import { DEFAULT_RETRY_MULTIPLIER, FormatPlayObjectOptions } from "../infrastructure/Atomic.js";
 import { LastfmData } from "../infrastructure/config/client/lastfm.js";
 import { PlayObject } from "../../../core/Atomic.js";
 import { isNodeNetworkException } from "../errors/NodeErrors.js";
-import { nonEmptyStringOrDefault, splitByFirstFound } from "../../../core/StringUtils.js";
+import {buildTrackString, capitalize, nonEmptyStringOrDefault, splitByFirstFound} from "../../../core/StringUtils.js";
 import {source} from "common-tags";
 import {ErrorWithCause} from "pony-cause";
+import {getScrobbleTsSOCDate} from "../../utils/TimeUtils.js";
+import {UpstreamError} from "../errors/UpstreamError.js";
 
 const badErrors = [
     'api key suspended',
@@ -180,4 +188,80 @@ export default class LastfmApiClient extends AbstractApiClient {
         }
     }
 
+    public playToClientPayload(playObj: PlayObject): TrackScrobblePayload {
+        const {
+            data: {
+                artists = [],
+                album,
+                albumArtists = [],
+                track,
+                duration,
+                playDate,
+                meta: {
+                    brainz: {
+                        track: mbid
+                    } = {},
+                } = {}
+            } = {}
+        } = playObj;
+
+        // LFM does not support multiple artists in scrobble payload
+        // https://www.last.fm/api/show/track.scrobble
+        let artist: string;
+        if (artists.length === 0) {
+            artist = "";
+        } else {
+            artist = artists[0];
+        }
+
+        const rawPayload: TrackScrobblePayload = {
+            artist: artist,
+            duration,
+            track,
+            album,
+            timestamp: getScrobbleTsSOCDate(playObj).unix(),
+            mbid,
+        };
+
+        // LFM does not support multiple artists in scrobble payload
+        // https://www.last.fm/api/show/track.scrobble
+        if (albumArtists.length > 0) {
+            rawPayload.albumArtist = albumArtists[0];
+        }
+
+        // I don't know if its lastfm-node-client building the request params incorrectly
+        // or the last.fm api not handling the params correctly...
+        //
+        // ...but in either case if any of the below properties is undefined (possibly also null??)
+        // then last.fm responds with an IGNORED scrobble and error code 1 (totally unhelpful)
+        // so remove all undefined keys from the object before passing to the api client
+        return removeUndefinedKeys(rawPayload);
+    }
+
+    updateNowPlaying = async (play: PlayObject) => {
+        try {
+            const {timestamp, mbid, ...rest} = this.playToClientPayload(play);
+            const response = await this.callApi<NowPlayingResponse>((client: LastFm) => {
+                return client.trackUpdateNowPlaying(rest)
+            });
+            const {
+                nowplaying: {
+                    ignoredMessage: {
+                        code: ignoreCode,
+                        '#text': ignoreMsg,
+                    } = {},
+                } = {}
+            } = response;
+            if (ignoreCode > 0) {
+                this.logger.warn(`Service ignored this scrobble 😬 => (Code ${ignoreCode}) ${(ignoreMsg === '' ? '(No error message returned)' : ignoreMsg)} -- See https://www.last.fm/api/show/track.updateNowPlaying for more information`, {payload: rest});
+            }
+            return response;
+        } catch (e) {
+            if (!(e instanceof UpstreamError)) {
+                throw new UpstreamError('Error received from LastFM API', {cause: e, showStopper: true});
+            } else {
+                throw e;
+            }
+        }
+    }
 }
