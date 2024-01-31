@@ -137,8 +137,6 @@ const configDir = process.env.CONFIG_DIR || path.resolve(projectDir, `./config`)
         if (anyNotReady) {
             logger.info(`Some sources are not ready, open the dashboard to continue`);
         }
-        const lastfm = scrobbleSources.getByName('mylfm') as LastfmSource;
-        await lastfm.api.updateNowPlaying({data: {artists: ['Silva', 'Marina Sena', 'RDD'], 'track': 'Te Vi Na Rua'}, meta: {}});
 
         scheduler.addSimpleIntervalJob(new SimpleIntervalJob({
             minutes: 20,
