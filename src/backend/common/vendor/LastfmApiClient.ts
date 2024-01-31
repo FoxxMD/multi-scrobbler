@@ -11,9 +11,8 @@ import {readJson, removeUndefinedKeys, sleep, writeFile} from "../../utils.js";
 import { DEFAULT_RETRY_MULTIPLIER, FormatPlayObjectOptions } from "../infrastructure/Atomic.js";
 import { LastfmData } from "../infrastructure/config/client/lastfm.js";
 import { PlayObject } from "../../../core/Atomic.js";
-import { isNodeNetworkException } from "../errors/NodeErrors.js";
-import {buildTrackString, capitalize, nonEmptyStringOrDefault, splitByFirstFound} from "../../../core/StringUtils.js";
-import {source} from "common-tags";
+import {getNodeNetworkException, isNodeNetworkException} from "../errors/NodeErrors.js";
+import {nonEmptyStringOrDefault, splitByFirstFound} from "../../../core/StringUtils.js";
 import {ErrorWithCause} from "pony-cause";
 import {getScrobbleTsSOCDate} from "../../utils/TimeUtils.js";
 import {UpstreamError} from "../errors/UpstreamError.js";
@@ -113,12 +112,20 @@ export default class LastfmApiClient extends AbstractApiClient {
             } = e;
             // for now check for exceptional errors by matching error code text
             const retryError = retryErrors.find(x => message.toLocaleLowerCase().includes(x));
-            const timeout = retryError === undefined && message.includes('ETIMEDOUT');
-            if (undefined !== retryError || timeout) {
+            let networkError =  null;
+            if(retryError === undefined) {
+                const nError = getNodeNetworkException(e);
+                if(nError !== undefined) {
+                    networkError = nError.message;
+                } else if(message.includes('ETIMEDOUT')) {
+                    networkError = 'request timed out after 3 seconds'
+                }
+            }
+            if (undefined !== retryError || networkError !== undefined) {
                 if (retries < maxRequestRetries) {
                     const delay = (retries + 1) * retryMultiplier;
-                    if(timeout) {
-                        this.logger.warn(`API call timed out after 3 seconds, retrying in ${delay} seconds...`);
+                    if(networkError !== undefined) {
+                        this.logger.warn(`API call failed due to network issue (${networkError}), retrying in ${delay} seconds...`);
                     } else {
                         this.logger.warn(`API call was not good but recoverable (${retryError}), retrying in ${delay} seconds...`);
                     }
