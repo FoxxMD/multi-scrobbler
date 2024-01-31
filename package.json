@@ -17,7 +17,8 @@
     "fileEndings": "jscodeshift --transformFrom js --transformTo none --importTypes relative --extensions=ts --parser tsx --transform codeshift/transform.ts src/backend",
     "dev": "APP_VERSION=$npm_package_version nodemon -w src/backend -x tsx src/backend/index.ts",
     "start": "APP_VERSION=$npm_package_version NODE_ENV=production tsx src/backend/index.ts",
-    "build": "APP_VERSION=$npm_package_version vite build"
+    "build": "APP_VERSION=$npm_package_version vite build",
+    "postinstall": "patch-package"
   },
   "exports": {
     ".": {
@@ -82,6 +83,7 @@
     "normalize-url": "^6.1.0",
     "ntfy": "1.0.5",
     "object-hash": "^3.0.0",
+    "patch-package": "^8.0.0",
     "p-event": "^4.2.0",
     "passport": "^0.6.0",
     "passport-deezer": "^0.2.0",
@@ -144,7 +146,6 @@
     "msw": "^2.1.2",
     "nodemon": "^3.0.3",
     "nyc": "^15.1.0",
-    "patch-package": "^8.0.0",
     "ts-essentials": "^9.1.2",
     "typedoc": "^0.25",
     "typescript": "^5.3.3",
