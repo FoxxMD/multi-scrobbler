@@ -79,6 +79,9 @@ export default abstract class AbstractSource implements Authenticatable {
     pollRetries: number = 0;
     tracksDiscovered: number = 0;
 
+    supportsUpstreamRecentlyPlayed: boolean = false;
+    supportsUpstreamNowPlaying: boolean = false;
+
     emitter: EventEmitter;
 
     protected recentDiscoveredPlays: GroupedFixedPlays = new TupleMap<DeviceId, PlayUserId, FixedSizeList<ProgressAwarePlayObject>>();
@@ -217,6 +220,14 @@ export default abstract class AbstractSource implements Authenticatable {
 
     getRecentlyPlayed = async (options: RecentlyPlayedOptions = {}): Promise<PlayObject[]> => {
         return [];
+    }
+
+    getUpstreamRecentlyPlayed = async (options: RecentlyPlayedOptions = {}): Promise<PlayObject[]> => {
+        throw new Error('Not implemented');
+    }
+
+    getUpstreamNowPlaying = async(): Promise<PlayObject[]> => {
+        throw new Error('Not implemented');
     }
 
     // by default if the track was recently played it is valid

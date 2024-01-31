@@ -68,6 +68,7 @@ export default class SpotifySource extends MemorySource {
         this.workingCredsPath = `${this.configDir}/currentCreds-${name}.json`;
         this.canPoll = true;
         this.canBacklog = true;
+        this.supportsUpstreamRecentlyPlayed = true;
     }
 
     static formatPlayObj(obj: PlayHistoryObject | CurrentlyPlayingObject, options: FormatPlayObjectOptions = {}): PlayObject {
@@ -348,6 +349,14 @@ export default class SpotifySource extends MemorySource {
         });
         const result = await this.callApi<ReturnType<typeof this.spotifyApi.getMyRecentlyPlayedTracks>>(func);
         return result.body.items.map((x: any) => SpotifySource.formatPlayObj(x)).sort(sortByOldestPlayDate);
+    }
+
+    getUpstreamRecentlyPlayed = async (options: RecentlyPlayedOptions = {}): Promise<PlayObject[]> => {
+        try {
+            return await this.getPlayHistory(options);
+        } catch (e) {
+            throw e;
+        }
     }
 
     getNowPlaying = async () => {

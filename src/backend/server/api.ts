@@ -202,7 +202,8 @@ export const setupApi = (app: ExpressWithAsync, logger: Logger, initialLogOutput
                 hasAuthInteraction: requiresAuthInteraction,
                 authed,
                 players: 'players' in x ? (x as MemorySource).playersToObject() : {},
-                sot: ('playerSourceOfTruth' in x) ? x.playerSourceOfTruth : SOURCE_SOT.HISTORY
+                sot: ('playerSourceOfTruth' in x) ? x.playerSourceOfTruth : SOURCE_SOT.HISTORY,
+                supportsUpstreamRecentlyPlayed: x.supportsUpstreamRecentlyPlayed
             };
             if(!x.isReady()) {
                 if(x.buildOK === false) {
@@ -264,11 +265,25 @@ export const setupApi = (app: ExpressWithAsync, logger: Logger, initialLogOutput
         const {
             // @ts-expect-error TS(2339): Property 'scrobbleSource' does not exist on type '... Remove this comment to see the full error message
             scrobbleSource: source,
+            query: {
+                upstream = 'false'
+            }
         } = req;
 
         let result: PlayObject[] = [];
         if (source !== undefined) {
-            result = (source as AbstractSource).getFlatRecentlyDiscoveredPlays();
+            if (upstream === 'true' || upstream === '1') {
+                if (!(source as AbstractSource).supportsUpstreamRecentlyPlayed) {
+                    return res.status(409).json({message: 'Fetching upstream recently played is not supported for this source'});
+                }
+                try {
+                    result = await (source as AbstractSource).getUpstreamRecentlyPlayed();
+                } catch (e) {
+                    return res.status(500).json({message: e.message});
+                }
+            } else {
+                result = (source as AbstractSource).getFlatRecentlyDiscoveredPlays();
+            }
         }
 
         return res.json(result);

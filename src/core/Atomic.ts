@@ -14,6 +14,7 @@ export interface SourceStatusData {
     authed: boolean;
     players: Record<string, SourcePlayerJson>
     sot: SOURCE_SOT_TYPES
+    supportsUpstreamRecentlyPlayed: boolean;
 }
 
 export interface ClientStatusData {
