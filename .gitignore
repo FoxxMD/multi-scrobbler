@@ -125,6 +125,7 @@ src/**/**.js
 src/**/**.js.map
 
 *.bak
+*.p8
 .flatpak-builder
 flatpak/generated-sources.json
 
