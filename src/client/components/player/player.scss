@@ -17,6 +17,20 @@ $primary: #00ACC1;
     position: relative;
   }
 
+  .player-tooltip {
+    width: 90%;
+    position: absolute;
+    top: $spacing;
+    left: $spacing/0.5;
+    border: 0;
+    outline: 0;
+    background: transparent;
+    text-shadow: rgba(black, 0.75) 0 0 5px;
+    box-shadow: none !important;
+    color: white !important;
+    z-index: 1;
+  }
+
   .toggle-playlist {
     position: absolute;
     top: $spacing/2;

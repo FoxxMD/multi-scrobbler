@@ -19,6 +19,7 @@ import {SimpleIntervalJob, ToadScheduler} from "toad-scheduler";
 import { createHeartbeatSourcesTask } from "./tasks/heartbeatSources.js";
 import { createHeartbeatClientsTask } from "./tasks/heartbeatClients.js";
 import {ErrorWithCause} from "pony-cause";
+import LastfmSource from "./sources/LastfmSource.js";
 
 
 dayjs.extend(utc)
@@ -136,6 +137,8 @@ const configDir = process.env.CONFIG_DIR || path.resolve(projectDir, `./config`)
         if (anyNotReady) {
             logger.info(`Some sources are not ready, open the dashboard to continue`);
         }
+        const lastfm = scrobbleSources.getByName('mylfm') as LastfmSource;
+        await lastfm.api.updateNowPlaying({data: {artists: ['Silva', 'Marina Sena', 'RDD'], 'track': 'Te Vi Na Rua'}, meta: {}});
 
         scheduler.addSimpleIntervalJob(new SimpleIntervalJob({
             minutes: 20,

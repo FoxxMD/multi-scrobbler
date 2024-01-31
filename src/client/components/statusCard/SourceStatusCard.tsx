@@ -54,7 +54,8 @@ const SourceStatusCard = (props: SourceStatusCardData) => {
             tracksDiscovered,
             hasAuthInteraction,
             type,
-            players = {}
+            players = {},
+            sot
         } = data;
         if(type === 'listenbrainz' || type === 'lastfm') {
             header = `${display} (Source)`;
@@ -70,7 +71,7 @@ const SourceStatusCard = (props: SourceStatusCardData) => {
 
         // TODO links
         body = (<div className="statusCardBody">
-            {platformIds.map(x => <Player key={x} data={players[x]}/>)}
+            {platformIds.map(x => <Player key={x} data={players[x]} sot={sot}/>)}
             <div>{discovered}: {tracksDiscovered}</div>
             {canPoll && hasAuthInteraction ? <a target="_blank" href={`/api/source/auth?name=${name}&type=${type}`}>(Re)authenticate</a> : null}
         </div>);

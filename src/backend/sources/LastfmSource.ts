@@ -4,7 +4,7 @@ import { sortByOldestPlayDate } from "../utils.js";
 import { FormatPlayObjectOptions, InternalConfig } from "../common/infrastructure/Atomic.js";
 import {TrackObject, UserGetRecentTracksResponse} from "lastfm-node-client";
 import EventEmitter from "events";
-import { PlayObject } from "../../core/Atomic.js";
+import {PlayObject, SOURCE_SOT} from "../../core/Atomic.js";
 import MemorySource from "./MemorySource.js";
 import { LastfmSourceConfig } from "../common/infrastructure/config/source/lastfm.js";
 import dayjs from "dayjs";
@@ -32,7 +32,8 @@ export default class LastfmSource extends MemorySource {
         this.canPoll = true;
         this.canBacklog = true;
         this.api = new LastfmApiClient(name, {...config.data, configDir: internal.configDir, localUrl: internal.localUrl});
-        this.playerSourceOfTruth = false;
+        this.playerSourceOfTruth = SOURCE_SOT.HISTORY;
+        this.logger.info(`Note: The player for this source is an analogue for the 'Now Playing' status exposed by ${this.type} which is NOT used for scrobbling. Instead, the 'recently played' or 'history' information provided by this source is used for scrobbles.`)
     }
 
     static formatPlayObj(obj: any, options: FormatPlayObjectOptions = {}): PlayObject {

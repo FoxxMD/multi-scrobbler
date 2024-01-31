@@ -25,20 +25,21 @@ import {
     SourceType,
 } from "../common/infrastructure/Atomic.js";
 import TupleMap from "../common/TupleMap.js";
-import { AbstractPlayerState, PlayerStateOptions } from "./PlayerState/AbstractPlayerState.js";
+import {AbstractPlayerState, createPlayerOptions, PlayerStateOptions} from "./PlayerState/AbstractPlayerState.js";
 import { GenericPlayerState } from "./PlayerState/GenericPlayerState.js";
 import {Logger} from "@foxxmd/winston";
-import { PlayObject, SourcePlayerObj } from "../../core/Atomic.js";
+import {PlayObject, SOURCE_SOT, SOURCE_SOT_TYPES, SourcePlayerObj} from "../../core/Atomic.js";
 import { buildTrackString } from "../../core/StringUtils.js";
 import {SimpleIntervalJob, Task, ToadScheduler} from "toad-scheduler";
 import { SourceConfig } from "../common/infrastructure/config/source/sources.js";
 import {EventEmitter} from "events";
 import objectHash from 'object-hash';
 import { timePassesScrobbleThreshold } from "../utils/TimeUtils.js";
+import {PollingOptions} from "../common/infrastructure/config/common.js";
 
 export default class MemorySource extends AbstractSource {
 
-    playerSourceOfTruth: boolean = true;
+    playerSourceOfTruth: SOURCE_SOT_TYPES = SOURCE_SOT.PLAYER;
 
     /*
     * MemorySource uses its own state to maintain a list of recently played tracks and determine if a track is valid.
@@ -102,8 +103,7 @@ export default class MemorySource extends AbstractSource {
 
     setNewPlayer = (idStr: string, logger: Logger, id: PlayPlatformId, opts: PlayerStateOptions = {}) => {
         this.players.set(idStr, this.getNewPlayer(this.logger, id, {
-            staleInterval: (this.config.data.interval ?? 30) * 3,
-            orphanedInterval: (this.config.data.maxInterval ?? 60) * 5,
+            ...createPlayerOptions(this.config.data as Partial<PollingOptions>),
             ...opts
         }));
         this.playerState.set(idStr, '');
@@ -179,7 +179,7 @@ export default class MemorySource extends AbstractSource {
                     if (thresholdResults.passes) {
                         const matchingRecent = this.existingDiscovered(candidate); //sRecentlyPlayed.find(x => playObjDataMatch(x, candidate));
                         if (matchingRecent === undefined) {
-                            if(this.playerSourceOfTruth) {
+                            if(this.playerSourceOfTruth === SOURCE_SOT.PLAYER) {
                                 player.logger.debug(`${stPrefix} added after ${thresholdResultSummary(thresholdResults)} and not matching any prior plays`);
                             }
                             newStatefulPlays.push(candidate);
@@ -189,7 +189,7 @@ export default class MemorySource extends AbstractSource {
                             if (!playDate.isSame(rplayDate)) {
                                 if (duration !== undefined) {
                                     if (playDate.isAfter(rplayDate.add(duration, 's'))) {
-                                        if(this.playerSourceOfTruth) {
+                                        if(this.playerSourceOfTruth === SOURCE_SOT.PLAYER) {
                                             player.logger.debug(`${stPrefix} added after ${thresholdResultSummary(thresholdResults)} and having a different timestamp than a prior play`);
                                         }
                                         newStatefulPlays.push(candidate);
@@ -198,7 +198,7 @@ export default class MemorySource extends AbstractSource {
                                     const discoveredPlays = this.getRecentlyDiscoveredPlaysByPlatform(genGroupId(candidate));
                                     if (discoveredPlays.length === 0 || !playObjDataMatch(discoveredPlays[0], candidate)) {
                                         // if most recent stateful play is not this track we'll add it
-                                        if(this.playerSourceOfTruth) {
+                                        if(this.playerSourceOfTruth === SOURCE_SOT.PLAYER) {
                                             player.logger.debug(`${stPrefix} added after ${thresholdResultSummary(thresholdResults)}. Matched other recent play but could not determine time frame due to missing duration. Allowed due to not being last played track.`);
                                         }
                                         newStatefulPlays.push(candidate);
@@ -206,7 +206,7 @@ export default class MemorySource extends AbstractSource {
                                 }
                             }
                         }
-                    } else if(playChanged) {
+                    } else if(playChanged && this.playerSourceOfTruth === SOURCE_SOT.PLAYER) {
                         player.logger.verbose(`${stPrefix} not added because ${thresholdResultSummary(thresholdResults)}.`);
                     }
                 }

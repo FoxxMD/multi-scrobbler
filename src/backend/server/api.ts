@@ -9,7 +9,7 @@ import {
     LogInfoJson,
     LogLevel,
     LogOutputConfig,
-    PlayObject,
+    PlayObject, SOURCE_SOT,
     SourceStatusData,
 } from "../../core/Atomic.js";
 import {Logger} from "@foxxmd/winston";
@@ -201,7 +201,8 @@ export const setupApi = (app: ExpressWithAsync, logger: Logger, initialLogOutput
                 hasAuth: requiresAuth,
                 hasAuthInteraction: requiresAuthInteraction,
                 authed,
-                players: 'players' in x ? (x as MemorySource).playersToObject() : {}
+                players: 'players' in x ? (x as MemorySource).playersToObject() : {},
+                sot: ('playerSourceOfTruth' in x) ? x.playerSourceOfTruth : SOURCE_SOT.HISTORY
             };
             if(!x.isReady()) {
                 if(x.buildOK === false) {
