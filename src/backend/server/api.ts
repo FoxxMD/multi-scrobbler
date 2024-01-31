@@ -290,6 +290,8 @@ export const setupApi = (app: ExpressWithAsync, logger: Logger, initialLogOutput
             scrobbleClient: client,
         } = req;
 
+        (client as AbstractScrobbleClient).logger.debug('User requested processing of all dead letter scrobbles via API');
+
         await (client as AbstractScrobbleClient).processDeadLetterQueue(1000);
 
         let result: DeadLetterScrobble<PlayObject>[] = (client as AbstractScrobbleClient).deadLetterScrobbles;
@@ -308,9 +310,12 @@ export const setupApi = (app: ExpressWithAsync, logger: Logger, initialLogOutput
 
         const deadId = id as string;
 
+        (client as AbstractScrobbleClient).logger.debug(`User requested processing of dead letter scrobble ${deadId} via API call`)
+
         const deadScrobble = (client as AbstractScrobbleClient).deadLetterScrobbles.find(x => x.id === deadId);
 
         if(deadScrobble === undefined) {
+            (client as AbstractScrobbleClient).logger.debug(`No dead letter scrobble with ID ${deadId}`)
             return res.status(404).send();
         }
 
@@ -329,6 +334,8 @@ export const setupApi = (app: ExpressWithAsync, logger: Logger, initialLogOutput
             scrobbleClient: client,
         } = req;
 
+        (client as AbstractScrobbleClient).logger.debug('User requested deletion of all dead letter scrobbles via API');
+
         (client as AbstractScrobbleClient).removeDeadLetterScrobbles();
 
         return res.json([]);
@@ -345,9 +352,12 @@ export const setupApi = (app: ExpressWithAsync, logger: Logger, initialLogOutput
 
         const deadId = id as string;
 
+        (client as AbstractScrobbleClient).logger.debug(`User requested removal of dead letter scrobble ${deadId} via API call`)
+
         const deadScrobble = (client as AbstractScrobbleClient).deadLetterScrobbles.find(x => x.id === deadId);
 
         if(deadScrobble === undefined) {
+            (client as AbstractScrobbleClient).logger.debug(`No dead letter scrobble with ID ${deadId}`)
             return res.status(404).send();
         }
 
@@ -373,8 +383,10 @@ export const setupApi = (app: ExpressWithAsync, logger: Logger, initialLogOutput
     app.getAsync('/api/poll', async function (req, res) {
         // @ts-expect-error TS(2339): Property 'scrobbleSource' does not exist on type '... Remove this comment to see the full error message
         const source = req.scrobbleSource as AbstractSource;
+        source.logger.debug('User requested (re)start via API call');
 
         if (!source.canPoll) {
+            source.logger.debug(`Does not support polling (${source.type})`);
             return res.status(400).send(`Specified source cannot poll (${source.type})`);
         }
 
@@ -394,13 +406,14 @@ export const setupApi = (app: ExpressWithAsync, logger: Logger, initialLogOutput
     app.postAsync('/api/client/init', async function (req, res) {
         // @ts-expect-error TS(2339): Property 'scrobbleSource' does not exist on type '... Remove this comment to see the full error message
         const client = req.scrobbleClient as AbstractScrobbleClient;
+        client.logger.debug('User requested (re)start via API call');
 
-        logger.info('Checking (and trying) to stop scrobbler if already running...');
+        client.logger.info('Checking (and trying) to stop scrobbler if already running...');
         if(false === (await client.tryStopScrobbling())) {
             return res.status(500).send();
         }
 
-        logger.info('Trying to start scrobbler...');
+        client.logger.info('Trying to start scrobbler...');
         await client.initScrobbleMonitoring();
         res.status(200).send('OK');
     });
