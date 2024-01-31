@@ -113,15 +113,19 @@ export default class LastfmApiClient extends AbstractApiClient {
             } = e;
             // for now check for exceptional errors by matching error code text
             const retryError = retryErrors.find(x => message.toLocaleLowerCase().includes(x));
-            if (undefined !== retryError) {
+            const timeout = retryError === undefined && message.includes('ETIMEDOUT');
+            if (undefined !== retryError || timeout) {
                 if (retries < maxRequestRetries) {
                     const delay = (retries + 1) * retryMultiplier;
-                    this.logger.warn(`API call was not good but recoverable (${retryError}), retrying in ${delay} seconds...`);
+                    if(timeout) {
+                        this.logger.warn(`API call timed out after 3 seconds, retrying in ${delay} seconds...`);
+                    } else {
+                        this.logger.warn(`API call was not good but recoverable (${retryError}), retrying in ${delay} seconds...`);
+                    }
                     await sleep(delay * 1000);
                     return this.callApi(func, retries + 1);
                 } else {
-                    this.logger.warn('Could not recover!');
-                    throw e;
+                    throw new UpstreamError(`API call failed due -> ${retryError ?? 'API call timed out'} <- after max retries hit ${maxRequestRetries}`, {cause: e})
                 }
             }
 
