@@ -46,9 +46,10 @@ jobs:
             foxxmd/multi-scrobbler
             ghcr.io/foxxmd/multi-scrobbler
           # generate Docker tags based on the following events/attributes
+          # https://github.com/docker/metadata-action/issues/247#issuecomment-1511259674 for NOT is default branch
           tags: |
-            type=raw,value=latest,enable=${{ endsWith(github.ref, 'master') }}
-            type=ref,event=branch,enable=${{ !endsWith(github.ref, 'master') }}
+            type=raw,value=latest,enable={{is_default_branch}}
+            type=ref,event=branch,enable={{#if is_default_branch}}false{{else}}true{{/if}}
             type=semver,pattern={{version}}
           flavor: |
             latest=false
