@@ -128,6 +128,7 @@ src/**/**.js.map
 *.p8
 .flatpak-builder
 flatpak/generated-sources.json
+*.secrets
 
 build
 !setupProxy.js

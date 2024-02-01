@@ -21,3 +21,4 @@ docsite/node_modules
 docsite/.docusaurus
 docsite/.cache-loader
 build
+*.secrets
