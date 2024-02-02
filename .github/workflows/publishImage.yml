@@ -21,8 +21,12 @@ jobs:
         include:
           - dockerfile: ./Dockerfile
             suffix: ''
+            platforms: 'linux/amd64,linux/arm64'
           - dockerfile: ./debian.Dockerfile
             suffix: '-debian'
+            # can't build arm64 due to a TLS issue when running npm install??
+            # https://github.com/FoxxMD/multi-scrobbler/issues/126
+            platforms: 'linux/amd64'
     # https://docs.github.com/en/actions/security-guides/automatic-token-authentication#permissions-for-the-github_token
     permissions:
       packages: write
@@ -76,4 +80,4 @@ jobs:
           push: ${{ github.event_name != 'pull_request' && !env.ACT}}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
-          platforms: linux/amd64,linux/arm64
+          platforms: ${{ matrix.platforms }}

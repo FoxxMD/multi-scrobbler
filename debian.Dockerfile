@@ -1,15 +1,35 @@
-FROM ghcr.io/linuxserver/baseimage-ubuntu:jammy as base
+#FROM ghcr.io/linuxserver/baseimage-ubuntu:jammy as base
+FROM ghcr.io/linuxserver/baseimage-debian:bookworm as base
 
 ENV TZ=Etc/GMT
 
+# borrowing openssl header removal trick from offical docker-node
+# https://github.com/nodejs/docker-node/blob/main/18/bookworm-slim/Dockerfile#L8
 RUN \
+    ARCH= OPENSSL_ARCH= && dpkgArch="$(dpkg --print-architecture)" \
+        && case "${dpkgArch##*-}" in \
+          amd64) ARCH='x64' OPENSSL_ARCH='linux-x86_64';; \
+          ppc64el) ARCH='ppc64le' OPENSSL_ARCH='linux-ppc64le';; \
+          s390x) ARCH='s390x' OPENSSL_ARCH='linux*-s390x';; \
+          arm64) ARCH='arm64' OPENSSL_ARCH='linux-aarch64';; \
+          armhf) ARCH='armv7l' OPENSSL_ARCH='linux-armv4';; \
+          i386) ARCH='x86' OPENSSL_ARCH='linux-elf';; \
+          *) echo "unsupported architecture"; exit 1 ;; \
+        esac && \
+        set -ex && \
   echo "**** install build packages ****" && \
     apt-get update && \
     apt-get install --no-install-recommends -y \
+        #ca-certificates \
         curl && \
     curl -sL https://deb.nodesource.com/setup_18.x | bash - && \
     apt-get install --no-install-recommends -y nodejs && \
+    npm update -g npm && \
   echo "**** cleanup ****" && \
+    # https://github.com/nodejs/docker-node/blob/main/18/bookworm-slim/Dockerfile#L49
+    # Remove unused OpenSSL headers to save ~34MB
+    # (does not affect arm64 issue below)
+    find /usr/include/node/openssl/archs -mindepth 1 -maxdepth 1 ! -name "$OPENSSL_ARCH" -exec rm -rf {} \; && \
     apt-get purge --auto-remove -y perl && \
     apt-get autoclean && \
     apt-get autoremove && \
@@ -38,9 +58,23 @@ FROM base as build
 COPY --chown=abc:abc package*.json tsconfig.json ./
 COPY --chown=abc:abc patches ./patches
 
+# for debugging, so the build fails faster when timing out (arm64)
+#RUN npm config set fetch-retries 1 && \
+#    npm config set fetch-retry-mintimeout 5000 && \
+#    npm config set fetch-retry-maxtimeout 5000
 
-RUN npm install --verbose \
+# https://www.npmjs.com/package/tls-test
+# used to test that the OS supports downloading packages over HTTPS with TLS 1.2 enforced
+# -- this always succeeds but a good sanity check
+#RUN npm install -g https://tls-test.npmjs.com/tls-test-1.0.0.tgz
+
+# This FAILS when building arm64 but not amd64 (and alpine-based Dockerfile has no issues building arm64)
+# see https://github.com/FoxxMD/multi-scrobbler/issues/126
+RUN npm install \
+    --verbose \
+#   --no-audit \
     && chown -R root:root node_modules
+# running with --no-audit does not have any affect even though the error only logs with prefix 'npm verb audit error'
 
 COPY --chown=abc:abc . /app
 
