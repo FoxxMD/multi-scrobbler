@@ -2,6 +2,7 @@
 FROM ghcr.io/linuxserver/baseimage-debian:bookworm as base
 
 ENV TZ=Etc/GMT
+ENV NODE_VERSION 18.19.0
 
 # borrowing openssl header removal trick from offical docker-node
 # https://github.com/nodejs/docker-node/blob/main/18/bookworm-slim/Dockerfile#L8
@@ -21,16 +22,24 @@ RUN \
     apt-get update && \
     apt-get install --no-install-recommends -y \
         #ca-certificates \
+        xz-utils \
         curl && \
-    curl -sL https://deb.nodesource.com/setup_18.x | bash - && \
-    apt-get install --no-install-recommends -y nodejs && \
+  echo "**** Fetch and install node****" && \
+    # get node/npm directly from nodejs dist \
+    # https://github.com/nodejs/docker-node/blob/main/18/bookworm-slim/Dockerfile#L41
+    curl -fsSLO --compressed "https://nodejs.org/dist/v$NODE_VERSION/node-v$NODE_VERSION-linux-$ARCH.tar.xz" && \
+    tar -xJf "node-v$NODE_VERSION-linux-$ARCH.tar.xz" -C /usr --strip-components=1 --no-same-owner && \
+    rm "node-v$NODE_VERSION-linux-$ARCH.tar.xz" && \
+    ln -s /usr/bin/node /usr/bin/nodejs && \
+#    curl -sL https://deb.nodesource.com/setup_18.x | bash - && \
+#    apt-get install --no-install-recommends -y nodejs && \
     npm update -g npm && \
   echo "**** cleanup ****" && \
     # https://github.com/nodejs/docker-node/blob/main/18/bookworm-slim/Dockerfile#L49
     # Remove unused OpenSSL headers to save ~34MB
     # (does not affect arm64 issue below)
     find /usr/include/node/openssl/archs -mindepth 1 -maxdepth 1 ! -name "$OPENSSL_ARCH" -exec rm -rf {} \; && \
-    apt-get purge --auto-remove -y perl && \
+    apt-get purge --auto-remove -y perl xz-utils && \
     apt-get autoclean && \
     apt-get autoremove && \
       rm -rf \
@@ -48,7 +57,8 @@ ENV CONFIG_DIR=$data_dir
 
 COPY docker/root /
 
-RUN npm install -g patch-package \
+RUN npm install -g  \
+    patch-package \
     && chown -R root:root /usr/lib/node_modules/patch-package
 
 WORKDIR /app
@@ -70,7 +80,7 @@ COPY --chown=abc:abc patches ./patches
 
 # This FAILS when building arm64 but not amd64 (and alpine-based Dockerfile has no issues building arm64)
 # see https://github.com/FoxxMD/multi-scrobbler/issues/126
-RUN npm install \
+RUN npm ci \
     --verbose \
 #   --no-audit \
     && chown -R root:root node_modules
@@ -95,7 +105,7 @@ COPY --from=base /usr/lib /usr/lib
 ENV NODE_ENV=production
 ENV IS_DOCKER=true
 
-RUN npm install --omit=dev \
+RUN npm ci --omit=dev \
     && npm cache clean --force \
     && chown -R abc:abc node_modules \
     && rm -rf node_modules/@types \
