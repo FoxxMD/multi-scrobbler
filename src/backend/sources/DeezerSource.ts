@@ -54,6 +54,7 @@ export default class DeezerSource extends AbstractSource {
         this.workingCredsPath = `${this.configDir}/currentCreds-${name}.json`;
         this.canPoll = true;
         this.canBacklog = true;
+        this.supportsUpstreamRecentlyPlayed = true;
     }
 
     static formatPlayObj(obj: any, options: FormatPlayObjectOptions = {}): PlayObject {
@@ -135,6 +136,10 @@ export default class DeezerSource extends AbstractSource {
         } catch (e) {
             throw e;
         }
+    }
+
+    getUpstreamRecentlyPlayed = async (options: RecentlyPlayedOptions = {}): Promise<PlayObject[]> => {
+        return this.getRecentlyPlayed(options);
     }
 
     getRecentlyPlayed = async (options: RecentlyPlayedOptions = {}) => {

@@ -7,7 +7,7 @@ import MemorySource from "./MemorySource.js";
 import {ErrorWithCause} from "pony-cause";
 import request from "superagent";
 import {isNodeNetworkException} from "../common/errors/NodeErrors.js";
-import {SOURCE_SOT} from "../../core/Atomic.js";
+import {PlayObject, SOURCE_SOT} from "../../core/Atomic.js";
 
 export default class ListenbrainzSource extends MemorySource {
 
@@ -30,6 +30,7 @@ export default class ListenbrainzSource extends MemorySource {
         this.canBacklog = true;
         this.api = new ListenbrainzApiClient(name, config.data);
         this.playerSourceOfTruth = SOURCE_SOT.HISTORY;
+        this.supportsUpstreamRecentlyPlayed = true;
         this.logger.info(`Note: The player for this source is an analogue for the 'Now Playing' status exposed by ${this.type} which is NOT used for scrobbling. Instead, the 'recently played' or 'history' information provided by this source is used for scrobbles.`)
     }
 
@@ -67,6 +68,14 @@ export default class ListenbrainzSource extends MemorySource {
         const now = await this.api.getPlayingNow();
         this.processRecentPlays(now.listens.map(x => ListenbrainzSource.formatPlayObj(x)));
         return await this.api.getRecentlyPlayed(limit);
+    }
+
+    getUpstreamRecentlyPlayed = async (options: RecentlyPlayedOptions = {}): Promise<PlayObject[]> => {
+        try {
+            return await this.api.getRecentlyPlayed(20);
+        } catch (e) {
+            throw e;
+        }
     }
 
     protected getBackloggedPlays = async () => {
