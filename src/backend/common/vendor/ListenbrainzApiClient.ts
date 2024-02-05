@@ -241,7 +241,6 @@ export class ListenbrainzApiClient extends AbstractApiClient {
     getRecentlyPlayed = async (maxTracks: number, user?: string): Promise<PlayObject[]> => {
         try {
             const resp = await this.getUserListens(maxTracks, user);
-            const now = await this.getPlayingNow(user);
             return resp.listens.map(x => ListenbrainzApiClient.listenResponseToPlay(x));
         } catch (e) {
             this.logger.error(`Error encountered while getting User listens | Error =>  ${e.message}`);

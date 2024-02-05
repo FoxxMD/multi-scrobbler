@@ -10,8 +10,8 @@ $primary: #00ACC1;
   bottom: 0;
   left: 0;
   right: 0;
-  padding: $spacing/1.7;
-  padding-right: $spacing/1.5;
+  padding: calc($spacing/1.7);
+  padding-right: calc($spacing/1.5);
   //overflow: auto;
   //background: #282c34;
 
@@ -51,7 +51,7 @@ $primary: #00ACC1;
     }
 
     .subtitle {
-      margin-top: -$spacing/2;
+      margin-top: - calc($spacing/2);
       font-size: 0.75rem;
       text-transform: uppercase;
       color: #607D8B
@@ -61,8 +61,8 @@ $primary: #00ACC1;
 
 .toggle-playlist {
   position: absolute;
-  top: $spacing/2;
-  right: $spacing/2;
+  top: calc($spacing/2);
+  right: calc($spacing/2);
   border: 0;
   outline: 0;
   background: transparent;

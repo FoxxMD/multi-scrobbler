@@ -6,8 +6,9 @@ import {strategies} from '@foxxmd/string-sameness';
 
 const {levenStrategy, diceStrategy} = strategies;
 
-export const PUNCTUATION_WHITESPACE_REGEX = new RegExp(/[^\w\d]/g);
-export const PUNCTUATION_REGEX = new RegExp(/[^\w\s]/g);
+// cant use [^\w\s] because this also catches non-english characters
+export const SYMBOLS_WHITESPACE_REGEX = new RegExp(/[`=(){}<>;',.~!@#$%^&*_+|:"?\-\\\[\]\/\s]/g);
+export const SYMBOLS_REGEX = new RegExp(/[`=(){}<>;',.~!@#$%^&*_+|:"?\-\\\[\]\/]/g);
 
 export const MULTI_WHITESPACE_REGEX = new RegExp(/\s{2,}/g);
 export const uniqueNormalizedStrArr = (arr: string[]): string[] => {
@@ -24,9 +25,9 @@ export const normalizeStr = (str: string, options?: {keepSingleWhitespace?: bool
     const {keepSingleWhitespace = false} = options || {};
     const normal = str.normalize('NFD').replace(/[\u0300-\u036f]/g, "");
     if(!keepSingleWhitespace) {
-        return normal.replace(PUNCTUATION_WHITESPACE_REGEX, '').toLocaleLowerCase();
+        return normal.replace(SYMBOLS_WHITESPACE_REGEX, '').toLocaleLowerCase();
     }
-    return normal.replace(PUNCTUATION_REGEX, '').replace(MULTI_WHITESPACE_REGEX, ' ').toLocaleLowerCase().trim();
+    return normal.replace(SYMBOLS_REGEX, '').replace(MULTI_WHITESPACE_REGEX, ' ').toLocaleLowerCase().trim();
 }
 
 export interface PlayCredits {

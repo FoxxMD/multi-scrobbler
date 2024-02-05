@@ -4,6 +4,7 @@
   * [Jellyfin has warnings about undefined or missing data](#jellyfin-has-warnings-about-undefined-or-missing-data)
   * [Jellyfin has warnings about missing headers](#jellyfin-has-warnings-about-missing-headers)
   * [Spotify/Deezer/LastFM won't authenticate](#spotifydeezerlastfm-wont-authenticate)
+  * [Sporadic network problems on docker](#sporadic-network-problems-on-docker)
 * [Configuration Issues](#configuration-issues)
   * [Config could not be parsed](#config-could-not-be-parsed)
 * [Scrobbling Issues](#scrobbling-issues)
@@ -129,6 +130,16 @@ The callback/redirect URL for these services must be:
 If multi-scrobbler is not running on the same machine your browser is on then the default/example addresses (`http://localhost...`) **will not work.** You must determine the address you can reach the web interface at (such as `http://192.168.0.140:9078`) then use that in place of `localhost` in the callback URLs.
 
 EX `http://localhost:9078/lastfm/callback` -> `http://192.168.0.220:9078/lastfm/callback`
+
+## Sporadic network problems on docker
+
+If you encounter networking issues like:
+
+* sporadic timeouts (`ETIMEDOUT`) without a pattern
+* DNS errors (`EAI_AGAIN`) that do no occur consistently
+* Failures to reach a host that was previously fine (`EHOSTUNREACH`)
+
+there may be an issue with the underlying docker image OS (alpine) that may be solved by switching to a different image. Try switching to a `*-debian` variant tag (only available for ARM hosts) to see if this resolves your issue. IE `multi-scrobbler:latest-debian` or `multi-scrobbler:develop-debian`
 
 # Configuration Issues
 

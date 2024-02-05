@@ -15,24 +15,36 @@ jobs:
   push_to_registry:
     name: Push Docker image to Docker Hub
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - dockerfile: ./Dockerfile
+            suffix: ''
+            platforms: 'linux/amd64,linux/arm64'
+          - dockerfile: ./debian.Dockerfile
+            suffix: '-debian'
+            # can't build arm64 due to a TLS issue when running npm install??
+            # https://github.com/FoxxMD/multi-scrobbler/issues/126
+            platforms: 'linux/amd64'
     # https://docs.github.com/en/actions/security-guides/automatic-token-authentication#permissions-for-the-github_token
     permissions:
       packages: write
       contents: read
     steps:
       - name: Check out the repo
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
 
       - name: Log in to Docker Hub
         if: github.event_name != 'pull_request'
-        uses: docker/login-action@v2
+        uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
 
       - name: Login to GitHub Container Registry
         if: github.event_name != 'pull_request'
-        uses: docker/login-action@v2
+        uses: docker/login-action@v3
         with:
           registry: ghcr.io
           username: ${{ github.repository_owner }}
@@ -40,30 +52,32 @@ jobs:
       
       - name: Extract metadata (tags, labels) for Docker
         id: meta
-        uses: docker/metadata-action@v3
+        uses: docker/metadata-action@v5
         with:
           images: |
             foxxmd/multi-scrobbler
             ghcr.io/foxxmd/multi-scrobbler
           # generate Docker tags based on the following events/attributes
+          # https://github.com/docker/metadata-action/issues/247#issuecomment-1511259674 for NOT is default branch, eventually
           tags: |
-            type=raw,value=latest,enable=${{ endsWith(github.ref, 'master') }}
-            type=ref,event=branch,enable=${{ !endsWith(github.ref, 'master') }}
-            type=semver,pattern={{version}}
+            type=raw,value=latest,enable={{is_default_branch}},suffix=${{ matrix.suffix }}
+            type=ref,event=branch,enable=${{ !endsWith(github.ref, 'master') }},suffix=${{ matrix.suffix }}
+            type=semver,pattern={{version}},suffix=${{ matrix.suffix }}
           flavor: |
             latest=false
 
       - name: Set up QEMU
-        uses: docker/setup-qemu-action@v2
+        uses: docker/setup-qemu-action@v3
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v2
+        uses: docker/setup-buildx-action@v3
 
       - name: Build and push Docker image
-        uses: docker/build-push-action@v4
+        uses: docker/build-push-action@v5
         with:
           context: .
+          file: ${{ matrix.dockerfile }}
           push: ${{ github.event_name != 'pull_request' && !env.ACT}}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
-          platforms: linux/amd64,linux/arm64
+          platforms: ${{ matrix.platforms }}

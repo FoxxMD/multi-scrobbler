@@ -17,7 +17,8 @@
     "fileEndings": "jscodeshift --transformFrom js --transformTo none --importTypes relative --extensions=ts --parser tsx --transform codeshift/transform.ts src/backend",
     "dev": "APP_VERSION=$npm_package_version nodemon -w src/backend -x tsx src/backend/index.ts",
     "start": "APP_VERSION=$npm_package_version NODE_ENV=production tsx src/backend/index.ts",
-    "build": "APP_VERSION=$npm_package_version vite build"
+    "build": "APP_VERSION=$npm_package_version vite build",
+    "postinstall": "patch-package"
   },
   "exports": {
     ".": {
@@ -46,7 +47,7 @@
     "@fortawesome/fontawesome-svg-core": "^6.4.2",
     "@fortawesome/free-solid-svg-icons": "^6.4.2",
     "@fortawesome/react-fontawesome": "^0.2.0",
-    "@foxxmd/chromecast-client": "^1.0.1",
+    "@foxxmd/chromecast-client": "^1.0.4",
     "@foxxmd/string-sameness": "^0.2.0",
     "@foxxmd/winston": "3.3.31",
     "@kenyip/backoff-strategies": "^1.0.4",
@@ -82,6 +83,7 @@
     "normalize-url": "^6.1.0",
     "ntfy": "1.0.5",
     "object-hash": "^3.0.0",
+    "patch-package": "^8.0.0",
     "p-event": "^4.2.0",
     "passport": "^0.6.0",
     "passport-deezer": "^0.2.0",
@@ -100,13 +102,11 @@
     "triple-beam": "^1.3.0",
     "tsx": "^4.7.0",
     "vite-express": "^0.13.0",
-    "wait-on": "^7.0.1",
-    "web-vitals": "^2.1.4",
     "winston-daily-rotate-file": "^4.5.0",
     "winston-duplex": "0.1.3",
     "winston-null": "^2.0.0",
     "winston-transport": "^4.4.0",
-    "xml2js": "^0.4.23",
+    "xml2js": "0.5.0",
     "youtube-music-ts-api": "^1.7.0"
   },
   "devDependencies": {
@@ -141,13 +141,11 @@
     "chai": "^4.3.6",
     "chai-as-promised": "^7.1.1",
     "clone": "^2.1.2",
-    "concurrently": "^8.2.0",
     "jscodeshift": "^0.15.0",
     "mocha": "10.1.0",
     "msw": "^2.1.2",
     "nodemon": "^3.0.3",
     "nyc": "^15.1.0",
-    "patch-package": "^8.0.0",
     "ts-essentials": "^9.1.2",
     "typedoc": "^0.25",
     "typescript": "^5.3.3",

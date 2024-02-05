@@ -135,54 +135,8 @@ export default class LastfmScrobbler extends AbstractScrobbleClient {
         return (await this.existingScrobble(playObj)) !== undefined;
     }
 
-    public playToClientPayload(playObj: PlayObject): TrackScrobblePayload {
-        const {
-            data: {
-                artists = [],
-                album,
-                albumArtists = [],
-                track,
-                duration,
-                playDate,
-                meta: {
-                    brainz: {
-                        track: mbid
-                    } = {},
-                } = {}
-            } = {}
-        } = playObj;
-
-        // LFM does not support multiple artists in scrobble payload
-        // https://www.last.fm/api/show/track.scrobble
-        let artist: string;
-        if (artists.length === 0) {
-            artist = "";
-        } else {
-            artist = artists[0];
-        }
-
-        const rawPayload: TrackScrobblePayload = {
-            artist: artist,
-            duration,
-            track,
-            album,
-            timestamp: getScrobbleTsSOCDate(playObj).unix(),
-            mbid,
-        };
-
-        // LFM does not support multiple artists in scrobble payload
-        // https://www.last.fm/api/show/track.scrobble
-        if (albumArtists.length > 0) {
-            rawPayload.albumArtist = albumArtists[0];
-        }
-
-        // I don't know if its lastfm-node-client building the request params incorrectly
-        // or the last.fm api not handling the params correctly...
-        //
-        // ...but in either case if any of the below properties is undefined (possibly also null??)
-        // then last.fm responds with an IGNORED scrobble and error code 1 (totally unhelpful)
-        // so remove all undefined keys from the object before passing to the api client
-        return removeUndefinedKeys(rawPayload);
+    public playToClientPayload(playObject: PlayObject): object {
+        return this.api.playToClientPayload(playObject);
     }
 
     doScrobble = async (playObj: PlayObject) => {
@@ -195,7 +149,7 @@ export default class LastfmScrobbler extends AbstractScrobbleClient {
 
         const sType = newFromSource ? 'New' : 'Backlog';
 
-        const scrobblePayload = this.playToClientPayload(playObj);
+        const scrobblePayload = this.api.playToClientPayload(playObj);
 
         try {
             const response = await this.api.callApi<TrackScrobbleResponse>((client: any) => client.trackScrobble(

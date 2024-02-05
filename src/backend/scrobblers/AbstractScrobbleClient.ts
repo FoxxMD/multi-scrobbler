@@ -581,7 +581,7 @@ ${closestMatch.breakdowns.join('\n')}`, {leaf: ['Dupe Check']});
                     if (this.lastScrobbleCheck.unix() < this.getLatestQueuePlayDate().unix()) {
                         await this.refreshScrobbles();
                     }
-                    const currQueuedPlay = this.queuedScrobbles[0];
+                    const currQueuedPlay = this.queuedScrobbles.shift();
                     const [timeFrameValid, timeFrameValidLog] = this.timeFrameIsValid(currQueuedPlay.play);
                     if (timeFrameValid && !(await this.alreadyScrobbled(currQueuedPlay.play))) {
                         try {
@@ -593,20 +593,14 @@ ${closestMatch.breakdowns.join('\n')}`, {leaf: ['Dupe Check']});
                                 this.addDeadLetterScrobble(currQueuedPlay, e);
                                 this.logger.warn(new ErrorWithCause(`Could not scrobble ${buildTrackString(currQueuedPlay.play)} from Source '${currQueuedPlay.source}' but error was not show stopping. Adding scrobble to Dead Letter Queue and will retry on next heartbeat.`, {cause: e}));
                             } else {
-                                const processError = new ErrorWithCause('Error occurred while trying to scrobble', {cause: e});
-                                //this.logger.error(processError);
-                                throw processError;
+                                this.queuedScrobbles.unshift(currQueuedPlay);
+                                throw new ErrorWithCause('Error occurred while trying to scrobble', {cause: e});
                             }
                         }
                     } else if (!timeFrameValid) {
                         this.logger.debug(`Will not scrobble ${buildTrackString(currQueuedPlay.play)} from Source '${currQueuedPlay.source}' because it ${timeFrameValidLog}`);
                     }
-                    // processing play may have changed index while we were scrobbling
-                    const pIndex = this.queuedScrobbles.findIndex(x => x.id === currQueuedPlay.id);
-                    if (pIndex !== -1) {
-                        this.emitEvent('scrobbleDequeued', {queuedScrobble: currQueuedPlay})
-                        this.queuedScrobbles.splice(pIndex, 1);
-                    }
+                    this.emitEvent('scrobbleDequeued', {queuedScrobble: currQueuedPlay})
                 }
                 await sleep(this.scrobbleSleep);
             }

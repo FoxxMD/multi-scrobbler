@@ -9,7 +9,7 @@ import {
     SourceData,
 } from "../common/infrastructure/Atomic.js";
 import {EventEmitter} from "events";
-import {MediaController, PersistentClient, Media, connect, createPlatform} from "@foxxmd/chromecast-client";
+import {MediaController, PersistentClient, Media, createPlatform} from "@foxxmd/chromecast-client";
 import {Client as CastClient} from 'castv2';
 import {ErrorWithCause, findCauseByReference} from "pony-cause";
 import { PlayObject } from "../../core/Atomic.js";
@@ -30,14 +30,13 @@ import { buildTrackString } from "../../core/StringUtils.js";
 import { discoveryAvahi, discoveryNative } from "../utils/MDNSUtils.js";
 import {MaybeLogger} from "../common/logging.js";
 import e, {application} from "express";
-import {options} from "superagent";
+import {NETWORK_ERROR_FAILURE_CODES} from "../common/errors/NodeErrors.js";
 
 interface ChromecastDeviceInfo {
     mdns: MdnsDeviceInfo
     client: PersistentClient
     castv2: CastClient
     logger: Logger,
-    connected: boolean
     retries: number
     platform: PlatformType
     applications: Map<string, PlatformApplicationWithContext>
@@ -234,7 +233,6 @@ export class ChromecastSource extends MemorySource {
                 mdns: device,
                 client,
                 castv2: castClient,
-                connected: true,
                 retries: 0,
                 platform,
                 applications,
@@ -250,13 +248,16 @@ export class ChromecastSource extends MemorySource {
 
         let index = 0;
         for(const address of device.addresses) {
-            let client: PersistentClient;
+
             let castClient = new CastClient;
-            castClient.on('connect', () => this.handleCastClientEvent(device.name, 'connect'));
-            castClient.on('error', (err) => this.handleCastClientEvent(device.name, 'error', err));
-            castClient.on('close', () => this.handleCastClientEvent(device.name, 'close'));
+            let client: PersistentClient = new PersistentClient({host: address, client: castClient});
+            client.on('connect', () => this.handleCastClientEvent(device.name, 'connect'));
+            client.on('reconnect', () => this.handleCastClientEvent(device.name, 'reconnect'));
+            client.on('reconnecting', () => this.handleCastClientEvent(device.name, 'reconnecting'));
+            client.on('error', (err) => this.handleCastClientEvent(device.name, 'error', err));
+            client.on('close', () => this.handleCastClientEvent(device.name, 'close'));
             try {
-                client = await connect({host: address, client: castClient});
+                await client.connect();
             } catch (e) {
                 if(index < device.addresses.length - 1) {
                     this.logger.warn(new ErrorWithCause(`Could not connect to ${device.name} but more interfaces exist, will attempt next host.`, {cause: e}));
@@ -276,36 +277,48 @@ export class ChromecastSource extends MemorySource {
             const info = this.devices.get(clientName);
             switch(event) {
                 case 'connect':
+                case 'reconnect':
                     if(info === undefined) {
                         return;
                     }
-                    if(info.connected === false) {
-                        info.logger.verbose(`Reconnected`);
+                    if(event === "reconnect") {
+                        if(payload instanceof Error) {
+                            info.logger.warn(new ErrorWithCause(`Failed to reconnect, will retry ${5 - info.retries} more times`, {cause: e}))
+                        } else {
+                            info.logger.verbose(`Reconnected`);
+                            info.retries = 0;
+                        }
+                    } else {
+                        info.retries = 0;
                     }
-                    info.connected = true;
-                    info.retries = 0;
+                    break;
+                case 'reconnecting':
+                    if(info === undefined) {
+                        return;
+                    }
+                    info.retries += 1;
+
+                    // TODO make this configurable?
+                    if(info.retries >= 4) {
+                        this.removeDevice(clientName, 'Device unreachable for more than 20 seconds');
+                    }
                     break;
                 case 'close':
                     if(info === undefined) {
                         return;
                     }
-                    if(info.connected === false) {
-                        info.retries += 1;
-
-                        // TODO make this configurable?
-                        if(info.retries === 6) {
-                            //info.logger.verbose(`Removing device applications after being unreachable for 30 seconds`);
-                            this.removeApplications(clientName, 'Device unreachable for more than 30 seconds');
-                        }
-                    }
-                    info.connected = false;
+                    info.logger.debug('Connection was closed');
                     break;
                 case 'error':
                     if(info === undefined) {
                         this.logger.error(new ErrorWithCause(`(${clientName}) Encountered error in castv2 lib`, {cause: payload as Error}));
                     } else {
-                        info.connected = false;
-                        info.logger.error(new ErrorWithCause(`Encountered error in castv2 lib`, {cause: payload as Error}));
+                        if(NETWORK_ERROR_FAILURE_CODES.some(x => (payload as Error).message.includes(x))) {
+                            info.logger.warn(new ErrorWithCause(`Encountered network error. Will try to reconnect to device`, {cause: payload as Error}));
+                            info.client.client.close();
+                        } else {
+                            info.logger.error(new ErrorWithCause(`Encountered error in castv2 lib`, {cause: payload as Error}));
+                        }
                     }
                     break;
             }
@@ -313,7 +326,7 @@ export class ChromecastSource extends MemorySource {
 
     protected refreshApplications = async () => {
         for(const [k, v] of this.devices.entries()) {
-            if(!v.connected) {
+            if(!v.client.connected) {
                 continue;
             }
 
@@ -328,8 +341,8 @@ export class ChromecastSource extends MemorySource {
                     v.logger.warn(JSON.stringify(validationError.data));
                 }
                 v.retries++;
-                if(v.retries >= 5) {
-                    this.removeDevice(k, 'Unable to refresh application more than 6 times consecutively! If this device comes back online it will be re-added on next heartbeat.');
+                if(v.retries >= 4) {
+                    this.removeDevice(k, 'Unable to refresh application more than 4 times consecutively! If this device comes back online it will be re-added on next heartbeat.');
                 }
                 continue;
             }
@@ -434,7 +447,7 @@ export class ChromecastSource extends MemorySource {
 
     protected pruneApplications = (force: boolean = false) => {
         for(const [k, v] of this.devices.entries()) {
-            if (!force && !v.connected) {
+            if (!force && !v.client.connected) {
                 continue;
             }
 
@@ -485,7 +498,7 @@ export class ChromecastSource extends MemorySource {
         }
 
         for (const [k, v] of this.devices.entries()) {
-            if (!v.connected || v.retries > 0) {
+            if (!v.client.connected || v.retries > 0) {
                 continue;
             }
 

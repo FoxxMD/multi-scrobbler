@@ -1,15 +1,17 @@
 import React, {useState, useCallback, Fragment} from 'react';
 import './player.scss';
 import PlayerTimestamp from "./PlayerTimestamp";
-import {SourcePlayerJson} from "../../../core/Atomic";
+import {SOURCE_SOT, SOURCE_SOT_TYPES, SourcePlayerJson} from "../../../core/Atomic";
 import PlayerInfo from "./PlayerInfo";
 import {FontAwesomeIcon} from "@fortawesome/react-fontawesome";
-import {faBars, faTimes} from '@fortawesome/free-solid-svg-icons'
+import {faBars, faTimes, faQuestionCircle} from '@fortawesome/free-solid-svg-icons'
 
 import {capitalize} from "../../../core/StringUtils";
+import Tooltip from "../Tooltip";
 
 export interface PlayerProps {
     data: SourcePlayerJson
+    sot?: SOURCE_SOT_TYPES
 }
 
 export interface Track {
@@ -24,6 +26,7 @@ export interface Track {
 const Player = (props: PlayerProps) => {
     const {
         data,
+        sot = SOURCE_SOT.PLAYER
     } = props;
 
     const {
@@ -71,6 +74,9 @@ const Player = (props: PlayerProps) => {
     return (
             <article className={["player", "mb-2"].join(' ')}>
                 <div className="player__wrapper">
+                    {sot === SOURCE_SOT.HISTORY ? <span className="player-tooltip"><Tooltip message="This player is for DISPLAY ONLY and likely represents a 'Now Playing' status exposed by the Source. For scrobbling Multi Scrobbler uses the 'recently played' or 'history' information provided by this source.">
+                        <FontAwesomeIcon color="black" icon={faQuestionCircle}/>
+                    </Tooltip></span> : null}
                     <button className="button toggle-playlist" onClick={toggleViewMode}>
                         <FontAwesomeIcon color="black" icon={viewMode === 'playlist' ? faTimes : faBars}/>
                     </button>

@@ -13,6 +13,8 @@ export interface SourceStatusData {
     hasAuthInteraction: boolean;
     authed: boolean;
     players: Record<string, SourcePlayerJson>
+    sot: SOURCE_SOT_TYPES
+    supportsUpstreamRecentlyPlayed: boolean;
 }
 
 export interface ClientStatusData {
@@ -234,4 +236,10 @@ export interface TemporalPlayComparison {
         fuzzyListenedDiff?: number
     }
     range?: false | ListenRangeData
+}
+
+export type SOURCE_SOT_TYPES = 'player' | 'history';
+export const SOURCE_SOT = {
+    PLAYER : 'player' as SOURCE_SOT_TYPES,
+    HISTORY: 'history' as SOURCE_SOT_TYPES
 }

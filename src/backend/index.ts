@@ -19,6 +19,7 @@ import {SimpleIntervalJob, ToadScheduler} from "toad-scheduler";
 import { createHeartbeatSourcesTask } from "./tasks/heartbeatSources.js";
 import { createHeartbeatClientsTask } from "./tasks/heartbeatClients.js";
 import {ErrorWithCause} from "pony-cause";
+import LastfmSource from "./sources/LastfmSource.js";
 
 
 dayjs.extend(utc)

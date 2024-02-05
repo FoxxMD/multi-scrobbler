@@ -22,6 +22,25 @@ npm run build
 npm run start
 ```
 
+#### Rollup build error
+
+During building if you encounter an error like: `Your current platform "XXX" and architecture "XXX" combination is not yet supported by the native Rollup build.`
+
+Modify `overrides` in `package.json` to use `@rollup/wasm-node` as a drop-in replacement for rollup:
+
+```json
+"overrides": {
+  "spotify-web-api-node": {
+    "superagent": "$superagent"
+  }
+  "vite": {
+    "rollup": "npm:@rollup/wasm-node@^4.9.6"
+  }
+}
+```
+
+See [this issue](https://github.com/FoxxMD/multi-scrobbler/issues/135#issuecomment-1927080260) for more detail.
+
 ### Usage Examples
 
 * The web UI and API is served on port `9078`. This can be modified using the `PORT` environmental variable.
@@ -45,6 +64,11 @@ You must have [Flatpak](https://flatpak.org/) installed on your system.
 ```shell
 flatpak install flathub io.github.foxxmd.multiscrobbler
 ```
+
+**Note:** Flatpak users have experienced issues when using multi-scrobbler as a long-running process. Due to the relative difficulty in debugging issues with flatpak installations it is recommended:
+
+* to use a [Docker](#docker) installation if possible or
+* only if you need access to host-level resources like dbus for [MPRIS](https://foxxmd.github.io/multi-scrobbler/docs/configuration#mpris) and cannot run a [nodejs](#nodejs) installation
 
 ### Usage Examples
 
@@ -131,6 +155,16 @@ To get the UID and GID for the current user run these commands from a terminal:
 
 * `id -u` -- prints UID
 * `id -g` -- prints GID
+
+### Network Issues
+
+If you encounter networking issues like:
+
+* sporadic timeouts (`ETIMEDOUT`) without a pattern
+* DNS errors (`EAI_AGAIN`) that do no occur consistently
+* Failures to reach a host that was previously fine (`EHOSTUNREACH`)
+
+there may be an issue with the underlying docker image OS (alpine) that may be solved by switching to a different image. Try switching to a `*-debian` variant tag (only available for ARM hosts) to see if this resolves your issue. IE `multi-scrobbler:latest-debian` or `multi-scrobbler:develop-debian`
 
 ## Docker Usage Examples
 
