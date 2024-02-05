@@ -156,6 +156,16 @@ To get the UID and GID for the current user run these commands from a terminal:
 * `id -u` -- prints UID
 * `id -g` -- prints GID
 
+### Network Issues
+
+If you encounter networking issues like:
+
+* sporadic timeouts (`ETIMEDOUT`) without a pattern
+* DNS errors (`EAI_AGAIN`) that do no occur consistently
+* Failures to reach a host that was previously fine (`EHOSTUNREACH`)
+
+there may be an issue with the underlying docker image OS (alpine) that may be solved by switching to a different image. Try switching to a `*-debian` variant tag (only available for ARM hosts) to see if this resolves your issue. IE `multi-scrobbler:latest-debian` or `multi-scrobbler:develop-debian`
+
 ## Docker Usage Examples
 
 If installing on a different machine make sure all redirect URIs are defined or that you have set a [Base URL](#base-url).
