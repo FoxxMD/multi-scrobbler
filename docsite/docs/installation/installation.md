@@ -164,7 +164,7 @@ If you encounter networking issues like:
 * DNS errors (`EAI_AGAIN`) that do no occur consistently
 * Failures to reach a host that was previously fine (`EHOSTUNREACH`)
 
-there may be an issue with the underlying docker image OS (alpine) that may be solved by switching to a different image. Try switching to a `*-debian` variant tag (only available for ARM hosts) to see if this resolves your issue. IE `multi-scrobbler:latest-debian` or `multi-scrobbler:develop-debian`
+there may be an issue with the underlying docker image OS (alpine) that may be solved by switching to a different image. Try switching to a `*-debian` variant tag (only available for x86/x64 hosts) to see if this resolves your issue. IE `multi-scrobbler:latest-debian` or `multi-scrobbler:develop-debian`
 
 ## Docker Usage Examples
 
