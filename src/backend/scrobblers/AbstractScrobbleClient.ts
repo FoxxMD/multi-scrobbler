@@ -310,7 +310,7 @@ export default abstract class AbstractScrobbleClient implements Authenticatable 
         }
 
         let existingScrobble;
-        let closestMatch: {score: number, breakdowns: string[], confidence: string, scrobble?: PlayObject} = {score: 0, breakdowns: [], confidence: 'None'};
+        let closestMatch: {score: number, breakdowns: string[], confidence: string, scrobble?: PlayObject} = {score: 0, breakdowns: [], confidence: 'No existing scrobble matched with a score higher than 0'};
 
         // then check if we have already recorded this
         const [existingExactSubmitted, existingDataSubmitted = []] = this.findExistingSubmittedPlayObj(playObj);
@@ -419,9 +419,13 @@ export default abstract class AbstractScrobbleClient implements Authenticatable 
         }
 
         if ((existingScrobble !== undefined && this.verboseOptions.match.onMatch) || (existingScrobble === undefined && this.verboseOptions.match.onNoMatch)) {
-            const closestScrobble = `Closest Scrobble: ${buildTrackString(closestMatch.scrobble, scoreTrackOpts)} => ${closestMatch.confidence}`;
-            this.logger.debug(`${capitalize(playObj.meta.source ?? 'Source')}: ${buildTrackString(playObj, scoreTrackOpts)} => ${closestScrobble}`, {leaf: ['Dupe Check']});
-            if (this.verboseOptions.match.confidenceBreakdown === true) {
+            const closestScrobbleParts: string[] = [];
+            if(closestMatch.scrobble !== undefined) {
+                closestScrobbleParts.push(`Closest Scrobble: ${buildTrackString(closestMatch.scrobble, scoreTrackOpts)}`);
+            }
+            closestScrobbleParts.push(closestMatch.confidence);
+            this.logger.debug(`${capitalize(playObj.meta.source ?? 'Source')}: ${buildTrackString(playObj, scoreTrackOpts)} => ${closestScrobbleParts.join(' => ')}`, {leaf: ['Dupe Check']});
+            if (this.verboseOptions.match.confidenceBreakdown === true && closestMatch.breakdowns.length > 0) {
                 this.logger.debug(`Breakdown:
 ${closestMatch.breakdowns.join('\n')}`, {leaf: ['Dupe Check']});
             }
