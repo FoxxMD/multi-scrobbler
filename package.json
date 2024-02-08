@@ -17,7 +17,9 @@
     "fileEndings": "jscodeshift --transformFrom js --transformTo none --importTypes relative --extensions=ts --parser tsx --transform codeshift/transform.ts src/backend",
     "dev": "APP_VERSION=$npm_package_version nodemon -w src/backend -x tsx src/backend/index.ts",
     "start": "APP_VERSION=$npm_package_version NODE_ENV=production tsx src/backend/index.ts",
-    "build": "APP_VERSION=$npm_package_version vite build",
+    "build:frontend": "APP_VERSION=$npm_package_version vite build",
+    "build:backend": "tsc -p src/backend",
+    "build": "npm run -s build:backend && npm run -s build:frontend",
     "postinstall": "patch-package"
   },
   "exports": {
