@@ -1,7 +1,786 @@
 {
     "$schema": "http://json-schema.org/draft-07/schema#",
     "definitions": {
-        "ChromecastData": {
+        "LogLevel": {
+            "enum": [
+                "debug",
+                "error",
+                "info",
+                "verbose",
+                "warn"
+            ],
+            "title": "LogLevel",
+            "type": "string"
+        },
+        "Record<string,any>": {
+            "title": "Record<string,any>",
+            "type": "object"
+        },
+        "import(\"/home/foxx/code/multi-scrobbler/src/backend/common/infrastructure/Atomic\",{assert:{\"resolution-mode\":\"import\"}}).LogOptions": {
+            "properties": {
+                "console": {
+                    "description": "Specify the minimum log level streamed to the console (or docker container)",
+                    "enum": [
+                        "debug",
+                        "error",
+                        false,
+                        "info",
+                        "verbose",
+                        "warn"
+                    ],
+                    "title": "console"
+                },
+                "file": {
+                    "description": "Specify the minimum log level to output to rotating files. If `false` no log files will be created.",
+                    "enum": [
+                        "debug",
+                        "error",
+                        false,
+                        "info",
+                        "verbose",
+                        "warn"
+                    ],
+                    "title": "file"
+                },
+                "level": {
+                    "$ref": "#/definitions/LogLevel",
+                    "default": "'info'",
+                    "description": "Specify the minimum log level for all log outputs without their own level specified.\n\nDefaults to env `LOG_LEVEL` or `info` if not specified.",
+                    "title": "level"
+                },
+                "stream": {
+                    "$ref": "#/definitions/LogLevel",
+                    "description": "Specify the minimum log level streamed to the UI",
+                    "title": "stream"
+                }
+            },
+            "title": "import(\"/home/foxx/code/multi-scrobbler/src/backend/common/infrastructure/Atomic\",{assert:{\"resolution-mode\":\"import\"}}).LogOptions",
+            "type": "object"
+        },
+        "import(\"/home/foxx/code/multi-scrobbler/src/backend/common/infrastructure/config/aioConfig\",{assert:{\"resolution-mode\":\"import\"}}).SourceDefaults": {
+            "properties": {
+                "maxPollRetries": {
+                    "default": 5,
+                    "description": "default # of automatic polling restarts on error",
+                    "examples": [
+                        5
+                    ],
+                    "title": "maxPollRetries",
+                    "type": "number"
+                },
+                "maxRequestRetries": {
+                    "default": 1,
+                    "description": "default # of http request retries a source can make before error is thrown",
+                    "examples": [
+                        1
+                    ],
+                    "title": "maxRequestRetries",
+                    "type": "number"
+                },
+                "options": {
+                    "$ref": "#/definitions/import(\"/home/foxx/code/multi-scrobbler/src/backend/common/infrastructure/config/source/index\",{assert:{\"resolution-mode\":\"import\"}}).CommonSourceOptions",
+                    "title": "options"
+                },
+                "retryMultiplier": {
+                    "default": 1.5,
+                    "description": "default retry delay multiplier (retry attempt * multiplier = # of seconds to wait before retrying)",
+                    "examples": [
+                        1.5
+                    ],
+                    "title": "retryMultiplier",
+                    "type": "number"
+                },
+                "scrobbleThresholds": {
+                    "$ref": "#/definitions/import(\"/home/foxx/code/multi-scrobbler/src/backend/common/infrastructure/config/source/index\",{assert:{\"resolution-mode\":\"import\"}}).ScrobbleThresholds",
+                    "description": "Set thresholds for when multi-scrobbler should consider a tracked play to be \"scrobbable\". If both duration and percent are defined then if either condition is met the track is scrobbled.",
+                    "title": "scrobbleThresholds"
+                }
+            },
+            "title": "import(\"/home/foxx/code/multi-scrobbler/src/backend/common/infrastructure/config/aioConfig\",{assert:{\"resolution-mode\":\"import\"}}).SourceDefaults",
+            "type": "object"
+        },
+        "import(\"/home/foxx/code/multi-scrobbler/src/backend/common/infrastructure/config/client/clients\",{assert:{\"resolution-mode\":\"import\"}}).ClientAIOConfig": {
+            "anyOf": [
+                {
+                    "$ref": "#/definitions/import(\"/home/foxx/code/multi-scrobbler/src/backend/common/infrastructure/config/client/lastfm\",{assert:{\"resolution-mode\":\"import\"}}).LastfmClientAIOConfig"
+                },
+                {
+                    "$ref": "#/definitions/import(\"/home/foxx/code/multi-scrobbler/src/backend/common/infrastructure/config/client/listenbrainz\",{assert:{\"resolution-mode\":\"import\"}}).ListenBrainzClientAIOConfig"
+                },
+                {
+                    "$ref": "#/definitions/import(\"/home/foxx/code/multi-scrobbler/src/backend/common/infrastructure/config/client/maloja\",{assert:{\"resolution-mode\":\"import\"}}).MalojaClientAIOConfig"
+                }
+            ],
+            "title": "import(\"/home/foxx/code/multi-scrobbler/src/backend/common/infrastructure/config/client/clients\",{assert:{\"resolution-mode\":\"import\"}}).ClientAIOConfig"
+        },
+        "import(\"/home/foxx/code/multi-scrobbler/src/backend/common/infrastructure/config/client/index\",{assert:{\"resolution-mode\":\"import\"}}).CommonClientData": {
+            "properties": {
+                "maxRequestRetries": {
+                    "default": 1,
+                    "description": "default # of http request retries a client can make before error is thrown.",
+                    "examples": [
+                        1
+                    ],
+                    "title": "maxRequestRetries",
+                    "type": "number"
+                },
+                "options": {
+                    "properties": {
+                        "checkExistingScrobbles": {
+                            "default": true,
+                            "description": "Check client for an existing scrobble at the same recorded time as the \"new\" track to be scrobbled. If an existing scrobble is found this track is not track scrobbled.",
+                            "examples": [
+                                true
+                            ],
+                            "title": "checkExistingScrobbles",
+                            "type": "boolean"
+                        },
+                        "deadLetterRetries": {
+                            "default": 1,
+                            "description": "Number of times MS should automatically retry scrobbles in dead letter queue",
+                            "examples": [
+                                1
+                            ],
+                            "title": "deadLetterRetries",
+                            "type": "number"
+                        },
+                        "refreshEnabled": {
+                            "default": true,
+                            "description": "Try to get fresh scrobble history from client when tracks to be scrobbled are newer than the last scrobble found in client history",
+                            "examples": [
+                                true
+                            ],
+                            "title": "refreshEnabled",
+                            "type": "boolean"
+                        },
+                        "verbose": {
+                            "description": "Options used for increasing verbosity of logging in MS (used for debugging)",
+                            "properties": {
+                                "match": {
+                                    "$ref": "#/definitions/import(\"/home/foxx/code/multi-scrobbler/src/backend/common/infrastructure/config/client/index\",{assert:{\"resolution-mode\":\"import\"}}).MatchLoggingOptions",
+                                    "title": "match"
+                                }
+                            },
+                            "title": "verbose",
+                            "type": "object"
+                        }
+                    },
+                    "title": "options",
+                    "type": "object"
+                },
+                "retryMultiplier": {
+                    "default": 1.5,
+                    "description": "default retry delay multiplier (retry attempt * multiplier = # of seconds to wait before retrying).",
+                    "examples": [
+                        1.5
+                    ],
+                    "title": "retryMultiplier",
+                    "type": "number"
+                }
+            },
+            "title": "import(\"/home/foxx/code/multi-scrobbler/src/backend/common/infrastructure/config/client/index\",{assert:{\"resolution-mode\":\"import\"}}).CommonClientData",
+            "type": "object"
+        },
+        "import(\"/home/foxx/code/multi-scrobbler/src/backend/common/infrastructure/config/client/index\",{assert:{\"resolution-mode\":\"import\"}}).MatchLoggingOptions": {
+            "description": "Scrobble matching (between new source track and existing client scrobbles) logging options. Used for debugging.",
+            "properties": {
+                "confidenceBreakdown": {
+                    "default": false,
+                    "description": "Include confidence breakdowns in track match logging, if applicable",
+                    "examples": [
+                        false
+                    ],
+                    "title": "confidenceBreakdown",
+                    "type": "boolean"
+                },
+                "onMatch": {
+                    "default": false,
+                    "description": "Log to DEBUG when a new track DOES match an existing scrobble",
+                    "examples": [
+                        false
+                    ],
+                    "title": "onMatch",
+                    "type": "boolean"
+                },
+                "onNoMatch": {
+                    "default": false,
+                    "description": "Log to DEBUG when a new track does NOT match an existing scrobble",
+                    "examples": [
+                        false
+                    ],
+                    "title": "onNoMatch",
+                    "type": "boolean"
+                }
+            },
+            "title": "import(\"/home/foxx/code/multi-scrobbler/src/backend/common/infrastructure/config/client/index\",{assert:{\"resolution-mode\":\"import\"}}).MatchLoggingOptions",
+            "type": "object"
+        },
+        "import(\"/home/foxx/code/multi-scrobbler/src/backend/common/infrastructure/config/client/lastfm\",{assert:{\"resolution-mode\":\"import\"}}).LastfmClientAIOConfig": {
+            "properties": {
+                "configureAs": {
+                    "default": "client",
+                    "description": "Should always be `client` when using LastFM as a client",
+                    "enum": [
+                        "client",
+                        "source"
+                    ],
+                    "examples": [
+                        "client"
+                    ],
+                    "title": "configureAs",
+                    "type": "string"
+                },
+                "data": {
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/import(\"/home/foxx/code/multi-scrobbler/src/backend/common/infrastructure/config/client/index\",{assert:{\"resolution-mode\":\"import\"}}).CommonClientData"
+                        },
+                        {
+                            "$ref": "#/definitions/import(\"/home/foxx/code/multi-scrobbler/src/backend/common/infrastructure/config/client/lastfm\",{assert:{\"resolution-mode\":\"import\"}}).LastfmData"
+                        }
+                    ],
+                    "description": "Specific data required to configure this client",
+                    "title": "data"
+                },
+                "enable": {
+                    "default": true,
+                    "description": "Should MS use this client/source? Defaults to true",
+                    "examples": [
+                        true
+                    ],
+                    "title": "enable",
+                    "type": "boolean"
+                },
+                "name": {
+                    "description": "Unique identifier for this client. Used with sources to restrict where scrobbles are sent.",
+                    "examples": [
+                        "MyConfig"
+                    ],
+                    "title": "name",
+                    "type": "string"
+                },
+                "type": {
+                    "enum": [
+                        "lastfm"
+                    ],
+                    "title": "type",
+                    "type": "string"
+                }
+            },
+            "required": [
+                "data",
+                "name",
+                "type"
+            ],
+            "title": "import(\"/home/foxx/code/multi-scrobbler/src/backend/common/infrastructure/config/client/lastfm\",{assert:{\"resolution-mode\":\"import\"}}).LastfmClientAIOConfig",
+            "type": "object"
+        },
+        "import(\"/home/foxx/code/multi-scrobbler/src/backend/common/infrastructure/config/client/lastfm\",{assert:{\"resolution-mode\":\"import\"}}).LastfmData": {
+            "properties": {
+                "apiKey": {
+                    "description": "API Key generated from Last.fm account",
+                    "examples": [
+                        "787c921a2a2ab42320831aba0c8f2fc2"
+                    ],
+                    "title": "apiKey",
+                    "type": "string"
+                },
+                "maxRequestRetries": {
+                    "default": 1,
+                    "description": "default # of http request retries a source can make before error is thrown",
+                    "examples": [
+                        1
+                    ],
+                    "title": "maxRequestRetries",
+                    "type": "number"
+                },
+                "redirectUri": {
+                    "default": "http://localhost:9078/lastfm/callback",
+                    "description": "Optional URI to use for callback. Specify this if callback should be different than the default. MUST have \"lastfm/callback\" in the URL somewhere.",
+                    "examples": [
+                        "http://localhost:9078/lastfm/callback"
+                    ],
+                    "title": "redirectUri",
+                    "type": "string"
+                },
+                "retryMultiplier": {
+                    "default": 1.5,
+                    "description": "default retry delay multiplier (retry attempt * multiplier = # of seconds to wait before retrying)",
+                    "examples": [
+                        1.5
+                    ],
+                    "title": "retryMultiplier",
+                    "type": "number"
+                },
+                "secret": {
+                    "description": "Secret generated from Last.fm account",
+                    "examples": [
+                        "ec42e09d5ae0ee0f0816ca151008412a"
+                    ],
+                    "title": "secret",
+                    "type": "string"
+                },
+                "session": {
+                    "description": "Optional session id returned from a completed auth flow",
+                    "title": "session",
+                    "type": "string"
+                }
+            },
+            "required": [
+                "apiKey",
+                "secret"
+            ],
+            "title": "import(\"/home/foxx/code/multi-scrobbler/src/backend/common/infrastructure/config/client/lastfm\",{assert:{\"resolution-mode\":\"import\"}}).LastfmData",
+            "type": "object"
+        },
+        "import(\"/home/foxx/code/multi-scrobbler/src/backend/common/infrastructure/config/client/listenbrainz\",{assert:{\"resolution-mode\":\"import\"}}).ListenBrainzClientAIOConfig": {
+            "properties": {
+                "configureAs": {
+                    "default": "client",
+                    "description": "Should always be `client` when using Listenbrainz as a client",
+                    "enum": [
+                        "client",
+                        "source"
+                    ],
+                    "examples": [
+                        "client"
+                    ],
+                    "title": "configureAs",
+                    "type": "string"
+                },
+                "data": {
+                    "$ref": "#/definitions/import(\"/home/foxx/code/multi-scrobbler/src/backend/common/infrastructure/config/client/listenbrainz\",{assert:{\"resolution-mode\":\"import\"}}).ListenBrainzClientData",
+                    "description": "Specific data required to configure this client",
+                    "title": "data"
+                },
+                "enable": {
+                    "default": true,
+                    "description": "Should MS use this client/source? Defaults to true",
+                    "examples": [
+                        true
+                    ],
+                    "title": "enable",
+                    "type": "boolean"
+                },
+                "name": {
+                    "description": "Unique identifier for this client. Used with sources to restrict where scrobbles are sent.",
+                    "examples": [
+                        "MyConfig"
+                    ],
+                    "title": "name",
+                    "type": "string"
+                },
+                "type": {
+                    "enum": [
+                        "listenbrainz"
+                    ],
+                    "title": "type",
+                    "type": "string"
+                }
+            },
+            "required": [
+                "data",
+                "name",
+                "type"
+            ],
+            "title": "import(\"/home/foxx/code/multi-scrobbler/src/backend/common/infrastructure/config/client/listenbrainz\",{assert:{\"resolution-mode\":\"import\"}}).ListenBrainzClientAIOConfig",
+            "type": "object"
+        },
+        "import(\"/home/foxx/code/multi-scrobbler/src/backend/common/infrastructure/config/client/listenbrainz\",{assert:{\"resolution-mode\":\"import\"}}).ListenBrainzClientData": {
+            "properties": {
+                "maxRequestRetries": {
+                    "default": 1,
+                    "description": "default # of http request retries a source can make before error is thrown",
+                    "examples": [
+                        1
+                    ],
+                    "title": "maxRequestRetries",
+                    "type": "number"
+                },
+                "options": {
+                    "properties": {
+                        "checkExistingScrobbles": {
+                            "default": true,
+                            "description": "Check client for an existing scrobble at the same recorded time as the \"new\" track to be scrobbled. If an existing scrobble is found this track is not track scrobbled.",
+                            "examples": [
+                                true
+                            ],
+                            "title": "checkExistingScrobbles",
+                            "type": "boolean"
+                        },
+                        "deadLetterRetries": {
+                            "default": 1,
+                            "description": "Number of times MS should automatically retry scrobbles in dead letter queue",
+                            "examples": [
+                                1
+                            ],
+                            "title": "deadLetterRetries",
+                            "type": "number"
+                        },
+                        "refreshEnabled": {
+                            "default": true,
+                            "description": "Try to get fresh scrobble history from client when tracks to be scrobbled are newer than the last scrobble found in client history",
+                            "examples": [
+                                true
+                            ],
+                            "title": "refreshEnabled",
+                            "type": "boolean"
+                        },
+                        "verbose": {
+                            "description": "Options used for increasing verbosity of logging in MS (used for debugging)",
+                            "properties": {
+                                "match": {
+                                    "$ref": "#/definitions/import(\"/home/foxx/code/multi-scrobbler/src/backend/common/infrastructure/config/client/index\",{assert:{\"resolution-mode\":\"import\"}}).MatchLoggingOptions",
+                                    "title": "match"
+                                }
+                            },
+                            "title": "verbose",
+                            "type": "object"
+                        }
+                    },
+                    "title": "options",
+                    "type": "object"
+                },
+                "retryMultiplier": {
+                    "default": 1.5,
+                    "description": "default retry delay multiplier (retry attempt * multiplier = # of seconds to wait before retrying)",
+                    "examples": [
+                        1.5
+                    ],
+                    "title": "retryMultiplier",
+                    "type": "number"
+                },
+                "token": {
+                    "description": "User token for the user to scrobble for",
+                    "examples": [
+                        "6794186bf-1157-4de6-80e5-uvb411f3ea2b"
+                    ],
+                    "title": "token",
+                    "type": "string"
+                },
+                "url": {
+                    "default": "https://api.listenbrainz.org/",
+                    "description": "URL for the ListenBrainz server, if not using the default",
+                    "examples": [
+                        "https://api.listenbrainz.org/"
+                    ],
+                    "title": "url",
+                    "type": "string"
+                },
+                "username": {
+                    "description": "Username of the user to scrobble for",
+                    "title": "username",
+                    "type": "string"
+                }
+            },
+            "required": [
+                "token",
+                "username"
+            ],
+            "title": "import(\"/home/foxx/code/multi-scrobbler/src/backend/common/infrastructure/config/client/listenbrainz\",{assert:{\"resolution-mode\":\"import\"}}).ListenBrainzClientData",
+            "type": "object"
+        },
+        "import(\"/home/foxx/code/multi-scrobbler/src/backend/common/infrastructure/config/client/maloja\",{assert:{\"resolution-mode\":\"import\"}}).MalojaClientAIOConfig": {
+            "properties": {
+                "data": {
+                    "$ref": "#/definitions/import(\"/home/foxx/code/multi-scrobbler/src/backend/common/infrastructure/config/client/maloja\",{assert:{\"resolution-mode\":\"import\"}}).MalojaClientData",
+                    "description": "Specific data required to configure this client",
+                    "title": "data"
+                },
+                "enable": {
+                    "default": true,
+                    "description": "Should MS use this client/source? Defaults to true",
+                    "examples": [
+                        true
+                    ],
+                    "title": "enable",
+                    "type": "boolean"
+                },
+                "name": {
+                    "description": "Unique identifier for this client. Used with sources to restrict where scrobbles are sent.",
+                    "examples": [
+                        "MyConfig"
+                    ],
+                    "title": "name",
+                    "type": "string"
+                },
+                "type": {
+                    "enum": [
+                        "maloja"
+                    ],
+                    "title": "type",
+                    "type": "string"
+                }
+            },
+            "required": [
+                "data",
+                "name",
+                "type"
+            ],
+            "title": "import(\"/home/foxx/code/multi-scrobbler/src/backend/common/infrastructure/config/client/maloja\",{assert:{\"resolution-mode\":\"import\"}}).MalojaClientAIOConfig",
+            "type": "object"
+        },
+        "import(\"/home/foxx/code/multi-scrobbler/src/backend/common/infrastructure/config/client/maloja\",{assert:{\"resolution-mode\":\"import\"}}).MalojaClientData": {
+            "properties": {
+                "apiKey": {
+                    "description": "API Key for Maloja server",
+                    "examples": [
+                        "myApiKey"
+                    ],
+                    "title": "apiKey",
+                    "type": "string"
+                },
+                "maxRequestRetries": {
+                    "default": 1,
+                    "description": "default # of http request retries a source can make before error is thrown",
+                    "examples": [
+                        1
+                    ],
+                    "title": "maxRequestRetries",
+                    "type": "number"
+                },
+                "options": {
+                    "properties": {
+                        "checkExistingScrobbles": {
+                            "default": true,
+                            "description": "Check client for an existing scrobble at the same recorded time as the \"new\" track to be scrobbled. If an existing scrobble is found this track is not track scrobbled.",
+                            "examples": [
+                                true
+                            ],
+                            "title": "checkExistingScrobbles",
+                            "type": "boolean"
+                        },
+                        "deadLetterRetries": {
+                            "default": 1,
+                            "description": "Number of times MS should automatically retry scrobbles in dead letter queue",
+                            "examples": [
+                                1
+                            ],
+                            "title": "deadLetterRetries",
+                            "type": "number"
+                        },
+                        "refreshEnabled": {
+                            "default": true,
+                            "description": "Try to get fresh scrobble history from client when tracks to be scrobbled are newer than the last scrobble found in client history",
+                            "examples": [
+                                true
+                            ],
+                            "title": "refreshEnabled",
+                            "type": "boolean"
+                        },
+                        "verbose": {
+                            "description": "Options used for increasing verbosity of logging in MS (used for debugging)",
+                            "properties": {
+                                "match": {
+                                    "$ref": "#/definitions/import(\"/home/foxx/code/multi-scrobbler/src/backend/common/infrastructure/config/client/index\",{assert:{\"resolution-mode\":\"import\"}}).MatchLoggingOptions",
+                                    "title": "match"
+                                }
+                            },
+                            "title": "verbose",
+                            "type": "object"
+                        }
+                    },
+                    "title": "options",
+                    "type": "object"
+                },
+                "retryMultiplier": {
+                    "default": 1.5,
+                    "description": "default retry delay multiplier (retry attempt * multiplier = # of seconds to wait before retrying)",
+                    "examples": [
+                        1.5
+                    ],
+                    "title": "retryMultiplier",
+                    "type": "number"
+                },
+                "url": {
+                    "description": "URL for maloja server",
+                    "examples": [
+                        "http://localhost:42010"
+                    ],
+                    "title": "url",
+                    "type": "string"
+                }
+            },
+            "required": [
+                "apiKey",
+                "url"
+            ],
+            "title": "import(\"/home/foxx/code/multi-scrobbler/src/backend/common/infrastructure/config/client/maloja\",{assert:{\"resolution-mode\":\"import\"}}).MalojaClientData",
+            "type": "object"
+        },
+        "import(\"/home/foxx/code/multi-scrobbler/src/backend/common/infrastructure/config/common\",{assert:{\"resolution-mode\":\"import\"}}).RequestRetryOptions": {
+            "properties": {
+                "maxRequestRetries": {
+                    "default": 1,
+                    "description": "default # of http request retries a source can make before error is thrown",
+                    "examples": [
+                        1
+                    ],
+                    "title": "maxRequestRetries",
+                    "type": "number"
+                },
+                "retryMultiplier": {
+                    "default": 1.5,
+                    "description": "default retry delay multiplier (retry attempt * multiplier = # of seconds to wait before retrying)",
+                    "examples": [
+                        1.5
+                    ],
+                    "title": "retryMultiplier",
+                    "type": "number"
+                }
+            },
+            "title": "import(\"/home/foxx/code/multi-scrobbler/src/backend/common/infrastructure/config/common\",{assert:{\"resolution-mode\":\"import\"}}).RequestRetryOptions",
+            "type": "object"
+        },
+        "import(\"/home/foxx/code/multi-scrobbler/src/backend/common/infrastructure/config/health/webhooks\",{assert:{\"resolution-mode\":\"import\"}}).GotifyConfig": {
+            "properties": {
+                "name": {
+                    "description": "A friendly name used to identify webhook config in logs",
+                    "title": "name",
+                    "type": "string"
+                },
+                "priorities": {
+                    "$ref": "#/definitions/import(\"/home/foxx/code/multi-scrobbler/src/backend/common/infrastructure/config/health/webhooks\",{assert:{\"resolution-mode\":\"import\"}}).PrioritiesConfig",
+                    "description": "Priority of messages\n\n* Info -> 5\n* Warn -> 7\n* Error -> 10",
+                    "title": "priorities"
+                },
+                "token": {
+                    "description": "The token created for this Application in Gotify",
+                    "examples": [
+                        "AQZI58fA.rfSZbm"
+                    ],
+                    "title": "token",
+                    "type": "string"
+                },
+                "type": {
+                    "description": "Webhook type. Valid values are:\n\n* gotify\n* ntfy",
+                    "enum": [
+                        "gotify",
+                        "ntfy"
+                    ],
+                    "examples": [
+                        "gotify"
+                    ],
+                    "title": "type",
+                    "type": "string"
+                },
+                "url": {
+                    "description": "The URL of the Gotify server. Same URL that would be used to reach the Gotify UI",
+                    "examples": [
+                        "http://192.168.0.100:8078"
+                    ],
+                    "title": "url",
+                    "type": "string"
+                }
+            },
+            "required": [
+                "token",
+                "type",
+                "url"
+            ],
+            "title": "import(\"/home/foxx/code/multi-scrobbler/src/backend/common/infrastructure/config/health/webhooks\",{assert:{\"resolution-mode\":\"import\"}}).GotifyConfig",
+            "type": "object"
+        },
+        "import(\"/home/foxx/code/multi-scrobbler/src/backend/common/infrastructure/config/health/webhooks\",{assert:{\"resolution-mode\":\"import\"}}).NtfyConfig": {
+            "properties": {
+                "name": {
+                    "description": "A friendly name used to identify webhook config in logs",
+                    "title": "name",
+                    "type": "string"
+                },
+                "password": {
+                    "description": "Required if topic is protected",
+                    "title": "password",
+                    "type": "string"
+                },
+                "priorities": {
+                    "$ref": "#/definitions/import(\"/home/foxx/code/multi-scrobbler/src/backend/common/infrastructure/config/health/webhooks\",{assert:{\"resolution-mode\":\"import\"}}).PrioritiesConfig",
+                    "description": "Priority of messages\n\n* Info -> 3\n* Warn -> 4\n* Error -> 5",
+                    "title": "priorities"
+                },
+                "topic": {
+                    "description": "The topic mutli-scrobbler should POST to",
+                    "title": "topic",
+                    "type": "string"
+                },
+                "type": {
+                    "description": "Webhook type. Valid values are:\n\n* gotify\n* ntfy",
+                    "enum": [
+                        "gotify",
+                        "ntfy"
+                    ],
+                    "examples": [
+                        "gotify"
+                    ],
+                    "title": "type",
+                    "type": "string"
+                },
+                "url": {
+                    "description": "The URL of the Ntfy server",
+                    "examples": [
+                        "http://192.168.0.100:8078"
+                    ],
+                    "title": "url",
+                    "type": "string"
+                },
+                "username": {
+                    "description": "Required if topic is protected",
+                    "title": "username",
+                    "type": "string"
+                }
+            },
+            "required": [
+                "topic",
+                "type",
+                "url"
+            ],
+            "title": "import(\"/home/foxx/code/multi-scrobbler/src/backend/common/infrastructure/config/health/webhooks\",{assert:{\"resolution-mode\":\"import\"}}).NtfyConfig",
+            "type": "object"
+        },
+        "import(\"/home/foxx/code/multi-scrobbler/src/backend/common/infrastructure/config/health/webhooks\",{assert:{\"resolution-mode\":\"import\"}}).PrioritiesConfig": {
+            "properties": {
+                "error": {
+                    "examples": [
+                        10
+                    ],
+                    "title": "error",
+                    "type": "number"
+                },
+                "info": {
+                    "examples": [
+                        5
+                    ],
+                    "title": "info",
+                    "type": "number"
+                },
+                "warn": {
+                    "examples": [
+                        7
+                    ],
+                    "title": "warn",
+                    "type": "number"
+                }
+            },
+            "required": [
+                "error",
+                "info",
+                "warn"
+            ],
+            "title": "import(\"/home/foxx/code/multi-scrobbler/src/backend/common/infrastructure/config/health/webhooks\",{assert:{\"resolution-mode\":\"import\"}}).PrioritiesConfig",
+            "type": "object"
+        },
+        "import(\"/home/foxx/code/multi-scrobbler/src/backend/common/infrastructure/config/health/webhooks\",{assert:{\"resolution-mode\":\"import\"}}).WebhookConfig": {
+            "anyOf": [
+                {
+                    "$ref": "#/definitions/import(\"/home/foxx/code/multi-scrobbler/src/backend/common/infrastructure/config/health/webhooks\",{assert:{\"resolution-mode\":\"import\"}}).GotifyConfig"
+                },
+                {
+                    "$ref": "#/definitions/import(\"/home/foxx/code/multi-scrobbler/src/backend/common/infrastructure/config/health/webhooks\",{assert:{\"resolution-mode\":\"import\"}}).NtfyConfig"
+                }
+            ],
+            "title": "import(\"/home/foxx/code/multi-scrobbler/src/backend/common/infrastructure/config/health/webhooks\",{assert:{\"resolution-mode\":\"import\"}}).WebhookConfig"
+        },
+        "import(\"/home/foxx/code/multi-scrobbler/src/backend/common/infrastructure/config/source/chromecast\",{assert:{\"resolution-mode\":\"import\"}}).ChromecastData": {
             "properties": {
                 "allowUnknownMedia": {
                     "anyOf": [
@@ -64,7 +843,7 @@
                 "devices": {
                     "description": "A list of Google Cast devices to monitor\n\nIf this is used then `useAutoDiscovery` is set to FALSE, if not explicitly set",
                     "items": {
-                        "$ref": "#/definitions/ChromecastDeviceInfo"
+                        "$ref": "#/definitions/import(\"/home/foxx/code/multi-scrobbler/src/backend/common/infrastructure/config/source/chromecast\",{assert:{\"resolution-mode\":\"import\"}}).ChromecastDeviceInfo"
                     },
                     "title": "devices",
                     "type": "array"
@@ -109,7 +888,7 @@
                     "type": "number"
                 },
                 "scrobbleThresholds": {
-                    "$ref": "#/definitions/ScrobbleThresholds",
+                    "$ref": "#/definitions/import(\"/home/foxx/code/multi-scrobbler/src/backend/common/infrastructure/config/source/index\",{assert:{\"resolution-mode\":\"import\"}}).ScrobbleThresholds",
                     "description": "Set thresholds for when multi-scrobbler should consider a tracked play to be \"scrobbable\". If both duration and percent are defined then if either condition is met the track is scrobbled.",
                     "title": "scrobbleThresholds"
                 },
@@ -167,10 +946,10 @@
                     "title": "whitelistDevices"
                 }
             },
-            "title": "ChromecastData",
+            "title": "import(\"/home/foxx/code/multi-scrobbler/src/backend/common/infrastructure/config/source/chromecast\",{assert:{\"resolution-mode\":\"import\"}}).ChromecastData",
             "type": "object"
         },
-        "ChromecastDeviceInfo": {
+        "import(\"/home/foxx/code/multi-scrobbler/src/backend/common/infrastructure/config/source/chromecast\",{assert:{\"resolution-mode\":\"import\"}}).ChromecastDeviceInfo": {
             "properties": {
                 "address": {
                     "description": "The IP address of the device",
@@ -193,10 +972,10 @@
                 "address",
                 "name"
             ],
-            "title": "ChromecastDeviceInfo",
+            "title": "import(\"/home/foxx/code/multi-scrobbler/src/backend/common/infrastructure/config/source/chromecast\",{assert:{\"resolution-mode\":\"import\"}}).ChromecastDeviceInfo",
             "type": "object"
         },
-        "ChromecastSourceAIOConfig": {
+        "import(\"/home/foxx/code/multi-scrobbler/src/backend/common/infrastructure/config/source/chromecast\",{assert:{\"resolution-mode\":\"import\"}}).ChromecastSourceAIOConfig": {
             "properties": {
                 "clients": {
                     "description": "Restrict scrobbling tracks played from this source to Clients with names from this list. If list is empty is not present Source scrobbles to all configured Clients.",
@@ -213,7 +992,7 @@
                     "type": "array"
                 },
                 "data": {
-                    "$ref": "#/definitions/ChromecastData",
+                    "$ref": "#/definitions/import(\"/home/foxx/code/multi-scrobbler/src/backend/common/infrastructure/config/source/chromecast\",{assert:{\"resolution-mode\":\"import\"}}).ChromecastData",
                     "title": "data"
                 },
                 "enable": {
@@ -231,7 +1010,7 @@
                     "type": "string"
                 },
                 "options": {
-                    "$ref": "#/definitions/CommonSourceOptions",
+                    "$ref": "#/definitions/import(\"/home/foxx/code/multi-scrobbler/src/backend/common/infrastructure/config/source/index\",{assert:{\"resolution-mode\":\"import\"}}).CommonSourceOptions",
                     "title": "options"
                 },
                 "type": {
@@ -246,139 +1025,10 @@
                 "data",
                 "type"
             ],
-            "title": "ChromecastSourceAIOConfig",
+            "title": "import(\"/home/foxx/code/multi-scrobbler/src/backend/common/infrastructure/config/source/chromecast\",{assert:{\"resolution-mode\":\"import\"}}).ChromecastSourceAIOConfig",
             "type": "object"
         },
-        "ClientAIOConfig": {
-            "anyOf": [
-                {
-                    "$ref": "#/definitions/LastfmClientAIOConfig"
-                },
-                {
-                    "$ref": "#/definitions/ListenBrainzClientAIOConfig"
-                },
-                {
-                    "$ref": "#/definitions/MalojaClientAIOConfig"
-                }
-            ],
-            "title": "ClientAIOConfig"
-        },
-        "CommonClientData": {
-            "properties": {
-                "maxRequestRetries": {
-                    "default": 1,
-                    "description": "default # of http request retries a client can make before error is thrown.",
-                    "examples": [
-                        1
-                    ],
-                    "title": "maxRequestRetries",
-                    "type": "number"
-                },
-                "options": {
-                    "properties": {
-                        "checkExistingScrobbles": {
-                            "default": true,
-                            "description": "Check client for an existing scrobble at the same recorded time as the \"new\" track to be scrobbled. If an existing scrobble is found this track is not track scrobbled.",
-                            "examples": [
-                                true
-                            ],
-                            "title": "checkExistingScrobbles",
-                            "type": "boolean"
-                        },
-                        "deadLetterRetries": {
-                            "default": 1,
-                            "description": "Number of times MS should automatically retry scrobbles in dead letter queue",
-                            "examples": [
-                                1
-                            ],
-                            "title": "deadLetterRetries",
-                            "type": "boolean"
-                        },
-                        "refreshEnabled": {
-                            "default": true,
-                            "description": "Try to get fresh scrobble history from client when tracks to be scrobbled are newer than the last scrobble found in client history",
-                            "examples": [
-                                true
-                            ],
-                            "title": "refreshEnabled",
-                            "type": "boolean"
-                        },
-                        "verbose": {
-                            "description": "Options used for increasing verbosity of logging in MS (used for debugging)",
-                            "properties": {
-                                "match": {
-                                    "$ref": "#/definitions/MatchLoggingOptions",
-                                    "title": "match"
-                                }
-                            },
-                            "title": "verbose",
-                            "type": "object"
-                        }
-                    },
-                    "title": "options",
-                    "type": "object"
-                },
-                "retryMultiplier": {
-                    "default": 1.5,
-                    "description": "default retry delay multiplier (retry attempt * multiplier = # of seconds to wait before retrying).",
-                    "examples": [
-                        1.5
-                    ],
-                    "title": "retryMultiplier",
-                    "type": "number"
-                }
-            },
-            "title": "CommonClientData",
-            "type": "object"
-        },
-        "CommonSourceOptions": {
-            "properties": {
-                "logFilterFailure": {
-                    "default": "warn",
-                    "description": "If this source has INGRESS to MS and has filters this determines how MS logs when a payload (event) fails a defined filter (IE users/servers/library filters)\n\n* `false` => do not log\n* `debug` => log to DEBUG level\n* `warn` => log to WARN level (default)\n\nHint: This is useful if you are sure this source is setup correctly and you have multiple other sources. Set to `debug` or `false` to reduce log noise.",
-                    "enum": [
-                        "debug",
-                        false,
-                        "warn"
-                    ],
-                    "examples": [
-                        "warn"
-                    ],
-                    "title": "logFilterFailure"
-                },
-                "logPayload": {
-                    "default": false,
-                    "description": "If this source has INGRESS to MS (sends a payload, rather than MS GETTING requesting a payload)\nthen setting this option to true will make MS log the payload JSON to DEBUG output",
-                    "examples": [
-                        false
-                    ],
-                    "title": "logPayload",
-                    "type": "boolean"
-                },
-                "logPlayerState": {
-                    "default": false,
-                    "description": "For Sources that track Player State (currently playing) this logs a simple player state/summary to DEBUG output",
-                    "examples": [
-                        false
-                    ],
-                    "title": "logPlayerState",
-                    "type": "boolean"
-                },
-                "scrobbleBacklog": {
-                    "default": true,
-                    "description": "If this source\n\n* supports fetching a listen history\n* and this option is enabled\n\nthen on startup MS will attempt to scrobble the recent listens from that history",
-                    "examples": [
-                        true,
-                        false
-                    ],
-                    "title": "scrobbleBacklog",
-                    "type": "boolean"
-                }
-            },
-            "title": "CommonSourceOptions",
-            "type": "object"
-        },
-        "DeezerData": {
+        "import(\"/home/foxx/code/multi-scrobbler/src/backend/common/infrastructure/config/source/deezer\",{assert:{\"resolution-mode\":\"import\"}}).DeezerData": {
             "properties": {
                 "clientId": {
                     "description": "deezer client id",
@@ -446,7 +1096,7 @@
                     "type": "number"
                 },
                 "scrobbleThresholds": {
-                    "$ref": "#/definitions/ScrobbleThresholds",
+                    "$ref": "#/definitions/import(\"/home/foxx/code/multi-scrobbler/src/backend/common/infrastructure/config/source/index\",{assert:{\"resolution-mode\":\"import\"}}).ScrobbleThresholds",
                     "description": "Set thresholds for when multi-scrobbler should consider a tracked play to be \"scrobbable\". If both duration and percent are defined then if either condition is met the track is scrobbled.",
                     "title": "scrobbleThresholds"
                 }
@@ -456,10 +1106,10 @@
                 "clientSecret",
                 "redirectUri"
             ],
-            "title": "DeezerData",
+            "title": "import(\"/home/foxx/code/multi-scrobbler/src/backend/common/infrastructure/config/source/deezer\",{assert:{\"resolution-mode\":\"import\"}}).DeezerData",
             "type": "object"
         },
-        "DeezerSourceAIOConfig": {
+        "import(\"/home/foxx/code/multi-scrobbler/src/backend/common/infrastructure/config/source/deezer\",{assert:{\"resolution-mode\":\"import\"}}).DeezerSourceAIOConfig": {
             "properties": {
                 "clients": {
                     "description": "Restrict scrobbling tracks played from this source to Clients with names from this list. If list is empty is not present Source scrobbles to all configured Clients.",
@@ -476,7 +1126,7 @@
                     "type": "array"
                 },
                 "data": {
-                    "$ref": "#/definitions/DeezerData",
+                    "$ref": "#/definitions/import(\"/home/foxx/code/multi-scrobbler/src/backend/common/infrastructure/config/source/deezer\",{assert:{\"resolution-mode\":\"import\"}}).DeezerData",
                     "title": "data"
                 },
                 "enable": {
@@ -494,7 +1144,7 @@
                     "type": "string"
                 },
                 "options": {
-                    "$ref": "#/definitions/CommonSourceOptions",
+                    "$ref": "#/definitions/import(\"/home/foxx/code/multi-scrobbler/src/backend/common/infrastructure/config/source/index\",{assert:{\"resolution-mode\":\"import\"}}).CommonSourceOptions",
                     "title": "options"
                 },
                 "type": {
@@ -509,194 +1159,81 @@
                 "data",
                 "type"
             ],
-            "title": "DeezerSourceAIOConfig",
+            "title": "import(\"/home/foxx/code/multi-scrobbler/src/backend/common/infrastructure/config/source/deezer\",{assert:{\"resolution-mode\":\"import\"}}).DeezerSourceAIOConfig",
             "type": "object"
         },
-        "GotifyConfig": {
+        "import(\"/home/foxx/code/multi-scrobbler/src/backend/common/infrastructure/config/source/index\",{assert:{\"resolution-mode\":\"import\"}}).CommonSourceOptions": {
             "properties": {
-                "name": {
-                    "description": "A friendly name used to identify webhook config in logs",
-                    "title": "name",
-                    "type": "string"
-                },
-                "priorities": {
-                    "$ref": "#/definitions/PrioritiesConfig",
-                    "description": "Priority of messages\n\n* Info -> 5\n* Warn -> 7\n* Error -> 10",
-                    "title": "priorities"
-                },
-                "token": {
-                    "description": "The token created for this Application in Gotify",
-                    "examples": [
-                        "AQZI58fA.rfSZbm"
-                    ],
-                    "title": "token",
-                    "type": "string"
-                },
-                "type": {
-                    "description": "Webhook type. Valid values are:\n\n* gotify\n* ntfy",
+                "logFilterFailure": {
+                    "default": "warn",
+                    "description": "If this source has INGRESS to MS and has filters this determines how MS logs when a payload (event) fails a defined filter (IE users/servers/library filters)\n\n* `false` => do not log\n* `debug` => log to DEBUG level\n* `warn` => log to WARN level (default)\n\nHint: This is useful if you are sure this source is setup correctly and you have multiple other sources. Set to `debug` or `false` to reduce log noise.",
                     "enum": [
-                        "gotify",
-                        "ntfy"
+                        "debug",
+                        false,
+                        "warn"
                     ],
                     "examples": [
-                        "gotify"
+                        "warn"
                     ],
-                    "title": "type",
-                    "type": "string"
+                    "title": "logFilterFailure"
                 },
-                "url": {
-                    "description": "The URL of the Gotify server. Same URL that would be used to reach the Gotify UI",
+                "logPayload": {
+                    "default": false,
+                    "description": "If this source has INGRESS to MS (sends a payload, rather than MS GETTING requesting a payload)\nthen setting this option to true will make MS log the payload JSON to DEBUG output",
                     "examples": [
-                        "http://192.168.0.100:8078"
+                        false
                     ],
-                    "title": "url",
-                    "type": "string"
-                }
-            },
-            "required": [
-                "token",
-                "type",
-                "url"
-            ],
-            "title": "GotifyConfig",
-            "type": "object"
-        },
-        "JRiverData": {
-            "properties": {
-                "interval": {
-                    "default": 10,
-                    "description": "How long to wait before polling the source API for new tracks (in seconds)",
-                    "examples": [
-                        10
-                    ],
-                    "title": "interval",
-                    "type": "number"
-                },
-                "maxInterval": {
-                    "default": 30,
-                    "description": "When there has been no new activity from the Source API multi-scrobbler will gradually increase the wait time between polling up to this value (in seconds)",
-                    "examples": [
-                        30
-                    ],
-                    "title": "maxInterval",
-                    "type": "number"
-                },
-                "maxPollRetries": {
-                    "default": 5,
-                    "description": "default # of automatic polling restarts on error",
-                    "examples": [
-                        5
-                    ],
-                    "title": "maxPollRetries",
-                    "type": "number"
-                },
-                "maxRequestRetries": {
-                    "default": 1,
-                    "description": "default # of http request retries a source can make before error is thrown",
-                    "examples": [
-                        1
-                    ],
-                    "title": "maxRequestRetries",
-                    "type": "number"
-                },
-                "options": {
-                    "$ref": "#/definitions/Record<string,any>",
-                    "title": "options"
-                },
-                "password": {
-                    "description": "If you have enabled authentication, the password you set",
-                    "title": "password",
-                    "type": "string"
-                },
-                "retryMultiplier": {
-                    "default": 1.5,
-                    "description": "default retry delay multiplier (retry attempt * multiplier = # of seconds to wait before retrying)",
-                    "examples": [
-                        1.5
-                    ],
-                    "title": "retryMultiplier",
-                    "type": "number"
-                },
-                "scrobbleThresholds": {
-                    "$ref": "#/definitions/ScrobbleThresholds",
-                    "description": "Set thresholds for when multi-scrobbler should consider a tracked play to be \"scrobbable\". If both duration and percent are defined then if either condition is met the track is scrobbled.",
-                    "title": "scrobbleThresholds"
-                },
-                "url": {
-                    "default": "http://localhost:52199/MCWS/v1/",
-                    "description": "URL of the JRiver HTTP server to connect to\n\nmulti-scrobbler connects to the Web Service Interface endpoint that ultimately looks like this => `http://yourDomain:52199/MCWS/v1/`\n\nThe URL you provide here will have all parts not explicitly defined filled in for you so if these are not the default you must define them.\n\nParts => [default value]\n\n* Protocol => `http://`\n* Hostname => `localhost`\n* Port => `52199`\n* Path => `/MCWS/v1/`",
-                    "examples": [
-                        "http://localhost:52199/MCWS/v1/"
-                    ],
-                    "title": "url",
-                    "type": "string"
-                },
-                "username": {
-                    "description": "If you have enabled authentication, the username you set",
-                    "title": "username",
-                    "type": "string"
-                }
-            },
-            "required": [
-                "url"
-            ],
-            "title": "JRiverData",
-            "type": "object"
-        },
-        "JRiverSourceAIOConfig": {
-            "properties": {
-                "clients": {
-                    "description": "Restrict scrobbling tracks played from this source to Clients with names from this list. If list is empty is not present Source scrobbles to all configured Clients.",
-                    "examples": [
-                        [
-                            "MyMalojaConfigName",
-                            "MyLastFMConfigName"
-                        ]
-                    ],
-                    "items": {
-                        "type": "string"
-                    },
-                    "title": "clients",
-                    "type": "array"
-                },
-                "data": {
-                    "$ref": "#/definitions/JRiverData",
-                    "title": "data"
-                },
-                "enable": {
-                    "default": true,
-                    "description": "Should MS use this client/source? Defaults to true",
-                    "examples": [
-                        true
-                    ],
-                    "title": "enable",
+                    "title": "logPayload",
                     "type": "boolean"
                 },
-                "name": {
-                    "description": "Unique identifier for this source.",
-                    "title": "name",
-                    "type": "string"
-                },
-                "options": {
-                    "$ref": "#/definitions/CommonSourceOptions",
-                    "title": "options"
-                },
-                "type": {
-                    "enum": [
-                        "jriver"
+                "logPlayerState": {
+                    "default": false,
+                    "description": "For Sources that track Player State (currently playing) this logs a simple player state/summary to DEBUG output",
+                    "examples": [
+                        false
                     ],
-                    "title": "type",
-                    "type": "string"
+                    "title": "logPlayerState",
+                    "type": "boolean"
+                },
+                "scrobbleBacklog": {
+                    "default": true,
+                    "description": "If this source\n\n* supports fetching a listen history\n* and this option is enabled\n\nthen on startup MS will attempt to scrobble the recent listens from that history",
+                    "examples": [
+                        true,
+                        false
+                    ],
+                    "title": "scrobbleBacklog",
+                    "type": "boolean"
                 }
             },
-            "required": [
-                "data",
-                "type"
-            ],
-            "title": "JRiverSourceAIOConfig",
+            "title": "import(\"/home/foxx/code/multi-scrobbler/src/backend/common/infrastructure/config/source/index\",{assert:{\"resolution-mode\":\"import\"}}).CommonSourceOptions",
             "type": "object"
         },
-        "JellyData": {
+        "import(\"/home/foxx/code/multi-scrobbler/src/backend/common/infrastructure/config/source/index\",{assert:{\"resolution-mode\":\"import\"}}).ScrobbleThresholds": {
+            "properties": {
+                "duration": {
+                    "default": 240,
+                    "description": "The number of seconds a track has been listened to before it should be considered scrobbled.\n\nSet to null to disable.",
+                    "examples": [
+                        240
+                    ],
+                    "title": "duration",
+                    "type": "number"
+                },
+                "percent": {
+                    "default": 50,
+                    "description": "The percentage (as an integer) of a track that should have been seen played before it should be scrobbled. Only used if the Source provides information about how long the track is.\n\nSet to null to disable.\n\nNOTE: This should be used with care when the Source is a \"polling\" type (has an 'interval' property). If the track is short and the interval is too high MS may ignore the track if percentage is high because it had not \"seen\" the track for long enough from first discovery, even if you have been playing the track for longer.",
+                    "examples": [
+                        50
+                    ],
+                    "title": "percent",
+                    "type": "number"
+                }
+            },
+            "title": "import(\"/home/foxx/code/multi-scrobbler/src/backend/common/infrastructure/config/source/index\",{assert:{\"resolution-mode\":\"import\"}}).ScrobbleThresholds",
+            "type": "object"
+        },
+        "import(\"/home/foxx/code/multi-scrobbler/src/backend/common/infrastructure/config/source/jellyfin\",{assert:{\"resolution-mode\":\"import\"}}).JellyData": {
             "properties": {
                 "maxPollRetries": {
                     "default": 5,
@@ -755,7 +1292,7 @@
                     "type": "number"
                 },
                 "scrobbleThresholds": {
-                    "$ref": "#/definitions/ScrobbleThresholds",
+                    "$ref": "#/definitions/import(\"/home/foxx/code/multi-scrobbler/src/backend/common/infrastructure/config/source/index\",{assert:{\"resolution-mode\":\"import\"}}).ScrobbleThresholds",
                     "description": "Set thresholds for when multi-scrobbler should consider a tracked play to be \"scrobbable\". If both duration and percent are defined then if either condition is met the track is scrobbled.",
                     "title": "scrobbleThresholds"
                 },
@@ -801,10 +1338,10 @@
                     "title": "users"
                 }
             },
-            "title": "JellyData",
+            "title": "import(\"/home/foxx/code/multi-scrobbler/src/backend/common/infrastructure/config/source/jellyfin\",{assert:{\"resolution-mode\":\"import\"}}).JellyData",
             "type": "object"
         },
-        "JellySourceAIOConfig": {
+        "import(\"/home/foxx/code/multi-scrobbler/src/backend/common/infrastructure/config/source/jellyfin\",{assert:{\"resolution-mode\":\"import\"}}).JellySourceAIOConfig": {
             "properties": {
                 "clients": {
                     "description": "Restrict scrobbling tracks played from this source to Clients with names from this list. If list is empty is not present Source scrobbles to all configured Clients.",
@@ -821,7 +1358,7 @@
                     "type": "array"
                 },
                 "data": {
-                    "$ref": "#/definitions/JellyData",
+                    "$ref": "#/definitions/import(\"/home/foxx/code/multi-scrobbler/src/backend/common/infrastructure/config/source/jellyfin\",{assert:{\"resolution-mode\":\"import\"}}).JellyData",
                     "title": "data"
                 },
                 "enable": {
@@ -839,7 +1376,7 @@
                     "type": "string"
                 },
                 "options": {
-                    "$ref": "#/definitions/CommonSourceOptions",
+                    "$ref": "#/definitions/import(\"/home/foxx/code/multi-scrobbler/src/backend/common/infrastructure/config/source/index\",{assert:{\"resolution-mode\":\"import\"}}).CommonSourceOptions",
                     "title": "options"
                 },
                 "type": {
@@ -854,10 +1391,145 @@
                 "data",
                 "type"
             ],
-            "title": "JellySourceAIOConfig",
+            "title": "import(\"/home/foxx/code/multi-scrobbler/src/backend/common/infrastructure/config/source/jellyfin\",{assert:{\"resolution-mode\":\"import\"}}).JellySourceAIOConfig",
             "type": "object"
         },
-        "KodiData": {
+        "import(\"/home/foxx/code/multi-scrobbler/src/backend/common/infrastructure/config/source/jriver\",{assert:{\"resolution-mode\":\"import\"}}).JRiverData": {
+            "properties": {
+                "interval": {
+                    "default": 10,
+                    "description": "How long to wait before polling the source API for new tracks (in seconds)",
+                    "examples": [
+                        10
+                    ],
+                    "title": "interval",
+                    "type": "number"
+                },
+                "maxInterval": {
+                    "default": 30,
+                    "description": "When there has been no new activity from the Source API multi-scrobbler will gradually increase the wait time between polling up to this value (in seconds)",
+                    "examples": [
+                        30
+                    ],
+                    "title": "maxInterval",
+                    "type": "number"
+                },
+                "maxPollRetries": {
+                    "default": 5,
+                    "description": "default # of automatic polling restarts on error",
+                    "examples": [
+                        5
+                    ],
+                    "title": "maxPollRetries",
+                    "type": "number"
+                },
+                "maxRequestRetries": {
+                    "default": 1,
+                    "description": "default # of http request retries a source can make before error is thrown",
+                    "examples": [
+                        1
+                    ],
+                    "title": "maxRequestRetries",
+                    "type": "number"
+                },
+                "options": {
+                    "$ref": "#/definitions/Record<string,any>",
+                    "title": "options"
+                },
+                "password": {
+                    "description": "If you have enabled authentication, the password you set",
+                    "title": "password",
+                    "type": "string"
+                },
+                "retryMultiplier": {
+                    "default": 1.5,
+                    "description": "default retry delay multiplier (retry attempt * multiplier = # of seconds to wait before retrying)",
+                    "examples": [
+                        1.5
+                    ],
+                    "title": "retryMultiplier",
+                    "type": "number"
+                },
+                "scrobbleThresholds": {
+                    "$ref": "#/definitions/import(\"/home/foxx/code/multi-scrobbler/src/backend/common/infrastructure/config/source/index\",{assert:{\"resolution-mode\":\"import\"}}).ScrobbleThresholds",
+                    "description": "Set thresholds for when multi-scrobbler should consider a tracked play to be \"scrobbable\". If both duration and percent are defined then if either condition is met the track is scrobbled.",
+                    "title": "scrobbleThresholds"
+                },
+                "url": {
+                    "default": "http://localhost:52199/MCWS/v1/",
+                    "description": "URL of the JRiver HTTP server to connect to\n\nmulti-scrobbler connects to the Web Service Interface endpoint that ultimately looks like this => `http://yourDomain:52199/MCWS/v1/`\n\nThe URL you provide here will have all parts not explicitly defined filled in for you so if these are not the default you must define them.\n\nParts => [default value]\n\n* Protocol => `http://`\n* Hostname => `localhost`\n* Port => `52199`\n* Path => `/MCWS/v1/`",
+                    "examples": [
+                        "http://localhost:52199/MCWS/v1/"
+                    ],
+                    "title": "url",
+                    "type": "string"
+                },
+                "username": {
+                    "description": "If you have enabled authentication, the username you set",
+                    "title": "username",
+                    "type": "string"
+                }
+            },
+            "required": [
+                "url"
+            ],
+            "title": "import(\"/home/foxx/code/multi-scrobbler/src/backend/common/infrastructure/config/source/jriver\",{assert:{\"resolution-mode\":\"import\"}}).JRiverData",
+            "type": "object"
+        },
+        "import(\"/home/foxx/code/multi-scrobbler/src/backend/common/infrastructure/config/source/jriver\",{assert:{\"resolution-mode\":\"import\"}}).JRiverSourceAIOConfig": {
+            "properties": {
+                "clients": {
+                    "description": "Restrict scrobbling tracks played from this source to Clients with names from this list. If list is empty is not present Source scrobbles to all configured Clients.",
+                    "examples": [
+                        [
+                            "MyMalojaConfigName",
+                            "MyLastFMConfigName"
+                        ]
+                    ],
+                    "items": {
+                        "type": "string"
+                    },
+                    "title": "clients",
+                    "type": "array"
+                },
+                "data": {
+                    "$ref": "#/definitions/import(\"/home/foxx/code/multi-scrobbler/src/backend/common/infrastructure/config/source/jriver\",{assert:{\"resolution-mode\":\"import\"}}).JRiverData",
+                    "title": "data"
+                },
+                "enable": {
+                    "default": true,
+                    "description": "Should MS use this client/source? Defaults to true",
+                    "examples": [
+                        true
+                    ],
+                    "title": "enable",
+                    "type": "boolean"
+                },
+                "name": {
+                    "description": "Unique identifier for this source.",
+                    "title": "name",
+                    "type": "string"
+                },
+                "options": {
+                    "$ref": "#/definitions/import(\"/home/foxx/code/multi-scrobbler/src/backend/common/infrastructure/config/source/index\",{assert:{\"resolution-mode\":\"import\"}}).CommonSourceOptions",
+                    "title": "options"
+                },
+                "type": {
+                    "enum": [
+                        "jriver"
+                    ],
+                    "title": "type",
+                    "type": "string"
+                }
+            },
+            "required": [
+                "data",
+                "type"
+            ],
+            "title": "import(\"/home/foxx/code/multi-scrobbler/src/backend/common/infrastructure/config/source/jriver\",{assert:{\"resolution-mode\":\"import\"}}).JRiverSourceAIOConfig",
+            "type": "object"
+        },
+        "import(\"/home/foxx/code/multi-scrobbler/src/backend/common/infrastructure/config/source/kodi\",{assert:{\"resolution-mode\":\"import\"}}).KodiData": {
             "properties": {
                 "interval": {
                     "default": 10,
@@ -914,7 +1586,7 @@
                     "type": "number"
                 },
                 "scrobbleThresholds": {
-                    "$ref": "#/definitions/ScrobbleThresholds",
+                    "$ref": "#/definitions/import(\"/home/foxx/code/multi-scrobbler/src/backend/common/infrastructure/config/source/index\",{assert:{\"resolution-mode\":\"import\"}}).ScrobbleThresholds",
                     "description": "Set thresholds for when multi-scrobbler should consider a tracked play to be \"scrobbable\". If both duration and percent are defined then if either condition is met the track is scrobbled.",
                     "title": "scrobbleThresholds"
                 },
@@ -938,10 +1610,10 @@
                 "url",
                 "username"
             ],
-            "title": "KodiData",
+            "title": "import(\"/home/foxx/code/multi-scrobbler/src/backend/common/infrastructure/config/source/kodi\",{assert:{\"resolution-mode\":\"import\"}}).KodiData",
             "type": "object"
         },
-        "KodiSourceAIOConfig": {
+        "import(\"/home/foxx/code/multi-scrobbler/src/backend/common/infrastructure/config/source/kodi\",{assert:{\"resolution-mode\":\"import\"}}).KodiSourceAIOConfig": {
             "properties": {
                 "clients": {
                     "description": "Restrict scrobbling tracks played from this source to Clients with names from this list. If list is empty is not present Source scrobbles to all configured Clients.",
@@ -958,7 +1630,7 @@
                     "type": "array"
                 },
                 "data": {
-                    "$ref": "#/definitions/KodiData",
+                    "$ref": "#/definitions/import(\"/home/foxx/code/multi-scrobbler/src/backend/common/infrastructure/config/source/kodi\",{assert:{\"resolution-mode\":\"import\"}}).KodiData",
                     "title": "data"
                 },
                 "enable": {
@@ -976,7 +1648,7 @@
                     "type": "string"
                 },
                 "options": {
-                    "$ref": "#/definitions/CommonSourceOptions",
+                    "$ref": "#/definitions/import(\"/home/foxx/code/multi-scrobbler/src/backend/common/infrastructure/config/source/index\",{assert:{\"resolution-mode\":\"import\"}}).CommonSourceOptions",
                     "title": "options"
                 },
                 "type": {
@@ -991,10 +1663,10 @@
                 "data",
                 "type"
             ],
-            "title": "KodiSourceAIOConfig",
+            "title": "import(\"/home/foxx/code/multi-scrobbler/src/backend/common/infrastructure/config/source/kodi\",{assert:{\"resolution-mode\":\"import\"}}).KodiSourceAIOConfig",
             "type": "object"
         },
-        "LastFmSouceAIOConfig": {
+        "import(\"/home/foxx/code/multi-scrobbler/src/backend/common/infrastructure/config/source/lastfm\",{assert:{\"resolution-mode\":\"import\"}}).LastFmSouceAIOConfig": {
             "properties": {
                 "clients": {
                     "description": "Restrict scrobbling tracks played from this source to Clients with names from this list. If list is empty is not present Source scrobbles to all configured Clients.",
@@ -1023,7 +1695,7 @@
                     "type": "string"
                 },
                 "data": {
-                    "$ref": "#/definitions/LastFmSourceData",
+                    "$ref": "#/definitions/import(\"/home/foxx/code/multi-scrobbler/src/backend/common/infrastructure/config/source/lastfm\",{assert:{\"resolution-mode\":\"import\"}}).LastFmSourceData",
                     "title": "data"
                 },
                 "enable": {
@@ -1041,7 +1713,7 @@
                     "type": "string"
                 },
                 "options": {
-                    "$ref": "#/definitions/CommonSourceOptions",
+                    "$ref": "#/definitions/import(\"/home/foxx/code/multi-scrobbler/src/backend/common/infrastructure/config/source/index\",{assert:{\"resolution-mode\":\"import\"}}).CommonSourceOptions",
                     "title": "options"
                 },
                 "type": {
@@ -1056,10 +1728,10 @@
                 "data",
                 "type"
             ],
-            "title": "LastFmSouceAIOConfig",
+            "title": "import(\"/home/foxx/code/multi-scrobbler/src/backend/common/infrastructure/config/source/lastfm\",{assert:{\"resolution-mode\":\"import\"}}).LastFmSouceAIOConfig",
             "type": "object"
         },
-        "LastFmSourceData": {
+        "import(\"/home/foxx/code/multi-scrobbler/src/backend/common/infrastructure/config/source/lastfm\",{assert:{\"resolution-mode\":\"import\"}}).LastFmSourceData": {
             "properties": {
                 "apiKey": {
                     "description": "API Key generated from Last.fm account",
@@ -1128,7 +1800,7 @@
                     "type": "number"
                 },
                 "scrobbleThresholds": {
-                    "$ref": "#/definitions/ScrobbleThresholds",
+                    "$ref": "#/definitions/import(\"/home/foxx/code/multi-scrobbler/src/backend/common/infrastructure/config/source/index\",{assert:{\"resolution-mode\":\"import\"}}).ScrobbleThresholds",
                     "description": "Set thresholds for when multi-scrobbler should consider a tracked play to be \"scrobbable\". If both duration and percent are defined then if either condition is met the track is scrobbled.",
                     "title": "scrobbleThresholds"
                 },
@@ -1150,275 +1822,10 @@
                 "apiKey",
                 "secret"
             ],
-            "title": "LastFmSourceData",
+            "title": "import(\"/home/foxx/code/multi-scrobbler/src/backend/common/infrastructure/config/source/lastfm\",{assert:{\"resolution-mode\":\"import\"}}).LastFmSourceData",
             "type": "object"
         },
-        "LastfmClientAIOConfig": {
-            "properties": {
-                "configureAs": {
-                    "default": "client",
-                    "description": "Should always be `client` when using LastFM as a client",
-                    "enum": [
-                        "client",
-                        "source"
-                    ],
-                    "examples": [
-                        "client"
-                    ],
-                    "title": "configureAs",
-                    "type": "string"
-                },
-                "data": {
-                    "allOf": [
-                        {
-                            "$ref": "#/definitions/CommonClientData"
-                        },
-                        {
-                            "$ref": "#/definitions/LastfmData"
-                        }
-                    ],
-                    "description": "Specific data required to configure this client",
-                    "title": "data"
-                },
-                "enable": {
-                    "default": true,
-                    "description": "Should MS use this client/source? Defaults to true",
-                    "examples": [
-                        true
-                    ],
-                    "title": "enable",
-                    "type": "boolean"
-                },
-                "name": {
-                    "description": "Unique identifier for this client. Used with sources to restrict where scrobbles are sent.",
-                    "examples": [
-                        "MyConfig"
-                    ],
-                    "title": "name",
-                    "type": "string"
-                },
-                "type": {
-                    "enum": [
-                        "lastfm"
-                    ],
-                    "title": "type",
-                    "type": "string"
-                }
-            },
-            "required": [
-                "data",
-                "name",
-                "type"
-            ],
-            "title": "LastfmClientAIOConfig",
-            "type": "object"
-        },
-        "LastfmData": {
-            "properties": {
-                "apiKey": {
-                    "description": "API Key generated from Last.fm account",
-                    "examples": [
-                        "787c921a2a2ab42320831aba0c8f2fc2"
-                    ],
-                    "title": "apiKey",
-                    "type": "string"
-                },
-                "maxRequestRetries": {
-                    "default": 1,
-                    "description": "default # of http request retries a source can make before error is thrown",
-                    "examples": [
-                        1
-                    ],
-                    "title": "maxRequestRetries",
-                    "type": "number"
-                },
-                "redirectUri": {
-                    "default": "http://localhost:9078/lastfm/callback",
-                    "description": "Optional URI to use for callback. Specify this if callback should be different than the default. MUST have \"lastfm/callback\" in the URL somewhere.",
-                    "examples": [
-                        "http://localhost:9078/lastfm/callback"
-                    ],
-                    "title": "redirectUri",
-                    "type": "string"
-                },
-                "retryMultiplier": {
-                    "default": 1.5,
-                    "description": "default retry delay multiplier (retry attempt * multiplier = # of seconds to wait before retrying)",
-                    "examples": [
-                        1.5
-                    ],
-                    "title": "retryMultiplier",
-                    "type": "number"
-                },
-                "secret": {
-                    "description": "Secret generated from Last.fm account",
-                    "examples": [
-                        "ec42e09d5ae0ee0f0816ca151008412a"
-                    ],
-                    "title": "secret",
-                    "type": "string"
-                },
-                "session": {
-                    "description": "Optional session id returned from a completed auth flow",
-                    "title": "session",
-                    "type": "string"
-                }
-            },
-            "required": [
-                "apiKey",
-                "secret"
-            ],
-            "title": "LastfmData",
-            "type": "object"
-        },
-        "ListenBrainzClientAIOConfig": {
-            "properties": {
-                "configureAs": {
-                    "default": "client",
-                    "description": "Should always be `client` when using Listenbrainz as a client",
-                    "enum": [
-                        "client",
-                        "source"
-                    ],
-                    "examples": [
-                        "client"
-                    ],
-                    "title": "configureAs",
-                    "type": "string"
-                },
-                "data": {
-                    "$ref": "#/definitions/ListenBrainzClientData",
-                    "description": "Specific data required to configure this client",
-                    "title": "data"
-                },
-                "enable": {
-                    "default": true,
-                    "description": "Should MS use this client/source? Defaults to true",
-                    "examples": [
-                        true
-                    ],
-                    "title": "enable",
-                    "type": "boolean"
-                },
-                "name": {
-                    "description": "Unique identifier for this client. Used with sources to restrict where scrobbles are sent.",
-                    "examples": [
-                        "MyConfig"
-                    ],
-                    "title": "name",
-                    "type": "string"
-                },
-                "type": {
-                    "enum": [
-                        "listenbrainz"
-                    ],
-                    "title": "type",
-                    "type": "string"
-                }
-            },
-            "required": [
-                "data",
-                "name",
-                "type"
-            ],
-            "title": "ListenBrainzClientAIOConfig",
-            "type": "object"
-        },
-        "ListenBrainzClientData": {
-            "properties": {
-                "maxRequestRetries": {
-                    "default": 1,
-                    "description": "default # of http request retries a source can make before error is thrown",
-                    "examples": [
-                        1
-                    ],
-                    "title": "maxRequestRetries",
-                    "type": "number"
-                },
-                "options": {
-                    "properties": {
-                        "checkExistingScrobbles": {
-                            "default": true,
-                            "description": "Check client for an existing scrobble at the same recorded time as the \"new\" track to be scrobbled. If an existing scrobble is found this track is not track scrobbled.",
-                            "examples": [
-                                true
-                            ],
-                            "title": "checkExistingScrobbles",
-                            "type": "boolean"
-                        },
-                        "deadLetterRetries": {
-                            "default": 1,
-                            "description": "Number of times MS should automatically retry scrobbles in dead letter queue",
-                            "examples": [
-                                1
-                            ],
-                            "title": "deadLetterRetries",
-                            "type": "boolean"
-                        },
-                        "refreshEnabled": {
-                            "default": true,
-                            "description": "Try to get fresh scrobble history from client when tracks to be scrobbled are newer than the last scrobble found in client history",
-                            "examples": [
-                                true
-                            ],
-                            "title": "refreshEnabled",
-                            "type": "boolean"
-                        },
-                        "verbose": {
-                            "description": "Options used for increasing verbosity of logging in MS (used for debugging)",
-                            "properties": {
-                                "match": {
-                                    "$ref": "#/definitions/MatchLoggingOptions",
-                                    "title": "match"
-                                }
-                            },
-                            "title": "verbose",
-                            "type": "object"
-                        }
-                    },
-                    "title": "options",
-                    "type": "object"
-                },
-                "retryMultiplier": {
-                    "default": 1.5,
-                    "description": "default retry delay multiplier (retry attempt * multiplier = # of seconds to wait before retrying)",
-                    "examples": [
-                        1.5
-                    ],
-                    "title": "retryMultiplier",
-                    "type": "number"
-                },
-                "token": {
-                    "description": "User token for the user to scrobble for",
-                    "examples": [
-                        "6794186bf-1157-4de6-80e5-uvb411f3ea2b"
-                    ],
-                    "title": "token",
-                    "type": "string"
-                },
-                "url": {
-                    "default": "https://api.listenbrainz.org/",
-                    "description": "URL for the ListenBrainz server, if not using the default",
-                    "examples": [
-                        "https://api.listenbrainz.org/"
-                    ],
-                    "title": "url",
-                    "type": "string"
-                },
-                "username": {
-                    "description": "Username of the user to scrobble for",
-                    "title": "username",
-                    "type": "string"
-                }
-            },
-            "required": [
-                "token",
-                "username"
-            ],
-            "title": "ListenBrainzClientData",
-            "type": "object"
-        },
-        "ListenBrainzSourceAIOConfig": {
+        "import(\"/home/foxx/code/multi-scrobbler/src/backend/common/infrastructure/config/source/listenbrainz\",{assert:{\"resolution-mode\":\"import\"}}).ListenBrainzSourceAIOConfig": {
             "properties": {
                 "clients": {
                     "description": "Restrict scrobbling tracks played from this source to Clients with names from this list. If list is empty is not present Source scrobbles to all configured Clients.",
@@ -1447,7 +1854,7 @@
                     "type": "string"
                 },
                 "data": {
-                    "$ref": "#/definitions/ListenBrainzSourceData",
+                    "$ref": "#/definitions/import(\"/home/foxx/code/multi-scrobbler/src/backend/common/infrastructure/config/source/listenbrainz\",{assert:{\"resolution-mode\":\"import\"}}).ListenBrainzSourceData",
                     "title": "data"
                 },
                 "enable": {
@@ -1465,7 +1872,7 @@
                     "type": "string"
                 },
                 "options": {
-                    "$ref": "#/definitions/CommonSourceOptions",
+                    "$ref": "#/definitions/import(\"/home/foxx/code/multi-scrobbler/src/backend/common/infrastructure/config/source/index\",{assert:{\"resolution-mode\":\"import\"}}).CommonSourceOptions",
                     "title": "options"
                 },
                 "type": {
@@ -1480,10 +1887,10 @@
                 "data",
                 "type"
             ],
-            "title": "ListenBrainzSourceAIOConfig",
+            "title": "import(\"/home/foxx/code/multi-scrobbler/src/backend/common/infrastructure/config/source/listenbrainz\",{assert:{\"resolution-mode\":\"import\"}}).ListenBrainzSourceAIOConfig",
             "type": "object"
         },
-        "ListenBrainzSourceData": {
+        "import(\"/home/foxx/code/multi-scrobbler/src/backend/common/infrastructure/config/source/listenbrainz\",{assert:{\"resolution-mode\":\"import\"}}).ListenBrainzSourceData": {
             "properties": {
                 "interval": {
                     "default": 10,
@@ -1535,7 +1942,7 @@
                     "type": "number"
                 },
                 "scrobbleThresholds": {
-                    "$ref": "#/definitions/ScrobbleThresholds",
+                    "$ref": "#/definitions/import(\"/home/foxx/code/multi-scrobbler/src/backend/common/infrastructure/config/source/index\",{assert:{\"resolution-mode\":\"import\"}}).ScrobbleThresholds",
                     "description": "Set thresholds for when multi-scrobbler should consider a tracked play to be \"scrobbable\". If both duration and percent are defined then if either condition is met the track is scrobbled.",
                     "title": "scrobbleThresholds"
                 },
@@ -1566,361 +1973,10 @@
                 "token",
                 "username"
             ],
-            "title": "ListenBrainzSourceData",
+            "title": "import(\"/home/foxx/code/multi-scrobbler/src/backend/common/infrastructure/config/source/listenbrainz\",{assert:{\"resolution-mode\":\"import\"}}).ListenBrainzSourceData",
             "type": "object"
         },
-        "LogLevel": {
-            "enum": [
-                "debug",
-                "error",
-                "info",
-                "verbose",
-                "warn"
-            ],
-            "title": "LogLevel",
-            "type": "string"
-        },
-        "LogOptions": {
-            "properties": {
-                "console": {
-                    "description": "Specify the minimum log level streamed to the console (or docker container)",
-                    "enum": [
-                        "debug",
-                        "error",
-                        false,
-                        "info",
-                        "verbose",
-                        "warn"
-                    ],
-                    "title": "console"
-                },
-                "file": {
-                    "description": "Specify the minimum log level to output to rotating files. If `false` no log files will be created.",
-                    "enum": [
-                        "debug",
-                        "error",
-                        false,
-                        "info",
-                        "verbose",
-                        "warn"
-                    ],
-                    "title": "file"
-                },
-                "level": {
-                    "$ref": "#/definitions/LogLevel",
-                    "default": "'info'",
-                    "description": "Specify the minimum log level for all log outputs without their own level specified.\n\nDefaults to env `LOG_LEVEL` or `info` if not specified.",
-                    "title": "level"
-                },
-                "stream": {
-                    "$ref": "#/definitions/LogLevel",
-                    "description": "Specify the minimum log level streamed to the UI",
-                    "title": "stream"
-                }
-            },
-            "title": "LogOptions",
-            "type": "object"
-        },
-        "MPRISData": {
-            "properties": {
-                "blacklist": {
-                    "anyOf": [
-                        {
-                            "items": {
-                                "type": "string"
-                            },
-                            "type": "array"
-                        },
-                        {
-                            "type": "string"
-                        }
-                    ],
-                    "description": "DO NOT scrobble from any players that START WITH these values, case-insensitive",
-                    "examples": [
-                        [
-                            "spotify",
-                            "vlc"
-                        ]
-                    ],
-                    "title": "blacklist"
-                },
-                "maxPollRetries": {
-                    "default": 5,
-                    "description": "default # of automatic polling restarts on error",
-                    "examples": [
-                        5
-                    ],
-                    "title": "maxPollRetries",
-                    "type": "number"
-                },
-                "maxRequestRetries": {
-                    "default": 1,
-                    "description": "default # of http request retries a source can make before error is thrown",
-                    "examples": [
-                        1
-                    ],
-                    "title": "maxRequestRetries",
-                    "type": "number"
-                },
-                "options": {
-                    "$ref": "#/definitions/Record<string,any>",
-                    "title": "options"
-                },
-                "retryMultiplier": {
-                    "default": 1.5,
-                    "description": "default retry delay multiplier (retry attempt * multiplier = # of seconds to wait before retrying)",
-                    "examples": [
-                        1.5
-                    ],
-                    "title": "retryMultiplier",
-                    "type": "number"
-                },
-                "scrobbleThresholds": {
-                    "$ref": "#/definitions/ScrobbleThresholds",
-                    "description": "Set thresholds for when multi-scrobbler should consider a tracked play to be \"scrobbable\". If both duration and percent are defined then if either condition is met the track is scrobbled.",
-                    "title": "scrobbleThresholds"
-                },
-                "whitelist": {
-                    "anyOf": [
-                        {
-                            "items": {
-                                "type": "string"
-                            },
-                            "type": "array"
-                        },
-                        {
-                            "type": "string"
-                        }
-                    ],
-                    "description": "ONLY from any players that START WITH these values, case-insensitive\n\nIf whitelist is present then blacklist is ignored",
-                    "examples": [
-                        [
-                            "spotify",
-                            "vlc"
-                        ]
-                    ],
-                    "title": "whitelist"
-                }
-            },
-            "title": "MPRISData",
-            "type": "object"
-        },
-        "MPRISSourceAIOConfig": {
-            "properties": {
-                "clients": {
-                    "description": "Restrict scrobbling tracks played from this source to Clients with names from this list. If list is empty is not present Source scrobbles to all configured Clients.",
-                    "examples": [
-                        [
-                            "MyMalojaConfigName",
-                            "MyLastFMConfigName"
-                        ]
-                    ],
-                    "items": {
-                        "type": "string"
-                    },
-                    "title": "clients",
-                    "type": "array"
-                },
-                "data": {
-                    "$ref": "#/definitions/MPRISData",
-                    "title": "data"
-                },
-                "enable": {
-                    "default": true,
-                    "description": "Should MS use this client/source? Defaults to true",
-                    "examples": [
-                        true
-                    ],
-                    "title": "enable",
-                    "type": "boolean"
-                },
-                "name": {
-                    "description": "Unique identifier for this source.",
-                    "title": "name",
-                    "type": "string"
-                },
-                "options": {
-                    "$ref": "#/definitions/CommonSourceOptions",
-                    "title": "options"
-                },
-                "type": {
-                    "enum": [
-                        "mpris"
-                    ],
-                    "title": "type",
-                    "type": "string"
-                }
-            },
-            "required": [
-                "data",
-                "type"
-            ],
-            "title": "MPRISSourceAIOConfig",
-            "type": "object"
-        },
-        "MalojaClientAIOConfig": {
-            "properties": {
-                "data": {
-                    "$ref": "#/definitions/MalojaClientData",
-                    "description": "Specific data required to configure this client",
-                    "title": "data"
-                },
-                "enable": {
-                    "default": true,
-                    "description": "Should MS use this client/source? Defaults to true",
-                    "examples": [
-                        true
-                    ],
-                    "title": "enable",
-                    "type": "boolean"
-                },
-                "name": {
-                    "description": "Unique identifier for this client. Used with sources to restrict where scrobbles are sent.",
-                    "examples": [
-                        "MyConfig"
-                    ],
-                    "title": "name",
-                    "type": "string"
-                },
-                "type": {
-                    "enum": [
-                        "maloja"
-                    ],
-                    "title": "type",
-                    "type": "string"
-                }
-            },
-            "required": [
-                "data",
-                "name",
-                "type"
-            ],
-            "title": "MalojaClientAIOConfig",
-            "type": "object"
-        },
-        "MalojaClientData": {
-            "properties": {
-                "apiKey": {
-                    "description": "API Key for Maloja server",
-                    "examples": [
-                        "myApiKey"
-                    ],
-                    "title": "apiKey",
-                    "type": "string"
-                },
-                "maxRequestRetries": {
-                    "default": 1,
-                    "description": "default # of http request retries a source can make before error is thrown",
-                    "examples": [
-                        1
-                    ],
-                    "title": "maxRequestRetries",
-                    "type": "number"
-                },
-                "options": {
-                    "properties": {
-                        "checkExistingScrobbles": {
-                            "default": true,
-                            "description": "Check client for an existing scrobble at the same recorded time as the \"new\" track to be scrobbled. If an existing scrobble is found this track is not track scrobbled.",
-                            "examples": [
-                                true
-                            ],
-                            "title": "checkExistingScrobbles",
-                            "type": "boolean"
-                        },
-                        "deadLetterRetries": {
-                            "default": 1,
-                            "description": "Number of times MS should automatically retry scrobbles in dead letter queue",
-                            "examples": [
-                                1
-                            ],
-                            "title": "deadLetterRetries",
-                            "type": "boolean"
-                        },
-                        "refreshEnabled": {
-                            "default": true,
-                            "description": "Try to get fresh scrobble history from client when tracks to be scrobbled are newer than the last scrobble found in client history",
-                            "examples": [
-                                true
-                            ],
-                            "title": "refreshEnabled",
-                            "type": "boolean"
-                        },
-                        "verbose": {
-                            "description": "Options used for increasing verbosity of logging in MS (used for debugging)",
-                            "properties": {
-                                "match": {
-                                    "$ref": "#/definitions/MatchLoggingOptions",
-                                    "title": "match"
-                                }
-                            },
-                            "title": "verbose",
-                            "type": "object"
-                        }
-                    },
-                    "title": "options",
-                    "type": "object"
-                },
-                "retryMultiplier": {
-                    "default": 1.5,
-                    "description": "default retry delay multiplier (retry attempt * multiplier = # of seconds to wait before retrying)",
-                    "examples": [
-                        1.5
-                    ],
-                    "title": "retryMultiplier",
-                    "type": "number"
-                },
-                "url": {
-                    "description": "URL for maloja server",
-                    "examples": [
-                        "http://localhost:42010"
-                    ],
-                    "title": "url",
-                    "type": "string"
-                }
-            },
-            "required": [
-                "apiKey",
-                "url"
-            ],
-            "title": "MalojaClientData",
-            "type": "object"
-        },
-        "MatchLoggingOptions": {
-            "description": "Scrobble matching (between new source track and existing client scrobbles) logging options. Used for debugging.",
-            "properties": {
-                "confidenceBreakdown": {
-                    "default": false,
-                    "description": "Include confidence breakdowns in track match logging, if applicable",
-                    "examples": [
-                        false
-                    ],
-                    "title": "confidenceBreakdown",
-                    "type": "boolean"
-                },
-                "onMatch": {
-                    "default": false,
-                    "description": "Log to DEBUG when a new track DOES match an existing scrobble",
-                    "examples": [
-                        false
-                    ],
-                    "title": "onMatch",
-                    "type": "boolean"
-                },
-                "onNoMatch": {
-                    "default": false,
-                    "description": "Log to DEBUG when a new track does NOT match an existing scrobble",
-                    "examples": [
-                        false
-                    ],
-                    "title": "onNoMatch",
-                    "type": "boolean"
-                }
-            },
-            "title": "MatchLoggingOptions",
-            "type": "object"
-        },
-        "MopidyData": {
+        "import(\"/home/foxx/code/multi-scrobbler/src/backend/common/infrastructure/config/source/mopidy\",{assert:{\"resolution-mode\":\"import\"}}).MopidyData": {
             "properties": {
                 "albumBlacklist": {
                     "default": [
@@ -1989,7 +2045,7 @@
                     "type": "number"
                 },
                 "scrobbleThresholds": {
-                    "$ref": "#/definitions/ScrobbleThresholds",
+                    "$ref": "#/definitions/import(\"/home/foxx/code/multi-scrobbler/src/backend/common/infrastructure/config/source/index\",{assert:{\"resolution-mode\":\"import\"}}).ScrobbleThresholds",
                     "description": "Set thresholds for when multi-scrobbler should consider a tracked play to be \"scrobbable\". If both duration and percent are defined then if either condition is met the track is scrobbled.",
                     "title": "scrobbleThresholds"
                 },
@@ -2019,10 +2075,10 @@
                     "type": "string"
                 }
             },
-            "title": "MopidyData",
+            "title": "import(\"/home/foxx/code/multi-scrobbler/src/backend/common/infrastructure/config/source/mopidy\",{assert:{\"resolution-mode\":\"import\"}}).MopidyData",
             "type": "object"
         },
-        "MopidySourceAIOConfig": {
+        "import(\"/home/foxx/code/multi-scrobbler/src/backend/common/infrastructure/config/source/mopidy\",{assert:{\"resolution-mode\":\"import\"}}).MopidySourceAIOConfig": {
             "properties": {
                 "clients": {
                     "description": "Restrict scrobbling tracks played from this source to Clients with names from this list. If list is empty is not present Source scrobbles to all configured Clients.",
@@ -2039,7 +2095,7 @@
                     "type": "array"
                 },
                 "data": {
-                    "$ref": "#/definitions/MopidyData",
+                    "$ref": "#/definitions/import(\"/home/foxx/code/multi-scrobbler/src/backend/common/infrastructure/config/source/mopidy\",{assert:{\"resolution-mode\":\"import\"}}).MopidyData",
                     "title": "data"
                 },
                 "enable": {
@@ -2057,7 +2113,7 @@
                     "type": "string"
                 },
                 "options": {
-                    "$ref": "#/definitions/CommonSourceOptions",
+                    "$ref": "#/definitions/import(\"/home/foxx/code/multi-scrobbler/src/backend/common/infrastructure/config/source/index\",{assert:{\"resolution-mode\":\"import\"}}).CommonSourceOptions",
                     "title": "options"
                 },
                 "type": {
@@ -2072,66 +2128,94 @@
                 "data",
                 "type"
             ],
-            "title": "MopidySourceAIOConfig",
+            "title": "import(\"/home/foxx/code/multi-scrobbler/src/backend/common/infrastructure/config/source/mopidy\",{assert:{\"resolution-mode\":\"import\"}}).MopidySourceAIOConfig",
             "type": "object"
         },
-        "NtfyConfig": {
+        "import(\"/home/foxx/code/multi-scrobbler/src/backend/common/infrastructure/config/source/mpris\",{assert:{\"resolution-mode\":\"import\"}}).MPRISData": {
             "properties": {
-                "name": {
-                    "description": "A friendly name used to identify webhook config in logs",
-                    "title": "name",
-                    "type": "string"
-                },
-                "password": {
-                    "description": "Required if topic is protected",
-                    "title": "password",
-                    "type": "string"
-                },
-                "priorities": {
-                    "$ref": "#/definitions/PrioritiesConfig",
-                    "description": "Priority of messages\n\n* Info -> 3\n* Warn -> 4\n* Error -> 5",
-                    "title": "priorities"
-                },
-                "topic": {
-                    "description": "The topic mutli-scrobbler should POST to",
-                    "title": "topic",
-                    "type": "string"
-                },
-                "type": {
-                    "description": "Webhook type. Valid values are:\n\n* gotify\n* ntfy",
-                    "enum": [
-                        "gotify",
-                        "ntfy"
+                "blacklist": {
+                    "anyOf": [
+                        {
+                            "items": {
+                                "type": "string"
+                            },
+                            "type": "array"
+                        },
+                        {
+                            "type": "string"
+                        }
                     ],
+                    "description": "DO NOT scrobble from any players that START WITH these values, case-insensitive",
                     "examples": [
-                        "gotify"
+                        [
+                            "spotify",
+                            "vlc"
+                        ]
                     ],
-                    "title": "type",
-                    "type": "string"
+                    "title": "blacklist"
                 },
-                "url": {
-                    "description": "The URL of the Ntfy server",
+                "maxPollRetries": {
+                    "default": 5,
+                    "description": "default # of automatic polling restarts on error",
                     "examples": [
-                        "http://192.168.0.100:8078"
+                        5
                     ],
-                    "title": "url",
-                    "type": "string"
+                    "title": "maxPollRetries",
+                    "type": "number"
                 },
-                "username": {
-                    "description": "Required if topic is protected",
-                    "title": "username",
-                    "type": "string"
+                "maxRequestRetries": {
+                    "default": 1,
+                    "description": "default # of http request retries a source can make before error is thrown",
+                    "examples": [
+                        1
+                    ],
+                    "title": "maxRequestRetries",
+                    "type": "number"
+                },
+                "options": {
+                    "$ref": "#/definitions/Record<string,any>",
+                    "title": "options"
+                },
+                "retryMultiplier": {
+                    "default": 1.5,
+                    "description": "default retry delay multiplier (retry attempt * multiplier = # of seconds to wait before retrying)",
+                    "examples": [
+                        1.5
+                    ],
+                    "title": "retryMultiplier",
+                    "type": "number"
+                },
+                "scrobbleThresholds": {
+                    "$ref": "#/definitions/import(\"/home/foxx/code/multi-scrobbler/src/backend/common/infrastructure/config/source/index\",{assert:{\"resolution-mode\":\"import\"}}).ScrobbleThresholds",
+                    "description": "Set thresholds for when multi-scrobbler should consider a tracked play to be \"scrobbable\". If both duration and percent are defined then if either condition is met the track is scrobbled.",
+                    "title": "scrobbleThresholds"
+                },
+                "whitelist": {
+                    "anyOf": [
+                        {
+                            "items": {
+                                "type": "string"
+                            },
+                            "type": "array"
+                        },
+                        {
+                            "type": "string"
+                        }
+                    ],
+                    "description": "ONLY from any players that START WITH these values, case-insensitive\n\nIf whitelist is present then blacklist is ignored",
+                    "examples": [
+                        [
+                            "spotify",
+                            "vlc"
+                        ]
+                    ],
+                    "title": "whitelist"
                 }
             },
-            "required": [
-                "topic",
-                "type",
-                "url"
-            ],
-            "title": "NtfyConfig",
+            "title": "import(\"/home/foxx/code/multi-scrobbler/src/backend/common/infrastructure/config/source/mpris\",{assert:{\"resolution-mode\":\"import\"}}).MPRISData",
             "type": "object"
         },
-        "PlexSourceAIOConfig": {
+        "import(\"/home/foxx/code/multi-scrobbler/src/backend/common/infrastructure/config/source/mpris\",{assert:{\"resolution-mode\":\"import\"}}).MPRISSourceAIOConfig": {
             "properties": {
                 "clients": {
                     "description": "Restrict scrobbling tracks played from this source to Clients with names from this list. If list is empty is not present Source scrobbles to all configured Clients.",
@@ -2148,7 +2232,7 @@
                     "type": "array"
                 },
                 "data": {
-                    "$ref": "#/definitions/PlexSourceData",
+                    "$ref": "#/definitions/import(\"/home/foxx/code/multi-scrobbler/src/backend/common/infrastructure/config/source/mpris\",{assert:{\"resolution-mode\":\"import\"}}).MPRISData",
                     "title": "data"
                 },
                 "enable": {
@@ -2166,7 +2250,60 @@
                     "type": "string"
                 },
                 "options": {
-                    "$ref": "#/definitions/CommonSourceOptions",
+                    "$ref": "#/definitions/import(\"/home/foxx/code/multi-scrobbler/src/backend/common/infrastructure/config/source/index\",{assert:{\"resolution-mode\":\"import\"}}).CommonSourceOptions",
+                    "title": "options"
+                },
+                "type": {
+                    "enum": [
+                        "mpris"
+                    ],
+                    "title": "type",
+                    "type": "string"
+                }
+            },
+            "required": [
+                "data",
+                "type"
+            ],
+            "title": "import(\"/home/foxx/code/multi-scrobbler/src/backend/common/infrastructure/config/source/mpris\",{assert:{\"resolution-mode\":\"import\"}}).MPRISSourceAIOConfig",
+            "type": "object"
+        },
+        "import(\"/home/foxx/code/multi-scrobbler/src/backend/common/infrastructure/config/source/plex\",{assert:{\"resolution-mode\":\"import\"}}).PlexSourceAIOConfig": {
+            "properties": {
+                "clients": {
+                    "description": "Restrict scrobbling tracks played from this source to Clients with names from this list. If list is empty is not present Source scrobbles to all configured Clients.",
+                    "examples": [
+                        [
+                            "MyMalojaConfigName",
+                            "MyLastFMConfigName"
+                        ]
+                    ],
+                    "items": {
+                        "type": "string"
+                    },
+                    "title": "clients",
+                    "type": "array"
+                },
+                "data": {
+                    "$ref": "#/definitions/import(\"/home/foxx/code/multi-scrobbler/src/backend/common/infrastructure/config/source/plex\",{assert:{\"resolution-mode\":\"import\"}}).PlexSourceData",
+                    "title": "data"
+                },
+                "enable": {
+                    "default": true,
+                    "description": "Should MS use this client/source? Defaults to true",
+                    "examples": [
+                        true
+                    ],
+                    "title": "enable",
+                    "type": "boolean"
+                },
+                "name": {
+                    "description": "Unique identifier for this source.",
+                    "title": "name",
+                    "type": "string"
+                },
+                "options": {
+                    "$ref": "#/definitions/import(\"/home/foxx/code/multi-scrobbler/src/backend/common/infrastructure/config/source/index\",{assert:{\"resolution-mode\":\"import\"}}).CommonSourceOptions",
                     "title": "options"
                 },
                 "type": {
@@ -2181,10 +2318,10 @@
                 "data",
                 "type"
             ],
-            "title": "PlexSourceAIOConfig",
+            "title": "import(\"/home/foxx/code/multi-scrobbler/src/backend/common/infrastructure/config/source/plex\",{assert:{\"resolution-mode\":\"import\"}}).PlexSourceAIOConfig",
             "type": "object"
         },
-        "PlexSourceData": {
+        "import(\"/home/foxx/code/multi-scrobbler/src/backend/common/infrastructure/config/source/plex\",{assert:{\"resolution-mode\":\"import\"}}).PlexSourceData": {
             "properties": {
                 "libraries": {
                     "anyOf": [
@@ -2255,7 +2392,7 @@
                     "type": "number"
                 },
                 "scrobbleThresholds": {
-                    "$ref": "#/definitions/ScrobbleThresholds",
+                    "$ref": "#/definitions/import(\"/home/foxx/code/multi-scrobbler/src/backend/common/infrastructure/config/source/index\",{assert:{\"resolution-mode\":\"import\"}}).ScrobbleThresholds",
                     "description": "Set thresholds for when multi-scrobbler should consider a tracked play to be \"scrobbable\". If both duration and percent are defined then if either condition is met the track is scrobbled.",
                     "title": "scrobbleThresholds"
                 },
@@ -2301,186 +2438,60 @@
                     "title": "user"
                 }
             },
-            "title": "PlexSourceData",
+            "title": "import(\"/home/foxx/code/multi-scrobbler/src/backend/common/infrastructure/config/source/plex\",{assert:{\"resolution-mode\":\"import\"}}).PlexSourceData",
             "type": "object"
         },
-        "PrioritiesConfig": {
-            "properties": {
-                "error": {
-                    "examples": [
-                        10
-                    ],
-                    "title": "error",
-                    "type": "number"
-                },
-                "info": {
-                    "examples": [
-                        5
-                    ],
-                    "title": "info",
-                    "type": "number"
-                },
-                "warn": {
-                    "examples": [
-                        7
-                    ],
-                    "title": "warn",
-                    "type": "number"
-                }
-            },
-            "required": [
-                "error",
-                "info",
-                "warn"
-            ],
-            "title": "PrioritiesConfig",
-            "type": "object"
-        },
-        "Record<string,any>": {
-            "title": "Record<string,any>",
-            "type": "object"
-        },
-        "RequestRetryOptions": {
-            "properties": {
-                "maxRequestRetries": {
-                    "default": 1,
-                    "description": "default # of http request retries a source can make before error is thrown",
-                    "examples": [
-                        1
-                    ],
-                    "title": "maxRequestRetries",
-                    "type": "number"
-                },
-                "retryMultiplier": {
-                    "default": 1.5,
-                    "description": "default retry delay multiplier (retry attempt * multiplier = # of seconds to wait before retrying)",
-                    "examples": [
-                        1.5
-                    ],
-                    "title": "retryMultiplier",
-                    "type": "number"
-                }
-            },
-            "title": "RequestRetryOptions",
-            "type": "object"
-        },
-        "ScrobbleThresholds": {
-            "properties": {
-                "duration": {
-                    "default": 240,
-                    "description": "The number of seconds a track has been listened to before it should be considered scrobbled.\n\nSet to null to disable.",
-                    "examples": [
-                        240
-                    ],
-                    "title": "duration",
-                    "type": "number"
-                },
-                "percent": {
-                    "default": 50,
-                    "description": "The percentage (as an integer) of a track that should have been seen played before it should be scrobbled. Only used if the Source provides information about how long the track is.\n\nSet to null to disable.\n\nNOTE: This should be used with care when the Source is a \"polling\" type (has an 'interval' property). If the track is short and the interval is too high MS may ignore the track if percentage is high because it had not \"seen\" the track for long enough from first discovery, even if you have been playing the track for longer.",
-                    "examples": [
-                        50
-                    ],
-                    "title": "percent",
-                    "type": "number"
-                }
-            },
-            "title": "ScrobbleThresholds",
-            "type": "object"
-        },
-        "SourceAIOConfig": {
+        "import(\"/home/foxx/code/multi-scrobbler/src/backend/common/infrastructure/config/source/sources\",{assert:{\"resolution-mode\":\"import\"}}).SourceAIOConfig": {
             "anyOf": [
                 {
-                    "$ref": "#/definitions/SpotifySourceAIOConfig"
+                    "$ref": "#/definitions/import(\"/home/foxx/code/multi-scrobbler/src/backend/common/infrastructure/config/source/spotify\",{assert:{\"resolution-mode\":\"import\"}}).SpotifySourceAIOConfig"
                 },
                 {
-                    "$ref": "#/definitions/PlexSourceAIOConfig"
+                    "$ref": "#/definitions/import(\"/home/foxx/code/multi-scrobbler/src/backend/common/infrastructure/config/source/plex\",{assert:{\"resolution-mode\":\"import\"}}).PlexSourceAIOConfig"
                 },
                 {
-                    "$ref": "#/definitions/TautulliSourceAIOConfig"
+                    "$ref": "#/definitions/import(\"/home/foxx/code/multi-scrobbler/src/backend/common/infrastructure/config/source/tautulli\",{assert:{\"resolution-mode\":\"import\"}}).TautulliSourceAIOConfig"
                 },
                 {
-                    "$ref": "#/definitions/DeezerSourceAIOConfig"
+                    "$ref": "#/definitions/import(\"/home/foxx/code/multi-scrobbler/src/backend/common/infrastructure/config/source/deezer\",{assert:{\"resolution-mode\":\"import\"}}).DeezerSourceAIOConfig"
                 },
                 {
-                    "$ref": "#/definitions/SubsonicSourceAIOConfig"
+                    "$ref": "#/definitions/import(\"/home/foxx/code/multi-scrobbler/src/backend/common/infrastructure/config/source/subsonic\",{assert:{\"resolution-mode\":\"import\"}}).SubsonicSourceAIOConfig"
                 },
                 {
-                    "$ref": "#/definitions/JellySourceAIOConfig"
+                    "$ref": "#/definitions/import(\"/home/foxx/code/multi-scrobbler/src/backend/common/infrastructure/config/source/jellyfin\",{assert:{\"resolution-mode\":\"import\"}}).JellySourceAIOConfig"
                 },
                 {
-                    "$ref": "#/definitions/LastFmSouceAIOConfig"
+                    "$ref": "#/definitions/import(\"/home/foxx/code/multi-scrobbler/src/backend/common/infrastructure/config/source/lastfm\",{assert:{\"resolution-mode\":\"import\"}}).LastFmSouceAIOConfig"
                 },
                 {
-                    "$ref": "#/definitions/YTMusicSourceAIOConfig"
+                    "$ref": "#/definitions/import(\"/home/foxx/code/multi-scrobbler/src/backend/common/infrastructure/config/source/ytmusic\",{assert:{\"resolution-mode\":\"import\"}}).YTMusicSourceAIOConfig"
                 },
                 {
-                    "$ref": "#/definitions/MPRISSourceAIOConfig"
+                    "$ref": "#/definitions/import(\"/home/foxx/code/multi-scrobbler/src/backend/common/infrastructure/config/source/mpris\",{assert:{\"resolution-mode\":\"import\"}}).MPRISSourceAIOConfig"
                 },
                 {
-                    "$ref": "#/definitions/MopidySourceAIOConfig"
+                    "$ref": "#/definitions/import(\"/home/foxx/code/multi-scrobbler/src/backend/common/infrastructure/config/source/mopidy\",{assert:{\"resolution-mode\":\"import\"}}).MopidySourceAIOConfig"
                 },
                 {
-                    "$ref": "#/definitions/ListenBrainzSourceAIOConfig"
+                    "$ref": "#/definitions/import(\"/home/foxx/code/multi-scrobbler/src/backend/common/infrastructure/config/source/listenbrainz\",{assert:{\"resolution-mode\":\"import\"}}).ListenBrainzSourceAIOConfig"
                 },
                 {
-                    "$ref": "#/definitions/JRiverSourceAIOConfig"
+                    "$ref": "#/definitions/import(\"/home/foxx/code/multi-scrobbler/src/backend/common/infrastructure/config/source/jriver\",{assert:{\"resolution-mode\":\"import\"}}).JRiverSourceAIOConfig"
                 },
                 {
-                    "$ref": "#/definitions/KodiSourceAIOConfig"
+                    "$ref": "#/definitions/import(\"/home/foxx/code/multi-scrobbler/src/backend/common/infrastructure/config/source/kodi\",{assert:{\"resolution-mode\":\"import\"}}).KodiSourceAIOConfig"
                 },
                 {
-                    "$ref": "#/definitions/WebScrobblerSourceAIOConfig"
+                    "$ref": "#/definitions/import(\"/home/foxx/code/multi-scrobbler/src/backend/common/infrastructure/config/source/webscrobbler\",{assert:{\"resolution-mode\":\"import\"}}).WebScrobblerSourceAIOConfig"
                 },
                 {
-                    "$ref": "#/definitions/ChromecastSourceAIOConfig"
+                    "$ref": "#/definitions/import(\"/home/foxx/code/multi-scrobbler/src/backend/common/infrastructure/config/source/chromecast\",{assert:{\"resolution-mode\":\"import\"}}).ChromecastSourceAIOConfig"
                 }
             ],
-            "title": "SourceAIOConfig"
+            "title": "import(\"/home/foxx/code/multi-scrobbler/src/backend/common/infrastructure/config/source/sources\",{assert:{\"resolution-mode\":\"import\"}}).SourceAIOConfig"
         },
-        "SourceDefaults": {
-            "properties": {
-                "maxPollRetries": {
-                    "default": 5,
-                    "description": "default # of automatic polling restarts on error",
-                    "examples": [
-                        5
-                    ],
-                    "title": "maxPollRetries",
-                    "type": "number"
-                },
-                "maxRequestRetries": {
-                    "default": 1,
-                    "description": "default # of http request retries a source can make before error is thrown",
-                    "examples": [
-                        1
-                    ],
-                    "title": "maxRequestRetries",
-                    "type": "number"
-                },
-                "options": {
-                    "$ref": "#/definitions/CommonSourceOptions",
-                    "title": "options"
-                },
-                "retryMultiplier": {
-                    "default": 1.5,
-                    "description": "default retry delay multiplier (retry attempt * multiplier = # of seconds to wait before retrying)",
-                    "examples": [
-                        1.5
-                    ],
-                    "title": "retryMultiplier",
-                    "type": "number"
-                },
-                "scrobbleThresholds": {
-                    "$ref": "#/definitions/ScrobbleThresholds",
-                    "description": "Set thresholds for when multi-scrobbler should consider a tracked play to be \"scrobbable\". If both duration and percent are defined then if either condition is met the track is scrobbled.",
-                    "title": "scrobbleThresholds"
-                }
-            },
-            "title": "SourceDefaults",
-            "type": "object"
-        },
-        "SpotifySourceAIOConfig": {
+        "import(\"/home/foxx/code/multi-scrobbler/src/backend/common/infrastructure/config/source/spotify\",{assert:{\"resolution-mode\":\"import\"}}).SpotifySourceAIOConfig": {
             "properties": {
                 "clients": {
                     "description": "Restrict scrobbling tracks played from this source to Clients with names from this list. If list is empty is not present Source scrobbles to all configured Clients.",
@@ -2497,7 +2508,7 @@
                     "type": "array"
                 },
                 "data": {
-                    "$ref": "#/definitions/SpotifySourceData",
+                    "$ref": "#/definitions/import(\"/home/foxx/code/multi-scrobbler/src/backend/common/infrastructure/config/source/spotify\",{assert:{\"resolution-mode\":\"import\"}}).SpotifySourceData",
                     "title": "data"
                 },
                 "enable": {
@@ -2515,7 +2526,7 @@
                     "type": "string"
                 },
                 "options": {
-                    "$ref": "#/definitions/CommonSourceOptions",
+                    "$ref": "#/definitions/import(\"/home/foxx/code/multi-scrobbler/src/backend/common/infrastructure/config/source/index\",{assert:{\"resolution-mode\":\"import\"}}).CommonSourceOptions",
                     "title": "options"
                 },
                 "type": {
@@ -2530,10 +2541,10 @@
                 "data",
                 "type"
             ],
-            "title": "SpotifySourceAIOConfig",
+            "title": "import(\"/home/foxx/code/multi-scrobbler/src/backend/common/infrastructure/config/source/spotify\",{assert:{\"resolution-mode\":\"import\"}}).SpotifySourceAIOConfig",
             "type": "object"
         },
-        "SpotifySourceData": {
+        "import(\"/home/foxx/code/multi-scrobbler/src/backend/common/infrastructure/config/source/spotify\",{assert:{\"resolution-mode\":\"import\"}}).SpotifySourceData": {
             "properties": {
                 "clientId": {
                     "description": "spotify client id",
@@ -2610,7 +2621,7 @@
                     "type": "number"
                 },
                 "scrobbleThresholds": {
-                    "$ref": "#/definitions/ScrobbleThresholds",
+                    "$ref": "#/definitions/import(\"/home/foxx/code/multi-scrobbler/src/backend/common/infrastructure/config/source/index\",{assert:{\"resolution-mode\":\"import\"}}).ScrobbleThresholds",
                     "description": "Set thresholds for when multi-scrobbler should consider a tracked play to be \"scrobbable\". If both duration and percent are defined then if either condition is met the track is scrobbled.",
                     "title": "scrobbleThresholds"
                 }
@@ -2620,11 +2631,17 @@
                 "clientSecret",
                 "redirectUri"
             ],
-            "title": "SpotifySourceData",
+            "title": "import(\"/home/foxx/code/multi-scrobbler/src/backend/common/infrastructure/config/source/spotify\",{assert:{\"resolution-mode\":\"import\"}}).SpotifySourceData",
             "type": "object"
         },
-        "SubsonicData": {
+        "import(\"/home/foxx/code/multi-scrobbler/src/backend/common/infrastructure/config/source/subsonic\",{assert:{\"resolution-mode\":\"import\"}}).SubsonicData": {
             "properties": {
+                "ignoreTlsErrors": {
+                    "default": false,
+                    "description": "If your subsonic server is using self-signed certs you may need to disable TLS errors in order to get a connection\n\nWARNING: This should be used with caution as your traffic may not be encrypted.",
+                    "title": "ignoreTlsErrors",
+                    "type": "boolean"
+                },
                 "interval": {
                     "default": 10,
                     "description": "How long to wait before polling the source API for new tracks (in seconds)",
@@ -2633,6 +2650,12 @@
                     ],
                     "title": "interval",
                     "type": "number"
+                },
+                "legacyAuthentication": {
+                    "default": false,
+                    "description": "Older Subsonic versions, and some badly implemented servers (Nextcloud), use legacy authentication which sends your password in CLEAR TEXT. This is less secure than the newer, recommended hashing authentication method but in some cases it is needed. See \"Authentication\" section here => https://www.subsonic.org/pages/api.jsp\n\nIf this option is not specified it will be turned on if the subsonic server responds with error code 41 \"Token authentication not supported for LDAP users.\" -- See Error Handling section => https://www.subsonic.org/pages/api.jsp",
+                    "title": "legacyAuthentication",
+                    "type": "boolean"
                 },
                 "maxInterval": {
                     "default": 30,
@@ -2683,7 +2706,7 @@
                     "type": "number"
                 },
                 "scrobbleThresholds": {
-                    "$ref": "#/definitions/ScrobbleThresholds",
+                    "$ref": "#/definitions/import(\"/home/foxx/code/multi-scrobbler/src/backend/common/infrastructure/config/source/index\",{assert:{\"resolution-mode\":\"import\"}}).ScrobbleThresholds",
                     "description": "Set thresholds for when multi-scrobbler should consider a tracked play to be \"scrobbable\". If both duration and percent are defined then if either condition is met the track is scrobbled.",
                     "title": "scrobbleThresholds"
                 },
@@ -2706,10 +2729,10 @@
                 "url",
                 "user"
             ],
-            "title": "SubsonicData",
+            "title": "import(\"/home/foxx/code/multi-scrobbler/src/backend/common/infrastructure/config/source/subsonic\",{assert:{\"resolution-mode\":\"import\"}}).SubsonicData",
             "type": "object"
         },
-        "SubsonicSourceAIOConfig": {
+        "import(\"/home/foxx/code/multi-scrobbler/src/backend/common/infrastructure/config/source/subsonic\",{assert:{\"resolution-mode\":\"import\"}}).SubsonicSourceAIOConfig": {
             "properties": {
                 "clients": {
                     "description": "Restrict scrobbling tracks played from this source to Clients with names from this list. If list is empty is not present Source scrobbles to all configured Clients.",
@@ -2726,7 +2749,7 @@
                     "type": "array"
                 },
                 "data": {
-                    "$ref": "#/definitions/SubsonicData",
+                    "$ref": "#/definitions/import(\"/home/foxx/code/multi-scrobbler/src/backend/common/infrastructure/config/source/subsonic\",{assert:{\"resolution-mode\":\"import\"}}).SubsonicData",
                     "title": "data"
                 },
                 "enable": {
@@ -2744,7 +2767,7 @@
                     "type": "string"
                 },
                 "options": {
-                    "$ref": "#/definitions/CommonSourceOptions",
+                    "$ref": "#/definitions/import(\"/home/foxx/code/multi-scrobbler/src/backend/common/infrastructure/config/source/index\",{assert:{\"resolution-mode\":\"import\"}}).CommonSourceOptions",
                     "title": "options"
                 },
                 "type": {
@@ -2759,10 +2782,10 @@
                 "data",
                 "type"
             ],
-            "title": "SubsonicSourceAIOConfig",
+            "title": "import(\"/home/foxx/code/multi-scrobbler/src/backend/common/infrastructure/config/source/subsonic\",{assert:{\"resolution-mode\":\"import\"}}).SubsonicSourceAIOConfig",
             "type": "object"
         },
-        "TautulliSourceAIOConfig": {
+        "import(\"/home/foxx/code/multi-scrobbler/src/backend/common/infrastructure/config/source/tautulli\",{assert:{\"resolution-mode\":\"import\"}}).TautulliSourceAIOConfig": {
             "properties": {
                 "clients": {
                     "description": "Restrict scrobbling tracks played from this source to Clients with names from this list. If list is empty is not present Source scrobbles to all configured Clients.",
@@ -2779,7 +2802,7 @@
                     "type": "array"
                 },
                 "data": {
-                    "$ref": "#/definitions/PlexSourceData",
+                    "$ref": "#/definitions/import(\"/home/foxx/code/multi-scrobbler/src/backend/common/infrastructure/config/source/plex\",{assert:{\"resolution-mode\":\"import\"}}).PlexSourceData",
                     "title": "data"
                 },
                 "enable": {
@@ -2797,7 +2820,7 @@
                     "type": "string"
                 },
                 "options": {
-                    "$ref": "#/definitions/CommonSourceOptions",
+                    "$ref": "#/definitions/import(\"/home/foxx/code/multi-scrobbler/src/backend/common/infrastructure/config/source/index\",{assert:{\"resolution-mode\":\"import\"}}).CommonSourceOptions",
                     "title": "options"
                 },
                 "type": {
@@ -2812,10 +2835,10 @@
                 "data",
                 "type"
             ],
-            "title": "TautulliSourceAIOConfig",
+            "title": "import(\"/home/foxx/code/multi-scrobbler/src/backend/common/infrastructure/config/source/tautulli\",{assert:{\"resolution-mode\":\"import\"}}).TautulliSourceAIOConfig",
             "type": "object"
         },
-        "WebScrobblerData": {
+        "import(\"/home/foxx/code/multi-scrobbler/src/backend/common/infrastructure/config/source/webscrobbler\",{assert:{\"resolution-mode\":\"import\"}}).WebScrobblerData": {
             "properties": {
                 "blacklist": {
                     "anyOf": [
@@ -2894,7 +2917,7 @@
                     "type": "number"
                 },
                 "scrobbleThresholds": {
-                    "$ref": "#/definitions/ScrobbleThresholds",
+                    "$ref": "#/definitions/import(\"/home/foxx/code/multi-scrobbler/src/backend/common/infrastructure/config/source/index\",{assert:{\"resolution-mode\":\"import\"}}).ScrobbleThresholds",
                     "description": "Set thresholds for when multi-scrobbler should consider a tracked play to be \"scrobbable\". If both duration and percent are defined then if either condition is met the track is scrobbled.",
                     "title": "scrobbleThresholds"
                 },
@@ -2926,10 +2949,10 @@
                     "title": "whitelist"
                 }
             },
-            "title": "WebScrobblerData",
+            "title": "import(\"/home/foxx/code/multi-scrobbler/src/backend/common/infrastructure/config/source/webscrobbler\",{assert:{\"resolution-mode\":\"import\"}}).WebScrobblerData",
             "type": "object"
         },
-        "WebScrobblerSourceAIOConfig": {
+        "import(\"/home/foxx/code/multi-scrobbler/src/backend/common/infrastructure/config/source/webscrobbler\",{assert:{\"resolution-mode\":\"import\"}}).WebScrobblerSourceAIOConfig": {
             "properties": {
                 "clients": {
                     "description": "Restrict scrobbling tracks played from this source to Clients with names from this list. If list is empty is not present Source scrobbles to all configured Clients.",
@@ -2946,7 +2969,7 @@
                     "type": "array"
                 },
                 "data": {
-                    "$ref": "#/definitions/WebScrobblerData",
+                    "$ref": "#/definitions/import(\"/home/foxx/code/multi-scrobbler/src/backend/common/infrastructure/config/source/webscrobbler\",{assert:{\"resolution-mode\":\"import\"}}).WebScrobblerData",
                     "title": "data"
                 },
                 "enable": {
@@ -2964,7 +2987,7 @@
                     "type": "string"
                 },
                 "options": {
-                    "$ref": "#/definitions/CommonSourceOptions",
+                    "$ref": "#/definitions/import(\"/home/foxx/code/multi-scrobbler/src/backend/common/infrastructure/config/source/index\",{assert:{\"resolution-mode\":\"import\"}}).CommonSourceOptions",
                     "title": "options"
                 },
                 "type": {
@@ -2978,21 +3001,10 @@
             "required": [
                 "type"
             ],
-            "title": "WebScrobblerSourceAIOConfig",
+            "title": "import(\"/home/foxx/code/multi-scrobbler/src/backend/common/infrastructure/config/source/webscrobbler\",{assert:{\"resolution-mode\":\"import\"}}).WebScrobblerSourceAIOConfig",
             "type": "object"
         },
-        "WebhookConfig": {
-            "anyOf": [
-                {
-                    "$ref": "#/definitions/GotifyConfig"
-                },
-                {
-                    "$ref": "#/definitions/NtfyConfig"
-                }
-            ],
-            "title": "WebhookConfig"
-        },
-        "YTMusicData": {
+        "import(\"/home/foxx/code/multi-scrobbler/src/backend/common/infrastructure/config/source/ytmusic\",{assert:{\"resolution-mode\":\"import\"}}).YTMusicData": {
             "properties": {
                 "authUser": {
                     "description": "If the 'X-Goog-AuthUser' header is present in the Request Headers for music.youtube.com it must also be included",
@@ -3057,7 +3069,7 @@
                     "type": "number"
                 },
                 "scrobbleThresholds": {
-                    "$ref": "#/definitions/ScrobbleThresholds",
+                    "$ref": "#/definitions/import(\"/home/foxx/code/multi-scrobbler/src/backend/common/infrastructure/config/source/index\",{assert:{\"resolution-mode\":\"import\"}}).ScrobbleThresholds",
                     "description": "Set thresholds for when multi-scrobbler should consider a tracked play to be \"scrobbable\". If both duration and percent are defined then if either condition is met the track is scrobbled.",
                     "title": "scrobbleThresholds"
                 }
@@ -3065,10 +3077,10 @@
             "required": [
                 "cookie"
             ],
-            "title": "YTMusicData",
+            "title": "import(\"/home/foxx/code/multi-scrobbler/src/backend/common/infrastructure/config/source/ytmusic\",{assert:{\"resolution-mode\":\"import\"}}).YTMusicData",
             "type": "object"
         },
-        "YTMusicSourceAIOConfig": {
+        "import(\"/home/foxx/code/multi-scrobbler/src/backend/common/infrastructure/config/source/ytmusic\",{assert:{\"resolution-mode\":\"import\"}}).YTMusicSourceAIOConfig": {
             "properties": {
                 "clients": {
                     "description": "Restrict scrobbling tracks played from this source to Clients with names from this list. If list is empty is not present Source scrobbles to all configured Clients.",
@@ -3085,7 +3097,7 @@
                     "type": "array"
                 },
                 "data": {
-                    "$ref": "#/definitions/YTMusicData",
+                    "$ref": "#/definitions/import(\"/home/foxx/code/multi-scrobbler/src/backend/common/infrastructure/config/source/ytmusic\",{assert:{\"resolution-mode\":\"import\"}}).YTMusicData",
                     "title": "data"
                 },
                 "enable": {
@@ -3103,7 +3115,7 @@
                     "type": "string"
                 },
                 "options": {
-                    "$ref": "#/definitions/CommonSourceOptions",
+                    "$ref": "#/definitions/import(\"/home/foxx/code/multi-scrobbler/src/backend/common/infrastructure/config/source/index\",{assert:{\"resolution-mode\":\"import\"}}).CommonSourceOptions",
                     "title": "options"
                 },
                 "type": {
@@ -3118,7 +3130,7 @@
                 "data",
                 "type"
             ],
-            "title": "YTMusicSourceAIOConfig",
+            "title": "import(\"/home/foxx/code/multi-scrobbler/src/backend/common/infrastructure/config/source/ytmusic\",{assert:{\"resolution-mode\":\"import\"}}).YTMusicSourceAIOConfig",
             "type": "object"
         }
     },
@@ -3135,12 +3147,12 @@
             "type": "string"
         },
         "clientDefaults": {
-            "$ref": "#/definitions/RequestRetryOptions",
+            "$ref": "#/definitions/import(\"/home/foxx/code/multi-scrobbler/src/backend/common/infrastructure/config/common\",{assert:{\"resolution-mode\":\"import\"}}).RequestRetryOptions",
             "title": "clientDefaults"
         },
         "clients": {
             "items": {
-                "$ref": "#/definitions/ClientAIOConfig"
+                "$ref": "#/definitions/import(\"/home/foxx/code/multi-scrobbler/src/backend/common/infrastructure/config/client/clients\",{assert:{\"resolution-mode\":\"import\"}}).ClientAIOConfig"
             },
             "title": "clients",
             "type": "array"
@@ -3155,7 +3167,7 @@
             "type": "boolean"
         },
         "logging": {
-            "$ref": "#/definitions/LogOptions",
+            "$ref": "#/definitions/import(\"/home/foxx/code/multi-scrobbler/src/backend/common/infrastructure/Atomic\",{assert:{\"resolution-mode\":\"import\"}}).LogOptions",
             "title": "logging"
         },
         "port": {
@@ -3168,19 +3180,19 @@
             "type": "number"
         },
         "sourceDefaults": {
-            "$ref": "#/definitions/SourceDefaults",
+            "$ref": "#/definitions/import(\"/home/foxx/code/multi-scrobbler/src/backend/common/infrastructure/config/aioConfig\",{assert:{\"resolution-mode\":\"import\"}}).SourceDefaults",
             "title": "sourceDefaults"
         },
         "sources": {
             "items": {
-                "$ref": "#/definitions/SourceAIOConfig"
+                "$ref": "#/definitions/import(\"/home/foxx/code/multi-scrobbler/src/backend/common/infrastructure/config/source/sources\",{assert:{\"resolution-mode\":\"import\"}}).SourceAIOConfig"
             },
             "title": "sources",
             "type": "array"
         },
         "webhooks": {
             "items": {
-                "$ref": "#/definitions/WebhookConfig"
+                "$ref": "#/definitions/import(\"/home/foxx/code/multi-scrobbler/src/backend/common/infrastructure/config/health/webhooks\",{assert:{\"resolution-mode\":\"import\"}}).WebhookConfig"
             },
             "title": "webhooks",
             "type": "array"

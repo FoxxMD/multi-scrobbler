@@ -1,21 +1,21 @@
 {
     "$schema": "http://json-schema.org/draft-07/schema#",
     "definitions": {
-        "ClientAIOConfig": {
+        "import(\"/home/foxx/code/multi-scrobbler/src/backend/common/infrastructure/config/client/clients\",{assert:{\"resolution-mode\":\"import\"}}).ClientAIOConfig": {
             "anyOf": [
                 {
-                    "$ref": "#/definitions/LastfmClientAIOConfig"
+                    "$ref": "#/definitions/import(\"/home/foxx/code/multi-scrobbler/src/backend/common/infrastructure/config/client/lastfm\",{assert:{\"resolution-mode\":\"import\"}}).LastfmClientAIOConfig"
                 },
                 {
-                    "$ref": "#/definitions/ListenBrainzClientAIOConfig"
+                    "$ref": "#/definitions/import(\"/home/foxx/code/multi-scrobbler/src/backend/common/infrastructure/config/client/listenbrainz\",{assert:{\"resolution-mode\":\"import\"}}).ListenBrainzClientAIOConfig"
                 },
                 {
-                    "$ref": "#/definitions/MalojaClientAIOConfig"
+                    "$ref": "#/definitions/import(\"/home/foxx/code/multi-scrobbler/src/backend/common/infrastructure/config/client/maloja\",{assert:{\"resolution-mode\":\"import\"}}).MalojaClientAIOConfig"
                 }
             ],
-            "title": "ClientAIOConfig"
+            "title": "import(\"/home/foxx/code/multi-scrobbler/src/backend/common/infrastructure/config/client/clients\",{assert:{\"resolution-mode\":\"import\"}}).ClientAIOConfig"
         },
-        "CommonClientData": {
+        "import(\"/home/foxx/code/multi-scrobbler/src/backend/common/infrastructure/config/client/index\",{assert:{\"resolution-mode\":\"import\"}}).CommonClientData": {
             "properties": {
                 "maxRequestRetries": {
                     "default": 1,
@@ -44,7 +44,7 @@
                                 1
                             ],
                             "title": "deadLetterRetries",
-                            "type": "boolean"
+                            "type": "number"
                         },
                         "refreshEnabled": {
                             "default": true,
@@ -59,7 +59,7 @@
                             "description": "Options used for increasing verbosity of logging in MS (used for debugging)",
                             "properties": {
                                 "match": {
-                                    "$ref": "#/definitions/MatchLoggingOptions",
+                                    "$ref": "#/definitions/import(\"/home/foxx/code/multi-scrobbler/src/backend/common/infrastructure/config/client/index\",{assert:{\"resolution-mode\":\"import\"}}).MatchLoggingOptions",
                                     "title": "match"
                                 }
                             },
@@ -80,10 +80,44 @@
                     "type": "number"
                 }
             },
-            "title": "CommonClientData",
+            "title": "import(\"/home/foxx/code/multi-scrobbler/src/backend/common/infrastructure/config/client/index\",{assert:{\"resolution-mode\":\"import\"}}).CommonClientData",
             "type": "object"
         },
-        "LastfmClientAIOConfig": {
+        "import(\"/home/foxx/code/multi-scrobbler/src/backend/common/infrastructure/config/client/index\",{assert:{\"resolution-mode\":\"import\"}}).MatchLoggingOptions": {
+            "description": "Scrobble matching (between new source track and existing client scrobbles) logging options. Used for debugging.",
+            "properties": {
+                "confidenceBreakdown": {
+                    "default": false,
+                    "description": "Include confidence breakdowns in track match logging, if applicable",
+                    "examples": [
+                        false
+                    ],
+                    "title": "confidenceBreakdown",
+                    "type": "boolean"
+                },
+                "onMatch": {
+                    "default": false,
+                    "description": "Log to DEBUG when a new track DOES match an existing scrobble",
+                    "examples": [
+                        false
+                    ],
+                    "title": "onMatch",
+                    "type": "boolean"
+                },
+                "onNoMatch": {
+                    "default": false,
+                    "description": "Log to DEBUG when a new track does NOT match an existing scrobble",
+                    "examples": [
+                        false
+                    ],
+                    "title": "onNoMatch",
+                    "type": "boolean"
+                }
+            },
+            "title": "import(\"/home/foxx/code/multi-scrobbler/src/backend/common/infrastructure/config/client/index\",{assert:{\"resolution-mode\":\"import\"}}).MatchLoggingOptions",
+            "type": "object"
+        },
+        "import(\"/home/foxx/code/multi-scrobbler/src/backend/common/infrastructure/config/client/lastfm\",{assert:{\"resolution-mode\":\"import\"}}).LastfmClientAIOConfig": {
             "properties": {
                 "configureAs": {
                     "default": "client",
@@ -101,10 +135,10 @@
                 "data": {
                     "allOf": [
                         {
-                            "$ref": "#/definitions/CommonClientData"
+                            "$ref": "#/definitions/import(\"/home/foxx/code/multi-scrobbler/src/backend/common/infrastructure/config/client/index\",{assert:{\"resolution-mode\":\"import\"}}).CommonClientData"
                         },
                         {
-                            "$ref": "#/definitions/LastfmData"
+                            "$ref": "#/definitions/import(\"/home/foxx/code/multi-scrobbler/src/backend/common/infrastructure/config/client/lastfm\",{assert:{\"resolution-mode\":\"import\"}}).LastfmData"
                         }
                     ],
                     "description": "Specific data required to configure this client",
@@ -140,10 +174,10 @@
                 "name",
                 "type"
             ],
-            "title": "LastfmClientAIOConfig",
+            "title": "import(\"/home/foxx/code/multi-scrobbler/src/backend/common/infrastructure/config/client/lastfm\",{assert:{\"resolution-mode\":\"import\"}}).LastfmClientAIOConfig",
             "type": "object"
         },
-        "LastfmData": {
+        "import(\"/home/foxx/code/multi-scrobbler/src/backend/common/infrastructure/config/client/lastfm\",{assert:{\"resolution-mode\":\"import\"}}).LastfmData": {
             "properties": {
                 "apiKey": {
                     "description": "API Key generated from Last.fm account",
@@ -198,10 +232,10 @@
                 "apiKey",
                 "secret"
             ],
-            "title": "LastfmData",
+            "title": "import(\"/home/foxx/code/multi-scrobbler/src/backend/common/infrastructure/config/client/lastfm\",{assert:{\"resolution-mode\":\"import\"}}).LastfmData",
             "type": "object"
         },
-        "ListenBrainzClientAIOConfig": {
+        "import(\"/home/foxx/code/multi-scrobbler/src/backend/common/infrastructure/config/client/listenbrainz\",{assert:{\"resolution-mode\":\"import\"}}).ListenBrainzClientAIOConfig": {
             "properties": {
                 "configureAs": {
                     "default": "client",
@@ -217,7 +251,7 @@
                     "type": "string"
                 },
                 "data": {
-                    "$ref": "#/definitions/ListenBrainzClientData",
+                    "$ref": "#/definitions/import(\"/home/foxx/code/multi-scrobbler/src/backend/common/infrastructure/config/client/listenbrainz\",{assert:{\"resolution-mode\":\"import\"}}).ListenBrainzClientData",
                     "description": "Specific data required to configure this client",
                     "title": "data"
                 },
@@ -251,10 +285,10 @@
                 "name",
                 "type"
             ],
-            "title": "ListenBrainzClientAIOConfig",
+            "title": "import(\"/home/foxx/code/multi-scrobbler/src/backend/common/infrastructure/config/client/listenbrainz\",{assert:{\"resolution-mode\":\"import\"}}).ListenBrainzClientAIOConfig",
             "type": "object"
         },
-        "ListenBrainzClientData": {
+        "import(\"/home/foxx/code/multi-scrobbler/src/backend/common/infrastructure/config/client/listenbrainz\",{assert:{\"resolution-mode\":\"import\"}}).ListenBrainzClientData": {
             "properties": {
                 "maxRequestRetries": {
                     "default": 1,
@@ -283,7 +317,7 @@
                                 1
                             ],
                             "title": "deadLetterRetries",
-                            "type": "boolean"
+                            "type": "number"
                         },
                         "refreshEnabled": {
                             "default": true,
@@ -298,7 +332,7 @@
                             "description": "Options used for increasing verbosity of logging in MS (used for debugging)",
                             "properties": {
                                 "match": {
-                                    "$ref": "#/definitions/MatchLoggingOptions",
+                                    "$ref": "#/definitions/import(\"/home/foxx/code/multi-scrobbler/src/backend/common/infrastructure/config/client/index\",{assert:{\"resolution-mode\":\"import\"}}).MatchLoggingOptions",
                                     "title": "match"
                                 }
                             },
@@ -345,13 +379,13 @@
                 "token",
                 "username"
             ],
-            "title": "ListenBrainzClientData",
+            "title": "import(\"/home/foxx/code/multi-scrobbler/src/backend/common/infrastructure/config/client/listenbrainz\",{assert:{\"resolution-mode\":\"import\"}}).ListenBrainzClientData",
             "type": "object"
         },
-        "MalojaClientAIOConfig": {
+        "import(\"/home/foxx/code/multi-scrobbler/src/backend/common/infrastructure/config/client/maloja\",{assert:{\"resolution-mode\":\"import\"}}).MalojaClientAIOConfig": {
             "properties": {
                 "data": {
-                    "$ref": "#/definitions/MalojaClientData",
+                    "$ref": "#/definitions/import(\"/home/foxx/code/multi-scrobbler/src/backend/common/infrastructure/config/client/maloja\",{assert:{\"resolution-mode\":\"import\"}}).MalojaClientData",
                     "description": "Specific data required to configure this client",
                     "title": "data"
                 },
@@ -385,10 +419,10 @@
                 "name",
                 "type"
             ],
-            "title": "MalojaClientAIOConfig",
+            "title": "import(\"/home/foxx/code/multi-scrobbler/src/backend/common/infrastructure/config/client/maloja\",{assert:{\"resolution-mode\":\"import\"}}).MalojaClientAIOConfig",
             "type": "object"
         },
-        "MalojaClientData": {
+        "import(\"/home/foxx/code/multi-scrobbler/src/backend/common/infrastructure/config/client/maloja\",{assert:{\"resolution-mode\":\"import\"}}).MalojaClientData": {
             "properties": {
                 "apiKey": {
                     "description": "API Key for Maloja server",
@@ -425,7 +459,7 @@
                                 1
                             ],
                             "title": "deadLetterRetries",
-                            "type": "boolean"
+                            "type": "number"
                         },
                         "refreshEnabled": {
                             "default": true,
@@ -440,7 +474,7 @@
                             "description": "Options used for increasing verbosity of logging in MS (used for debugging)",
                             "properties": {
                                 "match": {
-                                    "$ref": "#/definitions/MatchLoggingOptions",
+                                    "$ref": "#/definitions/import(\"/home/foxx/code/multi-scrobbler/src/backend/common/infrastructure/config/client/index\",{assert:{\"resolution-mode\":\"import\"}}).MatchLoggingOptions",
                                     "title": "match"
                                 }
                             },
@@ -473,44 +507,10 @@
                 "apiKey",
                 "url"
             ],
-            "title": "MalojaClientData",
+            "title": "import(\"/home/foxx/code/multi-scrobbler/src/backend/common/infrastructure/config/client/maloja\",{assert:{\"resolution-mode\":\"import\"}}).MalojaClientData",
             "type": "object"
         },
-        "MatchLoggingOptions": {
-            "description": "Scrobble matching (between new source track and existing client scrobbles) logging options. Used for debugging.",
-            "properties": {
-                "confidenceBreakdown": {
-                    "default": false,
-                    "description": "Include confidence breakdowns in track match logging, if applicable",
-                    "examples": [
-                        false
-                    ],
-                    "title": "confidenceBreakdown",
-                    "type": "boolean"
-                },
-                "onMatch": {
-                    "default": false,
-                    "description": "Log to DEBUG when a new track DOES match an existing scrobble",
-                    "examples": [
-                        false
-                    ],
-                    "title": "onMatch",
-                    "type": "boolean"
-                },
-                "onNoMatch": {
-                    "default": false,
-                    "description": "Log to DEBUG when a new track does NOT match an existing scrobble",
-                    "examples": [
-                        false
-                    ],
-                    "title": "onNoMatch",
-                    "type": "boolean"
-                }
-            },
-            "title": "MatchLoggingOptions",
-            "type": "object"
-        },
-        "RequestRetryOptions": {
+        "import(\"/home/foxx/code/multi-scrobbler/src/backend/common/infrastructure/config/common\",{assert:{\"resolution-mode\":\"import\"}}).RequestRetryOptions": {
             "properties": {
                 "maxRequestRetries": {
                     "default": 1,
@@ -531,18 +531,18 @@
                     "type": "number"
                 }
             },
-            "title": "RequestRetryOptions",
+            "title": "import(\"/home/foxx/code/multi-scrobbler/src/backend/common/infrastructure/config/common\",{assert:{\"resolution-mode\":\"import\"}}).RequestRetryOptions",
             "type": "object"
         }
     },
     "properties": {
         "clientDefaults": {
-            "$ref": "#/definitions/RequestRetryOptions",
+            "$ref": "#/definitions/import(\"/home/foxx/code/multi-scrobbler/src/backend/common/infrastructure/config/common\",{assert:{\"resolution-mode\":\"import\"}}).RequestRetryOptions",
             "title": "clientDefaults"
         },
         "clients": {
             "items": {
-                "$ref": "#/definitions/ClientAIOConfig"
+                "$ref": "#/definitions/import(\"/home/foxx/code/multi-scrobbler/src/backend/common/infrastructure/config/client/clients\",{assert:{\"resolution-mode\":\"import\"}}).ClientAIOConfig"
             },
             "title": "clients",
             "type": "array"
