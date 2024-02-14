@@ -454,7 +454,7 @@ export const setupApi = (app: ExpressWithAsync, logger: Logger, initialLogOutput
         const remote = req.connection.remoteAddress;
         const proxyRemote = req.headers["x-forwarded-for"];
         const ua = req.headers["user-agent"];
-        logger.debug(`Server received ${req.method} request from ${remote}${proxyRemote !== undefined ? ` (${proxyRemote})` : ''}${ua !== undefined ? ` (UA: ${ua})` : ''} to unknown route: ${req.url}`);
+        logger.debug(`Server received ${req.method} request from ${remote}${proxyRemote !== undefined ? ` (${proxyRemote})` : ''}${ua !== undefined ? ` (UA: ${ua})` : ''} to unknown route: ${req.originalUrl}`);
         return res.sendStatus(404);
     });
 }
