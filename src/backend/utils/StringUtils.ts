@@ -7,8 +7,8 @@ import {strategies} from '@foxxmd/string-sameness';
 const {levenStrategy, diceStrategy} = strategies;
 
 // cant use [^\w\s] because this also catches non-english characters
-export const SYMBOLS_WHITESPACE_REGEX = new RegExp(/[`=(){}<>;',.~!@#$%^&*_+|:"?\-\\\[\]\/\s]/g);
-export const SYMBOLS_REGEX = new RegExp(/[`=(){}<>;',.~!@#$%^&*_+|:"?\-\\\[\]\/]/g);
+export const SYMBOLS_WHITESPACE_REGEX = new RegExp(/[`=(){}<>;'’,.~!@#$%^&*_+|:"?\-\\\[\]\/\s]/g);
+export const SYMBOLS_REGEX = new RegExp(/[`=(){}<>;'’,.~!@#$%^&*_+|:"?\-\\\[\]\/]/g);
 
 export const MULTI_WHITESPACE_REGEX = new RegExp(/\s{2,}/g);
 export const uniqueNormalizedStrArr = (arr: string[]): string[] => {
