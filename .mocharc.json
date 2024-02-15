@@ -1,4 +1,5 @@
 {
   "reporter": "dot",
-  "require": ["tsx"]
+  "extension": "ts",
+  "import": "tsx/esm"
 }
