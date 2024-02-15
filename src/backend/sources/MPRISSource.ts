@@ -7,7 +7,6 @@ import {
     PLAYBACK_STATUS_STOPPED,
     PlaybackStatus,
     PlayerInfo,
-    PROPERTIES_IFACE,
 } from "../common/infrastructure/config/source/mpris.js";
 import { FormatPlayObjectOptions, InternalConfig } from "../common/infrastructure/Atomic.js";
 import MemorySource from "./MemorySource.js";
@@ -157,7 +156,7 @@ export class MPRISSource extends MemorySource {
         try {
             const pos = await props['Position'];
             // microseconds
-            return dayjs.duration({milliseconds: Number(pos.value / 1000000)}).asSeconds();
+            return dayjs.duration({milliseconds: Number(pos / 1000)}).asSeconds();
         } catch(e) {
             throw new ErrorWithCause('Could not get player Position', {cause: e});
         }
@@ -165,7 +164,7 @@ export class MPRISSource extends MemorySource {
 
     protected getPlayerStatus = async (props: DBusInterface): Promise<PlaybackStatus> => {
         try {
-            const status = await props['PlaybackStatus']; //Get(MPRIS_IFACE, 'PlaybackStatus');
+            const status = await props['PlaybackStatus'];
             return status as PlaybackStatus;
         } catch (e) {
             throw new ErrorWithCause('Could not get player PlaybackStatus', {cause: e})
@@ -174,7 +173,7 @@ export class MPRISSource extends MemorySource {
 
     protected getPlayerMetadata = async (props: DBusInterface): Promise<MPRISMetadata> => {
         try {
-            const metadata = await props['Metadata']; //.Get(MPRIS_IFACE, 'Metadata');
+            const metadata = await props['Metadata'];
             return this.metadataToPlain(metadata);
         } catch(e) {
             throw new ErrorWithCause('Could not get player Metadata', {cause: e});
@@ -191,7 +190,7 @@ export class MPRISSource extends MemorySource {
             }
             const plainKey = k.replace(/mpris:|xesam:/, '');
             if(plainKey === 'length' && typeof value === 'number') {
-                // microseconds
+                // microseconds to seconds
                 metadataPlain[plainKey] = value / 1000000
             } else {
                 metadataPlain[plainKey] = value;
