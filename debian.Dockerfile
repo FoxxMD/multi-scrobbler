@@ -57,10 +57,6 @@ ENV CONFIG_DIR=$data_dir
 
 COPY docker/root /
 
-RUN npm install -g  \
-    patch-package \
-    && chown -R root:root /usr/lib/node_modules/patch-package
-
 WORKDIR /app
 
 FROM base as build
