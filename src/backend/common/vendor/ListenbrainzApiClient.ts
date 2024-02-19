@@ -291,7 +291,7 @@ export class ListenbrainzApiClient extends AbstractApiClient {
         }
     }
 
-    static listenResponseToPlay = (listen: ListenResponse): PlayObject => {
+    static listenResponseToPlay(listen: ListenResponse): PlayObject {
         const {
             listened_at,
             track_metadata: {
@@ -512,7 +512,7 @@ export class ListenbrainzApiClient extends AbstractApiClient {
     /**
      * Try to parse true artists and track name without using MB information
      * */
-    static listenResponseToNaivePlay = (listen: ListenResponse): PlayObject => {
+    static listenResponseToNaivePlay(listen: ListenResponse): PlayObject {
         const {
             listened_at,
             recording_msid,
@@ -581,7 +581,7 @@ export class ListenbrainzApiClient extends AbstractApiClient {
         }
     }
 
-    static formatPlayObj = (obj: any, options: FormatPlayObjectOptions): PlayObject => {
+    static formatPlayObj(obj: any, options: FormatPlayObjectOptions): PlayObject {
         return ListenbrainzApiClient.listenResponseToPlay(obj);
     }
 }

@@ -47,7 +47,7 @@ export default class LastfmApiClient extends AbstractApiClient {
         this.client = new LastFm(apiKey as string, secret, session);
     }
 
-    static formatPlayObj = (obj: TrackObject, options: FormatPlayObjectOptions = {}): PlayObject => {
+    static formatPlayObj(obj: TrackObject, options: FormatPlayObjectOptions = {}): PlayObject {
         const {
             artist: {
                 '#text': artists,

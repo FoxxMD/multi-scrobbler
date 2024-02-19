@@ -27,7 +27,7 @@ export default abstract class AbstractApiClient {
         this.options = options;
     }
 
-    static formatPlayObj = (obj: any, options: FormatPlayObjectOptions): PlayObject => {
+    static formatPlayObj(obj: any, options: FormatPlayObjectOptions): PlayObject {
         throw new Error('should be overridden');
     }
 }
