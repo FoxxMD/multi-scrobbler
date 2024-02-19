@@ -5,11 +5,19 @@ import tsEslint from 'typescript-eslint';
 import arrow from 'eslint-plugin-prefer-arrow-functions';
 
 export default tsEslint.config(
+    eslint.configs.recommended,
+    ...tsEslint.configs.recommended,
+// use to enable typed linting (way more errors) https://typescript-eslint.io/linting/typed-linting
+/*    ...tsEslint.configs.recommendedTypeChecked,
     {
-        extends: [
-            eslint.configs.recommended,
-            ...tsEslint.configs.recommended,
-        ],
+        languageOptions: {
+            parserOptions: {
+                project: true,
+                tsconfigDirName: import.meta.dirname,
+            },
+        },
+    },*/
+    {
         files: ['src/backend/**/*.ts'],
         ignores: ['eslint.config.js'],
         plugins: {
