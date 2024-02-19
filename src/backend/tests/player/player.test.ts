@@ -8,7 +8,7 @@ import { playObjDataMatch } from "../../utils.js";
 import dayjs from "dayjs";
 import clone from "clone";
 
-const logger = getLogger({});
+const logger = getLogger({}, 'noop');
 
 const newPlay = generatePlay({duration: 300});
 

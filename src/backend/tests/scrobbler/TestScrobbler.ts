@@ -8,7 +8,7 @@ import request from "superagent";
 export class TestScrobbler extends AbstractScrobbleClient {
 
     constructor() {
-        const logger = getLogger({});
+        const logger = getLogger({}, 'noop');
         const notifier = new Notifiers(new EventEmitter(), new EventEmitter(), new EventEmitter());
         super('test', 'Test', {name: 'test'}, notifier, new EventEmitter(), logger);
     }
