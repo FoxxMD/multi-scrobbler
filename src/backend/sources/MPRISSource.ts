@@ -107,8 +107,8 @@ export class MPRISSource extends MemorySource {
     }
 
     protected listNew = async () => {
-        let iface = await this.getDBus();
-        let names = (await iface.ListNames())[0];
+        const iface = await this.getDBus();
+        const names = (await iface.ListNames())[0];
         return names.filter((n) => n.includes('org.mpris.MediaPlayer2'))
     }
 
@@ -123,7 +123,7 @@ export class MPRISSource extends MemorySource {
         for (const playerName of newList) {
             const plainPlayerName = playerName.replace('org.mpris.MediaPlayer2.', '');
             try {
-                let props = await busNew.getInterface(playerName, MPRIS_PATH, MPRIS_IFACE);
+                const props = await busNew.getInterface(playerName, MPRIS_PATH, MPRIS_IFACE);
                 // may not always have position available! can fallback to undefined for this
                 let pos: number | undefined;
                 try {
@@ -181,9 +181,9 @@ export class MPRISSource extends MemorySource {
     }
 
     metadataToPlain = (metadataVariant): MPRISMetadata => {
-        let metadataPlain = {};
-        for (let k of Object.keys(metadataVariant)) {
-            let value = metadataVariant[k];
+        const metadataPlain = {};
+        for (const k of Object.keys(metadataVariant)) {
+            const value = metadataVariant[k];
             if (value === undefined || value === null) {
                 //logging.warn(`ignoring a null metadata value for key ${k}`);
                 continue;
@@ -201,7 +201,7 @@ export class MPRISSource extends MemorySource {
 
     getRecentlyPlayed = async (options: RecentlyPlayedOptions = {}) => {
         const infos = await this.getPlayersInfo();
-        let plays: PlayObject[] = [];
+        const plays: PlayObject[] = [];
         for(const info of infos) {
             const lowerName = info.name.toLocaleLowerCase();
             if(this.whitelist.length > 0) {

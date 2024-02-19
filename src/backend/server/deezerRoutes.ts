@@ -18,7 +18,7 @@ export const setupDeezerRoutes = (app: ExpressWithAsync, logger: Logger, scrobbl
 
     // something about the deezer passport strategy makes express continue with the response even though it should wait for accesstoken callback and userprofile fetching
     // so to get around this add an additional middleware that loops/sleeps until we should have fetched everything ¯\_(ツ)_/¯
-    app.getAsync(/.*deezer\/callback*$/, function (req, res, next) {
+    app.getAsync(/.*deezer\/callback*$/, (req, res, next) => {
         if(req.url.indexOf('/api') !== 0) {
             return res.redirect(307, `/api${req.url}`);
         }
@@ -26,9 +26,9 @@ export const setupDeezerRoutes = (app: ExpressWithAsync, logger: Logger, scrobbl
         const entity = scrobbleSources.getByName(req.session.deezerSource as string);
         const passportFunc = passport.authenticate(`deezer-${entity.name}`, {session: false});
         return passportFunc(req, res, next);
-    }, async function (req, res) {
+    }, async (req, res) => {
         // @ts-expect-error TS(2339): Property 'deezerSource' does not exist on type 'Se... Remove this comment to see the full error message
-        let entity = scrobbleSources.getByName(req.session.deezerSource as string) as DeezerSource;
+        const entity = scrobbleSources.getByName(req.session.deezerSource as string) as DeezerSource;
         for(let i = 0; i < 3; i++) {
             if(entity.error !== undefined) {
                 return res.send('Error with deezer credentials storage');

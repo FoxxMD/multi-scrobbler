@@ -53,7 +53,7 @@ export class KodiSource extends MemorySource {
             return [];
         }
 
-        let play = await this.client.getRecentlyPlayed(options);
+        const play = await this.client.getRecentlyPlayed(options);
 
         return this.processRecentPlays(play);
     }

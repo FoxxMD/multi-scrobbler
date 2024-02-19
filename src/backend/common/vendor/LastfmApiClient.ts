@@ -61,7 +61,6 @@ export default class LastfmApiClient extends AbstractApiClient {
             },
             duration,
             date: {
-                // @ts-ignore
                 uts: time,
             } = {},
             '@attr': {
@@ -71,7 +70,7 @@ export default class LastfmApiClient extends AbstractApiClient {
             mbid,
         } = obj;
         // arbitrary decision yikes
-        let artistStrings = splitByFirstFound(artists, [','], [artistName]);
+        const artistStrings = splitByFirstFound(artists, [','], [artistName]);
         return {
             data: {
                 artists: [...new Set(artistStrings)] as string[],

@@ -10,7 +10,7 @@ import SpotifySource from "../sources/SpotifySource.js";
 
 export const setupAuthRoutes = (app: ExpressWithAsync, logger: Logger, sourceMiddle: ExpressHandler, clientMiddle: ExpressHandler, scrobbleSources: ScrobbleSources, scrobbleClients: ScrobbleClients) => {
     app.use('/api/client/auth', clientMiddle);
-    app.getAsync('/api/client/auth', async function (req, res) {
+    app.getAsync('/api/client/auth', async (req, res) => {
         const {
             scrobbleClient,
         } = req as any;
@@ -25,7 +25,7 @@ export const setupAuthRoutes = (app: ExpressWithAsync, logger: Logger, sourceMid
     });
 
     app.use('/api/source/auth', sourceMiddle);
-    app.getAsync('/api/source/auth', async function (req, res, next) {
+    app.getAsync('/api/source/auth', async (req, res, next) => {
         const {
             // @ts-expect-error TS(2339): Property 'scrobbleSource' does not exist on type '... Remove this comment to see the full error message
             scrobbleSource: source,
@@ -54,7 +54,7 @@ export const setupAuthRoutes = (app: ExpressWithAsync, logger: Logger, sourceMid
         }
     });
 
-    app.getAsync(/.*callback$/, async function (req, res, next) {
+    app.getAsync(/.*callback$/, async (req, res, next) => {
         if(req.url.indexOf('/api') !== 0) {
             return res.redirect(307, `/api${req.url}`);
         }

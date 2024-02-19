@@ -205,7 +205,7 @@ export abstract class AbstractPlayerState {
 
     public getPlayedObject(completed: boolean = false): PlayObject | undefined {
         if(this.currentPlay !== undefined) {
-            let ranges = [...this.listenRanges];
+            const ranges = [...this.listenRanges];
             if (this.currentListenRange !== undefined) {
                 ranges.push(this.currentListenRange);
             }
@@ -228,7 +228,7 @@ export abstract class AbstractPlayerState {
 
     public getListenDuration(): Second{
         let listenDur: number = 0;
-        let ranges = [...this.listenRanges];
+        const ranges = [...this.listenRanges];
         if (this.currentListenRange !== undefined) {
             ranges.push(this.currentListenRange);
         }
@@ -375,7 +375,7 @@ export abstract class AbstractPlayerState {
     }
 
     public textSummary() {
-        let parts = [''];
+        const parts = [''];
         let play: string;
         if (this.currentPlay !== undefined) {
             parts.push(`${buildTrackString(this.currentPlay, {include: ['trackId', 'artist', 'track']})} @ ${this.playFirstSeenAt.toISOString()}`);

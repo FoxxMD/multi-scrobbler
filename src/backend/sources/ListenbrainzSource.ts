@@ -78,7 +78,5 @@ export default class ListenbrainzSource extends MemorySource {
         }
     }
 
-    protected getBackloggedPlays = async () => {
-        return await this.getRecentlyPlayed({formatted: true});
-    }
+    protected getBackloggedPlays = async () => await this.getRecentlyPlayed({formatted: true})
 }

@@ -32,7 +32,7 @@ export default class LastfmScrobbler extends AbstractScrobbleClient {
 
     constructor(name: any, config: LastfmClientConfig, options = {}, notifier: Notifiers, emitter: EventEmitter, logger: Logger) {
         super('lastfm', name, config, notifier, emitter, logger);
-        // @ts-ignore
+        // @ts-expect-error sloppy data structure assign
         this.api = new LastfmApiClient(name, config.data, options)
     }
 
@@ -131,9 +131,7 @@ export default class LastfmScrobbler extends AbstractScrobbleClient {
         return track.toLocaleLowerCase().trim();
     }
 
-    alreadyScrobbled = async (playObj: PlayObject, log = false) => {
-        return (await this.existingScrobble(playObj)) !== undefined;
-    }
+    alreadyScrobbled = async (playObj: PlayObject, log = false) => (await this.existingScrobble(playObj)) !== undefined
 
     public playToClientPayload(playObject: PlayObject): object {
         return this.api.playToClientPayload(playObject);

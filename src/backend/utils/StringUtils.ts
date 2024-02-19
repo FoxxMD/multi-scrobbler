@@ -7,19 +7,17 @@ import {strategies} from '@foxxmd/string-sameness';
 const {levenStrategy, diceStrategy} = strategies;
 
 // cant use [^\w\s] because this also catches non-english characters
-export const SYMBOLS_WHITESPACE_REGEX = new RegExp(/[`=(){}<>;'’,.~!@#$%^&*_+|:"?\-\\\[\]\/\s]/g);
-export const SYMBOLS_REGEX = new RegExp(/[`=(){}<>;'’,.~!@#$%^&*_+|:"?\-\\\[\]\/]/g);
+export const SYMBOLS_WHITESPACE_REGEX = new RegExp(/[`=(){}<>;'’,.~!@#$%^&*_+|:"?\-\\[\]/\s]/g);
+export const SYMBOLS_REGEX = new RegExp(/[`=(){}<>;'’,.~!@#$%^&*_+|:"?\-\\[\]/]/g);
 
 export const MULTI_WHITESPACE_REGEX = new RegExp(/\s{2,}/g);
-export const uniqueNormalizedStrArr = (arr: string[]): string[] => {
-    return arr.reduce((acc: string[], curr) => {
+export const uniqueNormalizedStrArr = (arr: string[]): string[] => arr.reduce((acc: string[], curr) => {
         const normalizedCurr = normalizeStr(curr)
         if (!acc.some(x => normalizeStr(x) === normalizedCurr)) {
             return acc.concat(curr);
         }
         return acc;
-    }, []);
-}
+    }, [])
 // https://stackoverflow.com/a/37511463/1469797
 export const normalizeStr = (str: string, options?: {keepSingleWhitespace?: boolean}): string => {
     const {keepSingleWhitespace = false} = options || {};
@@ -46,7 +44,7 @@ export interface PlayCredits {
  *
  *
  * */
-export const SECONDARY_CAPTURED_REGEX = new RegExp(/[(\[]\s*(?<joiner>ft\.?\W|feat\.?\W|featuring|vs\.?\W)\s*(?<credits>.*)[)\]](?<creditsSuffix>.*)/i);
+export const SECONDARY_CAPTURED_REGEX = new RegExp(/[([]\s*(?<joiner>ft\.?\W|feat\.?\W|featuring|vs\.?\W)\s*(?<credits>.*)[)\]](?<creditsSuffix>.*)/i);
 
 
 /**
@@ -63,7 +61,7 @@ export const SECONDARY_CAPTURED_REGEX = new RegExp(/[(\[]\s*(?<joiner>ft\.?\W|fe
  *    !!!!  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ *******
  *
  * */
-export const SECONDARY_FREE_REGEX = new RegExp(/^\s*(?<joiner>ft\.?\W|feat\.?\W|featuring|vs\.?\W)\s*(?<credits>(?:.+?(?= - |\s*[(\[]))|(?:.*))(?<creditsSuffix>.*)/i);
+export const SECONDARY_FREE_REGEX = new RegExp(/^\s*(?<joiner>ft\.?\W|feat\.?\W|featuring|vs\.?\W)\s*(?<credits>(?:.+?(?= - |\s*[([]))|(?:.*))(?<creditsSuffix>.*)/i);
 
 const SECONDARY_REGEX_STRATS: RegExp[] = [SECONDARY_CAPTURED_REGEX, SECONDARY_FREE_REGEX];
 
@@ -78,7 +76,7 @@ const SECONDARY_REGEX_STRATS: RegExp[] = [SECONDARY_CAPTURED_REGEX, SECONDARY_FR
  *    ^^^^^^^^^^^^^^**********************************************
  *
  * */
-export const PRIMARY_SECONDARY_SECTIONS_REGEX = new RegExp(/^(?<primary>.+?)(?<secondary>(?:[(\[]?(?:\Wft\.?|\Wfeat\.?|featuring|\Wvs\.)).*)/i);
+export const PRIMARY_SECONDARY_SECTIONS_REGEX = new RegExp(/^(?<primary>.+?)(?<secondary>(?:[([]?(?:\Wft\.?|\Wfeat\.?|featuring|\Wvs\.)).*)/i);
 
 /**
  * For matching the most common track/artist pattern that has a joiner
@@ -184,9 +182,7 @@ export const parseStringList = (str: string, delimiters: string[] = [',', '&', '
         return explodedStrings.flat(1);
     }, [str]).map(x => x.trim());
 }
-export const containsDelimiters = (str: string) => {
-    return null !== str.match(/[,&\/\\]+/i);
-}
+export const containsDelimiters = (str: string) => null !== str.match(/[,&/\\]+/i)
 export const findDelimiters = (str: string) => {
     const found: string[] = [];
     for (const d of DELIMITERS) {

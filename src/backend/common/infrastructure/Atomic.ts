@@ -205,7 +205,7 @@ export interface numberFormatOptions {
     }
 }
 
-export const DELIMITERS = [',','&','\/','\\'];
+export const DELIMITERS = [',','&','/','\\'];
 
 export const ARTIST_WEIGHT = 0.3;
 export const TITLE_WEIGHT = 0.4;

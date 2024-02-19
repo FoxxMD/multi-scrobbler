@@ -77,9 +77,7 @@ export default class ListenbrainzScrobbler extends AbstractScrobbleClient {
         this.lastScrobbleCheck = dayjs();
     }
 
-    alreadyScrobbled = async (playObj: PlayObject, log = false) => {
-        return (await this.existingScrobble(playObj)) !== undefined;
-    }
+    alreadyScrobbled = async (playObj: PlayObject, log = false) => (await this.existingScrobble(playObj)) !== undefined
 
     public playToClientPayload(playObj: PlayObject): ListenPayload {
         return ListenbrainzApiClient.playToListenPayload(playObj);

@@ -1,5 +1,5 @@
 import {accessSync, constants, promises} from "fs";
-import dayjs from 'dayjs';
+import dayjs, {Dayjs} from 'dayjs';
 import utc from 'dayjs/plugin/utc.js';
 import {Logger} from '@foxxmd/winston';
 import JSON5 from 'json5';
@@ -135,8 +135,8 @@ export const sortByNewestPlayDate = (a: PlayObject, b: PlayObject) => {
 };
 
 export const setIntersection = (setA: any, setB: any) => {
-    let _intersection = new Set()
-    for (let elem of setB) {
+    const _intersection = new Set()
+    for (const elem of setB) {
         if (setA.has(elem)) {
             _intersection.add(elem)
         }
@@ -252,12 +252,11 @@ export const parseRetryAfterSecsFromObj = (err: any) => {
     }
 
     // first try to parse as float
-    let retryAfter = Number.parseFloat(raVal);
+    let retryAfter: number | Dayjs = Number.parseFloat(raVal);
     if (!isNaN(retryAfter)) {
         return retryAfter; // got a number!
     }
     // try to parse as date
-    // @ts-ignore
     retryAfter = dayjs(retryAfter);
     if (!dayjs.isDayjs(retryAfter)) {
         return undefined; // could not parse string if not in ISO 8601 format
@@ -278,7 +277,7 @@ export const spreadDelay = (retries: any, multiplier: any) => {
         return [];
     }
     let r;
-    let s = [];
+    const s = [];
     for(r = 0; r < retries; r++) {
         s.push(((r+1) * multiplier) * 1000);
     }
@@ -286,7 +285,7 @@ export const spreadDelay = (retries: any, multiplier: any) => {
 }
 
 export const removeUndefinedKeys = <T extends Record<string, any>>(obj: T): T | undefined => {
-    let newObj: any = {};
+    const newObj: any = {};
     Object.keys(obj).forEach((key) => {
         if(Array.isArray(obj[key])) {
             newObj[key] = obj[key];
@@ -366,7 +365,7 @@ export const validateJson = <T>(config: object, schema: Schema, logger: Logger):
         logger.error('Json config was not valid. Please use schema to check validity.', {leaf: 'Config'});
         if (Array.isArray(ajv.errors)) {
             for (const err of ajv.errors) {
-                let parts = [
+                const parts = [
                     `At: ${err.instancePath}`,
                 ];
                 let data;
@@ -379,9 +378,7 @@ export const validateJson = <T>(config: object, schema: Schema, logger: Logger):
                     parts.push(`Data: ${data}`);
                 }
                 let suffix = '';
-                // @ts-ignore
                 if (err.params.allowedValues !== undefined) {
-                    // @ts-ignore
                     suffix = err.params.allowedValues.join(', ');
                     suffix = ` [${suffix}]`;
                 }
@@ -727,7 +724,7 @@ export const durationToHuman = (dur: Duration): string => {
     return parts.join(' ');
 }
 export const getAddress = (host = '0.0.0.0', logger?: Logger): { v4?: string, v6?: string, host: string } => {
-    const local = host = '0.0.0.0' || host === '::' ? 'localhost' : host;
+    const local = host === '0.0.0.0' || host === '::' ? 'localhost' : host;
     let v4: string,
         v6: string;
     try {

@@ -137,9 +137,7 @@ export class WebScrobblerSource extends MemorySource {
         }
     }
 
-    getRecentlyPlayed = async (options = {}) => {
-        return this.getFlatRecentlyDiscoveredPlays();
-    }
+    getRecentlyPlayed = async (options = {}) => this.getFlatRecentlyDiscoveredPlays()
 
     isValidScrobble = (playObj: PlayObject) => {
         if (playObj.meta?.scrobbleAllowed === false) {

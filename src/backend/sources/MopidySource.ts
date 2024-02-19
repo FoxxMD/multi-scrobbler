@@ -57,7 +57,7 @@ export class MopidySource extends MemorySource {
         this.client = new Mopidy({
             autoConnect: false,
             webSocketUrl: this.url.toString(),
-            // @ts-ignore
+            // @ts-expect-error logger satisfies but is missing types not used
             console: winston.loggers.get('noop')
         });
         this.client.on('state:offline', () => {

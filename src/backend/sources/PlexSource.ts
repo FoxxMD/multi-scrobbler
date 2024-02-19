@@ -91,8 +91,7 @@ export default class PlexSource extends AbstractSource {
                 librarySectionTitle: library,
                 // plex returns the track artist as originalTitle (when there is an album artist)
                 // otherwise this is undefined
-                // @ts-expect-error
-                originalTitle: trackArtist
+                originalTitle: trackArtist = undefined
             } = {},
             Server: {
                 // @ts-expect-error TS(2525): Initializer provides no value for this binding ele... Remove this comment to see the full error message
@@ -104,8 +103,8 @@ export default class PlexSource extends AbstractSource {
             }
         } = obj;
 
-        let artists: string[] = [];
-        let albumArtists: string[] = [];
+        const artists: string[] = [];
+        const albumArtists: string[] = [];
         if(trackArtist !== undefined) {
             artists.push(trackArtist);
             albumArtists.push(artist);
@@ -241,13 +240,9 @@ export const plexRequestMiddle = () => {
         const form = formidable({
             allowEmptyFiles: true,
             multiples: true,
-            // issue with typings https://github.com/node-formidable/formidable/issues/821
-            // @ts-ignore
-            fileWriteStreamHandler: (file: any) => {
-                return concatStream((data: any) => {
+            fileWriteStreamHandler: (file: any) => concatStream((data: any) => {
                     file.buffer = data;
-                });
-            }
+                })
         });
         form.on('progress', (received: any, expected: any) => {
             plexLog.debug(`Received ${received} bytes of expected ${expected}`);

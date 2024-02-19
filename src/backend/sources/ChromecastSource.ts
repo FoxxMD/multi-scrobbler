@@ -246,11 +246,11 @@ export class ChromecastSource extends MemorySource {
 
     protected initializeClientPlatform = async (device: MdnsDeviceInfo): Promise<[CastClient, PersistentClient, PlatformType]> => {
 
-        let index = 0;
+        const index = 0;
         for(const address of device.addresses) {
 
-            let castClient = new CastClient;
-            let client: PersistentClient = new PersistentClient({host: address, client: castClient});
+            const castClient = new CastClient;
+            const client: PersistentClient = new PersistentClient({host: address, client: castClient});
             client.on('connect', () => this.handleCastClientEvent(device.name, 'connect'));
             client.on('reconnect', () => this.handleCastClientEvent(device.name, 'reconnect'));
             client.on('reconnecting', () => this.handleCastClientEvent(device.name, 'reconnecting'));
@@ -351,7 +351,7 @@ export class ChromecastSource extends MemorySource {
                 let storedApp = v.applications.get(a.transportId);
                 if(!storedApp) {
                     const appName = a.displayName;
-                    let found = `Found Application '${appName}-${a.transportId.substring(0, 4)}'`;
+                    const found = `Found Application '${appName}-${a.transportId.substring(0, 4)}'`;
                     const appLowerName = appName.toLocaleLowerCase();
                     let filtered = false;
                     let valid = true;
@@ -489,7 +489,7 @@ export class ChromecastSource extends MemorySource {
     }
 
     getRecentlyPlayed = async (options: RecentlyPlayedOptions = {}) => {
-        let plays: SourceData[] = [];
+        const plays: SourceData[] = [];
 
         try {
             await this.refreshApplications();
@@ -667,9 +667,10 @@ export class ChromecastSource extends MemorySource {
 
         let artists: string[] = [],
             albumArtists: string[] = [],
-            track: string = (title ?? songName) as string,
-            album: string = (albumNorm ?? albumName) as string,
             mediaType: string = 'unknown';
+
+            const track: string = (title ?? songName) as string;
+            const album: string = (albumNorm ?? albumName) as string;
 
         if(artist !== undefined) {
             artists = [artist as string];

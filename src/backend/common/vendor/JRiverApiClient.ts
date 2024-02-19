@@ -140,7 +140,7 @@ export class JRiverApiClient extends AbstractApiClient {
 
     testAuth = async () => {
         try {
-            let req = request.get(`${this.url}Authenticate`);
+            const req = request.get(`${this.url}Authenticate`);
             if (this.config.username !== undefined) {
                 req.auth(this.config.username, this.config.password);
             }

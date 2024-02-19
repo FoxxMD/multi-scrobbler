@@ -251,9 +251,7 @@ export default class JellyfinSource extends MemorySource {
         return true;
     }
 
-    getRecentlyPlayed = async (options = {}) => {
-        return this.getFlatRecentlyDiscoveredPlays();
-    }
+    getRecentlyPlayed = async (options = {}) => this.getFlatRecentlyDiscoveredPlays()
 
     handle = async (playObj: PlayObject) => {
         if (!this.isValidEvent(playObj)) {
@@ -366,7 +364,5 @@ export default class JellyfinSource extends MemorySource {
         }
     }
 
-    getNewPlayer = (logger: Logger, id: PlayPlatformId, opts: PlayerStateOptions) => {
-        return new JellyfinPlayerState(logger, id, opts);
-    }
+    getNewPlayer = (logger: Logger, id: PlayPlatformId, opts: PlayerStateOptions) => new JellyfinPlayerState(logger, id, opts)
 }

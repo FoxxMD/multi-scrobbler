@@ -18,17 +18,17 @@ export const setupJellyfinRoutes = (app: ExpressWithAsync, logger: Logger, scrob
         // }
     });
     const jellyIngress = new JellyfinNotifier();
-    app.postAsync('/jellyfin', async function(req, res)  {
+    app.postAsync('/jellyfin', async (req, res) => {
         res.redirect(307, '/api/jellyfin/ingress');
     });
     app.postAsync('/api/jellyfin/ingress',
-        async function (req, res, next) {
+        async (req, res, next) => {
             // track request before parsing body to ensure we at least log that something is happening
             // (in the event body parsing does not work or request is not POST/PATCH)
             jellyIngress.trackIngress(req, true);
             next();
         },
-        jellyfinJsonParser, async function (req, res) {
+        jellyfinJsonParser, async (req, res) => {
             jellyIngress.trackIngress(req, false);
 
             res.send('OK');
@@ -59,8 +59,6 @@ export const setupJellyfinRoutes = (app: ExpressWithAsync, logger: Logger, scrob
             }
             const logPayload = pSources.some(x => {
                 const {
-                    data: {
-                    } = {},
                     options: {
                         logPayload = parseBool(process.env.DEBUG_MODE)
                     } = {}

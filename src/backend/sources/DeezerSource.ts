@@ -42,7 +42,7 @@ export default class DeezerSource extends AbstractSource {
             this.logger.warn('Interval should be above 30 seconds...😬');
         }
 
-        // @ts-ignore
+        // @ts-expect-error not correct structure
         this.config.data = {
             ...rest,
             interval,
@@ -138,9 +138,7 @@ export default class DeezerSource extends AbstractSource {
         }
     }
 
-    getUpstreamRecentlyPlayed = async (options: RecentlyPlayedOptions = {}): Promise<PlayObject[]> => {
-        return this.getRecentlyPlayed(options);
-    }
+    getUpstreamRecentlyPlayed = async (options: RecentlyPlayedOptions = {}): Promise<PlayObject[]> => this.getRecentlyPlayed(options)
 
     getRecentlyPlayed = async (options: RecentlyPlayedOptions = {}) => {
         const resp = await this.callApi(request.get(`${this.baseUrl}/user/me/history?limit=20`));
@@ -208,15 +206,14 @@ export default class DeezerSource extends AbstractSource {
                 } = {},
                 response,
             } = e;
-            let msg = response !== undefined ? `API Call failed: Server Response => ${ssMessage}` : `API Call failed: ${message}`;
+            const msg = response !== undefined ? `API Call failed: Server Response => ${ssMessage}` : `API Call failed: ${message}`;
             const responseMeta = ssResp ?? text;
             this.logger.error(msg, {status, response: responseMeta});
             throw e;
         }
     }
 
-    generatePassportStrategy = () => {
-        return new DeezerStrategy({
+    generatePassportStrategy = () => new DeezerStrategy({
             clientID: this.config.data.clientId,
             clientSecret: this.config.data.clientSecret,
             callbackURL: this.redirectUri,
@@ -237,8 +234,7 @@ export default class DeezerSource extends AbstractSource {
                 }
                 return done(r);
             });
-        });
-    }
+        })
 
     handleAuthCodeCallback = async (res: any) => {
         const {error, accessToken, id, displayName} = res;
@@ -259,7 +255,5 @@ export default class DeezerSource extends AbstractSource {
         }
     }
 
-    protected getBackloggedPlays = async () => {
-        return await this.getRecentlyPlayed({formatted: true});
-    }
+    protected getBackloggedPlays = async () => await this.getRecentlyPlayed({formatted: true})
 }

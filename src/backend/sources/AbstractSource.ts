@@ -182,17 +182,11 @@ export default abstract class AbstractSource implements Authenticatable {
         return;
     }
 
-    authGated = () => {
-        return this.requiresAuth && !this.authed;
-    }
+    authGated = () => this.requiresAuth && !this.authed
 
-    canTryAuth = () => {
-        return this.authGated() && this.authFailure !== true;
-    }
+    canTryAuth = () => this.authGated() && this.authFailure !== true
 
-    protected doAuthentication = async (): Promise<boolean> => {
-        return this.authed;
-    }
+    protected doAuthentication = async (): Promise<boolean> => this.authed
 
     testAuth = async () => {
         if(!this.requiresAuth) {
@@ -218,9 +212,7 @@ export default abstract class AbstractSource implements Authenticatable {
             && !this.authGated();
     }
 
-    getRecentlyPlayed = async (options: RecentlyPlayedOptions = {}): Promise<PlayObject[]> => {
-        return [];
-    }
+    getRecentlyPlayed = async (options: RecentlyPlayedOptions = {}): Promise<PlayObject[]> => []
 
     getUpstreamRecentlyPlayed = async (options: RecentlyPlayedOptions = {}): Promise<PlayObject[]> => {
         throw new Error('Not implemented');
@@ -233,9 +225,7 @@ export default abstract class AbstractSource implements Authenticatable {
     // by default if the track was recently played it is valid
     // this is useful for sources where the track doesn't have complete information like Subsonic
     // TODO make this more descriptive? or move it elsewhere
-    recentlyPlayedTrackIsValid = (playObj: PlayObject) => {
-        return true;
-    }
+    recentlyPlayedTrackIsValid = (playObj: PlayObject) => true
 
     protected addPlayToDiscovered = (play: PlayObject) => {
         const platformId = this.multiPlatform ? genGroupId(play) : SINGLE_USER_PLATFORM_ID;
@@ -247,10 +237,9 @@ export default abstract class AbstractSource implements Authenticatable {
         this.emitEvent('discovered', {play});
     }
 
-    getFlatRecentlyDiscoveredPlays = (): PlayObject[] => {
-        // @ts-ignore
-        return Array.from(this.recentDiscoveredPlays.values()).map(x => x.data).flat(3).sort(sortByNewestPlayDate);
-    }
+    getFlatRecentlyDiscoveredPlays = (): PlayObject[] =>
+         Array.from(this.recentDiscoveredPlays.values()).map(x => x.data).flat(3).sort(sortByNewestPlayDate)
+    
 
     getRecentlyDiscoveredPlaysByPlatform = (platformId: PlayPlatformId): PlayObject[] => {
         const list = this.recentDiscoveredPlays.get(platformId);
@@ -263,7 +252,7 @@ export default abstract class AbstractSource implements Authenticatable {
     }
 
     existingDiscovered = (play: PlayObject, opts: {checkAll?: boolean} = {}): PlayObject | undefined => {
-        let lists: PlayObject[][] = [];
+        const lists: PlayObject[][] = [];
         if(opts.checkAll !== true) {
             lists.push(this.getRecentlyDiscoveredPlaysByPlatform(this.multiPlatform ? genGroupId(play) : SINGLE_USER_PLATFORM_ID));
         } else {
@@ -366,13 +355,9 @@ export default abstract class AbstractSource implements Authenticatable {
         this.emitter.emit('notify', payload);
     }
 
-    onPollPreAuthCheck = async (): Promise<boolean> => {
-        return true;
-    }
+    onPollPreAuthCheck = async (): Promise<boolean> => true
 
-    onPollPostAuthCheck = async (): Promise<boolean> => {
-        return true;
-    }
+    onPollPostAuthCheck = async (): Promise<boolean> => true
 
     poll = async () => {
         if(!(await this.onPollPreAuthCheck())) {

@@ -23,13 +23,13 @@ export const setupWebscrobblerRoutes = (app: ExpressWithAsync, parentLogger: Log
     });
     const webhookIngress = new WebhookNotifier();
     app.postAsync('/api/webscrobbler*',
-        async function (req, res, next) {
+        async (req, res, next) => {
             // track request before parsing body to ensure we at least log that something is happening
             // (in the event body parsing does not work or request is not POST/PATCH)
             webhookIngress.trackIngress(req, true);
             next();
         },
-        webScrobblerJsonParser, nonEmptyBody(logger, 'WebScrobbler Extension'), async function (req, res) {
+        webScrobblerJsonParser, nonEmptyBody(logger, 'WebScrobbler Extension'), async (req, res) => {
             webhookIngress.trackIngress(req, false);
 
             res.sendStatus(200);

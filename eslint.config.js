@@ -11,6 +11,7 @@ export default tsEslint.config(
             ...tsEslint.configs.recommended,
         ],
         files: ['src/backend/**/*.ts'],
+        ignores: ['eslint.config.js'],
         plugins: {
             "prefer-arrow-functions": arrow
         },
@@ -27,7 +28,8 @@ export default tsEslint.config(
                     "singleReturnOnly": false
                 }
             ],
-            "arrow-body-style": ["warn", "as-needed"]
+            "arrow-body-style": ["warn", "as-needed"],
+            "@typescript-eslint/no-explicit-any": "warn"
         }
     }
 );

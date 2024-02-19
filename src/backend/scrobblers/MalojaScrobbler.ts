@@ -106,7 +106,7 @@ export default class MalojaScrobbler extends AbstractScrobbleClient {
             duration = mDuration;
             time = mTime;
         }
-        let artistStrings = artists.reduce((acc: any, curr: any) => {
+        const artistStrings = artists.reduce((acc: any, curr: any) => {
             let aString;
             if (typeof curr === 'string') {
                 aString = curr;
@@ -375,9 +375,7 @@ export default class MalojaScrobbler extends AbstractScrobbleClient {
         return lowerTitle;
     }
 
-    alreadyScrobbled = async (playObj: any, log = false) => {
-        return (await this.existingScrobble(playObj)) !== undefined;
-    }
+    alreadyScrobbled = async (playObj: any, log = false) => (await this.existingScrobble(playObj)) !== undefined
 
     public playToClientPayload(playObj: PlayObject): MalojaScrobbleRequestData {
 

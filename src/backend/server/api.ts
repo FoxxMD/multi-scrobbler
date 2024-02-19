@@ -81,7 +81,7 @@ export const setupApi = (app: ExpressWithAsync, logger: Logger, initialLogOutput
     let logObjectStream: Transform;
     try {
         logObjectStream = new Transform({
-            transform(chunk, e, cb) {
+            transform: (chunk, e, cb) => {
                 cb(null, chunk)
             },
             objectMode: true,
@@ -109,13 +109,13 @@ export const setupApi = (app: ExpressWithAsync, logger: Logger, initialLogOutput
     const sourceRequiredMiddle = sourceMiddleFunc(true);
 
     const setLogWebSettings: ExpressHandler = async (req, res, next) => {
-        // @ts-ignore
+        // @ts-expect-error logLevel not part of session
         const sessionLevel: LogLevel | undefined = req.session.logLevel as LogLevel | undefined;
         if(sessionLevel !== undefined && logConfig.level !== sessionLevel) {
             logConfig.level = sessionLevel;
         }
-        // @ts-ignore
-        const sessionLimit: number | undefined = req.session.limit as Number | undefined;
+        // @ts-expect-error limit not part of session
+        const sessionLimit: number | undefined = req.session.limit as number | undefined;
         if(sessionLimit !== undefined && logConfig.limit !== sessionLimit) {
             logConfig.limit = sessionLimit;
         }
@@ -137,9 +137,9 @@ export const setupApi = (app: ExpressWithAsync, logger: Logger, initialLogOutput
         logConfig.level = req.body.level as LogLevel | undefined ?? logConfig.level;
         logConfig.limit = req.body.limit ?? logConfig.limit;
         const slicedLog = getLogs(logConfig.level, logConfig.limit + 1, logConfig.sort === 'ascending' ? 'asc' : 'desc');
-        // @ts-ignore
+        // @ts-expect-error logLevel not part of session
         req.session.logLevel = logConfig.level;
-        // @ts-ignore
+        // @ts-expect-error limit not part of session
         req.session.limit = logConfig.limit;
         const jsonLogs: LogInfoJson[] = slicedLog.map(x => ({...x, formattedMessage: x[MESSAGE]}));
         return res.json({data: jsonLogs, settings: logConfig});
@@ -295,7 +295,7 @@ export const setupApi = (app: ExpressWithAsync, logger: Logger, initialLogOutput
             scrobbleClient: client,
         } = req;
 
-        let result: DeadLetterScrobble<PlayObject>[] = (client as AbstractScrobbleClient).deadLetterScrobbles;
+        const result: DeadLetterScrobble<PlayObject>[] = (client as AbstractScrobbleClient).deadLetterScrobbles;
 
         return res.json(result);
     });
@@ -310,7 +310,7 @@ export const setupApi = (app: ExpressWithAsync, logger: Logger, initialLogOutput
 
         await (client as AbstractScrobbleClient).processDeadLetterQueue(1000);
 
-        let result: DeadLetterScrobble<PlayObject>[] = (client as AbstractScrobbleClient).deadLetterScrobbles;
+        const result: DeadLetterScrobble<PlayObject>[] = (client as AbstractScrobbleClient).deadLetterScrobbles;
 
         return res.json(result);
     });
@@ -383,7 +383,7 @@ export const setupApi = (app: ExpressWithAsync, logger: Logger, initialLogOutput
 
     app.getAsync('/api/scrobbled', clientMiddleFunc(false), async (req, res, next) => {
         const {
-            // @ts-ignore
+            // @ts-expect-error scrobbleClient not part of req
             scrobbleClient: client,
         } = req;
 
@@ -396,7 +396,7 @@ export const setupApi = (app: ExpressWithAsync, logger: Logger, initialLogOutput
     });
 
     app.use('/api/poll', sourceRequiredMiddle);
-    app.getAsync('/api/poll', async function (req, res) {
+    app.getAsync('/api/poll', async (req, res) => {
         // @ts-expect-error TS(2339): Property 'scrobbleSource' does not exist on type '... Remove this comment to see the full error message
         const source = req.scrobbleSource as AbstractSource;
         source.logger.debug('User requested (re)start via API call');
@@ -419,7 +419,7 @@ export const setupApi = (app: ExpressWithAsync, logger: Logger, initialLogOutput
     });
 
     app.use('/api/client/init', clientRequiredMiddle);
-    app.postAsync('/api/client/init', async function (req, res) {
+    app.postAsync('/api/client/init', async (req, res) => {
         // @ts-expect-error TS(2339): Property 'scrobbleSource' does not exist on type '... Remove this comment to see the full error message
         const client = req.scrobbleClient as AbstractScrobbleClient;
         client.logger.debug('User requested (re)start via API call');
@@ -434,10 +434,8 @@ export const setupApi = (app: ExpressWithAsync, logger: Logger, initialLogOutput
         res.status(200).send('OK');
     });
 
-    app.getAsync('/health', async function(req, res)  {
-        return res.redirect(307, `/api/${req.url.slice(1)}`);
-    });
-    app.getAsync('/api/health', async function (req, res) {
+    app.getAsync('/health', async (req, res) => res.redirect(307, `/api/${req.url.slice(1)}`));
+    app.getAsync('/api/health', async (req, res) => {
         const {
             type,
             name
@@ -450,7 +448,7 @@ export const setupApi = (app: ExpressWithAsync, logger: Logger, initialLogOutput
         return res.status((clientsReady && sourcesReady) ? 200 : 500).json({messages: sourceMessages.concat(clientMessages)});
     });
 
-    app.useAsync('/api/*', async function (req, res) {
+    app.useAsync('/api/*', async (req, res) => {
         const remote = req.connection.remoteAddress;
         const proxyRemote = req.headers["x-forwarded-for"];
         const ua = req.headers["user-agent"];

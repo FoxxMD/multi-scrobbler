@@ -88,7 +88,7 @@ export class SubsonicSource extends MemorySource {
             //queryOpts.p = password;
             queryOpts.p = `enc:${Buffer.from(password).toString('hex')}`
         } else {
-            const salt = await crypto.randomBytes(10).toString('hex');
+            const salt = crypto.randomBytes(10).toString('hex');
             const hash = crypto.createHash('md5').update(`${password}${salt}`).digest('hex')
             queryOpts.t = hash;
             queryOpts.s = salt;
@@ -152,7 +152,7 @@ export class SubsonicSource extends MemorySource {
                 }
             }
 
-            // @ts-ignore
+            // @ts-expect-error it is assignable to T idk
             return ssResp;
         } catch (e) {
             if(e instanceof UpstreamError) {
@@ -247,14 +247,12 @@ export class SubsonicSource extends MemorySource {
     }
 }
 
-export const getSubsonicResponseFromError = (error: unknown): UpstreamError => {
-    return findCauseByFunc(error, (err) => {
+export const getSubsonicResponseFromError = (error: unknown): UpstreamError => findCauseByFunc(error, (err) => {
         if(err instanceof UpstreamError && err.response !== undefined) {
             return getSubsonicResponse(err.response) !== undefined;
         }
         return false;
-    }) as UpstreamError | undefined;
-}
+    }) as UpstreamError | undefined
 
 export const parseApiResponseErrorToThrowable = (resp: SubsonicResponse) => {
     const {

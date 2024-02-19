@@ -1,3 +1,4 @@
+/* eslint-disable no-case-declarations */
 import dayjs, {Dayjs} from "dayjs";
 import {
     createAjvFactory,
@@ -55,13 +56,9 @@ export default class ScrobbleClients {
         });
     }
 
-    getByName = (name: any) => {
-        return this.clients.find(x => x.name === name);
-    }
+    getByName = (name: any) => this.clients.find(x => x.name === name)
 
-    getByType = (type: any) => {
-        return this.clients.filter(x => x.type === type);
-    }
+    getByType = (type: any) => this.clients.filter(x => x.type === type)
 
     async getStatusSummary(type?: string, name?: string): Promise<[boolean, string[]]> {
         let clients: AbstractScrobbleClient[];
@@ -88,7 +85,7 @@ export default class ScrobbleClients {
     }
 
     buildClientsFromConfig = async (notifier: Notifiers) => {
-        let configs: ParsedConfig[] = [];
+        const configs: ParsedConfig[] = [];
 
         let configFile;
         try {
@@ -127,7 +124,7 @@ export default class ScrobbleClients {
         }
 
         for (const clientType of clientTypes) {
-            let defaultConfigureAs = 'client';
+            const defaultConfigureAs = 'client';
             switch (clientType) {
                 case 'maloja':
                     // env builder for single user mode
@@ -142,7 +139,6 @@ export default class ScrobbleClients {
                             configureAs: 'client',
                             data: {
                                 url,
-                                // @ts-ignore
                                 apiKey
                             }
                         })
@@ -162,7 +158,6 @@ export default class ScrobbleClients {
                             source: 'ENV',
                             mode: 'single',
                             configureAs: 'client',
-                            // @ts-ignore
                             data: {...lfm, redirectUri: lfm.redirectUri ?? `${this.localUrl}/lastfm/callback`}
                         })
                     }
@@ -180,7 +175,6 @@ export default class ScrobbleClients {
                             source: 'ENV',
                             mode: 'single',
                             configureAs: 'client',
-                            // @ts-ignore
                             data: lz
                         })
                     }
@@ -211,7 +205,7 @@ export default class ScrobbleClients {
                 for(const [i,rawConf] of rawClientConfigs.entries()) {
                     try {
                         const validConfig = validateJson<ClientConfig>(rawConf, clientSchema, this.logger);
-                        // @ts-ignore
+                        // @ts-expect-error configureAs should exist
                         const {configureAs = defaultConfigureAs} = validConfig;
                         if (configureAs === 'client') {
                             const parsedConfig: ParsedConfig = {

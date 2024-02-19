@@ -16,7 +16,7 @@ export class TautulliNotifier extends IngressNotifier {
 
             if(!this.seenServers.includes(playObj.meta.server)) {
                 this.seenServers.push(playObj.meta.server);
-                let msg = [`Received data from server ${playObj.meta.server} for the first time.`];
+                const msg = [`Received data from server ${playObj.meta.server} for the first time.`];
                 if(req.body === undefined) {
                     msg.push('WARNING: Payload was empty.');
                 }

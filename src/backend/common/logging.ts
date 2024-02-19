@@ -60,7 +60,7 @@ export const getLogger = (config: LogConfig = {}, name = 'app'): winstonNs.Logge
         const myTransports: TransportStream[] = [
             new DuplexTransport({
                 stream: {
-                    transform(chunk, e, cb) {
+                    transform: (chunk, e, cb) => {
                         cb(null, chunk);
                     },
                     objectMode: true,
@@ -90,10 +90,9 @@ export const getLogger = (config: LogConfig = {}, name = 'app'): winstonNs.Logge
 
             try {
                 fileOrDirectoryIsWriteable(logPath);
-                // @ts-ignore
                 myTransports.push(rotateTransport);
             } catch (e: any) {
-                let msg = 'WILL NOT write logs to rotating file due to an error while trying to access the specified logging directory';
+                const msg = 'WILL NOT write logs to rotating file due to an error while trying to access the specified logging directory';
                 errors.push(new ErrorWithCause<Error>(msg, {cause: e}));
             }
         }
@@ -156,7 +155,7 @@ export const defaultFormat = (defaultLabel = 'App') => printf(({
                                                                    ...rest
                                                                }) => {
     const keys = Object.keys(rest);
-    let stringifyValue = keys.length > 0 && !keys.every(x => causeKeys.some(y => y == x)) ? stringify.default(rest) : '';
+    const stringifyValue = keys.length > 0 && !keys.every(x => causeKeys.some(y => y == x)) ? stringify.default(rest) : '';
     let msg = message;
     let stackMsg = '';
     if (stack !== undefined) {
@@ -174,7 +173,7 @@ export const defaultFormat = (defaultLabel = 'App') => printf(({
         }
     }
 
-    let nodes = Array.isArray(labels) ? labels : [labels];
+    const nodes = Array.isArray(labels) ? labels : [labels];
     if (leaf !== null && leaf !== undefined && !nodes.includes(leaf)) {
         nodes.push(leaf);
     }
@@ -221,7 +220,6 @@ export const logLevels = {
 
 export const LOG_LEVEL_REGEX: RegExp = /\s*(debug|warn|info|error|verbose)\s*:/i
 export const isLogLineMinLevel = (log: string | LogInfo, minLevelText: LogLevel): boolean => {
-    // @ts-ignore
     const minLevel = logLevels[minLevelText];
     let level: number;
 
@@ -230,19 +228,15 @@ export const isLogLineMinLevel = (log: string | LogInfo, minLevelText: LogLevel)
         if (lineLevelMatch === null) {
             return false;
         }
-        // @ts-ignore
         level = logLevels[lineLevelMatch[1]];
     } else {
         const lineLevelMatch = log.level;
-        // @ts-ignore
         level = logLevels[lineLevelMatch];
     }
     return level <= minLevel;
 }
 
-export const isLogLevelMinLevel = (levelStr: LogLevel, minLevelStr: LogLevel): boolean => {
-    return logLevels[levelStr] <= logLevels[minLevelStr];
-}
+export const isLogLevelMinLevel = (levelStr: LogLevel, minLevelStr: LogLevel): boolean => logLevels[levelStr] <= logLevels[minLevelStr]
 
 const isProbablyError = (val: any, explicitErrorName?: string) => {
     if(typeof val !== 'object' || val === null) {
@@ -281,12 +275,10 @@ const errorAwareFormat = {
         if (isProbablyError(einfo)) {
             const tinfo = transformError(einfo);
             info = Object.assign({}, tinfo, {
-                // @ts-ignore
                 level: einfo.level,
-                // @ts-ignore
                 [LEVEL]: einfo[LEVEL] || einfo.level,
                 message: tinfo.message,
-                // @ts-ignore
+
                 [MESSAGE]: tinfo[MESSAGE] || tinfo.message
             });
             if(includeStack) {
@@ -294,20 +286,17 @@ const errorAwareFormat = {
                 const dummyErr = new ErrorWithCause('');
                 const names = Object.getOwnPropertyNames(tinfo);
                 for(const k of names) {
+                    // eslint-disable-next-line no-prototype-builtins
                     if(dummyErr.hasOwnProperty(k) || k === 'cause') {
-                        // @ts-ignore
                         dummyErr[k] = tinfo[k];
                     }
                 }
-                // @ts-ignore
                 info.stack = stackWithCauses(dummyErr);
             }
         } else {
             const err = transformError(einfo.message);
             info = Object.assign({}, einfo, err);
-            // @ts-ignore
             info.message = err.message;
-            // @ts-ignore
             info[MESSAGE] = err.message;
 
             if(includeStack) {
@@ -316,12 +305,11 @@ const errorAwareFormat = {
                 // https://stackoverflow.com/a/18278145/1469797
                 const names = Object.getOwnPropertyNames(err);
                 for(const k of names) {
+                    // eslint-disable-next-line no-prototype-builtins
                     if(dummyErr.hasOwnProperty(k) || k === 'cause') {
-                        // @ts-ignore
                         dummyErr[k] = err[k];
                     }
                 }
-                // @ts-ignore
                 info.stack = stackWithCauses(dummyErr);
             }
         }
@@ -350,14 +338,13 @@ const _transformError = (err: Error, seen: Set<Error>) => {
 
     try {
 
-        // @ts-ignore
-        let mOpts = err.matchOptions ?? matchOptions;
+        // @ts-expect-error type missing expected props
+        const mOpts = err.matchOptions ?? matchOptions;
 
-        // @ts-ignore
         const cause = err.cause as unknown;
 
         if (cause !== undefined && cause instanceof Error) {
-            // @ts-ignore
+            // @ts-expect-error type missing expected props
             err.cause = _transformError(cause, seen, mOpts);
         }
 

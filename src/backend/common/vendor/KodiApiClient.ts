@@ -99,8 +99,8 @@ export class KodiApiClient extends AbstractApiClient {
             playerid,
         } = obj;
 
-        let artists = artistVal === null || artistVal === undefined ? [] : artistVal;
-        let album = albumVal === null || albumVal === '' ? undefined : albumVal;
+        const artists = artistVal === null || artistVal === undefined ? [] : artistVal;
+        const album = albumVal === null || albumVal === '' ? undefined : albumVal;
         const trackProgressPosition = time !== undefined ? Math.round(dayjs.duration(time).asSeconds()) : undefined;
 
         return {
@@ -150,14 +150,14 @@ export class KodiApiClient extends AbstractApiClient {
 
     getPlayerInfo = async (id: number): Promise<PlayerInfo> => {
         // https://kodi.wiki/view/JSON-RPC_API/v12#Player.GetProperties
-        // @ts-ignore
+        // @ts-expect-error types are wrong
         const playerInfo = await this.client.Player.GetProperties(0, ["position","type","time","totaltime"])
         return playerInfo;
     }
 
     getPlayerItem = async (id: number): Promise<{item: PlayerItem}> => {
         // https://kodi.wiki/view/JSON-RPC_API/v12#Player.GetItem
-        // @ts-ignore
+        // @ts-expect-error types are wrong
         const itemInfo = await this.client.Player.GetItem(0, ["title","artist","album","albumartist","starttime","endtime","duration","streamdetails","uniqueid"]);
         return itemInfo as {item: PlayerItem};
     }

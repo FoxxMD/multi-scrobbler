@@ -150,7 +150,7 @@ export class ListenbrainzApiClient extends AbstractApiClient {
             if(status !== undefined) {
                 const msgParts = [`(HTTP Status ${status})`];
                 // if the response is 400 then its likely there was an issue with the data we sent rather than an error with the service
-                let showStopper = status !== 400;
+                const showStopper = status !== 400;
                 if(body !== undefined) {
                     if(typeof body === 'object') {
                         if('code' in body) {
@@ -392,7 +392,7 @@ export class ListenbrainzApiClient extends AbstractApiClient {
             }
 
             // now try to extract any remaining artists from filtered artist/name values
-            let parsedArtists = parseArtistCredits(filteredSubmittedArtistName);
+            const parsedArtists = parseArtistCredits(filteredSubmittedArtistName);
             if (parsedArtists !== undefined) {
                 if (parsedArtists.primary !== undefined) {
                     artistsFromUserValues.push(parsedArtists.primary);

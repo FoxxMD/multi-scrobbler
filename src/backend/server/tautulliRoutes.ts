@@ -43,7 +43,7 @@ export const setupTautulliRoutes = (app: ExpressWithAsync, logger: Logger, scrob
         res.send('OK');
     };
 
-    app.postAsync('/tautulli', async function(req, res)  {
+    app.postAsync('/tautulli', async (req, res) => {
         res.redirect(307, '/api/tautulli/ingress');
     });
     app.postAsync('/api/tautulli/ingress', tautulliIngressRoute);
