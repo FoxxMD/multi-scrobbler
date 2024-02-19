@@ -113,6 +113,7 @@
   "devDependencies": {
     "@dbus-types/dbus": "^0.0.4",
     "@dbus-types/notifications": "^0.0.5",
+    "@eslint/js": "^8.56.0",
     "@faker-js/faker": "^8.1.0",
     "@istanbuljs/nyc-config-typescript": "^1.0.2",
     "@testing-library/jest-dom": "^5.17.0",
@@ -144,6 +145,8 @@
     "chai": "^4.3.6",
     "chai-as-promised": "^7.1.1",
     "clone": "^2.1.2",
+    "eslint": "^8.56.0",
+    "eslint-plugin-prefer-arrow-functions": "^3.2.4",
     "jscodeshift": "^0.15.0",
     "mocha": "^10.3.0",
     "msw": "^2.1.2",
@@ -151,6 +154,7 @@
     "ts-essentials": "^9.1.2",
     "typedoc": "^0.25",
     "typescript": "^5.3.3",
+    "typescript-eslint": "^7.0.1",
     "typescript-json-schema": "~0.55",
     "vite": "^5.0.11"
   },
