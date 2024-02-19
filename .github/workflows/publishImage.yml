@@ -45,7 +45,7 @@ jobs:
             suffix: '-debian'
             # can't build arm64 due to a TLS issue when running npm install??
             # https://github.com/FoxxMD/multi-scrobbler/issues/126
-            platforms: 'linux/amd64'
+            platforms: 'linux/amd64,linux/arm64'
     # https://docs.github.com/en/actions/security-guides/automatic-token-authentication#permissions-for-the-github_token
     permissions:
       packages: write
