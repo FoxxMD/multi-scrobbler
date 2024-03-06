@@ -11,6 +11,9 @@
     <url type="help">https://foxxmd.github.io/multi-scrobbler/docs/configuration</url>
     <metadata_license>MIT</metadata_license>
     <project_license>MIT</project_license>
+    <developer id="tld.vendor">
+        <name>FoxxMD</name>
+    </developer>
     <description>
         <p>
             Track your music listening history from many different sources:
