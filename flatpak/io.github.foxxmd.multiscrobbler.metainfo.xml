@@ -6,7 +6,7 @@
     </provides>
     <launchable type="desktop-id">io.github.foxxmd.multiscrobbler.desktop</launchable>
     <name>multi-scrobbler</name>
-    <summary>Scrobbles music from many sources to many clients</summary>
+    <summary>Scrobbles music from many sources</summary>
     <url type="homepage">https://foxxmd.github.io/multi-scrobbler</url>
     <url type="help">https://foxxmd.github.io/multi-scrobbler/docs/configuration</url>
     <metadata_license>MIT</metadata_license>
