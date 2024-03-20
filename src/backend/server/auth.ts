@@ -1,5 +1,5 @@
 import {ExpressWithAsync} from "@awaitjs/express";
-import {Logger} from "@foxxmd/winston";
+import {Logger} from "@foxxmd/logging";
 import ScrobbleSources from "../sources/ScrobbleSources.js";
 import passport from "passport";
 import { ExpressHandler } from "../common/infrastructure/Atomic.js";

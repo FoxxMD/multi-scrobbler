@@ -1,6 +1,6 @@
 import {Dayjs} from "dayjs";
-import {MESSAGE} from "triple-beam";
 import {ListenProgress} from "../backend/sources/PlayerState/ListenProgress.js";
+import {LogDataPretty, LogLevel} from "@foxxmd/logging";
 
 export interface SourceStatusData {
     status: string;
@@ -158,27 +158,10 @@ export interface JsonPlayData extends PlayData {
     playDateCompleted?: Dayjs
 }
 
-export type LogLevel = "error" | "warn" | "info" | "verbose" | "debug";
-export const logLevels = ['error', 'warn', 'info', 'verbose', 'debug'];
-
-export interface LogInfo {
-    id: number
-    message: string
-    [MESSAGE]: string,
-    level: string
-    timestamp: string
-    labels?: string[]
-    transport?: string[]
-}
-
 export interface LogOutputConfig {
     level: LogLevel,
     sort: string,
     limit: number
-}
-
-export interface LogInfoJson extends LogInfo {
-    formattedMessage: string
 }
 
 export interface SourcePlayerObj {
@@ -242,4 +225,8 @@ export type SOURCE_SOT_TYPES = 'player' | 'history';
 export const SOURCE_SOT = {
     PLAYER : 'player' as SOURCE_SOT_TYPES,
     HISTORY: 'history' as SOURCE_SOT_TYPES
+}
+
+export interface LeveledLogData extends LogDataPretty {
+    levelLabel: string
 }

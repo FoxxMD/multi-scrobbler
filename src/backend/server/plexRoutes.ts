@@ -1,16 +1,16 @@
 import { ExpressHandler } from "../common/infrastructure/Atomic.js";
 import { mergeArr, parseBool } from "../utils.js";
 import {ExpressWithAsync} from "@awaitjs/express";
-import {Logger} from "@foxxmd/winston";
+import {childLogger, Logger} from "@foxxmd/logging";
 import ScrobbleSources from "../sources/ScrobbleSources.js";
 import PlexSource, { plexRequestMiddle } from "../sources/PlexSource.js";
 import { PlexNotifier } from "../sources/ingressNotifiers/PlexNotifier.js";
 
 export const setupPlexRoutes = (app: ExpressWithAsync, logger: Logger, scrobbleSources: ScrobbleSources) => {
 
-    const plexMiddle = plexRequestMiddle();
-    const plexLog = logger.child({labels: ['Plex Request']}, mergeArr);
-    const plexIngress = new PlexNotifier();
+    const plexMiddle = plexRequestMiddle(logger);
+    const plexLog = childLogger(logger, 'Plex Request');
+    const plexIngress = new PlexNotifier(logger);
     const plexIngressMiddle: ExpressHandler = async (req, res, next) => {
         // track request before parsing body to ensure we at least log that something is happening
         // (in the event body parsing does not work or request is not POST/PATCH)

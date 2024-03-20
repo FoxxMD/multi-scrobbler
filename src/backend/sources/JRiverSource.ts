@@ -32,7 +32,7 @@ export class JRiverSource extends MemorySource {
             } = {},
         } = config;
         this.url = JRiverSource.parseConnectionUrl(url);
-        this.client = new JRiverApiClient(name, {...data, url: this.url.toString()});
+        this.client = new JRiverApiClient(name, {...data, url: this.url.toString()}, {logger: this.logger});
         this.requiresAuth = true;
         this.canPoll = true;
         this.multiPlatform = true;

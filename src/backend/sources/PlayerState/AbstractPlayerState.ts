@@ -7,7 +7,7 @@ import {
 } from "../../common/infrastructure/Atomic.js";
 import dayjs, {Dayjs} from "dayjs";
 import { formatNumber, genGroupIdStr, playObjDataMatch, progressBar } from "../../utils.js";
-import {Logger} from "@foxxmd/winston";
+import {childLogger, Logger} from "@foxxmd/logging";
 import { ListenProgress } from "./ListenProgress.js";
 import {PlayObject, Second, SOURCE_SOT, SOURCE_SOT_TYPES, SourcePlayerObj} from "../../../core/Atomic.js";
 import { buildTrackString } from "../../../core/StringUtils.js";
@@ -60,7 +60,7 @@ export abstract class AbstractPlayerState {
 
     protected constructor(logger: Logger, platformId: PlayPlatformId, opts: PlayerStateOptions = DefaultPlayerStateOptions) {
         this.platformId = platformId;
-        this.logger = logger.child({labels: [`Player ${this.platformIdStr}`]});
+        this.logger = childLogger(logger, `Player ${this.platformIdStr}`);
 
         const {
             staleInterval = 120,

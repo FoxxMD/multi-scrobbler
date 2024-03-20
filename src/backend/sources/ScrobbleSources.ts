@@ -9,7 +9,7 @@ import LastfmSource from "./LastfmSource.js";
 import DeezerSource from "./DeezerSource.js";
 import { ConfigMeta, InternalConfig, SourceType, sourceTypes } from "../common/infrastructure/Atomic.js";
 import { configDir as defaultConfigDir } from "../common/index.js";
-import winston, {Logger} from '@foxxmd/winston';
+import {childLogger, Logger} from '@foxxmd/logging';
 import { SourceAIOConfig, SourceConfig } from "../common/infrastructure/config/source/sources.js";
 import { DeezerData, DeezerSourceConfig } from "../common/infrastructure/config/source/deezer.js";
 import { LastfmClientConfig } from "../common/infrastructure/config/client/lastfm.js";
@@ -55,11 +55,11 @@ export default class ScrobbleSources {
 
     emitter: WildcardEmitter;
 
-    constructor(emitter: EventEmitter, localUrl: string, configDir: string = defaultConfigDir) {
+    constructor(emitter: EventEmitter, localUrl: string, configDir: string = defaultConfigDir, parentLogger: Logger) {
         this.emitter = emitter;
         this.configDir = configDir;
         this.localUrl = localUrl;
-        this.logger = winston.loggers.get('app').child({labels: ['Sources']}, mergeArr);
+        this.logger = childLogger(parentLogger, 'Sources'); // winston.loggers.get('app').child({labels: ['Sources']}, mergeArr);
     }
 
     getByName = (name: any) => this.sources.find(x => x.name === name)

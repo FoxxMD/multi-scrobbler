@@ -1,5 +1,5 @@
 import { AbstractPlayerState, PlayerStateOptions } from "./AbstractPlayerState.js";
-import {Logger} from "@foxxmd/winston";
+import {Logger} from "@foxxmd/logging";
 import { PlayPlatformId } from "../../common/infrastructure/Atomic.js";
 
 export class GenericPlayerState extends AbstractPlayerState {

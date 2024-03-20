@@ -3,7 +3,8 @@ import { RequestRetryOptions } from "./common.js";
 import { SourceAIOConfig } from "./source/sources.js";
 import { ClientAIOConfig } from "./client/clients.js";
 import { WebhookConfig } from "./health/webhooks.js";
-import { LogOptions } from "../Atomic.js";
+import {LogOptions} from "@foxxmd/logging";
+
 
 export interface SourceDefaults extends SourceRetryOptions {
     /**

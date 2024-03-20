@@ -28,7 +28,7 @@ import {
     SINGLE_USER_PLATFORM_ID,
     SourceType,
 } from "../common/infrastructure/Atomic.js";
-import {Logger} from '@foxxmd/winston';
+import {childLogger, Logger} from '@foxxmd/logging';
 import { SourceConfig } from "../common/infrastructure/config/source/sources.js";
 import {EventEmitter} from "events";
 import {FixedSizeList} from "fixed-size-list";
@@ -91,7 +91,7 @@ export default abstract class AbstractSource implements Authenticatable {
         this.type = type;
         this.name = name;
         this.identifier = `Source - ${capitalize(this.type)} - ${name}`;
-        this.logger = internal.logger.child({labels: [`${capitalize(this.type)} - ${name}`]}, mergeArr);
+        this.logger = childLogger(internal.logger, `${capitalize(this.type)} - ${name}`);
         this.config = config;
         this.clients = clients;
         this.instantiatedAt = dayjs();

@@ -13,7 +13,7 @@ import { FormatPlayObjectOptions, INITIALIZING, ScrobbledPlayObject } from "../c
 import { LastfmClientConfig } from "../common/infrastructure/config/client/lastfm.js";
 import {TrackScrobblePayload, TrackScrobbleResponse, UserGetRecentTracksResponse} from "lastfm-node-client";
 import { Notifiers } from "../notifier/Notifiers.js";
-import {Logger} from '@foxxmd/winston';
+import {Logger} from "@foxxmd/logging";
 import { PlayObject, TrackStringOptions } from "../../core/Atomic.js";
 import { buildTrackString, capitalize } from "../../core/StringUtils.js";
 import EventEmitter from "events";

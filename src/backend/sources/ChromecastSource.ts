@@ -24,13 +24,14 @@ import {
     getMediaStatus,
     genPlayHash,
 } from "../common/vendor/chromecast/ChromecastClientUtils.js";
-import {config, Logger} from "@foxxmd/winston";
+import {Logger} from "@foxxmd/logging";
 import {ContextualValidationError} from "@foxxmd/chromecast-client/dist/cjs/src/utils.js";
 import { buildTrackString } from "../../core/StringUtils.js";
 import { discoveryAvahi, discoveryNative } from "../utils/MDNSUtils.js";
 import {MaybeLogger} from "../common/logging.js";
 import e, {application} from "express";
 import {NETWORK_ERROR_FAILURE_CODES} from "../common/errors/NodeErrors.js";
+import {childLogger} from "@foxxmd/logging";
 
 interface ChromecastDeviceInfo {
     mdns: MdnsDeviceInfo
@@ -236,7 +237,7 @@ export class ChromecastSource extends MemorySource {
                 retries: 0,
                 platform,
                 applications,
-                logger: this.logger.child({labels: [device.name.substring(0, 25)]}, mergeArr),
+                logger: childLogger(this.logger, device.name.substring(0, 25)),
             });
         } catch (e) {
             this.logger.error(e);
@@ -392,7 +393,7 @@ export class ChromecastSource extends MemorySource {
                         badData: false,
                         validAppType: valid,
                         playerId: genGroupIdStr([genDeviceId(k, a.displayName), NO_USER]),
-                        logger: v.logger.child({labels: [`App ${a.displayName.substring(0, 25)}-${a.transportId.substring(0,4)}`]}, mergeArr)
+                        logger: childLogger(v.logger, `App ${a.displayName.substring(0, 25)}-${a.transportId.substring(0,4)}`)
                     }
                     v.applications.set(a.transportId, storedApp);
                 } else if(storedApp.stale === true) {

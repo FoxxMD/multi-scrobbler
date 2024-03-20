@@ -1,11 +1,7 @@
 /* eslint-disable no-case-declarations */
 import dayjs, {Dayjs} from "dayjs";
 import {
-    createAjvFactory,
-    mergeArr,
-    playObjDataMatch,
     readJson,
-    returnDuplicateStrings,
     validateJson,
 } from "../utils.js";
 import MalojaScrobbler from "./MalojaScrobbler.js";
@@ -19,13 +15,10 @@ import { MalojaClientConfig } from "../common/infrastructure/config/client/maloj
 import { LastfmClientConfig } from "../common/infrastructure/config/client/lastfm.js";
 import { Notifiers } from "../notifier/Notifiers.js";
 import AbstractScrobbleClient from "./AbstractScrobbleClient.js";
-import {EventEmitter} from "events";
-import winston, {Logger} from '@foxxmd/winston';
+import {childLogger, Logger} from '@foxxmd/logging';
 import ListenbrainzScrobbler from "./ListenbrainzScrobbler.js";
 import { ListenBrainzClientConfig } from "../common/infrastructure/config/client/listenbrainz.js";
-import {ErrorWithCause} from "pony-cause";
 import { PlayObject } from "../../core/Atomic.js";
-import { buildTrackString } from "../../core/StringUtils.js";
 import { WildcardEmitter } from "../common/WildcardEmitter.js";
 
 type groupedNamedConfigs = {[key: string]: ParsedConfig[]};
@@ -44,12 +37,12 @@ export default class ScrobbleClients {
 
     sourceEmitter: WildcardEmitter;
 
-    constructor(emitter: WildcardEmitter, sourceEmitter: WildcardEmitter, localUrl: string, configDir: string) {
+    constructor(emitter: WildcardEmitter, sourceEmitter: WildcardEmitter, localUrl: string, configDir: string, parentLogger: Logger) {
         this.emitter = emitter;
         this.sourceEmitter = sourceEmitter;
         this.configDir = configDir;
         this.localUrl = localUrl;
-        this.logger = winston.loggers.get('app').child({labels: ['Scrobblers']}, mergeArr);
+        this.logger = childLogger(parentLogger, 'Scrobblers'); // winston.loggers.get('app').child({labels: ['Scrobblers']}, mergeArr);
 
         this.sourceEmitter.on('discoveredToScrobble', async (payload: { data: (PlayObject | PlayObject[]), options: { forceRefresh?: boolean, checkTime?: Dayjs, scrobbleTo?: string[], scrobbleFrom?: string } }) => {
             await this.scrobble(payload.data, payload.options);

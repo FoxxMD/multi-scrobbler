@@ -1,14 +1,14 @@
 import dayjs from "dayjs";
-import { combinePartsToString, mergeArr } from "../utils.js";
+import { combinePartsToString } from "../utils.js";
 import AbstractSource from "./AbstractSource.js";
 import formidable from 'formidable';
 import concatStream from 'concat-stream';
 import { PlexSourceConfig } from "../common/infrastructure/config/source/plex.js";
 import { FormatPlayObjectOptions, InternalConfig, SourceType } from "../common/infrastructure/Atomic.js";
 import EventEmitter from "events";
-import winston from '@foxxmd/winston';
 import { PlayObject } from "../../core/Atomic.js";
 import { truncateStringToLength } from "../../core/StringUtils.js";
+import {childLogger, Logger} from "@foxxmd/logging";
 
 const shortDeviceId = truncateStringToLength(10, '');
 
@@ -231,9 +231,9 @@ export default class PlexSource extends AbstractSource {
     }
 }
 
-export const plexRequestMiddle = () => {
+export const plexRequestMiddle = (logger: Logger) => {
 
-    const plexLog = winston.loggers.get('app').child({labels: ['Plex Request']}, mergeArr);
+    const plexLog = childLogger(logger, 'Plex Request');
 
     return async (req: any, res: any, next: any) => {
 

@@ -2,11 +2,12 @@ import { IngressNotifier } from "./IngressNotifier.js";
 import {Request} from "express";
 import PlexSource from "../PlexSource.js";
 import TautulliSource from "../TautulliSource.js";
+import {Logger} from "@foxxmd/logging";
 
 export class TautulliNotifier extends IngressNotifier {
 
-    constructor() {
-        super('Tautulli');
+    constructor(logger: Logger) {
+        super('Tautulli', logger);
     }
 
     seenServers: string[] = [];

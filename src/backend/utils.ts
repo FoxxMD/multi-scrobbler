@@ -1,7 +1,7 @@
 import {accessSync, constants, promises} from "fs";
 import dayjs, {Dayjs} from 'dayjs';
 import utc from 'dayjs/plugin/utc.js';
-import {Logger} from '@foxxmd/winston';
+import {Logger} from '@foxxmd/logging';
 import JSON5 from 'json5';
 import {TimeoutError, WebapiError} from "spotify-web-api-node/src/response-error.js";
 import {Schema} from 'ajv';

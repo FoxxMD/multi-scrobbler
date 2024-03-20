@@ -4,19 +4,13 @@ import { makeClientCheckMiddle, makeSourceCheckMiddle } from "./middleware.js";
 import AbstractSource from "../sources/AbstractSource.js";
 import {
     ClientStatusData,
-    DeadLetterScrobble,
-    LogInfo,
-    LogInfoJson,
-    LogLevel,
+    DeadLetterScrobble, LeveledLogData,
     LogOutputConfig,
     PlayObject, SOURCE_SOT,
     SourceStatusData,
 } from "../../core/Atomic.js";
-import {Logger} from "@foxxmd/winston";
-import { formatLogToHtml, getLogger, isLogLevelMinLevel, isLogLineMinLevel } from "../common/logging.js";
-import {MESSAGE} from "triple-beam";
+import {LogDataPretty, Logger, LogLevel} from "@foxxmd/logging";
 import {Transform} from "stream";
-//import {createSession} from "better-sse";
 import * as bsse from 'better-sse';
 import bsseDef from 'better-sse';
 import { setupTautulliRoutes } from "./tautulliRoutes.js";
@@ -24,47 +18,42 @@ import { setupPlexRoutes } from "./plexRoutes.js";
 import { setupJellyfinRoutes } from "./jellyfinRoutes.js";
 import { setupDeezerRoutes } from "./deezerRoutes.js";
 import { setupAuthRoutes } from "./auth.js";
-import { ExpressHandler, ScrobbledPlayObject } from "../common/infrastructure/Atomic.js";
+import {ExpressHandler} from "../common/infrastructure/Atomic.js";
 import MemorySource from "../sources/MemorySource.js";
 import { capitalize } from "../../core/StringUtils.js";
-import {source} from "common-tags";
 import AbstractScrobbleClient from "../scrobblers/AbstractScrobbleClient.js";
 import { sortByNewestPlayDate } from "../utils.js";
 import bodyParser from "body-parser";
 import { setupWebscrobblerRoutes } from "./webscrobblerRoutes.js";
 import {FixedSizeList} from 'fixed-size-list';
+import {PassThrough} from "node:stream";
 
 const maxBufferSize = 300;
-const output: {
-    [key in LogLevel]: FixedSizeList<LogInfo>
-} = {
-    'debug': new FixedSizeList<LogInfo>(maxBufferSize),
-    'verbose': new FixedSizeList<LogInfo>(maxBufferSize),
-    'info': new FixedSizeList<LogInfo>(maxBufferSize),
-    'warn': new FixedSizeList<LogInfo>(maxBufferSize),
-    'error': new FixedSizeList<LogInfo>(maxBufferSize),
+const output: Record<number, FixedSizeList<LogDataPretty>> =  {};
+
+const createAddToLogBuffer = (levelMap:  {[p: number]: string}) => (log: LogDataPretty) => {
+    output[log.level].add({...log, levelLabel: levelMap[log.level]});
 }
 
-const addToLogBuffer = (log: LogInfo) => {
-    output[log.level as LogLevel].add(log);
-}
-
-const getLogs = (minLevel: LogLevel, limit: number = maxBufferSize, sort: 'asc' | 'desc' = 'desc'): LogInfo[] => {
-    const allLogs: LogInfo[][] = [];
+const getLogs = (minLevel: number, limit: number = maxBufferSize, sort: 'asc' | 'desc' = 'desc'): LeveledLogData[] => {
+    const allLogs: LeveledLogData[][] = [];
     for(const level of Object.keys(output)) {
-        if(isLogLevelMinLevel(level as LogLevel, minLevel)) {
+        if(Number.parseInt(level) >= minLevel) {
             allLogs.push(output[level].data);
         }
     }
     if(sort === 'desc') {
-        return allLogs.flat(1).sort((a, b) => b.id - a.id).slice(0, limit);
+        return allLogs.flat(1).sort((a, b) => b.time - a.time).slice(0, limit);
     }
-    return allLogs.flat(1).sort((a, b) => a.id - b.id).slice(0, limit);
+    return allLogs.flat(1).sort((a, b) => a.time - b.time).slice(0, limit);
 }
 
-const availableLevels: LogLevel[] = ['error', 'warn', 'info', 'verbose', 'debug'];
+export const setupApi = (app: ExpressWithAsync, logger: Logger, appLoggerStream: PassThrough, initialLogOutput: LogDataPretty[] = []) => {
+    for(const level of Object.keys(logger.levels.labels)) {
+        output[level] = new FixedSizeList<LeveledLogData>(maxBufferSize);
+    }
 
-export const setupApi = (app: ExpressWithAsync, logger: Logger, initialLogOutput: LogInfo[] = []) => {
+    const addToLogBuffer = createAddToLogBuffer(logger.levels.labels);
     for(const log of initialLogOutput) {
         addToLogBuffer(log);
     }
@@ -91,11 +80,10 @@ export const setupApi = (app: ExpressWithAsync, logger: Logger, initialLogOutput
         console.log(e);
     }
 
-    const appLogger = getLogger({}, 'app');
-    appLogger.stream().on('log', (log: LogInfo) => {
+    appLoggerStream.on('data', (log: LogDataPretty) => {
         addToLogBuffer(log);
-        if(isLogLineMinLevel(log, logConfig.level)) {
-            logObjectStream.write({message: log[MESSAGE], level: log.level});
+        if(log.level >= logger.levels.values[logConfig.level]) {
+            logObjectStream.write({message: log.line, level: log.level, levelLabel: logger.levels.labels[log.level]});
         }
     });
 
@@ -128,21 +116,19 @@ export const setupApi = (app: ExpressWithAsync, logger: Logger, initialLogOutput
     });
 
     app.get('/api/logs', setLogWebSettings, async (req, res) => {
-        const slicedLog = getLogs(logConfig.level, logConfig.limit + 1, logConfig.sort === 'ascending' ? 'asc' : 'desc');
-        const jsonLogs: LogInfoJson[] = slicedLog.map(x => ({...x, formattedMessage: x[MESSAGE]}));
-        return res.json({data: jsonLogs, settings: logConfig});
+        const slicedLog = getLogs(logger.levels.values[logConfig.level], logConfig.limit + 1, logConfig.sort === 'ascending' ? 'asc' : 'desc');
+        return res.json({data: slicedLog, settings: logConfig});
     });
 
     app.put('/api/logs', async (req, res) => {
         logConfig.level = req.body.level as LogLevel | undefined ?? logConfig.level;
         logConfig.limit = req.body.limit ?? logConfig.limit;
-        const slicedLog = getLogs(logConfig.level, logConfig.limit + 1, logConfig.sort === 'ascending' ? 'asc' : 'desc');
+        const slicedLog = getLogs(logger.levels.values[logConfig.level], logConfig.limit + 1, logConfig.sort === 'ascending' ? 'asc' : 'desc');
         // @ts-expect-error logLevel not part of session
         req.session.logLevel = logConfig.level;
         // @ts-expect-error limit not part of session
         req.session.limit = logConfig.limit;
-        const jsonLogs: LogInfoJson[] = slicedLog.map(x => ({...x, formattedMessage: x[MESSAGE]}));
-        return res.json({data: jsonLogs, settings: logConfig});
+        return res.json({data: slicedLog, settings: logConfig});
     });
 
     app.get('/api/events', async (req, res) => {

@@ -33,7 +33,7 @@ export default class LastfmSource extends MemorySource {
         this.canBacklog = true;
         this.supportsUpstreamRecentlyPlayed = true;
         this.supportsUpstreamNowPlaying = true;
-        this.api = new LastfmApiClient(name, {...config.data, configDir: internal.configDir, localUrl: internal.localUrl});
+        this.api = new LastfmApiClient(name, {...config.data, configDir: internal.configDir, localUrl: internal.localUrl}, {logger: this.logger});
         this.playerSourceOfTruth = SOURCE_SOT.HISTORY;
         this.logger.info(`Note: The player for this source is an analogue for the 'Now Playing' status exposed by ${this.type} which is NOT used for scrobbling. Instead, the 'recently played' or 'history' information provided by this source is used for scrobbles.`)
     }

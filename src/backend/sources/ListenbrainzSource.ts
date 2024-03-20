@@ -28,7 +28,7 @@ export default class ListenbrainzSource extends MemorySource {
         super('listenbrainz', name, {...config, data: {interval, maxInterval, ...restData}}, internal, emitter);
         this.canPoll = true;
         this.canBacklog = true;
-        this.api = new ListenbrainzApiClient(name, config.data);
+        this.api = new ListenbrainzApiClient(name, config.data, {logger: this.logger});
         this.playerSourceOfTruth = SOURCE_SOT.HISTORY;
         this.supportsUpstreamRecentlyPlayed = true;
         this.logger.info(`Note: The player for this source is an analogue for the 'Now Playing' status exposed by ${this.type} which is NOT used for scrobbling. Instead, the 'recently played' or 'history' information provided by this source is used for scrobbles.`)

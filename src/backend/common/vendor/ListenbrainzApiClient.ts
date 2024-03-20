@@ -1,7 +1,7 @@
 import AbstractApiClient from "./AbstractApiClient.js";
 import request, {Request} from 'superagent';
 import { ListenBrainzClientData } from "../infrastructure/config/client/listenbrainz.js";
-import { DEFAULT_RETRY_MULTIPLIER, FormatPlayObjectOptions } from "../infrastructure/Atomic.js";
+import {AbstractApiOptions, DEFAULT_RETRY_MULTIPLIER, FormatPlayObjectOptions} from "../infrastructure/Atomic.js";
 import dayjs from "dayjs";
 import { stringSameness } from '@foxxmd/string-sameness';
 import { combinePartsToString } from "../../utils.js";
@@ -118,7 +118,7 @@ export class ListenbrainzApiClient extends AbstractApiClient {
     declare config: ListenBrainzClientData;
     url: string;
 
-    constructor(name: any, config: ListenBrainzClientData, options = {}) {
+    constructor(name: any, config: ListenBrainzClientData, options: AbstractApiOptions) {
         super('ListenBrainz', name, config, options);
         const {
             url = 'https://api.listenbrainz.org/'

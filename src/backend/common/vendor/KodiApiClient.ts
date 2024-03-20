@@ -5,7 +5,7 @@ import { KodiClient } from 'kodi-api'
 import normalizeUrl from "normalize-url";
 import {URL} from "url";
 import { RecentlyPlayedOptions } from "../../sources/AbstractSource.js";
-import { FormatPlayObjectOptions } from "../infrastructure/Atomic.js";
+import {AbstractApiOptions, FormatPlayObjectOptions} from "../infrastructure/Atomic.js";
 import dayjs from "dayjs";
 import { PlayObject } from "../../../core/Atomic.js";
 
@@ -49,7 +49,7 @@ export class KodiApiClient extends AbstractApiClient {
 
     declare client: KodiClient;
 
-    constructor(name: any, config: KodiData, options = {}) {
+    constructor(name: any, config: KodiData, options: AbstractApiOptions) {
         super('Kodi', name, config, options);
         const {
             url = 'http://localhost:8080/jsonrpc'

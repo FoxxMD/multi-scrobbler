@@ -11,7 +11,7 @@ import { JellySourceConfig } from "../common/infrastructure/config/source/jellyf
 import { FormatPlayObjectOptions, InternalConfig, PlayPlatformId } from "../common/infrastructure/Atomic.js";
 import EventEmitter from "events";
 import { PlayerStateOptions } from "./PlayerState/AbstractPlayerState.js";
-import {Logger} from "@foxxmd/winston";
+import {Logger} from "@foxxmd/logging";
 import { JellyfinPlayerState } from "./PlayerState/JellyfinPlayerState.js";
 import { PlayObject, TA_CLOSE } from "../../core/Atomic.js";
 import { buildTrackString, splitByFirstFound, truncateStringToLength } from "../../core/StringUtils.js";

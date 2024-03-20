@@ -6,7 +6,7 @@ import { sleep, parseRetryAfterSecsFromObj } from "../utils.js";
 import { DEFAULT_RETRY_MULTIPLIER, FormatPlayObjectOptions, INITIALIZING } from "../common/infrastructure/Atomic.js";
 import { MalojaClientConfig } from "../common/infrastructure/config/client/maloja.js";
 import { Notifiers } from "../notifier/Notifiers.js";
-import {Logger} from '@foxxmd/winston';
+import {Logger} from "@foxxmd/logging";
 import {
     getMalojaResponseError,
     isMalojaAPIErrorBody,

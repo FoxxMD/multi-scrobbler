@@ -3,7 +3,7 @@ import {JRiverData} from "../infrastructure/config/source/jriver.js";
 import request, {Request, Response} from 'superagent';
 import xml2js from 'xml2js';
 import {ErrorWithCause} from "pony-cause";
-import {DEFAULT_RETRY_MULTIPLIER} from "../infrastructure/Atomic.js";
+import {AbstractApiOptions, DEFAULT_RETRY_MULTIPLIER} from "../infrastructure/Atomic.js";
 
 const parser = new xml2js.Parser({'async': true});
 
@@ -97,7 +97,7 @@ export class JRiverApiClient extends AbstractApiClient {
 
     token?: string;
 
-    constructor(name: any, config: JRiverData, options = {}) {
+    constructor(name: any, config: JRiverData, options: AbstractApiOptions) {
         super('JRiver', name, config, options);
         const {
             url = 'http://localhost:52199/MCWS/v1/'

@@ -24,7 +24,7 @@ import {
     TIME_WEIGHT,
     TITLE_WEIGHT,
 } from "../common/infrastructure/Atomic.js";
-import {Logger} from '@foxxmd/winston';
+import {childLogger, Logger} from "@foxxmd/logging";
 import { CommonClientConfig } from "../common/infrastructure/config/client/index.js";
 import { Notifiers } from "../notifier/Notifiers.js";
 import {FixedSizeList} from 'fixed-size-list';
@@ -95,7 +95,7 @@ export default abstract class AbstractScrobbleClient implements Authenticatable 
         this.type = type;
         this.name = name;
         this.identifier = `${capitalize(this.type)} - ${name}`;
-        this.logger = logger.child({labels: [this.identifier]}, mergeArr);
+        this.logger = childLogger(logger, this.identifier);
         this.notifier = notifier;
         this.emitter = emitter;
 

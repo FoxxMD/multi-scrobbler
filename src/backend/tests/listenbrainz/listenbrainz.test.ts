@@ -20,6 +20,7 @@ import { withRequestInterception } from "../utils/networking.js";
 import {http, HttpResponse} from "msw";
 import { UpstreamError } from "../../common/errors/UpstreamError.js";
 import { ExpectedResults } from "../utils/interfaces.js";
+import {loggerTest} from "@foxxmd/logging";
 
 interface LZTestFixture {
     data: ListenResponse
@@ -112,7 +113,7 @@ describe('Listenbrainz Response Behavior', function() {
         {
             token: 'test',
             username: 'test'
-        });
+        }, {logger: loggerTest});
 
     it('Should recognize bad requests as non-showstopping',withRequestInterception(
         [

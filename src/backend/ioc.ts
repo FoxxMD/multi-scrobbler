@@ -9,6 +9,7 @@ import { logPath } from "./common/logging.js";
 import { WildcardEmitter } from "./common/WildcardEmitter.js";
 import normalizeUrl from 'normalize-url';
 import fs from 'fs';
+import {Logger} from "@foxxmd/logging";
 
 let version = 'Unknown';
 
@@ -46,6 +47,7 @@ let root: ReturnType<typeof createRoot>;
 export interface RootOptions {
     baseUrl?: string,
     port?: string | number
+    logger: Logger
 }
 
 const createRoot = (options?: RootOptions) => {
@@ -71,9 +73,9 @@ const createRoot = (options?: RootOptions) => {
             localUrl = `${u.origin}:${items.mainPort}`;
         }
         return {
-            clients: () => new ScrobbleClients(items.clientEmitter, items.sourceEmitter, localUrl, items.configDir),
-            sources: () => new ScrobbleSources(items.sourceEmitter, localUrl, items.configDir),
-            notifiers: () => new Notifiers(items.notifierEmitter, items.clientEmitter, items.sourceEmitter),
+            clients: () => new ScrobbleClients(items.clientEmitter, items.sourceEmitter, localUrl, items.configDir, options.logger),
+            sources: () => new ScrobbleSources(items.sourceEmitter, localUrl, items.configDir, options.logger),
+            notifiers: () => new Notifiers(items.notifierEmitter, items.clientEmitter, items.sourceEmitter, options.logger),
             localUrl,
             hasDefinedBaseUrl: baseUrl !== undefined,
             isSubPath: u.pathname !== '/' && u.pathname.length > 0

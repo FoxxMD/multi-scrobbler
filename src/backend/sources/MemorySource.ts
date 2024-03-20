@@ -27,7 +27,7 @@ import {
 import TupleMap from "../common/TupleMap.js";
 import {AbstractPlayerState, createPlayerOptions, PlayerStateOptions} from "./PlayerState/AbstractPlayerState.js";
 import { GenericPlayerState } from "./PlayerState/GenericPlayerState.js";
-import {Logger} from "@foxxmd/winston";
+import {Logger} from "@foxxmd/logging";
 import {PlayObject, SOURCE_SOT, SOURCE_SOT_TYPES, SourcePlayerObj} from "../../core/Atomic.js";
 import { buildTrackString } from "../../core/StringUtils.js";
 import {SimpleIntervalJob, Task, ToadScheduler} from "toad-scheduler";

@@ -1,4 +1,4 @@
-import {Logger} from "@foxxmd/winston";
+import {Logger} from "@foxxmd/logging";
 import AvahiBrowser from 'avahi-browse';
 import { MaybeLogger } from "../common/logging.js";
 import { sleep } from "../utils.js";
