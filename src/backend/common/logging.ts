@@ -6,7 +6,7 @@ import {
     loggerAppRolling,
     LogOptions as FoxLogOptions,
     Logger as FoxLogger,
-    childLogger,
+    childLogger, LogLevel,
 } from '@foxxmd/logging';
 import {PassThrough, Transform} from "node:stream";
 import {buildLogger, buildDestinationStdout, buildDestinationJsonPrettyStream} from "@foxxmd/logging/factory";
@@ -26,8 +26,14 @@ export const initLogger = (): [FoxLogger, Transform] => {
     return [logger, stream];
 }
 
-export const appLogger = async (config?: FoxLogOptions): Promise<[FoxLogger, PassThrough]> => {
+export const appLogger = async (config: FoxLogOptions = {}): Promise<[FoxLogger, PassThrough]> => {
     const stream = new PassThrough({objectMode: true});
+    if(process.env.LOG_PATH === undefined && (config.file === undefined || config.file !== false) && (typeof config.file !== 'object' || config.file?.path === undefined)) {
+        config.file = {
+            level: config.file as LogLevel,
+            path: 'logs/scrobble.log'
+        }
+    }
     const opts = parseLogOptions(config)
     const logger = await loggerAppRolling(config, {
         logBaseDir: typeof process.env.CONFIG_DIR === 'string' ? process.env.CONFIG_DIR : undefined,
