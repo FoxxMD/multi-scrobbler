@@ -33,7 +33,7 @@ export default class LastfmScrobbler extends AbstractScrobbleClient {
     constructor(name: any, config: LastfmClientConfig, options = {}, notifier: Notifiers, emitter: EventEmitter, logger: Logger) {
         super('lastfm', name, config, notifier, emitter, logger);
         // @ts-expect-error sloppy data structure assign
-        this.api = new LastfmApiClient(name, config.data, options)
+        this.api = new LastfmApiClient(name, config.data, {...options, logger})
     }
 
     formatPlayObj = (obj: any, options: FormatPlayObjectOptions = {}) => LastfmApiClient.formatPlayObj(obj, options);
