@@ -59,6 +59,7 @@ COPY --from=base /usr/local/lib /usr/local/lib
 
 ENV NODE_ENV=production
 ENV IS_DOCKER=true
+ENV COLORED_CONSOLE=true
 #
 #RUN yarn global add patch-package \
 #    && yarn install --production=true \
