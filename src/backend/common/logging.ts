@@ -21,7 +21,7 @@ export const initLogger = (): [FoxLogger, Transform] => {
     const stream = new PassThrough({objectMode: true});
     const logger = buildLogger('debug', [
         buildDestinationStdout(opts.console),
-        buildDestinationJsonPrettyStream(opts.console, {destination: stream, object: true, colorize: false})
+        buildDestinationJsonPrettyStream(opts.console, {destination: stream, object: true, colorize: true})
     ]);
     return [logger, stream];
 }
@@ -32,7 +32,7 @@ export const appLogger = async (config?: FoxLogOptions): Promise<[FoxLogger, Pas
     const logger = await loggerAppRolling(config, {
         logBaseDir: typeof process.env.CONFIG_DIR === 'string' ? process.env.CONFIG_DIR : undefined,
         destinations: [
-            buildDestinationJsonPrettyStream(opts.console, {destination: stream, object: true, colorize: false})
+            buildDestinationJsonPrettyStream(opts.console, {destination: stream, object: true, colorize: true})
         ]
     });
     return [logger, stream];

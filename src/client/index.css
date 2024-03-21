@@ -30,18 +30,25 @@ a {
 .dark .loading {
   fill: white;
 }
-.blue {
+.blue,.ansi-blue-fg {
   color: rgb(97, 175, 239)
 }
-.red {
+.red,.ansi-red-fg {
   color: rgb(255 123 133);
 }
-.green {
+.green,.ansi-green-fg {
   color: rgb(170 255 109);
 }
-.purple {
+.purple,.ansi-magenta-fg {
   color: rgb(224 124 253);
 }
-.yellow {
+.yellow,.ansi-yellow-fg {
   color: rgb(253 198 94);
+}
+.ansi-cyan-fg {
+  color: rgb(255, 255, 255)
+}
+
+.ansi-bright-black-fg {
+  color: rgb(169, 169, 169)
 }
