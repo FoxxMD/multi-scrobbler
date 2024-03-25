@@ -3,6 +3,7 @@
     <id>io.github.foxxmd.multiscrobbler</id>
     <provides>
         <id>io.github.foxxmd.multiscrobbler.desktop</id>
+        <binary>multiscrobbler</binary>
     </provides>
     <launchable type="desktop-id">io.github.foxxmd.multiscrobbler.desktop</launchable>
     <name>multi-scrobbler</name>
