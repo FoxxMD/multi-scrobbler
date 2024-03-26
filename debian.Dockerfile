@@ -2,7 +2,7 @@
 FROM ghcr.io/linuxserver/baseimage-debian:bookworm as base
 
 ENV TZ=Etc/GMT
-ENV NODE_VERSION 18.19.0
+ENV NODE_VERSION 20.11.1
 
 # borrowing openssl header removal trick from offical docker-node
 # https://github.com/nodejs/docker-node/blob/main/18/bookworm-slim/Dockerfile#L8
@@ -56,10 +56,6 @@ VOLUME $data_dir
 ENV CONFIG_DIR=$data_dir
 
 COPY docker/root /
-
-RUN npm install -g  \
-    patch-package \
-    && chown -R root:root /usr/lib/node_modules/patch-package
 
 WORKDIR /app
 

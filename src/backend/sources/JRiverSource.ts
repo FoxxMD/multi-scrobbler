@@ -32,7 +32,7 @@ export class JRiverSource extends MemorySource {
             } = {},
         } = config;
         this.url = JRiverSource.parseConnectionUrl(url);
-        this.client = new JRiverApiClient(name, {...data, url: this.url.toString()});
+        this.client = new JRiverApiClient(name, {...data, url: this.url.toString()}, {logger: this.logger});
         this.requiresAuth = true;
         this.canPoll = true;
         this.multiPlatform = true;
@@ -91,8 +91,8 @@ export class JRiverSource extends MemorySource {
             ZoneName,
         } = obj;
 
-        let artists = Artist === null || Artist === undefined ? [] : [Artist];
-        let album = Album === null || Album === '' ? undefined : Album;
+        const artists = Artist === null || Artist === undefined ? [] : [Artist];
+        const album = Album === null || Album === '' ? undefined : Album;
         const length = Number.parseInt(DurationMS.toString()) / 1000;
 
         return {

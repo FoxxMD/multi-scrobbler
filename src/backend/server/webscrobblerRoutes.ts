@@ -1,6 +1,6 @@
 import { mergeArr, parseBool, remoteHostIdentifiers } from "../utils.js";
 import {ExpressWithAsync} from "@awaitjs/express";
-import {Logger} from "@foxxmd/winston";
+import {childLogger, Logger} from "@foxxmd/logging";
 import ScrobbleSources from "../sources/ScrobbleSources.js";
 import bodyParser from "body-parser";
 import { WebScrobblerPayload } from "../common/vendor/webscrobbler/interfaces.js";
@@ -11,7 +11,7 @@ import path from "path";
 
 export const setupWebscrobblerRoutes = (app: ExpressWithAsync, parentLogger: Logger, scrobbleSources: ScrobbleSources) => {
 
-    const logger = parentLogger.child({labels: ['Ingress', 'WebScrobbler']}, mergeArr);
+    const logger = childLogger(parentLogger, ['Ingress', 'WebScrobbler']);
 
     const webScrobblerJsonParser = bodyParser.json({
         type: ['text/*', 'application/json'],
@@ -21,15 +21,15 @@ export const setupWebscrobblerRoutes = (app: ExpressWithAsync, parentLogger: Log
         //     req.rawBody = buf.toString();
         // }
     });
-    const webhookIngress = new WebhookNotifier();
-    app.postAsync('/api/webscrobbler',
-        async function (req, res, next) {
+    const webhookIngress = new WebhookNotifier(logger);
+    app.postAsync('/api/webscrobbler*',
+        async (req, res, next) => {
             // track request before parsing body to ensure we at least log that something is happening
             // (in the event body parsing does not work or request is not POST/PATCH)
             webhookIngress.trackIngress(req, true);
             next();
         },
-        webScrobblerJsonParser, nonEmptyBody(logger, 'WebScrobbler Extension'), async function (req, res) {
+        webScrobblerJsonParser, nonEmptyBody(logger, 'WebScrobbler Extension'), async (req, res) => {
             webhookIngress.trackIngress(req, false);
 
             res.sendStatus(200);

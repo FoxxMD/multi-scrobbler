@@ -12,11 +12,11 @@ import {URL} from "url";
 import normalizeUrl from 'normalize-url';
 import {EventEmitter} from "events";
 import pEvent from 'p-event';
-import winston from '@foxxmd/winston';
 import { RecentlyPlayedOptions } from "./AbstractSource.js";
 import { PlayObject } from "../../core/Atomic.js";
 import { buildTrackString } from "../../core/StringUtils.js";
 import {ErrorWithCause} from "pony-cause";
+import {loggerTest} from "@foxxmd/logging";
 
 export class MopidySource extends MemorySource {
     declare config: MopidySourceConfig;
@@ -57,8 +57,8 @@ export class MopidySource extends MemorySource {
         this.client = new Mopidy({
             autoConnect: false,
             webSocketUrl: this.url.toString(),
-            // @ts-ignore
-            console: winston.loggers.get('noop')
+            // @ts-expect-error logger satisfies but is missing types not used
+            console: loggerTest
         });
         this.client.on('state:offline', () => {
             this.logger.verbose('Lost connection to server');

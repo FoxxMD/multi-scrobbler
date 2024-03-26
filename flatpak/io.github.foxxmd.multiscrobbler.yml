@@ -30,13 +30,17 @@ modules:
       - mkdir -p /app/bin /app/lib /app/lib/dist /app/lib/src /app/lib/assets
       - cp -a /usr/lib/sdk/node18/bin/{node,npm} /app/bin
       - cp -a /usr/lib/sdk/node18/lib/* /app/lib
-      - rm -r /app/lib/node_modules/npm/{docs,man}
+      - rm -r /app/lib/node_modules/npm/{docs,man} # remove this when updating to newer runtime-version
 
       # remove dev dependencies
       - npm prune --production
 
       # copy node_modules needed to run app
       - cp -r node_modules/. /app/lib/node_modules
+
+      # even if not using package.json for scripts it must be present
+      # so that tsx/node runs as esm (needs to see "type": "module" in file)
+      - cp package.json /app/lib/package.json
 
       # copy app files to runtime dir
       - cp -r dist/. /app/lib/dist
@@ -59,11 +63,12 @@ modules:
     subdir: main
     sources:
       # use for official releases
-      - type: git
-        url: https://github.com/FoxxMD/multi-scrobbler
-        tag: 0.6.3
-        commit: 4bd996eb466137ffc5c3f48305afabde03720525
-        dest: main
+#      - type: git
+#        url: https://github.com/FoxxMD/multi-scrobbler
+#        tag: 0.6.3
+#        commit: 4bd996eb466137ffc5c3f48305afabde03720525
+#        dest: main
+
       # use if developing locally
 #      - type: dir
 #        path: /home/yourUser/multi-scrobbler

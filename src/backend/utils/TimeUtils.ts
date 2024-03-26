@@ -106,10 +106,10 @@ export const comparePlayTemporally = (existingPlay: PlayObject, candidatePlay: P
     const referenceDuration = newDuration ?? existingDuration;
     const referenceListenedFor = newListenedFor ?? existingListenedFor;
 
-    let playDiffThreshold = diffThreshold;
+    const playDiffThreshold = diffThreshold;
 
     // check if existing play time is same as new play date
-    let scrobblePlayDiff = Math.abs(existingTsSOCDate.unix() - candidateTsSOCDate.unix());
+    const scrobblePlayDiff = Math.abs(existingTsSOCDate.unix() - candidateTsSOCDate.unix());
     result.date = {
         threshold: diffThreshold,
         diff: scrobblePlayDiff
@@ -161,10 +161,12 @@ export const comparePlayTemporally = (existingPlay: PlayObject, candidatePlay: P
 }
 export const timePassesScrobbleThreshold = (thresholds: ScrobbleThresholds, secondsTracked: number, playDuration?: number): ScrobbleThresholdResult => {
     let durationPasses = undefined,
-        durationThreshold: number | null = thresholds.duration ?? DEFAULT_SCROBBLE_DURATION_THRESHOLD,
         percentPasses = undefined,
-        percentThreshold: number | null = thresholds.percent ?? DEFAULT_SCROBBLE_PERCENT_THRESHOLD,
         percent: number | undefined;
+
+    const durationThreshold: number | null = thresholds.duration ?? DEFAULT_SCROBBLE_DURATION_THRESHOLD,
+        percentThreshold: number | null = thresholds.percent ?? DEFAULT_SCROBBLE_PERCENT_THRESHOLD;
+
 
     if (percentThreshold !== null && playDuration !== undefined && playDuration !== 0) {
         percent = Math.round(((secondsTracked / playDuration) * 100));

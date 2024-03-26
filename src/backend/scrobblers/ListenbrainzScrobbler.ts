@@ -3,7 +3,7 @@ import dayjs from 'dayjs';
 import AbstractScrobbleClient from "./AbstractScrobbleClient.js";
 import { FormatPlayObjectOptions, INITIALIZING } from "../common/infrastructure/Atomic.js";
 import { Notifiers } from "../notifier/Notifiers.js";
-import {Logger} from '@foxxmd/winston';
+import {Logger} from "@foxxmd/logging";
 import { ListenBrainzClientConfig } from "../common/infrastructure/config/client/listenbrainz.js";
 import { ListenbrainzApiClient, ListenPayload } from "../common/vendor/ListenbrainzApiClient.js";
 import { PlayObject, TrackStringOptions } from "../../core/Atomic.js";
@@ -23,7 +23,7 @@ export default class ListenbrainzScrobbler extends AbstractScrobbleClient {
 
     constructor(name: any, config: ListenBrainzClientConfig, options = {}, notifier: Notifiers, emitter: EventEmitter, logger: Logger) {
         super('listenbrainz', name, config, notifier, emitter, logger);
-        this.api = new ListenbrainzApiClient(name, config.data);
+        this.api = new ListenbrainzApiClient(name, config.data, {logger: this.logger});
     }
 
     formatPlayObj = (obj: any, options: FormatPlayObjectOptions = {}) => ListenbrainzApiClient.formatPlayObj(obj, options);
@@ -77,9 +77,7 @@ export default class ListenbrainzScrobbler extends AbstractScrobbleClient {
         this.lastScrobbleCheck = dayjs();
     }
 
-    alreadyScrobbled = async (playObj: PlayObject, log = false) => {
-        return (await this.existingScrobble(playObj)) !== undefined;
-    }
+    alreadyScrobbled = async (playObj: PlayObject, log = false) => (await this.existingScrobble(playObj)) !== undefined
 
     public playToClientPayload(playObj: PlayObject): ListenPayload {
         return ListenbrainzApiClient.playToListenPayload(playObj);

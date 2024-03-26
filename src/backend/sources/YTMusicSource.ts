@@ -1,12 +1,9 @@
 import YouTubeMusic from "youtube-music-ts-api";
-
 import AbstractSource, { RecentlyPlayedOptions } from "./AbstractSource.js";
 import { FormatPlayObjectOptions, InternalConfig } from "../common/infrastructure/Atomic.js";
-// @ts-ignore
 import {IYouTubeMusicAuthenticated} from "youtube-music-ts-api/interfaces-primary";
 import dayjs from "dayjs";
 import { parseDurationFromTimestamp, playObjDataMatch } from "../utils.js";
-// @ts-ignore
 import {IPlaylistDetail, ITrackDetail} from "youtube-music-ts-api/interfaces-supplementary";
 import { YTMusicSourceConfig } from "../common/infrastructure/config/source/ytmusic.js";
 import EventEmitter from "events";
@@ -71,15 +68,13 @@ export default class YTMusicSource extends AbstractSource {
         }
     }
 
-    recentlyPlayedTrackIsValid = (playObj: PlayObject) => {
-        return playObj.meta.newFromSource;
-    }
+    recentlyPlayedTrackIsValid = (playObj: PlayObject) => playObj.meta.newFromSource
 
     api = async (): Promise<IYouTubeMusicAuthenticated> => {
         if(this.apiInstance !== undefined) {
             return this.apiInstance;
         }
-        // @ts-ignore
+        // @ts-expect-error default does exist
         const ytm = new  YouTubeMusic.default() as YouTubeMusic;
         try {
             this.apiInstance = await ytm.authenticate(this.config.data.cookie, this.config.data.authUser);
@@ -152,8 +147,7 @@ export default class YTMusicSource extends AbstractSource {
             }
 
             if(newPlays.length > 0) {
-                newPlays = newPlays.map((x) => {
-                    return {
+                newPlays = newPlays.map((x) => ({
                         data: {
                             ...x.data,
                             playDate: dayjs().startOf('minute')
@@ -162,8 +156,7 @@ export default class YTMusicSource extends AbstractSource {
                             ...x.meta,
                             newFromSource: true
                         }
-                    }
-                });
+                    }));
                 this.recentlyPlayed = newPlays.concat(this.recentlyPlayed).slice(0, 20);
             }
         }

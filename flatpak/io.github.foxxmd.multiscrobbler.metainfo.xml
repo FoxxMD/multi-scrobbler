@@ -3,14 +3,18 @@
     <id>io.github.foxxmd.multiscrobbler</id>
     <provides>
         <id>io.github.foxxmd.multiscrobbler.desktop</id>
+        <binary>multiscrobbler</binary>
     </provides>
     <launchable type="desktop-id">io.github.foxxmd.multiscrobbler.desktop</launchable>
     <name>multi-scrobbler</name>
-    <summary>Scrobbles music from many sources to many clients</summary>
+    <summary>Scrobbles music from many sources</summary>
     <url type="homepage">https://foxxmd.github.io/multi-scrobbler</url>
     <url type="help">https://foxxmd.github.io/multi-scrobbler/docs/configuration</url>
     <metadata_license>MIT</metadata_license>
     <project_license>MIT</project_license>
+    <developer id="tld.vendor">
+        <name>FoxxMD</name>
+    </developer>
     <description>
         <p>
             Track your music listening history from many different sources:
@@ -45,6 +49,7 @@
         </screenshot>
     </screenshots>
     <releases>
+        <release version="0.7.0" date="2024-03-26"/>
         <release version="0.6.5" date="2024-02-05"/>
         <release version="0.6.4" date="2024-01-29"/>
         <release version="0.6.3" date="2024-01-10"/>

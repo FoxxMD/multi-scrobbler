@@ -1,10 +1,7 @@
+/* eslint-disable no-case-declarations */
 import dayjs, {Dayjs} from "dayjs";
 import {
-    createAjvFactory,
-    mergeArr,
-    playObjDataMatch,
     readJson,
-    returnDuplicateStrings,
     validateJson,
 } from "../utils.js";
 import MalojaScrobbler from "./MalojaScrobbler.js";
@@ -18,13 +15,10 @@ import { MalojaClientConfig } from "../common/infrastructure/config/client/maloj
 import { LastfmClientConfig } from "../common/infrastructure/config/client/lastfm.js";
 import { Notifiers } from "../notifier/Notifiers.js";
 import AbstractScrobbleClient from "./AbstractScrobbleClient.js";
-import {EventEmitter} from "events";
-import winston, {Logger} from '@foxxmd/winston';
+import {childLogger, Logger} from '@foxxmd/logging';
 import ListenbrainzScrobbler from "./ListenbrainzScrobbler.js";
 import { ListenBrainzClientConfig } from "../common/infrastructure/config/client/listenbrainz.js";
-import {ErrorWithCause} from "pony-cause";
 import { PlayObject } from "../../core/Atomic.js";
-import { buildTrackString } from "../../core/StringUtils.js";
 import { WildcardEmitter } from "../common/WildcardEmitter.js";
 
 type groupedNamedConfigs = {[key: string]: ParsedConfig[]};
@@ -43,25 +37,21 @@ export default class ScrobbleClients {
 
     sourceEmitter: WildcardEmitter;
 
-    constructor(emitter: WildcardEmitter, sourceEmitter: WildcardEmitter, localUrl: string, configDir: string) {
+    constructor(emitter: WildcardEmitter, sourceEmitter: WildcardEmitter, localUrl: string, configDir: string, parentLogger: Logger) {
         this.emitter = emitter;
         this.sourceEmitter = sourceEmitter;
         this.configDir = configDir;
         this.localUrl = localUrl;
-        this.logger = winston.loggers.get('app').child({labels: ['Scrobblers']}, mergeArr);
+        this.logger = childLogger(parentLogger, 'Scrobblers'); // winston.loggers.get('app').child({labels: ['Scrobblers']}, mergeArr);
 
         this.sourceEmitter.on('discoveredToScrobble', async (payload: { data: (PlayObject | PlayObject[]), options: { forceRefresh?: boolean, checkTime?: Dayjs, scrobbleTo?: string[], scrobbleFrom?: string } }) => {
             await this.scrobble(payload.data, payload.options);
         });
     }
 
-    getByName = (name: any) => {
-        return this.clients.find(x => x.name === name);
-    }
+    getByName = (name: any) => this.clients.find(x => x.name === name)
 
-    getByType = (type: any) => {
-        return this.clients.filter(x => x.type === type);
-    }
+    getByType = (type: any) => this.clients.filter(x => x.type === type)
 
     async getStatusSummary(type?: string, name?: string): Promise<[boolean, string[]]> {
         let clients: AbstractScrobbleClient[];
@@ -88,7 +78,7 @@ export default class ScrobbleClients {
     }
 
     buildClientsFromConfig = async (notifier: Notifiers) => {
-        let configs: ParsedConfig[] = [];
+        const configs: ParsedConfig[] = [];
 
         let configFile;
         try {
@@ -127,7 +117,7 @@ export default class ScrobbleClients {
         }
 
         for (const clientType of clientTypes) {
-            let defaultConfigureAs = 'client';
+            const defaultConfigureAs = 'client';
             switch (clientType) {
                 case 'maloja':
                     // env builder for single user mode
@@ -142,7 +132,6 @@ export default class ScrobbleClients {
                             configureAs: 'client',
                             data: {
                                 url,
-                                // @ts-ignore
                                 apiKey
                             }
                         })
@@ -162,7 +151,6 @@ export default class ScrobbleClients {
                             source: 'ENV',
                             mode: 'single',
                             configureAs: 'client',
-                            // @ts-ignore
                             data: {...lfm, redirectUri: lfm.redirectUri ?? `${this.localUrl}/lastfm/callback`}
                         })
                     }
@@ -180,7 +168,6 @@ export default class ScrobbleClients {
                             source: 'ENV',
                             mode: 'single',
                             configureAs: 'client',
-                            // @ts-ignore
                             data: lz
                         })
                     }
@@ -211,7 +198,7 @@ export default class ScrobbleClients {
                 for(const [i,rawConf] of rawClientConfigs.entries()) {
                     try {
                         const validConfig = validateJson<ClientConfig>(rawConf, clientSchema, this.logger);
-                        // @ts-ignore
+                        // @ts-expect-error configureAs should exist
                         const {configureAs = defaultConfigureAs} = validConfig;
                         if (configureAs === 'client') {
                             const parsedConfig: ParsedConfig = {

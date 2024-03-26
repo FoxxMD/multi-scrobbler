@@ -8,7 +8,7 @@ import LastFm, {
 import AbstractApiClient from "./AbstractApiClient.js";
 import dayjs from "dayjs";
 import {readJson, removeUndefinedKeys, sleep, writeFile} from "../../utils.js";
-import { DEFAULT_RETRY_MULTIPLIER, FormatPlayObjectOptions } from "../infrastructure/Atomic.js";
+import {AbstractApiOptions, DEFAULT_RETRY_MULTIPLIER, FormatPlayObjectOptions} from "../infrastructure/Atomic.js";
 import { LastfmData } from "../infrastructure/config/client/lastfm.js";
 import { PlayObject } from "../../../core/Atomic.js";
 import {getNodeNetworkException, isNodeNetworkException} from "../errors/NodeErrors.js";
@@ -36,7 +36,7 @@ export default class LastfmApiClient extends AbstractApiClient {
     user?: string;
     declare config: LastfmData;
 
-    constructor(name: any, config: Partial<LastfmData> & {configDir: string, localUrl: string}, options = {}) {
+    constructor(name: any, config: Partial<LastfmData> & {configDir: string, localUrl: string}, options: AbstractApiOptions) {
         super('lastfm', name, config, options);
         const {redirectUri, apiKey, secret, session, configDir} = config;
         this.redirectUri = `${redirectUri ?? `${config.localUrl}/lastfm/callback`}?state=${name}`;
@@ -47,7 +47,7 @@ export default class LastfmApiClient extends AbstractApiClient {
         this.client = new LastFm(apiKey as string, secret, session);
     }
 
-    static formatPlayObj = (obj: TrackObject, options: FormatPlayObjectOptions = {}): PlayObject => {
+    static formatPlayObj(obj: TrackObject, options: FormatPlayObjectOptions = {}): PlayObject {
         const {
             artist: {
                 '#text': artists,
@@ -61,7 +61,6 @@ export default class LastfmApiClient extends AbstractApiClient {
             },
             duration,
             date: {
-                // @ts-ignore
                 uts: time,
             } = {},
             '@attr': {
@@ -71,7 +70,7 @@ export default class LastfmApiClient extends AbstractApiClient {
             mbid,
         } = obj;
         // arbitrary decision yikes
-        let artistStrings = splitByFirstFound(artists, [','], [artistName]);
+        const artistStrings = splitByFirstFound(artists, [','], [artistName]);
         return {
             data: {
                 artists: [...new Set(artistStrings)] as string[],

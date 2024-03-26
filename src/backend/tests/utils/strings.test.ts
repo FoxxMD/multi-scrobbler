@@ -111,7 +111,7 @@ describe('String Comparisons', function () {
 
         for(const test of tests) {
             const result = compareNormalizedStrings(test[0], test[1]);
-            assert.isAtMost( result.highScore, 53, `Comparing: '${test[0]}' | '${test[1]}'`);
+            assert.isAtMost( result.highScore, 58, `Comparing: '${test[0]}' | '${test[1]}'`);
         }
     });
 

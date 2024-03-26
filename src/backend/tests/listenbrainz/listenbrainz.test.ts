@@ -20,6 +20,7 @@ import { withRequestInterception } from "../utils/networking.js";
 import {http, HttpResponse} from "msw";
 import { UpstreamError } from "../../common/errors/UpstreamError.js";
 import { ExpectedResults } from "../utils/interfaces.js";
+import {loggerTest} from "@foxxmd/logging";
 
 interface LZTestFixture {
     data: ListenResponse
@@ -112,7 +113,7 @@ describe('Listenbrainz Response Behavior', function() {
         {
             token: 'test',
             username: 'test'
-        });
+        }, {logger: loggerTest});
 
     it('Should recognize bad requests as non-showstopping',withRequestInterception(
         [
@@ -130,7 +131,7 @@ describe('Listenbrainz Response Behavior', function() {
                     playDate: dayjs(),
                     meta: {
                         brainz: {
-                            // @ts-expect-error
+                            // @ts-expect-error wrong on purpose
                             artist: 'fad8967c-a327-4af5-a64a-d4de66ece652;100846a7-06f6-4129-97ce-4409b9a9a311',
                             album: '2eb6a8fb-14f6-436e-9bdf-2f9d0d8cbae0',
                             track: '677862e0-3603-4120-8c44-ee9a70893647',

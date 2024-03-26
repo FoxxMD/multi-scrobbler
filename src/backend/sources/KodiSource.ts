@@ -32,7 +32,7 @@ export class KodiSource extends MemorySource {
                 url
             } = {}
         } = this.config;
-        this.client = new KodiApiClient(this.name, this.config.data);
+        this.client = new KodiApiClient(this.name, this.config.data, {logger: this.logger});
         this.logger.debug(`Config URL: '${url ?? '(None Given)'}' => Normalized: '${this.client.url.toString()}'`)
         return true;
     }
@@ -53,7 +53,7 @@ export class KodiSource extends MemorySource {
             return [];
         }
 
-        let play = await this.client.getRecentlyPlayed(options);
+        const play = await this.client.getRecentlyPlayed(options);
 
         return this.processRecentPlays(play);
     }

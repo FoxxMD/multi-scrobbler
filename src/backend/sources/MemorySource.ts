@@ -27,7 +27,7 @@ import {
 import TupleMap from "../common/TupleMap.js";
 import {AbstractPlayerState, createPlayerOptions, PlayerStateOptions} from "./PlayerState/AbstractPlayerState.js";
 import { GenericPlayerState } from "./PlayerState/GenericPlayerState.js";
-import {Logger} from "@foxxmd/winston";
+import {Logger} from "@foxxmd/logging";
 import {PlayObject, SOURCE_SOT, SOURCE_SOT_TYPES, SourcePlayerObj} from "../../core/Atomic.js";
 import { buildTrackString } from "../../core/StringUtils.js";
 import {SimpleIntervalJob, Task, ToadScheduler} from "toad-scheduler";
@@ -70,7 +70,6 @@ export default class MemorySource extends AbstractSource {
                 deadPlatformIds.push([player.platformIdStr, `Removed after being orphaned for ${dayjs.duration(player.stateIntervalOptions.orphanedInterval, 'seconds').asMinutes()} minutes`]);
             } else if (isStale) {
                 const state = player.getApiState();
-                // @ts-ignore
                 const stateHash = objectHash.sha1(state);
                 if(stateHash !== this.playerState.get(key)) {
                     this.playerState.set(key, stateHash);
@@ -97,9 +96,7 @@ export default class MemorySource extends AbstractSource {
         return record;
     }
 
-    getNewPlayer = (logger: Logger, id: PlayPlatformId, opts: PlayerStateOptions) => {
-        return new GenericPlayerState(logger, id, opts);
-    }
+    getNewPlayer = (logger: Logger, id: PlayPlatformId, opts: PlayerStateOptions) => new GenericPlayerState(logger, id, opts)
 
     setNewPlayer = (idStr: string, logger: Logger, id: PlayPlatformId, opts: PlayerStateOptions = {}) => {
         this.players.set(idStr, this.getNewPlayer(this.logger, id, {
@@ -173,7 +170,7 @@ export default class MemorySource extends AbstractSource {
                 // wait to discover play until it is stale or current play has changed
                 // so that our discovered track has an accurate "listenedFor" count
                 if (candidate !== undefined && (playChanged || player.isUpdateStale())) {
-                    let stPrefix = `${buildTrackString(candidate, {include: ['trackId', 'artist', 'track']})}`;
+                    const stPrefix = `${buildTrackString(candidate, {include: ['trackId', 'artist', 'track']})}`;
                     const thresholdResults = timePassesScrobbleThreshold(scrobbleThresholds, candidate.data.listenedFor, candidate.data.duration);
 
                     if (thresholdResults.passes) {
@@ -215,7 +212,6 @@ export default class MemorySource extends AbstractSource {
                     player.logSummary();
                 }
                 const apiState = player.getApiState();
-                // @ts-ignore
                 this.playerState.set(key, objectHash.sha1(apiState))
                 this.emitEvent('playerUpdate', apiState);
             }
@@ -224,9 +220,7 @@ export default class MemorySource extends AbstractSource {
         return newStatefulPlays;
     }
 
-    recentlyPlayedTrackIsValid = (playObj: any) => {
-        return playObj.data.playDate.isBefore(dayjs().subtract(30, 's'));
-    }
+    recentlyPlayedTrackIsValid = (playObj: any) => playObj.data.playDate.isBefore(dayjs().subtract(30, 's'))
 
     protected getInterval(): number {
         /**
@@ -270,7 +264,7 @@ export default class MemorySource extends AbstractSource {
     }
 }
 
-function sortByPlayDate(a: ProgressAwarePlayObject, b: ProgressAwarePlayObject): number {
+const sortByPlayDate = (a: ProgressAwarePlayObject, b: ProgressAwarePlayObject): number => {
     throw new Error("Function not implemented.");
-}
+};
 

@@ -7,7 +7,7 @@ import {
 } from "../../common/infrastructure/Atomic.js";
 import dayjs, {Dayjs} from "dayjs";
 import { formatNumber, genGroupIdStr, playObjDataMatch, progressBar } from "../../utils.js";
-import {Logger} from "@foxxmd/winston";
+import {childLogger, Logger} from "@foxxmd/logging";
 import { ListenProgress } from "./ListenProgress.js";
 import {PlayObject, Second, SOURCE_SOT, SOURCE_SOT_TYPES, SourcePlayerObj} from "../../../core/Atomic.js";
 import { buildTrackString } from "../../../core/StringUtils.js";
@@ -60,7 +60,7 @@ export abstract class AbstractPlayerState {
 
     protected constructor(logger: Logger, platformId: PlayPlatformId, opts: PlayerStateOptions = DefaultPlayerStateOptions) {
         this.platformId = platformId;
-        this.logger = logger.child({labels: [`Player ${this.platformIdStr}`]});
+        this.logger = childLogger(logger, `Player ${this.platformIdStr}`);
 
         const {
             staleInterval = 120,
@@ -205,7 +205,7 @@ export abstract class AbstractPlayerState {
 
     public getPlayedObject(completed: boolean = false): PlayObject | undefined {
         if(this.currentPlay !== undefined) {
-            let ranges = [...this.listenRanges];
+            const ranges = [...this.listenRanges];
             if (this.currentListenRange !== undefined) {
                 ranges.push(this.currentListenRange);
             }
@@ -228,7 +228,7 @@ export abstract class AbstractPlayerState {
 
     public getListenDuration(): Second{
         let listenDur: number = 0;
-        let ranges = [...this.listenRanges];
+        const ranges = [...this.listenRanges];
         if (this.currentListenRange !== undefined) {
             ranges.push(this.currentListenRange);
         }
@@ -375,7 +375,7 @@ export abstract class AbstractPlayerState {
     }
 
     public textSummary() {
-        let parts = [''];
+        const parts = [''];
         let play: string;
         if (this.currentPlay !== undefined) {
             parts.push(`${buildTrackString(this.currentPlay, {include: ['trackId', 'artist', 'track']})} @ ${this.playFirstSeenAt.toISOString()}`);

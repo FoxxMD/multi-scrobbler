@@ -103,7 +103,6 @@ declare module 'lastfm-node-client' {
         },
         duration: number,
         date?: {
-            // @ts-ignore
             uts: number,
         },
         '@attr'?: {

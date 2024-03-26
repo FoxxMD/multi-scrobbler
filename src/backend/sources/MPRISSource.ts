@@ -1,4 +1,3 @@
-import dbus, {ClientInterface, Variant} from 'dbus-next';
 import dayjs from "dayjs";
 import {
     MPRIS_IFACE,
@@ -8,7 +7,6 @@ import {
     PLAYBACK_STATUS_STOPPED,
     PlaybackStatus,
     PlayerInfo,
-    PROPERTIES_IFACE,
 } from "../common/infrastructure/config/source/mpris.js";
 import { FormatPlayObjectOptions, InternalConfig } from "../common/infrastructure/Atomic.js";
 import MemorySource from "./MemorySource.js";
@@ -17,6 +15,8 @@ import { removeDuplicates } from "../utils.js";
 import EventEmitter from "events";
 import {ErrorWithCause} from "pony-cause";
 import { PlayObject } from "../../core/Atomic.js";
+import {DBusInterface, sessionBus} from 'dbus-ts';
+import { Interfaces as Notifications } from '@dbus-types/notifications'
 
 
 export class MPRISSource extends MemorySource {
@@ -101,32 +101,29 @@ export class MPRISSource extends MemorySource {
     }
 
     protected getDBus = async () => {
-        const bus = dbus.sessionBus();
-        const obj = await bus.getProxyObject('org.freedesktop.DBus', '/org/freedesktop/DBus');
-        return obj.getInterface('org.freedesktop.DBus');
+        const busNew = await sessionBus<Notifications>();
+        const obj = await busNew.getInterface('org.freedesktop.DBus', '/org/freedesktop/DBus', 'org.freedesktop.DBus');
+        return obj;
     }
 
-    protected listAll = async () => {
-        let iface = await this.getDBus();
-        let names = await iface.ListNames();
-        return names.filter((n) => n.startsWith('org.mpris.MediaPlayer2'))
+    protected listNew = async () => {
+        const iface = await this.getDBus();
+        const names = (await iface.ListNames())[0];
+        return names.filter((n) => n.includes('org.mpris.MediaPlayer2'))
     }
 
     getPlayersInfo = async (activeOnly = true): Promise<PlayerInfo[]> => {
-        const list = await this.listAll();
 
-        let bus = dbus.sessionBus();
+        const busNew = await sessionBus<Notifications>();
 
         const playerInfos: PlayerInfo[] = [];
 
-        for (const playerName of list) {
+        const newList = await this.listNew();
+
+        for (const playerName of newList) {
             const plainPlayerName = playerName.replace('org.mpris.MediaPlayer2.', '');
             try {
-                let obj = await bus.getProxyObject(playerName, MPRIS_PATH);
-
-                //let player = obj.getInterface(MPRIS_IFACE);
-                let props = obj.getInterface(PROPERTIES_IFACE);
-
+                const props = await busNew.getInterface(playerName, MPRIS_PATH, MPRIS_IFACE);
                 // may not always have position available! can fallback to undefined for this
                 let pos: number | undefined;
                 try {
@@ -145,56 +142,56 @@ export class MPRISSource extends MemorySource {
                     position: pos,
                     metadata
                 });
-            } catch (e) {
+            }
+            catch (e) {
                 this.logger.warn(new ErrorWithCause(`Could not parse D-bus info for player ${plainPlayerName}`, {cause: e}));
             }
+
         }
+
         return playerInfos;
     }
 
-    protected getPlayerPosition = async (props: ClientInterface): Promise<number> => {
+    protected getPlayerPosition = async (props: DBusInterface): Promise<number> => {
         try {
-            const pos = await props.Get(MPRIS_IFACE, 'Position');
-            return dayjs.duration({milliseconds: Number(pos.value / 1000n)}).asSeconds();
+            const pos = await props['Position'];
+            // microseconds
+            return dayjs.duration({milliseconds: Number(pos / 1000)}).asSeconds();
         } catch(e) {
             throw new ErrorWithCause('Could not get player Position', {cause: e});
         }
     }
 
-    protected getPlayerStatus = async (props: ClientInterface): Promise<PlaybackStatus> => {
+    protected getPlayerStatus = async (props: DBusInterface): Promise<PlaybackStatus> => {
         try {
-            const status = await props.Get(MPRIS_IFACE, 'PlaybackStatus');
-            return status.value as PlaybackStatus;
+            const status = await props['PlaybackStatus'];
+            return status as PlaybackStatus;
         } catch (e) {
             throw new ErrorWithCause('Could not get player PlaybackStatus', {cause: e})
         }
     }
 
-    protected getPlayerMetadata = async (props: ClientInterface): Promise<MPRISMetadata> => {
+    protected getPlayerMetadata = async (props: DBusInterface): Promise<MPRISMetadata> => {
         try {
-            const metadata = await props.Get(MPRIS_IFACE, 'Metadata');
-            return this.metadataToPlain(metadata.value);
+            const metadata = await props['Metadata'];
+            return this.metadataToPlain(metadata);
         } catch(e) {
             throw new ErrorWithCause('Could not get player Metadata', {cause: e});
         }
     }
 
     metadataToPlain = (metadataVariant): MPRISMetadata => {
-        let metadataPlain = {};
-        for (let k of Object.keys(metadataVariant)) {
-            let value = metadataVariant[k];
+        const metadataPlain = {};
+        for (const k of Object.keys(metadataVariant)) {
+            const value = metadataVariant[k];
             if (value === undefined || value === null) {
                 //logging.warn(`ignoring a null metadata value for key ${k}`);
                 continue;
             }
             const plainKey = k.replace(/mpris:|xesam:/, '');
-            if (value instanceof Variant) {
-                if (typeof value.value === 'bigint') {
-                    // in this context we're using it as a duration (track length or playback position)
-                    metadataPlain[plainKey] = dayjs.duration({milliseconds: Number(value.value / 1000n)}).asSeconds();
-                } else {
-                    metadataPlain[plainKey] = value.value;
-                }
+            if(plainKey === 'length' && typeof value === 'number') {
+                // microseconds to seconds
+                metadataPlain[plainKey] = value / 1000000
             } else {
                 metadataPlain[plainKey] = value;
             }
@@ -204,7 +201,7 @@ export class MPRISSource extends MemorySource {
 
     getRecentlyPlayed = async (options: RecentlyPlayedOptions = {}) => {
         const infos = await this.getPlayersInfo();
-        let plays: PlayObject[] = [];
+        const plays: PlayObject[] = [];
         for(const info of infos) {
             const lowerName = info.name.toLocaleLowerCase();
             if(this.whitelist.length > 0) {

@@ -3,9 +3,10 @@ import {
     createSlice
 } from '@reduxjs/toolkit'
 import {logsApi} from "./logsApi";
-import {LogInfoJson, LogOutputConfig} from "../../core/Atomic";
+import {LogOutputConfig} from "../../core/Atomic";
+import {LogDataPretty} from "@foxxmd/logging";
 export interface LogsState {
-    data: LogInfoJson[],
+    data: (LogDataPretty & {levelLabel: string})[],
     settings: LogOutputConfig
 }
 const initialState: LogsState = {data: [], settings: {level: 'debug', sort: 'asc', limit: 50}};

@@ -1,3 +1,5 @@
 {
-  "reporter": "dot"
+  "reporter": "dot",
+  "extension": "ts",
+  "import": "tsx/esm"
 }

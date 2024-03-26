@@ -1,10 +1,10 @@
 import {Dayjs} from "dayjs";
 import {FixedSizeList} from 'fixed-size-list';
-import {Logger} from '@foxxmd/winston';
+import {Logger} from '@foxxmd/logging';
 import TupleMap from "../TupleMap.js";
 import {Request, Response} from "express";
 import {NextFunction, ParamsDictionary, Query} from "express-serve-static-core";
-import { LogLevel, logLevels, PlayMeta, PlayObject } from "../../../core/Atomic.js";
+import {PlayMeta, PlayObject} from "../../../core/Atomic.js";
 
 export type SourceType = 'spotify' | 'plex' | 'tautulli' | 'subsonic' | 'jellyfin' | 'lastfm' | 'deezer' | 'ytmusic' | 'mpris' | 'mopidy' | 'listenbrainz' | 'jriver' | 'kodi' | 'webscrobbler' | 'chromecast';
 export const sourceTypes: SourceType[] = ['spotify', 'plex', 'tautulli', 'subsonic', 'jellyfin', 'lastfm', 'deezer', 'ytmusic', 'mpris', 'mopidy', 'listenbrainz', 'jriver', 'kodi', 'webscrobbler', 'chromecast'];
@@ -105,45 +105,6 @@ export interface RemoteIdentityParts {
     agent: string | undefined
 }
 
-export interface LogConfig {
-    level?: string
-    file?: string | false
-    stream?: string
-    console?: string | false
-}
-
-export interface LogOptions {
-    /**
-     *  Specify the minimum log level for all log outputs without their own level specified.
-     *
-     *  Defaults to env `LOG_LEVEL` or `info` if not specified.
-     *
-     *  @default 'info'
-     * */
-    level?: LogLevel
-    /**
-     * Specify the minimum log level to output to rotating files. If `false` no log files will be created.
-     * */
-    file?: LogLevel | false
-    /**
-     * Specify the minimum log level streamed to the UI
-     * */
-    stream?: LogLevel
-    /**
-     * Specify the minimum log level streamed to the console (or docker container)
-     * */
-    console?: LogLevel | false
-}
-
-export const asLogOptions = (obj: LogConfig = {}): obj is LogOptions => {
-    return Object.entries(obj).every(([key,  val]) => {
-        if(key !== 'file') {
-            return val === undefined || logLevels.includes(val.toLocaleLowerCase());
-        }
-        return val === undefined || val === false || logLevels.includes(val.toLocaleLowerCase());
-    });
-}
-
 // https://stackoverflow.com/questions/40510611/typescript-interface-require-one-of-two-properties-to-exist#comment116238286_49725198
 export type RequireAtLeastOne<T, R extends keyof T = keyof T> = Omit<T, R> & {   [ P in R ] : Required<Pick<T, P>> & Partial<Omit<T, P>> }[R];
 
@@ -205,7 +166,7 @@ export interface numberFormatOptions {
     }
 }
 
-export const DELIMITERS = [',','&','\/','\\'];
+export const DELIMITERS = [',','&','/','\\'];
 
 export const ARTIST_WEIGHT = 0.3;
 export const TITLE_WEIGHT = 0.4;
@@ -232,3 +193,5 @@ export interface MdnsDeviceInfo {
     type: string
     addresses: string[]
 }
+
+export type AbstractApiOptions = Record<any, any> & { logger: Logger }

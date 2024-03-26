@@ -1,5 +1,5 @@
 import { GenericPlayerState } from "./GenericPlayerState.js";
-import {Logger} from "@foxxmd/winston";
+import {Logger} from "@foxxmd/logging";
 import { PlayPlatformId, ReportedPlayerStatus } from "../../common/infrastructure/Atomic.js";
 import { PlayerStateOptions } from "./AbstractPlayerState.js";
 import { PlayObject } from "../../../core/Atomic.js";

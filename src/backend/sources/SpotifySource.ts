@@ -233,7 +233,7 @@ export default class SpotifySource extends MemorySource {
         }
 
         if (validationErrors.length !== 0) {
-            this.logger.warn(`Configuration was not valid:\*${validationErrors.join('\n')}`);
+            this.logger.warn(`Configuration was not valid: *${validationErrors.join('\n')}`);
             throw new Error('Failed to initialize a Spotify source');
         }
 
@@ -284,9 +284,7 @@ export default class SpotifySource extends MemorySource {
         }
     }
 
-    createAuthUrl = () => {
-        return this.spotifyApi.createAuthorizeURL(scopes, this.name);
-    }
+    createAuthUrl = () => this.spotifyApi.createAuthorizeURL(scopes, this.name)
 
     handleAuthCodeCallback = async ({
         error,
@@ -508,39 +506,17 @@ export default class SpotifySource extends MemorySource {
         return true;
     }
 
-    protected getBackloggedPlays = async () => {
-        return await this.getPlayHistory({formatted: true});
-    }
+    protected getBackloggedPlays = async () => await this.getPlayHistory({formatted: true})
 }
 
-const asPlayHistoryObject = (obj: object): obj is PlayHistoryObject => {
-    return 'played_at' in obj;
-}
+const asPlayHistoryObject = (obj: object): obj is PlayHistoryObject => 'played_at' in obj
 
-const asCurrentlyPlayingObject = (obj: object): obj is CurrentlyPlayingObject => {
-    return 'is_playing' in obj;
-}
+const asCurrentlyPlayingObject = (obj: object): obj is CurrentlyPlayingObject => 'is_playing' in obj
 
-const hasApiPermissionError = (e: Error): boolean => {
-    return findCauseByFunc(e, (err) => {
-        return err.message.includes('Permissions missing');
-    }) !== undefined;
-}
+const hasApiPermissionError = (e: Error): boolean => findCauseByFunc(e, (err) => err.message.includes('Permissions missing')) !== undefined
 
-const hasApiAuthError = (e: Error): boolean => {
-    return findCauseByFunc(e, (err) => {
-        return err.message.includes('An authentication error occurred');
-    }) !== undefined;
-}
+const hasApiAuthError = (e: Error): boolean => findCauseByFunc(e, (err) => err.message.includes('An authentication error occurred')) !== undefined
 
-const hasApiTimeoutError = (e: Error): boolean => {
-    return findCauseByFunc(e, (err) => {
-        return err.message.includes('A timeout occurred');
-    }) !== undefined;
-}
+const hasApiTimeoutError = (e: Error): boolean => findCauseByFunc(e, (err) => err.message.includes('A timeout occurred')) !== undefined
 
-const hasApiError = (e: Error): boolean => {
-    return findCauseByFunc(e, (err) => {
-        return err.message.includes('while communicating with Spotify\'s Web API.');
-    }) !== undefined;
-}
+const hasApiError = (e: Error): boolean => findCauseByFunc(e, (err) => err.message.includes('while communicating with Spotify\'s Web API.')) !== undefined

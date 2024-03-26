@@ -4,23 +4,21 @@ import ViteExpress from "vite-express";
 import bodyParser from 'body-parser';
 import passport from 'passport';
 import session from 'express-session';
-import path from "path";
 import { getRoot } from "../ioc.js";
-import {Logger} from "@foxxmd/winston";
-import { LogInfo } from "../../core/Atomic.js";
 import { setupApi } from "./api.js";
 import { getAddress, mergeArr, parseBool } from "../utils.js";
 import {stripIndents} from "common-tags";
 import {ErrorWithCause} from "pony-cause";
-
-//const buildDir = path.join(process.cwd() + "/build");
+import {childLogger, LogData, LogDataPretty} from "@foxxmd/logging";
+import {PassThrough} from "node:stream";
+import {Logger} from '@foxxmd/logging';
 
 const app = addAsync(express());
 const router = Router();
 
-export const initServer = async (parentLogger: Logger, initialOutput: LogInfo[] = []) => {
+export const initServer = async (parentLogger: Logger, appLoggerStream: PassThrough, initialOutput: LogDataPretty[] = []) => {
 
-    const logger = parentLogger.child({labels: ['API']}, mergeArr);
+    const logger = childLogger(parentLogger, 'API'); // parentLogger.child({labels: ['API']}, mergeArr);
 
     try {
         app.use(router);
@@ -44,7 +42,7 @@ export const initServer = async (parentLogger: Logger, initialOutput: LogInfo[] 
         const local = root.get('localUrl');
         const localDefined = root.get('hasDefinedBaseUrl');
 
-        setupApi(app, logger, initialOutput);
+        setupApi(app, logger, appLoggerStream, initialOutput);
 
         const addy = getAddress();
         const addresses: string[] = [];

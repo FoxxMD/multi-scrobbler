@@ -1,3 +1,4 @@
+/* eslint-disable no-case-declarations */
 import { mergeArr, parseBool, readJson, validateJson } from "../utils.js";
 import SpotifySource from "./SpotifySource.js";
 import PlexSource from "./PlexSource.js";
@@ -8,7 +9,7 @@ import LastfmSource from "./LastfmSource.js";
 import DeezerSource from "./DeezerSource.js";
 import { ConfigMeta, InternalConfig, SourceType, sourceTypes } from "../common/infrastructure/Atomic.js";
 import { configDir as defaultConfigDir } from "../common/index.js";
-import winston, {Logger} from '@foxxmd/winston';
+import {childLogger, Logger} from '@foxxmd/logging';
 import { SourceAIOConfig, SourceConfig } from "../common/infrastructure/config/source/sources.js";
 import { DeezerData, DeezerSourceConfig } from "../common/infrastructure/config/source/deezer.js";
 import { LastfmClientConfig } from "../common/infrastructure/config/client/lastfm.js";
@@ -54,29 +55,23 @@ export default class ScrobbleSources {
 
     emitter: WildcardEmitter;
 
-    constructor(emitter: EventEmitter, localUrl: string, configDir: string = defaultConfigDir) {
+    constructor(emitter: EventEmitter, localUrl: string, configDir: string = defaultConfigDir, parentLogger: Logger) {
         this.emitter = emitter;
         this.configDir = configDir;
         this.localUrl = localUrl;
-        this.logger = winston.loggers.get('app').child({labels: ['Sources']}, mergeArr);
+        this.logger = childLogger(parentLogger, 'Sources'); // winston.loggers.get('app').child({labels: ['Sources']}, mergeArr);
     }
 
-    getByName = (name: any) => {
-        return this.sources.find(x => x.name === name);
-    }
+    getByName = (name: any) => this.sources.find(x => x.name === name)
 
-    getByType = (type: any) => {
-        return this.sources.filter(x => x.type === type);
-    }
+    getByType = (type: any) => this.sources.filter(x => x.type === type)
 
-    getByNameAndType = (name: string, type: SourceType) => {
-        return this.sources.find(x => x.name === name && x.type === type);
-    }
+    getByNameAndType = (name: string, type: SourceType) => this.sources.find(x => x.name === name && x.type === type)
 
     async getStatusSummary(type?: string, name?: string): Promise<[boolean, string[]]> {
         let sources: AbstractSource[]
         let sourcesReady = true;
-        let messages: string[] = [];
+        const messages: string[] = [];
 
         if(type !== undefined) {
             sources = this.getByType(type);
@@ -101,7 +96,7 @@ export default class ScrobbleSources {
     }
 
     buildSourcesFromConfig = async (additionalConfigs: ParsedConfig[] = []) => {
-        let configs: ParsedConfig[] = additionalConfigs;
+        const configs: ParsedConfig[] = additionalConfigs;
 
         let configFile;
         try {
@@ -138,7 +133,7 @@ export default class ScrobbleSources {
             }
         }
 
-        for (let sourceType of sourceTypes) {
+        for (const sourceType of sourceTypes) {
             let defaultConfigureAs = 'source';
             // env builder for single user mode
             switch (sourceType) {
@@ -376,7 +371,7 @@ export default class ScrobbleSources {
                     try {
                         const validConfig = validateJson<SourceConfig>(rawConf, sourceSchema, this.logger);
 
-                        // @ts-ignore
+                        // @ts-expect-error will eventually have all info (lazy)
                         const parsedConfig: ParsedConfig = {
                             ...rawConf,
                             source: `${sourceType}.json`,

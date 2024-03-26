@@ -2,11 +2,12 @@ import { IngressNotifier } from "./IngressNotifier.js";
 import {Request} from "express";
 import PlexSource from "../PlexSource.js";
 import TautulliSource from "../TautulliSource.js";
+import {Logger} from "@foxxmd/logging";
 
 export class TautulliNotifier extends IngressNotifier {
 
-    constructor() {
-        super('Tautulli');
+    constructor(logger: Logger) {
+        super('Tautulli', logger);
     }
 
     seenServers: string[] = [];
@@ -16,7 +17,7 @@ export class TautulliNotifier extends IngressNotifier {
 
             if(!this.seenServers.includes(playObj.meta.server)) {
                 this.seenServers.push(playObj.meta.server);
-                let msg = [`Received data from server ${playObj.meta.server} for the first time.`];
+                const msg = [`Received data from server ${playObj.meta.server} for the first time.`];
                 if(req.body === undefined) {
                     msg.push('WARNING: Payload was empty.');
                 }

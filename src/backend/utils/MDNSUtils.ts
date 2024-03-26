@@ -1,4 +1,4 @@
-import {Logger} from "@foxxmd/winston";
+import {Logger} from "@foxxmd/logging";
 import AvahiBrowser from 'avahi-browse';
 import { MaybeLogger } from "../common/logging.js";
 import { sleep } from "../utils.js";
@@ -39,7 +39,7 @@ export const discoveryAvahi = async (service: string, options?: DiscoveryOptions
     maybeLogger.debug(`Starting mDNS discovery with Avahi => Listening for ${(duration / 1000).toFixed(2)}s`);
     let anyDiscovered = false;
 
-    let services = new Map<string, MdnsDeviceInfo>();
+    const services = new Map<string, MdnsDeviceInfo>();
 
     const triggerDiscovery = () => {
         for(const [k,v] of services.entries()) {
@@ -114,7 +114,7 @@ export const discoveryNative = async (service: string, options?: DiscoveryOption
     maybeLogger.debug(`Starting mDNS discovery => Listening for ${(duration / 1000).toFixed(2)}s`);
 
     if (sanity) {
-        let services: ServiceType[] = [];
+        const services: ServiceType[] = [];
         const testBrowser = new Browser(ServiceType.all())
             .on('serviceUp', (service: ServiceType) => {
                 services.push(service)

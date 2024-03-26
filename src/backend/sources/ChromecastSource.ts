@@ -24,13 +24,14 @@ import {
     getMediaStatus,
     genPlayHash,
 } from "../common/vendor/chromecast/ChromecastClientUtils.js";
-import {config, Logger} from "@foxxmd/winston";
+import {Logger} from "@foxxmd/logging";
 import {ContextualValidationError} from "@foxxmd/chromecast-client/dist/cjs/src/utils.js";
 import { buildTrackString } from "../../core/StringUtils.js";
 import { discoveryAvahi, discoveryNative } from "../utils/MDNSUtils.js";
 import {MaybeLogger} from "../common/logging.js";
 import e, {application} from "express";
 import {NETWORK_ERROR_FAILURE_CODES} from "../common/errors/NodeErrors.js";
+import {childLogger} from "@foxxmd/logging";
 
 interface ChromecastDeviceInfo {
     mdns: MdnsDeviceInfo
@@ -236,7 +237,7 @@ export class ChromecastSource extends MemorySource {
                 retries: 0,
                 platform,
                 applications,
-                logger: this.logger.child({labels: [device.name.substring(0, 25)]}, mergeArr),
+                logger: childLogger(this.logger, device.name.substring(0, 25)),
             });
         } catch (e) {
             this.logger.error(e);
@@ -246,11 +247,11 @@ export class ChromecastSource extends MemorySource {
 
     protected initializeClientPlatform = async (device: MdnsDeviceInfo): Promise<[CastClient, PersistentClient, PlatformType]> => {
 
-        let index = 0;
+        const index = 0;
         for(const address of device.addresses) {
 
-            let castClient = new CastClient;
-            let client: PersistentClient = new PersistentClient({host: address, client: castClient});
+            const castClient = new CastClient;
+            const client: PersistentClient = new PersistentClient({host: address, client: castClient});
             client.on('connect', () => this.handleCastClientEvent(device.name, 'connect'));
             client.on('reconnect', () => this.handleCastClientEvent(device.name, 'reconnect'));
             client.on('reconnecting', () => this.handleCastClientEvent(device.name, 'reconnecting'));
@@ -351,7 +352,7 @@ export class ChromecastSource extends MemorySource {
                 let storedApp = v.applications.get(a.transportId);
                 if(!storedApp) {
                     const appName = a.displayName;
-                    let found = `Found Application '${appName}-${a.transportId.substring(0, 4)}'`;
+                    const found = `Found Application '${appName}-${a.transportId.substring(0, 4)}'`;
                     const appLowerName = appName.toLocaleLowerCase();
                     let filtered = false;
                     let valid = true;
@@ -392,7 +393,7 @@ export class ChromecastSource extends MemorySource {
                         badData: false,
                         validAppType: valid,
                         playerId: genGroupIdStr([genDeviceId(k, a.displayName), NO_USER]),
-                        logger: v.logger.child({labels: [`App ${a.displayName.substring(0, 25)}-${a.transportId.substring(0,4)}`]}, mergeArr)
+                        logger: childLogger(v.logger, `App ${a.displayName.substring(0, 25)}-${a.transportId.substring(0,4)}`)
                     }
                     v.applications.set(a.transportId, storedApp);
                 } else if(storedApp.stale === true) {
@@ -489,7 +490,7 @@ export class ChromecastSource extends MemorySource {
     }
 
     getRecentlyPlayed = async (options: RecentlyPlayedOptions = {}) => {
-        let plays: SourceData[] = [];
+        const plays: SourceData[] = [];
 
         try {
             await this.refreshApplications();
@@ -667,9 +668,10 @@ export class ChromecastSource extends MemorySource {
 
         let artists: string[] = [],
             albumArtists: string[] = [],
-            track: string = (title ?? songName) as string,
-            album: string = (albumNorm ?? albumName) as string,
             mediaType: string = 'unknown';
+
+            const track: string = (title ?? songName) as string;
+            const album: string = (albumNorm ?? albumName) as string;
 
         if(artist !== undefined) {
             artists = [artist as string];

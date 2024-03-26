@@ -28,13 +28,13 @@ export default class ListenbrainzSource extends MemorySource {
         super('listenbrainz', name, {...config, data: {interval, maxInterval, ...restData}}, internal, emitter);
         this.canPoll = true;
         this.canBacklog = true;
-        this.api = new ListenbrainzApiClient(name, config.data);
+        this.api = new ListenbrainzApiClient(name, config.data, {logger: this.logger});
         this.playerSourceOfTruth = SOURCE_SOT.HISTORY;
         this.supportsUpstreamRecentlyPlayed = true;
         this.logger.info(`Note: The player for this source is an analogue for the 'Now Playing' status exposed by ${this.type} which is NOT used for scrobbling. Instead, the 'recently played' or 'history' information provided by this source is used for scrobbles.`)
     }
 
-    static formatPlayObj = (obj: any, options: FormatPlayObjectOptions = {}) => ListenbrainzApiClient.formatPlayObj(obj, options);
+    static formatPlayObj(obj: any, options: FormatPlayObjectOptions = {}){ return ListenbrainzApiClient.formatPlayObj(obj, options); }
 
     protected async doCheckConnection(): Promise<true | string | undefined> {
         try {
@@ -78,7 +78,5 @@ export default class ListenbrainzSource extends MemorySource {
         }
     }
 
-    protected getBackloggedPlays = async () => {
-        return await this.getRecentlyPlayed({formatted: true});
-    }
+    protected getBackloggedPlays = async () => await this.getRecentlyPlayed({formatted: true})
 }

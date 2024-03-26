@@ -1,11 +1,11 @@
-import {config, Logger} from "@foxxmd/winston";
+import {childLogger, Logger} from '@foxxmd/logging';
 import { mergeArr } from "../utils.js";
 import {AsyncTask} from "toad-scheduler";
 import {PromisePool} from "@supercharge/promise-pool";
 import ScrobbleClients from "../scrobblers/ScrobbleClients.js";
 
 export const createHeartbeatClientsTask = (clients: ScrobbleClients, parentLogger: Logger) => {
-    const logger = parentLogger.child({labels: ['Heartbeat', 'Clients']}, mergeArr);
+    const logger = childLogger(parentLogger, ['Heartbeat', 'Clients']);
 
     return new AsyncTask(
         'Heartbeat',

@@ -1,8 +1,11 @@
 import {describe, it, after, before} from 'mocha';
-import {assert} from 'chai';
+import chai, {assert} from 'chai';
+import asPromised from 'chai-as-promised';
 import clone from 'clone';
 import pEvent from 'p-event';
 import { http, HttpResponse } from 'msw';
+
+chai.use(asPromised);
 
 import withDuration from '../plays/withDuration.json';
 import mixedDuration from '../plays/mixedDuration.json';
@@ -110,6 +113,23 @@ describe('Detects duplicate and unique scrobbles from client recent history', fu
             });
 
             assert.isFalse(await testScrobbler.alreadyScrobbled(newScrobble));
+        });
+
+        it('It handles unique detection when no existing scrobble matches above a score of 0', async function () {
+
+            testScrobbler.recentScrobbles = normalizedWithMixedDur;
+
+                const uniquePlay = generatePlay({
+                    artists: [
+                        "２８１４"
+                    ],
+                    track: "新宿ゴールデン街",
+                    duration: 130,
+                    playDate: normalizedWithMixedDur[normalizedWithMixedDur.length - 3].data.playDate.add(6, 'minutes')
+                });
+
+                await assert.isFulfilled( testScrobbler.alreadyScrobbled(uniquePlay))
+                await assert.eventually.isFalse(testScrobbler.alreadyScrobbled(uniquePlay))
         });
     });
 

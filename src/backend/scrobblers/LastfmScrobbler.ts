@@ -13,7 +13,7 @@ import { FormatPlayObjectOptions, INITIALIZING, ScrobbledPlayObject } from "../c
 import { LastfmClientConfig } from "../common/infrastructure/config/client/lastfm.js";
 import {TrackScrobblePayload, TrackScrobbleResponse, UserGetRecentTracksResponse} from "lastfm-node-client";
 import { Notifiers } from "../notifier/Notifiers.js";
-import {Logger} from '@foxxmd/winston';
+import {Logger} from "@foxxmd/logging";
 import { PlayObject, TrackStringOptions } from "../../core/Atomic.js";
 import { buildTrackString, capitalize } from "../../core/StringUtils.js";
 import EventEmitter from "events";
@@ -32,8 +32,8 @@ export default class LastfmScrobbler extends AbstractScrobbleClient {
 
     constructor(name: any, config: LastfmClientConfig, options = {}, notifier: Notifiers, emitter: EventEmitter, logger: Logger) {
         super('lastfm', name, config, notifier, emitter, logger);
-        // @ts-ignore
-        this.api = new LastfmApiClient(name, config.data, options)
+        // @ts-expect-error sloppy data structure assign
+        this.api = new LastfmApiClient(name, config.data, {...options, logger})
     }
 
     formatPlayObj = (obj: any, options: FormatPlayObjectOptions = {}) => LastfmApiClient.formatPlayObj(obj, options);
@@ -131,9 +131,7 @@ export default class LastfmScrobbler extends AbstractScrobbleClient {
         return track.toLocaleLowerCase().trim();
     }
 
-    alreadyScrobbled = async (playObj: PlayObject, log = false) => {
-        return (await this.existingScrobble(playObj)) !== undefined;
-    }
+    alreadyScrobbled = async (playObj: PlayObject, log = false) => (await this.existingScrobble(playObj)) !== undefined
 
     public playToClientPayload(playObject: PlayObject): object {
         return this.api.playToClientPayload(playObject);

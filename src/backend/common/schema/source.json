@@ -1815,6 +1815,12 @@
         },
         "SubsonicData": {
             "properties": {
+                "ignoreTlsErrors": {
+                    "default": false,
+                    "description": "If your subsonic server is using self-signed certs you may need to disable TLS errors in order to get a connection\n\nWARNING: This should be used with caution as your traffic may not be encrypted.",
+                    "title": "ignoreTlsErrors",
+                    "type": "boolean"
+                },
                 "interval": {
                     "default": 10,
                     "description": "How long to wait before polling the source API for new tracks (in seconds)",
@@ -1823,6 +1829,12 @@
                     ],
                     "title": "interval",
                     "type": "number"
+                },
+                "legacyAuthentication": {
+                    "default": false,
+                    "description": "Older Subsonic versions, and some badly implemented servers (Nextcloud), use legacy authentication which sends your password in CLEAR TEXT. This is less secure than the newer, recommended hashing authentication method but in some cases it is needed. See \"Authentication\" section here => https://www.subsonic.org/pages/api.jsp\n\nIf this option is not specified it will be turned on if the subsonic server responds with error code 41 \"Token authentication not supported for LDAP users.\" -- See Error Handling section => https://www.subsonic.org/pages/api.jsp",
+                    "title": "legacyAuthentication",
+                    "type": "boolean"
                 },
                 "maxInterval": {
                     "default": 30,
