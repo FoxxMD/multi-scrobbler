@@ -1,12 +1,16 @@
-import AbstractScrobbleClient from "./AbstractScrobbleClient.js";
-import request, {ResponseError, SuperAgentRequest} from 'superagent';
-import dayjs from 'dayjs';
+import { Logger } from "@foxxmd/logging";
 import compareVersions from 'compare-versions';
-import { sleep, parseRetryAfterSecsFromObj } from "../utils.js";
+import dayjs from 'dayjs';
+import EventEmitter from "events";
+import normalizeUrl from "normalize-url";
+import request, { SuperAgentRequest } from 'superagent';
+import { PlayObject } from "../../core/Atomic.js";
+import { buildTrackString, capitalize } from "../../core/StringUtils.js";
+import { isSuperAgentResponseError } from "../common/errors/ErrorUtils.js";
+import { isNodeNetworkException } from "../common/errors/NodeErrors.js";
+import { UpstreamError } from "../common/errors/UpstreamError.js";
 import { DEFAULT_RETRY_MULTIPLIER, FormatPlayObjectOptions, INITIALIZING } from "../common/infrastructure/Atomic.js";
 import { MalojaClientConfig } from "../common/infrastructure/config/client/maloja.js";
-import { Notifiers } from "../notifier/Notifiers.js";
-import {Logger} from "@foxxmd/logging";
 import {
     getMalojaResponseError,
     isMalojaAPIErrorBody,
@@ -19,14 +23,10 @@ import {
     MalojaV2ScrobbleData,
     MalojaV3ScrobbleData,
 } from "../common/vendor/maloja/interfaces.js";
-import { PlayObject, TrackStringOptions } from "../../core/Atomic.js";
-import { buildTrackString, capitalize } from "../../core/StringUtils.js";
-import EventEmitter from "events";
-import normalizeUrl from "normalize-url";
-import { UpstreamError } from "../common/errors/UpstreamError.js";
+import { Notifiers } from "../notifier/Notifiers.js";
+import { parseRetryAfterSecsFromObj, sleep } from "../utils.js";
 import { getScrobbleTsSOCDate, getScrobbleTsSOCDateWithContext } from "../utils/TimeUtils.js";
-import { isNodeNetworkException } from "../common/errors/NodeErrors.js";
-import { isSuperAgentResponseError } from "../common/errors/ErrorUtils.js";
+import AbstractScrobbleClient from "./AbstractScrobbleClient.js";
 
 const feat = ["ft.", "ft", "feat.", "feat", "featuring", "Ft.", "Ft", "Feat.", "Feat", "Featuring"];
 

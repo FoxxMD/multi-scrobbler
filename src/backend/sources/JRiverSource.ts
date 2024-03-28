@@ -1,13 +1,13 @@
-import MemorySource from "./MemorySource.js";
-import { FormatPlayObjectOptions, InternalConfig } from "../common/infrastructure/Atomic.js";
 import dayjs from "dayjs";
-import {URL} from "url";
+import { EventEmitter } from "events";
 import normalizeUrl from 'normalize-url';
-import {EventEmitter} from "events";
-import { RecentlyPlayedOptions } from "./AbstractSource.js";
+import { URL } from "url";
+import { PlayObject } from "../../core/Atomic.js";
+import { FormatPlayObjectOptions, InternalConfig } from "../common/infrastructure/Atomic.js";
 import { JRiverSourceConfig } from "../common/infrastructure/config/source/jriver.js";
 import { Info, JRiverApiClient, PLAYER_STATE } from "../common/vendor/JRiverApiClient.js";
-import { PlayObject } from "../../core/Atomic.js";
+import { RecentlyPlayedOptions } from "./AbstractSource.js";
+import MemorySource from "./MemorySource.js";
 
 export class JRiverSource extends MemorySource {
     declare config: JRiverSourceConfig;

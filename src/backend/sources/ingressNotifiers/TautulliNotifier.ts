@@ -1,8 +1,7 @@
-import { IngressNotifier } from "./IngressNotifier.js";
-import {Request} from "express";
-import PlexSource from "../PlexSource.js";
+import { Logger } from "@foxxmd/logging";
+import { Request } from "express";
 import TautulliSource from "../TautulliSource.js";
-import {Logger} from "@foxxmd/logging";
+import { IngressNotifier } from "./IngressNotifier.js";
 
 export class TautulliNotifier extends IngressNotifier {
 

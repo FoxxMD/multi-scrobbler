@@ -1,16 +1,10 @@
-import dayjs, {Dayjs} from "dayjs";
-import {
-    genGroupId,
-    genGroupIdStrFromPlay,
-    mergeArr,
-    playObjDataMatch,
-    pollingBackoff,
-    sleep,
-    sortByNewestPlayDate,
-    sortByOldestPlayDate,
-    findCauseByFunc,
-    formatNumber,
-} from "../utils.js";
+import { childLogger, Logger } from '@foxxmd/logging';
+import dayjs, { Dayjs } from "dayjs";
+import { EventEmitter } from "events";
+import { FixedSizeList } from "fixed-size-list";
+import { PlayObject, TA_CLOSE } from "../../core/Atomic.js";
+import { buildTrackString, capitalize } from "../../core/StringUtils.js";
+import { isNodeNetworkException } from "../common/errors/NodeErrors.js";
 import {
     Authenticatable,
     DEFAULT_POLLING_INTERVAL,
@@ -18,9 +12,7 @@ import {
     DEFAULT_RETRY_MULTIPLIER,
     DeviceId,
     GroupedFixedPlays,
-    GroupedPlays,
     InternalConfig,
-    NO_DEVICE,
     NO_USER,
     PlayPlatformId,
     PlayUserId,
@@ -28,14 +20,18 @@ import {
     SINGLE_USER_PLATFORM_ID,
     SourceType,
 } from "../common/infrastructure/Atomic.js";
-import {childLogger, Logger} from '@foxxmd/logging';
 import { SourceConfig } from "../common/infrastructure/config/source/sources.js";
-import {EventEmitter} from "events";
-import {FixedSizeList} from "fixed-size-list";
 import TupleMap from "../common/TupleMap.js";
-import { PlayObject, TA_CLOSE } from "../../core/Atomic.js";
-import { buildTrackString, capitalize } from "../../core/StringUtils.js";
-import { isNodeNetworkException } from "../common/errors/NodeErrors.js";
+import {
+    findCauseByFunc,
+    formatNumber,
+    genGroupId,
+    playObjDataMatch,
+    pollingBackoff,
+    sleep,
+    sortByNewestPlayDate,
+    sortByOldestPlayDate,
+} from "../utils.js";
 import { comparePlayTemporally, temporalAccuracyIsAtLeast } from "../utils/TimeUtils.js";
 
 export interface RecentlyPlayedOptions {

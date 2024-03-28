@@ -1,23 +1,21 @@
 import 'dotenv/config';
-import {LogDataPretty, Logger} from "@foxxmd/logging";
+import { childLogger, LogDataPretty, Logger as FoxLogger } from "@foxxmd/logging";
 import dayjs from 'dayjs';
-import utc from 'dayjs/plugin/utc.js';
+import duration from 'dayjs/plugin/duration.js';
 import isBetween from 'dayjs/plugin/isBetween.js';
 import relativeTime from 'dayjs/plugin/relativeTime.js';
-import duration from 'dayjs/plugin/duration.js';
 import timezone from 'dayjs/plugin/timezone.js';
-import { parseBool, readJson, sleep } from "./utils.js";
+import utc from 'dayjs/plugin/utc.js';
 import * as path from "path";
+import { SimpleIntervalJob, ToadScheduler } from "toad-scheduler";
 import { projectDir } from "./common/index.js";
-import SpotifySource from "./sources/SpotifySource.js";
 import { AIOConfig } from "./common/infrastructure/config/aioConfig.js";
+import { appLogger, initLogger as getInitLogger } from "./common/logging.js";
 import { getRoot } from "./ioc.js";
-import {appLogger, initLogger as getInitLogger} from "./common/logging.js";
 import { initServer } from "./server/index.js";
-import {SimpleIntervalJob, ToadScheduler} from "toad-scheduler";
-import { createHeartbeatSourcesTask } from "./tasks/heartbeatSources.js";
 import { createHeartbeatClientsTask } from "./tasks/heartbeatClients.js";
-import {loggerDebug, childLogger, LogData, Logger as FoxLogger} from '@foxxmd/logging';
+import { createHeartbeatSourcesTask } from "./tasks/heartbeatSources.js";
+import { parseBool, readJson, sleep } from "./utils.js";
 
 dayjs.extend(utc)
 dayjs.extend(isBetween);

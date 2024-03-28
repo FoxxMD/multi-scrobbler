@@ -1,21 +1,20 @@
-import {describe, it, after, before} from 'mocha';
-import chai, {assert} from 'chai';
+import chai, { assert } from 'chai';
 import asPromised from 'chai-as-promised';
 import clone from 'clone';
-import pEvent from 'p-event';
+import dayjs from "dayjs";
+import { after, before, describe, it } from 'mocha';
 import { http, HttpResponse } from 'msw';
-
-chai.use(asPromised);
-
-import withDuration from '../plays/withDuration.json';
+import pEvent from 'p-event';
+import { PlayObject } from "../../../core/Atomic.js";
+import { sleep } from "../../utils.js";
 import mixedDuration from '../plays/mixedDuration.json';
+import withDuration from '../plays/withDuration.json';
+import { MockNetworkError, withRequestInterception } from "../utils/networking.js";
+import { asPlays, generatePlay, normalizePlays } from "../utils/PlayTestUtils.js";
 
 import { TestScrobbler } from "./TestScrobbler.js";
-import { asPlays, generatePlay, normalizePlays } from "../utils/PlayTestUtils.js";
-import dayjs from "dayjs";
-import { sleep } from "../../utils.js";
-import { MockNetworkError, withRequestInterception } from "../utils/networking.js";
-import { PlayObject } from "../../../core/Atomic.js";
+
+chai.use(asPromised);
 
 const firstPlayDate = dayjs().subtract(1, 'hour');
 const olderFirstPlayDate = dayjs().subtract(4, 'hour');

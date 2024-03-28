@@ -1,8 +1,8 @@
-import { REPORTED_PLAYER_STATUSES, ReportedPlayerStatus } from "../../infrastructure/Atomic.js";
-import { PlatformApplication, PlatformType } from "./interfaces.js";
-import {Media, MediaController, Result} from "@foxxmd/chromecast-client";
+import { Media, MediaController, Result } from "@foxxmd/chromecast-client";
 import objectHash from "object-hash";
 import { PlayObject } from "../../../../core/Atomic.js";
+import { REPORTED_PLAYER_STATUSES, ReportedPlayerStatus } from "../../infrastructure/Atomic.js";
+import { PlatformApplication, PlatformType } from "./interfaces.js";
 
 export const chromePlayerStateToReported = (state: string): ReportedPlayerStatus => {
     switch (state) {

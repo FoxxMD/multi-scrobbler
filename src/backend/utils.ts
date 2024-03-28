@@ -1,12 +1,19 @@
-import {accessSync, constants, promises} from "fs";
-import dayjs, {Dayjs} from 'dayjs';
-import utc from 'dayjs/plugin/utc.js';
-import {Logger} from '@foxxmd/logging';
-import JSON5 from 'json5';
-import {TimeoutError, WebapiError} from "spotify-web-api-node/src/response-error.js";
-import {Schema} from 'ajv';
+import { Logger } from '@foxxmd/logging';
+import backoffStrategies from '@kenyip/backoff-strategies';
+import address from "address";
 import * as AjvNS from 'ajv';
-import Ajv from 'ajv';
+import Ajv, { Schema } from 'ajv';
+import { replaceResultTransformer, stripIndentTransformer, TemplateTag, trimResultTransformer } from 'common-tags';
+import dayjs, { Dayjs } from 'dayjs';
+import { Duration } from "dayjs/plugin/duration.js";
+import utc from 'dayjs/plugin/utc.js';
+import { Request } from "express";
+import { accessSync, constants, promises } from "fs";
+import JSON5 from 'json5';
+import pathUtil from "path";
+import { getErrorCause } from "pony-cause";
+import { TimeoutError, WebapiError } from "spotify-web-api-node/src/response-error.js";
+import { PlayObject } from "../core/Atomic.js";
 import {
     asPlayerStateData,
     NO_DEVICE,
@@ -19,14 +26,6 @@ import {
     RemoteIdentityParts,
     ScrobbleThresholdResult,
 } from "./common/infrastructure/Atomic.js";
-import {Request} from "express";
-import pathUtil from "path";
-import {getErrorCause} from "pony-cause";
-import backoffStrategies from '@kenyip/backoff-strategies';
-import {replaceResultTransformer, stripIndentTransformer, TemplateTag, trimResultTransformer} from 'common-tags';
-import {Duration} from "dayjs/plugin/duration.js";
-import { PlayObject } from "../core/Atomic.js";
-import address from "address";
 
 //const { default: Ajv } = AjvNS;
 dayjs.extend(utc);

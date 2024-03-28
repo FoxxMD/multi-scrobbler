@@ -1,41 +1,33 @@
-import AbstractSource from "./AbstractSource.js";
-import {
-    playObjDataMatch,
-    sortByOldestPlayDate,
-    toProgressAwarePlayObject,
-    getProgress,
-    thresholdResultSummary,
-    genGroupId,
-    genGroupIdStr,
-    getPlatformIdFromData,
-    formatNumber,
-} from "../utils.js";
+import { Logger } from "@foxxmd/logging";
 import dayjs from "dayjs";
+import { EventEmitter } from "events";
+import objectHash from 'object-hash';
+import { SimpleIntervalJob, Task, ToadScheduler } from "toad-scheduler";
+import { PlayObject, SOURCE_SOT, SOURCE_SOT_TYPES, SourcePlayerObj } from "../../core/Atomic.js";
+import { buildTrackString } from "../../core/StringUtils.js";
 import {
     asPlayerStateData,
     CALCULATED_PLAYER_STATUSES,
-    DeviceId,
-    GroupedPlays,
     InternalConfig,
     PlayerStateData,
     PlayPlatformId,
-    PlayUserId,
     ProgressAwarePlayObject,
-    ScrobbleThresholdResult,
     SourceType,
 } from "../common/infrastructure/Atomic.js";
-import TupleMap from "../common/TupleMap.js";
-import {AbstractPlayerState, createPlayerOptions, PlayerStateOptions} from "./PlayerState/AbstractPlayerState.js";
-import { GenericPlayerState } from "./PlayerState/GenericPlayerState.js";
-import {Logger} from "@foxxmd/logging";
-import {PlayObject, SOURCE_SOT, SOURCE_SOT_TYPES, SourcePlayerObj} from "../../core/Atomic.js";
-import { buildTrackString } from "../../core/StringUtils.js";
-import {SimpleIntervalJob, Task, ToadScheduler} from "toad-scheduler";
+import { PollingOptions } from "../common/infrastructure/config/common.js";
 import { SourceConfig } from "../common/infrastructure/config/source/sources.js";
-import {EventEmitter} from "events";
-import objectHash from 'object-hash';
+import {
+    formatNumber,
+    genGroupId,
+    genGroupIdStr,
+    getPlatformIdFromData,
+    playObjDataMatch,
+    thresholdResultSummary,
+} from "../utils.js";
 import { timePassesScrobbleThreshold } from "../utils/TimeUtils.js";
-import {PollingOptions} from "../common/infrastructure/config/common.js";
+import AbstractSource from "./AbstractSource.js";
+import { AbstractPlayerState, createPlayerOptions, PlayerStateOptions } from "./PlayerState/AbstractPlayerState.js";
+import { GenericPlayerState } from "./PlayerState/GenericPlayerState.js";
 
 export default class MemorySource extends AbstractSource {
 

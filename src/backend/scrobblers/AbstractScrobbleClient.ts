@@ -1,13 +1,20 @@
-import dayjs, {Dayjs} from "dayjs";
+import { childLogger, Logger } from "@foxxmd/logging";
+import dayjs, { Dayjs } from "dayjs";
+import EventEmitter from "events";
+import { FixedSizeList } from 'fixed-size-list';
+import { nanoid } from "nanoid";
+import { messageWithCauses } from "pony-cause";
 import {
-    comparingMultipleArtists,
-    mergeArr,
-    playObjDataMatch,
-    pollingBackoff,
-    setIntersection,
-    sleep,
-    sortByOldestPlayDate,
-} from "../utils.js";
+    DeadLetterScrobble,
+    PlayObject,
+    QueuedScrobble,
+    TA_CLOSE,
+    TA_FUZZY,
+    TrackStringOptions,
+} from "../../core/Atomic.js";
+import { buildTrackString, capitalize, truncateStringToLength } from "../../core/StringUtils.js";
+import { hasNodeNetworkException } from "../common/errors/NodeErrors.js";
+import { hasUpstreamError, UpstreamError } from "../common/errors/UpstreamError.js";
 import {
     ARTIST_WEIGHT,
     Authenticatable,
@@ -19,30 +26,21 @@ import {
     INITIALIZING,
     InitState,
     NOT_INITIALIZED,
-    REFERENCE_WEIGHT,
     ScrobbledPlayObject,
     TIME_WEIGHT,
     TITLE_WEIGHT,
 } from "../common/infrastructure/Atomic.js";
-import {childLogger, Logger} from "@foxxmd/logging";
 import { CommonClientConfig } from "../common/infrastructure/config/client/index.js";
 import { Notifiers } from "../notifier/Notifiers.js";
-import {FixedSizeList} from 'fixed-size-list';
 import {
-    DeadLetterScrobble,
-    PlayObject,
-    QueuedScrobble,
-    TA_CLOSE,
-    TA_FUZZY,
-    TrackStringOptions,
-} from "../../core/Atomic.js";
-import { buildTrackString, capitalize, truncateStringToLength } from "../../core/StringUtils.js";
-import EventEmitter from "events";
+    comparingMultipleArtists,
+    playObjDataMatch,
+    pollingBackoff,
+    setIntersection,
+    sleep,
+    sortByOldestPlayDate,
+} from "../utils.js";
 import { compareScrobbleArtists, compareScrobbleTracks, normalizeStr } from "../utils/StringUtils.js";
-import { hasUpstreamError, UpstreamError } from "../common/errors/UpstreamError.js";
-import {nanoid} from "nanoid";
-import {messageWithCauses} from "pony-cause";
-import { hasNodeNetworkException } from "../common/errors/NodeErrors.js";
 import {
     comparePlayTemporally,
     temporalAccuracyIsAtLeast,

@@ -1,13 +1,13 @@
-import YouTubeMusic from "youtube-music-ts-api";
-import AbstractSource, { RecentlyPlayedOptions } from "./AbstractSource.js";
-import { FormatPlayObjectOptions, InternalConfig } from "../common/infrastructure/Atomic.js";
-import {IYouTubeMusicAuthenticated} from "youtube-music-ts-api/interfaces-primary";
 import dayjs from "dayjs";
-import { parseDurationFromTimestamp, playObjDataMatch } from "../utils.js";
-import {IPlaylistDetail, ITrackDetail} from "youtube-music-ts-api/interfaces-supplementary";
-import { YTMusicSourceConfig } from "../common/infrastructure/config/source/ytmusic.js";
 import EventEmitter from "events";
+import YouTubeMusic from "youtube-music-ts-api";
+import { IYouTubeMusicAuthenticated } from "youtube-music-ts-api/interfaces-primary";
+import { IPlaylistDetail, ITrackDetail } from "youtube-music-ts-api/interfaces-supplementary";
 import { PlayObject } from "../../core/Atomic.js";
+import { FormatPlayObjectOptions, InternalConfig } from "../common/infrastructure/Atomic.js";
+import { YTMusicSourceConfig } from "../common/infrastructure/config/source/ytmusic.js";
+import { parseDurationFromTimestamp, playObjDataMatch } from "../utils.js";
+import AbstractSource, { RecentlyPlayedOptions } from "./AbstractSource.js";
 
 export default class YTMusicSource extends AbstractSource {
     apiInstance?: IYouTubeMusicAuthenticated

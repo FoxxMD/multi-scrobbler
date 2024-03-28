@@ -1,9 +1,14 @@
-import {childLogger, Logger} from '@foxxmd/logging';
-import { GotifyConfig, NtfyConfig, WebhookConfig, WebhookPayload } from "../common/infrastructure/config/health/webhooks.js";
+import { childLogger, Logger } from '@foxxmd/logging';
+import { EventEmitter } from "events";
+import {
+    GotifyConfig,
+    NtfyConfig,
+    WebhookConfig,
+    WebhookPayload
+} from "../common/infrastructure/config/health/webhooks.js";
 import { AbstractWebhookNotifier } from "./AbstractWebhookNotifier.js";
 import { GotifyWebhookNotifier } from "./GotifyWebhookNotifier.js";
 import { NtfyWebhookNotifier } from "./NtfyWebhookNotifier.js";
-import {EventEmitter} from "events";
 
 export class Notifiers {
 

@@ -1,3 +1,7 @@
+import { childLogger, Logger } from "@foxxmd/logging";
+import dayjs, { Dayjs } from "dayjs";
+import { PlayObject, Second, SOURCE_SOT, SOURCE_SOT_TYPES, SourcePlayerObj } from "../../../core/Atomic.js";
+import { buildTrackString } from "../../../core/StringUtils.js";
 import {
     CALCULATED_PLAYER_STATUSES,
     CalculatedPlayerStatus,
@@ -5,15 +9,10 @@ import {
     REPORTED_PLAYER_STATUSES,
     ReportedPlayerStatus,
 } from "../../common/infrastructure/Atomic.js";
-import dayjs, {Dayjs} from "dayjs";
+import { PollingOptions } from "../../common/infrastructure/config/common.js";
 import { formatNumber, genGroupIdStr, playObjDataMatch, progressBar } from "../../utils.js";
-import {childLogger, Logger} from "@foxxmd/logging";
 import { ListenProgress } from "./ListenProgress.js";
-import {PlayObject, Second, SOURCE_SOT, SOURCE_SOT_TYPES, SourcePlayerObj} from "../../../core/Atomic.js";
-import { buildTrackString } from "../../../core/StringUtils.js";
 import { ListenRange } from "./ListenRange.js";
-import {id} from "common-tags";
-import {PollingOptions} from "../../common/infrastructure/config/common.js";
 
 export interface PlayerStateIntervals {
     staleInterval?: number

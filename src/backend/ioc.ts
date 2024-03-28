@@ -1,15 +1,15 @@
-import {createContainer} from "iti";
+import { Logger } from "@foxxmd/logging";
+import { EventEmitter } from "events";
+import fs from 'fs';
+import { createContainer } from "iti";
+import normalizeUrl from 'normalize-url';
 import path from "path";
-import { configDir, projectDir } from "./common/index.js";
-import ScrobbleClients from "./scrobblers/ScrobbleClients.js";
-import ScrobbleSources from "./sources/ScrobbleSources.js";
-import { Notifiers } from "./notifier/Notifiers.js";
-import {EventEmitter} from "events";
+import { projectDir } from "./common/index.js";
 import { logPath } from "./common/logging.js";
 import { WildcardEmitter } from "./common/WildcardEmitter.js";
-import normalizeUrl from 'normalize-url';
-import fs from 'fs';
-import {Logger} from "@foxxmd/logging";
+import { Notifiers } from "./notifier/Notifiers.js";
+import ScrobbleClients from "./scrobblers/ScrobbleClients.js";
+import ScrobbleSources from "./sources/ScrobbleSources.js";
 
 let version = 'Unknown';
 

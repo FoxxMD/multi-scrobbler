@@ -1,26 +1,26 @@
-import {describe, it} from 'mocha';
-import {assert} from 'chai';
+import { loggerTest } from "@foxxmd/logging";
+import { assert } from 'chai';
+import dayjs from "dayjs";
+import { describe, it } from 'mocha';
+import { http, HttpResponse } from "msw";
+import { PlayObject } from "../../../core/Atomic.js";
+import { UpstreamError } from "../../common/errors/UpstreamError.js";
+
+import { ListenbrainzApiClient, ListenResponse } from "../../common/vendor/ListenbrainzApiClient.js";
+import { ExpectedResults } from "../utils/interfaces.js";
+import { withRequestInterception } from "../utils/networking.js";
+import artistWithProperJoiner from './correctlyMapped/artistProperHasJoinerInName.json';
 // correct mappings
 import multiArtistInArtistName from './correctlyMapped/multiArtistInArtistName.json';
 import multiArtistsInTrackName from './correctlyMapped/multiArtistInTrackName.json';
-import noArtistMapping from './correctlyMapped/noArtistMapping.json';
 import multiMappedArtistsWithSingleUserArtist from './correctlyMapped/multiArtistMappingWithSingleRecordedArtist.json';
-import artistWithProperJoiner from './correctlyMapped/artistProperHasJoinerInName.json';
+import noArtistMapping from './correctlyMapped/noArtistMapping.json';
 import normalizedValues from './correctlyMapped/normalizedName.json';
 import slightlyDifferentNames from './correctlyMapped/trackNameSlightlyDifferent.json';
 
 // incorrect mappings
 import incorrectMultiArtistsTrackName from './incorrectlyMapped/multiArtistsInTrackName.json';
 import veryWrong from './incorrectlyMapped/veryWrong.json';
-
-import { ListenbrainzApiClient, ListenResponse } from "../../common/vendor/ListenbrainzApiClient.js";
-import { PlayObject } from "../../../core/Atomic.js";
-import dayjs from "dayjs";
-import { withRequestInterception } from "../utils/networking.js";
-import {http, HttpResponse} from "msw";
-import { UpstreamError } from "../../common/errors/UpstreamError.js";
-import { ExpectedResults } from "../utils/interfaces.js";
-import {loggerTest} from "@foxxmd/logging";
 
 interface LZTestFixture {
     data: ListenResponse

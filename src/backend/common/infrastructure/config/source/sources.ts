@@ -1,18 +1,18 @@
-import { SpotifySourceAIOConfig, SpotifySourceConfig } from "./spotify.js";
-import { PlexSourceAIOConfig, PlexSourceConfig } from "./plex.js";
-import { TautulliSourceAIOConfig, TautulliSourceConfig } from "./tautulli.js";
+import { ChromecastSourceAIOConfig, ChromecastSourceConfig } from "./chromecast.js";
 import { DeezerSourceAIOConfig, DeezerSourceConfig } from "./deezer.js";
-import { SubsonicSourceAIOConfig, SubSonicSourceConfig } from "./subsonic.js";
 import { JellySourceAIOConfig, JellySourceConfig } from "./jellyfin.js";
-import { LastFmSouceAIOConfig, LastfmSourceConfig } from "./lastfm.js";
-import { YTMusicSourceAIOConfig, YTMusicSourceConfig } from "./ytmusic.js";
-import { MPRISSourceAIOConfig, MPRISSourceConfig } from "./mpris.js";
-import { MopidySourceAIOConfig, MopidySourceConfig } from "./mopidy.js";
-import { ListenBrainzSourceAIOConfig, ListenBrainzSourceConfig } from "./listenbrainz.js";
 import { JRiverSourceAIOConfig, JRiverSourceConfig } from "./jriver.js";
 import { KodiSourceAIOConfig, KodiSourceConfig } from "./kodi.js";
+import { LastFmSouceAIOConfig, LastfmSourceConfig } from "./lastfm.js";
+import { ListenBrainzSourceAIOConfig, ListenBrainzSourceConfig } from "./listenbrainz.js";
+import { MopidySourceAIOConfig, MopidySourceConfig } from "./mopidy.js";
+import { MPRISSourceAIOConfig, MPRISSourceConfig } from "./mpris.js";
+import { PlexSourceAIOConfig, PlexSourceConfig } from "./plex.js";
+import { SpotifySourceAIOConfig, SpotifySourceConfig } from "./spotify.js";
+import { SubsonicSourceAIOConfig, SubSonicSourceConfig } from "./subsonic.js";
+import { TautulliSourceAIOConfig, TautulliSourceConfig } from "./tautulli.js";
 import { WebScrobblerSourceAIOConfig, WebScrobblerSourceConfig } from "./webscrobbler.js";
-import { ChromecastSourceConfig, ChromecastSourceAIOConfig } from "./chromecast.js";
+import { YTMusicSourceAIOConfig, YTMusicSourceConfig } from "./ytmusic.js";
 
 
 export type SourceConfig = SpotifySourceConfig | PlexSourceConfig | TautulliSourceConfig | DeezerSourceConfig | SubSonicSourceConfig | JellySourceConfig | LastfmSourceConfig | YTMusicSourceConfig | MPRISSourceConfig | MopidySourceConfig | ListenBrainzSourceConfig | JRiverSourceConfig | KodiSourceConfig | WebScrobblerSourceConfig | ChromecastSourceConfig;

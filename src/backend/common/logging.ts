@@ -1,16 +1,16 @@
-import path from "path";
-import { projectDir } from "./index.js";
-import process from "process";
 import {
-    parseLogOptions,
-    loggerAppRolling,
-    LogOptions as FoxLogOptions,
+    childLogger,
     Logger as FoxLogger,
-    childLogger, LogLevel, PrettyOptionsExtra,
+    loggerAppRolling,
+    LogLevel,
+    LogOptions as FoxLogOptions,
+    parseLogOptions,
 } from '@foxxmd/logging';
-import {PassThrough, Transform} from "node:stream";
-import {buildLogger, buildDestinationStdout, buildDestinationJsonPrettyStream} from "@foxxmd/logging/factory";
-import {parseBool} from "../utils.js";
+import { buildDestinationJsonPrettyStream, buildDestinationStdout, buildLogger } from "@foxxmd/logging/factory";
+import { PassThrough, Transform } from "node:stream";
+import path from "path";
+import process from "process";
+import { projectDir } from "./index.js";
 
 export let logPath = path.resolve(projectDir, `./logs`);
 if (typeof process.env.CONFIG_DIR === 'string') {

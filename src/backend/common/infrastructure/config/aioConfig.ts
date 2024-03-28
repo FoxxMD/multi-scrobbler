@@ -1,9 +1,9 @@
-import { CommonSourceOptions, ScrobbleThresholds, SourceRetryOptions } from "./source/index.js";
-import { RequestRetryOptions } from "./common.js";
-import { SourceAIOConfig } from "./source/sources.js";
+import { LogOptions } from "@foxxmd/logging";
 import { ClientAIOConfig } from "./client/clients.js";
+import { RequestRetryOptions } from "./common.js";
 import { WebhookConfig } from "./health/webhooks.js";
-import {LogOptions} from "@foxxmd/logging";
+import { CommonSourceOptions, ScrobbleThresholds, SourceRetryOptions } from "./source/index.js";
+import { SourceAIOConfig } from "./source/sources.js";
 
 
 export interface SourceDefaults extends SourceRetryOptions {

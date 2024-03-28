@@ -1,17 +1,11 @@
-import dayjs, {Dayjs} from "dayjs";
-import {
-    readJson,
-    writeFile,
-    sortByOldestPlayDate,
-    sleep,
-    parseRetryAfterSecsFromObj,
-    combinePartsToString,
-    findCauseByFunc,
-} from "../utils.js";
+import dayjs, { Dayjs } from "dayjs";
+import EventEmitter from "events";
 import SpotifyWebApi from "spotify-web-api-node";
 import request from 'superagent';
-import AbstractSource, { RecentlyPlayedOptions } from "./AbstractSource.js";
-import { SpotifySourceConfig } from "../common/infrastructure/config/source/spotify.js";
+import { PlayObject, SCROBBLE_TS_SOC_END, SCROBBLE_TS_SOC_START, ScrobbleTsSOC } from "../../core/Atomic.js";
+import { truncateStringToLength } from "../../core/StringUtils.js";
+import { isNodeNetworkException } from "../common/errors/NodeErrors.js";
+import { hasUpstreamError, UpstreamError } from "../common/errors/UpstreamError.js";
 import {
     DEFAULT_POLLING_INTERVAL,
     FormatPlayObjectOptions,
@@ -22,18 +16,24 @@ import {
     ReportedPlayerStatus,
     SourceData,
 } from "../common/infrastructure/Atomic.js";
-import PlayHistoryObject = SpotifyApi.PlayHistoryObject;
-import EventEmitter from "events";
-import CurrentlyPlayingObject = SpotifyApi.CurrentlyPlayingObject;
-import TrackObjectFull = SpotifyApi.TrackObjectFull;
-import ArtistObjectSimplified = SpotifyApi.ArtistObjectSimplified;
-import AlbumObjectSimplified = SpotifyApi.AlbumObjectSimplified;
-import UserDevice = SpotifyApi.UserDevice;
+import { SpotifySourceConfig } from "../common/infrastructure/config/source/spotify.js";
+import {
+    combinePartsToString,
+    findCauseByFunc,
+    parseRetryAfterSecsFromObj,
+    readJson,
+    sleep,
+    sortByOldestPlayDate,
+    writeFile,
+} from "../utils.js";
+import { RecentlyPlayedOptions } from "./AbstractSource.js";
 import MemorySource from "./MemorySource.js";
-import { PlayObject, SCROBBLE_TS_SOC_END, SCROBBLE_TS_SOC_START, ScrobbleTsSOC } from "../../core/Atomic.js";
-import { buildTrackString, truncateStringToLength } from "../../core/StringUtils.js";
-import { isNodeNetworkException } from "../common/errors/NodeErrors.js";
-import { hasUpstreamError, UpstreamError } from "../common/errors/UpstreamError.js";
+import AlbumObjectSimplified = SpotifyApi.AlbumObjectSimplified;
+import ArtistObjectSimplified = SpotifyApi.ArtistObjectSimplified;
+import CurrentlyPlayingObject = SpotifyApi.CurrentlyPlayingObject;
+import PlayHistoryObject = SpotifyApi.PlayHistoryObject;
+import TrackObjectFull = SpotifyApi.TrackObjectFull;
+import UserDevice = SpotifyApi.UserDevice;
 
 const scopes = ['user-read-recently-played', 'user-read-currently-playing', 'user-read-playback-state', 'user-read-playback-position'];
 const state = 'random';

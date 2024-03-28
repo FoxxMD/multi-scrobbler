@@ -1,4 +1,9 @@
+import { Interfaces as Notifications } from '@dbus-types/notifications'
 import dayjs from "dayjs";
+import { DBusInterface, sessionBus } from 'dbus-ts';
+import EventEmitter from "events";
+import { PlayObject } from "../../core/Atomic.js";
+import { FormatPlayObjectOptions, InternalConfig } from "../common/infrastructure/Atomic.js";
 import {
     MPRIS_IFACE,
     MPRIS_PATH,
@@ -8,14 +13,9 @@ import {
     PlaybackStatus,
     PlayerInfo,
 } from "../common/infrastructure/config/source/mpris.js";
-import { FormatPlayObjectOptions, InternalConfig } from "../common/infrastructure/Atomic.js";
-import MemorySource from "./MemorySource.js";
-import { RecentlyPlayedOptions } from "./AbstractSource.js";
 import { removeDuplicates } from "../utils.js";
-import EventEmitter from "events";
-import { PlayObject } from "../../core/Atomic.js";
-import {DBusInterface, sessionBus} from 'dbus-ts';
-import { Interfaces as Notifications } from '@dbus-types/notifications'
+import { RecentlyPlayedOptions } from "./AbstractSource.js";
+import MemorySource from "./MemorySource.js";
 
 
 export class MPRISSource extends MemorySource {

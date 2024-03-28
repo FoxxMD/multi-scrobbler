@@ -1,11 +1,11 @@
-import {describe, it} from 'mocha';
-import {assert} from 'chai';
-import samplePayload from './playbackProgressSample.json';
+import { loggerTest } from "@foxxmd/logging";
+import { assert } from 'chai';
+import EventEmitter from "events";
+import { describe, it } from 'mocha';
+import { JsonPlayObject } from "../../../core/Atomic.js";
 
 import JellyfinSource from "../../sources/JellyfinSource.js";
-import EventEmitter from "events";
-import { JsonPlayObject, PlayObject } from "../../../core/Atomic.js";
-import {loggerTest} from "@foxxmd/logging";
+import samplePayload from './playbackProgressSample.json';
 
 const dataAsFixture = (data: any): TestFixture => {
     return data as TestFixture;

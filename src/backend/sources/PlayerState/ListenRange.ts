@@ -1,6 +1,6 @@
-import { ListenProgress } from "./ListenProgress.js";
-import dayjs, {Dayjs} from "dayjs";
+import dayjs, { Dayjs } from "dayjs";
 import { ListenRangeData, Second } from "../../../core/Atomic.js";
+import { ListenProgress } from "./ListenProgress.js";
 
 export class ListenRange implements ListenRangeData {
 

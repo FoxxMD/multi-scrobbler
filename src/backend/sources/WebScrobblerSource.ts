@@ -1,4 +1,6 @@
-import MemorySource from "./MemorySource.js";
+import dayjs from "dayjs";
+import EventEmitter from "events";
+import { PlayObject, SOURCE_SOT } from "../../core/Atomic.js";
 import {
     FormatPlayObjectOptions,
     InternalConfig,
@@ -7,11 +9,13 @@ import {
     REPORTED_PLAYER_STATUSES,
     ReportedPlayerStatus,
 } from "../common/infrastructure/Atomic.js";
-import EventEmitter from "events";
-import {PlayObject, SOURCE_SOT} from "../../core/Atomic.js";
-import { WebScrobblerHookEvent, WebScrobblerPayload, WebScrobblerSong } from "../common/vendor/webscrobbler/interfaces.js";
-import dayjs from "dayjs";
 import { WebScrobblerSourceConfig } from "../common/infrastructure/config/source/webscrobbler.js";
+import {
+    WebScrobblerHookEvent,
+    WebScrobblerPayload,
+    WebScrobblerSong
+} from "../common/vendor/webscrobbler/interfaces.js";
+import MemorySource from "./MemorySource.js";
 
 export class WebScrobblerSource extends MemorySource {
 

@@ -1,16 +1,15 @@
-import {addAsync, Router} from '@awaitjs/express';
-import express from 'express';
-import ViteExpress from "vite-express";
+import { addAsync, Router } from '@awaitjs/express';
+import { childLogger, LogDataPretty, Logger } from "@foxxmd/logging";
 import bodyParser from 'body-parser';
-import passport from 'passport';
+import { stripIndents } from "common-tags";
+import express from 'express';
 import session from 'express-session';
+import { PassThrough } from "node:stream";
+import passport from 'passport';
+import ViteExpress from "vite-express";
 import { getRoot } from "../ioc.js";
+import { getAddress, parseBool } from "../utils.js";
 import { setupApi } from "./api.js";
-import { getAddress, mergeArr, parseBool } from "../utils.js";
-import {stripIndents} from "common-tags";
-import {childLogger, LogData, LogDataPretty} from "@foxxmd/logging";
-import {PassThrough} from "node:stream";
-import {Logger} from '@foxxmd/logging';
 
 const app = addAsync(express());
 const router = Router();

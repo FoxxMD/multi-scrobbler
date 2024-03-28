@@ -1,8 +1,8 @@
-import AbstractApiClient from "./AbstractApiClient.js";
-import {JRiverData} from "../infrastructure/config/source/jriver.js";
-import request, {Request, Response} from 'superagent';
+import request, { Request, Response } from 'superagent';
 import xml2js from 'xml2js';
-import {AbstractApiOptions, DEFAULT_RETRY_MULTIPLIER} from "../infrastructure/Atomic.js";
+import { AbstractApiOptions, DEFAULT_RETRY_MULTIPLIER } from "../infrastructure/Atomic.js";
+import { JRiverData } from "../infrastructure/config/source/jriver.js";
+import AbstractApiClient from "./AbstractApiClient.js";
 
 const parser = new xml2js.Parser({'async': true});
 

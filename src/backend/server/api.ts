@@ -1,32 +1,33 @@
-import {ExpressWithAsync} from "@awaitjs/express";
-import { getRoot } from "../ioc.js";
-import { makeClientCheckMiddle, makeSourceCheckMiddle } from "./middleware.js";
-import AbstractSource from "../sources/AbstractSource.js";
+import { ExpressWithAsync } from "@awaitjs/express";
+import { LogDataPretty, Logger, LogLevel } from "@foxxmd/logging";
+import bsseDef from 'better-sse';
+import bodyParser from "body-parser";
+import { FixedSizeList } from 'fixed-size-list';
+import { PassThrough } from "node:stream";
+import { Transform } from "stream";
 import {
     ClientStatusData,
-    DeadLetterScrobble, LeveledLogData,
+    DeadLetterScrobble,
+    LeveledLogData,
     LogOutputConfig,
-    PlayObject, SOURCE_SOT,
+    PlayObject,
+    SOURCE_SOT,
     SourceStatusData,
 } from "../../core/Atomic.js";
-import {LogDataPretty, Logger, LogLevel} from "@foxxmd/logging";
-import {Transform} from "stream";
-import * as bsse from 'better-sse';
-import bsseDef from 'better-sse';
-import { setupTautulliRoutes } from "./tautulliRoutes.js";
-import { setupPlexRoutes } from "./plexRoutes.js";
-import { setupJellyfinRoutes } from "./jellyfinRoutes.js";
-import { setupDeezerRoutes } from "./deezerRoutes.js";
-import { setupAuthRoutes } from "./auth.js";
-import {ExpressHandler} from "../common/infrastructure/Atomic.js";
-import MemorySource from "../sources/MemorySource.js";
 import { capitalize } from "../../core/StringUtils.js";
+import { ExpressHandler } from "../common/infrastructure/Atomic.js";
+import { getRoot } from "../ioc.js";
 import AbstractScrobbleClient from "../scrobblers/AbstractScrobbleClient.js";
+import AbstractSource from "../sources/AbstractSource.js";
+import MemorySource from "../sources/MemorySource.js";
 import { sortByNewestPlayDate } from "../utils.js";
-import bodyParser from "body-parser";
+import { setupAuthRoutes } from "./auth.js";
+import { setupDeezerRoutes } from "./deezerRoutes.js";
+import { setupJellyfinRoutes } from "./jellyfinRoutes.js";
+import { makeClientCheckMiddle, makeSourceCheckMiddle } from "./middleware.js";
+import { setupPlexRoutes } from "./plexRoutes.js";
+import { setupTautulliRoutes } from "./tautulliRoutes.js";
 import { setupWebscrobblerRoutes } from "./webscrobblerRoutes.js";
-import {FixedSizeList} from 'fixed-size-list';
-import {PassThrough} from "node:stream";
 
 const maxBufferSize = 300;
 const output: Record<number, FixedSizeList<LogDataPretty>> =  {};
