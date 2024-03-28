@@ -5,7 +5,6 @@ import { createContainer } from "iti";
 import normalizeUrl from 'normalize-url';
 import path from "path";
 import { projectDir } from "./common/index.js";
-import { logPath } from "./common/logging.js";
 import { WildcardEmitter } from "./common/WildcardEmitter.js";
 import { Notifiers } from "./notifier/Notifiers.js";
 import ScrobbleClients from "./scrobblers/ScrobbleClients.js";
@@ -59,7 +58,6 @@ const createRoot = (options?: RootOptions) => {
     return createContainer().add({
         version,
         configDir: configDir,
-        logDir: logPath,
         isProd: process.env.NODE_ENV !== undefined && (process.env.NODE_ENV === 'production' || process.env.NODE_ENV === 'prod'),
         port: process.env.PORT ?? port,
         clientEmitter: () => new WildcardEmitter(),

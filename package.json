@@ -51,7 +51,7 @@
     "@fortawesome/free-solid-svg-icons": "^6.4.2",
     "@fortawesome/react-fontawesome": "^0.2.0",
     "@foxxmd/chromecast-client": "^1.0.4",
-    "@foxxmd/logging": "^0.1.13",
+    "@foxxmd/logging": "^0.1.14",
     "@foxxmd/string-sameness": "^0.4.0",
     "@kenyip/backoff-strategies": "^1.0.4",
     "@react-nano/use-event-source": "^0.13.0",

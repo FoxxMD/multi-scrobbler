@@ -1,11 +1,4 @@
-import {
-    childLogger,
-    Logger as FoxLogger,
-    loggerAppRolling,
-    LogLevel,
-    LogOptions as FoxLogOptions,
-    parseLogOptions,
-} from '@foxxmd/logging';
+import { childLogger, Logger, loggerAppRolling, LogOptions, parseLogOptions, } from '@foxxmd/logging';
 import { buildDestinationJsonPrettyStream, buildDestinationStdout, buildLogger } from "@foxxmd/logging/factory";
 import { PassThrough, Transform } from "node:stream";
 import path from "path";
@@ -17,7 +10,7 @@ if (typeof process.env.CONFIG_DIR === 'string') {
     logPath = path.resolve(process.env.CONFIG_DIR, './logs');
 }
 
-export const initLogger = (): [FoxLogger, Transform] => {
+export const initLogger = (): [Logger, Transform] => {
     const opts = parseLogOptions({file: false, console: 'debug'})
     const stream = new PassThrough({objectMode: true});
     const logger = buildLogger('debug', [
@@ -27,17 +20,12 @@ export const initLogger = (): [FoxLogger, Transform] => {
     return [logger, stream];
 }
 
-export const appLogger = async (config: FoxLogOptions = {}): Promise<[FoxLogger, PassThrough]> => {
+export const appLogger = async (config: LogOptions = {}): Promise<[Logger, PassThrough]> => {
     const stream = new PassThrough({objectMode: true});
-    if(process.env.LOG_PATH === undefined && (config.file === undefined || config.file !== false) && (typeof config.file !== 'object' || config.file?.path === undefined)) {
-        config.file = {
-            level: config.file as LogLevel,
-            path: 'logs/scrobble.log'
-        }
-    }
     const opts = parseLogOptions(config)
     const logger = await loggerAppRolling(config, {
         logBaseDir: typeof process.env.CONFIG_DIR === 'string' ? process.env.CONFIG_DIR : undefined,
+        logDefaultPath: './logs/scrobble.log',
         destinations: [
             buildDestinationJsonPrettyStream(opts.console, {destination: stream, object: true, colorize: true})
         ]
@@ -45,9 +33,9 @@ export const appLogger = async (config: FoxLogOptions = {}): Promise<[FoxLogger,
     return [logger, stream];
 }
 export class MaybeLogger {
-    logger?: FoxLogger
+    logger?: Logger
 
-    constructor(logger?: FoxLogger, label?: string) {
+    constructor(logger?: Logger, label?: string) {
         if (logger !== undefined && label !== undefined) {
             this.logger = childLogger(logger, label);
         } else {
