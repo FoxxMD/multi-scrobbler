@@ -20,7 +20,6 @@ import EventEmitter from "events";
 import { UpstreamError } from "../common/errors/UpstreamError.js";
 import { isNodeNetworkException } from "../common/errors/NodeErrors.js";
 import { getScrobbleTsSOCDate } from "../utils/TimeUtils.js";
-import {ErrorWithCause} from "pony-cause";
 
 export default class LastfmScrobbler extends AbstractScrobbleClient {
 
@@ -47,7 +46,7 @@ export default class LastfmScrobbler extends AbstractScrobbleClient {
             this.logger.info('Initialized');
         } catch (e) {
             this.initialized = false;
-            this.logger.warn(new ErrorWithCause('Initialization failed', {cause: e}));
+            this.logger.warn(new Error('Initialization failed', {cause: e}));
         }
 
         return this.initialized;

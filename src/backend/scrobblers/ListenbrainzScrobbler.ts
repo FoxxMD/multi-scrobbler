@@ -11,7 +11,6 @@ import { buildTrackString, capitalize } from "../../core/StringUtils.js";
 import EventEmitter from "events";
 import { UpstreamError } from "../common/errors/UpstreamError.js";
 import { isNodeNetworkException } from "../common/errors/NodeErrors.js";
-import {ErrorWithCause} from "pony-cause";
 
 export default class ListenbrainzScrobbler extends AbstractScrobbleClient {
 
@@ -40,7 +39,7 @@ export default class ListenbrainzScrobbler extends AbstractScrobbleClient {
                 this.initialized = true;
                 this.logger.info('Initialized');
             } catch (e) {
-                this.logger.warn(new ErrorWithCause('Could not initialize', {cause: e}));
+                this.logger.warn(new Error('Could not initialize', {cause: e}));
                 this.initialized = false;
             }
         }

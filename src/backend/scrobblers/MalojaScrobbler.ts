@@ -24,9 +24,7 @@ import { buildTrackString, capitalize } from "../../core/StringUtils.js";
 import EventEmitter from "events";
 import normalizeUrl from "normalize-url";
 import { UpstreamError } from "../common/errors/UpstreamError.js";
-import {ErrorWithCause} from "pony-cause";
 import { getScrobbleTsSOCDate, getScrobbleTsSOCDateWithContext } from "../utils/TimeUtils.js";
-import e from "express";
 import { isNodeNetworkException } from "../common/errors/NodeErrors.js";
 import { isSuperAgentResponseError } from "../common/errors/ErrorUtils.js";
 
@@ -170,7 +168,7 @@ export default class MalojaScrobbler extends AbstractScrobbleClient {
                     throw new UpstreamError(`API Call failed (HTTP ${status}) => ${message}`, {cause: e})
                 }
             } else {
-                throw new ErrorWithCause('Unexpected error occurred during API call', {cause : e});
+                throw new Error('Unexpected error occurred during API call', {cause : e});
             }
         }
     }
@@ -208,7 +206,7 @@ export default class MalojaScrobbler extends AbstractScrobbleClient {
             }
             return true;
         } catch (e) {
-            this.logger.error(new ErrorWithCause('Communication test failed', {cause: e}));
+            this.logger.error(new Error('Communication test failed', {cause: e}));
             return false;
         }
     }
@@ -244,7 +242,7 @@ export default class MalojaScrobbler extends AbstractScrobbleClient {
 
             return [true];
         } catch (e) {
-            this.logger.error(new ErrorWithCause('Unexpected error encountered while testing server health', {cause: e}));
+            this.logger.error(new Error('Unexpected error encountered while testing server health', {cause: e}));
             throw e;
         }
     }
@@ -293,7 +291,7 @@ export default class MalojaScrobbler extends AbstractScrobbleClient {
             }
         } catch (e) {
             if(e instanceof UpstreamError) {
-                if(e.cause.status === 403) {
+                if((e?.cause as any)?.status === 403) {
                     // may be an older version that doesn't support auth readiness before db upgrade
                     // and if it was before api was accessible during db build then test would fail during testConnection()
                     if(compareVersions(this.serverVersion, '2.12.19') < 0) {
@@ -322,7 +320,7 @@ export default class MalojaScrobbler extends AbstractScrobbleClient {
                 this.serverIsHealthy = true;
             }
         } catch (e) {
-            this.logger.error(new ErrorWithCause(`Testing server health failed due to an unexpected error`, {cause: e}));
+            this.logger.error(new Error(`Testing server health failed due to an unexpected error`, {cause: e}));
             this.serverIsHealthy = false;
         }
         return this.serverIsHealthy

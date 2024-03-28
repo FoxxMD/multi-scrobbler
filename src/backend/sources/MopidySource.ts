@@ -15,7 +15,6 @@ import pEvent from 'p-event';
 import { RecentlyPlayedOptions } from "./AbstractSource.js";
 import { PlayObject } from "../../core/Atomic.js";
 import { buildTrackString } from "../../core/StringUtils.js";
-import {ErrorWithCause} from "pony-cause";
 import {loggerTest} from "@foxxmd/logging";
 
 export class MopidySource extends MemorySource {
@@ -118,7 +117,7 @@ export class MopidySource extends MemorySource {
             return true;
         } else {
             this.client.close();
-            throw new ErrorWithCause(`Could not connect to Mopidy server`, {cause: (res as Error)});
+            throw new Error(`Could not connect to Mopidy server`, {cause: (res as Error)});
         }
     }
 

@@ -1,7 +1,6 @@
 import { REPORTED_PLAYER_STATUSES, ReportedPlayerStatus } from "../../infrastructure/Atomic.js";
 import { PlatformApplication, PlatformType } from "./interfaces.js";
 import {Media, MediaController, Result} from "@foxxmd/chromecast-client";
-import {ErrorWithCause} from "pony-cause";
 import objectHash from "object-hash";
 import { PlayObject } from "../../../../core/Atomic.js";
 
@@ -27,7 +26,7 @@ export const getCurrentPlatformApplications = async (platform: PlatformType): Pr
     try {
         statusRes = await platform.getStatus()
     } catch (e) {
-        throw new ErrorWithCause('Unable to fetch platform statuses', {cause: e});
+        throw new Error('Unable to fetch platform statuses', {cause: e});
     }
 
     let status: {applications?: PlatformApplication[]};
@@ -39,7 +38,7 @@ export const getCurrentPlatformApplications = async (platform: PlatformType): Pr
         }
         return status.applications;
     } catch (e) {
-        throw new ErrorWithCause('Unable to fetch platform statuses', {cause: e});
+        throw new Error('Unable to fetch platform statuses', {cause: e});
     }
 }
 
@@ -51,7 +50,7 @@ export const getMediaStatus = async (controller: MediaController.MediaController
         status = statusRes.unwrapAndThrow();
         return status;
     } catch (e) {
-        throw new ErrorWithCause('Unable to fetch media status', {cause: e});
+        throw new Error('Unable to fetch media status', {cause: e});
     }
 }
 

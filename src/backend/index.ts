@@ -17,7 +17,6 @@ import { initServer } from "./server/index.js";
 import {SimpleIntervalJob, ToadScheduler} from "toad-scheduler";
 import { createHeartbeatSourcesTask } from "./tasks/heartbeatSources.js";
 import { createHeartbeatClientsTask } from "./tasks/heartbeatClients.js";
-import {ErrorWithCause} from "pony-cause";
 import {loggerDebug, childLogger, LogData, Logger as FoxLogger} from '@foxxmd/logging';
 
 dayjs.extend(utc)
@@ -42,7 +41,7 @@ output = output.slice(0, 301);
 let logger: FoxLogger;
 
 process.on('uncaughtExceptionMonitor', (err, origin) => {
-    const appError = new ErrorWithCause(`Uncaught exception is crashing the app! :( Type: ${origin}`, {cause: err});
+    const appError = new Error(`Uncaught exception is crashing the app! :( Type: ${origin}`, {cause: err});
     if(logger !== undefined) {
         logger.error(appError)
     } else {
@@ -149,7 +148,7 @@ const configDir = process.env.CONFIG_DIR || path.resolve(projectDir, `./config`)
         logger.info('Scheduler started.');
 
     } catch (e) {
-        const appError = new ErrorWithCause('Exited with uncaught error', {cause: e});
+        const appError = new Error('Exited with uncaught error', {cause: e});
         if(logger !== undefined) {
             logger.error(appError);
         } else {

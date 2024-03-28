@@ -13,7 +13,6 @@ import { LastfmData } from "../infrastructure/config/client/lastfm.js";
 import { PlayObject } from "../../../core/Atomic.js";
 import {getNodeNetworkException, isNodeNetworkException} from "../errors/NodeErrors.js";
 import {nonEmptyStringOrDefault, splitByFirstFound} from "../../../core/StringUtils.js";
-import {ErrorWithCause} from "pony-cause";
 import {getScrobbleTsSOCDate} from "../../utils/TimeUtils.js";
 import {UpstreamError} from "../errors/UpstreamError.js";
 
@@ -168,7 +167,7 @@ export default class LastfmApiClient extends AbstractApiClient {
             }
             return true;
         } catch (e) {
-            throw new ErrorWithCause('Current lastfm credentials file exists but could not be parsed', {cause: e});
+            throw new Error('Current lastfm credentials file exists but could not be parsed', {cause: e});
         }
     }
 

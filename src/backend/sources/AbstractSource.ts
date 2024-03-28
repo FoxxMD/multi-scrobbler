@@ -36,7 +36,6 @@ import TupleMap from "../common/TupleMap.js";
 import { PlayObject, TA_CLOSE } from "../../core/Atomic.js";
 import { buildTrackString, capitalize } from "../../core/StringUtils.js";
 import { isNodeNetworkException } from "../common/errors/NodeErrors.js";
-import {ErrorWithCause} from "pony-cause";
 import { comparePlayTemporally, temporalAccuracyIsAtLeast } from "../utils/TimeUtils.js";
 
 export interface RecentlyPlayedOptions {
@@ -111,7 +110,7 @@ export default abstract class AbstractSource implements Authenticatable {
             this.logger.info('Fully Initialized!');
             return true;
         } catch(e) {
-            this.logger.error(new ErrorWithCause('Initialization failed', {cause: e}));
+            this.logger.error(new Error('Initialization failed', {cause: e}));
             return false;
         }
     }
@@ -135,7 +134,7 @@ export default abstract class AbstractSource implements Authenticatable {
             this.buildOK = true;
         } catch (e) {
             this.buildOK = false;
-            throw new ErrorWithCause('Building required data for initialization failed', {cause: e});
+            throw new Error('Building required data for initialization failed', {cause: e});
         }
     }
 
@@ -166,7 +165,7 @@ export default abstract class AbstractSource implements Authenticatable {
             this.connectionOK = true;
         } catch (e) {
             this.connectionOK = false;
-            throw new ErrorWithCause('Communicating with upstream service failed', {cause: e});
+            throw new Error('Communicating with upstream service failed', {cause: e});
         }
     }
 
@@ -202,7 +201,7 @@ export default abstract class AbstractSource implements Authenticatable {
             // only signal as auth failure if error was NOT a node network error
             this.authFailure = findCauseByFunc(e, isNodeNetworkException) === undefined;
             this.authed = false;
-            throw new ErrorWithCause(`Authentication test failed!${this.authFailure === false ? ' Due to a network issue. Will retry authentication on next heartbeat.' : ''}`, {cause: e})
+            throw new Error(`Authentication test failed!${this.authFailure === false ? ' Due to a network issue. Will retry authentication on next heartbeat.' : ''}`, {cause: e})
         }
     }
 
@@ -322,7 +321,7 @@ export default abstract class AbstractSource implements Authenticatable {
             try {
                 backlogPlays = await this.getBackloggedPlays();
             } catch (e) {
-                throw new ErrorWithCause('Error occurred while fetching backlogged plays', {cause: e});
+                throw new Error('Error occurred while fetching backlogged plays', {cause: e});
             }
             const discovered = this.discover(backlogPlays);
 
@@ -385,7 +384,7 @@ export default abstract class AbstractSource implements Authenticatable {
         try {
             await this.processBacklog();
         } catch (e) {
-            this.logger.error(new ErrorWithCause('Cannot start polling because error occurred while processing backlog', {cause: e}));
+            this.logger.error(new Error('Cannot start polling because error occurred while processing backlog', {cause: e}));
             this.notify({
                 title: `${this.identifier} - Polling Error`,
                 message: 'Cannot start polling because error occurred while processing backlog.',

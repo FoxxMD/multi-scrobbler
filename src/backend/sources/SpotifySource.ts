@@ -30,7 +30,6 @@ import ArtistObjectSimplified = SpotifyApi.ArtistObjectSimplified;
 import AlbumObjectSimplified = SpotifyApi.AlbumObjectSimplified;
 import UserDevice = SpotifyApi.UserDevice;
 import MemorySource from "./MemorySource.js";
-import {ErrorWithCause} from "pony-cause";
 import { PlayObject, SCROBBLE_TS_SOC_END, SCROBBLE_TS_SOC_START, ScrobbleTsSOC } from "../../core/Atomic.js";
 import { buildTrackString, truncateStringToLength } from "../../core/StringUtils.js";
 import { isNodeNetworkException } from "../common/errors/NodeErrors.js";
@@ -256,10 +255,10 @@ export default class SpotifySource extends MemorySource {
             return true;
         } catch (e) {
             if(isNodeNetworkException(e)) {
-                throw new ErrorWithCause('Could not communicate with Spotify API server', {cause: e});
+                throw new Error('Could not communicate with Spotify API server', {cause: e});
             }
             if(e.status >= 500) {
-                throw new ErrorWithCause('Spotify API server returned an unexpected response', { cause: e});
+                throw new Error('Spotify API server returned an unexpected response', { cause: e});
             }
             return true;
         }
@@ -277,9 +276,6 @@ export default class SpotifySource extends MemorySource {
             if(isNodeNetworkException(e)) {
                 this.logger.error('Could not communicate with Spotify API');
             }
-            // this.authFailure = !(e instanceof ErrorWithCause && e.cause !== undefined && isNodeNetworkException(e.cause));
-            // this.logger.error(new ErrorWithCause('Could not successfully communicate with Spotify API', {cause: e}));
-            // this.authed = false;
             throw e;
         }
     }
@@ -405,7 +401,7 @@ export default class SpotifySource extends MemorySource {
             if(hasApiError(e)) {
                 throw new UpstreamError('Error occurred while trying to retrieve current playback state', {cause: e});
             }
-            throw new ErrorWithCause('Error occurred while trying to retrieve current playback state', {cause: e});
+            throw new Error('Error occurred while trying to retrieve current playback state', {cause: e});
         }
     }
 

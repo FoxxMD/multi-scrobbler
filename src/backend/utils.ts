@@ -21,7 +21,7 @@ import {
 } from "./common/infrastructure/Atomic.js";
 import {Request} from "express";
 import pathUtil from "path";
-import {ErrorWithCause, getErrorCause} from "pony-cause";
+import {getErrorCause} from "pony-cause";
 import backoffStrategies from '@kenyip/backoff-strategies';
 import {replaceResultTransformer, stripIndentTransformer, TemplateTag, trimResultTransformer} from 'common-tags';
 import {Duration} from "dayjs/plugin/duration.js";
@@ -40,12 +40,12 @@ export async function readJson(this: any, path: any, {throwOnNotFound = true} = 
         const {code} = e;
         if (code === 'ENOENT') {
             if (throwOnNotFound) {
-                throw new ErrorWithCause(`No file found at given path: ${path}`, {cause: e});
+                throw new Error(`No file found at given path: ${path}`, {cause: e});
             } else {
                 return;
             }
         }
-        throw new ErrorWithCause(`Encountered error while parsing file: ${path}`, {cause: e})
+        throw new Error(`Encountered error while parsing file: ${path}`, {cause: e})
     }
 }
 
@@ -536,13 +536,13 @@ export const fileOrDirectoryIsWriteable = (location: string) => {
                     // also can't access directory :(
                     throw new Error(`No ${isDir ? 'directory' : 'file'} exists at ${location} and application does not have permission to write to the parent directory`);
                 } else {
-                    throw new ErrorWithCause(`No ${isDir ? 'directory' : 'file'} exists at ${location} and application is unable to access the parent directory due to a system error`, {cause: accessError});
+                    throw new Error(`No ${isDir ? 'directory' : 'file'} exists at ${location} and application is unable to access the parent directory due to a system error`, {cause: accessError});
                 }
             }
         } else if(code === 'EACCES') {
             throw new Error(`${isDir ? 'Directory' : 'File'} exists at ${location} but application does not have permission to write to it.`);
         } else {
-            throw new ErrorWithCause(`${isDir ? 'Directory' : 'File'} exists at ${location} but application is unable to access it due to a system error`, {cause: err});
+            throw new Error(`${isDir ? 'Directory' : 'File'} exists at ${location} but application is unable to access it due to a system error`, {cause: err});
         }
     }
 }
@@ -600,7 +600,7 @@ export const parseRegexSingleOrFail = (reg: RegExp, val: string): RegExResult | 
     const results = parseRegex(reg, val);
     if (results !== undefined) {
         if (results.length > 1) {
-            throw new ErrorWithCause(`Expected Regex to match once but got ${results.length} results. Either Regex must NOT be global (using 'g' flag) or parsed value must only match regex once. Given: ${val} || Regex: ${reg.toString()}`);
+            throw new Error(`Expected Regex to match once but got ${results.length} results. Either Regex must NOT be global (using 'g' flag) or parsed value must only match regex once. Given: ${val} || Regex: ${reg.toString()}`);
         }
         return results[0];
     }
@@ -733,7 +733,7 @@ export const getAddress = (host = '0.0.0.0', logger?: Logger): { v4?: string, v6
     } catch (e) {
         if (process.env.DEBUG_MODE === 'true') {
             if (logger !== undefined) {
-                logger.warn(new ErrorWithCause('Could not get machine IP address', {cause: e}));
+                logger.warn(new Error('Could not get machine IP address', {cause: e}));
             } else {
                 console.warn('Could not get machine IP address');
                 console.warn(e);

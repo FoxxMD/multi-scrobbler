@@ -1,5 +1,4 @@
 import AbstractApiClient from "./AbstractApiClient.js";
-import {ErrorWithCause} from "pony-cause";
 import { KodiData } from "../infrastructure/config/source/kodi.js";
 import { KodiClient } from 'kodi-api'
 import normalizeUrl from "normalize-url";
@@ -143,7 +142,7 @@ export class KodiApiClient extends AbstractApiClient {
             if(this.config.username === undefined || this.config.password === undefined) {
                 msg = 'Authentication failed. No username/password was provided in config! Did you mean to do this?';
             }
-            this.logger.error(new ErrorWithCause(msg, {cause: e}));
+            this.logger.error(new Error(msg, {cause: e}));
             return false;
         }
     }

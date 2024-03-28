@@ -14,7 +14,6 @@ import { DeezerSourceConfig } from "../common/infrastructure/config/source/deeze
 import { DEFAULT_RETRY_MULTIPLIER, FormatPlayObjectOptions, InternalConfig } from "../common/infrastructure/Atomic.js";
 import EventEmitter from "events";
 import { PlayObject } from "../../core/Atomic.js";
-import {ErrorWithCause} from "pony-cause";
 
 export default class DeezerSource extends AbstractSource {
     workingCredsPath;
@@ -102,7 +101,7 @@ export default class DeezerSource extends AbstractSource {
                 this.logger.warn(`No Deezer credentials file found at ${this.workingCredsPath}`);
             }
         } catch (e) {
-            throw new ErrorWithCause('Current deezer credentials file exists but could not be parsed', {cause: e});
+            throw new Error('Current deezer credentials file exists but could not be parsed', {cause: e});
         }
         if (this.config.data.accessToken === undefined) {
             if (this.config.data.clientId === undefined) {

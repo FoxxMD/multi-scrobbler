@@ -11,7 +11,7 @@ import {
 import {EventEmitter} from "events";
 import {MediaController, PersistentClient, Media, createPlatform} from "@foxxmd/chromecast-client";
 import {Client as CastClient} from 'castv2';
-import {ErrorWithCause, findCauseByReference} from "pony-cause";
+import {findCauseByReference} from "pony-cause";
 import { PlayObject } from "../../core/Atomic.js";
 import dayjs from "dayjs";
 import { RecentlyPlayedOptions } from "./AbstractSource.js";
@@ -140,18 +140,18 @@ export class ChromecastSource extends MemorySource {
 
         for (const device of devices) {
             this.initializeDevice({name: device.name, addresses: [device.address], type: 'googlecast'}).catch((err) => {
-                this.logger.error(new ErrorWithCause('Uncaught error occurred while connecting to manually configured device', {cause: err}));
+                this.logger.error(new Error('Uncaught error occurred while connecting to manually configured device', {cause: err}));
             });
         }
 
         if (useAutoDiscovery) {
             if (useAvahi) {
                 this.discoverAvahi(initial).catch((err) => {
-                    this.logger.error(new ErrorWithCause('Uncaught error occurred during mDNS discovery via Avahi', {cause: err}));
+                    this.logger.error(new Error('Uncaught error occurred during mDNS discovery via Avahi', {cause: err}));
                 });
             } else {
                 this.discoverNative(initial).catch((err) => {
-                    this.logger.error(new ErrorWithCause('Uncaught error occurred during mDNS discovery', {cause: err}));
+                    this.logger.error(new Error('Uncaught error occurred during mDNS discovery', {cause: err}));
                 });
             }
         }
@@ -167,7 +167,7 @@ export class ChromecastSource extends MemorySource {
                 },
             });
         } catch (e) {
-            this.logger.error(new ErrorWithCause('Uncaught error occurred during mDNS discovery via Avahi', {cause: e}));
+            this.logger.error(new Error('Uncaught error occurred during mDNS discovery via Avahi', {cause: e}));
         }
     }
 
@@ -181,7 +181,7 @@ export class ChromecastSource extends MemorySource {
                 },
             });
         } catch (e) {
-            this.logger.error(new ErrorWithCause('Uncaught error occurred during mDNS discovery', {cause: e}));
+            this.logger.error(new Error('Uncaught error occurred during mDNS discovery', {cause: e}));
         }
     }
 
@@ -261,10 +261,10 @@ export class ChromecastSource extends MemorySource {
                 await client.connect();
             } catch (e) {
                 if(index < device.addresses.length - 1) {
-                    this.logger.warn(new ErrorWithCause(`Could not connect to ${device.name} but more interfaces exist, will attempt next host.`, {cause: e}));
+                    this.logger.warn(new Error(`Could not connect to ${device.name} but more interfaces exist, will attempt next host.`, {cause: e}));
                     continue;
                 } else {
-                    throw new ErrorWithCause(`Could not connect to ${device.name} and no additional interfaces exist`, {cause: e});
+                    throw new Error(`Could not connect to ${device.name} and no additional interfaces exist`, {cause: e});
                 }
             }
 
@@ -284,7 +284,7 @@ export class ChromecastSource extends MemorySource {
                     }
                     if(event === "reconnect") {
                         if(payload instanceof Error) {
-                            info.logger.warn(new ErrorWithCause(`Failed to reconnect, will retry ${5 - info.retries} more times`, {cause: e}))
+                            info.logger.warn(new Error(`Failed to reconnect, will retry ${5 - info.retries} more times`, {cause: e}))
                         } else {
                             info.logger.verbose(`Reconnected`);
                             info.retries = 0;
@@ -312,13 +312,13 @@ export class ChromecastSource extends MemorySource {
                     break;
                 case 'error':
                     if(info === undefined) {
-                        this.logger.error(new ErrorWithCause(`(${clientName}) Encountered error in castv2 lib`, {cause: payload as Error}));
+                        this.logger.error(new Error(`(${clientName}) Encountered error in castv2 lib`, {cause: payload as Error}));
                     } else {
                         if(NETWORK_ERROR_FAILURE_CODES.some(x => (payload as Error).message.includes(x))) {
-                            info.logger.warn(new ErrorWithCause(`Encountered network error. Will try to reconnect to device`, {cause: payload as Error}));
+                            info.logger.warn(new Error(`Encountered network error. Will try to reconnect to device`, {cause: payload as Error}));
                             info.client.client.close();
                         } else {
-                            info.logger.error(new ErrorWithCause(`Encountered error in castv2 lib`, {cause: payload as Error}));
+                            info.logger.error(new Error(`Encountered error in castv2 lib`, {cause: payload as Error}));
                         }
                     }
                     break;
@@ -336,7 +336,7 @@ export class ChromecastSource extends MemorySource {
                 apps = await getCurrentPlatformApplications(v.platform);
                 v.retries = 0;
             } catch (e) {
-                v.logger.warn(new ErrorWithCause(`Could not refresh applications. Will remove after ${5 - v.retries} retries if error does not resolve itself.`, {cause: e}));
+                v.logger.warn(new Error(`Could not refresh applications. Will remove after ${5 - v.retries} retries if error does not resolve itself.`, {cause: e}));
                 const validationError = findCauseByReference(e, ContextualValidationError);
                 if(validationError && validationError.data !== undefined) {
                     v.logger.warn(JSON.stringify(validationError.data));
@@ -495,7 +495,7 @@ export class ChromecastSource extends MemorySource {
         try {
             await this.refreshApplications();
         } catch (e) {
-            this.logger.warn(new ErrorWithCause('Could not refresh all applications', {cause: e}));
+            this.logger.warn(new Error('Could not refresh all applications', {cause: e}));
         }
 
         for (const [k, v] of this.devices.entries()) {
@@ -629,7 +629,7 @@ export class ChromecastSource extends MemorySource {
                     plays.push(playerState);
 
                 } catch (e) {
-                    application.logger.warn(new ErrorWithCause(`Could not get Player State`, {cause: e}))
+                    application.logger.warn(new Error(`Could not get Player State`, {cause: e}))
                     const validationError = findCauseByReference(e, ContextualValidationError);
                     if (validationError && validationError.data !== undefined) {
                         application.logger.warn(JSON.stringify(validationError.data));

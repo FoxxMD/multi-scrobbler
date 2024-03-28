@@ -10,11 +10,8 @@ import { RecentlyPlayedOptions } from "./AbstractSource.js";
 import EventEmitter from "events";
 import { PlayObject } from "../../core/Atomic.js";
 import {isNodeNetworkException} from "../common/errors/NodeErrors.js";
-import {ErrorWithCause} from "pony-cause";
 import {UpstreamError} from "../common/errors/UpstreamError.js";
 import {getSubsonicResponse, SubsonicResponse, SubsonicResponseCommon} from "../common/vendor/subsonic/interfaces.js";
-import {hash} from "@astronautlabs/mdns/dist/hash.js";
-import e from "express";
 
 dayjs.extend(isSameOrAfter);
 
@@ -216,7 +213,7 @@ export class SubsonicSource extends MemorySource {
             } else if(e.status >= 500) {
                 throw new UpstreamError('Subsonic server returning an unexpected response', {cause: e})
             } else {
-                throw new ErrorWithCause('Unexpected error occurred', {cause: e})
+                throw new Error('Unexpected error occurred', {cause: e})
             }
         }
     }

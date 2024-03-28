@@ -4,7 +4,6 @@ import EventEmitter from "events";
 import { ListenBrainzSourceConfig } from "../common/infrastructure/config/source/listenbrainz.js";
 import { ListenbrainzApiClient } from "../common/vendor/ListenbrainzApiClient.js";
 import MemorySource from "./MemorySource.js";
-import {ErrorWithCause} from "pony-cause";
 import request from "superagent";
 import {isNodeNetworkException} from "../common/errors/NodeErrors.js";
 import {PlayObject, SOURCE_SOT} from "../../core/Atomic.js";
@@ -42,9 +41,9 @@ export default class ListenbrainzSource extends MemorySource {
             return true;
         } catch (e) {
             if(isNodeNetworkException(e)) {
-                throw new ErrorWithCause('Could not communicate with Listenbrainz API server', {cause: e});
+                throw new Error('Could not communicate with Listenbrainz API server', {cause: e});
             } else if(e.status !== 410) {
-                throw new ErrorWithCause('Listenbrainz API server returning an unexpected response', {cause: e})
+                throw new Error('Listenbrainz API server returning an unexpected response', {cause: e})
             }
             return true;
         }
@@ -58,7 +57,7 @@ export default class ListenbrainzSource extends MemorySource {
             return await this.api.testAuth();
         } catch (e) {
             throw e;
-            //throw new ErrorWithCause('Could not communicate with Listenbrainz API', {cause: e});
+            //throw new Error('Could not communicate with Listenbrainz API', {cause: e});
         }
     }
 

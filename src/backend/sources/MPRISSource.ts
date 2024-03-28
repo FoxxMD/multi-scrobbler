@@ -13,7 +13,6 @@ import MemorySource from "./MemorySource.js";
 import { RecentlyPlayedOptions } from "./AbstractSource.js";
 import { removeDuplicates } from "../utils.js";
 import EventEmitter from "events";
-import {ErrorWithCause} from "pony-cause";
 import { PlayObject } from "../../core/Atomic.js";
 import {DBusInterface, sessionBus} from 'dbus-ts';
 import { Interfaces as Notifications } from '@dbus-types/notifications'
@@ -96,7 +95,7 @@ export class MPRISSource extends MemorySource {
             await this.getDBus();
             return true;
         } catch (e) {
-            throw new ErrorWithCause('Could not get DBus interface from operating system', {cause: e});
+            throw new Error('Could not get DBus interface from operating system', {cause: e});
         }
     }
 
@@ -144,7 +143,7 @@ export class MPRISSource extends MemorySource {
                 });
             }
             catch (e) {
-                this.logger.warn(new ErrorWithCause(`Could not parse D-bus info for player ${plainPlayerName}`, {cause: e}));
+                this.logger.warn(new Error(`Could not parse D-bus info for player ${plainPlayerName}`, {cause: e}));
             }
 
         }
@@ -158,7 +157,7 @@ export class MPRISSource extends MemorySource {
             // microseconds
             return dayjs.duration({milliseconds: Number(pos / 1000)}).asSeconds();
         } catch(e) {
-            throw new ErrorWithCause('Could not get player Position', {cause: e});
+            throw new Error('Could not get player Position', {cause: e});
         }
     }
 
@@ -167,7 +166,7 @@ export class MPRISSource extends MemorySource {
             const status = await props['PlaybackStatus'];
             return status as PlaybackStatus;
         } catch (e) {
-            throw new ErrorWithCause('Could not get player PlaybackStatus', {cause: e})
+            throw new Error('Could not get player PlaybackStatus', {cause: e})
         }
     }
 
@@ -176,7 +175,7 @@ export class MPRISSource extends MemorySource {
             const metadata = await props['Metadata'];
             return this.metadataToPlain(metadata);
         } catch(e) {
-            throw new ErrorWithCause('Could not get player Metadata', {cause: e});
+            throw new Error('Could not get player Metadata', {cause: e});
         }
     }
 

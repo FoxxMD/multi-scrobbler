@@ -9,8 +9,7 @@ import MemorySource from "./MemorySource.js";
 import { LastfmSourceConfig } from "../common/infrastructure/config/source/lastfm.js";
 import dayjs from "dayjs";
 import { isNodeNetworkException } from "../common/errors/NodeErrors.js";
-import {ErrorWithCause} from "pony-cause";
-import request, {options} from "superagent";
+import request from "superagent";
 
 export default class LastfmSource extends MemorySource {
 
@@ -57,9 +56,9 @@ export default class LastfmSource extends MemorySource {
             return true;
         } catch (e) {
             if(isNodeNetworkException(e)) {
-                throw new ErrorWithCause('Could not communicate with Last.fm API server', {cause: e});
+                throw new Error('Could not communicate with Last.fm API server', {cause: e});
             } else if(e.status >= 500) {
-                throw new ErrorWithCause('Last.fm API server returning an unexpected response', {cause: e})
+                throw new Error('Last.fm API server returning an unexpected response', {cause: e})
             }
             return true;
         }

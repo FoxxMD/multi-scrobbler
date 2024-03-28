@@ -41,7 +41,7 @@ import EventEmitter from "events";
 import { compareScrobbleArtists, compareScrobbleTracks, normalizeStr } from "../utils/StringUtils.js";
 import { hasUpstreamError, UpstreamError } from "../common/errors/UpstreamError.js";
 import {nanoid} from "nanoid";
-import {ErrorWithCause, messageWithCauses} from "pony-cause";
+import {messageWithCauses} from "pony-cause";
 import { hasNodeNetworkException } from "../common/errors/NodeErrors.js";
 import {
     comparePlayTemporally,
@@ -187,7 +187,7 @@ export default abstract class AbstractScrobbleClient implements Authenticatable 
             // only signal as auth failure if error was NOT either a node network error or a non-showstopping upstream error
             this.authFailure = !(hasNodeNetworkException(e) || hasUpstreamError(e, false));
             this.authed = false;
-            this.logger.error(new ErrorWithCause(`Authentication test failed!${this.authFailure === false ? ' Due to a network issue. Will retry authentication on next heartbeat.' : ''}`, {cause: e}));
+            this.logger.error(new Error(`Authentication test failed!${this.authFailure === false ? ' Due to a network issue. Will retry authentication on next heartbeat.' : ''}`, {cause: e}));
         }
     }
 
@@ -583,10 +583,10 @@ ${closestMatch.breakdowns.join('\n')}`, {leaf: ['Dupe Check']});
                         } catch (e) {
                             if (e instanceof UpstreamError && e.showStopper === false) {
                                 this.addDeadLetterScrobble(currQueuedPlay, e);
-                                this.logger.warn(new ErrorWithCause(`Could not scrobble ${buildTrackString(currQueuedPlay.play)} from Source '${currQueuedPlay.source}' but error was not show stopping. Adding scrobble to Dead Letter Queue and will retry on next heartbeat.`, {cause: e}));
+                                this.logger.warn(new Error(`Could not scrobble ${buildTrackString(currQueuedPlay.play)} from Source '${currQueuedPlay.source}' but error was not show stopping. Adding scrobble to Dead Letter Queue and will retry on next heartbeat.`, {cause: e}));
                             } else {
                                 this.queuedScrobbles.unshift(currQueuedPlay);
-                                throw new ErrorWithCause('Error occurred while trying to scrobble', {cause: e});
+                                throw new Error('Error occurred while trying to scrobble', {cause: e});
                             }
                         }
                     } else if (!timeFrameValid) {
@@ -666,7 +666,7 @@ ${closestMatch.breakdowns.join('\n')}`, {leaf: ['Dupe Check']});
                 deadScrobble.retries++;
                 deadScrobble.error = messageWithCauses(e);
                 deadScrobble.lastRetry = dayjs();
-                this.logger.error(new ErrorWithCause(`Could not scrobble ${buildTrackString(deadScrobble.play)} from Source '${deadScrobble.source}' due to error`, {cause: e}));
+                this.logger.error(new Error(`Could not scrobble ${buildTrackString(deadScrobble.play)} from Source '${deadScrobble.source}' due to error`, {cause: e}));
                 this.deadLetterScrobbles[deadScrobbleIndex] = deadScrobble;
                 return [false, deadScrobble];
             } finally {
