@@ -10,6 +10,7 @@ Dockerfile
 .idea
 config/*.json
 config/*.bak
+config/*.p8
 /docs
 /logs
 .flatpak-builder
@@ -20,3 +21,4 @@ docsite/node_modules
 docsite/.docusaurus
 docsite/.cache-loader
 build
+*.secrets

@@ -6,8 +6,8 @@ export const recentApi = createApi({
     reducerPath: 'recentApi',
     baseQuery: fetchBaseQuery({ baseUrl: './api/' }),
     endpoints: (builder) => ({
-        getRecent: builder.query<RecentResponse, {name: string, type: string}>({
-            query: (params) => `recent?name=${params.name}&type=${params.type}`,
+        getRecent: builder.query<RecentResponse, {name: string, type: string, upstream?: string}>({
+            query: (params) => `recent?name=${params.name}&type=${params.type}&upstream=${params.upstream ?? 0}`,
             transformResponse: (response: RecentResponse, meta, arg) => {
                 return response.map((x, index) => ({...x, index: index + 1}))
             }

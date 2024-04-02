@@ -1,11 +1,18 @@
-import {accessSync, constants, promises} from "fs";
-import dayjs from 'dayjs';
-import utc from 'dayjs/plugin/utc.js';
-import {Logger} from '@foxxmd/winston';
-import JSON5 from 'json5';
-import {Schema} from 'ajv';
+import { Logger } from '@foxxmd/logging';
+import backoffStrategies from '@kenyip/backoff-strategies';
+import address from "address";
 import * as AjvNS from 'ajv';
-import Ajv from 'ajv';
+import Ajv, { Schema } from 'ajv';
+import { replaceResultTransformer, stripIndentTransformer, TemplateTag, trimResultTransformer } from 'common-tags';
+import dayjs, { Dayjs } from 'dayjs';
+import { Duration } from "dayjs/plugin/duration.js";
+import utc from 'dayjs/plugin/utc.js';
+import { Request } from "express";
+import { accessSync, constants, promises } from "fs";
+import JSON5 from 'json5';
+import pathUtil from "path";
+import { getErrorCause } from "pony-cause";
+import { PlayObject } from "../core/Atomic.js";
 import {
     asPlayerStateData,
     NO_DEVICE,
@@ -18,14 +25,6 @@ import {
     RemoteIdentityParts,
     ScrobbleThresholdResult,
 } from "./common/infrastructure/Atomic.js";
-import {Request} from "express";
-import pathUtil from "path";
-import {ErrorWithCause, getErrorCause} from "pony-cause";
-import backoffStrategies from '@kenyip/backoff-strategies';
-import {replaceResultTransformer, stripIndentTransformer, TemplateTag, trimResultTransformer} from 'common-tags';
-import {Duration} from "dayjs/plugin/duration.js";
-import { PlayObject } from "../core/Atomic.js";
-import address from "address";
 import {isNodeNetworkException} from "./common/errors/NodeErrors.js";
 
 //const { default: Ajv } = AjvNS;
@@ -40,12 +39,12 @@ export async function readJson(this: any, path: any, {throwOnNotFound = true} = 
         const {code} = e;
         if (code === 'ENOENT') {
             if (throwOnNotFound) {
-                throw new ErrorWithCause(`No file found at given path: ${path}`, {cause: e});
+                throw new Error(`No file found at given path: ${path}`, {cause: e});
             } else {
                 return;
             }
         }
-        throw new ErrorWithCause(`Encountered error while parsing file: ${path}`, {cause: e})
+        throw new Error(`Encountered error while parsing file: ${path}`, {cause: e})
     }
 }
 
@@ -135,8 +134,8 @@ export const sortByNewestPlayDate = (a: PlayObject, b: PlayObject) => {
 };
 
 export const setIntersection = (setA: any, setB: any) => {
-    let _intersection = new Set()
-    for (let elem of setB) {
+    const _intersection = new Set()
+    for (const elem of setB) {
         if (setA.has(elem)) {
             _intersection.add(elem)
         }
@@ -248,12 +247,11 @@ export const parseRetryAfterSecsFromObj = (err: any) => {
     }
 
     // first try to parse as float
-    let retryAfter = Number.parseFloat(raVal);
+    let retryAfter: number | Dayjs = Number.parseFloat(raVal);
     if (!isNaN(retryAfter)) {
         return retryAfter; // got a number!
     }
     // try to parse as date
-    // @ts-ignore
     retryAfter = dayjs(retryAfter);
     if (!dayjs.isDayjs(retryAfter)) {
         return undefined; // could not parse string if not in ISO 8601 format
@@ -274,7 +272,7 @@ export const spreadDelay = (retries: any, multiplier: any) => {
         return [];
     }
     let r;
-    let s = [];
+    const s = [];
     for(r = 0; r < retries; r++) {
         s.push(((r+1) * multiplier) * 1000);
     }
@@ -282,7 +280,7 @@ export const spreadDelay = (retries: any, multiplier: any) => {
 }
 
 export const removeUndefinedKeys = <T extends Record<string, any>>(obj: T): T | undefined => {
-    let newObj: any = {};
+    const newObj: any = {};
     Object.keys(obj).forEach((key) => {
         if(Array.isArray(obj[key])) {
             newObj[key] = obj[key];
@@ -362,7 +360,7 @@ export const validateJson = <T>(config: object, schema: Schema, logger: Logger):
         logger.error('Json config was not valid. Please use schema to check validity.', {leaf: 'Config'});
         if (Array.isArray(ajv.errors)) {
             for (const err of ajv.errors) {
-                let parts = [
+                const parts = [
                     `At: ${err.instancePath}`,
                 ];
                 let data;
@@ -375,9 +373,7 @@ export const validateJson = <T>(config: object, schema: Schema, logger: Logger):
                     parts.push(`Data: ${data}`);
                 }
                 let suffix = '';
-                // @ts-ignore
                 if (err.params.allowedValues !== undefined) {
-                    // @ts-ignore
                     suffix = err.params.allowedValues.join(', ');
                     suffix = ` [${suffix}]`;
                 }
@@ -535,13 +531,13 @@ export const fileOrDirectoryIsWriteable = (location: string) => {
                     // also can't access directory :(
                     throw new Error(`No ${isDir ? 'directory' : 'file'} exists at ${location} and application does not have permission to write to the parent directory`);
                 } else {
-                    throw new ErrorWithCause(`No ${isDir ? 'directory' : 'file'} exists at ${location} and application is unable to access the parent directory due to a system error`, {cause: accessError});
+                    throw new Error(`No ${isDir ? 'directory' : 'file'} exists at ${location} and application is unable to access the parent directory due to a system error`, {cause: accessError});
                 }
             }
         } else if(code === 'EACCES') {
             throw new Error(`${isDir ? 'Directory' : 'File'} exists at ${location} but application does not have permission to write to it.`);
         } else {
-            throw new ErrorWithCause(`${isDir ? 'Directory' : 'File'} exists at ${location} but application is unable to access it due to a system error`, {cause: err});
+            throw new Error(`${isDir ? 'Directory' : 'File'} exists at ${location} but application is unable to access it due to a system error`, {cause: err});
         }
     }
 }
@@ -599,7 +595,7 @@ export const parseRegexSingleOrFail = (reg: RegExp, val: string): RegExResult | 
     const results = parseRegex(reg, val);
     if (results !== undefined) {
         if (results.length > 1) {
-            throw new ErrorWithCause(`Expected Regex to match once but got ${results.length} results. Either Regex must NOT be global (using 'g' flag) or parsed value must only match regex once. Given: ${val} || Regex: ${reg.toString()}`);
+            throw new Error(`Expected Regex to match once but got ${results.length} results. Either Regex must NOT be global (using 'g' flag) or parsed value must only match regex once. Given: ${val} || Regex: ${reg.toString()}`);
         }
         return results[0];
     }
@@ -723,7 +719,7 @@ export const durationToHuman = (dur: Duration): string => {
     return parts.join(' ');
 }
 export const getAddress = (host = '0.0.0.0', logger?: Logger): { v4?: string, v6?: string, host: string } => {
-    const local = host = '0.0.0.0' || host === '::' ? 'localhost' : host;
+    const local = host === '0.0.0.0' || host === '::' ? 'localhost' : host;
     let v4: string,
         v6: string;
     try {
@@ -732,7 +728,7 @@ export const getAddress = (host = '0.0.0.0', logger?: Logger): { v4?: string, v6
     } catch (e) {
         if (process.env.DEBUG_MODE === 'true') {
             if (logger !== undefined) {
-                logger.warn(new ErrorWithCause('Could not get machine IP address', {cause: e}));
+                logger.warn(new Error('Could not get machine IP address', {cause: e}));
             } else {
                 console.warn('Could not get machine IP address');
                 console.warn(e);

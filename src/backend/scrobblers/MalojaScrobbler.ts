@@ -1,12 +1,16 @@
-import AbstractScrobbleClient from "./AbstractScrobbleClient.js";
-import request, {ResponseError, SuperAgentRequest} from 'superagent';
-import dayjs from 'dayjs';
+import { Logger } from "@foxxmd/logging";
 import compareVersions from 'compare-versions';
-import { sleep, parseRetryAfterSecsFromObj } from "../utils.js";
+import dayjs from 'dayjs';
+import EventEmitter from "events";
+import normalizeUrl from "normalize-url";
+import request, { SuperAgentRequest } from 'superagent';
+import { PlayObject } from "../../core/Atomic.js";
+import { buildTrackString, capitalize } from "../../core/StringUtils.js";
+import { isSuperAgentResponseError } from "../common/errors/ErrorUtils.js";
+import { isNodeNetworkException } from "../common/errors/NodeErrors.js";
+import { UpstreamError } from "../common/errors/UpstreamError.js";
 import { DEFAULT_RETRY_MULTIPLIER, FormatPlayObjectOptions, INITIALIZING } from "../common/infrastructure/Atomic.js";
 import { MalojaClientConfig } from "../common/infrastructure/config/client/maloja.js";
-import { Notifiers } from "../notifier/Notifiers.js";
-import {Logger} from '@foxxmd/winston';
 import {
     getMalojaResponseError,
     isMalojaAPIErrorBody,
@@ -19,16 +23,10 @@ import {
     MalojaV2ScrobbleData,
     MalojaV3ScrobbleData,
 } from "../common/vendor/maloja/interfaces.js";
-import { PlayObject, TrackStringOptions } from "../../core/Atomic.js";
-import { buildTrackString, capitalize } from "../../core/StringUtils.js";
-import EventEmitter from "events";
-import normalizeUrl from "normalize-url";
-import { UpstreamError } from "../common/errors/UpstreamError.js";
-import {ErrorWithCause} from "pony-cause";
+import { Notifiers } from "../notifier/Notifiers.js";
+import { parseRetryAfterSecsFromObj, sleep } from "../utils.js";
 import { getScrobbleTsSOCDate, getScrobbleTsSOCDateWithContext } from "../utils/TimeUtils.js";
-import e from "express";
-import { isNodeNetworkException } from "../common/errors/NodeErrors.js";
-import { isSuperAgentResponseError } from "../common/errors/ErrorUtils.js";
+import AbstractScrobbleClient from "./AbstractScrobbleClient.js";
 
 const feat = ["ft.", "ft", "feat.", "feat", "featuring", "Ft.", "Ft", "Feat.", "Feat", "Featuring"];
 
@@ -106,7 +104,7 @@ export default class MalojaScrobbler extends AbstractScrobbleClient {
             duration = mDuration;
             time = mTime;
         }
-        let artistStrings = artists.reduce((acc: any, curr: any) => {
+        const artistStrings = artists.reduce((acc: any, curr: any) => {
             let aString;
             if (typeof curr === 'string') {
                 aString = curr;
@@ -170,7 +168,7 @@ export default class MalojaScrobbler extends AbstractScrobbleClient {
                     throw new UpstreamError(`API Call failed (HTTP ${status}) => ${message}`, {cause: e})
                 }
             } else {
-                throw new ErrorWithCause('Unexpected error occurred during API call', {cause : e});
+                throw new Error('Unexpected error occurred during API call', {cause : e});
             }
         }
     }
@@ -200,13 +198,15 @@ export default class MalojaScrobbler extends AbstractScrobbleClient {
             } else {
                 this.logger.info(`Maloja Server Version: ${versionstring}`);
                 this.serverVersion = versionstring;
-                if(compareVersions(versionstring, '2.7.0') < 0) {
-                    this.logger.warn('Maloja Server Version is less than 2.7, please upgrade to ensure compatibility');
+                if(compareVersions(versionstring, '3.0.0') < 0) {
+                    this.logger.warn(`Support for Maloja versions below 3.0.0 is DEPRECATED and will be removed in a future minor release.`);
+                } else if(compareVersions(versionstring, '3.2.0') < 0) {
+                    this.logger.warn(`Maloja versions below 3.2.0 do not support scrobbling albums.`);
                 }
             }
             return true;
         } catch (e) {
-            this.logger.error(new ErrorWithCause('Communication test failed', {cause: e}));
+            this.logger.error(new Error('Communication test failed', {cause: e}));
             return false;
         }
     }
@@ -242,7 +242,7 @@ export default class MalojaScrobbler extends AbstractScrobbleClient {
 
             return [true];
         } catch (e) {
-            this.logger.error(new ErrorWithCause('Unexpected error encountered while testing server health', {cause: e}));
+            this.logger.error(new Error('Unexpected error encountered while testing server health', {cause: e}));
             throw e;
         }
     }
@@ -291,7 +291,7 @@ export default class MalojaScrobbler extends AbstractScrobbleClient {
             }
         } catch (e) {
             if(e instanceof UpstreamError) {
-                if(e.cause.status === 403) {
+                if((e?.cause as any)?.status === 403) {
                     // may be an older version that doesn't support auth readiness before db upgrade
                     // and if it was before api was accessible during db build then test would fail during testConnection()
                     if(compareVersions(this.serverVersion, '2.12.19') < 0) {
@@ -320,7 +320,7 @@ export default class MalojaScrobbler extends AbstractScrobbleClient {
                 this.serverIsHealthy = true;
             }
         } catch (e) {
-            this.logger.error(new ErrorWithCause(`Testing server health failed due to an unexpected error`, {cause: e}));
+            this.logger.error(new Error(`Testing server health failed due to an unexpected error`, {cause: e}));
             this.serverIsHealthy = false;
         }
         return this.serverIsHealthy
@@ -373,9 +373,7 @@ export default class MalojaScrobbler extends AbstractScrobbleClient {
         return lowerTitle;
     }
 
-    alreadyScrobbled = async (playObj: any, log = false) => {
-        return (await this.existingScrobble(playObj)) !== undefined;
-    }
+    alreadyScrobbled = async (playObj: any, log = false) => (await this.existingScrobble(playObj)) !== undefined
 
     public playToClientPayload(playObj: PlayObject): MalojaScrobbleRequestData {
 

@@ -7,13 +7,13 @@ $primary: #00ACC1;
   display: flex;
   justify-content: space-around;
   align-items: center;
-  height: $spacing*2.5;
+  height: calc($spacing*2.5);
   text-align: center;
   background: $primary;
 
   .button {
     height: 100%;
-    width: $spacing*2.5;
+    width: calc($spacing*2.5);
     border: 0;
     border-radius: 0;
     transition: background 250ms;

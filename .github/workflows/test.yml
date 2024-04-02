@@ -1,0 +1,24 @@
+name: Publish Docker image to Dockerhub
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+jobs:
+  test:
+    name: Run Tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out the repo
+        uses: actions/checkout@v4
+      - name: Use Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18.x'
+          cache: 'npm'
+      - name: Install dev dependencies
+        run: npm ci
+      - name: Build Backend
+        run: 'npm run build:backend'
+      - name: Test Backend
+        run: npm run test

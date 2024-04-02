@@ -1,13 +1,12 @@
-import AbstractApiClient from "./AbstractApiClient.js";
-import {ErrorWithCause} from "pony-cause";
-import { KodiData } from "../infrastructure/config/source/kodi.js";
+import dayjs from "dayjs";
 import { KodiClient } from 'kodi-api'
 import normalizeUrl from "normalize-url";
-import {URL} from "url";
-import { RecentlyPlayedOptions } from "../../sources/AbstractSource.js";
-import { FormatPlayObjectOptions } from "../infrastructure/Atomic.js";
-import dayjs from "dayjs";
+import { URL } from "url";
 import { PlayObject } from "../../../core/Atomic.js";
+import { RecentlyPlayedOptions } from "../../sources/AbstractSource.js";
+import { AbstractApiOptions, FormatPlayObjectOptions } from "../infrastructure/Atomic.js";
+import { KodiData } from "../infrastructure/config/source/kodi.js";
+import AbstractApiClient from "./AbstractApiClient.js";
 
 interface KodiDuration {
     hours: number
@@ -49,7 +48,7 @@ export class KodiApiClient extends AbstractApiClient {
 
     declare client: KodiClient;
 
-    constructor(name: any, config: KodiData, options = {}) {
+    constructor(name: any, config: KodiData, options: AbstractApiOptions) {
         super('Kodi', name, config, options);
         const {
             url = 'http://localhost:8080/jsonrpc'
@@ -99,8 +98,8 @@ export class KodiApiClient extends AbstractApiClient {
             playerid,
         } = obj;
 
-        let artists = artistVal === null || artistVal === undefined ? [] : artistVal;
-        let album = albumVal === null || albumVal === '' ? undefined : albumVal;
+        const artists = artistVal === null || artistVal === undefined ? [] : artistVal;
+        const album = albumVal === null || albumVal === '' ? undefined : albumVal;
         const trackProgressPosition = time !== undefined ? Math.round(dayjs.duration(time).asSeconds()) : undefined;
 
         return {
@@ -143,21 +142,21 @@ export class KodiApiClient extends AbstractApiClient {
             if(this.config.username === undefined || this.config.password === undefined) {
                 msg = 'Authentication failed. No username/password was provided in config! Did you mean to do this?';
             }
-            this.logger.error(new ErrorWithCause(msg, {cause: e}));
+            this.logger.error(new Error(msg, {cause: e}));
             return false;
         }
     }
 
     getPlayerInfo = async (id: number): Promise<PlayerInfo> => {
         // https://kodi.wiki/view/JSON-RPC_API/v12#Player.GetProperties
-        // @ts-ignore
+        // @ts-expect-error types are wrong
         const playerInfo = await this.client.Player.GetProperties(0, ["position","type","time","totaltime"])
         return playerInfo;
     }
 
     getPlayerItem = async (id: number): Promise<{item: PlayerItem}> => {
         // https://kodi.wiki/view/JSON-RPC_API/v12#Player.GetItem
-        // @ts-ignore
+        // @ts-expect-error types are wrong
         const itemInfo = await this.client.Player.GetItem(0, ["title","artist","album","albumartist","starttime","endtime","duration","streamdetails","uniqueid"]);
         return itemInfo as {item: PlayerItem};
     }

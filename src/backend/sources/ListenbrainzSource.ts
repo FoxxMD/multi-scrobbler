@@ -1,12 +1,12 @@
-import AbstractSource, { RecentlyPlayedOptions } from "./AbstractSource.js";
-import { FormatPlayObjectOptions, INITIALIZING, InternalConfig } from "../common/infrastructure/Atomic.js";
 import EventEmitter from "events";
+import request from "superagent";
+import { PlayObject, SOURCE_SOT } from "../../core/Atomic.js";
+import { isNodeNetworkException } from "../common/errors/NodeErrors.js";
+import { FormatPlayObjectOptions, InternalConfig } from "../common/infrastructure/Atomic.js";
 import { ListenBrainzSourceConfig } from "../common/infrastructure/config/source/listenbrainz.js";
 import { ListenbrainzApiClient } from "../common/vendor/ListenbrainzApiClient.js";
+import { RecentlyPlayedOptions } from "./AbstractSource.js";
 import MemorySource from "./MemorySource.js";
-import {ErrorWithCause} from "pony-cause";
-import request from "superagent";
-import {isNodeNetworkException} from "../common/errors/NodeErrors.js";
 
 export default class ListenbrainzSource extends MemorySource {
 
@@ -27,11 +27,13 @@ export default class ListenbrainzSource extends MemorySource {
         super('listenbrainz', name, {...config, data: {interval, maxInterval, ...restData}}, internal, emitter);
         this.canPoll = true;
         this.canBacklog = true;
-        this.api = new ListenbrainzApiClient(name, config.data);
-        this.playerSourceOfTruth = false;
+        this.api = new ListenbrainzApiClient(name, config.data, {logger: this.logger});
+        this.playerSourceOfTruth = SOURCE_SOT.HISTORY;
+        this.supportsUpstreamRecentlyPlayed = true;
+        this.logger.info(`Note: The player for this source is an analogue for the 'Now Playing' status exposed by ${this.type} which is NOT used for scrobbling. Instead, the 'recently played' or 'history' information provided by this source is used for scrobbles.`)
     }
 
-    static formatPlayObj = (obj: any, options: FormatPlayObjectOptions = {}) => ListenbrainzApiClient.formatPlayObj(obj, options);
+    static formatPlayObj(obj: any, options: FormatPlayObjectOptions = {}){ return ListenbrainzApiClient.formatPlayObj(obj, options); }
 
     protected async doCheckConnection(): Promise<true | string | undefined> {
         try {
@@ -39,9 +41,9 @@ export default class ListenbrainzSource extends MemorySource {
             return true;
         } catch (e) {
             if(isNodeNetworkException(e)) {
-                throw new ErrorWithCause('Could not communicate with Listenbrainz API server', {cause: e});
+                throw new Error('Could not communicate with Listenbrainz API server', {cause: e});
             } else if(e.status !== 410) {
-                throw new ErrorWithCause('Listenbrainz API server returning an unexpected response', {cause: e})
+                throw new Error('Listenbrainz API server returning an unexpected response', {cause: e})
             }
             return true;
         }
@@ -55,7 +57,7 @@ export default class ListenbrainzSource extends MemorySource {
             return await this.api.testAuth();
         } catch (e) {
             throw e;
-            //throw new ErrorWithCause('Could not communicate with Listenbrainz API', {cause: e});
+            //throw new Error('Could not communicate with Listenbrainz API', {cause: e});
         }
     }
 
@@ -67,7 +69,13 @@ export default class ListenbrainzSource extends MemorySource {
         return await this.api.getRecentlyPlayed(limit);
     }
 
-    protected getBackloggedPlays = async () => {
-        return await this.getRecentlyPlayed({formatted: true});
+    getUpstreamRecentlyPlayed = async (options: RecentlyPlayedOptions = {}): Promise<PlayObject[]> => {
+        try {
+            return await this.api.getRecentlyPlayed(20);
+        } catch (e) {
+            throw e;
+        }
     }
+
+    protected getBackloggedPlays = async () => await this.getRecentlyPlayed({formatted: true})
 }

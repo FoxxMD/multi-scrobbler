@@ -1,45 +1,45 @@
-import { mergeArr, parseBool, readJson, validateJson } from "../utils.js";
-import SpotifySource from "./SpotifySource.js";
-import PlexSource from "./PlexSource.js";
-import TautulliSource from "./TautulliSource.js";
-import { SubsonicSource } from "./SubsonicSource.js";
-import JellyfinSource from "./JellyfinSource.js";
-import LastfmSource from "./LastfmSource.js";
-import DeezerSource from "./DeezerSource.js";
-import { ConfigMeta, InternalConfig, SourceType, sourceTypes } from "../common/infrastructure/Atomic.js";
+/* eslint-disable no-case-declarations */
+import { childLogger, Logger } from '@foxxmd/logging';
+import EventEmitter from "events";
 import { configDir as defaultConfigDir } from "../common/index.js";
-import winston, {Logger} from '@foxxmd/winston';
-import { SourceAIOConfig, SourceConfig } from "../common/infrastructure/config/source/sources.js";
+import { ConfigMeta, InternalConfig, SourceType, sourceTypes } from "../common/infrastructure/Atomic.js";
+import { AIOConfig, SourceDefaults } from "../common/infrastructure/config/aioConfig.js";
+import { ChromecastSourceConfig } from "../common/infrastructure/config/source/chromecast.js";
 import { DeezerData, DeezerSourceConfig } from "../common/infrastructure/config/source/deezer.js";
-import { LastfmClientConfig } from "../common/infrastructure/config/client/lastfm.js";
 import { JellyData, JellySourceConfig } from "../common/infrastructure/config/source/jellyfin.js";
+import { JRiverData, JRiverSourceConfig } from "../common/infrastructure/config/source/jriver.js";
+import { KodiData, KodiSourceConfig } from "../common/infrastructure/config/source/kodi.js";
+import { LastfmSourceConfig } from "../common/infrastructure/config/source/lastfm.js";
+import { ListenBrainzSourceConfig } from "../common/infrastructure/config/source/listenbrainz.js";
+import { MopidySourceConfig } from "../common/infrastructure/config/source/mopidy.js";
+import { MPRISData, MPRISSourceConfig } from "../common/infrastructure/config/source/mpris.js";
+import { PlexSourceConfig } from "../common/infrastructure/config/source/plex.js";
+import { SourceAIOConfig, SourceConfig } from "../common/infrastructure/config/source/sources.js";
+import { SpotifySourceConfig, SpotifySourceData } from "../common/infrastructure/config/source/spotify.js";
 import { SubsonicData, SubSonicSourceConfig } from "../common/infrastructure/config/source/subsonic.js";
 import { TautulliSourceConfig } from "../common/infrastructure/config/source/tautulli.js";
-import { PlexSourceConfig } from "../common/infrastructure/config/source/plex.js";
-import { SpotifySourceConfig, SpotifySourceData } from "../common/infrastructure/config/source/spotify.js";
-import AbstractSource from "./AbstractSource.js";
-import { AIOConfig, SourceDefaults } from "../common/infrastructure/config/aioConfig.js";
+import { WebScrobblerSourceConfig } from "../common/infrastructure/config/source/webscrobbler.js";
+import { YTMusicSourceConfig } from "../common/infrastructure/config/source/ytmusic.js";
 import * as aioSchema from "../common/schema/aio-source.json";
 import * as sourceSchema from "../common/schema/source.json";
-import { LastfmSourceConfig } from "../common/infrastructure/config/source/lastfm.js";
-import YTMusicSource from "./YTMusicSource.js";
-import { YTMusicSourceConfig } from "../common/infrastructure/config/source/ytmusic.js";
-import { MPRISData, MPRISSourceConfig } from "../common/infrastructure/config/source/mpris.js";
-import { MPRISSource } from "./MPRISSource.js";
-import EventEmitter from "events";
-import { MopidySource } from "./MopidySource.js";
-import { MopidySourceConfig } from "../common/infrastructure/config/source/mopidy.js";
-import ListenbrainzSource from "./ListenbrainzSource.js";
-import { ListenBrainzSourceConfig } from "../common/infrastructure/config/source/listenbrainz.js";
-import { JRiverSource } from "./JRiverSource.js";
-import { JRiverData, JRiverSourceConfig } from "../common/infrastructure/config/source/jriver.js";
-import { KodiSource } from "./KodiSource.js";
-import { KodiData, KodiSourceConfig } from "../common/infrastructure/config/source/kodi.js";
 import { WildcardEmitter } from "../common/WildcardEmitter.js";
-import { WebScrobblerSource } from "./WebScrobblerSource.js";
-import { WebScrobblerSourceConfig } from "../common/infrastructure/config/source/webscrobbler.js";
+import { parseBool, readJson, validateJson } from "../utils.js";
+import AbstractSource from "./AbstractSource.js";
 import { ChromecastSource } from "./ChromecastSource.js";
-import { ChromecastSourceConfig } from "../common/infrastructure/config/source/chromecast.js";
+import DeezerSource from "./DeezerSource.js";
+import JellyfinSource from "./JellyfinSource.js";
+import { JRiverSource } from "./JRiverSource.js";
+import { KodiSource } from "./KodiSource.js";
+import LastfmSource from "./LastfmSource.js";
+import ListenbrainzSource from "./ListenbrainzSource.js";
+import { MopidySource } from "./MopidySource.js";
+import { MPRISSource } from "./MPRISSource.js";
+import PlexSource from "./PlexSource.js";
+import SpotifySource from "./SpotifySource.js";
+import { SubsonicSource } from "./SubsonicSource.js";
+import TautulliSource from "./TautulliSource.js";
+import { WebScrobblerSource } from "./WebScrobblerSource.js";
+import YTMusicSource from "./YTMusicSource.js";
 
 type groupedNamedConfigs = {[key: string]: ParsedConfig[]};
 
@@ -54,29 +54,23 @@ export default class ScrobbleSources {
 
     emitter: WildcardEmitter;
 
-    constructor(emitter: EventEmitter, localUrl: string, configDir: string = defaultConfigDir) {
+    constructor(emitter: EventEmitter, localUrl: string, configDir: string = defaultConfigDir, parentLogger: Logger) {
         this.emitter = emitter;
         this.configDir = configDir;
         this.localUrl = localUrl;
-        this.logger = winston.loggers.get('app').child({labels: ['Sources']}, mergeArr);
+        this.logger = childLogger(parentLogger, 'Sources'); // winston.loggers.get('app').child({labels: ['Sources']}, mergeArr);
     }
 
-    getByName = (name: any) => {
-        return this.sources.find(x => x.name === name);
-    }
+    getByName = (name: any) => this.sources.find(x => x.name === name)
 
-    getByType = (type: any) => {
-        return this.sources.filter(x => x.type === type);
-    }
+    getByType = (type: any) => this.sources.filter(x => x.type === type)
 
-    getByNameAndType = (name: string, type: SourceType) => {
-        return this.sources.find(x => x.name === name && x.type === type);
-    }
+    getByNameAndType = (name: string, type: SourceType) => this.sources.find(x => x.name === name && x.type === type)
 
     async getStatusSummary(type?: string, name?: string): Promise<[boolean, string[]]> {
         let sources: AbstractSource[]
         let sourcesReady = true;
-        let messages: string[] = [];
+        const messages: string[] = [];
 
         if(type !== undefined) {
             sources = this.getByType(type);
@@ -101,7 +95,7 @@ export default class ScrobbleSources {
     }
 
     buildSourcesFromConfig = async (additionalConfigs: ParsedConfig[] = []) => {
-        let configs: ParsedConfig[] = additionalConfigs;
+        const configs: ParsedConfig[] = additionalConfigs;
 
         let configFile;
         try {
@@ -138,7 +132,7 @@ export default class ScrobbleSources {
             }
         }
 
-        for (let sourceType of sourceTypes) {
+        for (const sourceType of sourceTypes) {
             let defaultConfigureAs = 'source';
             // env builder for single user mode
             switch (sourceType) {
@@ -376,7 +370,7 @@ export default class ScrobbleSources {
                     try {
                         const validConfig = validateJson<SourceConfig>(rawConf, sourceSchema, this.logger);
 
-                        // @ts-ignore
+                        // @ts-expect-error will eventually have all info (lazy)
                         const parsedConfig: ParsedConfig = {
                             ...rawConf,
                             source: `${sourceType}.json`,

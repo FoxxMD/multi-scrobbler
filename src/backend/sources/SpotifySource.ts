@@ -1,13 +1,5 @@
-import dayjs, {Dayjs} from "dayjs";
-import {
-    readJson,
-    writeFile,
-    sortByOldestPlayDate,
-    sleep,
-    parseRetryAfterSecsFromObj,
-    combinePartsToString,
-    findCauseByFunc,
-} from "../utils.js";
+import dayjs, { Dayjs } from "dayjs";
+import EventEmitter from "events";
 import SpotifyWebApi from "spotify-web-api-node";
 import {
     AccessToken,
@@ -18,8 +10,10 @@ import {
     RecentlyPlayedTracksPage
 } from '@fostertheweb/spotify-web-sdk';
 import request from 'superagent';
-import AbstractSource, { RecentlyPlayedOptions } from "./AbstractSource.js";
-import { SpotifySourceConfig } from "../common/infrastructure/config/source/spotify.js";
+import { PlayObject, SCROBBLE_TS_SOC_END, SCROBBLE_TS_SOC_START, ScrobbleTsSOC } from "../../core/Atomic.js";
+import { truncateStringToLength } from "../../core/StringUtils.js";
+import { isNodeNetworkException, getExceptionWithResponse } from "../common/errors/NodeErrors.js";
+import { hasUpstreamError, UpstreamError } from "../common/errors/UpstreamError.js";
 import {
     DEFAULT_POLLING_INTERVAL,
     FormatPlayObjectOptions,
@@ -30,21 +24,29 @@ import {
     ReportedPlayerStatus,
     SourceData,
 } from "../common/infrastructure/Atomic.js";
-import PlayHistoryObject = SpotifyApi.PlayHistoryObject;
-import EventEmitter from "events";
-import CurrentlyPlayingObject = SpotifyApi.CurrentlyPlayingObject;
-import TrackObjectFull = SpotifyApi.TrackObjectFull;
-import ArtistObjectSimplified = SpotifyApi.ArtistObjectSimplified;
-import AlbumObjectSimplified = SpotifyApi.AlbumObjectSimplified;
-import UserDevice = SpotifyApi.UserDevice;
+import { SpotifySourceConfig } from "../common/infrastructure/config/source/spotify.js";
+import {
+    combinePartsToString,
+    findCauseByFunc,
+    parseRetryAfterSecsFromObj,
+    readJson,
+    sleep,
+    sortByOldestPlayDate,
+    writeFile,
+} from "../utils.js";
+import { RecentlyPlayedOptions } from "./AbstractSource.js";
 import MemorySource from "./MemorySource.js";
-import {ErrorWithCause} from "pony-cause";
-import { PlayObject, SCROBBLE_TS_SOC_END, SCROBBLE_TS_SOC_START, ScrobbleTsSOC } from "../../core/Atomic.js";
-import { buildTrackString, truncateStringToLength } from "../../core/StringUtils.js";
-import {getExceptionWithResponse, isNodeNetworkException} from "../common/errors/NodeErrors.js";
-import { hasUpstreamError, UpstreamError } from "../common/errors/UpstreamError.js";
+import AlbumObjectSimplified = SpotifyApi.AlbumObjectSimplified;
+import ArtistObjectSimplified = SpotifyApi.ArtistObjectSimplified;
+import CurrentlyPlayingObject = SpotifyApi.CurrentlyPlayingObject;
+import PlayHistoryObject = SpotifyApi.PlayHistoryObject;
+import TrackObjectFull = SpotifyApi.TrackObjectFull;
+import UserDevice = SpotifyApi.UserDevice;
 import {MSSpotifyResponseValidator} from "../common/vendor/spotify/SpotifyErrorHandler.js";
 import {FileProvidedAccessTokenStrategy} from "../common/vendor/spotify/FileProvidedAccessTokenStrategy.js";
+
+const scopes = ['user-read-recently-played', 'user-read-currently-playing', 'user-read-playback-state', 'user-read-playback-position'];
+const state = 'random';
 
 const shortDeviceId = truncateStringToLength(10, '');
 
@@ -78,6 +80,7 @@ export default class SpotifySource extends MemorySource {
         this.workingCredsPath = `${this.configDir}/currentCreds-${name}.json`;
         this.canPoll = true;
         this.canBacklog = true;
+        this.supportsUpstreamRecentlyPlayed = true;
         this.usedRedirectUri = redirectUri || `${this.localUrl}/callback`;
     }
 
@@ -238,7 +241,7 @@ export default class SpotifySource extends MemorySource {
         }
 
         if (validationErrors.length !== 0) {
-            this.logger.warn(`Configuration was not valid:\*${validationErrors.join('\n')}`);
+            this.logger.warn(`Configuration was not valid: *${validationErrors.join('\n')}`);
             throw new Error('Failed to initialize a Spotify source');
         }
 
@@ -286,10 +289,10 @@ export default class SpotifySource extends MemorySource {
             return true;
         } catch (e) {
             if(isNodeNetworkException(e)) {
-                throw new ErrorWithCause('Could not communicate with Spotify API server', {cause: e});
+                throw new Error('Could not communicate with Spotify API server', {cause: e});
             }
             if(e.status >= 500) {
-                throw new ErrorWithCause('Spotify API server returned an unexpected response', { cause: e});
+                throw new Error('Spotify API server returned an unexpected response', { cause: e});
             }
             return true;
         }
@@ -305,6 +308,9 @@ export default class SpotifySource extends MemorySource {
             await this.callApi<UserProfile>((api) => api.currentUser.profile());
             return true;
         } catch (e) {
+            if(isNodeNetworkException(e)) {
+                this.logger.error('Could not communicate with Spotify API');
+            }
             throw e;
         }
     }
@@ -353,6 +359,14 @@ export default class SpotifySource extends MemorySource {
         return result.items.map((x: any) => SpotifySource.formatPlayObj(x)).sort(sortByOldestPlayDate);
     }
 
+    getUpstreamRecentlyPlayed = async (options: RecentlyPlayedOptions = {}): Promise<PlayObject[]> => {
+        try {
+            return await this.getPlayHistory(options);
+        } catch (e) {
+            throw e;
+        }
+    }
+
     getNowPlaying = async () => {
 
         const playingRes = await this.callApi((api) => api.player.getCurrentlyPlayingTrack())
@@ -399,7 +413,7 @@ export default class SpotifySource extends MemorySource {
             if(hasApiError(e)) {
                 throw new UpstreamError('Error occurred while trying to retrieve current playback state', {cause: e});
             }
-            throw new ErrorWithCause('Error occurred while trying to retrieve current playback state', {cause: e});
+            throw new Error('Error occurred while trying to retrieve current playback state', {cause: e});
         }
     }
 
@@ -411,13 +425,13 @@ export default class SpotifySource extends MemorySource {
         try {
             return await func(this.spotifyApi);
         } catch (e) {
-            let spotifyError: UpstreamError | Error | ErrorWithCause;
+            let spotifyError: UpstreamError | Error;
             if(e instanceof UpstreamError) {
                 spotifyError = e;
             } else if(isNodeNetworkException(e)) {
                 spotifyError = new UpstreamError('Could not reach Spotify API server', {cause: e});
             } else {
-                spotifyError = new ErrorWithCause('Unexpected error occurred in Spotify API library', {cause: e});
+                spotifyError = new Error('Unexpected error occurred in Spotify API library', {cause: e});
             }
             const resp = getExceptionWithResponse(spotifyError);
             if((isNodeNetworkException(e) || (resp !== undefined && !resp.showStopper))) {
@@ -469,42 +483,20 @@ export default class SpotifySource extends MemorySource {
         return true;
     }
 
-    protected getBackloggedPlays = async () => {
-        return await this.getPlayHistory({formatted: true});
-    }
+    protected getBackloggedPlays = async () => await this.getPlayHistory({formatted: true})
 }
 
-const asPlayHistoryObject = (obj: object): obj is PlayHistoryObject => {
-    return 'played_at' in obj;
-}
+const asPlayHistoryObject = (obj: object): obj is PlayHistoryObject => 'played_at' in obj
 
-const asCurrentlyPlayingObject = (obj: object): obj is CurrentlyPlayingObject => {
-    return 'is_playing' in obj;
-}
+const asCurrentlyPlayingObject = (obj: object): obj is CurrentlyPlayingObject => 'is_playing' in obj
 
-const hasApiPermissionError = (e: Error): boolean => {
-    return findCauseByFunc(e, (err) => {
-        return err.message.includes('Permissions missing');
-    }) !== undefined;
-}
+const hasApiPermissionError = (e: Error): boolean => findCauseByFunc(e, (err) => err.message.includes('Permissions missing')) !== undefined
 
-const hasApiAuthError = (e: Error): boolean => {
-    return findCauseByFunc(e, (err) => {
-        return err.message.includes('An authentication error occurred');
-    }) !== undefined;
-}
+const hasApiAuthError = (e: Error): boolean => findCauseByFunc(e, (err) => err.message.includes('An authentication error occurred')) !== undefined
 
-const hasApiTimeoutError = (e: Error): boolean => {
-    return findCauseByFunc(e, (err) => {
-        return err.message.includes('A timeout occurred');
-    }) !== undefined;
-}
+const hasApiTimeoutError = (e: Error): boolean => findCauseByFunc(e, (err) => err.message.includes('A timeout occurred')) !== undefined
 
-const hasApiError = (e: Error): boolean => {
-    return findCauseByFunc(e, (err) => {
-        return err.message.includes('while communicating with Spotify\'s Web API.');
-    }) !== undefined;
-}
+const hasApiError = (e: Error): boolean => findCauseByFunc(e, (err) => err.message.includes('while communicating with Spotify\'s Web API.')) !== undefined
 
 interface MSCredentials {
     token: string

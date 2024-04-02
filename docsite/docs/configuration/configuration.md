@@ -5,11 +5,14 @@ title: Overview
 
 # Configuration
 
+<!-- TOC -->
 * [Overview](#overview)
   * [ENV-Based Configuration](#env-based-configuration)
   * [File-Based Configuration](#file-based-configuration)
     * [All-in-One File Configuration](#all-in-one-file-configuration)
     * [Specific File Configuration](#specific-file-configuration)
+* [Application Options](#application-options)
+  * [Base URL](#base-url)
 * [Source Configurations](#source-configurations)
   * [Spotify](#spotify)
   * [Plex](#plex)
@@ -20,19 +23,26 @@ title: Overview
   * [Listenbrainz (Source)](#listenbrainz--source-)
   * [Deezer](#deezer)
   * [Youtube Music](#youtube-music)
-  * [MPRIS (Linux Desktop)](#mpris)
+  * [MPRIS](#mpris)
   * [Mopidy](#mopidy)
   * [JRiver](#jriver)
   * [Kodi](#kodi)
   * [WebScrobbler](#webscrobbler)
-  * [Google Cast (Chromecast)](#google-cast--chromecast)
+      * [Multiple Users](#multiple-users)
+  * [Google Cast (Chromecast)](#google-cast--chromecast-)
+    * [Connecting Devices](#connecting-devices)
+    * [What Media Does MS Scrobble?](#what-media-does-ms-scrobble)
+    * [Cast Troubleshooting](#cast-troubleshooting)
 * [Client Configurations](#client-configurations)
   * [Maloja](#maloja)
   * [Last.fm](#lastfm)
   * [Listenbrainz](#listenbrainz)
 * [Monitoring](#monitoring)
-  * [Webhooks](#webhook-configurations)
+  * [Webhook Configurations](#webhook-configurations)
+    * [Gotify](#gotify)
+    * [Ntfy](#ntfy)
   * [Health Endpoint](#health-endpoint)
+<!-- TOC -->
 
 # Overview
 
@@ -697,11 +707,13 @@ See [`webscrobbler.json.example`](https://github.com/FoxxMD/multi-scrobbler/blob
 
 ## [Google Cast (Chromecast)](https://www.google.com/chromecast/built-in/)
 
+**NOTE:** Google Cast support is **experimental**. You may experience crashes and errors while using this Source. Please open an issue if you experience problems and include all information detailed in the issue template to help debug your issue.
+
 If your media device can be **Cast** to using this button ![Chromecast Icon](https://upload.wikimedia.org/wikipedia/commons/2/26/Chromecast_cast_button_icon.svg) on your phone/computer then multi-scrobbler can monitor it in order to scrobble music you play.
 
 **Note:** This source relies on common, **basic** music data provided by the cast device which will always be less exhaustive than data parsed from full source integrations. If there is an existing [Source](#source-configurations) it is recommended to configure for it and blacklist the app on Google Cast, rather than relying solely on Google Cast for scrobbling.
 
-#### Connecting Devices
+### Connecting Devices
 
 Cast devices can be manually configured using [File-based configuration](#file-based-14) OR automatically discovered using **mDNS.**
 
@@ -733,7 +745,50 @@ Unsupported at this time.
 
 No additional steps are required.
 
-#### Cast Troubleshooting
+### What Media Does MS Scrobble?
+
+Cast devices report what type of media the current activity is [(see `metadata` property here)](https://developers.google.com/cast/docs/media/messages#MediaInformation). The reported type is dependent on the application playing the media to correctly report it, the cast device does not magically know what the media is. If an application does not report a type it is always classified as `unknown`.
+
+**By default, MS will only track media that is reported as `MusicTrack`.**
+
+#### Allow Unknown Media Type
+
+Media with an Unknown (`Generic`) media type can be explicitly allowed by setting `"allowUnknownMedia": true` in the [file-based configuration.](#file-based-14) This can also be configured to only allow unknown media types for specific applications by using a list of application names like:
+
+```json5
+// in chromecast.json or config.json sources
+[
+  {
+    "name": "MyCast",
+    "type": "chromecast",
+    "data": {
+      // only allow unknown if app name contains any of these phrases
+      "allowUnknownMedia": ["smarttube", "default media receiver"]
+    },
+  }
+]
+```
+
+#### Forcing Media Tracking
+
+MS can be forced to track media from an application regardless of media type. This is useful if an application incorrectly reports a media type you are sure should be music. Set `"forceMediaRecognitionOn"` in the [file-based configuration.](#file-based-14) to a list of application names that should always be tracked like:
+
+```json5
+// in chromecast.json or config.json sources
+[
+  {
+    "name": "MyCast",
+    "type": "chromecast",
+    "data": {
+      // media from applications that contains these phrases will always be tracked, regardless of media type reported
+      "forceMediaRecognitionOn": ["smarttube", "default media receiver"]
+    },
+  }
+]
+```
+
+
+### Cast Troubleshooting
 
 Please include any/all logs with raw output if there are any errors encountered as this is critical to diagnosing issues.
 

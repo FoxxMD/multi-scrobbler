@@ -1,11 +1,12 @@
-import { IngressNotifier } from "./IngressNotifier.js";
-import {Request} from "express";
+import { Logger } from "@foxxmd/logging";
+import { Request } from "express";
 import PlexSource from "../PlexSource.js";
+import { IngressNotifier } from "./IngressNotifier.js";
 
 export class PlexNotifier extends IngressNotifier {
 
-    constructor() {
-        super('Plex');
+    constructor(logger: Logger) {
+        super('Plex', logger);
     }
 
     seenServers: string[] = [];

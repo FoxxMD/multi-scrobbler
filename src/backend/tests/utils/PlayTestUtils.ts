@@ -1,11 +1,11 @@
-import { JsonPlayObject, ObjectPlayData, PlayData, PlayMeta, PlayObject } from "../../../core/Atomic.js";
-import dayjs, {Dayjs} from "dayjs";
-import utc from "dayjs/plugin/utc.js";
+import { faker } from '@faker-js/faker';
+import dayjs, { Dayjs } from "dayjs";
+import duration from "dayjs/plugin/duration.js";
 import isBetween from "dayjs/plugin/isBetween.js";
 import relativeTime from "dayjs/plugin/relativeTime.js";
-import duration from "dayjs/plugin/duration.js";
 import timezone from "dayjs/plugin/timezone.js";
-import {faker} from '@faker-js/faker';
+import utc from "dayjs/plugin/utc.js";
+import { JsonPlayObject, ObjectPlayData, PlayMeta, PlayObject } from "../../../core/Atomic.js";
 
 dayjs.extend(utc)
 dayjs.extend(isBetween);

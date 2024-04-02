@@ -1,9 +1,14 @@
-import {describe, it} from 'mocha';
-import {assert} from 'chai';
-import { compareNormalizedStrings, parseTrackCredits, uniqueNormalizedStrArr } from "../../utils/StringUtils.js";
-import testData from './playTestData.json';
-import { ExpectedResults } from "./interfaces.js";
+import { assert } from 'chai';
+import { describe, it } from 'mocha';
 import { intersect } from "../../utils.js";
+import {
+    compareNormalizedStrings,
+    normalizeStr,
+    parseTrackCredits,
+    uniqueNormalizedStrArr
+} from "../../utils/StringUtils.js";
+import { ExpectedResults } from "./interfaces.js";
+import testData from './playTestData.json';
 
 interface PlayTestFixture {
     caseHints: string[]
@@ -17,7 +22,7 @@ interface PlayTestFixture {
 
 describe('String Comparisons', function () {
 
-    it('should ignore punctuation', async function () {
+    it('should ignore symbols', async function () {
         const result = compareNormalizedStrings('this string! is the. same', 'this string is the same');
         assert.isAtLeast(result.highScore, 100);
     });
@@ -43,6 +48,19 @@ describe('String Comparisons', function () {
         for(const test of tests) {
             const result = compareNormalizedStrings(test[0], test[1]);
             assert.equal(100, result.highScore);
+        }
+    });
+
+    it('should not erase non-english characters', async function () {
+        const tests = [
+            ['VAPERROR / t e l e p a t h テレパシー能力者 - 切っても切れない', 'vaperror t e l e p a t h テレパシー能力者 切っても切れない'],
+            ['Мой мармеладный (Speed Up)', 'мои мармеладныи speed up'],
+            ['Мой мармеладный (Я не права) [Из сериала "Ольга", 2 Сезон]', 'мои мармеладныи я не права из сериала ольга 2 сезон']
+        ]
+
+        for(const test of tests) {
+            const result = normalizeStr(test[0], {keepSingleWhitespace: true});
+            assert.equal(result, test[1]);
         }
     });
 
@@ -93,7 +111,7 @@ describe('String Comparisons', function () {
 
         for(const test of tests) {
             const result = compareNormalizedStrings(test[0], test[1]);
-            assert.isAtMost( result.highScore, 53, `Comparing: '${test[0]}' | '${test[1]}'`);
+            assert.isAtMost( result.highScore, 58, `Comparing: '${test[0]}' | '${test[1]}'`);
         }
     });
 

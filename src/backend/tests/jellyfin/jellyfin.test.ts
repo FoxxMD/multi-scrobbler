@@ -1,11 +1,11 @@
-import {describe, it} from 'mocha';
-import {assert} from 'chai';
-import samplePayload from './playbackProgressSample.json';
+import { loggerTest } from "@foxxmd/logging";
+import { assert } from 'chai';
+import EventEmitter from "events";
+import { describe, it } from 'mocha';
+import { JsonPlayObject } from "../../../core/Atomic.js";
 
 import JellyfinSource from "../../sources/JellyfinSource.js";
-import EventEmitter from "events";
-import { getLogger } from "../../common/logging.js";
-import { JsonPlayObject, PlayObject } from "../../../core/Atomic.js";
+import samplePayload from './playbackProgressSample.json';
 
 const dataAsFixture = (data: any): TestFixture => {
     return data as TestFixture;
@@ -28,7 +28,7 @@ describe('Jellyfin Payload Parsing', function () {
 
     describe('Correctly detects events as valid/invalid', function () {
 
-        const jfSource = new JellyfinSource('Test', {data: {}}, {localUrl: 'test', configDir: 'test', logger: getLogger({}, 'Test')}, new EventEmitter());
+        const jfSource = new JellyfinSource('Test', {data: {}}, {localUrl: 'test', configDir: 'test', logger: loggerTest}, new EventEmitter());
 
         it('Should parse PlayProgress with Audio ItemType as valid event', async function () {
             const fixture = dataAsFixture(samplePayload[0]);

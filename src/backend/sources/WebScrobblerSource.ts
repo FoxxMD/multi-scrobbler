@@ -1,4 +1,6 @@
-import MemorySource from "./MemorySource.js";
+import dayjs from "dayjs";
+import EventEmitter from "events";
+import { PlayObject, SOURCE_SOT } from "../../core/Atomic.js";
 import {
     FormatPlayObjectOptions,
     InternalConfig,
@@ -7,11 +9,13 @@ import {
     REPORTED_PLAYER_STATUSES,
     ReportedPlayerStatus,
 } from "../common/infrastructure/Atomic.js";
-import EventEmitter from "events";
-import { PlayObject } from "../../core/Atomic.js";
-import { WebScrobblerHookEvent, WebScrobblerPayload, WebScrobblerSong } from "../common/vendor/webscrobbler/interfaces.js";
-import dayjs from "dayjs";
 import { WebScrobblerSourceConfig } from "../common/infrastructure/config/source/webscrobbler.js";
+import {
+    WebScrobblerHookEvent,
+    WebScrobblerPayload,
+    WebScrobblerSong
+} from "../common/vendor/webscrobbler/interfaces.js";
+import MemorySource from "./MemorySource.js";
 
 export class WebScrobblerSource extends MemorySource {
 
@@ -20,7 +24,8 @@ export class WebScrobblerSource extends MemorySource {
     constructor(name: any, config: WebScrobblerSourceConfig, internal: InternalConfig, emitter: EventEmitter) {
         super('webscrobbler', name, config, internal, emitter);
         this.multiPlatform = true;
-        this.playerSourceOfTruth = false;
+        this.playerSourceOfTruth = SOURCE_SOT.HISTORY;
+        this.logger.info(`Note: The player for this source is an analogue for the 'Now Playing' status exposed by ${this.type} which is NOT used for scrobbling. Instead, the 'recently played' or 'history' information provided by this source is used for scrobbles.`)
 
         const {
             data = {},
@@ -136,9 +141,7 @@ export class WebScrobblerSource extends MemorySource {
         }
     }
 
-    getRecentlyPlayed = async (options = {}) => {
-        return this.getFlatRecentlyDiscoveredPlays();
-    }
+    getRecentlyPlayed = async (options = {}) => this.getFlatRecentlyDiscoveredPlays()
 
     isValidScrobble = (playObj: PlayObject) => {
         if (playObj.meta?.scrobbleAllowed === false) {

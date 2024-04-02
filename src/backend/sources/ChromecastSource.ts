@@ -1,5 +1,14 @@
-import MemorySource from "./MemorySource.js";
-import { ChromecastSourceConfig } from "../common/infrastructure/config/source/chromecast.js";
+import { createPlatform, Media, MediaController, PersistentClient } from "@foxxmd/chromecast-client";
+import { ContextualValidationError } from "@foxxmd/chromecast-client/dist/cjs/src/utils.js";
+import { childLogger, Logger } from "@foxxmd/logging";
+import { Client as CastClient } from 'castv2';
+import dayjs from "dayjs";
+import { EventEmitter } from "events";
+import e from "express";
+import { findCauseByReference } from "pony-cause";
+import { PlayObject } from "../../core/Atomic.js";
+import { buildTrackString } from "../../core/StringUtils.js";
+import { NETWORK_ERROR_FAILURE_CODES } from "../common/errors/NodeErrors.js";
 import {
     FormatPlayObjectOptions,
     InternalConfig,
@@ -8,33 +17,30 @@ import {
     PlayerStateData,
     SourceData,
 } from "../common/infrastructure/Atomic.js";
-import {EventEmitter} from "events";
-import {MediaController, PersistentClient, Media, connect, createPlatform} from "@foxxmd/chromecast-client";
-import {Client as CastClient} from 'castv2';
-import {ErrorWithCause, findCauseByReference} from "pony-cause";
-import { PlayObject } from "../../core/Atomic.js";
-import dayjs from "dayjs";
-import { RecentlyPlayedOptions } from "./AbstractSource.js";
-import { difference, genGroupIdStr, isIPv4, mergeArr, parseBool, sleep } from "../utils.js";
-import { PlatformApplication, PlatformApplicationWithContext, PlatformType } from "../common/vendor/chromecast/interfaces.js";
+import { ChromecastSourceConfig } from "../common/infrastructure/config/source/chromecast.js";
+import { MaybeLogger } from "../common/logging.js";
 import {
     chromePlayerStateToReported,
     genDeviceId,
+    genPlayHash,
     getCurrentPlatformApplications,
     getMediaStatus,
-    genPlayHash,
 } from "../common/vendor/chromecast/ChromecastClientUtils.js";
-import {config, Logger} from "@foxxmd/winston";
-import {ContextualValidationError} from "@foxxmd/chromecast-client/dist/cjs/src/utils.js";
-import { buildTrackString } from "../../core/StringUtils.js";
+import {
+    PlatformApplication,
+    PlatformApplicationWithContext,
+    PlatformType
+} from "../common/vendor/chromecast/interfaces.js";
+import { difference, genGroupIdStr, parseBool } from "../utils.js";
 import { discoveryAvahi, discoveryNative } from "../utils/MDNSUtils.js";
+import { RecentlyPlayedOptions } from "./AbstractSource.js";
+import MemorySource from "./MemorySource.js";
 
 interface ChromecastDeviceInfo {
     mdns: MdnsDeviceInfo
     client: PersistentClient
     castv2: CastClient
     logger: Logger,
-    connected: boolean
     retries: number
     platform: PlatformType
     applications: Map<string, PlatformApplicationWithContext>
@@ -48,8 +54,13 @@ export class ChromecastSource extends MemorySource {
 
     whitelistDevices: string[] = [];
     blacklistDevices: string[] = [];
+    // since we check for new devices on every heartbeat we will be discovering blacklisted devices every time since they are never added
+    // track which we've already rejected so we only log to verbose instead of info -- to prevent noise at info level
+    seenRejectedDevices: string[] = [];
+
     whitelistApps: string[] = [];
     blacklistApps: string[] = [];
+
     allowUnknownMedia: string[] | boolean;
     forceMediaRecognitionOn: string[] = [];
 
@@ -132,18 +143,18 @@ export class ChromecastSource extends MemorySource {
 
         for (const device of devices) {
             this.initializeDevice({name: device.name, addresses: [device.address], type: 'googlecast'}).catch((err) => {
-                this.logger.error(new ErrorWithCause('Uncaught error occurred while connecting to manually configured device', {cause: err}));
+                this.logger.error(new Error('Uncaught error occurred while connecting to manually configured device', {cause: err}));
             });
         }
 
         if (useAutoDiscovery) {
             if (useAvahi) {
                 this.discoverAvahi(initial).catch((err) => {
-                    this.logger.error(new ErrorWithCause('Uncaught error occurred during mDNS discovery via Avahi', {cause: err}));
+                    this.logger.error(new Error('Uncaught error occurred during mDNS discovery via Avahi', {cause: err}));
                 });
             } else {
                 this.discoverNative(initial).catch((err) => {
-                    this.logger.error(new ErrorWithCause('Uncaught error occurred during mDNS discovery', {cause: err}));
+                    this.logger.error(new Error('Uncaught error occurred during mDNS discovery', {cause: err}));
                 });
             }
         }
@@ -154,12 +165,12 @@ export class ChromecastSource extends MemorySource {
             await discoveryAvahi('_googlecast._tcp', {
                 logger: this.logger,
                 sanity: initial,
-                onDiscover: (service, raw) => {
+                onDiscover: (service) => {
                     this.initializeDevice(service);
                 },
             });
         } catch (e) {
-            this.logger.error(new ErrorWithCause('Uncaught error occurred during mDNS discovery via Avahi', {cause: e}));
+            this.logger.error(new Error('Uncaught error occurred during mDNS discovery via Avahi', {cause: e}));
         }
     }
 
@@ -168,12 +179,12 @@ export class ChromecastSource extends MemorySource {
             await discoveryNative('_googlecast._tcp', {
                 logger: this.logger,
                 sanity: initial,
-                onDiscover: (service, raw) => {
+                onDiscover: (service) => {
                     this.initializeDevice(service);
                 },
             });
         } catch (e) {
-            this.logger.error(new ErrorWithCause('Uncaught error occurred during mDNS discovery', {cause: e}));
+            this.logger.error(new Error('Uncaught error occurred during mDNS discovery', {cause: e}));
         }
     }
 
@@ -191,13 +202,25 @@ export class ChromecastSource extends MemorySource {
             if (found !== undefined) {
                 this.logger.info(`${discovered} => Adding as a device because it was whitelisted by keyword '${found}'`);
             } else {
-                this.logger.info(`${discovered} => NOT ADDING as a device because no part of its name appeared in whitelistDevices`);
+                const msg = `${discovered} => NOT ADDING as a device because no part of its name appeared in whitelistDevices`;
+                if(!this.seenRejectedDevices.includes(device.name)) {
+                    this.seenRejectedDevices.push(device.name);
+                    this.logger.info(msg);
+                } else {
+                    this.logger.verbose(msg);
+                }
                 return;
             }
         } else if (this.blacklistDevices.length > 0) {
             const found = this.blacklistDevices.find(x => lowerName.includes(x));
             if (found !== undefined) {
-                this.logger.info(`${discovered} => NOT ADDING as a device because it was blacklisted by keyword '${found}'`);
+                const msg = `${discovered} => NOT ADDING as a device because it was blacklisted by keyword '${found}'`;
+                if(!this.seenRejectedDevices.includes(device.name)) {
+                    this.seenRejectedDevices.push(device.name);
+                    this.logger.info(msg);
+                } else {
+                    this.logger.verbose(msg);
+                }
                 return;
             } else {
                 this.logger.info(`${discovered} => Adding as a device because no part of its name appeared in blacklistDevices`);
@@ -214,11 +237,10 @@ export class ChromecastSource extends MemorySource {
                 mdns: device,
                 client,
                 castv2: castClient,
-                connected: true,
                 retries: 0,
                 platform,
                 applications,
-                logger: this.logger.child({labels: [device.name.substring(0, 25)]}, mergeArr),
+                logger: childLogger(this.logger, device.name.substring(0, 25)),
             });
         } catch (e) {
             this.logger.error(e);
@@ -227,56 +249,80 @@ export class ChromecastSource extends MemorySource {
     }
 
     protected initializeClientPlatform = async (device: MdnsDeviceInfo): Promise<[CastClient, PersistentClient, PlatformType]> => {
-        let client: PersistentClient;
-        let castClient = new CastClient;
-        castClient.on('connect', () => this.handleCastClientEvent(device.name, 'connect'));
-        castClient.on('error', (err) => this.handleCastClientEvent(device.name, 'error', err));
-        castClient.on('close', () => this.handleCastClientEvent(device.name, 'close'));
-        try {
-            client = await connect({host: device.addresses?.[0], client: castClient});
-        } catch (e) {
-            throw new ErrorWithCause(`Could not connect to ${device.name}`, {cause: e});
+
+        const index = 0;
+        for(const address of device.addresses) {
+
+            const castClient = new CastClient;
+            const client: PersistentClient = new PersistentClient({host: address, client: castClient});
+            client.on('connect', () => this.handleCastClientEvent(device.name, 'connect'));
+            client.on('reconnect', () => this.handleCastClientEvent(device.name, 'reconnect'));
+            client.on('reconnecting', () => this.handleCastClientEvent(device.name, 'reconnecting'));
+            client.on('error', (err) => this.handleCastClientEvent(device.name, 'error', err));
+            client.on('close', () => this.handleCastClientEvent(device.name, 'close'));
+            try {
+                await client.connect();
+            } catch (e) {
+                if(index < device.addresses.length - 1) {
+                    this.logger.warn(new Error(`Could not connect to ${device.name} but more interfaces exist, will attempt next host.`, {cause: e}));
+                    continue;
+                } else {
+                    throw new Error(`Could not connect to ${device.name} and no additional interfaces exist`, {cause: e});
+                }
+            }
+
+            const platform = createPlatform(client);
+
+            return [castClient, client, platform];
         }
-
-        const platform = createPlatform(client);
-
-        return [castClient, client, platform];
     }
 
     protected handleCastClientEvent = (clientName: string, event: string, payload?: any) => {
             const info = this.devices.get(clientName);
             switch(event) {
                 case 'connect':
+                case 'reconnect':
                     if(info === undefined) {
                         return;
                     }
-                    if(info.connected === false) {
-                        info.logger.verbose(`Reconnected`);
+                    if(event === "reconnect") {
+                        if(payload instanceof Error) {
+                            info.logger.warn(new Error(`Failed to reconnect, will retry ${5 - info.retries} more times`, {cause: e}))
+                        } else {
+                            info.logger.verbose(`Reconnected`);
+                            info.retries = 0;
+                        }
+                    } else {
+                        info.retries = 0;
                     }
-                    info.connected = true;
-                    info.retries = 0;
+                    break;
+                case 'reconnecting':
+                    if(info === undefined) {
+                        return;
+                    }
+                    info.retries += 1;
+
+                    // TODO make this configurable?
+                    if(info.retries >= 4) {
+                        this.removeDevice(clientName, 'Device unreachable for more than 20 seconds');
+                    }
                     break;
                 case 'close':
                     if(info === undefined) {
                         return;
                     }
-                    if(info.connected === false) {
-                        info.retries += 1;
-
-                        // TODO make this configurable?
-                        if(info.retries === 6) {
-                            //info.logger.verbose(`Removing device applications after being unreachable for 30 seconds`);
-                            this.removeApplications(clientName, 'Device unreachable for more than 30 seconds');
-                        }
-                    }
-                    info.connected = false;
+                    info.logger.debug('Connection was closed');
                     break;
                 case 'error':
                     if(info === undefined) {
-                        this.logger.error(new ErrorWithCause(`(${clientName}) Encountered error in castv2 lib`, {cause: payload as Error}));
+                        this.logger.error(new Error(`(${clientName}) Encountered error in castv2 lib`, {cause: payload as Error}));
                     } else {
-                        info.connected = false;
-                        info.logger.error(new ErrorWithCause(`Encountered error in castv2 lib`, {cause: payload as Error}));
+                        if(NETWORK_ERROR_FAILURE_CODES.some(x => (payload as Error).message.includes(x))) {
+                            info.logger.warn(new Error(`Encountered network error. Will try to reconnect to device`, {cause: payload as Error}));
+                            info.client.client.close();
+                        } else {
+                            info.logger.error(new Error(`Encountered error in castv2 lib`, {cause: payload as Error}));
+                        }
                     }
                     break;
             }
@@ -284,7 +330,7 @@ export class ChromecastSource extends MemorySource {
 
     protected refreshApplications = async () => {
         for(const [k, v] of this.devices.entries()) {
-            if(!v.connected) {
+            if(!v.client.connected) {
                 continue;
             }
 
@@ -293,14 +339,14 @@ export class ChromecastSource extends MemorySource {
                 apps = await getCurrentPlatformApplications(v.platform);
                 v.retries = 0;
             } catch (e) {
-                v.logger.warn(new ErrorWithCause(`Could not refresh applications. Will after ${5 - v.retries} retries if error does not resolve itself.`, {cause: e}));
+                v.logger.warn(new Error(`Could not refresh applications. Will remove after ${5 - v.retries} retries if error does not resolve itself.`, {cause: e}));
                 const validationError = findCauseByReference(e, ContextualValidationError);
                 if(validationError && validationError.data !== undefined) {
                     v.logger.warn(JSON.stringify(validationError.data));
                 }
                 v.retries++;
-                if(v.retries >= 5) {
-                    this.removeDevice(k, 'Unable to refresh application more than 6 times consecutively! If this device comes back online it will be re-added on next heartbeat.');
+                if(v.retries >= 4) {
+                    this.removeDevice(k, 'Unable to refresh application more than 4 times consecutively! If this device comes back online it will be re-added on next heartbeat.');
                 }
                 continue;
             }
@@ -309,7 +355,7 @@ export class ChromecastSource extends MemorySource {
                 let storedApp = v.applications.get(a.transportId);
                 if(!storedApp) {
                     const appName = a.displayName;
-                    let found = `Found Application '${appName}-${a.transportId.substring(0, 4)}'`;
+                    const found = `Found Application '${appName}-${a.transportId.substring(0, 4)}'`;
                     const appLowerName = appName.toLocaleLowerCase();
                     let filtered = false;
                     let valid = true;
@@ -323,17 +369,17 @@ export class ChromecastSource extends MemorySource {
 
                     if(valid) {
                         if(this.whitelistApps.length > 0) {
-                            const found = this.whitelistDevices.find(x => appLowerName.includes(x));
-                            if(found !== undefined) {
-                                v.logger.info(`${found} => Watching because it was whitelisted by keyword '${found}'`);
+                            const foundWhiteApp = this.whitelistDevices.find(x => appLowerName.includes(x));
+                            if(foundWhiteApp !== undefined) {
+                                v.logger.info(`${found} => Watching because it was whitelisted by keyword '${foundWhiteApp}'`);
                             } else {
                                 v.logger.info(`${found} => NOT Watching because no part of its name appeared in whitelistApps`);
                                 filtered = true;
                             }
                         } else if(this.blacklistApps.length > 0) {
-                            const found = this.blacklistDevices.find(x => appLowerName.includes(x));
-                            if(found !== undefined) {
-                                v.logger.info(`${found} => NOT Watching because it was blacklisted by keyword '${found}'`);
+                            const foundBlackApp = this.blacklistDevices.find(x => appLowerName.includes(x));
+                            if(foundBlackApp !== undefined) {
+                                v.logger.info(`${found} => NOT Watching because it was blacklisted by keyword '${foundBlackApp}'`);
                                 filtered = true;
                             } else {
                                 v.logger.info(`${found} => Watching because no part of its name appeared in blacklistApps`);
@@ -350,7 +396,7 @@ export class ChromecastSource extends MemorySource {
                         badData: false,
                         validAppType: valid,
                         playerId: genGroupIdStr([genDeviceId(k, a.displayName), NO_USER]),
-                        logger: v.logger.child({labels: [`App ${a.displayName.substring(0, 25)}-${a.transportId.substring(0,4)}`]}, mergeArr)
+                        logger: childLogger(v.logger, `App ${a.displayName.substring(0, 25)}-${a.transportId.substring(0,4)}`)
                     }
                     v.applications.set(a.transportId, storedApp);
                 } else if(storedApp.stale === true) {
@@ -405,7 +451,7 @@ export class ChromecastSource extends MemorySource {
 
     protected pruneApplications = (force: boolean = false) => {
         for(const [k, v] of this.devices.entries()) {
-            if (!force && !v.connected) {
+            if (!force && !v.client.connected) {
                 continue;
             }
 
@@ -447,16 +493,16 @@ export class ChromecastSource extends MemorySource {
     }
 
     getRecentlyPlayed = async (options: RecentlyPlayedOptions = {}) => {
-        let plays: SourceData[] = [];
+        const plays: SourceData[] = [];
 
         try {
             await this.refreshApplications();
         } catch (e) {
-            this.logger.warn(new ErrorWithCause('Could not refresh all applications', {cause: e}));
+            this.logger.warn(new Error('Could not refresh all applications', {cause: e}));
         }
 
         for (const [k, v] of this.devices.entries()) {
-            if (!v.connected || v.retries > 0) {
+            if (!v.client.connected || v.retries > 0) {
                 continue;
             }
 
@@ -485,9 +531,37 @@ export class ChromecastSource extends MemorySource {
                             //v.applications.delete(application.transportId);
                             // TODO count timeouts before setting app as stale
                             continue;
-                        } else {
-                            throw e;
                         }
+
+                        const validationError = findCauseByReference(e, ContextualValidationError);
+                        if (validationError && validationError.data !== undefined) {
+                            const  {
+                                status = []
+                            } = validationError.data as Record<string, any>;
+                            if(status[0] !== undefined) {
+                               const {
+                                    media: {
+                                        streamType = undefined
+                                    } = {}
+                                } = status[0] || {};
+                                if(streamType === 'BUFFERED') {
+                                    let maybePlay: PlayObject | undefined;
+                                    try {
+                                        maybePlay = ChromecastSource.formatPlayObj(status[0]);
+                                    } catch (e) {
+                                        // its fine just do error without play string
+                                    }
+                                    application.logger.verbose(`Skipping status for ${maybePlay !== undefined ? buildTrackString(maybePlay) : 'unknown media'} because it is buffering.`);
+                                    if (this.config.options.logPayload) {
+                                        application.logger.debug(`Media Status Payload:\n ${status[0] === undefined || status[0] === null ? 'undefined' : JSON.stringify(status[0])}`);
+                                    }
+                                    continue;
+                                }
+                            }
+                            application.logger.warn(JSON.stringify(validationError.data));
+                        }
+
+                        throw e;
                     }
 
                     if (this.config.options.logPayload) {
@@ -516,32 +590,36 @@ export class ChromecastSource extends MemorySource {
                     }
 
                     const playHash = genPlayHash(play);
+                    let shouldLogOnUnknown = false;
                     if (playHash !== application.lastPlayHash) {
                         application.lastPlayHash = playHash;
+                        shouldLogOnUnknown = true;
+                    }
+                    // only log the FIRST time we see a play so that we aren't making logs noisy
+                    const unknownLogger = new MaybeLogger(shouldLogOnUnknown ? application.logger : undefined);
 
-                        if (play.meta.mediaType !== 'music') {
-                            const playInfo = buildTrackString(play);
-                            const forcedBy = this.forceMediaRecognitionOn.find(x => application.displayName.toLocaleLowerCase().includes(x));
-                            if (forcedBy !== undefined) {
-                                this.logger.verbose(`${playInfo} has non-music type (${play.meta.mediaType}) but was forced recognized by keyword "${forcedBy}"`);
-                            } else if (play.meta.mediaType === 'unknown') {
-                                if (this.allowUnknownMedia === false) {
-                                    this.logger.verbose(`${playInfo} has 'unknown' media type and allowUnknownMedia=false, will not track`);
-                                    continue;
-                                } else if (Array.isArray(this.allowUnknownMedia)) {
-                                    const allowedBy = this.allowUnknownMedia.find(x => application.displayName.toLocaleLowerCase().includes(x))
-                                    if (allowedBy) {
-                                        this.logger.verbose(`${playInfo} has 'unknown' media type but was allowed by keyword "${allowedBy}" in allowUnknownMedia`);
-                                    } else {
-                                        this.logger.verbose(`${playInfo} has 'unknown' media type and App name was not found in allowUnknownMedia, will not track`);
-                                        continue;
-                                    }
+                    if (play.meta.mediaType !== 'music') {
+                        const playInfo = buildTrackString(play);
+                        const forcedBy = this.forceMediaRecognitionOn.find(x => application.displayName.toLocaleLowerCase().includes(x));
+                        if (forcedBy !== undefined) {
+                            unknownLogger.verbose(`${playInfo} has non-music type (${play.meta.mediaType}) but was forced recognized by keyword "${forcedBy}"`);
+                        } else if (play.meta.mediaType === 'unknown') {
+                            if (this.allowUnknownMedia === false) {
+                                unknownLogger.verbose(`${playInfo} has 'unknown' media type and allowUnknownMedia=false, will not track`);
+                                continue;
+                            } else if (Array.isArray(this.allowUnknownMedia)) {
+                                const allowedBy = this.allowUnknownMedia.find(x => application.displayName.toLocaleLowerCase().includes(x))
+                                if (allowedBy) {
+                                    unknownLogger.verbose(`${playInfo} has 'unknown' media type but was allowed by keyword "${allowedBy}" in allowUnknownMedia`);
                                 } else {
-                                    this.logger.verbose(`${playInfo} has 'unknown' media type and allowUnknownMedia=true`);
+                                    unknownLogger.verbose(`${playInfo} has 'unknown' media type and App name was not found in allowUnknownMedia, will not track`);
+                                    continue;
                                 }
                             } else {
-                                this.logger.verbose(`${playInfo} has non-music type (${play.meta.mediaType}) so will not track`);
+                                unknownLogger.verbose(`${playInfo} has 'unknown' media type and allowUnknownMedia=true`);
                             }
+                        } else {
+                            unknownLogger.verbose(`${playInfo} has non-music type (${play.meta.mediaType}) so will not track`);
                         }
                     }
 
@@ -554,7 +632,7 @@ export class ChromecastSource extends MemorySource {
                     plays.push(playerState);
 
                 } catch (e) {
-                    application.logger.warn(new ErrorWithCause(`Could not get Player State`, {cause: e}))
+                    application.logger.warn(new Error(`Could not get Player State`, {cause: e}))
                     const validationError = findCauseByReference(e, ContextualValidationError);
                     if (validationError && validationError.data !== undefined) {
                         application.logger.warn(JSON.stringify(validationError.data));
@@ -588,14 +666,15 @@ export class ChromecastSource extends MemorySource {
                     albumName,
                     album: albumNorm
                 } = {}
-            }
+            } = {}
         } = obj;
 
         let artists: string[] = [],
             albumArtists: string[] = [],
-            track: string = (title ?? songName) as string,
-            album: string = (albumNorm ?? albumName) as string,
             mediaType: string = 'unknown';
+
+            const track: string = (title ?? songName) as string;
+            const album: string = (albumNorm ?? albumName) as string;
 
         if(artist !== undefined) {
             artists = [artist as string];

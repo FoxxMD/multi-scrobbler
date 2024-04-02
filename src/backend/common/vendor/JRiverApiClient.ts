@@ -1,9 +1,8 @@
-import AbstractApiClient from "./AbstractApiClient.js";
-import {JRiverData} from "../infrastructure/config/source/jriver.js";
-import request, {Request, Response} from 'superagent';
+import request, { Request, Response } from 'superagent';
 import xml2js from 'xml2js';
-import {ErrorWithCause} from "pony-cause";
-import {DEFAULT_RETRY_MULTIPLIER} from "../infrastructure/Atomic.js";
+import { AbstractApiOptions, DEFAULT_RETRY_MULTIPLIER } from "../infrastructure/Atomic.js";
+import { JRiverData } from "../infrastructure/config/source/jriver.js";
+import AbstractApiClient from "./AbstractApiClient.js";
 
 const parser = new xml2js.Parser({'async': true});
 
@@ -97,7 +96,7 @@ export class JRiverApiClient extends AbstractApiClient {
 
     token?: string;
 
-    constructor(name: any, config: JRiverData, options = {}) {
+    constructor(name: any, config: JRiverData, options: AbstractApiOptions) {
         super('JRiver', name, config, options);
         const {
             url = 'http://localhost:52199/MCWS/v1/'
@@ -134,13 +133,13 @@ export class JRiverApiClient extends AbstractApiClient {
             this.logger.verbose(`Found ${data.ProgramName} ${data.ProgramVersion} (${data.FriendlyName})`);
             return true;
         } catch (e) {
-            throw new ErrorWithCause('Could not communicate with JRiver server. Verify your server URL is correct.', {cause: e});
+            throw new Error('Could not communicate with JRiver server. Verify your server URL is correct.', {cause: e});
         }
     }
 
     testAuth = async () => {
         try {
-            let req = request.get(`${this.url}Authenticate`);
+            const req = request.get(`${this.url}Authenticate`);
             if (this.config.username !== undefined) {
                 req.auth(this.config.username, this.config.password);
             }
@@ -152,7 +151,7 @@ export class JRiverApiClient extends AbstractApiClient {
             if(this.config.username === undefined || this.config.password === undefined) {
                 msg = 'Authentication failed. No username/password was provided in config! Did you mean to do this?';
             }
-            this.logger.error(new ErrorWithCause(msg, {cause: e}));
+            this.logger.error(new Error(msg, {cause: e}));
             return false;
         }
     }

@@ -1,16 +1,15 @@
-import { RecentlyPlayedOptions } from "./AbstractSource.js";
+import dayjs from "dayjs";
+import EventEmitter from "events";
+import { TrackObject, UserGetRecentTracksResponse } from "lastfm-node-client";
+import request from "superagent";
+import { PlayObject, SOURCE_SOT } from "../../core/Atomic.js";
+import { isNodeNetworkException } from "../common/errors/NodeErrors.js";
+import { FormatPlayObjectOptions, InternalConfig } from "../common/infrastructure/Atomic.js";
+import { LastfmSourceConfig } from "../common/infrastructure/config/source/lastfm.js";
 import LastfmApiClient from "../common/vendor/LastfmApiClient.js";
 import { sortByOldestPlayDate } from "../utils.js";
-import { FormatPlayObjectOptions, InternalConfig } from "../common/infrastructure/Atomic.js";
-import {TrackObject, UserGetRecentTracksResponse} from "lastfm-node-client";
-import EventEmitter from "events";
-import { PlayObject } from "../../core/Atomic.js";
+import { RecentlyPlayedOptions } from "./AbstractSource.js";
 import MemorySource from "./MemorySource.js";
-import { LastfmSourceConfig } from "../common/infrastructure/config/source/lastfm.js";
-import dayjs from "dayjs";
-import { isNodeNetworkException } from "../common/errors/NodeErrors.js";
-import {ErrorWithCause} from "pony-cause";
-import request from "superagent";
 
 export default class LastfmSource extends MemorySource {
 
@@ -31,8 +30,11 @@ export default class LastfmSource extends MemorySource {
         super('lastfm', name, {...config, data: {interval, maxInterval, ...restData}}, internal, emitter);
         this.canPoll = true;
         this.canBacklog = true;
-        this.api = new LastfmApiClient(name, {...config.data, configDir: internal.configDir, localUrl: internal.localUrl});
-        this.playerSourceOfTruth = false;
+        this.supportsUpstreamRecentlyPlayed = true;
+        this.supportsUpstreamNowPlaying = true;
+        this.api = new LastfmApiClient(name, {...config.data, configDir: internal.configDir, localUrl: internal.localUrl}, {logger: this.logger});
+        this.playerSourceOfTruth = SOURCE_SOT.HISTORY;
+        this.logger.info(`Note: The player for this source is an analogue for the 'Now Playing' status exposed by ${this.type} which is NOT used for scrobbling. Instead, the 'recently played' or 'history' information provided by this source is used for scrobbles.`)
     }
 
     static formatPlayObj(obj: any, options: FormatPlayObjectOptions = {}): PlayObject {
@@ -54,9 +56,9 @@ export default class LastfmSource extends MemorySource {
             return true;
         } catch (e) {
             if(isNodeNetworkException(e)) {
-                throw new ErrorWithCause('Could not communicate with Last.fm API server', {cause: e});
+                throw new Error('Could not communicate with Last.fm API server', {cause: e});
             } else if(e.status >= 500) {
-                throw new ErrorWithCause('Last.fm API server returning an unexpected response', {cause: e})
+                throw new Error('Last.fm API server returning an unexpected response', {cause: e})
             }
             return true;
         }
@@ -70,7 +72,7 @@ export default class LastfmSource extends MemorySource {
     }
 
 
-    getRecentlyPlayed = async(options: RecentlyPlayedOptions = {}): Promise<PlayObject[]> => {
+    getLastfmRecentTrack = async(options: RecentlyPlayedOptions = {}): Promise<[PlayObject[], PlayObject[]]> => {
         const {limit = 20} = options;
         const resp = await this.api.callApi<UserGetRecentTracksResponse>((client: any) => client.userGetRecentTracks({
             user: this.api.user,
@@ -118,11 +120,36 @@ export default class LastfmSource extends MemorySource {
         // so we'll just ignore it in the context of recent tracks since really we only want "tracks that have already finished being played" anyway
         const history = plays.filter(x => x.meta.nowPlaying !== true);
         const now = plays.filter(x => x.meta.nowPlaying === true);
-        this.processRecentPlays(now);
-        return history;
+        return [history, now];
     }
 
-    protected getBackloggedPlays = async () => {
-        return await this.getRecentlyPlayed({formatted: true});
+    getRecentlyPlayed = async(options: RecentlyPlayedOptions = {}): Promise<PlayObject[]> => {
+        try {
+            const [history, now] = await this.getLastfmRecentTrack(options);
+            this.processRecentPlays(now);
+            return  history;
+        } catch (e) {
+            throw e;
+        }
     }
+
+    getUpstreamRecentlyPlayed = async (options: RecentlyPlayedOptions = {}): Promise<PlayObject[]> => {
+        try {
+            const [history, now] = await this.getLastfmRecentTrack(options);
+            return history;
+        } catch (e) {
+            throw e;
+        }
+    }
+
+    getUpstreamNowPlaying = async (): Promise<PlayObject[]> => {
+        try {
+            const [history, now] = await this.getLastfmRecentTrack();
+            return now;
+        } catch (e) {
+            throw e;
+        }
+    }
+
+    protected getBackloggedPlays = async () => await this.getRecentlyPlayed({formatted: true})
 }

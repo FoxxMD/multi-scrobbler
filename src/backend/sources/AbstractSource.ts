@@ -1,16 +1,10 @@
-import dayjs, {Dayjs} from "dayjs";
-import {
-    genGroupId,
-    genGroupIdStrFromPlay,
-    mergeArr,
-    playObjDataMatch,
-    pollingBackoff,
-    sleep,
-    sortByNewestPlayDate,
-    sortByOldestPlayDate,
-    findCauseByFunc,
-    formatNumber,
-} from "../utils.js";
+import { childLogger, Logger } from '@foxxmd/logging';
+import dayjs, { Dayjs } from "dayjs";
+import { EventEmitter } from "events";
+import { FixedSizeList } from "fixed-size-list";
+import { PlayObject, TA_CLOSE } from "../../core/Atomic.js";
+import { buildTrackString, capitalize } from "../../core/StringUtils.js";
+import { isNodeNetworkException } from "../common/errors/NodeErrors.js";
 import {
     Authenticatable,
     DEFAULT_POLLING_INTERVAL,
@@ -18,9 +12,7 @@ import {
     DEFAULT_RETRY_MULTIPLIER,
     DeviceId,
     GroupedFixedPlays,
-    GroupedPlays,
     InternalConfig,
-    NO_DEVICE,
     NO_USER,
     PlayPlatformId,
     PlayUserId,
@@ -28,15 +20,18 @@ import {
     SINGLE_USER_PLATFORM_ID,
     SourceType,
 } from "../common/infrastructure/Atomic.js";
-import {Logger} from '@foxxmd/winston';
 import { SourceConfig } from "../common/infrastructure/config/source/sources.js";
-import {EventEmitter} from "events";
-import {FixedSizeList} from "fixed-size-list";
 import TupleMap from "../common/TupleMap.js";
-import { PlayObject, TA_CLOSE } from "../../core/Atomic.js";
-import { buildTrackString, capitalize } from "../../core/StringUtils.js";
-import { isNodeNetworkException } from "../common/errors/NodeErrors.js";
-import {ErrorWithCause} from "pony-cause";
+import {
+    findCauseByFunc,
+    formatNumber,
+    genGroupId,
+    playObjDataMatch,
+    pollingBackoff,
+    sleep,
+    sortByNewestPlayDate,
+    sortByOldestPlayDate,
+} from "../utils.js";
 import { comparePlayTemporally, temporalAccuracyIsAtLeast } from "../utils/TimeUtils.js";
 
 export interface RecentlyPlayedOptions {
@@ -79,6 +74,9 @@ export default abstract class AbstractSource implements Authenticatable {
     pollRetries: number = 0;
     tracksDiscovered: number = 0;
 
+    supportsUpstreamRecentlyPlayed: boolean = false;
+    supportsUpstreamNowPlaying: boolean = false;
+
     emitter: EventEmitter;
 
     protected recentDiscoveredPlays: GroupedFixedPlays = new TupleMap<DeviceId, PlayUserId, FixedSizeList<ProgressAwarePlayObject>>();
@@ -88,7 +86,7 @@ export default abstract class AbstractSource implements Authenticatable {
         this.type = type;
         this.name = name;
         this.identifier = `Source - ${capitalize(this.type)} - ${name}`;
-        this.logger = internal.logger.child({labels: [`${capitalize(this.type)} - ${name}`]}, mergeArr);
+        this.logger = childLogger(internal.logger, `${capitalize(this.type)} - ${name}`);
         this.config = config;
         this.clients = clients;
         this.instantiatedAt = dayjs();
@@ -108,7 +106,7 @@ export default abstract class AbstractSource implements Authenticatable {
             this.logger.info('Fully Initialized!');
             return true;
         } catch(e) {
-            this.logger.error(new ErrorWithCause('Initialization failed', {cause: e}));
+            this.logger.error(new Error('Initialization failed', {cause: e}));
             return false;
         }
     }
@@ -132,7 +130,7 @@ export default abstract class AbstractSource implements Authenticatable {
             this.buildOK = true;
         } catch (e) {
             this.buildOK = false;
-            throw new ErrorWithCause('Building required data for initialization failed', {cause: e});
+            throw new Error('Building required data for initialization failed', {cause: e});
         }
     }
 
@@ -163,7 +161,7 @@ export default abstract class AbstractSource implements Authenticatable {
             this.connectionOK = true;
         } catch (e) {
             this.connectionOK = false;
-            throw new ErrorWithCause('Communicating with upstream service failed', {cause: e});
+            throw new Error('Communicating with upstream service failed', {cause: e});
         }
     }
 
@@ -179,17 +177,11 @@ export default abstract class AbstractSource implements Authenticatable {
         return;
     }
 
-    authGated = () => {
-        return this.requiresAuth && !this.authed;
-    }
+    authGated = () => this.requiresAuth && !this.authed
 
-    canTryAuth = () => {
-        return this.authGated() && this.authFailure !== true;
-    }
+    canTryAuth = () => this.authGated() && this.authFailure !== true
 
-    protected doAuthentication = async (): Promise<boolean> => {
-        return this.authed;
-    }
+    protected doAuthentication = async (): Promise<boolean> => this.authed
 
     testAuth = async () => {
         if(!this.requiresAuth) {
@@ -205,7 +197,7 @@ export default abstract class AbstractSource implements Authenticatable {
             // only signal as auth failure if error was NOT a node network error
             this.authFailure = findCauseByFunc(e, isNodeNetworkException) === undefined;
             this.authed = false;
-            throw new ErrorWithCause(`Authentication test failed!${this.authFailure === false ? ' Due to a network issue. Will retry authentication on next heartbeat.' : ''}`, {cause: e})
+            throw new Error(`Authentication test failed!${this.authFailure === false ? ' Due to a network issue. Will retry authentication on next heartbeat.' : ''}`, {cause: e})
         }
     }
 
@@ -215,16 +207,20 @@ export default abstract class AbstractSource implements Authenticatable {
             && !this.authGated();
     }
 
-    getRecentlyPlayed = async (options: RecentlyPlayedOptions = {}): Promise<PlayObject[]> => {
-        return [];
+    getRecentlyPlayed = async (options: RecentlyPlayedOptions = {}): Promise<PlayObject[]> => []
+
+    getUpstreamRecentlyPlayed = async (options: RecentlyPlayedOptions = {}): Promise<PlayObject[]> => {
+        throw new Error('Not implemented');
+    }
+
+    getUpstreamNowPlaying = async(): Promise<PlayObject[]> => {
+        throw new Error('Not implemented');
     }
 
     // by default if the track was recently played it is valid
     // this is useful for sources where the track doesn't have complete information like Subsonic
     // TODO make this more descriptive? or move it elsewhere
-    recentlyPlayedTrackIsValid = (playObj: PlayObject) => {
-        return true;
-    }
+    recentlyPlayedTrackIsValid = (playObj: PlayObject) => true
 
     protected addPlayToDiscovered = (play: PlayObject) => {
         const platformId = this.multiPlatform ? genGroupId(play) : SINGLE_USER_PLATFORM_ID;
@@ -236,10 +232,9 @@ export default abstract class AbstractSource implements Authenticatable {
         this.emitEvent('discovered', {play});
     }
 
-    getFlatRecentlyDiscoveredPlays = (): PlayObject[] => {
-        // @ts-ignore
-        return Array.from(this.recentDiscoveredPlays.values()).map(x => x.data).flat(3).sort(sortByNewestPlayDate);
-    }
+    getFlatRecentlyDiscoveredPlays = (): PlayObject[] =>
+         Array.from(this.recentDiscoveredPlays.values()).map(x => x.data).flat(3).sort(sortByNewestPlayDate)
+    
 
     getRecentlyDiscoveredPlaysByPlatform = (platformId: PlayPlatformId): PlayObject[] => {
         const list = this.recentDiscoveredPlays.get(platformId);
@@ -252,7 +247,7 @@ export default abstract class AbstractSource implements Authenticatable {
     }
 
     existingDiscovered = (play: PlayObject, opts: {checkAll?: boolean} = {}): PlayObject | undefined => {
-        let lists: PlayObject[][] = [];
+        const lists: PlayObject[][] = [];
         if(opts.checkAll !== true) {
             lists.push(this.getRecentlyDiscoveredPlaysByPlatform(this.multiPlatform ? genGroupId(play) : SINGLE_USER_PLATFORM_ID));
         } else {
@@ -322,7 +317,7 @@ export default abstract class AbstractSource implements Authenticatable {
             try {
                 backlogPlays = await this.getBackloggedPlays();
             } catch (e) {
-                throw new ErrorWithCause('Error occurred while fetching backlogged plays', {cause: e});
+                throw new Error('Error occurred while fetching backlogged plays', {cause: e});
             }
             const discovered = this.discover(backlogPlays);
 
@@ -355,13 +350,9 @@ export default abstract class AbstractSource implements Authenticatable {
         this.emitter.emit('notify', payload);
     }
 
-    onPollPreAuthCheck = async (): Promise<boolean> => {
-        return true;
-    }
+    onPollPreAuthCheck = async (): Promise<boolean> => true
 
-    onPollPostAuthCheck = async (): Promise<boolean> => {
-        return true;
-    }
+    onPollPostAuthCheck = async (): Promise<boolean> => true
 
     poll = async () => {
         if(!(await this.onPollPreAuthCheck())) {
@@ -389,7 +380,7 @@ export default abstract class AbstractSource implements Authenticatable {
         try {
             await this.processBacklog();
         } catch (e) {
-            this.logger.error(new ErrorWithCause('Cannot start polling because error occurred while processing backlog', {cause: e}));
+            this.logger.error(new Error('Cannot start polling because error occurred while processing backlog', {cause: e}));
             this.notify({
                 title: `${this.identifier} - Polling Error`,
                 message: 'Cannot start polling because error occurred while processing backlog.',

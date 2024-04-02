@@ -1,8 +1,7 @@
-import {ErrorWithCause} from "pony-cause";
 import { findCauseByFunc } from "../../utils.js";
 import {Response as SuperagentResponse} from 'superagent';
 
-export class UpstreamError<T = undefined> extends ErrorWithCause<T> {
+export class UpstreamError<T = undefined> extends Error {
 
     showStopper: boolean = false;
     response?: SuperagentResponse | Response

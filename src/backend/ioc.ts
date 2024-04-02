@@ -1,14 +1,14 @@
-import {createContainer} from "iti";
+import { Logger } from "@foxxmd/logging";
+import { EventEmitter } from "events";
+import fs from 'fs';
+import { createContainer } from "iti";
+import normalizeUrl from 'normalize-url';
 import path from "path";
-import { configDir, projectDir } from "./common/index.js";
+import { projectDir } from "./common/index.js";
+import { WildcardEmitter } from "./common/WildcardEmitter.js";
+import { Notifiers } from "./notifier/Notifiers.js";
 import ScrobbleClients from "./scrobblers/ScrobbleClients.js";
 import ScrobbleSources from "./sources/ScrobbleSources.js";
-import { Notifiers } from "./notifier/Notifiers.js";
-import {EventEmitter} from "events";
-import { logPath } from "./common/logging.js";
-import { WildcardEmitter } from "./common/WildcardEmitter.js";
-import normalizeUrl from 'normalize-url';
-import fs from 'fs';
 
 let version = 'Unknown';
 
@@ -46,6 +46,7 @@ let root: ReturnType<typeof createRoot>;
 export interface RootOptions {
     baseUrl?: string,
     port?: string | number
+    logger: Logger
 }
 
 const createRoot = (options?: RootOptions) => {
@@ -57,7 +58,6 @@ const createRoot = (options?: RootOptions) => {
     return createContainer().add({
         version,
         configDir: configDir,
-        logDir: logPath,
         isProd: process.env.NODE_ENV !== undefined && (process.env.NODE_ENV === 'production' || process.env.NODE_ENV === 'prod'),
         port: process.env.PORT ?? port,
         clientEmitter: () => new WildcardEmitter(),
@@ -71,9 +71,9 @@ const createRoot = (options?: RootOptions) => {
             localUrl = `${u.origin}:${items.mainPort}`;
         }
         return {
-            clients: () => new ScrobbleClients(items.clientEmitter, items.sourceEmitter, localUrl, items.configDir),
-            sources: () => new ScrobbleSources(items.sourceEmitter, localUrl, items.configDir),
-            notifiers: () => new Notifiers(items.notifierEmitter, items.clientEmitter, items.sourceEmitter),
+            clients: () => new ScrobbleClients(items.clientEmitter, items.sourceEmitter, localUrl, items.configDir, options.logger),
+            sources: () => new ScrobbleSources(items.sourceEmitter, localUrl, items.configDir, options.logger),
+            notifiers: () => new Notifiers(items.notifierEmitter, items.clientEmitter, items.sourceEmitter, options.logger),
             localUrl,
             hasDefinedBaseUrl: baseUrl !== undefined,
             isSubPath: u.pathname !== '/' && u.pathname.length > 0

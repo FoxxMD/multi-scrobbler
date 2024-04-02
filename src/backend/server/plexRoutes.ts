@@ -1,23 +1,22 @@
+import { ExpressWithAsync } from "@awaitjs/express";
+import { childLogger, Logger } from "@foxxmd/logging";
 import { ExpressHandler } from "../common/infrastructure/Atomic.js";
-import { mergeArr, parseBool } from "../utils.js";
-import {ExpressWithAsync} from "@awaitjs/express";
-import {Logger} from "@foxxmd/winston";
-import ScrobbleSources from "../sources/ScrobbleSources.js";
-import PlexSource, { plexRequestMiddle } from "../sources/PlexSource.js";
 import { PlexNotifier } from "../sources/ingressNotifiers/PlexNotifier.js";
+import PlexSource, { plexRequestMiddle } from "../sources/PlexSource.js";
+import ScrobbleSources from "../sources/ScrobbleSources.js";
 
 export const setupPlexRoutes = (app: ExpressWithAsync, logger: Logger, scrobbleSources: ScrobbleSources) => {
 
-    const plexMiddle = plexRequestMiddle();
-    const plexLog = logger.child({labels: ['Plex Request']}, mergeArr);
-    const plexIngress = new PlexNotifier();
-    const plexIngressMiddle: ExpressHandler = async function (req, res, next) {
+    const plexMiddle = plexRequestMiddle(logger);
+    const plexLog = childLogger(logger, 'Plex Request');
+    const plexIngress = new PlexNotifier(logger);
+    const plexIngressMiddle: ExpressHandler = async (req, res, next) => {
         // track request before parsing body to ensure we at least log that something is happening
         // (in the event body parsing does not work or request is not POST/PATCH)
         plexIngress.trackIngress(req, true);
         next();
     };
-    const plexIngressRoute: ExpressHandler = async function (req, res) {
+    const plexIngressRoute: ExpressHandler = async (req, res) => {
         plexIngress.trackIngress(req, false);
 
         const {payload} = req as any;
@@ -36,7 +35,7 @@ export const setupPlexRoutes = (app: ExpressWithAsync, logger: Logger, scrobbleS
 
         res.send('OK');
     };
-    app.postAsync('/plex', async function (req, res) {
+    app.postAsync('/plex', async (req, res) => {
         res.redirect(307, '/api/plex/ingress');
     });
     app.postAsync('/api/plex/ingress', plexIngressMiddle, plexMiddle, plexIngressRoute);

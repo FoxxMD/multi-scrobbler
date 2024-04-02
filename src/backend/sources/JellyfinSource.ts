@@ -1,26 +1,25 @@
-import MemorySource from "./MemorySource.js";
-import dayjs, {Dayjs} from "dayjs";
+import { Logger } from "@foxxmd/logging";
+import dayjs from "dayjs";
+import EventEmitter from "events";
+import { PlayObject, TA_CLOSE } from "../../core/Atomic.js";
+import { buildTrackString, splitByFirstFound, truncateStringToLength } from "../../core/StringUtils.js";
+import { FormatPlayObjectOptions, InternalConfig, PlayPlatformId } from "../common/infrastructure/Atomic.js";
+import { JellySourceConfig } from "../common/infrastructure/config/source/jellyfin.js";
 import {
     combinePartsToString,
+    doubleReturnNewline,
     parseBool,
     parseDurationFromTimestamp,
     playObjDataMatch,
-    doubleReturnNewline,
 } from "../utils.js";
-import { JellySourceConfig } from "../common/infrastructure/config/source/jellyfin.js";
-import { FormatPlayObjectOptions, InternalConfig, PlayPlatformId } from "../common/infrastructure/Atomic.js";
-import EventEmitter from "events";
-import { PlayerStateOptions } from "./PlayerState/AbstractPlayerState.js";
-import {Logger} from "@foxxmd/winston";
-import { JellyfinPlayerState } from "./PlayerState/JellyfinPlayerState.js";
-import { PlayObject, TA_CLOSE } from "../../core/Atomic.js";
-import { buildTrackString, splitByFirstFound, truncateStringToLength } from "../../core/StringUtils.js";
-import {source} from "common-tags";
 import {
     comparePlayTemporally,
     temporalAccuracyIsAtLeast,
     temporalPlayComparisonSummary,
 } from "../utils/TimeUtils.js";
+import MemorySource from "./MemorySource.js";
+import { PlayerStateOptions } from "./PlayerState/AbstractPlayerState.js";
+import { JellyfinPlayerState } from "./PlayerState/JellyfinPlayerState.js";
 
 const shortDeviceId = truncateStringToLength(10, '');
 
@@ -251,9 +250,7 @@ export default class JellyfinSource extends MemorySource {
         return true;
     }
 
-    getRecentlyPlayed = async (options = {}) => {
-        return this.getFlatRecentlyDiscoveredPlays();
-    }
+    getRecentlyPlayed = async (options = {}) => this.getFlatRecentlyDiscoveredPlays()
 
     handle = async (playObj: PlayObject) => {
         if (!this.isValidEvent(playObj)) {
@@ -366,7 +363,5 @@ export default class JellyfinSource extends MemorySource {
         }
     }
 
-    getNewPlayer = (logger: Logger, id: PlayPlatformId, opts: PlayerStateOptions) => {
-        return new JellyfinPlayerState(logger, id, opts);
-    }
+    getNewPlayer = (logger: Logger, id: PlayPlatformId, opts: PlayerStateOptions) => new JellyfinPlayerState(logger, id, opts)
 }

@@ -1,4 +1,4 @@
-import dayjs, {Dayjs} from "dayjs";
+import dayjs, { Dayjs } from "dayjs";
 
 import { PlayProgress, Second } from "../../../core/Atomic.js";
 

@@ -3,17 +3,18 @@ import './LogsSection.css';
 import {FixedSizeList} from "fixed-size-list";
 import {useEventSource, useEventSourceListener} from "@react-nano/use-event-source";
 import LogLine from "./LogLine";
-import {useGetLogsQuery, useLazySetLogSettingsQuery, logsApi} from "./logsApi";
+import {useGetLogsQuery, useLazySetLogSettingsQuery} from "./logsApi";
 import {connect, ConnectedProps} from "react-redux";
 import {RootState} from "../store";
 import Loading from "../components/loading/Loading";
 
-let logBuffer: { message: string, id: string, level: string }[] = [];
+const logBuffer: { message: string, id: string, level: number, levelLabel:string }[] = [];
 
 interface MinLogInfo {
     message: string,
     id: string,
-    level: string
+    level: number
+    levelLabel: string
 }
 
 const createFixedList = (size, initialList: MinLogInfo[] = []): FixedSizeList<MinLogInfo> => {
@@ -55,7 +56,7 @@ const LogsSection = (props: PropsFromRedux) => {
     useGetLogsQuery(undefined);
 
     useEffect(() => {
-        list = createFixedList(settings.limit, logs.map((x, index) => ({...x, message: x.formattedMessage, id: index.toString()})));
+        list = createFixedList(settings.limit, logs.map((x, index) => ({...x, message: x.line, id: index.toString()})));
         setLogList(Array.from(list.data));
         setLogLevel(settings.level);
     }, [logs, settings, setLogList, setLogLevel]);
@@ -73,7 +74,7 @@ const LogsSection = (props: PropsFromRedux) => {
     useEventSourceListener(eventSource, ['messsage', 'stream'], evt => {
         const data = JSON.parse(evt.data);
         // @ts-ignore
-        list.add({message: data.message, id: evt.lastEventId, level: data.level});
+        list.add({message: data.message, id: evt.lastEventId, level: data.level, levelLabel: data.levelLabel});
         setLogList(Array.from(list.data));
         //console.log(evt);
     }, [setLogList]);
@@ -101,7 +102,7 @@ const LogsSection = (props: PropsFromRedux) => {
                     <br/>
                     <div className="logs font-mono">
                         {
-                            logList.map(x => <LogLine key={x.id} level={x.level} message={x.message}/>)
+                            logList.map(x => <LogLine key={x.id} level={x.level} levelLabel={x.levelLabel} message={x.message}/>)
                         }
                     </div>
                 </div>

@@ -1,10 +1,10 @@
-import {Logger} from "@foxxmd/winston";
+import { Browser, Service, ServiceType } from "@astronautlabs/mdns";
+import { Logger } from "@foxxmd/logging";
 import AvahiBrowser from 'avahi-browse';
+import { MdnsDeviceInfo } from "../common/infrastructure/Atomic.js";
 import { MaybeLogger } from "../common/logging.js";
 import { sleep } from "../utils.js";
-import {ErrorWithCause} from "pony-cause";
-import { MdnsDeviceInfo } from "../common/infrastructure/Atomic.js";
-import {Browser, Service, ServiceType} from "@astronautlabs/mdns";
+import { debounce, DebouncedFunction } from "./debounce.js";
 
 export interface AvahiService {
     service_name: string
@@ -19,7 +19,7 @@ export interface AvahiService {
 
 export interface DiscoveryOptions<T> {
     sanity?: boolean
-    onDiscover?: (service: MdnsDeviceInfo, raw: T) => void
+    onDiscover?: (service: MdnsDeviceInfo) => void
     onDnsError?: (err: Error) => void
     duration?: number,
     logger?: Logger
@@ -38,21 +38,46 @@ export const discoveryAvahi = async (service: string, options?: DiscoveryOptions
     maybeLogger.debug(`Starting mDNS discovery with Avahi => Listening for ${(duration / 1000).toFixed(2)}s`);
     let anyDiscovered = false;
 
+    const services = new Map<string, MdnsDeviceInfo>();
+
+    const triggerDiscovery = () => {
+        for(const [k,v] of services.entries()) {
+            maybeLogger.debug(`Discovered device "${v.name}" with ${v.addresses.length} interfaces`);
+            onDiscover(v);
+            services.delete(k);
+        }
+    }
+
+    let debouncedFunc: DebouncedFunction;
+
     try {
         const browser = new AvahiBrowser(service);
         browser.on(AvahiBrowser.EVENT_SERVICE_UP, async (service: AvahiService) => {
             anyDiscovered = true;
-            maybeLogger.debug(`Discovered device "${service.service_name}" at ${service.target.host}`);
-            if (onDiscover !== undefined) {
-                onDiscover({
-                    name: service.service_name,
-                    addresses: [service.target.host],
-                    type: service.target.service_type
-                }, service)
+
+            if(onDiscover !== undefined) {
+
+                let foundService = services.get(service.service_name);
+                if(foundService === undefined) {
+                    foundService = {
+                        name: service.service_name,
+                        addresses: [service.target.host],
+                        type: service.target.service_type,
+                    }
+                } else {
+                    foundService.addresses.push(service.target.host);
+                }
+                services.set(foundService.name, foundService);
+
+                if(debouncedFunc === undefined) {
+                    debouncedFunc = debounce(() => triggerDiscovery(), 1000);
+                } else {
+                    await debouncedFunc();
+                }
             }
         });
         browser.on(AvahiBrowser.EVENT_DNSSD_ERROR, (err) => {
-            const e = new ErrorWithCause('Error occurred while using avahi-browse', {cause: err});
+            const e = new Error('Error occurred while using avahi-browse', {cause: err});
             if (onDnsError) {
                 onDnsError(e)
             } else {
@@ -71,7 +96,7 @@ export const discoveryAvahi = async (service: string, options?: DiscoveryOptions
         }
         maybeLogger.debug('Stopped discovery');
     } catch (e) {
-        maybeLogger.warn(new ErrorWithCause('mDNS device discovery with avahi-browse failed', {cause: e}));
+        maybeLogger.warn(new Error('mDNS device discovery with avahi-browse failed', {cause: e}));
     }
 }
 
@@ -88,14 +113,14 @@ export const discoveryNative = async (service: string, options?: DiscoveryOption
     maybeLogger.debug(`Starting mDNS discovery => Listening for ${(duration / 1000).toFixed(2)}s`);
 
     if (sanity) {
-        let services: ServiceType[] = [];
+        const services: ServiceType[] = [];
         const testBrowser = new Browser(ServiceType.all())
             .on('serviceUp', (service: ServiceType) => {
                 services.push(service)
             })
             .start();
         testBrowser.on('error', (err) => {
-            maybeLogger.error(new ErrorWithCause('Error occurred during mDNS service discovery', {cause: err}));
+            maybeLogger.error(new Error('Error occurred during mDNS service discovery', {cause: err}));
         });
         maybeLogger.debug('Waiting 1s to gather advertised mdns services...');
         await sleep(1000);
@@ -109,13 +134,13 @@ export const discoveryNative = async (service: string, options?: DiscoveryOption
 
     const browser = new Browser(service, {resolve: true})
         .on('serviceUp', async (service) => {
-            maybeLogger.debug(`Discovered device "${service.name}" at ${service.addresses?.[0]}`);
+            maybeLogger.debug(`Discovered device "${service.name}" with ${service.addresses.length} interfaces`);
             if (onDiscover) {
-                onDiscover({name: service.name, addresses: service.addresses, type: service.service_type}, service);
+                onDiscover({name: service.name, addresses: service.addresses, type: service.service_type});
             }
         })
     browser.on('error', (err) => {
-        const e = new ErrorWithCause('Error occurred during mDNS discovery', {cause: err});
+        const e = new Error('Error occurred during mDNS discovery', {cause: err});
         if (onDnsError) {
             onDnsError(e)
         } else {

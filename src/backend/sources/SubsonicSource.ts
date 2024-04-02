@@ -1,18 +1,17 @@
-import request, {Request, Response} from 'superagent';
 import * as crypto from 'crypto';
 import dayjs from "dayjs";
 import isSameOrAfter from "dayjs/plugin/isSameOrAfter.js";
-import {findCauseByFunc, parseRetryAfterSecsFromObj, removeDuplicates, sleep} from "../utils.js";
-import MemorySource from "./MemorySource.js";
-import { SubSonicSourceConfig } from "../common/infrastructure/config/source/subsonic.js";
-import { DEFAULT_RETRY_MULTIPLIER, FormatPlayObjectOptions, InternalConfig } from "../common/infrastructure/Atomic.js";
-import { RecentlyPlayedOptions } from "./AbstractSource.js";
 import EventEmitter from "events";
+import request, { Request } from 'superagent';
 import { PlayObject } from "../../core/Atomic.js";
-import {isNodeNetworkException} from "../common/errors/NodeErrors.js";
-import {ErrorWithCause} from "pony-cause";
-import {UpstreamError} from "../common/errors/UpstreamError.js";
-import {getSubsonicResponse, SubsonicResponse, SubsonicResponseCommon} from "../common/vendor/subsonic/interfaces.js";
+import { isNodeNetworkException } from "../common/errors/NodeErrors.js";
+import { UpstreamError } from "../common/errors/UpstreamError.js";
+import { DEFAULT_RETRY_MULTIPLIER, FormatPlayObjectOptions, InternalConfig } from "../common/infrastructure/Atomic.js";
+import { SubSonicSourceConfig } from "../common/infrastructure/config/source/subsonic.js";
+import { getSubsonicResponse, SubsonicResponse, SubsonicResponseCommon } from "../common/vendor/subsonic/interfaces.js";
+import { findCauseByFunc, parseRetryAfterSecsFromObj, removeDuplicates, sleep } from "../utils.js";
+import { RecentlyPlayedOptions } from "./AbstractSource.js";
+import MemorySource from "./MemorySource.js";
 
 dayjs.extend(isSameOrAfter);
 
@@ -76,17 +75,28 @@ export class SubsonicSource extends MemorySource {
             retryMultiplier = DEFAULT_RETRY_MULTIPLIER
         } = this.config.data;
 
-
-        const salt = await crypto.randomBytes(10).toString('hex');
-        const hash = crypto.createHash('md5').update(`${password}${salt}`).digest('hex')
-        req.query({
+        const queryOpts: Record<string, string> = {
             u: user,
-            t: hash,
-            s: salt,
             v: '1.15.0',
             c: `multi-scrobbler - ${this.name}`,
             f: 'json'
-        });
+        };
+        if((this.config?.data?.legacyAuthentication ?? false)) {
+            //queryOpts.p = password;
+            queryOpts.p = `enc:${Buffer.from(password).toString('hex')}`
+        } else {
+            const salt = crypto.randomBytes(10).toString('hex');
+            const hash = crypto.createHash('md5').update(`${password}${salt}`).digest('hex')
+            queryOpts.t = hash;
+            queryOpts.s = salt;
+        }
+
+        req.query(queryOpts);
+
+        if((this.config?.data?.ignoreTlsErrors ?? false)) {
+            req.disableTLSCerts();
+        }
+
         try {
             const resp = await req as SubsonicResponse;
 
@@ -121,10 +131,25 @@ export class SubsonicSource extends MemorySource {
             } = body;
 
             if (status === 'failed') {
-                throw new UpstreamError(`Subsonic API returned an error => ${parseApiResponseErrorToThrowable(resp)}`, {response: resp});
+                const uError = new UpstreamError(`Subsonic API returned an error => ${parseApiResponseErrorToThrowable(resp)}`, {response: resp});
+                if(uError.message.includes('Subsonic Api Response => (41)')) {
+                    const tokenError = 'This server does not support token-based authentication and must use the legacy authentication approach with sends your password in CLEAR TEXT.';
+                    if(this.config.data.legacyAuthentication !== undefined) {
+                        if(this.config.data.legacyAuthentication === true) {
+                            this.logger.error(`${tokenError} MS has already tried to use legacy authentication but it has failed. There is likely a different reason the server is rejecting authentication.`);
+                        } else {
+                            this.logger.error(`${tokenError} Your config settings do not allow legacy authentication to be used.`);
+                        }
+                        throw uError;
+                    } else {
+                        this.logger.warn(`${parseApiResponseErrorToThrowable(resp)} | ${tokenError} MS will attempt to use legacy authentication since 'legacyAuthentication' is not explicitly defined (or disabled) in config.`);
+                        this.config.data.legacyAuthentication = true;
+                        return await this.callApi(req);
+                    }
+                }
             }
 
-            // @ts-ignore
+            // @ts-expect-error it is assignable to T idk
             return ssResp;
         } catch (e) {
             if(e instanceof UpstreamError) {
@@ -140,6 +165,10 @@ export class SubsonicSource extends MemorySource {
 
             if(isNodeNetworkException(e)) {
                 throw new UpstreamError('Could not communicate with Subsonic Server', {cause: e, showStopper: true});
+            }
+
+            if(e.message.includes('self-signed certificate')) {
+                throw new UpstreamError(`Subsonic server uses self-signed certs which MS does not allow by default. This error can be ignored by setting 'ignoreTlsErrors: true' in config. WARNING this can result in cleartext communication which is insecure.`, {cause: e, showStopper: true});
             }
 
             throw new UpstreamError('Subsonic server response was unexpected', {cause: e});
@@ -184,7 +213,7 @@ export class SubsonicSource extends MemorySource {
             } else if(e.status >= 500) {
                 throw new UpstreamError('Subsonic server returning an unexpected response', {cause: e})
             } else {
-                throw new ErrorWithCause('Unexpected error occurred', {cause: e})
+                throw new Error('Unexpected error occurred', {cause: e})
             }
         }
     }
@@ -215,14 +244,12 @@ export class SubsonicSource extends MemorySource {
     }
 }
 
-export const getSubsonicResponseFromError = (error: unknown): UpstreamError => {
-    return findCauseByFunc(error, (err) => {
+export const getSubsonicResponseFromError = (error: unknown): UpstreamError => findCauseByFunc(error, (err) => {
         if(err instanceof UpstreamError && err.response !== undefined) {
             return getSubsonicResponse(err.response as Response) !== undefined;
         }
         return false;
-    }) as UpstreamError | undefined;
-}
+    }) as UpstreamError | undefined
 
 export const parseApiResponseErrorToThrowable = (resp: SubsonicResponse) => {
     const {

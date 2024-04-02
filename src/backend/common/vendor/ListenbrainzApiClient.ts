@@ -1,12 +1,9 @@
-import AbstractApiClient from "./AbstractApiClient.js";
-import request, {Request} from 'superagent';
-import { ListenBrainzClientData } from "../infrastructure/config/client/listenbrainz.js";
-import { DEFAULT_RETRY_MULTIPLIER, FormatPlayObjectOptions } from "../infrastructure/Atomic.js";
-import dayjs from "dayjs";
 import { stringSameness } from '@foxxmd/string-sameness';
-import { combinePartsToString } from "../../utils.js";
+import dayjs from "dayjs";
+import request, { Request } from 'superagent';
 import { PlayObject } from "../../../core/Atomic.js";
 import { slice } from "../../../core/StringUtils.js";
+import { combinePartsToString } from "../../utils.js";
 import {
     findDelimiters,
     normalizeStr,
@@ -15,8 +12,11 @@ import {
     parseTrackCredits,
     uniqueNormalizedStrArr,
 } from "../../utils/StringUtils.js";
-import { UpstreamError } from "../errors/UpstreamError.js";
 import { getScrobbleTsSOCDate } from "../../utils/TimeUtils.js";
+import { UpstreamError } from "../errors/UpstreamError.js";
+import { AbstractApiOptions, DEFAULT_RETRY_MULTIPLIER, FormatPlayObjectOptions } from "../infrastructure/Atomic.js";
+import { ListenBrainzClientData } from "../infrastructure/config/client/listenbrainz.js";
+import AbstractApiClient from "./AbstractApiClient.js";
 
 
 export interface ArtistMBIDMapping {
@@ -118,7 +118,7 @@ export class ListenbrainzApiClient extends AbstractApiClient {
     declare config: ListenBrainzClientData;
     url: string;
 
-    constructor(name: any, config: ListenBrainzClientData, options = {}) {
+    constructor(name: any, config: ListenBrainzClientData, options: AbstractApiOptions) {
         super('ListenBrainz', name, config, options);
         const {
             url = 'https://api.listenbrainz.org/'
@@ -150,7 +150,7 @@ export class ListenbrainzApiClient extends AbstractApiClient {
             if(status !== undefined) {
                 const msgParts = [`(HTTP Status ${status})`];
                 // if the response is 400 then its likely there was an issue with the data we sent rather than an error with the service
-                let showStopper = status !== 400;
+                const showStopper = status !== 400;
                 if(body !== undefined) {
                     if(typeof body === 'object') {
                         if('code' in body) {
@@ -241,7 +241,6 @@ export class ListenbrainzApiClient extends AbstractApiClient {
     getRecentlyPlayed = async (maxTracks: number, user?: string): Promise<PlayObject[]> => {
         try {
             const resp = await this.getUserListens(maxTracks, user);
-            const now = await this.getPlayingNow(user);
             return resp.listens.map(x => ListenbrainzApiClient.listenResponseToPlay(x));
         } catch (e) {
             this.logger.error(`Error encountered while getting User listens | Error =>  ${e.message}`);
@@ -292,7 +291,7 @@ export class ListenbrainzApiClient extends AbstractApiClient {
         }
     }
 
-    static listenResponseToPlay = (listen: ListenResponse): PlayObject => {
+    static listenResponseToPlay(listen: ListenResponse): PlayObject {
         const {
             listened_at,
             track_metadata: {
@@ -393,7 +392,7 @@ export class ListenbrainzApiClient extends AbstractApiClient {
             }
 
             // now try to extract any remaining artists from filtered artist/name values
-            let parsedArtists = parseArtistCredits(filteredSubmittedArtistName);
+            const parsedArtists = parseArtistCredits(filteredSubmittedArtistName);
             if (parsedArtists !== undefined) {
                 if (parsedArtists.primary !== undefined) {
                     artistsFromUserValues.push(parsedArtists.primary);
@@ -513,7 +512,7 @@ export class ListenbrainzApiClient extends AbstractApiClient {
     /**
      * Try to parse true artists and track name without using MB information
      * */
-    static listenResponseToNaivePlay = (listen: ListenResponse): PlayObject => {
+    static listenResponseToNaivePlay(listen: ListenResponse): PlayObject {
         const {
             listened_at,
             recording_msid,
@@ -582,7 +581,7 @@ export class ListenbrainzApiClient extends AbstractApiClient {
         }
     }
 
-    static formatPlayObj = (obj: any, options: FormatPlayObjectOptions): PlayObject => {
+    static formatPlayObj(obj: any, options: FormatPlayObjectOptions): PlayObject {
         return ListenbrainzApiClient.listenResponseToPlay(obj);
     }
 }

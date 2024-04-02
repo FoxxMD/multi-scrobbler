@@ -1,9 +1,9 @@
-import { AbstractWebhookNotifier } from "./AbstractWebhookNotifier.js";
-import { GotifyConfig, PrioritiesConfig, WebhookPayload } from "../common/infrastructure/config/health/webhooks.js";
-import {gotify} from 'gotify';
+import { Logger } from "@foxxmd/logging";
+import { HTTPError } from "got";
+import { gotify } from 'gotify';
 import request from 'superagent';
-import {HTTPError} from "got";
-import {Logger} from '@foxxmd/winston';
+import { GotifyConfig, PrioritiesConfig, WebhookPayload } from "../common/infrastructure/config/health/webhooks.js";
+import { AbstractWebhookNotifier } from "./AbstractWebhookNotifier.js";
 
 export class GotifyWebhookNotifier extends AbstractWebhookNotifier {
 

@@ -41,7 +41,7 @@
                                 1
                             ],
                             "title": "deadLetterRetries",
-                            "type": "boolean"
+                            "type": "number"
                         },
                         "refreshEnabled": {
                             "default": true,
@@ -264,7 +264,7 @@
                                 1
                             ],
                             "title": "deadLetterRetries",
-                            "type": "boolean"
+                            "type": "number"
                         },
                         "refreshEnabled": {
                             "default": true,
@@ -398,7 +398,7 @@
                                 1
                             ],
                             "title": "deadLetterRetries",
-                            "type": "boolean"
+                            "type": "number"
                         },
                         "refreshEnabled": {
                             "default": true,

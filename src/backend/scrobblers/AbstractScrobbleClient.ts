@@ -1,13 +1,20 @@
-import dayjs, {Dayjs} from "dayjs";
+import { childLogger, Logger } from "@foxxmd/logging";
+import dayjs, { Dayjs } from "dayjs";
+import EventEmitter from "events";
+import { FixedSizeList } from 'fixed-size-list';
+import { nanoid } from "nanoid";
+import { messageWithCauses } from "pony-cause";
 import {
-    comparingMultipleArtists,
-    mergeArr,
-    playObjDataMatch,
-    pollingBackoff,
-    setIntersection,
-    sleep,
-    sortByOldestPlayDate,
-} from "../utils.js";
+    DeadLetterScrobble,
+    PlayObject,
+    QueuedScrobble,
+    TA_CLOSE,
+    TA_FUZZY,
+    TrackStringOptions,
+} from "../../core/Atomic.js";
+import { buildTrackString, capitalize, truncateStringToLength } from "../../core/StringUtils.js";
+import { hasNodeNetworkException } from "../common/errors/NodeErrors.js";
+import { hasUpstreamError, UpstreamError } from "../common/errors/UpstreamError.js";
 import {
     ARTIST_WEIGHT,
     Authenticatable,
@@ -19,30 +26,21 @@ import {
     INITIALIZING,
     InitState,
     NOT_INITIALIZED,
-    REFERENCE_WEIGHT,
     ScrobbledPlayObject,
     TIME_WEIGHT,
     TITLE_WEIGHT,
 } from "../common/infrastructure/Atomic.js";
-import {Logger} from '@foxxmd/winston';
 import { CommonClientConfig } from "../common/infrastructure/config/client/index.js";
 import { Notifiers } from "../notifier/Notifiers.js";
-import {FixedSizeList} from 'fixed-size-list';
 import {
-    DeadLetterScrobble,
-    PlayObject,
-    QueuedScrobble,
-    TA_CLOSE,
-    TA_FUZZY,
-    TrackStringOptions,
-} from "../../core/Atomic.js";
-import { buildTrackString, capitalize, truncateStringToLength } from "../../core/StringUtils.js";
-import EventEmitter from "events";
+    comparingMultipleArtists,
+    playObjDataMatch,
+    pollingBackoff,
+    setIntersection,
+    sleep,
+    sortByOldestPlayDate,
+} from "../utils.js";
 import { compareScrobbleArtists, compareScrobbleTracks, normalizeStr } from "../utils/StringUtils.js";
-import { hasUpstreamError, UpstreamError } from "../common/errors/UpstreamError.js";
-import {nanoid} from "nanoid";
-import {ErrorWithCause, messageWithCauses} from "pony-cause";
-import { hasNodeNetworkException } from "../common/errors/NodeErrors.js";
 import {
     comparePlayTemporally,
     temporalAccuracyIsAtLeast,
@@ -95,7 +93,7 @@ export default abstract class AbstractScrobbleClient implements Authenticatable 
         this.type = type;
         this.name = name;
         this.identifier = `${capitalize(this.type)} - ${name}`;
-        this.logger = logger.child({labels: [this.identifier]}, mergeArr);
+        this.logger = childLogger(logger, this.identifier);
         this.notifier = notifier;
         this.emitter = emitter;
 
@@ -172,17 +170,11 @@ export default abstract class AbstractScrobbleClient implements Authenticatable 
         return true;
     }
 
-    authGated = () => {
-        return this.requiresAuth && !this.authed;
-    }
+    authGated = () => this.requiresAuth && !this.authed
 
-    canTryAuth = () => {
-        return this.authGated() && this.authFailure !== true;
-    }
+    canTryAuth = () => this.authGated() && this.authFailure !== true
 
-    protected doAuthentication = async (): Promise<boolean> => {
-        return this.authed;
-    }
+    protected doAuthentication = async (): Promise<boolean> => this.authed
 
     // default init function, should be overridden if auth stage is required
     testAuth = async () => {
@@ -193,22 +185,18 @@ export default abstract class AbstractScrobbleClient implements Authenticatable 
             // only signal as auth failure if error was NOT either a node network error or a non-showstopping upstream error
             this.authFailure = !(hasNodeNetworkException(e) || hasUpstreamError(e, false));
             this.authed = false;
-            this.logger.error(new ErrorWithCause(`Authentication test failed!${this.authFailure === false ? ' Due to a network issue. Will retry authentication on next heartbeat.' : ''}`, {cause: e}));
+            this.logger.error(new Error(`Authentication test failed!${this.authFailure === false ? ' Due to a network issue. Will retry authentication on next heartbeat.' : ''}`, {cause: e}));
         }
     }
 
-    isReady = async () => {
-        return this.initialized && !this.authGated();
-    }
+    isReady = async () => this.initialized && !this.authGated()
 
     refreshScrobbles = async () => {
         this.logger.debug('Scrobbler does not have refresh function implemented!');
     }
 
     public abstract alreadyScrobbled(playObj: PlayObject, log?: boolean): Promise<boolean>;
-    scrobblesLastCheckedAt = () => {
-        return this.lastScrobbleCheck;
-    }
+    scrobblesLastCheckedAt = () => this.lastScrobbleCheck
 
     formatPlayObj = (obj: any, options: FormatPlayObjectOptions = {}) => {
         this.logger.warn('formatPlayObj should be defined by concrete class!');
@@ -246,9 +234,7 @@ export default abstract class AbstractScrobbleClient implements Authenticatable 
         this.scrobbledPlayObjs = new FixedSizeList<ScrobbledPlayObject>(this.MAX_STORED_SCROBBLES, this.scrobbledPlayObjs.data.filter(x => this.timeFrameIsValid(x.play)[0])) ;
     }
 
-    getScrobbledPlays = () => {
-        return this.scrobbledPlayObjs.data.map(x => x.scrobble);
-    }
+    getScrobbledPlays = () => this.scrobbledPlayObjs.data.map(x => x.scrobble)
 
     findExistingSubmittedPlayObj = (playObj: PlayObject): ([undefined, undefined] | [ScrobbledPlayObject, ScrobbledPlayObject[]]) => {
         const {
@@ -310,7 +296,7 @@ export default abstract class AbstractScrobbleClient implements Authenticatable 
         }
 
         let existingScrobble;
-        let closestMatch: {score: number, breakdowns: string[], confidence: string, scrobble?: PlayObject} = {score: 0, breakdowns: [], confidence: 'None'};
+        let closestMatch: {score: number, breakdowns: string[], confidence: string, scrobble?: PlayObject} = {score: 0, breakdowns: [], confidence: 'No existing scrobble matched with a score higher than 0'};
 
         // then check if we have already recorded this
         const [existingExactSubmitted, existingDataSubmitted = []] = this.findExistingSubmittedPlayObj(playObj);
@@ -392,7 +378,7 @@ export default abstract class AbstractScrobbleClient implements Authenticatable 
                     artistBreakdown = `Artist: (${artistMatch.toFixed(2)} + Whole Match Bonus ${artistWholeMatchBonus.toFixed(2)}) * (${ARTIST_WEIGHT} + Whole Match Bonus 0.05) = ${artistScore.toFixed(2)}`;
                 }
 
-                let scoreBreakdowns = [
+                const scoreBreakdowns = [
                     //`Reference: ${(referenceMatch ? 1 : 0)} * ${REFERENCE_WEIGHT} = ${referenceScore.toFixed(2)}`,
                     artistBreakdown,
                     `Title: ${titleMatch.toFixed(2)} * ${TITLE_WEIGHT} = ${titleScore.toFixed(2)}`,
@@ -419,9 +405,13 @@ export default abstract class AbstractScrobbleClient implements Authenticatable 
         }
 
         if ((existingScrobble !== undefined && this.verboseOptions.match.onMatch) || (existingScrobble === undefined && this.verboseOptions.match.onNoMatch)) {
-            const closestScrobble = `Closest Scrobble: ${buildTrackString(closestMatch.scrobble, scoreTrackOpts)} => ${closestMatch.confidence}`;
-            this.logger.debug(`${capitalize(playObj.meta.source ?? 'Source')}: ${buildTrackString(playObj, scoreTrackOpts)} => ${closestScrobble}`, {leaf: ['Dupe Check']});
-            if (this.verboseOptions.match.confidenceBreakdown === true) {
+            const closestScrobbleParts: string[] = [];
+            if(closestMatch.scrobble !== undefined) {
+                closestScrobbleParts.push(`Closest Scrobble: ${buildTrackString(closestMatch.scrobble, scoreTrackOpts)}`);
+            }
+            closestScrobbleParts.push(closestMatch.confidence);
+            this.logger.debug(`${capitalize(playObj.meta.source ?? 'Source')}: ${buildTrackString(playObj, scoreTrackOpts)} => ${closestScrobbleParts.join(' => ')}`, {leaf: ['Dupe Check']});
+            if (this.verboseOptions.match.confidenceBreakdown === true && closestMatch.breakdowns.length > 0) {
                 this.logger.debug(`Breakdown:
 ${closestMatch.breakdowns.join('\n')}`, {leaf: ['Dupe Check']});
             }
@@ -581,7 +571,7 @@ ${closestMatch.breakdowns.join('\n')}`, {leaf: ['Dupe Check']});
                     if (this.lastScrobbleCheck.unix() < this.getLatestQueuePlayDate().unix()) {
                         await this.refreshScrobbles();
                     }
-                    const currQueuedPlay = this.queuedScrobbles[0];
+                    const currQueuedPlay = this.queuedScrobbles.shift();
                     const [timeFrameValid, timeFrameValidLog] = this.timeFrameIsValid(currQueuedPlay.play);
                     if (timeFrameValid && !(await this.alreadyScrobbled(currQueuedPlay.play))) {
                         try {
@@ -591,22 +581,16 @@ ${closestMatch.breakdowns.join('\n')}`, {leaf: ['Dupe Check']});
                         } catch (e) {
                             if (e instanceof UpstreamError && e.showStopper === false) {
                                 this.addDeadLetterScrobble(currQueuedPlay, e);
-                                this.logger.warn(new ErrorWithCause(`Could not scrobble ${buildTrackString(currQueuedPlay.play)} from Source '${currQueuedPlay.source}' but error was not show stopping. Adding scrobble to Dead Letter Queue and will retry on next heartbeat.`, {cause: e}));
+                                this.logger.warn(new Error(`Could not scrobble ${buildTrackString(currQueuedPlay.play)} from Source '${currQueuedPlay.source}' but error was not show stopping. Adding scrobble to Dead Letter Queue and will retry on next heartbeat.`, {cause: e}));
                             } else {
-                                const processError = new ErrorWithCause('Error occurred while trying to scrobble', {cause: e});
-                                //this.logger.error(processError);
-                                throw processError;
+                                this.queuedScrobbles.unshift(currQueuedPlay);
+                                throw new Error('Error occurred while trying to scrobble', {cause: e});
                             }
                         }
                     } else if (!timeFrameValid) {
                         this.logger.debug(`Will not scrobble ${buildTrackString(currQueuedPlay.play)} from Source '${currQueuedPlay.source}' because it ${timeFrameValidLog}`);
                     }
-                    // processing play may have changed index while we were scrobbling
-                    const pIndex = this.queuedScrobbles.findIndex(x => x.id === currQueuedPlay.id);
-                    if (pIndex !== -1) {
-                        this.emitEvent('scrobbleDequeued', {queuedScrobble: currQueuedPlay})
-                        this.queuedScrobbles.splice(pIndex, 1);
-                    }
+                    this.emitEvent('scrobbleDequeued', {queuedScrobble: currQueuedPlay})
                 }
                 await sleep(this.scrobbleSleep);
             }
@@ -680,7 +664,7 @@ ${closestMatch.breakdowns.join('\n')}`, {leaf: ['Dupe Check']});
                 deadScrobble.retries++;
                 deadScrobble.error = messageWithCauses(e);
                 deadScrobble.lastRetry = dayjs();
-                this.logger.error(new ErrorWithCause(`Could not scrobble ${buildTrackString(deadScrobble.play)} from Source '${deadScrobble.source}' due to error`, {cause: e}));
+                this.logger.error(new Error(`Could not scrobble ${buildTrackString(deadScrobble.play)} from Source '${deadScrobble.source}' due to error`, {cause: e}));
                 this.deadLetterScrobbles[deadScrobbleIndex] = deadScrobble;
                 return [false, deadScrobble];
             } finally {

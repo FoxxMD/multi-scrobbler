@@ -1,26 +1,22 @@
-import {addAsync, Router} from '@awaitjs/express';
-import express from 'express';
-import ViteExpress from "vite-express";
+import { addAsync, Router } from '@awaitjs/express';
+import { childLogger, LogDataPretty, Logger } from "@foxxmd/logging";
 import bodyParser from 'body-parser';
-import passport from 'passport';
+import { stripIndents } from "common-tags";
+import express from 'express';
 import session from 'express-session';
-import path from "path";
+import { PassThrough } from "node:stream";
+import passport from 'passport';
+import ViteExpress from "vite-express";
 import { getRoot } from "../ioc.js";
-import {Logger} from "@foxxmd/winston";
-import { LogInfo } from "../../core/Atomic.js";
+import { getAddress, parseBool } from "../utils.js";
 import { setupApi } from "./api.js";
-import { getAddress, mergeArr, parseBool } from "../utils.js";
-import {stripIndents} from "common-tags";
-import {ErrorWithCause} from "pony-cause";
-
-//const buildDir = path.join(process.cwd() + "/build");
 
 const app = addAsync(express());
 const router = Router();
 
-export const initServer = async (parentLogger: Logger, initialOutput: LogInfo[] = []) => {
+export const initServer = async (parentLogger: Logger, appLoggerStream: PassThrough, initialOutput: LogDataPretty[] = []) => {
 
-    const logger = parentLogger.child({labels: ['API']}, mergeArr);
+    const logger = childLogger(parentLogger, 'API'); // parentLogger.child({labels: ['API']}, mergeArr);
 
     try {
         app.use(router);
@@ -44,7 +40,7 @@ export const initServer = async (parentLogger: Logger, initialOutput: LogInfo[] 
         const local = root.get('localUrl');
         const localDefined = root.get('hasDefinedBaseUrl');
 
-        setupApi(app, logger, initialOutput);
+        setupApi(app, logger, appLoggerStream, initialOutput);
 
         const addy = getAddress();
         const addresses: string[] = [];
@@ -87,14 +83,13 @@ export const initServer = async (parentLogger: Logger, initialOutput: LogInfo[] 
                     logger.info(`User-defined base URL for UI and redirect URLs (spotify, deezer, lastfm): ${local}`)
                 }
             }).on('error', (err) => {
-                logger.error(new ErrorWithCause('Server encountered unrecoverable error', {cause: err}));
-                process.exit(1);
+                throw new Error('Server encountered unrecoverable error', {cause: err});
             });
         } catch (e) {
-            throw new ErrorWithCause('Server encountered unrecoverable error', {cause: e});
+            throw new Error('Server encountered unrecoverable error', {cause: e});
         }
 
     } catch (e) {
-        logger.error(new ErrorWithCause('Server crashed with uncaught exception', {cause: e}));
+        throw new Error('Server crashed with uncaught exception', {cause: e});
     }
 }

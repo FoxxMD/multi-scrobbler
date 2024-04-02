@@ -57,7 +57,9 @@ const SourceStatusCard = (props: SourceStatusCardData) => {
             tracksDiscovered,
             hasAuthInteraction,
             type,
-            players = {}
+            players = {},
+            sot,
+            supportsUpstreamRecentlyPlayed
         } = data;
         if(type === 'listenbrainz' || type === 'lastfm') {
             header = `${display} (Source)`;
@@ -66,6 +68,11 @@ const SourceStatusCard = (props: SourceStatusCardData) => {
         const platformIds = Object.keys(players);
 
         const discovered = (!hasAuth || authed) ? <Link to={`/recent?type=${type}&name=${name}`}>Tracks Discovered</Link> : <span>Tracks Discovered</span>;
+
+        let upstreamRecent = null;
+        if(supportsUpstreamRecentlyPlayed && (!hasAuth || authed)) {
+            upstreamRecent = <div><Link to={`/recent?type=${type}&name=${name}&upstream=1`}>See Recent from Source API</Link></div>;
+        }
 
         if((!hasAuth || authed) && canPoll) {
             startSourceElement = <div onClick={poll} className="capitalize underline cursor-pointer">{status === 'Polling' ? 'Restart' : 'Start'}</div>
@@ -87,8 +94,9 @@ const SourceStatusCard = (props: SourceStatusCardData) => {
 
         // TODO links
         body = (<div className="statusCardBody">
-        {platformIds.map(x => <Player key={x} data={players[x]}/>)}
+        {platformIds.map(x => <Player key={x} data={players[x]} sot={sot}/>)}
             <div>{discovered}: {tracksDiscovered}</div>
+            {upstreamRecent}
             {authAction}
         </div>);
     }

@@ -1,20 +1,13 @@
-import request from 'superagent';
-import passport from "passport";
-import {
-    parseRetryAfterSecsFromObj,
-    readJson,
-    sleep,
-    sortByOldestPlayDate,
-    writeFile,
-} from "../utils.js";
-import {Strategy as DeezerStrategy} from 'passport-deezer';
-import AbstractSource, { RecentlyPlayedOptions } from "./AbstractSource.js";
 import dayjs from "dayjs";
-import { DeezerSourceConfig } from "../common/infrastructure/config/source/deezer.js";
-import { DEFAULT_RETRY_MULTIPLIER, FormatPlayObjectOptions, InternalConfig } from "../common/infrastructure/Atomic.js";
 import EventEmitter from "events";
+import passport from "passport";
+import { Strategy as DeezerStrategy } from 'passport-deezer';
+import request from 'superagent';
 import { PlayObject } from "../../core/Atomic.js";
-import {ErrorWithCause} from "pony-cause";
+import { DEFAULT_RETRY_MULTIPLIER, FormatPlayObjectOptions, InternalConfig } from "../common/infrastructure/Atomic.js";
+import { DeezerSourceConfig } from "../common/infrastructure/config/source/deezer.js";
+import { parseRetryAfterSecsFromObj, readJson, sleep, sortByOldestPlayDate, writeFile, } from "../utils.js";
+import AbstractSource, { RecentlyPlayedOptions } from "./AbstractSource.js";
 
 export default class DeezerSource extends AbstractSource {
     workingCredsPath;
@@ -42,7 +35,7 @@ export default class DeezerSource extends AbstractSource {
             this.logger.warn('Interval should be above 30 seconds...😬');
         }
 
-        // @ts-ignore
+        // @ts-expect-error not correct structure
         this.config.data = {
             ...rest,
             interval,
@@ -54,6 +47,7 @@ export default class DeezerSource extends AbstractSource {
         this.workingCredsPath = `${this.configDir}/currentCreds-${name}.json`;
         this.canPoll = true;
         this.canBacklog = true;
+        this.supportsUpstreamRecentlyPlayed = true;
     }
 
     static formatPlayObj(obj: any, options: FormatPlayObjectOptions = {}): PlayObject {
@@ -101,7 +95,7 @@ export default class DeezerSource extends AbstractSource {
                 this.logger.warn(`No Deezer credentials file found at ${this.workingCredsPath}`);
             }
         } catch (e) {
-            throw new ErrorWithCause('Current deezer credentials file exists but could not be parsed', {cause: e});
+            throw new Error('Current deezer credentials file exists but could not be parsed', {cause: e});
         }
         if (this.config.data.accessToken === undefined) {
             if (this.config.data.clientId === undefined) {
@@ -136,6 +130,8 @@ export default class DeezerSource extends AbstractSource {
             throw e;
         }
     }
+
+    getUpstreamRecentlyPlayed = async (options: RecentlyPlayedOptions = {}): Promise<PlayObject[]> => this.getRecentlyPlayed(options)
 
     getRecentlyPlayed = async (options: RecentlyPlayedOptions = {}) => {
         const resp = await this.callApi(request.get(`${this.baseUrl}/user/me/history?limit=20`));
@@ -203,15 +199,14 @@ export default class DeezerSource extends AbstractSource {
                 } = {},
                 response,
             } = e;
-            let msg = response !== undefined ? `API Call failed: Server Response => ${ssMessage}` : `API Call failed: ${message}`;
+            const msg = response !== undefined ? `API Call failed: Server Response => ${ssMessage}` : `API Call failed: ${message}`;
             const responseMeta = ssResp ?? text;
             this.logger.error(msg, {status, response: responseMeta});
             throw e;
         }
     }
 
-    generatePassportStrategy = () => {
-        return new DeezerStrategy({
+    generatePassportStrategy = () => new DeezerStrategy({
             clientID: this.config.data.clientId,
             clientSecret: this.config.data.clientSecret,
             callbackURL: this.redirectUri,
@@ -232,8 +227,7 @@ export default class DeezerSource extends AbstractSource {
                 }
                 return done(r);
             });
-        });
-    }
+        })
 
     handleAuthCodeCallback = async (res: any) => {
         const {error, accessToken, id, displayName} = res;
@@ -254,7 +248,5 @@ export default class DeezerSource extends AbstractSource {
         }
     }
 
-    protected getBackloggedPlays = async () => {
-        return await this.getRecentlyPlayed({formatted: true});
-    }
+    protected getBackloggedPlays = async () => await this.getRecentlyPlayed({formatted: true})
 }

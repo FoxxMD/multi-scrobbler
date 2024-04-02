@@ -1,12 +1,12 @@
 import dayjs from "dayjs";
-import PlexSource from "./PlexSource.js";
-import { TautulliSourceConfig } from "../common/infrastructure/config/source/tautulli.js";
-import { FormatPlayObjectOptions, InternalConfig } from "../common/infrastructure/Atomic.js";
-import { combinePartsToString } from "../utils.js";
 import EventEmitter from "events";
-import {Request} from "express";
+import { Request } from "express";
 import { PlayObject } from "../../core/Atomic.js";
 import { truncateStringToLength } from "../../core/StringUtils.js";
+import { FormatPlayObjectOptions, InternalConfig } from "../common/infrastructure/Atomic.js";
+import { TautulliSourceConfig } from "../common/infrastructure/config/source/tautulli.js";
+import { combinePartsToString } from "../utils.js";
+import PlexSource from "./PlexSource.js";
 
 const shortDeviceId = truncateStringToLength(10, '');
 
@@ -40,18 +40,13 @@ export default class TautulliSource extends PlexSource {
                 player,
             } = {}
         } = obj;
-        let artists: string[] = [];
-        let albumArtists: string[] = [];
+        const artists: string[] = [];
+        const albumArtists: string[] = [];
         if (track_artist !== undefined && track_artist !== artist_name) {
             artists.push(track_artist);
             albumArtists.push(artist_name);
         } else {
             artists.push(artist_name);
-        }
-        if(action === undefined) {
-            //TODO why does TS think logger doesn't exist?
-            // @ts-ignore
-            this.logger.warn(`Payload did contain property 'action', assuming it should be 'watched'`);
         }
         return {
             data: {

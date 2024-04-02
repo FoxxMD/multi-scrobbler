@@ -1,22 +1,21 @@
-import MemorySource from "./MemorySource.js";
-import { MopidySourceConfig } from "../common/infrastructure/config/source/mopidy.js";
+import { loggerTest } from "@foxxmd/logging";
+import dayjs from "dayjs";
+import { EventEmitter } from "events";
+import Mopidy, { models } from "mopidy";
+import normalizeUrl from 'normalize-url';
+import pEvent from 'p-event';
+import { URL } from "url";
+import { PlayObject } from "../../core/Atomic.js";
+import { buildTrackString } from "../../core/StringUtils.js";
 import {
     FormatPlayObjectOptions,
     InternalConfig,
     PlayerStateData,
     SINGLE_USER_PLATFORM_ID,
 } from "../common/infrastructure/Atomic.js";
-import dayjs from "dayjs";
-import Mopidy, {models} from "mopidy";
-import {URL} from "url";
-import normalizeUrl from 'normalize-url';
-import {EventEmitter} from "events";
-import pEvent from 'p-event';
-import winston from '@foxxmd/winston';
+import { MopidySourceConfig } from "../common/infrastructure/config/source/mopidy.js";
 import { RecentlyPlayedOptions } from "./AbstractSource.js";
-import { PlayObject } from "../../core/Atomic.js";
-import { buildTrackString } from "../../core/StringUtils.js";
-import {ErrorWithCause} from "pony-cause";
+import MemorySource from "./MemorySource.js";
 
 export class MopidySource extends MemorySource {
     declare config: MopidySourceConfig;
@@ -57,8 +56,8 @@ export class MopidySource extends MemorySource {
         this.client = new Mopidy({
             autoConnect: false,
             webSocketUrl: this.url.toString(),
-            // @ts-ignore
-            console: winston.loggers.get('noop')
+            // @ts-expect-error logger satisfies but is missing types not used
+            console: loggerTest
         });
         this.client.on('state:offline', () => {
             this.logger.verbose('Lost connection to server');
@@ -118,7 +117,7 @@ export class MopidySource extends MemorySource {
             return true;
         } else {
             this.client.close();
-            throw new ErrorWithCause(`Could not connect to Mopidy server`, {cause: (res as Error)});
+            throw new Error(`Could not connect to Mopidy server`, {cause: (res as Error)});
         }
     }
 

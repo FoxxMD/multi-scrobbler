@@ -1,3 +1,7 @@
+import { childLogger, Logger } from "@foxxmd/logging";
+import dayjs, { Dayjs } from "dayjs";
+import { PlayObject, Second, SOURCE_SOT, SOURCE_SOT_TYPES, SourcePlayerObj } from "../../../core/Atomic.js";
+import { buildTrackString } from "../../../core/StringUtils.js";
 import {
     CALCULATED_PLAYER_STATUSES,
     CalculatedPlayerStatus,
@@ -5,14 +9,10 @@ import {
     REPORTED_PLAYER_STATUSES,
     ReportedPlayerStatus,
 } from "../../common/infrastructure/Atomic.js";
-import dayjs, {Dayjs} from "dayjs";
+import { PollingOptions } from "../../common/infrastructure/config/common.js";
 import { formatNumber, genGroupIdStr, playObjDataMatch, progressBar } from "../../utils.js";
-import {Logger} from "@foxxmd/winston";
 import { ListenProgress } from "./ListenProgress.js";
-import { PlayObject, Second, SourcePlayerObj } from "../../../core/Atomic.js";
-import { buildTrackString } from "../../../core/StringUtils.js";
 import { ListenRange } from "./ListenRange.js";
-import {id} from "common-tags";
 
 export interface PlayerStateIntervals {
     staleInterval?: number
@@ -20,6 +20,27 @@ export interface PlayerStateIntervals {
 }
 
 export interface PlayerStateOptions extends PlayerStateIntervals {
+}
+
+export const DefaultPlayerStateOptions: PlayerStateOptions = {};
+
+export const createPlayerOptions = (pollingOpts?: Partial<PollingOptions>, sot: SOURCE_SOT_TYPES = SOURCE_SOT.PLAYER): PlayerStateOptions => {
+    const {
+        interval = 30,
+        maxInterval = 60,
+    } = pollingOpts || {};
+    if(sot === SOURCE_SOT.PLAYER) {
+        return {
+            staleInterval: interval * 3,
+            orphanedInterval: interval * 5
+        }
+    }
+    // if this player is not the source of truth we don't care about waiting around to see if the state comes back
+    // in fact, we probably want to get rid of it as fast as possible since its superficial and more of an ephemeral "Now Playing" status than something we are actually tracking
+    return {
+        staleInterval: interval,
+        orphanedInterval: maxInterval
+    }
 }
 
 export abstract class AbstractPlayerState {
@@ -36,14 +57,14 @@ export abstract class AbstractPlayerState {
     createdAt: Dayjs = dayjs();
     stateLastUpdatedAt: Dayjs = dayjs();
 
-    protected constructor(logger: Logger, platformId: PlayPlatformId, opts?: PlayerStateOptions) {
+    protected constructor(logger: Logger, platformId: PlayPlatformId, opts: PlayerStateOptions = DefaultPlayerStateOptions) {
         this.platformId = platformId;
-        this.logger = logger.child({labels: [`Player ${this.platformIdStr}`]});
+        this.logger = childLogger(logger, `Player ${this.platformIdStr}`);
 
         const {
             staleInterval = 120,
             orphanedInterval = 300,
-        } = opts || {};
+        } = opts;
         this.stateIntervalOptions = {staleInterval, orphanedInterval: orphanedInterval};
     }
 
@@ -183,7 +204,7 @@ export abstract class AbstractPlayerState {
 
     public getPlayedObject(completed: boolean = false): PlayObject | undefined {
         if(this.currentPlay !== undefined) {
-            let ranges = [...this.listenRanges];
+            const ranges = [...this.listenRanges];
             if (this.currentListenRange !== undefined) {
                 ranges.push(this.currentListenRange);
             }
@@ -206,7 +227,7 @@ export abstract class AbstractPlayerState {
 
     public getListenDuration(): Second{
         let listenDur: number = 0;
-        let ranges = [...this.listenRanges];
+        const ranges = [...this.listenRanges];
         if (this.currentListenRange !== undefined) {
             ranges.push(this.currentListenRange);
         }
@@ -353,7 +374,7 @@ export abstract class AbstractPlayerState {
     }
 
     public textSummary() {
-        let parts = [''];
+        const parts = [''];
         let play: string;
         if (this.currentPlay !== undefined) {
             parts.push(`${buildTrackString(this.currentPlay, {include: ['trackId', 'artist', 'track']})} @ ${this.playFirstSeenAt.toISOString()}`);

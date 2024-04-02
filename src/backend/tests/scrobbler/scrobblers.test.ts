@@ -1,18 +1,20 @@
-import {describe, it, after, before} from 'mocha';
-import {assert} from 'chai';
+import chai, { assert } from 'chai';
+import asPromised from 'chai-as-promised';
 import clone from 'clone';
-import pEvent from 'p-event';
+import dayjs from "dayjs";
+import { after, before, describe, it } from 'mocha';
 import { http, HttpResponse } from 'msw';
-
-import withDuration from '../plays/withDuration.json';
+import pEvent from 'p-event';
+import { PlayObject } from "../../../core/Atomic.js";
+import { sleep } from "../../utils.js";
 import mixedDuration from '../plays/mixedDuration.json';
+import withDuration from '../plays/withDuration.json';
+import { MockNetworkError, withRequestInterception } from "../utils/networking.js";
+import { asPlays, generatePlay, normalizePlays } from "../utils/PlayTestUtils.js";
 
 import { TestScrobbler } from "./TestScrobbler.js";
-import { asPlays, generatePlay, normalizePlays } from "../utils/PlayTestUtils.js";
-import dayjs from "dayjs";
-import { sleep } from "../../utils.js";
-import { MockNetworkError, withRequestInterception } from "../utils/networking.js";
-import { PlayObject } from "../../../core/Atomic.js";
+
+chai.use(asPromised);
 
 const firstPlayDate = dayjs().subtract(1, 'hour');
 const olderFirstPlayDate = dayjs().subtract(4, 'hour');
@@ -110,6 +112,23 @@ describe('Detects duplicate and unique scrobbles from client recent history', fu
             });
 
             assert.isFalse(await testScrobbler.alreadyScrobbled(newScrobble));
+        });
+
+        it('It handles unique detection when no existing scrobble matches above a score of 0', async function () {
+
+            testScrobbler.recentScrobbles = normalizedWithMixedDur;
+
+                const uniquePlay = generatePlay({
+                    artists: [
+                        "２８１４"
+                    ],
+                    track: "新宿ゴールデン街",
+                    duration: 130,
+                    playDate: normalizedWithMixedDur[normalizedWithMixedDur.length - 3].data.playDate.add(6, 'minutes')
+                });
+
+                await assert.isFulfilled( testScrobbler.alreadyScrobbled(uniquePlay))
+                await assert.eventually.isFalse(testScrobbler.alreadyScrobbled(uniquePlay))
         });
     });
 

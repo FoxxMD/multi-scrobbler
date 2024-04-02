@@ -50,6 +50,17 @@ declare module 'lastfm-node-client' {
         }
     }
 
+    export type NowPlayingPayload = Omit<TrackScrobblePayload, 'mbid' | 'timestamp'>
+
+    export interface NowPlayingResponse {
+        nowplaying: {
+            ignoredMessage: {
+                code: number
+                '#text': string
+            }
+        }
+    }
+
     export interface AuthGetSessionPayload {
         token: string
     }
@@ -92,7 +103,6 @@ declare module 'lastfm-node-client' {
         },
         duration: number,
         date?: {
-            // @ts-ignore
             uts: number,
         },
         '@attr'?: {
@@ -105,6 +115,7 @@ declare module 'lastfm-node-client' {
     export default class LastFM {
         constructor(apiKey: string, secret?: string, session?: string);
 
+        trackUpdateNowPlaying(params: NowPlayingPayload): Promise<NowPlayingResponse>
         trackScrobble(params: TrackScrobblePayload): Promise<TrackScrobbleResponse>
         authGetSession(params: AuthGetSessionPayload): Promise<AuthGetSessionResponse>
         userGetInfo(): Promise<UserGetInfoResponse>
