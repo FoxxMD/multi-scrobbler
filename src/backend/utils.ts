@@ -1,15 +1,21 @@
-import {accessSync, constants, promises} from "fs";
-import dayjs from 'dayjs';
+import { Logger } from '@foxxmd/logging';
+import backoffStrategies from '@kenyip/backoff-strategies';
+import address from "address";
+import * as AjvNS from 'ajv';
+import Ajv, { Schema } from 'ajv';
+import { replaceResultTransformer, stripIndentTransformer, TemplateTag, trimResultTransformer } from 'common-tags';
+import dayjs, { Dayjs } from 'dayjs';
+import { Duration } from "dayjs/plugin/duration.js";
 import utc from 'dayjs/plugin/utc.js';
-import {Logger} from '@foxxmd/winston';
+import { Request } from "express";
+import { accessSync, constants, promises } from "fs";
 import JSON5 from 'json5';
-import {TimeoutError, WebapiError} from "spotify-web-api-node/src/response-error.js";
-import Ajv, {Schema} from 'ajv';
+import pathUtil from "path";
+import { getErrorCause } from "pony-cause";
+import { TimeoutError, WebapiError } from "spotify-web-api-node/src/response-error.js";
+import { PlayObject } from "../core/Atomic.js";
 import {
     asPlayerStateData,
-    DEFAULT_SCROBBLE_DURATION_THRESHOLD,
-    DEFAULT_SCROBBLE_PERCENT_THRESHOLD,
-    lowGranularitySources,
     NO_DEVICE,
     NO_USER,
     numberFormatOptions,
@@ -19,17 +25,9 @@ import {
     RegExResult,
     RemoteIdentityParts,
     ScrobbleThresholdResult,
-} from "./common/infrastructure/Atomic";
-import {Request} from "express";
-import pathUtil from "path";
-import {ErrorWithCause} from "pony-cause";
-import backoffStrategies from '@kenyip/backoff-strategies';
-import {ScrobbleThresholds} from "./common/infrastructure/config/source";
-import {replaceResultTransformer, stripIndentTransformer, TemplateTag, trimResultTransformer} from 'common-tags';
-import {Duration} from "dayjs/plugin/duration.js";
-import {ListenRangeData, PlayObject} from "../core/Atomic";
-import address from "address";
+} from "./common/infrastructure/Atomic.js";
 
+//const { default: Ajv } = AjvNS;
 dayjs.extend(utc);
 
 export async function readJson(this: any, path: any, {throwOnNotFound = true} = {}) {
@@ -41,12 +39,12 @@ export async function readJson(this: any, path: any, {throwOnNotFound = true} = 
         const {code} = e;
         if (code === 'ENOENT') {
             if (throwOnNotFound) {
-                throw new ErrorWithCause(`No file found at given path: ${path}`, {cause: e});
+                throw new Error(`No file found at given path: ${path}`, {cause: e});
             } else {
                 return;
             }
         }
-        throw new ErrorWithCause(`Encountered error while parsing file: ${path}`, {cause: e})
+        throw new Error(`Encountered error while parsing file: ${path}`, {cause: e})
     }
 }
 
@@ -136,8 +134,8 @@ export const sortByNewestPlayDate = (a: PlayObject, b: PlayObject) => {
 };
 
 export const setIntersection = (setA: any, setB: any) => {
-    let _intersection = new Set()
-    for (let elem of setB) {
+    const _intersection = new Set()
+    for (const elem of setB) {
         if (setA.has(elem)) {
             _intersection.add(elem)
         }
@@ -253,12 +251,11 @@ export const parseRetryAfterSecsFromObj = (err: any) => {
     }
 
     // first try to parse as float
-    let retryAfter = Number.parseFloat(raVal);
+    let retryAfter: number | Dayjs = Number.parseFloat(raVal);
     if (!isNaN(retryAfter)) {
         return retryAfter; // got a number!
     }
     // try to parse as date
-    // @ts-ignore
     retryAfter = dayjs(retryAfter);
     if (!dayjs.isDayjs(retryAfter)) {
         return undefined; // could not parse string if not in ISO 8601 format
@@ -279,7 +276,7 @@ export const spreadDelay = (retries: any, multiplier: any) => {
         return [];
     }
     let r;
-    let s = [];
+    const s = [];
     for(r = 0; r < retries; r++) {
         s.push(((r+1) * multiplier) * 1000);
     }
@@ -287,7 +284,7 @@ export const spreadDelay = (retries: any, multiplier: any) => {
 }
 
 export const removeUndefinedKeys = <T extends Record<string, any>>(obj: T): T | undefined => {
-    let newObj: any = {};
+    const newObj: any = {};
     Object.keys(obj).forEach((key) => {
         if(Array.isArray(obj[key])) {
             newObj[key] = obj[key];
@@ -351,8 +348,8 @@ export const parseDurationFromTimestamp = (timestamp: any) => {
     });
 }
 
-export const createAjvFactory = (logger: Logger): Ajv => {
-    const validator =  new Ajv({logger: logger, verbose: true, strict: "log", allowUnionTypes: true});
+export const createAjvFactory = (logger: Logger): AjvNS.default => {
+    const validator =  new Ajv.default({logger: logger, verbose: true, strict: "log", allowUnionTypes: true});
     // https://ajv.js.org/strict-mode.html#unknown-keywords
     validator.addKeyword('deprecationMessage');
     return validator;
@@ -367,8 +364,8 @@ export const validateJson = <T>(config: object, schema: Schema, logger: Logger):
         logger.error('Json config was not valid. Please use schema to check validity.', {leaf: 'Config'});
         if (Array.isArray(ajv.errors)) {
             for (const err of ajv.errors) {
-                let parts = [
-                    `At: ${err.dataPath}`,
+                const parts = [
+                    `At: ${err.instancePath}`,
                 ];
                 let data;
                 if (typeof err.data === 'string') {
@@ -380,9 +377,7 @@ export const validateJson = <T>(config: object, schema: Schema, logger: Logger):
                     parts.push(`Data: ${data}`);
                 }
                 let suffix = '';
-                // @ts-ignore
                 if (err.params.allowedValues !== undefined) {
-                    // @ts-ignore
                     suffix = err.params.allowedValues.join(', ');
                     suffix = ` [${suffix}]`;
                 }
@@ -421,128 +416,6 @@ export const remoteHostStr = (req: Request): string => {
     const {host, proxy, agent} = remoteHostIdentifiers(req);
 
     return `${host}${proxy !== undefined ? ` (${proxy})` : ''}${agent !== undefined ? ` (UA: ${agent})` : ''}`;
-}
-
-export const isPlayTemporallyClose = (existingPlay: PlayObject, candidatePlay: PlayObject, options: { diffThreshold?: number, fuzzyDuration?: boolean, useListRanges?: boolean} = {}): boolean => {
-    return comparePlayTemporally(existingPlay, candidatePlay, options).close;
-}
-
-export interface TemporalPlayComparison {
-    close: boolean
-    date?: {
-        threshold: number
-        diff: number
-        fuzzyDiff?: number
-    }
-    range?: false | ListenRangeData
-}
-
-export const temporalPlayComparisonSummary = (data: TemporalPlayComparison, existingPlay?: PlayObject, candidatePlay?: PlayObject) => {
-    const parts: string[] = [];
-    if (existingPlay !== undefined && candidatePlay !== undefined) {
-        if (existingPlay.data.playDate.isSame(candidatePlay.data.playDate, 'day')) {
-            parts.push(`Existing: ${existingPlay.data.playDate.format('HH:mm:ssZ')} - Candidate: ${candidatePlay.data.playDate.format('HH:mm:ssZ')}`);
-        } else {
-            parts.push(`Existing: ${existingPlay.data.playDate.toISOString()} - Candidate: ${candidatePlay.data.playDate.toISOString()}`);
-        }
-    }
-    parts.push(`Close: ${data.close ? 'YES' : 'NO'}`);
-    if (data.date !== undefined) {
-        parts.push(`Play Diff: ${formatNumber(data.date.diff, {toFixed: 0})}s (Needed <${data.date.threshold}s)`)
-    }
-    if (data.date.fuzzyDiff !== undefined) {
-        parts.push(`Fuzzy Diff: ${formatNumber(data.date.fuzzyDiff, {toFixed: 0})}s (Needed <10s)`);
-    }
-    if (data.range !== undefined) {
-        if (data.range === false) {
-            parts.push('Candidate not played during Existing tracked listening');
-        } else {
-            parts.push(`Candidate played during tracked listening range from existing: ${data.range[0].timestamp.format('HH:mm:ssZ')} => ${data.range[1].timestamp.format('HH:mm:ssZ')}`);
-        }
-    } else {
-        parts.push('One or both Plays did not have have tracked listening to compare');
-    }
-    return parts.join(' | ');
-}
-
-export const comparePlayTemporally = (existingPlay: PlayObject, candidatePlay: PlayObject, options: { diffThreshold?: number, fuzzyDuration?: boolean, useListRanges?: boolean} = {}): TemporalPlayComparison => {
-
-    const result: TemporalPlayComparison = {
-        close: false
-    };
-
-    const {
-        meta:{
-            source,
-        },
-        data: {
-            playDate: existingPlayDate,
-            duration: existingDuration,
-            listenRanges: existingRanges,
-        }
-    } = existingPlay;
-
-    const {
-        data: {
-            playDate: newPlayDate,
-            duration: newDuration,
-            listenRanges: newRanges,
-        }
-    } = candidatePlay;
-
-    const {
-        diffThreshold = lowGranularitySources.some(x => x.toLocaleLowerCase() === source) ? 60 : 10,
-        fuzzyDuration = false,
-        useListRanges = true,
-    } = options;
-
-    // cant compare!
-    if(existingPlayDate === undefined || newPlayDate === undefined) {
-        return result;
-    }
-
-    const referenceDuration = newDuration ?? existingDuration;
-
-    let playDiffThreshold = diffThreshold;
-
-    // check if existing play time is same as new play date
-    let scrobblePlayDiff = Math.abs(existingPlayDate.unix() - newPlayDate.unix());
-    result.date = {
-        threshold: diffThreshold,
-        diff: scrobblePlayDiff
-    };
-
-    if (scrobblePlayDiff <= playDiffThreshold) {
-        result.close = true;
-    }
-
-    if(useListRanges && existingRanges !== undefined) {
-        // since we know when the existing track was listened to
-        // we can check if the new track play date took place while the existing one was being listened to
-        // which would indicate (assuming same source) the new track is a duplicate
-        for(const range of existingRanges) {
-            if(newPlayDate.isBetween(range.start.timestamp, range.end.timestamp)) {
-                result.range = range;
-                result.close = true;
-                break;
-            }
-        }
-        if(result.range === undefined) {
-            result.range = false;
-        }
-    }
-
-    // if the source has a duration its possible one play was scrobbled at the beginning of the track and the other at the end
-    // so check if the duration matches the diff between the two play dates
-    if (result.close === false && referenceDuration !== undefined && fuzzyDuration) {
-        const fuzzyDiff = Math.abs(scrobblePlayDiff - referenceDuration);
-        result.date.fuzzyDiff = fuzzyDiff;
-        if(fuzzyDiff < 10) { // TODO use finer comparison for this?
-            result.close = true;
-        }
-    }
-
-    return result;
 }
 
 export const combinePartsToString = (parts: any[], glue: string = '-'): string | undefined => {
@@ -597,41 +470,6 @@ export const getProgress = (initial: ProgressAwarePlayObject, curr: PlayObject):
         return Math.round(Math.abs(curr.meta.trackProgressPosition - initial.meta.initialTrackProgressPosition));
     }
     return undefined;
-}
-
-export const playPassesScrobbleThreshold = (play: PlayObject, thresholds: ScrobbleThresholds): ScrobbleThresholdResult => {
-    const progressed = Math.round(Math.abs(dayjs().diff(play.data.playDate, 's')));
-    return timePassesScrobbleThreshold(thresholds, progressed, play.data.duration);
-}
-
-export const timePassesScrobbleThreshold = (thresholds: ScrobbleThresholds, secondsTracked: number, playDuration?: number): ScrobbleThresholdResult => {
-    let durationPasses = undefined,
-        durationThreshold: number | null = thresholds.duration ?? DEFAULT_SCROBBLE_DURATION_THRESHOLD,
-        percentPasses = undefined,
-        percentThreshold: number | null = thresholds.percent ?? DEFAULT_SCROBBLE_PERCENT_THRESHOLD,
-        percent: number | undefined;
-
-    if (percentThreshold !== null && playDuration !== undefined && playDuration !== 0) {
-        percent = Math.round(((secondsTracked / playDuration) * 100));
-        percentPasses = percent >= percentThreshold;
-    }
-    if (durationThreshold !== null || percentPasses === undefined) {
-        durationPasses = secondsTracked >= durationThreshold;
-    }
-
-    return {
-        passes: (durationPasses ?? false) || (percentPasses ?? false),
-        duration: {
-            passes: durationPasses,
-            threshold: durationThreshold,
-            value: secondsTracked
-        },
-        percent: {
-            passes: percentPasses,
-            value: percent,
-            threshold: percentThreshold
-        }
-    }
 }
 
 export const thresholdResultSummary = (result: ScrobbleThresholdResult) => {
@@ -697,13 +535,13 @@ export const fileOrDirectoryIsWriteable = (location: string) => {
                     // also can't access directory :(
                     throw new Error(`No ${isDir ? 'directory' : 'file'} exists at ${location} and application does not have permission to write to the parent directory`);
                 } else {
-                    throw new ErrorWithCause(`No ${isDir ? 'directory' : 'file'} exists at ${location} and application is unable to access the parent directory due to a system error`, {cause: accessError});
+                    throw new Error(`No ${isDir ? 'directory' : 'file'} exists at ${location} and application is unable to access the parent directory due to a system error`, {cause: accessError});
                 }
             }
         } else if(code === 'EACCES') {
             throw new Error(`${isDir ? 'Directory' : 'File'} exists at ${location} but application does not have permission to write to it.`);
         } else {
-            throw new ErrorWithCause(`${isDir ? 'Directory' : 'File'} exists at ${location} but application is unable to access it due to a system error`, {cause: err});
+            throw new Error(`${isDir ? 'Directory' : 'File'} exists at ${location} but application is unable to access it due to a system error`, {cause: err});
         }
     }
 }
@@ -761,7 +599,7 @@ export const parseRegexSingleOrFail = (reg: RegExp, val: string): RegExResult | 
     const results = parseRegex(reg, val);
     if (results !== undefined) {
         if (results.length > 1) {
-            throw new ErrorWithCause(`Expected Regex to match once but got ${results.length} results. Either Regex must NOT be global (using 'g' flag) or parsed value must only match regex once. Given: ${val} || Regex: ${reg.toString()}`);
+            throw new Error(`Expected Regex to match once but got ${results.length} results. Either Regex must NOT be global (using 'g' flag) or parsed value must only match regex once. Given: ${val} || Regex: ${reg.toString()}`);
         }
         return results[0];
     }
@@ -773,6 +611,13 @@ export const intersect = (a: Array<any>, b: Array<any>) => {
     const setB = new Set(b);
     const intersection = new Set([...setA].filter(x => setB.has(x)));
     return Array.from(intersection);
+}
+
+export const difference = (a: Array<any>, b: Array<any>) => {
+    const setA = new Set(a);
+    const setB = new Set(b);
+    const diff = new Set([...setA].filter(x => !setB.has(x)));
+    return Array.from(diff);
 }
 
 /**
@@ -878,7 +723,7 @@ export const durationToHuman = (dur: Duration): string => {
     return parts.join(' ');
 }
 export const getAddress = (host = '0.0.0.0', logger?: Logger): { v4?: string, v6?: string, host: string } => {
-    const local = host = '0.0.0.0' || host === '::' ? 'localhost' : host;
+    const local = host === '0.0.0.0' || host === '::' ? 'localhost' : host;
     let v4: string,
         v6: string;
     try {
@@ -887,7 +732,7 @@ export const getAddress = (host = '0.0.0.0', logger?: Logger): { v4?: string, v6
     } catch (e) {
         if (process.env.DEBUG_MODE === 'true') {
             if (logger !== undefined) {
-                logger.warn(new ErrorWithCause('Could not get machine IP address', {cause: e}));
+                logger.warn(new Error('Could not get machine IP address', {cause: e}));
             } else {
                 console.warn('Could not get machine IP address');
                 console.warn(e);
@@ -899,6 +744,11 @@ export const getAddress = (host = '0.0.0.0', logger?: Logger): { v4?: string, v6
         v4,
         v6
     };
+}
+
+const IPV4_REGEX = new RegExp(/^((25[0-5]|(2[0-4]|1\d|[1-9]|)\d)\.?\b){4}$/);
+export const isIPv4 = (address: string): boolean => {
+    return parseRegexSingleOrFail(IPV4_REGEX, address) !== undefined;
 }
 
 export const comparingMultipleArtists = (existing: PlayObject, candidate: PlayObject): boolean => {
@@ -915,3 +765,31 @@ export const comparingMultipleArtists = (existing: PlayObject, candidate: PlayOb
 
     return eArtists.length > 1 || cArtists.length > 1;
 }
+
+/**
+ * Adapted from https://github.com/voxpelli/pony-cause/blob/main/lib/helpers.js to find cause by truthy function
+ * */
+export const findCauseByFunc = (err: any, func: (e: Error) => boolean) => {
+    if (!err || !func) return;
+    if (!(err instanceof Error)) return;
+    if (typeof func !== 'function') {
+        return;
+    }
+
+    /**
+     * Ensures we don't go circular
+     */
+    const seen = new Set<Error>();
+
+    let currentErr: Error | undefined = err;
+
+    while (currentErr && !seen.has(currentErr)) {
+        seen.add(currentErr);
+
+        if (func(currentErr)) {
+            return currentErr;
+        }
+
+        currentErr = getErrorCause(currentErr);
+    }
+};

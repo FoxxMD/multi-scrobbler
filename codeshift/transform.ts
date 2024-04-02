@@ -77,7 +77,7 @@ export default function transformer(
           if(hasNoExt) {
             const dirFiles = fs.readdirSync(dir)
             filenameFromDir = dirFiles.find(x => path.parse(x).name === pathInfo.name);
-            if(filenameFromDir !== undefined) {
+            if(filenameFromDir === undefined) {
               fileExists = false;
               isRelative = false;
             } else {
@@ -159,7 +159,7 @@ export default function transformer(
           }
           break;
         default:
-          transformedImport = combineDirFile(pathInfo.dir, `.${derivedTT}`); // path.join(pathInfo.root, dir, pathInfo.name, `.${derivedTT}`);
+          transformedImport = combineDirFile(pathInfo.dir, `${path.parse(filenameFromDir).name}.${derivedTT}`); // path.join(pathInfo.root, dir, pathInfo.name, `.${derivedTT}`);
           break;
       }
 

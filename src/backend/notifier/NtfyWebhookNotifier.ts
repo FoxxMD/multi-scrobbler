@@ -1,9 +1,9 @@
-import { AbstractWebhookNotifier } from "./AbstractWebhookNotifier";
-import { NtfyConfig, PrioritiesConfig, WebhookPayload } from "../common/infrastructure/config/health/webhooks";
-import {publish} from 'ntfy';
+import { Logger } from "@foxxmd/logging";
+import { publish } from 'ntfy';
+import { Config } from "ntfy/interfaces.js";
 import request from "superagent";
-import {Logger} from '@foxxmd/winston';
-import {Config} from "ntfy/interfaces";
+import { NtfyConfig, PrioritiesConfig, WebhookPayload } from "../common/infrastructure/config/health/webhooks.js";
+import { AbstractWebhookNotifier } from "./AbstractWebhookNotifier.js";
 
 export class NtfyWebhookNotifier extends AbstractWebhookNotifier {
 

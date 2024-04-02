@@ -5,12 +5,11 @@ ENV TZ=Etc/GMT
 RUN \
   echo "**** install build packages ****" && \
   apk add --no-cache \
-    alpine-base \
-    git \
+    avahi \
+    avahi-tools \
     nodejs \
     npm \
-    #yarn \
-    openssh && \
+    && \
   echo "**** cleanup ****" && \
   rm -rf \
     /root/.cache \
@@ -24,9 +23,6 @@ ENV CONFIG_DIR=$data_dir
 
 COPY docker/root/ /
 
-RUN npm install -g patch-package \
-    && chown -R root:root /usr/local/lib/node_modules/patch-package
-
 WORKDIR /app
 
 FROM base as build
@@ -39,8 +35,7 @@ FROM base as build
 COPY --chown=abc:abc package*.json tsconfig.json ./
 COPY --chown=abc:abc patches ./patches
 
-
-RUN npm install \
+RUN npm ci \
     && chown -R root:root node_modules
 #RUN yarn install
 
@@ -57,12 +52,14 @@ FROM base as app
 #COPY --chown=abc:abc package.json yarn.lock ./
 COPY --chown=abc:abc package*.json ./
 COPY --chown=abc:abc patches ./patches
-COPY --from=build --chown=abc:abc /app/build /app/build
+COPY --from=build --chown=abc:abc /app/dist /app/dist
+COPY --from=build --chown=abc:abc /app/src /app/src
 COPY --from=base /usr/local/bin /usr/local/bin
 COPY --from=base /usr/local/lib /usr/local/lib
 
 ENV NODE_ENV=production
 ENV IS_DOCKER=true
+ENV COLORED_STD=true
 #
 #RUN yarn global add patch-package \
 #    && yarn install --production=true \
@@ -72,11 +69,9 @@ ENV IS_DOCKER=true
 #    && rm -rf node_modules/ts-node \
 #    && rm -rf node_modules/typescript
 
-RUN npm install --omit=dev \
+RUN npm ci --omit=dev \
     && npm cache clean --force \
     && chown -R abc:abc node_modules \
-    && rm -rf node_modules/ts-node \
-    && rm -rf node_modules/typescript \
     && rm -rf node_modules/@types
 
 ARG webPort=9078

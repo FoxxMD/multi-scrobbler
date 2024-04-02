@@ -3,14 +3,18 @@
     <id>io.github.foxxmd.multiscrobbler</id>
     <provides>
         <id>io.github.foxxmd.multiscrobbler.desktop</id>
+        <binary>multiscrobbler</binary>
     </provides>
     <launchable type="desktop-id">io.github.foxxmd.multiscrobbler.desktop</launchable>
     <name>multi-scrobbler</name>
-    <summary>Scrobbles music from many sources to many clients</summary>
-    <url type="homepage">https://github.com/FoxxMD/multi-scrobbler</url>
-    <url type="help">https://github.com/FoxxMD/multi-scrobbler/blob/flatpak-clean/docs/configuration.md</url>
+    <summary>Scrobbles music from many sources</summary>
+    <url type="homepage">https://foxxmd.github.io/multi-scrobbler</url>
+    <url type="help">https://foxxmd.github.io/multi-scrobbler/docs/configuration</url>
     <metadata_license>MIT</metadata_license>
     <project_license>MIT</project_license>
+    <developer id="tld.vendor">
+        <name>FoxxMD</name>
+    </developer>
     <description>
         <p>
             Track your music listening history from many different sources:
@@ -20,11 +24,15 @@
             <li>Plex (Tautulli)</li>
             <li>Any subsonic-based music player (Airsonic)</li>
             <li>Jellyfin</li>
+            <li>WebScrobbler</li>
             <li>Mopidy</li>
             <li>Deezer</li>
             <li>JRiver</li>
             <li>Kodi</li>
+            <li>Webscrobbler</li>
+            <li>Youtube Music</li>
             <li>MPRIS (linux desktop)</li>
+            <li>Google Cast (Chromecast)</li>
         </ul>
         <p>and consolidate your listens (scrobbles) into one or more scrobbling servers/services:</p>
         <ul>
@@ -37,10 +45,16 @@
     <screenshots>
         <screenshot type="default">
             <caption>Browser-based UI</caption>
-            <image type="source">https://raw.githubusercontent.com/FoxxMD/multi-scrobbler/7b0f5801a1aa728986f440f4c67fe158cecd763d/assets/status-ui.jpg</image>
+            <image type="source">https://raw.githubusercontent.com/FoxxMD/multi-scrobbler/f4256d1084f4bdea2945c03e523af6d0ed89b3ae/assets/status-ui.png</image>
         </screenshot>
     </screenshots>
     <releases>
+        <release version="0.7.0" date="2024-03-26"/>
+        <release version="0.6.5" date="2024-02-05"/>
+        <release version="0.6.4" date="2024-01-29"/>
+        <release version="0.6.3" date="2024-01-10"/>
+        <release version="0.6.2" date="2023-11-29"/>
+        <release version="0.6.1" date="2023-10-24"/>
         <release version="0.6.0" date="2023-10-04"/>
         <release version="0.5.2" date="2023-09-21"/>
         <release version="0.5.0" date="2023-08-29"/>

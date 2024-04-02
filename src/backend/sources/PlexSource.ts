@@ -1,14 +1,14 @@
-import dayjs from "dayjs";
-import { combinePartsToString, mergeArr } from "../utils";
-import AbstractSource from "./AbstractSource";
-import formidable from 'formidable';
+import { childLogger, Logger } from "@foxxmd/logging";
 import concatStream from 'concat-stream';
-import { PlexSourceConfig } from "../common/infrastructure/config/source/plex";
-import { FormatPlayObjectOptions, InternalConfig, SourceType } from "../common/infrastructure/Atomic";
+import dayjs from "dayjs";
 import EventEmitter from "events";
-import winston from '@foxxmd/winston';
-import { PlayObject } from "../../core/Atomic";
-import { truncateStringToLength } from "../../core/StringUtils";
+import formidable from 'formidable';
+import { PlayObject } from "../../core/Atomic.js";
+import { truncateStringToLength } from "../../core/StringUtils.js";
+import { FormatPlayObjectOptions, InternalConfig, SourceType } from "../common/infrastructure/Atomic.js";
+import { PlexSourceConfig } from "../common/infrastructure/config/source/plex.js";
+import { combinePartsToString } from "../utils.js";
+import AbstractSource from "./AbstractSource.js";
 
 const shortDeviceId = truncateStringToLength(10, '');
 
@@ -68,7 +68,6 @@ export default class PlexSource extends AbstractSource {
         } else {
             this.logger.info(`Initializing with the following filters => Users: ${this.users.length === 0 ? 'N/A' : this.users.join(', ')} | Libraries: ${this.libraries.length === 0 ? 'N/A' : this.libraries.join(', ')} | Servers: ${this.servers.length === 0 ? 'N/A' : this.servers.join(', ')}`);
         }
-        this.initialized = true;
     }
 
     static formatPlayObj(obj: any, options: FormatPlayObjectOptions = {}): PlayObject {
@@ -87,9 +86,12 @@ export default class PlexSource extends AbstractSource {
                 // @ts-expect-error TS(2525): Initializer provides no value for this binding ele... Remove this comment to see the full error message
                 parentTitle: album,
                 // @ts-expect-error TS(2525): Initializer provides no value for this binding ele... Remove this comment to see the full error message
-                grandparentTitle: artist,
+                grandparentTitle: artist, // OR album artist
                 // @ts-expect-error TS(2525): Initializer provides no value for this binding ele... Remove this comment to see the full error message
-                librarySectionTitle: library
+                librarySectionTitle: library,
+                // plex returns the track artist as originalTitle (when there is an album artist)
+                // otherwise this is undefined
+                originalTitle: trackArtist = undefined
             } = {},
             Server: {
                 // @ts-expect-error TS(2525): Initializer provides no value for this binding ele... Remove this comment to see the full error message
@@ -100,9 +102,19 @@ export default class PlexSource extends AbstractSource {
                 uuid,
             }
         } = obj;
+
+        const artists: string[] = [];
+        const albumArtists: string[] = [];
+        if(trackArtist !== undefined) {
+            artists.push(trackArtist);
+            albumArtists.push(artist);
+        } else {
+            artists.push(artist);
+        }
         return {
             data: {
-                artists: [artist],
+                artists,
+                albumArtists,
                 album,
                 track,
                 playDate: dayjs(),
@@ -219,22 +231,18 @@ export default class PlexSource extends AbstractSource {
     }
 }
 
-export const plexRequestMiddle = () => {
+export const plexRequestMiddle = (logger: Logger) => {
 
-    const plexLog = winston.loggers.get('app').child({labels: ['Plex Request']}, mergeArr);
+    const plexLog = childLogger(logger, 'Plex Request');
 
     return async (req: any, res: any, next: any) => {
 
         const form = formidable({
             allowEmptyFiles: true,
             multiples: true,
-            // issue with typings https://github.com/node-formidable/formidable/issues/821
-            // @ts-ignore
-            fileWriteStreamHandler: (file: any) => {
-                return concatStream((data: any) => {
+            fileWriteStreamHandler: (file: any) => concatStream((data: any) => {
                     file.buffer = data;
-                });
-            }
+                })
         });
         form.on('progress', (received: any, expected: any) => {
             plexLog.debug(`Received ${received} bytes of expected ${expected}`);

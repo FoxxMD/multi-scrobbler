@@ -1,21 +1,21 @@
 import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react';
-import {LogInfoJson, LogOutputConfig} from "../../core/Atomic";
+import {LeveledLogData, LogOutputConfig} from "../../core/Atomic";
 
 export const logsApi = createApi({
     reducerPath: 'logsApi',
-    baseQuery: fetchBaseQuery({ baseUrl: '/api/' }),
+    baseQuery: fetchBaseQuery({ baseUrl: './api/' }),
     endpoints: (builder) => ({
-        getLogs: builder.query<{ data: LogInfoJson[], settings: LogOutputConfig }, undefined>({
+        getLogs: builder.query<{ data: LeveledLogData[], settings: LogOutputConfig }, undefined>({
             query: () => `logs`,
         }),
-        setLevel: builder.query<{ data: LogInfoJson[], settings: LogOutputConfig }, string>({
-            query: (level) => ({
+        setLogSettings: builder.query<{ data: LeveledLogData[], settings: LogOutputConfig }, object>({
+            query: (settings) => ({
                 url: '/logs',
                 method: 'PUT',
-                body: {level}
+                body: settings
             })
         }),
     }),
 });
 
-export const { useGetLogsQuery, useLazySetLevelQuery } = logsApi;
+export const { useGetLogsQuery, useLazySetLogSettingsQuery } = logsApi;

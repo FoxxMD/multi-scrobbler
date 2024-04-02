@@ -1,41 +1,37 @@
-import AbstractSource from "./AbstractSource";
+import { Logger } from "@foxxmd/logging";
+import dayjs from "dayjs";
+import { EventEmitter } from "events";
+import objectHash from 'object-hash';
+import { SimpleIntervalJob, Task, ToadScheduler } from "toad-scheduler";
+import { PlayObject, SOURCE_SOT, SOURCE_SOT_TYPES, SourcePlayerObj } from "../../core/Atomic.js";
+import { buildTrackString } from "../../core/StringUtils.js";
 import {
-    playObjDataMatch,
-    sortByOldestPlayDate,
-    toProgressAwarePlayObject,
-    getProgress,
-    playPassesScrobbleThreshold,
-    timePassesScrobbleThreshold,
-    thresholdResultSummary,
+    asPlayerStateData,
+    CALCULATED_PLAYER_STATUSES,
+    InternalConfig,
+    PlayerStateData,
+    PlayPlatformId,
+    ProgressAwarePlayObject,
+    SourceType,
+} from "../common/infrastructure/Atomic.js";
+import { PollingOptions } from "../common/infrastructure/config/common.js";
+import { SourceConfig } from "../common/infrastructure/config/source/sources.js";
+import {
+    formatNumber,
     genGroupId,
     genGroupIdStr,
     getPlatformIdFromData,
-} from "../utils";
-import dayjs from "dayjs";
-import {
-    asPlayerStateData,
-    DeviceId,
-    GroupedPlays, InternalConfig,
-    PlayerStateData,
-    PlayPlatformId,
-    PlayUserId,
-    ProgressAwarePlayObject,
-    ScrobbleThresholdResult, SourceType,
-} from "../common/infrastructure/Atomic";
-import TupleMap from "../common/TupleMap";
-import { AbstractPlayerState, PlayerStateOptions } from "./PlayerState/AbstractPlayerState";
-import { GenericPlayerState } from "./PlayerState/GenericPlayerState";
-import {Logger} from "@foxxmd/winston";
-import {PlayObject, SourcePlayerObj} from "../../core/Atomic";
-import { buildTrackString } from "../../core/StringUtils";
-import {SimpleIntervalJob, Task, ToadScheduler} from "toad-scheduler";
-import {SourceConfig} from "../common/infrastructure/config/source/sources";
-import {EventEmitter} from "events";
-import objectHash from 'object-hash';
+    playObjDataMatch,
+    thresholdResultSummary,
+} from "../utils.js";
+import { timePassesScrobbleThreshold } from "../utils/TimeUtils.js";
+import AbstractSource from "./AbstractSource.js";
+import { AbstractPlayerState, createPlayerOptions, PlayerStateOptions } from "./PlayerState/AbstractPlayerState.js";
+import { GenericPlayerState } from "./PlayerState/GenericPlayerState.js";
 
 export default class MemorySource extends AbstractSource {
 
-    playerSourceOfTruth: boolean = true;
+    playerSourceOfTruth: SOURCE_SOT_TYPES = SOURCE_SOT.PLAYER;
 
     /*
     * MemorySource uses its own state to maintain a list of recently played tracks and determine if a track is valid.
@@ -58,17 +54,14 @@ export default class MemorySource extends AbstractSource {
     }
 
     cleanupPlayers = () => {
-        const deadPlatformIds: string[] = [];
+        const deadPlatformIds: [string, string?][] = [];
         for (const [key, player] of this.players.entries()) {
             // no communication from the source was received for this player
             const isStale = player.checkStale();
             if (isStale && player.checkOrphaned() && player.isDead()) {
-                player.logger.debug(`Removed after being orphaned for ${dayjs.duration(player.stateIntervalOptions.orphanedInterval, 'seconds').asMinutes()} minutes`);
-                deadPlatformIds.push(player.platformIdStr);
-                this.emitEvent('playerDelete', {platformId: player.platformIdStr});
+                deadPlatformIds.push([player.platformIdStr, `Removed after being orphaned for ${dayjs.duration(player.stateIntervalOptions.orphanedInterval, 'seconds').asMinutes()} minutes`]);
             } else if (isStale) {
                 const state = player.getApiState();
-                // @ts-ignore
                 const stateHash = objectHash.sha1(state);
                 if(stateHash !== this.playerState.get(key)) {
                     this.playerState.set(key, stateHash);
@@ -79,8 +72,8 @@ export default class MemorySource extends AbstractSource {
                 }
             }
         }
-        for (const deadId of deadPlatformIds) {
-            this.deletePlayer(deadId);
+        for (const [deadId, reason] of deadPlatformIds) {
+            this.deletePlayer(deadId, reason);
         }
     }
 
@@ -95,22 +88,26 @@ export default class MemorySource extends AbstractSource {
         return record;
     }
 
-    getNewPlayer = (logger: Logger, id: PlayPlatformId, opts: PlayerStateOptions) => {
-        return new GenericPlayerState(logger, id, opts);
-    }
+    getNewPlayer = (logger: Logger, id: PlayPlatformId, opts: PlayerStateOptions) => new GenericPlayerState(logger, id, opts)
 
     setNewPlayer = (idStr: string, logger: Logger, id: PlayPlatformId, opts: PlayerStateOptions = {}) => {
         this.players.set(idStr, this.getNewPlayer(this.logger, id, {
-            staleInterval: (this.config.data.interval ?? 30) * 3,
-            orphanedInterval: (this.config.data.maxInterval ?? 60) * 5,
+            ...createPlayerOptions(this.config.data as Partial<PollingOptions>),
             ...opts
         }));
         this.playerState.set(idStr, '');
     }
 
-    deletePlayer = (id: string) => {
+    deletePlayer = (id: string, reason?: string) => {
+        if(!this.players.has(id)) {
+            return;
+        }
+        if(reason !== undefined) {
+            this.players.get(id)?.logger.debug(reason);
+        }
         this.players.delete(id);
         this.playerState.delete(id);
+        this.emitEvent('playerDelete', {platformId: id});
     }
 
     processRecentPlays = (datas: (PlayObject | PlayerStateData)[]) => {
@@ -129,10 +126,16 @@ export default class MemorySource extends AbstractSource {
             const idStr = genGroupIdStr(id);
             if (!this.players.has(idStr)) {
                 this.setNewPlayer(idStr, this.logger, id);
+
+                if(!this.multiPlatform && this.players.size > 1) {
+                    // new platform should have old platform data transferred
+                    const [id,firstPlayer] = Array.from(this.players.entries())[0];
+                    const newPlayer = this.players.get(idStr);
+                    firstPlayer.transferToNewPlayer(newPlayer);
+                    this.deletePlayer(id, 'Removed due to player transfer');
+                }
             }
         }
-
-        //const deadPlatformIds: string[] = [];
 
         for (const [key, player] of this.players.entries()) {
 
@@ -159,13 +162,13 @@ export default class MemorySource extends AbstractSource {
                 // wait to discover play until it is stale or current play has changed
                 // so that our discovered track has an accurate "listenedFor" count
                 if (candidate !== undefined && (playChanged || player.isUpdateStale())) {
-                    let stPrefix = `${buildTrackString(candidate, {include: ['trackId', 'artist', 'track']})}`;
+                    const stPrefix = `${buildTrackString(candidate, {include: ['trackId', 'artist', 'track']})}`;
                     const thresholdResults = timePassesScrobbleThreshold(scrobbleThresholds, candidate.data.listenedFor, candidate.data.duration);
 
                     if (thresholdResults.passes) {
                         const matchingRecent = this.existingDiscovered(candidate); //sRecentlyPlayed.find(x => playObjDataMatch(x, candidate));
                         if (matchingRecent === undefined) {
-                            if(this.playerSourceOfTruth) {
+                            if(this.playerSourceOfTruth === SOURCE_SOT.PLAYER) {
                                 player.logger.debug(`${stPrefix} added after ${thresholdResultSummary(thresholdResults)} and not matching any prior plays`);
                             }
                             newStatefulPlays.push(candidate);
@@ -175,7 +178,7 @@ export default class MemorySource extends AbstractSource {
                             if (!playDate.isSame(rplayDate)) {
                                 if (duration !== undefined) {
                                     if (playDate.isAfter(rplayDate.add(duration, 's'))) {
-                                        if(this.playerSourceOfTruth) {
+                                        if(this.playerSourceOfTruth === SOURCE_SOT.PLAYER) {
                                             player.logger.debug(`${stPrefix} added after ${thresholdResultSummary(thresholdResults)} and having a different timestamp than a prior play`);
                                         }
                                         newStatefulPlays.push(candidate);
@@ -184,7 +187,7 @@ export default class MemorySource extends AbstractSource {
                                     const discoveredPlays = this.getRecentlyDiscoveredPlaysByPlatform(genGroupId(candidate));
                                     if (discoveredPlays.length === 0 || !playObjDataMatch(discoveredPlays[0], candidate)) {
                                         // if most recent stateful play is not this track we'll add it
-                                        if(this.playerSourceOfTruth) {
+                                        if(this.playerSourceOfTruth === SOURCE_SOT.PLAYER) {
                                             player.logger.debug(`${stPrefix} added after ${thresholdResultSummary(thresholdResults)}. Matched other recent play but could not determine time frame due to missing duration. Allowed due to not being last played track.`);
                                         }
                                         newStatefulPlays.push(candidate);
@@ -192,7 +195,7 @@ export default class MemorySource extends AbstractSource {
                                 }
                             }
                         }
-                    } else if(playChanged) {
+                    } else if(playChanged && this.playerSourceOfTruth === SOURCE_SOT.PLAYER) {
                         player.logger.verbose(`${stPrefix} not added because ${thresholdResultSummary(thresholdResults)}.`);
                     }
                 }
@@ -201,7 +204,6 @@ export default class MemorySource extends AbstractSource {
                     player.logSummary();
                 }
                 const apiState = player.getApiState();
-                // @ts-ignore
                 this.playerState.set(key, objectHash.sha1(apiState))
                 this.emitEvent('playerUpdate', apiState);
             }
@@ -210,12 +212,51 @@ export default class MemorySource extends AbstractSource {
         return newStatefulPlays;
     }
 
-    recentlyPlayedTrackIsValid = (playObj: any) => {
-        return playObj.data.playDate.isBefore(dayjs().subtract(30, 's'));
+    recentlyPlayedTrackIsValid = (playObj: any) => playObj.data.playDate.isBefore(dayjs().subtract(30, 's'))
+
+    protected getInterval(): number {
+        /**
+         * If any player is progressing, reports position, and play has duration
+         * then we can modify polling interval so that we check source data just before track is supposed to end
+         * which will give us more accurate data on when player moves to the next play = better duration reporting to scrobble clients
+         * -- additionally, will have better confidence for fudging 100% duration played
+         * */
+        let interval = super.getInterval();
+        if(this.players.size === 0) {
+            return interval;
+        }
+        let logDecrease: undefined | string;
+        for(const player of this.players.values()) {
+            if(player.calculatedStatus === CALCULATED_PLAYER_STATUSES.playing) {
+                const pos = player.getPosition();
+                if(pos !== undefined && player.currentPlay !== undefined) {
+                    const {
+                        data: {
+                            duration
+                        } = {}
+                    } = player.currentPlay;
+                    const remaining = duration - pos;
+                    if(remaining < interval + 2) {
+                        // interval should be at least 1 second so we don't spam sources when polling
+                        interval = Math.max(1, remaining - 2);
+                        logDecrease = `Temporarily decreasing polling interval to ${formatNumber(interval)}s due to Player ${player.platformIdStr} reporting track duration remaining (${formatNumber(remaining)}s) less than normal interval (${formatNumber(super.getInterval())}s)`;
+                    }
+                }
+            }
+        }
+        if(logDecrease !== undefined) {
+            this.logger.debug(logDecrease);
+        }
+        return interval;
+    }
+
+    public async destroy() {
+        this.scheduler.stop();
+        await super.destroy();
     }
 }
 
-function sortByPlayDate(a: ProgressAwarePlayObject, b: ProgressAwarePlayObject): number {
+const sortByPlayDate = (a: ProgressAwarePlayObject, b: ProgressAwarePlayObject): number => {
     throw new Error("Function not implemented.");
-}
+};
 

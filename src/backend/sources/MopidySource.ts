@@ -1,21 +1,21 @@
-import MemorySource from "./MemorySource";
-import { MopidySourceConfig } from "../common/infrastructure/config/source/mopidy";
+import { loggerTest } from "@foxxmd/logging";
+import dayjs from "dayjs";
+import { EventEmitter } from "events";
+import Mopidy, { models } from "mopidy";
+import normalizeUrl from 'normalize-url';
+import pEvent from 'p-event';
+import { URL } from "url";
+import { PlayObject } from "../../core/Atomic.js";
+import { buildTrackString } from "../../core/StringUtils.js";
 import {
     FormatPlayObjectOptions,
     InternalConfig,
     PlayerStateData,
     SINGLE_USER_PLATFORM_ID,
-} from "../common/infrastructure/Atomic";
-import dayjs from "dayjs";
-import Mopidy, {models} from "mopidy";
-import {URL} from "url";
-import normalizeUrl from 'normalize-url';
-import {EventEmitter} from "events";
-import pEvent from 'p-event';
-import winston from '@foxxmd/winston';
-import { RecentlyPlayedOptions } from "./AbstractSource";
-import { PlayObject } from "../../core/Atomic";
-import { buildTrackString } from "../../core/StringUtils";
+} from "../common/infrastructure/Atomic.js";
+import { MopidySourceConfig } from "../common/infrastructure/config/source/mopidy.js";
+import { RecentlyPlayedOptions } from "./AbstractSource.js";
+import MemorySource from "./MemorySource.js";
 
 export class MopidySource extends MemorySource {
     declare config: MopidySourceConfig;
@@ -56,8 +56,8 @@ export class MopidySource extends MemorySource {
         this.client = new Mopidy({
             autoConnect: false,
             webSocketUrl: this.url.toString(),
-            // @ts-ignore
-            console: winston.loggers.get('noop')
+            // @ts-expect-error logger satisfies but is missing types not used
+            console: loggerTest
         });
         this.client.on('state:offline', () => {
             this.logger.verbose('Lost connection to server');
@@ -95,14 +95,17 @@ export class MopidySource extends MemorySource {
         return url;
     }
 
-    initialize = async () => {
+    protected async doBuildInitData(): Promise<true | string | undefined> {
         const {
             data: {
                 url
             } = {}
         } = this.config;
         this.logger.debug(`Config URL: '${url ?? '(None Given)'}' => Normalized: '${this.url.toString()}'`)
+        return true;
+    }
 
+    protected async doCheckConnection(): Promise<true | string | undefined> {
         this.client.connect();
         const res = await Promise.race([
             pEvent(this.client, 'state:online'),
@@ -111,12 +114,10 @@ export class MopidySource extends MemorySource {
         ]);
         if (res === undefined) {
             this.logger.info('Connection OK');
-            this.initialized = true;
             return true;
         } else {
-            this.logger.error(`Could not connect. Error => ${(res as Error).message}`);
             this.client.close();
-            return false;
+            throw new Error(`Could not connect to Mopidy server`, {cause: (res as Error)});
         }
     }
 
@@ -133,7 +134,7 @@ export class MopidySource extends MemorySource {
             performers = []
         } = obj;
 
-        let artists = artistsVal === null ? [] : artistsVal;
+        let artists: models.Artist[] = artistsVal === null ? [] : artistsVal;
         let album: models.Album = albumVal === null ? {} as models.Album : albumVal;
         if (this.albumBlacklist.length > 0 && album.name !== undefined && this.albumBlacklist.some(x => album.name.toLocaleLowerCase().includes(x))) {
             album = {} as models.Album;
@@ -145,8 +146,11 @@ export class MopidySource extends MemorySource {
             artists: albumArtists = []
         } = album as models.Album;
 
+        let actualAlbumArtists: models.Artist[] = [];
         if ((artists.length === 0 || artists.every(x => x.name.toLocaleLowerCase().includes('various'))) && albumArtists.length > 0) {
             artists = albumArtists;
+        } else {
+            actualAlbumArtists = albumArtists;
         }
         if (artists.length === 0 && composers.length > 0) {
             artists = composers;
@@ -159,6 +163,7 @@ export class MopidySource extends MemorySource {
             data: {
                 track: name,
                 album: albumName,
+                albumArtists: actualAlbumArtists.length > 0 ? actualAlbumArtists.map(x => x.name) : [],
                 artists: artists.length > 0 ? artists.map(x => x.name) : [],
                 duration: Math.round(length / 1000),
                 playDate: dayjs()

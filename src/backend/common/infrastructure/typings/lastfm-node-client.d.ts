@@ -25,6 +25,9 @@ declare module 'lastfm-node-client' {
         album?: string
 
         albumArtist?: string
+
+        /** MusicBrainz track ID */
+        mbid?: string
     }
 
     export interface TrackScrobbleResponse {
@@ -43,6 +46,17 @@ declare module 'lastfm-node-client' {
                     code: number
                     '#text': string
                 }
+            }
+        }
+    }
+
+    export type NowPlayingPayload = Omit<TrackScrobblePayload, 'mbid' | 'timestamp'>
+
+    export interface NowPlayingResponse {
+        nowplaying: {
+            ignoredMessage: {
+                code: number
+                '#text': string
             }
         }
     }
@@ -80,14 +94,15 @@ declare module 'lastfm-node-client' {
         artist: {
             '#text': string,
             name: string,
+            mbid: string,
         },
         name: string,
         album: {
             '#text': string,
+            mbid: string
         },
         duration: number,
         date?: {
-            // @ts-ignore
             uts: number,
         },
         '@attr'?: {
@@ -100,6 +115,7 @@ declare module 'lastfm-node-client' {
     export default class LastFM {
         constructor(apiKey: string, secret?: string, session?: string);
 
+        trackUpdateNowPlaying(params: NowPlayingPayload): Promise<NowPlayingResponse>
         trackScrobble(params: TrackScrobblePayload): Promise<TrackScrobbleResponse>
         authGetSession(params: AuthGetSessionPayload): Promise<AuthGetSessionResponse>
         userGetInfo(): Promise<UserGetInfoResponse>

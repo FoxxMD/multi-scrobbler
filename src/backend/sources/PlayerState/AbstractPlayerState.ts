@@ -1,18 +1,18 @@
+import { childLogger, Logger } from "@foxxmd/logging";
+import dayjs, { Dayjs } from "dayjs";
+import { PlayObject, Second, SOURCE_SOT, SOURCE_SOT_TYPES, SourcePlayerObj } from "../../../core/Atomic.js";
+import { buildTrackString } from "../../../core/StringUtils.js";
 import {
     CALCULATED_PLAYER_STATUSES,
     CalculatedPlayerStatus,
     PlayPlatformId,
     REPORTED_PLAYER_STATUSES,
     ReportedPlayerStatus,
-} from "../../common/infrastructure/Atomic";
-import dayjs, {Dayjs} from "dayjs";
-import { formatNumber, genGroupIdStr, playObjDataMatch, progressBar } from "../../utils";
-import {Logger} from "@foxxmd/winston";
-import { ListenProgress } from "./ListenProgress";
-import {PlayObject, SourcePlayerObj} from "../../../core/Atomic";
-import { buildTrackString } from "../../../core/StringUtils";
-import {ListenRange} from "./ListenRange";
-import {start} from "repl";
+} from "../../common/infrastructure/Atomic.js";
+import { PollingOptions } from "../../common/infrastructure/config/common.js";
+import { formatNumber, genGroupIdStr, playObjDataMatch, progressBar } from "../../utils.js";
+import { ListenProgress } from "./ListenProgress.js";
+import { ListenRange } from "./ListenRange.js";
 
 export interface PlayerStateIntervals {
     staleInterval?: number
@@ -20,6 +20,27 @@ export interface PlayerStateIntervals {
 }
 
 export interface PlayerStateOptions extends PlayerStateIntervals {
+}
+
+export const DefaultPlayerStateOptions: PlayerStateOptions = {};
+
+export const createPlayerOptions = (pollingOpts?: Partial<PollingOptions>, sot: SOURCE_SOT_TYPES = SOURCE_SOT.PLAYER): PlayerStateOptions => {
+    const {
+        interval = 30,
+        maxInterval = 60,
+    } = pollingOpts || {};
+    if(sot === SOURCE_SOT.PLAYER) {
+        return {
+            staleInterval: interval * 3,
+            orphanedInterval: interval * 5
+        }
+    }
+    // if this player is not the source of truth we don't care about waiting around to see if the state comes back
+    // in fact, we probably want to get rid of it as fast as possible since its superficial and more of an ephemeral "Now Playing" status than something we are actually tracking
+    return {
+        staleInterval: interval,
+        orphanedInterval: maxInterval
+    }
 }
 
 export abstract class AbstractPlayerState {
@@ -32,18 +53,18 @@ export abstract class AbstractPlayerState {
     playFirstSeenAt?: Dayjs
     playLastUpdatedAt?: Dayjs
     currentListenRange?: ListenRange
-    listenRanges: ListenRange[]
+    listenRanges: ListenRange[] = [];
     createdAt: Dayjs = dayjs();
     stateLastUpdatedAt: Dayjs = dayjs();
 
-    protected constructor(logger: Logger, platformId: PlayPlatformId, opts?: PlayerStateOptions) {
+    protected constructor(logger: Logger, platformId: PlayPlatformId, opts: PlayerStateOptions = DefaultPlayerStateOptions) {
         this.platformId = platformId;
-        this.logger = logger.child({labels: [`Player ${this.platformIdStr}`]});
+        this.logger = childLogger(logger, `Player ${this.platformIdStr}`);
 
         const {
             staleInterval = 120,
             orphanedInterval = 300,
-        } = opts || {};
+        } = opts;
         this.stateIntervalOptions = {staleInterval, orphanedInterval: orphanedInterval};
     }
 
@@ -105,7 +126,7 @@ export abstract class AbstractPlayerState {
         } else if (status !== undefined) {
             if (status === 'stopped' && this.reportedStatus !== 'stopped' && this.currentPlay !== undefined) {
                 this.stopPlayer();
-                const play = this.getPlayedObject();
+                const play = this.getPlayedObject(true);
                 this.clearPlayer();
                 return [play, play];
             }
@@ -123,11 +144,12 @@ export abstract class AbstractPlayerState {
         }
 
         if (this.currentPlay !== undefined) {
-            if (!playObjDataMatch(this.currentPlay, play)/* || (true !== false)*/) { // TODO check new play date and listen range to see if they intersect
+            const currentPlayMatches = playObjDataMatch(this.currentPlay, play);
+            if (!currentPlayMatches) { // TODO check new play date and listen range to see if they intersect
                 this.logger.debug(`Incoming play state (${buildTrackString(play, {include: ['trackId', 'artist', 'track']})}) does not match existing state, removing existing: ${buildTrackString(this.currentPlay, {include: ['trackId', 'artist', 'track']})}`)
                 this.currentListenSessionEnd();
-                const played = this.getPlayedObject();
-                this.setCurrentPlay(play, undefined, reportedTS);
+                const played = this.getPlayedObject(true);
+                this.setCurrentPlay(play, {reportedTS});
                 if (this.calculatedStatus !== CALCULATED_PLAYER_STATUSES.playing) {
                     this.calculatedStatus = CALCULATED_PLAYER_STATUSES.unknown;
                 }
@@ -138,9 +160,9 @@ export abstract class AbstractPlayerState {
             } else if (this.isSessionRepeat(play.meta.trackProgressPosition, reportedTS)) {
                 // if we detect the track has been restarted end listen session and treat as a new play
                 this.currentListenSessionEnd();
-                const played = this.getPlayedObject();
+                const played = this.getPlayedObject(true);
                 play.data.playDate = dayjs();
-                this.setCurrentPlay(play, undefined, reportedTS);
+                this.setCurrentPlay(play, {reportedTS});
                 return [this.getPlayedObject(), played];
             } else {
                 if(this.currentListenRange !== undefined) {
@@ -180,18 +202,22 @@ export abstract class AbstractPlayerState {
         this.currentListenSessionEnd();
     }
 
-    getPlayedObject(): PlayObject | undefined {
+    public getPlayedObject(completed: boolean = false): PlayObject | undefined {
         if(this.currentPlay !== undefined) {
-            let ranges = [...this.listenRanges];
+            const ranges = [...this.listenRanges];
             if (this.currentListenRange !== undefined) {
                 ranges.push(this.currentListenRange);
+            }
+            if(completed) {
+                this.logger.debug('Generating play object with playDateCompleted');
             }
             return {
                 data: {
                     ...this.currentPlay.data,
                     playDate: this.playFirstSeenAt,
                     listenedFor: this.getListenDuration(),
-                    listenRanges: ranges
+                    listenRanges: ranges,
+                    playDateCompleted: completed ? dayjs() : undefined
                 },
                 meta: this.currentPlay.meta
             }
@@ -199,9 +225,9 @@ export abstract class AbstractPlayerState {
         return undefined;
     }
 
-    getListenDuration(){
+    public getListenDuration(): Second{
         let listenDur: number = 0;
-        let ranges = [...this.listenRanges];
+        const ranges = [...this.listenRanges];
         if (this.currentListenRange !== undefined) {
             ranges.push(this.currentListenRange);
         }
@@ -215,7 +241,13 @@ export abstract class AbstractPlayerState {
         const now = dayjs();
         if (this.currentListenRange === undefined) {
             this.logger.debug('Started new Player listen range.');
-            this.currentListenRange = new ListenRange(new ListenProgress(timestamp, position));
+            let usedPosition = position;
+            if(this.calculatedStatus === CALCULATED_PLAYER_STATUSES.playing && position !== undefined && position <= 3) {
+                // likely the player has moved to a new track from a previous track (still calculated as playing)
+                // and polling/network delays means we did not catch absolute beginning of track
+                usedPosition = 1;
+            }
+            this.currentListenRange = new ListenRange(new ListenProgress(timestamp, usedPosition));
         } else {
             const oldEndProgress = this.currentListenRange.end;
             const newEndProgress = new ListenProgress(timestamp, position);
@@ -245,6 +277,19 @@ export abstract class AbstractPlayerState {
     protected currentListenSessionEnd() {
         if (this.currentListenRange !== undefined && this.currentListenRange.getDuration() !== 0) {
             this.logger.debug('Ended current Player listen range.')
+            if(this.calculatedStatus === CALCULATED_PLAYER_STATUSES.playing && this.currentListenRange.isPositional() && !this.currentListenRange.isInitial()) {
+                const {
+                    data: {
+                        duration,
+                    } = {}
+                } = this.currentPlay;
+                if(duration !== undefined && (duration - this.currentListenRange.end.position) < 3) {
+                    // likely the track was listened to until it ended
+                    // but polling interval or network delays caused MS to not get data on the very end
+                    // also...within 3 seconds of ending is close enough to call this complete IMO
+                    this.currentListenRange.end.position = duration;
+                }
+            }
             this.listenRanges.push(this.currentListenRange);
         }
         this.currentListenRange = undefined;
@@ -304,7 +349,14 @@ export abstract class AbstractPlayerState {
         return false;
     }
 
-    protected setCurrentPlay(play: PlayObject, status?: ReportedPlayerStatus, reportedTS?: Dayjs) {
+    protected setCurrentPlay(play: PlayObject, options?: CurrentPlayOptions) {
+
+        const {
+            status,
+            reportedTS,
+            listenSessionManaged = true
+        } = options || {};
+
         this.currentPlay = play;
         this.playFirstSeenAt = dayjs();
         this.listenRanges = [];
@@ -316,13 +368,13 @@ export abstract class AbstractPlayerState {
             this.reportedStatus = status;
         }
 
-        if (!['stopped'].includes(this.reportedStatus)) {
+        if (listenSessionManaged && !['stopped'].includes(this.reportedStatus)) {
             this.currentListenSessionContinue(play.meta.trackProgressPosition, reportedTS);
         }
     }
 
-    textSummary() {
-        let parts = [''];
+    public textSummary() {
+        const parts = [''];
         let play: string;
         if (this.currentPlay !== undefined) {
             parts.push(`${buildTrackString(this.currentPlay, {include: ['trackId', 'artist', 'track']})} @ ${this.playFirstSeenAt.toISOString()}`);
@@ -343,11 +395,11 @@ export abstract class AbstractPlayerState {
         return parts.join('\n');
     }
 
-    logSummary() {
+    public logSummary() {
         this.logger.debug(this.textSummary());
     }
 
-    protected getPosition() {
+    public getPosition(): Second {
         if(this.calculatedStatus === 'stopped') {
             return undefined;
         }
@@ -363,12 +415,12 @@ export abstract class AbstractPlayerState {
         return lastRange.end.position;
     }
 
-    getApiState(): SourcePlayerObj {
+    public getApiState(): SourcePlayerObj {
         return {
             platformId: this.platformIdStr,
             play: this.getPlayedObject(),
-            playLastUpdatedAt: this.playLastUpdatedAt.toISOString(),
-            playFirstSeenAt: this.playFirstSeenAt.toISOString(),
+            playLastUpdatedAt: this.playLastUpdatedAt !== undefined ? this.playLastUpdatedAt.toISOString() : undefined,
+            playFirstSeenAt: this.playFirstSeenAt !== undefined ? this.playFirstSeenAt.toISOString() : undefined,
             playerLastUpdatedAt: this.stateLastUpdatedAt.toISOString(),
             position: this.getPosition(),
             listenedDuration: this.getListenDuration(),
@@ -380,4 +432,22 @@ export abstract class AbstractPlayerState {
             }
         }
     }
+
+    public transferToNewPlayer(newPlayer: AbstractPlayerState) {
+        this.logger.debug(`Transferring state to new Player (${newPlayer.platformIdStr})`);
+        newPlayer.calculatedStatus = this.calculatedStatus;
+        if(this.currentPlay !== undefined) {
+            newPlayer.setCurrentPlay(this.currentPlay, {status: this.reportedStatus, listenSessionManaged: false});
+        }
+        newPlayer.currentListenRange = this.currentListenRange;
+        newPlayer.listenRanges = this.listenRanges;
+        newPlayer.playFirstSeenAt = this.playFirstSeenAt;
+        newPlayer.playLastUpdatedAt = this.playLastUpdatedAt;
+    }
+}
+
+export interface CurrentPlayOptions {
+    status?: ReportedPlayerStatus,
+    reportedTS?: Dayjs
+    listenSessionManaged?: boolean
 }

@@ -1,10 +1,14 @@
-import winston, {config, format, Logger} from '@foxxmd/winston';
-import { mergeArr } from "../utils";
-import { GotifyConfig, NtfyConfig, WebhookConfig, WebhookPayload } from "../common/infrastructure/config/health/webhooks";
-import { AbstractWebhookNotifier } from "./AbstractWebhookNotifier";
-import { GotifyWebhookNotifier } from "./GotifyWebhookNotifier";
-import { NtfyWebhookNotifier } from "./NtfyWebhookNotifier";
-import {EventEmitter} from "events";
+import { childLogger, Logger } from '@foxxmd/logging';
+import { EventEmitter } from "events";
+import {
+    GotifyConfig,
+    NtfyConfig,
+    WebhookConfig,
+    WebhookPayload
+} from "../common/infrastructure/config/health/webhooks.js";
+import { AbstractWebhookNotifier } from "./AbstractWebhookNotifier.js";
+import { GotifyWebhookNotifier } from "./GotifyWebhookNotifier.js";
+import { NtfyWebhookNotifier } from "./NtfyWebhookNotifier.js";
 
 export class Notifiers {
 
@@ -17,12 +21,12 @@ export class Notifiers {
     clientEmitter: EventEmitter;
     sourceEmitter: EventEmitter;
 
-    constructor(emitter: EventEmitter, clientEmitter: EventEmitter, sourceEmitter: EventEmitter) {
+    constructor(emitter: EventEmitter, clientEmitter: EventEmitter, sourceEmitter: EventEmitter, parentLogger: Logger) {
         this.emitter = emitter;
         this.clientEmitter = clientEmitter;
         this.sourceEmitter = sourceEmitter;
 
-        this.logger = winston.loggers.get('app').child({labels: ['Notifiers']}, mergeArr);
+        this.logger = childLogger(parentLogger, 'Notifiers'); // winston.loggers.get('app').child({labels: ['Notifiers']}, mergeArr);
 
         this.sourceEmitter.on('notify', async (payload: WebhookPayload) => {
             await this.notify(payload);

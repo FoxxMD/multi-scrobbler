@@ -1,43 +1,45 @@
-import { mergeArr, parseBool, readJson, validateJson } from "../utils";
-import SpotifySource from "./SpotifySource";
-import PlexSource from "./PlexSource";
-import TautulliSource from "./TautulliSource";
-import { SubsonicSource } from "./SubsonicSource";
-import JellyfinSource from "./JellyfinSource";
-import LastfmSource from "./LastfmSource";
-import DeezerSource from "./DeezerSource";
-import { ConfigMeta, InternalConfig, SourceType, sourceTypes } from "../common/infrastructure/Atomic";
-import { configDir as defaultConfigDir } from "../common/index";
-import winston, {Logger} from '@foxxmd/winston';
-import { SourceAIOConfig, SourceConfig } from "../common/infrastructure/config/source/sources";
-import { DeezerData, DeezerSourceConfig } from "../common/infrastructure/config/source/deezer";
-import { LastfmClientConfig } from "../common/infrastructure/config/client/lastfm";
-import { JellyData, JellySourceConfig } from "../common/infrastructure/config/source/jellyfin";
-import { SubsonicData, SubSonicSourceConfig } from "../common/infrastructure/config/source/subsonic";
-import { TautulliSourceConfig } from "../common/infrastructure/config/source/tautulli";
-import { PlexSourceConfig } from "../common/infrastructure/config/source/plex";
-import { SpotifySourceConfig, SpotifySourceData } from "../common/infrastructure/config/source/spotify";
-import AbstractSource from "./AbstractSource";
-import { AIOConfig, SourceDefaults } from "../common/infrastructure/config/aioConfig";
+/* eslint-disable no-case-declarations */
+import { childLogger, Logger } from '@foxxmd/logging';
+import EventEmitter from "events";
+import { configDir as defaultConfigDir } from "../common/index.js";
+import { ConfigMeta, InternalConfig, SourceType, sourceTypes } from "../common/infrastructure/Atomic.js";
+import { AIOConfig, SourceDefaults } from "../common/infrastructure/config/aioConfig.js";
+import { ChromecastSourceConfig } from "../common/infrastructure/config/source/chromecast.js";
+import { DeezerData, DeezerSourceConfig } from "../common/infrastructure/config/source/deezer.js";
+import { JellyData, JellySourceConfig } from "../common/infrastructure/config/source/jellyfin.js";
+import { JRiverData, JRiverSourceConfig } from "../common/infrastructure/config/source/jriver.js";
+import { KodiData, KodiSourceConfig } from "../common/infrastructure/config/source/kodi.js";
+import { LastfmSourceConfig } from "../common/infrastructure/config/source/lastfm.js";
+import { ListenBrainzSourceConfig } from "../common/infrastructure/config/source/listenbrainz.js";
+import { MopidySourceConfig } from "../common/infrastructure/config/source/mopidy.js";
+import { MPRISData, MPRISSourceConfig } from "../common/infrastructure/config/source/mpris.js";
+import { PlexSourceConfig } from "../common/infrastructure/config/source/plex.js";
+import { SourceAIOConfig, SourceConfig } from "../common/infrastructure/config/source/sources.js";
+import { SpotifySourceConfig, SpotifySourceData } from "../common/infrastructure/config/source/spotify.js";
+import { SubsonicData, SubSonicSourceConfig } from "../common/infrastructure/config/source/subsonic.js";
+import { TautulliSourceConfig } from "../common/infrastructure/config/source/tautulli.js";
+import { WebScrobblerSourceConfig } from "../common/infrastructure/config/source/webscrobbler.js";
+import { YTMusicSourceConfig } from "../common/infrastructure/config/source/ytmusic.js";
 import * as aioSchema from "../common/schema/aio-source.json";
 import * as sourceSchema from "../common/schema/source.json";
-import { LastfmSourceConfig } from "../common/infrastructure/config/source/lastfm";
-import YTMusicSource from "./YTMusicSource";
-import { YTMusicSourceConfig } from "../common/infrastructure/config/source/ytmusic";
-import { MPRISData, MPRISSourceConfig } from "../common/infrastructure/config/source/mpris";
-import { MPRISSource } from "./MPRISSource";
-import EventEmitter from "events";
-import { MopidySource } from "./MopidySource";
-import { MopidySourceConfig } from "../common/infrastructure/config/source/mopidy";
-import ListenbrainzSource from "./ListenbrainzSource";
-import { ListenBrainzSourceConfig } from "../common/infrastructure/config/source/listenbrainz";
-import { JRiverSource } from "./JRiverSource";
-import { JRiverData, JRiverSourceConfig } from "../common/infrastructure/config/source/jriver";
-import { KodiSource } from "./KodiSource";
-import { KodiData, KodiSourceConfig } from "../common/infrastructure/config/source/kodi";
-import { WildcardEmitter } from "../common/WildcardEmitter";
-import {WebScrobblerSource} from "./WebScrobblerSource";
-import {WebScrobblerSourceConfig} from "../common/infrastructure/config/source/webscrobbler";
+import { WildcardEmitter } from "../common/WildcardEmitter.js";
+import { parseBool, readJson, validateJson } from "../utils.js";
+import AbstractSource from "./AbstractSource.js";
+import { ChromecastSource } from "./ChromecastSource.js";
+import DeezerSource from "./DeezerSource.js";
+import JellyfinSource from "./JellyfinSource.js";
+import { JRiverSource } from "./JRiverSource.js";
+import { KodiSource } from "./KodiSource.js";
+import LastfmSource from "./LastfmSource.js";
+import ListenbrainzSource from "./ListenbrainzSource.js";
+import { MopidySource } from "./MopidySource.js";
+import { MPRISSource } from "./MPRISSource.js";
+import PlexSource from "./PlexSource.js";
+import SpotifySource from "./SpotifySource.js";
+import { SubsonicSource } from "./SubsonicSource.js";
+import TautulliSource from "./TautulliSource.js";
+import { WebScrobblerSource } from "./WebScrobblerSource.js";
+import YTMusicSource from "./YTMusicSource.js";
 import {EndpointListenbrainzSource} from "./EndpointListenbrainzSource";
 import {ListenbrainzEndpointConfig} from "../common/infrastructure/config/source/endpointlz";
 
@@ -54,29 +56,23 @@ export default class ScrobbleSources {
 
     emitter: WildcardEmitter;
 
-    constructor(emitter: EventEmitter, localUrl: string, configDir: string = defaultConfigDir) {
+    constructor(emitter: EventEmitter, localUrl: string, configDir: string = defaultConfigDir, parentLogger: Logger) {
         this.emitter = emitter;
         this.configDir = configDir;
         this.localUrl = localUrl;
-        this.logger = winston.loggers.get('app').child({labels: ['Sources']}, mergeArr);
+        this.logger = childLogger(parentLogger, 'Sources'); // winston.loggers.get('app').child({labels: ['Sources']}, mergeArr);
     }
 
-    getByName = (name: any) => {
-        return this.sources.find(x => x.name === name);
-    }
+    getByName = (name: any) => this.sources.find(x => x.name === name)
 
-    getByType = (type: any) => {
-        return this.sources.filter(x => x.type === type);
-    }
+    getByType = (type: any) => this.sources.filter(x => x.type === type)
 
-    getByNameAndType = (name: string, type: SourceType) => {
-        return this.sources.find(x => x.name === name && x.type === type);
-    }
+    getByNameAndType = (name: string, type: SourceType) => this.sources.find(x => x.name === name && x.type === type)
 
     async getStatusSummary(type?: string, name?: string): Promise<[boolean, string[]]> {
         let sources: AbstractSource[]
         let sourcesReady = true;
-        let messages: string[] = [];
+        const messages: string[] = [];
 
         if(type !== undefined) {
             sources = this.getByType(type);
@@ -101,7 +97,7 @@ export default class ScrobbleSources {
     }
 
     buildSourcesFromConfig = async (additionalConfigs: ParsedConfig[] = []) => {
-        let configs: ParsedConfig[] = additionalConfigs;
+        const configs: ParsedConfig[] = additionalConfigs;
 
         let configFile;
         try {
@@ -138,7 +134,7 @@ export default class ScrobbleSources {
             }
         }
 
-        for (let sourceType of sourceTypes) {
+        for (const sourceType of sourceTypes) {
             let defaultConfigureAs = 'source';
             // env builder for single user mode
             switch (sourceType) {
@@ -306,10 +302,10 @@ export default class ScrobbleSources {
                     }
                     break;
                 case 'webscrobbler':
-                    const wsShouldUse = parseBool(process.env.WEBSCROBBLER_ENABLE);
+                    const wsShouldUse = parseBool(process.env.WS_ENABLE);
                     const ws = {
-                        blacklist: process.env.WEBSCROBBLER_BLACKLIST,
-                        whitelist: process.env.WEBSCROBBLER_WHITELIST
+                        blacklist: process.env.WS_BLACKLIST,
+                        whitelist: process.env.WS_WHITELIST
                     }
                     if (!Object.values(ws).every(x => x === undefined) || wsShouldUse) {
                         configs.push({
@@ -321,6 +317,30 @@ export default class ScrobbleSources {
                             data: {
                                 blacklist: ws.blacklist !== undefined ? ws.blacklist.split(',') : [],
                                 whitelist: ws.whitelist !== undefined ? ws.whitelist.split(',') : [],
+                            }
+                        });
+                    }
+                    break;
+                case 'chromecast':
+                    const ccShouldUse = parseBool(process.env.CC_ENABLE);
+                    const cc = {
+                        blacklistDevices: process.env.CC_BLACKLIST_DEVICES,
+                        whitelistDevices: process.env.CC_WHITELIST_DEVICES,
+                        blacklistApps: process.env.CC_BLACKLIST_APPS,
+                        whitelistApps: process.env.CC_WHITELIST_APPS
+                    }
+                    if (!Object.values(cc).every(x => x === undefined) || ccShouldUse) {
+                        configs.push({
+                            type: 'chromecast',
+                            name: 'unnamed',
+                            source: 'ENV',
+                            mode: 'single',
+                            configureAs: defaultConfigureAs,
+                            data: {
+                                blacklistDevices: cc.blacklistDevices !== undefined ? cc.blacklistDevices.split(',') : [],
+                                whitelistDevices: cc.whitelistDevices !== undefined ? cc.whitelistDevices.split(',') : [],
+                                blacklistApps: cc.blacklistApps !== undefined ? cc.blacklistApps.split(',') : [],
+                                whitelistApps: cc.whitelistApps !== undefined ? cc.whitelistApps.split(',') : [],
                             }
                         });
                     }
@@ -366,7 +386,7 @@ export default class ScrobbleSources {
                     try {
                         const validConfig = validateJson<SourceConfig>(rawConf, sourceSchema, this.logger);
 
-                        // @ts-ignore
+                        // @ts-expect-error will eventually have all info (lazy)
                         const parsedConfig: ParsedConfig = {
                             ...rawConf,
                             source: `${sourceType}.json`,
@@ -517,6 +537,9 @@ export default class ScrobbleSources {
             case 'webscrobbler':
                 newSource = await new WebScrobblerSource(name, compositeConfig as WebScrobblerSourceConfig, internal, this.emitter);
                 break;
+            case 'chromecast':
+                newSource = await new ChromecastSource(name, compositeConfig as ChromecastSourceConfig, internal, this.emitter);
+                break;
             case 'endpointlz':
                 newSource = await new EndpointListenbrainzSource(name, compositeConfig as ListenbrainzEndpointConfig, internal, this.emitter);
                 break;
@@ -526,35 +549,16 @@ export default class ScrobbleSources {
 
         if(newSource === undefined) {
             // really shouldn't get here!
-            throw new Error(`Source of type ${type} was not recognized??`);
+            this.logger.error(new Error(`Source of type ${type} was not recognized??`));
+            return;
         }
-        if(newSource.initialized === false) {
-            this.logger.debug(`Attempting ${type} (${name}) initialization...`);
+        this.sources.push(newSource);
+        if(!newSource.isReady()) {
             if ((await newSource.initialize()) === false) {
                 this.logger.error(`${type} (${name}) source failed to initialize. Source needs to be successfully initialized before activity capture can begin.`);
-                return;
-            } else {
-                this.logger.info(`${type} (${name}) source initialized`);
             }
         } else {
-            this.logger.info(`${type} (${name}) source initialized`);
+            newSource.logger.info('Fully Initialized!');
         }
-
-        if(newSource.requiresAuth && !newSource.authed) {
-            this.logger.debug(`Checking ${type} (${name}) source auth...`);
-            let success;
-            try {
-                success = await newSource.testAuth();
-            } catch (e) {
-                success = false;
-            }
-            if(!success) {
-                this.logger.warn(`${type} (${name}) source auth failed.`);
-            } else {
-                this.logger.info(`${type} (${name}) source auth OK`);
-            }
-        }
-
-        this.sources.push(newSource);
     }
 }

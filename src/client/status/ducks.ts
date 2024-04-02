@@ -46,20 +46,34 @@ const sourceSlice = createSlice({
             .addMatcher(
                 (action) => sourceUpdate.match(action) && action.payload.event === 'discovered',
                 (state, action) => {
-                    state.entities[action.payload.id].tracksDiscovered = state.entities[action.payload.id].tracksDiscovered + 1;
+                    if(state.entities[action.payload.id] !== undefined) {
+                        state.entities[action.payload.id].tracksDiscovered++;
+                    }
                 }
             ).addMatcher(
             (action) => sourceUpdate.match(action) && action.payload.event === 'playerUpdate',
             (state, action) => {
-                const playerState = action.payload.data as SourcePlayerJson;
-                state.entities[action.payload.id].players[playerState.platformId] = playerState;
+                if(state.entities[action.payload.id] !== undefined) {
+                    const playerState = action.payload.data as SourcePlayerJson;
+                    state.entities[action.payload.id].players[playerState.platformId] = playerState;
+                }
             }).addMatcher(
             (action) => sourceUpdate.match(action) && action.payload.event === 'playerDelete',
             (state, action) => {
-                const playerState = action.payload.data as {platformId: string};
-                delete state.entities[action.payload.id].players[playerState.platformId];
+                if(state.entities[action.payload.id] !== undefined) {
+                    const playerState = action.payload.data as {platformId: string};
+                    delete state.entities[action.payload.id].players[playerState.platformId];
+                }
             }
         )
+            .addMatcher(
+                (action) => sourceUpdate.match(action) && action.payload.event === 'statusChange',
+                (state, action) => {
+                    if(state.entities[action.payload.id] !== undefined) {
+                        state.entities[action.payload.id].status = action.payload.data.status;
+                    }
+                }
+            )
     }
 });
 const clientSlice = createSlice({
@@ -79,7 +93,41 @@ const clientSlice = createSlice({
             .addMatcher(
                 (action) => clientUpdate.match(action) && action.payload.event === 'scrobble',
                 (state, action) => {
-                    state.entities[action.payload.id].tracksDiscovered = state.entities[action.payload.id].tracksDiscovered + 1;
+                    if(state.entities[action.payload.id] !== undefined) {
+                        state.entities[action.payload.id].scrobbled++;
+                    }
+                }
+            )
+            .addMatcher(
+                (action) => clientUpdate.match(action) && action.payload.event === 'deadLetter',
+                (state, action) => {
+                    if(state.entities[action.payload.id] !== undefined) {
+                        state.entities[action.payload.id].deadLetterScrobbles++;
+                    }
+                }
+            )
+            .addMatcher(
+                (action) => clientUpdate.match(action) && action.payload.event === 'statusChange',
+                (state, action) => {
+                    if(state.entities[action.payload.id] !== undefined) {
+                        state.entities[action.payload.id].status = action.payload.data.status;
+                    }
+                }
+            )
+            .addMatcher(
+                (action) => clientUpdate.match(action) && action.payload.event === 'scrobbleQueued',
+                (state, action) => {
+                    if(state.entities[action.payload.id] !== undefined) {
+                        state.entities[action.payload.id].queued++;
+                    }
+                }
+            )
+            .addMatcher(
+                (action) => clientUpdate.match(action) && action.payload.event === 'scrobbleDequeued',
+                (state, action) => {
+                    if(state.entities[action.payload.id] !== undefined) {
+                        state.entities[action.payload.id].queued--;
+                    }
                 }
             )
     }

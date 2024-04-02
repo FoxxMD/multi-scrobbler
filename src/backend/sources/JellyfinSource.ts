@@ -1,23 +1,25 @@
-import MemorySource from "./MemorySource";
-import dayjs, {Dayjs} from "dayjs";
+import { Logger } from "@foxxmd/logging";
+import dayjs from "dayjs";
+import EventEmitter from "events";
+import { PlayObject, TA_CLOSE } from "../../core/Atomic.js";
+import { buildTrackString, splitByFirstFound, truncateStringToLength } from "../../core/StringUtils.js";
+import { FormatPlayObjectOptions, InternalConfig, PlayPlatformId } from "../common/infrastructure/Atomic.js";
+import { JellySourceConfig } from "../common/infrastructure/config/source/jellyfin.js";
 import {
-    isPlayTemporallyClose,
     combinePartsToString,
+    doubleReturnNewline,
     parseBool,
     parseDurationFromTimestamp,
     playObjDataMatch,
+} from "../utils.js";
+import {
     comparePlayTemporally,
+    temporalAccuracyIsAtLeast,
     temporalPlayComparisonSummary,
-    doubleReturnNewline,
-} from "../utils";
-import { JellySourceConfig } from "../common/infrastructure/config/source/jellyfin";
-import { FormatPlayObjectOptions, InternalConfig, PlayPlatformId } from "../common/infrastructure/Atomic";
-import EventEmitter from "events";
-import { PlayerStateOptions } from "./PlayerState/AbstractPlayerState";
-import {Logger} from "@foxxmd/winston";
-import { JellyfinPlayerState } from "./PlayerState/JellyfinPlayerState";
-import { PlayObject } from "../../core/Atomic";
-import { buildTrackString, truncateStringToLength } from "../../core/StringUtils";
+} from "../utils/TimeUtils.js";
+import MemorySource from "./MemorySource.js";
+import { PlayerStateOptions } from "./PlayerState/AbstractPlayerState.js";
+import { JellyfinPlayerState } from "./PlayerState/JellyfinPlayerState.js";
 
 const shortDeviceId = truncateStringToLength(10, '');
 
@@ -87,7 +89,6 @@ export default class JellyfinSource extends MemorySource {
         } else {
             this.logger.info(`Initializing with the following filters => Users: ${this.users === undefined ? 'N/A' : this.users.join(', ')} | Servers: ${this.servers === undefined ? 'N/A' : this.servers.join(', ')}`);
         }
-        this.initialized = true;
     }
 
     static formatPlayObj(obj: any, options: FormatPlayObjectOptions = {}): PlayObject {
@@ -158,7 +159,7 @@ export default class JellyfinSource extends MemorySource {
                 playDate,
                 meta: {
                     brainz: {
-                        artist: Provider_musicbrainzartist,
+                        artist: splitByFirstFound<undefined>(Provider_musicbrainzartist, [';'], undefined),
                         album: Provider_musicbrainzalbum,
                         albumArtist: Provider_musicbrainzalbumartist,
                         track: Provider_musicbrainztrack,
@@ -249,9 +250,7 @@ export default class JellyfinSource extends MemorySource {
         return true;
     }
 
-    getRecentlyPlayed = async (options = {}) => {
-        return this.getFlatRecentlyDiscoveredPlays();
-    }
+    getRecentlyPlayed = async (options = {}) => this.getFlatRecentlyDiscoveredPlays()
 
     handle = async (playObj: PlayObject) => {
         if (!this.isValidEvent(playObj)) {
@@ -309,7 +308,7 @@ export default class JellyfinSource extends MemorySource {
                         
                         Temporal Comparison => ${temporalPlayComparisonSummary(temporalResult, currPlay, playObj)}`);
                     }
-                    if(temporalResult.close) {
+                    if(temporalAccuracyIsAtLeast(TA_CLOSE,temporalResult.match)) {
                         existingTracked = currPlay;
                     }
                     break;
@@ -364,7 +363,5 @@ export default class JellyfinSource extends MemorySource {
         }
     }
 
-    getNewPlayer = (logger: Logger, id: PlayPlatformId, opts: PlayerStateOptions) => {
-        return new JellyfinPlayerState(logger, id, opts);
-    }
+    getNewPlayer = (logger: Logger, id: PlayPlatformId, opts: PlayerStateOptions) => new JellyfinPlayerState(logger, id, opts)
 }

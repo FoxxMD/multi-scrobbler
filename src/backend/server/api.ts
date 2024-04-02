@@ -1,41 +1,64 @@
-import {ExpressWithAsync} from "@awaitjs/express";
-import {getRoot} from "../ioc";
-import {makeClientCheckMiddle, makeSourceCheckMiddle} from "./middleware";
-import AbstractSource from "../sources/AbstractSource";
+import { ExpressWithAsync } from "@awaitjs/express";
+import { LogDataPretty, Logger, LogLevel } from "@foxxmd/logging";
+import bsseDef from 'better-sse';
+import bodyParser from "body-parser";
+import { FixedSizeList } from 'fixed-size-list';
+import { PassThrough } from "node:stream";
+import { Transform } from "stream";
 import {
     ClientStatusData,
-    LogInfo,
-    LogInfoJson,
-    LogLevel,
-    LogOutputConfig, PlayObject,
+    DeadLetterScrobble,
+    LeveledLogData,
+    LogOutputConfig,
+    PlayObject,
+    SOURCE_SOT,
     SourceStatusData,
-} from "../../core/Atomic";
-import {Logger} from "@foxxmd/winston";
-import {formatLogToHtml, getLogger, isLogLineMinLevel} from "../common/logging";
-import {MESSAGE} from "triple-beam";
-import {Transform} from "stream";
-import {createSession} from "better-sse";
-import {setupTautulliRoutes} from "./tautulliRoutes";
-import {setupPlexRoutes} from "./plexRoutes";
-import {setupJellyfinRoutes} from "./jellyfinRoutes";
-import {setupDeezerRoutes} from "./deezerRoutes";
-import {setupAuthRoutes} from "./auth";
-import {ExpressHandler, ScrobbledPlayObject} from "../common/infrastructure/Atomic";
-import MemorySource from "../sources/MemorySource";
-import {capitalize} from "../../core/StringUtils";
-import {source} from "common-tags";
-import AbstractScrobbleClient from "../scrobblers/AbstractScrobbleClient";
-import {sortByNewestPlayDate} from "../utils";
-import bodyParser from "body-parser";
-import {setupWebscrobblerRoutes} from "./webscrobblerRoutes";
+} from "../../core/Atomic.js";
+import { capitalize } from "../../core/StringUtils.js";
+import { ExpressHandler } from "../common/infrastructure/Atomic.js";
+import { getRoot } from "../ioc.js";
+import AbstractScrobbleClient from "../scrobblers/AbstractScrobbleClient.js";
+import AbstractSource from "../sources/AbstractSource.js";
+import MemorySource from "../sources/MemorySource.js";
+import { sortByNewestPlayDate } from "../utils.js";
+import { setupAuthRoutes } from "./auth.js";
+import { setupDeezerRoutes } from "./deezerRoutes.js";
+import { setupJellyfinRoutes } from "./jellyfinRoutes.js";
+import { makeClientCheckMiddle, makeSourceCheckMiddle } from "./middleware.js";
+import { setupPlexRoutes } from "./plexRoutes.js";
+import { setupTautulliRoutes } from "./tautulliRoutes.js";
+import { setupWebscrobblerRoutes } from "./webscrobblerRoutes.js";
+
+const maxBufferSize = 300;
+const output: Record<number, FixedSizeList<LogDataPretty>> =  {};
 import {setupLZEndpointRoutes} from "./endpointListenbrainzRoutes";
 
-let output: LogInfo[] = []
+const createAddToLogBuffer = (levelMap:  {[p: number]: string}) => (log: LogDataPretty) => {
+    output[log.level].add({...log, levelLabel: levelMap[log.level]});
+}
 
-const availableLevels = ['error', 'warn', 'info', 'verbose', 'debug'];
+const getLogs = (minLevel: number, limit: number = maxBufferSize, sort: 'asc' | 'desc' = 'desc'): LeveledLogData[] => {
+    const allLogs: LeveledLogData[][] = [];
+    for(const level of Object.keys(output)) {
+        if(Number.parseInt(level) >= minLevel) {
+            allLogs.push(output[level].data);
+        }
+    }
+    if(sort === 'desc') {
+        return allLogs.flat(1).sort((a, b) => b.time - a.time).slice(0, limit);
+    }
+    return allLogs.flat(1).sort((a, b) => a.time - b.time).slice(0, limit);
+}
 
-export const setupApi = (app: ExpressWithAsync, logger: Logger, initialLogOutput: LogInfo[] = []) => {
-    output = initialLogOutput;
+export const setupApi = (app: ExpressWithAsync, logger: Logger, appLoggerStream: PassThrough, initialLogOutput: LogDataPretty[] = []) => {
+    for(const level of Object.keys(logger.levels.labels)) {
+        output[level] = new FixedSizeList<LeveledLogData>(maxBufferSize);
+    }
+
+    const addToLogBuffer = createAddToLogBuffer(logger.levels.labels);
+    for(const log of initialLogOutput) {
+        addToLogBuffer(log);
+    }
     const root = getRoot();
 
     //let logWebLevel: LogLevel = logger.level as LogLevel || (process.env.LOG_LEVEL || 'info') as LogLevel;
@@ -49,7 +72,7 @@ export const setupApi = (app: ExpressWithAsync, logger: Logger, initialLogOutput
     let logObjectStream: Transform;
     try {
         logObjectStream = new Transform({
-            transform(chunk, e, cb) {
+            transform: (chunk, e, cb) => {
                 cb(null, chunk)
             },
             objectMode: true,
@@ -59,12 +82,10 @@ export const setupApi = (app: ExpressWithAsync, logger: Logger, initialLogOutput
         console.log(e);
     }
 
-    const appLogger = getLogger({}, 'app');
-    appLogger.stream().on('log', (log: LogInfo) => {
-        output.unshift(log);
-        output = output.slice(0, 501);
-        if(isLogLineMinLevel(log, logConfig.level)) {
-            logObjectStream.write({message: log[MESSAGE], level: log.level});
+    appLoggerStream.on('data', (log: LogDataPretty) => {
+        addToLogBuffer(log);
+        if(log.level >= logger.levels.values[logConfig.level]) {
+            logObjectStream.write({message: log.line, level: log.level, levelLabel: logger.levels.labels[log.level]});
         }
     });
 
@@ -77,44 +98,49 @@ export const setupApi = (app: ExpressWithAsync, logger: Logger, initialLogOutput
     const clientRequiredMiddle = clientMiddleFunc(true);
     const sourceRequiredMiddle = sourceMiddleFunc(true);
 
-    const setLogWebLevel: ExpressHandler = async (req, res, next) => {
-        // @ts-ignore
+    const setLogWebSettings: ExpressHandler = async (req, res, next) => {
+        // @ts-expect-error logLevel not part of session
         const sessionLevel: LogLevel | undefined = req.session.logLevel as LogLevel | undefined;
         if(sessionLevel !== undefined && logConfig.level !== sessionLevel) {
             logConfig.level = sessionLevel;
         }
+        // @ts-expect-error limit not part of session
+        const sessionLimit: number | undefined = req.session.limit as number | undefined;
+        if(sessionLimit !== undefined && logConfig.limit !== sessionLimit) {
+            logConfig.limit = sessionLimit;
+        }
         next();
     }
 
-    app.get('/api/logs/stream', setLogWebLevel, async (req, res) => {
-        const session = await createSession(req, res);
+    app.get('/api/logs/stream', setLogWebSettings, async (req, res) => {
+        const session = await bsseDef.createSession(req, res);
         await session.stream(logObjectStream);
     });
 
-    app.get('/api/logs', setLogWebLevel, async (req, res) => {
-        let slicedLog = output.filter(x => isLogLineMinLevel(x, logConfig.level)).slice(0, logConfig.limit + 1);
-        if (logConfig.sort === 'ascending') {
-            slicedLog.reverse();
-        }
-        const jsonLogs: LogInfoJson[] = slicedLog.map(x => ({...x, formattedMessage: x[MESSAGE]}));
-        return res.json({data: jsonLogs, settings: logConfig});
+    app.get('/api/logs', setLogWebSettings, async (req, res) => {
+        const slicedLog = getLogs(logger.levels.values[logConfig.level], logConfig.limit + 1, logConfig.sort === 'ascending' ? 'asc' : 'desc');
+        return res.json({data: slicedLog, settings: logConfig});
     });
 
     app.put('/api/logs', async (req, res) => {
-        logConfig.level = req.body.level as LogLevel;
-        let slicedLog = output.filter(x => isLogLineMinLevel(x, logConfig.level)).slice(0, logConfig.limit + 1);
-        if (logConfig.sort === 'ascending') {
-            slicedLog.reverse();
-        }
-        // @ts-ignore
+        logConfig.level = req.body.level as LogLevel | undefined ?? logConfig.level;
+        logConfig.limit = req.body.limit ?? logConfig.limit;
+        const slicedLog = getLogs(logger.levels.values[logConfig.level], logConfig.limit + 1, logConfig.sort === 'ascending' ? 'asc' : 'desc');
+        // @ts-expect-error logLevel not part of session
         req.session.logLevel = logConfig.level;
-        const jsonLogs: LogInfoJson[] = slicedLog.map(x => ({...x, formattedMessage: x[MESSAGE]}));
-        return res.json({data: jsonLogs, settings: logConfig});
+        // @ts-expect-error limit not part of session
+        req.session.limit = logConfig.limit;
+        return res.json({data: slicedLog, settings: logConfig});
     });
 
     app.get('/api/events', async (req, res) => {
-        const session = await createSession(req, res);
+        const session = await bsseDef.createSession(req, res);
         scrobbleSources.emitter.on('*', (payload: any, eventName: string) => {
+            if(payload.from !== undefined) {
+                session.push({event: eventName, ...payload}, payload.from);
+            }
+        });
+        scrobbleClients.emitter.on('*', (payload: any, eventName: string) => {
             if(payload.from !== undefined) {
                 session.push({event: eventName, ...payload}, payload.from);
             }
@@ -150,7 +176,6 @@ export const setupApi = (app: ExpressWithAsync, logger: Logger, initialLogOutput
                 name,
                 canPoll = false,
                 polling = false,
-                initialized = false,
                 requiresAuth = false,
                 requiresAuthInteraction = false,
                 authed = false,
@@ -165,16 +190,26 @@ export const setupApi = (app: ExpressWithAsync, logger: Logger, initialLogOutput
                 hasAuth: requiresAuth,
                 hasAuthInteraction: requiresAuthInteraction,
                 authed,
-                players: 'players' in x ? (x as MemorySource).playersToObject() : {}
+                players: 'players' in x ? (x as MemorySource).playersToObject() : {},
+                sot: ('playerSourceOfTruth' in x) ? x.playerSourceOfTruth : SOURCE_SOT.HISTORY,
+                supportsUpstreamRecentlyPlayed: x.supportsUpstreamRecentlyPlayed
             };
-            if (!initialized) {
-                base.status = 'Not Initialized';
-            } else if (requiresAuth && !authed) {
-                base.status = requiresAuthInteraction ? 'Auth Interaction Required' : 'Authentication Failed Or Not Attempted'
-            } else if (canPoll) {
-                base.status = polling ? 'Polling' : 'Idle';
+            if(!x.isReady()) {
+                if(x.buildOK === false) {
+                    base.status = 'Initializing Data Failed';
+                } else if(x.connectionOK === false) {
+                    base.status = 'Communication Failed';
+                } else if (requiresAuth && !authed) {
+                    base.status = requiresAuthInteraction ? 'Auth Interaction Required' : 'Authentication Failed Or Not Attempted'
+                } else {
+                    base.status = 'Not Ready';
+                }
             } else {
-                base.status = !x.instantiatedAt.isSame(x.lastActivityAt) ? 'Received Data' : 'Awaiting Data';
+                if (canPoll) {
+                    base.status = polling ? 'Polling' : 'Idle';
+                } else {
+                    base.status = !x.instantiatedAt.isSame(x.lastActivityAt) ? 'Received Data' : 'Awaiting Data';
+                }
             }
             return base;
         });
@@ -194,12 +229,14 @@ export const setupApi = (app: ExpressWithAsync, logger: Logger, initialLogOutput
                 status: '',
                 type,
                 display: capitalize(type),
-                tracksDiscovered: tracksScrobbled,
+                scrobbled: tracksScrobbled,
                 name,
                 hasAuth: requiresAuth,
                 hasAuthInteraction: requiresAuthInteraction,
                 authed,
-                initialized
+                initialized,
+                deadLetterScrobbles: x.deadLetterScrobbles.length,
+                queued: x.queuedScrobbles.length
             };
             if (!initialized) {
                 base.status = 'Not Initialized';
@@ -217,19 +254,125 @@ export const setupApi = (app: ExpressWithAsync, logger: Logger, initialLogOutput
         const {
             // @ts-expect-error TS(2339): Property 'scrobbleSource' does not exist on type '... Remove this comment to see the full error message
             scrobbleSource: source,
+            query: {
+                upstream = 'false'
+            }
         } = req;
 
         let result: PlayObject[] = [];
         if (source !== undefined) {
-            result = (source as AbstractSource).getFlatRecentlyDiscoveredPlays();
+            if (upstream === 'true' || upstream === '1') {
+                if (!(source as AbstractSource).supportsUpstreamRecentlyPlayed) {
+                    return res.status(409).json({message: 'Fetching upstream recently played is not supported for this source'});
+                }
+                try {
+                    result = await (source as AbstractSource).getUpstreamRecentlyPlayed();
+                } catch (e) {
+                    return res.status(500).json({message: e.message});
+                }
+            } else {
+                result = (source as AbstractSource).getFlatRecentlyDiscoveredPlays();
+            }
         }
 
         return res.json(result);
     });
 
+    app.getAsync('/api/dead', clientMiddleFunc(true), async (req, res, next) => {
+        const {
+            // @ts-expect-error TS(2339): Property 'scrobbleSource' does not exist on type '... Remove this comment to see the full error message
+            scrobbleClient: client,
+        } = req;
+
+        const result: DeadLetterScrobble<PlayObject>[] = (client as AbstractScrobbleClient).deadLetterScrobbles;
+
+        return res.json(result);
+    });
+
+    app.putAsync('/api/dead', clientMiddleFunc(true), async (req, res, next) => {
+        const {
+            // @ts-expect-error TS(2339): Property 'scrobbleSource' does not exist on type '... Remove this comment to see the full error message
+            scrobbleClient: client,
+        } = req;
+
+        (client as AbstractScrobbleClient).logger.debug('User requested processing of all dead letter scrobbles via API');
+
+        await (client as AbstractScrobbleClient).processDeadLetterQueue(1000);
+
+        const result: DeadLetterScrobble<PlayObject>[] = (client as AbstractScrobbleClient).deadLetterScrobbles;
+
+        return res.json(result);
+    });
+
+    app.putAsync('/api/dead/:id', clientMiddleFunc(true), async (req, res, next) => {
+        const {
+            // @ts-expect-error TS(2339): Property 'scrobbleSource' does not exist on type '... Remove this comment to see the full error message
+            scrobbleClient: client,
+            params: {
+                id
+            } = {}
+        } = req;
+
+        const deadId = id as string;
+
+        (client as AbstractScrobbleClient).logger.debug(`User requested processing of dead letter scrobble ${deadId} via API call`)
+
+        const deadScrobble = (client as AbstractScrobbleClient).deadLetterScrobbles.find(x => x.id === deadId);
+
+        if(deadScrobble === undefined) {
+            (client as AbstractScrobbleClient).logger.debug(`No dead letter scrobble with ID ${deadId}`)
+            return res.status(404).send();
+        }
+
+        const [scrobbled, dead] = await (client as AbstractScrobbleClient).processDeadLetterScrobble(deadId);
+
+        if(scrobbled) {
+            return res.status(200).send();
+        }
+
+        return res.json(dead);
+    });
+
+    app.deleteAsync('/api/dead', clientMiddleFunc(true), async (req, res, next) => {
+        const {
+            // @ts-expect-error TS(2339): Property 'scrobbleSource' does not exist on type '... Remove this comment to see the full error message
+            scrobbleClient: client,
+        } = req;
+
+        (client as AbstractScrobbleClient).logger.debug('User requested deletion of all dead letter scrobbles via API');
+
+        (client as AbstractScrobbleClient).removeDeadLetterScrobbles();
+
+        return res.json([]);
+    });
+
+    app.deleteAsync('/api/dead/:id', clientMiddleFunc(true), async (req, res, next) => {
+        const {
+            // @ts-expect-error TS(2339): Property 'scrobbleSource' does not exist on type '... Remove this comment to see the full error message
+            scrobbleClient: client,
+            params: {
+                id
+            } = {}
+        } = req;
+
+        const deadId = id as string;
+
+        (client as AbstractScrobbleClient).logger.debug(`User requested removal of dead letter scrobble ${deadId} via API call`)
+
+        const deadScrobble = (client as AbstractScrobbleClient).deadLetterScrobbles.find(x => x.id === deadId);
+
+        if(deadScrobble === undefined) {
+            (client as AbstractScrobbleClient).logger.debug(`No dead letter scrobble with ID ${deadId}`)
+            return res.status(404).send();
+        }
+
+        (client as AbstractScrobbleClient).removeDeadLetterScrobble(deadId);
+        return res.status(200).send();
+    });
+
     app.getAsync('/api/scrobbled', clientMiddleFunc(false), async (req, res, next) => {
         const {
-            // @ts-ignore
+            // @ts-expect-error scrobbleClient not part of req
             scrobbleClient: client,
         } = req;
 
@@ -242,11 +385,13 @@ export const setupApi = (app: ExpressWithAsync, logger: Logger, initialLogOutput
     });
 
     app.use('/api/poll', sourceRequiredMiddle);
-    app.getAsync('/api/poll', async function (req, res) {
+    app.getAsync('/api/poll', async (req, res) => {
         // @ts-expect-error TS(2339): Property 'scrobbleSource' does not exist on type '... Remove this comment to see the full error message
         const source = req.scrobbleSource as AbstractSource;
+        source.logger.debug('User requested (re)start via API call');
 
         if (!source.canPoll) {
+            source.logger.debug(`Does not support polling (${source.type})`);
             return res.status(400).send(`Specified source cannot poll (${source.type})`);
         }
 
@@ -255,15 +400,31 @@ export const setupApi = (app: ExpressWithAsync, logger: Logger, initialLogOutput
             source.logger.info('Source is already polling! Restarting polling...');
             const stopRes = await source.tryStopPolling();
             if(stopRes === true) {
-                source.startPolling();
+                source.poll();
             }
+        } else {
+            source.poll();
         }
     });
 
-    app.getAsync('/health', async function(req, res)  {
-        return res.redirect(307, `/api/${req.url.slice(1)}`);
+    app.use('/api/client/init', clientRequiredMiddle);
+    app.postAsync('/api/client/init', async (req, res) => {
+        // @ts-expect-error TS(2339): Property 'scrobbleSource' does not exist on type '... Remove this comment to see the full error message
+        const client = req.scrobbleClient as AbstractScrobbleClient;
+        client.logger.debug('User requested (re)start via API call');
+
+        client.logger.info('Checking (and trying) to stop scrobbler if already running...');
+        if(false === (await client.tryStopScrobbling())) {
+            return res.status(500).send();
+        }
+
+        client.logger.info('Trying to start scrobbler...');
+        await client.initScrobbleMonitoring();
+        res.status(200).send('OK');
     });
-    app.getAsync('/api/health', async function (req, res) {
+
+    app.getAsync('/health', async (req, res) => res.redirect(307, `/api/${req.url.slice(1)}`));
+    app.getAsync('/api/health', async (req, res) => {
         const {
             type,
             name
@@ -276,11 +437,11 @@ export const setupApi = (app: ExpressWithAsync, logger: Logger, initialLogOutput
         return res.status((clientsReady && sourcesReady) ? 200 : 500).json({messages: sourceMessages.concat(clientMessages)});
     });
 
-    app.useAsync('/api/*', async function (req, res) {
+    app.useAsync('/api/*', async (req, res) => {
         const remote = req.connection.remoteAddress;
         const proxyRemote = req.headers["x-forwarded-for"];
         const ua = req.headers["user-agent"];
-        logger.debug(`Server received ${req.method} request from ${remote}${proxyRemote !== undefined ? ` (${proxyRemote})` : ''}${ua !== undefined ? ` (UA: ${ua})` : ''} to unknown route: ${req.url}`);
+        logger.debug(`Server received ${req.method} request from ${remote}${proxyRemote !== undefined ? ` (${proxyRemote})` : ''}${ua !== undefined ? ` (UA: ${ua})` : ''} to unknown route: ${req.originalUrl}`);
         return res.sendStatus(404);
     });
 }

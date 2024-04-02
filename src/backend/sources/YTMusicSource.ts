@@ -1,16 +1,13 @@
-import YouTubeMusic from "youtube-music-ts-api";
-
-import AbstractSource, { RecentlyPlayedOptions } from "./AbstractSource";
-import { FormatPlayObjectOptions, InternalConfig } from "../common/infrastructure/Atomic";
-// @ts-ignore
-import {IYouTubeMusicAuthenticated} from "youtube-music-ts-api/interfaces-primary";
 import dayjs from "dayjs";
-import { parseDurationFromTimestamp, playObjDataMatch } from "../utils";
-// @ts-ignore
-import {IPlaylistDetail, ITrackDetail} from "youtube-music-ts-api/interfaces-supplementary";
-import { YTMusicSourceConfig } from "../common/infrastructure/config/source/ytmusic";
 import EventEmitter from "events";
-import { PlayObject } from "../../core/Atomic";
+import YouTubeMusic from "youtube-music-ts-api";
+import { IYouTubeMusicAuthenticated } from "youtube-music-ts-api/interfaces-primary";
+import { IPlaylistDetail, ITrackDetail } from "youtube-music-ts-api/interfaces-supplementary";
+import { PlayObject } from "../../core/Atomic.js";
+import { FormatPlayObjectOptions, InternalConfig } from "../common/infrastructure/Atomic.js";
+import { YTMusicSourceConfig } from "../common/infrastructure/config/source/ytmusic.js";
+import { parseDurationFromTimestamp, playObjDataMatch } from "../utils.js";
+import AbstractSource, { RecentlyPlayedOptions } from "./AbstractSource.js";
 
 export default class YTMusicSource extends AbstractSource {
     apiInstance?: IYouTubeMusicAuthenticated
@@ -42,8 +39,12 @@ export default class YTMusicSource extends AbstractSource {
         if(artistsData !== undefined) {
             artists = artistsData.map(x => x.name) as string[];
         }
+        let albumArtists: string[] = [];
         if(albumData !== undefined) {
             album = albumData.name;
+            if(albumData.artist !== undefined) {
+                albumArtists = [albumData.artist.name];
+            }
         }
         if(durTimestamp !== undefined) {
             const durObj = parseDurationFromTimestamp(durTimestamp);
@@ -52,6 +53,7 @@ export default class YTMusicSource extends AbstractSource {
         return {
             data: {
                 artists,
+                albumArtists,
                 album,
                 track: title,
                 duration,
@@ -66,15 +68,14 @@ export default class YTMusicSource extends AbstractSource {
         }
     }
 
-    recentlyPlayedTrackIsValid = (playObj: PlayObject) => {
-        return playObj.meta.newFromSource;
-    }
+    recentlyPlayedTrackIsValid = (playObj: PlayObject) => playObj.meta.newFromSource
 
     api = async (): Promise<IYouTubeMusicAuthenticated> => {
         if(this.apiInstance !== undefined) {
             return this.apiInstance;
         }
-        const ytm = new  YouTubeMusic();
+        // @ts-expect-error default does exist
+        const ytm = new  YouTubeMusic.default() as YouTubeMusic;
         try {
             this.apiInstance = await ytm.authenticate(this.config.data.cookie, this.config.data.authUser);
         } catch (e: any) {
@@ -146,8 +147,7 @@ export default class YTMusicSource extends AbstractSource {
             }
 
             if(newPlays.length > 0) {
-                newPlays = newPlays.map((x) => {
-                    return {
+                newPlays = newPlays.map((x) => ({
                         data: {
                             ...x.data,
                             playDate: dayjs().startOf('minute')
@@ -156,8 +156,7 @@ export default class YTMusicSource extends AbstractSource {
                             ...x.meta,
                             newFromSource: true
                         }
-                    }
-                });
+                    }));
                 this.recentlyPlayed = newPlays.concat(this.recentlyPlayed).slice(0, 20);
             }
         }
@@ -166,10 +165,10 @@ export default class YTMusicSource extends AbstractSource {
         
     }
 
-    testAuth = async () => {
+    doAuthentication = async () => {
         try {
             await this.getRecentlyPlayed();
-            this.authed = true;
+            return true;
         } catch (e) {
             if(e.message.includes('Status code: 401')) {
                 let hint = 'Verify your cookie and authUser are correct.';
@@ -178,9 +177,8 @@ export default class YTMusicSource extends AbstractSource {
                 }
                 this.logger.error(`Authentication failed with the given credentials. ${hint} | Error => ${e.message}`);
             }
-            this.authed = false;
+            throw e;
         }
-        return this.authed;
     }
 
     onPollPostAuthCheck = async () => {

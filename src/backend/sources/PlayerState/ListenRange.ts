@@ -1,6 +1,6 @@
-import {ListenProgress} from "./ListenProgress";
-import dayjs, {Dayjs} from "dayjs";
-import {ListenRangeData} from "../../../core/Atomic";
+import dayjs, { Dayjs } from "dayjs";
+import { ListenRangeData, Second } from "../../../core/Atomic.js";
+import { ListenProgress } from "./ListenProgress.js";
 
 export class ListenRange implements ListenRangeData {
 
@@ -26,7 +26,7 @@ export class ListenRange implements ListenRangeData {
         return this.start.timestamp.isSame(this.end.timestamp);
     }
 
-    seeked(position?: number, reportedTS: Dayjs = dayjs()): [boolean, number?] {
+    seeked(position?: number, reportedTS: Dayjs = dayjs()): [boolean, Second?] {
         if (position === undefined || this.isInitial() || !this.isPositional()) {
             return [false];
         }
@@ -64,7 +64,7 @@ export class ListenRange implements ListenRangeData {
         }
     }
 
-    getDuration() {
+    getDuration(): Second {
         return this.start.getDuration(this.end);
     }
 

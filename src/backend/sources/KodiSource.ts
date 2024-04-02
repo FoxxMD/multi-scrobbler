@@ -1,10 +1,10 @@
-import MemorySource from "./MemorySource";
-import { FormatPlayObjectOptions, InternalConfig } from "../common/infrastructure/Atomic";
-import {EventEmitter} from "events";
-import { RecentlyPlayedOptions } from "./AbstractSource";
-import { KodiSourceConfig } from "../common/infrastructure/config/source/kodi";
-import { KodiApiClient } from "../common/vendor/KodiApiClient";
-import { PlayObject } from "../../core/Atomic";
+import { EventEmitter } from "events";
+import { PlayObject } from "../../core/Atomic.js";
+import { FormatPlayObjectOptions, InternalConfig } from "../common/infrastructure/Atomic.js";
+import { KodiSourceConfig } from "../common/infrastructure/config/source/kodi.js";
+import { KodiApiClient } from "../common/vendor/KodiApiClient.js";
+import { RecentlyPlayedOptions } from "./AbstractSource.js";
+import MemorySource from "./MemorySource.js";
 
 export class KodiSource extends MemorySource {
     declare config: KodiSourceConfig;
@@ -26,34 +26,21 @@ export class KodiSource extends MemorySource {
         this.multiPlatform = true;
     }
 
-    initialize = async () => {
+    protected async doBuildInitData(): Promise<true | string | undefined> {
         const {
             data: {
                 url
             } = {}
         } = this.config;
-        this.client = new KodiApiClient(this.name, this.config.data);
+        this.client = new KodiApiClient(this.name, this.config.data, {logger: this.logger});
         this.logger.debug(`Config URL: '${url ?? '(None Given)'}' => Normalized: '${this.client.url.toString()}'`)
-        this.initialized = true;
         return true;
-
-        /*const connected = await this.client.testConnection();
-        if(connected) {
-            //this.logger.info('Connection OK');
-            this.initialized = true;
-            return true;
-        } else {
-            this.logger.error(`Could not connect.`);
-            this.initialized = false;
-            return false;
-        }*/
     }
 
-    testAuth = async () => {
+    doAuthentication = async () => {
         const resp = await this.client.testAuth();
-        this.authed = resp;
-        this.clientReady = this.authed;
-        return this.authed;
+        this.clientReady = resp;
+        return resp;
     }
 
     static formatPlayObj(obj: any, options: FormatPlayObjectOptions = {}): PlayObject {
@@ -66,7 +53,7 @@ export class KodiSource extends MemorySource {
             return [];
         }
 
-        let play = await this.client.getRecentlyPlayed(options);
+        const play = await this.client.getRecentlyPlayed(options);
 
         return this.processRecentPlays(play);
     }

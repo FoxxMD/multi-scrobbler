@@ -1,13 +1,15 @@
-import { RecentlyPlayedOptions } from "./AbstractSource";
-import LastfmApiClient from "../common/vendor/LastfmApiClient";
-import { sortByOldestPlayDate } from "../utils";
-import { FormatPlayObjectOptions, InternalConfig } from "../common/infrastructure/Atomic";
-import {TrackObject, UserGetRecentTracksResponse} from "lastfm-node-client";
-import EventEmitter from "events";
-import { PlayObject } from "../../core/Atomic";
-import MemorySource from "./MemorySource";
-import {LastfmSourceConfig} from "../common/infrastructure/config/source/lastfm";
 import dayjs from "dayjs";
+import EventEmitter from "events";
+import { TrackObject, UserGetRecentTracksResponse } from "lastfm-node-client";
+import request from "superagent";
+import { PlayObject, SOURCE_SOT } from "../../core/Atomic.js";
+import { isNodeNetworkException } from "../common/errors/NodeErrors.js";
+import { FormatPlayObjectOptions, InternalConfig } from "../common/infrastructure/Atomic.js";
+import { LastfmSourceConfig } from "../common/infrastructure/config/source/lastfm.js";
+import LastfmApiClient from "../common/vendor/LastfmApiClient.js";
+import { sortByOldestPlayDate } from "../utils.js";
+import { RecentlyPlayedOptions } from "./AbstractSource.js";
+import MemorySource from "./MemorySource.js";
 
 export default class LastfmSource extends MemorySource {
 
@@ -28,34 +30,56 @@ export default class LastfmSource extends MemorySource {
         super('lastfm', name, {...config, data: {interval, maxInterval, ...restData}}, internal, emitter);
         this.canPoll = true;
         this.canBacklog = true;
-        this.api = new LastfmApiClient(name, {...config.data, configDir: internal.configDir, localUrl: internal.localUrl});
-        this.playerSourceOfTruth = false;
+        this.supportsUpstreamRecentlyPlayed = true;
+        this.supportsUpstreamNowPlaying = true;
+        this.api = new LastfmApiClient(name, {...config.data, configDir: internal.configDir, localUrl: internal.localUrl}, {logger: this.logger});
+        this.playerSourceOfTruth = SOURCE_SOT.HISTORY;
+        this.logger.info(`Note: The player for this source is an analogue for the 'Now Playing' status exposed by ${this.type} which is NOT used for scrobbling. Instead, the 'recently played' or 'history' information provided by this source is used for scrobbles.`)
     }
 
     static formatPlayObj(obj: any, options: FormatPlayObjectOptions = {}): PlayObject {
         return LastfmApiClient.formatPlayObj(obj, options);
     }
 
-    initialize = async () => {
-        this.initialized = await this.api.initialize();
-        return this.initialized;
+    // initialize = async () => {
+    //     this.initialized = await this.api.initialize();
+    //     return this.initialized;
+    // }
+
+    protected async doBuildInitData(): Promise<true | string | undefined> {
+        return await this.api.initialize();
     }
 
-    testAuth = async () => {
+    protected async doCheckConnection():Promise<true | string | undefined> {
         try {
-            this.authed = await this.api.testAuth();
+            await request.get('http://ws.audioscrobbler.com/2.0/');
+            return true;
         } catch (e) {
-            this.logger.error('Could not successfully communicate with Last.fm API');
-            this.logger.error(e);
-            this.authed = false;
+            if(isNodeNetworkException(e)) {
+                throw new Error('Could not communicate with Last.fm API server', {cause: e});
+            } else if(e.status >= 500) {
+                throw new Error('Last.fm API server returning an unexpected response', {cause: e})
+            }
+            return true;
         }
-        return this.authed;
+    }
+    doAuthentication = async () => {
+        try {
+            return await this.api.testAuth();
+        } catch (e) {
+            throw e;
+        }
     }
 
 
-    getRecentlyPlayed = async(options: RecentlyPlayedOptions = {}): Promise<PlayObject[]> => {
+    getLastfmRecentTrack = async(options: RecentlyPlayedOptions = {}): Promise<[PlayObject[], PlayObject[]]> => {
         const {limit = 20} = options;
-        const resp = await this.api.callApi<UserGetRecentTracksResponse>((client: any) => client.userGetRecentTracks({user: this.api.user, limit, extended: true}));
+        const resp = await this.api.callApi<UserGetRecentTracksResponse>((client: any) => client.userGetRecentTracks({
+            user: this.api.user,
+            sk: this.api.client.sessionKey,
+            limit,
+            extended: true
+        }));
         const {
             recenttracks: {
                 track: list = [],
@@ -96,11 +120,36 @@ export default class LastfmSource extends MemorySource {
         // so we'll just ignore it in the context of recent tracks since really we only want "tracks that have already finished being played" anyway
         const history = plays.filter(x => x.meta.nowPlaying !== true);
         const now = plays.filter(x => x.meta.nowPlaying === true);
-        this.processRecentPlays(now);
-        return history;
+        return [history, now];
     }
 
-    protected getBackloggedPlays = async () => {
-        return await this.getRecentlyPlayed({formatted: true});
+    getRecentlyPlayed = async(options: RecentlyPlayedOptions = {}): Promise<PlayObject[]> => {
+        try {
+            const [history, now] = await this.getLastfmRecentTrack(options);
+            this.processRecentPlays(now);
+            return  history;
+        } catch (e) {
+            throw e;
+        }
     }
+
+    getUpstreamRecentlyPlayed = async (options: RecentlyPlayedOptions = {}): Promise<PlayObject[]> => {
+        try {
+            const [history, now] = await this.getLastfmRecentTrack(options);
+            return history;
+        } catch (e) {
+            throw e;
+        }
+    }
+
+    getUpstreamNowPlaying = async (): Promise<PlayObject[]> => {
+        try {
+            const [history, now] = await this.getLastfmRecentTrack();
+            return now;
+        } catch (e) {
+            throw e;
+        }
+    }
+
+    protected getBackloggedPlays = async () => await this.getRecentlyPlayed({formatted: true})
 }

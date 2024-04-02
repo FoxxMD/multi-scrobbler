@@ -1,9 +1,12 @@
-import AbstractSource, { RecentlyPlayedOptions } from "./AbstractSource";
-import { FormatPlayObjectOptions, INITIALIZING, InternalConfig } from "../common/infrastructure/Atomic";
 import EventEmitter from "events";
-import { ListenBrainzSourceConfig } from "../common/infrastructure/config/source/listenbrainz";
-import { ListenbrainzApiClient } from "../common/vendor/ListenbrainzApiClient";
-import MemorySource from "./MemorySource";
+import request from "superagent";
+import { PlayObject, SOURCE_SOT } from "../../core/Atomic.js";
+import { isNodeNetworkException } from "../common/errors/NodeErrors.js";
+import { FormatPlayObjectOptions, InternalConfig } from "../common/infrastructure/Atomic.js";
+import { ListenBrainzSourceConfig } from "../common/infrastructure/config/source/listenbrainz.js";
+import { ListenbrainzApiClient } from "../common/vendor/ListenbrainzApiClient.js";
+import { RecentlyPlayedOptions } from "./AbstractSource.js";
+import MemorySource from "./MemorySource.js";
 
 export default class ListenbrainzSource extends MemorySource {
 
@@ -24,39 +27,38 @@ export default class ListenbrainzSource extends MemorySource {
         super('listenbrainz', name, {...config, data: {interval, maxInterval, ...restData}}, internal, emitter);
         this.canPoll = true;
         this.canBacklog = true;
-        this.api = new ListenbrainzApiClient(name, config.data);
-        this.playerSourceOfTruth = false;
+        this.api = new ListenbrainzApiClient(name, config.data, {logger: this.logger});
+        this.playerSourceOfTruth = SOURCE_SOT.HISTORY;
+        this.supportsUpstreamRecentlyPlayed = true;
+        this.logger.info(`Note: The player for this source is an analogue for the 'Now Playing' status exposed by ${this.type} which is NOT used for scrobbling. Instead, the 'recently played' or 'history' information provided by this source is used for scrobbles.`)
     }
 
-    static formatPlayObj = (obj: any, options: FormatPlayObjectOptions = {}) => ListenbrainzApiClient.formatPlayObj(obj, options);
+    static formatPlayObj(obj: any, options: FormatPlayObjectOptions = {}){ return ListenbrainzApiClient.formatPlayObj(obj, options); }
 
-    initialize = async () => {
-        // @ts-expect-error TS(2322): Type 'number' is not assignable to type 'boolean'.
-        this.initialized = INITIALIZING;
-        if(this.config.data.token === undefined) {
-            this.logger.error('Must provide a User Token');
-            this.initialized = false;
-        } else {
-            try {
-                await this.api.testConnection();
-                this.initialized = true;
-            } catch (e) {
-                this.logger.error(e);
-                this.initialized = false;
-            }
-        }
-        return this.initialized;
-    }
-
-    testAuth = async () => {
+    protected async doCheckConnection(): Promise<true | string | undefined> {
         try {
-            this.authed = await this.api.testAuth();
+            await request.get(this.api.url);
+            return true;
         } catch (e) {
-            this.logger.error('Could not successfully communicate with Listenbrainz API');
-            this.logger.error(e);
-            this.authed = false;
+            if(isNodeNetworkException(e)) {
+                throw new Error('Could not communicate with Listenbrainz API server', {cause: e});
+            } else if(e.status !== 410) {
+                throw new Error('Listenbrainz API server returning an unexpected response', {cause: e})
+            }
+            return true;
         }
-        return this.authed;
+    }
+
+    doAuthentication = async () => {
+        if(this.config.data.token === undefined) {
+            throw new Error('Must provide a User Token in configuration');
+        }
+        try {
+            return await this.api.testAuth();
+        } catch (e) {
+            throw e;
+            //throw new Error('Could not communicate with Listenbrainz API', {cause: e});
+        }
     }
 
 
@@ -67,7 +69,13 @@ export default class ListenbrainzSource extends MemorySource {
         return await this.api.getRecentlyPlayed(limit);
     }
 
-    protected getBackloggedPlays = async () => {
-        return await this.getRecentlyPlayed({formatted: true});
+    getUpstreamRecentlyPlayed = async (options: RecentlyPlayedOptions = {}): Promise<PlayObject[]> => {
+        try {
+            return await this.api.getRecentlyPlayed(20);
+        } catch (e) {
+            throw e;
+        }
     }
+
+    protected getBackloggedPlays = async () => await this.getRecentlyPlayed({formatted: true})
 }

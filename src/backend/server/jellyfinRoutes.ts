@@ -1,10 +1,10 @@
-import { parseBool, remoteHostIdentifiers } from "../utils";
-import {ExpressWithAsync} from "@awaitjs/express";
-import {Logger} from "@foxxmd/winston";
-import ScrobbleSources from "../sources/ScrobbleSources";
+import { ExpressWithAsync } from "@awaitjs/express";
+import { Logger } from "@foxxmd/logging";
 import bodyParser from "body-parser";
-import { JellyfinNotifier } from "../sources/ingressNotifiers/JellyfinNotifier";
-import JellyfinSource from "../sources/JellyfinSource";
+import { JellyfinNotifier } from "../sources/ingressNotifiers/JellyfinNotifier.js";
+import JellyfinSource from "../sources/JellyfinSource.js";
+import ScrobbleSources from "../sources/ScrobbleSources.js";
+import { parseBool, remoteHostIdentifiers } from "../utils.js";
 
 export const setupJellyfinRoutes = (app: ExpressWithAsync, logger: Logger, scrobbleSources: ScrobbleSources) => {
 
@@ -17,18 +17,18 @@ export const setupJellyfinRoutes = (app: ExpressWithAsync, logger: Logger, scrob
         //     req.rawBody = buf.toString();
         // }
     });
-    const jellyIngress = new JellyfinNotifier();
-    app.postAsync('/jellyfin', async function(req, res)  {
+    const jellyIngress = new JellyfinNotifier(logger);
+    app.postAsync('/jellyfin', async (req, res) => {
         res.redirect(307, '/api/jellyfin/ingress');
     });
     app.postAsync('/api/jellyfin/ingress',
-        async function (req, res, next) {
+        async (req, res, next) => {
             // track request before parsing body to ensure we at least log that something is happening
             // (in the event body parsing does not work or request is not POST/PATCH)
             jellyIngress.trackIngress(req, true);
             next();
         },
-        jellyfinJsonParser, async function (req, res) {
+        jellyfinJsonParser, async (req, res) => {
             jellyIngress.trackIngress(req, false);
 
             res.send('OK');
@@ -59,8 +59,6 @@ export const setupJellyfinRoutes = (app: ExpressWithAsync, logger: Logger, scrob
             }
             const logPayload = pSources.some(x => {
                 const {
-                    data: {
-                    } = {},
                     options: {
                         logPayload = parseBool(process.env.DEBUG_MODE)
                     } = {}

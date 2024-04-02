@@ -1,12 +1,13 @@
-import { IngressNotifier } from "./IngressNotifier";
-import {Request} from "express";
-import JellyfinSource from "../JellyfinSource";
-import { remoteHostIdentifiers, remoteHostStr } from "../../utils";
+import { Logger } from "@foxxmd/logging";
+import { Request } from "express";
+import { remoteHostIdentifiers, remoteHostStr } from "../../utils.js";
+import JellyfinSource from "../JellyfinSource.js";
+import { IngressNotifier } from "./IngressNotifier.js";
 
 export class JellyfinNotifier extends IngressNotifier {
 
-    constructor() {
-        super('Jellyfin');
+    constructor(logger: Logger) {
+        super('Jellyfin', logger);
     }
 
     seenServers: Record<string, string> = {};

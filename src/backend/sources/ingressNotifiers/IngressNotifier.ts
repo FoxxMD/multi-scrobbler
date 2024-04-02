@@ -1,7 +1,7 @@
-import winston, {Logger} from '@foxxmd/winston';
-import { mergeArr, remoteHostIdentifiers, remoteHostStr } from "../../utils";
-import {Request} from "express";
-import { RemoteIdentityParts } from "../../common/infrastructure/Atomic";
+import { childLogger, Logger } from '@foxxmd/logging';
+import { Request } from "express";
+import { RemoteIdentityParts } from "../../common/infrastructure/Atomic.js";
+import { remoteHostIdentifiers, remoteHostStr } from "../../utils.js";
 
 
 export abstract class IngressNotifier {
@@ -11,9 +11,9 @@ export abstract class IngressNotifier {
 
     remotes: Record<string, RemoteIdentityParts> = {};
 
-    protected constructor(name: string) {
+    protected constructor(name: string, logger: Logger) {
         this.identifier = name;
-        this.logger =  winston.loggers.get('app').child({labels: ['Ingress', name]}, mergeArr);
+        this.logger = childLogger(logger, ['Ingress', name]);
     }
 
     public trackIngress(req: Request, isRaw: boolean) {

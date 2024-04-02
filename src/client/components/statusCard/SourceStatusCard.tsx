@@ -14,7 +14,7 @@ export interface SourceStatusCardData extends StatusCardSkeletonData, PropsFromR
 
 const statusToStatusType = (status: string) => {
     const lower = status.toLowerCase();
-    if(lower.includes('running') || lower.includes('polling') || lower.includes('data')) {
+    if(lower.includes('running') || lower.includes('polling') || lower.includes('awaiting data')) {
         return 'active';
     }
     if(lower.includes('idle')) {
@@ -41,6 +41,7 @@ const SourceStatusCard = (props: SourceStatusCardData) => {
             method: 'GET',
         });
     },[data]);
+    let startSourceElement = null;
     if(data !== undefined)
     {
         const {
@@ -53,7 +54,9 @@ const SourceStatusCard = (props: SourceStatusCardData) => {
             tracksDiscovered,
             hasAuthInteraction,
             type,
-            players = {}
+            players = {},
+            sot,
+            supportsUpstreamRecentlyPlayed
         } = data;
         if(type === 'listenbrainz' || type === 'lastfm') {
             header = `${display} (Source)`;
@@ -63,16 +66,31 @@ const SourceStatusCard = (props: SourceStatusCardData) => {
 
         const discovered = (!hasAuth || authed) ? <Link to={`/recent?type=${type}&name=${name}`}>Tracks Discovered</Link> : <span>Tracks Discovered</span>;
 
+        let upstreamRecent = null;
+        if(supportsUpstreamRecentlyPlayed && (!hasAuth || authed)) {
+            upstreamRecent = <div><Link to={`/recent?type=${type}&name=${name}&upstream=1`}>See Recent from Source API</Link></div>;
+        }
+
+        if((!hasAuth || authed) && canPoll) {
+            startSourceElement = <div onClick={poll} className="capitalize underline cursor-pointer">{status === 'Polling' ? 'Restart' : 'Start'}</div>
+        }
+
         // TODO links
         body = (<div className="statusCardBody">
-            {platformIds.map(x => <Player key={x} data={players[x]}/>)}
+            {platformIds.map(x => <Player key={x} data={players[x]} sot={sot}/>)}
             <div>{discovered}: {tracksDiscovered}</div>
-            {canPoll && hasAuthInteraction ? <a target="_blank" href={`/api/source/auth?name=${name}&type=${type}`}>(Re)authenticate and (re)start polling</a> : null}
-            {canPoll && (!hasAuth || authed) ? <div onClick={poll} className="cursor-pointer underline">Restart Polling</div> : null}
+            {upstreamRecent}
+            {canPoll && hasAuthInteraction ? <a target="_blank" href={`/api/source/auth?name=${name}&type=${type}`}>(Re)authenticate</a> : null}
         </div>);
     }
     return (
-        <StatusCardSkeleton loading={loading} title={header} subtitle={name} status={status} statusType={statusToStatusType(status)}>
+        <StatusCardSkeleton
+            loading={loading}
+            title={header}
+            subtitle={name}
+            status={status}
+            subtitleRight={startSourceElement}
+            statusType={statusToStatusType(status)}>
                 {body}
         </StatusCardSkeleton>
     );

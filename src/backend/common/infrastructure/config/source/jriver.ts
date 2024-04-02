@@ -1,5 +1,5 @@
-import { CommonSourceConfig, CommonSourceData } from "./index";
-import { PollingOptions } from "../common";
+import { PollingOptions } from "../common.js";
+import { CommonSourceConfig, CommonSourceData } from "./index.js";
 
 export interface JRiverData extends CommonSourceData, PollingOptions {
     /**

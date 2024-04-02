@@ -1,37 +1,54 @@
-import dayjs, {Dayjs} from "dayjs";
+import { childLogger, Logger } from "@foxxmd/logging";
+import dayjs, { Dayjs } from "dayjs";
+import EventEmitter from "events";
+import { FixedSizeList } from 'fixed-size-list';
+import { nanoid } from "nanoid";
+import { messageWithCauses } from "pony-cause";
 import {
-    comparingMultipleArtists,
-    isPlayTemporallyClose,
-    mergeArr,
-    playObjDataMatch, pollingBackoff,
-    setIntersection, sleep, sortByOldestPlayDate,
-} from "../utils";
+    DeadLetterScrobble,
+    PlayObject,
+    QueuedScrobble,
+    TA_CLOSE,
+    TA_FUZZY,
+    TrackStringOptions,
+} from "../../core/Atomic.js";
+import { buildTrackString, capitalize, truncateStringToLength } from "../../core/StringUtils.js";
+import { hasNodeNetworkException } from "../common/errors/NodeErrors.js";
+import { hasUpstreamError, UpstreamError } from "../common/errors/UpstreamError.js";
 import {
     ARTIST_WEIGHT,
-    ClientType, DEFAULT_RETRY_MULTIPLIER, DUP_SCORE_THRESHOLD,
+    Authenticatable,
+    ClientType,
+    DEFAULT_RETRY_MULTIPLIER,
+    DUP_SCORE_THRESHOLD,
     FormatPlayObjectOptions,
     INITIALIZED,
     INITIALIZING,
     InitState,
-    NOT_INITIALIZED, REFERENCE_WEIGHT,
-    ScrobbledPlayObject, SourceScrobble, TIME_WEIGHT, TITLE_WEIGHT,
-} from "../common/infrastructure/Atomic";
-import winston, {Logger} from '@foxxmd/winston';
-import { CommonClientConfig } from "../common/infrastructure/config/client/index";
-import { ClientConfig } from "../common/infrastructure/config/client/clients";
-import { Notifiers } from "../notifier/Notifiers";
-import {FixedSizeList} from 'fixed-size-list';
-import { PlayObject, TrackStringOptions } from "../../core/Atomic";
-import {buildTrackString, capitalize, truncateStringToLength} from "../../core/StringUtils";
-import EventEmitter from "events";
-import {compareScrobbleArtists, compareScrobbleTracks, normalizeStr} from "../utils/StringUtils";
-import {UpstreamError} from "../common/errors/UpstreamError";
-import {nanoid} from "nanoid";
-import {ErrorWithCause} from "pony-cause";
-import {de} from "@faker-js/faker";
-import {del} from "superagent";
+    NOT_INITIALIZED,
+    ScrobbledPlayObject,
+    TIME_WEIGHT,
+    TITLE_WEIGHT,
+} from "../common/infrastructure/Atomic.js";
+import { CommonClientConfig } from "../common/infrastructure/config/client/index.js";
+import { Notifiers } from "../notifier/Notifiers.js";
+import {
+    comparingMultipleArtists,
+    playObjDataMatch,
+    pollingBackoff,
+    setIntersection,
+    sleep,
+    sortByOldestPlayDate,
+} from "../utils.js";
+import { compareScrobbleArtists, compareScrobbleTracks, normalizeStr } from "../utils/StringUtils.js";
+import {
+    comparePlayTemporally,
+    temporalAccuracyIsAtLeast,
+    temporalAccuracyToString,
+    temporalPlayComparisonSummary,
+} from "../utils/TimeUtils.js";
 
-export default abstract class AbstractScrobbleClient {
+export default abstract class AbstractScrobbleClient implements Authenticatable {
 
     name: string;
     type: ClientType;
@@ -44,6 +61,7 @@ export default abstract class AbstractScrobbleClient {
     requiresAuth: boolean = false;
     requiresAuthInteraction: boolean = false;
     authed: boolean = false;
+    authFailure?: boolean;
 
     #recentScrobblesList: PlayObject[] = [];
     scrobbledPlayObjs: FixedSizeList<ScrobbledPlayObject>;
@@ -62,8 +80,8 @@ export default abstract class AbstractScrobbleClient {
     scrobbleRetries: number =  0;
     scrobbling: boolean = false;
     userScrobblingStopSignal: undefined | any;
-    queuedScrobbles: (SourceScrobble & {id: string})[] = [];
-    deadLetterScrobbles: (SourceScrobble & {id: string, retries: number})[] = [];
+    queuedScrobbles: QueuedScrobble<PlayObject>[] = [];
+    deadLetterScrobbles: DeadLetterScrobble<PlayObject>[] = [];
 
     config: CommonClientConfig;
     logger: Logger;
@@ -75,7 +93,7 @@ export default abstract class AbstractScrobbleClient {
         this.type = type;
         this.name = name;
         this.identifier = `${capitalize(this.type)} - ${name}`;
-        this.logger = logger.child({labels: [this.identifier]}, mergeArr);
+        this.logger = childLogger(logger, this.identifier);
         this.notifier = notifier;
         this.emitter = emitter;
 
@@ -148,26 +166,37 @@ export default abstract class AbstractScrobbleClient {
     // default init function, should be overridden if init stage is required
     initialize = async () => {
         this.initialized = true;
+        this.logger.info('Initialized');
         return true;
     }
 
+    authGated = () => this.requiresAuth && !this.authed
+
+    canTryAuth = () => this.authGated() && this.authFailure !== true
+
+    protected doAuthentication = async (): Promise<boolean> => this.authed
+
     // default init function, should be overridden if auth stage is required
     testAuth = async () => {
-        return this.authed;
+        try {
+            this.authed = await this.doAuthentication();
+            this.authFailure = !this.authed;
+        } catch (e) {
+            // only signal as auth failure if error was NOT either a node network error or a non-showstopping upstream error
+            this.authFailure = !(hasNodeNetworkException(e) || hasUpstreamError(e, false));
+            this.authed = false;
+            this.logger.error(new Error(`Authentication test failed!${this.authFailure === false ? ' Due to a network issue. Will retry authentication on next heartbeat.' : ''}`, {cause: e}));
+        }
     }
 
-    isReady = async () => {
-        return this.initialized && (!this.requiresAuth || (this.requiresAuth && this.authed));
-    }
+    isReady = async () => this.initialized && !this.authGated()
 
     refreshScrobbles = async () => {
         this.logger.debug('Scrobbler does not have refresh function implemented!');
     }
 
     public abstract alreadyScrobbled(playObj: PlayObject, log?: boolean): Promise<boolean>;
-    scrobblesLastCheckedAt = () => {
-        return this.lastScrobbleCheck;
-    }
+    scrobblesLastCheckedAt = () => this.lastScrobbleCheck
 
     formatPlayObj = (obj: any, options: FormatPlayObjectOptions = {}) => {
         this.logger.warn('formatPlayObj should be defined by concrete class!');
@@ -205,9 +234,7 @@ export default abstract class AbstractScrobbleClient {
         this.scrobbledPlayObjs = new FixedSizeList<ScrobbledPlayObject>(this.MAX_STORED_SCROBBLES, this.scrobbledPlayObjs.data.filter(x => this.timeFrameIsValid(x.play)[0])) ;
     }
 
-    getScrobbledPlays = () => {
-        return this.scrobbledPlayObjs.data.map(x => x.scrobble);
-    }
+    getScrobbledPlays = () => this.scrobbledPlayObjs.data.map(x => x.scrobble)
 
     findExistingSubmittedPlayObj = (playObj: PlayObject): ([undefined, undefined] | [ScrobbledPlayObject, ScrobbledPlayObject[]]) => {
         const {
@@ -226,23 +253,16 @@ export default abstract class AbstractScrobbleClient {
         }
 
         const matchPlayDate = dtInvariantMatches.find((x: ScrobbledPlayObject) => {
-            const [closeTime, fuzzyTime = false] = this.compareExistingScrobbleTime(x.play, playObj);
-            return closeTime;
+            const temporalComparison = comparePlayTemporally(x.play, playObj);
+            return temporalAccuracyIsAtLeast(TA_CLOSE, temporalComparison.match)
         });
 
         return [matchPlayDate, dtInvariantMatches];
     }
 
-    protected compareExistingScrobbleTime = (existing: PlayObject, candidate: PlayObject): [boolean, boolean?] => {
-        let closeTime = isPlayTemporallyClose(existing, candidate);
-        let fuzzyTime = false;
-        if(!closeTime) {
-            fuzzyTime = isPlayTemporallyClose(existing, candidate, {fuzzyDuration: true});
-        }
-        return [closeTime, fuzzyTime];
-    }
     protected compareExistingScrobbleTitle = (existing: PlayObject, candidate: PlayObject): number => {
-        return Math.min(compareScrobbleTracks(existing, candidate)/100, 1);
+        const result = compareScrobbleTracks(existing, candidate);
+        return Math.min(result.highScore/100, 1);
     }
 
     protected compareExistingScrobbleArtist = (existing: PlayObject, candidate: PlayObject): [number, number] => {
@@ -270,13 +290,13 @@ export default abstract class AbstractScrobbleClient {
         // return early if we don't care about checking existing
         if (false === this.checkExistingScrobbles) {
             if (this.verboseOptions.match.onNoMatch) {
-                this.logger.debug(`(Existing Check) Source: ${buildTrackString(playObj, scoreTrackOpts)} => No Match because existing scrobble check is FALSE`);
+                this.logger.debug(`${capitalize(playObj.meta.source ?? 'Source')}: ${buildTrackString(playObj, scoreTrackOpts)} => No Match because existing scrobble check is FALSE`, {leaf: ['Dupe Check']});
             }
             return undefined;
         }
 
         let existingScrobble;
-        let closestMatch: {score: number, breakdowns: string[], confidence: string, scrobble?: PlayObject} = {score: 0, breakdowns: [], confidence: 'None'};
+        let closestMatch: {score: number, breakdowns: string[], confidence: string, scrobble?: PlayObject} = {score: 0, breakdowns: [], confidence: 'No existing scrobble matched with a score higher than 0'};
 
         // then check if we have already recorded this
         const [existingExactSubmitted, existingDataSubmitted = []] = this.findExistingSubmittedPlayObj(playObj);
@@ -301,7 +321,7 @@ export default abstract class AbstractScrobbleClient {
             // (either user doesnt want to check history or there is no history to check!)
             if (this.recentScrobbles.length === 0) {
                 if (this.verboseOptions.match.onNoMatch) {
-                    this.logger.debug(`(Existing Check) ${buildTrackString(playObj, scoreTrackOpts)} => No Match because no recent scrobbles returned from API`);
+                    this.logger.debug(`${buildTrackString(playObj, scoreTrackOpts)} => No Match because no recent scrobbles returned from API`, {leaf: ['Dupe Check']});
                 }
                 return undefined;
             }
@@ -315,8 +335,13 @@ export default abstract class AbstractScrobbleClient {
                 //const referenceMatch = referenceApiScrobbleResponse !== undefined && playObjDataMatch(x, referenceApiScrobbleResponse);
 
 
-                const [closeTime, fuzzyTime = false] = this.compareExistingScrobbleTime(x, playObj);
-                const timeMatch = (closeTime ? 1 : (fuzzyTime ? 0.6 : 0));
+                const temporalComparison = comparePlayTemporally(x, playObj);
+                let timeMatch = 0;
+                if(temporalAccuracyIsAtLeast(TA_CLOSE, temporalComparison.match)) {
+                    timeMatch = 1;
+                } else if(temporalComparison.match === TA_FUZZY) {
+                    timeMatch = 0.6;
+                }
 
                 const titleMatch = this.compareExistingScrobbleTitle(x, playObj);
 
@@ -353,11 +378,12 @@ export default abstract class AbstractScrobbleClient {
                     artistBreakdown = `Artist: (${artistMatch.toFixed(2)} + Whole Match Bonus ${artistWholeMatchBonus.toFixed(2)}) * (${ARTIST_WEIGHT} + Whole Match Bonus 0.05) = ${artistScore.toFixed(2)}`;
                 }
 
-                let scoreBreakdowns = [
+                const scoreBreakdowns = [
                     //`Reference: ${(referenceMatch ? 1 : 0)} * ${REFERENCE_WEIGHT} = ${referenceScore.toFixed(2)}`,
                     artistBreakdown,
                     `Title: ${titleMatch.toFixed(2)} * ${TITLE_WEIGHT} = ${titleScore.toFixed(2)}`,
-                    `Time: ${timeMatch} * ${TIME_WEIGHT} = ${timeScore.toFixed(2)}`,
+                    `Time: (${capitalize(temporalAccuracyToString(temporalComparison.match))}) ${timeMatch} * ${TIME_WEIGHT} = ${timeScore.toFixed(2)}`,
+                    `Time Detail => ${temporalPlayComparisonSummary(temporalComparison, x, playObj)}`,
                     `Score ${score.toFixed(2)} => ${score >= DUP_SCORE_THRESHOLD ? 'Matched!' : 'No Match'}`
                 ];
 
@@ -379,11 +405,15 @@ export default abstract class AbstractScrobbleClient {
         }
 
         if ((existingScrobble !== undefined && this.verboseOptions.match.onMatch) || (existingScrobble === undefined && this.verboseOptions.match.onNoMatch)) {
-            const closestScrobble = `Closest Scrobble: ${buildTrackString(closestMatch.scrobble, scoreTrackOpts)} => ${closestMatch.confidence}`;
-            this.logger.debug(`(Existing Check) Source: ${buildTrackString(playObj, scoreTrackOpts)} => ${closestScrobble}`);
-            if (this.verboseOptions.match.confidenceBreakdown === true) {
+            const closestScrobbleParts: string[] = [];
+            if(closestMatch.scrobble !== undefined) {
+                closestScrobbleParts.push(`Closest Scrobble: ${buildTrackString(closestMatch.scrobble, scoreTrackOpts)}`);
+            }
+            closestScrobbleParts.push(closestMatch.confidence);
+            this.logger.debug(`${capitalize(playObj.meta.source ?? 'Source')}: ${buildTrackString(playObj, scoreTrackOpts)} => ${closestScrobbleParts.join(' => ')}`, {leaf: ['Dupe Check']});
+            if (this.verboseOptions.match.confidenceBreakdown === true && closestMatch.breakdowns.length > 0) {
                 this.logger.debug(`Breakdown:
-${closestMatch.breakdowns.join('\n')}`);
+${closestMatch.breakdowns.join('\n')}`, {leaf: ['Dupe Check']});
             }
         }
         return existingScrobble;
@@ -408,6 +438,8 @@ ${closestMatch.breakdowns.join('\n')}`);
     }
 
     protected abstract doScrobble(playObj: PlayObject): Promise<PlayObject>
+
+    public abstract playToClientPayload(playObject: PlayObject): object
     
     initScrobbleMonitoring = async () => {
         if(!this.initialized) {
@@ -421,12 +453,18 @@ ${closestMatch.breakdowns.join('\n')}`);
             }
         }
 
-        if(this.requiresAuth && !this.authed) {
-            if (this.requiresAuthInteraction) {
+        if(this.authGated()) {
+            if(this.canTryAuth()) {
+                await this.testAuth();
+                if(!this.authed) {
+                    this.logger.warn(`Cannot start scrobble processing because auth test failed`);
+                    return;
+                }
+            } else if (this.requiresAuthInteraction) {
                 this.logger.warn(`Cannot start scrobble processing because user interaction is required for authentication`);
                 return;
-            } else if (!(await this.testAuth())) {
-                this.logger.warn(`Cannot start scrobble processing because auth test failed`);
+            } else {
+                this.logger.warn(`Cannot start scrobble processing because client needs to be reauthenticated.`);
                 return;
             }
         }
@@ -436,7 +474,10 @@ ${closestMatch.breakdowns.join('\n')}`);
             return;
         }
 
-        await this.startScrobbling();
+        this.startScrobbling().catch((e) => {
+            // do nothing, should have already been caught and logged
+        });
+        return;
     }
 
     startScrobbling = async () => {
@@ -510,6 +551,7 @@ ${closestMatch.breakdowns.join('\n')}`);
     protected doStopScrobbling = (reason: string = 'system') => {
         this.scrobbling = false;
         this.userScrobblingStopSignal = undefined;
+        this.emitEvent('statusChange', {status: 'Idle'});
         this.logger.info(`Stopped scrobble processing due to: ${reason}`);
     }
 
@@ -520,6 +562,7 @@ ${closestMatch.breakdowns.join('\n')}`);
             return true;
         }
         this.logger.info('Scrobble processing started');
+        this.emitEvent('statusChange', {status: 'Running'});
 
         try {
             this.scrobbling = true;
@@ -528,7 +571,7 @@ ${closestMatch.breakdowns.join('\n')}`);
                     if (this.lastScrobbleCheck.unix() < this.getLatestQueuePlayDate().unix()) {
                         await this.refreshScrobbles();
                     }
-                    const currQueuedPlay = this.queuedScrobbles[0];
+                    const currQueuedPlay = this.queuedScrobbles.shift();
                     const [timeFrameValid, timeFrameValidLog] = this.timeFrameIsValid(currQueuedPlay.play);
                     if (timeFrameValid && !(await this.alreadyScrobbled(currQueuedPlay.play))) {
                         try {
@@ -537,22 +580,17 @@ ${closestMatch.breakdowns.join('\n')}`);
                             this.addScrobbledTrack(currQueuedPlay.play, scrobbledPlay);
                         } catch (e) {
                             if (e instanceof UpstreamError && e.showStopper === false) {
-                                this.addDeadLetterScrobble(currQueuedPlay);
-                                this.logger.warn(`Could not scrobble ${buildTrackString(currQueuedPlay.play)} from Source '${currQueuedPlay.source}' but error was not show stopping. Adding scrobble to Dead Letter Queue and will retry on next heartbeat.`);
+                                this.addDeadLetterScrobble(currQueuedPlay, e);
+                                this.logger.warn(new Error(`Could not scrobble ${buildTrackString(currQueuedPlay.play)} from Source '${currQueuedPlay.source}' but error was not show stopping. Adding scrobble to Dead Letter Queue and will retry on next heartbeat.`, {cause: e}));
                             } else {
-                                const processError = new ErrorWithCause('Error occurred while trying to scrobble', {cause: e});
-                                //this.logger.error(processError);
-                                throw processError;
+                                this.queuedScrobbles.unshift(currQueuedPlay);
+                                throw new Error('Error occurred while trying to scrobble', {cause: e});
                             }
                         }
                     } else if (!timeFrameValid) {
                         this.logger.debug(`Will not scrobble ${buildTrackString(currQueuedPlay.play)} from Source '${currQueuedPlay.source}' because it ${timeFrameValidLog}`);
                     }
-                    // processing play may have changed index while we were scrobbling
-                    const pIndex = this.queuedScrobbles.findIndex(x => x.id === currQueuedPlay.id);
-                    if (pIndex !== -1) {
-                        this.queuedScrobbles.splice(pIndex, 1);
-                    }
+                    this.emitEvent('scrobbleDequeued', {queuedScrobble: currQueuedPlay})
                 }
                 await sleep(this.scrobbleSleep);
             }
@@ -563,6 +601,7 @@ ${closestMatch.breakdowns.join('\n')}`);
         } catch (e) {
             this.logger.error('Scrobble processing interrupted');
             this.logger.error(e);
+            this.emitEvent('statusChange', {status: 'Idle'});
             this.scrobbling = false;
             throw e;
         }
@@ -583,34 +622,36 @@ ${closestMatch.breakdowns.join('\n')}`);
         const retries = attemptWithRetries ?? deadLetterRetries;
 
         const processable = this.deadLetterScrobbles.filter(x => x.retries < retries);
-        this.logger.info(`${processable.length} of ${this.deadLetterScrobbles.length} dead scrobbles have less than ${retries} retries, ${processable.length === 0 ? 'will skip processing.': 'processing now...'}`, {leaf: 'Dead Letter'});
+        const queueStatus = `${processable.length} of ${this.deadLetterScrobbles.length} dead scrobbles have less than ${retries} retries, ${processable.length === 0 ? 'will skip processing.': 'processing now...'}`;
         if (processable.length === 0) {
+            this.logger.verbose(queueStatus, {leaf: 'Dead Letter'});
             return;
         }
+        this.logger.info(queueStatus, {leaf: 'Dead Letter'});
 
-        const idsToRemove = [];
+        const removedIds = [];
         for (const deadScrobble of this.deadLetterScrobbles) {
             if (deadScrobble.retries < retries) {
-                const scrobbled = await this.processDeadLetterScrobble(deadScrobble.id);
+                const [scrobbled, dead] = await this.processDeadLetterScrobble(deadScrobble.id);
                 if (scrobbled) {
-                    idsToRemove.push(deadScrobble.id);
+                    removedIds.push(deadScrobble.id);
                 }
             }
         }
-        if (idsToRemove.length > 0) {
-            this.deadLetterScrobbles = this.deadLetterScrobbles.filter(x => !idsToRemove.includes(x.id));
-            this.logger.info(`Removed ${idsToRemove.length} scrobbles from dead letter queue`, {leaf: 'Dead Letter'});
+        if (removedIds.length > 0) {
+            this.logger.info(`Removed ${removedIds.length} scrobbles from dead letter queue`, {leaf: 'Dead Letter'});
         }
     }
 
-    processDeadLetterScrobble = async (id: string) => {
-        if (!(await this.isReady())) {
-            this.logger.warn('Cannot process dead letter scrobble because client is not ready.', {leaf: 'Dead Letter'});
-            return;
-        }
+    processDeadLetterScrobble = async (id: string): Promise<[boolean, DeadLetterScrobble<PlayObject>?]> => {
         const deadScrobbleIndex = this.deadLetterScrobbles.findIndex(x => x.id === id);
         const deadScrobble = this.deadLetterScrobbles[deadScrobbleIndex];
-        if (this.lastScrobbleCheck.unix() < this.getLatestQueuePlayDate().unix()) {
+
+        if (!(await this.isReady())) {
+            this.logger.warn('Cannot process dead letter scrobble because client is not ready.', {leaf: 'Dead Letter'});
+            return [false, deadScrobble];
+        }
+        if (this.getLatestQueuePlayDate() !== undefined && this.lastScrobbleCheck.unix() < this.getLatestQueuePlayDate().unix()) {
             await this.refreshScrobbles();
         }
         const [timeFrameValid, timeFrameValidLog] = this.timeFrameIsValid(deadScrobble.play);
@@ -621,17 +662,22 @@ ${closestMatch.breakdowns.join('\n')}`);
                 this.addScrobbledTrack(deadScrobble.play, scrobbledPlay);
             } catch (e) {
                 deadScrobble.retries++;
-                this.logger.error(`Could not scrobble ${buildTrackString(deadScrobble.play)} from Source '${deadScrobble.source}' due to error`, {leaf: 'Dead Letter'});
-                this.logger.error(e);
+                deadScrobble.error = messageWithCauses(e);
+                deadScrobble.lastRetry = dayjs();
+                this.logger.error(new Error(`Could not scrobble ${buildTrackString(deadScrobble.play)} from Source '${deadScrobble.source}' due to error`, {cause: e}));
                 this.deadLetterScrobbles[deadScrobbleIndex] = deadScrobble;
-                return false;
+                return [false, deadScrobble];
             } finally {
                 await sleep(1000);
             }
         } else if (!timeFrameValid) {
             this.logger.debug(`Will not scrobble ${buildTrackString(deadScrobble.play)} from Source '${deadScrobble.source}' because it ${timeFrameValidLog}`, {leaf: 'Dead Letter'});
         }
-        return true;
+        if(deadScrobble !== undefined) {
+            this.removeDeadLetterScrobble(deadScrobble.id)
+        }
+
+        return [true];
     }
 
     removeDeadLetterScrobble = (id: string) => {
@@ -639,8 +685,13 @@ ${closestMatch.breakdowns.join('\n')}`);
         if (index === -1) {
             this.logger.warn(`No scrobble found with ID ${id}`, {leaf: 'Dead Letter'});
         }
-        this.logger.debug(`Removed scrobble ${buildTrackString(this.deadLetterScrobbles[index].play)} from queue`, {leaf: 'Dead Letter'});
+        this.logger.info(`Removed scrobble ${buildTrackString(this.deadLetterScrobbles[index].play)} from queue`, {leaf: 'Dead Letter'});
         this.deadLetterScrobbles.splice(index, 1);
+    }
+
+    removeDeadLetterScrobbles = () => {
+        this.deadLetterScrobbles = [];
+        this.logger.info('Removed all scrobbles from queue', {leaf: 'Dead Letter'});
     }
 
     protected getLatestQueuePlayDate = () => {
@@ -653,14 +704,24 @@ ${closestMatch.breakdowns.join('\n')}`);
     queueScrobble = (data: PlayObject | PlayObject[], source: string) => {
         const plays = Array.isArray(data) ? data : [data];
         for(const p of plays) {
-            this.queuedScrobbles.push({id: nanoid(), source, play: p});
+            const queuedPlay = {id: nanoid(), source, play: p}
+            this.emitEvent('scrobbleQueued', {queuedPlay: queuedPlay});
+            this.queuedScrobbles.push(queuedPlay);
         }
         this.queuedScrobbles.sort((a, b) => sortByOldestPlayDate(a.play, b.play));
     }
 
-    protected addDeadLetterScrobble = (data: SourceScrobble & { id?: string, retries?: number }) => {
-        this.deadLetterScrobbles.push({id: nanoid(), retries: 0, ...data});
+    protected addDeadLetterScrobble = (data: QueuedScrobble<PlayObject>, error: (Error | string) = 'Unspecified error') => {
+        let eString = '';
+        if(typeof error === 'string') {
+            eString = error;
+        } else {
+            eString = messageWithCauses(error);
+        }
+        const deadData = {id: nanoid(), retries: 0, error: eString, ...data};
+        this.deadLetterScrobbles.push(deadData);
         this.deadLetterScrobbles.sort((a, b) => sortByOldestPlayDate(a.play, b.play));
+        this.emitEvent('deadLetter', {dead: deadData});
     }
 
 

@@ -1,6 +1,6 @@
-import { AbstractPlayerState, PlayerStateOptions } from "./AbstractPlayerState";
-import {Logger} from "@foxxmd/winston";
-import { PlayPlatformId } from "../../common/infrastructure/Atomic";
+import { Logger } from "@foxxmd/logging";
+import { PlayPlatformId } from "../../common/infrastructure/Atomic.js";
+import { AbstractPlayerState, PlayerStateOptions } from "./AbstractPlayerState.js";
 
 export class GenericPlayerState extends AbstractPlayerState {
     constructor(logger: Logger, platformId: PlayPlatformId, opts?: PlayerStateOptions) {

@@ -1,28 +1,21 @@
 import 'dotenv/config';
-import {Logger} from '@foxxmd/winston';
+import { childLogger, LogDataPretty, Logger as FoxLogger } from "@foxxmd/logging";
 import dayjs from 'dayjs';
-import utc from 'dayjs/plugin/utc.js';
+import duration from 'dayjs/plugin/duration.js';
 import isBetween from 'dayjs/plugin/isBetween.js';
 import relativeTime from 'dayjs/plugin/relativeTime.js';
-import duration from 'dayjs/plugin/duration.js';
 import timezone from 'dayjs/plugin/timezone.js';
-import {
-    parseBool,
-    readJson,
-    sleep
-} from "./utils";
+import utc from 'dayjs/plugin/utc.js';
 import * as path from "path";
-import {projectDir} from "./common/index";
-import SpotifySource from "./sources/SpotifySource";
-import { AIOConfig } from "./common/infrastructure/config/aioConfig";
-import { getRoot } from "./ioc";
-import {getLogger} from "./common/logging";
-import {LogInfo} from "../core/Atomic";
-import {initServer} from "./server/index";
-import {SimpleIntervalJob, ToadScheduler} from "toad-scheduler";
-import {createHeartbeatSourcesTask} from "./tasks/heartbeatSources";
-import {createHeartbeatClientsTask} from "./tasks/heartbeatClients";
-
+import { SimpleIntervalJob, ToadScheduler } from "toad-scheduler";
+import { projectDir } from "./common/index.js";
+import { AIOConfig } from "./common/infrastructure/config/aioConfig.js";
+import { appLogger, initLogger as getInitLogger } from "./common/logging.js";
+import { getRoot } from "./ioc.js";
+import { initServer } from "./server/index.js";
+import { createHeartbeatClientsTask } from "./tasks/heartbeatClients.js";
+import { createHeartbeatSourcesTask } from "./tasks/heartbeatSources.js";
+import { parseBool, readJson, sleep } from "./utils.js";
 
 dayjs.extend(utc)
 dayjs.extend(isBetween);
@@ -34,15 +27,25 @@ dayjs.extend(timezone);
 
 const scheduler = new ToadScheduler()
 
-let output: LogInfo[] = []
+let output: LogDataPretty[] = []
 
-const initLogger = getLogger({file: false}, 'init');
-initLogger.stream().on('log', (log: LogInfo) => {
-    output.unshift(log);
-    output = output.slice(0, 301);
+const [parentInitLogger, initLoggerStream] = getInitLogger();
+const initLogger = childLogger(parentInitLogger, 'Init');
+initLoggerStream.on('data', (log: LogDataPretty) => {
+output.unshift(log);
+output = output.slice(0, 301);
 });
 
-let logger: Logger;
+let logger: FoxLogger;
+
+process.on('uncaughtExceptionMonitor', (err, origin) => {
+    const appError = new Error(`Uncaught exception is crashing the app! :( Type: ${origin}`, {cause: err});
+    if(logger !== undefined) {
+        logger.error(appError)
+    } else {
+        initLogger.error(appError);
+    }
+})
 
 const configDir = process.env.CONFIG_DIR || path.resolve(projectDir, `./config`);
 
@@ -72,14 +75,16 @@ const configDir = process.env.CONFIG_DIR || path.resolve(projectDir, `./config`)
             process.env.DEBUG_MODE = b.toString();
         }
 
-        const root = getRoot(config);
+        const [aLogger, appLoggerStream] = await appLogger(logging)
+        logger = childLogger(aLogger, 'App');
 
-        logger = getLogger(logging, 'app');
+        const root = getRoot({...config, logger});
+        initLogger.info(`Version: ${root.get('version')}`);
 
-        initServer(logger, output);
+        initServer(logger, appLoggerStream, output);
 
         if(process.env.IS_LOCAL === 'true') {
-            logger.info('multi-scrobbler can be run as a background service! See: https://github.com/FoxxMD/multi-scrobbler/blob/develop/docs/service.md');
+            logger.info('multi-scrobbler can be run as a background service! See: https://foxxmd.github.io/multi-scrobbler/docs/installation/service');
         }
 
         if(appConfigFail !== undefined) {
@@ -97,6 +102,11 @@ const configDir = process.env.CONFIG_DIR || path.resolve(projectDir, `./config`)
         await scrobbleClients.buildClientsFromConfig(notifiers);
         if (scrobbleClients.clients.length === 0) {
             logger.warn('No scrobble clients were configured!')
+        } else {
+            logger.info('Starting scrobble clients...');
+        }
+        for(const client of scrobbleClients.clients) {
+            await client.initScrobbleMonitoring();
         }
 
         const scrobbleSources = root.get('sources');//new ScrobbleSources(localUrl, configDir);
@@ -115,30 +125,10 @@ const configDir = process.env.CONFIG_DIR || path.resolve(projectDir, `./config`)
         let anyNotReady = false;
         for (const source of scrobbleSources.sources.filter(x => x.canPoll === true)) {
             await sleep(1500); // stagger polling by 1.5 seconds so that log messages for each source don't get mixed up
-            switch (source.type) {
-                case 'spotify':
-                    if ((source as SpotifySource).spotifyApi !== undefined) {
-                        if ((source as SpotifySource).spotifyApi.getAccessToken() === undefined) {
-                            anyNotReady = true;
-                        } else {
-                            (source as SpotifySource).poll();
-                        }
-                    }
-                    break;
-                case 'lastfm':
-                    if(source.initialized === true) {
-                        source.poll();
-                    }
-                    break;
-                default:
-                    if (source.poll !== undefined) {
-                        source.poll();
-                    }
-            }
-        }
-        for(const client of scrobbleClients.clients) {
-            if((await client.isReady())) {
-                client.initScrobbleMonitoring();
+            if(source.isReady()) {
+                source.poll();
+            } else {
+                anyNotReady = true;
             }
         }
         if (anyNotReady) {
@@ -156,8 +146,13 @@ const configDir = process.env.CONFIG_DIR || path.resolve(projectDir, `./config`)
         logger.info('Scheduler started.');
 
     } catch (e) {
-        logger.error('Exited with uncaught error');
-        logger.error(e);
+        const appError = new Error('Exited with uncaught error', {cause: e});
+        if(logger !== undefined) {
+            logger.error(appError);
+        } else {
+            initLogger.error(appError);
+        }
+        process.exit(1);
     }
 }());
 

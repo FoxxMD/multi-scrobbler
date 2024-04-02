@@ -1,13 +1,13 @@
-import MemorySource from "./MemorySource";
-import { FormatPlayObjectOptions, InternalConfig } from "../common/infrastructure/Atomic";
 import dayjs from "dayjs";
-import {URL} from "url";
+import { EventEmitter } from "events";
 import normalizeUrl from 'normalize-url';
-import {EventEmitter} from "events";
-import { RecentlyPlayedOptions } from "./AbstractSource";
-import { JRiverSourceConfig } from "../common/infrastructure/config/source/jriver";
-import { Info, JRiverApiClient, PLAYER_STATE } from "../common/vendor/JRiverApiClient";
-import { PlayObject } from "../../core/Atomic";
+import { URL } from "url";
+import { PlayObject } from "../../core/Atomic.js";
+import { FormatPlayObjectOptions, InternalConfig } from "../common/infrastructure/Atomic.js";
+import { JRiverSourceConfig } from "../common/infrastructure/config/source/jriver.js";
+import { Info, JRiverApiClient, PLAYER_STATE } from "../common/vendor/JRiverApiClient.js";
+import { RecentlyPlayedOptions } from "./AbstractSource.js";
+import MemorySource from "./MemorySource.js";
 
 export class JRiverSource extends MemorySource {
     declare config: JRiverSourceConfig;
@@ -32,7 +32,7 @@ export class JRiverSource extends MemorySource {
             } = {},
         } = config;
         this.url = JRiverSource.parseConnectionUrl(url);
-        this.client = new JRiverApiClient(name, {...data, url: this.url.toString()});
+        this.client = new JRiverApiClient(name, {...data, url: this.url.toString()}, {logger: this.logger});
         this.requiresAuth = true;
         this.canPoll = true;
         this.multiPlatform = true;
@@ -53,31 +53,28 @@ export class JRiverSource extends MemorySource {
         return url;
     }
 
-    initialize = async () => {
+    protected async doBuildInitData(): Promise<true | string | undefined> {
         const {
             data: {
                 url
             } = {}
         } = this.config;
         this.logger.debug(`Config URL: '${url ?? '(None Given)'}' => Normalized: '${this.url.toString()}'`)
+        return true;
+    }
 
-        const connected = await this.client.testConnection();
-        if(connected) {
-            this.logger.info('Connection OK');
-            this.initialized = true;
-            return true;
-        } else {
-            this.logger.error(`Could not connect.`);
-            this.initialized = false;
-            return false;
+    protected async doCheckConnection(): Promise<true | string | undefined> {
+        try {
+            return await this.client.testConnection();
+        } catch (e) {
+            throw e;
         }
     }
 
-    testAuth = async () => {
+    doAuthentication = async () => {
         const resp = await this.client.testAuth();
-        this.authed = resp;
-        this.clientReady = this.authed;
-        return this.authed;
+        this.clientReady = resp;
+        return resp;
     }
 
     static formatPlayObj(obj: Info, options: FormatPlayObjectOptions = {}): PlayObject {
@@ -94,8 +91,8 @@ export class JRiverSource extends MemorySource {
             ZoneName,
         } = obj;
 
-        let artists = Artist === null || Artist === undefined ? [] : [Artist];
-        let album = Album === null || Album === '' ? undefined : Album;
+        const artists = Artist === null || Artist === undefined ? [] : [Artist];
+        const album = Album === null || Album === '' ? undefined : Album;
         const length = Number.parseInt(DurationMS.toString()) / 1000;
 
         return {

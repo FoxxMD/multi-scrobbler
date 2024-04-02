@@ -22,7 +22,7 @@ export const buildTrackStringReactOptions: TrackStringOptions<ReactElement> = {
     }
 }
 
-const LOG_LINE_REGEX = new RegExp(/(?<timestamp>\S+)\s+(?<level>\w+)\s*:\s*(?<message>(?:.|\n)*)/, 'm');
+const LOG_LINE_REGEX = new RegExp(/\[(?<timestamp>.+)]\s+(?<level>\w+)\s*:\s*(?<message>(?:.|\n)*)/m, 'm');
 export const parseLogLine = (line: string) => {
     const match = line.match(LOG_LINE_REGEX);
     if (match === null) {
@@ -44,11 +44,15 @@ export const DAYJS_TIMEZ_FORMAT = 'HH:mm:ssZ';
 export const DAYJS_TIME_FORMAT = 'HH:mm:ss';
 export const DAYJS_DATE_FORMAT = 'YYYY-MM-DD';
 
-export const isoToHuman = (iso: string, opts?: DateFormatOptions) => {
+export const isoToHuman = (iso?: string | null, opts?: DateFormatOptions) => {
     const {
         includeRelative = false,
         includeDate
     } = opts;
+
+    if(iso === undefined || iso === null) {
+        return 'N/A';
+    }
 
     let parts = [];
 

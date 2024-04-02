@@ -1,11 +1,20 @@
-import {describe, it} from 'mocha';
-import {assert} from 'chai';
+import { loggerTest } from "@foxxmd/logging";
+import { assert } from 'chai';
+import dayjs from "dayjs";
+import { describe, it } from 'mocha';
+import { http, HttpResponse } from "msw";
+import { PlayObject } from "../../../core/Atomic.js";
+import { UpstreamError } from "../../common/errors/UpstreamError.js";
+
+import { ListenbrainzApiClient, ListenResponse } from "../../common/vendor/ListenbrainzApiClient.js";
+import { ExpectedResults } from "../utils/interfaces.js";
+import { withRequestInterception } from "../utils/networking.js";
+import artistWithProperJoiner from './correctlyMapped/artistProperHasJoinerInName.json';
 // correct mappings
 import multiArtistInArtistName from './correctlyMapped/multiArtistInArtistName.json';
 import multiArtistsInTrackName from './correctlyMapped/multiArtistInTrackName.json';
-import noArtistMapping from './correctlyMapped/noArtistMapping.json';
 import multiMappedArtistsWithSingleUserArtist from './correctlyMapped/multiArtistMappingWithSingleRecordedArtist.json';
-import artistWithProperJoiner from './correctlyMapped/artistProperHasJoinerInName.json';
+import noArtistMapping from './correctlyMapped/noArtistMapping.json';
 import normalizedValues from './correctlyMapped/normalizedName.json';
 import slightlyDifferentNames from './correctlyMapped/trackNameSlightlyDifferent.json';
 
@@ -13,12 +22,6 @@ import slightlyDifferentNames from './correctlyMapped/trackNameSlightlyDifferent
 import incorrectMultiArtistsTrackName from './incorrectlyMapped/multiArtistsInTrackName.json';
 import veryWrong from './incorrectlyMapped/veryWrong.json';
 
-import {ListenbrainzApiClient, ListenResponse} from "../../common/vendor/ListenbrainzApiClient";
-
-interface ExpectedResults {
-    artists: string[]
-    track: string
-}
 interface LZTestFixture {
     data: ListenResponse
     expected: ExpectedResults
@@ -102,4 +105,48 @@ describe('Listenbrainz Listen Parsing', function () {
             }
         });
     });
+});
+
+describe('Listenbrainz Response Behavior', function() {
+
+    const client = new ListenbrainzApiClient('test',
+        {
+            token: 'test',
+            username: 'test'
+        }, {logger: loggerTest});
+
+    it('Should recognize bad requests as non-showstopping',withRequestInterception(
+        [
+            http.post('https://api.listenbrainz.org/1/submit-listens', () => {
+                return HttpResponse.json({code: 400, error: 'artist_mbids MBID format invalid'}, {status: 400});
+            })
+        ],
+        async function() {
+            const play: PlayObject = {
+                data: {
+                    artists: ['Celldweller'],
+                    album: 'The Complete Cellout, Volume 01',
+                    track: 'Frozen',
+                    duration: 299,
+                    playDate: dayjs(),
+                    meta: {
+                        brainz: {
+                            // @ts-expect-error wrong on purpose
+                            artist: 'fad8967c-a327-4af5-a64a-d4de66ece652;100846a7-06f6-4129-97ce-4409b9a9a311',
+                            album: '2eb6a8fb-14f6-436e-9bdf-2f9d0d8cbae0',
+                            track: '677862e0-3603-4120-8c44-ee9a70893647',
+                            releaseGroup: 'bd3bb964-6da7-4d59-b0aa-f8bf639cd419'
+                        }
+                    }
+                },
+                meta: {}
+            }
+            try {
+                await client.submitListen(play);
+            } catch (e) {
+                assert.isTrue(e instanceof UpstreamError);
+                assert.isTrue(e.showStopper === false);
+            }
+        }
+    ));
 });

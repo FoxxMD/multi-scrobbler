@@ -1,45 +1,87 @@
-import {DELIMITERS} from "../common/infrastructure/Atomic";
-import {parseRegexSingleOrFail} from "../utils";
-import {PlayObject} from "../../core/Atomic";
-import {stringSameness, StringSamenessResult} from "@foxxmd/string-sameness";
-// @ts-ignore
-import {levenStrategy} from "@foxxmd/string-sameness/strategies/leven"
-// @ts-ignore
-import {diceStrategy} from "@foxxmd/string-sameness/strategies/deice";
+import { strategies, stringSameness, StringSamenessResult } from "@foxxmd/string-sameness";
+import { PlayObject } from "../../core/Atomic.js";
+import { DELIMITERS } from "../common/infrastructure/Atomic.js";
+import { parseRegexSingleOrFail } from "../utils.js";
 
-export const PUNCTUATION_WHITESPACE_REGEX = new RegExp(/[^\w\d]/g);
-export const PUNCTUATION_REGEX = new RegExp(/[^\w\d\s]/g);
+const {levenStrategy, diceStrategy} = strategies;
+
+// cant use [^\w\s] because this also catches non-english characters
+export const SYMBOLS_WHITESPACE_REGEX = new RegExp(/[`=(){}<>;'’,.~!@#$%^&*_+|:"?\-\\[\]/\s]/g);
+export const SYMBOLS_REGEX = new RegExp(/[`=(){}<>;'’,.~!@#$%^&*_+|:"?\-\\[\]/]/g);
 
 export const MULTI_WHITESPACE_REGEX = new RegExp(/\s{2,}/g);
-export const uniqueNormalizedStrArr = (arr: string[]): string[] => {
-    return arr.reduce((acc: string[], curr) => {
+export const uniqueNormalizedStrArr = (arr: string[]): string[] => arr.reduce((acc: string[], curr) => {
         const normalizedCurr = normalizeStr(curr)
         if (!acc.some(x => normalizeStr(x) === normalizedCurr)) {
             return acc.concat(curr);
         }
         return acc;
-    }, []);
-}
+    }, [])
 // https://stackoverflow.com/a/37511463/1469797
 export const normalizeStr = (str: string, options?: {keepSingleWhitespace?: boolean}): string => {
     const {keepSingleWhitespace = false} = options || {};
     const normal = str.normalize('NFD').replace(/[\u0300-\u036f]/g, "");
     if(!keepSingleWhitespace) {
-        return normal.replace(PUNCTUATION_WHITESPACE_REGEX, '').toLocaleLowerCase();
+        return normal.replace(SYMBOLS_WHITESPACE_REGEX, '').toLocaleLowerCase();
     }
-    return normal.replace(PUNCTUATION_REGEX, '').replace(MULTI_WHITESPACE_REGEX, ' ').toLocaleLowerCase().trim();
+    return normal.replace(SYMBOLS_REGEX, '').replace(MULTI_WHITESPACE_REGEX, ' ').toLocaleLowerCase().trim();
 }
 
 export interface PlayCredits {
     primary: string
+    primaryComposite: string
     secondary?: string[]
+    suffix?: string
 }
+
+/**
+ * Matches if the secondary string is wrapped in parenthesis-like symbols. Returns joiner, credits, and
+ * suffix = if anything appears after end of wrapped string
+ *
+ * EX (feat. Kaash Paige & Diamond Platnumz) - Remix
+ *     !!!!  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^  *******
+ *
+ *
+ * */
+export const SECONDARY_CAPTURED_REGEX = new RegExp(/[([]\s*(?<joiner>ft\.?\W|feat\.?\W|featuring|vs\.?\W)\s*(?<credits>.*)[)\]](?<creditsSuffix>.*)/i);
+
+
+/**
+ * Matches if the secondary string is NOT wrapped in parenthesis-like symbols. Returns joiner, credits, and
+ * suffix = if anything appears wrapped or starting with " - " proceeding string appearing after joiner
+ *
+ * EX feat. Diag
+ *    !!!!  ^^^^
+ *
+ *    Ft Akon, Paige & Djfredse (Remix Braquer vos têtes)
+ *    !! ^^^^^^^^^^^^^^^^^^^^^^ *************************
+ *
+ *    feat. Kaash Paige & Diamond Platnumz - Remix
+ *    !!!!  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ *******
+ *
+ * */
+export const SECONDARY_FREE_REGEX = new RegExp(/^\s*(?<joiner>ft\.?\W|feat\.?\W|featuring|vs\.?\W)\s*(?<credits>(?:.+?(?= - |\s*[([]))|(?:.*))(?<creditsSuffix>.*)/i);
+
+const SECONDARY_REGEX_STRATS: RegExp[] = [SECONDARY_CAPTURED_REGEX, SECONDARY_FREE_REGEX];
+
+/**
+ * Matches JUST primary and secondary sections separated by a REQUIRED joiner that can optionally be wrapped in parenthesis-like symbols
+ *
+ * EX
+ *    Criminal mind Ft Akon (Remix Braquer vos têtes)
+ *    ^^^^^^^^^^^^^**********************************
+ *
+ *    Wasted Energy (feat. Kaash Paige & Diamond Platnumz) - Remix
+ *    ^^^^^^^^^^^^^^**********************************************
+ *
+ * */
+export const PRIMARY_SECONDARY_SECTIONS_REGEX = new RegExp(/^(?<primary>.+?)(?<secondary>(?:[([]?(?:\Wft\.?|\Wfeat\.?|featuring|\Wvs\.)).*)/i);
 
 /**
  * For matching the most common track/artist pattern that has a joiner
  *
  * Primary ft. 2nd Artist, 3rd Artist
- * Primary (2nd Artist)
+ * Primary (2nd Artist) - Suffix
  * Primary [featuring 2nd Artist]
  *
  * ____
@@ -50,28 +92,44 @@ export interface PlayCredits {
  *   => MUST begin with joiner ft. feat. featuring with vs.
  *   => May have closing character ) ]
  * */
-export const SECONDARY_ARTISTS_SECTION_REGEX = new RegExp(/^(?<primary>[^(\[]*)?(?<secondarySection>[(\[]?(?<joiner>\Wft\.?|\Wfeat\.?|featuring|\Wvs\.?) (?<secondaryArtists>[^)\]]*)(?:[)\]]|\s*)$)/i);
 // export const SECONDARY_ARTISTS_REGEX = new RegExp(//ig);
 export const parseCredits = (str: string, delimiters?: boolean | string[]): PlayCredits => {
     if (str.trim() === '') {
         return undefined;
     }
+
     let primary: string | undefined;
     let secondary: string[] = [];
-    const results = parseRegexSingleOrFail(SECONDARY_ARTISTS_SECTION_REGEX, str);
-    if (results !== undefined) {
-        primary = results.named.primary !== undefined ? results.named.primary.trim() : undefined;
+    let suffix: string | undefined;
+    const results = parseRegexSingleOrFail(PRIMARY_SECONDARY_SECTIONS_REGEX, str);
+    if(results !== undefined) {
+
         let delims: string[] | undefined;
         if (Array.isArray(delimiters)) {
             delims = delimiters;
         } else if (delimiters === false) {
             delims = [];
         }
-        secondary = parseStringList(results.named.secondaryArtists as string, delims)
+
+        primary = results.named.primary.trim();
+        for(const strat of SECONDARY_REGEX_STRATS) {
+            const secCredits = parseRegexSingleOrFail(strat, results.named.secondary);
+            if(secCredits !== undefined) {
+                secondary = parseStringList(secCredits.named.credits as string, delims)
+                suffix = secCredits.named.creditsSuffix;
+                break;
+            }
+        }
+        if(secondary === undefined) {
+            // uh oh, this shouldn't have happened! Return nothing since we don't know how to parse this
+            return undefined;
+        }
         return {
             primary,
-            secondary
-        };
+            primaryComposite: `${primary}${suffix ?? ''}`,
+            secondary,
+            suffix
+        }
     }
     return undefined;
 }
@@ -93,6 +151,7 @@ export const parseArtistCredits = (str: string, delimiters?: boolean | string[])
         if (primaries.length > 1) {
             return {
                 primary: primaries[0],
+                primaryComposite: primaries[0],
                 secondary: primaries.slice(1).concat(withJoiner.secondary)
             }
         }
@@ -103,11 +162,13 @@ export const parseArtistCredits = (str: string, delimiters?: boolean | string[])
     if (artists.length > 1) {
         return {
             primary: artists[0],
+            primaryComposite: artists[0],
             secondary: artists.slice(1)
         }
     }
     return {
-        primary: artists[0]
+        primary: artists[0],
+        primaryComposite: artists[0],
     }
 }
 export const parseTrackCredits = (str: string, delimiters?: boolean | string[]): PlayCredits | undefined => parseCredits(str, delimiters);
@@ -120,9 +181,7 @@ export const parseStringList = (str: string, delimiters: string[] = [',', '&', '
         return explodedStrings.flat(1);
     }, [str]).map(x => x.trim());
 }
-export const containsDelimiters = (str: string) => {
-    return null !== str.match(/[,&\/\\]+/i);
-}
+export const containsDelimiters = (str: string) => null !== str.match(/[,&/\\]+/i)
 export const findDelimiters = (str: string) => {
     const found: string[] = [];
     for (const d of DELIMITERS) {
@@ -136,7 +195,7 @@ export const findDelimiters = (str: string) => {
     return found;
 }
 
-export const compareScrobbleTracks = (existing: PlayObject, candidate: PlayObject): number => {
+export const compareScrobbleTracks = (existing: PlayObject, candidate: PlayObject): StringSamenessResult => {
     const {
         data: {
             track: existingTrack,
@@ -149,7 +208,21 @@ export const compareScrobbleTracks = (existing: PlayObject, candidate: PlayObjec
         }
     } = candidate;
 
-    return compareNormalizedStrings(existingTrack, candidateTrack).highScore;
+    // try to remove any joiners based on existing artists
+    const existingCredits = parseTrackCredits(existingTrack);
+    const existingPrimary = existingCredits !== undefined ? existingCredits.primaryComposite : existingTrack;
+
+    const candidateCredits = parseTrackCredits(candidateTrack);
+    const candidatePrimary = candidateCredits !== undefined ? candidateCredits.primaryComposite : candidateTrack;
+
+    // take whichever score is higher
+    const creditsCleanedTrackSameness = compareNormalizedStrings(existingPrimary, candidatePrimary);
+    const naiveTrackSameness = compareNormalizedStrings(existingTrack, candidateTrack);
+
+    if(creditsCleanedTrackSameness.highScore > naiveTrackSameness.highScore) {
+        return creditsCleanedTrackSameness;
+    }
+    return naiveTrackSameness;
 }
 
 export const compareScrobbleArtists = (existing: PlayObject, candidate: PlayObject): number => {
@@ -168,23 +241,55 @@ export const compareScrobbleArtists = (existing: PlayObject, candidate: PlayObje
     return compareNormalizedStrings(existingArtists.reduce((acc, curr) => `${acc} ${curr}`, ''), candidateArtists.reduce((acc, curr) => `${acc} ${curr}`, '')).highScore;
 }
 
+/**
+ * Compare the sameness of two strings after making them token-order independent
+ *
+ * Transform two strings before comparing in order to have as little difference between them as possible:
+ *
+ * * First, normalize (lower case, remove extraneous whitespace, remove punctuation, make all characters standard ANSI) strings and split into tokens
+ * * Second, reorder tokens in the shorter list so that they mirror order of tokens in longer list as closely as possible
+ * * Finally, concat back to strings and compare with sameness strategies
+ *
+ * */
 export const compareNormalizedStrings = (existing: string, candidate: string): StringSamenessResult => {
-
-    const normalExisting = normalizeStr(existing, {keepSingleWhitespace: true});
-    const normalCandidate = normalizeStr(candidate, {keepSingleWhitespace: true});
 
     // there may be scenarios where a track differs in *ordering* of ancillary information between sources
     // EX My Track (feat. Art1, Art2)  -- My Track (feat. Art2 Art1)
-    // so instead of naively comparing the entire track string against the candidate we
-    // * first try to match up all white-space separated tokens
-    // * recombine with closest tokens in order
-    // * then check sameness
+
+    // first remove lower case, extraneous whitespace, punctuation, and replace non-ansi with ansi characters
+    const normalExisting = normalizeStr(existing, {keepSingleWhitespace: true});
+    const normalCandidate = normalizeStr(candidate, {keepSingleWhitespace: true});
+
+    // split by "token"
     const eTokens = normalExisting.split(' ');
     const cTokens = normalCandidate.split(' ');
 
-    const orderedCandidateTokens = eTokens.reduce((acc: { ordered: string[], remaining: string[] }, curr) => {
+
+    let longerTokens: string[],
+        shorterTokens: string[];
+
+    if (eTokens.length > cTokens.length) {
+        longerTokens = eTokens;
+        shorterTokens = cTokens;
+    } else {
+        longerTokens = cTokens;
+        shorterTokens = eTokens;
+    }
+
+    // we will use longest string (token list) as the reducer and order the shorter list to match it
+    // so we don't have to deal with undefined positions in the shorter list
+
+    const orderedCandidateTokens = longerTokens.reduce((acc: { ordered: string[], remaining: string[] }, curr) => {
+        // if we've run out of tokens in the shorter list just return
+        if (acc.remaining.length === 0) {
+            return acc;
+        }
+
+        // on each iteration of tokens in the long list
+        // we iterate through remaining tokens from the shorter list and find the token with the most sameness
+
         let highScore = 0;
-        let highIndex = undefined;
+        let highIndex = 0;
         let index = 0;
         for (const token of acc.remaining) {
             const result = stringSameness(curr, token);
@@ -195,22 +300,28 @@ export const compareNormalizedStrings = (existing: string, candidate: string): S
             index++;
         }
 
+        // then remove the most same token from the remaining short list tokens
         const splicedRemaining = [...acc.remaining];
         splicedRemaining.splice(highIndex, 1);
 
-        return {ordered: acc.ordered.concat(acc.remaining[highIndex]), remaining: splicedRemaining};
-    }, {ordered: [], remaining: cTokens});
+        return {
+            // finally add the most same token to the ordered short list
+            ordered: acc.ordered.concat(acc.remaining[highIndex]),
+            // and return the remaining short list tokens
+            remaining: splicedRemaining
+        };
+    }, {
+        // "ordered" is the result of ordering tokens in the shorter list to match longer token order
+        ordered: [],
+        // remaining is the initial shorter list
+        remaining: shorterTokens
+    });
 
-    const allOrderedCandidateTokens = orderedCandidateTokens.ordered.concat(orderedCandidateTokens.remaining);
-    const orderedCandidateString = allOrderedCandidateTokens.join(' ');
-
-    // since we have already "matched" up words by order we don't want to use cosine strat
+    // since we have already "matched" up tokens by order we don't want to use cosine strat
     // bc it only does comparisons between whole words in a sentence (instead of all letters in a string)
     // which makes it inaccurate for small-n sentences and typos
-
-    return stringSameness(normalExisting, orderedCandidateString, {transforms: [], strategies: [levenStrategy, diceStrategy]});
-}
-
-export const getUrlSlug = (path: string) => {
-
+    return stringSameness(longerTokens.join(' '), orderedCandidateTokens.ordered.join(' '), {
+        transforms: [],
+        strategies: [levenStrategy, diceStrategy]
+    })
 }

@@ -1,10 +1,11 @@
-import React, {Fragment} from 'react';
+import React, {Fragment, useCallback} from 'react';
 import StatusCardSkeleton, {StatusCardSkeletonData} from "./StatusCardSkeleton";
 import SkeletonParagraph from "../skeleton/SkeletonParagraph";
 import {clientAdapter} from "../../status/ducks";
 import {RootState} from "../../store";
 import {connect, ConnectedProps} from "react-redux";
 import {Link} from "react-router-dom";
+import {useStartClientMutation} from "./clientDucks";
 
 export interface ClientStatusCardData extends StatusCardSkeletonData, PropsFromRedux {
     loading?: boolean
@@ -30,14 +31,24 @@ const ClientStatusCard = (props: ClientStatusCardData) => {
             name,
             type,
             display,
-            status
+            status,
+            scrobbled: scrobbledCount = 0,
+            queued = 0,
+            deadLetterScrobbles = 0
         } = {}
     } = props;
+
+    const [startClientPut, startResult] = useStartClientMutation();
+
+    const tryStart = useCallback((name: string) => startClientPut({name}), [startClientPut]);
+
     let header: string | undefined = display;
     let body = <SkeletonParagraph/>;
+    const startClientElement = <div onClick={()  => tryStart(name)} className="capitalize underline cursor-pointer">{status === 'Running' ? 'Restart' : 'Start'}</div>
     if(data !== undefined) {
         const {
             hasAuth,
+            hasAuthInteraction,
             name,
             type,
             authed,
@@ -46,16 +57,24 @@ const ClientStatusCard = (props: ClientStatusCardData) => {
         if(type === 'lastfm' || type === 'listenbrainz')
         header = `${display} (Client)`;
 
-        const scrobbled = initialized && (!hasAuth || (hasAuth && authed)) ? <Link to={`/scrobbled?type=${type}&name=${name}`}>Tracks Scrobbled</Link> : <span>Tracks Scrobbled</span>
+        const scrobbled = initialized && (!hasAuth || (hasAuth && authed)) ? <Link to={`/scrobbled?type=${type}&name=${name}`}>Tracks Scrobbled</Link> : <span>Tracks Scrobbled</span>;
 
         // TODO links
         body = (<Fragment>
-            <div>{scrobbled}: {data.tracksDiscovered}</div>
-            {hasAuth ? <a target="_blank" href={`/api/client/auth?name=${name}&type=${type}`}>(Re)authenticate or initialize</a> : null}
+            <div>{scrobbled}: {scrobbledCount}</div>
+            <div>Queued Scrobbles: {queued}</div>
+            <div><Link to={`/dead?type=${type}&name=${name}`}>Failed Scrobbles</Link>: {deadLetterScrobbles}</div>
+            {hasAuthInteraction ? <a target="_blank" href={`/api/client/auth?name=${name}&type=${type}`}>(Re)authenticate</a> : null}
         </Fragment>);
     }
     return (
-        <StatusCardSkeleton loading={loading} title={header} subtitle={name} status={status} statusType={statusToStatusType(status)}>
+        <StatusCardSkeleton
+            loading={loading}
+            title={header}
+            subtitle={name}
+            status={status}
+            subtitleRight={startClientElement}
+            statusType={statusToStatusType(status)}>
                 {body}
         </StatusCardSkeleton>
     );

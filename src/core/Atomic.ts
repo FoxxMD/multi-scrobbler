@@ -1,10 +1,10 @@
-import {Dayjs} from "dayjs";
-import {MESSAGE} from "triple-beam";
-import {ListenProgress} from "../backend/sources/PlayerState/ListenProgress";
+import { LogDataPretty, LogLevel } from "@foxxmd/logging";
+import { Dayjs } from "dayjs";
+import { ListenProgress } from "../backend/sources/PlayerState/ListenProgress.js";
 
 export interface SourceStatusData {
     status: string;
-    type: "spotify" | "plex" | "tautulli" | "subsonic" | "jellyfin" | "lastfm" | "deezer" | "ytmusic" | "mpris" | "mopidy" | "listenbrainz" | "jriver" | "kodi" | 'webscrobbler' | 'endpointlz';
+    type: "spotify" | "plex" | "tautulli" | "subsonic" | "jellyfin" | "lastfm" | "deezer" | "ytmusic" | "mpris" | "mopidy" | "listenbrainz" | "jriver" | "kodi" | 'webscrobbler' | 'chromecast' | 'endpointlz';
     display: string;
     tracksDiscovered: number;
     name: string;
@@ -13,13 +13,17 @@ export interface SourceStatusData {
     hasAuthInteraction: boolean;
     authed: boolean;
     players: Record<string, SourcePlayerJson>
+    sot: SOURCE_SOT_TYPES
+    supportsUpstreamRecentlyPlayed: boolean;
 }
 
 export interface ClientStatusData {
     status: string;
     type: "maloja" | "lastfm" | "listenbrainz";
     display: string;
-    tracksDiscovered: number;
+    scrobbled: number;
+    deadLetterScrobbles: number
+    queued: number
     name: string;
     hasAuth: boolean;
     hasAuthInteraction: boolean;
@@ -35,7 +39,7 @@ export interface TrackStringOptions<T = string> {
     transformers?: {
         artists?: (a: string[]) => T | string
         track?: (t: string,data: AmbPlayObject, hasExistingParts?: boolean) => T | string
-        time?: (t: Dayjs) => T | string
+        time?: (t: Dayjs, i?: ScrobbleTsSOC) => T | string
         timeFromNow?: (t: Dayjs) => T | string
         reducer?: (arr: (T | string)[]) => T //(acc: T, curr: T | string) => T
     }
@@ -54,6 +58,7 @@ export interface ListenRangeData {
 
 export interface TrackData {
     artists?: string[]
+    albumArtists?: string[]
     album?: string
     track?: string
     /**
@@ -63,7 +68,7 @@ export interface TrackData {
 
     meta?: {
         brainz?: {
-            artist?: string
+            artist?: string[]
             albumArtist?: string
             album?: string
             track?: string
@@ -80,6 +85,7 @@ export interface PlayData extends TrackData {
     /** Number of seconds the track was listened to */
     listenedFor?: number
     listenRanges?: ListenRangeData[]
+    playDateCompleted?: Dayjs | string
 }
 
 export interface PlayMeta {
@@ -119,8 +125,15 @@ export interface PlayMeta {
 
     nowPlaying?: boolean
 
+    scrobbleTsSOC?: ScrobbleTsSOC
+
     [key: string]: any
 }
+
+export type ScrobbleTsSOC = 1 | 2;
+
+export const SCROBBLE_TS_SOC_START: ScrobbleTsSOC = 1;
+export const SCROBBLE_TS_SOC_END: ScrobbleTsSOC = 2;
 
 export interface AmbPlayObject {
     data: PlayData,
@@ -132,23 +145,17 @@ export interface PlayObject extends AmbPlayObject {
 }
 
 export interface JsonPlayObject extends AmbPlayObject {
-    playDate?: string
+    data: JsonPlayData
 }
 
 export interface ObjectPlayData extends PlayData {
     playDate?: Dayjs
+    playDateCompleted?: Dayjs
 }
 
-export type LogLevel = "error" | "warn" | "info" | "verbose" | "debug";
-export const logLevels = ['error', 'warn', 'info', 'verbose', 'debug'];
-
-export interface LogInfo {
-    message: string
-    [MESSAGE]: string,
-    level: string
-    timestamp: string
-    labels?: string[]
-    transport?: string[]
+export interface JsonPlayData extends PlayData {
+    playDate?: Dayjs
+    playDateCompleted?: Dayjs
 }
 
 export interface LogOutputConfig {
@@ -157,18 +164,14 @@ export interface LogOutputConfig {
     limit: number
 }
 
-export interface LogInfoJson extends LogInfo {
-    formattedMessage: string
-}
-
 export interface SourcePlayerObj {
     platformId: string,
     play: PlayObject,
-    playFirstSeenAt: string,
-    playLastUpdatedAt: string,
+    playFirstSeenAt?: string,
+    playLastUpdatedAt?: string,
     playerLastUpdatedAt: string
-    position?: number
-    listenedDuration: number
+    position?: Second
+    listenedDuration: Second
     status: {
         reported: string
         calculated: string
@@ -179,4 +182,51 @@ export interface SourcePlayerObj {
 
 export interface SourcePlayerJson extends Omit<SourcePlayerObj, 'play'> {
     play: JsonPlayObject
+}
+
+export interface SourceScrobble<PlayType> {
+    source: string
+    play: PlayType
+}
+
+export interface QueuedScrobble<PlayType> extends SourceScrobble<PlayType> {
+    id: string
+}
+
+export interface DeadLetterScrobble<PlayType, RetryType = Dayjs> extends QueuedScrobble<PlayType> {
+    id: string
+    retries: number
+    lastRetry?: RetryType
+    error: string
+}
+
+export type Second = number;
+export type Millisecond = number;
+
+export type TemporalAccuracy = 1 | 2 | 3 | false;
+
+export const TA_EXACT: TemporalAccuracy = 1;
+export const TA_CLOSE: TemporalAccuracy = 2;
+export const TA_FUZZY: TemporalAccuracy = 3;
+export const TA_NONE: TemporalAccuracy = false;
+
+export interface TemporalPlayComparison {
+    match: TemporalAccuracy
+    date?: {
+        threshold: number
+        diff: number
+        fuzzyDurationDiff?: number
+        fuzzyListenedDiff?: number
+    }
+    range?: false | ListenRangeData
+}
+
+export type SOURCE_SOT_TYPES = 'player' | 'history';
+export const SOURCE_SOT = {
+    PLAYER : 'player' as SOURCE_SOT_TYPES,
+    HISTORY: 'history' as SOURCE_SOT_TYPES
+}
+
+export interface LeveledLogData extends LogDataPretty {
+    levelLabel: string
 }

@@ -1,36 +1,38 @@
-import dayjs, {Dayjs} from "dayjs";
+import { childLogger, Logger } from '@foxxmd/logging';
+import dayjs, { Dayjs } from "dayjs";
+import { EventEmitter } from "events";
+import { FixedSizeList } from "fixed-size-list";
+import { PlayObject, TA_CLOSE } from "../../core/Atomic.js";
+import { buildTrackString, capitalize } from "../../core/StringUtils.js";
+import { isNodeNetworkException } from "../common/errors/NodeErrors.js";
 import {
-    isPlayTemporallyClose,
-    genGroupId,
-    genGroupIdStrFromPlay,
-    mergeArr,
-    playObjDataMatch,
-    pollingBackoff,
-    sleep,
-    sortByNewestPlayDate,
-    sortByOldestPlayDate,
-} from "../utils";
-import {
-    DEFAULT_POLLING_INTERVAL, DEFAULT_POLLING_MAX_INTERVAL, DEFAULT_RETRY_MULTIPLIER,
+    Authenticatable,
+    DEFAULT_POLLING_INTERVAL,
+    DEFAULT_POLLING_MAX_INTERVAL,
+    DEFAULT_RETRY_MULTIPLIER,
     DeviceId,
     GroupedFixedPlays,
-    GroupedPlays,
     InternalConfig,
-    NO_DEVICE,
     NO_USER,
     PlayPlatformId,
     PlayUserId,
     ProgressAwarePlayObject,
     SINGLE_USER_PLATFORM_ID,
     SourceType,
-} from "../common/infrastructure/Atomic";
-import {Logger} from '@foxxmd/winston';
-import { SourceConfig } from "../common/infrastructure/config/source/sources";
-import {EventEmitter} from "events";
-import {FixedSizeList} from "fixed-size-list";
-import TupleMap from "../common/TupleMap";
-import { PlayObject } from "../../core/Atomic";
-import {buildTrackString, capitalize} from "../../core/StringUtils";
+} from "../common/infrastructure/Atomic.js";
+import { SourceConfig } from "../common/infrastructure/config/source/sources.js";
+import TupleMap from "../common/TupleMap.js";
+import {
+    findCauseByFunc,
+    formatNumber,
+    genGroupId,
+    playObjDataMatch,
+    pollingBackoff,
+    sleep,
+    sortByNewestPlayDate,
+    sortByOldestPlayDate,
+} from "../utils.js";
+import { comparePlayTemporally, temporalAccuracyIsAtLeast } from "../utils/TimeUtils.js";
 
 export interface RecentlyPlayedOptions {
     limit?: number
@@ -39,7 +41,7 @@ export interface RecentlyPlayedOptions {
     display?: boolean
 }
 
-export default abstract class AbstractSource {
+export default abstract class AbstractSource implements Authenticatable {
 
     name: string;
     type: SourceType;
@@ -50,10 +52,14 @@ export default abstract class AbstractSource {
     logger: Logger;
     instantiatedAt: Dayjs;
     lastActivityAt: Dayjs;
-    initialized: boolean = false;
+
     requiresAuth: boolean = false;
     requiresAuthInteraction: boolean = false;
     authed: boolean = false;
+    authFailure?: boolean;
+
+    buildOK?: boolean | null;
+    connectionOK?: boolean | null;
 
     multiPlatform: boolean = false;
 
@@ -68,6 +74,9 @@ export default abstract class AbstractSource {
     pollRetries: number = 0;
     tracksDiscovered: number = 0;
 
+    supportsUpstreamRecentlyPlayed: boolean = false;
+    supportsUpstreamNowPlaying: boolean = false;
+
     emitter: EventEmitter;
 
     protected recentDiscoveredPlays: GroupedFixedPlays = new TupleMap<DeviceId, PlayUserId, FixedSizeList<ProgressAwarePlayObject>>();
@@ -77,7 +86,7 @@ export default abstract class AbstractSource {
         this.type = type;
         this.name = name;
         this.identifier = `Source - ${capitalize(this.type)} - ${name}`;
-        this.logger = internal.logger.child({labels: [`${capitalize(this.type)} - ${name}`]}, mergeArr);
+        this.logger = childLogger(internal.logger, `${capitalize(this.type)} - ${name}`);
         this.config = config;
         this.clients = clients;
         this.instantiatedAt = dayjs();
@@ -89,29 +98,129 @@ export default abstract class AbstractSource {
 
     // default init function, should be overridden if init stage is required
     initialize = async () => {
-        this.initialized = true;
-        return this.initialized;
+        this.logger.debug('Attempting to initialize...');
+        try {
+            await this.buildInitData();
+            await this.checkConnection();
+            await this.testAuth();
+            this.logger.info('Fully Initialized!');
+            return true;
+        } catch(e) {
+            this.logger.error(new Error('Initialization failed', {cause: e}));
+            return false;
+        }
     }
 
-    authGated = () => {
-        return this.requiresAuth && !this.authed;
+    public async buildInitData() {
+        if(this.buildOK) {
+            return;
+        }
+        try {
+            const res = await this.doBuildInitData();
+            if(res === undefined) {
+                this.buildOK = null;
+                this.logger.debug('No required data to build.');
+                return;
+            }
+            if (res === true) {
+                this.logger.debug('Building required data init succeeded');
+            } else if (typeof res === 'string') {
+                this.logger.debug(`Building required data init succeeded => ${res}`);
+            }
+            this.buildOK = true;
+        } catch (e) {
+            this.buildOK = false;
+            throw new Error('Building required data for initialization failed', {cause: e});
+        }
     }
 
-    // default init function, should be overridden if auth stage is required
+    /**
+     * Build any data/config/objects required for this Source to communicate with upstream service
+     *
+     * * Return undefined if not possible or not required
+     * * Return TRUE if build succeeded
+     * * Return string if build succeeded and should log result
+     * * Throw error on failure
+     * */
+    protected async doBuildInitData(): Promise<true | string | undefined> {
+        return;
+    }
+
+    public async checkConnection() {
+        try {
+            const res = await this.doCheckConnection();
+            if (res === undefined) {
+                this.logger.debug('Connection check was not required.');
+                this.connectionOK = null;
+                return;
+            } else if (res === true) {
+                this.logger.verbose('Connection check succeeded');
+            } else {
+                this.logger.verbose(`Connection check succeeded => ${res}`);
+            }
+            this.connectionOK = true;
+        } catch (e) {
+            this.connectionOK = false;
+            throw new Error('Communicating with upstream service failed', {cause: e});
+        }
+    }
+
+    /**
+     * Check Source upstream API/connection to ensure we can communicate
+     *
+     * * Return undefined if not possible or not required to check
+     * * Return TRUE if communication succeeded
+     * * Return string if communication succeeded and should log result
+     * * Throw error if communication failed
+     * */
+    protected async doCheckConnection(): Promise<true | string | undefined> {
+        return;
+    }
+
+    authGated = () => this.requiresAuth && !this.authed
+
+    canTryAuth = () => this.authGated() && this.authFailure !== true
+
+    protected doAuthentication = async (): Promise<boolean> => this.authed
+
     testAuth = async () => {
-        return this.authed;
+        if(!this.requiresAuth) {
+            return;
+        }
+
+        this.logger.debug('Checking Authentication...');
+        try {
+            this.authed = await this.doAuthentication();
+            this.authFailure = !this.authed;
+            this.logger.info(`Auth is ${this.authed ? 'OK' : 'NOT OK'}`)
+        } catch (e) {
+            // only signal as auth failure if error was NOT a node network error
+            this.authFailure = findCauseByFunc(e, isNodeNetworkException) === undefined;
+            this.authed = false;
+            throw new Error(`Authentication test failed!${this.authFailure === false ? ' Due to a network issue. Will retry authentication on next heartbeat.' : ''}`, {cause: e})
+        }
     }
 
-    getRecentlyPlayed = async (options: RecentlyPlayedOptions = {}): Promise<PlayObject[]> => {
-        return [];
+    public isReady() {
+        return (this.buildOK === null || this.buildOK === true) &&
+            (this.connectionOK === null || this.connectionOK === true)
+            && !this.authGated();
+    }
+
+    getRecentlyPlayed = async (options: RecentlyPlayedOptions = {}): Promise<PlayObject[]> => []
+
+    getUpstreamRecentlyPlayed = async (options: RecentlyPlayedOptions = {}): Promise<PlayObject[]> => {
+        throw new Error('Not implemented');
+    }
+
+    getUpstreamNowPlaying = async(): Promise<PlayObject[]> => {
+        throw new Error('Not implemented');
     }
 
     // by default if the track was recently played it is valid
     // this is useful for sources where the track doesn't have complete information like Subsonic
     // TODO make this more descriptive? or move it elsewhere
-    recentlyPlayedTrackIsValid = (playObj: PlayObject) => {
-        return true;
-    }
+    recentlyPlayedTrackIsValid = (playObj: PlayObject) => true
 
     protected addPlayToDiscovered = (play: PlayObject) => {
         const platformId = this.multiPlatform ? genGroupId(play) : SINGLE_USER_PLATFORM_ID;
@@ -123,10 +232,9 @@ export default abstract class AbstractSource {
         this.emitEvent('discovered', {play});
     }
 
-    getFlatRecentlyDiscoveredPlays = (): PlayObject[] => {
-        // @ts-ignore
-        return Array.from(this.recentDiscoveredPlays.values()).map(x => x.data).flat(3).sort(sortByNewestPlayDate);
-    }
+    getFlatRecentlyDiscoveredPlays = (): PlayObject[] =>
+         Array.from(this.recentDiscoveredPlays.values()).map(x => x.data).flat(3).sort(sortByNewestPlayDate)
+    
 
     getRecentlyDiscoveredPlaysByPlatform = (platformId: PlayPlatformId): PlayObject[] => {
         const list = this.recentDiscoveredPlays.get(platformId);
@@ -139,7 +247,7 @@ export default abstract class AbstractSource {
     }
 
     existingDiscovered = (play: PlayObject, opts: {checkAll?: boolean} = {}): PlayObject | undefined => {
-        let lists: PlayObject[][] = [];
+        const lists: PlayObject[][] = [];
         if(opts.checkAll !== true) {
             lists.push(this.getRecentlyDiscoveredPlaysByPlatform(this.multiPlatform ? genGroupId(play) : SINGLE_USER_PLATFORM_ID));
         } else {
@@ -155,7 +263,7 @@ export default abstract class AbstractSource {
             });
         }
         for(const list of lists) {
-            const existing = list.find(x => playObjDataMatch(x, play) && isPlayTemporallyClose(x, play));
+            const existing = list.find(x => playObjDataMatch(x, play) && temporalAccuracyIsAtLeast(TA_CLOSE, comparePlayTemporally(x, play).match));
             if(existing) {
                 return existing;
             }
@@ -205,7 +313,12 @@ export default abstract class AbstractSource {
     protected processBacklog = async () => {
         if (this.canBacklog) {
             this.logger.info('Discovering backlogged tracks from recently played API...');
-            const backlogPlays = await this.getBackloggedPlays();
+            let backlogPlays: PlayObject[] = [];
+            try {
+                backlogPlays = await this.getBackloggedPlays();
+            } catch (e) {
+                throw new Error('Error occurred while fetching backlogged plays', {cause: e});
+            }
             const discovered = this.discover(backlogPlays);
 
             const {
@@ -237,32 +350,44 @@ export default abstract class AbstractSource {
         this.emitter.emit('notify', payload);
     }
 
-    onPollPreAuthCheck = async (): Promise<boolean> => {
-        return true;
-    }
+    onPollPreAuthCheck = async (): Promise<boolean> => true
 
-    onPollPostAuthCheck = async (): Promise<boolean> => {
-        return true;
-    }
+    onPollPostAuthCheck = async (): Promise<boolean> => true
 
     poll = async () => {
         if(!(await this.onPollPreAuthCheck())) {
             return;
         }
         if(this.authGated()) {
-            if(this.requiresAuthInteraction) {
+            if(this.canTryAuth()) {
+                await this.testAuth();
+                if(!this.authed) {
+                    this.notify( {title: `${this.identifier} - Polling Error`, message: 'Cannot start polling because source does not have authentication.', priority: 'error'});
+                    this.logger.error('Cannot start polling because source is not authenticated correctly.');
+                }
+            } else if(this.requiresAuthInteraction) {
                 this.notify({title: `${this.identifier} - Polling Error`, message: 'Cannot start polling because user interaction is required for authentication', priority: 'error'});
                 this.logger.error('Cannot start polling because user interaction is required for authentication');
             } else {
-                this.notify( {title: `${this.identifier} - Polling Error`, message: 'Cannot start polling because source does not have authentication.', priority: 'error'});
-                this.logger.error('Cannot start polling because source is not authenticated correctly.');
+                this.notify( {title: `${this.identifier} - Polling Error`, message: 'Cannot start polling because source authentication previously failed and must be reauthenticated.', priority: 'error'});
+                this.logger.error('Cannot start polling because source authentication previously failed and must be reauthenticated.');
             }
             return;
         }
         if(!(await this.onPollPostAuthCheck())) {
             return;
         }
-        await this.processBacklog();
+        try {
+            await this.processBacklog();
+        } catch (e) {
+            this.logger.error(new Error('Cannot start polling because error occurred while processing backlog', {cause: e}));
+            this.notify({
+                title: `${this.identifier} - Polling Error`,
+                message: 'Cannot start polling because error occurred while processing backlog.',
+                priority: 'error'
+            });
+            return;
+        }
 
         await this.startPolling();
     }
@@ -330,6 +455,7 @@ export default abstract class AbstractSource {
     protected doStopPolling = (reason: string = 'system') => {
         this.polling = false;
         this.userPollingStopSignal = undefined;
+        this.emitEvent('statusChange', {status: 'Idle'});
         this.logger.info(`Stopped polling due to: ${reason}`);
     }
 
@@ -340,20 +466,24 @@ export default abstract class AbstractSource {
             return true;
         }
         this.logger.info('Polling started');
+        this.emitEvent('statusChange', {status: 'Running'});
         this.notify({title: `${this.identifier} - Polling Started`, message: 'Polling Started', priority: 'info'});
         this.lastActivityAt = dayjs();
         let checkCount = 0;
         let checksOverThreshold = 0;
 
-        const {interval = DEFAULT_POLLING_INTERVAL, checkActiveFor = 300, maxInterval = DEFAULT_POLLING_MAX_INTERVAL} = this.config.data;
-        const maxBackoff = maxInterval - interval;
-        let sleepTime = interval;
+        const {checkActiveFor = 300, maxInterval = DEFAULT_POLLING_MAX_INTERVAL} = this.config.data;
 
         try {
             this.polling = true;
             while (!this.shouldStopPolling()) {
+                const pollFrom = dayjs();
                 this.logger.debug('Refreshing recently played');
                 const playObjs = await this.getRecentlyPlayed({formatted: true});
+
+                const interval = this.getInterval();
+                const maxBackoff = this.getMaxBackoff();
+                let sleepTime = interval;
 
                 let newDiscovered: PlayObject[] = [];
 
@@ -397,15 +527,14 @@ export default abstract class AbstractSource {
                         this.logger.debug(`Last activity was at ${this.lastActivityAt.format()} which is ${inactiveFor} outside of active polling period of (last activity + ${checkActiveFor} seconds). Will check again in max interval ${maxInterval} seconds.`);
                     }
                 } else {
-                    sleepTime = interval;
-                    this.logger.debug(`Last activity was at ${this.lastActivityAt.format()}. Will check again in interval ${sleepTime} seconds.`);
+                    this.logger.debug(`Last activity was at ${this.lastActivityAt.format()}. Will check again in interval ${formatNumber(sleepTime)} seconds.`);
                 }
 
-                this.logger.verbose(`Sleeping for ${sleepTime}s`);
-                const wakeUpAt = dayjs().add(sleepTime, 'seconds');
+                this.logger.verbose(`Sleeping for ${formatNumber(sleepTime)}s`);
+                const wakeUpAt = pollFrom.add(sleepTime, 'seconds');
                 while(!this.shouldStopPolling() && dayjs().isBefore(wakeUpAt)) {
-                    // check for polling status every 2 seconds and wait till wake up time
-                    await sleep(2000);
+                    // check for polling status every half second and wait till wake up time
+                    await sleep(500);
                 }
 
             }
@@ -416,9 +545,20 @@ export default abstract class AbstractSource {
         } catch (e) {
             this.logger.error('Error occurred while polling');
             this.logger.error(e);
+            this.emitEvent('statusChange', {status: 'Idle'});
             this.polling = false;
             throw e;
         }
+    }
+
+    protected getInterval() {
+        const {interval = DEFAULT_POLLING_INTERVAL} = this.config.data;
+        return interval;
+    }
+
+    protected getMaxBackoff() {
+        const {interval = DEFAULT_POLLING_INTERVAL, maxInterval = DEFAULT_POLLING_MAX_INTERVAL} = this.config.data;
+        return maxInterval - interval;
     }
 
     public emitEvent = (eventName: string, payload: object = {}) => {
@@ -428,5 +568,9 @@ export default abstract class AbstractSource {
             from: 'source',
             data: payload,
         });
+    }
+
+    public async destroy() {
+        this.emitter.removeAllListeners();
     }
 }

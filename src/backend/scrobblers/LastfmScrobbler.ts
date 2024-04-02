@@ -1,23 +1,16 @@
-import AbstractScrobbleClient from "./AbstractScrobbleClient";
+import { Logger } from "@foxxmd/logging";
 import dayjs from 'dayjs';
-
-import {
-    playObjDataMatch,
-    removeUndefinedKeys,
-    setIntersection,
-    sleep,
-    sortByOldestPlayDate,
-} from "../utils";
-import LastfmApiClient from "../common/vendor/LastfmApiClient";
-import { FormatPlayObjectOptions, INITIALIZING, ScrobbledPlayObject } from "../common/infrastructure/Atomic";
-import { LastfmClientConfig } from "../common/infrastructure/config/client/lastfm";
-import {TrackScrobbleResponse, UserGetRecentTracksResponse} from "lastfm-node-client";
-import { Notifiers } from "../notifier/Notifiers";
-import {Logger} from '@foxxmd/winston';
-import { PlayObject, TrackStringOptions } from "../../core/Atomic";
-import {buildTrackString, capitalize} from "../../core/StringUtils";
 import EventEmitter from "events";
-import {UpstreamError} from "../common/errors/UpstreamError";
+import { TrackScrobbleResponse, UserGetRecentTracksResponse } from "lastfm-node-client";
+import { PlayObject } from "../../core/Atomic.js";
+import { buildTrackString, capitalize } from "../../core/StringUtils.js";
+import { isNodeNetworkException } from "../common/errors/NodeErrors.js";
+import { UpstreamError } from "../common/errors/UpstreamError.js";
+import { FormatPlayObjectOptions, INITIALIZING } from "../common/infrastructure/Atomic.js";
+import { LastfmClientConfig } from "../common/infrastructure/config/client/lastfm.js";
+import LastfmApiClient from "../common/vendor/LastfmApiClient.js";
+import { Notifiers } from "../notifier/Notifiers.js";
+import AbstractScrobbleClient from "./AbstractScrobbleClient.js";
 
 export default class LastfmScrobbler extends AbstractScrobbleClient {
 
@@ -29,8 +22,8 @@ export default class LastfmScrobbler extends AbstractScrobbleClient {
 
     constructor(name: any, config: LastfmClientConfig, options = {}, notifier: Notifiers, emitter: EventEmitter, logger: Logger) {
         super('lastfm', name, config, notifier, emitter, logger);
-        // @ts-ignore
-        this.api = new LastfmApiClient(name, config.data, options)
+        // @ts-expect-error sloppy data structure assign
+        this.api = new LastfmApiClient(name, config.data, {...options, logger})
     }
 
     formatPlayObj = (obj: any, options: FormatPlayObjectOptions = {}) => LastfmApiClient.formatPlayObj(obj, options);
@@ -38,25 +31,38 @@ export default class LastfmScrobbler extends AbstractScrobbleClient {
     initialize = async () => {
         // @ts-expect-error TS(2322): Type 'number' is not assignable to type 'boolean'.
         this.initialized = INITIALIZING;
-        this.initialized = await this.api.initialize();
+        try {
+            const result = await this.api.initialize();
+            this.initialized = true;
+            this.logger.info('Initialized');
+        } catch (e) {
+            this.initialized = false;
+            this.logger.warn(new Error('Initialization failed', {cause: e}));
+        }
+
         return this.initialized;
     }
 
-    testAuth = async () => {
+    doAuthentication = async () => {
         try {
-            this.authed = await this.api.testAuth();
+            return await this.api.testAuth();
         } catch (e) {
-            this.logger.error('Could not successfully communicate with Last.fm API');
-            this.logger.error(e);
-            this.authed = false;
+            if(isNodeNetworkException(e)) {
+                this.logger.error('Could not communicate with Last.fm API');
+            }
+            throw e;
         }
-        return this.authed;
     }
 
     refreshScrobbles = async () => {
         if (this.refreshEnabled) {
             this.logger.debug('Refreshing recent scrobbles');
-            const resp = await this.api.callApi<UserGetRecentTracksResponse>((client: any) => client.userGetRecentTracks({user: this.api.user, limit: this.MAX_STORED_SCROBBLES, extended: true}));
+            const resp = await this.api.callApi<UserGetRecentTracksResponse>((client: any) => client.userGetRecentTracks({
+                user: this.api.user,
+                sk: this.api.client.sessionKey,
+                limit: this.MAX_STORED_SCROBBLES,
+                extended: true
+            }));
             const {
                 recenttracks: {
                     track: list = [],
@@ -115,20 +121,14 @@ export default class LastfmScrobbler extends AbstractScrobbleClient {
         return track.toLocaleLowerCase().trim();
     }
 
-    alreadyScrobbled = async (playObj: PlayObject, log = false) => {
-        return (await this.existingScrobble(playObj)) !== undefined;
+    alreadyScrobbled = async (playObj: PlayObject, log = false) => (await this.existingScrobble(playObj)) !== undefined
+
+    public playToClientPayload(playObject: PlayObject): object {
+        return this.api.playToClientPayload(playObject);
     }
 
     doScrobble = async (playObj: PlayObject) => {
         const {
-            data: {
-                artists,
-                album,
-                track,
-                duration,
-                playDate
-            } = {},
-            data = {},
             meta: {
                 source,
                 newFromSource = false,
@@ -137,29 +137,7 @@ export default class LastfmScrobbler extends AbstractScrobbleClient {
 
         const sType = newFromSource ? 'New' : 'Backlog';
 
-        // LFM does not support multiple artists in scrobble payload
-        // https://www.last.fm/api/show/track.scrobble
-        let artist: string;
-        if (artists.length === 0) {
-            artist = "";
-        } else {
-            artist = artists[0];
-        }
-
-        const rawPayload = {
-            artist: artist,
-            duration,
-            track,
-            album,
-            timestamp: playDate.unix(),
-        };
-        // i don't know if its lastfm-node-client building the request params incorrectly
-        // or the last.fm api not handling the params correctly...
-        //
-        // ...but in either case if any of the below properties is undefined (possibly also null??)
-        // then last.fm responds with an IGNORED scrobble and error code 1 (totally unhelpful)
-        // so remove all undefined keys from the object before passing to the api client
-        const scrobblePayload = removeUndefinedKeys(rawPayload);
+        const scrobblePayload = this.api.playToClientPayload(playObj);
 
         try {
             const response = await this.api.callApi<TrackScrobbleResponse>((client: any) => client.trackScrobble(
@@ -211,7 +189,7 @@ export default class LastfmScrobbler extends AbstractScrobbleClient {
                 throw e;
             }
         } finally {
-            this.logger.debug('Raw Payload: ', rawPayload);
+            this.logger.debug('Raw Payload: ', scrobblePayload);
         }
     }
 }

@@ -1,14 +1,14 @@
-import { TautulliNotifier } from "../sources/ingressNotifiers/TautulliNotifier";
-import { ExpressHandler } from "../common/infrastructure/Atomic";
-import TautulliSource from "../sources/TautulliSource";
-import { parseBool } from "../utils";
-import {ExpressWithAsync} from "@awaitjs/express";
-import {Logger} from "@foxxmd/winston";
-import ScrobbleSources from "../sources/ScrobbleSources";
+import { ExpressWithAsync } from "@awaitjs/express";
+import { Logger } from "@foxxmd/logging";
+import { ExpressHandler } from "../common/infrastructure/Atomic.js";
+import { TautulliNotifier } from "../sources/ingressNotifiers/TautulliNotifier.js";
+import ScrobbleSources from "../sources/ScrobbleSources.js";
+import TautulliSource from "../sources/TautulliSource.js";
+import { parseBool } from "../utils.js";
 
 export const setupTautulliRoutes = (app: ExpressWithAsync, logger: Logger, scrobbleSources: ScrobbleSources) => {
 
-    const tauIngress = new TautulliNotifier();
+    const tauIngress = new TautulliNotifier(logger);
     const tautulliIngressRoute: ExpressHandler = async function(this: any, req, res) {
         tauIngress.trackIngress(req, false);
 
@@ -43,7 +43,7 @@ export const setupTautulliRoutes = (app: ExpressWithAsync, logger: Logger, scrob
         res.send('OK');
     };
 
-    app.postAsync('/tautulli', async function(req, res)  {
+    app.postAsync('/tautulli', async (req, res) => {
         res.redirect(307, '/api/tautulli/ingress');
     });
     app.postAsync('/api/tautulli/ingress', tautulliIngressRoute);

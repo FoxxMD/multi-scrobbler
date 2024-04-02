@@ -17,10 +17,24 @@ $primary: #00ACC1;
     position: relative;
   }
 
+  .player-tooltip {
+    width: 90%;
+    position: absolute;
+    top: $spacing;
+    left: calc($spacing/0.5);
+    border: 0;
+    outline: 0;
+    background: transparent;
+    text-shadow: rgba(black, 0.75) 0 0 5px;
+    box-shadow: none !important;
+    color: white !important;
+    z-index: 1;
+  }
+
   .toggle-playlist {
     position: absolute;
-    top: $spacing/2;
-    right: $spacing/0.5;
+    top: calc($spacing/2);
+    right: calc($spacing/0.5);
     border: 0;
     outline: 0;
     background: transparent;
@@ -69,7 +83,7 @@ $primary: #00ACC1;
   }
 
   &__head {
-    padding: $spacing/2 $spacing;
+    padding: calc($spacing/2) $spacing;
   }
 
   &__art {
@@ -132,7 +146,7 @@ $primary: #00ACC1;
     .subtitle {
       font-size: 0.75rem;
       color: #90A4AE;
-      padding-top: $spacing/4;
+      padding-top: calc($spacing/4);
       margin-bottom: $spacing;
       text-transform: uppercase;
     }

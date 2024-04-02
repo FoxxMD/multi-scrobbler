@@ -1,25 +1,22 @@
-import {addAsync, Router} from '@awaitjs/express';
-import express from 'express';
+import { addAsync, Router } from '@awaitjs/express';
+import { childLogger, LogDataPretty, Logger } from "@foxxmd/logging";
 import bodyParser from 'body-parser';
-import passport from 'passport';
+import { stripIndents } from "common-tags";
+import express from 'express';
 import session from 'express-session';
-import path from "path";
-import { getRoot } from "../ioc";
-import {Logger} from "@foxxmd/winston";
-import { LogInfo } from "../../core/Atomic";
-import { setupApi } from "./api";
-import { getAddress, mergeArr, parseBool } from "../utils";
-import {stripIndents} from "common-tags";
-import {ErrorWithCause} from "pony-cause";
-
-const buildDir = path.join(process.cwd() + "/build");
+import { PassThrough } from "node:stream";
+import passport from 'passport';
+import ViteExpress from "vite-express";
+import { getRoot } from "../ioc.js";
+import { getAddress, parseBool } from "../utils.js";
+import { setupApi } from "./api.js";
 
 const app = addAsync(express());
 const router = Router();
 
-export const initServer = async (parentLogger: Logger, initialOutput: LogInfo[] = []) => {
+export const initServer = async (parentLogger: Logger, appLoggerStream: PassThrough, initialOutput: LogDataPretty[] = []) => {
 
-    const logger = parentLogger.child({labels: ['API']}, mergeArr);
+    const logger = childLogger(parentLogger, 'API'); // parentLogger.child({labels: ['API']}, mergeArr);
 
     try {
         app.use(router);
@@ -30,7 +27,7 @@ export const initServer = async (parentLogger: Logger, initialOutput: LogInfo[] 
             })
         );
 
-        app.use(express.static(buildDir));
+        //app.use(express.static(buildDir));
 
         app.use(session({secret: 'keyboard cat', resave: false, saveUninitialized: false}));
         app.use(passport.initialize());
@@ -39,23 +36,11 @@ export const initServer = async (parentLogger: Logger, initialOutput: LogInfo[] 
         const root = getRoot();
 
         const isProd = root.get('isProd');
-        const apiPort = root.get('apiPort');
-        const mainPort = root.get('mainPort');
         const port = root.get('port');
         const local = root.get('localUrl');
         const localDefined = root.get('hasDefinedBaseUrl');
 
-        setupApi(app, logger, initialOutput);
-
-        app.get("/*", function (req, res) {
-            if (!isProd) {
-                logger.warn(`In development environment this path (on port ${apiPort}) does nothing. You most likely want port ${mainPort}`)
-            }
-            res.sendFile(path.join(buildDir, "index.html"));
-        });
-
-        const backendPort = isProd ? port : apiPort;
-        app.listen(backendPort);
+        setupApi(app, logger, appLoggerStream, initialOutput);
 
         const addy = getAddress();
         const addresses: string[] = [];
@@ -74,23 +59,37 @@ export const initServer = async (parentLogger: Logger, initialOutput: LogInfo[] 
                 switch (k) {
                     case 'host':
                     case 'v4':
-                        addresses.push(`---> ${k === 'host' ? 'Local'.padEnd(14, ' ') : 'Network'.padEnd(14, ' ')} http://${v}:${backendPort}`);
+                        addresses.push(`---> ${k === 'host' ? 'Local'.padEnd(14, ' ') : 'Network'.padEnd(14, ' ')} http://${v}:${port}`);
                         break;
                     case 'v6':
-                        addresses.push(`---> Network (IPv6) http://[${v}]:${backendPort}`);
+                        addresses.push(`---> Network (IPv6) http://[${v}]:${port}`);
                 }
             }
         }
-        const start = stripIndents`\n
-        ${isProd ? 'Server' : 'API Backend'} started:
+
+        if(process.env.USE_HASH_ROUTER === undefined) {
+            process.env.USE_HASH_ROUTER = root.get('isSubPath');
+        }
+        ViteExpress.config({mode: isProd ? 'production' : 'development'});
+        try {
+            ViteExpress.listen(app, port, () => {
+                const start = stripIndents`\n
+        Server started:
         ${addresses.join('\n')}${dockerHint !== '' ? `\n${dockerHint}` : ''}`
 
-        logger.info(start);
+                logger.info(start);
 
-        if(localDefined) {
-            logger.info(`User-defined base URL for UI and redirect URLs (spotify, deezer, lastfm): ${local}`)
+                if(localDefined) {
+                    logger.info(`User-defined base URL for UI and redirect URLs (spotify, deezer, lastfm): ${local}`)
+                }
+            }).on('error', (err) => {
+                throw new Error('Server encountered unrecoverable error', {cause: err});
+            });
+        } catch (e) {
+            throw new Error('Server encountered unrecoverable error', {cause: e});
         }
+
     } catch (e) {
-        logger.error(new ErrorWithCause('Server crashed with uncaught exception', {cause: e}));
+        throw new Error('Server crashed with uncaught exception', {cause: e});
     }
 }

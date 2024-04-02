@@ -1,22 +1,30 @@
-import {describe, it} from 'mocha';
-import {assert} from 'chai';
+import chai, { assert } from 'chai';
+import asPromised from 'chai-as-promised';
 import clone from 'clone';
-import pEvent from 'p-event';
-
-import withDuration from '../plays/withDuration.json';
-import mixedDuration from '../plays/mixedDuration.json';
-
-import {TestScrobbler} from "./TestScrobbler";
-import {asPlays, generatePlay, normalizePlays} from "../utils/PlayTestUtils";
 import dayjs from "dayjs";
-import {sleep} from "../../utils";
+import { after, before, describe, it } from 'mocha';
+import { http, HttpResponse } from 'msw';
+import pEvent from 'p-event';
+import { PlayObject } from "../../../core/Atomic.js";
+import { sleep } from "../../utils.js";
+import mixedDuration from '../plays/mixedDuration.json';
+import withDuration from '../plays/withDuration.json';
+import { MockNetworkError, withRequestInterception } from "../utils/networking.js";
+import { asPlays, generatePlay, normalizePlays } from "../utils/PlayTestUtils.js";
+
+import { TestScrobbler } from "./TestScrobbler.js";
+
+chai.use(asPromised);
 
 const firstPlayDate = dayjs().subtract(1, 'hour');
+const olderFirstPlayDate = dayjs().subtract(4, 'hour');
 
 const withDurPlays = asPlays(withDuration);
 const mixedDurPlays = asPlays(mixedDuration);
 const normalizedWithDur = normalizePlays(withDurPlays, {initialDate: firstPlayDate});
 const normalizedWithMixedDur = normalizePlays(mixedDurPlays, {initialDate: firstPlayDate});
+
+const normalizedWithMixedDurOlder = normalizePlays(mixedDurPlays, {initialDate: olderFirstPlayDate});
 
 const testScrobbler = new TestScrobbler();
 testScrobbler.verboseOptions = {
@@ -27,6 +35,57 @@ testScrobbler.verboseOptions = {
     }
 };
 testScrobbler.lastScrobbleCheck = dayjs().subtract(60, 'seconds');
+
+describe('Networking', function () {
+
+    describe('Authentication', function () {
+        it('Should set as authenticated if doAuthentication does not throw and returns true',
+            withRequestInterception(
+                [
+                    http.get('http://example.com', () => {
+                            // https://github.com/mswjs/msw/issues/1819#issuecomment-1789364174
+                            // already using DOM though, not sure why it doesn't fix itself
+                            return new HttpResponse(null, {status: 200});
+                        }
+                    )
+                ],
+                async function() {
+                    await testScrobbler.testAuth();
+                    assert.isTrue(testScrobbler.authed);
+                }
+            ));
+
+        it('Should set as unauthenticated with possibility to retry if error is network related',
+            withRequestInterception(
+                [
+                    http.get('http://example.com', () => {
+                            throw new MockNetworkError('EAI_AGAIN');
+                        }
+                    )
+                ],
+                async function() {
+                    await testScrobbler.testAuth();
+                    assert.isFalse(testScrobbler.authed);
+                    assert.isFalse(testScrobbler.authFailure);
+                }
+            ));
+
+        it('Should set as unauthenticated with no possibility to retry if error is not network related',
+            withRequestInterception(
+                [
+                    http.get('http://example.com', () => {
+                            return HttpResponse.json({error: 'Invalid API Key'}, {status: 401});
+                        }
+                    )
+                ],
+                async function() {
+                    await testScrobbler.testAuth();
+                    assert.isFalse(testScrobbler.authed);
+                    assert.isTrue(testScrobbler.authFailure);
+                }
+            ));
+    });
+});
 
 describe('Detects duplicate and unique scrobbles from client recent history', function () {
 
@@ -41,6 +100,7 @@ describe('Detects duplicate and unique scrobbles from client recent history', fu
             });
 
             assert.isFalse(await testScrobbler.alreadyScrobbled(newScrobble));
+            return;
         });
 
         it('It is not detected as duplicate when play date is close to an existing scrobble', async function () {
@@ -52,6 +112,23 @@ describe('Detects duplicate and unique scrobbles from client recent history', fu
             });
 
             assert.isFalse(await testScrobbler.alreadyScrobbled(newScrobble));
+        });
+
+        it('It handles unique detection when no existing scrobble matches above a score of 0', async function () {
+
+            testScrobbler.recentScrobbles = normalizedWithMixedDur;
+
+                const uniquePlay = generatePlay({
+                    artists: [
+                        "２８１４"
+                    ],
+                    track: "新宿ゴールデン街",
+                    duration: 130,
+                    playDate: normalizedWithMixedDur[normalizedWithMixedDur.length - 3].data.playDate.add(6, 'minutes')
+                });
+
+                await assert.isFulfilled( testScrobbler.alreadyScrobbled(uniquePlay))
+                await assert.eventually.isFalse(testScrobbler.alreadyScrobbled(uniquePlay))
         });
     });
 
@@ -181,7 +258,7 @@ describe('Detects duplicate and unique scrobbles from client recent history', fu
             assert.isTrue(await testScrobbler.alreadyScrobbled(diffPlay));
         });
 
-        it('Is detected as duplicate when play date is off by less than 10 seconds (high granularity source)', async function () {
+        it('Is detected as duplicate when play date is off by 10 seconds or less (high granularity source)', async function () {
 
             testScrobbler.recentScrobbles = normalizedWithMixedDur;
 
@@ -193,6 +270,17 @@ describe('Detects duplicate and unique scrobbles from client recent history', fu
 
             assert.isTrue(await testScrobbler.alreadyScrobbled(timeOffPos));
             assert.isTrue(await testScrobbler.alreadyScrobbled(timeOffNeg));
+
+            // 10 seconds fuzzy diff inclusive
+            const son = normalizedWithMixedDurOlder.find(x => x.data.track === 'Sonora')
+            son.data.playDate = dayjs().subtract(1, 'hour').set('minute', 26).set('second', 20);
+            son.data.duration = 267;
+            son.data.listenedFor = undefined;
+            testScrobbler.recentScrobbles = normalizedWithMixedDurOlder.concat(son);
+
+            const offSon = clone(son);
+            offSon.data.playDate = dayjs().subtract(1, 'hour').set('minute', 30).set('second', 37);
+            assert.isTrue(await testScrobbler.alreadyScrobbled(offSon));
         });
 
         it('Is detected as duplicate when play date is off by less than 60 seconds (low granularity source)', async function () {
@@ -229,8 +317,37 @@ describe('Detects duplicate and unique scrobbles from client recent history', fu
 
             const sonDiffPlay = clone(son);
             sonDiffPlay.data.playDate = sonDiffPlay.data.playDate.subtract(son.data.duration + 1, 's');
-            sonDiffPlay.data.artists = [sonDiffPlay.data.artists[1]]
             assert.isTrue(await testScrobbler.alreadyScrobbled(sonDiffPlay));
+        });
+
+        it('Is detected as duplicate when artists are included in joiner', async function () {
+            const ref = normalizedWithMixedDurOlder.find(x => x.data.track === 'Freeze Tag');
+            ref.data.playDate = dayjs().subtract(1, 'hour').set('minute', 29).set('second', 26)
+
+            const spotifyPlay: PlayObject = {
+                data: {
+                    artists: [
+                        "Terrace Martin",
+                        "Robert Glasper",
+                        "9th Wonder",
+                        "Kamasi Washington",
+                        "Dinner Party",
+                        "Cordae",
+                        "Phoelix"
+                    ],
+                    album: "Dinner Party: Dessert",
+                    track: "Freeze Tag (feat. Cordae & Phoelix)",
+                    "duration": 191.375,
+                    "playDate": dayjs().subtract(1, 'hour').set('minute', 29).set('second', 27)
+                },
+                meta: {
+                    source: 'Spotify'
+                }
+            }
+
+            testScrobbler.recentScrobbles = normalizedWithMixedDurOlder.concat(ref);
+
+            assert.isTrue(await testScrobbler.alreadyScrobbled(spotifyPlay));
         });
 
         describe('When at least one play has duration', function () {
@@ -239,7 +356,7 @@ describe('Detects duplicate and unique scrobbles from client recent history', fu
 
                 testScrobbler.recentScrobbles = normalizedWithDur;
 
-                const timeEnd = clone(normalizedWithDur[normalizedWithMixedDur.length - 1]);
+                const timeEnd = clone(normalizedWithDur[normalizedWithMixedDur.length - 2]);
                 timeEnd.data.playDate = timeEnd.data.playDate.add(timeEnd.data.duration, 's');
 
                 assert.isTrue(await testScrobbler.alreadyScrobbled(timeEnd));
@@ -260,8 +377,11 @@ describe('Detects duplicate and unique scrobbles from client recent history', fu
 });
 
 describe('Detects duplicate and unique scrobbles using actively tracked scrobbles', function() {
-    testScrobbler.recentScrobbles = normalizedWithMixedDur;
-    testScrobbler.lastScrobbleCheck = dayjs().subtract(60, 'seconds');
+
+    before(function () {
+        testScrobbler.recentScrobbles = normalizedWithMixedDur;
+        testScrobbler.lastScrobbleCheck = dayjs().subtract(60, 'seconds');
+    });
 
     it('Detects a unique play', async function() {
         const newScrobble = generatePlay({
@@ -304,11 +424,13 @@ describe('Detects duplicate and unique scrobbles using actively tracked scrobble
 
 describe('Manages scrobble queue', function() {
 
-    testScrobbler.recentScrobbles = normalizedWithMixedDur;
-    testScrobbler.scrobbleSleep = 500;
-    testScrobbler.scrobbleDelay = 0;
-    testScrobbler.lastScrobbleCheck = dayjs().subtract(60, 'seconds');
-    testScrobbler.initScrobbleMonitoring();
+    before(function() {
+        testScrobbler.recentScrobbles = normalizedWithMixedDur;
+        testScrobbler.scrobbleSleep = 500;
+        testScrobbler.scrobbleDelay = 0;
+        testScrobbler.lastScrobbleCheck = dayjs().subtract(60, 'seconds');
+        testScrobbler.initScrobbleMonitoring();
+    });
 
     it('Scrobbles a uniquely queued play', async function() {
         const newScrobble = generatePlay({
@@ -388,5 +510,10 @@ describe('Manages scrobble queue', function() {
 
         // roughly...
         assert.closeTo(end.diff(initial, 'ms'), 1200, 200);
+    });
+
+    after(async function () {
+       this.timeout(3500);
+       await testScrobbler.tryStopScrobbling()
     });
 });

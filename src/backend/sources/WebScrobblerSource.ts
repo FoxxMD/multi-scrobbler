@@ -1,16 +1,21 @@
-import MemorySource from "./MemorySource";
+import dayjs from "dayjs";
+import EventEmitter from "events";
+import { PlayObject, SOURCE_SOT } from "../../core/Atomic.js";
 import {
     FormatPlayObjectOptions,
     InternalConfig,
     NO_USER,
-    PlayerStateData, REPORTED_PLAYER_STATUSES,
-    ReportedPlayerStatus
-} from "../common/infrastructure/Atomic";
-import EventEmitter from "events";
-import {PlayObject} from "../../core/Atomic";
-import {WebScrobblerHookEvent, WebScrobblerPayload, WebScrobblerSong} from "../common/vendor/webscrobbler/interfaces";
-import dayjs from "dayjs";
-import {WebScrobblerSourceConfig} from "../common/infrastructure/config/source/webscrobbler";
+    PlayerStateData,
+    REPORTED_PLAYER_STATUSES,
+    ReportedPlayerStatus,
+} from "../common/infrastructure/Atomic.js";
+import { WebScrobblerSourceConfig } from "../common/infrastructure/config/source/webscrobbler.js";
+import {
+    WebScrobblerHookEvent,
+    WebScrobblerPayload,
+    WebScrobblerSong
+} from "../common/vendor/webscrobbler/interfaces.js";
+import MemorySource from "./MemorySource.js";
 
 export class WebScrobblerSource extends MemorySource {
 
@@ -19,7 +24,8 @@ export class WebScrobblerSource extends MemorySource {
     constructor(name: any, config: WebScrobblerSourceConfig, internal: InternalConfig, emitter: EventEmitter) {
         super('webscrobbler', name, config, internal, emitter);
         this.multiPlatform = true;
-        this.playerSourceOfTruth = false;
+        this.playerSourceOfTruth = SOURCE_SOT.HISTORY;
+        this.logger.info(`Note: The player for this source is an analogue for the 'Now Playing' status exposed by ${this.type} which is NOT used for scrobbling. Instead, the 'recently played' or 'history' information provided by this source is used for scrobbles.`)
 
         const {
             data = {},
@@ -37,6 +43,11 @@ export class WebScrobblerSource extends MemorySource {
             blacklist: bl.map(x => x.toLocaleLowerCase().trim()),
             whitelist: wl.map(x => x.toLocaleLowerCase().trim())
         };
+    }
+
+    protected async doBuildInitData(): Promise<true | string | undefined> {
+        this.logger.info(`Accepting requests at ${this.localUrl}/api/webscrobbler${this.config.data.slug === undefined ? '' : `/${this.config.data.slug}`}`);
+        return true;
     }
 
     matchSlug(slug: string | undefined) {
@@ -107,6 +118,7 @@ export class WebScrobblerSource extends MemorySource {
                 track,
                 artists: [artist],
                 album: album === null ? undefined : album,
+                albumArtists: albumArtist === null ? undefined : [albumArtist],
                 playDate: dayjs.unix(startTimestamp),
                 duration: duration === null ? undefined : duration,
                 meta: {
@@ -129,9 +141,7 @@ export class WebScrobblerSource extends MemorySource {
         }
     }
 
-    getRecentlyPlayed = async (options = {}) => {
-        return this.getFlatRecentlyDiscoveredPlays();
-    }
+    getRecentlyPlayed = async (options = {}) => this.getFlatRecentlyDiscoveredPlays()
 
     isValidScrobble = (playObj: PlayObject) => {
         if (playObj.meta?.scrobbleAllowed === false) {

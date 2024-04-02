@@ -1,4 +1,5 @@
 {
-  "require": ["./register.js", "source-map-support/register"],
-  "reporter": "dot"
+  "reporter": "dot",
+  "extension": "ts",
+  "import": "tsx/esm"
 }

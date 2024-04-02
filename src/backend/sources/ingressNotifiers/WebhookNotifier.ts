@@ -1,11 +1,12 @@
-import {IngressNotifier} from "./IngressNotifier";
-import {Request} from "express";
+import { Logger } from "@foxxmd/logging";
+import { Request } from "express";
 import path from "path";
+import { IngressNotifier } from "./IngressNotifier.js";
 
 export class WebhookNotifier extends IngressNotifier {
 
-    constructor() {
-        super('WebScrobbler');
+    constructor(logger: Logger) {
+        super('WebScrobbler', logger);
     }
 
     seenSlugs: Record<string, boolean> = {};

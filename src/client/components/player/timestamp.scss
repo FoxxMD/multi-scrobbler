@@ -18,9 +18,9 @@ $primary: #556a77;
 
   &__progress {
     position: relative;
-    top: $spacing/4;
+    top: calc($spacing/4);
     left: 50%;
-    height: $spacing/4;
+    height: calc($spacing/4);
     width: calc(100% - #{$spacing*3});
     transform: translate(-50%, 0);
     border-radius: 5px;

@@ -1,16 +1,16 @@
-import {ExpressWithAsync} from "@awaitjs/express";
-import {Logger} from "@foxxmd/winston";
-import ScrobbleSources from "../sources/ScrobbleSources";
+import { ExpressWithAsync } from "@awaitjs/express";
+import { Logger } from "@foxxmd/logging";
 import passport from "passport";
-import { ExpressHandler } from "../common/infrastructure/Atomic";
-import ScrobbleClients from "../scrobblers/ScrobbleClients";
-import LastfmScrobbler from "../scrobblers/LastfmScrobbler";
-import LastfmSource from "../sources/LastfmSource";
-import SpotifySource from "../sources/SpotifySource";
+import { ExpressHandler } from "../common/infrastructure/Atomic.js";
+import LastfmScrobbler from "../scrobblers/LastfmScrobbler.js";
+import ScrobbleClients from "../scrobblers/ScrobbleClients.js";
+import LastfmSource from "../sources/LastfmSource.js";
+import ScrobbleSources from "../sources/ScrobbleSources.js";
+import SpotifySource from "../sources/SpotifySource.js";
 
 export const setupAuthRoutes = (app: ExpressWithAsync, logger: Logger, sourceMiddle: ExpressHandler, clientMiddle: ExpressHandler, scrobbleSources: ScrobbleSources, scrobbleClients: ScrobbleClients) => {
     app.use('/api/client/auth', clientMiddle);
-    app.getAsync('/api/client/auth', async function (req, res) {
+    app.getAsync('/api/client/auth', async (req, res) => {
         const {
             scrobbleClient,
         } = req as any;
@@ -25,7 +25,7 @@ export const setupAuthRoutes = (app: ExpressWithAsync, logger: Logger, sourceMid
     });
 
     app.use('/api/source/auth', sourceMiddle);
-    app.getAsync('/api/source/auth', async function (req, res, next) {
+    app.getAsync('/api/source/auth', async (req, res, next) => {
         const {
             // @ts-expect-error TS(2339): Property 'scrobbleSource' does not exist on type '... Remove this comment to see the full error message
             scrobbleSource: source,
@@ -54,7 +54,7 @@ export const setupAuthRoutes = (app: ExpressWithAsync, logger: Logger, sourceMid
         }
     });
 
-    app.getAsync(/.*callback$/, async function (req, res, next) {
+    app.getAsync(/.*callback$/, async (req, res, next) => {
         if(req.url.indexOf('/api') !== 0) {
             return res.redirect(307, `/api${req.url}`);
         }
@@ -76,7 +76,7 @@ export const setupAuthRoutes = (app: ExpressWithAsync, logger: Logger, sourceMid
             try {
                 await entity.api.authenticate(token);
                 await entity.initialize();
-                await entity.testAuth();
+                await entity.doAuthentication();
                 return res.send('OK');
             } catch (e) {
                 return res.send(e.message);

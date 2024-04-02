@@ -1,3 +1,7 @@
+import { ResponseError } from "superagent";
+import { findCauseByFunc } from "../../../utils.js";
+import { isSuperAgentResponseError } from "../../errors/ErrorUtils.js";
+
 export interface MalojaV2ScrobbleData {
     artists: string[]
     title: string
@@ -79,7 +83,7 @@ export interface MalojaResponseV3CommonData {
     status: 'failure' | 'error' | 'success' | 'ok'
     error?: {
         type: string
-        value?: string | object
+        value?: string | MalojaV3ScrobbleData & { [key: string]: any }
         desc: string
     }
 }
@@ -92,4 +96,39 @@ export interface MalojaScrobbleV3ResponseData extends MalojaResponseV3CommonData
     }
     desc: string
     warnings?: MalojaScrobbleWarning[]
+}
+
+export const isMalojaAPIErrorBody = (body: any): body is MalojaResponseV3CommonData => {
+    return typeof body === 'object'
+        && 'status' in body
+        && typeof body.status === 'string'
+        && 'error' in body
+        && typeof body.error === 'object'
+        && 'type' in body.error;
+}
+
+export const getMalojaResponseError = (e: Error, asObject: boolean = false): ResponseError | undefined => {
+    return findCauseByFunc(e, (err) => {
+        if (!isSuperAgentResponseError(err)) {
+            return false;
+        }
+        return isMalojaAPIErrorBody(err.response.body);
+    }) as ResponseError | undefined;
+}
+
+export const getMalojaRawResponse = (e: Error, asObject: boolean = false): string | object | undefined => {
+    const err = getMalojaResponseError(e);
+    if (err === undefined) {
+        return undefined;
+    }
+    const {
+        response: {
+            body,
+            text
+        } = {}
+    } = err;
+    if (asObject) {
+        return body as object;
+    }
+    return text;
 }

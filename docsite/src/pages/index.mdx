@@ -26,6 +26,7 @@ A javascript app to scrobble music you listened to, to [Maloja](https://github.c
     * [Mopidy](docs/configuration#mopidy)
     * [JRiver](docs/configuration#jriver)
     * [Kodi](docs/configuration#kodi)
+    * [Google Cast (Chromecast)](/docs/configuration#google-cast--chromecast-)
 * Supports scrobbling to many **Clients**
     * [Maloja](docs/configuration#maloja)
     * [Last.fm](docs/configuration#lastfm)
@@ -33,6 +34,7 @@ A javascript app to scrobble music you listened to, to [Maloja](https://github.c
 * Monitor status of Sources and Clients using [webhooks (Gotify or Ntfy)](docs/configuration#webhook-configurations) or [healthcheck endpoint](docs/configuration#health-endpoint)
 * Supports configuring for single or multiple users (scrobbling for your friends and family!)
 * Web server interface for stats, basic control, and detailed logs
+* Graceful network and client failure handling (queued scrobbles that auto-retry)
 * Smart handling of credentials (persistent, authorization through app)
 * Easy configuration through ENVs or JSON
 * Install using [Docker images for x86/ARM](docs/installation#docker), [flatpak](docs/installation#flatpak), or [locally with NodeJS](docs/installation#nodejs)
