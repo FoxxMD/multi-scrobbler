@@ -95,7 +95,6 @@
     "react-dom": "^18.2.0",
     "react-redux": "^8.1.2",
     "react-router-dom": "^6.15.0",
-    "safe-stable-stringify": "^1.1.1",
     "sass": "^1.70.0",
     "spotify-web-api-node": "^5.0.2",
     "superagent": "^8.0.9",
@@ -107,7 +106,6 @@
     "youtube-music-ts-api": "^1.7.0"
   },
   "devDependencies": {
-    "@dbus-types/dbus": "^0.0.4",
     "@dbus-types/notifications": "^0.0.5",
     "@eslint/js": "^8.56.0",
     "@faker-js/faker": "^8.1.0",
