@@ -28,10 +28,10 @@ import { makeClientCheckMiddle, makeSourceCheckMiddle } from "./middleware.js";
 import { setupPlexRoutes } from "./plexRoutes.js";
 import { setupTautulliRoutes } from "./tautulliRoutes.js";
 import { setupWebscrobblerRoutes } from "./webscrobblerRoutes.js";
+import {setupLZEndpointRoutes} from "./endpointListenbrainzRoutes.js";
 
 const maxBufferSize = 300;
 const output: Record<number, FixedSizeList<LogDataPretty>> =  {};
-import {setupLZEndpointRoutes} from "./endpointListenbrainzRoutes";
 
 const createAddToLogBuffer = (levelMap:  {[p: number]: string}) => (log: LogDataPretty) => {
     output[log.level].add({...log, levelLabel: levelMap[log.level]});

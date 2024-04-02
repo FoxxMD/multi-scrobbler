@@ -1,19 +1,20 @@
-import MemorySource from "./MemorySource";
+import { redactString } from "@foxxmd/redact-string";
+import dayjs from "dayjs";
+import EventEmitter from "events";
+import { PlayObject, SOURCE_SOT } from "../../core/Atomic.js";
 import {
     ExpressRequest,
     FormatPlayObjectOptions,
     InternalConfig,
     NO_USER,
-    PlayerStateData, REPORTED_PLAYER_STATUSES,
+    PlayerStateData,
+    REPORTED_PLAYER_STATUSES,
     ReportedPlayerStatus
-} from "../common/infrastructure/Atomic";
-import EventEmitter from "events";
-import {PlayObject} from "../../core/Atomic";
-import dayjs from "dayjs";
-import {ListenbrainzEndpointConfig} from "../common/infrastructure/config/source/endpointlz";
-import {ListenbrainzApiClient, ListenPayload, SubmitPayload} from "../common/vendor/ListenbrainzApiClient";
-import {parseRegexSingleOrFail} from "../utils";
-import {redactString} from "@foxxmd/redact-string";
+} from "../common/infrastructure/Atomic.js";
+import { ListenbrainzEndpointConfig } from "../common/infrastructure/config/source/endpointlz.js";
+import { ListenbrainzApiClient, ListenPayload, SubmitPayload } from "../common/vendor/ListenbrainzApiClient.js";
+import { parseRegexSingleOrFail } from "../utils.js";
+import MemorySource from "./MemorySource.js";
 
 const noSlugMatch = new RegExp(/\/api\/listenbrainz(?:\/?|\/1\/?|\/1\/submit-listens\/?)$/i);
 const slugMatch = new RegExp(/\/api\/listenbrainz\/([^\/]+)(?:\/?|\/1\/?|\/1\/submit-listens\/?)$/i);
@@ -27,7 +28,7 @@ export class EndpointListenbrainzSource extends MemorySource {
     constructor(name: any, config: ListenbrainzEndpointConfig, internal: InternalConfig, emitter: EventEmitter) {
         super('endpointlz', name, config, internal, emitter);
         this.multiPlatform = true;
-        this.playerSourceOfTruth = false;
+        this.playerSourceOfTruth = SOURCE_SOT.HISTORY;
 
         const {
             data = {},

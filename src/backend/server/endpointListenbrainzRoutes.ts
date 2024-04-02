@@ -1,22 +1,21 @@
-import {mergeArr, parseBool, remoteHostIdentifiers} from "../utils";
-import {ExpressWithAsync} from "@awaitjs/express";
-import {Logger} from "@foxxmd/winston";
-import ScrobbleSources from "../sources/ScrobbleSources";
+import { ExpressWithAsync } from "@awaitjs/express";
+import { childLogger, Logger } from "@foxxmd/logging";
 import bodyParser from "body-parser";
-import {nonEmptyBody} from "./middleware";
-import {LZEndpointNotifier} from "../sources/ingressNotifiers/LZEndpointNotifier";
-import {EndpointListenbrainzSource} from "../sources/EndpointListenbrainzSource";
+import { EndpointListenbrainzSource } from "../sources/EndpointListenbrainzSource.js";
+import { LZEndpointNotifier } from "../sources/ingressNotifiers/LZEndpointNotifier.js";
+import ScrobbleSources from "../sources/ScrobbleSources.js";
+import { nonEmptyBody } from "./middleware.js";
 
 export const setupLZEndpointRoutes = (app: ExpressWithAsync, parentLogger: Logger, scrobbleSources: ScrobbleSources) => {
 
-    const logger = parentLogger.child({labels: ['Ingress', 'Listenbrainz']}, mergeArr);
+    const logger = childLogger(parentLogger, ['Ingress', 'Listenbrainz']);
 
     const lzJsonParser = bodyParser.json({
         type: ['text/*', 'application/json'],
     });
     const nonEmptyCheck = nonEmptyBody(logger, 'LZ Endpoint', false);
 
-    const webhookIngress = new LZEndpointNotifier();
+    const webhookIngress = new LZEndpointNotifier(logger);
     app.useAsync(/\/api\/listenbrainz.*/,
         async function (req, res, next) {
             // track request before parsing body to ensure we at least log that something is happening

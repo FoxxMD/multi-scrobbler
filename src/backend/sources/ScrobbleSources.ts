@@ -6,6 +6,7 @@ import { ConfigMeta, InternalConfig, SourceType, sourceTypes } from "../common/i
 import { AIOConfig, SourceDefaults } from "../common/infrastructure/config/aioConfig.js";
 import { ChromecastSourceConfig } from "../common/infrastructure/config/source/chromecast.js";
 import { DeezerData, DeezerSourceConfig } from "../common/infrastructure/config/source/deezer.js";
+import { ListenbrainzEndpointConfig } from "../common/infrastructure/config/source/endpointlz.js";
 import { JellyData, JellySourceConfig } from "../common/infrastructure/config/source/jellyfin.js";
 import { JRiverData, JRiverSourceConfig } from "../common/infrastructure/config/source/jriver.js";
 import { KodiData, KodiSourceConfig } from "../common/infrastructure/config/source/kodi.js";
@@ -27,6 +28,7 @@ import { parseBool, readJson, validateJson } from "../utils.js";
 import AbstractSource from "./AbstractSource.js";
 import { ChromecastSource } from "./ChromecastSource.js";
 import DeezerSource from "./DeezerSource.js";
+import { EndpointListenbrainzSource } from "./EndpointListenbrainzSource.js";
 import JellyfinSource from "./JellyfinSource.js";
 import { JRiverSource } from "./JRiverSource.js";
 import { KodiSource } from "./KodiSource.js";
@@ -40,8 +42,6 @@ import { SubsonicSource } from "./SubsonicSource.js";
 import TautulliSource from "./TautulliSource.js";
 import { WebScrobblerSource } from "./WebScrobblerSource.js";
 import YTMusicSource from "./YTMusicSource.js";
-import {EndpointListenbrainzSource} from "./EndpointListenbrainzSource";
-import {ListenbrainzEndpointConfig} from "../common/infrastructure/config/source/endpointlz";
 
 type groupedNamedConfigs = {[key: string]: ParsedConfig[]};
 

@@ -1,12 +1,13 @@
-import {IngressNotifier} from "./IngressNotifier";
-import {Request} from "express";
-import {authHeaderRegex, EndpointListenbrainzSource} from "../EndpointListenbrainzSource";
-import {redactString} from "@foxxmd/redact-string";
+import { Logger } from "@foxxmd/logging";
+import { redactString } from "@foxxmd/redact-string";
+import { Request } from "express";
+import { EndpointListenbrainzSource } from "../EndpointListenbrainzSource.js";
+import { IngressNotifier } from "./IngressNotifier.js";
 
 export class LZEndpointNotifier extends IngressNotifier {
 
-    constructor() {
-        super('Listenbrainz Endpoint');
+    constructor(logger: Logger) {
+        super('Listenbrainz Endpoint', logger);
     }
 
     seenSlugs: Record<string, boolean> = {};

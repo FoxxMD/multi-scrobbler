@@ -315,7 +315,7 @@ export class ListenbrainzApiClient extends AbstractApiClient {
                 duration,
                 meta: {
                     brainz: {
-                        artist: artist_mbids !== undefined ? artist_mbids[0] : undefined,
+                        artist: artist_mbids !== undefined ? artist_mbids : undefined,
                         album: release_mbid,
                         albumArtist: release_group_mbid,
                         track: track_mbid

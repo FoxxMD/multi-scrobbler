@@ -10,9 +10,9 @@ import utc from 'dayjs/plugin/utc.js';
 import { Request } from "express";
 import { accessSync, constants, promises } from "fs";
 import JSON5 from 'json5';
+import { TimeoutError } from "p-event";
 import pathUtil from "path";
 import { getErrorCause } from "pony-cause";
-import { TimeoutError, WebapiError } from "spotify-web-api-node/src/response-error.js";
 import { PlayObject } from "../core/Atomic.js";
 import {
     asPlayerStateData,
@@ -224,7 +224,7 @@ export const parseRetryAfterSecsFromObj = (err: any) => {
         return undefined;
     }
 
-    if (err instanceof WebapiError || 'headers' in err) {
+    if ('headers' in err) {
         const {headers = {}} = err;
         raVal = headers['retry-after']
     }
