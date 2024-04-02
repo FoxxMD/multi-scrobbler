@@ -1,4 +1,4 @@
-import { Response } from 'superagent';
+import { Response as SAResponse } from 'superagent';
 
 export interface SubsonicResponseCommon {
     status: 'failed' | 'ok'
@@ -17,7 +17,7 @@ export interface SubsonicResponseBody<T extends SubsonicResponseCommon = Subsoni
     "subsonic-response": T
 }
 
-export interface SubsonicResponse extends Response {
+export interface SubsonicResponse extends SAResponse {
     body: SubsonicResponseBody
 }
 
@@ -54,7 +54,7 @@ export const asSubsonicResponseBody = (obj: unknown): obj is SubsonicResponse =>
     return obj !== null && typeof obj === 'object' && 'subsonic-response' in obj;
 }
 
-export const getSubsonicResponse = (resp: Response): SubsonicResponseCommon | undefined => {
+export const getSubsonicResponse = (resp: Response | SAResponse): SubsonicResponseCommon | undefined => {
     if(asSubsonicResponseBody(resp.body) && asSubsonicResponseCommon(resp.body['subsonic-response'])) {
         return resp.body['subsonic-response'];
     }

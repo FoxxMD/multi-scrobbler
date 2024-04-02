@@ -1,18 +1,10 @@
+import { AccessToken, MaxInt, SdkOptions, SpotifyApi, UserProfile } from '@fostertheweb/spotify-web-sdk';
 import dayjs, { Dayjs } from "dayjs";
 import EventEmitter from "events";
-import SpotifyWebApi from "spotify-web-api-node";
-import {
-    AccessToken,
-    AuthorizationCodeWithPKCEStrategy, MaxInt, PlaybackState,
-    SdkOptions,
-    SpotifyApi,
-    UserProfile,
-    RecentlyPlayedTracksPage
-} from '@fostertheweb/spotify-web-sdk';
 import request from 'superagent';
 import { PlayObject, SCROBBLE_TS_SOC_END, SCROBBLE_TS_SOC_START, ScrobbleTsSOC } from "../../core/Atomic.js";
 import { truncateStringToLength } from "../../core/StringUtils.js";
-import { isNodeNetworkException, getExceptionWithResponse } from "../common/errors/NodeErrors.js";
+import { getExceptionWithResponse, isNodeNetworkException } from "../common/errors/NodeErrors.js";
 import { hasUpstreamError, UpstreamError } from "../common/errors/UpstreamError.js";
 import {
     DEFAULT_POLLING_INTERVAL,
@@ -25,6 +17,8 @@ import {
     SourceData,
 } from "../common/infrastructure/Atomic.js";
 import { SpotifySourceConfig } from "../common/infrastructure/config/source/spotify.js";
+import { FileProvidedAccessTokenStrategy } from "../common/vendor/spotify/FileProvidedAccessTokenStrategy.js";
+import { MSSpotifyResponseValidator } from "../common/vendor/spotify/SpotifyErrorHandler.js";
 import {
     combinePartsToString,
     findCauseByFunc,
@@ -42,8 +36,6 @@ import CurrentlyPlayingObject = SpotifyApi.CurrentlyPlayingObject;
 import PlayHistoryObject = SpotifyApi.PlayHistoryObject;
 import TrackObjectFull = SpotifyApi.TrackObjectFull;
 import UserDevice = SpotifyApi.UserDevice;
-import {MSSpotifyResponseValidator} from "../common/vendor/spotify/SpotifyErrorHandler.js";
-import {FileProvidedAccessTokenStrategy} from "../common/vendor/spotify/FileProvidedAccessTokenStrategy.js";
 
 const scopes = ['user-read-recently-played', 'user-read-currently-playing', 'user-read-playback-state', 'user-read-playback-position'];
 const state = 'random';
@@ -250,7 +242,7 @@ export default class SpotifySource extends MemorySource {
                 await writeFile(this.workingCredsPath, JSON.stringify(accessTokenToMSCreds(data)));
                 this.logger.debug('Refreshed access token');
             } catch (e) {
-                this.logger.warn(new ErrorWithCause('Failed to write refreshed access token to file', {cause: e}));
+                this.logger.warn(new Error('Failed to write refreshed access token to file', {cause: e}));
             }
         }
 
@@ -274,7 +266,7 @@ export default class SpotifySource extends MemorySource {
             await writeFile(this.workingCredsPath, JSON.stringify(accessTokenToMSCreds(data)));
             this.logger.debug('Wrote new credentials');
         } catch (e) {
-            this.logger.warn(new ErrorWithCause('Failed to write refreshed crendentials to file', {cause: e}));
+            this.logger.warn(new Error('Failed to write refreshed crendentials to file', {cause: e}));
         }
     }
 

@@ -201,7 +201,7 @@ export class SubsonicSource extends MemorySource {
 
             const subResponseError = getSubsonicResponseFromError(e);
             if(subResponseError !== undefined) {
-                const resp = getSubsonicResponse(subResponseError.response as Response)
+                const resp = getSubsonicResponse(subResponseError.response)
                 this.logger.info(`Subsonic Server reachable: ${identifiersFromResponse(resp)}`);
                 return true;
             }

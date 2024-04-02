@@ -1,5 +1,6 @@
 import { findCauseByFunc } from "../../utils.js";
 import { isArbitraryObject } from "../infrastructure/Atomic.js";
+import { UpstreamError } from "./UpstreamError.js";
 import ErrnoException = NodeJS.ErrnoException;
 
 export type NodeNetworkErrorCode = 'ENOTFOUND' | 'ETIMEDOUT' | 'EAI_AGAIN' | 'ECONNRESET' | 'ECONNREFUSED' | 'ERRADDRINUSE' | 'EADDRNOTAVAIL' | 'ECONNABORTED' | 'EHOSTUNREACH';
