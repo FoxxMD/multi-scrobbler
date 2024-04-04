@@ -47,19 +47,26 @@ export interface RootOptions {
     baseUrl?: string,
     port?: string | number
     logger: Logger
+    disableWeb?: boolean
 }
 
 const createRoot = (options?: RootOptions) => {
     const {
         port = 9078,
         baseUrl = process.env.BASE_URL,
+        disableWeb: dw
     } = options || {};
     const configDir = process.env.CONFIG_DIR || path.resolve(projectDir, `./config`);
+    let disableWeb = dw;
+    if(disableWeb === undefined) {
+        disableWeb = process.env.DISABLE_WEB === 'true';
+    }
     return createContainer().add({
         version,
         configDir: configDir,
         isProd: process.env.NODE_ENV !== undefined && (process.env.NODE_ENV === 'production' || process.env.NODE_ENV === 'prod'),
         port: process.env.PORT ?? port,
+        disableWeb,
         clientEmitter: () => new WildcardEmitter(),
         sourceEmitter: () => new WildcardEmitter(),
         notifierEmitter: () => new EventEmitter(),

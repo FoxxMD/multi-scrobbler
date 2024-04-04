@@ -46,6 +46,13 @@ export interface AIOConfig {
     logging?: LogOptions
 
     /**
+     * Disable web server from running/listening on port.
+     *
+     * This will also make any ingress sources (Plex, Jellyfin, Tautulli, etc...) unusable
+     * */
+    disableWeb?: boolean
+
+    /**
      * Enables ALL relevant logging and debug options for all sources/clients, when none are defined.
      *
      * This is a convenience shortcut for enabling all output needed to troubleshoot an issue and does not need to be on for normal operation.

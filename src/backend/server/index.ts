@@ -35,6 +35,11 @@ export const initServer = async (parentLogger: Logger, appLoggerStream: PassThro
 
         const root = getRoot();
 
+        if(root.get('disableWeb')) {
+            logger.warn('API and Dashboard have been DISABLED. Note that any ingress sources (Plex, Jellyfin, Tautulli, etc...) will be unusable');
+            return;
+        }
+
         const isProd = root.get('isProd');
         const port = root.get('port');
         const local = root.get('localUrl');
