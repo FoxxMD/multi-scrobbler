@@ -195,6 +195,15 @@ EX: Lastfm Redirect Url is `BASE_URL:PORT/lastfm/callback` -- Set `BASE_URL=http
 
 Useful when running with [docker](../installation/installation.md#docker) so that you do not need to specify redirect URLs for each configuration.
 
+#### Disable Web
+
+If you do not need the dashboard and/or ingress sources, or have security concerns about ingress and cannot control their hosting environment, the web server and API can be disabled. Note that any **ingress-based sources will be unusable** (Plex, Jellyfin, Tautulli, etc...) if this is disabled.
+
+Disable using either:
+
+* ENV `DISABLE_WEB=true`
+* In [All-in-One File](#all-in-one-file-configuration) use the top-level property `"disableWeb": true`
+
 # Source Configurations
 
 ## [Spotify](https://www.spotify.com)
