@@ -1,8 +1,10 @@
 export interface WebhookPayload {
     title?: string
     message: string
-    priority: 'info' | 'warn' | 'error'
+    priority: Priority
 }
+
+export type Priority = 'info' | 'warn' | 'error';
 
 export interface PrioritiesConfig {
     /**
@@ -28,7 +30,7 @@ export interface CommonWebhookConfig {
      *
      * @examples ["gotify"]
      * */
-    type: 'gotify' | 'ntfy'
+    type: 'gotify' | 'ntfy' | 'apprise'
     /**
      * A friendly name used to identify webhook config in logs
      * */
@@ -90,4 +92,30 @@ export interface NtfyConfig extends CommonWebhookConfig {
     priorities?: PrioritiesConfig
 }
 
-export type WebhookConfig = GotifyConfig | NtfyConfig;
+export interface AppriseConfig extends CommonWebhookConfig {
+    /**
+     * The URL of the apprise-api server
+     *
+     * @examples ["http://192.168.0.100:8078"]
+     * */
+    host: string
+
+    /**
+     * If using [Stateless Endpoints](https://github.com/caronc/apprise-api?tab=readme-ov-file#stateless-solution) the Apprise config URL(s) to send
+     * */
+    urls?: string | string[]
+
+    /**
+     * If using [Persistent Store Endpoints](https://github.com/caronc/apprise-api?tab=readme-ov-file#persistent-storage-solution) the Configuration ID(s) to send to
+     *
+     * Note: If multiple keys are defined then MS will attempt to POST to each one individually
+     * */
+    keys?: string | string[]
+
+    /**
+     * Optional [tag(s)](https://github.com/caronc/apprise-api?tab=readme-ov-file#tagging) to send in the notification payload
+     * */
+    tags?: string | string[]
+}
+
+export type WebhookConfig = GotifyConfig | NtfyConfig | AppriseConfig;

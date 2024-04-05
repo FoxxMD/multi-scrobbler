@@ -28,7 +28,7 @@ A javascript app to scrobble music you listened to, to [Maloja](https://github.c
   * [Maloja](/docsite/docs/configuration/configuration.md#maloja)
   * [Last.fm](/docsite/docs/configuration/configuration.md#lastfm)
   * [ListenBrainz](/docsite/docs/configuration/configuration.md#listenbrainz)
-* Monitor status of Sources and Clients using [webhooks (Gotify or Ntfy)](/docsite/docs/configuration/configuration.md#webhook-configurations) or [healthcheck endpoint](/docsite/docs/configuration/configuration.md#health-endpoint)
+* Monitor status of Sources and Clients using [webhooks (Gotify, Ntfy, Apprise)](/docsite/docs/configuration/configuration.md#webhook-configurations) or [healthcheck endpoint](/docsite/docs/configuration/configuration.md#health-endpoint)
 * Supports configuring for single or multiple users (scrobbling for your friends and family!)
 * Web server interface for stats, basic control, and detailed logs
 * Graceful network and client failure handling (queued scrobbles that auto-retry)

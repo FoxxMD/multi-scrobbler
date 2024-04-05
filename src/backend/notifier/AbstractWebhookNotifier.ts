@@ -1,16 +1,21 @@
 import { childLogger, Logger } from "@foxxmd/logging";
-import { GotifyConfig, NtfyConfig, WebhookPayload } from "../common/infrastructure/config/health/webhooks.js";
+import {
+    AppriseConfig,
+    GotifyConfig,
+    NtfyConfig,
+    WebhookPayload
+} from "../common/infrastructure/config/health/webhooks.js";
 
 export abstract class AbstractWebhookNotifier {
 
-    config: GotifyConfig | NtfyConfig
+    config: GotifyConfig | NtfyConfig | AppriseConfig
     logger: Logger;
 
     initialized: boolean = false;
     requiresAuth: boolean = false;
     authed: boolean = false;
 
-    protected constructor(type: string, defaultName: string, config: GotifyConfig | NtfyConfig, logger: Logger) {
+    protected constructor(type: string, defaultName: string, config: GotifyConfig | NtfyConfig | AppriseConfig, logger: Logger) {
         this.config = config;
         const label = `${type} - ${config.name ?? defaultName}`
         this.logger = childLogger(logger, label);

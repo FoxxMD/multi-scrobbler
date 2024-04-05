@@ -983,6 +983,25 @@ EX
 }
 ```
 
+### [Apprise](https://github.com/caronc/apprise-api)
+
+Refer to the [config schema for AppriseConfig](https://json-schema.app/view/%23/%23%2Fdefinitions%2FAppriseConfig?url=https%3A%2F%2Fraw.githubusercontent.com%2FFoxxMD%2Fmulti-scrobbler%2Fmaster%2Fsrc%2Fbackend%2Fcommon%2Fschema%2Faio.json)
+
+multi-scrobbler supports [stateless](https://github.com/caronc/apprise-api?tab=readme-ov-file#stateless-solution) and [persistent storage](https://github.com/caronc/apprise-api?tab=readme-ov-file#persistent-storage-solution) endpoints as well as [tags](https://github.com/caronc/apprise-api?tab=readme-ov-file#tagging)/
+
+EX
+
+```json5
+{
+  "type": "apprise",
+  "name": "MyAppriseFriendlyNameForLogs",
+  "host": "http://192.168.0.100:8080",
+  "urls": ["gotify://192.168.0.101:8070/MyToken"], // stateless endpoints
+  "keys": ["e90b20526808373353afad7fb98a201198c0c3e0555bea19f182df3388af7b17"], //persistent storage endpoints
+  "tags": ["my","optional","tags"]
+}
+```
+
 ## Health Endpoint
 
 An endpoint for monitoring the health of sources/clients is available at GET `http://YourMultiScrobblerDomain/health`

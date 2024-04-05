@@ -1,6 +1,87 @@
 {
     "$schema": "http://json-schema.org/draft-07/schema#",
     "definitions": {
+        "AppriseConfig": {
+            "properties": {
+                "host": {
+                    "description": "The URL of the apprise-api server",
+                    "examples": [
+                        "http://192.168.0.100:8078"
+                    ],
+                    "title": "host",
+                    "type": "string"
+                },
+                "keys": {
+                    "anyOf": [
+                        {
+                            "items": {
+                                "type": "string"
+                            },
+                            "type": "array"
+                        },
+                        {
+                            "type": "string"
+                        }
+                    ],
+                    "description": "If using [Persistent Store Endpoints](https://github.com/caronc/apprise-api?tab=readme-ov-file#persistent-storage-solution) the Configuration ID(s) to send to\n\nNote: If multiple keys are defined then MS will attempt to POST to each one individually",
+                    "title": "keys"
+                },
+                "name": {
+                    "description": "A friendly name used to identify webhook config in logs",
+                    "title": "name",
+                    "type": "string"
+                },
+                "tags": {
+                    "anyOf": [
+                        {
+                            "items": {
+                                "type": "string"
+                            },
+                            "type": "array"
+                        },
+                        {
+                            "type": "string"
+                        }
+                    ],
+                    "description": "Optional [tag(s)](https://github.com/caronc/apprise-api?tab=readme-ov-file#tagging) to send in the notification payload",
+                    "title": "tags"
+                },
+                "type": {
+                    "description": "Webhook type. Valid values are:\n\n* gotify\n* ntfy",
+                    "enum": [
+                        "apprise",
+                        "gotify",
+                        "ntfy"
+                    ],
+                    "examples": [
+                        "gotify"
+                    ],
+                    "title": "type",
+                    "type": "string"
+                },
+                "urls": {
+                    "anyOf": [
+                        {
+                            "items": {
+                                "type": "string"
+                            },
+                            "type": "array"
+                        },
+                        {
+                            "type": "string"
+                        }
+                    ],
+                    "description": "If using [Stateless Endpoints](https://github.com/caronc/apprise-api?tab=readme-ov-file#stateless-solution) the Apprise config URL(s) to send",
+                    "title": "urls"
+                }
+            },
+            "required": [
+                "host",
+                "type"
+            ],
+            "title": "AppriseConfig",
+            "type": "object"
+        },
         "ChromecastData": {
             "properties": {
                 "allowUnknownMedia": {
@@ -602,6 +683,7 @@
                 "type": {
                     "description": "Webhook type. Valid values are:\n\n* gotify\n* ntfy",
                     "enum": [
+                        "apprise",
                         "gotify",
                         "ntfy"
                     ],
@@ -2170,6 +2252,7 @@
                 "type": {
                     "description": "Webhook type. Valid values are:\n\n* gotify\n* ntfy",
                     "enum": [
+                        "apprise",
                         "gotify",
                         "ntfy"
                     ],
@@ -3070,6 +3153,9 @@
                 },
                 {
                     "$ref": "#/definitions/NtfyConfig"
+                },
+                {
+                    "$ref": "#/definitions/AppriseConfig"
                 }
             ],
             "title": "WebhookConfig"
