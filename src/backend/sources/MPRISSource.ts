@@ -14,6 +14,7 @@ import {
     PlayerInfo,
 } from "../common/infrastructure/config/source/mpris.js";
 import { removeDuplicates } from "../utils.js";
+import { findCauseByMessage } from "../utils/ErrorUtils.js";
 import { RecentlyPlayedOptions } from "./AbstractSource.js";
 import MemorySource from "./MemorySource.js";
 
@@ -128,7 +129,10 @@ export class MPRISSource extends MemorySource {
                 try {
                     pos = await this.getPlayerPosition(props);
                 } catch (e) {
-                    this.logger.warn(`Could not get Position info for player ${plainPlayerName}`);
+                    // only log if the error is not related to position not being supported since this is a potentially expected result
+                    if(!findCauseByMessage(e, 'Position is not supported')) {
+                        this.logger.warn(new Error(`Could not get Position info for player ${plainPlayerName}`, {cause: e}));
+                    }
                 }
                 const status = await this.getPlayerStatus(props);
                 if (status === PLAYBACK_STATUS_STOPPED && activeOnly) {
@@ -141,9 +145,8 @@ export class MPRISSource extends MemorySource {
                     position: pos,
                     metadata
                 });
-            }
-            catch (e) {
-                this.logger.warn(new Error(`Could not parse D-bus info for player ${plainPlayerName}`, {cause: e}));
+            } catch (e) {
+                this.logger.warn(new Error(`Could not parse D-bus info for player ${plainPlayerName}`, {cause: convertDBusExceptionToError(e)}));
             }
 
         }
@@ -157,7 +160,7 @@ export class MPRISSource extends MemorySource {
             // microseconds
             return dayjs.duration({milliseconds: Number(pos / 1000)}).asSeconds();
         } catch(e) {
-            throw new Error('Could not get player Position', {cause: e});
+            throw new Error('Could not get player Position', {cause: convertDBusExceptionToError(e)});
         }
     }
 
@@ -166,7 +169,7 @@ export class MPRISSource extends MemorySource {
             const status = await props['PlaybackStatus'];
             return status as PlaybackStatus;
         } catch (e) {
-            throw new Error('Could not get player PlaybackStatus', {cause: e})
+            throw new Error('Could not get player PlaybackStatus', {cause: convertDBusExceptionToError(e)})
         }
     }
 
@@ -175,7 +178,7 @@ export class MPRISSource extends MemorySource {
             const metadata = await props['Metadata'];
             return this.metadataToPlain(metadata);
         } catch(e) {
-            throw new Error('Could not get player Metadata', {cause: e});
+            throw new Error('Could not get player Metadata', {cause: convertDBusExceptionToError(e)});
         }
     }
 
@@ -224,4 +227,15 @@ export class MPRISSource extends MemorySource {
     }
 }
 
+const convertDBusExceptionToError = (e: any): Error => {
+    let err: Error;
+    if(e instanceof Error) {
+        err = e;
+    } else if(Array.isArray(e)) {
+        err = new Error(e.map(x => x.toString()).join(' | '));
+    } else {
+        err = new Error(e.toString());
+    }
+    return err;
+}
 
