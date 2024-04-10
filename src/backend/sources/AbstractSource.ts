@@ -517,20 +517,18 @@ export default abstract class AbstractSource implements Authenticatable {
                 const activeThreshold = this.lastActivityAt.add(checkActiveFor, 's');
                 const inactiveFor = dayjs.duration(Math.abs(activeThreshold.diff(dayjs(), 'millisecond'))).humanize(false);
                 if (activeThreshold.isBefore(dayjs())) {
+                    let intervalStr: string = formatNumber(maxInterval);
                     checksOverThreshold++;
                     if(sleepTime < maxInterval) {
                         const checkVal = Math.min(checksOverThreshold, 1000);
                         const backoff = Math.round(Math.max(Math.min(Math.min(checkVal, 1000) * 2 * (1.1 * checkVal), maxBackoff), 5));
+                        intervalStr = `(${interval} + ${backoff})`;
                         sleepTime = interval + backoff;
-                        this.logger.debug(`Last activity was at ${this.lastActivityAt.format()} which is ${inactiveFor} outside of active polling period of (last activity + ${checkActiveFor} seconds). Will check again in interval ${interval} + ${backoff} seconds.`);
-                    } else {
-                        this.logger.debug(`Last activity was at ${this.lastActivityAt.format()} which is ${inactiveFor} outside of active polling period of (last activity + ${checkActiveFor} seconds). Will check again in max interval ${maxInterval} seconds.`);
                     }
+                    this.logger.debug(`Last activity ${this.lastActivityAt.format()} is ${inactiveFor} outside of polling period (last activity + ${checkActiveFor}s) | Next check interval: ${intervalStr}s`);
                 } else {
-                    this.logger.debug(`Last activity was at ${this.lastActivityAt.format()}. Will check again in interval ${formatNumber(sleepTime)} seconds.`);
+                    this.logger.debug(`Last activity was at ${this.lastActivityAt.format()} | Next check interval: ${formatNumber(sleepTime)}s`);
                 }
-
-                this.logger.verbose(`Sleeping for ${formatNumber(sleepTime)}s`);
                 const wakeUpAt = pollFrom.add(sleepTime, 'seconds');
                 while(!this.shouldStopPolling() && dayjs().isBefore(wakeUpAt)) {
                     // check for polling status every half second and wait till wake up time
