@@ -9,7 +9,8 @@ import { UpstreamError } from "../common/errors/UpstreamError.js";
 import { DEFAULT_RETRY_MULTIPLIER, FormatPlayObjectOptions, InternalConfig } from "../common/infrastructure/Atomic.js";
 import { SubSonicSourceConfig } from "../common/infrastructure/config/source/subsonic.js";
 import { getSubsonicResponse, SubsonicResponse, SubsonicResponseCommon } from "../common/vendor/subsonic/interfaces.js";
-import { findCauseByFunc, parseRetryAfterSecsFromObj, removeDuplicates, sleep } from "../utils.js";
+import { parseRetryAfterSecsFromObj, removeDuplicates, sleep } from "../utils.js";
+import { findCauseByFunc } from "../utils/ErrorUtils.js";
 import { RecentlyPlayedOptions } from "./AbstractSource.js";
 import MemorySource from "./MemorySource.js";
 

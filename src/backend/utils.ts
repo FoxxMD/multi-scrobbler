@@ -11,7 +11,6 @@ import { Request } from "express";
 import { accessSync, constants, promises } from "fs";
 import JSON5 from 'json5';
 import pathUtil from "path";
-import { getErrorCause } from "pony-cause";
 import { TimeoutError, WebapiError } from "spotify-web-api-node/src/response-error.js";
 import { PlayObject } from "../core/Atomic.js";
 import {
@@ -766,30 +765,3 @@ export const comparingMultipleArtists = (existing: PlayObject, candidate: PlayOb
     return eArtists.length > 1 || cArtists.length > 1;
 }
 
-/**
- * Adapted from https://github.com/voxpelli/pony-cause/blob/main/lib/helpers.js to find cause by truthy function
- * */
-export const findCauseByFunc = (err: any, func: (e: Error) => boolean) => {
-    if (!err || !func) return;
-    if (!(err instanceof Error)) return;
-    if (typeof func !== 'function') {
-        return;
-    }
-
-    /**
-     * Ensures we don't go circular
-     */
-    const seen = new Set<Error>();
-
-    let currentErr: Error | undefined = err;
-
-    while (currentErr && !seen.has(currentErr)) {
-        seen.add(currentErr);
-
-        if (func(currentErr)) {
-            return currentErr;
-        }
-
-        currentErr = getErrorCause(currentErr);
-    }
-};

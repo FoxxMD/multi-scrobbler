@@ -23,7 +23,6 @@ import {
 import { SourceConfig } from "../common/infrastructure/config/source/sources.js";
 import TupleMap from "../common/TupleMap.js";
 import {
-    findCauseByFunc,
     formatNumber,
     genGroupId,
     playObjDataMatch,
@@ -32,6 +31,7 @@ import {
     sortByNewestPlayDate,
     sortByOldestPlayDate,
 } from "../utils.js";
+import { findCauseByFunc } from "../utils/ErrorUtils.js";
 import { comparePlayTemporally, temporalAccuracyIsAtLeast } from "../utils/TimeUtils.js";
 
 export interface RecentlyPlayedOptions {

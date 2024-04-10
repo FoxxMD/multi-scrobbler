@@ -1,5 +1,6 @@
 import { Response } from 'superagent';
-import { findCauseByFunc } from "../../utils.js";
+
+import { findCauseByFunc } from "../../utils/ErrorUtils.js";
 
 export class UpstreamError<T = undefined> extends Error {
 

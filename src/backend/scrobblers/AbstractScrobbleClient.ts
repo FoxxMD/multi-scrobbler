@@ -3,7 +3,6 @@ import dayjs, { Dayjs } from "dayjs";
 import EventEmitter from "events";
 import { FixedSizeList } from 'fixed-size-list';
 import { nanoid } from "nanoid";
-import { messageWithCauses } from "pony-cause";
 import {
     DeadLetterScrobble,
     PlayObject,
@@ -40,6 +39,7 @@ import {
     sleep,
     sortByOldestPlayDate,
 } from "../utils.js";
+import { messageWithCauses } from "../utils/ErrorUtils.js";
 import { compareScrobbleArtists, compareScrobbleTracks, normalizeStr } from "../utils/StringUtils.js";
 import {
     comparePlayTemporally,

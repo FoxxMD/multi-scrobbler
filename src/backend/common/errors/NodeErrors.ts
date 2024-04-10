@@ -1,4 +1,4 @@
-import { findCauseByFunc } from "../../utils.js";
+import { findCauseByFunc } from "../../utils/ErrorUtils.js";
 import { isArbitraryObject } from "../infrastructure/Atomic.js";
 import ErrnoException = NodeJS.ErrnoException;
 

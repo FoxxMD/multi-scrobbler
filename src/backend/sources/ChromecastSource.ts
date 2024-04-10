@@ -5,7 +5,6 @@ import { Client as CastClient } from 'castv2';
 import dayjs from "dayjs";
 import { EventEmitter } from "events";
 import e from "express";
-import { findCauseByReference } from "pony-cause";
 import { PlayObject } from "../../core/Atomic.js";
 import { buildTrackString } from "../../core/StringUtils.js";
 import { NETWORK_ERROR_FAILURE_CODES } from "../common/errors/NodeErrors.js";
@@ -32,6 +31,7 @@ import {
     PlatformType
 } from "../common/vendor/chromecast/interfaces.js";
 import { difference, genGroupIdStr, parseBool } from "../utils.js";
+import { findCauseByReference } from "../utils/ErrorUtils.js";
 import { discoveryAvahi, discoveryNative } from "../utils/MDNSUtils.js";
 import { RecentlyPlayedOptions } from "./AbstractSource.js";
 import MemorySource from "./MemorySource.js";

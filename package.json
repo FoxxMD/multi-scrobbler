@@ -89,7 +89,6 @@
     "passport": "^0.6.0",
     "passport-deezer": "^0.2.0",
     "patch-package": "^8.0.0",
-    "pony-cause": "^1.1.1",
     "postcss": "^8.4.33",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",

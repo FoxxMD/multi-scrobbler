@@ -19,13 +19,13 @@ import {
 import { SpotifySourceConfig } from "../common/infrastructure/config/source/spotify.js";
 import {
     combinePartsToString,
-    findCauseByFunc,
     parseRetryAfterSecsFromObj,
     readJson,
     sleep,
     sortByOldestPlayDate,
     writeFile,
 } from "../utils.js";
+import { findCauseByFunc } from "../utils/ErrorUtils.js";
 import { RecentlyPlayedOptions } from "./AbstractSource.js";
 import MemorySource from "./MemorySource.js";
 import AlbumObjectSimplified = SpotifyApi.AlbumObjectSimplified;
