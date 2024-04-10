@@ -54,13 +54,13 @@ export class GotifyWebhookNotifier extends AbstractWebhookNotifier {
                 title: payload.title,
                 priority: this.priorities[payload.priority]
             });
-            this.logger.debug(`Pushed notification.`);
+            this.logger.verbose(`Pushed notification.`);
         } catch (e: any) {
             if(e instanceof HTTPError && e.response.statusCode === 401) {
-                this.logger.error(`Unable to push notification. Error returned with 401 which means the TOKEN provided is probably incorrect. Disabling Notifier | Error => ${e.response.body}`);
+                this.logger.warn(`Unable to push notification. Error returned with 401 which means the TOKEN provided is probably incorrect. Disabling Notifier | Error => ${e.response.body}`);
                 this.authed = false;
             } else {
-                this.logger.error(`Failed to push notification | Error => ${e.message}`);
+                this.logger.warn(`Failed to push notification | Error => ${e.message}`);
             }
         }
     }

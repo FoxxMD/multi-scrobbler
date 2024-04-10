@@ -50,7 +50,7 @@ process.on('uncaughtExceptionMonitor', (err, origin) => {
 const configDir = process.env.CONFIG_DIR || path.resolve(projectDir, `./config`);
 
     try {
-        initLogger.debug(`Config Dir ENV: ${process.env.CONFIG_DIR} -> Resolved: ${configDir}`)
+        initLogger.verbose(`Config Dir ENV: ${process.env.CONFIG_DIR} -> Resolved: ${configDir}`)
         // try to read a configuration file
         let appConfigFail: Error | undefined = undefined;
         let config = {};

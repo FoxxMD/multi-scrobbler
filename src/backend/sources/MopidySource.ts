@@ -101,7 +101,7 @@ export class MopidySource extends MemorySource {
                 url
             } = {}
         } = this.config;
-        this.logger.debug(`Config URL: '${url ?? '(None Given)'}' => Normalized: '${this.url.toString()}'`)
+        this.logger.verbose(`Config URL: '${url ?? '(None Given)'}' => Normalized: '${this.url.toString()}'`)
         return true;
     }
 

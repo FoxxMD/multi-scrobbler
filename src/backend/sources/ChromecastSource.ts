@@ -126,7 +126,7 @@ export class ChromecastSource extends MemorySource {
 
         this.discoverDevices(logPayload);
         if(useAutoDiscovery) {
-            this.logger.debug('Will run mDNS discovery on subsequent heartbeats.')
+            this.logger.verbose('Will run mDNS discovery on subsequent heartbeats.')
         }
 
         return true;

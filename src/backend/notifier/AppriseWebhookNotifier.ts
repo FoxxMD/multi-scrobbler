@@ -87,7 +87,7 @@ export class AppriseWebhookNotifier extends AbstractWebhookNotifier {
                         .type('json')
                         .send(body));
                     anyOk = true;
-                    this.logger.debug(`Pushed notification to Config ${shortKey(key)}`);
+                    this.logger.verbose(`Pushed notification to Config ${shortKey(key)}`);
                 } catch (e: any) {
                     this.logger.warn(new Error(`Failed to push notification for '${payload.title}' to Config ${shortKey(key)}`, {cause: e}));
                 }
@@ -103,7 +103,7 @@ export class AppriseWebhookNotifier extends AbstractWebhookNotifier {
                     .type('json')
                     .send(body));
                 anyOk = true;
-                this.logger.debug(`Pushed notification to URLs`);
+                this.logger.verbose(`Pushed notification to URLs`);
             } catch (e: any) {
                 this.logger.warn(`Failed to push notification for '${payload.title}' to URLs`, {cause: e});
             }

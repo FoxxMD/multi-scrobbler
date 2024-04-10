@@ -33,7 +33,7 @@ export class KodiSource extends MemorySource {
             } = {}
         } = this.config;
         this.client = new KodiApiClient(this.name, this.config.data, {logger: this.logger});
-        this.logger.debug(`Config URL: '${url ?? '(None Given)'}' => Normalized: '${this.client.url.toString()}'`)
+        this.logger.verbose(`Config URL: '${url ?? '(None Given)'}' => Normalized: '${this.client.url.toString()}'`)
         return true;
     }
 

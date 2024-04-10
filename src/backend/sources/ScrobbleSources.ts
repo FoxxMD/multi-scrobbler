@@ -384,10 +384,10 @@ export default class ScrobbleSources {
                                 if(validConfig.configureAs === 'source') {
                                     configs.push(parsedConfig);
                                 } else {
-                                    this.logger.debug(`${sourceType} has 'configureAs: client' so will skip adding as a source`);
+                                    this.logger.verbose(`${sourceType} has 'configureAs: client' so will skip adding as a source`);
                                 }
                             } else {
-                                this.logger.debug(`${sourceType} did not have 'configureAs' specified! Assuming 'client' so will skip adding as a source`);
+                                this.logger.verbose(`${sourceType} did not have 'configureAs' specified! Assuming 'client' so will skip adding as a source`);
                             }
                         }
                     } catch (e: any) {
