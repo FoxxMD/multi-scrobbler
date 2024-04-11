@@ -1669,37 +1669,13 @@
         "SourceAIOConfig": {
             "anyOf": [
                 {
-                    "$ref": "#/definitions/SpotifySourceAIOConfig"
-                },
-                {
-                    "$ref": "#/definitions/PlexSourceAIOConfig"
-                },
-                {
-                    "$ref": "#/definitions/TautulliSourceAIOConfig"
+                    "$ref": "#/definitions/ChromecastSourceAIOConfig"
                 },
                 {
                     "$ref": "#/definitions/DeezerSourceAIOConfig"
                 },
                 {
-                    "$ref": "#/definitions/SubsonicSourceAIOConfig"
-                },
-                {
                     "$ref": "#/definitions/JellySourceAIOConfig"
-                },
-                {
-                    "$ref": "#/definitions/LastFmSouceAIOConfig"
-                },
-                {
-                    "$ref": "#/definitions/YTMusicSourceAIOConfig"
-                },
-                {
-                    "$ref": "#/definitions/MPRISSourceAIOConfig"
-                },
-                {
-                    "$ref": "#/definitions/MopidySourceAIOConfig"
-                },
-                {
-                    "$ref": "#/definitions/ListenBrainzSourceAIOConfig"
                 },
                 {
                     "$ref": "#/definitions/JRiverSourceAIOConfig"
@@ -1708,10 +1684,34 @@
                     "$ref": "#/definitions/KodiSourceAIOConfig"
                 },
                 {
+                    "$ref": "#/definitions/LastFmSouceAIOConfig"
+                },
+                {
+                    "$ref": "#/definitions/ListenBrainzSourceAIOConfig"
+                },
+                {
+                    "$ref": "#/definitions/MopidySourceAIOConfig"
+                },
+                {
+                    "$ref": "#/definitions/MPRISSourceAIOConfig"
+                },
+                {
+                    "$ref": "#/definitions/PlexSourceAIOConfig"
+                },
+                {
+                    "$ref": "#/definitions/SpotifySourceAIOConfig"
+                },
+                {
+                    "$ref": "#/definitions/SubsonicSourceAIOConfig"
+                },
+                {
+                    "$ref": "#/definitions/TautulliSourceAIOConfig"
+                },
+                {
                     "$ref": "#/definitions/WebScrobblerSourceAIOConfig"
                 },
                 {
-                    "$ref": "#/definitions/ChromecastSourceAIOConfig"
+                    "$ref": "#/definitions/YTMusicSourceAIOConfig"
                 }
             ],
             "title": "SourceAIOConfig"

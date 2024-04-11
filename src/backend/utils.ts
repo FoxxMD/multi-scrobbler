@@ -1,12 +1,18 @@
-import {accessSync, constants, promises} from "fs";
-import dayjs, {Dayjs} from 'dayjs';
-import utc from 'dayjs/plugin/utc.js';
-import {Logger} from '@foxxmd/logging';
-import JSON5 from 'json5';
-import {TimeoutError, WebapiError} from "spotify-web-api-node/src/response-error.js";
-import {Schema} from 'ajv';
+import { Logger } from '@foxxmd/logging';
+import backoffStrategies from '@kenyip/backoff-strategies';
+import address from "address";
 import * as AjvNS from 'ajv';
-import Ajv from 'ajv';
+import Ajv, { Schema } from 'ajv';
+import { replaceResultTransformer, stripIndentTransformer, TemplateTag, trimResultTransformer } from 'common-tags';
+import dayjs, { Dayjs } from 'dayjs';
+import { Duration } from "dayjs/plugin/duration.js";
+import utc from 'dayjs/plugin/utc.js';
+import { Request } from "express";
+import { accessSync, constants, promises } from "fs";
+import JSON5 from 'json5';
+import pathUtil from "path";
+import { TimeoutError, WebapiError } from "spotify-web-api-node/src/response-error.js";
+import { PlayObject } from "../core/Atomic.js";
 import {
     asPlayerStateData,
     NO_DEVICE,
@@ -19,14 +25,6 @@ import {
     RemoteIdentityParts,
     ScrobbleThresholdResult,
 } from "./common/infrastructure/Atomic.js";
-import {Request} from "express";
-import pathUtil from "path";
-import {ErrorWithCause, getErrorCause} from "pony-cause";
-import backoffStrategies from '@kenyip/backoff-strategies';
-import {replaceResultTransformer, stripIndentTransformer, TemplateTag, trimResultTransformer} from 'common-tags';
-import {Duration} from "dayjs/plugin/duration.js";
-import { PlayObject } from "../core/Atomic.js";
-import address from "address";
 
 //const { default: Ajv } = AjvNS;
 dayjs.extend(utc);
@@ -40,12 +38,12 @@ export async function readJson(this: any, path: any, {throwOnNotFound = true} = 
         const {code} = e;
         if (code === 'ENOENT') {
             if (throwOnNotFound) {
-                throw new ErrorWithCause(`No file found at given path: ${path}`, {cause: e});
+                throw new Error(`No file found at given path: ${path}`, {cause: e});
             } else {
                 return;
             }
         }
-        throw new ErrorWithCause(`Encountered error while parsing file: ${path}`, {cause: e})
+        throw new Error(`Encountered error while parsing file: ${path}`, {cause: e})
     }
 }
 
@@ -536,13 +534,13 @@ export const fileOrDirectoryIsWriteable = (location: string) => {
                     // also can't access directory :(
                     throw new Error(`No ${isDir ? 'directory' : 'file'} exists at ${location} and application does not have permission to write to the parent directory`);
                 } else {
-                    throw new ErrorWithCause(`No ${isDir ? 'directory' : 'file'} exists at ${location} and application is unable to access the parent directory due to a system error`, {cause: accessError});
+                    throw new Error(`No ${isDir ? 'directory' : 'file'} exists at ${location} and application is unable to access the parent directory due to a system error`, {cause: accessError});
                 }
             }
         } else if(code === 'EACCES') {
             throw new Error(`${isDir ? 'Directory' : 'File'} exists at ${location} but application does not have permission to write to it.`);
         } else {
-            throw new ErrorWithCause(`${isDir ? 'Directory' : 'File'} exists at ${location} but application is unable to access it due to a system error`, {cause: err});
+            throw new Error(`${isDir ? 'Directory' : 'File'} exists at ${location} but application is unable to access it due to a system error`, {cause: err});
         }
     }
 }
@@ -600,7 +598,7 @@ export const parseRegexSingleOrFail = (reg: RegExp, val: string): RegExResult | 
     const results = parseRegex(reg, val);
     if (results !== undefined) {
         if (results.length > 1) {
-            throw new ErrorWithCause(`Expected Regex to match once but got ${results.length} results. Either Regex must NOT be global (using 'g' flag) or parsed value must only match regex once. Given: ${val} || Regex: ${reg.toString()}`);
+            throw new Error(`Expected Regex to match once but got ${results.length} results. Either Regex must NOT be global (using 'g' flag) or parsed value must only match regex once. Given: ${val} || Regex: ${reg.toString()}`);
         }
         return results[0];
     }
@@ -733,7 +731,7 @@ export const getAddress = (host = '0.0.0.0', logger?: Logger): { v4?: string, v6
     } catch (e) {
         if (process.env.DEBUG_MODE === 'true') {
             if (logger !== undefined) {
-                logger.warn(new ErrorWithCause('Could not get machine IP address', {cause: e}));
+                logger.warn(new Error('Could not get machine IP address', {cause: e}));
             } else {
                 console.warn('Could not get machine IP address');
                 console.warn(e);
@@ -767,30 +765,3 @@ export const comparingMultipleArtists = (existing: PlayObject, candidate: PlayOb
     return eArtists.length > 1 || cArtists.length > 1;
 }
 
-/**
- * Adapted from https://github.com/voxpelli/pony-cause/blob/main/lib/helpers.js to find cause by truthy function
- * */
-export const findCauseByFunc = (err: any, func: (e: Error) => boolean) => {
-    if (!err || !func) return;
-    if (!(err instanceof Error)) return;
-    if (typeof func !== 'function') {
-        return;
-    }
-
-    /**
-     * Ensures we don't go circular
-     */
-    const seen = new Set<Error>();
-
-    let currentErr: Error | undefined = err;
-
-    while (currentErr && !seen.has(currentErr)) {
-        seen.add(currentErr);
-
-        if (func(currentErr)) {
-            return currentErr;
-        }
-
-        currentErr = getErrorCause(currentErr);
-    }
-};

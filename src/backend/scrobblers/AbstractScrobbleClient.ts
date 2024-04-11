@@ -1,13 +1,19 @@
-import dayjs, {Dayjs} from "dayjs";
+import { childLogger, Logger } from "@foxxmd/logging";
+import dayjs, { Dayjs } from "dayjs";
+import EventEmitter from "events";
+import { FixedSizeList } from 'fixed-size-list';
+import { nanoid } from "nanoid";
 import {
-    comparingMultipleArtists,
-    mergeArr,
-    playObjDataMatch,
-    pollingBackoff,
-    setIntersection,
-    sleep,
-    sortByOldestPlayDate,
-} from "../utils.js";
+    DeadLetterScrobble,
+    PlayObject,
+    QueuedScrobble,
+    TA_CLOSE,
+    TA_FUZZY,
+    TrackStringOptions,
+} from "../../core/Atomic.js";
+import { buildTrackString, capitalize, truncateStringToLength } from "../../core/StringUtils.js";
+import { hasNodeNetworkException } from "../common/errors/NodeErrors.js";
+import { hasUpstreamError, UpstreamError } from "../common/errors/UpstreamError.js";
 import {
     ARTIST_WEIGHT,
     Authenticatable,
@@ -19,30 +25,22 @@ import {
     INITIALIZING,
     InitState,
     NOT_INITIALIZED,
-    REFERENCE_WEIGHT,
     ScrobbledPlayObject,
     TIME_WEIGHT,
     TITLE_WEIGHT,
 } from "../common/infrastructure/Atomic.js";
-import {childLogger, Logger} from "@foxxmd/logging";
 import { CommonClientConfig } from "../common/infrastructure/config/client/index.js";
 import { Notifiers } from "../notifier/Notifiers.js";
-import {FixedSizeList} from 'fixed-size-list';
 import {
-    DeadLetterScrobble,
-    PlayObject,
-    QueuedScrobble,
-    TA_CLOSE,
-    TA_FUZZY,
-    TrackStringOptions,
-} from "../../core/Atomic.js";
-import { buildTrackString, capitalize, truncateStringToLength } from "../../core/StringUtils.js";
-import EventEmitter from "events";
+    comparingMultipleArtists,
+    playObjDataMatch,
+    pollingBackoff,
+    setIntersection,
+    sleep,
+    sortByOldestPlayDate,
+} from "../utils.js";
+import { messageWithCauses } from "../utils/ErrorUtils.js";
 import { compareScrobbleArtists, compareScrobbleTracks, normalizeStr } from "../utils/StringUtils.js";
-import { hasUpstreamError, UpstreamError } from "../common/errors/UpstreamError.js";
-import {nanoid} from "nanoid";
-import {ErrorWithCause, messageWithCauses} from "pony-cause";
-import { hasNodeNetworkException } from "../common/errors/NodeErrors.js";
 import {
     comparePlayTemporally,
     temporalAccuracyIsAtLeast,
@@ -187,7 +185,7 @@ export default abstract class AbstractScrobbleClient implements Authenticatable 
             // only signal as auth failure if error was NOT either a node network error or a non-showstopping upstream error
             this.authFailure = !(hasNodeNetworkException(e) || hasUpstreamError(e, false));
             this.authed = false;
-            this.logger.error(new ErrorWithCause(`Authentication test failed!${this.authFailure === false ? ' Due to a network issue. Will retry authentication on next heartbeat.' : ''}`, {cause: e}));
+            this.logger.error(new Error(`Authentication test failed!${this.authFailure === false ? ' Due to a network issue. Will retry authentication on next heartbeat.' : ''}`, {cause: e}));
         }
     }
 
@@ -583,10 +581,10 @@ ${closestMatch.breakdowns.join('\n')}`, {leaf: ['Dupe Check']});
                         } catch (e) {
                             if (e instanceof UpstreamError && e.showStopper === false) {
                                 this.addDeadLetterScrobble(currQueuedPlay, e);
-                                this.logger.warn(new ErrorWithCause(`Could not scrobble ${buildTrackString(currQueuedPlay.play)} from Source '${currQueuedPlay.source}' but error was not show stopping. Adding scrobble to Dead Letter Queue and will retry on next heartbeat.`, {cause: e}));
+                                this.logger.warn(new Error(`Could not scrobble ${buildTrackString(currQueuedPlay.play)} from Source '${currQueuedPlay.source}' but error was not show stopping. Adding scrobble to Dead Letter Queue and will retry on next heartbeat.`, {cause: e}));
                             } else {
                                 this.queuedScrobbles.unshift(currQueuedPlay);
-                                throw new ErrorWithCause('Error occurred while trying to scrobble', {cause: e});
+                                throw new Error('Error occurred while trying to scrobble', {cause: e});
                             }
                         }
                     } else if (!timeFrameValid) {
@@ -666,7 +664,7 @@ ${closestMatch.breakdowns.join('\n')}`, {leaf: ['Dupe Check']});
                 deadScrobble.retries++;
                 deadScrobble.error = messageWithCauses(e);
                 deadScrobble.lastRetry = dayjs();
-                this.logger.error(new ErrorWithCause(`Could not scrobble ${buildTrackString(deadScrobble.play)} from Source '${deadScrobble.source}' due to error`, {cause: e}));
+                this.logger.error(new Error(`Could not scrobble ${buildTrackString(deadScrobble.play)} from Source '${deadScrobble.source}' due to error`, {cause: e}));
                 this.deadLetterScrobbles[deadScrobbleIndex] = deadScrobble;
                 return [false, deadScrobble];
             } finally {

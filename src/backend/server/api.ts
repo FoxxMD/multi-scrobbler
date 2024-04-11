@@ -1,32 +1,33 @@
-import {ExpressWithAsync} from "@awaitjs/express";
-import { getRoot } from "../ioc.js";
-import { makeClientCheckMiddle, makeSourceCheckMiddle } from "./middleware.js";
-import AbstractSource from "../sources/AbstractSource.js";
+import { ExpressWithAsync } from "@awaitjs/express";
+import { LogDataPretty, Logger, LogLevel } from "@foxxmd/logging";
+import bsseDef from 'better-sse';
+import bodyParser from "body-parser";
+import { FixedSizeList } from 'fixed-size-list';
+import { PassThrough } from "node:stream";
+import { Transform } from "stream";
 import {
     ClientStatusData,
-    DeadLetterScrobble, LeveledLogData,
+    DeadLetterScrobble,
+    LeveledLogData,
     LogOutputConfig,
-    PlayObject, SOURCE_SOT,
+    PlayObject,
+    SOURCE_SOT,
     SourceStatusData,
 } from "../../core/Atomic.js";
-import {LogDataPretty, Logger, LogLevel} from "@foxxmd/logging";
-import {Transform} from "stream";
-import * as bsse from 'better-sse';
-import bsseDef from 'better-sse';
-import { setupTautulliRoutes } from "./tautulliRoutes.js";
-import { setupPlexRoutes } from "./plexRoutes.js";
-import { setupJellyfinRoutes } from "./jellyfinRoutes.js";
-import { setupDeezerRoutes } from "./deezerRoutes.js";
-import { setupAuthRoutes } from "./auth.js";
-import {ExpressHandler} from "../common/infrastructure/Atomic.js";
-import MemorySource from "../sources/MemorySource.js";
 import { capitalize } from "../../core/StringUtils.js";
+import { ExpressHandler } from "../common/infrastructure/Atomic.js";
+import { getRoot } from "../ioc.js";
 import AbstractScrobbleClient from "../scrobblers/AbstractScrobbleClient.js";
+import AbstractSource from "../sources/AbstractSource.js";
+import MemorySource from "../sources/MemorySource.js";
 import { sortByNewestPlayDate } from "../utils.js";
-import bodyParser from "body-parser";
+import { setupAuthRoutes } from "./auth.js";
+import { setupDeezerRoutes } from "./deezerRoutes.js";
+import { setupJellyfinRoutes } from "./jellyfinRoutes.js";
+import { makeClientCheckMiddle, makeSourceCheckMiddle } from "./middleware.js";
+import { setupPlexRoutes } from "./plexRoutes.js";
+import { setupTautulliRoutes } from "./tautulliRoutes.js";
 import { setupWebscrobblerRoutes } from "./webscrobblerRoutes.js";
-import {FixedSizeList} from 'fixed-size-list';
-import {PassThrough} from "node:stream";
 
 const maxBufferSize = 300;
 const output: Record<number, FixedSizeList<LogDataPretty>> =  {};
@@ -292,7 +293,7 @@ export const setupApi = (app: ExpressWithAsync, logger: Logger, appLoggerStream:
             scrobbleClient: client,
         } = req;
 
-        (client as AbstractScrobbleClient).logger.debug('User requested processing of all dead letter scrobbles via API');
+        (client as AbstractScrobbleClient).logger.verbose('User requested processing of all dead letter scrobbles via API');
 
         await (client as AbstractScrobbleClient).processDeadLetterQueue(1000);
 
@@ -312,7 +313,7 @@ export const setupApi = (app: ExpressWithAsync, logger: Logger, appLoggerStream:
 
         const deadId = id as string;
 
-        (client as AbstractScrobbleClient).logger.debug(`User requested processing of dead letter scrobble ${deadId} via API call`)
+        (client as AbstractScrobbleClient).logger.verbose(`User requested processing of dead letter scrobble ${deadId} via API call`)
 
         const deadScrobble = (client as AbstractScrobbleClient).deadLetterScrobbles.find(x => x.id === deadId);
 
@@ -336,7 +337,7 @@ export const setupApi = (app: ExpressWithAsync, logger: Logger, appLoggerStream:
             scrobbleClient: client,
         } = req;
 
-        (client as AbstractScrobbleClient).logger.debug('User requested deletion of all dead letter scrobbles via API');
+        (client as AbstractScrobbleClient).logger.verbose('User requested deletion of all dead letter scrobbles via API');
 
         (client as AbstractScrobbleClient).removeDeadLetterScrobbles();
 
@@ -354,12 +355,12 @@ export const setupApi = (app: ExpressWithAsync, logger: Logger, appLoggerStream:
 
         const deadId = id as string;
 
-        (client as AbstractScrobbleClient).logger.debug(`User requested removal of dead letter scrobble ${deadId} via API call`)
+        (client as AbstractScrobbleClient).logger.verbose(`User requested removal of dead letter scrobble ${deadId} via API call`)
 
         const deadScrobble = (client as AbstractScrobbleClient).deadLetterScrobbles.find(x => x.id === deadId);
 
         if(deadScrobble === undefined) {
-            (client as AbstractScrobbleClient).logger.debug(`No dead letter scrobble with ID ${deadId}`)
+            (client as AbstractScrobbleClient).logger.verbose(`No dead letter scrobble with ID ${deadId}`)
             return res.status(404).send();
         }
 
@@ -385,10 +386,10 @@ export const setupApi = (app: ExpressWithAsync, logger: Logger, appLoggerStream:
     app.getAsync('/api/poll', async (req, res) => {
         // @ts-expect-error TS(2339): Property 'scrobbleSource' does not exist on type '... Remove this comment to see the full error message
         const source = req.scrobbleSource as AbstractSource;
-        source.logger.debug('User requested (re)start via API call');
+        source.logger.verbose('User requested (re)start via API call');
 
         if (!source.canPoll) {
-            source.logger.debug(`Does not support polling (${source.type})`);
+            source.logger.warn(`Does not support polling (${source.type})`);
             return res.status(400).send(`Specified source cannot poll (${source.type})`);
         }
 
@@ -408,7 +409,7 @@ export const setupApi = (app: ExpressWithAsync, logger: Logger, appLoggerStream:
     app.postAsync('/api/client/init', async (req, res) => {
         // @ts-expect-error TS(2339): Property 'scrobbleSource' does not exist on type '... Remove this comment to see the full error message
         const client = req.scrobbleClient as AbstractScrobbleClient;
-        client.logger.debug('User requested (re)start via API call');
+        client.logger.verbose('User requested (re)start via API call');
 
         client.logger.info('Checking (and trying) to stop scrobbler if already running...');
         if(false === (await client.tryStopScrobbling())) {

@@ -1,17 +1,15 @@
-import {addAsync, Router} from '@awaitjs/express';
-import express from 'express';
-import ViteExpress from "vite-express";
+import { addAsync, Router } from '@awaitjs/express';
+import { childLogger, LogDataPretty, Logger } from "@foxxmd/logging";
 import bodyParser from 'body-parser';
-import passport from 'passport';
+import { stripIndents } from "common-tags";
+import express from 'express';
 import session from 'express-session';
+import { PassThrough } from "node:stream";
+import passport from 'passport';
+import ViteExpress from "vite-express";
 import { getRoot } from "../ioc.js";
+import { getAddress, parseBool } from "../utils.js";
 import { setupApi } from "./api.js";
-import { getAddress, mergeArr, parseBool } from "../utils.js";
-import {stripIndents} from "common-tags";
-import {ErrorWithCause} from "pony-cause";
-import {childLogger, LogData, LogDataPretty} from "@foxxmd/logging";
-import {PassThrough} from "node:stream";
-import {Logger} from '@foxxmd/logging';
 
 const app = addAsync(express());
 const router = Router();
@@ -36,6 +34,11 @@ export const initServer = async (parentLogger: Logger, appLoggerStream: PassThro
         app.use(passport.session());
 
         const root = getRoot();
+
+        if(root.get('disableWeb')) {
+            logger.warn('API and Dashboard have been DISABLED. Note that any ingress sources (Plex, Jellyfin, Tautulli, etc...) will be unusable');
+            return;
+        }
 
         const isProd = root.get('isProd');
         const port = root.get('port');
@@ -85,13 +88,13 @@ export const initServer = async (parentLogger: Logger, appLoggerStream: PassThro
                     logger.info(`User-defined base URL for UI and redirect URLs (spotify, deezer, lastfm): ${local}`)
                 }
             }).on('error', (err) => {
-                throw new ErrorWithCause('Server encountered unrecoverable error', {cause: err});
+                throw new Error('Server encountered unrecoverable error', {cause: err});
             });
         } catch (e) {
-            throw new ErrorWithCause('Server encountered unrecoverable error', {cause: e});
+            throw new Error('Server encountered unrecoverable error', {cause: e});
         }
 
     } catch (e) {
-        throw new ErrorWithCause('Server crashed with uncaught exception', {cause: e});
+        throw new Error('Server crashed with uncaught exception', {cause: e});
     }
 }

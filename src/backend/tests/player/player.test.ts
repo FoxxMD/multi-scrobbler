@@ -1,12 +1,17 @@
-import {describe, it} from 'mocha';
-import {assert} from 'chai';
-import { generatePlay } from "../utils/PlayTestUtils.js";
-import { GenericPlayerState } from "../../sources/PlayerState/GenericPlayerState.js";
-import { CALCULATED_PLAYER_STATUSES, NO_DEVICE, NO_USER, REPORTED_PLAYER_STATUSES } from "../../common/infrastructure/Atomic.js";
-import { playObjDataMatch } from "../../utils.js";
-import dayjs from "dayjs";
+import { loggerTest } from "@foxxmd/logging";
+import { assert } from 'chai';
 import clone from "clone";
-import {loggerTest} from "@foxxmd/logging";
+import dayjs from "dayjs";
+import { describe, it } from 'mocha';
+import {
+    CALCULATED_PLAYER_STATUSES,
+    NO_DEVICE,
+    NO_USER,
+    REPORTED_PLAYER_STATUSES
+} from "../../common/infrastructure/Atomic.js";
+import { GenericPlayerState } from "../../sources/PlayerState/GenericPlayerState.js";
+import { playObjDataMatch } from "../../utils.js";
+import { generatePlay } from "../utils/PlayTestUtils.js";
 
 const logger = loggerTest;
 

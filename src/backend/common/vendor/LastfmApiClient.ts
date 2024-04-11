@@ -1,3 +1,4 @@
+import dayjs from "dayjs";
 import LastFm, {
     AuthGetSessionResponse,
     NowPlayingResponse,
@@ -5,17 +6,15 @@ import LastFm, {
     TrackScrobblePayload,
     UserGetInfoResponse
 } from "lastfm-node-client";
-import AbstractApiClient from "./AbstractApiClient.js";
-import dayjs from "dayjs";
-import {readJson, removeUndefinedKeys, sleep, writeFile} from "../../utils.js";
-import {AbstractApiOptions, DEFAULT_RETRY_MULTIPLIER, FormatPlayObjectOptions} from "../infrastructure/Atomic.js";
-import { LastfmData } from "../infrastructure/config/client/lastfm.js";
 import { PlayObject } from "../../../core/Atomic.js";
-import {getNodeNetworkException, isNodeNetworkException} from "../errors/NodeErrors.js";
-import {nonEmptyStringOrDefault, splitByFirstFound} from "../../../core/StringUtils.js";
-import {ErrorWithCause} from "pony-cause";
-import {getScrobbleTsSOCDate} from "../../utils/TimeUtils.js";
-import {UpstreamError} from "../errors/UpstreamError.js";
+import { nonEmptyStringOrDefault, splitByFirstFound } from "../../../core/StringUtils.js";
+import { readJson, removeUndefinedKeys, sleep, writeFile } from "../../utils.js";
+import { getScrobbleTsSOCDate } from "../../utils/TimeUtils.js";
+import { getNodeNetworkException, isNodeNetworkException } from "../errors/NodeErrors.js";
+import { UpstreamError } from "../errors/UpstreamError.js";
+import { AbstractApiOptions, DEFAULT_RETRY_MULTIPLIER, FormatPlayObjectOptions } from "../infrastructure/Atomic.js";
+import { LastfmData } from "../infrastructure/config/client/lastfm.js";
+import AbstractApiClient from "./AbstractApiClient.js";
 
 const badErrors = [
     'api key suspended',
@@ -168,7 +167,7 @@ export default class LastfmApiClient extends AbstractApiClient {
             }
             return true;
         } catch (e) {
-            throw new ErrorWithCause('Current lastfm credentials file exists but could not be parsed', {cause: e});
+            throw new Error('Current lastfm credentials file exists but could not be parsed', {cause: e});
         }
     }
 

@@ -1,4 +1,4 @@
-import {ResponseError} from "superagent";
+import { ResponseError } from "superagent";
 
 export const isSuperAgentResponseError = (e: any): e is ResponseError => {
     return typeof e === 'object'

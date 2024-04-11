@@ -1,26 +1,16 @@
-import AbstractScrobbleClient from "./AbstractScrobbleClient.js";
+import { Logger } from "@foxxmd/logging";
 import dayjs from 'dayjs';
-
-import {
-    playObjDataMatch,
-    removeUndefinedKeys,
-    setIntersection,
-    sleep,
-    sortByOldestPlayDate,
-} from "../utils.js";
-import LastfmApiClient from "../common/vendor/LastfmApiClient.js";
-import { FormatPlayObjectOptions, INITIALIZING, ScrobbledPlayObject } from "../common/infrastructure/Atomic.js";
-import { LastfmClientConfig } from "../common/infrastructure/config/client/lastfm.js";
-import {TrackScrobblePayload, TrackScrobbleResponse, UserGetRecentTracksResponse} from "lastfm-node-client";
-import { Notifiers } from "../notifier/Notifiers.js";
-import {Logger} from "@foxxmd/logging";
-import { PlayObject, TrackStringOptions } from "../../core/Atomic.js";
-import { buildTrackString, capitalize } from "../../core/StringUtils.js";
 import EventEmitter from "events";
-import { UpstreamError } from "../common/errors/UpstreamError.js";
+import { TrackScrobbleResponse, UserGetRecentTracksResponse } from "lastfm-node-client";
+import { PlayObject } from "../../core/Atomic.js";
+import { buildTrackString, capitalize } from "../../core/StringUtils.js";
 import { isNodeNetworkException } from "../common/errors/NodeErrors.js";
-import { getScrobbleTsSOCDate } from "../utils/TimeUtils.js";
-import {ErrorWithCause} from "pony-cause";
+import { UpstreamError } from "../common/errors/UpstreamError.js";
+import { FormatPlayObjectOptions, INITIALIZING } from "../common/infrastructure/Atomic.js";
+import { LastfmClientConfig } from "../common/infrastructure/config/client/lastfm.js";
+import LastfmApiClient from "../common/vendor/LastfmApiClient.js";
+import { Notifiers } from "../notifier/Notifiers.js";
+import AbstractScrobbleClient from "./AbstractScrobbleClient.js";
 
 export default class LastfmScrobbler extends AbstractScrobbleClient {
 
@@ -47,7 +37,7 @@ export default class LastfmScrobbler extends AbstractScrobbleClient {
             this.logger.info('Initialized');
         } catch (e) {
             this.initialized = false;
-            this.logger.warn(new ErrorWithCause('Initialization failed', {cause: e}));
+            this.logger.warn(new Error('Initialization failed', {cause: e}));
         }
 
         return this.initialized;

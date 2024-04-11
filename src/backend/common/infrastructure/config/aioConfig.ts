@@ -1,9 +1,9 @@
-import { CommonSourceOptions, ScrobbleThresholds, SourceRetryOptions } from "./source/index.js";
-import { RequestRetryOptions } from "./common.js";
-import { SourceAIOConfig } from "./source/sources.js";
+import { LogOptions } from "@foxxmd/logging";
 import { ClientAIOConfig } from "./client/clients.js";
+import { RequestRetryOptions } from "./common.js";
 import { WebhookConfig } from "./health/webhooks.js";
-import {LogOptions} from "@foxxmd/logging";
+import { CommonSourceOptions, ScrobbleThresholds, SourceRetryOptions } from "./source/index.js";
+import { SourceAIOConfig } from "./source/sources.js";
 
 
 export interface SourceDefaults extends SourceRetryOptions {
@@ -44,6 +44,13 @@ export interface AIOConfig {
     baseUrl?: string
 
     logging?: LogOptions
+
+    /**
+     * Disable web server from running/listening on port.
+     *
+     * This will also make any ingress sources (Plex, Jellyfin, Tautulli, etc...) unusable
+     * */
+    disableWeb?: boolean
 
     /**
      * Enables ALL relevant logging and debug options for all sources/clients, when none are defined.

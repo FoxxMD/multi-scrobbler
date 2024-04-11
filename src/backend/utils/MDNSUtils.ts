@@ -1,11 +1,10 @@
-import {Logger} from "@foxxmd/logging";
+import { Browser, Service, ServiceType } from "@astronautlabs/mdns";
+import { Logger } from "@foxxmd/logging";
 import AvahiBrowser from 'avahi-browse';
+import { MdnsDeviceInfo } from "../common/infrastructure/Atomic.js";
 import { MaybeLogger } from "../common/logging.js";
 import { sleep } from "../utils.js";
-import {ErrorWithCause} from "pony-cause";
-import { MdnsDeviceInfo } from "../common/infrastructure/Atomic.js";
-import {Browser, Service, ServiceType} from "@astronautlabs/mdns";
-import {debounce, DebouncedFunction} from "./debounce.js";
+import { debounce, DebouncedFunction } from "./debounce.js";
 
 export interface AvahiService {
     service_name: string
@@ -78,7 +77,7 @@ export const discoveryAvahi = async (service: string, options?: DiscoveryOptions
             }
         });
         browser.on(AvahiBrowser.EVENT_DNSSD_ERROR, (err) => {
-            const e = new ErrorWithCause('Error occurred while using avahi-browse', {cause: err});
+            const e = new Error('Error occurred while using avahi-browse', {cause: err});
             if (onDnsError) {
                 onDnsError(e)
             } else {
@@ -97,7 +96,7 @@ export const discoveryAvahi = async (service: string, options?: DiscoveryOptions
         }
         maybeLogger.debug('Stopped discovery');
     } catch (e) {
-        maybeLogger.warn(new ErrorWithCause('mDNS device discovery with avahi-browse failed', {cause: e}));
+        maybeLogger.warn(new Error('mDNS device discovery with avahi-browse failed', {cause: e}));
     }
 }
 
@@ -121,7 +120,7 @@ export const discoveryNative = async (service: string, options?: DiscoveryOption
             })
             .start();
         testBrowser.on('error', (err) => {
-            maybeLogger.error(new ErrorWithCause('Error occurred during mDNS service discovery', {cause: err}));
+            maybeLogger.error(new Error('Error occurred during mDNS service discovery', {cause: err}));
         });
         maybeLogger.debug('Waiting 1s to gather advertised mdns services...');
         await sleep(1000);
@@ -141,7 +140,7 @@ export const discoveryNative = async (service: string, options?: DiscoveryOption
             }
         })
     browser.on('error', (err) => {
-        const e = new ErrorWithCause('Error occurred during mDNS discovery', {cause: err});
+        const e = new Error('Error occurred during mDNS discovery', {cause: err});
         if (onDnsError) {
             onDnsError(e)
         } else {

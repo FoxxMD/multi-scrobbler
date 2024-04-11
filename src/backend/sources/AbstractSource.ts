@@ -1,16 +1,10 @@
-import dayjs, {Dayjs} from "dayjs";
-import {
-    genGroupId,
-    genGroupIdStrFromPlay,
-    mergeArr,
-    playObjDataMatch,
-    pollingBackoff,
-    sleep,
-    sortByNewestPlayDate,
-    sortByOldestPlayDate,
-    findCauseByFunc,
-    formatNumber,
-} from "../utils.js";
+import { childLogger, Logger } from '@foxxmd/logging';
+import dayjs, { Dayjs } from "dayjs";
+import { EventEmitter } from "events";
+import { FixedSizeList } from "fixed-size-list";
+import { PlayObject, TA_CLOSE } from "../../core/Atomic.js";
+import { buildTrackString, capitalize } from "../../core/StringUtils.js";
+import { isNodeNetworkException } from "../common/errors/NodeErrors.js";
 import {
     Authenticatable,
     DEFAULT_POLLING_INTERVAL,
@@ -18,9 +12,7 @@ import {
     DEFAULT_RETRY_MULTIPLIER,
     DeviceId,
     GroupedFixedPlays,
-    GroupedPlays,
     InternalConfig,
-    NO_DEVICE,
     NO_USER,
     PlayPlatformId,
     PlayUserId,
@@ -28,15 +20,18 @@ import {
     SINGLE_USER_PLATFORM_ID,
     SourceType,
 } from "../common/infrastructure/Atomic.js";
-import {childLogger, Logger} from '@foxxmd/logging';
 import { SourceConfig } from "../common/infrastructure/config/source/sources.js";
-import {EventEmitter} from "events";
-import {FixedSizeList} from "fixed-size-list";
 import TupleMap from "../common/TupleMap.js";
-import { PlayObject, TA_CLOSE } from "../../core/Atomic.js";
-import { buildTrackString, capitalize } from "../../core/StringUtils.js";
-import { isNodeNetworkException } from "../common/errors/NodeErrors.js";
-import {ErrorWithCause} from "pony-cause";
+import {
+    formatNumber,
+    genGroupId,
+    playObjDataMatch,
+    pollingBackoff,
+    sleep,
+    sortByNewestPlayDate,
+    sortByOldestPlayDate,
+} from "../utils.js";
+import { findCauseByFunc } from "../utils/ErrorUtils.js";
 import { comparePlayTemporally, temporalAccuracyIsAtLeast } from "../utils/TimeUtils.js";
 
 export interface RecentlyPlayedOptions {
@@ -111,7 +106,7 @@ export default abstract class AbstractSource implements Authenticatable {
             this.logger.info('Fully Initialized!');
             return true;
         } catch(e) {
-            this.logger.error(new ErrorWithCause('Initialization failed', {cause: e}));
+            this.logger.error(new Error('Initialization failed', {cause: e}));
             return false;
         }
     }
@@ -128,14 +123,14 @@ export default abstract class AbstractSource implements Authenticatable {
                 return;
             }
             if (res === true) {
-                this.logger.debug('Building required data init succeeded');
+                this.logger.verbose('Building required data init succeeded');
             } else if (typeof res === 'string') {
-                this.logger.debug(`Building required data init succeeded => ${res}`);
+                this.logger.verbose(`Building required data init succeeded => ${res}`);
             }
             this.buildOK = true;
         } catch (e) {
             this.buildOK = false;
-            throw new ErrorWithCause('Building required data for initialization failed', {cause: e});
+            throw new Error('Building required data for initialization failed', {cause: e});
         }
     }
 
@@ -166,7 +161,7 @@ export default abstract class AbstractSource implements Authenticatable {
             this.connectionOK = true;
         } catch (e) {
             this.connectionOK = false;
-            throw new ErrorWithCause('Communicating with upstream service failed', {cause: e});
+            throw new Error('Communicating with upstream service failed', {cause: e});
         }
     }
 
@@ -202,7 +197,7 @@ export default abstract class AbstractSource implements Authenticatable {
             // only signal as auth failure if error was NOT a node network error
             this.authFailure = findCauseByFunc(e, isNodeNetworkException) === undefined;
             this.authed = false;
-            throw new ErrorWithCause(`Authentication test failed!${this.authFailure === false ? ' Due to a network issue. Will retry authentication on next heartbeat.' : ''}`, {cause: e})
+            throw new Error(`Authentication test failed!${this.authFailure === false ? ' Due to a network issue. Will retry authentication on next heartbeat.' : ''}`, {cause: e})
         }
     }
 
@@ -322,7 +317,7 @@ export default abstract class AbstractSource implements Authenticatable {
             try {
                 backlogPlays = await this.getBackloggedPlays();
             } catch (e) {
-                throw new ErrorWithCause('Error occurred while fetching backlogged plays', {cause: e});
+                throw new Error('Error occurred while fetching backlogged plays', {cause: e});
             }
             const discovered = this.discover(backlogPlays);
 
@@ -385,7 +380,7 @@ export default abstract class AbstractSource implements Authenticatable {
         try {
             await this.processBacklog();
         } catch (e) {
-            this.logger.error(new ErrorWithCause('Cannot start polling because error occurred while processing backlog', {cause: e}));
+            this.logger.error(new Error('Cannot start polling because error occurred while processing backlog', {cause: e}));
             this.notify({
                 title: `${this.identifier} - Polling Error`,
                 message: 'Cannot start polling because error occurred while processing backlog.',
@@ -522,20 +517,18 @@ export default abstract class AbstractSource implements Authenticatable {
                 const activeThreshold = this.lastActivityAt.add(checkActiveFor, 's');
                 const inactiveFor = dayjs.duration(Math.abs(activeThreshold.diff(dayjs(), 'millisecond'))).humanize(false);
                 if (activeThreshold.isBefore(dayjs())) {
+                    let intervalStr: string = formatNumber(maxInterval);
                     checksOverThreshold++;
                     if(sleepTime < maxInterval) {
                         const checkVal = Math.min(checksOverThreshold, 1000);
                         const backoff = Math.round(Math.max(Math.min(Math.min(checkVal, 1000) * 2 * (1.1 * checkVal), maxBackoff), 5));
+                        intervalStr = `(${interval} + ${backoff})`;
                         sleepTime = interval + backoff;
-                        this.logger.debug(`Last activity was at ${this.lastActivityAt.format()} which is ${inactiveFor} outside of active polling period of (last activity + ${checkActiveFor} seconds). Will check again in interval ${interval} + ${backoff} seconds.`);
-                    } else {
-                        this.logger.debug(`Last activity was at ${this.lastActivityAt.format()} which is ${inactiveFor} outside of active polling period of (last activity + ${checkActiveFor} seconds). Will check again in max interval ${maxInterval} seconds.`);
                     }
+                    this.logger.debug(`Last activity ${this.lastActivityAt.format()} is ${inactiveFor} outside of polling period (last activity + ${checkActiveFor}s) | Next check interval: ${intervalStr}s`);
                 } else {
-                    this.logger.debug(`Last activity was at ${this.lastActivityAt.format()}. Will check again in interval ${formatNumber(sleepTime)} seconds.`);
+                    this.logger.debug(`Last activity was at ${this.lastActivityAt.format()} | Next check interval: ${formatNumber(sleepTime)}s`);
                 }
-
-                this.logger.verbose(`Sleeping for ${formatNumber(sleepTime)}s`);
                 const wakeUpAt = pollFrom.add(sleepTime, 'seconds');
                 while(!this.shouldStopPolling() && dayjs().isBefore(wakeUpAt)) {
                     // check for polling status every half second and wait till wake up time

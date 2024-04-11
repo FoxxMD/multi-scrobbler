@@ -1,13 +1,12 @@
-import AbstractApiClient from "./AbstractApiClient.js";
-import {ErrorWithCause} from "pony-cause";
-import { KodiData } from "../infrastructure/config/source/kodi.js";
+import dayjs from "dayjs";
 import { KodiClient } from 'kodi-api'
 import normalizeUrl from "normalize-url";
-import {URL} from "url";
-import { RecentlyPlayedOptions } from "../../sources/AbstractSource.js";
-import {AbstractApiOptions, FormatPlayObjectOptions} from "../infrastructure/Atomic.js";
-import dayjs from "dayjs";
+import { URL } from "url";
 import { PlayObject } from "../../../core/Atomic.js";
+import { RecentlyPlayedOptions } from "../../sources/AbstractSource.js";
+import { AbstractApiOptions, FormatPlayObjectOptions } from "../infrastructure/Atomic.js";
+import { KodiData } from "../infrastructure/config/source/kodi.js";
+import AbstractApiClient from "./AbstractApiClient.js";
 
 interface KodiDuration {
     hours: number
@@ -143,7 +142,7 @@ export class KodiApiClient extends AbstractApiClient {
             if(this.config.username === undefined || this.config.password === undefined) {
                 msg = 'Authentication failed. No username/password was provided in config! Did you mean to do this?';
             }
-            this.logger.error(new ErrorWithCause(msg, {cause: e}));
+            this.logger.error(new Error(msg, {cause: e}));
             return false;
         }
     }

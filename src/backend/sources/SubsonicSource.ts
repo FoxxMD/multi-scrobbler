@@ -1,20 +1,18 @@
-import request, {Request, Response} from 'superagent';
 import * as crypto from 'crypto';
 import dayjs from "dayjs";
 import isSameOrAfter from "dayjs/plugin/isSameOrAfter.js";
-import {findCauseByFunc, parseRetryAfterSecsFromObj, removeDuplicates, sleep} from "../utils.js";
-import MemorySource from "./MemorySource.js";
-import { SubSonicSourceConfig } from "../common/infrastructure/config/source/subsonic.js";
-import { DEFAULT_RETRY_MULTIPLIER, FormatPlayObjectOptions, InternalConfig } from "../common/infrastructure/Atomic.js";
-import { RecentlyPlayedOptions } from "./AbstractSource.js";
 import EventEmitter from "events";
+import request, { Request } from 'superagent';
 import { PlayObject } from "../../core/Atomic.js";
-import {isNodeNetworkException} from "../common/errors/NodeErrors.js";
-import {ErrorWithCause} from "pony-cause";
-import {UpstreamError} from "../common/errors/UpstreamError.js";
-import {getSubsonicResponse, SubsonicResponse, SubsonicResponseCommon} from "../common/vendor/subsonic/interfaces.js";
-import {hash} from "@astronautlabs/mdns/dist/hash.js";
-import e from "express";
+import { isNodeNetworkException } from "../common/errors/NodeErrors.js";
+import { UpstreamError } from "../common/errors/UpstreamError.js";
+import { DEFAULT_RETRY_MULTIPLIER, FormatPlayObjectOptions, InternalConfig } from "../common/infrastructure/Atomic.js";
+import { SubSonicSourceConfig } from "../common/infrastructure/config/source/subsonic.js";
+import { getSubsonicResponse, SubsonicResponse, SubsonicResponseCommon } from "../common/vendor/subsonic/interfaces.js";
+import { parseRetryAfterSecsFromObj, removeDuplicates, sleep } from "../utils.js";
+import { findCauseByFunc } from "../utils/ErrorUtils.js";
+import { RecentlyPlayedOptions } from "./AbstractSource.js";
+import MemorySource from "./MemorySource.js";
 
 dayjs.extend(isSameOrAfter);
 
@@ -216,7 +214,7 @@ export class SubsonicSource extends MemorySource {
             } else if(e.status >= 500) {
                 throw new UpstreamError('Subsonic server returning an unexpected response', {cause: e})
             } else {
-                throw new ErrorWithCause('Unexpected error occurred', {cause: e})
+                throw new Error('Unexpected error occurred', {cause: e})
             }
         }
     }

@@ -1,4 +1,9 @@
+import { Interfaces as Notifications } from '@dbus-types/notifications'
 import dayjs from "dayjs";
+import { DBusInterface, sessionBus } from 'dbus-ts';
+import EventEmitter from "events";
+import { PlayObject } from "../../core/Atomic.js";
+import { FormatPlayObjectOptions, InternalConfig } from "../common/infrastructure/Atomic.js";
 import {
     MPRIS_IFACE,
     MPRIS_PATH,
@@ -8,15 +13,10 @@ import {
     PlaybackStatus,
     PlayerInfo,
 } from "../common/infrastructure/config/source/mpris.js";
-import { FormatPlayObjectOptions, InternalConfig } from "../common/infrastructure/Atomic.js";
-import MemorySource from "./MemorySource.js";
-import { RecentlyPlayedOptions } from "./AbstractSource.js";
 import { removeDuplicates } from "../utils.js";
-import EventEmitter from "events";
-import {ErrorWithCause} from "pony-cause";
-import { PlayObject } from "../../core/Atomic.js";
-import {DBusInterface, sessionBus} from 'dbus-ts';
-import { Interfaces as Notifications } from '@dbus-types/notifications'
+import { findCauseByMessage } from "../utils/ErrorUtils.js";
+import { RecentlyPlayedOptions } from "./AbstractSource.js";
+import MemorySource from "./MemorySource.js";
 
 
 export class MPRISSource extends MemorySource {
@@ -96,7 +96,7 @@ export class MPRISSource extends MemorySource {
             await this.getDBus();
             return true;
         } catch (e) {
-            throw new ErrorWithCause('Could not get DBus interface from operating system', {cause: e});
+            throw new Error('Could not get DBus interface from operating system', {cause: e});
         }
     }
 
@@ -129,7 +129,10 @@ export class MPRISSource extends MemorySource {
                 try {
                     pos = await this.getPlayerPosition(props);
                 } catch (e) {
-                    this.logger.warn(`Could not get Position info for player ${plainPlayerName}`);
+                    // only log if the error is not related to position not being supported since this is a potentially expected result
+                    if(!findCauseByMessage(e, 'Position is not supported')) {
+                        this.logger.warn(new Error(`Could not get Position info for player ${plainPlayerName}`, {cause: e}));
+                    }
                 }
                 const status = await this.getPlayerStatus(props);
                 if (status === PLAYBACK_STATUS_STOPPED && activeOnly) {
@@ -142,9 +145,8 @@ export class MPRISSource extends MemorySource {
                     position: pos,
                     metadata
                 });
-            }
-            catch (e) {
-                this.logger.warn(new ErrorWithCause(`Could not parse D-bus info for player ${plainPlayerName}`, {cause: e}));
+            } catch (e) {
+                this.logger.warn(new Error(`Could not parse D-bus info for player ${plainPlayerName}`, {cause: convertDBusExceptionToError(e)}));
             }
 
         }
@@ -158,7 +160,7 @@ export class MPRISSource extends MemorySource {
             // microseconds
             return dayjs.duration({milliseconds: Number(pos / 1000)}).asSeconds();
         } catch(e) {
-            throw new ErrorWithCause('Could not get player Position', {cause: e});
+            throw new Error('Could not get player Position', {cause: convertDBusExceptionToError(e)});
         }
     }
 
@@ -167,7 +169,7 @@ export class MPRISSource extends MemorySource {
             const status = await props['PlaybackStatus'];
             return status as PlaybackStatus;
         } catch (e) {
-            throw new ErrorWithCause('Could not get player PlaybackStatus', {cause: e})
+            throw new Error('Could not get player PlaybackStatus', {cause: convertDBusExceptionToError(e)})
         }
     }
 
@@ -176,7 +178,7 @@ export class MPRISSource extends MemorySource {
             const metadata = await props['Metadata'];
             return this.metadataToPlain(metadata);
         } catch(e) {
-            throw new ErrorWithCause('Could not get player Metadata', {cause: e});
+            throw new Error('Could not get player Metadata', {cause: convertDBusExceptionToError(e)});
         }
     }
 
@@ -225,4 +227,15 @@ export class MPRISSource extends MemorySource {
     }
 }
 
+const convertDBusExceptionToError = (e: any): Error => {
+    let err: Error;
+    if(e instanceof Error) {
+        err = e;
+    } else if(Array.isArray(e)) {
+        err = new Error(e.map(x => x.toString()).join(' | '));
+    } else {
+        err = new Error(e.toString());
+    }
+    return err;
+}
 

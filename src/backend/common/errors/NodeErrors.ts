@@ -1,6 +1,6 @@
+import { findCauseByFunc } from "../../utils/ErrorUtils.js";
 import { isArbitraryObject } from "../infrastructure/Atomic.js";
 import ErrnoException = NodeJS.ErrnoException;
-import { findCauseByFunc } from "../../utils.js";
 
 export type NodeNetworkErrorCode = 'ENOTFOUND' | 'ETIMEDOUT' | 'EAI_AGAIN' | 'ECONNRESET' | 'ECONNREFUSED' | 'ERRADDRINUSE' | 'EADDRNOTAVAIL' | 'ECONNABORTED' | 'EHOSTUNREACH';
 export const NETWORK_ERROR_CODES: NodeNetworkErrorCode[] = ['ENOTFOUND', 'ETIMEDOUT',  'EAI_AGAIN', 'ECONNRESET', 'ECONNREFUSED', 'ERRADDRINUSE', 'EADDRNOTAVAIL', 'ECONNABORTED', 'EHOSTUNREACH'];

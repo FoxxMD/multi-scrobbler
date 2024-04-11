@@ -1,10 +1,10 @@
-import MemorySource from "./MemorySource.js";
+import { EventEmitter } from "events";
+import { PlayObject } from "../../core/Atomic.js";
 import { FormatPlayObjectOptions, InternalConfig } from "../common/infrastructure/Atomic.js";
-import {EventEmitter} from "events";
-import { RecentlyPlayedOptions } from "./AbstractSource.js";
 import { KodiSourceConfig } from "../common/infrastructure/config/source/kodi.js";
 import { KodiApiClient } from "../common/vendor/KodiApiClient.js";
-import { PlayObject } from "../../core/Atomic.js";
+import { RecentlyPlayedOptions } from "./AbstractSource.js";
+import MemorySource from "./MemorySource.js";
 
 export class KodiSource extends MemorySource {
     declare config: KodiSourceConfig;
@@ -33,7 +33,7 @@ export class KodiSource extends MemorySource {
             } = {}
         } = this.config;
         this.client = new KodiApiClient(this.name, this.config.data, {logger: this.logger});
-        this.logger.debug(`Config URL: '${url ?? '(None Given)'}' => Normalized: '${this.client.url.toString()}'`)
+        this.logger.verbose(`Config URL: '${url ?? '(None Given)'}' => Normalized: '${this.client.url.toString()}'`)
         return true;
     }
 

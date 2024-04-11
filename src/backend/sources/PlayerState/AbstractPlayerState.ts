@@ -1,3 +1,7 @@
+import { childLogger, Logger } from "@foxxmd/logging";
+import dayjs, { Dayjs } from "dayjs";
+import { PlayObject, Second, SOURCE_SOT, SOURCE_SOT_TYPES, SourcePlayerObj } from "../../../core/Atomic.js";
+import { buildTrackString } from "../../../core/StringUtils.js";
 import {
     CALCULATED_PLAYER_STATUSES,
     CalculatedPlayerStatus,
@@ -5,15 +9,10 @@ import {
     REPORTED_PLAYER_STATUSES,
     ReportedPlayerStatus,
 } from "../../common/infrastructure/Atomic.js";
-import dayjs, {Dayjs} from "dayjs";
+import { PollingOptions } from "../../common/infrastructure/config/common.js";
 import { formatNumber, genGroupIdStr, playObjDataMatch, progressBar } from "../../utils.js";
-import {childLogger, Logger} from "@foxxmd/logging";
 import { ListenProgress } from "./ListenProgress.js";
-import {PlayObject, Second, SOURCE_SOT, SOURCE_SOT_TYPES, SourcePlayerObj} from "../../../core/Atomic.js";
-import { buildTrackString } from "../../../core/StringUtils.js";
 import { ListenRange } from "./ListenRange.js";
-import {id} from "common-tags";
-import {PollingOptions} from "../../common/infrastructure/config/common.js";
 
 export interface PlayerStateIntervals {
     staleInterval?: number
@@ -256,14 +255,14 @@ export abstract class AbstractPlayerState {
                 if (position === oldEndProgress.position && !['paused', 'stopped'].includes(this.calculatedStatus)) {
                     this.calculatedStatus = this.reportedStatus === 'stopped' ? CALCULATED_PLAYER_STATUSES.stopped : CALCULATED_PLAYER_STATUSES.paused;
                     if (this.reportedStatus !== this.calculatedStatus) {
-                        this.logger.verbose(`Reported status '${this.reportedStatus}' but track position has not progressed between two updates. Calculated player status is now ${this.calculatedStatus}`);
+                        this.logger.debug(`Reported status '${this.reportedStatus}' but track position has not progressed between two updates. Calculated player status is now ${this.calculatedStatus}`);
                     } else {
                         this.logger.debug(`Player position is equal between current -> last update. Updated calculated status to ${this.calculatedStatus}`);
                     }
                 } else if (position !== oldEndProgress.position && this.calculatedStatus !== 'playing') {
                     this.calculatedStatus = CALCULATED_PLAYER_STATUSES.playing;
                     if (this.reportedStatus !== this.calculatedStatus) {
-                        this.logger.verbose(`Reported status '${this.reportedStatus}' but track position has progressed between two updates. Calculated player status is now ${this.calculatedStatus}`);
+                        this.logger.debug(`Reported status '${this.reportedStatus}' but track position has progressed between two updates. Calculated player status is now ${this.calculatedStatus}`);
                     } else {
                         this.logger.debug(`Player position changed between current -> last update. Updated calculated status to ${this.calculatedStatus}`);
                     }

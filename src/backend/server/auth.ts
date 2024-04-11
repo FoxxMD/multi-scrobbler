@@ -1,11 +1,11 @@
-import {ExpressWithAsync} from "@awaitjs/express";
-import {Logger} from "@foxxmd/logging";
-import ScrobbleSources from "../sources/ScrobbleSources.js";
+import { ExpressWithAsync } from "@awaitjs/express";
+import { Logger } from "@foxxmd/logging";
 import passport from "passport";
 import { ExpressHandler } from "../common/infrastructure/Atomic.js";
-import ScrobbleClients from "../scrobblers/ScrobbleClients.js";
 import LastfmScrobbler from "../scrobblers/LastfmScrobbler.js";
+import ScrobbleClients from "../scrobblers/ScrobbleClients.js";
 import LastfmSource from "../sources/LastfmSource.js";
+import ScrobbleSources from "../sources/ScrobbleSources.js";
 import SpotifySource from "../sources/SpotifySource.js";
 
 export const setupAuthRoutes = (app: ExpressWithAsync, logger: Logger, sourceMiddle: ExpressHandler, clientMiddle: ExpressHandler, scrobbleSources: ScrobbleSources, scrobbleClients: ScrobbleClients) => {

@@ -2,37 +2,13 @@
     "$schema": "http://json-schema.org/draft-07/schema#",
     "anyOf": [
         {
-            "$ref": "#/definitions/SpotifySourceConfig"
-        },
-        {
-            "$ref": "#/definitions/PlexSourceConfig"
-        },
-        {
-            "$ref": "#/definitions/TautulliSourceConfig"
+            "$ref": "#/definitions/ChromecastSourceConfig"
         },
         {
             "$ref": "#/definitions/DeezerSourceConfig"
         },
         {
-            "$ref": "#/definitions/SubSonicSourceConfig"
-        },
-        {
             "$ref": "#/definitions/JellySourceConfig"
-        },
-        {
-            "$ref": "#/definitions/LastfmSourceConfig"
-        },
-        {
-            "$ref": "#/definitions/YTMusicSourceConfig"
-        },
-        {
-            "$ref": "#/definitions/MPRISSourceConfig"
-        },
-        {
-            "$ref": "#/definitions/MopidySourceConfig"
-        },
-        {
-            "$ref": "#/definitions/ListenBrainzSourceConfig"
         },
         {
             "$ref": "#/definitions/JRiverSourceConfig"
@@ -41,10 +17,34 @@
             "$ref": "#/definitions/KodiSourceConfig"
         },
         {
+            "$ref": "#/definitions/LastfmSourceConfig"
+        },
+        {
+            "$ref": "#/definitions/ListenBrainzSourceConfig"
+        },
+        {
+            "$ref": "#/definitions/MopidySourceConfig"
+        },
+        {
+            "$ref": "#/definitions/MPRISSourceConfig"
+        },
+        {
+            "$ref": "#/definitions/PlexSourceConfig"
+        },
+        {
+            "$ref": "#/definitions/SpotifySourceConfig"
+        },
+        {
+            "$ref": "#/definitions/SubSonicSourceConfig"
+        },
+        {
+            "$ref": "#/definitions/TautulliSourceConfig"
+        },
+        {
             "$ref": "#/definitions/WebScrobblerSourceConfig"
         },
         {
-            "$ref": "#/definitions/ChromecastSourceConfig"
+            "$ref": "#/definitions/YTMusicSourceConfig"
         }
     ],
     "definitions": {

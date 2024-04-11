@@ -1,9 +1,9 @@
-import { AbstractWebhookNotifier } from "./AbstractWebhookNotifier.js";
-import { NtfyConfig, PrioritiesConfig, WebhookPayload } from "../common/infrastructure/config/health/webhooks.js";
-import {publish} from 'ntfy';
+import { Logger } from "@foxxmd/logging";
+import { publish } from 'ntfy';
+import { Config } from "ntfy/interfaces.js";
 import request from "superagent";
-import {Logger} from "@foxxmd/logging";
-import {Config} from "ntfy/interfaces.js";
+import { NtfyConfig, PrioritiesConfig, WebhookPayload } from "../common/infrastructure/config/health/webhooks.js";
+import { AbstractWebhookNotifier } from "./AbstractWebhookNotifier.js";
 
 export class NtfyWebhookNotifier extends AbstractWebhookNotifier {
 
@@ -65,9 +65,9 @@ export class NtfyWebhookNotifier extends AbstractWebhookNotifier {
                 }
             }
             await publish(req);
-            this.logger.debug(`Pushed notification.`);
+            this.logger.verbose(`Pushed notification.`);
         } catch (e: any) {
-            this.logger.error(`Failed to push notification: ${e.message}`)
+            this.logger.warn(`Failed to push notification: ${e.message}`)
         }
     }
 

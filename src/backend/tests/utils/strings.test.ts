@@ -1,14 +1,14 @@
-import {describe, it} from 'mocha';
-import {assert} from 'chai';
+import { assert } from 'chai';
+import { describe, it } from 'mocha';
+import { intersect } from "../../utils.js";
 import {
     compareNormalizedStrings,
     normalizeStr,
     parseTrackCredits,
     uniqueNormalizedStrArr
 } from "../../utils/StringUtils.js";
-import testData from './playTestData.json';
 import { ExpectedResults } from "./interfaces.js";
-import { intersect } from "../../utils.js";
+import testData from './playTestData.json';
 
 interface PlayTestFixture {
     caseHints: string[]

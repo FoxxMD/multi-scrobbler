@@ -1,9 +1,16 @@
-import {childLogger, Logger} from '@foxxmd/logging';
-import { GotifyConfig, NtfyConfig, WebhookConfig, WebhookPayload } from "../common/infrastructure/config/health/webhooks.js";
+import { childLogger, Logger } from '@foxxmd/logging';
+import { EventEmitter } from "events";
+import {
+    AppriseConfig,
+    GotifyConfig,
+    NtfyConfig,
+    WebhookConfig,
+    WebhookPayload
+} from "../common/infrastructure/config/health/webhooks.js";
 import { AbstractWebhookNotifier } from "./AbstractWebhookNotifier.js";
+import { AppriseWebhookNotifier } from "./AppriseWebhookNotifier.js";
 import { GotifyWebhookNotifier } from "./GotifyWebhookNotifier.js";
 import { NtfyWebhookNotifier } from "./NtfyWebhookNotifier.js";
-import {EventEmitter} from "events";
 
 export class Notifiers {
 
@@ -21,7 +28,7 @@ export class Notifiers {
         this.clientEmitter = clientEmitter;
         this.sourceEmitter = sourceEmitter;
 
-        this.logger = childLogger(parentLogger, 'Notifiers'); // winston.loggers.get('app').child({labels: ['Notifiers']}, mergeArr);
+        this.logger = childLogger(parentLogger, 'Notifiers');
 
         this.sourceEmitter.on('notify', async (payload: WebhookPayload) => {
             await this.notify(payload);
@@ -38,6 +45,9 @@ export class Notifiers {
                     break;
                 case 'ntfy':
                     webhook = new NtfyWebhookNotifier(defaultName, config as NtfyConfig, this.logger);
+                    break;
+                case 'apprise':
+                    webhook = new AppriseWebhookNotifier(defaultName, config as AppriseConfig, this.logger);
                     break;
                 default:
                     this.logger.error(`'${config.type}' is not a valid webhook type`);

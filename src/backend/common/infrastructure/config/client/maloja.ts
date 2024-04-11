@@ -1,5 +1,5 @@
-import { CommonClientConfig, CommonClientData } from "./index.js";
 import { RequestRetryOptions } from "../common.js";
+import { CommonClientConfig, CommonClientData } from "./index.js";
 
 export interface MalojaClientData extends RequestRetryOptions, CommonClientData {
     /**

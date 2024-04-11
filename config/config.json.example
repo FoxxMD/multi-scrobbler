@@ -1,5 +1,6 @@
 {
   "debugMode": false,
+  "disableWeb": false,
   "sourceDefaults": {
     "maxPollRetries": 1,
     "maxRequestRetries": 1,

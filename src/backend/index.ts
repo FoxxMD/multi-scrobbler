@@ -1,24 +1,21 @@
 import 'dotenv/config';
-import {LogDataPretty, Logger} from "@foxxmd/logging";
+import { childLogger, LogDataPretty, Logger as FoxLogger } from "@foxxmd/logging";
 import dayjs from 'dayjs';
-import utc from 'dayjs/plugin/utc.js';
+import duration from 'dayjs/plugin/duration.js';
 import isBetween from 'dayjs/plugin/isBetween.js';
 import relativeTime from 'dayjs/plugin/relativeTime.js';
-import duration from 'dayjs/plugin/duration.js';
 import timezone from 'dayjs/plugin/timezone.js';
-import { parseBool, readJson, sleep } from "./utils.js";
+import utc from 'dayjs/plugin/utc.js';
 import * as path from "path";
+import { SimpleIntervalJob, ToadScheduler } from "toad-scheduler";
 import { projectDir } from "./common/index.js";
-import SpotifySource from "./sources/SpotifySource.js";
 import { AIOConfig } from "./common/infrastructure/config/aioConfig.js";
+import { appLogger, initLogger as getInitLogger } from "./common/logging.js";
 import { getRoot } from "./ioc.js";
-import {appLogger, initLogger as getInitLogger} from "./common/logging.js";
 import { initServer } from "./server/index.js";
-import {SimpleIntervalJob, ToadScheduler} from "toad-scheduler";
-import { createHeartbeatSourcesTask } from "./tasks/heartbeatSources.js";
 import { createHeartbeatClientsTask } from "./tasks/heartbeatClients.js";
-import {ErrorWithCause} from "pony-cause";
-import {loggerDebug, childLogger, LogData, Logger as FoxLogger} from '@foxxmd/logging';
+import { createHeartbeatSourcesTask } from "./tasks/heartbeatSources.js";
+import { parseBool, readJson, sleep } from "./utils.js";
 
 dayjs.extend(utc)
 dayjs.extend(isBetween);
@@ -42,7 +39,7 @@ output = output.slice(0, 301);
 let logger: FoxLogger;
 
 process.on('uncaughtExceptionMonitor', (err, origin) => {
-    const appError = new ErrorWithCause(`Uncaught exception is crashing the app! :( Type: ${origin}`, {cause: err});
+    const appError = new Error(`Uncaught exception is crashing the app! :( Type: ${origin}`, {cause: err});
     if(logger !== undefined) {
         logger.error(appError)
     } else {
@@ -53,7 +50,7 @@ process.on('uncaughtExceptionMonitor', (err, origin) => {
 const configDir = process.env.CONFIG_DIR || path.resolve(projectDir, `./config`);
 
     try {
-        initLogger.debug(`Config Dir ENV: ${process.env.CONFIG_DIR} -> Resolved: ${configDir}`)
+        initLogger.verbose(`Config Dir ENV: ${process.env.CONFIG_DIR} -> Resolved: ${configDir}`)
         // try to read a configuration file
         let appConfigFail: Error | undefined = undefined;
         let config = {};
@@ -149,7 +146,7 @@ const configDir = process.env.CONFIG_DIR || path.resolve(projectDir, `./config`)
         logger.info('Scheduler started.');
 
     } catch (e) {
-        const appError = new ErrorWithCause('Exited with uncaught error', {cause: e});
+        const appError = new Error('Exited with uncaught error', {cause: e});
         if(logger !== undefined) {
             logger.error(appError);
         } else {

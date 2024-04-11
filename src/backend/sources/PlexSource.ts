@@ -1,14 +1,14 @@
-import dayjs from "dayjs";
-import { combinePartsToString } from "../utils.js";
-import AbstractSource from "./AbstractSource.js";
-import formidable from 'formidable';
+import { childLogger, Logger } from "@foxxmd/logging";
 import concatStream from 'concat-stream';
-import { PlexSourceConfig } from "../common/infrastructure/config/source/plex.js";
-import { FormatPlayObjectOptions, InternalConfig, SourceType } from "../common/infrastructure/Atomic.js";
+import dayjs from "dayjs";
 import EventEmitter from "events";
+import formidable from 'formidable';
 import { PlayObject } from "../../core/Atomic.js";
 import { truncateStringToLength } from "../../core/StringUtils.js";
-import {childLogger, Logger} from "@foxxmd/logging";
+import { FormatPlayObjectOptions, InternalConfig, SourceType } from "../common/infrastructure/Atomic.js";
+import { PlexSourceConfig } from "../common/infrastructure/config/source/plex.js";
+import { combinePartsToString } from "../utils.js";
+import AbstractSource from "./AbstractSource.js";
 
 const shortDeviceId = truncateStringToLength(10, '');
 

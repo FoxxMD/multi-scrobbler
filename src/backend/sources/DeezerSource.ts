@@ -1,20 +1,13 @@
-import request from 'superagent';
-import passport from "passport";
-import {
-    parseRetryAfterSecsFromObj,
-    readJson,
-    sleep,
-    sortByOldestPlayDate,
-    writeFile,
-} from "../utils.js";
-import {Strategy as DeezerStrategy} from 'passport-deezer';
-import AbstractSource, { RecentlyPlayedOptions } from "./AbstractSource.js";
 import dayjs from "dayjs";
-import { DeezerSourceConfig } from "../common/infrastructure/config/source/deezer.js";
-import { DEFAULT_RETRY_MULTIPLIER, FormatPlayObjectOptions, InternalConfig } from "../common/infrastructure/Atomic.js";
 import EventEmitter from "events";
+import passport from "passport";
+import { Strategy as DeezerStrategy } from 'passport-deezer';
+import request from 'superagent';
 import { PlayObject } from "../../core/Atomic.js";
-import {ErrorWithCause} from "pony-cause";
+import { DEFAULT_RETRY_MULTIPLIER, FormatPlayObjectOptions, InternalConfig } from "../common/infrastructure/Atomic.js";
+import { DeezerSourceConfig } from "../common/infrastructure/config/source/deezer.js";
+import { parseRetryAfterSecsFromObj, readJson, sleep, sortByOldestPlayDate, writeFile, } from "../utils.js";
+import AbstractSource, { RecentlyPlayedOptions } from "./AbstractSource.js";
 
 export default class DeezerSource extends AbstractSource {
     workingCredsPath;
@@ -102,7 +95,7 @@ export default class DeezerSource extends AbstractSource {
                 this.logger.warn(`No Deezer credentials file found at ${this.workingCredsPath}`);
             }
         } catch (e) {
-            throw new ErrorWithCause('Current deezer credentials file exists but could not be parsed', {cause: e});
+            throw new Error('Current deezer credentials file exists but could not be parsed', {cause: e});
         }
         if (this.config.data.accessToken === undefined) {
             if (this.config.data.clientId === undefined) {

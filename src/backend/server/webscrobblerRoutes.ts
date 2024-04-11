@@ -1,13 +1,11 @@
-import { mergeArr, parseBool, remoteHostIdentifiers } from "../utils.js";
-import {ExpressWithAsync} from "@awaitjs/express";
-import {childLogger, Logger} from "@foxxmd/logging";
-import ScrobbleSources from "../sources/ScrobbleSources.js";
+import { ExpressWithAsync } from "@awaitjs/express";
+import { childLogger, Logger } from "@foxxmd/logging";
 import bodyParser from "body-parser";
-import { WebScrobblerPayload } from "../common/vendor/webscrobbler/interfaces.js";
-import { WebhookNotifier } from "../sources/ingressNotifiers/WebhookNotifier.js";
-import { nonEmptyBody } from "./middleware.js";
-import { WebScrobblerSource } from "../sources/WebScrobblerSource.js";
 import path from "path";
+import { WebhookNotifier } from "../sources/ingressNotifiers/WebhookNotifier.js";
+import ScrobbleSources from "../sources/ScrobbleSources.js";
+import { WebScrobblerSource } from "../sources/WebScrobblerSource.js";
+import { nonEmptyBody } from "./middleware.js";
 
 export const setupWebscrobblerRoutes = (app: ExpressWithAsync, parentLogger: Logger, scrobbleSources: ScrobbleSources) => {
 

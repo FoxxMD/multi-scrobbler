@@ -1,25 +1,22 @@
 /* eslint-disable no-case-declarations */
-import dayjs, {Dayjs} from "dayjs";
-import {
-    readJson,
-    validateJson,
-} from "../utils.js";
-import MalojaScrobbler from "./MalojaScrobbler.js";
-import LastfmScrobbler from "./LastfmScrobbler.js";
+import { childLogger, Logger } from '@foxxmd/logging';
+import dayjs, { Dayjs } from "dayjs";
+import { PlayObject } from "../../core/Atomic.js";
 import { clientTypes, ConfigMeta } from "../common/infrastructure/Atomic.js";
 import { AIOConfig } from "../common/infrastructure/config/aioConfig.js";
+import { ClientAIOConfig, ClientConfig } from "../common/infrastructure/config/client/clients.js";
+import { LastfmClientConfig } from "../common/infrastructure/config/client/lastfm.js";
+import { ListenBrainzClientConfig } from "../common/infrastructure/config/client/listenbrainz.js";
+import { MalojaClientConfig } from "../common/infrastructure/config/client/maloja.js";
 import * as aioSchema from '../common/schema/aio-client.json';
 import * as clientSchema from '../common/schema/client.json';
-import { ClientAIOConfig, ClientConfig } from "../common/infrastructure/config/client/clients.js";
-import { MalojaClientConfig } from "../common/infrastructure/config/client/maloja.js";
-import { LastfmClientConfig } from "../common/infrastructure/config/client/lastfm.js";
-import { Notifiers } from "../notifier/Notifiers.js";
-import AbstractScrobbleClient from "./AbstractScrobbleClient.js";
-import {childLogger, Logger} from '@foxxmd/logging';
-import ListenbrainzScrobbler from "./ListenbrainzScrobbler.js";
-import { ListenBrainzClientConfig } from "../common/infrastructure/config/client/listenbrainz.js";
-import { PlayObject } from "../../core/Atomic.js";
 import { WildcardEmitter } from "../common/WildcardEmitter.js";
+import { Notifiers } from "../notifier/Notifiers.js";
+import { readJson, validateJson, } from "../utils.js";
+import AbstractScrobbleClient from "./AbstractScrobbleClient.js";
+import LastfmScrobbler from "./LastfmScrobbler.js";
+import ListenbrainzScrobbler from "./ListenbrainzScrobbler.js";
+import MalojaScrobbler from "./MalojaScrobbler.js";
 
 type groupedNamedConfigs = {[key: string]: ParsedConfig[]};
 

@@ -1,7 +1,7 @@
+import { strategies, stringSameness, StringSamenessResult } from "@foxxmd/string-sameness";
+import { PlayObject } from "../../core/Atomic.js";
 import { DELIMITERS } from "../common/infrastructure/Atomic.js";
 import { parseRegexSingleOrFail } from "../utils.js";
-import { PlayObject } from "../../core/Atomic.js";
-import {stringSameness, StringSamenessResult, strategies} from "@foxxmd/string-sameness";
 
 const {levenStrategy, diceStrategy} = strategies;
 

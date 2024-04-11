@@ -1,6 +1,87 @@
 {
     "$schema": "http://json-schema.org/draft-07/schema#",
     "definitions": {
+        "AppriseConfig": {
+            "properties": {
+                "host": {
+                    "description": "The URL of the apprise-api server",
+                    "examples": [
+                        "http://192.168.0.100:8078"
+                    ],
+                    "title": "host",
+                    "type": "string"
+                },
+                "keys": {
+                    "anyOf": [
+                        {
+                            "items": {
+                                "type": "string"
+                            },
+                            "type": "array"
+                        },
+                        {
+                            "type": "string"
+                        }
+                    ],
+                    "description": "If using [Persistent Store Endpoints](https://github.com/caronc/apprise-api?tab=readme-ov-file#persistent-storage-solution) the Configuration ID(s) to send to\n\nNote: If multiple keys are defined then MS will attempt to POST to each one individually",
+                    "title": "keys"
+                },
+                "name": {
+                    "description": "A friendly name used to identify webhook config in logs",
+                    "title": "name",
+                    "type": "string"
+                },
+                "tags": {
+                    "anyOf": [
+                        {
+                            "items": {
+                                "type": "string"
+                            },
+                            "type": "array"
+                        },
+                        {
+                            "type": "string"
+                        }
+                    ],
+                    "description": "Optional [tag(s)](https://github.com/caronc/apprise-api?tab=readme-ov-file#tagging) to send in the notification payload",
+                    "title": "tags"
+                },
+                "type": {
+                    "description": "Webhook type. Valid values are:\n\n* gotify\n* ntfy",
+                    "enum": [
+                        "apprise",
+                        "gotify",
+                        "ntfy"
+                    ],
+                    "examples": [
+                        "gotify"
+                    ],
+                    "title": "type",
+                    "type": "string"
+                },
+                "urls": {
+                    "anyOf": [
+                        {
+                            "items": {
+                                "type": "string"
+                            },
+                            "type": "array"
+                        },
+                        {
+                            "type": "string"
+                        }
+                    ],
+                    "description": "If using [Stateless Endpoints](https://github.com/caronc/apprise-api?tab=readme-ov-file#stateless-solution) the Apprise config URL(s) to send",
+                    "title": "urls"
+                }
+            },
+            "required": [
+                "host",
+                "type"
+            ],
+            "title": "AppriseConfig",
+            "type": "object"
+        },
         "ChromecastData": {
             "properties": {
                 "allowUnknownMedia": {
@@ -512,6 +593,73 @@
             "title": "DeezerSourceAIOConfig",
             "type": "object"
         },
+        "FileLogOptions": {
+            "properties": {
+                "frequency": {
+                    "anyOf": [
+                        {
+                            "enum": [
+                                "daily",
+                                "hourly"
+                            ],
+                            "type": "string"
+                        },
+                        {
+                            "type": "number"
+                        }
+                    ],
+                    "default": "'daily'",
+                    "description": "The amount of time a given rolling log file is used. Can be combined with size.\n\nUse `daily` or `hourly` to rotate file every day (or every hour). Existing file within the current day (or hour) will be re-used.\n\nNumerical values will be considered as a number of milliseconds. Using a numerical value will always create a new file upon startup.",
+                    "title": "frequency"
+                },
+                "level": {
+                    "description": "Specify the minimum log level to output to rotating files. If `false` no log files will be created.",
+                    "enum": [
+                        "debug",
+                        "error",
+                        false,
+                        "fatal",
+                        "info",
+                        "log",
+                        "silent",
+                        "verbose",
+                        "warn"
+                    ],
+                    "title": "level"
+                },
+                "path": {
+                    "default": "'./logs/app.log'",
+                    "description": "The path and filename to use for log files.\n\nIf using rolling files the filename will be appended with `.N` (a number) BEFORE the extension based on rolling status.\n\nMay also be specified using env LOG_PATH or a function that returns a string.\n\nIf path is relative the absolute path will be derived from `logBaseDir` (in `LoggerAppExtras`) which defaults to CWD",
+                    "title": "path",
+                    "type": [
+                        "string",
+                        "object"
+                    ]
+                },
+                "size": {
+                    "default": "'10MB'",
+                    "description": "The maximum size of a given rolling log file.\n\nCan be combined with frequency. Use k, m and g to express values in KB, MB or GB.\n\nNumerical values will be considered as MB.",
+                    "title": "size",
+                    "type": [
+                        "string",
+                        "number"
+                    ]
+                },
+                "timestamp": {
+                    "default": "'auto'",
+                    "description": "For rolling log files\n\nWhen\n* value passed to rolling destination is a string (`path` from LogOptions is a string) and\n* `frequency` is defined\n\nThis determines the format of the datetime inserted into the log file name:\n\n* `unix` - unix epoch timestamp in milliseconds\n* `iso`  - Full [ISO8601](https://en.wikipedia.org/wiki/ISO_8601) datetime IE '2024-03-07T20:11:34Z'\n* `auto`\n  * When frequency is `daily` only inserts date IE YYYY-MM-DD\n  * Otherwise inserts full ISO8601 datetime",
+                    "enum": [
+                        "auto",
+                        "iso",
+                        "unix"
+                    ],
+                    "title": "timestamp",
+                    "type": "string"
+                }
+            },
+            "title": "FileLogOptions",
+            "type": "object"
+        },
         "GotifyConfig": {
             "properties": {
                 "name": {
@@ -535,6 +683,7 @@
                 "type": {
                     "description": "Webhook type. Valid values are:\n\n* gotify\n* ntfy",
                     "enum": [
+                        "apprise",
                         "gotify",
                         "ntfy"
                     ],
@@ -1570,10 +1719,14 @@
             "type": "object"
         },
         "LogLevel": {
+            "description": "Names of log levels that can be invoked on the logger\n\nFrom lowest to highest:\n\n* `debug`\n* `verbose`\n* `log`\n* `info`\n* `warn`\n* `error`\n* `fatal`\n* `silent` (will never output anything)\n\nWhen used in `LogOptions` specifies the **minimum** level the output should log at.",
             "enum": [
                 "debug",
                 "error",
+                "fatal",
                 "info",
+                "log",
+                "silent",
                 "verbose",
                 "warn"
             ],
@@ -1581,29 +1734,33 @@
             "type": "string"
         },
         "LogOptions": {
+            "description": "Configure log levels and file options for an AppLogger.\n\n```ts\nconst infoLogger = loggerApp({\n level: 'info' // console and file will log any levels `info` and above\n});\n\nconst logger = loggerApp({\n  console: 'debug', // console will log `debug` and higher\n  file: 'warn' // file will log `warn` and higher\n});\n\nconst fileLogger = loggerRollingApp({\n  console: 'debug', // console will log `debug` and higher\n  file: {\n      level: 'warn', // file will log `warn` and higher\n      path: '/my/cool/path/output.log', // optionally, output to log file at this path\n      frequency: 'hourly', // optionally, rotate hourly\n  }\n});\n```",
             "properties": {
                 "console": {
+                    "$ref": "#/definitions/LogLevel",
                     "description": "Specify the minimum log level streamed to the console (or docker container)",
-                    "enum": [
-                        "debug",
-                        "error",
-                        false,
-                        "info",
-                        "verbose",
-                        "warn"
-                    ],
                     "title": "console"
                 },
                 "file": {
-                    "description": "Specify the minimum log level to output to rotating files. If `false` no log files will be created.",
-                    "enum": [
-                        "debug",
-                        "error",
-                        false,
-                        "info",
-                        "verbose",
-                        "warn"
+                    "anyOf": [
+                        {
+                            "$ref": "#/definitions/FileLogOptions"
+                        },
+                        {
+                            "enum": [
+                                "debug",
+                                "error",
+                                false,
+                                "fatal",
+                                "info",
+                                "log",
+                                "silent",
+                                "verbose",
+                                "warn"
+                            ]
+                        }
                     ],
+                    "description": "Specify the minimum log level to output to rotating files or file output options. If `false` no log files will be created.",
                     "title": "file"
                 },
                 "level": {
@@ -1611,11 +1768,6 @@
                     "default": "'info'",
                     "description": "Specify the minimum log level for all log outputs without their own level specified.\n\nDefaults to env `LOG_LEVEL` or `info` if not specified.",
                     "title": "level"
-                },
-                "stream": {
-                    "$ref": "#/definitions/LogLevel",
-                    "description": "Specify the minimum log level streamed to the UI",
-                    "title": "stream"
                 }
             },
             "title": "LogOptions",
@@ -2100,6 +2252,7 @@
                 "type": {
                     "description": "Webhook type. Valid values are:\n\n* gotify\n* ntfy",
                     "enum": [
+                        "apprise",
                         "gotify",
                         "ntfy"
                     ],
@@ -2391,37 +2544,13 @@
         "SourceAIOConfig": {
             "anyOf": [
                 {
-                    "$ref": "#/definitions/SpotifySourceAIOConfig"
-                },
-                {
-                    "$ref": "#/definitions/PlexSourceAIOConfig"
-                },
-                {
-                    "$ref": "#/definitions/TautulliSourceAIOConfig"
+                    "$ref": "#/definitions/ChromecastSourceAIOConfig"
                 },
                 {
                     "$ref": "#/definitions/DeezerSourceAIOConfig"
                 },
                 {
-                    "$ref": "#/definitions/SubsonicSourceAIOConfig"
-                },
-                {
                     "$ref": "#/definitions/JellySourceAIOConfig"
-                },
-                {
-                    "$ref": "#/definitions/LastFmSouceAIOConfig"
-                },
-                {
-                    "$ref": "#/definitions/YTMusicSourceAIOConfig"
-                },
-                {
-                    "$ref": "#/definitions/MPRISSourceAIOConfig"
-                },
-                {
-                    "$ref": "#/definitions/MopidySourceAIOConfig"
-                },
-                {
-                    "$ref": "#/definitions/ListenBrainzSourceAIOConfig"
                 },
                 {
                     "$ref": "#/definitions/JRiverSourceAIOConfig"
@@ -2430,10 +2559,34 @@
                     "$ref": "#/definitions/KodiSourceAIOConfig"
                 },
                 {
+                    "$ref": "#/definitions/LastFmSouceAIOConfig"
+                },
+                {
+                    "$ref": "#/definitions/ListenBrainzSourceAIOConfig"
+                },
+                {
+                    "$ref": "#/definitions/MopidySourceAIOConfig"
+                },
+                {
+                    "$ref": "#/definitions/MPRISSourceAIOConfig"
+                },
+                {
+                    "$ref": "#/definitions/PlexSourceAIOConfig"
+                },
+                {
+                    "$ref": "#/definitions/SpotifySourceAIOConfig"
+                },
+                {
+                    "$ref": "#/definitions/SubsonicSourceAIOConfig"
+                },
+                {
+                    "$ref": "#/definitions/TautulliSourceAIOConfig"
+                },
+                {
                     "$ref": "#/definitions/WebScrobblerSourceAIOConfig"
                 },
                 {
-                    "$ref": "#/definitions/ChromecastSourceAIOConfig"
+                    "$ref": "#/definitions/YTMusicSourceAIOConfig"
                 }
             ],
             "title": "SourceAIOConfig"
@@ -3000,6 +3153,9 @@
                 },
                 {
                     "$ref": "#/definitions/NtfyConfig"
+                },
+                {
+                    "$ref": "#/definitions/AppriseConfig"
                 }
             ],
             "title": "WebhookConfig"
@@ -3164,6 +3320,11 @@
                 false
             ],
             "title": "debugMode",
+            "type": "boolean"
+        },
+        "disableWeb": {
+            "description": "Disable web server from running/listening on port.\n\nThis will also make any ingress sources (Plex, Jellyfin, Tautulli, etc...) unusable",
+            "title": "disableWeb",
             "type": "boolean"
         },
         "logging": {
