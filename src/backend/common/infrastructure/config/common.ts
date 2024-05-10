@@ -16,7 +16,7 @@ export type CommonData = keyOmit<{ [key: string]: any }, "options">
 
 export interface RequestRetryOptions {
     /**
-     * default # of http request retries a source can make before error is thrown
+     * default # of http request retries a source/client can make before error is thrown
      *
      * @default 1
      * @examples [1]

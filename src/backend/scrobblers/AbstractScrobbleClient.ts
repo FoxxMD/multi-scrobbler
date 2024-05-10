@@ -99,16 +99,14 @@ export default abstract class AbstractScrobbleClient implements Authenticatable 
 
         this.scrobbledPlayObjs = new FixedSizeList<ScrobbledPlayObject>(this.MAX_STORED_SCROBBLES);
 
-        const {
-            data: {
-                options: {
-                    refreshEnabled = true,
-                    checkExistingScrobbles = true,
-                    verbose = {},
-                } = {},
-            } = {},
-        } = config;
         this.config = config;
+        const {
+            options: {
+                refreshEnabled = true,
+                checkExistingScrobbles = true,
+                verbose = {},
+            } = {},
+        } = this.config
         this.refreshEnabled = refreshEnabled;
         this.checkExistingScrobbles = checkExistingScrobbles;
 
@@ -617,7 +615,7 @@ ${closestMatch.breakdowns.join('\n')}`, {leaf: ['Dupe Check']});
             options: {
                 deadLetterRetries = 1
             } = {}
-        } = this.config.data;
+        } = this.config;
 
         const retries = attemptWithRetries ?? deadLetterRetries;
 
