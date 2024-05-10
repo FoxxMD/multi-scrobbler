@@ -70,11 +70,15 @@ export class SubsonicSource extends MemorySource {
 
     callApi = async <T extends SubsonicResponseCommon = SubsonicResponseCommon>(req: Request, retries = 0): Promise<T> => {
         const {
-            user,
-            password,
-            maxRequestRetries = 1,
-            retryMultiplier = DEFAULT_RETRY_MULTIPLIER
-        } = this.config.data;
+            data: {
+                user,
+                password
+            } = {},
+            options: {
+                maxRequestRetries = 1,
+                retryMultiplier = DEFAULT_RETRY_MULTIPLIER
+            } = {},
+        } = this.config;
 
         const queryOpts: Record<string, string> = {
             u: user,

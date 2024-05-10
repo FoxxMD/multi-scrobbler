@@ -39,7 +39,7 @@ export interface ScrobbleThresholds {
     percent?: number | null
 }
 
-export interface CommonSourceOptions {
+export interface CommonSourceOptions extends SourceRetryOptions {
     /**
      * If this source has INGRESS to MS (sends a payload, rather than MS GETTING requesting a payload)
      * then setting this option to true will make MS log the payload JSON to DEBUG output
@@ -90,7 +90,7 @@ export interface CommonSourceOptions {
     scrobbleThresholds?: ScrobbleThresholds
 }
 
-export interface CommonSourceData extends CommonData, SourceRetryOptions {
+export interface CommonSourceData extends CommonData {
 
 }
 

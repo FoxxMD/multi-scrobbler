@@ -414,7 +414,7 @@ export default class SpotifySource extends MemorySource {
         const {
             maxRequestRetries = 1,
             retryMultiplier = 2,
-        } = this.config.data;
+        } = this.config.options;
         try {
             return await func(this.spotifyApi);
         } catch (e) {

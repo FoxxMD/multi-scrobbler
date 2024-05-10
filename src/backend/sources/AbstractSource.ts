@@ -397,10 +397,10 @@ export default abstract class AbstractSource implements Authenticatable {
         this.pollRetries = 0;
 
         const {
-            data: {
+            options: {
                 maxPollRetries = 5,
                 retryMultiplier = DEFAULT_RETRY_MULTIPLIER,
-            } = {},
+            }
         } = this.config;
 
         // can't have negative retries!
