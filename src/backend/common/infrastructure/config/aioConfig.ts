@@ -2,17 +2,13 @@ import { LogOptions } from "@foxxmd/logging";
 import { ClientAIOConfig } from "./client/clients.js";
 import { RequestRetryOptions } from "./common.js";
 import { WebhookConfig } from "./health/webhooks.js";
-import { CommonSourceOptions, ScrobbleThresholds, SourceRetryOptions } from "./source/index.js";
+import { CommonSourceOptions, SourceRetryOptions } from "./source/index.js";
 import { SourceAIOConfig } from "./source/sources.js";
 
 
-export interface SourceDefaults extends SourceRetryOptions {
-    /**
-     * Set thresholds for when multi-scrobbler should consider a tracked play to be "scrobbable". If both duration and percent are defined then if either condition is met the track is scrobbled.
-     * */
-    scrobbleThresholds?: ScrobbleThresholds
-    options?: CommonSourceOptions
+export interface SourceDefaults extends CommonSourceOptions {
 }
+
 export interface AIOConfig {
     sourceDefaults?: SourceDefaults
     clientDefaults?: RequestRetryOptions

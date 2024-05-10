@@ -195,3 +195,5 @@ export interface MdnsDeviceInfo {
 }
 
 export type AbstractApiOptions = Record<any, any> & { logger: Logger }
+
+export type keyOmit<T, U extends keyof any> = T & { [P in U]?: never }

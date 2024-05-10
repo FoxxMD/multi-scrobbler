@@ -42,6 +42,8 @@ Using just one config file located at `CONFIG_DIR/config.json`:
       "data": {
         "clientId": "foxxSpotifyAppId", 
         "clientSecret": "foxxSpotifyAppSecret",
+      },
+      "options": {
         "maxRequestRetries": 2,  // override default max retries because spotify can...spotty
       }
     },

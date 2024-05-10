@@ -1,3 +1,5 @@
+import { keyOmit } from "../Atomic.js";
+
 export interface CommonConfig {
     name?: string
     data?: CommonData
@@ -10,10 +12,7 @@ export interface CommonConfig {
     enable?: boolean
 }
 
-export interface CommonData {
-    [key: string]: any
-    options?: Record<string, any>
-}
+export type CommonData = keyOmit<{ [key: string]: any }, "options">
 
 export interface RequestRetryOptions {
     /**

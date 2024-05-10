@@ -470,11 +470,9 @@ export default class ScrobbleSources {
             this.logger.warn(`${type} (${name}) source was disabled by config`);
             return;
         }
-
+        
         // add defaults
-        const {options: defaultOptions = {}, ...restDefaults} = defaults;
-        const data = {...defaults, ...d};
-        const compositeConfig: SourceConfig = {...clientConfig, data, options: {...defaultOptions, ...clientOptions}};
+        const compositeConfig: SourceConfig = {...clientConfig, data: d, options: {...defaults, ...clientOptions}};
 
         this.logger.debug(`(${name}) Constructing ${type} source`);
         let newSource: AbstractSource;
