@@ -113,9 +113,9 @@ export default class MemorySource extends AbstractSource {
     processRecentPlays = (datas: (PlayObject | PlayerStateData)[]) => {
 
         const {
-            data: {
+            options: {
                 scrobbleThresholds = {}
-            } = {}
+            }
         } = this.config;
 
         const newStatefulPlays: PlayObject[] = [];
