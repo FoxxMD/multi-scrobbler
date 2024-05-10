@@ -1,5 +1,6 @@
 import { LogOptions } from "@foxxmd/logging";
 import { ClientAIOConfig } from "./client/clients.js";
+import { CommonClientOptions } from "./client/index.js";
 import { RequestRetryOptions } from "./common.js";
 import { WebhookConfig } from "./health/webhooks.js";
 import { CommonSourceOptions, SourceRetryOptions } from "./source/index.js";
@@ -9,9 +10,12 @@ import { SourceAIOConfig } from "./source/sources.js";
 export interface SourceDefaults extends CommonSourceOptions {
 }
 
+export interface ClientDefaults extends CommonClientOptions {
+}
+
 export interface AIOConfig {
     sourceDefaults?: SourceDefaults
-    clientDefaults?: RequestRetryOptions
+    clientDefaults?: ClientDefaults
     sources?: SourceAIOConfig[]
     clients?: ClientAIOConfig[]
 

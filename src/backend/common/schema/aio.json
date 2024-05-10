@@ -308,6 +308,68 @@
             ],
             "title": "ClientAIOConfig"
         },
+        "ClientDefaults": {
+            "properties": {
+                "checkExistingScrobbles": {
+                    "default": true,
+                    "description": "Check client for an existing scrobble at the same recorded time as the \"new\" track to be scrobbled. If an existing scrobble is found this track is not track scrobbled.",
+                    "examples": [
+                        true
+                    ],
+                    "title": "checkExistingScrobbles",
+                    "type": "boolean"
+                },
+                "deadLetterRetries": {
+                    "default": 1,
+                    "description": "Number of times MS should automatically retry scrobbles in dead letter queue",
+                    "examples": [
+                        1
+                    ],
+                    "title": "deadLetterRetries",
+                    "type": "number"
+                },
+                "maxRequestRetries": {
+                    "default": 1,
+                    "description": "default # of http request retries a source/client can make before error is thrown",
+                    "examples": [
+                        1
+                    ],
+                    "title": "maxRequestRetries",
+                    "type": "number"
+                },
+                "refreshEnabled": {
+                    "default": true,
+                    "description": "Try to get fresh scrobble history from client when tracks to be scrobbled are newer than the last scrobble found in client history",
+                    "examples": [
+                        true
+                    ],
+                    "title": "refreshEnabled",
+                    "type": "boolean"
+                },
+                "retryMultiplier": {
+                    "default": 1.5,
+                    "description": "default retry delay multiplier (retry attempt * multiplier = # of seconds to wait before retrying)",
+                    "examples": [
+                        1.5
+                    ],
+                    "title": "retryMultiplier",
+                    "type": "number"
+                },
+                "verbose": {
+                    "description": "Options used for increasing verbosity of logging in MS (used for debugging)",
+                    "properties": {
+                        "match": {
+                            "$ref": "#/definitions/MatchLoggingOptions",
+                            "title": "match"
+                        }
+                    },
+                    "title": "verbose",
+                    "type": "object"
+                }
+            },
+            "title": "ClientDefaults",
+            "type": "object"
+        },
         "CommonClientData": {
             "title": "CommonClientData",
             "type": "object"
@@ -2078,30 +2140,6 @@
             "title": "PrioritiesConfig",
             "type": "object"
         },
-        "RequestRetryOptions": {
-            "properties": {
-                "maxRequestRetries": {
-                    "default": 1,
-                    "description": "default # of http request retries a source/client can make before error is thrown",
-                    "examples": [
-                        1
-                    ],
-                    "title": "maxRequestRetries",
-                    "type": "number"
-                },
-                "retryMultiplier": {
-                    "default": 1.5,
-                    "description": "default retry delay multiplier (retry attempt * multiplier = # of seconds to wait before retrying)",
-                    "examples": [
-                        1.5
-                    ],
-                    "title": "retryMultiplier",
-                    "type": "number"
-                }
-            },
-            "title": "RequestRetryOptions",
-            "type": "object"
-        },
         "ScrobbleThresholds": {
             "properties": {
                 "duration": {
@@ -2756,7 +2794,7 @@
             "type": "string"
         },
         "clientDefaults": {
-            "$ref": "#/definitions/RequestRetryOptions",
+            "$ref": "#/definitions/ClientDefaults",
             "title": "clientDefaults"
         },
         "clients": {
