@@ -21,6 +21,19 @@ export class TestScrobbler extends AbstractScrobbleClient {
         return (await this.existingScrobble(playObj)) !== undefined;
     }
 
+
+
+    playToClientPayload(playObject: PlayObject): object {
+        return playObject;
+    }
+
+}
+
+export class TestAuthScrobbler extends TestScrobbler {
+    constructor() {
+        super();
+        this.requiresAuth = true;
+    }
     doAuthentication = async() => {
         try {
             await request.get('http://example.com');
@@ -29,9 +42,4 @@ export class TestScrobbler extends AbstractScrobbleClient {
             throw e;
         }
     }
-
-    playToClientPayload(playObject: PlayObject): object {
-        return playObject;
-    }
-
 }

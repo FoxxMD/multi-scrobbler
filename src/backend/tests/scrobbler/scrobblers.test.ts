@@ -12,7 +12,7 @@ import withDuration from '../plays/withDuration.json';
 import { MockNetworkError, withRequestInterception } from "../utils/networking.js";
 import { asPlays, generatePlay, normalizePlays } from "../utils/PlayTestUtils.js";
 
-import { TestScrobbler } from "./TestScrobbler.js";
+import { TestAuthScrobbler, TestScrobbler } from "./TestScrobbler.js";
 
 chai.use(asPromised);
 
@@ -36,6 +36,8 @@ testScrobbler.verboseOptions = {
 };
 testScrobbler.lastScrobbleCheck = dayjs().subtract(60, 'seconds');
 
+const authScrobbler = new TestAuthScrobbler();
+
 describe('Networking', function () {
 
     describe('Authentication', function () {
@@ -50,8 +52,8 @@ describe('Networking', function () {
                     )
                 ],
                 async function() {
-                    await testScrobbler.testAuth();
-                    assert.isTrue(testScrobbler.authed);
+                    await authScrobbler.testAuth();
+                    assert.isFalse(authScrobbler.authGated());
                 }
             ));
 
@@ -64,9 +66,9 @@ describe('Networking', function () {
                     )
                 ],
                 async function() {
-                    await testScrobbler.testAuth();
-                    assert.isFalse(testScrobbler.authed);
-                    assert.isFalse(testScrobbler.authFailure);
+                    await authScrobbler.testAuth();
+                    assert.isTrue(authScrobbler.authGated());
+                    assert.isFalse(authScrobbler.authFailure);
                 }
             ));
 
@@ -79,9 +81,9 @@ describe('Networking', function () {
                     )
                 ],
                 async function() {
-                    await testScrobbler.testAuth();
-                    assert.isFalse(testScrobbler.authed);
-                    assert.isTrue(testScrobbler.authFailure);
+                    await authScrobbler.testAuth();
+                    assert.isTrue(authScrobbler.authGated());
+                    assert.isTrue(authScrobbler.authFailure);
                 }
             ));
     });

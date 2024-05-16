@@ -182,10 +182,10 @@ export class ListenbrainzApiClient extends AbstractApiClient {
             const resp = await this.callApi(request.get(this.url))
             return true;
         } catch (e) {
-            if(e.status === 410) {
+            if(e.status === 410 || e.message.includes('HTTP Status 410')) {
                 return true;
             }
-            return false;
+            throw e;
         }
     }
 

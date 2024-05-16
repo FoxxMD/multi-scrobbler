@@ -5,7 +5,7 @@ import { PlayObject } from "../../core/Atomic.js";
 import { buildTrackString, capitalize } from "../../core/StringUtils.js";
 import { isNodeNetworkException } from "../common/errors/NodeErrors.js";
 import { UpstreamError } from "../common/errors/UpstreamError.js";
-import { FormatPlayObjectOptions, INITIALIZING } from "../common/infrastructure/Atomic.js";
+import { FormatPlayObjectOptions } from "../common/infrastructure/Atomic.js";
 import { ListenBrainzClientConfig } from "../common/infrastructure/config/client/listenbrainz.js";
 import { ListenbrainzApiClient, ListenPayload } from "../common/vendor/ListenbrainzApiClient.js";
 import { Notifiers } from "../notifier/Notifiers.js";
@@ -27,23 +27,21 @@ export default class ListenbrainzScrobbler extends AbstractScrobbleClient {
 
     formatPlayObj = (obj: any, options: FormatPlayObjectOptions = {}) => ListenbrainzApiClient.formatPlayObj(obj, options);
 
-    initialize = async () => {
-        // @ts-expect-error TS(2322): Type 'number' is not assignable to type 'boolean'.
-        this.initialized = INITIALIZING;
-        if(this.config.data.token === undefined) {
-            this.logger.error('Could not initialize, must provide a User Token');
-            this.initialized = false;
-        } else {
-            try {
-                await this.api.testConnection();
-                this.initialized = true;
-                this.logger.info('Initialized');
-            } catch (e) {
-                this.logger.warn(new Error('Could not initialize', {cause: e}));
-                this.initialized = false;
-            }
+    protected async doBuildInitData(): Promise<true | string | undefined> {
+        const {
+            data: {
+                token,
+            } = {}
+        } = this.config;
+        if (token === undefined) {
+            throw new Error('Could not initialize, must provide a User Token');
         }
-        return this.initialized;
+        return true;
+    }
+
+    protected async doCheckConnection(): Promise<true | string | undefined> {
+        await this.api.testConnection();
+        return true;
     }
 
     doAuthentication = async () => {
