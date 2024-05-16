@@ -79,6 +79,8 @@ export default abstract class AbstractSource implements Authenticatable {
 
     emitter: EventEmitter;
 
+    protected SCROBBLE_BACKLOG_COUNT: number = 20;
+
     protected recentDiscoveredPlays: GroupedFixedPlays = new TupleMap<DeviceId, PlayUserId, FixedSizeList<ProgressAwarePlayObject>>();
 
     constructor(type: SourceType, name: string, config: SourceConfig, internal: InternalConfig, emitter: EventEmitter) {
@@ -314,8 +316,17 @@ export default abstract class AbstractSource implements Authenticatable {
         if (this.canBacklog) {
             this.logger.info('Discovering backlogged tracks from recently played API...');
             let backlogPlays: PlayObject[] = [];
+            const {
+                scrobbleBacklogCount = this.SCROBBLE_BACKLOG_COUNT
+            } = this.config.options || {};
+            let backlogLimit = scrobbleBacklogCount;
+            if(backlogLimit > this.SCROBBLE_BACKLOG_COUNT) {
+                this.logger.warn(`scrobbleBacklogCount (${scrobbleBacklogCount}) cannot be greater than max API limit (${this.SCROBBLE_BACKLOG_COUNT}), reverting to max...`);
+                backlogLimit = this.SCROBBLE_BACKLOG_COUNT;
+            }
             try {
-                backlogPlays = await this.getBackloggedPlays();
+                this.logger.verbose(`Fetching the last ${backlogLimit}${backlogLimit === this.SCROBBLE_BACKLOG_COUNT ? ' (max) ' : ''} listens to check for backlogging...`);
+                backlogPlays = await this.getBackloggedPlays({limit: backlogLimit});
             } catch (e) {
                 throw new Error('Error occurred while fetching backlogged plays', {cause: e});
             }
@@ -341,7 +352,7 @@ export default abstract class AbstractSource implements Authenticatable {
         }
     }
 
-    protected getBackloggedPlays = async (): Promise<PlayObject[]> => {
+    protected getBackloggedPlays = async (options: RecentlyPlayedOptions): Promise<PlayObject[]> => {
         this.logger.debug('Backlogging not implemented');
         return [];
     }

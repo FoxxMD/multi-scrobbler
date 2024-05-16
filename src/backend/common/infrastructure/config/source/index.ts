@@ -88,6 +88,14 @@ export interface CommonSourceOptions extends SourceRetryOptions {
      * Set thresholds for when multi-scrobbler should consider a tracked play to be "scrobbable". If both duration and percent are defined then if either condition is met the track is scrobbled.
      * */
     scrobbleThresholds?: ScrobbleThresholds
+
+    /**
+     * The number of listens to fetch when scrobbling from backlog
+     *
+     * * Only applies if this source supports fetching a listen history
+     * * If not specified it defaults to the maximum number of listens the source API supports
+     * */
+    scrobbleBacklogCount?: number
 }
 
 export interface CommonSourceData extends CommonData {

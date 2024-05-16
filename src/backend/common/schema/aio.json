@@ -506,6 +506,11 @@
                     "title": "scrobbleBacklog",
                     "type": "boolean"
                 },
+                "scrobbleBacklogCount": {
+                    "description": "The number of listens to fetch when scrobbling from backlog\n\n* Only applies if this source supports fetching a listen history\n* If not specified it defaults to the maximum number of listens the source API supports",
+                    "title": "scrobbleBacklogCount",
+                    "type": "number"
+                },
                 "scrobbleThresholds": {
                     "$ref": "#/definitions/ScrobbleThresholds",
                     "description": "Set thresholds for when multi-scrobbler should consider a tracked play to be \"scrobbable\". If both duration and percent are defined then if either condition is met the track is scrobbled.",
@@ -2283,6 +2288,11 @@
                     ],
                     "title": "scrobbleBacklog",
                     "type": "boolean"
+                },
+                "scrobbleBacklogCount": {
+                    "description": "The number of listens to fetch when scrobbling from backlog\n\n* Only applies if this source supports fetching a listen history\n* If not specified it defaults to the maximum number of listens the source API supports",
+                    "title": "scrobbleBacklogCount",
+                    "type": "number"
                 },
                 "scrobbleThresholds": {
                     "$ref": "#/definitions/ScrobbleThresholds",

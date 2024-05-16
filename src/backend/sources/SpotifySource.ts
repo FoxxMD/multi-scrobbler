@@ -68,6 +68,8 @@ export default class SpotifySource extends MemorySource {
         this.canPoll = true;
         this.canBacklog = true;
         this.supportsUpstreamRecentlyPlayed = true;
+        // https://developer.spotify.com/documentation/web-api/reference/get-recently-played
+        this.SCROBBLE_BACKLOG_COUNT = 50
     }
 
     static formatPlayObj(obj: PlayHistoryObject | CurrentlyPlayingObject, options: FormatPlayObjectOptions = {}): PlayObject {
@@ -502,7 +504,7 @@ export default class SpotifySource extends MemorySource {
         return true;
     }
 
-    protected getBackloggedPlays = async () => await this.getPlayHistory({formatted: true})
+    protected getBackloggedPlays = async (options: RecentlyPlayedOptions = {}) => await this.getPlayHistory({formatted: true, ...options})
 }
 
 const asPlayHistoryObject = (obj: object): obj is PlayHistoryObject => 'played_at' in obj

@@ -29,7 +29,10 @@ export default class ListenbrainzSource extends MemorySource {
         this.canBacklog = true;
         this.api = new ListenbrainzApiClient(name, config.data, {logger: this.logger});
         this.playerSourceOfTruth = SOURCE_SOT.HISTORY;
-        this.supportsUpstreamRecentlyPlayed = true;
+        this.supportsUpstreamRecentlyPlayed = true
+        // https://listenbrainz.readthedocs.io/en/latest/users/api/core.html#get--1-user-(user_name)-listens
+        // 1000 is way too high. maxing at 100
+        this.SCROBBLE_BACKLOG_COUNT = 100;
         this.logger.info(`Note: The player for this source is an analogue for the 'Now Playing' status exposed by ${this.type} which is NOT used for scrobbling. Instead, the 'recently played' or 'history' information provided by this source is used for scrobbles.`)
     }
 
@@ -77,5 +80,5 @@ export default class ListenbrainzSource extends MemorySource {
         }
     }
 
-    protected getBackloggedPlays = async () => await this.getRecentlyPlayed({formatted: true})
+    protected getBackloggedPlays = async (options: RecentlyPlayedOptions = {}) =>  await this.getRecentlyPlayed({formatted: true, ...options})
 }
