@@ -57,6 +57,11 @@
                     "title": "refreshEnabled",
                     "type": "boolean"
                 },
+                "refreshInitialCount": {
+                    "description": "The number of tracks to retrieve on initial refresh (related to scrobbleBacklogCount). If not specified this is the maximum supported for the client.",
+                    "title": "refreshInitialCount",
+                    "type": "number"
+                },
                 "retryMultiplier": {
                     "default": 1.5,
                     "description": "default retry delay multiplier (retry attempt * multiplier = # of seconds to wait before retrying)",

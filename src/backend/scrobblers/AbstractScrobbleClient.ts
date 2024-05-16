@@ -51,6 +51,7 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
     identifier: string;
 
     protected MAX_STORED_SCROBBLES = 40;
+    protected MAX_INITIAL_SCROBBLES_FETCH = this.MAX_STORED_SCROBBLES;
 
     #recentScrobblesList: PlayObject[] = [];
     scrobbledPlayObjs: FixedSizeList<ScrobbledPlayObject>;
@@ -130,7 +131,24 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
         return this.#recentScrobblesList;
     }
 
-    refreshScrobbles = async () => {
+    protected async postInitialize(): Promise<void> {
+        const {
+            options: {
+                refreshInitialCount= this.MAX_INITIAL_SCROBBLES_FETCH
+            } = {}
+        } = this.config;
+
+        let initialLimit = refreshInitialCount;
+        if(refreshInitialCount > this.MAX_INITIAL_SCROBBLES_FETCH) {
+            this.logger.warn(`Defined initial scrobbles count (${refreshInitialCount}) higher than maximum allowed (${this.MAX_INITIAL_SCROBBLES_FETCH}). Will use max instead.`);
+            initialLimit = this.MAX_INITIAL_SCROBBLES_FETCH;
+        }
+
+        this.logger.verbose(`Fetching up to ${initialLimit} initial scrobbles...`);
+        await this.refreshScrobbles(initialLimit);
+    }
+
+    refreshScrobbles = async (limit?: number) => {
         this.logger.debug('Scrobbler does not have refresh function implemented!');
     }
 

@@ -23,6 +23,11 @@ export default abstract class AbstractComponent {
             await this.checkConnection();
             await this.testAuth();
             this.logger.info('Fully Initialized!');
+            try {
+                await this.postInitialize();
+            } catch (e) {
+                this.logger.warn(new Error('Error occurred during post-initialization hook but was caught', {cause: e}));
+            }
             return true;
         } catch(e) {
             this.logger.error(new Error('Initialization failed', {cause: e}));
@@ -131,5 +136,14 @@ export default abstract class AbstractComponent {
     public isUsable() {
         return (this.buildOK === null || this.buildOK === true) &&
             (this.connectionOK === null || this.connectionOK === true);
+    }
+
+    /**
+     * Override to perform some action after successfully initializing
+     *
+     * Results will be try-catched and swallowed/logged if an error is thrown. This will not affect initialized state.
+     * */
+    protected async postInitialize(): Promise<void> {
+        return;
     }
 }

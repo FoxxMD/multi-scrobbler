@@ -24,6 +24,8 @@ export default class LastfmScrobbler extends AbstractScrobbleClient {
         super('lastfm', name, config, notifier, emitter, logger);
         // @ts-expect-error sloppy data structure assign
         this.api = new LastfmApiClient(name, config.data, {...options, logger})
+        // https://www.last.fm/api/show/user.getRecentTracks
+        this.MAX_INITIAL_SCROBBLES_FETCH = 200;
     }
 
     formatPlayObj = (obj: any, options: FormatPlayObjectOptions = {}) => LastfmApiClient.formatPlayObj(obj, options);
@@ -44,13 +46,13 @@ export default class LastfmScrobbler extends AbstractScrobbleClient {
         }
     }
 
-    refreshScrobbles = async () => {
+    refreshScrobbles = async (limit = this.MAX_STORED_SCROBBLES) => {
         if (this.refreshEnabled) {
             this.logger.debug('Refreshing recent scrobbles');
             const resp = await this.api.callApi<UserGetRecentTracksResponse>((client: any) => client.userGetRecentTracks({
                 user: this.api.user,
                 sk: this.api.client.sessionKey,
-                limit: this.MAX_STORED_SCROBBLES,
+                limit: limit,
                 extended: true
             }));
             const {

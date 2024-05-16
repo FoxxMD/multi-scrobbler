@@ -23,6 +23,9 @@ export default class ListenbrainzScrobbler extends AbstractScrobbleClient {
     constructor(name: any, config: ListenBrainzClientConfig, options = {}, notifier: Notifiers, emitter: EventEmitter, logger: Logger) {
         super('listenbrainz', name, config, notifier, emitter, logger);
         this.api = new ListenbrainzApiClient(name, config.data, {logger: this.logger});
+        // https://listenbrainz.readthedocs.io/en/latest/users/api/core.html#get--1-user-(user_name)-listens
+        // 1000 is way too high. maxing at 100
+        this.MAX_INITIAL_SCROBBLES_FETCH = 100;
     }
 
     formatPlayObj = (obj: any, options: FormatPlayObjectOptions = {}) => ListenbrainzApiClient.formatPlayObj(obj, options);
@@ -56,10 +59,10 @@ export default class ListenbrainzScrobbler extends AbstractScrobbleClient {
         }
     }
 
-    refreshScrobbles = async () => {
+    refreshScrobbles = async (limit = this.MAX_STORED_SCROBBLES) => {
         if (this.refreshEnabled) {
             this.logger.debug('Refreshing recent scrobbles');
-            const resp = await this.api.getRecentlyPlayed(this.MAX_STORED_SCROBBLES);
+            const resp = await this.api.getRecentlyPlayed(limit);
             this.logger.debug(`Found ${resp.length} recent scrobbles`);
             this.recentScrobbles = resp;
             if (this.recentScrobbles.length > 0) {

@@ -37,6 +37,11 @@ export interface CommonClientOptions extends RequestRetryOptions {
      * @examples [true]
      * */
     refreshEnabled?: boolean
+
+    /**
+     * The number of tracks to retrieve on initial refresh (related to scrobbleBacklogCount). If not specified this is the maximum supported for the client.
+     * */
+    refreshInitialCount?: number
     /**
      * Check client for an existing scrobble at the same recorded time as the "new" track to be scrobbled. If an existing scrobble is found this track is not track scrobbled.
      * @default true

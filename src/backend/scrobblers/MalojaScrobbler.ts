@@ -40,6 +40,7 @@ export default class MalojaScrobbler extends AbstractScrobbleClient {
 
     constructor(name: any, config: MalojaClientConfig, notifier: Notifiers, emitter: EventEmitter, logger: Logger) {
         super('maloja', name, config, notifier,  emitter,logger);
+        this.MAX_INITIAL_SCROBBLES_FETCH = 100;
     }
 
     static formatPlayObj(obj: MalojaScrobbleData, options: FormatPlayObjectOptions = {}): PlayObject {
@@ -298,11 +299,11 @@ export default class MalojaScrobbler extends AbstractScrobbleClient {
         }
     }
 
-    refreshScrobbles = async () => {
+    refreshScrobbles = async (limit = this.MAX_STORED_SCROBBLES) => {
         if (this.refreshEnabled) {
             this.logger.debug('Refreshing recent scrobbles');
             const {url} = this.config.data;
-            const resp = await this.callApi(request.get(`${url}/apis/mlj_1/scrobbles?max=${this.MAX_STORED_SCROBBLES}`));
+            const resp = await this.callApi(request.get(`${url}/apis/mlj_1/scrobbles?perpage=${limit}`));
             const {
                 body: {
                     list = [],
