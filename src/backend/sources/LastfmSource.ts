@@ -43,11 +43,6 @@ export default class LastfmSource extends MemorySource {
         return LastfmApiClient.formatPlayObj(obj, options);
     }
 
-    // initialize = async () => {
-    //     this.initialized = await this.api.initialize();
-    //     return this.initialized;
-    // }
-
     protected async doBuildInitData(): Promise<true | string | undefined> {
         return await this.api.initialize();
     }

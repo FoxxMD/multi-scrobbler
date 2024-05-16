@@ -1,10 +1,10 @@
-import { childLogger, Logger } from '@foxxmd/logging';
+import { childLogger } from '@foxxmd/logging';
 import dayjs, { Dayjs } from "dayjs";
 import { EventEmitter } from "events";
 import { FixedSizeList } from "fixed-size-list";
 import { PlayObject, TA_CLOSE } from "../../core/Atomic.js";
 import { buildTrackString, capitalize } from "../../core/StringUtils.js";
-import { isNodeNetworkException } from "../common/errors/NodeErrors.js";
+import AbstractComponent from "../common/AbstractComponent.js";
 import {
     Authenticatable,
     DEFAULT_POLLING_INTERVAL,
@@ -31,7 +31,6 @@ import {
     sortByNewestPlayDate,
     sortByOldestPlayDate,
 } from "../utils.js";
-import { findCauseByFunc } from "../utils/ErrorUtils.js";
 import { comparePlayTemporally, temporalAccuracyIsAtLeast } from "../utils/TimeUtils.js";
 
 export interface RecentlyPlayedOptions {
@@ -41,7 +40,7 @@ export interface RecentlyPlayedOptions {
     display?: boolean
 }
 
-export default abstract class AbstractSource implements Authenticatable {
+export default abstract class AbstractSource extends AbstractComponent implements Authenticatable {
 
     name: string;
     type: SourceType;
@@ -49,17 +48,8 @@ export default abstract class AbstractSource implements Authenticatable {
 
     config: SourceConfig;
     clients: string[];
-    logger: Logger;
     instantiatedAt: Dayjs;
     lastActivityAt: Dayjs;
-
-    requiresAuth: boolean = false;
-    requiresAuthInteraction: boolean = false;
-    authed: boolean = false;
-    authFailure?: boolean;
-
-    buildOK?: boolean | null;
-    connectionOK?: boolean | null;
 
     multiPlatform: boolean = false;
 
@@ -84,6 +74,7 @@ export default abstract class AbstractSource implements Authenticatable {
     protected recentDiscoveredPlays: GroupedFixedPlays = new TupleMap<DeviceId, PlayUserId, FixedSizeList<ProgressAwarePlayObject>>();
 
     constructor(type: SourceType, name: string, config: SourceConfig, internal: InternalConfig, emitter: EventEmitter) {
+        super();
         const {clients = [] } = config;
         this.type = type;
         this.name = name;
@@ -96,117 +87,6 @@ export default abstract class AbstractSource implements Authenticatable {
         this.localUrl = internal.localUrl;
         this.configDir = internal.configDir;
         this.emitter = emitter;
-    }
-
-    // default init function, should be overridden if init stage is required
-    initialize = async () => {
-        this.logger.debug('Attempting to initialize...');
-        try {
-            await this.buildInitData();
-            await this.checkConnection();
-            await this.testAuth();
-            this.logger.info('Fully Initialized!');
-            return true;
-        } catch(e) {
-            this.logger.error(new Error('Initialization failed', {cause: e}));
-            return false;
-        }
-    }
-
-    public async buildInitData() {
-        if(this.buildOK) {
-            return;
-        }
-        try {
-            const res = await this.doBuildInitData();
-            if(res === undefined) {
-                this.buildOK = null;
-                this.logger.debug('No required data to build.');
-                return;
-            }
-            if (res === true) {
-                this.logger.verbose('Building required data init succeeded');
-            } else if (typeof res === 'string') {
-                this.logger.verbose(`Building required data init succeeded => ${res}`);
-            }
-            this.buildOK = true;
-        } catch (e) {
-            this.buildOK = false;
-            throw new Error('Building required data for initialization failed', {cause: e});
-        }
-    }
-
-    /**
-     * Build any data/config/objects required for this Source to communicate with upstream service
-     *
-     * * Return undefined if not possible or not required
-     * * Return TRUE if build succeeded
-     * * Return string if build succeeded and should log result
-     * * Throw error on failure
-     * */
-    protected async doBuildInitData(): Promise<true | string | undefined> {
-        return;
-    }
-
-    public async checkConnection() {
-        try {
-            const res = await this.doCheckConnection();
-            if (res === undefined) {
-                this.logger.debug('Connection check was not required.');
-                this.connectionOK = null;
-                return;
-            } else if (res === true) {
-                this.logger.verbose('Connection check succeeded');
-            } else {
-                this.logger.verbose(`Connection check succeeded => ${res}`);
-            }
-            this.connectionOK = true;
-        } catch (e) {
-            this.connectionOK = false;
-            throw new Error('Communicating with upstream service failed', {cause: e});
-        }
-    }
-
-    /**
-     * Check Source upstream API/connection to ensure we can communicate
-     *
-     * * Return undefined if not possible or not required to check
-     * * Return TRUE if communication succeeded
-     * * Return string if communication succeeded and should log result
-     * * Throw error if communication failed
-     * */
-    protected async doCheckConnection(): Promise<true | string | undefined> {
-        return;
-    }
-
-    authGated = () => this.requiresAuth && !this.authed
-
-    canTryAuth = () => this.authGated() && this.authFailure !== true
-
-    protected doAuthentication = async (): Promise<boolean> => this.authed
-
-    testAuth = async () => {
-        if(!this.requiresAuth) {
-            return;
-        }
-
-        this.logger.debug('Checking Authentication...');
-        try {
-            this.authed = await this.doAuthentication();
-            this.authFailure = !this.authed;
-            this.logger.info(`Auth is ${this.authed ? 'OK' : 'NOT OK'}`)
-        } catch (e) {
-            // only signal as auth failure if error was NOT a node network error
-            this.authFailure = findCauseByFunc(e, isNodeNetworkException) === undefined;
-            this.authed = false;
-            throw new Error(`Authentication test failed!${this.authFailure === false ? ' Due to a network issue. Will retry authentication on next heartbeat.' : ''}`, {cause: e})
-        }
-    }
-
-    public isReady() {
-        return (this.buildOK === null || this.buildOK === true) &&
-            (this.connectionOK === null || this.connectionOK === true)
-            && !this.authGated();
     }
 
     getRecentlyPlayed = async (options: RecentlyPlayedOptions = {}): Promise<PlayObject[]> => []

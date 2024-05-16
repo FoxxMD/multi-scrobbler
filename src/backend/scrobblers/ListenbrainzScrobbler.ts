@@ -34,7 +34,7 @@ export default class ListenbrainzScrobbler extends AbstractScrobbleClient {
             } = {}
         } = this.config;
         if (token === undefined) {
-            throw new Error('Could not initialize, must provide a User Token');
+            throw new Error('Must provide a User Token');
         }
         return true;
     }
