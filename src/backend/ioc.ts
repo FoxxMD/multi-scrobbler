@@ -2,13 +2,13 @@ import { Logger } from "@foxxmd/logging";
 import { EventEmitter } from "events";
 import fs from 'fs';
 import { createContainer } from "iti";
-import normalizeUrl from 'normalize-url';
 import path from "path";
 import { projectDir } from "./common/index.js";
 import { WildcardEmitter } from "./common/WildcardEmitter.js";
 import { Notifiers } from "./notifier/Notifiers.js";
 import ScrobbleClients from "./scrobblers/ScrobbleClients.js";
 import ScrobbleSources from "./sources/ScrobbleSources.js";
+import { generateBaseURL } from "./utils.js";
 
 let version = 'Unknown';
 
@@ -71,19 +71,14 @@ const createRoot = (options?: RootOptions) => {
         sourceEmitter: () => new WildcardEmitter(),
         notifierEmitter: () => new EventEmitter(),
     }).add((items) => {
-        const base = normalizeUrl(baseUrl ?? 'http://localhost', {removeSingleSlash: true});
-        const u = new URL(base);
-        let localUrl = u.toString();
-        if(u.port === '' && u.pathname === '/') {
-            localUrl = `${u.origin}:${items.mainPort}`;
-        }
+        const localUrl = generateBaseURL(baseUrl, items.port)
         return {
             clients: () => new ScrobbleClients(items.clientEmitter, items.sourceEmitter, localUrl, items.configDir, options.logger),
             sources: () => new ScrobbleSources(items.sourceEmitter, localUrl, items.configDir, options.logger),
             notifiers: () => new Notifiers(items.notifierEmitter, items.clientEmitter, items.sourceEmitter, options.logger),
             localUrl,
             hasDefinedBaseUrl: baseUrl !== undefined,
-            isSubPath: u.pathname !== '/' && u.pathname.length > 0
+            isSubPath: localUrl.pathname !== '/' && localUrl.pathname.length > 0
         }
     });
 }

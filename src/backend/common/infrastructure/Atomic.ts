@@ -27,7 +27,7 @@ export const READY: ReadyState = 2;
 export const readyStates: ReadyState[] = [NOT_READY, GETTING_READY, READY];
 
 export interface InternalConfig {
-    localUrl: string
+    localUrl: URL
     configDir: string
 
     logger: Logger

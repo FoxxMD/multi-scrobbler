@@ -109,7 +109,7 @@ const configDir = process.env.CONFIG_DIR || path.resolve(projectDir, `./config`)
             await client.initScrobbleMonitoring();
         }
 
-        const scrobbleSources = root.get('sources');//new ScrobbleSources(localUrl, configDir);
+        const scrobbleSources = root.get('sources');
         await scrobbleSources.buildSourcesFromConfig([]);
 
         // check ambiguous client/source types like this for now

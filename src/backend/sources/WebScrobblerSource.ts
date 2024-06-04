@@ -46,7 +46,7 @@ export class WebScrobblerSource extends MemorySource {
     }
 
     protected async doBuildInitData(): Promise<true | string | undefined> {
-        this.logger.info(`Accepting requests at ${this.localUrl}/api/webscrobbler${this.config.data.slug === undefined ? '' : `/${this.config.data.slug}`}`);
+        this.logger.info(`Accepting requests at ${this.localUrl.toString()}/api/webscrobbler${this.config.data.slug === undefined ? '' : `/${this.config.data.slug}`}`);
         return true;
     }
 

@@ -10,6 +10,9 @@ import utc from 'dayjs/plugin/utc.js';
 import { Request } from "express";
 import { accessSync, constants, promises } from "fs";
 import JSON5 from 'json5';
+// https://github.com/jfromaniello/url-join#in-nodejs
+import { join as joinPath } from 'node:path/posix';
+import normalizeUrl from "normalize-url";
 import pathUtil from "path";
 import { TimeoutError, WebapiError } from "spotify-web-api-node/src/response-error.js";
 import { PlayObject } from "../core/Atomic.js";
@@ -765,3 +768,25 @@ export const comparingMultipleArtists = (existing: PlayObject, candidate: PlayOb
     return eArtists.length > 1 || cArtists.length > 1;
 }
 
+export const generateBaseURL = (userUrl: string | undefined, defaultPort: number | string): URL => {
+    const urlStr = userUrl ?? `http://localhost:${defaultPort}`;
+    const base = normalizeUrl(urlStr, {removeSingleSlash: true});
+    const u = new URL(base);
+    if(u.port === '') {
+        if(u.protocol === 'https:') {
+            u.port = '443';
+        } else if(userUrl.includes(`${u.hostname}:80`)) {
+            u.port = '80';
+        } else {
+            u.port = defaultPort.toString();
+        }
+    }
+    return u;
+}
+
+export const joinedUrl = (url: URL, ...paths: string[]): URL => {
+    // https://github.com/jfromaniello/url-join#in-nodejs
+    const finalUrl = new URL(url);
+    finalUrl.pathname = joinPath(url.pathname, ...paths);
+    return finalUrl;
+}

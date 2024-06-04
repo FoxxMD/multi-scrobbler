@@ -19,6 +19,7 @@ import {
 import { SpotifySourceConfig } from "../common/infrastructure/config/source/spotify.js";
 import {
     combinePartsToString,
+    joinedUrl,
     parseRetryAfterSecsFromObj,
     readJson,
     sleep,
@@ -205,7 +206,7 @@ export default class SpotifySource extends MemorySource {
             redirectUri,
         } = this.config.data || {};
 
-        const rdUri = redirectUri || `${this.localUrl}/callback`;
+        const rdUri = redirectUri || joinedUrl(this.localUrl, 'callback');
 
         const apiConfig = {
             clientId,

@@ -50,11 +50,11 @@ export default class ScrobbleSources {
     sources: AbstractSource[] = [];
     logger: Logger;
     configDir: string;
-    localUrl: string;
+    localUrl: URL;
 
     emitter: WildcardEmitter;
 
-    constructor(emitter: EventEmitter, localUrl: string, configDir: string = defaultConfigDir, parentLogger: Logger) {
+    constructor(emitter: EventEmitter, localUrl: URL, configDir: string = defaultConfigDir, parentLogger: Logger) {
         this.emitter = emitter;
         this.configDir = configDir;
         this.localUrl = localUrl;

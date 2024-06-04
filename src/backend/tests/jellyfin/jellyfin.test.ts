@@ -28,7 +28,7 @@ describe('Jellyfin Payload Parsing', function () {
 
     describe('Correctly detects events as valid/invalid', function () {
 
-        const jfSource = new JellyfinSource('Test', {data: {}}, {localUrl: 'test', configDir: 'test', logger: loggerTest}, new EventEmitter());
+        const jfSource = new JellyfinSource('Test', {data: {}}, {localUrl: new URL('http://test'), configDir: 'test', logger: loggerTest}, new EventEmitter());
 
         it('Should parse PlayProgress with Audio ItemType as valid event', async function () {
             const fixture = dataAsFixture(samplePayload[0]);

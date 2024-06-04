@@ -53,7 +53,7 @@ export default abstract class AbstractSource extends AbstractComponent implement
 
     multiPlatform: boolean = false;
 
-    localUrl: string;
+    localUrl: URL;
 
     configDir: string;
 

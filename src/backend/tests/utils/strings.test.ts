@@ -1,6 +1,6 @@
 import { assert } from 'chai';
 import { describe, it } from 'mocha';
-import { intersect } from "../../utils.js";
+import { generateBaseURL, intersect, joinedUrl } from "../../utils.js";
 import {
     compareNormalizedStrings,
     normalizeStr,
@@ -141,5 +141,60 @@ describe('Play Strings',function () {
             assert.equal(res.primaryComposite, test.expected.track);
             assert.sameDeepMembers(artists, test.expected.artists);
         }
+    });
+});
+
+describe('URL Parsing', function () {
+    describe('Base URL', function () {
+
+       it('should return http://localhost:9078 if no url is specified', function () {
+           assert.equal(generateBaseURL(undefined, 9078).toString(), 'http://localhost:9078/');
+       });
+
+        it('should normalize URL without protocol to HTTP', function () {
+            assert.include(generateBaseURL('192.168.0.1', 9078).toString(), 'http://192.168.0.1');
+            assert.include(generateBaseURL('my.domain.local', 9078).toString(), 'http://my.domain.local');
+        });
+
+        it('should use 443 for port, instead of default port, if protocol is https and no port is specified', function () {
+            assert.include(generateBaseURL('https://192.168.0.1', 9078).toString(), 'https://192.168.0.1');
+            assert.include(generateBaseURL('https://my.domain.local', 9078).toString(), 'https://my.domain.local');
+        });
+
+        it('should preserve port if explicitly specified', function () {
+            assert.include(generateBaseURL('http://my.domain.local:80', 9078).toString(), 'http://my.domain.local');
+            assert.include(generateBaseURL('192.168.0.1:80', 9078).toString(), 'http://192.168.0.1');
+            assert.include(generateBaseURL('192.168.0.1:8000', 9078).toString(), 'http://192.168.0.1:8000');
+            assert.include(generateBaseURL('my.domain.local:9075', 9078).toString(), 'http://my.domain.local:9075');
+            assert.include(generateBaseURL('https://my.domain.local:9075', 9078).toString(), 'https://my.domain.local:9075');
+        });
+
+        it('should use default port if protocol is HTTP and port is not specified', function () {
+            assert.include(generateBaseURL('192.168.0.1', 9078).toString(), 'http://192.168.0.1:9078');
+            assert.include(generateBaseURL('http://my.domain.local', 9078).toString(), 'http://my.domain.local:9078');
+        });
+
+        it('should preserve pathname for subfolder usage', function () {
+            assert.include(generateBaseURL('192.168.0.1/my/subfolder', 9078).toString(), 'http://192.168.0.1:9078/my/subfolder');
+            assert.include(generateBaseURL('http://my.domain.local/my/subfolder', 9078).toString(), 'http://my.domain.local:9078/my/subfolder');
+            assert.include(generateBaseURL('http://my.domain.local:5000/my/subfolder', 9078).toString(), 'http://my.domain.local:5000/my/subfolder');
+            assert.include(generateBaseURL('https://my.domain.local/my/subfolder', 9078).toString(), 'https://my.domain.local/my/subfolder');
+        });
+    });
+
+    describe('URL Path Joining', function() {
+       it('should join a path to a base URL without erasing base pathname', function() {
+           const baseUrl = generateBaseURL('192.168.0.1/my/subfolder', 9078);
+           assert.equal(joinedUrl(baseUrl, 'lastfm/callback').toString(), 'http://192.168.0.1:9078/my/subfolder/lastfm/callback');
+       });
+        it('should join a path to a base URL while handling leading and trailing slashes', function() {
+            const baseUrl = generateBaseURL('192.168.0.1/my/subfolder', 9078);
+            assert.equal(joinedUrl(baseUrl, '/lastfm/callback').toString(), 'http://192.168.0.1:9078/my/subfolder/lastfm/callback');
+            assert.equal(joinedUrl(baseUrl, 'lastfm/callback/').toString(), 'http://192.168.0.1:9078/my/subfolder/lastfm/callback/');
+
+            const baseUrlNoSub = generateBaseURL('192.168.0.1', 9078);
+            assert.equal(joinedUrl(baseUrlNoSub, '/lastfm/callback').toString(), 'http://192.168.0.1:9078/lastfm/callback');
+            assert.equal(joinedUrl(baseUrlNoSub, 'lastfm/callback/').toString(), 'http://192.168.0.1:9078/lastfm/callback/');
+        });
     });
 });

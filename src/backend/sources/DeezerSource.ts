@@ -6,7 +6,7 @@ import request from 'superagent';
 import { PlayObject } from "../../core/Atomic.js";
 import { DEFAULT_RETRY_MULTIPLIER, FormatPlayObjectOptions, InternalConfig } from "../common/infrastructure/Atomic.js";
 import { DeezerSourceConfig } from "../common/infrastructure/config/source/deezer.js";
-import { parseRetryAfterSecsFromObj, readJson, sleep, sortByOldestPlayDate, writeFile, } from "../utils.js";
+import { joinedUrl, parseRetryAfterSecsFromObj, readJson, sleep, sortByOldestPlayDate, writeFile, } from "../utils.js";
 import AbstractSource, { RecentlyPlayedOptions } from "./AbstractSource.js";
 
 export default class DeezerSource extends AbstractSource {
@@ -42,7 +42,7 @@ export default class DeezerSource extends AbstractSource {
             redirectUri,
         };
 
-        this.redirectUri = redirectUri || `${this.localUrl}/deezer/callback`;
+        this.redirectUri = redirectUri || joinedUrl(this.localUrl, 'deezer/callback').toString();
 
         this.workingCredsPath = `${this.configDir}/currentCreds-${name}.json`;
         this.canPoll = true;
