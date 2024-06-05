@@ -206,7 +206,7 @@ export default class SpotifySource extends MemorySource {
             redirectUri,
         } = this.config.data || {};
 
-        const rdUri = redirectUri || joinedUrl(this.localUrl, 'callback');
+        const rdUri: string = redirectUri || joinedUrl(this.localUrl, 'callback').toString();
 
         const apiConfig = {
             clientId,
