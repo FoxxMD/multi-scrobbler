@@ -31,8 +31,8 @@ export interface ClientStatusData {
     initialized: boolean;
 }
 
-export type PlayObjectIncludeTypes = 'time' | 'artist' | 'track' | 'timeFromNow' | 'trackId';
-export const recentIncludes: PlayObjectIncludeTypes[] = ['time', 'timeFromNow', 'track', 'artist'];
+export type PlayObjectIncludeTypes = 'time' | 'artist' | 'track' | 'timeFromNow' | 'trackId' | 'comment';
+export const recentIncludes: PlayObjectIncludeTypes[] = ['time', 'timeFromNow', 'track', 'artist', 'comment'];
 
 export interface TrackStringOptions<T = string> {
     include?: PlayObjectIncludeTypes[]
@@ -41,6 +41,7 @@ export interface TrackStringOptions<T = string> {
         track?: (t: string,data: AmbPlayObject, hasExistingParts?: boolean) => T | string
         time?: (t: Dayjs, i?: ScrobbleTsSOC) => T | string
         timeFromNow?: (t: Dayjs) => T | string
+        comment?: (c: string | undefined) => T | string
         reducer?: (arr: (T | string)[]) => T //(acc: T, curr: T | string) => T
     }
 }
@@ -126,6 +127,8 @@ export interface PlayMeta {
     nowPlaying?: boolean
 
     scrobbleTsSOC?: ScrobbleTsSOC
+
+    comment?: string
 
     [key: string]: any
 }

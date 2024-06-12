@@ -21,6 +21,7 @@ export default class YTMusicSource extends AbstractSource {
     constructor(name: string, config: YTMusicSourceConfig, internal: InternalConfig, emitter: EventEmitter) {
         super('ytmusic', name, config, internal, emitter);
         this.canPoll = true;
+        this.supportsUpstreamRecentlyPlayed = true;
     }
 
     static formatPlayObj(obj: ITrackDetail, options: FormatPlayObjectOptions = {}): PlayObject {
@@ -99,6 +100,37 @@ export default class YTMusicSource extends AbstractSource {
         } catch (e) {
             throw e;
         }
+    }
+
+    protected getLibraryHistoryPlaylists = async (): Promise<IPlaylistDetail[]> => {
+        // internally for this call YT returns a *list* of playlists with decreasing granularity from most recent to least recent like this:
+        // * Today
+        // * Yesterday
+        // * ....
+        // * January 2023
+        //
+        // the playlist returned can therefore change abruptly IE MS started yesterday and new music listened to today -> "today" playlist is cleared
+        try {
+            return await (await this.api()).getLibraryHistory(true) as IPlaylistDetail[];
+        } catch (e) {
+            throw e;
+        }
+    }
+
+    getUpstreamRecentlyPlayed = async (options: RecentlyPlayedOptions = {}): Promise<PlayObject[]> => {
+        let playlists: IPlaylistDetail[];
+        try {
+            playlists = await this.getLibraryHistoryPlaylists()
+        } catch (e) {
+            throw e;
+        }
+        const playlistAwareTracks: PlayObject[][] = [];
+
+        for(const playlist of playlists) {
+            playlistAwareTracks.push(playlist.tracks.map((x) => YTMusicSource.formatPlayObj(x, {newFromSource: false})).map((x) => ({...x,meta: {...x.meta, comment: playlist.name}})))
+        }
+
+       return playlistAwareTracks.flat(1).slice(0, 100);
     }
 
     /**
