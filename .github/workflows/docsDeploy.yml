@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - master
+      - developDocs
     # Review gh actions docs if you want to further define triggers, paths, etc
     # https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#on
 
@@ -22,6 +23,9 @@ jobs:
         run: npm ci
         working-directory: ./docsite
       - name: Build website
+        env:
+          ANALYTICS: ${{ secrets.ANALYTICS }}
+          ANALYTICS_DOMAIN: ${{ secrets.ANALYTICS_DOMAIN }}
         run: npm run build
         working-directory: ./docsite
 
