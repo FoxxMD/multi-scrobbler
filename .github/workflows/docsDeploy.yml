@@ -24,8 +24,8 @@ jobs:
         working-directory: ./docsite
       - name: Build website
         env:
-          ANALYTICS: ${{ secrets.ANALYTICS }}
-          ANALYTICS_DOMAIN: ${{ secrets.ANALYTICS_DOMAIN }}
+          ANALYTICS: ${{ vars.ANALYTICS }}
+          ANALYTICS_DOMAIN: ${{ vars.ANALYTICS_DOMAIN }}
         run: npm run build
         working-directory: ./docsite
 
