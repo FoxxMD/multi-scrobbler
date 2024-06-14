@@ -1797,7 +1797,21 @@
                     "type": "string"
                 },
                 "options": {
-                    "$ref": "#/definitions/CommonSourceOptions",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/CommonSourceOptions"
+                        },
+                        {
+                            "properties": {
+                                "logAuthUpdateChanges": {
+                                    "description": "When true MS will log to DEBUG what parts of the cookie are updated by YTM",
+                                    "title": "logAuthUpdateChanges",
+                                    "type": "boolean"
+                                }
+                            },
+                            "type": "object"
+                        }
+                    ],
                     "title": "options"
                 }
             },

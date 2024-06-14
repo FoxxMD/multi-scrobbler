@@ -5,8 +5,8 @@ import { IYouTubeMusicAuthenticated } from "youtube-music-ts-api/interfaces-prim
 import { IPlaylistDetail, ITrackDetail } from "youtube-music-ts-api/interfaces-supplementary";
 import { PlayObject } from "../../core/Atomic.js";
 import { FormatPlayObjectOptions, InternalConfig } from "../common/infrastructure/Atomic.js";
-import { YTMusicSourceConfig } from "../common/infrastructure/config/source/ytmusic.js";
-import { parseDurationFromTimestamp, playObjDataMatch } from "../utils.js";
+import { YTMusicCredentials, YTMusicSourceConfig } from "../common/infrastructure/config/source/ytmusic.js";
+import { parseDurationFromTimestamp, playObjDataMatch, readJson, writeFile } from "../utils.js";
 import AbstractSource, { RecentlyPlayedOptions } from "./AbstractSource.js";
 
 export default class YTMusicSource extends AbstractSource {
@@ -18,10 +18,57 @@ export default class YTMusicSource extends AbstractSource {
 
     recentlyPlayed: PlayObject[] = [];
 
+    workingCredsPath: string;
+    currentCreds!: YTMusicCredentials;
+
     constructor(name: string, config: YTMusicSourceConfig, internal: InternalConfig, emitter: EventEmitter) {
         super('ytmusic', name, config, internal, emitter);
         this.canPoll = true;
         this.supportsUpstreamRecentlyPlayed = true;
+        this.workingCredsPath = `${this.configDir}/currentAuth-ytm-${name}.json`;
+    }
+
+    protected writeCurrentAuth = async (cookie: string, authUser: number) => {
+        await writeFile(this.workingCredsPath, JSON.stringify({
+            cookie,
+            authUser
+        }));
+    }
+
+    protected async doBuildInitData(): Promise<true | string | undefined> {
+        let creds: YTMusicCredentials;
+        try {
+            creds = await readJson(this.workingCredsPath, {throwOnNotFound: false}) as YTMusicCredentials;
+            if(creds !== undefined) {
+                this.currentCreds = creds;
+                return `Read updated credentials from file currentAuth-ytm-${this.name}.json`;
+            }
+        } catch (e) {
+            this.logger.warn('Current YTMusic credentials file exists but could not be parsed', { path: this.workingCredsPath });
+        }
+        if(creds === undefined) {
+            if(this.config.data.cookie === undefined) {
+                throw new Error('No YTM cookies were found in configuration');
+            }
+            this.currentCreds = this.config.data;
+            return 'Read initial credentials from config';
+        }
+    }
+
+    doAuthentication = async () => {
+        try {
+            await this.getRecentlyPlayed();
+            return true;
+        } catch (e) {
+            if(e.message.includes('Status code: 401')) {
+                let hint = 'Verify your cookie and authUser are correct.';
+                if(this.currentCreds.authUser === undefined) {
+                    hint = `${hint} TIP: 'authUser' is not defined your credentials. If you are using Chrome to retrieve credentials from music.youtube.com make sure the value from the 'X-Goog-AuthUser' is used as 'authUser'.`;
+                }
+                this.logger.error(`Authentication failed with the given credentials. ${hint} | Error => ${e.message}`);
+            }
+            throw e;
+        }
     }
 
     static formatPlayObj(obj: ITrackDetail, options: FormatPlayObjectOptions = {}): PlayObject {
@@ -71,6 +118,35 @@ export default class YTMusicSource extends AbstractSource {
 
     recentlyPlayedTrackIsValid = (playObj: PlayObject) => playObj.meta.newFromSource
 
+    protected onAuthUpdate = (cookieStr: string, authUser: number, updated: Map<string, {new: string, old: string}>) => {
+        const {
+            options: {
+                logAuthUpdateChanges = false
+            } = {}
+        } = this.config;
+
+        if(logAuthUpdateChanges) {
+            const parts: string[] = [];
+            if(authUser !== this.currentCreds.authUser) {
+                parts.push(`X-Goog-Authuser: ${authUser}`);
+            }
+            for(const [k,v] of updated) {
+                parts.push(`Cookie ${k}: Old => ${v.old} | New => ${v.new}`);
+            }
+            this.logger.debug(`Updated Auth -->\n${parts.join('\n')}`);
+        } else {
+            this.logger.debug(`Updated Auth`);
+        }
+
+        this.currentCreds = {
+            cookie: cookieStr,
+            authUser
+        };
+
+
+        this.writeCurrentAuth(cookieStr, authUser).then(() => {});
+    }
+
     api = async (): Promise<IYouTubeMusicAuthenticated> => {
         if(this.apiInstance !== undefined) {
             return this.apiInstance;
@@ -78,7 +154,7 @@ export default class YTMusicSource extends AbstractSource {
         // @ts-expect-error default does exist
         const ytm = new  YouTubeMusic.default() as YouTubeMusic;
         try {
-            this.apiInstance = await ytm.authenticate(this.config.data.cookie, this.config.data.authUser);
+            this.apiInstance = await ytm.authenticate(this.config.data.cookie, this.config.data.authUser, this.onAuthUpdate);
         } catch (e: any) {
             this.logger.error('Failed to authenticate', e);
             throw e;
@@ -195,22 +271,6 @@ export default class YTMusicSource extends AbstractSource {
 
         return newPlays;
         
-    }
-
-    doAuthentication = async () => {
-        try {
-            await this.getRecentlyPlayed();
-            return true;
-        } catch (e) {
-            if(e.message.includes('Status code: 401')) {
-                let hint = 'Verify your cookie and authUser are correct.';
-                if(this.config.data.authUser === undefined) {
-                    hint = `${hint} TIP: 'authUser' is not defined your credentials. If you are using Chrome to retrieve credentials from music.youtube.com make sure the value from the 'X-Goog-AuthUser' is used as 'authUser'.`;
-                }
-                this.logger.error(`Authentication failed with the given credentials. ${hint} | Error => ${e.message}`);
-            }
-            throw e;
-        }
     }
 
     onPollPostAuthCheck = async () => {
