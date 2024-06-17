@@ -787,6 +787,6 @@ export const generateBaseURL = (userUrl: string | undefined, defaultPort: number
 export const joinedUrl = (url: URL, ...paths: string[]): URL => {
     // https://github.com/jfromaniello/url-join#in-nodejs
     const finalUrl = new URL(url);
-    finalUrl.pathname = joinPath(url.pathname, ...paths);
+    finalUrl.pathname = joinPath(url.pathname, ...(paths.filter(x => x.trim() !== '')));
     return finalUrl;
 }
