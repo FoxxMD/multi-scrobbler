@@ -1,6 +1,5 @@
 import { Logger } from "@foxxmd/logging";
-import { publish } from 'ntfy';
-import { Config } from "ntfy/interfaces.js";
+import { Config, publish } from 'ntfy';
 import request from "superagent";
 import { NtfyConfig, PrioritiesConfig, WebhookPayload } from "../common/infrastructure/config/health/webhooks.js";
 import { AbstractWebhookNotifier } from "./AbstractWebhookNotifier.js";
