@@ -6,7 +6,13 @@ import { IPlaylistDetail, ITrackDetail } from "youtube-music-ts-api/interfaces-s
 import { PlayObject } from "../../core/Atomic.js";
 import { FormatPlayObjectOptions, InternalConfig } from "../common/infrastructure/Atomic.js";
 import { YTMusicCredentials, YTMusicSourceConfig } from "../common/infrastructure/config/source/ytmusic.js";
-import { parseDurationFromTimestamp, playObjDataMatch, readJson, writeFile } from "../utils.js";
+import { parseDurationFromTimestamp, readJson, writeFile } from "../utils.js";
+import {
+    getPlaysDiff,
+    humanReadableDiff,
+    playsAreAddedOnly,
+    playsAreSortConsistent
+} from "../utils/PlayComparisonUtils.js";
 import AbstractSource, { RecentlyPlayedOptions } from "./AbstractSource.js";
 
 export default class YTMusicSource extends AbstractSource {
@@ -230,28 +236,21 @@ export default class YTMusicSource extends AbstractSource {
             newPlays = plays;
         } else {
 
-            // iterate through each play until we find one that matched the "newest" from the recently played
-            for (const [i, value] of plays.entries()) {
-                if (this.recentlyPlayed.length === 0) {
-                    // playlist was empty when we started, nothing to compare to so all tracks are new
-                    newPlays.push(value);
-                } else if (this.recentlyPlayed.length !== plays.length) { // if there is a difference in list length we need to check for consecutive repeat tracks as well
-                    const match = playObjDataMatch(value, this.recentlyPlayed[0]);
-                    if (!match) {
-                        newPlays.push(value)
-                    } else if (match && plays.length > i + 1 && playObjDataMatch(plays[i + 1], this.recentlyPlayed[0])) { // if it matches but next ALSO matches the current it's a repeat "new"
-                        // check if repeated track
-                        newPlays.push(value)
-                    } else {
-                        break;
-                    }
-                } else if (!playObjDataMatch(value, this.recentlyPlayed[0])) {
-                    // if the newest doesn't match a play then the play is new
-                    newPlays.push(value);
-                } else {
-                    // otherwise we're back known plays
-                    break;
-                }
+            if(playsAreSortConsistent(this.recentlyPlayed, plays)) {
+                return newPlays;
+            }
+            const [ok, diff, addType] = playsAreAddedOnly(this.recentlyPlayed, plays);
+            if(!ok || addType === 'insert' || addType === 'append') {
+                const playsDiff = getPlaysDiff(this.recentlyPlayed, plays)
+                const humanDiff = humanReadableDiff(this.recentlyPlayed, plays, playsDiff);
+                this.logger.warn('YTM History returned temporally inconsistent order, resetting watched history to new list.');
+                this.logger.warn(`Changes from last seen list:
+${humanDiff}`);
+                this.recentlyPlayed = plays;
+                return newPlays;
+            } else {
+                // new plays
+                newPlays = [...diff].reverse();
             }
 
             if(newPlays.length > 0) {

@@ -47,6 +47,7 @@
     "@astronautlabs/mdns": "^1.0.7",
     "@awaitjs/express": "^0.6.3",
     "@curvenote/ansi-to-react": "^7.0.0",
+    "@donedeal0/superdiff": "^1.1.1",
     "@fortawesome/fontawesome-svg-core": "^6.4.2",
     "@fortawesome/free-solid-svg-icons": "^6.4.2",
     "@fortawesome/react-fontawesome": "^0.2.0",

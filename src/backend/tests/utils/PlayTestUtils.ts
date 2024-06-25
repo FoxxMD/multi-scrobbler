@@ -93,3 +93,7 @@ export const generatePlay = (data: ObjectPlayData = {}, meta: PlayMeta = {}): Pl
         }
     }
 }
+
+export const generatePlays = (numberOfPlays: number, data: ObjectPlayData = {}, meta: PlayMeta = {}): PlayObject[] => {
+    return Array.from(Array(numberOfPlays), () => generatePlay(data, meta));
+}
