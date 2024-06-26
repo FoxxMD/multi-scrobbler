@@ -1,0 +1,45 @@
+name: Publish Docker image to Dockerhub
+
+on:
+  push:
+    branches:
+      - 'master'
+      - 'develop'
+    tags:
+      - '*.*.*'
+    # don't trigger if just updating docs
+    paths-ignore:
+      - '**.md'
+  # use release instead of tags once version is correctly parsed
+  # https://github.com/docker/metadata-action/issues/422
+  # https://github.com/docker/metadata-action/issues/240
+#  release:
+#    types: [ published ]
+
+jobs:
+
+  test:
+    name: Build and push container images
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out the repo
+        uses: actions/checkout@v4
+
+      - name: Set short git commit SHA
+        id: vars
+        # https://dev.to/hectorleiva/github-actions-and-creating-a-short-sha-hash-8b7
+        # short sha available under env.COMMIT_SHORT_SHA
+        run: |
+          calculatedSha=$(git rev-parse --short ${{ github.sha }})
+          echo "COMMIT_SHORT_SHA=$calculatedSha" >> $GITHUB_ENV
+
+      - name: Check App Version
+        env:
+          # use release instead of tags once version is correctly parsed
+          #APP_VERSION: ${{ github.event.release.tag_name }}
+
+          # https://github.com/actions/runner/issues/409#issuecomment-752775072
+          # https://stackoverflow.com/a/69919067/1469797
+          APP_VERSION: ${{ contains(github.ref, 'refs/tags/') && github.ref_name || format('{0}-{1}', github.ref_name, env.COMMIT_SHORT_SHA ) }}
+        run: |
+          echo $APP_VERSION
