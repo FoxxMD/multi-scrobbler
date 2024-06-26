@@ -115,6 +115,9 @@ jobs:
         uses: docker/build-push-action@v5
         with:
           context: .
+          # https://github.com/docker/build-push-action/issues/1026#issue-2041857786
+          build-args: |
+            APP_BUILD_VERSION=${{env.APP_VERSION}}
           file: ${{ matrix.dockerfile }}
           push: ${{ github.event_name != 'pull_request' && !env.ACT}}
           tags: ${{ steps.meta.outputs.tags }}

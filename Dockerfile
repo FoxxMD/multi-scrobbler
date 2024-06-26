@@ -60,6 +60,10 @@ COPY --from=base /usr/local/lib /usr/local/lib
 ENV NODE_ENV=production
 ENV IS_DOCKER=true
 ENV COLORED_STD=true
+
+# https://stackoverflow.com/a/63640896/1469797
+ARG APP_BUILD_VERSION
+ENV APP_VERSION=$APP_BUILD_VERSION
 #
 #RUN yarn global add patch-package \
 #    && yarn install --production=true \
