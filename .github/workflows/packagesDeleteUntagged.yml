@@ -1,14 +1,21 @@
 name: Delete Untagged Packages
 on:
   schedule:
-    - cron: "0 12 * * 1" # see https://docs.github.com/en/actions/reference/events-that-trigger-workflows#scheduled-events
-
+    - cron: '30 1 * * *'
+  workflow_run:
+    workflows: ["Publish Docker image to Dockerhub"]
+    types:
+      - completed
+  workflow_dispatch:
 jobs:
   delete-untagged:
     runs-on: ubuntu-latest
+    permissions:
+      packages: write
     steps:
-      - uses: actions/delete-package-versions@v5
+      - uses: dataaxiom/ghcr-cleanup-action@v1
         with:
-          package-name: 'multi-scrobbler'
-          package-type: 'container'
-          delete-only-untagged-versions: 'true'
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+# maybe set up for PR close later
+# https://github.com/dataaxiom/ghcr-cleanup-action?tab=readme-ov-file#delete-image-when-pull-request-is-closed
