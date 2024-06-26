@@ -1,0 +1,14 @@
+name: Delete Untagged Packages
+on:
+  schedule:
+    - cron: "0 12 * * 1" # see https://docs.github.com/en/actions/reference/events-that-trigger-workflows#scheduled-events
+
+jobs:
+  delete-untagged:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/delete-package-versions@v5
+        with:
+          package-name: 'multi-scrobbler'
+          package-type: 'container'
+          delete-only-untagged-versions: 'true'
