@@ -64,8 +64,10 @@ jobs:
         # https://dev.to/hectorleiva/github-actions-and-creating-a-short-sha-hash-8b7
         # short sha available under env.COMMIT_SHORT_SHA
         run: |
-          calculatedSha=$(git rev-parse --short ${{ github.sha }})
+          calculatedSha=$(git rev-parse --short HEAD)
+          branchName=$(git rev-parse --abbrev-ref HEAD)
           echo "COMMIT_SHORT_SHA=$calculatedSha" >> $GITHUB_ENV
+          echo "COMMIT_BRANCH=$branchName" >> $GITHUB_ENV
 
       - name: Log in to Docker Hub
         if: github.event_name != 'pull_request'
@@ -111,7 +113,7 @@ jobs:
 
         # https://github.com/actions/runner/issues/409#issuecomment-752775072
         # https://stackoverflow.com/a/69919067/1469797
-          APP_VERSION: ${{ contains(github.ref, 'refs/tags/') && github.ref_name || format('{0}-{1}', github.ref_name, env.COMMIT_SHORT_SHA ) }}
+          APP_VERSION: ${{ contains(github.ref, 'refs/tags/') && github.ref_name || format('{0}-{1}', env.COMMIT_BRANCH, env.COMMIT_SHORT_SHA ) }}
         uses: docker/build-push-action@v5
         with:
           context: .

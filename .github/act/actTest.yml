@@ -32,13 +32,25 @@ jobs:
       - name: Check out the repo
         uses: actions/checkout@v4
 
-      - name: Set short git commit SHA
+      - name: Debug
+        run: echo $JSON
+        env:
+          JSON: ${{ toJSON(github) }}
+
+      - name: Set git state to ENV
         id: vars
         # https://dev.to/hectorleiva/github-actions-and-creating-a-short-sha-hash-8b7
         # short sha available under env.COMMIT_SHORT_SHA
         run: |
-          calculatedSha=$(git rev-parse --short ${{ github.sha }})
+          calculatedSha=$(git rev-parse --short HEAD)
+          branchName=$(git rev-parse --abbrev-ref HEAD)
           echo "COMMIT_SHORT_SHA=$calculatedSha" >> $GITHUB_ENV
+          echo "COMMIT_BRANCH=$branchName" >> $GITHUB_ENV
+
+#      - name: Set push event short ref
+#        run: |
+#          shortEventRef=${github.event.push.ref:10}
+#          echo "SHORT_REF=$shortEventRef" >> $GITHUB_ENV
 
       - name: Check App Version
         env:
@@ -47,7 +59,7 @@ jobs:
 
           # https://github.com/actions/runner/issues/409#issuecomment-752775072
           # https://stackoverflow.com/a/69919067/1469797
-          APP_VERSION: ${{ contains(github.ref, 'refs/tags/') && github.ref_name || format('{0}-{1}', github.ref_name, env.COMMIT_SHORT_SHA ) }}
+          APP_VERSION: ${{ contains(github.ref, 'refs/tags/') && github.ref_name || format('{0}-{1}', env.COMMIT_BRANCH, env.COMMIT_SHORT_SHA ) }}
         run: |
           echo $APP_VERSION
 
@@ -77,7 +89,7 @@ jobs:
 
           # https://github.com/actions/runner/issues/409#issuecomment-752775072
           # https://stackoverflow.com/a/69919067/1469797
-          APP_VERSION: ${{ contains(github.ref, 'refs/tags/') && github.ref_name || format('{0}-{1}', github.ref_name, env.COMMIT_SHORT_SHA ) }}
+          APP_VERSION: ${{ contains(github.ref, 'refs/tags/') && github.ref_name || format('{0}-{1}', env.COMMIT_BRANCH, env.COMMIT_SHORT_SHA ) }}
         uses: docker/build-push-action@v5
         with:
           context: .
