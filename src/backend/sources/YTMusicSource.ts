@@ -235,7 +235,6 @@ export default class YTMusicSource extends AbstractSource {
             this.recentlyPlayed = plays;
             newPlays = plays;
         } else {
-
             if(playsAreSortConsistent(this.recentlyPlayed, plays)) {
                 return newPlays;
             }
@@ -251,20 +250,18 @@ ${humanDiff}`);
             } else {
                 // new plays
                 newPlays = [...diff].reverse();
-            }
+                this.recentlyPlayed = plays;
 
-            if(newPlays.length > 0) {
                 newPlays = newPlays.map((x) => ({
-                        data: {
-                            ...x.data,
-                            playDate: dayjs().startOf('minute')
-                        },
-                        meta: {
-                            ...x.meta,
-                            newFromSource: true
-                        }
-                    }));
-                this.recentlyPlayed = newPlays.concat(this.recentlyPlayed).slice(0, 20);
+                    data: {
+                        ...x.data,
+                        playDate: dayjs().startOf('minute')
+                    },
+                    meta: {
+                        ...x.meta,
+                        newFromSource: true
+                    }
+                }));
             }
         }
 
