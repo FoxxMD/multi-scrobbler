@@ -31,7 +31,6 @@ export default defineConfig(() => {
             sourcemap: true
         },
         define: {
-            "__APP_VERSION__": JSON.stringify((process.env.APP_VERSION ?? 'Unknown').toString()),
             "__USE_HASH_ROUTER__": JSON.stringify((process.env.USE_HASH_ROUTER ?? false))
         }
     };

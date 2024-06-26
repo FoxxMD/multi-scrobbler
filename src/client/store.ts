@@ -1,14 +1,15 @@
-import {configureStore} from '@reduxjs/toolkit'
+import { configureStore } from '@reduxjs/toolkit'
 // Or from '@reduxjs/toolkit/query/react'
-import {setupListeners} from '@reduxjs/toolkit/query'
-import {statusApi} from './status/statusApi';
-import {clientSlice, sourceSlice} from "./status/ducks";
-import {logsReducer} from "./logs/logDucks";
-import {logsApi} from "./logs/logsApi";
-import {recentApi} from "./recent/recentDucks";
-import {scrobbledApi} from "./scrobbled/scrobbledDucks";
-import {deadApi, deadSlice} from "./deadLetter/deadLetterDucks";
-import {scrobblerApi} from './components/statusCard/clientDucks';
+import { setupListeners } from '@reduxjs/toolkit/query'
+import { scrobblerApi } from './components/statusCard/clientDucks';
+import { deadApi, deadSlice } from "./deadLetter/deadLetterDucks";
+import { logsReducer } from "./logs/logDucks";
+import { logsApi } from "./logs/logsApi";
+import { recentApi } from "./recent/recentDucks";
+import { scrobbledApi } from "./scrobbled/scrobbledDucks";
+import { clientSlice, sourceSlice } from "./status/ducks";
+import { statusApi } from './status/statusApi';
+import { versionApi } from "./Version";
 
 export const store = configureStore({
     reducer: {
@@ -19,6 +20,7 @@ export const store = configureStore({
         [deadApi.reducerPath]: deadApi.reducer,
         [scrobbledApi.reducerPath]: scrobbledApi.reducer,
         [scrobblerApi.reducerPath]: scrobblerApi.reducer,
+        [versionApi.reducerPath]: versionApi.reducer,
         //parts: statusReducer
         clients: clientSlice.reducer,
         sources: sourceSlice.reducer,
@@ -28,7 +30,7 @@ export const store = configureStore({
     // Adding the api middleware enables caching, invalidation, polling,
     // and other useful features of `rtk-query`.
     middleware: (getDefaultMiddleware) =>
-        getDefaultMiddleware().concat([statusApi.middleware, logsApi.middleware, recentApi.middleware, scrobbledApi.middleware, deadApi.middleware, scrobblerApi.middleware]),
+        getDefaultMiddleware().concat([statusApi.middleware, logsApi.middleware, recentApi.middleware, scrobbledApi.middleware, deadApi.middleware, scrobblerApi.middleware, versionApi.middleware]),
 })
 
 // optional, but required for refetchOnFocus/refetchOnReconnect behaviors

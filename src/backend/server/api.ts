@@ -440,6 +440,10 @@ export const setupApi = (app: ExpressWithAsync, logger: Logger, appLoggerStream:
         return res.status((clientsReady && sourcesReady) ? 200 : 500).json({messages: sourceMessages.concat(clientMessages)});
     });
 
+    app.getAsync('/api/version', async (req, res) => {
+       return res.json({version: root.get('version')});
+    });
+
     app.useAsync('/api/*', async (req, res) => {
         const remote = req.connection.remoteAddress;
         const proxyRemote = req.headers["x-forwarded-for"];
