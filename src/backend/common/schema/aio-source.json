@@ -1189,6 +1189,86 @@
             "title": "MopidySourceAIOConfig",
             "type": "object"
         },
+        "MusikcubeData": {
+            "properties": {
+                "device_id": {
+                    "title": "device_id",
+                    "type": "string"
+                },
+                "password": {
+                    "description": "Password set in Musikcube https://github.com/clangen/musikcube/wiki/remote-api-documentation\n\n* musikcube -> settings -> server setup -> password",
+                    "title": "password",
+                    "type": "string"
+                },
+                "url": {
+                    "default": "ws://localhost:7905",
+                    "description": "URL of the Musikcube Websocket (Metadata) server to connect to\n\nYou MUST have enabled 'metadata' server and set a password: https://github.com/clangen/musikcube/wiki/remote-api-documentation\n  * musikcube -> settings -> server setup\n\nThe URL you provide here will have all parts not explicitly defined filled in for you so if these are not the default you must define them.\n\nParts => [default value]\n\n* Protocol => `ws://`\n* Hostname => `localhost`\n* Port => `7905`",
+                    "examples": [
+                        "ws://localhost:7905"
+                    ],
+                    "title": "url",
+                    "type": "string"
+                }
+            },
+            "required": [
+                "password"
+            ],
+            "title": "MusikcubeData",
+            "type": "object"
+        },
+        "MusikcubeSourceAIOConfig": {
+            "properties": {
+                "clients": {
+                    "description": "Restrict scrobbling tracks played from this source to Clients with names from this list. If list is empty is not present Source scrobbles to all configured Clients.",
+                    "examples": [
+                        [
+                            "MyMalojaConfigName",
+                            "MyLastFMConfigName"
+                        ]
+                    ],
+                    "items": {
+                        "type": "string"
+                    },
+                    "title": "clients",
+                    "type": "array"
+                },
+                "data": {
+                    "$ref": "#/definitions/MusikcubeData",
+                    "title": "data"
+                },
+                "enable": {
+                    "default": true,
+                    "description": "Should MS use this client/source? Defaults to true",
+                    "examples": [
+                        true
+                    ],
+                    "title": "enable",
+                    "type": "boolean"
+                },
+                "name": {
+                    "description": "Unique identifier for this source.",
+                    "title": "name",
+                    "type": "string"
+                },
+                "options": {
+                    "$ref": "#/definitions/CommonSourceOptions",
+                    "title": "options"
+                },
+                "type": {
+                    "enum": [
+                        "musikcube"
+                    ],
+                    "title": "type",
+                    "type": "string"
+                }
+            },
+            "required": [
+                "data",
+                "type"
+            ],
+            "title": "MusikcubeSourceAIOConfig",
+            "type": "object"
+        },
         "PlexSourceAIOConfig": {
             "properties": {
                 "clients": {
@@ -1362,6 +1442,9 @@
                 },
                 {
                     "$ref": "#/definitions/MPRISSourceAIOConfig"
+                },
+                {
+                    "$ref": "#/definitions/MusikcubeSourceAIOConfig"
                 },
                 {
                     "$ref": "#/definitions/PlexSourceAIOConfig"

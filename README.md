@@ -24,6 +24,7 @@ A javascript app to scrobble music you listened to, to [Maloja](https://github.c
   * [JRiver](/docsite/docs/configuration/configuration.md#jriver)
   * [Kodi](/docsite/docs/configuration/configuration.md#kodi)
   * [Google Cast (Chromecast)](/docsite/docs/configuration/configuration.md#google-cast--chromecast-)
+  * [Musikcube](/docsite/docs/configuration/configuration.md#muikcube)
 * Supports scrobbling to many **Clients**
   * [Maloja](/docsite/docs/configuration/configuration.md#maloja)
   * [Last.fm](/docsite/docs/configuration/configuration.md#lastfm)

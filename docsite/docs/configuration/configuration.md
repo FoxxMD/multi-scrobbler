@@ -846,6 +846,38 @@ Note: [Manually configuring cast device connections](#connecting-devices) is onl
 
 See [`chromecast.json.example`](https://github.com/FoxxMD/multi-scrobbler/blob/master/config/chromecast.json.example) or [explore the schema with an example and live editor/validator](https://json-schema.app/view/%23%2Fdefinitions%2FChromecastSourceConfig/%23%2Fdefinitions%2FChromecastData?url=https%3A%2F%2Fraw.githubusercontent.com%2FFoxxMD%2Fmulti-scrobbler%2Fmaster%2Fsrc%2Fbackend%2Fcommon%2Fschema%2Fsource.json)
 
+## [Musikcube](https://musikcube.com)
+
+In order to use Musikcube configure it to accept [websocket connections](https://github.com/clangen/musikcube/wiki/remote-api-documentation) in **server setup**:
+
+* Enable the **Metadata Server**
+* Set a **Password**
+
+Both of these settings are found in _Musikcube -> (s)ettings -> server setup_
+
+![Server Setup](musikcube.jpg)
+
+The URL used by MS has the syntax:
+
+```
+[ws|wss]://HOST:[PORT]
+```
+
+The **port** is the same as shown in the server setup screenshot from above, under **metadata server enabled**. If no port is provided to MS it will default to `7905`.
+
+If no URL is provided to MS it will try to use `ws://localhost:7905`
+
+### ENV-Based
+
+| Environmental Variable | Required? | Default               | Description                          |
+|------------------------|-----------|-----------------------|--------------------------------------|
+| `MC_URL`               | No        | `ws://localhost:7905` | Use port set for **metadata server** |
+| `MC_PASSWORD`          | Yes       |                       |                                      |
+
+### File-Based
+
+See [`musikcube.json.example`](https://github.com/FoxxMD/multi-scrobbler/blob/master/config/chromecast.json.example) or [explore the schema with an example and live editor/validator](https://json-schema.app/view/%23%2Fdefinitions%2FMuikcubeSourceConfig/%23%2Fdefinitions%2FMuikcubeData?url=https%3A%2F%2Fraw.githubusercontent.com%2FFoxxMD%2Fmulti-scrobbler%2Fmaster%2Fsrc%2Fbackend%2Fcommon%2Fschema%2Fsource.json)
+
 # Client Configurations
 
 ## [Maloja](https://github.com/krateng/maloja)
