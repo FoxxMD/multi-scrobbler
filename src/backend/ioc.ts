@@ -1,6 +1,7 @@
 import { Logger } from "@foxxmd/logging";
 import { EventEmitter } from "events";
 import fs from 'fs';
+import git, { Commit } from "git-last-commit";
 import { createContainer } from "iti";
 import path from "path";
 import { projectDir } from "./common/index.js";
@@ -10,25 +11,31 @@ import ScrobbleClients from "./scrobblers/ScrobbleClients.js";
 import ScrobbleSources from "./sources/ScrobbleSources.js";
 import { generateBaseURL } from "./utils.js";
 
-let version = 'Unknown';
+let version: string;
+let packageVersion: string | undefined = undefined;
+let envVersion: string | undefined = process.env.APP_VERSION;
+if(envVersion !== undefined && envVersion.trim() === '') {
+    envVersion = undefined;
+}
+let gitVersion: string | undefined = undefined;
 
-if(process.env.APP_VERSION === undefined) {
-    if(fs.existsSync('./package.json')) {
+try {
+    if (fs.existsSync('./package.json')) {
         try {
             const pkg = fs.readFileSync('./package.json') as unknown as string;
             try {
-                version = JSON.parse(pkg).version || 'unknown'
+                packageVersion = JSON.parse(pkg).version || 'unknown'
             } catch (e) {
                 // don't care
             }
         } catch (e) {
             // don't care
         }
-    } else if(fs.existsSync('./package-lock.json')) {
+    } else if (fs.existsSync('./package-lock.json')) {
         try {
             const pkg = fs.readFileSync('./package-lock.json') as unknown as string;
             try {
-                version = JSON.parse(pkg).version || 'unknown'
+                packageVersion = JSON.parse(pkg).version || 'unknown'
             } catch (e) {
                 // don't care
             }
@@ -36,9 +43,38 @@ if(process.env.APP_VERSION === undefined) {
             // don't care
         }
     }
-    process.env.APP_VERSION = version;
-} else {
-    version = process.env.APP_VERSION;
+} catch (e) {
+    // swallow!
+}
+
+export const parseGitVersion = async (logger?: Logger): Promise<[Commit, string] | undefined> => {
+    try {
+        const gitInfo = await new Promise((resolve, reject) => {
+            git.getLastCommit((err, commit) => {
+                if(err) {
+                    reject(err);
+                }
+                // read commit object properties
+                resolve(commit);
+            });
+        }) as Commit;
+        const parts = [];
+        if(gitInfo.tags.length > 0) {
+            parts.push(gitInfo.tags[0]);
+        } else {
+            if(gitInfo.branch !== undefined) {
+                parts.push(gitInfo.branch);
+            }
+            parts.push(gitInfo.shortHash);
+        }
+        gitVersion = parts.join('-');
+        return [gitInfo, gitVersion];
+    } catch (e) {
+        if(process.env.DEBUG_MODE === "true") {
+            logger.debug(new Error('Could not get git info, continuing...', {cause: e}));
+        }
+        return undefined;
+    }
 }
 
 let root: ReturnType<typeof createRoot>;
@@ -61,6 +97,17 @@ const createRoot = (options?: RootOptions) => {
     if(disableWeb === undefined) {
         disableWeb = process.env.DISABLE_WEB === 'true';
     }
+
+    if(envVersion !== undefined) {
+        version = envVersion;
+    } else if(gitVersion !== undefined) {
+        version = gitVersion;
+    } else if(packageVersion !== undefined) {
+        version = packageVersion;
+    } else {
+        version = 'Unknown';
+    }
+
     return createContainer().add({
         version,
         configDir: configDir,
