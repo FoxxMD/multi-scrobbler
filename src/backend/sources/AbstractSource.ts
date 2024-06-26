@@ -434,6 +434,10 @@ export default abstract class AbstractSource extends AbstractComponent implement
         } catch (e) {
             this.logger.error('Error occurred while polling');
             this.logger.error(e);
+            if(e.message.includes('Status code: 401')) {
+                this.authed = false;
+                this.authFailure = true;
+            }
             this.emitEvent('statusChange', {status: 'Idle'});
             this.polling = false;
             throw e;
