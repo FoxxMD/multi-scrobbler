@@ -139,9 +139,9 @@ export default class YTMusicSource extends AbstractSource {
             for(const [k,v] of updated) {
                 parts.push(`Cookie ${k}: Old => ${v.old} | New => ${v.new}`);
             }
-            this.logger.debug(`Updated Auth -->\n${parts.join('\n')}`);
+            this.logger.info(`Updated Auth -->\n${parts.join('\n')}`);
         } else {
-            this.logger.debug(`Updated Auth`);
+            this.logger.verbose(`Updated Auth`);
         }
 
         this.currentCreds = {
