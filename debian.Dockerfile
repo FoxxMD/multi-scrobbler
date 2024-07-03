@@ -1,4 +1,3 @@
-#FROM ghcr.io/linuxserver/baseimage-ubuntu:jammy as base
 FROM ghcr.io/linuxserver/baseimage-debian:bookworm as base
 
 ENV TZ=Etc/GMT
@@ -23,6 +22,7 @@ RUN \
     apt-get install --no-install-recommends -y \
         #ca-certificates \
         xz-utils \
+        avahi-utils \
         curl && \
   echo "**** Fetch and install node****" && \
     # get node/npm directly from nodejs dist \
@@ -31,8 +31,6 @@ RUN \
     tar -xJf "node-v$NODE_VERSION-linux-$ARCH.tar.xz" -C /usr --strip-components=1 --no-same-owner && \
     rm "node-v$NODE_VERSION-linux-$ARCH.tar.xz" && \
     ln -s /usr/bin/node /usr/bin/nodejs && \
-#    curl -sL https://deb.nodesource.com/setup_18.x | bash - && \
-#    apt-get install --no-install-recommends -y nodejs && \
     npm update -g npm && \
   echo "**** cleanup ****" && \
     # https://github.com/nodejs/docker-node/blob/main/18/bookworm-slim/Dockerfile#L49
@@ -74,13 +72,12 @@ COPY --chown=abc:abc patches ./patches
 # -- this always succeeds but a good sanity check
 #RUN npm install -g https://tls-test.npmjs.com/tls-test-1.0.0.tgz
 
-# This FAILS when building arm64 but not amd64 (and alpine-based Dockerfile has no issues building arm64)
+# This FAILED for node < 20 when building arm64 but not amd64 (and alpine-based Dockerfile has no issues building arm64)
 # see https://github.com/FoxxMD/multi-scrobbler/issues/126
 RUN npm ci \
     --verbose \
 #   --no-audit \
     && chown -R root:root node_modules
-# running with --no-audit does not have any affect even though the error only logs with prefix 'npm verb audit error'
 
 COPY --chown=abc:abc . /app
 
@@ -100,6 +97,10 @@ COPY --from=base /usr/lib /usr/lib
 
 ENV NODE_ENV=production
 ENV IS_DOCKER=true
+
+# https://stackoverflow.com/a/63640896/1469797
+ARG APP_BUILD_VERSION
+ENV APP_VERSION=$APP_BUILD_VERSION
 
 RUN npm ci --omit=dev \
     && npm cache clean --force \

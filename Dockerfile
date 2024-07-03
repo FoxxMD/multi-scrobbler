@@ -27,11 +27,7 @@ WORKDIR /app
 
 FROM base as build
 
-# would very much like to use YARN for dependency management but its got show-stopping bad design for prod dependencies
-# https://github.com/yarnpkg/yarn/issues/6323 -- always downloads devDependencies -- and im not about to migrate to v2 since alpine doesn't support it yet
-
 # copy dep/TS config and install dev dependencies
-#COPY --chown=abc:abc package.json tsconfig.json yarn.lock ./
 COPY --chown=abc:abc package*.json tsconfig.json ./
 COPY --chown=abc:abc patches ./patches
 
@@ -45,7 +41,6 @@ COPY --chown=abc:abc . /app
 ENV NODE_ENV=production
 
 RUN npm run build && rm -rf node_modules
-#RUN yarn run build && rm -rf node_modules
 
 FROM base as app
 
@@ -64,14 +59,6 @@ ENV COLORED_STD=true
 # https://stackoverflow.com/a/63640896/1469797
 ARG APP_BUILD_VERSION
 ENV APP_VERSION=$APP_BUILD_VERSION
-#
-#RUN yarn global add patch-package \
-#    && yarn install --production=true \
-#    && yarn global remove patch-package \
-#    && yarn cache clean --mirror \
-#    && chown abc:abc node_modules \
-#    && rm -rf node_modules/ts-node \
-#    && rm -rf node_modules/typescript
 
 RUN npm ci --omit=dev \
     && npm cache clean --force \
