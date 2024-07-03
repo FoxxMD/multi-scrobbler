@@ -50,8 +50,8 @@ jobs:
           - dockerfile: ./Dockerfile
             suffix: ''
             platforms: 'linux/amd64,linux/arm64'
-          - dockerfile: ./debian.Dockerfile
-            suffix: '-debian'
+          - dockerfile: ./alpine.Dockerfile
+            suffix: '-alpine'
             platforms: 'linux/amd64,linux/arm64'
     # https://docs.github.com/en/actions/security-guides/automatic-token-authentication#permissions-for-the-github_token
     permissions:

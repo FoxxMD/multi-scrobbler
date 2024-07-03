@@ -45,8 +45,8 @@ jobs:
           - dockerfile: ./Dockerfile
             suffix: ''
             platforms: 'linux/amd64,linux/arm64'
-          - dockerfile: ./debian.Dockerfile
-            suffix: '-debian'
+          - dockerfile: ./alpine.Dockerfile
+            suffix: '-alpine'
             platforms: 'linux/amd64,linux/arm64'
     steps:
       - name: Set up QEMU
@@ -91,12 +91,13 @@ jobs:
           APP_VERSION: ${{ format('pr{0}-{1}', github.event.number, github.event.pull_request.head.sha ) }}
         with:
           context: .
-          push: true
-          file: ${{ matrix.dockerfile }}
-          tags: ${{ steps.meta.outputs.tags }}
-          platforms: ${{ matrix.platforms }}
           build-args: |
             APP_BUILD_VERSION=${{env.APP_VERSION}}
+          file: ${{ matrix.dockerfile }}
+          push: ${{ !env.ACT}}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          platforms: ${{ matrix.platforms }}
 
   combine-and-comment:
     name: Leave comment
@@ -114,7 +115,7 @@ jobs:
 
             To play around with this PR, pull an image:
             * `foxxmd/multi-scrobbler:pr-${{ github.event.number }}`
-            * `foxxmd/multi-scrobbler:pr-${{ github.event.number }}-debian`.
+            * `foxxmd/multi-scrobbler:pr-${{ github.event.number }}-alpine`.
 
             Images are available for x86_64 and ARM64.
 
