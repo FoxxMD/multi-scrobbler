@@ -13,7 +13,7 @@ import { generateBaseURL } from "./utils.js";
 let version: string = 'unknown';
 
 export const parseVersion = async () => {
-    version = await getVersion({priority: ['file', 'git', 'env']});
+    version = await getVersion({priority: ['env', 'git', 'file']});
 }
 
 let root: ReturnType<typeof createRoot>;
