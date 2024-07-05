@@ -11,7 +11,7 @@ import { SimpleIntervalJob, ToadScheduler } from "toad-scheduler";
 import { projectDir } from "./common/index.js";
 import { AIOConfig } from "./common/infrastructure/config/aioConfig.js";
 import { appLogger, initLogger as getInitLogger } from "./common/logging.js";
-import { getRoot, parseGitVersion } from "./ioc.js";
+import { getRoot, parseVersion } from "./ioc.js";
 import { initServer } from "./server/index.js";
 import { createHeartbeatClientsTask } from "./tasks/heartbeatClients.js";
 import { createHeartbeatSourcesTask } from "./tasks/heartbeatSources.js";
@@ -75,7 +75,7 @@ const configDir = process.env.CONFIG_DIR || path.resolve(projectDir, `./config`)
             process.env.DEBUG_MODE = b.toString();
         }
 
-        await parseGitVersion(initLogger);
+        await parseVersion();
 
         const [aLogger, appLoggerStream] = await appLogger(logging)
         logger = childLogger(aLogger, 'App');
