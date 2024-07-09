@@ -1,0 +1,415 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "anyOf": [
+        {
+            "$ref": "#/definitions/LastfmClientConfig"
+        },
+        {
+            "$ref": "#/definitions/ListenBrainzClientConfig"
+        },
+        {
+            "$ref": "#/definitions/MalojaClientConfig"
+        }
+    ],
+    "definitions": {
+        "CommonClientData": {
+            "title": "CommonClientData",
+            "type": "object"
+        },
+        "CommonClientOptions": {
+            "properties": {
+                "checkExistingScrobbles": {
+                    "default": true,
+                    "description": "Check client for an existing scrobble at the same recorded time as the \"new\" track to be scrobbled. If an existing scrobble is found this track is not track scrobbled.",
+                    "examples": [
+                        true
+                    ],
+                    "title": "checkExistingScrobbles",
+                    "type": "boolean"
+                },
+                "deadLetterRetries": {
+                    "default": 1,
+                    "description": "Number of times MS should automatically retry scrobbles in dead letter queue",
+                    "examples": [
+                        1
+                    ],
+                    "title": "deadLetterRetries",
+                    "type": "number"
+                },
+                "maxRequestRetries": {
+                    "default": 1,
+                    "description": "default # of http request retries a source/client can make before error is thrown",
+                    "examples": [
+                        1
+                    ],
+                    "title": "maxRequestRetries",
+                    "type": "number"
+                },
+                "refreshEnabled": {
+                    "default": true,
+                    "description": "Try to get fresh scrobble history from client when tracks to be scrobbled are newer than the last scrobble found in client history",
+                    "examples": [
+                        true
+                    ],
+                    "title": "refreshEnabled",
+                    "type": "boolean"
+                },
+                "refreshInitialCount": {
+                    "description": "The number of tracks to retrieve on initial refresh (related to scrobbleBacklogCount). If not specified this is the maximum supported for the client.",
+                    "title": "refreshInitialCount",
+                    "type": "number"
+                },
+                "retryMultiplier": {
+                    "default": 1.5,
+                    "description": "default retry delay multiplier (retry attempt * multiplier = # of seconds to wait before retrying)",
+                    "examples": [
+                        1.5
+                    ],
+                    "title": "retryMultiplier",
+                    "type": "number"
+                },
+                "verbose": {
+                    "description": "Options used for increasing verbosity of logging in MS (used for debugging)",
+                    "properties": {
+                        "match": {
+                            "$ref": "#/definitions/MatchLoggingOptions",
+                            "title": "match"
+                        }
+                    },
+                    "title": "verbose",
+                    "type": "object"
+                }
+            },
+            "title": "CommonClientOptions",
+            "type": "object"
+        },
+        "LastfmClientConfig": {
+            "properties": {
+                "configureAs": {
+                    "default": "client",
+                    "description": "Should always be `client` when using LastFM as a client",
+                    "enum": [
+                        "client",
+                        "source"
+                    ],
+                    "examples": [
+                        "client"
+                    ],
+                    "title": "configureAs",
+                    "type": "string"
+                },
+                "data": {
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/CommonClientData"
+                        },
+                        {
+                            "$ref": "#/definitions/LastfmData"
+                        }
+                    ],
+                    "description": "Specific data required to configure this client",
+                    "title": "data"
+                },
+                "enable": {
+                    "default": true,
+                    "description": "Should MS use this client/source? Defaults to true",
+                    "examples": [
+                        true
+                    ],
+                    "title": "enable",
+                    "type": "boolean"
+                },
+                "name": {
+                    "description": "Unique identifier for this client. Used with sources to restrict where scrobbles are sent.",
+                    "examples": [
+                        "MyConfig"
+                    ],
+                    "title": "name",
+                    "type": "string"
+                },
+                "options": {
+                    "$ref": "#/definitions/CommonClientOptions",
+                    "title": "options"
+                }
+            },
+            "required": [
+                "data",
+                "name"
+            ],
+            "title": "LastfmClientConfig",
+            "type": "object"
+        },
+        "LastfmData": {
+            "properties": {
+                "apiKey": {
+                    "description": "API Key generated from Last.fm account",
+                    "examples": [
+                        "787c921a2a2ab42320831aba0c8f2fc2"
+                    ],
+                    "title": "apiKey",
+                    "type": "string"
+                },
+                "maxRequestRetries": {
+                    "default": 1,
+                    "description": "default # of http request retries a source/client can make before error is thrown",
+                    "examples": [
+                        1
+                    ],
+                    "title": "maxRequestRetries",
+                    "type": "number"
+                },
+                "redirectUri": {
+                    "default": "http://localhost:9078/lastfm/callback",
+                    "description": "Optional URI to use for callback. Specify this if callback should be different than the default. MUST have \"lastfm/callback\" in the URL somewhere.",
+                    "examples": [
+                        "http://localhost:9078/lastfm/callback"
+                    ],
+                    "title": "redirectUri",
+                    "type": "string"
+                },
+                "retryMultiplier": {
+                    "default": 1.5,
+                    "description": "default retry delay multiplier (retry attempt * multiplier = # of seconds to wait before retrying)",
+                    "examples": [
+                        1.5
+                    ],
+                    "title": "retryMultiplier",
+                    "type": "number"
+                },
+                "secret": {
+                    "description": "Secret generated from Last.fm account",
+                    "examples": [
+                        "ec42e09d5ae0ee0f0816ca151008412a"
+                    ],
+                    "title": "secret",
+                    "type": "string"
+                },
+                "session": {
+                    "description": "Optional session id returned from a completed auth flow",
+                    "title": "session",
+                    "type": "string"
+                }
+            },
+            "required": [
+                "apiKey",
+                "secret"
+            ],
+            "title": "LastfmData",
+            "type": "object"
+        },
+        "ListenBrainzClientConfig": {
+            "properties": {
+                "configureAs": {
+                    "default": "client",
+                    "description": "Should always be `client` when using Listenbrainz as a client",
+                    "enum": [
+                        "client",
+                        "source"
+                    ],
+                    "examples": [
+                        "client"
+                    ],
+                    "title": "configureAs",
+                    "type": "string"
+                },
+                "data": {
+                    "$ref": "#/definitions/ListenBrainzClientData",
+                    "description": "Specific data required to configure this client",
+                    "title": "data"
+                },
+                "enable": {
+                    "default": true,
+                    "description": "Should MS use this client/source? Defaults to true",
+                    "examples": [
+                        true
+                    ],
+                    "title": "enable",
+                    "type": "boolean"
+                },
+                "name": {
+                    "description": "Unique identifier for this client. Used with sources to restrict where scrobbles are sent.",
+                    "examples": [
+                        "MyConfig"
+                    ],
+                    "title": "name",
+                    "type": "string"
+                },
+                "options": {
+                    "$ref": "#/definitions/CommonClientOptions",
+                    "title": "options"
+                }
+            },
+            "required": [
+                "data",
+                "name"
+            ],
+            "title": "ListenBrainzClientConfig",
+            "type": "object"
+        },
+        "ListenBrainzClientData": {
+            "properties": {
+                "maxRequestRetries": {
+                    "default": 1,
+                    "description": "default # of http request retries a source/client can make before error is thrown",
+                    "examples": [
+                        1
+                    ],
+                    "title": "maxRequestRetries",
+                    "type": "number"
+                },
+                "retryMultiplier": {
+                    "default": 1.5,
+                    "description": "default retry delay multiplier (retry attempt * multiplier = # of seconds to wait before retrying)",
+                    "examples": [
+                        1.5
+                    ],
+                    "title": "retryMultiplier",
+                    "type": "number"
+                },
+                "token": {
+                    "description": "User token for the user to scrobble for",
+                    "examples": [
+                        "6794186bf-1157-4de6-80e5-uvb411f3ea2b"
+                    ],
+                    "title": "token",
+                    "type": "string"
+                },
+                "url": {
+                    "default": "https://api.listenbrainz.org/",
+                    "description": "URL for the ListenBrainz server, if not using the default",
+                    "examples": [
+                        "https://api.listenbrainz.org/"
+                    ],
+                    "title": "url",
+                    "type": "string"
+                },
+                "username": {
+                    "description": "Username of the user to scrobble for",
+                    "title": "username",
+                    "type": "string"
+                }
+            },
+            "required": [
+                "token",
+                "username"
+            ],
+            "title": "ListenBrainzClientData",
+            "type": "object"
+        },
+        "MalojaClientConfig": {
+            "properties": {
+                "data": {
+                    "$ref": "#/definitions/MalojaClientData",
+                    "description": "Specific data required to configure this client",
+                    "title": "data"
+                },
+                "enable": {
+                    "default": true,
+                    "description": "Should MS use this client/source? Defaults to true",
+                    "examples": [
+                        true
+                    ],
+                    "title": "enable",
+                    "type": "boolean"
+                },
+                "name": {
+                    "description": "Unique identifier for this client. Used with sources to restrict where scrobbles are sent.",
+                    "examples": [
+                        "MyConfig"
+                    ],
+                    "title": "name",
+                    "type": "string"
+                },
+                "options": {
+                    "$ref": "#/definitions/CommonClientOptions",
+                    "title": "options"
+                }
+            },
+            "required": [
+                "data",
+                "name"
+            ],
+            "title": "MalojaClientConfig",
+            "type": "object"
+        },
+        "MalojaClientData": {
+            "properties": {
+                "apiKey": {
+                    "description": "API Key for Maloja server",
+                    "examples": [
+                        "myApiKey"
+                    ],
+                    "title": "apiKey",
+                    "type": "string"
+                },
+                "maxRequestRetries": {
+                    "default": 1,
+                    "description": "default # of http request retries a source/client can make before error is thrown",
+                    "examples": [
+                        1
+                    ],
+                    "title": "maxRequestRetries",
+                    "type": "number"
+                },
+                "retryMultiplier": {
+                    "default": 1.5,
+                    "description": "default retry delay multiplier (retry attempt * multiplier = # of seconds to wait before retrying)",
+                    "examples": [
+                        1.5
+                    ],
+                    "title": "retryMultiplier",
+                    "type": "number"
+                },
+                "url": {
+                    "description": "URL for maloja server",
+                    "examples": [
+                        "http://localhost:42010"
+                    ],
+                    "title": "url",
+                    "type": "string"
+                }
+            },
+            "required": [
+                "apiKey",
+                "url"
+            ],
+            "title": "MalojaClientData",
+            "type": "object"
+        },
+        "MatchLoggingOptions": {
+            "description": "Scrobble matching (between new source track and existing client scrobbles) logging options. Used for debugging.",
+            "properties": {
+                "confidenceBreakdown": {
+                    "default": false,
+                    "description": "Include confidence breakdowns in track match logging, if applicable",
+                    "examples": [
+                        false
+                    ],
+                    "title": "confidenceBreakdown",
+                    "type": "boolean"
+                },
+                "onMatch": {
+                    "default": false,
+                    "description": "Log to DEBUG when a new track DOES match an existing scrobble",
+                    "examples": [
+                        false
+                    ],
+                    "title": "onMatch",
+                    "type": "boolean"
+                },
+                "onNoMatch": {
+                    "default": false,
+                    "description": "Log to DEBUG when a new track does NOT match an existing scrobble",
+                    "examples": [
+                        false
+                    ],
+                    "title": "onNoMatch",
+                    "type": "boolean"
+                }
+            },
+            "title": "MatchLoggingOptions",
+            "type": "object"
+        }
+    }
+}
+
