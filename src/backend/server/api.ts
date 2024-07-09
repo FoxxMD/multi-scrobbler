@@ -217,7 +217,6 @@ export const setupApi = (app: ExpressWithAsync, logger: Logger, appLoggerStream:
                 type,
                 tracksScrobbled = 0,
                 name,
-                initialized = false,
                 requiresAuth = false,
                 requiresAuthInteraction = false,
                 authed = false,
@@ -232,14 +231,20 @@ export const setupApi = (app: ExpressWithAsync, logger: Logger, appLoggerStream:
                 hasAuth: requiresAuth,
                 hasAuthInteraction: requiresAuthInteraction,
                 authed,
-                initialized,
+                initialized: x.isReady(),
                 deadLetterScrobbles: x.deadLetterScrobbles.length,
                 queued: x.queuedScrobbles.length
             };
-            if (!initialized) {
-                base.status = 'Not Initialized';
-            } else if (requiresAuth && !authed) {
-                base.status = requiresAuthInteraction ? 'Auth Interaction Required' : 'Authentication Failed Or Not Attempted'
+            if (!base.initialized) {
+                if(x.buildOK === false) {
+                    base.status = 'Initializing Data Failed';
+                } else if(x.connectionOK === false) {
+                    base.status = 'Communication Failed';
+                } else if (requiresAuth && !authed) {
+                    base.status = requiresAuthInteraction ? 'Auth Interaction Required' : 'Authentication Failed Or Not Attempted'
+                } else {
+                    base.status = 'Not Ready';
+                }
             } else {
                 base.status = scrobbling ? 'Running' : 'Idle';
             }
@@ -433,6 +438,10 @@ export const setupApi = (app: ExpressWithAsync, logger: Logger, appLoggerStream:
 
 
         return res.status((clientsReady && sourcesReady) ? 200 : 500).json({messages: sourceMessages.concat(clientMessages)});
+    });
+
+    app.getAsync('/api/version', async (req, res) => {
+       return res.json({version: root.get('version')});
     });
 
     app.useAsync('/api/*', async (req, res) => {

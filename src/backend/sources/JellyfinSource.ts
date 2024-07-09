@@ -38,13 +38,13 @@ export default class JellyfinSource extends MemorySource {
         super('jellyfin', name, config, internal, emitter);
         const {
             data: {
-            users,
-            servers,
+                users,
+                servers,
+            } = {},
             options: {
-                logFilterFailure =  (parseBool(process.env.DEBUG_MODE) ? 'debug' : 'warn')
-                } = {}
+                logFilterFailure = (parseBool(process.env.DEBUG_MODE) ? 'debug' : 'warn')
             } = {}
-        } = config;
+        } = this.config;
 
         if(logFilterFailure !== false && !['debug', 'warn'].includes(logFilterFailure)) {
             this.logger.warn(`logFilterFailure value of '${logFilterFailure.toString()}' is NOT VALID. Logging will not occur if filters fail. You should fix this.`);
@@ -185,10 +185,8 @@ export default class JellyfinSource extends MemorySource {
 
     protected logFilterFailure = (str: string, meta?: any) => {
         const {
-            data: {
-                options: {
-                    logFilterFailure = (parseBool(process.env.DEBUG_MODE) ? 'debug' : 'warn')
-                } = {}
+            options: {
+                logFilterFailure = (parseBool(process.env.DEBUG_MODE) ? 'debug' : 'warn')
             } = {}
         } = this.config;
 

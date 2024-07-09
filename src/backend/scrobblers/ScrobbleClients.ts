@@ -12,7 +12,7 @@ import * as aioSchema from '../common/schema/aio-client.json';
 import * as clientSchema from '../common/schema/client.json';
 import { WildcardEmitter } from "../common/WildcardEmitter.js";
 import { Notifiers } from "../notifier/Notifiers.js";
-import { readJson, validateJson, } from "../utils.js";
+import { joinedUrl, readJson, validateJson, } from "../utils.js";
 import AbstractScrobbleClient from "./AbstractScrobbleClient.js";
 import LastfmScrobbler from "./LastfmScrobbler.js";
 import ListenbrainzScrobbler from "./ListenbrainzScrobbler.js";
@@ -28,13 +28,13 @@ export default class ScrobbleClients {
     clients: (MalojaScrobbler | LastfmScrobbler)[] = [];
     logger: Logger;
     configDir: string;
-    localUrl: string;
+    localUrl: URL;
 
     emitter: WildcardEmitter;
 
     sourceEmitter: WildcardEmitter;
 
-    constructor(emitter: WildcardEmitter, sourceEmitter: WildcardEmitter, localUrl: string, configDir: string, parentLogger: Logger) {
+    constructor(emitter: WildcardEmitter, sourceEmitter: WildcardEmitter, localUrl: URL, configDir: string, parentLogger: Logger) {
         this.emitter = emitter;
         this.sourceEmitter = sourceEmitter;
         this.configDir = configDir;
@@ -148,7 +148,7 @@ export default class ScrobbleClients {
                             source: 'ENV',
                             mode: 'single',
                             configureAs: 'client',
-                            data: {...lfm, redirectUri: lfm.redirectUri ?? `${this.localUrl}/lastfm/callback`}
+                            data: {...lfm, redirectUri: lfm.redirectUri ?? joinedUrl(this.localUrl, 'lastfm/callback').toString()}
                         })
                     }
                     break;

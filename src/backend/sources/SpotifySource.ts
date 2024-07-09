@@ -19,6 +19,7 @@ import {
 import { SpotifySourceConfig } from "../common/infrastructure/config/source/spotify.js";
 import {
     combinePartsToString,
+    joinedUrl,
     parseRetryAfterSecsFromObj,
     readJson,
     sleep,
@@ -68,6 +69,8 @@ export default class SpotifySource extends MemorySource {
         this.canPoll = true;
         this.canBacklog = true;
         this.supportsUpstreamRecentlyPlayed = true;
+        // https://developer.spotify.com/documentation/web-api/reference/get-recently-played
+        this.SCROBBLE_BACKLOG_COUNT = 50
     }
 
     static formatPlayObj(obj: PlayHistoryObject | CurrentlyPlayingObject, options: FormatPlayObjectOptions = {}): PlayObject {
@@ -203,7 +206,7 @@ export default class SpotifySource extends MemorySource {
             redirectUri,
         } = this.config.data || {};
 
-        const rdUri = redirectUri || `${this.localUrl}/callback`;
+        const rdUri: string = redirectUri || joinedUrl(this.localUrl, 'callback').toString();
 
         const apiConfig = {
             clientId,
@@ -414,7 +417,7 @@ export default class SpotifySource extends MemorySource {
         const {
             maxRequestRetries = 1,
             retryMultiplier = 2,
-        } = this.config.data;
+        } = this.config.options;
         try {
             return await func(this.spotifyApi);
         } catch (e) {
@@ -502,7 +505,7 @@ export default class SpotifySource extends MemorySource {
         return true;
     }
 
-    protected getBackloggedPlays = async () => await this.getPlayHistory({formatted: true})
+    protected getBackloggedPlays = async (options: RecentlyPlayedOptions = {}) => await this.getPlayHistory({formatted: true, ...options})
 }
 
 const asPlayHistoryObject = (obj: object): obj is PlayHistoryObject => 'played_at' in obj

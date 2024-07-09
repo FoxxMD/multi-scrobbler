@@ -1,7 +1,7 @@
 import { PollingOptions } from "../common.js";
-import { CommonSourceConfig, CommonSourceData } from "./index.js";
+import { CommonSourceConfig, CommonSourceData, CommonSourceOptions } from "./index.js";
 
-export interface YTMusicData extends CommonSourceData, PollingOptions {
+export interface YTMusicCredentials {
     /**
      * The cookie retrieved from the Request Headers of music.youtube.com after logging in.
      *
@@ -17,8 +17,17 @@ export interface YTMusicData extends CommonSourceData, PollingOptions {
      * */
     authUser?: number
 }
+
+export interface YTMusicData extends YTMusicCredentials, CommonSourceData, PollingOptions {
+}
 export interface YTMusicSourceConfig extends CommonSourceConfig {
     data: YTMusicData
+    options?: CommonSourceOptions & {
+        /**
+         * When true MS will log to DEBUG what parts of the cookie are updated by YTM
+         * */
+        logAuthUpdateChanges?: boolean
+    }
 }
 
 export interface YTMusicSourceAIOConfig extends YTMusicSourceConfig {

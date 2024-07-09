@@ -188,10 +188,21 @@ These options affect multi-scrobbler's behavior and are not specific to any sour
 
 Defines the URL that is used to generate default redirect URLs for authentication on [spotify](#spotify), [lastfm](#lastfm), and [deezer](#deezer) -- as well as some logging hints.
 
-* Default => `http://localhost`
+* Default => `http://localhost:9078`
 * Set with [ENV](#env-based-configuration) `BASE_URL` or `baseUrl` [all-in-one configuration](#all-in-one-file-configuration)
+* If protocol is `http` or no protocol is specified MS will try to use port `9078` -- to override this explicitly set the port or use `https`
 
-EX: Lastfm Redirect Url is `BASE_URL:PORT/lastfm/callback` -- Set `BASE_URL=http://192.168.0.101` => Redirect URL is `http://192.168.0.101:9078/lastfm/callback` (when no other redirectUri is specified for [lastfm configuration](#lastfm))
+EX Lastfm Redirect Url is `BASE_URL:PORT/lastfm/callback` (when no other redirectUri is specified for [lastfm configuration](#lastfm))
+
+* `BASE_URL=192.168.0.101` => Redirect URL is `http://192.168.0.101:9078/lastfm/callback`
+* `BASE_URL=http://my.domain.local` => Redirect URL is `http://my.domain.local:9078/lastfm/callback`
+* `BASE_URL=http://192.168.0.101/my/subfolder` => Redirect URL is `http://192.168.0.101:9078/my/subfolder/lastfm/callback`
+
+* `BASE_URL=my.domain.local:80` => Redirect URL is `http://my.domain.local:80/lastfm/callback`
+* `BASE_URL=my.domain.local:9000` => Redirect URL is `http://my.domain.local:9000/lastfm/callback`
+* `BASE_URL=192.168.0.101:4000/my/subfolder` => Redirect URL is `http://192.168.0.101:4000/my/subfolder/lastfm/callback`
+* `BASE_URL=https://192.168.0.101` => Redirect URL is `https://192.168.0.101:443/lastfm/callback`
+
 
 Useful when running with [docker](../installation/installation.md#docker) so that you do not need to specify redirect URLs for each configuration.
 
@@ -834,6 +845,38 @@ Note: [Manually configuring cast device connections](#connecting-devices) is onl
 ### File-Based
 
 See [`chromecast.json.example`](https://github.com/FoxxMD/multi-scrobbler/blob/master/config/chromecast.json.example) or [explore the schema with an example and live editor/validator](https://json-schema.app/view/%23%2Fdefinitions%2FChromecastSourceConfig/%23%2Fdefinitions%2FChromecastData?url=https%3A%2F%2Fraw.githubusercontent.com%2FFoxxMD%2Fmulti-scrobbler%2Fmaster%2Fsrc%2Fbackend%2Fcommon%2Fschema%2Fsource.json)
+
+## [Musikcube](https://musikcube.com)
+
+In order to use Musikcube configure it to accept [websocket connections](https://github.com/clangen/musikcube/wiki/remote-api-documentation) in **server setup**:
+
+* Enable the **Metadata Server**
+* Set a **Password**
+
+Both of these settings are found in _Musikcube -> (s)ettings -> server setup_
+
+![Server Setup](musikcube.jpg)
+
+The URL used by MS has the syntax:
+
+```
+[ws|wss]://HOST:[PORT]
+```
+
+The **port** is the same as shown in the server setup screenshot from above, under **metadata server enabled**. If no port is provided to MS it will default to `7905`.
+
+If no URL is provided to MS it will try to use `ws://localhost:7905`
+
+### ENV-Based
+
+| Environmental Variable | Required? | Default               | Description                          |
+|------------------------|-----------|-----------------------|--------------------------------------|
+| `MC_URL`               | No        | `ws://localhost:7905` | Use port set for **metadata server** |
+| `MC_PASSWORD`          | Yes       |                       |                                      |
+
+### File-Based
+
+See [`musikcube.json.example`](https://github.com/FoxxMD/multi-scrobbler/blob/master/config/chromecast.json.example) or [explore the schema with an example and live editor/validator](https://json-schema.app/view/%23%2Fdefinitions%2FMuikcubeSourceConfig/%23%2Fdefinitions%2FMuikcubeData?url=https%3A%2F%2Fraw.githubusercontent.com%2FFoxxMD%2Fmulti-scrobbler%2Fmaster%2Fsrc%2Fbackend%2Fcommon%2Fschema%2Fsource.json)
 
 # Client Configurations
 

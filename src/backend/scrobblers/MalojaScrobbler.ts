@@ -9,7 +9,7 @@ import { buildTrackString, capitalize } from "../../core/StringUtils.js";
 import { isSuperAgentResponseError } from "../common/errors/ErrorUtils.js";
 import { isNodeNetworkException } from "../common/errors/NodeErrors.js";
 import { UpstreamError } from "../common/errors/UpstreamError.js";
-import { DEFAULT_RETRY_MULTIPLIER, FormatPlayObjectOptions, INITIALIZING } from "../common/infrastructure/Atomic.js";
+import { DEFAULT_RETRY_MULTIPLIER, FormatPlayObjectOptions } from "../common/infrastructure/Atomic.js";
 import { MalojaClientConfig } from "../common/infrastructure/config/client/maloja.js";
 import {
     getMalojaResponseError,
@@ -33,7 +33,6 @@ const feat = ["ft.", "ft", "feat.", "feat", "featuring", "Ft.", "Ft", "Feat.", "
 export default class MalojaScrobbler extends AbstractScrobbleClient {
 
     requiresAuth = true;
-    serverIsHealthy = false;
     serverVersion: any;
     webUrl: string;
 
@@ -41,14 +40,7 @@ export default class MalojaScrobbler extends AbstractScrobbleClient {
 
     constructor(name: any, config: MalojaClientConfig, notifier: Notifiers, emitter: EventEmitter, logger: Logger) {
         super('maloja', name, config, notifier,  emitter,logger);
-        const {url, apiKey} = config.data;
-        if (apiKey === undefined) {
-            this.logger.warn("'apiKey' not found in config! Client will most likely fail when trying to scrobble");
-        }
-        if (url === undefined) {
-            throw new Error("Missing 'url' for Maloja config");
-        }
-        this.webUrl = normalizeUrl(url);
+        this.MAX_INITIAL_SCROBBLES_FETCH = 100;
     }
 
     static formatPlayObj(obj: MalojaScrobbleData, options: FormatPlayObjectOptions = {}): PlayObject {
@@ -187,8 +179,7 @@ export default class MalojaScrobbler extends AbstractScrobbleClient {
             } = serverInfoResp;
 
             if (statusCode >= 300) {
-                this.logger.info(`Communication test not OK! HTTP Status => Expected: 200 | Received: ${statusCode}`);
-                return false;
+                throw new Error(`Communication test not OK! HTTP Status => Expected: 200 | Received: ${statusCode}`);
             }
 
             this.logger.info('Communication test succeeded.');
@@ -206,8 +197,7 @@ export default class MalojaScrobbler extends AbstractScrobbleClient {
             }
             return true;
         } catch (e) {
-            this.logger.error(new Error('Communication test failed', {cause: e}));
-            return false;
+            throw new Error('Communication test failed', {cause: e})
         }
     }
 
@@ -229,37 +219,41 @@ export default class MalojaScrobbler extends AbstractScrobbleClient {
             } = serverInfoResp;
 
             if (statusCode >= 300) {
-                return [false, `Server responded with NOT OK status: ${statusCode}`];
+                throw new Error(`Server responded with NOT OK status: ${statusCode}`);
             }
 
             if(rebuildinprogress) {
-                return [false, 'Server is rebuilding database'];
+                throw new Error(`Server is rebuilding database`);
             }
 
             if(!healthy) {
-                return [false, 'Server responded that it is not healthy'];
+                throw new Error('Server responded that it is not healthy');
             }
 
-            return [true];
+            return true
         } catch (e) {
-            this.logger.error(new Error('Unexpected error encountered while testing server health', {cause: e}));
-            throw e;
+            throw new Error('Error encountered while testing server health', {cause: e});
         }
     }
 
-    initialize = async () => {
-        // just checking that we can get a connection
-        // @ts-expect-error TS(2322): Type 'number' is not assignable to type 'boolean'.
-        this.initialized = INITIALIZING;
-        const result = await this.testConnection();
-        this.initialized = result;
-        if(result) {
-            this.logger.info('Initialized');
-        } else {
-            this.logger.warn('Could not initialize');
+    protected async doBuildInitData(): Promise<true | string | undefined> {
+        const {data: {url, apiKey} = {}} = this.config;
+        if (apiKey === undefined) {
+            throw new Error("'apiKey' not found in config!");
         }
-        return this.initialized;
+        if (url === undefined) {
+            throw new Error("Missing 'url' for Maloja config");
+        }
+        this.webUrl = normalizeUrl(url);
+        return true;
     }
+
+    protected async doCheckConnection(): Promise<true | string | undefined> {
+        await this.testConnection();
+        await this.testHealth();
+        return true;
+    }
+
 
     doAuthentication = async () => {
 
@@ -305,32 +299,11 @@ export default class MalojaScrobbler extends AbstractScrobbleClient {
         }
     }
 
-    isReady = async () => {
-        if (this.serverIsHealthy) {
-            return true;
-        }
-
-        try {
-            const [isHealthy, status] = await this.testHealth();
-            if (!isHealthy) {
-                this.logger.error(`Server is not ready: ${status}`);
-                this.serverIsHealthy = false;
-            } else {
-                this.logger.info('Server reported database is built and status is healthy');
-                this.serverIsHealthy = true;
-            }
-        } catch (e) {
-            this.logger.error(new Error(`Testing server health failed due to an unexpected error`, {cause: e}));
-            this.serverIsHealthy = false;
-        }
-        return this.serverIsHealthy
-    }
-
-    refreshScrobbles = async () => {
+    refreshScrobbles = async (limit = this.MAX_STORED_SCROBBLES) => {
         if (this.refreshEnabled) {
             this.logger.debug('Refreshing recent scrobbles');
             const {url} = this.config.data;
-            const resp = await this.callApi(request.get(`${url}/apis/mlj_1/scrobbles?max=${this.MAX_STORED_SCROBBLES}`));
+            const resp = await this.callApi(request.get(`${url}/apis/mlj_1/scrobbles?perpage=${limit}`));
             const {
                 body: {
                     list = [],

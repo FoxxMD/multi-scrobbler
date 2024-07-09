@@ -15,6 +15,7 @@ import {
     WebScrobblerPayload,
     WebScrobblerSong
 } from "../common/vendor/webscrobbler/interfaces.js";
+import { joinedUrl } from "../utils.js";
 import MemorySource from "./MemorySource.js";
 
 export class WebScrobblerSource extends MemorySource {
@@ -46,12 +47,12 @@ export class WebScrobblerSource extends MemorySource {
     }
 
     protected async doBuildInitData(): Promise<true | string | undefined> {
-        this.logger.info(`Accepting requests at ${this.localUrl}/api/webscrobbler${this.config.data.slug === undefined ? '' : `/${this.config.data.slug}`}`);
+        this.logger.info(`Accepting requests at ${joinedUrl(this.localUrl, 'api/webscrobbler', this.config.data.slug ?? '')}`);
         return true;
     }
 
     matchSlug(slug: string | undefined) {
-        if (this.config.data.slug === undefined || this.config.data.slug === null) {
+        if (this.config.data.slug === undefined) {
             return slug === undefined;
         }
 

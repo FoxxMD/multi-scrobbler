@@ -77,42 +77,6 @@
                     "title": "forceMediaRecognitionOn",
                     "type": "array"
                 },
-                "maxPollRetries": {
-                    "default": 5,
-                    "description": "default # of automatic polling restarts on error",
-                    "examples": [
-                        5
-                    ],
-                    "title": "maxPollRetries",
-                    "type": "number"
-                },
-                "maxRequestRetries": {
-                    "default": 1,
-                    "description": "default # of http request retries a source can make before error is thrown",
-                    "examples": [
-                        1
-                    ],
-                    "title": "maxRequestRetries",
-                    "type": "number"
-                },
-                "options": {
-                    "$ref": "#/definitions/Record<string,any>",
-                    "title": "options"
-                },
-                "retryMultiplier": {
-                    "default": 1.5,
-                    "description": "default retry delay multiplier (retry attempt * multiplier = # of seconds to wait before retrying)",
-                    "examples": [
-                        1.5
-                    ],
-                    "title": "retryMultiplier",
-                    "type": "number"
-                },
-                "scrobbleThresholds": {
-                    "$ref": "#/definitions/ScrobbleThresholds",
-                    "description": "Set thresholds for when multi-scrobbler should consider a tracked play to be \"scrobbable\". If both duration and percent are defined then if either condition is met the track is scrobbled.",
-                    "title": "scrobbleThresholds"
-                },
                 "useAutoDiscovery": {
                     "description": "Use mDNS to discovery Google Cast devices on your next automatically?\n\nIf not explicitly set then it is TRUE if `devices` is not set",
                     "title": "useAutoDiscovery",
@@ -282,6 +246,33 @@
                     "title": "logPlayerState",
                     "type": "boolean"
                 },
+                "maxPollRetries": {
+                    "default": 5,
+                    "description": "default # of automatic polling restarts on error",
+                    "examples": [
+                        5
+                    ],
+                    "title": "maxPollRetries",
+                    "type": "number"
+                },
+                "maxRequestRetries": {
+                    "default": 1,
+                    "description": "default # of http request retries a source/client can make before error is thrown",
+                    "examples": [
+                        1
+                    ],
+                    "title": "maxRequestRetries",
+                    "type": "number"
+                },
+                "retryMultiplier": {
+                    "default": 1.5,
+                    "description": "default retry delay multiplier (retry attempt * multiplier = # of seconds to wait before retrying)",
+                    "examples": [
+                        1.5
+                    ],
+                    "title": "retryMultiplier",
+                    "type": "number"
+                },
                 "scrobbleBacklog": {
                     "default": true,
                     "description": "If this source\n\n* supports fetching a listen history\n* and this option is enabled\n\nthen on startup MS will attempt to scrobble the recent listens from that history",
@@ -291,6 +282,16 @@
                     ],
                     "title": "scrobbleBacklog",
                     "type": "boolean"
+                },
+                "scrobbleBacklogCount": {
+                    "description": "The number of listens to fetch when scrobbling from backlog\n\n* Only applies if this source supports fetching a listen history\n* If not specified it defaults to the maximum number of listens the source API supports",
+                    "title": "scrobbleBacklogCount",
+                    "type": "number"
+                },
+                "scrobbleThresholds": {
+                    "$ref": "#/definitions/ScrobbleThresholds",
+                    "description": "Set thresholds for when multi-scrobbler should consider a tracked play to be \"scrobbable\". If both duration and percent are defined then if either condition is met the track is scrobbled.",
+                    "title": "scrobbleThresholds"
                 }
             },
             "title": "CommonSourceOptions",
@@ -323,28 +324,6 @@
                     "title": "interval",
                     "type": "number"
                 },
-                "maxPollRetries": {
-                    "default": 5,
-                    "description": "default # of automatic polling restarts on error",
-                    "examples": [
-                        5
-                    ],
-                    "title": "maxPollRetries",
-                    "type": "number"
-                },
-                "maxRequestRetries": {
-                    "default": 1,
-                    "description": "default # of http request retries a source can make before error is thrown",
-                    "examples": [
-                        1
-                    ],
-                    "title": "maxRequestRetries",
-                    "type": "number"
-                },
-                "options": {
-                    "$ref": "#/definitions/Record<string,any>",
-                    "title": "options"
-                },
                 "redirectUri": {
                     "default": "http://localhost:9078/deezer/callback",
                     "description": "deezer redirect URI -- required only if not the default shown here. URI must end in \"callback\"",
@@ -353,20 +332,6 @@
                     ],
                     "title": "redirectUri",
                     "type": "string"
-                },
-                "retryMultiplier": {
-                    "default": 1.5,
-                    "description": "default retry delay multiplier (retry attempt * multiplier = # of seconds to wait before retrying)",
-                    "examples": [
-                        1.5
-                    ],
-                    "title": "retryMultiplier",
-                    "type": "number"
-                },
-                "scrobbleThresholds": {
-                    "$ref": "#/definitions/ScrobbleThresholds",
-                    "description": "Set thresholds for when multi-scrobbler should consider a tracked play to be \"scrobbable\". If both duration and percent are defined then if either condition is met the track is scrobbled.",
-                    "title": "scrobbleThresholds"
                 }
             },
             "required": [
@@ -450,46 +415,10 @@
                     "title": "maxInterval",
                     "type": "number"
                 },
-                "maxPollRetries": {
-                    "default": 5,
-                    "description": "default # of automatic polling restarts on error",
-                    "examples": [
-                        5
-                    ],
-                    "title": "maxPollRetries",
-                    "type": "number"
-                },
-                "maxRequestRetries": {
-                    "default": 1,
-                    "description": "default # of http request retries a source can make before error is thrown",
-                    "examples": [
-                        1
-                    ],
-                    "title": "maxRequestRetries",
-                    "type": "number"
-                },
-                "options": {
-                    "$ref": "#/definitions/Record<string,any>",
-                    "title": "options"
-                },
                 "password": {
                     "description": "If you have enabled authentication, the password you set",
                     "title": "password",
                     "type": "string"
-                },
-                "retryMultiplier": {
-                    "default": 1.5,
-                    "description": "default retry delay multiplier (retry attempt * multiplier = # of seconds to wait before retrying)",
-                    "examples": [
-                        1.5
-                    ],
-                    "title": "retryMultiplier",
-                    "type": "number"
-                },
-                "scrobbleThresholds": {
-                    "$ref": "#/definitions/ScrobbleThresholds",
-                    "description": "Set thresholds for when multi-scrobbler should consider a tracked play to be \"scrobbable\". If both duration and percent are defined then if either condition is met the track is scrobbled.",
-                    "title": "scrobbleThresholds"
                 },
                 "url": {
                     "default": "http://localhost:52199/MCWS/v1/",
@@ -567,67 +496,6 @@
         },
         "JellyData": {
             "properties": {
-                "maxPollRetries": {
-                    "default": 5,
-                    "description": "default # of automatic polling restarts on error",
-                    "examples": [
-                        5
-                    ],
-                    "title": "maxPollRetries",
-                    "type": "number"
-                },
-                "maxRequestRetries": {
-                    "default": 1,
-                    "description": "default # of http request retries a source can make before error is thrown",
-                    "examples": [
-                        1
-                    ],
-                    "title": "maxRequestRetries",
-                    "type": "number"
-                },
-                "options": {
-                    "description": "Additional options for jellyfin logging and tuning",
-                    "properties": {
-                        "logFilterFailure": {
-                            "default": "warn",
-                            "description": "How MS should log when a Jellyfin event fails a defined filter (users/servers)\n\n* `false` => do not log\n* `debug` => log to DEBUG level\n* `warn` => log to WARN level (default)\n\nHint: This is useful if you are sure this source is setup correctly and you have multiple other Jellyfin sources. Set to `debug` or `false` to reduce log noise.",
-                            "enum": [
-                                "debug",
-                                false,
-                                "warn"
-                            ],
-                            "examples": [
-                                "warn"
-                            ],
-                            "title": "logFilterFailure"
-                        },
-                        "logPayload": {
-                            "default": false,
-                            "description": "Log raw Jellyfin webhook payload to debug",
-                            "examples": [
-                                false
-                            ],
-                            "title": "logPayload",
-                            "type": "boolean"
-                        }
-                    },
-                    "title": "options",
-                    "type": "object"
-                },
-                "retryMultiplier": {
-                    "default": 1.5,
-                    "description": "default retry delay multiplier (retry attempt * multiplier = # of seconds to wait before retrying)",
-                    "examples": [
-                        1.5
-                    ],
-                    "title": "retryMultiplier",
-                    "type": "number"
-                },
-                "scrobbleThresholds": {
-                    "$ref": "#/definitions/ScrobbleThresholds",
-                    "description": "Set thresholds for when multi-scrobbler should consider a tracked play to be \"scrobbable\". If both duration and percent are defined then if either condition is met the track is scrobbled.",
-                    "title": "scrobbleThresholds"
-                },
                 "servers": {
                     "anyOf": [
                         {
@@ -746,46 +614,10 @@
                     "title": "maxInterval",
                     "type": "number"
                 },
-                "maxPollRetries": {
-                    "default": 5,
-                    "description": "default # of automatic polling restarts on error",
-                    "examples": [
-                        5
-                    ],
-                    "title": "maxPollRetries",
-                    "type": "number"
-                },
-                "maxRequestRetries": {
-                    "default": 1,
-                    "description": "default # of http request retries a source can make before error is thrown",
-                    "examples": [
-                        1
-                    ],
-                    "title": "maxRequestRetries",
-                    "type": "number"
-                },
-                "options": {
-                    "$ref": "#/definitions/Record<string,any>",
-                    "title": "options"
-                },
                 "password": {
                     "description": "The password set for Remote Control via Web Sever",
                     "title": "password",
                     "type": "string"
-                },
-                "retryMultiplier": {
-                    "default": 1.5,
-                    "description": "default retry delay multiplier (retry attempt * multiplier = # of seconds to wait before retrying)",
-                    "examples": [
-                        1.5
-                    ],
-                    "title": "retryMultiplier",
-                    "type": "number"
-                },
-                "scrobbleThresholds": {
-                    "$ref": "#/definitions/ScrobbleThresholds",
-                    "description": "Set thresholds for when multi-scrobbler should consider a tracked play to be \"scrobbable\". If both duration and percent are defined then if either condition is met the track is scrobbled.",
-                    "title": "scrobbleThresholds"
                 },
                 "url": {
                     "default": "http://localhost:8080/jsonrpc",
@@ -956,27 +788,14 @@
                     "title": "maxInterval",
                     "type": "number"
                 },
-                "maxPollRetries": {
-                    "default": 5,
-                    "description": "default # of automatic polling restarts on error",
-                    "examples": [
-                        5
-                    ],
-                    "title": "maxPollRetries",
-                    "type": "number"
-                },
                 "maxRequestRetries": {
                     "default": 1,
-                    "description": "default # of http request retries a source can make before error is thrown",
+                    "description": "default # of http request retries a source/client can make before error is thrown",
                     "examples": [
                         1
                     ],
                     "title": "maxRequestRetries",
                     "type": "number"
-                },
-                "options": {
-                    "$ref": "#/definitions/Record<string,any>",
-                    "title": "options"
                 },
                 "redirectUri": {
                     "default": "http://localhost:9078/lastfm/callback",
@@ -995,11 +814,6 @@
                     ],
                     "title": "retryMultiplier",
                     "type": "number"
-                },
-                "scrobbleThresholds": {
-                    "$ref": "#/definitions/ScrobbleThresholds",
-                    "description": "Set thresholds for when multi-scrobbler should consider a tracked play to be \"scrobbable\". If both duration and percent are defined then if either condition is met the track is scrobbled.",
-                    "title": "scrobbleThresholds"
                 },
                 "secret": {
                     "description": "Secret generated from Last.fm account",
@@ -1107,27 +921,14 @@
                     "title": "maxInterval",
                     "type": "number"
                 },
-                "maxPollRetries": {
-                    "default": 5,
-                    "description": "default # of automatic polling restarts on error",
-                    "examples": [
-                        5
-                    ],
-                    "title": "maxPollRetries",
-                    "type": "number"
-                },
                 "maxRequestRetries": {
                     "default": 1,
-                    "description": "default # of http request retries a source can make before error is thrown",
+                    "description": "default # of http request retries a source/client can make before error is thrown",
                     "examples": [
                         1
                     ],
                     "title": "maxRequestRetries",
                     "type": "number"
-                },
-                "options": {
-                    "$ref": "#/definitions/Record<string,any>",
-                    "title": "options"
                 },
                 "retryMultiplier": {
                     "default": 1.5,
@@ -1137,11 +938,6 @@
                     ],
                     "title": "retryMultiplier",
                     "type": "number"
-                },
-                "scrobbleThresholds": {
-                    "$ref": "#/definitions/ScrobbleThresholds",
-                    "description": "Set thresholds for when multi-scrobbler should consider a tracked play to be \"scrobbable\". If both duration and percent are defined then if either condition is met the track is scrobbled.",
-                    "title": "scrobbleThresholds"
                 },
                 "token": {
                     "description": "User token for the user to scrobble for",
@@ -1195,42 +991,6 @@
                         ]
                     ],
                     "title": "blacklist"
-                },
-                "maxPollRetries": {
-                    "default": 5,
-                    "description": "default # of automatic polling restarts on error",
-                    "examples": [
-                        5
-                    ],
-                    "title": "maxPollRetries",
-                    "type": "number"
-                },
-                "maxRequestRetries": {
-                    "default": 1,
-                    "description": "default # of http request retries a source can make before error is thrown",
-                    "examples": [
-                        1
-                    ],
-                    "title": "maxRequestRetries",
-                    "type": "number"
-                },
-                "options": {
-                    "$ref": "#/definitions/Record<string,any>",
-                    "title": "options"
-                },
-                "retryMultiplier": {
-                    "default": 1.5,
-                    "description": "default retry delay multiplier (retry attempt * multiplier = # of seconds to wait before retrying)",
-                    "examples": [
-                        1.5
-                    ],
-                    "title": "retryMultiplier",
-                    "type": "number"
-                },
-                "scrobbleThresholds": {
-                    "$ref": "#/definitions/ScrobbleThresholds",
-                    "description": "Set thresholds for when multi-scrobbler should consider a tracked play to be \"scrobbable\". If both duration and percent are defined then if either condition is met the track is scrobbled.",
-                    "title": "scrobbleThresholds"
                 },
                 "whitelist": {
                     "anyOf": [
@@ -1347,42 +1107,6 @@
                     "title": "maxInterval",
                     "type": "number"
                 },
-                "maxPollRetries": {
-                    "default": 5,
-                    "description": "default # of automatic polling restarts on error",
-                    "examples": [
-                        5
-                    ],
-                    "title": "maxPollRetries",
-                    "type": "number"
-                },
-                "maxRequestRetries": {
-                    "default": 1,
-                    "description": "default # of http request retries a source can make before error is thrown",
-                    "examples": [
-                        1
-                    ],
-                    "title": "maxRequestRetries",
-                    "type": "number"
-                },
-                "options": {
-                    "$ref": "#/definitions/Record<string,any>",
-                    "title": "options"
-                },
-                "retryMultiplier": {
-                    "default": 1.5,
-                    "description": "default retry delay multiplier (retry attempt * multiplier = # of seconds to wait before retrying)",
-                    "examples": [
-                        1.5
-                    ],
-                    "title": "retryMultiplier",
-                    "type": "number"
-                },
-                "scrobbleThresholds": {
-                    "$ref": "#/definitions/ScrobbleThresholds",
-                    "description": "Set thresholds for when multi-scrobbler should consider a tracked play to be \"scrobbable\". If both duration and percent are defined then if either condition is met the track is scrobbled.",
-                    "title": "scrobbleThresholds"
-                },
                 "uriBlacklist": {
                     "description": "Do not scrobble tracks whose URI STARTS WITH any of these strings, case-insensitive\n\nEX: Don't scrobble tracks from soundcloud by adding 'soundcloud' to this list.\n\nList is ignored if uriWhitelist is used.",
                     "items": {
@@ -1465,6 +1189,86 @@
             "title": "MopidySourceAIOConfig",
             "type": "object"
         },
+        "MusikcubeData": {
+            "properties": {
+                "device_id": {
+                    "title": "device_id",
+                    "type": "string"
+                },
+                "password": {
+                    "description": "Password set in Musikcube https://github.com/clangen/musikcube/wiki/remote-api-documentation\n\n* musikcube -> settings -> server setup -> password",
+                    "title": "password",
+                    "type": "string"
+                },
+                "url": {
+                    "default": "ws://localhost:7905",
+                    "description": "URL of the Musikcube Websocket (Metadata) server to connect to\n\nYou MUST have enabled 'metadata' server and set a password: https://github.com/clangen/musikcube/wiki/remote-api-documentation\n  * musikcube -> settings -> server setup\n\nThe URL you provide here will have all parts not explicitly defined filled in for you so if these are not the default you must define them.\n\nParts => [default value]\n\n* Protocol => `ws://`\n* Hostname => `localhost`\n* Port => `7905`",
+                    "examples": [
+                        "ws://localhost:7905"
+                    ],
+                    "title": "url",
+                    "type": "string"
+                }
+            },
+            "required": [
+                "password"
+            ],
+            "title": "MusikcubeData",
+            "type": "object"
+        },
+        "MusikcubeSourceAIOConfig": {
+            "properties": {
+                "clients": {
+                    "description": "Restrict scrobbling tracks played from this source to Clients with names from this list. If list is empty is not present Source scrobbles to all configured Clients.",
+                    "examples": [
+                        [
+                            "MyMalojaConfigName",
+                            "MyLastFMConfigName"
+                        ]
+                    ],
+                    "items": {
+                        "type": "string"
+                    },
+                    "title": "clients",
+                    "type": "array"
+                },
+                "data": {
+                    "$ref": "#/definitions/MusikcubeData",
+                    "title": "data"
+                },
+                "enable": {
+                    "default": true,
+                    "description": "Should MS use this client/source? Defaults to true",
+                    "examples": [
+                        true
+                    ],
+                    "title": "enable",
+                    "type": "boolean"
+                },
+                "name": {
+                    "description": "Unique identifier for this source.",
+                    "title": "name",
+                    "type": "string"
+                },
+                "options": {
+                    "$ref": "#/definitions/CommonSourceOptions",
+                    "title": "options"
+                },
+                "type": {
+                    "enum": [
+                        "musikcube"
+                    ],
+                    "title": "type",
+                    "type": "string"
+                }
+            },
+            "required": [
+                "data",
+                "type"
+            ],
+            "title": "MusikcubeSourceAIOConfig",
+            "type": "object"
+        },
         "PlexSourceAIOConfig": {
             "properties": {
                 "clients": {
@@ -1541,58 +1345,6 @@
                     ],
                     "title": "libraries"
                 },
-                "maxPollRetries": {
-                    "default": 5,
-                    "description": "default # of automatic polling restarts on error",
-                    "examples": [
-                        5
-                    ],
-                    "title": "maxPollRetries",
-                    "type": "number"
-                },
-                "maxRequestRetries": {
-                    "default": 1,
-                    "description": "default # of http request retries a source can make before error is thrown",
-                    "examples": [
-                        1
-                    ],
-                    "title": "maxRequestRetries",
-                    "type": "number"
-                },
-                "options": {
-                    "description": "Additional options for Plex/Tautulli logging and tuning",
-                    "properties": {
-                        "logFilterFailure": {
-                            "default": "warn",
-                            "description": "How MS should log when a Plex/Tautulli event fails a defined filter (users/servers)\n\n* `false` => do not log\n* `debug` => log to DEBUG level\n* `warn` => log to WARN level (default)\n\nHint: This is useful if you are sure this source is setup correctly and you have multiple other Plex/Tautulli sources. Set to `debug` or `false` to reduce log noise.",
-                            "enum": [
-                                "debug",
-                                false,
-                                "warn"
-                            ],
-                            "examples": [
-                                "warn"
-                            ],
-                            "title": "logFilterFailure"
-                        }
-                    },
-                    "title": "options",
-                    "type": "object"
-                },
-                "retryMultiplier": {
-                    "default": 1.5,
-                    "description": "default retry delay multiplier (retry attempt * multiplier = # of seconds to wait before retrying)",
-                    "examples": [
-                        1.5
-                    ],
-                    "title": "retryMultiplier",
-                    "type": "number"
-                },
-                "scrobbleThresholds": {
-                    "$ref": "#/definitions/ScrobbleThresholds",
-                    "description": "Set thresholds for when multi-scrobbler should consider a tracked play to be \"scrobbable\". If both duration and percent are defined then if either condition is met the track is scrobbled.",
-                    "title": "scrobbleThresholds"
-                },
                 "servers": {
                     "anyOf": [
                         {
@@ -1636,10 +1388,6 @@
                 }
             },
             "title": "PlexSourceData",
-            "type": "object"
-        },
-        "Record<string,any>": {
-            "title": "Record<string,any>",
             "type": "object"
         },
         "ScrobbleThresholds": {
@@ -1696,6 +1444,9 @@
                     "$ref": "#/definitions/MPRISSourceAIOConfig"
                 },
                 {
+                    "$ref": "#/definitions/MusikcubeSourceAIOConfig"
+                },
+                {
                     "$ref": "#/definitions/PlexSourceAIOConfig"
                 },
                 {
@@ -1729,7 +1480,7 @@
                 },
                 "maxRequestRetries": {
                     "default": 1,
-                    "description": "default # of http request retries a source can make before error is thrown",
+                    "description": "default # of http request retries a source/client can make before error is thrown",
                     "examples": [
                         1
                     ],
@@ -1838,28 +1589,6 @@
                     "title": "maxInterval",
                     "type": "number"
                 },
-                "maxPollRetries": {
-                    "default": 5,
-                    "description": "default # of automatic polling restarts on error",
-                    "examples": [
-                        5
-                    ],
-                    "title": "maxPollRetries",
-                    "type": "number"
-                },
-                "maxRequestRetries": {
-                    "default": 1,
-                    "description": "default # of http request retries a source can make before error is thrown",
-                    "examples": [
-                        1
-                    ],
-                    "title": "maxRequestRetries",
-                    "type": "number"
-                },
-                "options": {
-                    "$ref": "#/definitions/Record<string,any>",
-                    "title": "options"
-                },
                 "redirectUri": {
                     "default": "http://localhost:9078/callback",
                     "description": "spotify redirect URI -- required only if not the default shown here. URI must end in \"callback\"",
@@ -1868,20 +1597,6 @@
                     ],
                     "title": "redirectUri",
                     "type": "string"
-                },
-                "retryMultiplier": {
-                    "default": 1.5,
-                    "description": "default retry delay multiplier (retry attempt * multiplier = # of seconds to wait before retrying)",
-                    "examples": [
-                        1.5
-                    ],
-                    "title": "retryMultiplier",
-                    "type": "number"
-                },
-                "scrobbleThresholds": {
-                    "$ref": "#/definitions/ScrobbleThresholds",
-                    "description": "Set thresholds for when multi-scrobbler should consider a tracked play to be \"scrobbable\". If both duration and percent are defined then if either condition is met the track is scrobbled.",
-                    "title": "scrobbleThresholds"
                 }
             },
             "required": [
@@ -1924,28 +1639,6 @@
                     "title": "maxInterval",
                     "type": "number"
                 },
-                "maxPollRetries": {
-                    "default": 5,
-                    "description": "default # of automatic polling restarts on error",
-                    "examples": [
-                        5
-                    ],
-                    "title": "maxPollRetries",
-                    "type": "number"
-                },
-                "maxRequestRetries": {
-                    "default": 1,
-                    "description": "default # of http request retries a source can make before error is thrown",
-                    "examples": [
-                        1
-                    ],
-                    "title": "maxRequestRetries",
-                    "type": "number"
-                },
-                "options": {
-                    "$ref": "#/definitions/Record<string,any>",
-                    "title": "options"
-                },
                 "password": {
                     "description": "Password for the user to login to the server with",
                     "examples": [
@@ -1953,20 +1646,6 @@
                     ],
                     "title": "password",
                     "type": "string"
-                },
-                "retryMultiplier": {
-                    "default": 1.5,
-                    "description": "default retry delay multiplier (retry attempt * multiplier = # of seconds to wait before retrying)",
-                    "examples": [
-                        1.5
-                    ],
-                    "title": "retryMultiplier",
-                    "type": "number"
-                },
-                "scrobbleThresholds": {
-                    "$ref": "#/definitions/ScrobbleThresholds",
-                    "description": "Set thresholds for when multi-scrobbler should consider a tracked play to be \"scrobbable\". If both duration and percent are defined then if either condition is met the track is scrobbled.",
-                    "title": "scrobbleThresholds"
                 },
                 "url": {
                     "description": "URL of the subsonic media server to query",
@@ -2118,67 +1797,6 @@
                     ],
                     "title": "blacklist"
                 },
-                "maxPollRetries": {
-                    "default": 5,
-                    "description": "default # of automatic polling restarts on error",
-                    "examples": [
-                        5
-                    ],
-                    "title": "maxPollRetries",
-                    "type": "number"
-                },
-                "maxRequestRetries": {
-                    "default": 1,
-                    "description": "default # of http request retries a source can make before error is thrown",
-                    "examples": [
-                        1
-                    ],
-                    "title": "maxRequestRetries",
-                    "type": "number"
-                },
-                "options": {
-                    "description": "Additional options for WebScrobbler logging and tuning",
-                    "properties": {
-                        "logFilterFailure": {
-                            "default": "warn",
-                            "description": "How MS should log when a WebScrobbler event fails a defined filter\n\n* `false` => do not log\n* `debug` => log to DEBUG level\n* `warn` => log to WARN level (default)",
-                            "enum": [
-                                "debug",
-                                false,
-                                "warn"
-                            ],
-                            "examples": [
-                                "warn"
-                            ],
-                            "title": "logFilterFailure"
-                        },
-                        "logPayload": {
-                            "default": false,
-                            "description": "Log raw WebScrobbler webhook payload to debug",
-                            "examples": [
-                                false
-                            ],
-                            "title": "logPayload",
-                            "type": "boolean"
-                        }
-                    },
-                    "title": "options",
-                    "type": "object"
-                },
-                "retryMultiplier": {
-                    "default": 1.5,
-                    "description": "default retry delay multiplier (retry attempt * multiplier = # of seconds to wait before retrying)",
-                    "examples": [
-                        1.5
-                    ],
-                    "title": "retryMultiplier",
-                    "type": "number"
-                },
-                "scrobbleThresholds": {
-                    "$ref": "#/definitions/ScrobbleThresholds",
-                    "description": "Set thresholds for when multi-scrobbler should consider a tracked play to be \"scrobbable\". If both duration and percent are defined then if either condition is met the track is scrobbled.",
-                    "title": "scrobbleThresholds"
-                },
                 "slug": {
                     "description": "The URL ending that should be used to identify scrobbles for this source\n\nIn WebScrobbler's Webhook you must set an 'API URL'. All MS WebScrobbler sources must start like:\n\nhttp://localhost:9078/api/webscrobbler\n\nIf you are using multiple WebScrobbler sources (scrobbles for many users) you must use a slug to match Sources with each users extension.\n\nExample:\n\n* slug: 'usera' => API URL: http://localhost:9078/api/webscrobbler/usera\n* slug: 'userb' => API URL: http://localhost:9078/api/webscrobbler/userb\n\nIf no slug is found from an extension's incoming webhook event the first WebScrobbler source without a slug will be used",
                     "title": "slug",
@@ -2294,42 +1912,6 @@
                     ],
                     "title": "maxInterval",
                     "type": "number"
-                },
-                "maxPollRetries": {
-                    "default": 5,
-                    "description": "default # of automatic polling restarts on error",
-                    "examples": [
-                        5
-                    ],
-                    "title": "maxPollRetries",
-                    "type": "number"
-                },
-                "maxRequestRetries": {
-                    "default": 1,
-                    "description": "default # of http request retries a source can make before error is thrown",
-                    "examples": [
-                        1
-                    ],
-                    "title": "maxRequestRetries",
-                    "type": "number"
-                },
-                "options": {
-                    "$ref": "#/definitions/Record<string,any>",
-                    "title": "options"
-                },
-                "retryMultiplier": {
-                    "default": 1.5,
-                    "description": "default retry delay multiplier (retry attempt * multiplier = # of seconds to wait before retrying)",
-                    "examples": [
-                        1.5
-                    ],
-                    "title": "retryMultiplier",
-                    "type": "number"
-                },
-                "scrobbleThresholds": {
-                    "$ref": "#/definitions/ScrobbleThresholds",
-                    "description": "Set thresholds for when multi-scrobbler should consider a tracked play to be \"scrobbable\". If both duration and percent are defined then if either condition is met the track is scrobbled.",
-                    "title": "scrobbleThresholds"
                 }
             },
             "required": [
@@ -2373,7 +1955,21 @@
                     "type": "string"
                 },
                 "options": {
-                    "$ref": "#/definitions/CommonSourceOptions",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/CommonSourceOptions"
+                        },
+                        {
+                            "properties": {
+                                "logAuthUpdateChanges": {
+                                    "description": "When true MS will log to DEBUG what parts of the cookie are updated by YTM",
+                                    "title": "logAuthUpdateChanges",
+                                    "type": "boolean"
+                                }
+                            },
+                            "type": "object"
+                        }
+                    ],
                     "title": "options"
                 },
                 "type": {

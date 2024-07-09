@@ -13,6 +13,7 @@ import ScrobbledPage from "./scrobbled/ScrobbledPage";
 import DeadPage from "./deadLetter/DeadPage";
 import {clientUpdate, sourceUpdate} from "./status/ducks";
 import {useEventSource, useEventSourceListener} from "@react-nano/use-event-source";
+import Version from "./Version";
 
 function NoMatch() {
     let location = useLocation();
@@ -86,8 +87,6 @@ const Global = (props: PropsFromRedux) => {
 
 const ConnectedGlobal = connector(Global);
 
-const version = __APP_VERSION__;
-
 function App() {
   return (
       <Provider store={store}>
@@ -97,9 +96,7 @@ function App() {
             <div className="flex items-center justify-between">
               <a href="/" className="flex items-center flex-grow no-underline pr-4">
                 <img src="icon.svg" style={{maxWidth: '30px'}}/>
-                <span className="px-4 break-normal">
-                        Multi Scrobbler <span className="ml-2 text-xs version">v{version}</span>
-                    </span>
+                <Version/>
               </a>
             </div>
           </div>

@@ -12,8 +12,8 @@ import {
     TrackStringOptions,
 } from "../../core/Atomic.js";
 import { buildTrackString, capitalize, truncateStringToLength } from "../../core/StringUtils.js";
-import { hasNodeNetworkException } from "../common/errors/NodeErrors.js";
-import { hasUpstreamError, UpstreamError } from "../common/errors/UpstreamError.js";
+import AbstractComponent from "../common/AbstractComponent.js";
+import { UpstreamError } from "../common/errors/UpstreamError.js";
 import {
     ARTIST_WEIGHT,
     Authenticatable,
@@ -21,10 +21,6 @@ import {
     DEFAULT_RETRY_MULTIPLIER,
     DUP_SCORE_THRESHOLD,
     FormatPlayObjectOptions,
-    INITIALIZED,
-    INITIALIZING,
-    InitState,
-    NOT_INITIALIZED,
     ScrobbledPlayObject,
     TIME_WEIGHT,
     TITLE_WEIGHT,
@@ -48,20 +44,14 @@ import {
     temporalPlayComparisonSummary,
 } from "../utils/TimeUtils.js";
 
-export default abstract class AbstractScrobbleClient implements Authenticatable {
+export default abstract class AbstractScrobbleClient extends AbstractComponent implements Authenticatable {
 
     name: string;
     type: ClientType;
     identifier: string;
 
-    #initState: InitState = NOT_INITIALIZED;
-
     protected MAX_STORED_SCROBBLES = 40;
-
-    requiresAuth: boolean = false;
-    requiresAuthInteraction: boolean = false;
-    authed: boolean = false;
-    authFailure?: boolean;
+    protected MAX_INITIAL_SCROBBLES_FETCH = this.MAX_STORED_SCROBBLES;
 
     #recentScrobblesList: PlayObject[] = [];
     scrobbledPlayObjs: FixedSizeList<ScrobbledPlayObject>;
@@ -84,12 +74,12 @@ export default abstract class AbstractScrobbleClient implements Authenticatable 
     deadLetterScrobbles: DeadLetterScrobble<PlayObject>[] = [];
 
     config: CommonClientConfig;
-    logger: Logger;
 
     notifier: Notifiers;
     emitter: EventEmitter;
 
     constructor(type: any, name: any, config: CommonClientConfig, notifier: Notifiers, emitter: EventEmitter, logger: Logger) {
+        super();
         this.type = type;
         this.name = name;
         this.identifier = `${capitalize(this.type)} - ${name}`;
@@ -99,16 +89,14 @@ export default abstract class AbstractScrobbleClient implements Authenticatable 
 
         this.scrobbledPlayObjs = new FixedSizeList<ScrobbledPlayObject>(this.MAX_STORED_SCROBBLES);
 
-        const {
-            data: {
-                options: {
-                    refreshEnabled = true,
-                    checkExistingScrobbles = true,
-                    verbose = {},
-                } = {},
-            } = {},
-        } = config;
         this.config = config;
+        const {
+            options: {
+                refreshEnabled = true,
+                checkExistingScrobbles = true,
+                verbose = {},
+            } = {},
+        } = this.config
         this.refreshEnabled = refreshEnabled;
         this.checkExistingScrobbles = checkExistingScrobbles;
 
@@ -143,55 +131,24 @@ export default abstract class AbstractScrobbleClient implements Authenticatable 
         return this.#recentScrobblesList;
     }
 
-    get initialized() {
-        return this.#initState === INITIALIZED;
-    }
+    protected async postInitialize(): Promise<void> {
+        const {
+            options: {
+                refreshInitialCount= this.MAX_INITIAL_SCROBBLES_FETCH
+            } = {}
+        } = this.config;
 
-   set initialized(val) {
-        // @ts-expect-error TS(2367): This condition will always return 'false' since th... Remove this comment to see the full error message
-        if(val === INITIALIZING) {
-            this.#initState = INITIALIZING;
-        // @ts-expect-error TS(2367): This condition will always return 'false' since th... Remove this comment to see the full error message
-        } else if(val === true || val === INITIALIZED) {
-            this.#initState = INITIALIZED;
-        } else {
-            this.#initState = NOT_INITIALIZED;
+        let initialLimit = refreshInitialCount;
+        if(refreshInitialCount > this.MAX_INITIAL_SCROBBLES_FETCH) {
+            this.logger.warn(`Defined initial scrobbles count (${refreshInitialCount}) higher than maximum allowed (${this.MAX_INITIAL_SCROBBLES_FETCH}). Will use max instead.`);
+            initialLimit = this.MAX_INITIAL_SCROBBLES_FETCH;
         }
-   }
 
-   get initializing() {
-        return this.#initState === INITIALIZING;
-   }
-
-    // default init function, should be overridden if init stage is required
-    initialize = async () => {
-        this.initialized = true;
-        this.logger.info('Initialized');
-        return true;
+        this.logger.verbose(`Fetching up to ${initialLimit} initial scrobbles...`);
+        await this.refreshScrobbles(initialLimit);
     }
 
-    authGated = () => this.requiresAuth && !this.authed
-
-    canTryAuth = () => this.authGated() && this.authFailure !== true
-
-    protected doAuthentication = async (): Promise<boolean> => this.authed
-
-    // default init function, should be overridden if auth stage is required
-    testAuth = async () => {
-        try {
-            this.authed = await this.doAuthentication();
-            this.authFailure = !this.authed;
-        } catch (e) {
-            // only signal as auth failure if error was NOT either a node network error or a non-showstopping upstream error
-            this.authFailure = !(hasNodeNetworkException(e) || hasUpstreamError(e, false));
-            this.authed = false;
-            this.logger.error(new Error(`Authentication test failed!${this.authFailure === false ? ' Due to a network issue. Will retry authentication on next heartbeat.' : ''}`, {cause: e}));
-        }
-    }
-
-    isReady = async () => this.initialized && !this.authGated()
-
-    refreshScrobbles = async () => {
+    refreshScrobbles = async (limit?: number) => {
         this.logger.debug('Scrobbler does not have refresh function implemented!');
     }
 
@@ -440,9 +397,9 @@ ${closestMatch.breakdowns.join('\n')}`, {leaf: ['Dupe Check']});
     protected abstract doScrobble(playObj: PlayObject): Promise<PlayObject>
 
     public abstract playToClientPayload(playObject: PlayObject): object
-    
+
     initScrobbleMonitoring = async () => {
-        if(!this.initialized) {
+        if(!this.isUsable()) {
             if(this.initializing) {
                 this.logger.warn(`Cannot start scrobble processing because client is still initializing`);
                 return;
@@ -469,7 +426,7 @@ ${closestMatch.breakdowns.join('\n')}`, {leaf: ['Dupe Check']});
             }
         }
 
-        if(!(await this.isReady())) {
+        if(!this.isReady()) {
             this.logger.warn(`Cannot start scrobble processing because client is not ready`);
             return;
         }
@@ -507,11 +464,11 @@ ${closestMatch.breakdowns.join('\n')}`, {leaf: ['Dupe Check']});
                     break;
                 }
             } catch (e) {
-                if(!this.initialized) {
-                    this.logger.warn('Stopping scrobble processing due to client no longer being initialized.');
-                    await this.notifier.notify({title: `Client - ${this.identifier} - Processing Error`, message: `Encountered error while scrobble processing and client is no longer initialized, stopping processing!. | Error: ${e.message}`, priority: 'error'});
+                if(!this.isUsable()) {
+                    this.logger.warn('Stopping scrobble processing due to client no longer usable.');
+                    await this.notifier.notify({title: `Client - ${this.identifier} - Processing Error`, message: `Encountered error while scrobble processing and client is no longer usable, stopping processing!. | Error: ${e.message}`, priority: 'error'});
                     break;
-                } else if (this.requiresAuth && !this.authed) {
+                } else if (this.authGated()) {
                     this.logger.warn('Stopping scrobble processing due to client no longer being authenticated.');
                     await this.notifier.notify({title: `Client - ${this.identifier} - Processing Error`, message: `Encountered error while scrobble processing and client is no longer authenticated, stopping processing!. | Error: ${e.message}`, priority: 'error'});
                     break;
@@ -617,7 +574,7 @@ ${closestMatch.breakdowns.join('\n')}`, {leaf: ['Dupe Check']});
             options: {
                 deadLetterRetries = 1
             } = {}
-        } = this.config.data;
+        } = this.config;
 
         const retries = attemptWithRetries ?? deadLetterRetries;
 

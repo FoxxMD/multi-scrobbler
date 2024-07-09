@@ -39,7 +39,7 @@ export interface ScrobbleThresholds {
     percent?: number | null
 }
 
-export interface CommonSourceOptions {
+export interface CommonSourceOptions extends SourceRetryOptions {
     /**
      * If this source has INGRESS to MS (sends a payload, rather than MS GETTING requesting a payload)
      * then setting this option to true will make MS log the payload JSON to DEBUG output
@@ -83,13 +83,23 @@ export interface CommonSourceOptions {
      * @examples [true, false]
      * */
     scrobbleBacklog?: boolean
-}
 
-export interface CommonSourceData extends CommonData, SourceRetryOptions {
     /**
      * Set thresholds for when multi-scrobbler should consider a tracked play to be "scrobbable". If both duration and percent are defined then if either condition is met the track is scrobbled.
      * */
     scrobbleThresholds?: ScrobbleThresholds
+
+    /**
+     * The number of listens to fetch when scrobbling from backlog
+     *
+     * * Only applies if this source supports fetching a listen history
+     * * If not specified it defaults to the maximum number of listens the source API supports
+     * */
+    scrobbleBacklogCount?: number
+}
+
+export interface CommonSourceData extends CommonData {
+
 }
 
 export interface CommonSourceConfig extends CommonConfig {

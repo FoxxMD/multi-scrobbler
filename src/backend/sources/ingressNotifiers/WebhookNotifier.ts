@@ -13,18 +13,12 @@ export class WebhookNotifier extends IngressNotifier {
     notifyBySource(req: Request, isRaw: boolean): [boolean, (string | undefined)] {
 
         if(!isRaw) {
-            // let cleanPath = req.path;
-            // if(cleanPath.charAt(cleanPath.length - 1) === '/') {
-            //     cleanPath = cleanPath.slice(0, -1);
-            // }
-            // const splitPath = cleanPath.split('/');
-            // const slug = splitPath[cleanPath.length - 1];
             const parts = path.parse(req.path);
             const slug = parts.name;
 
             if(this.seenSlugs[slug] === undefined) {
                 this.seenSlugs[slug] = true;
-                return [true, `Received valid data for API URL slug '${slug === 'webscrobbler' ? '(none)' : slug}' for the first time.`];
+                return [true, `Received data for API URL slug '${slug === 'webscrobbler' ? '(none)' : slug}' for the first time.`];
             }
         }
 
@@ -32,8 +26,8 @@ export class WebhookNotifier extends IngressNotifier {
     }
 
     notifyByRequest(req: Request, isRaw: boolean): string | undefined {
-        if(req.method !== 'POST') {
-            return `Expected POST request (webhook payload) but received ${req.method}`;
+        if(req.method !== 'POST' && req.method !== 'OPTIONS') {
+            return `Expected POST or OPTIONS request (webhook payload) but received ${req.method}`;
         }
         return;
     }

@@ -6,7 +6,7 @@ import { PlayObject } from "../../core/Atomic.js";
 import { buildTrackString, capitalize } from "../../core/StringUtils.js";
 import { isNodeNetworkException } from "../common/errors/NodeErrors.js";
 import { UpstreamError } from "../common/errors/UpstreamError.js";
-import { FormatPlayObjectOptions, INITIALIZING } from "../common/infrastructure/Atomic.js";
+import { FormatPlayObjectOptions } from "../common/infrastructure/Atomic.js";
 import { LastfmClientConfig } from "../common/infrastructure/config/client/lastfm.js";
 import LastfmApiClient from "../common/vendor/LastfmApiClient.js";
 import { Notifiers } from "../notifier/Notifiers.js";
@@ -24,23 +24,15 @@ export default class LastfmScrobbler extends AbstractScrobbleClient {
         super('lastfm', name, config, notifier, emitter, logger);
         // @ts-expect-error sloppy data structure assign
         this.api = new LastfmApiClient(name, config.data, {...options, logger})
+        // https://www.last.fm/api/show/user.getRecentTracks
+        this.MAX_INITIAL_SCROBBLES_FETCH = 200;
     }
 
     formatPlayObj = (obj: any, options: FormatPlayObjectOptions = {}) => LastfmApiClient.formatPlayObj(obj, options);
 
-    initialize = async () => {
-        // @ts-expect-error TS(2322): Type 'number' is not assignable to type 'boolean'.
-        this.initialized = INITIALIZING;
-        try {
-            const result = await this.api.initialize();
-            this.initialized = true;
-            this.logger.info('Initialized');
-        } catch (e) {
-            this.initialized = false;
-            this.logger.warn(new Error('Initialization failed', {cause: e}));
-        }
-
-        return this.initialized;
+    protected async doBuildInitData(): Promise<true | string | undefined> {
+        await this.api.initialize();
+        return true;
     }
 
     doAuthentication = async () => {
@@ -54,13 +46,13 @@ export default class LastfmScrobbler extends AbstractScrobbleClient {
         }
     }
 
-    refreshScrobbles = async () => {
+    refreshScrobbles = async (limit = this.MAX_STORED_SCROBBLES) => {
         if (this.refreshEnabled) {
             this.logger.debug('Refreshing recent scrobbles');
             const resp = await this.api.callApi<UserGetRecentTracksResponse>((client: any) => client.userGetRecentTracks({
                 user: this.api.user,
                 sk: this.api.client.sessionKey,
-                limit: this.MAX_STORED_SCROBBLES,
+                limit: limit,
                 extended: true
             }));
             const {
@@ -163,7 +155,6 @@ export default class LastfmScrobbler extends AbstractScrobbleClient {
                 } = {},
             } = response;
             if(code === 5) {
-                this.initialized = false;
                 throw new UpstreamError('LastFM API reported daily scrobble limit exceeded! 😬 Disabling client', {showStopper: true});
             }
             if (newFromSource) {

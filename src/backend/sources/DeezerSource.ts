@@ -6,7 +6,7 @@ import request from 'superagent';
 import { PlayObject } from "../../core/Atomic.js";
 import { DEFAULT_RETRY_MULTIPLIER, FormatPlayObjectOptions, InternalConfig } from "../common/infrastructure/Atomic.js";
 import { DeezerSourceConfig } from "../common/infrastructure/config/source/deezer.js";
-import { parseRetryAfterSecsFromObj, readJson, sleep, sortByOldestPlayDate, writeFile, } from "../utils.js";
+import { joinedUrl, parseRetryAfterSecsFromObj, readJson, sleep, sortByOldestPlayDate, writeFile, } from "../utils.js";
 import AbstractSource, { RecentlyPlayedOptions } from "./AbstractSource.js";
 
 export default class DeezerSource extends AbstractSource {
@@ -42,12 +42,15 @@ export default class DeezerSource extends AbstractSource {
             redirectUri,
         };
 
-        this.redirectUri = redirectUri || `${this.localUrl}/deezer/callback`;
+        this.redirectUri = redirectUri || joinedUrl(this.localUrl, 'deezer/callback').toString();
 
         this.workingCredsPath = `${this.configDir}/currentCreds-${name}.json`;
         this.canPoll = true;
         this.canBacklog = true;
         this.supportsUpstreamRecentlyPlayed = true;
+        // https://developers.deezer.com/api/user/history
+        // https://stackoverflow.com/a/19497151/1469797
+        this.SCROBBLE_BACKLOG_COUNT = 50;
     }
 
     static formatPlayObj(obj: any, options: FormatPlayObjectOptions = {}): PlayObject {
@@ -134,7 +137,7 @@ export default class DeezerSource extends AbstractSource {
     getUpstreamRecentlyPlayed = async (options: RecentlyPlayedOptions = {}): Promise<PlayObject[]> => this.getRecentlyPlayed(options)
 
     getRecentlyPlayed = async (options: RecentlyPlayedOptions = {}) => {
-        const resp = await this.callApi(request.get(`${this.baseUrl}/user/me/history?limit=20`));
+        const resp = await this.callApi(request.get(`${this.baseUrl}/user/me/history?limit=${options.limit || 20}`));
         return resp.data.map((x: any) => DeezerSource.formatPlayObj(x)).sort(sortByOldestPlayDate);
     }
 
@@ -142,7 +145,7 @@ export default class DeezerSource extends AbstractSource {
         const {
             maxRequestRetries = 1,
             retryMultiplier = DEFAULT_RETRY_MULTIPLIER
-        } = this.config.data;
+        } = this.config.options;
 
         req.query({
             access_token: this.config.data.accessToken,
@@ -248,5 +251,5 @@ export default class DeezerSource extends AbstractSource {
         }
     }
 
-    protected getBackloggedPlays = async () => await this.getRecentlyPlayed({formatted: true})
+    protected getBackloggedPlays = async (options: RecentlyPlayedOptions = {}) => await this.getRecentlyPlayed({formatted: true, ...options})
 }

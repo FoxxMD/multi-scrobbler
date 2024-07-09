@@ -13,6 +13,7 @@ import { LastfmSourceConfig } from "../common/infrastructure/config/source/lastf
 import { ListenBrainzSourceConfig } from "../common/infrastructure/config/source/listenbrainz.js";
 import { MopidySourceConfig } from "../common/infrastructure/config/source/mopidy.js";
 import { MPRISData, MPRISSourceConfig } from "../common/infrastructure/config/source/mpris.js";
+import { MusikcubeData, MusikcubeSourceConfig } from "../common/infrastructure/config/source/musikcube.js";
 import { PlexSourceConfig } from "../common/infrastructure/config/source/plex.js";
 import { SourceAIOConfig, SourceConfig } from "../common/infrastructure/config/source/sources.js";
 import { SpotifySourceConfig, SpotifySourceData } from "../common/infrastructure/config/source/spotify.js";
@@ -34,6 +35,7 @@ import LastfmSource from "./LastfmSource.js";
 import ListenbrainzSource from "./ListenbrainzSource.js";
 import { MopidySource } from "./MopidySource.js";
 import { MPRISSource } from "./MPRISSource.js";
+import { MusikcubeSource } from "./MusikcubeSource.js";
 import PlexSource from "./PlexSource.js";
 import SpotifySource from "./SpotifySource.js";
 import { SubsonicSource } from "./SubsonicSource.js";
@@ -50,11 +52,11 @@ export default class ScrobbleSources {
     sources: AbstractSource[] = [];
     logger: Logger;
     configDir: string;
-    localUrl: string;
+    localUrl: URL;
 
     emitter: WildcardEmitter;
 
-    constructor(emitter: EventEmitter, localUrl: string, configDir: string = defaultConfigDir, parentLogger: Logger) {
+    constructor(emitter: EventEmitter, localUrl: URL, configDir: string = defaultConfigDir, parentLogger: Logger) {
         this.emitter = emitter;
         this.configDir = configDir;
         this.localUrl = localUrl;
@@ -343,6 +345,22 @@ export default class ScrobbleSources {
                         });
                     }
                     break;
+                case 'musikcube':
+                    const mc = {
+                        url: process.env.MC_URL,
+                        password: process.env.MC_PASSWORD
+                    }
+                    if (!Object.values(mc).every(x => x === undefined)) {
+                        configs.push({
+                            type: 'musikcube',
+                            name: 'unnamed',
+                            source: 'ENV',
+                            mode: 'single',
+                            configureAs: defaultConfigureAs,
+                            data: mc as MusikcubeData
+                        });
+                    }
+                    break;
                 default:
                     break;
             }
@@ -470,11 +488,9 @@ export default class ScrobbleSources {
             this.logger.warn(`${type} (${name}) source was disabled by config`);
             return;
         }
-
+        
         // add defaults
-        const {options: defaultOptions = {}, ...restDefaults} = defaults;
-        const data = {...defaults, ...d};
-        const compositeConfig: SourceConfig = {...clientConfig, data, options: {...defaultOptions, ...clientOptions}};
+        const compositeConfig: SourceConfig = {...clientConfig, data: d, options: {...defaults, ...clientOptions}};
 
         this.logger.debug(`(${name}) Constructing ${type} source`);
         let newSource: AbstractSource;
@@ -523,6 +539,9 @@ export default class ScrobbleSources {
                 break;
             case 'chromecast':
                 newSource = await new ChromecastSource(name, compositeConfig as ChromecastSourceConfig, internal, this.emitter);
+                break;
+            case 'musikcube':
+                newSource = await new MusikcubeSource(name, compositeConfig as MusikcubeSourceConfig, internal, this.emitter);
                 break;
             default:
                 break;

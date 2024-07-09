@@ -8,7 +8,7 @@ import LastFm, {
 } from "lastfm-node-client";
 import { PlayObject } from "../../../core/Atomic.js";
 import { nonEmptyStringOrDefault, splitByFirstFound } from "../../../core/StringUtils.js";
-import { readJson, removeUndefinedKeys, sleep, writeFile } from "../../utils.js";
+import { joinedUrl, readJson, removeUndefinedKeys, sleep, writeFile } from "../../utils.js";
 import { getScrobbleTsSOCDate } from "../../utils/TimeUtils.js";
 import { getNodeNetworkException, isNodeNetworkException } from "../errors/NodeErrors.js";
 import { UpstreamError } from "../errors/UpstreamError.js";
@@ -35,10 +35,10 @@ export default class LastfmApiClient extends AbstractApiClient {
     user?: string;
     declare config: LastfmData;
 
-    constructor(name: any, config: Partial<LastfmData> & {configDir: string, localUrl: string}, options: AbstractApiOptions) {
+    constructor(name: any, config: Partial<LastfmData> & {configDir: string, localUrl: URL}, options: AbstractApiOptions) {
         super('lastfm', name, config, options);
         const {redirectUri, apiKey, secret, session, configDir} = config;
-        this.redirectUri = `${redirectUri ?? `${config.localUrl}/lastfm/callback`}?state=${name}`;
+        this.redirectUri = `${redirectUri ?? joinedUrl(config.localUrl, 'lastfm/callback').href}?state=${name}`;
         if (apiKey === undefined) {
             this.logger.warn("'apiKey' not found in config!");
         }

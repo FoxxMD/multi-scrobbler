@@ -2,6 +2,7 @@
 node_modules
 npm-debug.log
 Dockerfile
+*.Dockerfile
 .dockerignore
 .gitignore
 .github

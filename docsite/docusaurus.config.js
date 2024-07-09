@@ -33,7 +33,8 @@ const config = {
     defaultLocale: 'en',
     locales: ['en'],
   },
-
+  scripts: [
+  ],
   presets: [
     [
       'classic',
@@ -155,5 +156,15 @@ const config = {
       },
     }),
 };
+
+if (process.env.ANALYTICS !== undefined && process.env.ANALYTICS !== '') {
+  const script = {
+    src: process.env.ANALYTICS,
+  }
+  if (process.env.ANALYTICS_DOMAIN !== undefined && process.env.ANALYTICS_DOMAIN !== '') {
+    script['data-domain'] = process.env.ANALYTICS_DOMAIN;
+  }
+  config.scripts.push(script)
+}
 
 module.exports = config;

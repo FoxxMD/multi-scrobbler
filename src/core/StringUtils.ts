@@ -1,10 +1,16 @@
-import dayjs, {Dayjs} from "dayjs";
-import utc from "dayjs/plugin/utc.js";
+import dayjs, { Dayjs } from "dayjs";
+import duration from "dayjs/plugin/duration.js";
 import isBetween from "dayjs/plugin/isBetween.js";
 import relativeTime from "dayjs/plugin/relativeTime.js";
-import duration from "dayjs/plugin/duration.js";
 import timezone from "dayjs/plugin/timezone.js";
-import {AmbPlayObject, SCROBBLE_TS_SOC_END, SCROBBLE_TS_SOC_START, ScrobbleTsSOC, TrackStringOptions} from "./Atomic.js";
+import utc from "dayjs/plugin/utc.js";
+import {
+    AmbPlayObject,
+    SCROBBLE_TS_SOC_END,
+    SCROBBLE_TS_SOC_START,
+    ScrobbleTsSOC,
+    TrackStringOptions
+} from "./Atomic.js";
 
 dayjs.extend(utc)
 dayjs.extend(isBetween);
@@ -29,11 +35,13 @@ export const defaultReducer = (acc, curr) => `${acc} ${curr}`;
 export const defaultArtistFunc = (a: string[]) => a.join(' / ');
 export const defaultTimeFunc = (t: Dayjs | undefined, i?: ScrobbleTsSOC) => t === undefined ? '@ N/A' : `@ ${t.local().format()} ${i === undefined ? '' : (i === SCROBBLE_TS_SOC_START ? '(S)' : '(C)')}`;
 export const defaultTimeFromNowFunc = (t: Dayjs | undefined) => t === undefined ? undefined : `(${t.local().fromNow()})`;
+export const defaultCommentFunc = (c: string | undefined) => c === undefined ? undefined : `(${c})`;
 export const defaultBuildTrackStringTransformers = {
     artists: defaultArtistFunc,
     track: defaultTrackTransformer,
     time: defaultTimeFunc,
     timeFromNow: defaultTimeFromNowFunc,
+    comment: defaultCommentFunc
 }
 export const buildTrackString = <T = string>(playObj: AmbPlayObject, options: TrackStringOptions<T> = {}): T => {
     const {
@@ -43,6 +51,7 @@ export const buildTrackString = <T = string>(playObj: AmbPlayObject, options: Tr
             track: trackFunc = defaultBuildTrackStringTransformers.track,
             time: timeFunc = defaultBuildTrackStringTransformers.time,
             timeFromNow = defaultBuildTrackStringTransformers.timeFromNow,
+            comment: commentFunc = defaultBuildTrackStringTransformers.comment,
             reducer = arr => arr.join(' ') // (acc, curr) => `${acc} ${curr}`
         } = {},
     } = options;
@@ -56,7 +65,8 @@ export const buildTrackString = <T = string>(playObj: AmbPlayObject, options: Tr
         } = {},
         meta: {
             trackId,
-            scrobbleTsSOC = SCROBBLE_TS_SOC_START
+            scrobbleTsSOC = SCROBBLE_TS_SOC_START,
+            comment
         } = {},
     } = playObj;
 
@@ -88,6 +98,12 @@ export const buildTrackString = <T = string>(playObj: AmbPlayObject, options: Tr
             strParts.push(tfn)
         }
 
+    }
+    if (include.includes('comment')) {
+        const cfn = commentFunc(comment);
+        if(cfn !== undefined) {
+            strParts.push(cfn);
+        }
     }
     // @ts-ignore
     return reducer(strParts); //strParts.join(' ');

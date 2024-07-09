@@ -1,0 +1,10 @@
+[
+  {
+    "type": "musikcube",
+    "enable": true,
+    "name": "musikcube",
+    "data": {
+      "password": "MY_PASSWORD"
+    }
+  }
+]

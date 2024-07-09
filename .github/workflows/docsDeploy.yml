@@ -1,9 +1,11 @@
 name: Deploy to GitHub Pages
 
 on:
+  workflow_dispatch:
   push:
     branches:
       - master
+      - developDocs
     # Review gh actions docs if you want to further define triggers, paths, etc
     # https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#on
 
@@ -22,6 +24,9 @@ jobs:
         run: npm ci
         working-directory: ./docsite
       - name: Build website
+        env:
+          ANALYTICS: ${{ vars.ANALYTICS }}
+          ANALYTICS_DOMAIN: ${{ vars.ANALYTICS_DOMAIN }}
         run: npm run build
         working-directory: ./docsite
 

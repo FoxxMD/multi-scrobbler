@@ -13,71 +13,74 @@
     ],
     "definitions": {
         "CommonClientData": {
+            "title": "CommonClientData",
+            "type": "object"
+        },
+        "CommonClientOptions": {
             "properties": {
+                "checkExistingScrobbles": {
+                    "default": true,
+                    "description": "Check client for an existing scrobble at the same recorded time as the \"new\" track to be scrobbled. If an existing scrobble is found this track is not track scrobbled.",
+                    "examples": [
+                        true
+                    ],
+                    "title": "checkExistingScrobbles",
+                    "type": "boolean"
+                },
+                "deadLetterRetries": {
+                    "default": 1,
+                    "description": "Number of times MS should automatically retry scrobbles in dead letter queue",
+                    "examples": [
+                        1
+                    ],
+                    "title": "deadLetterRetries",
+                    "type": "number"
+                },
                 "maxRequestRetries": {
                     "default": 1,
-                    "description": "default # of http request retries a client can make before error is thrown.",
+                    "description": "default # of http request retries a source/client can make before error is thrown",
                     "examples": [
                         1
                     ],
                     "title": "maxRequestRetries",
                     "type": "number"
                 },
-                "options": {
-                    "properties": {
-                        "checkExistingScrobbles": {
-                            "default": true,
-                            "description": "Check client for an existing scrobble at the same recorded time as the \"new\" track to be scrobbled. If an existing scrobble is found this track is not track scrobbled.",
-                            "examples": [
-                                true
-                            ],
-                            "title": "checkExistingScrobbles",
-                            "type": "boolean"
-                        },
-                        "deadLetterRetries": {
-                            "default": 1,
-                            "description": "Number of times MS should automatically retry scrobbles in dead letter queue",
-                            "examples": [
-                                1
-                            ],
-                            "title": "deadLetterRetries",
-                            "type": "number"
-                        },
-                        "refreshEnabled": {
-                            "default": true,
-                            "description": "Try to get fresh scrobble history from client when tracks to be scrobbled are newer than the last scrobble found in client history",
-                            "examples": [
-                                true
-                            ],
-                            "title": "refreshEnabled",
-                            "type": "boolean"
-                        },
-                        "verbose": {
-                            "description": "Options used for increasing verbosity of logging in MS (used for debugging)",
-                            "properties": {
-                                "match": {
-                                    "$ref": "#/definitions/MatchLoggingOptions",
-                                    "title": "match"
-                                }
-                            },
-                            "title": "verbose",
-                            "type": "object"
-                        }
-                    },
-                    "title": "options",
-                    "type": "object"
+                "refreshEnabled": {
+                    "default": true,
+                    "description": "Try to get fresh scrobble history from client when tracks to be scrobbled are newer than the last scrobble found in client history",
+                    "examples": [
+                        true
+                    ],
+                    "title": "refreshEnabled",
+                    "type": "boolean"
+                },
+                "refreshInitialCount": {
+                    "description": "The number of tracks to retrieve on initial refresh (related to scrobbleBacklogCount). If not specified this is the maximum supported for the client.",
+                    "title": "refreshInitialCount",
+                    "type": "number"
                 },
                 "retryMultiplier": {
                     "default": 1.5,
-                    "description": "default retry delay multiplier (retry attempt * multiplier = # of seconds to wait before retrying).",
+                    "description": "default retry delay multiplier (retry attempt * multiplier = # of seconds to wait before retrying)",
                     "examples": [
                         1.5
                     ],
                     "title": "retryMultiplier",
                     "type": "number"
+                },
+                "verbose": {
+                    "description": "Options used for increasing verbosity of logging in MS (used for debugging)",
+                    "properties": {
+                        "match": {
+                            "$ref": "#/definitions/MatchLoggingOptions",
+                            "title": "match"
+                        }
+                    },
+                    "title": "verbose",
+                    "type": "object"
                 }
             },
-            "title": "CommonClientData",
+            "title": "CommonClientOptions",
             "type": "object"
         },
         "LastfmClientConfig": {
@@ -123,6 +126,10 @@
                     ],
                     "title": "name",
                     "type": "string"
+                },
+                "options": {
+                    "$ref": "#/definitions/CommonClientOptions",
+                    "title": "options"
                 }
             },
             "required": [
@@ -144,7 +151,7 @@
                 },
                 "maxRequestRetries": {
                     "default": 1,
-                    "description": "default # of http request retries a source can make before error is thrown",
+                    "description": "default # of http request retries a source/client can make before error is thrown",
                     "examples": [
                         1
                     ],
@@ -226,6 +233,10 @@
                     ],
                     "title": "name",
                     "type": "string"
+                },
+                "options": {
+                    "$ref": "#/definitions/CommonClientOptions",
+                    "title": "options"
                 }
             },
             "required": [
@@ -239,56 +250,12 @@
             "properties": {
                 "maxRequestRetries": {
                     "default": 1,
-                    "description": "default # of http request retries a source can make before error is thrown",
+                    "description": "default # of http request retries a source/client can make before error is thrown",
                     "examples": [
                         1
                     ],
                     "title": "maxRequestRetries",
                     "type": "number"
-                },
-                "options": {
-                    "properties": {
-                        "checkExistingScrobbles": {
-                            "default": true,
-                            "description": "Check client for an existing scrobble at the same recorded time as the \"new\" track to be scrobbled. If an existing scrobble is found this track is not track scrobbled.",
-                            "examples": [
-                                true
-                            ],
-                            "title": "checkExistingScrobbles",
-                            "type": "boolean"
-                        },
-                        "deadLetterRetries": {
-                            "default": 1,
-                            "description": "Number of times MS should automatically retry scrobbles in dead letter queue",
-                            "examples": [
-                                1
-                            ],
-                            "title": "deadLetterRetries",
-                            "type": "number"
-                        },
-                        "refreshEnabled": {
-                            "default": true,
-                            "description": "Try to get fresh scrobble history from client when tracks to be scrobbled are newer than the last scrobble found in client history",
-                            "examples": [
-                                true
-                            ],
-                            "title": "refreshEnabled",
-                            "type": "boolean"
-                        },
-                        "verbose": {
-                            "description": "Options used for increasing verbosity of logging in MS (used for debugging)",
-                            "properties": {
-                                "match": {
-                                    "$ref": "#/definitions/MatchLoggingOptions",
-                                    "title": "match"
-                                }
-                            },
-                            "title": "verbose",
-                            "type": "object"
-                        }
-                    },
-                    "title": "options",
-                    "type": "object"
                 },
                 "retryMultiplier": {
                     "default": 1.5,
@@ -352,6 +319,10 @@
                     ],
                     "title": "name",
                     "type": "string"
+                },
+                "options": {
+                    "$ref": "#/definitions/CommonClientOptions",
+                    "title": "options"
                 }
             },
             "required": [
@@ -373,56 +344,12 @@
                 },
                 "maxRequestRetries": {
                     "default": 1,
-                    "description": "default # of http request retries a source can make before error is thrown",
+                    "description": "default # of http request retries a source/client can make before error is thrown",
                     "examples": [
                         1
                     ],
                     "title": "maxRequestRetries",
                     "type": "number"
-                },
-                "options": {
-                    "properties": {
-                        "checkExistingScrobbles": {
-                            "default": true,
-                            "description": "Check client for an existing scrobble at the same recorded time as the \"new\" track to be scrobbled. If an existing scrobble is found this track is not track scrobbled.",
-                            "examples": [
-                                true
-                            ],
-                            "title": "checkExistingScrobbles",
-                            "type": "boolean"
-                        },
-                        "deadLetterRetries": {
-                            "default": 1,
-                            "description": "Number of times MS should automatically retry scrobbles in dead letter queue",
-                            "examples": [
-                                1
-                            ],
-                            "title": "deadLetterRetries",
-                            "type": "number"
-                        },
-                        "refreshEnabled": {
-                            "default": true,
-                            "description": "Try to get fresh scrobble history from client when tracks to be scrobbled are newer than the last scrobble found in client history",
-                            "examples": [
-                                true
-                            ],
-                            "title": "refreshEnabled",
-                            "type": "boolean"
-                        },
-                        "verbose": {
-                            "description": "Options used for increasing verbosity of logging in MS (used for debugging)",
-                            "properties": {
-                                "match": {
-                                    "$ref": "#/definitions/MatchLoggingOptions",
-                                    "title": "match"
-                                }
-                            },
-                            "title": "verbose",
-                            "type": "object"
-                        }
-                    },
-                    "title": "options",
-                    "type": "object"
                 },
                 "retryMultiplier": {
                     "default": 1.5,

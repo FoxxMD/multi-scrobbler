@@ -21,7 +21,7 @@ export const createHeartbeatSourcesTask = (sources: ScrobbleSources, parentLogge
                         }
                         if (source.canPoll && !source.polling && (!source.authGated() || source.canTryAuth())) {
                             source.logger.info('Should be polling! Attempting to restart polling...', {leaf: 'Heartbeat'});
-                            source.poll();
+                            source.poll().catch(e => logger.error(e));
                             return 1;
                         }
                     }

@@ -1,0 +1,122 @@
+name: PR Workflow
+
+on:
+  pull_request_target:
+    types:
+      - labeled
+      - synchronize
+      - reopened
+      - opened
+    branches:
+      - 'develop'
+
+jobs:
+  test:
+    name: Run Tests
+    runs-on: ubuntu-latest
+    if: contains(github.event.pull_request.labels.*.name, 'safe to test')
+    steps:
+      - name: Check out the repo
+        uses: actions/checkout@v4
+      - name: Use Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18.x'
+          cache: 'npm'
+      - name: Install dev dependencies
+        run: npm ci
+      - name: Build Backend
+        run: 'npm run build:backend'
+      - name: Test Backend
+        run: npm run test
+
+  release-snapshot:
+    name: Release snapshot
+    runs-on: ubuntu-latest
+    needs: test
+    if: contains(github.event.pull_request.labels.*.name, 'safe to test')
+    permissions:
+      packages: write
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - dockerfile: ./Dockerfile
+            suffix: ''
+            platforms: 'linux/amd64,linux/arm64'
+          - dockerfile: ./alpine.Dockerfile
+            suffix: '-alpine'
+            platforms: 'linux/amd64,linux/arm64'
+    steps:
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract metadata (tags, labels) for Docker
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: |
+            foxxmd/multi-scrobbler
+            ghcr.io/foxxmd/multi-scrobbler
+          tags: |
+            type=ref,event=pr,suffix=${{ matrix.suffix }}
+          flavor: |
+            latest=false
+
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+
+      - name: Build and push
+        id: docker_build
+        uses: docker/build-push-action@v5
+        env:
+          APP_VERSION: ${{ format('pr{0}-{1}', github.event.number, github.event.pull_request.head.sha ) }}
+        with:
+          context: .
+          build-args: |
+            APP_BUILD_VERSION=${{env.APP_VERSION}}
+          file: ${{ matrix.dockerfile }}
+          push: ${{ !env.ACT}}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          platforms: ${{ matrix.platforms }}
+
+  combine-and-comment:
+    name: Leave comment
+    runs-on: ubuntu-latest
+    needs: release-snapshot
+    if: contains(github.event.pull_request.labels.*.name, 'safe to test')
+    steps:
+      - name: Create comment
+        uses: marocchino/sticky-pull-request-comment@v2
+        with:
+          recreate: true
+          header: "pr-release"
+          message: |
+            #### :package: A new release has been made for this pull request.
+
+            To play around with this PR, pull an image:
+            * `foxxmd/multi-scrobbler:pr-${{ github.event.number }}`
+            * `foxxmd/multi-scrobbler:pr-${{ github.event.number }}-alpine`.
+
+            Images are available for x86_64 and ARM64.
+
+            > Latest commit: ${{ github.event.pull_request.head.sha }}

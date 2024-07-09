@@ -11,7 +11,7 @@ import { SimpleIntervalJob, ToadScheduler } from "toad-scheduler";
 import { projectDir } from "./common/index.js";
 import { AIOConfig } from "./common/infrastructure/config/aioConfig.js";
 import { appLogger, initLogger as getInitLogger } from "./common/logging.js";
-import { getRoot } from "./ioc.js";
+import { getRoot, parseVersion } from "./ioc.js";
 import { initServer } from "./server/index.js";
 import { createHeartbeatClientsTask } from "./tasks/heartbeatClients.js";
 import { createHeartbeatSourcesTask } from "./tasks/heartbeatSources.js";
@@ -75,6 +75,8 @@ const configDir = process.env.CONFIG_DIR || path.resolve(projectDir, `./config`)
             process.env.DEBUG_MODE = b.toString();
         }
 
+        await parseVersion();
+
         const [aLogger, appLoggerStream] = await appLogger(logging)
         logger = childLogger(aLogger, 'App');
 
@@ -109,7 +111,7 @@ const configDir = process.env.CONFIG_DIR || path.resolve(projectDir, `./config`)
             await client.initScrobbleMonitoring();
         }
 
-        const scrobbleSources = root.get('sources');//new ScrobbleSources(localUrl, configDir);
+        const scrobbleSources = root.get('sources');
         await scrobbleSources.buildSourcesFromConfig([]);
 
         // check ambiguous client/source types like this for now

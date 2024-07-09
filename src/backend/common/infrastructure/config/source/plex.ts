@@ -25,26 +25,6 @@ export interface PlexSourceData extends CommonSourceData {
      * @examples [["MyServerName"]]
      * */
     servers?: string | string[]
-
-    /**
-     * Additional options for Plex/Tautulli logging and tuning
-     * */
-    options?: {
-
-        /**
-         * How MS should log when a Plex/Tautulli event fails a defined filter (users/servers)
-         *
-         * * `false` => do not log
-         * * `debug` => log to DEBUG level
-         * * `warn` => log to WARN level (default)
-         *
-         * Hint: This is useful if you are sure this source is setup correctly and you have multiple other Plex/Tautulli sources. Set to `debug` or `false` to reduce log noise.
-         *
-         * @default warn
-         * @examples ["warn"]
-         * */
-        logFilterFailure?: false | 'debug' | 'warn'
-    }
 }
 
 export interface PlexSourceConfig extends CommonSourceConfig {

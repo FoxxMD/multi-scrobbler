@@ -1,11 +1,16 @@
 import { ExpressWithAsync } from "@awaitjs/express";
 import { childLogger, Logger } from "@foxxmd/logging";
 import bodyParser from "body-parser";
+import cors from 'cors';
 import path from "path";
 import { WebhookNotifier } from "../sources/ingressNotifiers/WebhookNotifier.js";
 import ScrobbleSources from "../sources/ScrobbleSources.js";
 import { WebScrobblerSource } from "../sources/WebScrobblerSource.js";
 import { nonEmptyBody } from "./middleware.js";
+
+const corsOpts: cors.CorsOptions = {
+    methods: ['POST']
+}
 
 export const setupWebscrobblerRoutes = (app: ExpressWithAsync, parentLogger: Logger, scrobbleSources: ScrobbleSources) => {
 
@@ -20,13 +25,18 @@ export const setupWebscrobblerRoutes = (app: ExpressWithAsync, parentLogger: Log
         // }
     });
     const webhookIngress = new WebhookNotifier(logger);
+    app.options('/api/webscrobbler*', async (req, res, next) => {
+        webhookIngress.trackIngress(req, true);
+        next();
+    },
+        cors(corsOpts));
+
     app.postAsync('/api/webscrobbler*',
         async (req, res, next) => {
-            // track request before parsing body to ensure we at least log that something is happening
-            // (in the event body parsing does not work or request is not POST/PATCH)
             webhookIngress.trackIngress(req, true);
             next();
         },
+        cors(corsOpts),
         webScrobblerJsonParser, nonEmptyBody(logger, 'WebScrobbler Extension'), async (req, res) => {
             webhookIngress.trackIngress(req, false);
 

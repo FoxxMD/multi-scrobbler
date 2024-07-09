@@ -28,11 +28,11 @@ export default class PlexSource extends AbstractSource {
                 user = [],
                 libraries = [],
                 servers = [],
-                options: {
-                    logFilterFailure = 'warn'
-                } = {}
             } = {},
-        } = config
+            options: {
+                logFilterFailure = 'warn'
+            } = {}
+        } = this.config
 
         if(logFilterFailure !== false && !['debug', 'warn'].includes(logFilterFailure)) {
             this.logger.warn(`logFilterFailure value of '${logFilterFailure.toString()}' is NOT VALID. Logging will not occur if filters fail. You should fix this.`);
@@ -134,10 +134,8 @@ export default class PlexSource extends AbstractSource {
 
     protected logFilterFailure = (str: string, meta?: any) => {
         const {
-            data: {
-                options: {
-                    logFilterFailure = 'warn'
-                } = {}
+            options: {
+                logFilterFailure = 'warn'
             } = {}
         } = this.config;
 

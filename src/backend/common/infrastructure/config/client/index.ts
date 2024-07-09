@@ -1,4 +1,4 @@
-import { CommonConfig, CommonData } from "../common.js";
+import { CommonConfig, CommonData, RequestRetryOptions } from "../common.js";
 
 /**
  * Scrobble matching (between new source track and existing client scrobbles) logging options. Used for debugging.
@@ -28,50 +28,41 @@ export interface MatchLoggingOptions {
 }
 
 export interface CommonClientData extends CommonData {
+}
+
+export interface CommonClientOptions extends RequestRetryOptions {
     /**
-     * default # of http request retries a client can make before error is thrown.
+     * Try to get fresh scrobble history from client when tracks to be scrobbled are newer than the last scrobble found in client history
+     * @default true
+     * @examples [true]
+     * */
+    refreshEnabled?: boolean
+
+    /**
+     * The number of tracks to retrieve on initial refresh (related to scrobbleBacklogCount). If not specified this is the maximum supported for the client.
+     * */
+    refreshInitialCount?: number
+    /**
+     * Check client for an existing scrobble at the same recorded time as the "new" track to be scrobbled. If an existing scrobble is found this track is not track scrobbled.
+     * @default true
+     * @examples [true]
+     * */
+    checkExistingScrobbles?: boolean
+    /**
+     * Options used for increasing verbosity of logging in MS (used for debugging)
+     * */
+    verbose?: {
+
+        match?: MatchLoggingOptions
+    }
+
+    /**
+     * Number of times MS should automatically retry scrobbles in dead letter queue
      *
      * @default 1
      * @examples [1]
      * */
-    maxRequestRetries?: number
-    /**
-     * default retry delay multiplier (retry attempt * multiplier = # of seconds to wait before retrying).
-     *
-     * @default 1.5
-     * @examples [1.5]
-     * */
-    retryMultiplier?: number
-
-    options?: {
-        /**
-         * Try to get fresh scrobble history from client when tracks to be scrobbled are newer than the last scrobble found in client history
-         * @default true
-         * @examples [true]
-         * */
-        refreshEnabled?: boolean
-        /**
-         * Check client for an existing scrobble at the same recorded time as the "new" track to be scrobbled. If an existing scrobble is found this track is not track scrobbled.
-         * @default true
-         * @examples [true]
-         * */
-        checkExistingScrobbles?: boolean
-        /**
-        * Options used for increasing verbosity of logging in MS (used for debugging)
-        * */
-        verbose?: {
-
-            match?: MatchLoggingOptions
-        }
-
-        /**
-         * Number of times MS should automatically retry scrobbles in dead letter queue
-         *
-         * @default 1
-         * @examples [1]
-         * */
-        deadLetterRetries?: number
-    }
+    deadLetterRetries?: number
 }
 
 export interface CommonClientConfig extends CommonConfig {
@@ -85,4 +76,5 @@ export interface CommonClientConfig extends CommonConfig {
      * Specific data required to configure this client
      * */
     data?: CommonClientData
+    options?: CommonClientOptions
 }
