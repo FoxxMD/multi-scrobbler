@@ -1,11 +1,9 @@
-// @ts-check
-// Note: type annotations allow type checking and IDEs autocompletion
+import type * as Preset from '@docusaurus/preset-classic';
+import type { Config } from '@docusaurus/types';
+import * as themes from 'prism-react-renderer';
+//import sidebars from './sidebars';
 
-const lightCodeTheme = require('prism-react-renderer/themes/github');
-const darkCodeTheme = require('prism-react-renderer/themes/dracula');
-
-/** @type {import('@docusaurus/types').Config} */
-const config = {
+const config: Config = {
   title: 'Multi-Scrobbler',
   tagline: 'Scrobble all the things',
   favicon: 'img/favicon.ico',
@@ -38,10 +36,9 @@ const config = {
   presets: [
     [
       'classic',
-      /** @type {import('@docusaurus/preset-classic').Options} */
-      ({
+      {
         docs: {
-          sidebarPath: require.resolve('./sidebars.js'),
+          sidebarPath: './sidebars.ts',
           // Please change this to your repo.
           // Remove this to remove the "edit this page" links.
           editUrl:
@@ -57,23 +54,32 @@ const config = {
         blog: false,
 
         theme: {
-          customCss: require.resolve('./src/css/custom.css'),
+          customCss: './src/css/custom.css',
         },
-      }),
+      } satisfies Preset.Options,
     ],
   ],
-  themes: ["docusaurus-json-schema-plugin"],
-  plugins: [
+  themes: [
+      "docusaurus-json-schema-plugin",
     [
-      require.resolve("@cmfcmf/docusaurus-search-local"),
+      "@easyops-cn/docusaurus-search-local",
+      /** @type {import("@easyops-cn/docusaurus-search-local").PluginOptions} */
       {
+        // ... Your options.
+        // `hashed` is recommended as long-term-cache of index file is possible.
+        hashed: true,
         indexBlog: false,
+        // For Docs using Chinese, The `language` is recommended to set to:
+        // ```
+        // language: ["en", "zh"],
+        // ```
       },
     ],
   ],
+  plugins: [
+  ],
   themeConfig:
-    /** @type {import('@docusaurus/preset-classic').ThemeConfig} */
-    ({
+    {
       // Replace with your project's social card
       image: 'img/docusaurus-social-card.jpg',
       navbar: {
@@ -151,10 +157,10 @@ const config = {
         copyright: `Copyright © ${new Date().getFullYear()} Multi-Scrobbler. Built with Docusaurus.`,
       },
       prism: {
-        theme: lightCodeTheme,
-        darkTheme: darkCodeTheme,
+        theme: themes.themes.github,
+        darkTheme: themes.themes.dracula,
       },
-    }),
+    } satisfies Preset.ThemeConfig,
 };
 
 if (process.env.ANALYTICS !== undefined && process.env.ANALYTICS !== '') {
@@ -167,4 +173,4 @@ if (process.env.ANALYTICS !== undefined && process.env.ANALYTICS !== '') {
   config.scripts.push(script)
 }
 
-module.exports = config;
+export default config;
