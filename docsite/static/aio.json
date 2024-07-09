@@ -1,6 +1,299 @@
 {
     "$schema": "http://json-schema.org/draft-07/schema#",
     "definitions": {
+        "AppriseConfig": {
+            "properties": {
+                "host": {
+                    "description": "The URL of the apprise-api server",
+                    "examples": [
+                        "http://192.168.0.100:8078"
+                    ],
+                    "title": "host",
+                    "type": "string"
+                },
+                "keys": {
+                    "anyOf": [
+                        {
+                            "items": {
+                                "type": "string"
+                            },
+                            "type": "array"
+                        },
+                        {
+                            "type": "string"
+                        }
+                    ],
+                    "description": "If using [Persistent Store Endpoints](https://github.com/caronc/apprise-api?tab=readme-ov-file#persistent-storage-solution) the Configuration ID(s) to send to\n\nNote: If multiple keys are defined then MS will attempt to POST to each one individually",
+                    "title": "keys"
+                },
+                "name": {
+                    "description": "A friendly name used to identify webhook config in logs",
+                    "title": "name",
+                    "type": "string"
+                },
+                "tags": {
+                    "anyOf": [
+                        {
+                            "items": {
+                                "type": "string"
+                            },
+                            "type": "array"
+                        },
+                        {
+                            "type": "string"
+                        }
+                    ],
+                    "description": "Optional [tag(s)](https://github.com/caronc/apprise-api?tab=readme-ov-file#tagging) to send in the notification payload",
+                    "title": "tags"
+                },
+                "type": {
+                    "description": "Webhook type. Valid values are:\n\n* gotify\n* ntfy",
+                    "enum": [
+                        "apprise",
+                        "gotify",
+                        "ntfy"
+                    ],
+                    "examples": [
+                        "gotify"
+                    ],
+                    "title": "type",
+                    "type": "string"
+                },
+                "urls": {
+                    "anyOf": [
+                        {
+                            "items": {
+                                "type": "string"
+                            },
+                            "type": "array"
+                        },
+                        {
+                            "type": "string"
+                        }
+                    ],
+                    "description": "If using [Stateless Endpoints](https://github.com/caronc/apprise-api?tab=readme-ov-file#stateless-solution) the Apprise config URL(s) to send",
+                    "title": "urls"
+                }
+            },
+            "required": [
+                "host",
+                "type"
+            ],
+            "title": "AppriseConfig",
+            "type": "object"
+        },
+        "ChromecastData": {
+            "properties": {
+                "allowUnknownMedia": {
+                    "anyOf": [
+                        {
+                            "items": {
+                                "type": "string"
+                            },
+                            "type": "array"
+                        },
+                        {
+                            "type": "boolean"
+                        }
+                    ],
+                    "default": false,
+                    "description": "Chromecast Apps report a \"media type\" in the status info returned for whatever is currently playing\n\n* If set to TRUE then Music AND Generic/Unknown media will be tracked for ALL APPS\n* If set to FALSE then only media explicitly typed as Music will be tracked for ALL APPS\n* If set to a list then only Apps whose name contain one of these values, case-insensitive, will have Music AND Generic/Unknown tracked\n\nSee https://developers.google.com/cast/docs/media/messages#MediaInformation \"metadata\" property",
+                    "title": "allowUnknownMedia"
+                },
+                "blacklistApps": {
+                    "anyOf": [
+                        {
+                            "items": {
+                                "type": "string"
+                            },
+                            "type": "array"
+                        },
+                        {
+                            "type": "string"
+                        }
+                    ],
+                    "description": "DO NOT scrobble from any application that START WITH these values, case-insensitive",
+                    "examples": [
+                        [
+                            "spotify",
+                            "pandora"
+                        ]
+                    ],
+                    "title": "blacklistApps"
+                },
+                "blacklistDevices": {
+                    "anyOf": [
+                        {
+                            "items": {
+                                "type": "string"
+                            },
+                            "type": "array"
+                        },
+                        {
+                            "type": "string"
+                        }
+                    ],
+                    "description": "DO NOT scrobble from any cast devices that START WITH these values, case-insensitive\n\nUseful when used with auto discovery",
+                    "examples": [
+                        [
+                            "home-mini",
+                            "family-tv"
+                        ]
+                    ],
+                    "title": "blacklistDevices"
+                },
+                "devices": {
+                    "description": "A list of Google Cast devices to monitor\n\nIf this is used then `useAutoDiscovery` is set to FALSE, if not explicitly set",
+                    "items": {
+                        "$ref": "#/definitions/ChromecastDeviceInfo"
+                    },
+                    "title": "devices",
+                    "type": "array"
+                },
+                "forceMediaRecognitionOn": {
+                    "description": "Media provided by any App whose name is listed here will ALWAYS be tracked, regardless of the \"media type\" reported\n\nApps will be recognized if they CONTAIN any of these values, case-insensitive",
+                    "items": {
+                        "type": "string"
+                    },
+                    "title": "forceMediaRecognitionOn",
+                    "type": "array"
+                },
+                "useAutoDiscovery": {
+                    "description": "Use mDNS to discovery Google Cast devices on your next automatically?\n\nIf not explicitly set then it is TRUE if `devices` is not set",
+                    "title": "useAutoDiscovery",
+                    "type": "boolean"
+                },
+                "useAvahi": {
+                    "default": false,
+                    "description": "Try to use Avahi and avahi-browse to resolve mDNS devices instead of native mDNS querying\n\nUseful for docker (alpine) container where mDNS resolution is not yet supported. Avahi socket must be exposed to the container and avahi-tools must be installed.",
+                    "title": "useAvahi",
+                    "type": "boolean"
+                },
+                "whitelistApps": {
+                    "anyOf": [
+                        {
+                            "items": {
+                                "type": "string"
+                            },
+                            "type": "array"
+                        },
+                        {
+                            "type": "string"
+                        }
+                    ],
+                    "description": "ONLY scrobble from any application that START WITH these values, case-insensitive\n\nIf whitelist is present then blacklist is ignored",
+                    "examples": [
+                        [
+                            "spotify",
+                            "pandora"
+                        ]
+                    ],
+                    "title": "whitelistApps"
+                },
+                "whitelistDevices": {
+                    "anyOf": [
+                        {
+                            "items": {
+                                "type": "string"
+                            },
+                            "type": "array"
+                        },
+                        {
+                            "type": "string"
+                        }
+                    ],
+                    "description": "ONLY scrobble from any cast device that START WITH these values, case-insensitive\n\nIf whitelist is present then blacklist is ignored\n\nUseful when used with auto discovery",
+                    "examples": [
+                        [
+                            "home-mini",
+                            "family-tv"
+                        ]
+                    ],
+                    "title": "whitelistDevices"
+                }
+            },
+            "title": "ChromecastData",
+            "type": "object"
+        },
+        "ChromecastDeviceInfo": {
+            "properties": {
+                "address": {
+                    "description": "The IP address of the device",
+                    "examples": [
+                        "192.168.0.115"
+                    ],
+                    "title": "address",
+                    "type": "string"
+                },
+                "name": {
+                    "description": "A friendly name to identify this device",
+                    "examples": [
+                        "MySmartTV"
+                    ],
+                    "title": "name",
+                    "type": "string"
+                }
+            },
+            "required": [
+                "address",
+                "name"
+            ],
+            "title": "ChromecastDeviceInfo",
+            "type": "object"
+        },
+        "ChromecastSourceAIOConfig": {
+            "properties": {
+                "clients": {
+                    "description": "Restrict scrobbling tracks played from this source to Clients with names from this list. If list is empty is not present Source scrobbles to all configured Clients.",
+                    "examples": [
+                        [
+                            "MyMalojaConfigName",
+                            "MyLastFMConfigName"
+                        ]
+                    ],
+                    "items": {
+                        "type": "string"
+                    },
+                    "title": "clients",
+                    "type": "array"
+                },
+                "data": {
+                    "$ref": "#/definitions/ChromecastData",
+                    "title": "data"
+                },
+                "enable": {
+                    "default": true,
+                    "description": "Should MS use this client/source? Defaults to true",
+                    "examples": [
+                        true
+                    ],
+                    "title": "enable",
+                    "type": "boolean"
+                },
+                "name": {
+                    "description": "Unique identifier for this source.",
+                    "title": "name",
+                    "type": "string"
+                },
+                "options": {
+                    "$ref": "#/definitions/CommonSourceOptions",
+                    "title": "options"
+                },
+                "type": {
+                    "enum": [
+                        "chromecast"
+                    ],
+                    "title": "type",
+                    "type": "string"
+                }
+            },
+            "required": [
+                "data",
+                "type"
+            ],
+            "title": "ChromecastSourceAIOConfig",
+            "type": "object"
+        },
         "ClientAIOConfig": {
             "anyOf": [
                 {
@@ -15,63 +308,226 @@
             ],
             "title": "ClientAIOConfig"
         },
-        "CommonClientData": {
+        "ClientDefaults": {
             "properties": {
+                "checkExistingScrobbles": {
+                    "default": true,
+                    "description": "Check client for an existing scrobble at the same recorded time as the \"new\" track to be scrobbled. If an existing scrobble is found this track is not track scrobbled.",
+                    "examples": [
+                        true
+                    ],
+                    "title": "checkExistingScrobbles",
+                    "type": "boolean"
+                },
+                "deadLetterRetries": {
+                    "default": 1,
+                    "description": "Number of times MS should automatically retry scrobbles in dead letter queue",
+                    "examples": [
+                        1
+                    ],
+                    "title": "deadLetterRetries",
+                    "type": "number"
+                },
                 "maxRequestRetries": {
                     "default": 1,
-                    "description": "default # of http request retries a client can make before error is thrown.",
+                    "description": "default # of http request retries a source/client can make before error is thrown",
                     "examples": [
                         1
                     ],
                     "title": "maxRequestRetries",
                     "type": "number"
                 },
-                "options": {
-                    "properties": {
-                        "checkExistingScrobbles": {
-                            "default": true,
-                            "description": "Check client for an existing scrobble at the same recorded time as the \"new\" track to be scrobbled. If an existing scrobble is found this track is not track scrobbled.",
-                            "examples": [
-                                true
-                            ],
-                            "title": "checkExistingScrobbles",
-                            "type": "boolean"
-                        },
-                        "refreshEnabled": {
-                            "default": true,
-                            "description": "Try to get fresh scrobble history from client when tracks to be scrobbled are newer than the last scrobble found in client history",
-                            "examples": [
-                                true
-                            ],
-                            "title": "refreshEnabled",
-                            "type": "boolean"
-                        },
-                        "verbose": {
-                            "description": "Options used for increasing verbosity of logging in MS (used for debugging)",
-                            "properties": {
-                                "match": {
-                                    "$ref": "#/definitions/MatchLoggingOptions",
-                                    "title": "match"
-                                }
-                            },
-                            "title": "verbose",
-                            "type": "object"
-                        }
-                    },
-                    "title": "options",
-                    "type": "object"
+                "refreshEnabled": {
+                    "default": true,
+                    "description": "Try to get fresh scrobble history from client when tracks to be scrobbled are newer than the last scrobble found in client history",
+                    "examples": [
+                        true
+                    ],
+                    "title": "refreshEnabled",
+                    "type": "boolean"
+                },
+                "refreshInitialCount": {
+                    "description": "The number of tracks to retrieve on initial refresh (related to scrobbleBacklogCount). If not specified this is the maximum supported for the client.",
+                    "title": "refreshInitialCount",
+                    "type": "number"
                 },
                 "retryMultiplier": {
                     "default": 1.5,
-                    "description": "default retry delay multiplier (retry attempt * multiplier = # of seconds to wait before retrying).",
+                    "description": "default retry delay multiplier (retry attempt * multiplier = # of seconds to wait before retrying)",
                     "examples": [
                         1.5
                     ],
                     "title": "retryMultiplier",
                     "type": "number"
+                },
+                "verbose": {
+                    "description": "Options used for increasing verbosity of logging in MS (used for debugging)",
+                    "properties": {
+                        "match": {
+                            "$ref": "#/definitions/MatchLoggingOptions",
+                            "title": "match"
+                        }
+                    },
+                    "title": "verbose",
+                    "type": "object"
                 }
             },
+            "title": "ClientDefaults",
+            "type": "object"
+        },
+        "CommonClientData": {
             "title": "CommonClientData",
+            "type": "object"
+        },
+        "CommonClientOptions": {
+            "properties": {
+                "checkExistingScrobbles": {
+                    "default": true,
+                    "description": "Check client for an existing scrobble at the same recorded time as the \"new\" track to be scrobbled. If an existing scrobble is found this track is not track scrobbled.",
+                    "examples": [
+                        true
+                    ],
+                    "title": "checkExistingScrobbles",
+                    "type": "boolean"
+                },
+                "deadLetterRetries": {
+                    "default": 1,
+                    "description": "Number of times MS should automatically retry scrobbles in dead letter queue",
+                    "examples": [
+                        1
+                    ],
+                    "title": "deadLetterRetries",
+                    "type": "number"
+                },
+                "maxRequestRetries": {
+                    "default": 1,
+                    "description": "default # of http request retries a source/client can make before error is thrown",
+                    "examples": [
+                        1
+                    ],
+                    "title": "maxRequestRetries",
+                    "type": "number"
+                },
+                "refreshEnabled": {
+                    "default": true,
+                    "description": "Try to get fresh scrobble history from client when tracks to be scrobbled are newer than the last scrobble found in client history",
+                    "examples": [
+                        true
+                    ],
+                    "title": "refreshEnabled",
+                    "type": "boolean"
+                },
+                "refreshInitialCount": {
+                    "description": "The number of tracks to retrieve on initial refresh (related to scrobbleBacklogCount). If not specified this is the maximum supported for the client.",
+                    "title": "refreshInitialCount",
+                    "type": "number"
+                },
+                "retryMultiplier": {
+                    "default": 1.5,
+                    "description": "default retry delay multiplier (retry attempt * multiplier = # of seconds to wait before retrying)",
+                    "examples": [
+                        1.5
+                    ],
+                    "title": "retryMultiplier",
+                    "type": "number"
+                },
+                "verbose": {
+                    "description": "Options used for increasing verbosity of logging in MS (used for debugging)",
+                    "properties": {
+                        "match": {
+                            "$ref": "#/definitions/MatchLoggingOptions",
+                            "title": "match"
+                        }
+                    },
+                    "title": "verbose",
+                    "type": "object"
+                }
+            },
+            "title": "CommonClientOptions",
+            "type": "object"
+        },
+        "CommonSourceOptions": {
+            "properties": {
+                "logFilterFailure": {
+                    "default": "warn",
+                    "description": "If this source has INGRESS to MS and has filters this determines how MS logs when a payload (event) fails a defined filter (IE users/servers/library filters)\n\n* `false` => do not log\n* `debug` => log to DEBUG level\n* `warn` => log to WARN level (default)\n\nHint: This is useful if you are sure this source is setup correctly and you have multiple other sources. Set to `debug` or `false` to reduce log noise.",
+                    "enum": [
+                        "debug",
+                        false,
+                        "warn"
+                    ],
+                    "examples": [
+                        "warn"
+                    ],
+                    "title": "logFilterFailure"
+                },
+                "logPayload": {
+                    "default": false,
+                    "description": "If this source has INGRESS to MS (sends a payload, rather than MS GETTING requesting a payload)\nthen setting this option to true will make MS log the payload JSON to DEBUG output",
+                    "examples": [
+                        false
+                    ],
+                    "title": "logPayload",
+                    "type": "boolean"
+                },
+                "logPlayerState": {
+                    "default": false,
+                    "description": "For Sources that track Player State (currently playing) this logs a simple player state/summary to DEBUG output",
+                    "examples": [
+                        false
+                    ],
+                    "title": "logPlayerState",
+                    "type": "boolean"
+                },
+                "maxPollRetries": {
+                    "default": 5,
+                    "description": "default # of automatic polling restarts on error",
+                    "examples": [
+                        5
+                    ],
+                    "title": "maxPollRetries",
+                    "type": "number"
+                },
+                "maxRequestRetries": {
+                    "default": 1,
+                    "description": "default # of http request retries a source/client can make before error is thrown",
+                    "examples": [
+                        1
+                    ],
+                    "title": "maxRequestRetries",
+                    "type": "number"
+                },
+                "retryMultiplier": {
+                    "default": 1.5,
+                    "description": "default retry delay multiplier (retry attempt * multiplier = # of seconds to wait before retrying)",
+                    "examples": [
+                        1.5
+                    ],
+                    "title": "retryMultiplier",
+                    "type": "number"
+                },
+                "scrobbleBacklog": {
+                    "default": true,
+                    "description": "If this source\n\n* supports fetching a listen history\n* and this option is enabled\n\nthen on startup MS will attempt to scrobble the recent listens from that history",
+                    "examples": [
+                        true,
+                        false
+                    ],
+                    "title": "scrobbleBacklog",
+                    "type": "boolean"
+                },
+                "scrobbleBacklogCount": {
+                    "description": "The number of listens to fetch when scrobbling from backlog\n\n* Only applies if this source supports fetching a listen history\n* If not specified it defaults to the maximum number of listens the source API supports",
+                    "title": "scrobbleBacklogCount",
+                    "type": "number"
+                },
+                "scrobbleThresholds": {
+                    "$ref": "#/definitions/ScrobbleThresholds",
+                    "description": "Set thresholds for when multi-scrobbler should consider a tracked play to be \"scrobbable\". If both duration and percent are defined then if either condition is met the track is scrobbled.",
+                    "title": "scrobbleThresholds"
+                }
+            },
+            "title": "CommonSourceOptions",
             "type": "object"
         },
         "DeezerData": {
@@ -101,28 +557,6 @@
                     "title": "interval",
                     "type": "number"
                 },
-                "maxPollRetries": {
-                    "default": 5,
-                    "description": "default # of automatic polling restarts on error",
-                    "examples": [
-                        5
-                    ],
-                    "title": "maxPollRetries",
-                    "type": "number"
-                },
-                "maxRequestRetries": {
-                    "default": 1,
-                    "description": "default # of http request retries a source can make before error is thrown",
-                    "examples": [
-                        1
-                    ],
-                    "title": "maxRequestRetries",
-                    "type": "number"
-                },
-                "options": {
-                    "$ref": "#/definitions/Record<string,any>",
-                    "title": "options"
-                },
                 "redirectUri": {
                     "default": "http://localhost:9078/deezer/callback",
                     "description": "deezer redirect URI -- required only if not the default shown here. URI must end in \"callback\"",
@@ -131,20 +565,6 @@
                     ],
                     "title": "redirectUri",
                     "type": "string"
-                },
-                "retryMultiplier": {
-                    "default": 1.5,
-                    "description": "default retry delay multiplier (retry attempt * multiplier = # of seconds to wait before retrying)",
-                    "examples": [
-                        1.5
-                    ],
-                    "title": "retryMultiplier",
-                    "type": "number"
-                },
-                "scrobbleThresholds": {
-                    "$ref": "#/definitions/ScrobbleThresholds",
-                    "description": "Set thresholds for when multi-scrobbler should consider a tracked play to be \"scrobbable\". If both duration and percent are defined then if either condition is met the track is scrobbled.",
-                    "title": "scrobbleThresholds"
                 }
             },
             "required": [
@@ -175,10 +595,23 @@
                     "$ref": "#/definitions/DeezerData",
                     "title": "data"
                 },
+                "enable": {
+                    "default": true,
+                    "description": "Should MS use this client/source? Defaults to true",
+                    "examples": [
+                        true
+                    ],
+                    "title": "enable",
+                    "type": "boolean"
+                },
                 "name": {
                     "description": "Unique identifier for this source.",
                     "title": "name",
                     "type": "string"
+                },
+                "options": {
+                    "$ref": "#/definitions/CommonSourceOptions",
+                    "title": "options"
                 },
                 "type": {
                     "enum": [
@@ -193,6 +626,73 @@
                 "type"
             ],
             "title": "DeezerSourceAIOConfig",
+            "type": "object"
+        },
+        "FileLogOptions": {
+            "properties": {
+                "frequency": {
+                    "anyOf": [
+                        {
+                            "enum": [
+                                "daily",
+                                "hourly"
+                            ],
+                            "type": "string"
+                        },
+                        {
+                            "type": "number"
+                        }
+                    ],
+                    "default": "'daily'",
+                    "description": "The amount of time a given rolling log file is used. Can be combined with size.\n\nUse `daily` or `hourly` to rotate file every day (or every hour). Existing file within the current day (or hour) will be re-used.\n\nNumerical values will be considered as a number of milliseconds. Using a numerical value will always create a new file upon startup.",
+                    "title": "frequency"
+                },
+                "level": {
+                    "description": "Specify the minimum log level to output to rotating files. If `false` no log files will be created.",
+                    "enum": [
+                        "debug",
+                        "error",
+                        false,
+                        "fatal",
+                        "info",
+                        "log",
+                        "silent",
+                        "verbose",
+                        "warn"
+                    ],
+                    "title": "level"
+                },
+                "path": {
+                    "default": "'./logs/app.log'",
+                    "description": "The path and filename to use for log files.\n\nIf using rolling files the filename will be appended with `.N` (a number) BEFORE the extension based on rolling status.\n\nMay also be specified using env LOG_PATH or a function that returns a string.\n\nIf path is relative the absolute path will be derived from `logBaseDir` (in `LoggerAppExtras`) which defaults to CWD",
+                    "title": "path",
+                    "type": [
+                        "string",
+                        "object"
+                    ]
+                },
+                "size": {
+                    "default": "'10MB'",
+                    "description": "The maximum size of a given rolling log file.\n\nCan be combined with frequency. Use k, m and g to express values in KB, MB or GB.\n\nNumerical values will be considered as MB.",
+                    "title": "size",
+                    "type": [
+                        "string",
+                        "number"
+                    ]
+                },
+                "timestamp": {
+                    "default": "'auto'",
+                    "description": "For rolling log files\n\nWhen\n* value passed to rolling destination is a string (`path` from LogOptions is a string) and\n* `frequency` is defined\n\nThis determines the format of the datetime inserted into the log file name:\n\n* `unix` - unix epoch timestamp in milliseconds\n* `iso`  - Full [ISO8601](https://en.wikipedia.org/wiki/ISO_8601) datetime IE '2024-03-07T20:11:34Z'\n* `auto`\n  * When frequency is `daily` only inserts date IE YYYY-MM-DD\n  * Otherwise inserts full ISO8601 datetime",
+                    "enum": [
+                        "auto",
+                        "iso",
+                        "unix"
+                    ],
+                    "title": "timestamp",
+                    "type": "string"
+                }
+            },
+            "title": "FileLogOptions",
             "type": "object"
         },
         "GotifyConfig": {
@@ -218,6 +718,7 @@
                 "type": {
                     "description": "Webhook type. Valid values are:\n\n* gotify\n* ntfy",
                     "enum": [
+                        "apprise",
                         "gotify",
                         "ntfy"
                     ],
@@ -247,63 +748,27 @@
         "JRiverData": {
             "properties": {
                 "interval": {
-                    "default": 30,
+                    "default": 10,
                     "description": "How long to wait before polling the source API for new tracks (in seconds)",
                     "examples": [
-                        30
+                        10
                     ],
                     "title": "interval",
                     "type": "number"
                 },
                 "maxInterval": {
-                    "default": 60,
+                    "default": 30,
                     "description": "When there has been no new activity from the Source API multi-scrobbler will gradually increase the wait time between polling up to this value (in seconds)",
                     "examples": [
-                        60
+                        30
                     ],
                     "title": "maxInterval",
                     "type": "number"
-                },
-                "maxPollRetries": {
-                    "default": 5,
-                    "description": "default # of automatic polling restarts on error",
-                    "examples": [
-                        5
-                    ],
-                    "title": "maxPollRetries",
-                    "type": "number"
-                },
-                "maxRequestRetries": {
-                    "default": 1,
-                    "description": "default # of http request retries a source can make before error is thrown",
-                    "examples": [
-                        1
-                    ],
-                    "title": "maxRequestRetries",
-                    "type": "number"
-                },
-                "options": {
-                    "$ref": "#/definitions/Record<string,any>",
-                    "title": "options"
                 },
                 "password": {
                     "description": "If you have enabled authentication, the password you set",
                     "title": "password",
                     "type": "string"
-                },
-                "retryMultiplier": {
-                    "default": 1.5,
-                    "description": "default retry delay multiplier (retry attempt * multiplier = # of seconds to wait before retrying)",
-                    "examples": [
-                        1.5
-                    ],
-                    "title": "retryMultiplier",
-                    "type": "number"
-                },
-                "scrobbleThresholds": {
-                    "$ref": "#/definitions/ScrobbleThresholds",
-                    "description": "Set thresholds for when multi-scrobbler should consider a tracked play to be \"scrobbable\". If both duration and percent are defined then if either condition is met the track is scrobbled.",
-                    "title": "scrobbleThresholds"
                 },
                 "url": {
                     "default": "http://localhost:52199/MCWS/v1/",
@@ -346,10 +811,23 @@
                     "$ref": "#/definitions/JRiverData",
                     "title": "data"
                 },
+                "enable": {
+                    "default": true,
+                    "description": "Should MS use this client/source? Defaults to true",
+                    "examples": [
+                        true
+                    ],
+                    "title": "enable",
+                    "type": "boolean"
+                },
                 "name": {
                     "description": "Unique identifier for this source.",
                     "title": "name",
                     "type": "string"
+                },
+                "options": {
+                    "$ref": "#/definitions/CommonSourceOptions",
+                    "title": "options"
                 },
                 "type": {
                     "enum": [
@@ -368,67 +846,6 @@
         },
         "JellyData": {
             "properties": {
-                "maxPollRetries": {
-                    "default": 5,
-                    "description": "default # of automatic polling restarts on error",
-                    "examples": [
-                        5
-                    ],
-                    "title": "maxPollRetries",
-                    "type": "number"
-                },
-                "maxRequestRetries": {
-                    "default": 1,
-                    "description": "default # of http request retries a source can make before error is thrown",
-                    "examples": [
-                        1
-                    ],
-                    "title": "maxRequestRetries",
-                    "type": "number"
-                },
-                "options": {
-                    "description": "Additional options for jellyfin logging and tuning",
-                    "properties": {
-                        "logFilterFailure": {
-                            "default": "warn",
-                            "description": "How MS should log when a Jellyfin event fails a defined filter (users/servers)\n\n* `false` => do not log\n* `debug` => log to DEBUG level\n* `warn` => log to WARN level (default)\n\nHint: This is useful if you are sure this source is setup correctly and you have multiple other Jellyfin sources. Set to `debug` or `false` to reduce log noise.",
-                            "enum": [
-                                "debug",
-                                false,
-                                "warn"
-                            ],
-                            "examples": [
-                                "warn"
-                            ],
-                            "title": "logFilterFailure"
-                        },
-                        "logPayload": {
-                            "default": false,
-                            "description": "Log raw Jellyfin webhook payload to debug",
-                            "examples": [
-                                false
-                            ],
-                            "title": "logPayload",
-                            "type": "boolean"
-                        }
-                    },
-                    "title": "options",
-                    "type": "object"
-                },
-                "retryMultiplier": {
-                    "default": 1.5,
-                    "description": "default retry delay multiplier (retry attempt * multiplier = # of seconds to wait before retrying)",
-                    "examples": [
-                        1.5
-                    ],
-                    "title": "retryMultiplier",
-                    "type": "number"
-                },
-                "scrobbleThresholds": {
-                    "$ref": "#/definitions/ScrobbleThresholds",
-                    "description": "Set thresholds for when multi-scrobbler should consider a tracked play to be \"scrobbable\". If both duration and percent are defined then if either condition is met the track is scrobbled.",
-                    "title": "scrobbleThresholds"
-                },
                 "servers": {
                     "anyOf": [
                         {
@@ -494,10 +911,23 @@
                     "$ref": "#/definitions/JellyData",
                     "title": "data"
                 },
+                "enable": {
+                    "default": true,
+                    "description": "Should MS use this client/source? Defaults to true",
+                    "examples": [
+                        true
+                    ],
+                    "title": "enable",
+                    "type": "boolean"
+                },
                 "name": {
                     "description": "Unique identifier for this source.",
                     "title": "name",
                     "type": "string"
+                },
+                "options": {
+                    "$ref": "#/definitions/CommonSourceOptions",
+                    "title": "options"
                 },
                 "type": {
                     "enum": [
@@ -517,63 +947,27 @@
         "KodiData": {
             "properties": {
                 "interval": {
-                    "default": 30,
+                    "default": 10,
                     "description": "How long to wait before polling the source API for new tracks (in seconds)",
                     "examples": [
-                        30
+                        10
                     ],
                     "title": "interval",
                     "type": "number"
                 },
                 "maxInterval": {
-                    "default": 60,
+                    "default": 30,
                     "description": "When there has been no new activity from the Source API multi-scrobbler will gradually increase the wait time between polling up to this value (in seconds)",
                     "examples": [
-                        60
+                        30
                     ],
                     "title": "maxInterval",
                     "type": "number"
-                },
-                "maxPollRetries": {
-                    "default": 5,
-                    "description": "default # of automatic polling restarts on error",
-                    "examples": [
-                        5
-                    ],
-                    "title": "maxPollRetries",
-                    "type": "number"
-                },
-                "maxRequestRetries": {
-                    "default": 1,
-                    "description": "default # of http request retries a source can make before error is thrown",
-                    "examples": [
-                        1
-                    ],
-                    "title": "maxRequestRetries",
-                    "type": "number"
-                },
-                "options": {
-                    "$ref": "#/definitions/Record<string,any>",
-                    "title": "options"
                 },
                 "password": {
                     "description": "The password set for Remote Control via Web Sever",
                     "title": "password",
                     "type": "string"
-                },
-                "retryMultiplier": {
-                    "default": 1.5,
-                    "description": "default retry delay multiplier (retry attempt * multiplier = # of seconds to wait before retrying)",
-                    "examples": [
-                        1.5
-                    ],
-                    "title": "retryMultiplier",
-                    "type": "number"
-                },
-                "scrobbleThresholds": {
-                    "$ref": "#/definitions/ScrobbleThresholds",
-                    "description": "Set thresholds for when multi-scrobbler should consider a tracked play to be \"scrobbable\". If both duration and percent are defined then if either condition is met the track is scrobbled.",
-                    "title": "scrobbleThresholds"
                 },
                 "url": {
                     "default": "http://localhost:8080/jsonrpc",
@@ -618,10 +1012,23 @@
                     "$ref": "#/definitions/KodiData",
                     "title": "data"
                 },
+                "enable": {
+                    "default": true,
+                    "description": "Should MS use this client/source? Defaults to true",
+                    "examples": [
+                        true
+                    ],
+                    "title": "enable",
+                    "type": "boolean"
+                },
                 "name": {
                     "description": "Unique identifier for this source.",
                     "title": "name",
                     "type": "string"
+                },
+                "options": {
+                    "$ref": "#/definitions/CommonSourceOptions",
+                    "title": "options"
                 },
                 "type": {
                     "enum": [
@@ -670,10 +1077,23 @@
                     "$ref": "#/definitions/LastFmSourceData",
                     "title": "data"
                 },
+                "enable": {
+                    "default": true,
+                    "description": "Should MS use this client/source? Defaults to true",
+                    "examples": [
+                        true
+                    ],
+                    "title": "enable",
+                    "type": "boolean"
+                },
                 "name": {
                     "description": "Unique identifier for this source.",
                     "title": "name",
                     "type": "string"
+                },
+                "options": {
+                    "$ref": "#/definitions/CommonSourceOptions",
+                    "title": "options"
                 },
                 "type": {
                     "enum": [
@@ -700,27 +1120,32 @@
                     "title": "apiKey",
                     "type": "string"
                 },
-                "maxPollRetries": {
-                    "default": 5,
-                    "description": "default # of automatic polling restarts on error",
+                "interval": {
+                    "default": 10,
+                    "description": "How long to wait before polling the source API for new tracks (in seconds)",
                     "examples": [
-                        5
+                        10
                     ],
-                    "title": "maxPollRetries",
+                    "title": "interval",
+                    "type": "number"
+                },
+                "maxInterval": {
+                    "default": 30,
+                    "description": "When there has been no new activity from the Source API multi-scrobbler will gradually increase the wait time between polling up to this value (in seconds)",
+                    "examples": [
+                        30
+                    ],
+                    "title": "maxInterval",
                     "type": "number"
                 },
                 "maxRequestRetries": {
                     "default": 1,
-                    "description": "default # of http request retries a source can make before error is thrown",
+                    "description": "default # of http request retries a source/client can make before error is thrown",
                     "examples": [
                         1
                     ],
                     "title": "maxRequestRetries",
                     "type": "number"
-                },
-                "options": {
-                    "$ref": "#/definitions/Record<string,any>",
-                    "title": "options"
                 },
                 "redirectUri": {
                     "default": "http://localhost:9078/lastfm/callback",
@@ -739,11 +1164,6 @@
                     ],
                     "title": "retryMultiplier",
                     "type": "number"
-                },
-                "scrobbleThresholds": {
-                    "$ref": "#/definitions/ScrobbleThresholds",
-                    "description": "Set thresholds for when multi-scrobbler should consider a tracked play to be \"scrobbable\". If both duration and percent are defined then if either condition is met the track is scrobbled.",
-                    "title": "scrobbleThresholds"
                 },
                 "secret": {
                     "description": "Secret generated from Last.fm account",
@@ -793,6 +1213,15 @@
                     "description": "Specific data required to configure this client",
                     "title": "data"
                 },
+                "enable": {
+                    "default": true,
+                    "description": "Should MS use this client/source? Defaults to true",
+                    "examples": [
+                        true
+                    ],
+                    "title": "enable",
+                    "type": "boolean"
+                },
                 "name": {
                     "description": "Unique identifier for this client. Used with sources to restrict where scrobbles are sent.",
                     "examples": [
@@ -800,6 +1229,10 @@
                     ],
                     "title": "name",
                     "type": "string"
+                },
+                "options": {
+                    "$ref": "#/definitions/CommonClientOptions",
+                    "title": "options"
                 },
                 "type": {
                     "enum": [
@@ -829,7 +1262,7 @@
                 },
                 "maxRequestRetries": {
                     "default": 1,
-                    "description": "default # of http request retries a source can make before error is thrown",
+                    "description": "default # of http request retries a source/client can make before error is thrown",
                     "examples": [
                         1
                     ],
@@ -895,6 +1328,15 @@
                     "description": "Specific data required to configure this client",
                     "title": "data"
                 },
+                "enable": {
+                    "default": true,
+                    "description": "Should MS use this client/source? Defaults to true",
+                    "examples": [
+                        true
+                    ],
+                    "title": "enable",
+                    "type": "boolean"
+                },
                 "name": {
                     "description": "Unique identifier for this client. Used with sources to restrict where scrobbles are sent.",
                     "examples": [
@@ -902,6 +1344,10 @@
                     ],
                     "title": "name",
                     "type": "string"
+                },
+                "options": {
+                    "$ref": "#/definitions/CommonClientOptions",
+                    "title": "options"
                 },
                 "type": {
                     "enum": [
@@ -923,47 +1369,12 @@
             "properties": {
                 "maxRequestRetries": {
                     "default": 1,
-                    "description": "default # of http request retries a source can make before error is thrown",
+                    "description": "default # of http request retries a source/client can make before error is thrown",
                     "examples": [
                         1
                     ],
                     "title": "maxRequestRetries",
                     "type": "number"
-                },
-                "options": {
-                    "properties": {
-                        "checkExistingScrobbles": {
-                            "default": true,
-                            "description": "Check client for an existing scrobble at the same recorded time as the \"new\" track to be scrobbled. If an existing scrobble is found this track is not track scrobbled.",
-                            "examples": [
-                                true
-                            ],
-                            "title": "checkExistingScrobbles",
-                            "type": "boolean"
-                        },
-                        "refreshEnabled": {
-                            "default": true,
-                            "description": "Try to get fresh scrobble history from client when tracks to be scrobbled are newer than the last scrobble found in client history",
-                            "examples": [
-                                true
-                            ],
-                            "title": "refreshEnabled",
-                            "type": "boolean"
-                        },
-                        "verbose": {
-                            "description": "Options used for increasing verbosity of logging in MS (used for debugging)",
-                            "properties": {
-                                "match": {
-                                    "$ref": "#/definitions/MatchLoggingOptions",
-                                    "title": "match"
-                                }
-                            },
-                            "title": "verbose",
-                            "type": "object"
-                        }
-                    },
-                    "title": "options",
-                    "type": "object"
                 },
                 "retryMultiplier": {
                     "default": 1.5,
@@ -1036,10 +1447,23 @@
                     "$ref": "#/definitions/ListenBrainzSourceData",
                     "title": "data"
                 },
+                "enable": {
+                    "default": true,
+                    "description": "Should MS use this client/source? Defaults to true",
+                    "examples": [
+                        true
+                    ],
+                    "title": "enable",
+                    "type": "boolean"
+                },
                 "name": {
                     "description": "Unique identifier for this source.",
                     "title": "name",
                     "type": "string"
+                },
+                "options": {
+                    "$ref": "#/definitions/CommonSourceOptions",
+                    "title": "options"
                 },
                 "type": {
                     "enum": [
@@ -1058,27 +1482,32 @@
         },
         "ListenBrainzSourceData": {
             "properties": {
-                "maxPollRetries": {
-                    "default": 5,
-                    "description": "default # of automatic polling restarts on error",
+                "interval": {
+                    "default": 10,
+                    "description": "How long to wait before polling the source API for new tracks (in seconds)",
                     "examples": [
-                        5
+                        10
                     ],
-                    "title": "maxPollRetries",
+                    "title": "interval",
+                    "type": "number"
+                },
+                "maxInterval": {
+                    "default": 30,
+                    "description": "When there has been no new activity from the Source API multi-scrobbler will gradually increase the wait time between polling up to this value (in seconds)",
+                    "examples": [
+                        30
+                    ],
+                    "title": "maxInterval",
                     "type": "number"
                 },
                 "maxRequestRetries": {
                     "default": 1,
-                    "description": "default # of http request retries a source can make before error is thrown",
+                    "description": "default # of http request retries a source/client can make before error is thrown",
                     "examples": [
                         1
                     ],
                     "title": "maxRequestRetries",
                     "type": "number"
-                },
-                "options": {
-                    "$ref": "#/definitions/Record<string,any>",
-                    "title": "options"
                 },
                 "retryMultiplier": {
                     "default": 1.5,
@@ -1088,11 +1517,6 @@
                     ],
                     "title": "retryMultiplier",
                     "type": "number"
-                },
-                "scrobbleThresholds": {
-                    "$ref": "#/definitions/ScrobbleThresholds",
-                    "description": "Set thresholds for when multi-scrobbler should consider a tracked play to be \"scrobbable\". If both duration and percent are defined then if either condition is met the track is scrobbled.",
-                    "title": "scrobbleThresholds"
                 },
                 "token": {
                     "description": "User token for the user to scrobble for",
@@ -1125,10 +1549,14 @@
             "type": "object"
         },
         "LogLevel": {
+            "description": "Names of log levels that can be invoked on the logger\n\nFrom lowest to highest:\n\n* `debug`\n* `verbose`\n* `log`\n* `info`\n* `warn`\n* `error`\n* `fatal`\n* `silent` (will never output anything)\n\nWhen used in `LogOptions` specifies the **minimum** level the output should log at.",
             "enum": [
                 "debug",
                 "error",
+                "fatal",
                 "info",
+                "log",
+                "silent",
                 "verbose",
                 "warn"
             ],
@@ -1136,6 +1564,7 @@
             "type": "string"
         },
         "LogOptions": {
+            "description": "Configure log levels and file options for an AppLogger.\n\n```ts\nconst infoLogger = loggerApp({\n level: 'info' // console and file will log any levels `info` and above\n});\n\nconst logger = loggerApp({\n  console: 'debug', // console will log `debug` and higher\n  file: 'warn' // file will log `warn` and higher\n});\n\nconst fileLogger = loggerRollingApp({\n  console: 'debug', // console will log `debug` and higher\n  file: {\n      level: 'warn', // file will log `warn` and higher\n      path: '/my/cool/path/output.log', // optionally, output to log file at this path\n      frequency: 'hourly', // optionally, rotate hourly\n  }\n});\n```",
             "properties": {
                 "console": {
                     "$ref": "#/definitions/LogLevel",
@@ -1143,15 +1572,25 @@
                     "title": "console"
                 },
                 "file": {
-                    "description": "Specify the minimum log level to output to rotating files. If `false` no log files will be created.",
-                    "enum": [
-                        "debug",
-                        "error",
-                        false,
-                        "info",
-                        "verbose",
-                        "warn"
+                    "anyOf": [
+                        {
+                            "$ref": "#/definitions/FileLogOptions"
+                        },
+                        {
+                            "enum": [
+                                "debug",
+                                "error",
+                                false,
+                                "fatal",
+                                "info",
+                                "log",
+                                "silent",
+                                "verbose",
+                                "warn"
+                            ]
+                        }
                     ],
+                    "description": "Specify the minimum log level to output to rotating files or file output options. If `false` no log files will be created.",
                     "title": "file"
                 },
                 "level": {
@@ -1159,11 +1598,6 @@
                     "default": "'info'",
                     "description": "Specify the minimum log level for all log outputs without their own level specified.\n\nDefaults to env `LOG_LEVEL` or `info` if not specified.",
                     "title": "level"
-                },
-                "stream": {
-                    "$ref": "#/definitions/LogLevel",
-                    "description": "Specify the minimum log level streamed to the UI",
-                    "title": "stream"
                 }
             },
             "title": "LogOptions",
@@ -1191,42 +1625,6 @@
                         ]
                     ],
                     "title": "blacklist"
-                },
-                "maxPollRetries": {
-                    "default": 5,
-                    "description": "default # of automatic polling restarts on error",
-                    "examples": [
-                        5
-                    ],
-                    "title": "maxPollRetries",
-                    "type": "number"
-                },
-                "maxRequestRetries": {
-                    "default": 1,
-                    "description": "default # of http request retries a source can make before error is thrown",
-                    "examples": [
-                        1
-                    ],
-                    "title": "maxRequestRetries",
-                    "type": "number"
-                },
-                "options": {
-                    "$ref": "#/definitions/Record<string,any>",
-                    "title": "options"
-                },
-                "retryMultiplier": {
-                    "default": 1.5,
-                    "description": "default retry delay multiplier (retry attempt * multiplier = # of seconds to wait before retrying)",
-                    "examples": [
-                        1.5
-                    ],
-                    "title": "retryMultiplier",
-                    "type": "number"
-                },
-                "scrobbleThresholds": {
-                    "$ref": "#/definitions/ScrobbleThresholds",
-                    "description": "Set thresholds for when multi-scrobbler should consider a tracked play to be \"scrobbable\". If both duration and percent are defined then if either condition is met the track is scrobbled.",
-                    "title": "scrobbleThresholds"
                 },
                 "whitelist": {
                     "anyOf": [
@@ -1273,10 +1671,23 @@
                     "$ref": "#/definitions/MPRISData",
                     "title": "data"
                 },
+                "enable": {
+                    "default": true,
+                    "description": "Should MS use this client/source? Defaults to true",
+                    "examples": [
+                        true
+                    ],
+                    "title": "enable",
+                    "type": "boolean"
+                },
                 "name": {
                     "description": "Unique identifier for this source.",
                     "title": "name",
                     "type": "string"
+                },
+                "options": {
+                    "$ref": "#/definitions/CommonSourceOptions",
+                    "title": "options"
                 },
                 "type": {
                     "enum": [
@@ -1300,6 +1711,15 @@
                     "description": "Specific data required to configure this client",
                     "title": "data"
                 },
+                "enable": {
+                    "default": true,
+                    "description": "Should MS use this client/source? Defaults to true",
+                    "examples": [
+                        true
+                    ],
+                    "title": "enable",
+                    "type": "boolean"
+                },
                 "name": {
                     "description": "Unique identifier for this client. Used with sources to restrict where scrobbles are sent.",
                     "examples": [
@@ -1307,6 +1727,10 @@
                     ],
                     "title": "name",
                     "type": "string"
+                },
+                "options": {
+                    "$ref": "#/definitions/CommonClientOptions",
+                    "title": "options"
                 },
                 "type": {
                     "enum": [
@@ -1336,47 +1760,12 @@
                 },
                 "maxRequestRetries": {
                     "default": 1,
-                    "description": "default # of http request retries a source can make before error is thrown",
+                    "description": "default # of http request retries a source/client can make before error is thrown",
                     "examples": [
                         1
                     ],
                     "title": "maxRequestRetries",
                     "type": "number"
-                },
-                "options": {
-                    "properties": {
-                        "checkExistingScrobbles": {
-                            "default": true,
-                            "description": "Check client for an existing scrobble at the same recorded time as the \"new\" track to be scrobbled. If an existing scrobble is found this track is not track scrobbled.",
-                            "examples": [
-                                true
-                            ],
-                            "title": "checkExistingScrobbles",
-                            "type": "boolean"
-                        },
-                        "refreshEnabled": {
-                            "default": true,
-                            "description": "Try to get fresh scrobble history from client when tracks to be scrobbled are newer than the last scrobble found in client history",
-                            "examples": [
-                                true
-                            ],
-                            "title": "refreshEnabled",
-                            "type": "boolean"
-                        },
-                        "verbose": {
-                            "description": "Options used for increasing verbosity of logging in MS (used for debugging)",
-                            "properties": {
-                                "match": {
-                                    "$ref": "#/definitions/MatchLoggingOptions",
-                                    "title": "match"
-                                }
-                            },
-                            "title": "verbose",
-                            "type": "object"
-                        }
-                    },
-                    "title": "options",
-                    "type": "object"
                 },
                 "retryMultiplier": {
                     "default": 1.5,
@@ -1474,42 +1863,6 @@
                     "title": "maxInterval",
                     "type": "number"
                 },
-                "maxPollRetries": {
-                    "default": 5,
-                    "description": "default # of automatic polling restarts on error",
-                    "examples": [
-                        5
-                    ],
-                    "title": "maxPollRetries",
-                    "type": "number"
-                },
-                "maxRequestRetries": {
-                    "default": 1,
-                    "description": "default # of http request retries a source can make before error is thrown",
-                    "examples": [
-                        1
-                    ],
-                    "title": "maxRequestRetries",
-                    "type": "number"
-                },
-                "options": {
-                    "$ref": "#/definitions/Record<string,any>",
-                    "title": "options"
-                },
-                "retryMultiplier": {
-                    "default": 1.5,
-                    "description": "default retry delay multiplier (retry attempt * multiplier = # of seconds to wait before retrying)",
-                    "examples": [
-                        1.5
-                    ],
-                    "title": "retryMultiplier",
-                    "type": "number"
-                },
-                "scrobbleThresholds": {
-                    "$ref": "#/definitions/ScrobbleThresholds",
-                    "description": "Set thresholds for when multi-scrobbler should consider a tracked play to be \"scrobbable\". If both duration and percent are defined then if either condition is met the track is scrobbled.",
-                    "title": "scrobbleThresholds"
-                },
                 "uriBlacklist": {
                     "description": "Do not scrobble tracks whose URI STARTS WITH any of these strings, case-insensitive\n\nEX: Don't scrobble tracks from soundcloud by adding 'soundcloud' to this list.\n\nList is ignored if uriWhitelist is used.",
                     "items": {
@@ -1559,10 +1912,23 @@
                     "$ref": "#/definitions/MopidyData",
                     "title": "data"
                 },
+                "enable": {
+                    "default": true,
+                    "description": "Should MS use this client/source? Defaults to true",
+                    "examples": [
+                        true
+                    ],
+                    "title": "enable",
+                    "type": "boolean"
+                },
                 "name": {
                     "description": "Unique identifier for this source.",
                     "title": "name",
                     "type": "string"
+                },
+                "options": {
+                    "$ref": "#/definitions/CommonSourceOptions",
+                    "title": "options"
                 },
                 "type": {
                     "enum": [
@@ -1577,6 +1943,86 @@
                 "type"
             ],
             "title": "MopidySourceAIOConfig",
+            "type": "object"
+        },
+        "MusikcubeData": {
+            "properties": {
+                "device_id": {
+                    "title": "device_id",
+                    "type": "string"
+                },
+                "password": {
+                    "description": "Password set in Musikcube https://github.com/clangen/musikcube/wiki/remote-api-documentation\n\n* musikcube -> settings -> server setup -> password",
+                    "title": "password",
+                    "type": "string"
+                },
+                "url": {
+                    "default": "ws://localhost:7905",
+                    "description": "URL of the Musikcube Websocket (Metadata) server to connect to\n\nYou MUST have enabled 'metadata' server and set a password: https://github.com/clangen/musikcube/wiki/remote-api-documentation\n  * musikcube -> settings -> server setup\n\nThe URL you provide here will have all parts not explicitly defined filled in for you so if these are not the default you must define them.\n\nParts => [default value]\n\n* Protocol => `ws://`\n* Hostname => `localhost`\n* Port => `7905`",
+                    "examples": [
+                        "ws://localhost:7905"
+                    ],
+                    "title": "url",
+                    "type": "string"
+                }
+            },
+            "required": [
+                "password"
+            ],
+            "title": "MusikcubeData",
+            "type": "object"
+        },
+        "MusikcubeSourceAIOConfig": {
+            "properties": {
+                "clients": {
+                    "description": "Restrict scrobbling tracks played from this source to Clients with names from this list. If list is empty is not present Source scrobbles to all configured Clients.",
+                    "examples": [
+                        [
+                            "MyMalojaConfigName",
+                            "MyLastFMConfigName"
+                        ]
+                    ],
+                    "items": {
+                        "type": "string"
+                    },
+                    "title": "clients",
+                    "type": "array"
+                },
+                "data": {
+                    "$ref": "#/definitions/MusikcubeData",
+                    "title": "data"
+                },
+                "enable": {
+                    "default": true,
+                    "description": "Should MS use this client/source? Defaults to true",
+                    "examples": [
+                        true
+                    ],
+                    "title": "enable",
+                    "type": "boolean"
+                },
+                "name": {
+                    "description": "Unique identifier for this source.",
+                    "title": "name",
+                    "type": "string"
+                },
+                "options": {
+                    "$ref": "#/definitions/CommonSourceOptions",
+                    "title": "options"
+                },
+                "type": {
+                    "enum": [
+                        "musikcube"
+                    ],
+                    "title": "type",
+                    "type": "string"
+                }
+            },
+            "required": [
+                "data",
+                "type"
+            ],
+            "title": "MusikcubeSourceAIOConfig",
             "type": "object"
         },
         "NtfyConfig": {
@@ -1604,6 +2050,7 @@
                 "type": {
                     "description": "Webhook type. Valid values are:\n\n* gotify\n* ntfy",
                     "enum": [
+                        "apprise",
                         "gotify",
                         "ntfy"
                     ],
@@ -1655,10 +2102,23 @@
                     "$ref": "#/definitions/PlexSourceData",
                     "title": "data"
                 },
+                "enable": {
+                    "default": true,
+                    "description": "Should MS use this client/source? Defaults to true",
+                    "examples": [
+                        true
+                    ],
+                    "title": "enable",
+                    "type": "boolean"
+                },
                 "name": {
                     "description": "Unique identifier for this source.",
                     "title": "name",
                     "type": "string"
+                },
+                "options": {
+                    "$ref": "#/definitions/CommonSourceOptions",
+                    "title": "options"
                 },
                 "type": {
                     "enum": [
@@ -1697,58 +2157,6 @@
                         ]
                     ],
                     "title": "libraries"
-                },
-                "maxPollRetries": {
-                    "default": 5,
-                    "description": "default # of automatic polling restarts on error",
-                    "examples": [
-                        5
-                    ],
-                    "title": "maxPollRetries",
-                    "type": "number"
-                },
-                "maxRequestRetries": {
-                    "default": 1,
-                    "description": "default # of http request retries a source can make before error is thrown",
-                    "examples": [
-                        1
-                    ],
-                    "title": "maxRequestRetries",
-                    "type": "number"
-                },
-                "options": {
-                    "description": "Additional options for Plex/Tautulli logging and tuning",
-                    "properties": {
-                        "logFilterFailure": {
-                            "default": "warn",
-                            "description": "How MS should log when a Plex/Tautulli event fails a defined filter (users/servers)\n\n* `false` => do not log\n* `debug` => log to DEBUG level\n* `warn` => log to WARN level (default)\n\nHint: This is useful if you are sure this source is setup correctly and you have multiple other Plex/Tautulli sources. Set to `debug` or `false` to reduce log noise.",
-                            "enum": [
-                                "debug",
-                                false,
-                                "warn"
-                            ],
-                            "examples": [
-                                "warn"
-                            ],
-                            "title": "logFilterFailure"
-                        }
-                    },
-                    "title": "options",
-                    "type": "object"
-                },
-                "retryMultiplier": {
-                    "default": 1.5,
-                    "description": "default retry delay multiplier (retry attempt * multiplier = # of seconds to wait before retrying)",
-                    "examples": [
-                        1.5
-                    ],
-                    "title": "retryMultiplier",
-                    "type": "number"
-                },
-                "scrobbleThresholds": {
-                    "$ref": "#/definitions/ScrobbleThresholds",
-                    "description": "Set thresholds for when multi-scrobbler should consider a tracked play to be \"scrobbable\". If both duration and percent are defined then if either condition is met the track is scrobbled.",
-                    "title": "scrobbleThresholds"
                 },
                 "servers": {
                     "anyOf": [
@@ -1827,47 +2235,23 @@
             "title": "PrioritiesConfig",
             "type": "object"
         },
-        "Record<string,any>": {
-            "title": "Record<string,any>",
-            "type": "object"
-        },
-        "RequestRetryOptions": {
-            "properties": {
-                "maxRequestRetries": {
-                    "default": 1,
-                    "description": "default # of http request retries a source can make before error is thrown",
-                    "examples": [
-                        1
-                    ],
-                    "title": "maxRequestRetries",
-                    "type": "number"
-                },
-                "retryMultiplier": {
-                    "default": 1.5,
-                    "description": "default retry delay multiplier (retry attempt * multiplier = # of seconds to wait before retrying)",
-                    "examples": [
-                        1.5
-                    ],
-                    "title": "retryMultiplier",
-                    "type": "number"
-                }
-            },
-            "title": "RequestRetryOptions",
-            "type": "object"
-        },
         "ScrobbleThresholds": {
             "properties": {
                 "duration": {
-                    "default": 30,
-                    "description": "The number of seconds before a track should be considered scrobbled.",
+                    "default": 240,
+                    "description": "The number of seconds a track has been listened to before it should be considered scrobbled.\n\nSet to null to disable.",
                     "examples": [
-                        30
+                        240
                     ],
                     "title": "duration",
                     "type": "number"
                 },
                 "percent": {
-                    "description": "The percentage of a track that should have been seen played before it should be scrobbled. Only used if the Source provides information about how long the track is.\n\nNOTE: This should be used with care when the Source is a \"polling\" type (has an 'interval' property). If the track is short and the interval is too high MS may ignore the track if percentage is high because it had not \"seen\" the track for long enough from first discovery, even if you have been playing the track for longer.",
+                    "default": 50,
+                    "description": "The percentage (as an integer) of a track that should have been seen played before it should be scrobbled. Only used if the Source provides information about how long the track is.\n\nSet to null to disable.\n\nNOTE: This should be used with care when the Source is a \"polling\" type (has an 'interval' property). If the track is short and the interval is too high MS may ignore the track if percentage is high because it had not \"seen\" the track for long enough from first discovery, even if you have been playing the track for longer.",
+                    "examples": [
+                        50
+                    ],
                     "title": "percent",
                     "type": "number"
                 }
@@ -1878,49 +2262,89 @@
         "SourceAIOConfig": {
             "anyOf": [
                 {
-                    "$ref": "#/definitions/SpotifySourceAIOConfig"
-                },
-                {
-                    "$ref": "#/definitions/PlexSourceAIOConfig"
-                },
-                {
-                    "$ref": "#/definitions/TautulliSourceAIOConfig"
+                    "$ref": "#/definitions/ChromecastSourceAIOConfig"
                 },
                 {
                     "$ref": "#/definitions/DeezerSourceAIOConfig"
                 },
                 {
-                    "$ref": "#/definitions/SubsonicSourceAIOConfig"
-                },
-                {
                     "$ref": "#/definitions/JellySourceAIOConfig"
-                },
-                {
-                    "$ref": "#/definitions/LastFmSouceAIOConfig"
-                },
-                {
-                    "$ref": "#/definitions/YTMusicSourceAIOConfig"
-                },
-                {
-                    "$ref": "#/definitions/MPRISSourceAIOConfig"
-                },
-                {
-                    "$ref": "#/definitions/MopidySourceAIOConfig"
-                },
-                {
-                    "$ref": "#/definitions/ListenBrainzSourceAIOConfig"
                 },
                 {
                     "$ref": "#/definitions/JRiverSourceAIOConfig"
                 },
                 {
                     "$ref": "#/definitions/KodiSourceAIOConfig"
+                },
+                {
+                    "$ref": "#/definitions/LastFmSouceAIOConfig"
+                },
+                {
+                    "$ref": "#/definitions/ListenBrainzSourceAIOConfig"
+                },
+                {
+                    "$ref": "#/definitions/MopidySourceAIOConfig"
+                },
+                {
+                    "$ref": "#/definitions/MPRISSourceAIOConfig"
+                },
+                {
+                    "$ref": "#/definitions/MusikcubeSourceAIOConfig"
+                },
+                {
+                    "$ref": "#/definitions/PlexSourceAIOConfig"
+                },
+                {
+                    "$ref": "#/definitions/SpotifySourceAIOConfig"
+                },
+                {
+                    "$ref": "#/definitions/SubsonicSourceAIOConfig"
+                },
+                {
+                    "$ref": "#/definitions/TautulliSourceAIOConfig"
+                },
+                {
+                    "$ref": "#/definitions/WebScrobblerSourceAIOConfig"
+                },
+                {
+                    "$ref": "#/definitions/YTMusicSourceAIOConfig"
                 }
             ],
             "title": "SourceAIOConfig"
         },
-        "SourceRetryOptions": {
+        "SourceDefaults": {
             "properties": {
+                "logFilterFailure": {
+                    "default": "warn",
+                    "description": "If this source has INGRESS to MS and has filters this determines how MS logs when a payload (event) fails a defined filter (IE users/servers/library filters)\n\n* `false` => do not log\n* `debug` => log to DEBUG level\n* `warn` => log to WARN level (default)\n\nHint: This is useful if you are sure this source is setup correctly and you have multiple other sources. Set to `debug` or `false` to reduce log noise.",
+                    "enum": [
+                        "debug",
+                        false,
+                        "warn"
+                    ],
+                    "examples": [
+                        "warn"
+                    ],
+                    "title": "logFilterFailure"
+                },
+                "logPayload": {
+                    "default": false,
+                    "description": "If this source has INGRESS to MS (sends a payload, rather than MS GETTING requesting a payload)\nthen setting this option to true will make MS log the payload JSON to DEBUG output",
+                    "examples": [
+                        false
+                    ],
+                    "title": "logPayload",
+                    "type": "boolean"
+                },
+                "logPlayerState": {
+                    "default": false,
+                    "description": "For Sources that track Player State (currently playing) this logs a simple player state/summary to DEBUG output",
+                    "examples": [
+                        false
+                    ],
+                    "title": "logPlayerState",
+                    "type": "boolean"
+                },
                 "maxPollRetries": {
                     "default": 5,
                     "description": "default # of automatic polling restarts on error",
@@ -1932,7 +2356,7 @@
                 },
                 "maxRequestRetries": {
                     "default": 1,
-                    "description": "default # of http request retries a source can make before error is thrown",
+                    "description": "default # of http request retries a source/client can make before error is thrown",
                     "examples": [
                         1
                     ],
@@ -1947,9 +2371,29 @@
                     ],
                     "title": "retryMultiplier",
                     "type": "number"
+                },
+                "scrobbleBacklog": {
+                    "default": true,
+                    "description": "If this source\n\n* supports fetching a listen history\n* and this option is enabled\n\nthen on startup MS will attempt to scrobble the recent listens from that history",
+                    "examples": [
+                        true,
+                        false
+                    ],
+                    "title": "scrobbleBacklog",
+                    "type": "boolean"
+                },
+                "scrobbleBacklogCount": {
+                    "description": "The number of listens to fetch when scrobbling from backlog\n\n* Only applies if this source supports fetching a listen history\n* If not specified it defaults to the maximum number of listens the source API supports",
+                    "title": "scrobbleBacklogCount",
+                    "type": "number"
+                },
+                "scrobbleThresholds": {
+                    "$ref": "#/definitions/ScrobbleThresholds",
+                    "description": "Set thresholds for when multi-scrobbler should consider a tracked play to be \"scrobbable\". If both duration and percent are defined then if either condition is met the track is scrobbled.",
+                    "title": "scrobbleThresholds"
                 }
             },
-            "title": "SourceRetryOptions",
+            "title": "SourceDefaults",
             "type": "object"
         },
         "SpotifySourceAIOConfig": {
@@ -1972,10 +2416,23 @@
                     "$ref": "#/definitions/SpotifySourceData",
                     "title": "data"
                 },
+                "enable": {
+                    "default": true,
+                    "description": "Should MS use this client/source? Defaults to true",
+                    "examples": [
+                        true
+                    ],
+                    "title": "enable",
+                    "type": "boolean"
+                },
                 "name": {
                     "description": "Unique identifier for this source.",
                     "title": "name",
                     "type": "string"
+                },
+                "options": {
+                    "$ref": "#/definitions/CommonSourceOptions",
+                    "title": "options"
                 },
                 "type": {
                     "enum": [
@@ -2011,82 +2468,8 @@
                     "type": "string"
                 },
                 "interval": {
-                    "default": 30,
-                    "description": "How long to wait before polling the source API for new tracks (in seconds)\n\nIt is unlikely you should need to change this unless you scrobble many very short tracks often\n\nReading:\n* https://developer.spotify.com/documentation/web-api/guides/rate-limits/\n* https://medium.com/mendix/limiting-your-amount-of-calls-in-mendix-most-of-the-time-rest-835dde55b10e\n  * The rate limit is ~180 req/min",
-                    "examples": [
-                        30
-                    ],
-                    "title": "interval",
-                    "type": "number"
-                },
-                "maxInterval": {
-                    "default": 60,
-                    "description": "When there has been no new activity from the Source API multi-scrobbler will gradually increase the wait time between polling up to this value (in seconds)",
-                    "examples": [
-                        60
-                    ],
-                    "title": "maxInterval",
-                    "type": "number"
-                },
-                "maxPollRetries": {
-                    "default": 5,
-                    "description": "default # of automatic polling restarts on error",
-                    "examples": [
-                        5
-                    ],
-                    "title": "maxPollRetries",
-                    "type": "number"
-                },
-                "maxRequestRetries": {
-                    "default": 1,
-                    "description": "default # of http request retries a source can make before error is thrown",
-                    "examples": [
-                        1
-                    ],
-                    "title": "maxRequestRetries",
-                    "type": "number"
-                },
-                "options": {
-                    "$ref": "#/definitions/Record<string,any>",
-                    "title": "options"
-                },
-                "redirectUri": {
-                    "default": "http://localhost:9078/callback",
-                    "description": "spotify redirect URI -- required only if not the default shown here. URI must end in \"callback\"",
-                    "examples": [
-                        "http://localhost:9078/callback"
-                    ],
-                    "title": "redirectUri",
-                    "type": "string"
-                },
-                "retryMultiplier": {
-                    "default": 1.5,
-                    "description": "default retry delay multiplier (retry attempt * multiplier = # of seconds to wait before retrying)",
-                    "examples": [
-                        1.5
-                    ],
-                    "title": "retryMultiplier",
-                    "type": "number"
-                },
-                "scrobbleThresholds": {
-                    "$ref": "#/definitions/ScrobbleThresholds",
-                    "description": "Set thresholds for when multi-scrobbler should consider a tracked play to be \"scrobbable\". If both duration and percent are defined then if either condition is met the track is scrobbled.",
-                    "title": "scrobbleThresholds"
-                }
-            },
-            "required": [
-                "clientId",
-                "clientSecret",
-                "redirectUri"
-            ],
-            "title": "SpotifySourceData",
-            "type": "object"
-        },
-        "SubsonicData": {
-            "properties": {
-                "interval": {
                     "default": 10,
-                    "description": "How long to wait before polling the source API for new tracks (in seconds)",
+                    "description": "How long to wait before polling the source API for new tracks (in seconds)\n\nIt is unlikely you should need to change this unless you scrobble many very short tracks often\n\nReading:\n* https://developer.spotify.com/documentation/web-api/guides/rate-limits/\n* https://medium.com/mendix/limiting-your-amount-of-calls-in-mendix-most-of-the-time-rest-835dde55b10e\n  * Rate limit may ~180 req/min\n* https://community.spotify.com/t5/Spotify-for-Developers/Web-API-ratelimit/m-p/5503150/highlight/true#M7930\n  * Informally indicated as 20 req/sec? Probably for burstiness",
                     "examples": [
                         10
                     ],
@@ -2102,27 +2485,55 @@
                     "title": "maxInterval",
                     "type": "number"
                 },
-                "maxPollRetries": {
-                    "default": 5,
-                    "description": "default # of automatic polling restarts on error",
+                "redirectUri": {
+                    "default": "http://localhost:9078/callback",
+                    "description": "spotify redirect URI -- required only if not the default shown here. URI must end in \"callback\"",
                     "examples": [
-                        5
+                        "http://localhost:9078/callback"
                     ],
-                    "title": "maxPollRetries",
+                    "title": "redirectUri",
+                    "type": "string"
+                }
+            },
+            "required": [
+                "clientId",
+                "clientSecret",
+                "redirectUri"
+            ],
+            "title": "SpotifySourceData",
+            "type": "object"
+        },
+        "SubsonicData": {
+            "properties": {
+                "ignoreTlsErrors": {
+                    "default": false,
+                    "description": "If your subsonic server is using self-signed certs you may need to disable TLS errors in order to get a connection\n\nWARNING: This should be used with caution as your traffic may not be encrypted.",
+                    "title": "ignoreTlsErrors",
+                    "type": "boolean"
+                },
+                "interval": {
+                    "default": 10,
+                    "description": "How long to wait before polling the source API for new tracks (in seconds)",
+                    "examples": [
+                        10
+                    ],
+                    "title": "interval",
                     "type": "number"
                 },
-                "maxRequestRetries": {
-                    "default": 1,
-                    "description": "default # of http request retries a source can make before error is thrown",
-                    "examples": [
-                        1
-                    ],
-                    "title": "maxRequestRetries",
-                    "type": "number"
+                "legacyAuthentication": {
+                    "default": false,
+                    "description": "Older Subsonic versions, and some badly implemented servers (Nextcloud), use legacy authentication which sends your password in CLEAR TEXT. This is less secure than the newer, recommended hashing authentication method but in some cases it is needed. See \"Authentication\" section here => https://www.subsonic.org/pages/api.jsp\n\nIf this option is not specified it will be turned on if the subsonic server responds with error code 41 \"Token authentication not supported for LDAP users.\" -- See Error Handling section => https://www.subsonic.org/pages/api.jsp",
+                    "title": "legacyAuthentication",
+                    "type": "boolean"
                 },
-                "options": {
-                    "$ref": "#/definitions/Record<string,any>",
-                    "title": "options"
+                "maxInterval": {
+                    "default": 30,
+                    "description": "When there has been no new activity from the Source API multi-scrobbler will gradually increase the wait time between polling up to this value (in seconds)",
+                    "examples": [
+                        30
+                    ],
+                    "title": "maxInterval",
+                    "type": "number"
                 },
                 "password": {
                     "description": "Password for the user to login to the server with",
@@ -2131,20 +2542,6 @@
                     ],
                     "title": "password",
                     "type": "string"
-                },
-                "retryMultiplier": {
-                    "default": 1.5,
-                    "description": "default retry delay multiplier (retry attempt * multiplier = # of seconds to wait before retrying)",
-                    "examples": [
-                        1.5
-                    ],
-                    "title": "retryMultiplier",
-                    "type": "number"
-                },
-                "scrobbleThresholds": {
-                    "$ref": "#/definitions/ScrobbleThresholds",
-                    "description": "Set thresholds for when multi-scrobbler should consider a tracked play to be \"scrobbable\". If both duration and percent are defined then if either condition is met the track is scrobbled.",
-                    "title": "scrobbleThresholds"
                 },
                 "url": {
                     "description": "URL of the subsonic media server to query",
@@ -2188,10 +2585,23 @@
                     "$ref": "#/definitions/SubsonicData",
                     "title": "data"
                 },
+                "enable": {
+                    "default": true,
+                    "description": "Should MS use this client/source? Defaults to true",
+                    "examples": [
+                        true
+                    ],
+                    "title": "enable",
+                    "type": "boolean"
+                },
                 "name": {
                     "description": "Unique identifier for this source.",
                     "title": "name",
                     "type": "string"
+                },
+                "options": {
+                    "$ref": "#/definitions/CommonSourceOptions",
+                    "title": "options"
                 },
                 "type": {
                     "enum": [
@@ -2228,10 +2638,23 @@
                     "$ref": "#/definitions/PlexSourceData",
                     "title": "data"
                 },
+                "enable": {
+                    "default": true,
+                    "description": "Should MS use this client/source? Defaults to true",
+                    "examples": [
+                        true
+                    ],
+                    "title": "enable",
+                    "type": "boolean"
+                },
                 "name": {
                     "description": "Unique identifier for this source.",
                     "title": "name",
                     "type": "string"
+                },
+                "options": {
+                    "$ref": "#/definitions/CommonSourceOptions",
+                    "title": "options"
                 },
                 "type": {
                     "enum": [
@@ -2248,6 +2671,111 @@
             "title": "TautulliSourceAIOConfig",
             "type": "object"
         },
+        "WebScrobblerData": {
+            "properties": {
+                "blacklist": {
+                    "anyOf": [
+                        {
+                            "items": {
+                                "type": "string"
+                            },
+                            "type": "array"
+                        },
+                        {
+                            "type": "string"
+                        }
+                    ],
+                    "description": "Block scrobbling from specific WebScrobbler Connectors",
+                    "examples": [
+                        [
+                            "youtube"
+                        ]
+                    ],
+                    "title": "blacklist"
+                },
+                "slug": {
+                    "description": "The URL ending that should be used to identify scrobbles for this source\n\nIn WebScrobbler's Webhook you must set an 'API URL'. All MS WebScrobbler sources must start like:\n\nhttp://localhost:9078/api/webscrobbler\n\nIf you are using multiple WebScrobbler sources (scrobbles for many users) you must use a slug to match Sources with each users extension.\n\nExample:\n\n* slug: 'usera' => API URL: http://localhost:9078/api/webscrobbler/usera\n* slug: 'userb' => API URL: http://localhost:9078/api/webscrobbler/userb\n\nIf no slug is found from an extension's incoming webhook event the first WebScrobbler source without a slug will be used",
+                    "title": "slug",
+                    "type": "string"
+                },
+                "whitelist": {
+                    "anyOf": [
+                        {
+                            "items": {
+                                "type": "string"
+                            },
+                            "type": "array"
+                        },
+                        {
+                            "type": "string"
+                        }
+                    ],
+                    "description": "Only allow scrobbling from specific WebScrobbler Connectors",
+                    "examples": [
+                        [
+                            "mixcloud",
+                            "soundcloud",
+                            "bandcamp"
+                        ]
+                    ],
+                    "title": "whitelist"
+                }
+            },
+            "title": "WebScrobblerData",
+            "type": "object"
+        },
+        "WebScrobblerSourceAIOConfig": {
+            "properties": {
+                "clients": {
+                    "description": "Restrict scrobbling tracks played from this source to Clients with names from this list. If list is empty is not present Source scrobbles to all configured Clients.",
+                    "examples": [
+                        [
+                            "MyMalojaConfigName",
+                            "MyLastFMConfigName"
+                        ]
+                    ],
+                    "items": {
+                        "type": "string"
+                    },
+                    "title": "clients",
+                    "type": "array"
+                },
+                "data": {
+                    "$ref": "#/definitions/WebScrobblerData",
+                    "title": "data"
+                },
+                "enable": {
+                    "default": true,
+                    "description": "Should MS use this client/source? Defaults to true",
+                    "examples": [
+                        true
+                    ],
+                    "title": "enable",
+                    "type": "boolean"
+                },
+                "name": {
+                    "description": "Unique identifier for this source.",
+                    "title": "name",
+                    "type": "string"
+                },
+                "options": {
+                    "$ref": "#/definitions/CommonSourceOptions",
+                    "title": "options"
+                },
+                "type": {
+                    "enum": [
+                        "webscrobbler"
+                    ],
+                    "title": "type",
+                    "type": "string"
+                }
+            },
+            "required": [
+                "type"
+            ],
+            "title": "WebScrobblerSourceAIOConfig",
+            "type": "object"
+        },
         "WebhookConfig": {
             "anyOf": [
                 {
@@ -2255,6 +2783,9 @@
                 },
                 {
                     "$ref": "#/definitions/NtfyConfig"
+                },
+                {
+                    "$ref": "#/definitions/AppriseConfig"
                 }
             ],
             "title": "WebhookConfig"
@@ -2275,58 +2806,22 @@
                     "type": "string"
                 },
                 "interval": {
-                    "default": 30,
+                    "default": 10,
                     "description": "How long to wait before polling the source API for new tracks (in seconds)",
                     "examples": [
-                        30
+                        10
                     ],
                     "title": "interval",
                     "type": "number"
                 },
                 "maxInterval": {
-                    "default": 60,
+                    "default": 30,
                     "description": "When there has been no new activity from the Source API multi-scrobbler will gradually increase the wait time between polling up to this value (in seconds)",
                     "examples": [
-                        60
+                        30
                     ],
                     "title": "maxInterval",
                     "type": "number"
-                },
-                "maxPollRetries": {
-                    "default": 5,
-                    "description": "default # of automatic polling restarts on error",
-                    "examples": [
-                        5
-                    ],
-                    "title": "maxPollRetries",
-                    "type": "number"
-                },
-                "maxRequestRetries": {
-                    "default": 1,
-                    "description": "default # of http request retries a source can make before error is thrown",
-                    "examples": [
-                        1
-                    ],
-                    "title": "maxRequestRetries",
-                    "type": "number"
-                },
-                "options": {
-                    "$ref": "#/definitions/Record<string,any>",
-                    "title": "options"
-                },
-                "retryMultiplier": {
-                    "default": 1.5,
-                    "description": "default retry delay multiplier (retry attempt * multiplier = # of seconds to wait before retrying)",
-                    "examples": [
-                        1.5
-                    ],
-                    "title": "retryMultiplier",
-                    "type": "number"
-                },
-                "scrobbleThresholds": {
-                    "$ref": "#/definitions/ScrobbleThresholds",
-                    "description": "Set thresholds for when multi-scrobbler should consider a tracked play to be \"scrobbable\". If both duration and percent are defined then if either condition is met the track is scrobbled.",
-                    "title": "scrobbleThresholds"
                 }
             },
             "required": [
@@ -2355,10 +2850,37 @@
                     "$ref": "#/definitions/YTMusicData",
                     "title": "data"
                 },
+                "enable": {
+                    "default": true,
+                    "description": "Should MS use this client/source? Defaults to true",
+                    "examples": [
+                        true
+                    ],
+                    "title": "enable",
+                    "type": "boolean"
+                },
                 "name": {
                     "description": "Unique identifier for this source.",
                     "title": "name",
                     "type": "string"
+                },
+                "options": {
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/CommonSourceOptions"
+                        },
+                        {
+                            "properties": {
+                                "logAuthUpdateChanges": {
+                                    "description": "When true MS will log to DEBUG what parts of the cookie are updated by YTM",
+                                    "title": "logAuthUpdateChanges",
+                                    "type": "boolean"
+                                }
+                            },
+                            "type": "object"
+                        }
+                    ],
+                    "title": "options"
                 },
                 "type": {
                     "enum": [
@@ -2377,8 +2899,19 @@
         }
     },
     "properties": {
+        "baseUrl": {
+            "default": "http://localhost",
+            "description": "Set the Base URL the application should assume the UI is served from.\n\nThis will affect how default redirect URLs are generated (spotify, lastfm, deezer) and some logging messages.\n\nIt will NOT set the actual interface/IP that the application is listening on.\n\nThis can also be set using the BASE_URL environmental variable.",
+            "examples": [
+                "http://localhost",
+                "http://192.168.0.101",
+                "https://ms.myDomain.tld"
+            ],
+            "title": "baseUrl",
+            "type": "string"
+        },
         "clientDefaults": {
-            "$ref": "#/definitions/RequestRetryOptions",
+            "$ref": "#/definitions/ClientDefaults",
             "title": "clientDefaults"
         },
         "clients": {
@@ -2387,6 +2920,20 @@
             },
             "title": "clients",
             "type": "array"
+        },
+        "debugMode": {
+            "default": false,
+            "description": "Enables ALL relevant logging and debug options for all sources/clients, when none are defined.\n\nThis is a convenience shortcut for enabling all output needed to troubleshoot an issue and does not need to be on for normal operation.\n\nIt can also be enabled with the environmental variable DEBUG_MODE=true",
+            "examples": [
+                false
+            ],
+            "title": "debugMode",
+            "type": "boolean"
+        },
+        "disableWeb": {
+            "description": "Disable web server from running/listening on port.\n\nThis will also make any ingress sources (Plex, Jellyfin, Tautulli, etc...) unusable",
+            "title": "disableWeb",
+            "type": "boolean"
         },
         "logging": {
             "$ref": "#/definitions/LogOptions",
@@ -2402,21 +2949,7 @@
             "type": "number"
         },
         "sourceDefaults": {
-            "allOf": [
-                {
-                    "$ref": "#/definitions/SourceRetryOptions"
-                },
-                {
-                    "properties": {
-                        "scrobbleThresholds": {
-                            "$ref": "#/definitions/ScrobbleThresholds",
-                            "description": "Set thresholds for when multi-scrobbler should consider a tracked play to be \"scrobbable\". If both duration and percent are defined then if either condition is met the track is scrobbled.",
-                            "title": "scrobbleThresholds"
-                        }
-                    },
-                    "type": "object"
-                }
-            ],
+            "$ref": "#/definitions/SourceDefaults",
             "title": "sourceDefaults"
         },
         "sources": {
