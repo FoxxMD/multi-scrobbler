@@ -12,6 +12,8 @@ on:
     paths-ignore:
       - '**.md'
       - '.github/**'
+      - 'docsite/**'
+      - 'flatpak/**'
   # use release instead of tags once version is correctly parsed
   # https://github.com/docker/metadata-action/issues/422
   # https://github.com/docker/metadata-action/issues/240
