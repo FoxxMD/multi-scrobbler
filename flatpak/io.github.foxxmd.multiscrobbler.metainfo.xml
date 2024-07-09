@@ -33,6 +33,7 @@
             <li>Youtube Music</li>
             <li>MPRIS (linux desktop)</li>
             <li>Google Cast (Chromecast)</li>
+            <li>Musikcube</li>
         </ul>
         <p>and consolidate your listens (scrobbles) into one or more scrobbling servers/services:</p>
         <ul>
@@ -49,6 +50,7 @@
         </screenshot>
     </screenshots>
     <releases>
+        <release version="0.8.0" date="2024-07-08"/>
         <release version="0.7.1" date="2024-04-11"/>
         <release version="0.7.0" date="2024-03-26"/>
         <release version="0.6.5" date="2024-02-05"/>
