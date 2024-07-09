@@ -1,25 +1,45 @@
+---
+toc_min_heading_level: 2
+toc_max_heading_level: 5
+---
+
+<details>
+
+<summary>Table of Contents</summary>
+
 <!-- TOC -->
-* [Connection Issues](#connection-issues)
-  * [Plex/Tautulli/Jellyfin don't connect](#plextautullijellyfin-dont-connect)
-  * [Jellyfin has warnings about undefined or missing data](#jellyfin-has-warnings-about-undefined-or-missing-data)
-  * [Jellyfin has warnings about missing headers](#jellyfin-has-warnings-about-missing-headers)
-  * [Spotify/Deezer/LastFM won't authenticate](#spotifydeezerlastfm-wont-authenticate)
-* [Configuration Issues](#configuration-issues)
-  * [Config could not be parsed](#config-could-not-be-parsed)
-* [Scrobbling Issues](#scrobbling-issues)
-  * [Last.fm does not scrobble tracks with multiple artists correctly](#lastfm-does-not-scrobble-tracks-with-multiple-artists-correctly)
-  * [Jellyfin does not scrobble tracks with multiple artists correctly](#jellyfin-does-not-scrobble-tracks-with-multiple-artists-correctly)
-  * [Google Cast track information is missing/incorrect or MS player has weird times](#google-cast-track-information-is-missingincorrect-or-ms-player-has-weird-times)
-  * [Google Cast device does not track media](#google-cast-device-does-not-track-media)
+  * [Connection Issues](#connection-issues)
+    * [Plex/Tautulli/Jellyfin/Webscrobbler don't connect](#plextautullijellyfinwebscrobbler-dont-connect)
+      * [Troubleshooting](#troubleshooting-)
+        * [Turn on Debug Logging](#turn-on-debug-logging)
+        * [Check Host name and URL](#check-host-name-and-url)
+        * [Check Firewall and Port Forwarding](#check-firewall-and-port-forwarding)
+        * [Check Source Service Logs](#check-source-service-logs)
+          * [Plex](#plex)
+          * [Tautulli](#tautulli)
+          * [Jellyfin](#jellyfin)
+          * [Webscrobbler](#webscrobbler)
+    * [Jellyfin has warnings about undefined or missing data](#jellyfin-has-warnings-about-undefined-or-missing-data)
+    * [Jellyfin has warnings about missing headers](#jellyfin-has-warnings-about-missing-headers)
+    * [Spotify/Deezer/LastFM won't authenticate](#spotifydeezerlastfm-wont-authenticate)
+  * [Configuration Issues](#configuration-issues)
+    * [Config could not be parsed](#config-could-not-be-parsed)
+  * [Scrobbling Issues](#scrobbling-issues)
+    * [Last.fm does not scrobble tracks with multiple artists correctly](#lastfm-does-not-scrobble-tracks-with-multiple-artists-correctly)
+    * [Jellyfin does not scrobble tracks with multiple artists correctly](#jellyfin-does-not-scrobble-tracks-with-multiple-artists-correctly)
+    * [Google Cast track information is missing/incorrect or MS player has weird times](#google-cast-track-information-is-missingincorrect-or-ms-player-has-weird-times)
+    * [Google Cast device does not track media](#google-cast-device-does-not-track-media)
 <!-- TOC -->
 
-# Connection Issues
+</details>
 
-## Plex/Tautulli/Jellyfin don't connect
+## Connection Issues
 
-These three [sources](/#source) are **ingress-based** which means that multi-scrobbler waits for the Plex/Tautulli/Jellyfin server to contact multi-scrobbler, as opposed to multi-scrobbler contacting the server.
+### Plex/Tautulli/Jellyfin/Webscrobbler don't connect
 
-multi-scrobbler will log information about any server that connects to it for these three services. In the logs it looks something like this:
+These sources are **ingress-based** which means that multi-scrobbler waits for the Plex/Tautulli/Jellyfin server (or Webscrobbler extension) to contact multi-scrobbler, as opposed to multi-scrobbler contacting them.
+
+multi-scrobbler will log information about any server that connects to it for these services. In the logs it looks something like this:
 
 ```
 2023-02-22T10:55:56-05:00 info   : [Ingress - Plex  ] Received request from a new remote address: ::ffff:192.168.0.140 (UA: PlexMediaServer/1.24.5.5173-8dcc73a59)
@@ -30,15 +50,15 @@ It also logs if a server tries to connect to a URL that it does not recognize:
 ```
 2023-02-22T11:16:12-05:00 debug  : [App             ] Server received POST request from ::ffff:192.168.0.140 (UA: PlexMediaServer/1.24.5.5173-8dcc73a59) to unknown route: /plkex
 ```
-**So, if you do not see either of these in your logs then Plex/Tautulli/Jellyfin is not able to connect to your multi-scrobbler instance at all.**
+**So, if you do not see either of these in your logs then Plex/Tautulli/Jellyfin/Webscrobbler is not able to connect to your multi-scrobbler instance at all.**
 
 This is not something multi-scrobbler can fix and means you have an issue in your network.
 
-### Troubleshooting 
+#### Troubleshooting 
 
 Check or try all these steps before submitting an issue:
 
-#### Turn on Debug Logging
+##### Turn on Debug Logging
 
 First, turn on **debug** logging for multi-scrobbler by setting the environmental variable `LOG_LEVEL=debug`:
 
@@ -47,33 +67,37 @@ First, turn on **debug** logging for multi-scrobbler by setting the environmenta
 
 Check the output for any additional information.
 
-#### Check Host name and URL
+##### Check Host name and URL
 
-The URLs examples in the [configuration](configuration/configuration.md) documentation assume you are running Plex/Tautulli/Jellyfin on the same server as multi-scrobbler. If these are not the same machine then you need to determine the IP address or domain name that multi-scrobbler is reachable at and use that instead of `localhost` when configuring these sources. **This is likely the same host name that you would use to access the web interface for multi-scrobbler.**
+The URLs examples in the [configuration](configuration/configuration.md) documentation assume you are running Plex/Tautulli/Jellyfin/Webscrobbler on the same server as multi-scrobbler. If these are not the same machine then you need to determine the IP address or domain name that multi-scrobbler is reachable at and use that instead of `localhost` when configuring these sources. **This is likely the same host name that you would use to access the web interface for multi-scrobbler.**
 
 EX `http://localhost:9078/plex` -> `http://192.168.0.140:9078/plex`
 
-#### Check Firewall and Port Forwarding
+##### Check Firewall and Port Forwarding
 
 If the machine multi-scrobbler is running on has a firewall ensure that port **9078** is open. Or if it is in another network entirely make sure your router is forwarding this port and it is open to the correct machine.
 
-#### Check Source Service Logs
+##### Check Source Service Logs
 
 Plex/Tautulli/Jellyfin all have logs that will log if they cannot connect to multi-scrobbler. Check these for further information.
 
-##### Plex
+###### Plex
 
 Settings -> Manage -> Console
 
-##### Tautulli
+###### Tautulli
 
 Check the command-line output of the application or docker logs.
 
-##### Jellyfin
+###### Jellyfin
 
 Administration -> Dashboard -> Advanced -> Logs
 
-## Jellyfin has warnings about undefined or missing data
+###### Webscrobbler
+
+See [Debugging the extension](https://github.com/web-scrobbler/web-scrobbler/wiki/Debug-the-extension) to get logs which should have information about failed requests.
+
+### Jellyfin has warnings about undefined or missing data
 
 Make sure you have 
 * [Configured the webhook plugin correctly](configuration/configuration.md#jellyfin)
@@ -89,10 +113,10 @@ You can verify the payload sent from the webhook by modifying your jellyfin conf
     "name": "MyJellyfin",
     "clients": [],
     "data": {
-      "users": ["FoxxMD"],
-      "options": {
-        "logPayload": true
-      }
+      "users": ["FoxxMD"]
+    },
+    "options": {
+      "logPayload": true
     }
   }
 ]
@@ -100,7 +124,7 @@ You can verify the payload sent from the webhook by modifying your jellyfin conf
 
 If your issue persists and you open an Issue for it please include the raw payload logs in your report.
 
-## Jellyfin has warnings about missing headers
+### Jellyfin has warnings about missing headers
 
 If you experience issues trying to scrobble with Jellyfin and find this in your MS logs
 
@@ -117,7 +141,7 @@ A workaround that may fix this:
       * **Value:** `application/json`
   * Then Save
 
-## Spotify/Deezer/LastFM won't authenticate
+### Spotify/Deezer/LastFM won't authenticate
 
 Ensure any **client id** or **secrets** are correct in your configuration.
 
@@ -130,9 +154,9 @@ If multi-scrobbler is not running on the same machine your browser is on then th
 
 EX `http://localhost:9078/lastfm/callback` -> `http://192.168.0.220:9078/lastfm/callback`
 
-# Configuration Issues
+## Configuration Issues
 
-## Config could not be parsed
+### Config could not be parsed
 
 If you see something like this in your logs:
 
@@ -144,25 +168,25 @@ If you see something like this in your logs:
 
 It means the JSON in your configuration file is not valid. Copy and paste your configuration into a site like [JSONLint](https://jsonlint.com/) to find out where errors you have and fix them.
 
-# Scrobbling Issues
+## Scrobbling Issues
 
-## Last.fm does not scrobble tracks with multiple artists correctly
+### Last.fm does not scrobble tracks with multiple artists correctly
 
 This is a limitation of the [Last.fm API](https://www.last.fm/api/show/track.scrobble) where the **artist** field is only one string and Last.fm does not recognize (play well) with "combined" artists.
 
 Multi-scrobbler works the same was the official Spotify-Last.fm integration works -- it only scrobbles the **first** artist on a multi-artist track.
 
-## Jellyfin does not scrobble tracks with multiple artists correctly
+### Jellyfin does not scrobble tracks with multiple artists correctly
 
 This is a limitation caused by the [Jellyfin webhook plugin](https://github.com/FoxxMD/multi-scrobbler/issues/70#issuecomment-1443804712) only sending the first artist to multi-scrobbler. This issues needs to be [fixed upstream on the Jellyfin webhook repository.](https://github.com/jellyfin/jellyfin-plugin-webhook/issues/166)
 
-## Google Cast track information is missing/incorrect or MS player has weird times
+### Google Cast track information is missing/incorrect or MS player has weird times
 
 The Google Cast integration relies on a few common fields in the data it receives from your casting device. Every platform that can cast (Spotify, Pandora, etc...) *should* use these fields the same but there are slight differences between their implementations that may confuse multi-scrobbler. Specific platforms may also return more information in non-common fields that are undocumented.
 
 To diagnose these issues you [**must enable payload logging**](configuration/configuration.md#cast-troubleshooting) for your google cast Source, run MS, and then include logs with this output from that run. Without the raw data logged from your cast device it will be nearly impossible to resolve your issue.
 
-## Google Cast device does not track media
+### Google Cast device does not track media
 
 It is likely the app playing on the cast device is incorrectly reporting the media type as **not music**. 
 

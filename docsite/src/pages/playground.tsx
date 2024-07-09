@@ -17,7 +17,9 @@ function PlaygroundComponent(): JSX.Element {
         >
             <BrowserOnly fallback={<div>Loading...</div>}>
                 {() => {
+                    // required to keep SSR from trying to render monaco/etc...
                     const PlaygroundInnerComponent =
+                        // eslint-disable-next-line @typescript-eslint/no-var-requires
                         require("@site/src/components/PlaygroundInner").default
                     return <PlaygroundInnerComponent />
                 }}

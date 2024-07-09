@@ -5,8 +5,6 @@ title: 'Overview'
 
 # Installation
 
-# Local
-
 After installation see [service.md](service.md) to configure multi-scrobbler to run automatically in the background.
 
 ## Nodejs
