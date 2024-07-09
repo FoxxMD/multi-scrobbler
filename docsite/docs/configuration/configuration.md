@@ -1,9 +1,14 @@
 ---
 sidebar_position: 2
 title: Overview
+toc_max_heading_level: 3
 ---
 
 # Configuration
+
+<details>
+
+<summary>Table of Contents</summary>
 
 <!-- TOC -->
 * [Overview](#overview)
@@ -33,6 +38,7 @@ title: Overview
     * [Connecting Devices](#connecting-devices)
     * [What Media Does MS Scrobble?](#what-media-does-ms-scrobble)
     * [Cast Troubleshooting](#cast-troubleshooting)
+  * [Musikcube](#musikcube)
 * [Client Configurations](#client-configurations)
   * [Maloja](#maloja)
   * [Last.fm](#lastfm)
@@ -44,7 +50,9 @@ title: Overview
   * [Health Endpoint](#health-endpoint)
 <!-- TOC -->
 
-# Overview
+</details>
+
+## Overview
 
 [**Sources** and **Clients**](/#how-does-multi-scrobbler-ms-work) are configured using environmental (ENV) variables and/or json files.
 
@@ -52,7 +60,7 @@ title: Overview
 
 TIP: Check the [**FAQ**](../FAQ.md) if you have any issues after configuration!
 
-## ENV-Based Configuration
+### ENV-Based Configuration
 
 This is done by passing environmental variables and so does not require any files to run MS.
 
@@ -64,7 +72,7 @@ Use ENV-based configuration if:
 * You are the only person for whom MS is scrobbling for
 * You have a very simple setup for MS such as one scrobble [Client](/#client) and one [Source](/#source) IE Plex -> Maloja
 
-## File-Based Configuration
+### File-Based Configuration
 
 MS will parse configuration files located in the directory specified by the `CONFIG_DIR` environmental variable. This variable defaults to:
 
@@ -90,7 +98,7 @@ For docker installations these examples are copied to your configuration directo
 
 There is also a [**kitchensink example**](kitchensink.md) that provides examples of using all sources/clients in a complex configuration.
 
-### All-in-One File Configuration
+#### All-in-One File Configuration
 
 [**Explore the schema for this configuration, along with an example generator and validator, here**](https://json-schema.app/view/%23?url=https%3A%2F%2Fraw.githubusercontent.com%2FFoxxMD%2Fmulti-scrobbler%2Fmaster%2Fsrc%2Fbackend%2Fcommon%2Fschema%2Faio.json)
 
@@ -139,7 +147,7 @@ Example directory structure:
 
 See [config.json.example](https://github.com/FoxxMD/multi-scrobbler/blob/master/config/config.json.example) for an annotated example or check out [the kitchen sink example](kitchensink.md).
 
-### Specific File Configuration
+#### Specific File Configuration
 
 Each file is named by the **type** of the Client/Source found in below sections. Each file as an **array** of that type of Client/Source.
 
@@ -180,7 +188,7 @@ Example directory structure:
 
 See the [/config](https://github.com/FoxxMD/multi-scrobbler/blob/master/config) directory of this project for examples of each type of config file or reference specific files below.
 
-# Application Options
+## Application Options
 
 These options affect multi-scrobbler's behavior and are not specific to any source/client.
 
@@ -215,16 +223,16 @@ Disable using either:
 * ENV `DISABLE_WEB=true`
 * In [All-in-One File](#all-in-one-file-configuration) use the top-level property `"disableWeb": true`
 
-# Source Configurations
+## Source Configurations
 
-## [Spotify](https://www.spotify.com)
+### [Spotify](https://www.spotify.com)
 
 To access your Spotify history you must [register an application](https://developer.spotify.com/dashboard) to get a
 Client ID/Secret. Make sure to also whitelist your redirect URI in the application settings.
 
 **NOTE:** If your Spotify player has [Automix](https://community.spotify.com/t5/FAQs/What-is-Automix/ta-p/5257278) enabled and Spotify uses it for your playlist/queue then MS cannot accurately determine when a track will end. This is because the track is "mixed" in your queue with a shorter play time than its actual length and [Spotify does not report this modified play time in its API.](https://community.spotify.com/t5/Spotify-for-Developers/Wrong-duration-ms-of-track-with-Automix/m-p/5429147) This **does not affect MS's ability to scrobble** from Spotify but it will affect the accuracy of the duration MS reports was played.
 
-### ENV-Based
+#### ENV-Based
 
 | Environmental Variable     | Required? | Default                          |                    Description                     |
 |----------------------------|-----------|----------------------------------|----------------------------------------------------|
@@ -232,39 +240,39 @@ Client ID/Secret. Make sure to also whitelist your redirect URI in the applicati
 | `SPOTIFY_CLIENT_SECRET`    | Yes       |                                  |                                                    |
 | `SPOTIFY_REDIRECT_URI`     | No         | `http://localhost:9078/callback` | URI must end in `callback`                         |
 
-### File-Based
+#### File-Based
 
 See [`spotify.json.example`](https://github.com/FoxxMD/multi-scrobbler/blob/master/config/spotify.json.example) or [explore the schema with an example and live editor/validator](https://json-schema.app/view/%23/%23%2Fdefinitions%2FSpotifySourceConfig?url=https%3A%2F%2Fraw.githubusercontent.com%2FFoxxMD%2Fmulti-scrobbler%2Fmaster%2Fsrc%2Fbackend%2Fcommon%2Fschema%2Fsource.json)
 
-## [Plex](https://plex.tv)
+### [Plex](https://plex.tv)
 
 Check the [instructions](plex.md) on how to setup a [webhooks](https://support.plex.tv/articles/115002267687-webhooks) to scrobble your plays.
 
-### ENV-Based
+#### ENV-Based
 
 | Environmental Variable | Required | Default |                   Description                   |
 |------------------------|----------|---------|-------------------------------------------------|
 | `PLEX_USER`              |        No |         | The a comma-delimited list of usernames to scrobble tracks for. No usernames specified means all tracks by all users will be scrobbled. |
 
-### File-Based
+#### File-Based
 
 See [`plex.json.example`](https://github.com/FoxxMD/multi-scrobbler/blob/master/config/plex.json.example) or [explore the schema with an example and live editor/validator](https://json-schema.app/view/%23/%23%2Fdefinitions%2FPlexSourceConfig?url=https%3A%2F%2Fraw.githubusercontent.com%2FFoxxMD%2Fmulti-scrobbler%2Fmaster%2Fsrc%2Fbackend%2Fcommon%2Fschema%2Fsource.json)
 
-## [Tautulli](https://tautulli.com)
+### [Tautulli](https://tautulli.com)
 
 Check the [instructions](plex.md) on how to setup a notification agent.
 
-### ENV-Based
+#### ENV-Based
 
 | Environmental Variable | Required | Default |                   Description                   |
 |------------------------|----------|---------|-------------------------------------------------|
 | `TAUTULLI_USER`              |        No |         | The a comma-delimited list of usernames to scrobble tracks for. No usernames specified means all tracks by all users will be scrobbled. |
 
-### File-Based
+####File-Based
 
 See [`tautulli.json.example`](https://github.com/FoxxMD/multi-scrobbler/blob/master/config/tautulli.json.example) or [explore the schema with an example and live editor/validator](https://json-schema.app/view/%23/%23%2Fdefinitions%2FTautulliSourceConfig?url=https%3A%2F%2Fraw.githubusercontent.com%2FFoxxMD%2Fmulti-scrobbler%2Fmaster%2Fsrc%2Fbackend%2Fcommon%2Fschema%2Fsource.json)
 
-## [Subsonic](http://www.subsonic.org/)
+### [Subsonic](http://www.subsonic.org/)
 
 Can use this source for any application that implements the [Subsonic API](http://www.subsonic.org/pages/api.jsp) and supports the [`getNowPlaying`](http://www.subsonic.org/pages/api.jsp#getNowPlaying) endpoint (such as [Airsonic](https://airsonic.github.io/) and [Navidrome](https://www.navidrome.org/))
 
@@ -275,7 +283,7 @@ Can use this source for any application that implements the [Subsonic API](http:
 * Multiple artists are reported as one value and cannot be separated
 * If using [Airsonic Advanced](https://github.com/airsonic-advanced/airsonic-advanced) the password used (under **Credentials**) must be **Decodable**  
 
-### ENV-Based
+#### ENV-Based
 
 | Environmental Variable     | Required? |            Default             |                    Description                     |
 |----------------------------|-----------|----------------------------------|----------------------------------------------------|
@@ -283,11 +291,11 @@ Can use this source for any application that implements the [Subsonic API](http:
 | `SUBSONIC_PASSWORD`    | Yes       |                                  |                                                    |
 | `SUBSONIC_URL`     | Yes         |                                  | Base url of your subsonic-api server |
 
-### File-Based
+#### File-Based
 
 See [`subsonic.json.example`](https://github.com/FoxxMD/multi-scrobbler/blob/master/config/subsonic.json.example) or [explore the schema with an example and live editor/validator](https://json-schema.app/view/%23/%23%2Fdefinitions%2FSubSonicSourceConfig?url=https%3A%2F%2Fraw.githubusercontent.com%2FFoxxMD%2Fmulti-scrobbler%2Fmaster%2Fsrc%2Fbackend%2Fcommon%2Fschema%2Fsource.json)
 
-## [Jellyfin](https://jellyfin.org/)
+### [Jellyfin](https://jellyfin.org/)
 
 Must be using Jellyfin 10.7 or greater
 
@@ -306,30 +314,30 @@ Must be using Jellyfin 10.7 or greater
 
 If you see errors in the MS logs regarding `missing headers` when using Jellyfin [see this workaround.](../FAQ.md#jellyfin-has-warnings-about-missing-headers)
 
-### ENV-Based
+#### ENV-Based
 
 | Environmental Variable | Required? | Default | Description                                                       |
 |------------------------|-----------|---------|-------------------------------------------------------------------|
 | `JELLYFIN_USER`        |           |         | Comma-separated list of usernames (from Jellyfin) to scrobble for |
 | `JELLYFIN_SERVER`      |           |         | Comma-separated list of Jellyfin server names to scrobble from    |
 
-### File-Based
+#### File-Based
 
 See [`jellyfin.json.example`](https://github.com/FoxxMD/multi-scrobbler/blob/master/config/jellyfin.json.example) or [explore the schema with an example and live editor/validator](https://json-schema.app/view/%23/%23%2Fdefinitions%2FJellySourceConfig?url=https%3A%2F%2Fraw.githubusercontent.com%2FFoxxMD%2Fmulti-scrobbler%2Fmaster%2Fsrc%2Fbackend%2Fcommon%2Fschema%2Fsource.json)
 
-## [Last.fm (Source)](https://www.last.fm)
+### [Last.fm (Source)](https://www.last.fm)
 
 See the [Last.fm (Client)](#lastfm) setup for registration instructions.
 
-### ENV-Based
+#### ENV-Based
 
 No support for ENV based for Last.fm as a client (only source)
 
-### File-Based
+#### File-Based
 
 See [`lastfm.json.example`](https://github.com/FoxxMD/multi-scrobbler/blob/master/config/lastfm.json.example), change `configureAs` to `source`. Or [explore the schema with an example and live editor/validator](https://json-schema.app/view/%23/%23%2Fdefinitions%2FLastfmSourceConfig?url=https%3A%2F%2Fraw.githubusercontent.com%2FFoxxMD%2Fmulti-scrobbler%2Fmaster%2Fsrc%2Fbackend%2Fcommon%2Fschema%2Fsource.json)
 
-## [Listenbrainz (Source)](https://listenbrainz.org)
+### [Listenbrainz (Source)](https://listenbrainz.org)
 
 You will need to run your own Listenbrainz server or have an account [on the official instance](https://listenbrainz.org/login/)
 
@@ -337,13 +345,13 @@ On your [profile page](https://listenbrainz.org/profile/) find your **User Token
 
 **NOTE:** You cannot use ENV variables shown in the [Listenbrainz Client config](#listenbrainz) -- multi-scrobbler assumes Listenbrainz ENVs are always used for the **client** configuration. You must use the file-based config from below to setup Listenbrainz as a Source.
 
-### File-Based
+#### File-Based
 
 See [`listenbrainz.json.example`](https://github.com/FoxxMD/multi-scrobbler/blob/master/config/listenbrainz.json.example) or [explore the schema with an example and live editor/validator](https://json-schema.app/view/%23%2Fdefinitions%2FListenBrainzSourceConfig?url=https%3A%2F%2Fraw.githubusercontent.com%2FFoxxMD%2Fmulti-scrobbler%2Fmaster%2Fsrc%2Fbackend%2Fcommon%2Fschema%2Fsource.json)
 
 **Change `configureAs` to `source`**
 
-## [Deezer](https://deezer.com/)
+### [Deezer](https://deezer.com/)
 
 Create a new application at [Deezer Developers](https://developers.deezer.com/myapps)
 
@@ -361,7 +369,7 @@ After application creation you should have credentials displayed in the "My Apps
 
 After starting multi-scrobbler with credentials in-place open the dashboard (`http://localhost:9078`) and find your Deezer source. Click **(Re)authenticate and (re)start polling** to start the login process. After login is complete polling will begin automatically.
 
-### ENV-Based
+#### ENV-Based
 
 | Environmental Variable     | Required? | Default                                 |                    Description                     |
 |----------------------------|-----------|-----------------------------------------|----------------------------------------------------|
@@ -369,11 +377,11 @@ After starting multi-scrobbler with credentials in-place open the dashboard (`ht
 | `DEEZER_CLIENT_SECRET`    | Yes       |                                         |  Your **Secret Key**                                |
 | `DEEZER_REDIRECT_URI`     | No         | `http://localhost:9078/deezer/callback` | URI must end in `deezer/callback`         |
 
-### File-Based
+#### File-Based
 
 See [`deezer.json.example`](https://github.com/FoxxMD/multi-scrobbler/blob/master/config/deezer.json.example) or [explore the schema with an example and live editor/validator](https://json-schema.app/view/%23/%23%2Fdefinitions%2FDeezerSourceConfig?url=https%3A%2F%2Fraw.githubusercontent.com%2FFoxxMD%2Fmulti-scrobbler%2Fmaster%2Fsrc%2Fbackend%2Fcommon%2Fschema%2Fsource.json)
 
-## [Youtube Music](https://music.youtube.com)
+### [Youtube Music](https://music.youtube.com)
 
 Credentials for YT Music are obtained from a browser request to https://music.youtube.com **once you are logged in.** [Specific requirements are here and summarized below:](https://github.com/nickp10/youtube-music-ts-api/blob/master/DOCUMENTATION.md#authenticate)
 
@@ -395,11 +403,11 @@ NOTES:
 * YT Music authentication is "browser based" which means your credentials may expire after a (long?) period of time OR if you log out of https://music.youtube.com. In the event this happens just repeat the steps above to get new credentials.
 * Communication to YT Music is **unofficial** and not supported or endorsed by Google. This means that **this integration may stop working at any time** if Google decides to change how YT Music works in the browser.
 
-### File-Based
+#### File-Based
 
 See [`ytmusic.json.example`](https://github.com/FoxxMD/multi-scrobbler/blob/master/config/ytmusic.json.example) or [explore the schema with an example and live editor/validator](https://json-schema.app/view/%23/%23%2Fdefinitions%2FYTMusicSourceConfig?url=https%3A%2F%2Fraw.githubusercontent.com%2FFoxxMD%2Fmulti-scrobbler%2Fmaster%2Fsrc%2Fbackend%2Fcommon%2Fschema%2Fsource.json)
 
-## [MPRIS](https://specifications.freedesktop.org/mpris-spec/latest/)
+### [MPRIS](https://specifications.freedesktop.org/mpris-spec/latest/)
 
 MPRIS is a standard interface for communicating with Music Players on **linux operating systems.**
 
@@ -411,7 +419,7 @@ multi-scrobbler can listen to this interface and scrobble tracks played by **any
 
 **NOTE:** multi-scrobbler needs to be running as a [**Local Installation**](../installation/installation.md#local) in order to use MPRIS. This cannot be used from docker.
 
-### ENV-Based
+#### ENV-Based
 
 | Environmental Variable | Required? | Default | Description                                                                      |
 |------------------------|-----------|---------|----------------------------------------------------------------------------------|
@@ -419,23 +427,23 @@ multi-scrobbler can listen to this interface and scrobble tracks played by **any
 | MPRIS_BLACKLIST        | No        |         | Comma-delimited list of player names not to scrobble from                        |
 | MPRIS_WHITELIST        | No        |         | Comma-delimited list of players names to ONLY scrobble from. Overrides blacklist |
 
-### File-Based
+#### File-Based
 
 See [`mpris.json.example`](https://github.com/FoxxMD/multi-scrobbler/blob/master/config/mpris.json.example) or [explore the schema with an example and live editor/validator](https://json-schema.app/view/%23%2Fdefinitions%2FMPRISSourceConfig?url=https%3A%2F%2Fraw.githubusercontent.com%2FFoxxMD%2Fmulti-scrobbler%2Fmaster%2Fsrc%2Fbackend%2Fcommon%2Fschema%2Fsource.json)
 
-## [Mopidy](https://mopidy.com/)
+### [Mopidy](https://mopidy.com/)
 
 Mopidy is a headless music server that supports playing music from many [standard and non-standard sources such as Pandora, Bandcamp, and Tunein.](https://mopidy.com/ext/)
 
 multi-scrobbler can scrobble tracks played from any Mopidy backend source, regardless of where you listen to them.
 
-### File-Based
+#### File-Based
 
 See [`mopidy.json.example`](https://github.com/FoxxMD/multi-scrobbler/blob/master/config/mopidy.json.example) or [explore the schema with an example and live editor/validator](https://json-schema.app/view/%23%2Fdefinitions%2FMopidySourceConfig/%23%2Fdefinitions%2FMopidyData?url=https%3A%2F%2Fraw.githubusercontent.com%2FFoxxMD%2Fmulti-scrobbler%2Fmaster%2Fsrc%2Fbackend%2Fcommon%2Fschema%2Fsource.json)
 
 Configuration Options:
 
-##### `url`
+###### `url`
 
 The URL used to connect to the Mopidy server. You MUST have [Mopidy-HTTP extension](https://mopidy.com/ext/http) enabled.
 
@@ -493,7 +501,7 @@ MS transforms this to: `ws://mopidy.mydomain.com:80/MOPWS`
 </details>
 
 
-#### URI Blacklist/Whitelist
+##### URI Blacklist/Whitelist
 
 If you wish to disallow or only allow scrobbling from some sources played through Mopidy you can specify these using `uriBlacklist` or `uriWhitelist` in your config. multi-scrobbler will check the list to see if any string matches the START of the `uri` on a track. If whitelist is used then blacklist is ignored. All strings are case-insensitive.
 
@@ -507,7 +515,7 @@ EX:
 
 Will prevent multi-scrobbler from scrobbling any Mopidy track that start with a `uri` like `soundcloud:song:MySong-1234`
 
-#### Album Blacklist
+##### Album Blacklist
 
 For certain sources (Soundcloud) Mopidy does not have all track info (Album) and will instead use "Soundcloud" as the Album name. You can prevent multi-scrobbler from using this bad Album data by adding the fake Album name to this list. Multi-scrobbler will still scrobble the track, just without the bad data. All strings are case-insensitive.
 
@@ -522,7 +530,7 @@ EX:
 If a track would be scrobbled like `Album: Soundcloud, Track: My Cool Track, Artist: A Cool Artist` 
 then multi-scrobbler will instead scrobble  `Track: My Cool Track, Artist: A Cool Artist`
 
-## [JRiver](https://jriver.com/)
+### [JRiver](https://jriver.com/)
 
 In order for multi-scrobbler to communicate with JRiver you must have [Web Server Interface](https://wiki.jriver.com/index.php/Web_Service_Interface#Documentation_of_Functions) enabled. This can can be in the JRiver GUI:
 
@@ -530,7 +538,7 @@ In order for multi-scrobbler to communicate with JRiver you must have [Web Serve
   * Check `Use Media Network to share this library...`
   * If you have `Authentication` checked you will need to provide the **Username** and **Password** in the ENV/File configuration below.
 
-#### URL
+##### URL
 
 If you do not provide a URL then a default is used which assumes JRiver is installed on the same server as multi-scrobbler: `http://localhost:52199/MCWS/v1/`
 
@@ -576,7 +584,7 @@ MS transforms this to: `http://mydomain.com:80/jriverReverse/MCWS/v1/`
 
 </details>
 
-### ENV-Based
+#### ENV-Based
 
 
 | Environmental Variable | Required |             Default             |                  Description                   |
@@ -586,11 +594,11 @@ MS transforms this to: `http://mydomain.com:80/jriverReverse/MCWS/v1/`
 | JRIVER_PASSWORD        | No       |                                 | If authenticated is enabled, the password set  |
 
 
-### File-Based
+#### File-Based
 
 See [`jriver.json.example`](https://github.com/FoxxMD/multi-scrobbler/blob/master/config/jriver.json.example) or [explore the schema with an example and live editor/validator](https://json-schema.app/view/%23%2Fdefinitions%2FJRiverSourceConfig/%23%2Fdefinitions%2FJRiverData?url=https%3A%2F%2Fraw.githubusercontent.com%2FFoxxMD%2Fmulti-scrobbler%2Fmaster%2Fsrc%2Fbackend%2Fcommon%2Fschema%2Fsource.json)
 
-## [Kodi](https://kodi.tv/)
+### [Kodi](https://kodi.tv/)
 
 In order for multi-scrobbler to communicate with Kodi you must have the [Web Interface](https://kodi.wiki/view/Web_interface) enabled. This can can be in the Kodi GUI:
 
@@ -598,7 +606,7 @@ In order for multi-scrobbler to communicate with Kodi you must have the [Web Int
   * Check `Allow remote control via HTTP`
   * Ensure you have a **Username** and **Password** set, you will need to provide them in the ENV/File configuration below.
 
-#### URL
+##### URL
 
 If you do not provide a URL then a default is used which assumes Kodi is installed on the same server as multi-scrobbler: `http://localhost:8080/jsonrpc`
 
@@ -644,7 +652,7 @@ MS transforms this to: `http://mydomain.com:80/kodiReverse/jsonrpc`
 
 </details>
 
-### ENV-Based
+#### ENV-Based
 
 
 | Environmental Variable | Required | Default                       | Description                |
@@ -654,11 +662,11 @@ MS transforms this to: `http://mydomain.com:80/kodiReverse/jsonrpc`
 | KODI_PASSWORD          | No       |                               | The password set           |
 
 
-### File-Based
+#### File-Based
 
 See [`kodi.json.example`](https://github.com/FoxxMD/multi-scrobbler/blob/master/config/kodi.json.example) or [explore the schema with an example and live editor/validator](https://json-schema.app/view/%23%2Fdefinitions%2FKodiSourceConfig/%23%2Fdefinitions%2FKodiData?url=https%3A%2F%2Fraw.githubusercontent.com%2FFoxxMD%2Fmulti-scrobbler%2Fmaster%2Fsrc%2Fbackend%2Fcommon%2Fschema%2Fsource.json)
 
-## [WebScrobbler](https://web-scrobbler.com/)
+### [WebScrobbler](https://web-scrobbler.com/)
 
 After installing the extension open the preferences/settings for it:
 
@@ -673,7 +681,7 @@ Reload the extension after adding the webhook.
 * **On Chromium-based Browsers** - Any domain will work for API URL
 * All Other browsers are untested
 
-#### Multiple Users
+##### Multiple Users
 
 If you would like use multiple WebScrobbler sources they can be matched using a **slug** at the end of the **API URL.** This requires using [a file-based config.](#file-based-configuration)
 
@@ -709,11 +717,11 @@ In `webscrobbler.json`
 
 Note: `http://localhost:9078/api/webscrobbler` is matched with the first source that _that does not have a slug defined._
 
-##### Connectors Black/Whitelist
+###### Connectors Black/Whitelist
 
 MS can be configured to only scrobble, or NOT scrobble, from some WS connectors. Use the name of the website from the [supported websites](https://web-scrobbler.com/) or from the **Connectors** tab in the extension. Note that this **only** affects MS's behavior and does not affect the general connector behavior you have configured within the WebScrobbler extension.
 
-### ENV-Based
+#### ENV-Based
 
 | Environmental Variable | Required? | Default | Description                                                              |
 |------------------------|-----------|---------|--------------------------------------------------------------------------|
@@ -721,11 +729,11 @@ MS can be configured to only scrobble, or NOT scrobble, from some WS connectors.
 | WS_WHITELIST           | No        |         | Only scrobble from these WebScrobbler Connectors. Comma-delimited list   |
 | WS_BLACKLIST           | No        |         | Do not scrobble from these WebScrobbler Connectors. Comma-delimited list |
 
-### File-Based
+#### File-Based
 
 See [`webscrobbler.json.example`](https://github.com/FoxxMD/multi-scrobbler/blob/master/config/webscrobbler.json.example) or [explore the schema with an example and live editor/validator](https://json-schema.app/view/%23%2Fdefinitions%2FWebScrobblerSourceConfig/%23%2Fdefinitions%2FWebScrobblerData?url=https%3A%2F%2Fraw.githubusercontent.com%2FFoxxMD%2Fmulti-scrobbler%2Fmaster%2Fsrc%2Fbackend%2Fcommon%2Fschema%2Fsource.json)
 
-## [Google Cast (Chromecast)](https://www.google.com/chromecast/built-in/)
+### [Google Cast (Chromecast)](https://www.google.com/chromecast/built-in/)
 
 **NOTE:** Google Cast support is **experimental**. You may experience crashes and errors while using this Source. Please open an issue if you experience problems and include all information detailed in the issue template to help debug your issue.
 
@@ -733,15 +741,15 @@ If your media device can be **Cast** to using this button ![Chromecast Icon](htt
 
 **Note:** This source relies on common, **basic** music data provided by the cast device which will always be less exhaustive than data parsed from full source integrations. If there is an existing [Source](#source-configurations) it is recommended to configure for it and blacklist the app on Google Cast, rather than relying solely on Google Cast for scrobbling.
 
-### Connecting Devices
+#### Connecting Devices
 
 Cast devices can be manually configured using [File-based configuration](#file-based-14) OR automatically discovered using **mDNS.**
 
-##### mDNS Discovery
+###### mDNS Discovery
 
 The host machine running multi-scrobbler must be configured to allow [mDNS traffic on port 5353/UDP](https://book.hacktricks.xyz/network-services-pentesting/5353-udp-multicast-dns-mdns).
 
-##### Linux
+###### Linux
 
 **Docker**
 
@@ -755,7 +763,7 @@ docker run ... -v /var/run/dbus:/var/run/dbus -v  	/var/run/avahi-daemon/socket:
 
 No additional steps are required.
 
-##### Windows
+###### Windows
 
 **Docker**
 
@@ -765,13 +773,13 @@ Unsupported at this time.
 
 No additional steps are required.
 
-### What Media Does MS Scrobble?
+#### What Media Does MS Scrobble?
 
 Cast devices report what type of media the current activity is [(see `metadata` property here)](https://developers.google.com/cast/docs/media/messages#MediaInformation). The reported type is dependent on the application playing the media to correctly report it, the cast device does not magically know what the media is. If an application does not report a type it is always classified as `unknown`.
 
 **By default, MS will only track media that is reported as `MusicTrack`.**
 
-#### Allow Unknown Media Type
+##### Allow Unknown Media Type
 
 Media with an Unknown (`Generic`) media type can be explicitly allowed by setting `"allowUnknownMedia": true` in the [file-based configuration.](#file-based-14) This can also be configured to only allow unknown media types for specific applications by using a list of application names like:
 
@@ -789,7 +797,7 @@ Media with an Unknown (`Generic`) media type can be explicitly allowed by settin
 ]
 ```
 
-#### Forcing Media Tracking
+##### Forcing Media Tracking
 
 MS can be forced to track media from an application regardless of media type. This is useful if an application incorrectly reports a media type you are sure should be music. Set `"forceMediaRecognitionOn"` in the [file-based configuration.](#file-based-14) to a list of application names that should always be tracked like:
 
@@ -808,7 +816,7 @@ MS can be forced to track media from an application regardless of media type. Th
 ```
 
 
-### Cast Troubleshooting
+#### Cast Troubleshooting
 
 Please include any/all logs with raw output if there are any errors encountered as this is critical to diagnosing issues.
 
@@ -830,7 +838,7 @@ To diagnose bad/incomplete track information or strange MS player behavior pleas
 ]
 ```
 
-### ENV-Based
+#### ENV-Based
 
 Note: [Manually configuring cast device connections](#connecting-devices) is only available through [File-based config.](#file-based-14)
 
@@ -842,11 +850,11 @@ Note: [Manually configuring cast device connections](#connecting-devices) is onl
 | CC_WHITELIST_APPS      | No        |         | Only scrobble from these casted Apps. Comma-delimited list. EX spotify, pandora      |
 | CC_BLACKLIST_APPS      | No        |         | Do not scrobble from these casted Apps. Comma-delimited list                         |
 
-### File-Based
+#### File-Based
 
 See [`chromecast.json.example`](https://github.com/FoxxMD/multi-scrobbler/blob/master/config/chromecast.json.example) or [explore the schema with an example and live editor/validator](https://json-schema.app/view/%23%2Fdefinitions%2FChromecastSourceConfig/%23%2Fdefinitions%2FChromecastData?url=https%3A%2F%2Fraw.githubusercontent.com%2FFoxxMD%2Fmulti-scrobbler%2Fmaster%2Fsrc%2Fbackend%2Fcommon%2Fschema%2Fsource.json)
 
-## [Musikcube](https://musikcube.com)
+### [Musikcube](https://musikcube.com)
 
 In order to use Musikcube configure it to accept [websocket connections](https://github.com/clangen/musikcube/wiki/remote-api-documentation) in **server setup**:
 
@@ -867,33 +875,33 @@ The **port** is the same as shown in the server setup screenshot from above, und
 
 If no URL is provided to MS it will try to use `ws://localhost:7905`
 
-### ENV-Based
+#### ENV-Based
 
 | Environmental Variable | Required? | Default               | Description                          |
 |------------------------|-----------|-----------------------|--------------------------------------|
 | `MC_URL`               | No        | `ws://localhost:7905` | Use port set for **metadata server** |
 | `MC_PASSWORD`          | Yes       |                       |                                      |
 
-### File-Based
+#### File-Based
 
 See [`musikcube.json.example`](https://github.com/FoxxMD/multi-scrobbler/blob/master/config/chromecast.json.example) or [explore the schema with an example and live editor/validator](https://json-schema.app/view/%23%2Fdefinitions%2FMuikcubeSourceConfig/%23%2Fdefinitions%2FMuikcubeData?url=https%3A%2F%2Fraw.githubusercontent.com%2FFoxxMD%2Fmulti-scrobbler%2Fmaster%2Fsrc%2Fbackend%2Fcommon%2Fschema%2Fsource.json)
 
-# Client Configurations
+## Client Configurations
 
-## [Maloja](https://github.com/krateng/maloja)
+### [Maloja](https://github.com/krateng/maloja)
 
-### ENV-Based
+#### ENV-Based
 
 | Environmental Variable | Required? | Default |          Description          |
 |----------------------------|-----------|---------|-------------------------------|
 | `MALOJA_URL`               | Yes       |         | Base URL of your installation |
 | `MALOJA_API_KEY`           | Yes       |         | Api Key                       |
 
-### File-Based
+#### File-Based
 
 See [`maloja.json.example`](https://github.com/FoxxMD/multi-scrobbler/blob/master/config/maloja.json.example) or [explore the schema with an example and live editor/validator](https://json-schema.app/view/%23/%23%2Fdefinitions%2FMalojaClientConfig?url=https%3A%2F%2Fraw.githubusercontent.com%2FFoxxMD%2Fmulti-scrobbler%2Fmaster%2Fsrc%2Fbackend%2Fcommon%2Fschema%2Fclient.json)
 
-## [Last.fm](https://www.last.fm)
+### [Last.fm](https://www.last.fm)
 
 [Register for an API account here.](https://www.last.fm/api/account/create)
 
@@ -903,7 +911,7 @@ http://localhost:9078/lastfm/callback
 ```
 or replace `localhost:9078` with your own base URL
 
-### ENV-Based
+#### ENV-Based
 
 | Environmental Variable | Required? | Default                                 |          Description          |
 |----------------------------|-----------|-----------------------------------------|-------------------------------|
@@ -912,17 +920,17 @@ or replace `localhost:9078` with your own base URL
 | `LASTFM_REDIRECT_URI`      | No        | `http://localhost:9078/lastfm/callback` | Url to use for authentication. Must include `lastfm/callback` somewhere in it |
 | `LASTFM_SESSION`           | No        |                                         | Session id. Will be generated by authentication flow if not provided.                       |
 
-### File-Based
+#### File-Based
 
 See [`lastfm.json.example`](https://github.com/FoxxMD/multi-scrobbler/blob/master/config/lastfm.json.example) or [explore the schema with an example and live editor/validator](https://json-schema.app/view/%23/%23%2Fdefinitions%2FLastfmClientConfig?url=https%3A%2F%2Fraw.githubusercontent.com%2FFoxxMD%2Fmulti-scrobbler%2Fmaster%2Fsrc%2Fbackend%2Fcommon%2Fschema%2Fclient.json)
 
-## [Listenbrainz](https://listenbrainz.org)
+### [Listenbrainz](https://listenbrainz.org)
 
 You will need to run your own Listenbrainz server or have an account [on the official instance](https://listenbrainz.org/login/)
 
 On your [profile page](https://listenbrainz.org/profile/) find your **User Token** to use in the configuration.
 
-### ENV-Based
+#### ENV-Based
 
 
 | Environmental Variable | Required? |            Default            |           Description           |
@@ -931,15 +939,15 @@ On your [profile page](https://listenbrainz.org/profile/) find your **User Token
 | LZ_USER                | Yes       |                               | Your LZ username                |
 | LZ_URL                 | No        | https://api.listenbrainz.org/ | The base URL for the LZ server  |
 
-### File-Based
+#### File-Based
 
 See [`listenbrainz.json.example`](https://github.com/FoxxMD/multi-scrobbler/blob/master/config/listenbrainz.json.example) or [explore the schema with an example and live editor/validator](https://json-schema.app/view/%23%2Fdefinitions%2FListenBrainzClientConfig?url=https%3A%2F%2Fraw.githubusercontent.com%2FFoxxMD%2Fmulti-scrobbler%2Fmaster%2Fsrc%2Fbackend%2Fcommon%2Fschema%2Fclient.json)
 
-# Monitoring
+## Monitoring
 
 multi-scrobbler supports some common webhooks and a healthcheck endpoint in order to monitor Sources and Clients for errors.
 
-## Webhook Configurations
+### Webhook Configurations
 
 Webhooks will **push** a notification to your configured servers on these events:
 
@@ -980,7 +988,7 @@ Webhooks are configured in the main [config.json](#all-in-one-file-configuration
 }
 ```
 
-### [Gotify](https://gotify.net/)
+#### [Gotify](https://gotify.net/)
 
 Refer to the [config schema for GotifyConfig](https://json-schema.app/view/%23/%23%2Fdefinitions%2FGotifyConfig?url=https%3A%2F%2Fraw.githubusercontent.com%2FFoxxMD%2Fmulti-scrobbler%2Fmaster%2Fsrc%2Fbackend%2Fcommon%2Fschema%2Faio.json)
 
@@ -1002,7 +1010,7 @@ EX
 }
 ```
 
-### [Ntfy](https://ntfy.sh/)
+#### [Ntfy](https://ntfy.sh/)
 
 Refer to the [config schema for NtfyConfig](https://json-schema.app/view/%23/%23%2Fdefinitions%2FNtfyConfig?url=https%3A%2F%2Fraw.githubusercontent.com%2FFoxxMD%2Fmulti-scrobbler%2Fmaster%2Fsrc%2Fbackend%2Fcommon%2Fschema%2Faio.json)
 
@@ -1026,7 +1034,7 @@ EX
 }
 ```
 
-### [Apprise](https://github.com/caronc/apprise-api)
+#### [Apprise](https://github.com/caronc/apprise-api)
 
 Refer to the [config schema for AppriseConfig](https://json-schema.app/view/%23/%23%2Fdefinitions%2FAppriseConfig?url=https%3A%2F%2Fraw.githubusercontent.com%2FFoxxMD%2Fmulti-scrobbler%2Fmaster%2Fsrc%2Fbackend%2Fcommon%2Fschema%2Faio.json)
 
@@ -1045,7 +1053,7 @@ EX
 }
 ```
 
-## Health Endpoint
+### Health Endpoint
 
 An endpoint for monitoring the health of sources/clients is available at GET `http://YourMultiScrobblerDomain/health`
 
