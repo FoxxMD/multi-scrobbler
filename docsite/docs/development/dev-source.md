@@ -5,6 +5,34 @@ sidebar_position: 2
 title: Source Development/Tutorial
 ---
 
+<details>
+
+<summary>Table of Contents</summary>
+
+<!-- TOC -->
+  * [Scenario](#scenario)
+  * [Minimal Implementation](#minimal-implementation)
+    * [Define and Implement Config](#define-and-implement-config)
+    * [Create CoolPlayer Source](#create-coolplayer-source)
+    * [Initialize Source from Config](#initialize-source-from-config)
+    * [Implement Play Object Transform](#implement-play-object-transform)
+    * [Implement Stages](#implement-stages)
+      * [Build Data](#build-data)
+      * [Check Connection](#check-connection)
+      * [Test Auth](#test-auth)
+    * [Implement Polling](#implement-polling)
+  * [Further Implementation](#further-implementation)
+    * [Backlog](#backlog)
+    * [Other Source Types](#other-source-types)
+      * [Music History Source](#music-history-source)
+      * [Non-Polling Source](#non-polling-source)
+      * [Basic Source](#basic-source)
+        * [Discovery](#discovery)
+        * [Scrobbling](#scrobbling)
+<!-- TOC -->
+
+</details>
+
 This document will provide a step-by-step guide for creating a (trivial) new Source in MS alongside describing what aspects of the Source need to be implemented based on the service you use. Before using this document you should review [Common Development](dev-common.md#common-development).
 
 ## Scenario
