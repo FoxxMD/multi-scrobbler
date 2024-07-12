@@ -3,6 +3,8 @@
 [![Latest Release](https://img.shields.io/github/v/release/foxxmd/multi-scrobbler)](https://github.com/FoxxMD/multi-scrobbler/releases)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Docker Pulls](https://img.shields.io/docker/pulls/foxxmd/multi-scrobbler)](https://hub.docker.com/r/foxxmd/multi-scrobbler)
+[![Docs](https://img.shields.io/badge/Read%20The%20Docs-1082c2)](https://foxxmd.github.io/multi-scrobbler/)
+
 
 <img src="/assets/icon.png" align="right"
 alt="multi-scrobbler logo" width="180" height="180">
@@ -37,6 +39,10 @@ A javascript app to scrobble music you listened to, to [Maloja](https://github.c
 * Easy configuration through ENVs or JSON
 * Install using [Docker images for x86/ARM](/docsite/docs/installation/installation.md#docker), [flatpak](/docsite/docs/installation/installation.md#flatpak), or [locally with NodeJS](/docsite/docs/installation/installation.md#nodejs)
 
+[**Read The Docs to get started**](https://foxxmd.github.io/multi-scrobbler/docs/installation)
+
+<img src="/assets/status-ui.png" width="800">
+
 **Why should I use this over a browser extension and/or mobile app scrobbler?**
 
 * **Platform independent** -- Because multi-scrobbler communicates directly with service APIs it will scrobble everything you play regardless of where you play it. No more need for apps on every platform you use!
@@ -47,8 +53,6 @@ A javascript app to scrobble music you listened to, to [Maloja](https://github.c
 **But I already scrobble my music to Last.fm/ListenBrainz, is multi-scrobbler for me?**
 
 Yes! You can use [Last.fm as a **Source**](/docsite/docs/configuration/configuration.md#lastfm--source-) or [Listenbrainz as a **Source**](/docsite/docs/configuration/configuration.md#listenbrainz--source-) to forward scrobbles from your profile to any other Client! That way you can keep your current scrobble setup as-is but still get the benefit of capturing your data to a self-hosted location.
-
-<img src="/assets/status-ui.png" width="800">
 
 ## How Does multi-scrobbler (MS) Work?
 
