@@ -16,6 +16,38 @@ import { WebScrobblerSourceAIOConfig, WebScrobblerSourceConfig } from "./webscro
 import { YTMusicSourceAIOConfig, YTMusicSourceConfig } from "./ytmusic.js";
 
 
-export type SourceConfig = SpotifySourceConfig | PlexSourceConfig | TautulliSourceConfig | DeezerSourceConfig | SubSonicSourceConfig | JellySourceConfig | LastfmSourceConfig | YTMusicSourceConfig | MPRISSourceConfig | MopidySourceConfig | ListenBrainzSourceConfig | JRiverSourceConfig | KodiSourceConfig | WebScrobblerSourceConfig | ChromecastSourceConfig | MusikcubeSourceConfig;
+export type SourceConfig =
+    SpotifySourceConfig
+    | PlexSourceConfig
+    | TautulliSourceConfig
+    | DeezerSourceConfig
+    | SubSonicSourceConfig
+    | JellySourceConfig
+    | LastfmSourceConfig
+    | YTMusicSourceConfig
+    | MPRISSourceConfig
+    | MopidySourceConfig
+    | ListenBrainzSourceConfig
+    | JRiverSourceConfig
+    | KodiSourceConfig
+    | WebScrobblerSourceConfig
+    | ChromecastSourceConfig
+    | MusikcubeSourceConfig;
 
-export type SourceAIOConfig = SpotifySourceAIOConfig | PlexSourceAIOConfig | TautulliSourceAIOConfig | DeezerSourceAIOConfig | SubsonicSourceAIOConfig | JellySourceAIOConfig | LastFmSouceAIOConfig | YTMusicSourceAIOConfig | MPRISSourceAIOConfig | MopidySourceAIOConfig | ListenBrainzSourceAIOConfig | JRiverSourceAIOConfig | KodiSourceAIOConfig | WebScrobblerSourceAIOConfig | ChromecastSourceAIOConfig | MusikcubeSourceAIOConfig;
+export type SourceAIOConfig =
+    SpotifySourceAIOConfig
+    | PlexSourceAIOConfig
+    | TautulliSourceAIOConfig
+    | DeezerSourceAIOConfig
+    | SubsonicSourceAIOConfig
+    | JellySourceAIOConfig
+    | LastFmSouceAIOConfig
+    | YTMusicSourceAIOConfig
+    | MPRISSourceAIOConfig
+    | MopidySourceAIOConfig
+    | ListenBrainzSourceAIOConfig
+    | JRiverSourceAIOConfig
+    | KodiSourceAIOConfig
+    | WebScrobblerSourceAIOConfig
+    | ChromecastSourceAIOConfig
+    | MusikcubeSourceAIOConfig;

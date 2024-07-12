@@ -6,13 +6,54 @@ import { FixedSizeList } from 'fixed-size-list';
 import { PlayMeta, PlayObject } from "../../../core/Atomic.js";
 import TupleMap from "../TupleMap.js";
 
-export type SourceType = 'spotify' | 'plex' | 'tautulli' | 'subsonic' | 'jellyfin' | 'lastfm' | 'deezer' | 'ytmusic' | 'mpris' | 'mopidy' | 'listenbrainz' | 'jriver' | 'kodi' | 'webscrobbler' | 'chromecast' | 'musikcube';
-export const sourceTypes: SourceType[] = ['spotify', 'plex', 'tautulli', 'subsonic', 'jellyfin', 'lastfm', 'deezer', 'ytmusic', 'mpris', 'mopidy', 'listenbrainz', 'jriver', 'kodi', 'webscrobbler', 'chromecast', 'musikcube'];
+export type SourceType =
+    'spotify'
+    | 'plex'
+    | 'tautulli'
+    | 'subsonic'
+    | 'jellyfin'
+    | 'lastfm'
+    | 'deezer'
+    | 'ytmusic'
+    | 'mpris'
+    | 'mopidy'
+    | 'listenbrainz'
+    | 'jriver'
+    | 'kodi'
+    | 'webscrobbler'
+    | 'chromecast'
+    | 'musikcube';
 
-export const lowGranularitySources: SourceType[] = ['subsonic','ytmusic'];
+export const sourceTypes: SourceType[] = [
+    'spotify',
+    'plex',
+    'tautulli',
+    'subsonic',
+    'jellyfin',
+    'lastfm',
+    'deezer',
+    'ytmusic',
+    'mpris',
+    'mopidy',
+    'listenbrainz',
+    'jriver',
+    'kodi',
+    'webscrobbler',
+    'chromecast',
+    'musikcube'
+];
 
-export type ClientType = 'maloja' | 'lastfm' | 'listenbrainz';
-export const clientTypes: ClientType[] = ['maloja', 'lastfm', 'listenbrainz'];
+export const lowGranularitySources: SourceType[] = ['subsonic', 'ytmusic'];
+
+export type ClientType =
+    'maloja'
+    | 'lastfm'
+    | 'listenbrainz';
+export const clientTypes: ClientType[] = [
+    'maloja',
+    'lastfm',
+    'listenbrainz'
+];
 
 export type InitState = 0 | 1 | 2;
 export const NOT_INITIALIZED: InitState = 0;
