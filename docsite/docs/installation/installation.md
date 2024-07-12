@@ -16,7 +16,6 @@ git clone https://github.com/FoxxMD/multi-scrobbler.git .
 cd multi-scrobbler
 nvm use # optional, to set correct Node version
 npm install
-npm run build
 npm run start
 ```
 

@@ -96,6 +96,10 @@ On first startup you may need to authorize Spotify and/or Last.fm by visiting th
 
 Having issues with connections or configuration? Check the [FAQ](/docsite/docs/FAQ.md) before creating an issue!
 
+## Development
+
+[Detailed architecture and development guides for Sources/Clients](/docsite/docs/development/dev-common.md)
+
 ## License
 
 MIT
