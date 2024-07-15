@@ -10,7 +10,7 @@ toc_max_heading_level: 5
 <!-- TOC -->
   * [Connection Issues](#connection-issues)
     * [Plex/Tautulli/Jellyfin/Webscrobbler don't connect](#plextautullijellyfinwebscrobbler-dont-connect)
-      * [Troubleshooting](#troubleshooting-)
+      * [Troubleshooting](#troubleshooting)
         * [Turn on Debug Logging](#turn-on-debug-logging)
         * [Check Host name and URL](#check-host-name-and-url)
         * [Check Firewall and Port Forwarding](#check-firewall-and-port-forwarding)
@@ -54,7 +54,7 @@ It also logs if a server tries to connect to a URL that it does not recognize:
 
 This is not something multi-scrobbler can fix and means you have an issue in your network.
 
-#### Troubleshooting 
+#### Troubleshooting
 
 Check or try all these steps before submitting an issue:
 

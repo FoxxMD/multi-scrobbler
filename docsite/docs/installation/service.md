@@ -3,7 +3,7 @@ sidebar_position: 2
 title: 'As a Service'
 ---
 
-If you have multi-scrobbler installed [locally](installation.md#local) you can enable it to run as a background service when you login.
+If you have multi-scrobbler installed [locally](installation.md#nodejs) you can enable it to run as a background service when you login.
 
 Before running as a service you should run it at least once in the foreground to ensure it can start up correctly!
 

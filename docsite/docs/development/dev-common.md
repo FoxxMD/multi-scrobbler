@@ -13,18 +13,17 @@ description: Start here for MS development
 <summary>Table of Contents</summary>
 
 <!-- TOC -->
-* [Development](#development)
-  * [Architecture](#architecture)
-  * [Project Setup](#project-setup)
-  * [Common Development](#common-development)
-    * [Config](#config)
-    * [Concrete Class](#concrete-class)
-      * [Stages](#stages)
-        * [Stage: Build Data](#stage-build-data)
-        * [Stage: Check Connection](#stage-check-connection)
-        * [Stage: Test Auth](#stage-test-auth)
-    * [Play Object](#play-object)
-  * [Creating Clients and Sources](#creating-clients-and-sources)
+* [Architecture](#architecture)
+* [Project Setup](#project-setup)
+* [Common Development](#common-development)
+  * [Config](#config)
+  * [Concrete Class](#concrete-class)
+    * [Stages](#stages)
+      * [Stage: Build Data](#stage-build-data)
+      * [Stage: Check Connection](#stage-check-connection)
+      * [Stage: Test Auth](#stage-test-auth)
+  * [Play Object](#play-object)
+* [Creating Clients and Sources](#creating-clients-and-sources)
 <!-- TOC -->
 
 </details>

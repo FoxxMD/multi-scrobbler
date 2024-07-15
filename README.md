@@ -52,7 +52,7 @@ A javascript app to scrobble music you listened to, to [Maloja](https://github.c
 
 **But I already scrobble my music to Last.fm/ListenBrainz, is multi-scrobbler for me?**
 
-Yes! You can use [Last.fm as a **Source**](/docsite/docs/configuration/configuration.md#lastfm--source-) or [Listenbrainz as a **Source**](/docsite/docs/configuration/configuration.md#listenbrainz--source-) to forward scrobbles from your profile to any other Client! That way you can keep your current scrobble setup as-is but still get the benefit of capturing your data to a self-hosted location.
+Yes! You can use [Last.fm as a **Source**](/docsite/docs/configuration/configuration.md#lastfm-source) or [Listenbrainz as a **Source**](/docsite/docs/configuration/configuration.md#listenbrainz-source) to forward scrobbles from your profile to any other Client! That way you can keep your current scrobble setup as-is but still get the benefit of capturing your data to a self-hosted location.
 
 ## How Does multi-scrobbler (MS) Work?
 

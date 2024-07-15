@@ -24,8 +24,8 @@ toc_max_heading_level: 3
   * [Tautulli](#tautulli)
   * [Subsonic](#subsonic)
   * [Jellyfin](#jellyfin)
-  * [Last.fm (Source)](#lastfm--source-)
-  * [Listenbrainz (Source)](#listenbrainz--source-)
+  * [Last.fm (Source)](#lastfm-source)
+  * [Listenbrainz (Source)](#listenbrainz-source)
   * [Deezer](#deezer)
   * [Youtube Music](#youtube-music)
   * [MPRIS](#mpris)
@@ -34,7 +34,7 @@ toc_max_heading_level: 3
   * [Kodi](#kodi)
   * [WebScrobbler](#webscrobbler)
       * [Multiple Users](#multiple-users)
-  * [Google Cast (Chromecast)](#google-cast--chromecast-)
+  * [Google Cast (Chromecast)](#google-cast-chromecast)
     * [Connecting Devices](#connecting-devices)
     * [What Media Does MS Scrobble?](#what-media-does-ms-scrobble)
     * [Cast Troubleshooting](#cast-troubleshooting)
@@ -417,7 +417,7 @@ If you run Linux and have a notification tray that shows what media you are list
 
 multi-scrobbler can listen to this interface and scrobble tracks played by **any media player** that communicates to the operating system with MPRIS.
 
-**NOTE:** multi-scrobbler needs to be running as a [**Local Installation**](../installation/installation.md#local) in order to use MPRIS. This cannot be used from docker.
+**NOTE:** multi-scrobbler needs to be running as a [**Local Installation**](../installation/installation.md#nodejs) in order to use MPRIS. This cannot be used from docker.
 
 #### ENV-Based
 
