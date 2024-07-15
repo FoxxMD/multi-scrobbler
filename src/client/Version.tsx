@@ -18,8 +18,8 @@ const Version = () => {
         data = undefined,
     } = useGetVersionQuery(undefined);
 
-    return <span className="px-4 break-normal">
-                        Multi Scrobbler <span className="ml-2 text-xs version">{data === undefined ? null : `${data.version}`}</span>
+    return <span className="break-normal">
+                         <span className="text-xs version">{data === undefined ? null : `${data.version}`}</span>
             </span>;
 }
 

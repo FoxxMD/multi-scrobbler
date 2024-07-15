@@ -6,7 +6,9 @@ import express from 'express';
 import session from 'express-session';
 import { PassThrough } from "node:stream";
 import passport from 'passport';
+import path from "path";
 import ViteExpress from "vite-express";
+import { projectDir } from "../common/index.js";
 import { getRoot } from "../ioc.js";
 import { getAddress, parseBool } from "../utils.js";
 import { setupApi } from "./api.js";
@@ -71,6 +73,8 @@ export const initServer = async (parentLogger: Logger, appLoggerStream: PassThro
                 }
             }
         }
+
+        app.use('/docs', express.static(path.resolve(projectDir, `./docsite/build`)));
 
         if(process.env.USE_HASH_ROUTER === undefined) {
             process.env.USE_HASH_ROUTER = root.get('isSubPath');
