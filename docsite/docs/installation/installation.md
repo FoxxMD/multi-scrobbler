@@ -43,13 +43,13 @@ See [this issue](https://github.com/FoxxMD/multi-scrobbler/issues/135#issuecomme
 
 * The web UI and API is served on port `9078`. This can be modified using the `PORT` environmental variable.
 
-#### Using [file-based](../configuration/configuration.md#file-based-configuration) configuration
+#### Using [file-based](../configuration/configuration.mdx?fileType=aio#configuration-types) configuration
 
 ```shell
 npm run start
 ```
 
-#### Using [env-based](../configuration/configuration.md#env-based-configuration) configuration
+#### Using [env-based](../configuration/configuration.mdx?fileType=env#configuration-types) configuration
 
 ```shell
 SPOTIFY_CLIENT_ID=yourId SPOTIFY_CLIENT_SECRET=yourSecret MALOJA_URL="http://domain.tld" node src/index.js
@@ -74,7 +74,7 @@ Flatpak users have experienced issues when using multi-scrobbler as a long-runni
 
 ### Usage Examples
 
-#### Using [file-based](../configuration/configuration.md#file-based-configuration) configuration
+#### Using [file-based](../configuration/configuration.mdx?fileType=aio#configuration-types) configuration
 
 The config directory for multi-scrobbler as a flatpak can be found under `/home/YourUser/.var/app/io.github.foxxmd.multiscrobbler/config`
 
@@ -82,7 +82,7 @@ The config directory for multi-scrobbler as a flatpak can be found under `/home/
 flatpak run io.github.foxxmd.multiscrobbler
 ```
 
-#### Using [env-based](../configuration/configuration.md#env-based-configuration) configuration
+#### Using [env-based](../configuration/configuration.mdx?fileType=env#configuration-types) configuration
 
 There are a few [options for running flatpak applications with temporary or permanent environmental variables.](https://ardasevinc.dev/launch-flatpak-apps-with-custom-args-and-environment-variables)
 
@@ -128,12 +128,12 @@ The default container port is `9078`. To map container to host port:
 
 Optionally, when
 
-* using a [Source or Client](../configuration/configuration.md) that has a "Redirect URI" that you have not explicitly defined
+* using a [Source or Client](../configuration/configuration.mdx) that has a "Redirect URI" that you have not explicitly defined
 * and
   * using a bridge network or
   * installing MS on a different machine than the one used to view the dashboard
 
-set the [Base URL](../configuration/configuration.md#base-url) as the IP of the host machine. (This is the IP you would use to view the dashboard in a browser)
+set the [Base URL](../configuration/configuration.mdx#base-url) as the IP of the host machine. (This is the IP you would use to view the dashboard in a browser)
 
 * With docker: `-e BASE_URL="http://hostMachineIP"` (first port is the port on the host to use)
 * With docker-compose: [see comments in docker-compose.yml](../../../docker-compose.yml)
@@ -162,13 +162,13 @@ To get the UID and GID for the current user run these commands from a terminal:
 
 If installing on a different machine make sure all redirect URIs are defined or that you have set a [Base URL](#base-url).
 
-### Using [env-based](../configuration/configuration.md#env-based-configuration) configuration
+### Using [env-based](../configuration/configuration.mdx?fileType=env#configuration-types) configuration
 
 ```bash
 docker run -e "SPOTIFY_CLIENT_ID=yourId" -e "SPOTIFY_CLIENT_SECRET=yourSecret" -e "MALOJA_URL=http://domain.tld" -e "MALOJA_API_KEY=1234" -e "PUID=1000" -e "PGID=1000" -p 9078:9078 -v /path/on/host/config:/config foxxmd/multi-scrobbler
 ```
 
-### Using [file-based](../configuration/configuration.md#file-based-configuration) configuration
+### Using [file-based](../configuration/configuration.mdx?fileType=aio#configuration-types) configuration
 
 ```bash
 docker run -e "PUID=1000" -e "PGID=1000" -p 9078:9078 -v /path/on/host/config:/config foxxmd/multi-scrobbler

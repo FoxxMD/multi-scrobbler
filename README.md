@@ -12,32 +12,32 @@ alt="multi-scrobbler logo" width="180" height="180">
 A javascript app to scrobble music you listened to, to [Maloja](https://github.com/krateng/maloja), [Last.fm](https://www.last.fm), and [ListenBrainz](https://listenbrainz.org)
 
 * Supports scrobbling from many **Sources**
-  * [Spotify](/docsite/docs/configuration/configuration.md#spotify)
-  * [Plex](/docsite/docs/configuration/configuration.md#plex) or [Tautulli](/docsite/docs/configuration/configuration.md#tautulli)
-  * [Subsonic-compatible APIs](/docsite/docs/configuration/configuration.md#subsonic) (like [Airsonic](https://airsonic.github.io/) and [Navidrome](https://www.navidrome.org/))
-  * [Jellyfin](/docsite/docs/configuration/configuration.md#jellyfin)
-  * [WebScrobbler](/docsite/docs/configuration/configuration.md#webscrobbler)
-  * [Youtube Music](/docsite/docs/configuration/configuration.md#youtube-music)
-  * [Last.fm](/docsite/docs/configuration/configuration.md#lastfm-source)
-  * [ListenBrainz](/docsite/docs/configuration/configuration.md#listenbrainz--source-)
-  * [Deezer](/docsite/docs/configuration/configuration.md#deezer)
-  * [MPRIS (Linux Desktop)](/docsite/docs/configuration/configuration.md#mpris)
-  * [Mopidy](/docsite/docs/configuration/configuration.md#mopidy)
-  * [JRiver](/docsite/docs/configuration/configuration.md#jriver)
-  * [Kodi](/docsite/docs/configuration/configuration.md#kodi)
-  * [Google Cast (Chromecast)](/docsite/docs/configuration/configuration.md#google-cast--chromecast-)
-  * [Musikcube](/docsite/docs/configuration/configuration.md#muikcube)
+  * [Spotify](https://foxxmd.github.io/multi-scrobbler/docs/configuration#spotify)
+  * [Plex](https://foxxmd.github.io/multi-scrobbler/docs/configuration#plex) or [Tautulli](https://foxxmd.github.io/multi-scrobbler/docs/configuration#tautulli)
+  * [Subsonic-compatible APIs](https://foxxmd.github.io/multi-scrobbler/docs/configuration#subsonic) (like [Airsonic](https://airsonic.github.io/) and [Navidrome](https://www.navidrome.org/))
+  * [Jellyfin](https://foxxmd.github.io/multi-scrobbler/docs/configuration#jellyfin)
+  * [WebScrobbler](https://foxxmd.github.io/multi-scrobbler/docs/configuration#webscrobbler)
+  * [Youtube Music](https://foxxmd.github.io/multi-scrobbler/docs/configuration#youtube-music)
+  * [Last.fm](https://foxxmd.github.io/multi-scrobbler/docs/configuration#lastfm-source)
+  * [ListenBrainz](https://foxxmd.github.io/multi-scrobbler/docs/configuration#listenbrainz-source)
+  * [Deezer](https://foxxmd.github.io/multi-scrobbler/docs/configuration#deezer)
+  * [MPRIS (Linux Desktop)](https://foxxmd.github.io/multi-scrobbler/docs/configuration#mpris)
+  * [Mopidy](https://foxxmd.github.io/multi-scrobbler/docs/configuration#mopidy)
+  * [JRiver](https://foxxmd.github.io/multi-scrobbler/docs/configuration#jriver)
+  * [Kodi](https://foxxmd.github.io/multi-scrobbler/docs/configuration#kodi)
+  * [Google Cast (Chromecast)](https://foxxmd.github.io/multi-scrobbler/docs/configuration#google-cast-chromecast)
+  * [Musikcube](https://foxxmd.github.io/multi-scrobbler/docs/configuration#muikcube)
 * Supports scrobbling to many **Clients**
-  * [Maloja](/docsite/docs/configuration/configuration.md#maloja)
-  * [Last.fm](/docsite/docs/configuration/configuration.md#lastfm)
-  * [ListenBrainz](/docsite/docs/configuration/configuration.md#listenbrainz)
-* Monitor status of Sources and Clients using [webhooks (Gotify, Ntfy, Apprise)](/docsite/docs/configuration/configuration.md#webhook-configurations) or [healthcheck endpoint](/docsite/docs/configuration/configuration.md#health-endpoint)
+  * [Maloja](https://foxxmd.github.io/multi-scrobbler/docs/configuration#maloja)
+  * [Last.fm](https://foxxmd.github.io/multi-scrobbler/docs/configuration#lastfm)
+  * [ListenBrainz](https://foxxmd.github.io/multi-scrobbler/docs/configuration#listenbrainz)
+* Monitor status of Sources and Clients using [webhooks (Gotify, Ntfy, Apprise)](https://foxxmd.github.io/multi-scrobbler/docs/configuration#webhook-configurations) or [healthcheck endpoint](https://foxxmd.github.io/multi-scrobbler/docs/configuration#health-endpoint)
 * Supports configuring for single or multiple users (scrobbling for your friends and family!)
 * Web server interface for stats, basic control, and detailed logs
 * Graceful network and client failure handling (queued scrobbles that auto-retry)
 * Smart handling of credentials (persistent, authorization through app)
 * Easy configuration through ENVs or JSON
-* Install using [Docker images for x86/ARM](/docsite/docs/installation/installation.md#docker), [flatpak](/docsite/docs/installation/installation.md#flatpak), or [locally with NodeJS](/docsite/docs/installation/installation.md#nodejs)
+* Install using [Docker images for x86/ARM](https://foxxmd.github.io/multi-scrobbler/docs/installation#docker#docker), [flatpak](https://foxxmd.github.io/multi-scrobbler/docs/installation#docker#flatpak), or [locally with NodeJS](https://foxxmd.github.io/multi-scrobbler/docs/installation#docker#nodejs)
 
 [**Read The Docs to get started**](https://foxxmd.github.io/multi-scrobbler/docs/installation)
 
@@ -52,7 +52,7 @@ A javascript app to scrobble music you listened to, to [Maloja](https://github.c
 
 **But I already scrobble my music to Last.fm/ListenBrainz, is multi-scrobbler for me?**
 
-Yes! You can use [Last.fm as a **Source**](/docsite/docs/configuration/configuration.md#lastfm-source) or [Listenbrainz as a **Source**](/docsite/docs/configuration/configuration.md#listenbrainz-source) to forward scrobbles from your profile to any other Client! That way you can keep your current scrobble setup as-is but still get the benefit of capturing your data to a self-hosted location.
+Yes! You can use [Last.fm as a **Source**](https://foxxmd.github.io/multi-scrobbler/docs/configuration#lastfm-source) or [Listenbrainz as a **Source**](https://foxxmd.github.io/multi-scrobbler/docs/configuration#listenbrainz-source) to forward scrobbles from your profile to any other Client! That way you can keep your current scrobble setup as-is but still get the benefit of capturing your data to a self-hosted location.
 
 ## How Does multi-scrobbler (MS) Work?
 
@@ -79,11 +79,11 @@ Client configurations consist of:
 
 ## Installation
 
-[See the **Installation** documentation](/docsite/docs/installation/installation.md)
+[See the **Installation** documentation](https://foxxmd.github.io/multi-scrobbler/docs/installation)
 
 ## Configuration
 
-[See the **Configuration** documentation](/docsite/docs/configuration/configuration.md)
+[See the **Configuration** documentation](https://foxxmd.github.io/multi-scrobbler/docs/configuration)
 
 ## Usage
 
@@ -98,11 +98,11 @@ On first startup you may need to authorize Spotify and/or Last.fm by visiting th
 
 ## Help/FAQ
 
-Having issues with connections or configuration? Check the [FAQ](/docsite/docs/FAQ.md) before creating an issue!
+Having issues with connections or configuration? Check the [FAQ](https://foxxmd.github.io/multi-scrobbler/docs/FAQ) before creating an issue!
 
 ## Development
 
-[Detailed architecture and development guides for Sources/Clients](/docsite/docs/development/dev-common.md)
+[Detailed architecture and development guides for Sources/Clients](https://foxxmd.github.io/multi-scrobbler/docs/development/dev-common)
 
 ## License
 

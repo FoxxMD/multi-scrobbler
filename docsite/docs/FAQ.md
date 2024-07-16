@@ -3,36 +3,6 @@ toc_min_heading_level: 2
 toc_max_heading_level: 5
 ---
 
-<details>
-
-<summary>Table of Contents</summary>
-
-<!-- TOC -->
-  * [Connection Issues](#connection-issues)
-    * [Plex/Tautulli/Jellyfin/Webscrobbler don't connect](#plextautullijellyfinwebscrobbler-dont-connect)
-      * [Troubleshooting](#troubleshooting)
-        * [Turn on Debug Logging](#turn-on-debug-logging)
-        * [Check Host name and URL](#check-host-name-and-url)
-        * [Check Firewall and Port Forwarding](#check-firewall-and-port-forwarding)
-        * [Check Source Service Logs](#check-source-service-logs)
-          * [Plex](#plex)
-          * [Tautulli](#tautulli)
-          * [Jellyfin](#jellyfin)
-          * [Webscrobbler](#webscrobbler)
-    * [Jellyfin has warnings about undefined or missing data](#jellyfin-has-warnings-about-undefined-or-missing-data)
-    * [Jellyfin has warnings about missing headers](#jellyfin-has-warnings-about-missing-headers)
-    * [Spotify/Deezer/LastFM won't authenticate](#spotifydeezerlastfm-wont-authenticate)
-  * [Configuration Issues](#configuration-issues)
-    * [Config could not be parsed](#config-could-not-be-parsed)
-  * [Scrobbling Issues](#scrobbling-issues)
-    * [Last.fm does not scrobble tracks with multiple artists correctly](#lastfm-does-not-scrobble-tracks-with-multiple-artists-correctly)
-    * [Jellyfin does not scrobble tracks with multiple artists correctly](#jellyfin-does-not-scrobble-tracks-with-multiple-artists-correctly)
-    * [Google Cast track information is missing/incorrect or MS player has weird times](#google-cast-track-information-is-missingincorrect-or-ms-player-has-weird-times)
-    * [Google Cast device does not track media](#google-cast-device-does-not-track-media)
-<!-- TOC -->
-
-</details>
-
 ## Connection Issues
 
 ### Plex/Tautulli/Jellyfin/Webscrobbler don't connect
@@ -69,7 +39,7 @@ Check the output for any additional information.
 
 ##### Check Host name and URL
 
-The URLs examples in the [configuration](configuration/configuration.md) documentation assume you are running Plex/Tautulli/Jellyfin/Webscrobbler on the same server as multi-scrobbler. If these are not the same machine then you need to determine the IP address or domain name that multi-scrobbler is reachable at and use that instead of `localhost` when configuring these sources. **This is likely the same host name that you would use to access the web interface for multi-scrobbler.**
+The URLs examples in the [configuration](configuration/configuration.mdx) documentation assume you are running Plex/Tautulli/Jellyfin/Webscrobbler on the same server as multi-scrobbler. If these are not the same machine then you need to determine the IP address or domain name that multi-scrobbler is reachable at and use that instead of `localhost` when configuring these sources. **This is likely the same host name that you would use to access the web interface for multi-scrobbler.**
 
 EX `http://localhost:9078/plex` -> `http://192.168.0.140:9078/plex`
 
@@ -100,7 +70,7 @@ See [Debugging the extension](https://github.com/web-scrobbler/web-scrobbler/wik
 ### Jellyfin has warnings about undefined or missing data
 
 Make sure you have 
-* [Configured the webhook plugin correctly](configuration/configuration.md#jellyfin)
+* [Configured the webhook plugin correctly](configuration/configuration.mdx#jellyfin)
   * Checked the **Send All Properties(ignores template)** option in the webhook settings and **Saved**
 
 multi-scrobbler is known to work on Jellyfin `10.8.9` with Webhook version `11.0.0.0`.
@@ -135,7 +105,7 @@ If you experience issues trying to scrobble with Jellyfin and find this in your 
 A workaround that may fix this:
 
 * In Webhook settings:
-  * [In the webhook you have already configured...](configuration/configuration.md#jellyfin)
+  * [In the webhook you have already configured...](configuration/configuration.mdx#jellyfin)
     * Add Request Header...
       * **Key:** `Content-Type`
       * **Value:** `application/json`
@@ -184,7 +154,7 @@ This is a limitation caused by the [Jellyfin webhook plugin](https://github.com/
 
 The Google Cast integration relies on a few common fields in the data it receives from your casting device. Every platform that can cast (Spotify, Pandora, etc...) *should* use these fields the same but there are slight differences between their implementations that may confuse multi-scrobbler. Specific platforms may also return more information in non-common fields that are undocumented.
 
-To diagnose these issues you [**must enable payload logging**](configuration/configuration.md#cast-troubleshooting) for your google cast Source, run MS, and then include logs with this output from that run. Without the raw data logged from your cast device it will be nearly impossible to resolve your issue.
+To diagnose these issues you [**must enable payload logging**](configuration/configuration.mdx#cast-troubleshooting) for your google cast Source, run MS, and then include logs with this output from that run. Without the raw data logged from your cast device it will be nearly impossible to resolve your issue.
 
 ### Google Cast device does not track media
 
@@ -196,10 +166,10 @@ MS logs will tell you what type the media is reported as with lines like:
 My Artist - Example Track has 'unknown' media type and allowUnknownMedia=false, will not track
 ```
 
-Refer to [Allow Unknown Media Type](configuration/configuration.md#allow-unknown-media-type) section to fix this
+Refer to [Allow Unknown Media Type](configuration/configuration.mdx#allow-unknown-media-type) section to fix this
 
 ```
 My Artist - Example Track has 'movie' media type so will not track
 ```
 
-Refer to [Force Media Tracking](configuration/configuration.md#forcing-media-tracking) section to fix this
+Refer to [Force Media Tracking](configuration/configuration.mdx#forcing-media-tracking) section to fix this
