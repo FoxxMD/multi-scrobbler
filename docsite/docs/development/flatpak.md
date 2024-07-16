@@ -8,7 +8,7 @@ description: Building Flatpak App locally
 
 :::note
 
-These steps are for building the flatpak from source. If you want to install the application normally then [get it through flathub](../installation/installation.md#flatpak)
+These steps are for building the flatpak from source. If you want to install the application normally then [get it through flathub](../installation/installation.mdx#flatpak)
 
 :::
 
