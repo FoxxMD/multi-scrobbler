@@ -63,10 +63,14 @@ You must have [Flatpak](https://flatpak.org/) installed on your system.
 flatpak install flathub io.github.foxxmd.multiscrobbler
 ```
 
-**Note:** Flatpak users have experienced issues when using multi-scrobbler as a long-running process. Due to the relative difficulty in debugging issues with flatpak installations it is recommended:
+:::warning
+
+Flatpak users have experienced issues when using multi-scrobbler as a long-running process. Due to the relative difficulty in debugging issues with flatpak installations it is recommended:
 
 * to use a [Docker](#docker) installation if possible or
 * only if you need access to host-level resources like dbus for [MPRIS](https://foxxmd.github.io/multi-scrobbler/docs/configuration#mpris) and cannot run a [nodejs](#nodejs) installation
+
+::::
 
 ### Usage Examples
 

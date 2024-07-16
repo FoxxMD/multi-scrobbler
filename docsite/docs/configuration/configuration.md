@@ -216,7 +216,13 @@ Useful when running with [docker](../installation/installation.md#docker) so tha
 
 #### Disable Web
 
-If you do not need the dashboard and/or ingress sources, or have security concerns about ingress and cannot control their hosting environment, the web server and API can be disabled. Note that any **ingress-based sources will be unusable** (Plex, Jellyfin, Tautulli, etc...) if this is disabled.
+If you do not need the dashboard and/or ingress sources, or have security concerns about ingress and cannot control their hosting environment, the web server and API can be disabled. 
+
+:::warning
+
+Any **ingress-based sources will be unusable** (Plex, Jellyfin, Tautulli, etc...) if this is disabled.
+
+::::
 
 Disable using either:
 
@@ -230,7 +236,11 @@ Disable using either:
 To access your Spotify history you must [register an application](https://developer.spotify.com/dashboard) to get a
 Client ID/Secret. Make sure to also whitelist your redirect URI in the application settings.
 
-**NOTE:** If your Spotify player has [Automix](https://community.spotify.com/t5/FAQs/What-is-Automix/ta-p/5257278) enabled and Spotify uses it for your playlist/queue then MS cannot accurately determine when a track will end. This is because the track is "mixed" in your queue with a shorter play time than its actual length and [Spotify does not report this modified play time in its API.](https://community.spotify.com/t5/Spotify-for-Developers/Wrong-duration-ms-of-track-with-Automix/m-p/5429147) This **does not affect MS's ability to scrobble** from Spotify but it will affect the accuracy of the duration MS reports was played.
+:::note
+
+If your Spotify player has [Automix](https://community.spotify.com/t5/FAQs/What-is-Automix/ta-p/5257278) enabled and Spotify uses it for your playlist/queue then MS cannot accurately determine when a track will end. This is because the track is "mixed" in your queue with a shorter play time than its actual length and [Spotify does not report this modified play time in its API.](https://community.spotify.com/t5/Spotify-for-Developers/Wrong-duration-ms-of-track-with-Automix/m-p/5429147) This **does not affect MS's ability to scrobble** from Spotify but it will affect the accuracy of the duration MS reports was played.
+
+::::
 
 #### ENV-Based
 
@@ -312,7 +322,11 @@ Must be using Jellyfin 10.7 or greater
     * Check `Send All Properties`
   * Save
 
+:::note
+
 If you see errors in the MS logs regarding `missing headers` when using Jellyfin [see this workaround.](../FAQ.md#jellyfin-has-warnings-about-missing-headers)
+
+::::
 
 #### ENV-Based
 
@@ -343,7 +357,11 @@ You will need to run your own Listenbrainz server or have an account [on the off
 
 On your [profile page](https://listenbrainz.org/profile/) find your **User Token** to use in the configuration.
 
-**NOTE:** You cannot use ENV variables shown in the [Listenbrainz Client config](#listenbrainz) -- multi-scrobbler assumes Listenbrainz ENVs are always used for the **client** configuration. You must use the file-based config from below to setup Listenbrainz as a Source.
+:::note
+
+You cannot use ENV variables shown in the [Listenbrainz Client config](#listenbrainz) -- multi-scrobbler assumes Listenbrainz ENVs are always used for the **client** configuration. You must use the file-based config from below to setup Listenbrainz as a Source.
+
+::::
 
 #### File-Based
 
@@ -383,6 +401,13 @@ See [`deezer.json.example`](https://github.com/FoxxMD/multi-scrobbler/blob/maste
 
 ### [Youtube Music](https://music.youtube.com)
 
+:::note
+
+* YT Music authentication is "browser based" which means your credentials may expire after a (long?) period of time OR if you log out of https://music.youtube.com. In the event this happens just repeat the steps below to get new credentials.
+* Communication to YT Music is **unofficial** and not supported or endorsed by Google. This means that **this integration may stop working at any time** if Google decides to change how YT Music works in the browser.
+
+::::
+
 Credentials for YT Music are obtained from a browser request to https://music.youtube.com **once you are logged in.** [Specific requirements are here and summarized below:](https://github.com/nickp10/youtube-music-ts-api/blob/master/DOCUMENTATION.md#authenticate)
 
 * Open a new tab
@@ -398,10 +423,6 @@ Then...
 
 ![Google Headers](google-header.jpg)
 
-NOTES:
-
-* YT Music authentication is "browser based" which means your credentials may expire after a (long?) period of time OR if you log out of https://music.youtube.com. In the event this happens just repeat the steps above to get new credentials.
-* Communication to YT Music is **unofficial** and not supported or endorsed by Google. This means that **this integration may stop working at any time** if Google decides to change how YT Music works in the browser.
 
 #### File-Based
 
@@ -417,7 +438,11 @@ If you run Linux and have a notification tray that shows what media you are list
 
 multi-scrobbler can listen to this interface and scrobble tracks played by **any media player** that communicates to the operating system with MPRIS.
 
-**NOTE:** multi-scrobbler needs to be running as a [**Local Installation**](../installation/installation.md#nodejs) in order to use MPRIS. This cannot be used from docker.
+:::note
+
+multi-scrobbler needs to be running as a [**Local Installation**](../installation/installation.md#nodejs) in order to use MPRIS. This cannot be used from docker.
+
+::::
 
 #### ENV-Based
 
@@ -715,11 +740,21 @@ In `webscrobbler.json`
 * To use `aUserWS` source set **API URL** to `http://localhost:9078/api/webscrobbler/usera`
 * To use `bUserWS` source set **API URL** to `http://localhost:9078/api/webscrobbler/userb`
 
-Note: `http://localhost:9078/api/webscrobbler` is matched with the first source that _that does not have a slug defined._
+:::note
+
+`http://localhost:9078/api/webscrobbler` is matched with the first source that _that does not have a slug defined._
+
+::::
 
 ###### Connectors Black/Whitelist
 
-MS can be configured to only scrobble, or NOT scrobble, from some WS connectors. Use the name of the website from the [supported websites](https://web-scrobbler.com/) or from the **Connectors** tab in the extension. Note that this **only** affects MS's behavior and does not affect the general connector behavior you have configured within the WebScrobbler extension.
+MS can be configured to only scrobble, or NOT scrobble, from some WS connectors. Use the name of the website from the [supported websites](https://web-scrobbler.com/) or from the **Connectors** tab in the extension. 
+
+:::note
+
+This affects **only** MS's behavior and does not affect the general connector behavior you have configured within the WebScrobbler extension.
+
+::::
 
 #### ENV-Based
 
@@ -735,11 +770,20 @@ See [`webscrobbler.json.example`](https://github.com/FoxxMD/multi-scrobbler/blob
 
 ### [Google Cast (Chromecast)](https://www.google.com/chromecast/built-in/)
 
-**NOTE:** Google Cast support is **experimental**. You may experience crashes and errors while using this Source. Please open an issue if you experience problems and include all information detailed in the issue template to help debug your issue.
-
 If your media device can be **Cast** to using this button ![Chromecast Icon](https://upload.wikimedia.org/wikipedia/commons/2/26/Chromecast_cast_button_icon.svg) on your phone/computer then multi-scrobbler can monitor it in order to scrobble music you play.
 
-**Note:** This source relies on common, **basic** music data provided by the cast device which will always be less exhaustive than data parsed from full source integrations. If there is an existing [Source](#source-configurations) it is recommended to configure for it and blacklist the app on Google Cast, rather than relying solely on Google Cast for scrobbling.
+
+:::note 
+
+Google Cast support is **experimental**. You may experience crashes and errors while using this Source. Please open an issue if you experience problems and include all information detailed in the issue template to help debug your issue.
+
+::::
+
+:::note 
+
+This source relies on common, **basic** music data provided by the cast device which will always be less exhaustive than data parsed from full source integrations. If there is an existing [Source](#source-configurations) it is recommended to configure for it and blacklist the app on Google Cast, rather than relying solely on Google Cast for scrobbling.
+
+::::
 
 #### Connecting Devices
 
@@ -840,7 +884,11 @@ To diagnose bad/incomplete track information or strange MS player behavior pleas
 
 #### ENV-Based
 
-Note: [Manually configuring cast device connections](#connecting-devices) is only available through [File-based config.](#file-based-14)
+:::note
+
+[Manually configuring cast device connections](#connecting-devices) is only available through [File-based config.](#file-based-14)
+
+::::
 
 | Environmental Variable | Required? | Default |                                     Description                                      |
 |------------------------|-----------|---------|--------------------------------------------------------------------------------------|
