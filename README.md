@@ -39,7 +39,7 @@ A javascript app to scrobble music you listened to, to [Maloja](https://github.c
 * Easy configuration through ENVs or JSON
 * Install using [Docker images for x86/ARM](https://foxxmd.github.io/multi-scrobbler/docs/installation#docker#docker), [flatpak](https://foxxmd.github.io/multi-scrobbler/docs/installation#docker#flatpak), or [locally with NodeJS](https://foxxmd.github.io/multi-scrobbler/docs/installation#docker#nodejs)
 
-[**Read The Docs to get started**](https://foxxmd.github.io/multi-scrobbler/docs/installation)
+[**Quick Start Guide**](https://foxxmd.github.io/multi-scrobbler/docs/quickstart)
 
 <img src="/assets/status-ui.png" width="800">
 
@@ -76,6 +76,10 @@ Client configurations consist of:
 
 * A friendly name.
 * Any data needed to communicate or authenticate with the Client.
+
+## Quick Start
+
+[See the **Quick Start Guide**](https://foxxmd.github.io/multi-scrobbler/docs/quickstart)
 
 ## Installation
 

@@ -75,6 +75,7 @@ const config: Config = {
         // ```
       },
     ],
+    'docusaurus-theme-github-codeblock'
   ],
   plugins: [
   ],
@@ -155,13 +156,19 @@ const config: Config = {
       prism: {
         theme: themes.themes.github,
         darkTheme: themes.themes.dracula,
-        additionalLanguages: ['json','json5','typescript']
+        additionalLanguages: ['json','json5','typescript', 'docker', 'bash', 'ini']
       },
       colorMode: {
         defaultMode: 'dark',
         disableSwitch: false,
         respectPrefersColorScheme: false,
       },
+      codeblock: {
+        showGithubLink: true,
+        githubLinkLabel: 'View on GitHub',
+        showRunmeLink: false,
+        runmeLinkLabel: 'Checkout via Runme'
+      }
     } satisfies Preset.ThemeConfig,
 };
 

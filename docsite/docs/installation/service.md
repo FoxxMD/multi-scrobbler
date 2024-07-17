@@ -17,7 +17,7 @@ This setup will create a [user service](https://wiki.archlinux.org/title/systemd
 
 Create a new service file for multi-scrobbler under your HOME config:
 
-```console
+```bash
 mkdir -p ~/.config/systemd/user
 touch ~/.config/systemd/user/multi-scrobbler.service
 ```
@@ -56,7 +56,7 @@ Restart=no
 
 Save the file then run:
 
-```console
+```bash
 systemctl daemon-reload
 systemctl --user enable multi-scrobbler.service
 systemctl --user start multi-scrobbler.service
