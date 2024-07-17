@@ -20,7 +20,9 @@
     "@mdx-js/react": "^3.0.0",
     "clsx": "^2.0.0",
     "docusaurus-json-schema-plugin": "^1.12.1",
+    "micromark-extension-directive": "^3.0.1",
     "prism-react-renderer": "^2.3.0",
+    "raw-loader": "^4.0.2",
     "react": "^18.0.0",
     "react-dom": "^18.0.0"
   },
