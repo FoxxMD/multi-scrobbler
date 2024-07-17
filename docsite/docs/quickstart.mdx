@@ -34,7 +34,7 @@ services:
       # all Environmental Variables in below examples go here!
 
     volumes:
-      - "$PWD/config:/config"
+      - "./config:/config"
     ports:
       - "9078:9078"
     restart: unless-stopped

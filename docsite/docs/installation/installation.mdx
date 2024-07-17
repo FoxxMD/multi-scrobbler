@@ -176,7 +176,7 @@ You **should** bind a host directory into the container for storing configuratio
     <TabItem value="docker" label="Docker">
         [Using `-v` method for docker](https://docs.docker.com/storage/bind-mounts/#start-a-container-with-a-bind-mount):
         ```shell
-        docker run ... -v /path/on/host/config:/config foxxmd/multi-scrobbler
+        docker run ... -v "$(pwd)/config:/config" foxxmd/multi-scrobbler
         ```
     </TabItem>
     <TabItem value="docker-compose" label="Docker Compose">
@@ -187,7 +187,7 @@ You **should** bind a host directory into the container for storing configuratio
           multi-scrobbler:
             # ...
             volumes:
-              - /path/on/host/config:/config
+              - "./config:/config"
         ```
     </TabItem>
 </Tabs>
@@ -297,7 +297,7 @@ The example scenario:
 * [Maloja **Client**](../configuration/configuration.mdx#maloja)
 * Serving app on port `9078`
 * Docker container located on a different IP (`192.168.0.100`) so use [Base URL](../configuration/configuration.mdx#base-url)
-* Config/data directory on host machine is at `/home/myUser/ms`
+* Config/data directory on host machine in a directory next to `docker-compose.yml`
 * Linux uid/gid is `1000:1000`
 
 <Tabs groupId="runType" queryString>
@@ -310,7 +310,7 @@ The example scenario:
             </TabItem>
             <TabItem value="file" label="File">
                 ```bash
-                docker run -e "PUID=1000" -e "PGID=1000" -e "BASE_URL=192.168.0.100" -p 9078:9078 -v /home/myUser/ms:/config foxxmd/multi-scrobbler
+                docker run -e "PUID=1000" -e "PGID=1000" -e "BASE_URL=192.168.0.100" -p 9078:9078 -v "$(pwd)/config:/config" foxxmd/multi-scrobbler
                 ```
             </TabItem>
         </Tabs>
@@ -333,7 +333,7 @@ The example scenario:
                     - PUID=1000
                     - PGID=1000
                 volumes:
-                    - /home/myUser/ms:/config
+                    - "./config:/config"
                 ports:
                     - "9078:9078"
                 restart: unless-stopped
