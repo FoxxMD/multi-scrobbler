@@ -15,7 +15,7 @@ config/*.p8
 /docs
 /logs
 .flatpak-builder
-flatpak/generated-sources.json
+**/generated-sources.*
 flatpak/.flatpak-builder
 docsite/build
 docsite/node_modules

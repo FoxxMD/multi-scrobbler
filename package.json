@@ -1,6 +1,6 @@
 {
   "name": "multi-scrobbler",
-  "version": "0.8.0",
+  "version": "0.8.1",
   "type": "module",
   "description": "scrobble plays from multiple sources to multiple clients",
   "scripts": {
@@ -10,16 +10,17 @@
     "schema-aio": "typescript-json-schema src/backend/tsconfig.json AIOConfig --out src/backend/common/schema/aio.json --required --titles --tsNodeRegister --refs --validationKeywords deprecationMessage",
     "schema-aiosource": "typescript-json-schema src/backend/tsconfig.json AIOSourceConfig --out src/backend/common/schema/aio-source.json --titles --required --tsNodeRegister --refs --validationKeywords deprecationMessage",
     "schema-aioclient": "typescript-json-schema src/backend/tsconfig.json AIOClientConfig --out src/backend/common/schema/aio-client.json --titles --required --tsNodeRegister --refs --validationKeywords deprecationMessage",
-    "typedoc": "typedoc",
     "circular": "madge --circular --extensions ts src/index.ts",
     "test": "npm run -s test:backend",
     "test:backend": "mocha --reporter spec --recursive src/backend/tests/**/*.test.ts",
-    "fileEndings": "jscodeshift --transformFrom js --transformTo none --importTypes relative --extensions=ts --parser tsx --transform codeshift/transform.ts src/backend",
     "dev": "nodemon -w src/backend -x tsx src/backend/index.ts",
     "start": "NODE_ENV=production tsx src/backend/index.ts",
-    "build:frontend": "APP_VERSION=$npm_package_version vite build",
+    "build:frontend": "vite build",
     "build:backend": "tsc -p src/backend",
-    "build": "npm run -s build:backend && npm run -s build:frontend",
+    "build": "npm run -s build:backend && npm run -s build:frontend && npm run -s docs:build",
+    "docs:install": "cd docsite && npm ci",
+    "docs:start": "cd docsite && npm start",
+    "docs:build": "cd docsite && npm run build",
     "postinstall": "patch-package"
   },
   "exports": {
@@ -148,7 +149,6 @@
     "msw": "^2.1.2",
     "nodemon": "^3.0.3",
     "ts-essentials": "^9.1.2",
-    "typedoc": "^0.25",
     "typescript": "^5.3.3",
     "typescript-eslint": "^7.0.1",
     "typescript-json-schema": "~0.55",

@@ -3,7 +3,7 @@ sidebar_position: 2
 title: 'As a Service'
 ---
 
-If you have multi-scrobbler installed [locally](installation.md#local) you can enable it to run as a background service when you login.
+If you have multi-scrobbler installed [locally](installation.mdx#nodejs) you can enable it to run as a background service when you login.
 
 Before running as a service you should run it at least once in the foreground to ensure it can start up correctly!
 
@@ -17,7 +17,7 @@ This setup will create a [user service](https://wiki.archlinux.org/title/systemd
 
 Create a new service file for multi-scrobbler under your HOME config:
 
-```console
+```bash
 mkdir -p ~/.config/systemd/user
 touch ~/.config/systemd/user/multi-scrobbler.service
 ```
@@ -38,11 +38,11 @@ Restart=no
 WantedBy=default.target
 ```
 
-The above assumes you [installed multi-scrobbler using flatpak](installation.md#flatpak)
+The above assumes you [installed multi-scrobbler using flatpak](installation.mdx#flatpak)
 
 ### Node.js Installs
 
-If you are running multi-scrobbler directly with [nodejs from a clone repository directory](installation.md#nodejs) you should modify the `[Service]`:
+If you are running multi-scrobbler directly with [nodejs from a clone repository directory](installation.mdx#nodejs) you should modify the `[Service]`:
 
 ```ini
 [Service]
@@ -56,7 +56,7 @@ Restart=no
 
 Save the file then run:
 
-```console
+```bash
 systemctl daemon-reload
 systemctl --user enable multi-scrobbler.service
 systemctl --user start multi-scrobbler.service

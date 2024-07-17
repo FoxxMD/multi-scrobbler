@@ -12,7 +12,7 @@ const config: Config = {
   url: 'https://foxxmd.github.io',
   // Set the /<baseUrl>/ pathname under which your site is served
   // For GitHub pages deployment, it is often '/<projectName>/'
-  baseUrl: '/multi-scrobbler',
+  baseUrl: process.env.DOCS_BASE !== undefined && process.env.DOCS_BASE !== '' ? process.env.DOCS_BASE : '/docs',
 
   // GitHub pages deployment config.
   // If you aren't using GitHub pages, you don't need these.
@@ -21,7 +21,7 @@ const config: Config = {
 
   trailingSlash: false,
 
-  onBrokenLinks: 'throw',
+  onBrokenLinks: 'warn',
   onBrokenMarkdownLinks: 'warn',
 
   // Even if you don't use internalization, you can use this field to set useful
@@ -75,6 +75,7 @@ const config: Config = {
         // ```
       },
     ],
+    'docusaurus-theme-github-codeblock'
   ],
   plugins: [
   ],
@@ -105,6 +106,11 @@ const config: Config = {
             label: 'GitHub',
             position: 'right',
           },
+          {
+            href: 'https://foxxmd.github.io/multi-scrobbler/',
+            label: 'Website',
+            position: 'right',
+          },
         ],
       },
       footer: {
@@ -119,37 +125,28 @@ const config: Config = {
               },
               {
                 label: 'Installation',
-                to: '/docs/installation',
+                to: 'docs/installation',
               },
               {
                 label: 'Configuration',
-                to: '/docs/configuration',
+                to: 'docs/configuration',
+              },
+              {
+                label: 'Development',
+                to: 'docs/development/dev-common',
               },
             ],
           },
-/*          {
-            title: 'Community',
-            items: [
-              {
-                label: 'Stack Overflow',
-                href: 'https://stackoverflow.com/questions/tagged/docusaurus',
-              },
-              {
-                label: 'Discord',
-                href: 'https://discordapp.com/invite/docusaurus',
-              },
-              {
-                label: 'Twitter',
-                href: 'https://twitter.com/docusaurus',
-              },
-            ],
-          },*/
           {
             title: 'More',
             items: [
               {
                 label: 'GitHub',
                 href: 'https://github.com/foxxmd/multi-scrobbler',
+              },
+              {
+                label: 'Website',
+                href: 'https://foxxmd.github.io/multi-scrobbler/',
               },
             ],
           },
@@ -159,7 +156,19 @@ const config: Config = {
       prism: {
         theme: themes.themes.github,
         darkTheme: themes.themes.dracula,
+        additionalLanguages: ['json','json5','typescript', 'docker', 'bash', 'ini']
       },
+      colorMode: {
+        defaultMode: 'dark',
+        disableSwitch: false,
+        respectPrefersColorScheme: false,
+      },
+      codeblock: {
+        showGithubLink: true,
+        githubLinkLabel: 'View on GitHub',
+        showRunmeLink: false,
+        runmeLinkLabel: 'Checkout via Runme'
+      }
     } satisfies Preset.ThemeConfig,
 };
 

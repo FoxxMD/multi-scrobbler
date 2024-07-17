@@ -21,9 +21,7 @@ Scenario:
 
 ### All-in-one Config
 
-Using just one config file located at `CONFIG_DIR/config.json`:
-
-```json5
+```json5 title="CONFIG_DIR/config.json"
 {
   "sourceDefaults": {
     "maxPollRetries": 0,          // optional, default # of automatic polling restarts on error. can be overridden by property in individual config
@@ -160,9 +158,7 @@ Using just one config file located at `CONFIG_DIR/config.json`:
 
 ### Separate JSON files
 
-In `CONFIG_DIR/spotify.json`:
-
-```json5
+```json5 title="CONFIG_DIR/spotify.json"
 [
   {
     // may omit 'type' property since app knows this is file is for spotify configs
@@ -193,9 +189,7 @@ In `CONFIG_DIR/spotify.json`:
 ]
 ```
 
-In `CONFIG_DIR/plex.json`
-
-```json5
+```json5 title="CONFIG_DIR/plex.json"
 [
   {
     "name": "fredPlex",
@@ -221,9 +215,7 @@ In `CONFIG_DIR/plex.json`
 ]
 ```
 
-In `CONFIG_DIR/jellyfin.json`
-
-```json5
+```json5 title="CONFIG_DIR/jellyfin.json"
 [
   {
     "name": "FredJelly",
@@ -234,9 +226,7 @@ In `CONFIG_DIR/jellyfin.json`
 ]
 ```
 
-In `CONFIG_DIR/ytmusic.json`
-
-```json5
+```json5 title="CONFIG_DIR/ytmusic.json"
 [
   {
     "type": "ytmusic",
@@ -250,9 +240,7 @@ In `CONFIG_DIR/ytmusic.json`
 ]
 ```
 
-In `CONFIG_DIR/maloja.json`:
-
-```json5
+```json5 title="CONFIG_DIR/maloja.json"
 [
   {
     "name": "foxxMaloja",
@@ -278,9 +266,7 @@ In `CONFIG_DIR/maloja.json`:
 ]
 ```
 
-In `CONFIG_DIR/lastfm.json`:
-
-```json5
+```json5 title="CONFIG_DIR/lastfm.json"
 [
   {
     "name": "maryLFM",

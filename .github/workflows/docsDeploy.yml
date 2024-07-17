@@ -27,6 +27,7 @@ jobs:
         env:
           ANALYTICS: ${{ vars.ANALYTICS }}
           ANALYTICS_DOMAIN: ${{ vars.ANALYTICS_DOMAIN }}
+          DOCS_BASE: '/multi-scrobbler'
         run: npm run build
         working-directory: ./docsite
 

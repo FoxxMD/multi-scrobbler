@@ -21,7 +21,8 @@ modules:
         npm_config_offline: 'true'
     build-commands:
       # install npm dependencies
-      - npm install --offline
+      - npm ci --offline
+      - cd docsite && npm ci --offline && cd ../
 
       # build app
       - NODE_ENV=production npm run build
@@ -34,6 +35,8 @@ modules:
 
       # remove dev dependencies
       - npm prune --production
+      # remove docsite dependencies since we've built static site
+      - rm -r docsite/node_modules
 
       # copy node_modules needed to run app
       - cp -r node_modules/. /app/lib/node_modules
@@ -45,6 +48,7 @@ modules:
       # copy app files to runtime dir
       - cp -r dist/. /app/lib/dist
       - cp -r src/. /app/lib/src
+      - cp -r docsite/. /app/lib/docsite
       - cp -r config /app/lib/config
       - cp -r assets /app/lib/assets
       - cp -r public /app/lib/public
@@ -89,4 +93,5 @@ modules:
             fi
           - cd /app/lib && CONFIG_DIR=$XDG_CONFIG_HOME LOG_DIR=$XDG_CONFIG_HOME IS_LOCAL=true NODE_ENV=production node_modules/.bin/tsx src/backend/index.ts
 
-      - generated-sources.json
+      - generated-sources.0.json
+      - generated-sources.1.json

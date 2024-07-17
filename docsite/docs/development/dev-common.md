@@ -8,27 +8,6 @@ description: Start here for MS development
 
 # Development
 
-<details>
-
-<summary>Table of Contents</summary>
-
-<!-- TOC -->
-* [Development](#development)
-  * [Architecture](#architecture)
-  * [Project Setup](#project-setup)
-  * [Common Development](#common-development)
-    * [Config](#config)
-    * [Concrete Class](#concrete-class)
-      * [Stages](#stages)
-        * [Stage: Build Data](#stage-build-data)
-        * [Stage: Check Connection](#stage-check-connection)
-        * [Stage: Test Auth](#stage-test-auth)
-    * [Play Object](#play-object)
-  * [Creating Clients and Sources](#creating-clients-and-sources)
-<!-- TOC -->
-
-</details>
-
 ## Architecture
 
 Multi-scrobbler is written entirely in [Typescript](https://www.typescriptlang.org/). It consists of a backend and frontend. The backend handles all Source/Client logic, mounts web server endpoints that listen for Auth callbacks and Source ingress using [expressjs](https://expressjs.com/), and  serves the frontend. The frontend is a standalone [Vitejs](https://vitejs.dev/) app that communicates via API to the backend in order to render the dashboard.

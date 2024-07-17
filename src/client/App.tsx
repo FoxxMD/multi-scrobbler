@@ -6,6 +6,8 @@ import {
 } from "react-router-dom";
 import {connect, ConnectedProps, Provider} from 'react-redux'
 import './App.css';
+import CopyToClipboard from "./components/CopyToClipboard";
+import ExternalLink from "./components/ExternalLink";
 import {store} from './store';
 import Dashboard from "./dashboard/dashboard";
 import RecentPage from "./recent/RecentPage";
@@ -16,7 +18,7 @@ import {useEventSource, useEventSourceListener} from "@react-nano/use-event-sour
 import Version from "./Version";
 
 function NoMatch() {
-    let location = useLocation();
+    const location = useLocation();
 
     return (
         <div>
@@ -25,22 +27,52 @@ function NoMatch() {
     );
 }
 
+// https://tailwindflex.com/@sienna/copy-code-block
+function MissingDocs() {
+    return (
+        <div>
+            <div>Oops! You need to build docs first. Run the following commands to build:</div>
+            <code
+                className="mt-5 text-sm sm:text-base inline-flex text-left items-center space-x-4 bg-gray-900 text-white rounded-lg p-4 pl-6">
+                    <span className="flex gap-4">
+                        <span className="shrink-0 text-gray-500">
+                            $
+                        </span>
+
+                        <span className="flex-1">
+                            <span>
+                                npm run  <span className="text-yellow-500">docs:install</span> && npm run <span
+                                className="text-yellow-500">docs:build</span>
+                            </span>
+                        </span>
+                    </span>
+
+                <CopyToClipboard text="npm run docs:install && npm run docs:build"/>
+            </code>
+        </div>
+    );
+}
+
 const routes: RouteObject[] = [
     {
         path: "/",
-        element: <Dashboard />,
+        element: <Dashboard/>,
     },
     {
         path: "/recent",
-        element: <RecentPage />,
+        element: <RecentPage/>,
     },
     {
         path: "/scrobbled",
-        element: <ScrobbledPage />,
+        element: <ScrobbledPage/>,
     },
     {
         path: "/dead",
-        element: <DeadPage />,
+        element: <DeadPage/>,
+    },
+    {
+        path: "/docs",
+        element: <MissingDocs/>
     },
     {
         path: "*",
@@ -93,18 +125,27 @@ function App() {
       <div className="min-w-screen min-h-screen bg-gray-800 font-sans text-white">
         <div className="space-x-4 p-6 md:px-10 md:py-6 leading-6 font-semibold bg-gray-800 text-white">
           <div className="container mx-auto">
-            <div className="flex items-center justify-between">
-              <a href="/" className="flex items-center flex-grow no-underline pr-4">
-                <img src="icon.svg" style={{maxWidth: '30px'}}/>
-                <Version/>
-              </a>
-            </div>
+              <div className="flex items-center justify-between">
+                  <a href="/" className="flex items-center no-underline pr-4">
+                      <img src="/icon.svg" style={{maxWidth: '30px'}}/>
+                      <span className="ml-2">Multi Scrobbler</span>
+                  </a>
+                  <Version/>
+                  <span className="space-x-3" style={{marginLeft: 'auto'}}>
+                       <a href="/docs">
+                          Docs
+                      </a>
+                      <a target="_blank" href="https://github.com/FoxxMD/multi-scrobbler">
+                          Github <ExternalLink/>
+                      </a>
+                  </span>
+              </div>
           </div>
         </div>
-        <div className="container mx-auto">
-            <ConnectedGlobal/>
-            <RouterProvider router={router}/>
-        </div>
+          <div className="container mx-auto">
+              <ConnectedGlobal/>
+              <RouterProvider router={router}/>
+          </div>
       </div>
       </Provider>
   );

@@ -1,0 +1,344 @@
+---
+sidebar_position: 1
+title: 'Overview'
+---
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+:::tip
+
+For the difference between **ENV** and **File** examples in this document see [Configuration Types](../configuration/configuration.mdx#configuration-types).
+
+:::
+
+## Local Installation
+
+After installation see [service.md](service.md) to configure multi-scrobbler to run automatically in the background.
+
+### Nodejs
+
+Clone this repository somewhere and then install from the working directory
+
+```shell
+git clone https://github.com/FoxxMD/multi-scrobbler.git .
+cd multi-scrobbler
+nvm use # optional, to set correct Node version
+npm install
+npm run docs:install && npm run build
+npm run start
+```
+
+#### Rollup build error
+
+During building if you encounter an error like: `Your current platform "XXX" and architecture "XXX" combination is not yet supported by the native Rollup build.`
+
+Modify `overrides` in `package.json` to use `@rollup/wasm-node` as a drop-in replacement for rollup:
+
+```json
+"overrides": {
+  "spotify-web-api-node": {
+    "superagent": "$superagent"
+  }
+  "vite": {
+    "rollup": "npm:@rollup/wasm-node@^4.9.6"
+  }
+}
+```
+
+See [this issue](https://github.com/FoxxMD/multi-scrobbler/issues/135#issuecomment-1927080260) for more detail.
+
+#### Usage Examples
+
+<Tabs groupId="configType" queryString>
+<TabItem value="env" label="ENV">
+```shell
+SPOTIFY_CLIENT_ID=yourId SPOTIFY_CLIENT_SECRET=yourSecret MALOJA_URL="http://domain.tld" node src/index.js
+```
+</TabItem>
+<TabItem value="file" label="File">
+
+<details>
+    <summary>`./config/config.json`</summary>
+
+    ```json title="./config/config.json"
+    {
+        "sources": [
+            {
+                "type": "spotify",
+                "clients": ["myConfig"],
+                "name": "mySpotifySource",
+                "data": {
+                    "clientId": "a89cba1569901a0671d5a9875fed4be1",
+                    "clientSecret": "ec42e09d5ae0ee0f0816ca151008412a",
+                 }
+            }
+        ],
+        "clients": [
+            {
+                "type": "maloja",
+                "name": "myConfig",
+                "data": {
+                    "url": "http://localhost:42010",
+                    "apiKey": "myMalojaKey"
+                }
+            }
+        ],
+    }
+    ```
+
+</details>
+
+```shell
+npm run start
+```
+</TabItem>
+</Tabs>
+
+:::tip
+
+The web UI and API is served on port `9078`. This can be modified using the `PORT` environmental variable.
+
+:::
+
+### Flatpak
+
+You must have [Flatpak](https://flatpak.org/) installed on your system.
+
+```shell
+flatpak install flathub io.github.foxxmd.multiscrobbler
+```
+
+:::warning
+
+Flatpak users have experienced issues when using multi-scrobbler as a long-running process. Due to the relative difficulty in debugging issues with flatpak installations it is recommended:
+
+* to use a [Docker](#docker) installation if possible or
+* only if you need access to host-level resources like dbus for [MPRIS](https://foxxmd.github.io/multi-scrobbler/docs/configuration#mpris) and cannot run a [nodejs](#nodejs) installation
+
+::::
+
+#### Usage Examples
+
+<Tabs groupId="configType" queryString>
+    <TabItem value="env" label="ENV">
+        There are a few [options for running flatpak applications with temporary or permanent environmental variables.](https://ardasevinc.dev/launch-flatpak-apps-with-custom-args-and-environment-variables)
+
+        ```shell
+        flatpak run --env=SPOTIFY_CLIENT_ID=yourId --envSPOTIFY_CLIENT_SECRET=yourSecret --env=MALOJA_URL="http://domain.tld" io.github.foxxmd.multiscrobbler
+        ```
+    </TabItem>
+    <TabItem value="file" label="File">
+        The config directory for multi-scrobbler as a flatpak can be found under `/home/YourUser/.var/app/io.github.foxxmd.multiscrobbler/config`
+
+        ```shell
+        flatpak run io.github.foxxmd.multiscrobbler
+        ```
+    </TabItem>
+</Tabs>
+
+## Docker
+
+Cross-platform images are built for x86 (Intel/AMD) and ARM64 (IE Raspberry Pi)
+
+:::info[Available Images]
+
+<Tabs>
+    <TabItem value="docker" label="Dockerhub">
+        [Repository Page](https://hub.docker.com/r/foxxmd/multi-scrobbler)
+        ```
+        docker.io/foxxmd/multi-scrobbler:latest
+        ```
+    </TabItem>
+    <TabItem value="ghcr" label="Github Packages">
+        [Repository Page](https://github.com/FoxxMD/multi-scrobbler/pkgs/container/multi-scrobbler)
+        ```
+        ghcr.io/foxxmd/multi-scrobbler:latest
+        ```
+    </TabItem>
+</Tabs>
+
+:::
+
+Or use the provided [docker-compose.yml](../../../docker-compose.yml) after modifying it to fit your configuration.
+
+Recommended configuration steps for docker or docker-compose usage:
+
+#### Storage
+
+You **should** bind a host directory into the container for storing configurations and credentials. Otherwise, these will be lost when the container is updated.
+
+<details>
+
+<summary>Example</summary>
+
+<Tabs groupId="runType" queryString>
+    <TabItem value="docker" label="Docker">
+        [Using `-v` method for docker](https://docs.docker.com/storage/bind-mounts/#start-a-container-with-a-bind-mount):
+        ```shell
+        docker run ... -v "$(pwd)/config:/config" foxxmd/multi-scrobbler
+        ```
+    </TabItem>
+    <TabItem value="docker-compose" label="Docker Compose">
+        [Using docker-compose](https://docs.docker.com/compose/compose-file/compose-file-v3/#short-syntax-3):
+
+        ```yaml title="docker-compose.yml"
+        services:
+          multi-scrobbler:
+            # ...
+            volumes:
+              - "./config:/config"
+        ```
+    </TabItem>
+</Tabs>
+
+</details>
+
+#### Networking
+
+If you are using a [bridge network](https://www.appsdeveloperblog.com/docker-networking-bridging-host-and-overlay/) (default docker setup) you **must** map a port to the container in order to access the dashboard and use MS with some sources (Plex, Jellyfin). The default container port is `9078`.
+
+<details>
+
+    <summary>Example</summary>
+
+<Tabs groupId="runType" queryString>
+    <TabItem value="docker" label="Docker">
+        [Docker `run` publish options](https://docs.docker.com/engine/reference/commandline/run/#publish):
+        ```shell
+        docker run ... -p 9078:9078 foxxmd/multi-scrobbler
+        ```
+    </TabItem>
+    <TabItem value="docker-compose" label="Docker Compose">
+        [docker-compose](https://docs.docker.com/compose/compose-file/compose-file-v3/#short-syntax-1):
+
+        ```yaml title="docker-compose.yml"
+        services:
+          multi-scrobbler:
+            # ...
+            ports:
+              - "9078:9078"
+        ```
+    </TabItem>
+</Tabs>
+
+</details>
+
+##### Base URL
+
+Optionally, when
+
+* using a [Source or Client](../configuration/configuration.mdx) that has a "Redirect URI" that you have not explicitly defined
+* and
+  * using a bridge network or
+  * installing MS on a different machine than the one used to view the dashboard
+
+set the [Base URL](../configuration/configuration.mdx#base-url) as the IP of the host machine. (This is the IP you would use to view the dashboard in a browser)
+
+<details>
+
+    <summary>Example</summary>
+
+<Tabs groupId="runType" queryString>
+    <TabItem value="docker" label="Docker">
+        ```shell
+        docker run ... -e BASE_URL="http://hostMachineIP" foxxmd/multi-scrobbler
+        ```
+    </TabItem>
+    <TabItem value="docker-compose" label="Docker Compose">
+        [docker-compose](https://docs.docker.com/compose/compose-file/compose-file-v3/#short-syntax-1):
+
+        ```yaml title="docker-compose.yml"
+        services:
+          multi-scrobbler:
+            # ...
+            environment:
+              - BASE_URL="http://hostMachineIP"
+        ```
+    </TabItem>
+</Tabs>
+
+</details>
+
+#### Other
+
+* (Optionally) set the [timezone](https://en.wikipedia.org/wiki/List_of_tz_database_time_zones) for the container using the environmental variable `TZ` ([docker](https://docs.docker.com/engine/reference/commandline/run/#env)) ([docker-compose](https://docs.docker.com/compose/compose-file/compose-file-v3/#environment))
+
+### Linux Host
+
+::::info
+
+:::note
+
+If you are using [rootless containers with Podman](https://developers.redhat.com/blog/2020/09/25/rootless-containers-with-podman-the-basics#why_podman_) or are running docker on MacOS/Windows this **DOES NOT** apply to you.
+
+:::
+
+If you are running Docker on a **Linux Host** you must specify `user:group` permissions of the user who owns the **configuration directory** on the host to avoid [docker file permission problems.](https://ikriv.com/blog/?p=4698) These can be specified using the [environmental variables **PUID** and **PGID**.](https://docs.linuxserver.io/general/understanding-puid-and-pgid)
+
+To get the UID and GID for the current user run these commands from a terminal:
+
+* `id -u` -- prints UID
+* `id -g` -- prints GID
+
+::::
+
+### Docker Usage Example
+
+:::tip
+
+See the [**Quick Start Guide**](../quickstart.mdx) for another guided docker-compose example
+
+:::
+
+The example scenario:
+
+* [Spotify **Source**](../configuration/configuration.mdx#spotify)
+* [Maloja **Client**](../configuration/configuration.mdx#maloja)
+* Serving app on port `9078`
+* Docker container located on a different IP (`192.168.0.100`) so use [Base URL](../configuration/configuration.mdx#base-url)
+* Config/data directory on host machine in a directory next to `docker-compose.yml`
+* Linux uid/gid is `1000:1000`
+
+<Tabs groupId="runType" queryString>
+    <TabItem value="docker" label="Docker">
+        <Tabs groupId="configType" queryString>
+            <TabItem value="env" label="ENV">
+                ```bash
+                docker run -e "SPOTIFY_CLIENT_ID=yourId" -e "SPOTIFY_CLIENT_SECRET=yourSecret" -e "BASE_URL=192.168.0.100" -e "MALOJA_URL=http://domain.tld" -e "MALOJA_API_KEY=1234" -e "PUID=1000" -e "PGID=1000" -p 9078:9078 -v /home/myUser/ms:/config foxxmd/multi-scrobbler
+                ```
+            </TabItem>
+            <TabItem value="file" label="File">
+                ```bash
+                docker run -e "PUID=1000" -e "PGID=1000" -e "BASE_URL=192.168.0.100" -p 9078:9078 -v "$(pwd)/config:/config" foxxmd/multi-scrobbler
+                ```
+            </TabItem>
+        </Tabs>
+    </TabItem>
+    <TabItem value="docker-compose" label="Docker Compose">
+        See [`docker-compose.yml`](../../../docker-compose.yml) file for more options and annotations.
+
+        ```yaml title="docker-compose.yml"
+        services:
+            multi-scrobbler:
+                image: foxxmd/multi-scrobbler
+                container_name: multi-scrobbler
+                environment:
+                    - TZ=Etc/GMT # Specify timezone from TZ Database name found here https://en.wikipedia.org/wiki/List_of_tz_database_time_zones
+                    - SPOTIFY_CLIENT_ID=yourId
+                    - SPOTIFY_CLIENT_SECRET=yourSecret
+                    - BASE_URL="http://192.168.0.100:9078"
+                    - MALOJA_URL=http://domain.tld:42010
+                    - MALOJA_API_KEY=1234
+                    - PUID=1000
+                    - PGID=1000
+                volumes:
+                    - "./config:/config"
+                ports:
+                    - "9078:9078"
+                restart: unless-stopped
+        ```
+    </TabItem>
+</Tabs>
+
+
