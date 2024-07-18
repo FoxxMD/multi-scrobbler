@@ -160,24 +160,24 @@ Useful when running with [docker](../installation/installation.mdx#docker) so th
 
     EX Lastfm Redirect Url is `BASE_URL:PORT/lastfm/callback` (when no other redirectUri is specified for [lastfm configuration](#lastfm))
 
-    | `BASE_URL`                            | Redirect URL                                             |
+    | `BASE_URL`                          | Redirect URL                                             |
     |-------------------------------------|----------------------------------------------------------|
     | `192.168.0.101`                     | `http://192.168.0.101:9078/lastfm/callback`              |
     | `http://my.domain.local`            | `http://my.domain.local:9078/lastfm/callback`            |
     | `http://192.168.0.101/my/subfolder` | `http://192.168.0.101:9078/my/subfolder/lastfm/callback` |
 
-    | `BASE_URL`                         | Redirect URL                                             |
+    | `BASE_URL`                        | Redirect URL                                             |
     |-----------------------------------|----------------------------------------------------------|
-    | `my.domain.local:80`              | `http://192.168.0.101:9078/lastfm/callback`              |
-    | `my.domain.local:9000`            | `http://my.domain.local:9078/lastfm/callback`            |
-    | `192.168.0.101:4000/my/subfolder` | `http://192.168.0.101:9078/my/subfolder/lastfm/callback` |
+    | `my.domain.local:80`              | `http://192.168.0.101:80/lastfm/callback`                |
+    | `my.domain.local:9000`            | `http://my.domain.local:9000/lastfm/callback`            |
+    | `192.168.0.101:4000/my/subfolder` | `http://192.168.0.101:4000/my/subfolder/lastfm/callback` |
     | `https://192.168.0.101`           | `https://192.168.0.101:443/lastfm/callback`              |
 
 </details>
 
 #### Disable Web
 
-If you do not need the dashboard and/or ingress sources, or have security concerns about ingress and cannot control their hosting environment, the web server and API can be disabled. 
+If you do not need the dashboard and/or ingress sources, or have security concerns about ingress and cannot control your hosting environment, the web server and API can be disabled.
 
 :::warning
 
@@ -314,12 +314,12 @@ Check the [instructions](plex.md) on how to setup a notification agent.
 
 Can use this source for any application that implements the [Subsonic API](http://www.subsonic.org/pages/api.jsp) and supports the [`getNowPlaying`](http://www.subsonic.org/pages/api.jsp#getNowPlaying) endpoint (such as [Airsonic](https://airsonic.github.io/) and [Navidrome](https://www.navidrome.org/))
 
-**Known Issues:**
-* "Time played at" is somewhat inaccurate since the api only reports "played X minutes ago" so...
-  * All scrobble times are therefore "on the minute" and you may experience occasional duplicate scrobbles
-  * "played X minutes ago" sometimes is also not reported correctly
+:::warning[Known Issues]
+
 * Multiple artists are reported as one value and cannot be separated
 * If using [Airsonic Advanced](https://github.com/airsonic-advanced/airsonic-advanced) the password used (under **Credentials**) must be **Decodable**
+
+:::
 
 #### Configuration
 
@@ -374,7 +374,7 @@ Must be using Jellyfin 10.7 or greater
     * Check `Send All Properties`
   * Save
 
-:::note
+:::tip
 
 If you see errors in the MS logs regarding `missing headers` when using Jellyfin [see this workaround.](../FAQ.md#jellyfin-has-warnings-about-missing-headers)
 
@@ -653,7 +653,13 @@ Mopidy is a headless music server that supports playing music from many [standar
 
 multi-scrobbler can scrobble tracks played from any Mopidy backend source, regardless of where you listen to them.
 
-#### Configuration
+:::note
+
+You must have [Mopidy-HTTP extension](https://mopidy.com/ext/http) enabled for this integration to work.
+
+:::
+
+#### Configuration {#mopidy-config}
 
 <Tabs groupId="configType" queryString>
     <TabItem value="env" label="ENV">
@@ -685,60 +691,40 @@ multi-scrobbler can scrobble tracks played from any Mopidy backend source, regar
 
 #### Configuration Options
 
-###### `url`
+###### URL
 
-The URL used to connect to the Mopidy server. You MUST have [Mopidy-HTTP extension](https://mopidy.com/ext/http) enabled.
+The URL used to connect to the Mopidy server, set in your [file config as `url`.](#mopidy-config) The URL used to connect ultimately must be formed like this:
 
-If no `url` is provided a default is used which assumes Mopidy is installed on the same server as multi-scrobbler: `ws://localhost:6680/mopidy/ws/`
+```
+Syntax  => [protocol]://[hostname]:[port]/[path]
+Default =>         ws://localhost:6680/mopidy/ws
+```
+
+If any part of this URL is missing multi-scrobbler will use a default value. This also means that if any part of your URL is **not** standard you must explicitly define it.
+
+:::tip[Mopidy Configuration]
 
 Make sure the hostname and port number match what is found in the Mopidy configuration file `mopidy.conf`:
 
-```
-...
-
+```ini
 [http]
 hostname = localhost
 port = 6680
-
-...
 ```
 
-The URL used to connect ultimately must be formed like this: `[protocol]://[hostname]:[port]/[path]`
-If any part of this URL is missing multi-scrobbler will use a default value, for your convenience. This also means that if any part of your URL is **not** standard you must explicitly define it.
-
-Part => Default Value
-
-* Protocol => `ws://`
-* Hostname => `localhost`
-* Port => `6680`
-* Path => `/mopidy/ws/`
+:::
 
 <details>
 <summary>URL Transform Examples</summary>
 
-```json
-{
-  "url": "mopidy.mydomain.com"
-}
-```
+    Examples of a given `url` in your file config and the final URL multi-scrobbler will use to connect to Mopidy:
 
-MS transforms this to: `ws://mopidy.mydomain.com:6680/mopidy/ws/`
-
-```json
-{
-  "url": "192.168.0.101:3456"
-}
-```
-
-MS transforms this to: `ws://192.168.0.101:3456/mopidy/ws/`
-
-```json
-{
-  "url": "mopidy.mydomain.com:80/MOPWS"
-}
-```
-
-MS transforms this to: `ws://mopidy.mydomain.com:80/MOPWS`
+    | `url`                          | Transformed URL                            |
+    |--------------------------------|--------------------------------------------|
+    | (none set)                     | `ws://localhost:6680/mopidy/ws`            |
+    | `mopidy.mydomain.com`          | `ws://mopidy.mydomain.com:6680/mopidy/ws/` |
+    | `192.168.0.101:3456`           | `ws://192.168.0.101:3456/mopidy/ws/`       |
+    | `mopidy.mydomain.com:80/MOPWS` | `ws://mopidy.mydomain.com:80/MOPWS`        |
 
 </details>
 
@@ -747,26 +733,39 @@ MS transforms this to: `ws://mopidy.mydomain.com:80/MOPWS`
 
 If you wish to disallow or only allow scrobbling from some sources played through Mopidy you can specify these using `uriBlacklist` or `uriWhitelist` in your config. multi-scrobbler will check the list to see if any string matches the START of the `uri` on a track. If whitelist is used then blacklist is ignored. All strings are case-insensitive.
 
-```json
-{
-  "uriBlacklist": ["soundcloud"]
-}
-```
+<details>
+    <summary>Example</summary>
+    ```json
+    {
+        "uriBlacklist": ["soundcloud"]
+    }
+    ```
 
-Will prevent multi-scrobbler from scrobbling any Mopidy track that start with a `uri` like `soundcloud:song:MySong-1234`
+    Will prevent multi-scrobbler from scrobbling any Mopidy track that start with a `uri` like `soundcloud:song:MySong-1234`
+</details>
+
 
 ##### Album Blacklist
 
 For certain sources (Soundcloud) Mopidy does not have all track info (Album) and will instead use "Soundcloud" as the Album name. You can prevent multi-scrobbler from using this bad Album data by adding the fake Album name to this list. Multi-scrobbler will still scrobble the track, just without the bad data. All strings are case-insensitive.
 
-```json
-{
-  "albumBlacklist": ["SoundCloud", "Mixcloud"]
-}
-```
+<details>
+    <summary>Example</summary>
+    ```json
+    {
+        "albumBlacklist": ["SoundCloud", "Mixcloud"]
+    }
+    ```
 
-If a track would be scrobbled like `Album: Soundcloud, Track: My Cool Track, Artist: A Cool Artist` 
-then multi-scrobbler will instead scrobble  `Track: My Cool Track, Artist: A Cool Artist`
+    If a track would be scrobbled like
+    ```
+    Album: Soundcloud, Track: My Cool Track, Artist: A Cool Artist
+    ```
+    then multi-scrobbler will instead scrobble
+    ```
+    Track: My Cool Track, Artist: A Cool Artist
+    ```
+</details>
 
 ### [JRiver](https://jriver.com/)
 
@@ -776,53 +775,7 @@ In order for multi-scrobbler to communicate with JRiver you must have [Web Serve
   * Check `Use Media Network to share this library...`
   * If you have `Authentication` checked you will need to provide the **Username** and **Password** in the ENV/File configuration below.
 
-##### URL
-
-If you do not provide a URL then a default is used which assumes JRiver is installed on the same server as multi-scrobbler: `http://localhost:52199/MCWS/v1/`
-
-* Make sure the port number matches what is found in `Advanced` section in the [Media Network](#jriver) options.
-* If your installation is on the same machine but you cannot connect using `localhost` try `0.0.0.0` instead.
-
-The URL used to connect ultimately must be formed like this: `[protocol]://[hostname]:[port]/[path]`
-If any part of this URL is missing multi-scrobbler will use a default value, for your convenience. This also means that if any part of your URL is **not** standard you must explicitly define it.
-
-Part => Default Value
-
-* Protocol => `http://`
-* Hostname => `localhost`
-* Port => `52199`
-* Path => `/MCWS/v1/`
-
-<details>
-<summary>URL Transform Examples</summary>
-
-```json
-{
-  "url": "jriver.mydomain.com"
-}
-```
-
-MS transforms this to: `http://jriver.mydomain.com:52199/MCWS/v1/`
-
-```json
-{
-  "url": "192.168.0.101:3456"
-}
-```
-
-MS transforms this to: `http://192.168.0.101:3456/MCWS/v1/`
-
-```json
-{
-  "url": "mydomain.com:80/jriverReverse/MCWS/v1/"
-}
-```
-
-MS transforms this to: `http://mydomain.com:80/jriverReverse/MCWS/v1/`
-
-</details>
-
-#### Configuration
+#### Configuration {#jriver-config}
 
 <Tabs groupId="configType" queryString>
     <TabItem value="env" label="ENV">
@@ -842,7 +795,7 @@ MS transforms this to: `http://mydomain.com:80/jriverReverse/MCWS/v1/`
         </details>
 
         or <SchemaLink lower objectName="JRiverSourceConfig"/>
-        </TabItem>
+    </TabItem>
     <TabItem value="aio" label="AIO">
         <details>
 
@@ -856,61 +809,47 @@ MS transforms this to: `http://mydomain.com:80/jriverReverse/MCWS/v1/`
     </TabItem>
 </Tabs>
 
+##### URL
+
+The URL used to connect to JRiver, set in your [file config as `url`.](#jriver-config) The URL used to connect ultimately must be formed like this:
+
+```
+Syntax  => [protocol]://[hostname]:[port]/[path]
+Default =>       http://localhost:52199/MCWS/v1/
+```
+
+If any part of this URL is missing multi-scrobbler will use a default value. This also means that if any part of your URL is **not** standard you must explicitly define it.
+
+:::tip[Jriver Settings]
+
+* Make sure the port number matches what is found in `Advanced` section in the [Media Network](#jriver) options.
+* If your installation is on the same machine but you cannot connect using `localhost` try `0.0.0.0` instead.
+
+:::
+
+<details>
+    <summary>URL Transform Examples</summary>
+
+    Examples of a given `url` in your file config and the final URL multi-scrobbler will use to connect to JRiver:
+
+    | `url`                                    | Transformed URL                             |
+    |------------------------------------------|---------------------------------------------|
+    | (none set)                               | `http://localhost:52199/MCWS/v1/`           |
+    | `jriver.mydomain.com`                    | `http://jriver.mydomain.com:52199/MCWS/v1/` |
+    | `192.168.0.101:3456`                     | `http://192.168.0.101:3456/MCWS/v1/`        |
+    | `mydomain.com:80/jriverReverse/MCWS/v1/` | `mydomain.com:80/jriverReverse/MCWS/v1/`    |
+
+</details>
+
 ### [Kodi](https://kodi.tv/)
 
-In order for multi-scrobbler to communicate with Kodi you must have the [Web Interface](https://kodi.wiki/view/Web_interface) enabled. This can can be in the Kodi GUI:
+In order for multi-scrobbler to communicate with Kodi you must have the [Web Interface](https://kodi.wiki/view/Web_interface) enabled. This can be done in the Kodi GUI:
 
 * Settings -> Services -> Control
   * Check `Allow remote control via HTTP`
   * Ensure you have a **Username** and **Password** set, you will need to provide them in the ENV/File configuration below.
 
-##### URL
-
-If you do not provide a URL then a default is used which assumes Kodi is installed on the same server as multi-scrobbler: `http://localhost:8080/jsonrpc`
-
-* Make sure the port number matches what is found in **Port** in the [Control](#kodi) section mentioned above.
-* If your installation is on the same machine but you cannot connect using `localhost` try `0.0.0.0` instead.
-
-The URL used to connect ultimately must be formed like this: `[protocol]://[hostname]:[port]/[path]`
-If any part of this URL is missing multi-scrobbler will use a default value, for your convenience. This also means that if any part of your URL is **not** standard you must explicitly define it.
-
-Part => Default Value
-
-* Protocol => `http://`
-* Hostname => `localhost`
-* Port => `8080`
-* Path => `/jsonrpc`
-
-<details>
-<summary>URL Transform Examples</summary>
-
-```json
-{
-  "url": "kodi.mydomain.com"
-}
-```
-
-MS transforms this to: `http://kodi.mydomain.com:8080/jsonrpc`
-
-```json
-{
-  "url": "192.168.0.101:3456"
-}
-```
-
-MS transforms this to: `http://192.168.0.101:3456/jsonprc`
-
-```json
-{
-  "url": "mydomain.com:80/kodiReverse/jsonrpc"
-}
-```
-
-MS transforms this to: `http://mydomain.com:80/kodiReverse/jsonrpc`
-
-</details>
-
-#### Configuration
+#### Configuration {#kodi-config}
 
 <Tabs groupId="configType" queryString>
     <TabItem value="env" label="ENV">
@@ -944,70 +883,64 @@ MS transforms this to: `http://mydomain.com:80/kodiReverse/jsonrpc`
     </TabItem>
 </Tabs>
 
+##### URL
+
+The URL used to connect to Kodi, set in your [file config as `url`.](#kodi-config) The URL used to connect ultimately must be formed like this:
+
+```
+Syntax  => [protocol]://[hostname]:[port]/[path]
+Default =>       http://localhost:8080/jsonrpc
+```
+
+If any part of this URL is missing multi-scrobbler will use a default value. This also means that if any part of your URL is **not** standard you must explicitly define it.
+
+:::tip[Kodi Settings]
+
+* Make sure the port number matches what is found in **Port** in the [Control](#kodi) section mentioned above.
+* If your installation is on the same machine but you cannot connect using `localhost` try `0.0.0.0` instead.
+
+:::
+
+<details>
+    <summary>URL Transform Examples</summary>
+
+    Examples of a given `url` in your file config and the final URL multi-scrobbler will use to connect to Kodi:
+
+    | `url`                                 | Transformed URL                              |
+    |---------------------------------------|----------------------------------------------|
+    | (none set)                            | `http://localhost:8080/jsonrpc`              |
+    | `kodi.mydomain.com`                   | `http://kodi.mydomain.com:8080/jsonrpc`      |
+    | `192.168.0.101:3456`                  | `http://192.168.0.101:3456/jsonprc`          |
+    | `mydomain.com:80/kodiReverse/jsonrpc` | `http://mydomain.com:80/kodiReverse/jsonrpc` |
+
+</details>
+
 ### [WebScrobbler](https://web-scrobbler.com/)
 
 After installing the extension open the preferences/settings for it:
 
 * Under **Accounts**
   * **Add Webhook**
-    * API URL: `http://localhost:9078/api/webscrobbler`
+    * API URL: `[YourMultiScrobblerInstance]/api/webscrobbler` EX `http://localhost:9078/api/webscrobbler`
     * Application name: `(whatever you want)`
 
 Reload the extension after adding the webhook.
 
+:::note
+
 * **On Firefox** - Only FQNs (domain.tld), `localhost`, and `127.0.0.1` are supported for API URL due to [firefox requiring https](https://github.com/web-scrobbler/web-scrobbler/issues/4183#issuecomment-1749222006)
 * **On Chromium-based Browsers** - Any domain will work for API URL
-* All Other browsers are untested
-
-##### Multiple Users
-
-If you would like use multiple WebScrobbler sources they can be matched using a **slug** at the end of the **API URL.** This requires using [a file-based config.](./configuration?configType=file#webscrobbler)
-
-Example:
-
-```json title="webscrobbler.json"
-[
-  {
-    "name": "aUserWS",
-    "clients": [
-      "client1Maloja"
-    ],
-    "data": {
-      "slug": "usera" 
-    }
-  },
-  {
-    "name": "bUserWS",
-    "clients": [
-      "client2Maloja"
-    ],
-    "data": {
-      "slug": "userb"
-    }
-  }
-]
-```
-
-* To use `aUserWS` source set **API URL** to `http://localhost:9078/api/webscrobbler/usera`
-* To use `bUserWS` source set **API URL** to `http://localhost:9078/api/webscrobbler/userb`
-
-:::note
-
-`http://localhost:9078/api/webscrobbler` is matched with the first source that _that does not have a slug defined._
+* All other browsers are untested
 
 :::
 
-###### Connectors Black/Whitelist
+:::warning
 
-MS can be configured to only scrobble, or NOT scrobble, from some WS connectors. Use the name of the website from the [supported websites](https://web-scrobbler.com/) or from the **Connectors** tab in the extension. 
-
-:::note
-
-This affects **only** MS's behavior and does not affect the general connector behavior you have configured within the WebScrobbler extension.
+Multi-scrobbler is **not** designed to be publicly accessible from the internet. To use Webscrobbler outside your local network you should be accessing MS through a VPN or through a reverse proxy with some kind of authentication (though this is still not recommended).
 
 :::
 
-#### Configuration
+#### Configuration {#webscrobbler-config}
 
 <Tabs groupId="configType" queryString>
     <TabItem value="env" label="ENV">
@@ -1041,6 +974,58 @@ This affects **only** MS's behavior and does not affect the general connector be
     </TabItem>
 </Tabs>
 
+##### Multiple Users
+
+If you would like use multiple WebScrobbler sources they can be matched using a **slug** at the end of the **API URL.** This requires using [a file-based config.](./configuration?configType=file#webscrobbler-config)
+
+<details>
+
+    <summary>Example</summary>
+
+    ```json title="webscrobbler.json"
+    [
+      {
+        "name": "aUserWS",
+        "clients": [
+          "client1Maloja"
+        ],
+        "data": {
+          "slug": "usera"
+        }
+      },
+      {
+        "name": "bUserWS",
+        "clients": [
+          "client2Maloja"
+        ],
+        "data": {
+          "slug": "userb"
+        }
+      }
+    ]
+    ```
+
+    * To use `aUserWS` source set **API URL** to `http://localhost:9078/api/webscrobbler/usera`
+    * To use `bUserWS` source set **API URL** to `http://localhost:9078/api/webscrobbler/userb`
+
+    :::tip
+
+    `http://localhost:9078/api/webscrobbler` is matched with the first source that _that does not have a slug defined._
+
+    :::
+
+</details>
+
+###### Connectors Black/Whitelist
+
+MS can be configured to only scrobble, or NOT scrobble, from some WS connectors. Use the name of the website from the [supported websites](https://web-scrobbler.com/) or from the **Connectors** tab in the extension. 
+
+:::note
+
+This affects **only** MS's behavior and does not affect the general connector behavior you have configured within the WebScrobbler extension.
+
+:::
+
 ### [Google Cast (Chromecast)](https://www.google.com/chromecast/built-in/)
 
 If your media device can be **Cast** to using this button ![Chromecast Icon](https://upload.wikimedia.org/wikipedia/commons/2/26/Chromecast_cast_button_icon.svg) on your phone/computer then multi-scrobbler can monitor it in order to scrobble music you play.
@@ -1057,107 +1042,6 @@ Google Cast support is **experimental**. You may experience crashes and errors w
 This source relies on common, **basic** music data provided by the cast device which will always be less exhaustive than data parsed from full source integrations. If there is an existing [Source](#source-configurations) it is recommended to configure for it and blacklist the app on Google Cast, rather than relying solely on Google Cast for scrobbling.
 
 :::
-
-#### Connecting Devices
-
-Cast devices can be manually configured using file-based configuration OR automatically discovered using **mDNS.**
-
-###### mDNS Discovery
-
-The host machine running multi-scrobbler must be configured to allow [mDNS traffic on port 5353/UDP](https://book.hacktricks.xyz/network-services-pentesting/5353-udp-multicast-dns-mdns).
-
-:::info[OS Specific Instructions]
-
-<Tabs>
-    <TabItem value="linux" label="Linux">
-        **Docker**
-
-        The host machine must have [avahi-daemon](https://avahi.org/) running to circumvent limitations with DNS resolution due to musl in Alpine. Most major linux distributions package avahi and many have it built-in. Once avahi is running you must pass D-Bus and the avahi daemon socket to your container like so:
-
-        ```
-        docker run ... -v /var/run/dbus:/var/run/dbus -v  	/var/run/avahi-daemon/socket:/var/run/avahi-daemon/socket ... foxxmd/multi-scrobbler
-        ```
-
-        **Flatpak/Nodejs**
-
-        No additional steps are required.
-    </TabItem>
-    <TabItem value="windows" label="Windows">
-        **Docker**
-
-        Unsupported at this time.
-
-        **Nodejs**
-
-        No additional steps are required.
-    </TabItem>
-</Tabs>
-
-:::
-
-#### What Media Does MS Scrobble?
-
-Cast devices report what type of media the current activity is [(see `metadata` property here)](https://developers.google.com/cast/docs/media/messages#MediaInformation). The reported type is dependent on the application playing the media to correctly report it, the cast device does not magically know what the media is. If an application does not report a type it is always classified as `unknown`.
-
-**By default, MS will only track media that is reported as `MusicTrack`.**
-
-##### Allow Unknown Media Type
-
-Media with an Unknown (`Generic`) media type can be explicitly allowed by setting `"allowUnknownMedia": true` in the file-based configuration. This can also be configured to only allow unknown media types for specific applications by using a list of application names like:
-
-```json5 title="chromecast.json"
-[
-  {
-    "name": "MyCast",
-    "type": "chromecast",
-    "data": {
-      // only allow unknown if app name contains any of these phrases
-      "allowUnknownMedia": ["smarttube", "default media receiver"]
-    },
-  }
-]
-```
-
-##### Forcing Media Tracking
-
-MS can be forced to track media from an application regardless of media type. This is useful if an application incorrectly reports a media type you are sure should be music. Set `"forceMediaRecognitionOn"` in the file-based configuration. to a list of application names that should always be tracked like:
-
-```json5
-// in chromecast.json or config.json sources
-[
-  {
-    "name": "MyCast",
-    "type": "chromecast",
-    "data": {
-      // media from applications that contains these phrases will always be tracked, regardless of media type reported
-      "forceMediaRecognitionOn": ["smarttube", "default media receiver"]
-    },
-  }
-]
-```
-
-
-#### Cast Troubleshooting
-
-Please include any/all logs with raw output if there are any errors encountered as this is critical to diagnosing issues.
-
-To diagnose bad/incomplete track information or strange MS player behavior please turn on **payload logging** and include log output of the source running to help diagnose this issue:
-
-```json5
-// in chromecast.json or config.json sources
-[
-  {
-    "name": "MyCast",
-    "type": "chromecast",
-    "data": {
-      //...
-    },
-    "options": {
-      "logPayload": true
-    }
-  }
-]
-```
 
 #### Configuration
 
@@ -1199,6 +1083,124 @@ To diagnose bad/incomplete track information or strange MS player behavior pleas
         or <SchemaLink lower objectName="ChromecastSourceConfig"/>
     </TabItem>
 </Tabs>
+
+#### Connecting Devices
+
+Cast devices can be manually configured using file-based configuration OR automatically discovered using **mDNS.**
+
+###### mDNS Discovery
+
+The host machine running multi-scrobbler must be configured to allow [mDNS traffic on port 5353/UDP](https://book.hacktricks.xyz/network-services-pentesting/5353-udp-multicast-dns-mdns).
+
+<details>
+
+    <summary>OS Specific Instructions</summary>
+
+<Tabs>
+    <TabItem value="linux" label="Linux">
+        **Docker**
+
+        The host machine must have [avahi-daemon](https://avahi.org/) running to circumvent limitations with DNS resolution due to musl in Alpine. Most major linux distributions package avahi and many have it built-in. Once avahi is running you must pass D-Bus and the avahi daemon socket to your container like so:
+
+        ```
+        docker run ... -v /var/run/dbus:/var/run/dbus -v  	/var/run/avahi-daemon/socket:/var/run/avahi-daemon/socket ... foxxmd/multi-scrobbler
+        ```
+
+        **Flatpak/Nodejs**
+
+        No additional steps are required.
+    </TabItem>
+    <TabItem value="windows" label="Windows">
+        **Docker**
+
+        Unsupported at this time.
+
+        **Nodejs**
+
+        No additional steps are required.
+    </TabItem>
+</Tabs>
+
+</details>
+
+#### What Media Does MS Scrobble?
+
+Cast devices report what type of media the current activity is [(see `metadata` property here)](https://developers.google.com/cast/docs/media/messages#MediaInformation). The reported type is dependent on the application playing the media to correctly report it, the cast device does not magically know what the media is. If an application does not report a type it is always classified as `unknown`.
+
+**By default, MS will only track media that is reported as `MusicTrack`.**
+
+##### Allow Unknown Media Type
+
+Media with an Unknown (`Generic`) media type can be explicitly allowed by setting `"allowUnknownMedia": true` in the file-based configuration. This can also be configured to only allow unknown media types for specific applications by using a list of application names.
+
+<details>
+
+    <summary>Example</summary>
+
+    ```json5 title="chromecast.json"
+    [
+      {
+        "name": "MyCast",
+        "type": "chromecast",
+        "data": {
+          // only allow unknown if app name contains any of these phrases
+          "allowUnknownMedia": ["smarttube", "default media receiver"]
+        },
+      }
+    ]
+    ```
+
+</details>
+
+##### Forcing Media Tracking
+
+MS can be forced to track media from an application regardless of media type. This is useful if an application incorrectly reports a media type you are sure should be music. Set `"forceMediaRecognitionOn"` in the file-based configuration to a list of application names that should always be tracked.
+
+<details>
+
+    <summary>Example</summary>
+
+    ```json5 title="chromecast.json"
+    [
+      {
+        "name": "MyCast",
+        "type": "chromecast",
+        "data": {
+          // media from applications that contains these phrases will always be tracked, regardless of media type reported
+          "forceMediaRecognitionOn": ["smarttube", "default media receiver"]
+        },
+      }
+    ]
+    ```
+
+</details>
+
+#### Cast Troubleshooting
+
+Please include any/all logs with raw output if there are any errors encountered as this is critical to diagnosing issues.
+
+To diagnose bad/incomplete track information or strange MS player behavior please turn on **payload logging** and include log output of the source running to help diagnose this issue.
+
+<details>
+
+    <summary>Example</summary>
+
+    ```json5 title="chromecast.json"
+    [
+      {
+        "name": "MyCast",
+        "type": "chromecast",
+        "data": {
+          //...
+        },
+        "options": {
+          "logPayload": true
+        }
+      }
+    ]
+    ```
+
+</details>
 
 ### [Musikcube](https://musikcube.com)
 
@@ -1392,37 +1394,43 @@ Webhooks will **push** a notification to your configured servers on these events
 * Source polling stopped on error 
 * Scrobble client scrobble failure
 
-Webhooks are configured in the AIO [config.json](#configuration-types) file under the `webhook` top-level property. Multiple webhooks may be configured for each webhook type. EX:
+Webhooks are configured in the AIO [config.json](#configuration-types) file under the `webhook` top-level property. Multiple webhooks may be configured for each webhook type.
 
-```json5
-{
-  "sources": [
-    //...
-  ],
-  "clients": [
-    //...
-  ],
-  "webhooks": [
+<details>
+
+    <summary>Example</summary>
+
+    ```json5 title="config.json"
     {
-      "name": "FirstGotifyServer",
-      "type": "gotify",
-      "url": "http://192.168.0.100:8070",
-      "token": "abcd"
-    }, 
-    {
-      "name": "SecondGotifyServer",
-      "type": "gotify",
-      //...
-    },
-    {
-      "name": "NtfyServerOne",
-      "type": "ntfy",
-      //...
-    },
-    //...
-  ]
-}
-```
+      "sources": [
+        //...
+      ],
+      "clients": [
+        //...
+      ],
+      "webhooks": [
+        {
+          "name": "FirstGotifyServer",
+          "type": "gotify",
+          "url": "http://192.168.0.100:8070",
+          "token": "abcd"
+        },
+        {
+          "name": "SecondGotifyServer",
+          "type": "gotify",
+          //...
+        },
+        {
+          "name": "NtfyServerOne",
+          "type": "ntfy",
+          //...
+        },
+        //...
+      ]
+    }
+    ```
+
+</details>
 
 #### [Gotify](https://gotify.net/)
 
@@ -1430,21 +1438,25 @@ Refer to the [config schema for GotifyConfig](https://json-schema.app/view/%23/%
 
 multi-scrobbler optionally supports setting message notification priority via `info` `warn` and `error` mappings.
 
-EX
+<details>
 
-```json
-{
-  "type": "gotify",
-  "name": "MyGotifyFriendlyNameForLogs",
-  "url": "http://192.168.0.100:8070",
-  "token": "AQZI58fA.rfSZbm",
-  "priorities": {
-    "info": 5,
-    "warn": 7,
-    "error": 10
-  }
-}
+    <summary>Example</summary>
+
+    ```json title="config.json"
+    {
+      "type": "gotify",
+      "name": "MyGotifyFriendlyNameForLogs",
+      "url": "http://192.168.0.100:8070",
+      "token": "AQZI58fA.rfSZbm",
+      "priorities": {
+        "info": 5,
+        "warn": 7,
+        "error": 10
+      }
+    }
 ```
+
+</details>
 
 #### [Ntfy](https://ntfy.sh/)
 
@@ -1452,23 +1464,27 @@ Refer to the [config schema for NtfyConfig](https://json-schema.app/view/%23/%23
 
 multi-scrobbler optionally supports setting message notification priority via `info` `warn` and `error` mappings.
 
-EX
+<details>
 
-```json
-{
-  "type": "ntfy",
-  "name": "MyNtfyFriendlyNameForLogs",
-  "url": "http://192.168.0.100:9991",
-  "topic": "RvOwKJ1XtIVMXGLR",
-  "username": "Optional",
-  "password": "Optional",
-  "priorities": {
-    "info": 3,
-    "warn": 4,
-    "error": 5
-  }
-}
+    <summary>Example</summary>
+
+    ```json title="config.json"
+    {
+      "type": "ntfy",
+      "name": "MyNtfyFriendlyNameForLogs",
+      "url": "http://192.168.0.100:9991",
+      "topic": "RvOwKJ1XtIVMXGLR",
+      "username": "Optional",
+      "password": "Optional",
+      "priorities": {
+        "info": 3,
+        "warn": 4,
+        "error": 5
+      }
+    }
 ```
+
+</details>
 
 #### [Apprise](https://github.com/caronc/apprise-api)
 
@@ -1476,18 +1492,22 @@ Refer to the [config schema for AppriseConfig](https://json-schema.app/view/%23/
 
 multi-scrobbler supports [stateless](https://github.com/caronc/apprise-api?tab=readme-ov-file#stateless-solution) and [persistent storage](https://github.com/caronc/apprise-api?tab=readme-ov-file#persistent-storage-solution) endpoints as well as [tags](https://github.com/caronc/apprise-api?tab=readme-ov-file#tagging)/
 
-EX
+<details>
 
-```json5
-{
-  "type": "apprise",
-  "name": "MyAppriseFriendlyNameForLogs",
-  "host": "http://192.168.0.100:8080",
-  "urls": ["gotify://192.168.0.101:8070/MyToken"], // stateless endpoints
-  "keys": ["e90b20526808373353afad7fb98a201198c0c3e0555bea19f182df3388af7b17"], //persistent storage endpoints
-  "tags": ["my","optional","tags"]
-}
-```
+    <summary>Example</summary>
+
+    ```json5 title="config.json"
+    {
+      "type": "apprise",
+      "name": "MyAppriseFriendlyNameForLogs",
+      "host": "http://192.168.0.100:8080",
+      "urls": ["gotify://192.168.0.101:8070/MyToken"], // stateless endpoints
+      "keys": ["e90b20526808373353afad7fb98a201198c0c3e0555bea19f182df3388af7b17"], //persistent storage endpoints
+      "tags": ["my","optional","tags"]
+    }
+    ```
+
+</details>
 
 ### Health Endpoint
 
