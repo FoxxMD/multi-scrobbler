@@ -6,6 +6,7 @@ import { KodiSourceAIOConfig, KodiSourceConfig } from "./kodi.js";
 import { LastFmSouceAIOConfig, LastfmSourceConfig } from "./lastfm.js";
 import { ListenBrainzSourceAIOConfig, ListenBrainzSourceConfig } from "./listenbrainz.js";
 import { MopidySourceAIOConfig, MopidySourceConfig } from "./mopidy.js";
+import { MPDSourceAIOConfig, MPDSourceConfig } from "./mpd.js";
 import { MPRISSourceAIOConfig, MPRISSourceConfig } from "./mpris.js";
 import { MusikcubeSourceAIOConfig, MusikcubeSourceConfig } from "./musikcube.js";
 import { PlexSourceAIOConfig, PlexSourceConfig } from "./plex.js";
@@ -32,7 +33,8 @@ export type SourceConfig =
     | KodiSourceConfig
     | WebScrobblerSourceConfig
     | ChromecastSourceConfig
-    | MusikcubeSourceConfig;
+    | MusikcubeSourceConfig
+    | MPDSourceConfig;
 
 export type SourceAIOConfig =
     SpotifySourceAIOConfig
@@ -50,4 +52,5 @@ export type SourceAIOConfig =
     | KodiSourceAIOConfig
     | WebScrobblerSourceAIOConfig
     | ChromecastSourceAIOConfig
-    | MusikcubeSourceAIOConfig;
+    | MusikcubeSourceAIOConfig
+    | MPDSourceAIOConfig;

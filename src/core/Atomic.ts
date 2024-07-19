@@ -57,6 +57,14 @@ export interface ListenRangeData {
     end: ListenProgress
 }
 
+export interface BrainzMeta {
+    artist?: string[]
+    albumArtist?: string
+    album?: string
+    track?: string
+    releaseGroup?: string
+}
+
 export interface TrackData {
     artists?: string[]
     albumArtists?: string[]
@@ -68,13 +76,7 @@ export interface TrackData {
     duration?: number
 
     meta?: {
-        brainz?: {
-            artist?: string[]
-            albumArtist?: string
-            album?: string
-            track?: string
-            releaseGroup?: string
-        }
+        brainz?: BrainzMeta
     }
 }
 

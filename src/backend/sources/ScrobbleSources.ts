@@ -12,6 +12,7 @@ import { KodiData, KodiSourceConfig } from "../common/infrastructure/config/sour
 import { LastfmSourceConfig } from "../common/infrastructure/config/source/lastfm.js";
 import { ListenBrainzSourceConfig } from "../common/infrastructure/config/source/listenbrainz.js";
 import { MopidySourceConfig } from "../common/infrastructure/config/source/mopidy.js";
+import { MPDSourceConfig } from "../common/infrastructure/config/source/mpd.js";
 import { MPRISData, MPRISSourceConfig } from "../common/infrastructure/config/source/mpris.js";
 import { MusikcubeData, MusikcubeSourceConfig } from "../common/infrastructure/config/source/musikcube.js";
 import { PlexSourceConfig } from "../common/infrastructure/config/source/plex.js";
@@ -34,6 +35,7 @@ import { KodiSource } from "./KodiSource.js";
 import LastfmSource from "./LastfmSource.js";
 import ListenbrainzSource from "./ListenbrainzSource.js";
 import { MopidySource } from "./MopidySource.js";
+import { MPDSource } from "./MPDSource.js";
 import { MPRISSource } from "./MPRISSource.js";
 import { MusikcubeSource } from "./MusikcubeSource.js";
 import PlexSource from "./PlexSource.js";
@@ -542,6 +544,9 @@ export default class ScrobbleSources {
                 break;
             case 'musikcube':
                 newSource = await new MusikcubeSource(name, compositeConfig as MusikcubeSourceConfig, internal, this.emitter);
+                break;
+            case 'mpd':
+                newSource = await new MPDSource(name, compositeConfig as MPDSourceConfig, internal, this.emitter);
                 break;
             default:
                 break;

@@ -22,7 +22,8 @@ export type SourceType =
     | 'kodi'
     | 'webscrobbler'
     | 'chromecast'
-    | 'musikcube';
+    | 'musikcube'
+    | 'mpd';
 
 export const sourceTypes: SourceType[] = [
     'spotify',
@@ -40,7 +41,8 @@ export const sourceTypes: SourceType[] = [
     'kodi',
     'webscrobbler',
     'chromecast',
-    'musikcube'
+    'musikcube',
+    'mpd'
 ];
 
 export const lowGranularitySources: SourceType[] = ['subsonic', 'ytmusic'];

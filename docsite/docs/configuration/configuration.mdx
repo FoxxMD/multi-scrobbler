@@ -21,6 +21,7 @@ import MalojaConfig from '!!raw-loader!../../../config/maloja.json.example';
 import MopidyConfig from '!!raw-loader!../../../config/mopidy.json.example';
 import MprisConfig from '!!raw-loader!../../../config/mpris.json.example';
 import MusikcubeConfig from '!!raw-loader!../../../config/musikcube.json.example';
+import MPDConfig from '!!raw-loader!../../../config/mpd.json.example';
 import PlexConfig from '!!raw-loader!../../../config/plex.json.example';
 import SpotifyConfig from '!!raw-loader!../../../config/spotify.json.example';
 import SubsonicConfig from '!!raw-loader!../../../config/subsonic.json.example';
@@ -1253,6 +1254,52 @@ If no URL is provided to MS it will try to use `ws://localhost:7905`
         </details>
 
         or <SchemaLink lower objectName="MusikcubeSourceConfig"/>
+    </TabItem>
+</Tabs>
+
+### [MPD (Music Player Daemon)](https://www.musicpd.org/)
+
+MS communicates with MPD using the [TCP client connection.](https://mpd.readthedocs.io/en/stable/user.html#client-connections)
+
+You should uncomment/create the following settings in your mpd config:
+
+```
+bind_to_address	"any"   # or a specific ipv4/v6 address
+port            "6600"
+```
+
+<!-- MS will also discover MPD servers if [zeroconf support](https://mpd.readthedocs.io/en/stable/user.html#zeroconf) is enabled and MS is set up to utilize mDNS. This can be disabled in file-config options. -->
+
+#### Configuration
+
+<Tabs groupId="configType" queryString>
+    <TabItem value="env" label="ENV">
+        | Environmental Variable | Required? | Default          | Description |
+        |------------------------|-----------|------------------|-------------|
+        | `MPD_URL`              | No        | `localhost:6600` |             |
+        | `MPD_PASSWORD`         | No        |                  |             |
+    </TabItem>
+    <TabItem value="file" label="File">
+        <details>
+
+            <summary>Example</summary>
+
+            <CodeBlock title="CONFIG_DIR/mpd.json" language="json5">{MPDConfig}</CodeBlock>
+
+        </details>
+
+        or <SchemaLink lower objectName="MPDSourceConfig"/>
+    </TabItem>
+    <TabItem value="aio" label="AIO">
+        <details>
+
+            <summary>Example</summary>
+
+            <AIOExample data={MPDConfig} name="mpd"/>
+
+        </details>
+
+        or <SchemaLink lower objectName="MPDSourceConfig"/>
     </TabItem>
 </Tabs>
 

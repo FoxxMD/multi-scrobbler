@@ -1,0 +1,13 @@
+[
+  {
+    "enable": true,
+    "name": "MyMPD",
+    "data": {
+      "url": "192.168.0.100:6600",
+      "password": "MY_PASSWORD"
+    },
+    "options": {
+      "disableDiscovery": false
+    }
+  }
+]
