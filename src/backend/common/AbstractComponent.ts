@@ -111,8 +111,11 @@ export default abstract class AbstractComponent {
     protected doAuthentication = async (): Promise<boolean> => this.authed
 
     // default init function, should be overridden if auth stage is required
-    testAuth = async () => {
+    testAuth = async (force: boolean = false) => {
         if(!this.requiresAuth) {
+            return;
+        }
+        if(this.authed && !force) {
             return;
         }
 

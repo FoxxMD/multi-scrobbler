@@ -64,6 +64,9 @@ export default abstract class AbstractSource extends AbstractComponent implement
     pollRetries: number = 0;
     tracksDiscovered: number = 0;
 
+    protected isSleeping: boolean = false;
+    protected wakeAt: Dayjs = dayjs();
+
     supportsUpstreamRecentlyPlayed: boolean = false;
     supportsUpstreamNowPlaying: boolean = false;
 
@@ -305,6 +308,13 @@ export default abstract class AbstractSource extends AbstractComponent implement
         let pollRes: boolean | undefined = undefined;
         while (pollRes === undefined && this.pollRetries <= maxRetries) {
             try {
+                if(!this.isReady() && this.buildOK) {
+                    this.logger.verbose(`Source is no longer ready! Will attempt to reinitialize => Connection OK: ${this.connectionOK} | Auth OK: ${this.authed}`);
+                    const init = await this.initialize();
+                    if(init === false) {
+                        throw new Error('Source failed reinitialization');
+                    }
+                }
                 pollRes = await this.doPolling();
                 if(pollRes === true) {
                     break;
@@ -420,11 +430,13 @@ export default abstract class AbstractSource extends AbstractComponent implement
                 } else {
                     this.logger.debug(`Last activity was at ${this.lastActivityAt.format()} | Next check interval: ${formatNumber(sleepTime)}s`);
                 }
-                const wakeUpAt = pollFrom.add(sleepTime, 'seconds');
-                while(!this.shouldStopPolling() && dayjs().isBefore(wakeUpAt)) {
+                this.setWakeAt(pollFrom.add(sleepTime, 'seconds'));
+                this.setIsSleeping(true);
+                while(!this.shouldStopPolling() && dayjs().isBefore(this.getWakeAt())) {
                     // check for polling status every half second and wait till wake up time
                     await sleep(500);
                 }
+                this.setIsSleeping(false);
 
             }
             if(this.shouldStopPolling()) {
@@ -441,7 +453,25 @@ export default abstract class AbstractSource extends AbstractComponent implement
             this.emitEvent('statusChange', {status: 'Idle'});
             this.polling = false;
             throw e;
+        } finally {
+            this.setIsSleeping(false);
         }
+    }
+
+    protected setIsSleeping(sleeping: boolean) {
+        this.isSleeping = sleeping;
+    }
+
+    protected getIsSleeping() {
+        return this.isSleeping;
+    }
+
+    protected setWakeAt(dt: Dayjs) {
+        this.wakeAt = dt;
+    }
+
+    protected getWakeAt() {
+        return this.wakeAt;
     }
 
     protected getInterval() {
