@@ -1,3 +1,4 @@
+import dayjs from "dayjs";
 import { EventEmitter } from "events";
 import mpdapiNS, { MPDApi } from 'mpd-api';
 import mpd2 from 'mpd2';
@@ -43,9 +44,10 @@ export class MPDSource extends MemorySource {
             data = {}
         } = config;
         const {
+            interval = 5, // reduced polling interval because its likely we are on the same network
             ...rest
         } = data;
-        super('mpd', name, {...config, data: {...rest}}, internal, emitter);
+        super('mpd', name, {...config, data: {...rest, interval}}, internal, emitter);
 
         this.requiresAuth = true;
         this.canPoll = true;
@@ -106,6 +108,13 @@ export class MPDSource extends MemorySource {
 
         try {
             this.client = await mpdClient.connect({...this.clientConfig, timeout: 1000});
+            this.client.on('system-player', () => {
+               if(this.getIsSleeping()) {
+                   // wake up now!
+                   this.logger.debug(`Waking up from sleeping ${Math.abs(this.getWakeAt().diff(dayjs(), 'ms'))}ms early due to player state change`)
+                   this.setWakeAt(dayjs());
+               }
+            });
             return true;
         } catch (e) {
             let friendlyError: string | undefined;
@@ -195,8 +204,16 @@ export class MPDSource extends MemorySource {
 
     getRecentlyPlayed = async (options: RecentlyPlayedOptions = {}) => {
 
-        const state = await this.client.api.status.get<StatusResponse>();
-        const currentSong = await this.client.api.status.currentsong<CurrentSongResponse>();
+        let state: StatusResponse;
+        let currentSong: CurrentSongResponse;
+        try {
+            state = await this.client.api.status.get<StatusResponse>();
+            currentSong = await this.client.api.status.currentsong<CurrentSongResponse>();
+        } catch (e) {
+            this.connectionOK = false;
+            this.authed = false;
+            throw e;
+        }
 
         let play: PlayObject | undefined;
         if(currentSong !== undefined) {
