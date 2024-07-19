@@ -36,8 +36,6 @@ testScrobbler.verboseOptions = {
 };
 testScrobbler.lastScrobbleCheck = dayjs().subtract(60, 'seconds');
 
-const authScrobbler = new TestAuthScrobbler();
-
 describe('Networking', function () {
 
     describe('Authentication', function () {
@@ -52,6 +50,7 @@ describe('Networking', function () {
                     )
                 ],
                 async function() {
+                    const authScrobbler = new TestAuthScrobbler();
                     await authScrobbler.testAuth();
                     assert.isFalse(authScrobbler.authGated());
                 }
@@ -66,6 +65,7 @@ describe('Networking', function () {
                     )
                 ],
                 async function() {
+                    const authScrobbler = new TestAuthScrobbler();
                     await authScrobbler.testAuth();
                     assert.isTrue(authScrobbler.authGated());
                     assert.isFalse(authScrobbler.authFailure);
@@ -81,6 +81,7 @@ describe('Networking', function () {
                     )
                 ],
                 async function() {
+                    const authScrobbler = new TestAuthScrobbler();
                     await authScrobbler.testAuth();
                     assert.isTrue(authScrobbler.authGated());
                     assert.isTrue(authScrobbler.authFailure);
