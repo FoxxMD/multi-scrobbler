@@ -183,7 +183,7 @@ If you do not need the dashboard and/or ingress sources, or have security concer
 
 :::warning
 
-Any **ingress-based sources will be unusable** (Plex, Jellyfin, Tautulli, etc...) if this is disabled.
+Any **ingress-based sources will be unusable** (Plex, Tautulli, etc...) if this is disabled.
 
 :::
 
@@ -359,37 +359,52 @@ Can use this source for any application that implements the [Subsonic API](http:
 
 ### [Jellyfin](https://jellyfin.org/)
 
-#### Webhook Setup
+<details>
+
+    <summary>Migrating from Webhook (multi-scrobbler below `v0.9.0`) to API</summary>
+
+    In multi-scrobbler **below v0.9.0** communication with Jellyfin was done using Jellyfin's **Webhook** plugin.
+    This has been deprecated in favor of directly using Jeyllfin's API for a better experience in multi-scrobbler.
+
+    ### To Migrate:
+
+    * Remove the **Webhook** plugin (if not using it for anything else)
+    * Follow the new instructions below (outside this section) to setup API usage
+    * The `servers` (`JELLYFIN_SERVERS`) setting is no longer available as MS only scrobbles from the server using the API anyways.
+      * If you need to scrobble for multiple servers set up each server as a separate Jellyfin source
+    * The `users` (`JELLYFIN_USER`) setting has been renamed `usersAllowed` (`JELLYFIN_USERS_ALLOWED`)
+      * If you were using this filter to ensure only scrobbles from yourself were registered then you no longer need this setting -- by default MS will only scrobble for the user authenticated with Jellyfin's API.
+
+</details>
 
 Must be using Jellyfin 10.7 or greater
 
-* In the Jellyfin desktop web UI Navigate to -> Administration -> Dashboard -> Plugins -> Catalog
-  * Under Notifications -> **Webhook** -> Install, then restart your server
-* Navigate back to -> Administration -> Dashboard -> Plugins -> My Plugins -> Webhook
-  * Click "..." -> Settings
-* In Webhook settings:
-  * `Add Generic Destination`
-  * In the new `Generic` dropdown:
-    * Webhook Url: `http://localhost:9078/jellyfin`
-    * Notification Type: `Playback Progress`
-    * Item Type: `Songs`
-    * Check `Send All Properties`
-  * Save
+* Create an **API Key** for multi-scrobbler
+  * In the Jellyfin desktop web UI Navigate to -> Administration -> Dashboard -> API Keys (`http://YOUR_JELLYIN_URL/web/index.html#!/apikeys.html`)
+  * Click `+` button and create a new key with **App name** `multi-scrobbler`
+  * Copy the created API Key value for use in configuration below
 
-:::tip
 
-If you see errors in the MS logs regarding `missing headers` when using Jellyfin [see this workaround.](../FAQ.md#jellyfin-has-warnings-about-missing-headers)
-
-:::
+It is **recommended** to use API Key + username but if you are not an admin for your Jellyfin instance you can also authenticate with your Jellyfin username and **password.**
 
 #### Configuration
 
+:::tip
+
+By default, multi-scrobbler will only scrobble for the user authenticated with the API. Allowed Users are only necessary if you want to scrobble for additional users.
+
+:::
+
 <Tabs groupId="configType" queryString>
     <TabItem value="env" label="ENV">
-        | Environmental Variable | Required? | Default | Description                                                       |
-        |------------------------|-----------|---------|-------------------------------------------------------------------|
-        | `JELLYFIN_USER`        |           |         | Comma-separated list of usernames (from Jellyfin) to scrobble for |
-        | `JELLYFIN_SERVER`      |           |         | Comma-separated list of Jellyfin server names to scrobble from    |
+        | Environmental Variable     | Required? | Default | Description                                                                                |
+        |----------------------------|-----------|---------|--------------------------------------------------------------------------------------------|
+        | `JELLYFIN_URL`             | **Yes**   |         | The URL of the Jellyfin server IE `http://localhost:8096`                                  |
+        | `JELLYFIN_USER`            | **Yes**   |         | The user to authenticate with the API                                                      |
+        | `JELLYFIN_APIKEY`          | No        |         | The API Key to use for authentication **(Must provide either apikey or password)**         |
+        | `JELLYFIN_PASSWORD`        | No        |         | The password of the user to authenticate for. **(Must provide either apikey or password)** |
+        | `JELLYFIN_USERS_ALLOWED`   | No        |         | Comma-separated list of usernames (from Jellyfin) to scrobble for                          |
+        | `JELLYFIN_DEVICES_ALLOWED` | No        |         | Comma-separated list of devices to scrobble from                                           |
     </TabItem>
     <TabItem value="file" label="File">
         <details>

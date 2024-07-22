@@ -1,12 +1,16 @@
 /* eslint-disable no-case-declarations */
 import { childLogger, Logger } from '@foxxmd/logging';
 import EventEmitter from "events";
-import { configDir as defaultConfigDir } from "../common/index.js";
 import { ConfigMeta, InternalConfig, SourceType, sourceTypes } from "../common/infrastructure/Atomic.js";
 import { AIOConfig, SourceDefaults } from "../common/infrastructure/config/aioConfig.js";
 import { ChromecastSourceConfig } from "../common/infrastructure/config/source/chromecast.js";
 import { DeezerData, DeezerSourceConfig } from "../common/infrastructure/config/source/deezer.js";
-import { JellyData, JellySourceConfig } from "../common/infrastructure/config/source/jellyfin.js";
+import {
+    JellyApiData,
+    JellyApiSourceConfig,
+    JellyData,
+    JellySourceConfig
+} from "../common/infrastructure/config/source/jellyfin.js";
 import { JRiverData, JRiverSourceConfig } from "../common/infrastructure/config/source/jriver.js";
 import { KodiData, KodiSourceConfig } from "../common/infrastructure/config/source/kodi.js";
 import { LastfmSourceConfig } from "../common/infrastructure/config/source/lastfm.js";
@@ -30,6 +34,7 @@ import { parseBool, readJson, validateJson } from "../utils.js";
 import AbstractSource from "./AbstractSource.js";
 import { ChromecastSource } from "./ChromecastSource.js";
 import DeezerSource from "./DeezerSource.js";
+import JellyfinApiSource from "./JellyfinApiSource.js";
 import JellyfinSource from "./JellyfinSource.js";
 import { JRiverSource } from "./JRiverSource.js";
 import { KodiSource } from "./KodiSource.js";
@@ -51,20 +56,23 @@ type groupedNamedConfigs = {[key: string]: ParsedConfig[]};
 
 type ParsedConfig = SourceAIOConfig & ConfigMeta;
 
+type InternalConfigOptional = Omit<InternalConfig, 'logger'>
+
 export default class ScrobbleSources {
 
     sources: AbstractSource[] = [];
     logger: Logger;
-    configDir: string;
-    localUrl: URL;
+    internalConfig: InternalConfig;
 
     emitter: WildcardEmitter;
 
-    constructor(emitter: EventEmitter, localUrl: URL, configDir: string = defaultConfigDir, parentLogger: Logger) {
+    constructor(emitter: EventEmitter, internal: InternalConfigOptional, parentLogger: Logger) {
         this.emitter = emitter;
-        this.configDir = configDir;
-        this.localUrl = localUrl;
         this.logger = childLogger(parentLogger, 'Sources'); // winston.loggers.get('app').child({labels: ['Sources']}, mergeArr);
+        this.internalConfig = {
+            ...internal,
+            logger: this.logger
+        }
     }
 
     getByName = (name: any) => this.sources.find(x => x.name === name)
@@ -105,7 +113,7 @@ export default class ScrobbleSources {
 
         let configFile;
         try {
-            configFile = await readJson(`${this.configDir}/config.json`, {throwOnNotFound: false});
+            configFile = await readJson(`${this.internalConfig.configDir}/config.json`, {throwOnNotFound: false});
         } catch (e) {
             throw new Error('config.json could not be parsed');
         }
@@ -213,9 +221,15 @@ export default class ScrobbleSources {
                     }
                     break;
                 case 'jellyfin':
-                    const j: JellyData = {
+                    const j: (JellyData | JellyApiData) = {
                         users: process.env.JELLYFIN_USER,
                         servers: process.env.JELLYFIN_SERVER,
+                        user: process.env.JELLYFIN_USER,
+                        password: process.env.JELLYFIN_PASSWORD,
+                        apiKey: process.env.JELLYFIN_APIKEY,
+                        url: process.env.JELLYFIN_URL,
+                        usersAllow: process.env.JELLYFIN_USERS_ALLOWED,
+                        devicesAllow: process.env.JELLYFIN_DEVICES_ALLOWED,
                     };
                     if (!Object.values(j).every(x => x === undefined)) {
                         configs.push({
@@ -386,7 +400,7 @@ export default class ScrobbleSources {
             }
             let rawSourceConfigs;
             try {
-                rawSourceConfigs = await readJson(`${this.configDir}/${sourceType}.json`, {throwOnNotFound: false});
+                rawSourceConfigs = await readJson(`${this.internalConfig.configDir}/${sourceType}.json`, {throwOnNotFound: false});
             } catch (e) {
                 this.logger.error(`${sourceType}.json config file could not be parsed`);
                 continue;
@@ -496,12 +510,6 @@ export default class ScrobbleSources {
         //     throw new Error(`Config object from ${clientConfig.source || 'unknown'} with name [${clientConfig.name || 'unnamed'}] of type [${clientConfig.type || 'unknown'}] has errors: ${isValidConfig.join(' | ')}`)
         // }
 
-        const internal: InternalConfig = {
-            localUrl: this.localUrl,
-            configDir: this.configDir,
-            logger: this.logger
-        };
-
         const {type, name, data: d = {}, enable = true, options: clientOptions = {}} = clientConfig;
 
         if(enable === false) {
@@ -516,55 +524,60 @@ export default class ScrobbleSources {
         let newSource: AbstractSource;
         switch (type) {
             case 'spotify':
-                newSource = new SpotifySource(name, compositeConfig as SpotifySourceConfig, internal, this.emitter);
+                newSource = new SpotifySource(name, compositeConfig as SpotifySourceConfig, this.internalConfig, this.emitter);
                 break;
             case 'plex':
-                newSource = await new PlexSource(name, compositeConfig as PlexSourceConfig, internal, 'plex', this.emitter);
+                newSource = await new PlexSource(name, compositeConfig as PlexSourceConfig, this.internalConfig, 'plex', this.emitter);
                 break;
             case 'tautulli':
-                newSource = await new TautulliSource(name, compositeConfig as TautulliSourceConfig, internal, this.emitter);
+                newSource = await new TautulliSource(name, compositeConfig as TautulliSourceConfig, this.internalConfig, this.emitter);
                 break;
             case 'subsonic':
-                newSource = new SubsonicSource(name, compositeConfig as SubSonicSourceConfig, internal, this.emitter);
+                newSource = new SubsonicSource(name, compositeConfig as SubSonicSourceConfig, this.internalConfig, this.emitter);
                 break;
             case 'jellyfin':
-                newSource = await new JellyfinSource(name, compositeConfig as JellySourceConfig, internal, this.emitter);
+                const jfConfig = compositeConfig as (JellySourceConfig | JellyApiSourceConfig);
+                if(jfConfig.data.user !== undefined) {
+                    newSource = await new JellyfinApiSource(name, compositeConfig as JellyApiSourceConfig, this.internalConfig, this.emitter);
+                } else {
+                    newSource = await new JellyfinSource(name, compositeConfig as JellySourceConfig, this.internalConfig, this.emitter);
+                }
                 break;
             case 'lastfm':
-                newSource = await new LastfmSource(name, compositeConfig as LastfmSourceConfig, internal, this.emitter);
+                newSource = await new LastfmSource(name, compositeConfig as LastfmSourceConfig, this.internalConfig, this.emitter);
                 break;
             case 'deezer':
-                newSource = await new DeezerSource(name, compositeConfig as DeezerSourceConfig, internal, this.emitter);
+                newSource = await new DeezerSource(name, compositeConfig as DeezerSourceConfig, this.internalConfig, this.emitter);
                 break;
             case 'ytmusic':
-                newSource = await new YTMusicSource(name, compositeConfig as YTMusicSourceConfig, internal, this.emitter);
+                newSource = await new YTMusicSource(name, compositeConfig as YTMusicSourceConfig, this.internalConfig, this.emitter);
                 break;
             case 'mpris':
-                newSource = await new MPRISSource(name, compositeConfig as MPRISSourceConfig, internal, this.emitter);
+                newSource = await new MPRISSource(name, compositeConfig as MPRISSourceConfig, this.internalConfig, this.emitter);
                 break;
             case 'mopidy':
-                newSource = await new MopidySource(name, compositeConfig as MopidySourceConfig, internal, this.emitter);
+                newSource = await new MopidySource(name, compositeConfig as MopidySourceConfig, this.internalConfig, this.emitter);
                 break;
             case 'listenbrainz':
-                newSource = await new ListenbrainzSource(name, compositeConfig as ListenBrainzSourceConfig, internal, this.emitter);
+                newSource = await new ListenbrainzSource(name, compositeConfig as ListenBrainzSourceConfig, this.internalConfig, this.emitter);
                 break;
             case 'jriver':
-                newSource = await new JRiverSource(name, compositeConfig as JRiverSourceConfig, internal, this.emitter);
+                newSource = await new JRiverSource(name, compositeConfig as JRiverSourceConfig, this.internalConfig, this.emitter);
                 break;
             case 'kodi':
-                newSource = await new KodiSource(name, compositeConfig as KodiSourceConfig, internal, this.emitter);
+                newSource = await new KodiSource(name, compositeConfig as KodiSourceConfig, this.internalConfig, this.emitter);
                 break;
             case 'webscrobbler':
-                newSource = await new WebScrobblerSource(name, compositeConfig as WebScrobblerSourceConfig, internal, this.emitter);
+                newSource = await new WebScrobblerSource(name, compositeConfig as WebScrobblerSourceConfig, this.internalConfig, this.emitter);
                 break;
             case 'chromecast':
-                newSource = await new ChromecastSource(name, compositeConfig as ChromecastSourceConfig, internal, this.emitter);
+                newSource = await new ChromecastSource(name, compositeConfig as ChromecastSourceConfig, this.internalConfig, this.emitter);
                 break;
             case 'musikcube':
-                newSource = await new MusikcubeSource(name, compositeConfig as MusikcubeSourceConfig, internal, this.emitter);
+                newSource = await new MusikcubeSource(name, compositeConfig as MusikcubeSourceConfig, this.internalConfig, this.emitter);
                 break;
             case 'mpd':
-                newSource = await new MPDSource(name, compositeConfig as MPDSourceConfig, internal, this.emitter);
+                newSource = await new MPDSource(name, compositeConfig as MPDSourceConfig, this.internalConfig, this.emitter);
                 break;
             case 'vlc':
                 newSource = await new VLCSource(name, compositeConfig as VLCSourceConfig, internal, this.emitter);
