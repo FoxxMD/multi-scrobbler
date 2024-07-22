@@ -4,12 +4,16 @@
     "enable": true,
     "clients": [],
     "data": {
-      "users": ["FoxxMD"],
-      "servers": ["myServer","anotherServer"]
+      "url": "http://localhost:8096",
+      "user": "FoxxMD",
+      "apiKey": "c9fae8756fbf481ebd9c5bb56bd6540c",
+      "usersAllowed": ["FoxxMD","SomeOtherUser"],
+      "usersBlocked": ["AnotherUser"],
+      "devicesAllowed": ["firefox"],
+      "devicesBlocked": ["google-home"]
     },
     "options": {
-      "logPayload": false,
-      "logFilterFailure": "warn"
+      "logFilterFailure": "debug"
     }
   }
 ]

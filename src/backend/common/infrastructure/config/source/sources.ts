@@ -1,6 +1,6 @@
 import { ChromecastSourceAIOConfig, ChromecastSourceConfig } from "./chromecast.js";
 import { DeezerSourceAIOConfig, DeezerSourceConfig } from "./deezer.js";
-import { JellySourceAIOConfig, JellySourceConfig } from "./jellyfin.js";
+import { JellyApiSourceAIOConfig, JellyApiSourceConfig, JellySourceAIOConfig, JellySourceConfig } from "./jellyfin.js";
 import { JRiverSourceAIOConfig, JRiverSourceConfig } from "./jriver.js";
 import { KodiSourceAIOConfig, KodiSourceConfig } from "./kodi.js";
 import { LastFmSouceAIOConfig, LastfmSourceConfig } from "./lastfm.js";
@@ -24,6 +24,7 @@ export type SourceConfig =
     | DeezerSourceConfig
     | SubSonicSourceConfig
     | JellySourceConfig
+    | JellyApiSourceConfig
     | LastfmSourceConfig
     | YTMusicSourceConfig
     | MPRISSourceConfig
@@ -43,6 +44,7 @@ export type SourceAIOConfig =
     | DeezerSourceAIOConfig
     | SubsonicSourceAIOConfig
     | JellySourceAIOConfig
+    | JellyApiSourceAIOConfig
     | LastFmSouceAIOConfig
     | YTMusicSourceAIOConfig
     | MPRISSourceAIOConfig

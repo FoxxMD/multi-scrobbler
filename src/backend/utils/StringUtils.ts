@@ -325,3 +325,24 @@ export const compareNormalizedStrings = (existing: string, candidate: string): S
         strategies: [levenStrategy, diceStrategy]
     })
 }
+
+interface ArrParseOpts {
+    lower?: boolean
+}
+
+export const parseArrayFromMaybeString = (value: string | string[] = '', opts: ArrParseOpts = {}) => {
+    const {lower = false} = opts;
+    let arr: string[] = [];
+    if (Array.isArray(value)) {
+        arr = value;
+    } else if (value.trim() === '') {
+        return [];
+    } else {
+        arr = value.split(',');
+    }
+    arr = arr.map(x => x.trim());
+    if (lower) {
+        arr = arr.map(x => x.toLowerCase());
+    }
+    return arr;
+}
