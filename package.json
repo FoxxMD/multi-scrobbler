@@ -80,7 +80,7 @@
     "fixed-size-list": "^0.3.0",
     "formidable": "^2.1",
     "gotify": "^1.1.0",
-    "iso-websocket": "^0.2.0",
+    "iso-websocket": "^0.3.0",
     "iti": "^0.6.0",
     "json5": "^2.2.3",
     "kodi-api": "^0.2.1",

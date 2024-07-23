@@ -4,6 +4,7 @@
     "enable": true,
     "name": "musikcube",
     "data": {
+      "url": "ws://localhost:7905",
       "password": "MY_PASSWORD"
     }
   }

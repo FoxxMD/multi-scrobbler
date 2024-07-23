@@ -1,9 +1,6 @@
 import { childLogger } from "@foxxmd/logging";
 import { EventEmitter } from "events";
-import { WS } from 'iso-websocket'
-// TODO remove when/if iso-websocket exports these
-// @ ts-expect-error not exported properly by package
-//import { CloseEvent, ErrorEvent, RetryEvent } from "iso-websocket/dist/src/events.js";
+import { WS, CloseEvent, ErrorEvent, RetryEvent } from 'iso-websocket'
 import { randomUUID } from "node:crypto";
 import normalizeUrl from 'normalize-url';
 import pEvent from 'p-event';
@@ -102,8 +99,7 @@ export class MusikcubeSource extends MemorySource {
             automaticOpen: false,
             retry: {
                 retries: 0
-            },
-            //errorInfo: true
+            }
         });
         const wsLogger = childLogger(this.logger, 'WS');
         this.client.addEventListener('retry', (e) => {
@@ -128,12 +124,8 @@ export class MusikcubeSource extends MemorySource {
                 this.connectionOK = false;
                 this.authed = false;
             }
-            if(e.error.message === ('Websocket error')) {
-                wsLogger.error('Communication with server failed => Websocket error');
-
-            } else {
-                wsLogger.error(new Error('Communication with server failed', {cause: e.error}));
-            }
+            const hint = e.error?.cause?.message ?? undefined;
+            wsLogger.error(new Error(`Communication with server failed${hint !== undefined ? ` (${hint})` : ''}`, {cause: e.error}));
         });
 
         this.client.addEventListener('message', (e) => {
@@ -148,11 +140,12 @@ export class MusikcubeSource extends MemorySource {
     protected async doCheckConnection(): Promise<true | string | undefined> {
         try {
             this.client.open();
-            const e = await pEvent(this.client, 'open');
+            const opened = await pEvent(this.client, 'open');
             return true;
         } catch (e) {
             this.client.close();
-            throw new Error(`Could not connect to Musikcube metadata server`);
+            const hint = e.error?.cause?.message ?? undefined;
+            throw new Error(`Could not connect to Musikcube metadata server${hint !== undefined ? ` (${hint})` : ''}`, {cause: e.error ?? e});
         }
 
     }
@@ -282,21 +275,6 @@ const isErrorEvent = (e: Event): e is ErrorEvent => {
 }
 const isRetryEvent = (e: Event): e is RetryEvent => {
     return e.type === 'retry';
-}
-
-// TODO remove when/if iso-websockets exports these
-interface ErrorEvent extends Event {
-    type: 'error'
-    error: Error
-    message: string
-}
-interface CloseEvent extends Event {
-    type: 'close'
-    reason: string
-    code: number
-}
-interface RetryEvent extends Event {
-    type: 'retry'
 }
 
 const isAuthenticateResponse = (data: any): data is MCAuthenticateResponse => {
