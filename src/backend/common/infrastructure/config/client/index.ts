@@ -37,6 +37,15 @@ export interface CommonClientOptions extends RequestRetryOptions {
      * @examples [true]
      * */
     refreshEnabled?: boolean
+    /**
+     * Force client to always refresh scrobbled plays from service before scrobbling new play
+     *
+     * WARNING: This will cause increased load on the scrobble service and potentially slow down scrobble speed as well. This should be used as a debugging tool and not be always-on.
+     *
+     * @default false
+     * @examples [false]
+     * */
+    refreshForce?: boolean
 
     /**
      * The number of tracks to retrieve on initial refresh (related to scrobbleBacklogCount). If not specified this is the maximum supported for the client.

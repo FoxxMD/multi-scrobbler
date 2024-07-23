@@ -521,11 +521,15 @@ ${closestMatch.breakdowns.join('\n')}`, {leaf: ['Dupe Check']});
         this.logger.info('Scrobble processing started');
         this.emitEvent('statusChange', {status: 'Running'});
 
+        const {
+            refreshForce = false
+        } = this.config.options || {};
+
         try {
             this.scrobbling = true;
             while (!this.shouldStopScrobbleProcessing()) {
                 while (this.queuedScrobbles.length > 0) {
-                    if (this.lastScrobbleCheck.unix() < this.getLatestQueuePlayDate().unix()) {
+                    if (refreshForce || (this.lastScrobbleCheck.unix() < this.getLatestQueuePlayDate().unix())) {
                         await this.refreshScrobbles();
                     }
                     const currQueuedPlay = this.queuedScrobbles.shift();
