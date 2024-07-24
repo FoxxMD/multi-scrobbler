@@ -427,12 +427,13 @@ describe('Detects duplicate and unique scrobbles using actively tracked scrobble
 
 describe('Manages scrobble queue', function() {
 
-    before(function() {
+    before(async function() {
+        await testScrobbler.initialize();
         testScrobbler.recentScrobbles = normalizedWithMixedDur;
         testScrobbler.scrobbleSleep = 500;
         testScrobbler.scrobbleDelay = 0;
         testScrobbler.lastScrobbleCheck = dayjs().subtract(60, 'seconds');
-        testScrobbler.initScrobbleMonitoring();
+        testScrobbler.initScrobbleMonitoring().catch(console.error);
     });
 
     it('Scrobbles a uniquely queued play', async function() {
