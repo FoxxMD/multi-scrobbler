@@ -1,6 +1,6 @@
 import { stringSameness } from '@foxxmd/string-sameness';
 import dayjs from "dayjs";
-import request, { Request } from 'superagent';
+import request, { Request, Response } from 'superagent';
 import { PlayObject } from "../../../core/Atomic.js";
 import { slice } from "../../../core/StringUtils.js";
 import { combinePartsToString } from "../../utils.js";
@@ -127,7 +127,7 @@ export class ListenbrainzApiClient extends AbstractApiClient {
     }
 
 
-    callApi = async <T>(req: Request, retries = 0): Promise<T> => {
+    callApi = async <T = Response>(req: Request, retries = 0): Promise<T> => {
         const {
             maxRequestRetries = 2,
             retryMultiplier = DEFAULT_RETRY_MULTIPLIER
@@ -248,17 +248,27 @@ export class ListenbrainzApiClient extends AbstractApiClient {
         }
     }
 
-    submitListen = async (play: PlayObject) => {
+    submitListen = async (play: PlayObject, log: boolean = false) => {
         try {
             const listenPayload: SubmitPayload = {listen_type: 'single', payload: [ListenbrainzApiClient.playToListenPayload(play)]};
-            await this.callApi(request.post(`${this.url}1/submit-listens`).type('json').send(listenPayload));
+            if(log) {
+                this.logger.debug(`Submit Payload: ${JSON.stringify(listenPayload)}`);
+            }
+            // response consists of {"status": "ok"}
+            // so no useful information
+            // https://listenbrainz.readthedocs.io/en/latest/users/api-usage.html#submitting-listens
+            // TODO may we should make a call to recent-listens to get the parsed scrobble?
+            const resp = await this.callApi(request.post(`${this.url}1/submit-listens`).type('json').send(listenPayload));
+            if(log) {
+                this.logger.debug(`Submit Response: ${resp.text}`)
+            }
             return listenPayload;
         } catch (e) {
             throw e;
         }
     }
 
-    static playToListenPayload = (play: PlayObject): ListenPayload => {
+    static playToListenPayload(play: PlayObject): ListenPayload {
         const {
             data: {
                 playDate,
@@ -579,6 +589,21 @@ export class ListenbrainzApiClient extends AbstractApiClient {
                 deviceId: combinePartsToString([music_service_name ?? music_service, submission_client, submission_client_version])
             }
         }
+    }
+
+    static submitToPlayObj(submitObj: SubmitPayload, playObj: PlayObject): PlayObject {
+        if (submitObj.payload.length > 0) {
+            const respPlay = {
+                ...playObj,
+            };
+            respPlay.data = {
+                ...playObj.data,
+                album: submitObj.payload[0].track_metadata?.release_name ?? playObj.data.album,
+                track: submitObj.payload[0].track_metadata?.track_name ?? playObj.data.album,
+            };
+            return respPlay;
+        }
+        return playObj;
     }
 
     static formatPlayObj(obj: any, options: FormatPlayObjectOptions): PlayObject {

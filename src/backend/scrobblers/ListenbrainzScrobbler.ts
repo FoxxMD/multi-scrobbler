@@ -91,30 +91,18 @@ export default class ListenbrainzScrobbler extends AbstractScrobbleClient {
             } = {}
         } = playObj;
 
-        let rawPayload = {listen_type: 'single', payload: [this.playToClientPayload(playObj)]};
-
         try {
-            const resp = await this.api.submitListen(playObj);
-            rawPayload = resp;
+            await this.api.submitListen(playObj, true);
 
             if (newFromSource) {
                 this.logger.info(`Scrobbled (New)     => (${source}) ${buildTrackString(playObj)}`);
             } else {
                 this.logger.info(`Scrobbled (Backlog) => (${source}) ${buildTrackString(playObj)}`);
             }
-            // last fm has rate limits but i can't find a specific example of what that limit is. going to default to 1 scrobble/sec to be safe
-            //await sleep(1000);
             return playObj;
         } catch (e) {
             await this.notifier.notify({title: `Client - ${capitalize(this.type)} - ${this.name} - Scrobble Error`, message: `Failed to scrobble => ${buildTrackString(playObj)} | Error: ${e.message}`, priority: 'error'});
-            this.logger.error(`Failed to scrobble => ${e.message}`, {payload: rawPayload});
-            if(e instanceof UpstreamError) {
-                throw e;
-            } else {
-                throw new UpstreamError(`Error occurred while making Listenbrainz API request: ${e.message}`, {cause: e, showStopper: true});
-            }
-        } finally {
-            this.logger.debug(`Raw Payload:`, {rawPayload});
+            throw new UpstreamError(`Error occurred while making Listenbrainz API scrobble request: ${e.message}`, {cause: e, showStopper: !(e instanceof UpstreamError)});
         }
     }
 }
