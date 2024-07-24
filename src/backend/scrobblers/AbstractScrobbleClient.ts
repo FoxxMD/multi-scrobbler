@@ -167,6 +167,43 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
 
     protected abstract getScrobblesForRefresh(limit: number): Promise<PlayObject[]>;
 
+    shouldRefreshScrobble = () => {
+        const {
+            refreshStaleAfter
+        } = this.config.options || {};
+
+        if (!this.refreshEnabled) {
+            this.logger.debug(`Should NOT refresh scrobbles => refreshEnabled is false`);
+            return false;
+        }
+
+        const queuedPlayedDate = this.getLatestQueuePlayDate();
+
+        // if next queued play was played more recently than the last time we refreshed upstream scrobbles
+        if (this.lastScrobbleCheck.unix() < queuedPlayedDate.unix()) {
+            this.logger.debug('Should refresh scrobbles => queued scrobble playDate is newer than last upstream scrobble refresh');
+            return true;
+        }
+
+        // if the last scrobbled play is at or is newer than the next scrobble then we are inserting (or potentially duping)
+        // in which case our data is probably stale
+        if(this.newestScrobbleTime !== undefined && this.newestScrobbleTime.unix() >= queuedPlayedDate.unix()) {
+            this.logger.debug('Should refresh scrobbles => queued scrobble playDate is equal to or older than the newest upstream scrobble');
+            return true;
+        }
+
+        if(refreshStaleAfter !== undefined) {
+            const diff = dayjs().diff(this.lastScrobbleCheck, 's');
+            if(diff > refreshStaleAfter) {
+                this.logger.debug(`Should refresh scrobbles => last refresh (${diff}s ago) was longer than refreshStaleAfter (${refreshStaleAfter}s)`);
+                return true;
+            }
+        }
+
+        this.logger.debug('Scrobble refresh not needed');
+        return false;
+    }
+
     public abstract alreadyScrobbled(playObj: PlayObject, log?: boolean): Promise<boolean>;
     scrobblesLastCheckedAt = () => this.lastScrobbleCheck
 
@@ -528,40 +565,6 @@ ${closestMatch.breakdowns.join('\n')}`, {leaf: ['Dupe Check']});
     }
 
     protected shouldStopScrobbleProcessing = () => this.scrobbling === false || this.userScrobblingStopSignal !== undefined;
-
-    shouldRefreshScrobble = (ignoreForce: boolean = false) => {
-        const {
-            refreshForce = false
-        } = this.config.options || {};
-
-        if (!this.refreshEnabled) {
-            this.logger.debug(`Should NOT refresh scrobbles => refreshEnabled is false`);
-            return false;
-        }
-
-        if(refreshForce && !ignoreForce) {
-            this.logger.debug(`Should refresh scrobbles => refreshForce is true`);
-            return true;
-        }
-
-        const queuedPlayedDate = this.getLatestQueuePlayDate();
-
-        // if next queued play was played more recently than the last time we refreshed upstream scrobbles
-        if (this.lastScrobbleCheck.unix() < queuedPlayedDate.unix()) {
-            this.logger.debug('Should refresh scrobbles => queued scrobble playDate is newer than last upstream scrobble refresh');
-            return true;
-        }
-
-        // if the last scrobbled play is at or is newer than the next scrobble then we are inserting (or potentially duping)
-        // in which case our data is probably stale
-        if(this.newestScrobbleTime !== undefined && this.newestScrobbleTime.unix() >= queuedPlayedDate.unix()) {
-            this.logger.debug('Should refresh scrobbles => queued scrobble playDate is equal to or older than the newest upstream scrobble');
-            return true;
-        }
-
-        this.logger.debug('Scrobble refresh not needed');
-        return false;
-    }
 
     protected doProcessing = async (): Promise<true | undefined> => {
         if (this.scrobbling === true) {
