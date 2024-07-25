@@ -55,6 +55,7 @@
     "@foxxmd/chromecast-client": "^1.0.4",
     "@foxxmd/get-version": "^0.0.3",
     "@foxxmd/logging": "^0.1.14",
+    "@foxxmd/regex-buddy-core": "^0.1.0",
     "@foxxmd/string-sameness": "^0.4.0",
     "@kenyip/backoff-strategies": "^1.0.4",
     "@react-nano/use-event-source": "^0.13.0",

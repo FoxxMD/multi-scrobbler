@@ -1,6 +1,13 @@
 import { Logger } from "@foxxmd/logging";
+import { searchAndReplace, SearchAndReplaceRegExp } from "@foxxmd/regex-buddy-core";
+import { compare } from "compare-versions";
+import { PlayObject } from "../../core/Atomic.js";
+import { configPartsToStrongParts, configValToSearchReplace } from "../utils.js";
 import { hasNodeNetworkException } from "./errors/NodeErrors.js";
 import { hasUpstreamError } from "./errors/UpstreamError.js";
+import { PlayTransformParts, PlayTransformRules, TRANSFORM_HOOK, TransformHook } from "./infrastructure/Atomic.js";
+import { CommonClientConfig } from "./infrastructure/config/client/index.js";
+import { CommonSourceConfig } from "./infrastructure/config/source/index.js";
 
 export default abstract class AbstractComponent {
     requiresAuth: boolean = false;
@@ -13,13 +20,22 @@ export default abstract class AbstractComponent {
 
     initializing: boolean = false;
 
+    config: CommonClientConfig | CommonSourceConfig;
+
+    transformRules!: PlayTransformRules;
+
     logger: Logger;
+
+    protected constructor(config: CommonClientConfig | CommonSourceConfig) {
+        this.config = config;
+    }
 
     initialize = async () => {
         this.logger.debug('Attempting to initialize...');
         try {
             this.initializing = true;
             await this.buildInitData();
+            this.buildTransformRules();
             await this.checkConnection();
             await this.testAuth();
             this.logger.info('Fully Initialized!');
@@ -72,6 +88,74 @@ export default abstract class AbstractComponent {
         return;
     }
 
+    public buildTransformRules() {
+        try {
+            this.doBuildTransformRules();
+        } catch (e) {
+            this.buildOK = false;
+            throw new Error('Could not build playTransform rules. Check your configuration is valid.', {cause: e});
+        }
+    }
+
+    protected doBuildTransformRules() {
+        const {
+            options: {
+                playTransform
+            } = {}
+        } = this.config;
+
+        if (playTransform === undefined) {
+            this.transformRules = {};
+            return;
+        }
+
+        const {
+            preCompare: preConfig,
+            compare: {
+                candidate: candidateConfig,
+                existing: existingConfig,
+            } = {},
+            postCompare: postConfig
+        } = playTransform;
+
+        let preCompare,
+            candidate,
+            existing,
+            postCompare;
+
+        try {
+            preCompare = configPartsToStrongParts(preConfig)
+        } catch (e) {
+            throw new Error('preCompare was not valid', {cause: e});
+        }
+
+        try {
+            candidate = configPartsToStrongParts(candidateConfig)
+        } catch (e) {
+            throw new Error('candidate was not valid', {cause: e});
+        }
+
+        try {
+            existing = configPartsToStrongParts(existingConfig)
+        } catch (e) {
+            throw new Error('existing was not valid', {cause: e});
+        }
+
+        try {
+            postCompare = configPartsToStrongParts(postConfig)
+        } catch (e) {
+            throw new Error('postCompare was not valid', {cause: e});
+        }
+
+        this.transformRules = {
+            preCompare,
+            compare: {
+                candidate,
+                existing,
+            },
+            postCompare,
+        }
+    }
 
     public async checkConnection() {
         try {
@@ -148,5 +232,116 @@ export default abstract class AbstractComponent {
      * */
     protected async postInitialize(): Promise<void> {
         return;
+    }
+
+    public transformPlay = (play: PlayObject, hookType: TransformHook, log: boolean = true) => {
+        let hook: PlayTransformParts<SearchAndReplaceRegExp> | undefined;
+
+        switch (hookType) {
+            case TRANSFORM_HOOK.preCompare:
+                hook = this.transformRules.preCompare;
+                break;
+            case TRANSFORM_HOOK.candidate:
+                hook = this.transformRules.compare?.candidate;
+                break;
+            case TRANSFORM_HOOK.existing:
+                hook = this.transformRules.compare?.candidate;
+                break;
+            case TRANSFORM_HOOK.postCompare:
+                hook = this.transformRules.postCompare;
+                break;
+        }
+
+        if (hook === undefined) {
+            return play;
+        }
+
+        const {
+            data: {
+                track,
+                artists,
+                albumArtists,
+                album
+            } = {}
+        } = play;
+
+        const transformedPlay = {
+            ...play
+        }
+
+        const results: [string, string, string][] = [];
+
+        if (hook.title !== undefined && track !== undefined) {
+            try {
+                const t = searchAndReplace(track, hook.title);
+                if (t !== track) {
+                    results.push(['title', track, t]);
+                    transformedPlay.data.track = t;
+                }
+            } catch (e) {
+                this.logger.warn(`Failed to transform title during ${hookType} transform: ${track}`, {cause: e});
+            }
+        }
+
+        if (hook.artists !== undefined && artists !== undefined && artists.length > 0) {
+            const transformedArtists: string[] = [];
+            let anyTransformed = false;
+            for (const artist of artists) {
+                try {
+                    const t = searchAndReplace(artist, hook.artists);
+                    if (t !== artist) {
+                        anyTransformed = true;
+                    }
+                    transformedArtists.push(t);
+                } catch (e) {
+                    this.logger.warn(`Failed to transform artist during ${hookType} transform: ${artist}`, {cause: e});
+                    transformedArtists.push(artist);
+                }
+            }
+            transformedPlay.data.artists = transformedArtists;
+            if (anyTransformed) {
+                results.push(['artists', artists.join(' / '), transformedArtists.join(' / ')]);
+            }
+        }
+
+        if (hook.artists !== undefined && albumArtists !== undefined && albumArtists.length > 0) {
+            const transformedArtists: string[] = [];
+            let anyTransformed = false;
+            for (const artist of albumArtists) {
+                try {
+                    const t = searchAndReplace(artist, hook.artists);
+                    if (t !== artist) {
+                        anyTransformed = true;
+                    }
+                    transformedArtists.push(t);
+                } catch (e) {
+                    this.logger.warn(`Failed to transform albumArtist during ${hookType} transform: ${artist}`, {cause: e});
+                    transformedArtists.push(artist);
+                }
+            }
+            transformedPlay.data.albumArtists = transformedArtists;
+            if (anyTransformed) {
+                results.push(['albumArtists', artists.join(' / '), transformedArtists.join(' / ')]);
+            }
+        }
+
+        if (hook.album !== undefined && album !== undefined) {
+            try {
+                const t = searchAndReplace(album, hook.album);
+                if (t !== album) {
+                    results.push(['album', album, t]);
+                    transformedPlay.data.album = t;
+                }
+            } catch (e) {
+                this.logger.warn(`Failed to transform album during ${hookType} transform: ${album}`, {cause: e});
+            }
+        }
+
+        if(results.length > 0) {
+            this.logger.debug(`Play transformed by ${hookType}:
+            ${results.map(x => `${x[0]}: ${x[1]} => ${x[2]}`).join('\n')}`);
+        }
+
+        return transformedPlay;
     }
 }

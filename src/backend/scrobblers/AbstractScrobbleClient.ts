@@ -73,13 +73,13 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
     queuedScrobbles: QueuedScrobble<PlayObject>[] = [];
     deadLetterScrobbles: DeadLetterScrobble<PlayObject>[] = [];
 
-    config: CommonClientConfig;
+    declare config: CommonClientConfig;
 
     notifier: Notifiers;
     emitter: EventEmitter;
 
     constructor(type: any, name: any, config: CommonClientConfig, notifier: Notifiers, emitter: EventEmitter, logger: Logger) {
-        super();
+        super(config);
         this.type = type;
         this.name = name;
         this.identifier = `${capitalize(this.type)} - ${name}`;
@@ -89,7 +89,6 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
 
         this.scrobbledPlayObjs = new FixedSizeList<ScrobbledPlayObject>(this.MAX_STORED_SCROBBLES);
 
-        this.config = config;
         const {
             options: {
                 refreshEnabled = true,

@@ -46,7 +46,7 @@ export default abstract class AbstractSource extends AbstractComponent implement
     type: SourceType;
     identifier: string;
 
-    config: SourceConfig;
+    declare config: SourceConfig;
     clients: string[];
     instantiatedAt: Dayjs;
     lastActivityAt: Dayjs;
@@ -77,7 +77,7 @@ export default abstract class AbstractSource extends AbstractComponent implement
     protected recentDiscoveredPlays: GroupedFixedPlays = new TupleMap<DeviceId, PlayUserId, FixedSizeList<ProgressAwarePlayObject>>();
 
     constructor(type: SourceType, name: string, config: SourceConfig, internal: InternalConfig, emitter: EventEmitter) {
-        super();
+        super(config);
         const {clients = [] } = config;
         this.type = type;
         this.name = name;
