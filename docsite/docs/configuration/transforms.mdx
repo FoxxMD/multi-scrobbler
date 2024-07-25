@@ -159,8 +159,8 @@ The `compare` [hook](#hook) is slightly different than `preCompare` and `postCom
     "options": {
       "playTransform": {
         "compare": {
-          "candidate": [/* ... */], // modify the "new" Play being compared
-          "existing": [/* ... */], // modify all "existing" Play/Scrobbles the new Play is being compared against
+          "candidate": {/* ... */}, // modify the "new" Play being compared
+          "existing": {/* ... */}, // modify all "existing" Play/Scrobbles the new Play is being compared against
         },
       }
     }
@@ -203,9 +203,7 @@ Removes the phrase `(Album Version)` from the Title of a Play/Scrobble
       "playTransform": {
         "preCompare": {
           "title": [
-            [
               "(Album Version)"
-            ]
           ]
         },
       }
