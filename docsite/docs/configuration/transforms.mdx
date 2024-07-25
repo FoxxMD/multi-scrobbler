@@ -1,0 +1,217 @@
+---
+sidebar_position: 4
+title: Scrobble Modification
+toc_max_heading_level: 4
+---
+
+Multi-scrobbler configs support the ability to modify scrobble data in an automated fashion by matching and replacing strings in **title, artists, and album** at many different times in multi-scrobbler's lifecycle.
+
+### Why?
+
+You may need to "clean up" data from a Source or before sending to a scrobble Client due to any number of reasons:
+
+* ID3 tags in your music collection are dirty or have repeating garbage IE `[YourMusicSource.com] My Artist - My Title`
+* A Source's service often incorrectly adds data to some field IE `My Artist - My Title (Album Version)` when the title should just be `My Title`
+* An Artist you listen to often is spelled different between a Source and a Client which causes duplicate scrobbles
+
+In any scenario where a repeating pattern can be found in the data it would be nice to be able to fix it before the data gets downstream or to help prevent duplicate scrobbling. Multi-scrobbler can help you do this.
+
+## Overview
+
+### Journey of a Scrobble
+
+First, let's recap the lifecycle of a scrobble in multi-scrobbler:
+
+**Sources** are the beginning of the journey for a **Play** (song you've listened to long enough to scrobblable)
+
+* A Source finds a new valid **Play**
+* The Source **compares** this new Play to all the other Plays it has already seen, if the Play is unique (title/artist/album/listened datetime) then...
+* The Source **discovers** the Play, adds it to Plays it has seen already, and broadcasts the Play should be scrobbled to all Clients
+
+Scrobble **Clients** listen for discovered Plays from Sources, then...
+
+* A Client receives a **Play** from a Source
+* The Client **compares** this Play to all the other scrobbles it has already seen, if the Play is unique (title/artist/album/listened datetime) then...
+* The Client **scrobbles** the Play downstream to the scrobble service and adds it as a Scrobble it has seen already
+
+### Lifecyle Hooks
+
+You'll notice there is a pattern above that looks like this:
+
+* **Before** data is compared
+* Data is **compared**
+* **After** data is compared
+
+These points, during both Source and Client processes, are when you can hook into the scrobble lifecycle and modify it.
+
+#### TLDR
+
+In more concrete terms this is the structure of hooks within a configuration (can be used in any **Source** or **Client**):
+
+```json5 title="lastfm.json" {10-14}
+[
+  {
+    "name": "myLastFm",
+    "enable": true,
+    "configureAs": "source",
+    "data": {
+      // ...
+    },
+    "options": {
+      "playTransform": {
+        "preCompare": {/* ... */},
+        "compare": {/* ... */},
+        "postCompare": {/* ... */}
+      }
+    }
+  }
+]
+```
+
+##### Hook
+
+For **Sources**:
+
+* `preCompare` - modify Play data immediately when received
+* `compare` - modify Play data when it is being compared to see if Play was already discovered
+* `postCompare` - modify Play data before sending to scrobble **Clients**
+
+For **Clients**:
+
+* `preCompare` - modify Play data immediately when received
+* `compare` - modify Play data when it is being compared to see if it was already scrobbled
+* `postCompare` - modify Play data before scrobbling it to downstream service and adding to already seen scrobbles
+
+:::tip
+
+Keep in mind that modifying Scrobble/Play data earlier in the lifecycle will affect that data at all times later in the lifecycle.
+
+For example, to modify the track so it's the same anywhere it is processed in multi-scrobbler you only need to modify it in the **Source's** `preCompare` hook because all later processes will receive the data with the modified track.
+
+:::
+
+### Modification Parts
+
+
+Each **hook** (`preCompare` etc...) is an object that specifies what part of the **Play** to modify:
+
+```json5
+{
+    "title": [/* ... */],
+    "artists": [/* ... */],
+    "album": [/* ... */]
+}
+```
+
+##### Expression
+
+and then a **list** what pattern/replacements (expressions) to use for the modification by using either simple strings or `search-replace` objects:
+
+```json5
+[
+  "badTerm", // remove all instances of 'badTerm'
+  {
+    "search": "anotherBadTerm", // and also match all instances of 'anotherBadTerm'
+    "replace": "goodTerm" // replace with the string 'goodTerm'
+  }
+]
+```
+
+Putting it all together:
+
+```json5 title="lastfm.json"
+[
+  {
+    "name": "myLastFm",
+    "enable": true,
+    "configureAs": "source",
+    "data": {
+      // ...
+    },
+    "options": {
+      "playTransform": {
+        "preCompare": {
+          "title": [
+            [
+              "badTerm",
+              {
+                "search": "badTerm",
+                "replace": "goodTerm"
+              }
+            ]
+          ]
+        },
+      }
+    }
+  }
+]
+```
+
+#### Compare Hook
+
+The `compare` [hook](#hook) is slightly different than `preCompare` and `postCompare`. It consists of an object where you define which side(s) of the comparison should be modified. It also **does not modify downstream data!** Instead, the modifications are made only for use in the comparison.
+
+```json5 title="lastfm.json"
+[
+  {
+    "name": "myLastFm",
+    // ...
+    "options": {
+      "playTransform": {
+        "compare": {
+          "candidate": [/* ... */], // modify the "new" Play being compared
+          "existing": [/* ... */], // modify all "existing" Play/Scrobbles the new Play is being compared against
+        },
+      }
+    }
+  }
+]
+```
+
+#### Regular Expressions
+
+In addition to plain strings [expressions](#expression) that are matched and removed you can also use Regular Expressions. Write your regex like you normally would, but as a string, and it'll automatically be parsed:
+
+```json5
+[
+  "/^\(\w+.com)/i", // matches any string that starts with '(YourMusic.com)' and removes it
+  {
+    "search": "/^\(\w+.com)/i", // matches any string that starts with '(YourMusic.com)'
+    "replace": "[MySite.com]" // replace with the string '[MySite.com]'
+  }
+]
+```
+
+The `replace` property uses javascript's [`replace()` function and so can use any special string characters.](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String/replace#specifying_a_string_as_the_replacement)
+
+## Examples
+
+### Remove phrase from Title everywhere
+
+Removes the phrase `(Album Version)` from the Title of a Play/Scrobble
+
+<details>
+
+    <summary>Example</summary>
+
+```json5 title="lastfm.json"
+[
+  {
+    "name": "myLastFm",
+    // ...
+    "options": {
+      "playTransform": {
+        "preCompare": {
+          "title": [
+            [
+              "(Album Version)"
+            ]
+          ]
+        },
+      }
+    }
+  }
+]
+```
+</details>
+
