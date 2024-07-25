@@ -81,10 +81,10 @@ export const generatePlay = (data: ObjectPlayData = {}, meta: PlayMeta = {}): Pl
     return {
         data: {
             track: faker.music.songName(),
-            artists: faker.helpers.multiple(faker.person.fullName, {count: {min: 1, max: 2}}),
+            artists: faker.helpers.multiple(faker.music.artist, {count: {min: 1, max: 3}}),
             duration: faker.number.int({min: 30, max: 300}),
             playDate: dayjs().subtract(faker.number.int({min: 1, max: 800})),
-            album: faker.music.songName(),
+            album: faker.music.album(),
             ...data
         },
         meta: {
