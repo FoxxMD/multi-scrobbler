@@ -1,6 +1,7 @@
-import chai, { assert } from 'chai';
+import chai, { assert, expect } from 'chai';
 import asPromised from 'chai-as-promised';
 import clone from 'clone';
+import { source } from "common-tags";
 import dayjs from "dayjs";
 import { after, before, describe, it } from 'mocha';
 import { http, HttpResponse } from 'msw';
@@ -26,15 +27,20 @@ const normalizedWithMixedDur = normalizePlays(mixedDurPlays, {initialDate: first
 
 const normalizedWithMixedDurOlder = normalizePlays(mixedDurPlays, {initialDate: olderFirstPlayDate});
 
-const testScrobbler = new TestScrobbler();
-testScrobbler.verboseOptions = {
-    match: {
-        onMatch: true,
-        onNoMatch: true,
-        confidenceBreakdown: true
-    }
-};
-testScrobbler.lastScrobbleCheck = dayjs().subtract(60, 'seconds');
+const generateTestScrobbler = () => {
+    const testScrobbler = new TestScrobbler();
+    testScrobbler.verboseOptions = {
+        match: {
+            onMatch: true,
+            onNoMatch: true,
+            confidenceBreakdown: true
+        }
+    };
+    testScrobbler.lastScrobbleCheck = dayjs().subtract(60, 'seconds');
+    return testScrobbler;
+}
+
+let testScrobbler: TestScrobbler = generateTestScrobbler()
 
 describe('Networking', function () {
 
@@ -94,6 +100,10 @@ describe('Detects duplicate and unique scrobbles from client recent history', fu
 
     describe('When scrobble is unique', function () {
 
+        beforeEach(function() {
+            testScrobbler = generateTestScrobbler();
+        });
+
         it('It is not detected as duplicate when play date is newer than most recent', async function () {
 
             testScrobbler.recentScrobbles = normalizedWithMixedDur;
@@ -136,6 +146,10 @@ describe('Detects duplicate and unique scrobbles from client recent history', fu
     });
 
     describe('When scrobble track/artist/album matches existing but is a new scrobble', function () {
+
+        beforeEach(function() {
+            testScrobbler = generateTestScrobbler();
+        });
 
         it('Is not detected as duplicate when artist is same, time is similar, but track is different', async function () {
 
@@ -192,6 +206,11 @@ describe('Detects duplicate and unique scrobbles from client recent history', fu
         });
 
         describe('When existing has duration', function () {
+
+            beforeEach(function() {
+                testScrobbler = generateTestScrobbler();
+            });
+
             it('A track with continuity to the previous track is not detected as a duplicate', async function () {
 
                 testScrobbler.recentScrobbles = normalizedWithDur;
@@ -221,6 +240,10 @@ describe('Detects duplicate and unique scrobbles from client recent history', fu
     });
 
     describe('When scrobble is a duplicate (title/artists/album)', function () {
+
+        beforeEach(function() {
+            testScrobbler = generateTestScrobbler();
+        });
 
         it('Is detected as duplicate when an exact match', async function () {
             testScrobbler.recentScrobbles = normalizedWithMixedDur;
@@ -355,6 +378,10 @@ describe('Detects duplicate and unique scrobbles from client recent history', fu
 
         describe('When at least one play has duration', function () {
 
+            beforeEach(function() {
+                testScrobbler = generateTestScrobbler();
+            });
+
             it('Is detected as duplicate when play date is close to the end of an existing scrobble', async function () {
 
                 testScrobbler.recentScrobbles = normalizedWithDur;
@@ -381,10 +408,16 @@ describe('Detects duplicate and unique scrobbles from client recent history', fu
 
 describe('Detects duplicate and unique scrobbles using actively tracked scrobbles', function() {
 
-    before(function () {
+    beforeEach(function() {
+        testScrobbler = generateTestScrobbler();
         testScrobbler.recentScrobbles = normalizedWithMixedDur;
         testScrobbler.lastScrobbleCheck = dayjs().subtract(60, 'seconds');
     });
+
+    // before(function () {
+    //     testScrobbler.recentScrobbles = normalizedWithMixedDur;
+    //     testScrobbler.lastScrobbleCheck = dayjs().subtract(60, 'seconds');
+    // });
 
     it('Detects a unique play', async function() {
         const newScrobble = generatePlay({
@@ -430,6 +463,7 @@ describe('Detects when upstream scrobbles should be refreshed', function() {
     const normalizedClose = normalizePlays(withDurPlays, {initialDate: dayjs().subtract(100, 'seconds')});
 
     beforeEach(function () {
+        testScrobbler = generateTestScrobbler();
         testScrobbler.recentScrobbles = normalizedWithMixedDur;
         testScrobbler.newestScrobbleTime = normalizedWithMixedDur[0].data.playDate;
         testScrobbler.lastScrobbleCheck = dayjs().subtract(60, 'seconds');
@@ -484,9 +518,115 @@ describe('Detects when upstream scrobbles should be refreshed', function() {
     });
 });
 
+describe('Scrobble client uses transform plays correctly', function() {
+
+    beforeEach(async function() {
+        testScrobbler = generateTestScrobbler();
+        await testScrobbler.initialize();
+        testScrobbler.recentScrobbles = normalizedWithMixedDur;
+        testScrobbler.scrobbleSleep = 500;
+        testScrobbler.scrobbleDelay = 0;
+        testScrobbler.lastScrobbleCheck = dayjs().subtract(60, 'seconds');
+        testScrobbler.config.options = {};
+        //testScrobbler.initScrobbleMonitoring().catch(console.error);
+    });
+
+    it('Transforms play before queue when preCompare is present', async function() {
+        testScrobbler.config.options = {
+            playTransform: {
+                preCompare: {
+                    title: [
+                        'cool'
+                    ]
+                }
+            }
+        }
+        testScrobbler.buildTransformRules();
+        const newScrobble = generatePlay({
+            track: 'my cool track'
+        });
+        testScrobbler.queueScrobble(newScrobble, 'test');
+        expect(testScrobbler.queuedScrobbles[0].play.data.track).is.eq('my  track');
+    });
+
+    it('Transforms play on scrobble when postCompare is present', async function() {
+        testScrobbler.config.options = {
+            playTransform: {
+                postCompare: {
+                    title: [
+                        'cool'
+                    ]
+                }
+            }
+        }
+        testScrobbler.buildTransformRules();
+        const newScrobble = generatePlay({
+            track: 'my cool track'
+        });
+        testScrobbler.queueScrobble(newScrobble, 'test');
+        expect(testScrobbler.queuedScrobbles[0].play.data.track).is.eq('my cool track');
+        testScrobbler.scrobbleSleep = 100;
+        testScrobbler.initScrobbleMonitoring().catch(console.error);
+
+        const e = (await pEvent(testScrobbler.emitter, 'scrobble')) as {data: {play: PlayObject }};
+        expect(e.data.play.data.track).is.eq('my  track');
+    });
+
+    it('Transforms candidate play on comparison', async function() {
+        testScrobbler.config.options = {
+            playTransform: {
+                compare: {
+                    candidate: {
+                        title: [
+                            'hugely cool and very different track'
+                        ]
+                    }
+                }
+            }
+        }
+        const newScrobble = generatePlay({
+            track: 'my hugely cool and very different track title'
+        });
+
+        testScrobbler.recentScrobbles = normalizePlays([newScrobble, ...withDurPlays], {initialDate: firstPlayDate});
+        testScrobbler.buildTransformRules();
+
+        expect(await testScrobbler.alreadyScrobbled(newScrobble)).is.false;
+    });
+
+    it('Transforms existing play on comparison', async function() {
+        testScrobbler.config.options = {
+            playTransform: {
+                compare: {
+                    existing: {
+                        title: [
+                            'hugely cool and very different track'
+                        ]
+                    }
+                }
+            }
+        }
+        const newScrobble = generatePlay({
+            track: 'my hugely cool and very different track title'
+        });
+
+        testScrobbler.recentScrobbles = normalizePlays([newScrobble, ...withDurPlays], {initialDate: firstPlayDate});
+        testScrobbler.buildTransformRules();
+
+        expect(await testScrobbler.alreadyScrobbled(newScrobble)).is.false;
+    });
+
+    afterEach(async function () {
+        this.timeout(3500);
+        await testScrobbler.tryStopScrobbling()
+    });
+
+});
+
 describe('Manages scrobble queue', function() {
 
     before(async function() {
+        testScrobbler = generateTestScrobbler();
         await testScrobbler.initialize();
         testScrobbler.recentScrobbles = normalizedWithMixedDur;
         testScrobbler.scrobbleSleep = 500;

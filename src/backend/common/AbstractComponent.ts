@@ -252,7 +252,7 @@ export default abstract class AbstractComponent {
                     hook = this.transformRules.compare?.candidate;
                     break;
                 case TRANSFORM_HOOK.existing:
-                    hook = this.transformRules.compare?.candidate;
+                    hook = this.transformRules.compare?.existing;
                     break;
                 case TRANSFORM_HOOK.postCompare:
                     hook = this.transformRules.postCompare;
