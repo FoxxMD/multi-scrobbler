@@ -1,4 +1,4 @@
-import { CommonConfig, CommonData, PlayTransformConfig, RequestRetryOptions } from "../common.js";
+import { CommonConfig, CommonData, PlayTransformConfig, PlayTransformOptions, RequestRetryOptions } from "../common.js";
 
 /**
  * Scrobble matching (between new source track and existing client scrobbles) logging options. Used for debugging.
@@ -74,7 +74,7 @@ export interface CommonClientOptions extends RequestRetryOptions {
      * */
     deadLetterRetries?: number
 
-    playTransform?: PlayTransformConfig
+    playTransform?: PlayTransformOptions
 }
 
 export interface CommonClientConfig extends CommonConfig {

@@ -1,4 +1,4 @@
-import { CommonConfig, CommonData, PlayTransformConfig, RequestRetryOptions } from "../common.js";
+import { CommonConfig, CommonData, PlayTransformConfig, PlayTransformOptions, RequestRetryOptions } from "../common.js";
 
 export interface SourceRetryOptions extends RequestRetryOptions {
     /**
@@ -97,7 +97,7 @@ export interface CommonSourceOptions extends SourceRetryOptions {
      * */
     scrobbleBacklogCount?: number
 
-    playTransform?: PlayTransformConfig
+    playTransform?: PlayTransformOptions
 }
 
 export interface CommonSourceData extends CommonData {

@@ -51,3 +51,5 @@ export interface PollingOptions {
 }
 
 export type PlayTransformConfig = PlayTransformHooks<SearchAndReplaceTerm>;
+
+export type PlayTransformOptions = PlayTransformConfig & { log?: boolean }

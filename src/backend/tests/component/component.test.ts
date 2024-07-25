@@ -1,8 +1,7 @@
-import { loggerTest } from "@foxxmd/logging";
+import { loggerTest, loggerDebug, childLogger } from "@foxxmd/logging";
 import chai, { assert, expect } from 'chai';
 import asPromised from 'chai-as-promised';
 import { after, before, describe, it } from 'mocha';
-import { PlayObject } from "../../../core/Atomic.js";
 import AbstractComponent from "../../common/AbstractComponent.js";
 import { TRANSFORM_HOOK } from "../../common/infrastructure/Atomic.js";
 import { isSearchAndReplace } from "../../utils.js";
@@ -17,7 +16,7 @@ class TestComponent extends AbstractComponent {
 }
 
 const component = new TestComponent();
-component.logger = loggerTest;
+component.logger = childLogger(loggerTest, 'App');
 
 describe('Play Transforms', function () {
 

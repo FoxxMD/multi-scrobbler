@@ -1,7 +1,8 @@
-import { Logger } from "@foxxmd/logging";
+import { childLogger, Logger } from "@foxxmd/logging";
 import { searchAndReplace, SearchAndReplaceRegExp } from "@foxxmd/regex-buddy-core";
 import { compare } from "compare-versions";
-import { PlayObject } from "../../core/Atomic.js";
+import { ObjectPlayData, PlayData, PlayObject } from "../../core/Atomic.js";
+import { buildTrackString } from "../../core/StringUtils.js";
 import { configPartsToStrongParts, configValToSearchReplace } from "../utils.js";
 import { hasNodeNetworkException } from "./errors/NodeErrors.js";
 import { hasUpstreamError } from "./errors/UpstreamError.js";
@@ -234,114 +235,156 @@ export default abstract class AbstractComponent {
         return;
     }
 
-    public transformPlay = (play: PlayObject, hookType: TransformHook, log: boolean = true) => {
-        let hook: PlayTransformParts<SearchAndReplaceRegExp> | undefined;
+    public transformPlay = (play: PlayObject, hookType: TransformHook, log?: boolean) => {
 
-        switch (hookType) {
-            case TRANSFORM_HOOK.preCompare:
-                hook = this.transformRules.preCompare;
-                break;
-            case TRANSFORM_HOOK.candidate:
-                hook = this.transformRules.compare?.candidate;
-                break;
-            case TRANSFORM_HOOK.existing:
-                hook = this.transformRules.compare?.candidate;
-                break;
-            case TRANSFORM_HOOK.postCompare:
-                hook = this.transformRules.postCompare;
-                break;
-        }
+        let logger: Logger;
+        const labels = ['Play Transform', hookType];
+        const getLogger = () => logger !== undefined ? logger : childLogger(this.logger, labels);
 
-        if (hook === undefined) {
+        try {
+            let hook: PlayTransformParts<SearchAndReplaceRegExp> | undefined;
+
+            switch (hookType) {
+                case TRANSFORM_HOOK.preCompare:
+                    hook = this.transformRules.preCompare;
+                    break;
+                case TRANSFORM_HOOK.candidate:
+                    hook = this.transformRules.compare?.candidate;
+                    break;
+                case TRANSFORM_HOOK.existing:
+                    hook = this.transformRules.compare?.candidate;
+                    break;
+                case TRANSFORM_HOOK.postCompare:
+                    hook = this.transformRules.postCompare;
+                    break;
+            }
+
+            if (hook === undefined) {
+                return play;
+            }
+
+            const {
+                data: {
+                    track,
+                    artists,
+                    albumArtists,
+                    album
+                } = {}
+            } = play;
+
+            const transformedPlayData: Partial<ObjectPlayData> = {};
+
+            //const results: [string, string, string][] = [];
+            let isTransformed = false;
+
+            if (hook.title !== undefined && track !== undefined) {
+                try {
+                    const t = searchAndReplace(track, hook.title);
+                    if (t !== track) {
+                        //results.push(['title', track, t]);
+                        transformedPlayData.track = t;
+                        //transformedPlay.data.track = t;
+                        isTransformed = true;
+                    }
+                } catch (e) {
+                    getLogger().warn(new Error(`Failed to transform title: ${track}`, {cause: e}));
+                }
+            }
+
+            if (hook.artists !== undefined && artists !== undefined && artists.length > 0) {
+                const transformedArtists: string[] = [];
+                let anyArtistTransformed = false;
+                for (const artist of artists) {
+                    try {
+                        const t = searchAndReplace(artist, hook.artists);
+                        if (t !== artist) {
+                            anyArtistTransformed = true;
+                            isTransformed = true;
+                        }
+                        transformedArtists.push(t);
+                    } catch (e) {
+                        getLogger().warn(new Error(`Failed to transform artist: ${artist}`, {cause: e}));
+                        transformedArtists.push(artist);
+                    }
+                }
+                if(anyArtistTransformed) {
+                    transformedPlayData.artists = transformedArtists;
+                }
+                //transformedPlay.data.artists = transformedArtists;
+                // if (anyTransformed) {
+                //     //results.push(['artists', artists.join(' / '), transformedArtists.join(' / ')]);
+                // }
+            }
+
+            if (hook.artists !== undefined && albumArtists !== undefined && albumArtists.length > 0) {
+                const transformedArtists: string[] = [];
+                let anyArtistTransformed = false;
+                for (const artist of albumArtists) {
+                    try {
+                        const t = searchAndReplace(artist, hook.artists);
+                        if (t !== artist) {
+                            anyArtistTransformed = true;
+                            isTransformed = true;
+                        }
+                        transformedArtists.push(t);
+                    } catch (e) {
+                        getLogger().warn(new Error(`Failed to transform albumArtist: ${artist}`, {cause: e}));
+                        transformedArtists.push(artist);
+                    }
+                }
+                if(anyArtistTransformed) {
+                    transformedPlayData.albumArtists = transformedArtists;
+                }
+                // transformedPlay.data.albumArtists = transformedArtists;
+                // if (anyTransformed) {
+                //     results.push(['albumArtists', artists.join(' / '), transformedArtists.join(' / ')]);
+                // }
+            }
+
+            if (hook.album !== undefined && album !== undefined) {
+                try {
+                    const t = searchAndReplace(album, hook.album);
+                    if (t !== album) {
+                        isTransformed = true;
+                        transformedPlayData.album = t;
+                        // results.push(['album', album, t]);
+                        // transformedPlay.data.album = t;
+                    }
+                } catch (e) {
+                    getLogger().warn(new Error(`Failed to transform album: ${album}`, {cause: e}));
+                }
+            }
+
+            if(isTransformed) {
+
+                const transformedPlay = {
+                    ...play,
+                    data: {
+                        ...play.data,
+                        ...transformedPlayData
+                    }
+                }
+
+                const shouldLog = log ?? this.config.options?.playTransform?.log ?? true;
+                if(shouldLog) {
+                    this.logger.debug({labels}, `Play transformed by ${hookType}:
+Original    : ${buildTrackString(play, {include: ['artist', 'track', 'album']})}
+Transformed : ${buildTrackString(transformedPlay, {include: ['artist', 'track', 'album']})}
+`);
+                }
+
+                return transformedPlay;
+            }
+
+//             if (results.length > 0 && log) {
+//                 this.logger.debug({labels}, `Play transformed by ${hookType}:
+// ${results.map(x => `${x[0]}: ${x[1]} => ${x[2]}`).join('\n')}`);
+//             }
+
+            return play;
+        } catch (e) {
+            getLogger().warn(new Error(`Unexpected error occurred, returning original play.`, {cause: e}));
             return play;
         }
-
-        const {
-            data: {
-                track,
-                artists,
-                albumArtists,
-                album
-            } = {}
-        } = play;
-
-        const transformedPlay = {
-            ...play
-        }
-
-        const results: [string, string, string][] = [];
-
-        if (hook.title !== undefined && track !== undefined) {
-            try {
-                const t = searchAndReplace(track, hook.title);
-                if (t !== track) {
-                    results.push(['title', track, t]);
-                    transformedPlay.data.track = t;
-                }
-            } catch (e) {
-                this.logger.warn(`Failed to transform title during ${hookType} transform: ${track}`, {cause: e});
-            }
-        }
-
-        if (hook.artists !== undefined && artists !== undefined && artists.length > 0) {
-            const transformedArtists: string[] = [];
-            let anyTransformed = false;
-            for (const artist of artists) {
-                try {
-                    const t = searchAndReplace(artist, hook.artists);
-                    if (t !== artist) {
-                        anyTransformed = true;
-                    }
-                    transformedArtists.push(t);
-                } catch (e) {
-                    this.logger.warn(`Failed to transform artist during ${hookType} transform: ${artist}`, {cause: e});
-                    transformedArtists.push(artist);
-                }
-            }
-            transformedPlay.data.artists = transformedArtists;
-            if (anyTransformed) {
-                results.push(['artists', artists.join(' / '), transformedArtists.join(' / ')]);
-            }
-        }
-
-        if (hook.artists !== undefined && albumArtists !== undefined && albumArtists.length > 0) {
-            const transformedArtists: string[] = [];
-            let anyTransformed = false;
-            for (const artist of albumArtists) {
-                try {
-                    const t = searchAndReplace(artist, hook.artists);
-                    if (t !== artist) {
-                        anyTransformed = true;
-                    }
-                    transformedArtists.push(t);
-                } catch (e) {
-                    this.logger.warn(`Failed to transform albumArtist during ${hookType} transform: ${artist}`, {cause: e});
-                    transformedArtists.push(artist);
-                }
-            }
-            transformedPlay.data.albumArtists = transformedArtists;
-            if (anyTransformed) {
-                results.push(['albumArtists', artists.join(' / '), transformedArtists.join(' / ')]);
-            }
-        }
-
-        if (hook.album !== undefined && album !== undefined) {
-            try {
-                const t = searchAndReplace(album, hook.album);
-                if (t !== album) {
-                    results.push(['album', album, t]);
-                    transformedPlay.data.album = t;
-                }
-            } catch (e) {
-                this.logger.warn(`Failed to transform album during ${hookType} transform: ${album}`, {cause: e});
-            }
-        }
-
-        if(results.length > 0) {
-            this.logger.debug(`Play transformed by ${hookType}:
-            ${results.map(x => `${x[0]}: ${x[1]} => ${x[2]}`).join('\n')}`);
-        }
-
-        return transformedPlay;
     }
 }
