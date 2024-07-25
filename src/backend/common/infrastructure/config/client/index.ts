@@ -37,6 +37,16 @@ export interface CommonClientOptions extends RequestRetryOptions {
      * @examples [true]
      * */
     refreshEnabled?: boolean
+    /**
+     * Force client to refresh scrobbled plays from upstream service if last refresh was at least X seconds ago
+     *
+     * **In most case this setting should NOT be used.** MS intelligently refreshes based on activity so using this setting may increase upstream service load and slow down scrobbles.
+     *
+     * This setting should only be used in specific scenarios where MS is handling multiple "relaying" client-services (IE lfm -> lz -> lfm) and there is the potential for a client to be out of sync after more than a few seconds.
+     *
+     * @examples [3]
+     * */
+    refreshStaleAfter?: number
 
     /**
      * The number of tracks to retrieve on initial refresh (related to scrobbleBacklogCount). If not specified this is the maximum supported for the client.

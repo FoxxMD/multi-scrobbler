@@ -299,28 +299,15 @@ export default class MalojaScrobbler extends AbstractScrobbleClient {
         }
     }
 
-    refreshScrobbles = async (limit = this.MAX_STORED_SCROBBLES) => {
-        if (this.refreshEnabled) {
-            this.logger.debug('Refreshing recent scrobbles');
-            const {url} = this.config.data;
-            const resp = await this.callApi(request.get(`${url}/apis/mlj_1/scrobbles?perpage=${limit}`));
-            const {
-                body: {
-                    list = [],
-                } = {},
-            } = resp;
-            this.logger.debug(`Found ${list.length} recent scrobbles`);
-            this.recentScrobbles = list.map((x: any) => this.formatPlayObj(x));
-            if (this.recentScrobbles.length > 0) {
-                const [{data: {playDate: newestScrobbleTime = dayjs()} = {}} = {}] = this.recentScrobbles.slice(-1);
-                const [{data: {playDate: oldestScrobbleTime = dayjs()} = {}} = {}] = this.recentScrobbles.slice(0, 1);
-                this.newestScrobbleTime = newestScrobbleTime;
-                this.oldestScrobbleTime = oldestScrobbleTime;
-
-                this.filterScrobbledTracks();
-            }
-        }
-        this.lastScrobbleCheck = dayjs();
+    getScrobblesForRefresh = async (limit: number) => {
+        const {url} = this.config.data;
+        const resp = await this.callApi(request.get(`${url}/apis/mlj_1/scrobbles?perpage=${limit}`));
+        const {
+            body: {
+                list = [],
+            } = {},
+        } = resp;
+        return list.map((x: any) => this.formatPlayObj(x));
     }
 
     cleanSourceSearchTitle = (playObj: PlayObject) => {
