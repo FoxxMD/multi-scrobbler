@@ -165,6 +165,58 @@ describe('Play Transforms', function () {
             const transformed = component.transformPlay(play, TRANSFORM_HOOK.preCompare);
             expect(transformed.data.track).equal('My cool thing track');
         });
+
+        it('Removes title when transform replaces with empty string', function () {
+            component.config = {
+                options: {
+                    playTransform: {
+                        preCompare: {
+                            title: ['something']
+                        }
+                    }
+                }
+            }
+            component.buildTransformRules();
+
+            const play = generatePlay({track: 'something'});
+            const transformed = component.transformPlay(play, TRANSFORM_HOOK.preCompare);
+            expect(transformed.data.track).is.undefined;
+        });
+
+        it('Removes album when transform replaces with empty string', function () {
+            component.config = {
+                options: {
+                    playTransform: {
+                        preCompare: {
+                            album: ['something']
+                        }
+                    }
+                }
+            }
+            component.buildTransformRules();
+
+            const play = generatePlay({album: 'something'});
+            const transformed = component.transformPlay(play, TRANSFORM_HOOK.preCompare);
+            expect(transformed.data.album).is.undefined;
+        });
+
+        it('Removes an artist when transform replaces with empty string', function () {
+            component.config = {
+                options: {
+                    playTransform: {
+                        preCompare: {
+                            artists: ['something']
+                        }
+                    }
+                }
+            }
+            component.buildTransformRules();
+
+            const play = generatePlay({artists: ['something', 'big']});
+            const transformed = component.transformPlay(play, TRANSFORM_HOOK.preCompare);
+            expect(transformed.data.artists.length).is.eq(1)
+            expect(transformed.data.artists[0]).is.eq('big')
+        });
     });
 
 

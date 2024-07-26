@@ -147,6 +147,12 @@ Putting it all together:
 ]
 ```
 
+:::note
+
+If the value of the field (title, an artist, album) is an empty string after transforming then the field is **removed.**
+
+:::
+
 :::tip
 
 Modifications can also be applied to **all Sources** or **all Clients** when using the [AIO Config](./configuration.mdx?configType=aio#configuration-types) `config.json` by setting `playTransform` in `sourceDefaults` or `clientDefaults`:
@@ -281,6 +287,29 @@ Removes the phrase `(Album Version)` from the Title of a Play
           {
             "search": "Boz Skaggs",
             "replace": "Boz Scaggs"
+          }
+        ]
+      }
+    }
+  }
+}
+```
+</details>
+
+### Remove "Various Artists" albums in all new Plays
+
+<details>
+
+    <summary>Example</summary>
+```json5 title="config.json"
+{
+  "sourceDefaults": {
+    "playTransform": {
+      "preCompare": {
+        "album": [
+          {
+            "search": "Various Artists",
+            "replace": ""
           }
         ]
       }

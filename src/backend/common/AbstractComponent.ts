@@ -274,16 +274,13 @@ export default abstract class AbstractComponent {
 
             const transformedPlayData: Partial<ObjectPlayData> = {};
 
-            //const results: [string, string, string][] = [];
             let isTransformed = false;
 
             if (hook.title !== undefined && track !== undefined) {
                 try {
                     const t = searchAndReplace(track, hook.title);
                     if (t !== track) {
-                        //results.push(['title', track, t]);
-                        transformedPlayData.track = t;
-                        //transformedPlay.data.track = t;
+                        transformedPlayData.track = t.trim() === '' ? undefined : t;
                         isTransformed = true;
                     }
                 } catch (e) {
@@ -301,7 +298,9 @@ export default abstract class AbstractComponent {
                             anyArtistTransformed = true;
                             isTransformed = true;
                         }
-                        transformedArtists.push(t);
+                        if(t.trim() !== '') {
+                            transformedArtists.push(t);
+                        }
                     } catch (e) {
                         getLogger().warn(new Error(`Failed to transform artist: ${artist}`, {cause: e}));
                         transformedArtists.push(artist);
@@ -310,10 +309,6 @@ export default abstract class AbstractComponent {
                 if(anyArtistTransformed) {
                     transformedPlayData.artists = transformedArtists;
                 }
-                //transformedPlay.data.artists = transformedArtists;
-                // if (anyTransformed) {
-                //     //results.push(['artists', artists.join(' / '), transformedArtists.join(' / ')]);
-                // }
             }
 
             if (hook.artists !== undefined && albumArtists !== undefined && albumArtists.length > 0) {
@@ -326,7 +321,9 @@ export default abstract class AbstractComponent {
                             anyArtistTransformed = true;
                             isTransformed = true;
                         }
-                        transformedArtists.push(t);
+                        if(t.trim() !== '') {
+                            transformedArtists.push(t);
+                        }
                     } catch (e) {
                         getLogger().warn(new Error(`Failed to transform albumArtist: ${artist}`, {cause: e}));
                         transformedArtists.push(artist);
@@ -335,10 +332,6 @@ export default abstract class AbstractComponent {
                 if(anyArtistTransformed) {
                     transformedPlayData.albumArtists = transformedArtists;
                 }
-                // transformedPlay.data.albumArtists = transformedArtists;
-                // if (anyTransformed) {
-                //     results.push(['albumArtists', artists.join(' / '), transformedArtists.join(' / ')]);
-                // }
             }
 
             if (hook.album !== undefined && album !== undefined) {
@@ -346,9 +339,7 @@ export default abstract class AbstractComponent {
                     const t = searchAndReplace(album, hook.album);
                     if (t !== album) {
                         isTransformed = true;
-                        transformedPlayData.album = t;
-                        // results.push(['album', album, t]);
-                        // transformedPlay.data.album = t;
+                        transformedPlayData.album = t.trim() === '' ? undefined : t;
                     }
                 } catch (e) {
                     getLogger().warn(new Error(`Failed to transform album: ${album}`, {cause: e}));
@@ -375,11 +366,6 @@ Transformed : ${buildTrackString(transformedPlay, {include: ['artist', 'track', 
 
                 return transformedPlay;
             }
-
-//             if (results.length > 0 && log) {
-//                 this.logger.debug({labels}, `Play transformed by ${hookType}:
-// ${results.map(x => `${x[0]}: ${x[1]} => ${x[2]}`).join('\n')}`);
-//             }
 
             return play;
         } catch (e) {
