@@ -22,7 +22,7 @@ In any scenario where a repeating pattern can be found in the data it would be n
 
 First, let's recap the lifecycle of a scrobble in multi-scrobbler:
 
-**Sources** are the beginning of the journey for a **Play** (song you've listened to long enough to scrobblable)
+**Sources** are the beginning of the journey for a **Play** (song you've listened to long enough to be scrobblable)
 
 * A Source finds a new valid **Play**
 * The Source **compares** this new Play to all the other Plays it has already seen, if the Play is unique (title/artist/album/listened datetime) then...
@@ -73,13 +73,13 @@ In more concrete terms this is the structure of hooks within a configuration (ca
 For **Sources**:
 
 * `preCompare` - modify Play data immediately when received
-* `compare` - modify Play data when it is being compared to see if Play was already discovered
+* `compare` - temporarily modify Play data when it is being compared to see if Play was already discovered
 * `postCompare` - modify Play data before sending to scrobble **Clients**
 
 For **Clients**:
 
 * `preCompare` - modify Play data immediately when received
-* `compare` - modify Play data when it is being compared to see if it was already scrobbled
+* `compare` - temporarily modify Play data when it is being compared to see if it was already scrobbled
 * `postCompare` - modify Play data before scrobbling it to downstream service and adding to already seen scrobbles
 
 :::tip
@@ -93,7 +93,7 @@ For example, to modify the track so it's the same anywhere it is processed in mu
 ### Modification Parts
 
 
-Each **hook** (`preCompare` etc...) is an object that specifies what part of the **Play** to modify:
+Each [**hook**](#hook) (`preCompare` etc...) is an object that specifies what part of the **Play** to modify:
 
 ```json5
 {
@@ -147,6 +147,32 @@ Putting it all together:
 ]
 ```
 
+:::tip
+
+Modifications can also be applied to **all Sources** or **all Clients** when using the [AIO Config](./configuration.mdx?configType=aio#configuration-types) `config.json` by setting `playTransform` in `sourceDefaults` or `clientDefaults`:
+
+<details>
+
+    <summary>Example</summary>
+```json5 title="config.json"
+{
+  "sourceDefaults": { // will apply playTransform to all sources
+    "playTransform": {
+      "preCompare": {
+        "title": [
+          "(Album Version)"
+        ]
+      }
+    }
+  },
+  "sources": [/* ... */],
+  "clients": [/* ... */]
+}
+```
+</details>
+
+:::
+
 #### Compare Hook
 
 The `compare` [hook](#hook) is slightly different than `preCompare` and `postCompare`. It consists of an object where you define which side(s) of the comparison should be modified. It also **does not modify downstream data!** Instead, the modifications are made only for use in the comparison.
@@ -186,14 +212,35 @@ The `replace` property uses javascript's [`replace()` function and so can use an
 
 ## Examples
 
-### Remove phrase from Title everywhere
+### Remove phrase from Title in all new Plays
 
-Removes the phrase `(Album Version)` from the Title of a Play/Scrobble
+Removes the phrase `(Album Version)` from the Title of a Play
+
 
 <details>
 
     <summary>Example</summary>
+```json5 title="config.json"
+{
+  "sourceDefaults": {
+    "playTransform": {
+      "preCompare": {
+        "title": [
+          "(Album Version)"
+        ]
+      }
+    }
+  }
+}
 
+```
+</details>
+
+### Remove all parenthesized content from the end of a title
+
+<details>
+
+    <summary>Example</summary>
 ```json5 title="lastfm.json"
 [
   {
@@ -201,10 +248,17 @@ Removes the phrase `(Album Version)` from the Title of a Play/Scrobble
     // ...
     "options": {
       "playTransform": {
-        "preCompare": {
+        "compare": {
+          "candidate": {
           "title": [
-              "(Album Version)"
-          ]
+              "/(\(.+\))\s*$/"
+            ]
+          },
+          "existing": {
+          "title": [
+              "/(\(.+\))\s*$/"
+            ]
+          },
         },
       }
     }
@@ -213,3 +267,25 @@ Removes the phrase `(Album Version)` from the Title of a Play/Scrobble
 ```
 </details>
 
+### Rename misspelled artist in all new Plays
+
+<details>
+
+    <summary>Example</summary>
+```json5 title="config.json"
+{
+  "sourceDefaults": {
+    "playTransform": {
+      "preCompare": {
+        "artists": [
+          {
+            "search": "Boz Skaggs",
+            "replace": "Boz Scaggs"
+          }
+        ]
+      }
+    }
+  }
+}
+```
+</details>
