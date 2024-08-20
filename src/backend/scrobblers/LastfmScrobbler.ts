@@ -46,9 +46,7 @@ export default class LastfmScrobbler extends AbstractScrobbleClient {
         }
     }
 
-    refreshScrobbles = async (limit = this.MAX_STORED_SCROBBLES) => {
-        if (this.refreshEnabled) {
-            this.logger.debug('Refreshing recent scrobbles');
+    getScrobblesForRefresh = async (limit: number) => {
             const resp = await this.api.callApi<UserGetRecentTracksResponse>((client: any) => client.userGetRecentTracks({
                 user: this.api.user,
                 sk: this.api.client.sessionKey,
@@ -60,7 +58,7 @@ export default class LastfmScrobbler extends AbstractScrobbleClient {
                     track: list = [],
                 }
             } = resp;
-            this.recentScrobbles = list.reduce((acc: any, x: any) => {
+            return list.reduce((acc: any, x: any) => {
                 try {
                     const formatted = LastfmApiClient.formatPlayObj(x);
                     const {
@@ -91,17 +89,6 @@ export default class LastfmScrobbler extends AbstractScrobbleClient {
                     return acc;
                 }
             }, []);
-            this.logger.debug(`Found ${this.recentScrobbles.length} recent scrobbles`);
-            if (this.recentScrobbles.length > 0) {
-                const [{data: {playDate: newestScrobbleTime = dayjs()} = {}} = {}] = this.recentScrobbles.slice(-1);
-                const [{data: {playDate: oldestScrobbleTime = dayjs()} = {}} = {}] = this.recentScrobbles.slice(0, 1);
-                this.newestScrobbleTime = newestScrobbleTime;
-                this.oldestScrobbleTime = oldestScrobbleTime;
-
-                this.filterScrobbledTracks();
-            }
-        }
-        this.lastScrobbleCheck = dayjs();
     }
 
     cleanSourceSearchTitle = (playObj: PlayObject) => {

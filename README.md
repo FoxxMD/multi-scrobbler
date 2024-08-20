@@ -20,13 +20,14 @@ A javascript app to scrobble music you listened to, to [Maloja](https://github.c
   * [Youtube Music](https://foxxmd.github.io/multi-scrobbler/docs/configuration#youtube-music)
   * [Last.fm](https://foxxmd.github.io/multi-scrobbler/docs/configuration#lastfm-source)
   * [ListenBrainz](https://foxxmd.github.io/multi-scrobbler/docs/configuration#listenbrainz-source)
-  * [Deezer](https://foxxmd.github.io/multi-scrobbler/docs/configuration#deezer)
+  * [~~Deezer~~](https://foxxmd.github.io/multi-scrobbler/docs/configuration#deezer)
   * [MPRIS (Linux Desktop)](https://foxxmd.github.io/multi-scrobbler/docs/configuration#mpris)
   * [Mopidy](https://foxxmd.github.io/multi-scrobbler/docs/configuration#mopidy)
   * [JRiver](https://foxxmd.github.io/multi-scrobbler/docs/configuration#jriver)
   * [Kodi](https://foxxmd.github.io/multi-scrobbler/docs/configuration#kodi)
   * [Google Cast (Chromecast)](https://foxxmd.github.io/multi-scrobbler/docs/configuration#google-cast-chromecast)
   * [Musikcube](https://foxxmd.github.io/multi-scrobbler/docs/configuration#muikcube)
+  * [MPD (Music Player Daemon)](https://foxxmd.github.io/multi-scrobbler/docs/configuration#mpd-music-player-daemon)
 * Supports scrobbling to many **Clients**
   * [Maloja](https://foxxmd.github.io/multi-scrobbler/docs/configuration#maloja)
   * [Last.fm](https://foxxmd.github.io/multi-scrobbler/docs/configuration#lastfm)
@@ -37,7 +38,8 @@ A javascript app to scrobble music you listened to, to [Maloja](https://github.c
 * Graceful network and client failure handling (queued scrobbles that auto-retry)
 * Smart handling of credentials (persistent, authorization through app)
 * Easy configuration through ENVs or JSON
-* Install using [Docker images for x86/ARM](https://foxxmd.github.io/multi-scrobbler/docs/installation#docker#docker), [flatpak](https://foxxmd.github.io/multi-scrobbler/docs/installation#docker#flatpak), or [locally with NodeJS](https://foxxmd.github.io/multi-scrobbler/docs/installation#docker#nodejs)
+* Modify data before scrobbling with [regular expression or search patterns](https://foxxmd.github.io/multi-scrobbler/docs/transforms)
+* Install using [Docker images for x86/ARM](https://foxxmd.github.io/multi-scrobbler/docs/installation#docker), [flatpak](https://foxxmd.github.io/multi-scrobbler/docs/installationr#flatpak), or [locally with NodeJS](https://foxxmd.github.io/multi-scrobbler/docs/installation#nodejs)
 
 [**Quick Start Guide**](https://foxxmd.github.io/multi-scrobbler/docs/quickstart)
 

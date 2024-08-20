@@ -124,6 +124,10 @@ If multi-scrobbler is not running on the same machine your browser is on then th
 
 EX `http://localhost:9078/lastfm/callback` -> `http://192.168.0.220:9078/lastfm/callback`
 
+### Deezer is not working
+
+Deezer has discontinued support for their API and the Deezer Source is now [**deprecated.**](configuration/configuration.mdx#deezer) See [this issue for more discussion.](https://github.com/FoxxMD/multi-scrobbler/issues/175#issuecomment-2296776625)
+
 ## Configuration Issues
 
 ### Config could not be parsed

@@ -1,6 +1,14 @@
-import { Logger } from "@foxxmd/logging";
+import { childLogger, Logger } from "@foxxmd/logging";
+import { searchAndReplace, SearchAndReplaceRegExp } from "@foxxmd/regex-buddy-core";
+import { compare } from "compare-versions";
+import { ObjectPlayData, PlayData, PlayObject } from "../../core/Atomic.js";
+import { buildTrackString } from "../../core/StringUtils.js";
+import { configPartsToStrongParts, configValToSearchReplace } from "../utils.js";
 import { hasNodeNetworkException } from "./errors/NodeErrors.js";
 import { hasUpstreamError } from "./errors/UpstreamError.js";
+import { PlayTransformParts, PlayTransformRules, TRANSFORM_HOOK, TransformHook } from "./infrastructure/Atomic.js";
+import { CommonClientConfig } from "./infrastructure/config/client/index.js";
+import { CommonSourceConfig } from "./infrastructure/config/source/index.js";
 
 export default abstract class AbstractComponent {
     requiresAuth: boolean = false;
@@ -13,13 +21,22 @@ export default abstract class AbstractComponent {
 
     initializing: boolean = false;
 
+    config: CommonClientConfig | CommonSourceConfig;
+
+    transformRules!: PlayTransformRules;
+
     logger: Logger;
+
+    protected constructor(config: CommonClientConfig | CommonSourceConfig) {
+        this.config = config;
+    }
 
     initialize = async () => {
         this.logger.debug('Attempting to initialize...');
         try {
             this.initializing = true;
             await this.buildInitData();
+            this.buildTransformRules();
             await this.checkConnection();
             await this.testAuth();
             this.logger.info('Fully Initialized!');
@@ -72,6 +89,74 @@ export default abstract class AbstractComponent {
         return;
     }
 
+    public buildTransformRules() {
+        try {
+            this.doBuildTransformRules();
+        } catch (e) {
+            this.buildOK = false;
+            throw new Error('Could not build playTransform rules. Check your configuration is valid.', {cause: e});
+        }
+    }
+
+    protected doBuildTransformRules() {
+        const {
+            options: {
+                playTransform
+            } = {}
+        } = this.config;
+
+        if (playTransform === undefined) {
+            this.transformRules = {};
+            return;
+        }
+
+        const {
+            preCompare: preConfig,
+            compare: {
+                candidate: candidateConfig,
+                existing: existingConfig,
+            } = {},
+            postCompare: postConfig
+        } = playTransform;
+
+        let preCompare,
+            candidate,
+            existing,
+            postCompare;
+
+        try {
+            preCompare = configPartsToStrongParts(preConfig)
+        } catch (e) {
+            throw new Error('preCompare was not valid', {cause: e});
+        }
+
+        try {
+            candidate = configPartsToStrongParts(candidateConfig)
+        } catch (e) {
+            throw new Error('candidate was not valid', {cause: e});
+        }
+
+        try {
+            existing = configPartsToStrongParts(existingConfig)
+        } catch (e) {
+            throw new Error('existing was not valid', {cause: e});
+        }
+
+        try {
+            postCompare = configPartsToStrongParts(postConfig)
+        } catch (e) {
+            throw new Error('postCompare was not valid', {cause: e});
+        }
+
+        this.transformRules = {
+            preCompare,
+            compare: {
+                candidate,
+                existing,
+            },
+            postCompare,
+        }
+    }
 
     public async checkConnection() {
         try {
@@ -111,8 +196,11 @@ export default abstract class AbstractComponent {
     protected doAuthentication = async (): Promise<boolean> => this.authed
 
     // default init function, should be overridden if auth stage is required
-    testAuth = async () => {
+    testAuth = async (force: boolean = false) => {
         if(!this.requiresAuth) {
+            return;
+        }
+        if(this.authed && !force) {
             return;
         }
 
@@ -145,5 +233,144 @@ export default abstract class AbstractComponent {
      * */
     protected async postInitialize(): Promise<void> {
         return;
+    }
+
+    public transformPlay = (play: PlayObject, hookType: TransformHook, log?: boolean) => {
+
+        let logger: Logger;
+        const labels = ['Play Transform', hookType];
+        const getLogger = () => logger !== undefined ? logger : childLogger(this.logger, labels);
+
+        try {
+            let hook: PlayTransformParts<SearchAndReplaceRegExp> | undefined;
+
+            switch (hookType) {
+                case TRANSFORM_HOOK.preCompare:
+                    hook = this.transformRules.preCompare;
+                    break;
+                case TRANSFORM_HOOK.candidate:
+                    hook = this.transformRules.compare?.candidate;
+                    break;
+                case TRANSFORM_HOOK.existing:
+                    hook = this.transformRules.compare?.existing;
+                    break;
+                case TRANSFORM_HOOK.postCompare:
+                    hook = this.transformRules.postCompare;
+                    break;
+            }
+
+            if (hook === undefined) {
+                return play;
+            }
+
+            const {
+                data: {
+                    track,
+                    artists,
+                    albumArtists,
+                    album
+                } = {}
+            } = play;
+
+            const transformedPlayData: Partial<ObjectPlayData> = {};
+
+            let isTransformed = false;
+
+            if (hook.title !== undefined && track !== undefined) {
+                try {
+                    const t = searchAndReplace(track, hook.title);
+                    if (t !== track) {
+                        transformedPlayData.track = t.trim() === '' ? undefined : t;
+                        isTransformed = true;
+                    }
+                } catch (e) {
+                    getLogger().warn(new Error(`Failed to transform title: ${track}`, {cause: e}));
+                }
+            }
+
+            if (hook.artists !== undefined && artists !== undefined && artists.length > 0) {
+                const transformedArtists: string[] = [];
+                let anyArtistTransformed = false;
+                for (const artist of artists) {
+                    try {
+                        const t = searchAndReplace(artist, hook.artists);
+                        if (t !== artist) {
+                            anyArtistTransformed = true;
+                            isTransformed = true;
+                        }
+                        if(t.trim() !== '') {
+                            transformedArtists.push(t);
+                        }
+                    } catch (e) {
+                        getLogger().warn(new Error(`Failed to transform artist: ${artist}`, {cause: e}));
+                        transformedArtists.push(artist);
+                    }
+                }
+                if(anyArtistTransformed) {
+                    transformedPlayData.artists = transformedArtists;
+                }
+            }
+
+            if (hook.artists !== undefined && albumArtists !== undefined && albumArtists.length > 0) {
+                const transformedArtists: string[] = [];
+                let anyArtistTransformed = false;
+                for (const artist of albumArtists) {
+                    try {
+                        const t = searchAndReplace(artist, hook.artists);
+                        if (t !== artist) {
+                            anyArtistTransformed = true;
+                            isTransformed = true;
+                        }
+                        if(t.trim() !== '') {
+                            transformedArtists.push(t);
+                        }
+                    } catch (e) {
+                        getLogger().warn(new Error(`Failed to transform albumArtist: ${artist}`, {cause: e}));
+                        transformedArtists.push(artist);
+                    }
+                }
+                if(anyArtistTransformed) {
+                    transformedPlayData.albumArtists = transformedArtists;
+                }
+            }
+
+            if (hook.album !== undefined && album !== undefined) {
+                try {
+                    const t = searchAndReplace(album, hook.album);
+                    if (t !== album) {
+                        isTransformed = true;
+                        transformedPlayData.album = t.trim() === '' ? undefined : t;
+                    }
+                } catch (e) {
+                    getLogger().warn(new Error(`Failed to transform album: ${album}`, {cause: e}));
+                }
+            }
+
+            if(isTransformed) {
+
+                const transformedPlay = {
+                    ...play,
+                    data: {
+                        ...play.data,
+                        ...transformedPlayData
+                    }
+                }
+
+                const shouldLog = log ?? this.config.options?.playTransform?.log ?? true;
+                if(shouldLog) {
+                    this.logger.debug({labels}, `Play transformed by ${hookType}:
+Original    : ${buildTrackString(play, {include: ['artist', 'track', 'album']})}
+Transformed : ${buildTrackString(transformedPlay, {include: ['artist', 'track', 'album']})}
+`);
+                }
+
+                return transformedPlay;
+            }
+
+            return play;
+        } catch (e) {
+            getLogger().warn(new Error(`Unexpected error occurred, returning original play.`, {cause: e}));
+            return play;
+        }
     }
 }

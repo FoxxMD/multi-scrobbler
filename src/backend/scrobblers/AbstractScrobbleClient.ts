@@ -3,6 +3,7 @@ import dayjs, { Dayjs } from "dayjs";
 import EventEmitter from "events";
 import { FixedSizeList } from 'fixed-size-list';
 import { nanoid } from "nanoid";
+import { Simulate } from "react-dom/test-utils";
 import {
     DeadLetterScrobble,
     PlayObject,
@@ -23,7 +24,7 @@ import {
     FormatPlayObjectOptions,
     ScrobbledPlayObject,
     TIME_WEIGHT,
-    TITLE_WEIGHT,
+    TITLE_WEIGHT, TRANSFORM_HOOK,
 } from "../common/infrastructure/Atomic.js";
 import { CommonClientConfig } from "../common/infrastructure/config/client/index.js";
 import { Notifiers } from "../notifier/Notifiers.js";
@@ -73,13 +74,13 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
     queuedScrobbles: QueuedScrobble<PlayObject>[] = [];
     deadLetterScrobbles: DeadLetterScrobble<PlayObject>[] = [];
 
-    config: CommonClientConfig;
+    declare config: CommonClientConfig;
 
     notifier: Notifiers;
     emitter: EventEmitter;
 
     constructor(type: any, name: any, config: CommonClientConfig, notifier: Notifiers, emitter: EventEmitter, logger: Logger) {
-        super();
+        super(config);
         this.type = type;
         this.name = name;
         this.identifier = `${capitalize(this.type)} - ${name}`;
@@ -89,7 +90,6 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
 
         this.scrobbledPlayObjs = new FixedSizeList<ScrobbledPlayObject>(this.MAX_STORED_SCROBBLES);
 
-        this.config = config;
         const {
             options: {
                 refreshEnabled = true,
@@ -148,8 +148,60 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
         await this.refreshScrobbles(initialLimit);
     }
 
-    refreshScrobbles = async (limit?: number) => {
-        this.logger.debug('Scrobbler does not have refresh function implemented!');
+    refreshScrobbles = async (limit: number = this.MAX_STORED_SCROBBLES) => {
+        if (this.refreshEnabled) {
+            this.logger.debug('Refreshing recent scrobbles');
+            const recent = await this.getScrobblesForRefresh(limit);
+            this.logger.debug(`Found ${recent.length} recent scrobbles`);
+            if (this.recentScrobbles.length > 0) {
+                const [{data: {playDate: newestScrobbleTime = dayjs()} = {}} = {}] = this.recentScrobbles.slice(-1);
+                const [{data: {playDate: oldestScrobbleTime = dayjs()} = {}} = {}] = this.recentScrobbles.slice(0, 1);
+                this.newestScrobbleTime = newestScrobbleTime;
+                this.oldestScrobbleTime = oldestScrobbleTime;
+
+                this.filterScrobbledTracks();
+            }
+        }
+        this.lastScrobbleCheck = dayjs();
+    }
+
+    protected abstract getScrobblesForRefresh(limit: number): Promise<PlayObject[]>;
+
+    shouldRefreshScrobble = () => {
+        const {
+            refreshStaleAfter
+        } = this.config.options || {};
+
+        if (!this.refreshEnabled) {
+            this.logger.debug(`Should NOT refresh scrobbles => refreshEnabled is false`);
+            return false;
+        }
+
+        const queuedPlayedDate = this.getLatestQueuePlayDate();
+
+        // if next queued play was played more recently than the last time we refreshed upstream scrobbles
+        if (this.lastScrobbleCheck.unix() < queuedPlayedDate.unix()) {
+            this.logger.debug('Should refresh scrobbles => queued scrobble playDate is newer than last upstream scrobble refresh');
+            return true;
+        }
+
+        // if the last scrobbled play is at or is newer than the next scrobble then we are inserting (or potentially duping)
+        // in which case our data is probably stale
+        if(this.newestScrobbleTime !== undefined && this.newestScrobbleTime.unix() >= queuedPlayedDate.unix()) {
+            this.logger.debug('Should refresh scrobbles => queued scrobble playDate is equal to or older than the newest upstream scrobble');
+            return true;
+        }
+
+        if(refreshStaleAfter !== undefined) {
+            const diff = dayjs().diff(this.lastScrobbleCheck, 's');
+            if(diff > refreshStaleAfter) {
+                this.logger.debug(`Should refresh scrobbles => last refresh (${diff}s ago) was longer than refreshStaleAfter (${refreshStaleAfter}s)`);
+                return true;
+            }
+        }
+
+        this.logger.debug('Scrobble refresh not needed');
+        return false;
     }
 
     public abstract alreadyScrobbled(playObj: PlayObject, log?: boolean): Promise<boolean>;
@@ -193,17 +245,13 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
 
     getScrobbledPlays = () => this.scrobbledPlayObjs.data.map(x => x.scrobble)
 
-    findExistingSubmittedPlayObj = (playObj: PlayObject): ([undefined, undefined] | [ScrobbledPlayObject, ScrobbledPlayObject[]]) => {
-        const {
-            data: {
-                playDate
-            } = {},
-            meta: {
-                source,
-            } = {}
-        } = playObj;
+    findExistingSubmittedPlayObj = (playObjPre: PlayObject): ([undefined, undefined] | [ScrobbledPlayObject, ScrobbledPlayObject[]]) => {
 
-        const dtInvariantMatches = this.scrobbledPlayObjs.data.filter(x => playObjDataMatch(playObj, x.play));
+        const playObj = this.transformPlay(playObjPre, TRANSFORM_HOOK.candidate);
+
+        const dtInvariantMatches = this.scrobbledPlayObjs.data
+            .map(x => ({...x, play: this.transformPlay(x.play, TRANSFORM_HOOK.existing)}))
+            .filter(x => playObjDataMatch(playObj, x.play));
 
         if (dtInvariantMatches.length === 0) {
             return [undefined, []];
@@ -240,7 +288,10 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
         return [Math.min(compareScrobbleArtists(existing, candidate)/100, 1), wholeMatches]
     }
 
-    existingScrobble = async (playObj: PlayObject) => {
+    existingScrobble = async (playObjPre: PlayObject) => {
+
+        const playObj = this.transformPlay(playObjPre, TRANSFORM_HOOK.candidate);
+
         const tr = truncateStringToLength(27);
         const scoreTrackOpts: TrackStringOptions = {include: ['track', 'artist', 'time'], transformers: {track: (t: any, data, existing) => `${existing ? '- ': ''}${tr(t)}`}};
 
@@ -256,7 +307,7 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
         let closestMatch: {score: number, breakdowns: string[], confidence: string, scrobble?: PlayObject} = {score: 0, breakdowns: [], confidence: 'No existing scrobble matched with a score higher than 0'};
 
         // then check if we have already recorded this
-        const [existingExactSubmitted, existingDataSubmitted = []] = this.findExistingSubmittedPlayObj(playObj);
+        const [existingExactSubmitted, existingDataSubmitted = []] = this.findExistingSubmittedPlayObj(playObjPre);
 
         // if we have an submitted play with matching data and play date then we can just return the response from the original scrobble
         if (existingExactSubmitted !== undefined) {
@@ -287,7 +338,9 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
             // in which case we can check the scrobble api response against recent scrobbles (also from api) for a more accurate comparison
             const referenceApiScrobbleResponse = existingDataSubmitted.length > 0 ? existingDataSubmitted[0].scrobble : undefined;
 
-            existingScrobble = this.recentScrobbles.find((x) => {
+            existingScrobble = this.recentScrobbles.find((xPre) => {
+
+                const x = this.transformPlay(xPre, TRANSFORM_HOOK.existing);
 
                 //const referenceMatch = referenceApiScrobbleResponse !== undefined && playObjDataMatch(x, referenceApiScrobbleResponse);
 
@@ -525,20 +578,21 @@ ${closestMatch.breakdowns.join('\n')}`, {leaf: ['Dupe Check']});
             this.scrobbling = true;
             while (!this.shouldStopScrobbleProcessing()) {
                 while (this.queuedScrobbles.length > 0) {
-                    if (this.lastScrobbleCheck.unix() < this.getLatestQueuePlayDate().unix()) {
+                    if (this.shouldRefreshScrobble()) {
                         await this.refreshScrobbles();
                     }
                     const currQueuedPlay = this.queuedScrobbles.shift();
                     const [timeFrameValid, timeFrameValidLog] = this.timeFrameIsValid(currQueuedPlay.play);
                     if (timeFrameValid && !(await this.alreadyScrobbled(currQueuedPlay.play))) {
+                        const transformedScrobble = this.transformPlay(currQueuedPlay.play, TRANSFORM_HOOK.postCompare);
                         try {
-                            const scrobbledPlay = await this.scrobble(currQueuedPlay.play);
-                            this.emitEvent('scrobble', {play: currQueuedPlay.play});
-                            this.addScrobbledTrack(currQueuedPlay.play, scrobbledPlay);
+                            const scrobbledPlay = await this.scrobble(transformedScrobble);
+                            this.emitEvent('scrobble', {play: transformedScrobble});
+                            this.addScrobbledTrack(transformedScrobble, scrobbledPlay);
                         } catch (e) {
                             if (e instanceof UpstreamError && e.showStopper === false) {
                                 this.addDeadLetterScrobble(currQueuedPlay, e);
-                                this.logger.warn(new Error(`Could not scrobble ${buildTrackString(currQueuedPlay.play)} from Source '${currQueuedPlay.source}' but error was not show stopping. Adding scrobble to Dead Letter Queue and will retry on next heartbeat.`, {cause: e}));
+                                this.logger.warn(new Error(`Could not scrobble ${buildTrackString(transformedScrobble)} from Source '${currQueuedPlay.source}' but error was not show stopping. Adding scrobble to Dead Letter Queue and will retry on next heartbeat.`, {cause: e}));
                             } else {
                                 this.queuedScrobbles.unshift(currQueuedPlay);
                                 throw new Error('Error occurred while trying to scrobble', {cause: e});
@@ -613,15 +667,16 @@ ${closestMatch.breakdowns.join('\n')}`, {leaf: ['Dupe Check']});
         }
         const [timeFrameValid, timeFrameValidLog] = this.timeFrameIsValid(deadScrobble.play);
         if (timeFrameValid && !(await this.alreadyScrobbled(deadScrobble.play))) {
+            const transformedScrobble = this.transformPlay(deadScrobble.play, TRANSFORM_HOOK.postCompare);
             try {
-                const scrobbledPlay = await this.scrobble(deadScrobble.play);
-                this.emitEvent('scrobble', {play: deadScrobble.play});
-                this.addScrobbledTrack(deadScrobble.play, scrobbledPlay);
+                const scrobbledPlay = await this.scrobble(transformedScrobble);
+                this.emitEvent('scrobble', {play: transformedScrobble});
+                this.addScrobbledTrack(transformedScrobble, scrobbledPlay);
             } catch (e) {
                 deadScrobble.retries++;
                 deadScrobble.error = messageWithCauses(e);
                 deadScrobble.lastRetry = dayjs();
-                this.logger.error(new Error(`Could not scrobble ${buildTrackString(deadScrobble.play)} from Source '${deadScrobble.source}' due to error`, {cause: e}));
+                this.logger.error(new Error(`Could not scrobble ${buildTrackString(transformedScrobble)} from Source '${deadScrobble.source}' due to error`, {cause: e}));
                 this.deadLetterScrobbles[deadScrobbleIndex] = deadScrobble;
                 return [false, deadScrobble];
             } finally {
@@ -661,7 +716,8 @@ ${closestMatch.breakdowns.join('\n')}`, {leaf: ['Dupe Check']});
     queueScrobble = (data: PlayObject | PlayObject[], source: string) => {
         const plays = Array.isArray(data) ? data : [data];
         for(const p of plays) {
-            const queuedPlay = {id: nanoid(), source, play: p}
+            const transformedPlay = this.transformPlay(p, TRANSFORM_HOOK.preCompare);
+            const queuedPlay = {id: nanoid(), source, play: transformedPlay}
             this.emitEvent('scrobbleQueued', {queuedPlay: queuedPlay});
             this.queuedScrobbles.push(queuedPlay);
         }

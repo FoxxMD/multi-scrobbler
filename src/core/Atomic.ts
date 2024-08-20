@@ -31,13 +31,14 @@ export interface ClientStatusData {
     initialized: boolean;
 }
 
-export type PlayObjectIncludeTypes = 'time' | 'artist' | 'track' | 'timeFromNow' | 'trackId' | 'comment';
-export const recentIncludes: PlayObjectIncludeTypes[] = ['time', 'timeFromNow', 'track', 'artist', 'comment'];
+export type PlayObjectIncludeTypes = 'album' | 'time' | 'artist' | 'track' | 'timeFromNow' | 'trackId' | 'comment';
+export const recentIncludes: PlayObjectIncludeTypes[] = ['time', 'timeFromNow', 'track', 'album', 'artist', 'comment'];
 
 export interface TrackStringOptions<T = string> {
     include?: PlayObjectIncludeTypes[]
     transformers?: {
         artists?: (a: string[]) => T | string
+        album?: (t: string,data: AmbPlayObject, hasExistingParts?: boolean) => T | string
         track?: (t: string,data: AmbPlayObject, hasExistingParts?: boolean) => T | string
         time?: (t: Dayjs, i?: ScrobbleTsSOC) => T | string
         timeFromNow?: (t: Dayjs) => T | string
@@ -57,6 +58,14 @@ export interface ListenRangeData {
     end: ListenProgress
 }
 
+export interface BrainzMeta {
+    artist?: string[]
+    albumArtist?: string
+    album?: string
+    track?: string
+    releaseGroup?: string
+}
+
 export interface TrackData {
     artists?: string[]
     albumArtists?: string[]
@@ -68,13 +77,7 @@ export interface TrackData {
     duration?: number
 
     meta?: {
-        brainz?: {
-            artist?: string[]
-            albumArtist?: string
-            album?: string
-            track?: string
-            releaseGroup?: string
-        }
+        brainz?: BrainzMeta
     }
 }
 

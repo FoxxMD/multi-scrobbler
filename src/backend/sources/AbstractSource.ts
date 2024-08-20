@@ -18,7 +18,7 @@ import {
     PlayUserId,
     ProgressAwarePlayObject,
     SINGLE_USER_PLATFORM_ID,
-    SourceType,
+    SourceType, TRANSFORM_HOOK,
 } from "../common/infrastructure/Atomic.js";
 import { SourceConfig } from "../common/infrastructure/config/source/sources.js";
 import TupleMap from "../common/TupleMap.js";
@@ -46,7 +46,7 @@ export default abstract class AbstractSource extends AbstractComponent implement
     type: SourceType;
     identifier: string;
 
-    config: SourceConfig;
+    declare config: SourceConfig;
     clients: string[];
     instantiatedAt: Dayjs;
     lastActivityAt: Dayjs;
@@ -64,6 +64,9 @@ export default abstract class AbstractSource extends AbstractComponent implement
     pollRetries: number = 0;
     tracksDiscovered: number = 0;
 
+    protected isSleeping: boolean = false;
+    protected wakeAt: Dayjs = dayjs();
+
     supportsUpstreamRecentlyPlayed: boolean = false;
     supportsUpstreamNowPlaying: boolean = false;
 
@@ -74,7 +77,7 @@ export default abstract class AbstractSource extends AbstractComponent implement
     protected recentDiscoveredPlays: GroupedFixedPlays = new TupleMap<DeviceId, PlayUserId, FixedSizeList<ProgressAwarePlayObject>>();
 
     constructor(type: SourceType, name: string, config: SourceConfig, internal: InternalConfig, emitter: EventEmitter) {
-        super();
+        super(config);
         const {clients = [] } = config;
         this.type = type;
         this.name = name;
@@ -144,8 +147,12 @@ export default abstract class AbstractSource extends AbstractComponent implement
                 }
             });
         }
+        const candidate = this.transformPlay(play, TRANSFORM_HOOK.candidate);
         for(const list of lists) {
-            const existing = list.find(x => playObjDataMatch(x, play) && temporalAccuracyIsAtLeast(TA_CLOSE, comparePlayTemporally(x, play).match));
+            const existing = list.find(x => {
+                const e = this.transformPlay(x, TRANSFORM_HOOK.existing);
+                return playObjDataMatch(e, candidate) && temporalAccuracyIsAtLeast(TA_CLOSE, comparePlayTemporally(e, candidate).match)
+            });
             if(existing) {
                 return existing;
             }
@@ -163,7 +170,9 @@ export default abstract class AbstractSource extends AbstractComponent implement
     discover = (plays: PlayObject[], options: { checkAll?: boolean, [key: string]: any } = {}): PlayObject[] => {
         const newDiscoveredPlays: PlayObject[] = [];
 
-        for(const play of plays) {
+        const transformedPlayed = plays.map(x => this.transformPlay(x, TRANSFORM_HOOK.preCompare));
+
+        for(const play of transformedPlayed) {
             if(!this.alreadyDiscovered(play, options)) {
                 this.addPlayToDiscovered(play);
                 newDiscoveredPlays.push(play);
@@ -181,7 +190,7 @@ export default abstract class AbstractSource extends AbstractComponent implement
         if(newDiscoveredPlays.length > 0) {
             newDiscoveredPlays.sort(sortByOldestPlayDate);
             this.emitter.emit('discoveredToScrobble', {
-                data: newDiscoveredPlays,
+                data: newDiscoveredPlays.map(x => this.transformPlay(x, TRANSFORM_HOOK.postCompare)),
                 options: {
                     ...options,
                     checkTime: newDiscoveredPlays[newDiscoveredPlays.length-1].data.playDate.add(2, 'second'),
@@ -305,6 +314,13 @@ export default abstract class AbstractSource extends AbstractComponent implement
         let pollRes: boolean | undefined = undefined;
         while (pollRes === undefined && this.pollRetries <= maxRetries) {
             try {
+                if(!this.isReady() && this.buildOK) {
+                    this.logger.verbose(`Source is no longer ready! Will attempt to reinitialize => Connection OK: ${this.connectionOK} | Auth OK: ${this.authed}`);
+                    const init = await this.initialize();
+                    if(init === false) {
+                        throw new Error('Source failed reinitialization');
+                    }
+                }
                 pollRes = await this.doPolling();
                 if(pollRes === true) {
                     break;
@@ -420,11 +436,13 @@ export default abstract class AbstractSource extends AbstractComponent implement
                 } else {
                     this.logger.debug(`Last activity was at ${this.lastActivityAt.format()} | Next check interval: ${formatNumber(sleepTime)}s`);
                 }
-                const wakeUpAt = pollFrom.add(sleepTime, 'seconds');
-                while(!this.shouldStopPolling() && dayjs().isBefore(wakeUpAt)) {
+                this.setWakeAt(pollFrom.add(sleepTime, 'seconds'));
+                this.setIsSleeping(true);
+                while(!this.shouldStopPolling() && dayjs().isBefore(this.getWakeAt())) {
                     // check for polling status every half second and wait till wake up time
                     await sleep(500);
                 }
+                this.setIsSleeping(false);
 
             }
             if(this.shouldStopPolling()) {
@@ -441,7 +459,25 @@ export default abstract class AbstractSource extends AbstractComponent implement
             this.emitEvent('statusChange', {status: 'Idle'});
             this.polling = false;
             throw e;
+        } finally {
+            this.setIsSleeping(false);
         }
+    }
+
+    protected setIsSleeping(sleeping: boolean) {
+        this.isSleeping = sleeping;
+    }
+
+    protected getIsSleeping() {
+        return this.isSleeping;
+    }
+
+    protected setWakeAt(dt: Dayjs) {
+        this.wakeAt = dt;
+    }
+
+    protected getWakeAt() {
+        return this.wakeAt;
     }
 
     protected getInterval() {

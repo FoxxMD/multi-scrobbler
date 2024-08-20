@@ -90,6 +90,8 @@ export default class DeezerSource extends AbstractSource {
     }
 
     protected async doBuildInitData(): Promise<true | string | undefined> {
+        this.logger.warn('This Source is DEPRECATED! Deezer has dropped support official API support. New apps cannot be created and existing apps are not guaranteed to continue working. See the documentation or this issue for more information: https://github.com/FoxxMD/multi-scrobbler/issues/175#issuecomment-2296776625');
+
         try {
             const credFile = await readJson(this.workingCredsPath, {throwOnNotFound: false});
             if(credFile !== undefined) {

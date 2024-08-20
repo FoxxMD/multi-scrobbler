@@ -1,4 +1,5 @@
 import { Logger } from '@foxxmd/logging';
+import { SearchAndReplaceRegExp } from "@foxxmd/regex-buddy-core";
 import { Dayjs } from "dayjs";
 import { Request, Response } from "express";
 import { NextFunction, ParamsDictionary, Query } from "express-serve-static-core";
@@ -22,7 +23,8 @@ export type SourceType =
     | 'kodi'
     | 'webscrobbler'
     | 'chromecast'
-    | 'musikcube';
+    | 'musikcube'
+    | 'mpd';
 
 export const sourceTypes: SourceType[] = [
     'spotify',
@@ -40,7 +42,8 @@ export const sourceTypes: SourceType[] = [
     'kodi',
     'webscrobbler',
     'chromecast',
-    'musikcube'
+    'musikcube',
+    'mpd'
 ];
 
 export const lowGranularitySources: SourceType[] = ['subsonic', 'ytmusic'];
@@ -238,3 +241,30 @@ export interface MdnsDeviceInfo {
 export type AbstractApiOptions = Record<any, any> & { logger: Logger }
 
 export type keyOmit<T, U extends keyof any> = T & { [P in U]?: never }
+
+export type SearchAndReplaceTerm = string | SearchAndReplaceRegExp;
+
+export interface PlayTransformParts<T> {
+    title?: T[]
+    artists?: T[]
+    album?: T[]
+}
+
+export interface PlayTransformHooks<T> {
+    preCompare?: PlayTransformParts<T>
+    compare?: {
+        candidate?: PlayTransformParts<T>
+        existing?: PlayTransformParts<T>
+    }
+    postCompare?: PlayTransformParts<T>
+}
+
+export type PlayTransformRules = PlayTransformHooks<SearchAndReplaceRegExp>
+
+export type TransformHook = 'preCompare' | 'compare' | 'candidate' | 'existing' | 'postCompare';
+export const TRANSFORM_HOOK = {
+    preCompare: 'preCompare' as TransformHook,
+    candidate: 'candidate' as TransformHook,
+    existing: 'existing' as TransformHook,
+    postCompare: 'postCompare' as TransformHook,
+}

@@ -33,12 +33,14 @@ export const truncateStringToLength = (length: any, truncStr = '...') => (val: a
 export const defaultTrackTransformer = (input: any, data: AmbPlayObject, hasExistingParts: boolean = false) => hasExistingParts ? `- ${input}` : input;
 export const defaultReducer = (acc, curr) => `${acc} ${curr}`;
 export const defaultArtistFunc = (a: string[]) => a.join(' / ');
+export const defaultAlbumFunc = (input: any, data: AmbPlayObject, hasExistingParts: boolean = false) => hasExistingParts ? `--- ${input}` : input;
 export const defaultTimeFunc = (t: Dayjs | undefined, i?: ScrobbleTsSOC) => t === undefined ? '@ N/A' : `@ ${t.local().format()} ${i === undefined ? '' : (i === SCROBBLE_TS_SOC_START ? '(S)' : '(C)')}`;
 export const defaultTimeFromNowFunc = (t: Dayjs | undefined) => t === undefined ? undefined : `(${t.local().fromNow()})`;
 export const defaultCommentFunc = (c: string | undefined) => c === undefined ? undefined : `(${c})`;
 export const defaultBuildTrackStringTransformers = {
     artists: defaultArtistFunc,
     track: defaultTrackTransformer,
+    album: defaultAlbumFunc,
     time: defaultTimeFunc,
     timeFromNow: defaultTimeFromNowFunc,
     comment: defaultCommentFunc
@@ -48,6 +50,7 @@ export const buildTrackString = <T = string>(playObj: AmbPlayObject, options: Tr
         include = ['time', 'artist', 'track'],
         transformers: {
             artists: artistsFunc = defaultBuildTrackStringTransformers.artists,
+            album: albumFunc = defaultBuildTrackStringTransformers.album,
             track: trackFunc = defaultBuildTrackStringTransformers.track,
             time: timeFunc = defaultBuildTrackStringTransformers.time,
             timeFromNow = defaultBuildTrackStringTransformers.timeFromNow,
@@ -88,6 +91,9 @@ export const buildTrackString = <T = string>(playObj: AmbPlayObject, options: Tr
     }
     if (include.includes('track')) {
         strParts.push(trackFunc(track, playObj, strParts.length > 0));
+    }
+    if (include.includes('album')) {
+        strParts.push(albumFunc(album, playObj, strParts.length > 0));
     }
     if (include.includes('time')) {
         strParts.push(timeFunc(pd, usedTsSOC));

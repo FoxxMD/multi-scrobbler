@@ -6,6 +6,9 @@ import { Notifiers } from "../../notifier/Notifiers.js";
 import AbstractScrobbleClient from "../../scrobblers/AbstractScrobbleClient.js";
 
 export class TestScrobbler extends AbstractScrobbleClient {
+    protected async getScrobblesForRefresh(limit: number): Promise<PlayObject[]> {
+        return [];
+    }
 
     constructor() {
         const logger = loggerTest;

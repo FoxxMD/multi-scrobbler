@@ -1,4 +1,5 @@
 import { Logger } from '@foxxmd/logging';
+import { SearchAndReplaceRegExp } from "@foxxmd/regex-buddy-core";
 import backoffStrategies from '@kenyip/backoff-strategies';
 import address from "address";
 import * as AjvNS from 'ajv';
@@ -22,11 +23,11 @@ import {
     NO_USER,
     numberFormatOptions,
     PlayerStateData,
-    PlayPlatformId,
+    PlayPlatformId, PlayTransformParts,
     ProgressAwarePlayObject,
     RegExResult,
     RemoteIdentityParts,
-    ScrobbleThresholdResult,
+    ScrobbleThresholdResult, SearchAndReplaceTerm,
 } from "./common/infrastructure/Atomic.js";
 
 //const { default: Ajv } = AjvNS;
@@ -789,4 +790,65 @@ export const joinedUrl = (url: URL, ...paths: string[]): URL => {
     const finalUrl = new URL(url);
     finalUrl.pathname = joinPath(url.pathname, ...(paths.filter(x => x.trim() !== '')));
     return finalUrl;
+}
+
+export const configValToSearchReplace = (val: string | undefined | object): SearchAndReplaceRegExp | undefined => {
+    if (val === undefined || val === null) {
+        return undefined;
+    }
+    if (typeof val === 'string') {
+        return {
+            search: val,
+            replace: ''
+        }
+    }
+    if (isSearchAndReplace(val)) {
+        return val as SearchAndReplaceRegExp;
+    }
+    throw new Error(`Value must be a string or an object containing 'search: string' and 'replace: 'string'. Given: ${val}`);
+}
+
+export const isSearchAndReplace = (val: object): val is SearchAndReplaceRegExp => {
+    return typeof val === 'object'
+    && ('search' in val && typeof val.search === 'string')
+    && ('replace' in val && typeof val.replace === 'string');
+}
+
+export const configPartsToStrongParts = (val: PlayTransformParts<SearchAndReplaceTerm> | undefined): PlayTransformParts<SearchAndReplaceRegExp> => {
+    if (val === undefined) {
+        return {}
+    }
+    const {
+        title: titleConfig,
+        artists: artistConfig,
+        album: albumConfig
+    } = val;
+    let title,
+        artists,
+        album;
+
+    if (titleConfig !== undefined) {
+        if (!Array.isArray(titleConfig)) {
+            throw new Error('title must be an array');
+        }
+        title = titleConfig.map(configValToSearchReplace);
+    }
+    if (artistConfig !== undefined) {
+        if (!Array.isArray(artistConfig)) {
+            throw new Error('arist must be an array');
+        }
+        artists = artistConfig.map(configValToSearchReplace);
+    }
+    if (albumConfig !== undefined) {
+        if (!Array.isArray(albumConfig)) {
+            throw new Error('albumConfig must be an array');
+        }
+        album = albumConfig.map(configValToSearchReplace);
+    }
+
+    return {
+        title,
+        artists,
+        album
+    }
 }

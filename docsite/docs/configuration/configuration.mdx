@@ -21,6 +21,7 @@ import MalojaConfig from '!!raw-loader!../../../config/maloja.json.example';
 import MopidyConfig from '!!raw-loader!../../../config/mopidy.json.example';
 import MprisConfig from '!!raw-loader!../../../config/mpris.json.example';
 import MusikcubeConfig from '!!raw-loader!../../../config/musikcube.json.example';
+import MPDConfig from '!!raw-loader!../../../config/mpd.json.example';
 import PlexConfig from '!!raw-loader!../../../config/plex.json.example';
 import SpotifyConfig from '!!raw-loader!../../../config/spotify.json.example';
 import SubsonicConfig from '!!raw-loader!../../../config/subsonic.json.example';
@@ -146,7 +147,7 @@ These options affect multi-scrobbler's behavior and are not specific to any sour
 
 #### Base URL
 
-Defines the URL that is used to generate default redirect URLs for authentication on [spotify](#spotify), [lastfm](#lastfm), and [deezer](#deezer) -- as well as some logging hints.
+Defines the URL that is used to generate default redirect URLs for authentication on [spotify](#spotify) and [lastfm](#lastfm) -- as well as some logging hints.
 
 * Default => `http://localhost:9078`
 * Set with [ENV](./configuration?configType=env#configuration-types) `BASE_URL` or `baseUrl` [all-in-one configuration](./configuration?configType=aio#configuration-types)
@@ -491,7 +492,21 @@ On your [profile page](https://listenbrainz.org/profile/) find your **User Token
     </TabItem>
 </Tabs>
 
-### [Deezer](https://deezer.com/)
+### [~~Deezer~~](https://deezer.com/)
+
+:::warning
+
+**This Source is DEPRECATED because Deezer has dropped official API support.** This Source will **not** be removed but no further support or fixes will be given.
+
+Users cannot create new applications on Deezer Developers and there is no guarantee existing applications will continue to work.
+
+As a workaround consider integrating Deezer with last.fm and then using [last.fm as a Source](#lastfm-source).
+
+Users with existing Deezer applications in use with multi-scrobbler should consider this change as well to avoid future breaking issues with the unsupported API.
+
+[See this issue for more discussion.](https://github.com/FoxxMD/multi-scrobbler/issues/175#issuecomment-2296776625)
+
+:::
 
 Create a new application at [Deezer Developers](https://developers.deezer.com/myapps)
 
@@ -1253,6 +1268,52 @@ If no URL is provided to MS it will try to use `ws://localhost:7905`
         </details>
 
         or <SchemaLink lower objectName="MusikcubeSourceConfig"/>
+    </TabItem>
+</Tabs>
+
+### [MPD (Music Player Daemon)](https://www.musicpd.org/)
+
+MS communicates with MPD using the [TCP client connection.](https://mpd.readthedocs.io/en/stable/user.html#client-connections)
+
+You should uncomment/create the following settings in your mpd config:
+
+```
+bind_to_address	"any"   # or a specific ipv4/v6 address
+port            "6600"
+```
+
+<!-- MS will also discover MPD servers if [zeroconf support](https://mpd.readthedocs.io/en/stable/user.html#zeroconf) is enabled and MS is set up to utilize mDNS. This can be disabled in file-config options. -->
+
+#### Configuration
+
+<Tabs groupId="configType" queryString>
+    <TabItem value="env" label="ENV">
+        | Environmental Variable | Required? | Default          | Description |
+        |------------------------|-----------|------------------|-------------|
+        | `MPD_URL`              | No        | `localhost:6600` |             |
+        | `MPD_PASSWORD`         | No        |                  |             |
+    </TabItem>
+    <TabItem value="file" label="File">
+        <details>
+
+            <summary>Example</summary>
+
+            <CodeBlock title="CONFIG_DIR/mpd.json" language="json5">{MPDConfig}</CodeBlock>
+
+        </details>
+
+        or <SchemaLink lower objectName="MPDSourceConfig"/>
+    </TabItem>
+    <TabItem value="aio" label="AIO">
+        <details>
+
+            <summary>Example</summary>
+
+            <AIOExample data={MPDConfig} name="mpd"/>
+
+        </details>
+
+        or <SchemaLink lower objectName="MPDSourceConfig"/>
     </TabItem>
 </Tabs>
 
