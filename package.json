@@ -1,6 +1,6 @@
 {
   "name": "multi-scrobbler",
-  "version": "0.8.1",
+  "version": "0.8.2",
   "type": "module",
   "description": "scrobble plays from multiple sources to multiple clients",
   "scripts": {
@@ -114,7 +114,7 @@
   "devDependencies": {
     "@dbus-types/notifications": "^0.0.5",
     "@eslint/js": "^8.56.0",
-    "@faker-js/faker": "^9.0.0-rc.0",
+    "@faker-js/faker": "^9.0.0-rc.1",
     "@istanbuljs/nyc-config-typescript": "^1.0.2",
     "@testing-library/jest-dom": "^5.17.0",
     "@testing-library/react": "^13.4.0",
