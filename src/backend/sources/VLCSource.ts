@@ -12,6 +12,7 @@ import {
 } from "../common/infrastructure/Atomic.js";
 import { VlcAudioMeta, VLCSourceConfig, PlayerState } from "../common/infrastructure/config/source/vlc.js";
 import { isPortReachable } from "../utils/NetworkUtils.js";
+import { firstNonEmptyStr } from "../utils/StringUtils.js";
 import { RecentlyPlayedOptions } from "./AbstractSource.js";
 import MemorySource from "./MemorySource.js";
 
@@ -111,16 +112,21 @@ export class VLCSource extends MemorySource {
             title,
             album,
             ALBUMARTIST,
+            Writer,
+            StreamArtist,
+            StreamTitle,
             artist
         } = obj;
 
         let artists = [];
         let albumArtists = [];
-        if(artist !== undefined && artist.trim() !== '') {
-            artists.push(artist);
+        const validArtist = firstNonEmptyStr([artist, StreamArtist, ALBUMARTIST, Writer]);
+        if(artist !== undefined) {
+            artists.push(validArtist);
         }
-        if(ALBUMARTIST !== undefined && ALBUMARTIST.trim() !== '' && ALBUMARTIST !== artist) {
-            albumArtists.push(ALBUMARTIST);
+        const aa = firstNonEmptyStr([ALBUMARTIST]);
+        if(aa !== undefined) {
+            albumArtists.push(aa);
         }
         if(artists.length === 0 && albumArtists.length !== 0) {
             // switch these, tags are probably improper
@@ -128,10 +134,7 @@ export class VLCSource extends MemorySource {
             albumArtists = [];
         }
 
-        let trackName = title;
-        if(trackName === undefined && filename !== undefined) {
-            trackName = filename;
-        }
+        const trackName = firstNonEmptyStr([title, StreamTitle, filename]);
 
         const {
             /** time position within the current track */
