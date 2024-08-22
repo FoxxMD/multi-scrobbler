@@ -1,3 +1,4 @@
+import { parseRegexSingle, parseToRegex } from "@foxxmd/regex-buddy-core";
 import { EventEmitter } from "events";
 import * as VLC from "vlc-client"
 import { VlcMeta, VlcStatus } from "vlc-client/dist/Types.js";
@@ -29,6 +30,7 @@ export class VLCSource extends MemorySource {
     port?: number
     client!: VLC.Client;
     deviceId: string
+    filenamePatterns: RegExp[] = [];
 
     constructor(name: any, config: VLCSourceConfig, internal: InternalConfig, emitter: EventEmitter) {
         const {
@@ -58,6 +60,9 @@ export class VLCSource extends MemorySource {
             data: {
                 url,
                 password,
+            } = {},
+            options: {
+                filenamePatterns = []
             } = {}
         } = this.config;
 
@@ -70,6 +75,21 @@ export class VLCSource extends MemorySource {
             port: this.port,
             password: password
         });
+
+        let fp = filenamePatterns;
+        if(typeof filenamePatterns === 'string') {
+            fp = [filenamePatterns];
+        }
+        if(fp.length > 0) {
+            for(const p of fp) {
+                const reg = parseToRegex(p);
+                if(reg === undefined) {
+                    throw new Error(`filenamePattern could not be parsed as a valid Regex => ${p}`);
+                }
+                this.filenamePatterns.push(reg);
+            }
+        }
+
         return true;
     }
 
@@ -110,7 +130,7 @@ export class VLCSource extends MemorySource {
         const {
             filename,
             title,
-            album,
+            album: albumVal,
             ALBUMARTIST,
             Writer,
             StreamArtist,
@@ -134,7 +154,53 @@ export class VLCSource extends MemorySource {
             albumArtists = [];
         }
 
-        const trackName = firstNonEmptyStr([title, StreamTitle, filename]);
+        let album = albumVal;
+
+        let trackName = firstNonEmptyStr([title, StreamTitle]);
+        if (trackName === undefined && album === undefined && artists.length === 0 && albumArtists.length === 0 && this.filenamePatterns.length > 0) {
+            const {
+                options: {
+                    logFilenamePatterns = false
+                } = {}
+            } = this.config;
+
+            let anyMatched = false;
+            for (const reg of this.filenamePatterns) {
+                const result = parseRegexSingle(reg, filename);
+                const matchedPatternDebug: Record<string, string> = {};
+                if (result !== undefined) {
+                    anyMatched = true;
+                    if (result.named.title !== undefined) {
+                        trackName = result.named.title;
+                        matchedPatternDebug.title = trackName;
+                    }
+                    if (result.named.artist !== undefined) {
+                        artists.push(result.named.artist);
+                        matchedPatternDebug.artist = result.named.artist;
+                    }
+                    if (result.named.album !== undefined) {
+                        album = result.named.album;
+                        matchedPatternDebug.album = album;
+                    }
+
+                    if (logFilenamePatterns) {
+                        if (Object.keys(matchedPatternDebug).length > 0) {
+                            matchedPatternDebug.filenamePattern = reg.source;
+                            this.logger.debug(matchedPatternDebug, `No metadata found for file '${filename}' but it was matched by filenamePattern`);
+                        } else {
+                            this.logger.debug(`filenamePattern matched but no named groups? Should have groups named any of: title artist album | filenamePattern => ${reg.source}`);
+                        }
+                    }
+                }
+            }
+            if (!anyMatched && logFilenamePatterns) {
+                this.logger.debug(`no filenamePatterns matched for filename => ${filename}`);
+            }
+        }
+
+        if(trackName === undefined) {
+            trackName = filename;
+        }
 
         const {
             /** time position within the current track */
@@ -175,6 +241,9 @@ export class VLCSource extends MemorySource {
         let play: PlayObject | undefined;
         if(meta !== undefined) {
             play = this.formatPlayObj(meta, {vlcStatus: state});
+            if(this.config?.options?.dumpVlcMetadata) {
+                this.logger.debug(meta, 'VLC Metadata');
+            }
         }
 
         const playerState: PlayerStateData = {

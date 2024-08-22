@@ -6,7 +6,7 @@ export interface VLCData extends CommonSourceData, PollingOptions {
     /**
      * URL:PORT of the VLC server to connect to
      *
-     * To use this you must have Web (http) interface module enabled and a password set https://foxxmd.github.io/multi-scrobbler/docs/configuration#vlc
+     * To use this you must have the Web (http) interface module enabled and a password set https://foxxmd.github.io/multi-scrobbler/docs/configuration#vlc
      *
      * @examples ["localhost:8080"]
      * @default "localhost:8080"
@@ -21,6 +21,25 @@ export interface VLCData extends CommonSourceData, PollingOptions {
 }
 
 export interface VLCSourceOptions extends CommonSourceOptions {
+    /** A list of regular expressions to use to extract metadata (title, album, artist) from a filename
+     *
+     * Used when VLC reports only the filename for the current audio track
+     * */
+    filenamePatterns?: string[]
+    /**
+     * Log to DEBUG when a filename-only track is matched or not matched by filenamePatterns
+     *
+     * @default false
+     * */
+    logFilenamePatterns?: boolean
+    /**
+     * Dump all the metadata VLC reports for an audio track to DEBUG.
+     *
+     * Use this if reporting an issue with VLC not correctly capturing metadata for a track.
+     *
+     * @default false
+     * */
+    dumpVlcMetadata?: boolean
 }
 
 export interface VLCSourceConfig extends CommonSourceConfig {
