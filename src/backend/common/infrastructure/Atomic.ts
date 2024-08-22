@@ -24,7 +24,8 @@ export type SourceType =
     | 'webscrobbler'
     | 'chromecast'
     | 'musikcube'
-    | 'mpd';
+    | 'mpd'
+    | 'vlc';
 
 export const sourceTypes: SourceType[] = [
     'spotify',
@@ -43,7 +44,8 @@ export const sourceTypes: SourceType[] = [
     'webscrobbler',
     'chromecast',
     'musikcube',
-    'mpd'
+    'mpd',
+    'vlc'
 ];
 
 export const lowGranularitySources: SourceType[] = ['subsonic', 'ytmusic'];

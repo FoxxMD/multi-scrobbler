@@ -13,6 +13,7 @@ import { PlexSourceAIOConfig, PlexSourceConfig } from "./plex.js";
 import { SpotifySourceAIOConfig, SpotifySourceConfig } from "./spotify.js";
 import { SubsonicSourceAIOConfig, SubSonicSourceConfig } from "./subsonic.js";
 import { TautulliSourceAIOConfig, TautulliSourceConfig } from "./tautulli.js";
+import { VLCSourceAIOConfig, VLCSourceConfig } from "./vlc.js";
 import { WebScrobblerSourceAIOConfig, WebScrobblerSourceConfig } from "./webscrobbler.js";
 import { YTMusicSourceAIOConfig, YTMusicSourceConfig } from "./ytmusic.js";
 
@@ -34,7 +35,8 @@ export type SourceConfig =
     | WebScrobblerSourceConfig
     | ChromecastSourceConfig
     | MusikcubeSourceConfig
-    | MPDSourceConfig;
+    | MPDSourceConfig
+    | VLCSourceConfig;
 
 export type SourceAIOConfig =
     SpotifySourceAIOConfig
@@ -53,4 +55,5 @@ export type SourceAIOConfig =
     | WebScrobblerSourceAIOConfig
     | ChromecastSourceAIOConfig
     | MusikcubeSourceAIOConfig
-    | MPDSourceAIOConfig;
+    | MPDSourceAIOConfig
+    | VLCSourceAIOConfig;
