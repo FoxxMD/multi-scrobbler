@@ -356,7 +356,6 @@
                     "title": "options"
                 },
                 "type": {
-                    "default": "maloja",
                     "enum": [
                         "maloja"
                     ],

@@ -20,7 +20,7 @@ import { SourceAIOConfig, SourceConfig } from "../common/infrastructure/config/s
 import { SpotifySourceConfig, SpotifySourceData } from "../common/infrastructure/config/source/spotify.js";
 import { SubsonicData, SubSonicSourceConfig } from "../common/infrastructure/config/source/subsonic.js";
 import { TautulliSourceConfig } from "../common/infrastructure/config/source/tautulli.js";
-import { VLCSourceConfig } from "../common/infrastructure/config/source/vlc.js";
+import { VLCData, VLCSourceConfig } from "../common/infrastructure/config/source/vlc.js";
 import { WebScrobblerSourceConfig } from "../common/infrastructure/config/source/webscrobbler.js";
 import { YTMusicSourceConfig } from "../common/infrastructure/config/source/ytmusic.js";
 import * as aioSchema from "../common/schema/aio-source.json";
@@ -362,6 +362,22 @@ export default class ScrobbleSources {
                             mode: 'single',
                             configureAs: defaultConfigureAs,
                             data: mc as MusikcubeData
+                        });
+                    }
+                    break;
+                case 'vlc':
+                    const vlc = {
+                        url: process.env.VLC_URL,
+                        password: process.env.VLC_PASSWORD
+                    }
+                    if (!Object.values(vlc).every(x => x === undefined)) {
+                        configs.push({
+                            type: 'vlc',
+                            name: 'unnamed',
+                            source: 'ENV',
+                            mode: 'single',
+                            configureAs: defaultConfigureAs,
+                            data: vlc as VLCData
                         });
                     }
                     break;

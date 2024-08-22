@@ -44,7 +44,7 @@ export interface VLCSourceOptions extends CommonSourceOptions {
 
 export interface VLCSourceConfig extends CommonSourceConfig {
     data: VLCData
-    options: VLCSourceOptions
+    options?: VLCSourceOptions
 }
 
 export interface VLCSourceAIOConfig extends VLCSourceConfig {

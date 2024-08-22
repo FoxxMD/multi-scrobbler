@@ -28,6 +28,7 @@ A javascript app to scrobble music you listened to, to [Maloja](https://github.c
   * [Google Cast (Chromecast)](https://foxxmd.github.io/multi-scrobbler/docs/configuration#google-cast-chromecast)
   * [Musikcube](https://foxxmd.github.io/multi-scrobbler/docs/configuration#muikcube)
   * [MPD (Music Player Daemon)](https://foxxmd.github.io/multi-scrobbler/docs/configuration#mpd-music-player-daemon)
+  * [VLC](https://foxxmd.github.io/multi-scrobbler/docs/configuration#vlc)
 * Supports scrobbling to many **Clients**
   * [Maloja](https://foxxmd.github.io/multi-scrobbler/docs/configuration#maloja)
   * [Last.fm](https://foxxmd.github.io/multi-scrobbler/docs/configuration#lastfm)

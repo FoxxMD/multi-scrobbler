@@ -28,6 +28,7 @@ import SubsonicConfig from '!!raw-loader!../../../config/subsonic.json.example';
 import TautulliConfig from '!!raw-loader!../../../config/tautulli.json.example';
 import WebscrobblerConfig from '!!raw-loader!../../../config/webscrobbler.json.example';
 import YTMusicConfig from '!!raw-loader!../../../config/ytmusic.json.example';
+import VLCConfig from '!!raw-loader!../../../config/vlc.json.example';
 
 # Configuration
 
@@ -1316,6 +1317,122 @@ port            "6600"
         or <SchemaLink lower objectName="MPDSourceConfig"/>
     </TabItem>
 </Tabs>
+
+### [VLC](https://www.videolan.org/vlc/)
+
+MS communicates with VLC using the [Web (`http`) interface module](https://wiki.videolan.org/VLC_HTTP_requests/)
+
+#### Enable HTTP Interface
+
+Open VLC, then
+
+* **Tools** Menu -> Preferences
+  * In the bottom left change **Show Settings** from `Simple` to `All`
+  * In the updated window select Interface -> Main interfaces
+     * In the **Extra interface modules** section enable **Web** and verify that `http` is shown in the textbox
+  * Select Interface -> Main interfaces -> Lua
+    * In Lua HTTP -> Password -> set a password in this box
+  * Click **Save** at the bottom to persist your changes
+* Restart VLC
+* Verify the HTTP interface is accessible by navigating to `http://localhost:8080` in your browser
+
+If the interface is accessible, after typing in your password, VLC  is now ready to be used by MS.
+
+##### Setting VLC Interface and Port
+
+These can be set by starting VLC from command line with specific options:
+
+* `vlc --http-host yourHostIp:yourPort` or
+* `vlc --http-port yourPort` or
+* modify the configuration file for VLC by editing keys with the same values as from the command line (`http-host` and `http-port`)
+
+
+#### Configuration
+
+<Tabs groupId="configType" queryString>
+    <TabItem value="env" label="ENV">
+        | Environmental Variable | Required?  | Default          | Description |
+        |------------------------|------------|------------------|-------------|
+        | `VLC_URL`              | No         | `localhost:8080` |             |
+        | `VLC_PASSWORD`         | Yes        |                  |             |
+    </TabItem>
+    <TabItem value="file" label="File">
+        <details>
+
+            <summary>Example</summary>
+
+            <CodeBlock title="CONFIG_DIR/vlc.json" language="json5">{VLCConfig}</CodeBlock>
+
+        </details>
+
+        or <SchemaLink lower objectName="VLCSourceConfig"/>
+    </TabItem>
+    <TabItem value="aio" label="AIO">
+        <details>
+
+            <summary>Example</summary>
+
+            <AIOExample data={VLCConfig} name="vlc"/>
+
+        </details>
+
+        or <SchemaLink lower objectName="VLCSourceConfig"/>
+    </TabItem>
+</Tabs>
+
+#### Filename Parsing
+
+If the file being played in VLC does not have ID3 tags/metadata information multi-scrobbler can attempt to extract artist, title, and album information from the raw filename using regular expressions. Mutli-scrobbler will only do this if there is **no other information** reported by VLC about these fields.
+
+To extract this information use [named capture groups](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Regular_expressions/Named_capturing_group) in your expression matching the field that should be extracted: `artist` `title` and/or `album`. MS accepts multiple expressions, the first one that matches a filename will be used.
+
+<details>
+
+    <summary>Example</summary>
+
+    Example usage in [a file-based config:](./configuration?configType=file#webscrobbler-config)
+
+    ```json5 title="config/vlc.json" {10-16}
+    [
+      {
+        "name": "MyVlc",
+        "enable": true,
+        "data": {
+          // ...
+        },
+        "options": {
+          "filenamePatterns": [
+              // Extracts artist and title from filenames that look like:
+              // My Artist - My Cool title.mp4
+              "/^\\s*(?<artist>.+?) - (?<title>.+?)\\.\\w+$/i"
+            ],
+          // logs to DEBUG when MS tries to extract data from a filename
+          "logFilenamePatterns": true,
+        }
+      }
+    ]
+    ```
+
+</details>
+
+#### Vlc Information Reporting
+
+If you find that VLC is correctly reporting track information (in its interface) but multi-scrobbler is not parsing it correctly it may be due to the _name_ of the fields VLC is reporting. mutli-scrobbler uses the most common field name but does not cover all use cases. Before reporting an issue please turn on metadata logging and include output from your logs while it is turned on:
+
+```json5 title="config/vlc.json" {10-10}
+    [
+      {
+        "name": "MyVlc",
+        "enable": true,
+        "data": {
+          // ...
+        },
+        "options": {
+          "dumpVlcMetadata": true
+        }
+      }
+    ]
+    ```
 
 ## Client Configurations
 

@@ -2213,7 +2213,6 @@
             },
             "required": [
                 "data",
-                "options",
                 "type"
             ],
             "title": "VLCSourceAIOConfig",

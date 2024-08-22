@@ -1928,7 +1928,6 @@
                     "title": "options"
                 },
                 "type": {
-                    "default": "maloja",
                     "enum": [
                         "maloja"
                     ],
@@ -3138,7 +3137,6 @@
             },
             "required": [
                 "data",
-                "options",
                 "type"
             ],
             "title": "VLCSourceAIOConfig",
