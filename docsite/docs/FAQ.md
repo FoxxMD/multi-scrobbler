@@ -177,3 +177,7 @@ My Artist - Example Track has 'movie' media type so will not track
 ```
 
 Refer to [Force Media Tracking](configuration/configuration.mdx#forcing-media-tracking) section to fix this
+
+### VLC is not scrobbling fields correctly
+
+Before reporting an issue turn on metadata logging in the MS VLC configuration, [see the VLC documentation.](configuration/configuration.mdx#vlc-information-reporting)

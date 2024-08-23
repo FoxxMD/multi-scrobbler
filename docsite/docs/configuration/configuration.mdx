@@ -1324,13 +1324,13 @@ MS communicates with VLC using the [Web (`http`) interface module](https://wiki.
 
 #### Enable HTTP Interface
 
-Open VLC, then
+Open VLC:
 
 * **Tools** Menu -> Preferences
   * In the bottom left change **Show Settings** from `Simple` to `All`
-  * In the updated window select Interface -> Main interfaces
+  * In the updated window select `Interface -> Main interfaces`
      * In the **Extra interface modules** section enable **Web** and verify that `http` is shown in the textbox
-  * Select Interface -> Main interfaces -> Lua
+  * Select `Interface -> Main interfaces -> Lua`
     * In Lua HTTP -> Password -> set a password in this box
   * Click **Save** at the bottom to persist your changes
 * Restart VLC
@@ -1386,40 +1386,36 @@ If the file being played in VLC does not have ID3 tags/metadata information mult
 
 To extract this information use [named capture groups](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Regular_expressions/Named_capturing_group) in your expression matching the field that should be extracted: `artist` `title` and/or `album`. MS accepts multiple expressions, the first one that matches a filename will be used.
 
-<details>
+<!-- Would like to put this in a <details> node but the <> in the named capture groups are causing the parser to incorrectly parse them as an actual tag  -->
 
-    <summary>Example</summary>
+Example usage in [a file-based config:](./configuration?configType=file#webscrobbler-config)
 
-    Example usage in [a file-based config:](./configuration?configType=file#webscrobbler-config)
-
-    ```json5 title="config/vlc.json" {10-16}
-    [
-      {
-        "name": "MyVlc",
-        "enable": true,
-        "data": {
-          // ...
-        },
-        "options": {
-          "filenamePatterns": [
-              // Extracts artist and title from filenames that look like:
-              // My Artist - My Cool title.mp4
-              "/^\\s*(?<artist>.+?) - (?<title>.+?)\\.\\w+$/i"
-            ],
-          // logs to DEBUG when MS tries to extract data from a filename
-          "logFilenamePatterns": true,
-        }
-      }
-    ]
-    ```
-
-</details>
+```json5 title="config/vlc.json" {10-15}
+[
+  {
+    "name": "MyVlc",
+    "enable": true,
+    "data": {
+      // ...
+    },
+    "options": {
+      "filenamePatterns": [
+          // Extracts artist and title from filenames that look like:
+          // My Artist - My Cool title.mp4
+          "/^\\s*(?<artist>.+?) - (?<title>.+?)\\.\\w+$/i"
+        ],
+      // logs to DEBUG when MS tries to extract data from a filename
+      "logFilenamePatterns": true,
+    }
+  }
+]
+```
 
 #### Vlc Information Reporting
 
-If you find that VLC is correctly reporting track information (in its interface) but multi-scrobbler is not parsing it correctly it may be due to the _name_ of the fields VLC is reporting. mutli-scrobbler uses the most common field name but does not cover all use cases. Before reporting an issue please turn on metadata logging and include output from your logs while it is turned on:
+If you find that VLC is incorrectly reporting track information (in its interface) but multi-scrobbler is not parsing it correctly it may be due to the _name_ of the fields VLC is reporting. mutli-scrobbler uses the most common field name but does not cover all use cases. Before reporting an issue please turn on metadata logging and include output from your logs while it is turned on:
 
-```json5 title="config/vlc.json" {10-10}
+```json5 title="config/vlc.json" {9-9}
     [
       {
         "name": "MyVlc",
@@ -1432,7 +1428,7 @@ If you find that VLC is correctly reporting track information (in its interface)
         }
       }
     ]
-    ```
+```
 
 ## Client Configurations
 
