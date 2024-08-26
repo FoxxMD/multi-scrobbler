@@ -19,7 +19,7 @@ import {
     MalojaScrobbleRequestData,
     MalojaScrobbleV2RequestData,
     MalojaScrobbleV3RequestData,
-    MalojaScrobbleV3ResponseData,
+    MalojaScrobbleV3ResponseData, MalojaScrobbleWarning,
     MalojaV2ScrobbleData,
     MalojaV3ScrobbleData,
 } from "../common/vendor/maloja/interfaces.js";
@@ -59,7 +59,7 @@ export default class MalojaScrobbler extends AbstractScrobbleClient {
                 // when the track was scrobbled
                 time: mTime,
                 track: {
-                    artists: mArtists,
+                    artists: mArtists = [],
                     title: mTitle,
                     album: mAlbum,
                     // length of the track
@@ -77,14 +77,14 @@ export default class MalojaScrobbler extends AbstractScrobbleClient {
                 const {
                     albumtitle,
                     name: mAlbumName,
-                    artists: albumArtists
+                    artists: albumArtists = []
                 } = mAlbum || {};
                 album = albumtitle ?? mAlbumName;
             }
         } else {
             // scrobble data structure for v2 and below
             const {
-                artists: mArtists,
+                artists: mArtists = [],
                 title: mTitle,
                 album: mAlbum,
                 duration: mDuration,
@@ -438,7 +438,11 @@ export default class MalojaScrobbler extends AbstractScrobbleClient {
                     }
                     if(warnings.length > 0) {
                         for(const w of warnings) {
-                            this.logger.warn(`Maloja Warning: ${w.desc} => ${JSON.stringify(w.value)}`)
+                            const warnStr = buildWarningString(w);
+                            if(warnStr.includes('The submitted scrobble was not added')) {
+                                throw new UpstreamError(`Maloja returned a warning but MS treating as error: ${warnStr}`, {showStopper: false});
+                            }
+                            this.logger.warn(`Maloja Warning: ${warnStr}`);
                         }
                     }
                 } else {
@@ -516,4 +520,20 @@ const buildErrorString = (body: MalojaResponseV3CommonData) => {
         }
     }
     return `Maloja API returned ${status} of type ${type} "${desc}"${valString !== undefined ? `: ${valString}` : ''}`;
+}
+
+const buildWarningString = (w: MalojaScrobbleWarning): string => {
+    const parts: string[] = [`${typeof w.type === 'string' ? `(${w.type}) ` : ''}${w.desc ?? ''}`];
+    let vals: string[] = [];
+    if(w.value !== null && w.value !== undefined) {
+        if(Array.isArray(w.value)) {
+            vals = w.value;
+        } else {
+            vals.push(w.value);
+        }
+    }
+    if(vals.length > 0) {
+        parts.push(vals.join(' | '));
+    }
+    return parts.join(' => ');
 }
