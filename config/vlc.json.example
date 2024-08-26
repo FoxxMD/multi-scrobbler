@@ -1,0 +1,10 @@
+[
+  {
+    "enable": true,
+    "name": "MyVlc",
+    "data": {
+      "url": "localhost:8080",
+      "password": "changeme"
+    }
+  }
+]

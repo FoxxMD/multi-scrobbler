@@ -264,6 +264,10 @@
                     "title": "maxRequestRetries",
                     "type": "number"
                 },
+                "playTransform": {
+                    "$ref": "#/definitions/PlayTransformOptions",
+                    "title": "playTransform"
+                },
                 "retryMultiplier": {
                     "default": 1.5,
                     "description": "default retry delay multiplier (retry attempt * multiplier = # of seconds to wait before retrying)",
@@ -1099,6 +1103,10 @@
                     "title": "maxRequestRetries",
                     "type": "number"
                 },
+                "playTransform": {
+                    "$ref": "#/definitions/PlayTransformOptions",
+                    "title": "playTransform"
+                },
                 "retryMultiplier": {
                     "default": 1.5,
                     "description": "default retry delay multiplier (retry attempt * multiplier = # of seconds to wait before retrying)",
@@ -1432,6 +1440,78 @@
             "title": "MusikcubeSourceAIOConfig",
             "type": "object"
         },
+        "PlayTransformConfig": {
+            "properties": {
+                "compare": {
+                    "properties": {
+                        "candidate": {
+                            "$ref": "#/definitions/PlayTransformParts<SearchAndReplaceTerm>",
+                            "title": "candidate"
+                        },
+                        "existing": {
+                            "$ref": "#/definitions/PlayTransformParts<SearchAndReplaceTerm>",
+                            "title": "existing"
+                        }
+                    },
+                    "title": "compare",
+                    "type": "object"
+                },
+                "postCompare": {
+                    "$ref": "#/definitions/PlayTransformParts<SearchAndReplaceTerm>",
+                    "title": "postCompare"
+                },
+                "preCompare": {
+                    "$ref": "#/definitions/PlayTransformParts<SearchAndReplaceTerm>",
+                    "title": "preCompare"
+                }
+            },
+            "title": "PlayTransformConfig",
+            "type": "object"
+        },
+        "PlayTransformOptions": {
+            "allOf": [
+                {
+                    "$ref": "#/definitions/PlayTransformConfig"
+                },
+                {
+                    "properties": {
+                        "log": {
+                            "title": "log",
+                            "type": "boolean"
+                        }
+                    },
+                    "type": "object"
+                }
+            ],
+            "title": "PlayTransformOptions"
+        },
+        "PlayTransformParts<SearchAndReplaceTerm>": {
+            "properties": {
+                "album": {
+                    "items": {
+                        "$ref": "#/definitions/SearchAndReplaceTerm"
+                    },
+                    "title": "album",
+                    "type": "array"
+                },
+                "artists": {
+                    "items": {
+                        "$ref": "#/definitions/SearchAndReplaceTerm"
+                    },
+                    "title": "artists",
+                    "type": "array"
+                },
+                "title": {
+                    "items": {
+                        "$ref": "#/definitions/SearchAndReplaceTerm"
+                    },
+                    "title": "title",
+                    "type": "array"
+                }
+            },
+            "title": "PlayTransformParts<SearchAndReplaceTerm>",
+            "type": "object"
+        },
         "PlexSourceAIOConfig": {
             "properties": {
                 "clients": {
@@ -1553,6 +1633,64 @@
             "title": "PlexSourceData",
             "type": "object"
         },
+        "RegExp": {
+            "properties": {
+                "dotAll": {
+                    "title": "dotAll",
+                    "type": "boolean"
+                },
+                "flags": {
+                    "title": "flags",
+                    "type": "string"
+                },
+                "global": {
+                    "title": "global",
+                    "type": "boolean"
+                },
+                "hasIndices": {
+                    "title": "hasIndices",
+                    "type": "boolean"
+                },
+                "ignoreCase": {
+                    "title": "ignoreCase",
+                    "type": "boolean"
+                },
+                "lastIndex": {
+                    "title": "lastIndex",
+                    "type": "number"
+                },
+                "multiline": {
+                    "title": "multiline",
+                    "type": "boolean"
+                },
+                "source": {
+                    "title": "source",
+                    "type": "string"
+                },
+                "sticky": {
+                    "title": "sticky",
+                    "type": "boolean"
+                },
+                "unicode": {
+                    "title": "unicode",
+                    "type": "boolean"
+                }
+            },
+            "required": [
+                "dotAll",
+                "flags",
+                "global",
+                "hasIndices",
+                "ignoreCase",
+                "lastIndex",
+                "multiline",
+                "source",
+                "sticky",
+                "unicode"
+            ],
+            "title": "RegExp",
+            "type": "object"
+        },
         "ScrobbleThresholds": {
             "properties": {
                 "duration": {
@@ -1576,6 +1714,48 @@
             },
             "title": "ScrobbleThresholds",
             "type": "object"
+        },
+        "SearchAndReplaceRegExp": {
+            "properties": {
+                "replace": {
+                    "description": "The replacement string/value to use when search is found\n\nThis can be a literal string like `'replace with this`, an empty string to remove the search value (`''`), or a special regex value\n\nSee replacement here for more information: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String/replace",
+                    "title": "replace",
+                    "type": "string"
+                },
+                "search": {
+                    "anyOf": [
+                        {
+                            "$ref": "#/definitions/RegExp"
+                        },
+                        {
+                            "type": "string"
+                        }
+                    ],
+                    "description": "The search value to test for\n\nCan be a normal string (converted to a case-sensitive literal) or a valid regular expression as a string, or an actual RegExp object\n\nEX `[\"find this string\", \"/some string*\\/ig\"]`",
+                    "examples": [
+                        "find this string",
+                        "/some string*/ig"
+                    ],
+                    "title": "search"
+                }
+            },
+            "required": [
+                "replace",
+                "search"
+            ],
+            "title": "SearchAndReplaceRegExp",
+            "type": "object"
+        },
+        "SearchAndReplaceTerm": {
+            "anyOf": [
+                {
+                    "$ref": "#/definitions/SearchAndReplaceRegExp"
+                },
+                {
+                    "type": "string"
+                }
+            ],
+            "title": "SearchAndReplaceTerm"
         },
         "SourceAIOConfig": {
             "anyOf": [
@@ -1623,6 +1803,9 @@
                 },
                 {
                     "$ref": "#/definitions/TautulliSourceAIOConfig"
+                },
+                {
+                    "$ref": "#/definitions/VLCSourceAIOConfig"
                 },
                 {
                     "$ref": "#/definitions/WebScrobblerSourceAIOConfig"
@@ -1939,6 +2122,208 @@
                 "type"
             ],
             "title": "TautulliSourceAIOConfig",
+            "type": "object"
+        },
+        "VLCData": {
+            "properties": {
+                "interval": {
+                    "default": 10,
+                    "description": "How long to wait before polling the source API for new tracks (in seconds)",
+                    "examples": [
+                        10
+                    ],
+                    "title": "interval",
+                    "type": "number"
+                },
+                "maxInterval": {
+                    "default": 30,
+                    "description": "When there has been no new activity from the Source API multi-scrobbler will gradually increase the wait time between polling up to this value (in seconds)",
+                    "examples": [
+                        30
+                    ],
+                    "title": "maxInterval",
+                    "type": "number"
+                },
+                "password": {
+                    "description": "Password for the server",
+                    "title": "password",
+                    "type": "string"
+                },
+                "url": {
+                    "default": "localhost:8080",
+                    "description": "URL:PORT of the VLC server to connect to\n\nTo use this you must have the Web (http) interface module enabled and a password set https://foxxmd.github.io/multi-scrobbler/docs/configuration#vlc",
+                    "examples": [
+                        "localhost:8080"
+                    ],
+                    "title": "url",
+                    "type": "string"
+                }
+            },
+            "required": [
+                "password"
+            ],
+            "title": "VLCData",
+            "type": "object"
+        },
+        "VLCSourceAIOConfig": {
+            "properties": {
+                "clients": {
+                    "description": "Restrict scrobbling tracks played from this source to Clients with names from this list. If list is empty is not present Source scrobbles to all configured Clients.",
+                    "examples": [
+                        [
+                            "MyMalojaConfigName",
+                            "MyLastFMConfigName"
+                        ]
+                    ],
+                    "items": {
+                        "type": "string"
+                    },
+                    "title": "clients",
+                    "type": "array"
+                },
+                "data": {
+                    "$ref": "#/definitions/VLCData",
+                    "title": "data"
+                },
+                "enable": {
+                    "default": true,
+                    "description": "Should MS use this client/source? Defaults to true",
+                    "examples": [
+                        true
+                    ],
+                    "title": "enable",
+                    "type": "boolean"
+                },
+                "name": {
+                    "description": "Unique identifier for this source.",
+                    "title": "name",
+                    "type": "string"
+                },
+                "options": {
+                    "$ref": "#/definitions/VLCSourceOptions",
+                    "title": "options"
+                },
+                "type": {
+                    "enum": [
+                        "vlc"
+                    ],
+                    "title": "type",
+                    "type": "string"
+                }
+            },
+            "required": [
+                "data",
+                "type"
+            ],
+            "title": "VLCSourceAIOConfig",
+            "type": "object"
+        },
+        "VLCSourceOptions": {
+            "properties": {
+                "dumpVlcMetadata": {
+                    "default": false,
+                    "description": "Dump all the metadata VLC reports for an audio track to DEBUG.\n\nUse this if reporting an issue with VLC not correctly capturing metadata for a track.",
+                    "title": "dumpVlcMetadata",
+                    "type": "boolean"
+                },
+                "filenamePatterns": {
+                    "description": "A list of regular expressions to use to extract metadata (title, album, artist) from a filename\n\nUsed when VLC reports only the filename for the current audio track",
+                    "items": {
+                        "type": "string"
+                    },
+                    "title": "filenamePatterns",
+                    "type": "array"
+                },
+                "logFilenamePatterns": {
+                    "default": false,
+                    "description": "Log to DEBUG when a filename-only track is matched or not matched by filenamePatterns",
+                    "title": "logFilenamePatterns",
+                    "type": "boolean"
+                },
+                "logFilterFailure": {
+                    "default": "warn",
+                    "description": "If this source has INGRESS to MS and has filters this determines how MS logs when a payload (event) fails a defined filter (IE users/servers/library filters)\n\n* `false` => do not log\n* `debug` => log to DEBUG level\n* `warn` => log to WARN level (default)\n\nHint: This is useful if you are sure this source is setup correctly and you have multiple other sources. Set to `debug` or `false` to reduce log noise.",
+                    "enum": [
+                        "debug",
+                        false,
+                        "warn"
+                    ],
+                    "examples": [
+                        "warn"
+                    ],
+                    "title": "logFilterFailure"
+                },
+                "logPayload": {
+                    "default": false,
+                    "description": "If this source has INGRESS to MS (sends a payload, rather than MS GETTING requesting a payload)\nthen setting this option to true will make MS log the payload JSON to DEBUG output",
+                    "examples": [
+                        false
+                    ],
+                    "title": "logPayload",
+                    "type": "boolean"
+                },
+                "logPlayerState": {
+                    "default": false,
+                    "description": "For Sources that track Player State (currently playing) this logs a simple player state/summary to DEBUG output",
+                    "examples": [
+                        false
+                    ],
+                    "title": "logPlayerState",
+                    "type": "boolean"
+                },
+                "maxPollRetries": {
+                    "default": 5,
+                    "description": "default # of automatic polling restarts on error",
+                    "examples": [
+                        5
+                    ],
+                    "title": "maxPollRetries",
+                    "type": "number"
+                },
+                "maxRequestRetries": {
+                    "default": 1,
+                    "description": "default # of http request retries a source/client can make before error is thrown",
+                    "examples": [
+                        1
+                    ],
+                    "title": "maxRequestRetries",
+                    "type": "number"
+                },
+                "playTransform": {
+                    "$ref": "#/definitions/PlayTransformOptions",
+                    "title": "playTransform"
+                },
+                "retryMultiplier": {
+                    "default": 1.5,
+                    "description": "default retry delay multiplier (retry attempt * multiplier = # of seconds to wait before retrying)",
+                    "examples": [
+                        1.5
+                    ],
+                    "title": "retryMultiplier",
+                    "type": "number"
+                },
+                "scrobbleBacklog": {
+                    "default": true,
+                    "description": "If this source\n\n* supports fetching a listen history\n* and this option is enabled\n\nthen on startup MS will attempt to scrobble the recent listens from that history",
+                    "examples": [
+                        true,
+                        false
+                    ],
+                    "title": "scrobbleBacklog",
+                    "type": "boolean"
+                },
+                "scrobbleBacklogCount": {
+                    "description": "The number of listens to fetch when scrobbling from backlog\n\n* Only applies if this source supports fetching a listen history\n* If not specified it defaults to the maximum number of listens the source API supports",
+                    "title": "scrobbleBacklogCount",
+                    "type": "number"
+                },
+                "scrobbleThresholds": {
+                    "$ref": "#/definitions/ScrobbleThresholds",
+                    "description": "Set thresholds for when multi-scrobbler should consider a tracked play to be \"scrobbable\". If both duration and percent are defined then if either condition is met the track is scrobbled.",
+                    "title": "scrobbleThresholds"
+                }
+            },
+            "title": "VLCSourceOptions",
             "type": "object"
         },
         "WebScrobblerData": {

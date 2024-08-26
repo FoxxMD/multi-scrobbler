@@ -808,7 +808,7 @@ export const configValToSearchReplace = (val: string | undefined | object): Sear
     throw new Error(`Value must be a string or an object containing 'search: string' and 'replace: 'string'. Given: ${val}`);
 }
 
-export const isSearchAndReplace = (val: object): val is SearchAndReplaceRegExp => {
+export const isSearchAndReplace = (val: unknown): val is SearchAndReplaceRegExp => {
     return typeof val === 'object'
     && ('search' in val && typeof val.search === 'string')
     && ('replace' in val && typeof val.replace === 'string');
