@@ -153,6 +153,7 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
             this.logger.debug('Refreshing recent scrobbles');
             const recent = await this.getScrobblesForRefresh(limit);
             this.logger.debug(`Found ${recent.length} recent scrobbles`);
+            this.recentScrobbles = recent;
             if (this.recentScrobbles.length > 0) {
                 const [{data: {playDate: newestScrobbleTime = dayjs()} = {}} = {}] = this.recentScrobbles.slice(-1);
                 const [{data: {playDate: oldestScrobbleTime = dayjs()} = {}} = {}] = this.recentScrobbles.slice(0, 1);

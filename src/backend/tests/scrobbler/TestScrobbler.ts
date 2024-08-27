@@ -6,14 +6,17 @@ import { Notifiers } from "../../notifier/Notifiers.js";
 import AbstractScrobbleClient from "../../scrobblers/AbstractScrobbleClient.js";
 
 export class TestScrobbler extends AbstractScrobbleClient {
-    protected async getScrobblesForRefresh(limit: number): Promise<PlayObject[]> {
-        return [];
-    }
+
+    testRecentScrobbles: PlayObject[] = [];
 
     constructor() {
         const logger = loggerTest;
         const notifier = new Notifiers(new EventEmitter(), new EventEmitter(), new EventEmitter(), logger);
         super('test', 'Test', {name: 'test'}, notifier, new EventEmitter(), logger);
+    }
+
+    protected async getScrobblesForRefresh(limit: number): Promise<PlayObject[]> {
+        return this.testRecentScrobbles;
     }
 
     doScrobble(playObj: PlayObject): Promise<PlayObject> {
