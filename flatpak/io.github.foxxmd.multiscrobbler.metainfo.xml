@@ -22,7 +22,7 @@
         <ul>
             <li>Spotify</li>
             <li>Plex (Tautulli)</li>
-            <li>Any subsonic-based music player (Airsonic)</li>
+            <li>Any subsonic-based music player (Airsonic or Navidrome)</li>
             <li>Jellyfin</li>
             <li>WebScrobbler</li>
             <li>Mopidy</li>
@@ -33,6 +33,8 @@
             <li>MPRIS (linux desktop)</li>
             <li>Google Cast (Chromecast)</li>
             <li>Musikcube</li>
+            <li>MPDF (Music Player Daemon)</li>
+            <li>VLC</li>
         </ul>
         <p>and consolidate your listens (scrobbles) into one or more scrobbling servers/services:</p>
         <ul>
@@ -49,6 +51,7 @@
         </screenshot>
     </screenshots>
     <releases>
+        <release version="0.8.3" date="2024-08-28"/>
         <release version="0.8.2" date="2024-08-20"/>
         <release version="0.8.1" date="2024-07-17"/>
         <release version="0.8.0" date="2024-07-08"/>
