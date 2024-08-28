@@ -74,7 +74,7 @@ export interface MalojaScrobbleV3RequestData extends MalojaScrobbleRequestData {
     nofix?: boolean
 }
 
-interface MalojaScrobbleWarning {
+export interface MalojaScrobbleWarning {
     type: string
     value: string[] | string
     desc: string

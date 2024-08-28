@@ -325,3 +325,14 @@ export const compareNormalizedStrings = (existing: string, candidate: string): S
         strategies: [levenStrategy, diceStrategy]
     })
 }
+
+export const firstNonEmptyStr = (vals: unknown[]): string | undefined => {
+    for(const val of vals) {
+        if(val !== undefined && val !== null && typeof val !== 'object') {
+            const strVal = val.toString();
+            if(strVal.trim() !== '') {
+                return strVal;
+            }
+        }
+    }
+}

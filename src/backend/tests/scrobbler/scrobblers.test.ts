@@ -458,65 +458,79 @@ describe('Detects duplicate and unique scrobbles using actively tracked scrobble
     });
 });
 
-describe('Detects when upstream scrobbles should be refreshed', function() {
+describe('Upstream Scrobbles', function() {
 
-    const normalizedClose = normalizePlays(withDurPlays, {initialDate: dayjs().subtract(100, 'seconds')});
-
-    beforeEach(function () {
-        testScrobbler = generateTestScrobbler();
-        testScrobbler.recentScrobbles = normalizedWithMixedDur;
-        testScrobbler.newestScrobbleTime = normalizedWithMixedDur[0].data.playDate;
-        testScrobbler.lastScrobbleCheck = dayjs().subtract(60, 'seconds');
-        testScrobbler.queuedScrobbles = [];
-        testScrobbler.config.options = {};
+    it('Stores upstream scrobbles on refresh', async function () {
+        const scrobbler = generateTestScrobbler();
+        scrobbler.testRecentScrobbles = normalizedWithMixedDur;
+        assert.isEmpty(scrobbler.recentScrobbles);
+        await scrobbler.refreshScrobbles();
+        assert.isNotEmpty(scrobbler.recentScrobbles);
     });
 
-    it('Detects queued scrobble date is newer than last scrobble refresh', async function() {
-        const newScrobble = generatePlay({
-            playDate: dayjs()
+    describe('Detects when upstream scrobbles should be refreshed', function() {
+
+        const normalizedClose = normalizePlays(withDurPlays, {initialDate: dayjs().subtract(100, 'seconds')});
+
+        beforeEach(function () {
+            testScrobbler = generateTestScrobbler();
+            testScrobbler.recentScrobbles = normalizedWithMixedDur;
+            testScrobbler.newestScrobbleTime = normalizedWithMixedDur[0].data.playDate;
+            testScrobbler.lastScrobbleCheck = dayjs().subtract(60, 'seconds');
+            testScrobbler.queuedScrobbles = [];
+            testScrobbler.config.options = {};
         });
 
-        testScrobbler.queueScrobble(newScrobble, 'test');
-        assert.isTrue(testScrobbler.shouldRefreshScrobble());
-    });
+        it('Detects queued scrobble date is newer than last scrobble refresh', async function() {
+            const newScrobble = generatePlay({
+                playDate: dayjs()
+            });
 
-    it('Detects queued scrobble date is older than newest scrobble', async function() {
-        testScrobbler.recentScrobbles = normalizedClose;
-        testScrobbler.newestScrobbleTime = normalizedClose[0].data.playDate;
-
-        const newScrobble = generatePlay({
-            playDate: dayjs().subtract(120, 'seconds')
+            testScrobbler.queueScrobble(newScrobble, 'test');
+            assert.isTrue(testScrobbler.shouldRefreshScrobble());
         });
 
-        testScrobbler.queueScrobble(newScrobble, 'test');
-        assert.isTrue(testScrobbler.shouldRefreshScrobble());
-    });
+        it('Detects queued scrobble date is older than newest scrobble', async function() {
+            testScrobbler.recentScrobbles = normalizedClose;
+            testScrobbler.newestScrobbleTime = normalizedClose[0].data.playDate;
 
-    it('Forces refresh if refreshStaleAfter is set', async function() {
-        testScrobbler.recentScrobbles = normalizedClose;
-        testScrobbler.newestScrobbleTime = normalizedClose[0].data.playDate;
-        testScrobbler.config.options = { refreshStaleAfter: 10 };
+            const newScrobble = generatePlay({
+                playDate: dayjs().subtract(120, 'seconds')
+            });
 
-        const newScrobble = generatePlay({
-            playDate: dayjs().subtract(80, 'seconds')
+            testScrobbler.queueScrobble(newScrobble, 'test');
+            assert.isTrue(testScrobbler.shouldRefreshScrobble());
         });
 
-        testScrobbler.queueScrobble(newScrobble, 'test');
-        assert.isTrue(testScrobbler.shouldRefreshScrobble());
-    });
+        it('Forces refresh if refreshStaleAfter is set', async function() {
+            testScrobbler.recentScrobbles = normalizedClose;
+            testScrobbler.newestScrobbleTime = normalizedClose[0].data.playDate;
+            testScrobbler.config.options = { refreshStaleAfter: 10 };
 
-    it('Does not refresh if scrobble is older than last check but newer than newest upstream scrobble', async function() {
-        testScrobbler.recentScrobbles = normalizedClose;
-        testScrobbler.newestScrobbleTime = normalizedClose[0].data.playDate;
+            const newScrobble = generatePlay({
+                playDate: dayjs().subtract(80, 'seconds')
+            });
 
-        const newScrobble = generatePlay({
-            playDate: dayjs().subtract(80, 'seconds')
+            testScrobbler.queueScrobble(newScrobble, 'test');
+            assert.isTrue(testScrobbler.shouldRefreshScrobble());
         });
 
-        testScrobbler.queueScrobble(newScrobble, 'test');
-        assert.isFalse(testScrobbler.shouldRefreshScrobble());
+        it('Does not refresh if scrobble is older than last check but newer than newest upstream scrobble', async function() {
+            testScrobbler.recentScrobbles = normalizedClose;
+            testScrobbler.newestScrobbleTime = normalizedClose[0].data.playDate;
+
+            const newScrobble = generatePlay({
+                playDate: dayjs().subtract(80, 'seconds')
+            });
+
+            testScrobbler.queueScrobble(newScrobble, 'test');
+            assert.isFalse(testScrobbler.shouldRefreshScrobble());
+        });
     });
+
 });
+
+
 
 describe('Scrobble client uses transform plays correctly', function() {
 
