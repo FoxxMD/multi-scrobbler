@@ -128,6 +128,18 @@ EX `http://localhost:9078/lastfm/callback` -> `http://192.168.0.220:9078/lastfm/
 
 Deezer has discontinued support for their API and the Deezer Source is now [**deprecated.**](configuration/configuration.mdx#deezer) See [this issue for more discussion.](https://github.com/FoxxMD/multi-scrobbler/issues/175#issuecomment-2296776625)
 
+### Youtube Music fails after some time
+
+The Youtube Music library relies on scraping the YTM site (pretending to be a browser) by using cookies/auth from your actual browser. It does its best to keep these up to date but since this is not an official way to access the service YTM may invalidate your access _to the authenticated session_ at any time. How this is triggered is unknown and not something multi-scrobbler can control.
+
+If you see errors in multi-scrobbler for YTM that contain **401** or **403** like
+
+```
+Error: Could not send the specified request to browse. Status code: 401
+```
+
+then YTM has invalidated your access. [Follow the YTM instructions to retrieve a new set of cookies for multi-scrobbler]((configuration/configuration.mdx#youtube-music)) and then restart MS to potentially resolve the problem. See [this issue](https://github.com/FoxxMD/multi-scrobbler/issues/158) for further discussion of the problem.
+
 ## Configuration Issues
 
 ### Config could not be parsed
@@ -181,3 +193,11 @@ Refer to [Force Media Tracking](configuration/configuration.mdx#forcing-media-tr
 ### VLC is not scrobbling fields correctly
 
 Before reporting an issue turn on metadata logging in the MS VLC configuration, [see the VLC documentation.](configuration/configuration.mdx#vlc-information-reporting)
+
+### Youtube Music misses scrobbles
+
+In order for multi-scrobbler to accurately determine if a song has been scrobbled it needs **a source of truth.** For YTM this is a "history" list scraped from the YTM website. Unfortunately, the data in this list can be (often) inconsistent which makes it hard for multi-scrobbler to "trust" that it is correct and determine when/if new scrobbles occur. This inconsistency is not something multi-scrobbler can control -- it is a side-effect of having to use an unofficial method to access YTM (scraping).
+
+In order to compensate for this multi-scrobbler resets when it considers this list the "source of truth" based on if the list changes in an inconsistent way between consecutive checks. New scrobbles can only be detected when this list is "OK" as a source of truth for N+1 checks. Therefore, any new tracks that appear when the list is inconsistent will be ignored.
+
+See [this issue](https://github.com/FoxxMD/multi-scrobbler/issues/156#issuecomment-2312533486) for further discussion and a more detailed explanation of why this is happening and how multi-scrobbler compensates for it.
