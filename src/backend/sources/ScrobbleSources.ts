@@ -580,7 +580,7 @@ export default class ScrobbleSources {
                 newSource = await new MPDSource(name, compositeConfig as MPDSourceConfig, this.internalConfig, this.emitter);
                 break;
             case 'vlc':
-                newSource = await new VLCSource(name, compositeConfig as VLCSourceConfig, internal, this.emitter);
+                newSource = await new VLCSource(name, compositeConfig as VLCSourceConfig, this.internalConfig, this.emitter);
                 break;
             default:
                 break;
