@@ -1,4 +1,5 @@
 import { Logger } from "@foxxmd/logging";
+import { WS } from "iso-websocket";
 import objectHash from 'object-hash';
 // @ts-expect-error weird typings?
 import { Api, Jellyfin } from "@jellyfin/sdk";
@@ -18,11 +19,24 @@ import {
     // @ts-expect-error weird typings?
     SortOrder, UserDto,
 } from "@jellyfin/sdk/lib/generated-client/index.js";
-// @ts-expect-error weird typings?
-import { getItemsApi, getSessionApi, getSystemApi, getUserApi, getApiKeyApi } from "@jellyfin/sdk/lib/utils/api/index.js";
+import {
+    // @ts-expect-error weird typings?
+    getItemsApi,
+    // @ts-expect-error weird typings?
+    getSessionApi,
+    // @ts-expect-error weird typings?
+    getSystemApi,
+    // @ts-expect-error weird typings?
+    getUserApi,
+    // @ts-expect-error weird typings?
+    getApiKeyApi,
+    // @ts-expect-error weird typings?
+    getActivityLogApi
+} from "@jellyfin/sdk/lib/utils/api/index.js";
 import dayjs from "dayjs";
 import EventEmitter from "events";
 import { nanoid } from "nanoid";
+import pEvent from "p-event";
 import { Simulate } from "react-dom/test-utils";
 import { PlayObject } from "../../core/Atomic.js";
 import { buildTrackString, truncateStringToLength } from "../../core/StringUtils.js";
@@ -46,6 +60,8 @@ export default class JellyfinApiSource extends MemorySource {
 
     client: Jellyfin
     api: Api
+    wsClient!: WS;
+    address!: string;
     user!: UserDto
 
     deviceId: string;
@@ -122,11 +138,30 @@ export default class JellyfinApiSource extends MemorySource {
         return true;
     }
 
+    protected buildWSClient(url: string, token: string) {
+        this.wsClient = new WS(`ws://${url}/socket?api_key=${token}&deviceId=${Buffer.from(this.deviceId).toString('base64')}`, {
+            automaticOpen: false,
+            retry: {
+                retries: 0
+            }
+        });
+        this.wsClient.addEventListener('close', (e) => {
+            this.logger.warn(`Connection was closed: ${e.code} => ${e.reason}`, {labels: 'WS'});
+        });
+        this.wsClient.addEventListener('open', (e) => {
+            this.logger.verbose(`Connection was established.`, {labels: 'WS'});
+        });
+        this.wsClient.addEventListener('message', (e) => {
+            this.logger.debug(e.data, {labels: 'WS'});
+        });
+    }
+
     protected async doCheckConnection(): Promise<true | string | undefined> {
         try {
             const servers = await this.client.discovery.getRecommendedServerCandidates(this.config.data.url);
             const best = this.client.discovery.findBestServer(servers);
             this.api = this.client.createApi(best.address);
+            this.address = best.address;
             const info = await getSystemApi(this.api).getPublicSystemInfo();
             return `Found Server ${info.data.ServerName} (${info.data.Version})`;
         } catch (e) {
@@ -140,12 +175,18 @@ export default class JellyfinApiSource extends MemorySource {
     protected doAuthentication = async (): Promise<boolean> => {
         try {
 
+            let token: string;
             if(this.config.data.password !== undefined) {
-                const auth = await this.api.authenticateUserByName(this.config.data.user);
+                const auth = await this.api.authenticateUserByName(this.config.data.user,this.config.data.password);
                 this.user = auth.data.User;
+                token = auth.data.AccessToken;
                 this.logger.info(`Authenticated with user ${this.user.Name}`);
+
+                // not in use for now
+                //this.buildWSClient(this.address, token);
             } else {
                 this.api.accessToken = this.config.data.apiKey;
+                token = this.config.data.apiKey;
                 const users = await getUserApi(this.api).getUsers();
                 for(const user of users.data) {
                     if(user.Name.toLocaleLowerCase() === this.config.data.user.toLocaleLowerCase()) {
@@ -214,8 +255,12 @@ export default class JellyfinApiSource extends MemorySource {
     }
 
     getRecentlyPlayed = async (options = {}) => {
+
+        // itemUserData.data.Items[0].UserData.LastPlayedDate
+        // time when track was started playing
+        // 'played' is always true, for some reason
         // const itemUserData = await getItemsApi(this.api).getItems({
-        //     userId: this.auth.data.User.Id,
+        //     userId: this.user.Id,
         //     enableUserData: true,
         //     sortBy: ItemSortBy.DatePlayed,
         //     sortOrder: [SortOrder.Descending],
@@ -225,6 +270,12 @@ export default class JellyfinApiSource extends MemorySource {
         //     recursive: true,
         //     limit: 50,
         // });
+
+
+        // for potential future use with offline scrobbling?
+        //const activities = await getActivityLogApi(this.api).getLogEntries({hasUserId: true, minDate: dayjs().subtract(1, 'day').toISOString()});
+        //const items = await getItemsApi(this.api).getItems({ids: ['ID']});
+        //const userData = await getItemsApi(this.api).getItemUserData({itemId: 'ID', userId: this.user.Id});
 
         const sessions = await getSessionApi(this.api).getSessions();
         const nonMSSessions = sessions.data.filter(x => x.DeviceId !== this.deviceId).map(x => this.sessionToPlayerState(x)) as PlayerStateData[];
