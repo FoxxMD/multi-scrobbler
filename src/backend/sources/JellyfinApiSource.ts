@@ -200,7 +200,7 @@ export default class JellyfinApiSource extends MemorySource {
                 artists: Artists,
                 album: Album,
                 track: Name,
-                albumArtists: AlbumArtists,
+                albumArtists: AlbumArtists.map(x => x.Name),
                 playDate: UserData !== undefined ? dayjs(UserData.LastPlayedDate) : undefined,
                 duration: ticksToSeconds(RunTimeTicks) // dayjs.duration(RunTimeTicks / 1000, 'ms').asSeconds()
             },
