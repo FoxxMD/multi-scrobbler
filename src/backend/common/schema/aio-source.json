@@ -498,6 +498,242 @@
             "title": "JRiverSourceAIOConfig",
             "type": "object"
         },
+        "JellyApiData": {
+            "properties": {
+                "apiKey": {
+                    "description": "API Key to authenticate with.\n\nRequired if `password` is not provided.",
+                    "title": "apiKey",
+                    "type": "string"
+                },
+                "devicesAllow": {
+                    "anyOf": [
+                        {
+                            "items": {
+                                "type": "string"
+                            },
+                            "type": "array"
+                        },
+                        {
+                            "type": "string"
+                        }
+                    ],
+                    "description": "Only scrobble if device or application name contains strings from this list (case-insensitive)\n\nNote: This only applies to real-time scrobbling as JF does not track device info in user activity history",
+                    "title": "devicesAllow"
+                },
+                "devicesBlock": {
+                    "anyOf": [
+                        {
+                            "items": {
+                                "type": "string"
+                            },
+                            "type": "array"
+                        },
+                        {
+                            "type": "string"
+                        }
+                    ],
+                    "description": "Do not scrobble if device or application name contains strings from this list (case-insensitive)\n\nNote: This only applies to real-time scrobbling as JF does not track device info in user activity history",
+                    "title": "devicesBlock"
+                },
+                "password": {
+                    "description": "Password of the username to authenticate for\n\nRequired if `apiKey` is not provided.",
+                    "title": "password",
+                    "type": "string"
+                },
+                "url": {
+                    "description": "HOST:PORT of the Jellyfin server to connect to",
+                    "title": "url",
+                    "type": "string"
+                },
+                "user": {
+                    "description": "The username of the user to authenticate for or track scrobbles for",
+                    "title": "user",
+                    "type": "string"
+                },
+                "usersAllow": {
+                    "anyOf": [
+                        {
+                            "items": {
+                                "type": "string"
+                            },
+                            "type": "array"
+                        },
+                        {
+                            "const": true,
+                            "type": "boolean"
+                        },
+                        {
+                            "type": "string"
+                        }
+                    ],
+                    "description": "Only scrobble for specific users (case-insensitive)\n\nIf `true` MS will scrobble activity from all users",
+                    "title": "usersAllow"
+                },
+                "usersBlock": {
+                    "anyOf": [
+                        {
+                            "items": {
+                                "type": "string"
+                            },
+                            "type": "array"
+                        },
+                        {
+                            "type": "string"
+                        }
+                    ],
+                    "description": "Do not scrobble for these users (case-insensitive)",
+                    "title": "usersBlock"
+                }
+            },
+            "required": [
+                "url",
+                "user"
+            ],
+            "title": "JellyApiData",
+            "type": "object"
+        },
+        "JellyApiOptions": {
+            "properties": {
+                "logFilterFailure": {
+                    "default": "warn",
+                    "description": "If this source has INGRESS to MS and has filters this determines how MS logs when a payload (event) fails a defined filter (IE users/servers/library filters)\n\n* `false` => do not log\n* `debug` => log to DEBUG level\n* `warn` => log to WARN level (default)\n\nHint: This is useful if you are sure this source is setup correctly and you have multiple other sources. Set to `debug` or `false` to reduce log noise.",
+                    "enum": [
+                        "debug",
+                        false,
+                        "warn"
+                    ],
+                    "examples": [
+                        "warn"
+                    ],
+                    "title": "logFilterFailure"
+                },
+                "logPayload": {
+                    "default": false,
+                    "description": "If this source has INGRESS to MS (sends a payload, rather than MS GETTING requesting a payload)\nthen setting this option to true will make MS log the payload JSON to DEBUG output",
+                    "examples": [
+                        false
+                    ],
+                    "title": "logPayload",
+                    "type": "boolean"
+                },
+                "logPlayerState": {
+                    "default": false,
+                    "description": "For Sources that track Player State (currently playing) this logs a simple player state/summary to DEBUG output",
+                    "examples": [
+                        false
+                    ],
+                    "title": "logPlayerState",
+                    "type": "boolean"
+                },
+                "maxPollRetries": {
+                    "default": 5,
+                    "description": "default # of automatic polling restarts on error",
+                    "examples": [
+                        5
+                    ],
+                    "title": "maxPollRetries",
+                    "type": "number"
+                },
+                "maxRequestRetries": {
+                    "default": 1,
+                    "description": "default # of http request retries a source/client can make before error is thrown",
+                    "examples": [
+                        1
+                    ],
+                    "title": "maxRequestRetries",
+                    "type": "number"
+                },
+                "playTransform": {
+                    "$ref": "#/definitions/PlayTransformOptions",
+                    "title": "playTransform"
+                },
+                "retryMultiplier": {
+                    "default": 1.5,
+                    "description": "default retry delay multiplier (retry attempt * multiplier = # of seconds to wait before retrying)",
+                    "examples": [
+                        1.5
+                    ],
+                    "title": "retryMultiplier",
+                    "type": "number"
+                },
+                "scrobbleBacklog": {
+                    "default": true,
+                    "description": "If this source\n\n* supports fetching a listen history\n* and this option is enabled\n\nthen on startup MS will attempt to scrobble the recent listens from that history",
+                    "examples": [
+                        true,
+                        false
+                    ],
+                    "title": "scrobbleBacklog",
+                    "type": "boolean"
+                },
+                "scrobbleBacklogCount": {
+                    "description": "The number of listens to fetch when scrobbling from backlog\n\n* Only applies if this source supports fetching a listen history\n* If not specified it defaults to the maximum number of listens the source API supports",
+                    "title": "scrobbleBacklogCount",
+                    "type": "number"
+                },
+                "scrobbleThresholds": {
+                    "$ref": "#/definitions/ScrobbleThresholds",
+                    "description": "Set thresholds for when multi-scrobbler should consider a tracked play to be \"scrobbable\". If both duration and percent are defined then if either condition is met the track is scrobbled.",
+                    "title": "scrobbleThresholds"
+                }
+            },
+            "title": "JellyApiOptions",
+            "type": "object"
+        },
+        "JellyApiSourceAIOConfig": {
+            "properties": {
+                "clients": {
+                    "description": "Restrict scrobbling tracks played from this source to Clients with names from this list. If list is empty is not present Source scrobbles to all configured Clients.",
+                    "examples": [
+                        [
+                            "MyMalojaConfigName",
+                            "MyLastFMConfigName"
+                        ]
+                    ],
+                    "items": {
+                        "type": "string"
+                    },
+                    "title": "clients",
+                    "type": "array"
+                },
+                "data": {
+                    "$ref": "#/definitions/JellyApiData",
+                    "title": "data"
+                },
+                "enable": {
+                    "default": true,
+                    "description": "Should MS use this client/source? Defaults to true",
+                    "examples": [
+                        true
+                    ],
+                    "title": "enable",
+                    "type": "boolean"
+                },
+                "name": {
+                    "description": "Unique identifier for this source.",
+                    "title": "name",
+                    "type": "string"
+                },
+                "options": {
+                    "$ref": "#/definitions/JellyApiOptions",
+                    "title": "options"
+                },
+                "type": {
+                    "enum": [
+                        "jellyfin"
+                    ],
+                    "title": "type",
+                    "type": "string"
+                }
+            },
+            "required": [
+                "data",
+                "options",
+                "type"
+            ],
+            "title": "JellyApiSourceAIOConfig",
+            "type": "object"
+        },
         "JellyData": {
             "properties": {
                 "servers": {
@@ -1767,6 +2003,9 @@
                 },
                 {
                     "$ref": "#/definitions/JellySourceAIOConfig"
+                },
+                {
+                    "$ref": "#/definitions/JellyApiSourceAIOConfig"
                 },
                 {
                     "$ref": "#/definitions/JRiverSourceAIOConfig"
