@@ -5,7 +5,6 @@ on:
   push:
     branches:
       - 'master'
-      - 'develop'
     tags:
       - '*.*.*'
     # don't trigger if just updating docs
@@ -95,11 +94,13 @@ jobs:
           # generate Docker tags based on the following events/attributes
           # https://github.com/docker/metadata-action/issues/247#issuecomment-1511259674 for NOT is default branch, eventually
           tags: |
-            type=raw,value=latest,enable={{is_default_branch}},suffix=${{ matrix.suffix }}
-            type=ref,event=branch,enable=${{ !endsWith(github.ref, 'master') }},suffix=${{ matrix.suffix }}
-            type=semver,pattern={{version}},suffix=${{ matrix.suffix }}
+            type=raw,value=edge,enable={{is_default_branch}}
+            type=ref,event=branch,enable=${{ !endsWith(github.ref, 'master') }}
+            type=semver,pattern={{version}}
+            type=semver,value=latest
           flavor: |
             latest=false
+            suffix=${{ matrix.suffix }},onlatest=true
 
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
