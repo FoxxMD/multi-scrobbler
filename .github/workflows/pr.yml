@@ -45,9 +45,9 @@ jobs:
           - dockerfile: ./Dockerfile
             suffix: ''
             platforms: 'linux/amd64,linux/arm64'
-          - dockerfile: ./alpine.Dockerfile
-            suffix: '-alpine'
-            platforms: 'linux/amd64,linux/arm64'
+#          - dockerfile: ./alpine.Dockerfile
+#            suffix: '-alpine'
+#            platforms: 'linux/amd64,linux/arm64'
     steps:
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
@@ -115,7 +115,6 @@ jobs:
 
             To play around with this PR, pull an image:
             * `foxxmd/multi-scrobbler:pr-${{ github.event.number }}`
-            * `foxxmd/multi-scrobbler:pr-${{ github.event.number }}-alpine`.
 
             Images are available for x86_64 and ARM64.
 
