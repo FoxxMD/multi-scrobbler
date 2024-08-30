@@ -75,6 +75,7 @@ export const readyStates: ReadyState[] = [NOT_READY, GETTING_READY, READY];
 export interface InternalConfig {
     localUrl: URL
     configDir: string
+    version: string
 
     logger: Logger
 }
