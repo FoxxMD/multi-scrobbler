@@ -50,9 +50,9 @@ jobs:
           - dockerfile: ./Dockerfile
             suffix: ''
             platforms: 'linux/amd64,linux/arm64'
-          - dockerfile: ./alpine.Dockerfile
-            suffix: '-alpine'
-            platforms: 'linux/amd64,linux/arm64'
+#          - dockerfile: ./alpine.Dockerfile
+#            suffix: '-alpine'
+#            platforms: 'linux/amd64,linux/arm64'
     # https://docs.github.com/en/actions/security-guides/automatic-token-authentication#permissions-for-the-github_token
     permissions:
       packages: write
@@ -94,13 +94,17 @@ jobs:
           # generate Docker tags based on the following events/attributes
           # https://github.com/docker/metadata-action/issues/247#issuecomment-1511259674 for NOT is default branch, eventually
           tags: |
-            type=raw,value=edge,enable={{is_default_branch}}
+            type=edge
             type=ref,event=branch,enable=${{ !endsWith(github.ref, 'master') }}
+            
+            # tag non-prelease as latest -- has a higher priority than regular tag so it shows first in registries
+            type=semver,pattern={{major}}.{{minor}}.{{patch}},value=latest,priority=901
+            
+            # tag all semver (include pre-release)
             type=semver,pattern={{version}}
-            type=semver,value=latest
           flavor: |
             latest=false
-            suffix=${{ matrix.suffix }},onlatest=true
+#            suffix=${{ matrix.suffix }},onlatest=false
 
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
