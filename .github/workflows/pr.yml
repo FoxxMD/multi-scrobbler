@@ -8,7 +8,7 @@ on:
       - reopened
       - opened
     branches:
-      - 'develop'
+      - 'master'
 
 jobs:
   test:

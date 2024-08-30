@@ -1,6 +1,5 @@
 ## Checklist before requesting a review
 
-- [ ] **I am opening this PR for the [`develop` branch](https://github.com/FoxxMD/multi-scrobbler/tree/develop) and NOT `master`.**
 - [ ] I have read the [contributing guidelines.](../CONTRIBUTING.md)
 
 ## Type of change

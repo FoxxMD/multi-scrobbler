@@ -2,10 +2,8 @@ name: Deploy to GitHub Pages
 
 on:
   workflow_dispatch:
-  push:
-    branches:
-      - master
-      - developDocs
+  release:
+    types: [released]
     # Review gh actions docs if you want to further define triggers, paths, etc
     # https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#on
 

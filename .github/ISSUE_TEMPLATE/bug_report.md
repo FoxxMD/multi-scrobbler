@@ -32,7 +32,7 @@ Copy and paste as much log data as possible related to this issue here.
 **Versions (please complete the following information):**
 Provide version information for any related sources/clients.
 
-- multi-scrobbler: [e.g. 0.4.0 on docker]
+- multi-scrobbler: [e.g. 0.8.3 on docker]
 - maloja [e.g. 3.1.4]
 - jellyfin [e.g. 10.8.9]
 
