@@ -4,7 +4,8 @@ import asPromised from 'chai-as-promised';
 import { after, before, describe, it } from 'mocha';
 import AbstractComponent from "../../common/AbstractComponent.js";
 import { TRANSFORM_HOOK } from "../../common/infrastructure/Atomic.js";
-import { isSearchAndReplace } from "../../utils.js";
+
+import { isConditionalSearchAndReplace } from "../../utils/PlayTransformUtils.js";
 import { asPlays, generatePlay, normalizePlays } from "../utils/PlayTestUtils.js";
 
 chai.use(asPromised);
@@ -49,7 +50,7 @@ describe('Play Transforms', function () {
             expect(component.transformRules.preCompare).to.exist;
             expect(component.transformRules.preCompare.title).to.exist;
             expect(Array.isArray(component.transformRules.preCompare.title)).is.true;
-            expect( isSearchAndReplace(component.transformRules.preCompare.title[0])).is.true
+            expect( isConditionalSearchAndReplace(component.transformRules.preCompare.title[0])).is.true
         });
 
         it('Converts transform config into real S&P data with default being empty string', function() {
@@ -68,7 +69,7 @@ describe('Play Transforms', function () {
             expect(component.transformRules.preCompare).to.exist;
             expect(component.transformRules.preCompare.title).to.exist;
             expect(Array.isArray(component.transformRules.preCompare.title)).is.true;
-            expect( isSearchAndReplace(component.transformRules.preCompare.title[0])).is.true
+            expect( isConditionalSearchAndReplace(component.transformRules.preCompare.title[0])).is.true
             expect( component.transformRules.preCompare.title[0].search).is.eq('something');
             expect( component.transformRules.preCompare.title[0].replace).is.eq('');
         });
@@ -94,7 +95,7 @@ describe('Play Transforms', function () {
             expect(component.transformRules.preCompare).to.exist;
             expect(component.transformRules.preCompare.title).to.exist;
             expect(Array.isArray(component.transformRules.preCompare.title)).is.true;
-            expect( isSearchAndReplace(component.transformRules.preCompare.title[0])).is.true
+            expect( isConditionalSearchAndReplace(component.transformRules.preCompare.title[0])).is.true
             expect( component.transformRules.preCompare.title[0].search).is.eq('nothing');
             expect( component.transformRules.preCompare.title[0].replace).is.eq('anything');
         });
@@ -217,6 +218,116 @@ describe('Play Transforms', function () {
             expect(transformed.data.artists.length).is.eq(1)
             expect(transformed.data.artists[0]).is.eq('big')
         });
+    });
+
+    describe('Conditional Transforming', function() {
+
+        describe('On Hook', function () {
+            it('Does not run hook if when conditions do not match', function () {
+                component.config = {
+                    options: {
+                        playTransform: {
+                            preCompare: {
+                                when: [
+                                    {
+                                        album: "Has This"
+                                    }
+                                ],
+                                artists: ['something']
+                            }
+                        }
+                    }
+                }
+                component.buildTransformRules();
+
+                const play = generatePlay({artists: ['something', 'big'], album: 'It Has No Match'});
+                const transformed = component.transformPlay(play, TRANSFORM_HOOK.preCompare);
+                expect(transformed.data.artists.length).is.eq(2)
+                expect(transformed.data.artists[0]).is.eq('something')
+            });
+
+            it('Does run hook if when conditions matches', function () {
+                component.config = {
+                    options: {
+                        playTransform: {
+                            preCompare: {
+                                when: [
+                                    {
+                                        album: "Has This"
+                                    }
+                                ],
+                                artists: ['something']
+                            }
+                        }
+                    }
+                }
+                component.buildTransformRules();
+
+                const play = generatePlay({artists: ['something', 'big'], album: 'It Has This Match'});
+                const transformed = component.transformPlay(play, TRANSFORM_HOOK.preCompare);
+                expect(transformed.data.artists.length).is.eq(1)
+                expect(transformed.data.artists[0]).is.eq('big')
+            });
+        });
+
+        describe('On Search-And-Replace', function() {
+            it('Does not run hook if when conditions do not match', function () {
+                component.config = {
+                    options: {
+                        playTransform: {
+                            preCompare: {
+                                artists: [
+                                    {
+                                        search: "something",
+                                        replace: "",
+                                        when: [
+                                            {
+                                                album: "Has This"
+                                            }
+                                        ]
+                                    }
+                                ]
+                            }
+                        }
+                    }
+                }
+                component.buildTransformRules();
+
+                const play = generatePlay({artists: ['something', 'big'], album: 'It Has No Match'});
+                const transformed = component.transformPlay(play, TRANSFORM_HOOK.preCompare);
+                expect(transformed.data.artists.length).is.eq(2)
+                expect(transformed.data.artists[0]).is.eq('something')
+            });
+
+            it('Does run hook if when conditions matches', function () {
+                component.config = {
+                    options: {
+                        playTransform: {
+                            preCompare: {
+                                artists: [
+                                    {
+                                        search: "something",
+                                        replace: "",
+                                        when: [
+                                            {
+                                                album: "Has This"
+                                            }
+                                        ]
+                                    }
+                                ]
+                            }
+                        }
+                    }
+                }
+                component.buildTransformRules();
+
+                const play = generatePlay({artists: ['something', 'big'], album: 'It Has This Match'});
+                const transformed = component.transformPlay(play, TRANSFORM_HOOK.preCompare);
+                expect(transformed.data.artists.length).is.eq(1)
+                expect(transformed.data.artists[0]).is.eq('big')
+            });
+        });
+
     });
 
 

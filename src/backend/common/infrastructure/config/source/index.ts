@@ -1,4 +1,5 @@
-import { CommonConfig, CommonData, PlayTransformConfig, PlayTransformOptions, RequestRetryOptions } from "../common.js";
+import { PlayTransformConfig, PlayTransformOptions } from "../../Atomic.js";
+import { CommonConfig, CommonData, RequestRetryOptions } from "../common.js";
 
 export interface SourceRetryOptions extends RequestRetryOptions {
     /**

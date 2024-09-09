@@ -1,12 +1,22 @@
 import { childLogger, Logger } from "@foxxmd/logging";
-import { searchAndReplace, SearchAndReplaceRegExp } from "@foxxmd/regex-buddy-core";
-import { compare } from "compare-versions";
-import { ObjectPlayData, PlayData, PlayObject } from "../../core/Atomic.js";
-import { buildTrackString } from "../../core/StringUtils.js";
-import { configPartsToStrongParts, configValToSearchReplace } from "../utils.js";
+import {
+    cacheFunctions,
+} from "@foxxmd/regex-buddy-core";
+import { PlayObject } from "../../core/Atomic.js";
+
+import {
+    configPartsToStrongParts, countRegexes,
+    transformPlayUsingParts
+} from "../utils/PlayTransformUtils.js";
 import { hasNodeNetworkException } from "./errors/NodeErrors.js";
 import { hasUpstreamError } from "./errors/UpstreamError.js";
-import { PlayTransformParts, PlayTransformRules, TRANSFORM_HOOK, TransformHook } from "./infrastructure/Atomic.js";
+import {
+    ConditionalSearchAndReplaceRegExp,
+    PlayTransformParts,
+    PlayTransformRules,
+    TRANSFORM_HOOK,
+    TransformHook
+} from "./infrastructure/Atomic.js";
 import { CommonClientConfig } from "./infrastructure/config/client/index.js";
 import { CommonSourceConfig } from "./infrastructure/config/source/index.js";
 
@@ -24,6 +34,9 @@ export default abstract class AbstractComponent {
     config: CommonClientConfig | CommonSourceConfig;
 
     transformRules!: PlayTransformRules;
+    // TODO set this based on number of rules?
+    // we will know how many rules there are at component build time...
+    regexCache!: ReturnType<typeof cacheFunctions>;
 
     logger: Logger;
 
@@ -95,6 +108,12 @@ export default abstract class AbstractComponent {
         } catch (e) {
             this.buildOK = false;
             throw new Error('Could not build playTransform rules. Check your configuration is valid.', {cause: e});
+        }
+        try {
+            const ruleCount = countRegexes(this.transformRules);
+            this.regexCache = cacheFunctions(ruleCount);
+        } catch (e) {
+            this.logger.warn(new Error('Failed to count number of rule regexes for caching but will continue will fallback to 100', {cause: e}));
         }
     }
 
@@ -242,7 +261,7 @@ export default abstract class AbstractComponent {
         const getLogger = () => logger !== undefined ? logger : childLogger(this.logger, labels);
 
         try {
-            let hook: PlayTransformParts<SearchAndReplaceRegExp> | undefined;
+            let hook: PlayTransformParts<ConditionalSearchAndReplaceRegExp> | undefined;
 
             switch (hookType) {
                 case TRANSFORM_HOOK.preCompare:
@@ -263,111 +282,20 @@ export default abstract class AbstractComponent {
                 return play;
             }
 
-            const {
-                data: {
-                    track,
-                    artists,
-                    albumArtists,
-                    album
-                } = {}
-            } = play;
-
-            const transformedPlayData: Partial<ObjectPlayData> = {};
-
-            let isTransformed = false;
-
-            if (hook.title !== undefined && track !== undefined) {
-                try {
-                    const t = searchAndReplace(track, hook.title);
-                    if (t !== track) {
-                        transformedPlayData.track = t.trim() === '' ? undefined : t;
-                        isTransformed = true;
-                    }
-                } catch (e) {
-                    getLogger().warn(new Error(`Failed to transform title: ${track}`, {cause: e}));
+            const [transformedPlay, transformDetails] = transformPlayUsingParts(play, hook, {
+                logger: getLogger,
+                regex: {
+                    searchAndReplace: this.regexCache.searchAndReplace,
+                    testMaybeRegex: this.regexCache.testMaybeRegex,
                 }
-            }
+            });
 
-            if (hook.artists !== undefined && artists !== undefined && artists.length > 0) {
-                const transformedArtists: string[] = [];
-                let anyArtistTransformed = false;
-                for (const artist of artists) {
-                    try {
-                        const t = searchAndReplace(artist, hook.artists);
-                        if (t !== artist) {
-                            anyArtistTransformed = true;
-                            isTransformed = true;
-                        }
-                        if(t.trim() !== '') {
-                            transformedArtists.push(t);
-                        }
-                    } catch (e) {
-                        getLogger().warn(new Error(`Failed to transform artist: ${artist}`, {cause: e}));
-                        transformedArtists.push(artist);
-                    }
-                }
-                if(anyArtistTransformed) {
-                    transformedPlayData.artists = transformedArtists;
-                }
-            }
-
-            if (hook.artists !== undefined && albumArtists !== undefined && albumArtists.length > 0) {
-                const transformedArtists: string[] = [];
-                let anyArtistTransformed = false;
-                for (const artist of albumArtists) {
-                    try {
-                        const t = searchAndReplace(artist, hook.artists);
-                        if (t !== artist) {
-                            anyArtistTransformed = true;
-                            isTransformed = true;
-                        }
-                        if(t.trim() !== '') {
-                            transformedArtists.push(t);
-                        }
-                    } catch (e) {
-                        getLogger().warn(new Error(`Failed to transform albumArtist: ${artist}`, {cause: e}));
-                        transformedArtists.push(artist);
-                    }
-                }
-                if(anyArtistTransformed) {
-                    transformedPlayData.albumArtists = transformedArtists;
-                }
-            }
-
-            if (hook.album !== undefined && album !== undefined) {
-                try {
-                    const t = searchAndReplace(album, hook.album);
-                    if (t !== album) {
-                        isTransformed = true;
-                        transformedPlayData.album = t.trim() === '' ? undefined : t;
-                    }
-                } catch (e) {
-                    getLogger().warn(new Error(`Failed to transform album: ${album}`, {cause: e}));
-                }
-            }
-
-            if(isTransformed) {
-
-                const transformedPlay = {
-                    ...play,
-                    data: {
-                        ...play.data,
-                        ...transformedPlayData
-                    }
-                }
-
-                const shouldLog = log ?? this.config.options?.playTransform?.log ?? true;
+                            const shouldLog = log ?? this.config.options?.playTransform?.log ?? true;
                 if(shouldLog) {
-                    this.logger.debug({labels}, `Play transformed by ${hookType}:
-Original    : ${buildTrackString(play, {include: ['artist', 'track', 'album']})}
-Transformed : ${buildTrackString(transformedPlay, {include: ['artist', 'track', 'album']})}
-`);
+                    this.logger.debug({labels: [...labels, hookType]}, transformDetails);
                 }
 
                 return transformedPlay;
-            }
-
-            return play;
         } catch (e) {
             getLogger().warn(new Error(`Unexpected error occurred, returning original play.`, {cause: e}));
             return play;

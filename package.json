@@ -55,7 +55,7 @@
     "@foxxmd/chromecast-client": "^1.0.4",
     "@foxxmd/get-version": "^0.0.3",
     "@foxxmd/logging": "^0.2.1",
-    "@foxxmd/regex-buddy-core": "^0.1.0",
+    "@foxxmd/regex-buddy-core": "^0.1.2",
     "@foxxmd/string-sameness": "^0.4.0",
     "@jellyfin/sdk": "^0.10.0",
     "@kenyip/backoff-strategies": "^1.0.4",

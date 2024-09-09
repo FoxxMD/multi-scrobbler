@@ -245,12 +245,19 @@ export type AbstractApiOptions = Record<any, any> & { logger: Logger }
 
 export type keyOmit<T, U extends keyof any> = T & { [P in U]?: never }
 
-export type SearchAndReplaceTerm = string | SearchAndReplaceRegExp;
+export interface ConditionalSearchAndReplaceRegExp extends SearchAndReplaceRegExp {
+    when?: WhenConditionsConfig
+}
 
-export interface PlayTransformParts<T> {
-    title?: T[]
-    artists?: T[]
-    album?: T[]
+export type SearchAndReplaceTerm = string | ConditionalSearchAndReplaceRegExp;
+
+
+export type PlayTransformParts<T> = PlayTransformPartsAtomic<T[]> & { when?: WhenConditionsConfig };
+
+export interface PlayTransformPartsAtomic<T> {
+    title?: T
+    artists?: T
+    album?: T
 }
 
 export interface PlayTransformHooks<T> {
@@ -262,7 +269,7 @@ export interface PlayTransformHooks<T> {
     postCompare?: PlayTransformParts<T>
 }
 
-export type PlayTransformRules = PlayTransformHooks<SearchAndReplaceRegExp>
+export type PlayTransformRules = PlayTransformHooks<ConditionalSearchAndReplaceRegExp>
 
 export type TransformHook = 'preCompare' | 'compare' | 'candidate' | 'existing' | 'postCompare';
 export const TRANSFORM_HOOK = {
@@ -271,3 +278,10 @@ export const TRANSFORM_HOOK = {
     existing: 'existing' as TransformHook,
     postCompare: 'postCompare' as TransformHook,
 }
+export type PlayTransformConfig = PlayTransformHooks<SearchAndReplaceTerm>;
+export type PlayTransformOptions = PlayTransformConfig & { log?: boolean }
+
+export type WhenParts<T> = PlayTransformPartsAtomic<T>;
+
+export type WhenConditions<T> = WhenParts<T>[];
+export type WhenConditionsConfig = WhenConditions<string>;
