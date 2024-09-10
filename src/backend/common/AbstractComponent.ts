@@ -2,7 +2,10 @@ import { childLogger, Logger } from "@foxxmd/logging";
 import {
     cacheFunctions,
 } from "@foxxmd/regex-buddy-core";
+import deepEqual from 'fast-deep-equal';
+import { Simulate } from "react-dom/test-utils";
 import { PlayObject } from "../../core/Atomic.js";
+import { buildTrackString } from "../../core/StringUtils.js";
 
 import {
     configPartsToStrongParts, countRegexes,
@@ -12,13 +15,14 @@ import { hasNodeNetworkException } from "./errors/NodeErrors.js";
 import { hasUpstreamError } from "./errors/UpstreamError.js";
 import {
     ConditionalSearchAndReplaceRegExp,
-    PlayTransformParts,
+    PlayTransformParts, PlayTransformPartsArray,
     PlayTransformRules,
     TRANSFORM_HOOK,
     TransformHook
 } from "./infrastructure/Atomic.js";
 import { CommonClientConfig } from "./infrastructure/config/client/index.js";
 import { CommonSourceConfig } from "./infrastructure/config/source/index.js";
+import play = Simulate.play;
 
 export default abstract class AbstractComponent {
     requiresAuth: boolean = false;
@@ -34,8 +38,6 @@ export default abstract class AbstractComponent {
     config: CommonClientConfig | CommonSourceConfig;
 
     transformRules!: PlayTransformRules;
-    // TODO set this based on number of rules?
-    // we will know how many rules there are at component build time...
     regexCache!: ReturnType<typeof cacheFunctions>;
 
     logger: Logger;
@@ -261,7 +263,7 @@ export default abstract class AbstractComponent {
         const getLogger = () => logger !== undefined ? logger : childLogger(this.logger, labels);
 
         try {
-            let hook: PlayTransformParts<ConditionalSearchAndReplaceRegExp> | undefined;
+            let hook: PlayTransformPartsArray<ConditionalSearchAndReplaceRegExp> | undefined;
 
             switch (hookType) {
                 case TRANSFORM_HOOK.preCompare:
@@ -282,20 +284,35 @@ export default abstract class AbstractComponent {
                 return play;
             }
 
-            const [transformedPlay, transformDetails] = transformPlayUsingParts(play, hook, {
-                logger: getLogger,
-                regex: {
-                    searchAndReplace: this.regexCache.searchAndReplace,
-                    testMaybeRegex: this.regexCache.testMaybeRegex,
+            let transformedPlay: PlayObject = play;
+            const transformDetails: string[] = [];
+            for(const hookItem of hook) {
+                const newTransformedPlay = transformPlayUsingParts(transformedPlay, hookItem, {
+                    logger: getLogger,
+                    regex: {
+                        searchAndReplace: this.regexCache.searchAndReplace,
+                        testMaybeRegex: this.regexCache.testMaybeRegex,
+                    }
+                });
+                if(!deepEqual(newTransformedPlay, transformedPlay)) {
+                    transformDetails.push(buildTrackString(transformedPlay, {include: ['artist', 'track', 'album']}));
                 }
-            });
+                transformedPlay = newTransformedPlay;
+            }
 
-                            const shouldLog = log ?? this.config.options?.playTransform?.log ?? true;
-                if(shouldLog) {
-                    this.logger.debug({labels: [...labels, hookType]}, transformDetails);
+            if(transformDetails.length > 0) {
+                let transformStatements = [`Original: ${buildTrackString(play, {include: ['artist', 'track', 'album']})}`];
+                const shouldLog = log ?? this.config.options?.playTransform?.log ?? false;
+                if (shouldLog === true || shouldLog === 'all') {
+                    if(shouldLog === 'all') {
+                        transformStatements = transformStatements.concat(transformDetails.map(x => `=> ${x}`));
+                    } else {
+                        transformStatements.push(`=> ${transformDetails[transformDetails.length - 1]}`);
+                    }
+                    this.logger.debug({labels: [...labels, hookType]}, `Transform Pipeline:\n${transformStatements.join('\n')}`);
                 }
-
-                return transformedPlay;
+            }
+            return transformedPlay;
         } catch (e) {
             getLogger().warn(new Error(`Unexpected error occurred, returning original play.`, {cause: e}));
             return play;

@@ -4,7 +4,7 @@ import { ObjectPlayData, PlayObject } from "../../core/Atomic.js";
 import { buildTrackString } from "../../core/StringUtils.js";
 import {
     ConditionalSearchAndReplaceRegExp,
-    PlayTransformParts, PlayTransformRules,
+    PlayTransformParts, PlayTransformPartsArray, PlayTransformPartsConfig, PlayTransformRules,
     SearchAndReplaceTerm,
     WhenConditionsConfig,
     WhenParts
@@ -49,52 +49,57 @@ export const isConditionalSearchAndReplace = (val: unknown): val is ConditionalS
         && ('replace' in val && typeof val.replace === 'string')
         && (!('when' in val) || isWhenConditionConfig(val.when));
 }
-export const configPartsToStrongParts = (val: PlayTransformParts<SearchAndReplaceTerm> | undefined): PlayTransformParts<ConditionalSearchAndReplaceRegExp> => {
+export const configPartsToStrongParts = (val: PlayTransformPartsConfig<SearchAndReplaceTerm> | undefined): PlayTransformPartsArray<ConditionalSearchAndReplaceRegExp> => {
     if (val === undefined) {
-        return {}
+        return []
     }
-    const {
-        title: titleConfig,
-        artists: artistConfig,
-        album: albumConfig,
-        when: whenConfig
-    } = val;
-    let title,
-        artists,
-        album,
-        when;
+    const arr = Array.isArray(val) ? val : [val];
 
-    if (titleConfig !== undefined) {
-        if (!Array.isArray(titleConfig)) {
-            throw new Error('title must be an array');
-        }
-        title = titleConfig.map(configValToSearchReplace);
-    }
-    if (artistConfig !== undefined) {
-        if (!Array.isArray(artistConfig)) {
-            throw new Error('arist must be an array');
-        }
-        artists = artistConfig.map(configValToSearchReplace);
-    }
-    if (albumConfig !== undefined) {
-        if (!Array.isArray(albumConfig)) {
-            throw new Error('album must be an array');
-        }
-        album = albumConfig.map(configValToSearchReplace);
-    }
-    if (whenConfig !== undefined) {
-        if (!isWhenConditionConfig(whenConfig)) {
-            throw new Error('when must be an array of artist/title/album objects and each object\'s property must be a string');
-        }
-        when = whenConfig;
-    }
+    return arr.map((x) => {
+        const {
+            title: titleConfig,
+            artists: artistConfig,
+            album: albumConfig,
+            when: whenConfig
+        } = x;
+        let title,
+            artists,
+            album,
+            when;
 
-    return {
-        title,
-        artists,
-        album,
-        when
-    }
+        if (titleConfig !== undefined) {
+            if (!Array.isArray(titleConfig)) {
+                throw new Error('title must be an array');
+            }
+            title = titleConfig.map(configValToSearchReplace);
+        }
+        if (artistConfig !== undefined) {
+            if (!Array.isArray(artistConfig)) {
+                throw new Error('arist must be an array');
+            }
+            artists = artistConfig.map(configValToSearchReplace);
+        }
+        if (albumConfig !== undefined) {
+            if (!Array.isArray(albumConfig)) {
+                throw new Error('album must be an array');
+            }
+            album = albumConfig.map(configValToSearchReplace);
+        }
+        if (whenConfig !== undefined) {
+            if (!isWhenConditionConfig(whenConfig)) {
+                throw new Error('when must be an array of artist/title/album objects and each object\'s property must be a string');
+            }
+            when = whenConfig;
+        }
+
+        return {
+            title,
+            artists,
+            album,
+            when
+        }
+    });
+
 }
 
 export const testWhen = (parts: WhenParts<string>, play: PlayObject, options?: SuppliedRegex): boolean => {
@@ -134,7 +139,7 @@ export interface TransformPlayPartsOptions {
     regex?: SuppliedRegex
 }
 
-export const transformPlayUsingParts = (play: PlayObject, parts: PlayTransformParts<ConditionalSearchAndReplaceRegExp>, options?: TransformPlayPartsOptions): [PlayObject, string?] => {
+export const transformPlayUsingParts = (play: PlayObject, parts: PlayTransformParts<ConditionalSearchAndReplaceRegExp>, options?: TransformPlayPartsOptions): PlayObject => {
     const {
         data: {
             track,
@@ -158,7 +163,7 @@ export const transformPlayUsingParts = (play: PlayObject, parts: PlayTransformPa
 
     if(parts.when !== undefined) {
         if(!testWhenConditions(parts.when, play, {testMaybeRegex})) {
-            return [play];
+            return play;
         }
     }
 
@@ -244,29 +249,35 @@ export const transformPlayUsingParts = (play: PlayObject, parts: PlayTransformPa
             }
         }
 
-        return [transformedPlay, `Play transformed:
-Original    : ${buildTrackString(play, {include: ['artist', 'track', 'album']})}
-Transformed : ${buildTrackString(transformedPlay, {include: ['artist', 'track', 'album']})}
-`];
+        return transformedPlay;
     }
 
-    return [play];
+    return play;
 }
 
 export const countRegexes = (rules: PlayTransformRules): number => {
     let rulesCount = 0;
     if(rules.preCompare !== undefined) {
-        rulesCount = countRulesInParts(rules.preCompare) + countWhens(rules.preCompare.when);
+        for(const hookItem of rules.preCompare) {
+            rulesCount = countRulesInParts(hookItem) + countWhens(hookItem.when);
+        }
+
     }
     if(rules.postCompare !== undefined) {
-        rulesCount = countRulesInParts(rules.postCompare) + countWhens(rules.postCompare.when);
+        for(const hookItem of rules.postCompare) {
+            rulesCount = countRulesInParts(hookItem) + countWhens(hookItem.when);
+        }
     }
     if(rules.compare !== undefined) {
         if(rules.compare.existing !== undefined) {
-            rulesCount = countRulesInParts(rules.compare.existing) + countWhens(rules.compare.existing.when);
+            for(const hookItem of rules.compare.existing) {
+                rulesCount = countRulesInParts(hookItem) + countWhens(hookItem.when);
+            }
         }
         if(rules.compare.candidate !== undefined) {
-            rulesCount = countRulesInParts(rules.compare.candidate) + countWhens(rules.compare.candidate.when);
+            for(const hookItem of rules.compare.candidate) {
+                rulesCount = countRulesInParts(hookItem) + countWhens(hookItem.when);
+            }
         }
     }
     return rulesCount;

@@ -245,14 +245,19 @@ export type AbstractApiOptions = Record<any, any> & { logger: Logger }
 
 export type keyOmit<T, U extends keyof any> = T & { [P in U]?: never }
 
-export interface ConditionalSearchAndReplaceRegExp extends SearchAndReplaceRegExp {
+export interface ConditionalSearchAndReplaceRegExp extends SearchAndReplaceRegExp{
     when?: WhenConditionsConfig
 }
 
-export type SearchAndReplaceTerm = string | ConditionalSearchAndReplaceRegExp;
+export type ConditionalSearchAndReplaceTerm = Omit<ConditionalSearchAndReplaceRegExp, 'test'>
 
+export type SearchAndReplaceTerm = string | ConditionalSearchAndReplaceTerm;
 
 export type PlayTransformParts<T> = PlayTransformPartsAtomic<T[]> & { when?: WhenConditionsConfig };
+
+export type PlayTransformPartsArray<T> = PlayTransformParts<T>[];
+
+export type PlayTransformPartsConfig<T> = PlayTransformPartsArray<T> | PlayTransformParts<T>;
 
 export interface PlayTransformPartsAtomic<T> {
     title?: T
@@ -260,13 +265,22 @@ export interface PlayTransformPartsAtomic<T> {
     album?: T
 }
 
-export interface PlayTransformHooks<T> {
-    preCompare?: PlayTransformParts<T>
+export interface PlayTransformHooksConfig<T> {
+    preCompare?: PlayTransformPartsConfig<T>
     compare?: {
-        candidate?: PlayTransformParts<T>
-        existing?: PlayTransformParts<T>
+        candidate?: PlayTransformPartsConfig<T>
+        existing?: PlayTransformPartsConfig<T>
     }
-    postCompare?: PlayTransformParts<T>
+    postCompare?: PlayTransformPartsConfig<T>
+}
+
+export interface PlayTransformHooks<T> extends PlayTransformHooksConfig<T> {
+    preCompare?: PlayTransformPartsArray<T>
+    compare?: {
+        candidate?: PlayTransformPartsArray<T>
+        existing?: PlayTransformPartsArray<T>
+    }
+    postCompare?: PlayTransformPartsArray<T>
 }
 
 export type PlayTransformRules = PlayTransformHooks<ConditionalSearchAndReplaceRegExp>
@@ -278,8 +292,8 @@ export const TRANSFORM_HOOK = {
     existing: 'existing' as TransformHook,
     postCompare: 'postCompare' as TransformHook,
 }
-export type PlayTransformConfig = PlayTransformHooks<SearchAndReplaceTerm>;
-export type PlayTransformOptions = PlayTransformConfig & { log?: boolean }
+export type PlayTransformConfig = PlayTransformHooksConfig<SearchAndReplaceTerm>;
+export type PlayTransformOptions = PlayTransformConfig & { log?: boolean | 'all' }
 
 export type WhenParts<T> = PlayTransformPartsAtomic<T>;
 

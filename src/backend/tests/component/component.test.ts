@@ -34,6 +34,48 @@ describe('Play Transforms', function () {
             expect(Object.keys(component.transformRules).length).eq(0);
         });
 
+        it('Converts single object hook into hook array', function() {
+            component.config = {
+                options: {
+                    playTransform: {
+                        preCompare: {
+                            title: ['something']
+                        }
+                    }
+                }
+            }
+
+            component.buildTransformRules();
+
+            expect(component.transformRules.preCompare).to.be.an('array');
+            expect(component.transformRules.preCompare).to.be.length(1);
+            expect(component.transformRules.preCompare).to.have.nested.property('0.title');
+        });
+
+        it('Accepts hook array', function() {
+            component.config = {
+                options: {
+                    playTransform: {
+                        preCompare: [
+                            {
+                                title: ['something']
+                            },
+                            {
+                                title: ['something else']
+                            }
+                        ]
+                    }
+                }
+            }
+
+            component.buildTransformRules();
+
+            expect(component.transformRules.preCompare).to.be.an('array');
+            expect(component.transformRules.preCompare).to.be.length(2);
+            expect(component.transformRules.preCompare).to.have.nested.property('0.title');
+            expect(component.transformRules.preCompare).to.have.nested.property('1.title')
+        });
+
         it('Converts transform config into real S&P data', function() {
             component.config = {
                 options: {
@@ -47,10 +89,10 @@ describe('Play Transforms', function () {
 
             component.buildTransformRules();
 
-            expect(component.transformRules.preCompare).to.exist;
-            expect(component.transformRules.preCompare.title).to.exist;
-            expect(Array.isArray(component.transformRules.preCompare.title)).is.true;
-            expect( isConditionalSearchAndReplace(component.transformRules.preCompare.title[0])).is.true
+            expect(component.transformRules.preCompare[0]).to.exist;
+            expect(component.transformRules.preCompare[0].title).to.exist;
+            expect(Array.isArray(component.transformRules.preCompare[0].title)).is.true;
+            expect( isConditionalSearchAndReplace(component.transformRules.preCompare[0].title[0])).is.true
         });
 
         it('Converts transform config into real S&P data with default being empty string', function() {
@@ -66,12 +108,12 @@ describe('Play Transforms', function () {
 
             component.buildTransformRules();
 
-            expect(component.transformRules.preCompare).to.exist;
-            expect(component.transformRules.preCompare.title).to.exist;
-            expect(Array.isArray(component.transformRules.preCompare.title)).is.true;
-            expect( isConditionalSearchAndReplace(component.transformRules.preCompare.title[0])).is.true
-            expect( component.transformRules.preCompare.title[0].search).is.eq('something');
-            expect( component.transformRules.preCompare.title[0].replace).is.eq('');
+            expect(component.transformRules.preCompare[0]).to.exist;
+            expect(component.transformRules.preCompare[0].title).to.exist;
+            expect(Array.isArray(component.transformRules.preCompare[0].title)).is.true;
+            expect( isConditionalSearchAndReplace(component.transformRules.preCompare[0].title[0])).is.true
+            expect( component.transformRules.preCompare[0].title[0].search).is.eq('something');
+            expect( component.transformRules.preCompare[0].title[0].replace).is.eq('');
         });
 
         it('Respects transform config when it is already S&P data', function() {
@@ -92,12 +134,12 @@ describe('Play Transforms', function () {
 
             component.buildTransformRules();
 
-            expect(component.transformRules.preCompare).to.exist;
-            expect(component.transformRules.preCompare.title).to.exist;
-            expect(Array.isArray(component.transformRules.preCompare.title)).is.true;
-            expect( isConditionalSearchAndReplace(component.transformRules.preCompare.title[0])).is.true
-            expect( component.transformRules.preCompare.title[0].search).is.eq('nothing');
-            expect( component.transformRules.preCompare.title[0].replace).is.eq('anything');
+            expect(component.transformRules.preCompare[0]).to.exist;
+            expect(component.transformRules.preCompare[0].title).to.exist;
+            expect(Array.isArray(component.transformRules.preCompare[0].title)).is.true;
+            expect( isConditionalSearchAndReplace(component.transformRules.preCompare[0].title[0])).is.true
+            expect( component.transformRules.preCompare[0].title[0].search).is.eq('nothing');
+            expect( component.transformRules.preCompare[0].title[0].replace).is.eq('anything');
         });
     });
 
@@ -330,5 +372,39 @@ describe('Play Transforms', function () {
 
     });
 
+    describe('Multiple hook transforms', function() {
 
+        it('Accumulates transforms', function() {
+            component.config = {
+                options: {
+                    playTransform: {
+                        preCompare: [
+                            {
+                                title: [
+                                    {
+                                        search: "something",
+                                        replace: "another else"
+                                    }
+                                ]
+                            },
+                            {
+                                title: [
+                                    {
+                                        search: "another else",
+                                        replace: "final thing"
+                                    }
+                                ]
+                            }
+                        ]
+                    }
+                }
+            }
+
+            component.buildTransformRules();
+            const play = generatePlay({track: 'My cool something track'});
+            const transformed = component.transformPlay(play, TRANSFORM_HOOK.preCompare);
+            expect(transformed.data.track).equal('My cool final thing track');
+        });
+
+    });
 })
