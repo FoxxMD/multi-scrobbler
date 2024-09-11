@@ -19,7 +19,7 @@ const config: Config = {
   organizationName: 'foxxmd', // Usually your GitHub org/user name.
   projectName: 'multi-scrobbler', // Usually your repo name.
 
-  trailingSlash: false,
+  trailingSlash: true,
 
   onBrokenLinks: 'warn',
   onBrokenMarkdownLinks: 'warn',
