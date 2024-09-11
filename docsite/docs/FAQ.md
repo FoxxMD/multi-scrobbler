@@ -138,7 +138,7 @@ If you see errors in multi-scrobbler for YTM that contain **401** or **403** lik
 Error: Could not send the specified request to browse. Status code: 401
 ```
 
-then YTM has invalidated your access. [Follow the YTM instructions to retrieve a new set of cookies for multi-scrobbler]((configuration/configuration.mdx#youtube-music)) and then restart MS to potentially resolve the problem. See [this issue](https://github.com/FoxxMD/multi-scrobbler/issues/158) for further discussion of the problem.
+then YTM has invalidated your access. [Follow the YTM instructions to retrieve a new set of cookies for multi-scrobbler](configuration/configuration.mdx#youtube-music) and then restart MS to potentially resolve the problem. See [this issue](https://github.com/FoxxMD/multi-scrobbler/issues/158) for further discussion of the problem.
 
 ## Configuration Issues
 
