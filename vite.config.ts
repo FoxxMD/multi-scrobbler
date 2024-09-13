@@ -1,4 +1,3 @@
-import { parseRegexSingle } from "@foxxmd/regex-buddy-core";
 import react from '@vitejs/plugin-react';
 import normalizeUrl from "normalize-url";
 import { defineConfig } from 'vite';
@@ -6,9 +5,9 @@ import { defineConfig } from 'vite';
 const QUOTES_UNWRAP_REGEX: RegExp = new RegExp(/^"(.*)"$/);
 export const generateBaseURL = (userUrl: string | undefined): URL => {
     let cleanUserUrl = userUrl.trim();
-    const results = parseRegexSingle(QUOTES_UNWRAP_REGEX, cleanUserUrl);
-    if(results !== undefined && results.groups && results.groups.length > 0) {
-        cleanUserUrl = results.groups[0];
+    if(QUOTES_UNWRAP_REGEX.test(cleanUserUrl)) {
+        const results = cleanUserUrl.match(QUOTES_UNWRAP_REGEX);
+        cleanUserUrl = results[1];
     }
     const base = normalizeUrl(cleanUserUrl, {removeSingleSlash: true});
     const u = new URL(base);
