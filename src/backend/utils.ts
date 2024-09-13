@@ -1,5 +1,5 @@
 import { Logger } from '@foxxmd/logging';
-import { SearchAndReplaceRegExp } from "@foxxmd/regex-buddy-core";
+import { parseRegexSingle, SearchAndReplaceRegExp } from "@foxxmd/regex-buddy-core";
 import backoffStrategies from '@kenyip/backoff-strategies';
 import address from "address";
 import * as AjvNS from 'ajv';
@@ -769,9 +769,15 @@ export const comparingMultipleArtists = (existing: PlayObject, candidate: PlayOb
     return eArtists.length > 1 || cArtists.length > 1;
 }
 
+const QUOTES_UNWRAP_REGEX: RegExp = new RegExp(/^"(.*)"$/);
 export const generateBaseURL = (userUrl: string | undefined, defaultPort: number | string): URL => {
     const urlStr = userUrl ?? `http://localhost:${defaultPort}`;
-    const base = normalizeUrl(urlStr, {removeSingleSlash: true});
+    let cleanUserUrl = urlStr.trim();
+    const results = parseRegexSingle(QUOTES_UNWRAP_REGEX, cleanUserUrl);
+    if(results !== undefined && results.groups && results.groups.length > 0) {
+        cleanUserUrl = results.groups[0];
+    }
+    const base = normalizeUrl(cleanUserUrl, {removeSingleSlash: true});
     const u = new URL(base);
     if(u.port === '') {
         if(u.protocol === 'https:') {

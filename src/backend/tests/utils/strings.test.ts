@@ -180,6 +180,10 @@ describe('URL Parsing', function () {
             assert.include(generateBaseURL('http://my.domain.local:5000/my/subfolder', 9078).toString(), 'http://my.domain.local:5000/my/subfolder');
             assert.include(generateBaseURL('https://my.domain.local/my/subfolder', 9078).toString(), 'https://my.domain.local/my/subfolder');
         });
+
+        it('should should strip wrapping quotes', function () {
+            assert.equal(generateBaseURL(`"http://192.168.3.120:9078"`, 9078).toString(), 'http://192.168.3.120:9078/');
+        });
     });
 
     describe('URL Path Joining', function() {
