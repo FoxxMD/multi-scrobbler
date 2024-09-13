@@ -13,7 +13,7 @@ chai.use(asPromised);
 
 const emitter = new EventEmitter();
 const generateSource = () => {
-    return new TestSource('spotify', 'test', {}, {localUrl: new URL('https://example.com'), configDir: 'fake', logger: loggerTest},  emitter);
+    return new TestSource('spotify', 'test', {}, {localUrl: new URL('https://example.com'), configDir: 'fake', logger: loggerTest, version: 'test'},  emitter);
 }
 let source: TestSource = generateSource();
 
