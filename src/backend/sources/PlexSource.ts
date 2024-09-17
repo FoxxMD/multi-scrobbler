@@ -2,12 +2,14 @@ import { childLogger, Logger } from "@foxxmd/logging";
 import concatStream from 'concat-stream';
 import dayjs from "dayjs";
 import EventEmitter from "events";
-import formidable from 'formidable';
+import formidable, { Files, File } from 'formidable';
+import { file } from "jscodeshift";
 import { PlayObject } from "../../core/Atomic.js";
 import { truncateStringToLength } from "../../core/StringUtils.js";
 import { FormatPlayObjectOptions, InternalConfig, SourceType } from "../common/infrastructure/Atomic.js";
 import { PlexSourceConfig } from "../common/infrastructure/config/source/plex.js";
 import { combinePartsToString } from "../utils.js";
+import { getFileIdentifier, getValidMultipartJsonFile } from "../utils/RequestUtils.js";
 import AbstractSource from "./AbstractSource.js";
 
 const shortDeviceId = truncateStringToLength(10, '');
@@ -265,7 +267,7 @@ export const plexRequestMiddle = (logger: Logger) => {
         plexLog.debug('Receiving request from Plex...');
 
         return new Promise((resolve, reject) => {
-            form.parse(req, (err: any, fields: any, files: any) => {
+            form.parse(req, (err: any, fields: any, files: Files | File) => {
                 if (err) {
                     plexLog.error('Error occurred while parsing formdata');
                     plexLog.error(err);
@@ -274,20 +276,35 @@ export const plexRequestMiddle = (logger: Logger) => {
                     return;
                 }
 
-                let validFile = null;
-                for (const namedFile of Object.values(files)) {
-                    // @ts-expect-error TS(2571): Object is of type 'unknown'.
-                    if (namedFile.mimetype.includes('json')) {
-                        validFile = namedFile;
-                        break;
-                    }
+                let validFile,
+                    fileResults;
+                try {
+                    const [vf, fr] = getValidMultipartJsonFile(files);
+                    validFile = vf;
+                    fileResults = fr;
+                } catch (e) {
+                    const parseError = new Error('Could not parse plex webhook formdata to valid files', {cause: e});
+                    plexLog.error(parseError)
+                    next(parseError);
+                    reject(parseError);
+                    return;
                 }
-                if (validFile === null) {
-                    // @ts-expect-error TS(2571): Object is of type 'unknown'.
-                    const err = new Error(`No files parsed from formdata had a mimetype that included 'json'. Found files:\n ${Object.entries(files).map(([k, v]) => `${k}: ${v.mimetype}`).join('\n')}`);
-                    plexLog.error(err);
-                    next(err);
-                    reject(err);
+
+                if (validFile === undefined) {
+                    const validError = new Error(`No files parsed from formdata had a mimetype that included 'json' => ${fileResults.join('\n')}`);
+                    plexLog.error(validError);
+                    next(validError);
+                    reject(validError);
+                    return;
+                } else {
+                    plexLog.debug(`formdata file results => ${fileResults.join('\n')}`);
+                }
+
+                if(!('buffer' in validFile)) {
+                    const buffErr = new Error(`${getFileIdentifier(validFile as unknown as File)} file should have had buffer but it did not!`);
+                    plexLog.error(buffErr);
+                    next(buffErr);
+                    reject(buffErr);
                     return;
                 }
 
@@ -297,13 +314,13 @@ export const plexRequestMiddle = (logger: Logger) => {
                     payload = JSON.parse(payloadRaw);
                     req.payload = payload;
                     next();
-                    // @ts-expect-error TS(2794): Expected 1 arguments, but got 0. Did you forget to... Remove this comment to see the full error message
-                    resolve();
+                    resolve(undefined);
                 } catch (e) {
-                    plexLog.error(`Error occurred while trying to parse Plex file payload to json. Raw text:\n${payloadRaw}`);
-                    plexLog.error(e);
-                    next(e);
-                    reject(e);
+                    const jsonParseError = new Error(`Error occurred while trying to parse Plex formdata file ${getFileIdentifier(validFile as unknown as File)} to json. Raw text:\n${payloadRaw}`, {cause: e});
+                    plexLog.error(jsonParseError);
+                    next(jsonParseError);
+                    reject(jsonParseError);
+                    return;
                 }
             });
         });
