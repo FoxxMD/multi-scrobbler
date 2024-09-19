@@ -4,6 +4,7 @@ import EventEmitter from "events";
 import { FixedSizeList } from 'fixed-size-list';
 import { nanoid } from "nanoid";
 import { Simulate } from "react-dom/test-utils";
+import { MarkOptional } from "ts-essentials";
 import {
     DeadLetterScrobble,
     PlayObject,
@@ -26,7 +27,7 @@ import {
     TIME_WEIGHT,
     TITLE_WEIGHT, TRANSFORM_HOOK,
 } from "../common/infrastructure/Atomic.js";
-import { CommonClientConfig } from "../common/infrastructure/config/client/index.js";
+import { CommonClientConfig, UpstreamRefreshOptions } from "../common/infrastructure/config/client/index.js";
 import { Notifiers } from "../notifier/Notifiers.js";
 import {
     comparingMultipleArtists,
@@ -56,13 +57,14 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
 
     #recentScrobblesList: PlayObject[] = [];
     scrobbledPlayObjs: FixedSizeList<ScrobbledPlayObject>;
+    lastScrobbledPlayDate?: Dayjs;
     newestScrobbleTime?: Dayjs
     oldestScrobbleTime?: Dayjs
     tracksScrobbled: number = 0;
 
     lastScrobbleCheck: Dayjs = dayjs(0)
     lastScrobbleAttempt: Dayjs = dayjs(0)
-    refreshEnabled: boolean;
+    upstreamRefresh: MarkOptional<Required<UpstreamRefreshOptions>, 'refreshInitialCount'>;
     checkExistingScrobbles: boolean;
     verboseOptions;
 
@@ -93,11 +95,23 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
         const {
             options: {
                 refreshEnabled = true,
+                refreshInitialCount,
+                refreshMinInterval = 5,
+                refreshStaleAfter = 60,
                 checkExistingScrobbles = true,
                 verbose = {},
             } = {},
         } = this.config
-        this.refreshEnabled = refreshEnabled;
+        this.upstreamRefresh = {
+            refreshEnabled,
+            refreshInitialCount,
+            refreshMinInterval,
+            refreshStaleAfter
+        };
+        if(refreshStaleAfter < (refreshMinInterval/1000)) {
+            this.logger.warn(`refreshMinInterval (${refreshMinInterval}ms) is longer than refreshStaleAfter (${refreshStaleAfter}s)! This would cause refreshStaleAfter to potentially not trigger a refresh. Setting refreshMinInterval to same interval as refreshStaleAfter`);
+            this.upstreamRefresh.refreshMinInterval = refreshStaleAfter * 1000;
+        }
         this.checkExistingScrobbles = checkExistingScrobbles;
 
         const {
@@ -146,10 +160,11 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
 
         this.logger.verbose(`Fetching up to ${initialLimit} initial scrobbles...`);
         await this.refreshScrobbles(initialLimit);
+        this.lastScrobbledPlayDate = this.newestScrobbleTime;
     }
 
     refreshScrobbles = async (limit: number = this.MAX_STORED_SCROBBLES) => {
-        if (this.refreshEnabled) {
+        if (this.upstreamRefresh.refreshEnabled) {
             this.logger.debug('Refreshing recent scrobbles');
             const recent = await this.getScrobblesForRefresh(limit);
             this.logger.debug(`Found ${recent.length} recent scrobbles`);
@@ -170,43 +185,74 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
 
     shouldRefreshScrobble = () => {
         const {
-            refreshStaleAfter
-        } = this.config.options || {};
+            refreshStaleAfter,
+            refreshMinInterval,
+            refreshEnabled
+        } = this.upstreamRefresh;
 
-        if (!this.refreshEnabled) {
-            this.logger.debug(`Should NOT refresh scrobbles => refreshEnabled is false`);
+        if (!refreshEnabled) {
+            this.logger.debug({labels: ['Upstream Refresh']}, `Should NOT refresh => refreshEnabled is false`);
+            return false;
+        }
+
+        if(this.queuedScrobbles.length === 0) {
+            this.logger.debug({labels: ['Upstream Refresh']}, `Should NOT refresh => no scrobbles in queue!`);
             return false;
         }
 
         const queuedPlayedDate = this.getLatestQueuePlayDate();
 
-        // if next queued play was played more recently than the last time we refreshed upstream scrobbles
-        if (this.lastScrobbleCheck.unix() < queuedPlayedDate.unix()) {
-            this.logger.debug('Should refresh scrobbles => queued scrobble playDate is newer than last upstream scrobble refresh');
-            return true;
-        }
-
-        // if the last scrobbled play is at or is newer than the next scrobble then we are inserting (or potentially duping)
-        // in which case our data is probably stale
-        if(this.newestScrobbleTime !== undefined && this.newestScrobbleTime.unix() >= queuedPlayedDate.unix()) {
-            this.logger.debug('Should refresh scrobbles => queued scrobble playDate is equal to or older than the newest upstream scrobble');
-            return true;
-        }
-
-        if(refreshStaleAfter !== undefined) {
-            const diff = dayjs().diff(this.lastScrobbleCheck, 's');
-            if(diff > refreshStaleAfter) {
-                this.logger.debug(`Should refresh scrobbles => last refresh (${diff}s ago) was longer than refreshStaleAfter (${refreshStaleAfter}s)`);
+        // if newest queued play was played more recently than the last time we refreshed upstream scrobbles
+        if (this.scrobblesLastCheckedAt().unix() < queuedPlayedDate.unix()) {
+            if(!this.scrobblesRefreshMinIntervalPassed()) {
+                this.logger.debug({labels: ['Upstream Refresh']}, `Should refresh but WILL NOT => queued scrobble playDate is newer than last refresh but refreshMinInterval (${refreshMinInterval}ms) has not passed since last check`);
+                return false;
+            } else {
+                this.logger.debug({labels: ['Upstream Refresh']}, 'Should refresh => newest queued scrobble playDate is newer than last refresh');
                 return true;
             }
         }
 
-        this.logger.debug('Scrobble refresh not needed');
+        // if the play date of the last Play scrobbled is *newer*
+        // than the queued scrobble we are about to scrobble
+        // then we are inserting a scrobble out of order which can happen if
+        // * backlogging and upstream returned plays out of order
+        // * processing dead letter queue
+        // * two sources have different history
+        //
+        // in all cases we probably want to refresh
+        if(this.lastScrobbledPlayDate !== undefined && this.queuedScrobbles[0].play.meta.newFromSource && this.lastScrobbledPlayDate.unix() > this.queuedScrobbles[0].play.data.playDate.unix()) {
+            if(!this.scrobblesRefreshMinIntervalPassed()) {
+                this.logger.debug({labels: ['Upstream Refresh']}, `Should refresh but WILL NOT => queued scrobble playDate is older than last scrobbled play (out-of-order insert) but refreshMinInterval (${refreshMinInterval}ms) has not passed since last check`);
+                return false;
+            } else {
+                this.logger.debug({labels: ['Upstream Refresh']}, 'Should refresh => queued scrobble playDate is older than last scrobbled play (out-of-order insert)');
+                return true;
+            }
+        }
+
+        // if it's been X seconds since we last refreshed
+        if(refreshStaleAfter !== undefined) {
+            const diff = dayjs().diff(this.scrobblesLastCheckedAt(), 's');
+            if(diff > refreshStaleAfter) {
+                this.logger.debug({labels: ['Upstream Refresh']}, `Should refresh => last refresh (${diff}s ago) was longer than refreshStaleAfter (${refreshStaleAfter}s)`);
+                return true;
+            }
+        }
+
         return false;
     }
 
+    protected scrobblesLastCheckedAt = () => this.lastScrobbleCheck
+    protected scrobblesLastCheckedAtDiff = () => dayjs().diff(this.scrobblesLastCheckedAt(), 'ms')
+    protected scrobblesRefreshMinIntervalPassed = () => {
+        const {
+            refreshMinInterval,
+        } = this.upstreamRefresh;
+        return this.scrobblesLastCheckedAtDiff() >= refreshMinInterval;
+    }
+
     public abstract alreadyScrobbled(playObj: PlayObject, log?: boolean): Promise<boolean>;
-    scrobblesLastCheckedAt = () => this.lastScrobbleCheck
 
     formatPlayObj = (obj: any, options: FormatPlayObjectOptions = {}) => {
         this.logger.warn('formatPlayObj should be defined by concrete class!');
@@ -237,6 +283,7 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
 
     addScrobbledTrack = (playObj: PlayObject, scrobbledPlay: PlayObject) => {
         this.scrobbledPlayObjs.add({play: playObj, scrobble: scrobbledPlay});
+        this.lastScrobbledPlayDate = playObj.data.playDate;
         this.tracksScrobbled++;
     }
 
@@ -663,7 +710,7 @@ ${closestMatch.breakdowns.join('\n')}`, {leaf: ['Dupe Check']});
             this.logger.warn('Cannot process dead letter scrobble because client is not ready.', {leaf: 'Dead Letter'});
             return [false, deadScrobble];
         }
-        if (this.getLatestQueuePlayDate() !== undefined && this.lastScrobbleCheck.unix() < this.getLatestQueuePlayDate().unix()) {
+        if (this.getLatestQueuePlayDate() !== undefined && this.scrobblesLastCheckedAt().unix() < this.getLatestQueuePlayDate().unix()) {
             await this.refreshScrobbles();
         }
         const [timeFrameValid, timeFrameValidLog] = this.timeFrameIsValid(deadScrobble.play);

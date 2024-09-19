@@ -6,6 +6,7 @@ import relativeTime from "dayjs/plugin/relativeTime.js";
 import timezone from "dayjs/plugin/timezone.js";
 import utc from "dayjs/plugin/utc.js";
 import { JsonPlayObject, ObjectPlayData, PlayMeta, PlayObject } from "../../../core/Atomic.js";
+import { sortByNewestPlayDate } from "../../utils.js";
 
 dayjs.extend(utc)
 dayjs.extend(isBetween);
@@ -28,7 +29,9 @@ export const asPlays = (data: object[]): PlayObject[] => {
 
 export const normalizePlays = (plays: PlayObject[],
                                options?: {
+                                   //sortFunc?: (a: PlayObject, b: PlayObject) => 0 | 1 | -1
                                    initialDate?: Dayjs,
+                                   endDate?: Dayjs
                                    defaultDuration?: number,
                                    defaultData?: ObjectPlayData,
                                    defaultMeta?: PlayMeta
@@ -36,42 +39,96 @@ export const normalizePlays = (plays: PlayObject[],
 ): PlayObject[] => {
     const {
         initialDate,
+        endDate,
         defaultDuration = 180,
         defaultData = {},
-        defaultMeta = {}
+        defaultMeta = {},
+        //sortFunc = sortByNewestPlayDate
     } = options || {};
-    let date = initialDate;
-    if (date === undefined) {
-        const firstDatedPlay = plays.find(x => x.data.playDate !== undefined);
-        if (firstDatedPlay !== undefined) {
-            date = firstDatedPlay.data.playDate;
-        } else {
-            throw new Error('No initial date specified and no play had a defined date');
-        }
-    }
-    let lastTrackEndsAt: Dayjs | undefined = undefined;
+
     const normalizedPlays: PlayObject[] = [];
 
-    for (const play of plays) {
+    let actualInitialDate: Dayjs | undefined = initialDate;
 
-        const cleanPlay = {...play};
+    if(endDate !== undefined && actualInitialDate !== undefined) {
 
-        if (lastTrackEndsAt === undefined) {
-            // first track
-            cleanPlay.data.playDate = date;
-        } else {
-            cleanPlay.data.playDate = lastTrackEndsAt.add(1, 'second');
+        // need to redefine durations and listenedFor, if present
+        const dur = dayjs.duration(endDate.diff(actualInitialDate));
+        let remaining = plays.length;
+
+        let index = 0;
+        let lastDate = endDate;
+        let remainingTime = dur.asSeconds()
+        for(const play of plays) {
+
+            const cleanPlay = {...play};
+
+            const remainingAvgTime = remainingTime/remaining;
+            cleanPlay.data.playDate = lastDate;
+            cleanPlay.data.duration = faker.number.int({min: 30, max: remainingAvgTime});
+            if(cleanPlay.data.listenedFor !== undefined) {
+                cleanPlay.data.listenedFor = faker.number.int({min: Math.floor(cleanPlay.data.duration * 0.9), max: cleanPlay.data.duration});
+            }
+            cleanPlay.data = {
+                ...cleanPlay.data,
+                ...defaultData
+            }
+            cleanPlay.meta = {
+                ...cleanPlay.meta,
+                ...defaultMeta
+            }
+
+            if(index + 1 <= plays.length - 1) {
+                const listenTime = (plays[index+1].data.duration ?? defaultDuration) + faker.number.int({min: 0, max: 2});
+                lastDate = cleanPlay.data.playDate.subtract(listenTime, 'seconds');
+            }
+            remaining--;
+            remainingTime -= cleanPlay.data.duration;
+            index++;
         }
-        cleanPlay.data = {
-            ...cleanPlay.data,
-            ...defaultData
+
+    } else {
+        const progressDirection: 'newer' | 'older' = endDate !== undefined ? 'older' : 'newer';
+        if(progressDirection === 'newer' && actualInitialDate === undefined) {
+            const firstDatedPlay = plays.find(x => x.data.playDate !== undefined);
+            if (firstDatedPlay !== undefined) {
+                actualInitialDate = firstDatedPlay.data.playDate;
+            } else {
+                throw new Error('No initial date specified and no play had a defined date');
+            }
         }
-        cleanPlay.meta = {
-            ...cleanPlay.meta,
-            ...defaultMeta
+
+        let lastDate: Dayjs = progressDirection === 'newer' ? actualInitialDate : endDate;
+        let index = 0;
+        for (const play of plays) {
+
+            const cleanPlay = {...play};
+
+            cleanPlay.data.playDate = lastDate;
+            cleanPlay.data = {
+                ...cleanPlay.data,
+                ...defaultData
+            }
+            cleanPlay.meta = {
+                ...cleanPlay.meta,
+                ...defaultMeta
+            }
+
+            if(progressDirection === 'newer') {
+                const listenTime = (cleanPlay.data.duration ?? defaultDuration) + faker.number.int({min: 0, max: 2});
+                lastDate = cleanPlay.data.playDate.add(listenTime, 'seconds');
+            } else if(index + 1 <= plays.length - 1) {
+                const listenTime = (plays[index+1].data.duration ?? defaultDuration) + faker.number.int({min: 0, max: 2});
+                lastDate = cleanPlay.data.playDate.subtract(listenTime, 'seconds');
+            }
+
+            normalizedPlays.push(cleanPlay);
+            index++;
         }
-        lastTrackEndsAt = cleanPlay.data.playDate.add(cleanPlay.data.duration ?? defaultDuration, 'seconds');
-        normalizedPlays.push(cleanPlay);
+
+        if(progressDirection === 'older') {
+            normalizedPlays.sort(sortByNewestPlayDate);
+        }
     }
 
     return normalizedPlays;

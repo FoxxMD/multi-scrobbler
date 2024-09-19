@@ -11,7 +11,7 @@ import { sleep } from "../../utils.js";
 import mixedDuration from '../plays/mixedDuration.json';
 import withDuration from '../plays/withDuration.json';
 import { MockNetworkError, withRequestInterception } from "../utils/networking.js";
-import { asPlays, generatePlay, normalizePlays } from "../utils/PlayTestUtils.js";
+import { asPlays, generatePlay, generatePlays, normalizePlays } from "../utils/PlayTestUtils.js";
 
 import { TestAuthScrobbler, TestScrobbler } from "./TestScrobbler.js";
 
@@ -190,15 +190,16 @@ describe('Detects duplicate and unique scrobbles from client recent history', fu
 
         it('Is not detected as duplicate when play date is different by more than 60 seconds (low granularity source)', async function () {
 
-            testScrobbler.recentScrobbles = normalizePlays(mixedDurPlays, {
+            const recent = normalizePlays(mixedDurPlays, {
                 initialDate: firstPlayDate,
                 defaultMeta: {source: 'subsonic'}
             });
+            testScrobbler.recentScrobbles = recent;
 
-            const timeOffPos = clone(normalizedWithMixedDur[normalizedWithMixedDur.length - 1]);
+            const timeOffPos = clone(recent[recent.length - 1]);
             timeOffPos.data.playDate = timeOffPos.data.playDate.add(61, 's');
 
-            const timeOffNeg = clone(normalizedWithMixedDur[normalizedWithMixedDur.length - 1]);
+            const timeOffNeg = clone(recent[recent.length - 1]);
             timeOffNeg.data.playDate = timeOffNeg.data.playDate.subtract(61, 's');
 
             assert.isFalse(await testScrobbler.alreadyScrobbled(timeOffPos));
@@ -311,15 +312,16 @@ describe('Detects duplicate and unique scrobbles from client recent history', fu
 
         it('Is detected as duplicate when play date is off by less than 60 seconds (low granularity source)', async function () {
 
-            testScrobbler.recentScrobbles = normalizePlays(mixedDurPlays, {
+            const recent = normalizePlays(mixedDurPlays, {
                 initialDate: firstPlayDate,
                 defaultMeta: {source: 'subsonic'}
             });
+            testScrobbler.recentScrobbles = recent;
 
-            const timeOffPos = clone(normalizedWithMixedDur[normalizedWithMixedDur.length - 1]);
+            const timeOffPos = clone(recent[recent.length - 1]);
             timeOffPos.data.playDate = timeOffPos.data.playDate.add(59, 's');
 
-            const timeOffNeg = clone(normalizedWithMixedDur[normalizedWithMixedDur.length - 1]);
+            const timeOffNeg = clone(recent[recent.length - 1]);
             timeOffNeg.data.playDate = timeOffNeg.data.playDate.subtract(59, 's');
 
             assert.isTrue(await testScrobbler.alreadyScrobbled(timeOffPos));
@@ -470,13 +472,13 @@ describe('Upstream Scrobbles', function() {
 
     describe('Detects when upstream scrobbles should be refreshed', function() {
 
-        const normalizedClose = normalizePlays(withDurPlays, {initialDate: dayjs().subtract(100, 'seconds')});
+        const normalizedClose = normalizePlays(generatePlays(10), {endDate: dayjs().subtract(100, 'seconds')});
 
-        beforeEach(function () {
+        beforeEach(async function () {
             testScrobbler = generateTestScrobbler();
-            testScrobbler.recentScrobbles = normalizedWithMixedDur;
-            testScrobbler.newestScrobbleTime = normalizedWithMixedDur[0].data.playDate;
-            testScrobbler.lastScrobbleCheck = dayjs().subtract(60, 'seconds');
+            testScrobbler.testRecentScrobbles = normalizedClose;
+            await testScrobbler.initialize();
+            testScrobbler.lastScrobbleCheck = dayjs().subtract(65, 'seconds');
             testScrobbler.queuedScrobbles = [];
             testScrobbler.config.options = {};
         });
@@ -491,9 +493,6 @@ describe('Upstream Scrobbles', function() {
         });
 
         it('Detects queued scrobble date is older than newest scrobble', async function() {
-            testScrobbler.recentScrobbles = normalizedClose;
-            testScrobbler.newestScrobbleTime = normalizedClose[0].data.playDate;
-
             const newScrobble = generatePlay({
                 playDate: dayjs().subtract(120, 'seconds')
             });
@@ -503,8 +502,6 @@ describe('Upstream Scrobbles', function() {
         });
 
         it('Forces refresh if refreshStaleAfter is set', async function() {
-            testScrobbler.recentScrobbles = normalizedClose;
-            testScrobbler.newestScrobbleTime = normalizedClose[0].data.playDate;
             testScrobbler.config.options = { refreshStaleAfter: 10 };
 
             const newScrobble = generatePlay({
@@ -516,9 +513,7 @@ describe('Upstream Scrobbles', function() {
         });
 
         it('Does not refresh if scrobble is older than last check but newer than newest upstream scrobble', async function() {
-            testScrobbler.recentScrobbles = normalizedClose;
-            testScrobbler.newestScrobbleTime = normalizedClose[0].data.playDate;
-
+            testScrobbler.lastScrobbleCheck = dayjs().subtract(40, 'seconds');
             const newScrobble = generatePlay({
                 playDate: dayjs().subtract(80, 'seconds')
             });

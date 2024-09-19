@@ -351,14 +351,24 @@
                     "type": "boolean"
                 },
                 "refreshInitialCount": {
-                    "description": "The number of tracks to retrieve on initial refresh (related to scrobbleBacklogCount). If not specified this is the maximum supported for the client.",
+                    "description": "The number of tracks to retrieve on initial refresh (related to scrobbleBacklogCount). If not specified this is the maximum supported by the client in 1 API call.",
                     "title": "refreshInitialCount",
                     "type": "number"
                 },
-                "refreshStaleAfter": {
-                    "description": "Force client to refresh scrobbled plays from upstream service if last refresh was at least X seconds ago\n\n**In most case this setting should NOT be used.** MS intelligently refreshes based on activity so using this setting may increase upstream service load and slow down scrobbles.\n\nThis setting should only be used in specific scenarios where MS is handling multiple \"relaying\" client-services (IE lfm -> lz -> lfm) and there is the potential for a client to be out of sync after more than a few seconds.",
+                "refreshMinInterval": {
+                    "default": 5000,
+                    "description": "Minimum time (milliseconds) required to pass before upstream scrobbles can be refreshed.\n\n**In most case this setting does NOT need to be changed.** This will always be equal to or smaller than `refreshStaleAfter`.",
                     "examples": [
-                        3
+                        5000
+                    ],
+                    "title": "refreshMinInterval",
+                    "type": "number"
+                },
+                "refreshStaleAfter": {
+                    "default": 60,
+                    "description": "Refresh scrobbled plays from upstream service if last refresh was at least X seconds ago\n\n**In most case this setting does NOT need to be changed.** The default value is sufficient for the majority of use-cases. Increasing this setting may increase upstream service load and slow down scrobbles.\n\nThis setting should only be changed in specific scenarios where MS is handling multiple \"relaying\" client-services (IE lfm -> lz -> lfm) and there is the potential for a client to be out of sync after more than a few seconds.",
+                    "examples": [
+                        60
                     ],
                     "title": "refreshStaleAfter",
                     "type": "number"
@@ -434,14 +444,24 @@
                     "type": "boolean"
                 },
                 "refreshInitialCount": {
-                    "description": "The number of tracks to retrieve on initial refresh (related to scrobbleBacklogCount). If not specified this is the maximum supported for the client.",
+                    "description": "The number of tracks to retrieve on initial refresh (related to scrobbleBacklogCount). If not specified this is the maximum supported by the client in 1 API call.",
                     "title": "refreshInitialCount",
                     "type": "number"
                 },
-                "refreshStaleAfter": {
-                    "description": "Force client to refresh scrobbled plays from upstream service if last refresh was at least X seconds ago\n\n**In most case this setting should NOT be used.** MS intelligently refreshes based on activity so using this setting may increase upstream service load and slow down scrobbles.\n\nThis setting should only be used in specific scenarios where MS is handling multiple \"relaying\" client-services (IE lfm -> lz -> lfm) and there is the potential for a client to be out of sync after more than a few seconds.",
+                "refreshMinInterval": {
+                    "default": 5000,
+                    "description": "Minimum time (milliseconds) required to pass before upstream scrobbles can be refreshed.\n\n**In most case this setting does NOT need to be changed.** This will always be equal to or smaller than `refreshStaleAfter`.",
                     "examples": [
-                        3
+                        5000
+                    ],
+                    "title": "refreshMinInterval",
+                    "type": "number"
+                },
+                "refreshStaleAfter": {
+                    "default": 60,
+                    "description": "Refresh scrobbled plays from upstream service if last refresh was at least X seconds ago\n\n**In most case this setting does NOT need to be changed.** The default value is sufficient for the majority of use-cases. Increasing this setting may increase upstream service load and slow down scrobbles.\n\nThis setting should only be changed in specific scenarios where MS is handling multiple \"relaying\" client-services (IE lfm -> lz -> lfm) and there is the potential for a client to be out of sync after more than a few seconds.",
+                    "examples": [
+                        60
                     ],
                     "title": "refreshStaleAfter",
                     "type": "number"
