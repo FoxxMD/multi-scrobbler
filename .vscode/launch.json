@@ -1,0 +1,89 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "dev",
+            "type": "node",
+            "runtimeVersion": "18.19.1",
+            "request": "launch",
+            // Debug current file in VSCode
+            "program": "${workspaceFolder}/src/backend/index.ts",
+            "runtimeExecutable": "${workspaceFolder}/node_modules/.bin/tsx",
+            "console": "integratedTerminal",
+            "internalConsoleOptions": "neverOpen",
+            "skipFiles": [
+                "<node_internals>/**",
+                // Ignore all dependencies (optional)
+                "${workspaceFolder}/node_modules/**",
+            ],
+        },
+        {
+            "name": "tsx",
+            "type": "node",
+            "runtimeVersion": "18.19.1",
+            "request": "launch",
+            // Debug current file in VSCode
+            "program": "${file}",
+            "runtimeExecutable": "${workspaceFolder}/node_modules/.bin/tsx",
+            "console": "integratedTerminal",
+            "internalConsoleOptions": "neverOpen",
+            "skipFiles": [
+                "<node_internals>/**",
+                // Ignore all dependencies (optional)
+                "${workspaceFolder}/node_modules/**",
+            ],
+        },
+        {
+            "args": [
+                "-u",
+                "bdd",
+                "--timeout",
+                "999999",
+                "--reporter",
+                "spec",
+                "--colors",
+                "--config", 
+                "${workspaceRoot}/.mocharc.json",
+                "--recursive",
+                "${workspaceFolder}/src/backend/tests/**/*.test.ts"
+            ],
+            "runtimeVersion": "18.19.1",
+            "runtimeExecutable": "${workspaceFolder}/node_modules/.bin/tsx",
+            "internalConsoleOptions": "openOnSessionStart",
+            "name": "Mocha Tests",
+            "program": "${workspaceFolder}/node_modules/mocha/bin/_mocha",
+            "request": "launch",
+            "skipFiles": [
+                "<node_internals>/**",
+                // Ignore all dependencies (optional)
+                "${workspaceFolder}/node_modules/**",
+            ],
+            "type": "node"
+        },
+        {
+            "args": [
+                "-u",
+                "bdd",
+                "--timeout",
+                "999999",
+                "--reporter",
+                "spec",
+                "--colors",
+                "--config", "${workspaceRoot}/.mocharc.json",
+                "${file}"
+            ],
+            "runtimeVersion": "18.19.1",
+            "runtimeExecutable": "${workspaceFolder}/node_modules/.bin/tsx",
+            "internalConsoleOptions": "openOnSessionStart",
+            "name": "Mocha Test on File",
+            "program": "${workspaceFolder}/node_modules/mocha/bin/_mocha",
+            "request": "launch",
+            "skipFiles": [
+                "<node_internals>/**",
+                // Ignore all dependencies (optional)
+                "${workspaceFolder}/node_modules/**",
+            ],
+            "type": "node"
+        }
+    ]
+}
