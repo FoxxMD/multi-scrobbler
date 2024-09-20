@@ -16,19 +16,24 @@ Multi-scrobbler is written entirely in [Typescript](https://www.typescriptlang.o
 
 Development requires [Node v18.19.1](https://nodejs.org/en) or higher is installed on your system. It is recommended to use [nvm](https://github.com/nvm-sh/nvm) to manage the installed node version.
 
-
 Clone this repository somewhere and then install from the working directory
 
 ```shell
 git clone https://github.com/FoxxMD/multi-scrobbler.git .
 cd multi-scrobbler
-git checkout --track origin/develop
 nvm use # optional, to set correct Node version
 npm install
 npm run start
 ```
 
-Use the [`develop`](https://github.com/FoxxMD/multi-scrobbler/tree/develop) branch as the target for any Pull Requests. The `master` branch is reserved for releases and minor documentation updates only.
+### VSCode
+
+This repository contains [workspace settings](https://github.com/FoxxMD/multi-scrobbler/blob/master/.devcontainer) for development with VSCode. These include:
+
+* Run/Debug [Launch configurations](https://code.visualstudio.com/Docs/editor/debugging#_launch-configurations) for the application and tests
+* [Devcontainer](https://code.visualstudio.com/docs/devcontainers/containers) for development with all dependencies already installed
+
+To use the Devcontainer simple open the repository in VSCode and "Use Devcontainer" when the notification is presented. You will still need to run `nvm use` and `npm install` the first time it is used.
 
 ## Common Development
 
@@ -47,7 +52,7 @@ In both parts Source/Clients share some common properties/behavior before diverg
 
 ### Config
 
-The configuration for a Component should always have this minimum shape, enforced respectively by the interfaces [CommonSourceConfig](https://github.com/FoxxMD/multi-scrobbler/blob/develop/src/backend/common/infrastructure/config/source/index.ts#L105) and [CommonClientConfig](https://github.com/FoxxMD/multi-scrobbler/blob/ce1c70a4e1e87fb5bea7cca960eaafbd15881a1f/src/backend/common/infrastructure/config/client/index.ts#L68):
+The configuration for a Component should always have this minimum shape, enforced respectively by the interfaces [CommonSourceConfig](https://github.com/FoxxMD/multi-scrobbler/blob/master/src/backend/common/infrastructure/config/source/index.ts#L105) and [CommonClientConfig](https://github.com/FoxxMD/multi-scrobbler/blob/ce1c70a4e1e87fb5bea7cca960eaafbd15881a1f/src/backend/common/infrastructure/config/client/index.ts#L68):
 
 ```ts
 interface MyConfig {
@@ -62,7 +67,7 @@ interface MyConfig {
 
 ### Concrete Class
 
-Components inherit from an abstract base class, [`AbstractComponent`](https://github.com/FoxxMD/multi-scrobbler/blob/develop/src/backend/common/AbstractComponent.ts), that defines different "stages" of how a Component is built and initialized when MS first starts as well as when restarting the Component in the event it stops due to an error/network failure/etc...
+Components inherit from an abstract base class, [`AbstractComponent`](https://github.com/FoxxMD/multi-scrobbler/blob/master/src/backend/common/AbstractComponent.ts), that defines different "stages" of how a Component is built and initialized when MS first starts as well as when restarting the Component in the event it stops due to an error/network failure/etc...
 
 #### Stages
 
@@ -81,7 +86,7 @@ This stage should be used to validate user configuration, parse any additional d
 
 :::info
 
-Implement [`doBuildInitData`](https://github.com/FoxxMD/multi-scrobbler/blob/develop/src/backend/common/AbstractComponent.ts#L71) in your child class to invoke this stage.
+Implement [`doBuildInitData`](https://github.com/FoxxMD/multi-scrobbler/blob/master/src/backend/common/AbstractComponent.ts#L71) in your child class to invoke this stage.
 
 ::::
 
@@ -103,7 +108,7 @@ If the Component depends on **ingress** (like Jellyfin/Plex webhook) this stage 
 
 :::info
 
-Implement [`doCheckConnection`](https://github.com/FoxxMD/multi-scrobbler/blob/develop/src/backend/common/AbstractComponent.ts#L103) in your child class to invoke this stage.
+Implement [`doCheckConnection`](https://github.com/FoxxMD/multi-scrobbler/blob/master/src/backend/common/AbstractComponent.ts#L103) in your child class to invoke this stage.
 
 ::::
 
@@ -136,7 +141,7 @@ You _should_ attempt to re-authenticate, if possible. Only throw an exception or
 
 :::info
 
-Implement [`doAuthentication`](https://github.com/FoxxMD/multi-scrobbler/blob/develop/src/backend/common/AbstractComponent.ts#L111) in your child class to invoke this stage.
+Implement [`doAuthentication`](https://github.com/FoxxMD/multi-scrobbler/blob/master/src/backend/common/AbstractComponent.ts#L111) in your child class to invoke this stage.
 
 ::::
 
