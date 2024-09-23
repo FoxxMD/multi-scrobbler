@@ -105,6 +105,40 @@
             "title": "CommonClientOptions",
             "type": "object"
         },
+        "ConditionalSearchAndReplaceTerm": {
+            "properties": {
+                "replace": {
+                    "description": "The replacement string/value to use when search is found\n\nThis can be a literal string like `'replace with this`, an empty string to remove the search value (`''`), or a special regex value\n\nSee replacement here for more information: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String/replace",
+                    "title": "replace",
+                    "type": "string"
+                },
+                "search": {
+                    "anyOf": [
+                        {
+                            "$ref": "#/definitions/RegExp"
+                        },
+                        {
+                            "type": "string"
+                        }
+                    ],
+                    "description": "The search value to test for\n\nCan be a normal string (converted to a case-sensitive literal) or a valid regular expression as a string, or an actual RegExp object",
+                    "title": "search"
+                },
+                "when": {
+                    "items": {
+                        "$ref": "#/definitions/WhenParts<string>"
+                    },
+                    "title": "when",
+                    "type": "array"
+                }
+            },
+            "required": [
+                "replace",
+                "search"
+            ],
+            "title": "ConditionalSearchAndReplaceTerm",
+            "type": "object"
+        },
         "LastfmClientConfig": {
             "properties": {
                 "configureAs": {
@@ -437,11 +471,11 @@
                 "compare": {
                     "properties": {
                         "candidate": {
-                            "$ref": "#/definitions/PlayTransformParts<SearchAndReplaceTerm>",
+                            "$ref": "#/definitions/PlayTransformPartsConfig<SearchAndReplaceTerm>",
                             "title": "candidate"
                         },
                         "existing": {
-                            "$ref": "#/definitions/PlayTransformParts<SearchAndReplaceTerm>",
+                            "$ref": "#/definitions/PlayTransformPartsConfig<SearchAndReplaceTerm>",
                             "title": "existing"
                         }
                     },
@@ -449,11 +483,11 @@
                     "type": "object"
                 },
                 "postCompare": {
-                    "$ref": "#/definitions/PlayTransformParts<SearchAndReplaceTerm>",
+                    "$ref": "#/definitions/PlayTransformPartsConfig<SearchAndReplaceTerm>",
                     "title": "postCompare"
                 },
                 "preCompare": {
-                    "$ref": "#/definitions/PlayTransformParts<SearchAndReplaceTerm>",
+                    "$ref": "#/definitions/PlayTransformPartsConfig<SearchAndReplaceTerm>",
                     "title": "preCompare"
                 }
             },
@@ -468,8 +502,12 @@
                 {
                     "properties": {
                         "log": {
-                            "title": "log",
-                            "type": "boolean"
+                            "enum": [
+                                "all",
+                                false,
+                                true
+                            ],
+                            "title": "log"
                         }
                     },
                     "type": "object"
@@ -478,6 +516,26 @@
             "title": "PlayTransformOptions"
         },
         "PlayTransformParts<SearchAndReplaceTerm>": {
+            "allOf": [
+                {
+                    "$ref": "#/definitions/PlayTransformPartsAtomic<SearchAndReplaceTerm[]>"
+                },
+                {
+                    "properties": {
+                        "when": {
+                            "items": {
+                                "$ref": "#/definitions/WhenParts<string>"
+                            },
+                            "title": "when",
+                            "type": "array"
+                        }
+                    },
+                    "type": "object"
+                }
+            ],
+            "title": "PlayTransformParts<SearchAndReplaceTerm>"
+        },
+        "PlayTransformPartsAtomic<SearchAndReplaceTerm[]>": {
             "properties": {
                 "album": {
                     "items": {
@@ -501,8 +559,22 @@
                     "type": "array"
                 }
             },
-            "title": "PlayTransformParts<SearchAndReplaceTerm>",
+            "title": "PlayTransformPartsAtomic<SearchAndReplaceTerm[]>",
             "type": "object"
+        },
+        "PlayTransformPartsConfig<SearchAndReplaceTerm>": {
+            "anyOf": [
+                {
+                    "items": {
+                        "$ref": "#/definitions/PlayTransformParts<SearchAndReplaceTerm>"
+                    },
+                    "type": "array"
+                },
+                {
+                    "$ref": "#/definitions/PlayTransformParts<SearchAndReplaceTerm>"
+                }
+            ],
+            "title": "PlayTransformPartsConfig<SearchAndReplaceTerm>"
         },
         "RegExp": {
             "properties": {
@@ -562,47 +634,34 @@
             "title": "RegExp",
             "type": "object"
         },
-        "SearchAndReplaceRegExp": {
-            "properties": {
-                "replace": {
-                    "description": "The replacement string/value to use when search is found\n\nThis can be a literal string like `'replace with this`, an empty string to remove the search value (`''`), or a special regex value\n\nSee replacement here for more information: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String/replace",
-                    "title": "replace",
-                    "type": "string"
-                },
-                "search": {
-                    "anyOf": [
-                        {
-                            "$ref": "#/definitions/RegExp"
-                        },
-                        {
-                            "type": "string"
-                        }
-                    ],
-                    "description": "The search value to test for\n\nCan be a normal string (converted to a case-sensitive literal) or a valid regular expression as a string, or an actual RegExp object\n\nEX `[\"find this string\", \"/some string*\\/ig\"]`",
-                    "examples": [
-                        "find this string",
-                        "/some string*/ig"
-                    ],
-                    "title": "search"
-                }
-            },
-            "required": [
-                "replace",
-                "search"
-            ],
-            "title": "SearchAndReplaceRegExp",
-            "type": "object"
-        },
         "SearchAndReplaceTerm": {
             "anyOf": [
                 {
-                    "$ref": "#/definitions/SearchAndReplaceRegExp"
+                    "$ref": "#/definitions/ConditionalSearchAndReplaceTerm"
                 },
                 {
                     "type": "string"
                 }
             ],
             "title": "SearchAndReplaceTerm"
+        },
+        "WhenParts<string>": {
+            "properties": {
+                "album": {
+                    "title": "album",
+                    "type": "string"
+                },
+                "artists": {
+                    "title": "artists",
+                    "type": "string"
+                },
+                "title": {
+                    "title": "title",
+                    "type": "string"
+                }
+            },
+            "title": "WhenParts<string>",
+            "type": "object"
         }
     }
 }

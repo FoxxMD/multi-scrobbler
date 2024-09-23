@@ -1,4 +1,4 @@
-import { keyOmit, PlayTransformHooks, SearchAndReplaceTerm } from "../Atomic.js";
+import { keyOmit } from "../Atomic.js";
 
 export interface CommonConfig {
     name?: string
@@ -50,6 +50,3 @@ export interface PollingOptions {
     maxInterval?: number
 }
 
-export type PlayTransformConfig = PlayTransformHooks<SearchAndReplaceTerm>;
-
-export type PlayTransformOptions = PlayTransformConfig & { log?: boolean }
