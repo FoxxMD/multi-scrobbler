@@ -23,4 +23,5 @@ docsite/.docusaurus
 docsite/.cache-loader
 build
 *.secrets
-/.devcontainer
+.devcontainer
+.vscode
