@@ -216,6 +216,149 @@ In addition to plain strings [expressions](#expression) that are matched and rem
 
 The `replace` property uses javascript's [`replace()` function and so can use any special string characters.](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String/replace#specifying_a_string_as_the_replacement)
 
+### Conditional Modification
+
+#### "When" Condition
+
+Top-level hooks **and** individual rules also support a `when` key for testing **if they should be run.**
+
+The `when` key is similar to a normal [modification](#modification-parts) except:
+
+* the keys accept a single string instead of an array
+* the `when` key data is an array instead of a single object
+
+All parts of an individual `when` clause must test true to "pass" but if **any** `when` clauses pass the hook/rule is processed. Example `when` data:
+
+```json5
+{
+  "when": [
+    {
+      "artist": "Elephant Gym", // both of these must match the Play object (AND)
+      "album": "Dreams" // both of these must match the Play object (AND)
+    },
+    // OR
+    {
+      "title": "/(Remastered)$/", // both of these must match the Play object (AND)
+      "album": "Various Artists" // both of these must match the Play object (AND)
+    }
+  ]
+}
+```
+
+More succinctly:
+
+* All parts (`artist` `album` `title`) of a `when` are `AND` conditions
+* All part-objects in the `when` array are `OR` conditions
+
+<details>
+
+<summary>Example of top-level hook with when condition</summary>
+
+```json5
+{
+  // IF the artist is Elephant Gym 
+  // THEN Run preCompare hook ELSE skip this hook
+  //
+  //    Run search-replace on album
+  //    Run regex title remove
+  "sourceDefaults": {
+    "playTransform": {
+      "preCompare": {
+        "when": [
+          {
+            "artist": "/Elephant Gym/"
+          }
+        ],
+        "album": [
+          {
+            "search": "Dreams",
+            "replace": "夢境"
+          }
+        ],
+        "title": ["/\s\-\s滾石40\s滾石撞樂隊\s40團拚經典(.+)$/i"]
+      },
+    }
+  }
+}
+```
+
+</details>
+
+<details>
+
+<summary>Example of individual rule with when condition</summary>
+
+```json5
+{
+  // Always run preCompare
+  //
+  //   On search-replace in title...
+  //     IF artist matches "Elephant Gym"
+  //     THEN Run regex search-replace ELSE skip this rule
+  //
+  //   Run live|remastered regex remove
+  "sourceDefaults": {
+    "playTransform": {
+      "preCompare": {
+        "title": [
+          {
+            "search": "/\\s\\-\\s滾石40\\s滾石撞樂隊\\s40團拚經典(.+)$/i",
+            "replace": "",
+            "when": [
+              {
+                "artist": "/Elephant Gym/"
+              }
+            ]
+          },
+          "/(\\s\\-\\s|\\s)(feat\\.(.+)|live|remastered(.+))$/i"
+        ],
+      }
+    }
+  }
+}
+```
+
+</details>
+
+#### Top-level Hook array
+
+Top-level hooks can also be an array of hooks. This makes creating multiple scenarios for top-level `when`-gated hooks easier. All hooks in the array will be run (assuming their `when`'s pass, if they exist) and their **input will be the Play object output of the previous hook in the array.**
+
+<details>
+
+<summary>Example</summary>
+
+```json5
+{
+  "sourceDefaults": {
+    "playTransform": {
+      "preCompare": [
+        // first lifecycle hook of preCompare to run
+        {
+          "title": [
+            {
+              "search": "something",
+              "replace": "else unique"
+            }
+          ]
+        },
+        // second lifecycle hook of preCompare to run
+        {
+          "title": [
+            {
+              "search": "else unique",
+              "replace": "very demure"
+            }
+          ]
+        },
+      ]
+    }
+  }
+}
+```
+
+</details>
+
 ## Examples
 
 ### Remove phrase from Title in all new Plays
