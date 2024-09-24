@@ -359,6 +359,26 @@ Top-level hooks can also be an array of hooks. This makes creating multiple scen
 
 </details>
 
+### Logging
+
+MS can log the output of hook transformations if/when they occur. In the `playTransform` object of a Source/Client config use `log`:
+
+* `"log": true` => Output original play + final transformed output of last hook in the array
+* `"log": "all"` => Output original play + final transformed output of **each** hook in the array
+
+```json5
+{
+  "name": "myThing",
+  "data": {/*...*/},
+  "options": {
+    "playTransform": {
+      "preCompare": {/*...*/},
+      "log": true
+    }
+  }
+}
+```
+
 ## Examples
 
 ### Remove phrase from Title in all new Plays
