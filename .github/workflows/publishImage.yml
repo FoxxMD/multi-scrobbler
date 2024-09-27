@@ -43,16 +43,6 @@ jobs:
     if: github.event_name != 'pull_request'
     runs-on: ubuntu-latest
     needs: test
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - dockerfile: ./Dockerfile
-            suffix: ''
-            platforms: 'linux/amd64,linux/arm64'
-#          - dockerfile: ./alpine.Dockerfile
-#            suffix: '-alpine'
-#            platforms: 'linux/amd64,linux/arm64'
     # https://docs.github.com/en/actions/security-guides/automatic-token-authentication#permissions-for-the-github_token
     permissions:
       packages: write
@@ -95,16 +85,17 @@ jobs:
           # https://github.com/docker/metadata-action/issues/247#issuecomment-1511259674 for NOT is default branch, eventually
           tags: |
             type=edge
-            type=ref,event=branch,enable=${{ !endsWith(github.ref, 'master') }}
+
+            # maybe re-enable branch-named tags in the futures
+            #type=ref,event=branch,enable=${{ !endsWith(github.ref, 'master') }}
             
             # tag non-prelease as latest -- has a higher priority than regular tag so it shows first in registries
-            type=semver,pattern={{major}}.{{minor}}.{{patch}},value=latest,priority=901
+            type=match,pattern=\d.\d.\d$,priority=901
             
             # tag all semver (include pre-release)
             type=semver,pattern={{version}}
-          flavor: |
-            latest=false
-#            suffix=${{ matrix.suffix }},onlatest=false
+        #  flavor: |
+        #    latest=false
 
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
@@ -126,8 +117,7 @@ jobs:
           # https://github.com/docker/build-push-action/issues/1026#issue-2041857786
           build-args: |
             APP_BUILD_VERSION=${{env.APP_VERSION}}
-          file: ${{ matrix.dockerfile }}
-          push: ${{ !env.ACT}}
+          push: ${{ !env.ACT }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
-          platforms: ${{ matrix.platforms }}
+          platforms: linux/amd64,linux/arm64
