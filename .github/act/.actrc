@@ -1,3 +1,5 @@
 --directory ../../
 --env-file .github/act/.env
 --secret-file .github/act/.secrets
+--artifact-server-path out
+#--action-offline-mode

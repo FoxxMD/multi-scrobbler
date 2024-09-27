@@ -133,3 +133,4 @@ flatpak/generated-sources.json
 build
 !setupProxy.js
 **/generated-sources.*
+.github/act/out
