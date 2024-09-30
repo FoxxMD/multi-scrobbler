@@ -67,6 +67,7 @@ describe("Jellyfin API Source", function() {
             expect(jf.usersBlock).to.be.eql(['someuser']);
             expect(jf.devicesAllow).to.be.eql(['web player']);
             expect(jf.devicesBlock).to.be.eql(['bad player']);
+            await jf.destroy();
         });
 
         it('Should include authenticating user as allowed when no others are set', async function () {
@@ -74,6 +75,7 @@ describe("Jellyfin API Source", function() {
             await jf.buildInitData();
 
             expect(jf.usersAllow).to.be.eql(['myuser']);
+            await jf.destroy();
         });
 
         it('Should set allowed users to empty array (allow all) when usersAllow is true', async function () {
@@ -81,6 +83,7 @@ describe("Jellyfin API Source", function() {
             await jf.buildInitData();
 
             expect(jf.usersAllow).to.be.empty;
+            await jf.destroy();
         });
 
         it('Should set allowed users to empty array (allow all) when usersAllow is an array with only one value equal to true', async function () {
@@ -88,6 +91,7 @@ describe("Jellyfin API Source", function() {
             await jf.buildInitData();
 
             expect(jf.usersAllow).to.be.empty;
+            await jf.destroy();
         });
     });
 
@@ -99,6 +103,7 @@ describe("Jellyfin API Source", function() {
             expect(jf.isActivityValid('1234', 'SomeOtherUser')).to.not.be.true;
             expect(jf.isActivityValid('1234', 'MyUser')).to.be.true;
             expect(jf.isActivityValid('1234', 'myuser')).to.be.true;
+            await jf.destroy();
         });
 
         it('Show disallow activity based on user block', async function () {
@@ -108,6 +113,7 @@ describe("Jellyfin API Source", function() {
             expect(jf.isActivityValid('1234', 'BadUser')).to.not.be.true;
             expect(jf.isActivityValid('1234', 'MyUser')).to.be.true;
             expect(jf.isActivityValid('1234', 'myuser')).to.be.true;
+            await jf.destroy();
         });
 
         it('Show allow activity based on devices allow', async function () {
@@ -116,6 +122,7 @@ describe("Jellyfin API Source", function() {
 
             expect(jf.isActivityValid('1234', 'MyUser')).to.not.be.true;
             expect(jf.isActivityValid('WebPlayer', 'MyUser')).to.be.true;
+            await jf.destroy();
         });
 
         it('Show disallow activity based on devices block', async function () {
@@ -124,6 +131,7 @@ describe("Jellyfin API Source", function() {
 
             expect(jf.isActivityValid('1234', 'MyUser')).to.be.true;
             expect(jf.isActivityValid('WebPlayer', 'MyUser')).to.not.be.true;
+            await jf.destroy();
         });
     });
 });
