@@ -7,10 +7,10 @@
       "url": "http://localhost:8096",
       "user": "FoxxMD",
       "apiKey": "c9fae8756fbf481ebd9c5bb56bd6540c",
-      "usersAllowed": ["FoxxMD","SomeOtherUser"],
-      "usersBlocked": ["AnotherUser"],
-      "devicesAllowed": ["firefox"],
-      "devicesBlocked": ["google-home"]
+      "usersAllow": ["FoxxMD","SomeOtherUser"],
+      "usersBlock": ["AnotherUser"],
+      "devicesAllow": ["firefox"],
+      "devicesBlock": ["google-home"]
     },
     "options": {
       "logFilterFailure": "debug"

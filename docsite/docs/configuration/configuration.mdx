@@ -372,7 +372,7 @@ Can use this source for any application that implements the [Subsonic API](http:
     * Follow the new instructions below (outside this section) to setup API usage
     * The `servers` (`JELLYFIN_SERVERS`) setting is no longer available as MS only scrobbles from the server using the API anyways.
       * If you need to scrobble for multiple servers set up each server as a separate Jellyfin source
-    * The `users` (`JELLYFIN_USER`) setting has been renamed `usersAllowed` (`JELLYFIN_USERS_ALLOWED`)
+    * The `users` (`JELLYFIN_USER`) setting has been renamed `usersAllow` (`JELLYFIN_USERS_ALLOWED`)
       * If you were using this filter to ensure only scrobbles from yourself were registered then you no longer need this setting -- by default MS will only scrobble for the user authenticated with Jellyfin's API.
 
 </details>
@@ -403,8 +403,8 @@ By default, multi-scrobbler will only scrobble for the user authenticated with t
         | `JELLYFIN_USER`            | **Yes**   |         | The user to authenticate with the API                                                      |
         | `JELLYFIN_APIKEY`          | No        |         | The API Key to use for authentication **(Must provide either apikey or password)**         |
         | `JELLYFIN_PASSWORD`        | No        |         | The password of the user to authenticate for. **(Must provide either apikey or password)** |
-        | `JELLYFIN_USERS_ALLOWED`   | No        |         | Comma-separated list of usernames (from Jellyfin) to scrobble for                          |
-        | `JELLYFIN_DEVICES_ALLOWED` | No        |         | Comma-separated list of devices to scrobble from                                           |
+        | `JELLYFIN_USERS_ALLOW`     | No        |         | Comma-separated list of usernames (from Jellyfin) to scrobble for                          |
+        | `JELLYFIN_DEVICES_ALLOW`   | No        |         | Comma-separated list of devices to scrobble from                                           |
     </TabItem>
     <TabItem value="file" label="File">
         <details>
@@ -427,7 +427,7 @@ By default, multi-scrobbler will only scrobble for the user authenticated with t
 
         </details>
 
-        or <SchemaLink lower objectName="JellySourceConfig"/>
+        or <SchemaLink lower objectName="JellyApiSourceConfig"/>
     </TabItem>
 </Tabs>
 

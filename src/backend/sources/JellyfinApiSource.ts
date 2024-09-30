@@ -124,16 +124,16 @@ export default class JellyfinApiSource extends MemorySource {
         if(usersAllow === true) {
             this.usersAllow = [];
         } else {
-            const ua = parseArrayFromMaybeString(usersAllow);
+            const ua = parseArrayFromMaybeString(usersAllow, {lower: true});
             if(ua.length === 1 && ua[0] === 'true') {
                 this.usersAllow = [];
             } else {
                 this.usersAllow = ua;
             }
         }
-        this.usersBlock = parseArrayFromMaybeString(usersBlock);
-        this.devicesAllow = parseArrayFromMaybeString(devicesAllow);
-        this.devicesBlock = parseArrayFromMaybeString(devicesBlock);
+        this.usersBlock = parseArrayFromMaybeString(usersBlock, {lower: true});
+        this.devicesAllow = parseArrayFromMaybeString(devicesAllow, {lower: true});
+        this.devicesBlock = parseArrayFromMaybeString(devicesBlock, {lower: true});
 
         return true;
     }
