@@ -19,7 +19,10 @@ export default tsEslint.config(
     },*/
     {
         files: ['src/backend/**/*.ts'],
-        ignores: ['eslint.config.js'],
+        ignores: [
+            'eslint.config.js',
+            'src/backend/tests/**/*.ts'
+        ],
         plugins: {
             "prefer-arrow-functions": arrow
         },

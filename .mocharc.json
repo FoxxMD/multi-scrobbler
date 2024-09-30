@@ -1,5 +1,6 @@
 {
   "reporter": "dot",
   "extension": "ts",
-  "import": "tsx/esm"
+  "import": "tsx/esm",
+  "spec": "./src/backend/tests/**/*.test.ts"
 }
