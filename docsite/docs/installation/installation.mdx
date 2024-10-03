@@ -5,6 +5,8 @@ title: 'Overview'
 
 import Tabs from '@theme/Tabs';
 import TabItem from '@theme/TabItem';
+import CodeBlock from '@theme/CodeBlock';
+import ComposeStack from '!!raw-loader!../../../docker-compose.yml';
 
 :::tip
 
@@ -160,7 +162,15 @@ Cross-platform images are built for x86 (Intel/AMD) and ARM64 (IE Raspberry Pi)
 
 :::
 
-Or use the provided [docker-compose.yml](../../../docker-compose.yml) after modifying it to fit your configuration.
+Or use the example `docker-compose.yml`, found in the repo, after modifying it to fit your configuration:
+
+<details>
+
+<summary>`docker-compose.yml`</summary>
+
+<CodeBlock language="yaml">{ComposeStack}</CodeBlock>
+
+</details>
 
 Recommended configuration steps for docker or docker-compose usage:
 
@@ -253,7 +263,7 @@ set the [Base URL](../configuration/configuration.mdx#base-url) as the IP of the
           multi-scrobbler:
             # ...
             environment:
-              - BASE_URL="http://hostMachineIP"
+              - BASE_URL=http://hostMachineIP
         ```
     </TabItem>
 </Tabs>
@@ -316,7 +326,7 @@ The example scenario:
         </Tabs>
     </TabItem>
     <TabItem value="docker-compose" label="Docker Compose">
-        See [`docker-compose.yml`](../../../docker-compose.yml) file for more options and annotations.
+        See [`docker-compose.yml`](#docker) sample above for more options and annotations.
 
         ```yaml title="docker-compose.yml"
         services:
@@ -327,7 +337,7 @@ The example scenario:
                     - TZ=Etc/GMT # Specify timezone from TZ Database name found here https://en.wikipedia.org/wiki/List_of_tz_database_time_zones
                     - SPOTIFY_CLIENT_ID=yourId
                     - SPOTIFY_CLIENT_SECRET=yourSecret
-                    - BASE_URL="http://192.168.0.100:9078"
+                    - BASE_URL=http://192.168.0.100:9078
                     - MALOJA_URL=http://domain.tld:42010
                     - MALOJA_API_KEY=1234
                     - PUID=1000

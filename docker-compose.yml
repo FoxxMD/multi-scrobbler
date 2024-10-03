@@ -18,7 +18,7 @@ services:
       # EX: You will view MS dashboard at 'http://192.168.0.101:9078' -> set BASE_URL=http://192.168.0.101:9078
       #- BASE_URL=http://MyHostIP:9078
     volumes:
-      - /path_on_host/multi-scrobbler-config:/config
+      - "./config:/config"
     #networks:
     #  - (optional to add container to the same bridge network that maloja is inside to be able to use docker internal networking & dns to resolve and connect to maloja URL via http://maloja:port)
     ports:
