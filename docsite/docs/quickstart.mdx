@@ -30,7 +30,7 @@ services:
     container_name: multi-scrobbler
     environment:
       - TZ=Etc/GMT # Specify timezone from TZ Database name found here https://en.wikipedia.org/wiki/List_of_tz_database_time_zones
-      - BASE_URL="http://192.168.0.100:9078"
+      - BASE_URL=http://192.168.0.100:9078
       # all Environmental Variables in below examples go here!
 
     volumes:
@@ -46,13 +46,14 @@ services:
 
 <Tabs>
     <TabItem value="jellyfin" label="Jellyfin">
-        Follow the Jellyfin configuration [instructions for setting up a **webhook**.](./configuration/configuration.mdx#jellyfin)
+        Follow the Jellyfin configuration [instructions for setting up an **API Key**.](./configuration/configuration.mdx#jellyfin)
 
-        After webhook is setup add **at least one** of these values to the `environment` section in the [`docker-compose.yml` you created.](#create-docker-compose-file)
+        Then, add these values to the `environment` section in the [`docker-compose.yml` you created.](#create-docker-compose-file)
 
         ```yaml title="~/msData/docker-compose.yml"
-        - JELLYFIN_USER=myUserName # comma-separated list of users to monitor
-        - JELLYFIN_SERVER=myServerName # comma-separated list of servers that should be monitored
+        - JELLYFIN_URL=192.168.0.110:8096 # URL to Jellyfin UI
+        - JELLYFIN_APIKEY=c9fae8756fbf481ebd9c5bb56b # Api Key created in previous step
+        - JELLYFIN_USER=MyUser # Your username in Jellyfin
         ```
     </TabItem>
     <TabItem value="spotify" label="Spotify">
@@ -109,7 +110,7 @@ services:
         Finally, add these values to the `environment` section in the [`docker-compose.yml` you created for multi-scrobbler earlier.](#create-docker-compose-file)
 
         ```yaml title="~/msData/docker-compose.yml"
-        - MALOJA_URL="http://192.168.0.100:42010"
+        - MALOJA_URL=http://192.168.0.100:42010
         - MALOJA_API_KEY=myApiKey
         ```
     </TabItem>
