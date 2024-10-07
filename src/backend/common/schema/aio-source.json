@@ -2734,7 +2734,10 @@
                 "authUser": {
                     "description": "If the 'X-Goog-AuthUser' header is present in the Request Headers for music.youtube.com it must also be included",
                     "title": "authUser",
-                    "type": "number"
+                    "type": [
+                        "string",
+                        "number"
+                    ]
                 },
                 "cookie": {
                     "description": "The cookie retrieved from the Request Headers of music.youtube.com after logging in.\n\nSee https://github.com/nickp10/youtube-music-ts-api/blob/master/DOCUMENTATION.md#authenticate and https://ytmusicapi.readthedocs.io/en/latest/setup.html#copy-authentication-headers for how to retrieve this value.",

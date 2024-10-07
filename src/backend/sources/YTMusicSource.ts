@@ -160,7 +160,7 @@ export default class YTMusicSource extends AbstractSource {
         // @ts-expect-error default does exist
         const ytm = new  YouTubeMusic.default() as YouTubeMusic;
         try {
-            this.apiInstance = await ytm.authenticate(this.config.data.cookie, this.config.data.authUser, this.onAuthUpdate);
+            this.apiInstance = await ytm.authenticate(this.currentCreds.cookie, typeof this.config.data.authUser === 'string' ? Number.parseInt(this.config.data.authUser) : this.config.data.authUser, this.onAuthUpdate);
         } catch (e: any) {
             this.logger.error('Failed to authenticate', e);
             throw e;
