@@ -2,21 +2,22 @@
 import { childLogger, Logger } from '@foxxmd/logging';
 import dayjs, { Dayjs } from "dayjs";
 import { PlayObject } from "../../core/Atomic.js";
-import { clientTypes, ConfigMeta } from "../common/infrastructure/Atomic.js";
+import { ClientType, clientTypes, ConfigMeta, isClientType } from "../common/infrastructure/Atomic.js";
 import { AIOConfig } from "../common/infrastructure/config/aioConfig.js";
 import { ClientAIOConfig, ClientConfig } from "../common/infrastructure/config/client/clients.js";
 import { LastfmClientConfig } from "../common/infrastructure/config/client/lastfm.js";
 import { ListenBrainzClientConfig } from "../common/infrastructure/config/client/listenbrainz.js";
 import { MalojaClientConfig } from "../common/infrastructure/config/client/maloja.js";
-import * as aioSchema from '../common/schema/aio-client.json';
-import * as clientSchema from '../common/schema/client.json';
 import { WildcardEmitter } from "../common/WildcardEmitter.js";
 import { Notifiers } from "../notifier/Notifiers.js";
-import { joinedUrl, readJson, validateJson, } from "../utils.js";
+import { joinedUrl, readJson, thresholdResultSummary } from "../utils.js";
+import { getTypeSchemaFromConfigGenerator } from "../utils/SchemaUtils.js";
+import { validateJson } from "../utils/ValidationUtils.js";
 import AbstractScrobbleClient from "./AbstractScrobbleClient.js";
 import LastfmScrobbler from "./LastfmScrobbler.js";
 import ListenbrainzScrobbler from "./ListenbrainzScrobbler.js";
 import MalojaScrobbler from "./MalojaScrobbler.js";
+import { Definition } from 'typescript-json-schema';
 
 type groupedNamedConfigs = {[key: string]: ParsedConfig[]};
 
@@ -29,6 +30,8 @@ export default class ScrobbleClients {
     logger: Logger;
     configDir: string;
     localUrl: URL;
+
+    private schemaDefinitions: Record<string, Definition> = {};
 
     emitter: WildcardEmitter;
 
@@ -74,6 +77,23 @@ export default class ScrobbleClients {
         return [clientsReady, messages];
     }
 
+    private getSchemaByType = (type: ClientType): Definition => {
+        if(this.schemaDefinitions[type] === undefined) {
+            switch(type) {
+                case 'maloja':
+                    this.schemaDefinitions[type] = getTypeSchemaFromConfigGenerator("MalojaClientConfig");
+                    break;
+                case 'lastfm':
+                    this.schemaDefinitions[type] = getTypeSchemaFromConfigGenerator("LastfmClientConfig");
+                    break;
+                case 'listenbrainz':
+                    this.schemaDefinitions[type] = getTypeSchemaFromConfigGenerator("ListenBrainzClientConfig");
+                    break;
+            }
+        }
+        return this.schemaDefinitions[type];
+    }
+
     buildClientsFromConfig = async (notifier: Notifiers) => {
         const configs: ParsedConfig[] = [];
 
@@ -84,27 +104,33 @@ export default class ScrobbleClients {
             // think this should stay as show-stopper since config could include important defaults (delay, retries) we don't want to ignore
             throw new Error('config.json could not be parsed');
         }
+
+        const relaxedSchema = getTypeSchemaFromConfigGenerator("AIOClientRelaxedConfig");
+
         let clientDefaults = {};
         if (configFile !== undefined) {
-            const aioConfig = validateJson<AIOConfig>(configFile, aioSchema, this.logger);
+            const aioConfig = validateJson<AIOConfig>(configFile, relaxedSchema, this.logger);
             const {
                 clients: mainConfigClientConfigs = [],
                 clientDefaults: cd = {},
             } = aioConfig;
             clientDefaults = cd;
-            // const validMainConfigs = mainConfigClientConfigs.reduce((acc: any, curr: any, i: any) => {
-            //     if(curr === null) {
-            //         this.logger.error(`The client config entry at index ${i} in config.json is null but should be an object, will not parse`);
-            //         return acc;
-            //     }
-            //     if(typeof curr !== 'object') {
-            //         this.logger.error(`The client config entry at index ${i} in config.json should be an object, will not parse`);
-            //         return acc;
-            //     }
-            //     return acc.concat(curr);
-            // }, []);
-            for (const c of mainConfigClientConfigs) {
+            for (const [index, c] of mainConfigClientConfigs.entries()) {
                 const {name = 'unnamed'} = c;
+                if(!isClientType(c.type.toLocaleLowerCase())) {
+                    this.logger.error(`Client config ${index + 1} (${name}) in config.json has an invalid client type of '${c.type}'. Must be one of ${clientTypes.join(' | ')}`);
+                    continue;
+                }
+                if(['lastfm','listenbrainz'].includes(c.type.toLocaleLowerCase()) && ((c as LastfmClientConfig | ListenBrainzClientConfig).configureAs === 'source')) {
+                       this.logger.debug(`Skipping config ${index + 1} (${name}) in config.json because it is configured as a source.`);
+                       continue;
+                }
+                try {
+                    validateJson<AIOConfig>(c, this.getSchemaByType(c.type.toLocaleLowerCase() as ClientType), this.logger);
+                } catch (e) {
+                    this.logger.error(new Error(`Client config ${index + 1} (${c.type} - ${name}) in config.json is invalid and will not be used.`, {cause: e}));
+                    continue;
+                }
                 configs.push({...c,
                     name,
                     source: 'config.json',
@@ -193,8 +219,14 @@ export default class ScrobbleClients {
                     continue;
                 }
                 for(const [i,rawConf] of rawClientConfigs.entries()) {
+                    if(['lastfm','listenbrainz'].includes(clientType) && 
+                    ((rawConf as LastfmClientConfig | ListenBrainzClientConfig).configureAs === 'source')) 
+                    {
+                        this.logger.debug(`Skipping config ${i + 1} from ${clientType}.json because it is configured as a source.`);
+                       continue;
+                    }
                     try {
-                        const validConfig = validateJson<ClientConfig>(rawConf, clientSchema, this.logger);
+                        const validConfig = validateJson<ClientConfig>(rawConf, this.getSchemaByType(clientType), this.logger);
                         // @ts-expect-error configureAs should exist
                         const {configureAs = defaultConfigureAs} = validConfig;
                         if (configureAs === 'client') {
@@ -206,37 +238,11 @@ export default class ScrobbleClients {
                             configs.push(parsedConfig);
                         }
                     } catch (e: any) {
-                        this.logger.error(`The config entry at index ${i} from ${clientType}.json was not valid`);
+                        this.logger.error(new Error(`The config entry at index ${i} from ${clientType}.json was not valid`, {cause: e}));
                     }
                 }
-/*                for (const [i,m] of clientConfigs.entries()) {
-                    if(m === null) {
-                        this.logger.error(`The config entry at index ${i} from ${clientType}.json is null`);
-                        continue;
-                    }
-                    if (typeof m !== 'object') {
-                        this.logger.error(`The config entry at index ${i} from ${clientType}.json was not an object, skipping`, m);
-                        continue;
-                    }
-                    const {configureAs = defaultConfigureAs} = m;
-                    if(configureAs === 'client') {
-                        m.source = `${clientType}.json`;
-                        m.type = clientType;
-                        configs.push(m);
-                    }
-                }*/
             }
         }
-
-        // we have all possible client configurations so we'll check they are minimally valid
-        /*const validConfigs = configs.reduce((acc, c) => {
-            const isValid = isValidConfigStructure(c, {type: true, data: true});
-            if (isValid !== true) {
-                this.logger.error(`Client config from ${c.source} with name [${c.name || 'unnamed'}] of type [${c.type || 'unknown'}] will not be used because it has structural errors: ${isValid.join(' | ')}`);
-                return acc;
-            }
-            return acc.concat(c);
-        }, []);*/
 
         // all client configs are minimally valid
         // now check that names are unique

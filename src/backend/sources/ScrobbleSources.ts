@@ -1,7 +1,7 @@
 /* eslint-disable no-case-declarations */
 import { childLogger, Logger } from '@foxxmd/logging';
 import EventEmitter from "events";
-import { ConfigMeta, InternalConfig, SourceType, sourceTypes } from "../common/infrastructure/Atomic.js";
+import { ConfigMeta, InternalConfig, isSourceType, SourceType, sourceTypes } from "../common/infrastructure/Atomic.js";
 import { AIOConfig, SourceDefaults } from "../common/infrastructure/config/aioConfig.js";
 import { ChromecastSourceConfig } from "../common/infrastructure/config/source/chromecast.js";
 import { DeezerData, DeezerSourceConfig } from "../common/infrastructure/config/source/deezer.js";
@@ -27,10 +27,9 @@ import { TautulliSourceConfig } from "../common/infrastructure/config/source/tau
 import { VLCData, VLCSourceConfig } from "../common/infrastructure/config/source/vlc.js";
 import { WebScrobblerSourceConfig } from "../common/infrastructure/config/source/webscrobbler.js";
 import { YTMusicSourceConfig } from "../common/infrastructure/config/source/ytmusic.js";
-import * as aioSchema from "../common/schema/aio-source.json";
-import * as sourceSchema from "../common/schema/source.json";
 import { WildcardEmitter } from "../common/WildcardEmitter.js";
-import { parseBool, readJson, validateJson } from "../utils.js";
+import { parseBool, readJson } from "../utils.js";
+import { validateJson } from "../utils/ValidationUtils.js";
 import AbstractSource from "./AbstractSource.js";
 import { ChromecastSource } from "./ChromecastSource.js";
 import DeezerSource from "./DeezerSource.js";
@@ -51,6 +50,8 @@ import TautulliSource from "./TautulliSource.js";
 import { VLCSource } from "./VLCSource.js";
 import { WebScrobblerSource } from "./WebScrobblerSource.js";
 import YTMusicSource from "./YTMusicSource.js";
+import { Definition } from 'typescript-json-schema';
+import { getTypeSchemaFromConfigGenerator } from '../utils/SchemaUtils.js';
 
 type groupedNamedConfigs = {[key: string]: ParsedConfig[]};
 
@@ -64,11 +65,13 @@ export default class ScrobbleSources {
     logger: Logger;
     internalConfig: InternalConfig;
 
+    private schemaDefinitions: Record<string, Definition> = {};
+
     emitter: WildcardEmitter;
 
     constructor(emitter: EventEmitter, internal: InternalConfigOptional, parentLogger: Logger) {
         this.emitter = emitter;
-        this.logger = childLogger(parentLogger, 'Sources'); // winston.loggers.get('app').child({labels: ['Sources']}, mergeArr);
+        this.logger = childLogger(parentLogger, 'Sources');
         this.internalConfig = {
             ...internal,
             logger: this.logger
@@ -108,6 +111,68 @@ export default class ScrobbleSources {
         return [sourcesReady, messages];
     }
 
+    private getSchemaByType = (type: SourceType): Definition => {
+        if(this.schemaDefinitions[type] === undefined) {
+            switch(type) {
+                case 'spotify':
+                    this.schemaDefinitions[type] = getTypeSchemaFromConfigGenerator("SpotifySourceConfig");
+                    break;
+                case 'plex':
+                    this.schemaDefinitions[type] = getTypeSchemaFromConfigGenerator("PlexSourceConfig");
+                    break;
+                case 'tautulli':
+                    this.schemaDefinitions[type] = getTypeSchemaFromConfigGenerator("TautulliSourceConfig");
+                    break;
+                case 'deezer':
+                    this.schemaDefinitions[type] = getTypeSchemaFromConfigGenerator("DeezerSourceConfig");
+                    break;
+                case 'subsonic':
+                    this.schemaDefinitions[type] = getTypeSchemaFromConfigGenerator("SubSonicSourceConfig");
+                    break;
+                case 'jellyfin':
+                    this.schemaDefinitions[type] = getTypeSchemaFromConfigGenerator("JellyfinCompatConfig");
+                    break;
+                case 'lastfm':
+                    this.schemaDefinitions[type] = getTypeSchemaFromConfigGenerator("LastfmSourceConfig");
+                    break;
+                case 'ytmusic':
+                    this.schemaDefinitions[type] = getTypeSchemaFromConfigGenerator("YTMusicSourceConfig");
+                    break;
+                case 'mpris':
+                    this.schemaDefinitions[type] = getTypeSchemaFromConfigGenerator("MPRISSourceConfig");
+                    break;
+                case 'mopidy':
+                    this.schemaDefinitions[type] = getTypeSchemaFromConfigGenerator("MopidySourceConfig");
+                    break;
+                case 'listenbrainz':
+                    this.schemaDefinitions[type] = getTypeSchemaFromConfigGenerator("ListenBrainzSourceConfig");
+                    break;
+                case 'jriver':
+                    this.schemaDefinitions[type] = getTypeSchemaFromConfigGenerator("JRiverSourceConfig");
+                    break;
+                case 'kodi':
+                    this.schemaDefinitions[type] = getTypeSchemaFromConfigGenerator("KodiSourceConfig");
+                    break;
+                case 'chromecast':
+                    this.schemaDefinitions[type] = getTypeSchemaFromConfigGenerator("ChromecastSourceConfig");
+                    break;
+                case 'webscrobbler':
+                    this.schemaDefinitions[type] = getTypeSchemaFromConfigGenerator("WebScrobblerSourceConfig");
+                    break;
+                case 'musikcube':
+                    this.schemaDefinitions[type] = getTypeSchemaFromConfigGenerator("MusikcubeSourceConfig");
+                    break;
+                case 'mpd':
+                    this.schemaDefinitions[type] = getTypeSchemaFromConfigGenerator("MPDSourceConfig");
+                    break;
+                case 'vlc':
+                    this.schemaDefinitions[type] = getTypeSchemaFromConfigGenerator("VLCSourceConfig");
+                    break;
+            }
+        }
+        return this.schemaDefinitions[type];
+    }
+
     buildSourcesFromConfig = async (additionalConfigs: ParsedConfig[] = []) => {
         const configs: ParsedConfig[] = additionalConfigs;
 
@@ -117,27 +182,34 @@ export default class ScrobbleSources {
         } catch (e) {
             throw new Error('config.json could not be parsed');
         }
+
+        const relaxedSchema = getTypeSchemaFromConfigGenerator("AIOSourceRelaxedConfig");
+
         let sourceDefaults = {};
         if (configFile !== undefined) {
-            const aioConfig = validateJson<AIOConfig>(configFile, aioSchema, this.logger);
+            const aioConfig = validateJson<AIOConfig>(configFile, relaxedSchema, this.logger);
             const {
                 sources: mainConfigSourcesConfigs = [],
                 sourceDefaults: sd = {},
             } = aioConfig;
             sourceDefaults = sd;
-/*            const validMainConfigs = mainConfigSourcesConfigs.reduce((acc: any, curr: any, i: any) => {
-                if(curr === null) {
-                    this.logger.error(`The source config entry at index ${i} in config.json is null but should be an object, will not parse`);
-                    return acc;
-                }
-                if(typeof curr !== 'object') {
-                    this.logger.error(`The source config entry at index ${i} in config.json should be an object, will not parse`);
-                    return acc;
-                }
-                return acc.concat(curr);
-            }, []);*/
-            for (const c of mainConfigSourcesConfigs) {
+            for (const [index, c] of mainConfigSourcesConfigs.entries()) {
                 const {name = 'unnamed'} = c;
+                if(!isSourceType(c.type.toLocaleLowerCase())) {
+                    this.logger.error(`Source config ${index + 1} (${name}) in config.json has an invalid source type of '${c.type}'. Must be one of ${sourceTypes.join(' | ')}`);
+                    continue;
+                }
+                if(['lastfm','listenbrainz'].includes(c.type.toLocaleLowerCase()) && ((c as LastfmSourceConfig | ListenBrainzSourceConfig).configureAs !== 'source')) 
+                {
+                   this.logger.debug(`Skipping config ${index + 1} (${name}) in config.json because it is configured as a client.`);
+                   continue;
+                }
+                try {
+                    validateJson<SourceConfig>(c, this.getSchemaByType(c.type.toLocaleLowerCase() as SourceType), this.logger);
+                } catch (e) {
+                    this.logger.error(new Error(`Source config ${index + 1} (${c.type} - ${name}) in config.json is invalid and will not be used.`, {cause: e}));
+                    continue;
+                }
                 configs.push({...c,
                     name,
                     source: 'config.json',
@@ -419,8 +491,14 @@ export default class ScrobbleSources {
                     continue;
                 }
                 for (const [i,rawConf] of sourceConfigs.entries()) {
+                    if(['lastfm','listenbrainz'].includes(sourceType) && 
+                    ((rawConf as LastfmSourceConfig | ListenBrainzSourceConfig).configureAs !== 'source')) 
+                    {
+                        this.logger.debug(`Skipping config ${i + 1} from ${sourceType}.json because it is configured as a client.`);
+                        continue;
+                    }
                     try {
-                        const validConfig = validateJson<SourceConfig>(rawConf, sourceSchema, this.logger);
+                        const validConfig = validateJson<SourceConfig>(rawConf, this.getSchemaByType(sourceType), this.logger);
 
                         // @ts-expect-error will eventually have all info (lazy)
                         const parsedConfig: ParsedConfig = {
@@ -428,37 +506,13 @@ export default class ScrobbleSources {
                             source: `${sourceType}.json`,
                             type: sourceType
                         }
-
-                        if(!['lastfm','listenbrainz'].includes(sourceType) || ((validConfig as LastfmSourceConfig | ListenBrainzSourceConfig).configureAs === 'source')) {
-                            configs.push(parsedConfig);
-                        } else {
-                            if('configureAs' in validConfig) {
-                                if(validConfig.configureAs === 'source') {
-                                    configs.push(parsedConfig);
-                                } else {
-                                    this.logger.verbose(`${sourceType} has 'configureAs: client' so will skip adding as a source`);
-                                }
-                            } else {
-                                this.logger.verbose(`${sourceType} did not have 'configureAs' specified! Assuming 'client' so will skip adding as a source`);
-                            }
-                        }
+                        configs.push(parsedConfig);
                     } catch (e: any) {
-                        this.logger.error(`The config entry at index ${i} from ${sourceType}.json was not valid`);
+                        this.logger.error(new Error(`The config entry at index ${i} from ${sourceType}.json was not valid`, {cause: e}));
                     }
                 }
             }
         }
-
-        // we have all possible configurations so we'll check they are minimally valid
-/*        const validConfigs = configs.reduce((acc, c) => {
-            const isValid = isValidConfigStructure(c, {type: true, data: true});
-            if (isValid !== true) {
-                // @ts-expect-error TS(2339): Property 'source' does not exist on type 'never'.
-                this.logger.error(`Source config from ${c.source} with name [${c.name || 'unnamed'}] of type [${c.type || 'unknown'}] will not be used because it has structural errors: ${isValid.join(' | ')}`);
-                return acc;
-            }
-            return acc.concat(c);
-        }, []);*/
 
         // finally! all configs are valid, structurally, and can now be passed to addClient
         // do a last check that names (within each type) are unique and warn if not, but add anyways

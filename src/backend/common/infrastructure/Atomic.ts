@@ -48,6 +48,10 @@ export const sourceTypes: SourceType[] = [
     'vlc'
 ];
 
+export const isSourceType = (data: string): data is SourceType => {
+    return sourceTypes.includes(data as SourceType);
+}
+
 export const lowGranularitySources: SourceType[] = ['subsonic', 'ytmusic'];
 
 export type ClientType =
@@ -59,6 +63,9 @@ export const clientTypes: ClientType[] = [
     'lastfm',
     'listenbrainz'
 ];
+export const isClientType = (data: string): data is ClientType => {
+    return clientTypes.includes(data as ClientType);
+}
 
 export type InitState = 0 | 1 | 2;
 export const NOT_INITIALIZED: InitState = 0;
