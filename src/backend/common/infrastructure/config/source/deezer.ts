@@ -19,7 +19,7 @@ export interface DeezerData extends CommonSourceData {
      * @default "http://localhost:9078/deezer/callback"
      * @examples ["http://localhost:9078/deezer/callback"]
      * */
-    redirectUri: string
+    redirectUri?: string
     /**
      * optional, how long to wait before calling spotify for new tracks (in seconds)
      *

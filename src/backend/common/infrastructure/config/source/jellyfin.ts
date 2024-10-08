@@ -89,3 +89,6 @@ export interface JellyApiSourceConfig extends CommonSourceConfig {
 export interface JellyApiSourceAIOConfig extends JellyApiSourceConfig {
     type: 'jellyfin'
 }
+
+
+export type JellyfinCompatConfig = JellyApiSourceConfig | JellySourceConfig;
