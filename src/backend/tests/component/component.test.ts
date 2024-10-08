@@ -23,6 +23,7 @@ describe('Play Transforms', function () {
 
     beforeEach(function() {
        component.config = {};
+       // @ts-expect-error should be built on every test
        component.transformRules = undefined;
     });
 
@@ -89,10 +90,10 @@ describe('Play Transforms', function () {
 
             component.buildTransformRules();
 
-            expect(component.transformRules.preCompare[0]).to.exist;
-            expect(component.transformRules.preCompare[0].title).to.exist;
-            expect(Array.isArray(component.transformRules.preCompare[0].title)).is.true;
-            expect( isConditionalSearchAndReplace(component.transformRules.preCompare[0].title[0])).is.true
+            expect(component.transformRules.preCompare![0]).to.exist;
+            expect(component.transformRules.preCompare![0].title).to.exist;
+            expect(Array.isArray(component.transformRules.preCompare![0].title)).is.true;
+            expect( isConditionalSearchAndReplace(component.transformRules.preCompare![0].title![0])).is.true
         });
 
         it('Converts transform config into real S&P data with default being empty string', function() {
@@ -108,12 +109,12 @@ describe('Play Transforms', function () {
 
             component.buildTransformRules();
 
-            expect(component.transformRules.preCompare[0]).to.exist;
-            expect(component.transformRules.preCompare[0].title).to.exist;
-            expect(Array.isArray(component.transformRules.preCompare[0].title)).is.true;
-            expect( isConditionalSearchAndReplace(component.transformRules.preCompare[0].title[0])).is.true
-            expect( component.transformRules.preCompare[0].title[0].search).is.eq('something');
-            expect( component.transformRules.preCompare[0].title[0].replace).is.eq('');
+            expect(component.transformRules.preCompare![0]).to.exist;
+            expect(component.transformRules.preCompare![0].title).to.exist;
+            expect(Array.isArray(component.transformRules.preCompare![0].title)).is.true;
+            expect( isConditionalSearchAndReplace(component.transformRules.preCompare![0].title![0])).is.true
+            expect( component.transformRules.preCompare![0].title![0].search).is.eq('something');
+            expect( component.transformRules.preCompare![0].title![0].replace).is.eq('');
         });
 
         it('Respects transform config when it is already S&P data', function() {
@@ -134,12 +135,12 @@ describe('Play Transforms', function () {
 
             component.buildTransformRules();
 
-            expect(component.transformRules.preCompare[0]).to.exist;
-            expect(component.transformRules.preCompare[0].title).to.exist;
-            expect(Array.isArray(component.transformRules.preCompare[0].title)).is.true;
-            expect( isConditionalSearchAndReplace(component.transformRules.preCompare[0].title[0])).is.true
-            expect( component.transformRules.preCompare[0].title[0].search).is.eq('nothing');
-            expect( component.transformRules.preCompare[0].title[0].replace).is.eq('anything');
+            expect(component.transformRules.preCompare![0]).to.exist;
+            expect(component.transformRules.preCompare![0].title).to.exist;
+            expect(Array.isArray(component.transformRules.preCompare![0].title)).is.true;
+            expect( isConditionalSearchAndReplace(component.transformRules.preCompare![0].title![0])).is.true
+            expect( component.transformRules.preCompare![0].title![0].search).is.eq('nothing');
+            expect( component.transformRules.preCompare![0].title![0].replace).is.eq('anything');
         });
     });
 
@@ -257,8 +258,8 @@ describe('Play Transforms', function () {
 
             const play = generatePlay({artists: ['something', 'big']});
             const transformed = component.transformPlay(play, TRANSFORM_HOOK.preCompare);
-            expect(transformed.data.artists.length).is.eq(1)
-            expect(transformed.data.artists[0]).is.eq('big')
+            expect(transformed.data.artists!.length).is.eq(1)
+            expect(transformed.data.artists![0]).is.eq('big')
         });
     });
 
@@ -284,8 +285,8 @@ describe('Play Transforms', function () {
 
                 const play = generatePlay({artists: ['something', 'big'], album: 'It Has No Match'});
                 const transformed = component.transformPlay(play, TRANSFORM_HOOK.preCompare);
-                expect(transformed.data.artists.length).is.eq(2)
-                expect(transformed.data.artists[0]).is.eq('something')
+                expect(transformed.data.artists!.length).is.eq(2)
+                expect(transformed.data.artists![0]).is.eq('something')
             });
 
             it('Does run hook if when conditions matches', function () {
@@ -307,8 +308,8 @@ describe('Play Transforms', function () {
 
                 const play = generatePlay({artists: ['something', 'big'], album: 'It Has This Match'});
                 const transformed = component.transformPlay(play, TRANSFORM_HOOK.preCompare);
-                expect(transformed.data.artists.length).is.eq(1)
-                expect(transformed.data.artists[0]).is.eq('big')
+                expect(transformed.data.artists!.length).is.eq(1)
+                expect(transformed.data.artists![0]).is.eq('big')
             });
         });
 
@@ -337,8 +338,8 @@ describe('Play Transforms', function () {
 
                 const play = generatePlay({artists: ['something', 'big'], album: 'It Has No Match'});
                 const transformed = component.transformPlay(play, TRANSFORM_HOOK.preCompare);
-                expect(transformed.data.artists.length).is.eq(2)
-                expect(transformed.data.artists[0]).is.eq('something')
+                expect(transformed.data.artists!.length).is.eq(2)
+                expect(transformed.data.artists![0]).is.eq('something')
             });
 
             it('Does run hook if when conditions matches', function () {
@@ -365,8 +366,8 @@ describe('Play Transforms', function () {
 
                 const play = generatePlay({artists: ['something', 'big'], album: 'It Has This Match'});
                 const transformed = component.transformPlay(play, TRANSFORM_HOOK.preCompare);
-                expect(transformed.data.artists.length).is.eq(1)
-                expect(transformed.data.artists[0]).is.eq('big')
+                expect(transformed.data.artists!.length).is.eq(1)
+                expect(transformed.data.artists![0]).is.eq('big')
             });
         });
 

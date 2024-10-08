@@ -12,7 +12,7 @@
     "schema-aioclient": "typescript-json-schema src/backend/tsconfig.json AIOClientConfig --out src/backend/common/schema/aio-client.json --titles --required --tsNodeRegister --refs --validationKeywords deprecationMessage --constAsEnum",
     "circular": "madge --circular --extensions ts src/index.ts",
     "test": "npm run -s test:backend",
-    "test:backend": "mocha --reporter spec --recursive src/backend/tests/**/*.test.ts",
+    "test:backend": "mocha --reporter spec",
     "dev": "nodemon -w src/backend -x tsx src/backend/index.ts",
     "start": "NODE_ENV=production tsx src/backend/index.ts",
     "build:frontend": "vite build",

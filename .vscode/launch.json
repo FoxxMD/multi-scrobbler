@@ -4,7 +4,6 @@
         {
             "name": "dev",
             "type": "node",
-            "runtimeVersion": "18.19.1",
             "request": "launch",
             // Debug current file in VSCode
             "program": "${workspaceFolder}/src/backend/index.ts",
@@ -20,7 +19,6 @@
         {
             "name": "tsx",
             "type": "node",
-            "runtimeVersion": "18.19.1",
             "request": "launch",
             // Debug current file in VSCode
             "program": "${file}",
@@ -47,7 +45,6 @@
                 "--recursive",
                 "${workspaceFolder}/src/backend/tests/**/*.test.ts"
             ],
-            "runtimeVersion": "18.19.1",
             "runtimeExecutable": "${workspaceFolder}/node_modules/.bin/tsx",
             "internalConsoleOptions": "openOnSessionStart",
             "name": "Mocha Tests",
@@ -72,7 +69,6 @@
                 "--config", "${workspaceRoot}/.mocharc.json",
                 "${file}"
             ],
-            "runtimeVersion": "18.19.1",
             "runtimeExecutable": "${workspaceFolder}/node_modules/.bin/tsx",
             "internalConsoleOptions": "openOnSessionStart",
             "name": "Mocha Test on File",
