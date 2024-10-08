@@ -1,5 +1,5 @@
 {
-    "debug.javascript.terminalOptions": {
-        "runtimeVersion": "18.19.1"
-    }
+    // "debug.javascript.terminalOptions": {
+    //     "runtimeVersion": "18.19.1"
+    // }
 }
