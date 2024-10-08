@@ -3,7 +3,7 @@
   "version": "0.0.0",
   "private": true,
   "scripts": {
-    "start": "npx docusaurus start",
+    "start": "npx docusaurus start --host 0.0.0.0",
     "build": "npx docusaurus build",
     "swizzle": "npx docusaurus swizzle",
     "deploy": "npx docusaurus deploy",

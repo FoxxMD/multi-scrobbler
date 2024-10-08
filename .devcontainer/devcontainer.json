@@ -9,10 +9,10 @@
 	// "features": {},
 
 	// Use 'forwardPorts' to make a list of ports inside the container available locally.
-	"forwardPorts": [9078],
+	"forwardPorts": [9078,3000],
 
 	// Use 'postCreateCommand' to run commands after the container is created.
-	//"postCreateCommand": "./.devcontainer/postCreateCommand.sh"
+	"postCreateCommand": "npm install",
 
 	// Configure tool-specific properties.
 	"customizations": {
@@ -21,6 +21,14 @@
 				"hbenl.vscode-mocha-test-adapter",
 				"dbaeumer.vscode-eslint"
 			]
+		}
+	},
+	"portsAttributes": {
+		"3000": {
+			"label": "Docusaurus"
+		},
+		"9078": {
+			"label": "App"
 		}
 	}
 

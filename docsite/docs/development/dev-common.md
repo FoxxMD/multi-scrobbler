@@ -14,14 +14,20 @@ Multi-scrobbler is written entirely in [Typescript](https://www.typescriptlang.o
 
 ## Project Setup
 
-Development requires [Node v18.19.1](https://nodejs.org/en) or higher is installed on your system. It is recommended to use [nvm](https://github.com/nvm-sh/nvm) to manage the installed node version.
+Development requires [Node v18.19.1](https://nodejs.org/en) or higher is installed on your system. 
+
+:::tip
+
+When running locally (not with a devcontainer) you can use [nvm](https://github.com/nvm-sh/nvm) to manage the installed node version.
+
+:::
 
 Clone this repository somewhere and then install from the working directory
 
 ```shell
 git clone https://github.com/FoxxMD/multi-scrobbler.git .
 cd multi-scrobbler
-nvm use # optional, to set correct Node version
+nvm use # optional, sets correct node version when running without devcontainer
 npm install
 npm run start
 ```
@@ -32,8 +38,9 @@ This repository contains [workspace settings](https://github.com/FoxxMD/multi-sc
 
 * Run/Debug [Launch configurations](https://code.visualstudio.com/Docs/editor/debugging#_launch-configurations) for the application and tests
 * [Devcontainer](https://code.visualstudio.com/docs/devcontainers/containers) for development with all dependencies already installed
+* Useful extensions for linting and running tests
 
-To use the Devcontainer simple open the repository in VSCode and "Use Devcontainer" when the notification is presented. You will still need to run `nvm use` and `npm install` the first time it is used.
+To use the Devcontainer simple open the repository in VSCode and "Use Devcontainer" when the notification is presented. `npm install` will be run when a new container is created.
 
 ## Common Development
 
