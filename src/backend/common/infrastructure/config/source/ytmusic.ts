@@ -15,7 +15,7 @@ export interface YTMusicCredentials {
      *
      * @example [0]
      * */
-    authUser?: number
+    authUser?: number | string
 }
 
 export interface YTMusicData extends YTMusicCredentials, CommonSourceData, PollingOptions {
