@@ -60,7 +60,7 @@ describe('Sample Configs', function () {
                         localUrl: new URL('http://example.com'),
                         configDir: process.cwd(),
                         version: 'test'
-                    }, loggerDebug);
+                    }, loggerTest);
 
                     await sources.buildSourcesFromConfig();
                     expect(sources.sources).length(1);
