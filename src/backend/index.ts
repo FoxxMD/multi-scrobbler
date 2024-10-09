@@ -24,6 +24,7 @@ dayjs.extend(relativeTime);
 dayjs.extend(duration);
 dayjs.extend(timezone);
 
+// eslint-disable-next-line prefer-arrow-functions/prefer-arrow-functions
 (async function () {
 
 const scheduler = new ToadScheduler()
@@ -118,6 +119,12 @@ const configDir = process.env.CONFIG_DIR || path.resolve(projectDir, `./config`)
 
         const scrobbleSources = root.get('sources');
         await scrobbleSources.buildSourcesFromConfig([]);
+        for(const source of scrobbleSources.sources) {
+            if(!source.isReady()) {
+                await source.initialize();
+            }
+        }
+        scrobbleSources.logger.info('Finished initializing sources');
 
         // check ambiguous client/source types like this for now
         const lastfmSources = scrobbleSources.getByType('lastfm');

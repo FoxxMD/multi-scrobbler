@@ -646,12 +646,5 @@ export default class ScrobbleSources {
             return;
         }
         this.sources.push(newSource);
-        if(!newSource.isReady()) {
-            if ((await newSource.initialize()) === false) {
-                this.logger.error(`${type} (${name}) source failed to initialize. Source needs to be successfully initialized before activity capture can begin.`);
-            }
-        } else {
-            newSource.logger.info('Fully Initialized!');
-        }
     }
 }
