@@ -196,7 +196,9 @@ export default class ScrobbleSources {
             for (const [index, c] of mainConfigSourcesConfigs.entries()) {
                 const {name = 'unnamed'} = c;
                 if(!isSourceType(c.type.toLocaleLowerCase())) {
-                    this.logger.error(`Source config ${index + 1} (${name}) in config.json has an invalid source type of '${c.type}'. Must be one of ${sourceTypes.join(' | ')}`);
+                    const invalidMsgType = `Source config ${index + 1} (${name}) in config.json has an invalid source type of '${c.type}'. Must be one of ${sourceTypes.join(' | ')}`;
+                    this.emitter.emit('error', new Error(invalidMsgType));
+                    this.logger.error(invalidMsgType);
                     continue;
                 }
                 if(['lastfm','listenbrainz'].includes(c.type.toLocaleLowerCase()) && ((c as LastfmSourceConfig | ListenBrainzSourceConfig).configureAs !== 'source')) 
@@ -207,7 +209,9 @@ export default class ScrobbleSources {
                 try {
                     validateJson<SourceConfig>(c, this.getSchemaByType(c.type.toLocaleLowerCase() as SourceType), this.logger);
                 } catch (e) {
-                    this.logger.error(new Error(`Source config ${index + 1} (${c.type} - ${name}) in config.json is invalid and will not be used.`, {cause: e}));
+                    const err = new Error(`Source config ${index + 1} (${c.type} - ${name}) in config.json is invalid and will not be used.`, {cause: e});
+                    this.emitter.emit('error', err);
+                    this.logger.error(err);
                     continue;
                 }
                 configs.push({...c,
@@ -474,7 +478,9 @@ export default class ScrobbleSources {
             try {
                 rawSourceConfigs = await readJson(`${this.internalConfig.configDir}/${sourceType}.json`, {throwOnNotFound: false});
             } catch (e) {
-                this.logger.error(`${sourceType}.json config file could not be parsed`);
+                const errMsg = `${sourceType}.json config file could not be parsed`;
+                this.emitter.emit('error', errMsg);
+                this.logger.error(errMsg);
                 continue;
             }
             if (rawSourceConfigs !== undefined) {
@@ -508,7 +514,9 @@ export default class ScrobbleSources {
                         }
                         configs.push(parsedConfig);
                     } catch (e: any) {
-                        this.logger.error(new Error(`The config entry at index ${i} from ${sourceType}.json was not valid`, {cause: e}));
+                        const configErr = new Error(`The config entry at index ${i} from ${sourceType}.json was not valid`, {cause: e});
+                        this.emitter.emit('error', configErr);
+                        this.logger.error(configErr);
                     }
                 }
             }
@@ -550,8 +558,9 @@ export default class ScrobbleSources {
                     try {
                         await this.addSource(c, sourceDefaults);
                     } catch(e) {
-                        this.logger.error(`Source ${c.name} of type ${c.type} was not added because of unrecoverable errors`);
-                        this.logger.error(e);
+                        const addError = new Error(`Source ${c.name} of type ${c.type} was not added because of unrecoverable errors`, {cause: e});
+                        this.emitter.emit('error', addError);
+                        this.logger.error(addError);
                     }
                 }
             }

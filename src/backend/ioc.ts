@@ -37,14 +37,22 @@ const createRoot = (options?: RootOptions) => {
         disableWeb = process.env.DISABLE_WEB === 'true';
     }
 
+    const cEmitter = new WildcardEmitter();
+    // do nothing, just catch
+    cEmitter.on('error', (e) => null);
+    const sEmitter = new WildcardEmitter();
+    sEmitter.on('error', (e) => {
+        const f = e;
+    });
+
     return createContainer().add({
         version,
         configDir: configDir,
         isProd: process.env.NODE_ENV !== undefined && (process.env.NODE_ENV === 'production' || process.env.NODE_ENV === 'prod'),
         port: process.env.PORT ?? port,
         disableWeb,
-        clientEmitter: () => new WildcardEmitter(),
-        sourceEmitter: () => new WildcardEmitter(),
+        clientEmitter: () => cEmitter,
+        sourceEmitter: () => sEmitter,
         notifierEmitter: () => new EventEmitter(),
     }).add((items) => {
         const localUrl = generateBaseURL(baseUrl, items.port)

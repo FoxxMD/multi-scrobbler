@@ -118,7 +118,9 @@ export default class ScrobbleClients {
             for (const [index, c] of mainConfigClientConfigs.entries()) {
                 const {name = 'unnamed'} = c;
                 if(!isClientType(c.type.toLocaleLowerCase())) {
-                    this.logger.error(`Client config ${index + 1} (${name}) in config.json has an invalid client type of '${c.type}'. Must be one of ${clientTypes.join(' | ')}`);
+                    const invalidTypeMsg = `Client config ${index + 1} (${name}) in config.json has an invalid client type of '${c.type}'. Must be one of ${clientTypes.join(' | ')}`;
+                    //this.emitter.emit('error', new Error(invalidTypeMsg));
+                    this.logger.error(invalidTypeMsg);
                     continue;
                 }
                 if(['lastfm','listenbrainz'].includes(c.type.toLocaleLowerCase()) && ((c as LastfmClientConfig | ListenBrainzClientConfig).configureAs === 'source')) {
@@ -128,7 +130,9 @@ export default class ScrobbleClients {
                 try {
                     validateJson<AIOConfig>(c, this.getSchemaByType(c.type.toLocaleLowerCase() as ClientType), this.logger);
                 } catch (e) {
-                    this.logger.error(new Error(`Client config ${index + 1} (${c.type} - ${name}) in config.json is invalid and will not be used.`, {cause: e}));
+                    const err = new Error(`Client config ${index + 1} (${c.type} - ${name}) in config.json is invalid and will not be used.`, {cause: e});
+                    this.emitter.emit('error', err);
+                    this.logger.error(err);
                     continue;
                 }
                 configs.push({...c,
@@ -202,7 +206,9 @@ export default class ScrobbleClients {
             try {
                 rawClientConfigs = await readJson(`${this.configDir}/${clientType}.json`, {throwOnNotFound: false});
             } catch (e) {
-                this.logger.error(`${clientType}.json config file could not be parsed`);
+                const errMsg = `${clientType}.json config file could not be parsed`;
+                this.emitter.emit('error', errMsg);
+                this.logger.error(errMsg);
                 continue;
             }
             if (rawClientConfigs !== undefined) {
@@ -238,7 +244,9 @@ export default class ScrobbleClients {
                             configs.push(parsedConfig);
                         }
                     } catch (e: any) {
-                        this.logger.error(new Error(`The config entry at index ${i} from ${clientType}.json was not valid`, {cause: e}));
+                        const configErr = new Error(`The config entry at index ${i} from ${clientType}.json was not valid`, {cause: e});
+                        this.emitter.emit('error', configErr);
+                        this.logger.error(configErr);
                     }
                 }
             }
@@ -275,8 +283,9 @@ ${sources.join('\n')}`);
             try {
                 await this.addClient(c, clientDefaults, notifier);
             } catch(e) {
-                this.logger.error(`Client ${c.name} was not added because it had unrecoverable errors`);
-                this.logger.error(e);
+                const addError = new Error(`Client ${c.name} was not added because it had unrecoverable errors`, {cause: e});
+                this.emitter.emit('error', addError);
+                this.logger.error(addError);
             }
         }
     }
