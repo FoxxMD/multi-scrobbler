@@ -134,3 +134,4 @@ build
 !setupProxy.js
 **/generated-sources.*
 .github/act/out
+tmp-*

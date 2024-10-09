@@ -26,3 +26,4 @@ build
 .devcontainer
 .vscode
 **/act/*
+tmp-*
