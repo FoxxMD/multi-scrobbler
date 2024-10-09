@@ -16,6 +16,7 @@ import { initServer } from "./server/index.js";
 import { createHeartbeatClientsTask } from "./tasks/heartbeatClients.js";
 import { createHeartbeatSourcesTask } from "./tasks/heartbeatSources.js";
 import { parseBool, readJson, sleep } from "./utils.js";
+import { getTsConfigGenerator } from './utils/SchemaUtils.js';
 
 dayjs.extend(utc)
 dayjs.extend(isBetween);
@@ -23,6 +24,7 @@ dayjs.extend(relativeTime);
 dayjs.extend(duration);
 dayjs.extend(timezone);
 
+// eslint-disable-next-line prefer-arrow-functions/prefer-arrow-functions
 (async function () {
 
 const scheduler = new ToadScheduler()
@@ -83,6 +85,10 @@ const configDir = process.env.CONFIG_DIR || path.resolve(projectDir, `./config`)
         const root = getRoot({...config, logger});
         initLogger.info(`Version: ${root.get('version')}`);
 
+        initLogger.info('Generating schema definitions...');
+        getTsConfigGenerator();
+        initLogger.info('Schema definitions generated');
+
         initServer(logger, appLoggerStream, output);
 
         if(process.env.IS_LOCAL === 'true') {
@@ -113,6 +119,12 @@ const configDir = process.env.CONFIG_DIR || path.resolve(projectDir, `./config`)
 
         const scrobbleSources = root.get('sources');
         await scrobbleSources.buildSourcesFromConfig([]);
+        for(const source of scrobbleSources.sources) {
+            if(!source.isReady()) {
+                await source.initialize();
+            }
+        }
+        scrobbleSources.logger.info('Finished initializing sources');
 
         // check ambiguous client/source types like this for now
         const lastfmSources = scrobbleSources.getByType('lastfm');

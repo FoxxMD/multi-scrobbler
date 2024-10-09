@@ -651,8 +651,7 @@
             },
             "required": [
                 "clientId",
-                "clientSecret",
-                "redirectUri"
+                "clientSecret"
             ],
             "title": "DeezerData",
             "type": "object"
@@ -3174,8 +3173,7 @@
             },
             "required": [
                 "clientId",
-                "clientSecret",
-                "redirectUri"
+                "clientSecret"
             ],
             "title": "SpotifySourceData",
             "type": "object"
@@ -3451,12 +3449,19 @@
                     "type": "boolean"
                 },
                 "filenamePatterns": {
+                    "anyOf": [
+                        {
+                            "items": {
+                                "type": "string"
+                            },
+                            "type": "array"
+                        },
+                        {
+                            "type": "string"
+                        }
+                    ],
                     "description": "A list of regular expressions to use to extract metadata (title, album, artist) from a filename\n\nUsed when VLC reports only the filename for the current audio track",
-                    "items": {
-                        "type": "string"
-                    },
-                    "title": "filenamePatterns",
-                    "type": "array"
+                    "title": "filenamePatterns"
                 },
                 "logFilenamePatterns": {
                     "default": false,

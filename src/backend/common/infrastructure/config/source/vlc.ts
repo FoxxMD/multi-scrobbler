@@ -25,7 +25,7 @@ export interface VLCSourceOptions extends CommonSourceOptions {
      *
      * Used when VLC reports only the filename for the current audio track
      * */
-    filenamePatterns?: string[]
+    filenamePatterns?: string | string[]
     /**
      * Log to DEBUG when a filename-only track is matched or not matched by filenamePatterns
      *

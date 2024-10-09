@@ -24,7 +24,7 @@
   "exclude": [
     "../../node_modules",
     "../../coverage",
-    "./tests/**/*",
+
     "../../_site",
     "../../docsite",
     "../../build",

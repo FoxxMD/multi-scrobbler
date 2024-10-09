@@ -20,7 +20,7 @@ export interface SpotifySourceData extends CommonSourceData, PollingOptions {
      * @default "http://localhost:9078/callback"
      * @examples ["http://localhost:9078/callback"]
      * */
-    redirectUri: string
+    redirectUri?: string
     /**
      * How long to wait before polling the source API for new tracks (in seconds)
      *

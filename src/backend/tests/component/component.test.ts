@@ -23,7 +23,6 @@ describe('Play Transforms', function () {
 
     beforeEach(function() {
        component.config = {};
-       // @ts-expect-error should be built on every test
        component.transformRules = undefined;
     });
 
