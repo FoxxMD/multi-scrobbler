@@ -38,8 +38,7 @@ export const getTypeSchemaFromConfigGenerator = (type: string): TJS.Definition |
 
 export const defaultGeneratorArgs: TJS.PartialArgs = {
     required: true, 
-    titles: true, 
-    tsNodeRegister: true,
+    titles: true,
     validationKeywords: ['deprecationMessage'],
     constAsEnum: true,
     ref: true,
