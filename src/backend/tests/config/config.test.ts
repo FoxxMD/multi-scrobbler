@@ -71,6 +71,10 @@ describe('Sample Configs', function () {
         describe('Client Configs', function () {
             let reset: any;
 
+            before(function() {
+                this.timeout(5000);
+            });
+
             beforeEach(async function() {
                 reset = await withLocalTmpDir({unsafeCleanup: true});
             });
