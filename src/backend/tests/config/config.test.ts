@@ -41,10 +41,6 @@ describe('Sample Configs', function () {
         describe('Source Configs', function () {
             let reset: any;
 
-            before(function() {
-                this.timeout(5000);
-            });
-
             beforeEach(async function() {
                 reset = await withLocalTmpDir({unsafeCleanup: true});
             });
@@ -57,6 +53,7 @@ describe('Sample Configs', function () {
 
                 //trueName = componentType;
                 it(`Sample ${componentType}.json parses and validates`, async function () {
+                    this.timeout(5000);
 
                     let emitter = new EventEmitter();
                     await copyFile(samplePath(componentType), `${componentType}.json`);
@@ -78,10 +75,6 @@ describe('Sample Configs', function () {
         describe('Client Configs', function () {
             let reset: any;
 
-            before(function() {
-                this.timeout(5000);
-            });
-
             beforeEach(async function() {
                 reset = await withLocalTmpDir({unsafeCleanup: true});
             });
@@ -92,6 +85,7 @@ describe('Sample Configs', function () {
 
             for(const componentType of clientTypes) {
                 it(`Sample ${componentType}.json parses and validates`, async function () {
+                    this.timeout(5000);
 
                     let emitter = new EventEmitter();
                     await copyFile(samplePath(componentType), `${componentType}.json`);
