@@ -41,6 +41,10 @@ describe('Sample Configs', function () {
         describe('Source Configs', function () {
             let reset: any;
 
+            before(function() {
+                this.timeout(5000);
+            });
+
             beforeEach(async function() {
                 reset = await withLocalTmpDir({unsafeCleanup: true});
             });
@@ -64,6 +68,9 @@ describe('Sample Configs', function () {
 
                     await sources.buildSourcesFromConfig();
                     expect(sources.sources).length(1);
+                    for(const s of sources.sources) {
+                        await s.destroy();
+                    }
                 });
             }
         });
