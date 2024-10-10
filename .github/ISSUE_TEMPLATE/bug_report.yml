@@ -1,0 +1,59 @@
+name: Bug Report
+description: Report a reproducible problem
+title: "bug: "
+labels: ["bug"]
+body:
+  - type: checkboxes
+    attributes:
+      label: Please check existing knowledge before opening an issue
+      options:
+      - label: I have [checked the FAQ](https://foxxmd.github.io/multi-scrobbler/docs/FAQ/) and [documentation](https://foxxmd.github.io/multi-scrobbler/docs/configuration/)
+        required: true
+      - label: I have [searched through existing issues](https://github.com/FoxxMD/multi-scrobbler/issues?q=sort%3Aupdated-desc) and [discussions.](https://github.com/FoxxMD/multi-scrobbler/discussions)
+        required: true
+  - type: markdown
+    attributes:
+      value: |
+        If this a how-do-I question, troublehooting, or generally **not** a bug/error with multi-scrobbler please consider [**starting a discussion**](https://github.com/FoxxMD/multi-scrobbler/discussions) instead of opening an issue.
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: Describe the Bug
+      description: Describe what you expected to happen and what happened instead. Please provide as much detail as possible.
+      placeholder: The app should have scrobbled from Spotify but instead it crashed with an error about undefined properties, etc...
+    validations:
+      required: true
+  - type: dropdown
+    id: platform
+    attributes:
+      label: Platform
+      description: What platform are you running multi-scrobbler on?
+      options:
+        - Docker
+        - Local (NodeJS)
+        - Flatpak
+      default: 0
+    validations:
+      required: true
+  - type: textarea
+    attributes:
+      label: Versions
+      description: What version of multi-scrobbler and issue-related sources/clients are running?
+      placeholder: |
+        - multi-scrobbler: 0.8.3 on docker
+        - maloja 3.1.4
+        - jellyfin 10.8.9
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs
+      description: |
+        Please copy and paste any relevant log output. This will be automatically formatted into code, so no need for backticks.
+        If possible reproduce the issue with [debug logging ON](https://foxxmd.github.io/multi-scrobbler/docs/FAQ/#turn-on-debug-logging)
+      render: shell
+  - type: textarea
+    attributes:
+      label: Additional Context
+      description: Add any other context about the problem here.
