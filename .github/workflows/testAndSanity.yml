@@ -1,0 +1,57 @@
+name: Tests and Sanity Run
+
+on:
+  workflow_call:
+    inputs:
+      node-version:
+        description: "Node version"
+        required: false
+        default: '18.x'
+        type: string
+
+jobs:
+  test:
+    name: Tests / Build / Sanity Run
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out the repo
+        uses: actions/checkout@v4
+      - name: Use Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ inputs.node-version }}
+          cache: 'npm'
+
+      - name: Install dev dependencies
+        run: npm ci
+      - name: Test Backend
+        run: npm run test
+
+      - name: Install Docs Deps
+        run: NODE_ENV=production npm run docs:install
+      - name: Build
+        run: NODE_ENV=production npm run build
+      
+        # remove modules that might include dev stuff
+        # so that in the next step we are sure that prod-only runs work correctly
+      - name: Install Prod Deps
+        run: |
+          rm -rf node_modules && \
+          rm -rf docsite/node_modules && \
+          NODE_ENV=production npm ci --omit=dev
+
+        # run app for 10 seconds as sanity check to see if it errors for any reason
+        # easy testcase for missing packages and init errors
+      - name: Sanity Run
+        run: |
+          set +e
+          export NODE_ENV=production
+          timeout --preserve-status 10s node node_modules/.bin/tsx src/backend/index.ts
+          exitcode="$?"
+          if [[ "$exitcode" -eq 143 ]] || [[ "$exitcode" -eq 137 ]]; then
+            echo "App stayed up long enough and exited with expected status"
+            exit 0
+          else
+            echo "App exited with unexpected code $exitcode"
+            exit "$exitcode"
+          fi

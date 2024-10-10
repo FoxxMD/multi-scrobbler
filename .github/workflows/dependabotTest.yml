@@ -11,24 +11,6 @@ on:
 
 jobs:
   test:
-    name: Run Tests and Build (sanity)
+    name: Tests / Build / Sanity Run
     if: github.actor == 'dependabot[bot]'
-    runs-on: ubuntu-latest
-    steps:
-      - name: Check out the repo
-        uses: actions/checkout@v4
-      - name: Use Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '18.x'
-          cache: 'npm'
-      - name: Install dev dependencies
-        run: npm ci
-      - name: Build Backend
-        run: 'npm run build:backend'
-      - name: Test Backend
-        run: npm run test
-      - name: Install Docs Deps
-        run: npm run docs:install
-      - name: Build
-        run: npm run build
+    uses: ./.github/workflows/testAndSanity.yml

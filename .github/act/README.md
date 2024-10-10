@@ -12,7 +12,13 @@ docker pull ghcr.io/jefuller/artifact-server:latest
 docker run -d --name artifact-server -p 8082:8080 --add-host host.docker.internal:host-gateway -e AUTH_KEY=foo ghcr.io/jefuller/artifact-server:latest
 ```
 
-Run the following **from this directory** to make use of `.actrc` and proper working directoy.
+Run the following **from this directory** to make use of `.actrc` and proper working directory.
+
+### Test Branch Test Suite
+
+```shell
+act -W '.github/act/testSuite.yml' -e '.github/act/actBranchEvent.json'
+```
 
 ### Test Branch Push
 
