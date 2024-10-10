@@ -7,6 +7,7 @@ import ScrobbleClients from "../scrobblers/ScrobbleClients.js";
 import LastfmSource from "../sources/LastfmSource.js";
 import ScrobbleSources from "../sources/ScrobbleSources.js";
 import SpotifySource from "../sources/SpotifySource.js";
+import YTMusicSource from "../sources/YTMusicSource.js";
 
 export const setupAuthRoutes = (app: ExpressWithAsync, logger: Logger, sourceMiddle: ExpressHandler, clientMiddle: ExpressHandler, scrobbleSources: ScrobbleSources, scrobbleClients: ScrobbleClients) => {
     app.use('/api/client/auth', clientMiddle);
@@ -49,6 +50,10 @@ export const setupAuthRoutes = (app: ExpressWithAsync, logger: Logger, sourceMid
                 // @ts-expect-error TS(2339): Property 'deezerSource' does not exist on type 'Se... Remove this comment to see the full error message
                 req.session.deezerSource = name;
                 return passport.authenticate(`deezer-${source.name}`)(req,res,next);
+            case 'ytmusic':
+                await (source as YTMusicSource).reauthenticate();
+                res.redirect((source as YTMusicSource).verificationUrl);
+                break;
             default:
                 return res.status(400).send(`Specified source does not have auth implemented (${source.type})`);
         }
