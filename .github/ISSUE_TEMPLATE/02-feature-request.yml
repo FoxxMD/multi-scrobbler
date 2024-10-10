@@ -1,0 +1,45 @@
+name: Feature Request
+description: Suggest a new feature or functionality
+title: "feat: "
+labels: ["enhancement"]
+body:
+  - type: checkboxes
+    attributes:
+      label: Please check existing knowledge before opening an issue
+      options:
+      - label: I have checked the [documentation](https://foxxmd.github.io/multi-scrobbler/docs/configuration/)
+        required: true
+      - label: I have [searched through existing issues](https://github.com/FoxxMD/multi-scrobbler/issues?q=sort%3Aupdated-desc) and [discussions.](https://github.com/FoxxMD/multi-scrobbler/discussions)
+        required: true
+  - type: textarea
+    attributes:
+      label: Describe the new functionality
+      description: Please describe the feature or functionality you want multi-scrobbler to have. Use as much detail as possible about the exact behavior you wish to see.
+    validations:
+      required: true
+  - type: textarea
+    attributes:
+      label: Configuration Example
+      description: |
+        If the functionality involves changes to configuration files please provide an example here
+      render: json5
+  - type: dropdown
+    attributes:
+      label: Will you help implement it?
+      description: Are you willing to contribute code towards completing this feature?
+      options:
+        - Yes
+        - No
+      default: 1
+    validations:
+      required: true
+  - type: dropdown
+    attributes:
+      label: Will you help test it?
+      description: Are you willing to help test preview builds for this feature?
+      options:
+        - Yes
+        - No
+      default: 0
+    validations:
+      required: true

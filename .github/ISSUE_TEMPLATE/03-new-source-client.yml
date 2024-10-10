@@ -1,0 +1,89 @@
+name: Request a new Source or Client
+description: Request a new Source or Client to be implemented
+title: "feat: "
+labels: ["enhancement"]
+body:
+  - type: checkboxes
+    attributes:
+      label: Please check existing knowledge before opening an issue
+      options:
+      - label: I have checked the [documentation](https://foxxmd.github.io/multi-scrobbler/docs/configuration/)
+        required: true
+      - label: I have [searched through existing issues](https://github.com/FoxxMD/multi-scrobbler/issues?q=sort%3Aupdated-desc) and [discussions.](https://github.com/FoxxMD/multi-scrobbler/discussions)
+        required: true
+  - type: dropdown
+    attributes:
+      label: What Type?
+      description: Is this a Source or a Client?
+      options:
+        - Source
+        - Client
+      default: 1
+    validations:
+      required: true
+  - type: input
+    attributes:
+      label: Name
+      description: "What is the name of the new service/software?"
+      placeholder: "My Cool Player"
+    validations:
+      required: true
+  - type: input
+    attributes:
+      label: Website
+      description: "Website for the service/software. Preferably a github repo or other source-code homepage"
+    validations:
+      required: true
+  - type: dropdown
+    attributes:
+      label: API Available?
+      description: Does the service have an API or other protocol that multi-scrobbler can use to communicate? **Without this the likelyhood of implementation is very low.**
+      options:
+        - Yes
+        - No
+      default: 1
+    validations:
+      required: true
+  - type: dropdown
+    attributes:
+      label: Free To Use?
+      description: Is this service/software freely available or does it require purchasing/subscription?
+      options:
+        - Yes
+        - No
+      default: 1
+    validations:
+      required: true
+  - type: dropdown
+    attributes:
+      label: Willing to finance development?
+      description: If the software is **non-free** are you will to provide a paid account/subscription to multi-scrobbler developer's in order to facilitate development/testing?
+      options:
+        - Yes
+        - No
+    validations:
+      required: false
+  - type: dropdown
+    attributes:
+      label: Will you help implement it?
+      description: Are you willing to contribute code towards completing this feature?
+      options:
+        - Yes
+        - No
+      default: 1
+    validations:
+      required: true
+  - type: dropdown
+    attributes:
+      label: Will you help test it?
+      description: Are you willing to help test preview builds for this feature?
+      options:
+        - Yes
+        - No
+      default: 0
+    validations:
+      required: true
+  - type: textarea
+    attributes:
+      label: Additional Context
+      description: Add any other context about the new Source/Client here
