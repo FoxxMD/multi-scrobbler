@@ -44,6 +44,7 @@ import {
     FormatPlayObjectOptions,
     InternalConfig,
     PlayerStateData,
+    PlayerStateDataMaybePlay,
     PlayPlatformId, REPORTED_PLAYER_STATUSES
 } from "../common/infrastructure/Atomic.js";
 import { JellyApiSourceConfig } from "../common/infrastructure/config/source/jellyfin.js";
@@ -278,7 +279,10 @@ export default class JellyfinApiSource extends MemorySource {
         //const userData = await getItemsApi(this.api).getItemUserData({itemId: 'ID', userId: this.user.Id});
 
         const sessions = await getSessionApi(this.api).getSessions();
-        const nonMSSessions = sessions.data.filter(x => x.DeviceId !== this.deviceId).map(x => this.sessionToPlayerState(x)) as PlayerStateData[];
+        const nonMSSessions = sessions.data
+        .filter(x => x.DeviceId !== this.deviceId)
+        .map(x => this.sessionToPlayerState(x))
+        .filter((x: PlayerStateDataMaybePlay) => x.play !== undefined) as PlayerStateData[];
         const validSessions: PlayerStateData[] = [];
 
         for(const session of nonMSSessions) {
@@ -292,7 +296,7 @@ export default class JellyfinApiSource extends MemorySource {
         return this.processRecentPlays(validSessions);
     }
 
-    sessionToPlayerState = (obj: SessionInfo): PlayerStateData => {
+    sessionToPlayerState = (obj: SessionInfo): PlayerStateDataMaybePlay => {
 
         const {
             UserName,
