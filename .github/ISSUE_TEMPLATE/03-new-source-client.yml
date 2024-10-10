@@ -39,8 +39,8 @@ body:
       label: API Available?
       description: Does the service have an API or other protocol that multi-scrobbler can use to communicate? **Without this the likelyhood of implementation is very low.**
       options:
-        - Yes
-        - No
+        - 'Yes'
+        - 'No'
       default: 1
     validations:
       required: true
@@ -49,8 +49,8 @@ body:
       label: Free To Use?
       description: Is this service/software freely available or does it require purchasing/subscription?
       options:
-        - Yes
-        - No
+        - 'Yes'
+        - 'No'
       default: 1
     validations:
       required: true
@@ -59,30 +59,16 @@ body:
       label: Willing to finance development?
       description: If the software is **non-free** are you will to provide a paid account/subscription to multi-scrobbler developer's in order to facilitate development/testing?
       options:
-        - Yes
-        - No
+        - 'Yes'
+        - 'No'
     validations:
       required: false
-  - type: dropdown
+  - type: checkboxes
     attributes:
       label: Will you help implement it?
-      description: Are you willing to contribute code towards completing this feature?
       options:
-        - Yes
-        - No
-      default: 1
-    validations:
-      required: true
-  - type: dropdown
-    attributes:
-      label: Will you help test it?
-      description: Are you willing to help test preview builds for this feature?
-      options:
-        - Yes
-        - No
-      default: 0
-    validations:
-      required: true
+        - label: I am willing to contribute code towards completing this feature
+        - label: I am willing to help test preview builds for this feature
   - type: textarea
     attributes:
       label: Additional Context

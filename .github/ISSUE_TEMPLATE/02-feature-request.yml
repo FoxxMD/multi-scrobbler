@@ -23,23 +23,9 @@ body:
       description: |
         If the functionality involves changes to configuration files please provide an example here
       render: json5
-  - type: dropdown
+  - type: checkboxes
     attributes:
       label: Will you help implement it?
-      description: Are you willing to contribute code towards completing this feature?
       options:
-        - Yes
-        - No
-      default: 1
-    validations:
-      required: true
-  - type: dropdown
-    attributes:
-      label: Will you help test it?
-      description: Are you willing to help test preview builds for this feature?
-      options:
-        - Yes
-        - No
-      default: 0
-    validations:
-      required: true
+        - label: I am willing to contribute code towards completing this feature
+        - label: I am willing to help test preview builds for this feature
