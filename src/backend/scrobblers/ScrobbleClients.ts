@@ -17,7 +17,7 @@ import AbstractScrobbleClient from "./AbstractScrobbleClient.js";
 import LastfmScrobbler from "./LastfmScrobbler.js";
 import ListenbrainzScrobbler from "./ListenbrainzScrobbler.js";
 import MalojaScrobbler from "./MalojaScrobbler.js";
-import { Definition } from 'typescript-json-schema';
+import { Definition } from 'ts-json-schema-generator';
 
 type groupedNamedConfigs = {[key: string]: ParsedConfig[]};
 

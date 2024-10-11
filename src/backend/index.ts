@@ -16,7 +16,7 @@ import { initServer } from "./server/index.js";
 import { createHeartbeatClientsTask } from "./tasks/heartbeatClients.js";
 import { createHeartbeatSourcesTask } from "./tasks/heartbeatSources.js";
 import { parseBool, readJson, sleep } from "./utils.js";
-import { getTsConfigGenerator } from './utils/SchemaUtils.js';
+import { createVegaGenerator } from './utils/SchemaUtils.js';
 
 dayjs.extend(utc)
 dayjs.extend(isBetween);
@@ -86,7 +86,7 @@ const configDir = process.env.CONFIG_DIR || path.resolve(projectDir, `./config`)
         initLogger.info(`Version: ${root.get('version')}`);
 
         initLogger.info('Generating schema definitions...');
-        getTsConfigGenerator();
+        createVegaGenerator()
         initLogger.info('Schema definitions generated');
 
         initServer(logger, appLoggerStream, output);

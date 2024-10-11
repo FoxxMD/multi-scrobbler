@@ -106,8 +106,8 @@ ENV APP_VERSION=$APP_BUILD_VERSION
 RUN npm ci --omit=dev \
     && npm cache clean --force \
     && chown -R abc:abc node_modules \
-    && rm -rf node_modules/@types \
-              /root/.cache
+    && rm -rf /root/.cache
+
 
 ARG webPort=9078
 ENV PORT=$webPort
