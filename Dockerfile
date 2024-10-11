@@ -88,7 +88,7 @@ RUN npm run docs:install && npm run build && rm -rf node_modules && rm -rf docsi
 
 FROM base as app
 
-COPY --chown=abc:abc package*.json ./
+COPY --chown=abc:abc *.json *.js *.ts index.html ./
 COPY --chown=abc:abc patches ./patches
 COPY --from=build --chown=abc:abc /app/dist /app/dist
 COPY --from=build --chown=abc:abc /app/src /app/src
