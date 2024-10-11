@@ -110,9 +110,13 @@ export interface ConfigMeta {
 
 export type SourceData = (PlayObject | PlayerStateData);
 
-export interface PlayerStateData {
-    platformId: PlayPlatformId
+export interface PlayerStateData extends PlayerStateDataMaybePlay {
     play: PlayObject
+}
+
+export interface PlayerStateDataMaybePlay {
+    platformId: PlayPlatformId
+    play?: PlayObject
     status?: ReportedPlayerStatus
     position?: number
     timestamp?: Dayjs
