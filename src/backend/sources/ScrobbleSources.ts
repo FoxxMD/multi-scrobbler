@@ -50,7 +50,7 @@ import TautulliSource from "./TautulliSource.js";
 import { VLCSource } from "./VLCSource.js";
 import { WebScrobblerSource } from "./WebScrobblerSource.js";
 import YTMusicSource from "./YTMusicSource.js";
-import { Definition } from 'typescript-json-schema';
+import { Definition } from 'ts-json-schema-generator';
 import { getTypeSchemaFromConfigGenerator } from '../utils/SchemaUtils.js';
 
 type groupedNamedConfigs = {[key: string]: ParsedConfig[]};

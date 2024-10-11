@@ -88,7 +88,7 @@ RUN npm run docs:install && npm run build && rm -rf node_modules && rm -rf docsi
 
 FROM base as app
 
-COPY --chown=abc:abc package*.json ./
+COPY --chown=abc:abc *.json *.js *.ts index.html ./
 COPY --chown=abc:abc patches ./patches
 COPY --from=build --chown=abc:abc /app/dist /app/dist
 COPY --from=build --chown=abc:abc /app/src /app/src
@@ -106,8 +106,8 @@ ENV APP_VERSION=$APP_BUILD_VERSION
 RUN npm ci --omit=dev \
     && npm cache clean --force \
     && chown -R abc:abc node_modules \
-    && rm -rf node_modules/@types \
-              /root/.cache
+    && rm -rf /root/.cache
+
 
 ARG webPort=9078
 ENV PORT=$webPort

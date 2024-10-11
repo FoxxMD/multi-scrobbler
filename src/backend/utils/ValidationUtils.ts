@@ -10,6 +10,9 @@ export const createAjvFactory = (logger: Logger): AjvNS.default => {
 }
 export const validateJson = <T>(config: object, schema: Schema, logger: Logger): T => {
     const ajv = createAjvFactory(logger);
+    if(schema === null) {
+        throw new Error('Schema cannot be null');
+    }
     const valid = ajv.validate(schema, config);
     if (valid) {
         return config as unknown as T;

@@ -1,46 +1,56 @@
-import * as TJS from "typescript-json-schema";
-import {sync} from "glob";
 import { resolve } from "path";
 import { projectDir } from "../common/index.js";
+import {
+    Definition as TSJDefinition,
+    createFormatter,
+    CompletedConfig as TSJCompletedConfig,
+    DEFAULT_CONFIG,
+    createProgram,
+    createParser,
+    SchemaGenerator, LiteralType, LiteralTypeFormatter
+} from "ts-json-schema-generator";
 
-// const includeOnly = [
-//     sync(resolve(projectDir, "src/backend/**/*.ts"), {ignore: resolve(projectDir, "src/backend/tests/**/*")}),
-//     sync(resolve(projectDir, "src/core/**/*.ts"))
-// ].flat(1);
+// https://github.com/vega/ts-json-schema-generator/issues/1899#issuecomment-2407674526
+// https://github.com/vega/ts-json-schema-generator?tab=readme-ov-file#custom-formatting
+class CustomLiteralTypeFormatter extends LiteralTypeFormatter {
+    public getDefinition(type: LiteralType): TSJDefinition {
+        const result = super.getDefinition(type);
 
-export const buildSchemaGenerator = (program?: TJS.Program, settings: TJS.PartialArgs = {}) => {
-    return TJS.buildGenerator(program, {...defaultGeneratorArgs, ...settings});
-}
+        if ("const" in result && result.const) {
+            return { type: result.type, enum: [result.const] };
+        }
 
-let configProgram: TJS.Program,
-generatorFromConfig: TJS.JsonSchemaGenerator;
-
-export const getTsConfigProgram = (): TJS.Program => { 
-    if(configProgram === undefined) {
-        const tsConfig = resolve(projectDir, "src/backend/tsconfig.json");
-        configProgram = TJS.programFromConfig(tsConfig,
-            sync(resolve(projectDir, "src/backend/common/infrastructure/config/**/*.ts"))
-        );
+        return result;
     }
-    return configProgram;
 }
 
-export const getTsConfigGenerator = (): TJS.JsonSchemaGenerator => {
-    if(generatorFromConfig === undefined) {
-        generatorFromConfig = buildSchemaGenerator(getTsConfigProgram());
-    }
-    return generatorFromConfig;
-}
 
-export const getTypeSchemaFromConfigGenerator = (type: string): TJS.Definition | null => {
-    return TJS.generateSchema(getTsConfigProgram(), type, undefined, [], getTsConfigGenerator());
-}
-
-export const defaultGeneratorArgs: TJS.PartialArgs = {
-    required: true, 
-    titles: true,
-    validationKeywords: ['deprecationMessage'],
-    constAsEnum: true,
-    ref: true,
-    esModuleInterop: true
+const tsjConfig: TSJCompletedConfig = {
+    ...DEFAULT_CONFIG,
+    sortProps: false,
+    additionalProperties: true,
+    markdownDescription: true,
+    path: resolve(projectDir, "src/backend/common/infrastructure/config/aioConfig.ts"),
+    tsconfig: resolve(projectDir, "src/backend/tsconfig.json"),
 };
+
+const formatter = createFormatter(tsjConfig, (fmt, circularReferenceTypeFormatter) => {
+    fmt.addTypeFormatter(new CustomLiteralTypeFormatter());
+});
+
+let vegaGenerator: SchemaGenerator;
+
+export const createVegaGenerator = () => {
+    if(vegaGenerator === undefined) {
+        const program = createProgram(tsjConfig);
+        const parser = createParser(program, tsjConfig);
+        vegaGenerator = new SchemaGenerator(program, parser, formatter, tsjConfig);
+    }
+    return vegaGenerator;
+}
+
+export const getTypeSchemaFromConfigGenerator = (type: string): any => {
+    const generator = createVegaGenerator();
+    const schema = generator.createSchema(type)
+    return schema;
+}
