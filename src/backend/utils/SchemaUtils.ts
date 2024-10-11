@@ -28,6 +28,9 @@ export const getTsConfigProgram = (): TJS.Program => {
 export const getTsConfigGenerator = (): TJS.JsonSchemaGenerator => {
     if(generatorFromConfig === undefined) {
         generatorFromConfig = buildSchemaGenerator(getTsConfigProgram());
+        if(generatorFromConfig === null) {
+            throw new Error('Schema generator had errors! See console output.');
+        }
     }
     return generatorFromConfig;
 }
@@ -37,7 +40,8 @@ export const getTypeSchemaFromConfigGenerator = (type: string): TJS.Definition |
 }
 
 export const defaultGeneratorArgs: TJS.PartialArgs = {
-    required: true, 
+    required: true,
+    //ignoreErrors: true,
     titles: true,
     validationKeywords: ['deprecationMessage'],
     constAsEnum: true,
