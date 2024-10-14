@@ -8,6 +8,8 @@ import JellyfinSource from "../../sources/JellyfinSource.js";
 import JellyfinApiSource from "../../sources/JellyfinApiSource.js";
 import samplePayload from './playbackProgressSample.json';
 import { JellyApiData } from "../../common/infrastructure/config/source/jellyfin.js";
+import { generatePlay } from "../utils/PlayTestUtils.js";
+import { fakerJA } from "@faker-js/faker";
 
 const dataAsFixture = (data: any): TestFixture => {
     return data as TestFixture;
@@ -26,6 +28,8 @@ const createJfApi = (data: JellyApiData): JellyfinApiSource => {
 }
 
 const defaultJfApiCreds = {url: 'http://example.com', user: 'MyUser', apiKey: '1234'};
+
+const validPlay = generatePlay({}, {mediaType: 'Audio'});
 
 describe('Jellyfin Legacy Source', function() {
     describe('Jellyfin Payload Parsing', function () {
@@ -96,41 +100,59 @@ describe("Jellyfin API Source", function() {
     });
 
     describe('Correctly detects activity as valid/invalid', function() {
-        it('Show allow activity based on user allow', async function () {
+        it('Should allow activity based on user allow', async function () {
             const jf = createJfApi({...defaultJfApiCreds});
             await jf.buildInitData();
 
-            expect(jf.isActivityValid('1234', 'SomeOtherUser')).to.not.be.true;
-            expect(jf.isActivityValid('1234', 'MyUser')).to.be.true;
-            expect(jf.isActivityValid('1234', 'myuser')).to.be.true;
+            expect(jf.isActivityValid('1234', 'SomeOtherUser', validPlay)).to.not.be.true;
+            expect(jf.isActivityValid('1234', 'MyUser', validPlay)).to.be.true;
+            expect(jf.isActivityValid('1234', 'myuser', validPlay)).to.be.true;
             await jf.destroy();
         });
 
-        it('Show disallow activity based on user block', async function () {
+        it('Should disallow activity based on user block', async function () {
             const jf = createJfApi({...defaultJfApiCreds, usersAllow: true, usersBlock: ['BadUser']});
             await jf.buildInitData();
 
-            expect(jf.isActivityValid('1234', 'BadUser')).to.not.be.true;
-            expect(jf.isActivityValid('1234', 'MyUser')).to.be.true;
-            expect(jf.isActivityValid('1234', 'myuser')).to.be.true;
+            expect(jf.isActivityValid('1234', 'BadUser', validPlay)).to.not.be.true;
+            expect(jf.isActivityValid('1234', 'MyUser', validPlay)).to.be.true;
+            expect(jf.isActivityValid('1234', 'myuser', validPlay)).to.be.true;
             await jf.destroy();
         });
 
-        it('Show allow activity based on devices allow', async function () {
+        it('Should allow activity based on devices allow', async function () {
             const jf = createJfApi({...defaultJfApiCreds, usersAllow: true, devicesAllow: ['WebPlayer']});
             await jf.buildInitData();
 
-            expect(jf.isActivityValid('1234', 'MyUser')).to.not.be.true;
-            expect(jf.isActivityValid('WebPlayer', 'MyUser')).to.be.true;
+            expect(jf.isActivityValid('1234', 'MyUser', validPlay)).to.not.be.true;
+            expect(jf.isActivityValid('WebPlayer', 'MyUser', validPlay)).to.be.true;
             await jf.destroy();
         });
 
-        it('Show disallow activity based on devices block', async function () {
+        it('Should disallow activity based on devices block', async function () {
             const jf = createJfApi({...defaultJfApiCreds, usersAllow: true, devicesBlock: ['WebPlayer']});
             await jf.buildInitData();
 
-            expect(jf.isActivityValid('1234', 'MyUser')).to.be.true;
-            expect(jf.isActivityValid('WebPlayer', 'MyUser')).to.not.be.true;
+            expect(jf.isActivityValid('1234', 'MyUser', validPlay)).to.be.true;
+            expect(jf.isActivityValid('WebPlayer', 'MyUser', validPlay)).to.not.be.true;
+            await jf.destroy();
+        });
+
+        it('Should disallow activity that is not audio', async function () {
+            const jf = createJfApi({...defaultJfApiCreds});
+            await jf.buildInitData();
+
+            expect(jf.isActivityValid('1234', 'MyUser', generatePlay({}, {mediaType: 'Video'}))).to.not.be.true;
+            expect(jf.isActivityValid('1234', 'MyUser', generatePlay({}, {mediaType: 'Unknown'}))).to.not.be.true;
+            await jf.destroy();
+        });
+
+        it('Should allow unknown activity if specified in options', async function () {
+            const jf = createJfApi({...defaultJfApiCreds});
+            jf.config.data.allowUnknown = true;
+            await jf.buildInitData();
+
+            expect(jf.isActivityValid('1234', 'MyUser', generatePlay({}, {mediaType: 'Unknown'}))).to.be.true;
             await jf.destroy();
         });
     });
