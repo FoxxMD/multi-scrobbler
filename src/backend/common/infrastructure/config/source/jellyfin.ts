@@ -64,6 +64,13 @@ export interface JellyApiData extends CommonSourceData {
      * Note: This only applies to real-time scrobbling as JF does not track device info in user activity history
      * */
     devicesBlock?: string | string[]
+
+    /**
+    * Force media with a type of "Unknown" to be counted as Audio
+    * 
+    * @default false
+    */
+    allowUnknown?: boolean
 }
 
 export interface JellyApiOptions extends CommonSourceOptions {

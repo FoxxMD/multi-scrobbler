@@ -203,7 +203,7 @@ export default class JellyfinApiSource extends MemorySource {
         }
     }
 
-    isActivityValid = (deviceId: string, user: string): boolean | string => {
+    isActivityValid = (deviceId: string, user: string, play: PlayObject): boolean | string => {
         if(this.usersAllow.length > 0 && !this.usersAllow.includes(user.toLocaleLowerCase())) {
             return `'usersAllow does not include user ${user}`;
         }
@@ -216,6 +216,12 @@ export default class JellyfinApiSource extends MemorySource {
         }
         if(this.devicesBlock.length > 0 && this.devicesBlock.some(x => deviceId.toLocaleLowerCase().includes(x))) {
             return `'devicesBlock includes a phrase found in ${deviceId}`;
+        }
+        if(play.meta.mediaType !== MediaType.Audio) {
+            if(play.meta.mediaType === MediaType.Unknown && this.config.data.allowUnknown) {
+                return true;
+            }
+            return `media type ${play.meta.mediaType} is not allowed`;
         }
         return true;
     }
@@ -249,7 +255,7 @@ export default class JellyfinApiSource extends MemorySource {
             meta: {
                 trackId: Id,
                 server: ServerId,
-                mediaType: MediaType,
+                mediaType: md,
                 source: 'Jellyfin',
             }
         }
@@ -286,11 +292,11 @@ export default class JellyfinApiSource extends MemorySource {
         const validSessions: PlayerStateData[] = [];
 
         for(const session of nonMSSessions) {
-            const validPlay = this.isActivityValid(session.platformId[0], session.platformId[1]);
+            const validPlay = this.isActivityValid(session.platformId[0], session.platformId[1], session.play);
             if(validPlay === true) {
                 validSessions.push(session);
             } else if(this.logFilterFailure !== false) {
-                this.logger[this.logFilterFailure](`Player State for  -> ${buildTrackString(session.play, {include: ['artist', 'track']})} <-- is being dropped because ${validPlay}`);
+                this.logger[this.logFilterFailure](`Player State for  -> ${buildTrackString(session.play, {include: ['artist', 'track', 'platform']})} <-- is being dropped because ${validPlay}`);
             }
         }
         return this.processRecentPlays(validSessions);
