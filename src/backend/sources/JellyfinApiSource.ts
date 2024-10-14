@@ -72,8 +72,6 @@ export default class JellyfinApiSource extends MemorySource {
     devicesAllow: string[] = [];
     devicesBlock: string[] = [];
 
-    multiPlatform: boolean = true;
-
     logFilterFailure: false | 'debug' | 'warn';
 
     mediaIdsSeen: string[] = [];
@@ -83,6 +81,7 @@ export default class JellyfinApiSource extends MemorySource {
     constructor(name: any, config: JellyApiSourceConfig, internal: InternalConfig, emitter: EventEmitter) {
         super('jellyfin', name, config, internal, emitter);
         this.canPoll = true;
+        this.multiPlatform = true;
         this.requiresAuth = true;
         this.deviceId = `${name}-ms${internal.version}-${truncateStringToLength(10, '')(objectHash.sha1(config))}`;
 
