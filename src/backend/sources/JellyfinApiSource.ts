@@ -312,7 +312,6 @@ export default class JellyfinApiSource extends MemorySource {
             DeviceId,
             DeviceName,
             Client,
-            Id,
             LastActivityDate,
             PlayState: {
                 PositionTicks,
@@ -322,11 +321,6 @@ export default class JellyfinApiSource extends MemorySource {
 
         const msDeviceId = combinePartsToString([shortDeviceId(DeviceId), DeviceName, Client]);
         const playerPosition = PositionTicks !== undefined ? ticksToSeconds(PositionTicks) : undefined; // dayjs.duration(PositionTicks / 1000, 'ms').asSeconds() : undefined;
-
-        if(this.config.options.logPayload && !this.mediaIdsSeen.includes(Id)) {
-            this.logger.debug(`First time seeing media ${Id} on ${msDeviceId} (play position ${playerPosition}) => ${JSON.stringify(NowPlayingItem)}`);
-            this.mediaIdsSeen.push(Id);
-        }
 
         let play: PlayObject | undefined;
         if(NowPlayingItem !== undefined) {
@@ -341,6 +335,11 @@ export default class JellyfinApiSource extends MemorySource {
                     deviceId: msDeviceId,
                     trackProgressPosition: playerPosition
                 }
+            }
+
+            if(this.config.options.logPayload && !this.mediaIdsSeen.includes(NowPlayingItem.Id)) {
+                this.logger.debug(`First time seeing media ${NowPlayingItem.Id} on ${msDeviceId} (play position ${playerPosition}) => ${JSON.stringify(NowPlayingItem)}`);
+                this.mediaIdsSeen.push(NowPlayingItem.Id);
             }
         }
 
