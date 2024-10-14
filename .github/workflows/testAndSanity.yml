@@ -8,6 +8,10 @@ on:
         required: false
         default: '18.x'
         type: string
+      ref:
+        description: "Ref to checkout"
+        required: false
+        type: string
 
 jobs:
   test:
@@ -16,6 +20,8 @@ jobs:
     steps:
       - name: Check out the repo
         uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref }}
       - name: Use Node.js
         uses: actions/setup-node@v4
         with:
