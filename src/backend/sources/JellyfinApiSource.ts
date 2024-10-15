@@ -17,7 +17,7 @@ import {
     // @ts-expect-error weird typings?
     SessionInfo,
     // @ts-expect-error weird typings?
-    SortOrder, UserDto,
+    SortOrder, UserDto, VirtualFolderInfo, CollectionType, CollectionTypeOptions
 } from "@jellyfin/sdk/lib/generated-client/index.js";
 import {
     // @ts-expect-error weird typings?
@@ -31,7 +31,7 @@ import {
     // @ts-expect-error weird typings?
     getApiKeyApi,
     // @ts-expect-error weird typings?
-    getActivityLogApi
+    getLibraryStructureApi
 } from "@jellyfin/sdk/lib/utils/api/index.js";
 import dayjs from "dayjs";
 import EventEmitter from "events";
@@ -71,16 +71,22 @@ export default class JellyfinApiSource extends MemorySource {
     usersBlock: string[] = [];
     devicesAllow: string[] = [];
     devicesBlock: string[] = [];
-
-    multiPlatform: boolean = true;
+    librariesAllow: string[] = [];
+    librariesBlock: string[] = [];
+    allowedLibraryTypes: CollectionType[] = [];
 
     logFilterFailure: false | 'debug' | 'warn';
+
+    mediaIdsSeen: string[] = [];
+
+    libraries: {name: string, paths: string[], collectionType: CollectionType}[] = [];
 
     declare config: JellyApiSourceConfig;
 
     constructor(name: any, config: JellyApiSourceConfig, internal: InternalConfig, emitter: EventEmitter) {
         super('jellyfin', name, config, internal, emitter);
         this.canPoll = true;
+        this.multiPlatform = true;
         this.requiresAuth = true;
         this.deviceId = `${name}-ms${internal.version}-${truncateStringToLength(10, '')(objectHash.sha1(config))}`;
 
@@ -105,7 +111,10 @@ export default class JellyfinApiSource extends MemorySource {
                 usersAllow = [user],
                 usersBlock = [],
                 devicesAllow = [],
-                devicesBlock = []
+                devicesBlock = [],
+                librariesAllow = [],
+                librariesBlock = [],
+                additionalAllowedLibraryTypes = [],
             } = {},
             options: {
                 logFilterFailure = (parseBool(process.env.DEBUG_MODE) ? 'debug' : 'warn')
@@ -135,6 +144,9 @@ export default class JellyfinApiSource extends MemorySource {
         this.usersBlock = parseArrayFromMaybeString(usersBlock, {lower: true});
         this.devicesAllow = parseArrayFromMaybeString(devicesAllow, {lower: true});
         this.devicesBlock = parseArrayFromMaybeString(devicesBlock, {lower: true});
+        this.librariesAllow = parseArrayFromMaybeString(librariesAllow, {lower: true});
+        this.librariesBlock = parseArrayFromMaybeString(librariesBlock, {lower: true});
+        this.allowedLibraryTypes = Array.from(new Set(['music', ...parseArrayFromMaybeString(additionalAllowedLibraryTypes, {lower: true})]));
 
         return true;
     }
@@ -203,19 +215,100 @@ export default class JellyfinApiSource extends MemorySource {
         }
     }
 
-    isActivityValid = (deviceId: string, user: string): boolean | string => {
-        if(this.usersAllow.length > 0 && !this.usersAllow.includes(user.toLocaleLowerCase())) {
-            return `'usersAllow does not include user ${user}`;
-        }
-        if(this.usersBlock.length > 0 && this.usersBlock.includes(user.toLocaleLowerCase())) {
-            return `'usersBlock includes user ${user}`;
+    // protected getItemFromLibrary = async (id: string, virtualFolderId: string) => {
+    //     const items = await getItemsApi(this.api).getItems({
+    //         // NowPlayingItem.Id
+    //         ids: [id], 
+    //         // does not work, always returns item anyway
+    //         parentId: virtualFolderId
+    //     });
+    // }
+
+    protected buildLibraryInfo = async () => {
+        try {
+            const virtualResp = await getLibraryStructureApi(this.api).getVirtualFolders();
+            const folders = virtualResp.data as VirtualFolderInfo[];
+            this.libraries = folders.map(x => ({name: x.Name, paths: x.Locations, collectionType: x.CollectionType}));
+        } catch (e) {
+            throw new Error('Unable to get server Libraries and paths', {cause: e});
         }
 
-        if(this.devicesAllow.length > 0 && !this.devicesAllow.some(x => deviceId.toLocaleLowerCase().includes(x))) {
-            return `'devicesAllow does not include a phrase found in ${deviceId}`;
+    }
+
+    getAllowedLibraries = () => {
+        if(this.librariesAllow.length === 0) {
+            return [];
         }
-        if(this.devicesBlock.length > 0 && this.devicesBlock.some(x => deviceId.toLocaleLowerCase().includes(x))) {
-            return `'devicesBlock includes a phrase found in ${deviceId}`;
+        return this.libraries.filter(x => this.librariesAllow.includes(x.name.toLocaleLowerCase()));
+    }
+
+    getBlockedLibraries = () => {
+        if(this.librariesBlock.length === 0) {
+            return [];
+        }
+        return this.libraries.filter(x => this.librariesBlock.includes(x.name.toLocaleLowerCase()));
+    }
+
+    getValidLibraries = () => this.libraries.filter(x => this.allowedLibraryTypes.includes(x.collectionType))
+
+    onPollPostAuthCheck = async () => {
+        try {
+            await this.buildLibraryInfo();
+            return true;
+        } catch (e) {
+            this.logger.error(new Error('Cannot start polling because JF prerequisite data could not be built', {cause: e}));
+            return false;
+        }
+    }
+
+    isActivityValid = (play: PlayObject, session: SessionInfo): boolean | string => {
+        if(this.usersAllow.length > 0 && !this.usersAllow.includes(play.meta.user.toLocaleLowerCase())) {
+            return `'usersAllow does not include user ${play.meta.user}`;
+        }
+        if(this.usersBlock.length > 0 && this.usersBlock.includes(play.meta.user.toLocaleLowerCase())) {
+            return `'usersBlock includes user ${play.meta.user}`;
+        }
+
+        if(this.devicesAllow.length > 0 && !this.devicesAllow.some(x => play.meta.deviceId.toLocaleLowerCase().includes(x))) {
+            return `'devicesAllow does not include a phrase found in ${play.meta.deviceId}`;
+        }
+        if(this.devicesBlock.length > 0 && this.devicesBlock.some(x => play.meta.deviceId.toLocaleLowerCase().includes(x))) {
+            return `'devicesBlock includes a phrase found in ${play.meta.deviceId}`;
+        }
+
+        const allowedLibraries = this.getAllowedLibraries();
+        if(allowedLibraries.length > 0 && !allowedLibraries.map(x => x.paths).flat(1).some(x => session.NowPlayingItem.Path.includes(x))) {
+            return `media not included in librariesAllow`;
+        }
+        
+        if(allowedLibraries.length === 0) {
+            const blockedLibraries = this.getBlockedLibraries();
+            if(blockedLibraries.length > 0) {
+                const blockedLibrary = blockedLibraries.find(x => x.paths.some(y => session.NowPlayingItem.Path.includes(y)));
+                if(blockedLibrary !== undefined) {
+                    return `media included in librariesBlock '${blockedLibrary.name}'`;
+                }
+            }
+
+            if(!this.getValidLibraries().map(x => x.paths).flat(1).some(x => session.NowPlayingItem.Path.includes(x))) {
+                return `media not included in a valid library`;
+            }
+        }
+
+        if(play.meta.mediaType !== MediaType.Audio
+            && (play.meta.mediaType !== MediaType.Unknown
+                || play.meta.mediaType === MediaType.Unknown && !this.config.data.allowUnknown
+            )
+        ) {
+            return `media detected as ${play.meta.mediaType} (MediaType) is not allowed`;
+        }
+        if('ExtraType' in session.NowPlayingItem && session.NowPlayingItem.ExtraType === 'ThemeSong'/* 
+            || play.data.track === 'theme' && 
+            (play.data.artists === undefined || play.data.artists.length === 0) */) {
+                return `media detected as a ThemeSong (ExtraType) is not allowed`;
+        }
+        if(session.NowPlayingItem.Type !== 'Audio') {
+                return `media detected as a ${session.NowPlayingItem.Type} (Type) is not allowed`;
         }
         return true;
     }
@@ -249,29 +342,13 @@ export default class JellyfinApiSource extends MemorySource {
             meta: {
                 trackId: Id,
                 server: ServerId,
-                mediaType: MediaType,
+                mediaType: md,
                 source: 'Jellyfin',
             }
         }
     }
 
     getRecentlyPlayed = async (options = {}) => {
-
-        // itemUserData.data.Items[0].UserData.LastPlayedDate
-        // time when track was started playing
-        // 'played' is always true, for some reason
-        // const itemUserData = await getItemsApi(this.api).getItems({
-        //     userId: this.user.Id,
-        //     enableUserData: true,
-        //     sortBy: ItemSortBy.DatePlayed,
-        //     sortOrder: [SortOrder.Descending],
-        //     //fields: [ItemFields.],
-        //     excludeItemTypes: [BaseItemKind.CollectionFolder],
-        //     includeItemTypes: [BaseItemKind.Audio],
-        //     recursive: true,
-        //     limit: 50,
-        // });
-
 
         // for potential future use with offline scrobbling?
         //const activities = await getActivityLogApi(this.api).getLogEntries({hasUserId: true, minDate: dayjs().subtract(1, 'day').toISOString()});
@@ -281,16 +358,16 @@ export default class JellyfinApiSource extends MemorySource {
         const sessions = await getSessionApi(this.api).getSessions();
         const nonMSSessions = sessions.data
         .filter(x => x.DeviceId !== this.deviceId)
-        .map(x => this.sessionToPlayerState(x))
-        .filter((x: PlayerStateDataMaybePlay) => x.play !== undefined) as PlayerStateData[];
+        .map(x => [this.sessionToPlayerState(x), x])
+        .filter((x: [PlayerStateDataMaybePlay, SessionInfo]) => x[0].play !== undefined) as [PlayerStateData, SessionInfo][];
         const validSessions: PlayerStateData[] = [];
 
-        for(const session of nonMSSessions) {
-            const validPlay = this.isActivityValid(session.platformId[0], session.platformId[1]);
+        for(const sessionData of nonMSSessions) {
+            const validPlay = this.isActivityValid(sessionData[0].play, sessionData[1]);
             if(validPlay === true) {
-                validSessions.push(session);
+                validSessions.push(sessionData[0]);
             } else if(this.logFilterFailure !== false) {
-                this.logger[this.logFilterFailure](`Player State for  -> ${buildTrackString(session.play, {include: ['artist', 'track']})} <-- is being dropped because ${validPlay}`);
+                this.logger[this.logFilterFailure](`Player State for  -> ${buildTrackString(sessionData[0].play, {include: ['artist', 'track', 'platform']})} <-- is being dropped because ${validPlay}`);
             }
         }
         return this.processRecentPlays(validSessions);
@@ -328,6 +405,11 @@ export default class JellyfinApiSource extends MemorySource {
                     deviceId: msDeviceId,
                     trackProgressPosition: playerPosition
                 }
+            }
+
+            if(this.config.options.logPayload && !this.mediaIdsSeen.includes(NowPlayingItem.Id)) {
+                this.logger.debug(`First time seeing media ${NowPlayingItem.Id} on ${msDeviceId} (play position ${playerPosition}) => ${JSON.stringify(NowPlayingItem)}`);
+                this.mediaIdsSeen.push(NowPlayingItem.Id);
             }
         }
 

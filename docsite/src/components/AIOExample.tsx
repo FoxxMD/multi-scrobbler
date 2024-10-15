@@ -5,6 +5,7 @@ import ErrorBoundary from "@docusaurus/ErrorBoundary"
 import Error from "@theme/Error"
 import { Simulate } from "react-dom/test-utils";
 import error = Simulate.error;
+import json5 from 'json5';
 
 export interface AIOProps {
     data: string
@@ -22,7 +23,7 @@ const AIOExample = (props: AIOProps) => {
     let configObj;
     // eslint-disable-next-line prefer-const
     try {
-        configObj = JSON.parse(data);
+        configObj = json5.parse(data);
     } catch (e) {
         console.error(e);
         return <Admonition type="danger" title="Unexpected Error">

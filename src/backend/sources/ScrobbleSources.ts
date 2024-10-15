@@ -305,7 +305,11 @@ export default class ScrobbleSources {
                         apiKey: process.env.JELLYFIN_APIKEY,
                         url: process.env.JELLYFIN_URL,
                         usersAllow: process.env.JELLYFIN_USERS_ALLOW,
+                        usersBlock: process.env.JELLYFIN_USERS_BLOCK,
                         devicesAllow: process.env.JELLYFIN_DEVICES_ALLOW,
+                        deviceBlock: process.env.JELLYFIN_DEVICES_BLOCK,
+                        librariesAllow: process.env.JELLYFIN_LIBRARIES_ALLOW,
+                        librariesBlock: process.env.JELLYFIN_LIBRARIES_BLOCK
                     };
                     if (!Object.values(j).every(x => x === undefined)) {
                         configs.push({

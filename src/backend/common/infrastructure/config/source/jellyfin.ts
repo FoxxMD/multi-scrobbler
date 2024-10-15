@@ -1,4 +1,8 @@
 import { CommonSourceConfig, CommonSourceData, CommonSourceOptions } from "./index.js";
+import {
+    // @ts-expect-error weird typings?
+    CollectionType
+} from "@jellyfin/sdk/lib/generated-client/index.js";
 
 export interface JellyData extends CommonSourceData {
     /**
@@ -54,23 +58,46 @@ export interface JellyApiData extends CommonSourceData {
 
     /**
      * Only scrobble if device or application name contains strings from this list (case-insensitive)
-     *
-     * Note: This only applies to real-time scrobbling as JF does not track device info in user activity history
      * */
     devicesAllow?: string | string[]
     /**
      * Do not scrobble if device or application name contains strings from this list (case-insensitive)
-     *
-     * Note: This only applies to real-time scrobbling as JF does not track device info in user activity history
      * */
     devicesBlock?: string | string[]
+
+    /**
+     * Only scrobble if library name contains string from this list (case-insensitive)
+     * */
+    librariesAllow?: string | string[]
+    /**
+     * Do not scrobble if library name contains strings from this list (case-insensitive)
+     * */
+    librariesBlock?: string | string[]
+
+    /**
+     * Allow MS to scrobble audio media in libraries classified other than 'music'
+     * 
+     * `librariesAllow` will achieve the same result as this but this is more convenient if you do not want to explicitly list every library name or are only using `librariesBlock`
+     */
+    additionalAllowedLibraryTypes?: CollectionType[]
+
+    /**
+    * Force media with a type of "Unknown" to be counted as Audio
+    * 
+    * @default false
+    */
+    allowUnknown?: boolean
 }
 
 export interface JellyApiOptions extends CommonSourceOptions {
-/*    /!**
-     * Set a persistent device id suffix
-     * *!/
-    deviceId?: string*/
+    /*
+    * Outputs JSON for session data the first time a new media ID is seen
+    * 
+    * For use when troubleshooting issues
+    * 
+    * @default false
+    */
+    logPayload?: boolean
 }
 
 export interface JellySourceConfig extends CommonSourceConfig {

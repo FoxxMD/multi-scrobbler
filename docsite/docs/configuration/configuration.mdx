@@ -387,24 +387,36 @@ Must be using Jellyfin 10.7 or greater
 
 It is **recommended** to use API Key + username but if you are not an admin for your Jellyfin instance you can also authenticate with your Jellyfin username and **password.**
 
-#### Configuration
+:::tip[Important Defaults]
 
-:::tip
+By default...
 
-By default, multi-scrobbler will only scrobble for the user authenticated with the API. Allowed Users are only necessary if you want to scrobble for additional users.
+* multi-scrobbler will **only** scrobbling for the user authenticated with the API. 
+  * Allowed Users (`usersAllow` or `JELLYFIN_USERS_ALLOW`) are only necessary if you want to scrobble for additional users.
+* multi-scrobbler will only scrobble media found in Jellyfin libraries that were labelled as **Music.**
+  * `librariesAllow` or `JELLYFIN_LIBRARIES_ALLOW` will override this
+  * OR use `additionalAllowedLibraryTypes` to allow more types (like `mixed` or `book` for audiobooks)
+* multi-scrobbler will only scrobble media Jellyfin detects as **Audio.**
+  * To force multi-scrobbler to scrobble when media is detected as **Unknown** use `"allowUnknown": true` in file/aio configuration.
 
 :::
+
+#### Configuration
 
 <Tabs groupId="configType" queryString>
     <TabItem value="env" label="ENV">
         | Environmental Variable     | Required? | Default | Description                                                                                |
-        |----------------------------|-----------|---------|--------------------------------------------------------------------------------------------|
+        | -------------------------- | --------- | ------- | ------------------------------------------------------------------------------------------ |
         | `JELLYFIN_URL`             | **Yes**   |         | The URL of the Jellyfin server IE `http://localhost:8096`                                  |
         | `JELLYFIN_USER`            | **Yes**   |         | The user to authenticate with the API                                                      |
         | `JELLYFIN_APIKEY`          | No        |         | The API Key to use for authentication **(Must provide either apikey or password)**         |
         | `JELLYFIN_PASSWORD`        | No        |         | The password of the user to authenticate for. **(Must provide either apikey or password)** |
         | `JELLYFIN_USERS_ALLOW`     | No        |         | Comma-separated list of usernames (from Jellyfin) to scrobble for                          |
+        | `JELLYFIN_USERS_BLOCK`     | No        |         | Comma-separated list of usernames (from Jellyfin) to disallow scrobble for                 |
         | `JELLYFIN_DEVICES_ALLOW`   | No        |         | Comma-separated list of devices to scrobble from                                           |
+        | `JELLYFIN_DEVICES_BLOCK`   | No        |         | Comma-separated list of devices to disallow scrobbles from                                 |
+        | `JELLYFIN_LIBRARIES_ALLOW` | No        |         | Comma-separated list of libraries to allow scrobbles from                                  |
+        | `JELLYFIN_LIBRARIES_BLOCK` | No        |         | Comma-separated list of libraries to disallow scrobbles from                               |
     </TabItem>
     <TabItem value="file" label="File">
         <details>
@@ -415,7 +427,7 @@ By default, multi-scrobbler will only scrobble for the user authenticated with t
 
         </details>
 
-        or <SchemaLink lower objectName="JellySourceConfig"/>
+        or <SchemaLink lower objectName="JellyApiSourceConfig"/>
 
     </TabItem>
     <TabItem value="aio" label="AIO">

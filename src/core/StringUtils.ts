@@ -37,13 +37,16 @@ export const defaultAlbumFunc = (input: any, data: AmbPlayObject, hasExistingPar
 export const defaultTimeFunc = (t: Dayjs | undefined, i?: ScrobbleTsSOC) => t === undefined ? '@ N/A' : `@ ${t.local().format()} ${i === undefined ? '' : (i === SCROBBLE_TS_SOC_START ? '(S)' : '(C)')}`;
 export const defaultTimeFromNowFunc = (t: Dayjs | undefined) => t === undefined ? undefined : `(${t.local().fromNow()})`;
 export const defaultCommentFunc = (c: string | undefined) => c === undefined ? undefined : `(${c})`;
+// TODO replace with genGroupIdStr and refactor Platform types/etc. into core Atomic
+export const defaultPlatformFunc = (d: string | undefined, u: string | undefined) => `${d ?? 'NoDevice'}-${u ?? 'SingleUser'}`;
 export const defaultBuildTrackStringTransformers = {
     artists: defaultArtistFunc,
     track: defaultTrackTransformer,
     album: defaultAlbumFunc,
     time: defaultTimeFunc,
     timeFromNow: defaultTimeFromNowFunc,
-    comment: defaultCommentFunc
+    comment: defaultCommentFunc,
+    platform: defaultPlatformFunc
 }
 export const buildTrackString = <T = string>(playObj: AmbPlayObject, options: TrackStringOptions<T> = {}): T => {
     const {
@@ -55,6 +58,7 @@ export const buildTrackString = <T = string>(playObj: AmbPlayObject, options: Tr
             time: timeFunc = defaultBuildTrackStringTransformers.time,
             timeFromNow = defaultBuildTrackStringTransformers.timeFromNow,
             comment: commentFunc = defaultBuildTrackStringTransformers.comment,
+            platform: platformFunc = defaultBuildTrackStringTransformers.platform,
             reducer = arr => arr.join(' ') // (acc, curr) => `${acc} ${curr}`
         } = {},
     } = options;
@@ -69,7 +73,9 @@ export const buildTrackString = <T = string>(playObj: AmbPlayObject, options: Tr
         meta: {
             trackId,
             scrobbleTsSOC = SCROBBLE_TS_SOC_START,
-            comment
+            comment,
+            deviceId,
+            user
         } = {},
     } = playObj;
 
@@ -83,6 +89,9 @@ export const buildTrackString = <T = string>(playObj: AmbPlayObject, options: Tr
     }
 
     const strParts: (T | string)[] = [];
+    if(include.includes('platform')) {
+        strParts.push(platformFunc(deviceId, user))
+    }
     if (include.includes('trackId') && trackId !== undefined) {
         strParts.push(`(${trackId})`);
     }

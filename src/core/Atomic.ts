@@ -31,8 +31,8 @@ export interface ClientStatusData {
     initialized: boolean;
 }
 
-export type PlayObjectIncludeTypes = 'album' | 'time' | 'artist' | 'track' | 'timeFromNow' | 'trackId' | 'comment';
-export const recentIncludes: PlayObjectIncludeTypes[] = ['time', 'timeFromNow', 'track', 'album', 'artist', 'comment'];
+export type PlayObjectIncludeTypes = 'album' | 'time' | 'artist' | 'track' | 'timeFromNow' | 'trackId' | 'comment' | 'platform';
+export const recentIncludes: PlayObjectIncludeTypes[] = ['time', 'timeFromNow', 'track', 'album', 'artist', 'comment', 'platform'];
 
 export interface TrackStringOptions<T = string> {
     include?: PlayObjectIncludeTypes[]
@@ -43,6 +43,7 @@ export interface TrackStringOptions<T = string> {
         time?: (t: Dayjs, i?: ScrobbleTsSOC) => T | string
         timeFromNow?: (t: Dayjs) => T | string
         comment?: (c: string | undefined) => T | string
+        platform?: (d: string | undefined, u: string | undefined) => T | string
         reducer?: (arr: (T | string)[]) => T //(acc: T, curr: T | string) => T
     }
 }
