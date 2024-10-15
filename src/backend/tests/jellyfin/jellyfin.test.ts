@@ -2,7 +2,7 @@ import { loggerTest } from "@foxxmd/logging";
 import { assert, expect } from 'chai';
 import EventEmitter from "events";
 import { describe, it } from 'mocha';
-import { JsonPlayObject } from "../../../core/Atomic.js";
+import { JsonPlayObject, PlayMeta, PlayObject } from "../../../core/Atomic.js";
 
 import JellyfinSource from "../../sources/JellyfinSource.js";
 import JellyfinApiSource from "../../sources/JellyfinApiSource.js";
@@ -29,7 +29,10 @@ const createJfApi = (data: JellyApiData): JellyfinApiSource => {
 
 const defaultJfApiCreds = {url: 'http://example.com', user: 'MyUser', apiKey: '1234'};
 
-const validPlay = generatePlay({}, {mediaType: 'Audio'});
+const validPlay = generatePlay({}, {mediaType: 'Audio', user: 'MyUser', deviceId: '1234'});
+const playWithMeta = (meta: PlayMeta): PlayObject => ({...validPlay, meta: {...validPlay.meta, ...meta}});
+
+const validSession = {NowPlayingItem: {}};
 
 describe('Jellyfin Legacy Source', function() {
     describe('Jellyfin Payload Parsing', function () {
@@ -104,9 +107,9 @@ describe("Jellyfin API Source", function() {
             const jf = createJfApi({...defaultJfApiCreds});
             await jf.buildInitData();
 
-            expect(jf.isActivityValid('1234', 'SomeOtherUser', validPlay)).to.not.be.true;
-            expect(jf.isActivityValid('1234', 'MyUser', validPlay)).to.be.true;
-            expect(jf.isActivityValid('1234', 'myuser', validPlay)).to.be.true;
+            expect(jf.isActivityValid(playWithMeta({user: 'SomeOtherUser'}), validSession)).to.not.be.true;
+            expect(jf.isActivityValid(validPlay, validSession)).to.be.true;
+            expect(jf.isActivityValid(playWithMeta({user: 'myuser'}), validSession)).to.be.true;
             await jf.destroy();
         });
 
@@ -114,9 +117,9 @@ describe("Jellyfin API Source", function() {
             const jf = createJfApi({...defaultJfApiCreds, usersAllow: true, usersBlock: ['BadUser']});
             await jf.buildInitData();
 
-            expect(jf.isActivityValid('1234', 'BadUser', validPlay)).to.not.be.true;
-            expect(jf.isActivityValid('1234', 'MyUser', validPlay)).to.be.true;
-            expect(jf.isActivityValid('1234', 'myuser', validPlay)).to.be.true;
+            expect(jf.isActivityValid(playWithMeta({user: 'BadUser'}), validSession)).to.not.be.true;
+            expect(jf.isActivityValid(validPlay, validSession)).to.be.true;
+            expect(jf.isActivityValid(playWithMeta({user: 'myuser'}), validSession)).to.be.true;
             await jf.destroy();
         });
 
@@ -124,8 +127,8 @@ describe("Jellyfin API Source", function() {
             const jf = createJfApi({...defaultJfApiCreds, usersAllow: true, devicesAllow: ['WebPlayer']});
             await jf.buildInitData();
 
-            expect(jf.isActivityValid('1234', 'MyUser', validPlay)).to.not.be.true;
-            expect(jf.isActivityValid('WebPlayer', 'MyUser', validPlay)).to.be.true;
+            expect(jf.isActivityValid(validPlay, validSession)).to.not.be.true;
+            expect(jf.isActivityValid(playWithMeta({deviceId: 'WebPlayer'}), validSession)).to.be.true;
             await jf.destroy();
         });
 
@@ -133,17 +136,25 @@ describe("Jellyfin API Source", function() {
             const jf = createJfApi({...defaultJfApiCreds, usersAllow: true, devicesBlock: ['WebPlayer']});
             await jf.buildInitData();
 
-            expect(jf.isActivityValid('1234', 'MyUser', validPlay)).to.be.true;
-            expect(jf.isActivityValid('WebPlayer', 'MyUser', validPlay)).to.not.be.true;
+            expect(jf.isActivityValid(validPlay, validSession)).to.be.true;
+            expect(jf.isActivityValid(playWithMeta({deviceId: 'WebPlayer'}), validSession)).to.not.be.true;
             await jf.destroy();
         });
 
-        it('Should disallow activity that is not audio', async function () {
+        it('Should disallow activity that is not valid audio', async function () {
             const jf = createJfApi({...defaultJfApiCreds});
             await jf.buildInitData();
 
-            expect(jf.isActivityValid('1234', 'MyUser', generatePlay({}, {mediaType: 'Video'}))).to.not.be.true;
-            expect(jf.isActivityValid('1234', 'MyUser', generatePlay({}, {mediaType: 'Unknown'}))).to.not.be.true;
+            expect(jf.isActivityValid(playWithMeta({mediaType: 'Video'}), validSession)).to.not.be.true;
+            expect(jf.isActivityValid(playWithMeta({mediaType: 'Unknown'}), validSession)).to.not.be.true;
+            await jf.destroy();
+        });
+
+        it('Should disallow activity that is a theme song extra', async function () {
+            const jf = createJfApi({...defaultJfApiCreds});
+            await jf.buildInitData();
+
+            expect(jf.isActivityValid(validPlay, {NowPlayingItem: {ExtraType: 'ThemeSong'}})).to.not.be.true;
             await jf.destroy();
         });
 
@@ -152,7 +163,7 @@ describe("Jellyfin API Source", function() {
             jf.config.data.allowUnknown = true;
             await jf.buildInitData();
 
-            expect(jf.isActivityValid('1234', 'MyUser', generatePlay({}, {mediaType: 'Unknown'}))).to.be.true;
+            expect(jf.isActivityValid(playWithMeta({mediaType: 'Unknown'}), validSession)).to.be.true;
             await jf.destroy();
         });
     });

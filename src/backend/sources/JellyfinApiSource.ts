@@ -204,19 +204,19 @@ export default class JellyfinApiSource extends MemorySource {
         }
     }
 
-    isActivityValid = (deviceId: string, user: string, play: PlayObject): boolean | string => {
-        if(this.usersAllow.length > 0 && !this.usersAllow.includes(user.toLocaleLowerCase())) {
-            return `'usersAllow does not include user ${user}`;
+    isActivityValid = (play: PlayObject, session: SessionInfo): boolean | string => {
+        if(this.usersAllow.length > 0 && !this.usersAllow.includes(play.meta.user.toLocaleLowerCase())) {
+            return `'usersAllow does not include user ${play.meta.user}`;
         }
-        if(this.usersBlock.length > 0 && this.usersBlock.includes(user.toLocaleLowerCase())) {
-            return `'usersBlock includes user ${user}`;
+        if(this.usersBlock.length > 0 && this.usersBlock.includes(play.meta.user.toLocaleLowerCase())) {
+            return `'usersBlock includes user ${play.meta.user}`;
         }
 
-        if(this.devicesAllow.length > 0 && !this.devicesAllow.some(x => deviceId.toLocaleLowerCase().includes(x))) {
-            return `'devicesAllow does not include a phrase found in ${deviceId}`;
+        if(this.devicesAllow.length > 0 && !this.devicesAllow.some(x => play.meta.deviceId.toLocaleLowerCase().includes(x))) {
+            return `'devicesAllow does not include a phrase found in ${play.meta.deviceId}`;
         }
-        if(this.devicesBlock.length > 0 && this.devicesBlock.some(x => deviceId.toLocaleLowerCase().includes(x))) {
-            return `'devicesBlock includes a phrase found in ${deviceId}`;
+        if(this.devicesBlock.length > 0 && this.devicesBlock.some(x => play.meta.deviceId.toLocaleLowerCase().includes(x))) {
+            return `'devicesBlock includes a phrase found in ${play.meta.deviceId}`;
         }
         if(play.meta.mediaType !== MediaType.Audio) {
             if(play.meta.mediaType === MediaType.Unknown && this.config.data.allowUnknown) {
@@ -224,6 +224,11 @@ export default class JellyfinApiSource extends MemorySource {
             }
             return `media type ${play.meta.mediaType} is not allowed`;
         }
+        if('ExtraType' in session.NowPlayingItem && session.NowPlayingItem.ExtraType === 'ThemeSong'/* 
+            || play.data.track === 'theme' && 
+            (play.data.artists === undefined || play.data.artists.length === 0) */) {
+                return `media type detected as a Theme Song is not allowed`;
+            }
         return true;
     }
 
@@ -288,16 +293,16 @@ export default class JellyfinApiSource extends MemorySource {
         const sessions = await getSessionApi(this.api).getSessions();
         const nonMSSessions = sessions.data
         .filter(x => x.DeviceId !== this.deviceId)
-        .map(x => this.sessionToPlayerState(x))
-        .filter((x: PlayerStateDataMaybePlay) => x.play !== undefined) as PlayerStateData[];
+        .map(x => [this.sessionToPlayerState(x), x])
+        .filter((x: [PlayerStateDataMaybePlay, SessionInfo]) => x[0].play !== undefined) as [PlayerStateData, SessionInfo][];
         const validSessions: PlayerStateData[] = [];
 
-        for(const session of nonMSSessions) {
-            const validPlay = this.isActivityValid(session.platformId[0], session.platformId[1], session.play);
+        for(const sessionData of nonMSSessions) {
+            const validPlay = this.isActivityValid(sessionData[0].play, sessionData[1]);
             if(validPlay === true) {
-                validSessions.push(session);
+                validSessions.push(sessionData[0]);
             } else if(this.logFilterFailure !== false) {
-                this.logger[this.logFilterFailure](`Player State for  -> ${buildTrackString(session.play, {include: ['artist', 'track', 'platform']})} <-- is being dropped because ${validPlay}`);
+                this.logger[this.logFilterFailure](`Player State for  -> ${buildTrackString(sessionData[0].play, {include: ['artist', 'track', 'platform']})} <-- is being dropped because ${validPlay}`);
             }
         }
         return this.processRecentPlays(validSessions);
