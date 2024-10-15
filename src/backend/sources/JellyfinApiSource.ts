@@ -218,17 +218,21 @@ export default class JellyfinApiSource extends MemorySource {
         if(this.devicesBlock.length > 0 && this.devicesBlock.some(x => play.meta.deviceId.toLocaleLowerCase().includes(x))) {
             return `'devicesBlock includes a phrase found in ${play.meta.deviceId}`;
         }
-        if(play.meta.mediaType !== MediaType.Audio) {
-            if(play.meta.mediaType === MediaType.Unknown && this.config.data.allowUnknown) {
-                return true;
-            }
-            return `media type ${play.meta.mediaType} is not allowed`;
+        if(play.meta.mediaType !== MediaType.Audio
+            && (play.meta.mediaType !== MediaType.Unknown
+                || play.meta.mediaType === MediaType.Unknown && !this.config.data.allowUnknown
+            )
+        ) {
+            return `media detected as ${play.meta.mediaType} (MediaType) is not allowed`;
         }
         if('ExtraType' in session.NowPlayingItem && session.NowPlayingItem.ExtraType === 'ThemeSong'/* 
             || play.data.track === 'theme' && 
             (play.data.artists === undefined || play.data.artists.length === 0) */) {
-                return `media type detected as a Theme Song is not allowed`;
-            }
+                return `media detected as a ThemeSong (ExtraType) is not allowed`;
+        }
+        if(session.NowPlayingItem.Type !== 'Audio') {
+                return `media detected as a ${session.NowPlayingItem.Type} (Type) is not allowed`;
+        }
         return true;
     }
 

@@ -7,9 +7,14 @@ import { JsonPlayObject, PlayMeta, PlayObject } from "../../../core/Atomic.js";
 import JellyfinSource from "../../sources/JellyfinSource.js";
 import JellyfinApiSource from "../../sources/JellyfinApiSource.js";
 import samplePayload from './playbackProgressSample.json';
+import validSession from './validSession.json';
 import { JellyApiData } from "../../common/infrastructure/config/source/jellyfin.js";
 import { generatePlay } from "../utils/PlayTestUtils.js";
 import { fakerJA } from "@faker-js/faker";
+import {
+    // @ts-expect-error weird typings?
+    SessionInfo,
+} from "@jellyfin/sdk/lib/generated-client/index.js";
 
 const dataAsFixture = (data: any): TestFixture => {
     return data as TestFixture;
@@ -32,7 +37,7 @@ const defaultJfApiCreds = {url: 'http://example.com', user: 'MyUser', apiKey: '1
 const validPlay = generatePlay({}, {mediaType: 'Audio', user: 'MyUser', deviceId: '1234'});
 const playWithMeta = (meta: PlayMeta): PlayObject => ({...validPlay, meta: {...validPlay.meta, ...meta}});
 
-const validSession = {NowPlayingItem: {}};
+const nowPlayingSession = (data: object): SessionInfo => ({...validSession, NowPlayingItem: {...validSession.NowPlayingItem, ...data}});
 
 describe('Jellyfin Legacy Source', function() {
     describe('Jellyfin Payload Parsing', function () {
@@ -141,7 +146,15 @@ describe("Jellyfin API Source", function() {
             await jf.destroy();
         });
 
-        it('Should disallow activity that is not valid audio', async function () {
+        it('Should disallow NowPlayingItem that is not valid Type', async function () {
+            const jf = createJfApi({...defaultJfApiCreds});
+            await jf.buildInitData();
+
+            expect(jf.isActivityValid(validPlay, nowPlayingSession({Type: 'Book'}))).to.not.be.true;
+            await jf.destroy();
+        });
+
+        it('Should disallow Play that is not valid MediaType', async function () {
             const jf = createJfApi({...defaultJfApiCreds});
             await jf.buildInitData();
 
@@ -150,20 +163,20 @@ describe("Jellyfin API Source", function() {
             await jf.destroy();
         });
 
-        it('Should disallow activity that is a theme song extra', async function () {
-            const jf = createJfApi({...defaultJfApiCreds});
-            await jf.buildInitData();
-
-            expect(jf.isActivityValid(validPlay, {NowPlayingItem: {ExtraType: 'ThemeSong'}})).to.not.be.true;
-            await jf.destroy();
-        });
-
-        it('Should allow unknown activity if specified in options', async function () {
+        it('Should allow Play with unknown mediaType if specified in options', async function () {
             const jf = createJfApi({...defaultJfApiCreds});
             jf.config.data.allowUnknown = true;
             await jf.buildInitData();
 
             expect(jf.isActivityValid(playWithMeta({mediaType: 'Unknown'}), validSession)).to.be.true;
+            await jf.destroy();
+        });
+
+        it('Should disallow NowPlayingItem that is a theme song (ExtraType)', async function () {
+            const jf = createJfApi({...defaultJfApiCreds});
+            await jf.buildInitData();
+
+            expect(jf.isActivityValid(validPlay, nowPlayingSession({ExtraType: 'ThemeSong'}))).to.not.be.true;
             await jf.destroy();
         });
     });

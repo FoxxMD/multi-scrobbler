@@ -1,0 +1,84 @@
+{
+    "NowPlayingItem": {
+        "Name": "theme",
+        "ServerId": "74d29a4870e84e8bb575b0e73f684a2e",
+        "Id": "b06904afd3caecadcb56648d494992f8",
+        "DateCreated": "2023-08-20T18:37:40.1902942Z",
+        "ExtraType": "ThemeSong",
+        "HasLyrics": false,
+        "ExternalUrls": [],
+        "Path": "/mnt/film/A Movie/theme.mp3",
+        "EnableMediaSourceDisplay": true,
+        "OfficialRating": "PG",
+        "ChannelId": null,
+        "Overview": "An overview",
+        "Taglines": [],
+        "Genres": [],
+        "CommunityRating": 7.3,
+        "RunTimeTicks": 1637006848,
+        "ProviderIds": {},
+        "IsFolder": false,
+        "ParentId": null,
+        "Type": "Audio",
+        "Studios": [],
+        "GenreItems": [],
+        "ParentLogoItemId": "08a65b1c50ceeb0535f33d19d3b219d8",
+        "ParentBackdropItemId": "08a65b1c50ceeb0535f33d19d3b219d8",
+        "ParentBackdropImageTags": [
+            "f106ecce6ad29fe66eed96ac7281dbb3"
+        ],
+        "LocalTrailerCount": 0,
+        "SpecialFeatureCount": 0,
+        "Artists": [],
+        "ArtistItems": [],
+        "AlbumArtists": [],
+        "MediaStreams": [
+            {
+                "Codec": "aac",
+                "CodecTag": "mp4a",
+                "Language": "eng",
+                "TimeBase": "1/44100",
+                "Title": "ISO Media file produced by Google Inc.",
+                "VideoRange": "Unknown",
+                "VideoRangeType": "Unknown",
+                "AudioSpatialFormat": "None",
+                "LocalizedDefault": "По умолчанию",
+                "LocalizedExternal": "Внешние",
+                "DisplayTitle": "ISO Media file produced by Google Inc. - Английский - AAC - Stereo - По умолчанию",
+                "IsInterlaced": false,
+                "ChannelLayout": "stereo",
+                "BitRate": 7830,
+                "Channels": 2,
+                "SampleRate": 44100,
+                "IsDefault": true,
+                "IsForced": false,
+                "IsHearingImpaired": false,
+                "Profile": "LC",
+                "Type": "Audio",
+                "Index": 0,
+                "IsExternal": false,
+                "IsTextSubtitleStream": false,
+                "SupportsExternalStream": false,
+                "Level": 0
+            }
+        ],
+        "ImageTags": {},
+        "BackdropImageTags": [],
+        "ParentLogoImageTag": "f106ecce6ad29fe66eed96ac7281dbb3",
+        "ImageBlurHashes": {
+            "Logo": {
+                "f106ecce6ad29fe66eed96ac7281dbb3": "HEEMLDM{4nRjM{ofWBIUxu~qM{%MRjxuRjxuxuj["
+            },
+            "Thumb": {
+                "f106ecce6ad29fe66eed96ac7281dbb3": "NEDvTx569bxJjFs*1A^ixuNGxaM|8xOXxn%1NKNf"
+            },
+            "Backdrop": {
+                "f106ecce6ad29fe66eed96ac7281dbb3": "WSC6p0EMIUxaR.t8tpaKflj?WBog57w[xtWTj[WB$+NZjYs:WBWC"
+            }
+        },
+        "ParentThumbItemId": "08a65b1c50ceeb0535f33d19d3b219d8",
+        "ParentThumbImageTag": "f106ecce6ad29fe66eed96ac7281dbb3",
+        "LocationType": "FileSystem",
+        "MediaType": "Audio"
+    }
+}

@@ -1,0 +1,547 @@
+{
+    "PlayState": {
+        "PositionTicks": 160960000,
+        "CanSeek": true,
+        "IsPaused": true,
+        "IsMuted": false,
+        "VolumeLevel": 61,
+        "MediaSourceId": "7648c5d1a50b1e03f225a2ce76baef07",
+        "PlayMethod": "DirectPlay",
+        "RepeatMode": "RepeatNone",
+        "PlaybackOrder": "Default"
+    },
+    "AdditionalUsers": [],
+    "Capabilities": {
+        "PlayableMediaTypes": [
+            "Audio",
+            "Video"
+        ],
+        "SupportedCommands": [
+            "MoveUp",
+            "MoveDown",
+            "MoveLeft",
+            "MoveRight",
+            "PageUp",
+            "PageDown",
+            "PreviousLetter",
+            "NextLetter",
+            "ToggleOsd",
+            "ToggleContextMenu",
+            "Select",
+            "Back",
+            "SendKey",
+            "SendString",
+            "GoHome",
+            "GoToSettings",
+            "VolumeUp",
+            "VolumeDown",
+            "Mute",
+            "Unmute",
+            "ToggleMute",
+            "SetVolume",
+            "SetAudioStreamIndex",
+            "SetSubtitleStreamIndex",
+            "DisplayContent",
+            "GoToSearch",
+            "DisplayMessage",
+            "SetRepeatMode",
+            "SetShuffleQueue",
+            "ChannelUp",
+            "ChannelDown",
+            "PlayMediaSource",
+            "PlayTrailers"
+        ],
+        "SupportsMediaControl": true,
+        "SupportsPersistentIdentifier": false,
+        "SupportsContentUploading": false,
+        "SupportsSync": false
+    },
+    "RemoteEndPoint": "192.168.0.220",
+    "PlayableMediaTypes": [
+        "Audio",
+        "Video"
+    ],
+    "Id": "9717105bdbdb30d25f7338997910a147",
+    "UserId": "1ae8a43ed293456da28274f1a89cd2a5",
+    "UserName": "foxx",
+    "Client": "Jellyfin Web",
+    "LastActivityDate": "2024-10-15T13:36:46.6727027Z",
+    "LastPlaybackCheckIn": "2024-10-15T13:36:46.6727028Z",
+    "LastPausedDate": "2024-10-15T12:57:59.5443726Z",
+    "DeviceName": "Firefox",
+    "NowPlayingItem": {
+        "Name": "I GOT YOU",
+        "ServerId": "64fd848a38664fd2b8f168db7eede729",
+        "Id": "7648c5d1a50b1e03f225a2ce76baef07",
+        "DateCreated": "2024-08-26T18:10:25.0263918Z",
+        "HasLyrics": true,
+        "Container": "mp3",
+        "PremiereDate": "2024-01-01T00:00:00.0000000Z",
+        "ExternalUrls": [
+            {
+                "Name": "MusicBrainz",
+                "Url": "https://musicbrainz.org/artist/8da127cc-c432-418f-b356-ef36210d82ac"
+            }
+        ],
+        "Path": "/data/allmusic/TWICE/I GOT YOU/01 - I GOT YOU.mp3",
+        "EnableMediaSourceDisplay": true,
+        "ChannelId": null,
+        "Taglines": [],
+        "Genres": [
+            "Pop"
+        ],
+        "RunTimeTicks": 1732702040,
+        "ProductionYear": 2024,
+        "IndexNumber": 1,
+        "ParentIndexNumber": 1,
+        "ProviderIds": {
+            "MusicBrainzArtist": "8da127cc-c432-418f-b356-ef36210d82ac"
+        },
+        "IsFolder": false,
+        "ParentId": "53eadcbac2228cd0879469c12b9e8c0c",
+        "Type": "Audio",
+        "Studios": [],
+        "GenreItems": [
+            {
+                "Name": "Pop",
+                "Id": "f1f202f389018ad2c0766af4b0fcb155"
+            }
+        ],
+        "ParentLogoItemId": "fcc5032e8edca6a0f4bf89613638e016",
+        "ParentBackdropItemId": "fcc5032e8edca6a0f4bf89613638e016",
+        "ParentBackdropImageTags": [
+            "9ba1ea2ca908c8f3a6ecfc708a994df7"
+        ],
+        "LocalTrailerCount": 0,
+        "SpecialFeatureCount": 0,
+        "PrimaryImageAspectRatio": 1,
+        "Artists": [
+            "TWICE"
+        ],
+        "ArtistItems": [
+            {
+                "Name": "TWICE",
+                "Id": "fcc5032e8edca6a0f4bf89613638e016"
+            }
+        ],
+        "Album": "I GOT YOU",
+        "AlbumId": "53eadcbac2228cd0879469c12b9e8c0c",
+        "AlbumPrimaryImageTag": "a10d57593fa2ecbf430e3bfd39225700",
+        "AlbumArtist": "TWICE",
+        "AlbumArtists": [
+            {
+                "Name": "TWICE",
+                "Id": "fcc5032e8edca6a0f4bf89613638e016"
+            }
+        ],
+        "MediaStreams": [
+            {
+                "Codec": "mp3",
+                "TimeBase": "1/14112000",
+                "VideoRange": "Unknown",
+                "VideoRangeType": "Unknown",
+                "AudioSpatialFormat": "None",
+                "LocalizedDefault": "Default",
+                "LocalizedExternal": "External",
+                "DisplayTitle": "MP3 - Stereo",
+                "IsInterlaced": false,
+                "IsAVC": false,
+                "ChannelLayout": "stereo",
+                "BitRate": 320000,
+                "Channels": 2,
+                "SampleRate": 44100,
+                "IsDefault": false,
+                "IsForced": false,
+                "IsHearingImpaired": false,
+                "Type": "Audio",
+                "Index": 0,
+                "IsExternal": false,
+                "IsTextSubtitleStream": false,
+                "SupportsExternalStream": false,
+                "Level": 0
+            },
+            {
+                "Codec": "mjpeg",
+                "ColorSpace": "bt470bg",
+                "Comment": "Cover (front)",
+                "TimeBase": "1/90000",
+                "VideoRange": "Unknown",
+                "VideoRangeType": "Unknown",
+                "AudioSpatialFormat": "None",
+                "IsInterlaced": false,
+                "IsAVC": false,
+                "BitDepth": 8,
+                "RefFrames": 1,
+                "IsDefault": false,
+                "IsForced": false,
+                "IsHearingImpaired": false,
+                "Height": 1000,
+                "Width": 1000,
+                "RealFrameRate": 90000,
+                "Profile": "Baseline",
+                "Type": "EmbeddedImage",
+                "AspectRatio": "1:1",
+                "Index": 1,
+                "IsExternal": false,
+                "IsTextSubtitleStream": false,
+                "SupportsExternalStream": false,
+                "PixelFormat": "yuvj444p",
+                "Level": -99,
+                "IsAnamorphic": false
+            },
+            {
+                "VideoRange": "Unknown",
+                "VideoRangeType": "Unknown",
+                "AudioSpatialFormat": "None",
+                "IsInterlaced": false,
+                "IsDefault": false,
+                "IsForced": false,
+                "IsHearingImpaired": false,
+                "Type": "Lyric",
+                "Index": 2,
+                "IsExternal": false,
+                "IsTextSubtitleStream": false,
+                "SupportsExternalStream": false,
+                "Path": "/config/data/metadata/library/76/7648c5d1a50b1e03f225a2ce76baef07/01 - I GOT YOU.lrc"
+            }
+        ],
+        "ImageTags": {
+            "Primary": "909f8ed25c11f7575842f09fb529e9d5"
+        },
+        "BackdropImageTags": [],
+        "ParentLogoImageTag": "7f7855ce907ab29bbb13a873480dd3c6",
+        "ImageBlurHashes": {
+            "Primary": {
+                "909f8ed25c11f7575842f09fb529e9d5": "e+K_Xj~qRjR%t8InIARjofWBD%IoWVayWBRjaet7j[ayV@V@t7ofj[",
+                "a10d57593fa2ecbf430e3bfd39225700": "e+K_Xj~qRjR%t8InIARjofWBD%IoWVayWBRjaet7j[ayV@V@t7ofj["
+            },
+            "Logo": {
+                "7f7855ce907ab29bbb13a873480dd3c6": "OSA8+Na{0|oL=yS1I:xGfQR*jas.bGayI:ay$*oLR*WVbY"
+            },
+            "Backdrop": {
+                "9ba1ea2ca908c8f3a6ecfc708a994df7": "WWKJvK-;N1oiIBRV]@V@sDs=tQxbvoovs:aKbb%2?1ozSwRlRPRk"
+            }
+        },
+        "LocationType": "FileSystem",
+        "MediaType": "Audio"
+    },
+    "DeviceId": "TW96aWxsYS81LjAgKFgxMTsgTGludXggeDg2XzY0OyBydjoxMjkuMCkgR2Vja28vMjAxMDAxMDEgRmlyZWZveC8xMjkuMHwxNzI1NjQzMjYwNTEy",
+    "ApplicationVersion": "10.9.11",
+    "IsActive": true,
+    "SupportsMediaControl": true,
+    "SupportsRemoteControl": true,
+    "NowPlayingQueue": [
+        {
+            "Id": "7648c5d1a50b1e03f225a2ce76baef07",
+            "PlaylistItemId": "playlistItem1"
+        }
+    ],
+    "NowPlayingQueueFullItems": [
+        {
+            "Name": "I GOT YOU",
+            "ServerId": "64fd848a38664fd2b8f168db7eede729",
+            "Id": "7648c5d1a50b1e03f225a2ce76baef07",
+            "Etag": "8162479b9f2fef290b521ea4d30ffef7",
+            "DateCreated": "2024-08-26T18:10:25.0263918Z",
+            "CanDelete": true,
+            "CanDownload": true,
+            "HasLyrics": true,
+            "Container": "mp3",
+            "SortName": "0001 - 0001 - I GOT YOU",
+            "PremiereDate": "2024-01-01T00:00:00.0000000Z",
+            "ExternalUrls": [
+                {
+                    "Name": "MusicBrainz",
+                    "Url": "https://musicbrainz.org/artist/8da127cc-c432-418f-b356-ef36210d82ac"
+                }
+            ],
+            "MediaSources": [
+                {
+                    "Protocol": "File",
+                    "Id": "7648c5d1a50b1e03f225a2ce76baef07",
+                    "Path": "/data/allmusic/TWICE/I GOT YOU/01 - I GOT YOU.mp3",
+                    "Type": "Default",
+                    "Container": "mp3",
+                    "Size": 7583921,
+                    "Name": "01 - I GOT YOU",
+                    "IsRemote": false,
+                    "ETag": "98895d1d581b04e57e5bb70b7665b9f4",
+                    "RunTimeTicks": 1732702040,
+                    "ReadAtNativeFramerate": false,
+                    "IgnoreDts": false,
+                    "IgnoreIndex": false,
+                    "GenPtsInput": false,
+                    "SupportsTranscoding": true,
+                    "SupportsDirectStream": true,
+                    "SupportsDirectPlay": true,
+                    "IsInfiniteStream": false,
+                    "RequiresOpening": false,
+                    "RequiresClosing": false,
+                    "RequiresLooping": false,
+                    "SupportsProbing": true,
+                    "MediaStreams": [
+                        {
+                            "Codec": "mp3",
+                            "TimeBase": "1/14112000",
+                            "VideoRange": "Unknown",
+                            "VideoRangeType": "Unknown",
+                            "AudioSpatialFormat": "None",
+                            "LocalizedDefault": "Default",
+                            "LocalizedExternal": "External",
+                            "DisplayTitle": "MP3 - Stereo",
+                            "IsInterlaced": false,
+                            "IsAVC": false,
+                            "ChannelLayout": "stereo",
+                            "BitRate": 320000,
+                            "Channels": 2,
+                            "SampleRate": 44100,
+                            "IsDefault": false,
+                            "IsForced": false,
+                            "IsHearingImpaired": false,
+                            "Type": "Audio",
+                            "Index": 0,
+                            "IsExternal": false,
+                            "IsTextSubtitleStream": false,
+                            "SupportsExternalStream": false,
+                            "Level": 0
+                        },
+                        {
+                            "Codec": "mjpeg",
+                            "ColorSpace": "bt470bg",
+                            "Comment": "Cover (front)",
+                            "TimeBase": "1/90000",
+                            "VideoRange": "Unknown",
+                            "VideoRangeType": "Unknown",
+                            "AudioSpatialFormat": "None",
+                            "IsInterlaced": false,
+                            "IsAVC": false,
+                            "BitDepth": 8,
+                            "RefFrames": 1,
+                            "IsDefault": false,
+                            "IsForced": false,
+                            "IsHearingImpaired": false,
+                            "Height": 1000,
+                            "Width": 1000,
+                            "RealFrameRate": 90000,
+                            "Profile": "Baseline",
+                            "Type": "EmbeddedImage",
+                            "AspectRatio": "1:1",
+                            "Index": 1,
+                            "IsExternal": false,
+                            "IsTextSubtitleStream": false,
+                            "SupportsExternalStream": false,
+                            "PixelFormat": "yuvj444p",
+                            "Level": -99,
+                            "IsAnamorphic": false
+                        },
+                        {
+                            "VideoRange": "Unknown",
+                            "VideoRangeType": "Unknown",
+                            "AudioSpatialFormat": "None",
+                            "IsInterlaced": false,
+                            "IsDefault": false,
+                            "IsForced": false,
+                            "IsHearingImpaired": false,
+                            "Type": "Lyric",
+                            "Index": 2,
+                            "IsExternal": false,
+                            "IsTextSubtitleStream": false,
+                            "SupportsExternalStream": false,
+                            "Path": "/config/data/metadata/library/76/7648c5d1a50b1e03f225a2ce76baef07/01 - I GOT YOU.lrc"
+                        }
+                    ],
+                    "MediaAttachments": [],
+                    "Formats": [],
+                    "Bitrate": 350154,
+                    "RequiredHttpHeaders": {},
+                    "TranscodingSubProtocol": "http"
+                }
+            ],
+            "Path": "/data/allmusic/TWICE/I GOT YOU/01 - I GOT YOU.mp3",
+            "EnableMediaSourceDisplay": true,
+            "ChannelId": null,
+            "Taglines": [],
+            "Genres": [
+                "Pop"
+            ],
+            "RunTimeTicks": 1732702040,
+            "ProductionYear": 2024,
+            "IndexNumber": 1,
+            "ParentIndexNumber": 1,
+            "RemoteTrailers": [],
+            "ProviderIds": {
+                "MusicBrainzArtist": "8da127cc-c432-418f-b356-ef36210d82ac"
+            },
+            "IsFolder": false,
+            "ParentId": "53eadcbac2228cd0879469c12b9e8c0c",
+            "Type": "Audio",
+            "People": [],
+            "Studios": [],
+            "GenreItems": [
+                {
+                    "Name": "Pop",
+                    "Id": "f1f202f389018ad2c0766af4b0fcb155"
+                }
+            ],
+            "ParentLogoItemId": "fcc5032e8edca6a0f4bf89613638e016",
+            "ParentBackdropItemId": "fcc5032e8edca6a0f4bf89613638e016",
+            "ParentBackdropImageTags": [
+                "9ba1ea2ca908c8f3a6ecfc708a994df7"
+            ],
+            "LocalTrailerCount": 0,
+            "SpecialFeatureCount": 0,
+            "DisplayPreferencesId": "61bba315f137702baa296a1c417faada",
+            "Tags": [],
+            "PrimaryImageAspectRatio": 1,
+            "Artists": [
+                "TWICE"
+            ],
+            "ArtistItems": [
+                {
+                    "Name": "TWICE",
+                    "Id": "fcc5032e8edca6a0f4bf89613638e016"
+                }
+            ],
+            "Album": "I GOT YOU",
+            "AlbumId": "53eadcbac2228cd0879469c12b9e8c0c",
+            "AlbumPrimaryImageTag": "a10d57593fa2ecbf430e3bfd39225700",
+            "AlbumArtist": "TWICE",
+            "AlbumArtists": [
+                {
+                    "Name": "TWICE",
+                    "Id": "fcc5032e8edca6a0f4bf89613638e016"
+                }
+            ],
+            "MediaStreams": [
+                {
+                    "Codec": "mp3",
+                    "TimeBase": "1/14112000",
+                    "VideoRange": "Unknown",
+                    "VideoRangeType": "Unknown",
+                    "AudioSpatialFormat": "None",
+                    "LocalizedDefault": "Default",
+                    "LocalizedExternal": "External",
+                    "DisplayTitle": "MP3 - Stereo",
+                    "IsInterlaced": false,
+                    "IsAVC": false,
+                    "ChannelLayout": "stereo",
+                    "BitRate": 320000,
+                    "Channels": 2,
+                    "SampleRate": 44100,
+                    "IsDefault": false,
+                    "IsForced": false,
+                    "IsHearingImpaired": false,
+                    "Type": "Audio",
+                    "Index": 0,
+                    "IsExternal": false,
+                    "IsTextSubtitleStream": false,
+                    "SupportsExternalStream": false,
+                    "Level": 0
+                },
+                {
+                    "Codec": "mjpeg",
+                    "ColorSpace": "bt470bg",
+                    "Comment": "Cover (front)",
+                    "TimeBase": "1/90000",
+                    "VideoRange": "Unknown",
+                    "VideoRangeType": "Unknown",
+                    "AudioSpatialFormat": "None",
+                    "IsInterlaced": false,
+                    "IsAVC": false,
+                    "BitDepth": 8,
+                    "RefFrames": 1,
+                    "IsDefault": false,
+                    "IsForced": false,
+                    "IsHearingImpaired": false,
+                    "Height": 1000,
+                    "Width": 1000,
+                    "RealFrameRate": 90000,
+                    "Profile": "Baseline",
+                    "Type": "EmbeddedImage",
+                    "AspectRatio": "1:1",
+                    "Index": 1,
+                    "IsExternal": false,
+                    "IsTextSubtitleStream": false,
+                    "SupportsExternalStream": false,
+                    "PixelFormat": "yuvj444p",
+                    "Level": -99,
+                    "IsAnamorphic": false
+                },
+                {
+                    "VideoRange": "Unknown",
+                    "VideoRangeType": "Unknown",
+                    "AudioSpatialFormat": "None",
+                    "IsInterlaced": false,
+                    "IsDefault": false,
+                    "IsForced": false,
+                    "IsHearingImpaired": false,
+                    "Type": "Lyric",
+                    "Index": 2,
+                    "IsExternal": false,
+                    "IsTextSubtitleStream": false,
+                    "SupportsExternalStream": false,
+                    "Path": "/config/data/metadata/library/76/7648c5d1a50b1e03f225a2ce76baef07/01 - I GOT YOU.lrc"
+                }
+            ],
+            "ImageTags": {
+                "Primary": "909f8ed25c11f7575842f09fb529e9d5"
+            },
+            "BackdropImageTags": [],
+            "ParentLogoImageTag": "7f7855ce907ab29bbb13a873480dd3c6",
+            "ImageBlurHashes": {
+                "Primary": {
+                    "909f8ed25c11f7575842f09fb529e9d5": "e+K_Xj~qRjR%t8InIARjofWBD%IoWVayWBRjaet7j[ayV@V@t7ofj[",
+                    "a10d57593fa2ecbf430e3bfd39225700": "e+K_Xj~qRjR%t8InIARjofWBD%IoWVayWBRjaet7j[ayV@V@t7ofj["
+                },
+                "Logo": {
+                    "7f7855ce907ab29bbb13a873480dd3c6": "OSA8+Na{0|oL=yS1I:xGfQR*jas.bGayI:ay$*oLR*WVbY"
+                },
+                "Backdrop": {
+                    "9ba1ea2ca908c8f3a6ecfc708a994df7": "WWKJvK-;N1oiIBRV]@V@sDs=tQxbvoovs:aKbb%2?1ozSwRlRPRk"
+                }
+            },
+            "LocationType": "FileSystem",
+            "MediaType": "Audio",
+            "LockedFields": [],
+            "LockData": false
+        }
+    ],
+    "HasCustomDeviceName": false,
+    "PlaylistItemId": "playlistItem1",
+    "ServerId": "64fd848a38664fd2b8f168db7eede729",
+    "SupportedCommands": [
+        "MoveUp",
+        "MoveDown",
+        "MoveLeft",
+        "MoveRight",
+        "PageUp",
+        "PageDown",
+        "PreviousLetter",
+        "NextLetter",
+        "ToggleOsd",
+        "ToggleContextMenu",
+        "Select",
+        "Back",
+        "SendKey",
+        "SendString",
+        "GoHome",
+        "GoToSettings",
+        "VolumeUp",
+        "VolumeDown",
+        "Mute",
+        "Unmute",
+        "ToggleMute",
+        "SetVolume",
+        "SetAudioStreamIndex",
+        "SetSubtitleStreamIndex",
+        "DisplayContent",
+        "GoToSearch",
+        "DisplayMessage",
+        "SetRepeatMode",
+        "SetShuffleQueue",
+        "ChannelUp",
+        "ChannelDown",
+        "PlayMediaSource",
+        "PlayTrailers"
+    ]
+}
