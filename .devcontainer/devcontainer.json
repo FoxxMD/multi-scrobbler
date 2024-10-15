@@ -19,7 +19,8 @@
 		"vscode": {
 			"extensions": [
 				"hbenl.vscode-mocha-test-adapter",
-				"dbaeumer.vscode-eslint"
+				"dbaeumer.vscode-eslint",
+				"unifiedjs.vscode-mdx"
 			]
 		}
 	},
