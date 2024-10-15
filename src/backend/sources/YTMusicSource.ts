@@ -10,6 +10,7 @@ import {
     getPlaysDiff,
     humanReadableDiff,
     playsAreAddedOnly,
+    playsAreBumpedOnly,
     playsAreSortConsistent
 } from "../utils/PlayComparisonUtils.js";
 import AbstractSource, { RecentlyPlayedOptions } from "./AbstractSource.js";
@@ -266,7 +267,10 @@ export default class YTMusicSource extends AbstractSource {
 
         let newPlays: PlayObject[] = [];
 
-        const plays = ytiHistoryResponseToListItems(playlistDetail).map((x) => YTMusicSource.formatPlayObj(x, {newFromSource: false})).slice(0, 20);
+        const page = Parser.parseResponse<IBrowseResponse>(playlistDetail.data);
+        const shelfPlays = ytiHistoryResponseFromShelfToPlays(playlistDetail);
+        const listPlays = ytiHistoryResponseToListItems(playlistDetail).map((x) => YTMusicSource.formatPlayObj(x, {newFromSource: false}));
+        const plays = listPlays.slice(0, 20);
         if(this.polling === false) {
             this.recentlyPlayed = plays;
             newPlays = plays;
@@ -274,31 +278,37 @@ export default class YTMusicSource extends AbstractSource {
             if(playsAreSortConsistent(this.recentlyPlayed, plays)) {
                 return newPlays;
             }
-            const [ok, diff, addType] = playsAreAddedOnly(this.recentlyPlayed, plays);
-            if(!ok || addType === 'insert' || addType === 'append') {
-                const playsDiff = getPlaysDiff(this.recentlyPlayed, plays)
-                const humanDiff = humanReadableDiff(this.recentlyPlayed, plays, playsDiff);
-                this.logger.warn('YTM History returned temporally inconsistent order, resetting watched history to new list.');
-                this.logger.warn(`Changes from last seen list:
-${humanDiff}`);
-                this.recentlyPlayed = plays;
-                return newPlays;
-            } else {
-                // new plays
-                newPlays = [...diff].reverse();
-                this.recentlyPlayed = plays;
 
-                newPlays = newPlays.map((x) => ({
+            const bumpResults = playsAreBumpedOnly(this.recentlyPlayed, plays);
+            if(bumpResults[0] === true) {
+                newPlays = bumpResults[1];
+            } else {
+                const addResults = playsAreAddedOnly(this.recentlyPlayed, plays);
+                if(addResults[0] === true) {
+                    newPlays = [...addResults[1]].reverse();
+                } else {
+                    const playsDiff = getPlaysDiff(this.recentlyPlayed, plays)
+                    const humanDiff = humanReadableDiff(this.recentlyPlayed, plays, playsDiff);
+                    this.logger.warn('YTM History returned temporally inconsistent order, resetting watched history to new list.');
+                    this.logger.warn(`Changes from last seen list:
+    ${humanDiff}`);
+                    this.recentlyPlayed = plays;
+                    return newPlays;
+                }
+            }
+
+            this.recentlyPlayed = plays;
+
+                newPlays = newPlays.map((x, index) => ({
                     data: {
                         ...x.data,
-                        playDate: dayjs().startOf('minute')
+                        playDate: dayjs().startOf('minute').add(index, 's')
                     },
                     meta: {
                         ...x.meta,
                         newFromSource: true
                     }
                 }));
-            }
         }
 
         return newPlays;
