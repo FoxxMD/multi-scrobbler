@@ -17,7 +17,7 @@ import {
     // @ts-expect-error weird typings?
     SessionInfo,
     // @ts-expect-error weird typings?
-    SortOrder, UserDto,
+    SortOrder, UserDto, VirtualFolderInfo, CollectionType, CollectionTypeOptions
 } from "@jellyfin/sdk/lib/generated-client/index.js";
 import {
     // @ts-expect-error weird typings?
@@ -31,7 +31,7 @@ import {
     // @ts-expect-error weird typings?
     getApiKeyApi,
     // @ts-expect-error weird typings?
-    getActivityLogApi
+    getLibraryStructureApi
 } from "@jellyfin/sdk/lib/utils/api/index.js";
 import dayjs from "dayjs";
 import EventEmitter from "events";
@@ -71,10 +71,15 @@ export default class JellyfinApiSource extends MemorySource {
     usersBlock: string[] = [];
     devicesAllow: string[] = [];
     devicesBlock: string[] = [];
+    librariesAllow: string[] = [];
+    librariesBlock: string[] = [];
+    allowedLibraryTypes: CollectionType[] = [];
 
     logFilterFailure: false | 'debug' | 'warn';
 
     mediaIdsSeen: string[] = [];
+
+    libraries: {name: string, paths: string[], collectionType: CollectionType}[] = [];
 
     declare config: JellyApiSourceConfig;
 
@@ -106,7 +111,10 @@ export default class JellyfinApiSource extends MemorySource {
                 usersAllow = [user],
                 usersBlock = [],
                 devicesAllow = [],
-                devicesBlock = []
+                devicesBlock = [],
+                librariesAllow = [],
+                librariesBlock = [],
+                additionalAllowedLibraryTypes = [],
             } = {},
             options: {
                 logFilterFailure = (parseBool(process.env.DEBUG_MODE) ? 'debug' : 'warn')
@@ -136,6 +144,9 @@ export default class JellyfinApiSource extends MemorySource {
         this.usersBlock = parseArrayFromMaybeString(usersBlock, {lower: true});
         this.devicesAllow = parseArrayFromMaybeString(devicesAllow, {lower: true});
         this.devicesBlock = parseArrayFromMaybeString(devicesBlock, {lower: true});
+        this.librariesAllow = parseArrayFromMaybeString(librariesAllow, {lower: true});
+        this.librariesBlock = parseArrayFromMaybeString(librariesBlock, {lower: true});
+        this.allowedLibraryTypes = Array.from(new Set(['music', ...parseArrayFromMaybeString(additionalAllowedLibraryTypes, {lower: true})]));
 
         return true;
     }
@@ -204,6 +215,52 @@ export default class JellyfinApiSource extends MemorySource {
         }
     }
 
+    // protected getItemFromLibrary = async (id: string, virtualFolderId: string) => {
+    //     const items = await getItemsApi(this.api).getItems({
+    //         // NowPlayingItem.Id
+    //         ids: [id], 
+    //         // does not work, always returns item anyway
+    //         parentId: virtualFolderId
+    //     });
+    // }
+
+    protected buildLibraryInfo = async () => {
+        try {
+            const virtualResp = await getLibraryStructureApi(this.api).getVirtualFolders();
+            const folders = virtualResp.data as VirtualFolderInfo[];
+            this.libraries = folders.map(x => ({name: x.Name, paths: x.Locations, collectionType: x.CollectionType}));
+        } catch (e) {
+            throw new Error('Unable to get server Libraries and paths', {cause: e});
+        }
+
+    }
+
+    getAllowedLibraries = () => {
+        if(this.librariesAllow.length === 0) {
+            return [];
+        }
+        return this.libraries.filter(x => this.librariesAllow.includes(x.name.toLocaleLowerCase()));
+    }
+
+    getBlockedLibraries = () => {
+        if(this.librariesBlock.length === 0) {
+            return [];
+        }
+        return this.libraries.filter(x => this.librariesBlock.includes(x.name.toLocaleLowerCase()));
+    }
+
+    getValidLibraries = () => this.libraries.filter(x => this.allowedLibraryTypes.includes(x.collectionType))
+
+    onPollPostAuthCheck = async () => {
+        try {
+            await this.buildLibraryInfo();
+            return true;
+        } catch (e) {
+            this.logger.error(new Error('Cannot start polling because JF prerequisite data could not be built', {cause: e}));
+            return false;
+        }
+    }
+
     isActivityValid = (play: PlayObject, session: SessionInfo): boolean | string => {
         if(this.usersAllow.length > 0 && !this.usersAllow.includes(play.meta.user.toLocaleLowerCase())) {
             return `'usersAllow does not include user ${play.meta.user}`;
@@ -218,6 +275,26 @@ export default class JellyfinApiSource extends MemorySource {
         if(this.devicesBlock.length > 0 && this.devicesBlock.some(x => play.meta.deviceId.toLocaleLowerCase().includes(x))) {
             return `'devicesBlock includes a phrase found in ${play.meta.deviceId}`;
         }
+
+        const allowedLibraries = this.getAllowedLibraries();
+        if(allowedLibraries.length > 0 && !allowedLibraries.map(x => x.paths).flat(1).some(x => session.NowPlayingItem.Path.includes(x))) {
+            return `media not included in librariesAllow`;
+        }
+        
+        if(allowedLibraries.length === 0) {
+            const blockedLibraries = this.getBlockedLibraries();
+            if(blockedLibraries.length > 0) {
+                const blockedLibrary = blockedLibraries.find(x => x.paths.some(y => session.NowPlayingItem.Path.includes(y)));
+                if(blockedLibrary !== undefined) {
+                    return `media included in librariesBlock '${blockedLibrary.name}'`;
+                }
+            }
+
+            if(!this.getValidLibraries().map(x => x.paths).flat(1).some(x => session.NowPlayingItem.Path.includes(x))) {
+                return `media not included in a valid library`;
+            }
+        }
+
         if(play.meta.mediaType !== MediaType.Audio
             && (play.meta.mediaType !== MediaType.Unknown
                 || play.meta.mediaType === MediaType.Unknown && !this.config.data.allowUnknown
@@ -272,22 +349,6 @@ export default class JellyfinApiSource extends MemorySource {
     }
 
     getRecentlyPlayed = async (options = {}) => {
-
-        // itemUserData.data.Items[0].UserData.LastPlayedDate
-        // time when track was started playing
-        // 'played' is always true, for some reason
-        // const itemUserData = await getItemsApi(this.api).getItems({
-        //     userId: this.user.Id,
-        //     enableUserData: true,
-        //     sortBy: ItemSortBy.DatePlayed,
-        //     sortOrder: [SortOrder.Descending],
-        //     //fields: [ItemFields.],
-        //     excludeItemTypes: [BaseItemKind.CollectionFolder],
-        //     includeItemTypes: [BaseItemKind.Audio],
-        //     recursive: true,
-        //     limit: 50,
-        // });
-
 
         // for potential future use with offline scrobbling?
         //const activities = await getActivityLogApi(this.api).getLogEntries({hasUserId: true, minDate: dayjs().subtract(1, 'day').toISOString()});
