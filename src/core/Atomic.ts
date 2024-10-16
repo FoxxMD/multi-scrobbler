@@ -111,9 +111,30 @@ export interface PlayMeta {
     playId?: string
     newFromSource?: boolean
     url?: {
+        /**
+         * The URL where this track can be found for the serice it was created from
+         * 
+         * IE
+         * 
+         * * Spotify Source <-- url to spotify track
+         * * Maloja Client <--- url to specific scrobble
+         */
         web: string
+        /**
+         * The URL where this play was originally played
+         * 
+         * IE Frank Sinatra - My way FROM youtube.com <-- URL pointing to specific video
+         */
         origin?: string
         [key: string]: string
+    }
+    /**
+     * Hot-linkable images for use with displaying art for this play
+     */
+    art?: {
+        album?: string
+        track?: string
+        artist?: string
     }
     user?: string
     mediaType?: string

@@ -31,6 +31,20 @@ $primary: #00ACC1;
     z-index: 1;
   }
 
+  .player-album {
+    width: 100%;
+    height: 100%;
+    position: absolute;
+    left: calc($spacing/1);
+    border: 0;
+    outline: 0;
+    background: transparent;
+    text-shadow: rgba(black, 0.75) 0 0 5px;
+    box-shadow: none !important;
+    color: white !important;
+    z-index: 1;
+  }
+
   .toggle-playlist {
     position: absolute;
     top: calc($spacing/2);

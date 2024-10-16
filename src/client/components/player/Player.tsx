@@ -4,7 +4,7 @@ import PlayerTimestamp from "./PlayerTimestamp";
 import {SOURCE_SOT, SOURCE_SOT_TYPES, SourcePlayerJson} from "../../../core/Atomic";
 import PlayerInfo from "./PlayerInfo";
 import {FontAwesomeIcon} from "@fortawesome/react-fontawesome";
-import {faBars, faTimes, faQuestionCircle} from '@fortawesome/free-solid-svg-icons'
+import {faBars, faTimes, faQuestion} from '@fortawesome/free-solid-svg-icons'
 
 import {capitalize} from "../../../core/StringUtils";
 import Tooltip from "../Tooltip";
@@ -36,6 +36,9 @@ const Player = (props: PlayerProps) => {
                 artists = ['???'],
                 duration = 0
             } = {},
+            meta: {
+art = {},
+            } = {}
         } = {},
         play,
         listenedDuration,
@@ -71,18 +74,26 @@ const Player = (props: PlayerProps) => {
         setViewMode(newViewMode);
     }, [viewMode, setViewMode]);
 
+    const playArt = art.track ?? art.album ?? art.artist ?? undefined;
+
     return (
             <article className={["player", "mb-2"].join(' ')}>
                 <div className="player__wrapper">
-                    {sot === SOURCE_SOT.HISTORY ? <span className="player-tooltip"><Tooltip message="This player is for DISPLAY ONLY and likely represents a 'Now Playing' status exposed by the Source. For scrobbling Multi Scrobbler uses the 'recently played' or 'history' information provided by this source.">
-                        <FontAwesomeIcon color="black" icon={faQuestionCircle}/>
+                    {sot === SOURCE_SOT.HISTORY ? <span className="player-tooltip"><Tooltip
+                    classNames={['justify-end', 'mr-4']}
+                     message="This player is for DISPLAY ONLY and likely represents a 'Now Playing' status exposed by the Source. For scrobbling Multi Scrobbler uses the 'recently played' or 'history' information provided by this source.">
+                        <FontAwesomeIcon width={9} color="black" icon={faQuestion}/>
                     </Tooltip></span> : null}
                     <button className="button toggle-playlist" onClick={toggleViewMode}>
                         <FontAwesomeIcon color="black" icon={viewMode === 'playlist' ? faTimes : faBars}/>
                     </button>
                 <section className="player__body">
+                    <div className="player__info" style={{position: 'relative'}}>
+                    <div className="player-album">{playArt !== undefined ? <img style={{height: '100%'}} src={playArt}></img> : null}</div>
                     <p className="title">{calculated !== 'stopped' ? track : '-'}</p>
                     <p className="subtitle">{calculated !== 'stopped' ? artists.join(' / ') : '-'}</p>
+                    </div>
+
                     <PlayerTimestamp duration={duration} current={data.position || 0} />
                     <div className="flex">
                         <p className="stats flex-1 text-left">Status: {capitalize(calculated)}</p>
