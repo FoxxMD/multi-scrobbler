@@ -88,10 +88,10 @@ art = {},
                         <FontAwesomeIcon color="black" icon={viewMode === 'playlist' ? faTimes : faBars}/>
                     </button>
                 <section className="player__body">
-                    <div className="player__info" style={{position: 'relative'}}>
-                    <div className="player-album">{playArt !== undefined ? <img style={{height: '100%'}} src={playArt}></img> : null}</div>
-                    <p className="title">{calculated !== 'stopped' ? track : '-'}</p>
-                    <p className="subtitle">{calculated !== 'stopped' ? artists.join(' / ') : '-'}</p>
+                    <div className="player__info" style={{position: 'relative', zIndex: 0}}>
+                        <div className="player-album">{playArt !== undefined ? <img style={{height: '100%', maxWidth: '90px'}} src={playArt}></img> : null}</div>
+                        <p className="title">{calculated !== 'stopped' ? track : '-'}</p>
+                        <p className="subtitle">{calculated !== 'stopped' ? artists.join(' / ') : '-'}</p>
                     </div>
 
                     <PlayerTimestamp duration={duration} current={data.position || 0} />
