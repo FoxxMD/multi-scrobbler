@@ -1,4 +1,4 @@
-import { assert } from 'chai';
+import { assert, expect } from 'chai';
 import { describe, it } from 'mocha';
 import { generateBaseURL, intersect, joinedUrl } from "../../utils.js";
 import {
@@ -9,6 +9,7 @@ import {
 } from "../../utils/StringUtils.js";
 import { ExpectedResults } from "./interfaces.js";
 import testData from './playTestData.json';
+import { splitByFirstFound } from '../../../core/StringUtils.js';
 
 interface PlayTestFixture {
     caseHints: string[]
@@ -199,6 +200,16 @@ describe('URL Parsing', function () {
             const baseUrlNoSub = generateBaseURL('192.168.0.1', 9078);
             assert.equal(joinedUrl(baseUrlNoSub, '/lastfm/callback').toString(), 'http://192.168.0.1:9078/lastfm/callback');
             assert.equal(joinedUrl(baseUrlNoSub, 'lastfm/callback/').toString(), 'http://192.168.0.1:9078/lastfm/callback/');
+        });
+    });
+
+    describe('String Splitting', function() {
+
+        it('should not split string with no delimiter', function() {
+            const artistName = undefined;
+            const artist = "Phil Collins";
+            const artistStrings = splitByFirstFound(artist, [','], [artistName]);
+            expect(artistStrings).to.eql(['Phil Collins'])
         });
     });
 });

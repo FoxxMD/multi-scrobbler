@@ -149,7 +149,7 @@ export const splitByFirstFound = <T>(str: any, delims = [','], onNotAStringVal: 
         return onNotAStringVal;
     }
     for(const d of delims) {
-        const split = d.split(d);
+        const split = str.split(d);
         if(split.length > 1) {
             return split;
         }
