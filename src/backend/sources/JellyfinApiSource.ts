@@ -17,7 +17,7 @@ import {
     // @ts-expect-error weird typings?
     SessionInfo,
     // @ts-expect-error weird typings?
-    SortOrder, UserDto, VirtualFolderInfo, CollectionType, CollectionTypeOptions
+    SortOrder, UserDto, VirtualFolderInfo, CollectionType, CollectionTypeOptions, ImageUrlsApi
 } from "@jellyfin/sdk/lib/generated-client/index.js";
 import {
     // @ts-expect-error weird typings?
@@ -31,7 +31,9 @@ import {
     // @ts-expect-error weird typings?
     getApiKeyApi,
     // @ts-expect-error weird typings?
-    getLibraryStructureApi
+    getLibraryStructureApi,
+    // @ts-expect-error weird typings?
+    getImageApi
 } from "@jellyfin/sdk/lib/utils/api/index.js";
 import dayjs from "dayjs";
 import EventEmitter from "events";
@@ -48,7 +50,7 @@ import {
     PlayPlatformId, REPORTED_PLAYER_STATUSES
 } from "../common/infrastructure/Atomic.js";
 import { JellyApiSourceConfig } from "../common/infrastructure/config/source/jellyfin.js";
-import { combinePartsToString, genGroupIdStr, getPlatformIdFromData, parseBool, } from "../utils.js";
+import { combinePartsToString, genGroupIdStr, getPlatformIdFromData, joinedUrl, parseBool, } from "../utils.js";
 import { parseArrayFromMaybeString } from "../utils/StringUtils.js";
 import MemorySource from "./MemorySource.js";
 import { PlayerStateOptions } from "./PlayerState/AbstractPlayerState.js";
@@ -61,6 +63,7 @@ export default class JellyfinApiSource extends MemorySource {
 
     client: Jellyfin
     api: Api
+    imageApi!: ImageUrlsApi
     wsClient!: WS;
     address!: string;
     user!: UserDto
@@ -174,6 +177,7 @@ export default class JellyfinApiSource extends MemorySource {
             const servers = await this.client.discovery.getRecommendedServerCandidates(this.config.data.url);
             const best = this.client.discovery.findBestServer(servers);
             this.api = this.client.createApi(best.address);
+            this.imageApi = getImageApi(this.api);
             this.address = best.address;
             const info = await getSystemApi(this.api).getPublicSystemInfo();
             return `Found Server ${info.data.ServerName} (${info.data.Version})`;
@@ -322,6 +326,35 @@ export default class JellyfinApiSource extends MemorySource {
         return true;
     }
 
+    formatPlayObjAware(obj: BaseItemDto, options: FormatPlayObjectOptions = {}): PlayObject {
+        const play = JellyfinApiSource.formatPlayObj(obj, options);
+
+        const {
+            ParentId,
+            AlbumId,
+            AlbumPrimaryImageTag,
+            ServerId
+        } = obj;
+
+
+        if(AlbumId !== undefined && AlbumPrimaryImageTag !== undefined) {
+            const existingArt = play.meta?.art || {};
+            existingArt.album = this.imageApi.getItemImageUrlById(AlbumId, undefined, {maxHeight: 500});
+            play.meta.art = existingArt;
+        }
+        if(ParentId !== undefined) {
+            const u = joinedUrl(new URL(this.address), '/web/#/details')
+            u.searchParams.append('id', ParentId);
+            u.searchParams.append('serviceId', ServerId);
+            play.meta.url = {
+                ...(play.meta?.url || {}),
+                web: u.toString().replace('%23', '#')
+            }
+        }
+
+        return play;
+    }
+
     static formatPlayObj(obj: BaseItemDto, options: FormatPlayObjectOptions = {}): PlayObject {
 
         const {
@@ -410,7 +443,7 @@ export default class JellyfinApiSource extends MemorySource {
 
         let play: PlayObject | undefined;
         if(NowPlayingItem !== undefined) {
-            const sessionPlay = JellyfinApiSource.formatPlayObj(NowPlayingItem);
+            const sessionPlay = this.formatPlayObjAware(NowPlayingItem);
             play = {
                 data: {
                     ...sessionPlay.data

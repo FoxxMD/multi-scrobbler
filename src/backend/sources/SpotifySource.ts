@@ -155,7 +155,11 @@ export default class SpotifySource extends MemorySource {
             throw new Error('Could not determine format of spotify response data');
         }
 
-        const {name: albumName, artists: albumArtists = []} = album || {};
+        const {
+            name: albumName,
+            artists: albumArtists = [],
+            images = []
+        } = album || {};
 
         const trackArtistIds = artists.map(x => x.id);
         let actualAlbumArtists: ArtistObjectSimplified[] = [];
@@ -165,7 +169,15 @@ export default class SpotifySource extends MemorySource {
             actualAlbumArtists = albumArtists;
         }
 
-        return {
+        let imageData: {url: string};
+        if(images.length > 0) {
+            imageData = images.find(x => x.height < 640);
+            if(imageData === undefined) {
+                imageData = images[0];
+            }
+        }
+
+        const play: PlayObject = {
             data: {
                 artists: artists.map(x => x.name),
                 albumArtists: actualAlbumArtists.map(x => x.name),
@@ -187,6 +199,12 @@ export default class SpotifySource extends MemorySource {
                 }
             }
         };
+
+        if(imageData !== undefined) {
+            play.meta.art = {album: imageData.url};
+        }
+
+        return play;
     }
 
     buildSpotifyApi = async () => {
@@ -345,7 +363,7 @@ export default class SpotifySource extends MemorySource {
             limit
         });
         const result = await this.callApi<ReturnType<typeof this.spotifyApi.getMyRecentlyPlayedTracks>>(func);
-        return result.body.items.map((x: any) => SpotifySource.formatPlayObj(x)).sort(sortByOldestPlayDate);
+        return result.body.items.map((x: PlayHistoryObject) => SpotifySource.formatPlayObj(x)).sort(sortByOldestPlayDate);
     }
 
     getUpstreamRecentlyPlayed = async (options: RecentlyPlayedOptions = {}): Promise<PlayObject[]> => {
