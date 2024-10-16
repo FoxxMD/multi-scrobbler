@@ -198,6 +198,7 @@ export abstract class AbstractPlayerState {
 
     protected stopPlayer() {
         this.reportedStatus = 'stopped';
+        this.calculatedStatus = 'stopped';
         this.playLastUpdatedAt = dayjs();
         this.currentListenSessionEnd();
     }
