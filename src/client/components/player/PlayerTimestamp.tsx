@@ -23,7 +23,7 @@ const Timestamp = (props: TimestampProps) => {
                 {convertTime(Math.floor(props.current))}
             </div>
             <div className="timestamp__progress">
-                <div style={{ width: Math.floor((props.current / props.duration) * 100) + "%" }}></div>
+                <div style={{ width: (props.current === 0 && props.duration === 0 ? 0 : Math.floor((props.current / props.duration) * 100)) + "%" }}></div>
             </div>
             <div className="timestamp__total">
                 {convertTime(Math.floor(props.duration) - Math.floor(props.current))}

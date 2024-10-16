@@ -81,12 +81,12 @@ const Player = (props: PlayerProps) => {
                         <FontAwesomeIcon color="black" icon={viewMode === 'playlist' ? faTimes : faBars}/>
                     </button>
                 <section className="player__body">
-                    <p className="title">{track}</p>
-                    <p className="subtitle">{artists.join(' / ')}</p>
+                    <p className="title">{calculated !== 'stopped' ? track : '-'}</p>
+                    <p className="subtitle">{calculated !== 'stopped' ? artists.join(' / ') : '-'}</p>
                     <PlayerTimestamp duration={duration} current={data.position || 0} />
                     <div className="flex">
                         <p className="stats flex-1 text-left">Status: {capitalize(calculated)}</p>
-                        <p className="stats flex-1 text-right">Listened: {listenedDuration.toFixed(0)}s{durPer}</p>
+                        <p className="stats flex-1 text-right">Listened: {calculated !== 'stopped' ? `${listenedDuration.toFixed(0)}s` : '-'}{durPer}</p>
                     </div>
                 </section>
                     <PlayerInfo data={data} isVisible={viewMode === 'playlist'} />
