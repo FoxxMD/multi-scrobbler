@@ -32,7 +32,7 @@ export interface ClientStatusData {
 }
 
 export type PlayObjectIncludeTypes = 'album' | 'time' | 'artist' | 'track' | 'timeFromNow' | 'trackId' | 'comment' | 'platform';
-export const recentIncludes: PlayObjectIncludeTypes[] = ['time', 'timeFromNow', 'track', 'album', 'artist', 'comment', 'platform'];
+export const recentIncludes: PlayObjectIncludeTypes[] = ['time', 'timeFromNow', 'track', 'album', 'artist', 'comment'];
 
 export interface TrackStringOptions<T = string> {
     include?: PlayObjectIncludeTypes[]
