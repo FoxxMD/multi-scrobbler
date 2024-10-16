@@ -48,7 +48,7 @@ import {
     PlayPlatformId, REPORTED_PLAYER_STATUSES
 } from "../common/infrastructure/Atomic.js";
 import { JellyApiSourceConfig } from "../common/infrastructure/config/source/jellyfin.js";
-import { combinePartsToString, parseBool, } from "../utils.js";
+import { combinePartsToString, genGroupIdStr, getPlatformIdFromData, parseBool, } from "../utils.js";
 import { parseArrayFromMaybeString } from "../utils/StringUtils.js";
 import MemorySource from "./MemorySource.js";
 import { PlayerStateOptions } from "./PlayerState/AbstractPlayerState.js";
@@ -261,55 +261,64 @@ export default class JellyfinApiSource extends MemorySource {
         }
     }
 
-    isActivityValid = (play: PlayObject, session: SessionInfo): boolean | string => {
-        if(this.usersAllow.length > 0 && !this.usersAllow.includes(play.meta.user.toLocaleLowerCase())) {
-            return `'usersAllow does not include user ${play.meta.user}`;
+    isActivityValid = (state: PlayerStateDataMaybePlay, session: SessionInfo): boolean | string => {
+        if(this.usersAllow.length > 0 && !this.usersAllow.includes(state.platformId[1].toLocaleLowerCase())) {
+            return `'usersAllow does not include user ${state.platformId[1]}`;
         }
-        if(this.usersBlock.length > 0 && this.usersBlock.includes(play.meta.user.toLocaleLowerCase())) {
-            return `'usersBlock includes user ${play.meta.user}`;
-        }
-
-        if(this.devicesAllow.length > 0 && !this.devicesAllow.some(x => play.meta.deviceId.toLocaleLowerCase().includes(x))) {
-            return `'devicesAllow does not include a phrase found in ${play.meta.deviceId}`;
-        }
-        if(this.devicesBlock.length > 0 && this.devicesBlock.some(x => play.meta.deviceId.toLocaleLowerCase().includes(x))) {
-            return `'devicesBlock includes a phrase found in ${play.meta.deviceId}`;
+        if(this.usersBlock.length > 0 && this.usersBlock.includes(state.platformId[1].toLocaleLowerCase())) {
+            return `'usersBlock includes user ${state.platformId[1]}`;
         }
 
-        const allowedLibraries = this.getAllowedLibraries();
-        if(allowedLibraries.length > 0 && !allowedLibraries.map(x => x.paths).flat(1).some(x => session.NowPlayingItem.Path.includes(x))) {
-            return `media not included in librariesAllow`;
+        if(this.devicesAllow.length > 0 && !this.devicesAllow.some(x => state.platformId[0].toLocaleLowerCase().includes(x))) {
+            return `'devicesAllow does not include a phrase found in ${state.platformId[0]}`;
         }
-        
-        if(allowedLibraries.length === 0) {
-            const blockedLibraries = this.getBlockedLibraries();
-            if(blockedLibraries.length > 0) {
-                const blockedLibrary = blockedLibraries.find(x => x.paths.some(y => session.NowPlayingItem.Path.includes(y)));
-                if(blockedLibrary !== undefined) {
-                    return `media included in librariesBlock '${blockedLibrary.name}'`;
+        if(this.devicesBlock.length > 0 && this.devicesBlock.some(x => state.platformId[0].toLocaleLowerCase().includes(x))) {
+            return `'devicesBlock includes a phrase found in ${state.platformId[0]}`;
+        }
+
+
+        if(session.NowPlayingItem !== undefined) {
+            const allowedLibraries = this.getAllowedLibraries();
+            if(allowedLibraries.length > 0 && !allowedLibraries.map(x => x.paths).flat(1).some(x => session.NowPlayingItem.Path.includes(x))) {
+                return `media not included in librariesAllow`;
+            }
+            
+            if(allowedLibraries.length === 0) {
+                const blockedLibraries = this.getBlockedLibraries();
+                if(blockedLibraries.length > 0) {
+                    const blockedLibrary = blockedLibraries.find(x => x.paths.some(y => session.NowPlayingItem.Path.includes(y)));
+                    if(blockedLibrary !== undefined) {
+                        return `media included in librariesBlock '${blockedLibrary.name}'`;
+                    }
+                }
+    
+                if(!this.getValidLibraries().map(x => x.paths).flat(1).some(x => session.NowPlayingItem.Path.includes(x))) {
+                    return `media not included in a valid library`;
                 }
             }
+        }
 
-            if(!this.getValidLibraries().map(x => x.paths).flat(1).some(x => session.NowPlayingItem.Path.includes(x))) {
-                return `media not included in a valid library`;
+        if(state.play !== undefined) {
+            if(state.play.meta.mediaType !== MediaType.Audio
+                && (state.play.meta.mediaType !== MediaType.Unknown
+                    || state.play.meta.mediaType === MediaType.Unknown && !this.config.data.allowUnknown
+                )
+            ) {
+                return `media detected as ${state.play.meta.mediaType} (MediaType) is not allowed`;
             }
         }
 
-        if(play.meta.mediaType !== MediaType.Audio
-            && (play.meta.mediaType !== MediaType.Unknown
-                || play.meta.mediaType === MediaType.Unknown && !this.config.data.allowUnknown
-            )
-        ) {
-            return `media detected as ${play.meta.mediaType} (MediaType) is not allowed`;
+        if(session.NowPlayingItem !== undefined) {
+            if('ExtraType' in session.NowPlayingItem && session.NowPlayingItem.ExtraType === 'ThemeSong'/* 
+                || play.data.track === 'theme' && 
+                (play.data.artists === undefined || play.data.artists.length === 0) */) {
+                    return `media detected as a ThemeSong (ExtraType) is not allowed`;
+            }
+            if(session.NowPlayingItem.Type !== 'Audio') {
+                    return `media detected as a ${session.NowPlayingItem.Type} (Type) is not allowed`;
+            }
         }
-        if('ExtraType' in session.NowPlayingItem && session.NowPlayingItem.ExtraType === 'ThemeSong'/* 
-            || play.data.track === 'theme' && 
-            (play.data.artists === undefined || play.data.artists.length === 0) */) {
-                return `media detected as a ThemeSong (ExtraType) is not allowed`;
-        }
-        if(session.NowPlayingItem.Type !== 'Audio') {
-                return `media detected as a ${session.NowPlayingItem.Type} (Type) is not allowed`;
-        }
+
         return true;
     }
 
@@ -359,15 +368,22 @@ export default class JellyfinApiSource extends MemorySource {
         const nonMSSessions = sessions.data
         .filter(x => x.DeviceId !== this.deviceId)
         .map(x => [this.sessionToPlayerState(x), x])
-        .filter((x: [PlayerStateDataMaybePlay, SessionInfo]) => x[0].play !== undefined) as [PlayerStateData, SessionInfo][];
-        const validSessions: PlayerStateData[] = [];
+        .filter((x: [PlayerStateDataMaybePlay, SessionInfo]) => {
+            return x[0].play !== undefined
+            || this.hasPlayer(x[0]);
+        }) as [PlayerStateDataMaybePlay, SessionInfo][];
+        const validSessions: PlayerStateDataMaybePlay[] = [];
 
         for(const sessionData of nonMSSessions) {
-            const validPlay = this.isActivityValid(sessionData[0].play, sessionData[1]);
+            const validPlay = this.isActivityValid(sessionData[0], sessionData[1]);
             if(validPlay === true) {
                 validSessions.push(sessionData[0]);
             } else if(this.logFilterFailure !== false) {
-                this.logger[this.logFilterFailure](`Player State for  -> ${buildTrackString(sessionData[0].play, {include: ['artist', 'track', 'platform']})} <-- is being dropped because ${validPlay}`);
+                let stateIdentifyingInfo: string = genGroupIdStr(getPlatformIdFromData(sessionData[0]));
+                if(sessionData[0].play !== undefined) {
+                    stateIdentifyingInfo = buildTrackString(sessionData[0].play, {include: ['artist', 'track', 'platform']});
+                } 
+                this.logger[this.logFilterFailure](`Player State for  -> ${stateIdentifyingInfo} <-- is being dropped because ${validPlay}`);
             }
         }
         return this.processRecentPlays(validSessions);

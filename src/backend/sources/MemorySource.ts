@@ -7,9 +7,11 @@ import { PlayObject, SOURCE_SOT, SOURCE_SOT_TYPES, SourcePlayerObj } from "../..
 import { buildTrackString } from "../../core/StringUtils.js";
 import {
     asPlayerStateData,
+    asPlayerStateDataMaybePlay,
     CALCULATED_PLAYER_STATUSES,
     InternalConfig,
     PlayerStateData,
+    PlayerStateDataMaybePlay,
     PlayPlatformId,
     ProgressAwarePlayObject,
     SourceType,
@@ -98,6 +100,16 @@ export default class MemorySource extends AbstractSource {
         this.playerState.set(idStr, '');
     }
 
+    hasPlayer = (data: string | PlayerStateDataMaybePlay): boolean => {
+        let id: string;
+        if(typeof data === 'string') {
+            id = data;
+        } else {
+            id = genGroupIdStr(getPlatformIdFromData(data));
+        }
+        return this.players.has(id);
+    }
+
     deletePlayer = (id: string, reason?: string) => {
         if(!this.players.has(id)) {
             return;
@@ -110,7 +122,7 @@ export default class MemorySource extends AbstractSource {
         this.emitEvent('playerDelete', {platformId: id});
     }
 
-    processRecentPlays = (datas: (PlayObject | PlayerStateData)[]) => {
+    processRecentPlays = (datas: (PlayObject | PlayerStateDataMaybePlay)[]) => {
 
         const {
             options: {
@@ -139,7 +151,7 @@ export default class MemorySource extends AbstractSource {
 
         for (const [key, player] of this.players.entries()) {
 
-            let incomingData: PlayObject | PlayerStateData;
+            let incomingData: PlayObject | PlayerStateDataMaybePlay;
             // get all incoming datas relevant for each player (this should only be one)
             const relevantDatas = datas.filter(x => {
                 const id = getPlatformIdFromData(x);
@@ -155,7 +167,7 @@ export default class MemorySource extends AbstractSource {
                 }
                 incomingData = relevantDatas[0];
 
-                const [currPlay, prevPlay] = asPlayerStateData(incomingData) ? player.setState(incomingData.status, incomingData.play) : player.setState(undefined, incomingData);
+                const [currPlay, prevPlay] = asPlayerStateDataMaybePlay(incomingData) ? player.setState(incomingData.status, incomingData.play) : player.setState(undefined, incomingData);
                 const candidate = prevPlay !== undefined ? prevPlay : currPlay;
                 const playChanged = prevPlay !== undefined;
 

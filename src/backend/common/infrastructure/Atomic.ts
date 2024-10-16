@@ -126,6 +126,10 @@ export const asPlayerStateData = (obj: object): obj is PlayerStateData => {
     return 'platformId' in obj && 'play' in obj;
 }
 
+export const asPlayerStateDataMaybePlay = (obj: object): obj is PlayerStateDataMaybePlay => {
+    return 'platformId' in obj;
+}
+
 export interface FormatPlayObjectOptions {
     newFromSource?: boolean
     parsedFrom?: string

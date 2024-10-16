@@ -15,6 +15,7 @@ import {
     // @ts-expect-error weird typings?
     SessionInfo,
 } from "@jellyfin/sdk/lib/generated-client/index.js";
+import { PlayerStateDataMaybePlay } from "../../common/infrastructure/Atomic.js";
 
 const dataAsFixture = (data: any): TestFixture => {
     return data as TestFixture;
@@ -36,8 +37,24 @@ const createJfApi = (data: JellyApiData): JellyfinApiSource => {
 
 const defaultJfApiCreds = {url: 'http://example.com', user: 'MyUser', apiKey: '1234'};
 
-const validPlay = generatePlay({}, {mediaType: 'Audio', user: 'MyUser', deviceId: '1234'});
-const playWithMeta = (meta: PlayMeta): PlayObject => ({...validPlay, meta: {...validPlay.meta, ...meta}});
+const validPlayerState: PlayerStateDataMaybePlay = {
+    platformId: ['1234', 'MyUser'],
+    play: generatePlay({}, {mediaType: 'Audio', user: 'MyUser', deviceId: '1234'})
+}
+const playWithMeta = (meta: PlayMeta): PlayerStateDataMaybePlay => {
+    const {user, deviceId} = meta;
+    const platformId = validPlayerState.platformId;
+    return {
+    ...validPlayerState,
+    platformId: [deviceId ?? platformId[0], user ?? platformId[1]],
+    play: {
+        ...validPlayerState.play,
+        meta: {
+            ...validPlayerState.play?.meta,
+            ...meta
+        }
+    }
+}}// ({...validPlayerState, meta: {...validPlayerState.meta, ...meta}});
 
 const nowPlayingSession = (data: object): SessionInfo => ({...validSession, NowPlayingItem: {...validSession.NowPlayingItem, ...data}});
 
@@ -124,7 +141,7 @@ describe("Jellyfin API Source", function() {
                 await jf.buildInitData();
     
                 expect(jf.isActivityValid(playWithMeta({user: 'SomeOtherUser'}), validSession)).to.not.be.true;
-                expect(jf.isActivityValid(validPlay, validSession)).to.be.true;
+                expect(jf.isActivityValid(validPlayerState, validSession)).to.be.true;
                 expect(jf.isActivityValid(playWithMeta({user: 'myuser'}), validSession)).to.be.true;
                 await jf.destroy();
             });
@@ -134,7 +151,7 @@ describe("Jellyfin API Source", function() {
                 await jf.buildInitData();
     
                 expect(jf.isActivityValid(playWithMeta({user: 'BadUser'}), validSession)).to.not.be.true;
-                expect(jf.isActivityValid(validPlay, validSession)).to.be.true;
+                expect(jf.isActivityValid(validPlayerState, validSession)).to.be.true;
                 expect(jf.isActivityValid(playWithMeta({user: 'myuser'}), validSession)).to.be.true;
                 await jf.destroy();
             });
@@ -143,7 +160,7 @@ describe("Jellyfin API Source", function() {
                 const jf = createJfApi({...defaultJfApiCreds, devicesAllow: ['WebPlayer']});
                 await jf.buildInitData();
     
-                expect(jf.isActivityValid(validPlay, validSession)).to.not.be.true;
+                expect(jf.isActivityValid(validPlayerState, validSession)).to.not.be.true;
                 expect(jf.isActivityValid(playWithMeta({deviceId: 'WebPlayer'}), validSession)).to.be.true;
                 await jf.destroy();
             });
@@ -152,7 +169,7 @@ describe("Jellyfin API Source", function() {
                 const jf = createJfApi({...defaultJfApiCreds, devicesBlock: ['WebPlayer']});
                 await jf.buildInitData();
     
-                expect(jf.isActivityValid(validPlay, validSession)).to.be.true;
+                expect(jf.isActivityValid(validPlayerState, validSession)).to.be.true;
                 expect(jf.isActivityValid(playWithMeta({deviceId: 'WebPlayer'}), validSession)).to.not.be.true;
                 await jf.destroy();
             });
@@ -162,7 +179,7 @@ describe("Jellyfin API Source", function() {
                 await jf.buildInitData();
                 jf.libraries.push({name: 'CoolVideos', paths: ['/data/someOtherFolder'], collectionType: 'musicvideos'});
     
-                expect(jf.isActivityValid(validPlay, nowPlayingSession({Path: '/data/someOtherFolder/myMusic.mp3'}))).to.be.true;
+                expect(jf.isActivityValid(validPlayerState, nowPlayingSession({Path: '/data/someOtherFolder/myMusic.mp3'}))).to.be.true;
                 await jf.destroy();
             });
 
@@ -170,8 +187,8 @@ describe("Jellyfin API Source", function() {
                 const jf = createJfApi({...defaultJfApiCreds, librariesAllow: ['music']});
                 await jf.buildInitData();
     
-                expect(jf.isActivityValid(validPlay, validSession)).to.be.true;
-                expect(jf.isActivityValid(validPlay, nowPlayingSession({Path: '/data/someOtherFolder/myMusic.mp3'}))).to.not.be.true;
+                expect(jf.isActivityValid(validPlayerState, validSession)).to.be.true;
+                expect(jf.isActivityValid(validPlayerState, nowPlayingSession({Path: '/data/someOtherFolder/myMusic.mp3'}))).to.not.be.true;
                 await jf.destroy();
             });
 
@@ -180,8 +197,8 @@ describe("Jellyfin API Source", function() {
                 await jf.buildInitData();
                 jf.libraries.push({name: 'CoolVideos', paths: ['/data/someOtherFolder'], collectionType: 'musicvideos'});
     
-                expect(jf.isActivityValid(validPlay, validSession)).to.be.true;
-                expect(jf.isActivityValid(validPlay, nowPlayingSession({Path: '/data/someOtherFolder/myMusic.mp3'}))).to.be.true;
+                expect(jf.isActivityValid(validPlayerState, validSession)).to.be.true;
+                expect(jf.isActivityValid(validPlayerState, nowPlayingSession({Path: '/data/someOtherFolder/myMusic.mp3'}))).to.be.true;
                 await jf.destroy();
             });
     
@@ -190,8 +207,8 @@ describe("Jellyfin API Source", function() {
                 await jf.buildInitData();
                 jf.libraries.push({name: 'CoolMusic', paths: ['/data/someOtherFolder'], collectionType: 'music'});
     
-                expect(jf.isActivityValid(validPlay, validSession)).to.not.be.true;
-                expect(jf.isActivityValid(validPlay, nowPlayingSession({Path: '/data/someOtherFolder/myMusic.mp3'}))).to.be.true;
+                expect(jf.isActivityValid(validPlayerState, validSession)).to.not.be.true;
+                expect(jf.isActivityValid(validPlayerState, nowPlayingSession({Path: '/data/someOtherFolder/myMusic.mp3'}))).to.be.true;
                 await jf.destroy();
             });
 
@@ -203,7 +220,7 @@ describe("Jellyfin API Source", function() {
                 const jf = createJfApi({...defaultJfApiCreds});
                 await jf.buildInitData();
     
-                expect(jf.isActivityValid(validPlay, validSession)).to.be.true;
+                expect(jf.isActivityValid(validPlayerState, validSession)).to.be.true;
                 await jf.destroy();
             });
 
@@ -212,7 +229,7 @@ describe("Jellyfin API Source", function() {
                 await jf.buildInitData();
                 jf.libraries.push({name: 'CoolVideos', paths: ['/data/someOtherFolder'], collectionType: 'musicvideos'});
     
-                expect(jf.isActivityValid(validPlay, nowPlayingSession({Path: '/data/someOtherFolder/myMusic.mp3'}))).to.not.be.true;
+                expect(jf.isActivityValid(validPlayerState, nowPlayingSession({Path: '/data/someOtherFolder/myMusic.mp3'}))).to.not.be.true;
                 await jf.destroy();
             });
 
@@ -220,7 +237,7 @@ describe("Jellyfin API Source", function() {
                 const jf = createJfApi({...defaultJfApiCreds});
                 await jf.buildInitData();
     
-                expect(jf.isActivityValid(validPlay, nowPlayingSession({Type: 'Book'}))).to.not.be.true;
+                expect(jf.isActivityValid(validPlayerState, nowPlayingSession({Type: 'Book'}))).to.not.be.true;
                 await jf.destroy();
             });
     
@@ -246,7 +263,7 @@ describe("Jellyfin API Source", function() {
                 const jf = createJfApi({...defaultJfApiCreds});
                 await jf.buildInitData();
     
-                expect(jf.isActivityValid(validPlay, nowPlayingSession({ExtraType: 'ThemeSong'}))).to.not.be.true;
+                expect(jf.isActivityValid(validPlayerState, nowPlayingSession({ExtraType: 'ThemeSong'}))).to.not.be.true;
                 await jf.destroy();
             });
 

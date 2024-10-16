@@ -17,10 +17,12 @@ import { TimeoutError, WebapiError } from "spotify-web-api-node/src/response-err
 import { PlayObject } from "../core/Atomic.js";
 import {
     asPlayerStateData,
+    asPlayerStateDataMaybePlay,
     NO_DEVICE,
     NO_USER,
     numberFormatOptions,
     PlayerStateData,
+    PlayerStateDataMaybePlay,
     PlayPlatformId,
     ProgressAwarePlayObject,
     RegExResult,
@@ -454,8 +456,8 @@ export const genGroupIdStr = (id: PlayPlatformId) => {
 }
 export const genGroupId = (play: PlayObject): PlayPlatformId => [play.meta.deviceId ?? NO_DEVICE, play.meta.user ?? NO_USER];
 
-export const getPlatformIdFromData = (data: PlayObject | PlayerStateData) => {
-    if(asPlayerStateData(data)) {
+export const getPlatformIdFromData = (data: PlayObject | PlayerStateDataMaybePlay) => {
+    if(asPlayerStateDataMaybePlay(data)) {
         return data.platformId;
     }
     return genGroupId(data);
