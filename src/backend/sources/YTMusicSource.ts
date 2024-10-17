@@ -127,7 +127,9 @@ export default class YTMusicSource extends AbstractSource {
     }
 
     clearCredentials = async () => {
-        await this.yti.session.signOut();
+        if(this.yti.session.logged_in) {
+            await this.yti.session.signOut();
+        }
     }
 
     doAuthentication = async () => {
