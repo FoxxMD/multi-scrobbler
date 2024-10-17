@@ -1,4 +1,4 @@
-import { getListDiff } from "@donedeal0/superdiff";
+import { getListDiff, ListDiff } from "@donedeal0/superdiff";
 import { PlayObject } from "../../core/Atomic.js";
 import { buildTrackString } from "../../core/StringUtils.js";
 
@@ -38,7 +38,7 @@ export type ListTransformers = PlayTransformer[];
 
 export const defaultListTransformers: ListTransformers = [metaInvariantTransform, playDateInvariantTransform];
 
-export const getPlaysDiff = (aPlays: PlayObject[], bPlays: PlayObject[], transformers: ListTransformers = defaultListTransformers) => {
+export const getPlaysDiff = (aPlays: PlayObject[], bPlays: PlayObject[], transformers: ListTransformers = defaultListTransformers): ListDiff => {
     const cleanAPlays = transformers === undefined ? aPlays : transformers.reduce((acc: PlayObject[], curr) => acc.map(curr), aPlays);
     const cleanBPlays = transformers === undefined ? bPlays : transformers.reduce((acc: PlayObject[], curr) => acc.map(curr), bPlays);
 
@@ -173,10 +173,10 @@ export const playsAreBumpedOnly = (aPlays: PlayObject[], bPlays: PlayObject[], t
    return [true, addTypeShouldBe === 'prepend' ? [bPlays[0]] : [bPlays[bPlays.length - 1]], addTypeShouldBe];
 }
 
-export const humanReadableDiff = (aPlay: PlayObject[], bPlay: PlayObject[], result: any): string => {
+export const humanReadableDiff = (aPlay: PlayObject[], bPlay: PlayObject[], result: ListDiff): string => {
     const changes: [string, string?][] = [];
     for(const [index, play] of bPlay.entries()) {
-        const ab: [string, string?] = [`${index + 1}. ${buildTrackString(play)}`];
+        const ab: [string, string?] = [`${index + 1}. ${buildTrackString(play, {include: ['artist', 'track', 'trackId', 'album']})}`];
 
         const isEqual = result.diff.some(x => x.status === 'equal' && x.prevIndex === index && x.newIndex === index);
         if(!isEqual) {
@@ -197,7 +197,7 @@ export const humanReadableDiff = (aPlay: PlayObject[], bPlay: PlayObject[], resu
                         // was updated, probably??
                         const updated = result.diff.filter(x => x.status === 'deleted' && x.prevIndex === index);
                         if(updated.length > 0) {
-                            ab.push(`Updated - Original => ${buildTrackString( aPlay[updated[0].preIndex])}`);
+                            ab.push(`Updated - Original => ${buildTrackString( aPlay[updated[0].prevIndex])}`);
                         } else {
                             ab.push('Should not have gotten this far!');
                         }
