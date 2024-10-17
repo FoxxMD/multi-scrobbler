@@ -1,107 +1,194 @@
 import dayjs from "dayjs";
 import EventEmitter from "events";
-import YouTubeMusic from "youtube-music-ts-api";
-import { IYouTubeMusicAuthenticated } from "youtube-music-ts-api/interfaces-primary";
-import { IPlaylistDetail, ITrackDetail } from "youtube-music-ts-api/interfaces-supplementary";
 import { PlayObject } from "../../core/Atomic.js";
 import { FormatPlayObjectOptions, InternalConfig } from "../common/infrastructure/Atomic.js";
-import { YTMusicCredentials, YTMusicSourceConfig } from "../common/infrastructure/config/source/ytmusic.js";
-import { parseDurationFromTimestamp, readJson, writeFile } from "../utils.js";
+import { YTMusicSourceConfig } from "../common/infrastructure/config/source/ytmusic.js";
+import { Innertube, UniversalCache, Parser, YTNodes, ApiResponse, IBrowseResponse } from 'youtubei.js';
+import {resolve} from 'path';
+import { sleep } from "../utils.js";
 import {
     getPlaysDiff,
     humanReadableDiff,
     playsAreAddedOnly,
+    playsAreBumpedOnly,
     playsAreSortConsistent
 } from "../utils/PlayComparisonUtils.js";
 import AbstractSource, { RecentlyPlayedOptions } from "./AbstractSource.js";
+import { ListDiff } from "@donedeal0/superdiff";
+
+export const ytiHistoryResponseToListItems = (res: ApiResponse): YTNodes.MusicResponsiveListItem[] => {
+    const page = Parser.parseResponse<IBrowseResponse>(res.data);
+    const items = page.contents_memo.getType(YTNodes.MusicResponsiveListItem);
+    return Array.from(items);
+}
+
+const maybeJsonErrorInfo = (err: Error): object | string | undefined => {
+    if('info' in err) {
+        try {
+            return JSON.parse(err.info as string);
+        } catch (e) {
+            return err.info as string;
+        }
+    }
+    return undefined;
+}
+
+const loggedErrorExtra = (err: Error): object | undefined => {
+    const maybeInfo = maybeJsonErrorInfo(err);
+    if(maybeInfo === undefined) {
+        return undefined;
+    }
+    if(typeof maybeInfo === 'string') {
+        return {apiResponse: maybeInfo};
+    }
+    return maybeInfo;
+}
+
+export const ytiHistoryResponseFromShelfToPlays = (res: ApiResponse): PlayObject[] => {
+    const page = Parser.parseResponse<IBrowseResponse>(res.data);
+    const items: PlayObject[] = [];
+    const shelves = page.contents_memo.getType(YTNodes.MusicShelf);
+    shelves.forEach((shelf) => {
+        shelf.contents.forEach((listItem) => {
+            items.push(YTMusicSource.formatPlayObj(listItem, {shelf: shelf.title.text}));
+        });
+    });
+    return items;
+}
 
 export default class YTMusicSource extends AbstractSource {
-    apiInstance?: IYouTubeMusicAuthenticated
 
     requiresAuth = true;
+    requiresAuthInteraction = true;
 
     declare config: YTMusicSourceConfig
 
     recentlyPlayed: PlayObject[] = [];
 
+    yti: Innertube;
+    userCode?: string;
+    verificationUrl?: string;
+
     workingCredsPath: string;
-    currentCreds!: YTMusicCredentials;
 
     constructor(name: string, config: YTMusicSourceConfig, internal: InternalConfig, emitter: EventEmitter) {
         super('ytmusic', name, config, internal, emitter);
         this.canPoll = true;
         this.supportsUpstreamRecentlyPlayed = true;
-        this.workingCredsPath = `${this.configDir}/currentAuth-ytm-${name}.json`;
+        this.workingCredsPath = resolve(this.configDir, `yti-${this.name}`);
     }
 
-    protected writeCurrentAuth = async (cookie: string, authUser: number) => {
-        await writeFile(this.workingCredsPath, JSON.stringify({
-            cookie,
-            authUser
-        }));
+    public additionalApiData(): Record<string, any> {
+        const data: Record<string, any> = {};
+        if(this.userCode !== undefined) {
+            data.userCode = this.userCode;
+        }
+        return data;
     }
 
     protected async doBuildInitData(): Promise<true | string | undefined> {
-        let creds: YTMusicCredentials;
-        try {
-            creds = await readJson(this.workingCredsPath, {throwOnNotFound: false}) as YTMusicCredentials;
-            if(creds !== undefined) {
-                this.currentCreds = creds;
-                return `Read updated credentials from file currentAuth-ytm-${this.name}.json`;
+        this.yti = await Innertube.create({
+            cache: new UniversalCache(true, this.workingCredsPath)
+        });
+        this.yti.session.on('update-credentials', async ({ credentials }) => {
+            if(this.config.options?.logAuth) {
+                this.logger.debug(credentials, 'Credentials updated');
+            } else {
+                this.logger.debug('Credentials updated');
             }
-        } catch (e) {
-            this.logger.warn('Current YTMusic credentials file exists but could not be parsed', { path: this.workingCredsPath });
-        }
-        if(creds === undefined) {
-            if(this.config.data.cookie === undefined) {
-                throw new Error('No YTM cookies were found in configuration');
+            await this.yti.session.oauth.cacheCredentials();
+        });
+        this.yti.session.on('auth-pending', async (data) => {
+            this.userCode = data.user_code;
+            this.verificationUrl = data.verification_url;
+        });
+        this.yti.session.on('auth-error', async (data) => {
+            this.logger.error(new Error('YTM Authentication error', {cause: data}));
+        });
+        this.yti.session.on('auth', async ({ credentials }) => {
+            if(this.config.options?.logAuth) {
+                this.logger.debug(credentials, 'Auth success');
+            } else {
+                this.logger.debug('Auth success');
             }
-            this.currentCreds = this.config.data;
-            return 'Read initial credentials from config';
+            await this.yti.session.oauth.cacheCredentials();
+            this.userCode = undefined;
+            this.verificationUrl = undefined;
+            this.authed = true;
+        });
+        return true;
+    }
+
+    reauthenticate = async () => {
+        await this.tryStopPolling();
+        await this.clearCredentials();
+        this.authed = false;
+        await this.testAuth();
+    }
+
+    clearCredentials = async () => {
+        if(this.yti.session.logged_in) {
+            await this.yti.session.signOut();
         }
     }
 
     doAuthentication = async () => {
         try {
-            await this.getRecentlyPlayed();
+            await Promise.race([
+                sleep(300),
+                this.yti.session.signIn()
+            ]);
+            if(this.authed === false && this.userCode !== undefined) {
+                if(this.userCode !== undefined) {
+                    throw new Error(`Sign in with the code '${this.userCode}' using the authentication link on the dashboard or ${this.verificationUrl}`)
+                } else {
+                    throw new Error('Waited too long for auth response from YTM!');
+                }
+            }
+            try {
+                await this.yti.account.getInfo()
+            } catch (e) {
+                const info = loggedErrorExtra(e);
+                if(info !== undefined) {
+                    this.logger.error(info, 'Additional API response details')
+                }
+                throw new Error('Credentials exist but API calls are failing. Try re-authenticating?', {cause: e});
+            }
             return true;
         } catch (e) {
-            if(e.message.includes('Status code: 401')) {
-                let hint = 'Verify your cookie and authUser are correct.';
-                if(this.currentCreds.authUser === undefined) {
-                    hint = `${hint} TIP: 'authUser' is not defined your credentials. If you are using Chrome to retrieve credentials from music.youtube.com make sure the value from the 'X-Goog-AuthUser' is used as 'authUser'.`;
-                }
-                this.logger.error(`Authentication failed with the given credentials. ${hint} | Error => ${e.message}`);
-            }
             throw e;
         }
     }
 
-    static formatPlayObj(obj: ITrackDetail, options: FormatPlayObjectOptions = {}): PlayObject {
-        const {newFromSource = false} = options;
+    static formatPlayObj(obj: YTNodes.MusicResponsiveListItem, options: FormatPlayObjectOptions = {}): PlayObject {
+        const {newFromSource = false, shelf = undefined} = options;
         const {
             id,
             title,
             album: albumData,
             artists: artistsData,
-            duration: durTimestamp, // string timestamp
+            authors: authorData,
+            duration: dur, // string timestamp
         } = obj;
 
-        let artists = undefined,
+        let artists = [],
             album = undefined,
         duration = undefined;
         if(artistsData !== undefined) {
             artists = artistsData.map(x => x.name) as string[];
+        } else if(authorData !== undefined) {
+            artists = authorData.map(x => x.name) as string[];
         }
+
         let albumArtists: string[] = [];
+        if(artistsData !== undefined && authorData !== undefined) {
+            albumArtists = authorData.map(x => x.name) as string[];
+        }
         if(albumData !== undefined) {
             album = albumData.name;
-            if(albumData.artist !== undefined) {
-                albumArtists = [albumData.artist.name];
-            }
         }
-        if(durTimestamp !== undefined) {
-            const durObj = parseDurationFromTimestamp(durTimestamp);
+        if(dur!== undefined) {
+            const durObj = dayjs.duration(dur.seconds, 's')
             duration = durObj.asSeconds();
         }
         return {
@@ -118,57 +205,14 @@ export default class YTMusicSource extends AbstractSource {
                 source: 'YTMusic',
                 trackId: id,
                 newFromSource,
+                comment: shelf
             }
         }
     }
 
     recentlyPlayedTrackIsValid = (playObj: PlayObject) => playObj.meta.newFromSource
 
-    protected onAuthUpdate = (cookieStr: string, authUser: number, updated: Map<string, {new: string, old: string}>) => {
-        const {
-            options: {
-                logAuthUpdateChanges = false
-            } = {}
-        } = this.config;
-
-        if(logAuthUpdateChanges) {
-            const parts: string[] = [];
-            if(authUser !== this.currentCreds.authUser) {
-                parts.push(`X-Goog-Authuser: ${authUser}`);
-            }
-            for(const [k,v] of updated) {
-                parts.push(`Cookie ${k}: Old => ${v.old} | New => ${v.new}`);
-            }
-            this.logger.info(`Updated Auth -->\n${parts.join('\n')}`);
-        } else {
-            this.logger.verbose(`Updated Auth`);
-        }
-
-        this.currentCreds = {
-            cookie: cookieStr,
-            authUser
-        };
-
-
-        this.writeCurrentAuth(cookieStr, authUser).then(() => {});
-    }
-
-    api = async (): Promise<IYouTubeMusicAuthenticated> => {
-        if(this.apiInstance !== undefined) {
-            return this.apiInstance;
-        }
-        // @ts-expect-error default does exist
-        const ytm = new  YouTubeMusic.default() as YouTubeMusic;
-        try {
-            this.apiInstance = await ytm.authenticate(this.currentCreds.cookie, typeof this.config.data.authUser === 'string' ? Number.parseInt(this.config.data.authUser) : this.config.data.authUser, this.onAuthUpdate);
-        } catch (e: any) {
-            this.logger.error('Failed to authenticate', e);
-            throw e;
-        }
-        return this.apiInstance;
-    }
-
-    protected getLibraryHistory = async (): Promise<IPlaylistDetail> => {
+    protected getLibraryHistory = async (): Promise<ApiResponse> => {
         // internally for this call YT returns a *list* of playlists with decreasing granularity from most recent to least recent like this:
         // * Today
         // * Yesterday
@@ -177,14 +221,17 @@ export default class YTMusicSource extends AbstractSource {
         //
         // the playlist returned can therefore change abruptly IE MS started yesterday and new music listened to today -> "today" playlist is cleared
         try {
-            const playlist = await (await this.api()).getLibraryHistory();
-            return {tracks: [], ...playlist};
+            const res = await this.yti.actions.execute('/browse', {
+                browse_id: 'FEmusic_history',
+                client: 'YTMUSIC'
+            });
+            return res;
         } catch (e) {
             throw e;
         }
     }
 
-    protected getLibraryHistoryPlaylists = async (): Promise<IPlaylistDetail[]> => {
+    protected getLibraryHistoryPlaylists = async (): Promise<PlayObject[]> => {
         // internally for this call YT returns a *list* of playlists with decreasing granularity from most recent to least recent like this:
         // * Today
         // * Yesterday
@@ -193,26 +240,19 @@ export default class YTMusicSource extends AbstractSource {
         //
         // the playlist returned can therefore change abruptly IE MS started yesterday and new music listened to today -> "today" playlist is cleared
         try {
-            return await (await this.api()).getLibraryHistory(true) as IPlaylistDetail[];
+            const res = await this.getLibraryHistory();
+            return ytiHistoryResponseFromShelfToPlays(res);
         } catch (e) {
+            const info = loggedErrorExtra(e);
+            if(info !== undefined) {
+                this.logger.error(info, 'Additional API response details')
+            }
             throw e;
         }
     }
 
     getUpstreamRecentlyPlayed = async (options: RecentlyPlayedOptions = {}): Promise<PlayObject[]> => {
-        let playlists: IPlaylistDetail[];
-        try {
-            playlists = await this.getLibraryHistoryPlaylists()
-        } catch (e) {
-            throw e;
-        }
-        const playlistAwareTracks: PlayObject[][] = [];
-
-        for(const playlist of playlists) {
-            playlistAwareTracks.push(playlist.tracks.map((x) => YTMusicSource.formatPlayObj(x, {newFromSource: false})).map((x) => ({...x,meta: {...x.meta, comment: playlist.name}})))
-        }
-
-       return playlistAwareTracks.flat(1).slice(0, 100);
+       return (await this.getLibraryHistoryPlaylists()).slice(0, 100);
     }
 
     /**
@@ -221,7 +261,7 @@ export default class YTMusicSource extends AbstractSource {
     getRecentlyPlayed = async (options: RecentlyPlayedOptions = {}) => {
         const { display = false } = options;
 
-        let playlistDetail: IPlaylistDetail;
+        let playlistDetail: ApiResponse;
         try {
             playlistDetail = await this.getLibraryHistory();
         } catch (e) {
@@ -230,7 +270,10 @@ export default class YTMusicSource extends AbstractSource {
 
         let newPlays: PlayObject[] = [];
 
-        const plays = playlistDetail.tracks.map((x) => YTMusicSource.formatPlayObj(x, {newFromSource: false})).slice(0, 20);
+        const page = Parser.parseResponse<IBrowseResponse>(playlistDetail.data);
+        const shelfPlays = ytiHistoryResponseFromShelfToPlays(playlistDetail);
+        const listPlays = ytiHistoryResponseToListItems(playlistDetail).map((x) => YTMusicSource.formatPlayObj(x, {newFromSource: false}));
+        const plays = listPlays.slice(0, 20);
         if(this.polling === false) {
             this.recentlyPlayed = plays;
             newPlays = plays;
@@ -238,31 +281,45 @@ export default class YTMusicSource extends AbstractSource {
             if(playsAreSortConsistent(this.recentlyPlayed, plays)) {
                 return newPlays;
             }
-            const [ok, diff, addType] = playsAreAddedOnly(this.recentlyPlayed, plays);
-            if(!ok || addType === 'insert' || addType === 'append') {
+
+            let warnMsg: string;
+            const bumpResults = playsAreBumpedOnly(this.recentlyPlayed, plays);
+            if(bumpResults[0] === true) {
+                newPlays = bumpResults[1];
+            } else {
+                const addResults = playsAreAddedOnly(this.recentlyPlayed, plays);
+                if(addResults[0] === true) {
+                    newPlays = [...addResults[1]].reverse();
+                } else {
+                    warnMsg = 'YTM History returned temporally inconsistent order, resetting watched history to new list.';
+                }
+            }
+
+            if(warnMsg !== undefined || (newPlays.length > 0 && this.config.options?.logDiff === true)) {
                 const playsDiff = getPlaysDiff(this.recentlyPlayed, plays)
                 const humanDiff = humanReadableDiff(this.recentlyPlayed, plays, playsDiff);
-                this.logger.warn('YTM History returned temporally inconsistent order, resetting watched history to new list.');
-                this.logger.warn(`Changes from last seen list:
-${humanDiff}`);
-                this.recentlyPlayed = plays;
-                return newPlays;
-            } else {
-                // new plays
-                newPlays = [...diff].reverse();
-                this.recentlyPlayed = plays;
+                const diffMsg = `Changes from last seen list:
+    ${humanDiff}`;
+                if(warnMsg !== undefined) {
+                    this.logger.warn(warnMsg);
+                    this.logger.warn(diffMsg);
+                } else {
+                    this.logger.debug(diffMsg);
+                }
+            }
 
-                newPlays = newPlays.map((x) => ({
+            this.recentlyPlayed = plays;
+
+                newPlays = newPlays.map((x, index) => ({
                     data: {
                         ...x.data,
-                        playDate: dayjs().startOf('minute')
+                        playDate: dayjs().startOf('minute').add(index + 1, 's')
                     },
                     meta: {
                         ...x.meta,
                         newFromSource: true
                     }
                 }));
-            }
         }
 
         return newPlays;

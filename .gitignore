@@ -118,6 +118,7 @@ dist
 .pnp.*
 
 config/*.json
+config/yti-*
 *.txt
 .idea/
 

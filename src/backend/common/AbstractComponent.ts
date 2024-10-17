@@ -318,4 +318,8 @@ export default abstract class AbstractComponent {
             return play;
         }
     }
+
+    public additionalApiData(): Record<string, any> {
+        return {};
+    }
 }
