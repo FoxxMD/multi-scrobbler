@@ -5,7 +5,7 @@
     "clients": [],
     "data": {
       "token": "1234",
-      "url": "http://192.168.0.120:32400"
+      "url": "http://192.168.0.120:32400",
       "usersAllow": ["FoxxMD","SomeOtherUser"],
       "usersBlock": ["AnotherUser"],
       "devicesAllow": ["firefox"],
