@@ -19,7 +19,7 @@ import { MopidySourceConfig } from "../common/infrastructure/config/source/mopid
 import { MPDSourceConfig } from "../common/infrastructure/config/source/mpd.js";
 import { MPRISData, MPRISSourceConfig } from "../common/infrastructure/config/source/mpris.js";
 import { MusikcubeData, MusikcubeSourceConfig } from "../common/infrastructure/config/source/musikcube.js";
-import { PlexSourceConfig } from "../common/infrastructure/config/source/plex.js";
+import { PlexApiSourceConfig, PlexCompatConfig, PlexSourceConfig } from "../common/infrastructure/config/source/plex.js";
 import { SourceAIOConfig, SourceConfig } from "../common/infrastructure/config/source/sources.js";
 import { SpotifySourceConfig, SpotifySourceData } from "../common/infrastructure/config/source/spotify.js";
 import { SubsonicData, SubSonicSourceConfig } from "../common/infrastructure/config/source/subsonic.js";
@@ -52,6 +52,7 @@ import { WebScrobblerSource } from "./WebScrobblerSource.js";
 import YTMusicSource from "./YTMusicSource.js";
 import { Definition } from 'ts-json-schema-generator';
 import { getTypeSchemaFromConfigGenerator } from '../utils/SchemaUtils.js';
+import PlexApiSource from './PlexApiSource.js';
 
 type groupedNamedConfigs = {[key: string]: ParsedConfig[]};
 
@@ -118,7 +119,7 @@ export default class ScrobbleSources {
                     this.schemaDefinitions[type] = getTypeSchemaFromConfigGenerator("SpotifySourceConfig");
                     break;
                 case 'plex':
-                    this.schemaDefinitions[type] = getTypeSchemaFromConfigGenerator("PlexSourceConfig");
+                    this.schemaDefinitions[type] = getTypeSchemaFromConfigGenerator("PlexCompatConfig");
                     break;
                 case 'tautulli':
                     this.schemaDefinitions[type] = getTypeSchemaFromConfigGenerator("TautulliSourceConfig");
@@ -266,7 +267,15 @@ export default class ScrobbleSources {
                     break;
                 case 'plex':
                     const p = {
-                        user: process.env.PLEX_USER
+                        user: process.env.PLEX_USER,
+                        url: process.env.PLEX_URL,
+                        token: process.env.PLEX_TOKEN,
+                        usersAllow: process.env.PLEX_USERS_ALLOW,
+                        usersBlock: process.env.PLEX_USERS_BLOCK,
+                        devicesAllow: process.env.PLEX_DEVICES_ALLOW,
+                        deviceBlock: process.env.PLEX_DEVICES_BLOCK,
+                        librariesAllow: process.env.PLEX_LIBRARIES_ALLOW,
+                        librariesBlock: process.env.PLEX_LIBRARIES_BLOCK
                     };
                     if (!Object.values(p).every(x => x === undefined)) {
                         configs.push({
@@ -594,7 +603,12 @@ export default class ScrobbleSources {
                 newSource = new SpotifySource(name, compositeConfig as SpotifySourceConfig, this.internalConfig, this.emitter);
                 break;
             case 'plex':
-                newSource = await new PlexSource(name, compositeConfig as PlexSourceConfig, this.internalConfig, 'plex', this.emitter);
+                const plexConfig = compositeConfig as PlexCompatConfig;
+                if(plexConfig.data.token !== undefined) {
+                    newSource = await new PlexApiSource(name, compositeConfig as PlexApiSourceConfig, this.internalConfig, this.emitter); 
+                } else {
+                    newSource = await new PlexSource(name, compositeConfig as PlexSourceConfig, this.internalConfig, 'plex', this.emitter);
+                }
                 break;
             case 'tautulli':
                 newSource = await new TautulliSource(name, compositeConfig as TautulliSourceConfig, this.internalConfig, this.emitter);

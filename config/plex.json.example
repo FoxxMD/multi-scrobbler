@@ -1,15 +1,21 @@
 [
   {
-    "name": "MyPlex",
+    "name": "MyPlexApi",
     "enable": true,
     "clients": [],
     "data": {
-      "user": ["username@gmail.com","anotherUser@gmail.com"],
-      "libraries": ["music","my podcasts"],
-      "servers": ["myServer","anotherServer"],
-      "options": {
-        "logFilterFailure": "warn"
+      "token": "1234",
+      "url": "http://192.168.0.120:32400"
+      "usersAllow": ["FoxxMD","SomeOtherUser"],
+      "usersBlock": ["AnotherUser"],
+      "devicesAllow": ["firefox"],
+      "devicesBlock": ["google-home"],
+      "librariesAllow": ["GoodMusic"],
+      "librariesBlock": ["BadMusic"]
+    },
+    "options": {
+      "logPayload": true,
+      "logFilterFailure": "debug"
       }
-    }
   }
 ]
