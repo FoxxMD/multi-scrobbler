@@ -6,23 +6,10 @@ import { JsonPlayObject, PlayMeta, PlayObject } from "../../../core/Atomic.js";
 
 import validSessionResponse from './validSession.json';
 import { generatePlay } from "../utils/PlayTestUtils.js";
-import {
-    // @ts-expect-error weird typings?
-    SessionInfo,
-} from "@jellyfin/sdk/lib/generated-client/index.js";
 import { PlayerStateDataMaybePlay } from "../../common/infrastructure/Atomic.js";
 import { PlexApiData } from "../../common/infrastructure/config/source/plex.js";
 import PlexApiSource from "../../sources/PlexApiSource.js";
 import { GetSessionsMetadata } from "@lukehagar/plexjs/sdk/models/operations/getsessions.js";
-
-const dataAsFixture = (data: any): TestFixture => {
-    return data as TestFixture;
-}
-
-interface TestFixture {
-    data: any
-    expected: JsonPlayObject
-}
 
 const validSession = validSessionResponse.object.mediaContainer.metadata[0];
 
@@ -32,7 +19,7 @@ const createSource = async (data: PlexApiData, authedUser: string | false = 'MyU
         options: {}
     }, { localUrl: new URL('http://test'), configDir: 'test', logger: loggerTest, version: 'test' }, new EventEmitter());
     source.libraries = [{name: 'Music', collectionType: 'artist', uuid: 'dfsdf'}];
-    source.plexUser = {username: 'MyUser'}
+    source.plexUser = 'MyUser';
     await source.buildInitData();
     if(authedUser !== false && source.usersAllow.length === 0 && data.usersAllow !== true) {
         source.usersAllow.push(authedUser.toLocaleLowerCase());
@@ -82,6 +69,13 @@ describe("Plex API Source", function() {
             expect(s.devicesBlock).to.be.eql(['bad player']);
             expect(s.librariesAllow).to.be.eql(['musicone']);
             expect(s.librariesBlock).to.be.eql(['musicbad']);
+            await s.destroy();
+        });
+
+        it('Should include authenticating user as allowed when no others are set', async function () {
+            const s = await createSource({...defaultCreds});
+
+            expect(s.usersAllow).to.be.eql(['myuser']);
             await s.destroy();
         });
 

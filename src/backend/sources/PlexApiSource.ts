@@ -9,15 +9,18 @@ import {
     PlayerStateDataMaybePlay,
     PlayPlatformId, REPORTED_PLAYER_STATUSES
 } from "../common/infrastructure/Atomic.js";
-import { combinePartsToString, genGroupIdStr, getPlatformIdFromData, joinedUrl, parseBool, } from "../utils.js";
+import { combinePartsToString, genGroupIdStr, getFirstNonEmptyString, getPlatformIdFromData, joinedUrl, parseBool, } from "../utils.js";
 import { parseArrayFromMaybeString } from "../utils/StringUtils.js";
 import MemorySource from "./MemorySource.js";
 import { GetSessionsMetadata } from "@lukehagar/plexjs/sdk/models/operations/getsessions.js";
 import { PlexAPI } from "@lukehagar/plexjs";
+import {
+    SDKValidationError,
+  } from "@lukehagar/plexjs/sdk/models/errors";
 import { PlexApiSourceConfig } from "../common/infrastructure/config/source/plex.js";
-import {  MyPlex } from "@lukehagar/plexjs/sdk/models/operations/getmyplexaccount.js";
 import { isPortReachable } from '../utils/NetworkUtils.js';
 import normalizeUrl from 'normalize-url';
+import { GetTokenDetailsResponse, GetTokenDetailsUserPlexAccount } from '@lukehagar/plexjs/sdk/models/operations/gettokendetails.js';
 
 const shortDeviceId = truncateStringToLength(10, '');
 
@@ -25,7 +28,7 @@ export default class PlexApiSource extends MemorySource {
     users: string[] = [];
 
     plexApi: PlexAPI;
-    plexUser: MyPlex;
+    plexUser: string;
 
     deviceId: string;
 
@@ -127,14 +130,26 @@ export default class PlexApiSource extends MemorySource {
 
             const server = await this.plexApi.server.getServerCapabilities();
 
-            const account = (await this.plexApi.server.getMyPlexAccount());
-            this.plexUser = account.object.myPlex;
+            let userPlexAccount: GetTokenDetailsUserPlexAccount;
 
-            if(this.usersAllow.length === 0) {
-                this.usersAllow.push(this.plexUser.username.toLocaleLowerCase());
+            try {
+            const tokenDetails = await this.plexApi.authentication.getTokenDetails();
+            userPlexAccount = tokenDetails.userPlexAccount;
+            } catch (e) {
+                if(e instanceof SDKValidationError && 'UserPlexAccount' in (e.rawValue as object)) {
+                    userPlexAccount = (e.rawValue as {UserPlexAccount: GetTokenDetailsUserPlexAccount}).UserPlexAccount as GetTokenDetailsUserPlexAccount;
+                } else {
+                    throw new Error('Could not parse Plex Account details to determine authenticated username', {cause: e});
+                }
             }
 
-            this.logger.info(`Authenticated on behalf of user ${this.plexUser.username} on Server ${server.object.mediaContainer.friendlyName} (version ${server.object.mediaContainer.version})`);
+            this.plexUser = getFirstNonEmptyString([userPlexAccount.username, userPlexAccount.title, userPlexAccount.friendlyName, userPlexAccount.email]);
+
+            if(this.usersAllow.length === 0) {
+                this.usersAllow.push(this.plexUser.toLocaleLowerCase());
+            }
+
+            this.logger.info(`Authenticated on behalf of user ${this.plexUser} on Server ${server.object.mediaContainer.friendlyName} (version ${server.object.mediaContainer.version})`);
             return true;
         } catch (e) {
             if(e.message.includes('401') && e.message.includes('API error occurred')) {
