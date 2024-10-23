@@ -241,11 +241,14 @@ If your Spotify player has [Automix](https://community.spotify.com/t5/FAQs/What-
 
 ### [Plex](https://plex.tv)
 
+<Tabs groupId="plexType" queryString>
+<TabItem value="api" label="API">
+
 :::tip[Important Defaults]
 
 By default...
 
-* multi-scrobbler will **only** scrobbling for the user authenticated with the Plex Token. 
+* multi-scrobbler will **only** scrobble for the user authenticated with the Plex Token. 
   * Allowed Users (`usersAllow` or `PLEX_USERS_ALLOW`) are only necessary if you want to scrobble for additional users.
 * multi-scrobbler will only scrobble media found in Plex libraries that are labelled as **Music.**
   * `librariesAllow` or `PLEX_LIBRARIES_ALLOW` will override this
@@ -260,7 +263,7 @@ Find your [**Plex Token**](https://support.plex.tv/articles/204059436-finding-an
     <TabItem value="env" label="ENV">
         | Environmental Variable | Required? | Default | Description                                                            |
         | ---------------------- | --------- | ------- | ---------------------------------------------------------------------- |
-        | `PLEX_URL`             | **Yes**   |         | The URL of the Plex server IE `http://localhost:8096`                  |
+        | `PLEX_URL`             | **Yes**   |         | The URL of the Plex server IE `http://localhost:32400`                 |
         | `PLEX_TOKEN`           | **Yes**   |         | The **Plex Token** to use with the API                                 |
         | `PLEX_USERS_ALLOW`     | No        |         | Comma-separated list of usernames (from Plex) to scrobble for          |
         | `PLEX_USERS_BLOCK`     | No        |         | Comma-separated list of usernames (from Plex) to disallow scrobble for |
@@ -294,11 +297,27 @@ Find your [**Plex Token**](https://support.plex.tv/articles/204059436-finding-an
     </TabItem>
 </Tabs>
 
-#### Legacy Webhooks
+</TabItem>
+<TabItem value="webhook" label="Webhook (Deprecated)">
 
-Multi-scrobbler < 0.9.0 used [webhooks](https://support.plex.tv/articles/115002267687-webhooks) to support Plex scrobbling. The legacy docs are below.
+:::warning[Deprecated]
+
+Multi-scrobbler < 0.9.0 used [webhooks](https://support.plex.tv/articles/115002267687-webhooks) to support Plex scrobbling. This approach has been deprecated in favor of using Plex's API directly which has many benefits including **not requiring Plex Pass.**
+
+:::
 
 <details>
+
+    <summary>Migrating to API</summary>
+
+    * Follow the instructions in the API tab
+    * The `user` (`PLEX_USER`) setting has been renamed `usersAllow` (`PLEX_USERS_ALLOW`)
+      * If you were using this filter to ensure only scrobbles from yourself were registered then you no longer need this setting -- by default MS will only scrobble for the user the Plex Token is used for.
+    * The `servers` setting is no longer available as MS only scrobbles from the server using the API anyways.
+      * If you need to scrobble for multiple servers set up each server as a separate Plex API source
+    * The `libraries` setting has been renamed to `librariesAllow`
+
+</details>
 
 * In the Plex dashboard Navigate to your **Account/Settings** and find the **Webhooks** page
 * Click **Add Webhook**
@@ -338,7 +357,8 @@ Multi-scrobbler < 0.9.0 used [webhooks](https://support.plex.tv/articles/1150022
     </TabItem>
 </Tabs>
 
-</details>
+</TabItem>
+</Tabs>
 
 ### [Tautulli](https://tautulli.com)
 

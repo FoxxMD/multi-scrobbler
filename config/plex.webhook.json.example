@@ -1,4 +1,5 @@
 [
+  // DEPRECATED, use API Source instead
   // rename files to plex.json to use
   {
     "name": "MyPlex",
