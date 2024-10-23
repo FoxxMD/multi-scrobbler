@@ -21,8 +21,12 @@ import { PlexApiSourceConfig } from "../common/infrastructure/config/source/plex
 import { isPortReachable } from '../utils/NetworkUtils.js';
 import normalizeUrl from 'normalize-url';
 import { GetTokenDetailsResponse, GetTokenDetailsUserPlexAccount } from '@lukehagar/plexjs/sdk/models/operations/gettokendetails.js';
+import { parseRegexSingle } from '@foxxmd/regex-buddy-core';
+import { Readable } from 'node:stream';
 
 const shortDeviceId = truncateStringToLength(10, '');
+
+const THUMB_REGEX = new RegExp(/\/library\/metadata\/(?<ratingkey>\d+)\/thumb\/\d+/)
 
 export default class PlexApiSource extends MemorySource {
     users: string[] = [];
@@ -244,8 +248,26 @@ export default class PlexApiSource extends MemorySource {
     }
 
     formatPlayObjAware(obj: GetSessionsMetadata, options: FormatPlayObjectOptions = {}): PlayObject {
-        // TODO
-        return PlexApiSource.formatPlayObj(obj, options);
+        const play = PlexApiSource.formatPlayObj(obj, options);
+
+        const thumb = getFirstNonEmptyString([obj.thumb, obj.parentThumb, obj.grandparentThumb]);
+
+        if(thumb !== undefined) {
+            const res = parseRegexSingle(THUMB_REGEX, thumb)
+            if(res !== undefined) {
+                return {
+                    ...play,
+                    meta: {
+                        ...play.meta,
+                        art: {
+                            track: `/api/source/art?name=${this.name}&type=${this.type}&data=${res.named.ratingkey}`
+                        }
+                    }
+                }
+            }
+        }
+
+        return play;
     }
 
     static formatPlayObj(obj: GetSessionsMetadata, options: FormatPlayObjectOptions = {}): PlayObject {
@@ -314,6 +336,24 @@ export default class PlexApiSource extends MemorySource {
             }
         }
         return this.processRecentPlays(validSessions);
+    }
+
+    getSourceArt = async (data: string): Promise<[Readable, string]> => {
+        try {
+            const resp = await this.plexApi.media.getThumbImage({
+                ratingKey: parseInt(data),
+                width: 250,
+                height: 250,
+                minSize: 1,
+                upscale: 0,
+                xPlexToken: this.config.data.token
+            });
+
+            // @ts-expect-error its fine
+            return [Readable.fromWeb(resp.responseStream), resp.contentType]
+        } catch (e) {
+            throw new Error('Failed to get art', { cause: e });
+        }
     }
 
     sessionToPlayerState = (obj: GetSessionsMetadata): PlayerStateDataMaybePlay => {

@@ -28,6 +28,7 @@ import { makeClientCheckMiddle, makeSourceCheckMiddle } from "./middleware.js";
 import { setupPlexRoutes } from "./plexRoutes.js";
 import { setupTautulliRoutes } from "./tautulliRoutes.js";
 import { setupWebscrobblerRoutes } from "./webscrobblerRoutes.js";
+import { Readable } from 'node:stream';
 
 const maxBufferSize = 300;
 const output: Record<number, FixedSizeList<LogDataPretty>> =  {};
@@ -279,6 +280,34 @@ export const setupApi = (app: ExpressWithAsync, logger: Logger, appLoggerStream:
         }
 
         return res.json(result);
+    });
+
+    app.getAsync('/api/source/art', sourceMiddleFunc(false), async (req, res, next) => {
+        const {
+            // @ts-expect-error TS(2339): Property 'scrobbleSource' does not exist on type '... Remove this comment to see the full error message
+            scrobbleSource,
+            query: {
+                data
+            }
+        } = req;
+
+        const source = scrobbleSource as AbstractSource;
+        if(!(source instanceof MemorySource)) {
+            return res.status(500).json({message: 'Source does not support players'});
+        }
+
+        if('getSourceArt' in source && typeof source.getSourceArt === 'function') {
+            const [stream, contentType] = await source.getSourceArt(data);
+            res.writeHead(200, {'Content-Type': contentType});
+            try {
+                return stream.pipe(res);
+            } catch (e) {
+                logger.error(new Error(`Error occurred while trying to stream art for ${source.name} (${source.type}) | Data ${data}`, {cause: e}));
+                return res.status(500).json({message: 'Error during art retrieval'});
+            }
+        } else {
+            return res.status(500).json({message: `Source ${source.name} (${source.type} does not support art retrieval`});
+        }
     });
 
     app.getAsync('/api/dead', clientMiddleFunc(true), async (req, res, next) => {
