@@ -23,6 +23,9 @@ import normalizeUrl from 'normalize-url';
 import { GetTokenDetailsResponse, GetTokenDetailsUserPlexAccount } from '@lukehagar/plexjs/sdk/models/operations/gettokendetails.js';
 import { parseRegexSingle } from '@foxxmd/regex-buddy-core';
 import { Readable } from 'node:stream';
+import { PlexPlayerState } from './PlayerState/PlexPlayerState.js';
+import { PlayerStateOptions } from './PlayerState/AbstractPlayerState.js';
+import { Logger } from '@foxxmd/logging';
 
 const shortDeviceId = truncateStringToLength(10, '');
 
@@ -66,6 +69,7 @@ export default class PlexApiSource extends MemorySource {
         const {
             data: {
                 token,
+                interval = 5,
                 usersAllow = [],
                 usersBlock = [],
                 devicesAllow = [],
@@ -74,9 +78,11 @@ export default class PlexApiSource extends MemorySource {
                 librariesBlock = [],
             } = {},
             options: {
-                logFilterFailure = (parseBool(process.env.DEBUG_MODE) ? 'debug' : 'warn')
+                logFilterFailure = (parseBool(process.env.DEBUG_MODE) ? 'debug' : 'warn'),
             } = {}
         } = this.config;
+
+        this.config.data.interval = interval;
 
         if((token === undefined || token.trim() === '')) {
             throw new Error(`'token' must be specified in config data`);
@@ -385,4 +391,6 @@ export default class PlexApiSource extends MemorySource {
             position: viewOffset / 1000
         }
     }
+
+    getNewPlayer = (logger: Logger, id: PlayPlatformId, opts: PlayerStateOptions) => new PlexPlayerState(logger, id, opts);
 }

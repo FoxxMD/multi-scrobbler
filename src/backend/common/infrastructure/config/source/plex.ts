@@ -1,3 +1,4 @@
+import { PollingOptions } from "../common.js";
 import { CommonSourceConfig, CommonSourceData, CommonSourceOptions } from "./index.js";
 
 export interface PlexSourceData extends CommonSourceData {
@@ -35,7 +36,7 @@ export interface PlexSourceAIOConfig extends PlexSourceConfig {
     type: 'plex'
 }
 
-export interface PlexApiData extends CommonSourceData {
+export interface PlexApiData extends CommonSourceData, PollingOptions {
     token?: string
     /**
      * http(s)://HOST:PORT of the Plex server to connect to
