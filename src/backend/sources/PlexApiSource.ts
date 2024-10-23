@@ -237,6 +237,7 @@ export default class PlexApiSource extends MemorySource {
 
         const {
             type,
+            viewOffset,
             title: track,
             parentTitle: album,
             grandparentTitle: artist, // OR album artist
@@ -271,7 +272,8 @@ export default class PlexApiSource extends MemorySource {
                 mediaType: type,
                 source: 'Plex',
                 library,
-                deviceId: combinePartsToString([shortDeviceId(machineIdentifier), product, playerTitle])
+                deviceId: combinePartsToString([shortDeviceId(machineIdentifier), product, playerTitle]),
+                trackProgressPosition: viewOffset / 1000
             }
         }
     }
@@ -302,6 +304,7 @@ export default class PlexApiSource extends MemorySource {
     sessionToPlayerState = (obj: GetSessionsMetadata): PlayerStateDataMaybePlay => {
 
         const {
+            viewOffset,
             player: {
                 machineIdentifier,
                 product,
@@ -323,7 +326,8 @@ export default class PlexApiSource extends MemorySource {
         return {
             platformId: [msDeviceId, play.meta.user],
             play,
-            status: reportedStatus
+            status: reportedStatus,
+            position: viewOffset / 1000
         }
     }
 }
