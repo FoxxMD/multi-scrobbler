@@ -7,7 +7,9 @@ import {
     CALCULATED_PLAYER_STATUSES,
     NO_DEVICE,
     NO_USER,
-    REPORTED_PLAYER_STATUSES
+    PlayerStateDataMaybePlay,
+    REPORTED_PLAYER_STATUSES,
+    SINGLE_USER_PLATFORM_ID
 } from "../../common/infrastructure/Atomic.js";
 import { GenericPlayerState } from "../../sources/PlayerState/GenericPlayerState.js";
 import { playObjDataMatch } from "../../utils.js";
@@ -17,6 +19,8 @@ const logger = loggerTest;
 
 const newPlay = generatePlay({duration: 300});
 
+const testState = (data: Omit<PlayerStateDataMaybePlay, 'platformId'>): PlayerStateDataMaybePlay => ({...data, platformId: SINGLE_USER_PLATFORM_ID});
+
 describe('Basic player state', function () {
 
     it('Creates new play state when new', function () {
@@ -25,7 +29,7 @@ describe('Basic player state', function () {
         assert.isUndefined(player.currentListenRange);
         assert.isUndefined(player.currentPlay);
 
-        player.setState(undefined, newPlay);
+        player.update(testState({play: newPlay}));
 
         assert.isDefined(player.currentListenRange);
         assert.isDefined(player.currentPlay);
@@ -37,7 +41,7 @@ describe('Basic player state', function () {
         assert.isUndefined(player.currentListenRange);
         assert.isUndefined(player.currentPlay);
 
-        player.setState(undefined, newPlay);
+        player.update(testState({play: newPlay}));
 
         assert.isDefined(player.currentListenRange);
         assert.isDefined(player.currentPlay);
@@ -47,12 +51,12 @@ describe('Basic player state', function () {
     it('Creates new play state when incoming play is not the same as stored play', function () {
         const player = new GenericPlayerState(logger, [NO_DEVICE, NO_USER]);
 
-        player.setState(undefined, newPlay);
+        player.update(testState({play: newPlay}));
 
         assert.isTrue(playObjDataMatch(player.currentPlay, newPlay));
 
         const nextPlay = generatePlay({playDate: newPlay.data.playDate.add(2, 'seconds')});
-        const [returnedPlay, prevPlay] = player.setState(undefined, nextPlay);
+        const [returnedPlay, prevPlay] = player.update(testState({play: nextPlay}));
 
         assert.isTrue(playObjDataMatch(prevPlay, newPlay));
         assert.isTrue(playObjDataMatch(player.currentPlay, nextPlay));
@@ -64,10 +68,10 @@ describe('Player status', function () {
     it('New player transitions from unknown to playing on n+1 states', function () {
         const player = new GenericPlayerState(logger, [NO_DEVICE, NO_USER]);
 
-        player.setState(undefined, newPlay);
+        player.update(testState({play: newPlay}));
         assert.equal(CALCULATED_PLAYER_STATUSES.unknown, player.calculatedStatus);
 
-        player.setState(undefined, newPlay, dayjs().add(10, 'seconds'));
+        player.update(testState({play: newPlay}), dayjs().add(10, 'seconds'));
         assert.equal(CALCULATED_PLAYER_STATUSES.playing, player.calculatedStatus);
     });
 
@@ -76,8 +80,8 @@ describe('Player status', function () {
         it('Calculated state is playing when source reports playing', function () {
             const player = new GenericPlayerState(logger, [NO_DEVICE, NO_USER]);
 
-            player.setState(REPORTED_PLAYER_STATUSES.playing, newPlay);
-            player.setState(REPORTED_PLAYER_STATUSES.playing, newPlay, dayjs().add(10, 'seconds'));
+            player.update(testState({play: newPlay, status: REPORTED_PLAYER_STATUSES.playing}));
+            player.update(testState({play: newPlay, status: REPORTED_PLAYER_STATUSES.playing}), dayjs().add(10, 'seconds'));
             assert.equal(CALCULATED_PLAYER_STATUSES.playing, player.calculatedStatus);
         });
 
@@ -85,18 +89,18 @@ describe('Player status', function () {
         it('Calculated state is paused when source reports paused', function () {
             const player = new GenericPlayerState(logger, [NO_DEVICE, NO_USER]);
 
-            player.setState(REPORTED_PLAYER_STATUSES.playing, newPlay);
-            player.setState(REPORTED_PLAYER_STATUSES.playing, newPlay, dayjs().add(10, 'seconds'));
-            player.setState(REPORTED_PLAYER_STATUSES.paused, newPlay, dayjs().add(20, 'seconds'));
+            player.update(testState({play: newPlay, status: REPORTED_PLAYER_STATUSES.playing}));
+            player.update(testState({play: newPlay, status: REPORTED_PLAYER_STATUSES.playing}), dayjs().add(10, 'seconds'));
+            player.update(testState({play: newPlay, status: REPORTED_PLAYER_STATUSES.paused}), dayjs().add(20, 'seconds'));
             assert.equal(CALCULATED_PLAYER_STATUSES.paused, player.calculatedStatus);
         });
 
         it('Calculated state is stopped when source reports stopped', function () {
             const player = new GenericPlayerState(logger, [NO_DEVICE, NO_USER]);
 
-            player.setState(REPORTED_PLAYER_STATUSES.playing, newPlay);
-            player.setState(REPORTED_PLAYER_STATUSES.playing, newPlay, dayjs().add(10, 'seconds'));
-            player.setState(REPORTED_PLAYER_STATUSES.stopped, newPlay, dayjs().add(20, 'seconds'));
+            player.update(testState({play: newPlay, status: REPORTED_PLAYER_STATUSES.playing}));
+            player.update(testState({play: newPlay, status: REPORTED_PLAYER_STATUSES.playing}), dayjs().add(10, 'seconds'));
+            player.update(testState({play: newPlay, status: REPORTED_PLAYER_STATUSES.stopped}), dayjs().add(20, 'seconds'));
             assert.equal(CALCULATED_PLAYER_STATUSES.stopped, player.calculatedStatus);
         });
 
@@ -110,10 +114,10 @@ describe('Player status', function () {
             const positioned = clone(newPlay);
             positioned.meta.trackProgressPosition = 3;
 
-            player.setState(undefined, positioned);
+            player.update(testState({play: positioned}));
 
             positioned.meta.trackProgressPosition = 13;
-            player.setState(undefined, positioned, dayjs().add(10, 'seconds'));
+            player.update(testState({play: positioned}), dayjs().add(10, 'seconds'));
 
             assert.equal(CALCULATED_PLAYER_STATUSES.playing, player.calculatedStatus);
         });
@@ -124,12 +128,12 @@ describe('Player status', function () {
             const positioned = clone(newPlay);
             positioned.meta.trackProgressPosition = 3;
 
-            player.setState(undefined, positioned);
+            player.update(testState({play: positioned}));
 
             positioned.meta.trackProgressPosition = 13;
-            player.setState(undefined, positioned, dayjs().add(10, 'seconds'));
+            player.update(testState({play: positioned}), dayjs().add(10, 'seconds'));
 
-            player.setState(undefined, positioned, dayjs().add(20, 'seconds'));
+            player.update(testState({play: positioned}), dayjs().add(20, 'seconds'));
 
             assert.equal(CALCULATED_PLAYER_STATUSES.paused, player.calculatedStatus);
         });
@@ -144,17 +148,17 @@ describe('Player listen ranges', function () {
         it('Duration is timestamp based for unknown/playing reported players', function () {
             const player = new GenericPlayerState(logger, [NO_DEVICE, NO_USER]);
 
-            player.setState(REPORTED_PLAYER_STATUSES.playing, newPlay);
-            player.setState(REPORTED_PLAYER_STATUSES.playing, newPlay, dayjs().add(10, 'seconds'));
-            player.setState(REPORTED_PLAYER_STATUSES.playing, newPlay, dayjs().add(20, 'seconds'));
+            player.update(testState({play: newPlay, status: REPORTED_PLAYER_STATUSES.playing}));
+            player.update(testState({play: newPlay, status: REPORTED_PLAYER_STATUSES.playing}), dayjs().add(10, 'seconds'));
+            player.update(testState({play: newPlay, status: REPORTED_PLAYER_STATUSES.playing}), dayjs().add(20, 'seconds'));
 
             assert.equal(player.getListenDuration(), 20);
 
             const uplayer = new GenericPlayerState(logger, [NO_DEVICE, NO_USER]);
 
-            uplayer.setState(undefined, newPlay);
-            uplayer.setState(undefined, newPlay, dayjs().add(10, 'seconds'));
-            uplayer.setState(undefined, newPlay, dayjs().add(20, 'seconds'));
+            uplayer.update(testState({play: newPlay}));
+            uplayer.update(testState({play: newPlay}), dayjs().add(10, 'seconds'));
+            uplayer.update(testState({play: newPlay}), dayjs().add(20, 'seconds'));
 
             assert.equal(uplayer.getListenDuration(), 20);
         });
@@ -162,11 +166,11 @@ describe('Player listen ranges', function () {
         it('Range ends if player reports paused', function () {
             const player = new GenericPlayerState(logger, [NO_DEVICE, NO_USER]);
 
-            player.setState(REPORTED_PLAYER_STATUSES.playing, newPlay);
-            player.setState(REPORTED_PLAYER_STATUSES.playing, newPlay, dayjs().add(10, 'seconds'));
-            player.setState(REPORTED_PLAYER_STATUSES.playing, newPlay, dayjs().add(20, 'seconds'));
-            player.setState(REPORTED_PLAYER_STATUSES.paused, newPlay, dayjs().add(30, 'seconds'));
-            player.setState(REPORTED_PLAYER_STATUSES.paused, newPlay, dayjs().add(40, 'seconds'));
+            player.update(testState({play: newPlay, status: REPORTED_PLAYER_STATUSES.playing}));
+            player.update(testState({play: newPlay, status: REPORTED_PLAYER_STATUSES.playing}), dayjs().add(10, 'seconds'));
+            player.update(testState({play: newPlay, status: REPORTED_PLAYER_STATUSES.playing}), dayjs().add(20, 'seconds'));
+            player.update(testState({play: newPlay, status: REPORTED_PLAYER_STATUSES.paused}), dayjs().add(30, 'seconds'));
+            player.update(testState({play: newPlay, status: REPORTED_PLAYER_STATUSES.paused}), dayjs().add(40, 'seconds'));
 
             assert.equal(player.getListenDuration(), 20);
         });
@@ -174,15 +178,15 @@ describe('Player listen ranges', function () {
         it('Listen duration continues when player resumes', function () {
             const player = new GenericPlayerState(logger, [NO_DEVICE, NO_USER]);
 
-            player.setState(REPORTED_PLAYER_STATUSES.playing, newPlay);
-            player.setState(REPORTED_PLAYER_STATUSES.playing, newPlay, dayjs().add(10, 'seconds'));
-            player.setState(REPORTED_PLAYER_STATUSES.playing, newPlay, dayjs().add(20, 'seconds'));
-            player.setState(REPORTED_PLAYER_STATUSES.paused, newPlay, dayjs().add(30, 'seconds'));
-            player.setState(REPORTED_PLAYER_STATUSES.paused, newPlay, dayjs().add(40, 'seconds'));
+            player.update(testState({play: newPlay, status: REPORTED_PLAYER_STATUSES.playing}));
+            player.update(testState({play: newPlay, status: REPORTED_PLAYER_STATUSES.playing}), dayjs().add(10, 'seconds'));
+            player.update(testState({play: newPlay, status: REPORTED_PLAYER_STATUSES.playing}), dayjs().add(20, 'seconds'));
+            player.update(testState({play: newPlay, status: REPORTED_PLAYER_STATUSES.paused}), dayjs().add(30, 'seconds'));
+            player.update(testState({play: newPlay, status: REPORTED_PLAYER_STATUSES.paused}), dayjs().add(40, 'seconds'));
             // For TS-only players the player must see two consecutive playing states to count the duration between them
             // so it does NOT count above paused ^^ to below playing -- only playing-to-playing
-            player.setState(REPORTED_PLAYER_STATUSES.playing, newPlay, dayjs().add(50, 'seconds'));
-            player.setState(REPORTED_PLAYER_STATUSES.playing, newPlay, dayjs().add(60, 'seconds'));
+            player.update(testState({play: newPlay, status: REPORTED_PLAYER_STATUSES.playing}), dayjs().add(50, 'seconds'));
+            player.update(testState({play: newPlay, status: REPORTED_PLAYER_STATUSES.playing}), dayjs().add(60, 'seconds'));
 
             assert.equal(player.getListenDuration(), 30);
         });
@@ -195,10 +199,10 @@ describe('Player listen ranges', function () {
 
             const positioned = clone(newPlay);
             positioned.meta.trackProgressPosition = 3;
-            player.setState(undefined, positioned);
+            player.update(testState({play: positioned}));
 
             positioned.meta.trackProgressPosition = 10;
-            player.setState(undefined, positioned, dayjs().add(10, 'seconds'));
+            player.update(testState({play: positioned}), dayjs().add(10, 'seconds'));
 
             assert.equal(player.getListenDuration(), 7);
         });
@@ -208,10 +212,10 @@ describe('Player listen ranges', function () {
 
             const positioned = clone(newPlay);
             positioned.meta.trackProgressPosition = 3;
-            player.setState(undefined, positioned);
+            player.update(testState({play: positioned}));
 
             positioned.meta.trackProgressPosition = 3;
-            player.setState(undefined, positioned, dayjs().add(10, 'seconds'));
+            player.update(testState({play: positioned}), dayjs().add(10, 'seconds'));
 
             assert.equal(player.getListenDuration(), 0);
         });
@@ -221,18 +225,18 @@ describe('Player listen ranges', function () {
 
             const positioned = clone(newPlay);
             positioned.meta.trackProgressPosition = 3;
-            player.setState(undefined, positioned);
+            player.update(testState({play: positioned}));
 
             positioned.meta.trackProgressPosition = 7;
-            player.setState(undefined, positioned, dayjs().add(10, 'seconds'));
+            player.update(testState({play: positioned}), dayjs().add(10, 'seconds'));
 
-            player.setState(undefined, positioned, dayjs().add(20, 'seconds'));
+            player.update(testState({play: positioned}), dayjs().add(20, 'seconds'));
 
             positioned.meta.trackProgressPosition = 17;
-            player.setState(undefined, positioned, dayjs().add(30, 'seconds'));
+            player.update(testState({play: positioned}), dayjs().add(30, 'seconds'));
 
             positioned.meta.trackProgressPosition = 27;
-            player.setState(undefined, positioned, dayjs().add(40, 'seconds'));
+            player.update(testState({play: positioned}), dayjs().add(40, 'seconds'));
 
             assert.equal(player.getListenDuration(), 24);
         });
@@ -244,18 +248,18 @@ describe('Player listen ranges', function () {
 
                 const positioned = clone(newPlay);
                 positioned.meta.trackProgressPosition = 3;
-                player.setState(undefined, positioned);
+                player.update(testState({play: positioned}));
 
                 positioned.meta.trackProgressPosition = 13;
-                player.setState(undefined, positioned, dayjs().add(10, 'seconds'));
+                player.update(testState({play: positioned}), dayjs().add(10, 'seconds'));
 
                 positioned.meta.trackProgressPosition = 30;
-                player.setState(undefined, positioned, dayjs().add(20, 'seconds'));
+                player.update(testState({play: positioned}), dayjs().add(20, 'seconds'));
 
                 assert.equal(player.currentListenRange.start.timestamp, player.currentListenRange.end.timestamp);
 
                 positioned.meta.trackProgressPosition = 40;
-                player.setState(undefined, positioned, dayjs().add(30, 'seconds'));
+                player.update(testState({play: positioned}), dayjs().add(30, 'seconds'));
 
                 assert.equal(player.getListenDuration(), 20);
             });
@@ -265,18 +269,18 @@ describe('Player listen ranges', function () {
 
                 const positioned = clone(newPlay);
                 positioned.meta.trackProgressPosition = 30;
-                player.setState(undefined, positioned);
+                player.update(testState({play: positioned}));
 
                 positioned.meta.trackProgressPosition = 40;
-                player.setState(undefined, positioned, dayjs().add(10, 'seconds'));
+                player.update(testState({play: positioned}), dayjs().add(10, 'seconds'));
 
                 positioned.meta.trackProgressPosition = 20;
-                player.setState(undefined, positioned, dayjs().add(20, 'seconds'));
+                player.update(testState({play: positioned}), dayjs().add(20, 'seconds'));
 
                 assert.equal(player.currentListenRange.start.timestamp, player.currentListenRange.end.timestamp);
 
                 positioned.meta.trackProgressPosition = 30;
-                player.setState(undefined, positioned, dayjs().add(30, 'seconds'));
+                player.update(testState({play: positioned}), dayjs().add(30, 'seconds'));
 
                 assert.equal(player.getListenDuration(), 20);
             });
@@ -290,16 +294,16 @@ describe('Player listen ranges', function () {
                 const positioned = clone(newPlay);
                 positioned.data.duration = 70;
                 positioned.meta.trackProgressPosition = 45;
-                player.setState(undefined, positioned);
+                player.update(testState({play: positioned}));
 
                 positioned.meta.trackProgressPosition = 55;
-                player.setState(undefined, positioned, dayjs().add(10, 'seconds'));
+                player.update(testState({play: positioned}), dayjs().add(10, 'seconds'));
 
                 positioned.meta.trackProgressPosition = 65;
-                player.setState(undefined, positioned, dayjs().add(20, 'seconds'));
+                player.update(testState({play: positioned}), dayjs().add(20, 'seconds'));
 
                 positioned.meta.trackProgressPosition = 5;
-                const [curr, prevPlay] = player.setState(undefined, positioned, dayjs().add(30, 'seconds'));
+                const [curr, prevPlay] = player.update(testState({play: positioned}), dayjs().add(30, 'seconds'));
 
                 assert.isDefined(prevPlay);
                 assert.equal(player.getListenDuration(), 0);
@@ -311,16 +315,16 @@ describe('Player listen ranges', function () {
                 const positioned = clone(newPlay);
                 positioned.data.duration = 300;
                 positioned.meta.trackProgressPosition = 351;
-                player.setState(undefined, positioned);
+                player.update(testState({play: positioned}));
 
                 positioned.meta.trackProgressPosition = 361;
-                player.setState(undefined, positioned, dayjs().add(10, 'seconds'));
+                player.update(testState({play: positioned}), dayjs().add(10, 'seconds'));
 
                 positioned.meta.trackProgressPosition = 371;
-                player.setState(undefined, positioned, dayjs().add(20, 'seconds'));
+                player.update(testState({play: positioned}), dayjs().add(20, 'seconds'));
 
                 positioned.meta.trackProgressPosition = 20;
-                const [curr, prevPlay] = player.setState(undefined, positioned, dayjs().add(30, 'seconds'));
+                const [curr, prevPlay] = player.update(testState({play: positioned}), dayjs().add(30, 'seconds'));
 
                 assert.isDefined(prevPlay);
                 assert.equal(player.getListenDuration(), 0);
@@ -332,22 +336,22 @@ describe('Player listen ranges', function () {
                 const positioned = clone(newPlay);
                 positioned.data.duration = 70;
                 positioned.meta.trackProgressPosition = 0;
-                player.setState(undefined, positioned);
+                player.update(testState({play: positioned}));
 
                 positioned.meta.trackProgressPosition = 10;
-                player.setState(undefined, positioned, dayjs().add(10, 'seconds'));
+                player.update(testState({play: positioned}), dayjs().add(10, 'seconds'));
 
                 positioned.meta.trackProgressPosition = 20;
-                player.setState(undefined, positioned, dayjs().add(20, 'seconds'));
+                player.update(testState({play: positioned}), dayjs().add(20, 'seconds'));
 
                 positioned.meta.trackProgressPosition = 30;
-                player.setState(undefined, positioned, dayjs().add(30, 'seconds'));
+                player.update(testState({play: positioned}), dayjs().add(30, 'seconds'));
 
                 positioned.meta.trackProgressPosition = 40;
-                player.setState(undefined, positioned, dayjs().add(40, 'seconds'));
+                player.update(testState({play: positioned}), dayjs().add(40, 'seconds'));
 
                 positioned.meta.trackProgressPosition = 2;
-                const [curr, prevPlay] = player.setState(undefined, positioned, dayjs().add(50, 'seconds'));
+                const [curr, prevPlay] = player.update(testState({play: positioned}), dayjs().add(50, 'seconds'));
 
                 assert.isDefined(prevPlay);
                 assert.equal(player.getListenDuration(), 0);

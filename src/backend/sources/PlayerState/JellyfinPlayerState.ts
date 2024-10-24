@@ -1,6 +1,6 @@
 import { Logger } from "@foxxmd/logging";
 import { PlayObject } from "../../../core/Atomic.js";
-import { PlayPlatformId, ReportedPlayerStatus } from "../../common/infrastructure/Atomic.js";
+import { PlayerStateDataMaybePlay, PlayPlatformId, ReportedPlayerStatus } from "../../common/infrastructure/Atomic.js";
 import { PlayerStateOptions } from "./AbstractPlayerState.js";
 import { GenericPlayerState } from "./GenericPlayerState.js";
 
@@ -9,11 +9,11 @@ export class JellyfinPlayerState extends GenericPlayerState {
         super(logger, platformId, opts);
     }
 
-    setState(status?: ReportedPlayerStatus, play?: PlayObject) {
-        let stat: ReportedPlayerStatus = status;
-        if(status === undefined && play.meta?.event === 'PlaybackProgress') {
+    update(state: PlayerStateDataMaybePlay) {
+        let stat: ReportedPlayerStatus = state.status;
+        if(stat === undefined && state.play?.meta?.event === 'PlaybackProgress') {
             stat = 'playing';
         }
-        return super.setState(stat, play);
+        return super.update({...state, status: stat});
     }
 }

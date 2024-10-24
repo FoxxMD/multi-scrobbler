@@ -5,6 +5,7 @@ import { buildTrackString } from "../../../core/StringUtils.js";
 import {
     CALCULATED_PLAYER_STATUSES,
     CalculatedPlayerStatus,
+    PlayerStateDataMaybePlay,
     PlayPlatformId,
     REPORTED_PLAYER_STATUSES,
     ReportedPlayerStatus,
@@ -121,8 +122,11 @@ export abstract class AbstractPlayerState {
         return status !== 'paused' && status !== 'stopped';
     }
 
-    setState(status?: ReportedPlayerStatus, play?: PlayObject, reportedTS?: Dayjs) {
+    update(state: PlayerStateDataMaybePlay, reportedTS?: Dayjs) {
         this.stateLastUpdatedAt = dayjs();
+
+        const {play, status} = state;
+        
         if (play !== undefined) {
             return this.setPlay(play, status, reportedTS);
         } else if (status !== undefined) {

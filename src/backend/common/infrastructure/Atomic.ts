@@ -4,7 +4,7 @@ import { Dayjs } from "dayjs";
 import { Request, Response } from "express";
 import { NextFunction, ParamsDictionary, Query } from "express-serve-static-core";
 import { FixedSizeList } from 'fixed-size-list';
-import { PlayMeta, PlayObject } from "../../../core/Atomic.js";
+import { isPlayObject, PlayMeta, PlayObject } from "../../../core/Atomic.js";
 import TupleMap from "../TupleMap.js";
 
 export type SourceType =
@@ -122,13 +122,9 @@ export interface PlayerStateDataMaybePlay {
     timestamp?: Dayjs
 }
 
-export const asPlayerStateData = (obj: object): obj is PlayerStateData => {
-    return 'platformId' in obj && 'play' in obj;
-}
+export const asPlayerStateData = (obj: object): obj is PlayerStateData => asPlayerStateDataMaybePlay(obj) && 'play' in obj && isPlayObject(obj.play)
 
-export const asPlayerStateDataMaybePlay = (obj: object): obj is PlayerStateDataMaybePlay => {
-    return 'platformId' in obj;
-}
+export const asPlayerStateDataMaybePlay = (obj: object): obj is PlayerStateDataMaybePlay => 'platformId' in obj
 
 export interface FormatPlayObjectOptions {
     newFromSource?: boolean

@@ -167,7 +167,14 @@ export default class MemorySource extends AbstractSource {
                 }
                 incomingData = relevantDatas[0];
 
-                const [currPlay, prevPlay] = asPlayerStateDataMaybePlay(incomingData) ? player.setState(incomingData.status, incomingData.play) : player.setState(undefined, incomingData);
+                let playerState: PlayerStateDataMaybePlay;
+                if(asPlayerStateDataMaybePlay(incomingData)) {
+                    playerState = incomingData;
+                } else {
+                    playerState = {play: incomingData, platformId: getPlatformIdFromData(incomingData)};
+                }
+
+                const [currPlay, prevPlay] = player.update(playerState);
                 const candidate = prevPlay !== undefined ? prevPlay : currPlay;
                 const playChanged = prevPlay !== undefined;
 
