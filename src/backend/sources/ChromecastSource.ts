@@ -34,7 +34,7 @@ import { difference, genGroupIdStr, parseBool } from "../utils.js";
 import { findCauseByReference } from "../utils/ErrorUtils.js";
 import { discoveryAvahi, discoveryNative } from "../utils/MDNSUtils.js";
 import { RecentlyPlayedOptions } from "./AbstractSource.js";
-import MemorySource from "./MemorySource.js";
+import { MemoryPositionalSource } from "./MemoryPositionalSource.js";
 
 interface ChromecastDeviceInfo {
     mdns: MdnsDeviceInfo
@@ -46,7 +46,7 @@ interface ChromecastDeviceInfo {
     applications: Map<string, PlatformApplicationWithContext>
 }
 
-export class ChromecastSource extends MemorySource {
+export class ChromecastSource extends MemoryPositionalSource {
 
     declare config: ChromecastSourceConfig;
 

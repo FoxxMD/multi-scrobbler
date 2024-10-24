@@ -28,20 +28,20 @@ import {
 } from "../utils.js";
 import { findCauseByFunc } from "../utils/ErrorUtils.js";
 import { RecentlyPlayedOptions } from "./AbstractSource.js";
-import MemorySource from "./MemorySource.js";
 import AlbumObjectSimplified = SpotifyApi.AlbumObjectSimplified;
 import ArtistObjectSimplified = SpotifyApi.ArtistObjectSimplified;
 import CurrentlyPlayingObject = SpotifyApi.CurrentlyPlayingObject;
 import PlayHistoryObject = SpotifyApi.PlayHistoryObject;
 import TrackObjectFull = SpotifyApi.TrackObjectFull;
 import UserDevice = SpotifyApi.UserDevice;
+import { MemoryPositionalSource } from "./MemoryPositionalSource.js";
 
 const scopes = ['user-read-recently-played', 'user-read-currently-playing', 'user-read-playback-state', 'user-read-playback-position'];
 const state = 'random';
 
 const shortDeviceId = truncateStringToLength(10, '');
 
-export default class SpotifySource extends MemorySource {
+export default class SpotifySource extends MemoryPositionalSource {
 
     spotifyApi: SpotifyWebApi;
     workingCredsPath: string;

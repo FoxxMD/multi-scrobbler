@@ -15,7 +15,7 @@ import { VlcAudioMeta, VLCSourceConfig, PlayerState } from "../common/infrastruc
 import { isPortReachable } from "../utils/NetworkUtils.js";
 import { firstNonEmptyStr } from "../utils/StringUtils.js";
 import { RecentlyPlayedOptions } from "./AbstractSource.js";
-import MemorySource from "./MemorySource.js";
+import { MemoryPositionalSource } from "./MemoryPositionalSource.js";
 
 const CLIENT_PLAYER_STATE: Record<PlayerState, ReportedPlayerStatus> = {
     'playing': REPORTED_PLAYER_STATUSES.playing,
@@ -23,7 +23,7 @@ const CLIENT_PLAYER_STATE: Record<PlayerState, ReportedPlayerStatus> = {
     'stopped': REPORTED_PLAYER_STATUSES.stopped,
 }
 
-export class VLCSource extends MemorySource {
+export class VLCSource extends MemoryPositionalSource {
     declare config: VLCSourceConfig;
 
     host?: string

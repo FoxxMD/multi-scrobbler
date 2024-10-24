@@ -22,7 +22,7 @@ import {
 } from "../common/infrastructure/config/source/musikcube.js";
 import { sleep } from "../utils.js";
 import { RecentlyPlayedOptions } from "./AbstractSource.js";
-import MemorySource from "./MemorySource.js";
+import { MemoryPositionalSource } from "./MemoryPositionalSource.js";
 
 const CLIENT_STATE = {
     0: 'connecting',
@@ -31,7 +31,7 @@ const CLIENT_STATE = {
     3: 'closed'
 }
 
-export class MusikcubeSource extends MemorySource {
+export class MusikcubeSource extends MemoryPositionalSource {
     declare config: MusikcubeSourceConfig;
 
     url: URL;

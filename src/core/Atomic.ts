@@ -54,6 +54,10 @@ export interface PlayProgress {
     positionPercent?: number
 }
 
+export interface PlayProgressPositional extends PlayProgress {
+    position: number
+}
+
 export interface ListenRangeData {
     start: ListenProgress
     end: ListenProgress
@@ -166,6 +170,10 @@ export const SCROBBLE_TS_SOC_END: ScrobbleTsSOC = 2;
 export interface AmbPlayObject {
     data: PlayData,
     meta: PlayMeta
+}
+
+export const isPlayObject = (obj: object): obj is PlayObject => {
+   return 'data' in obj && typeof obj.data === 'object' && 'meta' in obj && typeof obj.meta === 'object';
 }
 
 export interface PlayObject extends AmbPlayObject {
