@@ -739,6 +739,24 @@ export const joinedUrl = (url: URL, ...paths: string[]): URL => {
     // https://github.com/jfromaniello/url-join#in-nodejs
     const finalUrl = new URL(url);
     finalUrl.pathname = joinPath(url.pathname, ...(paths.filter(x => x.trim() !== '')));
+    const f = getFirstNonEmptyVal(['something']);
     return finalUrl;
 }
 
+export const getFirstNonEmptyVal = <T = unknown>(values: unknown[], options: {ofType?: string, test?: (val: T) => boolean} = {}): NonNullable<T> | undefined => {
+    for(const v of values) {
+        if(v === undefined || v === null) {
+            continue;
+        }
+        if(options.ofType !== undefined && typeof v !== options.ofType) {
+            continue;
+        }
+        if(options.test !== undefined && options.test(v as T) === false) {
+            continue;
+        }
+        return v as T;
+    }
+    return undefined;
+}
+
+export const getFirstNonEmptyString = (values: unknown[]) => getFirstNonEmptyVal<string>(values, {ofType: 'string', test: (v) => v.trim() !== ''});

@@ -1,4 +1,5 @@
-import { CommonSourceConfig, CommonSourceData } from "./index.js";
+import { PollingOptions } from "../common.js";
+import { CommonSourceConfig, CommonSourceData, CommonSourceOptions } from "./index.js";
 
 export interface PlexSourceData extends CommonSourceData {
     /**
@@ -34,3 +35,62 @@ export interface PlexSourceConfig extends CommonSourceConfig {
 export interface PlexSourceAIOConfig extends PlexSourceConfig {
     type: 'plex'
 }
+
+export interface PlexApiData extends CommonSourceData, PollingOptions {
+    token?: string
+    /**
+     * http(s)://HOST:PORT of the Plex server to connect to
+     * */
+    url: string
+
+        /**
+     * Only scrobble for specific users (case-insensitive)
+     *
+     * If `true` MS will scrobble activity from all users
+     * */
+        usersAllow?: string | true | string[]
+        /**
+         * Do not scrobble for these users (case-insensitive)
+         * */
+        usersBlock?: string | string[]
+    
+        /**
+         * Only scrobble if device or application name contains strings from this list (case-insensitive)
+         * */
+        devicesAllow?: string | string[]
+        /**
+         * Do not scrobble if device or application name contains strings from this list (case-insensitive)
+         * */
+        devicesBlock?: string | string[]
+    
+        /**
+         * Only scrobble if library name contains string from this list (case-insensitive)
+         * */
+        librariesAllow?: string | string[]
+        /**
+         * Do not scrobble if library name contains strings from this list (case-insensitive)
+         * */
+        librariesBlock?: string | string[]
+}
+
+export interface PlexApiOptions extends CommonSourceOptions {
+    /*
+    * Outputs JSON for session data the first time a new media ID is seen
+    * 
+    * For use when troubleshooting issues
+    * 
+    * @default false
+    */
+        logPayload?: boolean
+}
+
+export interface PlexApiSourceConfig extends CommonSourceConfig {
+    data: PlexApiData
+    options: PlexApiOptions
+}
+
+export interface PlexApiSourceAIOConfig extends PlexApiSourceConfig {
+    type: 'plex'
+}
+
+export type PlexCompatConfig = PlexApiSourceConfig | PlexSourceConfig;

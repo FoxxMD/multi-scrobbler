@@ -1,0 +1,17 @@
+[
+  // DEPRECATED, use API Source instead
+  // rename files to plex.json to use
+  {
+    "name": "MyPlex",
+    "enable": true,
+    "clients": [],
+    "data": {
+      "user": ["username@gmail.com","anotherUser@gmail.com"],
+      "libraries": ["music","my podcasts"],
+      "servers": ["myServer","anotherServer"],
+      "options": {
+        "logFilterFailure": "warn"
+      }
+    }
+  }
+]

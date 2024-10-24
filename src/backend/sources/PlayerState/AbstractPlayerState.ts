@@ -57,6 +57,8 @@ export abstract class AbstractPlayerState {
     createdAt: Dayjs = dayjs();
     stateLastUpdatedAt: Dayjs = dayjs();
 
+    protected allowedDrift?: number;
+
     protected constructor(logger: Logger, platformId: PlayPlatformId, opts: PlayerStateOptions = DefaultPlayerStateOptions) {
         this.platformId = platformId;
         this.logger = childLogger(logger, `Player ${this.platformIdStr}`);
@@ -248,18 +250,18 @@ export abstract class AbstractPlayerState {
                 // and polling/network delays means we did not catch absolute beginning of track
                 usedPosition = 1;
             }
-            this.currentListenRange = new ListenRange(new ListenProgress(timestamp, usedPosition));
+            this.currentListenRange = new ListenRange(new ListenProgress(timestamp, usedPosition), undefined, this.allowedDrift);
         } else {
             const oldEndProgress = this.currentListenRange.end;
             const newEndProgress = new ListenProgress(timestamp, position);
             if (position !== undefined && oldEndProgress !== undefined) {
-                if (position === oldEndProgress.position && !['paused', 'stopped'].includes(this.calculatedStatus)) {
-                    this.calculatedStatus = this.reportedStatus === 'stopped' ? CALCULATED_PLAYER_STATUSES.stopped : CALCULATED_PLAYER_STATUSES.paused;
-                    if (this.reportedStatus !== this.calculatedStatus) {
-                        this.logger.debug(`Reported status '${this.reportedStatus}' but track position has not progressed between two updates. Calculated player status is now ${this.calculatedStatus}`);
-                    } else {
-                        this.logger.debug(`Player position is equal between current -> last update. Updated calculated status to ${this.calculatedStatus}`);
-                    }
+                if (!this.isSessionStillPlaying(position) && !['paused', 'stopped'].includes(this.calculatedStatus)) {
+                        this.calculatedStatus = this.reportedStatus === 'stopped' ? CALCULATED_PLAYER_STATUSES.stopped : CALCULATED_PLAYER_STATUSES.paused;
+                        if (this.reportedStatus !== this.calculatedStatus) {
+                            this.logger.debug(`Reported status '${this.reportedStatus}' but track position has not progressed between two updates. Calculated player status is now ${this.calculatedStatus}`);
+                        } else {
+                            this.logger.debug(`Player position is equal between current -> last update. Updated calculated status to ${this.calculatedStatus}`);
+                        }
                 } else if (position !== oldEndProgress.position && this.calculatedStatus !== 'playing') {
                     this.calculatedStatus = CALCULATED_PLAYER_STATUSES.playing;
                     if (this.reportedStatus !== this.calculatedStatus) {
@@ -274,6 +276,8 @@ export abstract class AbstractPlayerState {
             this.currentListenRange.setRangeEnd(newEndProgress);
         }
     }
+
+    protected abstract isSessionStillPlaying(position: number): boolean;
 
     protected currentListenSessionEnd() {
         if (this.currentListenRange !== undefined && this.currentListenRange.getDuration() !== 0) {

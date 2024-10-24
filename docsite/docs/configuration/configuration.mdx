@@ -23,6 +23,7 @@ import MprisConfig from '!!raw-loader!../../../config/mpris.json.example';
 import MusikcubeConfig from '!!raw-loader!../../../config/musikcube.json.example';
 import MPDConfig from '!!raw-loader!../../../config/mpd.json.example';
 import PlexConfig from '!!raw-loader!../../../config/plex.json.example';
+import PlexWebhookConfig from '!!raw-loader!../../../config/plex.webhook.json.example';
 import SpotifyConfig from '!!raw-loader!../../../config/spotify.json.example';
 import SubsonicConfig from '!!raw-loader!../../../config/subsonic.json.example';
 import TautulliConfig from '!!raw-loader!../../../config/tautulli.json.example';
@@ -240,9 +241,90 @@ If your Spotify player has [Automix](https://community.spotify.com/t5/FAQs/What-
 
 ### [Plex](https://plex.tv)
 
-Check the [instructions](plex.md) on how to setup a [webhooks](https://support.plex.tv/articles/115002267687-webhooks) to scrobble your plays.
+<Tabs groupId="plexType" queryString>
+<TabItem value="api" label="API">
+
+:::tip[Important Defaults]
+
+By default...
+
+* multi-scrobbler will **only** scrobble for the user authenticated with the Plex Token. 
+  * Allowed Users (`usersAllow` or `PLEX_USERS_ALLOW`) are only necessary if you want to scrobble for additional users.
+* multi-scrobbler will only scrobble media found in Plex libraries that are labelled as **Music.**
+  * `librariesAllow` or `PLEX_LIBRARIES_ALLOW` will override this
+
+:::
+
+Find your [**Plex Token**](https://support.plex.tv/articles/204059436-finding-an-authentication-token-x-plex-token/) and make note of the **URL** and **Port** used to connect to your Plex instance.
 
 #### Configuration
+
+<Tabs groupId="configType" queryString>
+    <TabItem value="env" label="ENV">
+        | Environmental Variable | Required? | Default | Description                                                            |
+        | ---------------------- | --------- | ------- | ---------------------------------------------------------------------- |
+        | `PLEX_URL`             | **Yes**   |         | The URL of the Plex server IE `http://localhost:32400`                 |
+        | `PLEX_TOKEN`           | **Yes**   |         | The **Plex Token** to use with the API                                 |
+        | `PLEX_USERS_ALLOW`     | No        |         | Comma-separated list of usernames (from Plex) to scrobble for          |
+        | `PLEX_USERS_BLOCK`     | No        |         | Comma-separated list of usernames (from Plex) to disallow scrobble for |
+        | `PLEX_DEVICES_ALLOW`   | No        |         | Comma-separated list of devices to scrobble from                       |
+        | `PLEX_DEVICES_BLOCK`   | No        |         | Comma-separated list of devices to disallow scrobbles from             |
+        | `PLEX_LIBRARIES_ALLOW` | No        |         | Comma-separated list of libraries to allow scrobbles from              |
+        | `PLEX_LIBRARIES_BLOCK` | No        |         | Comma-separated list of libraries to disallow scrobbles from           |
+    </TabItem>
+    <TabItem value="file" label="File">
+        <details>
+
+            <summary>Example</summary>
+
+            <CodeBlock title="CONFIG_DIR/plex.json" language="json5">{PlexConfig}</CodeBlock>
+
+        </details>
+
+        or <SchemaLink lower objectName="PlexApiSourceConfig"/>
+
+    </TabItem>
+    <TabItem value="aio" label="AIO">
+        <details>
+
+            <summary>Example</summary>
+
+            <AIOExample data={PlexConfig} name="plex"/>
+
+        </details>
+
+        or <SchemaLink lower objectName="PlexApiSourceConfig"/>
+    </TabItem>
+</Tabs>
+
+</TabItem>
+<TabItem value="webhook" label="Webhook (Deprecated)">
+
+:::warning[Deprecated]
+
+Multi-scrobbler < 0.9.0 used [webhooks](https://support.plex.tv/articles/115002267687-webhooks) to support Plex scrobbling. This approach has been deprecated in favor of using Plex's API directly which has many benefits including **not requiring Plex Pass.**
+
+:::
+
+<details>
+
+    <summary>Migrating to API</summary>
+
+    * Follow the instructions in the API tab
+    * The `user` (`PLEX_USER`) setting has been renamed `usersAllow` (`PLEX_USERS_ALLOW`)
+      * If you were using this filter to ensure only scrobbles from yourself were registered then you no longer need this setting -- by default MS will only scrobble for the user the Plex Token is used for.
+    * The `servers` setting is no longer available as MS only scrobbles from the server using the API anyways.
+      * If you need to scrobble for multiple servers set up each server as a separate Plex API source
+    * The `libraries` setting has been renamed to `librariesAllow`
+
+</details>
+
+* In the Plex dashboard Navigate to your **Account/Settings** and find the **Webhooks** page
+* Click **Add Webhook**
+* URL -- `http://localhost:9078/plex` (substitute your domain if different than the default)
+* **Save Changes**
+
+##### Configuration
 
 <Tabs groupId="configType" queryString>
     <TabItem value="env" label="ENV">
@@ -256,7 +338,7 @@ Check the [instructions](plex.md) on how to setup a [webhooks](https://support.p
 
             <summary>Example</summary>
 
-            <CodeBlock title="CONFIG_DIR/plex.json" language="json5">{PlexConfig}</CodeBlock>
+            <CodeBlock title="CONFIG_DIR/plex.json" language="json5">{PlexWebhookConfig}</CodeBlock>
 
         </details>
 
@@ -267,12 +349,15 @@ Check the [instructions](plex.md) on how to setup a [webhooks](https://support.p
 
             <summary>Example</summary>
 
-            <AIOExample data={PlexConfig} name="plex"/>
+            <AIOExample data={PlexWebhookConfig} name="plex"/>
 
         </details>
 
         or <SchemaLink lower objectName="PlexSourceConfig"/>
     </TabItem>
+</Tabs>
+
+</TabItem>
 </Tabs>
 
 ### [Tautulli](https://tautulli.com)

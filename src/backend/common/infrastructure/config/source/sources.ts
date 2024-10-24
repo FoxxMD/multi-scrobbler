@@ -9,7 +9,7 @@ import { MopidySourceAIOConfig, MopidySourceConfig } from "./mopidy.js";
 import { MPDSourceAIOConfig, MPDSourceConfig } from "./mpd.js";
 import { MPRISSourceAIOConfig, MPRISSourceConfig } from "./mpris.js";
 import { MusikcubeSourceAIOConfig, MusikcubeSourceConfig } from "./musikcube.js";
-import { PlexSourceAIOConfig, PlexSourceConfig } from "./plex.js";
+import { PlexSourceAIOConfig, PlexSourceConfig, PlexApiSourceConfig, PlexApiSourceAIOConfig } from "./plex.js";
 import { SpotifySourceAIOConfig, SpotifySourceConfig } from "./spotify.js";
 import { SubsonicSourceAIOConfig, SubSonicSourceConfig } from "./subsonic.js";
 import { TautulliSourceAIOConfig, TautulliSourceConfig } from "./tautulli.js";
@@ -21,6 +21,7 @@ import { YTMusicSourceAIOConfig, YTMusicSourceConfig } from "./ytmusic.js";
 export type SourceConfig =
     SpotifySourceConfig
     | PlexSourceConfig
+    | PlexApiSourceConfig
     | TautulliSourceConfig
     | DeezerSourceConfig
     | SubSonicSourceConfig
@@ -42,6 +43,7 @@ export type SourceConfig =
 export type SourceAIOConfig =
     SpotifySourceAIOConfig
     | PlexSourceAIOConfig
+    | PlexApiSourceAIOConfig
     | TautulliSourceAIOConfig
     | DeezerSourceAIOConfig
     | SubsonicSourceAIOConfig

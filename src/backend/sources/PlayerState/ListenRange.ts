@@ -6,13 +6,15 @@ export class ListenRange implements ListenRangeData {
 
     public start: ListenProgress;
     public end: ListenProgress;
+    protected allowedDrift: number;
 
-    constructor(start?: ListenProgress, end?: ListenProgress) {
+    constructor(start?: ListenProgress, end?: ListenProgress, allowedDrift: number = 2500) {
         const s = start ?? new ListenProgress();
         const e = end ?? s;
 
         this.start = s;
         this.end = e;
+        this.allowedDrift = allowedDrift;
     }
 
     isPositional() {
@@ -39,7 +41,7 @@ export class ListenRange implements ListenRangeData {
         const realTimeDiff = Math.max(0, reportedTS.diff(this.end.timestamp, 'ms')); // 0 max used so TS from testing doesn't cause "backward" diff
         const positionDiff = (position - this.end.position) * 1000;
         // if user is more than 2.5 seconds ahead of real time
-        if (positionDiff - realTimeDiff > 2500) {
+        if (positionDiff - realTimeDiff > this.allowedDrift) {
             return [true, position - this.end.position];
         }
 

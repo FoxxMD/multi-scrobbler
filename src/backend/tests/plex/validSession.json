@@ -1,0 +1,116 @@
+{
+    "contentType": "application/json",
+    "object": {
+        "mediaContainer": {
+            "size": 1,
+            "metadata": [
+                {
+                    "addedAt": 1726672934,
+                    "art": "/library/metadata/61152/art/1699291483",
+                    "duration": 136411,
+                    "grandparentArt": "/library/metadata/61152/art/1699291483",
+                    "grandparentGuid": "plex://artist/5d07bbfc403c6402904a5ec9",
+                    "grandparentKey": "/library/metadata/61152",
+                    "grandparentRatingKey": "61152",
+                    "grandparentThumb": "/library/metadata/61152/thumb/1699291483",
+                    "grandparentTitle": "Various Artists",
+                    "guid": "plex://track/5d07cdbb403c640290f5881e",
+                    "index": 19,
+                    "key": "/library/metadata/73894",
+                    "librarySectionID": "10",
+                    "librarySectionKey": "/library/sections/10",
+                    "librarySectionTitle": "Music",
+                    "parentGuid": "plex://album/5d07c208403c640290899b4e",
+                    "parentIndex": 1,
+                    "parentKey": "/library/metadata/73701",
+                    "parentRatingKey": "73701",
+                    "parentStudio": "A&M Records",
+                    "parentThumb": "/library/metadata/73701/thumb/1727511278",
+                    "parentTitle": "Good Morning, Vietnam",
+                    "parentYear": 1987,
+                    "ratingCount": 1194979,
+                    "ratingKey": "73894",
+                    "sessionKey": "326",
+                    "thumb": "/library/metadata/73701/thumb/1727511278",
+                    "title": "What a Wonderful World",
+                    "type": "track",
+                    "updatedAt": 1728182712,
+                    "viewOffset": 9000,
+                    "media": [
+                        {
+                            "audioChannels": 2,
+                            "audioCodec": "mp3",
+                            "bitrate": 188,
+                            "container": "mp3",
+                            "duration": 136411,
+                            "id": "89344",
+                            "selected": true,
+                            "part": [
+                                {
+                                    "container": "mp3",
+                                    "duration": 136411,
+                                    "file": "/mnt/audio/music/Louis Armstrong/Good Morning Vietnam/19 - What a Wonderful World.mp3",
+                                    "id": "96866",
+                                    "key": "/library/parts/96866/1550814498/file.mp3",
+                                    "size": 3219411,
+                                    "decision": "directplay",
+                                    "selected": true,
+                                    "stream": [
+                                        {
+                                            "albumGain": "-3.66",
+                                            "albumPeak": "0.999969",
+                                            "albumRange": "8.224801",
+                                            "audioChannelLayout": "stereo",
+                                            "bitrate": 188,
+                                            "channels": 2,
+                                            "codec": "mp3",
+                                            "displayTitle": "MP3 (Stereo)",
+                                            "extendedDisplayTitle": "MP3 (Stereo)",
+                                            "gain": "-3.66",
+                                            "id": "247971",
+                                            "index": 0,
+                                            "loudness": "-17.78",
+                                            "lra": "5.68",
+                                            "peak": "0.569977",
+                                            "samplingRate": 44100,
+                                            "selected": true,
+                                            "streamType": 2,
+                                            "location": "direct"
+                                        }
+                                    ]
+                                }
+                            ]
+                        }
+                    ],
+                    "user": {
+                        "id": "1",
+                        "thumb": "https://plex.tv/users/fsdfdsfd/avatar?c=sfds",
+                        "title": "MyUser"
+                    },
+                    "player": {
+                        "address": "192.168.0.XXX",
+                        "machineIdentifier": "wrbcnasdasdj0bwdfacqw9",
+                        "model": "bundled",
+                        "platform": "Firefox",
+                        "platformVersion": "131.0",
+                        "product": "Plex Web",
+                        "profile": "Firefox",
+                        "remotePublicAddress": "XX.177.95.XXX",
+                        "state": "playing",
+                        "title": "Firefox",
+                        "version": "4.136.1",
+                        "local": true,
+                        "relayed": false,
+                        "secure": true,
+                        "userID": 1
+                    },
+                    "session": {
+                        "id": "k77lg8r8m2jdvjvu1g8t8rp0",
+                        "bandwidth": 193,
+                        "location": "lan"
+                    }
+                }
+            ]
+        }
+    }
+}
