@@ -15,9 +15,9 @@ import {
 } from "../common/infrastructure/Atomic.js";
 import { MopidySourceConfig } from "../common/infrastructure/config/source/mopidy.js";
 import { RecentlyPlayedOptions } from "./AbstractSource.js";
-import MemorySource from "./MemorySource.js";
+import { MemoryPositionalSource } from "./MemoryPositionalSource.js";
 
-export class MopidySource extends MemorySource {
+export class MopidySource extends MemoryPositionalSource {
     declare config: MopidySourceConfig;
 
     albumBlacklist: string[] = [];

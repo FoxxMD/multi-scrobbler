@@ -1,7 +1,7 @@
 import { loggerTest } from "@foxxmd/logging";
 import { assert } from 'chai';
 import clone from "clone";
-import dayjs from "dayjs";
+import dayjs, { Dayjs } from "dayjs";
 import { describe, it } from 'mocha';
 import {
     CALCULATED_PLAYER_STATUSES,
@@ -14,12 +14,25 @@ import {
 import { GenericPlayerState } from "../../sources/PlayerState/GenericPlayerState.js";
 import { playObjDataMatch } from "../../utils.js";
 import { generatePlay } from "../utils/PlayTestUtils.js";
+import { PositionalPlayerState } from "../../sources/PlayerState/PositionalPlayerState.js";
+import { ListenProgressPositional } from "../../sources/PlayerState/ListenProgress.js";
+import { ListenRangePositional } from "../../sources/PlayerState/ListenRange.js";
 
 const logger = loggerTest;
 
 const newPlay = generatePlay({duration: 300});
 
 const testState = (data: Omit<PlayerStateDataMaybePlay, 'platformId'>): PlayerStateDataMaybePlay => ({...data, platformId: SINGLE_USER_PLATFORM_ID});
+
+class TestPositionalPlayerState extends PositionalPlayerState {
+    protected newListenRange(start?: ListenProgressPositional, end?: ListenProgressPositional, options: object = {}): ListenRangePositional {
+        const range = super.newListenRange(start, end, {rtImmediate: false, ...options});
+        return range;
+    }
+    public testSessionRepeat(position: number, reportedTS?: Dayjs) {
+        return this.isSessionRepeat(position, reportedTS);
+    }
+}
 
 describe('Basic player state', function () {
 
@@ -109,31 +122,31 @@ describe('Player status', function () {
     describe('When source provides playback position', function () {
 
         it('Calculated state is playing when position moves forward', function () {
-            const player = new GenericPlayerState(logger, [NO_DEVICE, NO_USER]);
+            const player = new TestPositionalPlayerState(logger, [NO_DEVICE, NO_USER]);
 
             const positioned = clone(newPlay);
-            positioned.meta.trackProgressPosition = 3;
 
-            player.update(testState({play: positioned}));
+            player.update(testState({play: positioned, position: 3}));
 
-            positioned.meta.trackProgressPosition = 13;
-            player.update(testState({play: positioned}), dayjs().add(10, 'seconds'));
+            player.currentListenRange.rtPlayer.setPosition(13000);
+            player.update(testState({play: positioned, position: 13}), dayjs().add(10, 'seconds'));
 
             assert.equal(CALCULATED_PLAYER_STATUSES.playing, player.calculatedStatus);
         });
 
-        it('Calculated state is paused when position does not change', function () {
-            const player = new GenericPlayerState(logger, [NO_DEVICE, NO_USER]);
+        it('Calculated state is paused when position does not change and rt overdrifts', function () {
+            const player = new TestPositionalPlayerState(logger, [NO_DEVICE, NO_USER]);
 
             const positioned = clone(newPlay);
             positioned.meta.trackProgressPosition = 3;
 
-            player.update(testState({play: positioned}));
+            player.update(testState({play: positioned, position: 3}));
 
-            positioned.meta.trackProgressPosition = 13;
-            player.update(testState({play: positioned}), dayjs().add(10, 'seconds'));
+            player.currentListenRange.rtPlayer.setPosition(13000);
+            player.update(testState({play: positioned, position: 13}), dayjs().add(10, 'seconds'));
 
-            player.update(testState({play: positioned}), dayjs().add(20, 'seconds'));
+            player.currentListenRange.rtPlayer.setPosition(23000);
+            player.update(testState({play: positioned, position: 13}), dayjs().add(20, 'seconds'));
 
             assert.equal(CALCULATED_PLAYER_STATUSES.paused, player.calculatedStatus);
         });
@@ -195,163 +208,148 @@ describe('Player listen ranges', function () {
     describe('When source does provide playback position', function () {
 
         it('Duration is position based', function () {
-            const player = new GenericPlayerState(logger, [NO_DEVICE, NO_USER]);
+            const player = new TestPositionalPlayerState(logger, [NO_DEVICE, NO_USER]);
 
             const positioned = clone(newPlay);
-            positioned.meta.trackProgressPosition = 3;
-            player.update(testState({play: positioned}));
 
-            positioned.meta.trackProgressPosition = 10;
-            player.update(testState({play: positioned}), dayjs().add(10, 'seconds'));
+            player.update(testState({play: positioned, position: 3}));
+
+            player.currentListenRange.rtPlayer.setPosition(10000);
+            player.update(testState({play: positioned, position: 10}), dayjs().add(10, 'seconds'));
 
             assert.equal(player.getListenDuration(), 7);
         });
 
-        it('Range ends if position does not move', function () {
-            const player = new GenericPlayerState(logger, [NO_DEVICE, NO_USER]);
+        it('Range ends if position over drifts', function () {
+            const player = new TestPositionalPlayerState(logger, [NO_DEVICE, NO_USER]);
 
             const positioned = clone(newPlay);
-            positioned.meta.trackProgressPosition = 3;
-            player.update(testState({play: positioned}));
+            player.update(testState({play: positioned, position: 3}));
 
-            positioned.meta.trackProgressPosition = 3;
-            player.update(testState({play: positioned}), dayjs().add(10, 'seconds'));
+            player.currentListenRange.rtPlayer.setPosition(10000);
+            player.update(testState({play: positioned, position: 3}), dayjs().add(10, 'seconds'));
 
             assert.equal(player.getListenDuration(), 0);
         });
 
         it('Range continues when position continues moving forward', function () {
-            const player = new GenericPlayerState(logger, [NO_DEVICE, NO_USER]);
+            const player = new TestPositionalPlayerState(logger, [NO_DEVICE, NO_USER]);
 
             const positioned = clone(newPlay);
-            positioned.meta.trackProgressPosition = 3;
-            player.update(testState({play: positioned}));
+            player.update(testState({play: positioned, position: 3}));
 
-            positioned.meta.trackProgressPosition = 7;
-            player.update(testState({play: positioned}), dayjs().add(10, 'seconds'));
+            player.currentListenRange.rtPlayer.setPosition(7000);
+            player.update(testState({play: positioned, position: 7}), dayjs().add(4, 'seconds'));
 
-            player.update(testState({play: positioned}), dayjs().add(20, 'seconds'));
 
-            positioned.meta.trackProgressPosition = 17;
-            player.update(testState({play: positioned}), dayjs().add(30, 'seconds'));
+            player.currentListenRange.rtPlayer.setPosition(23000);
+            player.update(testState({play: positioned, position: 23}), dayjs().add(20, 'seconds'));
 
-            positioned.meta.trackProgressPosition = 27;
-            player.update(testState({play: positioned}), dayjs().add(40, 'seconds'));
+            player.currentListenRange.rtPlayer.setPosition(33000);
+            player.update(testState({play: positioned, position: 33}), dayjs().add(30, 'seconds'));
 
-            assert.equal(player.getListenDuration(), 24);
+            player.currentListenRange.rtPlayer.setPosition(43000);
+            player.update(testState({play: positioned, position: 43}), dayjs().add(40, 'seconds'));
+
+            assert.equal(player.getListenDuration(), 40);
         });
 
         describe('Detects seeking', function () {
 
             it('Detects seeking forward', function () {
-                const player = new GenericPlayerState(logger, [NO_DEVICE, NO_USER]);
+                const player = new TestPositionalPlayerState(logger, [NO_DEVICE, NO_USER]);
 
                 const positioned = clone(newPlay);
-                positioned.meta.trackProgressPosition = 3;
-                player.update(testState({play: positioned}));
+                player.update(testState({play: positioned, position: 3}));
 
                 positioned.meta.trackProgressPosition = 13;
-                player.update(testState({play: positioned}), dayjs().add(10, 'seconds'));
+                player.currentListenRange.rtPlayer.setPosition(13000);
+                player.update(testState({play: positioned, position: 13}), dayjs().add(10, 'seconds'));
 
-                positioned.meta.trackProgressPosition = 30;
-                player.update(testState({play: positioned}), dayjs().add(20, 'seconds'));
-
-                assert.equal(player.currentListenRange.start.timestamp, player.currentListenRange.end.timestamp);
-
-                positioned.meta.trackProgressPosition = 40;
-                player.update(testState({play: positioned}), dayjs().add(30, 'seconds'));
-
-                assert.equal(player.getListenDuration(), 20);
+                player.currentListenRange.rtPlayer.setPosition(17000);
+                const [isSeeked, time] = player.currentListenRange.seeked(24, dayjs().add(17, 'seconds'))
+                assert.isTrue(isSeeked);
+                assert.equal(time, 7000)
             });
 
-            it('Detects seeking backwards', function () {
-                const player = new GenericPlayerState(logger, [NO_DEVICE, NO_USER]);
+            it('Detects seeking backwards when position is before last reported position', function () {
+                const player = new TestPositionalPlayerState(logger, [NO_DEVICE, NO_USER]);
 
                 const positioned = clone(newPlay);
-                positioned.meta.trackProgressPosition = 30;
-                player.update(testState({play: positioned}));
+                player.update(testState({play: positioned, position: 3}));
 
-                positioned.meta.trackProgressPosition = 40;
-                player.update(testState({play: positioned}), dayjs().add(10, 'seconds'));
+                player.currentListenRange.rtPlayer.setPosition(13000);
+                player.update(testState({play: positioned, position: 13}), dayjs().add(10, 'seconds'));
 
-                positioned.meta.trackProgressPosition = 20;
-                player.update(testState({play: positioned}), dayjs().add(20, 'seconds'));
-
-                assert.equal(player.currentListenRange.start.timestamp, player.currentListenRange.end.timestamp);
-
-                positioned.meta.trackProgressPosition = 30;
-                player.update(testState({play: positioned}), dayjs().add(30, 'seconds'));
-
-                assert.equal(player.getListenDuration(), 20);
+                player.currentListenRange.rtPlayer.setPosition(17000);
+                const [isSeeked, time] = player.currentListenRange.seeked(10, dayjs().add(17, 'seconds'))
+                assert.isTrue(isSeeked);
+                assert.equal(time, -3000)
             });
-
         });
 
         describe('Detects repeating', function () {
             it('Detects repeat when player was within 12 seconds of ending and seeked back to within 12 seconds of start', function () {
-                const player = new GenericPlayerState(logger, [NO_DEVICE, NO_USER]);
+                const player = new TestPositionalPlayerState(logger, [NO_DEVICE, NO_USER]);
 
                 const positioned = clone(newPlay);
                 positioned.data.duration = 70;
-                positioned.meta.trackProgressPosition = 45;
-                player.update(testState({play: positioned}));
+                player.update(testState({play: positioned, position: 45}));
 
-                positioned.meta.trackProgressPosition = 55;
-                player.update(testState({play: positioned}), dayjs().add(10, 'seconds'));
+                player.currentListenRange.rtPlayer.setPosition(65000);
+                player.update(testState({play: positioned, position: 65}), dayjs().add(20, 'seconds'));
 
-                positioned.meta.trackProgressPosition = 65;
-                player.update(testState({play: positioned}), dayjs().add(20, 'seconds'));
+                const isRepeat = player.testSessionRepeat(5,  dayjs().add(20, 'seconds'));
+                assert.isTrue(isRepeat);
 
-                positioned.meta.trackProgressPosition = 5;
-                const [curr, prevPlay] = player.update(testState({play: positioned}), dayjs().add(30, 'seconds'));
+                player.currentListenRange.rtPlayer.setPosition(67000);
+                const [curr, prevPlay] = player.update(testState({play: positioned, position: 5}), dayjs().add(22, 'seconds'));
 
                 assert.isDefined(prevPlay);
                 assert.equal(player.getListenDuration(), 0);
             });
 
             it('Detects repeat when player was within 15% of ending and seeked back to within 15% of start', function () {
-                const player = new GenericPlayerState(logger, [NO_DEVICE, NO_USER]);
+                const player = new TestPositionalPlayerState(logger, [NO_DEVICE, NO_USER]);
 
                 const positioned = clone(newPlay);
                 positioned.data.duration = 300;
-                positioned.meta.trackProgressPosition = 351;
-                player.update(testState({play: positioned}));
 
-                positioned.meta.trackProgressPosition = 361;
-                player.update(testState({play: positioned}), dayjs().add(10, 'seconds'));
+                player.update(testState({play: positioned, position: 351}));
 
-                positioned.meta.trackProgressPosition = 371;
-                player.update(testState({play: positioned}), dayjs().add(20, 'seconds'));
+                player.currentListenRange.rtPlayer.setPosition(361000);
+                player.update(testState({play: positioned, position: 361}), dayjs().add(10, 'seconds'));
 
-                positioned.meta.trackProgressPosition = 20;
-                const [curr, prevPlay] = player.update(testState({play: positioned}), dayjs().add(30, 'seconds'));
+                player.currentListenRange.rtPlayer.setPosition(371000);
+                player.update(testState({play: positioned, position: 371}), dayjs().add(20, 'seconds'));
+
+                const isRepeat = player.testSessionRepeat(20,  dayjs().add(30, 'seconds'));
+                assert.isTrue(isRepeat);
+
+                player.currentListenRange.rtPlayer.setPosition(381000);
+                const [curr, prevPlay] = player.update(testState({play: positioned, position: 20}), dayjs().add(30, 'seconds'));
 
                 assert.isDefined(prevPlay);
                 assert.equal(player.getListenDuration(), 0);
             });
 
-            it('Detects repeat when player is seeked to start and a heft chunk of the track has already been played', function () {
-                const player = new GenericPlayerState(logger, [NO_DEVICE, NO_USER]);
+            it('Detects repeat when player is seeked to start and a hefty chunk of the track has already been played', function () {
+                const player = new TestPositionalPlayerState(logger, [NO_DEVICE, NO_USER]);
 
                 const positioned = clone(newPlay);
                 positioned.data.duration = 70;
-                positioned.meta.trackProgressPosition = 0;
-                player.update(testState({play: positioned}));
 
-                positioned.meta.trackProgressPosition = 10;
-                player.update(testState({play: positioned}), dayjs().add(10, 'seconds'));
+                player.update(testState({play: positioned, position: 0}));
 
-                positioned.meta.trackProgressPosition = 20;
-                player.update(testState({play: positioned}), dayjs().add(20, 'seconds'));
+                player.currentListenRange.rtPlayer.setPosition(40000);
+                player.update(testState({play: positioned, position: 40}), dayjs().add(40, 'seconds'));
 
-                positioned.meta.trackProgressPosition = 30;
-                player.update(testState({play: positioned}), dayjs().add(30, 'seconds'));
-
-                positioned.meta.trackProgressPosition = 40;
-                player.update(testState({play: positioned}), dayjs().add(40, 'seconds'));
+                const isRepeat = player.testSessionRepeat(2,  dayjs().add(50, 'seconds'));
+                assert.isTrue(isRepeat);
 
                 positioned.meta.trackProgressPosition = 2;
-                const [curr, prevPlay] = player.update(testState({play: positioned}), dayjs().add(50, 'seconds'));
+                player.currentListenRange.rtPlayer.setPosition(50000);
+                const [curr, prevPlay] = player.update(testState({play: positioned, position: 2}), dayjs().add(50, 'seconds'));
 
                 assert.isDefined(prevPlay);
                 assert.equal(player.getListenDuration(), 0);

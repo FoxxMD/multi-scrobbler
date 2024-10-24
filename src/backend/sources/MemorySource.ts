@@ -90,7 +90,7 @@ export default class MemorySource extends AbstractSource {
         return record;
     }
 
-    getNewPlayer = (logger: Logger, id: PlayPlatformId, opts: PlayerStateOptions) => new GenericPlayerState(logger, id, opts)
+    getNewPlayer = (logger: Logger, id: PlayPlatformId, opts: PlayerStateOptions): AbstractPlayerState => new GenericPlayerState(logger, id, opts)
 
     setNewPlayer = (idStr: string, logger: Logger, id: PlayPlatformId, opts: PlayerStateOptions = {}) => {
         this.players.set(idStr, this.getNewPlayer(this.logger, id, {
@@ -172,6 +172,9 @@ export default class MemorySource extends AbstractSource {
                     playerState = incomingData;
                 } else {
                     playerState = {play: incomingData, platformId: getPlatformIdFromData(incomingData)};
+                }
+                if(playerState.position === undefined && playerState.play !== undefined && playerState.play.meta.trackProgressPosition !== undefined) {
+                    playerState.position = playerState.play.meta?.trackProgressPosition;
                 }
 
                 const [currPlay, prevPlay] = player.update(playerState);

@@ -19,7 +19,7 @@ import {
 } from "../common/infrastructure/config/source/mpd.js";
 import { isPortReachable } from "../utils/NetworkUtils.js";
 import { RecentlyPlayedOptions } from "./AbstractSource.js";
-import MemorySource from "./MemorySource.js";
+import { MemoryPositionalSource } from "./MemoryPositionalSource.js";
 
 const mpdClient = mpdapiNS.default;
 
@@ -29,7 +29,7 @@ const CLIENT_PLAYER_STATE: Record<PlayerState, ReportedPlayerStatus> = {
     'stop': REPORTED_PLAYER_STATUSES.stopped,
 }
 
-export class MPDSource extends MemorySource {
+export class MPDSource extends MemoryPositionalSource {
     declare config: MPDSourceConfig;
 
     host?: string

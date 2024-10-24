@@ -4,9 +4,9 @@ import { FormatPlayObjectOptions, InternalConfig } from "../common/infrastructur
 import { KodiSourceConfig } from "../common/infrastructure/config/source/kodi.js";
 import { KodiApiClient } from "../common/vendor/KodiApiClient.js";
 import { RecentlyPlayedOptions } from "./AbstractSource.js";
-import MemorySource from "./MemorySource.js";
+import { MemoryPositionalSource } from "./MemoryPositionalSource.js";
 
-export class KodiSource extends MemorySource {
+export class KodiSource extends MemoryPositionalSource {
     declare config: KodiSourceConfig;
 
     client: KodiApiClient;

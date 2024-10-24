@@ -54,6 +54,10 @@ export interface PlayProgress {
     positionPercent?: number
 }
 
+export interface PlayProgressPositional extends PlayProgress {
+    position: number
+}
+
 export interface ListenRangeData {
     start: ListenProgress
     end: ListenProgress
