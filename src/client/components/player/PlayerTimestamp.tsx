@@ -4,6 +4,7 @@ import './timestamp.scss';
 export interface TimestampProps {
     current: number
     duration: number
+    indeterminate?: boolean
 }
 
 const convertTime = (rawTime: number) => {
@@ -19,11 +20,11 @@ const convertTime = (rawTime: number) => {
 const Timestamp = (props: TimestampProps) => {
     return(
         <div className="timestamp">
-            <div className="timestamp__current">
-                {convertTime(Math.floor(props.current))}
+            <div className="timestamp__current" style={{left: props.indeterminate ? '1em' : '0'}}>
+                {props.indeterminate ? '-' : convertTime(Math.floor(props.current))}
             </div>
             <div className="timestamp__progress">
-                <div style={{ width: (props.current === 0 && props.duration === 0 ? 0 : Math.floor((props.current / props.duration) * 100)) + "%" }}></div>
+                <div className={props.indeterminate ? 'indeterminate' : ''} style={{ width: props.indeterminate ? '100%' : (props.current === 0 && props.duration === 0 ? 0 : Math.floor((props.current / props.duration) * 100)) + "%" }}></div>
             </div>
             <div className="timestamp__total">
                 {convertTime(Math.floor(props.duration) - Math.floor(props.current))}
@@ -31,32 +32,5 @@ const Timestamp = (props: TimestampProps) => {
         </div>
     );
 }
-/*export class TimestampC extends React.Component {
-    convertTime(time) {
-        let mins = Math.floor(time / 60);
-        let seconds = time - (mins * 60);
-        if (seconds < 10) {
-            seconds = "0" + seconds;
-        }
-        time = mins + ":" + seconds;
-        return time;
-    }
-
-    render() {
-        return(
-            <div className="timestamp">
-                <div className="timestamp__current">
-                    {this.convertTime(this.props.current)}
-                </div>
-                <div className="timestamp__progress">
-                    <div style={{ width: Math.floor((this.props.current / this.props.duration) * 100) + "%" }}></div>
-                </div>
-                <div className="timestamp__total">
-                    {this.convertTime(this.props.duration - this.props.current)}
-                </div>
-            </div>
-        );
-    }
-}*/
 
 export default Timestamp;
