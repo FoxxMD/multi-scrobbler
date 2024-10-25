@@ -34,6 +34,13 @@ $primary: #556a77;
       bottom: 0;
       background: $primary;
     }
+
+    > div.indeterminate {
+      background-color: #ECEFF1;
+      animation: indeterminateAnimation 3s infinite linear;
+      transform-origin: 0% 50%;
+      background: $primary;
+    }
   }
 
   &__current {
@@ -42,5 +49,17 @@ $primary: #556a77;
 
   &__total {
     right: 0;
+  }
+}
+
+@keyframes indeterminateAnimation {
+  0% {
+    transform:  translateX(0) scaleX(0);
+  }
+  50% {
+    transform:  translateX(0) scaleX(0.5);
+  }
+  100% {
+    transform:  translateX(100%) scaleX(0.5);
   }
 }

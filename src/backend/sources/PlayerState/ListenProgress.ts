@@ -1,32 +1,53 @@
 import dayjs, { Dayjs } from "dayjs";
 
-import { PlayProgress, Second } from "../../../core/Atomic.js";
+import { PlayProgress, PlayProgressPositional, Second } from "../../../core/Atomic.js";
 
-export class ListenProgress implements PlayProgress {
+export class ListenProgressTS implements PlayProgress {
 
     public timestamp: Dayjs;
-    public position?: Second;
     public positionPercent?: number;
 
-    constructor(timestamp?: Dayjs, position?: number, positionPercent?: number) {
+    constructor(data: Partial<PlayProgress> = {}) {
+        const {timestamp, positionPercent} = data;
         this.timestamp = timestamp ?? dayjs();
-        this.position = position;
         this.positionPercent = positionPercent;
     }
 
-    getDuration(end: ListenProgress): Second {
-        if (this.position !== undefined && end.position !== undefined) {
-            return end.position - this.position;
-        } else {
-            return end.timestamp.diff(this.timestamp, 'seconds');
-        }
+    getDuration(end: ListenProgressTS): Second {
+        return end.timestamp.diff(this.timestamp, 'seconds');
     }
 
     toJSON() {
         return {
             timestamp: this.timestamp.toISOString(),
-            position: this.position,
+            position: undefined,
             positionPercent: this.positionPercent
         }
     }
 }
+
+export class ListenProgressPositional extends ListenProgressTS implements PlayProgressPositional {
+    public position: Second;
+
+    constructor(data: PlayProgressPositional) {
+        super(data);
+        const {timestamp, position} = data;
+        this.timestamp = timestamp ?? dayjs();
+        this.position = position;
+    }
+
+    getDuration(end: ListenProgressPositional): Second {
+        return end.position - this.position;
+    }
+
+
+    toJSON() {
+        return {
+            timestamp: this.timestamp.toISOString(),
+            position: this.position,
+            positionPercent: undefined
+        }
+    }
+}
+
+export type ListenProgress = ListenProgressTS | ListenProgressPositional;

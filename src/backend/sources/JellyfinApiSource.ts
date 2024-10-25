@@ -52,13 +52,11 @@ import {
 import { JellyApiSourceConfig } from "../common/infrastructure/config/source/jellyfin.js";
 import { combinePartsToString, genGroupIdStr, getPlatformIdFromData, joinedUrl, parseBool, } from "../utils.js";
 import { parseArrayFromMaybeString } from "../utils/StringUtils.js";
-import MemorySource from "./MemorySource.js";
-import { PlayerStateOptions } from "./PlayerState/AbstractPlayerState.js";
-import { JellyfinPlayerState } from "./PlayerState/JellyfinPlayerState.js";
+import { MemoryPositionalSource } from "./MemoryPositionalSource.js";
 
 const shortDeviceId = truncateStringToLength(10, '');
 
-export default class JellyfinApiSource extends MemorySource {
+export default class JellyfinApiSource extends MemoryPositionalSource {
     users: string[] = [];
 
     client: Jellyfin
@@ -476,7 +474,6 @@ export default class JellyfinApiSource extends MemorySource {
         }
     }
 
-    getNewPlayer = (logger: Logger, id: PlayPlatformId, opts: PlayerStateOptions) => new JellyfinPlayerState(logger, id, opts)
 }
 
 /**

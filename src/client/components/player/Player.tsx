@@ -94,7 +94,7 @@ art = {},
                         <p className="subtitle">{calculated !== 'stopped' ? artists.join(' / ') : '-'}</p>
                     </div>
 
-                    <PlayerTimestamp duration={duration} current={data.position || 0} />
+                    <PlayerTimestamp duration={duration} indeterminate={calculated === 'playing' && data.position === undefined} current={data.position || 0} />
                     <div className="flex">
                         <p className="stats flex-1 text-left">Status: {capitalize(calculated)}</p>
                         <p className="stats flex-1 text-right">Listened: {calculated !== 'stopped' ? `${listenedDuration.toFixed(0)}s` : '-'}{durPer}</p>

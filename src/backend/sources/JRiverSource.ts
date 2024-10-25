@@ -7,9 +7,9 @@ import { FormatPlayObjectOptions, InternalConfig } from "../common/infrastructur
 import { JRiverSourceConfig } from "../common/infrastructure/config/source/jriver.js";
 import { Info, JRiverApiClient, PLAYER_STATE } from "../common/vendor/JRiverApiClient.js";
 import { RecentlyPlayedOptions } from "./AbstractSource.js";
-import MemorySource from "./MemorySource.js";
+import { MemoryPositionalSource } from "./MemoryPositionalSource.js";
 
-export class JRiverSource extends MemorySource {
+export class JRiverSource extends MemoryPositionalSource {
     declare config: JRiverSourceConfig;
 
     url: URL;

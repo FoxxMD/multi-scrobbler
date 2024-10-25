@@ -11,7 +11,6 @@ import {
 } from "../common/infrastructure/Atomic.js";
 import { combinePartsToString, genGroupIdStr, getFirstNonEmptyString, getPlatformIdFromData, joinedUrl, parseBool, } from "../utils.js";
 import { parseArrayFromMaybeString } from "../utils/StringUtils.js";
-import MemorySource from "./MemorySource.js";
 import { GetSessionsMetadata } from "@lukehagar/plexjs/sdk/models/operations/getsessions.js";
 import { PlexAPI } from "@lukehagar/plexjs";
 import {
@@ -26,12 +25,13 @@ import { Readable } from 'node:stream';
 import { PlexPlayerState } from './PlayerState/PlexPlayerState.js';
 import { PlayerStateOptions } from './PlayerState/AbstractPlayerState.js';
 import { Logger } from '@foxxmd/logging';
+import { MemoryPositionalSource } from './MemoryPositionalSource.js';
 
 const shortDeviceId = truncateStringToLength(10, '');
 
 const THUMB_REGEX = new RegExp(/\/library\/metadata\/(?<ratingkey>\d+)\/thumb\/\d+/)
 
-export default class PlexApiSource extends MemorySource {
+export default class PlexApiSource extends MemoryPositionalSource {
     users: string[] = [];
 
     plexApi: PlexAPI;
