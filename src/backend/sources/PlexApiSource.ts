@@ -26,6 +26,7 @@ import { PlexPlayerState } from './PlayerState/PlexPlayerState.js';
 import { PlayerStateOptions } from './PlayerState/AbstractPlayerState.js';
 import { Logger } from '@foxxmd/logging';
 import { MemoryPositionalSource } from './MemoryPositionalSource.js';
+import { FixedSizeList } from 'fixed-size-list';
 
 const shortDeviceId = truncateStringToLength(10, '');
 
@@ -50,7 +51,8 @@ export default class PlexApiSource extends MemoryPositionalSource {
 
     logFilterFailure: false | 'debug' | 'warn';
 
-    mediaIdsSeen: string[] = [];
+    mediaIdsSeen: FixedSizeList<string>;
+    uniqueDropReasons: FixedSizeList<string>;
 
     libraries: {name: string, collectionType: string, uuid: string}[] = [];
 
@@ -63,6 +65,8 @@ export default class PlexApiSource extends MemoryPositionalSource {
         this.requiresAuth = true;
         this.requiresAuthInteraction = false;
         this.deviceId = `${name}-ms${internal.version}-${truncateStringToLength(10, '')(objectHash.sha1(config))}`;
+        this.uniqueDropReasons = new FixedSizeList<string>(100);
+        this.mediaIdsSeen = new FixedSizeList<string>(100);
     }
 
     protected async doBuildInitData(): Promise<true | string | undefined> {
@@ -337,8 +341,12 @@ export default class PlexApiSource extends MemoryPositionalSource {
                 let stateIdentifyingInfo: string = genGroupIdStr(getPlatformIdFromData(sessionData[0]));
                 if(sessionData[0].play !== undefined) {
                     stateIdentifyingInfo = buildTrackString(sessionData[0].play, {include: ['artist', 'track', 'platform']});
-                } 
-                this.logger[this.logFilterFailure](`Player State for  -> ${stateIdentifyingInfo} <-- is being dropped because ${validPlay}`);
+                }
+                const dropReason = `Player State for  -> ${stateIdentifyingInfo} <-- is being dropped because ${validPlay}`;
+                if(!this.uniqueDropReasons.data.some(x => x === dropReason)) {
+                    this.logger[this.logFilterFailure](dropReason);
+                    this.uniqueDropReasons.add(dropReason);
+                }
             }
         }
         return this.processRecentPlays(validSessions);
@@ -378,9 +386,9 @@ export default class PlexApiSource extends MemoryPositionalSource {
 
         const play: PlayObject = this.formatPlayObjAware(obj);
 
-        if(this.config.options.logPayload && !this.mediaIdsSeen.includes(play.meta.trackId)) {
+        if(this.config.options.logPayload && !this.mediaIdsSeen.data.includes(play.meta.trackId)) {
             this.logger.debug(`First time seeing media ${play.meta.trackId} on ${msDeviceId} => ${JSON.stringify(play)}`);
-            this.mediaIdsSeen.push(play.meta.trackId);
+            this.mediaIdsSeen.add(play.meta.trackId);
         }
 
         const reportedStatus = state !== 'playing' ? REPORTED_PLAYER_STATUSES.paused : REPORTED_PLAYER_STATUSES.playing;

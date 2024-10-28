@@ -53,6 +53,7 @@ import { JellyApiSourceConfig } from "../common/infrastructure/config/source/jel
 import { combinePartsToString, genGroupIdStr, getPlatformIdFromData, joinedUrl, parseBool, } from "../utils.js";
 import { parseArrayFromMaybeString } from "../utils/StringUtils.js";
 import { MemoryPositionalSource } from "./MemoryPositionalSource.js";
+import { FixedSizeList } from "fixed-size-list";
 
 const shortDeviceId = truncateStringToLength(10, '');
 
@@ -78,7 +79,8 @@ export default class JellyfinApiSource extends MemoryPositionalSource {
 
     logFilterFailure: false | 'debug' | 'warn';
 
-    mediaIdsSeen: string[] = [];
+    mediaIdsSeen: FixedSizeList<string>;
+    uniqueDropReasons: FixedSizeList<string>;
 
     libraries: {name: string, paths: string[], collectionType: CollectionType}[] = [];
 
@@ -101,6 +103,9 @@ export default class JellyfinApiSource extends MemoryPositionalSource {
                 id: this.deviceId
             }
         });
+
+        this.uniqueDropReasons = new FixedSizeList<string>(100);
+        this.mediaIdsSeen = new FixedSizeList<string>(100);
     }
 
     protected async doBuildInitData(): Promise<true | string | undefined> {
@@ -413,8 +418,13 @@ export default class JellyfinApiSource extends MemoryPositionalSource {
                 let stateIdentifyingInfo: string = genGroupIdStr(getPlatformIdFromData(sessionData[0]));
                 if(sessionData[0].play !== undefined) {
                     stateIdentifyingInfo = buildTrackString(sessionData[0].play, {include: ['artist', 'track', 'platform']});
-                } 
-                this.logger[this.logFilterFailure](`Player State for  -> ${stateIdentifyingInfo} <-- is being dropped because ${validPlay}`);
+                }
+                const dropReason = `Player State for  -> ${stateIdentifyingInfo} <-- is being dropped because ${validPlay}`;
+                if(!this.uniqueDropReasons.data.some(x => x === dropReason)) {
+                    this.logger[this.logFilterFailure](dropReason);
+                    this.uniqueDropReasons.add(dropReason);
+                }
+                this.logger[this.logFilterFailure](dropReason);
             }
         }
         return this.processRecentPlays(validSessions);
@@ -454,9 +464,9 @@ export default class JellyfinApiSource extends MemoryPositionalSource {
                 }
             }
 
-            if(this.config.options.logPayload && !this.mediaIdsSeen.includes(NowPlayingItem.Id)) {
+            if(this.config.options.logPayload && !this.mediaIdsSeen.data.includes(NowPlayingItem.Id)) {
                 this.logger.debug(`First time seeing media ${NowPlayingItem.Id} on ${msDeviceId} (play position ${playerPosition}) => ${JSON.stringify(NowPlayingItem)}`);
-                this.mediaIdsSeen.push(NowPlayingItem.Id);
+                this.mediaIdsSeen.add(NowPlayingItem.Id);
             }
         }
 
