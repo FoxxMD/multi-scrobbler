@@ -8,7 +8,8 @@ import { WildcardEmitter } from "./common/WildcardEmitter.js";
 import { Notifiers } from "./notifier/Notifiers.js";
 import ScrobbleClients from "./scrobblers/ScrobbleClients.js";
 import ScrobbleSources from "./sources/ScrobbleSources.js";
-import { generateBaseURL } from "./utils.js";
+
+import { generateBaseURL } from "./utils/NetworkUtils.js";
 import { PassThrough } from "stream";
 
 let version: string = 'unknown';

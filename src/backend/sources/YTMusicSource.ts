@@ -6,7 +6,7 @@ import { YTMusicSourceConfig } from "../common/infrastructure/config/source/ytmu
 import { Innertube, UniversalCache, Parser, YTNodes, ApiResponse, IBrowseResponse, Log, SessionOptions } from 'youtubei.js';
 import { GenerateAuthUrlOpts, OAuth2Client } from 'google-auth-library';
 import {resolve} from 'path';
-import { joinedUrl, parseBool, sleep } from "../utils.js";
+import { parseBool, sleep } from "../utils.js";
 import {
     getPlaysDiff,
     humanReadableDiff,
@@ -16,6 +16,7 @@ import {
 } from "../utils/PlayComparisonUtils.js";
 import AbstractSource, { RecentlyPlayedOptions } from "./AbstractSource.js";
 import { truncateStringToLength } from "../../core/StringUtils.js";
+import { joinedUrl } from "../utils/NetworkUtils.js";
 
 export const ytiHistoryResponseToListItems = (res: ApiResponse): YTNodes.MusicResponsiveListItem[] => {
     const page = Parser.parseResponse<IBrowseResponse>(res.data);

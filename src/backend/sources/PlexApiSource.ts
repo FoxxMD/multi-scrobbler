@@ -11,7 +11,7 @@ import {
     PlayerStateDataMaybePlay,
     PlayPlatformId, REPORTED_PLAYER_STATUSES
 } from "../common/infrastructure/Atomic.js";
-import { genGroupIdStr, getFirstNonEmptyString, getPlatformIdFromData, joinedUrl, parseBool, } from "../utils.js";
+import { genGroupIdStr, getFirstNonEmptyString, getPlatformIdFromData, parseBool, } from "../utils.js";
 import { buildStatePlayerPlayIdententifyingInfo, parseArrayFromMaybeString } from "../utils/StringUtils.js";
 import { GetSessionsMetadata } from "@lukehagar/plexjs/sdk/models/operations/getsessions.js";
 import { PlexAPI } from "@lukehagar/plexjs";
@@ -19,7 +19,7 @@ import {
     SDKValidationError,
   } from "@lukehagar/plexjs/sdk/models/errors";
 import { PlexApiSourceConfig } from "../common/infrastructure/config/source/plex.js";
-import { isPortReachable } from '../utils/NetworkUtils.js';
+import { isPortReachable, joinedUrl } from '../utils/NetworkUtils.js';
 import normalizeUrl from 'normalize-url';
 import { GetTokenDetailsResponse, GetTokenDetailsUserPlexAccount } from '@lukehagar/plexjs/sdk/models/operations/gettokendetails.js';
 import { parseRegexSingle } from '@foxxmd/regex-buddy-core';
@@ -393,7 +393,7 @@ export default class PlexApiSource extends MemoryPositionalSource {
             return validSession;
         }
         return sessions[0];
-    } 
+    }
 
     sessionToPlayerState = (obj: GetSessionsMetadata): PlayerStateDataMaybePlay => {
 

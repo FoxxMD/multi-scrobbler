@@ -1,7 +1,4 @@
-import { Logger } from '@foxxmd/logging';
-import { parseRegexSingle } from "@foxxmd/regex-buddy-core";
 import backoffStrategies from '@kenyip/backoff-strategies';
-import address from "address";
 import { replaceResultTransformer, stripIndentTransformer, TemplateTag, trimResultTransformer } from 'common-tags';
 import dayjs, { Dayjs } from 'dayjs';
 import { Duration } from "dayjs/plugin/duration.js";
@@ -10,8 +7,6 @@ import { Request } from "express";
 import { accessSync, constants, promises } from "fs";
 import JSON5 from 'json5';
 // https://github.com/jfromaniello/url-join#in-nodejs
-import { join as joinPath } from 'node:path/posix';
-import normalizeUrl from "normalize-url";
 import pathUtil from "path";
 import { TimeoutError, WebapiError } from "spotify-web-api-node/src/response-error.js";
 import { PlayObject } from "../core/Atomic.js";
@@ -639,34 +634,6 @@ export const durationToHuman = (dur: Duration): string => {
     parts.push(`${nTime.seconds}sec`);
     return parts.join(' ');
 }
-export const getAddress = (host = '0.0.0.0', logger?: Logger): { v4?: string, v6?: string, host: string } => {
-    const local = host === '0.0.0.0' || host === '::' ? 'localhost' : host;
-    let v4: string,
-        v6: string;
-    try {
-        v4 = address.ip();
-        v6 = address.ipv6();
-    } catch (e) {
-        if (process.env.DEBUG_MODE === 'true') {
-            if (logger !== undefined) {
-                logger.warn(new Error('Could not get machine IP address', {cause: e}));
-            } else {
-                console.warn('Could not get machine IP address');
-                console.warn(e);
-            }
-        }
-    }
-    return {
-        host: local,
-        v4,
-        v6
-    };
-}
-
-const IPV4_REGEX = new RegExp(/^((25[0-5]|(2[0-4]|1\d|[1-9]|)\d)\.?\b){4}$/);
-export const isIPv4 = (address: string): boolean => {
-    return parseRegexSingleOrFail(IPV4_REGEX, address) !== undefined;
-}
 
 export const comparingMultipleArtists = (existing: PlayObject, candidate: PlayObject): boolean => {
     const {
@@ -681,36 +648,6 @@ export const comparingMultipleArtists = (existing: PlayObject, candidate: PlayOb
     } = candidate;
 
     return eArtists.length > 1 || cArtists.length > 1;
-}
-
-const QUOTES_UNWRAP_REGEX: RegExp = new RegExp(/^"(.*)"$/);
-export const generateBaseURL = (userUrl: string | undefined, defaultPort: number | string): URL => {
-    const urlStr = userUrl ?? `http://localhost:${defaultPort}`;
-    let cleanUserUrl = urlStr.trim();
-    const results = parseRegexSingle(QUOTES_UNWRAP_REGEX, cleanUserUrl);
-    if(results !== undefined && results.groups && results.groups.length > 0) {
-        cleanUserUrl = results.groups[0];
-    }
-    const base = normalizeUrl(cleanUserUrl, {removeSingleSlash: true});
-    const u = new URL(base);
-    if(u.port === '') {
-        if(u.protocol === 'https:') {
-            u.port = '443';
-        } else if(userUrl.includes(`${u.hostname}:80`)) {
-            u.port = '80';
-        } else {
-            u.port = defaultPort.toString();
-        }
-    }
-    return u;
-}
-
-export const joinedUrl = (url: URL, ...paths: string[]): URL => {
-    // https://github.com/jfromaniello/url-join#in-nodejs
-    const finalUrl = new URL(url);
-    finalUrl.pathname = joinPath(url.pathname, ...(paths.filter(x => x.trim() !== '')));
-    const f = getFirstNonEmptyVal(['something']);
-    return finalUrl;
 }
 
 export const getFirstNonEmptyVal = <T = unknown>(values: unknown[], options: {ofType?: string, test?: (val: T) => boolean} = {}): NonNullable<T> | undefined => {
