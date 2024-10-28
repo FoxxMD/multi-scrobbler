@@ -15,7 +15,8 @@ import {
     WebScrobblerPayload,
     WebScrobblerSong
 } from "../common/vendor/webscrobbler/interfaces.js";
-import { joinedUrl } from "../utils.js";
+
+import { joinedUrl } from "../utils/NetworkUtils.js";
 import MemorySource from "./MemorySource.js";
 
 export class WebScrobblerSource extends MemorySource {

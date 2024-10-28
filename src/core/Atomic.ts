@@ -266,3 +266,9 @@ export const SOURCE_SOT = {
 export interface LeveledLogData extends LogDataPretty {
     levelLabel: string
 }
+
+export interface URLData {
+    url: URL
+    normal: string
+    port: number
+}
