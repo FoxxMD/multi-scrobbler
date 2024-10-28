@@ -14,6 +14,7 @@ import {
     playsAreSortConsistent
 } from "../utils/PlayComparisonUtils.js";
 import AbstractSource, { RecentlyPlayedOptions } from "./AbstractSource.js";
+import { ListDiff } from "@donedeal0/superdiff";
 
 export const ytiHistoryResponseToListItems = (res: ApiResponse): YTNodes.MusicResponsiveListItem[] => {
     const page = Parser.parseResponse<IBrowseResponse>(res.data);
@@ -279,6 +280,7 @@ export default class YTMusicSource extends AbstractSource {
                 return newPlays;
             }
 
+            let warnMsg: string;
             const bumpResults = playsAreBumpedOnly(this.recentlyPlayed, plays);
             if(bumpResults[0] === true) {
                 newPlays = bumpResults[1];
@@ -287,13 +289,20 @@ export default class YTMusicSource extends AbstractSource {
                 if(addResults[0] === true) {
                     newPlays = [...addResults[1]].reverse();
                 } else {
-                    const playsDiff = getPlaysDiff(this.recentlyPlayed, plays)
-                    const humanDiff = humanReadableDiff(this.recentlyPlayed, plays, playsDiff);
-                    this.logger.warn('YTM History returned temporally inconsistent order, resetting watched history to new list.');
-                    this.logger.warn(`Changes from last seen list:
-    ${humanDiff}`);
-                    this.recentlyPlayed = plays;
-                    return newPlays;
+                    warnMsg = 'YTM History returned temporally inconsistent order, resetting watched history to new list.';
+                }
+            }
+
+            if(warnMsg !== undefined || (newPlays.length > 0 && this.config.options?.logDiff === true)) {
+                const playsDiff = getPlaysDiff(this.recentlyPlayed, plays)
+                const humanDiff = humanReadableDiff(this.recentlyPlayed, plays, playsDiff);
+                const diffMsg = `Changes from last seen list:
+    ${humanDiff}`;
+                if(warnMsg !== undefined) {
+                    this.logger.warn(warnMsg);
+                    this.logger.warn(diffMsg);
+                } else {
+                    this.logger.debug(diffMsg);
                 }
             }
 
@@ -302,7 +311,7 @@ export default class YTMusicSource extends AbstractSource {
                 newPlays = newPlays.map((x, index) => ({
                     data: {
                         ...x.data,
-                        playDate: dayjs().startOf('minute').add(index, 's')
+                        playDate: dayjs().startOf('minute').add(index + 1, 's')
                     },
                     meta: {
                         ...x.meta,
