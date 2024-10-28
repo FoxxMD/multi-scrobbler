@@ -673,28 +673,30 @@ After starting multi-scrobbler with credentials in-place open the dashboard (`ht
 
 ### [Youtube Music](https://music.youtube.com)
 
+<details>
+
+    <summary>Migrating from YT Music cookie-based Source</summary>
+
+    In multi-scrobbler **below v0.9.0** YT Music credentials were extracted from browser cookies. Due to authentication inconsistency and YT service changes this was approach was dropped in favor of [oauth authentication which is more stable.](https://ytjs.dev/guide/authentication.html#youtube-tv-oauth2)
+
+    Your existing credentials cannot be migrated. However, the oauth approach is quite easy. Continue following the directions below to setup new authentication for your YT Music Source.
+
+</details>
+
 :::note
 
-* YT Music authentication is "browser based" which means your credentials may expire after a (long?) period of time OR if you log out of https://music.youtube.com. In the event this happens just repeat the steps below to get new credentials. [See the FAQ](../FAQ.md#youtube-music-fails-after-some-time) for a more detailed explanation.
 * Communication to YT Music is **unofficial** and not supported or endorsed by Google. This means that **this integration may stop working at any time** if Google decides to change how YT Music works in the browser.
   * Due to this scrobble history from YTM is often inconsistent and can cause missed scrobbles. [See the FAQ](../FAQ.md#youtube-music-misses-scrobbles) for a more detailed explanation.
 
 :::
 
-Credentials for YT Music are obtained from a browser request to https://music.youtube.com **once you are logged in.** [Specific requirements are here and summarized below:](https://github.com/nickp10/youtube-music-ts-api/blob/master/DOCUMENTATION.md#authenticate)
+To authenticate simply start multi-scrobbler with an empty YT Music configuration. An authentication URL/code will be logged in additon to being available from the dashboard.
 
-* Open a new tab
-* Open the developer tools (Ctrl-Shift-I) and select the “Network” tab 
-* Go to https://music.youtube.com and ensure you are logged in 
+```
+[2024-10-09 15:24:17.358 -0400] INFO   : [App] [Sources] [Ytmusic - MyYTM] ERROR: Sign in with the code 'CLV-KFA-BVKY' using the authentication link on the dashboard or https://www.google.com/device
+```
 
-Then...
-
-1. Find and select an authenticated POST request. The simplest way is to filter by /browse using the search bar of the developer tools. If you don’t see the request, try scrolling down a bit or clicking on the library button in the top bar.
-2. **Make sure **Headers** pane is selected and open
-3. In the **Request Headers** section find and copy the **entire value** found after `Cookie:` and use this as the `cookie` value in your multi-scrobbler config
-4. If present, in the **Request Headers** section find and copy the number found in `X-google-AuthUser` and use this as the value for `authUser` in your multi-scrobbler config
-
-![Google Headers](google-header.jpg)
+Visit the authentication URL and enter the code that was provided (also available on the dashboard). After completing the setup flow MS will log `Auth success` and the YT Music dashboard card will display as **Idle** after refreshing. Click the **Start** link to begin monitoring.
 
 #### Configuration
 
