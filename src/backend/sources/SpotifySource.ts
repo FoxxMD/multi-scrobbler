@@ -19,7 +19,6 @@ import {
 import { SpotifySourceConfig } from "../common/infrastructure/config/source/spotify.js";
 import {
     combinePartsToString,
-    joinedUrl,
     parseRetryAfterSecsFromObj,
     readJson,
     sleep,
@@ -27,6 +26,7 @@ import {
     writeFile,
 } from "../utils.js";
 import { findCauseByFunc } from "../utils/ErrorUtils.js";
+import { joinedUrl } from "../utils/NetworkUtils.js";
 import { RecentlyPlayedOptions } from "./AbstractSource.js";
 import AlbumObjectSimplified = SpotifyApi.AlbumObjectSimplified;
 import ArtistObjectSimplified = SpotifyApi.ArtistObjectSimplified;

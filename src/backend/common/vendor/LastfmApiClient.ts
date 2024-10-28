@@ -8,7 +8,8 @@ import LastFm, {
 } from "lastfm-node-client";
 import { PlayObject } from "../../../core/Atomic.js";
 import { nonEmptyStringOrDefault, splitByFirstFound } from "../../../core/StringUtils.js";
-import { joinedUrl, readJson, removeUndefinedKeys, sleep, writeFile } from "../../utils.js";
+import { readJson, removeUndefinedKeys, sleep, writeFile } from "../../utils.js";
+import { joinedUrl } from "../../utils/NetworkUtils.js";
 import { getScrobbleTsSOCDate } from "../../utils/TimeUtils.js";
 import { getNodeNetworkException, isNodeNetworkException } from "../errors/NodeErrors.js";
 import { UpstreamError } from "../errors/UpstreamError.js";

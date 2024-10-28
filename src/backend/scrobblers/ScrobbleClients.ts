@@ -10,7 +10,8 @@ import { ListenBrainzClientConfig } from "../common/infrastructure/config/client
 import { MalojaClientConfig } from "../common/infrastructure/config/client/maloja.js";
 import { WildcardEmitter } from "../common/WildcardEmitter.js";
 import { Notifiers } from "../notifier/Notifiers.js";
-import { joinedUrl, readJson, thresholdResultSummary } from "../utils.js";
+import { readJson, thresholdResultSummary } from "../utils.js";
+import { joinedUrl } from "../utils/NetworkUtils.js";
 import { getTypeSchemaFromConfigGenerator } from "../utils/SchemaUtils.js";
 import { validateJson } from "../utils/ValidationUtils.js";
 import AbstractScrobbleClient from "./AbstractScrobbleClient.js";

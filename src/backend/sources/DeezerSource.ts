@@ -6,7 +6,8 @@ import request from 'superagent';
 import { PlayObject } from "../../core/Atomic.js";
 import { DEFAULT_RETRY_MULTIPLIER, FormatPlayObjectOptions, InternalConfig } from "../common/infrastructure/Atomic.js";
 import { DeezerSourceConfig } from "../common/infrastructure/config/source/deezer.js";
-import { joinedUrl, parseRetryAfterSecsFromObj, readJson, sleep, sortByOldestPlayDate, writeFile, } from "../utils.js";
+import { parseRetryAfterSecsFromObj, readJson, sleep, sortByOldestPlayDate, writeFile, } from "../utils.js";
+import { joinedUrl } from "../utils/NetworkUtils.js";
 import AbstractSource, { RecentlyPlayedOptions } from "./AbstractSource.js";
 
 export default class DeezerSource extends AbstractSource {
