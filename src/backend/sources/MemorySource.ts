@@ -122,6 +122,13 @@ export default class MemorySource extends AbstractSource {
         this.emitEvent('playerDelete', {platformId: id});
     }
 
+    pickPlatformSession = (sessions: (PlayObject | PlayerStateDataMaybePlay)[], player: AbstractPlayerState): PlayObject | PlayerStateDataMaybePlay =>  {
+        if(sessions.length > 1) {
+            player.logger.debug(`More than one data/state found in incoming data, will only use first found.`);
+        }
+        return sessions[0];
+    }
+    
     processRecentPlays = (datas: (PlayObject | PlayerStateDataMaybePlay)[]) => {
 
         const {
@@ -162,10 +169,7 @@ export default class MemorySource extends AbstractSource {
             if (relevantDatas.length > 0) {
                 this.lastActivityAt = dayjs();
 
-                if (relevantDatas.length > 1) {
-                    this.logger.warn(`More than one data/state for Player ${player.platformIdStr} found in incoming data, will only use first found.`);
-                }
-                incomingData = relevantDatas[0];
+                incomingData = this.pickPlatformSession(relevantDatas, player);
 
                 let playerState: PlayerStateDataMaybePlay;
                 if(asPlayerStateDataMaybePlay(incomingData)) {

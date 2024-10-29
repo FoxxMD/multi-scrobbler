@@ -116,6 +116,8 @@ export interface PlayerStateData extends PlayerStateDataMaybePlay {
 
 export interface PlayerStateDataMaybePlay {
     platformId: PlayPlatformId
+    /** The ID/Key for individual sessions on a device/platform */
+    sessionId?: string
     play?: PlayObject
     status?: ReportedPlayerStatus
     position?: number

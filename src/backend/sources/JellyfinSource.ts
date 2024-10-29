@@ -2,11 +2,15 @@ import { Logger } from "@foxxmd/logging";
 import dayjs from "dayjs";
 import EventEmitter from "events";
 import { PlayObject, TA_CLOSE } from "../../core/Atomic.js";
-import { buildTrackString, splitByFirstFound, truncateStringToLength } from "../../core/StringUtils.js";
+import {
+    buildTrackString,
+    combinePartsToString,
+    splitByFirstFound,
+    truncateStringToLength
+} from "../../core/StringUtils.js";
 import { FormatPlayObjectOptions, InternalConfig, PlayPlatformId } from "../common/infrastructure/Atomic.js";
 import { JellySourceConfig } from "../common/infrastructure/config/source/jellyfin.js";
 import {
-    combinePartsToString,
     doubleReturnNewline,
     parseBool,
     parseDurationFromTimestamp,

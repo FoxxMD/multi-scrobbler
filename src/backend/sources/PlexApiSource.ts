@@ -1,16 +1,17 @@
 import objectHash from 'object-hash';
 import EventEmitter from "events";
 import { PlayObject } from "../../core/Atomic.js";
-import { buildTrackString, truncateStringToLength } from "../../core/StringUtils.js";
+import { buildTrackString, combinePartsToString, truncateStringToLength } from "../../core/StringUtils.js";
 import {
+    asPlayerStateDataMaybePlay,
     FormatPlayObjectOptions,
     InternalConfig,
     PlayerStateData,
     PlayerStateDataMaybePlay,
     PlayPlatformId, REPORTED_PLAYER_STATUSES
 } from "../common/infrastructure/Atomic.js";
-import { combinePartsToString, genGroupIdStr, getFirstNonEmptyString, getPlatformIdFromData, joinedUrl, parseBool, } from "../utils.js";
-import { parseArrayFromMaybeString } from "../utils/StringUtils.js";
+import { genGroupIdStr, getFirstNonEmptyString, getPlatformIdFromData, joinedUrl, parseBool, } from "../utils.js";
+import { buildStatePlayerPlayIdententifyingInfo, parseArrayFromMaybeString } from "../utils/StringUtils.js";
 import { GetSessionsMetadata } from "@lukehagar/plexjs/sdk/models/operations/getsessions.js";
 import { PlexAPI } from "@lukehagar/plexjs";
 import {
@@ -23,7 +24,7 @@ import { GetTokenDetailsResponse, GetTokenDetailsUserPlexAccount } from '@lukeha
 import { parseRegexSingle } from '@foxxmd/regex-buddy-core';
 import { Readable } from 'node:stream';
 import { PlexPlayerState } from './PlayerState/PlexPlayerState.js';
-import { PlayerStateOptions } from './PlayerState/AbstractPlayerState.js';
+import { AbstractPlayerState, PlayerStateOptions } from './PlayerState/AbstractPlayerState.js';
 import { Logger } from '@foxxmd/logging';
 import { MemoryPositionalSource } from './MemoryPositionalSource.js';
 import { FixedSizeList } from 'fixed-size-list';
@@ -291,6 +292,7 @@ export default class PlexApiSource extends MemoryPositionalSource {
             librarySectionTitle: library,
             duration,
             guid,
+            sessionKey,
             player: {
                 product,
                 title: playerTitle,
@@ -320,6 +322,7 @@ export default class PlexApiSource extends MemoryPositionalSource {
                 source: 'Plex',
                 library,
                 deviceId: combinePartsToString([shortDeviceId(machineIdentifier), product, playerTitle]),
+                sessionId: sessionKey,
                 trackProgressPosition: viewOffset / 1000
             }
         }
@@ -329,19 +332,16 @@ export default class PlexApiSource extends MemoryPositionalSource {
 
         const result = await this.plexApi.sessions.getSessions();
 
-        const nonMSSessions: [PlayerStateDataMaybePlay, GetSessionsMetadata][] = (result.object.mediaContainer?.metadata ?? [])
+        const allSessions: [PlayerStateDataMaybePlay, GetSessionsMetadata][] = (result.object.mediaContainer?.metadata ?? [])
         .map(x => [this.sessionToPlayerState(x), x]);
         const validSessions: PlayerStateDataMaybePlay[] = [];
 
-        for(const sessionData of nonMSSessions) {
+        for(const sessionData of allSessions) {
             const validPlay = this.isActivityValid(sessionData[0], sessionData[1]);
             if(validPlay === true) {
                 validSessions.push(sessionData[0]);
             } else if(this.logFilterFailure !== false) {
-                let stateIdentifyingInfo: string = genGroupIdStr(getPlatformIdFromData(sessionData[0]));
-                if(sessionData[0].play !== undefined) {
-                    stateIdentifyingInfo = buildTrackString(sessionData[0].play, {include: ['artist', 'track', 'platform']});
-                }
+                const stateIdentifyingInfo = buildStatePlayerPlayIdententifyingInfo(sessionData[0]);
                 const dropReason = `Player State for  -> ${stateIdentifyingInfo} <-- is being dropped because ${validPlay}`;
                 if(!this.uniqueDropReasons.data.some(x => x === dropReason)) {
                     this.logger[this.logFilterFailure](dropReason);
@@ -370,6 +370,25 @@ export default class PlexApiSource extends MemoryPositionalSource {
         }
     }
 
+    pickPlatformSession = (sessions: (PlayObject | PlayerStateDataMaybePlay)[], player: AbstractPlayerState): PlayObject | PlayerStateDataMaybePlay => {
+        if(sessions.length === 1) {
+            return sessions[0];
+        }
+        // if all are player states and have session ids
+        // then choose the player state with the "latest" session key
+        if(sessions.every(x => asPlayerStateDataMaybePlay(x) && 'sessionId' in x)) {
+            const pStateSessions = sessions as PlayerStateDataMaybePlay[];
+            pStateSessions.sort((a, b) => parseInt(a.sessionId) - parseInt(b.sessionId));
+
+            const validSession = pStateSessions[sessions.length - 1];
+            const droppingSessions = pStateSessions.filter(x => x.sessionId !== validSession.sessionId).map(x => buildStatePlayerPlayIdententifyingInfo(x)).join('\n');
+            player.logger.debug(`More than one data/state found in incoming data, dropping these sessions with "earlier" session keys:\n${droppingSessions}`);
+
+            return validSession;
+        }
+        return sessions[0];
+    } 
+
     sessionToPlayerState = (obj: GetSessionsMetadata): PlayerStateDataMaybePlay => {
 
         const {
@@ -379,7 +398,8 @@ export default class PlexApiSource extends MemoryPositionalSource {
                 product,
                 title,
                 state
-            } = {}
+            } = {},
+            sessionKey
         } = obj;
 
         const msDeviceId = combinePartsToString([shortDeviceId(machineIdentifier), product, title]);
@@ -394,6 +414,7 @@ export default class PlexApiSource extends MemoryPositionalSource {
         const reportedStatus = state !== 'playing' ? REPORTED_PLAYER_STATUSES.paused : REPORTED_PLAYER_STATUSES.playing;
         return {
             platformId: [msDeviceId, play.meta.user],
+            sessionId: sessionKey,
             play,
             status: reportedStatus,
             position: viewOffset / 1000

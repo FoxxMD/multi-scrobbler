@@ -41,7 +41,7 @@ import { nanoid } from "nanoid";
 import pEvent from "p-event";
 import { Simulate } from "react-dom/test-utils";
 import { PlayObject } from "../../core/Atomic.js";
-import { buildTrackString, truncateStringToLength } from "../../core/StringUtils.js";
+import { buildTrackString, combinePartsToString, truncateStringToLength } from "../../core/StringUtils.js";
 import {
     FormatPlayObjectOptions,
     InternalConfig,
@@ -50,7 +50,7 @@ import {
     PlayPlatformId, REPORTED_PLAYER_STATUSES
 } from "../common/infrastructure/Atomic.js";
 import { JellyApiSourceConfig } from "../common/infrastructure/config/source/jellyfin.js";
-import { combinePartsToString, genGroupIdStr, getPlatformIdFromData, joinedUrl, parseBool, } from "../utils.js";
+import { genGroupIdStr, getPlatformIdFromData, joinedUrl, parseBool, } from "../utils.js";
 import { parseArrayFromMaybeString } from "../utils/StringUtils.js";
 import { MemoryPositionalSource } from "./MemoryPositionalSource.js";
 import { FixedSizeList } from "fixed-size-list";

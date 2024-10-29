@@ -302,7 +302,7 @@ Find your [**Plex Token**](https://support.plex.tv/articles/204059436-finding-an
 
 :::warning[Deprecated]
 
-Multi-scrobbler < 0.9.0 used [webhooks](https://support.plex.tv/articles/115002267687-webhooks) to support Plex scrobbling. This approach has been deprecated in favor of using Plex's API directly which has many benefits including **not requiring Plex Pass.**
+Multi-scrobbler < 0.8.7 used [webhooks](https://support.plex.tv/articles/115002267687-webhooks) to support Plex scrobbling. This approach has been deprecated in favor of using Plex's API directly which has many benefits including **not requiring Plex Pass.**
 
 :::
 
@@ -312,9 +312,9 @@ Multi-scrobbler < 0.9.0 used [webhooks](https://support.plex.tv/articles/1150022
 
     * Follow the instructions in the API tab
     * The `user` (`PLEX_USER`) setting has been renamed `usersAllow` (`PLEX_USERS_ALLOW`)
-      * If you were using this filter to ensure only scrobbles from yourself were registered then you no longer need this setting -- by default MS will only scrobble for the user the Plex Token is used for.
-    * The `servers` setting is no longer available as MS only scrobbles from the server using the API anyways.
-      * If you need to scrobble for multiple servers set up each server as a separate Plex API source
+      * If you were using this filter to ensure only scrobbles from yourself were registered then you no longer need this setting -- by default MS will only scrobble for the user the Plex Token is from.
+    * The `servers` setting is no longer available as MS only scrobbles from the server the Plex token is from.
+      * If you need to scrobble for multiple servers set up each server as a separate Plex API source with a separate token.
     * The `libraries` setting has been renamed to `librariesAllow`
 
 </details>

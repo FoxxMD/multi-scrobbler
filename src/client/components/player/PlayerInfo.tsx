@@ -14,6 +14,11 @@ const PlayerInfo = (props: PlayerInfoProps) => {
         data,
         data: {
             play,
+            play: {
+                meta: {
+                    sessionId
+                } = {}
+            } = {},
             status: {
                 calculated,
                 reported
@@ -34,7 +39,7 @@ const PlayerInfo = (props: PlayerInfoProps) => {
     return (
         <div className={["playlist", isHidden, 'bg-gray-600'].join(' ')}>
             <div className="playlist_body">
-                <div className="full">Player ID: <small>{data.platformId}</small></div>
+                <div className="full">Player ID: <small>{data.platformId}{sessionId !== undefined ? ` (Session ${sessionId})` : null}</small></div>
                 <div className="full">Player Updated: <small>{isoToHuman(data.playerLastUpdatedAt, {includeRelative: true})}</small></div>
                 <div className="full">Track Seen: <small>{isoToHuman(data.playFirstSeenAt, {includeRelative: true})}</small></div>
                 <div className="full">Track Updated: <small>{isoToHuman(data.playLastUpdatedAt, {includeRelative: true})}</small></div>

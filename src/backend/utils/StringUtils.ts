@@ -1,7 +1,8 @@
 import { strategies, stringSameness, StringSamenessResult } from "@foxxmd/string-sameness";
 import { PlayObject } from "../../core/Atomic.js";
-import { DELIMITERS } from "../common/infrastructure/Atomic.js";
-import { parseRegexSingleOrFail } from "../utils.js";
+import { asPlayerStateData, DELIMITERS, PlayerStateDataMaybePlay } from "../common/infrastructure/Atomic.js";
+import { genGroupIdStr, getPlatformIdFromData, parseRegexSingleOrFail } from "../utils.js";
+import { buildTrackString } from "../../core/StringUtils.js";
 
 const {levenStrategy, diceStrategy} = strategies;
 
@@ -356,4 +357,12 @@ export const firstNonEmptyStr = (vals: unknown[]): string | undefined => {
             }
         }
     }
+}
+
+export const buildStatePlayerPlayIdententifyingInfo = (data: PlayObject | PlayerStateDataMaybePlay): string => {
+    let idInfo = genGroupIdStr(getPlatformIdFromData(data));
+    if(asPlayerStateData(data)) {
+        idInfo = buildTrackString(data.play, {include: ['artist', 'track', 'platform', 'session']});
+    }
+    return idInfo;
 }

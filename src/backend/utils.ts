@@ -16,12 +16,10 @@ import pathUtil from "path";
 import { TimeoutError, WebapiError } from "spotify-web-api-node/src/response-error.js";
 import { PlayObject } from "../core/Atomic.js";
 import {
-    asPlayerStateData,
     asPlayerStateDataMaybePlay,
     NO_DEVICE,
     NO_USER,
     numberFormatOptions,
-    PlayerStateData,
     PlayerStateDataMaybePlay,
     PlayPlatformId,
     ProgressAwarePlayObject,
@@ -363,34 +361,6 @@ export const remoteHostStr = (req: Request): string => {
     const {host, proxy, agent} = remoteHostIdentifiers(req);
 
     return `${host}${proxy !== undefined ? ` (${proxy})` : ''}${agent !== undefined ? ` (UA: ${agent})` : ''}`;
-}
-
-export const combinePartsToString = (parts: any[], glue: string = '-'): string | undefined => {
-    const cleanParts: string[] = [];
-    for (const part of parts) {
-        if (part === null || part === undefined) {
-            continue;
-        }
-        if (Array.isArray(part)) {
-            const nestedParts = combinePartsToString(part, glue);
-            if (nestedParts !== undefined) {
-                cleanParts.push(nestedParts);
-            }
-        } else if (typeof part === 'object') {
-            // hope this works
-            cleanParts.push(JSON.stringify(part));
-        } else if(typeof part === 'string') {
-            if(part.trim() !== '') {
-                cleanParts.push(part);
-            }
-        } else {
-            cleanParts.push(part.toString());
-        }
-    }
-    if (cleanParts.length > 0) {
-        return cleanParts.join(glue);
-    }
-    return undefined;
 }
 
 /**

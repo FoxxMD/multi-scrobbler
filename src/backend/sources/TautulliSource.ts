@@ -2,10 +2,9 @@ import dayjs from "dayjs";
 import EventEmitter from "events";
 import { Request } from "express";
 import { PlayObject } from "../../core/Atomic.js";
-import { truncateStringToLength } from "../../core/StringUtils.js";
+import { combinePartsToString, truncateStringToLength } from "../../core/StringUtils.js";
 import { FormatPlayObjectOptions, InternalConfig } from "../common/infrastructure/Atomic.js";
 import { TautulliSourceConfig } from "../common/infrastructure/config/source/tautulli.js";
-import { combinePartsToString } from "../utils.js";
 import PlexSource from "./PlexSource.js";
 
 const shortDeviceId = truncateStringToLength(10, '');

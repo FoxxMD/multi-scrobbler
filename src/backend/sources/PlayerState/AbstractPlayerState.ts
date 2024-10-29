@@ -53,6 +53,7 @@ export abstract class AbstractPlayerState {
     reportedStatus: ReportedPlayerStatus = REPORTED_PLAYER_STATUSES.unknown
     calculatedStatus: CalculatedPlayerStatus = CALCULATED_PLAYER_STATUSES.unknown
     platformId: PlayPlatformId
+    sessionId?: string
     stateIntervalOptions: Required<PlayerStateIntervals>;
     currentPlay?: PlayObject
     playFirstSeenAt?: Dayjs
@@ -151,11 +152,12 @@ export abstract class AbstractPlayerState {
     }
 
     protected setPlay(state: PlayerStateData, reportedTS?: Dayjs): [PlayObject, PlayObject?] {
-        const {play, status} = state;
+        const {play, status, sessionId} = state;
         this.playLastUpdatedAt = dayjs();
         if (status !== undefined) {
             this.reportedStatus = status;
         }
+        this.sessionId = sessionId;
 
         if (this.currentPlay !== undefined) {
             if (!this.incomingPlayMatchesExisting(play)) { // TODO check new play date and listen range to see if they intersect
@@ -329,7 +331,7 @@ export abstract class AbstractPlayerState {
         this.listenRanges = [];
         this.currentListenRange = undefined;
 
-        this.logger.debug(`New Play: ${buildTrackString(play, {include: ['trackId', 'artist', 'track']})}`);
+        this.logger.verbose(`New Play: ${buildTrackString(play, {include: ['trackId', 'artist', 'track', 'session']})}`);
 
         if (status !== undefined) {
             this.reportedStatus = status;
@@ -344,7 +346,7 @@ export abstract class AbstractPlayerState {
         const parts = [''];
         let play: string;
         if (this.currentPlay !== undefined) {
-            parts.push(`${buildTrackString(this.currentPlay, {include: ['trackId', 'artist', 'track']})} @ ${this.playFirstSeenAt.toISOString()}`);
+            parts.push(`${buildTrackString(this.currentPlay, {include: ['trackId', 'artist', 'track', 'session']})} @ ${this.playFirstSeenAt.toISOString()}`);
         }
         parts.push(`Reported: ${this.reportedStatus.toUpperCase()} | Calculated: ${this.calculatedStatus.toUpperCase()} | Stale: ${this.isUpdateStale() ? 'Yes' : 'No'} | Orphaned: ${this.isOrphaned() ? 'Yes' : 'No'} | Last Update: ${this.stateLastUpdatedAt.toISOString()}`);
         let progress = '';

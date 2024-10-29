@@ -3,7 +3,7 @@ import EventEmitter from "events";
 import SpotifyWebApi from "spotify-web-api-node";
 import request from 'superagent';
 import { PlayObject, SCROBBLE_TS_SOC_END, SCROBBLE_TS_SOC_START, ScrobbleTsSOC } from "../../core/Atomic.js";
-import { truncateStringToLength } from "../../core/StringUtils.js";
+import { combinePartsToString, truncateStringToLength } from "../../core/StringUtils.js";
 import { isNodeNetworkException } from "../common/errors/NodeErrors.js";
 import { hasUpstreamError, UpstreamError } from "../common/errors/UpstreamError.js";
 import {
@@ -18,7 +18,6 @@ import {
 } from "../common/infrastructure/Atomic.js";
 import { SpotifySourceConfig } from "../common/infrastructure/config/source/spotify.js";
 import {
-    combinePartsToString,
     joinedUrl,
     parseRetryAfterSecsFromObj,
     readJson,

@@ -2,8 +2,7 @@ import { stringSameness } from '@foxxmd/string-sameness';
 import dayjs from "dayjs";
 import request, { Request, Response } from 'superagent';
 import { PlayObject } from "../../../core/Atomic.js";
-import { slice } from "../../../core/StringUtils.js";
-import { combinePartsToString } from "../../utils.js";
+import { combinePartsToString, slice } from "../../../core/StringUtils.js";
 import {
     findDelimiters,
     normalizeStr,

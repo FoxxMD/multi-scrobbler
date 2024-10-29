@@ -5,10 +5,9 @@ import EventEmitter from "events";
 import formidable, { Files, File } from 'formidable';
 import { file } from "jscodeshift";
 import { PlayObject } from "../../core/Atomic.js";
-import { truncateStringToLength } from "../../core/StringUtils.js";
+import { combinePartsToString, truncateStringToLength } from "../../core/StringUtils.js";
 import { FormatPlayObjectOptions, InternalConfig, SourceType } from "../common/infrastructure/Atomic.js";
 import { PlexSourceConfig } from "../common/infrastructure/config/source/plex.js";
-import { combinePartsToString } from "../utils.js";
 import { getFileIdentifier, getValidMultipartJsonFile } from "../utils/RequestUtils.js";
 import AbstractSource from "./AbstractSource.js";
 

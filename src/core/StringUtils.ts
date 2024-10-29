@@ -38,7 +38,7 @@ export const defaultTimeFunc = (t: Dayjs | undefined, i?: ScrobbleTsSOC) => t ==
 export const defaultTimeFromNowFunc = (t: Dayjs | undefined) => t === undefined ? undefined : `(${t.local().fromNow()})`;
 export const defaultCommentFunc = (c: string | undefined) => c === undefined ? undefined : `(${c})`;
 // TODO replace with genGroupIdStr and refactor Platform types/etc. into core Atomic
-export const defaultPlatformFunc = (d: string | undefined, u: string | undefined) => `${d ?? 'NoDevice'}-${u ?? 'SingleUser'}`;
+export const defaultPlatformFunc = (d: string | undefined, u: string | undefined, s: string | undefined) => combinePartsToString([d ?? 'NoDevice', u ?? 'SingleUser',s !== undefined ? `Session${s}` : undefined]);
 export const defaultBuildTrackStringTransformers = {
     artists: defaultArtistFunc,
     track: defaultTrackTransformer,
@@ -75,7 +75,8 @@ export const buildTrackString = <T = string>(playObj: AmbPlayObject, options: Tr
             scrobbleTsSOC = SCROBBLE_TS_SOC_START,
             comment,
             deviceId,
-            user
+            user,
+            sessionId
         } = {},
     } = playObj;
 
@@ -90,7 +91,9 @@ export const buildTrackString = <T = string>(playObj: AmbPlayObject, options: Tr
 
     const strParts: (T | string)[] = [];
     if(include.includes('platform')) {
-        strParts.push(platformFunc(deviceId, user))
+        strParts.push(platformFunc(deviceId, user, include.includes('session') ? sessionId : undefined))
+    } else if(include.includes('session') && sessionId !== undefined) {
+        strParts.push(`(Session ${sessionId})`);
     }
     if (include.includes('trackId') && trackId !== undefined) {
         strParts.push(`(${trackId})`);
@@ -165,4 +168,31 @@ export const nonEmptyStringOrDefault = <T>(str: any, defaultVal: T = undefined):
         return defaultVal;
     }
     return str;
+}
+export const combinePartsToString = (parts: any[], glue: string = '-'): string | undefined => {
+    const cleanParts: string[] = [];
+    for (const part of parts) {
+        if (part === null || part === undefined) {
+            continue;
+        }
+        if (Array.isArray(part)) {
+            const nestedParts = combinePartsToString(part, glue);
+            if (nestedParts !== undefined) {
+                cleanParts.push(nestedParts);
+            }
+        } else if (typeof part === 'object') {
+            // hope this works
+            cleanParts.push(JSON.stringify(part));
+        } else if (typeof part === 'string') {
+            if (part.trim() !== '') {
+                cleanParts.push(part);
+            }
+        } else {
+            cleanParts.push(part.toString());
+        }
+    }
+    if (cleanParts.length > 0) {
+        return cleanParts.join(glue);
+    }
+    return undefined;
 }
