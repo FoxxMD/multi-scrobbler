@@ -244,18 +244,58 @@ If your Spotify player has [Automix](https://community.spotify.com/t5/FAQs/What-
 <Tabs groupId="plexType" queryString>
 <TabItem value="api" label="API">
 
-:::tip[Important Defaults]
+Find your [**Plex Token**](https://support.plex.tv/articles/204059436-finding-an-authentication-token-x-plex-token/) and make note of the **URL** and **Port** used to connect to your Plex instance.
 
-By default...
+<details>
 
-* multi-scrobbler will **only** scrobble for the user authenticated with the Plex Token. 
-  * Allowed Users (`usersAllow` or `PLEX_USERS_ALLOW`) are only necessary if you want to scrobble for additional users.
-* multi-scrobbler will only scrobble media found in Plex libraries that are labelled as **Music.**
+<summary>Allowed Users and Defaults</summary>
+
+**Multi-scrobbler will automatically scrobble for these users by default:**
+
+* The User authenticated with the Plex Token
+* and the **Local User**
+
+The Local User (`PLEX_LOCAL_USER`) is how Plex identifies anyone directly accessing the Plex UI from a local IP (who does not need to login).
+
+To allow MS to scrobble for other users use `usersAllow` or `PLEX_USERS_ALLOW` (env) from the below configuration docs. However, because you are overriding the default settings you must also explicitly list the authenticated user and the Local User if you want them to also be able to scrobble.
+
+<details>
+
+<summary>Examples</summary>
+
+###### Defaults
+
+If `usersallow` and `PLEX_USERS_ALLOW` are not defined then the Plex Token authenticated User and Local User will be scrobbled for.
+
+
+###### Only A Specific User
+
+* `"usersallow": ["SomeUser"]` or
+* `PLEX_USERS_ALLOW: SomeUser`
+
+Only the Plex user `SomeUser` will be scrobbled for. The Plex Token authenticated user and the Local User will not be scrobbled for.
+
+###### A Specific User + Defaults
+
+(Assuming the plex authenticated user is `FoxxMD`)
+
+* `"usersallow": ["FoxxMD", "PLEX_LOCAL_USER", "SomeUser"]` or
+* `PLEX_USERS_ALLOW: FoxxMD,PLEX_LOCAL_USER,SomeUser`
+
+The Plex user SomeUser, the Plex Token authenticated user (FoxxMD) and the Local User will be scrobbled for.
+
+</details>
+
+</details>
+
+<details>
+
+<summary>Allowed Libraries and Defaults</summary>
+
+By default multi-scrobbler will only scrobble media found in Plex libraries that are labelled as **Music.**
   * `librariesAllow` or `PLEX_LIBRARIES_ALLOW` will override this
 
-:::
-
-Find your [**Plex Token**](https://support.plex.tv/articles/204059436-finding-an-authentication-token-x-plex-token/) and make note of the **URL** and **Port** used to connect to your Plex instance.
+</details>
 
 #### Configuration
 

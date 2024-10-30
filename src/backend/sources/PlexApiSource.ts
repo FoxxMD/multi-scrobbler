@@ -6,6 +6,7 @@ import {
     asPlayerStateDataMaybePlay,
     FormatPlayObjectOptions,
     InternalConfig,
+    NO_USER,
     PlayerStateData,
     PlayerStateDataMaybePlay,
     PlayPlatformId, REPORTED_PLAYER_STATUSES
@@ -30,6 +31,8 @@ import { MemoryPositionalSource } from './MemoryPositionalSource.js';
 import { FixedSizeList } from 'fixed-size-list';
 
 const shortDeviceId = truncateStringToLength(10, '');
+
+export const LOCAL_USER = 'PLEX_LOCAL_USER';
 
 const THUMB_REGEX = new RegExp(/\/library\/metadata\/(?<ratingkey>\d+)\/thumb\/\d+/)
 
@@ -162,6 +165,7 @@ export default class PlexApiSource extends MemoryPositionalSource {
 
             if(this.usersAllow.length === 0) {
                 this.usersAllow.push(this.plexUser.toLocaleLowerCase());
+                this.usersAllow.push(LOCAL_USER.toLocaleLowerCase());
             }
 
             this.logger.info(`Authenticated on behalf of user ${this.plexUser} on Server ${server.object.mediaContainer.friendlyName} (version ${server.object.mediaContainer.version})`);
@@ -299,7 +303,7 @@ export default class PlexApiSource extends MemoryPositionalSource {
                 machineIdentifier
             } = {},
             user: {
-                title: userTitle
+                title: userTitle,
             } = {}
             // plex returns the track artist as originalTitle (when there is an album artist)
             // otherwise this is undefined
@@ -315,7 +319,9 @@ export default class PlexApiSource extends MemoryPositionalSource {
                 duration: duration / 1000
             },
             meta: {
-                user: userTitle,
+                // If a user does not have to login to Plex (local IP and no Home Management(?)) then the User node is never populated
+                // in this case we will use a special constant to signal this is the local user
+                user: userTitle ?? LOCAL_USER,
                 trackId: guid,
                 // server: ServerId,
                 mediaType: type,
