@@ -45,12 +45,12 @@ import {
     temporalAccuracyToString,
     temporalPlayComparisonSummary,
 } from "../utils/TimeUtils.js";
+import { WebhookPayload } from "../common/infrastructure/config/health/webhooks.js";
 
 export default abstract class AbstractScrobbleClient extends AbstractComponent implements Authenticatable {
 
     name: string;
     type: ClientType;
-    identifier: string;
 
     protected MAX_STORED_SCROBBLES = 40;
     protected MAX_INITIAL_SCROBBLES_FETCH = this.MAX_STORED_SCROBBLES;
@@ -85,8 +85,7 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
         super(config);
         this.type = type;
         this.name = name;
-        this.identifier = `${capitalize(this.type)} - ${name}`;
-        this.logger = childLogger(logger, this.identifier);
+        this.logger = childLogger(logger, this.getIdentifier());
         this.notifier = notifier;
         this.emitter = emitter;
 
@@ -145,10 +144,18 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
         return this.#recentScrobblesList;
     }
 
+    protected getIdentifier() {
+        return `${capitalize(this.type)} - ${this.name}`
+    }
+
+    protected notify = async (payload: WebhookPayload) => {
+        this.notify(payload);
+    }
+
     protected async postInitialize(): Promise<void> {
         const {
             options: {
-                refreshInitialCount= this.MAX_INITIAL_SCROBBLES_FETCH
+                refreshInitialCount = this.MAX_INITIAL_SCROBBLES_FETCH
             } = {}
         } = this.config;
 
@@ -500,6 +507,7 @@ ${closestMatch.breakdowns.join('\n')}`, {leaf: ['Dupe Check']});
     public abstract playToClientPayload(playObject: PlayObject): object
 
     initScrobbleMonitoring = async () => {
+        // TODO refactor to only use tryInitialize
         if(!this.isUsable()) {
             if(this.initializing) {
                 this.logger.warn(`Cannot start scrobble processing because client is still initializing`);
@@ -511,12 +519,12 @@ ${closestMatch.breakdowns.join('\n')}`, {leaf: ['Dupe Check']});
             }
         }
 
-        if(this.authGated()) {
-            if(this.canTryAuth()) {
-                await this.testAuth();
-                if(!this.authed) {
-                    this.logger.warn(`Cannot start scrobble processing because auth test failed`);
-                    return;
+        if (this.authGated()) {
+            if (this.canTryAuth()) {
+                try {
+                    await this.testAuth();
+                } catch (e) {
+                    this.logger.warn(new Error('Cannot start scrobbling process due to auth issue', { cause: e }));
                 }
             } else if (this.requiresAuthInteraction) {
                 this.logger.warn(`Cannot start scrobble processing because user interaction is required for authentication`);
@@ -567,20 +575,20 @@ ${closestMatch.breakdowns.join('\n')}`, {leaf: ['Dupe Check']});
             } catch (e) {
                 if(!this.isUsable()) {
                     this.logger.warn('Stopping scrobble processing due to client no longer usable.');
-                    await this.notifier.notify({title: `Client - ${this.identifier} - Processing Error`, message: `Encountered error while scrobble processing and client is no longer usable, stopping processing!. | Error: ${e.message}`, priority: 'error'});
+                    await this.notify({title: `${this.getIdentifier()} - Processing Error`, message: `Encountered error while scrobble processing and client is no longer usable, stopping processing!. | Error: ${e.message}`, priority: 'error'});
                     break;
                 } else if (this.authGated()) {
                     this.logger.warn('Stopping scrobble processing due to client no longer being authenticated.');
-                    await this.notifier.notify({title: `Client - ${this.identifier} - Processing Error`, message: `Encountered error while scrobble processing and client is no longer authenticated, stopping processing!. | Error: ${e.message}`, priority: 'error'});
+                    await this.notify({title: `${this.getIdentifier()} - Processing Error`, message: `Encountered error while scrobble processing and client is no longer authenticated, stopping processing!. | Error: ${e.message}`, priority: 'error'});
                     break;
                 } else if (this.scrobbleRetries < maxRetries) {
                     const delayFor = pollingBackoff(this.scrobbleRetries + 1, retryMultiplier);
                     this.logger.info(`Scrobble processing retries (${this.scrobbleRetries}) less than max processing retries (${maxRetries}), restarting processing after ${delayFor} second delay...`);
-                    await this.notifier.notify({title: `Client - ${this.name} - Processing Retry`, message: `Encountered error while polling but retries (${this.scrobbleRetries}) are less than max poll retries (${maxRetries}), restarting processing after ${delayFor} second delay. | Error: ${e.message}`, priority: 'warn'});
+                    await this.notify({title: `${this.getIdentifier()} - Processing Retry`, message: `Encountered error while polling but retries (${this.scrobbleRetries}) are less than max poll retries (${maxRetries}), restarting processing after ${delayFor} second delay. | Error: ${e.message}`, priority: 'warn'});
                     await sleep((delayFor) * 1000);
                 } else {
                     this.logger.warn(`Scrobble processing retries (${this.scrobbleRetries}) equal to max processing retries (${maxRetries}), stopping processing!`);
-                    await this.notifier.notify({title: `Client - ${this.identifier} - Processing Error`, message: `Encountered error while scrobble processing and retries (${this.scrobbleRetries}) are equal to max processing retries (${maxRetries}), stopping processing!. | Error: ${e.message}`, priority: 'error'});
+                    await this.notify({title: `${this.getIdentifier()} - Processing Error`, message: `Encountered error while scrobble processing and retries (${this.scrobbleRetries}) are equal to max processing retries (${maxRetries}), stopping processing!. | Error: ${e.message}`, priority: 'error'});
                 }
                 this.scrobbleRetries++;
             }

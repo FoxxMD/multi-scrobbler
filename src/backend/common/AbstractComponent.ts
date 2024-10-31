@@ -23,6 +23,7 @@ import {
 import { CommonClientConfig } from "./infrastructure/config/client/index.js";
 import { CommonSourceConfig } from "./infrastructure/config/source/index.js";
 import play = Simulate.play;
+import { WebhookPayload } from "./infrastructure/config/health/webhooks.js";
 
 export default abstract class AbstractComponent {
     requiresAuth: boolean = false;
@@ -47,17 +48,25 @@ export default abstract class AbstractComponent {
         this.config = config;
     }
 
-    initialize = async () => {
+    protected abstract notify(payload: WebhookPayload): Promise<void>;
+
+    protected abstract getIdentifier(): string;
+
+    // TODO refactor throw error
+    initialize = async (options: {force?: boolean, notify?: boolean} = {}) => {
+
+        const {force = false, notify = false} = options;
+
         this.logger.debug('Attempting to initialize...');
         try {
             this.initializing = true;
             if(this.componentLogger === undefined) {
                 await this.buildComponentLogger();
             }
-            await this.buildInitData();
+            await this.buildInitData(force);
             this.buildTransformRules();
-            await this.checkConnection();
-            await this.testAuth();
+            await this.checkConnection(force);
+            await this.testAuth(force);
             this.logger.info('Fully Initialized!');
             try {
                 await this.postInitialize();
@@ -67,6 +76,9 @@ export default abstract class AbstractComponent {
             return true;
         } catch(e) {
             this.logger.error(new Error('Initialization failed', {cause: e}));
+            if(notify) {
+                await this.notify({title: `${this.getIdentifier()} - Initialization Error`, message: `Could not initialize | Error: ${e.message}`, priority: 'error'});
+            }
             return false;
         } finally {
             this.initializing = false;
@@ -82,9 +94,20 @@ export default abstract class AbstractComponent {
         return;
     }
 
-    public async buildInitData() {
-        if(this.buildOK) {
+    tryInitialize = async (options: {force?: boolean, notify?: boolean} = {}) => {
+        if(this.initializing) {
+            this.logger.warn(`Already trying to initialize, cannot attempt while an existing initialization attempt is running.`);
             return;
+        }
+        return await this.initialize(options);
+    }
+
+    public async buildInitData(force: boolean = false) {
+        if(this.buildOK) {
+            if(!force) {
+                return;
+            }
+            this.logger.debug('Build OK but step was forced');
         }
         try {
             const res = await this.doBuildInitData();
@@ -192,7 +215,13 @@ export default abstract class AbstractComponent {
         }
     }
 
-    public async checkConnection() {
+    public async checkConnection(force: boolean = false) {
+        if(this.connectionOK) {
+            if(!force) {
+                return;
+            }
+            this.logger.debug('Connection OK but step was forced')
+        }
         try {
             const res = await this.doCheckConnection();
             if (res === undefined) {
@@ -234,8 +263,21 @@ export default abstract class AbstractComponent {
         if(!this.requiresAuth) {
             return;
         }
-        if(this.authed && !force) {
-            return;
+        if(this.authed) {
+            if(!force) {
+                return;
+            }
+            this.logger.debug('Auth OK but step was forced');
+        }
+
+        if(this.authFailure) {
+            if(!force) {
+                if(this.requiresAuthInteraction) {
+                    throw new Error('Authentication failure: Will not retry auth because user interaction is required for authentication');
+                }
+                throw new Error('Authentication failure: Will not retry auth because authentication previously failed and must be reauthenticated');
+            }
+            this.logger.debug('Auth previously failed for non upstream/network reasons but retry is being forced');
         }
 
         try {
@@ -245,7 +287,7 @@ export default abstract class AbstractComponent {
             // only signal as auth failure if error was NOT either a node network error or a non-showstopping upstream error
             this.authFailure = !(hasNodeNetworkException(e) || hasUpstreamError(e, false));
             this.authed = false;
-            this.logger.error(new Error(`Authentication test failed!${this.authFailure === false ? ' Due to a network issue. Will retry authentication on next heartbeat.' : ''}`, {cause: e}));
+            throw new Error(`Authentication test failed!${this.authFailure === false ? ' Due to a network issue. Will retry authentication on next heartbeat.' : ''}`, {cause: e});
         }
     }
 
