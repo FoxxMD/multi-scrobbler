@@ -1,4 +1,4 @@
-import { getListDiff } from "@donedeal0/superdiff";
+import { getListDiff, ListDiff } from "@donedeal0/superdiff";
 import { PlayObject } from "../../core/Atomic.js";
 import { buildTrackString } from "../../core/StringUtils.js";
 
@@ -38,7 +38,7 @@ export type ListTransformers = PlayTransformer[];
 
 export const defaultListTransformers: ListTransformers = [metaInvariantTransform, playDateInvariantTransform];
 
-export const getPlaysDiff = (aPlays: PlayObject[], bPlays: PlayObject[], transformers: ListTransformers = defaultListTransformers) => {
+export const getPlaysDiff = (aPlays: PlayObject[], bPlays: PlayObject[], transformers: ListTransformers = defaultListTransformers): ListDiff => {
     const cleanAPlays = transformers === undefined ? aPlays : transformers.reduce((acc: PlayObject[], curr) => acc.map(curr), aPlays);
     const cleanBPlays = transformers === undefined ? bPlays : transformers.reduce((acc: PlayObject[], curr) => acc.map(curr), bPlays);
 
@@ -114,13 +114,69 @@ export const playsAreAddedOnly = (aPlays: PlayObject[], bPlays: PlayObject[], tr
          }
      }
     const added = results.diff.filter(x => x.status === 'added');
-    return [addType !== 'insert', added.map(x => bPlays[x.newIndex]), addType];
+    return [addType !== 'insert' && addType !== undefined, added.map(x => bPlays[x.newIndex]), addType];
 }
 
-export const humanReadableDiff = (aPlay: PlayObject[], bPlay: PlayObject[], result: any): string => {
+export const playsAreBumpedOnly = (aPlays: PlayObject[], bPlays: PlayObject[], transformers: ListTransformers = defaultListTransformers): [boolean, PlayObject[]?, ('append' | 'prepend')?] => {
+    const results = getPlaysDiff(aPlays, bPlays, transformers);
+    if(results.status === 'equal' || results.status === 'deleted') {
+       return [false];
+   }
+   if(aPlays.length !== bPlays.length) {
+    return [false];
+   }
+
+   let addTypeShouldBe: 'append' | 'prepend';
+   let cursor: 'moved' | 'equal';
+
+   for(const [index, diffData] of results.diff.entries()) {
+    if(diffData.status !== 'moved' && diffData.status !== 'equal') {
+        return [false];
+    }
+
+        if(index === 0) {
+            if(diffData.status === 'moved' && diffData.indexDiff < 0) {
+               addTypeShouldBe = 'prepend';
+            } else if(diffData.status === 'equal') {
+                addTypeShouldBe = 'append';
+            } else {
+                return [false];
+            }
+        } else {
+
+            if(index === results.diff.length - 1) {
+                if(addTypeShouldBe === 'append' && diffData.status !== 'moved') {
+                    return [false];
+                }
+            } else {
+
+                if(![-1,0,1].includes(diffData.indexDiff)) {
+                    return [false]; // shifted more than one spot in list which isn't a bump
+                }
+                if(cursor === undefined) { // first non-initial item
+                    cursor = diffData.status;
+                    continue;
+                } else if(
+                    (addTypeShouldBe === 'prepend' && cursor === 'equal' && diffData.status === 'moved')
+                    || (addTypeShouldBe === 'append' && cursor === 'moved' && diffData.status === 'equal')
+                ) {
+                    // can't go back from equal (passed bump point) to moved b/c would mean more than one item moved and not just one bump
+                    return [false];
+                }
+
+                // otherwise intermediate
+                cursor = diffData.status;
+            }
+        }
+   }
+
+   return [true, addTypeShouldBe === 'prepend' ? [bPlays[0]] : [bPlays[bPlays.length - 1]], addTypeShouldBe];
+}
+
+export const humanReadableDiff = (aPlay: PlayObject[], bPlay: PlayObject[], result: ListDiff): string => {
     const changes: [string, string?][] = [];
     for(const [index, play] of bPlay.entries()) {
-        const ab: [string, string?] = [`${index + 1}. ${buildTrackString(play)}`];
+        const ab: [string, string?] = [`${index + 1}. ${buildTrackString(play, {include: ['artist', 'track', 'trackId', 'album']})}`];
 
         const isEqual = result.diff.some(x => x.status === 'equal' && x.prevIndex === index && x.newIndex === index);
         if(!isEqual) {
@@ -141,7 +197,7 @@ export const humanReadableDiff = (aPlay: PlayObject[], bPlay: PlayObject[], resu
                         // was updated, probably??
                         const updated = result.diff.filter(x => x.status === 'deleted' && x.prevIndex === index);
                         if(updated.length > 0) {
-                            ab.push(`Updated - Original => ${buildTrackString( aPlay[updated[0].preIndex])}`);
+                            ab.push(`Updated - Original => ${buildTrackString( aPlay[updated[0].prevIndex])}`);
                         } else {
                             ab.push('Should not have gotten this far!');
                         }

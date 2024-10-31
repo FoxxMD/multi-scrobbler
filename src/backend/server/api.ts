@@ -191,7 +191,8 @@ export const setupApi = (app: ExpressWithAsync, logger: Logger, appLoggerStream:
                 authed,
                 players: 'players' in x ? (x as MemorySource).playersToObject() : {},
                 sot: ('playerSourceOfTruth' in x) ? x.playerSourceOfTruth : SOURCE_SOT.HISTORY,
-                supportsUpstreamRecentlyPlayed: x.supportsUpstreamRecentlyPlayed
+                supportsUpstreamRecentlyPlayed: x.supportsUpstreamRecentlyPlayed,
+                ...x.additionalApiData()
             };
             if(!x.isReady()) {
                 if(x.buildOK === false) {

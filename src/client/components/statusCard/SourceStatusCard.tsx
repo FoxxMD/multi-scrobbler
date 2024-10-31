@@ -81,6 +81,7 @@ const SourceStatusCard = (props: SourceStatusCardData) => {
             <div>{discovered}: {tracksDiscovered}</div>
             {upstreamRecent}
             {canPoll && hasAuthInteraction ? <a target="_blank" href={`/api/source/auth?name=${name}&type=${type}`}>(Re)authenticate</a> : null}
+            {type === 'ytmusic' && 'userCode' in data ? <div>Code: <strong>{data.userCode as string}</strong></div> : null}
         </div>);
     }
     return (
