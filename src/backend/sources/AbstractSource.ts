@@ -32,6 +32,7 @@ import {
     sortByOldestPlayDate,
 } from "../utils.js";
 import { comparePlayTemporally, temporalAccuracyIsAtLeast } from "../utils/TimeUtils.js";
+import { WebhookPayload } from '../common/infrastructure/config/health/webhooks.js';
 
 export interface RecentlyPlayedOptions {
     limit?: number
@@ -44,7 +45,6 @@ export default abstract class AbstractSource extends AbstractComponent implement
 
     name: string;
     type: SourceType;
-    identifier: string;
 
     declare config: SourceConfig;
     clients: string[];
@@ -81,8 +81,7 @@ export default abstract class AbstractSource extends AbstractComponent implement
         const {clients = [] } = config;
         this.type = type;
         this.name = name;
-        this.identifier = `Source - ${capitalize(this.type)} - ${name}`;
-        this.logger = childLogger(internal.logger, `${capitalize(this.type)} - ${name}`);
+        this.logger = childLogger(internal.logger, this.getIdentifier());
         this.config = config;
         this.clients = clients;
         this.instantiatedAt = dayjs();
@@ -90,6 +89,10 @@ export default abstract class AbstractSource extends AbstractComponent implement
         this.localUrl = internal.localUrl;
         this.configDir = internal.configDir;
         this.emitter = emitter;
+    }
+
+    protected getIdentifier() {
+        return `${capitalize(this.type)} - ${this.name}`
     }
 
     getRecentlyPlayed = async (options: RecentlyPlayedOptions = {}): Promise<PlayObject[]> => []
@@ -194,7 +197,7 @@ export default abstract class AbstractSource extends AbstractComponent implement
                 options: {
                     ...options,
                     checkTime: newDiscoveredPlays[newDiscoveredPlays.length-1].data.playDate.add(2, 'second'),
-                    scrobbleFrom: this.identifier,
+                    scrobbleFrom: this.getIdentifier(),
                     scrobbleTo: this.clients
                 }
             });
@@ -246,7 +249,7 @@ export default abstract class AbstractSource extends AbstractComponent implement
         return [];
     }
 
-    protected notify = (payload) => {
+    protected notify = async (payload: WebhookPayload) => {
         this.emitter.emit('notify', payload);
     }
 
@@ -254,7 +257,16 @@ export default abstract class AbstractSource extends AbstractComponent implement
 
     onPollPostAuthCheck = async (): Promise<boolean> => true
 
-    poll = async () => {
+    poll = async (options: {force?: boolean, notify?: boolean} = {}) => {
+        const {force = false, notify = false} = options;
+
+        // TODO refactor to only use tryInitialize
+        if(!this.isReady() || force) {
+            const ready = await this.tryInitialize(options);
+            if(!ready) {
+                // TODO
+            }
+        }
         if(!(await this.onPollPreAuthCheck())) {
             return;
         }
@@ -262,14 +274,14 @@ export default abstract class AbstractSource extends AbstractComponent implement
             if(this.canTryAuth()) {
                 await this.testAuth();
                 if(!this.authed) {
-                    this.notify( {title: `${this.identifier} - Polling Error`, message: 'Cannot start polling because source does not have authentication.', priority: 'error'});
+                    await this.notify( {title: `${this.getIdentifier()} - Polling Error`, message: 'Cannot start polling because source does not have authentication.', priority: 'error'});
                     this.logger.error('Cannot start polling because source is not authenticated correctly.');
                 }
             } else if(this.requiresAuthInteraction) {
-                this.notify({title: `${this.identifier} - Polling Error`, message: 'Cannot start polling because user interaction is required for authentication', priority: 'error'});
+                await this.notify({title: `${this.getIdentifier()} - Polling Error`, message: 'Cannot start polling because user interaction is required for authentication', priority: 'error'});
                 this.logger.error('Cannot start polling because user interaction is required for authentication');
             } else {
-                this.notify( {title: `${this.identifier} - Polling Error`, message: 'Cannot start polling because source authentication previously failed and must be reauthenticated.', priority: 'error'});
+                await this.notify( {title: `${this.getIdentifier()} - Polling Error`, message: 'Cannot start polling because source authentication previously failed and must be reauthenticated.', priority: 'error'});
                 this.logger.error('Cannot start polling because source authentication previously failed and must be reauthenticated.');
             }
             return;
@@ -281,8 +293,8 @@ export default abstract class AbstractSource extends AbstractComponent implement
             await this.processBacklog();
         } catch (e) {
             this.logger.error(new Error('Cannot start polling because error occurred while processing backlog', {cause: e}));
-            this.notify({
-                title: `${this.identifier} - Polling Error`,
+            await this.notify({
+                title: `${this.getIdentifier()} - Polling Error`,
                 message: 'Cannot start polling because error occurred while processing backlog.',
                 priority: 'error'
             });
@@ -329,11 +341,11 @@ export default abstract class AbstractSource extends AbstractComponent implement
                 if (this.pollRetries < maxRetries) {
                     const delayFor = pollingBackoff(this.pollRetries + 1, retryMultiplier);
                     this.logger.info(`Poll retries (${this.pollRetries}) less than max poll retries (${maxRetries}), restarting polling after ${delayFor} second delay...`);
-                    this.notify({title: `${this.identifier} - Polling Retry`, message: `Encountered error while polling but retries (${this.pollRetries}) are less than max poll retries (${maxRetries}), restarting polling after ${delayFor} second delay. | Error: ${e.message}`, priority: 'warn'});
+                    await this.notify({title: `${this.getIdentifier()} - Polling Retry`, message: `Encountered error while polling but retries (${this.pollRetries}) are less than max poll retries (${maxRetries}), restarting polling after ${delayFor} second delay. | Error: ${e.message}`, priority: 'warn'});
                     await sleep((delayFor) * 1000);
                 } else {
                     this.logger.warn(`Poll retries (${this.pollRetries}) equal to max poll retries (${maxRetries}), stopping polling!`);
-                    this.notify({title: `${this.identifier} - Polling Error`, message: `Encountered error while polling and retries (${this.pollRetries}) are equal to max poll retries (${maxRetries}), stopping polling!. | Error: ${e.message}`, priority: 'error'});
+                    await this.notify({title: `${this.getIdentifier()} - Polling Error`, message: `Encountered error while polling and retries (${this.pollRetries}) are equal to max poll retries (${maxRetries}), stopping polling!. | Error: ${e.message}`, priority: 'error'});
                 }
                 this.pollRetries++;
             }
@@ -374,7 +386,7 @@ export default abstract class AbstractSource extends AbstractComponent implement
         }
         this.logger.info('Polling started');
         this.emitEvent('statusChange', {status: 'Running'});
-        this.notify({title: `${this.identifier} - Polling Started`, message: 'Polling Started', priority: 'info'});
+        await this.notify({title: `${this.getIdentifier()} - Polling Started`, message: 'Polling Started', priority: 'info'});
         this.lastActivityAt = dayjs();
         let checkCount = 0;
         let checksOverThreshold = 0;
