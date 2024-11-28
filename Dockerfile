@@ -1,4 +1,4 @@
-FROM ghcr.io/linuxserver/baseimage-debian:bookworm as base
+FROM ghcr.io/linuxserver/baseimage-debian:bookworm AS base
 
 ENV TZ=Etc/GMT
 ENV NODE_VERSION 20.11.1
@@ -57,7 +57,7 @@ COPY docker/root /
 
 WORKDIR /app
 
-FROM base as build
+FROM base AS build
 
 COPY --chown=abc:abc package*.json tsconfig.json ./
 COPY --chown=abc:abc patches ./patches
@@ -86,7 +86,7 @@ ENV NODE_ENV=production
 
 RUN npm run docs:install && npm run build && rm -rf node_modules && rm -rf docsite/node_modules
 
-FROM base as app
+FROM base AS app
 
 COPY --chown=abc:abc *.json *.js *.ts index.html ./
 COPY --chown=abc:abc patches ./patches
