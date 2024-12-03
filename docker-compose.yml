@@ -1,5 +1,3 @@
-version: '3.7'
-
 services:
   multi-scrobbler:
     image: foxxmd/multi-scrobbler
