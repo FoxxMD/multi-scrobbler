@@ -80,6 +80,7 @@
     "fixed-size-list": "^0.3.0",
     "formidable": "^3.5",
     "glob": "^11.0.0",
+    "google-auth-library": "^9.15.0",
     "gotify": "^1.1.0",
     "iso-websocket": "^0.3.0",
     "iti": "^0.6.0",
@@ -111,7 +112,7 @@
     "vite-express": "^0.16.0",
     "vlc-client": "^1.1.1",
     "xml2js": "0.6.1",
-    "youtubei.js": "^10.5.0"
+    "youtubei.js": "^11.0.1"
   },
   "devDependencies": {
     "@dbus-types/notifications": "^0.0.5",

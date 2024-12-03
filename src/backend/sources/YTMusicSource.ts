@@ -3,9 +3,10 @@ import EventEmitter from "events";
 import { PlayObject } from "../../core/Atomic.js";
 import { FormatPlayObjectOptions, InternalConfig } from "../common/infrastructure/Atomic.js";
 import { YTMusicSourceConfig } from "../common/infrastructure/config/source/ytmusic.js";
-import { Innertube, UniversalCache, Parser, YTNodes, ApiResponse, IBrowseResponse } from 'youtubei.js';
+import { Innertube, UniversalCache, Parser, YTNodes, ApiResponse, IBrowseResponse, Log } from 'youtubei.js';
+import { OAuth2Client } from 'google-auth-library';
 import {resolve} from 'path';
-import { sleep } from "../utils.js";
+import { joinedUrl, sleep } from "../utils.js";
 import {
     getPlaysDiff,
     humanReadableDiff,
@@ -14,7 +15,6 @@ import {
     playsAreSortConsistent
 } from "../utils/PlayComparisonUtils.js";
 import AbstractSource, { RecentlyPlayedOptions } from "./AbstractSource.js";
-import { ListDiff } from "@donedeal0/superdiff";
 
 export const ytiHistoryResponseToListItems = (res: ApiResponse): YTNodes.MusicResponsiveListItem[] => {
     const page = Parser.parseResponse<IBrowseResponse>(res.data);
@@ -61,6 +61,8 @@ export default class YTMusicSource extends AbstractSource {
     requiresAuth = true;
     requiresAuthInteraction = true;
 
+    cookieBased: boolean = false;
+
     declare config: YTMusicSourceConfig
 
     recentlyPlayed: PlayObject[] = [];
@@ -68,12 +70,15 @@ export default class YTMusicSource extends AbstractSource {
     yti: Innertube;
     userCode?: string;
     verificationUrl?: string;
+    oauthClient?: OAuth2Client;
 
     workingCredsPath: string;
 
     constructor(name: string, config: YTMusicSourceConfig, internal: InternalConfig, emitter: EventEmitter) {
         super('ytmusic', name, config, internal, emitter);
         this.canPoll = true;
+        Log.setLevel(Log.Level.ERROR);
+        this.cookieBased = this.config.data?.cookie !== undefined;
         this.supportsUpstreamRecentlyPlayed = true;
         this.workingCredsPath = resolve(this.configDir, `yti-${this.name}`);
     }
@@ -88,6 +93,7 @@ export default class YTMusicSource extends AbstractSource {
 
     protected async doBuildInitData(): Promise<true | string | undefined> {
         this.yti = await Innertube.create({
+            ...this.config.data,
             cache: new UniversalCache(true, this.workingCredsPath)
         });
         this.yti.session.on('update-credentials', async ({ credentials }) => {
@@ -111,10 +117,11 @@ export default class YTMusicSource extends AbstractSource {
             } else {
                 this.logger.debug('Auth success');
             }
-            await this.yti.session.oauth.cacheCredentials();
             this.userCode = undefined;
             this.verificationUrl = undefined;
             this.authed = true;
+            await this.yti.session.oauth.cacheCredentials();
+            const f =1;
         });
         return true;
     }
@@ -127,33 +134,107 @@ export default class YTMusicSource extends AbstractSource {
     }
 
     clearCredentials = async () => {
-        if(this.yti.session.logged_in) {
+        if(this.yti.session.logged_in && !this.cookieBased) {
             await this.yti.session.signOut();
+        }
+    }
+
+    async handleAuthCodeCallback(obj: Record<string, any>): Promise<any> {
+        if (obj.code === undefined) {
+            this.logger.error(`Authorization callback did not contain 'code' in URL`);
+            return false;
+        }
+
+        const { tokens } = await this.oauthClient.getToken(obj.code as string);
+
+        if (tokens.access_token && tokens.refresh_token && tokens.expiry_date) {
+            await this.yti.session.signIn({
+                access_token: tokens.access_token,
+                refresh_token: tokens.refresh_token,
+                expiry_date: new Date(tokens.expiry_date).toISOString(),
+                client: {
+                    client_id: this.config.data.clientId,
+                    client_secret: this.config.data.clientSecret
+                }
+            });
+            this.authed = true;
+            this.verificationUrl = undefined;
+            this.userCode = undefined;
+            await this.yti.session.oauth.cacheCredentials();
+            Log.setLevel(Log.Level.ERROR);
+            return true;
+        } else {
+            this.logger.error(`Token data did not return all required properties.`);
+            return tokens;
         }
     }
 
     doAuthentication = async () => {
         try {
+            if (this.cookieBased) {
+                try {
+                    await this.yti.account.getInfo()
+                    this.authed = true;
+                } catch (e) {
+                    const info = loggedErrorExtra(e);
+                    if (info !== undefined) {
+                        this.logger.error(info, 'Additional API response details')
+                    }
+                    this.logger.error(new Error('Cookie-based authentication failed. Try recreating cookie or using custom OAuth Client', { cause: e }));
+                }
+            }
+
             await Promise.race([
-                sleep(300),
+                sleep(1000),
                 this.yti.session.signIn()
             ]);
-            if(this.authed === false && this.userCode !== undefined) {
-                if(this.userCode !== undefined) {
-                    throw new Error(`Sign in with the code '${this.userCode}' using the authentication link on the dashboard or ${this.verificationUrl}`)
+            if (this.authed === false) {
+
+                if (this.config.data.clientId !== undefined) {
+                    const redirectUri = this.config.data?.redirectUri ?? joinedUrl(this.localUrl, `ytmusic/callback?name=${this.name}`).toString();
+
+                    this.logger.info(`Using Custom OAuth Client with Redirect URI: ${redirectUri}`);
+                    this.oauthClient = new OAuth2Client({
+                        clientId: this.config.data.clientId,
+                        clientSecret: this.config.data.clientSecret,
+                        redirectUri
+                    });
+
+                    const authorizationUrl = this.oauthClient.generateAuthUrl({
+                        access_type: 'offline',
+                        scope: [
+                            "http://gdata.youtube.com",
+                            "https://www.googleapis.com/auth/youtube",
+                            "https://www.googleapis.com/auth/youtube.force-ssl",
+                            "https://www.googleapis.com/auth/youtube-paid-content",
+                            "https://www.googleapis.com/auth/accounts.reauth",
+                        ],
+                        include_granted_scopes: true,
+                        prompt: 'consent',
+                    });
+
+                    this.verificationUrl = authorizationUrl;
+                    this.userCode = undefined;
+                    throw new Error(`Sign in using ${authorizationUrl}`);
                 } else {
-                    throw new Error('Waited too long for auth response from YTM!');
+                    if (this.userCode !== undefined) {
+                        this.logger.warn('Logging in with YoutubeTV Oauth will likely NOT provide access to Youtube Music history!! You should try to use either cookies or a custom OAuth Client ID/Secret');
+                        throw new Error(`Sign in with the code '${this.userCode}' using the authentication link on the dashboard or ${this.verificationUrl}`)
+                    } else {
+                        throw new Error('Waited too long for auth response from YTM!');
+                    }
                 }
             }
             try {
                 await this.yti.account.getInfo()
             } catch (e) {
                 const info = loggedErrorExtra(e);
-                if(info !== undefined) {
+                if (info !== undefined) {
                     this.logger.error(info, 'Additional API response details')
                 }
-                throw new Error('Credentials exist but API calls are failing. Try re-authenticating?', {cause: e});
+                throw new Error('Credentials exist but API calls are failing. Try re-authenticating?', { cause: e });
             }
+            Log.setLevel(Log.Level.ERROR);
             return true;
         } catch (e) {
             throw e;
