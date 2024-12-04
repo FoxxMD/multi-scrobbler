@@ -1,11 +1,42 @@
 import { PollingOptions } from "../common.js";
 import { CommonSourceConfig, CommonSourceData, CommonSourceOptions } from "./index.js";
-import { Innertube } from 'youtubei.js';
 
-//type InnertubeOptions = Omit<Parameters<typeof Innertube.create>[0], 'cookie' | 'cache' | 'fetch'>;
+export interface InnertubeOptions {
+    /**
+     * Proof of Origin token
+     * 
+     * May be required if YTM starts returning 403
+     * 
+     * @see https://github.com/yt-dlp/yt-dlp/wiki/Extractors#po-token-guide
+     */
+    po_token?: string
+
+    /**
+     * Visitor ID value found in VISITOR_INFO1_LIVE or visitorData cookie
+     * 
+     * May be required if YTM starts returning 403
+     * 
+     * @see https://github.com/yt-dlp/yt-dlp/wiki/Extractors#po-token-guide
+     */
+    visitor_data?: string
+
+    /**
+     * If account login results in being able to choose multiple account, use a zero-based index to choose which one to monitor
+     * 
+     * @examples [0,1]
+     */
+    account_index?: number
+
+    location?: string
+    lang?: string
+    generate_session_locally?: boolean
+    device_category?: string
+    client_type?: string
+    timezone?: string
+}
 
 export interface YTMusicData extends CommonSourceData, PollingOptions {
-        /**
+    /**
      * The cookie retrieved from the Request Headers of music.youtube.com after logging in.
      *
      * See https://ytmusicapi.readthedocs.io/en/stable/setup/browser.html#copy-authentication-headers for how to retrieve this value.
@@ -14,13 +45,33 @@ export interface YTMusicData extends CommonSourceData, PollingOptions {
      * */
     cookie?: string
 
+    /**
+     * Google Cloud Console project OAuth Client ID
+     * 
+     * Generated from a custom OAuth Client, see docs
+     */
     clientId?: string
     
+    /**
+     * Google Cloud Console project OAuth Client Secret
+     * 
+     * Generated from a custom OAuth Client, see docs
+     */
     clientSecret?: string
 
+    /**
+     * Google Cloud Console project OAuth Client Authorized redirect URI
+     * 
+     * Generated from a custom OAuth Client, see docs. multi-scrobbler will generate a default based on BASE_URL.
+     * Only specify this if the default does not work for you.
+     */
     redirectUri?: string
+
+    /**
+     * Additional options for authorization and tailoring YTM client
+     */
+    innertubeOptions?: InnertubeOptions
 }
-//export type YTMusicData = YTMusicDataCommon & InnertubeOptions;
 
 export interface YTMusicSourceConfig extends CommonSourceConfig {
     data?: YTMusicData

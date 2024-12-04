@@ -3,7 +3,7 @@ import EventEmitter from "events";
 import { PlayObject } from "../../core/Atomic.js";
 import { FormatPlayObjectOptions, InternalConfig } from "../common/infrastructure/Atomic.js";
 import { YTMusicSourceConfig } from "../common/infrastructure/config/source/ytmusic.js";
-import { Innertube, UniversalCache, Parser, YTNodes, ApiResponse, IBrowseResponse, Log } from 'youtubei.js';
+import { Innertube, UniversalCache, Parser, YTNodes, ApiResponse, IBrowseResponse, Log, SessionOptions } from 'youtubei.js';
 import { OAuth2Client } from 'google-auth-library';
 import {resolve} from 'path';
 import { joinedUrl, sleep } from "../utils.js";
@@ -92,8 +92,13 @@ export default class YTMusicSource extends AbstractSource {
     }
 
     protected async doBuildInitData(): Promise<true | string | undefined> {
+        const {
+            cookie,
+            innertubeOptions = {},
+        } = this.config.data || {};
         this.yti = await Innertube.create({
-            ...this.config.data,
+            ...(innertubeOptions as SessionOptions),
+            cookie,
             cache: new UniversalCache(true, this.workingCredsPath)
         });
         this.yti.session.on('update-credentials', async ({ credentials }) => {
