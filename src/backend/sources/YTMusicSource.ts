@@ -191,7 +191,7 @@ export default class YTMusicSource extends AbstractSource {
             if (this.authed === false) {
 
                 if (this.config.data.clientId !== undefined) {
-                    const redirectUri = this.config.data?.redirectUri ?? joinedUrl(this.localUrl, `ytmusic/callback?name=${this.name}`).toString();
+                    const redirectUri = this.config.data?.redirectUri ?? joinedUrl(this.localUrl, `api/ytmusic/callback?name=${this.name}`).toString();
 
                     this.logger.info(`Using Custom OAuth Client with Redirect URI: ${redirectUri}`);
                     this.oauthClient = new OAuth2Client({
