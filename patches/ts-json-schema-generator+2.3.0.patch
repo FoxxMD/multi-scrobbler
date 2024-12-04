@@ -1,5 +1,5 @@
 diff --git a/node_modules/ts-json-schema-generator/dist/src/AnnotationsReader/ExtendedAnnotationsReader.js b/node_modules/ts-json-schema-generator/dist/src/AnnotationsReader/ExtendedAnnotationsReader.js
-index 107dc62..6b7c311 100644
+index 107dc62..d8cda3c 100644
 --- a/node_modules/ts-json-schema-generator/dist/src/AnnotationsReader/ExtendedAnnotationsReader.js
 +++ b/node_modules/ts-json-schema-generator/dist/src/AnnotationsReader/ExtendedAnnotationsReader.js
 @@ -49,7 +49,7 @@ class ExtendedAnnotationsReader extends BasicAnnotationsReader_js_1.BasicAnnotat
@@ -11,6 +11,19 @@ index 107dc62..6b7c311 100644
      }
      getTypeAnnotation(node) {
          const symbol = (0, symbolAtNode_js_1.symbolAtNode)(node);
+diff --git a/node_modules/ts-json-schema-generator/dist/src/SchemaGenerator.js b/node_modules/ts-json-schema-generator/dist/src/SchemaGenerator.js
+index e3b7761..93f914a 100644
+--- a/node_modules/ts-json-schema-generator/dist/src/SchemaGenerator.js
++++ b/node_modules/ts-json-schema-generator/dist/src/SchemaGenerator.js
+@@ -95,7 +95,7 @@ class SchemaGenerator {
+         children.reduce((definitions, child) => {
+             const name = child.getName();
+             if (!(name in definitions)) {
+-                definitions[name] = this.typeFormatter.getDefinition(child.getType());
++                definitions[name] = {...this.typeFormatter.getDefinition(child.getType()), title: name};
+             }
+             return definitions;
+         }, childDefinitions);
 diff --git a/node_modules/ts-json-schema-generator/src/AnnotationsReader/ExtendedAnnotationsReader.ts b/node_modules/ts-json-schema-generator/src/AnnotationsReader/ExtendedAnnotationsReader.ts
 index ba8fd57..806396c 100644
 --- a/node_modules/ts-json-schema-generator/src/AnnotationsReader/ExtendedAnnotationsReader.ts

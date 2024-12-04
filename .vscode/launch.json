@@ -5,7 +5,7 @@
             "name": "dev",
             "type": "node",
             "request": "launch",
-            // Debug current file in VSCode
+            // Debug app in VSCode
             "program": "${workspaceFolder}/src/backend/index.ts",
             "runtimeExecutable": "${workspaceFolder}/node_modules/.bin/tsx",
             "console": "integratedTerminal",
@@ -30,6 +30,25 @@
                 // Ignore all dependencies (optional)
                 "${workspaceFolder}/node_modules/**",
             ],
+        },
+        {
+            "name": "schema",
+            "type": "node",
+            "request": "launch",
+            // Debug app in VSCode
+            "program": "${workspaceFolder}/src/backend/utils/SchemaStaticUtil.ts",
+            "runtimeExecutable": "${workspaceFolder}/node_modules/.bin/tsx",
+            "console": "integratedTerminal",
+            "internalConsoleOptions": "neverOpen",
+            "skipFiles": [
+                "<node_internals>/**",
+                // Ignore all dependencies (optional)
+                //"${workspaceFolder}/node_modules/**",
+            ],
+            "resolveSourceMapLocations": [
+                "${workspaceFolder}/src/**/*",
+                "${workspaceFolder}/node_modules/**/*"
+            ]
         },
         {
             "args": [

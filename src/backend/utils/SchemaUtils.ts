@@ -30,6 +30,8 @@ const tsjConfig: TSJCompletedConfig = {
     sortProps: false,
     additionalProperties: true,
     markdownDescription: true,
+    minify: false,
+    topRef: false,
     path: resolve(projectDir, "src/backend/common/infrastructure/config/aioConfig.ts"),
     tsconfig: resolve(projectDir, "src/backend/tsconfig.json"),
 };
