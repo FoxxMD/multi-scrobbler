@@ -27,3 +27,4 @@ build
 .vscode
 **/act/*
 tmp-*
+.env

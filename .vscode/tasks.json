@@ -12,6 +12,26 @@
 				"isDefault": true
 			},
 			"label": "tsc: build - src/backend/tsconfig.json"
-		}
+		},
+		{
+			"type": "shell",
+			"label": "compose-up-dev",
+			"command": "docker-compose -f docker-compose.dev.yml up",
+			"presentation": {
+			  "reveal": "always",
+			  "panel": "new"
+			},
+			"problemMatcher": []
+		  },
+		  {
+			"type": "shell",
+			"label": "compose-build-dev",
+			"command": "docker-compose -f docker-compose.dev.yml build",
+			"presentation": {
+				"reveal": "always",
+				"panel": "new"
+			  },
+			  "problemMatcher": []
+		  }
 	]
 }
