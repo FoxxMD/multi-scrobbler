@@ -6,7 +6,7 @@ import { YTMusicSourceConfig } from "../common/infrastructure/config/source/ytmu
 import { Innertube, UniversalCache, Parser, YTNodes, ApiResponse, IBrowseResponse, Log, SessionOptions } from 'youtubei.js';
 import { GenerateAuthUrlOpts, OAuth2Client } from 'google-auth-library';
 import {resolve} from 'path';
-import { joinedUrl, sleep } from "../utils.js";
+import { joinedUrl, parseBool, sleep } from "../utils.js";
 import {
     getPlaysDiff,
     humanReadableDiff,
@@ -92,6 +92,16 @@ export default class YTMusicSource extends AbstractSource {
         this.canPoll = true;
         this.supportsUpstreamRecentlyPlayed = true;
         this.workingCredsPath = resolve(this.configDir, `yti-${this.name}`);
+
+        const diffEnv = process.env.YTM_LOG_DIFF;
+        if(diffEnv !== undefined && this.config.options?.logDiff === undefined) {
+            const logDiff = parseBool(diffEnv);
+            const opts = this.config.options ?? {};
+            this.config.options = {
+                ...opts,
+                logDiff
+            }
+        }
     }
 
     public additionalApiData(): Record<string, any> {

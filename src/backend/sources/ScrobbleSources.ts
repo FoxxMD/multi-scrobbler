@@ -26,7 +26,7 @@ import { SubsonicData, SubSonicSourceConfig } from "../common/infrastructure/con
 import { TautulliSourceConfig } from "../common/infrastructure/config/source/tautulli.js";
 import { VLCData, VLCSourceConfig } from "../common/infrastructure/config/source/vlc.js";
 import { WebScrobblerSourceConfig } from "../common/infrastructure/config/source/webscrobbler.js";
-import { YTMusicSourceConfig } from "../common/infrastructure/config/source/ytmusic.js";
+import { YTMusicData, YTMusicSourceConfig } from "../common/infrastructure/config/source/ytmusic.js";
 import { WildcardEmitter } from "../common/WildcardEmitter.js";
 import { parseBool, readJson } from "../utils.js";
 import { validateJson } from "../utils/ValidationUtils.js";
@@ -484,6 +484,24 @@ export default class ScrobbleSources {
                         });
                     }
                     break;
+                case 'ytmusic':
+                    const ytm = {
+                        redirectUri: process.env.YTM_REDIRECT_URI,
+                        clientId: process.env.YTM_CLIENT_ID,
+                        clientSecret: process.env.YTM_CLIENT_SECRET,
+                        cookie: process.env.YTM_COOKIE
+                    }
+                    if (!Object.values(ytm).every(x => x === undefined)) {
+                        configs.push({
+                            type: 'ytmusic',
+                            name: 'unnamed',
+                            source: 'ENV',
+                            mode: 'single',
+                            configureAs: defaultConfigureAs,
+                            data: ytm as YTMusicData
+                        });
+                    }
+                    break;                    
                 default:
                     break;
             }

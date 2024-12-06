@@ -886,7 +886,18 @@ Only one of these methods needs to be used. **Cookies** are easier but **OAuth C
 
 <Tabs groupId="configType" queryString>
     <TabItem value="env" label="ENV">
-        No ENV support
+
+
+
+| Environmental Variable | Required? | Default |                  Description                  |
+|------------------------|-----------|---------|-----------------------------------------------|
+| YTM_COOKIE             | No        |         | Value for Cookie Authentication               |
+| YTM_CLIENT_ID          | No        |         | Client ID for OAuth Athentication             |
+| YTM_CLIENT_SECRET      | No        |         | Client Secret for OAuth Athentication         |
+| YTM_REDIRECT_URI       | No        |         | A custom redirect URI for OAuth Athentication |
+| YTM_LOG_DIFF           | No        | false   | Log YTM history changes                       |
+
+
     </TabItem>
     <TabItem value="file" label="File">
         <details>
