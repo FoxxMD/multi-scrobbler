@@ -138,6 +138,31 @@ export default class YTMusicSource extends AbstractSource {
             const u = joinedUrl(this.localUrl, 'api/ytmusic/callback');
             u.searchParams.append('name', this.name);
             this.redirectUri = u.toString();
+        } else {
+            // verify custom URI has required parts
+            let u: URL;
+            try {
+                u = new URL(this.redirectUri);
+            } catch(e) {
+                throw new Error(`custom redirectUri '${this.redirectUri}' could not be parsed as a URL`, {cause: e});
+            }
+
+            if(!u.protocol.includes('http')) {
+                throw new Error(`Custom redirectUri '${this.redirectUri}' is missing protocol! Must start with 'http' or 'https'`);
+            }
+            if(!u.pathname.includes('api')) {
+                this.logger.warn(`Custom redirectUri '${this.redirectUri}' does not contain 'api' in path! Unless you know what you are doing with redirects this will likely cause authentication to fail.`);
+            }
+            if(null === u.pathname.match(/ytmusic\/callback$/)) {
+                throw new Error(`Custom redirectUri '${this.redirectUri}' must end in 'ytmusic/callback' before querystring!`);
+            }
+            if(!u.searchParams.has('name')) {
+                throw new Error(`Custom redirectUri '${this.redirectUri}' is missing 'name' in querystring! EX ?name=${this.name}`);
+            }
+            const nameVal = u.searchParams.get('name');
+            if(nameVal !== this.name) {
+                throw new Error(`Custom redirectUri '${this.redirectUri}' has wrong value '${nameVal}' for 'name' key in querystring. Must match Source name, case-sensitive -- EX ?name=${this.name}`);
+            }
         } 
 
         this.oauthClient = new OAuth2Client({
@@ -162,7 +187,11 @@ export default class YTMusicSource extends AbstractSource {
         });
 
         if (this.config.data.clientId !== undefined && this.config.data.clientSecret !== undefined) {
-            this.configureCustomOauth();
+            try {
+                this.configureCustomOauth();
+            } catch (e) {
+                throw new Error('Unable to build custom OAuth Client', { cause: e });
+            }
             this.logger.info(`Will use custom OAuth Client:
 Client ID     : ${truncateStringToLength(10)(this.config.data.clientId)}
 Client Secret : ${truncateStringToLength(10)(this.config.data.clientSecret)}
