@@ -82,6 +82,7 @@ export default class YTMusicSource extends AbstractSource {
     yti: Innertube;
     userCode?: string;
     verificationUrl?: string;
+    redirectUri?: string;
     oauthClient?: OAuth2Client;
 
     workingCredsPath: string;
@@ -132,17 +133,17 @@ export default class YTMusicSource extends AbstractSource {
     }
 
     protected configureCustomOauth() {
-        let redirectUri = this.config.data?.redirectUri;
-        if(redirectUri === undefined) {
+        this.redirectUri = this.config.data?.redirectUri;
+        if(this.redirectUri === undefined) {
             const u = joinedUrl(this.localUrl, 'api/ytmusic/callback');
             u.searchParams.append('name', this.name);
-            redirectUri = u.toString();
+            this.redirectUri = u.toString();
         } 
 
         this.oauthClient = new OAuth2Client({
             clientId: this.config.data.clientId,
             clientSecret: this.config.data.clientSecret,
-            redirectUri
+            redirectUri: this.redirectUri,
         });
 
         const authorizationUrl = this.oauthClient.generateAuthUrl(GOOGLE_OAUTH_OPTS);
@@ -162,7 +163,10 @@ export default class YTMusicSource extends AbstractSource {
 
         if (this.config.data.clientId !== undefined && this.config.data.clientSecret !== undefined) {
             this.configureCustomOauth();
-            this.logger.info(`Will use custom OAuth Client`);
+            this.logger.info(`Will use custom OAuth Client:
+Client ID     : ${truncateStringToLength(10)(this.config.data.clientId)}
+Client Secret : ${truncateStringToLength(10)(this.config.data.clientSecret)}
+Redirect URI  : ${this.redirectUri}`);
         } else if (this.config.data.clientId !== undefined || this.config.data.clientSecret !== undefined) {
             const missing = this.config.data.clientId !== undefined ? 'clientSecret' : 'clientId';
             throw new Error(`It looks like you tried to configure a custom OAuth Client but are missing '${missing}'! Cannot build client.`);
