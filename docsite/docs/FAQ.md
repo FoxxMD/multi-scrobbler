@@ -130,15 +130,25 @@ Deezer has discontinued support for their API and the Deezer Source is now [**de
 
 ### Youtube Music fails after some time
 
-The Youtube Music library relies on scraping the YTM site (pretending to be a browser) by using cookies/auth from your actual browser. It does its best to keep these up to date but since this is not an official way to access the service YTM may invalidate your access _to the authenticated session_ at any time. How this is triggered is unknown and not something multi-scrobbler can control.
-
 If you see errors in multi-scrobbler for YTM that contain **401** or **403** like
 
 ```
 Error: Could not send the specified request to browse. Status code: 401
 ```
 
-then YTM has invalidated your access. [Follow the YTM instructions to retrieve a new set of cookies for multi-scrobbler](configuration/configuration.mdx#youtube-music) and then restart MS to potentially resolve the problem. See [this issue](https://github.com/FoxxMD/multi-scrobbler/issues/158) for further discussion of the problem.
+then YTM has invalidated your authentication.
+
+First, ensure you are NOT using [YoutubeTV authentication.](configuration/configuration.mdx?ytmAuth=ytt#youtube-music) If you completed authentication by entering a "User Code" you are using YoutubeTV which has stopped working. You should reauthenticate using **Cookies** or **Custom OAuth.**
+
+#### When using OAuth Client Authentication
+
+Refresh your authentication by using the **(Re)authenticate** link from MS's web dashboard.
+
+#### When using Cookies Authentication
+
+The library MS uses relies on scraping the YTM site by using cookies from your actual browser to pretend it is a browser. It does its best to keep these up to date but since this is not an official way to access the service YTM may invalidate your access _to the authenticated session_ at any time. How this is triggered is unknown and not something multi-scrobbler can control. You can help limit the chance of your session being invalidated by [getting the cookie from an Incognito/Private Session](https://github.com/LuanRT/YouTube.js/issues/803#issuecomment-2504032666) and then immediately closing the browser afterwards.
+
+To re-authenticate MS [follow the YTM instructions to retrieve a new set of cookies for multi-scrobbler](configuration/configuration.mdx?ytmAuth=cookie#youtube-music) and then restart MS to potentially resolve the problem.
 
 ## Configuration Issues
 
@@ -194,10 +204,58 @@ Refer to [Force Media Tracking](configuration/configuration.mdx#forcing-media-tr
 
 Before reporting an issue turn on metadata logging in the MS VLC configuration, [see the VLC documentation.](configuration/configuration.mdx#vlc-information-reporting)
 
-### Youtube Music misses scrobbles
+### Youtube Music misses or duplicates scrobbles
 
 In order for multi-scrobbler to accurately determine if a song has been scrobbled it needs **a source of truth.** For YTM this is a "history" list scraped from the YTM website. Unfortunately, the data in this list can be (often) inconsistent which makes it hard for multi-scrobbler to "trust" that it is correct and determine when/if new scrobbles occur. This inconsistency is not something multi-scrobbler can control -- it is a side-effect of having to use an unofficial method to access YTM (scraping).
 
-In order to compensate for this multi-scrobbler resets when it considers this list the "source of truth" based on if the list changes in an inconsistent way between consecutive checks. New scrobbles can only be detected when this list is "OK" as a source of truth for N+1 checks. Therefore, any new tracks that appear when the list is inconsistent will be ignored.
+To compensate for this multi-scrobbler resets when it considers this list the "source of truth" based on if the list changes in an inconsistent way between consecutive checks. New scrobbles can only be detected when this list is "OK" as a source of truth for N+1 checks. Therefore, any new tracks that appear when the list is inconsistent will be ignored.
 
-See [this issue](https://github.com/FoxxMD/multi-scrobbler/issues/156#issuecomment-2312533486) for further discussion and a more detailed explanation of why this is happening and how multi-scrobbler compensates for it.
+Duplicate scrobbles can also occur if the change between two checks is technically consistent. For instance, if you listen to a track twice in some period, separated by other music, YTM will sometimes "remove" the track from the earlier time (further down in your history) and "re-add" it at the top of the history.
+
+#### Reporting YTM scrobble issues
+
+If you experience these behaviors you can help improve MS's YTM heureistic by providing thorough feedback as [an issue.](https://github.com/FoxxMD/multi-scrobbler/issues/new?assignees=&labels=bug&projects=&template=01-bug-report.yml&title=bug%3A+) **Please do the following to provide the most useful report:**
+
+##### Turn on Change Detection
+
+In your YTM configuration (`ytmusic.json`) add `logDiff` under `options` like this:
+
+
+```json
+{
+    "type": "ytmusic",
+    "name": "MyYTM",
+    "data": { ... },
+    "options": {
+        "logDiff": true
+    }
+}
+```
+
+This will cause MS to log YTM history changes similar to this:
+
+```
+[Ytmusic - MyYTM] Changes from last seen list:
+1. (tuhe1CpHRxY) KNOWER - I’m The President --- undefined => Moved -  Originally at 6
+2. (Mtg8V6Xa2nc) Vulfpeck - Romanian Drinking Song --- Schvitz => Moved -  Originally at 1
+3. (rxbCaiyYSXM) Nightmares On Wax - You Wish --- In A Space Outta Sound => Moved -  Originally at 2
+4. (tMt_YXr90AM) Gorillaz - O Green World --- undefined => Moved -  Originally at 3
+...
+```
+
+Which are essential to troubleshooting this behavior.
+
+##### Provide Detail and Context
+
+Provide a detailed account of how you were using YTM when the issue occurred, including things like:
+
+* the platform listening on (desktop, mobile, 3rd party client, etc...)
+* any changes in platform
+  * > I switched from desktop to listening on my phone...
+* how you were listening to music
+  * > I was playing an album start to finish
+  * > I listened to two songs in a row, then browsed for a new song in library by artist, then went back to a song in the queue...
+
+Explain the expected behavior (it should have scrobbled songs x, y, then z) and what actually happened (it scrobbled songs x, then y, then x again, then z)
+
+Provide ALL logs from the time when the issue occurred including logs from BEFORE (ideally 2-3 minutes of logs) and AFTER the issue.
