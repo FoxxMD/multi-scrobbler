@@ -41,6 +41,7 @@ export default abstract class AbstractComponent {
     regexCache!: ReturnType<typeof cacheFunctions>;
 
     logger: Logger;
+    componentLogger?: Logger;
 
     protected constructor(config: CommonClientConfig | CommonSourceConfig) {
         this.config = config;
@@ -50,6 +51,9 @@ export default abstract class AbstractComponent {
         this.logger.debug('Attempting to initialize...');
         try {
             this.initializing = true;
+            if(this.componentLogger === undefined) {
+                await this.buildComponentLogger();
+            }
             await this.buildInitData();
             this.buildTransformRules();
             await this.checkConnection();
@@ -67,6 +71,15 @@ export default abstract class AbstractComponent {
         } finally {
             this.initializing = false;
         }
+    }
+
+    private async buildComponentLogger() {
+        await this.doBuildComponentLogger();
+        return;
+    }
+
+    protected async doBuildComponentLogger() {
+        return;
     }
 
     public async buildInitData() {

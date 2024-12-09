@@ -1,5 +1,5 @@
 import { getVersion } from "@foxxmd/get-version";
-import { Logger } from "@foxxmd/logging";
+import { Logger, LogOptions } from "@foxxmd/logging";
 import { EventEmitter } from "events";
 import { createContainer } from "iti";
 import path from "path";
@@ -9,6 +9,7 @@ import { Notifiers } from "./notifier/Notifiers.js";
 import ScrobbleClients from "./scrobblers/ScrobbleClients.js";
 import ScrobbleSources from "./sources/ScrobbleSources.js";
 import { generateBaseURL } from "./utils.js";
+import { PassThrough } from "stream";
 
 let version: string = 'unknown';
 
@@ -23,13 +24,17 @@ export interface RootOptions {
     port?: string | number
     logger: Logger
     disableWeb?: boolean
+    loggerStream?: PassThrough
+    loggingConfig?: LogOptions
 }
 
 const createRoot = (options?: RootOptions) => {
     const {
         port = 9078,
         baseUrl = process.env.BASE_URL,
-        disableWeb: dw
+        disableWeb: dw,
+        loggerStream,
+        loggingConfig
     } = options || {};
     const configDir = process.env.CONFIG_DIR || path.resolve(projectDir, `./config`);
     let disableWeb = dw;
@@ -54,6 +59,8 @@ const createRoot = (options?: RootOptions) => {
         clientEmitter: () => cEmitter,
         sourceEmitter: () => sEmitter,
         notifierEmitter: () => new EventEmitter(),
+        loggerStream,
+        loggingConfig,
     }).add((items) => {
         const localUrl = generateBaseURL(baseUrl, items.port)
         return {

@@ -1,5 +1,5 @@
-import { childLogger, Logger, loggerAppRolling, LogOptions, parseLogOptions, } from '@foxxmd/logging';
-import { buildDestinationJsonPrettyStream, buildDestinationStdout, buildLogger } from "@foxxmd/logging/factory";
+import { childLogger, FileLogOptions, Logger, loggerAppRolling, LogLevel, LogLevelStreamEntry, LogOptions, parseLogOptions, } from '@foxxmd/logging';
+import { buildDestinationJsonPrettyStream, buildDestinationRollingFile, buildDestinationStdout, buildLogger } from "@foxxmd/logging/factory";
 import { PassThrough, Transform } from "node:stream";
 import path from "path";
 import process from "process";
@@ -32,6 +32,46 @@ export const appLogger = async (config: LogOptions = {}): Promise<[Logger, PassT
     });
     return [logger, stream];
 }
+
+export const componentFileLogger = async (type: string, name: string, fileConfig: true | LogLevel | FileLogOptions, config: LogOptions = {}): Promise<Logger> => {
+    const opts = parseLogOptions(config, {
+        logBaseDir: typeof process.env.CONFIG_DIR === 'string' ? process.env.CONFIG_DIR : undefined,
+        logDefaultPath: './logs/scrobble.log'
+    });
+
+    const base = path.dirname(typeof opts.file.path === 'function' ? opts.file.path() : opts.file.path);
+    const componentLogPath = path.join(base, `${type}-${name}.log`);
+
+    const componentConfig: LogOptions = {
+        level: opts.level ?? 'debug'
+    };
+    if (fileConfig === true) {
+        componentConfig.file = {
+            path: componentLogPath,
+        }
+    } else if (typeof fileConfig === 'string') {
+        componentConfig.file = {
+            level: fileConfig as LogLevel,
+            path: componentLogPath
+        }
+    } else {
+        componentConfig.file = fileConfig;
+    }
+
+    const strongOpts = parseLogOptions(componentConfig);
+
+    const streams: LogLevelStreamEntry[] = [];
+
+    if(strongOpts.file.level !== false) {
+        const file = await buildDestinationRollingFile(componentConfig.file.level ?? componentConfig.level, {...strongOpts.file})
+        streams.push(file);
+
+        return buildLogger('debug' as LogLevel, streams);
+    } else {
+        throw new Error('File must be set');
+    }
+}
+
 export class MaybeLogger {
     logger?: Logger
 
