@@ -1,4 +1,4 @@
-import { childLogger } from '@foxxmd/logging';
+import { childLogger, LogDataPretty } from '@foxxmd/logging';
 import dayjs, { Dayjs } from "dayjs";
 import { EventEmitter } from "events";
 import { FixedSizeList } from "fixed-size-list";
@@ -23,6 +23,7 @@ import {
 import { SourceConfig } from "../common/infrastructure/config/source/sources.js";
 import TupleMap from "../common/TupleMap.js";
 import {
+    difference,
     formatNumber,
     genGroupId,
     playObjDataMatch,
@@ -32,6 +33,8 @@ import {
     sortByOldestPlayDate,
 } from "../utils.js";
 import { comparePlayTemporally, temporalAccuracyIsAtLeast } from "../utils/TimeUtils.js";
+import { getRoot } from '../ioc.js';
+import { componentFileLogger } from '../common/logging.js';
 
 export interface RecentlyPlayedOptions {
     limit?: number
@@ -76,13 +79,16 @@ export default abstract class AbstractSource extends AbstractComponent implement
 
     protected recentDiscoveredPlays: GroupedFixedPlays = new TupleMap<DeviceId, PlayUserId, FixedSizeList<ProgressAwarePlayObject>>();
 
+    protected loggerLabel: string;
+
     constructor(type: SourceType, name: string, config: SourceConfig, internal: InternalConfig, emitter: EventEmitter) {
         super(config);
         const {clients = [] } = config;
         this.type = type;
         this.name = name;
-        this.identifier = `Source - ${capitalize(this.type)} - ${name}`;
-        this.logger = childLogger(internal.logger, `${capitalize(this.type)} - ${name}`);
+        this.loggerLabel = `${capitalize(this.type)} - ${name}`;
+        this.identifier = `Source - ${this.loggerLabel}`;
+        this.logger = childLogger(internal.logger, `${this.loggerLabel}`);
         this.config = config;
         this.clients = clients;
         this.instantiatedAt = dayjs();
@@ -501,5 +507,22 @@ export default abstract class AbstractSource extends AbstractComponent implement
 
     public async destroy() {
         this.emitter.removeAllListeners();
+    }
+
+    protected async doBuildComponentLogger(): Promise<void> {
+        if(this.config.options.logToFile) {
+            this.logger.debug('Enabling component logger...');
+            const root = getRoot();
+            const stream = root.get('loggerStream');
+            const logConfig = root.get('loggingConfig');
+            const cLogger = await componentFileLogger(this.type, this.name, true, logConfig);
+            this.componentLogger = childLogger(cLogger, this.logger.labels);
+            stream.on('data', (d: LogDataPretty) => {
+                const {level, msg, line, labels, ...rest} = d;
+                if(d.labels.includes(this.loggerLabel)) {
+                    this.componentLogger[this.componentLogger.levels.labels[d.level]]({...rest, labels: difference(labels, this.logger.labels)}, msg);
+                }
+            });
+        }
     }
 }

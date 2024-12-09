@@ -82,7 +82,7 @@ const configDir = process.env.CONFIG_DIR || path.resolve(projectDir, `./config`)
         const [aLogger, appLoggerStream] = await appLogger(logging)
         logger = childLogger(aLogger, 'App');
 
-        const root = getRoot({...config, logger});
+        const root = getRoot({...config, logger, loggingConfig: logging, loggerStream: appLoggerStream});
         initLogger.info(`Version: ${root.get('version')}`);
 
         initLogger.info('Generating schema definitions...');
