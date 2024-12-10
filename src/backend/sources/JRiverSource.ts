@@ -72,9 +72,13 @@ export class JRiverSource extends MemoryPositionalSource {
     }
 
     doAuthentication = async () => {
-        const resp = await this.client.testAuth();
-        this.clientReady = resp;
-        return resp;
+        try {
+            const resp = await this.client.testAuth();
+            this.clientReady = true;
+            return true;
+        } catch (e) {
+            throw e;
+        }
     }
 
     static formatPlayObj(obj: Info, options: FormatPlayObjectOptions = {}): PlayObject {
