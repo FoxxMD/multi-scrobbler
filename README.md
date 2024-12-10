@@ -39,7 +39,7 @@ A javascript app to scrobble music you listened to, to [Maloja](https://github.c
 * Graceful network and client failure handling (queued scrobbles that auto-retry)
 * Smart handling of credentials (persistent, authorization through app)
 * Easy configuration through ENVs or JSON
-* Modify data before scrobbling with [regular expression or search patterns](https://foxxmd.github.io/multi-scrobbler/docs/transforms)
+* Modify data before scrobbling with [regular expression or search patterns](https://foxxmd.github.io/multi-scrobbler/docs/configuration/transforms)
 * Install using [Docker images for x86/ARM](https://foxxmd.github.io/multi-scrobbler/docs/installation#docker), [flatpak](https://foxxmd.github.io/multi-scrobbler/docs/installation#flatpak), or [locally with NodeJS](https://foxxmd.github.io/multi-scrobbler/docs/installation#nodejs)
 
 [**Quick Start Guide**](https://foxxmd.github.io/multi-scrobbler/docs/quickstart)
