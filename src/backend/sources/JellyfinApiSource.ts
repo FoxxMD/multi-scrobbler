@@ -33,8 +33,14 @@ import {
     // @ts-expect-error weird typings?
     getLibraryStructureApi,
     // @ts-expect-error weird typings?
-    getImageApi
+    getImageApi,
+
 } from "@jellyfin/sdk/lib/utils/api/index.js";
+import {
+    // @ts-expect-error weird typings?
+    SystemInfoIssue
+} 
+from "@jellyfin/sdk/lib/index.js";
 import dayjs from "dayjs";
 import EventEmitter from "events";
 import { nanoid } from "nanoid";
@@ -178,7 +184,23 @@ export default class JellyfinApiSource extends MemoryPositionalSource {
     protected async doCheckConnection(): Promise<true | string | undefined> {
         try {
             const servers = await this.client.discovery.getRecommendedServerCandidates(this.config.data.url);
+            if(servers.length === 0) {
+                throw new Error(`No servers were parseable from the given Jellyfin URL ${this.config.data.url}`);
+            }
             const best = this.client.discovery.findBestServer(servers);
+            if(best === undefined) {
+                for(const s of servers) {
+                    const sysError = s.issues.find(x => x instanceof SystemInfoIssue);
+                    if(sysError !== undefined) {
+                        this.logger.warn(new Error(`Server ${s.address} failed to communicate or something went wrong (SystemInfoIssue)`, {cause: sysError.error}));
+                    } else {
+                        for(const i of s.issues) {
+                            this.logger.warn(`Server ${s.address} has an issue (${i.constructor.name})`)
+                        }
+                    }
+                }
+                throw new Error('Unable to determine a valid Server to connect to. See warnings above.');
+            }
             this.api = this.client.createApi(best.address);
             this.imageApi = getImageApi(this.api);
             this.address = best.address;
