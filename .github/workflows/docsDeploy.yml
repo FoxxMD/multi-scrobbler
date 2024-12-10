@@ -18,7 +18,12 @@ jobs:
           node-version: 20
           cache: npm
 
-      - name: Install dependencies
+      - name: Install app dev dependencies
+        run: npm ci
+      - name: Generate schema files
+        run: npm run schema
+
+      - name: Install docusaurus dependencies
         run: npm ci
         working-directory: ./docsite
       - name: Build website
