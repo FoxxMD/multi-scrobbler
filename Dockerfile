@@ -84,7 +84,7 @@ COPY --chown=abc:abc . /app
 # need to set before build so server/client build is optimized and has constants (if needed)
 ENV NODE_ENV=production
 
-RUN npm run docs:install && npm run build && rm -rf node_modules && rm -rf docsite/node_modules
+RUN npm run docs:install && npm run schema && npm run build && rm -rf node_modules && rm -rf docsite/node_modules
 
 FROM base AS app
 
