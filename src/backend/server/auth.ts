@@ -8,6 +8,8 @@ import LastfmSource from "../sources/LastfmSource.js";
 import ScrobbleSources from "../sources/ScrobbleSources.js";
 import SpotifySource from "../sources/SpotifySource.js";
 import YTMusicSource from "../sources/YTMusicSource.js";
+import { sortAndDeduplicateDiagnostics } from "typescript";
+import { source } from "common-tags";
 
 export const setupAuthRoutes = (app: ExpressWithAsync, logger: Logger, sourceMiddle: ExpressHandler, clientMiddle: ExpressHandler, scrobbleSources: ScrobbleSources, scrobbleClients: ScrobbleClients) => {
     app.use('/api/client/auth', clientMiddle);
@@ -65,7 +67,8 @@ export const setupAuthRoutes = (app: ExpressWithAsync, logger: Logger, sourceMid
         }
         const {
             query: {
-                state
+                state,
+                name
             } = {}
         } = req;
         if (req.url.includes('lastfm')) {
@@ -86,6 +89,19 @@ export const setupAuthRoutes = (app: ExpressWithAsync, logger: Logger, sourceMid
             } catch (e) {
                 return res.send(e.message);
             }
+        } else if(req.url.includes('ytmusic')) {
+            const entity: YTMusicSource | undefined = scrobbleSources.getByName(name) as (YTMusicSource | undefined);
+            if(entity === undefined) {
+                logger.error(`No YTMUsic source with name ${state} was found`);
+            }
+            const result = await entity.handleAuthCodeCallback(req.query);
+            let responseContent = 'OK';
+            if(result === true) {
+                entity.poll();
+            } else {
+                responseContent = result;
+            }
+            return res.send(responseContent);
         } else {
             // TODO right now all sources requiring source interaction are covered by logic branches (deezer above and spotify here)
             // but eventually should update all source callbacks to url specific URLS to avoid ambiguity...

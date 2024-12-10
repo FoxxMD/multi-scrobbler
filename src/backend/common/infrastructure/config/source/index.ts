@@ -1,3 +1,4 @@
+import { FileLogOptions, LogLevel } from "@foxxmd/logging";
 import { PlayTransformConfig, PlayTransformOptions } from "../../Atomic.js";
 import { CommonConfig, CommonData, RequestRetryOptions } from "../common.js";
 
@@ -71,6 +72,13 @@ export interface CommonSourceOptions extends SourceRetryOptions {
      * @examples [false]
      * */
     logPlayerState?: boolean
+
+    /**
+     * **Exprimental:** Log to a separate file for this Source.
+     * 
+     * Useful for debugging long-running Sources
+     */
+    logToFile?: true | LogLevel | FileLogOptions
 
     /**
      * If this source

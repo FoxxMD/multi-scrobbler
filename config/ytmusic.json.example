@@ -4,6 +4,16 @@
     "enable": true,
     "clients": [],
     "data": {
+      "cookie": "__Secure-1PSIDTS=sidts-CjEB3EgAEvCd-......",
+      // either cookie or id/secret needs to be provided
+      "clientId": "891098404....apps.googleusercontent.com",
+      "clientSecret": "GOCS..."
+
+      // optional
+      //"redirectUri": "http://my.custom.tld/api/ytmusic/callback?name=MyYTMusic"
+    },
+    "options": {
+      "logDiff": true
     }
   }
 ]
