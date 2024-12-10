@@ -152,7 +152,7 @@ These options affect multi-scrobbler's behavior and are not specific to any sour
 Defines the URL that is used to generate default redirect URLs for authentication on [spotify](#spotify) and [lastfm](#lastfm) -- as well as some logging hints.
 
 * Default => `http://localhost:9078`
-* Set with [ENV](./configuration?configType=env#configuration-types) `BASE_URL` or `baseUrl` [all-in-one configuration](./configuration?configType=aio#configuration-types)
+* Set with [ENV](./?configType=env#configuration-types) `BASE_URL` or `baseUrl` [all-in-one configuration](./?configType=aio#configuration-types)
 * If protocol is `http` or no protocol is specified MS will try to use port `9078` -- to override this explicitly set the port or use `https`
 
 Useful when running with [docker](../installation/installation.mdx#docker) so that you do not need to specify redirect URLs for each configuration.
@@ -191,7 +191,7 @@ Any **ingress-based sources will be unusable** (Plex, Tautulli, etc...) if this 
 Disable using either:
 
 * ENV `DISABLE_WEB=true`
-* In [All-in-One File](./configuration?configType=aio#configuration-types) use the top-level property `"disableWeb": true`
+* In [All-in-One File](./?configType=aio#configuration-types) use the top-level property `"disableWeb": true`
 
 ## Source Configurations
 
@@ -724,7 +724,7 @@ After starting multi-scrobbler with credentials in-place open the dashboard (`ht
 :::warning
 
 * Communication with YT Music is **unofficial** and not supported or endorsed by Google. This means that **this integration may stop working at any time** if Google decides to change how YT Music works in the browser.
-  * Due to this scrobble history from YTM is often inconsistent and can cause missed scrobbles. [See the FAQ](../FAQ.md#youtube-music-misses-scrobbles) for a more detailed explanation.
+  * Due to this scrobble history from YTM is often inconsistent and can cause missed scrobbles. [See the FAQ](../FAQ.md#youtube-music-misses-or-duplicates-scrobbles) for a more detailed explanation.
 
 :::
 
@@ -1302,7 +1302,7 @@ Multi-scrobbler is **not** designed to be publicly accessible from the internet.
 
 ##### Multiple Users
 
-If you would like use multiple WebScrobbler sources they can be matched using a **slug** at the end of the **API URL.** This requires using [a file-based config.](./configuration?configType=file#webscrobbler-config)
+If you would like use multiple WebScrobbler sources they can be matched using a **slug** at the end of the **API URL.** This requires using [a file-based config.](./?configType=file#webscrobbler-config)
 
 <details>
 
@@ -1698,7 +1698,7 @@ To extract this information use [named capture groups](https://developer.mozilla
 
 <!-- Would like to put this in a <details> node but the <> in the named capture groups are causing the parser to incorrectly parse them as an actual tag  -->
 
-Example usage in [a file-based config:](./configuration?configType=file#webscrobbler-config)
+Example usage in [a file-based config:](./?configType=file#webscrobbler-config)
 
 ```json5 title="config/vlc.json" {10-15}
 [
