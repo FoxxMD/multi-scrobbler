@@ -87,7 +87,7 @@ const _messageWithCauses = (err: Error, seen = new Set<Error>()) => {
 
     // Ensure we don't go circular or crazily deep
     if (seen.has(err)) {
-        return message + ': ...';
+        return message + ' => ...';
     }
 
     const cause = getErrorCause(err);
@@ -95,7 +95,7 @@ const _messageWithCauses = (err: Error, seen = new Set<Error>()) => {
     if (cause) {
         seen.add(err);
 
-        return (message + ': ' +
+        return (message + ' => ' +
             _messageWithCauses(cause, seen));
     } else {
         return message;

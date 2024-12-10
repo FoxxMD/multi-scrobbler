@@ -5,7 +5,7 @@ import {
 import deepEqual from 'fast-deep-equal';
 import { Simulate } from "react-dom/test-utils";
 import { PlayObject } from "../../core/Atomic.js";
-import { buildTrackString } from "../../core/StringUtils.js";
+import { buildTrackString, truncateStringToLength } from "../../core/StringUtils.js";
 
 import {
     configPartsToStrongParts, countRegexes,
@@ -24,6 +24,8 @@ import { CommonClientConfig } from "./infrastructure/config/client/index.js";
 import { CommonSourceConfig } from "./infrastructure/config/source/index.js";
 import play = Simulate.play;
 import { WebhookPayload } from "./infrastructure/config/health/webhooks.js";
+import { AuthCheckError, BuildDataError, ConnectionCheckError, PostInitError, TransformRulesError } from "./errors/MSErrors.js";
+import { messageWithCauses } from "../utils/ErrorUtils.js";
 
 export default abstract class AbstractComponent {
     requiresAuth: boolean = false;
@@ -71,13 +73,13 @@ export default abstract class AbstractComponent {
             try {
                 await this.postInitialize();
             } catch (e) {
-                this.logger.warn(new Error('Error occurred during post-initialization hook but was caught', {cause: e}));
+                throw new PostInitError('Error occurred during post-initialization hook', {cause: e});
             }
             return true;
         } catch(e) {
             this.logger.error(new Error('Initialization failed', {cause: e}));
             if(notify) {
-                await this.notify({title: `${this.getIdentifier()} - Initialization Error`, message: `Could not initialize | Error: ${e.message}`, priority: 'error'});
+                await this.notify({title: `${this.getIdentifier()} - Init Error`, message: truncateStringToLength(150)(messageWithCauses(e)), priority: 'error'});
             }
             return false;
         } finally {
@@ -124,7 +126,7 @@ export default abstract class AbstractComponent {
             this.buildOK = true;
         } catch (e) {
             this.buildOK = false;
-            throw new Error('Building required data for initialization failed', {cause: e});
+            throw new BuildDataError('Building required data for initialization failed', {cause: e});
         }
     }
 
@@ -145,13 +147,13 @@ export default abstract class AbstractComponent {
             this.doBuildTransformRules();
         } catch (e) {
             this.buildOK = false;
-            throw new Error('Could not build playTransform rules. Check your configuration is valid.', {cause: e});
+            throw new TransformRulesError('Could not build playTransform rules. Check your configuration is valid.', {cause: e});
         }
         try {
             const ruleCount = countRegexes(this.transformRules);
             this.regexCache = cacheFunctions(ruleCount);
         } catch (e) {
-            this.logger.warn(new Error('Failed to count number of rule regexes for caching but will continue will fallback to 100', {cause: e}));
+            this.logger.warn(new TransformRulesError('Failed to count number of rule regexes for caching but will continue will fallback to 100', {cause: e}));
         }
     }
 
@@ -236,7 +238,7 @@ export default abstract class AbstractComponent {
             this.connectionOK = true;
         } catch (e) {
             this.connectionOK = false;
-            throw new Error('Communicating with upstream service failed', {cause: e});
+            throw new ConnectionCheckError('Communicating with upstream service failed', {cause: e});
         }
     }
 
@@ -273,9 +275,9 @@ export default abstract class AbstractComponent {
         if(this.authFailure) {
             if(!force) {
                 if(this.requiresAuthInteraction) {
-                    throw new Error('Authentication failure: Will not retry auth because user interaction is required for authentication');
+                    throw new AuthCheckError('Authentication failure: Will not retry auth because user interaction is required for authentication');
                 }
-                throw new Error('Authentication failure: Will not retry auth because authentication previously failed and must be reauthenticated');
+                throw new AuthCheckError('Authentication failure: Will not retry auth because authentication previously failed and must be reauthenticated');
             }
             this.logger.debug('Auth previously failed for non upstream/network reasons but retry is being forced');
         }
@@ -287,7 +289,7 @@ export default abstract class AbstractComponent {
             // only signal as auth failure if error was NOT either a node network error or a non-showstopping upstream error
             this.authFailure = !(hasNodeNetworkException(e) || hasUpstreamError(e, false));
             this.authed = false;
-            throw new Error(`Authentication test failed!${this.authFailure === false ? ' Due to a network issue. Will retry authentication on next heartbeat.' : ''}`, {cause: e});
+            throw new AuthCheckError(`Authentication test failed!${this.authFailure === false ? ' Due to a network issue. Will retry authentication on next heartbeat.' : ''}`, {cause: e});
         }
     }
 
