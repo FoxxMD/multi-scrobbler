@@ -245,6 +245,25 @@ This will cause MS to log YTM history changes similar to this:
 
 Which are essential to troubleshooting this behavior.
 
+
+##### Turn on File Logging
+
+Optionally, if your logs are busy due to many other sources, you can log **only** YTM logs to a file. Turn this on with the `logToFile` config option:
+
+```json
+{
+    "type": "ytmusic",
+    "name": "MyYTM",
+    "data": { ... },
+    "options": {
+        "logDiff": true,
+        "logToFile": true
+    }
+}
+```
+
+This will cause MS to write YTM logs to a file in your `logs` folder named `ytmusic-MyYTM.log` (based on your source name).
+
 ##### Provide Detail and Context
 
 Provide a detailed account of how you were using YTM when the issue occurred, including things like:

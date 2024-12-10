@@ -452,7 +452,7 @@ Redirect URI  : ${this.redirectUri}`);
                     this.logger.warn(warnMsg);
                     this.logger.warn(diffMsg);
                 } else {
-                    this.logger.debug(diffMsg);
+                    this.logger.verbose(diffMsg);
                 }
             }
 
