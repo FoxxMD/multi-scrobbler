@@ -4,12 +4,16 @@ import { gotify } from 'gotify';
 import request from 'superagent';
 import { GotifyConfig, PrioritiesConfig, WebhookPayload } from "../common/infrastructure/config/health/webhooks.js";
 import { AbstractWebhookNotifier } from "./AbstractWebhookNotifier.js";
+import { isPortReachable, normalizeWebAddress } from "../utils/NetworkUtils.js";
+import { URLData } from "../../core/Atomic.js";
 
 export class GotifyWebhookNotifier extends AbstractWebhookNotifier {
 
     declare config: GotifyConfig;
 
     priorities: PrioritiesConfig;
+
+    protected endpoint: URLData;
 
     constructor(defaultName: string, config: GotifyConfig, logger: Logger) {
         super('Gotify', defaultName, config, logger);
@@ -29,14 +33,25 @@ export class GotifyWebhookNotifier extends AbstractWebhookNotifier {
     }
 
     initialize = async () => {
-        // check url is correct
+        // check url is correct as a courtesy
+        this.endpoint = normalizeWebAddress(this.config.url);
+        this.logger.verbose(`Config URL: '${this.config.url}' => Normalized: '${this.endpoint.normal}'`)
+
+        this.initialized = true; // always set as ready to go. Server issues may be transient.
+
+        try {
+            await isPortReachable(this.endpoint.port, { host: this.endpoint.url.hostname });
+        } catch (e) {
+            this.logger.warn(new Error('Unable to detect if server is reachable', { cause: e }));
+            return;
+        }
+
         try {
             const url = this.config.url;
             const resp = await request.get(`${url}/version`);
-            this.logger.verbose(`Initialized. Found Server version ${resp.body.version}`);
-            this.initialized = true;
+            this.logger.verbose(`Found Server version ${resp.body.version}`);
         } catch (e) {
-            this.logger.error(`Failed to contact server | Error: ${e.message}`);
+            this.logger.warn(new Error('Server was reachable but could not determine version', { cause: e }));
         }
     }
 
@@ -48,19 +63,19 @@ export class GotifyWebhookNotifier extends AbstractWebhookNotifier {
     doNotify = async (payload: WebhookPayload) => {
         try {
             await gotify({
-                server: this.config.url,
+                server: this.endpoint.normal,
                 app: this.config.token,
                 message: payload.message,
                 title: payload.title,
                 priority: this.priorities[payload.priority]
             });
             this.logger.verbose(`Pushed notification.`);
-        } catch (e: any) {
+        } catch (e) {
             if(e instanceof HTTPError && e.response.statusCode === 401) {
-                this.logger.warn(`Unable to push notification. Error returned with 401 which means the TOKEN provided is probably incorrect. Disabling Notifier | Error => ${e.response.body}`);
+                this.logger.warn(new Error(`Unable to push notification. Error returned with 401 which means the TOKEN provided is probably incorrect. Disabling Notifier \n Response Error => ${e.response.body}`, {cause: e}));
                 this.authed = false;
             } else {
-                this.logger.warn(`Failed to push notification | Error => ${e.message}`);
+                this.logger.warn(new Error('Failed to push notification', {cause: e}));
             }
         }
     }

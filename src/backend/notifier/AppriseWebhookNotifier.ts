@@ -11,6 +11,8 @@ import {
     WebhookPayload
 } from "../common/infrastructure/config/health/webhooks.js";
 import { AbstractWebhookNotifier } from "./AbstractWebhookNotifier.js";
+import { URLData } from "../../core/Atomic.js";
+import { isPortReachable, joinedUrl, normalizeWebAddress } from "../utils/NetworkUtils.js";
 
 const shortKey = truncateStringToLength(10);
 
@@ -19,6 +21,8 @@ export class AppriseWebhookNotifier extends AbstractWebhookNotifier {
     declare config: AppriseConfig;
 
     priorities: PrioritiesConfig;
+
+    protected endpoint: URLData;
 
     urls: string[];
     keys: string[];
@@ -42,18 +46,24 @@ export class AppriseWebhookNotifier extends AbstractWebhookNotifier {
     }
 
     initialize = async () => {
-        // check url is correct
+        // check url is correct as a courtesy
+        this.endpoint = normalizeWebAddress(this.config.host);
+        this.logger.verbose(`Config URL: '${this.config.host}' => Normalized: '${this.endpoint.normal}'`)
+
+        this.initialized = true; // always set as ready to go. Server issues may be transient.
+
         try {
-            await request.get(this.config.host);
+            await isPortReachable(this.endpoint.port, { host: this.endpoint.url.hostname });
         } catch (e) {
-            this.logger.error(new Error('Failed to contact Apprise server', {cause: e}));
+            this.logger.warn(new Error('Unable to detect if server is reachable', { cause: e }));
+            return;
         }
 
         if (this.keys.length > 0) {
             let anyOk = false;
             for (const key of this.keys) {
                 try {
-                    const resp = await request.get(`${this.config.host}/json/urls/${key}`);
+                    const resp = await request.get(joinedUrl(this.endpoint.url, `/json/urls/${key}`).toString());
                     if (resp.statusCode === 204) {
                         this.logger.warn(`Details for Config ${shortKey(key)} returned no content. Double check the key is set correctly or that the apprise Config is not empty.`);
                     } else {
@@ -64,9 +74,7 @@ export class AppriseWebhookNotifier extends AbstractWebhookNotifier {
                 }
             }
             if (!anyOk) {
-                this.logger.error('No Apprise Configs were valid!');
-                this.initialized = false;
-                return;
+                this.logger.warn('No Apprise Configs were valid!');
             }
         }
         this.initialized = true;
@@ -83,7 +91,7 @@ export class AppriseWebhookNotifier extends AbstractWebhookNotifier {
         if (this.keys.length > 0) {
             for (const key of this.keys) {
                 try {
-                    const resp = await this.callApi(request.post(`${this.config.host}/notify/${key}`)
+                    const resp = await this.callApi(request.post(joinedUrl(this.endpoint.url, `/notify/${key}`).toString())
                         .type('json')
                         .send(body));
                     anyOk = true;
@@ -99,7 +107,7 @@ export class AppriseWebhookNotifier extends AbstractWebhookNotifier {
                 body.urls = this.urls.join(',')
             }
             try {
-                const resp = await this.callApi(request.post(`${this.config.host}/notify`)
+                const resp = await this.callApi(request.post(joinedUrl(this.endpoint.url, '/notify').toString())
                     .type('json')
                     .send(body));
                 anyOk = true;
