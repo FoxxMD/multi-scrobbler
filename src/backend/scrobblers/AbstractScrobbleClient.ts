@@ -149,7 +149,7 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
     }
 
     protected notify = async (payload: WebhookPayload) => {
-        this.notify(payload);
+        this.emitEvent('notify', payload);
     }
 
     protected async postInitialize(): Promise<void> {

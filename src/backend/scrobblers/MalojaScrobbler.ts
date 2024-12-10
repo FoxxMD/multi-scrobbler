@@ -276,12 +276,12 @@ export default class MalojaScrobbler extends AbstractScrobbleClient {
                 this.logger.info('Auth test passed!');
                 return true;
             } else {
-                this.logger.error('Testing connection failed => Server Response body was malformed -- should have returned "status: ok"...is the URL correct?', {
+                this.logger.error('Maloja API Response', {
                     status,
                     body,
                     text: text.slice(0, 50)
                 });
-                return false;
+                throw new Error('Server Response body was malformed -- should have returned "status: ok"...is the URL correct?', {cause: new Error(`Maloja API Response was ${status}: ${text.slice(0,50)}`)})
             }
         } catch (e) {
             if(e instanceof UpstreamError) {

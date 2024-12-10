@@ -72,7 +72,11 @@ describe('Networking', function () {
                 ],
                 async function() {
                     const authScrobbler = new TestAuthScrobbler();
-                    await authScrobbler.testAuth();
+                    try {
+                        await authScrobbler.testAuth();
+                    } catch (e) {
+
+                    }
                     assert.isTrue(authScrobbler.authGated());
                     assert.isFalse(authScrobbler.authFailure);
                 }
@@ -88,7 +92,11 @@ describe('Networking', function () {
                 ],
                 async function() {
                     const authScrobbler = new TestAuthScrobbler();
-                    await authScrobbler.testAuth();
+                    try {
+                        await authScrobbler.testAuth();
+                    } catch (e) {
+
+                    }
                     assert.isTrue(authScrobbler.authGated());
                     assert.isTrue(authScrobbler.authFailure);
                 }
