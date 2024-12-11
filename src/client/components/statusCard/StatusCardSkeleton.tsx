@@ -37,8 +37,8 @@ const StatusCardSkeleton = (props: PropsWithChildren<StatusCardSkeletonData>) =>
                         {subtitle ? <div className="text-sm">{subtitle}</div> : null}
                     </div>
                     <div className="text-right">
-                        <div className="flex items-center text-right">{status}<StatusIndicator type={statusType}/></div>
-                        {subtitleRight ? <div className="text-sm">{subtitleRight}</div> : null}
+                        <div className="flex items-center justify-end">{status}<StatusIndicator type={statusType}/></div>
+                        {subtitleRight ? <div className="text-sm justify-end">{subtitleRight}</div> : null}
                     </div>
                 </div>
             </div>
