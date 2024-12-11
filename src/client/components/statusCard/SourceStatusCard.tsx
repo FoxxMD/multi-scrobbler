@@ -6,6 +6,7 @@ import {sourceAdapter} from "../../status/ducks";
 import {RootState} from "../../store";
 import {connect, ConnectedProps} from "react-redux";
 import Player from "../player/Player";
+import {useStartSourceMutation} from "./sourceDucks";
 import './statusCard.scss';
 
 export interface SourceStatusCardData extends StatusCardSkeletonData, PropsFromRedux {
@@ -30,18 +31,25 @@ const SourceStatusCard = (props: SourceStatusCardData) => {
         data: {
             display,
             name,
+            type,
             status,
         } = {}
     } = props;
     let header: string | undefined = display;
     let body = <SkeletonParagraph/>;
-    const poll = useCallback(async () => {
-        const params = new URLSearchParams({type: data.type, name: data.name});
-        await fetch(`/api/poll?${params}`, {
-            method: 'GET',
-        });
-    },[data]);
-    let startSourceElement = null;
+
+    const [startPut, startResult] = useStartSourceMutation();
+
+    const tryStart = useCallback((name: string, type: string, force?: boolean) => startPut({name, type, force}), [startPut]);
+
+    let startSourceElement = (<Fragment>
+        <div onClick={() => tryStart(name, type)} 
+        className="capitalize underline cursor-pointer inline mr-1">{status === 'Polling' ? 'Restart' : 'Start'}
+        </div>
+        (<div onClick={() => tryStart(name, type, true)} 
+        className="capitalize underline cursor-pointer inline">Force
+        </div>)
+    </Fragment>);
     if(data !== undefined)
     {
         const {
@@ -69,10 +77,6 @@ const SourceStatusCard = (props: SourceStatusCardData) => {
         let upstreamRecent = null;
         if(supportsUpstreamRecentlyPlayed && (!hasAuth || authed)) {
             upstreamRecent = <div><Link to={`/recent?type=${type}&name=${name}&upstream=1`}>See Recent from Source API</Link></div>;
-        }
-
-        if((!hasAuth || authed) && canPoll) {
-            startSourceElement = <div onClick={poll} className="capitalize underline cursor-pointer">{status === 'Polling' ? 'Restart' : 'Start'}</div>
         }
 
         // TODO links

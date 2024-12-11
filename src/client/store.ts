@@ -2,6 +2,7 @@ import { configureStore } from '@reduxjs/toolkit'
 // Or from '@reduxjs/toolkit/query/react'
 import { setupListeners } from '@reduxjs/toolkit/query'
 import { scrobblerApi } from './components/statusCard/clientDucks';
+import { sourceApi } from './components/statusCard/sourceDucks';
 import { deadApi, deadSlice } from "./deadLetter/deadLetterDucks";
 import { logsReducer } from "./logs/logDucks";
 import { logsApi } from "./logs/logsApi";
@@ -20,6 +21,7 @@ export const store = configureStore({
         [deadApi.reducerPath]: deadApi.reducer,
         [scrobbledApi.reducerPath]: scrobbledApi.reducer,
         [scrobblerApi.reducerPath]: scrobblerApi.reducer,
+        [sourceApi.reducerPath]: sourceApi.reducer,
         [versionApi.reducerPath]: versionApi.reducer,
         //parts: statusReducer
         clients: clientSlice.reducer,
@@ -30,7 +32,7 @@ export const store = configureStore({
     // Adding the api middleware enables caching, invalidation, polling,
     // and other useful features of `rtk-query`.
     middleware: (getDefaultMiddleware) =>
-        getDefaultMiddleware().concat([statusApi.middleware, logsApi.middleware, recentApi.middleware, scrobbledApi.middleware, deadApi.middleware, scrobblerApi.middleware, versionApi.middleware]),
+        getDefaultMiddleware().concat([statusApi.middleware, logsApi.middleware, recentApi.middleware, scrobbledApi.middleware, deadApi.middleware, scrobblerApi.middleware, sourceApi.middleware, versionApi.middleware]),
 })
 
 // optional, but required for refetchOnFocus/refetchOnReconnect behaviors

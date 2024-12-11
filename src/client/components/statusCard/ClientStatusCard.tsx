@@ -40,11 +40,15 @@ const ClientStatusCard = (props: ClientStatusCardData) => {
 
     const [startClientPut, startResult] = useStartClientMutation();
 
-    const tryStart = useCallback((name: string) => startClientPut({name}), [startClientPut]);
+    const tryStart = useCallback((name: string, force?: boolean) => startClientPut({name, force}), [startClientPut]);
 
     let header: string | undefined = display;
     let body = <SkeletonParagraph/>;
-    const startClientElement = <div onClick={()  => tryStart(name)} className="capitalize underline cursor-pointer">{status === 'Running' ? 'Restart' : 'Start'}</div>
+    const startClientElement = (
+        <Fragment>
+    <div onClick={()  => tryStart(name)} className="capitalize underline cursor-pointer inline mr-1">{status === 'Running' ? 'Restart' : 'Start'}</div>
+    (<div onClick={()  => tryStart(name, true)} className="capitalize underline cursor-pointer inline">Force</div>)
+    </Fragment>)
     if(data !== undefined) {
         const {
             hasAuth,
