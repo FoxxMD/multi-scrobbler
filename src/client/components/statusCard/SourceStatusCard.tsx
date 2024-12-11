@@ -41,15 +41,8 @@ const SourceStatusCard = (props: SourceStatusCardData) => {
     const [startPut, startResult] = useStartSourceMutation();
 
     const tryStart = useCallback((name: string, type: string, force?: boolean) => startPut({name, type, force}), [startPut]);
+    let startSourceElement = null;
 
-    let startSourceElement = (<Fragment>
-        <div onClick={() => tryStart(name, type)} 
-        className="capitalize underline cursor-pointer inline mr-1">{status === 'Polling' ? 'Restart' : 'Start'}
-        </div>
-        (<div onClick={() => tryStart(name, type, true)} 
-        className="capitalize underline cursor-pointer inline">Force
-        </div>)
-    </Fragment>);
     if(data !== undefined)
     {
         const {
@@ -69,6 +62,22 @@ const SourceStatusCard = (props: SourceStatusCardData) => {
         if(type === 'listenbrainz' || type === 'lastfm') {
             header = `${display} (Source)`;
         }
+
+        let startText = '';
+        if(canPoll) {
+            startText = status === 'Polling' ? 'Restart' : 'Start'
+        } else {
+            startText = status === 'Running' ? 'Reinit' : 'Init'
+        }
+
+        startSourceElement = (<Fragment>
+            <div onClick={() => tryStart(name, type)} 
+            className="capitalize underline cursor-pointer inline mr-1">{startText}
+            </div>
+            (<div onClick={() => tryStart(name, type, true)} 
+            className="capitalize underline cursor-pointer inline">Force
+            </div>)
+        </Fragment>);
 
         const platformIds = Object.keys(players);
 
