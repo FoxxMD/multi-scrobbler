@@ -37,7 +37,7 @@ import {
     sleep,
     sortByOldestPlayDate,
 } from "../utils.js";
-import { messageWithCauses } from "../utils/ErrorUtils.js";
+import { messageWithCauses, messageWithCausesTruncatedDefault } from "../utils/ErrorUtils.js";
 import { compareScrobbleArtists, compareScrobbleTracks, normalizeStr } from "../utils/StringUtils.js";
 import {
     comparePlayTemporally,
@@ -148,7 +148,7 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
         return `${capitalize(this.type)} - ${this.name}`
     }
 
-    protected notify = async (payload: WebhookPayload) => {
+    public notify = async (payload: WebhookPayload) => {
         this.emitEvent('notify', payload);
     }
 
@@ -506,38 +506,19 @@ ${closestMatch.breakdowns.join('\n')}`, {leaf: ['Dupe Check']});
 
     public abstract playToClientPayload(playObject: PlayObject): object
 
-    initScrobbleMonitoring = async () => {
-        // TODO refactor to only use tryInitialize
-        if(!this.isUsable()) {
-            if(this.initializing) {
-                this.logger.warn(`Cannot start scrobble processing because client is still initializing`);
-                return;
-            }
-            if(!(await this.initialize())) {
-                this.logger.warn(`Cannot start scrobble processing because client could not be initialized`);
-                return;
-            }
-        }
+    initScrobbleMonitoring = async (options: {force?: boolean, notify?: boolean} = {}) => {
+        const {force = false, notify = false} = options;
 
-        if (this.authGated()) {
-            if (this.canTryAuth()) {
-                try {
-                    await this.testAuth();
-                } catch (e) {
-                    this.logger.warn(new Error('Cannot start scrobbling process due to auth issue', { cause: e }));
+        if(!this.isReady() || force) {
+            try {
+                await this.tryInitialize(options);
+            } catch (e) {
+                this.logger.error(new Error('Cannot start monitoring because Client is not ready', {cause: e}));
+                if(notify) {
+                    await this.notify( {title: `${this.getIdentifier()} - Processing Error`, message: `Cannot start monitoring because Client is not ready: ${truncateStringToLength(500)(messageWithCausesTruncatedDefault(e))}`, priority: 'error'});
                 }
-            } else if (this.requiresAuthInteraction) {
-                this.logger.warn(`Cannot start scrobble processing because user interaction is required for authentication`);
-                return;
-            } else {
-                this.logger.warn(`Cannot start scrobble processing because client needs to be reauthenticated.`);
                 return;
             }
-        }
-
-        if(!this.isReady()) {
-            this.logger.warn(`Cannot start scrobble processing because client is not ready`);
-            return;
         }
 
         this.startScrobbling().catch((e) => {

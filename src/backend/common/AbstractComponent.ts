@@ -25,7 +25,7 @@ import { CommonSourceConfig } from "./infrastructure/config/source/index.js";
 import play = Simulate.play;
 import { WebhookPayload } from "./infrastructure/config/health/webhooks.js";
 import { AuthCheckError, BuildDataError, ConnectionCheckError, PostInitError, TransformRulesError } from "./errors/MSErrors.js";
-import { messageWithCauses } from "../utils/ErrorUtils.js";
+import { messageWithCauses, messageWithCausesTruncatedDefault } from "../utils/ErrorUtils.js";
 
 export default abstract class AbstractComponent {
     requiresAuth: boolean = false;
@@ -50,14 +50,13 @@ export default abstract class AbstractComponent {
         this.config = config;
     }
 
-    protected abstract notify(payload: WebhookPayload): Promise<void>;
+    public abstract notify(payload: WebhookPayload): Promise<void>;
 
     protected abstract getIdentifier(): string;
 
-    // TODO refactor throw error
-    initialize = async (options: {force?: boolean, notify?: boolean} = {}) => {
+    initialize = async (options: {force?: boolean, notify?: boolean, notifyTitle?: string} = {}) => {
 
-        const {force = false, notify = false} = options;
+        const {force = false, notify = false, notifyTitle = 'Init Error'} = options;
 
         this.logger.debug('Attempting to initialize...');
         try {
@@ -77,11 +76,10 @@ export default abstract class AbstractComponent {
             }
             return true;
         } catch(e) {
-            this.logger.error(new Error('Initialization failed', {cause: e}));
             if(notify) {
-                await this.notify({title: `${this.getIdentifier()} - Init Error`, message: truncateStringToLength(150)(messageWithCauses(e)), priority: 'error'});
+                await this.notify({title: `${this.getIdentifier()} - ${notifyTitle}`, message: truncateStringToLength(500)(messageWithCausesTruncatedDefault(e)), priority: 'error'});
             }
-            return false;
+            throw new Error('Initialization failed', {cause: e});
         } finally {
             this.initializing = false;
         }
@@ -96,12 +94,15 @@ export default abstract class AbstractComponent {
         return;
     }
 
-    tryInitialize = async (options: {force?: boolean, notify?: boolean} = {}) => {
+    tryInitialize = async (options: {force?: boolean, notify?: boolean, notifyTitle?: string} = {}) => {
         if(this.initializing) {
-            this.logger.warn(`Already trying to initialize, cannot attempt while an existing initialization attempt is running.`);
-            return;
+            throw new Error(`Already trying to initialize, cannot attempt while an existing initialization attempt is running.`)
         }
-        return await this.initialize(options);
+        try {
+            return await this.initialize(options);
+        } catch (e) {
+            throw e;
+        }
     }
 
     public async buildInitData(force: boolean = false) {
@@ -257,6 +258,8 @@ export default abstract class AbstractComponent {
     authGated = () => this.requiresAuth && !this.authed
 
     canTryAuth = () => this.isUsable() && this.authGated() && this.authFailure !== true
+
+    canAuthUnattended = () => !this.authGated || !this.requiresAuthInteraction || (this.requiresAuthInteraction && !this.authFailure);
 
     protected doAuthentication = async (): Promise<boolean> => this.authed
 

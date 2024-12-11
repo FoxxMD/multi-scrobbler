@@ -15,8 +15,10 @@ import { getRoot, parseVersion } from "./ioc.js";
 import { initServer } from "./server/index.js";
 import { createHeartbeatClientsTask } from "./tasks/heartbeatClients.js";
 import { createHeartbeatSourcesTask } from "./tasks/heartbeatSources.js";
-import { parseBool, readJson, sleep } from "./utils.js";
+import { parseBool, readJson, retry, sleep } from "./utils.js";
 import { createVegaGenerator } from './utils/SchemaUtils.js';
+import ScrobbleClients from './scrobblers/ScrobbleClients.js';
+import ScrobbleSources from './sources/ScrobbleSources.js';
 
 dayjs.extend(utc)
 dayjs.extend(isBetween);
@@ -106,25 +108,13 @@ const configDir = process.env.CONFIG_DIR || path.resolve(projectDir, `./config`)
         /*
         * setup clients
         * */
-        const scrobbleClients = root.get('clients');
+        const scrobbleClients = root.get('clients') as ScrobbleClients;
         await scrobbleClients.buildClientsFromConfig(notifiers);
-        if (scrobbleClients.clients.length === 0) {
-            logger.warn('No scrobble clients were configured!')
-        } else {
-            logger.info('Starting scrobble clients...');
-        }
-        for(const client of scrobbleClients.clients) {
-            await client.initScrobbleMonitoring();
-        }
-
-        const scrobbleSources = root.get('sources');
+        /*
+        * setup sources
+        * */
+        const scrobbleSources = root.get('sources') as ScrobbleSources;
         await scrobbleSources.buildSourcesFromConfig([]);
-        for(const source of scrobbleSources.sources) {
-            if(!source.isReady()) {
-                await source.initialize();
-            }
-        }
-        scrobbleSources.logger.info('Finished initializing sources');
 
         // check ambiguous client/source types like this for now
         const lastfmSources = scrobbleSources.getByType('lastfm');
@@ -136,27 +126,29 @@ const configDir = process.env.CONFIG_DIR || path.resolve(projectDir, `./config`)
             logger.warn(`Last.FM source and clients have same names [${nameColl.map(x => x.name).join(',')}] -- this may cause issues`);
         }
 
-        let anyNotReady = false;
-        for (const source of scrobbleSources.sources.filter(x => x.canPoll === true)) {
-            await sleep(1500); // stagger polling by 1.5 seconds so that log messages for each source don't get mixed up
-            if(source.isReady()) {
-                source.poll();
-            } else {
-                anyNotReady = true;
-            }
+        const clientTask = createHeartbeatClientsTask(scrobbleClients, logger);
+        clientTask.execute();
+        try {
+            await retry(() => {
+                if(clientTask.isExecuting) {
+                    throw new Error('Waiting')
+                }
+                return true;
+            },{retries: scrobbleClients.clients.length + 1, retryIntervalMs: 2000});
+        } catch (e) {
+            logger.warn('Waited too long for clients to start! Moving ahead with sources init...');
         }
-        if (anyNotReady) {
-            logger.info(`Some sources are not ready, open the dashboard to continue`);
-        }
+        scheduler.addSimpleIntervalJob(new SimpleIntervalJob({
+            minutes: 20,
+            runImmediately: false
+        }, clientTask, {id: 'clients_heart'}));
 
+        const sourceTask = createHeartbeatSourcesTask(scrobbleSources, logger);
         scheduler.addSimpleIntervalJob(new SimpleIntervalJob({
             minutes: 20,
-            runImmediately: false
-        }, createHeartbeatSourcesTask(scrobbleSources, logger)));
-        scheduler.addSimpleIntervalJob(new SimpleIntervalJob({
-            minutes: 20,
-            runImmediately: false
-        }, createHeartbeatClientsTask(scrobbleClients, logger)));
+            runImmediately: true
+        }, sourceTask, {id: 'sources_heart'}));
+
         logger.info('Scheduler started.');
 
     } catch (e) {

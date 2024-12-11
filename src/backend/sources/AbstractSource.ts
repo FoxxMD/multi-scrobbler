@@ -3,7 +3,7 @@ import dayjs, { Dayjs } from "dayjs";
 import { EventEmitter } from "events";
 import { FixedSizeList } from "fixed-size-list";
 import { PlayObject, TA_CLOSE } from "../../core/Atomic.js";
-import { buildTrackString, capitalize } from "../../core/StringUtils.js";
+import { buildTrackString, capitalize, truncateStringToLength } from "../../core/StringUtils.js";
 import AbstractComponent from "../common/AbstractComponent.js";
 import {
     Authenticatable,
@@ -36,6 +36,7 @@ import { comparePlayTemporally, temporalAccuracyIsAtLeast } from "../utils/TimeU
 import { getRoot } from '../ioc.js';
 import { componentFileLogger } from '../common/logging.js';
 import { WebhookPayload } from '../common/infrastructure/config/health/webhooks.js';
+import { messageWithCauses, messageWithCausesTruncatedDefault } from '../utils/ErrorUtils.js';
 
 export interface RecentlyPlayedOptions {
     limit?: number
@@ -255,7 +256,7 @@ export default abstract class AbstractSource extends AbstractComponent implement
         return [];
     }
 
-    protected notify = async (payload: WebhookPayload) => {
+    public notify = async (payload: WebhookPayload) => {
         this.emitter.emit('notify', payload);
     }
 
@@ -268,28 +269,17 @@ export default abstract class AbstractSource extends AbstractComponent implement
 
         // TODO refactor to only use tryInitialize
         if(!this.isReady() || force) {
-            const ready = await this.tryInitialize(options);
-            if(!ready) {
-                // TODO
+            try {
+                await this.tryInitialize(options);
+            } catch (e) {
+                this.logger.error(new Error('Cannot start polling because Source is not ready', {cause: e}));
+                if(notify) {
+                    await this.notify( {title: `${this.getIdentifier()} - Polling Error`, message: `Cannot start polling because Source is not ready: ${truncateStringToLength(500)(messageWithCausesTruncatedDefault(e))}`, priority: 'error'});
+                }
+                return;
             }
         }
         if(!(await this.onPollPreAuthCheck())) {
-            return;
-        }
-        if(this.authGated()) {
-            if(this.canTryAuth()) {
-                await this.testAuth();
-                if(!this.authed) {
-                    await this.notify( {title: `${this.getIdentifier()} - Polling Error`, message: 'Cannot start polling because source does not have authentication.', priority: 'error'});
-                    this.logger.error('Cannot start polling because source is not authenticated correctly.');
-                }
-            } else if(this.requiresAuthInteraction) {
-                await this.notify({title: `${this.getIdentifier()} - Polling Error`, message: 'Cannot start polling because user interaction is required for authentication', priority: 'error'});
-                this.logger.error('Cannot start polling because user interaction is required for authentication');
-            } else {
-                await this.notify( {title: `${this.getIdentifier()} - Polling Error`, message: 'Cannot start polling because source authentication previously failed and must be reauthenticated.', priority: 'error'});
-                this.logger.error('Cannot start polling because source authentication previously failed and must be reauthenticated.');
-            }
             return;
         }
         if(!(await this.onPollPostAuthCheck())) {
