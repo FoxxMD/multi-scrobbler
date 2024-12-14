@@ -160,9 +160,8 @@ export default class SpotifySource extends MemoryPositionalSource {
             images = []
         } = album || {};
 
-        const trackArtistIds = artists.map(x => x.id);
         let actualAlbumArtists: ArtistObjectSimplified[] = [];
-        if(albumArtists.filter(x => !trackArtistIds.includes(x.id)).length > 0) {
+        if ((artists.length !== albumArtists.length) || !artists.every(artist => albumArtists.some(albumArtist => artist.id === albumArtist.id))) {
             // only include album artists if they are not the EXACT same as the track artists
             // ...if they aren't the exact same then include all artists, even if they are duplicates of track artists
             actualAlbumArtists = albumArtists;
