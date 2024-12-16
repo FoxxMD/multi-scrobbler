@@ -4,9 +4,12 @@ import asPromised from 'chai-as-promised';
 import EventEmitter from "events";
 import { after, before, describe, it } from 'mocha';
 import pEvent from "p-event";
+import clone from 'clone';
 import { PlayObject } from "../../../core/Atomic.js";
 import { generatePlay } from "../utils/PlayTestUtils.js";
 import { TestSource } from "./TestSource.js";
+import spotifyPayload from '../plays/spotifyCurrentPlaybackState.json';
+import SpotifySource from "../../sources/SpotifySource.js";
 
 chai.use(asPromised);
 
@@ -125,3 +128,35 @@ describe('Sources use transform plays correctly', function () {
         expect(source.discover([newScrobble]).length).is.eq(1);
     });
 })
+
+
+describe('Sources correctly parse incoming payloads', function () {
+
+    it('Spotify parses payload with no album artists correctly', function() {
+        const noAAPayload = clone(spotifyPayload)
+        noAAPayload.item.album.artists = [];
+        const play = SpotifySource.formatPlayObj(noAAPayload as SpotifyApi.CurrentPlaybackResponse);
+        expect(play.data.track).eq('The Sandpits Of Zonhoven');
+        expect(play.data.album).eq('Bloodbags And Downtube Shifters');
+        expect(play.data.artists).eql(['Dubmood', 'MASTER BOOT RECORD']);
+        expect(play.data.albumArtists).to.be.empty;
+    });
+
+    it('Spotify parses payload with different album artists correctly', function() {
+        const play = SpotifySource.formatPlayObj(spotifyPayload as SpotifyApi.CurrentPlaybackResponse);
+        expect(play.data.track).eq('The Sandpits Of Zonhoven');
+        expect(play.data.album).eq('Bloodbags And Downtube Shifters');
+        expect(play.data.artists).eql(['Dubmood', 'MASTER BOOT RECORD']);
+        expect(play.data.albumArtists).eql(['Dubmood']);
+    });
+
+    it('Spotify parses payload with identical album artists correctly', function() {
+        const identicalArtistsPayload = clone(spotifyPayload)
+        identicalArtistsPayload.item.album.artists = identicalArtistsPayload.item.artists;
+        const identicalArtistsPlay = SpotifySource.formatPlayObj(identicalArtistsPayload as SpotifyApi.CurrentPlaybackResponse);
+        expect(identicalArtistsPlay.data.track).eq('The Sandpits Of Zonhoven');
+        expect(identicalArtistsPlay.data.album).eq('Bloodbags And Downtube Shifters');
+        expect(identicalArtistsPlay.data.artists).eql(['Dubmood', 'MASTER BOOT RECORD']);
+        expect(identicalArtistsPlay.data.albumArtists).to.be.empty;
+    });
+});
