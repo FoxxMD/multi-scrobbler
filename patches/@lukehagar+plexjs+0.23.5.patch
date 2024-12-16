@@ -1,0 +1,32 @@
+diff --git a/node_modules/@lukehagar/plexjs/sdk/models/operations/getsessions.d.ts b/node_modules/@lukehagar/plexjs/sdk/models/operations/getsessions.d.ts
+index 16632eb..e21bda6 100644
+--- a/node_modules/@lukehagar/plexjs/sdk/models/operations/getsessions.d.ts
++++ b/node_modules/@lukehagar/plexjs/sdk/models/operations/getsessions.d.ts
+@@ -95,6 +95,7 @@ export type GetSessionsMetadata = {
+     parentThumb?: string | undefined;
+     parentTitle?: string | undefined;
+     parentYear?: number | undefined;
++    originalTitle?: string | undefined;
+     ratingCount?: number | undefined;
+     ratingKey?: string | undefined;
+     sessionKey?: string | undefined;
+diff --git a/node_modules/@lukehagar/plexjs/sdk/models/operations/getsessions.js b/node_modules/@lukehagar/plexjs/sdk/models/operations/getsessions.js
+index efce9e2..f5c6eae 100644
+--- a/node_modules/@lukehagar/plexjs/sdk/models/operations/getsessions.js
++++ b/node_modules/@lukehagar/plexjs/sdk/models/operations/getsessions.js
+@@ -290,6 +290,7 @@ exports.GetSessionsMetadata$inboundSchema = z.object({
+     parentRatingKey: z.string().optional(),
+     parentStudio: z.string().optional(),
+     parentThumb: z.string().optional(),
++    originalTitle: z.string().optional(),
+     parentTitle: z.string().optional(),
+     parentYear: z.number().int().optional(),
+     ratingCount: z.number().int().optional(),
+@@ -339,6 +340,7 @@ exports.GetSessionsMetadata$outboundSchema = z.object({
+     parentThumb: z.string().optional(),
+     parentTitle: z.string().optional(),
+     parentYear: z.number().int().optional(),
++    originalTitle: z.string().optional(),
+     ratingCount: z.number().int().optional(),
+     ratingKey: z.string().optional(),
+     sessionKey: z.string().optional(),

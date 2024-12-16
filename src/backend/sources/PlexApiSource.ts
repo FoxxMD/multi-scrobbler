@@ -304,15 +304,26 @@ export default class PlexApiSource extends MemoryPositionalSource {
             } = {},
             user: {
                 title: userTitle,
-            } = {}
+            } = {},
             // plex returns the track artist as originalTitle (when there is an album artist)
             // otherwise this is undefined
-            //originalTitle: trackArtist = undefined
+            originalTitle: trackArtist
         } = obj;
+
+        const realArtists: string[] = [];
+        const albumArtists: string[] = [];
+
+        if(trackArtist !== undefined) {
+            realArtists.push(trackArtist);
+            albumArtists.push(artist);
+        } else {
+            realArtists.push(artist);
+        }
 
         return {
             data: {
-                artists: [artist],
+                artists: realArtists,
+                albumArtists,
                 album,
                 track,
                 // albumArtists: AlbumArtists !== undefined ? AlbumArtists.map(x => x.Name) : undefined,
@@ -413,7 +424,9 @@ export default class PlexApiSource extends MemoryPositionalSource {
         const play: PlayObject = this.formatPlayObjAware(obj);
 
         if(this.config.options.logPayload && !this.mediaIdsSeen.data.includes(play.meta.trackId)) {
-            this.logger.debug(`First time seeing media ${play.meta.trackId} on ${msDeviceId} => ${JSON.stringify(play)}`);
+            this.logger.debug(`First time seeing media ${play.meta.trackId} on ${msDeviceId} => ${JSON.stringify(play)}
+Plex Payload:
+${JSON.stringify(obj)}`);
             this.mediaIdsSeen.add(play.meta.trackId);
         }
 
