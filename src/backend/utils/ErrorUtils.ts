@@ -1,3 +1,5 @@
+import { truncateStringToLength } from "../../core/StringUtils.js";
+
 /**
  * Adapted from https://github.com/voxpelli/pony-cause/blob/main/lib/helpers.js to find cause by truthy function
  * */
@@ -77,17 +79,20 @@ export const findCauseByReference = <T extends Error>(err: unknown, reference: n
         currentErr = getErrorCause(currentErr);
     }
 };
+
+export type MessageTransformer = (val: string) => string;
+export const MessageTransformerDefault = (val: string) => val;
 /**
  * Adapted from https://github.com/voxpelli/pony-cause
  * */
-const _messageWithCauses = (err: Error, seen = new Set<Error>()) => {
+const _messageWithCauses = (err: Error, seen = new Set<Error>(), msgTransform: MessageTransformer = MessageTransformerDefault) => {
     if (!(err instanceof Error)) return '';
 
     const message = err.message;
 
     // Ensure we don't go circular or crazily deep
     if (seen.has(err)) {
-        return message + ': ...';
+        return msgTransform(message) + ' => ...';
     }
 
     const cause = getErrorCause(err);
@@ -95,13 +100,20 @@ const _messageWithCauses = (err: Error, seen = new Set<Error>()) => {
     if (cause) {
         seen.add(err);
 
-        return (message + ': ' +
+        return (msgTransform(message) + ' => ' +
             _messageWithCauses(cause, seen));
     } else {
-        return message;
+        return msgTransform(message);
     }
 };
 /**
  * Adapted from https://github.com/voxpelli/pony-cause
  * */
-export const messageWithCauses = (err: Error) => _messageWithCauses(err);
+export const messageWithCauses = (err: Error, msgTransformer?: MessageTransformer) => _messageWithCauses(err, new Set<Error>(), msgTransformer);
+
+export const messageWithCausesTruncated = (length: number) => {
+    const t = truncateStringToLength(length);
+    return (err: Error) => messageWithCauses(err, t);
+}
+
+export const messageWithCausesTruncatedDefault = messageWithCausesTruncated(100);

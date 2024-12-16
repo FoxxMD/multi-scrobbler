@@ -126,8 +126,7 @@ export default class DeezerSource extends AbstractSource {
 
     doAuthentication = async () => {
         if(this.config.data.accessToken === undefined) {
-            this.logger.warn(`No access token is present. User interaction for authentication is required.`);
-            return false;
+            throw new Error(`No access token is present. User interaction for authentication is required.`);
         }
         try {
             await this.callApi(request.get(`${this.baseUrl}/user/me`));

@@ -14,31 +14,35 @@ export const createHeartbeatClientsTask = (clients: ScrobbleClients, parentLogge
                 .withConcurrency(1)
                 .for(clients.clients)
                 .process(async (client) => {
-                    const ready = client.isReady();
-                    if(ready || client.canTryAuth()) {
-                        if(!ready) {
-                            client.logger.info('Trying client auth...');
-                            await client.testAuth();
-                            if(!client.authed) {
-                                return 0;
-                            }
-                            if(!client.isReady()) {
-                                return 0;
-                            }
+                    if(!client.isReady()) {
+                        if(!client.canAuthUnattended()) {
+                            client.logger.warn({label: 'Heartbeat'}, 'Client is not ready but will not try to initialize because auth state is not good and cannot be correct unattended.')
+                            return 0;
                         }
-                        await client.processDeadLetterQueue();
-                        if(!client.scrobbling) {
-                            client.logger.info('Should be processing scrobbles! Attempting to restart scrobbling...', {leaf: 'Heartbeat'});
-                            client.initScrobbleMonitoring();
+                        try {
+                            await client.tryInitialize({force: false, notify: true, notifyTitle: 'Could not initialize automatically'});
+                        } catch (e) {
+                            client.logger.error(new Error('Could not initialize automatically', {cause: e}));
                             return 1;
                         }
+                    }
+
+                    if(!client.canAuthUnattended()) {
+                        client.logger.warn({label: 'Heartbeat'}, 'Should be monitoring scrobbles but will not attempt to start because auth state is not good and cannot be correct unattended.');
                         return 0;
+                    }
+
+                    await client.processDeadLetterQueue();
+                    if(!client.scrobbling) {
+                        client.logger.info({label: 'Heartbeat'}, 'Should be processing scrobbles! Attempting to restart scrobbling...');
+                        client.initScrobbleMonitoring();
+                        return 1;
                     }
                 }).then(({results, errors}) => {
                     logger.verbose(`Checked Dead letter queue for ${clients.clients.length} clients.`);
                     const restarted = results.reduce((acc, curr) => acc += curr, 0);
                     if (restarted > 0) {
-                        logger.info(`Attempted to restart ${restarted} clients that were not processing scrobbles.`);
+                        logger.info(`Attempted to start ${restarted} clients that were not processing scrobbles.`);
                     }
                     if (errors.length > 0) {
                         logger.error(`Encountered errors!`);

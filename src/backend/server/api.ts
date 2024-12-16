@@ -20,7 +20,7 @@ import { getRoot } from "../ioc.js";
 import AbstractScrobbleClient from "../scrobblers/AbstractScrobbleClient.js";
 import AbstractSource from "../sources/AbstractSource.js";
 import MemorySource from "../sources/MemorySource.js";
-import { sortByNewestPlayDate } from "../utils.js";
+import { parseBool, sortByNewestPlayDate } from "../utils.js";
 import { setupAuthRoutes } from "./auth.js";
 import { setupDeezerRoutes } from "./deezerRoutes.js";
 import { setupJellyfinRoutes } from "./jellyfinRoutes.js";
@@ -417,26 +417,31 @@ export const setupApi = (app: ExpressWithAsync, logger: Logger, appLoggerStream:
         return res.json(result);
     });
 
-    app.use('/api/poll', sourceRequiredMiddle);
-    app.getAsync('/api/poll', async (req, res) => {
+    app.use('/api/source/init', sourceRequiredMiddle);
+    app.postAsync('/api/source/init', async (req, res) => {
         // @ts-expect-error TS(2339): Property 'scrobbleSource' does not exist on type '... Remove this comment to see the full error message
         const source = req.scrobbleSource as AbstractSource;
-        source.logger.verbose('User requested (re)start via API call');
 
-        if (!source.canPoll) {
-            source.logger.warn(`Does not support polling (${source.type})`);
-            return res.status(400).send(`Specified source cannot poll (${source.type})`);
-        }
+        const {
+            query: {
+                force: forceQ = false
+            }
+        } = req;
+
+        const force = parseBool(forceQ, false);
+
+        source.logger.verbose(`User requested${force ? ' a FORCED' :''} (re)init via API call`);
 
         res.status(200).send('OK');
+
         if(source.polling) {
             source.logger.info('Source is already polling! Restarting polling...');
             const stopRes = await source.tryStopPolling();
             if(stopRes === true) {
-                source.poll();
+                source.poll({force, notify: false}).catch(e => source.logger.error(e));
             }
         } else {
-            source.poll();
+            source.poll({force, notify: false}).catch(e => source.logger.error(e));
         }
     });
 
@@ -444,7 +449,16 @@ export const setupApi = (app: ExpressWithAsync, logger: Logger, appLoggerStream:
     app.postAsync('/api/client/init', async (req, res) => {
         // @ts-expect-error TS(2339): Property 'scrobbleSource' does not exist on type '... Remove this comment to see the full error message
         const client = req.scrobbleClient as AbstractScrobbleClient;
-        client.logger.verbose('User requested (re)start via API call');
+
+        const {
+            query: {
+                force: forceQ = false
+            }
+        } = req;
+
+        const force = parseBool(forceQ, false);
+
+        client.logger.verbose(`User requested${force ? ' a FORCED' :''} (re)init via API call`);
 
         client.logger.info('Checking (and trying) to stop scrobbler if already running...');
         if(false === (await client.tryStopScrobbling())) {
@@ -452,7 +466,7 @@ export const setupApi = (app: ExpressWithAsync, logger: Logger, appLoggerStream:
         }
 
         client.logger.info('Trying to start scrobbler...');
-        await client.initScrobbleMonitoring();
+        client.initScrobbleMonitoring({force, notify: false}).catch(e => client.logger.error(e));
         res.status(200).send('OK');
     });
 

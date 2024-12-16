@@ -7,10 +7,17 @@ import { TRANSFORM_HOOK } from "../../common/infrastructure/Atomic.js";
 
 import { isConditionalSearchAndReplace } from "../../utils/PlayTransformUtils.js";
 import { asPlays, generatePlay, normalizePlays } from "../utils/PlayTestUtils.js";
+import { WebhookPayload } from "../../common/infrastructure/config/health/webhooks.js";
 
 chai.use(asPromised);
 
 class TestComponent extends AbstractComponent {
+    public notify(payload: WebhookPayload): Promise<void> {
+        throw new Error("Method not implemented.");
+    }
+    protected getIdentifier(): string {
+        return 'test';
+    }
     constructor() {
         super({});
     }

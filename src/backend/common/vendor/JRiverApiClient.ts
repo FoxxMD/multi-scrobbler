@@ -151,8 +151,7 @@ export class JRiverApiClient extends AbstractApiClient {
             if(this.config.username === undefined || this.config.password === undefined) {
                 msg = 'Authentication failed. No username/password was provided in config! Did you mean to do this?';
             }
-            this.logger.error(new Error(msg, {cause: e}));
-            return false;
+            throw new Error(msg, {cause: e});
         }
     }
 

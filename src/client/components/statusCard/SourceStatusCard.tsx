@@ -6,6 +6,7 @@ import {sourceAdapter} from "../../status/ducks";
 import {RootState} from "../../store";
 import {connect, ConnectedProps} from "react-redux";
 import Player from "../player/Player";
+import {useStartSourceMutation} from "./sourceDucks";
 import './statusCard.scss';
 
 export interface SourceStatusCardData extends StatusCardSkeletonData, PropsFromRedux {
@@ -30,18 +31,18 @@ const SourceStatusCard = (props: SourceStatusCardData) => {
         data: {
             display,
             name,
+            type,
             status,
         } = {}
     } = props;
     let header: string | undefined = display;
     let body = <SkeletonParagraph/>;
-    const poll = useCallback(async () => {
-        const params = new URLSearchParams({type: data.type, name: data.name});
-        await fetch(`/api/poll?${params}`, {
-            method: 'GET',
-        });
-    },[data]);
+
+    const [startPut, startResult] = useStartSourceMutation();
+
+    const tryStart = useCallback((name: string, type: string, force?: boolean) => startPut({name, type, force}), [startPut]);
     let startSourceElement = null;
+
     if(data !== undefined)
     {
         const {
@@ -62,6 +63,22 @@ const SourceStatusCard = (props: SourceStatusCardData) => {
             header = `${display} (Source)`;
         }
 
+        let startText = '';
+        if(canPoll) {
+            startText = status === 'Polling' ? 'Restart' : 'Start'
+        } else {
+            startText = status === 'Running' ? 'Reinit' : 'Init'
+        }
+
+        startSourceElement = (<Fragment>
+            <div onClick={() => tryStart(name, type)} 
+            className="capitalize underline cursor-pointer inline mr-1">{startText}
+            </div>
+            (<div onClick={() => tryStart(name, type, true)} 
+            className="capitalize underline cursor-pointer inline">Force
+            </div>)
+        </Fragment>);
+
         const platformIds = Object.keys(players);
 
         const discovered = (!hasAuth || authed) ? <Link to={`/recent?type=${type}&name=${name}`}>Tracks Discovered</Link> : <span>Tracks Discovered</span>;
@@ -69,10 +86,6 @@ const SourceStatusCard = (props: SourceStatusCardData) => {
         let upstreamRecent = null;
         if(supportsUpstreamRecentlyPlayed && (!hasAuth || authed)) {
             upstreamRecent = <div><Link to={`/recent?type=${type}&name=${name}&upstream=1`}>See Recent from Source API</Link></div>;
-        }
-
-        if((!hasAuth || authed) && canPoll) {
-            startSourceElement = <div onClick={poll} className="capitalize underline cursor-pointer">{status === 'Polling' ? 'Restart' : 'Start'}</div>
         }
 
         // TODO links

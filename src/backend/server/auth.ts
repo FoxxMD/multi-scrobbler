@@ -83,8 +83,12 @@ export const setupAuthRoutes = (app: ExpressWithAsync, logger: Logger, sourceMid
             }
             try {
                 await entity.api.authenticate(token);
-                await entity.initialize();
-                await entity.doAuthentication();
+                entity.authFailure = false;
+                if(entity instanceof LastfmSource) {
+                    entity.poll().catch((e) => logger.error(e));
+                } else {
+                    entity.tryInitialize().catch((e) => logger.error(e));
+                }
                 return res.send('OK');
             } catch (e) {
                 return res.send(e.message);
@@ -97,7 +101,8 @@ export const setupAuthRoutes = (app: ExpressWithAsync, logger: Logger, sourceMid
             const result = await entity.handleAuthCodeCallback(req.query);
             let responseContent = 'OK';
             if(result === true) {
-                entity.poll();
+                entity.authFailure = false;
+                entity.poll().catch((e) => logger.error(e));
             } else {
                 responseContent = result;
             }
@@ -111,8 +116,8 @@ export const setupAuthRoutes = (app: ExpressWithAsync, logger: Logger, sourceMid
             const tokenResult = await source.handleAuthCodeCallback(req.query);
             let responseContent = 'OK';
             if (tokenResult === true) {
-                await source.testAuth();
-                source.poll();
+                source.authFailure = false;
+                source.poll().catch((e) => logger.error(e));
             } else {
                 responseContent = tokenResult;
             }
