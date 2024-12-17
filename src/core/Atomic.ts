@@ -175,7 +175,7 @@ export interface AmbPlayObject {
 }
 
 export const isPlayObject = (obj: object): obj is PlayObject => {
-   return 'data' in obj && typeof obj.data === 'object' && 'meta' in obj && typeof obj.meta === 'object';
+   return obj !== undefined && obj !== null &&  'data' in obj && typeof obj.data === 'object' && 'meta' in obj && typeof obj.meta === 'object';
 }
 
 export interface PlayObject extends AmbPlayObject {
