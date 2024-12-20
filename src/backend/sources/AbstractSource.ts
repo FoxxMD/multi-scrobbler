@@ -26,13 +26,14 @@ import {
     difference,
     formatNumber,
     genGroupId,
+    isDebugMode,
     playObjDataMatch,
     pollingBackoff,
     sleep,
     sortByNewestPlayDate,
     sortByOldestPlayDate,
 } from "../utils.js";
-import { comparePlayTemporally, temporalAccuracyIsAtLeast } from "../utils/TimeUtils.js";
+import { comparePlayTemporally, temporalAccuracyIsAtLeast, todayAwareFormat } from "../utils/TimeUtils.js";
 import { getRoot } from '../ioc.js';
 import { componentFileLogger } from '../common/logging.js';
 import { WebhookPayload } from '../common/infrastructure/config/health/webhooks.js';
@@ -393,8 +394,14 @@ export default abstract class AbstractSource extends AbstractComponent implement
             this.polling = true;
             while (!this.shouldStopPolling()) {
                 const pollFrom = dayjs();
-                this.logger.debug('Refreshing recently played');
-                const playObjs = await this.getRecentlyPlayed({formatted: true});
+
+                let playObjs: PlayObject[];
+                try {
+                    playObjs = await this.getRecentlyPlayed({formatted: true});
+                } catch (e) {
+                    throw new Error('Error occurred while refreshing recently played', {cause: e});
+                }
+            
 
                 const interval = this.getInterval();
                 const maxBackoff = this.getMaxBackoff();
@@ -419,31 +426,42 @@ export default abstract class AbstractSource extends AbstractComponent implement
                         });
                 }
 
+                const debugMsgs: string[] = [];
 
                 if(newDiscovered.length > 0) {
                     // only update date if the play date is after the current activity date (in the case of backlogged plays)
                     this.lastActivityAt = newDiscovered[0].data.playDate.isAfter(this.lastActivityAt) ? newDiscovered[0].data.playDate : this.lastActivityAt;
                     checkCount = 0;
                     checksOverThreshold = 0;
-                } else {
-                    this.logger.debug(`No new tracks discovered`);
                 }
 
                 const activeThreshold = this.lastActivityAt.add(checkActiveFor, 's');
                 const inactiveFor = dayjs.duration(Math.abs(activeThreshold.diff(dayjs(), 'millisecond'))).humanize(false);
+                let friendlyInterval = '';
+                const friendlyLastFormat = todayAwareFormat(this.lastActivityAt);
                 if (activeThreshold.isBefore(dayjs())) {
-                    let intervalStr: string = formatNumber(maxInterval);
+                    friendlyInterval = formatNumber(maxInterval);
                     checksOverThreshold++;
                     if(sleepTime < maxInterval) {
                         const checkVal = Math.min(checksOverThreshold, 1000);
                         const backoff = Math.round(Math.max(Math.min(Math.min(checkVal, 1000) * 2 * (1.1 * checkVal), maxBackoff), 5));
-                        intervalStr = `(${interval} + ${backoff})`;
+                        friendlyInterval = `(${interval} + ${backoff})`;
                         sleepTime = interval + backoff;
                     }
-                    this.logger.debug(`Last activity ${this.lastActivityAt.format()} is ${inactiveFor} outside of polling period (last activity + ${checkActiveFor}s) | Next check interval: ${intervalStr}s`);
+                    if(isDebugMode()) {
+                        debugMsgs.push(`Last activity ${friendlyLastFormat} is ${inactiveFor} outside of polling period (last activity + ${checkActiveFor}s)`);
+                    } else {
+                        debugMsgs.push(`Last activity was at ${friendlyLastFormat}`);
+                    }
                 } else {
-                    this.logger.debug(`Last activity was at ${this.lastActivityAt.format()} | Next check interval: ${formatNumber(sleepTime)}s`);
+                    debugMsgs.push(`Last activity was at ${friendlyLastFormat}`);
+                    friendlyInterval = `${formatNumber(sleepTime)}s`;
                 }
+                debugMsgs.push(`Next check in ${friendlyInterval}`);
+                if(newDiscovered.length === 0) {
+                    debugMsgs.push('No new tracks discovered');
+                }
+                this.logger.debug(debugMsgs.join(' | '));
                 this.setWakeAt(pollFrom.add(sleepTime, 'seconds'));
                 this.setIsSleeping(true);
                 while(!this.shouldStopPolling() && dayjs().isBefore(this.getWakeAt())) {
@@ -458,8 +476,7 @@ export default abstract class AbstractSource extends AbstractComponent implement
                 return true;
             }
         } catch (e) {
-            this.logger.error('Error occurred while polling');
-            this.logger.error(e);
+            this.logger.error(new Error('Error occurred while polling', {cause: e}));
             if(e.message.includes('Status code: 401')) {
                 this.authed = false;
                 this.authFailure = true;

@@ -1,4 +1,5 @@
 import dayjs, { Dayjs } from "dayjs";
+import isToday from 'dayjs/plugin/isToday.js';
 import {
     PlayObject,
     SCROBBLE_TS_SOC_END,
@@ -20,6 +21,8 @@ import {
 } from "../common/infrastructure/Atomic.js";
 import { ScrobbleThresholds } from "../common/infrastructure/config/source/index.js";
 import { formatNumber } from "../utils.js";
+
+dayjs.extend(isToday);
 
 export const temporalPlayComparisonSummary = (data: TemporalPlayComparison, existingPlay?: PlayObject, candidatePlay?: PlayObject) => {
     const parts: string[] = [];
@@ -234,4 +237,12 @@ export const getScrobbleTsSOCDateWithContext = (data: PlayObject): [Dayjs, Scrob
 export const getScrobbleTsSOCDate = (data: PlayObject): Dayjs => {
     const [date, _] = getScrobbleTsSOCDateWithContext(data);
     return date;
+}
+
+export const todayAwareFormat = (date: Dayjs, opts: {fullFormat?: string, todayFormat?: string} = {}): string => {
+    const {
+        fullFormat,
+        todayFormat = 'HH:mm:ssZ'
+    } = opts;
+    return date.format(date.isToday() ? todayFormat : fullFormat);
 }

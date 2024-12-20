@@ -4,6 +4,7 @@ import dayjs from 'dayjs';
 import duration from 'dayjs/plugin/duration.js';
 import isBetween from 'dayjs/plugin/isBetween.js';
 import relativeTime from 'dayjs/plugin/relativeTime.js';
+import isToday from 'dayjs/plugin/isToday.js';
 import timezone from 'dayjs/plugin/timezone.js';
 import utc from 'dayjs/plugin/utc.js';
 import * as path from "path";
@@ -25,6 +26,7 @@ dayjs.extend(isBetween);
 dayjs.extend(relativeTime);
 dayjs.extend(duration);
 dayjs.extend(timezone);
+dayjs.extend(isToday);
 
 // eslint-disable-next-line prefer-arrow-functions/prefer-arrow-functions
 (async function () {
