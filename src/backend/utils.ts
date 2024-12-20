@@ -230,6 +230,7 @@ export const parseRetryAfterSecsFromObj = (err: any) => {
     // }
     const {
         response: {
+            // @ts-ignore
             headers, // returned in superagent error
         } = {},
         retryAfter: ra // possible custom property we have set
