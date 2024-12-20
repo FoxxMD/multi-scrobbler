@@ -23,6 +23,7 @@ import {
     genGroupId,
     genGroupIdStr,
     getPlatformIdFromData,
+    isDebugMode,
     playObjDataMatch,
     thresholdResultSummary,
 } from "../utils.js";
@@ -69,7 +70,7 @@ export default class MemorySource extends AbstractSource {
                     this.playerState.set(key, stateHash);
                     this.emitEvent('playerUpdate', state);
                 }
-                if(this.config.options?.logPlayerState === true) {
+                if(this.config.options?.logPlayerState === true || isDebugMode()) {
                     player.logSummary();
                 }
             }
@@ -226,7 +227,7 @@ export default class MemorySource extends AbstractSource {
                     }
                 }
 
-                if(this.config.options?.logPlayerState === true) {
+                if(this.config.options?.logPlayerState === true || isDebugMode()) {
                     player.logSummary();
                 }
                 const apiState = player.getApiState();

@@ -16,6 +16,7 @@ import { PollingOptions } from "../../common/infrastructure/config/common.js";
 import { formatNumber, genGroupIdStr, playObjDataMatch, progressBar } from "../../utils.js";
 import { ListenProgress } from "./ListenProgress.js";
 import { ListenRange, ListenRangePositional } from "./ListenRange.js";
+import { todayAwareFormat } from "../../utils/TimeUtils.js";
 
 export interface PlayerStateIntervals {
     staleInterval?: number
@@ -346,9 +347,9 @@ export abstract class AbstractPlayerState {
         const parts = [''];
         let play: string;
         if (this.currentPlay !== undefined) {
-            parts.push(`${buildTrackString(this.currentPlay, {include: ['trackId', 'artist', 'track', 'session']})} @ ${this.playFirstSeenAt.toISOString()}`);
+            parts.push(`${buildTrackString(this.currentPlay, {include: ['trackId', 'artist', 'track', 'session']})} @ ${todayAwareFormat(this.playFirstSeenAt)}`);
         }
-        parts.push(`Reported: ${this.reportedStatus.toUpperCase()} | Calculated: ${this.calculatedStatus.toUpperCase()} | Stale: ${this.isUpdateStale() ? 'Yes' : 'No'} | Orphaned: ${this.isOrphaned() ? 'Yes' : 'No'} | Last Update: ${this.stateLastUpdatedAt.toISOString()}`);
+        parts.push(`Reported: ${this.reportedStatus.toUpperCase()} | Calculated: ${this.calculatedStatus.toUpperCase()} | Stale: ${this.isUpdateStale() ? 'Yes' : 'No'} | Orphaned: ${this.isOrphaned() ? 'Yes' : 'No'} | Player Updated At: ${todayAwareFormat(this.stateLastUpdatedAt)} | Play Updated At: ${this.playLastUpdatedAt === undefined ? 'N/A' : todayAwareFormat(this.playLastUpdatedAt)}`);
         let progress = '';
         if (this.currentListenRange !== undefined && this.currentListenRange instanceof ListenRangePositional && this.currentPlay.data.duration !== undefined) {
             progress = `${progressBar(this.currentListenRange.end.position / this.currentPlay.data.duration, 1, 15)} ${formatNumber(this.currentListenRange.end.position, {toFixed: 0})}/${formatNumber(this.currentPlay.data.duration, {toFixed: 0})}s | `;
