@@ -16,7 +16,7 @@ import { getRoot, parseVersion } from "./ioc.js";
 import { initServer } from "./server/index.js";
 import { createHeartbeatClientsTask } from "./tasks/heartbeatClients.js";
 import { createHeartbeatSourcesTask } from "./tasks/heartbeatSources.js";
-import { parseBool, readJson, retry, sleep } from "./utils.js";
+import { isDebugMode, parseBool, readJson, retry, sleep } from "./utils.js";
 import { createVegaGenerator } from './utils/SchemaUtils.js';
 import ScrobbleClients from './scrobblers/ScrobbleClients.js';
 import ScrobbleSources from './sources/ScrobbleSources.js';
@@ -80,6 +80,8 @@ const configDir = process.env.CONFIG_DIR || path.resolve(projectDir, `./config`)
             const b = parseBool(process.env.DEBUG_MODE);
             process.env.DEBUG_MODE = b.toString();
         }
+
+        initLogger.info(`Debug Mode: ${isDebugMode() ? 'YES' : 'NO'}`);
 
         await parseVersion();
 
