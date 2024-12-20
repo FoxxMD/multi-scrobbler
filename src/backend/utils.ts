@@ -230,7 +230,6 @@ export const parseRetryAfterSecsFromObj = (err: any) => {
     // }
     const {
         response: {
-            // @ts-expect-error TS(2525): Initializer provides no value for this binding ele... Remove this comment to see the full error message
             headers, // returned in superagent error
         } = {},
         retryAfter: ra // possible custom property we have set
@@ -691,3 +690,5 @@ export const retry = async <T>(
       return retry(fn, { retries: retries - 1, retryIntervalMs })
     }
   }
+
+export const isDebugMode = (): boolean => process.env.DEBUG_MODE === 'true';

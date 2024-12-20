@@ -4,7 +4,7 @@ import address from "address";
 import net from 'node:net';
 import normalizeUrl from "normalize-url";
 import { join as joinPath } from "path";
-import { getFirstNonEmptyVal, parseRegexSingleOrFail } from "../utils.js";
+import { getFirstNonEmptyVal, isDebugMode, parseRegexSingleOrFail } from "../utils.js";
 import { URLData } from "../../core/Atomic.js";
 
 export interface PortReachableOpts {
@@ -113,7 +113,7 @@ export const getAddress = (host = '0.0.0.0', logger?: Logger): { v4?: string, v6
         v4 = address.ip();
         v6 = address.ipv6();
     } catch (e) {
-        if (process.env.DEBUG_MODE === 'true') {
+        if (isDebugMode()) {
             if (logger !== undefined) {
                 logger.warn(new Error('Could not get machine IP address', {cause: e}));
             } else {

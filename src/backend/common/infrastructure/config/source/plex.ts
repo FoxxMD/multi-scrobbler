@@ -74,14 +74,6 @@ export interface PlexApiData extends CommonSourceData, PollingOptions {
 }
 
 export interface PlexApiOptions extends CommonSourceOptions {
-    /*
-    * Outputs JSON for session data the first time a new media ID is seen
-    * 
-    * For use when troubleshooting issues
-    * 
-    * @default false
-    */
-        logPayload?: boolean
 }
 
 export interface PlexApiSourceConfig extends CommonSourceConfig {

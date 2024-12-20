@@ -4,7 +4,7 @@ import { ExpressHandler } from "../common/infrastructure/Atomic.js";
 import { TautulliNotifier } from "../sources/ingressNotifiers/TautulliNotifier.js";
 import ScrobbleSources from "../sources/ScrobbleSources.js";
 import TautulliSource from "../sources/TautulliSource.js";
-import { parseBool } from "../utils.js";
+import { isDebugMode, parseBool } from "../utils.js";
 
 export const setupTautulliRoutes = (app: ExpressWithAsync, logger: Logger, scrobbleSources: ScrobbleSources) => {
 
@@ -21,7 +21,7 @@ export const setupTautulliRoutes = (app: ExpressWithAsync, logger: Logger, scrob
                     logger.warn(`Tautulli event specified a config name but the configured source was not a Tautulli type: ${req.body.scrobblerConfig}`);
                     return res.send('OK');
                 } else {
-                    if((source.config.options?.logPayload ?? parseBool(process.env.DEBUG_MODE)) === true) {
+                    if((source.config.options?.logPayload ?? isDebugMode()) === true) {
                         source.logger.debug(`Received Payload`, req.body);
                     }
                     // @ts-expect-error TS(2339): Property 'handle' does not exist on type 'never'.

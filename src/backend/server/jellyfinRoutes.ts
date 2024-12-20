@@ -4,7 +4,7 @@ import bodyParser from "body-parser";
 import { JellyfinNotifier } from "../sources/ingressNotifiers/JellyfinNotifier.js";
 import JellyfinSource from "../sources/JellyfinSource.js";
 import ScrobbleSources from "../sources/ScrobbleSources.js";
-import { parseBool, remoteHostIdentifiers } from "../utils.js";
+import { isDebugMode, parseBool, remoteHostIdentifiers } from "../utils.js";
 
 export const setupJellyfinRoutes = (app: ExpressWithAsync, logger: Logger, scrobbleSources: ScrobbleSources) => {
 
@@ -60,7 +60,7 @@ export const setupJellyfinRoutes = (app: ExpressWithAsync, logger: Logger, scrob
             const logPayload = pSources.some(x => {
                 const {
                     options: {
-                        logPayload = parseBool(process.env.DEBUG_MODE)
+                        logPayload = isDebugMode()
                     } = {}
                 } = x.config;
                 return logPayload;

@@ -31,6 +31,7 @@ import { CommonClientConfig, UpstreamRefreshOptions } from "../common/infrastruc
 import { Notifiers } from "../notifier/Notifiers.js";
 import {
     comparingMultipleArtists,
+    isDebugMode,
     playObjDataMatch,
     pollingBackoff,
     setIntersection,
@@ -115,13 +116,13 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
 
         const {
             match: {
-                onNoMatch = false,
-                onMatch = false,
-                confidenceBreakdown = false,
+                onNoMatch = isDebugMode(),
+                onMatch = isDebugMode(),
+                confidenceBreakdown = isDebugMode(),
             } = {},
             ...vRest
         } = verbose
-        if (onMatch || onNoMatch) {
+        if (onMatch || onNoMatch || isDebugMode()) {
             this.logger.warn('Setting verbose matching may produce noisy logs! Use with care.');
         }
         this.verboseOptions = {

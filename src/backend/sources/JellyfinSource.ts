@@ -12,6 +12,7 @@ import { FormatPlayObjectOptions, InternalConfig, PlayPlatformId } from "../comm
 import { JellySourceConfig } from "../common/infrastructure/config/source/jellyfin.js";
 import {
     doubleReturnNewline,
+    isDebugMode,
     parseBool,
     parseDurationFromTimestamp,
     playObjDataMatch,
@@ -46,7 +47,7 @@ export default class JellyfinSource extends MemorySource {
                 servers,
             } = {},
             options: {
-                logFilterFailure = (parseBool(process.env.DEBUG_MODE) ? 'debug' : 'warn')
+                logFilterFailure = (isDebugMode() ? 'debug' : 'warn')
             } = {}
         } = this.config;
 
@@ -192,7 +193,7 @@ export default class JellyfinSource extends MemorySource {
     protected logFilterFailure = (str: string, meta?: any) => {
         const {
             options: {
-                logFilterFailure = (parseBool(process.env.DEBUG_MODE) ? 'debug' : 'warn')
+                logFilterFailure = (isDebugMode() ? 'debug' : 'warn')
             } = {}
         } = this.config;
 
@@ -306,7 +307,7 @@ export default class JellyfinSource extends MemorySource {
                 const currPlay = player.getPlayedObject();
                 if(currPlay !== undefined && playObjDataMatch(currPlay, playObj)) {
                     const temporalResult = comparePlayTemporally(currPlay, playObj);
-                    if(parseBool(process.env.DEBUG_MODE)) {
+                    if(isDebugMode()) {
                         player.logger.debug(doubleReturnNewline`
                         Play with event UserDataSaved-PlaybackFinished matched => ${trackId}
                         

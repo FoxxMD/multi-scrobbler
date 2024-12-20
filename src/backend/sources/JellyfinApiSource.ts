@@ -56,7 +56,7 @@ import {
     PlayPlatformId, REPORTED_PLAYER_STATUSES
 } from "../common/infrastructure/Atomic.js";
 import { JellyApiSourceConfig } from "../common/infrastructure/config/source/jellyfin.js";
-import { genGroupIdStr, getPlatformIdFromData, parseBool, } from "../utils.js";
+import { genGroupIdStr, getPlatformIdFromData, isDebugMode, parseBool, } from "../utils.js";
 import { joinedUrl } from "../utils/NetworkUtils.js";
 import { parseArrayFromMaybeString } from "../utils/StringUtils.js";
 import { MemoryPositionalSource } from "./MemoryPositionalSource.js";
@@ -130,7 +130,7 @@ export default class JellyfinApiSource extends MemoryPositionalSource {
                 additionalAllowedLibraryTypes = [],
             } = {},
             options: {
-                logFilterFailure = (parseBool(process.env.DEBUG_MODE) ? 'debug' : 'warn')
+                logFilterFailure = (isDebugMode() ? 'debug' : 'warn')
             } = {}
         } = this.config;
 

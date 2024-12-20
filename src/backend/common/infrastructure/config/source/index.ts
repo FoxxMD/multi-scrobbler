@@ -43,8 +43,8 @@ export interface ScrobbleThresholds {
 
 export interface CommonSourceOptions extends SourceRetryOptions {
     /**
-     * If this source has INGRESS to MS (sends a payload, rather than MS GETTING requesting a payload)
-     * then setting this option to true will make MS log the payload JSON to DEBUG output
+     * * If this source has INGRESS to MS (sends a payload, rather than MS GETTING requesting a payload) then setting this option to true will make MS log the payload JSON to DEBUG output
+     * * If this source is POLLING then it will log the raw data for each unique track/response the first time it is seen
      *
      * @default false
      * @examples [false]

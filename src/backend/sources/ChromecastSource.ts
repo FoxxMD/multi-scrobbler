@@ -30,7 +30,7 @@ import {
     PlatformApplicationWithContext,
     PlatformType
 } from "../common/vendor/chromecast/interfaces.js";
-import { difference, genGroupIdStr, parseBool } from "../utils.js";
+import { difference, genGroupIdStr, isDebugMode, parseBool } from "../utils.js";
 import { findCauseByReference } from "../utils/ErrorUtils.js";
 import { discoveryAvahi, discoveryNative } from "../utils/MDNSUtils.js";
 import { RecentlyPlayedOptions } from "./AbstractSource.js";
@@ -120,7 +120,7 @@ export class ChromecastSource extends MemoryPositionalSource {
                 useAutoDiscovery
             } = {},
             options: {
-                logPayload = false
+                logPayload = isDebugMode()
             } = {},
         } = this.config;
 
@@ -552,7 +552,7 @@ export class ChromecastSource extends MemoryPositionalSource {
                                         // its fine just do error without play string
                                     }
                                     application.logger.verbose(`Skipping status for ${maybePlay !== undefined ? buildTrackString(maybePlay) : 'unknown media'} because it is buffering.`);
-                                    if (this.config.options.logPayload) {
+                                    if (this.config.options.logPayload || isDebugMode()) {
                                         application.logger.debug(`Media Status Payload:\n ${status[0] === undefined || status[0] === null ? 'undefined' : JSON.stringify(status[0])}`);
                                     }
                                     continue;
@@ -564,7 +564,7 @@ export class ChromecastSource extends MemoryPositionalSource {
                         throw e;
                     }
 
-                    if (this.config.options.logPayload) {
+                    if (this.config.options.logPayload || isDebugMode()) {
                         application.logger.debug(`Media Status Payload:\n ${mediaStatus === undefined || mediaStatus === null ? 'undefined' : JSON.stringify(mediaStatus)}`);
                     }
 
