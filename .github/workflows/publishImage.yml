@@ -41,7 +41,7 @@ jobs:
           echo "PLATFORM_PAIR=${platform//\//-}" >> $GITHUB_ENV          
 
       - name: Check out the repo
-        uses: actions/checkout@v5
+        uses: actions/checkout@v4
 
       - name: Set short git commit SHA
         id: appvars
