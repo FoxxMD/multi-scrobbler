@@ -24,9 +24,11 @@ on:
 #  release:
 #    types: [ published ]
 
-# define repository actions vars to enable pushing to registries IE
-# DOCKERHUB_SLUG: foxxmd/multi-scrobbler
-# GHCR_SLUG: ghcr.io/foxxmd/multi-scrobbler
+# define in GH Repository -> Actions -> Variables (or act .variables) to enable pushing to registries
+# -- will only push to registries that are defined
+# EX
+# DOCKERHUB_SLUG=foxxmd/multi-scrobbler
+# GHCR_SLUG=ghcr.io/foxxmd/multi-scrobbler
   
 jobs:
   test:
@@ -56,6 +58,7 @@ jobs:
 
           # list all registries to push to and join all non-empty with comma
           # https://unix.stackexchange.com/a/693165/116849
+          # https://stackoverflow.com/a/9429887/1469797
           strings=("${{vars.DOCKERHUB_SLUG}}" "${{vars.GHCR_SLUG}}")
           for i in ${!strings[@]}; do [[ -z ${strings[i]} ]] && unset strings[i]; done
           joined_string=$(IFS=, ; echo "${strings[*]}")
