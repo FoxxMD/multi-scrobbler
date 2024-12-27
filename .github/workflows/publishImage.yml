@@ -1,6 +1,6 @@
 # Based on https://docs.docker.com/build/ci/github-actions/multi-platform/#distribute-build-across-multiple-runners
 
-name: build
+name: Publish Docker image to Dockerhub
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
