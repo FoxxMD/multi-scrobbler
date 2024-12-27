@@ -19,7 +19,7 @@ export class GenericPlayerState extends AbstractPlayerState {
         super(logger, platformId, opts);
     }
     
-    protected currentListenSessionContinue(position?: number, timestamp?: Dayjs) {
+    protected currentListenSessionContinue(position: number = 0, timestamp?: Dayjs) {
         if (this.currentListenRange === undefined) {
             this.logger.debug('Started new Player listen range.');
             this.currentListenRange = this.newListenRange(this.newListenProgress({timestamp}));

@@ -470,6 +470,8 @@ export default class JellyfinApiSource extends MemoryPositionalSource {
         } = obj;
 
         const msDeviceId = combinePartsToString([shortDeviceId(DeviceId), DeviceName, Client]);
+        // sometimes, immediately after a track change on the player, PlayState indicates it is NOT paused but
+        // does not return PositionTicks
         const playerPosition = PositionTicks !== undefined ? ticksToSeconds(PositionTicks) : undefined; // dayjs.duration(PositionTicks / 1000, 'ms').asSeconds() : undefined;
 
         let play: PlayObject | undefined;

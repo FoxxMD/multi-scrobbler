@@ -41,7 +41,7 @@ export class PositionalPlayerState extends AbstractPlayerState {
         return position !== this.currentListenRange.end.position;
     }
 
-    protected currentListenSessionContinue(position: number, timestamp?: Dayjs) {
+    protected currentListenSessionContinue(position: number = 0, timestamp?: Dayjs) {
         if (this.currentListenRange === undefined) {
             this.logger.debug('Started new Player listen range.');
             let usedPosition = position;
