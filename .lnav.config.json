@@ -1,0 +1,28 @@
+{
+    "$schema": "https://lnav.org/schemas/format-v1.schema.json",
+    "error_log": {
+        "title": "Multi-Scrobbler Log",
+        "description": "Logs from Multi Scrobbler",
+        "regex": {
+            "std": {
+                "pattern": "^\\[(?<timestamp>\\d{4}-\\d{2}-\\d{2} \\d{2}:\\d{2}:\\d{2}(?:\\.\\d{3})?)(?:.*?)\\] (?<level>[A-Z]*)  : (?<body>.*)"
+            }
+        },
+        "level-field": "level",
+        "level": {
+            "info": "^(?i)(?:info)$",
+            "debug": "^(?i)(?:debug)$",
+            "error": "^(?i)(error)$",
+            "warning": "^(?i)(warn)$",
+            "trace": "^(?i)verbose$",
+            "critical": "^(?i)(?:crit|Cr)$",
+            "fatal": "^(?i)(?:alert|fatal|panic|Al|Em)$"
+        },
+        "sample": [
+            {
+                "line": "[2024-12-26 01:58:48.261 -0500] DEBUG  : [App] [Sources] [Jellyfin - unnamed] Last activity was at 01:58:48-05:00 | Next check in 10.00s | No new tracks discovered",
+                "level": "debug"
+            }
+        ]
+    }
+}
