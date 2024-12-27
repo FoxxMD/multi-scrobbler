@@ -1,43 +1,49 @@
-name: Publish Docker image to Dockerhub
+# Based on https://docs.docker.com/build/ci/github-actions/multi-platform/#distribute-build-across-multiple-runners
+
+name: build
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 on:
-  workflow_dispatch:
   push:
     branches:
       - 'master'
     tags:
       - '*.*.*'
-    # don't trigger if just updating docs
     paths-ignore:
       - 'README.md'
       - '.github/**'
       - 'flatpak/**'
-  # use release instead of tags once version is correctly parsed
-  # https://github.com/docker/metadata-action/issues/422
-  # https://github.com/docker/metadata-action/issues/240
-#  release:
-#    types: [ published ]
+
+env:
+  DOCKERHUB_SLUG: foxxmd/multi-scrobbler
+  GHCR_SLUG: ghcr.io/foxxmd/multi-scrobbler
 
 jobs:
-  test:
-    if: github.event_name != 'pull_request'
-    uses: ./.github/workflows/testAndSanity.yml
-
-  push_to_registry:
-    name: Build and push container images
-    if: github.event_name != 'pull_request'
+  build:
     runs-on: ubuntu-latest
-    needs: test
-    # https://docs.github.com/en/actions/security-guides/automatic-token-authentication#permissions-for-the-github_token
     permissions:
       packages: write
       contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        platform:
+          - linux/amd64
+          - linux/arm64
     steps:
+      - name: Prepare
+        run: |
+          platform=${{ matrix.platform }}
+          echo "PLATFORM_PAIR=${platform//\//-}" >> $GITHUB_ENV          
+
       - name: Check out the repo
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Set short git commit SHA
-        id: vars
+        id: appvars
         # https://dev.to/hectorleiva/github-actions-and-creating-a-short-sha-hash-8b7
         # short sha available under env.COMMIT_SHORT_SHA
         run: |
@@ -46,7 +52,37 @@ jobs:
           echo "COMMIT_SHORT_SHA=$calculatedSha" >> $GITHUB_ENV
           echo "COMMIT_BRANCH=$branchName" >> $GITHUB_ENV
 
-      - name: Log in to Docker Hub
+      - name: Get App Version
+        id: appversion
+        env:
+          # use release instead of tags once version is correctly parsed
+          #APP_VERSION: ${{ github.event.release.tag_name }}
+
+          # https://github.com/actions/runner/issues/409#issuecomment-752775072
+          # https://stackoverflow.com/a/69919067/1469797
+          APP_VERSION: ${{ contains(github.ref, 'refs/tags/') && github.ref_name || format('{0}-{1}', env.COMMIT_BRANCH, env.COMMIT_SHORT_SHA ) }}
+        run: |
+          echo appversion=$APP_VERSION >>${GITHUB_OUTPUT}
+      
+      # - name: Extract metadata (tags, labels) for Docker
+      #   id: meta
+      #   uses: docker/metadata-action@v5
+      #   with:
+      #     images: |
+      #       ${{ env.DOCKERHUB_SLUG }}
+      #       ${{ env.GHCR_SLUG }}
+      #     labels: |
+      #       org.opencontainers.image.title=Multi-Scrobbler
+      #       org.opencontainers.image.description=Scrobble from many sources to many clients
+      #       org.opencontainers.image.vendor=FoxxMD
+      
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+      
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+      
+      - name: Login to Docker Hub
         uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKER_USERNAME }}
@@ -59,20 +95,80 @@ jobs:
           username: ${{ github.repository_owner }}
           password: ${{ secrets.GITHUB_TOKEN }}
       
+      # https://github.com/docker/build-push-action/issues/671#issuecomment-1619353328
+      # for caching
+      - name: Build and push by digest
+        id: build
+        uses: docker/build-push-action@v6
+        with:
+          build-args: |
+            APP_BUILD_VERSION=${{steps.appversion.outputs.appversion}}
+          platforms: ${{ matrix.platform }}
+          labels: ${{ steps.meta.outputs.labels }}
+          #tags: ${{ steps.meta.outputs.tags }}
+          outputs: type=image,"name=${{ env.DOCKERHUB_SLUG }},${{ env.GHCR_SLUG }}",push-by-digest=true,name-canonical=true,push=true
+          #cache-from: type=gha,scope=build-${{ env.PLATFORM_PAIR }}
+          #cache-to: type=gha,scope=build-${{ env.PLATFORM_PAIR }}
+      
+      - name: Export digest
+        run: |
+          mkdir -p /tmp/digests
+          digest="${{ steps.build.outputs.digest }}"
+          touch "/tmp/digests/${digest#sha256:}"          
+      
+      - name: Upload digest
+        uses: actions/upload-artifact@v4
+        with:
+          name: digests-${{ env.PLATFORM_PAIR }}
+          path: /tmp/digests/*
+          if-no-files-found: error
+          retention-days: 1
+
+  merge:
+    runs-on: ubuntu-latest
+    permissions:
+      packages: write
+      contents: read
+    needs:
+      - build
+    steps:
+      - name: Download digests
+        uses: actions/download-artifact@v4
+        with:
+          path: /tmp/digests
+          pattern: digests-*
+          merge-multiple: true
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+      
       - name: Extract metadata (tags, labels) for Docker
         id: meta
         uses: docker/metadata-action@v5
         with:
           images: |
-            foxxmd/multi-scrobbler
-            ghcr.io/foxxmd/multi-scrobbler
+            ${{ env.DOCKERHUB_SLUG }}
+            ${{ env.GHCR_SLUG }}
           # generate Docker tags based on the following events/attributes
           # https://github.com/docker/metadata-action/issues/247#issuecomment-1511259674 for NOT is default branch, eventually
           tags: |
             type=edge
 
             # maybe re-enable branch-named tags in the futures
-            #type=ref,event=branch,enable=${{ !endsWith(github.ref, 'master') }}
+            type=ref,event=branch,enable=${{ !endsWith(github.ref, 'master') }}
             
             # tag non-prelease as latest -- has a higher priority than regular tag so it shows first in registries
             type=match,pattern=\d.\d.\d$,priority=901
@@ -81,28 +177,22 @@ jobs:
             type=semver,pattern={{version}}
         #  flavor: |
         #    latest=false
+          labels: |
+            org.opencontainers.image.title=Multi-Scrobbler
+            org.opencontainers.image.description=Scrobble from many sources to many clients
+            org.opencontainers.image.vendor=FoxxMD
+      
 
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v3
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Build and push Docker image
-        env:
-          # use release instead of tags once version is correctly parsed
-          #APP_VERSION: ${{ github.event.release.tag_name }}
-
-        # https://github.com/actions/runner/issues/409#issuecomment-752775072
-        # https://stackoverflow.com/a/69919067/1469797
-          APP_VERSION: ${{ contains(github.ref, 'refs/tags/') && github.ref_name || format('{0}-{1}', env.COMMIT_BRANCH, env.COMMIT_SHORT_SHA ) }}
-        uses: docker/build-push-action@v5
-        with:
-          context: .
-          # https://github.com/docker/build-push-action/issues/1026#issue-2041857786
-          build-args: |
-            APP_BUILD_VERSION=${{env.APP_VERSION}}
-          push: ${{ !env.ACT }}
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
-          platforms: linux/amd64,linux/arm64
+      
+      - name: Create manifest list and push
+        working-directory: /tmp/digests
+        run: |
+          docker buildx imagetools create $(jq -cr '.tags | map("-t " + .) | join(" ")' <<< "$DOCKER_METADATA_OUTPUT_JSON") \
+            $(printf '${{ env.DOCKERHUB_SLUG }}@sha256:%s ' *)
+          docker buildx imagetools create $(jq -cr '.tags | map("-t " + .) | join(" ")' <<< "$DOCKER_METADATA_OUTPUT_JSON") \
+            $(printf '${{ env.GHCR_SLUG }}@sha256:%s ' *)        
+      
+      - name: Inspect image
+        run: |
+          docker buildx imagetools inspect ${{ env.DOCKERHUB_SLUG }}:${{ steps.meta.outputs.version }}
+          docker buildx imagetools inspect ${{ env.GHCR_SLUG }}:${{ steps.meta.outputs.version }}      
