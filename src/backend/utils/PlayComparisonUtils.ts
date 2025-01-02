@@ -176,7 +176,7 @@ export const playsAreBumpedOnly = (aPlays: PlayObject[], bPlays: PlayObject[], t
 export const humanReadableDiff = (aPlay: PlayObject[], bPlay: PlayObject[], result: ListDiff): string => {
     const changes: [string, string?][] = [];
     for(const [index, play] of bPlay.entries()) {
-        const ab: [string, string?] = [`${index + 1}. ${buildTrackString(play, {include: ['artist', 'track', 'trackId', 'album']})}`];
+        const ab: [string, string?] = [`${index + 1}. ${buildTrackString(play, {include: ['artist', 'track', 'trackId', 'album', 'comment']})}`];
 
         const isEqual = result.diff.some(x => x.status === 'equal' && x.prevIndex === index && x.newIndex === index);
         if(!isEqual) {
