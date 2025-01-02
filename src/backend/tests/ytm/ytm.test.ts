@@ -8,6 +8,7 @@ import ytHistoryRes from './ytres.json' assert {type: 'json'};
 import EventEmitter from "events";
 import { generatePlay, generatePlays } from '../utils/PlayTestUtils.js';
 import { YTMusicSourceConfig } from '../../common/infrastructure/config/source/ytmusic.js';
+import { sleep } from '../../utils.js';
 
 chai.use(asPromised);
 
@@ -23,7 +24,7 @@ const createYtSource = (opts?: {
         },
         emitter = new EventEmitter
     } = opts || {};
-    return new YTMusicSource('test', config, { localUrl: new URL('https://example.com'), configDir: 'fake', logger: loggerDebug, version: 'test' }, emitter);
+    return new YTMusicSource('test', config, { localUrl: new URL('https://example.com'), configDir: 'fake', logger: loggerTest, version: 'test' }, emitter);
 }
 
 describe('Parses History', function () {
@@ -95,5 +96,38 @@ describe('Handles temporal inconsistency in history', function () {
         const appendPlays = [...plays.slice(1), generatePlay({}, { comment: 'Yesterday' })];
 
         expect(source.parseRecentAgainstResponse(appendPlays)).length(0);
+    });
+
+    it(`Detects outdated recent history when order was previously seen`, async function () {
+
+        this.timeout(3700);
+
+        const source = createYtSource();
+
+        const plays = [...generatePlays(10, {}, { comment: 'Today' }), ...generatePlays(10, {}, { comment: 'Yesterday' })];
+
+        expect(source.parseRecentAgainstResponse(plays)).length(20);
+
+        source.polling = true;
+
+        expect(source.parseRecentAgainstResponse(plays)).length(0);
+
+        const newPlay = generatePlay({}, { comment: 'Today' });
+
+        const prependedPlays = [newPlay, ...plays];
+
+        expect(source.parseRecentAgainstResponse(prependedPlays)).length(1);
+
+        await sleep(1000);
+
+        expect(source.parseRecentAgainstResponse(plays)).length(0);
+
+        await sleep(500);
+
+        expect(source.parseRecentAgainstResponse(plays)).length(0);
+
+        await sleep(500);
+
+        expect(source.parseRecentAgainstResponse(prependedPlays)).length(0);
     });
 });

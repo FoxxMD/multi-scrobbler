@@ -1,4 +1,4 @@
-import dayjs from "dayjs";
+import dayjs, { Dayjs } from "dayjs";
 import EventEmitter from "events";
 import { PlayObject } from "../../core/Atomic.js";
 import { FormatPlayObjectOptions, InternalConfig } from "../common/infrastructure/Atomic.js";
@@ -17,6 +17,8 @@ import {
 import AbstractSource, { RecentlyPlayedOptions } from "./AbstractSource.js";
 import { truncateStringToLength } from "../../core/StringUtils.js";
 import { joinedUrl } from "../utils/NetworkUtils.js";
+import { FixedSizeList } from "fixed-size-list";
+import { todayAwareFormat } from "../utils/TimeUtils.js";
 
 export const ytiHistoryResponseToListItems = (res: ApiResponse): YTNodes.MusicResponsiveListItem[] => {
     const page = Parser.parseResponse<IBrowseResponse>(res.data);
@@ -87,6 +89,8 @@ export default class YTMusicSource extends AbstractSource {
     oauthClient?: OAuth2Client;
 
     workingCredsPath: string;
+
+    recentChangedHistoryResponses: {ts: Dayjs, plays: PlayObject[]}[] = [];
 
     constructor(name: string, config: YTMusicSourceConfig, internal: InternalConfig, emitter: EventEmitter) {
         super('ytmusic', name, config, internal, emitter);
@@ -440,7 +444,7 @@ Redirect URI  : ${this.redirectUri}`);
             const [bumpOk, bumpDiff, bumpType] = playsAreBumpedOnly(this.recentlyPlayed, plays);
             if(bumpOk === true) {
                 if(bumpType !== 'prepend') {
-                    warnMsg = `(Bump Plays Detected) Previously seen YTM history was bumped in an unexpected way (${bumpType}), resetting watched history to new list`;
+                    warnMsg = `(Bump Plays Detected) Previously seen YTM history was bumped in an unexpected way (${bumpType}), resetting history to new list`;
                 } else {
                     newPlays = [...bumpDiff].reverse();
                     if(newPlays.length > 1) {
@@ -453,13 +457,18 @@ Redirect URI  : ${this.redirectUri}`);
                     if(addType !== 'prepend') {
                         warnMsg = `(Add Plays Detected) New tracks were added to YTM history in an unexpected way (${addType}), resetting watched history to new list`;
                     } else {
-                        newPlays = [...addDiff].reverse();
-                        if(newPlays.length > 1) {
-                            warnMsg = `(Add Plays Detected) Expected to see only 1 new track in YTM History but found ${newPlays.length}. This may be OK if monitoring was stopped or tracks truly are short in length.`;
+                        const revertedToRecent = this.recentChangedHistoryResponses.findIndex(x => playsAreSortConsistent(x.plays, plays));
+                        if(revertedToRecent !== -1) {
+                            warnMsg = `(Add Plays Detected) YTM History has exact order as another recent response *where history was changed* (${revertedToRecent + 1} ago @ ${todayAwareFormat(this.recentChangedHistoryResponses[revertedToRecent].ts)}) which means last history (n - 1) was probably out of date. Resetting history to current list and NOT ADDING new tracks since we probably already discovered them earlier.`
+                        } else {
+                            newPlays = [...addDiff].reverse();
+                            if(newPlays.length > 1) {
+                                warnMsg = `(Add Plays Detected) Expected to see only 1 new track in YTM History but found ${newPlays.length}. This may be OK if monitoring was stopped or tracks truly are short in length.`;
+                            }
                         }
                     }
                 } else {
-                    warnMsg = 'YTM History returned temporally inconsistent order, resetting watched history to new list.';
+                    warnMsg = 'YTM History returned temporally inconsistent order, resetting history to new list.';
                 }
             }
 
@@ -477,6 +486,9 @@ ${humanDiff}`;
             }
 
             this.recentlyPlayed = plays;
+            if(newPlays.length > 0) {
+                this.recentChangedHistoryResponses = [{plays, ts: dayjs()}, ...this.recentChangedHistoryResponses.slice(0, 3)]
+            }
 
                 newPlays = newPlays.map((x, index) => ({
                     data: {
