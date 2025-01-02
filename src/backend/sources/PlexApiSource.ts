@@ -124,8 +124,7 @@ export default class PlexApiSource extends MemoryPositionalSource {
 
         this.plexApi = new PlexAPI({
             serverURL: this.address.toString(),
-            accessToken: this.config.data.token,
-            xPlexClientIdentifier: this.deviceId,
+            accessToken: this.config.data.token
         });
 
         return true;
