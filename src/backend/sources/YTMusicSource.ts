@@ -46,13 +46,13 @@ const loggedErrorExtra = (err: Error): object | undefined => {
     return maybeInfo;
 }
 
-export const ytiHistoryResponseFromShelfToPlays = (res: ApiResponse): PlayObject[] => {
+export const ytiHistoryResponseFromShelfToPlays = (res: ApiResponse, options: {newFromSource?: boolean} = {}): PlayObject[] => {
     const page = Parser.parseResponse<IBrowseResponse>(res.data);
     const items: PlayObject[] = [];
     const shelves = page.contents_memo.getType(YTNodes.MusicShelf);
     shelves.forEach((shelf) => {
         shelf.contents.forEach((listItem) => {
-            items.push(YTMusicSource.formatPlayObj(listItem, {shelf: shelf.title.text}));
+            items.push(YTMusicSource.formatPlayObj(listItem, {shelf: shelf.title.text, newFromSource: options.newFromSource ?? false}));
         });
     });
     return items;
@@ -417,12 +417,17 @@ Redirect URI  : ${this.redirectUri}`);
             throw e;
         }
 
+        const listPlays = ytiHistoryResponseFromShelfToPlays(playlistDetail);
+        
+        return this.parseRecentAgainstResponse(listPlays);
+        
+    }
+
+    parseRecentAgainstResponse = (responsePlays: PlayObject[]): PlayObject[] => {
+
         let newPlays: PlayObject[] = [];
 
-        const page = Parser.parseResponse<IBrowseResponse>(playlistDetail.data);
-        const shelfPlays = ytiHistoryResponseFromShelfToPlays(playlistDetail);
-        const listPlays = ytiHistoryResponseToListItems(playlistDetail).map((x) => YTMusicSource.formatPlayObj(x, {newFromSource: false}));
-        const plays = listPlays.slice(0, 20);
+        const plays = responsePlays.slice(0, 20);
         if(this.polling === false) {
             this.recentlyPlayed = plays;
             newPlays = plays;
@@ -432,13 +437,27 @@ Redirect URI  : ${this.redirectUri}`);
             }
 
             let warnMsg: string;
-            const bumpResults = playsAreBumpedOnly(this.recentlyPlayed, plays);
-            if(bumpResults[0] === true) {
-                newPlays = bumpResults[1];
+            const [bumpOk, bumpDiff, bumpType] = playsAreBumpedOnly(this.recentlyPlayed, plays);
+            if(bumpOk === true) {
+                if(bumpType !== 'prepend') {
+                    warnMsg = `(Bump Plays Detected) Previously seen YTM history was bumped in an unexpected way (${bumpType}), resetting watched history to new list`;
+                } else {
+                    newPlays = [...bumpDiff].reverse();
+                    if(newPlays.length > 1) {
+                        warnMsg = `(Bump Plays Detected) Expected to see only 1 new track in YTM History but found ${newPlays.length}. This may be OK if monitoring was stopped or tracks truly are short in length.`;
+                    }
+                }
             } else {
-                const addResults = playsAreAddedOnly(this.recentlyPlayed, plays);
-                if(addResults[0] === true) {
-                    newPlays = [...addResults[1]].reverse();
+                const [addOk, addDiff, addType] = playsAreAddedOnly(this.recentlyPlayed, plays);
+                if(addOk === true) {
+                    if(addType !== 'prepend') {
+                        warnMsg = `(Add Plays Detected) New tracks were added to YTM history in an unexpected way (${addType}), resetting watched history to new list`;
+                    } else {
+                        newPlays = [...addDiff].reverse();
+                        if(newPlays.length > 1) {
+                            warnMsg = `(Add Plays Detected) Expected to see only 1 new track in YTM History but found ${newPlays.length}. This may be OK if monitoring was stopped or tracks truly are short in length.`;
+                        }
+                    }
                 } else {
                     warnMsg = 'YTM History returned temporally inconsistent order, resetting watched history to new list.';
                 }
@@ -448,7 +467,7 @@ Redirect URI  : ${this.redirectUri}`);
                 const playsDiff = getPlaysDiff(this.recentlyPlayed, plays)
                 const humanDiff = humanReadableDiff(this.recentlyPlayed, plays, playsDiff);
                 const diffMsg = `Changes from last seen list:
-    ${humanDiff}`;
+${humanDiff}`;
                 if(warnMsg !== undefined) {
                     this.logger.warn(warnMsg);
                     this.logger.warn(diffMsg);
@@ -472,7 +491,6 @@ Redirect URI  : ${this.redirectUri}`);
         }
 
         return newPlays;
-        
     }
 
     onPollPostAuthCheck = async () => {
