@@ -161,9 +161,9 @@ describe('Handles temporal inconsistency in history', function () {
     });
 });
 
-describe('Handles skipped tracks', function () {
+describe('Handles interim tracks', function () {
 
-    it(`Does not add interim plays`, async function () {
+    it(`Does not add skipped plays`, async function () {
 
         const source = createYtSource();
 
@@ -187,6 +187,30 @@ describe('Handles skipped tracks', function () {
         const prependedPlays = [firstPlay, ...interimPlays, ...plays];
         const prependResult = source.parseRecentAgainstResponse(prependedPlays);
         expect(prependResult.plays).length(1);
-        expect(prependResult.plays[0].data.track).eq(firstPlay.data.track)
+        expect(prependResult.plays[prependResult.plays.length - 1].data.track).eq(firstPlay.data.track)
+    });
+
+    it(`Adds interim plays when discover time is plausible`, async function () {
+
+        const source = createYtSource();
+
+        const plays = [...generatePlays(10, {playDate: dayjs().subtract(2, 'minutes')}, { comment: 'Today' }), ...generatePlays(10, {playDate: dayjs().subtract(2, 'minutes')}, { comment: 'Yesterday' })];
+
+        // emulating init from 20 seconds, get history to use as base truth without discovering tracks
+        expect(source.parseRecentAgainstResponse(plays).plays).length(20);
+
+        source.polling = true;
+        source.discover(plays);
+
+        // first true poll emulating no new tracks played (should not add new tracks from base truth)
+        expect(source.parseRecentAgainstResponse(plays).plays).length(0);
+
+        // add new track played
+        const firstPlay = generatePlay({duration: 120}, { comment: 'Today' });
+        const interimPlays = [generatePlay({duration: 40}, { comment: 'Today' }), generatePlay({duration: 200}, { comment: 'Today' })]
+        const prependedPlays = [firstPlay, ...interimPlays, ...plays];
+        const prependResult = source.parseRecentAgainstResponse(prependedPlays);
+        expect(prependResult.plays).length(2);
+        expect(prependResult.plays[prependResult.plays.length - 1].data.track).eq(firstPlay.data.track)
     });
 });

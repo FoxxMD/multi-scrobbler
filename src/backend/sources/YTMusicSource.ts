@@ -496,6 +496,16 @@ Redirect URI  : ${this.redirectUri}`);
         const plays = responsePlays.slice(0, 20);
         if(this.polling === false) {
             results.plays = plays;
+            results.plays = results.plays.map((x, index) => ({
+                data: {
+                    ...x.data,
+                    playDate: dayjs().startOf('minute').add(index + 1, 's')
+                },
+                meta: {
+                    ...x.meta,
+                    newFromSource: true
+                }
+            }));
         } else {
 
             const cResults = this.getIncomingHistoryConsistencyResult(plays);
@@ -569,6 +579,25 @@ ${humanDiff}`;
                     this.logger.verbose(diffMsg);
                 }
             }
+            let durSinceNow = 0;
+            const now = dayjs();
+
+            const rrPlays = results.plays.reduceRight((acc, curr) => {
+                const durDatedPlay = {
+                    data: {
+                        ...curr.data,
+                        playDate: durSinceNow === 0 ? now : now.subtract(durSinceNow, 'seconds'),
+                    },
+                    meta: {
+                        ...curr.meta,
+                        newFromSource: true
+                    }
+                }
+                durSinceNow += curr.data.duration ?? 1;
+                return [durDatedPlay, ...acc];
+            }, []);
+
+            results.plays = rrPlays
         }
 
         this.recentlyPlayed = plays;
@@ -576,17 +605,6 @@ ${humanDiff}`;
         if(results.plays.length > 0) {
             this.recentChangedHistoryResponses = [{plays, ts: dayjs()}, ...this.recentChangedHistoryResponses.slice(0, 3)]
         }
-
-        results.plays = results.plays.map((x, index) => ({
-            data: {
-                ...x.data,
-                playDate: dayjs().startOf('minute').add(index + 1, 's')
-            },
-            meta: {
-                ...x.meta,
-                newFromSource: true
-            }
-        }));
 
         return results;
     }
