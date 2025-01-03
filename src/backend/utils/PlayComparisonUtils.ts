@@ -66,7 +66,14 @@ export const getDiffIndexState = (results: any, index: number) => {
     return undefined;
 }
 
-export const playsAreAddedOnly = (aPlays: PlayObject[], bPlays: PlayObject[], transformers: ListTransformers = defaultListTransformers): [boolean, PlayObject[]?, ('append' | 'prepend' | 'insert')?] => {
+export type PlayOrderBumpedType = 'append' | 'prepend';
+export type PlayOrderAddedType = PlayOrderBumpedType | 'insert';
+export type PlayOrderChangeType = PlayOrderAddedType | PlayOrderBumpedType;
+
+
+export type PlayOrderConsistencyResults<T extends PlayOrderChangeType> = [boolean, PlayObject[]?, T?]
+
+export const playsAreAddedOnly = (aPlays: PlayObject[], bPlays: PlayObject[], transformers: ListTransformers = defaultListTransformers): PlayOrderConsistencyResults<PlayOrderAddedType> => {
     const results = getPlaysDiff(aPlays, bPlays, transformers);
      if(results.status === 'equal' || results.status === 'deleted') {
         return [false];
@@ -117,7 +124,7 @@ export const playsAreAddedOnly = (aPlays: PlayObject[], bPlays: PlayObject[], tr
     return [addType !== 'insert' && addType !== undefined, added.map(x => bPlays[x.newIndex]), addType];
 }
 
-export const playsAreBumpedOnly = (aPlays: PlayObject[], bPlays: PlayObject[], transformers: ListTransformers = defaultListTransformers): [boolean, PlayObject[]?, ('append' | 'prepend')?] => {
+export const playsAreBumpedOnly = (aPlays: PlayObject[], bPlays: PlayObject[], transformers: ListTransformers = defaultListTransformers): PlayOrderConsistencyResults<PlayOrderBumpedType> => {
     const results = getPlaysDiff(aPlays, bPlays, transformers);
     if(results.status === 'equal' || results.status === 'deleted') {
        return [false];
@@ -176,7 +183,7 @@ export const playsAreBumpedOnly = (aPlays: PlayObject[], bPlays: PlayObject[], t
 export const humanReadableDiff = (aPlay: PlayObject[], bPlay: PlayObject[], result: ListDiff): string => {
     const changes: [string, string?][] = [];
     for(const [index, play] of bPlay.entries()) {
-        const ab: [string, string?] = [`${index + 1}. ${buildTrackString(play, {include: ['artist', 'track', 'trackId', 'album']})}`];
+        const ab: [string, string?] = [`${index + 1}. ${buildTrackString(play, {include: ['artist', 'track', 'trackId', 'album', 'comment']})}`];
 
         const isEqual = result.diff.some(x => x.status === 'equal' && x.prevIndex === index && x.newIndex === index);
         if(!isEqual) {
