@@ -6,7 +6,7 @@ import { YTMusicSourceConfig } from "../common/infrastructure/config/source/ytmu
 import { Innertube, UniversalCache, Parser, YTNodes, ApiResponse, IBrowseResponse, Log, SessionOptions } from 'youtubei.js';
 import { GenerateAuthUrlOpts, OAuth2Client } from 'google-auth-library';
 import {resolve} from 'path';
-import { parseBool, sleep } from "../utils.js";
+import { formatNumber, parseBool, sleep } from "../utils.js";
 import {
     getPlaysDiff,
     humanReadableDiff,
@@ -17,7 +17,7 @@ import {
     playsAreSortConsistent
 } from "../utils/PlayComparisonUtils.js";
 import AbstractSource, { RecentlyPlayedOptions } from "./AbstractSource.js";
-import { truncateStringToLength } from "../../core/StringUtils.js";
+import { buildTrackString, truncateStringToLength } from "../../core/StringUtils.js";
 import { joinedUrl } from "../utils/NetworkUtils.js";
 import { FixedSizeList } from "fixed-size-list";
 import { todayAwareFormat } from "../utils/TimeUtils.js";
@@ -438,10 +438,13 @@ Redirect URI  : ${this.redirectUri}`);
     }
 
     getIncomingHistoryConsistencyResult = (plays: PlayObject[]): HistoryIngressResult => {
-        let newPlays: PlayObject[] = [];
+        const results: HistoryIngressResult = {
+            plays: [],
+            consistent: true
+        }
         
         if(playsAreSortConsistent(this.recentlyPlayed, plays)) {
-            return {plays: newPlays, consistent: true};
+            return {plays: [], consistent: true};
         }
 
         let warnMsg: string;
@@ -449,44 +452,37 @@ Redirect URI  : ${this.redirectUri}`);
         let diffType: 'bump' | 'added';
         diffResults = playsAreBumpedOnly(this.recentlyPlayed, plays);
         if(diffResults[0] === true) {
-            diffType = 'bump';
+            results.diffType = 'bump';
             if(diffResults[2] !== 'prepend') {
-                warnMsg = `(Bump Plays Detected) Previously seen YTM history was bumped in an unexpected way (${diffResults[2]}), resetting history to new list`;
+                results.consistent = false;
+                results.reason = `(Bump Plays Detected) Previously seen YTM history was bumped in an unexpected way (${diffResults[2]}), resetting history to new list`;
             } else {
-                newPlays = [...diffResults[1]].reverse();
-                if(newPlays.length > 1) {
-                    warnMsg = `(Bump Plays Detected) Expected to see only 1 new track in YTM History but found ${newPlays.length}. This may be OK if monitoring was stopped or tracks truly are short in length.`;
-                }
+                results.plays = [...diffResults[1]].reverse();
             }
         } else {
             diffResults = playsAreAddedOnly(this.recentlyPlayed, plays);
             if(diffResults[0] === true) {
-                diffType = 'added';
+                results.diffType = 'added';
                 if(diffResults[2] !== 'prepend') {
-                    warnMsg = `(Add Plays Detected) New tracks were added to YTM history in an unexpected way (${diffResults[2]}), resetting watched history to new list`;
+                    results.consistent = false;
+                    results.reason = `(Add Plays Detected) New tracks were added to YTM history in an unexpected way (${diffResults[2]}), resetting watched history to new list`;
                 } else {
                     const revertedToRecent = this.recentChangedHistoryResponses.findIndex(x => playsAreSortConsistent(x.plays, plays));
                     if(revertedToRecent !== -1) {
-                        warnMsg = `(Add Plays Detected) YTM History has exact order as another recent response *where history was changed* (${revertedToRecent + 1} ago @ ${todayAwareFormat(this.recentChangedHistoryResponses[revertedToRecent].ts)}) which means last history (n - 1) was probably out of date. Resetting history to current list and NOT ADDING new tracks since we probably already discovered them earlier.`
+                        results.consistent = false;
+                        results.reason = `(Add Plays Detected) YTM History has exact order as another recent response *where history was changed* (${revertedToRecent + 1} ago @ ${todayAwareFormat(this.recentChangedHistoryResponses[revertedToRecent].ts)}) which means last history (n - 1) was probably out of date. Resetting history to current list and NOT ADDING new tracks since we probably already discovered them earlier.`
                     } else {
-                        newPlays = [...diffResults[1]].reverse();
-                        if(newPlays.length > 1) {
-                            warnMsg = `(Add Plays Detected) Expected to see only 1 new track in YTM History but found ${newPlays.length}. This may be OK if monitoring was stopped or tracks truly are short in length.`;
-                        }
+                        results.plays = [...diffResults[1]].reverse();
                     }
                 }
             } else {
-                warnMsg = 'YTM History returned temporally inconsistent order, resetting history to new list.';
+                results.consistent = false;
+                results.reason = 'YTM History returned temporally inconsistent order, resetting history to new list.';
             }
         }
+        results.diffResults = diffResults;
 
-        return {
-            plays: newPlays,
-            consistent: warnMsg === undefined,
-            reason: warnMsg,
-            diffResults,
-            diffType
-        }
+        return results;
     }
 
     parseRecentAgainstResponse = (responsePlays: PlayObject[]): HistoryIngressResult => {
@@ -514,10 +510,57 @@ Redirect URI  : ${this.redirectUri}`);
 
             results = cResults;
 
+            if(consistent && newPlays.length > 1) {
+                const interimPlays = newPlays.slice(0, newPlays.length - 1);
+                // check enough time has passed since last discovery
+                const discovered = this.getFlatRecentlyDiscoveredPlays();
+                if(discovered.length > 0) {
+                    const lastDiscovered = discovered[0].data.playDate;
+                    // the assumption in behavior is that user skips 1 or more tracks which then get recorded to YTM history
+                    // eventually, they land on a track they want to listen to which is the current (newest) track in history
+                    // -- so check duration from newest to oldest and subtract time since last discovered, *ignoring* the newest track since that is the one being played
+                    const reversed = [...interimPlays].reverse();
+                    let timeRemaining = dayjs().diff(lastDiscovered, 'second');
+                    const durationValidTracks: PlayObject[] = [];
+                    const durationLog: string[] = [];
+                    for(const play of reversed) {
+                        const shortIdentifier = buildTrackString(play, {include: ['track']});
+                        if(play.data.duration === undefined) {
+                            // allow any tracks without duration, i guess?
+                            durationValidTracks.push(play);
+                            durationLog.push(`${shortIdentifier} => no duration, will allow`)
+                            continue;
+                        }
+                        if(timeRemaining <= 0) {
+                            durationLog.push(`${shortIdentifier} => Not enough time remaining!`);
+                            continue;
+                        }
+                        const newRemaining = timeRemaining - (play.data.duration * 0.5);
+                        if(newRemaining > 0) {
+                            durationValidTracks.push(play);
+                            durationLog.push(`${shortIdentifier} (50% of ${play.data.duration}s) => OK! ${timeRemaining} - ${formatNumber(play.data.duration * 0.5, {toFixed: 0})} = ${newRemaining}s remaining since last discovery`)
+                        } else {
+                            durationLog.push(`${shortIdentifier} (50% of ${play.data.duration}s) => Not OK! ${timeRemaining} - ${formatNumber(play.data.duration * 0.5, {toFixed: 0})} = ${newRemaining}s remaining since last discovery`);
+                        }
+                        timeRemaining = newRemaining;
+                    }
+                    this.logger.verbose(`More than one track found, using time since last discovered track (${dayjs().diff(lastDiscovered, 'second')}s) as guidepost for if n+1 earlier tracks could have passed 50% duration listened. Results:
+${durationLog.join('\n')}`);
+                    if(durationValidTracks.length === 0) {
+                        results.plays = [results.plays[results.plays.length - 1]]
+                    } else {
+                        const correctOrder = [...durationValidTracks].reverse();
+                        results.plays = [...correctOrder, results.plays[results.plays.length - 1]];
+                    }
+                } else {
+                    this.logger.verbose('No existing tracks discovered, could not determine if enough time has passed to reasonably scrobble new tracks.');
+                }
+            }
+
             if(!consistent || (newPlays.length > 0 && this.config.options?.logDiff === true)) {
                 const playsDiff = getPlaysDiff(this.recentlyPlayed, plays)
                 const humanDiff = humanReadableDiff(this.recentlyPlayed, plays, playsDiff);
-                const diffMsg = `Changes from last seen list:
+                const diffMsg = `Changes from last seen list detected as ${diffType} type:
 ${humanDiff}`;
                 if(reason !== undefined) {
                     this.logger.warn(reason);

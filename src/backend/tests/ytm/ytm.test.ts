@@ -6,9 +6,10 @@ import clone from "clone";
 import YTMusicSource, { ytiHistoryResponseFromShelfToPlays, ytiHistoryResponseToListItems } from "../../sources/YTMusicSource.js";
 import ytHistoryRes from './ytres.json' assert {type: 'json'};
 import EventEmitter from "events";
-import { generatePlay, generatePlays } from '../utils/PlayTestUtils.js';
+import { generatePlay, generatePlays, normalizePlays } from '../utils/PlayTestUtils.js';
 import { YTMusicSourceConfig } from '../../common/infrastructure/config/source/ytmusic.js';
 import { sleep } from '../../utils.js';
+import dayjs from 'dayjs';
 
 chai.use(asPromised);
 
@@ -24,7 +25,9 @@ const createYtSource = (opts?: {
         },
         emitter = new EventEmitter
     } = opts || {};
-    return new YTMusicSource('test', config, { localUrl: new URL('https://example.com'), configDir: 'fake', logger: loggerTest, version: 'test' }, emitter);
+    const source = new YTMusicSource('test', config, { localUrl: new URL('https://example.com'), configDir: 'fake', logger: loggerTest, version: 'test' }, emitter);
+    source.buildTransformRules();
+    return source;
 }
 
 describe('Parses History', function () {
@@ -46,7 +49,7 @@ describe('Handles temporal inconsistency in history', function () {
 
         const source = createYtSource();
 
-        const plays = [...generatePlays(10, {}, { comment: 'Today' }), ...generatePlays(10, {}, { comment: 'Yesterday' })];
+        const plays = [...generatePlays(10, {playDate: dayjs().subtract(10, 'minutes')}, { comment: 'Today' }), ...generatePlays(10, {playDate: dayjs().subtract(10, 'minutes')}, { comment: 'Yesterday' })];
 
         // emulating init, get history to use as base truth without discovering tracks
         expect(source.parseRecentAgainstResponse(plays).plays).length(20);
@@ -70,7 +73,7 @@ describe('Handles temporal inconsistency in history', function () {
 
         const source = createYtSource();
 
-        const plays = [...generatePlays(10, {}, { comment: 'Today' }), ...generatePlays(10, {}, { comment: 'Yesterday' })];
+        const plays = [...generatePlays(10, {playDate: dayjs().subtract(10, 'minutes')}, { comment: 'Today' }), ...generatePlays(10, {playDate: dayjs().subtract(10, 'minutes')}, { comment: 'Yesterday' })];
 
         // emulating init, get history to use as base truth without discovering tracks
         expect(source.parseRecentAgainstResponse(plays).plays).length(20);
@@ -96,7 +99,7 @@ describe('Handles temporal inconsistency in history', function () {
 
         const source = createYtSource();
 
-        const plays = [...generatePlays(10, {}, { comment: 'Today' }), ...generatePlays(10, {}, { comment: 'Yesterday' })];
+        const plays = [...generatePlays(10, {playDate: dayjs().subtract(10, 'minutes')}, { comment: 'Today' }), ...generatePlays(10, {playDate: dayjs().subtract(10, 'minutes')}, { comment: 'Yesterday' })];
 
         // emulating init, get history to use as base truth without discovering tracks
         expect(source.parseRecentAgainstResponse(plays).plays).length(20);
@@ -120,7 +123,7 @@ describe('Handles temporal inconsistency in history', function () {
 
         const source = createYtSource();
 
-        const plays = [...generatePlays(10, {}, { comment: 'Today' }), ...generatePlays(10, {}, { comment: 'Yesterday' })];
+        const plays = [...generatePlays(10, {playDate: dayjs().subtract(10, 'minutes')}, { comment: 'Today' }), ...generatePlays(10, {playDate: dayjs().subtract(10, 'minutes')}, { comment: 'Yesterday' })];
 
         // emulating init, get history to use as base truth without discovering tracks
         expect(source.parseRecentAgainstResponse(plays).plays).length(20);
@@ -155,5 +158,35 @@ describe('Handles temporal inconsistency in history', function () {
         expect(recentHistoryResult).to.deep.include({consistent: false, plays: []});
         // should detect that we have seen this history before and not duplicate add already discovered tracks
         expect(recentHistoryResult.reason).includes('(Add Plays Detected) YTM History has exact order as another recent response *where history was changed*')
+    });
+});
+
+describe('Handles skipped tracks', function () {
+
+    it(`Does not add interim plays`, async function () {
+
+        const source = createYtSource();
+
+        const plays = [...generatePlays(10, {playDate: dayjs().subtract(20, 'seconds')}, { comment: 'Today' }), ...generatePlays(10, {playDate: dayjs().subtract(20, 'seconds')}, { comment: 'Yesterday' })];
+
+        // emulating init from 20 seconds, get history to use as base truth without discovering tracks
+        expect(source.parseRecentAgainstResponse(plays).plays).length(20);
+
+        source.polling = true;
+        source.discover(plays);
+
+        // first true poll emulating no new tracks played (should not add new tracks from base truth)
+        expect(source.parseRecentAgainstResponse(plays).plays).length(0);
+
+        // add new track played
+        const firstPlay = generatePlay({duration: 120}, { comment: 'Today' });
+        // add skipped tracks
+        // both should be ignored since last discovered track was 20 seconds and both of these tracks length is longer than 50% of discovered time
+        // but it should not ignore most recent track as that is the one that is playing
+        const interimPlays = [generatePlay({duration: 120}, { comment: 'Today' }), generatePlay({duration: 200}, { comment: 'Today' })]
+        const prependedPlays = [firstPlay, ...interimPlays, ...plays];
+        const prependResult = source.parseRecentAgainstResponse(prependedPlays);
+        expect(prependResult.plays).length(1);
+        expect(prependResult.plays[0].data.track).eq(firstPlay.data.track)
     });
 });
