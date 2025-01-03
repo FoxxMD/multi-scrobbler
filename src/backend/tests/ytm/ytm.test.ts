@@ -48,17 +48,22 @@ describe('Handles temporal inconsistency in history', function () {
 
         const plays = [...generatePlays(10, {}, { comment: 'Today' }), ...generatePlays(10, {}, { comment: 'Yesterday' })];
 
-        expect(source.parseRecentAgainstResponse(plays)).length(20);
+        // emulating init, get history to use as base truth without discovering tracks
+        expect(source.parseRecentAgainstResponse(plays).plays).length(20);
 
         source.polling = true;
 
-        expect(source.parseRecentAgainstResponse(plays)).length(0);
+        // first true poll emulating no new tracks played (should not add new tracks from base truth)
+        expect(source.parseRecentAgainstResponse(plays).plays).length(0);
 
+        // add new track played
         const prependedPlays = [generatePlay({}, { comment: 'Today' }), ...plays];
+        const prependResult = source.parseRecentAgainstResponse(prependedPlays);
+        expect(prependResult.plays).length(1);
+        expect(prependResult).to.deep.include({consistent: true, diffType: 'added'});
+        expect(prependResult.diffResults[2]).eq('prepend');
 
-        expect(source.parseRecentAgainstResponse(prependedPlays)).length(1);
-
-        expect(source.parseRecentAgainstResponse(prependedPlays)).length(0);
+        expect(source.parseRecentAgainstResponse(prependedPlays).plays).length(0);
     });
 
     it(`Adds bumped, prepended track`, async function () {
@@ -67,18 +72,24 @@ describe('Handles temporal inconsistency in history', function () {
 
         const plays = [...generatePlays(10, {}, { comment: 'Today' }), ...generatePlays(10, {}, { comment: 'Yesterday' })];
 
-        expect(source.parseRecentAgainstResponse(plays)).length(20);
+        // emulating init, get history to use as base truth without discovering tracks
+        expect(source.parseRecentAgainstResponse(plays).plays).length(20);
 
         source.polling = true;
 
-        expect(source.parseRecentAgainstResponse(plays)).length(0);
+        // first true poll emulating no new tracks played (should not add new tracks from base truth)
+        expect(source.parseRecentAgainstResponse(plays).plays).length(0);
 
+        // add new track played that was seen in base truth (YT *bumps* track from earlier position to top of list)
         const bumpedList = [...plays.map(x => clone(x))];
         const bumped = bumpedList[6];
         bumpedList.splice(6, 1);
         bumpedList.unshift(bumped);
 
-        expect(source.parseRecentAgainstResponse(bumpedList)).length(1);
+        const bumpedResults = source.parseRecentAgainstResponse(bumpedList);
+        expect(bumpedResults.plays).length(1);
+        expect(bumpedResults).to.deep.include({consistent: true, diffType: 'bump'});
+        expect(bumpedResults.diffResults[2]).eq('prepend');
     });
 
     it(`Does not add appended track`, async function () {
@@ -87,15 +98,20 @@ describe('Handles temporal inconsistency in history', function () {
 
         const plays = [...generatePlays(10, {}, { comment: 'Today' }), ...generatePlays(10, {}, { comment: 'Yesterday' })];
 
-        expect(source.parseRecentAgainstResponse(plays)).length(20);
+        // emulating init, get history to use as base truth without discovering tracks
+        expect(source.parseRecentAgainstResponse(plays).plays).length(20);
 
         source.polling = true;
 
-        expect(source.parseRecentAgainstResponse(plays)).length(0);
+        // first true poll emulating no new tracks played (should not add new tracks from base truth)
+        expect(source.parseRecentAgainstResponse(plays).plays).length(0);
 
+        // track is erroneously added to end of history ("new" track played in the past, not temporally consistent)
         const appendPlays = [...plays.slice(1), generatePlay({}, { comment: 'Yesterday' })];
-
-        expect(source.parseRecentAgainstResponse(appendPlays)).length(0);
+        const appenedResult =source.parseRecentAgainstResponse(appendPlays);
+        expect(appenedResult.plays).length(0);
+        expect(appenedResult).to.deep.include({consistent: false, diffType: 'added'});
+        expect(appenedResult.diffResults[2]).eq('append');
     });
 
     it(`Detects outdated recent history when order was previously seen`, async function () {
@@ -106,28 +122,38 @@ describe('Handles temporal inconsistency in history', function () {
 
         const plays = [...generatePlays(10, {}, { comment: 'Today' }), ...generatePlays(10, {}, { comment: 'Yesterday' })];
 
-        expect(source.parseRecentAgainstResponse(plays)).length(20);
+        // emulating init, get history to use as base truth without discovering tracks
+        expect(source.parseRecentAgainstResponse(plays).plays).length(20);
 
         source.polling = true;
 
-        expect(source.parseRecentAgainstResponse(plays)).length(0);
+        // first true poll emulating no new tracks played (should not add new tracks from base truth)
+        expect(source.parseRecentAgainstResponse(plays).plays).length(0);
 
+        // add new track played
         const newPlay = generatePlay({}, { comment: 'Today' });
-
         const prependedPlays = [newPlay, ...plays];
-
-        expect(source.parseRecentAgainstResponse(prependedPlays)).length(1);
+        expect(source.parseRecentAgainstResponse(prependedPlays).plays).length(1);
 
         await sleep(1000);
 
-        expect(source.parseRecentAgainstResponse(plays)).length(0);
+        // YT returns outdated history
+        // should be detected as append since "removed" track in last position from previous history is seen again
+        const badAppend = source.parseRecentAgainstResponse(plays);
+        expect(badAppend).to.deep.include({consistent: false, diffType: 'added', plays: []});
+        expect(badAppend.diffResults[2]).eq('append');
 
         await sleep(500);
 
-        expect(source.parseRecentAgainstResponse(plays)).length(0);
+        // contiuned outdated history
+        expect(source.parseRecentAgainstResponse(plays)).to.deep.include({consistent: true, plays: []});
 
         await sleep(500);
 
-        expect(source.parseRecentAgainstResponse(prependedPlays)).length(0);
+        // correct, current history is finally returned correctly
+        const recentHistoryResult = source.parseRecentAgainstResponse(prependedPlays);
+        expect(recentHistoryResult).to.deep.include({consistent: false, plays: []});
+        // should detect that we have seen this history before and not duplicate add already discovered tracks
+        expect(recentHistoryResult.reason).includes('(Add Plays Detected) YTM History has exact order as another recent response *where history was changed*')
     });
 });

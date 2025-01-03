@@ -10,6 +10,8 @@ import { parseBool, sleep } from "../utils.js";
 import {
     getPlaysDiff,
     humanReadableDiff,
+    PlayOrderChangeType,
+    PlayOrderConsistencyResults,
     playsAreAddedOnly,
     playsAreBumpedOnly,
     playsAreSortConsistent
@@ -19,6 +21,14 @@ import { truncateStringToLength } from "../../core/StringUtils.js";
 import { joinedUrl } from "../utils/NetworkUtils.js";
 import { FixedSizeList } from "fixed-size-list";
 import { todayAwareFormat } from "../utils/TimeUtils.js";
+
+export interface HistoryIngressResult {
+    plays: PlayObject[], 
+    consistent: boolean, 
+    diffResults?: PlayOrderConsistencyResults<PlayOrderChangeType>, 
+    diffType?: 'bump' | 'added', 
+    reason?: string
+}
 
 export const ytiHistoryResponseToListItems = (res: ApiResponse): YTNodes.MusicResponsiveListItem[] => {
     const page = Parser.parseResponse<IBrowseResponse>(res.data);
@@ -423,86 +433,119 @@ Redirect URI  : ${this.redirectUri}`);
 
         const listPlays = ytiHistoryResponseFromShelfToPlays(playlistDetail);
         
-        return this.parseRecentAgainstResponse(listPlays);
+        return this.parseRecentAgainstResponse(listPlays).plays;
         
     }
 
-    parseRecentAgainstResponse = (responsePlays: PlayObject[]): PlayObject[] => {
-
+    getIncomingHistoryConsistencyResult = (plays: PlayObject[]): HistoryIngressResult => {
         let newPlays: PlayObject[] = [];
+        
+        if(playsAreSortConsistent(this.recentlyPlayed, plays)) {
+            return {plays: newPlays, consistent: true};
+        }
 
-        const plays = responsePlays.slice(0, 20);
-        if(this.polling === false) {
-            this.recentlyPlayed = plays;
-            newPlays = plays;
-        } else {
-            if(playsAreSortConsistent(this.recentlyPlayed, plays)) {
-                return newPlays;
+        let warnMsg: string;
+        let diffResults: PlayOrderConsistencyResults<PlayOrderChangeType>;
+        let diffType: 'bump' | 'added';
+        diffResults = playsAreBumpedOnly(this.recentlyPlayed, plays);
+        if(diffResults[0] === true) {
+            diffType = 'bump';
+            if(diffResults[2] !== 'prepend') {
+                warnMsg = `(Bump Plays Detected) Previously seen YTM history was bumped in an unexpected way (${diffResults[2]}), resetting history to new list`;
+            } else {
+                newPlays = [...diffResults[1]].reverse();
+                if(newPlays.length > 1) {
+                    warnMsg = `(Bump Plays Detected) Expected to see only 1 new track in YTM History but found ${newPlays.length}. This may be OK if monitoring was stopped or tracks truly are short in length.`;
+                }
             }
-
-            let warnMsg: string;
-            const [bumpOk, bumpDiff, bumpType] = playsAreBumpedOnly(this.recentlyPlayed, plays);
-            if(bumpOk === true) {
-                if(bumpType !== 'prepend') {
-                    warnMsg = `(Bump Plays Detected) Previously seen YTM history was bumped in an unexpected way (${bumpType}), resetting history to new list`;
+        } else {
+            diffResults = playsAreAddedOnly(this.recentlyPlayed, plays);
+            if(diffResults[0] === true) {
+                diffType = 'added';
+                if(diffResults[2] !== 'prepend') {
+                    warnMsg = `(Add Plays Detected) New tracks were added to YTM history in an unexpected way (${diffResults[2]}), resetting watched history to new list`;
                 } else {
-                    newPlays = [...bumpDiff].reverse();
-                    if(newPlays.length > 1) {
-                        warnMsg = `(Bump Plays Detected) Expected to see only 1 new track in YTM History but found ${newPlays.length}. This may be OK if monitoring was stopped or tracks truly are short in length.`;
+                    const revertedToRecent = this.recentChangedHistoryResponses.findIndex(x => playsAreSortConsistent(x.plays, plays));
+                    if(revertedToRecent !== -1) {
+                        warnMsg = `(Add Plays Detected) YTM History has exact order as another recent response *where history was changed* (${revertedToRecent + 1} ago @ ${todayAwareFormat(this.recentChangedHistoryResponses[revertedToRecent].ts)}) which means last history (n - 1) was probably out of date. Resetting history to current list and NOT ADDING new tracks since we probably already discovered them earlier.`
+                    } else {
+                        newPlays = [...diffResults[1]].reverse();
+                        if(newPlays.length > 1) {
+                            warnMsg = `(Add Plays Detected) Expected to see only 1 new track in YTM History but found ${newPlays.length}. This may be OK if monitoring was stopped or tracks truly are short in length.`;
+                        }
                     }
                 }
             } else {
-                const [addOk, addDiff, addType] = playsAreAddedOnly(this.recentlyPlayed, plays);
-                if(addOk === true) {
-                    if(addType !== 'prepend') {
-                        warnMsg = `(Add Plays Detected) New tracks were added to YTM history in an unexpected way (${addType}), resetting watched history to new list`;
-                    } else {
-                        const revertedToRecent = this.recentChangedHistoryResponses.findIndex(x => playsAreSortConsistent(x.plays, plays));
-                        if(revertedToRecent !== -1) {
-                            warnMsg = `(Add Plays Detected) YTM History has exact order as another recent response *where history was changed* (${revertedToRecent + 1} ago @ ${todayAwareFormat(this.recentChangedHistoryResponses[revertedToRecent].ts)}) which means last history (n - 1) was probably out of date. Resetting history to current list and NOT ADDING new tracks since we probably already discovered them earlier.`
-                        } else {
-                            newPlays = [...addDiff].reverse();
-                            if(newPlays.length > 1) {
-                                warnMsg = `(Add Plays Detected) Expected to see only 1 new track in YTM History but found ${newPlays.length}. This may be OK if monitoring was stopped or tracks truly are short in length.`;
-                            }
-                        }
-                    }
-                } else {
-                    warnMsg = 'YTM History returned temporally inconsistent order, resetting history to new list.';
-                }
+                warnMsg = 'YTM History returned temporally inconsistent order, resetting history to new list.';
             }
+        }
 
-            if(warnMsg !== undefined || (newPlays.length > 0 && this.config.options?.logDiff === true)) {
+        return {
+            plays: newPlays,
+            consistent: warnMsg === undefined,
+            reason: warnMsg,
+            diffResults,
+            diffType
+        }
+    }
+
+    parseRecentAgainstResponse = (responsePlays: PlayObject[]): HistoryIngressResult => {
+
+        //let newPlays: PlayObject[] = [];
+        let results: HistoryIngressResult = {
+            plays: [],
+            consistent: true
+        }
+
+        const plays = responsePlays.slice(0, 20);
+        if(this.polling === false) {
+            results.plays = plays;
+        } else {
+
+            const cResults = this.getIncomingHistoryConsistencyResult(plays);
+
+            const {
+                reason,
+                plays: newPlays,
+                consistent,
+                diffResults,
+                diffType
+            } = cResults;
+
+            results = cResults;
+
+            if(!consistent || (newPlays.length > 0 && this.config.options?.logDiff === true)) {
                 const playsDiff = getPlaysDiff(this.recentlyPlayed, plays)
                 const humanDiff = humanReadableDiff(this.recentlyPlayed, plays, playsDiff);
                 const diffMsg = `Changes from last seen list:
 ${humanDiff}`;
-                if(warnMsg !== undefined) {
-                    this.logger.warn(warnMsg);
+                if(reason !== undefined) {
+                    this.logger.warn(reason);
                     this.logger.warn(diffMsg);
                 } else {
                     this.logger.verbose(diffMsg);
                 }
             }
-
-            this.recentlyPlayed = plays;
-            if(newPlays.length > 0) {
-                this.recentChangedHistoryResponses = [{plays, ts: dayjs()}, ...this.recentChangedHistoryResponses.slice(0, 3)]
-            }
-
-                newPlays = newPlays.map((x, index) => ({
-                    data: {
-                        ...x.data,
-                        playDate: dayjs().startOf('minute').add(index + 1, 's')
-                    },
-                    meta: {
-                        ...x.meta,
-                        newFromSource: true
-                    }
-                }));
         }
 
-        return newPlays;
+        this.recentlyPlayed = plays;
+
+        if(results.plays.length > 0) {
+            this.recentChangedHistoryResponses = [{plays, ts: dayjs()}, ...this.recentChangedHistoryResponses.slice(0, 3)]
+        }
+
+        results.plays = results.plays.map((x, index) => ({
+            data: {
+                ...x.data,
+                playDate: dayjs().startOf('minute').add(index + 1, 's')
+            },
+            meta: {
+                ...x.meta,
+                newFromSource: true
+            }
+        }));
+
+        return results;
     }
 
     onPollPostAuthCheck = async () => {
