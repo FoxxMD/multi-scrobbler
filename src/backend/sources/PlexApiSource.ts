@@ -408,6 +408,10 @@ export default class PlexApiSource extends MemoryPositionalSource {
     sessionToPlayerState = (obj: GetSessionsMetadata): PlayerStateDataMaybePlay => {
 
         const {
+            // represents milliseconds position of player
+            // * only available when player is PLAYING (not paused)
+            // * when user seeks or pauses/stops -> plays the initial position is accurate
+            //   * when playing, is only updated every 15 seconds from the position of play
             viewOffset,
             player: {
                 machineIdentifier,

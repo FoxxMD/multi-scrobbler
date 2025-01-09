@@ -12,6 +12,7 @@ export class PositionalPlayerState extends AbstractPlayerState {
 
     protected allowedDrift: number;
     protected rtTruth: boolean;
+    protected gracefulEndBuffer: number = 3;
 
     declare currentListenRange?: ListenRangePositional;
     declare listenRanges: ListenRangePositional[];
@@ -83,13 +84,13 @@ export class PositionalPlayerState extends AbstractPlayerState {
         if (this.currentListenRange !== undefined && this.currentListenRange.getDuration() !== 0) {
             this.logger.debug('Ended current Player listen range.')
             let finalPosition: number;
-            if(this.calculatedStatus === CALCULATED_PLAYER_STATUSES.playing && !this.currentListenRange.isInitial()) {
+            if([CALCULATED_PLAYER_STATUSES.playing, CALCULATED_PLAYER_STATUSES.stale].includes(this.calculatedStatus) && !this.currentListenRange.isInitial()) {
                 const {
                     data: {
                         duration,
                     } = {}
                 } = this.currentPlay;
-                if(duration !== undefined && (duration - this.currentListenRange.end.position) < 3) {
+                if(duration !== undefined && (duration - this.currentListenRange.end.position) < this.gracefulEndBuffer) {
                     // likely the track was listened to until it ended
                     // but polling interval or network delays caused MS to not get data on the very end
                     // also...within 3 seconds of ending is close enough to call this complete IMO
