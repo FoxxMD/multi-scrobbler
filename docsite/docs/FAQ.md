@@ -206,15 +206,21 @@ Before reporting an issue turn on metadata logging in the MS VLC configuration, 
 
 ### Youtube Music misses or duplicates scrobbles
 
-In order for multi-scrobbler to accurately determine if a song has been scrobbled it needs **a source of truth.** For YTM this is a "history" list scraped from the YTM website. Unfortunately, the data in this list can be (often) inconsistent which makes it hard for multi-scrobbler to "trust" that it is correct and determine when/if new scrobbles occur. This inconsistency is not something multi-scrobbler can control -- it is a side-effect of having to use an unofficial method to access YTM (scraping).
+<details>
 
-To compensate for this multi-scrobbler resets when it considers this list the "source of truth" based on if the list changes in an inconsistent way between consecutive checks. New scrobbles can only be detected when this list is "OK" as a source of truth for N+1 checks. Therefore, any new tracks that appear when the list is inconsistent will be ignored.
+  <summary>How MS detects YTM history</summary>
 
-Duplicate scrobbles can also occur if the change between two checks is technically consistent. For instance, if you listen to a track twice in some period, separated by other music, YTM will sometimes "remove" the track from the earlier time (further down in your history) and "re-add" it at the top of the history.
+  In order for multi-scrobbler to accurately determine if a song has been scrobbled it needs **a source of truth.** For YTM this is a "history" list scraped from the YTM website. Unfortunately, the data in this list can be (often) inconsistent which makes it hard for multi-scrobbler to "trust" that it is correct and determine when/if new scrobbles occur. This inconsistency is not something multi-scrobbler can control -- it is a side-effect of having to use an unofficial method to access YTM (scraping).
+
+  To compensate for this multi-scrobbler resets when it considers this list the "source of truth" based on if the list changes in an inconsistent way between consecutive checks. New scrobbles can only be detected when this list is "OK" as a source of truth for N+1 checks. Therefore, any new tracks that appear when the list is inconsistent will be ignored.
+
+  Duplicate scrobbles can also occur if the change between two checks is technically consistent. For instance, if you listen to a track twice in some period, separated by other music, YTM will sometimes "remove" the track from the earlier time (further down in your history) and "re-add" it at the top of the history.
+
+</details>
 
 #### Reporting YTM scrobble issues
 
-If you experience these behaviors you can help improve MS's YTM heureistic by providing thorough feedback as [an issue.](https://github.com/FoxxMD/multi-scrobbler/issues/new?assignees=&labels=bug&projects=&template=01-bug-report.yml&title=bug%3A+) **Please do the following to provide the most useful report:**
+If you experience scrobble detection issues you can help improve MS's YTM heureistic by providing thorough feedback as [an issue.](https://github.com/FoxxMD/multi-scrobbler/issues/new?assignees=&labels=bug&projects=&template=01-bug-report.yml&title=bug%3A+) **Please do the following to provide the most useful report:**
 
 ##### Turn on Change Detection
 
@@ -231,6 +237,11 @@ In your YTM configuration (`ytmusic.json`) add `logDiff` under `options` like th
     }
 }
 ```
+
+or set either ENVs:
+
+* `YTM_LOG_DIFF=true`
+* `DEBUG_MODE=true`
 
 This will cause MS to log YTM history changes similar to this:
 

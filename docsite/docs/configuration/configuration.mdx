@@ -729,7 +729,9 @@ Communication with YT Music is **unofficial** and not supported or endorsed by G
 
 :::tip[Scrobble Troubleshooting]
 
-Due to monitoring being unofficial, listening history from YTM can be inconsistent and can cause missed scrobbles. [See the FAQ](../FAQ.md#youtube-music-misses-or-duplicates-scrobbles) for a detailed explanation of this and how to properly report an issue.
+Due to monitoring being unofficial, listening history from YTM can be inconsistent and can cause missed scrobbles. 
+
+[**See the FAQ**](../FAQ.md#youtube-music-misses-or-duplicates-scrobbles) for a detailed explanation, how to see more details about MS's detection of tracks, and how to properly report an issue.
 
 :::
 
@@ -754,7 +756,7 @@ Only one of these methods needs to be used. **Cookies** are easier but **OAuth C
 
         It is highly recommended to [get the cookie from an Incognito/Private Session](https://github.com/LuanRT/YouTube.js/issues/803#issuecomment-2504032666) to limit the chance the session is invalidated from normal browsing.
 
-        Add the cookie to your `ytmusic.json` config in `data`: 
+        Add the cookie to your `ytmusic.json` config in `data` or as an ENV: 
 
         ```json
             {
@@ -797,7 +799,7 @@ Only one of these methods needs to be used. **Cookies** are easier but **OAuth C
                     * Authorized redirect URIs
                         * This must be **exactly** the same as what is displayed in MS! For now leave it blank so we can generate it from MS first
                 * Create
-                    * In the newly created client popup save the **Client ID** and **Client Secret**, then copy them into `ytmusic.json`
+                    * In the newly created client popup save the **Client ID** and **Client Secret**, then copy them into `ytmusic.json` or appropriate ENVs:
 
         ```json
         {
@@ -818,15 +820,15 @@ Only one of these methods needs to be used. **Cookies** are easier but **OAuth C
         Now, start MS and during the YTMusic startup it will log something like this:
 
         ```
-        Using Custom OAuth Client:
+        Will use custom OAuth Client:
         Client ID: ...
         Client Secret: ...
         Redirect URI: http://localhost:9078/api/ytmusic/callback?name=MyYTM
         ```
 
-        If the beginning of the URL (before `api`) is EXACTLY how you would reach the MS dashboard from your browser (EX `http://localhost:9078`) then edit your google oauth client section for `Authorized redirect URIs` and add the URL MS has displayed.
+        If the beginning of the Redirect URI (before `api`) is EXACTLY how you would reach the MS dashboard from your browser (EX `http://localhost:9078`) then edit your google oauth client section for `Authorized redirect URIs` and add the URL MS has displayed.
 
-        If it is NOT EXACTLY the same you either need to set MS's [base url](https://foxxmd.github.io/multi-scrobbler/docs/configuration/#base-url) or you can provide your own (Custom) Redirect URI for MS to use by setting it in `ytmusic.json`.
+        If it is NOT EXACTLY the same you either need to set MS's [base url](https://foxxmd.github.io/multi-scrobbler/docs/configuration/#base-url) or you can provide your own (Custom) Redirect URI for MS to use by setting it in `ytmusic.json` or ENV.
 
         <details>
 
