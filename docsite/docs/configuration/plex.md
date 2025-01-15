@@ -1,7 +1,15 @@
 ---
 sidebar_position: 2
-title: Plex/Tautulli
+title: Plex/Tautulli (Deprecated)
 ---
+
+:::warning[Deprecated]
+
+Multi-scrobbler >= 0.8.8 supports a Plex Source that [directly uses the API](configuration/configuration.mdx?plexType=api#plex) which removes the need to use Tautulli since it does not require Plex Pass.
+
+The Tautulli source **and** Plex Webhook source are deprecated and will be removed in an upcoming release. Existing users should migrate to the API source as soon as possible.
+
+:::
 
 Tracks played on [Plex](https://plex.tv/) can be scrobbled either by:
  * A [Tautulli](https://tautulli.com/) notification agent with a webhook.

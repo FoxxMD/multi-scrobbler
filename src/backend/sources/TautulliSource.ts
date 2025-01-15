@@ -14,6 +14,7 @@ export default class TautulliSource extends PlexSource {
     declare config: TautulliSourceConfig;
     constructor(name: any, config: TautulliSourceConfig, internal: InternalConfig, emitter: EventEmitter) {
         super(name, config, internal, 'tautulli', emitter);
+        this.logger.warn('Tatutulli source is DEPRECATED and will be removed in an upcoming release! Please switch to Plex API Source as soon as possible.');
     }
     static formatPlayObj(obj: Request, options: FormatPlayObjectOptions = {}): PlayObject {
         const {newFromSource = false} = options;

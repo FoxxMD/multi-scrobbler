@@ -70,7 +70,7 @@ export default class PlexSource extends AbstractSource {
             this.logger.info(`Initializing with the following filters => Users: ${this.users.length === 0 ? 'N/A' : this.users.join(', ')} | Libraries: ${this.libraries.length === 0 ? 'N/A' : this.libraries.join(', ')} | Servers: ${this.servers.length === 0 ? 'N/A' : this.servers.join(', ')}`);
         }
 
-        this.logger.warn('Plex WEBHOOK source is DEPRECATED! Please switch to Plex API Source as soon as possible.');
+        this.logger.warn('Plex WEBHOOK source is DEPRECATED and will be removed in an upcoming release! Please switch to Plex API Source as soon as possible.');
     }
 
     static formatPlayObj(obj: any, options: FormatPlayObjectOptions = {}): PlayObject {

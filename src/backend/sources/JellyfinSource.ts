@@ -95,7 +95,7 @@ export default class JellyfinSource extends MemorySource {
             this.logger.info(`Initializing with the following filters => Users: ${this.users === undefined ? 'N/A' : this.users.join(', ')} | Servers: ${this.servers === undefined ? 'N/A' : this.servers.join(', ')}`);
         }
 
-        this.logger.warn('Jellyfin source using Webhook plugin is DEPRECATED! Please switch to Jellyfin source using API integration as soon as possible.')
+        this.logger.warn('Jellyfin source using Webhook plugin is DEPRECATED and will be removed in an upcoming release! Please switch to Jellyfin source using API integration as soon as possible.')
     }
 
     static formatPlayObj(obj: any, options: FormatPlayObjectOptions = {}): PlayObject {

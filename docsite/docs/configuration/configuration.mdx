@@ -365,6 +365,8 @@ By default multi-scrobbler will only scrobble media found in Plex libraries that
 
 Multi-scrobbler < 0.8.7 used [webhooks](https://support.plex.tv/articles/115002267687-webhooks) to support Plex scrobbling. This approach has been deprecated in favor of using Plex's API directly which has many benefits including **not requiring Plex Pass.**
 
+The Plex Webhook Source will be removed in an upcoming release. You should migrate to the API source as soon as possible.
+
 :::
 
 <details>
@@ -423,11 +425,11 @@ Multi-scrobbler < 0.8.7 used [webhooks](https://support.plex.tv/articles/1150022
 
 ### [Tautulli](https://tautulli.com)
 
-:::warning[Potentially Deprecated]
+:::warning[Deprecated]
 
-Multi-scrobbler >= 0.8.8 supports a Plex Source that [directly uses the API](#plex) and removes the need to use Tautulli since it does not require Plex Pass.
+Multi-scrobbler >= 0.8.8 supports a Plex Source that [directly uses the API](./?plexType=api#plex) and removes the need to use Tautulli since it does not require Plex Pass.
 
-Please see [this issue](https://github.com/FoxxMD/multi-scrobbler/issues/217) for discussion on deprecating Tautulli and provide your input.
+The Tautuilli Source will be removed in an upcoming release. You should migrate to the Plex API source as soon as possible.
 
 :::
 
@@ -513,16 +515,19 @@ Can use this source for any application that implements the [Subsonic API](http:
 
 ### [Jellyfin](https://jellyfin.org/)
 
+:::warning[Webhook Method Deprecated]
+
+In multi-scrobbler **below v0.8.4** communication with Jellyfin was done using Jellyfin's **Webhook** plugin. This has been deprecated in favor of directly using Jeyllfin's API for a better experience in multi-scrobbler.
+
+Webhook functionality will be removed in an upcoming release of MS. If you are still using the Webhook method you should migrate to the API method as soon as possible.
+
+:::
+
 <details>
 
     <summary>Migrating from Webhook (multi-scrobbler below `v0.8.4`) to API</summary>
 
-    In multi-scrobbler **below v0.9.0** communication with Jellyfin was done using Jellyfin's **Webhook** plugin.
-    This has been deprecated in favor of directly using Jeyllfin's API for a better experience in multi-scrobbler.
-
-    ### To Migrate:
-
-    * Remove the **Webhook** plugin (if not using it for anything else)
+    * Remove the Jellyfin **Webhook** plugin (if not using it for anything else)
     * Follow the new instructions below (outside this section) to setup API usage
     * The `servers` (`JELLYFIN_SERVERS`) setting is no longer available as MS only scrobbles from the server using the API anyways.
       * If you need to scrobble for multiple servers set up each server as a separate Jellyfin source
@@ -545,12 +550,12 @@ It is **recommended** to use API Key + username but if you are not an admin for 
 
 By default...
 
-* multi-scrobbler will **only** scrobbling for the user authenticated with the API. 
+* multi-scrobbler will **only** scrobble for the user authenticated with the API. 
   * Allowed Users (`usersAllow` or `JELLYFIN_USERS_ALLOW`) are only necessary if you want to scrobble for additional users.
-* multi-scrobbler will only scrobble media found in Jellyfin libraries that were labelled as **Music.**
+* multi-scrobbler will **only** scrobble media found in Jellyfin libraries that were labelled as **Music.**
   * `librariesAllow` or `JELLYFIN_LIBRARIES_ALLOW` will override this
   * OR use `additionalAllowedLibraryTypes` to allow more types (like `mixed` or `book` for audiobooks)
-* multi-scrobbler will only scrobble media Jellyfin detects as **Audio.**
+* multi-scrobbler will **only** scrobble media Jellyfin detects as **Audio.**
   * To force multi-scrobbler to scrobble when media is detected as **Unknown** use `"allowUnknown": true` in file/aio configuration.
 
 :::
