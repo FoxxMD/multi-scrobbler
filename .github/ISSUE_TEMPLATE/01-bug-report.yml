@@ -51,7 +51,7 @@ body:
       label: Logs
       description: |
         Please copy and paste any relevant log output. This will be automatically formatted into code, so no need for backticks.
-        If possible reproduce the issue with [debug logging ON](https://foxxmd.github.io/multi-scrobbler/docs/FAQ/#turn-on-debug-logging)
+        If possible reproduce the issue with [**Debug Mode** enabled](https://foxxmd.github.io/multi-scrobbler/docs/configuration#debug-mode)
       render: shell
   - type: textarea
     attributes:
