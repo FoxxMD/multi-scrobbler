@@ -120,10 +120,8 @@ export default class YTMusicSource extends AbstractSource {
             const diffEnv = process.env.YTM_LOG_DIFF;
             if(diffEnv !== undefined) {
                 diffVal = parseBool(diffEnv);
-            } else if(isDebugMode()) {
-                diffVal = true;
+                this.config.options = {...rest, logDiff: diffVal};
             }
-            this.config.options = {...rest, logDiff: diffVal};
         }
     }
 
@@ -575,7 +573,7 @@ ${durationLog.join('\n')}`);
                 }
             }
 
-            if(!consistent || (newPlays.length > 0 && this.config.options?.logDiff === true)) {
+            if(!consistent || (newPlays.length > 0 && (this.config.options?.logDiff === true || isDebugMode()))) {
                 const playsDiff = getPlaysDiff(this.recentlyPlayed, plays)
                 const humanDiff = humanReadableDiff(this.recentlyPlayed, plays, playsDiff);
                 const diffMsg = `Changes from last seen list detected as ${diffType} type:

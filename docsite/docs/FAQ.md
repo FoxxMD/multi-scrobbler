@@ -5,7 +5,7 @@ toc_max_heading_level: 5
 
 ## Connection Issues
 
-### Plex/Tautulli/Jellyfin/Webscrobbler don't connect
+### Plex (Webhook)/Tautulli/Jellyfin(Webhook)/Webscrobbler don't connect
 
 These sources are **ingress-based** which means that multi-scrobbler waits for the Plex/Tautulli/Jellyfin server (or Webscrobbler extension) to contact multi-scrobbler, as opposed to multi-scrobbler contacting them.
 
@@ -30,12 +30,7 @@ Check or try all these steps before submitting an issue:
 
 ##### Turn on Debug Logging
 
-First, turn on **debug** logging for multi-scrobbler by setting the environmental variable `LOG_LEVEL=debug`:
-
-* using node `LOG_LEVEL=debug ... node src/index.js`
-* using docker `docker run -e LOG_LEVEL=debug ... foxxmd/multi-scrobbler`
-
-Check the output for any additional information.
+First, turn on **debug** logging for multi-scrobbler by setting the environmental variable `DEBUG_MODE=true`. Then, check the output for any additional information.
 
 ##### Check Host name and URL
 
@@ -67,7 +62,7 @@ Administration -> Dashboard -> Advanced -> Logs
 
 See [Debugging the extension](https://github.com/web-scrobbler/web-scrobbler/wiki/Debug-the-extension) to get logs which should have information about failed requests.
 
-### Jellyfin has warnings about undefined or missing data
+### Jellyfin (Webhook) has warnings about undefined or missing data
 
 Make sure you have 
 * [Configured the webhook plugin correctly](configuration/configuration.mdx#jellyfin)
@@ -75,26 +70,11 @@ Make sure you have
 
 multi-scrobbler is known to work on Jellyfin `10.8.9` with Webhook version `11.0.0.0`.
 
-You can verify the payload sent from the webhook by modifying your jellyfin configuration to include `logPayload: true` which will output the raw payload to DEBUG level logging:
-
-```json
-[
-  {
-    "name": "MyJellyfin",
-    "clients": [],
-    "data": {
-      "users": ["FoxxMD"]
-    },
-    "options": {
-      "logPayload": true
-    }
-  }
-]
-```
+You can verify the payload sent from the webhook by enabling Debug Mode with the env `DEBUG_MODE=true` which will output the raw payload to DEBUG level logging.
 
 If your issue persists and you open an Issue for it please include the raw payload logs in your report.
 
-### Jellyfin has warnings about missing headers
+### Jellyfin (Webhook) has warnings about missing headers
 
 If you experience issues trying to scrobble with Jellyfin and find this in your MS logs
 
@@ -172,9 +152,11 @@ This is a limitation of the [Last.fm API](https://www.last.fm/api/show/track.scr
 
 Multi-scrobbler works the same was the official Spotify-Last.fm integration works -- it only scrobbles the **first** artist on a multi-artist track.
 
-### Jellyfin does not scrobble tracks with multiple artists correctly
+### Jellyfin (Webhook) does not scrobble tracks with multiple artists correctly
 
 This is a limitation caused by the [Jellyfin webhook plugin](https://github.com/FoxxMD/multi-scrobbler/issues/70#issuecomment-1443804712) only sending the first artist to multi-scrobbler. This issues needs to be [fixed upstream on the Jellyfin webhook repository.](https://github.com/jellyfin/jellyfin-plugin-webhook/issues/166)
+
+You can avoid this entirely by using the newer [Jellyfin API Source](configuration/configuration.mdx#jellyfin) which correctly handles multiple artists.
 
 ### Google Cast track information is missing/incorrect or MS player has weird times
 
@@ -241,7 +223,7 @@ In your YTM configuration (`ytmusic.json`) add `logDiff` under `options` like th
 or set either ENVs:
 
 * `YTM_LOG_DIFF=true`
-* `DEBUG_MODE=true`
+* [`DEBUG_MODE=true`](configuration/configuration.mdx?#debug-mode)
 
 This will cause MS to log YTM history changes similar to this:
 

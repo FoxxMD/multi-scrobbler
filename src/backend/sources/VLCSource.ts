@@ -16,6 +16,7 @@ import { isPortReachable } from "../utils/NetworkUtils.js";
 import { firstNonEmptyStr } from "../utils/StringUtils.js";
 import { RecentlyPlayedOptions } from "./AbstractSource.js";
 import { MemoryPositionalSource } from "./MemoryPositionalSource.js";
+import { isDebugMode } from "../utils.js";
 
 const CLIENT_PLAYER_STATE: Record<PlayerState, ReportedPlayerStatus> = {
     'playing': REPORTED_PLAYER_STATUSES.playing,
@@ -241,7 +242,7 @@ export class VLCSource extends MemoryPositionalSource {
         let play: PlayObject | undefined;
         if(meta !== undefined) {
             play = this.formatPlayObj(meta, {vlcStatus: state});
-            if(this.config?.options?.dumpVlcMetadata) {
+            if(this.config?.options?.dumpVlcMetadata || isDebugMode()) {
                 this.logger.debug(meta, 'VLC Metadata');
             }
         }

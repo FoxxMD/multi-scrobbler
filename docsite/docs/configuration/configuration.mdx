@@ -178,13 +178,34 @@ Useful when running with [docker](../installation/installation.mdx#docker) so th
 
 </details>
 
+#### Debug Mode
+
+Turning on Debug Mode will
+
+* override and enable all optional "debugging" options found in configuration
+* set log output to DEBUG
+
+Use this as a shortcut for enabling output that can be used for troubleshooting and issue reporting. Be aware that logs will likely be VERY noisy while Debug Mode is on. You should only have this mode on while gathering logs for troubleshooting and then turn it off afterwards.
+
+To set debug mode either add it to [AIO `config.json`](./?configType=aio#configuration-types)
+
+```json5 title="config.json"
+{
+    "debugMode": true,
+    "sources": [...],
+    // ...
+}
+```
+
+or set the ENV `DEBUG_MODE=true`
+
 #### Disable Web
 
 If you do not need the dashboard and/or ingress sources, or have security concerns about ingress and cannot control your hosting environment, the web server and API can be disabled.
 
 :::warning
 
-Any **ingress-based sources will be unusable** (Plex, Tautulli, etc...) if this is disabled.
+Any **ingress-based sources will be unusable** (Tautulli, Webscrobbler, etc...) if this is disabled.
 
 :::
 
@@ -1512,7 +1533,7 @@ MS can be forced to track media from an application regardless of media type. Th
 
 Please include any/all logs with raw output if there are any errors encountered as this is critical to diagnosing issues.
 
-To diagnose bad/incomplete track information or strange MS player behavior please turn on **payload logging** and include log output of the source running to help diagnose this issue.
+To diagnose bad/incomplete track information or strange MS player behavior please turn on **payload logging** and include log output of the source running to help diagnose this issue. Either enable in config using the below example OR enable [Debug Mode.](#debug-mode)
 
 <details>
 
