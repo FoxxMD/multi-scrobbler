@@ -6,7 +6,7 @@ import { YTMusicSourceConfig } from "../common/infrastructure/config/source/ytmu
 import { Innertube, UniversalCache, Parser, YTNodes, ApiResponse, IBrowseResponse, Log, SessionOptions } from 'youtubei.js';
 import { GenerateAuthUrlOpts, OAuth2Client } from 'google-auth-library';
 import {resolve} from 'path';
-import { formatNumber, parseBool, sleep } from "../utils.js";
+import { formatNumber, isDebugMode, parseBool, sleep } from "../utils.js";
 import {
     getPlaysDiff,
     humanReadableDiff,
@@ -21,6 +21,7 @@ import { buildTrackString, truncateStringToLength } from "../../core/StringUtils
 import { joinedUrl } from "../utils/NetworkUtils.js";
 import { FixedSizeList } from "fixed-size-list";
 import { todayAwareFormat } from "../utils/TimeUtils.js";
+import { RestType } from "ts-json-schema-generator";
 
 export interface HistoryIngressResult {
     plays: PlayObject[], 
@@ -108,14 +109,21 @@ export default class YTMusicSource extends AbstractSource {
         this.supportsUpstreamRecentlyPlayed = true;
         this.workingCredsPath = resolve(this.configDir, `yti-${this.name}`);
 
-        const diffEnv = process.env.YTM_LOG_DIFF;
-        if(diffEnv !== undefined && this.config.options?.logDiff === undefined) {
-            const logDiff = parseBool(diffEnv);
-            const opts = this.config.options ?? {};
-            this.config.options = {
-                ...opts,
-                logDiff
+        const {
+            logDiff,
+            ...rest
+        } = this.config.options || {};
+
+        let diffVal = logDiff;
+
+        if(diffVal === undefined) {
+            const diffEnv = process.env.YTM_LOG_DIFF;
+            if(diffEnv !== undefined) {
+                diffVal = parseBool(diffEnv);
+            } else if(isDebugMode()) {
+                diffVal = true;
             }
+            this.config.options = {...rest, logDiff: diffVal};
         }
     }
 
