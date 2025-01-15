@@ -69,7 +69,9 @@ Scenario:
       "name": "fredPlex",
       "clients": ["fredMaloja"],
       "data": {
-        "user": ["fred@email.com"]
+        "token": "JtRnwQWD__XMJF8sT3jc",
+        "url": "192.168.0.233:32400",
+        "usersallow": ["fredUser"]
       }
     },
     {
@@ -77,8 +79,10 @@ Scenario:
       "name": "maryPlex",
       "clients": ["maryMaloja"],
       "data": {
-        "user": ["mary@email.com"], // still need to specify mary as user so not all users who play from 'podcasts' get scrobbled
-        "libraries": ["podcasts"]
+        "token": "JtRnwQWD__XMJF8sT3jc",
+        "url": "192.168.0.233:32400",
+        "usersallow": ["maryUser"], // still need to specify mary as user so not all users who play from 'podcasts' get scrobbled
+        "librariesAllow": ["podcasts"]
       }
     },
     {
@@ -86,7 +90,9 @@ Scenario:
       "name": "partyPlex",
       // omitting clients (or making it empty) will make this Source scrobble to all Clients
       "data": {
-        "libraries": ["party"],
+        "token": "JtRnwQWD__XMJF8sT3jc",
+        "url": "192.168.0.233:32400",
+        "librariesAllow": ["party"]
       }
     },
     {
@@ -94,7 +100,10 @@ Scenario:
       "name": "FredJelly",
       // omitting clients (or making it empty) will make this Source scrobble to all Clients
       "data": {
-        "user": ["fred@email.com"]
+        "url": "http://localhost:8096",
+        "user": "FoxxMD",
+        "apiKey": "c9fae8756fbf481ebd9c5bb56bd6540c",
+        "usersAllow": ["fredUser"]
       }
     },
     {
@@ -113,7 +122,6 @@ Scenario:
       "clients": ["foxxMaloja"],
       "data": {
         "cookie": "__Secure-3PAPISID=3AxsXpy0MKGu75Qb/AkISXGqOnSDn1jEKn; DEVICE_INFO=ChxOekU0Tmpjek5EWTBPRGd3TlRBMk16QXpNdz09EJbS8Z0GGJbS8Z0G; ...",
-        "authUser": 1
       }
     },
   ],
@@ -195,21 +203,27 @@ Scenario:
     "name": "fredPlex",
     "clients": ["fredMaloja"],
     "data": {
-      "user": ["fred@email.com"]
+      "token": "JtRnwQWD__XMJF8sT3jc",
+      "url": "192.168.0.233:32400",
+      "usersallow": ["fredUser"]
     }
   },
   {
     "name": "maryPlex",
     "clients": ["maryMaloja"],
     "data": {
-      "user": ["mary@email.com"],
-      "libraries": ["podcasts"]
+      "token": "JtRnwQWD__XMJF8sT3jc",
+      "url": "192.168.0.233:32400",
+      "usersallow": ["maryUser"],
+      "librariesAllow": ["podcasts"]
     }
   },
   {
     "name": "partyPlex",
     "data": {
-      "libraries": ["party"]
+      "token": "JtRnwQWD__XMJF8sT3jc",
+      "url": "192.168.0.233:32400",
+      "librariesAllow": ["party"]
     }
   }
 ]
@@ -220,7 +234,10 @@ Scenario:
   {
     "name": "FredJelly",
     "data": {
-      "user": ["fred@email.com"]
+      "url": "http://localhost:8096",
+      "user": "FoxxMD",
+      "apiKey": "c9fae8756fbf481ebd9c5bb56bd6540c",
+      "usersAllow": ["fredUser"]
     }
   }
 ]
@@ -234,7 +251,6 @@ Scenario:
     "clients": ["foxxMaloja"],
     "data": {
       "cookie": "__Secure-3PAPISID=3AxsXpy0MKGu75Qb/AkISXGqOnSDn1jEKn; DEVICE_INFO=ChxOekU0Tmpjek5EWTBPRGd3TlRBMk16QXpNdz09EJbS8Z0GGJbS8Z0G; ...",
-      "authUser": 1
     }
   }
 ]
