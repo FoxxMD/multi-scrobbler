@@ -13,7 +13,7 @@ A javascript app to scrobble music you listened to, to [Maloja](https://github.c
 
 * Supports scrobbling from many **Sources**
   * [Spotify](https://foxxmd.github.io/multi-scrobbler/docs/configuration#spotify)
-  * [Plex](https://foxxmd.github.io/multi-scrobbler/docs/configuration#plex) or [Tautulli](https://foxxmd.github.io/multi-scrobbler/docs/configuration#tautulli)
+  * [Plex](https://foxxmd.github.io/multi-scrobbler/docs/configuration#plex) or [~~Tautulli~~](https://foxxmd.github.io/multi-scrobbler/docs/configuration#tautulli)
   * [Subsonic-compatible APIs](https://foxxmd.github.io/multi-scrobbler/docs/configuration#subsonic) (like [Airsonic](https://airsonic.github.io/) and [Navidrome](https://www.navidrome.org/))
   * [Jellyfin](https://foxxmd.github.io/multi-scrobbler/docs/configuration#jellyfin)
   * [WebScrobbler](https://foxxmd.github.io/multi-scrobbler/docs/configuration#webscrobbler)
