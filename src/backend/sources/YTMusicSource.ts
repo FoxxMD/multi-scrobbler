@@ -1,4 +1,4 @@
-import dayjs from "dayjs";
+import dayjs, { Dayjs } from "dayjs";
 import EventEmitter from "events";
 import { PlayObject } from "../../core/Atomic.js";
 import { FormatPlayObjectOptions, InternalConfig } from "../common/infrastructure/Atomic.js";
@@ -6,17 +6,29 @@ import { YTMusicSourceConfig } from "../common/infrastructure/config/source/ytmu
 import { Innertube, UniversalCache, Parser, YTNodes, ApiResponse, IBrowseResponse, Log, SessionOptions } from 'youtubei.js';
 import { GenerateAuthUrlOpts, OAuth2Client } from 'google-auth-library';
 import {resolve} from 'path';
-import { parseBool, sleep } from "../utils.js";
+import { formatNumber, parseBool, sleep } from "../utils.js";
 import {
     getPlaysDiff,
     humanReadableDiff,
+    PlayOrderChangeType,
+    PlayOrderConsistencyResults,
     playsAreAddedOnly,
     playsAreBumpedOnly,
     playsAreSortConsistent
 } from "../utils/PlayComparisonUtils.js";
 import AbstractSource, { RecentlyPlayedOptions } from "./AbstractSource.js";
-import { truncateStringToLength } from "../../core/StringUtils.js";
+import { buildTrackString, truncateStringToLength } from "../../core/StringUtils.js";
 import { joinedUrl } from "../utils/NetworkUtils.js";
+import { FixedSizeList } from "fixed-size-list";
+import { todayAwareFormat } from "../utils/TimeUtils.js";
+
+export interface HistoryIngressResult {
+    plays: PlayObject[], 
+    consistent: boolean, 
+    diffResults?: PlayOrderConsistencyResults<PlayOrderChangeType>, 
+    diffType?: 'bump' | 'added', 
+    reason?: string
+}
 
 export const ytiHistoryResponseToListItems = (res: ApiResponse): YTNodes.MusicResponsiveListItem[] => {
     const page = Parser.parseResponse<IBrowseResponse>(res.data);
@@ -46,13 +58,13 @@ const loggedErrorExtra = (err: Error): object | undefined => {
     return maybeInfo;
 }
 
-export const ytiHistoryResponseFromShelfToPlays = (res: ApiResponse): PlayObject[] => {
+export const ytiHistoryResponseFromShelfToPlays = (res: ApiResponse, options: {newFromSource?: boolean} = {}): PlayObject[] => {
     const page = Parser.parseResponse<IBrowseResponse>(res.data);
     const items: PlayObject[] = [];
     const shelves = page.contents_memo.getType(YTNodes.MusicShelf);
     shelves.forEach((shelf) => {
         shelf.contents.forEach((listItem) => {
-            items.push(YTMusicSource.formatPlayObj(listItem, {shelf: shelf.title.text}));
+            items.push(YTMusicSource.formatPlayObj(listItem, {shelf: shelf.title.text, newFromSource: options.newFromSource ?? false}));
         });
     });
     return items;
@@ -87,6 +99,8 @@ export default class YTMusicSource extends AbstractSource {
     oauthClient?: OAuth2Client;
 
     workingCredsPath: string;
+
+    recentChangedHistoryResponses: {ts: Dayjs, plays: PlayObject[]}[] = [];
 
     constructor(name: string, config: YTMusicSourceConfig, internal: InternalConfig, emitter: EventEmitter) {
         super('ytmusic', name, config, internal, emitter);
@@ -417,62 +431,182 @@ Redirect URI  : ${this.redirectUri}`);
             throw e;
         }
 
-        let newPlays: PlayObject[] = [];
+        const listPlays = ytiHistoryResponseFromShelfToPlays(playlistDetail);
+        
+        return this.parseRecentAgainstResponse(listPlays).plays;
+        
+    }
 
-        const page = Parser.parseResponse<IBrowseResponse>(playlistDetail.data);
-        const shelfPlays = ytiHistoryResponseFromShelfToPlays(playlistDetail);
-        const listPlays = ytiHistoryResponseToListItems(playlistDetail).map((x) => YTMusicSource.formatPlayObj(x, {newFromSource: false}));
-        const plays = listPlays.slice(0, 20);
-        if(this.polling === false) {
-            this.recentlyPlayed = plays;
-            newPlays = plays;
-        } else {
-            if(playsAreSortConsistent(this.recentlyPlayed, plays)) {
-                return newPlays;
-            }
+    getIncomingHistoryConsistencyResult = (plays: PlayObject[]): HistoryIngressResult => {
+        const results: HistoryIngressResult = {
+            plays: [],
+            consistent: true
+        }
+        
+        if(playsAreSortConsistent(this.recentlyPlayed, plays)) {
+            return {plays: [], consistent: true};
+        }
 
-            let warnMsg: string;
-            const bumpResults = playsAreBumpedOnly(this.recentlyPlayed, plays);
-            if(bumpResults[0] === true) {
-                newPlays = bumpResults[1];
+        let warnMsg: string;
+        let diffResults: PlayOrderConsistencyResults<PlayOrderChangeType>;
+        let diffType: 'bump' | 'added';
+        diffResults = playsAreBumpedOnly(this.recentlyPlayed, plays);
+        if(diffResults[0] === true) {
+            results.diffType = 'bump';
+            if(diffResults[2] !== 'prepend') {
+                results.consistent = false;
+                results.reason = `(Bump Plays Detected) Previously seen YTM history was bumped in an unexpected way (${diffResults[2]}), resetting history to new list`;
             } else {
-                const addResults = playsAreAddedOnly(this.recentlyPlayed, plays);
-                if(addResults[0] === true) {
-                    newPlays = [...addResults[1]].reverse();
+                results.plays = [...diffResults[1]].reverse();
+            }
+        } else {
+            diffResults = playsAreAddedOnly(this.recentlyPlayed, plays);
+            if(diffResults[0] === true) {
+                results.diffType = 'added';
+                if(diffResults[2] !== 'prepend') {
+                    results.consistent = false;
+                    results.reason = `(Add Plays Detected) New tracks were added to YTM history in an unexpected way (${diffResults[2]}), resetting watched history to new list`;
                 } else {
-                    warnMsg = 'YTM History returned temporally inconsistent order, resetting watched history to new list.';
+                    const revertedToRecent = this.recentChangedHistoryResponses.findIndex(x => playsAreSortConsistent(x.plays, plays));
+                    if(revertedToRecent !== -1) {
+                        results.consistent = false;
+                        results.reason = `(Add Plays Detected) YTM History has exact order as another recent response *where history was changed* (${revertedToRecent + 1} ago @ ${todayAwareFormat(this.recentChangedHistoryResponses[revertedToRecent].ts)}) which means last history (n - 1) was probably out of date. Resetting history to current list and NOT ADDING new tracks since we probably already discovered them earlier.`
+                    } else {
+                        results.plays = [...diffResults[1]].reverse();
+                    }
+                }
+            } else {
+                results.consistent = false;
+                results.reason = 'YTM History returned temporally inconsistent order, resetting history to new list.';
+            }
+        }
+        results.diffResults = diffResults;
+
+        return results;
+    }
+
+    parseRecentAgainstResponse = (responsePlays: PlayObject[]): HistoryIngressResult => {
+
+        //let newPlays: PlayObject[] = [];
+        let results: HistoryIngressResult = {
+            plays: [],
+            consistent: true
+        }
+
+        const plays = responsePlays.slice(0, 20);
+        if(this.polling === false) {
+            results.plays = plays;
+            results.plays = results.plays.map((x, index) => ({
+                data: {
+                    ...x.data,
+                    playDate: dayjs().startOf('minute').add(index + 1, 's')
+                },
+                meta: {
+                    ...x.meta,
+                    newFromSource: true
+                }
+            }));
+        } else {
+
+            const cResults = this.getIncomingHistoryConsistencyResult(plays);
+
+            const {
+                reason,
+                plays: newPlays,
+                consistent,
+                diffResults,
+                diffType
+            } = cResults;
+
+            results = cResults;
+
+            if(consistent && newPlays.length > 1) {
+                const interimPlays = newPlays.slice(0, newPlays.length - 1);
+                // check enough time has passed since last discovery
+                const discovered = this.getFlatRecentlyDiscoveredPlays();
+                if(discovered.length > 0) {
+                    const lastDiscovered = discovered[0].data.playDate;
+                    // the assumption in behavior is that user skips 1 or more tracks which then get recorded to YTM history
+                    // eventually, they land on a track they want to listen to which is the current (newest) track in history
+                    // -- so check duration from newest to oldest and subtract time since last discovered, *ignoring* the newest track since that is the one being played
+                    const reversed = [...interimPlays].reverse();
+                    let timeRemaining = dayjs().diff(lastDiscovered, 'second');
+                    const durationValidTracks: PlayObject[] = [];
+                    const durationLog: string[] = [];
+                    for(const play of reversed) {
+                        const shortIdentifier = buildTrackString(play, {include: ['track']});
+                        if(play.data.duration === undefined) {
+                            // allow any tracks without duration, i guess?
+                            durationValidTracks.push(play);
+                            durationLog.push(`${shortIdentifier} => no duration, will allow`)
+                            continue;
+                        }
+                        if(timeRemaining <= 0) {
+                            durationLog.push(`${shortIdentifier} => Not enough time remaining!`);
+                            continue;
+                        }
+                        const newRemaining = timeRemaining - (play.data.duration * 0.5);
+                        if(newRemaining > 0) {
+                            durationValidTracks.push(play);
+                            durationLog.push(`${shortIdentifier} (50% of ${play.data.duration}s) => OK! ${timeRemaining} - ${formatNumber(play.data.duration * 0.5, {toFixed: 0})} = ${newRemaining}s remaining since last discovery`)
+                        } else {
+                            durationLog.push(`${shortIdentifier} (50% of ${play.data.duration}s) => Not OK! ${timeRemaining} - ${formatNumber(play.data.duration * 0.5, {toFixed: 0})} = ${newRemaining}s remaining since last discovery`);
+                        }
+                        timeRemaining = newRemaining;
+                    }
+                    this.logger.verbose(`More than one track found, using time since last discovered track (${dayjs().diff(lastDiscovered, 'second')}s) as guidepost for if n+1 earlier tracks could have passed 50% duration listened. Results:
+${durationLog.join('\n')}`);
+                    if(durationValidTracks.length === 0) {
+                        results.plays = [results.plays[results.plays.length - 1]]
+                    } else {
+                        const correctOrder = [...durationValidTracks].reverse();
+                        results.plays = [...correctOrder, results.plays[results.plays.length - 1]];
+                    }
+                } else {
+                    this.logger.verbose('No existing tracks discovered, could not determine if enough time has passed to reasonably scrobble new tracks.');
                 }
             }
 
-            if(warnMsg !== undefined || (newPlays.length > 0 && this.config.options?.logDiff === true)) {
+            if(!consistent || (newPlays.length > 0 && this.config.options?.logDiff === true)) {
                 const playsDiff = getPlaysDiff(this.recentlyPlayed, plays)
                 const humanDiff = humanReadableDiff(this.recentlyPlayed, plays, playsDiff);
-                const diffMsg = `Changes from last seen list:
-    ${humanDiff}`;
-                if(warnMsg !== undefined) {
-                    this.logger.warn(warnMsg);
+                const diffMsg = `Changes from last seen list detected as ${diffType} type:
+${humanDiff}`;
+                if(reason !== undefined) {
+                    this.logger.warn(reason);
                     this.logger.warn(diffMsg);
                 } else {
                     this.logger.verbose(diffMsg);
                 }
             }
+            let durSinceNow = 0;
+            const now = dayjs();
 
-            this.recentlyPlayed = plays;
-
-                newPlays = newPlays.map((x, index) => ({
+            const rrPlays = results.plays.reduceRight((acc, curr) => {
+                const durDatedPlay = {
                     data: {
-                        ...x.data,
-                        playDate: dayjs().startOf('minute').add(index + 1, 's')
+                        ...curr.data,
+                        playDate: durSinceNow === 0 ? now : now.subtract(durSinceNow, 'seconds'),
                     },
                     meta: {
-                        ...x.meta,
+                        ...curr.meta,
                         newFromSource: true
                     }
-                }));
+                }
+                durSinceNow += curr.data.duration ?? 1;
+                return [durDatedPlay, ...acc];
+            }, []);
+
+            results.plays = rrPlays
         }
 
-        return newPlays;
-        
+        this.recentlyPlayed = plays;
+
+        if(results.plays.length > 0) {
+            this.recentChangedHistoryResponses = [{plays, ts: dayjs()}, ...this.recentChangedHistoryResponses.slice(0, 3)]
+        }
+
+        return results;
     }
 
     onPollPostAuthCheck = async () => {

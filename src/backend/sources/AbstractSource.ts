@@ -416,8 +416,11 @@ export default abstract class AbstractSource extends AbstractComponent implement
                         // because the interval check was so close to the play date we are going to delay client calls for a few secs
                         // this way we don't accidentally scrobble ahead of any other clients (we always want to be behind so we can check for dups)
                         // additionally -- it should be ok to have this in the for loop because played_at will only decrease (be further in the past) so we should only hit this once, hopefully
-                        this.logger.info('Potential plays were discovered close to polling interval! Delaying scrobble clients refresh by 10 seconds so other clients have time to scrobble first');
-                        await sleep(10 * 1000);
+
+                        // make sure delay is less than possible polling interval
+                        const maxDelay = Math.min(10, interval * 0.75);
+                        this.logger.info(`Potential plays were discovered close to polling interval! Delaying scrobble clients refresh by ${maxDelay} seconds so other clients have time to scrobble first`);
+                        await sleep(maxDelay * 1000);
                     }
                     newDiscovered = this.discover(playObjs);
                     this.scrobble(newDiscovered,
