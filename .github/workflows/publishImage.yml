@@ -47,9 +47,16 @@ jobs:
       fail-fast: false
       matrix:
         # does this need os/arch instead of platform? https://learn.arm.com/learning-paths/cross-platform/github-arm-runners/actions/
-        platform:
-          - linux/amd64
-          - linux/arm64
+        # platform:
+        #   - linux/amd64
+        #   - linux/arm64
+        include:
+          - os: ubuntu-latest
+            arch: amd64
+            platform: linux/amd64
+          - os: ubuntu-24.04-arm
+            arch: arm64
+            platform: linux/arm64
     steps:
       - name: Prepare
         run: |
@@ -109,8 +116,8 @@ jobs:
       # REMOVE(??) once arm runners are publicly available
       # https://github.com/orgs/community/discussions/142209#discussioncomment-11107737
       # https://github.com/github/roadmap/issues/970
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v3
+      # - name: Set up QEMU
+      #   uses: docker/setup-qemu-action@v3
       
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
