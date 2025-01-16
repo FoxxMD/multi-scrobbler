@@ -49,6 +49,8 @@ RUN \
 
 RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
 
+RUN npm install -g concurrently
+
 ARG data_dir=/config
 VOLUME $data_dir
 ENV CONFIG_DIR=$data_dir
@@ -61,6 +63,7 @@ FROM base AS build
 
 COPY --chown=abc:abc package*.json tsconfig.json ./
 COPY --chown=abc:abc patches ./patches
+COPY --chown=abc:abc docsite/package*.json tsconfig.json ./docsite/
 
 # for debugging, so the build fails faster when timing out (arm64)
 #RUN npm config set fetch-retries 1 && \
@@ -74,16 +77,16 @@ COPY --chown=abc:abc patches ./patches
 
 # This FAILED for node < 20 when building arm64 but not amd64 (and alpine-based Dockerfile has no issues building arm64)
 # see https://github.com/FoxxMD/multi-scrobbler/issues/126
-RUN npm ci \
-   --no-audit \
-    && chown -R root:root node_modules
+RUN npm run install:parallel \
+    && chown -R root:root node_modules \
+    && chown -R root:root docsite/node_modules
 
 COPY --chown=abc:abc . /app
 
 # need to set before build so server/client build is optimized and has constants (if needed)
 ENV NODE_ENV=production
 
-RUN npm run docs:install && npm run schema && npm run build && rm -rf node_modules && rm -rf docsite/node_modules
+RUN npm run build:parallel && rm -rf node_modules && rm -rf docsite/node_modules
 
 FROM base AS app
 

@@ -13,10 +13,12 @@
     "build:frontend": "vite build",
     "build:backend": "tsc -p src/backend",
     "build": "npm run -s build:backend && npm run -s build:frontend && npm run -s docs:build",
-    "docs:install": "cd docsite && npm ci",
+    "build:parallel": "concurrently --kill-others-on-fail --names backend,frontend,docs \"npm run -s build:backend\" \"npm run -s build:frontend\" \"npm run docs:build\"",
+    "docs:install": "cd docsite && npm ci --no-audit",
     "docs:start": "cd docsite && npm start",
-    "docs:build": "cd docsite && npm run build",
-    "postinstall": "patch-package"
+    "docs:build": "npm run schema && cd docsite && npm run build",
+    "postinstall": "patch-package",
+    "install:parallel": "concurrently --kill-others-on-fail --names app,docs \"npm ci --no-audit\" \"npm run docs:install\""
   },
   "exports": {
     ".": {
