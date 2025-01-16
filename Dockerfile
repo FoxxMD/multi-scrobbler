@@ -1,7 +1,7 @@
 FROM ghcr.io/linuxserver/baseimage-debian:bookworm AS base
 
 ENV TZ=Etc/GMT
-ENV NODE_VERSION 20.11.1
+ENV NODE_VERSION=20.18.1
 
 # borrowing openssl header removal trick from offical docker-node
 # https://github.com/nodejs/docker-node/blob/main/18/bookworm-slim/Dockerfile#L8
@@ -75,8 +75,7 @@ COPY --chown=abc:abc patches ./patches
 # This FAILED for node < 20 when building arm64 but not amd64 (and alpine-based Dockerfile has no issues building arm64)
 # see https://github.com/FoxxMD/multi-scrobbler/issues/126
 RUN npm ci \
-    --verbose \
-#   --no-audit \
+   --no-audit \
     && chown -R root:root node_modules
 
 COPY --chown=abc:abc . /app
@@ -103,7 +102,7 @@ ENV IS_DOCKER=true
 ARG APP_BUILD_VERSION
 ENV APP_VERSION=$APP_BUILD_VERSION
 
-RUN npm ci --omit=dev \
+RUN npm ci --omit=dev --no-audit \
     && npm cache clean --force \
     && chown -R abc:abc node_modules \
     && rm -rf /root/.cache
