@@ -6,7 +6,7 @@ on:
       node-version:
         description: "Node version"
         required: false
-        default: '18.x'
+        default: '20.x'
         type: string
       ref:
         description: "Ref to checkout"
@@ -28,15 +28,17 @@ jobs:
           node-version: ${{ inputs.node-version }}
           cache: 'npm'
 
+      - name: Install concurrently
+        run: npm install -g concurrently
+
       - name: Install dev dependencies
-        run: npm ci
+        run: npm run install:parallel
+
       - name: Test Backend
         run: npm run test
 
-      - name: Install Docs Deps
-        run: NODE_ENV=production npm run docs:install
       - name: Build
-        run: NODE_ENV=production npm run build
+        run: npm run build:parallel
       
         # remove modules that might include dev stuff
         # so that in the next step we are sure that prod-only runs work correctly
