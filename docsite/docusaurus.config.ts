@@ -4,6 +4,9 @@ import * as themes from 'prism-react-renderer';
 //import sidebars from './sidebars';
 
 const config: Config = {
+  future: {
+    experimental_faster: true
+  },
   title: 'Multi-Scrobbler',
   tagline: 'Scrobble all the things',
   favicon: 'img/favicon.ico',
