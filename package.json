@@ -1,5 +1,5 @@
 {
-  "name": "multi-scrobbler",
+  "name": "multi-scrobbler atest",
   "version": "0.9.0",
   "type": "module",
   "description": "scrobble plays from multiple sources to multiple clients",
