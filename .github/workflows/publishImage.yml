@@ -39,7 +39,7 @@ jobs:
     name: Build OCI Images
     if: ${{ github.event_name != 'pull_request' && (vars.DOCKERHUB_SLUG != '' ||  vars.GHCR_SLUG != '') }}
     needs: test
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.os }}
     permissions:
       packages: write
       contents: read
