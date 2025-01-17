@@ -1,5 +1,9 @@
 name: PR Workflow
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.head.sha }}
+  cancel-in-progress: true
+
 on:
   pull_request_target:
     types:
@@ -17,11 +21,11 @@ jobs:
     with:
       ref: ${{ github.event.pull_request.head.sha }}
 
-  release-snapshot:
-    name: Release snapshot
-    runs-on: ubuntu-latest
+  build-snapshot:
+    name: Build OCI snapshot
     needs: test
     if: contains(github.event.pull_request.labels.*.name, 'safe to test')
+    runs-on: ${{ matrix.os }}
     permissions:
       packages: write
       contents: read
@@ -29,40 +33,25 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - dockerfile: ./Dockerfile
-            suffix: ''
-            platforms: 'linux/amd64,linux/arm64'
+          - os: ubuntu-latest
+            arch: amd64
+            platform: linux/amd64
+          - os: ubuntu-24.04-arm
+            arch: arm64
+            platform: linux/arm64
     steps:
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v3
+      - name: Prepare
+        run: |
+          platform=${{ matrix.platform }}
+          echo "PLATFORM_PAIR=${platform//\//-}" >> $GITHUB_ENV     
 
-      - name: Set up Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Log in to Docker Hub
-        uses: docker/login-action@v3
-        with:
-          username: ${{ secrets.DOCKER_USERNAME }}
-          password: ${{ secrets.DOCKER_PASSWORD }}
-
-      - name: Login to GitHub Container Registry
-        uses: docker/login-action@v3
-        with:
-          registry: ghcr.io
-          username: ${{ github.repository_owner }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Extract metadata (tags, labels) for Docker
-        id: meta
-        uses: docker/metadata-action@v5
-        with:
-          images: |
-            foxxmd/multi-scrobbler
-            ghcr.io/foxxmd/multi-scrobbler
-          tags: |
-            type=ref,event=pr,suffix=${{ matrix.suffix }}
-          flavor: |
-            latest=false
+          # list all registries to push to and join all non-empty with comma
+          # https://unix.stackexchange.com/a/693165/116849
+          # https://stackoverflow.com/a/9429887/1469797
+          strings=("${{vars.DOCKERHUB_SLUG}}" "${{vars.GHCR_SLUG}}")
+          for i in ${!strings[@]}; do [[ -z ${strings[i]} ]] && unset strings[i]; done
+          joined_string=$(IFS=, ; echo "${strings[*]}")
+          echo "REGISTRIES_JOINED=$joined_string" >> $GITHUB_ENV 
 
       - uses: actions/checkout@v4
         with:
@@ -73,20 +62,139 @@ jobs:
           short=$(echo "${{ github.event.pull_request.head.sha }}" | head -c7)
           echo "COMMIT_SHORT_SHA=$short" >> $GITHUB_ENV
 
-      - name: Build and push
-        id: docker_build
-        uses: docker/build-push-action@v5
+      - name: Get App Version
+        id: appversion
         env:
           APP_VERSION: ${{ format('pr{0}-{1}', github.event.number, env.COMMIT_SHORT_SHA ) }}
+        run: |
+          echo appversion=$APP_VERSION >>${GITHUB_OUTPUT}
+
+      - name: Login to Docker Hub
+        if: ${{ vars.DOCKERHUB_SLUG != '' }}
+        uses: docker/login-action@v3
         with:
-          context: .
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+  
+      - name: Login to GitHub Container Registry
+        if: ${{ vars.GHCR_SLUG != '' }}
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # metadata extract for docker labels/image names is done in merge job
+
+      - name: Set up Buildx
+        uses: docker/setup-buildx-action@v3
+
+      # https://github.com/docker/build-push-action/issues/671#issuecomment-1619353328
+      # for caching
+      - name: Build and push by digest
+        id: build
+        uses: docker/build-push-action@v6
+        with:
           build-args: |
-            APP_BUILD_VERSION=${{env.APP_VERSION}}
-          file: ${{ matrix.dockerfile }}
-          push: ${{ !env.ACT}}
-          tags: ${{ steps.meta.outputs.tags }}
+            APP_BUILD_VERSION=${{steps.appversion.outputs.appversion}}
+          platforms: ${{ matrix.platform }}
           labels: ${{ steps.meta.outputs.labels }}
-          platforms: ${{ matrix.platforms }}
+          outputs: type=image,"name=${{ env.REGISTRIES_JOINED }}",push-by-digest=true,name-canonical=true,push=true
+          #cache-from: type=gha,scope=build-${{ env.PLATFORM_PAIR }}
+          #cache-to: type=gha,scope=build-${{ env.PLATFORM_PAIR }}
+
+      - name: Export digest
+        run: |
+          mkdir -p /tmp/digests
+          digest="${{ steps.build.outputs.digest }}"
+          touch "/tmp/digests/${digest#sha256:}"          
+      
+      - name: Upload digest
+        uses: actions/upload-artifact@v4
+        with:
+          name: digests-${{ env.PLATFORM_PAIR }}
+          path: /tmp/digests/*
+          if-no-files-found: error
+          retention-days: 1
+
+  release-snapshot:
+    name: Merge OCI Images and Push
+    if: ${{ vars.DOCKERHUB_SLUG != '' ||  vars.GHCR_SLUG != '' }}
+    runs-on: ubuntu-latest
+    permissions:
+      packages: write
+      contents: read
+    needs:
+      - build-snapshot
+      - test
+    steps:
+      - name: Download digests
+        uses: actions/download-artifact@v4
+        with:
+          path: /tmp/digests
+          pattern: digests-*
+          merge-multiple: true
+
+      - name: Login to Docker Hub
+        if: ${{ vars.DOCKERHUB_SLUG != '' }}
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
+      - name: Login to GitHub Container Registry
+        if: ${{ vars.GHCR_SLUG != '' }}
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+      
+      - name: Extract metadata (tags, labels)
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: |
+            ${{ vars.DOCKERHUB_SLUG }}
+            ${{ vars.GHCR_SLUG }}
+          # generate Docker tags based on the following events/attributes
+          # https://github.com/docker/metadata-action/issues/247#issuecomment-1511259674 for NOT is default branch, eventually
+          tags: |
+            type=ref,event=pr
+          flavor: |
+            latest=false
+          labels: |
+            org.opencontainers.image.title=Multi-Scrobbler
+            org.opencontainers.image.description=Scrobble from many sources to many clients
+            org.opencontainers.image.vendor=FoxxMD
+      
+      - name: Create manifest list and push dockerhub
+        if: ${{ vars.DOCKERHUB_SLUG != '' }}
+        working-directory: /tmp/digests
+        run: |
+          docker buildx imagetools create $(jq -cr '.tags | map("-t " + .) | join(" ")' <<< "$DOCKER_METADATA_OUTPUT_JSON") \
+            $(printf '${{ vars.DOCKERHUB_SLUG }}@sha256:%s ' *)
+      
+      - name: Create manifest list and push gchr
+        if: ${{ vars.GHCR_SLUG != '' }}
+        working-directory: /tmp/digests
+        run: |
+          docker buildx imagetools create $(jq -cr '.tags | map("-t " + .) | join(" ")' <<< "$DOCKER_METADATA_OUTPUT_JSON") \
+            $(printf '${{ vars.GHCR_SLUG }}@sha256:%s ' *)    
+      
+      - name: Inspect image dockerhub
+        if: ${{ vars.DOCKERHUB_SLUG != '' }}
+        run: |
+          docker buildx imagetools inspect ${{ vars.DOCKERHUB_SLUG }}:${{ steps.meta.outputs.version }}
+
+      - name: Inspect image ghcr
+        if: ${{ vars.GHCR_SLUG != '' }}
+        run: |
+            docker buildx imagetools inspect ${{ vars.GHCR_SLUG }}:${{ steps.meta.outputs.version }}   
+
 
   combine-and-comment:
     name: Leave comment
