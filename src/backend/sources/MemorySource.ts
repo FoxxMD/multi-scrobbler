@@ -105,7 +105,8 @@ export default class MemorySource extends AbstractSource {
         // if we haven't already tried to discover any in-progress plays then do it now (and only once)
         if(!this.playerCleanupDiscoveryAttempt.has(key)) {
             this.playerCleanupDiscoveryAttempt.set(key, true);
-            const cleanupPlay = player.getPlayedObject();
+            // get play as completed
+            const cleanupPlay = player.getPlayedObject(true);
             let discoverablePlay: boolean;
             if(cleanupPlay !== undefined) {
                 const [discoverable, discoverableReason] = this.isListenedPlayDiscoverable(cleanupPlay);
