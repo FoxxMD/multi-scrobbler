@@ -30,22 +30,38 @@ export interface PlayerStateOptions extends PlayerStateIntervals {
 
 export const DefaultPlayerStateOptions: PlayerStateOptions = {};
 
-export const createPlayerOptions = (pollingOpts?: Partial<PollingOptions>, sot: SOURCE_SOT_TYPES = SOURCE_SOT.PLAYER): PlayerStateOptions => {
+export const createPlayerOptions = (pollingOpts?: Partial<PollingOptions>, sot: SOURCE_SOT_TYPES = SOURCE_SOT.PLAYER, logger?: Logger): PlayerStateOptions => {
     const {
         interval = 30,
         maxInterval = 60,
+        staleAfter,
+        orphanedAfter
     } = pollingOpts || {};
-    if(sot === SOURCE_SOT.PLAYER) {
-        return {
-            staleInterval: interval * 3,
-            orphanedInterval: interval * 5
-        }
-    }
+
+    let sa = staleAfter,
+    oa = orphanedAfter;
+
     // if this player is not the source of truth we don't care about waiting around to see if the state comes back
     // in fact, we probably want to get rid of it as fast as possible since its superficial and more of an ephemeral "Now Playing" status than something we are actually tracking
+    const staleAfterDefault = sot === SOURCE_SOT.PLAYER ? interval * 3 : interval;
+    const orphanedAfterDefault = sot === SOURCE_SOT.PLAYER ? interval * 5 : maxInterval;
+
+    if(sa === undefined) {
+        sa = staleAfterDefault;
+    }
+    if(oa === undefined) {
+        oa = orphanedAfterDefault;
+    }
+    if(oa < sa) {
+        oa = sa;
+        if(logger !== undefined) {
+            logger.warn(`'orhanedAfter' (${oa}s) was less than 'staleAfter' (${sa}s) which is not allowed! 'orhanedAfter' has been set to equal 'staleAfter'`);
+        }
+    }
+
     return {
-        staleInterval: interval,
-        orphanedInterval: maxInterval
+        staleInterval: sa,
+        orphanedInterval: oa
     }
 }
 
