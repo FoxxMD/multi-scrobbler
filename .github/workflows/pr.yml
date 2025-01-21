@@ -53,6 +53,8 @@ jobs:
           joined_string=$(IFS=, ; echo "${strings[*]}")
           echo "REGISTRIES_JOINED=$joined_string" >> $GITHUB_ENV 
 
+      # do not use here!
+      # instead we can specify repo#sha in build-push-action so we only deal with foreign SHA for actually building image
       # - uses: actions/checkout@v4
       #   with:
       #     ref: ${{ github.event.pull_request.head.sha }}
@@ -95,6 +97,7 @@ jobs:
         id: build
         uses: docker/build-push-action@v6
         with:
+          # specify foreign repo#sha from PR that is used to build image
           context: ${{github.event.pull_request.head.repo.clone_url}}#${{github.event.pull_request.head.sha}}
           build-args: |
             APP_BUILD_VERSION=${{steps.appversion.outputs.appversion}}
