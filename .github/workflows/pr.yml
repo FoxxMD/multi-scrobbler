@@ -95,6 +95,7 @@ jobs:
         id: build
         uses: docker/build-push-action@v6
         with:
+          context: .
           build-args: |
             APP_BUILD_VERSION=${{steps.appversion.outputs.appversion}}
           platforms: ${{ matrix.platform }}
