@@ -141,7 +141,7 @@ export default class MemorySource extends AbstractSource {
 
     setNewPlayer = (idStr: string, logger: Logger, id: PlayPlatformId, opts: PlayerStateOptions = {}) => {
         this.players.set(idStr, this.getNewPlayer(this.logger, id, {
-            ...createPlayerOptions(this.config.data as Partial<PollingOptions>),
+            ...createPlayerOptions(this.config.data as Partial<PollingOptions>, this.playerSourceOfTruth, this.logger),
             ...opts
         }));
         this.playerState.set(idStr, '');
