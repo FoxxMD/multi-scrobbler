@@ -27,7 +27,7 @@ import {
     playObjDataMatch,
     thresholdResultSummary,
 } from "../utils.js";
-import { timePassesScrobbleThreshold } from "../utils/TimeUtils.js";
+import { timePassesScrobbleThreshold, timeToHumanTimestamp } from "../utils/TimeUtils.js";
 import AbstractSource from "./AbstractSource.js";
 import { AbstractPlayerState, createPlayerOptions, PlayerStateOptions } from "./PlayerState/AbstractPlayerState.js";
 import { GenericPlayerState } from "./PlayerState/GenericPlayerState.js";
@@ -120,7 +120,7 @@ export default class MemorySource extends AbstractSource {
             }
         }
         if(deletePlayer) {
-            this.deletePlayer(player.platformIdStr, `Removed after being orphaned for ${dayjs.duration(player.stateIntervalOptions.orphanedInterval, 'seconds').asMinutes()} minutes`);
+            this.deletePlayer(player.platformIdStr, `Removed after being orphaned for ${timeToHumanTimestamp(dayjs.duration(player.stateIntervalOptions.orphanedInterval, 'seconds'))}`);
         }
 
         return discoveredCleanupPlay;

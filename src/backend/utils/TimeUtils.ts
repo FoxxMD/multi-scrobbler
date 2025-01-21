@@ -245,4 +245,56 @@ export const todayAwareFormat = (date: Dayjs, opts: {fullFormat?: string, todayF
         todayFormat = 'HH:mm:ssZ'
     } = opts;
     return date.format(date.isToday() ? todayFormat : fullFormat);
+};
+export const parseDurationFromTimestamp = (timestamp: any) => {
+    if (timestamp === null || timestamp === undefined) {
+        return undefined;
+    }
+    if (!(typeof timestamp === 'string')) {
+        throw new Error('Timestamp must be a string');
+    }
+    if (timestamp.trim() === '') {
+        return undefined;
+    }
+    const parsedRuntime = timestamp.split(':');
+    let hours = '0', minutes = '0', seconds = '0', milli = '0';
+
+    switch (parsedRuntime.length) {
+        case 3:
+            hours = parsedRuntime[0];
+            minutes = parsedRuntime[1];
+            seconds = parsedRuntime[2];
+            break;
+        case 2:
+            minutes = parsedRuntime[0];
+            seconds = parsedRuntime[1];
+            break;
+        case 1:
+            seconds = parsedRuntime[0];
+    }
+    const splitSec = seconds.split('.');
+    if (splitSec.length > 1) {
+        seconds = splitSec[0];
+        milli = splitSec[1];
+    }
+    return dayjs.duration({
+        hours: Number.parseInt(hours),
+        minutes: Number.parseInt(minutes),
+        seconds: Number.parseInt(seconds),
+        milliseconds: Number.parseInt(milli)
+    });
+};
+
+export type Milliseconds = number;
+
+export const timeToHumanTimestamp = (val: ReturnType<typeof dayjs.duration> | Milliseconds): string => {
+    const ms = dayjs.isDuration(val) ? val.asMilliseconds() : val;
+
+    // less than one hour
+    if(ms < 3600000) {
+        // EX 14:07
+        return new Date(ms).toISOString().substring(14, 19)
+    }
+    // EX 01:15:45
+    return new Date(ms).toISOString().substring(11, 19);
 }
