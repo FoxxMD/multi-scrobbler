@@ -230,7 +230,7 @@ export const parseRetryAfterSecsFromObj = (err: any) => {
     // }
     const {
         response: {
-            // @ts-ignore
+            // @ts-expect-error
             headers, // returned in superagent error
         } = {},
         retryAfter: ra // possible custom property we have set
@@ -300,48 +300,6 @@ export const removeUndefinedKeys = <T extends Record<string, any>>(obj: T): T | 
     });
     //Object.keys(newObj).forEach(key => newObj[key] === undefined || newObj[key] && delete newObj[key])
     return newObj;
-}
-
-export const parseDurationFromTimestamp = (timestamp: any) => {
-    if (timestamp === null || timestamp === undefined) {
-        return undefined;
-    }
-    if (!(typeof timestamp === 'string')) {
-        throw new Error('Timestamp must be a string');
-    }
-    if (timestamp.trim() === '') {
-        return undefined;
-    }
-    const parsedRuntime = timestamp.split(':');
-    let hours = '0',
-        minutes = '0',
-        seconds = '0',
-        milli = '0';
-
-    switch (parsedRuntime.length) {
-        case 3:
-            hours = parsedRuntime[0];
-            minutes = parsedRuntime[1];
-            seconds = parsedRuntime[2];
-            break;
-        case 2:
-            minutes = parsedRuntime[0];
-            seconds = parsedRuntime[1];
-            break;
-        case 1:
-            seconds = parsedRuntime[0];
-    }
-    const splitSec = seconds.split('.');
-    if (splitSec.length > 1) {
-        seconds = splitSec[0];
-        milli = splitSec[1];
-    }
-    return dayjs.duration({
-        hours: Number.parseInt(hours),
-        minutes: Number.parseInt(minutes),
-        seconds: Number.parseInt(seconds),
-        milliseconds: Number.parseInt(milli)
-    });
 }
 
 export const remoteHostIdentifiers = (req: Request): RemoteIdentityParts => {

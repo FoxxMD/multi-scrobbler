@@ -16,7 +16,7 @@ import { PollingOptions } from "../../common/infrastructure/config/common.js";
 import { formatNumber, genGroupIdStr, playObjDataMatch, progressBar } from "../../utils.js";
 import { ListenProgress } from "./ListenProgress.js";
 import { ListenRange, ListenRangePositional } from "./ListenRange.js";
-import { todayAwareFormat } from "../../utils/TimeUtils.js";
+import { timeToHumanTimestamp, todayAwareFormat } from "../../utils/TimeUtils.js";
 
 export interface PlayerStateIntervals {
     staleInterval?: number
@@ -113,7 +113,7 @@ export abstract class AbstractPlayerState {
         const isStale = this.isUpdateStale();
         if (isStale && ![CALCULATED_PLAYER_STATUSES.stale, CALCULATED_PLAYER_STATUSES.orphaned].includes(this.calculatedStatus)) {
             this.calculatedStatus = CALCULATED_PLAYER_STATUSES.stale;
-            this.logger.debug(`Stale after no Play updates for ${Math.abs(dayjs().diff(this.playLastUpdatedAt, 'seconds'))} seconds`);
+            this.logger.debug(`Stale after no Play updates for ${timeToHumanTimestamp(Math.abs(dayjs().diff(this.playLastUpdatedAt, 'ms')))} (staleAfter ${this.stateIntervalOptions.staleInterval}s)`);
             // end current listening sessions
             this.currentListenSessionEnd();
         }
@@ -132,7 +132,7 @@ export abstract class AbstractPlayerState {
         const isOrphaned = this.isOrphaned();
         if (isOrphaned && this.calculatedStatus !== CALCULATED_PLAYER_STATUSES.orphaned) {
             this.calculatedStatus = CALCULATED_PLAYER_STATUSES.orphaned;
-            this.logger.debug(`Orphaned after no player updates for ${Math.abs(dayjs().diff(this.stateLastUpdatedAt, 'minutes'))} minutes`);
+            this.logger.debug(`Orphaned after no Player updates for ${timeToHumanTimestamp(Math.abs(dayjs().diff(this.stateLastUpdatedAt, 'ms')))} ${Math.abs(dayjs().diff(this.stateLastUpdatedAt, 'minutes'))} (orhanedAfter ${this.stateIntervalOptions.orphanedInterval}s)`);
         }
         return isOrphaned;
     }
