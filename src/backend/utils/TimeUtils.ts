@@ -288,7 +288,7 @@ export const parseDurationFromTimestamp = (timestamp: any) => {
 export type Milliseconds = number;
 
 export const timeToHumanTimestamp = (val: ReturnType<typeof dayjs.duration> | Milliseconds): string => {
-    const ms = dayjs.isDuration(val) ? val.asMilliseconds() : val;
+    const ms = dayjs.isDuration(val) ? Math.abs(val.asMilliseconds()) : val;
 
     // less than one hour
     if(ms < 3600000) {

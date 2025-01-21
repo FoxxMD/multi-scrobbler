@@ -33,7 +33,7 @@ import {
     sortByNewestPlayDate,
     sortByOldestPlayDate,
 } from "../utils.js";
-import { comparePlayTemporally, temporalAccuracyIsAtLeast, todayAwareFormat } from "../utils/TimeUtils.js";
+import { comparePlayTemporally, temporalAccuracyIsAtLeast, timeToHumanTimestamp, todayAwareFormat } from "../utils/TimeUtils.js";
 import { getRoot } from '../ioc.js';
 import { componentFileLogger } from '../common/logging.js';
 import { WebhookPayload } from '../common/infrastructure/config/health/webhooks.js';
@@ -440,6 +440,8 @@ export default abstract class AbstractSource extends AbstractComponent implement
 
                 const activeThreshold = this.lastActivityAt.add(checkActiveFor, 's');
                 const inactiveFor = dayjs.duration(Math.abs(activeThreshold.diff(dayjs(), 'millisecond'))).humanize(false);
+                const relativeActivity = dayjs.duration(this.lastActivityAt.diff(dayjs(), 'ms'));
+                const humanRelativeActivity = relativeActivity.asSeconds() > -3 ? '' : ` (${timeToHumanTimestamp(relativeActivity)} ago)`;
                 let friendlyInterval = '';
                 const friendlyLastFormat = todayAwareFormat(this.lastActivityAt);
                 if (activeThreshold.isBefore(dayjs())) {
@@ -452,12 +454,12 @@ export default abstract class AbstractSource extends AbstractComponent implement
                         sleepTime = interval + backoff;
                     }
                     if(isDebugMode()) {
-                        debugMsgs.push(`Last activity ${friendlyLastFormat} is ${inactiveFor} outside of polling period (last activity + ${checkActiveFor}s)`);
+                        debugMsgs.push(`Last activity ${friendlyLastFormat}${humanRelativeActivity} is ${inactiveFor} outside of polling period (last activity + ${checkActiveFor}s)`);
                     } else {
-                        debugMsgs.push(`Last activity was at ${friendlyLastFormat}`);
+                        debugMsgs.push(`Last activity was at ${friendlyLastFormat}${humanRelativeActivity}`);
                     }
                 } else {
-                    debugMsgs.push(`Last activity was at ${friendlyLastFormat}`);
+                    debugMsgs.push(`Last activity was at ${friendlyLastFormat}${humanRelativeActivity}`);
                     friendlyInterval = `${formatNumber(sleepTime)}s`;
                 }
                 debugMsgs.push(`Next check in ${friendlyInterval}`);
