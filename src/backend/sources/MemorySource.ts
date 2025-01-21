@@ -116,6 +116,14 @@ export default class MemorySource extends AbstractSource {
                 }
                 if(discoverable) {
                     discoveredCleanupPlay = cleanupPlay;
+                    // we are discovering/scrobbling play 
+                    // and since player is now stale we should treat this "session" as ended
+                    // -- so if user resumes a stale play later its a new session (new real time period of them listening)
+                    // basically this is the same as if the player was orphaned and removed
+                    // 
+                    // so we remove listen ranges so the old accumulated listen time can't be used for the "new" listening session
+                    player.listenRanges = [];
+                    player.currentListenRange = undefined;
                 }
             }
         }
