@@ -482,38 +482,42 @@ Removes the phrase `(Album Version)` from the Title of a Play
 
 ### Extract primary Artist from delimited, multi-Artist string
 
-When the Artist string is actually a multi-artist, delimited string, this search-and-replace will replace the string with just the first artist found.
-
-Ex
-
-```
-My Artist One / My Artist Two / Another Guy
-My Artist One
-```
-
-Artists are delimited with a spaced forward slash (`/`) in the regex below. Replace the contents of the `delim` capture group with the delimiter for your use case. Some more common scenarios:
-
-* `(?<delim>\\/)` No spaces between slash IE `My Artist One/My Artist Two/Another Guy`
-* `(?<delim>\\s*\\\\\s*)` Backslash instead of forward slash IE `My Artist One \ My Artist Two \ Another Guy`
-* `(?<delim>,)` Comma IE `My Artist One, My Artist Two, Another Guy`
-
 <details>
 
-    <summary>Example</summary>
-```json5 title="config.json"
-{
-  "sourceDefaults": {
-    "playTransform": {
-      "preCompare": {
-        "artists": [
-          {
-            "search": "(.*?)(?<delim>\\s*\\/\\s*)(.*$)",
-            "replace": "$1"
-          }
-        ]
+  When the Artist string is actually a multi-artist, delimited string, this search-and-replace will replace the string with just the first artist found.
+
+  Ex
+
+  ```
+  My Artist One / My Artist Two / Another Guy
+  My Artist One
+  ```
+
+  Artists are delimited with a spaced forward slash (`/`) in the regex below. Replace the contents of the `delim` capture group with the delimiter for your use case. Some more common scenarios:
+
+  * `(?<delim>\\/)` No spaces between slash IE `My Artist One/My Artist Two/Another Guy`
+  * `(?<delim>\\s*\\\\\s*)` Backslash instead of forward slash IE `My Artist One \ My Artist Two \ Another Guy`
+  * `(?<delim>,)` Comma IE `My Artist One, My Artist Two, Another Guy`
+
+  <details>
+
+      <summary>Example</summary>
+  ```json5 title="config.json"
+  {
+    "sourceDefaults": {
+      "playTransform": {
+        "preCompare": {
+          "artists": [
+            {
+              "search": "(.*?)(?<delim>\\s*\\/\\s*)(.*$)",
+              "replace": "$1"
+            }
+          ]
+        }
       }
     }
   }
-}
-```
+  ```
+  </details>
+
 </details>
