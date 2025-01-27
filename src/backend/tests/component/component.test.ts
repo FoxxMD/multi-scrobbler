@@ -216,6 +216,30 @@ describe('Play Transforms', function () {
             expect(transformed.data.track).equal('My cool thing track');
         });
 
+
+        it('Transforms using parsed regex to get primary artist from delimited artist string', function () {
+            component.config = {
+                options: {
+                    playTransform: {
+                        preCompare: {
+                            artists: [
+                                {
+                                    search: '/(.*?)(\\s*\\/\\s*)(.*$)/i',
+                                    replace: '$1'
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+            component.buildTransformRules();
+
+            const play = generatePlay({artists: ['My Artist One / My Artist Two / Another Guy']});
+            const transformed = component.transformPlay(play, TRANSFORM_HOOK.preCompare);
+            expect(transformed.data.artists).length(1)
+            expect(transformed.data.artists[0]).equal('My Artist One');
+        });
+
         it('Removes title when transform replaces with empty string', function () {
             component.config = {
                 options: {
