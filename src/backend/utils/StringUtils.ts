@@ -76,7 +76,7 @@ const SECONDARY_REGEX_STRATS: RegExp[] = [SECONDARY_CAPTURED_REGEX, SECONDARY_FR
  *    ^^^^^^^^^^^^^^**********************************************
  *
  * */
-export const PRIMARY_SECONDARY_SECTIONS_REGEX = new RegExp(/^(?<primary>.+?)(?<secondary>(?:[([]?(?:\Wft\.?|\Wfeat\.?|featuring|\Wvs\.)).*)/i);
+export const PRIMARY_SECONDARY_SECTIONS_REGEX = new RegExp(/^(?<primary>.+?)(?<secondary>(?:[([]?(?:\Wft\.?|\Wfeat\.?|featuring|\Wvs\.?)).*)/i);
 
 /**
  * For matching the most common track/artist pattern that has a joiner
