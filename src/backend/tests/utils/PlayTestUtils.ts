@@ -5,8 +5,9 @@ import isBetween from "dayjs/plugin/isBetween.js";
 import relativeTime from "dayjs/plugin/relativeTime.js";
 import timezone from "dayjs/plugin/timezone.js";
 import utc from "dayjs/plugin/utc.js";
-import { JsonPlayObject, ObjectPlayData, PlayMeta, PlayObject } from "../../../core/Atomic.js";
+import { FEAT, JOINERS, JOINERS_FINAL, JsonPlayObject, ObjectPlayData, PlayMeta, PlayObject } from "../../../core/Atomic.js";
 import { sortByNewestPlayDate } from "../../utils.js";
+import { arrayListAnd } from '../../../core/StringUtils.js';
 
 dayjs.extend(utc)
 dayjs.extend(isBetween);
@@ -153,4 +154,93 @@ export const generatePlay = (data: ObjectPlayData = {}, meta: PlayMeta = {}): Pl
 
 export const generatePlays = (numberOfPlays: number, data: ObjectPlayData = {}, meta: PlayMeta = {}): PlayObject[] => {
     return Array.from(Array(numberOfPlays), () => generatePlay(data, meta));
+}
+
+export const generateArtist = () => faker.music.artist;
+
+export const generateArtists = (num?: number, max: number = 3) => {
+    // if(num !== undefined) {
+    //     return Array(num).map(x => faker.music.artist);
+    // }
+    if(num === 0 || max === 0) {
+        return [];
+    }
+    return faker.helpers.multiple(faker.music.artist, {count: {min: num ?? 1, max: num ?? max}});
+}
+
+export interface ArtistGenerateOptions {
+    num?: number
+    max?: number
+    joiner?: string
+    finalJoiner?: false | string
+    spacedJoiners?: boolean
+}
+
+export interface SecondaryArtistGenerateOptions extends ArtistGenerateOptions {
+    ft?: string
+    ftWrap?: boolean
+}
+
+export interface CompoundArtistGenerateOptions {
+    primary?: number | ArtistGenerateOptions
+    secondary?: number | SecondaryArtistGenerateOptions
+}
+
+export const generateArtistsStr = (options: CompoundArtistGenerateOptions = {}): [string, string[], string[]] => {
+
+    const {primary = {}, secondary = {}} = options;
+
+    const primaryOpts: ArtistGenerateOptions = typeof primary === 'number' ? {num: primary} : primary;
+    const secondaryOpts: SecondaryArtistGenerateOptions = typeof secondary === 'number' ? {num: secondary} : secondary;
+
+    const primaryArt = generateArtists(primaryOpts.num, primaryOpts.max)
+    const secondaryArt = generateArtists(secondaryOpts.num, secondaryOpts.max);
+
+
+    const joinerPrimary: string = primaryOpts.joiner ?? faker.helpers.arrayElement(JOINERS);
+    let finalJoinerPrimary: string = joinerPrimary;
+    if(primaryOpts.finalJoiner !== false) {
+        if(primaryOpts.finalJoiner === undefined) {
+            if(joinerPrimary === ',') {
+                finalJoinerPrimary = faker.helpers.arrayElement(JOINERS_FINAL);
+            }
+        
+        } else {
+            finalJoinerPrimary = primaryOpts.finalJoiner;
+        }
+    }
+
+    const primaryStr = arrayListAnd(primaryArt, joinerPrimary, finalJoinerPrimary, primaryOpts.spacedJoiners);
+
+    if(secondaryArt.length === 0) {
+        return [primaryStr, primaryArt, []];
+    }
+
+    const joinerSecondary: string = secondaryOpts.joiner ?? faker.helpers.arrayElement(JOINERS);
+    let finalJoinerSecondary: string = joinerSecondary;
+    if(secondaryOpts.finalJoiner !== false) {
+        if(secondaryOpts.finalJoiner === undefined) {
+            if(joinerSecondary === ',') {
+                finalJoinerSecondary = faker.helpers.arrayElement(JOINERS_FINAL);
+            }
+        } else {
+            finalJoinerSecondary = secondaryOpts.finalJoiner;
+        }
+    }
+
+    const secondaryStr = arrayListAnd(secondaryArt, joinerSecondary, finalJoinerSecondary, secondaryOpts.spacedJoiners);
+    const ft = secondaryOpts.ft ?? faker.helpers.arrayElement(FEAT);
+    let sec = `${ft} ${secondaryStr}`;
+    let wrap: boolean;
+    if(secondaryOpts.ftWrap !== undefined) {
+        wrap = secondaryOpts.ftWrap;
+    } else {
+        wrap = faker.datatype.boolean();
+    }
+    if(wrap) {
+        sec = `(${sec})`;
+    }
+    const artistStr = `${primaryStr} ${sec}`;
+
+    return [artistStr, primaryArt, secondaryArt];
 }
