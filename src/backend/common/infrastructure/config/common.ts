@@ -48,5 +48,32 @@ export interface PollingOptions {
      * @examples [30]
      * */
     maxInterval?: number
+
+    /**
+     * Number of seconds after which A Player is considered Stale
+     * 
+     * When Polling the source does not recieve data about a specific Player after X seconds it becomes Stale. When the Player becomes Stale:
+     * 
+     * * The current listening session is ended. If the Player becomes active again a new listening session is started (Player will miss `interval` seconds of listening)
+     * * If the player has an existing session w/ track then MS attempts to scrobble it
+     * 
+     * This option DOES NOT need to be set. It is automatically calculated as (`interval` * 3) when not defined.
+     */
+    staleAfter?: number
+
+    /**
+     * Number of seconds after which A Player is considered Orphaned
+     * 
+     * When Polling the source does not recieve data about a specific Player after X seconds it becomes Orphaned. When the Player becomes Orphaned:
+     * 
+     * * The current Player session is ended and the Player is removed from MS
+     * * MS attempts to scrobble, if the Player has an existing session w/ track
+     * 
+     * A Player should become Orphaned EQUAL TO OR AFTER it becomes Stale.
+     * 
+     * * This option DOES NOT need to be set. It is automatically calculated as (`interval` * 5) when not defined.
+     * * If it is set it must be equal to or larger than `staleAfter` or (`interval * 3`)
+     */
+     orphanedAfter?: number
 }
 
