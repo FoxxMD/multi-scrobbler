@@ -94,9 +94,21 @@ export class PositionalPlayerState extends AbstractPlayerState {
                     // likely the track was listened to until it ended
                     // but polling interval or network delays caused MS to not get data on the very end
                     // also...within 3 seconds of ending is close enough to call this complete IMO
+                    //
+                    // -- STALE is included in this because there are some Sources (jellyfin or plex with 3rd party apps?)
+                    // that will created a new "player" if the queue is cleared or stopping the player,
+                    // from the user's perspective its all the same but then MS sees it as different
+                    // so the player will eventually be pruned but we want to treat the play "going stale" it as if it finished to account for this behavior
+                    this.logger.debug(`Listen duration was within ${this.gracefulEndBuffer}s of Play duration, bumping duration to 100% ${this.calculatedStatus === CALCULATED_PLAYER_STATUSES.stale ? 'because stale player probably finished Play before going dark.' : ' because we probably just missed Source reporting 100% before changing Play.'}`)
                     finalPosition = duration;
                     //this.currentListenRange.end.position = duration;
 
+                } else if(this.calculatedStatus === CALCULATED_PLAYER_STATUSES.stale && this.currentListenRange.isOverDrifted(this.currentListenRange.end.position)) {
+                    // if player uses realtime but source went stale and WAS NOT close to the end its likely the RT is way overdrifted
+                    // in which case we definitely do want to use RT as final position
+                    // so use last known position before stale instead
+                    this.logger.debug(`Player became Stale and realtime position overdrifted before session ended! Using last known position instead of RT position so listen duration stays accurate.`);
+                    finalPosition = this.currentListenRange.end.position;
                 }
             }
             this.currentListenRange.finalize(finalPosition);

@@ -102,18 +102,18 @@ export abstract class AbstractPlayerState {
         return this.platformId[0] === candidateId[0] && this.platformId[1] === candidateId[1];
     }
 
-    isUpdateStale() {
+    isUpdateStale(reportedTS?: Dayjs) {
         if (this.currentPlay !== undefined) {
-            return Math.abs(dayjs().diff(this.playLastUpdatedAt, 'seconds')) > this.stateIntervalOptions.staleInterval;
+            return Math.abs((reportedTS ?? dayjs()).diff(this.playLastUpdatedAt, 'seconds')) > this.stateIntervalOptions.staleInterval;
         }
         return false;
     }
 
-    checkStale() {
-        const isStale = this.isUpdateStale();
+    checkStale(reportedTS?: Dayjs) {
+        const isStale = this.isUpdateStale(reportedTS);
         if (isStale && ![CALCULATED_PLAYER_STATUSES.stale, CALCULATED_PLAYER_STATUSES.orphaned].includes(this.calculatedStatus)) {
             this.calculatedStatus = CALCULATED_PLAYER_STATUSES.stale;
-            this.logger.debug(`Stale after no Play updates for ${timeToHumanTimestamp(Math.abs(dayjs().diff(this.playLastUpdatedAt, 'ms')))} (staleAfter ${this.stateIntervalOptions.staleInterval}s)`);
+            this.logger.debug(`Stale after no Play updates for ${timeToHumanTimestamp(Math.abs((reportedTS ?? dayjs()).diff(this.playLastUpdatedAt, 'ms')))} (staleAfter ${this.stateIntervalOptions.staleInterval}s)`);
             // end current listening sessions
             this.currentListenSessionEnd();
         }
@@ -170,7 +170,7 @@ export abstract class AbstractPlayerState {
 
     protected setPlay(state: PlayerStateData, reportedTS?: Dayjs): [PlayObject, PlayObject?] {
         const {play, status, sessionId} = state;
-        this.playLastUpdatedAt = dayjs();
+        this.playLastUpdatedAt = reportedTS ?? dayjs();
         if (status !== undefined) {
             this.reportedStatus = status;
         }
@@ -344,7 +344,7 @@ export abstract class AbstractPlayerState {
         const {play, position} = state;
 
         this.currentPlay = play;
-        this.playFirstSeenAt = dayjs();
+        this.playFirstSeenAt = reportedTS ?? dayjs();
         this.listenRanges = [];
         this.currentListenRange = undefined;
 

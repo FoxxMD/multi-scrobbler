@@ -1,5 +1,5 @@
 import { loggerTest } from "@foxxmd/logging";
-import { assert } from 'chai';
+import { assert, expect } from 'chai';
 import clone from "clone";
 import dayjs, { Dayjs } from "dayjs";
 import { describe, it } from 'mocha';
@@ -26,7 +26,7 @@ const testState = (data: Omit<PlayerStateDataMaybePlay, 'platformId'>): PlayerSt
 
 class TestPositionalPlayerState extends PositionalPlayerState {
     protected newListenRange(start?: ListenProgressPositional, end?: ListenProgressPositional, options: object = {}): ListenRangePositional {
-        const range = super.newListenRange(start, end, {rtImmediate: false, ...options});
+        const range = super.newListenRange(start, end, {allowedDrift: this.allowedDrift, rtImmediate: false, rtTruth: this.rtTruth, ...options});
         return range;
     }
     public testSessionRepeat(position: number, reportedTS?: Dayjs) {
@@ -149,6 +149,29 @@ describe('Player status', function () {
             player.update(testState({play: positioned, position: 13}), dayjs().add(20, 'seconds'));
 
             assert.equal(CALCULATED_PLAYER_STATUSES.paused, player.calculatedStatus);
+        });
+
+        it('Uses last known position for final range when cleaning up stale player', function () {
+            const player = new TestPositionalPlayerState(logger, [NO_DEVICE, NO_USER], {staleInterval: 20, rtTruth: true});
+
+            const positioned = clone(newPlay);
+            positioned.meta.trackProgressPosition = 3;
+
+            player.update(testState({play: positioned, position: 3}));
+
+            player.currentListenRange.rtPlayer.setPosition(13000);
+            player.update(testState({play: positioned, position: 13}), dayjs().add(10, 'seconds'));
+
+            player.currentListenRange.rtPlayer.setPosition(23000);
+            player.update(testState({play: positioned, position: 23}), dayjs().add(20, 'seconds'));
+
+            const staleDate = dayjs().add(41, 'seconds')
+            player.currentListenRange.rtPlayer.setPosition(44000);
+            expect(player.currentListenRange.isOverDrifted(23)).to.be.true;
+
+            expect(player.checkStale(staleDate)).to.be.true;
+            expect(player.listenRanges[player.listenRanges.length - 1].end.position).to.eq(23);
+            expect(player.getListenDuration()).to.eq(20);
         });
 
         // TODO playback position reported and conflicts with player reported status
