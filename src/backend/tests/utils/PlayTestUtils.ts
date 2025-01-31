@@ -7,6 +7,7 @@ import timezone from "dayjs/plugin/timezone.js";
 import utc from "dayjs/plugin/utc.js";
 import { JsonPlayObject, ObjectPlayData, PlayMeta, PlayObject } from "../../../core/Atomic.js";
 import { sortByNewestPlayDate } from "../../utils.js";
+import { NO_DEVICE, NO_USER, PlayerStateDataMaybePlay, PlayPlatformId, ReportedPlayerStatus } from '../../common/infrastructure/Atomic.js';
 
 dayjs.extend(utc)
 dayjs.extend(isBetween);
@@ -132,6 +133,21 @@ export const normalizePlays = (plays: PlayObject[],
     }
 
     return normalizedPlays;
+}
+
+export const generatePlayerStateData = (options: Omit<PlayerStateDataMaybePlay, 'platformId'> & {playData?: ObjectPlayData, playMeta?: PlayMeta, platformId?: PlayPlatformId} = {}): PlayerStateDataMaybePlay => {
+    let play: PlayObject = options.play ?? generatePlay(options.playData, options.playMeta);
+    if(options.position !== undefined) {
+        play.meta.trackProgressPosition = options.position;
+    }
+    return {
+        platformId: options.platformId ?? [NO_DEVICE, NO_USER],
+        sessionId: options.sessionId,
+        play,
+        status: options.status,
+        position: options.position,
+        timestamp: options.timestamp ?? dayjs()
+    }
 }
 
 export const generatePlay = (data: ObjectPlayData = {}, meta: PlayMeta = {}): PlayObject => {

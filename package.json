@@ -153,6 +153,7 @@
     "eslint": "^8.56.0",
     "eslint-plugin-prefer-arrow-functions": "^3.2.4",
     "mocha": "^10.3.0",
+    "mockdate": "^3.0.5",
     "msw": "^2.1.2",
     "nodemon": "^3.0.3",
     "ts-essentials": "^9.1.2",
