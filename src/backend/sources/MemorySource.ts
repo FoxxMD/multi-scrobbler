@@ -1,5 +1,5 @@
 import { Logger } from "@foxxmd/logging";
-import dayjs from "dayjs";
+import dayjs, { Dayjs } from "dayjs";
 import { EventEmitter } from "events";
 import objectHash from 'object-hash';
 import { SimpleIntervalJob, Task, ToadScheduler } from "toad-scheduler";
@@ -184,7 +184,7 @@ export default class MemorySource extends AbstractSource {
         return sessions[0];
     }
     
-    processRecentPlays = (datas: (PlayObject | PlayerStateDataMaybePlay)[]) => {
+    processRecentPlays = (datas: (PlayObject | PlayerStateDataMaybePlay)[], reportedTS?: Dayjs) => {
 
         const {
             options: {
@@ -239,7 +239,7 @@ export default class MemorySource extends AbstractSource {
                     playerState.position = playerState.play.meta?.trackProgressPosition;
                 }
 
-                const [currPlay, prevPlay] = player.update(playerState);
+                const [currPlay, prevPlay] = player.update(playerState, reportedTS);
                 const candidate = prevPlay !== undefined ? prevPlay : currPlay;
                 const playChanged = prevPlay !== undefined;
 
