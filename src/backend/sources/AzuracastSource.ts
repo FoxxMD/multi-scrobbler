@@ -179,24 +179,24 @@ export class AzuracastSource extends MemoryPositionalSource {
     // TODO return based on user intervention
     protected isStationValidListen = () => {
         if(this.wsNowPlaying === undefined) {
-            this.logger.debug({leaf: `Station ${this.config.data.station}`}, `No data returned yet`);
+            this.logger.debug({labels: `Station ${this.config.data.station}`}, `No data returned yet (check station name is correct?)`);
             return false;
         }
         if(!this.wsNowPlaying.is_online && this.config.data.monitorWhenLive) {
-            this.logger.debug({leaf: `Station ${this.config.data.station}`}, `Currently offline`);
+            this.logger.debug({labels: `Station ${this.config.data.station}`}, `Currently offline`);
             return false;
         }
         if(this.manualListening !== undefined) {
-            this.logger.debug({leaf: `Station ${this.config.data.station}`}, `Using manual listening status ${this.manualListening}`);
+            this.logger.debug({labels: `Station ${this.config.data.station}`}, `Using manual listening status ${this.manualListening}`);
             return this.manualListening;
         }
         if(this.config.data.monitorWhenListeners !== undefined) {
             if(this.config.data.monitorWhenListeners === true && this.wsNowPlaying.listeners.current === 0) {
-                this.logger.debug({leaf: `Station ${this.config.data.station}`}, `No listeners`);
+                this.logger.debug({labels: `Station ${this.config.data.station}`}, `No listeners`);
                 return false;
             }
             if(typeof this.config.data.monitorWhenListeners === 'number' && this.wsNowPlaying.listeners.current < this.config.data.monitorWhenListeners) {
-                this.logger.debug({leaf: `Station ${this.config.data.station}`}, `Requries ${this.config.data.monitorWhenListeners} listeners to be active but currently only ${this.wsNowPlaying.listeners.current}`);
+                this.logger.debug({labels: `Station ${this.config.data.station}`}, `Requries ${this.config.data.monitorWhenListeners} listeners to be active but currently only ${this.wsNowPlaying.listeners.current}`);
                 return false;
             }
         }
