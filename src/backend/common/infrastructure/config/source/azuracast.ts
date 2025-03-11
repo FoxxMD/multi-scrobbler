@@ -80,6 +80,8 @@ export interface AzuracastData extends CommonSourceData {
 
     /**
      * Only activate scrobble monitoring if station has a live DJ/Streamer
+     * 
+     * @default true
      */
     monitorWhenLive?: boolean
 

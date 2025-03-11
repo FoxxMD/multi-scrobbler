@@ -5,7 +5,9 @@
     "name": "azura",
     "data": {
       "url": "ws://192.168.0.101",
-      "station": "my-station-name"
+      "station": "my-station-name",
+      "monitorWhenLive": true,
+      "monitorWhenListeners": 1
     }
   }
 ]
