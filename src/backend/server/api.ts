@@ -28,7 +28,6 @@ import { makeClientCheckMiddle, makeSourceCheckMiddle } from "./middleware.js";
 import { setupPlexRoutes } from "./plexRoutes.js";
 import { setupTautulliRoutes } from "./tautulliRoutes.js";
 import { setupWebscrobblerRoutes } from "./webscrobblerRoutes.js";
-import { Readable } from 'node:stream';
 
 const maxBufferSize = 300;
 const output: Record<number, FixedSizeList<LogDataPretty>> =  {};
@@ -192,6 +191,8 @@ export const setupApi = (app: ExpressWithAsync, logger: Logger, appLoggerStream:
                 players: 'players' in x ? (x as MemorySource).playersToObject() : {},
                 sot: ('playerSourceOfTruth' in x) ? x.playerSourceOfTruth : SOURCE_SOT.HISTORY,
                 supportsUpstreamRecentlyPlayed: x.supportsUpstreamRecentlyPlayed,
+                supportsManualListening: x.supportsManualListening,
+                manualListening: x.manualListening,
                 ...x.additionalApiData()
             };
             if(!x.isReady()) {
@@ -443,6 +444,34 @@ export const setupApi = (app: ExpressWithAsync, logger: Logger, appLoggerStream:
         } else {
             source.poll({force, notify: false}).catch(e => source.logger.error(e));
         }
+    });
+
+    app.use('/api/source/listen', sourceRequiredMiddle);
+    app.postAsync('/api/source/listen', async (req, res) => {
+        // @ts-expect-error TS(2339): Property 'scrobbleSource' does not exist on type '... Remove this comment to see the full error message
+        const source = req.scrobbleSource as AbstractSource;
+
+        const {
+            query: {
+                listening: listeningQ
+            }
+        } = req;
+
+        if(!source.supportsManualListening)
+        {
+            source.logger.warn('This source does not support manual listening');
+            res.status(400).send();
+            return;
+        }
+        let listening: boolean | undefined;
+        if(listeningQ !== undefined) {
+            listening = parseBool(listeningQ)
+        }
+        source.logger.verbose(`User requested listening status ${listening === undefined ? 'system' : listening}`);
+
+        source.manualListening = listening;
+
+        res.status(200).json({listening});
     });
 
     app.use('/api/client/init', clientRequiredMiddle);
