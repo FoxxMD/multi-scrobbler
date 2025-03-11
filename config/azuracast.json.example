@@ -1,0 +1,11 @@
+[
+  {
+    "type": "azuracast",
+    "enable": true,
+    "name": "azura",
+    "data": {
+      "url": "ws://192.168.0.101",
+      "station": "my-station-name"
+    }
+  }
+]

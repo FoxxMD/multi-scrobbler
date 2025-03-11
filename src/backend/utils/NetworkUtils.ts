@@ -79,6 +79,50 @@ export const normalizeWebAddress = (val: string): URLData => {
     }
 }
 
+export const  normalizeWSAddress = (val: string, options: {defaultPort?: number | string, defaultPath?: string} = {}): URLData => {
+    let cleanUserUrl = val.trim();
+    const results = parseRegexSingle(QUOTES_UNWRAP_REGEX, val);
+    if (results !== undefined && results.groups && results.groups.length > 0) {
+        cleanUserUrl = results.groups[0];
+    }
+    if(!cleanUserUrl.match(/^(?:wss?|https?):/i)) {
+        cleanUserUrl = `ws://${cleanUserUrl}`;
+    }
+    const normal = normalizeUrl(val, {removeTrailingSlash: false})
+    const url = new URL(normal);
+
+    // default WS
+    if (url.protocol === 'https:') {
+        url.protocol = 'wss:';
+    } else if (url.protocol === 'http:')  {
+        url.protocol = 'ws:';
+    } else if(url.protocol === '') {
+        url.protocol = 'ws:'
+    }
+
+    const {defaultPort, defaultPath} = options;
+
+    let port: number;
+    if(url.port === null || url.port === '') {
+        if(defaultPort !== undefined) {
+            url.port = defaultPort.toString();
+            port = parseInt(url.port);
+        } else {
+            port = url.protocol === 'ws:' ? 80 : 443;
+        }
+    }
+
+    if(url.pathname === '/' && defaultPath !== undefined) {
+        url.pathname = defaultPath;
+    }
+    
+    return {
+        url,
+        normal: url.toString(),
+        port
+    }
+}
+
 export const generateBaseURL = (userUrl: string | undefined, defaultPort: number | string): URL => {
     const urlStr = userUrl ?? `http://localhost:${defaultPort}`;
     let cleanUserUrl = urlStr.trim();
