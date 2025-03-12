@@ -20,6 +20,7 @@ export type SourceType =
     | 'ytmusic'
     | 'mpris'
     | 'mopidy'
+    | 'musiccast'
     | 'listenbrainz'
     | 'jriver'
     | 'kodi'
@@ -42,6 +43,7 @@ export const sourceTypes: SourceType[] = [
     'ytmusic',
     'mpris',
     'mopidy',
+    'musiccast',
     'listenbrainz',
     'jriver',
     'kodi',
