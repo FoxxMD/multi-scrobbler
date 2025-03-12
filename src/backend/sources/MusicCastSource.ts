@@ -69,14 +69,6 @@ export class MusicCastSource extends MemoryPositionalSource {
     }
 
     getAnyPlayInfo = async (): Promise<PlayInfoCDResponse | PlayInfoNetResponse | undefined> => {
-        try {
-            const cdResp = await request.get(joinedUrl(this.urlData.url, '/cd/getPlayInfo').toString());
-            if (cdResp.body !== undefined && typeof cdResp.body === 'object') {
-                return cdResp.body as PlayInfoCDResponse;
-            }
-        } catch (e) {
-            this.logger.warn(new Error('Not OK response from cd getPlayInfo but will continue', {cause: e}));
-        }
 
         try {
             const netResp = await request.get(joinedUrl(this.urlData.url, '/netusb/getPlayInfo').toString());
@@ -85,6 +77,15 @@ export class MusicCastSource extends MemoryPositionalSource {
             }
         } catch (e) {
             this.logger.warn(new Error('Not OK response from netusb getPlayInfo but will continue', {cause: e}));
+        }
+
+        try {
+            const cdResp = await request.get(joinedUrl(this.urlData.url, '/cd/getPlayInfo').toString());
+            if (cdResp.body !== undefined && typeof cdResp.body === 'object') {
+                return cdResp.body as PlayInfoCDResponse;
+            }
+        } catch (e) {
+            this.logger.warn(new Error('Not OK response from cd getPlayInfo but will continue', {cause: e}));
         }
 
         return undefined;
