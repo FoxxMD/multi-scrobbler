@@ -47,6 +47,44 @@ export const isPortReachable = async (port: number, opts: PortReachableOpts) => 
     }
 }
 
+/** Test if a host:port is reachable via TCP
+ * 
+ * Need to use net.connect instead of new.Socket() because the popular mocking libraries don't mock Socket
+ * 
+ * https://github.com/gr2m/node-net-interceptor/issues/2
+ * https://github.com/moll/node-mitm/issues/42
+ * 
+ */
+export const isPortReachableConnect = async (port: number, opts: PortReachableOpts) => {
+    const {host, timeout = 1000} = opts;
+
+    const promise = new Promise(((resolve, reject) => {
+        const client = net.connect({
+            timeout,
+            port,
+            host
+        }, () => {
+            client.end();
+            resolve(true);
+        });
+
+        client.on('error', (err) => {
+            client.destroy();
+            reject(err);
+        });
+        client.on('timeout', () => {
+            reject(new Error(`Connection timed out after ${timeout}ms`));
+        });
+    }));
+
+    try {
+        await promise;
+        return true;
+    } catch (e) {
+        throw e;
+    }
+}
+
 const QUOTES_UNWRAP_REGEX: RegExp = new RegExp(/^"(.*)"$/);
 
 export const normalizeWebAddress = (val: string, options: {defaultPath?: string} = {}): URLData => {
