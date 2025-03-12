@@ -55,7 +55,7 @@ export default class ScrobbleClients {
     getByType = (type: any) => this.clients.filter(x => x.type === type)
 
     async getStatusSummary(type?: string, name?: string): Promise<[boolean, string[]]> {
-        let clients: AbstractScrobbleClient[];
+        let clients: AbstractScrobbleClient[] = [];
 
         const messages: string[] = [];
         let clientsReady = true;
@@ -63,7 +63,10 @@ export default class ScrobbleClients {
         if(type !== undefined) {
             clients = this.getByType(type);
         } else if(name !== undefined) {
-            clients = [this.getByName(name)];
+            const clientByName = this.getByName(name);
+            if(clientByName !== undefined) {
+                clients = [clientByName];
+            }
         } else {
             clients = this.clients;
         }

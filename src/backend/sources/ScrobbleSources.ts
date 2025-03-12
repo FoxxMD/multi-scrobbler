@@ -86,14 +86,17 @@ export default class ScrobbleSources {
     getByNameAndType = (name: string, type: SourceType) => this.sources.find(x => x.name === name && x.type === type)
 
     async getStatusSummary(type?: string, name?: string): Promise<[boolean, string[]]> {
-        let sources: AbstractSource[]
+        let sources: AbstractSource[] = [];
         let sourcesReady = true;
         const messages: string[] = [];
 
         if(type !== undefined) {
             sources = this.getByType(type);
         } else if(name !== undefined) {
-            sources = [this.getByName(name)];
+            const sourceByName = this.getByName(name);
+            if(sourceByName !== undefined) {
+                sources = [sourceByName];
+            }
         } else {
             sources = this.sources;
         }
