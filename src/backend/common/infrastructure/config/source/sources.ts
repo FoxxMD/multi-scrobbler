@@ -9,6 +9,7 @@ import { MopidySourceAIOConfig, MopidySourceConfig } from "./mopidy.js";
 import { MPDSourceAIOConfig, MPDSourceConfig } from "./mpd.js";
 import { MPRISSourceAIOConfig, MPRISSourceConfig } from "./mpris.js";
 import { MusikcubeSourceAIOConfig, MusikcubeSourceConfig } from "./musikcube.js";
+import { MusicCastSourceConfig, MusicCastSourceAIOConfig } from "./musiccast.js";
 import { PlexSourceAIOConfig, PlexSourceConfig, PlexApiSourceConfig, PlexApiSourceAIOConfig } from "./plex.js";
 import { SpotifySourceAIOConfig, SpotifySourceConfig } from "./spotify.js";
 import { SubsonicSourceAIOConfig, SubSonicSourceConfig } from "./subsonic.js";
@@ -37,6 +38,7 @@ export type SourceConfig =
     | WebScrobblerSourceConfig
     | ChromecastSourceConfig
     | MusikcubeSourceConfig
+    | MusicCastSourceConfig
     | MPDSourceConfig
     | VLCSourceConfig;
 
@@ -59,5 +61,6 @@ export type SourceAIOConfig =
     | WebScrobblerSourceAIOConfig
     | ChromecastSourceAIOConfig
     | MusikcubeSourceAIOConfig
+    | MusicCastSourceAIOConfig
     | MPDSourceAIOConfig
     | VLCSourceAIOConfig;
