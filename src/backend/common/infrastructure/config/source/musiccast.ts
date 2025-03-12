@@ -35,7 +35,7 @@ export interface PlayInfoNetResponse extends PlayInfoCDResponse {
     input: string
 }
 
-const MusicCastResponseCodes = new Map<number, string>([
+export const MusicCastResponseCodes = new Map<number, string>([
     [0, 'Success'],
     [1, 'Initializing'],
     [2, 'Internal Error'],

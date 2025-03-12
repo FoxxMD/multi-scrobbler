@@ -8,8 +8,8 @@ import {
     PlayerStateData,
     SINGLE_USER_PLATFORM_ID,
 } from "../common/infrastructure/Atomic.js";
-import { isPortReachable, joinedUrl, normalizeWebAddress } from "../utils/NetworkUtils.js";
-import { DeviceInfoResponse, DeviceStatusResponse, MusicCastSourceConfig, playbackToReportedStatus, PlayInfoCDResponse, PlayInfoNetResponse } from "../common/infrastructure/config/source/musiccast.js";
+import { isPortReachable, isPortReachableConnect, joinedUrl, normalizeWebAddress } from "../utils/NetworkUtils.js";
+import { DeviceInfoResponse, DeviceStatusResponse, MusicCastResponseCodes, MusicCastSourceConfig, playbackToReportedStatus, PlayInfoCDResponse, PlayInfoNetResponse } from "../common/infrastructure/config/source/musiccast.js";
 import request, { Request, Response } from 'superagent';
 
 
@@ -51,7 +51,7 @@ export class MusicCastSource extends MemoryPositionalSource {
 
     protected async doCheckConnection(): Promise<true | string | undefined> {
         try {
-            await isPortReachable(this.urlData.port, { host: this.urlData.url.hostname });
+            await isPortReachableConnect(1130, { host: this.urlData.url.hostname });
             this.logger.verbose(`${this.urlData.url.hostname}:${this.urlData.port} is reachable.`);
 
             const resp = await request.get(joinedUrl(this.urlData.url, 'system/getDeviceInfo').toString())
@@ -73,7 +73,11 @@ export class MusicCastSource extends MemoryPositionalSource {
         try {
             const netResp = await request.get(joinedUrl(this.urlData.url, '/netusb/getPlayInfo').toString());
             if (netResp.body !== undefined && typeof netResp.body === 'object') {
-                return netResp.body as PlayInfoNetResponse
+                const resp = netResp.body as PlayInfoNetResponse
+                if(resp.response_code !== 0) {
+                    throw new Error(`netusb source is unexpected status: ${resp.response_code} (${MusicCastResponseCodes.get(resp.response_code) ?? 'Unknown'})`);
+                }
+                return resp;
             }
         } catch (e) {
             this.logger.warn(new Error('Not OK response from netusb getPlayInfo but will continue', {cause: e}));
@@ -82,7 +86,11 @@ export class MusicCastSource extends MemoryPositionalSource {
         try {
             const cdResp = await request.get(joinedUrl(this.urlData.url, '/cd/getPlayInfo').toString());
             if (cdResp.body !== undefined && typeof cdResp.body === 'object') {
-                return cdResp.body as PlayInfoCDResponse;
+                const resp = cdResp.body as PlayInfoCDResponse;
+                if(resp.response_code !== 0) {
+                    throw new Error(`cd source is unexpected status: ${resp.response_code} (${MusicCastResponseCodes.get(resp.response_code) ?? 'Unknown'})`);
+                }
+                return resp;
             }
         } catch (e) {
             this.logger.warn(new Error('Not OK response from cd getPlayInfo but will continue', {cause: e}));
