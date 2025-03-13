@@ -25,6 +25,7 @@ import { setupAuthRoutes } from "./auth.js";
 import { setupDeezerRoutes } from "./deezerRoutes.js";
 import { setupJellyfinRoutes } from "./jellyfinRoutes.js";
 import {setupLZEndpointRoutes} from "./endpointListenbrainzRoutes.js";
+import {setupLastfmEndpointRoutes} from "./endpointLastfmRoutes.js";
 import { makeClientCheckMiddle, makeSourceCheckMiddle } from "./middleware.js";
 import { setupPlexRoutes } from "./plexRoutes.js";
 import { setupTautulliRoutes } from "./tautulliRoutes.js";
@@ -154,6 +155,7 @@ export const setupApi = (app: ExpressWithAsync, logger: Logger, appLoggerStream:
     setupDeezerRoutes(app, logger, scrobbleSources);
     setupWebscrobblerRoutes(app, logger, scrobbleSources);
     setupLZEndpointRoutes(app, logger, scrobbleSources);
+    setupLastfmEndpointRoutes(app, logger, scrobbleSources);
     setupAuthRoutes(app, logger, sourceRequiredMiddle, clientRequiredMiddle, scrobbleSources, scrobbleClients);
 
     app.putAsync('/api/webscrobbler', bodyParser.json({type: ['text/*', 'application/json']}), async (req, res) => {

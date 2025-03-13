@@ -26,7 +26,7 @@ export class EndpointListenbrainzSource extends MemorySource {
 
     constructor(name: any, config: ListenbrainzEndpointSourceConfig, internal: InternalConfig, emitter: EventEmitter) {
         super('endpointlz', name, config, internal, emitter);
-        this.multiPlatform = true;
+        this.multiPlatform = false;
         this.playerSourceOfTruth = SOURCE_SOT.HISTORY;
 
         const {

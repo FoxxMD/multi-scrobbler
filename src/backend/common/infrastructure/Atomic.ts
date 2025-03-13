@@ -16,6 +16,7 @@ export type SourceType =
     | 'lastfm'
     | 'deezer'
     | 'endpointlz'
+    | 'endpointlfm'
     | 'ytmusic'
     | 'mpris'
     | 'mopidy'
@@ -37,6 +38,7 @@ export const sourceTypes: SourceType[] = [
     'lastfm',
     'deezer',
     'endpointlz',
+    'endpointlfm',
     'ytmusic',
     'mpris',
     'mopidy',

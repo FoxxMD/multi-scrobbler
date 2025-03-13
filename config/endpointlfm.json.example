@@ -1,0 +1,9 @@
+[
+  {
+    "name": "myLfm",
+    "enable": true,
+    "data": {
+      "slug": "mySlug"
+    }
+  }
+]

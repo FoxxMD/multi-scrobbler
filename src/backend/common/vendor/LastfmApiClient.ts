@@ -1,6 +1,8 @@
-import dayjs from "dayjs";
+import dayjs, { Dayjs } from "dayjs";
 import LastFm, {
     AuthGetSessionResponse,
+    LastfmTrackUpdateRequest,
+    NowPlayingPayload,
     NowPlayingResponse,
     TrackObject,
     TrackScrobblePayload,
@@ -16,6 +18,7 @@ import { UpstreamError } from "../errors/UpstreamError.js";
 import { AbstractApiOptions, DEFAULT_RETRY_MULTIPLIER, FormatPlayObjectOptions } from "../infrastructure/Atomic.js";
 import { LastfmData } from "../infrastructure/config/client/lastfm.js";
 import AbstractApiClient from "./AbstractApiClient.js";
+import { parseArtistCredits } from "../../utils/StringUtils.js";
 
 const badErrors = [
     'api key suspended',
@@ -274,4 +277,61 @@ export default class LastfmApiClient extends AbstractApiClient {
             }
         }
     }
+}
+
+export const scrobblePayloadToPlay = (obj: LastfmTrackUpdateRequest): PlayObject => {
+    const {
+        artist,
+        track,
+        duration,
+        album,
+        albumArtist,
+    } = obj;
+
+    let ts: Dayjs | undefined;
+    if('timestamp' in obj) {
+        ts = dayjs.unix(obj.timestamp);
+    }
+    const mbid = 'mbid' in obj ? obj.mbid : undefined;
+
+
+    let artists: string[] = [];
+
+    const credits = parseArtistCredits(artist);
+    if(credits !== undefined) {
+        artists.push(credits.primary);
+        if(credits.secondary !== undefined) {
+            const nonEmptyArtists = credits.secondary.filter(x => x !== undefined && x !== null && x.trim() !== '');
+            if(nonEmptyArtists.length > 0) {
+                artists = [...artists, ...nonEmptyArtists];
+            }
+        }
+    } else {
+        artists = [artist];
+    }
+
+    const play: PlayObject = {
+        data: {
+            track,
+            album: nonEmptyStringOrDefault(album),
+            albumArtists: nonEmptyStringOrDefault(albumArtist) !== undefined ? [albumArtist] : undefined,
+            duration: typeof duration === 'string' ? parseInt(duration, 10) : duration,
+            playDate: ts,
+            artists
+        },
+        meta: {
+            source: 'lastfm',
+            nowPlaying: obj.method === 'track.updateNowPlaying'
+        }
+    };
+
+    if(nonEmptyStringOrDefault(mbid) !== undefined) {
+        play.data.meta = {
+            brainz: {
+                track: mbid
+            }
+        };
+    }
+
+    return play;
 }

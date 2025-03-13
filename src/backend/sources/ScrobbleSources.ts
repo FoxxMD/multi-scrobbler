@@ -6,6 +6,7 @@ import { AIOConfig, SourceDefaults } from "../common/infrastructure/config/aioCo
 import { ChromecastSourceConfig } from "../common/infrastructure/config/source/chromecast.js";
 import { DeezerData, DeezerSourceConfig } from "../common/infrastructure/config/source/deezer.js";
 import { ListenbrainzEndpointSourceConfig, ListenbrainzEndpointData } from "../common/infrastructure/config/source/endpointlz.js";
+import { LastFMEndpointSourceConfig, LastFMEndpointData } from "../common/infrastructure/config/source/endpointlfm.js";
 import {
     JellyApiData,
     JellyApiSourceConfig,
@@ -35,6 +36,7 @@ import AbstractSource from "./AbstractSource.js";
 import { ChromecastSource } from "./ChromecastSource.js";
 import DeezerSource from "./DeezerSource.js";
 import { EndpointListenbrainzSource } from "./EndpointListenbrainzSource.js";
+import { EndpointLastfmSource } from "./EndpointLastfmSource.js";
 import JellyfinApiSource from "./JellyfinApiSource.js";
 import JellyfinSource from "./JellyfinSource.js";
 import { JRiverSource } from "./JRiverSource.js";
@@ -134,6 +136,9 @@ export default class ScrobbleSources {
                     break;
                 case 'endpointlz':
                     this.schemaDefinitions[type] = getTypeSchemaFromConfigGenerator("ListenbrainzEndpointSourceConfig");
+                    break;
+                case 'endpointlfm':
+                    this.schemaDefinitions[type] = getTypeSchemaFromConfigGenerator("LastFMEndpointSourceConfig");
                     break;
                 case 'subsonic':
                     this.schemaDefinitions[type] = getTypeSchemaFromConfigGenerator("SubSonicSourceConfig");
@@ -396,6 +401,22 @@ export default class ScrobbleSources {
                             mode: 'single',
                             configureAs: defaultConfigureAs,
                             data: lze as ListenbrainzEndpointData
+                        });
+                    }
+                    break;
+                case 'endpointlfm':
+                    const lfmShouldUse = parseBool(process.env.LFMENDPOINT_ENABLE);
+                    const lfme = {
+                        slug: process.env.LFM_SLUG,
+                    }
+                    if (!Object.values(lfme).every(x => x === undefined) || lfmShouldUse) {
+                        configs.push({
+                            type: 'endpointlfm',
+                            name: 'unnamed',
+                            source: 'ENV',
+                            mode: 'single',
+                            configureAs: defaultConfigureAs,
+                            data: lfme as LastFMEndpointData
                         });
                     }
                     break;
@@ -687,6 +708,9 @@ export default class ScrobbleSources {
                 break;
             case 'endpointlz':
                 newSource = await new EndpointListenbrainzSource(name, compositeConfig as ListenbrainzEndpointSourceConfig, this.internalConfig, this.emitter);
+                break;
+            case 'endpointlfm':
+                newSource = await new EndpointLastfmSource(name, compositeConfig as LastFMEndpointSourceConfig, this.internalConfig, this.emitter);
                 break;
             case 'jriver':
                 newSource = await new JRiverSource(name, compositeConfig as JRiverSourceConfig, this.internalConfig, this.emitter);
