@@ -2,7 +2,7 @@
 import { ExpressWithAsync } from "@awaitjs/express";
 import { childLogger, Logger } from "@foxxmd/logging";
 import bodyParser from "body-parser";
-import { EndpointListenbrainzSource, playStateFromRequest } from "../sources/EndpointListenbrainzSource.js";
+import { EndpointListenbrainzSource, playStateFromRequest, parseDisplayIdentifiersFromRequest } from "../sources/EndpointListenbrainzSource.js";
 import { LZEndpointNotifier } from "../sources/ingressNotifiers/LZEndpointNotifier.js";
 import ScrobbleSources from "../sources/ScrobbleSources.js";
 import { nonEmptyBody } from "./middleware.js";
@@ -17,7 +17,7 @@ export const setupLZEndpointRoutes = (app: ExpressWithAsync, parentLogger: Logge
     const nonEmptyCheck = nonEmptyBody(logger, 'LZ Endpoint');
 
     const webhookIngress = new LZEndpointNotifier(logger);
-    app.useAsync(/\/api\/listenbrainz.*/,
+    app.useAsync(/(\/api\/listenbrainz.*)|(\/1\/submit-listens)/,
         async function (req, res, next) {
             // track request before parsing body to ensure we at least log that something is happening
             // (in the event body parsing does not work or request is not POST/PATCH)
@@ -40,7 +40,7 @@ export const setupLZEndpointRoutes = (app: ExpressWithAsync, parentLogger: Logge
 
             const validSources = sources.filter(x => x.matchRequest(req));
             if (validSources.length === 0) {
-                const [slug, token] = EndpointListenbrainzSource.parseDisplayIdentifiersFromRequest(req);
+                const [slug, token] = parseDisplayIdentifiersFromRequest(req);
                 logger.warn(`No Listenbrainz endpoint config matched => Slug: ${slug} | Token: ${token}`);
             }
 

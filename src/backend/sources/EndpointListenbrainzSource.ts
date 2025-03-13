@@ -15,8 +15,8 @@ import { ListenbrainzApiClient, ListenPayload, SubmitPayload } from "../common/v
 import { parseRegexSingleOrFail } from "../utils.js";
 import MemorySource from "./MemorySource.js";
 
-const noSlugMatch = new RegExp(/\/api\/listenbrainz(?:\/?|\/1\/?|\/1\/submit-listens\/?)$/i);
-const slugMatch = new RegExp(/\/api\/listenbrainz\/([^\/]+)(?:\/?|\/1\/?|\/1\/submit-listens\/?)$/i);
+const noSlugMatch = new RegExp(/(?:\/api\/listenbrainz\/?)$|(?:\/1\/?|\/1\/submit-listens\/?)$/i);
+const slugMatch = new RegExp(/\/api\/listenbrainz\/([^\/]+)$/i);
 
 export const authHeaderRegex = new RegExp(/Token (.+)$/i);
 
@@ -42,70 +42,9 @@ export class EndpointListenbrainzSource extends MemorySource {
         };
     }
 
-    static parseSlugFromString(path: string): string | false | undefined {
-        const noSlug = parseRegexSingleOrFail(noSlugMatch, path);
-        if (noSlug !== undefined) {
-            return undefined;
-        }
-        const slugResult = parseRegexSingleOrFail(slugMatch, path);
-        if (slugResult !== undefined) {
-            return slugResult.groups[0];
-        }
-        return false;
-    }
-
-    static parseSlugFromRequest(req: ExpressRequest): string | false | undefined {
-        return EndpointListenbrainzSource.parseSlugFromString(req.baseUrl);
-    }
-
-    static parseTokenFromString(str: string): string | undefined {
-        const tokenMatch = parseRegexSingleOrFail(authHeaderRegex, str);
-        if(tokenMatch !== undefined) {
-            return tokenMatch.groups[0];
-        }
-        return undefined;
-    }
-
-    static parseTokenFromRequest(req: ExpressRequest): string | false | undefined {
-        const auth = req.header('Authorization');
-        if(typeof auth === 'string' && auth !== '') {
-            const matchedToken = EndpointListenbrainzSource.parseTokenFromString(auth);
-            if(matchedToken === undefined) {
-                return false;
-            }
-            return matchedToken;
-        }
-        return undefined;
-    }
-
-    static parseIdentifiersFromRequest(req: ExpressRequest): [string | false | undefined, false | string | undefined] {
-        const slug = EndpointListenbrainzSource.parseSlugFromRequest(req);
-        const token = EndpointListenbrainzSource.parseTokenFromRequest(req);
-
-        return [slug, token];
-    }
-
-    static parseDisplayIdentifiersFromRequest(req: ExpressRequest): [string, string] {
-        const [slug, token] = EndpointListenbrainzSource.parseIdentifiersFromRequest(req);
-        let slugStr = '(no slug)';
-        if (slug === false) {
-            slugStr = '(invalid slug)';
-        } else if (slug !== undefined) {
-            slugStr = slug;
-        }
-
-        let tokenStr = '(no token)';
-        if (token === false) {
-            tokenStr = '(invalid token)';
-        } else if (token !== undefined) {
-            tokenStr = `${token.substring(0,3)}****`
-        }
-        return [slugStr, tokenStr];
-    }
-
     matchRequest(req: ExpressRequest): boolean {
         let matchesToken = this.config.data.token === undefined;
-        const reqToken = EndpointListenbrainzSource.parseTokenFromRequest(req);
+        const reqToken = parseTokenFromRequest(req);
         if (reqToken === false) {
             return false;
         }
@@ -118,7 +57,7 @@ export class EndpointListenbrainzSource extends MemorySource {
         }
 
         let matchesPath = false;
-        const slug = EndpointListenbrainzSource.parseSlugFromRequest(req);
+        const slug = parseSlugFromRequest(req);
         if (slug === false) {
             return false;
         } else {
@@ -126,16 +65,6 @@ export class EndpointListenbrainzSource extends MemorySource {
         }
 
         return matchesToken && matchesPath;
-    }
-
-    static listenTypeAsPlayerStatus(event: string): ReportedPlayerStatus {
-        switch (event) {
-            case 'single':
-            case 'playing_now':
-                return REPORTED_PLAYER_STATUSES.playing;
-            default:
-                return REPORTED_PLAYER_STATUSES.unknown;
-        }
     }
 
     static formatPlayObj(obj: ListenPayload, options: FormatPlayObjectOptions & {
@@ -188,4 +117,63 @@ export const listenTypeAsPlayerStatus = (event: string): ReportedPlayerStatus =>
         default:
             return REPORTED_PLAYER_STATUSES.unknown;
     }
+}
+
+export const parseTokenFromString = (str: string): string | undefined => {
+    const tokenMatch = parseRegexSingleOrFail(authHeaderRegex, str);
+    if(tokenMatch !== undefined) {
+        return tokenMatch.groups[0];
+    }
+    return undefined;
+}
+
+export const parseTokenFromRequest = (req: ExpressRequest): string | false | undefined => {
+    const auth = req.header('Authorization');
+    if(typeof auth === 'string' && auth !== '') {
+        const matchedToken = parseTokenFromString(auth);
+        if(matchedToken === undefined) {
+            return false;
+        }
+        return matchedToken;
+    }
+    return undefined;
+}
+
+export const parseSlugFromString = (path: string): string | false | undefined => {
+    const noSlug = parseRegexSingleOrFail(noSlugMatch, path);
+    if (noSlug !== undefined) {
+        return undefined;
+    }
+    const slugResult = parseRegexSingleOrFail(slugMatch, path);
+    if (slugResult !== undefined) {
+        return slugResult.groups[0];
+    }
+    return false;
+}
+
+export const parseSlugFromRequest = (req: ExpressRequest): string | false | undefined => parseSlugFromString(req.baseUrl);
+
+export const parseIdentifiersFromRequest = (req: ExpressRequest): [string | false | undefined, false | string | undefined] => {
+    const slug = parseSlugFromRequest(req);
+    const token = parseTokenFromRequest(req);
+
+    return [slug, token];
+}
+
+export const parseDisplayIdentifiersFromRequest = (req: ExpressRequest): [string, string] => {
+    const [slug, token] = parseIdentifiersFromRequest(req);
+    let slugStr = '(no slug)';
+    if (slug === false) {
+        slugStr = '(invalid slug)';
+    } else if (slug !== undefined) {
+        slugStr = slug;
+    }
+
+    let tokenStr = '(no token)';
+    if (token === false) {
+        tokenStr = '(invalid token)';
+    } else if (token !== undefined) {
+        tokenStr = `${token.substring(0,3)}****`
+    }
+    return [slugStr, tokenStr];
 }
