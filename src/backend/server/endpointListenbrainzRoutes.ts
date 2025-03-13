@@ -1,0 +1,54 @@
+/* eslint-disable prefer-arrow-functions/prefer-arrow-functions */
+import { ExpressWithAsync } from "@awaitjs/express";
+import { childLogger, Logger } from "@foxxmd/logging";
+import bodyParser from "body-parser";
+import { EndpointListenbrainzSource, playStateFromRequest } from "../sources/EndpointListenbrainzSource.js";
+import { LZEndpointNotifier } from "../sources/ingressNotifiers/LZEndpointNotifier.js";
+import ScrobbleSources from "../sources/ScrobbleSources.js";
+import { nonEmptyBody } from "./middleware.js";
+
+export const setupLZEndpointRoutes = (app: ExpressWithAsync, parentLogger: Logger, scrobbleSources: ScrobbleSources) => {
+
+    const logger = childLogger(parentLogger, ['Ingress', 'Listenbrainz']);
+
+    const lzJsonParser = bodyParser.json({
+        type: ['text/*', 'application/json'],
+    });
+    const nonEmptyCheck = nonEmptyBody(logger, 'LZ Endpoint');
+
+    const webhookIngress = new LZEndpointNotifier(logger);
+    app.useAsync(/\/api\/listenbrainz.*/,
+        async function (req, res, next) {
+            // track request before parsing body to ensure we at least log that something is happening
+            // (in the event body parsing does not work or request is not POST/PATCH)
+            webhookIngress.trackIngress(req, true);
+            if (req.method !== 'POST') {
+                return res.sendStatus(405);
+            }
+            next();
+        },
+        lzJsonParser, nonEmptyCheck, async function (req, res) {
+            webhookIngress.trackIngress(req, false);
+
+            res.sendStatus(200);
+
+
+            const sources = scrobbleSources.getByType('endpointlz') as EndpointListenbrainzSource[];
+            if (sources.length === 0) {
+                logger.warn('Received Listenbrainz endpoint payload but no Listenbrainz endpoint sources are configured');
+            }
+
+            const validSources = sources.filter(x => x.matchRequest(req));
+            if (validSources.length === 0) {
+                const [slug, token] = EndpointListenbrainzSource.parseDisplayIdentifiersFromRequest(req);
+                logger.warn(`No Listenbrainz endpoint config matched => Slug: ${slug} | Token: ${token}`);
+            }
+
+            const playerState = playStateFromRequest(req.body);
+
+            for (const source of validSources) {
+                await source.handle(playerState);
+            }
+        });
+}
+

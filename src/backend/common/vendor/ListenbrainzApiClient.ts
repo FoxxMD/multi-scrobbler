@@ -81,7 +81,7 @@ export interface ListenPayload {
 }
 
 export interface SubmitPayload {
-    listen_type: 'single',
+    listen_type: 'single' | 'playing_now',
     payload: [ListenPayload]
 }
 
@@ -296,6 +296,43 @@ export class ListenbrainzApiClient extends AbstractApiClient {
                     release_mbid: brainz.album,
                     release_group_mbid: brainz.releaseGroup
                 }
+            }
+        }
+    }
+
+    static listenPayloadToPlay(payload: ListenPayload, nowPlaying: boolean = false): PlayObject {
+        const {
+            listened_at = dayjs().unix(),
+            track_metadata: {
+                artist_name,
+                track_name,
+                additional_info: {
+                    duration,
+                    track_mbid,
+                    artist_mbids,
+                    release_mbid,
+                    release_group_mbid
+                } = {}
+            } = {},
+        } = payload;
+
+        return {
+            data: {
+                playDate: typeof listened_at === 'number' ? dayjs.unix(listened_at) : dayjs(listened_at),
+                track: track_name,
+                artists: [artist_name],
+                duration,
+                meta: {
+                    brainz: {
+                        artist: artist_mbids !== undefined ? artist_mbids : undefined,
+                        album: release_mbid,
+                        albumArtist: release_group_mbid,
+                        track: track_mbid
+                    }
+                }
+            },
+            meta: {
+                nowPlaying,
             }
         }
     }

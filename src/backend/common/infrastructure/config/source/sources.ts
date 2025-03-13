@@ -1,4 +1,5 @@
 import { ChromecastSourceAIOConfig, ChromecastSourceConfig } from "./chromecast.js";
+import { ListenbrainzEndpointSourceAIOConfig, ListenbrainzEndpointSourceConfig } from "./endpointlz.js";
 import { DeezerSourceAIOConfig, DeezerSourceConfig } from "./deezer.js";
 import { JellyApiSourceAIOConfig, JellyApiSourceConfig, JellySourceAIOConfig, JellySourceConfig } from "./jellyfin.js";
 import { JRiverSourceAIOConfig, JRiverSourceConfig } from "./jriver.js";
@@ -24,6 +25,7 @@ export type SourceConfig =
     | PlexApiSourceConfig
     | TautulliSourceConfig
     | DeezerSourceConfig
+    | ListenbrainzEndpointSourceConfig
     | SubSonicSourceConfig
     | JellySourceConfig
     | JellyApiSourceConfig
@@ -46,6 +48,7 @@ export type SourceAIOConfig =
     | PlexApiSourceAIOConfig
     | TautulliSourceAIOConfig
     | DeezerSourceAIOConfig
+    | ListenbrainzEndpointSourceAIOConfig
     | SubsonicSourceAIOConfig
     | JellySourceAIOConfig
     | JellyApiSourceAIOConfig

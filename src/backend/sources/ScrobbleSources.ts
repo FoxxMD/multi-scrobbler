@@ -5,6 +5,7 @@ import { ConfigMeta, InternalConfig, isSourceType, SourceType, sourceTypes } fro
 import { AIOConfig, SourceDefaults } from "../common/infrastructure/config/aioConfig.js";
 import { ChromecastSourceConfig } from "../common/infrastructure/config/source/chromecast.js";
 import { DeezerData, DeezerSourceConfig } from "../common/infrastructure/config/source/deezer.js";
+import { ListenbrainzEndpointSourceConfig, ListenbrainzEndpointData } from "../common/infrastructure/config/source/endpointlz.js";
 import {
     JellyApiData,
     JellyApiSourceConfig,
@@ -33,6 +34,7 @@ import { validateJson } from "../utils/ValidationUtils.js";
 import AbstractSource from "./AbstractSource.js";
 import { ChromecastSource } from "./ChromecastSource.js";
 import DeezerSource from "./DeezerSource.js";
+import { EndpointListenbrainzSource } from "./EndpointListenbrainzSource.js";
 import JellyfinApiSource from "./JellyfinApiSource.js";
 import JellyfinSource from "./JellyfinSource.js";
 import { JRiverSource } from "./JRiverSource.js";
@@ -129,6 +131,9 @@ export default class ScrobbleSources {
                     break;
                 case 'deezer':
                     this.schemaDefinitions[type] = getTypeSchemaFromConfigGenerator("DeezerSourceConfig");
+                    break;
+                case 'endpointlz':
+                    this.schemaDefinitions[type] = getTypeSchemaFromConfigGenerator("ListenbrainzEndpointSourceConfig");
                     break;
                 case 'subsonic':
                     this.schemaDefinitions[type] = getTypeSchemaFromConfigGenerator("SubSonicSourceConfig");
@@ -376,6 +381,23 @@ export default class ScrobbleSources {
                 case 'listenbrainz':
                     // sane default for lastfm is that user want to scrobble TO it, not FROM it -- this is also existing behavior
                     defaultConfigureAs = 'client';
+                    break;
+                case 'endpointlz':
+                    const lzShouldUse = parseBool(process.env.LZENDPOINT_ENABLE);
+                    const lze = {
+                        slug: process.env.LZE_SLUG,
+                        token: process.env.LZE_TOKEN
+                    }
+                    if (!Object.values(lze).every(x => x === undefined) || lzShouldUse) {
+                        configs.push({
+                            type: 'endpointlz',
+                            name: 'unnamed',
+                            source: 'ENV',
+                            mode: 'single',
+                            configureAs: defaultConfigureAs,
+                            data: lze as ListenbrainzEndpointData
+                        });
+                    }
                     break;
                 case 'jriver':
                     const jr = {
@@ -662,6 +684,9 @@ export default class ScrobbleSources {
                 break;
             case 'listenbrainz':
                 newSource = await new ListenbrainzSource(name, compositeConfig as ListenBrainzSourceConfig, this.internalConfig, this.emitter);
+                break;
+            case 'endpointlz':
+                newSource = await new EndpointListenbrainzSource(name, compositeConfig as ListenbrainzEndpointSourceConfig, this.internalConfig, this.emitter);
                 break;
             case 'jriver':
                 newSource = await new JRiverSource(name, compositeConfig as JRiverSourceConfig, this.internalConfig, this.emitter);
