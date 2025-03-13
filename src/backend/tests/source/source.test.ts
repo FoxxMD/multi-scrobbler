@@ -6,10 +6,15 @@ import { after, before, describe, it } from 'mocha';
 import pEvent from "p-event";
 import clone from 'clone';
 import { PlayObject } from "../../../core/Atomic.js";
-import { generatePlay } from "../utils/PlayTestUtils.js";
-import { TestSource } from "./TestSource.js";
+import { generatePlay, generatePlayerStateData } from "../utils/PlayTestUtils.js";
+import { TestMemoryPositionalSource, TestMemorySource, TestSource } from "./TestSource.js";
 import spotifyPayload from '../plays/spotifyCurrentPlaybackState.json';
 import SpotifySource from "../../sources/SpotifySource.js";
+import MockDate from 'mockdate';
+import dayjs, { Dayjs } from "dayjs";
+import { REPORTED_PLAYER_STATUSES } from "../../common/infrastructure/Atomic.js";
+import { SourceConfig } from "../../common/infrastructure/config/source/sources.js";
+import MemorySource from "../../sources/MemorySource.js";
 
 chai.use(asPromised);
 
@@ -19,6 +24,20 @@ const generateSource = () => {
     return new TestSource('spotify', 'test', {}, {localUrl: new URL('https://example.com'), configDir: 'fake', logger: loggerTest, version: 'test'},  emitter);
 }
 let source: TestSource = generateSource();
+
+const generateMemorySource = (config: SourceConfig = {}) => {
+    const s = new TestMemorySource('spotify', 'test', config, {localUrl: new URL('https://example.com'), configDir: 'fake', logger: loggerTest, version: 'test'},  emitter);
+    s.buildTransformRules();
+    s.scheduler.stop();
+    return s;
+}
+
+const generateMemoryPositionalSource = (config: SourceConfig = {}) => {
+    const s = new TestMemoryPositionalSource('spotify', 'test', config, {localUrl: new URL('https://example.com'), configDir: 'fake', logger: loggerTest, version: 'test'},  emitter);
+    s.buildTransformRules();
+    s.scheduler.stop();
+    return s;
+}
 
 describe('Sources use transform plays correctly', function () {
 
@@ -158,5 +177,225 @@ describe('Sources correctly parse incoming payloads', function () {
         expect(identicalArtistsPlay.data.album).eq('Bloodbags And Downtube Shifters');
         expect(identicalArtistsPlay.data.artists).eql(['Dubmood', 'MASTER BOOT RECORD']);
         expect(identicalArtistsPlay.data.albumArtists).to.be.empty;
+    });
+});
+
+describe('Player Cleanup', function () {
+
+    this.afterEach(() => {
+        MockDate.reset();
+    });
+
+    const cleanedUpDuration = (generateSource: (config: SourceConfig) => MemorySource) => {
+        const source = generateSource({data: {staleAfter: 21, orphanedAfter: 40}, options: {}});
+        const initialDate = dayjs();
+        const initialState = generatePlayerStateData({position: 0, playData: {duration: 50}, timestamp: initialDate, status: REPORTED_PLAYER_STATUSES.playing});
+        expect(source.processRecentPlays([initialState]).length).to.be.eq(0);
+
+        let position = 0;
+        let timeSince = 0;
+
+        // simulate polling playing source for 30 seconds, 10 second interval
+        for(let i = 0; i < 3; i++) {
+            position += 10;
+            timeSince += 10;
+            MockDate.set(initialDate.add(position, 'seconds').toDate());
+            const advancedState = generatePlayerStateData({play: initialState.play, timestamp: dayjs(), position, status: REPORTED_PLAYER_STATUSES.playing});
+            expect(source.processRecentPlays([advancedState]).length).to.be.eq(0);
+        }
+
+        // simulate polling another 20 seconds without any updates from the Source
+        for(let i = 0; i < 2; i++) {
+            timeSince += 10;
+            MockDate.set(initialDate.add(timeSince, 'seconds').toDate());
+            expect(source.processRecentPlays([]).length).to.be.eq(0);
+        }
+
+        MockDate.set(initialDate.add(timeSince + 2, 'seconds').toDate());
+        const discoveredPlays = source.processRecentPlays([]);
+        // cleanup should discover stale play
+        expect(discoveredPlays.length).to.be.eq(1);
+        expect(discoveredPlays[0].data.listenedFor).closeTo(30, 2);
+    } 
+
+    it('Discovers cleaned up Play with correct duration (Non Positional Source)', function () {
+        cleanedUpDuration(generateMemorySource);
+    });
+
+    it('Discovers cleaned up Play with correct duration (Positional Source)', function () {
+        cleanedUpDuration(generateMemoryPositionalSource);
+    });
+
+    const noScrobbleRediscoveryOnActive = (generateSource: (config: SourceConfig) => MemorySource) => {
+
+        const source = generateSource({data: {staleAfter: 21, orphanedAfter: 40}, options: {}});
+        const initialDate = dayjs();
+        const initialState = generatePlayerStateData({position: 0, playData: {duration: 50}, timestamp: initialDate, status: REPORTED_PLAYER_STATUSES.playing});
+        expect(source.processRecentPlays([initialState]).length).to.be.eq(0);
+
+        let position = 0;
+        let timeSince = 0;
+
+        // simulate polling playing source for 30 seconds, 10 second interval
+        for(let i = 0; i < 3; i++) {
+            position += 10;
+            timeSince += 10;
+            MockDate.set(initialDate.add(position, 'seconds').toDate());
+            const advancedState = generatePlayerStateData({play: initialState.play, timestamp: dayjs(), position, status: REPORTED_PLAYER_STATUSES.playing});
+            expect(source.processRecentPlays([advancedState]).length).to.be.eq(0);
+        }
+
+        // simulate polling another 20 seconds without any updates from the Source
+        for(let i = 0; i < 2; i++) {
+            timeSince += 10;
+            MockDate.set(initialDate.add(timeSince, 'seconds').toDate());
+            expect(source.processRecentPlays([]).length).to.be.eq(0);
+        }
+
+        timeSince += 2;
+
+        MockDate.set(initialDate.add(timeSince, 'seconds').toDate());
+        const discoveredPlays = source.processRecentPlays([]);
+        // cleanup should discover stale play
+        expect(discoveredPlays.length).to.be.eq(1);
+        expect(discoveredPlays[0].data.listenedFor).closeTo(30, 2);
+
+        timeSince += 10;
+
+        position -= 9;
+        // simulate polling another 20 seconds with active source again
+        for(let i = 0; i < 2; i++) {
+            timeSince += 10;
+            MockDate.set(initialDate.add(timeSince, 'seconds').toDate());
+            const advancedState = generatePlayerStateData({play: initialState.play, timestamp: dayjs(), position, status: REPORTED_PLAYER_STATUSES.playing});
+            expect(source.processRecentPlays([advancedState]).length).to.be.eq(0);
+        }
+
+        timeSince += 10;
+        MockDate.set(initialDate.add(timeSince, 'seconds').toDate());
+        // new Play
+        const advancedState = generatePlayerStateData({timestamp: dayjs(), position: 0, status: REPORTED_PLAYER_STATUSES.playing});
+        // should not return play because it has only been played for ~20 seconds, less than 50% of duration
+        const plays = source.processRecentPlays([advancedState])
+        expect(plays.length).to.be.eq(0);
+    }
+
+
+    it('Does not discover same Play after becoming active again (Non Positional Source)', function () {
+        noScrobbleRediscoveryOnActive(generateMemorySource);
+    });
+
+    it('Does not discover same Play after becoming active again (Positional Source)', function () {
+        noScrobbleRediscoveryOnActive(generateMemoryPositionalSource);
+    });
+
+    const noScrobbleStale = (generateSource: (config: SourceConfig) => MemorySource) => {
+
+        const source = generateSource({data: {staleAfter: 21, orphanedAfter: 40}, options: {}});
+        const initialDate = dayjs();
+
+        // if player incorrectly counted stale time then 30s of actual play + 20s of stale time > scrobble threshold of 50% of 90s
+        const initialState = generatePlayerStateData({position: 0, playData: {duration: 90}, timestamp: initialDate, status: REPORTED_PLAYER_STATUSES.playing});
+        expect(source.processRecentPlays([initialState]).length).to.be.eq(0);
+
+        let position = 0;
+        let timeSince = 0;
+
+        // simulate polling playing source for 30 seconds, 10 second interval
+        for(let i = 0; i < 3; i++) {
+            position += 10;
+            timeSince += 10;
+            MockDate.set(initialDate.add(position, 'seconds').toDate());
+            const advancedState = generatePlayerStateData({play: initialState.play, timestamp: initialDate, position, status: REPORTED_PLAYER_STATUSES.playing});
+            expect(source.processRecentPlays([advancedState]).length).to.be.eq(0);
+        }
+
+        // simulate polling another 20 seconds without any updates from the Source
+        for(let i = 0; i < 2; i++) {
+            timeSince += 10;
+            MockDate.set(initialDate.add(timeSince, 'seconds').toDate());
+            expect(source.processRecentPlays([]).length).to.be.eq(0);
+        }
+
+        MockDate.set(initialDate.add(timeSince + 2, 'seconds').toDate());
+        const discoveredPlays = source.processRecentPlays([]);
+        // cleanup should not discover stale play
+        expect(discoveredPlays.length).to.be.eq(0);
+
+    }
+
+    it('Does not discover cleaned up Play that did not meet threshold (Non Positional Source)', function () {
+        noScrobbleStale(generateMemorySource);
+    });
+
+    it('Does not discover cleaned up Play that did not meet threshold (Positional Source)', function () {
+        noScrobbleStale(generateMemoryPositionalSource);
+    });
+
+    const scrobbleRediscoveryOnActive = (generateSource: (config: SourceConfig) => MemorySource) => {
+
+        const source = generateSource({data: {staleAfter: 21, orphanedAfter: 40}, options: {}});
+        const initialDate = dayjs();
+
+        // if player incorrectly counted stale time then 30s of actual play + 20s of stale time > scrobble threshold of 50% of 90s
+        const initialState = generatePlayerStateData({position: 0, playData: {duration: 90}, timestamp: initialDate, status: REPORTED_PLAYER_STATUSES.playing});
+        expect(source.processRecentPlays([initialState]).length).to.be.eq(0);
+
+        let position = 0;
+        let timeSince = 0;
+
+        // simulate polling playing source for 30 seconds, 10 second interval
+        for(let i = 0; i < 3; i++) {
+            position += 10;
+            timeSince += 10;
+            MockDate.set(initialDate.add(position, 'seconds').toDate());
+            const advancedState = generatePlayerStateData({play: initialState.play, timestamp: dayjs(), position, status: REPORTED_PLAYER_STATUSES.playing});
+            expect(source.processRecentPlays([advancedState]).length).to.be.eq(0);
+        }
+
+        // simulate polling another 20 seconds without any updates from the Source
+        for(let i = 0; i < 2; i++) {
+            timeSince += 10;
+            MockDate.set(initialDate.add(timeSince, 'seconds').toDate());
+            expect(source.processRecentPlays([]).length).to.be.eq(0);
+        }
+
+        timeSince += 2;
+
+        MockDate.set(initialDate.add(timeSince, 'seconds').toDate());
+        const discoveredPlays = source.processRecentPlays([]);
+        // cleanup should not discover stale play
+        expect(discoveredPlays.length).to.be.eq(0);
+
+        // so that loop starts 1 second after "paused" position
+        position -= 9;
+
+        // simulate ~50 seconds of listening (enough for scrobble)
+        MockDate.set(initialDate.add(timeSince, 'seconds').toDate());
+        for(let i = 0; i < 5; i++) {
+            position += 10;
+            timeSince += 10;
+            MockDate.set(initialDate.add(position, 'seconds').toDate());
+            const advancedState = generatePlayerStateData({play: initialState.play, timestamp: dayjs(), position, status: REPORTED_PLAYER_STATUSES.playing});
+            expect(source.processRecentPlays([advancedState]).length).to.be.eq(0);
+        }
+
+        timeSince += 10;
+        MockDate.set(initialDate.add(position, 'seconds').toDate());
+        // new Play
+        const advancedState = generatePlayerStateData({timestamp: dayjs(), position: 0, status: REPORTED_PLAYER_STATUSES.playing});
+        // should return discovered play with ~90 seconds of duration
+        const plays = source.processRecentPlays([advancedState])
+        expect(plays.length).to.be.eq(1);
+        expect(plays[0].data.duration).to.be.closeTo(90, 2);
+
+    }
+
+    it('Does discover Play after becoming active again (Non Positional Source)', function () {
+        scrobbleRediscoveryOnActive(generateMemorySource);
+    });
+
+    it('Does discover Play after becoming active again (Positional Source)', function () {
+        scrobbleRediscoveryOnActive(generateMemoryPositionalSource);
     });
 });

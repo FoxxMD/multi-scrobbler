@@ -1,5 +1,5 @@
 import { Logger } from "@foxxmd/logging";
-import dayjs from "dayjs";
+import dayjs, { Dayjs } from "dayjs";
 import { EventEmitter } from "events";
 import objectHash from 'object-hash';
 import { SimpleIntervalJob, Task, ToadScheduler } from "toad-scheduler";
@@ -27,7 +27,7 @@ import {
     playObjDataMatch,
     thresholdResultSummary,
 } from "../utils.js";
-import { timePassesScrobbleThreshold } from "../utils/TimeUtils.js";
+import { timePassesScrobbleThreshold, timeToHumanTimestamp } from "../utils/TimeUtils.js";
 import AbstractSource from "./AbstractSource.js";
 import { AbstractPlayerState, createPlayerOptions, PlayerStateOptions } from "./PlayerState/AbstractPlayerState.js";
 import { GenericPlayerState } from "./PlayerState/GenericPlayerState.js";
@@ -116,11 +116,19 @@ export default class MemorySource extends AbstractSource {
                 }
                 if(discoverable) {
                     discoveredCleanupPlay = cleanupPlay;
+                    // we are discovering/scrobbling play 
+                    // and since player is now stale we should treat this "session" as ended
+                    // -- so if user resumes a stale play later its a new session (new real time period of them listening)
+                    // basically this is the same as if the player was orphaned and removed
+                    // 
+                    // so we remove listen ranges so the old accumulated listen time can't be used for the "new" listening session
+                    player.listenRanges = [];
+                    player.currentListenRange = undefined;
                 }
             }
         }
         if(deletePlayer) {
-            this.deletePlayer(player.platformIdStr, `Removed after being orphaned for ${dayjs.duration(player.stateIntervalOptions.orphanedInterval, 'seconds').asMinutes()} minutes`);
+            this.deletePlayer(player.platformIdStr, `Removed after being orphaned for ${timeToHumanTimestamp(dayjs.duration(player.stateIntervalOptions.orphanedInterval, 'seconds'))}`);
         }
 
         return discoveredCleanupPlay;
@@ -141,7 +149,7 @@ export default class MemorySource extends AbstractSource {
 
     setNewPlayer = (idStr: string, logger: Logger, id: PlayPlatformId, opts: PlayerStateOptions = {}) => {
         this.players.set(idStr, this.getNewPlayer(this.logger, id, {
-            ...createPlayerOptions(this.config.data as Partial<PollingOptions>),
+            ...createPlayerOptions(this.config.data as Partial<PollingOptions>, this.playerSourceOfTruth, this.logger),
             ...opts
         }));
         this.playerState.set(idStr, '');
@@ -176,7 +184,7 @@ export default class MemorySource extends AbstractSource {
         return sessions[0];
     }
     
-    processRecentPlays = (datas: (PlayObject | PlayerStateDataMaybePlay)[]) => {
+    processRecentPlays = (datas: (PlayObject | PlayerStateDataMaybePlay)[], reportedTS?: Dayjs) => {
 
         const {
             options: {
@@ -231,7 +239,7 @@ export default class MemorySource extends AbstractSource {
                     playerState.position = playerState.play.meta?.trackProgressPosition;
                 }
 
-                const [currPlay, prevPlay] = player.update(playerState);
+                const [currPlay, prevPlay] = player.update(playerState, reportedTS);
                 const candidate = prevPlay !== undefined ? prevPlay : currPlay;
                 const playChanged = prevPlay !== undefined;
 

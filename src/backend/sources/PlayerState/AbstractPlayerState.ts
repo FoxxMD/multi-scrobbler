@@ -16,7 +16,7 @@ import { PollingOptions } from "../../common/infrastructure/config/common.js";
 import { formatNumber, genGroupIdStr, playObjDataMatch, progressBar } from "../../utils.js";
 import { ListenProgress } from "./ListenProgress.js";
 import { ListenRange, ListenRangePositional } from "./ListenRange.js";
-import { todayAwareFormat } from "../../utils/TimeUtils.js";
+import { timeToHumanTimestamp, todayAwareFormat } from "../../utils/TimeUtils.js";
 
 export interface PlayerStateIntervals {
     staleInterval?: number
@@ -30,22 +30,38 @@ export interface PlayerStateOptions extends PlayerStateIntervals {
 
 export const DefaultPlayerStateOptions: PlayerStateOptions = {};
 
-export const createPlayerOptions = (pollingOpts?: Partial<PollingOptions>, sot: SOURCE_SOT_TYPES = SOURCE_SOT.PLAYER): PlayerStateOptions => {
+export const createPlayerOptions = (pollingOpts?: Partial<PollingOptions>, sot: SOURCE_SOT_TYPES = SOURCE_SOT.PLAYER, logger?: Logger): PlayerStateOptions => {
     const {
         interval = 30,
         maxInterval = 60,
+        staleAfter,
+        orphanedAfter
     } = pollingOpts || {};
-    if(sot === SOURCE_SOT.PLAYER) {
-        return {
-            staleInterval: interval * 3,
-            orphanedInterval: interval * 5
-        }
-    }
+
+    let sa = staleAfter,
+    oa = orphanedAfter;
+
     // if this player is not the source of truth we don't care about waiting around to see if the state comes back
     // in fact, we probably want to get rid of it as fast as possible since its superficial and more of an ephemeral "Now Playing" status than something we are actually tracking
+    const staleAfterDefault = sot === SOURCE_SOT.PLAYER ? interval * 3 : interval;
+    const orphanedAfterDefault = sot === SOURCE_SOT.PLAYER ? interval * 5 : maxInterval;
+
+    if(sa === undefined) {
+        sa = staleAfterDefault;
+    }
+    if(oa === undefined) {
+        oa = orphanedAfterDefault;
+    }
+    if(oa < sa) {
+        oa = sa;
+        if(logger !== undefined) {
+            logger.warn(`'orhanedAfter' (${oa}s) was less than 'staleAfter' (${sa}s) which is not allowed! 'orhanedAfter' has been set to equal 'staleAfter'`);
+        }
+    }
+
     return {
-        staleInterval: interval,
-        orphanedInterval: maxInterval
+        staleInterval: sa,
+        orphanedInterval: oa
     }
 }
 
@@ -86,18 +102,18 @@ export abstract class AbstractPlayerState {
         return this.platformId[0] === candidateId[0] && this.platformId[1] === candidateId[1];
     }
 
-    isUpdateStale() {
+    isUpdateStale(reportedTS?: Dayjs) {
         if (this.currentPlay !== undefined) {
-            return Math.abs(dayjs().diff(this.playLastUpdatedAt, 'seconds')) > this.stateIntervalOptions.staleInterval;
+            return Math.abs((reportedTS ?? dayjs()).diff(this.playLastUpdatedAt, 'seconds')) > this.stateIntervalOptions.staleInterval;
         }
         return false;
     }
 
-    checkStale() {
-        const isStale = this.isUpdateStale();
+    checkStale(reportedTS?: Dayjs) {
+        const isStale = this.isUpdateStale(reportedTS);
         if (isStale && ![CALCULATED_PLAYER_STATUSES.stale, CALCULATED_PLAYER_STATUSES.orphaned].includes(this.calculatedStatus)) {
             this.calculatedStatus = CALCULATED_PLAYER_STATUSES.stale;
-            this.logger.debug(`Stale after no Play updates for ${Math.abs(dayjs().diff(this.playLastUpdatedAt, 'seconds'))} seconds`);
+            this.logger.debug(`Stale after no Play updates for ${timeToHumanTimestamp(Math.abs((reportedTS ?? dayjs()).diff(this.playLastUpdatedAt, 'ms')))} (staleAfter ${this.stateIntervalOptions.staleInterval}s)`);
             // end current listening sessions
             this.currentListenSessionEnd();
         }
@@ -116,7 +132,7 @@ export abstract class AbstractPlayerState {
         const isOrphaned = this.isOrphaned();
         if (isOrphaned && this.calculatedStatus !== CALCULATED_PLAYER_STATUSES.orphaned) {
             this.calculatedStatus = CALCULATED_PLAYER_STATUSES.orphaned;
-            this.logger.debug(`Orphaned after no player updates for ${Math.abs(dayjs().diff(this.stateLastUpdatedAt, 'minutes'))} minutes`);
+            this.logger.debug(`Orphaned after no Player updates for ${timeToHumanTimestamp(Math.abs(dayjs().diff(this.stateLastUpdatedAt, 'ms')))} ${Math.abs(dayjs().diff(this.stateLastUpdatedAt, 'minutes'))} (orhanedAfter ${this.stateIntervalOptions.orphanedInterval}s)`);
         }
         return isOrphaned;
     }
@@ -154,7 +170,7 @@ export abstract class AbstractPlayerState {
 
     protected setPlay(state: PlayerStateData, reportedTS?: Dayjs): [PlayObject, PlayObject?] {
         const {play, status, sessionId} = state;
-        this.playLastUpdatedAt = dayjs();
+        this.playLastUpdatedAt = reportedTS ?? dayjs();
         if (status !== undefined) {
             this.reportedStatus = status;
         }
@@ -328,7 +344,7 @@ export abstract class AbstractPlayerState {
         const {play, position} = state;
 
         this.currentPlay = play;
-        this.playFirstSeenAt = dayjs();
+        this.playFirstSeenAt = reportedTS ?? dayjs();
         this.listenRanges = [];
         this.currentListenRange = undefined;
 

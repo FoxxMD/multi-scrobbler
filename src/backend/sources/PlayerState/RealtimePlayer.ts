@@ -1,4 +1,5 @@
 import { childLogger, Logger } from "@foxxmd/logging";
+import dayjs, { Dayjs } from "dayjs";
 import { SimpleIntervalJob, Task, ToadScheduler } from "toad-scheduler";
 
 const RT_TICK = 500;
@@ -9,13 +10,21 @@ export abstract class RealtimePlayer {
     scheduler: ToadScheduler = new ToadScheduler();
 
     protected position: number = 0;
+    private clockTS: Dayjs = dayjs();
 
     protected constructor(/* logger: Logger */) {
         //this.logger = childLogger(logger, `RT`);
         const job = new SimpleIntervalJob({
             milliseconds: RT_TICK,
             runImmediately: true
-        }, new Task('updatePos', () => this.position += RT_TICK), { id: 'rt' });
+        }, new Task('updatePos', () => {
+            // in production RT_TICK and the diff between now and clockTS should always be the same
+            // but in order to mock for testing (where we manipulate Date now()) the source of truth
+            // needs to come from TS rather than simple TICK increase
+            this.setPosition()
+            //this.position += Math.abs(dayjs().diff(this.clockTS, 'ms')); // RT_TICK
+
+        }), { id: 'rt' });
         this.scheduler.addSimpleIntervalJob(job);
         this.scheduler.stop();
         this.position = 0;
@@ -25,6 +34,7 @@ export abstract class RealtimePlayer {
         if (position !== undefined) {
             this.position = position;
         }
+        this.clockTS = dayjs();
         this.scheduler.startById('rt');
     }
 
@@ -45,8 +55,12 @@ export abstract class RealtimePlayer {
         return !asSeconds ? this.position : this.position / 1000;
     }
 
-    public setPosition(time: number) {
+    public setPosition(time?: number) {
+        if(time === undefined) {
+            this.position += Math.abs(dayjs().diff(this.clockTS, 'ms'));
+        }
         this.position = time;
+        this.clockTS = dayjs();
     }
 }
 
