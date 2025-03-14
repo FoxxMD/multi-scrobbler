@@ -18,6 +18,7 @@ import { KodiData, KodiSourceConfig } from "../common/infrastructure/config/sour
 import { LastfmSourceConfig } from "../common/infrastructure/config/source/lastfm.js";
 import { ListenBrainzSourceConfig } from "../common/infrastructure/config/source/listenbrainz.js";
 import { MopidySourceConfig } from "../common/infrastructure/config/source/mopidy.js";
+import { MusicCastData, MusicCastSourceConfig } from "../common/infrastructure/config/source/musiccast.js";
 import { MPDSourceConfig } from "../common/infrastructure/config/source/mpd.js";
 import { MPRISData, MPRISSourceConfig } from "../common/infrastructure/config/source/mpris.js";
 import { MusikcubeData, MusikcubeSourceConfig } from "../common/infrastructure/config/source/musikcube.js";
@@ -47,6 +48,7 @@ import { MopidySource } from "./MopidySource.js";
 import { MPDSource } from "./MPDSource.js";
 import { MPRISSource } from "./MPRISSource.js";
 import { MusikcubeSource } from "./MusikcubeSource.js";
+import { MusicCastSource } from "./MusicCastSource.js";
 import PlexSource from "./PlexSource.js";
 import SpotifySource from "./SpotifySource.js";
 import { SubsonicSource } from "./SubsonicSource.js";
@@ -175,6 +177,9 @@ export default class ScrobbleSources {
                     break;
                 case 'musikcube':
                     this.schemaDefinitions[type] = getTypeSchemaFromConfigGenerator("MusikcubeSourceConfig");
+                    break;
+                case 'musiccast':
+                    this.schemaDefinitions[type] = getTypeSchemaFromConfigGenerator("MusicCastSourceConfig");
                     break;
                 case 'mpd':
                     this.schemaDefinitions[type] = getTypeSchemaFromConfigGenerator("MPDSourceConfig");
@@ -498,6 +503,21 @@ export default class ScrobbleSources {
                         });
                     }
                     break;
+                case 'musiccast':
+                    const musecase = {
+                        url: process.env.MCAST_URL,
+                    }
+                    if (!Object.values(musecase).every(x => x === undefined)) {
+                        configs.push({
+                            type: 'musiccast',
+                            name: 'unnamed',
+                            source: 'ENV',
+                            mode: 'single',
+                            configureAs: defaultConfigureAs,
+                            data: musecase as MusicCastData
+                        });
+                    }
+                    break;
                 case 'musikcube':
                     const mc = {
                         url: process.env.MC_URL,
@@ -726,6 +746,9 @@ export default class ScrobbleSources {
                 break;
             case 'musikcube':
                 newSource = await new MusikcubeSource(name, compositeConfig as MusikcubeSourceConfig, this.internalConfig, this.emitter);
+                break;
+            case 'musiccast':
+                newSource = await new MusicCastSource(name, compositeConfig as MusicCastSourceConfig, this.internalConfig, this.emitter);
                 break;
             case 'mpd':
                 newSource = await new MPDSource(name, compositeConfig as MPDSourceConfig, this.internalConfig, this.emitter);
