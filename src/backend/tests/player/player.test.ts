@@ -230,10 +230,24 @@ describe('Player listen ranges', function () {
 
     describe('When source does provide playback position', function () {
 
-        it('Duration is position based', function () {
+        it('Listened duration is position based', function () {
             const player = new TestPositionalPlayerState(logger, [NO_DEVICE, NO_USER]);
 
             const positioned = clone(newPlay);
+
+            player.update(testState({play: positioned, position: 3}));
+
+            player.currentListenRange.rtPlayer.setPosition(10000);
+            player.update(testState({play: positioned, position: 10}), dayjs().add(10, 'seconds'));
+
+            assert.equal(player.getListenDuration(), 7);
+        });
+
+        it('Listened duration is track duration invariant', function () {
+            const player = new TestPositionalPlayerState(logger, [NO_DEVICE, NO_USER]);
+
+            const positioned = clone(newPlay);
+            positioned.data.duration = 0;
 
             player.update(testState({play: positioned, position: 3}));
 

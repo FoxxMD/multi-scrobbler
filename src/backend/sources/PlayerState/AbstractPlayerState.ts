@@ -367,11 +367,11 @@ export abstract class AbstractPlayerState {
         }
         parts.push(`Reported: ${this.reportedStatus.toUpperCase()} | Calculated: ${this.calculatedStatus.toUpperCase()} | Stale: ${this.isUpdateStale() ? 'Yes' : 'No'} | Orphaned: ${this.isOrphaned() ? 'Yes' : 'No'} | Player Updated At: ${todayAwareFormat(this.stateLastUpdatedAt)} | Play Updated At: ${this.playLastUpdatedAt === undefined ? 'N/A' : todayAwareFormat(this.playLastUpdatedAt)}`);
         let progress = '';
-        if (this.currentListenRange !== undefined && this.currentListenRange instanceof ListenRangePositional && this.currentPlay.data.duration !== undefined) {
+        if (this.currentListenRange !== undefined && this.currentListenRange instanceof ListenRangePositional && this.currentPlay.data.duration !== undefined && this.currentPlay.data.duration !== 0) {
             progress = `${progressBar(this.currentListenRange.end.position / this.currentPlay.data.duration, 1, 15)} ${formatNumber(this.currentListenRange.end.position, {toFixed: 0})}/${formatNumber(this.currentPlay.data.duration, {toFixed: 0})}s | `;
         }
         let listenedPercent = '';
-        if (this.currentPlay !== undefined && this.currentPlay.data.duration !== undefined) {
+        if (this.currentPlay !== undefined && this.currentPlay.data.duration !== undefined && this.currentPlay.data.duration !== 0) {
             listenedPercent = formatNumber((this.getListenDuration() / this.currentPlay.data.duration) * 100, {
                 suffix: '%',
                 toFixed: 0
