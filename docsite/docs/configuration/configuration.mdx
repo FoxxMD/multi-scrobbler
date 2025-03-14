@@ -17,6 +17,7 @@ import JriverfinConfig from '!!raw-loader!../../../config/jriver.json.example';
 import KodiConfig from '!!raw-loader!../../../config/kodi.json.example';
 import LastfmConfig from '!!raw-loader!../../../config/lastfm.json.example';
 import ListenbrainzConfig from '!!raw-loader!../../../config/listenbrainz.json.example';
+import ListenbrainzEndpointConfig from '!!raw-loader!../../../config/endpointlz.json.example';
 import MalojaConfig from '!!raw-loader!../../../config/maloja.json.example';
 import MopidyConfig from '!!raw-loader!../../../config/mopidy.json.example';
 import MprisConfig from '!!raw-loader!../../../config/mpris.json.example';
@@ -640,6 +641,8 @@ See the [Last.fm (Client)](#lastfm) setup for registration instructions.
 
 ### [Listenbrainz (Source)](https://listenbrainz.org)
 
+This Source monitors a Listenbrainz account's scrobble history and then re-scrobbles discovered tracks to configured clients.
+
 You will need to run your own Listenbrainz server or have an account [on the official instance](https://listenbrainz.org/login/)
 
 On your [profile page](https://listenbrainz.org/profile/) find your **User Token** to use in the configuration.
@@ -676,6 +679,73 @@ On your [profile page](https://listenbrainz.org/profile/) find your **User Token
         </details>
 
         or <SchemaLink lower objectName="ListenBrainzSourceConfig"/>
+    </TabItem>
+</Tabs>
+
+### [Listenbrainz (Endpoint)](https://listenbrainz.org)
+
+This Source enables multi-scrobbler to accept scrobbles from outside applications as if it was a Listenbrainz server. An example of this would be configuring [pano-scrobbler](https://github.com/kawaiiDango/pano-scrobbler) with a custom Listenbrainz URL to point to multi-scrobbler.
+
+##### URL
+
+If a **slug** is **not** provided in configuration then multi-scrobbler will accept Listenbrainz scrobbles at
+
+```
+http://localhost:9078/1/submit-listens
+```
+
+which is the "standard" Listenbrainz server path for scrobbling.
+
+Use a slug only if you need to setup multiple Listenbrainz Endpoint sources and cannot use different tokens.
+
+If a slug is used then the URL will be:
+
+```
+http://localhost:9078/api/listenbrainz/mySlug
+```
+
+:::note
+    Some Listenbrainz applications may require custom Listenbrainz URLs to be a real domain (`example.com`) and/or use SSL (`https://`). In this case you should setup multi-scrobbler behind a reverse proxy to support this functionality. It is out of the scope of this project to do this solely within multi-scrobbler.
+:::
+
+##### Token
+
+Most Listenbrainz clients require a token (Authentication Token) to be provided during setup. This value can be anything you want, just make sure to use the same value for `token` in your multi-scrobbler configuration for the endpoint.
+
+
+#### Configuration
+
+<Tabs groupId="configType" queryString>
+    <TabItem value="env" label="ENV">
+        | Environmental Variable | Required? | Default | Description                                                                                                       |
+        | :--------------------- | :-------- | ------- | ----------------------------------------------------------------------------------------------------------------- |
+        | `LZENDPOINT_ENABLE`    | No        |         | Use LZ Endpoint as a Source without any other configuration. Only required if slug/token are not provided as ENVs |
+        | `LZE_TOKEN`            | No        |         | LZ "Authentication Token" you provided to the scrobbling application                                              |
+        | `LZE_SLUG`             | No        |         | (Optional) The URL suffix to use for accepting LZ scrobbles                                                       |
+    </TabItem>
+    <TabItem value="file" label="File">
+        <details>
+            Change `configureAs` to `source`
+
+            <summary>Example</summary>
+
+            <CodeBlock title="CONFIG_DIR/endpointlz.json" language="json5">{ListenbrainzEndpointConfig}</CodeBlock>
+
+        </details>
+
+        or <SchemaLink lower objectName="ListenbrainzEndpointSourceConfig"/>
+    </TabItem>
+    <TabItem value="aio" label="AIO">
+        <details>
+            Change `configureAs` to `source`
+
+            <summary>Example</summary>
+
+            <AIOExample data={ListenbrainzEndpointConfig} name="endpointlz"/>
+
+        </details>
+
+        or <SchemaLink lower objectName="ListenbrainzEndpointSourceConfig"/>
     </TabItem>
 </Tabs>
 
