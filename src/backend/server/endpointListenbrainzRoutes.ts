@@ -50,5 +50,14 @@ export const setupLZEndpointRoutes = (app: ExpressWithAsync, parentLogger: Logge
                 await source.handle(playerState);
             }
         });
+    app.getAsync('/1/validate-token', async function (req, res) {
+        //https://listenbrainz.readthedocs.io/en/latest/users/api/core.html#get--1-validate-token
+        return res.status(200).json({
+            code: 200,
+            message: "Token valid.",
+            valid: true,
+            user_name: "Multi-Scrobbler"
+        })
+    });
 }
 
