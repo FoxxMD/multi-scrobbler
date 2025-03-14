@@ -51,7 +51,7 @@ export class MusicCastSource extends MemoryPositionalSource {
 
     protected async doCheckConnection(): Promise<true | string | undefined> {
         try {
-            await isPortReachableConnect(1130, { host: this.urlData.url.hostname });
+            await isPortReachableConnect(this.urlData.port, { host: this.urlData.url.hostname });
             this.logger.verbose(`${this.urlData.url.hostname}:${this.urlData.port} is reachable.`);
 
             const resp = await request.get(joinedUrl(this.urlData.url, 'system/getDeviceInfo').toString())
