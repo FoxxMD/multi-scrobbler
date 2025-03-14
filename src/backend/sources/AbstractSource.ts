@@ -74,6 +74,9 @@ export default abstract class AbstractSource extends AbstractComponent implement
 
     supportsUpstreamRecentlyPlayed: boolean = false;
     supportsUpstreamNowPlaying: boolean = false;
+    supportsManualListening: boolean = false;
+
+    manualListening?: boolean
 
     emitter: EventEmitter;
 

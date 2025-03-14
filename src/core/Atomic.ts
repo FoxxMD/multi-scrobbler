@@ -15,6 +15,8 @@ export interface SourceStatusData {
     players: Record<string, SourcePlayerJson>
     sot: SOURCE_SOT_TYPES
     supportsUpstreamRecentlyPlayed: boolean;
+    supportsManualListening: boolean;
+    manualListening?: boolean
 }
 
 export interface ClientStatusData {

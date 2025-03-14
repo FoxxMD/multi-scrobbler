@@ -1,3 +1,4 @@
+import { AzuracastSourceAIOConfig, AzuracastSourceConfig } from "./azuracast.js";
 import { ChromecastSourceAIOConfig, ChromecastSourceConfig } from "./chromecast.js";
 import { ListenbrainzEndpointSourceAIOConfig, ListenbrainzEndpointSourceConfig } from "./endpointlz.js";
 import { LastFMEndpointSourceAIOConfig, LastFMEndpointSourceConfig } from "./endpointlfm.js";
@@ -42,7 +43,8 @@ export type SourceConfig =
     | ChromecastSourceConfig
     | MusikcubeSourceConfig
     | MPDSourceConfig
-    | VLCSourceConfig;
+    | VLCSourceConfig
+    | AzuracastSourceConfig;
 
 export type SourceAIOConfig =
     SpotifySourceAIOConfig
@@ -66,4 +68,5 @@ export type SourceAIOConfig =
     | ChromecastSourceAIOConfig
     | MusikcubeSourceAIOConfig
     | MPDSourceAIOConfig
-    | VLCSourceAIOConfig;
+    | VLCSourceAIOConfig
+    | AzuracastSourceAIOConfig;

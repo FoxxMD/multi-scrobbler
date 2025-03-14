@@ -18,8 +18,23 @@ export const sourceApi = createApi({
                     force: params.force
                 }
             })
+        }),
+        listenSource: builder.mutation<undefined, {
+            name: string,
+            type: string,
+            listening?: boolean
+        }>({
+            query: (params) => ({
+                url: '/source/listen',
+                method: 'POST',
+                params: {
+                    name: params.name,
+                    type: params.type,
+                    listening: params.listening
+                }
+            })
         })
     })
 });
 
-export const {useStartSourceMutation} = sourceApi;
+export const {useStartSourceMutation, useListenSourceMutation} = sourceApi;

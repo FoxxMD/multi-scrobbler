@@ -1,4 +1,4 @@
-import React, {Fragment, useCallback} from 'react';
+import React, {Fragment, useCallback, useMemo} from 'react';
 import StatusCardSkeleton, {StatusCardSkeletonData} from "./StatusCardSkeleton";
 import SkeletonParagraph from "../skeleton/SkeletonParagraph";
 import {Link} from "react-router-dom";
@@ -6,7 +6,7 @@ import {sourceAdapter} from "../../status/ducks";
 import {RootState} from "../../store";
 import {connect, ConnectedProps} from "react-redux";
 import Player from "../player/Player";
-import {useStartSourceMutation} from "./sourceDucks";
+import {useStartSourceMutation, useListenSourceMutation} from "./sourceDucks";
 import './statusCard.scss';
 
 export interface SourceStatusCardData extends StatusCardSkeletonData, PropsFromRedux {
@@ -39,9 +39,13 @@ const SourceStatusCard = (props: SourceStatusCardData) => {
     let body = <SkeletonParagraph/>;
 
     const [startPut, startResult] = useStartSourceMutation();
+    const [listenPut, listenResult] = useListenSourceMutation();
 
     const tryStart = useCallback((name: string, type: string, force?: boolean) => startPut({name, type, force}), [startPut]);
+    const tryListen = useCallback((name: string, type: string, listening?: boolean) => listenPut({name, type, listening}), [listenPut]);
     let startSourceElement = null;
+    let manualListenElement = null;
+    let subtitleElement = null;
 
     if(data !== undefined)
     {
@@ -57,7 +61,9 @@ const SourceStatusCard = (props: SourceStatusCardData) => {
             type,
             players = {},
             sot,
-            supportsUpstreamRecentlyPlayed
+            supportsUpstreamRecentlyPlayed,
+            supportsManualListening,
+            manualListening
         } = data;
         if(type === 'listenbrainz' || type === 'lastfm') {
             header = `${display} (Source)`;
@@ -70,6 +76,25 @@ const SourceStatusCard = (props: SourceStatusCardData) => {
             startText = status === 'Running' ? 'Reinit' : 'Init'
         }
 
+        const ml = useMemo(() => {
+            if(listenResult.status !== 'fulfilled' || listenResult.data === undefined) {
+                return manualListening;
+            }
+            return (listenResult.data as any).listening;
+        }, [manualListening, listenResult]);
+
+        if(supportsManualListening) {
+            manualListenElement = (<Fragment>
+                <span>Manual Listening:</span>
+                <div onClick={() => tryListen(name, type, ml === undefined ? true : !ml)} 
+                className="capitalize underline cursor-pointer inline mr-1 ml-1">{ml === undefined ? 'System' : (ml ? 'Yes' : 'No')}
+                </div>
+                (<div onClick={() => tryListen(name, type, undefined)} 
+                className="capitalize underline cursor-pointer inline">Clear
+                </div>)
+            </Fragment>);
+        }
+
         startSourceElement = (<Fragment>
             <div onClick={() => tryStart(name, type)} 
             className="capitalize underline cursor-pointer inline mr-1">{startText}
@@ -78,6 +103,12 @@ const SourceStatusCard = (props: SourceStatusCardData) => {
             className="capitalize underline cursor-pointer inline">Force
             </div>)
         </Fragment>);
+
+        if(manualListenElement !== null) {
+            subtitleElement = <Fragment>{manualListenElement} | {startSourceElement}</Fragment>
+        } else {
+            subtitleElement = startSourceElement;
+        }
 
         const platformIds = Object.keys(players);
 
@@ -103,7 +134,7 @@ const SourceStatusCard = (props: SourceStatusCardData) => {
             title={header}
             subtitle={name}
             status={status}
-            subtitleRight={startSourceElement}
+            subtitleRight={subtitleElement}
             statusType={statusToStatusType(status)}>
                 {body}
         </StatusCardSkeleton>

@@ -5,7 +5,7 @@ import { randomUUID } from "node:crypto";
 import normalizeUrl from 'normalize-url';
 import pEvent from 'p-event';
 import { URL } from "url";
-import { PlayObject } from "../../core/Atomic.js";
+import { PlayObject, URLData } from "../../core/Atomic.js";
 import { UpstreamError } from "../common/errors/UpstreamError.js";
 import {
     FormatPlayObjectOptions,
@@ -23,6 +23,7 @@ import {
 import { sleep } from "../utils.js";
 import { RecentlyPlayedOptions } from "./AbstractSource.js";
 import { MemoryPositionalSource } from "./MemoryPositionalSource.js";
+import { normalizeWSAddress } from "../utils/NetworkUtils.js";
 
 const CLIENT_STATE = {
     0: 'connecting',
@@ -34,7 +35,7 @@ const CLIENT_STATE = {
 export class MusikcubeSource extends MemoryPositionalSource {
     declare config: MusikcubeSourceConfig;
 
-    url: URL;
+    url: URLData;
 
 
     client!: WS;
@@ -56,32 +57,9 @@ export class MusikcubeSource extends MemoryPositionalSource {
             } = {}
         } = config;
         this.deviceId = device_id ?? name;
-        this.url = MusikcubeSource.parseConnectionUrl(url);
+        this.url = normalizeWSAddress(url, {defaultPort: 7905});
         this.requiresAuth = true;
         this.canPoll = true;
-    }
-
-    static parseConnectionUrl(valRaw: string) {
-        let val = valRaw.trim();
-        if(!val.match(/^(?:wss?|https?):/i)) {
-            val = `ws://${val}`;
-        }
-        const normal = normalizeUrl(val, {removeTrailingSlash: false})
-        const url = new URL(normal);
-
-        // default WS
-        if (url.protocol === 'https:') {
-            url.protocol = 'wss:';
-        } else if (url.protocol === 'http:')  {
-            url.protocol = 'ws:';
-        } else {
-            url.protocol = 'ws:'
-        }
-
-        if (url.port === null || url.port === '') {
-            url.port = '7905';
-        }
-        return url;
     }
 
     protected async doBuildInitData(): Promise<true | string | undefined> {
@@ -90,12 +68,12 @@ export class MusikcubeSource extends MemoryPositionalSource {
                 url
             } = {}
         } = this.config;
-        const normal = this.url.toString();
+        const normal = this.url.normal;
         this.logger.verbose(`Config URL: '${url ?? '(None Given)'}' => Normalized: '${normal}'`)
         if (!normal.includes('ws://') && !normal.includes('wss://')) {
-            throw new Error(`Server URL must be start with with ws:// or wss://`);
+            throw new Error(`Server URL must start with ws:// or wss://`);
         }
-        this.client = new WS(this.url.toString(), {
+        this.client = new WS(this.url.url.toString(), {
             automaticOpen: false,
             retry: {
                 retries: 0
