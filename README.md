@@ -19,6 +19,7 @@ A javascript app to scrobble music you listened to, to [Maloja](https://github.c
   * [WebScrobbler](https://foxxmd.github.io/multi-scrobbler/docs/configuration#webscrobbler)
   * [Youtube Music](https://foxxmd.github.io/multi-scrobbler/docs/configuration#youtube-music)
   * [Last.fm](https://foxxmd.github.io/multi-scrobbler/docs/configuration#lastfm-source)
+  * [Last.fm (Endpoint)](https://foxxmd.github.io/multi-scrobbler/docs/configuration#lastfm-endpoint)
   * [ListenBrainz](https://foxxmd.github.io/multi-scrobbler/docs/configuration#listenbrainz-source)
   * [ListenBrainz (Endpoint)](https://foxxmd.github.io/multi-scrobbler/docs/configuration#listenbrainz-endpoint)
   * [~~Deezer~~](https://foxxmd.github.io/multi-scrobbler/docs/configuration#deezer)

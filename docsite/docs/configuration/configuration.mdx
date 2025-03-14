@@ -16,6 +16,7 @@ import JellyfinConfig from '!!raw-loader!../../../config/jellyfin.json.example';
 import JriverfinConfig from '!!raw-loader!../../../config/jriver.json.example';
 import KodiConfig from '!!raw-loader!../../../config/kodi.json.example';
 import LastfmConfig from '!!raw-loader!../../../config/lastfm.json.example';
+import LastfmEndpointConfig from '!!raw-loader!../../../config/endpointlfm.json.example';
 import ListenbrainzConfig from '!!raw-loader!../../../config/listenbrainz.json.example';
 import ListenbrainzEndpointConfig from '!!raw-loader!../../../config/endpointlz.json.example';
 import MalojaConfig from '!!raw-loader!../../../config/maloja.json.example';
@@ -636,6 +637,63 @@ See the [Last.fm (Client)](#lastfm) setup for registration instructions.
         </details>
 
         or <SchemaLink lower objectName="LastfmSourceConfig"/>
+    </TabItem>
+</Tabs>
+
+### [Last.fm (Endpoint)](https://www.last.fm)
+
+This Source enables multi-scrobbler to accept scrobbles from outside applications as if it was a Last.fm server.
+
+##### URL
+
+If a **slug** is **not** provided in configuration then multi-scrobbler will accept Last.fm scrobbles at
+
+```
+http://localhost:9078/2.0/
+```
+
+which is the "standard" Last.fm server path for scrobbling.
+
+Use a slug only if you need to setup multiple Last.fm Endpoint sources and cannot use different tokens.
+
+If a slug is used then the URL will be:
+
+```
+http://localhost:9078/api/lastfm/mySlug
+```
+
+#### Configuration
+
+<Tabs groupId="configType" queryString>
+    <TabItem value="env" label="ENV">
+        | Environmental Variable | Required? | Default | Description                                                                                                        |
+        | :--------------------- | :-------- | ------- | ------------------------------------------------------------------------------------------------------------------ |
+        | `LFMENDPOINT_ENABLE`   | No        |         | Use LFM Endpoint as a Source without any other configuration. Only required if slug/token are not provided as ENVs |
+        | `LFM_SLUG`             | No        |         | (Optional) The URL suffix to use for accepting LFM scrobbles                                                       |
+    </TabItem>
+    <TabItem value="file" label="File">
+        <details>
+            Change `configureAs` to `source`
+
+            <summary>Example</summary>
+
+            <CodeBlock title="CONFIG_DIR/endpointlfm.json" language="json5">{LastfmEndpointConfig}</CodeBlock>
+
+        </details>
+
+        or <SchemaLink lower objectName="LastFMEndpointSourceConfig"/>
+    </TabItem>
+    <TabItem value="aio" label="AIO">
+        <details>
+            Change `configureAs` to `source`
+
+            <summary>Example</summary>
+
+            <AIOExample data={LastfmEndpointConfig} name="endpointlfm"/>
+
+        </details>
+
+        or <SchemaLink lower objectName="LastFMEndpointSourceConfig"/>
     </TabItem>
 </Tabs>
 
