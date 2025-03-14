@@ -1,0 +1,9 @@
+[
+  {
+    "name": "myLz",
+    "enable": true,
+    "data": {
+      "token": "myToken"
+    }
+  }
+]

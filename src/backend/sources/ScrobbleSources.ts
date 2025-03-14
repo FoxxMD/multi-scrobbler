@@ -5,6 +5,8 @@ import { ConfigMeta, InternalConfig, isSourceType, SourceType, sourceTypes } fro
 import { AIOConfig, SourceDefaults } from "../common/infrastructure/config/aioConfig.js";
 import { ChromecastSourceConfig } from "../common/infrastructure/config/source/chromecast.js";
 import { DeezerData, DeezerSourceConfig } from "../common/infrastructure/config/source/deezer.js";
+import { ListenbrainzEndpointSourceConfig, ListenbrainzEndpointData } from "../common/infrastructure/config/source/endpointlz.js";
+import { LastFMEndpointSourceConfig, LastFMEndpointData } from "../common/infrastructure/config/source/endpointlfm.js";
 import {
     JellyApiData,
     JellyApiSourceConfig,
@@ -33,6 +35,8 @@ import { validateJson } from "../utils/ValidationUtils.js";
 import AbstractSource from "./AbstractSource.js";
 import { ChromecastSource } from "./ChromecastSource.js";
 import DeezerSource from "./DeezerSource.js";
+import { EndpointListenbrainzSource } from "./EndpointListenbrainzSource.js";
+import { EndpointLastfmSource } from "./EndpointLastfmSource.js";
 import JellyfinApiSource from "./JellyfinApiSource.js";
 import JellyfinSource from "./JellyfinSource.js";
 import { JRiverSource } from "./JRiverSource.js";
@@ -129,6 +133,12 @@ export default class ScrobbleSources {
                     break;
                 case 'deezer':
                     this.schemaDefinitions[type] = getTypeSchemaFromConfigGenerator("DeezerSourceConfig");
+                    break;
+                case 'endpointlz':
+                    this.schemaDefinitions[type] = getTypeSchemaFromConfigGenerator("ListenbrainzEndpointSourceConfig");
+                    break;
+                case 'endpointlfm':
+                    this.schemaDefinitions[type] = getTypeSchemaFromConfigGenerator("LastFMEndpointSourceConfig");
                     break;
                 case 'subsonic':
                     this.schemaDefinitions[type] = getTypeSchemaFromConfigGenerator("SubSonicSourceConfig");
@@ -376,6 +386,39 @@ export default class ScrobbleSources {
                 case 'listenbrainz':
                     // sane default for lastfm is that user want to scrobble TO it, not FROM it -- this is also existing behavior
                     defaultConfigureAs = 'client';
+                    break;
+                case 'endpointlz':
+                    const lzShouldUse = parseBool(process.env.LZENDPOINT_ENABLE);
+                    const lze = {
+                        slug: process.env.LZE_SLUG,
+                        token: process.env.LZE_TOKEN
+                    }
+                    if (!Object.values(lze).every(x => x === undefined) || lzShouldUse) {
+                        configs.push({
+                            type: 'endpointlz',
+                            name: 'unnamed',
+                            source: 'ENV',
+                            mode: 'single',
+                            configureAs: defaultConfigureAs,
+                            data: lze as ListenbrainzEndpointData
+                        });
+                    }
+                    break;
+                case 'endpointlfm':
+                    const lfmShouldUse = parseBool(process.env.LFMENDPOINT_ENABLE);
+                    const lfme = {
+                        slug: process.env.LFM_SLUG,
+                    }
+                    if (!Object.values(lfme).every(x => x === undefined) || lfmShouldUse) {
+                        configs.push({
+                            type: 'endpointlfm',
+                            name: 'unnamed',
+                            source: 'ENV',
+                            mode: 'single',
+                            configureAs: defaultConfigureAs,
+                            data: lfme as LastFMEndpointData
+                        });
+                    }
                     break;
                 case 'jriver':
                     const jr = {
@@ -662,6 +705,12 @@ export default class ScrobbleSources {
                 break;
             case 'listenbrainz':
                 newSource = await new ListenbrainzSource(name, compositeConfig as ListenBrainzSourceConfig, this.internalConfig, this.emitter);
+                break;
+            case 'endpointlz':
+                newSource = await new EndpointListenbrainzSource(name, compositeConfig as ListenbrainzEndpointSourceConfig, this.internalConfig, this.emitter);
+                break;
+            case 'endpointlfm':
+                newSource = await new EndpointLastfmSource(name, compositeConfig as LastFMEndpointSourceConfig, this.internalConfig, this.emitter);
                 break;
             case 'jriver':
                 newSource = await new JRiverSource(name, compositeConfig as JRiverSourceConfig, this.internalConfig, this.emitter);
