@@ -90,7 +90,7 @@ export class PositionalPlayerState extends AbstractPlayerState {
                         duration,
                     } = {}
                 } = this.currentPlay;
-                if(duration !== undefined && (duration - this.currentListenRange.end.position) < this.gracefulEndBuffer) {
+                if(duration !== undefined && duration !== 0 && (duration - this.currentListenRange.end.position) < this.gracefulEndBuffer) {
                     // likely the track was listened to until it ended
                     // but polling interval or network delays caused MS to not get data on the very end
                     // also...within 3 seconds of ending is close enough to call this complete IMO
