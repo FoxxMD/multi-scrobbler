@@ -147,7 +147,8 @@ const formatPlayObj = (obj: PlayInfoCDResponse | PlayInfoNetResponse, options: F
             artists: artist !== undefined && artist !== '' ? [artist] : [],
             album: album !== '' ? album : undefined,
             track,
-            duration: total_time
+            // we should treat 0 time as the same as not being provided
+            duration: total_time === 0 ? undefined : total_time
         },
         meta: {
             trackProgressPosition: play_time,
