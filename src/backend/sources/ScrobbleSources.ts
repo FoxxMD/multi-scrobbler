@@ -59,6 +59,7 @@ import YTMusicSource from "./YTMusicSource.js";
 import { Definition } from 'ts-json-schema-generator';
 import { getTypeSchemaFromConfigGenerator } from '../utils/SchemaUtils.js';
 import PlexApiSource from './PlexApiSource.js';
+import { nonEmptyStringOrDefault } from '../../core/StringUtils.js';
 
 type groupedNamedConfigs = {[key: string]: ParsedConfig[]};
 
@@ -192,6 +193,45 @@ export default class ScrobbleSources {
         return this.schemaDefinitions[type];
     }
 
+    buildSourceDefaults = (fileDefaults: SourceDefaults = {}): SourceDefaults => {
+        const scrobbleDurationEnv = process.env.SOURCE_SCROBBLE_DURATION;
+        const scrobblePercentEnv = process.env.SOURCE_SCROBBLE_PERCENT;
+
+        const buildDefaults = {...fileDefaults};
+
+        if(nonEmptyStringOrDefault(scrobbleDurationEnv) !== undefined || nonEmptyStringOrDefault(scrobblePercentEnv) !== undefined) {
+            const {
+                scrobbleThresholds: {
+                    duration,
+                    percent
+                } = {},
+                scrobbleThresholds = {}
+            } = fileDefaults;
+            buildDefaults.scrobbleThresholds = {...scrobbleThresholds};
+
+            if(duration === undefined && nonEmptyStringOrDefault(scrobbleDurationEnv) !== undefined) {
+                const envDur = Number.parseInt(scrobbleDurationEnv);
+                if(Number.isNaN(envDur)) {
+                    this.logger.warn(`Ignoring value '${scrobbleDurationEnv}' for env SOURCE_SCROBBLE_DURATION because it is not a number`);
+                } else {
+                    buildDefaults.scrobbleThresholds.duration = envDur;
+                    this.logger.verbose(`Set default scrobble threshold duration to '${scrobbleDurationEnv}' based on env SOURCE_SCROBBLE_DURATION`);
+                }
+            }
+            if(percent === undefined && nonEmptyStringOrDefault(scrobblePercentEnv) !== undefined) {
+                const envPercent = Number.parseInt(scrobblePercentEnv);
+                if(Number.isNaN(envPercent)) {
+                    this.logger.warn(`Ignoring value '${scrobblePercentEnv}' for env SOURCE_SCROBBLE_PERCENT because it is not a number`);
+                } else {
+                    buildDefaults.scrobbleThresholds.percent = envPercent;
+                    this.logger.verbose(`Set default scrobble threshold percent to '${scrobblePercentEnv}' based on env SOURCE_SCROBBLE_PERCENT`);
+                }
+            }
+        }
+
+        return buildDefaults;
+    }
+
     buildSourcesFromConfig = async (additionalConfigs: ParsedConfig[] = []) => {
         const configs: ParsedConfig[] = additionalConfigs;
 
@@ -211,7 +251,7 @@ export default class ScrobbleSources {
                 sources: mainConfigSourcesConfigs = [],
                 sourceDefaults: sd = {},
             } = aioConfig;
-            sourceDefaults = sd;
+            sourceDefaults = this.buildSourceDefaults(sd);
             for (const [index, c] of mainConfigSourcesConfigs.entries()) {
                 const {name = 'unnamed'} = c;
                 if(!isSourceType(c.type.toLocaleLowerCase())) {
@@ -239,6 +279,8 @@ export default class ScrobbleSources {
                     configureAs: 'source' // override user value
                 });
             }
+        } else {
+            sourceDefaults = this.buildSourceDefaults();
         }
 
         for (const sourceType of sourceTypes) {

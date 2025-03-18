@@ -483,6 +483,7 @@ export const intersect = (a: Array<any>, b: Array<any>) => {
     return Array.from(intersection);
 }
 
+/** Return an array of elements from array a (first arg) that are not in array b (second arg) */
 export const difference = (a: Array<any>, b: Array<any>) => {
     const setA = new Set(a);
     const setB = new Set(b);
