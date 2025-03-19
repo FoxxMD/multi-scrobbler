@@ -1,4 +1,4 @@
-import { after, before, describe, it } from 'mocha';
+import { after, before, afterEach, describe, it } from 'mocha';
 import chai, { assert, expect } from 'chai';
 import asPromised from 'chai-as-promised';
 import withLocalTmpDir from 'with-local-tmp-dir';
@@ -11,6 +11,7 @@ import EventEmitter from "events";
 import {loggerTest, loggerDebug} from '@foxxmd/logging';
 import { clientTypes, SourceType, sourceTypes } from '../../common/infrastructure/Atomic.js';
 import { Notifiers } from '../../notifier/Notifiers.js';
+import { difference, intersect } from '../../utils.js';
 
 chai.use(asPromised);
 
@@ -96,4 +97,53 @@ describe('Sample Configs', function () {
             }
         });
     });
+});
+
+describe('Global ENVs with Config', function () {
+
+    let baseEnvKeys: string[] = [];
+
+    before(function() {
+        baseEnvKeys = Array.from(Object.keys(process.env));
+    });
+
+    afterEach(function() {
+        const modified = difference(Array.from(Object.keys(process.env)), baseEnvKeys);
+        for(const key of modified) {
+            delete process.env[key];
+        }
+    });
+
+    it('Parses default scrobble duration', async function () {
+        process.env.SOURCE_SCROBBLE_DURATION = '20';
+        process.env.MPRIS_ENABLE = 'true';
+
+        const emitter = new EventEmitter();
+        const sources = new ScrobbleSources(emitter, {
+            localUrl: new URL('http://example.com'),
+            configDir: process.cwd(),
+            version: 'test'
+        }, loggerTest);
+        await sources.buildSourcesFromConfig();
+
+        expect(sources.sources).length(1);
+        expect(sources.sources[0].config?.options?.scrobbleThresholds?.duration).to.eq(20);
+    });
+
+    it('Parses default scrobble precentage', async function () {
+        process.env.SOURCE_SCROBBLE_PERCENT = '20';
+        process.env.MPRIS_ENABLE = 'true';
+
+        const emitter = new EventEmitter();
+        const sources = new ScrobbleSources(emitter, {
+            localUrl: new URL('http://example.com'),
+            configDir: process.cwd(),
+            version: 'test'
+        }, loggerTest);
+        await sources.buildSourcesFromConfig();
+
+        expect(sources.sources).length(1);
+        expect(sources.sources[0].config?.options?.scrobbleThresholds?.percent).to.eq(20);
+    });
+
 });

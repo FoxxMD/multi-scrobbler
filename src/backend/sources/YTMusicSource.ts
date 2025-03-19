@@ -22,6 +22,7 @@ import { joinedUrl } from "../utils/NetworkUtils.js";
 import { FixedSizeList } from "fixed-size-list";
 import { todayAwareFormat } from "../utils/TimeUtils.js";
 import { RestType } from "ts-json-schema-generator";
+import { parseArtistCredits, parseCredits } from "../utils/StringUtils.js";
 
 export interface HistoryIngressResult {
     plays: PlayObject[], 
@@ -348,6 +349,25 @@ Redirect URI  : ${this.redirectUri}`);
         } else if(authorData !== undefined) {
             artists = authorData.map(x => x.name) as string[];
         }
+        if(artists.length === 0 && obj.flex_columns.at(1)?.title?.text !== undefined) {
+            // if YTM doesn't have an endpoint (page) for an artist (combined) then YouTube.js doesn't include it
+            // in the music shelf object created from parsing data
+            // BUT YouTube.js does expose the raw data so we can try to recover artists from plain text
+            // https://github.com/LuanRT/YouTube.js/issues/381
+            const credits = parseArtistCredits(obj.flex_columns.at(1)?.title?.text);
+            if(credits !== undefined) {
+                // try to be clever
+                artists.push(credits.primary);
+                if(credits.secondary !== undefined) {
+                    const nonEmptyArtists = credits.secondary.filter(x => x !== undefined && x !== null && x.trim() !== '');
+                    if(nonEmptyArtists.length > 0) {
+                        artists = [...artists, ...nonEmptyArtists];
+                    }
+                }
+            } else {
+                artists = [obj.flex_columns.at(1)?.title?.text];
+            }
+        }
 
         let albumArtists: string[] = [];
         if(artistsData !== undefined && authorData !== undefined) {
@@ -355,6 +375,9 @@ Redirect URI  : ${this.redirectUri}`);
         }
         if(albumData !== undefined) {
             album = albumData.name;
+        }
+        if(album === undefined && obj.flex_columns.at(2)?.title?.text !== undefined) {
+            album = obj.flex_columns.at(2)?.title?.text;
         }
         if(dur!== undefined) {
             const durObj = dayjs.duration(dur.seconds, 's')

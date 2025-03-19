@@ -1,5 +1,7 @@
 import { AzuracastSourceAIOConfig, AzuracastSourceConfig } from "./azuracast.js";
 import { ChromecastSourceAIOConfig, ChromecastSourceConfig } from "./chromecast.js";
+import { ListenbrainzEndpointSourceAIOConfig, ListenbrainzEndpointSourceConfig } from "./endpointlz.js";
+import { LastFMEndpointSourceAIOConfig, LastFMEndpointSourceConfig } from "./endpointlfm.js";
 import { DeezerSourceAIOConfig, DeezerSourceConfig } from "./deezer.js";
 import { JellyApiSourceAIOConfig, JellyApiSourceConfig, JellySourceAIOConfig, JellySourceConfig } from "./jellyfin.js";
 import { JRiverSourceAIOConfig, JRiverSourceConfig } from "./jriver.js";
@@ -10,6 +12,7 @@ import { MopidySourceAIOConfig, MopidySourceConfig } from "./mopidy.js";
 import { MPDSourceAIOConfig, MPDSourceConfig } from "./mpd.js";
 import { MPRISSourceAIOConfig, MPRISSourceConfig } from "./mpris.js";
 import { MusikcubeSourceAIOConfig, MusikcubeSourceConfig } from "./musikcube.js";
+import { MusicCastSourceConfig, MusicCastSourceAIOConfig } from "./musiccast.js";
 import { PlexSourceAIOConfig, PlexSourceConfig, PlexApiSourceConfig, PlexApiSourceAIOConfig } from "./plex.js";
 import { SpotifySourceAIOConfig, SpotifySourceConfig } from "./spotify.js";
 import { SubsonicSourceAIOConfig, SubSonicSourceConfig } from "./subsonic.js";
@@ -25,6 +28,8 @@ export type SourceConfig =
     | PlexApiSourceConfig
     | TautulliSourceConfig
     | DeezerSourceConfig
+    | ListenbrainzEndpointSourceConfig
+    | LastFMEndpointSourceConfig
     | SubSonicSourceConfig
     | JellySourceConfig
     | JellyApiSourceConfig
@@ -38,6 +43,7 @@ export type SourceConfig =
     | WebScrobblerSourceConfig
     | ChromecastSourceConfig
     | MusikcubeSourceConfig
+    | MusicCastSourceConfig
     | MPDSourceConfig
     | VLCSourceConfig
     | AzuracastSourceConfig;
@@ -48,6 +54,8 @@ export type SourceAIOConfig =
     | PlexApiSourceAIOConfig
     | TautulliSourceAIOConfig
     | DeezerSourceAIOConfig
+    | ListenbrainzEndpointSourceAIOConfig
+    | LastFMEndpointSourceAIOConfig
     | SubsonicSourceAIOConfig
     | JellySourceAIOConfig
     | JellyApiSourceAIOConfig
@@ -61,6 +69,7 @@ export type SourceAIOConfig =
     | WebScrobblerSourceAIOConfig
     | ChromecastSourceAIOConfig
     | MusikcubeSourceAIOConfig
+    | MusicCastSourceAIOConfig
     | MPDSourceAIOConfig
     | VLCSourceAIOConfig
     | AzuracastSourceAIOConfig;

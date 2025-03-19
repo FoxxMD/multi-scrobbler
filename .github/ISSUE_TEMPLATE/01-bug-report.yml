@@ -50,9 +50,17 @@ body:
     attributes:
       label: Logs
       description: |
-        Please copy and paste any relevant log output. This will be automatically formatted into code, so no need for backticks.
-        If possible reproduce the issue with [**Debug Mode** enabled](https://foxxmd.github.io/multi-scrobbler/docs/configuration#debug-mode)
+        Please copy and paste any/all relevant from the DEBUG level log output. 
+        Even if your issue does not seem to be shown in the logs you should still add as much detail as possible, a _lack_ of issues in logs may be a good hint during debugging.
+        Your logs will be automatically formatted into code, do not need use backticks.
+        If possible reproduce the issue with [**Debug Mode** enabled](https://foxxmd.github.io/multi-scrobbler/docs/configuration#debug-mode).
       render: shell
+      placeholder: |
+        [2025-02-14 12:47:57.170 -0500] VERBOSE: [Init] Config Dir ENV: undefined -> Resolved: CWD/config
+        [2025-02-14 12:47:57.236 -0500] INFO   : [Init] Debug Mode: NO
+        [2025-02-14 12:47:57.258 -0500] INFO   : [Init] Version: master
+        [2025-02-14 12:47:57.259 -0500] INFO   : [Init] Generating schema definitions...
+        [2025-02-14 12:47:59.148 -0500] DEBUG  : [App] [Scrobblers] [Maloja - default] Found 100 recent scrobbles
   - type: textarea
     attributes:
       label: Additional Context

@@ -17,11 +17,14 @@ import JellyfinConfig from '!!raw-loader!../../../config/jellyfin.json.example';
 import JriverfinConfig from '!!raw-loader!../../../config/jriver.json.example';
 import KodiConfig from '!!raw-loader!../../../config/kodi.json.example';
 import LastfmConfig from '!!raw-loader!../../../config/lastfm.json.example';
+import LastfmEndpointConfig from '!!raw-loader!../../../config/endpointlfm.json.example';
 import ListenbrainzConfig from '!!raw-loader!../../../config/listenbrainz.json.example';
+import ListenbrainzEndpointConfig from '!!raw-loader!../../../config/endpointlz.json.example';
 import MalojaConfig from '!!raw-loader!../../../config/maloja.json.example';
 import MopidyConfig from '!!raw-loader!../../../config/mopidy.json.example';
 import MprisConfig from '!!raw-loader!../../../config/mpris.json.example';
 import MusikcubeConfig from '!!raw-loader!../../../config/musikcube.json.example';
+import MusiccastConfig from '!!raw-loader!../../../config/musiccast.json.example';
 import MPDConfig from '!!raw-loader!../../../config/mpd.json.example';
 import PlexConfig from '!!raw-loader!../../../config/plex.json.example';
 import PlexWebhookConfig from '!!raw-loader!../../../config/plex.webhook.json.example';
@@ -639,7 +642,66 @@ See the [Last.fm (Client)](#lastfm) setup for registration instructions.
     </TabItem>
 </Tabs>
 
+### [Last.fm (Endpoint)](https://www.last.fm)
+
+This Source enables multi-scrobbler to accept scrobbles from outside applications as if it was a Last.fm server.
+
+##### URL
+
+If a **slug** is **not** provided in configuration then multi-scrobbler will accept Last.fm scrobbles at
+
+```
+http://localhost:9078/2.0/
+```
+
+which is the "standard" Last.fm server path for scrobbling.
+
+Use a slug only if you need to setup multiple Last.fm Endpoint sources and cannot use different tokens.
+
+If a slug is used then the URL will be:
+
+```
+http://localhost:9078/api/lastfm/mySlug
+```
+
+#### Configuration
+
+<Tabs groupId="configType" queryString>
+    <TabItem value="env" label="ENV">
+        | Environmental Variable | Required? | Default | Description                                                                                                        |
+        | :--------------------- | :-------- | ------- | ------------------------------------------------------------------------------------------------------------------ |
+        | `LFMENDPOINT_ENABLE`   | No        |         | Use LFM Endpoint as a Source without any other configuration. Only required if slug/token are not provided as ENVs |
+        | `LFM_SLUG`             | No        |         | (Optional) The URL suffix to use for accepting LFM scrobbles                                                       |
+    </TabItem>
+    <TabItem value="file" label="File">
+        <details>
+            Change `configureAs` to `source`
+
+            <summary>Example</summary>
+
+            <CodeBlock title="CONFIG_DIR/endpointlfm.json" language="json5">{LastfmEndpointConfig}</CodeBlock>
+
+        </details>
+
+        or <SchemaLink lower objectName="LastFMEndpointSourceConfig"/>
+    </TabItem>
+    <TabItem value="aio" label="AIO">
+        <details>
+            Change `configureAs` to `source`
+
+            <summary>Example</summary>
+
+            <AIOExample data={LastfmEndpointConfig} name="endpointlfm"/>
+
+        </details>
+
+        or <SchemaLink lower objectName="LastFMEndpointSourceConfig"/>
+    </TabItem>
+</Tabs>
+
 ### [Listenbrainz (Source)](https://listenbrainz.org)
+
+This Source monitors a Listenbrainz account's scrobble history and then re-scrobbles discovered tracks to configured clients.
 
 You will need to run your own Listenbrainz server or have an account [on the official instance](https://listenbrainz.org/login/)
 
@@ -677,6 +739,73 @@ On your [profile page](https://listenbrainz.org/profile/) find your **User Token
         </details>
 
         or <SchemaLink lower objectName="ListenBrainzSourceConfig"/>
+    </TabItem>
+</Tabs>
+
+### [Listenbrainz (Endpoint)](https://listenbrainz.org)
+
+This Source enables multi-scrobbler to accept scrobbles from outside applications as if it was a Listenbrainz server. An example of this would be configuring [pano-scrobbler](https://github.com/kawaiiDango/pano-scrobbler) with a custom Listenbrainz URL to point to multi-scrobbler.
+
+##### URL
+
+If a **slug** is **not** provided in configuration then multi-scrobbler will accept Listenbrainz scrobbles at
+
+```
+http://localhost:9078/1/submit-listens
+```
+
+which is the "standard" Listenbrainz server path for scrobbling.
+
+Use a slug only if you need to setup multiple Listenbrainz Endpoint sources and cannot use different tokens.
+
+If a slug is used then the URL will be:
+
+```
+http://localhost:9078/api/listenbrainz/mySlug
+```
+
+:::note
+    Some Listenbrainz applications may require custom Listenbrainz URLs to be a real domain (`example.com`) and/or use SSL (`https://`). In this case you should setup multi-scrobbler behind a reverse proxy to support this functionality. It is out of the scope of this project to do this solely within multi-scrobbler.
+:::
+
+##### Token
+
+Most Listenbrainz clients require a token (Authentication Token) to be provided during setup. This value can be anything you want, just make sure to use the same value for `token` in your multi-scrobbler configuration for the endpoint.
+
+
+#### Configuration
+
+<Tabs groupId="configType" queryString>
+    <TabItem value="env" label="ENV">
+        | Environmental Variable | Required? | Default | Description                                                                                                       |
+        | :--------------------- | :-------- | ------- | ----------------------------------------------------------------------------------------------------------------- |
+        | `LZENDPOINT_ENABLE`    | No        |         | Use LZ Endpoint as a Source without any other configuration. Only required if slug/token are not provided as ENVs |
+        | `LZE_TOKEN`            | No        |         | LZ "Authentication Token" you provided to the scrobbling application                                              |
+        | `LZE_SLUG`             | No        |         | (Optional) The URL suffix to use for accepting LZ scrobbles                                                       |
+    </TabItem>
+    <TabItem value="file" label="File">
+        <details>
+            Change `configureAs` to `source`
+
+            <summary>Example</summary>
+
+            <CodeBlock title="CONFIG_DIR/endpointlz.json" language="json5">{ListenbrainzEndpointConfig}</CodeBlock>
+
+        </details>
+
+        or <SchemaLink lower objectName="ListenbrainzEndpointSourceConfig"/>
+    </TabItem>
+    <TabItem value="aio" label="AIO">
+        <details>
+            Change `configureAs` to `source`
+
+            <summary>Example</summary>
+
+            <AIOExample data={ListenbrainzEndpointConfig} name="endpointlz"/>
+
+        </details>
+
+        or <SchemaLink lower objectName="ListenbrainzEndpointSourceConfig"/>
     </TabItem>
 </Tabs>
 
@@ -1730,8 +1859,6 @@ If the file being played in VLC does not have ID3 tags/metadata information mult
 
 To extract this information use [named capture groups](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Regular_expressions/Named_capturing_group) in your expression matching the field that should be extracted: `artist` `title` and/or `album`. MS accepts multiple expressions, the first one that matches a filename will be used.
 
-<!-- Would like to put this in a <details> node but the <> in the named capture groups are causing the parser to incorrectly parse them as an actual tag  -->
-
 Example usage in [a file-based config:](./?configType=file#webscrobbler-config)
 
 ```json5 title="config/vlc.json" {10-15}
@@ -1832,8 +1959,72 @@ A user can manually toggle scrobbling for Azuracast as long as the station is on
         </details>
 
         or <SchemaLink lower objectName="AzuracastSourceConfig"/>
+        | Environmental Variable | Required? | Default | Description              |
+        | :--------------------- | :-------- | ------- | :----------------------- |
+        | `MCAST_URL`            | Yes       |         | The Musiccast device URL |                                                    
+    </TabItem>
+    <TabItem value="file" label="File">
+        <details>
+            Change `configureAs` to `source`
+
+            <summary>Example</summary>
+
+            <CodeBlock title="CONFIG_DIR/musiccast.json" language="json5">{MusiccastConfig}</CodeBlock>
+
+        </details>
+
+        or <SchemaLink lower objectName="MusicCastSourceConfig"/>
+    </TabItem>
+    <TabItem value="aio" label="AIO">
+        <details>
+            Change `configureAs` to `source`
+
+            <summary>Example</summary>
+
+            <AIOExample data={MusiccastConfig} name="musiccast"/>
+
+        </details>
+
+        or <SchemaLink lower objectName="MusicCastSourceConfig"/>
     </TabItem>
 </Tabs>
+  
+### [Yamaha MusicCast](https://usa.yamaha.com/products/contents/audio_visual/musiccast/index.html)
+
+Monitor Musiccast device/receivers for music played on Network/USB/CD inputs.
+
+##### URL
+
+If only a domain/IP:PORT is provided to multi-scrobbler it will automatically append the default Musiccast API path. If your Musiccast device is located behind a custom URL (or reverse proxy) you should explicitly provide the base path to use.
+
+EX
+
+    | `url`                                   | Transformed URL                                 |
+    | --------------------------------------- | :---------------------------------------------- |
+    | `http://192.168.0.101`                  | `http://192.168.0.101/YamahaExtendedControl/v1` |
+    | `http://mydomain.com/reverseProxy/cast` | `http://mydomain.com/reverseProxy/cast`         |
+
+##### Scrobble Threshold
+
+The data source of the music being played on the Musiccast device may not report a track duration to multi-scrobbler. In its default configuration this means mutli-scrobbler won't consider a track scrobblable until it has been played for 4 minutes (or 50% but that is impossible to determine). You should configure multi-scrobbler to scrobble after a more reasonable amount of time by using `scrobbleThresholds` in the [Musiccast Source file-based config](./?configType=file#yamaha-musiccast):
+
+```json5
+[
+  {
+    "name": "myYamaha",
+    "enable": true,
+    "data": {
+      "url": "192.168.0.101"
+    },
+    "options": {
+      "scrobbleThresholds": { // scrobble track if...
+          "duration": 90, // listened to for 90 seconds OR
+          "percent": 50 // listened to 50% of the track
+      }
+    }
+  }
+]
+```
 
 ## Client Configurations
 

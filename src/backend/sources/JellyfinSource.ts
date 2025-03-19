@@ -14,9 +14,9 @@ import {
     doubleReturnNewline,
     isDebugMode,
     parseBool,
-    parseDurationFromTimestamp,
     playObjDataMatch,
 } from "../utils.js";
+import { parseDurationFromTimestamp } from '../utils/TimeUtils.js';
 import {
     comparePlayTemporally,
     temporalAccuracyIsAtLeast,

@@ -19,7 +19,9 @@ A javascript app to scrobble music you listened to, to [Maloja](https://github.c
   * [WebScrobbler](https://foxxmd.github.io/multi-scrobbler/docs/configuration#webscrobbler)
   * [Youtube Music](https://foxxmd.github.io/multi-scrobbler/docs/configuration#youtube-music)
   * [Last.fm](https://foxxmd.github.io/multi-scrobbler/docs/configuration#lastfm-source)
+  * [Last.fm (Endpoint)](https://foxxmd.github.io/multi-scrobbler/docs/configuration#lastfm-endpoint)
   * [ListenBrainz](https://foxxmd.github.io/multi-scrobbler/docs/configuration#listenbrainz-source)
+  * [ListenBrainz (Endpoint)](https://foxxmd.github.io/multi-scrobbler/docs/configuration#listenbrainz-endpoint)
   * [~~Deezer~~](https://foxxmd.github.io/multi-scrobbler/docs/configuration#deezer)
   * [MPRIS (Linux Desktop)](https://foxxmd.github.io/multi-scrobbler/docs/configuration#mpris)
   * [Mopidy](https://foxxmd.github.io/multi-scrobbler/docs/configuration#mopidy)
@@ -30,6 +32,7 @@ A javascript app to scrobble music you listened to, to [Maloja](https://github.c
   * [MPD (Music Player Daemon)](https://foxxmd.github.io/multi-scrobbler/docs/configuration#mpd-music-player-daemon)
   * [VLC](https://foxxmd.github.io/multi-scrobbler/docs/configuration#vlc)
   * [Azuracast](https://foxxmd.github.io/multi-scrobbler/docs/configuration#azuracast)
+  * [Yamaha MusicCast](https://foxxmd.github.io/multi-scrobbler/docs/configuration#yamaha-musiccast)
 * Supports scrobbling to many **Clients**
   * [Maloja](https://foxxmd.github.io/multi-scrobbler/docs/configuration#maloja)
   * [Last.fm](https://foxxmd.github.io/multi-scrobbler/docs/configuration#lastfm)

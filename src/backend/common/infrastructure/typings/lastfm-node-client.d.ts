@@ -30,6 +30,10 @@ declare module 'lastfm-node-client' {
         mbid?: string
     }
 
+    export interface TrackScrobbleRequest extends TrackScrobblePayload {
+        method: 'track.scrobble'
+    }
+
     export interface TrackScrobbleResponse {
         scrobbles: {
             '@attr': {
@@ -51,6 +55,10 @@ declare module 'lastfm-node-client' {
     }
 
     export type NowPlayingPayload = Omit<TrackScrobblePayload, 'mbid' | 'timestamp'>
+
+    export type NowPlayingRequest = NowPlayingPayload & { method: 'track.updateNowPlaying' };
+
+    export type LastfmTrackUpdateRequest = TrackScrobbleRequest | NowPlayingRequest;
 
     export interface NowPlayingResponse {
         nowplaying: {

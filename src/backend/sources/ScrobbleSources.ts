@@ -6,6 +6,8 @@ import { AIOConfig, SourceDefaults } from "../common/infrastructure/config/aioCo
 import { AzuracastData, AzuracastSourceConfig } from "../common/infrastructure/config/source/azuracast.js";
 import { ChromecastSourceConfig } from "../common/infrastructure/config/source/chromecast.js";
 import { DeezerData, DeezerSourceConfig } from "../common/infrastructure/config/source/deezer.js";
+import { ListenbrainzEndpointSourceConfig, ListenbrainzEndpointData } from "../common/infrastructure/config/source/endpointlz.js";
+import { LastFMEndpointSourceConfig, LastFMEndpointData } from "../common/infrastructure/config/source/endpointlfm.js";
 import {
     JellyApiData,
     JellyApiSourceConfig,
@@ -17,6 +19,7 @@ import { KodiData, KodiSourceConfig } from "../common/infrastructure/config/sour
 import { LastfmSourceConfig } from "../common/infrastructure/config/source/lastfm.js";
 import { ListenBrainzSourceConfig } from "../common/infrastructure/config/source/listenbrainz.js";
 import { MopidySourceConfig } from "../common/infrastructure/config/source/mopidy.js";
+import { MusicCastData, MusicCastSourceConfig } from "../common/infrastructure/config/source/musiccast.js";
 import { MPDSourceConfig } from "../common/infrastructure/config/source/mpd.js";
 import { MPRISData, MPRISSourceConfig } from "../common/infrastructure/config/source/mpris.js";
 import { MusikcubeData, MusikcubeSourceConfig } from "../common/infrastructure/config/source/musikcube.js";
@@ -35,6 +38,8 @@ import AbstractSource from "./AbstractSource.js";
 import { AzuracastSource } from "./AzuracastSource.js";
 import { ChromecastSource } from "./ChromecastSource.js";
 import DeezerSource from "./DeezerSource.js";
+import { EndpointListenbrainzSource } from "./EndpointListenbrainzSource.js";
+import { EndpointLastfmSource } from "./EndpointLastfmSource.js";
 import JellyfinApiSource from "./JellyfinApiSource.js";
 import JellyfinSource from "./JellyfinSource.js";
 import { JRiverSource } from "./JRiverSource.js";
@@ -45,6 +50,7 @@ import { MopidySource } from "./MopidySource.js";
 import { MPDSource } from "./MPDSource.js";
 import { MPRISSource } from "./MPRISSource.js";
 import { MusikcubeSource } from "./MusikcubeSource.js";
+import { MusicCastSource } from "./MusicCastSource.js";
 import PlexSource from "./PlexSource.js";
 import SpotifySource from "./SpotifySource.js";
 import { SubsonicSource } from "./SubsonicSource.js";
@@ -55,6 +61,7 @@ import YTMusicSource from "./YTMusicSource.js";
 import { Definition } from 'ts-json-schema-generator';
 import { getTypeSchemaFromConfigGenerator } from '../utils/SchemaUtils.js';
 import PlexApiSource from './PlexApiSource.js';
+import { nonEmptyStringOrDefault } from '../../core/StringUtils.js';
 
 type groupedNamedConfigs = {[key: string]: ParsedConfig[]};
 
@@ -88,14 +95,17 @@ export default class ScrobbleSources {
     getByNameAndType = (name: string, type: SourceType) => this.sources.find(x => x.name === name && x.type === type)
 
     async getStatusSummary(type?: string, name?: string): Promise<[boolean, string[]]> {
-        let sources: AbstractSource[]
+        let sources: AbstractSource[] = [];
         let sourcesReady = true;
         const messages: string[] = [];
 
         if(type !== undefined) {
             sources = this.getByType(type);
         } else if(name !== undefined) {
-            sources = [this.getByName(name)];
+            const sourceByName = this.getByName(name);
+            if(sourceByName !== undefined) {
+                sources = [sourceByName];
+            }
         } else {
             sources = this.sources;
         }
@@ -128,6 +138,12 @@ export default class ScrobbleSources {
                     break;
                 case 'deezer':
                     this.schemaDefinitions[type] = getTypeSchemaFromConfigGenerator("DeezerSourceConfig");
+                    break;
+                case 'endpointlz':
+                    this.schemaDefinitions[type] = getTypeSchemaFromConfigGenerator("ListenbrainzEndpointSourceConfig");
+                    break;
+                case 'endpointlfm':
+                    this.schemaDefinitions[type] = getTypeSchemaFromConfigGenerator("LastFMEndpointSourceConfig");
                     break;
                 case 'subsonic':
                     this.schemaDefinitions[type] = getTypeSchemaFromConfigGenerator("SubSonicSourceConfig");
@@ -165,6 +181,9 @@ export default class ScrobbleSources {
                 case 'musikcube':
                     this.schemaDefinitions[type] = getTypeSchemaFromConfigGenerator("MusikcubeSourceConfig");
                     break;
+                case 'musiccast':
+                    this.schemaDefinitions[type] = getTypeSchemaFromConfigGenerator("MusicCastSourceConfig");
+                    break;
                 case 'mpd':
                     this.schemaDefinitions[type] = getTypeSchemaFromConfigGenerator("MPDSourceConfig");
                     break;
@@ -177,6 +196,45 @@ export default class ScrobbleSources {
             }
         }
         return this.schemaDefinitions[type];
+    }
+
+    buildSourceDefaults = (fileDefaults: SourceDefaults = {}): SourceDefaults => {
+        const scrobbleDurationEnv = process.env.SOURCE_SCROBBLE_DURATION;
+        const scrobblePercentEnv = process.env.SOURCE_SCROBBLE_PERCENT;
+
+        const buildDefaults = {...fileDefaults};
+
+        if(nonEmptyStringOrDefault(scrobbleDurationEnv) !== undefined || nonEmptyStringOrDefault(scrobblePercentEnv) !== undefined) {
+            const {
+                scrobbleThresholds: {
+                    duration,
+                    percent
+                } = {},
+                scrobbleThresholds = {}
+            } = fileDefaults;
+            buildDefaults.scrobbleThresholds = {...scrobbleThresholds};
+
+            if(duration === undefined && nonEmptyStringOrDefault(scrobbleDurationEnv) !== undefined) {
+                const envDur = Number.parseInt(scrobbleDurationEnv);
+                if(Number.isNaN(envDur)) {
+                    this.logger.warn(`Ignoring value '${scrobbleDurationEnv}' for env SOURCE_SCROBBLE_DURATION because it is not a number`);
+                } else {
+                    buildDefaults.scrobbleThresholds.duration = envDur;
+                    this.logger.verbose(`Set default scrobble threshold duration to '${scrobbleDurationEnv}' based on env SOURCE_SCROBBLE_DURATION`);
+                }
+            }
+            if(percent === undefined && nonEmptyStringOrDefault(scrobblePercentEnv) !== undefined) {
+                const envPercent = Number.parseInt(scrobblePercentEnv);
+                if(Number.isNaN(envPercent)) {
+                    this.logger.warn(`Ignoring value '${scrobblePercentEnv}' for env SOURCE_SCROBBLE_PERCENT because it is not a number`);
+                } else {
+                    buildDefaults.scrobbleThresholds.percent = envPercent;
+                    this.logger.verbose(`Set default scrobble threshold percent to '${scrobblePercentEnv}' based on env SOURCE_SCROBBLE_PERCENT`);
+                }
+            }
+        }
+
+        return buildDefaults;
     }
 
     buildSourcesFromConfig = async (additionalConfigs: ParsedConfig[] = []) => {
@@ -198,7 +256,7 @@ export default class ScrobbleSources {
                 sources: mainConfigSourcesConfigs = [],
                 sourceDefaults: sd = {},
             } = aioConfig;
-            sourceDefaults = sd;
+            sourceDefaults = this.buildSourceDefaults(sd);
             for (const [index, c] of mainConfigSourcesConfigs.entries()) {
                 const {name = 'unnamed'} = c;
                 if(!isSourceType(c.type.toLocaleLowerCase())) {
@@ -226,6 +284,8 @@ export default class ScrobbleSources {
                     configureAs: 'source' // override user value
                 });
             }
+        } else {
+            sourceDefaults = this.buildSourceDefaults();
         }
 
         for (const sourceType of sourceTypes) {
@@ -379,6 +439,39 @@ export default class ScrobbleSources {
                     // sane default for lastfm is that user want to scrobble TO it, not FROM it -- this is also existing behavior
                     defaultConfigureAs = 'client';
                     break;
+                case 'endpointlz':
+                    const lzShouldUse = parseBool(process.env.LZENDPOINT_ENABLE);
+                    const lze = {
+                        slug: process.env.LZE_SLUG,
+                        token: process.env.LZE_TOKEN
+                    }
+                    if (!Object.values(lze).every(x => x === undefined) || lzShouldUse) {
+                        configs.push({
+                            type: 'endpointlz',
+                            name: 'unnamed',
+                            source: 'ENV',
+                            mode: 'single',
+                            configureAs: defaultConfigureAs,
+                            data: lze as ListenbrainzEndpointData
+                        });
+                    }
+                    break;
+                case 'endpointlfm':
+                    const lfmShouldUse = parseBool(process.env.LFMENDPOINT_ENABLE);
+                    const lfme = {
+                        slug: process.env.LFM_SLUG,
+                    }
+                    if (!Object.values(lfme).every(x => x === undefined) || lfmShouldUse) {
+                        configs.push({
+                            type: 'endpointlfm',
+                            name: 'unnamed',
+                            source: 'ENV',
+                            mode: 'single',
+                            configureAs: defaultConfigureAs,
+                            data: lfme as LastFMEndpointData
+                        });
+                    }
+                    break;
                 case 'jriver':
                     const jr = {
                         url: process.env.JRIVER_URL,
@@ -454,6 +547,21 @@ export default class ScrobbleSources {
                                 blacklistApps: cc.blacklistApps !== undefined ? cc.blacklistApps.split(',') : [],
                                 whitelistApps: cc.whitelistApps !== undefined ? cc.whitelistApps.split(',') : [],
                             }
+                        });
+                    }
+                    break;
+                case 'musiccast':
+                    const musecase = {
+                        url: process.env.MCAST_URL,
+                    }
+                    if (!Object.values(musecase).every(x => x === undefined)) {
+                        configs.push({
+                            type: 'musiccast',
+                            name: 'unnamed',
+                            source: 'ENV',
+                            mode: 'single',
+                            configureAs: defaultConfigureAs,
+                            data: musecase as MusicCastData
                         });
                     }
                     break;
@@ -684,6 +792,12 @@ export default class ScrobbleSources {
             case 'listenbrainz':
                 newSource = await new ListenbrainzSource(name, compositeConfig as ListenBrainzSourceConfig, this.internalConfig, this.emitter);
                 break;
+            case 'endpointlz':
+                newSource = await new EndpointListenbrainzSource(name, compositeConfig as ListenbrainzEndpointSourceConfig, this.internalConfig, this.emitter);
+                break;
+            case 'endpointlfm':
+                newSource = await new EndpointLastfmSource(name, compositeConfig as LastFMEndpointSourceConfig, this.internalConfig, this.emitter);
+                break;
             case 'jriver':
                 newSource = await new JRiverSource(name, compositeConfig as JRiverSourceConfig, this.internalConfig, this.emitter);
                 break;
@@ -698,6 +812,9 @@ export default class ScrobbleSources {
                 break;
             case 'musikcube':
                 newSource = await new MusikcubeSource(name, compositeConfig as MusikcubeSourceConfig, this.internalConfig, this.emitter);
+                break;
+            case 'musiccast':
+                newSource = await new MusicCastSource(name, compositeConfig as MusicCastSourceConfig, this.internalConfig, this.emitter);
                 break;
             case 'mpd':
                 newSource = await new MPDSource(name, compositeConfig as MPDSourceConfig, this.internalConfig, this.emitter);
