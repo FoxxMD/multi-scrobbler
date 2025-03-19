@@ -10,6 +10,7 @@ import SchemaLink from "../../src/components/SchemaLink";
 import AIOExample from "../../src/components/AIOExample";
 
 import AIOConfig from '!!raw-loader!../../../config/config.json.example';
+import AzuracastConfig from '!!raw-loader!../../../config/azuracast.json.example';
 import ChromecastConfig from '!!raw-loader!../../../config/chromecast.json.example';
 import DeezerConfig from '!!raw-loader!../../../config/chromecast.json.example';
 import JellyfinConfig from '!!raw-loader!../../../config/jellyfin.json.example';
@@ -1900,6 +1901,67 @@ If you find that VLC is incorrectly reporting track information (in its interfac
     ]
 ```
 
+### [Azuracast](https://www.azuracast.com/)
+
+The Azuracast server should have **Use High-Performance Now Playing Updates** enabled in _Administration -> System Settings_
+
+##### URL
+
+The URL used by MS to connect to Azuracast has the syntax:
+
+```
+[ws|wss]://HOST:[PORT]
+```
+
+MS will automatically add the path required for websockets, [`/api/live/nowplaying/websocket`](https://www.azuracast.com/docs/developers/now-playing-data/#websockets), to your URL if none is provided. If you use a reverse proxy with a path-based URL or otherwise need a custom path to access the websockets path correctly then explicitly provide it. Examples:
+
+```
+URL From Config                => MS Uses
+
+'ws://192.168.0.101'                 => ws://192.168.0.101/api/live/nowplaying/websocket
+'ws://azura.mydomain.com'            => ws://azura.mydomain.com.com/api/live/nowplaying/websocket
+'wss://mydomain.com/custom/azura/ws' => wss://mydomain.com/custom/azura/ws
+```
+
+##### Manual Listening
+
+A user can manually toggle scrobbling for Azuracast as long as the station is online. On the MS Dashboard use the **Manual Listening** link below the Source status to toggle scrobbling. This will override any automatic scrobbling based on current listeners.
+
+#### Configuration
+
+<Tabs groupId="configType" queryString>
+    <TabItem value="env" label="ENV">
+        | Environmental Variable | Required? | Default | Description                                                                                    |
+        | :--------------------- | :-------- | :------ | ---------------------------------------------------------------------------------------------- |
+        | `AZ_URL`               | Yes       |         | Azuracast URL *without station name*                                                           |
+        | `AZ_STATION`           | Yes       |         | The station name shown on the public page                                                      |
+        | `AZURA_LIVE`           | No        | Yes     | Only scrobble when station status is ONLINE                                                    |
+        | `AZURA_LISTENERS_NUM`  | No        | `true`  | Only scrobble if station has any listeners (`true`) or listeners are equal-to/greater-than `X` |
+    </TabItem>
+    <TabItem value="file" label="File">
+        <details>
+
+            <summary>Example</summary>
+
+            <CodeBlock title="CONFIG_DIR/azuracast.json" language="json5">{AzuracastConfig}</CodeBlock>
+
+        </details>
+
+        or <SchemaLink lower objectName="AzuracastSourceConfig"/>
+    </TabItem>
+    <TabItem value="aio" label="AIO">
+        <details>
+
+            <summary>Example</summary>
+
+            <AIOExample data={AzuracastConfig} name="azuracast"/>
+
+        </details>
+
+        or <SchemaLink lower objectName="AzuracastSourceConfig"/>                                                
+    </TabItem>
+</Tabs>
+  
 ### [Yamaha MusicCast](https://usa.yamaha.com/products/contents/audio_visual/musiccast/index.html)
 
 Monitor Musiccast device/receivers for music played on Network/USB/CD inputs.
@@ -1941,6 +2003,7 @@ The data source of the music being played on the Musiccast device may not report
 
 <Tabs groupId="configType" queryString>
     <TabItem value="env" label="ENV">
+        or <SchemaLink lower objectName="AzuracastSourceConfig"/>
         | Environmental Variable | Required? | Default | Description              |
         | :--------------------- | :-------- | ------- | :----------------------- |
         | `MCAST_URL`            | Yes       |         | The Musiccast device URL |                                                    

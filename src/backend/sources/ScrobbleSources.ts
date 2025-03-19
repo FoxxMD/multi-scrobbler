@@ -3,6 +3,7 @@ import { childLogger, Logger } from '@foxxmd/logging';
 import EventEmitter from "events";
 import { ConfigMeta, InternalConfig, isSourceType, SourceType, sourceTypes } from "../common/infrastructure/Atomic.js";
 import { AIOConfig, SourceDefaults } from "../common/infrastructure/config/aioConfig.js";
+import { AzuracastData, AzuracastSourceConfig } from "../common/infrastructure/config/source/azuracast.js";
 import { ChromecastSourceConfig } from "../common/infrastructure/config/source/chromecast.js";
 import { DeezerData, DeezerSourceConfig } from "../common/infrastructure/config/source/deezer.js";
 import { ListenbrainzEndpointSourceConfig, ListenbrainzEndpointData } from "../common/infrastructure/config/source/endpointlz.js";
@@ -34,6 +35,7 @@ import { WildcardEmitter } from "../common/WildcardEmitter.js";
 import { parseBool, readJson } from "../utils.js";
 import { validateJson } from "../utils/ValidationUtils.js";
 import AbstractSource from "./AbstractSource.js";
+import { AzuracastSource } from "./AzuracastSource.js";
 import { ChromecastSource } from "./ChromecastSource.js";
 import DeezerSource from "./DeezerSource.js";
 import { EndpointListenbrainzSource } from "./EndpointListenbrainzSource.js";
@@ -187,6 +189,9 @@ export default class ScrobbleSources {
                     break;
                 case 'vlc':
                     this.schemaDefinitions[type] = getTypeSchemaFromConfigGenerator("VLCSourceConfig");
+                    break;
+                case 'azuracast':
+                    this.schemaDefinitions[type] = getTypeSchemaFromConfigGenerator("AzuracastSourceConfig");
                     break;
             }
         }
@@ -609,6 +614,25 @@ export default class ScrobbleSources {
                             data: ytm as YTMusicData
                         });
                     }
+                    break;
+                case 'azuracast':
+                    const azura = {
+                        station: process.env.AZURA_STATION,
+                        url: process.env.AZURA_URL,
+                        monitorWhenListeners: process.env.AZURA_LISTENERS_NUM,
+                        monitorWhenLive: process.env.AZURA_LIVE,
+                        apiKey: process.env.AZURA_KEY
+                    }
+                    if (!Object.values(azura).every(x => x === undefined)) {
+                        configs.push({
+                            type: 'azuracast',
+                            name: 'unnamed',
+                            source: 'ENV',
+                            mode: 'single',
+                            configureAs: defaultConfigureAs,
+                            data: azura as unknown as AzuracastData
+                        });
+                    }
                     break;                    
                 default:
                     break;
@@ -797,6 +821,9 @@ export default class ScrobbleSources {
                 break;
             case 'vlc':
                 newSource = await new VLCSource(name, compositeConfig as VLCSourceConfig, this.internalConfig, this.emitter);
+                break;
+            case 'azuracast':
+                newSource = await new AzuracastSource(name, compositeConfig as AzuracastSourceConfig, this.internalConfig, this.emitter);
                 break;
             default:
                 break;
