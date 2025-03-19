@@ -230,7 +230,7 @@ describe('Player listen ranges', function () {
 
     describe('When source does provide playback position', function () {
 
-        it('Duration is position based', function () {
+        it('Listened duration is position based', function () {
             const player = new TestPositionalPlayerState(logger, [NO_DEVICE, NO_USER]);
 
             const positioned = clone(newPlay);
@@ -241,6 +241,43 @@ describe('Player listen ranges', function () {
             player.update(testState({play: positioned, position: 10}), dayjs().add(10, 'seconds'));
 
             assert.equal(player.getListenDuration(), 7);
+        });
+
+        it('Listened duration is track duration invariant', function () {
+            const player = new TestPositionalPlayerState(logger, [NO_DEVICE, NO_USER]);
+
+            const positioned = clone(newPlay);
+            positioned.data.duration = 0;
+
+            player.update(testState({play: positioned, position: 3}));
+
+            player.currentListenRange.rtPlayer.setPosition(10000);
+            player.update(testState({play: positioned, position: 10}), dayjs().add(10, 'seconds'));
+
+            assert.equal(player.getListenDuration(), 7);
+        });
+
+        it('Listened for is track duration invariant', function () {
+            const player = new TestPositionalPlayerState(logger, [NO_DEVICE, NO_USER]);
+
+            const positioned = clone(newPlay);
+            positioned.data.duration = 0;
+
+            player.update(testState({play: positioned, position: 3, status: REPORTED_PLAYER_STATUSES.playing}));
+
+            player.currentListenRange.rtPlayer.setPosition(10000);
+            player.update(testState({play: positioned, position: 10, status: REPORTED_PLAYER_STATUSES.playing}), dayjs().add(10, 'seconds'));
+
+            player.currentListenRange.rtPlayer.setPosition(20000);
+            player.update(testState({play: positioned, position: 20, status: REPORTED_PLAYER_STATUSES.playing}), dayjs().add(20, 'seconds'));
+
+            const otherPlay = clone(positioned);
+            otherPlay.data.track = "A New Track";
+            player.currentListenRange.rtPlayer.setPosition(30000);
+            const [currPlay, prevPlay] = player.update(testState({play: otherPlay, position: 2, status: REPORTED_PLAYER_STATUSES.playing}), dayjs().add(30, 'seconds'));
+
+            assert.isDefined(prevPlay);
+            assert.equal(prevPlay.data.listenedFor, 17);
         });
 
         it('Range ends if position over drifts', function () {
