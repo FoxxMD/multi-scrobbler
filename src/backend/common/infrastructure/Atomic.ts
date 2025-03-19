@@ -29,6 +29,7 @@ export type SourceType =
     | 'musikcube'
     | 'mpd'
     | 'vlc'
+    | 'icecast'
     | 'azuracast';
 
 export const sourceTypes: SourceType[] = [
@@ -53,6 +54,7 @@ export const sourceTypes: SourceType[] = [
     'musikcube',
     'mpd',
     'vlc',
+    'icecast',
     'azuracast'
 ];
 

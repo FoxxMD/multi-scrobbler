@@ -20,6 +20,7 @@ import { TautulliSourceAIOConfig, TautulliSourceConfig } from "./tautulli.js";
 import { VLCSourceAIOConfig, VLCSourceConfig } from "./vlc.js";
 import { WebScrobblerSourceAIOConfig, WebScrobblerSourceConfig } from "./webscrobbler.js";
 import { YTMusicSourceAIOConfig, YTMusicSourceConfig } from "./ytmusic.js";
+import { IcecastSourceAIOConfig, IcecastSourceConfig } from "./icecast.js";
 
 
 export type SourceConfig =
@@ -46,6 +47,7 @@ export type SourceConfig =
     | MusicCastSourceConfig
     | MPDSourceConfig
     | VLCSourceConfig
+    | IcecastSourceConfig
     | AzuracastSourceConfig;
 
 export type SourceAIOConfig =
@@ -72,4 +74,5 @@ export type SourceAIOConfig =
     | MusicCastSourceAIOConfig
     | MPDSourceAIOConfig
     | VLCSourceAIOConfig
+    | IcecastSourceAIOConfig
     | AzuracastSourceAIOConfig;

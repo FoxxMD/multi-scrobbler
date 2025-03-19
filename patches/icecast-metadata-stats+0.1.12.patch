@@ -1,0 +1,44 @@
+diff --git a/node_modules/icecast-metadata-stats/src/IcecastMetadataStats.js b/node_modules/icecast-metadata-stats/src/IcecastMetadataStats.js
+index 7b70725..8836a99 100644
+--- a/node_modules/icecast-metadata-stats/src/IcecastMetadataStats.js
++++ b/node_modules/icecast-metadata-stats/src/IcecastMetadataStats.js
+@@ -59,6 +59,7 @@ const sources = Symbol();
+ const interval = Symbol();
+ const onStats = Symbol();
+ const onStatsFetch = Symbol();
++const onError = Symbol();
+ 
+ const state = Symbol();
+ const intervalId = Symbol();
+@@ -106,6 +107,7 @@ export default class IcecastMetadataStats {
+       [interval]: (options.interval || 30) * 1000,
+       [onStats]: options.onStats || noOp,
+       [onStatsFetch]: options.onStatsFetch || noOp,
++      [onError]: options.onError,
+       [icyMetaInt]: options.icyMetaInt,
+       [icyCharacterEncoding]: options.icyCharacterEncoding,
+       [icyDetectionTimeout]: options.icyDetectionTimeout,
+@@ -425,13 +427,21 @@ export default class IcecastMetadataStats {
+         signal: p.get(this)[controller].signal,
+       })
+         .then((res) => {
+-          if (!res.ok) throw new Error(`HTTP Error ${res.status}`);
++          if (!res.ok) {
++            const responseError = new Error(`HTTP Error ${res.status}`);
++            responseError.res = res;
++            throw responseError;
++          } 
+           return res;
+         })
+         .then(mapper)
+         .catch((e) => {
+           if (e.name !== "AbortError") {
+-            console.warn(`Failed to fetch ${p.get(this)[endpoint]}`, e);
++            if(p.get(this)[onError] !== undefined) {
++              p.get(this)[onError](new Error(`Failed to fetch ${p.get(this)[endpoint]}`, {cause: e}));
++            } else {
++              console.warn(`Failed to fetch ${p.get(this)[endpoint]}`, e);
++            }
+           }
+         })
+         .finally(() => {

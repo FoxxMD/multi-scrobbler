@@ -33,6 +33,7 @@ A javascript app to scrobble music you listened to, to [Maloja](https://github.c
   * [VLC](https://foxxmd.github.io/multi-scrobbler/docs/configuration#vlc)
   * [Azuracast](https://foxxmd.github.io/multi-scrobbler/docs/configuration#azuracast)
   * [Yamaha MusicCast](https://foxxmd.github.io/multi-scrobbler/docs/configuration#yamaha-musiccast)
+  * [Icecast](https://foxxmd.github.io/multi-scrobbler/docs/configuration#icecast)
 * Supports scrobbling to many **Clients**
   * [Maloja](https://foxxmd.github.io/multi-scrobbler/docs/configuration#maloja)
   * [Last.fm](https://foxxmd.github.io/multi-scrobbler/docs/configuration#lastfm)
