@@ -9,6 +9,7 @@ import { FEAT, JOINERS, JOINERS_FINAL, JsonPlayObject, ObjectPlayData, PlayMeta,
 import { sortByNewestPlayDate } from "../../utils.js";
 import { NO_DEVICE, NO_USER, PlayerStateDataMaybePlay, PlayPlatformId, ReportedPlayerStatus } from '../../common/infrastructure/Atomic.js';
 import { arrayListAnd } from '../../../core/StringUtils.js';
+import { findDelimiters } from '../../utils/StringUtils.js';
 
 dayjs.extend(utc)
 dayjs.extend(isBetween);
@@ -180,14 +181,37 @@ export const generatePlays = (numberOfPlays: number, data: ObjectPlayData = {}, 
 
 export const generateArtist = () => faker.music.artist;
 
-export const generateArtists = (num?: number, max: number = 3) => {
-    // if(num !== undefined) {
-    //     return Array(num).map(x => faker.music.artist);
-    // }
+export const generateArtists = (num?: number, max: number = 3, opts: {ambiguousJoinedNames?: boolean, trailingAmpersand?: boolean} = {}) => {
     if(num === 0 || max === 0) {
         return [];
     }
-    return faker.helpers.multiple(faker.music.artist, {count: {min: num ?? 1, max: num ?? max}});
+    let artists = faker.helpers.multiple(faker.music.artist, {count: {min: num ?? 1, max: num ?? max}});
+
+    const {
+        trailingAmpersand = false,
+        ambiguousJoinedNames = false
+    } = opts;
+
+    if(!trailingAmpersand) {
+        // its really hard to parse an artist name that contains an '&' when it comes at the end of a list
+        // because its ambigious if the list is joining the list with & or if & is part of the artist name
+        // so by default don't generate these (we test for specific scenarios in playParsing.test.ts)
+        while(artists[artists.length - 1].includes('&')) {
+            artists = artists.slice(0, artists.length - 1).concat(faker.music.artist());
+        }
+    }
+    if(!ambiguousJoinedNames) {
+        artists = artists.map(x => {
+            let a = x;
+            let foundDelims = findDelimiters(a);
+            while(foundDelims !== undefined && foundDelims.length > 0 && !(foundDelims.length === 1 && foundDelims[0] === '&')) {
+                a = faker.music.artist();
+                foundDelims = findDelimiters(a);
+            }
+            return a;
+        });
+    }
+    return artists;
 }
 
 export interface ArtistGenerateOptions {
@@ -223,7 +247,7 @@ export const generateArtistsStr = (options: CompoundArtistGenerateOptions = {}):
     let finalJoinerPrimary: string = joinerPrimary;
     if(primaryOpts.finalJoiner !== false) {
         if(primaryOpts.finalJoiner === undefined) {
-            if(joinerPrimary === ',') {
+            if(joinerPrimary === ',' && !primaryArt.some(x => x.includes('&'))) {
                 finalJoinerPrimary = faker.helpers.arrayElement(JOINERS_FINAL);
             }
         
@@ -242,7 +266,7 @@ export const generateArtistsStr = (options: CompoundArtistGenerateOptions = {}):
     let finalJoinerSecondary: string = joinerSecondary;
     if(secondaryOpts.finalJoiner !== false) {
         if(secondaryOpts.finalJoiner === undefined) {
-            if(joinerSecondary === ',') {
+            if(joinerSecondary === ',' && !secondaryArt.some(x => x.includes('&'))) {
                 finalJoinerSecondary = faker.helpers.arrayElement(JOINERS_FINAL);
             }
         } else {
