@@ -85,7 +85,7 @@
     "glob": "^11.0.0",
     "google-auth-library": "^9.15.0",
     "gotify": "^1.1.0",
-    "icecast-metadata-js": "^1.2.9",
+    "icecast-metadata-stats": "^0.1.12",
     "iso-websocket": "^0.3.0",
     "iti": "^0.6.0",
     "json5": "^2.2.3",

@@ -10,10 +10,10 @@ import {
 } from "../common/infrastructure/Atomic.js";
 import { isPortReachableConnect, normalizeWebAddress } from "../utils/NetworkUtils.js";
 import MemorySource from "./MemorySource.js";
-import { IcecastMetadata, IcecastMetadataResponse, IcecastSourceConfig } from "../common/infrastructure/config/source/icecast.js";
-import { IcecastReadableStream } from 'icecast-metadata-js';
-import { parseArtistCredits, parseCredits, parseTrackCredits } from "../utils/StringUtils.js";
-import { sleep } from "../utils.js";
+import { IcecastMetadata, IcecastSourceConfig } from "../common/infrastructure/config/source/icecast.js";
+import IcecastMetadataStats from "icecast-metadata-stats";
+import { parseArtistCredits, parseTrackCredits } from "../utils/StringUtils.js";
+import { isDebugMode, sleep } from "../utils.js";
 
 
 export class IcecastSource extends MemorySource {
@@ -22,20 +22,21 @@ export class IcecastSource extends MemorySource {
 
     urlData!: URLData;
 
-    currentMetadata?: IcecastMetadataResponse
-    streamAbort?: AbortController;
+    currentMetadata?: IcecastMetadata
+    statsListener?: IcecastMetadataStats
 
     streamError?: Error;
     streaming: boolean = false;
 
     constructor(name: any, config: IcecastSourceConfig, internal: InternalConfig, emitter: EventEmitter) {
         const {
-            data = {}
+            data,
+            options = {},
         } = config;
         const {
             ...rest
-        } = data;
-        super('icecast', name, { ...config, data: { ...rest } }, internal, emitter);
+        } = data || {};
+        super('icecast', name, { ...config, options: {scrobbleOnStart: false, ...options}, data: { ...rest } }, internal, emitter);
 
         this.requiresAuth = false;
         this.canPoll = true;
@@ -70,103 +71,72 @@ export class IcecastSource extends MemorySource {
     }
 
     readIcecastStream = () => {
-        this.streamAbort = new AbortController();
-        this.streamError = undefined;
+        if (this.statsListener !== undefined) {
+            this.statsListener.stop();
+        }
 
-        fetch(this.urlData.url.toString(), {
-            signal: this.streamAbort.signal,
-            method: "GET",
-            headers: {
-              "Icy-MetaData": "1",
-            }
-          })
-          .then(async (response) => {
+        const {
+            url,
+            ...icecastUserOpts
+        } = this.config.data;
 
-            const contentType = response.headers.get('Content-Type');
-            if(!['audio','ogg','aac','mp3'].some(x => contentType.includes(x))) {
-                this.logger.warn(`Icecase URL response content-type does not look like audio! It will probably fail. Check your URL? Content-Type: ${contentType}`);
-            }
+        const icecastOpts = {sources: ["icy", 'ogg'], ...icecastUserOpts};
 
-            const opts: Record<string, any> = {
-                metadataTypes: ["icy", "ogg"]
-            };
-
-            const icyIntHeader = response.headers.get('Icy-MetaInt');
-            if(icyIntHeader !== null) {
-                const icyInt = Number.parseInt(icyIntHeader);
-                if(Number.isNaN(icyInt)) {
-                    this.logger.warn(`Could not parse value of header 'Icy-MetaInt' to a number: ${icyIntHeader}`);
-                } else {
-                    opts.icyMetaInt = icyInt;
+        this.statsListener = new IcecastMetadataStats(this.urlData.url.toString(), {
+            ...icecastOpts,
+            onStats: (stats) => {
+                if(isDebugMode()) {
+                    this.logger.debug(stats);
                 }
-            }
-
-            const icecast = new IcecastReadableStream(
-              response,
-              {
-                ...opts,
-                onStream: (stream) => {
-                    this.streaming = true;
-                    if(!this.polling || this.userPollingStopSignal !== undefined) {
-                        this.streamAbort.abort();
-                    }
-                },
-                onMetadata: (meta) => {
-                    console.log(meta)
-                    this.currentMetadata = meta;
-                },
-                onMetadataFailed: (metatype) => {
-                    console.log(metatype)
-                },
-                onError: (err) => {
-                    if(typeof err === 'string' && err === 'This stream is not an Ogg stream. No Ogg metadata will be returned.') {
-                        this.logger.debug('Stream is ICY only, no OGG metadata will be returned');
-                    } else {
-                        this.streaming = false;
-                        this.streamError = typeof err === 'string' ? new Error(err) : err;
-                    }
+                this.currentMetadata = stats;
+                if (this.polling === false) {
+                    this.statsListener.stop();
+                    this.streaming = false;
                 }
-              }
-            );
-            
-            await icecast.startReading();
-          })
-          .catch((err) => {
-            if(err.name !== 'AbortError') {
-                this.streamError = new Error('Error occurred while trying to communicate with Icecast URL', {cause: err});
-            }
-            this.streaming = false;
-          });
+            },
+            onError: (e) => {
+                this.streaming = false;
+                this.streamError = e;
+                this.statsListener.stop();
+            },
+            interval: 10
+        });
+        this.statsListener.start();
+        this.streaming = true;
+
     }
 
     getRecentlyPlayed = async (options: RecentlyPlayedOptions = {}) => {
 
-        if(this.streaming === false) {
+        if (this.streaming === false) {
             this.readIcecastStream();
             // wait a bit so stream can start and parse metadata
             await sleep(1000);
         }
 
-        if(this.streamError !== undefined) {
-            throw new Error('Icecast stream produced an error', {cause: this.streamError});
+        if (this.streamError !== undefined) {
+            if (this.streamError.cause !== undefined && ('res' in (this.streamError.cause as object))) {
+                const res = (this.streamError.cause as Error & { res: Response }).res as Response
+            }
+            throw new Error('Icecast stream produced an error', { cause: this.streamError });
         }
 
-        if(this.currentMetadata === undefined || this.currentMetadata.metadata === undefined) {
+        if (this.currentMetadata === undefined) {
             return this.processRecentPlays([]);
         }
 
-        if(this.manualListening === false) {
+        if (this.manualListening === false || (this.config.options.scrobbleOnStart === false && this.manualListening === undefined)) {
             const playerState: PlayerStateData = {
                 platformId: SINGLE_USER_PLATFORM_ID,
                 status: REPORTED_PLAYER_STATUSES.stopped,
                 play: undefined,
             }
-    
+
             return this.processRecentPlays([playerState]);
         }
 
-        let play: PlayObject | undefined = formatPlayObj(this.currentMetadata.metadata);
-        if(play.data.track === undefined) {
+        let play: PlayObject | undefined = formatPlayObj(this.currentMetadata);
+        if (play.data.track === undefined) {
             play = undefined;
         }
 
@@ -182,37 +152,59 @@ export class IcecastSource extends MemorySource {
 
 const formatPlayObj = (obj: IcecastMetadata, options: FormatPlayObjectOptions = {}): PlayObject => {
 
-    const value: string = obj.StreamTitle ?? obj.TITLE;
 
     let artist: string,
-    track: string = value;
-    let artists: string[] = [];
+        track: string,
+        artists: string[] = [],
+        album: string;
 
-    // naive implementation for now
-    const splitStr = value.split('-').map(x => x.trim());
+    if (obj.ogg?.TITLE !== undefined) {
+        const {
+            TITLE: oggTitle,
+            ARTIST: oggArtist,
+            ALBUM: oggAlbum
+        } = obj.ogg;
 
-    if(splitStr.length > 1) {
-        artist = splitStr[0];
-        track = value.substring(value.indexOf('-') + 1).trim();
+        track = oggTitle;
+        album = oggAlbum;
 
-        const artistCred = parseArtistCredits(artist);
-        if(artistCred !== undefined) {
+        const artistCred = parseArtistCredits(oggArtist);
+        if (artistCred !== undefined) {
             artists.push(artistCred.primary);
-            if(artistCred.secondary !== undefined) {
+            if (artistCred.secondary !== undefined) {
                 artists = artists.concat(artistCred.secondary);
             }
         } else {
-            artists.push(artist);
+            artists.push(oggArtist);
         }
+    } else if(obj.icy?.StreamTitle !== undefined) {
+        const value: string = obj.icy.StreamTitle;
 
-        const trackCred = parseTrackCredits(track);
-        if(trackCred !== undefined) {
-            track = trackCred.primary;
-            if(trackCred.secondary !== undefined) {
-                artists = artists.concat(trackCred.secondary);
+        // naive implementation for now
+        const splitStr = value.split('-').map(x => x.trim());
+    
+        if (splitStr.length > 1) {
+            artist = splitStr[0];
+            track = value.substring(value.indexOf('-') + 1).trim();
+    
+            const artistCred = parseArtistCredits(artist);
+            if (artistCred !== undefined) {
+                artists.push(artistCred.primary);
+                if (artistCred.secondary !== undefined) {
+                    artists = artists.concat(artistCred.secondary);
+                }
+            } else {
+                artists.push(artist);
+            }
+    
+            const trackCred = parseTrackCredits(track);
+            if (trackCred !== undefined) {
+                track = trackCred.primary;
+                if (trackCred.secondary !== undefined) {
+                    artists = artists.concat(trackCred.secondary);
+                }
             }
         }
-        
     }
 
     return {

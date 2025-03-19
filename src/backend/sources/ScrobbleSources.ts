@@ -480,6 +480,7 @@ export default class ScrobbleSources {
                 case 'icecast':
                     const icecast = {
                         url: process.env.ICECAST_URL,
+                        scrobbleOnStart: process.env.ICECAST_SCROBBLE_START,
                     }
                     if (!Object.values(icecast).every(x => x === undefined)) {
                         configs.push({
@@ -488,7 +489,10 @@ export default class ScrobbleSources {
                             source: 'ENV',
                             mode: 'single',
                             configureAs: defaultConfigureAs,
-                            data: icecast as IcecastData
+                            data: icecast as IcecastData,
+                            options: {
+                                scrobbleOnStart: parseBool(icecast.scrobbleOnStart)
+                            }
                         });
                     }
                     break;
