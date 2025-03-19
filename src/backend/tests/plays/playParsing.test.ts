@@ -4,7 +4,7 @@ import asPromised from 'chai-as-promised';
 import { after, before, describe, it } from 'mocha';
 
 import { asPlays, generateArtistsStr, generatePlay, normalizePlays } from "../utils/PlayTestUtils.js";
-import { parseArtistCredits, parseCredits } from "../../utils/StringUtils.js";
+import { parseArtistCredits, parseContextAwareStringList, parseCredits } from "../../utils/StringUtils.js";
 
 describe('Parsing Artists from String', function() {
 
@@ -18,7 +18,54 @@ describe('Parsing Artists from String', function() {
 '${str}'
 Expected => ${allArtists.join(' || ')}
 Found    => ${parsed.join(' || ')}`)
+
 .eql(parsed)
+        }
+    });
+
+    it('Parses & as "local" joiner when other delimiters present', function () {
+
+        const data = [{
+            str: `Melendi \\ Ryan Lewis \\ The Righteous Brothers (featuring Joan Jett & The Blackhearts \\ Robin Schulz)`,
+            expected: ['Melendi', 'Ryan Lewis', 'The Righteous Brothers', 'Joan Jett & The Blackhearts', 'Robin Schulz']
+        }, {
+            str: `Gigi D'Agostino \\ YOASOBI (vs Sam Hunt, Lisa Loeb & Booba)`,
+            expected: [`Gigi D'Agostino`, 'YOASOBI', 'Sam Hunt', 'Lisa Loeb', 'Booba']
+        }];
+
+        for(const d of data) {
+            const credits = parseArtistCredits(d.str);
+            const parsed = [credits.primary].concat(credits.secondary ?? [])
+            expect(d.expected).eql(parsed)
+        }
+    
+    });
+
+    it('Only parses & as "global" joiner when no other delimiters present', function () {
+
+        const data = [{
+            str: `Melendi & Ryan Lewis & The Righteous Brothers (featuring The Blackhearts \\ Robin Schulz)`,
+            expected: ['Melendi', 'Ryan Lewis', 'The Righteous Brothers', 'The Blackhearts', 'Robin Schulz']
+        }];
+
+        for(const d of data) {
+            const credits = parseArtistCredits(d.str);
+            const parsed = [credits.primary].concat(credits.secondary ?? [])
+            expect(d.expected).eql(parsed)
+        }
+    });
+
+    it('Parses secondary free regex', function () {
+
+        const data = [{
+            str: `Diddy & Grand Funk Railroad feat. Daya & (G)I-DLE`,
+            expected: ['Diddy', 'Grand Funk Railroad', 'Daya', '(G)I-DLE']
+        }];
+
+        for(const d of data) {
+            const credits = parseArtistCredits(d.str);
+            const parsed = [credits.primary].concat(credits.secondary ?? [])
+            expect(d.expected).eql(parsed)
         }
     });
 

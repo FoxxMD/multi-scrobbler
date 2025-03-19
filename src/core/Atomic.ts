@@ -209,7 +209,7 @@ export interface SourcePlayerObj {
     play: PlayObject,
     playFirstSeenAt?: string,
     playLastUpdatedAt?: string,
-    playerLastUpdatedAt: strin
+    playerLastUpdatedAt: string
     position?: Second
     listenedDuration: Second
     status: {
@@ -278,7 +278,7 @@ export interface URLData {
 }
 
 export type Joiner = ',' | '&' | '/' | '\\' | string;
-export const JOINERS: Joiner[] = [',','&','/','\\'];
+export const JOINERS: Joiner[] = [',','/','\\'];
 
 export type FinalJoiners = '&';
 export const JOINERS_FINAL: FinalJoiners[] = ['&'];
