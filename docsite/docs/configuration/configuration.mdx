@@ -1958,34 +1958,7 @@ A user can manually toggle scrobbling for Azuracast as long as the station is on
 
         </details>
 
-        or <SchemaLink lower objectName="AzuracastSourceConfig"/>
-        | Environmental Variable | Required? | Default | Description              |
-        | :--------------------- | :-------- | ------- | :----------------------- |
-        | `MCAST_URL`            | Yes       |         | The Musiccast device URL |                                                    
-    </TabItem>
-    <TabItem value="file" label="File">
-        <details>
-            Change `configureAs` to `source`
-
-            <summary>Example</summary>
-
-            <CodeBlock title="CONFIG_DIR/musiccast.json" language="json5">{MusiccastConfig}</CodeBlock>
-
-        </details>
-
-        or <SchemaLink lower objectName="MusicCastSourceConfig"/>
-    </TabItem>
-    <TabItem value="aio" label="AIO">
-        <details>
-            Change `configureAs` to `source`
-
-            <summary>Example</summary>
-
-            <AIOExample data={MusiccastConfig} name="musiccast"/>
-
-        </details>
-
-        or <SchemaLink lower objectName="MusicCastSourceConfig"/>
+        or <SchemaLink lower objectName="AzuracastSourceConfig"/>                                                
     </TabItem>
 </Tabs>
   
@@ -2025,6 +1998,41 @@ The data source of the music being played on the Musiccast device may not report
   }
 ]
 ```
+
+#### Configuration
+
+<Tabs groupId="configType" queryString>
+    <TabItem value="env" label="ENV">
+        or <SchemaLink lower objectName="AzuracastSourceConfig"/>
+        | Environmental Variable | Required? | Default | Description              |
+        | :--------------------- | :-------- | ------- | :----------------------- |
+        | `MCAST_URL`            | Yes       |         | The Musiccast device URL |                                                    
+    </TabItem>
+    <TabItem value="file" label="File">
+        <details>
+            Change `configureAs` to `source`
+
+            <summary>Example</summary>
+
+            <CodeBlock title="CONFIG_DIR/musiccast.json" language="json5">{MusiccastConfig}</CodeBlock>
+
+        </details>
+
+        or <SchemaLink lower objectName="MusicCastSourceConfig"/>
+    </TabItem>
+    <TabItem value="aio" label="AIO">
+        <details>
+            Change `configureAs` to `source`
+
+            <summary>Example</summary>
+
+            <AIOExample data={MusiccastConfig} name="musiccast"/>
+
+        </details>
+
+        or <SchemaLink lower objectName="MusicCastSourceConfig"/>
+    </TabItem>
+</Tabs>
 
 ## Client Configurations
 
