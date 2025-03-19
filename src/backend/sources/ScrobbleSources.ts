@@ -20,6 +20,7 @@ import { LastfmSourceConfig } from "../common/infrastructure/config/source/lastf
 import { ListenBrainzSourceConfig } from "../common/infrastructure/config/source/listenbrainz.js";
 import { MopidySourceConfig } from "../common/infrastructure/config/source/mopidy.js";
 import { MusicCastData, MusicCastSourceConfig } from "../common/infrastructure/config/source/musiccast.js";
+import { IcecastData, IcecastSourceConfig } from "../common/infrastructure/config/source/icecast.js";
 import { MPDSourceConfig } from "../common/infrastructure/config/source/mpd.js";
 import { MPRISData, MPRISSourceConfig } from "../common/infrastructure/config/source/mpris.js";
 import { MusikcubeData, MusikcubeSourceConfig } from "../common/infrastructure/config/source/musikcube.js";
@@ -62,6 +63,7 @@ import { Definition } from 'ts-json-schema-generator';
 import { getTypeSchemaFromConfigGenerator } from '../utils/SchemaUtils.js';
 import PlexApiSource from './PlexApiSource.js';
 import { nonEmptyStringOrDefault } from '../../core/StringUtils.js';
+import { IcecastSource } from './IcecastSource.js';
 
 type groupedNamedConfigs = {[key: string]: ParsedConfig[]};
 
@@ -144,6 +146,9 @@ export default class ScrobbleSources {
                     break;
                 case 'endpointlfm':
                     this.schemaDefinitions[type] = getTypeSchemaFromConfigGenerator("LastFMEndpointSourceConfig");
+                    break;
+                case 'icecast':
+                    this.schemaDefinitions[type] = getTypeSchemaFromConfigGenerator("IcecastSourceConfig");
                     break;
                 case 'subsonic':
                     this.schemaDefinitions[type] = getTypeSchemaFromConfigGenerator("SubSonicSourceConfig");
@@ -472,6 +477,21 @@ export default class ScrobbleSources {
                         });
                     }
                     break;
+                case 'icecast':
+                    const icecast = {
+                        url: process.env.ICECAST_URL,
+                    }
+                    if (!Object.values(icecast).every(x => x === undefined)) {
+                        configs.push({
+                            type: 'icecast',
+                            name: 'unnamed',
+                            source: 'ENV',
+                            mode: 'single',
+                            configureAs: defaultConfigureAs,
+                            data: icecast as IcecastData
+                        });
+                    }
+                    break;
                 case 'jriver':
                     const jr = {
                         url: process.env.JRIVER_URL,
@@ -797,6 +817,9 @@ export default class ScrobbleSources {
                 break;
             case 'endpointlfm':
                 newSource = await new EndpointLastfmSource(name, compositeConfig as LastFMEndpointSourceConfig, this.internalConfig, this.emitter);
+                break;
+            case 'icecast':
+                newSource = await new IcecastSource(name, compositeConfig as IcecastSourceConfig, this.internalConfig, this.emitter);
                 break;
             case 'jriver':
                 newSource = await new JRiverSource(name, compositeConfig as JRiverSourceConfig, this.internalConfig, this.emitter);
