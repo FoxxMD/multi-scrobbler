@@ -1,0 +1,10 @@
+[
+    {
+      "name": "myIcy",
+      "enable": true,
+      "data": {
+        "url": "http://myIcecast.com/radio"
+      }
+    }
+  ]
+  
