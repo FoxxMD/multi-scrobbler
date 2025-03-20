@@ -109,6 +109,15 @@ export interface CommonSourceOptions extends SourceRetryOptions {
     playTransform?: PlayTransformOptions
 }
 
+export interface ManualListeningOptions {
+    /** 
+     * For Sources that support manual listening, should MS default to scrobbling when no user interaction has occurred?
+     * 
+     * If not specified MS will use a Source's specific behavior, see Source's documentation.
+     */
+    systemScrobble?: boolean
+}
+
 export interface CommonSourceData extends CommonData {
 
 }

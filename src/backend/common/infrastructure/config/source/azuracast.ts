@@ -1,4 +1,4 @@
-import { CommonSourceConfig, CommonSourceData } from "./index.js";
+import { CommonSourceConfig, CommonSourceData, CommonSourceOptions, ManualListeningOptions } from "./index.js";
 
 export interface AzuraStationInfoResponse {
     id: string
@@ -91,6 +91,10 @@ export interface AzuracastData extends CommonSourceData {
      * https://www.azuracast.com/docs/developers/apis/#api-authentication
      * */
     apiKey?: string
+}
+
+export interface AzuracastSourceoptions extends CommonSourceOptions, ManualListeningOptions {
+    
 }
 
 export interface AzuracastSourceConfig extends CommonSourceConfig {

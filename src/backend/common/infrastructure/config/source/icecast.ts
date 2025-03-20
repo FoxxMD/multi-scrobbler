@@ -1,4 +1,4 @@
-import { CommonSourceConfig, CommonSourceData, CommonSourceOptions } from "./index.js";
+import { CommonSourceConfig, CommonSourceData, CommonSourceOptions, ManualListeningOptions } from "./index.js";
 
 
 export interface IcecastMetadata {
@@ -34,13 +34,7 @@ export interface IcecastData extends CommonSourceData, IcecastOptions {
     url: string
 }
 
-export interface IcecastSourceOptions extends CommonSourceOptions {
-    /** 
-     * For Sources that support manual listening, should MS default to scrobbling when no manual listening flag is set?
-     * 
-     * @default false
-     */
-    scrobbleOnStart?: boolean
+export interface IcecastSourceOptions extends CommonSourceOptions, ManualListeningOptions {
 }
 
 export interface IcecastSourceConfig extends CommonSourceConfig {

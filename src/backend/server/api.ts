@@ -197,6 +197,7 @@ export const setupApi = (app: ExpressWithAsync, logger: Logger, appLoggerStream:
                 supportsUpstreamRecentlyPlayed: x.supportsUpstreamRecentlyPlayed,
                 supportsManualListening: x.supportsManualListening,
                 manualListening: x.manualListening,
+                systemListeningBehavior: x.getSystemListeningBehavior(),
                 ...x.additionalApiData()
             };
             if(!x.isReady()) {
@@ -463,7 +464,7 @@ export const setupApi = (app: ExpressWithAsync, logger: Logger, appLoggerStream:
 
         if(!source.supportsManualListening)
         {
-            source.logger.warn('This source does not support manual listening');
+            source.logger.warn('This source does not support manual Should Scrobble state');
             res.status(400).send();
             return;
         }
@@ -471,7 +472,7 @@ export const setupApi = (app: ExpressWithAsync, logger: Logger, appLoggerStream:
         if(listeningQ !== undefined) {
             listening = parseBool(listeningQ)
         }
-        source.logger.verbose(`User requested listening status ${listening === undefined ? 'system' : listening}`);
+        source.logger.verbose(`User requested Should Scrobble status ${listening === undefined ? 'system' : listening}`);
 
         source.manualListening = listening;
 

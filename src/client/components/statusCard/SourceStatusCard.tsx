@@ -42,7 +42,22 @@ const SourceStatusCard = (props: SourceStatusCardData) => {
     const [listenPut, listenResult] = useListenSourceMutation();
 
     const tryStart = useCallback((name: string, type: string, force?: boolean) => startPut({name, type, force}), [startPut]);
-    const tryListen = useCallback((name: string, type: string, listening?: boolean) => listenPut({name, type, listening}), [listenPut]);
+    const tryListen = useCallback((name: string, type: string, currentListening?: boolean) => {
+        // cycle through states
+        let nextListen: boolean | undefined;
+        switch(currentListening) {
+            case true:
+                nextListen = false;
+                break;
+            case false:
+                nextListen = undefined;
+                break;
+            case undefined:
+                nextListen = true;
+                break;
+        }
+        listenPut({name, type, listening: nextListen});
+    }, [listenPut]);
     let startSourceElement = null;
     let manualListenElement = null;
     let subtitleElement = null;
@@ -63,7 +78,8 @@ const SourceStatusCard = (props: SourceStatusCardData) => {
             sot,
             supportsUpstreamRecentlyPlayed,
             supportsManualListening,
-            manualListening
+            manualListening,
+            systemListeningBehavior
         } = data;
         if(type === 'listenbrainz' || type === 'lastfm') {
             header = `${display} (Source)`;
@@ -85,13 +101,15 @@ const SourceStatusCard = (props: SourceStatusCardData) => {
 
         if(supportsManualListening) {
             manualListenElement = (<Fragment>
-                <span>Manual Listening:</span>
-                <div onClick={() => tryListen(name, type, ml === undefined ? true : !ml)} 
-                className="capitalize underline cursor-pointer inline mr-1 ml-1">{ml === undefined ? 'System' : (ml ? 'Yes' : 'No')}
+                <span>Should Scrobble:</span>
+                <div onClick={() => tryListen(name, type, ml)} 
+                className="capitalize underline cursor-pointer inline mr-1 ml-1">
+                    {ml !== undefined ? (ml ? 'Yes' : 'No') : null}
+                    {ml === undefined ? <span>System {systemListeningBehavior ? '(Yes)' : '(No)'}</span> : null}
                 </div>
-                (<div onClick={() => tryListen(name, type, undefined)} 
+                {/* {ml !== undefined ? <div onClick={() => tryListen(name, type, undefined)} 
                 className="capitalize underline cursor-pointer inline">Clear
-                </div>)
+                </div> : null} */}
             </Fragment>);
         }
 

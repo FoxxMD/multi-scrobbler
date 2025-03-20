@@ -36,7 +36,7 @@ export class IcecastSource extends MemorySource {
         const {
             ...rest
         } = data || {};
-        super('icecast', name, { ...config, options: {scrobbleOnStart: false, ...options}, data: { ...rest } }, internal, emitter);
+        super('icecast', name, { ...config, options: {systemScrobble: false, ...options}, data: { ...rest } }, internal, emitter);
 
         this.requiresAuth = false;
         this.canPoll = true;
@@ -125,15 +125,15 @@ export class IcecastSource extends MemorySource {
             return this.processRecentPlays([]);
         }
 
-        if (this.manualListening === false || (this.config.options.scrobbleOnStart === false && this.manualListening === undefined)) {
-            const playerState: PlayerStateData = {
-                platformId: SINGLE_USER_PLATFORM_ID,
-                status: REPORTED_PLAYER_STATUSES.stopped,
-                play: undefined,
-            }
+        // if (this.manualListening === false || (this.config.options.scrobbleOnStart === false && this.manualListening === undefined)) {
+        //     const playerState: PlayerStateData = {
+        //         platformId: SINGLE_USER_PLATFORM_ID,
+        //         status: REPORTED_PLAYER_STATUSES.stopped,
+        //         play: undefined,
+        //     }
 
-            return this.processRecentPlays([playerState]);
-        }
+        //     return this.processRecentPlays([playerState]);
+        // }
 
         let play: PlayObject | undefined = formatPlayObj(this.currentMetadata);
         if (play.data.track === undefined) {

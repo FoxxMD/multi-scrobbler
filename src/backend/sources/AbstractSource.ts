@@ -106,6 +106,13 @@ export default abstract class AbstractSource extends AbstractComponent implement
         return `${capitalize(this.type)} - ${this.name}`
     }
 
+    getSystemListeningBehavior = (): boolean | undefined => {
+        if(this.supportsManualListening) {
+            return this.config.options !== undefined && 'systemScrobble' in this.config.options ? this.config.options?.systemScrobble : undefined;
+        }
+        return undefined;
+    }
+
     getRecentlyPlayed = async (options: RecentlyPlayedOptions = {}): Promise<PlayObject[]> => []
 
     getUpstreamRecentlyPlayed = async (options: RecentlyPlayedOptions = {}): Promise<PlayObject[]> => {
@@ -198,10 +205,24 @@ export default abstract class AbstractSource extends AbstractComponent implement
         return newDiscoveredPlays;
     }
 
+    protected shouldScrobble = (discoverLocation?: 'backlog' | [key: string]) => {
+        if(this.supportsManualListening && discoverLocation !== 'backlog') {
+            const manualFlag = this.manualListening ?? this.getSystemListeningBehavior() ?? true;
+            if(manualFlag === false) {
+                this.logger.debug(`NOT scrobbling because Should Scrobble is FALSE (${this.manualListening === false ? 'user' : 'system'})`);
+                return false;
+            }
+        }
+        return true;
+    }
 
-    protected scrobble = (newDiscoveredPlays: PlayObject[], options: { forceRefresh?: boolean, [key: string]: any } = {}) => {
+
+    protected scrobble = (newDiscoveredPlays: PlayObject[], options: { forceRefresh?: boolean, [key: string]: any, discoverLocation?: 'backlog' | [key: string] } = {}) => {
 
         if(newDiscoveredPlays.length > 0) {
+            if(!this.shouldScrobble(options.discoverLocation)) {
+                return;
+            }
             newDiscoveredPlays.sort(sortByOldestPlayDate);
             this.emitter.emit('discoveredToScrobble', {
                 data: newDiscoveredPlays.map(x => this.transformPlay(x, TRANSFORM_HOOK.postCompare)),
@@ -233,7 +254,7 @@ export default abstract class AbstractSource extends AbstractComponent implement
             } catch (e) {
                 throw new Error('Error occurred while fetching backlogged plays', {cause: e});
             }
-            const discovered = this.discover(backlogPlays);
+            const discovered = this.discover(backlogPlays, {discoverLocation: 'backlog'});
 
             const {
                 options: {

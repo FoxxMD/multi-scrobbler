@@ -34,18 +34,23 @@ export class AzuracastSource extends MemoryPositionalSource {
 
     constructor(name: any, config: AzuracastSourceConfig, internal: InternalConfig, emitter: EventEmitter) {
         const {
-            data = {}
+            data = {},
+            options = {},
         } = config;
         const {
             ...rest
         } = data;
-        super('azuracast', name, { ...config, data: { ...rest } }, internal, emitter);
 
         const {
             data: {
-                url,
+                monitorWhenListeners,
+                monitorWhenLive
             } = {}
         } = config;
+
+        super('azuracast', name, { ...config, options: {systemScrobble: monitorWhenListeners !== undefined || monitorWhenLive === true, ...options}, data: { ...rest } }, internal, emitter);
+
+
         this.requiresAuth = false;
         this.canPoll = true;
         this.supportsManualListening = true;
@@ -186,7 +191,7 @@ export class AzuracastSource extends MemoryPositionalSource {
             this.logger.debug({labels: `Station ${this.config.data.station}`}, `Currently offline`);
             return false;
         }
-        if(this.manualListening !== undefined) {
+        if(this.manualListening === true) {
             this.logger.debug({labels: `Station ${this.config.data.station}`}, `Using manual listening status ${this.manualListening}`);
             return this.manualListening;
         }

@@ -17,6 +17,7 @@ export interface SourceStatusData {
     supportsUpstreamRecentlyPlayed: boolean;
     supportsManualListening: boolean;
     manualListening?: boolean
+    systemListeningBehavior?: boolean
 }
 
 export interface ClientStatusData {
