@@ -219,6 +219,67 @@ Disable using either:
 * ENV `DISABLE_WEB=true`
 * In [All-in-One File](./?configType=aio#configuration-types) use the top-level property `"disableWeb": true`
 
+## Common Source Functionality
+
+Some options and functionality is shared between all or some Sources. Detailed below is information on what these features are and how to use/configured them.
+
+#### Scrobble Thresholds
+
+For Sources where multi-scrobbler monitors active listening, it uses one of two metrics to determine if a Song is scrobbable based on your listening:
+
+* **percent** of track listened to (50% or more)
+* or amount of time (**duration**) track was listened to (4 minutes or more)
+
+These default values are based on [last.fm's scrobble guidance.](https://www.last.fm/api/scrobbling#when-is-a-scrobble-a-scrobble)
+
+Each Source can have these values customized using values in the Source's `options` in [file or aio config](./?configType=file#configuration-types):
+
+```json5 title="azuracast.json"
+{
+    "data": {
+        // ...
+    },
+    "options": {
+        "scrobbleThresholds": {
+            "duration": 40, // scrobbable if listened to for 40 seconds or more
+            "percent": 20   // scrobbable if listened to for 20% or more of the track's length
+        }
+    }
+}
+```
+
+These can also be configured **globally** for all Sources using ENVs:
+
+```
+SOURCE_SCROBBLE_DURATION=40
+SOURCE_SCROBBLE_PERCENT=20
+```
+
+#### Should Scrobble Behavior
+
+:::note
+
+This feature is currently available only for some Sources. Check each Source's documentation to see if it supported.
+
+:::
+
+For _most_ Sources multi-scrobbler can determine if a user is listening and scrobble automatically. For Sources which multi-scrobbler cannot do this or require additional configuration, a user can indicate to MS that it should or should not scrobble. This action can be taken on the Web Dashboard by clicking the link next to **Should Scrobble** found in each Source's status card.
+
+Additionally, for these Sources, the default behavior for Scrobbling can be explicitly set by adding the following value to a Source's `options` in [file or aio config](./?configType=file#configuration-types):
+
+```json5 title="azuracast.json"
+{
+    "data": {
+        // ...
+    },
+    "options": {
+        // set to true to always scrobble automatically
+        // set to false to never scrobble automatically
+        "systemScrobble": true
+    }
+}
+```
+
 ## Source Configurations
 
 ### [Spotify](https://www.spotify.com)
@@ -1904,6 +1965,12 @@ If you find that VLC is incorrectly reporting track information (in its interfac
 
 ### [Azuracast](https://www.azuracast.com/)
 
+:::tip[Scrobbling Threshold]
+
+Azuracast may not correctly report track length or position. If this is the case you should reduce the "listened to" **duration** using [Scrobble Thresholds](#scrobble-thresholds) so that multi-scrobbler scrobbles correctly.
+
+:::
+
 The Azuracast server should have **Use High-Performance Now Playing Updates** enabled in _Administration -> System Settings_
 
 ##### URL
@@ -1924,9 +1991,16 @@ URL From Config                => MS Uses
 'wss://mydomain.com/custom/azura/ws' => wss://mydomain.com/custom/azura/ws
 ```
 
-##### Manual Listening
+##### Scrobble Behavior
 
-A user can manually toggle scrobbling for Azuracast as long as the station is online. On the MS Dashboard use the **Manual Listening** link below the Source status to toggle scrobbling. This will override any automatic scrobbling based on current listeners.
+Multi-scrobbler will set the default [**scrobbling behavior**](#should-scrobble-behavior) based on if either of these settings is configured:
+
+* live status (`AZURA_LIVE` or `monitorWhenLive`) or
+* listener count (`AZURA_LISTENERS_NUM` or `monitorWhenListeners`)
+
+If either is configured then MS will automatically scrobble based on when these conditions are met.
+
+If neither is configured automatic scrobble defaults to **off** and you should either [manually initiate it or explicitly set the default behavior.](#should-scrobble-behavior)
 
 #### Configuration
 
@@ -1967,6 +2041,12 @@ A user can manually toggle scrobbling for Azuracast as long as the station is on
 
 Monitor Musiccast device/receivers for music played on Network/USB/CD inputs.
 
+:::tip[Scrobbling Threshold]
+
+Musiccast may not correctly report track length. If this is the case you should reduce the "listened to" **duration** using [Scrobble Thresholds](#scrobble-thresholds) so that multi-scrobbler scrobbles correctly.
+
+:::
+
 ##### URL
 
 If only a domain/IP:PORT is provided to multi-scrobbler it will automatically append the default Musiccast API path. If your Musiccast device is located behind a custom URL (or reverse proxy) you should explicitly provide the base path to use.
@@ -1977,28 +2057,6 @@ EX
     | --------------------------------------- | :---------------------------------------------- |
     | `http://192.168.0.101`                  | `http://192.168.0.101/YamahaExtendedControl/v1` |
     | `http://mydomain.com/reverseProxy/cast` | `http://mydomain.com/reverseProxy/cast`         |
-
-##### Scrobble Threshold
-
-The data source of the music being played on the Musiccast device may not report a track duration to multi-scrobbler. In its default configuration this means mutli-scrobbler won't consider a track scrobblable until it has been played for 4 minutes (or 50% but that is impossible to determine). You should configure multi-scrobbler to scrobble after a more reasonable amount of time by using `scrobbleThresholds` in the [Musiccast Source file-based config](./?configType=file#yamaha-musiccast):
-
-```json5
-[
-  {
-    "name": "myYamaha",
-    "enable": true,
-    "data": {
-      "url": "192.168.0.101"
-    },
-    "options": {
-      "scrobbleThresholds": { // scrobble track if...
-          "duration": 90, // listened to for 90 seconds OR
-          "percent": 50 // listened to 50% of the track
-      }
-    }
-  }
-]
-```
 
 #### Configuration
 
@@ -2047,6 +2105,21 @@ Multi-scrobbler will do its best to parse Artist/Album/Track information from th
 
 :::
 
+:::tip[Scrobbling Behavior]
+
+Multi-scrobbler cannot automatically determine if you are listening to a Station. Therefore, **automatic scrobbling for Icecast Sources is off by default.**
+
+Use [Should Scrobble Behavior](#should-scrobble-behavior) to initiate scrobbling or configure automatic scrobble.
+
+:::
+
+:::tip[Scrobbling Threshold]
+
+Icecast does not report track lengths so multi-scrobbler cannot determine if it should scrobble based on percent played. You should instead set a shorter "listened to" **duration** using [Scrobble Thresholds.](#scrobble-thresholds)
+
+:::
+
+
 ##### URL and Sources
 
 The URL should be the URL you would use to stream audio. 
@@ -2075,10 +2148,6 @@ Additional sources are supported based on those found in [`icecast-metadata-stat
 To manually set these sources include the same [`*Endpoint` options](https://github.com/eshaz/icecast-metadata-js/tree/main/src/icecast-metadata-stats#options) found in `icecast-metadata-stats`.
 
 If no `sources` are configured for multi-scrobbler it will automatically try to use `icy` and `ogg`.
-
-##### Manual Listening
-
-A user can manually toggle scrobbling for Icecast as long as the station is online. On the MS Dashboard use the **Manual Listening** link below the Source status to toggle scrobbling. This will override any automatic scrobbling based on current listeners.
 
 #### Configuration
 
