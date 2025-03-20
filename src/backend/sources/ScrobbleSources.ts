@@ -491,7 +491,7 @@ export default class ScrobbleSources {
                             configureAs: defaultConfigureAs,
                             data: icecast as IcecastData,
                             options: {
-                                scrobbleOnStart: parseBool(icecast.scrobbleOnStart)
+                                systemScrobble: parseBool(icecast.scrobbleOnStart)
                             }
                         });
                     }
