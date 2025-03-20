@@ -52,6 +52,8 @@ export default class MemorySource extends AbstractSource {
 
     scheduler: ToadScheduler = new ToadScheduler();
 
+    protected isPositional: boolean = false;
+
     constructor(type: SourceType, name: string, config: SourceConfig, internal: InternalConfig, emitter: EventEmitter) {
         super(type, name, config, internal, emitter);
 
@@ -331,7 +333,7 @@ export default class MemorySource extends AbstractSource {
         for(const player of this.players.values()) {
             if(player.calculatedStatus === CALCULATED_PLAYER_STATUSES.playing) {
                 const pos = player.getPosition();
-                if(pos !== undefined && player.currentPlay !== undefined && player.currentPlay.data?.duration !== undefined) {
+                if(pos !== undefined && this.isPositional && player.currentPlay !== undefined && player.currentPlay.data?.duration !== undefined) {
                     const {
                         data: {
                             duration

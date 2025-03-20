@@ -6,11 +6,13 @@ export class ListenProgressTS implements PlayProgress {
 
     public timestamp: Dayjs;
     public positionPercent?: number;
+    public position?: Second;
 
     constructor(data: Partial<PlayProgress> = {}) {
-        const {timestamp, positionPercent} = data;
+        const {timestamp, positionPercent, position} = data;
         this.timestamp = timestamp ?? dayjs();
         this.positionPercent = positionPercent;
+        this.position = position;
     }
 
     getDuration(end: ListenProgressTS): Second {
@@ -27,7 +29,7 @@ export class ListenProgressTS implements PlayProgress {
 }
 
 export class ListenProgressPositional extends ListenProgressTS implements PlayProgressPositional {
-    public position: Second;
+    declare public position: Second;
 
     constructor(data: PlayProgressPositional) {
         super(data);

@@ -1,5 +1,4 @@
-import { MemoryPositionalSource } from "./MemoryPositionalSource.js";
-import { sleep } from "../utils.js";
+import MemorySource from "./MemorySource.js";
 import { RecentlyPlayedOptions } from "./AbstractSource.js";
 import { childLogger, Logger } from "@foxxmd/logging";
 import { EventEmitter } from "events";
@@ -17,11 +16,9 @@ import {
 } from "../common/infrastructure/Atomic.js";
 import { AzuracastSourceConfig, AzuraNowPlayingResponse, AzuraStationResponse } from "../common/infrastructure/config/source/azuracast.js";
 import { isPortReachable, normalizeWSAddress } from "../utils/NetworkUtils.js";
-import { PlayerStateOptions } from "./PlayerState/AbstractPlayerState.js";
-import { AzuracastPlayerState } from "./PlayerState/AzuracastPlayerState.js";
 
 
-export class AzuracastSource extends MemoryPositionalSource {
+export class AzuracastSource extends MemorySource {
 
     declare config: AzuracastSourceConfig;
 
@@ -230,7 +227,6 @@ export class AzuracastSource extends MemoryPositionalSource {
         return this.processRecentPlays([playerState]);
     }
 
-        getNewPlayer = (logger: Logger, id: PlayPlatformId, opts: PlayerStateOptions) => new AzuracastPlayerState(logger, id, opts);
 }
 
 const formatPlayObj = (obj: AzuraNowPlayingResponse, options: FormatPlayObjectOptions = {}): PlayObject => {

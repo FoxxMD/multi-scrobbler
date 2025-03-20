@@ -66,7 +66,7 @@ export class ListenRangeTS extends ListenRange implements ListenRangeData {
     }
 
     public getPosition(): Second {
-        return undefined;
+        return this.end.position;
     }
 
     public finalize(position?: number) {
