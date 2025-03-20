@@ -15,7 +15,7 @@ export const setupLastfmEndpointRoutes = (app: ExpressWithAsync, parentLogger: L
     const nonEmptyCheck = nonEmptyBody(logger, 'LFM Endpoint');
 
     const webhookIngress = new LFMEndpointNotifier(logger);
-    app.useAsync(/(\/api\/lastfm.*)|(\/2.0\/?)$/,
+    app.useAsync(/(\/api\/lastfm(?!\/callback))|(\/2.0\/?)$/,
         async function (req, res, next) {
             // track request before parsing body to ensure we at least log that something is happening
             // (in the event body parsing does not work or request is not POST/PATCH)
