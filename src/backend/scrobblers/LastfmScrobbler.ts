@@ -41,17 +41,6 @@ export default class LastfmScrobbler extends AbstractScrobbleClient {
         try {
             await this.api.testAuth();
 
-            await this.doScrobble({ 
-                data: {
-                    track: '',
-                    artists: [''],
-                    playDate: dayjs.unix(1742566096)
-                },
-                meta: {
-
-                }
-            })
-
             return true;
         } catch (e) {
             if(isNodeNetworkException(e)) {
