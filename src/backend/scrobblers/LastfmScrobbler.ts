@@ -39,9 +39,7 @@ export default class LastfmScrobbler extends AbstractScrobbleClient {
 
     doAuthentication = async () => {
         try {
-            await this.api.testAuth();
-
-            return true;
+            return await this.api.testAuth();
         } catch (e) {
             if(isNodeNetworkException(e)) {
                 this.logger.error('Could not communicate with Last.fm API');
