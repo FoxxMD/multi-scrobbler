@@ -11,6 +11,8 @@ import { LastfmClientConfig } from "../common/infrastructure/config/client/lastf
 import LastfmApiClient from "../common/vendor/LastfmApiClient.js";
 import { Notifiers } from "../notifier/Notifiers.js";
 import AbstractScrobbleClient from "./AbstractScrobbleClient.js";
+import { getIntercept, interceptRequest } from "../utils/InterceptUtils.js";
+import { logCurlSafe } from "../utils/RequestUtils.js";
 
 export default class LastfmScrobbler extends AbstractScrobbleClient {
 
@@ -118,9 +120,12 @@ export default class LastfmScrobbler extends AbstractScrobbleClient {
 
         const scrobblePayload = this.api.playToClientPayload(playObj);
 
+        const iid = interceptRequest();
         try {
+
             const response = await this.api.callApi<TrackScrobbleResponse>((client: any) => client.trackScrobble(
-                scrobblePayload));
+                scrobblePayload, undefined, true));
+            const intercept = getIntercept(iid);
             const {
                 scrobbles: {
                     '@attr': {
@@ -152,6 +157,9 @@ export default class LastfmScrobbler extends AbstractScrobbleClient {
             if(ignored > 0) {
                 await this.notifier.notify({title: `Client - ${capitalize(this.type)} - ${this.name} - Scrobble Error`, message: `Failed to scrobble => ${buildTrackString(playObj)} | Error: Service ignored this scrobble 😬 => (Code ${ignoreCode}) ${(ignoreMsg === '' ? '(No error message returned)' : ignoreMsg)}`, priority: 'warn'});
                 this.logger.warn(`Service ignored this scrobble 😬 => (Code ${ignoreCode}) ${(ignoreMsg === '' ? '(No error message returned)' : ignoreMsg)} -- See https://www.last.fm/api/errorcodes for more information`, {payload: scrobblePayload});
+                if(intercept.req !== undefined) {
+                    await logCurlSafe(intercept.req, this.logger);
+                }
                 throw new UpstreamError('LastFM ignored scrobble', {showStopper: false});
             }
 
@@ -159,15 +167,20 @@ export default class LastfmScrobbler extends AbstractScrobbleClient {
             // last fm has rate limits but i can't find a specific example of what that limit is. going to default to 1 scrobble/sec to be safe
             //await sleep(1000);
         } catch (e) {
+            const intercept = getIntercept(iid);
             await this.notifier.notify({title: `Client - ${capitalize(this.type)} - ${this.name} - Scrobble Error`, message: `Failed to scrobble => ${buildTrackString(playObj)} | Error: ${e.message}`, priority: 'error'});
             this.logger.error(`Scrobble Error (${sType})`, {playInfo: buildTrackString(playObj), payload: scrobblePayload});
+            if(intercept.req !== undefined) {
+                await logCurlSafe(intercept.req, this.logger);
+            }
+
             if(!(e instanceof UpstreamError)) {
                 throw new UpstreamError('Error received from LastFM API', {cause: e, showStopper: true});
             } else {
                 throw e;
             }
         } finally {
-            this.logger.debug('Raw Payload: ', scrobblePayload);
+            this.logger.debug({scrobblePayload}, `MS Payload`);
         }
     }
 }
