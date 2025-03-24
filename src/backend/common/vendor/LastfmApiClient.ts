@@ -227,13 +227,18 @@ export default class LastfmApiClient extends AbstractApiClient {
             artist = artists[0];
         }
 
+        const additionalRichPayload: Partial<TrackScrobblePayload> = {};
+        if(duration !== 0) {
+            additionalRichPayload.duration = duration;
+        } 
+
         const rawPayload: TrackScrobblePayload = {
             artist: artist,
-            duration,
             track,
             album,
             timestamp: getScrobbleTsSOCDate(playObj).unix(),
             mbid,
+            ...additionalRichPayload
         };
 
         // LFM does not support multiple artists in scrobble payload
