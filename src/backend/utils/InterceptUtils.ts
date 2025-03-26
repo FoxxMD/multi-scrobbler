@@ -22,6 +22,7 @@ export interface Intercept {
 interface InterceptData extends Intercept {
     reqListener?: ReqListener
     resListener?: ResListener
+    reqId?: string
 }
 
 const interceptor = new BatchInterceptor({
@@ -94,22 +95,20 @@ export const interceptRequest = (listenerId?: string, opts?: InterceptFilterOpti
     const data = getScopedIntercept(lid);
 
     scopedIntercepts.set(lid, { ...data, id: lid });
-    let reqId: string | undefined;
 
     const filterFunc = generateRequestFilter(opts);
 
     const reqLis: ReqListener = (args) => {
         if(filterFunc(args.request)) {
-            reqId = args.requestId;
             interceptor.off('request', reqLis);
-            scopedIntercepts.set(lid, { ...getScopedIntercept(lid), req: args.request, reqListener: undefined });
+            scopedIntercepts.set(lid, { ...getScopedIntercept(lid), req: args.request, reqListener: undefined, reqId: args.requestId });
         }
     }
     scopedIntercepts.set(lid, { ...getScopedIntercept(lid), reqListener: reqLis });
     interceptor.on('request', reqLis);
 
     const resLis: ResListener = (args) => {
-        if (args.requestId === reqId) {
+        if (args.requestId === getScopedIntercept(lid).reqId) {
             interceptor.off('response', resLis);
             scopedIntercepts.set(lid, { ...getScopedIntercept(lid), res: args.response, resListener: undefined });
         }

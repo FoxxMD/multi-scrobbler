@@ -27,6 +27,8 @@ import { Notifiers } from "../notifier/Notifiers.js";
 import { parseRetryAfterSecsFromObj, sleep } from "../utils.js";
 import { getScrobbleTsSOCDate, getScrobbleTsSOCDateWithContext } from "../utils/TimeUtils.js";
 import AbstractScrobbleClient from "./AbstractScrobbleClient.js";
+import { deleteIntercept, getIntercept, Intercept, interceptRequest } from "../utils/InterceptUtils.js";
+import { logInterceptCurlSafe } from "../utils/RequestUtils.js";
 
 const feat = ["ft.", "ft", "feat.", "feat", "featuring", "Ft.", "Ft", "Feat.", "Feat", "Featuring"];
 
@@ -402,10 +404,14 @@ export default class MalojaScrobbler extends AbstractScrobbleClient {
 
         let responseBody: MalojaScrobbleV3ResponseData;
 
+        const iid = interceptRequest(undefined, {url: `${url}/apis/mlj_1/newscrobble`, method: 'POST'});
+        let intercept: Intercept;
         try {
             const response = await this.callApi(request.post(`${url}/apis/mlj_1/newscrobble`)
                 .type('json')
                 .send(scrobbleData));
+
+            intercept = getIntercept(iid, 'request');
 
             let scrobbleResponse: any | undefined = undefined,
                 scrobbledPlay: PlayObject;
@@ -437,6 +443,7 @@ export default class MalojaScrobbler extends AbstractScrobbleClient {
                         }
                     }
                     if(warnings.length > 0) {
+                        await logInterceptCurlSafe(intercept, this.logger);
                         for(const w of warnings) {
                             const warnStr = buildWarningString(w);
                             if(warnStr.includes('The submitted scrobble was not added')) {
@@ -472,12 +479,18 @@ export default class MalojaScrobbler extends AbstractScrobbleClient {
             if(warning !== '') {
                 this.logger.warn(`${scrobbleInfo} | ${warning}`);
                 this.logger.debug(`Response: ${this.logger.debug(JSON.stringify(response.body))}`);
+                await logInterceptCurlSafe(intercept, this.logger);
             } else {
+                await logInterceptCurlSafe(intercept, this.logger);
                 this.logger.info(scrobbleInfo);
             }
             return scrobbledPlay;
         } catch (e) {
             await this.notifier.notify({title: `Client - ${capitalize(this.type)} - ${this.name} - Scrobble Error`, message: `Failed to scrobble => ${buildTrackString(playObj)} | Error: ${e.message}`, priority: 'error'});
+            if(intercept === undefined) {
+                intercept = getIntercept(iid, 'request');
+            }
+            await logInterceptCurlSafe(intercept, this.logger);
             this.logger.error(`Scrobble Error (${sType})`, {playInfo: buildTrackString(playObj), payload: scrobbleData});
             const responseError = getMalojaResponseError(e);
             if(responseError !== undefined) {
@@ -491,6 +504,7 @@ export default class MalojaScrobbler extends AbstractScrobbleClient {
             throw e;
         } finally {
             this.logger.debug('Raw Payload:', scrobbleData);
+            deleteIntercept(iid);
         }
     }
 }

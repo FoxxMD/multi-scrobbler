@@ -11,6 +11,8 @@ import { ListenbrainzApiClient, ListenPayload } from "../common/vendor/Listenbra
 import { Notifiers } from "../notifier/Notifiers.js";
 
 import AbstractScrobbleClient from "./AbstractScrobbleClient.js";
+import { getIntercept, interceptRequest } from "../utils/InterceptUtils.js";
+import { logInterceptCurlSafe } from "../utils/RequestUtils.js";
 
 export default class ListenbrainzScrobbler extends AbstractScrobbleClient {
 
@@ -76,7 +78,7 @@ export default class ListenbrainzScrobbler extends AbstractScrobbleClient {
                 newFromSource = false,
             } = {}
         } = playObj;
-
+        const iid = interceptRequest(undefined, {url: `${this.api.url}1/submit-listens`, method: 'POST'});
         try {
             await this.api.submitListen(playObj, true);
 
@@ -87,7 +89,9 @@ export default class ListenbrainzScrobbler extends AbstractScrobbleClient {
             }
             return playObj;
         } catch (e) {
+            const intercept = getIntercept(iid, 'request');
             await this.notifier.notify({title: `Client - ${capitalize(this.type)} - ${this.name} - Scrobble Error`, message: `Failed to scrobble => ${buildTrackString(playObj)} | Error: ${e.message}`, priority: 'error'});
+            await logInterceptCurlSafe(intercept, this.logger);
             throw new UpstreamError(`Error occurred while making Listenbrainz API scrobble request: ${e.message}`, {cause: e, showStopper: !(e instanceof UpstreamError)});
         }
     }

@@ -120,7 +120,7 @@ export default class LastfmScrobbler extends AbstractScrobbleClient {
 
         const scrobblePayload = this.api.playToClientPayload(playObj);
 
-        const iid = interceptRequest(undefined, {url: 'ws.audioscrobbler.com'});
+        const iid = interceptRequest(undefined, {url: 'ws.audioscrobbler.com', method: 'POST'});
         try {
 
             const response = await this.api.callApi<TrackScrobbleResponse>((client: any) => client.trackScrobble(
