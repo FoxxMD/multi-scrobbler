@@ -2,7 +2,7 @@ import { BatchInterceptor, HttpRequestEventMap, InterceptorReadyState } from '@m
 import { ClientRequestInterceptor } from '@mswjs/interceptors/ClientRequest'
 import { XMLHttpRequestInterceptor } from '@mswjs/interceptors/XMLHttpRequest'
 import { nanoid } from 'nanoid';
-import { isDebugMode, parseRegexSingleOrFail } from '../utils.js';
+import { isDebugMode, parseBool, parseRegexSingleOrFail } from '../utils.js';
 
 interface InterceptFilterOptions {
     url?: string | RegExp
@@ -24,6 +24,8 @@ interface InterceptData extends Intercept {
     resListener?: ResListener
     reqId?: string
 }
+
+const enabled = isDebugMode() || parseBool(process.env.INTERCEPT_REQUESTS);
 
 const interceptor = new BatchInterceptor({
     name: 'global-interceptor',
@@ -86,7 +88,7 @@ const generateRequestFilter = (opts?: InterceptFilterOptions): RequestFilterFunc
 export const interceptRequest = (listenerId?: string, opts?: InterceptFilterOptions): string => {
     const lid = listenerId || nanoid();
 
-    if(!isDebugMode()) {
+    if(!enabled) {
         return lid;
     }
 
