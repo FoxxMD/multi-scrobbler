@@ -142,7 +142,7 @@ export const deleteIntercept = (id: string): void => {
         if(d.resListener !== undefined) {
             interceptor.off('response', d.resListener);
         }
+        scopedIntercepts.delete(id);
     }
-    scopedIntercepts.delete(id);
 }
 
