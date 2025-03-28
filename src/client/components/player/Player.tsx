@@ -41,7 +41,7 @@ art = {},
             } = {}
         } = {},
         play,
-        listenedDuration,
+        listenedDuration = 0,
         status: {
             calculated = '???',
             reported,
@@ -52,7 +52,7 @@ art = {},
 
     let durPer = null;
     if(duration !== undefined && duration !== null && duration !== 0) {
-        if(listenedDuration === 0) {
+        if(listenedDuration === 0 || listenedDuration === null) {
             durPer = ' (0%)';
         } else {
             durPer = ` (${((listenedDuration/duration) * 100).toFixed(0)}%)`;
@@ -97,7 +97,7 @@ art = {},
                     <PlayerTimestamp duration={duration} indeterminate={calculated === 'playing' && data.position === undefined} current={data.position || 0} />
                     <div className="flex">
                         <p className="stats flex-1 text-left">Status: {capitalize(calculated)}</p>
-                        <p className="stats flex-1 text-right">Listened: {calculated !== 'stopped' ? `${listenedDuration.toFixed(0)}s` : '-'}{durPer}</p>
+                        <p className="stats flex-1 text-right">Listened: {calculated !== 'stopped' && listenedDuration !== null ? `${listenedDuration.toFixed(0)}s` : '-'}{durPer}</p>
                     </div>
                 </section>
                     <PlayerInfo data={data} isVisible={viewMode === 'playlist'} />
