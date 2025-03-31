@@ -31,25 +31,12 @@ After=network.target
 
 [Service]
 Type=simple
-ExecStart=flatpak run io.github.multiscrobbler
+WorkingDirectory=/path/to/multi-scrobbler/directory
+ExecStart=npm run start
 Restart=no
 
 [Install]
 WantedBy=default.target
-```
-
-The above assumes you [installed multi-scrobbler using flatpak](installation.mdx#flatpak)
-
-### Node.js Installs
-
-If you are running multi-scrobbler directly with [nodejs from a clone repository directory](installation.mdx#nodejs) you should modify the `[Service]`:
-
-```ini
-[Service]
-Type=simple
-WorkingDirectory=/path/to/multi-scrobbler/directory
-ExecStart=node src/index.js
-Restart=no
 ```
 
 ## Start the Service

@@ -105,12 +105,6 @@ The web UI and API is served on port `9078`. This can be modified using the `POR
 
 ### Flatpak
 
-You must have [Flatpak](https://flatpak.org/) installed on your system.
-
-```shell
-flatpak install flathub io.github.foxxmd.multiscrobbler
-```
-
 :::warning
 
 Flatpak users have experienced issues when using multi-scrobbler as a long-running process. Due to the relative difficulty in debugging issues with flatpak installations it is recommended:
@@ -118,7 +112,9 @@ Flatpak users have experienced issues when using multi-scrobbler as a long-runni
 * to use a [Docker](#docker) installation if possible or
 * only if you need access to host-level resources like dbus for [MPRIS](https://foxxmd.github.io/multi-scrobbler/docs/configuration#mpris) and cannot run a [nodejs](#nodejs) installation
 
-::::
+:::
+
+Flatpak/Flathub installs are no longer supported. You can still build MS as a [Flatpak app from source.](../development/flatpak) See more information about [Flatpak EOL.](https://github.com/FoxxMD/multi-scrobbler/issues/287)
 
 #### Usage Examples
 
