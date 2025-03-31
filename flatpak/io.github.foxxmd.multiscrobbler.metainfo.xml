@@ -33,8 +33,12 @@
             <li>MPRIS (linux desktop)</li>
             <li>Google Cast (Chromecast)</li>
             <li>Musikcube</li>
-            <li>MPDF (Music Player Daemon)</li>
+            <li>MPD (Music Player Daemon)</li>
             <li>VLC</li>
+            <li>Azuracast</li>
+            <li>Icecast</li>
+            <li>Yamaha MusicCast</li>
+            <li>Listenbrainz and Last.fm Endpoints</li>
         </ul>
         <p>and consolidate your listens (scrobbles) into one or more scrobbling servers/services:</p>
         <ul>
