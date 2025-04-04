@@ -1,9 +1,9 @@
 import { loggerTest } from "@foxxmd/logging";
 import EventEmitter from "events";
 import request from "superagent";
-import { PlayObject } from "../../../core/Atomic.js";
-import { Notifiers } from "../../notifier/Notifiers.js";
-import AbstractScrobbleClient from "../../scrobblers/AbstractScrobbleClient.js";
+import { PlayObject } from "../../../core/Atomic.ts";
+import { Notifiers } from "../../notifier/Notifiers.ts";
+import AbstractScrobbleClient from "../../scrobblers/AbstractScrobbleClient.ts";
 
 export class TestScrobbler extends AbstractScrobbleClient {
 

@@ -2,12 +2,12 @@ import dayjs from "dayjs";
 import { EventEmitter } from "events";
 import normalizeUrl from 'normalize-url';
 import { URL } from "url";
-import { PlayObject } from "../../core/Atomic.js";
-import { FormatPlayObjectOptions, InternalConfig } from "../common/infrastructure/Atomic.js";
-import { JRiverSourceConfig } from "../common/infrastructure/config/source/jriver.js";
-import { Info, JRiverApiClient, PLAYER_STATE } from "../common/vendor/JRiverApiClient.js";
-import { RecentlyPlayedOptions } from "./AbstractSource.js";
-import { MemoryPositionalSource } from "./MemoryPositionalSource.js";
+import { PlayObject } from "../../core/Atomic.ts";
+import { FormatPlayObjectOptions, InternalConfig } from "../common/infrastructure/Atomic.ts";
+import { JRiverSourceConfig } from "../common/infrastructure/config/source/jriver.ts";
+import { Info, JRiverApiClient, PLAYER_STATE } from "../common/vendor/JRiverApiClient.ts";
+import { RecentlyPlayedOptions } from "./AbstractSource.ts";
+import { MemoryPositionalSource } from "./MemoryPositionalSource.ts";
 
 export class JRiverSource extends MemoryPositionalSource {
     declare config: JRiverSourceConfig;

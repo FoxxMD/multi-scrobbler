@@ -4,13 +4,13 @@ import dayjs from 'dayjs';
 import EventEmitter from "events";
 import normalizeUrl from "normalize-url";
 import request, { SuperAgentRequest } from 'superagent';
-import { PlayObject } from "../../core/Atomic.js";
-import { buildTrackString, capitalize } from "../../core/StringUtils.js";
-import { isSuperAgentResponseError } from "../common/errors/ErrorUtils.js";
-import { isNodeNetworkException } from "../common/errors/NodeErrors.js";
-import { UpstreamError } from "../common/errors/UpstreamError.js";
-import { DEFAULT_RETRY_MULTIPLIER, FormatPlayObjectOptions } from "../common/infrastructure/Atomic.js";
-import { MalojaClientConfig } from "../common/infrastructure/config/client/maloja.js";
+import { PlayObject } from "../../core/Atomic.ts";
+import { buildTrackString, capitalize } from "../../core/StringUtils.ts";
+import { isSuperAgentResponseError } from "../common/errors/ErrorUtils.ts";
+import { isNodeNetworkException } from "../common/errors/NodeErrors.ts";
+import { UpstreamError } from "../common/errors/UpstreamError.ts";
+import { DEFAULT_RETRY_MULTIPLIER, FormatPlayObjectOptions } from "../common/infrastructure/Atomic.ts";
+import { MalojaClientConfig } from "../common/infrastructure/config/client/maloja.ts";
 import {
     getMalojaResponseError,
     isMalojaAPIErrorBody,
@@ -22,11 +22,11 @@ import {
     MalojaScrobbleV3ResponseData, MalojaScrobbleWarning,
     MalojaV2ScrobbleData,
     MalojaV3ScrobbleData,
-} from "../common/vendor/maloja/interfaces.js";
-import { Notifiers } from "../notifier/Notifiers.js";
-import { parseRetryAfterSecsFromObj, sleep } from "../utils.js";
-import { getScrobbleTsSOCDate, getScrobbleTsSOCDateWithContext } from "../utils/TimeUtils.js";
-import AbstractScrobbleClient from "./AbstractScrobbleClient.js";
+} from "../common/vendor/maloja/interfaces.ts";
+import { Notifiers } from "../notifier/Notifiers.ts";
+import { parseRetryAfterSecsFromObj, sleep } from "../utils.ts";
+import { getScrobbleTsSOCDate, getScrobbleTsSOCDateWithContext } from "../utils/TimeUtils.ts";
+import AbstractScrobbleClient from "./AbstractScrobbleClient.ts";
 
 const feat = ["ft.", "ft", "feat.", "feat", "featuring", "Ft.", "Ft", "Feat.", "Feat", "Featuring"];
 

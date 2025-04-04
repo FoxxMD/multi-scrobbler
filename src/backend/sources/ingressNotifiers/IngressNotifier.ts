@@ -1,7 +1,7 @@
 import { childLogger, Logger } from '@foxxmd/logging';
 import { Request } from "express";
-import { RemoteIdentityParts } from "../../common/infrastructure/Atomic.js";
-import { remoteHostIdentifiers, remoteHostStr } from "../../utils.js";
+import { RemoteIdentityParts } from "../../common/infrastructure/Atomic.ts";
+import { remoteHostIdentifiers, remoteHostStr } from "../../utils.ts";
 
 
 export abstract class IngressNotifier {

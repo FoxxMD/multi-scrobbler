@@ -1,5 +1,5 @@
-import { REPORTED_PLAYER_STATUSES, ReportedPlayerStatus } from "../../Atomic.js";
-import { CommonSourceConfig, CommonSourceData } from "./index.js";
+import { REPORTED_PLAYER_STATUSES, ReportedPlayerStatus } from "../../Atomic.ts";
+import { CommonSourceConfig, CommonSourceData } from "./index.ts";
 
 export type PlaybackStatus = 'play' | 'stop' | 'pause' | 'fast_reverse' | 'fast_forward'
 

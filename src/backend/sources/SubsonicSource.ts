@@ -3,16 +3,16 @@ import dayjs from "dayjs";
 import isSameOrAfter from "dayjs/plugin/isSameOrAfter.js";
 import EventEmitter from "events";
 import request, { Request } from 'superagent';
-import { PlayObject } from "../../core/Atomic.js";
-import { isNodeNetworkException } from "../common/errors/NodeErrors.js";
-import { UpstreamError } from "../common/errors/UpstreamError.js";
-import { DEFAULT_RETRY_MULTIPLIER, FormatPlayObjectOptions, InternalConfig } from "../common/infrastructure/Atomic.js";
-import { SubSonicSourceConfig } from "../common/infrastructure/config/source/subsonic.js";
-import { getSubsonicResponse, SubsonicResponse, SubsonicResponseCommon } from "../common/vendor/subsonic/interfaces.js";
-import { parseRetryAfterSecsFromObj, removeDuplicates, sleep } from "../utils.js";
-import { findCauseByFunc } from "../utils/ErrorUtils.js";
-import { RecentlyPlayedOptions } from "./AbstractSource.js";
-import MemorySource from "./MemorySource.js";
+import { PlayObject } from "../../core/Atomic.ts";
+import { isNodeNetworkException } from "../common/errors/NodeErrors.ts";
+import { UpstreamError } from "../common/errors/UpstreamError.ts";
+import { DEFAULT_RETRY_MULTIPLIER, FormatPlayObjectOptions, InternalConfig } from "../common/infrastructure/Atomic.ts";
+import { SubSonicSourceConfig } from "../common/infrastructure/config/source/subsonic.ts";
+import { getSubsonicResponse, SubsonicResponse, SubsonicResponseCommon } from "../common/vendor/subsonic/interfaces.ts";
+import { parseRetryAfterSecsFromObj, removeDuplicates, sleep } from "../utils.ts";
+import { findCauseByFunc } from "../utils/ErrorUtils.ts";
+import { RecentlyPlayedOptions } from "./AbstractSource.ts";
+import MemorySource from "./MemorySource.ts";
 
 dayjs.extend(isSameOrAfter);
 

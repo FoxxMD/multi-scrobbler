@@ -1,13 +1,13 @@
 import { ExpressWithAsync } from "@awaitjs/express";
 import { Logger } from "@foxxmd/logging";
 import passport from "passport";
-import { ExpressHandler } from "../common/infrastructure/Atomic.js";
-import LastfmScrobbler from "../scrobblers/LastfmScrobbler.js";
-import ScrobbleClients from "../scrobblers/ScrobbleClients.js";
-import LastfmSource from "../sources/LastfmSource.js";
-import ScrobbleSources from "../sources/ScrobbleSources.js";
-import SpotifySource from "../sources/SpotifySource.js";
-import YTMusicSource from "../sources/YTMusicSource.js";
+import { ExpressHandler } from "../common/infrastructure/Atomic.ts";
+import LastfmScrobbler from "../scrobblers/LastfmScrobbler.ts";
+import ScrobbleClients from "../scrobblers/ScrobbleClients.ts";
+import LastfmSource from "../sources/LastfmSource.ts";
+import ScrobbleSources from "../sources/ScrobbleSources.ts";
+import SpotifySource from "../sources/SpotifySource.ts";
+import YTMusicSource from "../sources/YTMusicSource.ts";
 import { sortAndDeduplicateDiagnostics } from "typescript";
 import { source } from "common-tags";
 

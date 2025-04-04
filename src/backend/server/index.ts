@@ -8,11 +8,11 @@ import { PassThrough } from "node:stream";
 import passport from 'passport';
 import path from "path";
 import ViteExpress from "vite-express";
-import { projectDir } from "../common/index.js";
-import { getRoot } from "../ioc.js";
-import { parseBool } from "../utils.js";
-import { getAddress } from "../utils/NetworkUtils.js";
-import { setupApi } from "./api.js";
+import { projectDir } from "../common/index.ts";
+import { getRoot } from "../ioc.ts";
+import { parseBool } from "../utils.ts";
+import { getAddress } from "../utils/NetworkUtils.ts";
+import { setupApi } from "./api.ts";
 
 const app = addAsync(express());
 const router = Router();

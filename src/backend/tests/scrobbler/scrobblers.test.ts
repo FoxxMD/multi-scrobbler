@@ -6,14 +6,14 @@ import dayjs from "dayjs";
 import { after, before, describe, it } from 'mocha';
 import { http, HttpResponse } from 'msw';
 import pEvent from 'p-event';
-import { PlayObject } from "../../../core/Atomic.js";
-import { sleep } from "../../utils.js";
+import { PlayObject } from "../../../core/Atomic.ts";
+import { sleep } from "../../utils.ts";
 import mixedDuration from '../plays/mixedDuration.json';
 import withDuration from '../plays/withDuration.json';
-import { MockNetworkError, withRequestInterception } from "../utils/networking.js";
-import { asPlays, generatePlay, generatePlays, normalizePlays } from "../utils/PlayTestUtils.js";
+import { MockNetworkError, withRequestInterception } from "../utils/networking.ts";
+import { asPlays, generatePlay, generatePlays, normalizePlays } from "../utils/PlayTestUtils.ts";
 
-import { TestAuthScrobbler, TestScrobbler } from "./TestScrobbler.js";
+import { TestAuthScrobbler, TestScrobbler } from "./TestScrobbler.ts";
 
 chai.use(asPromised);
 

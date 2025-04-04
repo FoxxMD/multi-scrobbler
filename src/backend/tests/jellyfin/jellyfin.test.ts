@@ -2,20 +2,20 @@ import { loggerTest } from "@foxxmd/logging";
 import { assert, expect } from 'chai';
 import EventEmitter from "events";
 import { describe, it } from 'mocha';
-import { JsonPlayObject, PlayMeta, PlayObject } from "../../../core/Atomic.js";
+import { JsonPlayObject, PlayMeta, PlayObject } from "../../../core/Atomic.ts";
 
-import JellyfinSource from "../../sources/JellyfinSource.js";
-import JellyfinApiSource from "../../sources/JellyfinApiSource.js";
+import JellyfinSource from "../../sources/JellyfinSource.ts";
+import JellyfinApiSource from "../../sources/JellyfinApiSource.ts";
 import samplePayload from './playbackProgressSample.json';
 import validSession from './validSession.json';
-import { JellyApiData } from "../../common/infrastructure/config/source/jellyfin.js";
-import { generatePlay } from "../utils/PlayTestUtils.js";
+import { JellyApiData } from "../../common/infrastructure/config/source/jellyfin.ts";
+import { generatePlay } from "../utils/PlayTestUtils.ts";
 import { fakerJA } from "@faker-js/faker";
 import {
     // @ts-expect-error weird typings?
     SessionInfo,
-} from "@jellyfin/sdk/lib/generated-client/index.js";
-import { PlayerStateDataMaybePlay } from "../../common/infrastructure/Atomic.js";
+} from "@jellyfin/sdk/lib/generated-client/index.ts";
+import { PlayerStateDataMaybePlay } from "../../common/infrastructure/Atomic.ts";
 
 const dataAsFixture = (data: any): TestFixture => {
     return data as TestFixture;

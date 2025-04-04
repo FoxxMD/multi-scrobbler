@@ -3,10 +3,10 @@ import { childLogger, Logger } from "@foxxmd/logging";
 import bodyParser from "body-parser";
 import cors from 'cors';
 import path from "path";
-import { WebhookNotifier } from "../sources/ingressNotifiers/WebhookNotifier.js";
-import ScrobbleSources from "../sources/ScrobbleSources.js";
-import { WebScrobblerSource } from "../sources/WebScrobblerSource.js";
-import { nonEmptyBody } from "./middleware.js";
+import { WebhookNotifier } from "../sources/ingressNotifiers/WebhookNotifier.ts";
+import ScrobbleSources from "../sources/ScrobbleSources.ts";
+import { WebScrobblerSource } from "../sources/WebScrobblerSource.ts";
+import { nonEmptyBody } from "./middleware.ts";
 
 const corsOpts: cors.CorsOptions = {
     methods: ['POST']

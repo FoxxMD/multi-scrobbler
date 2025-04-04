@@ -1,14 +1,14 @@
 import { Logger, loggerTest } from "@foxxmd/logging";
 import { searchAndReplace as searchAndReplaceFunc, testMaybeRegex as testMaybeRegexFunc } from "@foxxmd/regex-buddy-core";
-import { ObjectPlayData, PlayObject } from "../../core/Atomic.js";
-import { buildTrackString } from "../../core/StringUtils.js";
+import { ObjectPlayData, PlayObject } from "../../core/Atomic.ts";
+import { buildTrackString } from "../../core/StringUtils.ts";
 import {
     ConditionalSearchAndReplaceRegExp,
     PlayTransformParts, PlayTransformPartsArray, PlayTransformPartsConfig, PlayTransformRules,
     SearchAndReplaceTerm,
     WhenConditionsConfig,
     WhenParts
-} from "../common/infrastructure/Atomic.js";
+} from "../common/infrastructure/Atomic.ts";
 
 export const isWhenCondition = (val: unknown): val is WhenParts<string> => {
     if (val !== null && typeof val === 'object') {

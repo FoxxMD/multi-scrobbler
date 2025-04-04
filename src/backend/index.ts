@@ -9,17 +9,17 @@ import timezone from 'dayjs/plugin/timezone.js';
 import utc from 'dayjs/plugin/utc.js';
 import * as path from "path";
 import { SimpleIntervalJob, ToadScheduler } from "toad-scheduler";
-import { projectDir } from "./common/index.js";
-import { AIOConfig } from "./common/infrastructure/config/aioConfig.js";
-import { appLogger, initLogger as getInitLogger } from "./common/logging.js";
-import { getRoot, parseVersion } from "./ioc.js";
-import { initServer } from "./server/index.js";
-import { createHeartbeatClientsTask } from "./tasks/heartbeatClients.js";
-import { createHeartbeatSourcesTask } from "./tasks/heartbeatSources.js";
-import { isDebugMode, parseBool, readJson, retry, sleep } from "./utils.js";
-import { createVegaGenerator } from './utils/SchemaUtils.js';
-import ScrobbleClients from './scrobblers/ScrobbleClients.js';
-import ScrobbleSources from './sources/ScrobbleSources.js';
+import { projectDir } from "./common/index.ts";
+import { AIOConfig } from "./common/infrastructure/config/aioConfig.ts";
+import { appLogger, initLogger as getInitLogger } from "./common/logging.ts";
+import { getRoot, parseVersion } from "./ioc.ts";
+import { initServer } from "./server/index.ts";
+import { createHeartbeatClientsTask } from "./tasks/heartbeatClients.ts";
+import { createHeartbeatSourcesTask } from "./tasks/heartbeatSources.ts";
+import { isDebugMode, parseBool, readJson, retry, sleep } from "./utils.ts";
+import { createVegaGenerator } from './utils/SchemaUtils.ts';
+import ScrobbleClients from './scrobblers/ScrobbleClients.ts';
+import ScrobbleSources from './sources/ScrobbleSources.ts';
 
 dayjs.extend(utc)
 dayjs.extend(isBetween);

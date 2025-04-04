@@ -2,7 +2,7 @@ import dayjs from "dayjs";
 import { EventEmitter } from "events";
 import mpdapiNS, { MPDApi } from 'mpd-api';
 import mpd2 from 'mpd2';
-import { BrainzMeta, PlayObject } from "../../core/Atomic.js";
+import { BrainzMeta, PlayObject } from "../../core/Atomic.ts";
 import {
     FormatPlayObjectOptions,
     InternalConfig,
@@ -10,16 +10,16 @@ import {
     REPORTED_PLAYER_STATUSES,
     ReportedPlayerStatus,
     SINGLE_USER_PLATFORM_ID,
-} from "../common/infrastructure/Atomic.js";
+} from "../common/infrastructure/Atomic.ts";
 import {
     CurrentSongResponse,
     MPDSourceConfig,
     PlayerState,
     StatusResponse,
-} from "../common/infrastructure/config/source/mpd.js";
-import { isPortReachable } from "../utils/NetworkUtils.js";
-import { RecentlyPlayedOptions } from "./AbstractSource.js";
-import { MemoryPositionalSource } from "./MemoryPositionalSource.js";
+} from "../common/infrastructure/config/source/mpd.ts";
+import { isPortReachable } from "../utils/NetworkUtils.ts";
+import { RecentlyPlayedOptions } from "./AbstractSource.ts";
+import { MemoryPositionalSource } from "./MemoryPositionalSource.ts";
 
 const mpdClient = mpdapiNS.default;
 

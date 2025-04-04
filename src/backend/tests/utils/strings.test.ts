@@ -1,16 +1,16 @@
 import { assert, expect } from 'chai';
 import { describe, it } from 'mocha';
-import { intersect } from "../../utils.js";
-import { generateBaseURL, joinedUrl, normalizeWebAddress } from "../../utils/NetworkUtils.js";
+import { intersect } from "../../utils.ts";
+import { generateBaseURL, joinedUrl, normalizeWebAddress } from "../../utils/NetworkUtils.ts";
 import {
     compareNormalizedStrings,
     normalizeStr,
     parseTrackCredits,
     uniqueNormalizedStrArr
-} from "../../utils/StringUtils.js";
-import { ExpectedResults } from "./interfaces.js";
+} from "../../utils/StringUtils.ts";
+import { ExpectedResults } from "./interfaces.ts";
 import testData from './playTestData.json';
-import { splitByFirstFound } from '../../../core/StringUtils.js';
+import { splitByFirstFound } from '../../../core/StringUtils.ts';
 
 interface PlayTestFixture {
     caseHints: string[]

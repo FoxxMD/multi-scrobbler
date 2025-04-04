@@ -2,10 +2,10 @@ import { Logger } from '@foxxmd/logging';
 import { SearchAndReplaceRegExp } from "@foxxmd/regex-buddy-core";
 import { Dayjs } from "dayjs";
 import { Request, Response } from "express";
-import { NextFunction, ParamsDictionary, Query } from "express-serve-static-core";
+import type { NextFunction, ParamsDictionary, Query } from "express-serve-static-core";
 import { FixedSizeList } from 'fixed-size-list';
-import { isPlayObject, PlayMeta, PlayObject } from "../../../core/Atomic.js";
-import TupleMap from "../TupleMap.js";
+import { isPlayObject, PlayMeta, PlayObject } from "../../../core/Atomic.ts";
+import TupleMap from "../TupleMap.ts";
 
 export type SourceType =
     'spotify'

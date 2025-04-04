@@ -1,7 +1,7 @@
 import { childLogger, Logger } from "@foxxmd/logging";
-import { PlayObject } from "../../../core/Atomic.js";
-import { capitalize } from "../../../core/StringUtils.js";
-import { AbstractApiOptions, FormatPlayObjectOptions } from "../infrastructure/Atomic.js";
+import { PlayObject } from "../../../core/Atomic.ts";
+import { capitalize } from "../../../core/StringUtils.ts";
+import { AbstractApiOptions, FormatPlayObjectOptions } from "../infrastructure/Atomic.ts";
 
 export default abstract class AbstractApiClient {
     name: string;

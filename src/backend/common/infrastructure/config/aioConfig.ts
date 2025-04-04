@@ -1,11 +1,11 @@
 import { LogOptions } from "@foxxmd/logging";
-import { ClientAIOConfig } from "./client/clients.js";
-import { CommonClientOptions } from "./client/index.js";
-import { RequestRetryOptions } from "./common.js";
-import { WebhookConfig } from "./health/webhooks.js";
-import { CommonSourceOptions, SourceRetryOptions } from "./source/index.js";
-import { SourceAIOConfig } from "./source/sources.js";
-import { ClientType, SourceType } from "../Atomic.js";
+import { ClientAIOConfig } from "./client/clients.ts";
+import { CommonClientOptions } from "./client/index.ts";
+import { RequestRetryOptions } from "./common.ts";
+import { WebhookConfig } from "./health/webhooks.ts";
+import { CommonSourceOptions, SourceRetryOptions } from "./source/index.ts";
+import { SourceAIOConfig } from "./source/sources.ts";
+import { ClientType, SourceType } from "../Atomic.ts";
 
 
 export interface SourceDefaults extends CommonSourceOptions {

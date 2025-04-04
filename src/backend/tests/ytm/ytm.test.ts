@@ -3,12 +3,12 @@ import { loggerTest, loggerDebug } from "@foxxmd/logging";
 import chai, { assert, expect } from 'chai';
 import asPromised from 'chai-as-promised';
 import clone from "clone";
-import YTMusicSource, { ytiHistoryResponseFromShelfToPlays, ytiHistoryResponseToListItems } from "../../sources/YTMusicSource.js";
+import YTMusicSource, { ytiHistoryResponseFromShelfToPlays, ytiHistoryResponseToListItems } from "../../sources/YTMusicSource.ts";
 import ytHistoryRes from './ytres.json' assert {type: 'json'};
 import EventEmitter from "events";
-import { generatePlay, generatePlays, normalizePlays } from '../utils/PlayTestUtils.js';
-import { YTMusicSourceConfig } from '../../common/infrastructure/config/source/ytmusic.js';
-import { sleep } from '../../utils.js';
+import { generatePlay, generatePlays, normalizePlays } from '../utils/PlayTestUtils.ts';
+import { YTMusicSourceConfig } from '../../common/infrastructure/config/source/ytmusic.ts';
+import { sleep } from '../../utils.ts';
 import dayjs from 'dayjs';
 
 chai.use(asPromised);

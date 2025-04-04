@@ -1,19 +1,19 @@
-import { RecentlyPlayedOptions } from "./AbstractSource.js";
+import { RecentlyPlayedOptions } from "./AbstractSource.ts";
 import { EventEmitter } from "events";
-import { PlayObject, URLData } from "../../core/Atomic.js";
+import { PlayObject, URLData } from "../../core/Atomic.ts";
 import {
     FormatPlayObjectOptions,
     InternalConfig,
     PlayerStateData,
     REPORTED_PLAYER_STATUSES,
     SINGLE_USER_PLATFORM_ID,
-} from "../common/infrastructure/Atomic.js";
-import { isPortReachableConnect, normalizeWebAddress } from "../utils/NetworkUtils.js";
-import MemorySource from "./MemorySource.js";
-import { IcecastMetadata, IcecastSourceConfig } from "../common/infrastructure/config/source/icecast.js";
+} from "../common/infrastructure/Atomic.ts";
+import { isPortReachableConnect, normalizeWebAddress } from "../utils/NetworkUtils.ts";
+import MemorySource from "./MemorySource.ts";
+import { IcecastMetadata, IcecastSourceConfig } from "../common/infrastructure/config/source/icecast.ts";
 import IcecastMetadataStats from "icecast-metadata-stats";
-import { parseArtistCredits, parseTrackCredits } from "../utils/StringUtils.js";
-import { isDebugMode, sleep } from "../utils.js";
+import { parseArtistCredits, parseTrackCredits } from "../utils/StringUtils.ts";
+import { isDebugMode, sleep } from "../utils.ts";
 
 
 export class IcecastSource extends MemorySource {

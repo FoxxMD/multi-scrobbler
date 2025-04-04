@@ -1,10 +1,10 @@
 import { ExpressWithAsync } from "@awaitjs/express";
 import { Logger } from "@foxxmd/logging";
-import { ExpressHandler } from "../common/infrastructure/Atomic.js";
-import { TautulliNotifier } from "../sources/ingressNotifiers/TautulliNotifier.js";
-import ScrobbleSources from "../sources/ScrobbleSources.js";
-import TautulliSource from "../sources/TautulliSource.js";
-import { isDebugMode, parseBool } from "../utils.js";
+import { ExpressHandler } from "../common/infrastructure/Atomic.ts";
+import { TautulliNotifier } from "../sources/ingressNotifiers/TautulliNotifier.ts";
+import ScrobbleSources from "../sources/ScrobbleSources.ts";
+import TautulliSource from "../sources/TautulliSource.ts";
+import { isDebugMode, parseBool } from "../utils.ts";
 
 export const setupTautulliRoutes = (app: ExpressWithAsync, logger: Logger, scrobbleSources: ScrobbleSources) => {
 

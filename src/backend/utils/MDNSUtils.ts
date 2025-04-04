@@ -1,10 +1,10 @@
 import { Browser, Service, ServiceType } from "@astronautlabs/mdns";
 import { Logger } from "@foxxmd/logging";
 import AvahiBrowser from 'avahi-browse';
-import { MdnsDeviceInfo } from "../common/infrastructure/Atomic.js";
-import { MaybeLogger } from "../common/logging.js";
-import { sleep } from "../utils.js";
-import { debounce, DebouncedFunction } from "./debounce.js";
+import { MdnsDeviceInfo } from "../common/infrastructure/Atomic.ts";
+import { MaybeLogger } from "../common/logging.ts";
+import { sleep } from "../utils.ts";
+import { debounce, DebouncedFunction } from "./debounce.ts";
 
 export interface AvahiService {
     service_name: string

@@ -1,8 +1,8 @@
 import { childLogger, Logger } from '@foxxmd/logging';
 import { PromisePool } from "@supercharge/promise-pool";
 import { AsyncTask } from "toad-scheduler";
-import { ChromecastSource } from "../sources/ChromecastSource.js";
-import ScrobbleSources from "../sources/ScrobbleSources.js";
+import { ChromecastSource } from "../sources/ChromecastSource.ts";
+import ScrobbleSources from "../sources/ScrobbleSources.ts";
 
 export const createHeartbeatSourcesTask = (sources: ScrobbleSources, parentLogger: Logger) => {
     const logger = childLogger(parentLogger, ['Heartbeat', 'Sources']);

@@ -5,18 +5,18 @@ import EventEmitter from "events";
 import { after, before, describe, it } from 'mocha';
 import pEvent from "p-event";
 import clone from 'clone';
-import { PlayObject } from "../../../core/Atomic.js";
-import { generatePlay, generatePlayerStateData } from "../utils/PlayTestUtils.js";
-import { TestMemoryPositionalSource, TestMemorySource, TestSource } from "./TestSource.js";
+import { PlayObject } from "../../../core/Atomic.ts";
+import { generatePlay, generatePlayerStateData } from "../utils/PlayTestUtils.ts";
+import { TestMemoryPositionalSource, TestMemorySource, TestSource } from "./TestSource.ts";
 import spotifyPayload from '../plays/spotifyCurrentPlaybackState.json';
-import SpotifySource from "../../sources/SpotifySource.js";
+import SpotifySource from "../../sources/SpotifySource.ts";
 import MockDate from 'mockdate';
 import dayjs, { Dayjs } from "dayjs";
-import { REPORTED_PLAYER_STATUSES } from "../../common/infrastructure/Atomic.js";
-import { SourceConfig } from "../../common/infrastructure/config/source/sources.js";
-import MemorySource from "../../sources/MemorySource.js";
-import { timePassesScrobbleThreshold } from "../../utils/TimeUtils.js";
-import { DEFAULT_SCROBBLE_DURATION_THRESHOLD, DEFAULT_SCROBBLE_PERCENT_THRESHOLD } from "../../common/infrastructure/Atomic.js";
+import { REPORTED_PLAYER_STATUSES } from "../../common/infrastructure/Atomic.ts";
+import { SourceConfig } from "../../common/infrastructure/config/source/sources.ts";
+import MemorySource from "../../sources/MemorySource.ts";
+import { timePassesScrobbleThreshold } from "../../utils/TimeUtils.ts";
+import { DEFAULT_SCROBBLE_DURATION_THRESHOLD, DEFAULT_SCROBBLE_PERCENT_THRESHOLD } from "../../common/infrastructure/Atomic.ts";
 
 chai.use(asPromised);
 

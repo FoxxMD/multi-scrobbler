@@ -1,5 +1,5 @@
-import { PlayTransformConfig, PlayTransformOptions } from "../../Atomic.js";
-import { CommonConfig, CommonData, RequestRetryOptions } from "../common.js";
+import { PlayTransformConfig, PlayTransformOptions } from "../../Atomic.ts";
+import { CommonConfig, CommonData, RequestRetryOptions } from "../common.ts";
 
 /**
  * Scrobble matching (between new source track and existing client scrobbles) logging options. Used for debugging.

@@ -3,13 +3,12 @@ import concatStream from 'concat-stream';
 import dayjs from "dayjs";
 import EventEmitter from "events";
 import formidable, { Files, File } from 'formidable';
-import { file } from "jscodeshift";
-import { PlayObject } from "../../core/Atomic.js";
-import { combinePartsToString, truncateStringToLength } from "../../core/StringUtils.js";
-import { FormatPlayObjectOptions, InternalConfig, SourceType } from "../common/infrastructure/Atomic.js";
-import { PlexSourceConfig } from "../common/infrastructure/config/source/plex.js";
-import { getFileIdentifier, getValidMultipartJsonFile } from "../utils/RequestUtils.js";
-import AbstractSource from "./AbstractSource.js";
+import { PlayObject } from "../../core/Atomic.ts";
+import { combinePartsToString, truncateStringToLength } from "../../core/StringUtils.ts";
+import { FormatPlayObjectOptions, InternalConfig, SourceType } from "../common/infrastructure/Atomic.ts";
+import { PlexSourceConfig } from "../common/infrastructure/config/source/plex.ts";
+import { getFileIdentifier, getValidMultipartJsonFile } from "../utils/RequestUtils.ts";
+import AbstractSource from "./AbstractSource.ts";
 
 const shortDeviceId = truncateStringToLength(10, '');
 

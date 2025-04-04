@@ -1,6 +1,6 @@
 import { LogDataPretty, LogLevel } from "@foxxmd/logging";
 import { Dayjs } from "dayjs";
-import { ListenProgress } from "../backend/sources/PlayerState/ListenProgress.js";
+import { ListenProgress } from "../backend/sources/PlayerState/ListenProgress.ts";
 
 export interface SourceStatusData {
     status: string;

@@ -1,11 +1,11 @@
-import MemorySource from "./MemorySource.js";
-import { RecentlyPlayedOptions } from "./AbstractSource.js";
+import MemorySource from "./MemorySource.ts";
+import { RecentlyPlayedOptions } from "./AbstractSource.ts";
 import { childLogger, Logger } from "@foxxmd/logging";
 import { EventEmitter } from "events";
 import { WS, CloseEvent, ErrorEvent, RetryEvent } from 'iso-websocket'
 import pEvent from 'p-event';
-import { PlayObject, URLData } from "../../core/Atomic.js";
-import { UpstreamError } from "../common/errors/UpstreamError.js";
+import { PlayObject, URLData } from "../../core/Atomic.ts";
+import { UpstreamError } from "../common/errors/UpstreamError.ts";
 import {
     FormatPlayObjectOptions,
     InternalConfig,
@@ -13,9 +13,9 @@ import {
     PlayPlatformId,
     REPORTED_PLAYER_STATUSES,
     SINGLE_USER_PLATFORM_ID,
-} from "../common/infrastructure/Atomic.js";
-import { AzuracastSourceConfig, AzuraNowPlayingResponse, AzuraStationResponse } from "../common/infrastructure/config/source/azuracast.js";
-import { isPortReachable, normalizeWSAddress } from "../utils/NetworkUtils.js";
+} from "../common/infrastructure/Atomic.ts";
+import { AzuracastSourceConfig, AzuraNowPlayingResponse, AzuraStationResponse } from "../common/infrastructure/config/source/azuracast.ts";
+import { isPortReachable, normalizeWSAddress } from "../utils/NetworkUtils.ts";
 
 
 export class AzuracastSource extends MemorySource {

@@ -4,8 +4,8 @@ import address from "address";
 import net from 'node:net';
 import normalizeUrl from "normalize-url";
 import { join as joinPath } from "path";
-import { getFirstNonEmptyVal, isDebugMode, parseRegexSingleOrFail } from "../utils.js";
-import { URLData } from "../../core/Atomic.js";
+import { getFirstNonEmptyVal, isDebugMode, parseRegexSingleOrFail } from "../utils.ts";
+import { URLData } from "../../core/Atomic.ts";
 
 export interface PortReachableOpts {
     host: string,

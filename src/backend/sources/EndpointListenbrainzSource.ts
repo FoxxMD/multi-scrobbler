@@ -1,6 +1,6 @@
 import dayjs from "dayjs";
 import EventEmitter from "events";
-import { PlayObject, SOURCE_SOT } from "../../core/Atomic.js";
+import { PlayObject, SOURCE_SOT } from "../../core/Atomic.ts";
 import {
     ExpressRequest,
     FormatPlayObjectOptions,
@@ -9,11 +9,11 @@ import {
     PlayerStateData,
     REPORTED_PLAYER_STATUSES,
     ReportedPlayerStatus
-} from "../common/infrastructure/Atomic.js";
-import { ListenbrainzEndpointSourceConfig } from "../common/infrastructure/config/source/endpointlz.js";
-import { ListenbrainzApiClient, ListenPayload, SubmitPayload } from "../common/vendor/ListenbrainzApiClient.js";
-import { parseRegexSingleOrFail } from "../utils.js";
-import MemorySource from "./MemorySource.js";
+} from "../common/infrastructure/Atomic.ts";
+import { ListenbrainzEndpointSourceConfig } from "../common/infrastructure/config/source/endpointlz.ts";
+import { ListenbrainzApiClient, ListenPayload, SubmitPayload } from "../common/vendor/ListenbrainzApiClient.ts";
+import { parseRegexSingleOrFail } from "../utils.ts";
+import MemorySource from "./MemorySource.ts";
 
 const noSlugMatch = new RegExp(/(?:\/api\/listenbrainz\/?)$|(?:\/1\/?|\/1\/submit-listens\/?)$/i);
 const slugMatch = new RegExp(/\/api\/listenbrainz\/([^\/]+)$/i);

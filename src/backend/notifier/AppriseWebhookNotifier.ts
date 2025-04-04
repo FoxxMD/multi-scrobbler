@@ -1,18 +1,18 @@
 import { Logger } from "@foxxmd/logging";
 import request, { Request } from "superagent";
-import { truncateStringToLength } from "../../core/StringUtils.js";
-import { isSuperAgentResponseError } from "../common/errors/ErrorUtils.js";
-import { isNodeNetworkException } from "../common/errors/NodeErrors.js";
-import { UpstreamError } from "../common/errors/UpstreamError.js";
+import { truncateStringToLength } from "../../core/StringUtils.ts";
+import { isSuperAgentResponseError } from "../common/errors/ErrorUtils.ts";
+import { isNodeNetworkException } from "../common/errors/NodeErrors.ts";
+import { UpstreamError } from "../common/errors/UpstreamError.ts";
 import {
     AppriseConfig,
     PrioritiesConfig,
     Priority,
     WebhookPayload
-} from "../common/infrastructure/config/health/webhooks.js";
-import { AbstractWebhookNotifier } from "./AbstractWebhookNotifier.js";
-import { URLData } from "../../core/Atomic.js";
-import { isPortReachable, joinedUrl, normalizeWebAddress } from "../utils/NetworkUtils.js";
+} from "../common/infrastructure/config/health/webhooks.ts";
+import { AbstractWebhookNotifier } from "./AbstractWebhookNotifier.ts";
+import { URLData } from "../../core/Atomic.ts";
+import { isPortReachable, joinedUrl, normalizeWebAddress } from "../utils/NetworkUtils.ts";
 
 const shortKey = truncateStringToLength(10);
 

@@ -1,9 +1,9 @@
 import { ExpressWithAsync } from "@awaitjs/express";
 import { childLogger, Logger } from "@foxxmd/logging";
-import { ExpressHandler } from "../common/infrastructure/Atomic.js";
-import { PlexNotifier } from "../sources/ingressNotifiers/PlexNotifier.js";
-import PlexSource, { plexRequestMiddle } from "../sources/PlexSource.js";
-import ScrobbleSources from "../sources/ScrobbleSources.js";
+import { ExpressHandler } from "../common/infrastructure/Atomic.ts";
+import { PlexNotifier } from "../sources/ingressNotifiers/PlexNotifier.ts";
+import PlexSource, { plexRequestMiddle } from "../sources/PlexSource.ts";
+import ScrobbleSources from "../sources/ScrobbleSources.ts";
 
 export const setupPlexRoutes = (app: ExpressWithAsync, logger: Logger, scrobbleSources: ScrobbleSources) => {
 

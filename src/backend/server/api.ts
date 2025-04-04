@@ -13,23 +13,23 @@ import {
     PlayObject,
     SOURCE_SOT,
     SourceStatusData,
-} from "../../core/Atomic.js";
-import { capitalize } from "../../core/StringUtils.js";
-import { ExpressHandler } from "../common/infrastructure/Atomic.js";
-import { getRoot } from "../ioc.js";
-import AbstractScrobbleClient from "../scrobblers/AbstractScrobbleClient.js";
-import AbstractSource from "../sources/AbstractSource.js";
-import MemorySource from "../sources/MemorySource.js";
-import { parseBool, sortByNewestPlayDate } from "../utils.js";
-import { setupAuthRoutes } from "./auth.js";
-import { setupDeezerRoutes } from "./deezerRoutes.js";
-import { setupJellyfinRoutes } from "./jellyfinRoutes.js";
-import {setupLZEndpointRoutes} from "./endpointListenbrainzRoutes.js";
-import {setupLastfmEndpointRoutes} from "./endpointLastfmRoutes.js";
-import { makeClientCheckMiddle, makeSourceCheckMiddle } from "./middleware.js";
-import { setupPlexRoutes } from "./plexRoutes.js";
-import { setupTautulliRoutes } from "./tautulliRoutes.js";
-import { setupWebscrobblerRoutes } from "./webscrobblerRoutes.js";
+} from "../../core/Atomic.ts";
+import { capitalize } from "../../core/StringUtils.ts";
+import { ExpressHandler } from "../common/infrastructure/Atomic.ts";
+import { getRoot } from "../ioc.ts";
+import AbstractScrobbleClient from "../scrobblers/AbstractScrobbleClient.ts";
+import AbstractSource from "../sources/AbstractSource.ts";
+import MemorySource from "../sources/MemorySource.ts";
+import { parseBool, sortByNewestPlayDate } from "../utils.ts";
+import { setupAuthRoutes } from "./auth.ts";
+import { setupDeezerRoutes } from "./deezerRoutes.ts";
+import { setupJellyfinRoutes } from "./jellyfinRoutes.ts";
+import {setupLZEndpointRoutes} from "./endpointListenbrainzRoutes.ts";
+import {setupLastfmEndpointRoutes} from "./endpointLastfmRoutes.ts";
+import { makeClientCheckMiddle, makeSourceCheckMiddle } from "./middleware.ts";
+import { setupPlexRoutes } from "./plexRoutes.ts";
+import { setupTautulliRoutes } from "./tautulliRoutes.ts";
+import { setupWebscrobblerRoutes } from "./webscrobblerRoutes.ts";
 
 const maxBufferSize = 300;
 const output: Record<number, FixedSizeList<LogDataPretty>> =  {};

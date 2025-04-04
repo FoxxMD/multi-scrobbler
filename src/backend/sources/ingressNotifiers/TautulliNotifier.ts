@@ -1,7 +1,7 @@
 import { Logger } from "@foxxmd/logging";
 import { Request } from "express";
-import TautulliSource from "../TautulliSource.js";
-import { IngressNotifier } from "./IngressNotifier.js";
+import TautulliSource from "../TautulliSource.ts";
+import { IngressNotifier } from "./IngressNotifier.ts";
 
 export class TautulliNotifier extends IngressNotifier {
 

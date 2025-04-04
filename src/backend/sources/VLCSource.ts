@@ -1,8 +1,8 @@
 import { parseRegexSingle, parseToRegex } from "@foxxmd/regex-buddy-core";
 import { EventEmitter } from "events";
 import * as VLC from "vlc-client"
-import { VlcMeta, VlcStatus } from "vlc-client/dist/Types.js";
-import { PlayObject } from "../../core/Atomic.js";
+import type { VlcMeta, VlcStatus } from "vlc-client/dist/Types.ts";
+import { PlayObject } from "../../core/Atomic.ts";
 import {
     FormatPlayObjectOptions,
     InternalConfig,
@@ -10,13 +10,13 @@ import {
     REPORTED_PLAYER_STATUSES,
     ReportedPlayerStatus,
     SINGLE_USER_PLATFORM_ID,
-} from "../common/infrastructure/Atomic.js";
-import { VlcAudioMeta, VLCSourceConfig, PlayerState } from "../common/infrastructure/config/source/vlc.js";
-import { isPortReachable } from "../utils/NetworkUtils.js";
-import { firstNonEmptyStr } from "../utils/StringUtils.js";
-import { RecentlyPlayedOptions } from "./AbstractSource.js";
-import { MemoryPositionalSource } from "./MemoryPositionalSource.js";
-import { isDebugMode } from "../utils.js";
+} from "../common/infrastructure/Atomic.ts";
+import { VlcAudioMeta, VLCSourceConfig, PlayerState } from "../common/infrastructure/config/source/vlc.ts";
+import { isPortReachable } from "../utils/NetworkUtils.ts";
+import { firstNonEmptyStr } from "../utils/StringUtils.ts";
+import { RecentlyPlayedOptions } from "./AbstractSource.ts";
+import { MemoryPositionalSource } from "./MemoryPositionalSource.ts";
+import { isDebugMode } from "../utils.ts";
 
 const CLIENT_PLAYER_STATE: Record<PlayerState, ReportedPlayerStatus> = {
     'playing': REPORTED_PLAYER_STATUSES.playing,

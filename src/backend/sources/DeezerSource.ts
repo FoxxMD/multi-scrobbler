@@ -3,12 +3,12 @@ import EventEmitter from "events";
 import passport from "passport";
 import { Strategy as DeezerStrategy } from 'passport-deezer';
 import request from 'superagent';
-import { PlayObject } from "../../core/Atomic.js";
-import { DEFAULT_RETRY_MULTIPLIER, FormatPlayObjectOptions, InternalConfig } from "../common/infrastructure/Atomic.js";
-import { DeezerSourceConfig } from "../common/infrastructure/config/source/deezer.js";
-import { parseRetryAfterSecsFromObj, readJson, sleep, sortByOldestPlayDate, writeFile, } from "../utils.js";
-import { joinedUrl } from "../utils/NetworkUtils.js";
-import AbstractSource, { RecentlyPlayedOptions } from "./AbstractSource.js";
+import { PlayObject } from "../../core/Atomic.ts";
+import { DEFAULT_RETRY_MULTIPLIER, FormatPlayObjectOptions, InternalConfig } from "../common/infrastructure/Atomic.ts";
+import { DeezerSourceConfig } from "../common/infrastructure/config/source/deezer.ts";
+import { parseRetryAfterSecsFromObj, readJson, sleep, sortByOldestPlayDate, writeFile, } from "../utils.ts";
+import { joinedUrl } from "../utils/NetworkUtils.ts";
+import AbstractSource, { RecentlyPlayedOptions } from "./AbstractSource.ts";
 
 export default class DeezerSource extends AbstractSource {
     workingCredsPath;

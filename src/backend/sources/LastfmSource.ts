@@ -2,14 +2,14 @@ import dayjs from "dayjs";
 import EventEmitter from "events";
 import { TrackObject, UserGetRecentTracksResponse } from "lastfm-node-client";
 import request from "superagent";
-import { PlayObject, SOURCE_SOT } from "../../core/Atomic.js";
-import { isNodeNetworkException } from "../common/errors/NodeErrors.js";
-import { FormatPlayObjectOptions, InternalConfig } from "../common/infrastructure/Atomic.js";
-import { LastfmSourceConfig } from "../common/infrastructure/config/source/lastfm.js";
-import LastfmApiClient from "../common/vendor/LastfmApiClient.js";
-import { sortByOldestPlayDate } from "../utils.js";
-import { RecentlyPlayedOptions } from "./AbstractSource.js";
-import MemorySource from "./MemorySource.js";
+import { PlayObject, SOURCE_SOT } from "../../core/Atomic.ts";
+import { isNodeNetworkException } from "../common/errors/NodeErrors.ts";
+import { FormatPlayObjectOptions, InternalConfig } from "../common/infrastructure/Atomic.ts";
+import { LastfmSourceConfig } from "../common/infrastructure/config/source/lastfm.ts";
+import LastfmApiClient from "../common/vendor/LastfmApiClient.ts";
+import { sortByOldestPlayDate } from "../utils.ts";
+import { RecentlyPlayedOptions } from "./AbstractSource.ts";
+import MemorySource from "./MemorySource.ts";
 
 export default class LastfmSource extends MemorySource {
 

@@ -1,13 +1,13 @@
 import { faker } from '@faker-js/faker';
 import dayjs, { Dayjs } from "dayjs";
-import duration from "dayjs/plugin/duration.js";
-import isBetween from "dayjs/plugin/isBetween.js";
-import relativeTime from "dayjs/plugin/relativeTime.js";
-import timezone from "dayjs/plugin/timezone.js";
-import utc from "dayjs/plugin/utc.js";
-import { JsonPlayObject, ObjectPlayData, PlayMeta, PlayObject } from "../../../core/Atomic.js";
-import { sortByNewestPlayDate } from "../../utils.js";
-import { NO_DEVICE, NO_USER, PlayerStateDataMaybePlay, PlayPlatformId, ReportedPlayerStatus } from '../../common/infrastructure/Atomic.js';
+import duration from "dayjs/plugin/duration.ts";
+import isBetween from "dayjs/plugin/isBetween.ts";
+import relativeTime from "dayjs/plugin/relativeTime.ts";
+import timezone from "dayjs/plugin/timezone.ts";
+import utc from "dayjs/plugin/utc.ts";
+import { JsonPlayObject, ObjectPlayData, PlayMeta, PlayObject } from "../../../core/Atomic.ts";
+import { sortByNewestPlayDate } from "../../utils.ts";
+import { NO_DEVICE, NO_USER, PlayerStateDataMaybePlay, PlayPlatformId, ReportedPlayerStatus } from '../../common/infrastructure/Atomic.ts';
 
 dayjs.extend(utc)
 dayjs.extend(isBetween);

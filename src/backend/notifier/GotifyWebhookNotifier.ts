@@ -2,10 +2,10 @@ import { Logger } from "@foxxmd/logging";
 import { HTTPError } from "got";
 import { gotify } from 'gotify';
 import request from 'superagent';
-import { GotifyConfig, PrioritiesConfig, WebhookPayload } from "../common/infrastructure/config/health/webhooks.js";
-import { AbstractWebhookNotifier } from "./AbstractWebhookNotifier.js";
-import { isPortReachable, normalizeWebAddress } from "../utils/NetworkUtils.js";
-import { URLData } from "../../core/Atomic.js";
+import { GotifyConfig, PrioritiesConfig, WebhookPayload } from "../common/infrastructure/config/health/webhooks.ts";
+import { AbstractWebhookNotifier } from "./AbstractWebhookNotifier.ts";
+import { isPortReachable, normalizeWebAddress } from "../utils/NetworkUtils.ts";
+import { URLData } from "../../core/Atomic.ts";
 
 export class GotifyWebhookNotifier extends AbstractWebhookNotifier {
 

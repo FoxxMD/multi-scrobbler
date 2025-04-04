@@ -45,21 +45,20 @@ import dayjs from "dayjs";
 import EventEmitter from "events";
 import { nanoid } from "nanoid";
 import pEvent from "p-event";
-import { Simulate } from "react-dom/test-utils";
-import { PlayObject } from "../../core/Atomic.js";
-import { buildTrackString, combinePartsToString, truncateStringToLength } from "../../core/StringUtils.js";
+import { PlayObject } from "../../core/Atomic.ts";
+import { buildTrackString, combinePartsToString, truncateStringToLength } from "../../core/StringUtils.ts";
 import {
     FormatPlayObjectOptions,
     InternalConfig,
     PlayerStateData,
     PlayerStateDataMaybePlay,
     PlayPlatformId, REPORTED_PLAYER_STATUSES
-} from "../common/infrastructure/Atomic.js";
-import { JellyApiSourceConfig } from "../common/infrastructure/config/source/jellyfin.js";
-import { genGroupIdStr, getPlatformIdFromData, isDebugMode, parseBool, } from "../utils.js";
-import { joinedUrl } from "../utils/NetworkUtils.js";
-import { parseArrayFromMaybeString } from "../utils/StringUtils.js";
-import { MemoryPositionalSource } from "./MemoryPositionalSource.js";
+} from "../common/infrastructure/Atomic.ts";
+import { JellyApiSourceConfig } from "../common/infrastructure/config/source/jellyfin.ts";
+import { genGroupIdStr, getPlatformIdFromData, isDebugMode, parseBool, } from "../utils.ts";
+import { joinedUrl } from "../utils/NetworkUtils.ts";
+import { parseArrayFromMaybeString } from "../utils/StringUtils.ts";
+import { MemoryPositionalSource } from "./MemoryPositionalSource.ts";
 import { FixedSizeList } from "fixed-size-list";
 
 const shortDeviceId = truncateStringToLength(10, '');

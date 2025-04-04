@@ -1,5 +1,5 @@
-import { findCauseByFunc } from "../../utils/ErrorUtils.js";
-import { isArbitraryObject } from "../infrastructure/Atomic.js";
+import { findCauseByFunc } from "../../utils/ErrorUtils.ts";
+import { isArbitraryObject } from "../infrastructure/Atomic.ts";
 import ErrnoException = NodeJS.ErrnoException;
 
 export type NodeNetworkErrorCode = 'ENOTFOUND' | 'ETIMEDOUT' | 'EAI_AGAIN' | 'ECONNRESET' | 'ECONNREFUSED' | 'ERRADDRINUSE' | 'EADDRNOTAVAIL' | 'ECONNABORTED' | 'EHOSTUNREACH';

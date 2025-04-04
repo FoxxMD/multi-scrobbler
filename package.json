@@ -9,7 +9,7 @@
     "test": "npm run -s test:backend",
     "test:backend": "mocha --reporter spec",
     "dev": "nodemon -w src/backend -x tsx src/backend/index.ts",
-    "start": "NODE_ENV=production tsx src/backend/index.ts",
+    "start": "NODE_ENV=production node --experimental-strip-types --experimental-transform-types src/backend/index.ts",
     "build:frontend": "vite build",
     "build:backend": "tsc -p src/backend",
     "build": "npm run -s build:backend && npm run -s build:frontend && npm run -s docs:build",
@@ -27,7 +27,7 @@
     }
   },
   "engines": {
-    "node": ">=18.19.1",
+    "node": ">=23.11.0",
     "npm": ">=9.1.0"
   },
   "repository": {

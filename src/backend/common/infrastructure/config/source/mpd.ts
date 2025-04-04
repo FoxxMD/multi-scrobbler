@@ -1,4 +1,4 @@
-import { CommonSourceConfig, CommonSourceData, CommonSourceOptions } from "./index.js";
+import { CommonSourceConfig, CommonSourceData, CommonSourceOptions } from "./index.ts";
 
 export interface MPDData extends CommonSourceData {
     /**

@@ -1,4 +1,4 @@
-import { truncateStringToLength } from "../../core/StringUtils.js";
+import { truncateStringToLength } from "../../core/StringUtils.ts";
 
 /**
  * Adapted from https://github.com/voxpelli/pony-cause/blob/main/lib/helpers.js to find cause by truthy function

@@ -3,13 +3,13 @@ import { Logger, LogOptions } from "@foxxmd/logging";
 import { EventEmitter } from "events";
 import { createContainer } from "iti";
 import path from "path";
-import { projectDir } from "./common/index.js";
-import { WildcardEmitter } from "./common/WildcardEmitter.js";
-import { Notifiers } from "./notifier/Notifiers.js";
-import ScrobbleClients from "./scrobblers/ScrobbleClients.js";
-import ScrobbleSources from "./sources/ScrobbleSources.js";
+import { projectDir } from "./common/index.ts";
+import { WildcardEmitter } from "./common/WildcardEmitter.ts";
+import { Notifiers } from "./notifier/Notifiers.ts";
+import ScrobbleClients from "./scrobblers/ScrobbleClients.ts";
+import ScrobbleSources from "./sources/ScrobbleSources.ts";
 
-import { generateBaseURL } from "./utils/NetworkUtils.js";
+import { generateBaseURL } from "./utils/NetworkUtils.ts";
 import { PassThrough } from "stream";
 
 let version: string = 'unknown';

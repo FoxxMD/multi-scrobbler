@@ -4,28 +4,28 @@ import {
 } from "@foxxmd/regex-buddy-core";
 import deepEqual from 'fast-deep-equal';
 import { Simulate } from "react-dom/test-utils";
-import { PlayObject } from "../../core/Atomic.js";
-import { buildTrackString, truncateStringToLength } from "../../core/StringUtils.js";
+import { PlayObject } from "../../core/Atomic.ts";
+import { buildTrackString, truncateStringToLength } from "../../core/StringUtils.ts";
 
 import {
     configPartsToStrongParts, countRegexes,
     transformPlayUsingParts
-} from "../utils/PlayTransformUtils.js";
-import { hasNodeNetworkException } from "./errors/NodeErrors.js";
-import { hasUpstreamError } from "./errors/UpstreamError.js";
+} from "../utils/PlayTransformUtils.ts";
+import { hasNodeNetworkException } from "./errors/NodeErrors.ts";
+import { hasUpstreamError } from "./errors/UpstreamError.ts";
 import {
     ConditionalSearchAndReplaceRegExp,
     PlayTransformParts, PlayTransformPartsArray,
     PlayTransformRules,
     TRANSFORM_HOOK,
     TransformHook
-} from "./infrastructure/Atomic.js";
-import { CommonClientConfig } from "./infrastructure/config/client/index.js";
-import { CommonSourceConfig } from "./infrastructure/config/source/index.js";
+} from "./infrastructure/Atomic.ts";
+import { CommonClientConfig } from "./infrastructure/config/client/index.ts";
+import { CommonSourceConfig } from "./infrastructure/config/source/index.ts";
 import play = Simulate.play;
-import { WebhookPayload } from "./infrastructure/config/health/webhooks.js";
-import { AuthCheckError, BuildDataError, ConnectionCheckError, PostInitError, TransformRulesError } from "./errors/MSErrors.js";
-import { messageWithCauses, messageWithCausesTruncatedDefault } from "../utils/ErrorUtils.js";
+import { WebhookPayload } from "./infrastructure/config/health/webhooks.ts";
+import { AuthCheckError, BuildDataError, ConnectionCheckError, PostInitError, TransformRulesError } from "./errors/MSErrors.ts";
+import { messageWithCauses, messageWithCausesTruncatedDefault } from "../utils/ErrorUtils.ts";
 
 export default abstract class AbstractComponent {
     requiresAuth: boolean = false;

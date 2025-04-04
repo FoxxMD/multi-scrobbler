@@ -1,4 +1,4 @@
-import { keyOmit } from "../Atomic.js";
+import { keyOmit } from "../Atomic.ts";
 
 export interface CommonConfig {
     name?: string

@@ -2,15 +2,15 @@ import { Logger } from "@foxxmd/logging";
 import dayjs from 'dayjs';
 import EventEmitter from "events";
 import { TrackScrobbleResponse, UserGetRecentTracksResponse } from "lastfm-node-client";
-import { PlayObject } from "../../core/Atomic.js";
-import { buildTrackString, capitalize } from "../../core/StringUtils.js";
-import { isNodeNetworkException } from "../common/errors/NodeErrors.js";
-import { UpstreamError } from "../common/errors/UpstreamError.js";
-import { FormatPlayObjectOptions } from "../common/infrastructure/Atomic.js";
-import { LastfmClientConfig } from "../common/infrastructure/config/client/lastfm.js";
-import LastfmApiClient from "../common/vendor/LastfmApiClient.js";
-import { Notifiers } from "../notifier/Notifiers.js";
-import AbstractScrobbleClient from "./AbstractScrobbleClient.js";
+import { PlayObject } from "../../core/Atomic.ts";
+import { buildTrackString, capitalize } from "../../core/StringUtils.ts";
+import { isNodeNetworkException } from "../common/errors/NodeErrors.ts";
+import { UpstreamError } from "../common/errors/UpstreamError.ts";
+import { FormatPlayObjectOptions } from "../common/infrastructure/Atomic.ts";
+import { LastfmClientConfig } from "../common/infrastructure/config/client/lastfm.ts";
+import LastfmApiClient from "../common/vendor/LastfmApiClient.ts";
+import { Notifiers } from "../notifier/Notifiers.ts";
+import AbstractScrobbleClient from "./AbstractScrobbleClient.ts";
 
 export default class LastfmScrobbler extends AbstractScrobbleClient {
 

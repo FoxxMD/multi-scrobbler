@@ -1,9 +1,9 @@
 import { ExpressWithAsync } from "@awaitjs/express";
 import { Logger } from "@foxxmd/logging";
 import passport from "passport";
-import DeezerSource from "../sources/DeezerSource.js";
-import ScrobbleSources from "../sources/ScrobbleSources.js";
-import { sleep } from "../utils.js";
+import DeezerSource from "../sources/DeezerSource.ts";
+import ScrobbleSources from "../sources/ScrobbleSources.ts";
+import { sleep } from "../utils.ts";
 
 export const setupDeezerRoutes = (app: ExpressWithAsync, logger: Logger, scrobbleSources: ScrobbleSources) => {
 

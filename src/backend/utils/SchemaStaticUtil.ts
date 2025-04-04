@@ -1,7 +1,7 @@
 import { writeFileSync } from "node:fs";
 import { resolve } from "path";
-import { projectDir } from "../common/index.js";
-import {getTypeSchemaFromConfigGenerator} from "./SchemaUtils.js";
+import { projectDir } from "../common/index.ts";
+import {getTypeSchemaFromConfigGenerator} from "./SchemaUtils.ts";
 
 const client = getTypeSchemaFromConfigGenerator('ClientConfig');
 writeFileSync(resolve(projectDir, 'src/backend/common/schema/client.json'), JSON.stringify(client));

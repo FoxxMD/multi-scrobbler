@@ -1,16 +1,16 @@
 import { Logger } from "@foxxmd/logging";
 import dayjs from 'dayjs';
 import EventEmitter from "events";
-import { PlayObject } from "../../core/Atomic.js";
-import { buildTrackString, capitalize } from "../../core/StringUtils.js";
-import { isNodeNetworkException } from "../common/errors/NodeErrors.js";
-import { UpstreamError } from "../common/errors/UpstreamError.js";
-import { FormatPlayObjectOptions } from "../common/infrastructure/Atomic.js";
-import { ListenBrainzClientConfig } from "../common/infrastructure/config/client/listenbrainz.js";
-import { ListenbrainzApiClient, ListenPayload } from "../common/vendor/ListenbrainzApiClient.js";
-import { Notifiers } from "../notifier/Notifiers.js";
+import { PlayObject } from "../../core/Atomic.ts";
+import { buildTrackString, capitalize } from "../../core/StringUtils.ts";
+import { isNodeNetworkException } from "../common/errors/NodeErrors.ts";
+import { UpstreamError } from "../common/errors/UpstreamError.ts";
+import { FormatPlayObjectOptions } from "../common/infrastructure/Atomic.ts";
+import { ListenBrainzClientConfig } from "../common/infrastructure/config/client/listenbrainz.ts";
+import { ListenbrainzApiClient, ListenPayload } from "../common/vendor/ListenbrainzApiClient.ts";
+import { Notifiers } from "../notifier/Notifiers.ts";
 
-import AbstractScrobbleClient from "./AbstractScrobbleClient.js";
+import AbstractScrobbleClient from "./AbstractScrobbleClient.ts";
 
 export default class ListenbrainzScrobbler extends AbstractScrobbleClient {
 

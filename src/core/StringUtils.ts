@@ -10,7 +10,7 @@ import {
     SCROBBLE_TS_SOC_START,
     ScrobbleTsSOC,
     TrackStringOptions
-} from "./Atomic.js";
+} from "./Atomic.ts";
 
 dayjs.extend(utc)
 dayjs.extend(isBetween);

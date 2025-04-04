@@ -11,16 +11,16 @@ import {
     TA_NONE,
     TemporalAccuracy,
     TemporalPlayComparison,
-} from "../../core/Atomic.js";
-import { capitalize } from "../../core/StringUtils.js";
+} from "../../core/Atomic.ts";
+import { capitalize } from "../../core/StringUtils.ts";
 import {
     DEFAULT_SCROBBLE_DURATION_THRESHOLD,
     DEFAULT_SCROBBLE_PERCENT_THRESHOLD,
     lowGranularitySources,
     ScrobbleThresholdResult,
-} from "../common/infrastructure/Atomic.js";
-import { ScrobbleThresholds } from "../common/infrastructure/config/source/index.js";
-import { formatNumber } from "../utils.js";
+} from "../common/infrastructure/Atomic.ts";
+import { ScrobbleThresholds } from "../common/infrastructure/config/source/index.ts";
+import { formatNumber } from "../utils.ts";
 
 dayjs.extend(isToday);
 

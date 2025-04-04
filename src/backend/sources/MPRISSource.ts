@@ -1,9 +1,9 @@
-import { Interfaces as Notifications } from '@dbus-types/notifications'
+import type { Interfaces as Notifications } from '@dbus-types/notifications'
 import dayjs from "dayjs";
 import { DBusInterface, sessionBus } from 'dbus-ts';
 import EventEmitter from "events";
-import { PlayObject } from "../../core/Atomic.js";
-import { FormatPlayObjectOptions, InternalConfig } from "../common/infrastructure/Atomic.js";
+import { PlayObject } from "../../core/Atomic.ts";
+import { FormatPlayObjectOptions, InternalConfig } from "../common/infrastructure/Atomic.ts";
 import {
     MPRIS_IFACE,
     MPRIS_PATH,
@@ -12,11 +12,11 @@ import {
     PLAYBACK_STATUS_STOPPED,
     PlaybackStatus,
     PlayerInfo,
-} from "../common/infrastructure/config/source/mpris.js";
-import { removeDuplicates } from "../utils.js";
-import { findCauseByMessage } from "../utils/ErrorUtils.js";
-import { RecentlyPlayedOptions } from "./AbstractSource.js";
-import MemorySource from "./MemorySource.js";
+} from "../common/infrastructure/config/source/mpris.ts";
+import { removeDuplicates } from "../utils.ts";
+import { findCauseByMessage } from "../utils/ErrorUtils.ts";
+import { RecentlyPlayedOptions } from "./AbstractSource.ts";
+import MemorySource from "./MemorySource.ts";
 
 
 export class MPRISSource extends MemorySource {

@@ -1,4 +1,4 @@
-import { CommonSourceConfig, CommonSourceData } from "./index.js";
+import { CommonSourceConfig, CommonSourceData } from "./index.ts";
 
 export interface ChromecastData extends CommonSourceData {
     /**

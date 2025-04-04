@@ -2,12 +2,12 @@ import { loggerTest, loggerDebug, childLogger } from "@foxxmd/logging";
 import chai, { assert, expect } from 'chai';
 import asPromised from 'chai-as-promised';
 import { after, before, describe, it } from 'mocha';
-import AbstractComponent from "../../common/AbstractComponent.js";
-import { TRANSFORM_HOOK } from "../../common/infrastructure/Atomic.js";
+import AbstractComponent from "../../common/AbstractComponent.ts";
+import { TRANSFORM_HOOK } from "../../common/infrastructure/Atomic.ts";
 
-import { isConditionalSearchAndReplace } from "../../utils/PlayTransformUtils.js";
-import { asPlays, generatePlay, normalizePlays } from "../utils/PlayTestUtils.js";
-import { WebhookPayload } from "../../common/infrastructure/config/health/webhooks.js";
+import { isConditionalSearchAndReplace } from "../../utils/PlayTransformUtils.ts";
+import { asPlays, generatePlay, normalizePlays } from "../utils/PlayTestUtils.ts";
+import { WebhookPayload } from "../../common/infrastructure/config/health/webhooks.ts";
 
 chai.use(asPromised);
 

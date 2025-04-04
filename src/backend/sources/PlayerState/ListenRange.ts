@@ -1,7 +1,7 @@
 import dayjs, { Dayjs } from "dayjs";
-import { ListenRangeData, Millisecond, PlayProgress, PlayProgressPositional, Second } from "../../../core/Atomic.js";
-import { ListenProgress, ListenProgressPositional,  ListenProgressTS } from "./ListenProgress.js";
-import { GenericRealtimePlayer, RealtimePlayer } from "./RealtimePlayer.js";
+import { ListenRangeData, Millisecond, PlayProgress, PlayProgressPositional, Second } from "../../../core/Atomic.ts";
+import { ListenProgress, ListenProgressPositional,  ListenProgressTS } from "./ListenProgress.ts";
+import { GenericRealtimePlayer, RealtimePlayer } from "./RealtimePlayer.ts";
 
 export abstract class ListenRange {
     public start: ListenProgress;

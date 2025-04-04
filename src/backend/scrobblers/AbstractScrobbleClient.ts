@@ -12,10 +12,10 @@ import {
     TA_CLOSE,
     TA_FUZZY,
     TrackStringOptions,
-} from "../../core/Atomic.js";
-import { buildTrackString, capitalize, truncateStringToLength } from "../../core/StringUtils.js";
-import AbstractComponent from "../common/AbstractComponent.js";
-import { UpstreamError } from "../common/errors/UpstreamError.js";
+} from "../../core/Atomic.ts";
+import { buildTrackString, capitalize, truncateStringToLength } from "../../core/StringUtils.ts";
+import AbstractComponent from "../common/AbstractComponent.ts";
+import { UpstreamError } from "../common/errors/UpstreamError.ts";
 import {
     ARTIST_WEIGHT,
     Authenticatable,
@@ -26,9 +26,9 @@ import {
     ScrobbledPlayObject,
     TIME_WEIGHT,
     TITLE_WEIGHT, TRANSFORM_HOOK,
-} from "../common/infrastructure/Atomic.js";
-import { CommonClientConfig, UpstreamRefreshOptions } from "../common/infrastructure/config/client/index.js";
-import { Notifiers } from "../notifier/Notifiers.js";
+} from "../common/infrastructure/Atomic.ts";
+import { CommonClientConfig, UpstreamRefreshOptions } from "../common/infrastructure/config/client/index.ts";
+import { Notifiers } from "../notifier/Notifiers.ts";
 import {
     comparingMultipleArtists,
     isDebugMode,
@@ -37,16 +37,16 @@ import {
     setIntersection,
     sleep,
     sortByOldestPlayDate,
-} from "../utils.js";
-import { messageWithCauses, messageWithCausesTruncatedDefault } from "../utils/ErrorUtils.js";
-import { compareScrobbleArtists, compareScrobbleTracks, normalizeStr } from "../utils/StringUtils.js";
+} from "../utils.ts";
+import { messageWithCauses, messageWithCausesTruncatedDefault } from "../utils/ErrorUtils.ts";
+import { compareScrobbleArtists, compareScrobbleTracks, normalizeStr } from "../utils/StringUtils.ts";
 import {
     comparePlayTemporally,
     temporalAccuracyIsAtLeast,
     temporalAccuracyToString,
     temporalPlayComparisonSummary,
-} from "../utils/TimeUtils.js";
-import { WebhookPayload } from "../common/infrastructure/config/health/webhooks.js";
+} from "../utils/TimeUtils.ts";
+import { WebhookPayload } from "../common/infrastructure/config/health/webhooks.ts";
 
 export default abstract class AbstractScrobbleClient extends AbstractComponent implements Authenticatable {
 

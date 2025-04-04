@@ -2,9 +2,9 @@ import { childLogger, LogDataPretty } from '@foxxmd/logging';
 import dayjs, { Dayjs } from "dayjs";
 import { EventEmitter } from "events";
 import { FixedSizeList } from "fixed-size-list";
-import { PlayObject, TA_CLOSE } from "../../core/Atomic.js";
-import { buildTrackString, capitalize, truncateStringToLength } from "../../core/StringUtils.js";
-import AbstractComponent from "../common/AbstractComponent.js";
+import { PlayObject, TA_CLOSE } from "../../core/Atomic.ts";
+import { buildTrackString, capitalize, truncateStringToLength } from "../../core/StringUtils.ts";
+import AbstractComponent from "../common/AbstractComponent.ts";
 import {
     Authenticatable,
     DEFAULT_POLLING_INTERVAL,
@@ -19,9 +19,9 @@ import {
     ProgressAwarePlayObject,
     SINGLE_USER_PLATFORM_ID,
     SourceType, TRANSFORM_HOOK,
-} from "../common/infrastructure/Atomic.js";
-import { SourceConfig } from "../common/infrastructure/config/source/sources.js";
-import TupleMap from "../common/TupleMap.js";
+} from "../common/infrastructure/Atomic.ts";
+import { SourceConfig } from "../common/infrastructure/config/source/sources.ts";
+import TupleMap from "../common/TupleMap.ts";
 import {
     difference,
     formatNumber,
@@ -32,12 +32,12 @@ import {
     sleep,
     sortByNewestPlayDate,
     sortByOldestPlayDate,
-} from "../utils.js";
-import { comparePlayTemporally, temporalAccuracyIsAtLeast, timeToHumanTimestamp, todayAwareFormat } from "../utils/TimeUtils.js";
-import { getRoot } from '../ioc.js';
-import { componentFileLogger } from '../common/logging.js';
-import { WebhookPayload } from '../common/infrastructure/config/health/webhooks.js';
-import { messageWithCauses, messageWithCausesTruncatedDefault } from '../utils/ErrorUtils.js';
+} from "../utils.ts";
+import { comparePlayTemporally, temporalAccuracyIsAtLeast, timeToHumanTimestamp, todayAwareFormat } from "../utils/TimeUtils.ts";
+import { getRoot } from '../ioc.ts';
+import { componentFileLogger } from '../common/logging.ts';
+import { WebhookPayload } from '../common/infrastructure/config/health/webhooks.ts';
+import { messageWithCauses, messageWithCausesTruncatedDefault } from '../utils/ErrorUtils.ts';
 
 export interface RecentlyPlayedOptions {
     limit?: number

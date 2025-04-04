@@ -2,10 +2,10 @@
 import { ExpressWithAsync } from "@awaitjs/express";
 import { childLogger, Logger } from "@foxxmd/logging";
 import bodyParser from "body-parser";
-import { EndpointListenbrainzSource, playStateFromRequest, parseDisplayIdentifiersFromRequest } from "../sources/EndpointListenbrainzSource.js";
-import { LZEndpointNotifier } from "../sources/ingressNotifiers/LZEndpointNotifier.js";
-import ScrobbleSources from "../sources/ScrobbleSources.js";
-import { nonEmptyBody } from "./middleware.js";
+import { EndpointListenbrainzSource, playStateFromRequest, parseDisplayIdentifiersFromRequest } from "../sources/EndpointListenbrainzSource.ts";
+import { LZEndpointNotifier } from "../sources/ingressNotifiers/LZEndpointNotifier.ts";
+import ScrobbleSources from "../sources/ScrobbleSources.ts";
+import { nonEmptyBody } from "./middleware.ts";
 
 export const setupLZEndpointRoutes = (app: ExpressWithAsync, parentLogger: Logger, scrobbleSources: ScrobbleSources) => {
 

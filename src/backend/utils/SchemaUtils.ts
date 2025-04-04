@@ -1,5 +1,5 @@
 import { resolve } from "path";
-import { projectDir } from "../common/index.js";
+import { projectDir } from "../common/index.ts";
 import {
     Definition as TSJDefinition,
     createFormatter,

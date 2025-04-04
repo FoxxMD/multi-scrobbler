@@ -1,15 +1,15 @@
-import { MemoryPositionalSource } from "./MemoryPositionalSource.js";
-import { RecentlyPlayedOptions } from "./AbstractSource.js";
+import { MemoryPositionalSource } from "./MemoryPositionalSource.ts";
+import { RecentlyPlayedOptions } from "./AbstractSource.ts";
 import { EventEmitter } from "events";
-import { PlayObject, URLData } from "../../core/Atomic.js";
+import { PlayObject, URLData } from "../../core/Atomic.ts";
 import {
     FormatPlayObjectOptions,
     InternalConfig,
     PlayerStateData,
     SINGLE_USER_PLATFORM_ID,
-} from "../common/infrastructure/Atomic.js";
-import { isPortReachable, isPortReachableConnect, joinedUrl, normalizeWebAddress } from "../utils/NetworkUtils.js";
-import { DeviceInfoResponse, DeviceStatusResponse, MusicCastResponseCodes, MusicCastSourceConfig, playbackToReportedStatus, PlayInfoCDResponse, PlayInfoNetResponse } from "../common/infrastructure/config/source/musiccast.js";
+} from "../common/infrastructure/Atomic.ts";
+import { isPortReachable, isPortReachableConnect, joinedUrl, normalizeWebAddress } from "../utils/NetworkUtils.ts";
+import { DeviceInfoResponse, DeviceStatusResponse, MusicCastResponseCodes, MusicCastSourceConfig, playbackToReportedStatus, PlayInfoCDResponse, PlayInfoNetResponse } from "../common/infrastructure/config/source/musiccast.ts";
 import request, { Request, Response } from 'superagent';
 
 

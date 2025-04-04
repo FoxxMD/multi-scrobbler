@@ -1,6 +1,6 @@
 import { getListDiff, ListDiff } from "@donedeal0/superdiff";
-import { PlayObject } from "../../core/Atomic.js";
-import { buildTrackString } from "../../core/StringUtils.js";
+import { PlayObject } from "../../core/Atomic.ts";
+import { buildTrackString } from "../../core/StringUtils.ts";
 
 
 export const metaInvariantTransform = (play: PlayObject): PlayObject => {

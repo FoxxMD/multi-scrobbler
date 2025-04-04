@@ -1,12 +1,12 @@
 import dayjs, { Dayjs } from "dayjs";
 import EventEmitter from "events";
-import { PlayObject } from "../../core/Atomic.js";
-import { FormatPlayObjectOptions, InternalConfig } from "../common/infrastructure/Atomic.js";
-import { YTMusicSourceConfig } from "../common/infrastructure/config/source/ytmusic.js";
+import { PlayObject } from "../../core/Atomic.ts";
+import { FormatPlayObjectOptions, InternalConfig } from "../common/infrastructure/Atomic.ts";
+import { YTMusicSourceConfig } from "../common/infrastructure/config/source/ytmusic.ts";
 import { Innertube, UniversalCache, Parser, YTNodes, ApiResponse, IBrowseResponse, Log, SessionOptions } from 'youtubei.js';
 import { GenerateAuthUrlOpts, OAuth2Client } from 'google-auth-library';
 import {resolve} from 'path';
-import { formatNumber, isDebugMode, parseBool, sleep } from "../utils.js";
+import { formatNumber, isDebugMode, parseBool, sleep } from "../utils.ts";
 import {
     getPlaysDiff,
     humanReadableDiff,
@@ -15,14 +15,13 @@ import {
     playsAreAddedOnly,
     playsAreBumpedOnly,
     playsAreSortConsistent
-} from "../utils/PlayComparisonUtils.js";
-import AbstractSource, { RecentlyPlayedOptions } from "./AbstractSource.js";
-import { buildTrackString, truncateStringToLength } from "../../core/StringUtils.js";
-import { joinedUrl } from "../utils/NetworkUtils.js";
+} from "../utils/PlayComparisonUtils.ts";
+import AbstractSource, { RecentlyPlayedOptions } from "./AbstractSource.ts";
+import { buildTrackString, truncateStringToLength } from "../../core/StringUtils.ts";
+import { joinedUrl } from "../utils/NetworkUtils.ts";
 import { FixedSizeList } from "fixed-size-list";
-import { todayAwareFormat } from "../utils/TimeUtils.js";
-import { RestType } from "ts-json-schema-generator";
-import { parseArtistCredits, parseCredits } from "../utils/StringUtils.js";
+import { todayAwareFormat } from "../utils/TimeUtils.ts";
+import { parseArtistCredits, parseCredits } from "../utils/StringUtils.ts";
 
 export interface HistoryIngressResult {
     plays: PlayObject[], 

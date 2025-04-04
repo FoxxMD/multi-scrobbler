@@ -5,9 +5,9 @@ import { Client as CastClient } from 'castv2';
 import dayjs from "dayjs";
 import { EventEmitter } from "events";
 import e from "express";
-import { PlayObject } from "../../core/Atomic.js";
-import { buildTrackString } from "../../core/StringUtils.js";
-import { NETWORK_ERROR_FAILURE_CODES } from "../common/errors/NodeErrors.js";
+import { PlayObject } from "../../core/Atomic.ts";
+import { buildTrackString } from "../../core/StringUtils.ts";
+import { NETWORK_ERROR_FAILURE_CODES } from "../common/errors/NodeErrors.ts";
 import {
     FormatPlayObjectOptions,
     InternalConfig,
@@ -15,26 +15,26 @@ import {
     NO_USER,
     PlayerStateData,
     SourceData,
-} from "../common/infrastructure/Atomic.js";
-import { ChromecastSourceConfig } from "../common/infrastructure/config/source/chromecast.js";
-import { MaybeLogger } from "../common/logging.js";
+} from "../common/infrastructure/Atomic.ts";
+import { ChromecastSourceConfig } from "../common/infrastructure/config/source/chromecast.ts";
+import { MaybeLogger } from "../common/logging.ts";
 import {
     chromePlayerStateToReported,
     genDeviceId,
     genPlayHash,
     getCurrentPlatformApplications,
     getMediaStatus,
-} from "../common/vendor/chromecast/ChromecastClientUtils.js";
+} from "../common/vendor/chromecast/ChromecastClientUtils.ts";
 import {
     PlatformApplication,
     PlatformApplicationWithContext,
     PlatformType
-} from "../common/vendor/chromecast/interfaces.js";
-import { difference, genGroupIdStr, isDebugMode, parseBool } from "../utils.js";
-import { findCauseByReference } from "../utils/ErrorUtils.js";
-import { discoveryAvahi, discoveryNative } from "../utils/MDNSUtils.js";
-import { RecentlyPlayedOptions } from "./AbstractSource.js";
-import { MemoryPositionalSource } from "./MemoryPositionalSource.js";
+} from "../common/vendor/chromecast/interfaces.ts";
+import { difference, genGroupIdStr, isDebugMode, parseBool } from "../utils.ts";
+import { findCauseByReference } from "../utils/ErrorUtils.ts";
+import { discoveryAvahi, discoveryNative } from "../utils/MDNSUtils.ts";
+import { RecentlyPlayedOptions } from "./AbstractSource.ts";
+import { MemoryPositionalSource } from "./MemoryPositionalSource.ts";
 
 interface ChromecastDeviceInfo {
     mdns: MdnsDeviceInfo

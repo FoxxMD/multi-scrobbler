@@ -1,6 +1,6 @@
 import dayjs from "dayjs";
 import EventEmitter from "events";
-import { PlayObject, SOURCE_SOT } from "../../core/Atomic.js";
+import { PlayObject, SOURCE_SOT } from "../../core/Atomic.ts";
 import {
     ExpressRequest,
     FormatPlayObjectOptions,
@@ -9,12 +9,12 @@ import {
     PlayerStateData,
     REPORTED_PLAYER_STATUSES,
     ReportedPlayerStatus
-} from "../common/infrastructure/Atomic.js";
-import { parseRegexSingleOrFail } from "../utils.js";
-import MemorySource from "./MemorySource.js";
-import { LastFMEndpointSourceConfig } from "../common/infrastructure/config/source/endpointlfm.js";
+} from "../common/infrastructure/Atomic.ts";
+import { parseRegexSingleOrFail } from "../utils.ts";
+import MemorySource from "./MemorySource.ts";
+import { LastFMEndpointSourceConfig } from "../common/infrastructure/config/source/endpointlfm.ts";
 import { LastfmTrackUpdateRequest, NowPlayingPayload, TrackScrobblePayload } from "lastfm-node-client";
-import { scrobblePayloadToPlay } from "../common/vendor/LastfmApiClient.js";
+import { scrobblePayloadToPlay } from "../common/vendor/LastfmApiClient.ts";
 
 const noSlugMatch = new RegExp(/(?:\/api\/lastfm\/?)$|(?:\/1\/?|\/2.0\/?)$/i);
 const slugMatch = new RegExp(/\/api\/lastfm\/([^\/]+)$/i);

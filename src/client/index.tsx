@@ -3,8 +3,8 @@ import ReactDOM from 'react-dom/client';
 import './index.css';
 import App from './App';
 import dayjs from 'dayjs';
-import utc from 'dayjs/plugin/utc.js';
-import relativeTime from 'dayjs/plugin/relativeTime.js';
+import utc from 'dayjs/plugin/utc.ts';
+import relativeTime from 'dayjs/plugin/relativeTime.ts';
 dayjs.extend(utc)
 dayjs.extend(relativeTime);
 

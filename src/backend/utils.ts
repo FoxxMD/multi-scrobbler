@@ -9,7 +9,7 @@ import JSON5 from 'json5';
 // https://github.com/jfromaniello/url-join#in-nodejs
 import pathUtil from "path";
 import { TimeoutError, WebapiError } from "spotify-web-api-node/src/response-error.js";
-import { PlayObject } from "../core/Atomic.js";
+import { PlayObject } from "../core/Atomic.ts";
 import {
     asPlayerStateDataMaybePlay,
     NO_DEVICE,
@@ -21,7 +21,7 @@ import {
     RegExResult,
     RemoteIdentityParts,
     ScrobbleThresholdResult,
-} from "./common/infrastructure/Atomic.js";
+} from "./common/infrastructure/Atomic.ts";
 
 //const { default: Ajv } = AjvNS;
 dayjs.extend(utc);

@@ -2,9 +2,9 @@ import { loggerTest } from "@foxxmd/logging";
 import { assert } from 'chai';
 import clone from "clone";
 import { describe, it } from 'mocha';
-import { playsAreAddedOnly, playsAreBumpedOnly, playsAreSortConsistent } from "../../utils/PlayComparisonUtils.js";
-import { generatePlay, generatePlays } from "./PlayTestUtils.js";
-import { PlayObject } from "../../../core/Atomic.js";
+import { playsAreAddedOnly, playsAreBumpedOnly, playsAreSortConsistent } from "../../utils/PlayComparisonUtils.ts";
+import { generatePlay, generatePlays } from "./PlayTestUtils.ts";
+import { PlayObject } from "../../../core/Atomic.ts";
 
 const logger = loggerTest;
 

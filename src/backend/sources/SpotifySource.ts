@@ -2,10 +2,10 @@ import dayjs, { Dayjs } from "dayjs";
 import EventEmitter from "events";
 import SpotifyWebApi from "spotify-web-api-node";
 import request from 'superagent';
-import { PlayObject, SCROBBLE_TS_SOC_END, SCROBBLE_TS_SOC_START, ScrobbleTsSOC } from "../../core/Atomic.js";
-import { combinePartsToString, truncateStringToLength } from "../../core/StringUtils.js";
-import { isNodeNetworkException } from "../common/errors/NodeErrors.js";
-import { hasUpstreamError, UpstreamError } from "../common/errors/UpstreamError.js";
+import { PlayObject, SCROBBLE_TS_SOC_END, SCROBBLE_TS_SOC_START, ScrobbleTsSOC } from "../../core/Atomic.ts";
+import { combinePartsToString, truncateStringToLength } from "../../core/StringUtils.ts";
+import { isNodeNetworkException } from "../common/errors/NodeErrors.ts";
+import { hasUpstreamError, UpstreamError } from "../common/errors/UpstreamError.ts";
 import {
     DEFAULT_POLLING_INTERVAL,
     FormatPlayObjectOptions,
@@ -15,25 +15,25 @@ import {
     PlayerStateData,
     ReportedPlayerStatus,
     SourceData,
-} from "../common/infrastructure/Atomic.js";
-import { SpotifySourceConfig } from "../common/infrastructure/config/source/spotify.js";
+} from "../common/infrastructure/Atomic.ts";
+import { SpotifySourceConfig } from "../common/infrastructure/config/source/spotify.ts";
 import {
     parseRetryAfterSecsFromObj,
     readJson,
     sleep,
     sortByOldestPlayDate,
     writeFile,
-} from "../utils.js";
-import { findCauseByFunc } from "../utils/ErrorUtils.js";
-import { joinedUrl } from "../utils/NetworkUtils.js";
-import { RecentlyPlayedOptions } from "./AbstractSource.js";
+} from "../utils.ts";
+import { findCauseByFunc } from "../utils/ErrorUtils.ts";
+import { joinedUrl } from "../utils/NetworkUtils.ts";
+import { RecentlyPlayedOptions } from "./AbstractSource.ts";
 import AlbumObjectSimplified = SpotifyApi.AlbumObjectSimplified;
 import ArtistObjectSimplified = SpotifyApi.ArtistObjectSimplified;
 import CurrentlyPlayingObject = SpotifyApi.CurrentlyPlayingObject;
 import PlayHistoryObject = SpotifyApi.PlayHistoryObject;
 import TrackObjectFull = SpotifyApi.TrackObjectFull;
 import UserDevice = SpotifyApi.UserDevice;
-import { MemoryPositionalSource } from "./MemoryPositionalSource.js";
+import { MemoryPositionalSource } from "./MemoryPositionalSource.ts";
 
 const scopes = ['user-read-recently-played', 'user-read-currently-playing', 'user-read-playback-state', 'user-read-playback-position'];
 const state = 'random';

@@ -8,17 +8,17 @@ import LastFm, {
     TrackScrobblePayload,
     UserGetInfoResponse
 } from "lastfm-node-client";
-import { PlayObject } from "../../../core/Atomic.js";
-import { nonEmptyStringOrDefault, splitByFirstFound } from "../../../core/StringUtils.js";
-import { readJson, removeUndefinedKeys, sleep, writeFile } from "../../utils.js";
-import { joinedUrl } from "../../utils/NetworkUtils.js";
-import { getScrobbleTsSOCDate } from "../../utils/TimeUtils.js";
-import { getNodeNetworkException, isNodeNetworkException } from "../errors/NodeErrors.js";
-import { UpstreamError } from "../errors/UpstreamError.js";
-import { AbstractApiOptions, DEFAULT_RETRY_MULTIPLIER, FormatPlayObjectOptions } from "../infrastructure/Atomic.js";
-import { LastfmData } from "../infrastructure/config/client/lastfm.js";
-import AbstractApiClient from "./AbstractApiClient.js";
-import { parseArtistCredits } from "../../utils/StringUtils.js";
+import { PlayObject } from "../../../core/Atomic.ts";
+import { nonEmptyStringOrDefault, splitByFirstFound } from "../../../core/StringUtils.ts";
+import { readJson, removeUndefinedKeys, sleep, writeFile } from "../../utils.ts";
+import { joinedUrl } from "../../utils/NetworkUtils.ts";
+import { getScrobbleTsSOCDate } from "../../utils/TimeUtils.ts";
+import { getNodeNetworkException, isNodeNetworkException } from "../errors/NodeErrors.ts";
+import { UpstreamError } from "../errors/UpstreamError.ts";
+import { AbstractApiOptions, DEFAULT_RETRY_MULTIPLIER, FormatPlayObjectOptions } from "../infrastructure/Atomic.ts";
+import { LastfmData } from "../infrastructure/config/client/lastfm.ts";
+import AbstractApiClient from "./AbstractApiClient.ts";
+import { parseArtistCredits } from "../../utils/StringUtils.ts";
 
 const badErrors = [
     'api key suspended',

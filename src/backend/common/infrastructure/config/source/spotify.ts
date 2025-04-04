@@ -1,5 +1,5 @@
-import { PollingOptions } from "../common.js";
-import { CommonSourceConfig, CommonSourceData } from "./index.js";
+import { PollingOptions } from "../common.ts";
+import { CommonSourceConfig, CommonSourceData } from "./index.ts";
 
 export interface SpotifySourceData extends CommonSourceData, PollingOptions {
     /**

@@ -1,7 +1,7 @@
 import objectHash from 'object-hash';
 import EventEmitter from "events";
-import { PlayObject } from "../../core/Atomic.js";
-import { buildTrackString, combinePartsToString, truncateStringToLength } from "../../core/StringUtils.js";
+import { PlayObject } from "../../core/Atomic.ts";
+import { buildTrackString, combinePartsToString, truncateStringToLength } from "../../core/StringUtils.ts";
 import {
     asPlayerStateDataMaybePlay,
     FormatPlayObjectOptions,
@@ -10,24 +10,24 @@ import {
     PlayerStateData,
     PlayerStateDataMaybePlay,
     PlayPlatformId, REPORTED_PLAYER_STATUSES
-} from "../common/infrastructure/Atomic.js";
-import { genGroupIdStr, getFirstNonEmptyString, getPlatformIdFromData, isDebugMode, parseBool, } from "../utils.js";
-import { buildStatePlayerPlayIdententifyingInfo, parseArrayFromMaybeString } from "../utils/StringUtils.js";
+} from "../common/infrastructure/Atomic.ts";
+import { genGroupIdStr, getFirstNonEmptyString, getPlatformIdFromData, isDebugMode, parseBool, } from "../utils.ts";
+import { buildStatePlayerPlayIdententifyingInfo, parseArrayFromMaybeString } from "../utils/StringUtils.ts";
 import { GetSessionsMetadata } from "@lukehagar/plexjs/sdk/models/operations/getsessions.js";
 import { PlexAPI } from "@lukehagar/plexjs";
-import {
-    SDKValidationError,
-  } from "@lukehagar/plexjs/sdk/models/errors";
-import { PlexApiSourceConfig } from "../common/infrastructure/config/source/plex.js";
-import { isPortReachable, joinedUrl } from '../utils/NetworkUtils.js';
+// import {
+//     SDKValidationError,
+//   } from "@lukehagar/plexjs/src/sdk/models/errors/index.ts";
+import { PlexApiSourceConfig } from "../common/infrastructure/config/source/plex.ts";
+import { isPortReachable, joinedUrl } from '../utils/NetworkUtils.ts';
 import normalizeUrl from 'normalize-url';
 import { GetTokenDetailsResponse, GetTokenDetailsUserPlexAccount } from '@lukehagar/plexjs/sdk/models/operations/gettokendetails.js';
 import { parseRegexSingle } from '@foxxmd/regex-buddy-core';
 import { Readable } from 'node:stream';
-import { PlexPlayerState } from './PlayerState/PlexPlayerState.js';
-import { AbstractPlayerState, PlayerStateOptions } from './PlayerState/AbstractPlayerState.js';
+import { PlexPlayerState } from './PlayerState/PlexPlayerState.ts';
+import { AbstractPlayerState, PlayerStateOptions } from './PlayerState/AbstractPlayerState.ts';
 import { Logger } from '@foxxmd/logging';
-import { MemoryPositionalSource } from './MemoryPositionalSource.js';
+import { MemoryPositionalSource } from './MemoryPositionalSource.ts';
 import { FixedSizeList } from 'fixed-size-list';
 
 const shortDeviceId = truncateStringToLength(10, '');
@@ -35,6 +35,8 @@ const shortDeviceId = truncateStringToLength(10, '');
 export const LOCAL_USER = 'PLEX_LOCAL_USER';
 
 const THUMB_REGEX = new RegExp(/\/library\/metadata\/(?<ratingkey>\d+)\/thumb\/\d+/)
+
+// class SDKValidationError = any;
 
 export default class PlexApiSource extends MemoryPositionalSource {
     users: string[] = [];
@@ -153,7 +155,7 @@ export default class PlexApiSource extends MemoryPositionalSource {
             const tokenDetails = await this.plexApi.authentication.getTokenDetails();
             userPlexAccount = tokenDetails.userPlexAccount;
             } catch (e) {
-                if(e instanceof SDKValidationError && 'UserPlexAccount' in (e.rawValue as object)) {
+                if('UserPlexAccount' in (e.rawValue as object)) {
                     userPlexAccount = (e.rawValue as {UserPlexAccount: GetTokenDetailsUserPlexAccount}).UserPlexAccount as GetTokenDetailsUserPlexAccount;
                 } else {
                     throw new Error('Could not parse Plex Account details to determine authenticated username', {cause: e});

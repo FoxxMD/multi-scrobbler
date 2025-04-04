@@ -6,11 +6,11 @@ import {
     NtfyConfig,
     WebhookConfig,
     WebhookPayload
-} from "../common/infrastructure/config/health/webhooks.js";
-import { AbstractWebhookNotifier } from "./AbstractWebhookNotifier.js";
-import { AppriseWebhookNotifier } from "./AppriseWebhookNotifier.js";
-import { GotifyWebhookNotifier } from "./GotifyWebhookNotifier.js";
-import { NtfyWebhookNotifier } from "./NtfyWebhookNotifier.js";
+} from "../common/infrastructure/config/health/webhooks.ts";
+import { AbstractWebhookNotifier } from "./AbstractWebhookNotifier.ts";
+import { AppriseWebhookNotifier } from "./AppriseWebhookNotifier.ts";
+import { GotifyWebhookNotifier } from "./GotifyWebhookNotifier.ts";
+import { NtfyWebhookNotifier } from "./NtfyWebhookNotifier.ts";
 
 export class Notifiers {
 

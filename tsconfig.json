@@ -17,6 +17,7 @@
     "noEmit": true,
     "jsx": "react-jsx",
     "sourceMap": false,
+    "allowImportingTsExtensions": true
   },
   "include": [
     "src"

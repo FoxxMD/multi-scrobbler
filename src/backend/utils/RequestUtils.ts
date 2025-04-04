@@ -1,5 +1,5 @@
 import { Files, File } from "formidable";
-import VolatileFile from "formidable/VolatileFile.js";
+import type VolatileFile from "formidable/VolatileFile.ts";
 
 // typings from Formidable are all nuts.
 // VolatileFile is missing buffer and also does not extend File even though it should

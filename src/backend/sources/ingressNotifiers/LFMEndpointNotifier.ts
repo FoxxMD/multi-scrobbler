@@ -1,7 +1,7 @@
 import { Logger } from "@foxxmd/logging";
 import { Request } from "express";
-import { parseIdentifiersFromRequest } from "../EndpointLastfmSource.js";
-import { IngressNotifier } from "./IngressNotifier.js";
+import { parseIdentifiersFromRequest } from "../EndpointLastfmSource.ts";
+import { IngressNotifier } from "./IngressNotifier.ts";
 import { LastfmTrackUpdateRequest } from "lastfm-node-client";
 
 export class LFMEndpointNotifier extends IngressNotifier {

@@ -1,7 +1,7 @@
 import { childLogger, Logger } from "@foxxmd/logging";
 import dayjs, { Dayjs } from "dayjs";
-import { PlayObject, PlayProgress, Second, SOURCE_SOT, SOURCE_SOT_TYPES, SourcePlayerObj } from "../../../core/Atomic.js";
-import { buildTrackString } from "../../../core/StringUtils.js";
+import { PlayObject, PlayProgress, Second, SOURCE_SOT, SOURCE_SOT_TYPES, SourcePlayerObj } from "../../../core/Atomic.ts";
+import { buildTrackString } from "../../../core/StringUtils.ts";
 import {
     asPlayerStateData,
     CALCULATED_PLAYER_STATUSES,
@@ -11,12 +11,12 @@ import {
     PlayPlatformId,
     REPORTED_PLAYER_STATUSES,
     ReportedPlayerStatus,
-} from "../../common/infrastructure/Atomic.js";
-import { PollingOptions } from "../../common/infrastructure/config/common.js";
-import { formatNumber, genGroupIdStr, playObjDataMatch, progressBar } from "../../utils.js";
-import { ListenProgress } from "./ListenProgress.js";
-import { ListenRange, ListenRangePositional } from "./ListenRange.js";
-import { timeToHumanTimestamp, todayAwareFormat } from "../../utils/TimeUtils.js";
+} from "../../common/infrastructure/Atomic.ts";
+import { PollingOptions } from "../../common/infrastructure/config/common.ts";
+import { formatNumber, genGroupIdStr, playObjDataMatch, progressBar } from "../../utils.ts";
+import { ListenProgress } from "./ListenProgress.ts";
+import { ListenRange, ListenRangePositional } from "./ListenRange.ts";
+import { timeToHumanTimestamp, todayAwareFormat } from "../../utils/TimeUtils.ts";
 
 export interface PlayerStateIntervals {
     staleInterval?: number

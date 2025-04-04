@@ -3,8 +3,8 @@ import dayjs, { Dayjs } from "dayjs";
 import { EventEmitter } from "events";
 import objectHash from 'object-hash';
 import { SimpleIntervalJob, Task, ToadScheduler } from "toad-scheduler";
-import { PlayObject, SOURCE_SOT, SOURCE_SOT_TYPES, SourcePlayerObj } from "../../core/Atomic.js";
-import { buildTrackString } from "../../core/StringUtils.js";
+import { PlayObject, SOURCE_SOT, SOURCE_SOT_TYPES, SourcePlayerObj } from "../../core/Atomic.ts";
+import { buildTrackString } from "../../core/StringUtils.ts";
 import {
     asPlayerStateData,
     asPlayerStateDataMaybePlay,
@@ -15,9 +15,9 @@ import {
     PlayPlatformId,
     ProgressAwarePlayObject,
     SourceType,
-} from "../common/infrastructure/Atomic.js";
-import { PollingOptions } from "../common/infrastructure/config/common.js";
-import { SourceConfig } from "../common/infrastructure/config/source/sources.js";
+} from "../common/infrastructure/Atomic.ts";
+import { PollingOptions } from "../common/infrastructure/config/common.ts";
+import { SourceConfig } from "../common/infrastructure/config/source/sources.ts";
 import {
     formatNumber,
     genGroupId,
@@ -26,11 +26,11 @@ import {
     isDebugMode,
     playObjDataMatch,
     thresholdResultSummary,
-} from "../utils.js";
-import { timePassesScrobbleThreshold, timeToHumanTimestamp } from "../utils/TimeUtils.js";
-import AbstractSource from "./AbstractSource.js";
-import { AbstractPlayerState, createPlayerOptions, PlayerStateOptions } from "./PlayerState/AbstractPlayerState.js";
-import { GenericPlayerState } from "./PlayerState/GenericPlayerState.js";
+} from "../utils.ts";
+import { timePassesScrobbleThreshold, timeToHumanTimestamp } from "../utils/TimeUtils.ts";
+import AbstractSource from "./AbstractSource.ts";
+import { AbstractPlayerState, createPlayerOptions, PlayerStateOptions } from "./PlayerState/AbstractPlayerState.ts";
+import { GenericPlayerState } from "./PlayerState/GenericPlayerState.ts";
 
 const EXPECTED_NON_DISCOVERED_REASON = 'not added because an identical play with the same timestamp was already discovered.';
 

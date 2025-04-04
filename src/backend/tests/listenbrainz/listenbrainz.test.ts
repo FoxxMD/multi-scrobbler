@@ -3,12 +3,12 @@ import { assert } from 'chai';
 import dayjs from "dayjs";
 import { describe, it } from 'mocha';
 import { http, HttpResponse } from "msw";
-import { PlayObject } from "../../../core/Atomic.js";
-import { UpstreamError } from "../../common/errors/UpstreamError.js";
+import { PlayObject } from "../../../core/Atomic.ts";
+import { UpstreamError } from "../../common/errors/UpstreamError.ts";
 
-import { ListenbrainzApiClient, ListenResponse } from "../../common/vendor/ListenbrainzApiClient.js";
-import { ExpectedResults } from "../utils/interfaces.js";
-import { withRequestInterception } from "../utils/networking.js";
+import { ListenbrainzApiClient, ListenResponse } from "../../common/vendor/ListenbrainzApiClient.ts";
+import { ExpectedResults } from "../utils/interfaces.ts";
+import { withRequestInterception } from "../utils/networking.ts";
 import artistWithProperJoiner from './correctlyMapped/artistProperHasJoinerInName.json';
 // correct mappings
 import multiArtistInArtistName from './correctlyMapped/multiArtistInArtistName.json';
