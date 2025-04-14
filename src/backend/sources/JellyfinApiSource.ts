@@ -61,6 +61,8 @@ import { joinedUrl } from "../utils/NetworkUtils.js";
 import { parseArrayFromMaybeString } from "../utils/StringUtils.js";
 import { MemoryPositionalSource } from "./MemoryPositionalSource.js";
 import { FixedSizeList } from "fixed-size-list";
+import axios from 'axios';
+import https from 'https';
 
 const shortDeviceId = truncateStringToLength(10, '');
 
@@ -202,7 +204,11 @@ export default class JellyfinApiSource extends MemoryPositionalSource {
                 }
                 throw new Error('Unable to determine a valid Server to connect to. See warnings above.');
             }
-            this.api = this.client.createApi(best.address);
+            const axiosInstance = axios.create({
+                httpsAgent: new https.Agent({ keepAlive: true }),
+                timeout: 10000
+            });
+            this.api = this.client.createApi(best.address, undefined, axiosInstance);
             this.imageApi = getImageApi(this.api);
             this.address = best.address;
             const info = await getSystemApi(this.api).getPublicSystemInfo();
