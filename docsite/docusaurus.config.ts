@@ -173,6 +173,15 @@ const config: Config = {
         runmeLinkLabel: 'Checkout via Runme'
       }
     } satisfies Preset.ThemeConfig,
+    headTags: [
+      {
+        tagName: 'meta',
+        attributes: {
+          name: 'google-site-verification',
+          content: process.env.GSITEVERIFICATION ?? 'none'
+        }
+      }
+    ]
 };
 
 if (process.env.ANALYTICS !== undefined && process.env.ANALYTICS !== '') {
