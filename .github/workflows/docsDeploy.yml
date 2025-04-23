@@ -30,6 +30,7 @@ jobs:
         env:
           ANALYTICS: ${{ vars.ANALYTICS }}
           ANALYTICS_DOMAIN: ${{ vars.ANALYTICS_DOMAIN }}
+          GSITEVERIFICATION: ${{ vars.GSITEVERIFICATION }}
           DOCS_BASE: '/multi-scrobbler'
         run: npm run build
         working-directory: ./docsite
