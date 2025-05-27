@@ -2,7 +2,12 @@ import { childLogger, Logger } from "@foxxmd/logging";
 import dayjs, { Dayjs } from "dayjs";
 import { SimpleIntervalJob, Task, ToadScheduler } from "toad-scheduler";
 
-const RT_TICK = 500;
+export const RT_TICK_DEFAULT = 500;
+let RT_TICK = 500;
+
+export const setRtTick = (tick: number) => {
+    RT_TICK = tick;
+}
 
 export abstract class RealtimePlayer {
 

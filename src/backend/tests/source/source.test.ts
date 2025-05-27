@@ -17,6 +17,8 @@ import { SourceConfig } from "../../common/infrastructure/config/source/sources.
 import MemorySource from "../../sources/MemorySource.js";
 import { timePassesScrobbleThreshold } from "../../utils/TimeUtils.js";
 import { DEFAULT_SCROBBLE_DURATION_THRESHOLD, DEFAULT_SCROBBLE_PERCENT_THRESHOLD } from "../../common/infrastructure/Atomic.js";
+import { RT_TICK_DEFAULT, setRtTick } from "../../sources/PlayerState/RealtimePlayer.js";
+import { sleep } from "../../utils.js";
 
 chai.use(asPromised);
 
@@ -186,9 +188,13 @@ describe('Player Cleanup', function () {
 
     this.afterEach(() => {
         MockDate.reset();
+        setRtTick(RT_TICK_DEFAULT);
+    });
+    this.beforeEach(() => {
+        setRtTick(1);
     });
 
-    const cleanedUpDuration = (generateSource: (config: SourceConfig) => MemorySource) => {
+    const cleanedUpDuration = async (generateSource: (config: SourceConfig) => MemorySource) => {
         const source = generateSource({data: {staleAfter: 21, orphanedAfter: 40}, options: {}});
         const initialDate = dayjs();
         const initialState = generatePlayerStateData({position: 0, playData: {duration: 50}, timestamp: initialDate, status: REPORTED_PLAYER_STATUSES.playing});
@@ -202,6 +208,7 @@ describe('Player Cleanup', function () {
             position += 10;
             timeSince += 10;
             MockDate.set(initialDate.add(position, 'seconds').toDate());
+            await sleep(1);
             const advancedState = generatePlayerStateData({play: initialState.play, timestamp: dayjs(), position, status: REPORTED_PLAYER_STATUSES.playing});
             expect(source.processRecentPlays([advancedState]).length).to.be.eq(0);
         }
@@ -210,25 +217,27 @@ describe('Player Cleanup', function () {
         for(let i = 0; i < 2; i++) {
             timeSince += 10;
             MockDate.set(initialDate.add(timeSince, 'seconds').toDate());
+            await sleep(1);
             expect(source.processRecentPlays([]).length).to.be.eq(0);
         }
 
         MockDate.set(initialDate.add(timeSince + 2, 'seconds').toDate());
+        await sleep(1);
         const discoveredPlays = source.processRecentPlays([]);
         // cleanup should discover stale play
         expect(discoveredPlays.length).to.be.eq(1);
         expect(discoveredPlays[0].data.listenedFor).closeTo(30, 2);
     } 
 
-    it('Discovers cleaned up Play with correct duration (Non Positional Source)', function () {
-        cleanedUpDuration(generateMemorySource);
+    it('Discovers cleaned up Play with correct duration (Non Positional Source)', async function () {
+        await cleanedUpDuration(generateMemorySource);
     });
 
-    it('Discovers cleaned up Play with correct duration (Positional Source)', function () {
-        cleanedUpDuration(generateMemoryPositionalSource);
+    it('Discovers cleaned up Play with correct duration (Positional Source)', async function () {
+        await cleanedUpDuration(generateMemoryPositionalSource);
     });
 
-    const noScrobbleRediscoveryOnActive = (generateSource: (config: SourceConfig) => MemorySource) => {
+    const noScrobbleRediscoveryOnActive = async (generateSource: (config: SourceConfig) => MemorySource) => {
 
         const source = generateSource({data: {staleAfter: 21, orphanedAfter: 40}, options: {}});
         const initialDate = dayjs();
@@ -243,6 +252,7 @@ describe('Player Cleanup', function () {
             position += 10;
             timeSince += 10;
             MockDate.set(initialDate.add(position, 'seconds').toDate());
+            await sleep(1);
             const advancedState = generatePlayerStateData({play: initialState.play, timestamp: dayjs(), position, status: REPORTED_PLAYER_STATUSES.playing});
             expect(source.processRecentPlays([advancedState]).length).to.be.eq(0);
         }
@@ -251,12 +261,14 @@ describe('Player Cleanup', function () {
         for(let i = 0; i < 2; i++) {
             timeSince += 10;
             MockDate.set(initialDate.add(timeSince, 'seconds').toDate());
+            await sleep(1);
             expect(source.processRecentPlays([]).length).to.be.eq(0);
         }
 
         timeSince += 2;
 
         MockDate.set(initialDate.add(timeSince, 'seconds').toDate());
+        await sleep(1);
         const discoveredPlays = source.processRecentPlays([]);
         // cleanup should discover stale play
         expect(discoveredPlays.length).to.be.eq(1);
@@ -269,12 +281,14 @@ describe('Player Cleanup', function () {
         for(let i = 0; i < 2; i++) {
             timeSince += 10;
             MockDate.set(initialDate.add(timeSince, 'seconds').toDate());
+            await sleep(1);
             const advancedState = generatePlayerStateData({play: initialState.play, timestamp: dayjs(), position, status: REPORTED_PLAYER_STATUSES.playing});
             expect(source.processRecentPlays([advancedState]).length).to.be.eq(0);
         }
 
         timeSince += 10;
         MockDate.set(initialDate.add(timeSince, 'seconds').toDate());
+        await sleep(1);
         // new Play
         const advancedState = generatePlayerStateData({timestamp: dayjs(), position: 0, status: REPORTED_PLAYER_STATUSES.playing});
         // should not return play because it has only been played for ~20 seconds, less than 50% of duration
@@ -283,15 +297,15 @@ describe('Player Cleanup', function () {
     }
 
 
-    it('Does not discover same Play after becoming active again (Non Positional Source)', function () {
-        noScrobbleRediscoveryOnActive(generateMemorySource);
+    it('Does not discover same Play after becoming active again (Non Positional Source)', async function () {
+        await noScrobbleRediscoveryOnActive(generateMemorySource);
     });
 
-    it('Does not discover same Play after becoming active again (Positional Source)', function () {
-        noScrobbleRediscoveryOnActive(generateMemoryPositionalSource);
+    it('Does not discover same Play after becoming active again (Positional Source)', async function () {
+        await noScrobbleRediscoveryOnActive(generateMemoryPositionalSource);
     });
 
-    const noScrobbleStale = (generateSource: (config: SourceConfig) => MemorySource) => {
+    const noScrobbleStale = async (generateSource: (config: SourceConfig) => MemorySource) => {
 
         const source = generateSource({data: {staleAfter: 21, orphanedAfter: 40}, options: {}});
         const initialDate = dayjs();
@@ -308,6 +322,7 @@ describe('Player Cleanup', function () {
             position += 10;
             timeSince += 10;
             MockDate.set(initialDate.add(position, 'seconds').toDate());
+            await sleep(1);
             const advancedState = generatePlayerStateData({play: initialState.play, timestamp: initialDate, position, status: REPORTED_PLAYER_STATUSES.playing});
             expect(source.processRecentPlays([advancedState]).length).to.be.eq(0);
         }
@@ -316,6 +331,7 @@ describe('Player Cleanup', function () {
         for(let i = 0; i < 2; i++) {
             timeSince += 10;
             MockDate.set(initialDate.add(timeSince, 'seconds').toDate());
+            await sleep(1);
             expect(source.processRecentPlays([]).length).to.be.eq(0);
         }
 
@@ -326,15 +342,15 @@ describe('Player Cleanup', function () {
 
     }
 
-    it('Does not discover cleaned up Play that did not meet threshold (Non Positional Source)', function () {
-        noScrobbleStale(generateMemorySource);
+    it('Does not discover cleaned up Play that did not meet threshold (Non Positional Source)', async function () {
+        await noScrobbleStale(generateMemorySource);
     });
 
-    it('Does not discover cleaned up Play that did not meet threshold (Positional Source)', function () {
-        noScrobbleStale(generateMemoryPositionalSource);
+    it('Does not discover cleaned up Play that did not meet threshold (Positional Source)', async function () {
+        await noScrobbleStale(generateMemoryPositionalSource);
     });
 
-    const scrobbleRediscoveryOnActive = (generateSource: (config: SourceConfig) => MemorySource) => {
+    const scrobbleRediscoveryOnActive = async (generateSource: (config: SourceConfig) => MemorySource) => {
 
         const source = generateSource({data: {staleAfter: 21, orphanedAfter: 40}, options: {}});
         const initialDate = dayjs();
@@ -351,6 +367,7 @@ describe('Player Cleanup', function () {
             position += 10;
             timeSince += 10;
             MockDate.set(initialDate.add(position, 'seconds').toDate());
+            await sleep(1);
             const advancedState = generatePlayerStateData({play: initialState.play, timestamp: dayjs(), position, status: REPORTED_PLAYER_STATUSES.playing});
             expect(source.processRecentPlays([advancedState]).length).to.be.eq(0);
         }
@@ -359,12 +376,14 @@ describe('Player Cleanup', function () {
         for(let i = 0; i < 2; i++) {
             timeSince += 10;
             MockDate.set(initialDate.add(timeSince, 'seconds').toDate());
+            await sleep(1);
             expect(source.processRecentPlays([]).length).to.be.eq(0);
         }
 
         timeSince += 2;
 
         MockDate.set(initialDate.add(timeSince, 'seconds').toDate());
+        await sleep(1);
         const discoveredPlays = source.processRecentPlays([]);
         // cleanup should not discover stale play
         expect(discoveredPlays.length).to.be.eq(0);
@@ -378,12 +397,14 @@ describe('Player Cleanup', function () {
             position += 10;
             timeSince += 10;
             MockDate.set(initialDate.add(position, 'seconds').toDate());
+            await sleep(1);
             const advancedState = generatePlayerStateData({play: initialState.play, timestamp: dayjs(), position, status: REPORTED_PLAYER_STATUSES.playing});
             expect(source.processRecentPlays([advancedState]).length).to.be.eq(0);
         }
 
         timeSince += 10;
         MockDate.set(initialDate.add(position, 'seconds').toDate());
+        await sleep(1);
         // new Play
         const advancedState = generatePlayerStateData({timestamp: dayjs(), position: 0, status: REPORTED_PLAYER_STATUSES.playing});
         // should return discovered play with ~90 seconds of duration
@@ -393,12 +414,12 @@ describe('Player Cleanup', function () {
 
     }
 
-    it('Does discover Play after becoming active again (Non Positional Source)', function () {
-        scrobbleRediscoveryOnActive(generateMemorySource);
+    it('Does discover Play after becoming active again (Non Positional Source)', async function () {
+        await scrobbleRediscoveryOnActive(generateMemorySource);
     });
 
-    it('Does discover Play after becoming active again (Positional Source)', function () {
-        scrobbleRediscoveryOnActive(generateMemoryPositionalSource);
+    it('Does discover Play after becoming active again (Positional Source)', async function () {
+        await scrobbleRediscoveryOnActive(generateMemoryPositionalSource);
     });
 });
 

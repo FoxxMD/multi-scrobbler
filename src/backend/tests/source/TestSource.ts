@@ -9,8 +9,7 @@ export class TestSource extends AbstractSource {
     }
 }
 
-export class TestMemorySource extends MemoryPositionalSource {
-
+export class TestMemorySource extends MemorySource {
 }
 
 export class TestMemoryPositionalSource extends MemoryPositionalSource {
