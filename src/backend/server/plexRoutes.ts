@@ -23,9 +23,9 @@ export const setupPlexRoutes = (app: ExpressWithAsync, logger: Logger, scrobbleS
         if (payload !== undefined) {
             const playObj = PlexSource.formatPlayObj(payload, {newFromSource: true});
 
-            const pSources = scrobbleSources.getByType('plex') as PlexSource[];
+            const pSources = scrobbleSources.getByType('plex').filter(x => x instanceof PlexSource) as PlexSource[];
             if (pSources.length === 0) {
-                plexLog.warn('Received valid Plex webhook payload but no Plex sources are configured');
+                plexLog.warn('Received valid Plex webhook payload but no Plex Webhook sources are configured');
             }
 
             for (const source of pSources) {
