@@ -13,7 +13,7 @@ export abstract class RealtimePlayer {
     private clockTS: Dayjs = dayjs();
 
     protected constructor(/* logger: Logger */) {
-        //this.logger = childLogger(logger, `RT`);
+        this.position = 0;
         const job = new SimpleIntervalJob({
             milliseconds: RT_TICK,
             runImmediately: true
@@ -27,7 +27,6 @@ export abstract class RealtimePlayer {
         }), { id: 'rt' });
         this.scheduler.addSimpleIntervalJob(job);
         this.scheduler.stop();
-        this.position = 0;
     }
 
     public play(position?: number) {
@@ -52,14 +51,18 @@ export abstract class RealtimePlayer {
     }
 
     public getPosition(asSeconds: boolean = false) {
+        if(this.position === 0 || this.position === undefined) {
+            return 0;
+        }
         return !asSeconds ? this.position : this.position / 1000;
     }
 
     public setPosition(time?: number) {
         if(time === undefined) {
             this.position += Math.abs(dayjs().diff(this.clockTS, 'ms'));
+        } else {
+            this.position = time;
         }
-        this.position = time;
         this.clockTS = dayjs();
     }
 }
