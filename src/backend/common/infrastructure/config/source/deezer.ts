@@ -2,7 +2,7 @@ import { Second } from "../../../../../core/Atomic.js";
 import { PollingOptions } from "../common.js";
 import { CommonSourceConfig, CommonSourceData } from "./index.js";
 
-export interface DeezerData extends CommonSourceData {
+export interface DeezerData extends CommonSourceData, PollingOptions {
     /**
      * deezer client id
      *
