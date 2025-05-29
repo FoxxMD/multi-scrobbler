@@ -1,3 +1,5 @@
+import { Second } from "../../../../../core/Atomic.js";
+import { PollingOptions } from "../common.js";
 import { CommonSourceConfig, CommonSourceData } from "./index.js";
 
 export interface DeezerData extends CommonSourceData {
@@ -20,13 +22,6 @@ export interface DeezerData extends CommonSourceData {
      * @examples ["http://localhost:9078/deezer/callback"]
      * */
     redirectUri?: string
-    /**
-     * optional, how long to wait before calling spotify for new tracks (in seconds)
-     *
-     * @default 60
-     * @examples [60]
-     * */
-    interval?: number
 }
 export interface DeezerSourceConfig extends CommonSourceConfig {
     data: DeezerData
@@ -34,4 +29,47 @@ export interface DeezerSourceConfig extends CommonSourceConfig {
 
 export interface DeezerSourceAIOConfig extends DeezerSourceConfig {
     type: 'deezer'
+}
+
+export interface DeezerInternalData extends CommonSourceData, PollingOptions {
+    /** ARL retrieved from Deezer response header */
+    arl: string
+    /** User agent
+     * 
+     * @default "Mozilla/5.0 (X11; Linux i686; rv:135.0) Gecko/20100101 Firefox/135.0"
+     */
+    userAgent?: string
+}
+
+export interface DeezerInternalSourceConfig extends CommonSourceConfig {
+    data: DeezerInternalData
+}
+
+export interface DeezerInternalAIOConfig extends DeezerInternalSourceConfig {
+    type: 'deezer'
+}
+
+export type DeezerCompatConfig = DeezerSourceConfig | DeezerInternalSourceConfig;
+
+export interface DeezerInternalTrackData {
+    /** Song Id */
+    SNG_ID: string
+    /** Date listened as unix timestamp in seconds */
+    TS: Second
+    /** Album Id */
+    ALB_ID: string
+    /** Album Title */
+    ALB_TITLE: string
+    /** Album Art Id */
+    ALB_PICTURE: string
+    /** Artist Id */
+    ART_ID: string
+    /** Artist Name */
+    ART_NAME: string
+    /** Song Title */
+    SNG_TITLE: string
+    /** Time listened to track in seconds */
+    DURATION: Second
+
+    __TYPE__: 'song' | string
 }

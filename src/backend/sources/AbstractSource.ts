@@ -80,7 +80,7 @@ export default abstract class AbstractSource extends AbstractComponent implement
 
     emitter: EventEmitter;
 
-    protected SCROBBLE_BACKLOG_COUNT: number = 20;
+    protected SCROBBLE_BACKLOG_COUNT: number = 30;
 
     protected recentDiscoveredPlays: GroupedFixedPlays = new TupleMap<DeviceId, PlayUserId, FixedSizeList<ProgressAwarePlayObject>>();
 
@@ -130,7 +130,7 @@ export default abstract class AbstractSource extends AbstractComponent implement
 
     protected addPlayToDiscovered = (play: PlayObject) => {
         const platformId = this.multiPlatform ? genGroupId(play) : SINGLE_USER_PLATFORM_ID;
-        const list = this.recentDiscoveredPlays.get(platformId) ?? new FixedSizeList<ProgressAwarePlayObject>(30);
+        const list = this.recentDiscoveredPlays.get(platformId) ?? new FixedSizeList<ProgressAwarePlayObject>(200);
         list.add(play);
         this.recentDiscoveredPlays.set(platformId, list);
         this.tracksDiscovered++;
