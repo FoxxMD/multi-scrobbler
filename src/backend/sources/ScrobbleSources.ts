@@ -5,7 +5,7 @@ import { ConfigMeta, InternalConfig, isSourceType, SourceType, sourceTypes } fro
 import { AIOConfig, SourceDefaults } from "../common/infrastructure/config/aioConfig.js";
 import { AzuracastData, AzuracastSourceConfig } from "../common/infrastructure/config/source/azuracast.js";
 import { ChromecastSourceConfig } from "../common/infrastructure/config/source/chromecast.js";
-import { DeezerData, DeezerSourceConfig } from "../common/infrastructure/config/source/deezer.js";
+import { DeezerData, DeezerSourceConfig, DeezerInternalSourceConfig, DeezerCompatConfig, DeezerInternalData } from "../common/infrastructure/config/source/deezer.js";
 import { ListenbrainzEndpointSourceConfig, ListenbrainzEndpointData } from "../common/infrastructure/config/source/endpointlz.js";
 import { LastFMEndpointSourceConfig, LastFMEndpointData } from "../common/infrastructure/config/source/endpointlfm.js";
 import {
@@ -64,6 +64,7 @@ import { getTypeSchemaFromConfigGenerator } from '../utils/SchemaUtils.js';
 import PlexApiSource from './PlexApiSource.js';
 import { nonEmptyStringOrDefault } from '../../core/StringUtils.js';
 import { IcecastSource } from './IcecastSource.js';
+import DeezerInternalSource from './DeezerInternalSource.js';
 
 type groupedNamedConfigs = {[key: string]: ParsedConfig[]};
 
@@ -139,7 +140,7 @@ export default class ScrobbleSources {
                     this.schemaDefinitions[type] = getTypeSchemaFromConfigGenerator("TautulliSourceConfig");
                     break;
                 case 'deezer':
-                    this.schemaDefinitions[type] = getTypeSchemaFromConfigGenerator("DeezerSourceConfig");
+                    this.schemaDefinitions[type] = getTypeSchemaFromConfigGenerator("DeezerCompatConfig");
                     break;
                 case 'endpointlz':
                     this.schemaDefinitions[type] = getTypeSchemaFromConfigGenerator("ListenbrainzEndpointSourceConfig");
@@ -411,6 +412,7 @@ export default class ScrobbleSources {
                         clientSecret: process.env.DEEZER_CLIENT_SECRET,
                         redirectUri: process.env.DEEZER_REDIRECT_URI,
                         accessToken: process.env.DEEZER_ACCESS_TOKEN,
+                        arl: process.env.DEEZER_ARL,
                     };
                     if (!Object.values(d).every(x => x === undefined)) {
                         configs.push({
@@ -802,7 +804,12 @@ export default class ScrobbleSources {
                 newSource = await new LastfmSource(name, compositeConfig as LastfmSourceConfig, this.internalConfig, this.emitter);
                 break;
             case 'deezer':
-                newSource = await new DeezerSource(name, compositeConfig as DeezerSourceConfig, this.internalConfig, this.emitter);
+                const deezerConfig = compositeConfig as DeezerCompatConfig;
+                if(deezerConfig.data.arl !== undefined) {
+                    newSource = await new DeezerInternalSource(name, compositeConfig as DeezerInternalSourceConfig, this.internalConfig, this.emitter);
+                } else {
+                    newSource = await new DeezerSource(name, compositeConfig as DeezerSourceConfig, this.internalConfig, this.emitter);
+                }
                 break;
             case 'ytmusic':
                 newSource = await new YTMusicSource(name, compositeConfig as YTMusicSourceConfig, this.internalConfig, this.emitter);
