@@ -1,14 +1,15 @@
 import dayjs from "dayjs";
 import EventEmitter from "events";
 import request, { Request, Response, SuperAgent } from 'superagent';
-import { PlayObject, SOURCE_SOT } from "../../core/Atomic.js";
-import { DEFAULT_RETRY_MULTIPLIER, FormatPlayObjectOptions, InternalConfig } from "../common/infrastructure/Atomic.js";
+import { PlayObject, SOURCE_SOT, TA_CLOSE, TA_FUZZY } from "../../core/Atomic.js";
+import { DEFAULT_RETRY_MULTIPLIER, FormatPlayObjectOptions, InternalConfig, TRANSFORM_HOOK } from "../common/infrastructure/Atomic.js";
 import { DeezerInternalSourceConfig, DeezerInternalTrackData, DeezerSourceConfig } from "../common/infrastructure/config/source/deezer.js";
-import { parseRetryAfterSecsFromObj, readJson, sleep, sortByOldestPlayDate, writeFile, } from "../utils.js";
+import { parseRetryAfterSecsFromObj, playObjDataMatch, readJson, sleep, sortByOldestPlayDate, writeFile, } from "../utils.js";
 import AbstractSource, { RecentlyPlayedOptions } from "./AbstractSource.js";
 import { CookieJar, Cookie } from 'tough-cookie';
 import { MixedCookieAgent } from 'http-cookie-agent/http';
 import MemorySource from "./MemorySource.js";
+import { genericSourcePlayMatch } from "../utils/PlayComparisonUtils.js";
 
 interface DeezerHistoryResponse {
     errors: []
@@ -195,6 +196,43 @@ export default class DeezerInternalSource extends MemorySource {
     }
 
     protected getBackloggedPlays = async (options: RecentlyPlayedOptions = {}) => await this.getRecentlyPlayed({formatted: true, ...options})
+
+
+    existingDiscovered = (play: PlayObject, opts: {checkAll?: boolean} = {}): PlayObject | undefined => {
+        const lists: PlayObject[][] = this.getExistingDiscoveredLists(play, opts);
+        const candidate = this.transformPlay(play, TRANSFORM_HOOK.candidate);
+        for(const list of lists) {
+            const existing = list.find(x => {
+                const e = this.transformPlay(x, TRANSFORM_HOOK.existing);
+                return genericSourcePlayMatch(e, candidate, TA_CLOSE);
+            });
+            if(existing) {
+                return existing;
+            }
+            if(this.config.options?.fuzzyDiscoveryIgnore === true || this.config.options?.fuzzyDiscoveryIgnore === 'aggressive') {
+                const fuzzyIndex = list.findIndex(x => {
+                    const e = this.transformPlay(x, TRANSFORM_HOOK.existing);
+                    return genericSourcePlayMatch(e, candidate, TA_FUZZY);
+                });
+                if(fuzzyIndex !== -1) {
+                    if(this.config.options?.fuzzyDiscoveryIgnore === 'aggressive') {
+                        // always return fuzzy match as existing
+                        // likely will make MS miss scrobbles for repeated plays
+                        return list[fuzzyIndex];
+                    }
+                    if(fuzzyIndex + 1 === list.length || playObjDataMatch(list[fuzzyIndex], list[fuzzyIndex + 1])) {
+                        // last discovered play was this one, or next played play was also this one
+                        // so we'll assume this means the play is on repeat, don't count as existing
+                        return undefined;
+                    }
+                    // next played play was *not* this one (Deezer reports play between candidate TS and fuzzy match)
+                    // so this is likely a duplicate deezer should not have reported
+                    return list[fuzzyIndex];
+                }
+            }
+        }
+        return undefined;
+    }
 }
 
 const setRequestHeaders = (req: Request, userAgent: string = 'Mozilla/5.0 (X11; Linux i686; rv:135.0) Gecko/20100101 Firefox/135.0') => {

@@ -6,7 +6,7 @@ import { after, before, describe, it } from 'mocha';
 import pEvent from "p-event";
 import clone from 'clone';
 import { PlayObject } from "../../../core/Atomic.js";
-import { generatePlay, generatePlayerStateData } from "../utils/PlayTestUtils.js";
+import { generatePlay, generatePlayerStateData, generatePlays, normalizePlays } from "../utils/PlayTestUtils.js";
 import { TestMemoryPositionalSource, TestMemorySource, TestSource } from "./TestSource.js";
 import spotifyPayload from '../plays/spotifyCurrentPlaybackState.json';
 import SpotifySource from "../../sources/SpotifySource.js";
@@ -19,6 +19,8 @@ import { timePassesScrobbleThreshold } from "../../utils/TimeUtils.js";
 import { DEFAULT_SCROBBLE_DURATION_THRESHOLD, DEFAULT_SCROBBLE_PERCENT_THRESHOLD } from "../../common/infrastructure/Atomic.js";
 import { RT_TICK_DEFAULT, setRtTick } from "../../sources/PlayerState/RealtimePlayer.js";
 import { sleep } from "../../utils.js";
+import DeezerInternalSource from "../../sources/DeezerInternalSource.js";
+import { DeezerInternalSourceOptions } from "../../common/infrastructure/config/source/deezer.js";
 
 chai.use(asPromised);
 
@@ -457,4 +459,116 @@ describe('Scrobble Threshold Checks', function() {
         expect(results.duration.passes).is.true;
         expect(results.passes).is.true;
     });
+});
+
+const generateDeezerSource = (options: DeezerInternalSourceOptions = {}) => {
+    return new DeezerInternalSource('test', {data: {arl: 'test'}, options}, {localUrl: new URL('https://example.com'), configDir: 'fake', logger: loggerTest, version: 'test'},  emitter);
+}
+const firstPlayDate = dayjs().subtract(1, 'hour');
+const normalizedPlays = normalizePlays(generatePlays(6), {initialDate: firstPlayDate});
+const lastPlay = normalizedPlays[normalizePlays.length - 1];
+
+describe('Deezer Internal Source', function() {
+
+    describe('When fuzzyDiscoveryIgnore is not defined or false', function () {
+
+        it('discovers fuzzy play', function() {
+            const interimPlay = generatePlay({playDate: lastPlay.data.playDate.add(15, 's'), duration: 80});
+            const targetPlay = normalizedPlays[normalizedPlays.length - 2]
+            const fuzzyPlay = clone(targetPlay);
+            fuzzyPlay.data.playDate = targetPlay.data.playDate.add(targetPlay.data.duration, 's');
+
+            const source = generateDeezerSource();
+            source.discover([...normalizedPlays, interimPlay]);
+
+            const discovered = source.discover([fuzzyPlay]);
+
+            expect(discovered.length).to.eq(1);
+        });
+    });
+
+    describe('When fuzzyDiscoveryIgnore is true', function () {
+
+        it('does not discover fuzzy play with interim plays', function() {
+            const interimPlay = generatePlay({playDate: lastPlay.data.playDate.add(15, 's'), duration: 80});
+            const targetPlay = normalizedPlays[normalizedPlays.length - 2]
+            const fuzzyPlay = clone(targetPlay);
+            fuzzyPlay.data.playDate = targetPlay.data.playDate.add(targetPlay.data.duration, 's');
+
+            const source = generateDeezerSource({fuzzyDiscoveryIgnore: true});
+            source.discover([...normalizedPlays, interimPlay]);
+
+            const discovered = source.discover([fuzzyPlay]);
+
+            expect(discovered.length).to.eq(0);
+        });
+
+        it('discovers fuzzy play when it is the last play ', function() {
+            const targetPlay = normalizedPlays[normalizedPlays.length - 1]
+            const fuzzyPlay = clone(targetPlay);
+            fuzzyPlay.data.playDate = targetPlay.data.playDate.add(targetPlay.data.duration, 's');
+
+            const source = generateDeezerSource({fuzzyDiscoveryIgnore: true});
+            source.discover(normalizedPlays);
+
+            const discovered = source.discover([fuzzyPlay]);
+
+            expect(discovered.length).to.eq(1);
+        });
+
+        it('discovers fuzzy play when it is played consecutively', function() {
+            const targetPlay = normalizedPlays[normalizedPlays.length - 1]
+            const fuzzyPlay = clone(targetPlay);
+            fuzzyPlay.data.playDate = targetPlay.data.playDate.add(targetPlay.data.duration, 's');
+            const morePlays = normalizePlays([...normalizedPlays, fuzzyPlay, ...generatePlays(2)], {initialDate: firstPlayDate});
+
+            const source = generateDeezerSource({fuzzyDiscoveryIgnore: true});
+            const discovered = source.discover(morePlays);
+
+            expect(discovered.length).to.eq(morePlays.length);
+        });
+    });
+
+        describe('When fuzzyDiscoveryIgnore is aggressive', function () {
+
+            it('does not discover fuzzy play with interim plays', function() {
+                const interimPlay = generatePlay({playDate: lastPlay.data.playDate.add(15, 's'), duration: 80});
+                const targetPlay = normalizedPlays[normalizedPlays.length - 2]
+                const fuzzyPlay = clone(targetPlay);
+                fuzzyPlay.data.playDate = targetPlay.data.playDate.add(targetPlay.data.duration, 's');
+
+                const source = generateDeezerSource({fuzzyDiscoveryIgnore: 'aggressive'});
+                source.discover([...normalizedPlays, interimPlay]);
+
+                const discovered = source.discover([fuzzyPlay]);
+
+                expect(discovered.length).to.eq(0);
+            });
+
+            it('it does not discover fuzzy play when it is the last play ', function() {
+                const targetPlay = normalizedPlays[normalizedPlays.length - 1]
+                const fuzzyPlay = clone(targetPlay);
+                fuzzyPlay.data.playDate = targetPlay.data.playDate.add(targetPlay.data.duration, 's');
+
+                const source = generateDeezerSource({fuzzyDiscoveryIgnore: 'aggressive'});
+                source.discover(normalizedPlays);
+
+                const discovered = source.discover([fuzzyPlay]);
+
+                expect(discovered.length).to.eq(0);
+            });
+
+            it('does not discover fuzzy play when it is played consecutively', function() {
+                const targetPlay = normalizedPlays[normalizedPlays.length - 1]
+                const fuzzyPlay = clone(targetPlay);
+                fuzzyPlay.data.playDate = targetPlay.data.playDate.add(targetPlay.data.duration, 's');
+                const morePlays = normalizePlays([...normalizedPlays, fuzzyPlay, ...generatePlays(2)], {initialDate: firstPlayDate});
+
+                const source = generateDeezerSource({fuzzyDiscoveryIgnore: 'aggressive'});
+                const discovered = source.discover(morePlays);
+
+                expect(discovered.length).to.eq(morePlays.length - 1);
+            });
+
+        });
 });
