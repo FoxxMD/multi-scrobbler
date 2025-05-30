@@ -38,6 +38,7 @@ import { getRoot } from '../ioc.js';
 import { componentFileLogger } from '../common/logging.js';
 import { WebhookPayload } from '../common/infrastructure/config/health/webhooks.js';
 import { messageWithCauses, messageWithCausesTruncatedDefault } from '../utils/ErrorUtils.js';
+import { genericSourcePlayMatch } from '../utils/PlayComparisonUtils.js';
 
 export interface RecentlyPlayedOptions {
     limit?: number
@@ -152,7 +153,7 @@ export default abstract class AbstractSource extends AbstractComponent implement
         return [];
     }
 
-    existingDiscovered = (play: PlayObject, opts: {checkAll?: boolean} = {}): PlayObject | undefined => {
+    protected getExistingDiscoveredLists = (play: PlayObject, opts: {checkAll?: boolean} = {}): PlayObject[][] => {
         const lists: PlayObject[][] = [];
         if(opts.checkAll !== true) {
             lists.push(this.getRecentlyDiscoveredPlaysByPlatform(this.multiPlatform ? genGroupId(play) : SINGLE_USER_PLATFORM_ID));
@@ -168,19 +169,22 @@ export default abstract class AbstractSource extends AbstractComponent implement
                 }
             });
         }
+        return lists;
+    }
+
+    existingDiscovered = (play: PlayObject, opts: {checkAll?: boolean} = {}): PlayObject | undefined => {
+        const lists: PlayObject[][] = this.getExistingDiscoveredLists(play, opts);
         const candidate = this.transformPlay(play, TRANSFORM_HOOK.candidate);
         for(const list of lists) {
             const existing = list.find(x => {
                 const e = this.transformPlay(x, TRANSFORM_HOOK.existing);
-                return playObjDataMatch(e, candidate) && temporalAccuracyIsAtLeast(TA_CLOSE, comparePlayTemporally(e, candidate).match)
+                return genericSourcePlayMatch(e, candidate, TA_CLOSE);
             });
             if(existing) {
                 return existing;
             }
         }
         return undefined;
-        //const list = this.getRecentlyDiscoveredPlaysByPlatform(this.multiPlatform ? genGroupId(play) : SINGLE_USER_PLATFORM_ID);
-        //return list.find(x => playObjDataMatch(x, play) && closePlayDate(x, play));
     }
 
     alreadyDiscovered = (play: PlayObject, opts: {checkAll?: boolean} = {}): boolean => {

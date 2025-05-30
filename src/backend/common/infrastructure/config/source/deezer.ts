@@ -1,6 +1,6 @@
 import { Second } from "../../../../../core/Atomic.js";
 import { PollingOptions } from "../common.js";
-import { CommonSourceConfig, CommonSourceData } from "./index.js";
+import { CommonSourceConfig, CommonSourceData, CommonSourceOptions } from "./index.js";
 
 export interface DeezerData extends CommonSourceData, PollingOptions {
     /**
@@ -43,6 +43,11 @@ export interface DeezerInternalData extends CommonSourceData, PollingOptions {
 
 export interface DeezerInternalSourceConfig extends CommonSourceConfig {
     data: DeezerInternalData
+    options: DeezerInternalSourceOptions
+}
+
+export interface  DeezerInternalSourceOptions extends CommonSourceOptions {
+    fuzzyDiscoveryIgnore?: boolean | 'aggressive'
 }
 
 export interface DeezerInternalAIOConfig extends DeezerInternalSourceConfig {
