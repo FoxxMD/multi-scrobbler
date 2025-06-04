@@ -46,7 +46,7 @@ import EventEmitter from "events";
 import { nanoid } from "nanoid";
 import pEvent from "p-event";
 import { Simulate } from "react-dom/test-utils";
-import { PlayObject } from "../../core/Atomic.js";
+import { BrainzMeta, PlayObject } from "../../core/Atomic.js";
 import { buildTrackString, combinePartsToString, truncateStringToLength } from "../../core/StringUtils.js";
 import {
     FormatPlayObjectOptions,
@@ -396,9 +396,28 @@ export default class JellyfinApiSource extends MemoryPositionalSource {
             RunTimeTicks,
             Type, // should be BaseItemKind.Audio
             UserData,
+            ProviderIds = {}
         } = obj;
 
-        return {
+        const meta: BrainzMeta = {};
+
+        if(ProviderIds.MusicBrainzAlbum !== undefined) {
+            meta.album = ProviderIds.MusicBrainzAlbum;
+        }
+        if(ProviderIds.MusicBrainzTrack !== undefined) {
+            meta.track = ProviderIds.MusicBrainzTrack;
+        }
+        if(ProviderIds.MusicBrainzTrack !== undefined) {
+            meta.track = ProviderIds.MusicBrainzTrack;
+        }
+        if(ProviderIds.MusicBrainzArtist !== undefined) {
+            meta.artist = [ProviderIds.MusicBrainzArtist];
+        }
+        if(ProviderIds.MusicBrainzAlbumArtist !== undefined) {
+            meta.albumArtist = ProviderIds.MusicBrainzAlbumArtist;
+        }
+
+        const play: PlayObject = {
             data: {
                 artists: Artists,
                 album: Album,
@@ -414,6 +433,10 @@ export default class JellyfinApiSource extends MemoryPositionalSource {
                 source: 'Jellyfin',
             }
         }
+        if(Object.keys(meta).length > 0) {
+            play.data.meta = { brainz: meta };
+        }
+        return play;
     }
 
     getRecentlyPlayed = async (options = {}) => {
