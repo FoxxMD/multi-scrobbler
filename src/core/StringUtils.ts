@@ -196,3 +196,29 @@ export const combinePartsToString = (parts: any[], glue: string = '-'): string |
     }
     return undefined;
 }
+
+export const arrayListOxfordAnd = (list: string[], joiner: string, finalJoiner: string, spaced: boolean = true): string => {
+    if(list.length === 1) {
+        return list[0];
+    }
+    const start = list.slice(0, list.length - 1);
+    const end = list.slice(list.length - 1);
+
+    const joinerProper = joiner === ',' ? ', ' : (spaced ? ` ${joiner} ` : joiner);
+    const finalProper = spaced ? ` ${finalJoiner} ` : finalJoiner;
+
+    return [start.join(joinerProper), end].join(joiner === ',' && spaced ? `,${finalProper}` : finalProper);
+}
+
+export const arrayListAnd = (list: string[], joiner: string, finalJoiner: string, spaced: boolean = true): string => {
+    if(list.length === 1) {
+        return list[0];
+    }
+    const start = list.slice(0, list.length - 1);
+    const end = list.slice(list.length - 1);
+
+    const joinerProper = joiner === ',' ? ', ' : (spaced ? ` ${joiner} ` : joiner);
+    const finalProper = spaced ? ` ${finalJoiner} ` : finalJoiner;
+
+    return [start.join(joinerProper), end].join(finalProper);
+}
