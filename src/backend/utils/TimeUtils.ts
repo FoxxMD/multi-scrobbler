@@ -54,11 +54,15 @@ export const temporalPlayComparisonSummary = (data: TemporalPlayComparison, exis
     }
     return parts.join(' | ');
 }
-export const comparePlayTemporally = (existingPlay: PlayObject, candidatePlay: PlayObject, options: {
+
+export interface TemporalPlayComparisonOptions {
     diffThreshold?: number,
     fuzzyDuration?: boolean,
+    fuzzyDiffThreshold?: number
     useListRanges?: boolean
-} = {}): TemporalPlayComparison => {
+}
+
+export const comparePlayTemporally = (existingPlay: PlayObject, candidatePlay: PlayObject, options: TemporalPlayComparisonOptions = {}): TemporalPlayComparison => {
 
     const result: TemporalPlayComparison = {
         match: TA_NONE
@@ -98,6 +102,7 @@ export const comparePlayTemporally = (existingPlay: PlayObject, candidatePlay: P
     const {
         diffThreshold = lowGranularitySources.some(x => x.toLocaleLowerCase() === source) ? 60 : 10,
         fuzzyDuration = false,
+        fuzzyDiffThreshold = 10,
         useListRanges = true,
     } = options;
 
@@ -146,7 +151,7 @@ export const comparePlayTemporally = (existingPlay: PlayObject, candidatePlay: P
     // so check if the duration matches the diff between the two play dates
     if (result.match === TA_NONE && referenceDuration !== undefined) {
         result.date.fuzzyDurationDiff = Math.abs(scrobblePlayDiff - referenceDuration);
-        if (result.date.fuzzyDurationDiff <= 10) { // TODO use finer comparison for this?
+        if (result.date.fuzzyDurationDiff <= fuzzyDiffThreshold) { // TODO use finer comparison for this?
             result.match = TA_FUZZY;
         }
     }
@@ -155,7 +160,7 @@ export const comparePlayTemporally = (existingPlay: PlayObject, candidatePlay: P
     // so check if there is a close match between candidate play date and source + listened for
     if (result.match === TA_NONE && referenceListenedFor !== undefined && fuzzyDuration) {
         result.date.fuzzyListenedDiff = Math.abs(scrobblePlayDiff - referenceListenedFor);
-        if (result.date.fuzzyListenedDiff <= 10) { // TODO use finer comparison for this?
+        if (result.date.fuzzyListenedDiff <= fuzzyDiffThreshold) { // TODO use finer comparison for this?
             result.match = TA_FUZZY
         }
     }

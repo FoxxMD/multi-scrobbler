@@ -212,7 +212,7 @@ export default class DeezerInternalSource extends MemorySource {
             if(this.config.options?.fuzzyDiscoveryIgnore === true || this.config.options?.fuzzyDiscoveryIgnore === 'aggressive') {
                 const fuzzyIndex = list.findIndex(x => {
                     const e = this.transformPlay(x, TRANSFORM_HOOK.existing);
-                    return genericSourcePlayMatch(e, candidate, TA_FUZZY);
+                    return genericSourcePlayMatch(e, candidate, TA_FUZZY, {fuzzyDiffThreshold: this.config.options?.fuzzyDiscoveryIgnore === 'aggressive' ? 40 : undefined});
                 });
                 if(fuzzyIndex !== -1) {
                     if(this.config.options?.fuzzyDiscoveryIgnore === 'aggressive') {
