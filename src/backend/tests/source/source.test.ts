@@ -545,6 +545,20 @@ describe('Deezer Internal Source', function() {
                 expect(discovered.length).to.eq(0);
             });
 
+            it('does not discover fuzzy play with delay of up to 40 seconds', function() {
+                const interimPlay = generatePlay({playDate: lastPlay.data.playDate.add(15, 's'), duration: 80});
+                const targetPlay = normalizedPlays[normalizedPlays.length - 2]
+                const fuzzyPlay = clone(targetPlay);
+                fuzzyPlay.data.playDate = targetPlay.data.playDate.add(targetPlay.data.duration + 39, 's');
+
+                const source = generateDeezerSource({fuzzyDiscoveryIgnore: 'aggressive'});
+                source.discover([...normalizedPlays, interimPlay]);
+
+                const discovered = source.discover([fuzzyPlay]);
+
+                expect(discovered.length).to.eq(0);
+            });
+
             it('it does not discover fuzzy play when it is the last play ', function() {
                 const targetPlay = normalizedPlays[normalizedPlays.length - 1]
                 const fuzzyPlay = clone(targetPlay);
