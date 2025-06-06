@@ -246,9 +246,16 @@ export type Millisecond = number;
 
 export type TemporalAccuracy = 1 | 2 | 3 | false;
 
+/** Timestamp diffs are close to exact (less than or equal to 1 second difference) */
 export const TA_EXACT: TemporalAccuracy = 1;
+/** Timestamp diffs are within source reporting granularity margin-of-error (see lowGranularitySources):
+ * normal granularity is 10 seconds
+ * low granularity (subsonic usually) is 60 seconds
+ */
 export const TA_CLOSE: TemporalAccuracy = 2;
+/** Timestamp diffs are not EXACT/CLOSE but Scrobble A's timestamp +/- duration is within 10 seconds of Scrobble B's timestamp */
 export const TA_FUZZY: TemporalAccuracy = 3;
+/** No correlation between timestamps */
 export const TA_NONE: TemporalAccuracy = false;
 
 export interface TemporalPlayComparison {

@@ -1,8 +1,8 @@
 import { loggerTest } from "@foxxmd/logging";
-import { assert } from 'chai';
+import { assert, expect } from 'chai';
 import clone from "clone";
 import { describe, it } from 'mocha';
-import { playsAreAddedOnly, playsAreBumpedOnly, playsAreSortConsistent } from "../../utils/PlayComparisonUtils.js";
+import { genericSourcePlayMatch, playsAreAddedOnly, playsAreBumpedOnly, playsAreSortConsistent } from "../../utils/PlayComparisonUtils.js";
 import { generatePlay, generatePlays } from "./PlayTestUtils.js";
 import { PlayObject } from "../../../core/Atomic.js";
 
@@ -248,5 +248,38 @@ describe('Compare lists by order', function () {
             assert.equal(addType, 'append');
         });
     
+    });
+
+    describe('Source Play Comparisons', function() {
+
+        describe('Generic Source Comparison', function() {
+
+            it('matches identical plays', function() {
+                expect(genericSourcePlayMatch(newPlay, newPlay)).to.be.true;
+            });
+
+            it('matches identical plays with close timestamps', function() {
+                const closePlay = clone(newPlay);
+                closePlay.data.playDate = closePlay.data.playDate.add(3, 's');
+                expect(genericSourcePlayMatch(newPlay, closePlay)).to.be.true;
+            });
+
+            it('does not match unique plays', function() {
+                expect(genericSourcePlayMatch(newPlay, generatePlay())).to.be.false;
+            });
+
+            it('does not match unique plays with exact timestamps', function() {
+                const diffPlay = generatePlay();
+                diffPlay.data.playDate = newPlay.data.playDate;
+                expect(genericSourcePlayMatch(newPlay, diffPlay)).to.be.false;
+            });
+
+            it('does not match unique plays with close timestamps', function() {
+                const diffPlay = generatePlay();
+                diffPlay.data.playDate = newPlay.data.playDate.add(3, 's');
+                expect(genericSourcePlayMatch(newPlay, diffPlay)).to.be.false;
+            });
+        });
+
     });
 });
