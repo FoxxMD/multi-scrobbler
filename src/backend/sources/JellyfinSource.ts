@@ -1,7 +1,7 @@
 import { Logger } from "@foxxmd/logging";
 import dayjs from "dayjs";
 import EventEmitter from "events";
-import { PlayObject, TA_CLOSE } from "../../core/Atomic.js";
+import { PlayObject, TA_CLOSE, TA_DEFAULT_ACCURACY, TA_EXACT } from "../../core/Atomic.js";
 import {
     buildTrackString,
     combinePartsToString,
@@ -19,7 +19,7 @@ import {
 import { parseDurationFromTimestamp } from '../utils/TimeUtils.js';
 import {
     comparePlayTemporally,
-    temporalAccuracyIsAtLeast,
+    hasAcceptableTemporalAccuracy,
     temporalPlayComparisonSummary,
 } from "../utils/TimeUtils.js";
 import MemorySource from "./MemorySource.js";
@@ -313,7 +313,7 @@ export default class JellyfinSource extends MemorySource {
                         
                         Temporal Comparison => ${temporalPlayComparisonSummary(temporalResult, currPlay, playObj)}`);
                     }
-                    if(temporalAccuracyIsAtLeast(TA_CLOSE,temporalResult.match)) {
+                    if(hasAcceptableTemporalAccuracy(temporalResult.match)) {
                         existingTracked = currPlay;
                     }
                     break;

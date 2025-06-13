@@ -1,7 +1,7 @@
 import dayjs from "dayjs";
 import EventEmitter from "events";
 import request, { Request, Response, SuperAgent } from 'superagent';
-import { PlayObject, SOURCE_SOT, TA_CLOSE, TA_FUZZY } from "../../core/Atomic.js";
+import { PlayObject, SOURCE_SOT, TA_CLOSE, TA_DURING, TA_EXACT, TA_FUZZY, TemporalAccuracy } from "../../core/Atomic.js";
 import { DEFAULT_RETRY_MULTIPLIER, FormatPlayObjectOptions, InternalConfig, TRANSFORM_HOOK } from "../common/infrastructure/Atomic.js";
 import { DeezerInternalSourceConfig, DeezerInternalTrackData, DeezerSourceConfig } from "../common/infrastructure/config/source/deezer.js";
 import { parseRetryAfterSecsFromObj, playObjDataMatch, readJson, sleep, sortByOldestPlayDate, writeFile, } from "../utils.js";
@@ -10,6 +10,7 @@ import { CookieJar, Cookie } from 'tough-cookie';
 import { MixedCookieAgent } from 'http-cookie-agent/http';
 import MemorySource from "./MemorySource.js";
 import { genericSourcePlayMatch } from "../utils/PlayComparisonUtils.js";
+import { TemporalPlayComparisonOptions } from "../utils/TimeUtils.js";
 
 interface DeezerHistoryResponse {
     errors: []
@@ -204,7 +205,7 @@ export default class DeezerInternalSource extends MemorySource {
         for(const list of lists) {
             const existing = list.find(x => {
                 const e = this.transformPlay(x, TRANSFORM_HOOK.existing);
-                return genericSourcePlayMatch(e, candidate, TA_CLOSE);
+                return genericSourcePlayMatch(e, candidate);
             });
             if(existing) {
                 return existing;
@@ -212,7 +213,16 @@ export default class DeezerInternalSource extends MemorySource {
             if(this.config.options?.fuzzyDiscoveryIgnore === true || this.config.options?.fuzzyDiscoveryIgnore === 'aggressive') {
                 const fuzzyIndex = list.findIndex(x => {
                     const e = this.transformPlay(x, TRANSFORM_HOOK.existing);
-                    return genericSourcePlayMatch(e, candidate, TA_FUZZY, {fuzzyDiffThreshold: this.config.options?.fuzzyDiscoveryIgnore === 'aggressive' ? 40 : undefined});
+                    let temporalOptions: TemporalPlayComparisonOptions = {};
+                    const temporalAccuracy: TemporalAccuracy[] = [TA_EXACT, TA_CLOSE, TA_FUZZY];
+                    if(this.config.options?.fuzzyDiscoveryIgnore === 'aggressive') {
+                        temporalOptions = {
+                            fuzzyDiffThreshold: Math.max(100, x.data.duration * 0.5),
+                            duringReferences: ['duration', 'listenedFor', 'range']
+                        }
+                        temporalAccuracy.push(TA_DURING);
+                    }
+                    return genericSourcePlayMatch(e, candidate, temporalAccuracy, temporalOptions);
                 });
                 if(fuzzyIndex !== -1) {
                     if(this.config.options?.fuzzyDiscoveryIgnore === 'aggressive') {

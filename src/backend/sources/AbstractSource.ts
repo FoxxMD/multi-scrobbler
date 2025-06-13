@@ -2,7 +2,7 @@ import { childLogger, LogDataPretty } from '@foxxmd/logging';
 import dayjs, { Dayjs } from "dayjs";
 import { EventEmitter } from "events";
 import { FixedSizeList } from "fixed-size-list";
-import { PlayObject, TA_CLOSE } from "../../core/Atomic.js";
+import { PlayObject, TA_CLOSE, TA_DEFAULT_ACCURACY } from "../../core/Atomic.js";
 import { buildTrackString, capitalize, truncateStringToLength } from "../../core/StringUtils.js";
 import AbstractComponent from "../common/AbstractComponent.js";
 import {
@@ -33,7 +33,7 @@ import {
     sortByNewestPlayDate,
     sortByOldestPlayDate,
 } from "../utils.js";
-import { comparePlayTemporally, temporalAccuracyIsAtLeast, timeToHumanTimestamp, todayAwareFormat } from "../utils/TimeUtils.js";
+import { timeToHumanTimestamp, todayAwareFormat } from "../utils/TimeUtils.js";
 import { getRoot } from '../ioc.js';
 import { componentFileLogger } from '../common/logging.js';
 import { WebhookPayload } from '../common/infrastructure/config/health/webhooks.js';
@@ -178,7 +178,7 @@ export default abstract class AbstractSource extends AbstractComponent implement
         for(const list of lists) {
             const existing = list.find(x => {
                 const e = this.transformPlay(x, TRANSFORM_HOOK.existing);
-                return genericSourcePlayMatch(e, candidate, TA_CLOSE);
+                return genericSourcePlayMatch(e, candidate);
             });
             if(existing) {
                 return existing;
