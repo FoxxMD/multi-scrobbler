@@ -1,11 +1,14 @@
 import dayjs, { Dayjs } from "dayjs";
 import isToday from 'dayjs/plugin/isToday.js';
 import {
+    AcceptableTemporalDuringReference,
     PlayObject,
     SCROBBLE_TS_SOC_END,
     SCROBBLE_TS_SOC_START,
     ScrobbleTsSOC,
     TA_CLOSE,
+    TA_DEFAULT_ACCURACY,
+    TA_DURING,
     TA_EXACT,
     TA_FUZZY,
     TA_NONE,
@@ -38,31 +41,31 @@ export const temporalPlayComparisonSummary = (data: TemporalPlayComparison, exis
         parts.push(`Play Diff: ${formatNumber(data.date.diff, {toFixed: 0})}s (Needed <${data.date.threshold}s)`)
     }
     if (data.date.fuzzyDurationDiff !== undefined) {
-        parts.push(`Fuzzy Duration Diff: ${formatNumber(data.date.fuzzyDurationDiff, {toFixed: 0})}s (Needed <= 10s)`);
+        parts.push(`Fuzzy Duration Diff: ${formatNumber(data.date.fuzzyDurationDiff, {toFixed: 0})}s (Needed <= ${data.date.fuzzyDiffThreshold}s)`);
     }
     if (data.date.fuzzyListenedDiff !== undefined) {
-        parts.push(`Fuzzy Listened Diff: ${formatNumber(data.date.fuzzyDurationDiff, {toFixed: 0})}s (Needed <= 10s)`);
+        parts.push(`Fuzzy Listened Diff: ${formatNumber(data.date.fuzzyDurationDiff, {toFixed: 0})}s (Needed <= ${data.date.fuzzyDiffThreshold}s)`);
     }
-    if (data.range !== undefined) {
-        if (data.range === false) {
-            parts.push('Candidate not played during Existing tracked listening');
-        } else {
-            parts.push(`Candidate played during tracked listening range from Existing ${data.range[0].timestamp.format('HH:mm:ssZ')} => ${data.range[1].timestamp.format('HH:mm:ssZ')}`);
-        }
-    } else {
+
+    if(data.range === undefined) {
         parts.push('Range Comparison N/A');
+    } else if(data.range.type === 'none') {
+        parts.push(`Candidate not played during Existing ${data.duringReferences.join(' or ')}`);
+    } else {
+        parts.push(`Candidate played during tracked listening range from Existing "${data.range.type}" ${data.range.timestamps[0].format('HH:mm:ssZ')} => ${data.range.timestamps[1].format('HH:mm:ssZ')}`);
     }
     return parts.join(' | ');
 }
-export const comparePlayTemporally = (existingPlay: PlayObject, candidatePlay: PlayObject, options: {
+
+export interface TemporalPlayComparisonOptions {
     diffThreshold?: number,
     fuzzyDuration?: boolean,
-    useListRanges?: boolean
-} = {}): TemporalPlayComparison => {
+    fuzzyDiffThreshold?: number
+    duringReferences?: AcceptableTemporalDuringReference
+}
 
-    const result: TemporalPlayComparison = {
-        match: TA_NONE
-    };
+export const comparePlayTemporally = (existingPlay: PlayObject, candidatePlay: PlayObject, options: TemporalPlayComparisonOptions = {}): TemporalPlayComparison => {
+
 
     const {
         meta: {
@@ -98,8 +101,14 @@ export const comparePlayTemporally = (existingPlay: PlayObject, candidatePlay: P
     const {
         diffThreshold = lowGranularitySources.some(x => x.toLocaleLowerCase() === source) ? 60 : 10,
         fuzzyDuration = false,
-        useListRanges = true,
+        fuzzyDiffThreshold = 10,
+        duringReferences = ['range']
     } = options;
+
+    const result: TemporalPlayComparison = {
+        match: TA_NONE,
+        duringReferences
+    };
 
     // cant compare!
     if (existingTsSOCDate === undefined || candidateTsSOCDate === undefined) {
@@ -115,7 +124,8 @@ export const comparePlayTemporally = (existingPlay: PlayObject, candidatePlay: P
     const scrobblePlayDiff = Math.abs(existingTsSOCDate.unix() - candidateTsSOCDate.unix());
     result.date = {
         threshold: diffThreshold,
-        diff: scrobblePlayDiff
+        diff: scrobblePlayDiff,
+        fuzzyDiffThreshold
     };
 
     if(scrobblePlayDiff <= 1) {
@@ -124,29 +134,57 @@ export const comparePlayTemporally = (existingPlay: PlayObject, candidatePlay: P
         result.match = TA_CLOSE;
     }
 
-    if (useListRanges && existingRanges !== undefined) {
-        // since we know when the existing track was listened to
-        // we can check if the new track play date took place while the existing one was being listened to
-        // which would indicate (assuming same source) the new track is a duplicate
-        for (const range of existingRanges) {
-            if (candidateTsSOCDate.isBetween(range.start.timestamp, range.end.timestamp)) {
-                result.range = range;
-                if(!temporalAccuracyIsAtLeast(TA_CLOSE, result.match)) {
-                    result.match = TA_CLOSE;
+    if(result.match !== TA_NONE) {
+        return result;
+    }
+
+    if(duringReferences.length > 0) {
+
+        if (duringReferences.includes('range') && existingRanges !== undefined) {
+            // since we know when the existing track was listened to
+            // we can check if the new track play date took place while the existing one was being listened to
+            // which would indicate (assuming same source) the new track is a duplicate
+            for (const range of existingRanges) {
+                if (candidateTsSOCDate.isBetween(range.start.timestamp, range.end.timestamp)) {
+                    result.range = {
+                        type: 'range',
+                        timestamps: [range.start.timestamp, range.end.timestamp]
+                    }
+                    result.match = TA_DURING;
+                    return result;
                 }
-                break;
             }
         }
-        if (result.range === undefined) {
-            result.range = false;
+
+        if(duringReferences.includes('listenedFor') && existingPlay.data.listenedFor !== undefined) {
+            if (candidateTsSOCDate.isBetween(existingTsSOCDate, existingTsSOCDate.add(existingPlay.data.listenedFor, 's'))) {
+                result.match = TA_DURING;
+                result.range = {
+                        type: 'listenedFor',
+                        timestamps: [existingTsSOCDate, existingTsSOCDate.add(existingPlay.data.listenedFor, 's')]
+                }
+                return result;
+            }
         }
+
+        if(duringReferences.includes('duration') && existingPlay.data.duration !== undefined) {
+            if (candidateTsSOCDate.isBetween(existingTsSOCDate, existingTsSOCDate.add(existingPlay.data.duration, 's'))) {
+                result.match = TA_DURING;
+                result.range = {
+                        type: 'duration',
+                        timestamps: [existingTsSOCDate, existingTsSOCDate.add(existingPlay.data.duration, 's')]
+                }
+                return result;
+            }
+        }
+
     }
 
     // if the source has a duration its possible one play was scrobbled at the beginning of the track and the other at the end
     // so check if the duration matches the diff between the two play dates
     if (result.match === TA_NONE && referenceDuration !== undefined) {
         result.date.fuzzyDurationDiff = Math.abs(scrobblePlayDiff - referenceDuration);
-        if (result.date.fuzzyDurationDiff <= 10) { // TODO use finer comparison for this?
+        if (result.date.fuzzyDurationDiff <= fuzzyDiffThreshold) { // TODO use finer comparison for this?
             result.match = TA_FUZZY;
         }
     }
@@ -155,7 +193,7 @@ export const comparePlayTemporally = (existingPlay: PlayObject, candidatePlay: P
     // so check if there is a close match between candidate play date and source + listened for
     if (result.match === TA_NONE && referenceListenedFor !== undefined && fuzzyDuration) {
         result.date.fuzzyListenedDiff = Math.abs(scrobblePlayDiff - referenceListenedFor);
-        if (result.date.fuzzyListenedDiff <= 10) { // TODO use finer comparison for this?
+        if (result.date.fuzzyListenedDiff <= fuzzyDiffThreshold) { // TODO use finer comparison for this?
             result.match = TA_FUZZY
         }
     }
@@ -194,15 +232,7 @@ export const timePassesScrobbleThreshold = (thresholds: ScrobbleThresholds, seco
     }
 }
 
-export const temporalAccuracyIsAtLeast = (expected: TemporalAccuracy, found: TemporalAccuracy): boolean => {
-    if(typeof expected === 'number') {
-        if(typeof found === 'number') {
-            return found <= expected;
-        }
-        return false;
-    }
-    return found === false;
-}
+export const hasAcceptableTemporalAccuracy = (found: TemporalAccuracy, expected: TemporalAccuracy[] = TA_DEFAULT_ACCURACY): boolean => expected.includes(found);
 
 export const temporalAccuracyToString = (acc: TemporalAccuracy): string => {
     switch(acc) {
@@ -212,7 +242,9 @@ export const temporalAccuracyToString = (acc: TemporalAccuracy): string => {
             return 'close';
         case 3:
             return 'fuzzy';
-        case false:
+        case 4:
+            return 'during';
+        case 99:
             return 'no correlation';
     }
 }

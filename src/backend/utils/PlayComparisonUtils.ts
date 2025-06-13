@@ -1,6 +1,8 @@
 import { getListDiff, ListDiff } from "@donedeal0/superdiff";
-import { PlayObject } from "../../core/Atomic.js";
+import { PlayObject, TA_CLOSE, TA_DEFAULT_ACCURACY, TA_EXACT, TemporalAccuracy } from "../../core/Atomic.js";
 import { buildTrackString } from "../../core/StringUtils.js";
+import { playObjDataMatch } from "../utils.js";
+import { comparePlayTemporally, hasAcceptableTemporalAccuracy, TemporalPlayComparisonOptions } from "./TimeUtils.js";
 
 
 export const metaInvariantTransform = (play: PlayObject): PlayObject => {
@@ -221,3 +223,7 @@ export const humanReadableDiff = (aPlay: PlayObject[], bPlay: PlayObject[], resu
        return `${a} => ${b}`;
     }).join('\n');
 }
+
+export const genericSourcePlayMatch = (a: PlayObject, b: PlayObject, t?: TemporalAccuracy[], temporalOptions?: TemporalPlayComparisonOptions): boolean =>
+    playObjDataMatch(a, b)
+    && hasAcceptableTemporalAccuracy(comparePlayTemporally(a, b, temporalOptions).match, t);
