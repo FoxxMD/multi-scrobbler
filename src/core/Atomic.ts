@@ -244,7 +244,7 @@ export interface DeadLetterScrobble<PlayType, RetryType = Dayjs> extends QueuedS
 export type Second = number;
 export type Millisecond = number;
 
-export type TemporalAccuracy = 1 | 2 | 3 | false;
+export type TemporalAccuracy = 1 | 2 | 3 | 4 | 99;
 
 /** Timestamp diffs are close to exact (less than or equal to 1 second difference) */
 export const TA_EXACT: TemporalAccuracy = 1;
@@ -253,10 +253,20 @@ export const TA_EXACT: TemporalAccuracy = 1;
  * low granularity (subsonic usually) is 60 seconds
  */
 export const TA_CLOSE: TemporalAccuracy = 2;
-/** Timestamp diffs are not EXACT/CLOSE but Scrobble A's timestamp +/- duration is within 10 seconds of Scrobble B's timestamp */
+/** Timestamp diffs are not CLOSE but Scrobble A's timestamp +/- duration is within fuzzyDiffThreshold seconds of Scrobble B's timestamp */
 export const TA_FUZZY: TemporalAccuracy = 3;
+/** Timestamp diffs are not FUZZY and Scrobble B's timestamp is within potential full play of Scrobble A (timestamp +/- duration) */
+export const TA_DURING: TemporalAccuracy = 4;
 /** No correlation between timestamps */
-export const TA_NONE: TemporalAccuracy = false;
+export const TA_NONE: TemporalAccuracy = 99;
+
+export type AcceptableTemporaryAccuracy = TemporalAccuracy[]
+
+export const TA_DEFAULT_ACCURACY: AcceptableTemporaryAccuracy = [TA_EXACT, TA_CLOSE];
+
+export type TemporalDuringReference = 'range' | 'duration' | 'listenedFor';
+
+export type AcceptableTemporalDuringReference = TemporalDuringReference[];
 
 export interface TemporalPlayComparison {
     match: TemporalAccuracy
@@ -265,8 +275,13 @@ export interface TemporalPlayComparison {
         diff: number
         fuzzyDurationDiff?: number
         fuzzyListenedDiff?: number
+        fuzzyDiffThreshold?: number
     }
-    range?: false | ListenRangeData
+    duringReferences: AcceptableTemporalDuringReference
+    range?: {
+        timestamps: [Dayjs, Dayjs]
+        type: TemporalDuringReference
+    } | { type: 'none' }
 }
 
 export type SOURCE_SOT_TYPES = 'player' | 'history';
