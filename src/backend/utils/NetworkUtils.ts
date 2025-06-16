@@ -195,6 +195,9 @@ export const joinedUrl = (url: URL, ...paths: string[]): URL => {
     finalUrl.pathname = joinPath(url.pathname, ...(paths.filter(x => x.trim() !== '')));
     return finalUrl;
 }
+
+export const getBaseFromUrl = (url: URL): URL => new URL(`${url.protocol}//${url.host}`);
+
 export const getAddress = (host = '0.0.0.0', logger?: Logger): { v4?: string, v6?: string, host: string } => {
     const local = host === '0.0.0.0' || host === '::' ? 'localhost' : host;
     let v4: string,

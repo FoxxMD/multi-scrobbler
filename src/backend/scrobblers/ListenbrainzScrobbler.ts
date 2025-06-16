@@ -17,6 +17,7 @@ export default class ListenbrainzScrobbler extends AbstractScrobbleClient {
     api: ListenbrainzApiClient;
     requiresAuth = true;
     requiresAuthInteraction = false;
+    isKoito: boolean = false;
 
     declare config: ListenBrainzClientConfig;
 
@@ -44,6 +45,7 @@ export default class ListenbrainzScrobbler extends AbstractScrobbleClient {
 
     protected async doCheckConnection(): Promise<true | string | undefined> {
         await this.api.testConnection();
+        this.isKoito = this.api.isKoito;
         return true;
     }
 
