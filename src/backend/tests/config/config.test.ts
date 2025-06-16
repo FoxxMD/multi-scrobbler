@@ -92,7 +92,8 @@ describe('Sample Configs', function () {
                     await copyFile(samplePath(componentType), `${componentType}.json`);
                     const clients = new ScrobbleClients(emitter, new EventEmitter, new URL('http://example.com'), process.cwd(), loggerTest);
                     await clients.buildClientsFromConfig(new Notifiers(new EventEmitter, new EventEmitter, new EventEmitter, loggerTest));
-                    expect(clients.clients).length(1);
+                    const expectedCount = componentType === 'listenbrainz' ? 2 : 1;
+                    expect(clients.clients).length(expectedCount);
                 });
             }
         });
