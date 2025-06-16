@@ -17,6 +17,7 @@ import { AbstractApiOptions, DEFAULT_RETRY_MULTIPLIER, FormatPlayObjectOptions }
 import { ListenBrainzClientData } from "../infrastructure/config/client/listenbrainz.js";
 import AbstractApiClient from "./AbstractApiClient.js";
 import { joinedUrl, normalizeWebAddress } from '../../utils/NetworkUtils.js';
+import { parseRegexSingleOrFail } from '../../utils.js';
 
 
 export interface ArtistMBIDMapping {
@@ -113,6 +114,8 @@ export interface ListenResponse {
     track_metadata: TrackResponse;
 }
 
+const LZ_VERSION_PATH: RegExp = new RegExp(/\/?1\/?$/);
+
 export class ListenbrainzApiClient extends AbstractApiClient {
 
     declare config: ListenBrainzClientData;
@@ -123,7 +126,14 @@ export class ListenbrainzApiClient extends AbstractApiClient {
         const {
             url = 'https://api.listenbrainz.org/'
         } = config;
-        this.url = normalizeWebAddress(url);
+        let cleanUrl = url;
+        if(parseRegexSingleOrFail(LZ_VERSION_PATH, cleanUrl)) {
+            this.logger.verbose(`LZ Server URL contained /1/, removing this because MS adds it automatically`);
+            cleanUrl = url.replace(LZ_VERSION_PATH, '');
+        }
+        this.url = normalizeWebAddress(cleanUrl);
+
+        this.logger.verbose(`Config URL: '${url ?? '(None Given)'}' => Normalized: '${this.url.url}'`)
     }
 
 
