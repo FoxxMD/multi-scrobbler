@@ -765,17 +765,18 @@ http://localhost:9078/api/lastfm/mySlug
 
 This Source monitors a Listenbrainz account's scrobble history and then re-scrobbles discovered tracks to configured clients.
 
-You will need to run your own Listenbrainz server or have an account [on the official instance](https://listenbrainz.org/login/)
+You will need to run your own Listenbrainz server, [Koito](https://koito.io) server, or have an account [on the official instance](https://listenbrainz.org/login/)
 
 On your [profile page](https://listenbrainz.org/profile/) find your **User Token** to use in the configuration.
 
+For Koito, [create an API Key from your Account page.](https://koito.io/guides/scrobbler/)
 
 #### Configuration
 
 <Tabs groupId="configType" queryString>
     <TabItem value="env" label="ENV">
         :::note
-            You cannot use ENV variables shown in the [Listenbrainz Client config](#listenbrainz) -- multi-scrobbler assumes Listenbrainz ENVs are always used for the **client** configuration. You must use the file-based config from below to setup Listenbrainz as a Source.
+            You cannot use ENV variables shown in the [Listenbrainz Client config](#listenbrainz) -- multi-scrobbler assumes Listenbrainz ENVs are always used for the **client** configuration. You must use the **File** or AOI config to setup Listenbrainz as a Source.
         :::
     </TabItem>
     <TabItem value="file" label="File">
@@ -2267,9 +2268,11 @@ or replace `localhost:9078` with your own base URL
 
 ### [Listenbrainz](https://listenbrainz.org)
 
-You will need to run your own Listenbrainz server or have an account [on the official instance](https://listenbrainz.org/login/)
+You will need to run your own Listenbrainz server, [Koito](https://koito.io) or have an account [on the official instance](https://listenbrainz.org/login/)
 
 On your [profile page](https://listenbrainz.org/profile/) find your **User Token** to use in the configuration.
+
+For Koito, [create an API Key from your Account page.](https://koito.io/guides/scrobbler/)
 
 #### Configuration
 

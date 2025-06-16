@@ -21,6 +21,7 @@ A javascript app to scrobble music you listened to, to [Maloja](https://github.c
   * [Last.fm](https://foxxmd.github.io/multi-scrobbler/docs/configuration#lastfm-source)
   * [Last.fm (Endpoint)](https://foxxmd.github.io/multi-scrobbler/docs/configuration#lastfm-endpoint)
   * [ListenBrainz](https://foxxmd.github.io/multi-scrobbler/docs/configuration#listenbrainz-source)
+  * [Koito](https://foxxmd.github.io/multi-scrobbler/docs/configuration#listenbrainz-source) using Listenbrainz Source
   * [ListenBrainz (Endpoint)](https://foxxmd.github.io/multi-scrobbler/docs/configuration#listenbrainz-endpoint)
   * [~~Deezer~~](https://foxxmd.github.io/multi-scrobbler/docs/configuration#deezer)
   * [MPRIS (Linux Desktop)](https://foxxmd.github.io/multi-scrobbler/docs/configuration#mpris)
@@ -38,6 +39,7 @@ A javascript app to scrobble music you listened to, to [Maloja](https://github.c
   * [Maloja](https://foxxmd.github.io/multi-scrobbler/docs/configuration#maloja)
   * [Last.fm](https://foxxmd.github.io/multi-scrobbler/docs/configuration#lastfm)
   * [ListenBrainz](https://foxxmd.github.io/multi-scrobbler/docs/configuration#listenbrainz)
+  * [Koito](https://foxxmd.github.io/multi-scrobbler/docs/configuration#listenbrainz) using Listenbrainz Client
 * Monitor status of Sources and Clients using [webhooks (Gotify, Ntfy, Apprise)](https://foxxmd.github.io/multi-scrobbler/docs/configuration#webhook-configurations) or [healthcheck endpoint](https://foxxmd.github.io/multi-scrobbler/docs/configuration#health-endpoint)
 * Supports configuring for single or multiple users (scrobbling for your friends and family!)
 * Web server interface for stats, basic control, and detailed logs
