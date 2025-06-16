@@ -1,7 +1,7 @@
 import { stringSameness } from '@foxxmd/string-sameness';
 import dayjs from "dayjs";
 import request, { Request, Response } from 'superagent';
-import { PlayObject } from "../../../core/Atomic.js";
+import { PlayObject, URLData } from "../../../core/Atomic.js";
 import { combinePartsToString, slice } from "../../../core/StringUtils.js";
 import {
     findDelimiters,
@@ -16,6 +16,7 @@ import { UpstreamError } from "../errors/UpstreamError.js";
 import { AbstractApiOptions, DEFAULT_RETRY_MULTIPLIER, FormatPlayObjectOptions } from "../infrastructure/Atomic.js";
 import { ListenBrainzClientData } from "../infrastructure/config/client/listenbrainz.js";
 import AbstractApiClient from "./AbstractApiClient.js";
+import { joinedUrl, normalizeWebAddress } from '../../utils/NetworkUtils.js';
 
 
 export interface ArtistMBIDMapping {
@@ -115,14 +116,14 @@ export interface ListenResponse {
 export class ListenbrainzApiClient extends AbstractApiClient {
 
     declare config: ListenBrainzClientData;
-    url: string;
+    url: URLData;
 
     constructor(name: any, config: ListenBrainzClientData, options: AbstractApiOptions) {
         super('ListenBrainz', name, config, options);
         const {
             url = 'https://api.listenbrainz.org/'
         } = config;
-        this.url = url;
+        this.url = normalizeWebAddress(url);
     }
 
 
@@ -178,7 +179,7 @@ export class ListenbrainzApiClient extends AbstractApiClient {
 
     testConnection = async () => {
         try {
-            const resp = await this.callApi(request.get(this.url))
+            const resp = await this.callApi(request.get(this.url.url.toString()))
             return true;
         } catch (e) {
             if(e.status === 410 || e.message.includes('HTTP Status 410')) {
@@ -190,7 +191,7 @@ export class ListenbrainzApiClient extends AbstractApiClient {
 
     testAuth = async () => {
         try {
-            const resp = await this.callApi(request.get(`${this.url}1/validate-token`));
+            const resp = await this.callApi(request.get(`${joinedUrl(this.url.url,'1/validate-token')}`));
             return true;
         } catch (e) {
             throw e;
@@ -201,7 +202,7 @@ export class ListenbrainzApiClient extends AbstractApiClient {
         try {
 
             const resp = await this.callApi(request
-                .get(`${this.url}1/user/${user ?? this.config.username}/listens`)
+                .get(`${joinedUrl(this.url.url,'1/user',user ?? this.config.username, 'listens')}`)
                 // this endpoint can take forever, sometimes, and we want to make sure we timeout in a reasonable amount of time for polling sources to continue trying to scrobble
                 .timeout({
                     response: 15000, // wait 15 seconds before timeout if server doesn't response at all
@@ -221,7 +222,7 @@ export class ListenbrainzApiClient extends AbstractApiClient {
         try {
 
             const resp = await this.callApi(request
-                .get(`${this.url}1/user/${user ?? this.config.username}/playing-now`)
+                .get(`${joinedUrl(this.url.url,'1/user',user ?? this.config.username, 'playing-now')}`)
                 // this endpoint can take forever, sometimes, and we want to make sure we timeout in a reasonable amount of time for polling sources to continue trying to scrobble
                 .timeout({
                     response: 15000, // wait 15 seconds before timeout if server doesn't response at all
@@ -257,7 +258,7 @@ export class ListenbrainzApiClient extends AbstractApiClient {
             // so no useful information
             // https://listenbrainz.readthedocs.io/en/latest/users/api-usage.html#submitting-listens
             // TODO may we should make a call to recent-listens to get the parsed scrobble?
-            const resp = await this.callApi(request.post(`${this.url}1/submit-listens`).type('json').send(listenPayload));
+            const resp = await this.callApi(request.post(`${joinedUrl(this.url.url,'1/submit-listens')}`).type('json').send(listenPayload));
             if(log) {
                 this.logger.debug(`Submit Response: ${resp.text}`)
             }
