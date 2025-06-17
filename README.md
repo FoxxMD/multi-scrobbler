@@ -23,7 +23,7 @@ A javascript app to scrobble music you listened to, to [Maloja](https://github.c
   * [ListenBrainz](https://foxxmd.github.io/multi-scrobbler/docs/configuration#listenbrainz-source)
   * [Koito](https://foxxmd.github.io/multi-scrobbler/docs/configuration#listenbrainz-source) using Listenbrainz Source
   * [ListenBrainz (Endpoint)](https://foxxmd.github.io/multi-scrobbler/docs/configuration#listenbrainz-endpoint)
-  * [~~Deezer~~](https://foxxmd.github.io/multi-scrobbler/docs/configuration#deezer)
+  * [Deezer](https://foxxmd.github.io/multi-scrobbler/docs/configuration#deezer)
   * [MPRIS (Linux Desktop)](https://foxxmd.github.io/multi-scrobbler/docs/configuration#mpris)
   * [Mopidy](https://foxxmd.github.io/multi-scrobbler/docs/configuration#mopidy)
   * [JRiver](https://foxxmd.github.io/multi-scrobbler/docs/configuration#jriver)
