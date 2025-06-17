@@ -43,7 +43,7 @@ export interface DeezerInternalData extends CommonSourceData, PollingOptions {
 
 export interface DeezerInternalSourceConfig extends CommonSourceConfig {
     data: DeezerInternalData
-    options: DeezerInternalSourceOptions
+    options?: DeezerInternalSourceOptions
 }
 
 export interface  DeezerInternalSourceOptions extends CommonSourceOptions {
