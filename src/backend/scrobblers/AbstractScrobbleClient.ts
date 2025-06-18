@@ -10,6 +10,8 @@ import {
     PlayObject,
     QueuedScrobble,
     TA_CLOSE,
+    TA_DEFAULT_ACCURACY,
+    TA_DURING,
     TA_FUZZY,
     TrackStringOptions,
 } from "../../core/Atomic.js";
@@ -42,7 +44,7 @@ import { messageWithCauses, messageWithCausesTruncatedDefault } from "../utils/E
 import { compareScrobbleArtists, compareScrobbleTracks, normalizeStr } from "../utils/StringUtils.js";
 import {
     comparePlayTemporally,
-    temporalAccuracyIsAtLeast,
+    hasAcceptableTemporalAccuracy,
     temporalAccuracyToString,
     temporalPlayComparisonSummary,
 } from "../utils/TimeUtils.js";
@@ -315,7 +317,7 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
 
         const matchPlayDate = dtInvariantMatches.find((x: ScrobbledPlayObject) => {
             const temporalComparison = comparePlayTemporally(x.play, playObj);
-            return temporalAccuracyIsAtLeast(TA_CLOSE, temporalComparison.match)
+            return hasAcceptableTemporalAccuracy(temporalComparison.match)
         });
 
         return [matchPlayDate, dtInvariantMatches];
@@ -403,9 +405,9 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
 
                 const temporalComparison = comparePlayTemporally(x, playObj);
                 let timeMatch = 0;
-                if(temporalAccuracyIsAtLeast(TA_CLOSE, temporalComparison.match)) {
+                if(hasAcceptableTemporalAccuracy(temporalComparison.match)) {
                     timeMatch = 1;
-                } else if(temporalComparison.match === TA_FUZZY) {
+                } else if(hasAcceptableTemporalAccuracy(temporalComparison.match, [TA_FUZZY, TA_DURING])) {
                     timeMatch = 0.6;
                 }
 
