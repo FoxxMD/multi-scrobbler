@@ -121,6 +121,11 @@ export default class ScrobbleClients {
             clientDefaults = cd;
             for (const [index, c] of mainConfigClientConfigs.entries()) {
                 const {name = 'unnamed'} = c;
+                if(c.type === undefined) {
+                    const invalidMsgType = `Client config ${index + 1} (${name}) in config.json does not have a "type" property! "type": "[clientType]" must be one of ${clientTypes.join(' | ')}`;
+                    this.logger.error(invalidMsgType);
+                    continue;
+                }
                 if(!isClientType(c.type.toLocaleLowerCase())) {
                     const invalidTypeMsg = `Client config ${index + 1} (${name}) in config.json has an invalid client type of '${c.type}'. Must be one of ${clientTypes.join(' | ')}`;
                     //this.emitter.emit('error', new Error(invalidTypeMsg));

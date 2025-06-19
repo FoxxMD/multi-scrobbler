@@ -265,8 +265,14 @@ export default class ScrobbleSources {
             sourceDefaults = this.buildSourceDefaults(sd);
             for (const [index, c] of mainConfigSourcesConfigs.entries()) {
                 const {name = 'unnamed'} = c;
+                if(c.type === undefined) {
+                    const invalidMsgType = `Source config ${index + 1} (${name}) in config.json does not have a "type" property! "type": "[sourceType]" must be one of ${sourceTypes.join(' | ')}`;
+                    this.emitter.emit('error', new Error(invalidMsgType));
+                    this.logger.error(invalidMsgType);
+                    continue;
+                }
                 if(!isSourceType(c.type.toLocaleLowerCase())) {
-                    const invalidMsgType = `Source config ${index + 1} (${name}) in config.json has an invalid source type of '${c.type}'. Must be one of ${sourceTypes.join(' | ')}`;
+                    const invalidMsgType = `Source config ${index + 1} (${name}) in config.json has an invalid source "type" of "${c.type}". Must be one of ${sourceTypes.join(' | ')}`;
                     this.emitter.emit('error', new Error(invalidMsgType));
                     this.logger.error(invalidMsgType);
                     continue;
