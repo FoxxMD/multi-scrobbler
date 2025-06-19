@@ -17,6 +17,25 @@
             ],
         },
         {
+            "name": "dev (ENV Only)",
+            "type": "node",
+            "request": "launch",
+            // Debug app in VSCode
+            "program": "${workspaceFolder}/src/backend/index.ts",
+            "runtimeExecutable": "${workspaceFolder}/node_modules/.bin/tsx",
+            "console": "integratedTerminal",
+            "envFile": "${workspaceFolder}/.env",
+            "env": {
+                "CONFIG_DIR": "./not-real"
+            },
+            "internalConsoleOptions": "neverOpen",
+            "skipFiles": [
+                "<node_internals>/**",
+                // Ignore all dependencies (optional)
+                "${workspaceFolder}/node_modules/**",
+            ],
+        },
+        {
             "name": "tsx",
             "type": "node",
             "request": "launch",
