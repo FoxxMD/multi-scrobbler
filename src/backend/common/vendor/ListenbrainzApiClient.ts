@@ -74,8 +74,21 @@ export interface AdditionalTrackInfoResponse extends AdditionalTrackInfo {
     recording_msid?: string
 }
 
+// using submit-listens example from openapi https://rain0r.github.io/listenbrainz-openapi/index.html#/lbCore/submitListens
+// which is documented in official docs https://listenbrainz.readthedocs.io/en/latest/users/api/index.html#openapi-specification
+// and based on this LZ developer comment https://github.com/lyarenei/jellyfin-plugin-listenbrainz/issues/10#issuecomment-1253867941
+export interface SubmitListenAdditionalTrackInfo extends AdditionalTrackInfo {
+    artist_names?: string[]
+    release_artist_name?: string
+    release_artist_names?: string[]
+    spotify_album_id?: string
+    spotify_album_artist_ids?: string[]
+    spotify_artist_ids?: string[]
+    albumartist?: string
+}
+
 export interface TrackPayload extends MinimumTrack {
-    additional_info?: AdditionalTrackInfo
+    additional_info?: SubmitListenAdditionalTrackInfo
 }
 
 export interface ListenPayload {
@@ -339,14 +352,40 @@ export class ListenbrainzApiClient extends AbstractApiClient {
                 track,
                 duration,
                 meta: {
-                    brainz = {}
+                    brainz = {},
+                    spotify = {}
                 } = {}
             }
         } = play;
+        // using submit-listens exmaple from openapi https://rain0r.github.io/listenbrainz-openapi/index.html#/lbCore/submitListens
+        // which is documented in official docs https://listenbrainz.readthedocs.io/en/latest/users/api/index.html#openapi-specification
+        // and based on this LZ developer comment https://github.com/lyarenei/jellyfin-plugin-listenbrainz/issues/10#issuecomment-1253867941
+
+        const addInfo: SubmitListenAdditionalTrackInfo = {
+            // all artists
+            artist_names: Array.from(new Set([...artists, ...albumArtists])),
+            // primary artist
+            release_artist_name: artists[0],
+            release_artist_names: [artists[0]],
+        };
+
+        if(spotify.track !== undefined) {
+            addInfo.spotify_id = spotify.track;
+        }
+        if(spotify.album !== undefined) {
+            addInfo.spotify_album_id = spotify.album;
+        }
+        if(spotify.albumArtist !== undefined && spotify.albumArtist.length > 0) {
+            addInfo.spotify_album_artist_ids = spotify.albumArtist;
+        }
+        if(spotify.artist !== undefined) {
+            addInfo.spotify_artist_ids = spotify.artist;
+        }
+
         return {
             listened_at: getScrobbleTsSOCDate(play).unix(),
             track_metadata: {
-                artist_name: artists[0],
+                artist_name: Array.from(new Set([...artists, ...albumArtists])).join(', '),
                 track_name: track,
                 release_name: album,
                 additional_info: {
@@ -354,7 +393,8 @@ export class ListenbrainzApiClient extends AbstractApiClient {
                     track_mbid: brainz.track,
                     artist_mbids: brainz.artist,
                     release_mbid: brainz.album,
-                    release_group_mbid: brainz.releaseGroup
+                    release_group_mbid: brainz.releaseGroup,
+                    ...addInfo
                 }
             }
         }
