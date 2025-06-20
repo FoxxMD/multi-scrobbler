@@ -74,6 +74,13 @@ export interface BrainzMeta {
     releaseGroup?: string
 }
 
+export interface SpotifyMeta {
+    artist?: string[]
+    albumArtist?: string[]
+    album?: string
+    track?: string
+}
+
 export interface TrackData {
     artists?: string[]
     albumArtists?: string[]
@@ -86,6 +93,7 @@ export interface TrackData {
 
     meta?: {
         brainz?: BrainzMeta
+        spotify?: SpotifyMeta
     }
 }
 
