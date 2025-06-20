@@ -2,7 +2,7 @@ import dayjs, { Dayjs } from "dayjs";
 import EventEmitter from "events";
 import SpotifyWebApi from "spotify-web-api-node";
 import request from 'superagent';
-import { PlayObject, SCROBBLE_TS_SOC_END, SCROBBLE_TS_SOC_START, ScrobbleTsSOC } from "../../core/Atomic.js";
+import { PlayObject, SCROBBLE_TS_SOC_END, SCROBBLE_TS_SOC_START, ScrobbleTsSOC, SpotifyMeta } from "../../core/Atomic.js";
 import { combinePartsToString, truncateStringToLength } from "../../core/StringUtils.js";
 import { isNodeNetworkException } from "../common/errors/NodeErrors.js";
 import { hasUpstreamError, UpstreamError } from "../common/errors/UpstreamError.js";
@@ -155,6 +155,7 @@ export default class SpotifySource extends MemoryPositionalSource {
         }
 
         const {
+            id: albumId,
             name: albumName,
             artists: albumArtists = [],
             images = []
@@ -183,7 +184,15 @@ export default class SpotifySource extends MemoryPositionalSource {
                 track: name,
                 duration: duration_ms / 1000,
                 playDate: played_at,
-                playDateCompleted
+                playDateCompleted,
+                meta: {
+                    spotify: {
+                        track: id,
+                        artist: artists.map(x => x.id),
+                        albumArtist: actualAlbumArtists.map(x => x.id),
+                        album: albumId
+                    }
+                }
             },
             meta: {
                 deviceId: deviceId ?? `${NO_DEVICE}-${NO_USER}`,
