@@ -337,11 +337,6 @@ ${sources.join('\n')}`);
         this.clients.push(newClient);
     }
 
-    /**
-     * @param {*} data
-     * @param {{scrobbleFrom, scrobbleTo, forceRefresh: boolean}|{scrobbleFrom, scrobbleTo}} options
-     * @returns {Array}
-     */
     scrobble = async (data: (PlayObject | PlayObject[]), options: {forceRefresh?: boolean, checkTime?: Dayjs, scrobbleTo?: string[], scrobbleFrom?: string} = {}) => {
         const playObjs = Array.isArray(data) ? data : [data];
         const {
