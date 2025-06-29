@@ -3,17 +3,13 @@ import dayjs, { Dayjs } from "dayjs";
 import EventEmitter from "events";
 import { FixedSizeList } from 'fixed-size-list';
 import { nanoid } from "nanoid";
-import { Simulate } from "react-dom/test-utils";
 import { MarkOptional } from "ts-essentials";
 import {
     DeadLetterScrobble,
     PlayObject,
-    QueuedScrobble,
-    TA_CLOSE,
-    TA_DEFAULT_ACCURACY,
-    TA_DURING,
+    QueuedScrobble, TA_DURING,
     TA_FUZZY,
-    TrackStringOptions,
+    TrackStringOptions
 } from "../../core/Atomic.js";
 import { buildTrackString, capitalize, truncateStringToLength } from "../../core/StringUtils.js";
 import AbstractComponent from "../common/AbstractComponent.js";
@@ -776,6 +772,18 @@ ${closestMatch.breakdowns.join('\n')}`, {leaf: ['Dupe Check']});
         this.deadLetterScrobbles.sort((a, b) => sortByOldestPlayDate(a.play, b.play));
         this.emitEvent('deadLetter', {dead: deadData});
     }
+
+    playingNow = (data: PlayObject | PlayObject[], source: string) => {
+        const plays = Array.isArray(data) ? data : [data];
+        const p = plays.at(-1);
+        
+        if(p !== undefined) {
+            const transformedPlay = this.transformPlay(p, TRANSFORM_HOOK.preCompare);
+            this.doPlayingNow(transformedPlay);
+        }
+    }
+
+    protected doPlayingNow = (data: PlayObject): Promise<any> => Promise.resolve(undefined)
 
 
     public emitEvent = (eventName: string, payload: object) => {

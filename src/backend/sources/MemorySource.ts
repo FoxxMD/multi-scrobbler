@@ -6,15 +6,12 @@ import { SimpleIntervalJob, Task, ToadScheduler } from "toad-scheduler";
 import { PlayObject, SOURCE_SOT, SOURCE_SOT_TYPES, SourcePlayerObj } from "../../core/Atomic.js";
 import { buildTrackString } from "../../core/StringUtils.js";
 import {
-    asPlayerStateData,
     asPlayerStateDataMaybePlay,
     CALCULATED_PLAYER_STATUSES,
-    InternalConfig,
-    PlayerStateData,
-    PlayerStateDataMaybePlay,
+    InternalConfig, PlayerStateDataMaybePlay,
     PlayPlatformId,
     ProgressAwarePlayObject,
-    SourceType,
+    SourceType
 } from "../common/infrastructure/Atomic.js";
 import { PollingOptions } from "../common/infrastructure/config/common.js";
 import { SourceConfig } from "../common/infrastructure/config/source/sources.js";
@@ -92,7 +89,13 @@ export default class MemorySource extends AbstractSource {
             const stateHash = objectHash.sha1(state);
             if(stateHash !== this.playerState.get(key)) {
                 this.playerState.set(key, stateHash);
-                this.emitEvent('playerUpdate', state);
+                this.emitEvent('playerUpdate', {
+                    ...state,
+                    options: {
+                        scrobbleFrom: this.getIdentifier(),
+                        scrobbleTo: this.clients
+                    }
+                });
             }
             if(this.config.options?.logPlayerState === true || isDebugMode()) {
                 player.logSummary();
@@ -264,7 +267,13 @@ export default class MemorySource extends AbstractSource {
                 }
                 const apiState = player.getApiState();
                 this.playerState.set(key, objectHash.sha1(apiState))
-                this.emitEvent('playerUpdate', apiState);
+                this.emitEvent('playerUpdate', {
+                    ...apiState,
+                    options: {
+                        scrobbleFrom: this.getIdentifier(),
+                        scrobbleTo: this.clients
+                    }
+                });
             } else {
                 const playFromCleanup = this.cleanupPlayer(key);
                 if(playFromCleanup !== undefined) {
