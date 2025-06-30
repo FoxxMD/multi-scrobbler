@@ -66,6 +66,21 @@ export interface UpstreamRefreshOptions {
     refreshInitialCount?: number
 }
 
+export interface NowPlayingOptions {
+
+    /**
+     * Configure if this Client should report Now Playing from Sources that can scrobble to it
+     * 
+     * * `true` (default) => Report Now Playing from any eligible Source. 
+     *   * If multiple Sources are Playing then reported Play is based on alphabetical order of Source names
+     * * `false` => Do not report Now Playing
+     * * `string` list => list of Source `names` that should be allowed to report Now Playing. Order of list determine priority of Play to Report.
+     * 
+     * @default true
+     * */
+    nowPlaying?: boolean | string[]
+}
+
 export interface CommonClientOptions extends RequestRetryOptions, UpstreamRefreshOptions {
 
     /**

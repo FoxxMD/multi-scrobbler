@@ -25,7 +25,7 @@ import {
     TIME_WEIGHT,
     TITLE_WEIGHT, TRANSFORM_HOOK,
 } from "../common/infrastructure/Atomic.js";
-import { CommonClientConfig, UpstreamRefreshOptions } from "../common/infrastructure/config/client/index.js";
+import { CommonClientConfig, NowPlayingOptions, UpstreamRefreshOptions } from "../common/infrastructure/config/client/index.js";
 import { Notifiers } from "../notifier/Notifiers.js";
 import {
     comparingMultipleArtists,
@@ -76,6 +76,9 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
     deadLetterScrobbles: DeadLetterScrobble<PlayObject>[] = [];
 
     supportsNowPlaying: boolean = false;
+    nowPlayingEnabled: boolean;
+    // TODO refactor to use source name for filtering
+    nowPlayingFilter: (data: PlayObject[]) => PlayObject[]
     nowPlayingThresholds: [number,number] = [10,30];
     nowPlayingLastUpdated?: Dayjs;
     nowPlayingLastPlay?: PlayObject;
@@ -160,7 +163,8 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
         const {
             options: {
                 refreshInitialCount = this.MAX_INITIAL_SCROBBLES_FETCH
-            } = {}
+            } = {},
+            options = {},
         } = this.config;
 
         let initialLimit = refreshInitialCount;
@@ -172,6 +176,33 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
         this.logger.verbose(`Fetching up to ${initialLimit} initial scrobbles...`);
         await this.refreshScrobbles(initialLimit);
         this.lastScrobbledPlayDate = this.newestScrobbleTime;
+        
+        if(this.supportsNowPlaying) {
+            if(this.nowPlayingEnabled === undefined) {
+                this.nowPlayingEnabled = true;
+            }
+            this.nowPlayingFilter = (data) => data.sort((a, b) => a.meta.source.localeCompare(b.meta.source));
+
+            if('nowPlaying' in options) {
+                const nowOpts = options as NowPlayingOptions;
+                if(this.nowPlayingEnabled === undefined) {
+                    this.nowPlayingEnabled = nowOpts.nowPlaying === true || Array.isArray(nowOpts.nowPlaying);
+                }
+                if(Array.isArray(nowOpts.nowPlaying)) {
+                    this.nowPlayingFilter = (data) => {
+                        for(const s of nowOpts.nowPlaying as string[]) {
+                            const sLower = s.toLocaleLowerCase();
+                            const validPlay = data.find(x => x.meta.source.toLocaleLowerCase() === sLower);
+                            if(validPlay !== undefined) {
+                                return undefined;
+                            }
+                        }
+                        return [];
+                    }
+                }
+            }
+        }
+
     }
 
     refreshScrobbles = async (limit: number = this.MAX_STORED_SCROBBLES) => {

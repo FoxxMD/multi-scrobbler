@@ -355,7 +355,7 @@ ${sources.join('\n')}`);
         }
 
         for (const client of this.clients) {
-            if(!client.supportsNowPlaying) {
+            if(!client.supportsNowPlaying || !client.nowPlayingEnabled) {
                 continue;
             }
             if (scrobbleTo.length > 0 && !scrobbleTo.includes(client.name)) {
