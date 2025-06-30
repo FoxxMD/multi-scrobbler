@@ -25,6 +25,7 @@ export default class LastfmScrobbler extends AbstractScrobbleClient {
         this.api = new LastfmApiClient(name, config.data, {...options, logger})
         // https://www.last.fm/api/show/user.getRecentTracks
         this.MAX_INITIAL_SCROBBLES_FETCH = 200;
+        this.supportsNowPlaying = true;
     }
 
     formatPlayObj = (obj: any, options: FormatPlayObjectOptions = {}) => LastfmApiClient.formatPlayObj(obj, options);

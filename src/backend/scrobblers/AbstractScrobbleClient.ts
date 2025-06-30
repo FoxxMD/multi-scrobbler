@@ -75,6 +75,11 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
     queuedScrobbles: QueuedScrobble<PlayObject>[] = [];
     deadLetterScrobbles: DeadLetterScrobble<PlayObject>[] = [];
 
+    supportsNowPlaying: boolean = false;
+    nowPlayingThresholds: [number,number] = [10,30];
+    nowPlayingLastUpdated?: Dayjs;
+    nowPlayingLastPlay?: PlayObject;
+
     declare config: CommonClientConfig;
 
     notifier: Notifiers;
@@ -779,8 +784,37 @@ ${closestMatch.breakdowns.join('\n')}`, {leaf: ['Dupe Check']});
         
         if(p !== undefined) {
             const transformedPlay = this.transformPlay(p, TRANSFORM_HOOK.preCompare);
+            if(this.shouldUpdatePlayingNow(p)) {
             this.doPlayingNow(transformedPlay);
+            this.logger.debug(`Now Playing updated.`);
+            this.nowPlayingLastPlay = transformedPlay;
+            this.nowPlayingLastUpdated = dayjs();
+            }
         }
+    }
+
+    protected shouldUpdatePlayingNow = (data: PlayObject): boolean => {
+        if(this.nowPlayingLastPlay === undefined || this.nowPlayingLastUpdated === undefined) {
+            this.logger.debug(`Now Playing has not yet been set! Should update Now Playing`);
+            return true;
+        }
+
+        const lastUpdateDiff = Math.abs(dayjs().diff(this.nowPlayingLastUpdated, 's'));
+
+        // update if play *has* changed and time since last update is greater than min interval
+        // this prevents spamming scrobbler API with updates if user is skipping tracks and source updates frequently
+        if(!playObjDataMatch(data, this.nowPlayingLastPlay) && this.nowPlayingThresholds[0] < lastUpdateDiff) {
+            this.logger.debug(`New Play differs from previous Now Playing and time since update > ${lastUpdateDiff}s, should update Now Playing`);
+            return true;
+        }
+        // update if play *has not* changed but last update is greater than max interval
+        // this keeps scrobbler Now Playing fresh ("active" indicator) in the event play is long
+        if(playObjDataMatch(data, this.nowPlayingLastPlay) && this.nowPlayingThresholds[1] < lastUpdateDiff) {
+            this.logger.debug(`Now Playing has not been updated in > ${lastUpdateDiff}s, should update Now Playing`);
+            return true;
+        }
+
+        return false;
     }
 
     protected doPlayingNow = (data: PlayObject): Promise<any> => Promise.resolve(undefined)

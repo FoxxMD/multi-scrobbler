@@ -10,7 +10,7 @@ import { ListenBrainzClientConfig } from "../common/infrastructure/config/client
 import { MalojaClientConfig } from "../common/infrastructure/config/client/maloja.js";
 import { WildcardEmitter } from "../common/WildcardEmitter.js";
 import { Notifiers } from "../notifier/Notifiers.js";
-import { readJson } from "../utils.js";
+import { isDebugMode, readJson } from "../utils.js";
 import { joinedUrl } from "../utils/NetworkUtils.js";
 import { getTypeSchemaFromConfigGenerator } from "../utils/SchemaUtils.js";
 import { validateJson } from "../utils/ValidationUtils.js";
@@ -47,7 +47,7 @@ export default class ScrobbleClients {
 
         this.sourceEmitter.on('playerUpdate', async (payload: { data: SourcePlayerObj & { options: { scrobbleTo?: string[], scrobbleFrom?: string } } }) => {
             if(payload.data.status.reported === REPORTED_PLAYER_STATUSES.playing) {
-                await this.playingNow(payload.data.play, payload.data.options);
+                this.playingNow(payload.data.play, payload.data.options);
             }
         });
 
@@ -351,12 +351,17 @@ ${sources.join('\n')}`);
         } = options;
 
         if (this.clients.length === 0) {
-            this.logger.warn('Cannot scrobble! No clients are configured.');
+            this.logger.warn('Cannot update Now Playing! No clients are configured.');
         }
 
         for (const client of this.clients) {
+            if(!client.supportsNowPlaying) {
+                continue;
+            }
             if (scrobbleTo.length > 0 && !scrobbleTo.includes(client.name)) {
-                client.logger.debug(`Client was filtered out by Source '${scrobbleFrom}'`);
+                if(isDebugMode()) {
+                    client.logger.debug(`Client was filtered out by Source '${scrobbleFrom}'`);
+                }
                 continue;
             }
             for (const playObj of playObjs) {
