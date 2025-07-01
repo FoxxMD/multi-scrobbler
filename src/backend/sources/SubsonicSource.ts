@@ -24,6 +24,8 @@ export class SubsonicSource extends MemorySource {
 
     declare config: SubSonicSourceConfig;
 
+    usersAllow: string[] = [];
+
     constructor(name: any, config: SubSonicSourceConfig, internal: InternalConfig, emitter: EventEmitter) {
         const {
             data: {
@@ -193,6 +195,22 @@ export class SubsonicSource extends MemorySource {
             throw new Error(`Cannot setup Subsonic source, 'url' is not defined`);
         }
 
+        let usersAllowVal = this.config.data.usersAllow;
+        if(usersAllowVal !== undefined && usersAllowVal !== null) {
+            if(!Array.isArray(usersAllowVal)) {
+                usersAllowVal = [usersAllowVal];
+            }
+            if(usersAllowVal.filter(x => x.toString().trim() !== '').length > 0) {
+                this.usersAllow = usersAllowVal.map(x => x.toString().trim());
+            }
+        }
+
+        if(this.usersAllow.length === 0) {
+            this.logger.verbose('Will monitor plays by all users');
+        } else {
+            this.logger.verbose(`Will only monitor plays for the following users: ${this.usersAllow.join(', ')}`);
+        }
+
         return true;
     }
 
@@ -245,7 +263,8 @@ export class SubsonicSource extends MemorySource {
         } = resp;
         // sometimes subsonic sources will return the same track as being played twice on the same player, need to remove this so we don't duplicate plays
         const deduped = removeDuplicates(entry.map(SubsonicSource.formatPlayObj));
-        return this.processRecentPlays(deduped);
+        const userFiltered = this.usersAllow.length == 0 ? deduped : deduped.filter(x => x.meta.user === undefined || this.usersAllow.map(x => x.toLocaleLowerCase()).includes(x.meta.user.toLocaleLowerCase()));
+        return this.processRecentPlays(userFiltered);
     }
 }
 

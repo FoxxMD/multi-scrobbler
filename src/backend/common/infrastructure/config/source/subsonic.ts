@@ -55,6 +55,13 @@ export interface SubsonicData extends CommonSourceData, PollingOptions {
      * @default false
      * */
     legacyAuthentication?: boolean
+
+    /**
+     * Only scrobble for specific users (case-insensitive)
+     *
+     * If undefined or an empty string/list MS will scrobble activity from all users
+     * */
+    usersAllow?: string | string[]
 }
 export interface SubSonicSourceConfig extends CommonSourceConfig {
     data: SubsonicData
