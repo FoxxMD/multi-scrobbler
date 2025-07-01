@@ -21,6 +21,7 @@ import {
     DEFAULT_RETRY_MULTIPLIER,
     DUP_SCORE_THRESHOLD,
     FormatPlayObjectOptions,
+    PlayPlatformId,
     ScrobbledPlayObject,
     SourceIdentifier,
     TIME_WEIGHT,
@@ -30,6 +31,9 @@ import { CommonClientConfig, NowPlayingOptions, UpstreamRefreshOptions } from ".
 import { Notifiers } from "../notifier/Notifiers.js";
 import {
     comparingMultipleArtists,
+    genGroupId,
+    genGroupIdStr,
+    genGroupIdStrFromPlay,
     isDebugMode,
     playObjDataMatch,
     pollingBackoff,
@@ -46,11 +50,17 @@ import {
     temporalPlayComparisonSummary,
 } from "../utils/TimeUtils.js";
 import { WebhookPayload } from "../common/infrastructure/config/health/webhooks.js";
+import { AsyncTask, SimpleIntervalJob, Task, ToadScheduler } from "toad-scheduler";
+
+type PlatformMappedPlays = Map<PlayPlatformId, {play: PlayObject, source: SourceIdentifier}>;
+type NowPlayingQueue = Map<string, PlatformMappedPlays>;
 
 export default abstract class AbstractScrobbleClient extends AbstractComponent implements Authenticatable {
 
     name: string;
     type: ClientType;
+
+    scheduler: ToadScheduler = new ToadScheduler();
 
     protected MAX_STORED_SCROBBLES = 40;
     protected MAX_INITIAL_SCROBBLES_FETCH = this.MAX_STORED_SCROBBLES;
@@ -79,10 +89,11 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
     supportsNowPlaying: boolean = false;
     nowPlayingEnabled: boolean;
     // TODO refactor to use source name for filtering
-    nowPlayingFilter: (data: PlayObject[]) => PlayObject[]
+    nowPlayingFilter: () => PlayObject | undefined;
     nowPlayingThresholds: [number,number] = [10,30];
     nowPlayingLastUpdated?: Dayjs;
     nowPlayingLastPlay?: PlayObject;
+    nowPlayingQueue: NowPlayingQueue = new Map();
 
     declare config: CommonClientConfig;
 
@@ -140,6 +151,15 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
                 confidenceBreakdown
             }
         };
+
+        const t = new AsyncTask('Playing Now', (): Promise<any> => this.processingPlayingNow(), (err: Error) => {
+            this.logger.error(new Error('Unexpected error while processing Now Playing queue', {cause: err}));
+        });
+
+        // even though we are processing every 5 seconds the interval that Now Playing is updated at, and that the queue is cleared on,
+        // is still set by shouldUpdatePlayingNow()
+        // 5 seconds makes sure our granularity for updates is decently fast *when* we do need to actually update
+        this.scheduler.addSimpleIntervalJob(new SimpleIntervalJob({seconds: 5}, t, {id: 'pn_task'}));
     }
 
     set recentScrobbles(scrobbles: PlayObject[]) {
@@ -160,6 +180,84 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
         this.emitEvent('notify', payload);
     }
 
+    protected initializeNowPlayingFilter() {
+
+        const {
+            options = {},
+        } = this.config;
+
+        if (this.supportsNowPlaying) {
+            // for future use...if we let user manually toggle now playing off/on
+            if (this.nowPlayingEnabled === undefined) {
+                this.nowPlayingEnabled = true;
+            }
+
+            let sourceFilter: (queue: NowPlayingQueue) => PlatformMappedPlays | undefined;
+
+            // sources default to being filters by name-type, alphabetically
+            sourceFilter = (queue: NowPlayingQueue) => {
+                const sorted = Array.from(queue.entries()).sort((a, b) => a[0].localeCompare(b[0]));
+                return sorted[0][1];
+            }
+
+            if ('nowPlaying' in options) {
+                const nowOpts = options as NowPlayingOptions;
+                if (this.nowPlayingEnabled === undefined) {
+                    this.nowPlayingEnabled = nowOpts.nowPlaying === true || Array.isArray(nowOpts.nowPlaying);
+                }
+                if (Array.isArray(nowOpts.nowPlaying)) {
+                    // if user defined priority list of source names then we use that instead, look for source name in name-type
+                    sourceFilter = (queue: NowPlayingQueue) => {
+                        const entries = Array.from(queue.entries());
+                        for (const s of nowOpts.nowPlaying as string[]) {
+                            const sLower = s.toLocaleLowerCase();
+                            const validSource = entries.find(x => x[0].toLocaleLowerCase().includes(sLower));
+                            if (validSource !== undefined) {
+                                return validSource[1];
+                            }
+                        }
+                        return undefined;
+                    }
+                }
+            }
+
+            this.nowPlayingFilter = () => {
+                if (this.nowPlayingQueue.size === 0) {
+                    return undefined;
+                }
+
+                // get list of play(ers) for top-priority Source
+                const platformPlays = sourceFilter(this.nowPlayingQueue);
+                if (platformPlays === undefined) {
+                    return undefined;
+                }
+                // if only one player then return it
+                const plays = Array.from(platformPlays);
+                if (plays.length === 1) {
+                    return plays[0][1].play;
+                }
+                // else we need to sort players to determine which to report
+
+                // if a now playing play already exists use that platform, if any matches...
+                // this way we aren't flip-flopping between multiple players for reporting now playing
+                // (keeps reporting sticky based on first reported)
+                if (this.nowPlayingLastPlay !== undefined) {
+                    const lastNowPlayingPlat = genGroupIdStrFromPlay(this.nowPlayingLastPlay);
+
+                    for (const [platform, data] of plays) {
+                        if (genGroupIdStr(platform) === lastNowPlayingPlat) {
+                            return data.play;
+                        }
+                    }
+                }
+
+                // otherwise sort platform alphabetically and take first
+                plays.sort((a, b) => genGroupIdStr(a[0]).localeCompare(genGroupIdStr(b[0])));
+                return plays[0][1].play;
+            }
+        }
+    }
+
     protected async postInitialize(): Promise<void> {
         const {
             options: {
@@ -167,6 +265,8 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
             } = {},
             options = {},
         } = this.config;
+
+        this.initializeNowPlayingFilter();
 
         let initialLimit = refreshInitialCount;
         if(refreshInitialCount > this.MAX_INITIAL_SCROBBLES_FETCH) {
@@ -177,33 +277,6 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
         this.logger.verbose(`Fetching up to ${initialLimit} initial scrobbles...`);
         await this.refreshScrobbles(initialLimit);
         this.lastScrobbledPlayDate = this.newestScrobbleTime;
-        
-        if(this.supportsNowPlaying) {
-            if(this.nowPlayingEnabled === undefined) {
-                this.nowPlayingEnabled = true;
-            }
-            this.nowPlayingFilter = (data) => data.sort((a, b) => a.meta.source.localeCompare(b.meta.source));
-
-            if('nowPlaying' in options) {
-                const nowOpts = options as NowPlayingOptions;
-                if(this.nowPlayingEnabled === undefined) {
-                    this.nowPlayingEnabled = nowOpts.nowPlaying === true || Array.isArray(nowOpts.nowPlaying);
-                }
-                if(Array.isArray(nowOpts.nowPlaying)) {
-                    this.nowPlayingFilter = (data) => {
-                        for(const s of nowOpts.nowPlaying as string[]) {
-                            const sLower = s.toLocaleLowerCase();
-                            const validPlay = data.find(x => x.meta.source.toLocaleLowerCase() === sLower);
-                            if(validPlay !== undefined) {
-                                return undefined;
-                            }
-                        }
-                        return [];
-                    }
-                }
-            }
-        }
-
     }
 
     refreshScrobbles = async (limit: number = this.MAX_STORED_SCROBBLES) => {
@@ -810,17 +883,27 @@ ${closestMatch.breakdowns.join('\n')}`, {leaf: ['Dupe Check']});
         this.emitEvent('deadLetter', {dead: deadData});
     }
 
-    playingNow = (data: PlayObject | PlayObject[], source: SourceIdentifier) => {
-        const plays = Array.isArray(data) ? data : [data];
-        const p = plays.at(-1);
-        
-        if(p !== undefined) {
-            const transformedPlay = this.transformPlay(p, TRANSFORM_HOOK.preCompare);
-            if(this.shouldUpdatePlayingNow(p)) {
-            this.doPlayingNow(transformedPlay);
-            this.logger.debug(`Now Playing updated.`);
-            this.nowPlayingLastPlay = transformedPlay;
-            this.nowPlayingLastUpdated = dayjs();
+    queuePlayingNow = (data: PlayObject, source: SourceIdentifier) => {
+        const sourceId = `${source.name}-${source.type}`;
+        const platformPlays = this.nowPlayingQueue.get(sourceId) ?? new Map();
+        platformPlays.set(genGroupId(data), {play: data, source});
+        this.nowPlayingQueue.set(sourceId, platformPlays);
+    }
+
+    processingPlayingNow = async (): Promise<void> => {
+        if(this.supportsNowPlaying && this.nowPlayingEnabled) {
+            const play = this.nowPlayingFilter();
+            if(play === undefined) {
+                return;
+            }
+            if(this.shouldUpdatePlayingNow(play)) {
+                await this.doPlayingNow(play);
+                this.logger.debug(`Now Playing updated.`);
+                this.nowPlayingLastPlay = play;
+                this.nowPlayingLastUpdated = dayjs();
+                // only clear queue after we have updated Now Playing, this way we always have the latest and "most complete"
+                // set of Source Player updates available for filtering/sorting
+                this.nowPlayingQueue = new Map();
             }
         }
     }
