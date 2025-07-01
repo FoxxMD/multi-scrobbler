@@ -1,5 +1,5 @@
 import React, { Fragment } from "react"
-import CodeBlock from '@theme/CodeBlock';
+import CodeBlock, {Props as CodeBlockProps} from '@theme/CodeBlock';
 import Admonition from '@theme/Admonition';
 import ErrorBoundary from "@docusaurus/ErrorBoundary"
 import Error from "@theme/Error"
@@ -7,17 +7,16 @@ import { Simulate } from "react-dom/test-utils";
 import error = Simulate.error;
 import json5 from 'json5';
 
-export interface AIOProps {
+export interface FileProps extends Omit<CodeBlockProps, 'children'> {
     data: string
     client?: boolean
-    name: string
 }
 
-const AIOExample = (props: AIOProps) => {
+const FileExample = (props: FileProps) => {
     const {
         data,
-        name,
-        client = false
+        client = false,
+        ...rest
     } = props;
 
     let configObj;
@@ -31,24 +30,20 @@ const AIOExample = (props: AIOProps) => {
             <CodeBlock>{e.message}</CodeBlock>
         </Admonition>
     }
-    const configType = client ? 'clients' : 'sources';
 
     configObj = configObj.filter(x => x.configureAs === undefined || x.configureAs === (client ? 'client' : 'source'));
-    configObj = configObj.map(x => ({...x, type: name}));
 
-
-    const aio = {[configType]: configObj};
-    return <CodeBlock title="CONFIG_DIR/config.json" language="json5">{JSON.stringify(aio, null, 2)}</CodeBlock>
+    return <CodeBlock {...rest} language="json5">{JSON.stringify(configObj, null, 2)}</CodeBlock>
 }
 
-const WrappedAIOExample = (props: AIOProps) => {
+const WrappedFileExample = (props: FileProps) => {
     return <ErrorBoundary
         fallback={({error}) => (
             <div>
                 <p>Example component crashed because of error: {error.message}.</p>
             </div>
         )}
-    ><AIOExample {...props} /></ErrorBoundary>
+    ><FileExample {...props} /></ErrorBoundary>
 }
 
-export default WrappedAIOExample;
+export default WrappedFileExample;

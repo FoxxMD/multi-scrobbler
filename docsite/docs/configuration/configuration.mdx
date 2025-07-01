@@ -8,6 +8,7 @@ import TabItem from '@theme/TabItem';
 import CodeBlock from '@theme/CodeBlock';
 import SchemaLink from "../../src/components/SchemaLink";
 import AIOExample from "../../src/components/AIOExample";
+import FileExample from "../../src/components/FileExample";
 
 import AIOConfig from '!!raw-loader!../../../config/config.json.example';
 import AzuracastConfig from '!!raw-loader!../../../config/azuracast.json.example';
@@ -685,7 +686,7 @@ See the [Last.fm (Client)](#lastfm) setup for registration instructions.
 
             <summary>Example</summary>
 
-            <CodeBlock title="CONFIG_DIR/lastfm.json" language="json5">{LastfmConfig}</CodeBlock>
+            <FileExample title="CONFIG_DIR/lastfm.json" data={LastfmConfig}/>
 
         </details>
 
@@ -786,7 +787,7 @@ For Koito, [create an API Key from your Account page.](https://koito.io/guides/s
 
             <summary>Example</summary>
 
-            <CodeBlock title="CONFIG_DIR/listenbrainz.json" language="json5">{ListenbrainzConfig}</CodeBlock>
+            <FileExample title="CONFIG_DIR/listenbrainz.json" data={ListenbrainzConfig}/>
 
         </details>
 
@@ -2346,7 +2347,7 @@ or replace `localhost:9078` with your own base URL
 
             <summary>Example</summary>
 
-            <CodeBlock title="CONFIG_DIR/lastfm.json" language="json5">{LastfmConfig}</CodeBlock>
+            <FileExample title="CONFIG_DIR/lastfm.json" data={LastfmConfig} client/>
 
         </details>
 
@@ -2357,7 +2358,7 @@ or replace `localhost:9078` with your own base URL
 
             <summary>Example</summary>
 
-            <AIOExample client data={LastfmConfig} name="lastfm"/>
+            <AIOExample client data={LastfmConfig} name="lastfm" client/>
 
         </details>
 
@@ -2389,7 +2390,7 @@ For Koito, [create an API Key from your Account page.](https://koito.io/guides/s
 
             <summary>Example</summary>
 
-            <CodeBlock title="CONFIG_DIR/listenbrainz.json" language="json5">{ListenbrainzConfig}</CodeBlock>
+            <FileExample title="CONFIG_DIR/listenbrainz.json" data={ListenbrainzConfig} client/>
 
         </details>
 
@@ -2400,7 +2401,7 @@ For Koito, [create an API Key from your Account page.](https://koito.io/guides/s
 
             <summary>Example</summary>
 
-            <AIOExample client data={ListenbrainzConfig} name="listenbrainz"/>
+            <AIOExample client data={ListenbrainzConfig} name="listenbrainz" client/>
 
         </details>
 
