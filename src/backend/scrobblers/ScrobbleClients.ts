@@ -2,7 +2,7 @@
 import { childLogger, Logger } from '@foxxmd/logging';
 import dayjs, { Dayjs } from "dayjs";
 import { PlayObject, SourcePlayerObj } from "../../core/Atomic.js";
-import { ClientType, clientTypes, ConfigMeta, isClientType, REPORTED_PLAYER_STATUSES } from "../common/infrastructure/Atomic.js";
+import { ClientType, clientTypes, ConfigMeta, isClientType, REPORTED_PLAYER_STATUSES, SourceIdentifier } from "../common/infrastructure/Atomic.js";
 import { AIOConfig } from "../common/infrastructure/config/aioConfig.js";
 import { ClientAIOConfig, ClientConfig } from "../common/infrastructure/config/client/clients.js";
 import { LastfmClientConfig } from "../common/infrastructure/config/client/lastfm.js";
@@ -45,9 +45,9 @@ export default class ScrobbleClients {
         this.localUrl = localUrl;
         this.logger = childLogger(parentLogger, 'Scrobblers'); // winston.loggers.get('app').child({labels: ['Scrobblers']}, mergeArr);
 
-        this.sourceEmitter.on('playerUpdate', async (payload: { data: SourcePlayerObj & { options: { scrobbleTo?: string[], scrobbleFrom?: string } } }) => {
+        this.sourceEmitter.on('playerUpdate', async (payload: { data: SourcePlayerObj & { options: { scrobbleTo: string[] } }} & SourceIdentifier) => {
             if(payload.data.status.reported === REPORTED_PLAYER_STATUSES.playing) {
-                this.playingNow(payload.data.play, payload.data.options);
+                this.playingNow(payload.data.play, {...payload.data.options, scrobbleFrom: { type: payload.type, name: payload.name}});
             }
         });
 
@@ -343,11 +343,11 @@ ${sources.join('\n')}`);
         this.clients.push(newClient);
     }
 
-    playingNow = async (data: (PlayObject | PlayObject[]), options: {scrobbleTo?: string[], scrobbleFrom?: string} = {}) => {
+    playingNow = async (data: (PlayObject | PlayObject[]), options: {scrobbleTo: string[], scrobbleFrom: SourceIdentifier}) => {
         const playObjs = Array.isArray(data) ? data : [data];
         const {
             scrobbleTo = [],
-            scrobbleFrom = 'source',
+            scrobbleFrom,
         } = options;
 
         if (this.clients.length === 0) {
@@ -360,7 +360,7 @@ ${sources.join('\n')}`);
             }
             if (scrobbleTo.length > 0 && !scrobbleTo.includes(client.name)) {
                 if(isDebugMode()) {
-                    client.logger.debug(`Client was filtered out by Source '${scrobbleFrom}'`);
+                    client.logger.debug(`Client was filtered out by Source '${scrobbleFrom.type} - ${scrobbleFrom.name}'`);
                 }
                 continue;
             }

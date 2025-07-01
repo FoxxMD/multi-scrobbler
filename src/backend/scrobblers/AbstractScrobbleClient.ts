@@ -22,6 +22,7 @@ import {
     DUP_SCORE_THRESHOLD,
     FormatPlayObjectOptions,
     ScrobbledPlayObject,
+    SourceIdentifier,
     TIME_WEIGHT,
     TITLE_WEIGHT, TRANSFORM_HOOK,
 } from "../common/infrastructure/Atomic.js";
@@ -809,7 +810,7 @@ ${closestMatch.breakdowns.join('\n')}`, {leaf: ['Dupe Check']});
         this.emitEvent('deadLetter', {dead: deadData});
     }
 
-    playingNow = (data: PlayObject | PlayObject[], source: string) => {
+    playingNow = (data: PlayObject | PlayObject[], source: SourceIdentifier) => {
         const plays = Array.isArray(data) ? data : [data];
         const p = plays.at(-1);
         
