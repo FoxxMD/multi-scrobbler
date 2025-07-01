@@ -753,7 +753,7 @@ export default class ScrobbleSources {
                     try {
                         await this.addSource(c, sourceDefaults);
                     } catch(e) {
-                        const addError = new Error(`Source ${c.name} of type ${c.type} was not added because of unrecoverable errors`, {cause: e});
+                        const addError = new Error(`Source ${c.name} of type ${c.type} from source ${c.source} was not added because of unrecoverable errors`, {cause: e});
                         this.emitter.emit('error', addError);
                         this.logger.error(addError);
                     }
@@ -768,17 +768,17 @@ export default class ScrobbleSources {
         //     throw new Error(`Config object from ${clientConfig.source || 'unknown'} with name [${clientConfig.name || 'unnamed'}] of type [${clientConfig.type || 'unknown'}] has errors: ${isValidConfig.join(' | ')}`)
         // }
 
-        const {type, name, data: d = {}, enable = true, options: clientOptions = {}} = clientConfig;
+        const {type, name, data: d = {}, enable = true, source, options: clientOptions = {}} = clientConfig;
 
         if(enable === false) {
-            this.logger.warn(`${type} (${name}) source was disabled by config`);
+            this.logger.warn({labels: [`${type} - ${name}`]},`Source from ${source} was disabled by config`);
             return;
         }
         
         // add defaults
         const compositeConfig: SourceConfig = {...clientConfig, data: d, options: {...defaults, ...clientOptions}};
 
-        this.logger.debug(`(${name}) Constructing ${type} source`);
+        this.logger.debug({labels: [`${type} - ${name}`]},`Constructing Source from ${source}...`);
         let newSource: AbstractSource;
         switch (type) {
             case 'spotify':
@@ -871,9 +871,10 @@ export default class ScrobbleSources {
 
         if(newSource === undefined) {
             // really shouldn't get here!
-            this.logger.error(new Error(`Source of type ${type} was not recognized??`));
+            this.logger.error(new Error(`Source of type ${type} from ${source} was not recognized??`));
             return;
         }
         this.sources.push(newSource);
+        newSource.logger.info(`Source Added from ${source}`);
     }
 }

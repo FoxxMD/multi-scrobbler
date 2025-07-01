@@ -292,7 +292,7 @@ ${sources.join('\n')}`);
             try {
                 await this.addClient(c, clientDefaults, notifier);
             } catch(e) {
-                const addError = new Error(`Client ${c.name} was not added because it had unrecoverable errors`, {cause: e});
+                const addError = new Error(`Client ${c.name} from ${c.source} was not added because it had unrecoverable errors`, {cause: e});
                 this.emitter.emit('error', addError);
                 this.logger.error(addError);
             }
@@ -304,17 +304,17 @@ ${sources.join('\n')}`);
         if (isValidConfig !== true) {
             throw new Error(`Config object from ${clientConfig.source || 'unknown'} with name [${clientConfig.name || 'unnamed'}] of type [${clientConfig.type || 'unknown'}] has errors: ${isValidConfig.join(' | ')}`)
         }*/
-        const {type, name, enable = true, data: d = {}} = clientConfig;
+        const {type, name, enable = true, source, data: d = {}} = clientConfig;
 
         if(enable === false) {
-            this.logger.warn(`${type} (${name}) client was disabled by config`);
+            this.logger.warn({labels: [`${type} - ${name}`]}, `Client from ${source} was disabled by config`);
             return;
         }
 
         // add defaults
         const data = {...defaults, ...d};
         let newClient;
-        this.logger.debug(`Constructing ${type} (${name}) client...`);
+        this.logger.debug({labels: [`${type} - ${name}`]}, `Constructing Client from ${source}`);
         switch (type) {
             case 'maloja':
                 newClient = new MalojaScrobbler(name, ({...clientConfig, data} as unknown as MalojaClientConfig), notifier, this.emitter, this.logger);
@@ -331,9 +331,9 @@ ${sources.join('\n')}`);
 
         if(newClient === undefined) {
             // really shouldn't get here!
-            throw new Error(`Client of type ${type} was not recognized??`);
+            throw new Error(`Client of type ${type} from ${source} was not recognized??`);
         }
-        newClient.logger.info('Client Added');
+        newClient.logger.info(`Client Added from ${source}`);
         this.clients.push(newClient);
     }
 
