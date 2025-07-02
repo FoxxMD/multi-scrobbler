@@ -1,7 +1,6 @@
 import { Logger } from "@foxxmd/logging";
-import dayjs from 'dayjs';
 import EventEmitter from "events";
-import { TrackScrobbleResponse, UserGetRecentTracksResponse } from "lastfm-node-client";
+import { NowPlayingResponse, TrackScrobbleResponse, UserGetRecentTracksResponse } from "lastfm-node-client";
 import { PlayObject } from "../../core/Atomic.js";
 import { buildTrackString, capitalize } from "../../core/StringUtils.js";
 import { isNodeNetworkException } from "../common/errors/NodeErrors.js";
@@ -26,6 +25,7 @@ export default class LastfmScrobbler extends AbstractScrobbleClient {
         this.api = new LastfmApiClient(name, config.data, {...options, logger})
         // https://www.last.fm/api/show/user.getRecentTracks
         this.MAX_INITIAL_SCROBBLES_FETCH = 200;
+        this.supportsNowPlaying = true;
     }
 
     formatPlayObj = (obj: any, options: FormatPlayObjectOptions = {}) => LastfmApiClient.formatPlayObj(obj, options);
@@ -168,6 +168,31 @@ export default class LastfmScrobbler extends AbstractScrobbleClient {
             }
         } finally {
             this.logger.debug('Raw Payload: ', scrobblePayload);
+        }
+    }
+
+    doPlayingNow = async (data: PlayObject) => {
+        try {
+            const {timestamp, mbid, ...rest} = this.api.playToClientPayload(data);
+            const response = await this.api.callApi<NowPlayingResponse>((client: any) => client.trackUpdateNowPlaying(rest));
+            const {
+                nowplaying: {
+                    ignoredMessage: {
+                        code: ignoreCode,
+                        '#text': ignoreMsg,
+                    } = {},
+                } = {}
+            } = response;
+            if (ignoreCode > 0) {
+                this.logger.warn(`Service ignored this scrobble 😬 => (Code ${ignoreCode}) ${(ignoreMsg === '' ? '(No error message returned)' : ignoreMsg)} -- See https://www.last.fm/api/show/track.updateNowPlaying for more information`, {payload: rest});
+            }
+            return response;
+        } catch (e) {
+            if (!(e instanceof UpstreamError)) {
+                throw new UpstreamError('Error received from LastFM API', {cause: e, showStopper: true});
+            } else {
+                throw e;
+            }
         }
     }
 }

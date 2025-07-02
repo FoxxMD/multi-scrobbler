@@ -77,6 +77,19 @@ export const isClientType = (data: string): data is ClientType => {
     return clientTypes.includes(data as ClientType);
 }
 
+export interface ComponentIdentifier {
+    type: SourceType | ClientType
+    name: string
+}
+
+export interface SourceIdentifier extends ComponentIdentifier {
+    type: SourceType
+}
+
+export interface ClientIdentifier extends ComponentIdentifier {
+    type: ClientType
+}
+
 export type InitState = 0 | 1 | 2;
 export const NOT_INITIALIZED: InitState = 0;
 export const INITIALIZING: InitState = 1;

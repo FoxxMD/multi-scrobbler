@@ -1,8 +1,8 @@
 /* eslint-disable no-case-declarations */
 import { childLogger, Logger } from '@foxxmd/logging';
 import dayjs, { Dayjs } from "dayjs";
-import { PlayObject } from "../../core/Atomic.js";
-import { ClientType, clientTypes, ConfigMeta, isClientType } from "../common/infrastructure/Atomic.js";
+import { PlayObject, SourcePlayerObj } from "../../core/Atomic.js";
+import { ClientType, clientTypes, ConfigMeta, isClientType, REPORTED_PLAYER_STATUSES, SourceIdentifier } from "../common/infrastructure/Atomic.js";
 import { AIOConfig } from "../common/infrastructure/config/aioConfig.js";
 import { ClientAIOConfig, ClientConfig } from "../common/infrastructure/config/client/clients.js";
 import { LastfmClientConfig } from "../common/infrastructure/config/client/lastfm.js";
@@ -10,7 +10,7 @@ import { ListenBrainzClientConfig } from "../common/infrastructure/config/client
 import { MalojaClientConfig } from "../common/infrastructure/config/client/maloja.js";
 import { WildcardEmitter } from "../common/WildcardEmitter.js";
 import { Notifiers } from "../notifier/Notifiers.js";
-import { readJson, thresholdResultSummary } from "../utils.js";
+import { isDebugMode, readJson } from "../utils.js";
 import { joinedUrl } from "../utils/NetworkUtils.js";
 import { getTypeSchemaFromConfigGenerator } from "../utils/SchemaUtils.js";
 import { validateJson } from "../utils/ValidationUtils.js";
@@ -44,6 +44,12 @@ export default class ScrobbleClients {
         this.configDir = configDir;
         this.localUrl = localUrl;
         this.logger = childLogger(parentLogger, 'Scrobblers'); // winston.loggers.get('app').child({labels: ['Scrobblers']}, mergeArr);
+
+        this.sourceEmitter.on('playerUpdate', async (payload: { data: SourcePlayerObj & { options: { scrobbleTo: string[] } }} & SourceIdentifier) => {
+            if(payload.data.status.reported === REPORTED_PLAYER_STATUSES.playing) {
+                this.playingNow(payload.data.play, {...payload.data.options, scrobbleFrom: { type: payload.type, name: payload.name}});
+            }
+        });
 
         this.sourceEmitter.on('discoveredToScrobble', async (payload: { data: (PlayObject | PlayObject[]), options: { forceRefresh?: boolean, checkTime?: Dayjs, scrobbleTo?: string[], scrobbleFrom?: string } }) => {
             await this.scrobble(payload.data, payload.options);
@@ -337,11 +343,33 @@ ${sources.join('\n')}`);
         this.clients.push(newClient);
     }
 
-    /**
-     * @param {*} data
-     * @param {{scrobbleFrom, scrobbleTo, forceRefresh: boolean}|{scrobbleFrom, scrobbleTo}} options
-     * @returns {Array}
-     */
+    playingNow = async (data: (PlayObject | PlayObject[]), options: {scrobbleTo: string[], scrobbleFrom: SourceIdentifier}) => {
+        const playObjs = Array.isArray(data) ? data : [data];
+        const {
+            scrobbleTo = [],
+            scrobbleFrom,
+        } = options;
+
+        if (this.clients.length === 0) {
+            this.logger.warn('Cannot update Now Playing! No clients are configured.');
+        }
+
+        for (const client of this.clients) {
+            if(!client.supportsNowPlaying || !client.nowPlayingEnabled) {
+                continue;
+            }
+            if (scrobbleTo.length > 0 && !scrobbleTo.includes(client.name)) {
+                if(isDebugMode()) {
+                    client.logger.debug(`Client was filtered out by Source '${scrobbleFrom.type} - ${scrobbleFrom.name}'`);
+                }
+                continue;
+            }
+            for (const playObj of playObjs) {
+                client.queuePlayingNow(playObj, scrobbleFrom);
+            }
+        }
+    }
+
     scrobble = async (data: (PlayObject | PlayObject[]), options: {forceRefresh?: boolean, checkTime?: Dayjs, scrobbleTo?: string[], scrobbleFrom?: string} = {}) => {
         const playObjs = Array.isArray(data) ? data : [data];
         const {

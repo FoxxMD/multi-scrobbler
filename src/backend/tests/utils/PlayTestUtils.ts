@@ -1,4 +1,4 @@
-import { faker } from '@faker-js/faker';
+import { faker, fakerEL, FakerError } from '@faker-js/faker';
 import dayjs, { Dayjs } from "dayjs";
 import duration from "dayjs/plugin/duration.js";
 import isBetween from "dayjs/plugin/isBetween.js";
@@ -165,6 +165,12 @@ export const generatePlay = (data: ObjectPlayData = {}, meta: PlayMeta = {}): Pl
             ...meta,
         }
     }
+}
+
+export const generatePlayPlatformId = (deviceId?: string, userId?: string): PlayPlatformId => {
+    const did = deviceId ?? [NO_DEVICE, faker.hacker.noun(), faker.hacker.noun()][faker.number.int({min: 0, max: 2})];
+    const uid = userId ?? [NO_USER, faker.internet.username(), faker.internet.username()][faker.number.int({min: 0, max: 2})];
+    return [did, uid];
 }
 
 export const generatePlays = (numberOfPlays: number, data: ObjectPlayData = {}, meta: PlayMeta = {}): PlayObject[] => {

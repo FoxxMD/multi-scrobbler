@@ -1,7 +1,7 @@
 import { RequestRetryOptions } from "../common.js";
-import { CommonClientConfig, CommonClientData } from "./index.js";
+import { CommonClientConfig, CommonClientData, CommonClientOptions, NowPlayingOptions } from "./index.js";
 
-export interface LastfmData extends RequestRetryOptions {
+export interface LastfmData extends CommonClientData, RequestRetryOptions {
     /**
      * API Key generated from Last.fm account
      *
@@ -27,6 +27,10 @@ export interface LastfmData extends RequestRetryOptions {
     redirectUri?: string
 }
 
+export interface LastfmClientOptions extends CommonClientOptions, NowPlayingOptions {
+
+}
+
 export interface LastfmClientConfig extends CommonClientConfig {
     /**
      * Should always be `client` when using LastFM as a client
@@ -35,7 +39,8 @@ export interface LastfmClientConfig extends CommonClientConfig {
      * @examples ["client"]
      * */
     configureAs?: 'client' | 'source'
-    data: CommonClientData & LastfmData
+    data: LastfmData
+    options?: LastfmClientOptions
 }
 
 export interface LastfmClientAIOConfig extends LastfmClientConfig {
