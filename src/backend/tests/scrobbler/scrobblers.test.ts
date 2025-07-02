@@ -858,4 +858,115 @@ describe('Now Playing', function() {
             });
     });
 
+    describe('Updating', function () {
+
+        it('Should update if no existing Now Playing', async function () {
+
+            const npScrobbler = new NowPlayingScrobbler();
+            await npScrobbler.initialize();
+
+            const res = npScrobbler.shouldUpdatePlayingNow(generatePlay({}, {deviceId: genGroupIdStr(generatePlayPlatformId())}));
+            expect(res).to.be.true;
+        });
+
+        it('Should update if previous Now Playing matches updated and last updated diff is greater than upper limit', async function () {
+
+            const npScrobbler = new NowPlayingScrobbler();
+            await npScrobbler.initialize();
+
+            const lastUpdate = generatePlay({}, {deviceId: genGroupIdStr(generatePlayPlatformId())});
+            npScrobbler.nowPlayingLastUpdated = dayjs().subtract(npScrobbler.nowPlayingThresholds[1] + 1, 's');
+            npScrobbler.nowPlayingLastPlay = lastUpdate;
+
+            const res = npScrobbler.shouldUpdatePlayingNow(lastUpdate);
+            expect(res).to.be.true;
+        });
+
+         it('Should NOT update if previous Now Playing matches updated and last updated diff is less than upper limit', async function () {
+
+            const npScrobbler = new NowPlayingScrobbler();
+            await npScrobbler.initialize();
+
+            const lastUpdate = generatePlay({}, {deviceId: genGroupIdStr(generatePlayPlatformId())});
+            npScrobbler.nowPlayingLastUpdated = dayjs().subtract(npScrobbler.nowPlayingThresholds[1] - 1, 's');
+            npScrobbler.nowPlayingLastPlay = lastUpdate;
+
+            const res = npScrobbler.shouldUpdatePlayingNow(lastUpdate);
+            expect(res).to.be.false;
+        });
+
+        it('Should update if previous Now Playing does NOT match updated and last updated diff is greater than lower limit', async function () {
+
+            const npScrobbler = new NowPlayingScrobbler();
+            await npScrobbler.initialize();
+
+            const lastUpdate = generatePlay({}, {deviceId: genGroupIdStr(generatePlayPlatformId())});
+            npScrobbler.nowPlayingLastUpdated = dayjs().subtract(npScrobbler.nowPlayingThresholds[0] + 1, 's');
+            npScrobbler.nowPlayingLastPlay = lastUpdate;
+
+            const res = npScrobbler.shouldUpdatePlayingNow(generatePlay({}, {deviceId: genGroupIdStr(generatePlayPlatformId())}));
+            expect(res).to.be.true;
+        });
+
+        it('Should NOT update if previous Now Playing does NOT match updated and last updated diff is less than than lower limit', async function () {
+
+            const npScrobbler = new NowPlayingScrobbler();
+            await npScrobbler.initialize();
+
+            const lastUpdate = generatePlay({}, {deviceId: genGroupIdStr(generatePlayPlatformId())});
+            npScrobbler.nowPlayingLastUpdated = dayjs().subtract(npScrobbler.nowPlayingThresholds[0] - 1, 's');
+            npScrobbler.nowPlayingLastPlay = lastUpdate;
+
+            const res = npScrobbler.shouldUpdatePlayingNow(generatePlay({}, {deviceId: genGroupIdStr(generatePlayPlatformId())}));
+            expect(res).to.be.false;
+        });
+
+    });
+
+    describe('Scheduling', function () {
+
+        this.afterEach(() => {
+            MockDate.reset();
+        });
+
+        it('Should update when no existing Now Playing', async function () {
+
+            const npScrobbler = new NowPlayingScrobbler();
+            npScrobbler.nowPlayingTaskInterval = 10;
+            await npScrobbler.initialize();
+            npScrobbler.scheduler.startById('pn_task');
+
+            npScrobbler.queuePlayingNow(generatePlay({}, {deviceId: genGroupIdStr(generatePlayPlatformId())}), {type: 'jellyfin', name: 'test'});
+
+            const res = await Promise.race([pEvent(npScrobbler.emitter, 'nowPlayingUpdated'), sleep(12)]);
+
+            expect(res).is.not.undefined;
+        });
+
+        it('Should update when updated does not match Now Playing', async function () {
+
+            const npScrobbler = new NowPlayingScrobbler();
+            npScrobbler.nowPlayingTaskInterval = 10;
+            await npScrobbler.initialize();
+            npScrobbler.scheduler.startById('pn_task');
+
+            const now = dayjs();
+
+            npScrobbler.queuePlayingNow(generatePlay({}, {deviceId: genGroupIdStr(generatePlayPlatformId())}), {type: 'jellyfin', name: 'test'});
+
+            const res = await Promise.race([pEvent(npScrobbler.emitter, 'nowPlayingUpdated'), sleep(12)]);
+
+            expect(res).is.not.undefined;
+
+            MockDate.set(now.add(npScrobbler.nowPlayingThresholds[0] + 3, 's').toDate());
+
+            npScrobbler.queuePlayingNow(generatePlay({}, {deviceId: genGroupIdStr(generatePlayPlatformId())}), {type: 'jellyfin', name: 'test'});
+
+            const resUpdate = await Promise.race([pEvent(npScrobbler.emitter, 'nowPlayingUpdated'), sleep(12)]);
+
+            expect(resUpdate).is.not.undefined;
+        });
+
+    });
+
 });
