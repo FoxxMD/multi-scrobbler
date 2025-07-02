@@ -35,6 +35,7 @@ import {
     genGroupIdStr,
     genGroupIdStrFromPlay,
     isDebugMode,
+    parseBool,
     playObjDataMatch,
     pollingBackoff,
     setIntersection,
@@ -171,6 +172,37 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
         this.emitEvent('notify', payload);
     }
 
+    protected initializeNowPlaying() {
+
+        if (this.supportsNowPlaying) {
+
+            const {
+                options = {},
+            } = this.config;
+
+            // for future use...if we let user manually toggle now playing off/on
+            if(this.nowPlayingEnabled === undefined) {
+                const npEnv = process.env.NOW_PLAYING;
+                if('nowPlaying' in options) {
+                    const nowOpts = options as NowPlayingOptions;
+                    this.nowPlayingEnabled = nowOpts.nowPlaying === true || Array.isArray(nowOpts.nowPlaying);
+                    this.logger.debug({labels: ['Now Playing']}, `${this.nowPlayingEnabled ? 'Enabled' : 'Disabled'} by 'nowPlaying' config`);
+                } else if (npEnv !== undefined) {
+                    this.nowPlayingEnabled = parseBool(npEnv);
+                    this.logger.debug({labels: ['Now Playing']}, `${this.nowPlayingEnabled ? 'Enabled' : 'Disabled'} by global ENV`);
+                } else {
+                    this.nowPlayingEnabled = true;
+                    this.logger.debug({labels: ['Now Playing']}, `Enabled by default config`);
+                }
+            }
+
+            this.initializeNowPlayingFilter();
+            this.initializeNowPlayingSchedule();
+        } else {
+            this.logger.debug({labels: ['Now Playing']}, 'Unsupported feature, disabled.');
+        }
+    }
+
     protected initializeNowPlayingSchedule() {
 
         const t = new AsyncTask('Playing Now', (): Promise<any> => {
@@ -194,10 +226,6 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
         } = this.config;
 
         if (this.supportsNowPlaying) {
-            // for future use...if we let user manually toggle now playing off/on
-            if (this.nowPlayingEnabled === undefined) {
-                this.nowPlayingEnabled = true;
-            }
 
             let sourceFilter: (queue: NowPlayingQueue) => PlatformMappedPlays | undefined;
 
@@ -273,8 +301,7 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
             options = {},
         } = this.config;
 
-        this.initializeNowPlayingFilter();
-        this.initializeNowPlayingSchedule();
+        this.initializeNowPlaying();
 
         let initialLimit = refreshInitialCount;
         if(refreshInitialCount > this.MAX_INITIAL_SCROBBLES_FETCH) {
