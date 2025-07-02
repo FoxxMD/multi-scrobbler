@@ -52,7 +52,7 @@ import {
 import { WebhookPayload } from "../common/infrastructure/config/health/webhooks.js";
 import { AsyncTask, SimpleIntervalJob, Task, ToadScheduler } from "toad-scheduler";
 
-type PlatformMappedPlays = Map<PlayPlatformId, {play: PlayObject, source: SourceIdentifier}>;
+type PlatformMappedPlays = Map<string, {play: PlayObject, source: SourceIdentifier}>;
 type NowPlayingQueue = Map<string, PlatformMappedPlays>;
 
 export default abstract class AbstractScrobbleClient extends AbstractComponent implements Authenticatable {
@@ -93,6 +93,7 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
     nowPlayingLastUpdated?: Dayjs;
     nowPlayingLastPlay?: PlayObject;
     nowPlayingQueue: NowPlayingQueue = new Map();
+    nowPlayingTaskInterval: number = 5000;
 
     declare config: CommonClientConfig;
 
@@ -150,15 +151,6 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
                 confidenceBreakdown
             }
         };
-
-        const t = new AsyncTask('Playing Now', (): Promise<any> => this.processingPlayingNow(), (err: Error) => {
-            this.logger.error(new Error('Unexpected error while processing Now Playing queue', {cause: err}));
-        });
-
-        // even though we are processing every 5 seconds the interval that Now Playing is updated at, and that the queue is cleared on,
-        // is still set by shouldUpdatePlayingNow()
-        // 5 seconds makes sure our granularity for updates is decently fast *when* we do need to actually update
-        this.scheduler.addSimpleIntervalJob(new SimpleIntervalJob({seconds: 5}, t, {id: 'pn_task'}));
     }
 
     set recentScrobbles(scrobbles: PlayObject[]) {
@@ -177,6 +169,22 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
 
     public notify = async (payload: WebhookPayload) => {
         this.emitEvent('notify', payload);
+    }
+
+    protected initializeNowPlayingSchedule() {
+
+        const t = new AsyncTask('Playing Now', (): Promise<any> => {
+            return this.processingPlayingNow();
+        }, (err: Error) => {
+            this.logger.error(new Error('Unexpected error while processing Now Playing queue', {cause: err}));
+        });
+
+        this.scheduler.removeById('pn_task');
+
+        // even though we are processing every 5 seconds the interval that Now Playing is updated at, and that the queue is cleared on,
+        // is still set by shouldUpdatePlayingNow()
+        // 5 seconds makes sure our granularity for updates is decently fast *when* we do need to actually update
+        this.scheduler.addSimpleIntervalJob(new SimpleIntervalJob({milliseconds: this.nowPlayingTaskInterval}, t, {id: 'pn_task'}));
     }
 
     protected initializeNowPlayingFilter() {
@@ -244,14 +252,14 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
                     const lastNowPlayingPlat = genGroupIdStrFromPlay(this.nowPlayingLastPlay);
 
                     for (const [platform, data] of plays) {
-                        if (genGroupIdStr(platform) === lastNowPlayingPlat) {
+                        if (platform === lastNowPlayingPlat) {
                             return data.play;
                         }
                     }
                 }
 
                 // otherwise sort platform alphabetically and take first
-                plays.sort((a, b) => genGroupIdStr(a[0]).localeCompare(genGroupIdStr(b[0])));
+                plays.sort((a, b) => a[0].localeCompare(b[0]));
                 return plays[0][1].play;
             }
         }
@@ -266,6 +274,7 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
         } = this.config;
 
         this.initializeNowPlayingFilter();
+        this.initializeNowPlayingSchedule();
 
         let initialLimit = refreshInitialCount;
         if(refreshInitialCount > this.MAX_INITIAL_SCROBBLES_FETCH) {
@@ -884,8 +893,11 @@ ${closestMatch.breakdowns.join('\n')}`, {leaf: ['Dupe Check']});
 
     queuePlayingNow = (data: PlayObject, source: SourceIdentifier) => {
         const sourceId = `${source.name}-${source.type}`;
+        if(isDebugMode()) {
+            this.logger.debug(`Queueing ${buildTrackString(data, {include: ['artist', 'track', 'platform']})} from ${sourceId}`);
+        }
         const platformPlays = this.nowPlayingQueue.get(sourceId) ?? new Map();
-        platformPlays.set(genGroupId(data), {play: data, source});
+        platformPlays.set(genGroupIdStrFromPlay(data), {play: data, source});
         this.nowPlayingQueue.set(sourceId, platformPlays);
     }
 
@@ -898,6 +910,7 @@ ${closestMatch.breakdowns.join('\n')}`, {leaf: ['Dupe Check']});
             if(this.shouldUpdatePlayingNow(play)) {
                 await this.doPlayingNow(play);
                 this.logger.debug(`Now Playing updated.`);
+                this.emitEvent('nowPlayingUpdated', play);
                 this.nowPlayingLastPlay = play;
                 this.nowPlayingLastUpdated = dayjs();
                 // only clear queue after we have updated Now Playing, this way we always have the latest and "most complete"
@@ -907,7 +920,7 @@ ${closestMatch.breakdowns.join('\n')}`, {leaf: ['Dupe Check']});
         }
     }
 
-    protected shouldUpdatePlayingNow = (data: PlayObject): boolean => {
+    shouldUpdatePlayingNow = (data: PlayObject): boolean => {
         if(this.nowPlayingLastPlay === undefined || this.nowPlayingLastUpdated === undefined) {
             this.logger.debug(`Now Playing has not yet been set! Should update Now Playing`);
             return true;
@@ -928,6 +941,9 @@ ${closestMatch.breakdowns.join('\n')}`, {leaf: ['Dupe Check']});
             return true;
         }
 
+        if(isDebugMode()) {
+            this.logger.debug(`Updated Now Playing ${playObjDataMatch(data, this.nowPlayingLastPlay) ? 'matches' : 'does not match'} and was last updated ${lastUpdateDiff}s ago, not updating Now Playing`);
+        }
         return false;
     }
 
