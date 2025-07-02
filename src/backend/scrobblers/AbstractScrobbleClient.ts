@@ -88,8 +88,7 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
 
     supportsNowPlaying: boolean = false;
     nowPlayingEnabled: boolean;
-    // TODO refactor to use source name for filtering
-    nowPlayingFilter: () => PlayObject | undefined;
+    nowPlayingFilter: (queue: NowPlayingQueue) => PlayObject | undefined;
     nowPlayingThresholds: [number,number] = [10,30];
     nowPlayingLastUpdated?: Dayjs;
     nowPlayingLastPlay?: PlayObject;
@@ -221,13 +220,13 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
                 }
             }
 
-            this.nowPlayingFilter = () => {
-                if (this.nowPlayingQueue.size === 0) {
+            this.nowPlayingFilter = (queue: NowPlayingQueue) => {
+                if (queue.size === 0) {
                     return undefined;
                 }
 
                 // get list of play(ers) for top-priority Source
-                const platformPlays = sourceFilter(this.nowPlayingQueue);
+                const platformPlays = sourceFilter(queue);
                 if (platformPlays === undefined) {
                     return undefined;
                 }
@@ -892,7 +891,7 @@ ${closestMatch.breakdowns.join('\n')}`, {leaf: ['Dupe Check']});
 
     processingPlayingNow = async (): Promise<void> => {
         if(this.supportsNowPlaying && this.nowPlayingEnabled) {
-            const play = this.nowPlayingFilter();
+            const play = this.nowPlayingFilter(this.nowPlayingQueue);
             if(play === undefined) {
                 return;
             }
