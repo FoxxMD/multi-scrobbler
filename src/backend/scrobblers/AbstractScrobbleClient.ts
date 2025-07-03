@@ -95,6 +95,7 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
     nowPlayingLastPlay?: PlayObject;
     nowPlayingQueue: NowPlayingQueue = new Map();
     nowPlayingTaskInterval: number = 5000;
+    npLogger: Logger;
 
     declare config: CommonClientConfig;
 
@@ -106,6 +107,7 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
         this.type = type;
         this.name = name;
         this.logger = childLogger(logger, this.getIdentifier());
+        this.npLogger = childLogger(this.logger, 'Now Playing');
         this.notifier = notifier;
         this.emitter = emitter;
 
@@ -186,20 +188,20 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
                 if('nowPlaying' in options) {
                     const nowOpts = options as NowPlayingOptions;
                     this.nowPlayingEnabled = nowOpts.nowPlaying === true || Array.isArray(nowOpts.nowPlaying);
-                    this.logger.debug({labels: ['Now Playing']}, `${this.nowPlayingEnabled ? 'Enabled' : 'Disabled'} by 'nowPlaying' config`);
+                    this.npLogger.debug(`${this.nowPlayingEnabled ? 'Enabled' : 'Disabled'} by 'nowPlaying' config`);
                 } else if (npEnv !== undefined) {
                     this.nowPlayingEnabled = parseBool(npEnv);
-                    this.logger.debug({labels: ['Now Playing']}, `${this.nowPlayingEnabled ? 'Enabled' : 'Disabled'} by global ENV`);
+                    this.npLogger.debug(`${this.nowPlayingEnabled ? 'Enabled' : 'Disabled'} by global ENV`);
                 } else {
                     this.nowPlayingEnabled = true;
-                    this.logger.debug({labels: ['Now Playing']}, `Enabled by default config`);
+                    this.npLogger.debug(`Enabled by default config`);
                 }
             }
 
             this.initializeNowPlayingFilter();
             this.initializeNowPlayingSchedule();
         } else {
-            this.logger.debug({labels: ['Now Playing']}, 'Unsupported feature, disabled.');
+            this.npLogger.debug('Unsupported feature, disabled.');
         }
     }
 
@@ -208,7 +210,7 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
         const t = new AsyncTask('Playing Now', (): Promise<any> => {
             return this.processingPlayingNow();
         }, (err: Error) => {
-            this.logger.error(new Error('Unexpected error while processing Now Playing queue', {cause: err}));
+            this.npLogger.error(new Error('Unexpected error while processing Now Playing queue', {cause: err}));
         });
 
         this.scheduler.removeById('pn_task');
@@ -921,7 +923,7 @@ ${closestMatch.breakdowns.join('\n')}`, {leaf: ['Dupe Check']});
     queuePlayingNow = (data: PlayObject, source: SourceIdentifier) => {
         const sourceId = `${source.name}-${source.type}`;
         if(isDebugMode()) {
-            this.logger.debug(`Queueing ${buildTrackString(data, {include: ['artist', 'track', 'platform']})} from ${sourceId}`);
+            this.npLogger.debug(`Queueing ${buildTrackString(data, {include: ['artist', 'track', 'platform']})} from ${sourceId}`);
         }
         const platformPlays = this.nowPlayingQueue.get(sourceId) ?? new Map();
         platformPlays.set(genGroupIdStrFromPlay(data), {play: data, source});
@@ -937,10 +939,10 @@ ${closestMatch.breakdowns.join('\n')}`, {leaf: ['Dupe Check']});
             if(this.shouldUpdatePlayingNow(play)) {
                 try {
                     await this.doPlayingNow(play);
-                    this.logger.debug(`Now Playing updated.`);
+                    this.npLogger.debug(`Now Playing updated.`);
                     this.emitEvent('nowPlayingUpdated', play);
                 } catch (e) {
-                    this.logger.warn(new Error('Error occurred while trying to update Now Playing, will ignore', {cause: e}));
+                    this.npLogger.warn(new Error('Error occurred while trying to update upstream Client, will ignore', {cause: e}));
                 }
                 this.nowPlayingLastPlay = play;
                 this.nowPlayingLastUpdated = dayjs();
@@ -953,7 +955,9 @@ ${closestMatch.breakdowns.join('\n')}`, {leaf: ['Dupe Check']});
 
     shouldUpdatePlayingNow = (data: PlayObject): boolean => {
         if(this.nowPlayingLastPlay === undefined || this.nowPlayingLastUpdated === undefined) {
-            this.logger.debug(`Now Playing has not yet been set! Should update Now Playing`);
+            if(isDebugMode()) {
+                this.npLogger.debug(`Now Playing has not yet been set! Should update`);
+            }
             return true;
         }
 
@@ -962,18 +966,22 @@ ${closestMatch.breakdowns.join('\n')}`, {leaf: ['Dupe Check']});
         // update if play *has* changed and time since last update is greater than min interval
         // this prevents spamming scrobbler API with updates if user is skipping tracks and source updates frequently
         if(!playObjDataMatch(data, this.nowPlayingLastPlay) && this.nowPlayingThresholds[0] < lastUpdateDiff) {
-            this.logger.debug(`New Play differs from previous Now Playing and time since update > ${lastUpdateDiff}s, should update Now Playing`);
+            if(isDebugMode()) {
+                this.npLogger.debug(`New Play differs from previous Now Playing and time since update > ${lastUpdateDiff}s, should update`);
+            }
             return true;
         }
         // update if play *has not* changed but last update is greater than max interval
         // this keeps scrobbler Now Playing fresh ("active" indicator) in the event play is long
         if(playObjDataMatch(data, this.nowPlayingLastPlay) && this.nowPlayingThresholds[1] < lastUpdateDiff) {
-            this.logger.debug(`Now Playing has not been updated in > ${lastUpdateDiff}s, should update Now Playing`);
+            if(isDebugMode()) {
+                this.npLogger.debug(`Now Playing has not been updated in > ${lastUpdateDiff}s, should update`);
+            }
             return true;
         }
 
         if(isDebugMode()) {
-            this.logger.debug(`Updated Now Playing ${playObjDataMatch(data, this.nowPlayingLastPlay) ? 'matches' : 'does not match'} and was last updated ${lastUpdateDiff}s ago, not updating Now Playing`);
+            this.npLogger.debug(`Updated Now Playing ${playObjDataMatch(data, this.nowPlayingLastPlay) ? 'matches' : 'does not match'} and was last updated ${lastUpdateDiff}s ago, not updating`);
         }
         return false;
     }
