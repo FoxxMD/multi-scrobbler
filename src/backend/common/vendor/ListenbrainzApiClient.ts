@@ -20,6 +20,7 @@ import { getBaseFromUrl, isPortReachableConnect, joinedUrl, normalizeWebAddress 
 import { parseRegexSingleOrFail } from '../../utils.js';
 import {ListensResponse as KoitoListensResponse} from '../infrastructure/config/client/koito.js'
 import { listenObjectResponseToPlay } from './koito/KoitoApiClient.js';
+import { log } from 'console';
 
 
 export interface ArtistMBIDMapping {
@@ -97,9 +98,16 @@ export interface ListenPayload {
     track_metadata: TrackPayload;
 }
 
+export type ListenType = 'single' | 'playing_now';
+
 export interface SubmitPayload {
-    listen_type: 'single' | 'playing_now',
+    listen_type: ListenType,
     payload: [ListenPayload]
+}
+
+interface SubmitOptions {
+    log?: boolean
+    listenType?: ListenType
 }
 
 export interface TrackResponse extends MinimumTrack {
@@ -320,9 +328,13 @@ export class ListenbrainzApiClient extends AbstractApiClient {
     }
 
 
-    submitListen = async (play: PlayObject, log: boolean = false) => {
+    submitListen = async (play: PlayObject, options: SubmitOptions = {}) => {
+        const { log = false, listenType = 'single'} = options;
         try {
-            const listenPayload: SubmitPayload = {listen_type: 'single', payload: [ListenbrainzApiClient.playToListenPayload(play)]};
+            const listenPayload: SubmitPayload = {listen_type: listenType, payload: [ListenbrainzApiClient.playToListenPayload(play)]};
+            if(listenType === 'playing_now') {
+                delete listenPayload.payload[0].listened_at;
+            }
             if(log) {
                 this.logger.debug(`Submit Payload: ${JSON.stringify(listenPayload)}`);
             }

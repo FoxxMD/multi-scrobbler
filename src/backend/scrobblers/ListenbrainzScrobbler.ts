@@ -11,6 +11,7 @@ import { ListenbrainzApiClient, ListenPayload } from "../common/vendor/Listenbra
 import { Notifiers } from "../notifier/Notifiers.js";
 
 import AbstractScrobbleClient from "./AbstractScrobbleClient.js";
+import { isDebugMode } from "../utils.js";
 
 export default class ListenbrainzScrobbler extends AbstractScrobbleClient {
 
@@ -27,6 +28,7 @@ export default class ListenbrainzScrobbler extends AbstractScrobbleClient {
         // https://listenbrainz.readthedocs.io/en/latest/users/api/core.html#get--1-user-(user_name)-listens
         // 1000 is way too high. maxing at 100
         this.MAX_INITIAL_SCROBBLES_FETCH = 100;
+        this.supportsNowPlaying = true;
     }
 
     formatPlayObj = (obj: any, options: FormatPlayObjectOptions = {}) => ListenbrainzApiClient.formatPlayObj(obj, options);
@@ -80,7 +82,7 @@ export default class ListenbrainzScrobbler extends AbstractScrobbleClient {
         } = playObj;
 
         try {
-            await this.api.submitListen(playObj, true);
+            await this.api.submitListen(playObj, { log: isDebugMode()});
 
             if (newFromSource) {
                 this.logger.info(`Scrobbled (New)     => (${source}) ${buildTrackString(playObj)}`);
@@ -91,6 +93,16 @@ export default class ListenbrainzScrobbler extends AbstractScrobbleClient {
         } catch (e) {
             await this.notifier.notify({title: `Client - ${capitalize(this.type)} - ${this.name} - Scrobble Error`, message: `Failed to scrobble => ${buildTrackString(playObj)} | Error: ${e.message}`, priority: 'error'});
             throw new UpstreamError(`Error occurred while making Listenbrainz API scrobble request: ${e.message}`, {cause: e, showStopper: !(e instanceof UpstreamError)});
+        }
+    }
+
+    doPlayingNow = async (data: PlayObject) => {
+        if(!this.isKoito) {
+            try {
+                await this.api.submitListen(data, { listenType: 'playing_now'});
+            } catch (e) {
+                throw new UpstreamError(`Error occurred while making Listenbrainz API Playing Now request: ${e.message}`, {cause: e, showStopper: !(e instanceof UpstreamError)});
+            }
         }
     }
 }

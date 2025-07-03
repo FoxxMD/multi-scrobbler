@@ -189,7 +189,7 @@ export default class LastfmScrobbler extends AbstractScrobbleClient {
             return response;
         } catch (e) {
             if (!(e instanceof UpstreamError)) {
-                throw new UpstreamError('Error received from LastFM API', {cause: e, showStopper: true});
+                throw new UpstreamError('Error received from LastFM API', {cause: e, showStopper: false});
             } else {
                 throw e;
             }
