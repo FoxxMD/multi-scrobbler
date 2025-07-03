@@ -97,12 +97,10 @@ export default class ListenbrainzScrobbler extends AbstractScrobbleClient {
     }
 
     doPlayingNow = async (data: PlayObject) => {
-        if(!this.isKoito) {
-            try {
-                await this.api.submitListen(data, { listenType: 'playing_now'});
-            } catch (e) {
-                throw new UpstreamError(`Error occurred while making Listenbrainz API Playing Now request: ${e.message}`, {cause: e, showStopper: !(e instanceof UpstreamError)});
-            }
+        try {
+            await this.api.submitListen(data, { listenType: 'playing_now'});
+        } catch (e) {
+            throw new UpstreamError(`Error occurred while making Listenbrainz API Playing Now request: ${e.message}`, {cause: e, showStopper: !(e instanceof UpstreamError)});
         }
     }
 }
