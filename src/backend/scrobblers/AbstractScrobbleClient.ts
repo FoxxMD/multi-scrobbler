@@ -935,9 +935,13 @@ ${closestMatch.breakdowns.join('\n')}`, {leaf: ['Dupe Check']});
                 return;
             }
             if(this.shouldUpdatePlayingNow(play)) {
-                await this.doPlayingNow(play);
-                this.logger.debug(`Now Playing updated.`);
-                this.emitEvent('nowPlayingUpdated', play);
+                try {
+                    await this.doPlayingNow(play);
+                    this.logger.debug(`Now Playing updated.`);
+                    this.emitEvent('nowPlayingUpdated', play);
+                } catch (e) {
+                    this.logger.warn(new Error('Error occurred while trying to update Now Playing, will ignore', {cause: e}));
+                }
                 this.nowPlayingLastPlay = play;
                 this.nowPlayingLastUpdated = dayjs();
                 // only clear queue after we have updated Now Playing, this way we always have the latest and "most complete"
