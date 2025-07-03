@@ -30,6 +30,9 @@ jobs:
         env:
           ANALYTICS: ${{ vars.ANALYTICS }}
           ANALYTICS_DOMAIN: ${{ vars.ANALYTICS_DOMAIN }}
+          RY_ANALYTICS: ${{ vars.RY_ANALYTICS }}
+          RY_ANALYTICS_SITEID: ${{ vars.ANALYTICS_SITEID }}
+          RY_ANALYTICS_REPLAY: ${{ vars.RY_ANALYTICS_REPLAY }}
           GSITEVERIFICATION: ${{ vars.GSITEVERIFICATION }}
           DOCS_BASE: '/multi-scrobbler'
         run: npm run build
