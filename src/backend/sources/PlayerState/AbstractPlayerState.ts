@@ -368,7 +368,7 @@ export abstract class AbstractPlayerState {
         parts.push(`Reported: ${this.reportedStatus.toUpperCase()} | Calculated: ${this.calculatedStatus.toUpperCase()} | Stale: ${this.isUpdateStale() ? 'Yes' : 'No'} | Orphaned: ${this.isOrphaned() ? 'Yes' : 'No'} | Player Updated At: ${todayAwareFormat(this.stateLastUpdatedAt)} | Play Updated At: ${this.playLastUpdatedAt === undefined ? 'N/A' : todayAwareFormat(this.playLastUpdatedAt)}`);
         let progress = '';
         if (this.currentListenRange !== undefined && this.currentListenRange instanceof ListenRangePositional && this.currentPlay.data.duration !== undefined && this.currentPlay.data.duration !== 0) {
-            progress = `${progressBar(this.currentListenRange.end.position / this.currentPlay.data.duration, 1, 15)} ${formatNumber(this.currentListenRange.end.position, {toFixed: 0})}/${formatNumber(this.currentPlay.data.duration, {toFixed: 0})}s | `;
+            progress = `${progressBar(this.currentListenRange.end.position / this.currentPlay.data.duration, 1, 15)} ${formatNumber(this.currentListenRange.end.position, {toFixed: 0})}/${formatNumber(this.currentPlay.data.duration, {toFixed: 0})}s Reported | `;
         }
         let listenedPercent = '';
         if (this.currentPlay !== undefined && this.currentPlay.data.duration !== undefined && this.currentPlay.data.duration !== 0) {
@@ -378,6 +378,10 @@ export abstract class AbstractPlayerState {
             })
         }
         parts.push(`${progress}Listened For: ${formatNumber(this.getListenDuration(), {toFixed: 0})}s ${listenedPercent}`);
+        if (this.currentListenRange !== undefined && this.currentListenRange instanceof ListenRangePositional && this.currentListenRange.rtTruth) {
+            const rtProgress = `${progressBar((this.currentListenRange.rtPlayer.getPosition() / 1000) / this.currentPlay.data.duration, 1, 15)} ${formatNumber(this.currentListenRange.rtPlayer.getPosition() / 1000, {toFixed: 0})}/${formatNumber(this.currentPlay.data.duration, {toFixed: 0})}s`;
+            parts.push(`${rtProgress} Realtime | Drifted ${formatNumber(Math.abs(this.currentListenRange.getDrift() / 1000), {toFixed: 1})}s (Max ${formatNumber(this.currentListenRange.getAllowedDrift() / 1000, {toFixed: 1})})`);
+        }
         return parts.join('\n');
     }
 
