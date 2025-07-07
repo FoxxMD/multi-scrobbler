@@ -6,7 +6,7 @@ import { PositionalPlayerState } from "./PositionalPlayerState.js";
 
 export class PlexPlayerState extends PositionalPlayerState {
     constructor(logger: Logger, platformId: PlayPlatformId, opts?: PlayerStateOptions) {
-        super(logger, platformId, {allowedDrift: 17000, rtTruth: true, ...(opts || {})});
+        super(logger, platformId, {allowedDrift: 35000, rtTruth: true, ...(opts || {})});
         this.gracefulEndBuffer = this.allowedDrift / 1000;
     }
 
