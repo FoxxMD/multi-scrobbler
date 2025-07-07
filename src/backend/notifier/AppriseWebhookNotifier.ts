@@ -13,6 +13,7 @@ import {
 import { AbstractWebhookNotifier } from "./AbstractWebhookNotifier.js";
 import { URLData } from "../../core/Atomic.js";
 import { isPortReachable, joinedUrl, normalizeWebAddress } from "../utils/NetworkUtils.js";
+import { isDebugMode } from "../utils.js";
 
 const shortKey = truncateStringToLength(10);
 
@@ -98,6 +99,9 @@ export class AppriseWebhookNotifier extends AbstractWebhookNotifier {
                     this.logger.verbose(`Pushed notification to Config ${shortKey(key)}`);
                 } catch (e: any) {
                     this.logger.warn(new Error(`Failed to push notification for '${payload.title}' to Config ${shortKey(key)}`, {cause: e}));
+                    if(isDebugMode()) {
+                        this.logger.debug({ body }, 'Apprise Request')
+                    }
                 }
             }
         }
@@ -114,6 +118,9 @@ export class AppriseWebhookNotifier extends AbstractWebhookNotifier {
                 this.logger.verbose(`Pushed notification to URLs`);
             } catch (e: any) {
                 this.logger.warn(`Failed to push notification for '${payload.title}' to URLs`, {cause: e});
+                if(isDebugMode()) {
+                    this.logger.debug({ body }, 'Apprise Request')
+                }
             }
         }
 
@@ -138,8 +145,27 @@ export class AppriseWebhookNotifier extends AbstractWebhookNotifier {
                     } = {}
                 } = e;
                 const errorMsgs = [message];
-                if (typeof jsonBody === 'object' && jsonBody.error !== undefined) {
-                    errorMsgs.push(jsonBody.error);
+                if(typeof jsonBody === 'object') {
+                    let appriseError = 'Apprise Error Response';
+                    if ('error' in jsonBody) {
+                        appriseError = `${appriseError}: ${jsonBody.error}`;
+                    }
+                    if('details' in jsonBody) {
+                        const appriseDetails = [];
+                        if(Array.isArray(jsonBody.details)) {
+                            for(const detailEntry of jsonBody.details) {
+                                try {
+                                appriseDetails.push(`(${detailEntry[0]}) ${detailEntry[2]}`);
+                                } catch (e) {
+                                    appriseDetails.push(JSON.stringify(detailEntry));
+                                }
+                            }
+                        } else {
+                            appriseDetails.push(JSON.stringify(jsonBody.details));
+                        }
+                        appriseError = `${appriseError} --> ${appriseDetails.join(' || ')} <--`;
+                    }
+                    errorMsgs.push(appriseError);
                 }
                 throw new UpstreamError(`Apprise API Request failed => (${status}) ${errorMsgs.join(' => ')}`, {response: e.response});
             } else {
