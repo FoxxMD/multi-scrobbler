@@ -194,5 +194,18 @@ if (process.env.ANALYTICS !== undefined && process.env.ANALYTICS !== '') {
   }
   config.scripts.push(script)
 }
+if (process.env.RY_ANALYTICS !== undefined && process.env.RY_ANALYTICS !== '') {
+  const script = {
+    src: process.env.RY_ANALYTICS,
+    defer: true
+  }
+  if (process.env.RY_ANALYTICS_SITEID !== undefined && process.env.RY_ANALYTICS_SITEID !== '') {
+    script['data-site-id'] = process.env.RY_ANALYTICS_SITEID;
+  }
+  if (process.env.RY_ANALYTICS_REPLAY !== undefined && process.env.RY_ANALYTICS_REPLAY !== '') {
+    script['data-session-replay'] = process.env.RY_ANALYTICS_REPLAY;
+  }
+  config.scripts.push(script)
+}
 
 export default config;
