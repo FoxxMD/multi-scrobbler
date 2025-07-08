@@ -8,14 +8,14 @@ path="/run/user/$user_id/bus"
 echo -e "Starting socat for uid $user_id at unix scoket $path and listening on port $SOCAT_PORT"
 
 # on host do 
-# socat TCP-LISTEN:6644,reuseaddr,fork UNIX-CONNECT:/run/user/1000/bus
+# socat TCP-LISTEN:$SOCAT_PORT,reuseaddr,fork UNIX-CONNECT:/run/user/$user_id/bus
 mkdir -p /run/user/$user_id
 touch /run/user/$user_id/bus
 chmod 666 /run/user/$user_id/bus
 chown -R abc:abc /run/user/$user_id
 
- exec \
- 	  s6-setuidgid abc socat UNIX-LISTEN:/run/user/$user_id/bus,fork,reuseaddr,unlink-early,user=abc,group=abc,mode=666 TCP:0.0.0.0:$SOCAT_PORT
+exec \
+ 	s6-setuidgid abc socat UNIX-LISTEN:/run/user/$user_id/bus,fork,reuseaddr,unlink-early,user=abc,group=abc,mode=666 TCP:0.0.0.0:$SOCAT_PORT
 
 else
     echo "Not starting socat"
