@@ -1261,11 +1261,32 @@ If you run Linux and have a notification tray that shows what media you are list
 
 multi-scrobbler can listen to this interface and scrobble tracks played by **any media player** that communicates to the operating system with MPRIS.
 
-:::note
+##### Host Setup
 
-multi-scrobbler needs to be running as a [**Local Installation**](../installation/installation.mdx#nodejs) in order to use MPRIS. This cannot be used from docker.
+MPRIS communication requires multi-scrobbler to have access to the host's dbus-daemon. 
 
-:::
+If multi-scrobbler is running as a [**Local Installation**](../installation/installation.mdx#nodejs) then no setup is required.
+
+If multi-scrobbler is running as a [**Docker Container**](../installation/installation.mdx#docker) some modifications are required...
+
+<details>
+
+   <summary>MPRIS with Docker</summary>
+
+    * The container must run on the same host that MPRIS is on
+    * [`PUID` and `PGID` ENVs must be configured](../installation/#linux-host) so the container has permissions to access the daemon
+    * Modify your multi-scrobbler compose file to include these additional values (UID retrieved from PUID instructions above):
+
+    ```yaml title="docker-compose.yaml"
+
+        environment:
+          - DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/UID/bus 
+
+        volumes:
+          - /run/user/UID/bus:/run/user/UID/bus:ro
+    ```
+
+</details>
 
 #### Configuration
 
