@@ -105,35 +105,11 @@ The web UI and API is served on port `9078`. This can be modified using the `POR
 
 ### Flatpak
 
-:::warning
-
-Flatpak users have experienced issues when using multi-scrobbler as a long-running process. Due to the relative difficulty in debugging issues with flatpak installations it is recommended:
-
-* to use a [Docker](#docker) installation if possible or
-* only if you need access to host-level resources like dbus for [MPRIS](https://foxxmd.github.io/multi-scrobbler/docs/configuration#mpris) and cannot run a [nodejs](#nodejs) installation
-
-:::
+:::warning[Unsupported]
 
 Flatpak/Flathub installs are no longer supported. You can still build MS as a [Flatpak app from source.](../development/flatpak) See more information about [Flatpak EOL.](https://github.com/FoxxMD/multi-scrobbler/issues/287)
 
-#### Usage Examples
-
-<Tabs groupId="configType" queryString>
-    <TabItem value="env" label="ENV">
-        There are a few [options for running flatpak applications with temporary or permanent environmental variables.](https://ardasevinc.dev/launch-flatpak-apps-with-custom-args-and-environment-variables)
-
-        ```shell
-        flatpak run --env=SPOTIFY_CLIENT_ID=yourId --envSPOTIFY_CLIENT_SECRET=yourSecret --env=MALOJA_URL="http://domain.tld" io.github.foxxmd.multiscrobbler
-        ```
-    </TabItem>
-    <TabItem value="file" label="File">
-        The config directory for multi-scrobbler as a flatpak can be found under `/home/YourUser/.var/app/io.github.foxxmd.multiscrobbler/config`
-
-        ```shell
-        flatpak run io.github.foxxmd.multiscrobbler
-        ```
-    </TabItem>
-</Tabs>
+:::
 
 ## Docker
 

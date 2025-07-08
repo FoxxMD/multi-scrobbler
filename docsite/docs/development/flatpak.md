@@ -6,8 +6,6 @@ title: Flatpak
 description: Building Flatpak App locally
 ---
 
-The final build repo for the flathub version can be found at [flathub/io.github.foxxmd.multiscrobbler](https://github.com/flathub/io.github.foxxmd.multiscrobbler)
-
 ## Install Requirements
 
 ### Flatpak and flatpak-builder
