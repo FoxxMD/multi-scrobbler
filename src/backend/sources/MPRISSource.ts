@@ -1,6 +1,6 @@
 import { Interfaces as Notifications } from '@dbus-types/notifications'
 import dayjs from "dayjs";
-import { DBusInterface, sessionBus } from 'dbus-ts';
+import { DBusInterface, MessageBus, sessionBus, Connection, ConnectOpts } from 'dbus-ts';
 import EventEmitter from "events";
 import { PlayObject } from "../../core/Atomic.js";
 import { FormatPlayObjectOptions, InternalConfig } from "../common/infrastructure/Atomic.js";
@@ -17,6 +17,9 @@ import { removeDuplicates } from "../utils.js";
 import { findCauseByMessage } from "../utils/ErrorUtils.js";
 import { RecentlyPlayedOptions } from "./AbstractSource.js";
 import MemorySource from "./MemorySource.js";
+import { Readable, Writable } from 'stream';
+import net from 'net';
+import pEvent from 'p-event';
 
 
 export class MPRISSource extends MemorySource {
@@ -101,9 +104,26 @@ export class MPRISSource extends MemorySource {
     }
 
     protected getDBus = async () => {
-        const busNew = await sessionBus<Notifications>();
-        const obj = await busNew.getInterface('org.freedesktop.DBus', '/org/freedesktop/DBus', 'org.freedesktop.DBus');
-        return obj;
+        const conn = new Connection(createStream({}));
+        try {
+            const res = await Promise.race([
+                pEvent(conn, 'error'),
+                conn.init()
+            ])
+            if(res instanceof Error) {
+                throw res;
+            }
+        } catch (e) {
+            throw new Error('Failed to connected to session bus', {cause: e});
+        }
+
+        try {
+            const promise = sessionBus<Notifications>();
+            const busNew = await sessionBus<Notifications>();
+            return await busNew.getInterface('org.freedesktop.DBus', '/org/freedesktop/DBus', 'org.freedesktop.DBus');
+        } catch (e) {
+            throw new Error('Failed to get DBus interface', {cause: e});
+        } 
     }
 
     protected listNew = async () => {
@@ -239,3 +259,56 @@ const convertDBusExceptionToError = (e: any): Error => {
     return err;
 }
 
+// unfortunately had to recreate this function from dbus-ts/Connection
+// in order to be able to create the Connection class without immediate init
+// so we can catch errors
+const createStream = (opts: ConnectOpts): Readable&Writable => {
+    if (typeof opts !== 'object') {
+        opts = {};
+    }
+    if ("stream" in opts) {
+        return opts.stream;
+    }
+    if ("socket" in opts) {
+        return net.createConnection(opts.socket);
+    }
+    if ("port" in opts) {
+        return net.createConnection(opts.port, opts.host);
+    }
+
+    const busAddress = opts.busAddress || process.env.DBUS_SESSION_BUS_ADDRESS;
+    if (!busAddress) throw new Error('unknown bus address');
+
+    const addresses = busAddress.split(';');
+    for (let i = 0; i < addresses.length; ++i) {
+        const address = addresses[i];
+        const familyParams = address.split(':');
+        const family = familyParams[0];
+        const params: any = {};
+        familyParams[1].split(',').map(function(p) {
+            let keyVal = p.split('=');
+            params[keyVal[0]] = keyVal[1];
+        });
+
+        try {
+            switch (family.toLowerCase()) {
+                case 'tcp':
+                    return net.createConnection(params.port, (params.host || 'localhost'));
+                case 'unix':
+                    if (params.socket) return net.createConnection(params.socket);
+                    if (params.path) return net.createConnection(params.path);
+                    throw new Error(
+                        "not enough parameters for 'unix' connection - you need to specify 'socket' or 'path' parameter"
+                    );
+                default:
+                    throw new Error('unknown address type:' + family);
+            }
+        } catch (e) {
+            if (i < addresses.length - 1) {
+                console.warn(e.message);
+            } else {
+                throw e;
+            }
+        }
+    }
+}
