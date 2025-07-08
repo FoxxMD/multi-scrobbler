@@ -144,6 +144,10 @@ export class ListenRangePositional extends ListenRange {
         return Math.abs(this.getDrift((position ?? this.end.position))) > this.allowedDrift;
     }
 
+    getAllowedDrift() {
+        return this.allowedDrift;
+    }
+
     setRangeEnd(data: ListenProgressPositional | PlayProgressPositional/* , force?: boolean */) {
         const endProgress = data instanceof ListenProgressPositional ? data : new ListenProgressPositional(data)
         // if(this.rtTruth) {
