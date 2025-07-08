@@ -1263,30 +1263,54 @@ multi-scrobbler can listen to this interface and scrobble tracks played by **any
 
 ##### Host Setup
 
-MPRIS communication requires multi-scrobbler to have access to the host's dbus-daemon. 
+MPRIS communication requires multi-scrobbler to have access to the host's dbus-daemon.
 
-If multi-scrobbler is running as a [**Local Installation**](../installation/installation.mdx#nodejs) then no setup is required.
+<Tabs groupId="dbus" queryString>
+    <TabItem value="local" label="Local">
+        If multi-scrobbler is running as a [**Local Installation**](../installation/installation.mdx#nodejs), directly with node/npm, on the same host as MPRIS then no setup is required.
 
-If multi-scrobbler is running as a [**Docker Container**](../installation/installation.mdx#docker) some modifications are required...
+        Remote setup is also possible, see the **Remote Unix Socket** section in the Docker tab.
+    </TabItem>
+    <TabItem value="docker" label="Docker">
+        If multi-scrobbler is running as a [**Docker Container**](../installation/installation.mdx#docker) some modifications are required...
 
-<details>
+        ##### Local Unix Socket
 
-   <summary>MPRIS with Docker</summary>
+        The most secure way is to **run a multi-scrobbler container on the same host as MPRIS.** In this scenario you can simply mount the **user session** dbus unix socket into the container. Make sure [`PUID` and `PGID` ENVs are configured](../installation/#linux-host) so the container has permissions to access the socket. Then, modify your compose stack with these additional values:
 
-    * The container must run on the same host that MPRIS is on
-    * [`PUID` and `PGID` ENVs must be configured](../installation/#linux-host) so the container has permissions to access the daemon
-    * Modify your multi-scrobbler compose file to include these additional values (UID retrieved from PUID instructions above):
+        ```yaml title="docker-compose.yaml"
 
-    ```yaml title="docker-compose.yaml"
+            environment:
+            - DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/UID/bus 
 
-        environment:
-          - DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/UID/bus 
+            volumes:
+            - /run/user/UID/bus:/run/user/UID/bus:ro
+        ```
 
-        volumes:
-          - /run/user/UID/bus:/run/user/UID/bus:ro
-    ```
+        ##### Remote Unix Socket
 
-</details>
+        :::warning
+
+        This method is **insecure.** You should not expose dbus over a network unless access to the port is restricted and the network is trusted.
+
+        :::
+
+        Use [`socat`](https://linux.die.net/man/1/socat) to bidirectionally relay communication from the host's dbus socket to a listening TCP port.
+
+        To make dbus for user with uid `1000` available on port `6644`:
+
+        ```shell
+        socat TCP-LISTEN:6644,reuseaddr,fork UNIX-CONNECT:/run/user/1000/bus
+        ```
+
+        Then, add the following value to multi-scrobbler's ENVs:
+
+        ```
+        DBUS_SESSION_BUS_ADDRESS=tcp:host=yourHostIP,port=6644
+        ```
+
+    </TabItem>
+</Tabs>
 
 #### Configuration
 
