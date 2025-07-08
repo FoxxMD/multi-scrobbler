@@ -21,6 +21,7 @@ import { VLCSourceAIOConfig, VLCSourceConfig } from "./vlc.js";
 import { WebScrobblerSourceAIOConfig, WebScrobblerSourceConfig } from "./webscrobbler.js";
 import { YTMusicSourceAIOConfig, YTMusicSourceConfig } from "./ytmusic.js";
 import { IcecastSourceAIOConfig, IcecastSourceConfig } from "./icecast.js";
+import { KoitoSourceAIOConfig, KoitoSourceConfig } from "./koito.js";
 
 
 export type SourceConfig =
@@ -49,7 +50,8 @@ export type SourceConfig =
     | MPDSourceConfig
     | VLCSourceConfig
     | IcecastSourceConfig
-    | AzuracastSourceConfig;
+    | AzuracastSourceConfig
+    | KoitoSourceConfig;
 
 export type SourceAIOConfig =
     SpotifySourceAIOConfig
@@ -77,4 +79,5 @@ export type SourceAIOConfig =
     | MPDSourceAIOConfig
     | VLCSourceAIOConfig
     | IcecastSourceAIOConfig
-    | AzuracastSourceAIOConfig;
+    | AzuracastSourceAIOConfig
+    | KoitoSourceAIOConfig;
