@@ -1,16 +1,16 @@
 [
-  {
-    "name": "koito-source",
-    "configureAs": "source",
+      {
+    "name": "koito-client",
+    "configureAs": "client",
     "data": {
       "token": "029b081ba-9156-4pe7-88e5-3be671f5ea2b",
       "username": "admin",
       "url": "http://192.168.0.100:4110" 
     }
   },
-    {
-    "name": "koito-client",
-    "configureAs": "client",
+  {
+    "name": "koito-source",
+    "configureAs": "source",
     "data": {
       "token": "029b081ba-9156-4pe7-88e5-3be671f5ea2b",
       "username": "admin",

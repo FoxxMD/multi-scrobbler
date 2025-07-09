@@ -143,7 +143,7 @@ export default class ScrobbleClients {
                     this.logger.error(invalidTypeMsg);
                     continue;
                 }
-                if(['lastfm','listenbrainz'].includes(c.type.toLocaleLowerCase()) && ((c as LastfmClientConfig | ListenBrainzClientConfig).configureAs === 'source')) {
+                if(['lastfm','listenbrainz','koito'].includes(c.type.toLocaleLowerCase()) && ((c as LastfmClientConfig | ListenBrainzClientConfig).configureAs === 'source')) {
                        this.logger.debug(`Skipping config ${index + 1} (${name}) in config.json because it is configured as a source.`);
                        continue;
                 }
@@ -262,8 +262,8 @@ export default class ScrobbleClients {
                     continue;
                 }
                 for(const [i,rawConf] of rawClientConfigs.entries()) {
-                    if(['lastfm','listenbrainz'].includes(clientType) && 
-                    ((rawConf as LastfmClientConfig | ListenBrainzClientConfig).configureAs === 'source')) 
+                    if(['lastfm','listenbrainz','koito'].includes(clientType) && 
+                    ((rawConf as LastfmClientConfig | ListenBrainzClientConfig | KoitoClientConfig).configureAs === 'source')) 
                     {
                         this.logger.debug(`Skipping config ${i + 1} from ${clientType}.json because it is configured as a source.`);
                        continue;

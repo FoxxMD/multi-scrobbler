@@ -146,7 +146,7 @@ export class KoitoApiClient extends AbstractApiClient {
     getRecentlyPlayed = async (maxTracks: number): Promise<PlayObject[]> => {
         try {
             const resp = await this.getUserListens(maxTracks);
-            return resp.items.map(x => listenObjectResponseToPlay(x));
+            return resp.items.map(x => listenObjectResponseToPlay(x, { url: this.url.url }));
         } catch (e) {
             this.logger.error(`Error encountered while getting User listens | Error =>  ${e.message}`);
             return [];
@@ -179,7 +179,7 @@ export class KoitoApiClient extends AbstractApiClient {
 
 }
 
-export const listenObjectResponseToPlay = (obj: ListenObjectResponse, options: { newFromSource?: boolean } = {}): PlayObject => {
+export const listenObjectResponseToPlay = (obj: ListenObjectResponse, options: { newFromSource?: boolean, url?: URL } = {}): PlayObject => {
     const play: PlayObject = {
         data: {
             track: obj.track.title,
@@ -190,7 +190,10 @@ export const listenObjectResponseToPlay = (obj: ListenObjectResponse, options: {
         meta: {
             source: 'Koito',
             newFromSource: options.newFromSource ?? false,
-            trackId: obj.track.id.toString()
+            trackId: obj.track.id.toString(),
+            url: {
+                    web: options.url !== undefined ? joinedUrl(options.url, `/track/${obj.track.id.toString()}`).toString() : undefined
+            }
         }
     }
     if (obj.track.musicbrainz_id !== null) {
