@@ -33,7 +33,12 @@ export const truncateStringToLength = (length: any, truncStr = '...') => (val: a
 export const defaultTrackTransformer = (input: any, data: AmbPlayObject, hasExistingParts: boolean = false) => hasExistingParts ? `- ${input}` : input;
 export const defaultReducer = (acc, curr) => `${acc} ${curr}`;
 export const defaultArtistFunc = (a: string[]) => a.join(' / ');
-export const defaultAlbumFunc = (input: any, data: AmbPlayObject, hasExistingParts: boolean = false) => hasExistingParts ? `--- ${input}` : input;
+export const defaultAlbumFunc = (input: any, data: AmbPlayObject, hasExistingParts: boolean = false) => {
+    if(input === undefined) {
+        return undefined;
+    }
+    return hasExistingParts ? `--- ${input}` : input
+};
 export const defaultTimeFunc = (t: Dayjs | undefined, i?: ScrobbleTsSOC) => t === undefined ? '@ N/A' : `@ ${t.local().format()} ${i === undefined ? '' : (i === SCROBBLE_TS_SOC_START ? '(S)' : '(C)')}`;
 export const defaultTimeFromNowFunc = (t: Dayjs | undefined) => t === undefined ? undefined : `(${t.local().fromNow()})`;
 export const defaultCommentFunc = (c: string | undefined) => c === undefined ? undefined : `(${c})`;
