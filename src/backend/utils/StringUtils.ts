@@ -366,3 +366,13 @@ export const buildStatePlayerPlayIdententifyingInfo = (data: PlayObject | Player
     }
     return idInfo;
 }
+
+
+export const LZ_VERSION_PATH: RegExp = new RegExp(/\/?1\/?$/);
+
+export const normalizeListenbrainzUrl = (urlVal: string): string | undefined => {
+    if (parseRegexSingleOrFail(LZ_VERSION_PATH, urlVal)) {
+        return urlVal.replace(LZ_VERSION_PATH, '');
+    }
+    return undefined;
+}
