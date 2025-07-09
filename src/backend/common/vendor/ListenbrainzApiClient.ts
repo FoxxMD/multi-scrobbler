@@ -236,7 +236,7 @@ export class ListenbrainzApiClient extends AbstractApiClient {
         try {
             const resp = await this.callApi(request.get(`${joinedUrl(getBaseFromUrl(this.url.url), 'apis/web/v1/stats')}`));
             this.logger.info('Listenbrainz Host looks like a Koito server, API client will now operate in Koito mode!');
-            this.logger.warn('Koito has limited support for the Listenbrainz API spec. It does not support Now Playing or retrieving full metabrainz data for a play.');
+            this.logger.warn('Koito has limited support for the Listenbrainz API spec. It does not support Now Playing or retrieving full metabrainz data for a play. Please consider switching to the full Koito Source/Client.');
             return true;
         } catch (e) {
             this.logger.verbose('Listenbrainz Host does not look like a Koito server.');
