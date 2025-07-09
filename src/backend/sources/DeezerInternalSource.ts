@@ -60,6 +60,7 @@ export default class DeezerInternalSource extends MemorySource {
 
         this.jar = new CookieJar();
         const mixedAgent = new MixedCookieAgent({ cookies: { jar: this.jar } });
+        // @ts-expect-error not correct structure
         this.agent = request.agent().use((req) => req.agent(mixedAgent));
     }
 
