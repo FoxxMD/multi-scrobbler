@@ -31,6 +31,7 @@ export class VLCSource extends MemoryPositionalSource {
     port?: number
     client!: VLC.Client;
     deviceId: string
+    vlcVersion?: string;
     filenamePatterns: RegExp[] = [];
 
     constructor(name: any, config: VLCSourceConfig, internal: InternalConfig, emitter: EventEmitter) {
@@ -110,6 +111,7 @@ export class VLCSource extends MemoryPositionalSource {
         try {
             const status = await this.client.status();
             this.logger.info(`Connected successfully, found VLC ${status.version}`);
+            this.vlcVersion = status.version;
             return true;
         } catch (e) {
             let friendlyError: string | undefined;
@@ -222,6 +224,9 @@ export class VLCSource extends MemoryPositionalSource {
             },
             meta: {
                 trackProgressPosition: time,
+                source: 'vlc',
+                mediaPlayerName: 'VLC',
+                mediaPlayerVersion: this.vlcVersion
             }
         }
     }

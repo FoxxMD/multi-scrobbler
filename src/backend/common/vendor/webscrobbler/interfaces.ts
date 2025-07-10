@@ -61,8 +61,14 @@ export type Metadata =
 }
     | Record<string, never>;
 
+export interface Connector {
+    id: string
+    js: string
+    label: string
+}
 export interface WebScrobblerSong {
     controllerTabId: string | number;
+    connector: Connector
     parsed: ParsedSongData;
     processed: ProcessedSongData;
     noRegex: ProcessedSongData;

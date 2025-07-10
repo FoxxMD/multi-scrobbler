@@ -255,7 +255,9 @@ const formatPlayObj = (obj: AzuraNowPlayingResponse, options: FormatPlayObjectOp
             duration
         },
         meta: {
-            trackProgressPosition: elapsed
+            trackProgressPosition: elapsed,
+            source: 'azuracast',
+            mediaPlayerName: 'Azuracast'
         }
     }
 }

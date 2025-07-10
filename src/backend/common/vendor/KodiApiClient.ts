@@ -46,6 +46,8 @@ export class KodiApiClient extends AbstractApiClient {
 
     token?: string;
 
+    version?: string;
+
     declare client: KodiClient;
 
     constructor(name: any, config: KodiData, options: AbstractApiOptions) {
@@ -84,7 +86,7 @@ export class KodiApiClient extends AbstractApiClient {
         return url;
     }
 
-    static formatPlayObj(obj: (PlayerItem & Partial<PlayerInfo> & { playerid?: number }), options: FormatPlayObjectOptions = {}): PlayObject {
+    static formatPlayObj(obj: (PlayerItem & Partial<PlayerInfo> & { playerid?: number }), options: FormatPlayObjectOptions & {version?: string} = {}): PlayObject {
         const {newFromSource = true} = options;
 
         const {
@@ -113,6 +115,8 @@ export class KodiApiClient extends AbstractApiClient {
             },
             meta: {
                 source: 'kodi',
+                mediaPlayerName: 'Kodi',
+                mediaPlayerVersion: options.version,
                 trackId: id.toString(),
                 newFromSource,
                 trackProgressPosition,
@@ -135,6 +139,7 @@ export class KodiApiClient extends AbstractApiClient {
             // https://kodi.wiki/view/JSON-RPC_API/v12#Application.GetProperties
             const applicationInfo = await this.client.Application.GetProperties(['version']);
 
+            this.version = `${applicationInfo.version.major}.${applicationInfo.version.minor}`;
             this.logger.info(`Found Kodi v${applicationInfo.version.major}.${applicationInfo.version.minor} (JSONRPC v${jsonInfo.version.major}.${jsonInfo.version.minor})`);
             return true;
         } catch (e) {
@@ -180,7 +185,7 @@ export class KodiApiClient extends AbstractApiClient {
 
         const itemInfo = await this.getPlayerItem(audioActive.playerid);
 
-        const play = KodiApiClient.formatPlayObj({...itemInfo.item, ...playerInfo, ...audioActive});
+        const play = KodiApiClient.formatPlayObj({...itemInfo.item, ...playerInfo, ...audioActive}, {version: this.version});
 
         return [play];
     }

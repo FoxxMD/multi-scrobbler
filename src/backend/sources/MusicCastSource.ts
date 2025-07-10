@@ -18,6 +18,7 @@ export class MusicCastSource extends MemoryPositionalSource {
     declare config: MusicCastSourceConfig;
 
     urlData!: URLData;
+    version?: string;
 
 
     constructor(name: any, config: MusicCastSourceConfig, internal: InternalConfig, emitter: EventEmitter) {
@@ -57,6 +58,9 @@ export class MusicCastSource extends MemoryPositionalSource {
             const resp = await request.get(joinedUrl(this.urlData.url, 'system/getDeviceInfo').toString())
             if (resp.body !== undefined && typeof resp.body === 'object') {
                 const deviceInfo = resp.body as DeviceInfoResponse;
+                if(deviceInfo.api_version !== undefined) {
+                    this.version = deviceInfo.api_version.toString();
+                }
                 this.logger.info(`Found ${deviceInfo.model_name} (${deviceInfo.device_id}) using API v${deviceInfo.api_version}`);
             } else {
                 this.logger.warn('Could not get device info! Ignoring but probably not good...');
@@ -130,7 +134,7 @@ export class MusicCastSource extends MemoryPositionalSource {
     }
 }
 
-const formatPlayObj = (obj: PlayInfoCDResponse | PlayInfoNetResponse, options: FormatPlayObjectOptions = {}): PlayObject => {
+const formatPlayObj = (obj: PlayInfoCDResponse | PlayInfoNetResponse, options: FormatPlayObjectOptions & {version?: string} = {}): PlayObject => {
 
     const {
         play_time,
@@ -152,7 +156,9 @@ const formatPlayObj = (obj: PlayInfoCDResponse | PlayInfoNetResponse, options: F
         },
         meta: {
             trackProgressPosition: play_time,
-            deviceId: 'input' in obj ? obj.input : 'cd'
+            deviceId: 'input' in obj ? obj.input : 'cd',
+            mediaPlayerName: 'MusicCast',
+            mediaPlayerVersion: options.version
         }
     }
 }

@@ -18,7 +18,7 @@ import { AbstractApiOptions, DEFAULT_RETRY_MULTIPLIER, FormatPlayObjectOptions }
 import { ListenBrainzClientData } from "../infrastructure/config/client/listenbrainz.js";
 import AbstractApiClient from "./AbstractApiClient.js";
 import { getBaseFromUrl, isPortReachableConnect, joinedUrl, normalizeWebAddress } from '../../utils/NetworkUtils.js';
-import { parseRegexSingleOrFail } from '../../utils.js';
+import { parseRegexSingleOrFail, removeUndefinedKeys } from '../../utils.js';
 import {ListensResponse as KoitoListensResponse} from '../infrastructure/config/client/koito.js'
 import { listenObjectResponseToPlay } from './koito/KoitoApiClient.js';
 import { log } from 'console';
@@ -713,34 +713,34 @@ export const playToListenPayload = (play: PlayObject): ListenPayload => {
                 duration,
                 meta: {
                     brainz = {},
-                    spotify = {}
+                    spotify = {},
                 } = {}
+            },
+            meta: {
+                mediaPlayerName,
+                mediaPlayerVersion,
+                musicService,
             }
         } = play;
         // using submit-listens exmaple from openapi https://rain0r.github.io/listenbrainz-openapi/index.html#/lbCore/submitListens
         // which is documented in official docs https://listenbrainz.readthedocs.io/en/latest/users/api/index.html#openapi-specification
         // and based on this LZ developer comment https://github.com/lyarenei/jellyfin-plugin-listenbrainz/issues/10#issuecomment-1253867941
 
-        const addInfo: SubmitListenAdditionalTrackInfo = {
+        let addInfo: SubmitListenAdditionalTrackInfo = {
             // all artists
             artist_names: Array.from(new Set([...artists, ...albumArtists])),
             // primary artist
             release_artist_name: artists[0],
             release_artist_names: [artists[0]],
+            media_player: mediaPlayerName,
+            media_player_version: mediaPlayerVersion,
+            music_service: musicService !== undefined ? musicServiceToCononical(musicService) : undefined,
+            spotify_id: spotify.track,
+            spotify_album_id: spotify.album,
+            spotify_artist_ids: spotify.artist
         };
 
-        if(spotify.track !== undefined) {
-            addInfo.spotify_id = spotify.track;
-        }
-        if(spotify.album !== undefined) {
-            addInfo.spotify_album_id = spotify.album;
-        }
-        if(spotify.albumArtist !== undefined && spotify.albumArtist.length > 0) {
-            addInfo.spotify_album_artist_ids = spotify.albumArtist;
-        }
-        if(spotify.artist !== undefined) {
-            addInfo.spotify_artist_ids = spotify.artist;
-        }
+        addInfo = removeUndefinedKeys(addInfo)
 
         return {
             listened_at: getScrobbleTsSOCDate(play).unix(),
@@ -761,3 +761,30 @@ export const playToListenPayload = (play: PlayObject): ListenPayload => {
             }
         }
     }
+
+const musicServices = {
+    spotify: 'spotify.com',
+    bandcamp: 'bandcamp.com',
+    ['youtube music']: 'music.youtube.com',
+    youtube: 'youtube.com',
+    deezer: 'deezer.com',
+    tidal: 'tidal.com',
+    apple: 'music.apple.com',
+    archive: 'archive.org',
+    soundcloud: 'soundcloud.com',
+    jamendo: 'jamendo.com',
+    play: 'play.google.com'
+}
+/**
+ *  Converts MS musicService to LZ cononical Music Service Name, if one exists 
+ * @see https://listenbrainz.readthedocs.io/en/latest/users/json.html#payload-json-details
+ * */
+const musicServiceToCononical = (str: string): string | undefined => {
+    const lower = str.trim().toLocaleLowerCase();
+    for(const [k, v] of Object.entries(musicServices)) {
+        if(lower.includes(k)) {
+            return v;
+        }
+    }
+    return undefined;
+}

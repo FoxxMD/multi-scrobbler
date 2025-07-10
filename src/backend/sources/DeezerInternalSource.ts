@@ -80,7 +80,8 @@ export default class DeezerInternalSource extends MemorySource {
                 newFromSource,
                 url: {
                     web: `https://www.deezer.com/track/${obj.SNG_ID}`
-                }
+                },
+                musicService: 'Deezer',
             }
         };
         if(obj.ALB_PICTURE !== undefined && obj.ALB_PICTURE !== '') {

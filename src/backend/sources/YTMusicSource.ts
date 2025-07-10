@@ -395,6 +395,7 @@ Redirect URI  : ${this.redirectUri}`);
             },
             meta: {
                 source: 'YTMusic',
+                musicService: 'Youtube Music',
                 trackId: id,
                 newFromSource,
                 comment: shelf

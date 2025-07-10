@@ -47,7 +47,7 @@ export class KodiSource extends MemoryPositionalSource {
         }
     }
 
-    static formatPlayObj(obj: any, options: FormatPlayObjectOptions = {}): PlayObject {
+    static formatPlayObj(obj: any, options: FormatPlayObjectOptions & {version?: string} = {}): PlayObject {
         return KodiApiClient.formatPlayObj(obj, options);
     }
 

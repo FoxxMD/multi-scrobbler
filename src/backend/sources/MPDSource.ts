@@ -198,6 +198,7 @@ export class MPDSource extends MemoryPositionalSource {
             meta: {
                 brainz,
                 trackProgressPosition: options.trackProgressPosition,
+                mediaPlayerName: 'mpd'
             }
         }
     }

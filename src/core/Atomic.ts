@@ -111,6 +111,11 @@ export interface PlayData extends TrackData {
 export interface PlayMeta {
     source?: string
 
+    /*
+    * If applicable, the name of the Service providing the track (Spotify, Tidal, etc...)
+    */
+    musicService?: string
+
     /**
      * Specifies from what facet/data from the source this play was parsed from IE history, now playing, etc...
      * */
@@ -159,6 +164,16 @@ export interface PlayMeta {
      * The position the "player" is at in the track at the time the play was reported, in seconds
      * */
     trackProgressPosition?: number
+
+    /*
+    * Name of the media player (program)
+    */
+    mediaPlayerName?: string
+
+   /*
+    * Version of the media player (program)
+    */
+    mediaPlayerVersion?: string
     /**
      * A unique identifier for the device playing this track
      * */

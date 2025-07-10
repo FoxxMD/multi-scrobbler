@@ -81,7 +81,7 @@ export class MPRISSource extends MemorySource {
                 playDate: dayjs()
             },
             meta: {
-                source: 'dbus',
+                source: 'mpris',
                 trackId: trackid,
                 newFromSource,
                 url: {
@@ -286,7 +286,7 @@ const createStream = (opts: ConnectOpts): Readable&Writable => {
         const family = familyParams[0];
         const params: any = {};
         familyParams[1].split(',').map(function(p) {
-            let keyVal = p.split('=');
+            const keyVal = p.split('=');
             params[keyVal[0]] = keyVal[1];
         });
 

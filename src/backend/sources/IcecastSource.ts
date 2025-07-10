@@ -213,7 +213,8 @@ const formatPlayObj = (obj: IcecastMetadata, options: FormatPlayObjectOptions = 
             artists
         },
         meta: {
-            source: 'icecast'
+            source: 'icecast',
+            mediaPlayerName: 'Icecast'
         }
     }
 }

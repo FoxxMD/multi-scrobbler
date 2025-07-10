@@ -339,7 +339,7 @@ export default class PlexApiSource extends MemoryPositionalSource {
                 library,
                 deviceId: combinePartsToString([shortDeviceId(machineIdentifier), product, playerTitle]),
                 sessionId: sessionKey,
-                trackProgressPosition: viewOffset / 1000
+                trackProgressPosition: viewOffset / 1000,
             }
         }
     }

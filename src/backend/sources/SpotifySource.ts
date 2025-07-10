@@ -197,6 +197,7 @@ export default class SpotifySource extends MemoryPositionalSource {
             meta: {
                 deviceId: deviceId ?? `${NO_DEVICE}-${NO_USER}`,
                 source: 'Spotify',
+                musicService: 'Spotify',
                 trackId: id,
                 trackProgressPosition: playbackPosition,
                 scrobbleTsSOC,

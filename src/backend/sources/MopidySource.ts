@@ -173,7 +173,8 @@ export class MopidySource extends MemoryPositionalSource {
                 trackId: uri,
                 newFromSource,
                 trackProgressPosition: trackProgressPosition !== undefined ? Math.round(trackProgressPosition / 1000) : undefined,
-                deviceId: name,
+                mediaPlayerName: 'Mopidy'
+                //deviceId: name,
             }
         }
     }

@@ -40,6 +40,7 @@ export class MusikcubeSource extends MemoryPositionalSource {
 
     client!: WS;
     deviceId: string
+    version?: string
 
     constructor(name: any, config: MusikcubeSourceConfig, internal: InternalConfig, emitter: EventEmitter) {
         const {
@@ -109,6 +110,7 @@ export class MusikcubeSource extends MemoryPositionalSource {
         this.client.addEventListener('message', (e) => {
             const data = getMessageData<any>(e);
             if(isAuthenticateResponse(data)) {
+                this.version = data.options.environment.app_version;
                 wsLogger.verbose(`${!data.options.authenticated ? 'NOT ' : ''}Authenticated for Muiskcube ${data.options.environment.app_version} with API v${data.options.environment.api_version}`);
             }
         });
@@ -197,7 +199,9 @@ export class MusikcubeSource extends MemoryPositionalSource {
             meta: {
                 trackProgressPosition: playing_current_time,
                 deviceId: this.deviceId,
-                trackId: external_id
+                trackId: external_id,
+                mediaPlayerName: 'Musikcube',
+                mediaPlayerVersion: this.version
             }
         }
     }

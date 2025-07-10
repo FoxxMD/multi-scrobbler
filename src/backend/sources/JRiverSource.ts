@@ -81,7 +81,7 @@ export class JRiverSource extends MemoryPositionalSource {
         }
     }
 
-    static formatPlayObj(obj: Info, options: FormatPlayObjectOptions = {}): PlayObject {
+    static formatPlayObj(obj: Info, options: FormatPlayObjectOptions & {version?: string} = {}): PlayObject {
         const {newFromSource = true} = options;
 
         const {
@@ -109,6 +109,8 @@ export class JRiverSource extends MemoryPositionalSource {
             },
             meta: {
                 source: 'mopidy',
+                mediaPlayerName: 'JRiver',
+                mediaPlayerVersion: options.version,
                 trackId: FileKey,
                 newFromSource,
                 trackProgressPosition: trackProgressPosition !== undefined ? Math.round(Number.parseInt(trackProgressPosition.toString()) / 1000) : undefined,
@@ -136,7 +138,7 @@ export class JRiverSource extends MemoryPositionalSource {
         if(data !== undefined) {
             const {State} = data;
             if(State !== PLAYER_STATE.STOPPED) {
-                play = [JRiverSource.formatPlayObj(data)];
+                play = [JRiverSource.formatPlayObj(data, {version: this.client.version})];
             }
         }
 

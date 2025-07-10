@@ -16,6 +16,16 @@ import MemorySource from "./MemorySource.js";
 
 dayjs.extend(isSameOrAfter);
 
+interface SourceIdentifierData {
+    /** Subsonic Version */
+    version?: string,
+    /** Media Player name */
+    type?: string,
+    /** Media Player version */
+    serverVersion?: string,
+    openSubsonic?: boolean
+}
+
 export class SubsonicSource extends MemorySource {
 
     requiresAuth = true;
@@ -25,6 +35,8 @@ export class SubsonicSource extends MemorySource {
     declare config: SubSonicSourceConfig;
 
     usersAllow: string[] = [];
+
+    sourceData: SourceIdentifierData = {};
 
     constructor(name: any, config: SubSonicSourceConfig, internal: InternalConfig, emitter: EventEmitter) {
         const {
@@ -38,8 +50,16 @@ export class SubsonicSource extends MemorySource {
         this.canPoll = true;
     }
 
-    static formatPlayObj(obj: any, options: FormatPlayObjectOptions = {}): PlayObject {
-        const {newFromSource = false} = options;
+    static formatPlayObj(obj: any, options: FormatPlayObjectOptions & { sourceData?: SourceIdentifierData } = {}): PlayObject {
+        const {
+            newFromSource = false,
+            sourceData: {
+                version,
+                type,
+                serverVersion,
+                openSubsonic
+            } = {},
+        } = options;
         const {
             id,
             title,
@@ -50,6 +70,7 @@ export class SubsonicSource extends MemorySource {
             playerId,
             username,
         } = obj;
+
         return {
             data: {
                 artists: [artist],
@@ -65,7 +86,9 @@ export class SubsonicSource extends MemorySource {
                 trackId: id,
                 newFromSource,
                 user: username,
-                deviceId: playerId
+                deviceId: playerId,
+                mediaPlayerName: type ?? `${openSubsonic ? 'Open ' : ''}Subsonic`,
+                mediaPlayerVersion: type !== undefined && serverVersion !== undefined ? serverVersion : version
             }
         }
     }
@@ -218,6 +241,7 @@ export class SubsonicSource extends MemorySource {
         const {url} = this.config.data;
         try {
             const resp = await this.callApi(request.get(`${url}/rest/ping`));
+            this.sourceData = resp as SourceIdentifierData;
             this.logger.info(`Subsonic Server reachable: ${identifiersFromResponse(resp)}`);
             return true;
         } catch (e) {
@@ -226,6 +250,7 @@ export class SubsonicSource extends MemorySource {
             if(subResponseError !== undefined) {
                 const resp = getSubsonicResponse(subResponseError.response)
                 this.logger.info(`Subsonic Server reachable: ${identifiersFromResponse(resp)}`);
+                this.sourceData = resp as SourceIdentifierData;
                 return true;
             }
 
@@ -262,7 +287,7 @@ export class SubsonicSource extends MemorySource {
             } = {}
         } = resp;
         // sometimes subsonic sources will return the same track as being played twice on the same player, need to remove this so we don't duplicate plays
-        const deduped = removeDuplicates(entry.map(SubsonicSource.formatPlayObj));
+        const deduped = removeDuplicates(entry.map(x => SubsonicSource.formatPlayObj(x, {sourceData: this.sourceData})));
         const userFiltered = this.usersAllow.length == 0 ? deduped : deduped.filter(x => x.meta.user === undefined || this.usersAllow.map(x => x.toLocaleLowerCase()).includes(x.meta.user.toLocaleLowerCase()));
         return this.processRecentPlays(userFiltered);
     }

@@ -96,6 +96,8 @@ export class JRiverApiClient extends AbstractApiClient {
 
     token?: string;
 
+    version?: string;
+
     constructor(name: any, config: JRiverData, options: AbstractApiOptions) {
         super('JRiver', name, config, options);
         const {
@@ -130,6 +132,7 @@ export class JRiverApiClient extends AbstractApiClient {
         try {
             const resp = await this.callApi<Alive>(request.get(`${this.url}Alive`));
             const {body: { data } = {}} = resp;
+            this.version = data.ProgramVersion;
             this.logger.verbose(`Found ${data.ProgramName} ${data.ProgramVersion} (${data.FriendlyName})`);
             return true;
         } catch (e) {

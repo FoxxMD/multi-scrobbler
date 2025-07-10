@@ -93,6 +93,9 @@ export class WebScrobblerSource extends MemorySource {
     } = {}): PlayObject {
         const {
             connectorLabel,
+            connector: {
+                label: connectorL
+            } = {},
             controllerTabId = 'UNK',
             processed,
             parsed: {
@@ -137,6 +140,7 @@ export class WebScrobblerSource extends MemorySource {
                     origin: originUrl
                 },
                 deviceId: `${connectorLabel}-${controllerTabId}`,
+                musicService: connectorL,
                 scrobbleAllowed: isScrobblingAllowed,
                 nowPlaying: options.nowPlaying ?? false
             }
