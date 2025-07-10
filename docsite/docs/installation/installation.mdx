@@ -148,7 +148,7 @@ Recommended configuration steps for docker or docker-compose usage:
 
 #### Storage
 
-You **should** bind a host directory into the container for storing configurations and credentials. Otherwise, these will be lost when the container is updated.
+You should bind a host directory into the container for storing configurations and credentials. Otherwise, these will be lost when the container is updated.
 
 <details>
 
@@ -178,7 +178,7 @@ You **should** bind a host directory into the container for storing configuratio
 
 #### Networking
 
-If you are using a [bridge network](https://www.appsdeveloperblog.com/docker-networking-bridging-host-and-overlay/) (default docker setup) you **must** map a port to the container in order to access the dashboard and use MS with some sources (Plex, Jellyfin). The default container port is `9078`.
+If you are using a [bridge network](https://www.appsdeveloperblog.com/docker-networking-bridging-host-and-overlay/) (default docker setup) you must map a port to the container in order to access the dashboard and use MS with some sources (Webscrobbler, LFM/LZ Endpoints). The default container port is `9078`.
 
 <details>
 
