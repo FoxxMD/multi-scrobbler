@@ -5,6 +5,7 @@ import { PlayObject, URLData } from "../../../core/Atomic.js";
 import { combinePartsToString, slice } from "../../../core/StringUtils.js";
 import {
     findDelimiters,
+    normalizeListenbrainzUrl,
     normalizeStr,
     parseArtistCredits,
     parseCredits,
@@ -136,9 +137,6 @@ export interface ListenResponse {
     recording_msid?: string;
     track_metadata: TrackResponse;
 }
-
-const LZ_VERSION_PATH: RegExp = new RegExp(/\/?1\/?$/);
-
 export class ListenbrainzApiClient extends AbstractApiClient {
 
     declare config: ListenBrainzClientData;
@@ -151,9 +149,10 @@ export class ListenbrainzApiClient extends AbstractApiClient {
             url = 'https://api.listenbrainz.org/'
         } = config;
         let cleanUrl = url;
-        if(parseRegexSingleOrFail(LZ_VERSION_PATH, cleanUrl)) {
+        const pathedUrl = normalizeListenbrainzUrl(cleanUrl);
+        if(pathedUrl !== undefined) {
             this.logger.verbose(`LZ Server URL contained /1/, removing this because MS adds it automatically`);
-            cleanUrl = url.replace(LZ_VERSION_PATH, '');
+            cleanUrl = pathedUrl;
         }
         this.url = normalizeWebAddress(cleanUrl);
 
@@ -237,7 +236,7 @@ export class ListenbrainzApiClient extends AbstractApiClient {
         try {
             const resp = await this.callApi(request.get(`${joinedUrl(getBaseFromUrl(this.url.url), 'apis/web/v1/stats')}`));
             this.logger.info('Listenbrainz Host looks like a Koito server, API client will now operate in Koito mode!');
-            this.logger.warn('Koito has limited support for the Listenbrainz API spec. It does not support Now Playing or retrieving full metabrainz data for a play.');
+            this.logger.warn('Koito has limited support for the Listenbrainz API spec. It does not support Now Playing or retrieving full metabrainz data for a play. Please consider switching to the full Koito Source/Client.');
             return true;
         } catch (e) {
             this.logger.verbose('Listenbrainz Host does not look like a Koito server.');
@@ -331,7 +330,7 @@ export class ListenbrainzApiClient extends AbstractApiClient {
     submitListen = async (play: PlayObject, options: SubmitOptions = {}) => {
         const { log = false, listenType = 'single'} = options;
         try {
-            const listenPayload: SubmitPayload = {listen_type: listenType, payload: [ListenbrainzApiClient.playToListenPayload(play)]};
+            const listenPayload: SubmitPayload = {listen_type: listenType, payload: [playToListenPayload(play)]};
             if(listenType === 'playing_now') {
                 delete listenPayload.payload[0].listened_at;
             }
@@ -349,66 +348,6 @@ export class ListenbrainzApiClient extends AbstractApiClient {
             return listenPayload;
         } catch (e) {
             throw e;
-        }
-    }
-
-    static playToListenPayload(play: PlayObject): ListenPayload {
-        const {
-            data: {
-                playDate,
-                artists = [],
-                // MB doesn't use this during submission AFAIK
-                // instead it relies on (assumes??) you will submit album/release group/etc where album artist gets credit on an individual release
-                albumArtists = [],
-                album,
-                track,
-                duration,
-                meta: {
-                    brainz = {},
-                    spotify = {}
-                } = {}
-            }
-        } = play;
-        // using submit-listens exmaple from openapi https://rain0r.github.io/listenbrainz-openapi/index.html#/lbCore/submitListens
-        // which is documented in official docs https://listenbrainz.readthedocs.io/en/latest/users/api/index.html#openapi-specification
-        // and based on this LZ developer comment https://github.com/lyarenei/jellyfin-plugin-listenbrainz/issues/10#issuecomment-1253867941
-
-        const addInfo: SubmitListenAdditionalTrackInfo = {
-            // all artists
-            artist_names: Array.from(new Set([...artists, ...albumArtists])),
-            // primary artist
-            release_artist_name: artists[0],
-            release_artist_names: [artists[0]],
-        };
-
-        if(spotify.track !== undefined) {
-            addInfo.spotify_id = spotify.track;
-        }
-        if(spotify.album !== undefined) {
-            addInfo.spotify_album_id = spotify.album;
-        }
-        if(spotify.albumArtist !== undefined && spotify.albumArtist.length > 0) {
-            addInfo.spotify_album_artist_ids = spotify.albumArtist;
-        }
-        if(spotify.artist !== undefined) {
-            addInfo.spotify_artist_ids = spotify.artist;
-        }
-
-        return {
-            listened_at: getScrobbleTsSOCDate(play).unix(),
-            track_metadata: {
-                artist_name: Array.from(new Set([...artists, ...albumArtists])).join(', '),
-                track_name: track,
-                release_name: album,
-                additional_info: {
-                    duration: play.data.duration !== undefined ? Math.round(duration) : undefined,
-                    track_mbid: brainz.track,
-                    artist_mbids: brainz.artist,
-                    release_mbid: brainz.album,
-                    release_group_mbid: brainz.releaseGroup,
-                    ...addInfo
-                }
-            }
         }
     }
 
@@ -758,3 +697,64 @@ export class ListenbrainzApiClient extends AbstractApiClient {
         return ListenbrainzApiClient.listenResponseToPlay(obj);
     }
 }
+
+
+export const playToListenPayload = (play: PlayObject): ListenPayload => {
+        const {
+            data: {
+                playDate,
+                artists = [],
+                // MB doesn't use this during submission AFAIK
+                // instead it relies on (assumes??) you will submit album/release group/etc where album artist gets credit on an individual release
+                albumArtists = [],
+                album,
+                track,
+                duration,
+                meta: {
+                    brainz = {},
+                    spotify = {}
+                } = {}
+            }
+        } = play;
+        // using submit-listens exmaple from openapi https://rain0r.github.io/listenbrainz-openapi/index.html#/lbCore/submitListens
+        // which is documented in official docs https://listenbrainz.readthedocs.io/en/latest/users/api/index.html#openapi-specification
+        // and based on this LZ developer comment https://github.com/lyarenei/jellyfin-plugin-listenbrainz/issues/10#issuecomment-1253867941
+
+        const addInfo: SubmitListenAdditionalTrackInfo = {
+            // all artists
+            artist_names: Array.from(new Set([...artists, ...albumArtists])),
+            // primary artist
+            release_artist_name: artists[0],
+            release_artist_names: [artists[0]],
+        };
+
+        if(spotify.track !== undefined) {
+            addInfo.spotify_id = spotify.track;
+        }
+        if(spotify.album !== undefined) {
+            addInfo.spotify_album_id = spotify.album;
+        }
+        if(spotify.albumArtist !== undefined && spotify.albumArtist.length > 0) {
+            addInfo.spotify_album_artist_ids = spotify.albumArtist;
+        }
+        if(spotify.artist !== undefined) {
+            addInfo.spotify_artist_ids = spotify.artist;
+        }
+
+        return {
+            listened_at: getScrobbleTsSOCDate(play).unix(),
+            track_metadata: {
+                artist_name: Array.from(new Set([...artists, ...albumArtists])).join(', '),
+                track_name: track,
+                release_name: album,
+                additional_info: {
+                    duration: play.data.duration !== undefined ? Math.round(duration) : undefined,
+                    track_mbid: brainz.track,
+                    artist_mbids: brainz.artist,
+                    release_mbid: brainz.album,
+                    release_group_mbid: brainz.releaseGroup,
+                    ...addInfo
+                }
+            }
+        }
+    }

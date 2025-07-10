@@ -141,13 +141,14 @@ services:
         * Determine your Koito URL
           * This is the URL you use to access your Koito dashboard OR whatever URL is accessible from your multi-scrobbler instance.
           * EX dashboard at `http://192.168.0.100:4110` => replace `myURL` below with `http://192.168.0.100:4110`
+          * [More info on the URL to use is the full docs](./configuration/configuration.mdx#koito)
 
         Add/Substitute values above into these examples values and add them to the `environment` section in the [`docker-compose.yml` you created for multi-scrobbler earlier.](#create-docker-compose-file)
 
         ```yaml title="~/msData/docker-compose.yml"
-        - LZ_TOKEN=myToken
-        - LZ_USER=myUser
-        - LZ_URL=myURL
+        - KOTIO_TOKEN=myToken
+        - KOTIO_USER=myUser
+        - KOITO_URL=myURL
         ```
 
         :::tip

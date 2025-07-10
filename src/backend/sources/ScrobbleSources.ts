@@ -65,6 +65,8 @@ import PlexApiSource from './PlexApiSource.js';
 import { nonEmptyStringOrDefault } from '../../core/StringUtils.js';
 import { IcecastSource } from './IcecastSource.js';
 import DeezerInternalSource from './DeezerInternalSource.js';
+import KoitoSource from './KoitoSource.js';
+import { KoitoSourceConfig } from '../common/infrastructure/config/source/koito.js';
 
 type groupedNamedConfigs = {[key: string]: ParsedConfig[]};
 
@@ -199,6 +201,9 @@ export default class ScrobbleSources {
                 case 'azuracast':
                     this.schemaDefinitions[type] = getTypeSchemaFromConfigGenerator("AzuracastSourceConfig");
                     break;
+                case 'koito':
+                    this.schemaDefinitions[type] = getTypeSchemaFromConfigGenerator("KoitoSourceConfig");
+                    break;
             }
         }
         return this.schemaDefinitions[type];
@@ -277,7 +282,7 @@ export default class ScrobbleSources {
                     this.logger.error(invalidMsgType);
                     continue;
                 }
-                if(['lastfm','listenbrainz'].includes(c.type.toLocaleLowerCase()) && ((c as LastfmSourceConfig | ListenBrainzSourceConfig).configureAs !== 'source')) 
+                if(['lastfm','listenbrainz','koito'].includes(c.type.toLocaleLowerCase()) && ((c as LastfmSourceConfig | ListenBrainzSourceConfig | KoitoSourceConfig).configureAs !== 'source')) 
                 {
                    this.logger.debug(`Skipping config ${index + 1} (${name}) in config.json because it is configured as a client.`);
                    continue;
@@ -692,8 +697,8 @@ export default class ScrobbleSources {
                     continue;
                 }
                 for (const [i,rawConf] of sourceConfigs.entries()) {
-                    if(['lastfm','listenbrainz'].includes(sourceType) && 
-                    ((rawConf as LastfmSourceConfig | ListenBrainzSourceConfig).configureAs !== 'source')) 
+                    if(['lastfm','listenbrainz','koito'].includes(sourceType) && 
+                    ((rawConf as LastfmSourceConfig | ListenBrainzSourceConfig | KoitoSourceConfig).configureAs !== 'source')) 
                     {
                         this.logger.debug(`Skipping config ${i + 1} from ${sourceType}.json because it is configured as a client.`);
                         continue;
@@ -864,6 +869,9 @@ export default class ScrobbleSources {
                 break;
             case 'azuracast':
                 newSource = await new AzuracastSource(name, compositeConfig as AzuracastSourceConfig, this.internalConfig, this.emitter);
+                break;
+            case 'koito':
+                newSource = await new KoitoSource(name, compositeConfig as KoitoSourceConfig, this.internalConfig, this.emitter);
                 break;
             default:
                 break;

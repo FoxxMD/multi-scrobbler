@@ -148,7 +148,7 @@
     "@types/react-dom": "^18.2.7",
     "@types/react-window": "^1.8.5",
     "@types/spotify-web-api-node": "^5.0.7",
-    "@types/superagent": "^4.1.16",
+    "@types/superagent": "^8.1.9",
     "@types/xml2js": "^0.4.11",
     "@vitejs/plugin-react": "^4.2.1",
     "chai": "^4.3.6",

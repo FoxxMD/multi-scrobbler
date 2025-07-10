@@ -19,6 +19,8 @@ import LastfmScrobbler from "./LastfmScrobbler.js";
 import ListenbrainzScrobbler from "./ListenbrainzScrobbler.js";
 import MalojaScrobbler from "./MalojaScrobbler.js";
 import { Definition } from 'ts-json-schema-generator';
+import KoitoScrobbler from './KoitoScrobbler.js';
+import { KoitoClientConfig } from '../common/infrastructure/config/client/koito.js';
 
 type groupedNamedConfigs = {[key: string]: ParsedConfig[]};
 
@@ -99,6 +101,9 @@ export default class ScrobbleClients {
                 case 'listenbrainz':
                     this.schemaDefinitions[type] = getTypeSchemaFromConfigGenerator("ListenBrainzClientConfig");
                     break;
+                case 'koito':
+                    this.schemaDefinitions[type] = getTypeSchemaFromConfigGenerator("KoitoClientConfig");
+                    break;
             }
         }
         return this.schemaDefinitions[type];
@@ -138,7 +143,7 @@ export default class ScrobbleClients {
                     this.logger.error(invalidTypeMsg);
                     continue;
                 }
-                if(['lastfm','listenbrainz'].includes(c.type.toLocaleLowerCase()) && ((c as LastfmClientConfig | ListenBrainzClientConfig).configureAs === 'source')) {
+                if(['lastfm','listenbrainz','koito'].includes(c.type.toLocaleLowerCase()) && ((c as LastfmClientConfig | ListenBrainzClientConfig).configureAs === 'source')) {
                        this.logger.debug(`Skipping config ${index + 1} (${name}) in config.json because it is configured as a source.`);
                        continue;
                 }
@@ -214,6 +219,23 @@ export default class ScrobbleClients {
                         })
                     }
                     break;
+                case 'koito':
+                    const koit = {
+                        url: process.env.KOITO_URL,
+                        token: process.env.KOITO_TOKEN,
+                        username: process.env.KOITO_USER
+                    };
+                    if (!Object.values(koit).every(x => x === undefined)) {
+                        configs.push({
+                            type: 'koito',
+                            name: 'unnamed-koito',
+                            source: 'ENV',
+                            mode: 'single',
+                            configureAs: 'client',
+                            data: koit
+                        })
+                    }
+                    break;
                 default:
                     break;
             }
@@ -240,8 +262,8 @@ export default class ScrobbleClients {
                     continue;
                 }
                 for(const [i,rawConf] of rawClientConfigs.entries()) {
-                    if(['lastfm','listenbrainz'].includes(clientType) && 
-                    ((rawConf as LastfmClientConfig | ListenBrainzClientConfig).configureAs === 'source')) 
+                    if(['lastfm','listenbrainz','koito'].includes(clientType) && 
+                    ((rawConf as LastfmClientConfig | ListenBrainzClientConfig | KoitoClientConfig).configureAs === 'source')) 
                     {
                         this.logger.debug(`Skipping config ${i + 1} from ${clientType}.json because it is configured as a source.`);
                        continue;
@@ -330,6 +352,9 @@ ${sources.join('\n')}`);
                 break;
             case 'listenbrainz':
                 newClient = new ListenbrainzScrobbler(name, {...clientConfig, data: {configDir: this.configDir, ...data} } as unknown as ListenBrainzClientConfig, {}, notifier, this.emitter, this.logger);
+                break;
+            case 'koito':
+                newClient = new KoitoScrobbler(name, {...clientConfig, data: {configDir: this.configDir, ...data} } as unknown as KoitoClientConfig, {}, notifier, this.emitter, this.logger);
                 break;
             default:
                 break;

@@ -12,26 +12,32 @@ import { Notifiers } from "../notifier/Notifiers.js";
 
 import AbstractScrobbleClient from "./AbstractScrobbleClient.js";
 import { isDebugMode } from "../utils.js";
+import { KoitoClientConfig } from "../common/infrastructure/config/client/koito.js";
+import { KoitoApiClient, listenObjectResponseToPlay } from "../common/vendor/koito/KoitoApiClient.js";
 
-export default class ListenbrainzScrobbler extends AbstractScrobbleClient {
+export default class KoitoScrobbler extends AbstractScrobbleClient {
 
-    api: ListenbrainzApiClient;
+    api: KoitoApiClient;
     requiresAuth = true;
     requiresAuthInteraction = false;
-    isKoito: boolean = false;
 
-    declare config: ListenBrainzClientConfig;
+    declare config: KoitoClientConfig;
 
-    constructor(name: any, config: ListenBrainzClientConfig, options = {}, notifier: Notifiers, emitter: EventEmitter, logger: Logger) {
-        super('listenbrainz', name, config, notifier, emitter, logger);
-        this.api = new ListenbrainzApiClient(name, config.data, {logger: this.logger});
+    constructor(name: any, config: KoitoClientConfig, options = {}, notifier: Notifiers, emitter: EventEmitter, logger: Logger) {
+        super('koito', name, config, notifier, emitter, logger);
+        this.api = new KoitoApiClient(name, config.data, {logger: this.logger});
         // https://listenbrainz.readthedocs.io/en/latest/users/api/core.html#get--1-user-(user_name)-listens
         // 1000 is way too high. maxing at 100
         this.MAX_INITIAL_SCROBBLES_FETCH = 100;
         this.supportsNowPlaying = true;
     }
 
-    formatPlayObj = (obj: any, options: FormatPlayObjectOptions = {}) => ListenbrainzApiClient.formatPlayObj(obj, options);
+    formatPlayObj = (obj: any, options: FormatPlayObjectOptions = {}) => listenObjectResponseToPlay(obj, options);
+
+    public playToClientPayload(playObject: PlayObject): object {
+        return playToListenPayload(playObject);
+    }
+
 
     protected async doBuildInitData(): Promise<true | string | undefined> {
         const {
@@ -47,7 +53,6 @@ export default class ListenbrainzScrobbler extends AbstractScrobbleClient {
 
     protected async doCheckConnection(): Promise<true | string | undefined> {
         await this.api.testConnection();
-        this.isKoito = this.api.isKoito;
         return true;
     }
 
@@ -57,7 +62,7 @@ export default class ListenbrainzScrobbler extends AbstractScrobbleClient {
             return await this.api.testAuth();
         } catch (e) {
             if(isNodeNetworkException(e)) {
-                this.logger.error('Could not communicate with Listenbrainz API');
+                this.logger.error('Could not communicate with Koito API');
             }
             throw e;
         }
@@ -68,10 +73,6 @@ export default class ListenbrainzScrobbler extends AbstractScrobbleClient {
     }
 
     alreadyScrobbled = async (playObj: PlayObject, log = false) => (await this.existingScrobble(playObj)) !== undefined
-
-    public playToClientPayload(playObj: PlayObject): ListenPayload {
-        return playToListenPayload(playObj);
-    }
 
     doScrobble = async (playObj: PlayObject) => {
         const {
@@ -92,7 +93,7 @@ export default class ListenbrainzScrobbler extends AbstractScrobbleClient {
             return playObj;
         } catch (e) {
             await this.notifier.notify({title: `Client - ${capitalize(this.type)} - ${this.name} - Scrobble Error`, message: `Failed to scrobble => ${buildTrackString(playObj)} | Error: ${e.message}`, priority: 'error'});
-            throw new UpstreamError(`Error occurred while making Listenbrainz API scrobble request: ${e.message}`, {cause: e, showStopper: !(e instanceof UpstreamError)});
+            throw new UpstreamError(`Error occurred while making Koito API scrobble request: ${e.message}`, {cause: e, showStopper: !(e instanceof UpstreamError)});
         }
     }
 
@@ -100,7 +101,7 @@ export default class ListenbrainzScrobbler extends AbstractScrobbleClient {
         try {
             await this.api.submitListen(data, { listenType: 'playing_now'});
         } catch (e) {
-            throw new UpstreamError(`Error occurred while making Listenbrainz API Playing Now request: ${e.message}`, {cause: e, showStopper: !(e instanceof UpstreamError)});
+            throw new UpstreamError(`Error occurred while making Koito API Playing Now request: ${e.message}`, {cause: e, showStopper: !(e instanceof UpstreamError)});
         }
     }
 }
