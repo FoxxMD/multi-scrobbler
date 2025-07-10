@@ -12,7 +12,7 @@ import ScrobbleSources from "./sources/ScrobbleSources.js";
 import { generateBaseURL } from "./utils/NetworkUtils.js";
 import { PassThrough } from "stream";
 
-let version: string = 'unknown';
+export let version: string = 'unknown';
 
 export const parseVersion = async () => {
     version = await getVersion({priority: ['env', 'git', 'file']});

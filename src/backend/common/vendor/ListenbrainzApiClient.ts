@@ -22,6 +22,7 @@ import { parseRegexSingleOrFail } from '../../utils.js';
 import {ListensResponse as KoitoListensResponse} from '../infrastructure/config/client/koito.js'
 import { listenObjectResponseToPlay } from './koito/KoitoApiClient.js';
 import { log } from 'console';
+import { version } from '../../ioc.js';
 
 
 export interface ArtistMBIDMapping {
@@ -753,6 +754,8 @@ export const playToListenPayload = (play: PlayObject): ListenPayload => {
                     artist_mbids: brainz.artist,
                     release_mbid: brainz.album,
                     release_group_mbid: brainz.releaseGroup,
+                    submission_client: 'multi-scrobbler',
+                    submission_client_version: version,
                     ...addInfo
                 }
             }
