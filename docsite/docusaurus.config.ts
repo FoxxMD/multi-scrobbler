@@ -88,6 +88,7 @@ const config: Config = {
       image: 'img/docusaurus-social-card.jpg',
       navbar: {
         title: 'Multi-Scrobbler',
+        hideOnScroll: true,
         logo: {
           alt: 'Logo',
           src: 'img/icon.svg',
