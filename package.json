@@ -121,6 +121,7 @@
     "youtubei.js": "^13.1.0"
   },
   "devDependencies": {
+    "@biomejs/biome": "^2.1.1",
     "@dbus-types/notifications": "^0.0.5",
     "@eslint/js": "^8.56.0",
     "@faker-js/faker": "^9.0.1",

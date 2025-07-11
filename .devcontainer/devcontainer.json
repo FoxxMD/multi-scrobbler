@@ -20,8 +20,10 @@
 			"extensions": [
 				"hbenl.vscode-mocha-test-adapter",
 				"dbaeumer.vscode-eslint",
-				"unifiedjs.vscode-mdx"
-			]
+				"unifiedjs.vscode-mdx",
+				"biomejs.biome"
+			],
+			"biome.lsp.bin": "${workspaceFolder}/node_modules/.bin/biome"
 		}
 	},
 	"portsAttributes": {

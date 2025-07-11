@@ -1,5 +1,12 @@
 {
     "mochaExplorer.require": "tsx/esm",
     "mochaExplorer.timeout": 1200000,
-    "mochaExplorer.exit": true
+    "mochaExplorer.exit": true,
+    "biome.requireConfiguration": true,
+    "biome.lsp.bin": "${workspaceFolder}/node_modules/.bin/biome",
+    "biome.suggestInstallingGlobally": false,
+    "eslint.enable": false,
+    "editor.defaultFormatter": "biomejs.biome",
+    "editor.formatOnSaveMode": "modifications",
+    "editor.formatOnSave": true
 }
