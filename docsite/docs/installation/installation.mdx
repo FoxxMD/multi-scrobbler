@@ -14,113 +14,6 @@ For the difference between **ENV** and **File** examples in this document see [C
 
 :::
 
-## Local Installation
-
-After installation see [service.md](service.md) to configure multi-scrobbler to run automatically in the background.
-
-### Nodejs
-
-Clone this repository somewhere and then install from the working directory
-
-```shell
-git clone https://github.com/FoxxMD/multi-scrobbler.git .
-cd multi-scrobbler
-nvm use # optional, to set correct Node version
-npm install
-npm run docs:install && npm run build
-npm run start
-```
-
-#### Rollup build error
-
-During building if you encounter an error like: `Your current platform "XXX" and architecture "XXX" combination is not yet supported by the native Rollup build.`
-
-Modify `overrides` in `package.json` to use `@rollup/wasm-node` as a drop-in replacement for rollup:
-
-```json
-"overrides": {
-  "spotify-web-api-node": {
-    "superagent": "$superagent"
-  }
-  "vite": {
-    "rollup": "npm:@rollup/wasm-node@^4.9.6"
-  }
-}
-```
-
-See [this issue](https://github.com/FoxxMD/multi-scrobbler/issues/135#issuecomment-1927080260) for more detail.
-
-#### Usage Examples
-
-<Tabs groupId="configType" queryString>
-<TabItem value="env" label="ENV">
-```shell
-SPOTIFY_CLIENT_ID=yourId SPOTIFY_CLIENT_SECRET=yourSecret MALOJA_URL="http://domain.tld" node src/index.js
-```
-</TabItem>
-<TabItem value="file" label="File">
-
-<details>
-    <summary>`./config/config.json`</summary>
-
-    ```json title="./config/config.json"
-    {
-        "sources": [
-            {
-                "type": "spotify",
-                "clients": ["myConfig"],
-                "name": "mySpotifySource",
-                "data": {
-                    "clientId": "a89cba1569901a0671d5a9875fed4be1",
-                    "clientSecret": "ec42e09d5ae0ee0f0816ca151008412a",
-                 }
-            }
-        ],
-        "clients": [
-            {
-                "type": "maloja",
-                "name": "myConfig",
-                "data": {
-                    "url": "http://localhost:42010",
-                    "apiKey": "myMalojaKey"
-                }
-            }
-        ],
-    }
-    ```
-
-</details>
-
-```shell
-npm run start
-```
-</TabItem>
-</Tabs>
-
-:::tip
-
-The web UI and API is served on port `9078`. This can be modified using the `PORT` environmental variable.
-
-:::
-
-#### Updating
-
-Assuming the repository was used for initial installation with `git clone`, update by pulling the latest commit:
-
-```
-git pull
-```
-
-and restart multi-scrobbler.
-
-### Flatpak
-
-:::warning[Unsupported]
-
-Flatpak/Flathub installs are no longer supported. You can still build MS as a [Flatpak app from source.](../development/flatpak) See more information about [Flatpak EOL.](https://github.com/FoxxMD/multi-scrobbler/issues/287)
-
-:::
-
 ## Docker
 
 Cross-platform images are built for x86 (Intel/AMD) and ARM64 (IE Raspberry Pi)
@@ -352,3 +245,110 @@ The example scenario:
         ```
     </TabItem>
 </Tabs>
+
+## Local Installation
+
+After installation see [service.md](service.md) to configure multi-scrobbler to run automatically in the background.
+
+### Nodejs
+
+Clone this repository somewhere and then install from the working directory
+
+```shell
+git clone https://github.com/FoxxMD/multi-scrobbler.git .
+cd multi-scrobbler
+nvm use # optional, to set correct Node version
+npm install
+npm run docs:install && npm run build
+npm run start
+```
+
+#### Rollup build error
+
+During building if you encounter an error like: `Your current platform "XXX" and architecture "XXX" combination is not yet supported by the native Rollup build.`
+
+Modify `overrides` in `package.json` to use `@rollup/wasm-node` as a drop-in replacement for rollup:
+
+```json
+"overrides": {
+  "spotify-web-api-node": {
+    "superagent": "$superagent"
+  }
+  "vite": {
+    "rollup": "npm:@rollup/wasm-node@^4.9.6"
+  }
+}
+```
+
+See [this issue](https://github.com/FoxxMD/multi-scrobbler/issues/135#issuecomment-1927080260) for more detail.
+
+#### Usage Examples
+
+<Tabs groupId="configType" queryString>
+<TabItem value="env" label="ENV">
+```shell
+SPOTIFY_CLIENT_ID=yourId SPOTIFY_CLIENT_SECRET=yourSecret MALOJA_URL="http://domain.tld" node src/index.js
+```
+</TabItem>
+<TabItem value="file" label="File">
+
+<details>
+    <summary>`./config/config.json`</summary>
+
+    ```json title="./config/config.json"
+    {
+        "sources": [
+            {
+                "type": "spotify",
+                "clients": ["myConfig"],
+                "name": "mySpotifySource",
+                "data": {
+                    "clientId": "a89cba1569901a0671d5a9875fed4be1",
+                    "clientSecret": "ec42e09d5ae0ee0f0816ca151008412a",
+                 }
+            }
+        ],
+        "clients": [
+            {
+                "type": "maloja",
+                "name": "myConfig",
+                "data": {
+                    "url": "http://localhost:42010",
+                    "apiKey": "myMalojaKey"
+                }
+            }
+        ],
+    }
+    ```
+
+</details>
+
+```shell
+npm run start
+```
+</TabItem>
+</Tabs>
+
+:::tip
+
+The web UI and API is served on port `9078`. This can be modified using the `PORT` environmental variable.
+
+:::
+
+#### Updating
+
+Assuming the repository was used for initial installation with `git clone`, update by pulling the latest commit:
+
+```
+git pull
+```
+
+and restart multi-scrobbler.
+
+### Flatpak
+
+:::warning[Unsupported]
+
+Flatpak/Flathub installs are no longer supported. You can still build MS as a [Flatpak app from source.](../development/flatpak) See more information about [Flatpak EOL.](https://github.com/FoxxMD/multi-scrobbler/issues/287)
+
+:::
