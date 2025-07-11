@@ -742,12 +742,16 @@ export const playToListenPayload = (play: PlayObject): ListenPayload => {
 
         addInfo = removeUndefinedKeys(addInfo)
 
-        return {
-            listened_at: getScrobbleTsSOCDate(play).unix(),
-            track_metadata: {
+        const minTrackData: MinimumTrack = removeUndefinedKeys({
                 artist_name: Array.from(new Set([...artists, ...albumArtists])).join(', '),
                 track_name: track,
                 release_name: album,
+        });
+
+        return {
+            listened_at: getScrobbleTsSOCDate(play).unix(),
+            track_metadata: {
+                ...minTrackData,
                 additional_info: {
                     duration: play.data.duration !== undefined ? Math.round(duration) : undefined,
                     track_mbid: brainz.track,
