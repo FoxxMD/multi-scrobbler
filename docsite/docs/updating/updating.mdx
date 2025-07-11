@@ -1,0 +1,46 @@
+---
+sidebar_position: 1
+title: 'Overview'
+---
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+import CodeBlock from '@theme/CodeBlock';
+
+## Updating
+
+Currently, multi-scrobbler does not have any databases or dependencies that require additional interaction/consideration when updating.
+
+The majority of major/minor version releases introduce only *new* functionality but occasionally may also include breaking changes in behavior or configuration. These changes, and how to update configs accordingly, are detailed in [Github Release Notes](https://github.com/FoxxMD/multi-scrobbler/releases). It is recommended to check this page before upgrading.
+
+Alternatively, multi-scrobbler version can be pinned using [git tags](https://github.com/FoxxMD/multi-scrobbler/tags) or docker image tags that match release versions IE `foxxmd/multi-scrobbler:0.9.7`
+
+### Docker
+
+<Tabs groupId="runType" queryString>
+    <TabItem value="docker" label="Docker">
+        ```shell
+        docker image pull foxxmd/multi-scrobbler:latest
+        docker container stop multi-scrobbler
+        docker container rm multi-scrobbler
+        docker run --name multi-scrobbler ...
+        ```
+        The last command is the [same as the command used to initialy run multi-scrobbler.](../installation/installation.mdx?runType=docker#docker-usage-example)
+    </TabItem>
+    <TabItem value="docker-compose" label="Docker Compose">
+        ```shell
+        docker compose pull
+        docker compose up -d
+        ```
+    </TabItem>
+</Tabs>
+
+### Nodejs
+
+Assuming the [repository was used for initial installation with `git clone`](../installation/installation.mdx#nodejs), update by pulling the latest commit:
+
+```
+git pull
+```
+
+and restart multi-scrobbler.

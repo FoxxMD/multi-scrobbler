@@ -149,17 +149,11 @@ set the [Base URL](../configuration/configuration.mdx#base-url) as the IP of the
 
 * (Optionally) set the [timezone](https://en.wikipedia.org/wiki/List_of_tz_database_time_zones) for the container using the environmental variable `TZ` ([docker](https://docs.docker.com/engine/reference/commandline/run/#env)) ([docker-compose](https://docs.docker.com/compose/compose-file/compose-file-v3/#environment))
 
-### Linux Host
+#### Linux Host
 
 ::::info
 
-:::note
-
-If you are using [rootless containers with Podman](https://developers.redhat.com/blog/2020/09/25/rootless-containers-with-podman-the-basics#why_podman_) or are running docker on MacOS/Windows this **DOES NOT** apply to you.
-
-:::
-
-If you are running Docker on a **Linux Host** you must specify `user:group` permissions of the user who owns the **configuration directory** on the host to avoid [docker file permission problems.](https://ikriv.com/blog/?p=4698) These can be specified using the [environmental variables **PUID** and **PGID**.](https://docs.linuxserver.io/general/understanding-puid-and-pgid)
+If you are running this container with **Docker** on a **Linux Host** you must specify `user:group` permissions of the user who owns the **configuration directory** on the host to avoid [docker file permission problems.](https://ikriv.com/blog/?p=4698) These can be specified using the [environmental variables **PUID** and **PGID**.](https://docs.linuxserver.io/general/understanding-puid-and-pgid)
 
 To get the UID and GID for the current user run these commands from a terminal:
 
@@ -222,26 +216,6 @@ The example scenario:
                 ports:
                     - "9078:9078"
                 restart: unless-stopped
-        ```
-    </TabItem>
-</Tabs>
-
-### Updating
-
-<Tabs groupId="runType" queryString>
-    <TabItem value="docker" label="Docker">
-        ```shell
-        docker image pull foxxmd/multi-scrobbler:latest
-        docker container stop multi-scrobbler
-        docker container rm multi-scrobbler
-        docker run --name multi-scrobbler ...
-        ```
-        The last command is the same as the command used to initial run multi-scrobbler.
-    </TabItem>
-    <TabItem value="docker-compose" label="Docker Compose">
-        ```shell
-        docker compose pull
-        docker compose up -d
         ```
     </TabItem>
 </Tabs>
@@ -334,16 +308,6 @@ npm run start
 The web UI and API is served on port `9078`. This can be modified using the `PORT` environmental variable.
 
 :::
-
-#### Updating
-
-Assuming the repository was used for initial installation with `git clone`, update by pulling the latest commit:
-
-```
-git pull
-```
-
-and restart multi-scrobbler.
 
 ### Flatpak
 
