@@ -1,0 +1,18 @@
+diff --git a/node_modules/@lukehagar/plexjs/funcs/libraryGetAllLibraries.js b/node_modules/@lukehagar/plexjs/funcs/libraryGetAllLibraries.js
+index f586c1f..221851d 100644
+--- a/node_modules/@lukehagar/plexjs/funcs/libraryGetAllLibraries.js
++++ b/node_modules/@lukehagar/plexjs/funcs/libraryGetAllLibraries.js
+@@ -102,9 +102,9 @@ async function $do(client, options) {
+     const [result] = await M.match(M.json(200, operations.GetAllLibrariesResponse$inboundSchema, {
+         key: "object",
+     }), M.jsonErr(400, errors.GetAllLibrariesBadRequest$inboundSchema), M.jsonErr(401, errors.GetAllLibrariesUnauthorized$inboundSchema), M.fail("4XX"), M.fail("5XX"))(response, req, { extraFields: responseFields });
+-    if (!result.ok) {
+-        return [result, { status: "complete", request: req, response }];
+-    }
++    // if (!result.ok) {
++    //     return [result, { status: "complete", request: req, response }];
++    // }
+     return [result, { status: "complete", request: req, response }];
+ }
+ //# sourceMappingURL=libraryGetAllLibraries.js.map
+\ No newline at end of file

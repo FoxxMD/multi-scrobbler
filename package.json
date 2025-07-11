@@ -57,7 +57,7 @@
     "@gr2m/net-interceptor": "^1.0.0",
     "@jellyfin/sdk": "^0.11.0",
     "@kenyip/backoff-strategies": "^1.0.4",
-    "@lukehagar/plexjs": "^0.32.1",
+    "@lukehagar/plexjs": "^0.39.0",
     "@react-nano/use-event-source": "^0.13.0",
     "@reduxjs/toolkit": "^1.9.5",
     "@supercharge/promise-pool": "^3.0.0",
