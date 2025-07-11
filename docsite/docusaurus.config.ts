@@ -91,6 +91,7 @@ const config: Config = {
         logo: {
           alt: 'Logo',
           src: 'img/icon.svg',
+          height: 40
         },
         items: [
           {
