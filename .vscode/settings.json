@@ -1,5 +1,9 @@
 {
     "mochaExplorer.require": "tsx/esm",
     "mochaExplorer.timeout": 1200000,
-    "mochaExplorer.exit": true
+    "mochaExplorer.exit": true,
+    "remote.localPortHost": "allInterfaces",
+    "[javascript],[typescript]": {
+        "editor.defaultFormatter": "esbenp.prettier-vscode"
+    }
 }

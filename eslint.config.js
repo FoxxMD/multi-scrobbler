@@ -3,6 +3,7 @@
 import eslint from '@eslint/js';
 import tsEslint from 'typescript-eslint';
 import arrow from 'eslint-plugin-prefer-arrow-functions';
+import prettier from 'eslint-config-prettier/flat';
 
 export default tsEslint.config({
     files: ['src/backend/**/*.ts'],
@@ -16,6 +17,7 @@ export default tsEslint.config({
     extends: [
         eslint.configs.recommended,
         ...tsEslint.configs.recommended,
+        prettier
     ],
     rules: {
         'no-useless-catch': 'off',
