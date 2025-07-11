@@ -103,6 +103,16 @@ The web UI and API is served on port `9078`. This can be modified using the `POR
 
 :::
 
+#### Updating
+
+Assuming the repository was used for initial installation with `git clone`, update by pulling the latest commit:
+
+```
+git pull
+```
+
+and restart multi-scrobbler.
+
 ### Flatpak
 
 :::warning[Unsupported]
@@ -287,12 +297,12 @@ The example scenario:
         <Tabs groupId="configType" queryString>
             <TabItem value="env" label="ENV">
                 ```bash
-                docker run -e "SPOTIFY_CLIENT_ID=yourId" -e "SPOTIFY_CLIENT_SECRET=yourSecret" -e "BASE_URL=192.168.0.100" -e "MALOJA_URL=http://domain.tld" -e "MALOJA_API_KEY=1234" -e "PUID=1000" -e "PGID=1000" -p 9078:9078 -v /home/myUser/ms:/config foxxmd/multi-scrobbler
+                docker run --name multi-scrobbler -e "SPOTIFY_CLIENT_ID=yourId" -e "SPOTIFY_CLIENT_SECRET=yourSecret" -e "BASE_URL=192.168.0.100" -e "MALOJA_URL=http://domain.tld" -e "MALOJA_API_KEY=1234" -e "PUID=1000" -e "PGID=1000" -p 9078:9078 -v /home/myUser/ms:/config foxxmd/multi-scrobbler
                 ```
             </TabItem>
             <TabItem value="file" label="File">
                 ```bash
-                docker run -e "PUID=1000" -e "PGID=1000" -e "BASE_URL=192.168.0.100" -p 9078:9078 -v "$(pwd)/config:/config" foxxmd/multi-scrobbler
+                docker run --name multi-scrobbler -e "PUID=1000" -e "PGID=1000" -e "BASE_URL=192.168.0.100" -p 9078:9078 -v "$(pwd)/config:/config" foxxmd/multi-scrobbler
                 ```
             </TabItem>
         </Tabs>
@@ -323,4 +333,22 @@ The example scenario:
     </TabItem>
 </Tabs>
 
+### Updating
 
+<Tabs groupId="runType" queryString>
+    <TabItem value="docker" label="Docker">
+        ```shell
+        docker image pull foxxmd/multi-scrobbler:latest
+        docker container stop multi-scrobbler
+        docker container rm multi-scrobbler
+        docker run --name multi-scrobbler ...
+        ```
+        The last command is the same as the command used to initial run multi-scrobbler.
+    </TabItem>
+    <TabItem value="docker-compose" label="Docker Compose">
+        ```shell
+        docker compose pull
+        docker compose up -d
+        ```
+    </TabItem>
+</Tabs>
