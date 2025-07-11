@@ -5,7 +5,14 @@ import * as themes from 'prism-react-renderer';
 
 const config: Config = {
   future: {
-    experimental_faster: true
+    v4: {
+      removeLegacyPostBuildHeadAttribute: true, // required
+    },
+    experimental_faster: {
+      ssgWorkerThreads: true,
+      rspackBundler: true, // required flag
+      rspackPersistentCache: true, // new flag
+    },
   },
   title: 'Multi-Scrobbler',
   tagline: 'Scrobble all the things',

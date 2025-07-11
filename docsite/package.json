@@ -14,20 +14,20 @@
     "typecheck": "tsc"
   },
   "dependencies": {
-    "@docusaurus/core": "^3.6.3",
-    "@docusaurus/faster": "^3.7.0",
-    "@docusaurus/preset-classic": "^3.6.3",
-    "@easyops-cn/docusaurus-search-local": "^0.48.3",
+    "@docusaurus/core": "3.8.1",
+    "@docusaurus/faster": "3.8.1",
+    "@docusaurus/preset-classic": "3.8.1",
+    "@easyops-cn/docusaurus-search-local": "0.51.1",
     "@mdx-js/react": "^3.0.0",
     "clsx": "^2.0.0",
-    "docusaurus-json-schema-plugin": "^1.12.1",
+    "docusaurus-json-schema-plugin": "^1.14.0",
     "docusaurus-theme-github-codeblock": "^2.0.2",
     "json5": "^2.2.3",
     "micromark-extension-directive": "^3.0.1",
     "prism-react-renderer": "^2.3.0",
     "raw-loader": "^4.0.2",
-    "react": "^18.0.0",
-    "react-dom": "^18.0.0"
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0"
   },
   "devDependencies": {
     "@docusaurus/module-type-aliases": "^3.6.3",
