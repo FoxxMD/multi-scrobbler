@@ -118,6 +118,10 @@ export default class PlexApiSource extends MemoryPositionalSource {
         this.librariesAllow = parseArrayFromMaybeString(librariesAllow, {lower: true});
         this.librariesBlock = parseArrayFromMaybeString(librariesBlock, {lower: true});
 
+        if(this.librariesBlock.length > 0 && this.librariesAllow.length > 0) {
+            this.logger.warn(`When both 'librariesAllow' and 'librariesBlock' are specified only 'librariesAllow' is used.`);
+        }
+
         const normal = normalizeUrl(this.config.data.url, {removeSingleSlash: true});
         this.address = new URL(normal);
         this.logger.debug(`Config URL: ${this.config.data.url} | Normalized: ${this.address.toString()}`);
