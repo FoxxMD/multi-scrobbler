@@ -71,11 +71,20 @@ export default class LastfmApiClient extends AbstractApiClient {
         } = obj;
         // arbitrary decision yikes
         const artistStrings = splitByFirstFound(artists, [','], [artistName]);
+        let al = album;
+        if(al !== undefined) {
+            if(al === null) {
+                al = undefined;
+            } else if (al.trim() === '') {
+                // lastfm may provide empty string when album data is not defined
+                al = undefined;
+            }
+        }
         return {
             data: {
                 artists: [...new Set(artistStrings)] as string[],
                 track: title,
-                album,
+                album: al,
                 duration,
                 playDate: time !== undefined ? dayjs.unix(time) : undefined,
                 meta: {

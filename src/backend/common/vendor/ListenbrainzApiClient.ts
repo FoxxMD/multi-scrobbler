@@ -742,10 +742,18 @@ export const playToListenPayload = (play: PlayObject): ListenPayload => {
 
         addInfo = removeUndefinedKeys(addInfo)
 
+        // possible lastfm provides an empty album field when no album data is found
+        let al = album;
+        if(al !== undefined && al !== null) {
+            if(al.trim() === '') {
+                al = undefined;
+            }
+        }
+
         const minTrackData: MinimumTrack = removeUndefinedKeys({
                 artist_name: Array.from(new Set([...artists, ...albumArtists])).join(', '),
                 track_name: track,
-                release_name: album,
+                release_name: al,
         });
 
         return {
