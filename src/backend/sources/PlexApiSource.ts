@@ -248,10 +248,13 @@ export default class PlexApiSource extends MemoryPositionalSource {
                         return `media included in librariesBlock '${blockedLibrary.name}'`;
                     }
                 }
-            }
 
-             if(!this.getValidLibraries().some(x => state.play.meta.library === x.name)) {
-                return `media not included in a valid library`;
+                // this is inside this block because we SHOULD allow non-music libraries if
+                // user specified name in librariesAllow
+                // -- so only check for this if nothing is specified
+                if(!this.getValidLibraries().some(x => state.play.meta.library === x.name)) {
+                    return `media not included in a valid library`;
+                }
             }
         }
 
