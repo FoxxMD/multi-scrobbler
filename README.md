@@ -19,7 +19,7 @@ A javascript app to scrobble music you listened to, to [Maloja](https://github.c
   * [Jellyfin](https://foxxmd.github.io/multi-scrobbler/docs/configuration#jellyfin)
   * [JRiver](https://foxxmd.github.io/multi-scrobbler/docs/configuration#jriver)
   * [Kodi](https://foxxmd.github.io/multi-scrobbler/docs/configuration#kodi)
-  * [Koito](https://foxxmd.github.io/multi-scrobbler/docs/configuration#listenbrainz-source) using Listenbrainz Source
+  * [Koito](https://foxxmd.github.io/multi-scrobbler/docs/configuration#koito-source)
   * [Last.fm](https://foxxmd.github.io/multi-scrobbler/docs/configuration#lastfm-source)
   * [Last.fm (Endpoint)](https://foxxmd.github.io/multi-scrobbler/docs/configuration#lastfm-endpoint)
   * [ListenBrainz](https://foxxmd.github.io/multi-scrobbler/docs/configuration#listenbrainz-source)
@@ -36,7 +36,7 @@ A javascript app to scrobble music you listened to, to [Maloja](https://github.c
   * [Yamaha MusicCast](https://foxxmd.github.io/multi-scrobbler/docs/configuration#yamaha-musiccast)  
   * [Youtube Music](https://foxxmd.github.io/multi-scrobbler/docs/configuration#youtube-music)
 * Supports scrobbling to many **Clients**
-  * [Koito](https://foxxmd.github.io/multi-scrobbler/docs/configuration#listenbrainz) using Listenbrainz Client
+  * [Koito](https://foxxmd.github.io/multi-scrobbler/docs/configuration#koito)
   * [Last.fm](https://foxxmd.github.io/multi-scrobbler/docs/configuration#lastfm)
   * [ListenBrainz](https://foxxmd.github.io/multi-scrobbler/docs/configuration#listenbrainz)
   * [Maloja](https://foxxmd.github.io/multi-scrobbler/docs/configuration#maloja)
