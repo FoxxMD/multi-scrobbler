@@ -134,18 +134,27 @@ describe("Plex API Source", function() {
 
             it('Should allow activity based on libraries allow', async function () {
                 const s = await createSource({...defaultCreds, librariesAllow: ['music']});
+                s.libraries.push({name: 'SomeOtherLibrary', collectionType: 'artist', uuid: '43543'});
+                s.libraries.push({name: 'Study Music', collectionType: 'artist', uuid: '435437'});
+                s.libraries.push({name: 'Music', collectionType: 'artist', uuid: '4354378'});
     
                 expect(s.isActivityValid(validPlayerState, validSession)).to.be.true;
                 expect(s.isActivityValid(playWithMeta({library: 'SomeOtherLibrary'}), nowPlayingSession({librarySectionTitle: 'SomeOtherLibrary'}))).to.not.be.true;
+                expect(s.isActivityValid(playWithMeta({library: 'Study Music'}), nowPlayingSession({librarySectionTitle: 'Study Music'}))).to.not.be.true;
+                expect(s.isActivityValid(playWithMeta({library: 'Music'}), nowPlayingSession({librarySectionTitle: 'Music'}))).to.be.true;
                 await s.destroy();
             });
     
             it('Should disallow activity based on libraries block', async function () {
                 const s = await createSource({...defaultCreds, librariesBlock: ['music']});
                 s.libraries.push({name: 'CoolVideos', collectionType: 'artist', uuid: '43543'});
+                s.libraries.push({name: 'Study Music', collectionType: 'artist', uuid: '435437'});
+                s.libraries.push({name: 'Music', collectionType: 'artist', uuid: '4354378'});
     
                 expect(s.isActivityValid(validPlayerState, validSession)).to.not.be.true;
                 expect(s.isActivityValid(playWithMeta({library: 'CoolVideos'}), nowPlayingSession({librarySectionTitle: 'CoolVideos'}))).to.be.true;
+                expect(s.isActivityValid(playWithMeta({library: 'Study Music'}), nowPlayingSession({librarySectionTitle: 'Study Music'}))).to.be.true;
+                expect(s.isActivityValid(playWithMeta({library: 'Music'}), nowPlayingSession({librarySectionTitle: 'Music'}))).to.not.be.true;
                 await s.destroy();
             });
 
