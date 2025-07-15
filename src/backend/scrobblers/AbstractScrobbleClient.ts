@@ -539,6 +539,11 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
             // in which case we can check the scrobble api response against recent scrobbles (also from api) for a more accurate comparison
             const referenceApiScrobbleResponse = existingDataSubmitted.length > 0 ? existingDataSubmitted[0].scrobble : undefined;
 
+            // only check for fuzzy if we know this play is NOT a repeat
+            // otherwise we may get a false positive on the previously played track ending time == repeat start time
+            // -- this is info we only know if play was generated from MS player so we can be reasonably sure
+            const looseTimeAccuracy = playObj.data.repeat ? [TA_DURING] : [TA_FUZZY, TA_DURING];
+
             existingScrobble = this.recentScrobbles.find((xPre) => {
 
                 const x = this.transformPlay(xPre, TRANSFORM_HOOK.existing);
@@ -550,7 +555,7 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
                 let timeMatch = 0;
                 if(hasAcceptableTemporalAccuracy(temporalComparison.match)) {
                     timeMatch = 1;
-                } else if(hasAcceptableTemporalAccuracy(temporalComparison.match, [TA_FUZZY, TA_DURING])) {
+                } else if(hasAcceptableTemporalAccuracy(temporalComparison.match, looseTimeAccuracy)) {
                     timeMatch = 0.6;
                 }
 
