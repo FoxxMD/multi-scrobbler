@@ -226,7 +226,29 @@ Disable using either:
 
 Some options and functionality is shared between all or some Sources. Detailed below is information on what these features are and how to use/configured them.
 
-#### Scrobble Thresholds
+### Limiting Scrobble Destination
+
+By default a Source will scrobble to **all** configured Clients.
+
+To limit which Clients a Source will scrobble to use the `clients` property in a Source's [File/AIO configuration](./?configType=file#configuration-types) to specify the **names** of the Clients that it should scrobble to:
+
+```json5 title="jellyfin.json"
+{
+    "name": "MyJellyfin",
+    "clients": ["myMaloja","koitoA","listenbrainzFoo"]
+    "data": {
+        // ...
+    },
+}
+```
+
+The Source above will only scrobble to Clients that are **named** (`name` property in Client config) either `myMaloja` `koitoA` or `listenbrainzFoo`.
+
+If your Client is configured using [ENV](./?configType=env#configuration-types) then they are given an automatically generated name. Check the multi-scrobbler Dashboard to find their name in a subheader under the Client type. Example:
+
+![Client Name Subheader](client-subheader.png)
+
+<h3 id="scrobble-thresholds">Scrobble Thresholds</h3>
 
 For Sources where multi-scrobbler monitors active listening, it uses one of two metrics to determine if a Song is scrobbable based on your listening:
 
@@ -258,7 +280,7 @@ SOURCE_SCROBBLE_DURATION=40
 SOURCE_SCROBBLE_PERCENT=20
 ```
 
-#### Should Scrobble Behavior
+<h3 id="should-scrobble-behavior">Should Scrobble Behavior</h3>
 
 :::note
 
