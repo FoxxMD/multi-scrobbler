@@ -15,9 +15,6 @@ import { genGroupIdStr, getFirstNonEmptyString, getPlatformIdFromData, isDebugMo
 import { buildStatePlayerPlayIdententifyingInfo, parseArrayFromMaybeString } from "../utils/StringUtils.js";
 import { GetSessionsMetadata } from "@lukehagar/plexjs/sdk/models/operations/getsessions.js";
 import { PlexAPI } from "@lukehagar/plexjs";
-import {
-    SDKValidationError,
-  } from "@lukehagar/plexjs/sdk/models/errors";
 import { PlexApiSourceConfig } from "../common/infrastructure/config/source/plex.js";
 import { isPortReachable, joinedUrl } from '../utils/NetworkUtils.js';
 import normalizeUrl from 'normalize-url';
@@ -29,6 +26,7 @@ import { AbstractPlayerState, PlayerStateOptions } from './PlayerState/AbstractP
 import { Logger } from '@foxxmd/logging';
 import { MemoryPositionalSource } from './MemoryPositionalSource.js';
 import { FixedSizeList } from 'fixed-size-list';
+import { SDKValidationError } from '@lukehagar/plexjs/sdk/models/errors/sdkvalidationerror.js';
 
 const shortDeviceId = truncateStringToLength(10, '');
 
@@ -187,6 +185,17 @@ export default class PlexApiSource extends MemoryPositionalSource {
 
             this.libraries = libraries.object.mediaContainer.directory.map(x => ({name: x.title, collectionType: x.type, uuid: x.uuid}));
         } catch (e) {
+            if(e instanceof SDKValidationError) {
+                if((e.rawValue as any).object?.MediaContainer?.Directory !== undefined) {
+                    // ensure directory has required values
+                    const ok = (e.rawValue as any).object?.MediaContainer?.Directory.every(x => x.title !== undefined && x.type !== undefined && x.uuid !== undefined);
+                    if(ok) {
+                        this.libraries = (e.rawValue as any).object.MediaContainer.Directory.map(x => ({name: x.title, collectionType: x.type, uuid: x.uuid}));
+                        return;
+                    }
+                }
+                this.logger.debug({ rawValue: e.rawValue }, 'Plex Response');
+            }
             throw new Error('Unable to get server libraries', {cause: e});
         }
 
@@ -451,4 +460,23 @@ ${JSON.stringify(obj)}`);
     }
 
     getNewPlayer = (logger: Logger, id: PlayPlatformId, opts: PlayerStateOptions) => new PlexPlayerState(logger, id, opts);
+}
+
+async function streamToString(stream: any) {
+  const reader = stream.getReader();
+  const textDecoder = new TextDecoder();
+  let result = '';
+
+  async function read() {
+    const { done, value } = await reader.read();
+
+    if (done) {
+      return result;
+    }
+
+    result += textDecoder.decode(value, { stream: true });
+    return read();
+  }
+
+  return read();
 }
