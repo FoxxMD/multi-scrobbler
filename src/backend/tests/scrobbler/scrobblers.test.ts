@@ -246,6 +246,23 @@ describe('Detects duplicate and unique scrobbles from client recent history', fu
 
                 assert.isFalse(await testScrobbler.alreadyScrobbled(ballad2));
             });
+
+            it('Is not detected as duplicate when play date matches fuzzy but play is marked as repeat', async function () {
+
+                const recent = normalizePlays(normalizedWithDur, {
+                    initialDate: firstPlayDate,
+                    defaultMeta: {source: 'jellyfin'}
+                });
+                testScrobbler.recentScrobbles = recent;
+
+                const repeatPlay = clone(recent[recent.length - 1]);
+                repeatPlay.data.playDate = repeatPlay.data.playDate.add(repeatPlay.data.duration + 2, 's');
+
+                assert.isTrue(await testScrobbler.alreadyScrobbled(repeatPlay));
+
+                repeatPlay.data.repeat = true;
+                assert.isFalse(await testScrobbler.alreadyScrobbled(repeatPlay));
+            });
         });
 
     });

@@ -75,6 +75,7 @@ export abstract class AbstractPlayerState {
     currentPlay?: PlayObject
     playFirstSeenAt?: Dayjs
     playLastUpdatedAt?: Dayjs
+    isRepeatPlay?: boolean = false;
     currentListenRange?: ListenRange
     listenRanges: ListenRange[] = [];
     createdAt: Dayjs = dayjs();
@@ -181,6 +182,7 @@ export abstract class AbstractPlayerState {
                 this.logger.debug(`Incoming play state (${buildTrackString(play, {include: ['trackId', 'artist', 'track']})}) does not match existing state, removing existing: ${buildTrackString(this.currentPlay, {include: ['trackId', 'artist', 'track']})}`)
                 this.currentListenSessionEnd();
                 const played = this.getPlayedObject(true);
+                this.isRepeatPlay = false;
                 this.setCurrentPlay(state, {reportedTS});
                 if (this.calculatedStatus !== CALCULATED_PLAYER_STATUSES.playing) {
                     this.calculatedStatus = CALCULATED_PLAYER_STATUSES.unknown;
@@ -194,6 +196,7 @@ export abstract class AbstractPlayerState {
                 this.currentListenSessionEnd();
                 const played = this.getPlayedObject(true);
                 play.data.playDate = dayjs();
+                this.isRepeatPlay = true;
                 this.setCurrentPlay(state, {reportedTS});
                 return [this.getPlayedObject(), played];
             } else {
@@ -212,6 +215,7 @@ export abstract class AbstractPlayerState {
                 this.currentListenSessionContinue(state.position, reportedTS);
             }
         } else {
+            this.isRepeatPlay = false;
             this.setCurrentPlay(state);
             this.calculatedStatus = CALCULATED_PLAYER_STATUSES.unknown;
         }
@@ -231,6 +235,7 @@ export abstract class AbstractPlayerState {
         this.playFirstSeenAt = undefined;
         this.listenRanges = [];
         this.currentListenRange = undefined;
+        this.isRepeatPlay = false;
     }
 
     protected stopPlayer() {
@@ -255,7 +260,8 @@ export abstract class AbstractPlayerState {
                     playDate: this.playFirstSeenAt,
                     listenedFor: this.getListenDuration(),
                     listenRanges: ranges,
-                    playDateCompleted: completed ? dayjs() : undefined
+                    playDateCompleted: completed ? dayjs() : undefined,
+                    repeat: this.isRepeatPlay
                 },
                 meta: this.currentPlay.meta
             }

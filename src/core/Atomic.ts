@@ -106,6 +106,7 @@ export interface PlayData extends TrackData {
     listenedFor?: number
     listenRanges?: ListenRangeData[]
     playDateCompleted?: Dayjs | string
+    repeat?: boolean
 }
 
 export interface PlayMeta {
