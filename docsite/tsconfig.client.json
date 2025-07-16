@@ -1,0 +1,18 @@
+{
+  "compilerOptions": {
+    "noEmit": false,
+    "composite": true,
+    "incremental": true,
+    "esModuleInterop": true,
+    "tsBuildInfoFile": "./lib/.tsbuildinfo-client",
+    "rootDir": "src",
+    "outDir": "lib",
+    "module": "CommonJS",
+    "target": "esnext",
+    "jsx": "react",
+    "types": ["node"],
+    "baseUrl": "./docs",
+    "lib": ["DOM"]
+  },
+  "include": ["src/ImageRenderers.tsx"]
+}

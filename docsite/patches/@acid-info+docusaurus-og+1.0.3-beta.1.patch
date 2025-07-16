@@ -1,0 +1,45 @@
+diff --git a/node_modules/@acid-info/docusaurus-og/lib/server/docs.plugin.js b/node_modules/@acid-info/docusaurus-og/lib/server/docs.plugin.js
+index 90f705e..5af6ee8 100644
+--- a/node_modules/@acid-info/docusaurus-og/lib/server/docs.plugin.js
++++ b/node_modules/@acid-info/docusaurus-og/lib/server/docs.plugin.js
+@@ -83,7 +83,18 @@ class DocsPlugin {
+             await document.write();
+         }
+     };
+-    getHtmlPath = (doc) => doc.metadata?.permalink &&
+-        path.join(this.context.outDir, doc.metadata.permalink, 'index.html');
++    getHtmlPath = (doc) => {
++        if(doc.metadata?.permalink !== undefined) {
++            let relativePerma = doc.metadata.permalink;
++            if(this.context.baseUrl !== undefined && this.context.baseUrl !== '/') {
++               relativePerma = path.join('/', relativePerma.replace(this.context.baseUrl, ''));
++            }
++            const p = path.join(this.context.outDir, relativePerma, 'index.html');
++            return p;
++        }
++        return undefined;
++    }
++    // doc.metadata?.permalink &&
++    //     path.join(this.context.outDir, doc.metadata.permalink, 'index.html');
+ }
+ exports.DocsPlugin = DocsPlugin;
+diff --git a/node_modules/@acid-info/docusaurus-og/lib/server/pages.plugin.js b/node_modules/@acid-info/docusaurus-og/lib/server/pages.plugin.js
+index 106fe9f..532ad65 100644
+--- a/node_modules/@acid-info/docusaurus-og/lib/server/pages.plugin.js
++++ b/node_modules/@acid-info/docusaurus-og/lib/server/pages.plugin.js
+@@ -91,6 +91,14 @@ class PagesPlugin {
+             await document.write();
+         }
+     };
+-    getHtmlPath = (permalink) => path.join(this.context.outDir, permalink, 'index.html');
++    getHtmlPath = (permalink) => {
++        let relativePerma = permalink;
++        if(this.context.baseUrl !== undefined && this.context.baseUrl !== '/') {
++            relativePerma = path.join('/', relativePerma.replace(this.context.baseUrl, ''));
++        }
++        const p = path.join(this.context.outDir, relativePerma, 'index.html');
++        return p;
++    }
++    //getHtmlPath = (permalink) => path.join(this.context.outDir, permalink, 'index.html');
+ }
+ exports.PagesPlugin = PagesPlugin;

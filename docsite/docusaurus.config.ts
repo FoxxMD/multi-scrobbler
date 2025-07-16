@@ -1,6 +1,7 @@
 import type * as Preset from '@docusaurus/preset-classic';
 import type { Config } from '@docusaurus/types';
 import * as themes from 'prism-react-renderer';
+import * as Renderers from './lib/ImageRenderers';
 //import sidebars from './sidebars';
 
 const config: Config = {
@@ -88,6 +89,16 @@ const config: Config = {
     'docusaurus-theme-github-codeblock'
   ],
   plugins: [
+      [
+        '@acid-info/docusaurus-og',
+        {
+          path: './preview-images', // relative to the build directory
+          imageRenderers: {
+              'docusaurus-plugin-content-docs': Renderers.docs,
+              'docusaurus-plugin-content-pages': Renderers.docs,
+          },
+        },
+        ],
   ],
   themeConfig:
     {

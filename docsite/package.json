@@ -11,9 +11,13 @@
     "serve": "docusaurus serve",
     "write-translations": "docusaurus write-translations",
     "write-heading-ids": "docusaurus write-heading-ids",
-    "typecheck": "tsc"
+    "typecheck": "tsc",
+    "previews:build-renderer": "tsc --project tsconfig.client.json || exit 0",
+    "prebuild": "npm run -s previews:build-renderer",
+    "postinstall": "patch-package"
   },
   "dependencies": {
+    "@acid-info/docusaurus-og": "^1.0.3-beta.1",
     "@docusaurus/core": "3.8.1",
     "@docusaurus/faster": "3.8.1",
     "@docusaurus/preset-classic": "3.8.1",
