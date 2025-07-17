@@ -17,6 +17,10 @@ import {
 } from "../../core/Atomic.js";
 import { capitalize } from "../../core/StringUtils.js";
 import {
+    DEFAULT_CLOSE_POSITION_ABSOLUTE,
+    DEFAULT_CLOSE_POSITION_PERCENT,
+    DEFAULT_DURATION_REPEAT_ABSOLUTE,
+    DEFAULT_DURATION_REPEAT_PERCENT,
     DEFAULT_SCROBBLE_DURATION_THRESHOLD,
     DEFAULT_SCROBBLE_PERCENT_THRESHOLD,
     lowGranularitySources,
@@ -329,4 +333,82 @@ export const timeToHumanTimestamp = (val: ReturnType<typeof dayjs.duration> | Mi
     }
     // EX 01:15:45
     return new Date(ms).toISOString().substring(11, 19);
+}
+
+/** Is Position earlier than X seconds or Y% percent of the start of a Play? */
+export const closeToPlayStart = (play: PlayObject, position: number, thresholds: {absolute?: number, percent?: number, hintPrefix?: boolean} = {}): [boolean, string] => {
+    const {
+        absolute = DEFAULT_CLOSE_POSITION_ABSOLUTE,
+        percent = DEFAULT_CLOSE_POSITION_PERCENT,
+        hintPrefix = true
+    } = thresholds;
+
+        let hintStart = hintPrefix ? `Position (${position})` : '';
+        const trackDur = play.data.duration;
+        const closeStartNum = position <= absolute;
+        const hints: string[] = [];
+        hints.push(`${closeStartNum ? 'is' : 'is not'} within ${absolute}s of track start`);
+
+        let closeStartPer = false;
+        if(trackDur !== undefined) {
+            const positionPercent = (position / trackDur);
+            closeStartPer = (positionPercent <= percent);
+            if(!closeStartNum) {
+                hints.push(`${closeStartPer ? 'is' : 'is not'} within ${formatNumber(percent * 100, {toFixed: 0})}% of track start (${formatNumber(positionPercent*100)}%)`);
+            }
+        }
+
+        return [closeStartNum || closeStartPer, `${hintStart} ${hints.join(' and ')}.`];
+}
+
+/** Is Position closer than X seconds or Y% percent of the end of a Play? */
+export const closeToPlayEnd = (play: PlayObject, position: number, thresholds: {absolute?: number, percent?: number, hintPrefix?: boolean} = {}): [boolean, string] => {
+    const {
+        absolute = DEFAULT_CLOSE_POSITION_ABSOLUTE,
+        percent = DEFAULT_CLOSE_POSITION_PERCENT,
+        hintPrefix = true
+    } = thresholds;
+
+        let hintStart = hintPrefix ? `Position (${position})` : '';
+        const trackDur = play.data.duration;
+
+        if(trackDur === undefined) {
+            return [false, `Cannot determine how close Position ${position} is to end of track because no duration data is available.`];
+        }
+
+        const nearEndNum = trackDur - position <= absolute;
+        const hints: string[] = [];
+        hints.push(`${nearEndNum ? 'is' : 'is not'} within ${absolute}s of track end`);
+        const positionPercent = 1 - (position / trackDur);
+        const nearEndPer = (positionPercent < percent);
+        if(!nearEndNum) {
+            hints.push(`${nearEndPer ? 'is' : 'is not'} within ${formatNumber(percent * 100, {toFixed: 0})}% of track end (${formatNumber(positionPercent*100)}%)`);
+        }
+        return [nearEndNum || nearEndPer, `${hintStart} ${hints.join(' and ')}`];
+}
+
+/** Has more than X seconds or Y% percent of Play duration been played? */
+export const repeatDurationPlayed = (play: PlayObject, duration: number, thresholds: {absolute?: number, percent?: number, hintPrefix?: boolean} = {}): [boolean, string] => {
+    const {
+        absolute =  DEFAULT_DURATION_REPEAT_ABSOLUTE,
+        percent = DEFAULT_DURATION_REPEAT_PERCENT,
+        hintPrefix = true
+    } = thresholds;
+
+        let hintStart = hintPrefix ? `Duration listened (${duration}s)` : '';
+        const trackDur = play.data.duration;
+        const absPlayed = duration >= absolute;
+        const hints: string[] = [];
+        hints.push(`${absPlayed ? 'is' : 'is not'} more than ${absolute}s`);
+
+        let majorityDurationPercent = false;
+        if(trackDur !== undefined) {
+            const durationPercent = (duration / trackDur);
+            majorityDurationPercent = (durationPercent >= percent);
+            if(!absPlayed) {
+                hints.push(`${majorityDurationPercent ? 'is' : 'is not'} more than ${formatNumber(percent * 100, {toFixed: 0})}% of track duration (${formatNumber(durationPercent*100)}%)`);
+            }
+        }
+
+        return [absPlayed || majorityDurationPercent, `${hintStart} ${hints.join(' and ')}.`];
 }
