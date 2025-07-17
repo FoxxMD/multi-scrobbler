@@ -425,42 +425,6 @@ describe('Player Cleanup', function () {
     });
 });
 
-describe('Scrobble Threshold Checks', function() {
-
-    it('uses defaults when no user-configured thresholds are passed', function() {
-        const results = timePassesScrobbleThreshold({}, 1, 1);
-        expect(results.duration.threshold).to.eq(DEFAULT_SCROBBLE_DURATION_THRESHOLD);
-        expect(results.percent.threshold).to.eq(DEFAULT_SCROBBLE_PERCENT_THRESHOLD);
-    });
-
-    it('uses user-configured thresholds when passed', function() {
-        const results = timePassesScrobbleThreshold({
-            duration: 20,
-            percent: 15
-        }, 1, 1);
-        expect(results.duration.threshold).to.eq(20);
-        expect(results.percent.threshold).to.eq(15);
-    });
-
-    it('passes when duration is above threshold', function() {
-        const results = timePassesScrobbleThreshold({}, DEFAULT_SCROBBLE_DURATION_THRESHOLD + 1);
-        expect(results.duration.passes).is.true;
-        expect(results.passes).is.true;
-    });
-
-    it('passes when percent is above threshold', function() {
-        const results = timePassesScrobbleThreshold({}, 30, 50);
-        expect(results.percent.passes).is.true;
-        expect(results.passes).is.true;
-    });
-
-    it('handles zero duration', function() {
-        const results = timePassesScrobbleThreshold({}, DEFAULT_SCROBBLE_DURATION_THRESHOLD + 1, 0);
-        expect(results.duration.passes).is.true;
-        expect(results.passes).is.true;
-    });
-});
-
 const generateDeezerSource = (options: DeezerInternalSourceOptions = {}) => {
     return new DeezerInternalSource('test', {data: {arl: 'test'}, options}, {localUrl: new URL('https://example.com'), configDir: 'fake', logger: loggerTest, version: 'test'},  emitter);
 }

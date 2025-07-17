@@ -211,6 +211,10 @@ export const DEFAULT_POLLING_MAX_INTERVAL = 30;
 
 export const DEFAULT_RETRY_MULTIPLIER: number = 1.5;
 
+export const DEFAULT_CLOSE_POSITION_ABSOLUTE = 12;
+export const DEFAULT_CLOSE_POSITION_PERCENT = 0.15;
+export const DEFAULT_DURATION_REPEAT_ABSOLUTE = 120;
+export const DEFAULT_DURATION_REPEAT_PERCENT = 0.50;
 export interface ScrobbleThresholdResult {
     passes: boolean
     duration: {
