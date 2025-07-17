@@ -343,7 +343,7 @@ export const closeToPlayStart = (play: PlayObject, position: number, thresholds:
         hintPrefix = true
     } = thresholds;
 
-        let hintStart = hintPrefix ? `Position (${position})` : '';
+        let hintStart = hintPrefix ? `Position (${position}) ` : '';
         const trackDur = play.data.duration;
         const closeStartNum = position <= absolute;
         const hints: string[] = [];
@@ -358,7 +358,7 @@ export const closeToPlayStart = (play: PlayObject, position: number, thresholds:
             }
         }
 
-        return [closeStartNum || closeStartPer, `${hintStart} ${hints.join(' and ')}.`];
+        return [closeStartNum || closeStartPer, `${hintStart}${hints.join(' and ')}`];
 }
 
 /** Is Position closer than X seconds or Y% percent of the end of a Play? */
@@ -369,7 +369,7 @@ export const closeToPlayEnd = (play: PlayObject, position: number, thresholds: {
         hintPrefix = true
     } = thresholds;
 
-        let hintStart = hintPrefix ? `Position (${position})` : '';
+        let hintStart = hintPrefix ? `Position (${position}) ` : '';
         const trackDur = play.data.duration;
 
         if(trackDur === undefined) {
@@ -384,7 +384,7 @@ export const closeToPlayEnd = (play: PlayObject, position: number, thresholds: {
         if(!nearEndNum) {
             hints.push(`${nearEndPer ? 'is' : 'is not'} within ${formatNumber(percent * 100, {toFixed: 0})}% of track end (${formatNumber(positionPercent*100)}%)`);
         }
-        return [nearEndNum || nearEndPer, `${hintStart} ${hints.join(' and ')}`];
+        return [nearEndNum || nearEndPer, `${hintStart}${hints.join(' and ')}`];
 }
 
 /** Has more than X seconds or Y% percent of Play duration been played? */
@@ -395,7 +395,7 @@ export const repeatDurationPlayed = (play: PlayObject, duration: number, thresho
         hintPrefix = true
     } = thresholds;
 
-        let hintStart = hintPrefix ? `Duration listened (${duration}s)` : '';
+        let hintStart = hintPrefix ? `Duration listened (${duration}s) ` : '';
         const trackDur = play.data.duration;
         const absPlayed = duration >= absolute;
         const hints: string[] = [];
@@ -410,5 +410,5 @@ export const repeatDurationPlayed = (play: PlayObject, duration: number, thresho
             }
         }
 
-        return [absPlayed || majorityDurationPercent, `${hintStart} ${hints.join(' and ')}.`];
+        return [absPlayed || majorityDurationPercent, `${hintStart}${hints.join(' and ')}`];
 }
