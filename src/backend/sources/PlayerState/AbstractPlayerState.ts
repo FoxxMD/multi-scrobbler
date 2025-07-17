@@ -82,6 +82,7 @@ export abstract class AbstractPlayerState {
     stateLastUpdatedAt: Dayjs = dayjs();
 
     lastPlay?: PlayObject
+    lastPlayUpdatedAt?: Dayjs
 
     protected constructor(logger: Logger, platformId: PlayPlatformId, opts: PlayerStateOptions = DefaultPlayerStateOptions) {
         this.platformId = platformId;
@@ -186,6 +187,7 @@ export abstract class AbstractPlayerState {
                 const played = this.getPlayedObject(true);
                 this.isRepeatPlay = false;
                 this.lastPlay = played;
+                this.lastPlayUpdatedAt = dayjs();
                 this.setCurrentPlay(state, {reportedTS});
                 if (this.calculatedStatus !== CALCULATED_PLAYER_STATUSES.playing) {
                     this.calculatedStatus = CALCULATED_PLAYER_STATUSES.unknown;
@@ -200,6 +202,7 @@ export abstract class AbstractPlayerState {
                 const played = this.getPlayedObject(true);
                 play.data.playDate = dayjs();
                 this.isRepeatPlay = true;
+                this.logger.debug('New Play is a repeat');
                 this.setCurrentPlay(state, {reportedTS});
                 return [this.getPlayedObject(), played];
             } else {
@@ -219,6 +222,15 @@ export abstract class AbstractPlayerState {
             }
         } else {
             this.isRepeatPlay = false;
+            // compensate for Players that report as STOPPED between Plays
+            // -- should we check for closeToPlayStart() as well?
+            if(this.lastPlay !== undefined) {
+                const lastPlayDiff = Math.abs(this.lastPlayUpdatedAt.diff(dayjs(), 's'));
+                const shortDiff = lastPlayDiff < 20;
+                const lastPlayMatch = playObjDataMatch(play, this.lastPlay);
+                this.isRepeatPlay = shortDiff && lastPlayMatch;
+                this.logger.debug(`Last Play ${shortDiff ? 'was' : 'was not'} within 20s of new Player session and ${lastPlayMatch ? 'does' : 'does not'} match new Play -- ${this.isRepeatPlay ? 'is' : 'is not'} a repeat Play`);
+            }
             
             this.setCurrentPlay(state);
             this.calculatedStatus = CALCULATED_PLAYER_STATUSES.unknown;
@@ -235,6 +247,7 @@ export abstract class AbstractPlayerState {
 
     protected clearPlayer() {
         this.lastPlay = this.currentPlay;
+        this.lastPlayUpdatedAt = dayjs();
         this.currentPlay = undefined;
         this.playLastUpdatedAt = undefined;
         this.playFirstSeenAt = undefined;
