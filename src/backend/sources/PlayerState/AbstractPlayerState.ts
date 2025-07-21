@@ -16,7 +16,7 @@ import { PollingOptions } from "../../common/infrastructure/config/common.js";
 import { formatNumber, genGroupIdStr, playObjDataMatch, progressBar } from "../../utils.js";
 import { ListenProgress } from "./ListenProgress.js";
 import { ListenRange, ListenRangePositional } from "./ListenRange.js";
-import { timeToHumanTimestamp, todayAwareFormat } from "../../utils/TimeUtils.js";
+import { closeToPlayEnd, closeToPlayStart, repeatDurationPlayed, timeToHumanTimestamp, todayAwareFormat } from "../../utils/TimeUtils.js";
 
 export interface PlayerStateIntervals {
     staleInterval?: number
@@ -80,6 +80,9 @@ export abstract class AbstractPlayerState {
     listenRanges: ListenRange[] = [];
     createdAt: Dayjs = dayjs();
     stateLastUpdatedAt: Dayjs = dayjs();
+
+    lastPlay?: PlayObject
+    lastPlayUpdatedAt?: Dayjs
 
     protected constructor(logger: Logger, platformId: PlayPlatformId, opts: PlayerStateOptions = DefaultPlayerStateOptions) {
         this.platformId = platformId;
@@ -183,6 +186,8 @@ export abstract class AbstractPlayerState {
                 this.currentListenSessionEnd();
                 const played = this.getPlayedObject(true);
                 this.isRepeatPlay = false;
+                this.lastPlay = played;
+                this.lastPlayUpdatedAt = dayjs();
                 this.setCurrentPlay(state, {reportedTS});
                 if (this.calculatedStatus !== CALCULATED_PLAYER_STATUSES.playing) {
                     this.calculatedStatus = CALCULATED_PLAYER_STATUSES.unknown;
@@ -197,6 +202,7 @@ export abstract class AbstractPlayerState {
                 const played = this.getPlayedObject(true);
                 play.data.playDate = dayjs();
                 this.isRepeatPlay = true;
+                this.logger.debug('New Play is a repeat');
                 this.setCurrentPlay(state, {reportedTS});
                 return [this.getPlayedObject(), played];
             } else {
@@ -216,6 +222,16 @@ export abstract class AbstractPlayerState {
             }
         } else {
             this.isRepeatPlay = false;
+            // compensate for Players that report as STOPPED between Plays
+            // -- should we check for closeToPlayStart() as well?
+            if(this.lastPlay !== undefined) {
+                const lastPlayDiff = Math.abs(this.lastPlayUpdatedAt.diff(dayjs(), 's'));
+                const shortDiff = lastPlayDiff < 20;
+                const lastPlayMatch = playObjDataMatch(play, this.lastPlay);
+                this.isRepeatPlay = shortDiff && lastPlayMatch;
+                this.logger.debug(`Last Play ${shortDiff ? 'was' : 'was not'} within 20s of new Player session and ${lastPlayMatch ? 'does' : 'does not'} match new Play -- ${this.isRepeatPlay ? 'is' : 'is not'} a repeat Play`);
+            }
+            
             this.setCurrentPlay(state);
             this.calculatedStatus = CALCULATED_PLAYER_STATUSES.unknown;
         }
@@ -230,6 +246,8 @@ export abstract class AbstractPlayerState {
     protected incomingPlayMatchesExisting(play: PlayObject): boolean { return playObjDataMatch(this.currentPlay, play); }
 
     protected clearPlayer() {
+        this.lastPlay = this.currentPlay;
+        this.lastPlayUpdatedAt = dayjs();
         this.currentPlay = undefined;
         this.playLastUpdatedAt = undefined;
         this.playFirstSeenAt = undefined;
@@ -285,6 +303,13 @@ export abstract class AbstractPlayerState {
 
     protected abstract currentListenSessionEnd();
 
+    /** Check if new Player Position was seeked to a Position that indicates user is repeating the track
+     * 
+     * True if:
+     *   * New position is close to start of Play and...
+     *     * Listened duraton is more than 2 minutes/50% of Play OR...
+     *     * Previous Position was close to end of Play
+     */
     protected isSessionRepeat(position?: number, reportedTS?: Dayjs) {
         if(this.currentListenRange === undefined) {
             return false;
@@ -293,45 +318,32 @@ export abstract class AbstractPlayerState {
         if (isSeeked === false || seekPos > 0) {
             return false;
         }
+
+        const hints: string[] = [];
+
         let repeatHint = `New Position (${position})`;
         const trackDur = this.currentPlay.data.duration;
-        // user is within 10 seconds or 10% of start of track
-        const closeStartNum = position <= 12;
-        if(closeStartNum) {
-            repeatHint = `${repeatHint} is within 12 seconds of track start`;
-        }
-        const closeStartPer = (trackDur !== undefined && ((position / trackDur) <= 0.15));
-        if(!closeStartNum && closeStartPer) {
-            repeatHint = `${repeatHint} is within 15% of track start (${formatNumber((position/trackDur)*100)}%).`;
-        }
-        if (closeStartNum || closeStartPer) {
-            // user has played at least 2 minutes or 50% of track
+
+        // new position is close to start of Play
+        const [closeStart, closeStartHint] = closeToPlayStart(this.currentPlay, position, {hintPrefix: false});
+        hints.push(closeStartHint);
+
+        if (closeStart) {
             const playerDur = this.getListenDuration();
-            const closeDurNum = playerDur >= 120;
-            if(closeDurNum) {
-                repeatHint = `${repeatHint} and listened to more than 120s (${playerDur}s)`
-            }
-            const closeDurPer = (trackDur !== undefined && (playerDur / trackDur) >= 0.5);
-            if(!closeDurNum && closeDurPer) {
-                repeatHint = `${repeatHint} and listened to more than 50% (${formatNumber((playerDur/trackDur)*100)}%).`
-            }
-            if (closeDurNum || closeDurPer) {
-                this.logger.verbose(repeatHint);
+            const [repeatDurationOk, repeatDurationHint] = repeatDurationPlayed(this.currentPlay, playerDur, {hintPrefix: false});
+
+            // user has played at least 2 minutes or 50% of track
+            if (repeatDurationOk) {
+                this.logger.verbose(`${repeatHint} ${[closeStartHint, repeatDurationHint].join(' and ')}`);
                 return true;
             }
-            if (trackDur !== undefined && this.currentListenRange.getPosition() !== undefined) {
-                const lastPos = this.currentListenRange.getPosition();
-                // or last position is within 10 seconds (or 10%) of end of track
-                const nearEndNum = (trackDur - lastPos < 12);
-                if(nearEndNum) {
-                    repeatHint = `${repeatHint} and previous position was within 12 seconds of track end.`;
-                }
-                const nearEndPos = ((lastPos / trackDur) > 0.85);
-                if(!nearEndNum && nearEndPos) {
-                    repeatHint = `${repeatHint} and previous position was within 15% of track end (${formatNumber((lastPos/trackDur)*100)}%)`;
-                }
-                if(nearEndNum || nearEndPos) {
-                    this.logger.verbose(repeatHint);
+
+            const lastPos = this.currentListenRange.getPosition();
+            if (trackDur !== undefined && lastPos !== undefined) {
+                const [nearEnd, nearEndHint] = closeToPlayEnd(this.currentPlay, lastPos, {hintPrefix: false});
+                // last position is close to end of Play
+                if(nearEnd) {
+                    this.logger.verbose(`${repeatHint} ${[closeStartHint, nearEndHint].join(' and ')}`);
                     return true;
                 }
             }
