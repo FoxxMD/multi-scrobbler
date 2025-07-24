@@ -1047,7 +1047,13 @@ If any part of this URL is missing multi-scrobbler will use a default value. Thi
 
 ### [Koito (Source)](https://koito.io/)
 
-This Source monitors a Koito account's scrobble history and then re-scrobbles discovered tracks to configured clients. To instead _scrobble to_ Koito use the [Koito (Client)](#koito) configuration.
+This Source monitors a Koito account's scrobble history and then re-scrobbles discovered tracks to configured [Clients.](#client-configurations)
+
+:::tip[Other Uses]
+
+To  _scrobble to_ a Koito server, create a [Koito (Client)](#koito)
+
+:::
 
 See the [Koito (Client)](#koito) configuration for general setup. The only difference for **Source** configuration:
 
@@ -1090,7 +1096,16 @@ See the [Koito (Client)](#koito) configuration for general setup. The only diffe
 
 ### [Last.fm (Source)](https://www.last.fm)
 
-See the [Last.fm (Client)](#lastfm) setup for registration instructions.
+This Source **monitors your Last.fm scrobble history** and re-scrobbles new activity to configured [Clients.](#client-configurations)
+
+:::tip[Other Uses]
+
+* To **scrobble to** Last.fm, create a [Last.fm (Client)](#lastfm)
+* To accept scrobbles from outside applications as if multi-scrobbler was Last.fm, create a [Last.fm (Endpoint)](#lastfm-endpoint)
+
+:::
+
+To configure this Source use the same registration instructions and configuration data shown in [Last.fm (Client)](#lastfm) with the difference being `"configureAs": "source"` defined in the File/AIO configuration below.
 
 #### Configuration
 
@@ -1128,6 +1143,13 @@ See the [Last.fm (Client)](#lastfm) setup for registration instructions.
 
 This Source enables multi-scrobbler to accept scrobbles from outside applications as if it was a Last.fm server.
 
+:::tip[Other Uses]
+
+* To **scrobble to** Last.fm, create a [Last.fm (Client)](#lastfm)
+* To monitor and re-scrobble activity from your Last.fm account, create a [Last.fm (Source)](#lastfm-source)
+
+:::
+
 ##### URL
 
 If a **slug** is **not** provided in configuration then multi-scrobbler will accept Last.fm scrobbles at
@@ -1136,7 +1158,7 @@ If a **slug** is **not** provided in configuration then multi-scrobbler will acc
 http://localhost:9078/2.0/
 ```
 
-which is the "standard" Last.fm server path for scrobbling.
+which is the "standard" Last.fm server path for scrobbling
 
 Use a slug only if you need to setup multiple Last.fm Endpoint sources and cannot use different tokens.
 
@@ -1185,6 +1207,13 @@ http://localhost:9078/api/lastfm/mySlug
 
 This Source monitors a Listenbrainz account's scrobble history and then re-scrobbles discovered tracks to configured clients.
 
+:::tip[Other Uses]
+
+* To **scrobble to** a Listenbrainz server, create a [Listenbrainz (Client)](#listenbrainz)
+* To accept scrobbles from outside applications as if multi-scrobbler was a Listenbrainz server, create a [Listenbrainz (Endpoint)](#listenbrainz-endpoint)
+
+:::
+
 You will need to run your own Listenbrainz server, [Koito](https://koito.io) server, or have an account [on the official instance](https://listenbrainz.org/login/)
 
 On your [profile page](https://listenbrainz.org/profile/) find your **User Token** to use in the configuration.
@@ -1228,6 +1257,13 @@ For Koito, [create an API Key from your Account page.](https://koito.io/guides/s
 ### [Listenbrainz (Endpoint)](https://listenbrainz.org)
 
 This Source enables multi-scrobbler to accept scrobbles from outside applications as if it was a Listenbrainz server. An example of this would be configuring [pano-scrobbler](https://github.com/kawaiiDango/pano-scrobbler) with a custom Listenbrainz URL to point to multi-scrobbler.
+
+:::tip[Other Uses]
+
+* To **scrobble to** a Listenbrainz server, create a [Listenbrainz (Client)](#listenbrainz)
+* To monitor and re-scrobble activity from a Listenbrainz account, create a [Listenbrainz (Source)](#listenbrainz-source)
+
+:::
 
 ##### URL
 
@@ -2398,6 +2434,12 @@ Only one of these methods needs to be used. **Cookies** are easier but **OAuth C
 
 ### [Koito](https://koito.io/)
 
+:::tip[Other Uses]
+
+To monitor and re-scrobble activity from a Koito account create a [Koito (Source)](#koito-source)
+
+:::
+
 Setup a [Koito server](https://koito.io/guides/installation/) if you have not already done this.
 
 * [Create (or get) an API Key](https://koito.io/guides/scrobbler/)
@@ -2469,6 +2511,13 @@ Ensure that Koito is configured to allow requests from multi-scrobbler! In Koito
 
 ### [Last.fm](https://www.last.fm)
 
+:::tip[Other Users]
+
+* To monitor and re-scrobble activity from your Last.fm account create a [Last.fm (Source)](#lastfm-source)
+* To accept scrobbles from outside applications as if multi-scrobbler was Last.fm, create a [Last.fm (Endpoint)](#lastfm-endpoint)
+
+:::
+
 [Register for an API account here.](https://www.last.fm/api/account/create)
 
 The Callback URL is actually specified by multi-scrobbler but to keep things consistent you should use
@@ -2514,6 +2563,13 @@ or replace `localhost:9078` with your own base URL.
 </Tabs>
 
 ### [Listenbrainz](https://listenbrainz.org)
+
+:::tip[Other Users]
+
+* To monitor and re-scrobble activity from a Listenbrainz account create a [Listenbrainz (Source)](#listenbrainz-source)
+* To accept scrobbles from outside applications as if multi-scrobbler was a Listenbrainz server, create a [Listenbrainz (Endpoint)](#listenbrainz-endpoint)
+
+:::
 
 You will need to run your own Listenbrainz server, [Koito](https://koito.io), or have an account [on the official instance](https://listenbrainz.org/login/)
 
