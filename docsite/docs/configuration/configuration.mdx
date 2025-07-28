@@ -2646,16 +2646,19 @@ On your [profile page](https://listenbrainz.org/profile/) find your **User Token
 
 ## Now Playing
 
-Multi-scrobbler can report the currently **playing** tracks it is monitoring to some Scrobble Clients via their individual **Now Playing** functionality. The behavior multi-scrobbler uses for determining Now Playing reporting:
+Multi-scrobbler can report the currently **playing** tracks it is monitoring to some Scrobble Clients via their individual **Now Playing** functionality.
 
+Now Playing is **default enabled** for all Clients that support it.
+
+The behavior multi-scrobbler uses for determining Now Playing reporting:
+
+* Now Playing can be explicitly enabled or disabled globally using ENV `NOW_PLAYING=true` or `NOW_PLAYING=false`
+    * This only affects Clients that don't have behavior set via File/AIO (below)
 * Now Playing will be only be reported to the same Clients a Source is configured to scrobble to
 * A Source's Player status must be **Playing**, IE **active**, for reporting to occur
   * This status can be verified via Player UI on the Dashboard
 * If multiple Sources having active Players then the scrobble Client will default to reporting the track based on Source **configuration** name, alphabetically
   * This is the `name` property set in [File or AIO source configs](./?configType=file#configuration-types)
-* Now Playing is **default enabled** for all Clients that support it
-  * Now Playing can be explicitly enabled or disabled globally using ENV `NOW_PLAYING=true` or `NOW_PLAYING=false`
-    * This only affects Clients that don't have behavior set via File/AIO (below)
 
 Clients can customize the Now Playing behavior individually using [File or AIO source configs:](./?configType=file#configuration-types)
 
