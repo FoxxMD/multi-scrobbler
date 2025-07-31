@@ -3,11 +3,12 @@ import { PlayObject, URLData } from "../../../../core/Atomic.js";
 import { AbstractApiOptions, DEFAULT_RETRY_MULTIPLIER } from "../../infrastructure/Atomic.js";
 import { KoitoData, ListenObjectResponse, ListensResponse } from "../../infrastructure/config/client/koito.js";
 import AbstractApiClient from "../AbstractApiClient.js";
-import { normalizeListenbrainzUrl } from "../../../utils/StringUtils.js";
 import { getBaseFromUrl, isPortReachableConnect, joinedUrl, normalizeWebAddress } from "../../../utils/NetworkUtils.js";
 import request, { Request, Response } from 'superagent';
 import { UpstreamError } from "../../errors/UpstreamError.js";
-import { ListenType, playToListenPayload, SubmitPayload } from "../ListenbrainzApiClient.js";
+import { playToListenPayload } from "../ListenbrainzApiClient.js";
+import { SubmitPayload } from '../listenbrainz/interfaces.js';
+import { ListenType } from '../listenbrainz/interfaces.js';
 import { parseRegexSingleOrFail } from "../../../utils.js";
 
 interface SubmitOptions {

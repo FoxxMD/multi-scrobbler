@@ -6,7 +6,8 @@ import { http, HttpResponse } from "msw";
 import { PlayObject } from "../../../core/Atomic.js";
 import { UpstreamError } from "../../common/errors/UpstreamError.js";
 
-import { ListenbrainzApiClient, ListenResponse } from "../../common/vendor/ListenbrainzApiClient.js";
+import { ListenbrainzApiClient } from "../../common/vendor/ListenbrainzApiClient.js";
+import { ListenResponse } from '../../common/vendor/listenbrainz/interfaces.js';
 import { ExpectedResults } from "../utils/interfaces.js";
 import { withRequestInterception } from "../utils/networking.js";
 import artistWithProperJoiner from './correctlyMapped/artistProperHasJoinerInName.json';

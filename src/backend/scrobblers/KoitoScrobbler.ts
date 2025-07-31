@@ -1,13 +1,11 @@
 import { Logger } from "@foxxmd/logging";
-import dayjs from 'dayjs';
 import EventEmitter from "events";
 import { PlayObject } from "../../core/Atomic.js";
 import { buildTrackString, capitalize } from "../../core/StringUtils.js";
 import { isNodeNetworkException } from "../common/errors/NodeErrors.js";
 import { UpstreamError } from "../common/errors/UpstreamError.js";
 import { FormatPlayObjectOptions } from "../common/infrastructure/Atomic.js";
-import { ListenBrainzClientConfig } from "../common/infrastructure/config/client/listenbrainz.js";
-import { ListenbrainzApiClient, ListenPayload, playToListenPayload } from "../common/vendor/ListenbrainzApiClient.js";
+import { playToListenPayload } from "../common/vendor/ListenbrainzApiClient.js";
 import { Notifiers } from "../notifier/Notifiers.js";
 
 import AbstractScrobbleClient from "./AbstractScrobbleClient.js";

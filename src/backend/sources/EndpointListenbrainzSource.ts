@@ -11,7 +11,9 @@ import {
     ReportedPlayerStatus
 } from "../common/infrastructure/Atomic.js";
 import { ListenbrainzEndpointSourceConfig } from "../common/infrastructure/config/source/endpointlz.js";
-import { ListenbrainzApiClient, ListenPayload, SubmitPayload } from "../common/vendor/ListenbrainzApiClient.js";
+import { ListenbrainzApiClient } from "../common/vendor/ListenbrainzApiClient.js";
+import { SubmitPayload } from '../common/vendor/listenbrainz/interfaces.js';
+import { ListenPayload } from '../common/vendor/listenbrainz/interfaces.js';
 import { parseRegexSingleOrFail } from "../utils.js";
 import MemorySource from "./MemorySource.js";
 

@@ -1,6 +1,7 @@
 import { LogDataPretty, LogLevel } from "@foxxmd/logging";
 import { Dayjs } from "dayjs";
 import { ListenProgress } from "../backend/sources/PlayerState/ListenProgress.js";
+import { AdditionalTrackInfoResponse } from "../backend/common/vendor/listenbrainz/interfaces.js";
 
 export interface SourceStatusData {
     status: string;
@@ -90,6 +91,7 @@ export interface BrainzMeta {
      * 
      *  The "consolidated" album like -->  "The Wall" by "Pink Floyd" */
     releaseGroup?: string
+    additionalInfo?: AdditionalTrackInfoResponse
 }
 
 export interface SpotifyMeta {

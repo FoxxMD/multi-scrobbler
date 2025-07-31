@@ -18,181 +18,15 @@ import { AbstractApiOptions, DEFAULT_RETRY_MULTIPLIER, FormatPlayObjectOptions }
 import { ListenBrainzClientData } from "../infrastructure/config/client/listenbrainz.js";
 import AbstractApiClient from "./AbstractApiClient.js";
 import { getBaseFromUrl, isPortReachableConnect, joinedUrl, normalizeWebAddress } from '../../utils/NetworkUtils.js';
-import { parseRegexSingleOrFail, removeUndefinedKeys } from '../../utils.js';
+import { removeUndefinedKeys } from '../../utils.js';
 import {ListensResponse as KoitoListensResponse} from '../infrastructure/config/client/koito.js'
 import { listenObjectResponseToPlay } from './koito/KoitoApiClient.js';
-import { log } from 'console';
 import { version } from '../../ioc.js';
-
-/*
- * https://musicbrainz.org/doc/MusicBrainz_Database/Schema#Overview
-*/
-
-/** A unique product a Recording is issued on.
- * 
- * This is like an album (release group) but is specific to the type, year, catalog, etc... for this release
- * 
- * EX: 1984 US release of "The Wall" by "Pink Floyd", release on label "Columbia Records" with catalog number "C2K 36183"
- * 
- * @see https://musicbrainz.org/doc/Release
- * 
- * Referred to in MB api response as release_mbid
- * 
-*/
-type ReleaseMbid = string;
-
-/** The "abstract", non-unique album/single/EP the Recording belongs to
- * 
- * This is what people normally think of as an album (release group)
- * 
- * EX: "The Wall" by "Pink Floyd"
- * 
- * @see https://musicbrainz.org/doc/Release
- * 
- * Referred to in MB api response as release_group -> mbid
- * 
-*/
-type ReleaseGroupMbid = string;
-
-/** A unique mix/edit/master of a Work
- * 
- * This is like a song but is unique to the master/edit of the song
- * 
- * 
- * * Album version of the track "Into the Blue" by "Moby"
- * * Remix "Into the Blue (Buzz Boys Main Room Mayhem mix)" by "Moby"
- * 
- * @see https://musicbrainz.org/doc/Recording
- * 
- * Referred to in MB api response as recording_mbid
- */
-type RecordingMbid = string;
-
-/** The "abstract", non-unique Song produced by an Artist
- * 
- * All Recordings "belong" to a single Work
- * 
- * EX: Song "Into the Blue" by "Moby"
- * 
- *  @see Song "Into the Blue" by "Moby"
- */
-type WorkMbid = string;
-
-/** A musician or group or musicians that release music
- * 
- * @see https://musicbrainz.org/doc/Artist
- * 
- * MB does not distinguish between Artist and Album Artists in API responses except for by release_artist_name in additional_info
- * All artists/album artists are included in mbid_mappings artists
- * 
-*/
-type ArtistMbid = string;
-
-/** A unique, random identifier used for each scrobble. Not the same as recording_mbid */
-type RecordingMsid = string;
-
-export interface ArtistMBIDMapping {
-    artist_credit_name: string
-    artist_mbid: ArtistMbid
-    join_phrase: string
-}
-
-export interface MinimumTrack {
-    artist_name: string;
-    track_name: string;
-    release_name?: string;
-}
-
-export interface AdditionalTrackInfo {
-    artist_mbids?: ArtistMbid[]
-    release_mbid?: ReleaseMbid
-    release_group_mbid?: ReleaseGroupMbid
-    recording_mbid?: RecordingMbid
-    submission_client?: string
-    submission_client_version?: string
-    spotify_id?: string
-    media_player?: string
-    media_player_version?: string
-
-    music_service?: string
-    music_service_name?: string
-    origin_url?: string
-    tags?: string[]
-    duration?: number
-
-    duration_ms?: number
-    track_mbid?: string
-    work_mbids?: WorkMbid[]
-}
-
-export interface Track {
-    artist_name: string;
-    track_name: string;
-    release_name?: string;
-    artist_mbids?: ArtistMbid[];
-    artist_msid?: ArtistMbid;
-    recording_mbid?: string;
-    release_mbid?: ReleaseMbid;
-    release_msid?: string;
-    tags?: string[];
-
-    duration?: number
-}
-
-export interface AdditionalTrackInfoResponse extends AdditionalTrackInfo {
-    recording_msid?: RecordingMsid
-    release_artist_name?: string
-    release_artists_names?: string
-}
-
-// using submit-listens example from openapi https://rain0r.github.io/listenbrainz-openapi/index.html#/lbCore/submitListens
-// which is documented in official docs https://listenbrainz.readthedocs.io/en/latest/users/api/index.html#openapi-specification
-// and based on this LZ developer comment https://github.com/lyarenei/jellyfin-plugin-listenbrainz/issues/10#issuecomment-1253867941
-export interface SubmitListenAdditionalTrackInfo extends AdditionalTrackInfo {
-    artist_names?: string[]
-    release_artist_name?: string
-    release_artist_names?: string[]
-    spotify_album_id?: string
-    spotify_album_artist_ids?: string[]
-    spotify_artist_ids?: string[]
-    albumartist?: string
-}
-
-export interface TrackPayload extends MinimumTrack {
-    additional_info?: SubmitListenAdditionalTrackInfo
-}
-
-export interface ListenPayload {
-    listened_at: Date | number;
-    recording_msid?: RecordingMsid;
-    track_metadata: TrackPayload;
-}
-
-export type ListenType = 'single' | 'playing_now';
-
-export interface SubmitPayload {
-    listen_type: ListenType,
-    payload: [ListenPayload]
-}
+import { ListenPayload, ListenResponse, ListenType, MinimumTrack, SubmitListenAdditionalTrackInfo, SubmitPayload } from './listenbrainz/interfaces.js';
 
 interface SubmitOptions {
     log?: boolean
     listenType?: ListenType
-}
-
-export interface TrackResponse extends MinimumTrack {
-    duration: number
-    additional_info: AdditionalTrackInfoResponse
-    mbid_mapping: {
-        recording_name?: string
-        artist_mbids?: ArtistMbid[]
-        artists?: ArtistMBIDMapping[]
-        caa_id?: number
-        /** cover album archive mbid, not related to anything else I think */
-        caa_release_mbid?: string
-        recording_mbid?: RecordingMbid
-        release_mbid?: ReleaseMbid
-    }
 }
 
 export interface ListensResponse {
@@ -200,13 +34,6 @@ export interface ListensResponse {
     listens: ListenResponse[];
 }
 
-export interface ListenResponse {
-
-    inserted_at: number
-    listened_at: number;
-    recording_msid?: RecordingMsid;
-    track_metadata: TrackResponse;
-}
 export class ListenbrainzApiClient extends AbstractApiClient {
 
     declare config: ListenBrainzClientData;
@@ -739,7 +566,8 @@ export class ListenbrainzApiClient extends AbstractApiClient {
                 } = {},
                 mbid_mapping: {
                     recording_mbid: mRecordingMbid
-                } = {}
+                } = {},
+                additional_info = {},
             } = {}
         } = listen;
 
@@ -785,14 +613,21 @@ export class ListenbrainzApiClient extends AbstractApiClient {
             }
         }
 
+        const brainzMeta: BrainzMeta = {};
+        if(Object.keys(additional_info).length > 0) {
+            brainzMeta.additionalInfo = additional_info;
+        }
+
         // we shouldn't include more metdata here because we don't know if the MB mapped data is actually correct
         if(trackId !== undefined) {
-            play.data.meta = {
-                brainz: {
-                    track: trackId
-                }
-            }
+            brainzMeta.track = trackId;
             play.meta.trackid = trackId;
+        }
+
+        if(Object.keys(brainzMeta).length > 0) {
+            play.data.meta = {
+                brainz: brainzMeta
+            }
         }
 
         return play;
@@ -845,18 +680,21 @@ export const playToListenPayload = (play: PlayObject): ListenPayload => {
         // which is documented in official docs https://listenbrainz.readthedocs.io/en/latest/users/api/index.html#openapi-specification
         // and based on this LZ developer comment https://github.com/lyarenei/jellyfin-plugin-listenbrainz/issues/10#issuecomment-1253867941
 
+        const msAdditionalInfo = brainz.additionalInfo ?? {};
+
         let addInfo: SubmitListenAdditionalTrackInfo = {
             // all artists
             artist_names: Array.from(new Set([...artists, ...albumArtists])),
             // primary artist
             release_artist_name: artists[0],
             release_artist_names: [artists[0]],
-            media_player: mediaPlayerName,
-            media_player_version: mediaPlayerVersion,
-            music_service: musicService !== undefined ? musicServiceToCononical(musicService) : undefined,
-            spotify_id: spotify.track,
-            spotify_album_id: spotify.album,
-            spotify_artist_ids: spotify.artist
+            // use data from LZ response, if this Play was originally from LZ Source
+            media_player: mediaPlayerName ?? msAdditionalInfo.media_player,
+            media_player_version: mediaPlayerVersion ?? msAdditionalInfo.media_player_version,
+            music_service: musicService !== undefined ? musicServiceToCononical(musicService) : msAdditionalInfo.music_service,
+            spotify_id: spotify.track ?? msAdditionalInfo.spotify_id,
+            spotify_album_id: spotify.album ?? msAdditionalInfo.spotify_album_id,
+            spotify_artist_ids: spotify.artist ?? msAdditionalInfo.spotify_artist_ids
         };
 
         addInfo = removeUndefinedKeys(addInfo)
