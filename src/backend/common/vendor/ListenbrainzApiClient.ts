@@ -1,7 +1,7 @@
 import { stringSameness } from '@foxxmd/string-sameness';
 import dayjs from "dayjs";
 import request, { Request, Response } from 'superagent';
-import { PlayObject, URLData } from "../../../core/Atomic.js";
+import { BrainzMeta, PlayObject, URLData } from "../../../core/Atomic.js";
 import { combinePartsToString, slice } from "../../../core/StringUtils.js";
 import {
     findDelimiters,
@@ -24,10 +24,76 @@ import { listenObjectResponseToPlay } from './koito/KoitoApiClient.js';
 import { log } from 'console';
 import { version } from '../../ioc.js';
 
+/*
+ * https://musicbrainz.org/doc/MusicBrainz_Database/Schema#Overview
+*/
+
+/** A unique product a Recording is issued on.
+ * 
+ * This is like an album (release group) but is specific to the type, year, catalog, etc... for this release
+ * 
+ * EX: 1984 US release of "The Wall" by "Pink Floyd", release on label "Columbia Records" with catalog number "C2K 36183"
+ * 
+ * @see https://musicbrainz.org/doc/Release
+ * 
+ * Referred to in MB api response as release_mbid
+ * 
+*/
+type ReleaseMbid = string;
+
+/** The "abstract", non-unique album/single/EP the Recording belongs to
+ * 
+ * This is what people normally think of as an album (release group)
+ * 
+ * EX: "The Wall" by "Pink Floyd"
+ * 
+ * @see https://musicbrainz.org/doc/Release
+ * 
+ * Referred to in MB api response as release_group -> mbid
+ * 
+*/
+type ReleaseGroupMbid = string;
+
+/** A unique mix/edit/master of a Work
+ * 
+ * This is like a song but is unique to the master/edit of the song
+ * 
+ * 
+ * * Album version of the track "Into the Blue" by "Moby"
+ * * Remix "Into the Blue (Buzz Boys Main Room Mayhem mix)" by "Moby"
+ * 
+ * @see https://musicbrainz.org/doc/Recording
+ * 
+ * Referred to in MB api response as recording_mbid
+ */
+type RecordingMbid = string;
+
+/** The "abstract", non-unique Song produced by an Artist
+ * 
+ * All Recordings "belong" to a single Work
+ * 
+ * EX: Song "Into the Blue" by "Moby"
+ * 
+ *  @see Song "Into the Blue" by "Moby"
+ */
+type WorkMbid = string;
+
+/** A musician or group or musicians that release music
+ * 
+ * @see https://musicbrainz.org/doc/Artist
+ * 
+ * MB does not distinguish between Artist and Album Artists in API responses except for by release_artist_name in additional_info
+ * All artists/album artists are included in mbid_mappings artists
+ * 
+*/
+type ArtistMbid = string;
+
+/** A unique, random identifier used for each scrobble. Not the same as recording_mbid */
+type RecordingMsid = string;
 
 export interface ArtistMBIDMapping {
     artist_credit_name: string
-    artist_mbid: string
+    artist_mbid: ArtistMbid
     join_phrase: string
 }
 
@@ -38,10 +104,10 @@ export interface MinimumTrack {
 }
 
 export interface AdditionalTrackInfo {
-    artist_mbids?: string[]
-    release_mbid?: string
-    release_group_mbid?: string
-    recording_mbid?: string
+    artist_mbids?: ArtistMbid[]
+    release_mbid?: ReleaseMbid
+    release_group_mbid?: ReleaseGroupMbid
+    recording_mbid?: RecordingMbid
     submission_client?: string
     submission_client_version?: string
     spotify_id?: string
@@ -56,17 +122,17 @@ export interface AdditionalTrackInfo {
 
     duration_ms?: number
     track_mbid?: string
-    work_mbids?: string[]
+    work_mbids?: WorkMbid[]
 }
 
 export interface Track {
     artist_name: string;
     track_name: string;
     release_name?: string;
-    artist_mbids?: string[];
-    artist_msid?: string;
+    artist_mbids?: ArtistMbid[];
+    artist_msid?: ArtistMbid;
     recording_mbid?: string;
-    release_mbid?: string;
+    release_mbid?: ReleaseMbid;
     release_msid?: string;
     tags?: string[];
 
@@ -74,7 +140,9 @@ export interface Track {
 }
 
 export interface AdditionalTrackInfoResponse extends AdditionalTrackInfo {
-    recording_msid?: string
+    recording_msid?: RecordingMsid
+    release_artist_name?: string
+    release_artists_names?: string
 }
 
 // using submit-listens example from openapi https://rain0r.github.io/listenbrainz-openapi/index.html#/lbCore/submitListens
@@ -96,7 +164,7 @@ export interface TrackPayload extends MinimumTrack {
 
 export interface ListenPayload {
     listened_at: Date | number;
-    recording_msid?: string;
+    recording_msid?: RecordingMsid;
     track_metadata: TrackPayload;
 }
 
@@ -117,12 +185,13 @@ export interface TrackResponse extends MinimumTrack {
     additional_info: AdditionalTrackInfoResponse
     mbid_mapping: {
         recording_name?: string
-        artist_mbids?: string[]
+        artist_mbids?: ArtistMbid[]
         artists?: ArtistMBIDMapping[]
         caa_id?: number
+        /** cover album archive mbid, not related to anything else I think */
         caa_release_mbid?: string
-        recording_mbid?: string
-        release_mbid?: string
+        recording_mbid?: RecordingMbid
+        release_mbid?: ReleaseMbid
     }
 }
 
@@ -135,7 +204,7 @@ export interface ListenResponse {
 
     inserted_at: number
     listened_at: number;
-    recording_msid?: string;
+    recording_msid?: RecordingMsid;
     track_metadata: TrackResponse;
 }
 export class ListenbrainzApiClient extends AbstractApiClient {
@@ -398,7 +467,12 @@ export class ListenbrainzApiClient extends AbstractApiClient {
                 mbid_mapping: {
                     recording_name,
                     artists: artistMappings = [],
-                    recording_mbid: mRecordingMbid
+                    recording_mbid: mRecordingMbid,
+                    release_mbid
+                } = {},
+                additional_info: {
+                    release_artists_names = [],
+                    release_group_mbid
                 } = {}
             } = {}
         } = listen;
@@ -419,6 +493,8 @@ export class ListenbrainzApiClient extends AbstractApiClient {
 
         let filteredSubmittedArtistName = artist_name;
         let filteredSubmittedTrackName = track_name;
+
+        let primaryArtist;
 
         if(artistMappings.length > 0) {
 
@@ -516,7 +592,7 @@ export class ListenbrainzApiClient extends AbstractApiClient {
             // now we check that primary artist exists in mapped artists
             const candidatedPrimaryArtist = artistsFromUserValues[0];
             const normalizedCandidatePrimary = normalizeStr(candidatedPrimaryArtist);
-            const primaryArtist = mappedArtists.find(x => {
+            primaryArtist = mappedArtists.find(x => {
                 if(normalizeStr(x) === normalizedCandidatePrimary)
                 {
                     return true;
@@ -535,6 +611,12 @@ export class ListenbrainzApiClient extends AbstractApiClient {
 
             // now we have the primary artist matched!
             // at this point we assume any differences between user and MB artists is a data discrepancy rather than being outright wrong
+
+            /*
+            *
+            * Can safely use musicbrainz metadata beyond this point!
+            *
+            */
 
             // next we match up user artists with mapped artists in order to use "more correct" spelling/punctuation/etc. from MB mapping
             const mappedUserArtists: string[] = [];
@@ -597,14 +679,40 @@ export class ListenbrainzApiClient extends AbstractApiClient {
             normalTrackName = recording_name;
         }
 
-        return {
+        const brainzMetaRaw: BrainzMeta = {
+            ...(naivePlay.data.meta.brainz ?? {}),
+            artist: artistMappings.map(x => x.artist_mbid),
+            album: release_mbid,
+            releaseGroup: release_group_mbid
+        }
+
+        // this should always find an artist but to be safe...
+        const primaryArtistMBMapping = artistMappings.find(x => x.artist_credit_name === primaryArtist);
+        if(primaryArtistMBMapping !== undefined) {
+            // only include as primary if musicbrainz does not disagree with us
+            if(release_artists_names.length === 0 || (release_artists_names.length > 0 && release_artists_names.includes(primaryArtist))) {
+                brainzMetaRaw.albumArtist = primaryArtistMBMapping.artist_mbid;
+            }
+        }
+
+        const brainzMeta = removeUndefinedKeys(brainzMetaRaw);
+
+        const play: PlayObject = {
             data: {
                 ...naivePlay.data,
                 track: normalTrackName,
-                artists: derivedArtists,
+                artists: derivedArtists
             },
             meta: naivePlay.meta
         }
+
+        if(brainzMeta !== undefined) {
+            play.data.meta = {
+                brainz: brainzMeta
+            }
+        }
+
+        return play;
     }
 
     /**
@@ -662,7 +770,7 @@ export class ListenbrainzApiClient extends AbstractApiClient {
         }
         artists = uniqueNormalizedStrArr(artists);
 
-        return {
+        const play: PlayObject = {
             data: {
                 playDate: dayjs.unix(listened_at),
                 track: normalTrackName,
@@ -672,11 +780,22 @@ export class ListenbrainzApiClient extends AbstractApiClient {
             },
             meta: {
                 source: 'listenbrainz',
-                trackId,
                 playId,
                 deviceId: combinePartsToString([music_service_name ?? music_service, submission_client, submission_client_version])
             }
         }
+
+        // we shouldn't include more metdata here because we don't know if the MB mapped data is actually correct
+        if(trackId !== undefined) {
+            play.data.meta = {
+                brainz: {
+                    track: trackId
+                }
+            }
+            play.meta.trackid = trackId;
+        }
+
+        return play;
     }
 
     static submitToPlayObj(submitObj: SubmitPayload, playObj: PlayObject): PlayObject {

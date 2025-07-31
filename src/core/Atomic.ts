@@ -66,11 +66,29 @@ export interface ListenRangeData {
     end: ListenProgress
 }
 
+/** https://musicbrainz.org/doc/MusicBrainz_Database/Schema#Overview */
 export interface BrainzMeta {
+    /**
+     *  artist_mbids
+     * 
+     *  All artists, including ft guests etc... go here */
     artist?: string[]
+    /**
+     * artists_mbid
+     * 
+     *  If multiple artists for track this is the "original" artist who is releasing the single/album */
     albumArtist?: string
+    /** 
+     * release_mbid
+     * 
+     * The unique release like --> 1984 US release of "The Wall" by "Pink Floyd", release on label "Columbia Records" with catalog number "C2K 36183"  
+     * */
     album?: string
+    /** Unique track id, recording_mbid */
     track?: string
+    /**
+     * 
+     *  The "consolidated" album like -->  "The Wall" by "Pink Floyd" */
     releaseGroup?: string
 }
 
