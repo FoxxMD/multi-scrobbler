@@ -1,7 +1,7 @@
 import { strategies, stringSameness, StringSamenessResult } from "@foxxmd/string-sameness";
 import { PlayObject } from "../../core/Atomic.js";
 import { asPlayerStateData, DELIMITERS, PlayerStateDataMaybePlay } from "../common/infrastructure/Atomic.js";
-import { genGroupIdStr, getPlatformIdFromData, parseRegexSingleOrFail } from "../utils.js";
+import { genGroupIdStr, getPlatformIdFromData, intersect, parseRegexSingleOrFail } from "../utils.js";
 import { buildTrackString } from "../../core/StringUtils.js";
 
 const {levenStrategy, diceStrategy} = strategies;
@@ -61,7 +61,7 @@ export const SECONDARY_CAPTURED_REGEX = new RegExp(/[([]\s*(?<joiner>ft\.?\W|fea
  *    !!!!  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ *******
  *
  * */
-export const SECONDARY_FREE_REGEX = new RegExp(/^\s*(?<joiner>ft\.?\W|feat\.?\W|featuring|vs\.?\W)\s*(?<credits>(?:.+?(?= - |\s*[([]))|(?:.*))(?<creditsSuffix>.*)/i);
+export const SECONDARY_FREE_REGEX = new RegExp(/^\s*(?<joiner>ft\.?\W|feat\.?\W|featuring|vs\.?\W)\s*(?<credits>(?:.+?(?= - |\s*[([].+[)\]]$))|(?:.*))(?<creditsSuffix>.*)/i);
 
 const SECONDARY_REGEX_STRATS: RegExp[] = [SECONDARY_CAPTURED_REGEX, SECONDARY_FREE_REGEX];
 
@@ -116,7 +116,7 @@ export const parseCredits = (str: string, delimiters?: boolean | string[]): Play
         for(const strat of SECONDARY_REGEX_STRATS) {
             const secCredits = parseRegexSingleOrFail(strat, results.named.secondary);
             if(secCredits !== undefined) {
-                secondary = parseStringList(secCredits.named.credits as string, delims)
+                secondary = parseContextAwareStringList(secCredits.named.credits as string, delims)
                 suffix = secCredits.named.creditsSuffix;
                 break;
             }
@@ -148,7 +148,7 @@ export const parseArtistCredits = (str: string, delimiters?: boolean | string[])
     if (withJoiner !== undefined) {
         // all this does is make sure and "ft" or parenthesis/brackets are separated --
         // it doesn't also separate primary artists so do that now
-        const primaries = parseStringList(withJoiner.primary, delims);
+        const primaries = parseContextAwareStringList(withJoiner.primary, delims);
         if (primaries.length > 1) {
             return {
                 primary: primaries[0],
@@ -181,6 +181,50 @@ export const parseStringList = (str: string, delimiters: string[] = [',', '&', '
         const explodedStrings = acc.map(x => x.split(curr));
         return explodedStrings.flat(1);
     }, [str]).map(x => x.trim());
+}
+export const parseContextAwareStringList = (str: string, delimiters: string[] = [',', '/', '\\'], opts: {ignoreGlobalAmpersand?: boolean} = {}): string[] => {
+    if (delimiters.length === 0) {
+        return [str];
+    }
+    // bypass tokens using slashes without spaces
+    const cleanStr = bypassJoiners(str);
+    const nonAmpersandDelims = delimiters.some(x => cleanStr.includes(x));
+    const shouldIgnoreGlobalAmpersand = opts.ignoreGlobalAmpersand ?? nonAmpersandDelims;
+
+    let awareList: string[] = [];
+
+    const list = parseStringList(cleanStr, nonAmpersandDelims === false && shouldIgnoreGlobalAmpersand === false ? ['&'] : delimiters);
+    if(shouldIgnoreGlobalAmpersand && list.length > 1 && list[list.length - 1].includes('&') && nonAmpersandDelims) { //&& !list[list.length - 1].includes('& the')
+        awareList = list.slice(0, list.length - 1).concat(list[list.length - 1].split('&') );
+    } else {
+        awareList = list;
+    }
+    return awareList.map(x =>rejoinBypassed(x.trim()));
+}
+
+const bypassJoinerMap = [
+    {
+        rejoin: str => str.replaceAll(/(.*?\S)(\^\^\^)(\S.*?)/g, '$1/$3'),
+        bypass: str => str.replaceAll(/(.*?\S)(\/)(\S.*?)/g, '$1^^^$3')
+    },
+    {
+        rejoin: str => str.replaceAll(/(.*)(###)(.*)/g, '$1\\$3'),
+        bypass: str => str.replaceAll(/(.*\S)(\\)(.*\S)/g, '$1###$3')
+    }
+];
+export const bypassJoiners = (str: string): string => {
+    let bypassed: string = str;
+    for(const b of bypassJoinerMap) {
+        bypassed = b.bypass(bypassed)
+    }
+    return bypassed;
+}
+export const rejoinBypassed = (str: string): string => {
+    let bypassed: string = str;
+    for(const b of bypassJoinerMap) {
+        bypassed = b.rejoin(bypassed)
+    }
+    return bypassed;
 }
 export const containsDelimiters = (str: string) => null !== str.match(/[,&/\\]+/i)
 export const findDelimiters = (str: string) => {
