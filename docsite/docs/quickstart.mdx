@@ -57,20 +57,17 @@ services:
         ```
     </TabItem>
     <TabItem value="spotify" label="Spotify">
-        To access your Spotify activity you must [register a Spotify application](https://developer.spotify.com/dashboard) to get a
-        **Client ID/Secret**.
+        To access your Spotify activity you must [create a Spotify App](https://developer.spotify.com/dashboard) to get a
+        **Client ID/Secret** and set a valid **Redirect URI**.
+        
+        Refer to the [Spotify Authentication instructions in the docs.](./configuration/configuration.mdx#authenticate-spotify-with-multi-scrobbler)
 
-        When creating the application add this to **Redirect URIs**
-
-        ```
-        http://192.168.0.100:9078/callback
-        ```
-
-        After the application is created add these values to the `environment` section in the [`docker-compose.yml` you created.](#create-docker-compose-file)
+        Assuming you used the **HTTPS** method for your **Redirect URI** from the instructions above...after the application is created add these values to the `environment` section in the [`docker-compose.yml` you created.](#create-docker-compose-file)
 
         ```yaml title="~/msData/docker-compose.yml"
         - SPOTIFY_CLIENT_ID=yourClientId
         - SPOTIFY_CLIENT_SECRET=yourClientSecret
+        - SPOTIFY_REDIRECT_URI=https://multi-scrobbler.mydomain.com/callback
         ```
 
         Later, after [starting multi-scrobbler](#start-multi-scrobbler), visit the dashboard at `http://192.168.0.100:9078` and click **(Re)authenticate** on the Spotify card to authorize multi-scrobbler to use your account. Monitoring will begin automatically after authorization is complete.
