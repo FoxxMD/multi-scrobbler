@@ -1,7 +1,7 @@
 import { RequestRetryOptions } from "../common.js";
 import { CommonClientConfig, CommonClientData } from "./index.js";
 
-export interface MalojaClientData extends RequestRetryOptions, CommonClientData {
+export interface MalojaData extends RequestRetryOptions {
     /**
      * URL for maloja server
      *
@@ -16,7 +16,18 @@ export interface MalojaClientData extends RequestRetryOptions, CommonClientData 
     apiKey: string
 }
 
+export interface MalojaClientData extends MalojaData, CommonClientData {
+
+}
+
 export interface MalojaClientConfig extends CommonClientConfig {
+    /**
+     * Should always be `client` when using Maloja as a client
+     *
+     * @default client
+     * @examples ["client"]
+     * */
+    configureAs?: 'client' | 'source'
     data: MalojaClientData
 }
 
