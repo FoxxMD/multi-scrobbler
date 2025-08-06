@@ -26,6 +26,7 @@ export type SourceType =
     | 'kodi'
     | 'webscrobbler'
     | 'chromecast'
+    | 'maloja'
     | 'musikcube'
     | 'mpd'
     | 'vlc'
@@ -52,6 +53,7 @@ export const sourceTypes: SourceType[] = [
     'kodi',
     'webscrobbler',
     'chromecast',
+    'maloja',
     'musikcube',
     'mpd',
     'vlc',
