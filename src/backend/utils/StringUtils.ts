@@ -134,7 +134,7 @@ export const parseCredits = (str: string, delimiters?: boolean | string[]): Play
     }
     return undefined;
 }
-export const parseArtistCredits = (str: string, delimiters?: boolean | string[]): PlayCredits | undefined => {
+export const parseArtistCredits = (str: string, delimiters?: boolean | string[], ignoreGlobalAmpersand?: boolean): PlayCredits | undefined => {
     if (str.trim() === '') {
         return undefined;
     }
@@ -148,7 +148,7 @@ export const parseArtistCredits = (str: string, delimiters?: boolean | string[])
     if (withJoiner !== undefined) {
         // all this does is make sure and "ft" or parenthesis/brackets are separated --
         // it doesn't also separate primary artists so do that now
-        const primaries = parseContextAwareStringList(withJoiner.primary, delims);
+        const primaries = parseContextAwareStringList(withJoiner.primary, delims, {ignoreGlobalAmpersand: ignoreGlobalAmpersand ?? false});
         if (primaries.length > 1) {
             return {
                 primary: primaries[0],
@@ -159,7 +159,7 @@ export const parseArtistCredits = (str: string, delimiters?: boolean | string[])
         return withJoiner;
     }
     // likely this is a plain string with just delims
-    const artists = parseStringList(str, delims);
+    const artists = parseContextAwareStringList(str, delims, {ignoreGlobalAmpersand: ignoreGlobalAmpersand ?? true});
     if (artists.length > 1) {
         return {
             primary: artists[0],
@@ -173,7 +173,7 @@ export const parseArtistCredits = (str: string, delimiters?: boolean | string[])
     }
 }
 export const parseTrackCredits = (str: string, delimiters?: boolean | string[]): PlayCredits | undefined => parseCredits(str, delimiters);
-export const parseStringList = (str: string, delimiters: string[] = [',', '&', '/', '\\']): string[] => {
+export const parseStringList = (str: string, delimiters: string[] = DELIMITERS): string[] => {
     if (delimiters.length === 0) {
         return [str];
     }
@@ -227,9 +227,9 @@ export const rejoinBypassed = (str: string): string => {
     return bypassed;
 }
 export const containsDelimiters = (str: string) => null !== str.match(/[,&/\\]+/i)
-export const findDelimiters = (str: string) => {
+export const findDelimiters = (str: string, delimiters = DELIMITERS) => {
     const found: string[] = [];
-    for (const d of DELIMITERS) {
+    for (const d of delimiters) {
         if (str.indexOf(d) !== -1) {
             found.push(d);
         }

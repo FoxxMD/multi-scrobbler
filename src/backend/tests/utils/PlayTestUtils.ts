@@ -181,7 +181,13 @@ export const generatePlays = (numberOfPlays: number, data: ObjectPlayData = {}, 
 
 export const generateArtist = () => faker.music.artist;
 
-export const generateArtists = (num?: number, max: number = 3, opts: {ambiguousJoinedNames?: boolean, trailingAmpersand?: boolean} = {}) => {
+export interface ArtistGenerationOptions
+{
+    ambiguousJoinedNames?: boolean, 
+    trailingAmpersand?: boolean
+}
+
+export const generateArtists = (num?: number, max: number = 3, opts: ArtistGenerationOptions = {}) => {
     if(num === 0 || max === 0) {
         return [];
     }
@@ -214,7 +220,7 @@ export const generateArtists = (num?: number, max: number = 3, opts: {ambiguousJ
     return artists;
 }
 
-export interface ArtistGenerateOptions {
+export interface ArtistGenerateOptions extends ArtistGenerationOptions {
     num?: number
     max?: number
     joiner?: string

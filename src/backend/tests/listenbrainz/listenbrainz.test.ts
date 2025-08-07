@@ -27,7 +27,7 @@ interface LZTestFixture {
     data: ListenResponse
     expected: ExpectedResults
 }
-describe('Listenbrainz Listen Parsing', function () {
+describe('#PlayParse Listenbrainz Listen Parsing', function () {
 
     describe('When user-submitted artist/track do NOT match MB mappings', function() {
         it('Uses user submitted values when no artist mappings', async function () {
@@ -56,7 +56,7 @@ describe('Listenbrainz Listen Parsing', function () {
     })
 
 
-    describe('When user-submitted artist/track matches a MB mapped value', function() {
+    describe('#PlayParse When user-submitted artist/track matches a MB mapped value', function() {
 
         it('Detects slightly different track names as equal', async function () {
             for(const test of slightlyDifferentNames as unknown as LZTestFixture[]) {
