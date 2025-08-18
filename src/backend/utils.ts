@@ -285,7 +285,9 @@ export const removeUndefinedKeys = <T extends Record<string, any>>(obj: T): T | 
         if(Array.isArray(obj[key])) {
             newObj[key] = obj[key];
         } else if (obj[key] === Object(obj[key])) {
-            newObj[key] = removeUndefinedKeys(obj[key]);
+            // dumb assign nested objects
+            // bc they may be third party library-objects that use prototyping and we don't want to mess with
+            newObj[key] = obj[key]; 
         } else if (obj[key] !== undefined) {
             newObj[key] = obj[key];
         }
