@@ -8,7 +8,7 @@ import { PlayObject, URLData } from "../../../../core/Atomic.js";
 import { AbstractApiOptions, DEFAULT_RETRY_MULTIPLIER, FormatPlayObjectOptions } from "../../infrastructure/Atomic.js";
 import { isNodeNetworkException } from "../../errors/NodeErrors.js";
 import { isSuperAgentResponseError } from "../../errors/ErrorUtils.js";
-import { parseRetryAfterSecsFromObj, sleep } from "../../../utils.js";
+import { getNonEmptyVal, parseRetryAfterSecsFromObj, removeUndefinedKeys, sleep } from "../../../utils.js";
 import { UpstreamError } from "../../errors/UpstreamError.js";
 import { getMalojaResponseError, isMalojaAPIErrorBody, MalojaResponseV3CommonData, MalojaScrobbleData, MalojaScrobbleRequestData, MalojaScrobbleV3RequestData, MalojaScrobbleV3ResponseData, MalojaScrobbleWarning } from "./interfaces.js";
 import { getScrobbleTsSOCDate, getScrobbleTsSOCDateWithContext } from '../../../utils/TimeUtils.js';
@@ -346,8 +346,8 @@ export const formatPlayObj = (obj: MalojaScrobbleData, options: FormatPlayObject
     artists = mArtists;
     time = mTime;
     title = mTitle;
-    duration = mLength;
-    listenedFor = mDuration;
+    duration = getNonEmptyVal(mLength);
+    listenedFor = getNonEmptyVal(mDuration);
     if (mAlbum !== null) {
         const {
             albumtitle,
@@ -369,14 +369,14 @@ export const formatPlayObj = (obj: MalojaScrobbleData, options: FormatPlayObject
     }, []);
     const urlParams = new URLSearchParams([['artist', artists[0]], ['title', title]]);
     return {
-        data: {
+        data: removeUndefinedKeys({
             artists: [...new Set(artistStrings)] as string[],
             track: title,
             album,
             duration,
             listenedFor,
             playDate: dayjs.unix(time),
-        },
+        }),
         meta: {
             source: 'Maloja',
             url: {

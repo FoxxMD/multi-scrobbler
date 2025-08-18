@@ -611,23 +611,36 @@ export const comparingMultipleArtists = (existing: PlayObject, candidate: PlayOb
     return eArtists.length > 1 || cArtists.length > 1;
 }
 
-export const getFirstNonEmptyVal = <T = unknown>(values: unknown[], options: {ofType?: string, test?: (val: T) => boolean} = {}): NonNullable<T> | undefined => {
+export interface NonEmptyOptions<T> {
+    ofType?: string, 
+    test?: (val: T) => boolean
+}
+export const getFirstNonEmptyVal = <T = unknown>(values: unknown[], options: NonEmptyOptions<T> = {}): NonNullable<T> | undefined => {
     for(const v of values) {
-        if(v === undefined || v === null) {
-            continue;
+        const nonEmptyVal = getNonEmptyVal(v, options);
+        if(nonEmptyVal !== undefined) {
+            return nonEmptyVal as T;
         }
-        if(options.ofType !== undefined && typeof v !== options.ofType) {
-            continue;
-        }
-        if(options.test !== undefined && options.test(v as T) === false) {
-            continue;
-        }
-        return v as T;
     }
     return undefined;
 }
 
-export const getFirstNonEmptyString = (values: unknown[]) => getFirstNonEmptyVal<string>(values, {ofType: 'string', test: (v) => v.trim() !== ''});
+export const getNonEmptyVal = <T = unknown>(value: unknown, options: NonEmptyOptions<T> = {}): NonNullable<T> | undefined => {
+    if (value === undefined || value === null) {
+        return undefined;
+    }
+    if (options.ofType !== undefined && typeof value !== options.ofType) {
+        return undefined;
+    }
+    if (options.test !== undefined && options.test(value as T) === false) {
+        return undefined;
+    }
+    return value as T;
+}
+
+const nonEmptyStringOpts: NonEmptyOptions<string> = { ofType: 'string', test: (v) => v.trim() !== '' };
+export const getFirstNonEmptyString = (values: unknown[]) => getFirstNonEmptyVal<string>(values, nonEmptyStringOpts);
+export const getNonEmptyString = (value: unknown) => getNonEmptyVal<string>(value, nonEmptyStringOpts);
 
   /**
  * Runs the function `fn`
