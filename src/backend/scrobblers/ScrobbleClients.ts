@@ -270,7 +270,6 @@ export default class ScrobbleClients {
                     }
                     try {
                         const validConfig = validateJson<ClientConfig>(rawConf, this.getSchemaByType(clientType), this.logger);
-                        // @ts-expect-error configureAs should exist
                         const {configureAs = defaultConfigureAs} = validConfig;
                         if (configureAs === 'client') {
                             const parsedConfig: ParsedConfig = {

@@ -25,6 +25,7 @@ import { MPDSourceConfig } from "../common/infrastructure/config/source/mpd.js";
 import { MPRISData, MPRISSourceConfig } from "../common/infrastructure/config/source/mpris.js";
 import { MusikcubeData, MusikcubeSourceConfig } from "../common/infrastructure/config/source/musikcube.js";
 import { PlexApiSourceConfig, PlexCompatConfig, PlexSourceConfig } from "../common/infrastructure/config/source/plex.js";
+import { MalojaSourceConfig } from "../common/infrastructure/config/source/maloja.js";
 import { SourceAIOConfig, SourceConfig } from "../common/infrastructure/config/source/sources.js";
 import { SpotifySourceConfig, SpotifySourceData } from "../common/infrastructure/config/source/spotify.js";
 import { SubsonicData, SubSonicSourceConfig } from "../common/infrastructure/config/source/subsonic.js";
@@ -67,6 +68,7 @@ import { IcecastSource } from './IcecastSource.js';
 import DeezerInternalSource from './DeezerInternalSource.js';
 import KoitoSource from './KoitoSource.js';
 import { KoitoSourceConfig } from '../common/infrastructure/config/source/koito.js';
+import MalojaSource from './MalojaSource.js';
 
 type groupedNamedConfigs = {[key: string]: ParsedConfig[]};
 
@@ -164,6 +166,9 @@ export default class ScrobbleSources {
                     break;
                 case 'ytmusic':
                     this.schemaDefinitions[type] = getTypeSchemaFromConfigGenerator("YTMusicSourceConfig");
+                    break;
+                case 'maloja':
+                    this.schemaDefinitions[type] = getTypeSchemaFromConfigGenerator("MalojaSourceConfig");
                     break;
                 case 'mpris':
                     this.schemaDefinitions[type] = getTypeSchemaFromConfigGenerator("MPRISSourceConfig");
@@ -697,8 +702,8 @@ export default class ScrobbleSources {
                     continue;
                 }
                 for (const [i,rawConf] of sourceConfigs.entries()) {
-                    if(['lastfm','listenbrainz','koito'].includes(sourceType) && 
-                    ((rawConf as LastfmSourceConfig | ListenBrainzSourceConfig | KoitoSourceConfig).configureAs !== 'source')) 
+                    if(['lastfm','listenbrainz','koito','maloja'].includes(sourceType) && 
+                    ((rawConf as LastfmSourceConfig | ListenBrainzSourceConfig | KoitoSourceConfig | MalojaSourceConfig).configureAs !== 'source')) 
                     {
                         this.logger.debug(`Skipping config ${i + 1} from ${sourceType}.json because it is configured as a client.`);
                         continue;
@@ -872,6 +877,9 @@ export default class ScrobbleSources {
                 break;
             case 'koito':
                 newSource = await new KoitoSource(name, compositeConfig as KoitoSourceConfig, this.internalConfig, this.emitter);
+                break;
+            case 'maloja':
+                newSource = await new MalojaSource(name, compositeConfig as MalojaSourceConfig, this.internalConfig, this.emitter);
                 break;
             default:
                 break;

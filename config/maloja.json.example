@@ -1,7 +1,17 @@
 [
   {
-    "name": "myMaloja",
+    "name": "myMaloja-client",
     "enable": true,
+    "configureAs": "client",
+    "data": {
+      "url": "http://localhost:42010",
+      "apiKey": "myMalojaKey"
+    }
+  },
+    {
+    "name": "myMaloja-source",
+    "enable": true,
+    "configureAs": "source",
     "data": {
       "url": "http://localhost:42010",
       "apiKey": "myMalojaKey"

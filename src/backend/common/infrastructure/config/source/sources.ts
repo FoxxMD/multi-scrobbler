@@ -22,6 +22,7 @@ import { WebScrobblerSourceAIOConfig, WebScrobblerSourceConfig } from "./webscro
 import { YTMusicSourceAIOConfig, YTMusicSourceConfig } from "./ytmusic.js";
 import { IcecastSourceAIOConfig, IcecastSourceConfig } from "./icecast.js";
 import { KoitoSourceAIOConfig, KoitoSourceConfig } from "./koito.js";
+import { MalojaSourceAIOConfig, MalojaSourceConfig } from "./maloja.js";
 
 
 export type SourceConfig =
@@ -45,6 +46,7 @@ export type SourceConfig =
     | KodiSourceConfig
     | WebScrobblerSourceConfig
     | ChromecastSourceConfig
+    | MalojaSourceConfig
     | MusikcubeSourceConfig
     | MusicCastSourceConfig
     | MPDSourceConfig
@@ -74,6 +76,7 @@ export type SourceAIOConfig =
     | KodiSourceAIOConfig
     | WebScrobblerSourceAIOConfig
     | ChromecastSourceAIOConfig
+    | MalojaSourceAIOConfig
     | MusikcubeSourceAIOConfig
     | MusicCastSourceAIOConfig
     | MPDSourceAIOConfig
