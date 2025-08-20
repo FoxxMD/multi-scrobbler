@@ -24,6 +24,7 @@ A javascript app to scrobble music you listened to, to [Maloja](https://github.c
   * [Last.fm (Endpoint)](https://foxxmd.github.io/multi-scrobbler/docs/configuration#lastfm-endpoint)
   * [ListenBrainz](https://foxxmd.github.io/multi-scrobbler/docs/configuration#listenbrainz-source)
   * [ListenBrainz (Endpoint)](https://foxxmd.github.io/multi-scrobbler/docs/configuration#listenbrainz-endpoint)
+  * [Maloja](https://foxxmd.github.io/multi-scrobbler/docs/configuration#maloja-source)
   * [Mopidy](https://foxxmd.github.io/multi-scrobbler/docs/configuration#mopidy)
   * [MPD (Music Player Daemon)](https://foxxmd.github.io/multi-scrobbler/docs/configuration#mpd-music-player-daemon)
   * [MPRIS (Linux Desktop)](https://foxxmd.github.io/multi-scrobbler/docs/configuration#mpris)
