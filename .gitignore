@@ -118,6 +118,7 @@ dist
 .pnp.*
 
 config/*.json
+config/mscache
 config/yti-*
 *.txt
 .idea/
