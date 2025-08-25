@@ -204,61 +204,6 @@ export default class LastfmApiClient extends AbstractApiClient {
             throw e;
         }
     }
-
-    public playToClientPayload(playObj: PlayObject): TrackScrobblePayload {
-        const {
-            data: {
-                artists = [],
-                album,
-                albumArtists = [],
-                track,
-                duration,
-                playDate,
-                meta: {
-                    brainz: {
-                        track: mbid
-                    } = {},
-                } = {}
-            } = {}
-        } = playObj;
-
-        // LFM does not support multiple artists in scrobble payload
-        // https://www.last.fm/api/show/track.scrobble
-        let artist: string;
-        if (artists.length === 0) {
-            artist = "";
-        } else {
-            artist = artists[0];
-        }
-
-        const additionalRichPayload: Partial<TrackScrobblePayload> = {};
-        if(duration !== 0) {
-            additionalRichPayload.duration = duration;
-        } 
-
-        const rawPayload: TrackScrobblePayload = {
-            artist: artist,
-            track,
-            album,
-            timestamp: getScrobbleTsSOCDate(playObj).unix(),
-            mbid,
-            ...additionalRichPayload
-        };
-
-        // LFM does not support multiple artists in scrobble payload
-        // https://www.last.fm/api/show/track.scrobble
-        if (albumArtists.length > 0) {
-            rawPayload.albumArtist = albumArtists[0];
-        }
-
-        // I don't know if its lastfm-node-client building the request params incorrectly
-        // or the last.fm api not handling the params correctly...
-        //
-        // ...but in either case if any of the below properties is undefined (possibly also null??)
-        // then last.fm responds with an IGNORED scrobble and error code 1 (totally unhelpful)
-        // so remove all undefined keys from the object before passing to the api client
-        return removeUndefinedKeys(rawPayload);
-    }
 }
 
 export const scrobblePayloadToPlay = (obj: LastfmTrackUpdateRequest): PlayObject => {
@@ -317,3 +262,61 @@ export const scrobblePayloadToPlay = (obj: LastfmTrackUpdateRequest): PlayObject
 
     return play;
 }
+
+export const playToClientPayload = (playObj: PlayObject): TrackScrobblePayload => {
+        const {
+            data: {
+                artists = [],
+                album,
+                albumArtists = [],
+                track,
+                duration,
+                playDate,
+                meta: {
+                    brainz: {
+                        track: mbid
+                    } = {},
+                } = {}
+            } = {}
+        } = playObj;
+
+        // LFM does not support multiple artists in scrobble payload
+        // https://www.last.fm/api/show/track.scrobble
+        let artist: string;
+        if (artists.length === 0) {
+            artist = "";
+        } else {
+            artist = artists[0];
+        }
+
+        const additionalRichPayload: Partial<TrackScrobblePayload> = {};
+        if(duration !== 0) {
+            additionalRichPayload.duration = duration;
+        } 
+
+        const rawPayload: TrackScrobblePayload = {
+            artist: artist,
+            track,
+            album,
+            timestamp: getScrobbleTsSOCDate(playObj).unix(),
+            mbid,
+            ...additionalRichPayload
+        };
+
+        // LFM ignores scrobbles where album artist is VA
+        // https://github.com/FoxxMD/multi-scrobbler/issues/340#issuecomment-3220774257
+        const nonVaAlbumArtists = albumArtists.filter(x => x.trim().toLocaleLowerCase() !== 'va');
+        // LFM does not support multiple artists in scrobble payload
+        // https://www.last.fm/api/show/track.scrobble
+        if (nonVaAlbumArtists.length > 0) {
+            rawPayload.albumArtist = nonVaAlbumArtists[0];
+        }
+
+        // I don't know if its lastfm-node-client building the request params incorrectly
+        // or the last.fm api not handling the params correctly...
+        //
+        // ...but in either case if any of the below properties is undefined (possibly also null??)
+        // then last.fm responds with an IGNORED scrobble and error code 1 (totally unhelpful)
+        // so remove all undefined keys from the object before passing to the api client
+        return removeUndefinedKeys(rawPayload);
+    }
