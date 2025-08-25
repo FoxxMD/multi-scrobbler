@@ -7,7 +7,7 @@ import { isNodeNetworkException } from "../common/errors/NodeErrors.js";
 import { UpstreamError } from "../common/errors/UpstreamError.js";
 import { FormatPlayObjectOptions } from "../common/infrastructure/Atomic.js";
 import { LastfmClientConfig } from "../common/infrastructure/config/client/lastfm.js";
-import LastfmApiClient from "../common/vendor/LastfmApiClient.js";
+import LastfmApiClient, { playToClientPayload } from "../common/vendor/LastfmApiClient.js";
 import { Notifiers } from "../notifier/Notifiers.js";
 import AbstractScrobbleClient from "./AbstractScrobbleClient.js";
 
@@ -103,7 +103,7 @@ export default class LastfmScrobbler extends AbstractScrobbleClient {
     alreadyScrobbled = async (playObj: PlayObject, log = false) => (await this.existingScrobble(playObj)) !== undefined
 
     public playToClientPayload(playObject: PlayObject): object {
-        return this.api.playToClientPayload(playObject);
+        return playToClientPayload(playObject);
     }
 
     doScrobble = async (playObj: PlayObject) => {
@@ -116,7 +116,7 @@ export default class LastfmScrobbler extends AbstractScrobbleClient {
 
         const sType = newFromSource ? 'New' : 'Backlog';
 
-        const scrobblePayload = this.api.playToClientPayload(playObj);
+        const scrobblePayload = playToClientPayload(playObj);
 
         try {
             const response = await this.api.callApi<TrackScrobbleResponse>((client: any) => client.trackScrobble(
@@ -173,7 +173,7 @@ export default class LastfmScrobbler extends AbstractScrobbleClient {
 
     doPlayingNow = async (data: PlayObject) => {
         try {
-            const {timestamp, mbid, ...rest} = this.api.playToClientPayload(data);
+            const {timestamp, mbid, ...rest} = playToClientPayload(data);
             const response = await this.api.callApi<NowPlayingResponse>((client: any) => client.trackUpdateNowPlaying(rest));
             const {
                 nowplaying: {
