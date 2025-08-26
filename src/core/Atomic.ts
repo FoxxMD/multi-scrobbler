@@ -5,7 +5,31 @@ import { AdditionalTrackInfoResponse } from "../backend/common/vendor/listenbrai
 
 export interface SourceStatusData {
     status: string;
-    type: "spotify" | "plex" | "tautulli" | "subsonic" | "jellyfin" | "lastfm" | "deezer" | "ytmusic" | "mpris" | "mopidy" | "listenbrainz" | "jriver" | "kodi" | 'webscrobbler' | 'chromecast';
+    type: 'spotify'
+    | 'plex'
+    | 'tautulli'
+    | 'subsonic'
+    | 'jellyfin'
+    | 'lastfm'
+    | 'deezer'
+    | 'endpointlz'
+    | 'endpointlfm'
+    | 'ytmusic'
+    | 'mpris'
+    | 'mopidy'
+    | 'musiccast'
+    | 'listenbrainz'
+    | 'jriver'
+    | 'kodi'
+    | 'webscrobbler'
+    | 'chromecast'
+    | 'maloja'
+    | 'musikcube'
+    | 'mpd'
+    | 'vlc'
+    | 'icecast'
+    | 'azuracast'
+    | 'koito';
     display: string;
     tracksDiscovered: number;
     name: string;
@@ -23,7 +47,7 @@ export interface SourceStatusData {
 
 export interface ClientStatusData {
     status: string;
-    type: "maloja" | "lastfm" | "listenbrainz";
+    type: "maloja" | "lastfm" | "listenbrainz" | "koito";
     display: string;
     scrobbled: number;
     deadLetterScrobbles: number

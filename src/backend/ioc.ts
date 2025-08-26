@@ -5,9 +5,6 @@ import { createContainer } from "iti";
 import path from "path";
 import { projectDir } from "./common/index.js";
 import { WildcardEmitter } from "./common/WildcardEmitter.js";
-import { Notifiers } from "./notifier/Notifiers.js";
-import ScrobbleClients from "./scrobblers/ScrobbleClients.js";
-import ScrobbleSources from "./sources/ScrobbleSources.js";
 
 import { generateBaseURL } from "./utils/NetworkUtils.js";
 import { PassThrough } from "stream";
@@ -22,7 +19,7 @@ let root: ReturnType<typeof createRoot>;
 
 export interface RootOptions {
     baseUrl?: string,
-    port?: string | number
+    port?: number
     logger: Logger
     disableWeb?: boolean
     loggerStream?: PassThrough
@@ -51,23 +48,24 @@ const createRoot = (options?: RootOptions) => {
         const f = e;
     });
 
+    const portVal: number | string = process.env.PORT ?? port;
+
     return createContainer().add({
         version,
         configDir: configDir,
         isProd: process.env.NODE_ENV !== undefined && (process.env.NODE_ENV === 'production' || process.env.NODE_ENV === 'prod'),
-        port: process.env.PORT ?? port,
+        // @ts-ignore
+        port: (Number.isInteger(portVal) ? portVal : Number.parseInt(portVal)) as number,
         disableWeb,
         clientEmitter: () => cEmitter,
         sourceEmitter: () => sEmitter,
         notifierEmitter: () => new EventEmitter(),
         loggerStream,
         loggingConfig,
+        logger: options.logger
     }).add((items) => {
         const localUrl = generateBaseURL(baseUrl, items.port)
         return {
-            clients: () => new ScrobbleClients(items.clientEmitter, items.sourceEmitter, localUrl, items.configDir, options.logger),
-            sources: () => new ScrobbleSources(items.sourceEmitter, { localUrl, configDir: items.configDir, version }, options.logger),
-            notifiers: () => new Notifiers(items.notifierEmitter, items.clientEmitter, items.sourceEmitter, options.logger),
             localUrl,
             hasDefinedBaseUrl: baseUrl !== undefined,
             isSubPath: localUrl.pathname !== '/' && localUrl.pathname.length > 0
