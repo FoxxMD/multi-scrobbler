@@ -7,6 +7,7 @@ import {
     InternalConfig,
     NO_USER,
     PlayerStateData,
+    PlayPlatformId,
     REPORTED_PLAYER_STATUSES,
     ReportedPlayerStatus
 } from "../common/infrastructure/Atomic.js";
@@ -16,6 +17,9 @@ import { SubmitPayload } from '../common/vendor/listenbrainz/interfaces.js';
 import { ListenPayload } from '../common/vendor/listenbrainz/interfaces.js';
 import { parseRegexSingleOrFail } from "../utils.js";
 import MemorySource from "./MemorySource.js";
+import { NowPlayingPlayerState } from "./PlayerState/NowPlayingPlayerState.js";
+import { Logger } from "@foxxmd/logging";
+import { PlayerStateOptions } from "./PlayerState/AbstractPlayerState.js";
 
 const noSlugMatch = new RegExp(/(?:\/api\/listenbrainz\/?)$|(?:\/1\/?|\/1\/submit-listens\/?)$/i);
 const slugMatch = new RegExp(/\/api\/listenbrainz\/([^\/]+)$/i);
@@ -94,6 +98,8 @@ export class EndpointListenbrainzSource extends MemorySource {
             }
         }
     }
+
+    getNewPlayer = (logger: Logger, id: PlayPlatformId, opts: PlayerStateOptions) => new NowPlayingPlayerState(logger,  id, opts);
 }
 
 export const playStateFromRequest = (obj: SubmitPayload): PlayerStateData => {
