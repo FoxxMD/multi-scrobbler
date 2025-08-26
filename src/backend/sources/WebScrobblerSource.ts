@@ -6,6 +6,7 @@ import {
     InternalConfig,
     NO_USER,
     PlayerStateData,
+    PlayPlatformId,
     REPORTED_PLAYER_STATUSES,
     ReportedPlayerStatus,
 } from "../common/infrastructure/Atomic.js";
@@ -18,6 +19,9 @@ import {
 
 import { joinedUrl } from "../utils/NetworkUtils.js";
 import MemorySource from "./MemorySource.js";
+import { Logger } from "@foxxmd/logging";
+import { PlayerStateOptions } from "./PlayerState/AbstractPlayerState.js";
+import { NowPlayingPlayerState } from "./PlayerState/NowPlayingPlayerState.js";
 
 export class WebScrobblerSource extends MemorySource {
 
@@ -185,4 +189,6 @@ export class WebScrobblerSource extends MemorySource {
             }
         }
     }
+
+    getNewPlayer = (logger: Logger, id: PlayPlatformId, opts: PlayerStateOptions) => new NowPlayingPlayerState(logger,  id, opts);
 }
