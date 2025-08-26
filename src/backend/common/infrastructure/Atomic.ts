@@ -349,3 +349,23 @@ export type WhenConditionsConfig = WhenConditions<string>;
 export type WithRequiredProperty<Type, Key extends keyof Type> = Type & {
   [Property in Key]-?: Type[Property];
 };
+export type CacheProvider = 'memory' | 'valkey' | 'file';
+export interface CacheConfig<T extends CacheProvider = CacheProvider> {
+    provider: T;
+    connection?: string;
+}
+export type CacheMetadaProvider = Exclude<CacheProvider, 'file'>;
+export type CacheMetadataConfig = CacheConfig<CacheMetadaProvider>;
+export const asCacheMetadataProvider = (val: string): val is CacheScrobbleProvider => {
+    return ['memory', 'valkey'].includes(val);
+};
+export type CacheScrobbleProvider = CacheProvider;
+export type CacheScrobbleConfig = CacheConfig<CacheScrobbleProvider>;
+export const asCacheScrobbleProvider = (val: string): val is CacheScrobbleProvider => {
+    return ['memory', 'valkey', 'file'].includes(val);
+};
+export interface CacheConfigOptions {
+    metadata?: CacheMetadataConfig;
+    scrobble?: CacheScrobbleConfig;
+}
+

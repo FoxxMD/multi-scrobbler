@@ -5,32 +5,7 @@ import { childLogger, Logger } from '@foxxmd/logging';
 import { projectDir } from './index.js';
 import path from 'path';
 import { fileOrDirectoryIsWriteable } from '../utils.js';
-
-export type CacheProvider = 'memory' | 'valkey' | 'file';
-
-interface CacheConfig<T extends CacheProvider = CacheProvider> {
-    provider: T
-    connection?: string
-}
-
-export type CacheMetadaProvider = Exclude<CacheProvider, 'file'>;
-export type CacheMetadataConfig = CacheConfig<CacheMetadaProvider>
-
-const asCacheMetadataProvider = (val: string): val is CacheScrobbleProvider => {
-    return ['memory', 'valkey'].includes(val);
-}
-
-export type CacheScrobbleProvider = CacheProvider;
-export type CacheScrobbleConfig = CacheConfig<CacheScrobbleProvider>;
-
-const asCacheScrobbleProvider = (val: string): val is CacheScrobbleProvider => {
-    return ['memory', 'valkey', 'file'].includes(val);
-}
-
-export interface CacheConfigOptions {
-    metadata?: CacheMetadataConfig
-    scrobble?: CacheScrobbleConfig
-}
+import { asCacheMetadataProvider, asCacheScrobbleProvider, CacheConfig, CacheConfigOptions, CacheMetadaProvider, CacheProvider } from './infrastructure/Atomic.js';
 
 const configDir = process.env.CONFIG_DIR || path.resolve(projectDir, `./config`);
 
@@ -43,17 +18,18 @@ export class MSCache {
 
     logger: Logger;
 
-    constructor(logger: Logger, config: CacheConfigOptions) {
+    constructor(logger: Logger, config: CacheConfigOptions = {}) {
         this.logger = childLogger(logger, 'Cache');
 
         const {
             metadata: {
-                provider: mProvider = 'memory',
+                provider: mProvider = (process.env.CACHE_METADATA as (CacheMetadaProvider | undefined) ?? 'memory'),
+                connection: mConn = process.env.CACHE_METADATA_CONN,
                 ...restMetadata
             } = {},
             scrobble: {
-                provider: sProvider = 'memory',
-                connection = configDir,
+                provider: sProvider = (process.env.CACHE_SCROBBLE as (CacheProvider | undefined) ?? 'file'),
+                connection = (process.env.CACHE_SCROBBLE_CONN ?? configDir),
                 ...restScrobble
             } = {},
         } = config;
@@ -61,6 +37,7 @@ export class MSCache {
         this.config = {
             metadata: {
                 provider: mProvider,
+                connection: mConn,
                 ...restMetadata,
             },
             scrobble: {

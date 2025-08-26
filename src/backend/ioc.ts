@@ -8,6 +8,8 @@ import { WildcardEmitter } from "./common/WildcardEmitter.js";
 
 import { generateBaseURL } from "./utils/NetworkUtils.js";
 import { PassThrough } from "stream";
+import { CacheConfigOptions } from "./common/infrastructure/Atomic.js";
+import { MSCache } from "./common/Cache.js";
 
 export let version: string = 'unknown';
 
@@ -24,6 +26,7 @@ export interface RootOptions {
     disableWeb?: boolean
     loggerStream?: PassThrough
     loggingConfig?: LogOptions
+    cache?: CacheConfigOptions
 }
 
 const createRoot = (options?: RootOptions) => {
@@ -32,7 +35,7 @@ const createRoot = (options?: RootOptions) => {
         baseUrl = process.env.BASE_URL,
         disableWeb: dw,
         loggerStream,
-        loggingConfig
+        loggingConfig,
     } = options || {};
     const configDir = process.env.CONFIG_DIR || path.resolve(projectDir, `./config`);
     let disableWeb = dw;
@@ -62,7 +65,8 @@ const createRoot = (options?: RootOptions) => {
         notifierEmitter: () => new EventEmitter(),
         loggerStream,
         loggingConfig,
-        logger: options.logger
+        logger: options.logger,
+        cache: new MSCache(options.logger, options.cache)
     }).add((items) => {
         const localUrl = generateBaseURL(baseUrl, items.port)
         return {

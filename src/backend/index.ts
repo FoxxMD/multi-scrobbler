@@ -103,6 +103,8 @@ const configDir = process.env.CONFIG_DIR || path.resolve(projectDir, `./config`)
              version: root.get('version')
              }, root.get('logger'));
 
+        await root.get('cache').init();
+
         initServer(logger, appLoggerStream, output, scrobbleSources, scrobbleClients);
 
         if(process.env.IS_LOCAL === 'true') {

@@ -5,7 +5,7 @@ import { RequestRetryOptions } from "./common.js";
 import { WebhookConfig } from "./health/webhooks.js";
 import { CommonSourceOptions, SourceRetryOptions } from "./source/index.js";
 import { SourceAIOConfig } from "./source/sources.js";
-import { ClientType, SourceType } from "../Atomic.js";
+import { CacheConfigOptions, ClientType, SourceType } from "../Atomic.js";
 
 
 export interface SourceDefaults extends CommonSourceOptions {
@@ -64,6 +64,8 @@ export interface AIOConfig {
      * @examples [false]
      * */
     debugMode?: boolean
+
+    cache?: CacheConfigOptions
 }
 
 export interface AIOClientConfig {

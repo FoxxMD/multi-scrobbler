@@ -52,6 +52,8 @@ import {
 } from "../utils/TimeUtils.js";
 import { WebhookPayload } from "../common/infrastructure/config/health/webhooks.js";
 import { AsyncTask, SimpleIntervalJob, Task, ToadScheduler } from "toad-scheduler";
+import { MSCache } from "../common/Cache.js";
+import { getRoot } from "../ioc.js";
 
 type PlatformMappedPlays = Map<string, {play: PlayObject, source: SourceIdentifier}>;
 type NowPlayingQueue = Map<string, PlatformMappedPlays>;
@@ -97,6 +99,8 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
     nowPlayingTaskInterval: number = 5000;
     npLogger: Logger;
 
+    cache: MSCache;
+
     declare config: CommonClientConfig;
 
     notifier: Notifiers;
@@ -110,6 +114,7 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
         this.npLogger = childLogger(this.logger, 'Now Playing');
         this.notifier = notifier;
         this.emitter = emitter;
+        this.cache = getRoot().get('cache');
 
         this.scrobbledPlayObjs = new FixedSizeList<ScrobbledPlayObject>(this.MAX_STORED_SCROBBLES);
 
@@ -168,6 +173,9 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
 
     protected getIdentifier() {
         return `${capitalize(this.type)} - ${this.name}`
+    }
+    protected getMachineId() {
+        return `${this.type}-${this.name}`;
     }
 
     public notify = async (payload: WebhookPayload) => {
@@ -293,6 +301,18 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
                 return plays[0][1].play;
             }
         }
+    }
+
+    protected async doParseCache(): Promise<true | string | undefined> {
+        const cachedQueue = (await this.cache.cacheScrobble.get(`${this.getMachineId()}-queue`) as QueuedScrobble<PlayObject>[] ?? []);
+        const cachedQLength = cachedQueue.length;
+        this.queuedScrobbles = cachedQueue;
+
+        const cachedDead = (await this.cache.cacheScrobble.get(`${this.getMachineId()}-dead`) as DeadLetterScrobble<PlayObject>[] ?? []);
+        const cachedDLength = cachedDead.length;
+        this.deadLetterScrobbles = cachedDead;
+
+        return `Scrobbled from Cache: ${cachedQLength} Queue | ${cachedDLength} Dead Letter`;
     }
 
     protected async postInitialize(): Promise<void> {
@@ -887,10 +907,12 @@ ${closestMatch.breakdowns.join('\n')}`, {leaf: ['Dupe Check']});
         }
         this.logger.info(`Removed scrobble ${buildTrackString(this.deadLetterScrobbles[index].play)} from queue`, {leaf: 'Dead Letter'});
         this.deadLetterScrobbles.splice(index, 1);
+        this.cache.cacheScrobble.set(`${this.getMachineId()}-dead`, this.deadLetterScrobbles);
     }
 
     removeDeadLetterScrobbles = () => {
         this.deadLetterScrobbles = [];
+         this.cache.cacheScrobble.set(`${this.getMachineId()}-dead`, []);
         this.logger.info('Removed all scrobbles from queue', {leaf: 'Dead Letter'});
     }
 
@@ -910,6 +932,7 @@ ${closestMatch.breakdowns.join('\n')}`, {leaf: ['Dupe Check']});
             this.queuedScrobbles.push(queuedPlay);
         }
         this.queuedScrobbles.sort((a, b) => sortByOldestPlayDate(a.play, b.play));
+        this.cache.cacheScrobble.set(`${this.getMachineId()}-queue`, this.queuedScrobbles);
     }
 
     protected addDeadLetterScrobble = (data: QueuedScrobble<PlayObject>, error: (Error | string) = 'Unspecified error') => {
@@ -923,6 +946,7 @@ ${closestMatch.breakdowns.join('\n')}`, {leaf: ['Dupe Check']});
         this.deadLetterScrobbles.push(deadData);
         this.deadLetterScrobbles.sort((a, b) => sortByOldestPlayDate(a.play, b.play));
         this.emitEvent('deadLetter', {dead: deadData});
+        this.cache.cacheScrobble.set(`${this.getMachineId()}-dead`, this.deadLetterScrobbles);
     }
 
     queuePlayingNow = (data: PlayObject, source: SourceIdentifier) => {

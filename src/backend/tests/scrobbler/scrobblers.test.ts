@@ -16,6 +16,8 @@ import MockDate from 'mockdate';
 
 import { NowPlayingScrobbler, TestAuthScrobbler, TestScrobbler } from "./TestScrobbler.js";
 import { PlayPlatformId } from '../../common/infrastructure/Atomic.js';
+import { getRoot } from '../../ioc.js';
+import { loggerTest } from '@foxxmd/logging';
 
 chai.use(asPromised);
 
@@ -28,6 +30,8 @@ const normalizedWithDur = normalizePlays(withDurPlays, {initialDate: firstPlayDa
 const normalizedWithMixedDur = normalizePlays(mixedDurPlays, {initialDate: firstPlayDate});
 
 const normalizedWithMixedDurOlder = normalizePlays(mixedDurPlays, {initialDate: olderFirstPlayDate});
+
+getRoot({cache: {scrobble: {provider: 'memory'}}, logger: loggerTest});
 
 const generateTestScrobbler = () => {
     const testScrobbler = new TestScrobbler();
