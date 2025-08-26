@@ -257,6 +257,7 @@ export interface SourcePlayerObj {
     playerLastUpdatedAt: string
     position?: Second
     listenedDuration: Second
+    nowPlayingMode?: boolean
     status: {
         reported: string
         calculated: string

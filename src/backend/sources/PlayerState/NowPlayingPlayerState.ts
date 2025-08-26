@@ -1,3 +1,4 @@
+import { SourcePlayerObj } from "../../../core/Atomic.js";
 import { GenericPlayerState } from "./GenericPlayerState.js";
 
 /**
@@ -21,6 +22,12 @@ export class NowPlayingPlayerState extends GenericPlayerState {
             return this.currentPlay.data.duration;
         }
         return super.getOrphanedInterval();
+    }
+
+    public getApiState(): SourcePlayerObj {
+        const data = super.getApiState();
+        data.nowPlayingMode = true;
+        return data;
     }
 
 }
