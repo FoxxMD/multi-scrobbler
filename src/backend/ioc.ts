@@ -1,5 +1,5 @@
 import { getVersion } from "@foxxmd/get-version";
-import { Logger, LogOptions } from "@foxxmd/logging";
+import { Logger, loggerDebug, LogOptions } from "@foxxmd/logging";
 import { EventEmitter } from "events";
 import { createContainer } from "iti";
 import path from "path";
@@ -26,22 +26,36 @@ export interface RootOptions {
     disableWeb?: boolean
     loggerStream?: PassThrough
     loggingConfig?: LogOptions
-    cache?: CacheConfigOptions
+    cache?: CacheConfigOptions | MSCache | (() => MSCache)
 }
 
-const createRoot = (options?: RootOptions) => {
+const createRoot = (options: RootOptions = {logger: loggerDebug}) => {
     const {
         port = 9078,
         baseUrl = process.env.BASE_URL,
         disableWeb: dw,
         loggerStream,
         loggingConfig,
+        logger,
+        cache
     } = options || {};
     const configDir = process.env.CONFIG_DIR || path.resolve(projectDir, `./config`);
     let disableWeb = dw;
     if(disableWeb === undefined) {
         disableWeb = process.env.DISABLE_WEB === 'true';
     }
+
+    let cacheFunc: () => MSCache;
+    let maybeSingletonCache: MSCache;
+
+    if(cache instanceof MSCache) {
+        maybeSingletonCache = cache;
+    } else if(typeof cache === 'function') {
+        cacheFunc = cache;
+    } else {
+        maybeSingletonCache = new MSCache(logger, cache);
+    }
+
 
     const cEmitter = new WildcardEmitter();
     // do nothing, just catch
@@ -65,8 +79,8 @@ const createRoot = (options?: RootOptions) => {
         notifierEmitter: () => new EventEmitter(),
         loggerStream,
         loggingConfig,
-        logger: options.logger,
-        cache: new MSCache(options.logger, options.cache)
+        logger: logger,
+        cache: () => maybeSingletonCache !== undefined ? () => maybeSingletonCache : cacheFunc
     }).add((items) => {
         const localUrl = generateBaseURL(baseUrl, items.port)
         return {

@@ -114,7 +114,7 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
         this.npLogger = childLogger(this.logger, 'Now Playing');
         this.notifier = notifier;
         this.emitter = emitter;
-        this.cache = getRoot().get('cache');
+        this.cache = getRoot().items.cache();
 
         this.scrobbledPlayObjs = new FixedSizeList<ScrobbledPlayObject>(this.MAX_STORED_SCROBBLES);
 
