@@ -98,6 +98,14 @@ export abstract class AbstractPlayerState {
     protected abstract newListenProgress(data?: Partial<PlayProgress>): ListenProgress;
     protected abstract newListenRange(start?: ListenProgress, end?: ListenProgress, options?: object): ListenRange;
 
+    protected getStaleInterval(): number {
+        return this.stateIntervalOptions.staleInterval;
+    }
+
+    protected getOrphanedInterval(): number {
+        return this.stateIntervalOptions.orphanedInterval;
+    }
+
     get platformIdStr() {
         return genGroupIdStr(this.platformId);
     }
@@ -108,7 +116,7 @@ export abstract class AbstractPlayerState {
 
     isUpdateStale(reportedTS?: Dayjs) {
         if (this.currentPlay !== undefined) {
-            return Math.abs((reportedTS ?? dayjs()).diff(this.playLastUpdatedAt, 'seconds')) > this.stateIntervalOptions.staleInterval;
+            return Math.abs((reportedTS ?? dayjs()).diff(this.playLastUpdatedAt, 'seconds')) > this.getStaleInterval();
         }
         return false;
     }
@@ -117,7 +125,7 @@ export abstract class AbstractPlayerState {
         const isStale = this.isUpdateStale(reportedTS);
         if (isStale && ![CALCULATED_PLAYER_STATUSES.stale, CALCULATED_PLAYER_STATUSES.orphaned].includes(this.calculatedStatus)) {
             this.calculatedStatus = CALCULATED_PLAYER_STATUSES.stale;
-            this.logger.debug(`Stale after no Play updates for ${timeToHumanTimestamp(Math.abs((reportedTS ?? dayjs()).diff(this.playLastUpdatedAt, 'ms')))} (staleAfter ${this.stateIntervalOptions.staleInterval}s)`);
+            this.logger.debug(`Stale after no Play updates for ${timeToHumanTimestamp(Math.abs((reportedTS ?? dayjs()).diff(this.playLastUpdatedAt, 'ms')))} (staleAfter ${this.getStaleInterval()}s)`);
             // end current listening sessions
             this.currentListenSessionEnd();
         }
@@ -125,18 +133,18 @@ export abstract class AbstractPlayerState {
     }
 
     isOrphaned() {
-        return dayjs().diff(this.stateLastUpdatedAt, 'seconds') >= this.stateIntervalOptions.orphanedInterval;
+        return dayjs().diff(this.stateLastUpdatedAt, 'seconds') >= this.getOrphanedInterval();
     }
 
     isDead() {
-        return dayjs().diff(this.stateLastUpdatedAt, 'seconds') >= this.stateIntervalOptions.orphanedInterval * 2;
+        return dayjs().diff(this.stateLastUpdatedAt, 'seconds') >= this.getOrphanedInterval()* 2;
     }
 
     checkOrphaned() {
         const isOrphaned = this.isOrphaned();
         if (isOrphaned && this.calculatedStatus !== CALCULATED_PLAYER_STATUSES.orphaned) {
             this.calculatedStatus = CALCULATED_PLAYER_STATUSES.orphaned;
-            this.logger.debug(`Orphaned after no Player updates for ${timeToHumanTimestamp(Math.abs(dayjs().diff(this.stateLastUpdatedAt, 'ms')))} ${Math.abs(dayjs().diff(this.stateLastUpdatedAt, 'minutes'))} (orhanedAfter ${this.stateIntervalOptions.orphanedInterval}s)`);
+            this.logger.debug(`Orphaned after no Player updates for ${timeToHumanTimestamp(Math.abs(dayjs().diff(this.stateLastUpdatedAt, 'ms')))} ${Math.abs(dayjs().diff(this.stateLastUpdatedAt, 'minutes'))} (orhanedAfter ${this.getOrphanedInterval()}s)`);
         }
         return isOrphaned;
     }

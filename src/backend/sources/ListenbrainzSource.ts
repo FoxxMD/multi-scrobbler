@@ -2,12 +2,15 @@ import EventEmitter from "events";
 import request from "superagent";
 import { PlayObject, SOURCE_SOT } from "../../core/Atomic.js";
 import { isNodeNetworkException } from "../common/errors/NodeErrors.js";
-import { FormatPlayObjectOptions, InternalConfig } from "../common/infrastructure/Atomic.js";
+import { FormatPlayObjectOptions, InternalConfig, PlayPlatformId } from "../common/infrastructure/Atomic.js";
 import { ListenBrainzSourceConfig } from "../common/infrastructure/config/source/listenbrainz.js";
 import { ListenbrainzApiClient } from "../common/vendor/ListenbrainzApiClient.js";
 import { RecentlyPlayedOptions } from "./AbstractSource.js";
 import MemorySource from "./MemorySource.js";
 import { isPortReachableConnect } from "../utils/NetworkUtils.js";
+import { Logger } from "@foxxmd/logging";
+import { PlayerStateOptions } from "./PlayerState/AbstractPlayerState.js";
+import { NowPlayingPlayerState } from "./PlayerState/NowPlayingPlayerState.js";
 
 export default class ListenbrainzSource extends MemorySource {
 
@@ -89,4 +92,6 @@ export default class ListenbrainzSource extends MemorySource {
     }
 
     protected getBackloggedPlays = async (options: RecentlyPlayedOptions = {}) =>  await this.getRecentlyPlayed({formatted: true, ...options})
+
+    getNewPlayer = (logger: Logger, id: PlayPlatformId, opts: PlayerStateOptions) => new NowPlayingPlayerState(logger,  id, opts);
 }

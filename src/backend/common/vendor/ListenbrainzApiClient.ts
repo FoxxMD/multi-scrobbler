@@ -254,6 +254,7 @@ export class ListenbrainzApiClient extends AbstractApiClient {
             track_metadata: {
                 artist_name,
                 track_name,
+                release_name,
                 additional_info: {
                     duration,
                     track_mbid,
@@ -269,6 +270,7 @@ export class ListenbrainzApiClient extends AbstractApiClient {
                 playDate: typeof listened_at === 'number' ? dayjs.unix(listened_at) : dayjs(listened_at),
                 track: track_name,
                 artists: [artist_name],
+                album: release_name,
                 duration,
                 meta: {
                     brainz: {
