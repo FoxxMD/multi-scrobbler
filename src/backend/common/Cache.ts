@@ -111,7 +111,10 @@ export class MSCache {
                     flatCache.off('error', onlySaveError);
                     flatCache.on('error', (e) => {
                         logger.warn(e);
-                    })
+                    });
+                    flatCache.on('save', () => {
+                        logger.debug('Saved cache to file');
+                    });
                 } catch (e) {
                     logger.warn(new Error(`Unable to use file cache at ${path.join(config.connection, 'mscache')}`, {cause: e}));
                 }
