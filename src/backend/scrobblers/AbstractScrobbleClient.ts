@@ -312,7 +312,7 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
         const cachedDLength = cachedDead.length;
         this.deadLetterScrobbles = cachedDead;
 
-        return `Scrobbled from Cache: ${cachedQLength} Queue | ${cachedDLength} Dead Letter`;
+        return `Scrobbles from Cache: ${cachedQLength} Queue | ${cachedDLength} Dead Letter`;
     }
 
     protected async postInitialize(): Promise<void> {

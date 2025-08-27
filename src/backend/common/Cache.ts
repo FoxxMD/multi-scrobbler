@@ -90,7 +90,7 @@ export class MSCache {
                     ttl: 0,
                     lruSize: 500,
                     cacheDir: config.connection,
-                    cacheId: 'mscache',
+                    cacheId: 'scrobble.cache',
                     persistInterval: 1 * 1000 * 60,
                     expirationInterval: 1 * 1000 * 60, // 1 minute
                 });
@@ -103,7 +103,7 @@ export class MSCache {
                 flatCache.on('error', onlySaveError);
                 try {
                     logger.debug('Loading cache from file...');
-                    flatCache.load('mscache');
+                    flatCache.load('scrobble.cache');
                     if(loadError !== undefined) {
                         throw loadError;
                     }
@@ -116,7 +116,7 @@ export class MSCache {
                         logger.debug('Saved cache to file');
                     });
                 } catch (e) {
-                    logger.warn(new Error(`Unable to use file cache at ${path.join(config.connection, 'mscache')}`, {cause: e}));
+                    logger.warn(new Error(`Unable to use file cache at ${path.join(config.connection, 'scrobble.cache')}`, {cause: e}));
                 }
                 secondaryCache = new Keyv({store: flatCache, throwOnErrors: true});
             }

@@ -120,6 +120,7 @@ dist
 config/*.json
 config/mscache
 config/yti-*
+config/*.cache
 *.txt
 .idea/
 
