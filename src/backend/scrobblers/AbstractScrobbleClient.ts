@@ -54,6 +54,7 @@ import { WebhookPayload } from "../common/infrastructure/config/health/webhooks.
 import { AsyncTask, SimpleIntervalJob, Task, ToadScheduler } from "toad-scheduler";
 import { MSCache } from "../common/Cache.js";
 import { getRoot } from "../ioc.js";
+import { rehydratePlay } from "../utils/CacheUtils.js";
 
 type PlatformMappedPlays = Map<string, {play: PlayObject, source: SourceIdentifier}>;
 type NowPlayingQueue = Map<string, PlatformMappedPlays>;
@@ -306,11 +307,11 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
     protected async doParseCache(): Promise<true | string | undefined> {
         const cachedQueue = (await this.cache.cacheScrobble.get(`${this.getMachineId()}-queue`) as QueuedScrobble<PlayObject>[] ?? []);
         const cachedQLength = cachedQueue.length;
-        this.queuedScrobbles = cachedQueue;
+        this.queuedScrobbles = cachedQueue.map(x => ({...x, play: rehydratePlay(x.play)}));
 
         const cachedDead = (await this.cache.cacheScrobble.get(`${this.getMachineId()}-dead`) as DeadLetterScrobble<PlayObject>[] ?? []);
         const cachedDLength = cachedDead.length;
-        this.deadLetterScrobbles = cachedDead;
+        this.deadLetterScrobbles = cachedDead.map(x => ({...x, play: rehydratePlay(x.play), lastRetry: x.lastRetry !== undefined ? dayjs(x.lastRetry) : undefined}));
 
         return `Scrobbles from Cache: ${cachedQLength} Queue | ${cachedDLength} Dead Letter`;
     }

@@ -76,17 +76,26 @@ export interface TrackStringOptions<T = string> {
     }
 }
 
-export interface PlayProgress {
-    timestamp: Dayjs
+export interface PlayProgressAmb {
+    timestamp: string | Dayjs
     position?: number
     positionPercent?: number
+}
+
+export interface PlayProgress extends PlayProgressAmb {
+    timestamp: Dayjs
 }
 
 export interface PlayProgressPositional extends PlayProgress {
     position: number
 }
 
-export interface ListenRangeData {
+export interface ListenRangeDataAmb {
+    start: PlayProgressAmb
+    end: PlayProgressAmb
+}
+
+export interface ListenRangeData extends ListenRangeDataAmb {
     start: ListenProgress
     end: ListenProgress
 }

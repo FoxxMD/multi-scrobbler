@@ -1,6 +1,14 @@
 import { Cacheable, CacheableMemory, Keyv, KeyvStoreAdapter } from 'cacheable';
 import { FlatCache } from 'flat-cache';
+import {parse} from 'flatted';
 import KeyvValkey from '@keyv/valkey';
+import dayjs from 'dayjs';
+import duration from 'dayjs/plugin/duration.js';
+import isBetween from 'dayjs/plugin/isBetween.js';
+import relativeTime from 'dayjs/plugin/relativeTime.js';
+import isToday from 'dayjs/plugin/isToday.js';
+import timezone from 'dayjs/plugin/timezone.js';
+import utc from 'dayjs/plugin/utc.js';
 import { childLogger, Logger } from '@foxxmd/logging';
 import { projectDir } from './index.js';
 import path from 'path';
@@ -8,6 +16,13 @@ import { fileOrDirectoryIsWriteable } from '../utils.js';
 import { asCacheMetadataProvider, asCacheScrobbleProvider, CacheConfig, CacheConfigOptions, CacheMetadaProvider, CacheProvider } from './infrastructure/Atomic.js';
 
 const configDir = process.env.CONFIG_DIR || path.resolve(projectDir, `./config`);
+
+dayjs.extend(utc)
+dayjs.extend(isBetween);
+dayjs.extend(relativeTime);
+dayjs.extend(duration);
+dayjs.extend(timezone);
+dayjs.extend(isToday);
 
 export class MSCache {
 
@@ -93,6 +108,10 @@ export class MSCache {
                     cacheId: 'scrobble.cache',
                     persistInterval: 1 * 1000 * 60,
                     expirationInterval: 1 * 1000 * 60, // 1 minute
+                    // deserialize: (str) => {
+                    //     const data = parse(str)
+                    //     return data;
+                    // }
                 });
 
                 let loadError: Error;
