@@ -349,21 +349,23 @@ export type WhenConditionsConfig = WhenConditions<string>;
 export type WithRequiredProperty<Type, Key extends keyof Type> = Type & {
   [Property in Key]-?: Type[Property];
 };
-export type CacheProvider = 'memory' | 'valkey' | 'file';
+export type CacheProvider = 'memory' | 'valkey' | 'file' | false;
 export interface CacheConfig<T extends CacheProvider = CacheProvider> {
     provider: T;
     connection?: string;
 }
-export type CacheMetadaProvider = Exclude<CacheProvider, 'file'>;
+export type CacheMetadaProvider = CacheProvider;//Exclude<CacheProvider, 'file'>;
 export type CacheMetadataConfig = CacheConfig<CacheMetadaProvider>;
-export const asCacheMetadataProvider = (val: string): val is CacheScrobbleProvider => {
-    return ['memory', 'valkey'].includes(val);
-};
+export const asCacheProvider = (val: boolean | string): val is CacheProvider => {
+    if(typeof val === 'string') {
+        return ['memory', 'valkey', 'file'].includes(val);
+    }
+    return val === false;
+}
+export const asCacheMetadataProvider = (val: any): val is CacheScrobbleProvider => asCacheProvider(val);
 export type CacheScrobbleProvider = CacheProvider;
 export type CacheScrobbleConfig = CacheConfig<CacheScrobbleProvider>;
-export const asCacheScrobbleProvider = (val: string): val is CacheScrobbleProvider => {
-    return ['memory', 'valkey', 'file'].includes(val);
-};
+export const asCacheScrobbleProvider = (val: any): val is CacheScrobbleProvider => asCacheProvider(val);
 export interface CacheConfigOptions {
     metadata?: CacheMetadataConfig;
     scrobble?: CacheScrobbleConfig;
