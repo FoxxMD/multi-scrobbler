@@ -162,6 +162,9 @@ export default class YTMusicSource extends AbstractSource {
                 this.authed = true;
                 await this.yti.session.oauth.cacheCredentials();
             });
+            if(isDebugMode()) {
+                Log.setLevel(Log.Level.DEBUG);
+            }
     }
 
     protected configureCustomOauth() {
