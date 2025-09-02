@@ -118,7 +118,7 @@
     "vite-express": "^0.16.0",
     "vlc-client": "^1.1.1",
     "xml2js": "0.6.1",
-    "youtubei.js": "^13.1.0"
+    "youtubei.js": "^15.0.1"
   },
   "devDependencies": {
     "@dbus-types/notifications": "^0.0.5",
