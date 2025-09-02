@@ -4,12 +4,13 @@ import chai, { assert, expect } from 'chai';
 import asPromised from 'chai-as-promised';
 import clone from "clone";
 import YTMusicSource, { ytiHistoryResponseFromShelfToPlays, ytiHistoryResponseToListItems } from "../../sources/YTMusicSource.js";
-import ytHistoryRes from './ytres.json' assert {type: 'json'};
+import ytHistoryRes from './ytres.json' with {type: 'json'};
 import EventEmitter from "events";
 import { generatePlay, generatePlays, normalizePlays } from '../utils/PlayTestUtils.js';
 import { YTMusicSourceConfig } from '../../common/infrastructure/config/source/ytmusic.js';
 import { sleep } from '../../utils.js';
 import dayjs from 'dayjs';
+import { ApiResponse } from 'youtubei.js';
 
 chai.use(asPromised);
 
@@ -33,12 +34,12 @@ const createYtSource = (opts?: {
 describe('Parses History', function () {
 
     it(`Parses a history response to tracks`, async function () {
-        const items = ytiHistoryResponseToListItems(ytHistoryRes);
+        const items = ytiHistoryResponseToListItems(ytHistoryRes as ApiResponse);
         expect(items).length(10);
     });
 
     it(`Parses a history response plays with shelf name`, async function () {
-        const items = ytiHistoryResponseFromShelfToPlays(ytHistoryRes);
+        const items = ytiHistoryResponseFromShelfToPlays(ytHistoryRes as ApiResponse);
         expect(items[0]?.meta?.comment).to.eq('March 2023');
     });
 });
