@@ -19,10 +19,8 @@ import {
 import AbstractSource, { RecentlyPlayedOptions } from "./AbstractSource.js";
 import { buildTrackString, truncateStringToLength } from "../../core/StringUtils.js";
 import { joinedUrl } from "../utils/NetworkUtils.js";
-import { FixedSizeList } from "fixed-size-list";
 import { todayAwareFormat } from "../utils/TimeUtils.js";
-import { RestType } from "ts-json-schema-generator";
-import { parseArtistCredits, parseCredits } from "../utils/StringUtils.js";
+import { parseArrayFromMaybeString, parseArtistCredits, parseCredits } from "../utils/StringUtils.js";
 
 export interface HistoryIngressResult {
     plays: PlayObject[], 
@@ -72,18 +70,43 @@ export const ytiHistoryResponseFromShelfToPlays = (res: ApiResponse, options: {n
     return items;
 }
 
-const GOOGLE_OAUTH_OPTS: GenerateAuthUrlOpts = {
-    access_type: 'offline',
-    scope: [
-        "http://gdata.youtube.com",
-        "https://www.googleapis.com/auth/youtube",
-        "https://www.googleapis.com/auth/youtube.force-ssl",
-        "https://www.googleapis.com/auth/youtube-paid-content",
-        "https://www.googleapis.com/auth/accounts.reauth",
-    ],
-    include_granted_scopes: true,
-    prompt: 'consent',
-};
+const DEFAULT_SCOPES = [
+    "http://gdata.youtube.com",
+    "https://www.googleapis.com/auth/youtube",
+    "https://www.googleapis.com/auth/youtube.force-ssl",
+    "https://www.googleapis.com/auth/youtube-paid-content",
+    "https://www.googleapis.com/auth/accounts.reauth",
+];
+
+const VALID_SCOPES = [
+    "https://www.googleapis.com/auth/youtube",
+    "https://www.googleapis.com/auth/youtube.force-ssl",
+    "https://www.googleapis.com/auth/youtube-paid-content",
+]
+
+const getGoogleOauthOpts = (): GenerateAuthUrlOpts => {
+    let scopes: string[];
+    const userInput = parseArrayFromMaybeString(process.env.YTM_SCOPES);
+    if (userInput.length > 0) {
+        scopes = userInput.map(x => {
+            if (x.toLocaleLowerCase() === 'default') {
+                return DEFAULT_SCOPES;
+            } else if (x.toLocaleLowerCase() === 'valid') {
+                return VALID_SCOPES;
+            }
+            return x;
+        }).flat(1);
+    } else {
+        scopes = VALID_SCOPES;
+    }
+
+    return {
+        access_type: 'offline',
+        scope: scopes,
+        include_granted_scopes: true,
+        prompt: 'consent',
+    };
+}
 
 export default class YTMusicSource extends AbstractSource {
 
@@ -206,7 +229,9 @@ export default class YTMusicSource extends AbstractSource {
             redirectUri: this.redirectUri,
         });
 
-        const authorizationUrl = this.oauthClient.generateAuthUrl(GOOGLE_OAUTH_OPTS);
+        const scopeOpts = getGoogleOauthOpts();
+        this.logger.debug(`Using scopes:\n${(scopeOpts.scope as string[]).join('\n')}`)
+        const authorizationUrl = this.oauthClient.generateAuthUrl(getGoogleOauthOpts());
         this.verificationUrl = authorizationUrl;
     }
 
