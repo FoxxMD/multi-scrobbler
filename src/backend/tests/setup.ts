@@ -1,8 +1,6 @@
 import { loggerTest } from '@foxxmd/logging';
 import { getRoot } from "../ioc.js";
-import { MSCache } from '../common/Cache.js';
-
-const transientCache = () => new MSCache(loggerTest, {scrobble: {provider: 'memory'}});
+import { transientCache } from './utils/CacheTestUtils.js';
 
 const root = getRoot({cache: transientCache, logger: loggerTest});
 root.items.cache().init();
