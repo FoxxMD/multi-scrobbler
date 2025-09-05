@@ -9,6 +9,11 @@ import { initFileCache, initMemoryCache, initValkeyCache, MSCache } from "../../
 import { generatePlay, generatePlayerStateData, generatePlays, normalizePlays } from "../utils/PlayTestUtils.js";
 import { ListenProgressPositional, ListenProgressTS } from "../../sources/PlayerState/ListenProgress.js";
 import { isPortReachableConnect } from "../../utils/NetworkUtils.js";
+import { getRoot } from "../../ioc.js";
+import { transientCache } from "../utils/CacheTestUtils.js";
+import { TestScrobbler } from "../scrobbler/TestScrobbler.js";
+import { sleep } from "../../utils.js";
+import {promises} from 'node:fs';
 
 chai.use(asPromised);
 
@@ -68,6 +73,7 @@ describe('#Caching', function () {
                 expect(time).to.not.be.undefined;
                 expect(time instanceof dayjs).is.true;
                 expect(now.toJSON()).eq((time as any).toJSON());
+                flat.destroy();
 
             }, { unsafeCleanup: true });
         });
@@ -90,6 +96,7 @@ describe('#Caching', function () {
                 expect(cachedProg).to.not.be.undefined;
                 expect(cachedProg instanceof ListenProgressTS).is.true;
                 expect(cachedProg.timestamp.toJSON()).eq(prog.timestamp.toJSON());
+                flat.destroy();
 
             }, { unsafeCleanup: true });
         });
@@ -140,32 +147,47 @@ describe('#Caching', function () {
         });
     });
 
+    describe('#ScrobbleCache', function () {
+
+        afterEach(function () {
+            const root = getRoot();
+            root.upsert({ cache: () => transientCache });
+            root.items.cache().init();
+        });
+
+        it('Preserves scrobbles', async function () {
 
 
+           await withLocalTmpDir(async () => {
 
-    // it('File backend serializes and deserializes non-primitives', async function() {
+                const root = getRoot();
+                root.upsert({ cache: () => () => new MSCache(loggerTest, { scrobble: { provider: 'file', connection: process.cwd(), persistInterval: 100 } }) });
+                root.items.cache().init();
 
-    //     withLocalTmpDir(async () => {
+                const test = new TestScrobbler();
+                await test.initialize();
+                const play = generatePlay();
+                test.queueScrobble(play, 'testSource');
+                await sleep(101);
+                const dirContents = await promises.readdir('.');
+                const hasCache = dirContents.some(x => x === 'ms-scrobble.cache');
+                expect(hasCache).is.true;
 
-    //     const cache = new MSCache(loggerTest, {scrobble: {provider: 'file', connection: process.cwd()}});
-    //     await cache.init();
+                // reinit cache
+                root.upsert({ cache: () => () => new MSCache(loggerTest, { scrobble: { provider: 'file', connection: process.cwd(), persistInterval: 100 } }) });
+                const newCache = root.items.cache();
+                expect(newCache.cacheScrobble).to.be.undefined;
+                newCache.init();
 
-    //     const now = dayjs();
+                const newTest = new TestScrobbler();
+                await newTest.initialize();
+                expect(newTest.queuedScrobbles.length).to.eq(1);
+                expect(newTest.queuedScrobbles[0].play.data.track).to.eq(play.data.track);
 
-    //     await cache.cacheScrobble.set('foo', now);
-    //     await cache.cacheScrobble.secondary.store.save();
-    //     await cache.cacheScrobble.disconnect()
+            }, { unsafeCleanup: true });
 
-    //     const cleanCache = new MSCache(loggerTest, {scrobble: {provider: 'file', connection: process.cwd()}});
-    //     await cleanCache.init();
+        });
 
-    //     const time = await cleanCache.cacheScrobble.get('foo');
-
-    //     expect(time).to.not.be.undefined;
-    //     expect(time instanceof dayjs).is.true;
-    //     expect(now.toJSON).eq((time as any).toJSON());
-
-    //     }, {unsafeCleanup: true});
-    // });
+    });
 
 });
