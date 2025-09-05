@@ -97,7 +97,7 @@ const getGoogleOauthOpts = (): GenerateAuthUrlOpts => {
             return x;
         }).flat(1);
     } else {
-        scopes = VALID_SCOPES;
+        scopes = DEFAULT_SCOPES;
     }
 
     return {
