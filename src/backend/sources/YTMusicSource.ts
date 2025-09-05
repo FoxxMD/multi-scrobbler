@@ -448,6 +448,10 @@ Redirect URI  : ${this.redirectUri}`);
             });
             return res;
         } catch (e) {
+            const info = loggedErrorExtra(e);
+            if(info !== undefined) {
+                this.logger.error(info, 'Additional API response details')
+            }
             throw e;
         }
     }
