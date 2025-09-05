@@ -114,7 +114,7 @@ export class MSCache {
             logger.debug(`Building file cache from ${path.join(config.connection, `${ns}.cache`)}`);
 
             try {
-                const [keyvFile] = initFileCache({ cacheDir: config.connection, cacheId: `${ns}.cache` }, logger);
+                const [keyvFile] = initFileCache({ ...config, cacheDir: config.connection, cacheId: `${ns}.cache` }, logger);
                 secondaryCache = keyvFile;
             } catch (e) {
                 logger.warn(e);

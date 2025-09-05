@@ -353,6 +353,7 @@ export type CacheProvider = 'memory' | 'valkey' | 'file' | false;
 export interface CacheConfig<T extends CacheProvider = CacheProvider> {
     provider: T;
     connection?: string;
+    [key: string]: any
 }
 export type CacheMetadaProvider = CacheProvider;//Exclude<CacheProvider, 'file'>;
 export type CacheMetadataConfig = CacheConfig<CacheMetadaProvider>;
