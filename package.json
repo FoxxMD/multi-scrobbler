@@ -171,7 +171,7 @@
     "typescript": "5.5.4",
     "typescript-eslint": "^7.0.1",
     "vite": "^5.2.12",
-    "with-local-tmp-dir": "^5.1.1"
+    "with-local-tmp-dir": "^6.0.0"
   },
   "browserslist": {
     "production": [
@@ -188,11 +188,6 @@
   "overrides": {
     "spotify-web-api-node": {
       "superagent": "$superagent"
-    },
-    "with-local-tmp-dir": {
-      "tmp-promise": {
-        "tmp": "0.2.1"
-      }
     }
   }
 }
