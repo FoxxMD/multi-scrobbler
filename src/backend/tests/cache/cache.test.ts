@@ -59,14 +59,14 @@ describe('#Caching', function () {
 
             withLocalTmpDir(async () => {
 
-                const [keyv, flat] = initFileCache({ cacheDir: process.cwd() });
+                const [keyv, flat] = await initFileCache({ cacheDir: process.cwd() });
 
                 const now = dayjs();
 
                 await keyv.set('foo', now);
                 flat.save();
 
-                const [cleanKeyv, cleanFlat] = initFileCache({ cacheDir: process.cwd() });
+                const [cleanKeyv, cleanFlat] = await initFileCache({ cacheDir: process.cwd() });
 
                 const time = await cleanKeyv.get('foo');
 
@@ -82,14 +82,14 @@ describe('#Caching', function () {
 
             withLocalTmpDir(async () => {
 
-                const [keyv, flat] = initFileCache({ cacheDir: process.cwd() });
+                const [keyv, flat] = await initFileCache({ cacheDir: process.cwd() });
 
                 const prog = new ListenProgressPositional({ timestamp: dayjs(), position: 35, positionPercent: 50 });
 
                 await keyv.set('foo', prog);
                 await flat.save();
 
-                const [cleanKeyv, cleanFlat] = initFileCache({ cacheDir: process.cwd() });
+                const [cleanKeyv, cleanFlat] = await initFileCache({ cacheDir: process.cwd() });
 
                 const cachedProg = await cleanKeyv.get('foo');
 
