@@ -114,7 +114,7 @@ export class MSCache {
             logger.debug(`Building file cache from ${path.join(config.connection, `${ns}.cache`)}`);
 
             try {
-                const [keyvFile] = initFileCache({ ...config, cacheDir: config.connection, cacheId: `${ns}.cache` }, logger);
+                const [keyvFile] = await initFileCache({ ...config, cacheDir: config.connection, cacheId: `${ns}.cache` }, logger);
                 secondaryCache = keyvFile;
             } catch (e) {
                 logger.warn(e);
@@ -177,38 +177,57 @@ export const flatCacheCreate = (opts: FlatCacheOptions) => {
     });
 }
 
-export const flatCacheLoad = (flatCache: FlatCache, logger: MaybeLogger): void => {
+export const flatCacheLoad = async (flatCache: FlatCache, logger: MaybeLogger): Promise<void> => {
 
     const cachePath = path.join(flatCache.cacheDir, flatCache.cacheId);
     try {
         fileOrDirectoryIsWriteable(cachePath);
     } catch (e) {
-        new Error(`Unable to use path for file cache at ${cachePath}`, { cause: e })
+        throw new Error(`Unable to use path for file cache at ${cachePath}`, { cause: e })
     }
 
-    let loadError: Error;
+    const streamPromise = new Promise((resolve, reject) => {
+        flatCache.loadFileStream(cachePath, (progress: number, total: number) => {
+            logger.debug(`Loading ${progress}/${total} chunks...`);
+        }, () => {
+            resolve(true);
+        }, (err: Error) => {
+            reject(err);
+        });
+    });
 
-    const onlySaveError = (e: Error) => {
-        loadError = e;
-    }
-    flatCache.on('error', onlySaveError);
     try {
-        logger.debug('Loading cache from file...');
-        flatCache.load();
-        if (loadError !== undefined) {
-            throw loadError;
-        }
+        await streamPromise;
         logger.debug(`File cache loaded`);
-        flatCache.off('error', onlySaveError);
+        return;
     } catch (e) {
-        throw new Error(`Unable to use file cache at ${cachePath}`, { cause: e });
+        if (null !== e.message.match(/Cache file .+ does not exist/)) {
+            let loadError: Error;
+            try {
+                const onlySaveError = (e: Error) => {
+                    loadError = e;
+                };
+                flatCache.on('error', onlySaveError);
+                flatCache.load();
+                if (loadError !== undefined) {
+                    throw loadError;
+                }
+                flatCache.off('error', onlySaveError);
+                logger.debug(`File cache loaded`);
+                return;
+            } catch (e) {
+                throw new Error(`Unable to use file cache at ${cachePath}`, { cause: e });
+            }
+        } else {
+            throw new Error(`Unable to use file cache at ${cachePath}`, { cause: e });
+        }
     }
 }
 
-export const initFileCache = (opts: FlatCacheOptions = {}, logger: MaybeLogger = new MaybeLogger()): [Keyv | KeyvStoreAdapter | undefined, FlatCache | undefined] => {
+export const initFileCache = async (opts: FlatCacheOptions = {}, logger: MaybeLogger = new MaybeLogger()): Promise<[Keyv | KeyvStoreAdapter | undefined, FlatCache | undefined]> => {
     const flatCache = flatCacheCreate(opts);
     try {
-        flatCacheLoad(flatCache, logger);
+        await flatCacheLoad(flatCache, logger);
         flatCache.on('error', (e) => {
             logger.warn(e);
         });

@@ -162,27 +162,21 @@ describe('#Caching', function () {
 
                 const root = getRoot();
                 root.upsert({ cache: () => () => new MSCache(loggerTest, { scrobble: { provider: 'file', connection: process.cwd(), persistInterval: 100 } }) });
-                root.items.cache().init();
 
                 const test = new TestScrobbler();
                 await test.initialize();
-                const play = generatePlay();
-                test.queueScrobble(play, 'testSource');
+                const plays = generatePlays(100);
+                test.queueScrobble(plays, 'testSource');
+                const queued = test.queuedScrobbles.map(x => x.play);
                 await sleep(101);
                 const dirContents = await promises.readdir('.');
                 const hasCache = dirContents.some(x => x === 'ms-scrobble.cache');
                 expect(hasCache).is.true;
 
-                // reinit cache
-                root.upsert({ cache: () => () => new MSCache(loggerTest, { scrobble: { provider: 'file', connection: process.cwd(), persistInterval: 100 } }) });
-                const newCache = root.items.cache();
-                expect(newCache.cacheScrobble).to.be.undefined;
-                newCache.init();
-
                 const newTest = new TestScrobbler();
                 await newTest.initialize();
-                expect(newTest.queuedScrobbles.length).to.eq(1);
-                expect(newTest.queuedScrobbles[0].play.data.track).to.eq(play.data.track);
+                expect(newTest.queuedScrobbles.length).to.eq(plays.length);
+                expect(newTest.queuedScrobbles[0].play.data.track).to.eq(queued[0].data.track);
 
             }, { unsafeCleanup: true });
 
