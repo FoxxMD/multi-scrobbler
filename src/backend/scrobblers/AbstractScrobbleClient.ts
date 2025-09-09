@@ -804,12 +804,14 @@ ${closestMatch.breakdowns.join('\n')}`, {leaf: ['Dupe Check']});
                                 this.logger.warn(new Error(`Could not scrobble ${buildTrackString(transformedScrobble)} from Source '${currQueuedPlay.source}' but error was not show stopping. Adding scrobble to Dead Letter Queue and will retry on next heartbeat.`, {cause: e}));
                             } else {
                                 this.queuedScrobbles.unshift(currQueuedPlay);
+                                this.updateQueuedScrobblesCache();
                                 throw new Error('Error occurred while trying to scrobble', {cause: e});
                             }
                         }
                     } else if (!timeFrameValid) {
                         this.logger.debug(`Will not scrobble ${buildTrackString(currQueuedPlay.play)} from Source '${currQueuedPlay.source}' because it ${timeFrameValidLog}`);
                     }
+                    this.updateQueuedScrobblesCache();
                     this.emitEvent('scrobbleDequeued', {queuedScrobble: currQueuedPlay})
                 }
                 await sleep(this.scrobbleSleep);
@@ -908,12 +910,12 @@ ${closestMatch.breakdowns.join('\n')}`, {leaf: ['Dupe Check']});
         }
         this.logger.info(`Removed scrobble ${buildTrackString(this.deadLetterScrobbles[index].play)} from queue`, {leaf: 'Dead Letter'});
         this.deadLetterScrobbles.splice(index, 1);
-        this.cache.cacheScrobble.set(`${this.getMachineId()}-dead`, this.deadLetterScrobbles);
+        this.updateDeadLetterCache();
     }
 
     removeDeadLetterScrobbles = () => {
         this.deadLetterScrobbles = [];
-         this.cache.cacheScrobble.set(`${this.getMachineId()}-dead`, []);
+        this.updateDeadLetterCache();
         this.logger.info('Removed all scrobbles from queue', {leaf: 'Dead Letter'});
     }
 
@@ -933,7 +935,7 @@ ${closestMatch.breakdowns.join('\n')}`, {leaf: ['Dupe Check']});
             this.queuedScrobbles.push(queuedPlay);
         }
         this.queuedScrobbles.sort((a, b) => sortByOldestPlayDate(a.play, b.play));
-        this.cache.cacheScrobble.set(`${this.getMachineId()}-queue`, this.queuedScrobbles);
+        this.updateQueuedScrobblesCache();
     }
 
     protected addDeadLetterScrobble = (data: QueuedScrobble<PlayObject>, error: (Error | string) = 'Unspecified error') => {
@@ -947,7 +949,7 @@ ${closestMatch.breakdowns.join('\n')}`, {leaf: ['Dupe Check']});
         this.deadLetterScrobbles.push(deadData);
         this.deadLetterScrobbles.sort((a, b) => sortByOldestPlayDate(a.play, b.play));
         this.emitEvent('deadLetter', {dead: deadData});
-        this.cache.cacheScrobble.set(`${this.getMachineId()}-dead`, this.deadLetterScrobbles);
+        this.updateDeadLetterCache();
     }
 
     queuePlayingNow = (data: PlayObject, source: SourceIdentifier) => {
@@ -1026,5 +1028,17 @@ ${closestMatch.breakdowns.join('\n')}`, {leaf: ['Dupe Check']});
             name: this.name,
             from: 'client'
         });
+    }
+
+    protected updateDeadLetterCache = () => {
+        this.cache.cacheScrobble.set(`${this.getMachineId()}-dead`, this.deadLetterScrobbles)
+        .then(() => isDebugMode() ? this.logger.debug('Updated dead letter cache') : null)
+        .catch((e) => this.logger.warn(new Error('Error while updating dead letter cache', {cause: e})));
+    }
+
+    protected updateQueuedScrobblesCache = () => {
+        this.cache.cacheScrobble.set(`${this.getMachineId()}-queue`, this.queuedScrobbles)
+        .then(() => isDebugMode() ? this.logger.debug('Updated queued scrobble cache') : null)
+        .catch((e) => this.logger.warn(new Error('Error while updating queued scrobble cache', {cause: e})));
     }
 }
