@@ -83,6 +83,11 @@ export interface NtfyConfig extends CommonWebhookConfig {
     password?: string
 
     /**
+     * Use instead of username/password, required if topic is protected
+     */
+    token?: string
+
+    /**
      * Priority of messages
      *
      * * Info -> 3

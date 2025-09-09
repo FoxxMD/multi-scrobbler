@@ -1,6 +1,7 @@
 import { Logger } from "@foxxmd/logging";
 import { Config, publish } from 'ntfy';
 import request from "superagent";
+import {redactString} from '@foxxmd/redact-string';
 import { NtfyConfig, PrioritiesConfig, WebhookPayload } from "../common/infrastructure/config/health/webhooks.js";
 import { AbstractWebhookNotifier } from "./AbstractWebhookNotifier.js";
 import { URLData } from "../../core/Atomic.js";
@@ -33,7 +34,14 @@ export class NtfyWebhookNotifier extends AbstractWebhookNotifier {
     initialize = async () => {
         // check url is correct as a courtesy
         this.endpoint = normalizeWebAddress(this.config.url);
-        this.logger.verbose(`Config URL: '${this.config.url}' => Normalized: '${this.endpoint.normal}'`)
+        this.logger.verbose(`Config URL: '${this.config.url}' => Normalized: '${this.endpoint.normal}'`);
+        if(this.config.token !== undefined) {
+            this.logger.verbose(`Using Access Token '${redactString(this.config.token, 3)}' for authentication`);
+        } else if(this.config.username !== undefined) {
+            this.logger.verbose(`Using Username/Password '${redactString(this.config.username, 3)}/${redactString(this.config.password, 3)}' for authentication`);
+        } else {
+            this.logger.verbose('No authentication provided, will not be able to push to protected topics');
+        }
 
         this.initialized = true; // always set as ready to go. Server issues may be transient.
 
@@ -72,7 +80,9 @@ export class NtfyWebhookNotifier extends AbstractWebhookNotifier {
                 server: this.endpoint.normal,
                 priority: this.priorities[payload.priority],
             };
-            if (this.config.username !== undefined) {
+            if(this.config.token !== undefined) {
+                req.authorization = this.config.token;
+            } else if (this.config.username !== undefined) {
                 req.authorization = {
                     username: this.config.username,
                     password: this.config.password,
