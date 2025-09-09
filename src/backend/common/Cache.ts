@@ -168,7 +168,7 @@ export const initMemoryCache = (opts: Parameters<typeof createKeyv>[0] = {}): Ke
 export const flatCacheCreate = (opts: FlatCacheOptions) => {
     return new FlatCache({
         ttl: 0,
-        lruSize: 500,
+        lruSize: 2000,
         cacheDir: opts.cacheDir ?? configDir,
         cacheId: opts.cacheId ?? 'scrobble.cache',
         persistInterval: 1 * 1000 * 60,
