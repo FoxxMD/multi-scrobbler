@@ -2358,17 +2358,12 @@ Due to monitoring being unofficial, listening history from YTM can be inconsiste
 
 :::
 
-#### Authentication
+#### Authentication {#ytm-auth}
 
-Only one of these methods needs to be used. **Cookies** are easier but **OAuth Client**  may be more stable.
+Only one of these methods needs to be used.
 
 <Tabs groupId="ytmAuth" queryString>
     <TabItem value="cookie" label="Cookies">
-        :::info
-
-        If cookies stop working for you or are being invalidated often try switching to **OAuth Client** authentication.
-
-        :::
 
         Use instructions from 
         
@@ -2400,10 +2395,14 @@ Only one of these methods needs to be used. **Cookies** are easier but **OAuth C
 
     </TabItem>
     <TabItem value="oauth" label="OAuth Client">
-        :::note
+        :::warning
 
-        This is likely to be the most stable method and least likely to be blocked or have authentication invalidated after an extended period. It requires more setup but is worth the effort.
-        
+        As of Sept 25' OAuth clients no longer seem to have permission to access the YTM service, as reported by the upstream YTM library developer and [several other users.](https://github.com/FoxxMD/multi-scrobbler/issues/345#issuecomment-3258518769)
+
+        If you have existing, working OAuth credentials keep using them but there is no gaurantee they will continue to work.
+
+        If you are setting up the YTM Source for the first time you should first try to use [Cookies](./?ytmAuth=cookie#ytm-auth).
+
         :::
 
         [Based on the instructions from here...](https://github.com/LuanRT/YouTube.js/issues/803#issuecomment-2479689924)
