@@ -14,11 +14,11 @@ import {
 } from "../../utils/StringUtils.js";
 import { getScrobbleTsSOCDate } from "../../utils/TimeUtils.js";
 import { UpstreamError } from "../errors/UpstreamError.js";
-import { AbstractApiOptions, DEFAULT_RETRY_MULTIPLIER, FormatPlayObjectOptions } from "../infrastructure/Atomic.js";
+import { AbstractApiOptions, DEFAULT_RETRY_MULTIPLIER, DELIMITERS, FormatPlayObjectOptions } from "../infrastructure/Atomic.js";
 import { ListenBrainzClientData } from "../infrastructure/config/client/listenbrainz.js";
 import AbstractApiClient from "./AbstractApiClient.js";
 import { getBaseFromUrl, isPortReachableConnect, joinedUrl, normalizeWebAddress } from '../../utils/NetworkUtils.js';
-import { removeUndefinedKeys } from '../../utils.js';
+import { removeUndefinedKeys, unique } from '../../utils.js';
 import {ListensResponse as KoitoListensResponse} from '../infrastructure/config/client/koito.js'
 import { listenObjectResponseToPlay } from './koito/KoitoApiClient.js';
 import { version } from '../../ioc.js';
@@ -395,7 +395,15 @@ export class ListenbrainzApiClient extends AbstractApiClient {
             }
 
             // now try to extract any remaining artists from filtered artist/name values
-            const parsedArtists = parseArtistCredits(filteredSubmittedArtistName);
+            const splitAmpersand = artistsWithJoiners.length === 0 && artistMappings.some(x => x.join_phrase.includes('&'));
+            let nonProperJoinedDelims = undefined;
+            if(artistsWithJoiners.length === 0) {
+                nonProperJoinedDelims = unique(artistMappings.filter(x => DELIMITERS.includes(x.join_phrase.trim())).map(x => x.join_phrase.trim()));
+                if(nonProperJoinedDelims.length === 0) {
+                    nonProperJoinedDelims = undefined;
+                }
+            }
+            const parsedArtists = parseArtistCredits(filteredSubmittedArtistName, nonProperJoinedDelims);
             if (parsedArtists !== undefined) {
                 if (parsedArtists.primary !== undefined) {
                     artistsFromUserValues.push(parsedArtists.primary);

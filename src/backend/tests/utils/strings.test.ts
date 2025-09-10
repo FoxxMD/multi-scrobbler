@@ -9,7 +9,7 @@ import {
     uniqueNormalizedStrArr
 } from "../../utils/StringUtils.js";
 import { ExpectedResults } from "./interfaces.js";
-import testData from './playTestData.json';
+import testData from './playTestData.json' with { type: "json" };
 import { splitByFirstFound } from '../../../core/StringUtils.js';
 
 interface PlayTestFixture {

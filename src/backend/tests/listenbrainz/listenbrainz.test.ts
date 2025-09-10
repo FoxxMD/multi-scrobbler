@@ -10,24 +10,24 @@ import { ListenbrainzApiClient } from "../../common/vendor/ListenbrainzApiClient
 import { ListenResponse } from '../../common/vendor/listenbrainz/interfaces.js';
 import { ExpectedResults } from "../utils/interfaces.js";
 import { withRequestInterception } from "../utils/networking.js";
-import artistWithProperJoiner from './correctlyMapped/artistProperHasJoinerInName.json';
+import artistWithProperJoiner from './correctlyMapped/artistProperHasJoinerInName.json' with { type: "json" };
 // correct mappings
-import multiArtistInArtistName from './correctlyMapped/multiArtistInArtistName.json';
-import multiArtistsInTrackName from './correctlyMapped/multiArtistInTrackName.json';
-import multiMappedArtistsWithSingleUserArtist from './correctlyMapped/multiArtistMappingWithSingleRecordedArtist.json';
-import noArtistMapping from './correctlyMapped/noArtistMapping.json';
-import normalizedValues from './correctlyMapped/normalizedName.json';
-import slightlyDifferentNames from './correctlyMapped/trackNameSlightlyDifferent.json';
+import multiArtistInArtistName from './correctlyMapped/multiArtistInArtistName.json' with { type: "json" };
+import multiArtistsInTrackName from './correctlyMapped/multiArtistInTrackName.json' with { type: "json" };
+import multiMappedArtistsWithSingleUserArtist from './correctlyMapped/multiArtistMappingWithSingleRecordedArtist.json' with { type: "json" };
+import noArtistMapping from './correctlyMapped/noArtistMapping.json' with { type: "json" };
+import normalizedValues from './correctlyMapped/normalizedName.json' with { type: "json" };
+import slightlyDifferentNames from './correctlyMapped/trackNameSlightlyDifferent.json' with { type: "json" };
 
 // incorrect mappings
-import incorrectMultiArtistsTrackName from './incorrectlyMapped/multiArtistsInTrackName.json';
-import veryWrong from './incorrectlyMapped/veryWrong.json';
+import incorrectMultiArtistsTrackName from './incorrectlyMapped/multiArtistsInTrackName.json' with { type: "json" };
+import veryWrong from './incorrectlyMapped/veryWrong.json' with { type: "json" };
 
 interface LZTestFixture {
     data: ListenResponse
     expected: ExpectedResults
 }
-describe('Listenbrainz Listen Parsing', function () {
+describe('#PlayParse Listenbrainz Listen Parsing', function () {
 
     describe('When user-submitted artist/track do NOT match MB mappings', function() {
         it('Uses user submitted values when no artist mappings', async function () {
@@ -56,7 +56,7 @@ describe('Listenbrainz Listen Parsing', function () {
     })
 
 
-    describe('When user-submitted artist/track matches a MB mapped value', function() {
+    describe('#PlayParse When user-submitted artist/track matches a MB mapped value', function() {
 
         it('Detects slightly different track names as equal', async function () {
             for(const test of slightlyDifferentNames as unknown as LZTestFixture[]) {
