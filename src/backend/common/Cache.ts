@@ -171,8 +171,8 @@ export const flatCacheCreate = (opts: FlatCacheOptions) => {
         lruSize: 2000,
         cacheDir: opts.cacheDir ?? configDir,
         cacheId: opts.cacheId ?? 'scrobble.cache',
-        persistInterval: 1 * 1000 * 60,
-        expirationInterval: 1 * 1000 * 60, // 1 minute
+        persistInterval: 1 * 1000 * 10,
+        expirationInterval: 1 * 1000 * 10, // 10 seconds
         ...opts
     });
 }
