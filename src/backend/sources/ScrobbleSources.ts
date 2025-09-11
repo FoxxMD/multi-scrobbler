@@ -69,6 +69,8 @@ import DeezerInternalSource from './DeezerInternalSource.js';
 import KoitoSource from './KoitoSource.js';
 import { KoitoSourceConfig } from '../common/infrastructure/config/source/koito.js';
 import MalojaSource from './MalojaSource.js';
+import { NavidromeSource } from './NavidromeSource.js';
+import { NavidromeSourceConfig } from '../common/infrastructure/config/source/navidrome.js';
 
 type groupedNamedConfigs = {[key: string]: ParsedConfig[]};
 
@@ -199,6 +201,9 @@ export default class ScrobbleSources {
                     break;
                 case 'mpd':
                     this.schemaDefinitions[type] = getTypeSchemaFromConfigGenerator("MPDSourceConfig");
+                    break;
+                case 'navidrome':
+                    this.schemaDefinitions[type] = getTypeSchemaFromConfigGenerator("NavidromeSourceConfig");
                     break;
                 case 'vlc':
                     this.schemaDefinitions[type] = getTypeSchemaFromConfigGenerator("VLCSourceConfig");
@@ -807,6 +812,9 @@ export default class ScrobbleSources {
                 break;
             case 'subsonic':
                 newSource = new SubsonicSource(name, compositeConfig as SubSonicSourceConfig, this.internalConfig, this.emitter);
+                break;
+            case 'navidrome':
+                newSource = new NavidromeSource(name, compositeConfig as NavidromeSourceConfig, this.internalConfig, this.emitter);
                 break;
             case 'jellyfin':
                 const jfConfig = compositeConfig as (JellySourceConfig | JellyApiSourceConfig);
