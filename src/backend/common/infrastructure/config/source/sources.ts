@@ -23,6 +23,7 @@ import { YTMusicSourceAIOConfig, YTMusicSourceConfig } from "./ytmusic.js";
 import { IcecastSourceAIOConfig, IcecastSourceConfig } from "./icecast.js";
 import { KoitoSourceAIOConfig, KoitoSourceConfig } from "./koito.js";
 import { MalojaSourceAIOConfig, MalojaSourceConfig } from "./maloja.js";
+import { NavidromeSourceAIOConfig, NavidromeSourceConfig } from "./navidrome.js";
 
 
 export type SourceConfig =
@@ -50,6 +51,7 @@ export type SourceConfig =
     | MusikcubeSourceConfig
     | MusicCastSourceConfig
     | MPDSourceConfig
+    | NavidromeSourceConfig
     | VLCSourceConfig
     | IcecastSourceConfig
     | AzuracastSourceConfig
@@ -80,6 +82,7 @@ export type SourceAIOConfig =
     | MusikcubeSourceAIOConfig
     | MusicCastSourceAIOConfig
     | MPDSourceAIOConfig
+    | NavidromeSourceAIOConfig
     | VLCSourceAIOConfig
     | IcecastSourceAIOConfig
     | AzuracastSourceAIOConfig

@@ -29,6 +29,7 @@ export type SourceType =
     | 'maloja'
     | 'musikcube'
     | 'mpd'
+    | 'navidrome'
     | 'vlc'
     | 'icecast'
     | 'azuracast'
@@ -56,6 +57,7 @@ export const sourceTypes: SourceType[] = [
     'maloja',
     'musikcube',
     'mpd',
+    'navidrome',
     'vlc',
     'icecast',
     'azuracast',
@@ -66,7 +68,7 @@ export const isSourceType = (data: string): data is SourceType => {
     return sourceTypes.includes(data as SourceType);
 }
 
-export const lowGranularitySources: SourceType[] = ['subsonic', 'ytmusic'];
+export const lowGranularitySources: SourceType[] = ['subsonic', 'navidrome', 'ytmusic'];
 
 export type ClientType =
     'maloja'

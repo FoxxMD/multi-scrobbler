@@ -13,6 +13,9 @@ import { parseRetryAfterSecsFromObj, removeDuplicates, sleep } from "../utils.js
 import { findCauseByFunc } from "../utils/ErrorUtils.js";
 import { RecentlyPlayedOptions } from "./AbstractSource.js";
 import MemorySource from "./MemorySource.js";
+import { NavidromeApiClient } from '../common/vendor/navidrome/NavidromeApiClient.js';
+import { joinedUrl } from '../utils/NetworkUtils.js';
+import { NavidromeSourceConfig } from '../common/infrastructure/config/source/navidrome.js';
 
 dayjs.extend(isSameOrAfter);
 
@@ -32,22 +35,25 @@ export class NavidromeSource extends MemorySource {
 
     multiPlatform: boolean = true;
 
-    declare config: SubSonicSourceConfig;
+    declare config: NavidromeSourceConfig;
 
     usersAllow: string[] = [];
 
     sourceData: SourceIdentifierData = {};
 
-    constructor(name: any, config: SubSonicSourceConfig, internal: InternalConfig, emitter: EventEmitter) {
+    naviApi: NavidromeApiClient;
+
+    constructor(name: any, config: NavidromeSourceConfig, internal: InternalConfig, emitter: EventEmitter) {
         const {
             data: {
                 ...restData
             } = {}
         } = config;
         const subsonicConfig = {...config, data: {...restData}};
-        super('subsonic', name, subsonicConfig, internal,emitter);
+        super('navidrome', name, subsonicConfig, internal,emitter);
 
         this.canPoll = true;
+        this.naviApi = new NavidromeApiClient(name, this.config.data, {logger: this.logger});
     }
 
     static formatPlayObj(obj: any, options: FormatPlayObjectOptions & { sourceData?: SourceIdentifierData } = {}): PlayObject {
@@ -243,6 +249,8 @@ export class NavidromeSource extends MemorySource {
             const resp = await this.callApi(request.get(`${url}/rest/ping`));
             this.sourceData = resp as SourceIdentifierData;
             this.logger.info(`Subsonic Server reachable: ${identifiersFromResponse(resp)}`);
+
+            await this.naviApi.testConnection();
             return true;
         } catch (e) {
 
@@ -271,6 +279,7 @@ export class NavidromeSource extends MemorySource {
         try {
             await this.callApi(request.get(`${url}/rest/ping`));
             this.logger.info('Subsonic API Status: ok');
+            await this.naviApi.testAuth();
             return true;
         } catch (e) {
             throw e;
@@ -281,6 +290,7 @@ export class NavidromeSource extends MemorySource {
         const {formatted = false} = options;
         const {url} = this.config.data;
         const resp = await this.callApi(request.get(`${url}/rest/getNowPlaying`));
+        const queue = await this.naviApi.callApi(request.get(`${joinedUrl(this.naviApi.url.url, '/api/queue')}`));
         const {
             nowPlaying: {
                 entry = []
