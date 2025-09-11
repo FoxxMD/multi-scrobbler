@@ -81,7 +81,7 @@ export class NtfyWebhookNotifier extends AbstractWebhookNotifier {
                 priority: this.priorities[payload.priority],
             };
             if(this.config.token !== undefined) {
-                req.authorization = this.config.token;
+                req.authorization = `Bearer ${this.config.token.replace(/Bearer/i, '').trim()}`;
             } else if (this.config.username !== undefined) {
                 req.authorization = {
                     username: this.config.username,
