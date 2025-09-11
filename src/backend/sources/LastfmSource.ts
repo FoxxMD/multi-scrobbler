@@ -80,47 +80,52 @@ export default class LastfmSource extends MemorySource {
             limit,
             extended: true
         }));
-        const {
-            recenttracks: {
-                track: list = [],
-            }
-        } = resp;
+        try {
+            const {
+                recenttracks: {
+                    track: list = [],
+                } = {}
+            } = resp;
 
-        const plays = list.reduce((acc: PlayObject[], x: TrackObject) => {
-            try {
-                const formatted = LastfmApiClient.formatPlayObj(x);
-                const {
-                    data: {
-                        track,
-                        playDate,
-                    },
-                    meta: {
-                        mbid,
-                        nowPlaying,
+            const plays = list.reduce((acc: PlayObject[], x: TrackObject) => {
+                try {
+                    const formatted = LastfmApiClient.formatPlayObj(x);
+                    const {
+                        data: {
+                            track,
+                            playDate,
+                        },
+                        meta: {
+                            mbid,
+                            nowPlaying,
+                        }
+                    } = formatted;
+                    if (playDate === undefined) {
+                        if (nowPlaying === true) {
+                            formatted.data.playDate = dayjs();
+                            return acc.concat(formatted);
+                        }
+                        this.logger.warn(`Last.fm recently scrobbled track did not contain a timestamp, omitting from time frame check`, { track, mbid });
+                        return acc;
                     }
-                } = formatted;
-                if(playDate === undefined) {
-                    if(nowPlaying === true) {
-                        formatted.data.playDate = dayjs();
-                        return acc.concat(formatted);
-                    }
-                    this.logger.warn(`Last.fm recently scrobbled track did not contain a timestamp, omitting from time frame check`, {track, mbid});
+                    return acc.concat(formatted);
+                } catch (e) {
+                    this.logger.warn('Failed to format Last.fm recently scrobbled track, omitting from time frame check', { error: e.message });
+                    this.logger.debug('Full api response object:');
+                    this.logger.debug(x);
                     return acc;
                 }
-                return acc.concat(formatted);
-            } catch (e) {
-                this.logger.warn('Failed to format Last.fm recently scrobbled track, omitting from time frame check', {error: e.message});
-                this.logger.debug('Full api response object:');
-                this.logger.debug(x);
-                return acc;
-            }
-        }, []).sort(sortByOldestPlayDate);
-        // if the track is "now playing" it doesn't get a timestamp so we can't determine when it started playing
-        // and don't want to accidentally count the same track at different timestamps by artificially assigning it 'now' as a timestamp
-        // so we'll just ignore it in the context of recent tracks since really we only want "tracks that have already finished being played" anyway
-        const history = plays.filter(x => x.meta.nowPlaying !== true);
-        const now = plays.filter(x => x.meta.nowPlaying === true);
-        return [history, now];
+            }, []).sort(sortByOldestPlayDate);
+            // if the track is "now playing" it doesn't get a timestamp so we can't determine when it started playing
+            // and don't want to accidentally count the same track at different timestamps by artificially assigning it 'now' as a timestamp
+            // so we'll just ignore it in the context of recent tracks since really we only want "tracks that have already finished being played" anyway
+            const history = plays.filter(x => x.meta.nowPlaying !== true);
+            const now = plays.filter(x => x.meta.nowPlaying === true);
+            return [history, now];
+        } catch (e) {
+            this.logger.debug(resp);
+            throw e;
+        }
     }
 
     getRecentlyPlayed = async(options: RecentlyPlayedOptions = {}): Promise<PlayObject[]> => {
