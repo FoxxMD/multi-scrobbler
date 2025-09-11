@@ -13,11 +13,13 @@ import { getRoot } from "../ioc.js";
 import { parseBool } from "../utils.js";
 import { getAddress } from "../utils/NetworkUtils.js";
 import { setupApi } from "./api.js";
+import ScrobbleSources from '../sources/ScrobbleSources.js';
+import ScrobbleClients from '../scrobblers/ScrobbleClients.js';
 
 const app = addAsync(express());
 const router = Router();
 
-export const initServer = async (parentLogger: Logger, appLoggerStream: PassThrough, initialOutput: LogDataPretty[] = []) => {
+export const initServer = async (parentLogger: Logger, appLoggerStream: PassThrough, initialOutput: LogDataPretty[] = [], sources: ScrobbleSources, clients: ScrobbleClients) => {
 
     const logger = childLogger(parentLogger, 'API'); // parentLogger.child({labels: ['API']}, mergeArr);
 
@@ -48,7 +50,7 @@ export const initServer = async (parentLogger: Logger, appLoggerStream: PassThro
         const local = root.get('localUrl');
         const localDefined = root.get('hasDefinedBaseUrl');
 
-        setupApi(app, logger, appLoggerStream, initialOutput);
+        setupApi(app, logger, appLoggerStream, initialOutput, sources, clients);
 
         const addy = getAddress();
         const addresses: string[] = [];
@@ -78,7 +80,7 @@ export const initServer = async (parentLogger: Logger, appLoggerStream: PassThro
         app.use('/docs', express.static(path.resolve(projectDir, `./docsite/build`)));
 
         if(process.env.USE_HASH_ROUTER === undefined) {
-            process.env.USE_HASH_ROUTER = root.get('isSubPath');
+            process.env.USE_HASH_ROUTER = root.get('isSubPath').toString();
         }
 
         ViteExpress.config({

@@ -12,6 +12,7 @@ import {
     LogOutputConfig,
     PlayObject,
     SOURCE_SOT,
+    SOURCE_SOT_TYPES,
     SourceStatusData,
 } from "../../core/Atomic.js";
 import { capitalize } from "../../core/StringUtils.js";
@@ -30,6 +31,8 @@ import { makeClientCheckMiddle, makeSourceCheckMiddle } from "./middleware.js";
 import { setupPlexRoutes } from "./plexRoutes.js";
 import { setupTautulliRoutes } from "./tautulliRoutes.js";
 import { setupWebscrobblerRoutes } from "./webscrobblerRoutes.js";
+import ScrobbleSources from "../sources/ScrobbleSources.js";
+import ScrobbleClients from "../scrobblers/ScrobbleClients.js";
 
 const maxBufferSize = 300;
 const output: Record<number, FixedSizeList<LogDataPretty>> =  {};
@@ -51,7 +54,7 @@ const getLogs = (minLevel: number, limit: number = maxBufferSize, sort: 'asc' | 
     return allLogs.flat(1).sort((a, b) => a.time - b.time).slice(0, limit);
 }
 
-export const setupApi = (app: ExpressWithAsync, logger: Logger, appLoggerStream: PassThrough, initialLogOutput: LogDataPretty[] = []) => {
+export const setupApi = (app: ExpressWithAsync, logger: Logger, appLoggerStream: PassThrough, initialLogOutput: LogDataPretty[] = [], scrobbleSources: ScrobbleSources, scrobbleClients: ScrobbleClients) => {
     for(const level of Object.keys(logger.levels.labels)) {
         output[level] = new FixedSizeList<LeveledLogData>(maxBufferSize);
     }
@@ -89,9 +92,6 @@ export const setupApi = (app: ExpressWithAsync, logger: Logger, appLoggerStream:
             logObjectStream.write({message: log.line, level: log.level, levelLabel: logger.levels.labels[log.level]});
         }
     });
-
-    const scrobbleSources = root.get('sources');
-    const scrobbleClients = root.get('clients');
 
     const clientMiddleFunc = makeClientCheckMiddle(scrobbleClients);
     const sourceMiddleFunc = makeSourceCheckMiddle(scrobbleSources);
@@ -169,9 +169,7 @@ export const setupApi = (app: ExpressWithAsync, logger: Logger, appLoggerStream:
 
     app.getAsync('/api/status', async (req, res, next) => {
 
-        const ss = root.get('sources');
-
-        const sourceData = ss.sources.map((x) => {
+        const sourceData = scrobbleSources.sources.map((x) => {
             const {
                 type,
                 tracksDiscovered = 0,
@@ -193,7 +191,7 @@ export const setupApi = (app: ExpressWithAsync, logger: Logger, appLoggerStream:
                 hasAuthInteraction: requiresAuthInteraction,
                 authed,
                 players: 'players' in x ? (x as MemorySource).playersToObject() : {},
-                sot: ('playerSourceOfTruth' in x) ? x.playerSourceOfTruth : SOURCE_SOT.HISTORY,
+                sot: ('playerSourceOfTruth' in x) ? x.playerSourceOfTruth as SOURCE_SOT_TYPES : SOURCE_SOT.HISTORY,
                 supportsUpstreamRecentlyPlayed: x.supportsUpstreamRecentlyPlayed,
                 supportsManualListening: x.supportsManualListening,
                 manualListening: x.manualListening,

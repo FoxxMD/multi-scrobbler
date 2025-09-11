@@ -24,7 +24,7 @@ import { CommonClientConfig } from "./infrastructure/config/client/index.js";
 import { CommonSourceConfig } from "./infrastructure/config/source/index.js";
 import play = Simulate.play;
 import { WebhookPayload } from "./infrastructure/config/health/webhooks.js";
-import { AuthCheckError, BuildDataError, ConnectionCheckError, PostInitError, TransformRulesError } from "./errors/MSErrors.js";
+import { AuthCheckError, BuildDataError, ConnectionCheckError, ParseCacheError, PostInitError, TransformRulesError } from "./errors/MSErrors.js";
 import { messageWithCauses, messageWithCausesTruncatedDefault } from "../utils/ErrorUtils.js";
 
 export default abstract class AbstractComponent {
@@ -35,6 +35,7 @@ export default abstract class AbstractComponent {
 
     buildOK?: boolean | null;
     connectionOK?: boolean | null;
+    cacheOK?: boolean | null;
 
     initializing: boolean = false;
 
@@ -65,6 +66,7 @@ export default abstract class AbstractComponent {
                 await this.buildComponentLogger();
             }
             await this.buildInitData(force);
+            await this.parseCache(force);
             this.buildTransformRules();
             await this.checkConnection(force);
             await this.testAuth(force);
@@ -104,6 +106,45 @@ export default abstract class AbstractComponent {
             throw e;
         }
     }
+
+    public async parseCache(force: boolean = false) {
+        if(this.cacheOK) {
+            if(!force) {
+                return;
+            }
+            this.logger.debug('Cache OK but step was forced');
+        }
+        try {
+            const res = await this.doParseCache();
+            if(res === undefined) {
+                this.cacheOK = null;
+                this.logger.debug('No cache to parse.');
+                return;
+            }
+            if (res === true) {
+                this.logger.verbose('Parsing caching succeeded');
+            } else if (typeof res === 'string') {
+                this.logger.verbose(`Parsing caching succeeded => ${res}`);
+            }
+            this.cacheOK = true;
+        } catch (e) {
+            this.cacheOK = false;
+            throw new ParseCacheError('Parsing cache for initialization failed', {cause: e});
+        }
+    }
+
+    /**
+     * Build or parse any cache required for this Component
+     *
+     * * Return undefined if not possible or not required
+     * * Return TRUE if build succeeded
+     * * Return string if build succeeded and should log result
+     * * Throw error on failure
+     * */
+    protected async doParseCache(): Promise<true | string | undefined> {
+        return;
+    }
+
 
     public async buildInitData(force: boolean = false) {
         if(this.buildOK) {

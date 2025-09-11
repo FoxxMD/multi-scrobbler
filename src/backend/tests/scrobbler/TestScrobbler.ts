@@ -28,6 +28,11 @@ export class TestScrobbler extends AbstractScrobbleClient {
         return (await this.existingScrobble(playObj)) !== undefined;
     }
 
+    protected async doParseCache() {
+        await this.cache.init();
+        return super.doParseCache();
+    }
+
 
 
     playToClientPayload(playObject: PlayObject): object {

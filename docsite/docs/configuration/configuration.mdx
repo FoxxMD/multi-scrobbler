@@ -186,6 +186,93 @@ Useful when running with [docker](../installation/installation.mdx#docker) so th
 
 </details>
 
+#### Caching
+
+Multi-scrobbler can cache some of its data for the purpose of **persisting queued and dead scrobbles** after restarting.
+
+It supports caching using either:
+
+* **File** cache stored in the `CONFIG_DIR` directory (next to your File/[AIO](./?configType=aio#configuration-types) file)
+* [**Valkey**](https://valkey.io/), an open-source fork of Redis.
+
+**File** caching is **enabled by default** when no other configuration is present.
+
+The type of cache used, and it's connection properties, can be configured through ENV or **AIO** config.
+
+##### Caching Configuration
+
+<Tabs groupId="cache" queryString>
+
+<TabItem value="file" label="File">
+
+**File** cache is stored in the `CONFIG_DIR` directory using the pre-defined file name `ms-scrobble.cache`.
+
+It is **enabled by default** if `CACHE_SCROBBLE`, or the respective AIO configuration, is not defined.
+
+<Tabs groupId="configType" queryString>
+
+<TabItem value="env" label="ENV">
+
+| Environmental Variable | Required? | Default              | Description                                                  |
+| :--------------------- | --------- | -------------------- | ------------------------------------------------------------ |
+| `CACHE_SCROBBLE`       | No        | `file`               | The cache type to use                                        |
+| `CACHE_SCROBBLE_CONN`  | No        | The config directory | The directory, within the container, to store the cache file |
+
+</TabItem>
+
+<TabItem value="aio" label="AIO">
+
+```json5 title="config.json"
+{
+    "cache": {
+        "scrobble": {
+            "provider": "file",
+            "connection": "/config"
+        }
+    },
+    // ...
+}
+```
+
+</TabItem>
+
+</Tabs>
+</TabItem>
+
+<TabItem value="valkey" label="Valkey">
+
+<Tabs groupId="configType" queryString>
+
+<TabItem value="env" label="ENV">
+
+| Environmental Variable | Required? | Default              | Description                                                  |
+| :--------------------- | --------- | -------------------- | ------------------------------------------------------------ |
+| `CACHE_SCROBBLE`       | Yes        | `valkey`               | The cache type to use                                      |
+| `CACHE_SCROBBLE_CONN`  | Yes        |  | The host/IP and port to connect to, prefixed with `redis://` -- EX: `redis://192.168.0.120:6379` |
+
+</TabItem>
+
+<TabItem value="aio" label="AIO">
+
+```json5 title="config.json"
+{
+    "cache": {
+        "scrobble": {
+            "provider": "valkey",
+            "connection": "redis://192.168.0.120:6379"
+        }
+    },
+    // ...
+}
+```
+
+</TabItem>
+
+</Tabs>
+</TabItem>
+
+</Tabs>
+
 #### Debug Mode
 
 Turning on Debug Mode will

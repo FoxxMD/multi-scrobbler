@@ -8,12 +8,16 @@ export class BuildDataError extends StageError {
     name = 'Init Build Data';
 }
 
+export class ParseCacheError extends StageError {
+    name = 'Init Parse Cache';
+}
+
 export class TransformRulesError extends StageError {
     name = 'Transform Rules';
 }
 
 export class ConnectionCheckError extends StageError {
-    name = 'Conenction Check';
+    name = 'Connection Check';
 }
 
 export class AuthCheckError extends StageError {
