@@ -770,8 +770,9 @@ ${closestMatch.breakdowns.join('\n')}`, {leaf: ['Dupe Check']});
                         await this.refreshScrobbles();
                     }
                     const currQueuedPlay = this.queuedScrobbles.shift();
+
                     const [timeFrameValid, timeFrameValidLog] = this.timeFrameIsValid(currQueuedPlay.play);
-                    if (timeFrameValid && !(await this.alreadyScrobbled(currQueuedPlay.play))) {
+                    if (timeFrameValid && !(await this.alreadyScrobbled(this.transformPlay(currQueuedPlay.play, TRANSFORM_HOOK.preCompare)))) {
                         const transformedScrobble = this.transformPlay(currQueuedPlay.play, TRANSFORM_HOOK.postCompare);
                         try {
                             const scrobbledPlay = await this.scrobble(transformedScrobble);
@@ -854,7 +855,7 @@ ${closestMatch.breakdowns.join('\n')}`, {leaf: ['Dupe Check']});
             await this.refreshScrobbles();
         }
         const [timeFrameValid, timeFrameValidLog] = this.timeFrameIsValid(deadScrobble.play);
-        if (timeFrameValid && !(await this.alreadyScrobbled(deadScrobble.play))) {
+        if (timeFrameValid && !(await this.alreadyScrobbled(this.transformPlay(deadScrobble.play, TRANSFORM_HOOK.preCompare)))) {
             const transformedScrobble = this.transformPlay(deadScrobble.play, TRANSFORM_HOOK.postCompare);
             try {
                 const scrobbledPlay = await this.scrobble(transformedScrobble);
@@ -904,8 +905,7 @@ ${closestMatch.breakdowns.join('\n')}`, {leaf: ['Dupe Check']});
     queueScrobble = (data: PlayObject | PlayObject[], source: string) => {
         const plays = Array.isArray(data) ? data : [data];
         for(const p of plays) {
-            const transformedPlay = this.transformPlay(p, TRANSFORM_HOOK.preCompare);
-            const queuedPlay = {id: nanoid(), source, play: transformedPlay}
+            const queuedPlay = {id: nanoid(), source, play: p}
             this.emitEvent('scrobbleQueued', {queuedPlay: queuedPlay});
             this.queuedScrobbles.push(queuedPlay);
         }

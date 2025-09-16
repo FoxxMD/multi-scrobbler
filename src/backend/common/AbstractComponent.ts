@@ -40,7 +40,7 @@ export default abstract class AbstractComponent {
 
     config: CommonClientConfig | CommonSourceConfig;
 
-    transformRules!: PlayTransformRules;
+    transformRules: PlayTransformRules = {};
     regexCache!: ReturnType<typeof cacheFunctions>;
 
     logger: Logger;
@@ -166,7 +166,6 @@ export default abstract class AbstractComponent {
         } = this.config;
 
         if (playTransform === undefined) {
-            this.transformRules = {};
             return;
         }
 
