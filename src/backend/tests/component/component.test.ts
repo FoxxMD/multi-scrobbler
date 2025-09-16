@@ -30,7 +30,7 @@ describe('Play Transforms', function () {
 
     beforeEach(function() {
        component.config = {};
-       component.transformRules = undefined;
+       component.transformRules = {};
     });
 
     describe('Transform Config Parsing', function() {
