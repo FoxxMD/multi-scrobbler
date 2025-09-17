@@ -345,3 +345,30 @@ export type WhenParts<T> = PlayTransformPartsAtomic<T>;
 
 export type WhenConditions<T> = WhenParts<T>[];
 export type WhenConditionsConfig = WhenConditions<string>;
+
+export type WithRequiredProperty<Type, Key extends keyof Type> = Type & {
+  [Property in Key]-?: Type[Property];
+};
+export type CacheProvider = 'memory' | 'valkey' | 'file' | false;
+export interface CacheConfig<T extends CacheProvider = CacheProvider> {
+    provider: T;
+    connection?: string;
+    [key: string]: any
+}
+export type CacheMetadaProvider = CacheProvider;//Exclude<CacheProvider, 'file'>;
+export type CacheMetadataConfig = CacheConfig<CacheMetadaProvider>;
+export const asCacheProvider = (val: boolean | string): val is CacheProvider => {
+    if(typeof val === 'string') {
+        return ['memory', 'valkey', 'file'].includes(val);
+    }
+    return val === false;
+}
+export const asCacheMetadataProvider = (val: any): val is CacheScrobbleProvider => asCacheProvider(val);
+export type CacheScrobbleProvider = CacheProvider;
+export type CacheScrobbleConfig = CacheConfig<CacheScrobbleProvider>;
+export const asCacheScrobbleProvider = (val: any): val is CacheScrobbleProvider => asCacheProvider(val);
+export interface CacheConfigOptions {
+    metadata?: CacheMetadataConfig;
+    scrobble?: CacheScrobbleConfig;
+}
+

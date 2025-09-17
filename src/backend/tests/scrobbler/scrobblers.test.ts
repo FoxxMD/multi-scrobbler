@@ -8,8 +8,8 @@ import { http, HttpResponse } from 'msw';
 import pEvent from 'p-event';
 import { PlayObject } from "../../../core/Atomic.js";
 import { genGroupIdStr, sleep } from "../../utils.js";
-import mixedDuration from '../plays/mixedDuration.json';
-import withDuration from '../plays/withDuration.json';
+import mixedDuration from '../plays/mixedDuration.json' with { type: 'json' };
+import withDuration from '../plays/withDuration.json' with { type: 'json' };
 import { MockNetworkError, withRequestInterception } from "../utils/networking.js";
 import { asPlays, generatePlay, generatePlayPlatformId, generatePlays, normalizePlays } from "../utils/PlayTestUtils.js";
 import MockDate from 'mockdate';
@@ -664,7 +664,7 @@ describe('Scrobble client uses transform plays correctly', function() {
 
 describe('Manages scrobble queue', function() {
 
-    before(async function() {
+    beforeEach(async function() {
         testScrobbler = generateTestScrobbler();
         await testScrobbler.initialize();
         testScrobbler.recentScrobbles = normalizedWithMixedDur;

@@ -20,6 +20,7 @@ import { isDebugMode, parseBool, readJson, retry, sleep } from "./utils.js";
 import { createVegaGenerator } from './utils/SchemaUtils.js';
 import ScrobbleClients from './scrobblers/ScrobbleClients.js';
 import ScrobbleSources from './sources/ScrobbleSources.js';
+import { Notifiers } from './notifier/Notifiers.js';
 
 dayjs.extend(utc)
 dayjs.extend(isBetween);
@@ -95,7 +96,16 @@ const configDir = process.env.CONFIG_DIR || path.resolve(projectDir, `./config`)
         createVegaGenerator()
         initLogger.info('Schema definitions generated');
 
-        initServer(logger, appLoggerStream, output);
+        const scrobbleClients = new ScrobbleClients(root.get('clientEmitter'), root.get('sourceEmitter'), root.get('localUrl'), root.get('configDir'), root.get('logger'));
+        const scrobbleSources = new ScrobbleSources(root.get('sourceEmitter'), {
+             localUrl: root.get('localUrl'),
+            configDir: root.get('configDir'),
+             version: root.get('version')
+             }, root.get('logger'));
+
+        await root.items.cache().init();
+
+        initServer(logger, appLoggerStream, output, scrobbleSources, scrobbleClients);
 
         if(process.env.IS_LOCAL === 'true') {
             logger.info('multi-scrobbler can be run as a background service! See: https://foxxmd.github.io/multi-scrobbler/docs/installation/service');
@@ -106,18 +116,16 @@ const configDir = process.env.CONFIG_DIR || path.resolve(projectDir, `./config`)
             logger.warn(appConfigFail);
         }
 
-        const notifiers = root.get('notifiers');
+        const notifiers = new Notifiers(root.get('notifierEmitter'), root.get('clientEmitter'), root.get('sourceEmitter'), root.get('logger')); //root.get('notifiers');
         await notifiers.buildWebhooks(webhooks);
 
         /*
         * setup clients
         * */
-        const scrobbleClients = root.get('clients') as ScrobbleClients;
         await scrobbleClients.buildClientsFromConfig(notifiers);
         /*
         * setup sources
         * */
-        const scrobbleSources = root.get('sources') as ScrobbleSources;
         await scrobbleSources.buildSourcesFromConfig([]);
 
         // check ambiguous client/source types like this for now

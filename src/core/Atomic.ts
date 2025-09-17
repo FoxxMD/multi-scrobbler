@@ -5,7 +5,31 @@ import { AdditionalTrackInfoResponse } from "../backend/common/vendor/listenbrai
 
 export interface SourceStatusData {
     status: string;
-    type: "spotify" | "plex" | "tautulli" | "subsonic" | "jellyfin" | "lastfm" | "deezer" | "ytmusic" | "mpris" | "mopidy" | "listenbrainz" | "jriver" | "kodi" | 'webscrobbler' | 'chromecast';
+    type: 'spotify'
+    | 'plex'
+    | 'tautulli'
+    | 'subsonic'
+    | 'jellyfin'
+    | 'lastfm'
+    | 'deezer'
+    | 'endpointlz'
+    | 'endpointlfm'
+    | 'ytmusic'
+    | 'mpris'
+    | 'mopidy'
+    | 'musiccast'
+    | 'listenbrainz'
+    | 'jriver'
+    | 'kodi'
+    | 'webscrobbler'
+    | 'chromecast'
+    | 'maloja'
+    | 'musikcube'
+    | 'mpd'
+    | 'vlc'
+    | 'icecast'
+    | 'azuracast'
+    | 'koito';
     display: string;
     tracksDiscovered: number;
     name: string;
@@ -23,7 +47,7 @@ export interface SourceStatusData {
 
 export interface ClientStatusData {
     status: string;
-    type: "maloja" | "lastfm" | "listenbrainz";
+    type: "maloja" | "lastfm" | "listenbrainz" | "koito";
     display: string;
     scrobbled: number;
     deadLetterScrobbles: number
@@ -52,17 +76,26 @@ export interface TrackStringOptions<T = string> {
     }
 }
 
-export interface PlayProgress {
-    timestamp: Dayjs
+export interface PlayProgressAmb {
+    timestamp: string | Dayjs
     position?: number
     positionPercent?: number
+}
+
+export interface PlayProgress extends PlayProgressAmb {
+    timestamp: Dayjs
 }
 
 export interface PlayProgressPositional extends PlayProgress {
     position: number
 }
 
-export interface ListenRangeData {
+export interface ListenRangeDataAmb {
+    start: PlayProgressAmb
+    end: PlayProgressAmb
+}
+
+export interface ListenRangeData extends ListenRangeDataAmb {
     start: ListenProgress
     end: ListenProgress
 }

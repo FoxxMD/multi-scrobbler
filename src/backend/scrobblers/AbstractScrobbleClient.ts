@@ -52,6 +52,9 @@ import {
 } from "../utils/TimeUtils.js";
 import { WebhookPayload } from "../common/infrastructure/config/health/webhooks.js";
 import { AsyncTask, SimpleIntervalJob, Task, ToadScheduler } from "toad-scheduler";
+import { MSCache } from "../common/Cache.js";
+import { getRoot } from "../ioc.js";
+import { rehydratePlay } from "../utils/CacheUtils.js";
 
 type PlatformMappedPlays = Map<string, {play: PlayObject, source: SourceIdentifier}>;
 type NowPlayingQueue = Map<string, PlatformMappedPlays>;
@@ -97,6 +100,8 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
     nowPlayingTaskInterval: number = 5000;
     npLogger: Logger;
 
+    cache: MSCache;
+
     declare config: CommonClientConfig;
 
     notifier: Notifiers;
@@ -110,6 +115,7 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
         this.npLogger = childLogger(this.logger, 'Now Playing');
         this.notifier = notifier;
         this.emitter = emitter;
+        this.cache = getRoot().items.cache();
 
         this.scrobbledPlayObjs = new FixedSizeList<ScrobbledPlayObject>(this.MAX_STORED_SCROBBLES);
 
@@ -168,6 +174,9 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
 
     protected getIdentifier() {
         return `${capitalize(this.type)} - ${this.name}`
+    }
+    protected getMachineId() {
+        return `${this.type}-${this.name}`;
     }
 
     public notify = async (payload: WebhookPayload) => {
@@ -293,6 +302,18 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
                 return plays[0][1].play;
             }
         }
+    }
+
+    protected async doParseCache(): Promise<true | string | undefined> {
+        const cachedQueue = (await this.cache.cacheScrobble.get(`${this.getMachineId()}-queue`) as QueuedScrobble<PlayObject>[] ?? []);
+        const cachedQLength = cachedQueue.length;
+        this.queuedScrobbles = cachedQueue.map(x => ({...x, play: rehydratePlay(x.play)}));
+
+        const cachedDead = (await this.cache.cacheScrobble.get(`${this.getMachineId()}-dead`) as DeadLetterScrobble<PlayObject>[] ?? []);
+        const cachedDLength = cachedDead.length;
+        this.deadLetterScrobbles = cachedDead.map(x => ({...x, play: rehydratePlay(x.play), lastRetry: x.lastRetry !== undefined ? dayjs(x.lastRetry) : undefined}));
+
+        return `Scrobbles from Cache: ${cachedQLength} Queue | ${cachedDLength} Dead Letter`;
     }
 
     protected async postInitialize(): Promise<void> {
@@ -784,12 +805,14 @@ ${closestMatch.breakdowns.join('\n')}`, {leaf: ['Dupe Check']});
                                 this.logger.warn(new Error(`Could not scrobble ${buildTrackString(transformedScrobble)} from Source '${currQueuedPlay.source}' but error was not show stopping. Adding scrobble to Dead Letter Queue and will retry on next heartbeat.`, {cause: e}));
                             } else {
                                 this.queuedScrobbles.unshift(currQueuedPlay);
+                                this.updateQueuedScrobblesCache();
                                 throw new Error('Error occurred while trying to scrobble', {cause: e});
                             }
                         }
                     } else if (!timeFrameValid) {
                         this.logger.debug(`Will not scrobble ${buildTrackString(currQueuedPlay.play)} from Source '${currQueuedPlay.source}' because it ${timeFrameValidLog}`);
                     }
+                    this.updateQueuedScrobblesCache();
                     this.emitEvent('scrobbleDequeued', {queuedScrobble: currQueuedPlay})
                 }
                 await sleep(this.scrobbleSleep);
@@ -888,10 +911,12 @@ ${closestMatch.breakdowns.join('\n')}`, {leaf: ['Dupe Check']});
         }
         this.logger.info(`Removed scrobble ${buildTrackString(this.deadLetterScrobbles[index].play)} from queue`, {leaf: 'Dead Letter'});
         this.deadLetterScrobbles.splice(index, 1);
+        this.updateDeadLetterCache();
     }
 
     removeDeadLetterScrobbles = () => {
         this.deadLetterScrobbles = [];
+        this.updateDeadLetterCache();
         this.logger.info('Removed all scrobbles from queue', {leaf: 'Dead Letter'});
     }
 
@@ -910,6 +935,7 @@ ${closestMatch.breakdowns.join('\n')}`, {leaf: ['Dupe Check']});
             this.queuedScrobbles.push(queuedPlay);
         }
         this.queuedScrobbles.sort((a, b) => sortByOldestPlayDate(a.play, b.play));
+        this.updateQueuedScrobblesCache();
     }
 
     protected addDeadLetterScrobble = (data: QueuedScrobble<PlayObject>, error: (Error | string) = 'Unspecified error') => {
@@ -923,6 +949,7 @@ ${closestMatch.breakdowns.join('\n')}`, {leaf: ['Dupe Check']});
         this.deadLetterScrobbles.push(deadData);
         this.deadLetterScrobbles.sort((a, b) => sortByOldestPlayDate(a.play, b.play));
         this.emitEvent('deadLetter', {dead: deadData});
+        this.updateDeadLetterCache();
     }
 
     queuePlayingNow = (data: PlayObject, source: SourceIdentifier) => {
@@ -1001,5 +1028,17 @@ ${closestMatch.breakdowns.join('\n')}`, {leaf: ['Dupe Check']});
             name: this.name,
             from: 'client'
         });
+    }
+
+    protected updateDeadLetterCache = () => {
+        this.cache.cacheScrobble.set(`${this.getMachineId()}-dead`, this.deadLetterScrobbles)
+        .then(() => isDebugMode() ? this.logger.debug('Updated dead letter cache') : null)
+        .catch((e) => this.logger.warn(new Error('Error while updating dead letter cache', {cause: e})));
+    }
+
+    protected updateQueuedScrobblesCache = () => {
+        this.cache.cacheScrobble.set(`${this.getMachineId()}-queue`, this.queuedScrobbles)
+        .then(() => isDebugMode() ? this.logger.debug('Updated queued scrobble cache') : null)
+        .catch((e) => this.logger.warn(new Error('Error while updating queued scrobble cache', {cause: e})));
     }
 }
