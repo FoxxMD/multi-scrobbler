@@ -1,7 +1,6 @@
 import { Logger } from "@foxxmd/logging";
 import dayjs, { Dayjs } from "dayjs";
 import { EventEmitter } from "events";
-import objectHash from 'object-hash';
 import { SimpleIntervalJob, Task, ToadScheduler } from "toad-scheduler";
 import { PlayObject, SOURCE_SOT, SOURCE_SOT_TYPES, SourcePlayerObj } from "../../core/Atomic.js";
 import { buildTrackString } from "../../core/StringUtils.js";
@@ -28,6 +27,7 @@ import { timePassesScrobbleThreshold, timeToHumanTimestamp } from "../utils/Time
 import AbstractSource from "./AbstractSource.js";
 import { AbstractPlayerState, createPlayerOptions, PlayerStateOptions } from "./PlayerState/AbstractPlayerState.js";
 import { GenericPlayerState } from "./PlayerState/GenericPlayerState.js";
+import { hashObject } from "../utils/StringUtils.js";
 
 const EXPECTED_NON_DISCOVERED_REASON = 'not added because an identical play with the same timestamp was already discovered.';
 
@@ -86,7 +86,7 @@ export default class MemorySource extends AbstractSource {
         } else if (isStale) {
             label = 'Stale Player Cleanup';
             const state = player.getApiState();
-            const stateHash = objectHash.sha1(state);
+            const stateHash = hashObject(state);
             if(stateHash !== this.playerState.get(key)) {
                 this.playerState.set(key, stateHash);
                 this.emitEvent('playerUpdate', {
@@ -265,7 +265,7 @@ export default class MemorySource extends AbstractSource {
                     player.logSummary();
                 }
                 const apiState = player.getApiState();
-                this.playerState.set(key, objectHash.sha1(apiState))
+                this.playerState.set(key, hashObject(apiState))
                 this.emitEvent('playerUpdate', {
                     ...apiState,
                     options: {

@@ -1,4 +1,3 @@
-import objectHash from 'object-hash';
 import EventEmitter from "events";
 import { PlayObject } from "../../core/Atomic.js";
 import { buildTrackString, combinePartsToString, truncateStringToLength } from "../../core/StringUtils.js";
@@ -12,7 +11,7 @@ import {
     PlayPlatformId, REPORTED_PLAYER_STATUSES
 } from "../common/infrastructure/Atomic.js";
 import { genGroupIdStr, getFirstNonEmptyString, getPlatformIdFromData, isDebugMode, parseBool, } from "../utils.js";
-import { buildStatePlayerPlayIdententifyingInfo, parseArrayFromMaybeString } from "../utils/StringUtils.js";
+import { buildStatePlayerPlayIdententifyingInfo, hashObject, parseArrayFromMaybeString } from "../utils/StringUtils.js";
 import { GetSessionsMetadata } from "@lukehagar/plexjs/sdk/models/operations/getsessions.js";
 import { PlexAPI } from "@lukehagar/plexjs";
 import { PlexApiSourceConfig } from "../common/infrastructure/config/source/plex.js";
@@ -66,7 +65,7 @@ export default class PlexApiSource extends MemoryPositionalSource {
         this.multiPlatform = true;
         this.requiresAuth = true;
         this.requiresAuthInteraction = false;
-        this.deviceId = `${name}-ms${internal.version}-${truncateStringToLength(10, '')(objectHash.sha1(config))}`;
+        this.deviceId = `${name}-ms${internal.version}-${truncateStringToLength(10, '')(hashObject(config))}`;
         this.uniqueDropReasons = new FixedSizeList<string>(100);
         this.mediaIdsSeen = new FixedSizeList<string>(100);
     }

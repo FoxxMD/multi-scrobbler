@@ -1,6 +1,5 @@
 import { Logger } from "@foxxmd/logging";
 import { WS } from "iso-websocket";
-import objectHash from 'object-hash';
 // @ts-expect-error weird typings?
 import { Api, Jellyfin } from "@jellyfin/sdk";
 import {
@@ -58,7 +57,7 @@ import {
 import { JellyApiSourceConfig } from "../common/infrastructure/config/source/jellyfin.js";
 import { genGroupIdStr, getPlatformIdFromData, isDebugMode, parseBool, } from "../utils.js";
 import { joinedUrl } from "../utils/NetworkUtils.js";
-import { parseArrayFromMaybeString } from "../utils/StringUtils.js";
+import { hashObject, parseArrayFromMaybeString } from "../utils/StringUtils.js";
 import { MemoryPositionalSource } from "./MemoryPositionalSource.js";
 import { FixedSizeList } from "fixed-size-list";
 
@@ -98,7 +97,7 @@ export default class JellyfinApiSource extends MemoryPositionalSource {
         this.canPoll = true;
         this.multiPlatform = true;
         this.requiresAuth = true;
-        this.deviceId = `${name}-ms${internal.version}-${truncateStringToLength(10, '')(objectHash.sha1(config))}`;
+        this.deviceId = `${name}-ms${internal.version}-${truncateStringToLength(10, '')(hashObject(config))}`;
 
         this.client = new Jellyfin({
             clientInfo: {
