@@ -308,21 +308,34 @@ export default class JellyfinApiSource extends MemoryPositionalSource {
 
 
         if(session.NowPlayingItem !== undefined) {
+            const {
+                Path
+            } = session.NowPlayingItem;
+
             const allowedLibraries = this.getAllowedLibraries();
-            if(allowedLibraries.length > 0 && !allowedLibraries.map(x => x.paths).flat(1).some(x => session.NowPlayingItem.Path.includes(x))) {
+            if(allowedLibraries.length > 0 && (Path === undefined || !allowedLibraries.map(x => x.paths).flat(1).some(x => Path.includes(x)))) {
+                if(Path === undefined) {
+                    return 'media does not have a path, cannot be included in librariesAllow';
+                }
                 return `media not included in librariesAllow`;
             }
             
             if(allowedLibraries.length === 0) {
                 const blockedLibraries = this.getBlockedLibraries();
                 if(blockedLibraries.length > 0) {
-                    const blockedLibrary = blockedLibraries.find(x => x.paths.some(y => session.NowPlayingItem.Path.includes(y)));
+                    let blockedLibrary = undefined;
+                    if(Path !== undefined) {
+                        blockedLibrary = blockedLibraries.find(x => x.paths.some(y => Path.includes(y)));
+                    }
                     if(blockedLibrary !== undefined) {
                         return `media included in librariesBlock '${blockedLibrary.name}'`;
                     }
                 }
     
-                if(!this.getValidLibraries().map(x => x.paths).flat(1).some(x => session.NowPlayingItem.Path.includes(x))) {
+                if(Path === undefined || !this.getValidLibraries().map(x => x.paths).flat(1).some(x => Path.includes(x))) {
+                    if(Path === undefined) {
+                        return 'media does not have a path, cannot be part of a valid library';
+                    }
                     return `media not included in a valid library`;
                 }
             }
