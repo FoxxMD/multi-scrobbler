@@ -1,12 +1,12 @@
 import { loggerTest } from "@foxxmd/logging";
-import { assert } from 'chai';
+import { assert, expect } from 'chai';
 import dayjs from "dayjs";
 import { describe, it } from 'mocha';
 import { http, HttpResponse } from "msw";
 import { PlayObject } from "../../../core/Atomic.js";
 import { UpstreamError } from "../../common/errors/UpstreamError.js";
 
-import { ListenbrainzApiClient } from "../../common/vendor/ListenbrainzApiClient.js";
+import { ListenbrainzApiClient, playToListenPayload } from "../../common/vendor/ListenbrainzApiClient.js";
 import { ListenResponse } from '../../common/vendor/listenbrainz/interfaces.js';
 import { ExpectedResults } from "../utils/interfaces.js";
 import { withRequestInterception } from "../utils/networking.js";
@@ -22,6 +22,7 @@ import slightlyDifferentNames from './correctlyMapped/trackNameSlightlyDifferent
 // incorrect mappings
 import incorrectMultiArtistsTrackName from './incorrectlyMapped/multiArtistsInTrackName.json' with { type: "json" };
 import veryWrong from './incorrectlyMapped/veryWrong.json' with { type: "json" };
+import { generatePlay } from "../utils/PlayTestUtils.js";
 
 interface LZTestFixture {
     data: ListenResponse
@@ -150,4 +151,38 @@ describe('Listenbrainz Response Behavior', function() {
             }
         }
     ));
+});
+
+describe('Listenbrainz Endpoint Behavior', function() {
+
+    it('Should combine artist and artist_names', function() {
+
+        const play = generatePlay({artists: ['Artist A'], albumArtists: []});
+        const submitPayload = playToListenPayload(play);
+
+        const additionalArtists = [...submitPayload.track_metadata.additional_info.artist_names, 'Artist B'];
+
+        submitPayload.track_metadata.additional_info.artist_names = additionalArtists;
+
+        const playFromPayload = ListenbrainzApiClient.listenPayloadToPlay(submitPayload);
+
+        expect(playFromPayload.data.artists).to.be.eql(additionalArtists)
+        
+    });
+
+    it('Should combine artist and artist_names into a unique array', function() {
+
+        const play = generatePlay({artists: ['Artist A'], albumArtists: []});
+        const submitPayload = playToListenPayload(play);
+
+        const additionalArtists = ['Artist A', 'Artist B'];
+
+        submitPayload.track_metadata.additional_info.artist_names = additionalArtists;
+
+        const playFromPayload = ListenbrainzApiClient.listenPayloadToPlay(submitPayload);
+
+        expect(playFromPayload.data.artists).to.be.eql(['Artist A', 'Artist B'])
+        
+    });
+
 });

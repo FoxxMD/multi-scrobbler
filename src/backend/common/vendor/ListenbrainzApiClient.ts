@@ -259,17 +259,29 @@ export class ListenbrainzApiClient extends AbstractApiClient {
                     duration,
                     track_mbid,
                     artist_mbids,
+                    artist_names = [],
                     release_mbid,
-                    release_group_mbid
+                    release_group_mbid,
+                    release_artist_name,
+                    release_artist_names = []
                 } = {}
             } = {},
         } = payload;
+
+        let albumArtists: string[];
+        if(release_artist_name !== undefined) {
+            albumArtists = [release_artist_name];
+        }
+        if(release_artist_names.length > 0) {
+            albumArtists = unique([...(albumArtists ?? []), ...release_artist_names])
+        }
 
         return {
             data: {
                 playDate: typeof listened_at === 'number' ? dayjs.unix(listened_at) : dayjs(listened_at),
                 track: track_name,
-                artists: [artist_name],
+                artists: unique([artist_name, ...artist_names]),
+                albumArtists,
                 album: release_name,
                 duration,
                 meta: {
