@@ -1,7 +1,7 @@
 import { stringSameness } from '@foxxmd/string-sameness';
 import dayjs from "dayjs";
 import request, { Request, Response } from 'superagent';
-import { BrainzMeta, PlayObject, URLData } from "../../../core/Atomic.js";
+import { BrainzMeta, PlayObject, SCROBBLE_TS_SOC_START, URLData } from "../../../core/Atomic.js";
 import { combinePartsToString, slice } from "../../../core/StringUtils.js";
 import {
     findDelimiters,
@@ -263,7 +263,8 @@ export class ListenbrainzApiClient extends AbstractApiClient {
                     release_mbid,
                     release_group_mbid,
                     release_artist_name,
-                    release_artist_names = []
+                    release_artist_names = [],
+                    scrobble_ts_soc = SCROBBLE_TS_SOC_START
                 } = {}
             } = {},
         } = payload;
@@ -295,6 +296,7 @@ export class ListenbrainzApiClient extends AbstractApiClient {
             },
             meta: {
                 nowPlaying,
+                scrobbleTsSOC: scrobble_ts_soc
             }
         }
     }
