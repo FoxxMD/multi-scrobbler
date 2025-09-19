@@ -130,6 +130,16 @@ export interface SubmitListenAdditionalTrackInfo extends AdditionalTrackInfo {
      * Specific to multi-scrobbler
      */
     scrobble_ts_soc?: ScrobbleTsSOC
+    /** Unix timestamp for when the user stopped listening
+     * 
+     * Specific to multi-scrobbler
+     */
+    listened_at_completed?: number
+    /** Number of seconds track was listened to
+     * 
+     * Specific to multi-scrobbler
+     */
+    listened_for?: number
 }
 export interface TrackPayload extends MinimumTrack {
     additional_info?: SubmitListenAdditionalTrackInfo;

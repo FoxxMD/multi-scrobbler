@@ -264,7 +264,9 @@ export class ListenbrainzApiClient extends AbstractApiClient {
                     release_group_mbid,
                     release_artist_name,
                     release_artist_names = [],
-                    scrobble_ts_soc = SCROBBLE_TS_SOC_START
+                    scrobble_ts_soc = SCROBBLE_TS_SOC_START,
+                    listened_for,
+                    listened_at_completed
                 } = {}
             } = {},
         } = payload;
@@ -277,7 +279,7 @@ export class ListenbrainzApiClient extends AbstractApiClient {
             albumArtists = unique([...(albumArtists ?? []), ...release_artist_names])
         }
 
-        return {
+        const play: PlayObject = {
             data: {
                 playDate: typeof listened_at === 'number' ? dayjs.unix(listened_at) : dayjs(listened_at),
                 track: track_name,
@@ -299,6 +301,15 @@ export class ListenbrainzApiClient extends AbstractApiClient {
                 scrobbleTsSOC: scrobble_ts_soc
             }
         }
+
+        if(listened_at_completed !== undefined) {
+            play.data.playDateCompleted = dayjs.unix(listened_at_completed);
+        }
+        if(listened_for !== undefined) {
+            play.data.listenedFor = listened_for;
+        }
+
+        return play;
     }
 
     static listenResponseToPlay(listen: ListenResponse): PlayObject {
