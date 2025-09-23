@@ -103,7 +103,6 @@
     "node-object-hash": "^3.1.1",
     "normalize-url": "^8.0.1",
     "ntfy": "^1.7.6",
-    "object-hash": "^3.0.0",
     "p-event": "^4.2.0",
     "passport": "^0.6.0",
     "passport-deezer": "^0.2.0",
