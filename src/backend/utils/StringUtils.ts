@@ -1,4 +1,5 @@
 import { strategies, stringSameness, StringSamenessResult } from "@foxxmd/string-sameness";
+import { hasher } from 'node-object-hash';
 import { PlayObject } from "../../core/Atomic.js";
 import { asPlayerStateData, DELIMITERS, PlayerStateDataMaybePlay } from "../common/infrastructure/Atomic.js";
 import { genGroupIdStr, getPlatformIdFromData, intersect, parseRegexSingleOrFail } from "../utils.js";
@@ -420,3 +421,8 @@ export const normalizeListenbrainzUrl = (urlVal: string): string | undefined => 
     }
     return undefined;
 }
+
+type HashFunction = (obj: object) => string;
+const defaultHasher = hasher();
+const defaultHashFunc: HashFunction = (obj) => defaultHasher.hash(obj);
+export const hashObject = (obj: object, h: HashFunction = defaultHashFunc): string => h(obj);
