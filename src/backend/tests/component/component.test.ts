@@ -3,7 +3,8 @@ import chai, { assert, expect } from 'chai';
 import asPromised from 'chai-as-promised';
 import { after, before, describe, it } from 'mocha';
 import AbstractComponent from "../../common/AbstractComponent.js";
-import { TRANSFORM_HOOK } from "../../common/infrastructure/Atomic.js";
+
+import { TRANSFORM_HOOK } from "../../common/infrastructure/Transform.js";
 
 import { isConditionalSearchAndReplace } from "../../utils/PlayTransformUtils.js";
 import { asPlays, generatePlay, normalizePlays } from "../utils/PlayTestUtils.js";
