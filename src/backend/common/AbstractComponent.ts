@@ -13,19 +13,20 @@ import {
 } from "../utils/PlayTransformUtils.js";
 import { hasNodeNetworkException } from "./errors/NodeErrors.js";
 import { hasUpstreamError } from "./errors/UpstreamError.js";
-import {
-    ConditionalSearchAndReplaceRegExp,
-    PlayTransformParts, PlayTransformPartsArray,
-    PlayTransformRules,
-    TRANSFORM_HOOK,
-    TransformHook
-} from "./infrastructure/Atomic.js";
 import { CommonClientConfig } from "./infrastructure/config/client/index.js";
 import { CommonSourceConfig } from "./infrastructure/config/source/index.js";
 import play = Simulate.play;
 import { WebhookPayload } from "./infrastructure/config/health/webhooks.js";
 import { AuthCheckError, BuildDataError, ConnectionCheckError, ParseCacheError, PostInitError, TransformRulesError } from "./errors/MSErrors.js";
 import { messageWithCauses, messageWithCausesTruncatedDefault } from "../utils/ErrorUtils.js";
+import {
+    ConditionalSearchAndReplaceRegExp,
+    PlayTransformParts,
+    PlayTransformPartsArray,
+    PlayTransformRules,
+    TRANSFORM_HOOK,
+    TransformHook
+} from "./infrastructure/Transform.js";
 
 export default abstract class AbstractComponent {
     requiresAuth: boolean = false;
