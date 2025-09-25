@@ -6,9 +6,10 @@ export interface ConditionalSearchAndReplaceRegExp extends SearchAndReplaceRegEx
 
 export type ConditionalSearchAndReplaceTerm = Omit<ConditionalSearchAndReplaceRegExp, 'test'>
 export type SearchAndReplaceTerm = string | ConditionalSearchAndReplaceTerm;
-export type ExternalMetadataTerm = true | undefined;
+export type ExternalMetadataTerm = true | undefined | { when: WhenConditionsConfig };
 
-export type PlayTransformParts<T> = PlayTransformPartsAtomic<T[]> & { when?: WhenConditionsConfig };
+export type PlayTransformParts<T> = PlayTransformStage<T[]> & { when?: WhenConditionsConfig };
+export type PlayTransformUserParts<T> = PlayTransformUserStage<T[]> & { when?: WhenConditionsConfig };
 export type PlayTransformPartsArray<T> = PlayTransformParts<T>[];
 export type PlayTransformPartsConfig<T> = PlayTransformPartsArray<T> | PlayTransformParts<T>;
 
@@ -18,6 +19,26 @@ export interface PlayTransformPartsAtomic<T> {
     album?: T
 }
 
+export type StageType = 'spotify' | 'listenbrainz' | 'native' | 'user';
+export const STAGE_TYPES: StageType[] = ['spotify','listenbrainz','native','user']
+
+export interface PlayTransformStageTyped<T> extends PlayTransformPartsAtomic<T> {
+    type: 'spotify' | 'listenbrainz' | 'native' | 'user'
+}
+
+export interface PlayTransformMetadataStage extends PlayTransformStageTyped<ExternalMetadataTerm[]> {
+    score?: number
+    all?: ExternalMetadataTerm
+    type: 'spotify' | 'listenbrainz' | 'native'
+}
+
+export interface PlayTransformUserStage<T> extends PlayTransformStageTyped<T> {
+    type: 'user'
+}
+
+export type PlayTransformStage<T> = PlayTransformMetadataStage | PlayTransformUserStage<T>
+
+/** Represents the plain json user-configured structure (input) */
 export interface PlayTransformHooksConfig<T> {
     preCompare?: PlayTransformPartsConfig<T>
     compare?: {
@@ -27,6 +48,7 @@ export interface PlayTransformHooksConfig<T> {
     postCompare?: PlayTransformPartsConfig<T>
 }
 
+/** Represents the final, strongly-typed transform configuration used during runtime */
 export interface PlayTransformHooks<T> extends PlayTransformHooksConfig<T> {
     preCompare?: PlayTransformPartsArray<T>
     compare?: {
