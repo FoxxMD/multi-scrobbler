@@ -9,23 +9,25 @@ import { buildTrackString, truncateStringToLength } from "../../core/StringUtils
 
 import {
     configPartsToStrongParts, countRegexes,
+    isUserStage,
     transformPlayUsingParts
 } from "../utils/PlayTransformUtils.js";
 import { hasNodeNetworkException } from "./errors/NodeErrors.js";
 import { hasUpstreamError } from "./errors/UpstreamError.js";
-import {
-    ConditionalSearchAndReplaceRegExp,
-    PlayTransformParts, PlayTransformPartsArray,
-    PlayTransformRules,
-    TRANSFORM_HOOK,
-    TransformHook
-} from "./infrastructure/Atomic.js";
 import { CommonClientConfig } from "./infrastructure/config/client/index.js";
 import { CommonSourceConfig } from "./infrastructure/config/source/index.js";
 import play = Simulate.play;
 import { WebhookPayload } from "./infrastructure/config/health/webhooks.js";
 import { AuthCheckError, BuildDataError, ConnectionCheckError, ParseCacheError, PostInitError, TransformRulesError } from "./errors/MSErrors.js";
 import { messageWithCauses, messageWithCausesTruncatedDefault } from "../utils/ErrorUtils.js";
+import {
+    ConditionalSearchAndReplaceRegExp,
+    PlayTransformParts,
+    PlayTransformPartsArray,
+    PlayTransformRules,
+    TRANSFORM_HOOK,
+    TransformHook
+} from "./infrastructure/Transform.js";
 
 export default abstract class AbstractComponent {
     requiresAuth: boolean = false;
@@ -387,17 +389,19 @@ export default abstract class AbstractComponent {
             let transformedPlay: PlayObject = play;
             const transformDetails: string[] = [];
             for(const hookItem of hook) {
-                const newTransformedPlay = transformPlayUsingParts(transformedPlay, hookItem, {
-                    logger: getLogger,
-                    regex: {
-                        searchAndReplace: this.regexCache.searchAndReplace,
-                        testMaybeRegex: this.regexCache.testMaybeRegex,
+                if(hookItem.type === 'user') {
+                    const newTransformedPlay = transformPlayUsingParts(transformedPlay, hookItem, {
+                        logger: getLogger,
+                        regex: {
+                            searchAndReplace: this.regexCache.searchAndReplace,
+                            testMaybeRegex: this.regexCache.testMaybeRegex,
+                        }
+                    });
+                    if(!deepEqual(newTransformedPlay, transformedPlay)) {
+                        transformDetails.push(buildTrackString(transformedPlay, {include: ['artist', 'track', 'album']}));
                     }
-                });
-                if(!deepEqual(newTransformedPlay, transformedPlay)) {
-                    transformDetails.push(buildTrackString(transformedPlay, {include: ['artist', 'track', 'album']}));
+                    transformedPlay = newTransformedPlay;
                 }
-                transformedPlay = newTransformedPlay;
             }
 
             if(transformDetails.length > 0) {

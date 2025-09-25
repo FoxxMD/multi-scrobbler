@@ -18,9 +18,10 @@ import {
     PlayUserId,
     ProgressAwarePlayObject,
     SINGLE_USER_PLATFORM_ID,
-    SourceType, TRANSFORM_HOOK,
+    SourceType,
 } from "../common/infrastructure/Atomic.js";
 import { SourceConfig } from "../common/infrastructure/config/source/sources.js";
+import { TRANSFORM_HOOK } from "../common/infrastructure/Transform.js";
 import TupleMap from "../common/TupleMap.js";
 import {
     difference,
