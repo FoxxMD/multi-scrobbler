@@ -27,12 +27,14 @@ export class AppriseWebhookNotifier extends AbstractWebhookNotifier {
 
     urls: string[];
     keys: string[];
+    tags: string[];
 
     constructor(defaultName: string, config: AppriseConfig, logger: Logger) {
         super('Apprise', defaultName, config, logger);
         const {
             urls = [],
             keys = [],
+            tags = [],
             host,
         } = this.config;
         if (host === undefined) {
@@ -40,6 +42,7 @@ export class AppriseWebhookNotifier extends AbstractWebhookNotifier {
         }
         this.urls = Array.isArray(urls) ? urls : [urls];
         this.keys = Array.isArray(keys) ? keys : [keys];
+        this.tags = Array.isArray(tags) ? tags : [tags];
 
         if (this.urls.length === 0 && this.keys.length === 0) {
             this.logger.warn(`No 'urls' or 'keys' were defined! Will assume stateless (POST ${host}/notify) and that you have the ENV 'APPRISE_STATELESS_URLS' set on your Apprise instance`);
@@ -85,6 +88,7 @@ export class AppriseWebhookNotifier extends AbstractWebhookNotifier {
         const body: Record<string, any> = {
             title: payload.title,
             body: payload.message,
+            tags: this.tags.join(','), // a comma 'OR's the tags https://github.com/caronc/apprise-api?tab=readme-ov-file#persistent-stateful-storage-solution
             type: convertPriorityToType(payload.priority)
         }
 
