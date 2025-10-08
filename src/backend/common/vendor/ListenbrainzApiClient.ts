@@ -696,6 +696,7 @@ export const playToListenPayload = (play: PlayObject): ListenPayload => {
                 mediaPlayerName,
                 mediaPlayerVersion,
                 musicService,
+                source
             }
         } = play;
         // using submit-listens exmaple from openapi https://rain0r.github.io/listenbrainz-openapi/index.html#/lbCore/submitListens
@@ -714,6 +715,7 @@ export const playToListenPayload = (play: PlayObject): ListenPayload => {
             media_player: mediaPlayerName ?? msAdditionalInfo.media_player,
             media_player_version: mediaPlayerVersion ?? msAdditionalInfo.media_player_version,
             music_service: musicService !== undefined ? musicServiceToCononical(musicService) : msAdditionalInfo.music_service,
+            music_service_name: source,
             spotify_id: spotify.track ?? msAdditionalInfo.spotify_id,
             spotify_album_id: spotify.album ?? msAdditionalInfo.spotify_album_id,
             spotify_artist_ids: spotify.artist ?? msAdditionalInfo.spotify_artist_ids

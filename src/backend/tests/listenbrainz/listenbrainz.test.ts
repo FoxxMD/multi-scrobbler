@@ -185,4 +185,13 @@ describe('Listenbrainz Endpoint Behavior', function() {
         
     });
 
+    it('Should set music_service_name from source', function() {
+
+        const play = generatePlay({artists: ['Artist A'], albumArtists: []}, {source: 'Plex'});
+        const submitPayload = playToListenPayload(play);
+
+        expect(submitPayload.track_metadata.additional_info.music_service_name).to.be.eql('Plex')
+        
+    });
+
 });
