@@ -71,6 +71,17 @@ export interface PlexApiData extends CommonSourceData, PollingOptions {
          * Do not scrobble if library name contains strings from this list (case-insensitive)
          * */
         librariesBlock?: string | string[]
+
+        /**
+         * Ignore invalid cert errors when connecting to Plex
+         * 
+         * Useful for Plex servers using "Required" Secure Connections with self-signed certificates
+         * 
+         * Do not enable unless you know you need this.
+         * 
+         * @default false
+         */
+        ignoreInvalidCert?: boolean
 }
 
 export interface PlexApiOptions extends CommonSourceOptions {
