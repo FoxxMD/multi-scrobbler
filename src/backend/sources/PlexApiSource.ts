@@ -81,11 +81,11 @@ export default class PlexApiSource extends MemoryPositionalSource {
                 devicesAllow = [],
                 devicesBlock = [],
                 librariesAllow = [],
-                librariesBlock = [],
-                ignoreInvalidCert = false
+                librariesBlock = []
             } = {},
             options: {
                 logFilterFailure = (isDebugMode() ? 'debug' : 'warn'),
+                ignoreInvalidCert = false
             } = {}
         } = this.config;
 
