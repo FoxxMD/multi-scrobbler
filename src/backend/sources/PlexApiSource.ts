@@ -13,7 +13,8 @@ import {
 import { genGroupIdStr, getFirstNonEmptyString, getPlatformIdFromData, isDebugMode, parseBool, } from "../utils.js";
 import { buildStatePlayerPlayIdententifyingInfo, hashObject, parseArrayFromMaybeString } from "../utils/StringUtils.js";
 import { GetSessionsMetadata } from "@lukehagar/plexjs/sdk/models/operations/getsessions.js";
-import { PlexAPI } from "@lukehagar/plexjs";
+import { PlexAPI, HTTPClient, Fetcher } from "@lukehagar/plexjs";
+import { Agent } from 'undici';
 import { PlexApiSourceConfig } from "../common/infrastructure/config/source/plex.js";
 import { isPortReachable, joinedUrl } from '../utils/NetworkUtils.js';
 import normalizeUrl from 'normalize-url';
@@ -80,10 +81,11 @@ export default class PlexApiSource extends MemoryPositionalSource {
                 devicesAllow = [],
                 devicesBlock = [],
                 librariesAllow = [],
-                librariesBlock = [],
+                librariesBlock = []
             } = {},
             options: {
                 logFilterFailure = (isDebugMode() ? 'debug' : 'warn'),
+                ignoreInvalidCert = false
             } = {}
         } = this.config;
 
@@ -123,9 +125,35 @@ export default class PlexApiSource extends MemoryPositionalSource {
         this.address = new URL(normal);
         this.logger.debug(`Config URL: ${this.config.data.url} | Normalized: ${this.address.toString()}`);
 
+        let httpClient: HTTPClient | undefined;
+
+        if(ignoreInvalidCert) {
+            this.logger.debug('Using http client that ignores self-signed certs');
+
+            // https://github.com/nodejs/undici/issues/1489#issuecomment-1543856261
+            const bypassAgent = new Agent({
+                connect: {
+                    rejectUnauthorized: false,
+                },
+            });
+
+            const bypassFetcher: Fetcher = (input, init) => {
+
+                if (init == null) {
+                    // @ts-ignore
+                    return fetch(input, {dispatcher: bypassAgent});
+                } else {
+                    // @ts-ignore
+                    return fetch(input, {...init, dispatcher: bypassAgent});
+                }
+            };
+            httpClient = new HTTPClient({ fetcher: bypassFetcher });
+        }
+
         this.plexApi = new PlexAPI({
             serverURL: this.address.toString(),
-            accessToken: this.config.data.token
+            accessToken: this.config.data.token,
+            httpClient
         });
 
         return true;
