@@ -87,6 +87,13 @@ export interface JellyApiData extends CommonSourceData {
     * @default false
     */
     allowUnknown?: boolean
+
+    /**
+     * HOST:PORT of the Jellyfin server that your browser will be able to access from the frontend (and thus load images and links from)
+     * If unspecified it will use the normal server HOST and PORT from the `url`
+     * Necessary if you are using a reverse proxy or other network configuration that prevents the frontend from accessing the server directly
+     * */
+    frontendUrlOverride?: string
 }
 
 export interface JellyApiOptions extends CommonSourceOptions {

@@ -378,6 +378,14 @@ export default class JellyfinApiSource extends MemoryPositionalSource {
         if(AlbumId !== undefined && AlbumPrimaryImageTag !== undefined) {
             const existingArt = play.meta?.art || {};
             existingArt.album = this.imageApi.getItemImageUrlById(AlbumId, undefined, {maxHeight: 500});
+            if(
+                this.config.data.frontendUrlOverride !== undefined &&
+                this.config.data.frontendUrlOverride.length > 0 &&
+                existingArt.album !== undefined &&
+                existingArt.album.length > 0
+            ) {
+                existingArt.album = existingArt.album.replace(this.config.data.url, this.config.data.frontendUrlOverride);
+            }
             play.meta.art = existingArt;
         }
         if(ParentId !== undefined) {
@@ -387,6 +395,14 @@ export default class JellyfinApiSource extends MemoryPositionalSource {
             play.meta.url = {
                 ...(play.meta?.url || {}),
                 web: u.toString().replace('%23', '#')
+            }
+            if(
+                this.config.data.frontendUrlOverride !== undefined &&
+                this.config.data.frontendUrlOverride.length > 0 &&
+                play.meta.url.web !== undefined &&
+                play.meta.url.web.length > 0
+            ) {
+                play.meta.url.web = play.meta.url.web.replace(this.config.data.url, this.config.data.frontendUrlOverride);
             }
         }
 
