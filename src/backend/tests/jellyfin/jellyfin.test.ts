@@ -172,6 +172,82 @@ describe("Jellyfin API Source", function() {
         });
     });
 
+    describe('Correctly replaces URLs with frontendUrlOverride', function () {
+
+        const sourceUrl = 'http://192.168.10.11:8096';
+        const frontendUrlOverride = 'https://myjellyfin.com';
+
+        it('Should return original URL when frontendUrlOverride is not set', async function () {
+            const jf = createJfApi({...defaultJfApiCreds, url: sourceUrl});
+            await jf.buildInitData();
+
+            const testUrl = `${sourceUrl}/Items/123/Images/Primary`;
+            expect(jf.replaceUrlIfNeeded(testUrl)).to.be.eql(testUrl);
+
+            await jf.destroy();
+        });
+
+        it('Should return original URL when frontendUrlOverride is empty string', async function () {
+            const jf = createJfApi({...defaultJfApiCreds, url: sourceUrl, frontendUrlOverride: ''});
+            await jf.buildInitData();
+
+            const testUrl = `${sourceUrl}/Items/123/Images/Primary`;
+            expect(jf.replaceUrlIfNeeded(testUrl)).to.be.eql(testUrl);
+
+            await jf.destroy();
+        });
+
+        it('Should replace source URL with frontendUrlOverride when set', async function () {
+            const jf = createJfApi({...defaultJfApiCreds, url: sourceUrl, frontendUrlOverride: frontendUrlOverride});
+            await jf.buildInitData();
+
+            const testUrl = `${sourceUrl}/Items/123/Images/Primary`;
+            const expectedUrl = `${frontendUrlOverride}/Items/123/Images/Primary`;
+            expect(jf.replaceUrlIfNeeded(testUrl)).to.be.eql(expectedUrl);
+
+            await jf.destroy();
+        });
+
+        it('Should return original URL when input URL is undefined', async function () {
+            const jf = createJfApi({...defaultJfApiCreds, url: sourceUrl, frontendUrlOverride: frontendUrlOverride});
+            await jf.buildInitData();
+
+            expect(jf.replaceUrlIfNeeded(undefined)).to.be.undefined;
+
+            await jf.destroy();
+        });
+
+        it('Should return original URL when input URL is empty string', async function () {
+            const jf = createJfApi({...defaultJfApiCreds, url: sourceUrl, frontendUrlOverride: frontendUrlOverride});
+            await jf.buildInitData();
+
+            expect(jf.replaceUrlIfNeeded('')).to.be.eql('');
+
+            await jf.destroy();
+        });
+
+        it('Should not replace URL when source URL is not present', async function () {
+            const jf = createJfApi({...defaultJfApiCreds, url: sourceUrl, frontendUrlOverride: frontendUrlOverride});
+            await jf.buildInitData();
+
+            const testUrl = 'https://some-other-domain.com/Items/123/Images/Primary';
+            expect(jf.replaceUrlIfNeeded(testUrl)).to.be.eql(testUrl);
+
+            await jf.destroy();
+        });
+
+        it('Should not replace multiple occurrences of source URL', async function () {
+            const jf = createJfApi({...defaultJfApiCreds, url: sourceUrl, frontendUrlOverride: frontendUrlOverride});
+            await jf.buildInitData();
+
+            const testUrl = `${sourceUrl}/redirect?url=${sourceUrl}/Items/123`;
+            const expectedUrl = `${frontendUrlOverride}/redirect?url=${sourceUrl}/Items/123`;
+            expect(jf.replaceUrlIfNeeded(testUrl)).to.be.eql(expectedUrl);
+
+            await jf.destroy();
+        });
+    });
+
     describe('Correctly detects activity as valid/invalid', function() {
 
         describe('Filters from Configuration', function() {
