@@ -3,6 +3,8 @@
  * https://musicbrainz.org/doc/MusicBrainz_Database/Schema#Overview
 */
 
+import { ScrobbleTsSOC } from "../../../../core/Atomic.js";
+
 /** A unique product a Recording is issued on.
  *
  * This is like an album (release group) but is specific to the type, year, catalog, etc... for this release
@@ -123,6 +125,21 @@ export interface SubmitListenAdditionalTrackInfo extends AdditionalTrackInfo {
     spotify_album_artist_ids?: string[];
     spotify_artist_ids?: string[];
     albumartist?: string;
+    /** Is the timestamp (listened_at) from when the user started listening or when they stopped listening?
+     * 
+     * Specific to multi-scrobbler
+     */
+    scrobble_ts_soc?: ScrobbleTsSOC
+    /** Unix timestamp for when the user stopped listening
+     * 
+     * Specific to multi-scrobbler
+     */
+    listened_at_completed?: number
+    /** Number of seconds track was listened to
+     * 
+     * Specific to multi-scrobbler
+     */
+    listened_for?: number
 }
 export interface TrackPayload extends MinimumTrack {
     additional_info?: SubmitListenAdditionalTrackInfo;
