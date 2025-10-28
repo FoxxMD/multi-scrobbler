@@ -122,6 +122,7 @@
     "tsx": "^4.7.0",
     "typeson": "^9.0.4",
     "typeson-registry": "^11.1.1",
+    "undici": "^7.0.0",
     "vite-express": "^0.16.0",
     "vlc-client": "^1.1.1",
     "xml2js": "0.6.1",

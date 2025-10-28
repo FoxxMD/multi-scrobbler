@@ -1,24 +1,20 @@
 import EventEmitter from "events";
 import { PlayObject } from "../../core/Atomic.js";
-import { buildTrackString, combinePartsToString, truncateStringToLength } from "../../core/StringUtils.js";
+import { combinePartsToString, truncateStringToLength } from "../../core/StringUtils.js";
 import {
     asPlayerStateDataMaybePlay,
     FormatPlayObjectOptions,
     InternalConfig,
-    NO_USER,
-    PlayerStateData,
     PlayerStateDataMaybePlay,
     PlayPlatformId, REPORTED_PLAYER_STATUSES
 } from "../common/infrastructure/Atomic.js";
-import { genGroupIdStr, getFirstNonEmptyString, getPlatformIdFromData, isDebugMode, parseBool, } from "../utils.js";
+import { getFirstNonEmptyString, isDebugMode, } from "../utils.js";
 import { buildStatePlayerPlayIdententifyingInfo, hashObject, parseArrayFromMaybeString } from "../utils/StringUtils.js";
 import { GetSessionsMetadata } from "@lukehagar/plexjs/sdk/models/operations/getsessions.js";
 import { PlexAPI, HTTPClient, Fetcher } from "@lukehagar/plexjs";
 import { Agent } from 'undici';
 import { PlexApiSourceConfig } from "../common/infrastructure/config/source/plex.js";
-import { isPortReachable, joinedUrl } from '../utils/NetworkUtils.js';
-import normalizeUrl from 'normalize-url';
-import { GetTokenDetailsResponse, GetTokenDetailsUserPlexAccount } from '@lukehagar/plexjs/sdk/models/operations/gettokendetails.js';
+import { GetTokenDetailsUserPlexAccount } from '@lukehagar/plexjs/sdk/models/operations/gettokendetails.js';
 import { parseRegexSingle } from '@foxxmd/regex-buddy-core';
 import { Readable } from 'node:stream';
 import { PlexPlayerState } from './PlayerState/PlexPlayerState.js';
@@ -41,8 +37,6 @@ export default class PlexApiSource extends MemoryPositionalSource {
     plexUser: string;
 
     deviceId: string;
-
-    address: URL;
 
     usersAllow: string[] = [];
     usersBlock: string[] = [];
