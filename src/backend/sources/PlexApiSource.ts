@@ -121,10 +121,6 @@ export default class PlexApiSource extends MemoryPositionalSource {
             this.logger.warn(`When both 'librariesAllow' and 'librariesBlock' are specified only 'librariesAllow' is used.`);
         }
 
-        const normal = normalizeUrl(this.config.data.url, {removeSingleSlash: true});
-        this.address = new URL(normal);
-        this.logger.debug(`Config URL: ${this.config.data.url} | Normalized: ${this.address.toString()}`);
-
         let httpClient: HTTPClient | undefined;
 
         if(ignoreInvalidCert) {
@@ -151,7 +147,7 @@ export default class PlexApiSource extends MemoryPositionalSource {
         }
 
         this.plexApi = new PlexAPI({
-            serverURL: this.address.toString(),
+            serverURL: this.config.data.url,
             accessToken: this.config.data.token,
             httpClient
         });
@@ -161,10 +157,7 @@ export default class PlexApiSource extends MemoryPositionalSource {
 
     protected async doCheckConnection(): Promise<true | string | undefined> {
         try {
-            const reachable = await isPortReachable(parseInt(this.address.port ?? '80'), {host: this.address.hostname});
-            if(!reachable) {
-                throw new Error(`Could not reach server at ${this.address}}`);
-            }
+            await this.plexApi.server.getServerCapabilities();
             return true;
         } catch (e) {
             throw e;
@@ -275,7 +268,7 @@ export default class PlexApiSource extends MemoryPositionalSource {
             if(allowedLibraries.length > 0 && !allowedLibraries.some(x => state.play.meta.library.toLocaleLowerCase() === x.name.toLocaleLowerCase())) {
                 return `media not included in librariesAllow`;
             }
-            
+
             if(allowedLibraries.length === 0) {
                 const blockedLibraries = this.getBlockedLibraries();
                 if(blockedLibraries.length > 0) {
