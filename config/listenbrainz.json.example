@@ -5,7 +5,8 @@
     "configureAs": "client",
     "data": {
       "token": "029b081ba-9156-4pe7-88e5-3be671f5ea2b",
-      "username": "FoxxMD"
+      "username": "FoxxMD",
+      "url": "https://api.listenbrainz.org"
     }
   },
   {
@@ -14,7 +15,8 @@
     "configureAs": "source",
     "data": {
       "token": "029b081ba-9156-4pe7-88e5-3be671f5ea2b",
-      "username": "FoxxMD"
+      "username": "FoxxMD",
+      "url": "https://api.listenbrainz.org"
     }
   }
 ]
