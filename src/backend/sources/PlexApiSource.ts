@@ -1,5 +1,5 @@
 import EventEmitter from "events";
-import { PlayObject } from "../../core/Atomic.js";
+import { PlayObject, URLData } from "../../core/Atomic.js";
 import { buildTrackString, combinePartsToString, truncateStringToLength } from "../../core/StringUtils.js";
 import {
     asPlayerStateDataMaybePlay,
@@ -16,8 +16,7 @@ import { GetSessionsMetadata } from "@lukehagar/plexjs/sdk/models/operations/get
 import { PlexAPI, HTTPClient, Fetcher } from "@lukehagar/plexjs";
 import { Agent } from 'undici';
 import { PlexApiSourceConfig } from "../common/infrastructure/config/source/plex.js";
-import { isPortReachable, joinedUrl } from '../utils/NetworkUtils.js';
-import normalizeUrl from 'normalize-url';
+import { isPortReachable, joinedUrl, normalizeWebAddress } from '../utils/NetworkUtils.js';
 import { GetTokenDetailsResponse, GetTokenDetailsUserPlexAccount } from '@lukehagar/plexjs/sdk/models/operations/gettokendetails.js';
 import { parseRegexSingle } from '@foxxmd/regex-buddy-core';
 import { Readable } from 'node:stream';
@@ -42,7 +41,7 @@ export default class PlexApiSource extends MemoryPositionalSource {
 
     deviceId: string;
 
-    address: URL;
+    address: URLData;
 
     usersAllow: string[] = [];
     usersBlock: string[] = [];
@@ -121,8 +120,7 @@ export default class PlexApiSource extends MemoryPositionalSource {
             this.logger.warn(`When both 'librariesAllow' and 'librariesBlock' are specified only 'librariesAllow' is used.`);
         }
 
-        const normal = normalizeUrl(this.config.data.url, {removeSingleSlash: true});
-        this.address = new URL(normal);
+        this.address = normalizeWebAddress(this.config.data.url);
         this.logger.debug(`Config URL: ${this.config.data.url} | Normalized: ${this.address.toString()}`);
 
         let httpClient: HTTPClient | undefined;
@@ -151,7 +149,7 @@ export default class PlexApiSource extends MemoryPositionalSource {
         }
 
         this.plexApi = new PlexAPI({
-            serverURL: this.address.toString(),
+            serverURL: this.address.url.toString(),
             accessToken: this.config.data.token,
             httpClient
         });
@@ -161,7 +159,7 @@ export default class PlexApiSource extends MemoryPositionalSource {
 
     protected async doCheckConnection(): Promise<true | string | undefined> {
         try {
-            const reachable = await isPortReachable(parseInt(this.address.port ?? '80'), {host: this.address.hostname});
+            const reachable = await isPortReachable(this.address.port, {host: this.address.url.hostname});
             if(!reachable) {
                 throw new Error(`Could not reach server at ${this.address}}`);
             }
