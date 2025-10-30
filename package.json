@@ -1,6 +1,6 @@
 {
   "name": "multi-scrobbler",
-  "version": "0.10.0",
+  "version": "0.10.1",
   "type": "module",
   "description": "scrobble plays from multiple sources to multiple clients",
   "scripts": {
