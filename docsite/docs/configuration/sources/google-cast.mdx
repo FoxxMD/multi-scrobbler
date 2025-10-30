@@ -1,0 +1,184 @@
+---
+title: Google Cast (Chromecast)
+toc_min_heading_level: 2
+toc_max_heading_level: 5
+---
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+import CodeBlock from '@theme/CodeBlock';
+import ChromecastConfig from '!!raw-loader!@site/../config/chromecast.json.example';
+
+If your media device can be **Cast** to using this button ![Chromecast Icon](https://upload.wikimedia.org/wikipedia/commons/2/26/Chromecast_cast_button_icon.svg) on your phone/computer then multi-scrobbler can monitor it in order to scrobble music you play.
+
+
+:::note 
+
+Google Cast support is **experimental**. You may experience crashes and errors while using this Source. Please open an issue if you experience problems and include all information detailed in the issue template to help debug your issue.
+
+:::
+
+:::note 
+
+This source relies on common, **basic** music data provided by the cast device which will always be less exhaustive than data parsed from full source integrations. If there is an existing [Source](/configuration/sources) it is recommended to configure for it and blacklist the app on Google Cast, rather than relying solely on Google Cast for scrobbling.
+
+:::
+
+#### Connecting Devices
+
+Cast devices can be manually configured using file-based configuration OR automatically discovered using **mDNS.**
+
+###### mDNS Discovery
+
+The host machine running multi-scrobbler must be configured to allow [mDNS traffic on port 5353/UDP](https://book.hacktricks.xyz/network-services-pentesting/5353-udp-multicast-dns-mdns).
+
+<details>
+
+    <summary>OS Specific Instructions</summary>
+
+<Tabs>
+    <TabItem value="linux" label="Linux">
+        **Docker**
+
+        The host machine must have [avahi-daemon](https://avahi.org/) running to circumvent limitations with DNS resolution due to musl in Alpine. Most major linux distributions package avahi and many have it built-in. Once avahi is running you must pass D-Bus and the avahi daemon socket to your container like so:
+
+        ```
+        docker run ... -v /var/run/dbus:/var/run/dbus -v  	/var/run/avahi-daemon/socket:/var/run/avahi-daemon/socket ... foxxmd/multi-scrobbler
+        ```
+
+        **Flatpak/Nodejs**
+
+        No additional steps are required.
+    </TabItem>
+    <TabItem value="windows" label="Windows">
+        **Docker**
+
+        Unsupported at this time.
+
+        **Nodejs**
+
+        No additional steps are required.
+    </TabItem>
+</Tabs>
+
+</details>
+
+#### What Media Does MS Scrobble?
+
+Cast devices report what type of media the current activity is [(see `metadata` property here)](https://developers.google.com/cast/docs/media/messages#MediaInformation). The reported type is dependent on the application playing the media to correctly report it, the cast device does not magically know what the media is. If an application does not report a type it is always classified as `unknown`.
+
+**By default, MS will only track media that is reported as `MusicTrack`.**
+
+##### Allow Unknown Media Type
+
+Media with an Unknown (`Generic`) media type can be explicitly allowed by setting `"allowUnknownMedia": true` in the file-based configuration. This can also be configured to only allow unknown media types for specific applications by using a list of application names.
+
+<details>
+
+    <summary>Example</summary>
+
+    ```json5 title="chromecast.json"
+    [
+      {
+        "name": "MyCast",
+        "type": "chromecast",
+        "data": {
+          // only allow unknown if app name contains any of these phrases
+          "allowUnknownMedia": ["smarttube", "default media receiver"]
+        },
+      }
+    ]
+    ```
+
+</details>
+
+##### Forcing Media Tracking
+
+MS can be forced to track media from an application regardless of media type. This is useful if an application incorrectly reports a media type you are sure should be music. Set `"forceMediaRecognitionOn"` in the file-based configuration to a list of application names that should always be tracked.
+
+<details>
+
+    <summary>Example</summary>
+
+    ```json5 title="chromecast.json"
+    [
+      {
+        "name": "MyCast",
+        "type": "chromecast",
+        "data": {
+          // media from applications that contains these phrases will always be tracked, regardless of media type reported
+          "forceMediaRecognitionOn": ["smarttube", "default media receiver"]
+        },
+      }
+    ]
+    ```
+
+</details>
+
+#### Cast Troubleshooting
+
+Please include any/all logs with raw output if there are any errors encountered as this is critical to diagnosing issues.
+
+To diagnose bad/incomplete track information or strange MS player behavior please turn on **payload logging** and include log output of the source running to help diagnose this issue. Either enable in config using the below example OR enable [Debug Mode.](/configuration#debug-mode)
+
+<details>
+
+    <summary>Example</summary>
+
+    ```json5 title="chromecast.json"
+    [
+      {
+        "name": "MyCast",
+        "type": "chromecast",
+        "data": {
+          //...
+        },
+        "options": {
+          "logPayload": true
+        }
+      }
+    ]
+    ```
+
+</details>
+
+## Configuration
+
+<Tabs groupId="configType" queryString>
+    <TabItem value="env" label="ENV">
+        :::note
+        [Manually configuring cast device connections](#connecting-devices) is only available through file-based config.
+        :::
+
+        | Environmental Variable | Required? | Default |                                     Description                                      |
+        |------------------------|-----------|---------|--------------------------------------------------------------------------------------|
+        | CC_ENABLE              | No        |         | Set to 'true' to enable Cast monitoring without needing to define other ENVs         |
+        | CC_WHITELIST_DEVICES   | No        |         | Only scrobble from these Cast devices. Comma-delimited list. EX mini-home, family-tv |
+        | CC_BLACKLIST_DEVICES   | No        |         | Do not scrobble from these Cast devices. Comma-delimited list                        |
+        | CC_WHITELIST_APPS      | No        |         | Only scrobble from these casted Apps. Comma-delimited list. EX spotify, pandora      |
+        | CC_BLACKLIST_APPS      | No        |         | Do not scrobble from these casted Apps. Comma-delimited list                         |
+    </TabItem>
+    <TabItem value="file" label="File">
+
+        <details>
+
+            <summary>Example</summary>
+
+            <CodeBlock title="CONFIG_DIR/chromecast.json" language="json5">{ChromecastConfig}</CodeBlock>
+
+        </details>
+
+        or <SchemaLink lower objectName="ChromecastSourceConfig"/>
+    </TabItem>
+    <TabItem value="aio" label="AIO">
+        <details>
+
+            <summary>Example</summary>
+
+            <AIOExample data={ChromecastConfig} name="chromecast"/>
+
+        </details>
+
+        or <SchemaLink lower objectName="ChromecastSourceConfig"/>
+    </TabItem>
+</Tabs>

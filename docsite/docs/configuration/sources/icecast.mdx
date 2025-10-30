@@ -1,0 +1,97 @@
+---
+title: Icecast
+toc_min_heading_level: 2
+toc_max_heading_level: 5
+---
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+import CodeBlock from '@theme/CodeBlock';
+import IcecastConfig from '!!raw-loader!@site/../config/icecast.json.example';
+import ShouldScrobble from "@site/src/components/snippets/_should-scrobble.mdx"
+
+Parse metadata from any Icecast Station (streams) to use for scrobbling.
+
+:::note
+
+There is no standard format for presenting track information in an Icecast stream and the majority of streams that do include metadata only use a single string (`StreamTitle`) from which metadata can be parsed.
+
+Multi-scrobbler will do its best to parse Artist/Album/Track information from this data but the quality and consistency for this is solely based on how the Icecast broadcaster chooses to format their tracks.
+
+:::
+
+:::note[Scrobbling Behavior]
+
+Multi-scrobbler cannot automatically determine if you are listening to a Station. Therefore, **automatic scrobbling for Icecast Sources is off by default.**
+
+Use [Should Scrobble Behavior](/configuration/sources#should-scrobble-behavior) to initiate scrobbling or configure automatic scrobble.
+
+:::
+
+:::tip[Scrobbling Threshold]
+
+Icecast does not report track lengths so multi-scrobbler cannot determine if it should scrobble based on percent played. You should instead set a shorter "listened to" **duration** using [Scrobble Thresholds.](/configuration/sources#scrobble-thresholds)
+
+:::
+
+
+#### URL and Sources
+
+The URL should be the URL you would use to stream audio. 
+
+Additional sources are supported based on those found in [`icecast-metadata-stats`](https://github.com/eshaz/icecast-metadata-js/tree/main/src/icecast-metadata-stats#supported-status-apis). To use these with automatic parsing [based on the regular URL](https://github.com/eshaz/icecast-metadata-js/tree/main/src/icecast-metadata-stats#options) include a `sources` array in your config the same way as shown in `icecast-metadata-stats`:
+
+<details>
+
+    <summary>Example</summary>
+
+```json5 title="config.json"
+[
+    {
+      "name": "myIcy",
+      "enable": true,
+      "data": {
+        "url": "http://myIcecast.com/radio",
+        "sources": ["icy", "ogg", "sevenhtml"]
+      }
+    }
+  ]
+  
+```
+</details>
+
+To manually set these sources include the same [`*Endpoint` options](https://github.com/eshaz/icecast-metadata-js/tree/main/src/icecast-metadata-stats#options) found in `icecast-metadata-stats`.
+
+If no `sources` are configured for multi-scrobbler it will automatically try to use `icy` and `ogg`.
+
+## Configuration
+
+<Tabs groupId="configType" queryString>
+    <TabItem value="env" label="ENV">
+        | Environmental Variable | Required? | Default | Description |
+        | :--------------------- | :-------- | :------ | ----------- |
+        | `ICECAST_URL`          | Yes       |         | Icecast URL |
+    </TabItem>
+    <TabItem value="file" label="File">
+        <details>
+
+            <summary>Example</summary>
+
+            <CodeBlock title="CONFIG_DIR/icecast.json" language="json5">{IcecastConfig}</CodeBlock>
+
+        </details>
+
+        or <SchemaLink lower objectName="IcecastSourceConfig"/>
+    </TabItem>
+    <TabItem value="aio" label="AIO">
+        <details>
+
+            <summary>Example</summary>
+
+            <AIOExample data={IcecastConfig} name="icecast"/>
+
+        </details>
+
+        or <SchemaLink lower objectName="IcecastSourceConfig"/>                                                
+    </TabItem>
+</Tabs>

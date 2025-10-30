@@ -33,7 +33,7 @@ First, turn on **debug** logging for multi-scrobbler by setting the environmenta
 
 ##### Check Host name and URL
 
-The URLs examples in the [configuration](configuration/configuration.mdx) documentation assume you are running Webscrobbler/LFM Endpoint on the same server as multi-scrobbler. If these are not the same machine then you need to determine the IP address or domain name that multi-scrobbler is reachable at and use that instead of `localhost` when configuring these sources. **This is likely the same host name that you would use to access the web interface for multi-scrobbler.**
+The URLs examples in the [configuration](/configuration#base-url) documentation assume you are running Webscrobbler/LFM Endpoint on the same server as multi-scrobbler. If these are not the same machine then you need to determine the IP address or domain name that multi-scrobbler is reachable at and use that instead of `localhost` when configuring these sources. **This is likely the same host name that you would use to access the web interface for multi-scrobbler.**
 
 EX `http://localhost:9078/api/webscrobbler` -> `http://192.168.0.140:9078/api/webscrobbler`
 
@@ -70,7 +70,7 @@ Error: Could not send the specified request to browse. Status code: 401
 
 then YTM has invalidated your authentication.
 
-First, ensure you are NOT using [YoutubeTV authentication.](configuration/configuration.mdx?ytmAuth=ytt#youtube-music) If you completed authentication by entering a "User Code" you are using YoutubeTV which has stopped working. You should reauthenticate using **Cookies** or **Custom OAuth.**
+First, ensure you are NOT using [YoutubeTV authentication.](/configuration/sources/youtube-music?ytmAuth=ytt#authentication) If you completed authentication by entering a "User Code" you are using YoutubeTV which has stopped working. You should reauthenticate using **Cookies** or **Custom OAuth.**
 
 #### When using OAuth Client Authentication
 
@@ -80,7 +80,7 @@ Refresh your authentication by using the **(Re)authenticate** link from MS's web
 
 The library MS uses relies on scraping the YTM site by using cookies from your actual browser to pretend it is a browser. It does its best to keep these up to date but since this is not an official way to access the service YTM may invalidate your access _to the authenticated session_ at any time. How this is triggered is unknown and not something multi-scrobbler can control. You can help limit the chance of your session being invalidated by [getting the cookie from an Incognito/Private Session](https://github.com/LuanRT/YouTube.js/issues/803#issuecomment-2504032666) and then immediately closing the browser afterwards.
 
-To re-authenticate MS [follow the YTM instructions to retrieve a new set of cookies for multi-scrobbler](configuration/configuration.mdx?ytmAuth=cookie#youtube-music) and then restart MS to potentially resolve the problem.
+To re-authenticate MS [follow the YTM instructions to retrieve a new set of cookies for multi-scrobbler](/configuration/sources/youtube-music?ytmAuth=cookie#authentication) and then restart MS to potentially resolve the problem.
 
 ## Configuration Issues
 
@@ -108,7 +108,7 @@ Multi-scrobbler works the same was the official Spotify-Last.fm integration work
 
 The Google Cast integration relies on a few common fields in the data it receives from your casting device. Every platform that can cast (Spotify, Pandora, etc...) *should* use these fields the same but there are slight differences between their implementations that may confuse multi-scrobbler. Specific platforms may also return more information in non-common fields that are undocumented.
 
-To diagnose these issues you [**must enable payload logging**](configuration/configuration.mdx#cast-troubleshooting) for your google cast Source, run MS, and then include logs with this output from that run. Without the raw data logged from your cast device it will be nearly impossible to resolve your issue.
+To diagnose these issues you [**must enable payload logging**](/configuration/sources/google-cast#cast-troubleshooting) for your google cast Source, run MS, and then include logs with this output from that run. Without the raw data logged from your cast device it will be nearly impossible to resolve your issue.
 
 ### Google Cast device does not track media
 
@@ -120,17 +120,17 @@ MS logs will tell you what type the media is reported as with lines like:
 My Artist - Example Track has 'unknown' media type and allowUnknownMedia=false, will not track
 ```
 
-Refer to [Allow Unknown Media Type](configuration/configuration.mdx#allow-unknown-media-type) section to fix this
+Refer to [Allow Unknown Media Type](/configuration/sources/google-cast#allow-unknown-media-type) section to fix this
 
 ```
 My Artist - Example Track has 'movie' media type so will not track
 ```
 
-Refer to [Force Media Tracking](configuration/configuration.mdx#forcing-media-tracking) section to fix this
+Refer to [Force Media Tracking](/configuration/sources/google-cast#forcing-media-tracking) section to fix this
 
 ### VLC is not scrobbling fields correctly
 
-Before reporting an issue turn on metadata logging in the MS VLC configuration, [see the VLC documentation.](configuration/configuration.mdx#vlc-information-reporting)
+Before reporting an issue turn on metadata logging in the MS VLC configuration, [see the VLC documentation.](/configuration/sources/vlc#vlc-information-reporting)
 
 ### Youtube Music misses or duplicates scrobbles
 
@@ -169,7 +169,7 @@ In your YTM configuration (`ytmusic.json`) add `logDiff` under `options` like th
 or set either ENVs:
 
 * `YTM_LOG_DIFF=true`
-* [`DEBUG_MODE=true`](configuration/configuration.mdx?#debug-mode)
+* [`DEBUG_MODE=true`](/configuration#debug-mode)
 
 This will cause MS to log YTM history changes similar to this:
 

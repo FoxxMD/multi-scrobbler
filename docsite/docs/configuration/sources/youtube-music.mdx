@@ -1,0 +1,189 @@
+---
+title: Youtube Music
+toc_min_heading_level: 2
+toc_max_heading_level: 5
+---
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+import CodeBlock from '@theme/CodeBlock';
+import JsonConfig from '!!raw-loader!@site/../config/ytmusic.json.example';
+
+:::warning
+
+Communication with YT Music is **unofficial** and not supported or endorsed by Google. This means that **this integration may stop working at any time** if Google decides to change how YT Music works in the browser.
+
+:::
+
+:::tip[Scrobble Troubleshooting]
+
+Due to monitoring being unofficial, listening history from YTM can be inconsistent and can cause missed scrobbles. 
+
+[**See the FAQ**](/FAQ.md#youtube-music-misses-or-duplicates-scrobbles) for a detailed explanation, how to see more details about MS's detection of tracks, and how to properly report an issue.
+
+:::
+
+#### Authentication {#ytm-auth}
+
+Only one of these methods needs to be used.
+
+<Tabs groupId="ytmAuth" queryString>
+    <TabItem value="cookie" label="Cookies">
+
+        Use instructions from 
+        
+        * https://github.com/patrickkfkan/Volumio-YouTube.js/wiki/How-to-obtain-Cookie or 
+        * https://ytmusicapi.readthedocs.io/en/stable/setup/browser.html#copy-authentication-headers 
+        
+        to get the **Cookie** value from a browser.
+
+        It is highly recommended to [get the cookie from an Incognito/Private Session](https://github.com/LuanRT/YouTube.js/issues/803#issuecomment-2504032666) to limit the chance the session is invalidated from normal browsing.
+
+        Add the cookie to your `ytmusic.json` config in `data` or as an ENV: 
+
+        ```json
+            {
+            "type": "ytmusic",
+            "enable": true,
+            "name": "MyYTM",
+            "data": {
+                "cookie": "__Secure-1PSIDTS=sidts-CjEB3EgAEvCd-......"
+            },
+            "options": {
+                "logAuthUpdateChanges": true,
+                "logDiff": true
+            }
+        }
+        ```
+
+        If MS gives you authentication errors (session invalidated) at some point in the future follow the same instructions to get new cookies.
+
+    </TabItem>
+    <TabItem value="oauth" label="OAuth Client">
+        :::warning
+
+        As of Sept 25' OAuth clients no longer seem to have permission to access the YTM service, as reported by the upstream YTM library developer and [several other users.](https://github.com/FoxxMD/multi-scrobbler/issues/345#issuecomment-3258518769)
+
+        If you have existing, working OAuth credentials keep using them but there is no gaurantee they will continue to work.
+
+        If you are setting up the YTM Source for the first time you should first try to use [Cookies](./?ytmAuth=cookie#ytm-auth).
+
+        :::
+
+        [Based on the instructions from here...](https://github.com/LuanRT/YouTube.js/issues/803#issuecomment-2479689924)
+
+        * Login to [Google Cloud console](https://console.cloud.google.com/) (create an account, if necessary)
+          * [Create a new project](https://console.cloud.google.com/projectcreate)
+        * Go to APIs and services.
+            * Configure the OAuth consent screen
+                * Use the old experience if possible
+                * If new is unavoidable then do not fill out any branding and under Authorized Domains you can delete the empty one (in order to save)
+                * Add yourself as an authorized user
+            * Navigate to Credentials
+                * Create Credentials -> choose "OAuth client ID"
+                    *  Application Type is **Web Application**
+                    * **Name** is whatever you want, leave Authorization Javascript origins blank
+                    * Authorized redirect URIs
+                        * This must be **exactly** the same as what is displayed in MS! For now leave it blank so we can generate it from MS first
+                * Create
+                    * In the newly created client popup save the **Client ID** and **Client Secret**, then copy them into `ytmusic.json` or appropriate ENVs:
+
+        ```json
+        {
+            "type": "ytmusic",
+            "enable": true,
+            "name": "MyYTM",
+            "data": {
+                "clientId": "8910....6jqupl.apps.googleusercontent.com",
+                "clientSecret": "GOCSPX-WGXL6BSuQ343..."
+            },
+            "options": {
+                "logAuthUpdateChanges": true,
+                "logDiff": true
+            }
+        }
+        ```
+
+        Now, start MS and during the YTMusic startup it will log something like this:
+
+        ```
+        Will use custom OAuth Client:
+        Client ID: ...
+        Client Secret: ...
+        Redirect URI: http://localhost:9078/api/ytmusic/callback?name=MyYTM
+        ```
+
+        If the beginning of the Redirect URI (before `api`) is EXACTLY how you would reach the MS dashboard from your browser (EX `http://localhost:9078`) then edit your google oauth client section for `Authorized redirect URIs` and add the URL MS has displayed.
+
+        If it is NOT EXACTLY the same you either need to set MS's [base url](https://foxxmd.github.io/multi-scrobbler/docs/configuration/#base-url) or you can provide your own (Custom) Redirect URI for MS to use by setting it in `ytmusic.json` or ENV.
+
+        <details>
+
+            <summary>Using a Custom Redirect URI</summary>
+
+                The three parts of the URL that must be the same:
+
+                * it must start with `api` (after domain or subdirectory IE `my.domain.tld/api...` or `whatever.tld/subDir/api...`
+                * it must end in `ytmusic/callback`
+                * It must include `name=[NameOfSource]` in the query string
+
+                Remember to add your custom URL to the `Authorized redirect URIs`  section in the google oauth client!
+
+                ```json
+                {
+                    "type": "ytmusic",
+                    "enable": true,
+                    "name": "MyYTM",
+                    "data": {
+                        "clientId": "8910....6jqupl.apps.googleusercontent.com",
+                        "clientSecret": "GOCSPX-WGXL6BSuQ343...",
+                        "redirectUri": "http://my.custom.domain/api/ytmusic/callback?name=MyYTM"
+                    },
+                    "options": {
+                        "logAuthUpdateChanges": true,
+                        "logDiff": true
+                    }
+                }
+                ```
+
+        </details>
+
+        AFTER changing the Authorized redirect URIs on Google Cloud console you may need to wait a few minutes for it to take affect. Then restart MS. From the dashboard click `(Re)authenticate` on the YTmusic source card and follow the auth flow:
+
+        * On the screen about "testing" make sure you hit **Continue** (not Back To Safety)
+        * Make sure to select ALL scopes/permissions/grants it asks you about
+          * `Select what [YourAppName] can access` -> Select all
+
+        Once the flow is finished MS will get the credentials and start polling automatically. You should not need to re-authenticate again after restarting MS as it saves the credentials to the `/config` folder.
+            
+    </TabItem>
+    <TabItem value="ytt" label="YoutubeTV">
+
+        :::warning
+
+        Using the built-in YoutubeTV authentication is unlikely to work due to [Google restricting what permissions TV clients can have](https://github.com/yt-dlp/yt-dlp/issues/11462#issuecomment-2471703090). This authentication method should not be used.
+        
+        :::   
+
+        To authenticate start multi-scrobbler with an empty YT Music configuration. An authentication URL/code will be logged in additon to being available from the dashboard.
+
+        ```
+        ERROR: Sign in with the code 'CLV-KFA-BVKY' using the authentication link on the dashboard or https://www.google.com/device
+        ```
+
+        Visit the authentication URL and enter the code that was provided (also available on the dashboard). After completing the setup flow MS will log `Auth success` and the YT Music dashboard card will display as **Idle** after refreshing. Click the **Start** link to begin monitoring.
+
+    </TabItem>
+</Tabs>
+
+## Configuration
+
+<Config config="YTMusicSourceConfig" fileContent={JsonConfig} name="ytmusic">
+| Environmental Variable | Required? | Default |                  Description                  |
+|------------------------|-----------|---------|-----------------------------------------------|
+| YTM_COOKIE             | No        |         | Value for Cookie Authentication               |
+| YTM_CLIENT_ID          | No        |         | Client ID for OAuth Athentication             |
+| YTM_CLIENT_SECRET      | No        |         | Client Secret for OAuth Athentication         |
+| YTM_REDIRECT_URI       | No        |         | A custom redirect URI for OAuth Athentication |
+| YTM_LOG_DIFF           | No        | false   | Log YTM history changes                       |
+</Config>

@@ -1,0 +1,29 @@
+---
+title: Maloja
+toc_min_heading_level: 2
+toc_max_heading_level: 5
+---
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+import CodeBlock from '@theme/CodeBlock';
+import MalojaConfig from '!!raw-loader!@site/../config/maloja.json.example';
+
+:::tip[Other Uses]
+
+To  _scrobble to_ a Maloja server, create a [Maloja (Client)](/configuration/clients/maloja)
+
+:::
+
+See the [Maloja (Client)](/configuration/clients/maloja) configuration for general setup. The only difference for **Source** configuration:
+
+* Cannot be setup with ENV config 
+* [File/AIO config](/configuration?configType=file#configuration-types)  must include `"configureAs": "source"`
+
+## Configuration
+
+<Config config="MalojaSourceConfig" fileContent={MalojaConfig} name="maloja">
+        :::note
+            You cannot use ENV variables shown in the [Maloja Client config](/configuration/clients/maloja) -- multi-scrobbler assumes Maloja ENVs are always used for the **client** configuration. You must use the [[File or AIO](/configuration?configType=file#configuration-types) config to setup Maloja as a Source.
+        :::
+</Config>

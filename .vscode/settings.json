@@ -1,5 +1,9 @@
 {
     "mochaExplorer.require": "tsx/esm",
     "mochaExplorer.timeout": 1200000,
-    "mochaExplorer.exit": true
+    "mochaExplorer.exit": true,
+    "search.exclude": {
+        "**/.docusaurus": true,
+        "**/build": true
+    }
 }

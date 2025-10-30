@@ -1,0 +1,28 @@
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+import CodeBlock from '@theme/CodeBlock';
+
+<Tabs groupId="configType" queryString>
+    <TabItem value="env" label="ENV">
+    <EnvType>
+        {props.children}
+    </EnvType>
+    </TabItem>
+    <TabItem value="file" label="File">
+    <FileType>
+
+    <FileExample title={`CONFIG/${props.name}.json`} client={props.client ?? false} data={props.fileContent}/>
+
+        or <SchemaLink lower objectName={props.config}/>
+    </FileType>
+    </TabItem>
+    <TabItem value="aio" label="AIO">
+    <AIOType>
+
+        <AIOExample data={props.fileContent} client={props.client ?? false} name={props.name}/>
+
+
+        or <SchemaLink lower objectName={props.config}/>
+        </AIOType>
+    </TabItem>
+</Tabs>

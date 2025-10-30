@@ -1,0 +1,56 @@
+---
+title: Listenbrainz (Endpoint)
+toc_min_heading_level: 2
+toc_max_heading_level: 5
+---
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+import CodeBlock from '@theme/CodeBlock';
+import ListenbrainzEndpointConfig from '!!raw-loader!@site/../config/endpointlz.json.example';
+
+This Source enables multi-scrobbler to accept scrobbles from outside applications as if it was a Listenbrainz server.
+
+:::tip[Other Uses]
+
+* To **scrobble to** Listenbrainz, create a [Listenbrainz (Client)](/configuration/clients/listenbrainz)
+* To monitor and re-scrobble activity from your Listenbrainz account, create a [Listenbrainz (Source)](/configuration/sources/listenbrainz-source)
+
+:::
+
+##### URL
+
+If a **slug** is **not** provided in configuration then multi-scrobbler will accept Listenbrainz scrobbles at
+
+```
+http://localhost:9078/1/submit-listens
+```
+
+which is the "standard" Listenbrainz server path for scrobbling.
+
+Use a slug only if you need to setup multiple Listenbrainz Endpoint sources and cannot use different tokens.
+
+If a slug is used then the URL will be:
+
+```
+http://localhost:9078/api/listenbrainz/mySlug
+```
+
+:::note
+    Some Listenbrainz applications may require custom Listenbrainz URLs to be a real domain (`example.com`) and/or use SSL (`https://`). In this case you should setup multi-scrobbler behind a reverse proxy to support this functionality. It is out of the scope of this project to do this solely within multi-scrobbler.
+:::
+
+##### Token
+
+Most Listenbrainz clients require a token (Authentication Token) to be provided during setup. This value can be anything you want, just make sure to use the same value for `token` in your multi-scrobbler configuration for the endpoint.
+
+
+## Configuration
+
+<Config config="ListenbrainzEndpointSourceConfig" fileContent={ListenbrainzEndpointConfig} name="endpointlz">
+        | Environmental Variable | Required? | Default | Description                                                                                                       |
+        | :--------------------- | :-------- | ------- | ----------------------------------------------------------------------------------------------------------------- |
+        | `LZENDPOINT_ENABLE`    | No        |         | Use LZ Endpoint as a Source without any other configuration. Only required if slug/token are not provided as ENVs |
+        | `LZE_TOKEN`            | No        |         | LZ "Authentication Token" you provided to the scrobbling application                                              |
+        | `LZE_SLUG`             | No        |         | (Optional) The URL suffix to use for accepting LZ scrobbles                                                       |
+</Config>

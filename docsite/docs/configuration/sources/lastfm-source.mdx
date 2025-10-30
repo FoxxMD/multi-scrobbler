@@ -1,0 +1,29 @@
+---
+title: Lastfm
+toc_min_heading_level: 2
+toc_max_heading_level: 5
+---
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+import CodeBlock from '@theme/CodeBlock';
+import LastfmConfig from '!!raw-loader!@site/../config/lastfm.json.example';
+
+This Source **monitors your Last.fm scrobble history** and re-scrobbles new activity to configured [Clients.](/configuration/clients)
+
+:::tip[Other Uses]
+
+* To **scrobble to** Last.fm, create a [Last.fm (Client)](/configuration/clients/lastfm)
+* To accept scrobbles from outside applications as if multi-scrobbler was Last.fm, create a [Last.fm (Endpoint)](/configuration/sources/lastfm-endpoint)
+
+:::
+
+To configure this Source use the same registration instructions and configuration data shown in [Last.fm (Client)](/configuration/clients/lastfm) with the difference being `"configureAs": "source"` defined in the File/AIO configuration below.
+
+## Configuration
+
+<Config config="LastfmSourceConfig" fileContent={LastfmConfig} name="lastfm">
+:::note
+        You cannot use ENV variables shown in the [Last.fm Client config](/configuration/clients/lastfm) -- multi-scrobbler assumes Last.fm ENVs are always used for the **client** configuration. You must use the [File or AIO](/configuration?configType=file#configuration-types) config to setup Last.fm as a Source.
+:::
+</Config>

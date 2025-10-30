@@ -1,0 +1,79 @@
+---
+title: Plex
+toc_min_heading_level: 2
+toc_max_heading_level: 5
+---
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+import CodeBlock from '@theme/CodeBlock';
+import AzuracastConfig from '!!raw-loader!@site/../config/azuracast.json.example';
+import PlexConfig from '!!raw-loader!@site/../config/plex.json.example';
+
+Find your [**Plex Token**](https://support.plex.tv/articles/204059436-finding-an-authentication-token-x-plex-token/) and make note of the **URL** and **Port** used to connect to your Plex instance.
+
+<details>
+
+<summary>Allowed Users and Defaults</summary>
+
+**Multi-scrobbler will automatically scrobble for these users by default:**
+
+* The User authenticated with the Plex Token
+* and the **Local User**
+
+The Local User (`PLEX_LOCAL_USER`) is how Plex identifies anyone directly accessing the Plex UI from a local IP (who does not need to login).
+
+To allow MS to scrobble for other users use `usersAllow` or `PLEX_USERS_ALLOW` (env) from the below configuration docs. However, because you are overriding the default settings you must also explicitly list the authenticated user and the Local User if you want them to also be able to scrobble.
+
+<details>
+
+<summary>Examples</summary>
+
+###### Defaults
+
+If `usersallow` and `PLEX_USERS_ALLOW` are not defined then the Plex Token authenticated User and Local User will be scrobbled for.
+
+
+###### Only A Specific User
+
+* `"usersallow": ["SomeUser"]` or
+* `PLEX_USERS_ALLOW: SomeUser`
+
+Only the Plex user `SomeUser` will be scrobbled for. The Plex Token authenticated user and the Local User will not be scrobbled for.
+
+###### A Specific User + Defaults
+
+(Assuming the plex authenticated user is `FoxxMD`)
+
+* `"usersallow": ["FoxxMD", "PLEX_LOCAL_USER", "SomeUser"]` or
+* `PLEX_USERS_ALLOW: FoxxMD,PLEX_LOCAL_USER,SomeUser`
+
+The Plex user SomeUser, the Plex Token authenticated user (FoxxMD) and the Local User will be scrobbled for.
+
+</details>
+
+</details>
+
+<details>
+
+<summary>Allowed Libraries and Defaults</summary>
+
+By default multi-scrobbler will only scrobble media found in Plex libraries that are labelled as **Music.**
+  * `librariesAllow` or `PLEX_LIBRARIES_ALLOW` will override this
+
+</details>
+
+#### Configuration
+
+<Config config="PlexApiSourceConfig" fileContent={PlexConfig} name="plex">
+        | Environmental Variable | Required? | Default | Description                                                            |
+        | ---------------------- | --------- | ------- | ---------------------------------------------------------------------- |
+        | `PLEX_URL`             | **Yes**   |         | The URL of the Plex server IE `http://localhost:32400`                 |
+        | `PLEX_TOKEN`           | **Yes**   |         | The **Plex Token** to use with the API                                 |
+        | `PLEX_USERS_ALLOW`     | No        |         | Comma-separated list of usernames (from Plex) to scrobble for          |
+        | `PLEX_USERS_BLOCK`     | No        |         | Comma-separated list of usernames (from Plex) to disallow scrobble for |
+        | `PLEX_DEVICES_ALLOW`   | No        |         | Comma-separated list of devices to scrobble from                       |
+        | `PLEX_DEVICES_BLOCK`   | No        |         | Comma-separated list of devices to disallow scrobbles from             |
+        | `PLEX_LIBRARIES_ALLOW` | No        |         | Comma-separated list of libraries to allow scrobbles from              |
+        | `PLEX_LIBRARIES_BLOCK` | No        |         | Comma-separated list of libraries to disallow scrobbles from           |
+</Config>

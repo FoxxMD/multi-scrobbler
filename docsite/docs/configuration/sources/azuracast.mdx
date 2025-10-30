@@ -1,0 +1,82 @@
+---
+title: Azuracast
+toc_min_heading_level: 2
+toc_max_heading_level: 5
+---
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+import CodeBlock from '@theme/CodeBlock';
+import AzuracastConfig from '!!raw-loader!@site/../config/azuracast.json.example';
+import ShouldScrobble from "@site/src/components/snippets/_should-scrobble.mdx"
+
+:::tip[Scrobbling Threshold]
+
+Azuracast may not correctly report track length or position. If this is the case you should reduce the "listened to" **duration** using [Scrobble Thresholds](/configuration/sources#scrobble-thresholds) so that multi-scrobbler scrobbles correctly.
+
+:::
+
+The Azuracast server should have **Use High-Performance Now Playing Updates** enabled in _Administration -> System Settings_
+
+#### URL
+
+The URL used by MS to connect to Azuracast has the syntax:
+
+```
+[ws|wss]://HOST:[PORT]
+```
+
+MS will automatically add the path required for websockets, [`/api/live/nowplaying/websocket`](https://www.azuracast.com/docs/developers/now-playing-data/#websockets), to your URL if none is provided. If you use a reverse proxy with a path-based URL or otherwise need a custom path to access the websockets path correctly then explicitly provide it. Examples:
+
+```
+URL From Config                => MS Uses
+
+'ws://192.168.0.101'                 => ws://192.168.0.101/api/live/nowplaying/websocket
+'ws://azura.mydomain.com'            => ws://azura.mydomain.com.com/api/live/nowplaying/websocket
+'wss://mydomain.com/custom/azura/ws' => wss://mydomain.com/custom/azura/ws
+```
+
+#### Scrobble Behavior
+
+:::info
+
+<ShouldScrobble filename="azuracast"/>
+
+:::
+
+Multi-scrobbler will set the default **scrobbling behavior** based on if either of these settings is configured:
+
+* live status (`AZURA_LIVE` or `monitorWhenLive`) or
+* listener count (`AZURA_LISTENERS_NUM` or `monitorWhenListeners`)
+
+If either is configured then MS will automatically scrobble based on when these conditions are met.
+
+If neither is configured automatic scrobble defaults to **off** and you should either manually initiate it or explicitly set the default behavior.
+
+## Configuration
+
+<Tabs groupId="configType" queryString>
+    <TabItem value="env" label="ENV">
+        | Environmental Variable | Required? | Default | Description                                                                                    |
+        | :--------------------- | :-------- | :------ | ---------------------------------------------------------------------------------------------- |
+        | `AZ_URL`               | Yes       |         | Azuracast URL *without station name*                                                           |
+        | `AZ_STATION`           | Yes       |         | The station name shown on the public page                                                      |
+        | `AZURA_LIVE`           | No        | Yes     | Only scrobble when station status is ONLINE                                                    |
+        | `AZURA_LISTENERS_NUM`  | No        | `true`  | Only scrobble if station has any listeners (`true`) or listeners are equal-to/greater-than `X` |
+    </TabItem>
+    <TabItem value="file" label="File">
+
+        <CodeBlock title="CONFIG_DIR/azuracast.json" language="json5">{AzuracastConfig}</CodeBlock>
+
+
+        or <SchemaLink lower objectName="AzuracastSourceConfig"/>
+    </TabItem>
+    <TabItem value="aio" label="AIO">
+
+        <AIOExample data={AzuracastConfig} name="azuracast"/>
+
+
+        or <SchemaLink lower objectName="AzuracastSourceConfig"/>                                                
+    </TabItem>
+</Tabs>
+

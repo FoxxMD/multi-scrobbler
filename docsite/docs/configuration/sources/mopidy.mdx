@@ -1,0 +1,102 @@
+---
+title: Mopidy
+toc_min_heading_level: 2
+toc_max_heading_level: 5
+---
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+import CodeBlock from '@theme/CodeBlock';
+import MopidyConfig from '!!raw-loader!@site/../config/mopidy.json.example';
+
+Mopidy is a headless music server that supports playing music from many [standard and non-standard sources such as Pandora, Bandcamp, and Tunein.](https://mopidy.com/ext/)
+
+multi-scrobbler can scrobble tracks played from any Mopidy backend source, regardless of where you listen to them.
+
+:::note
+
+You must have [Mopidy-HTTP extension](https://mopidy.com/ext/http) enabled for this integration to work.
+
+:::
+
+#### URL
+
+The URL used to connect to the Mopidy server, set in your [file config as `url`.](#configuration) The URL used to connect ultimately must be formed like this:
+
+```
+Syntax  => [protocol]://[hostname]:[port]/[path]
+Default =>         ws://localhost:6680/mopidy/ws
+```
+
+If any part of this URL is missing multi-scrobbler will use a default value. This also means that if any part of your URL is **not** standard you must explicitly define it.
+
+:::tip[Mopidy Configuration]
+
+Make sure the hostname and port number match what is found in the Mopidy configuration file `mopidy.conf`:
+
+```ini
+[http]
+hostname = localhost
+port = 6680
+```
+
+:::
+
+<details>
+<summary>URL Transform Examples</summary>
+
+    Examples of a given `url` in your file config and the final URL multi-scrobbler will use to connect to Mopidy:
+
+    | `url`                          | Transformed URL                            |
+    |--------------------------------|--------------------------------------------|
+    | (none set)                     | `ws://localhost:6680/mopidy/ws`            |
+    | `mopidy.mydomain.com`          | `ws://mopidy.mydomain.com:6680/mopidy/ws/` |
+    | `192.168.0.101:3456`           | `ws://192.168.0.101:3456/mopidy/ws/`       |
+    | `mopidy.mydomain.com:80/MOPWS` | `ws://mopidy.mydomain.com:80/MOPWS`        |
+
+</details>
+
+
+### URI Blacklist/Whitelist
+
+If you wish to disallow or only allow scrobbling from some sources played through Mopidy you can specify these using `uriBlacklist` or `uriWhitelist` in your config. multi-scrobbler will check the list to see if any string matches the START of the `uri` on a track. If whitelist is used then blacklist is ignored. All strings are case-insensitive.
+
+<details>
+    <summary>Example</summary>
+    ```json
+    {
+        "uriBlacklist": ["soundcloud"]
+    }
+    ```
+
+    Will prevent multi-scrobbler from scrobbling any Mopidy track that start with a `uri` like `soundcloud:song:MySong-1234`
+</details>
+
+
+### Album Blacklist
+
+For certain sources (Soundcloud) Mopidy does not have all track info (Album) and will instead use "Soundcloud" as the Album name. You can prevent multi-scrobbler from using this bad Album data by adding the fake Album name to this list. Multi-scrobbler will still scrobble the track, just without the bad data. All strings are case-insensitive.
+
+<details>
+    <summary>Example</summary>
+    ```json
+    {
+        "albumBlacklist": ["SoundCloud", "Mixcloud"]
+    }
+    ```
+
+    If a track would be scrobbled like
+    ```
+    Album: Soundcloud, Track: My Cool Track, Artist: A Cool Artist
+    ```
+    then multi-scrobbler will instead scrobble
+    ```
+    Track: My Cool Track, Artist: A Cool Artist
+    ```
+</details>
+
+## Configuration
+
+<Config config="MopidySourceConfig" fileContent={MopidyConfig} name="mopidy">
+No ENV support
+</Config>

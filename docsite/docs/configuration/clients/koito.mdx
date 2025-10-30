@@ -1,0 +1,60 @@
+---
+title: Koito
+toc_min_heading_level: 2
+toc_max_heading_level: 5
+---
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+import CodeBlock from '@theme/CodeBlock';
+import JsonConfig from '!!raw-loader!@site/../config/koito.json.example';
+
+:::tip[Other Uses]
+
+To monitor and re-scrobble activity from a Koito account create a [Koito (Source)](/configuration/sources/koito-source)
+
+:::
+
+Setup a [Koito server](https://koito.io/guides/installation/) if you have not already done this.
+
+* [Create (or get) an API Key](https://koito.io/guides/scrobbler/)
+    * From your Koito server dashboard navigate to **Settings** (bottom-left icon) => **API Keys**
+    * Create a new Key (or use an existing) and Copy the key using the copy icon to the right of the key
+    * EX `pM195xPV98CDpk0QW47FIIOR8AKATAX5DblBF-Jq0t1MbbKL`
+* Take note of your Koito username (used below as `KOITO_USER`)
+* Determine your Koito URL
+    * This is the URL you use to access your Koito dashboard OR whatever URL is accessible from your multi-scrobbler instance.
+    * EX dashboard at `http://192.168.0.100:4110` => `KOITO_URL` is set to `http://192.168.0.100:4110`
+
+:::note[Koito Base URL]
+
+Using the URL path `/apis/listenbrainz` [Koito docs describe](https://koito.io/guides/scrobbler/) **is not required.** The Koito URL used for multi-scrobbler should only be the **base** URL. Only include a URL path if your Koito **base** url is not at `host:port`. See the table below for examples.
+
+<details>
+
+<summary>Base URL Examples</summary>
+    | `KOITO_URL`                                   | MS Detected Base URL            | Example Scrobble Api URL                             |
+    | :-------------------------------------------- | :------------------------------ | ---------------------------------------------------- |
+    | `http://192.168.0.100:4110`                   | `http://192.168.0.100:4110`     | `http://192.168.0.100:4110/apis/listenbrainz/1`      |
+    | `https://koito.mydomain.com`                  | `https://koito.mydomain.com`    | `https://koito.mydomain.com/apis/listenbrainz/1`     |
+    | `http://192.168.0.100:4110/apis/listenbrainz` | `http://192.168.0.100:4110`     | `http://192.168.0.100:4110/apis/listenbrainz/1`      |
+    | `http://192.168.0.100:80/koito`               | `http://192.168.0.100:80/koito` | `http://192.168.0.100:80/koito/apis/listenbrainz/1` |
+</details>
+:::
+                                       
+
+:::tip
+
+Ensure that Koito is configured to allow requests from multi-scrobbler! In Koito config set [`KOITO_ALLOWED_HOSTS`](https://koito.io/reference/configuration/#koito_allowed_hosts) to the IP the multi-scrobbler dashboard is accessible from.
+
+:::
+
+## Configuration
+
+<Config config="KoitoClientConfig" fileContent={JsonConfig} client name="koito">
+        | Environmental Variable | Required? | Default | Description                       |
+        | :--------------------- | --------- | ------- | --------------------------------- |
+        | KOITO_TOKEN            | Yes       |         | API Key from your Koito Account   |
+        | KOITO_USER             | Yes       |         | Your Koito username               |
+        | KOITO_URL              | No        |         | The base URL for the Koito server |
+</Config>

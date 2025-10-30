@@ -1,0 +1,46 @@
+---
+title: Lastfm (Endpoint)
+toc_min_heading_level: 2
+toc_max_heading_level: 5
+---
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+import CodeBlock from '@theme/CodeBlock';
+import LastfmEndpointConfig from '!!raw-loader!@site/../config/endpointlfm.json.example';
+
+This Source enables multi-scrobbler to accept scrobbles from outside applications as if it was a Last.fm server.
+
+:::tip[Other Uses]
+
+* To **scrobble to** Last.fm, create a [Last.fm (Client)](/configuration/clients/lastfm)
+* To monitor and re-scrobble activity from your Last.fm account, create a [Last.fm (Source)](/configuration/sources/lastfm-source)
+
+:::
+
+### URL
+
+If a **slug** is **not** provided in configuration then multi-scrobbler will accept Last.fm scrobbles at
+
+```
+http://localhost:9078/2.0/
+```
+
+which is the "standard" Last.fm server path for scrobbling
+
+Use a slug only if you need to setup multiple Last.fm Endpoint sources and cannot use different tokens.
+
+If a slug is used then the URL will be:
+
+```
+http://localhost:9078/api/lastfm/mySlug
+```
+
+## Configuration
+
+<Config config="LastFMEndpointSourceConfig" fileContent={LastfmEndpointConfig} name="endpointlfm">
+        | Environmental Variable | Required? | Default | Description                                                                                                        |
+        | :--------------------- | :-------- | ------- | ------------------------------------------------------------------------------------------------------------------ |
+        | `LFMENDPOINT_ENABLE`   | No        |         | Use LFM Endpoint as a Source without any other configuration. Only required if slug/token are not provided as ENVs |
+        | `LFM_SLUG`             | No        |         | (Optional) The URL suffix to use for accepting LFM scrobbles                                                       |
+</Config>

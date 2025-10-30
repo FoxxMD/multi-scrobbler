@@ -1,0 +1,45 @@
+---
+title: Maloja
+toc_min_heading_level: 2
+toc_max_heading_level: 5
+---
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+import CodeBlock from '@theme/CodeBlock';
+import JsonConfig from '!!raw-loader!@site/../config/maloja.json.example';
+
+Setup a [Maloja server](https://github.com/krateng/maloja?tab=readme-ov-file#how-to-install) if you have not already done this.
+
+<details>
+
+    <summary>Maloja Setup Intructions</summary>
+
+    Using Maloja's example `docker-compose.yml`:
+
+    ```yaml reference title="~/malojaData/docker-compose.yml"
+    https://github.com/krateng/maloja/blob/master/example-compose.yml
+    ```
+
+    Uncomment `environment` and add `MALOJA_FORCE_PASSWORD=CHANGE_ME` to set an admin password
+
+    Start the container:
+
+    ```shell title="~/malojaData"
+    docker compose up -d
+    ```
+</details>
+
+* Navigate to the Admin Panel (Cog in upper-right corner) -> API Keys (or at http://myMalojaServerIP/admin_apikeys)
+    * Create a **New Key** and then copy the generated key value
+
+Finally, add the Maloja server URL and API Key to the configuration type you choose to use, below.
+
+## Configuration
+
+<Config config="MalojaClientConfig" fileContent={JsonConfig} name="maloja">
+        | Environmental Variable | Required? | Default | Description                   |
+        |------------------------|-----------|---------|-------------------------------|
+        | `MALOJA_URL`           | Yes       |         | Base URL of your installation |
+        | `MALOJA_API_KEY`       | Yes       |         | Api Key                       |
+</Config>

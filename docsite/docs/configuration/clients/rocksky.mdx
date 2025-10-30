@@ -1,0 +1,22 @@
+---
+title: Rocksky
+toc_min_heading_level: 2
+toc_max_heading_level: 5
+---
+
+[**Rocksky**](https://docs.rocksky.app/) is music tracking and discovery platform built on the AT Protocol (Bluesky). It is compatible with the Listenbrainz API and so can be as a multi-scrobbler [Listenbrainz Client](/configuration/clients/listenbrainz) using a custom URL.
+
+You will need a [Bluesky](https://bsky.app/) account to use Rockysky.
+
+:::note 
+
+Usage is adapted from [the Listenbrainz to Rocksky docs](https://docs.rocksky.app/migrating-from-listenbrainz-to-rocksky-1040189m0) on [docs.rockysky.app](https://docs.rocksky.app)
+
+:::
+
+While logged in to Bluesky, navigate to [RockySky API Application](https://rocksky.app/apikeys) and obtain an API Key.
+
+Then, follow the directions to create a normal multi-scrobbler [Listenbrainz Client](/configuration/clients/listenbrainz) and use:
+
+* **Listenbrainz Token** (`LZ_TOKEN`) - The API Key from RockySky
+* **Listenbrainz URL** (`LZ_URL`) - `https://audioscrobbler.rocksky.app`
