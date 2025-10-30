@@ -1,0 +1,31 @@
+---
+title: Listenbrainz
+toc_min_heading_level: 2
+toc_max_heading_level: 5
+---
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+import CodeBlock from '@theme/CodeBlock';
+import JsonConfig from '!!raw-loader!@site/../config/listenbrainz.json.example';
+
+:::tip[Other Users]
+
+* To monitor and re-scrobble activity from a Listenbrainz account create a [Listenbrainz (Source)](/configuration/sources/listenbrainz-source)
+* To accept scrobbles from outside applications as if multi-scrobbler was a Listenbrainz server, create a [Listenbrainz (Endpoint)](/configuration/sources/listenbrainz-endpoint)
+
+:::
+
+You will need to run your own Listenbrainz server or have an account [on the official instance](https://listenbrainz.org/login/)
+
+On your [profile page](https://listenbrainz.org/profile/) find your **User Token** to use in the configuration.
+
+## Configuration
+
+<Config config="ListenbrainzClientConfig" fileContent={JsonConfig} name="listenbrainz">
+        | Environmental Variable | Required? |            Default            |           Description           |
+        |------------------------|-----------|-------------------------------|---------------------------------|
+        | LZ_TOKEN               | Yes       |                               | User token from your LZ profile |
+        | LZ_USER                | Yes       |                               | Your LZ username                |
+        | LZ_URL                 | No        | https://api.listenbrainz.org/ | The base URL for the LZ server  |
+</Config>

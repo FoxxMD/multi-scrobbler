@@ -1,0 +1,65 @@
+---
+sidebar_position: 2
+title: Overview
+toc_max_heading_level: 4
+---
+
+import ScrobbleThreshold from "@site/src/components/snippets/_scrobble-threshold.mdx"
+
+A **Client** is an application that stores the historical information about what songs you have played (scrobbles). Examples are **Maloja, Last.fm, Listenbrainz**...
+
+## Clients
+
+| Name                                                | Now Playing |
+| :-------------------------------------------------- | :---------- |
+| [Last.fm](/configuration/clients/lastfm)            | ✅          |
+| [Listenbrainz](/configuration/clients/listenbrainz) | ✅          |
+| [Koito](/configuration/clients/koito)               | ❌          |
+| [Maloja](/configuration/clients/maloja)             | ❌          |
+| [Rocksky](/configuration/clients/rockysky)          | ❌          |
+
+## Features
+
+### Dead Scrobbles
+
+If multi-scrobbler is unable to submit a scrobble to a Client then it places the scrobble into a queue which is retried every 5 minutes for a number of times before it gives up.
+
+After it stops _automatically_ retrying the scrobble still exists and can be retried from the dashboard. Dead scrobbles persist between restart so you will never lose a scrobble that hasn't been successfully submitted yet.
+
+### Now Playing
+
+Multi-scrobbler can report the currently **playing** tracks it is monitoring to some Scrobble Clients via their individual **Now Playing** functionality.
+
+Now Playing is **default enabled** for all Clients that support it.
+
+The behavior multi-scrobbler uses for determining Now Playing reporting:
+
+* Now Playing can be explicitly enabled or disabled globally using ENV `NOW_PLAYING=true` or `NOW_PLAYING=false`
+    * This only affects Clients that don't have behavior set via File/AIO (below)
+* Now Playing will be only be reported to the same Clients a Source is configured to scrobble to
+* A Source's Player status must be **Playing**, IE **active**, for reporting to occur
+  * This status can be verified via Player UI on the Dashboard
+* If multiple Sources having active Players then the scrobble Client will default to reporting the track based on Source **configuration** name, alphabetically
+  * This is the `name` property set in [File or AIO source configs](/configuration?configType=file#configuration-types)
+
+Clients can customize the Now Playing behavior individually using [File or AIO source configs:](/configuration?configType=file#configuration-types)
+
+```json5 title="CONFIG_DIR/lastfm.json"
+[
+  {
+    "name": "myLastFmClient",
+    "configureAs": "client",
+    "data": {
+      // ...
+    },
+    "options": {
+        // disable or enable
+        //"nowPlaying": true
+        //
+        // OR define a list of Source *config* names that should be allowed to report Now Playing
+        // order of the list determines priority for reporting Now Playing
+        //"nowPlaying": ["mySpotify1","myJellyfin2"]
+    }
+  },
+]
+```
