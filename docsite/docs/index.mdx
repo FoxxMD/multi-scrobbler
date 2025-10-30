@@ -1,5 +1,6 @@
 ---
 title: Overview
+slug: /
 ---
 
 # Overview
