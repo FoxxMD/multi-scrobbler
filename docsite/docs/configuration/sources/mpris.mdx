@@ -32,7 +32,7 @@ MPRIS communication requires multi-scrobbler to have access to the host's dbus-d
 
         ##### Local Unix Socket
 
-        The most secure way is to **run a multi-scrobbler container on the same host as MPRIS.** In this scenario you can simply mount the **user session** dbus unix socket into the container. Make sure [`PUID` and `PGID` ENVs are configured](../installation/#linux-host) so the container has permissions to access the socket. Then, modify your compose stack with these additional values:
+        The most secure way is to **run a multi-scrobbler container on the same host as MPRIS.** In this scenario you can simply mount the **user session** dbus unix socket into the container. Make sure [`PUID` and `PGID` ENVs are configured](/installation/#linux-host) so the container has permissions to access the socket. Then, modify your compose stack with these additional values:
 
         ```yaml title="docker-compose.yaml"
 

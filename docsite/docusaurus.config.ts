@@ -138,15 +138,15 @@ const config: Config = {
               },
               {
                 label: 'Installation',
-                to: 'docs/installation',
+                to: '/installation',
               },
               {
                 label: 'Configuration',
-                to: 'docs/configuration',
+                to: '/configuration',
               },
               {
                 label: 'Development',
-                to: 'docs/development/dev-common',
+                to: '/development/dev-common',
               },
             ],
           },

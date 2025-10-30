@@ -1,9 +1,8 @@
 ---
-title: Overview
 slug: /
+title: Overview
+sidebar_position: 1
 ---
-
-# Overview
 
 ![Latest Release](https://img.shields.io/github/v/release/foxxmd/multi-scrobbler)
 ![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)
@@ -13,48 +12,48 @@ slug: /
 
 A javascript app to scrobble music you listened to, to [Maloja](https://github.com/krateng/maloja), [Last.fm](https://www.last.fm), [ListenBrainz](https://listenbrainz.org), and [Koito](https://koito.io/).
 
-* Supports scrobbling from many **Sources**
-    * [Azuracast](docs/configuration#azuracast)
-    * [Deezer](docs/configuration#deezer)
-    * [Google Cast (Chromecast)](docs/configuration#google-cast-chromecast)
-    * [Icecast](docs/configuration#icecast)
-    * [Jellyfin](docs/configuration#jellyfin)
-    * [JRiver](docs/configuration#jriver)
-    * [Kodi](docs/configuration#kodi)
-    * [Koito](docs/configuration#koito-source)
-    * [Last.fm](docs/configuration#lastfm-source)
-    * [Last.fm (Endpoint)](docs/configuration#lastfm-endpoint)
-    * [ListenBrainz](docs/configuration#listenbrainz-source)
-    * [ListenBrainz (Endpoint)](docs/configuration#listenbrainz-endpoint)
-    * [Maloja](docs/configuration#maloja-source)
-    * [Mopidy](docs/configuration#mopidy)
-    * [MPD (Music Player Daemon)](docs/configuration#mpd-music-player-daemon)
-    * [MPRIS (Linux Desktop)](docs/configuration#mpris)
-    * [Musikcube](docs/configuration#musikcube)
-    * [Plex](docs/configuration#plex) or [~~Tautulli~~](docs/configuration#tautulli)
-    * [Spotify](docs/configuration#spotify)
-    * [Subsonic-compatible APIs](docs/configuration#subsonic) (like [Airsonic](https://airsonic.github.io/) and [Navidrome](https://www.navidrome.org/))
-    * [WebScrobbler](docs/configuration#webscrobbler)
-    * [VLC](docs/configuration#vlc)
-    * [Yamaha MusicCast](docs/configuration#yamaha-musiccast)
-    * [Youtube Music](docs/configuration#youtube-music)
-* Supports scrobbling to many **Clients**
-    * [Koito](docs/configuration#koito)
-    * [Last.fm](docs/configuration#lastfm)
-    * [ListenBrainz](docs/configuration#listenbrainz)
-    * [Maloja](docs/configuration#maloja)
-    * [Rocksky](docs/configuration#rocksky)
-* Monitor status of Sources and Clients using [webhooks (Gotify, Ntfy, Apprise)](docs/configuration#webhook-configurations) or [healthcheck endpoint](docs/configuration#health-endpoint)
-* Supports [Now Playing](docs/configuration#now-playing) for scrobble Clients
+* Supports scrobbling from many [**Sources**](/configuration/sources)
+    * [Azuracast](/configuration/sources/azuracast)
+    * [Deezer](/configuration/sources/deezer)
+    * [Google Cast (Chromecast)](/configuration/sources/google-cast)
+    * [Icecast](/configuration/sources/icecast)
+    * [Jellyfin](/configuration/sources/jellyfin)
+    * [JRiver](/configuration/sources/jriver)
+    * [Kodi](/configuration/sources/kodi)
+    * [Koito](/configuration/sources/koito-source)
+    * [Last.fm](/configuration/sources/lastfm-source)
+    * [Last.fm (Endpoint)](/configuration/sources/lastfm-endpoint)
+    * [ListenBrainz](/configuration/sources/listenbrainz-source)
+    * [ListenBrainz (Endpoint)](/configuration/sources/listenbrainz-endpoint)
+    * [Maloja](/configuration/sources/maloja)
+    * [Mopidy](/configuration/sources/mopidy)
+    * [MPD (Music Player Daemon)](/configuration/sources/mpd)
+    * [MPRIS (Linux Desktop)](/configuration/sources/mpris)
+    * [Musikcube](/configuration/sources/musikcube)
+    * [Plex](/configuration/sources/plex)
+    * [Spotify](/configuration/sources/spotify)
+    * [Subsonic-compatible APIs](/configuration/sources/subsonic) (like [Airsonic](https://airsonic.github.io/) and [Navidrome](https://www.navidrome.org/))
+    * [WebScrobbler](/configuration/sources/webscrobbler)
+    * [VLC](/configuration/sources/vlc)
+    * [Yamaha MusicCast](/configuration/sources/yamaha-musiccast)
+    * [Youtube Music](/configuration/sources/youtube-music)
+* Supports scrobbling to many [**Clients**](/configuration/clients)
+    * [Koito](/configuration/clients/koito)
+    * [Last.fm](/configuration/clients/lastfm)
+    * [ListenBrainz](/configuration/clients/listenbrainz)
+    * [Maloja](/configuration/clients/maloja)
+    * [Rocksky](/configuration/clients/rocksky)
+* Monitor status of Sources and Clients using [webhooks (Gotify, Ntfy, Apprise)](/configuration#webhook-configurations) or [healthcheck endpoint](/configuration#health-endpoint)
+* Supports [Now Playing](/configuration/clients#now-playing) for scrobble Clients
 * Supports configuring for single or multiple users (scrobbling for your friends and family!)
 * Web server interface for stats, basic control, and detailed logs
 * Graceful network and client failure handling (queued scrobbles that auto-retry)
 * Smart handling of credentials (persistent, authorization through app)
 * Easy configuration through ENVs or JSON
-* Modify data before scrobbling with [regular expression or search patterns](docs/configuration/transforms)
-* Install using [Docker images for x86/ARM](docs/installation#docker) or [locally with NodeJS](docs/installation#nodejs)
+* Modify data before scrobbling with [regular expression or search patterns](/configuration/transforms)
+* Install using [Docker images for x86/ARM](/installation#docker) or [locally with NodeJS](/installation#nodejs)
 
-[**Quick Start Guide**](docs/quickstart)
+[**Quick Start Guide**](/quickstart)
 
 <img src={require('/img/status-ui.png').default} width="800"/>
 
@@ -67,7 +66,7 @@ A javascript app to scrobble music you listened to, to [Maloja](https://github.c
 
 **But I already scrobble my music to Last.fm/ListenBrainz, is multi-scrobbler for me?**
 
-Yes! You can use [Last.fm as a **Source**](docs/configuration#lastfm-source) or [Listenbrainz as a **Source**](docs/configuration#listenbrainz-source) to forward scrobbles from your profile to any other Client! That way you can keep your current scrobble setup as-is but still get the benefit of capturing your data to a self-hosted location.
+Yes! You can use [Last.fm as a **Source**](/configuration/sources/lastfm-source) or [Listenbrainz as a **Source**](configuration/sources/listenbrainz-source) to forward scrobbles from your profile to any other Client! That way you can keep your current scrobble setup as-is but still get the benefit of capturing your data to a self-hosted location.
 
 ## How Does multi-scrobbler (MS) Work?
 
@@ -94,15 +93,15 @@ Client configurations consist of:
 
 ## Quick Start
 
-[See the **Quick Start Guide**](docs/quickstart)
+[See the **Quick Start Guide**](/quickstart)
 
 ## Installation
 
-[See the **Installation** documentation](docs/installation)
+[See the **Installation** documentation](/installation)
 
 ## Configuration
 
-[See the **Configuration** documentation](docs/configuration)
+[See the **Configuration** documentation](/configuration)
 
 ## Usage
 
@@ -117,11 +116,11 @@ On first startup you may need to authorize Spotify and/or Last.fm by visiting th
 
 ## Help/FAQ
 
-Having issues with connections or configuration? Check the [FAQ](docs/FAQ) before creating an issue!
+Having issues with connections or configuration? Check the [FAQ](/FAQ) before creating an issue!
 
 ## Development
 
-[Detailed architecture and development guides for Sources/Clients](docs/development/dev-common)
+[Detailed architecture and development guides for Sources/Clients](/development/dev-common)
 
 ## License
 

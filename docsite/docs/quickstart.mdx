@@ -1,6 +1,6 @@
 ---
 title: 'Quickstart'
-sidebar_position: 1
+sidebar_position: 2
 ---
 
 import Tabs from '@theme/Tabs';
@@ -10,8 +10,8 @@ This guide will get you up and running with multi-scrobbler using [Docker](https
 
 * the dashboard served on port `9078` of a host machine which has an IP of `192.168.0.100`
 * data saved to the same directory as the `docker-compose.yml` file
-* multi-scrobbler monitoring [Spotify](./configuration/configuration.mdx#spotify) and/or [Jellyfin](./configuration/configuration.mdx#jellyfin) for listening activity
-* multi-scrobbler scrobbling to [Lastfm](./configuration/configuration.mdx#lastfm) and/or [Maloja](./configuration/configuration.mdx#maloja)
+* multi-scrobbler monitoring [Spotify](/configuration/sources/spotify) and/or [Jellyfin](/configuration/sources/jellyfin) for listening activity
+* multi-scrobbler scrobbling to [Lastfm](/configuration/clients/lastfm) and/or [Maloja](/configuration/clients/maloja)
 
 :::note
 
@@ -46,7 +46,7 @@ services:
 
 <Tabs>
     <TabItem value="jellyfin" label="Jellyfin">
-        Follow the Jellyfin configuration [instructions for setting up an **API Key**.](./configuration/configuration.mdx#jellyfin)
+        Follow the Jellyfin configuration [instructions for setting up an **API Key**.](/configuration/sources/jellyfin)
 
         Then, add these values to the `environment` section in the [`docker-compose.yml` you created.](#create-docker-compose-file)
 
@@ -60,7 +60,7 @@ services:
         To access your Spotify activity you must [create a Spotify App](https://developer.spotify.com/dashboard) to get a
         **Client ID/Secret** and set a valid **Redirect URI**.
         
-        Refer to the [Spotify Authentication instructions in the docs.](./configuration/configuration.mdx#authenticate-spotify-with-multi-scrobbler)
+        Refer to the [Spotify Authentication instructions in the docs.](/configuration/sources/spotify#authenticate-spotify-with-multi-scrobbler)
 
         Assuming you used the **HTTPS** method for your **Redirect URI** from the instructions above...after the application is created add these values to the `environment` section in the [`docker-compose.yml` you created.](#create-docker-compose-file)
 
@@ -138,7 +138,7 @@ services:
         * Determine your Koito URL
           * This is the URL you use to access your Koito dashboard OR whatever URL is accessible from your multi-scrobbler instance.
           * EX dashboard at `http://192.168.0.100:4110` => replace `myURL` below with `http://192.168.0.100:4110`
-          * [More info on the URL to use is the full docs](./configuration/configuration.mdx#koito)
+          * [More info on the URL to use is the full docs](/configuration/clients/koito)
 
         Add/Substitute values above into these examples values and add them to the `environment` section in the [`docker-compose.yml` you created for multi-scrobbler earlier.](#create-docker-compose-file)
 
@@ -161,7 +161,7 @@ services:
 
 :::tip
 
-If you are running your multi-scrobbler container on a Linux host see [these instructions for setting proper file permissions.](./installation/installation.mdx#linux-host)
+If you are running your multi-scrobbler container on a Linux host see [these instructions for setting proper file permissions.](/installation#linux-host)
 
 :::
 
@@ -182,10 +182,10 @@ Visit `http://192.168.0.100:9078` to see the dashboard where
 
 ## Next Steps
 
-* See more advanced docker options as well as other install methods in the [**Installation**](./installation/installation.mdx#docker) docs
-* Review the [**Configuration**](./configuration/configuration.mdx) docs
+* See more advanced docker options as well as other install methods in the [**Installation**](/installation#docker) docs
+* Review the [**Configuration**](/configuration) docs
   * Learn about how to configure multi-scrobbler using files for more complicated Source/Client scenarios
-  * See all available Sources/Clients alongside configuration examples
-  * Learn how to set up [notification webhooks](./configuration/configuration.mdx#webhook-configurations)
-  * Check out the [kitchensink example](./configuration/kitchensink.md)
-* Consult the [**FAQ**](./FAQ.md) for solutions to common problems
+  * See all available [**Sources**](/configuration/sources) and [**Clients**](/configuration/clients) alongside configuration examples
+  * Learn how to set up [notification webhooks](/configuration#webhook-configurations)
+  * Check out the [kitchensink example](/configuration/kitchensink)
+* Consult the [**FAQ**](/FAQ) for solutions to common problems

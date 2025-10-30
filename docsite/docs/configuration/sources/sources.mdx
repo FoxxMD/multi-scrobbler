@@ -1,0 +1,141 @@
+---
+sidebar_position: 2
+title: Overview
+toc_max_heading_level: 4
+---
+
+import ScrobbleThreshold from "@site/src/components/snippets/_scrobble-threshold.mdx"
+
+A **Source** is a data source that contains information about tracks you are playing like a music player or platform. Examples are **Spotify, Jellyfin, Plex, Youtube Music, Airsonic**, etc...
+
+## Sources
+
+| Name                                                                    | Networking          | Scrobble SOT          | [Multi Device/User](#multi-deviceuser) | [Scrobble Destination](#limiting-scrobble-destination) | [Thresholds](#scrobble-thresholds) | [Should Scrobble](#should-scrobble-behavior) |
+| :---------------------------------------------------------------------- | :------------------ | :-------------------- | :-------------------------------------- | :----------------------------------------------------- | :--------------------------------- | :------------------------------------------- |
+| [Azuracast](/configuration/sources/azuracast)                           | [Active](#active)   | [Activity](#activity) | ❌                                      | ✅                                                     | ✅                                 | ✅                                           |
+| [Deezer](/configuration/sources/deezer)                                 | [Active](#active)   | [History](#history)   | ✅                                      | ✅                                                     | ❌                                 | ❌                                           |
+| [Google Cast (Chromecast)](/configuration/sources/google-cast)          | [Active](#active)   | [Activity](#activity) | ✅                                      | ✅                                                     | ✅                                 | ❌                                           |
+| [Icecast](/configuration/sources/icecast)                               | [Active](#active)   | [Activity](#activity) | ❌                                      | ✅                                                     | ✅                                 | ✅                                           |
+| [Jellyfin](/configuration/sources/jellyfin)                             | [Active](#active)   | [Activity](#activity) | ✅                                      | ✅                                                     | ✅                                 | ❌                                           |
+| [JRiver](/configuration/sources/jriver)                                 | [Active](#active)   | [Activity](#activity) | ❌                                      | ✅                                                     | ✅                                 | ❌                                           |
+| [Kodi](/configuration/sources/kodi)                                     | [Active](#active)   | [Activity](#activity) | ❌                                      | ✅                                                     | ✅                                 | ❌                                           |
+| [Koito](/configuration/sources/koito-source)                            | [Active](#active)   | [History](#history)   | ❌                                      | ✅                                                     | ❌                                 | ❌                                           |
+| [Last.fm](/configuration/sources/lastfm-source)                         | [Active](#active)   | [History](#history)   | ❌                                      | ✅                                                     | ❌                                 | ❌                                           |
+| [Last.fm (Endpoint)](/configuration/sources/lastfm-endpoint)            | [Ingress](#ingress) | [History](#history)   | ❌                                      | ✅                                                     | ❌                                 | ❌                                           |
+| [ListenBrainz](/configuration/sources/listenbrainz-source)              | [Active](#active)   | [History](#history)   | ❌                                      | ✅                                                     | ❌                                 | ❌                                           |
+| [ListenBrainz (Endpoint)](/configuration/sources/listenbrainz-endpoint) | [Ingress](#ingress) | [History](#history)   | ❌                                      | ✅                                                     | ❌                                 | ❌                                           |
+| [Maloja](/configuration/sources/maloja)                                 | [Active](#active)   | [History](#history)   | ❌                                      | ✅                                                     | ❌                                 | ❌                                           |
+| [Mopidy](/configuration/sources/mopidy)                                 | [Active](#active)   | [Activity](#activity) | ❌                                      | ✅                                                     | ✅                                 | ❌                                           |
+| [MPD (Music Player Daemon)](/configuration/sources/mpd)                 | [Active](#active)   | [Activity](#activity) | ❌                                      | ✅                                                     | ✅                                 | ❌                                           |
+| [Musikcube](/configuration/sources/musikcube)                           | [Active](#active)   | [Activity](#activity) | ❌                                      | ✅                                                     | ✅                                 | ❌                                           |
+| [Plex](/configuration/sources/plex)                                     | [Active](#active)   | [Activity](#activity) | ✅                                      | ✅                                                     | ✅                                 | ❌                                           |
+| [Spotify](/configuration/sources/spotify)                               | [Active](#active)   | [Activity](#activity) | ✅                                      | ✅                                                     | ✅                                 | ❌                                           |
+| [Subsonic-compatible APIs](/configuration/sources/subsonic)             | [Active](#active)   | [Activity](#activity) | ✅                                      | ✅                                                     | ✅                                 | ❌                                           |
+| [WebScrobbler](/configuration/sources/webscrobbler)                     | [Ingress](#active)  | [History](#history)   | ❌                                      | ✅                                                     | ❌                                 | ❌                                           |
+| [VLC](/configuration/sources/vlc)                                       | [Active](#active)   | [Activity](#activity) | ❌                                      | ✅                                                     | ✅                                 | ❌                                           |
+| [Yamaha MusicCast](/configuration/sources/yamaha-musiccast)             | [Active](#active)   | [Activity](#activity) | ❌                                      | ✅                                                     | ✅                                 | ❌                                           |
+| [Youtube Music](/configuration/sources/youtube-music)                   | [Active](#active)   | [History](#history)   | ❌                                      | ✅                                                     | ❌                                 | ❌                                           |
+
+## Features
+
+### Types of Sources
+
+The Sources implemented in multi-scrobbler can be broken down into two categories.
+
+#### By Communication Method
+
+How does this Source get data from the service/application?
+
+##### Active
+
+The MS Source makes network requests to the service which returns a response with data MS can use to monitor listening activity or scrobbles.
+
+##### Ingress
+
+The MS Source waits for the service/application to send data to multi-scrobbler.
+
+These types of Sources require that multi-scrobbler is accessible to the service, generally through an open port or reverse proxy.
+
+#### By Data Source of Truth
+
+How does MS determine if/when a song has been played and is scrobbable?
+
+##### Listening Activity {#activity}
+
+These Sources expose some kind of real-time listening data for users, like:
+
+* player state (paused, stopped, playing)
+* player position (1:50/2:40)
+* current listened duration (Track A playing for 1m:20s)
+
+For theses Sources multi-scrobbler keeps track of the real-time state of your activity and scrobbles a track after it meets certain [scrobble thresholds](#scrobble-thresholds).
+
+##### Listening History/Scrobbles {#history}
+
+Some Sources expose their own version of "this track has been scrobbled."
+
+* Listenbrainz, Koito, and Last.fm are all scrobble services that have "definitive" histories of scrobbled tracks.
+
+For these Sources multi-scrobbler monitors the listening history data and scrobbles when it sees a new entry in the list.
+
+### Multi-Device/User
+
+Some Sources report which User is playing a track and/or on what device the track is being played. These Sources can be filtered with configuration to only monitor activity for specific devices or users.
+
+### Limiting Scrobble Destination
+
+By default a Source will scrobble to **all** configured Clients.
+
+To limit which Clients a Source will scrobble to use the `clients` property in a Source's [File/AIO configuration](/configuration?configType=file#configuration-types) to specify the **names** of the Clients that it should scrobble to:
+
+```json5 title="jellyfin.json"
+{
+    "name": "MyJellyfin",
+    "clients": ["myMaloja","koitoA","listenbrainzFoo"]
+    "data": {
+        // ...
+    },
+}
+```
+
+The Source above will only scrobble to Clients that are **named** (`name` property in Client config) either `myMaloja` `koitoA` or `listenbrainzFoo`.
+
+If your Client is configured using [ENV](/configuration?configType=env#configuration-types) then they are given an automatically generated name. Check the multi-scrobbler Dashboard to find their name in a subheader under the Client type. Example:
+
+![Client Name Subheader](../client-subheader.png)
+
+### Scrobble Thresholds
+
+<ScrobbleThreshold filename="spotify"/>
+
+These can also be configured **globally** for all Sources using ENVs:
+
+```
+SOURCE_SCROBBLE_DURATION=40
+SOURCE_SCROBBLE_PERCENT=20
+```
+
+### Should Scrobble Behavior
+
+:::note
+
+This feature is currently available only for some Sources. Check each Source's documentation to see if it supported.
+
+:::
+
+For _most_ Sources multi-scrobbler can determine if a user is listening and scrobble automatically. For Sources which multi-scrobbler cannot do this or require additional configuration, a user can indicate to MS that it should or should not scrobble. This action can be taken on the Web Dashboard by clicking the link next to **Should Scrobble** found in each Source's status card.
+
+Additionally, for these Sources, the default behavior for Scrobbling can be explicitly set by adding the following value to a Source's `options` in [file or aio config](/configuration?configType=file#configuration-types):
+
+```json5 title="azuracast.json"
+{
+    "data": {
+        // ...
+    },
+    "options": {
+        // set to true to always scrobble automatically
+        // set to false to never scrobble automatically
+        "systemScrobble": true
+    }
+}
+```

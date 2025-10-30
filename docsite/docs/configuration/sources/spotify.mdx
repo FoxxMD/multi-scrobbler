@@ -44,14 +44,14 @@ Use **one** of the following methods to specify a valid Redirect URI and complet
         
         For example, if you are already running multi-scrobbler behind a reverse proxy (nginx/traefik/caddy) at `https://scrobbler.mydomain.com` then set the Spotify Redirect URI for your Spotify App, and multi-scrobbler `SPOTIFY_REDIRECT_URI` ENV, to `https://scrobbler.mydomain.com/callback`
 
-        Alternatively, if multi-scrobbler is not accessible behind your domain, then use the [**Echo**](./?spotifyRedirect=echo#spotify) method with your own domain instead of 127.0.0.1.
+        Alternatively, if multi-scrobbler is not accessible behind your domain, then use the [**Echo**](./?spotifyRedirect=echo) method with your own domain instead of 127.0.0.1.
     </TabItem>
     <TabItem value="local" label="Run MS Locally">
         **Run multi-scrobbler, configured for a Spotify Source, from the same machine as your browser in order to get credentials.**
         
         In this scenario you can use `http://127.0.0.1:9078/callback` as the Spotify Redirect URI and multi-scrobbler `SPOTIFY_REDIRECT_URI` ENV.
         
-        After completing authentication, copy the contents of local multi-scrobbler's [configuration folder](../installation/installation.mdx#storage) to the final location of where multi-scrobbler will be run.
+        After completing authentication, copy the contents of local multi-scrobbler's [configuration folder](/installation#storage) to the final location of where multi-scrobbler will be run.
     </TabItem>
     <TabItem value="echo" label="Echo">
         **Use a docker container on the same machine your browser is on to "intercept" the callback URL from Spotify authentication, then manually finish the process by changing the domain to your multi-scrobbler instance.**
@@ -76,13 +76,13 @@ Use **one** of the following methods to specify a valid Redirect URI and complet
     </TabItem>
 
     <TabItem value="msEcho" label="Echo from echo.multi-scrobbler.app">
-        For your convenience, I run the [`mendhak/http-https-echo:36`](https://github.com/mendhak/docker-http-https-echo) container from the [**Echo**](./?spotifyRedirect=echo#spotify) approach on a domain I, the multi-scrobbler developer [FoxxMD](https://github.com/FoxxMD), control and self-host. Please be aware:
+        For your convenience, I run the [`mendhak/http-https-echo:36`](https://github.com/mendhak/docker-http-https-echo) container from the [**Echo**](./?spotifyRedirect=echo) approach on a domain I, the multi-scrobbler developer [FoxxMD](https://github.com/FoxxMD), control and self-host. Please be aware:
         
         * I **do not collect personal data** or any querystrings/data sent in requests to this site
         * It's **not possible** for me to use the code sent by Spotify to this URL without also having your Client ID/Secret
         * However, there is **always** risk involved with trusting a service you do not control. Evaluate the risk of using this site for yourself.
 
-        Use the [**Echo**](./?spotifyRedirect=echo#spotify) approach, starting from **Step 2**, with **https://echo.multi-scrobbler.app/callback** as Spotify Redirect URI and multi-scrobbler `SPOTIFY_REDIRECT_URI` ENV.
+        Use the [**Echo**](./?spotifyRedirect=echo) approach, starting from **Step 2**, with **https://echo.multi-scrobbler.app/callback** as Spotify Redirect URI and multi-scrobbler `SPOTIFY_REDIRECT_URI` ENV.
     </TabItem>
 </Tabs>
 
@@ -90,16 +90,16 @@ Use **one** of the following methods to specify a valid Redirect URI and complet
 
 4. Save your new App, then copy the Client ID/Secret from the App's Basic Information page.
 
-5. Add the Client ID, Secret, and Redirect URI to the respective field/ENV in the [configuration section below](#spotify-config)
+5. Add the Client ID, Secret, and Redirect URI to the respective field/ENV in the [configuration section below](#configuration)
 
 6. Start multi-scrobbler, then visit the Web Dashboard and click **(Re)authenticate** on the Spotify card to start the auth process
 
 ## Configuration
 
 <Config config="SpotifySourceConfig" fileContent={SpotifyConfig} name="spotify">
-    | Environmental Variable     | Required? | Default                          |                    Description                     |
-    |----------------------------|-----------|----------------------------------|----------------------------------------------------|
-    | `SPOTIFY_CLIENT_ID`        | Yes       |                                  |                                                    |
-    | `SPOTIFY_CLIENT_SECRET`    | Yes       |                                  |                                                    |
-    | `SPOTIFY_REDIRECT_URI`     | No         | `http://localhost:9078/callback` | URI must end in `callback`                         |
+    | Environmental Variable  | Required? | Default                          | Description                |
+    | ----------------------- | --------- | -------------------------------- | -------------------------- |
+    | `SPOTIFY_CLIENT_ID`     | Yes       |                                  |                            |
+    | `SPOTIFY_CLIENT_SECRET` | Yes       |                                  |                            |
+    | `SPOTIFY_REDIRECT_URI`  | No        | `http://localhost:9078/callback` | URI must end in `callback` |
 </Config>
