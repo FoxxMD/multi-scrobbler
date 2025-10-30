@@ -1,0 +1,31 @@
+---
+title: Subsonic
+toc_min_heading_level: 2
+toc_max_heading_level: 5
+---
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+import CodeBlock from '@theme/CodeBlock';
+import SubsonicConfig from '!!raw-loader!@site/../config/subsonic.json.example';
+
+This Source can be used for any application that implements the [Subsonic API](http://www.subsonic.org/pages/api.jsp) and supports the [`getNowPlaying`](http://www.subsonic.org/pages/api.jsp#getNowPlaying) endpoint (such as [Airsonic](https://airsonic.github.io/) and [Navidrome](https://www.navidrome.org/))
+
+:::warning[Known Issues]
+
+* Multiple artists are reported as one value and cannot be separated
+* If using [Airsonic Advanced](https://github.com/airsonic-advanced/airsonic-advanced) the password used (under **Credentials**) must be **Decodable**
+
+:::
+
+Use the optional `usersAllow` property with **File** or **AIO** configuration to restrict scrobbling to a list of defined users.
+
+## Configuration
+
+<Config config="SubsonicSourceConfig" fileContent={SubsonicConfig} name="subsonic">
+        | Environmental Variable | Required? | Default | Description                          |
+        |------------------------|-----------|---------|--------------------------------------|
+        | `SUBSONIC_USER`        | Yes       |         |                                      |
+        | `SUBSONIC_PASSWORD`    | Yes       |         |                                      |
+        | `SUBSONIC_URL`         | Yes       |         | Base url of your subsonic-api server |
+</Config>

@@ -1,0 +1,76 @@
+---
+title: JRiver
+toc_min_heading_level: 2
+toc_max_heading_level: 5
+---
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+import CodeBlock from '@theme/CodeBlock';
+import JriverConfig from '!!raw-loader!@site/../config/jriver.json.example';
+
+In order for multi-scrobbler to communicate with JRiver you must have [Web Server Interface](https://wiki.jriver.com/index.php/Web_Service_Interface#Documentation_of_Functions) enabled. This can can be in the JRiver GUI:
+
+* Tools -> Options -> Media Network
+  * Check `Use Media Network to share this library...`
+  * If you have `Authentication` checked you will need to provide the **Username** and **Password** in the ENV/File configuration below.
+
+### URL
+
+The URL used to connect to JRiver, set in your [file config as `url`.](#jriver-config) The URL used to connect ultimately must be formed like this:
+
+```
+Syntax  => [protocol]://[hostname]:[port]/[path]
+Default =>       http://localhost:52199/MCWS/v1/
+```
+
+If any part of this URL is missing multi-scrobbler will use a default value. This also means that if any part of your URL is **not** standard you must explicitly define it.
+
+:::tip[Jriver Settings]
+
+* Make sure the port number matches what is found in `Advanced` section in the [Media Network](#jriver) options.
+* If your installation is on the same machine but you cannot connect using `localhost` try `0.0.0.0` instead.
+
+:::
+
+<details>
+    <summary>URL Transform Examples</summary>
+
+    Examples of a given `url` in your file config and the final URL multi-scrobbler will use to connect to JRiver:
+
+    | `url`                                    | Transformed URL                             |
+    |------------------------------------------|---------------------------------------------|
+    | (none set)                               | `http://localhost:52199/MCWS/v1/`           |
+    | `jriver.mydomain.com`                    | `http://jriver.mydomain.com:52199/MCWS/v1/` |
+    | `192.168.0.101:3456`                     | `http://192.168.0.101:3456/MCWS/v1/`        |
+    | `mydomain.com:80/jriverReverse/MCWS/v1/` | `mydomain.com:80/jriverReverse/MCWS/v1/`    |
+
+</details>
+
+## Configuration
+
+<Tabs groupId="configType" queryString>
+    <TabItem value="env" label="ENV">
+    <EnvType>
+        | Environmental Variable | Required |             Default             |                  Description                   |
+        |------------------------|----------|---------------------------------|------------------------------------------------|
+        | JRIVER_URL             | Yes      | http://localhost:52199/MCWS/v1/ | The URL of the JRiver server                   |
+        | JRIVER_USERNAME        | No       |                                 | If authentication is enabled, the username set |
+        | JRIVER_PASSWORD        | No       |                                 | If authenticated is enabled, the password set  |
+    </EnvType>
+    </TabItem>
+    <TabItem value="file" label="File">
+    <FileType>
+        <CodeBlock title="CONFIG_DIR/jriver.json" language="json5">{JriverConfig}</CodeBlock>
+
+        or <SchemaLink lower objectName="JRiverSourceConfig"/>
+    </FileType>
+    </TabItem>
+    <TabItem value="aio" label="AIO">
+    <AIOType>
+        <AIOExample data={JriverConfig} name="jriver"/>
+
+        or <SchemaLink lower objectName="JRiverSourceConfig"/>
+    </AIOType>
+    </TabItem>
+</Tabs>

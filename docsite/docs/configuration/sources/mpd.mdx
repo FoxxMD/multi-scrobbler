@@ -1,0 +1,28 @@
+---
+title: MPD (Music Player Daemon)
+toc_min_heading_level: 2
+toc_max_heading_level: 5
+---
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+import CodeBlock from '@theme/CodeBlock';
+import MPDConfig from '!!raw-loader!@site/../config/mpd.json.example';
+
+MS communicates with MPD using the [TCP client connection.](https://mpd.readthedocs.io/en/stable/user.html#client-connections)
+
+You should uncomment/create the following settings in your mpd config:
+
+```
+bind_to_address	"any"   # or a specific ipv4/v6 address
+port            "6600"
+```
+
+## Configuration
+
+<Config config="MPDSourceConfig" fileContent={MPDConfig} name="mpd">
+        | Environmental Variable | Required? | Default          | Description |
+        |------------------------|-----------|------------------|-------------|
+        | `MPD_URL`              | No        | `localhost:6600` |             |
+        | `MPD_PASSWORD`         | No        |                  |             |
+</Config>

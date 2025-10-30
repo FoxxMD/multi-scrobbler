@@ -1,0 +1,95 @@
+---
+title: Webscrobbler
+toc_min_heading_level: 2
+toc_max_heading_level: 5
+---
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+import CodeBlock from '@theme/CodeBlock';
+import JsonConfig from '!!raw-loader!@site/../config/webscrobbler.json.example';
+
+After installing the [Webscrobbler extension](https://web-scrobbler.com/) open the preferences/settings for it:
+
+* Under **Accounts**
+  * **Add Webhook**
+    * API URL: `[YourMultiScrobblerInstance]/api/webscrobbler` EX `http://localhost:9078/api/webscrobbler`
+    * Application name: `(whatever you want)`
+
+Reload the extension after adding the webhook.
+
+:::note
+
+* **On Firefox** - Only FQNs (domain.tld), `localhost`, and `127.0.0.1` are supported for API URL due to [firefox requiring https](https://github.com/web-scrobbler/web-scrobbler/issues/4183#issuecomment-1749222006)
+* **On Chromium-based Browsers** - Any domain will work for API URL
+* All other browsers are untested
+
+:::
+
+:::warning
+
+Multi-scrobbler is **not** designed to be publicly accessible from the internet. To use Webscrobbler outside your local network you should be accessing MS through a VPN or through a reverse proxy with some kind of authentication (though this is still not recommended).
+
+:::
+
+### Multiple Users
+
+If you would like use multiple WebScrobbler sources they can be matched using a **slug** at the end of the **API URL.** This requires using [a file-based config.](/configuration?configType=file#configuration-types)
+
+<details>
+
+    <summary>Example</summary>
+
+    ```json title="webscrobbler.json"
+    [
+      {
+        "name": "aUserWS",
+        "clients": [
+          "client1Maloja"
+        ],
+        "data": {
+          "slug": "usera"
+        }
+      },
+      {
+        "name": "bUserWS",
+        "clients": [
+          "client2Maloja"
+        ],
+        "data": {
+          "slug": "userb"
+        }
+      }
+    ]
+    ```
+
+    * To use `aUserWS` source set **API URL** to `http://localhost:9078/api/webscrobbler/usera`
+    * To use `bUserWS` source set **API URL** to `http://localhost:9078/api/webscrobbler/userb`
+
+    :::tip
+
+    `http://localhost:9078/api/webscrobbler` is matched with the first source that _that does not have a slug defined._
+
+    :::
+
+</details>
+
+### Connectors Black/Whitelist
+
+MS can be configured to only scrobble, or NOT scrobble, from some WS connectors. Use the name of the website from the [supported websites](https://web-scrobbler.com/) or from the **Connectors** tab in the extension. 
+
+:::note
+
+This affects **only** MS's behavior and does not affect the general connector behavior you have configured within the WebScrobbler extension.
+
+:::
+
+## Configuration
+
+<Config config="WebscrobblerSourceConfig" fileContent={JsonConfig} name="webscrobbler">
+        | Environmental Variable | Required? | Default | Description                                                              |
+        |------------------------|-----------|---------|--------------------------------------------------------------------------|
+        | WS_ENABLE              | No        |         | Set to 'true' to enable WS without needing to define other ENVs          |
+        | WS_WHITELIST           | No        |         | Only scrobble from these WebScrobbler Connectors. Comma-delimited list   |
+        | WS_BLACKLIST           | No        |         | Do not scrobble from these WebScrobbler Connectors. Comma-delimited list |
+</Config>

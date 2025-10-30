@@ -1,0 +1,153 @@
+---
+title: Deezer
+toc_min_heading_level: 2
+toc_max_heading_level: 5
+---
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+import CodeBlock from '@theme/CodeBlock';
+import DeezerConfig from '!!raw-loader!@site/../config/deezer.json.example';
+import DeezerDeprecatedConfig from '!!raw-loader!@site/../config/deezer-deprecated.json.example';
+
+<Tabs groupId="deezerSource" queryString>
+    <TabItem value="arl" label="Unofficial ARL">
+        :::warning
+
+        This Source uses unofficial methods to access Deezer data that are likely in violation of Deezer's TOS. Deezer may change or remove these methods at any time, breaking functionality. Use this Source at your own risk.
+
+        :::
+
+        :::info
+
+        This Source will work only if you have a **Premium** Deezer account.
+
+        :::
+
+        ### Retrieve ARL
+
+        The `arl` is a browser cookie that Deezer uses to store your login information. Multi-scrobbler uses the `arl` value to make authorized requests to Deezer's API where it can retrieve listening history.
+
+        **After logging into Deezer**, use one of the methods below to retrieve the `arl` cookie value:
+
+        <Tabs groupId="arlRetrival">
+            <TabItem value="chrome" label="Chrome">
+                1. On deezer.com, press F12 to open the Developer Tools window.
+                2. Go to the Applications tab. Press the '>>' More tabs icon if it's hidden.
+                3. Under the Cookies Filter, click deezer.com, then the text bar name `arl`.
+                4. Copy all the contents shown in the **Cookie Value** pane.
+            </TabItem>
+            <TabItem value="firefox" label="Firefox">
+                1. On deezer.com, hit Ctrl+Shift+I to open Developer Tools
+                2. Go to the Storage Tab, then expand Cookies in the sidebar and select deezer.com
+                3. Find the row with `arl` as the name, then double click the Value column and right click -> copy the value
+            </TabItem>
+        </Tabs>
+
+        ## Configuration
+
+        <Tabs groupId="configType" queryString>
+            <TabItem value="env" label="ENV">
+                | Environmental Variable | Required? | Default | Description                                      |
+                | :--------------------- | --------- | ------- | ------------------------------------------------ |
+                | `DEEZER_ARL`           | Yes       |         | The ARL cookie value retrieved from your browser |
+            </TabItem>
+            <TabItem value="file" label="File">
+
+                <CodeBlock title="CONFIG_DIR/deezer.json" language="json5">{DeezerConfig}</CodeBlock>
+
+                or <SchemaLink lower objectName="DeezerSourceConfig"/>
+            </TabItem>
+            <TabItem value="aio" label="AIO">
+
+                <AIOExample data={DeezerConfig} name="deezer"/>
+
+                or <SchemaLink lower objectName="DeezerSourceConfig"/>
+            </TabItem>
+        </Tabs>
+
+        ### Duplicate detection
+
+        Third party integrations with Deezer (Sonos) may cause Deezer to [report the same track many times in listening history.](https://github.com/FoxxMD/multi-scrobbler/pull/296#issuecomment-2922374738) If you experience this issue modify your Deezer Source config (file-based only) to include the option `"fuzzyDiscoveryIgnore": "aggressive"`
+
+        <details>
+
+            <summary>deezer.json example</summary>
+
+            ```json title="deezer.json"
+            [
+                {
+                    "name": "MyDeezer",
+                    "data": {
+                        "arl": "UOsRPjT3U5Dhaaup3x...",
+                    },
+                    "options": {
+                        "fuzzyDiscoveryIgnore": "aggressive"
+                    }
+                }
+            ]
+            ```
+        </details>
+
+        This option comes with some trade-offs: MS will aggressively detect repeated tracks within a window of time that should eliminate all duplicates. However, this will also prevent *intentionally* repeated tracks from being scrobbled. See [this thread](https://github.com/FoxxMD/multi-scrobbler/pull/296#issuecomment-2970417070) for more information on how this works.
+
+    </TabItem>
+    <TabItem value="official" label="Official API">
+
+        :::warning
+
+        **This Source is DEPRECATED because Deezer has dropped official API support.** This Source will **not** be removed but no further support or fixes will be given. [See this issue for more discussion.](https://github.com/FoxxMD/multi-scrobbler/issues/175#issuecomment-2296776625)
+
+        Users cannot create new applications on Deezer Developers and there is no guarantee existing applications will continue to work.
+
+        As a workaround consider:
+        
+        * Using the alternative [Deezer Source that uses unofficial, internal API via ARL](./?deezerSource=arl#deezer)
+        * Connect Deezer with Last.fm and then use [Last.fm as a Source](#lastfm-source)
+
+        :::
+
+        Create a new application at [Deezer Developers](https://developers.deezer.com/myapps)
+
+        * Application Domain must be the same as your multi-scrobbler domain. Default is `localhost:9078`
+        * Redirect URL must end in `deezer/callback`
+        * Default would be `http://localhost:9078/deezer/callback`
+
+        After application creation you should have credentials displayed in the "My Apps" dashboard. You will need:
+
+        * **Application ID**
+        * **Secret Key**
+        * **Redirect URL** (if not the default)
+
+        **If no access token is provided...**
+
+        After starting multi-scrobbler with credentials in-place open the dashboard (`http://localhost:9078`) and find your Deezer source. Click **(Re)authenticate and (re)start polling** to start the login process. After login is complete polling will begin automatically.
+
+        ###### Configuration
+
+        <Tabs groupId="configType" queryString>
+            <TabItem value="env" label="ENV">
+                | Environmental Variable | Required? | Default                                 | Description                       |
+                |------------------------|-----------|-----------------------------------------|-----------------------------------|
+                | `DEEZER_CLIENT_ID`     | Yes       |                                         | Your **Application ID**           |
+                | `DEEZER_CLIENT_SECRET` | Yes       |                                         | Your **Secret Key**               |
+                | `DEEZER_REDIRECT_URI`  | No        | `http://localhost:9078/deezer/callback` | URI must end in `deezer/callback` |
+            </TabItem>
+            <TabItem value="file" label="File">
+
+                <CodeBlock title="CONFIG_DIR/deezer.json" language="json5">{DeezerDeprecatedConfig}</CodeBlock>
+
+
+                or <SchemaLink lower objectName="DeezerSourceConfig"/>
+            </TabItem>
+            <TabItem value="aio" label="AIO">
+
+                <AIOExample data={DeezerDeprecatedConfig} name="deezer"/>
+
+
+                or <SchemaLink lower objectName="DeezerSourceConfig"/>
+            </TabItem>
+        </Tabs>
+
+        </TabItem>
+</Tabs>

@@ -1,0 +1,38 @@
+---
+title: Musikcube
+toc_min_heading_level: 2
+toc_max_heading_level: 5
+---
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+import CodeBlock from '@theme/CodeBlock';
+import MusikcubeConfig from '!!raw-loader!@site/../config/musikcube.json.example';
+
+In order to use [Musikcube](https://musikcube.com) configure it to accept [websocket connections](https://github.com/clangen/musikcube/wiki/remote-api-documentation) in **server setup**:
+
+* Enable the **Metadata Server**
+* Set a **Password**
+
+Both of these settings are found in _Musikcube -> (s)ettings -> server setup_
+
+![Server Setup](../musikcube.jpg)
+
+The URL used by MS has the syntax:
+
+```
+[ws|wss]://HOST:[PORT]
+```
+
+The **port** is the same as shown in the server setup screenshot from above, under **metadata server enabled**. If no port is provided to MS it will default to `7905`.
+
+If no URL is provided to MS it will try to use `ws://localhost:7905`
+
+## Configuration
+
+<Config config="MusikcubeSourceConfig" fileContent={MusikcubeConfig} name="musikcube">
+        | Environmental Variable | Required? | Default               | Description                          |
+        |------------------------|-----------|-----------------------|--------------------------------------|
+        | `MC_URL`               | No        | `ws://localhost:7905` | Use port set for **metadata server** |
+        | `MC_PASSWORD`          | Yes       |                       |                                      |
+</Config>

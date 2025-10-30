@@ -1,0 +1,59 @@
+---
+title: Kodi
+toc_min_heading_level: 2
+toc_max_heading_level: 5
+---
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+import CodeBlock from '@theme/CodeBlock';
+import KodiConfig from '!!raw-loader!@site/../config/kodi.json.example';
+import Config from '@site/src/components/GenericConfiguration.mdx';
+
+In order for multi-scrobbler to communicate with Kodi you must have the [Web Interface](https://kodi.wiki/view/Web_interface) enabled. This can be done in the Kodi GUI:
+
+* Settings -> Services -> Control
+  * Check `Allow remote control via HTTP`
+  * Ensure you have a **Username** and **Password** set, you will need to provide them in the ENV/File configuration below.
+
+### URL
+
+The URL used to connect to Kodi, set in your [file config as `url`.](#kodi-config) The URL used to connect ultimately must be formed like this:
+
+```
+Syntax  => [protocol]://[hostname]:[port]/[path]
+Default =>       http://localhost:8080/jsonrpc
+```
+
+If any part of this URL is missing multi-scrobbler will use a default value. This also means that if any part of your URL is **not** standard you must explicitly define it.
+
+:::tip[Kodi Settings]
+
+* Make sure the port number matches what is found in **Port** in the [Control](#kodi) section mentioned above.
+* If your installation is on the same machine but you cannot connect using `localhost` try `0.0.0.0` instead.
+
+:::
+
+<details>
+    <summary>URL Transform Examples</summary>
+
+    Examples of a given `url` in your file config and the final URL multi-scrobbler will use to connect to Kodi:
+
+    | `url`                                 | Transformed URL                              |
+    |---------------------------------------|----------------------------------------------|
+    | (none set)                            | `http://localhost:8080/jsonrpc`              |
+    | `kodi.mydomain.com`                   | `http://kodi.mydomain.com:8080/jsonrpc`      |
+    | `192.168.0.101:3456`                  | `http://192.168.0.101:3456/jsonprc`          |
+    | `mydomain.com:80/kodiReverse/jsonrpc` | `http://mydomain.com:80/kodiReverse/jsonrpc` |
+
+</details>
+
+## Configuration
+
+<Config config="KodiSourceConfig" fileContent={KodiConfig} name="kodi">
+        | Environmental Variable | Required | Default                       | Description                |
+        |------------------------|----------|-------------------------------|----------------------------|
+        | KODI_URL               | Yes      | http://localhost:8080/jsonrpc | The URL of the Kodi server |
+        | KODI_USERNAME          | No       |                               | The username set           |
+        | KODI_PASSWORD          | No       |                               | The password set           |
+</Config>
