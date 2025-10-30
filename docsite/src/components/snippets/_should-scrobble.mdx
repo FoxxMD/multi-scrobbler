@@ -1,0 +1,22 @@
+import CodeBlock from '@theme/CodeBlock';
+
+This **Source** supports toggling scrobbling on or off manually. This action can be taken on the Web Dashboard by clicking the link next to **Should Scrobble** found in each Source's status card.
+
+Additionally, the default behavior for scrobbling can be explicitly set by adding the following value to a Source's `options` in [file or aio config](/configuration?configType=file#configuration-types):
+
+<CodeBlock
+language="json5"
+title={`${props.filename}.json`}>
+{`{
+    "data": {
+        // ...
+    },
+    "options": {
+        // highlight-start
+        // set to true to always scrobble automatically
+        // set to false to never scrobble automatically
+        "systemScrobble": true
+        // highlight-end
+    }
+}}`}
+</CodeBlock>

@@ -1,0 +1,27 @@
+import CodeBlock from '@theme/CodeBlock';
+
+A **Source** that monitors active listening uses one of two metrics to determine if a Song is scrobbable based on your listening:
+
+* **percent** of track listened to (50% or more)
+* or amount of time (**duration**) track was listened to (4 minutes or more)
+
+These default values are based on [last.fm's scrobble guidance.](https://www.last.fm/api/scrobbling#when-is-a-scrobble-a-scrobble)
+
+These values can be customized in the `options` of Source's [file or aio config](/configuration#configuration-types):
+<CodeBlock
+language="json5"
+title={`${props.filename}.json`}>
+{`{
+    "data": {
+        // ...
+    },
+    "options": {
+        // highlight-start
+        "scrobbleThresholds": {
+            "duration": 40, // scrobbable if listened to for 40 seconds or more
+            "percent": 20   // scrobbable if listened to for 20% or more of the track's length
+        }
+        // highlight-end
+    }
+}`}
+</CodeBlock>

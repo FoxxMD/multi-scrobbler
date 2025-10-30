@@ -9,6 +9,7 @@ import CodeBlock from '@theme/CodeBlock';
 import SchemaLink from "../../src/components/SchemaLink";
 import AIOExample from "../../src/components/AIOExample";
 import FileExample from "../../src/components/FileExample";
+import ScrobbleThreshold from "@site/src/components/snippets/_scrobble-threshold.mdx"
 
 import AIOConfig from '!!raw-loader!../../../config/config.json.example';
 import AzuracastConfig from '!!raw-loader!../../../config/azuracast.json.example';
@@ -337,28 +338,7 @@ If your Client is configured using [ENV](./?configType=env#configuration-types) 
 
 <h3 id="scrobble-thresholds">Scrobble Thresholds</h3>
 
-For Sources where multi-scrobbler monitors active listening, it uses one of two metrics to determine if a Song is scrobbable based on your listening:
-
-* **percent** of track listened to (50% or more)
-* or amount of time (**duration**) track was listened to (4 minutes or more)
-
-These default values are based on [last.fm's scrobble guidance.](https://www.last.fm/api/scrobbling#when-is-a-scrobble-a-scrobble)
-
-Each Source can have these values customized using values in the Source's `options` in [file or aio config](./?configType=file#configuration-types):
-
-```json5 title="azuracast.json"
-{
-    "data": {
-        // ...
-    },
-    "options": {
-        "scrobbleThresholds": {
-            "duration": 40, // scrobbable if listened to for 40 seconds or more
-            "percent": 20   // scrobbable if listened to for 20% or more of the track's length
-        }
-    }
-}
-```
+<ScrobbleThreshold filename="spotify"/>
 
 These can also be configured **globally** for all Sources using ENVs:
 
