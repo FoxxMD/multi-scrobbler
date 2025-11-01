@@ -3,7 +3,8 @@ import LastFm, {
     AuthGetSessionResponse,
     LastfmTrackUpdateRequest, TrackObject,
     TrackScrobblePayload,
-    UserGetInfoResponse
+    UserGetInfoResponse,
+    UserGetRecentTracksResponse
 } from "lastfm-node-client";
 import { PlayObject } from "../../../core/Atomic.js";
 import { nonEmptyStringOrDefault, splitByFirstFound } from "../../../core/StringUtils.js";
@@ -203,6 +204,25 @@ export default class LastfmApiClient extends AbstractApiClient {
             }
             throw e;
         }
+    }
+
+    getRecentTracksWithPagination = async (options: {
+        page?: number;
+        limit?: number;
+        from?: number;
+        to?: number;
+    } = {}) => {
+        const { page = 1, limit = 200, from, to } = options;
+
+        return await this.callApi<UserGetRecentTracksResponse>((client: any) => client.userGetRecentTracks({
+            user: this.user,
+            sk: this.client.sessionKey,
+            limit,
+            page,
+            from,
+            to,
+            extended: true
+        }));
     }
 }
 
