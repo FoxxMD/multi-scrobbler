@@ -197,21 +197,12 @@ export class TransferJob {
             } = resp;
 
             if (pageInfo && !totalPagesKnown) {
-                const totalPages = parseInt(pageInfo.totalPages, 10);
-                const total = parseInt(pageInfo.total, 10);
-
-                // If playCount is specified, cap the total at playCount
-                if (this.playCount) {
-                    this.progress.total = Math.min(this.playCount, total);
-                    // Calculate how many pages we'll actually need
-                    this.progress.totalPages = Math.ceil(this.progress.total / this.PAGE_SIZE);
-                } else {
-                    this.progress.total = total;
-                    this.progress.totalPages = totalPages;
-                }
+                const apiTotal = parseInt(pageInfo.total, 10);
+                this.progress.total = this.playCount ? Math.min(this.playCount, apiTotal) : apiTotal;
+                this.progress.totalPages = Math.ceil(this.progress.total / this.PAGE_SIZE);
 
                 totalPagesKnown = true;
-                this.logger.info(`Total pages in source: ${totalPages}, Total plays in source: ${total}, Will transfer: ${this.progress.total}, Expected pages: ${this.progress.totalPages}`);
+                this.logger.info(`Total plays in source: ${apiTotal}, Will transfer: ${this.progress.total}, Expected pages: ${this.progress.totalPages}`);
             }
 
             if (rawTracks.length === 0) {
@@ -313,6 +304,8 @@ export class TransferJob {
         await this.processPlaysWithSlidingWindow(sortedPlays, client);
     }
 
+    private timeRangeScrobbles: PlayObject[] = [];
+
     private async processPlaysWithSlidingWindow(plays: PlayObject[], client: AbstractScrobbleClient): Promise<void> {
         if (plays.length === 0) {
             return;
@@ -321,11 +314,33 @@ export class TransferJob {
         const oldest = plays[0].data.playDate;
         const newest = plays[plays.length - 1].data.playDate;
 
+        // Fetch scrobbles for the specific time range being processed
         if (oldest && newest) {
-            this.logger.debug(`Refreshing client scrobbles for time range: ${oldest.format()} to ${newest.format()}`);
-            await client.refreshScrobbles(this.SLIDING_WINDOW_SIZE);
+            this.logger.debug(`Fetching client scrobbles for time range: ${oldest.format()} to ${newest.format()}`);
+
+            // Check if client supports time-range fetching
+            if ('getScrobblesForTimeRange' in client && typeof (client as any).getScrobblesForTimeRange === 'function') {
+                try {
+                    // Add a buffer before/after to catch nearby scrobbles
+                    const bufferHours = 24;
+                    const fromDate = oldest.subtract(bufferHours, 'hours');
+                    const toDate = newest.add(bufferHours, 'hours');
+
+                    this.timeRangeScrobbles = await (client as any).getScrobblesForTimeRange(fromDate, toDate, this.SLIDING_WINDOW_SIZE);
+                    this.logger.debug(`Fetched ${this.timeRangeScrobbles.length} scrobbles from ${this.clientName} for duplicate detection`);
+                } catch (e) {
+                    this.logger.error(`Error fetching scrobbles for time range: ${e.message}`);
+                    throw e;
+                }
+            } else {
+                // Fallback to regular refresh (will only work for recent scrobbles)
+                this.logger.warn('Client does not support time-range fetching, falling back to regular refresh (may not detect duplicates for old scrobbles)');
+                await client.refreshScrobbles(this.SLIDING_WINDOW_SIZE);
+                this.timeRangeScrobbles = [];
+            }
         } else {
             await client.refreshScrobbles(this.SLIDING_WINDOW_SIZE);
+            this.timeRangeScrobbles = [];
         }
 
         for (let i = 0; i < plays.length; i++) {
@@ -358,6 +373,37 @@ export class TransferJob {
         this.progress.currentTrack = undefined;
     }
 
+    private isAlreadyScrobbledInTimeRange(play: PlayObject): boolean {
+        if (this.timeRangeScrobbles.length === 0) {
+            return false;
+        }
+
+        const playDate = play.data.playDate;
+        if (!playDate) {
+            return false;
+        }
+
+        // Check for matching scrobble (same track, artist, and similar timestamp)
+        return this.timeRangeScrobbles.some(scrobbled => {
+            const scrobbledDate = scrobbled.data.playDate;
+            if (!scrobbledDate) {
+                return false;
+            }
+
+            // Check if timestamps are within 30 seconds of each other
+            const timeDiffSeconds = Math.abs(playDate.diff(scrobbledDate, 'second'));
+            if (timeDiffSeconds > 30) {
+                return false;
+            }
+
+            // Check if track and artists match
+            const trackMatch = play.data.track?.toLowerCase() === scrobbled.data.track?.toLowerCase();
+            const artistsMatch = play.data.artists?.join(',').toLowerCase() === scrobbled.data.artists?.join(',').toLowerCase();
+
+            return trackMatch && artistsMatch;
+        });
+    }
+
     private async processPlay(play: PlayObject, client: AbstractScrobbleClient): Promise<void> {
         const transformedPlay = client.transformPlay(play, TRANSFORM_HOOK.preCompare);
 
@@ -366,9 +412,17 @@ export class TransferJob {
         // 2. timeFrameIsValid is designed to prevent re-scrobbling during normal operation
         // 3. We have our own duplicate detection via time-range fetching
 
+        // Check against our time-range-specific scrobbles (the actual duplicate detection)
+        if (this.isAlreadyScrobbledInTimeRange(transformedPlay)) {
+            this.logger.verbose(`DUPLICATE (time-range): ${buildTrackString(play)} - found in ${this.clientName}'s ${this.timeRangeScrobbles.length} scrobbles`);
+            this.progress.duplicates++;
+            return;
+        }
+
+        // Check using the client's built-in method (for recently added scrobbles from this transfer)
         const alreadyScrobbled = await client.alreadyScrobbled(transformedPlay);
         if (alreadyScrobbled) {
-            this.logger.debug(`Skipping ${buildTrackString(play)}: already scrobbled`);
+            this.logger.verbose(`DUPLICATE (recent): ${buildTrackString(play)} - found in ${this.clientName}'s recent scrobbles`);
             this.progress.duplicates++;
             return;
         }
