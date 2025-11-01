@@ -243,6 +243,25 @@ export default class LastfmApiClient extends AbstractApiClient {
         }
     }
 
+    getRecentTracksWithPagination = async (options: {
+        page?: number;
+        limit?: number;
+        from?: number;
+        to?: number;
+    } = {}) => {
+        const { page = 1, limit = 200, from, to } = options;
+
+        return await this.callApi<UserGetRecentTracksResponse>((client: any) => client.userGetRecentTracks({
+            user: this.user,
+            sk: this.client.sessionKey,
+            limit,
+            page,
+            from,
+            to,
+            extended: true
+        }));
+    }
+
     getRecentTracks = async (options: TracksFetchOptions = {}): Promise<PlayObject[]> => {
 
         let resp: LastFMUserGetRecentTracksResponse;
