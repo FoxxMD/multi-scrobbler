@@ -146,6 +146,37 @@ export class KoitoApiClient extends AbstractApiClient {
         }
     }
 
+    getUserListensWithPagination = async (options: {
+        count?: number;
+        minTs?: number;
+        maxTs?: number;
+    } = {}): Promise<ListensResponse> => {
+        const { count = 100, minTs, maxTs } = options;
+
+        try {
+            const query: any = { count };
+            if (minTs !== undefined) {
+                query.min_ts = minTs;
+            }
+            if (maxTs !== undefined) {
+                query.max_ts = maxTs;
+            }
+
+            const resp = await this.callApi(request
+                .get(`${joinedUrl(this.url.url, '/apis/listenbrainz/1/user', this.config.username, 'listens')}`)
+                .timeout({
+                    response: 15000,
+                    deadline: 30000
+                })
+                .query(query));
+
+            const { body: { payload } } = resp as any;
+            return payload as ListensResponse;
+        } catch (e) {
+            throw e;
+        }
+    }
+
     getRecentlyPlayed = async (maxTracks: number): Promise<PlayObject[]> => {
         try {
             const resp = await this.getUserListens(maxTracks);

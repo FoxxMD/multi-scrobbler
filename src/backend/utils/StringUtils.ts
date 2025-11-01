@@ -12,7 +12,7 @@ export const SYMBOLS_WHITESPACE_REGEX = new RegExp(/[`=(){}<>;'’,.~!@#$%^&*_+|
 export const SYMBOLS_REGEX = new RegExp(/[`=(){}<>;'’,.~!@#$%^&*_+|:"?\-\\[\]/]/g);
 
 export const MULTI_WHITESPACE_REGEX = new RegExp(/\s{2,}/g);
-export const uniqueNormalizedStrArr = (arr: string[]): string[] => arr.reduce((acc: string[], curr) => {
+export const uniqueNormalizedStrArr = (arr: string[]): string[] => arr.filter(x => x != null).reduce((acc: string[], curr) => {
         const normalizedCurr = normalizeStr(curr)
         if (!acc.some(x => normalizeStr(x) === normalizedCurr)) {
             return acc.concat(curr);
@@ -21,6 +21,9 @@ export const uniqueNormalizedStrArr = (arr: string[]): string[] => arr.reduce((a
     }, [])
 // https://stackoverflow.com/a/37511463/1469797
 export const normalizeStr = (str: string, options?: {keepSingleWhitespace?: boolean}): string => {
+    if (!str) {
+        return '';
+    }
     const {keepSingleWhitespace = false} = options || {};
     const normal = str.normalize('NFD').replace(/[\u0300-\u036f]/g, "");
     if(!keepSingleWhitespace) {
@@ -96,7 +99,7 @@ export const PRIMARY_SECONDARY_SECTIONS_REGEX = new RegExp(/^(?<primary>.+?)(?<s
  * */
 // export const SECONDARY_ARTISTS_REGEX = new RegExp(//ig);
 export const parseCredits = (str: string, delimiters?: boolean | string[]): PlayCredits => {
-    if (str.trim() === '') {
+    if (!str || str.trim() === '') {
         return undefined;
     }
 
@@ -136,7 +139,7 @@ export const parseCredits = (str: string, delimiters?: boolean | string[]): Play
     return undefined;
 }
 export const parseArtistCredits = (str: string, delimiters?: boolean | string[], ignoreGlobalAmpersand?: boolean): PlayCredits | undefined => {
-    if (str.trim() === '') {
+    if (!str || str.trim() === '') {
         return undefined;
     }
     let delims: string[] | undefined;

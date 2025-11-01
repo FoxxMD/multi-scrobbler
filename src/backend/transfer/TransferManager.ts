@@ -129,6 +129,39 @@ export class TransferManager {
             throw new Error('Play count must be greater than 0');
         }
 
+        // Validate date range if provided
+        if (fromDate || toDate) {
+            const now = new Date();
+
+            if (fromDate) {
+                const from = new Date(fromDate);
+                if (isNaN(from.getTime())) {
+                    throw new Error('Invalid fromDate format');
+                }
+                if (from > now) {
+                    throw new Error('fromDate cannot be in the future');
+                }
+            }
+
+            if (toDate) {
+                const to = new Date(toDate);
+                if (isNaN(to.getTime())) {
+                    throw new Error('Invalid toDate format');
+                }
+                if (to > now) {
+                    throw new Error('toDate cannot be in the future');
+                }
+            }
+
+            if (fromDate && toDate) {
+                const from = new Date(fromDate);
+                const to = new Date(toDate);
+                if (from > to) {
+                    throw new Error('fromDate must be before toDate');
+                }
+            }
+        }
+
         const source = this.scrobbleSources.getByName(sourceName);
         if (!source) {
             throw new Error(`Source '${sourceName}' not found`);
@@ -145,6 +178,11 @@ export class TransferManager {
 
         if (!client.isReady()) {
             throw new Error(`Client '${clientName}' is not ready`);
+        }
+
+        // Check if client supports time-range fetching (required for duplicate detection)
+        if (!('getScrobblesForTimeRange' in client) || typeof (client as any).getScrobblesForTimeRange !== 'function') {
+            throw new Error(`Client '${clientName}' does not support time-range fetching, which is required for accurate duplicate detection during transfers. Supported clients: Last.fm, Listenbrainz`);
         }
 
         if (playCount !== undefined && playCount > 10000) {
