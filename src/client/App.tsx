@@ -13,6 +13,7 @@ import Dashboard from "./dashboard/dashboard";
 import RecentPage from "./recent/RecentPage";
 import ScrobbledPage from "./scrobbled/ScrobbledPage";
 import DeadPage from "./deadLetter/DeadPage";
+import TransferPage from "./transfer/TransferPage";
 import {clientUpdate, sourceUpdate} from "./status/ducks";
 import {useEventSource, useEventSourceListener} from "@react-nano/use-event-source";
 import Version from "./Version";
@@ -69,6 +70,10 @@ const routes: RouteObject[] = [
     {
         path: "/dead",
         element: <DeadPage/>,
+    },
+    {
+        path: "/transfer",
+        element: <TransferPage/>,
     },
     {
         path: "/docs",
@@ -132,6 +137,9 @@ function App() {
                   </a>
                   <Version/>
                   <span className="space-x-3" style={{marginLeft: 'auto'}}>
+                       <a href="/transfer">
+                          Transfer
+                      </a>
                        <a href="/docs">
                           Docs
                       </a>

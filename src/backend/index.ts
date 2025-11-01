@@ -22,6 +22,7 @@ import { readJson } from './utils/DataUtils.js';
 import ScrobbleClients from './scrobblers/ScrobbleClients.js';
 import ScrobbleSources from './sources/ScrobbleSources.js';
 import { Notifiers } from './notifier/Notifiers.js';
+import { TransferManager } from './transfer/TransferManager.js';
 
 dayjs.extend(utc)
 dayjs.extend(isBetween);
@@ -108,7 +109,9 @@ const configDir = process.env.CONFIG_DIR || path.resolve(projectDir, `./config`)
 
         await root.items.cache().init();
 
-        initServer(logger, appLoggerStream, output, scrobbleSources, scrobbleClients);
+        const transferManager = new TransferManager(scrobbleSources, scrobbleClients, logger);
+
+        initServer(logger, appLoggerStream, output, scrobbleSources, scrobbleClients, transferManager);
 
         if(process.env.IS_LOCAL === 'true') {
             logger.info('multi-scrobbler can be run as a background service! See: https://foxxmd.github.io/multi-scrobbler/docs/installation/service');

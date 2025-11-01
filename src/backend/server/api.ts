@@ -31,6 +31,8 @@ import { setupWebscrobblerRoutes } from "./webscrobblerRoutes.js";
 import ScrobbleSources from "../sources/ScrobbleSources.js";
 import ScrobbleClients from "../scrobblers/ScrobbleClients.js";
 import prom from 'prom-client';
+import { TransferManager } from "../transfer/TransferManager.js";
+import { TransferOptions } from "../transfer/TransferJob.js";
 
 const maxBufferSize = 300;
 const output: Record<number, FixedSizeList<LogDataPretty>> =  {};
@@ -52,7 +54,7 @@ const getLogs = (minLevel: number, limit: number = maxBufferSize, sort: 'asc' | 
     return allLogs.flat(1).sort((a, b) => a.time - b.time).slice(0, limit);
 }
 
-export const setupApi = (app: ExpressWithAsync, logger: Logger, appLoggerStream: PassThrough, initialLogOutput: LogDataPretty[] = [], scrobbleSources: ScrobbleSources, scrobbleClients: ScrobbleClients) => {
+export const setupApi = (app: ExpressWithAsync, logger: Logger, appLoggerStream: PassThrough, initialLogOutput: LogDataPretty[] = [], scrobbleSources: ScrobbleSources, scrobbleClients: ScrobbleClients, transferManager: TransferManager) => {
     for(const level of Object.keys(logger.levels.labels)) {
         output[level] = new FixedSizeList<LeveledLogData>(maxBufferSize);
     }
@@ -560,6 +562,49 @@ export const setupApi = (app: ExpressWithAsync, logger: Logger, appLoggerStream:
 
     app.getAsync('/api/version', async (req, res) => {
        return res.json({version: root.get('version')});
+    });
+
+    app.getAsync('/api/transfer/sources-clients', async (req, res) => {
+        try {
+            const result = transferManager.getActiveSourcesAndClients();
+            return res.json(result);
+        } catch (e) {
+            logger.error(`Error getting sources and clients: ${e.message}`);
+            return res.status(500).json({ error: e.message });
+        }
+    });
+
+    app.postAsync('/api/transfer', bodyParser.json(), async (req, res) => {
+        try {
+            const options: TransferOptions = req.body;
+            const id = await transferManager.startTransfer(options);
+            return res.json({ id });
+        } catch (e) {
+            logger.error(`Error starting transfer: ${e.message}`);
+            return res.status(400).json({ error: e.message });
+        }
+    });
+
+    app.getAsync('/api/transfer/:id?', async (req, res) => {
+        try {
+            const { id } = req.params;
+            const result = transferManager.getTransferStatus(id);
+            return res.json(result);
+        } catch (e) {
+            logger.error(`Error getting transfer status: ${e.message}`);
+            return res.status(404).json({ error: e.message });
+        }
+    });
+
+    app.deleteAsync('/api/transfer/:id', async (req, res) => {
+        try {
+            const { id } = req.params;
+            transferManager.cancelTransfer(id);
+            return res.status(200).json({ message: 'Transfer cancelled' });
+        } catch (e) {
+            logger.error(`Error cancelling transfer: ${e.message}`);
+            return res.status(400).json({ error: e.message });
+        }
     });
 
     app.useAsync('/api/*', async (req, res) => {
