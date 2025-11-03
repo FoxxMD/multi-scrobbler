@@ -23,6 +23,7 @@ export const setupLZEndpointRoutes = (app: ExpressWithAsync, parentLogger: Logge
             // (in the event body parsing does not work or request is not POST/PATCH)
             webhookIngress.trackIngress(req, true);
             if (req.method !== 'POST') {
+                logger.warn(`Expected request to this endpoint to be POST but got ${req.method} instead. URL: ${req.originalUrl}\nMake sure base URL path to MS endpoint is correct.`);
                 return res.sendStatus(405);
             }
             next();
@@ -52,6 +53,7 @@ export const setupLZEndpointRoutes = (app: ExpressWithAsync, parentLogger: Logge
         });
     app.getAsync('/1/validate-token', async function (req, res) {
         //https://listenbrainz.readthedocs.io/en/latest/users/api/core.html#get--1-validate-token
+        logger.info('Validated token');
         return res.status(200).json({
             code: 200,
             message: "Token valid.",
