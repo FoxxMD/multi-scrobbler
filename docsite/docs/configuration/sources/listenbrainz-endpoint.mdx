@@ -18,29 +18,41 @@ This Source enables multi-scrobbler to accept scrobbles from outside application
 
 :::
 
-##### URL
+### URL
 
 If a **slug** is **not** provided in configuration then multi-scrobbler will accept Listenbrainz scrobbles at
 
 ```
-http://localhost:9078/1/submit-listens
+http://myMultiScrobblerIP:9078/1/submit-listens
 ```
 
 which is the "standard" Listenbrainz server path for scrobbling.
+
+In general, you should use `http://myMultiScrobblerIP:9078/1/` as the **base path** when configuring your application to scrobble to multi-scrobbler.
+
+<details>
+
+<summary>URL Setup for Popular Apps</summary>
+
+##### Navidrome
+
+Set the [**ListenBrainz.BaseURL**](https://www.navidrome.org/docs/usage/configuration-options/#advanced-configuration) (env `ND_LISTENBRAINZ_BASEURL`) to `http://myMultiScrobblerIP:9078/1/`
+
+</details>
 
 Use a slug only if you need to setup multiple Listenbrainz Endpoint sources and cannot use different tokens.
 
 If a slug is used then the URL will be:
 
 ```
-http://localhost:9078/api/listenbrainz/mySlug
+http://myMultiScrobblerIP:9078/api/listenbrainz/mySlug
 ```
 
 :::note
     Some Listenbrainz applications may require custom Listenbrainz URLs to be a real domain (`example.com`) and/or use SSL (`https://`). In this case you should setup multi-scrobbler behind a reverse proxy to support this functionality. It is out of the scope of this project to do this solely within multi-scrobbler.
 :::
 
-##### Token
+### Token
 
 Most Listenbrainz clients require a token (Authentication Token) to be provided during setup. This value can be anything you want, just make sure to use the same value for `token` in your multi-scrobbler configuration for the endpoint.
 
