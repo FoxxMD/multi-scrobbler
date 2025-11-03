@@ -30,7 +30,7 @@ export const setupLZEndpointRoutes = (app: ExpressWithAsync, parentLogger: Logge
         lzJsonParser, nonEmptyCheck, async function (req, res) {
             webhookIngress.trackIngress(req, false);
 
-            res.sendStatus(200);
+            res.status(200).json({status: "ok"});
 
 
             const sources = scrobbleSources.getByType('endpointlz') as EndpointListenbrainzSource[];
