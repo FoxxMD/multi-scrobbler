@@ -17,7 +17,7 @@ export const setupLZEndpointRoutes = (app: ExpressWithAsync, parentLogger: Logge
     const nonEmptyCheck = nonEmptyBody(logger, 'LZ Endpoint');
 
     const webhookIngress = new LZEndpointNotifier(logger);
-    app.useAsync(/(\/api\/listenbrainz.*)|(\/1\/submit-listens)/,
+    app.useAsync(/(\/api\/listenbrainz.*)|(\/1\/submit-listens\/?$)/,
         async function (req, res, next) {
             // track request before parsing body to ensure we at least log that something is happening
             // (in the event body parsing does not work or request is not POST/PATCH)
@@ -58,6 +58,10 @@ export const setupLZEndpointRoutes = (app: ExpressWithAsync, parentLogger: Logge
             valid: true,
             user_name: "Multi-Scrobbler"
         })
+    });
+    app.useAsync(/\/1\/.*/, async function (req, res) {
+        logger.warn(`Received what looks like a Listenbrainz Endpoint request but it was to an invalid URL route: ${req.originalUrl}\nMake sure base URL path to MS endpoint is correct.`);
+        res.status(404);
     });
 }
 
