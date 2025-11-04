@@ -48,7 +48,7 @@ A javascript app to scrobble music you listen to, to [Maloja](https://github.com
 * Web server interface for stats, basic control, and detailed logs
 * Graceful network and client failure handling (queued scrobbles that auto-retry)
 * Smart handling of credentials (persistent, authorization through app)
-* Easy configuration through ENVs or JSON
+* Easy configuration through [ENVs or JSON](ttps://foxxmd.github.io/multi-scrobbler/configuration#configuration-types)
 * Modify data before scrobbling with [regular expression or search patterns](https://foxxmd.github.io/multi-scrobbler/configuration/transforms)
 * Install using [Docker images for x86/ARM](https://foxxmd.github.io/multi-scrobbler/installation#docker) or [locally with NodeJS](https://foxxmd.github.io/multi-scrobbler/installation#nodejs)
 
@@ -69,11 +69,11 @@ Yes! You can use [Last.fm as a **Source**](https://foxxmd.github.io/multi-scrobb
 
 ## How Does multi-scrobbler (MS) Work?
 
-You set up configurations for one or more **Sources** and one or more **Clients**. MS monitors all of your configured **Sources**. When new tracks are played by a Source it grabs that information and then sends it (scrobbles it) to all **Clients** that Source is configured to scrobble to.
+You set up [configurations](https://foxxmd.github.io/multi-scrobbler/configuration) for one or more [**Sources**](https://foxxmd.github.io/multi-scrobbler/configuration/sources) and one or more [**Clients**](https://foxxmd.github.io/multi-scrobbler/configuration/clients). MS monitors all of your configured **Sources**. When new tracks are played by a Source MS grabs that information and then sends it (scrobbles it) to all **Clients** that Source is configured to forward to.
 
 ### Source
 
-A **Source** is a data source that contains information about tracks you are playing like a music player or platform. Examples are **Spotify, Jellyfin, Plex, Youtube Music, Airsonic**, etc...
+A [**Source**](https://foxxmd.github.io/multi-scrobbler/configuration/sources) is a data source that contains information about music you are playing or have listened to, like a desktop player, web music player, or cloud music service. Examples are **Spotify, Jellyfin, Plex, Youtube Music, Navidrome**, etc...
 
 Source configurations consist of:
 
@@ -83,7 +83,7 @@ Source configurations consist of:
 
 ### Client
 
-A **Client** is an application that stores the historical information about what songs you have played (scrobbles). Examples are **Maloja, Last.fm, Listenbrainz**...
+A [**Client**](https://foxxmd.github.io/multi-scrobbler/configuration/clients) is an application that stores the historical information about what music you have played (scrobbles). Examples are **Maloja, Last.fm, Listenbrainz**...
 
 Client configurations consist of:
 

@@ -22,7 +22,7 @@ Check the [**FAQ**](../FAQ.md) if you have any issues after configuration!
 
 ## Configuration Types
 
-[**Sources** and **Clients**](/#how-does-multi-scrobbler-ms-work) are configured using:
+[**Sources**](/configuration/sources) and [**Clients**](/configuration/clients) are configured using:
 
 * environmental (ENV) variables
 * client/source specific json config files
@@ -32,15 +32,46 @@ Check the [**FAQ**](../FAQ.md) if you have any issues after configuration!
 
 <Tabs groupId="configType" queryString>
     <TabItem value="env" label="ENV">
-        This is done by passing environmental variables and so does not require any files to run MS.
+        MS will parse environmental variables present in the OS/container when it is run. **This method means MS does not require files to run.**
 
-        * Using a docker container EX `docker run -e "SPOTIFY_CLIENT_ID=yourId" -e "SPOTIFY_CLIENT_SECRET=yourSecret" ...`
-        * Using a local installations by exporting variables before running MS EX `SPOTIFY_CLIENT_ID=yourId SPOTIFY_CLIENT_SECRET=yourSecret node index.js`
+        <details>
+          <summary>Use ENV-based configuration if...</summary>
 
-        Use ENV-based configuration if:
+          * You are the only person for whom MS is scrobbling for
+          * You have a very simple setup for MS such as one scrobble [Client](/configuration/clients) and one [Source](/configuration/sources) IE Plex -> Maloja
 
-        * You are the only person for whom MS is scrobbling for
-        * You have a very simple setup for MS such as one scrobble [Client](/#client) and one [Source](/#source) IE Plex -> Maloja
+        </details>
+
+        <details>
+          <summary>Config Example</summary>
+
+          For Docker container...
+
+          ```shell
+          docker run -e "SPOTIFY_CLIENT_ID=yourId" -e "SPOTIFY_CLIENT_SECRET=yourSecret" ...
+          ```
+
+          For Docker Compose
+
+          ```yaml title="docker-compose.yml"
+          services:
+              multi-scrobbler:
+                  image: foxxmd/multi-scrobbler
+                  environment:
+                      - SPOTIFY_CLIENT_ID=yourId
+                      - SPOTIFY_CLIENT_SECRET=yourSecret
+                      - MALOJA_URL=http://domain.tld:42010
+                      - MALOJA_API_KEY=1234
+                      # ...
+                  # ...
+          ```
+
+          For a local/node installation export variables before running...
+
+          ```shell
+          SPOTIFY_CLIENT_ID=yourId SPOTIFY_CLIENT_SECRET=yourSecret npm run start
+          ```
+        </details>
     </TabItem>
     <TabItem value="file" label="File">
         MS will parse configuration files located in the directory specified by the `CONFIG_DIR` environmental variable. This variable defaults to:
@@ -52,18 +83,19 @@ Check the [**FAQ**](../FAQ.md) if you have any issues after configuration!
 
             <summary>Use File-based configuration if...</summary>
 
-            * You have many [Sources](/#source)
+            * You have many [Sources](/configuration/sources)
             * You have many of each type of **Source** you want to scrobble from IE 2x Plex accounts, 3x Spotify accounts, 1x
             Funkwhale...
             * You have more than one scrobble **Client** you want to scrobble to IE multiple Maloja servers
-            * You want only some **Sources** to scrobble to some **Clients** IE Fred's Spotify account scrobbles to Fred's Maloja
-            server, but not Mary's Maloja server
+            * You want only to scrobble to specific **Clients**
+            * You need to setup more advanced configuration for a Source/Client
+              * Most Source/Clients only support basic configuration through ENV, all configuration is possible using File/AIO
 
         </details>
 
         :::tip
             * There are **example configurations** for all Source/Client types and AIO config located in the [`/config`](https://github.com/FoxxMD/multi-scrobbler/tree/master/config) directory of this project. These can be used as-is by renaming them to `.json`.
-            * For docker/flatpak installations these examples are copied to your configuration directory on first-time use.
+            * For docker installations these examples are copied to your configuration directory on first-time use.
             * There is also a [**kitchensink example**](kitchensink.md) that provides examples of using all sources/clients in a complex configuration.
         :::
 
@@ -95,12 +127,13 @@ Check the [**FAQ**](../FAQ.md) if you have any issues after configuration!
 
             <summary>Use AIO-based configuration if...</summary>
 
-            * You have many [Sources](/#source)
+            * You have many [Sources](/configuration/sources)
             * You have many of each type of **Source** you want to scrobble from IE 2x Plex accounts, 3x Spotify accounts, 1x
             Funkwhale...
             * You have more than one scrobble **Client** you want to scrobble to IE multiple Maloja servers
-            * You want only some **Sources** to scrobble to some **Clients** IE Fred's Spotify account scrobbles to Fred's Maloja
-            server, but not Mary's Maloja server
+            * You want only to scrobble to specific **Clients**
+            * You need to setup [monitoring/webhooks](#monitoring)
+            * You want to setup defaults for all Sources/Clients
 
         </details>
 
@@ -108,7 +141,7 @@ Check the [**FAQ**](../FAQ.md) if you have any issues after configuration!
 
         :::tip
             * An example AIO config files can be found in the project directory at [`/config/config.json.example`](https://github.com/FoxxMD/multi-scrobbler/tree/master/config/config.json.example)
-            * For docker/flatpak installations this example is copied to your configuration directory on first-time use.
+            * For docker installations this example is copied to your configuration directory on first-time use.
             * There is also a [**kitchensink example**](kitchensink.md) that provides examples of using all sources/clients in a complex configuration.
         :::
 
@@ -123,6 +156,15 @@ Check the [**FAQ**](../FAQ.md) if you have any issues after configuration!
         </details>
     </TabItem>
 </Tabs>
+
+## Setup Sources and Clients
+
+See the [Configuration Types](#configuration-types) above for your options for creating Source and Client configurations.
+
+* Reference [**Scrobble Sources**](/configuration/sources) for what Sources are available
+* Reference [**Scrobble Clients**](/configuration/clients) for what Clients are available
+
+Each entry for a Source/Client includes a **Configuration** section that describes how to configure it using a [configuration type](#configuration-types).
 
 ## Application Options
 
@@ -265,7 +307,7 @@ To set debug mode either add it to [AIO `config.json`](./?configType=aio#configu
 }
 ```
 
-or set the ENV `DEBUG_MODE=true`
+or set the [ENV](./?configType=env#configuration-types) `DEBUG_MODE=true`
 
 ### Disable Web
 
