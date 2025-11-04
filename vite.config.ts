@@ -45,6 +45,13 @@ export default defineConfig(() => {
         },
         define: {
             "__USE_HASH_ROUTER__": JSON.stringify((process.env.USE_HASH_ROUTER ?? false))
+        },
+        css: {
+            preprocessorOptions: {
+                scss: {
+                    api: 'modern-compiler' // or "modern"
+                }
+            }
         }
     };
 });
