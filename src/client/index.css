@@ -1,6 +1,12 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import 'tailwindcss';
+
+@utility container {  
+   padding-inline: 1rem;
+}
+
+@theme {
+    --breakpoint-md: 1024px;
+}
 
 body {
   margin: 0;

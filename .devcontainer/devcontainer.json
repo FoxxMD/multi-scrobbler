@@ -26,7 +26,8 @@
 			"extensions": [
 				"hbenl.vscode-mocha-test-adapter",
 				"dbaeumer.vscode-eslint",
-				"unifiedjs.vscode-mdx"
+				"unifiedjs.vscode-mdx",
+				"bradlc.vscode-tailwindcss"
 			]
 		}
 	},
