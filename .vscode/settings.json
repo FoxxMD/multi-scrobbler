@@ -5,5 +5,12 @@
     "search.exclude": {
         "**/.docusaurus": true,
         "**/build": true
-    }
+    },
+    "tailwindCSS.files.exclude": [
+        "docsite/**"
+    ],
+    "files.associations": {
+        "*.css": "tailwindcss"
+    },
+    "tailwindCSS.experimental.configFile": "src/client/index.css"
 }
