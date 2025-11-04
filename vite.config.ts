@@ -1,6 +1,7 @@
 import react from '@vitejs/plugin-react';
 import normalizeUrl from "normalize-url";
 import { defineConfig } from 'vite';
+import tailwindcss from '@tailwindcss/vite'
 
 const QUOTES_UNWRAP_REGEX: RegExp = new RegExp(/^"(.*)"$/);
 export const generateBaseURL = (userUrl: string | undefined): URL => {
@@ -35,7 +36,10 @@ export default defineConfig(() => {
             minifyIdentifiers: false
         },
         base: baseUrlStr,
-        plugins: [react()],
+        plugins: [
+            react(),
+            tailwindcss(),
+        ],
         build: {
             sourcemap: true
         },
