@@ -215,7 +215,7 @@ jobs:
         working-directory: /tmp/digests
         run: |
           docker buildx imagetools create $(jq -cr '.tags | map("-t " + .) | join(" ")' <<< "$DOCKER_METADATA_OUTPUT_JSON") \
-            $(printf '${VARS_DOCKERHUB_SLUG}@sha256:%s ' *)
+            $(printf "${VARS_DOCKERHUB_SLUG}@sha256:%s " *)
         env:
           VARS_DOCKERHUB_SLUG: ${{ vars.DOCKERHUB_SLUG }}
       
@@ -224,7 +224,7 @@ jobs:
         working-directory: /tmp/digests
         run: |
           docker buildx imagetools create $(jq -cr '.tags | map("-t " + .) | join(" ")' <<< "$DOCKER_METADATA_OUTPUT_JSON") \
-            $(printf '${VARS_GHCR_SLUG}@sha256:%s ' *)
+            $(printf "${VARS_GHCR_SLUG}@sha256:%s " *)
         env:
           VARS_GHCR_SLUG: ${{ vars.GHCR_SLUG }}    
       
