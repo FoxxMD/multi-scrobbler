@@ -62,13 +62,19 @@ jobs:
           # list all registries to push to and join all non-empty with comma
           # https://unix.stackexchange.com/a/693165/116849
           # https://stackoverflow.com/a/9429887/1469797
-          strings=("${{vars.DOCKERHUB_SLUG}}" "${{vars.GHCR_SLUG}}")
+          strings=("${VARS_DOCKERHUB_SLUG}" "${VARS_GHCR_SLUG}")
           for i in ${!strings[@]}; do [[ -z ${strings[i]} ]] && unset strings[i]; done
           joined_string=$(IFS=, ; echo "${strings[*]}")
           echo "REGISTRIES_JOINED=$joined_string" >> $GITHUB_ENV 
+        env:
+          VARS_DOCKERHUB_SLUG: ${{ vars.DOCKERHUB_SLUG }}
+          VARS_GHCR_SLUG: ${{vars.GHCR_SLUG}}
+          
 
       - name: Check out the repo
-        uses: actions/checkout@v4
+        uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955 #v4.3.0
+        with:
+          persist-credentials: false
 
       - name: Set short git commit SHA
         id: appvars
@@ -94,14 +100,14 @@ jobs:
 
       - name: Login to Docker Hub
         if: ${{ github.event_name != 'pull_request' && vars.DOCKERHUB_SLUG != '' }}
-        uses: docker/login-action@v3
+        uses: docker/login-action@5e57cd118135c172c3672efd75eb46360885c0ef # v3.6.0
         with:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
   
       - name: Login to GitHub Container Registry
         if: ${{ github.event_name != 'pull_request' && vars.GHCR_SLUG != '' }}
-        uses: docker/login-action@v3
+        uses: docker/login-action@5e57cd118135c172c3672efd75eb46360885c0ef # v3.6.0
         with:
           registry: ghcr.io
           username: ${{ github.repository_owner }}
@@ -110,13 +116,13 @@ jobs:
       # metadata extract for docker labels/image names is done in merge job
       
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@e468171a9de216ec08956ac3ada2f0791b6bd435 #v3.11.1
       
       # https://github.com/docker/build-push-action/issues/671#issuecomment-1619353328
       # for caching
       - name: Build and push by digest
         id: build
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@263435318d21b8e681c14492fe198d362a7d2c83 #v6.18.0
         with:
           build-args: |
             APP_BUILD_VERSION=${{steps.appversion.outputs.appversion}}
@@ -129,11 +135,12 @@ jobs:
       - name: Export digest
         run: |
           mkdir -p /tmp/digests
-          digest="${{ steps.build.outputs.digest }}"
-          touch "/tmp/digests/${digest#sha256:}"          
-      
+          digest="${VARS_DIGEST}"
+          touch "/tmp/digests/${digest#sha256:}"
+        env:
+            VARS_DIGEST: ${{ steps.build.outputs.digest }}      
       - name: Upload digest
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 #4.6.2
         with:
           name: digests-${{ env.PLATFORM_PAIR }}
           path: /tmp/digests/*
@@ -152,7 +159,7 @@ jobs:
       - test
     steps:
       - name: Download digests
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 #4.3.0
         with:
           path: /tmp/digests
           pattern: digests-*
@@ -160,25 +167,25 @@ jobs:
 
       - name: Login to Docker Hub
         if: ${{ github.event_name != 'pull_request' && vars.DOCKERHUB_SLUG != '' }}
-        uses: docker/login-action@v3
+        uses: docker/login-action@5e57cd118135c172c3672efd75eb46360885c0ef # v3.6.0
         with:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
 
       - name: Login to GitHub Container Registry
         if: ${{ github.event_name != 'pull_request' && vars.GHCR_SLUG != '' }}
-        uses: docker/login-action@v3
+        uses: docker/login-action@5e57cd118135c172c3672efd75eb46360885c0ef # v3.6.0
         with:
           registry: ghcr.io
           username: ${{ github.repository_owner }}
           password: ${{ secrets.GITHUB_TOKEN }}
       
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@e468171a9de216ec08956ac3ada2f0791b6bd435 
       
       - name: Extract metadata (tags, labels)
         id: meta
-        uses: docker/metadata-action@v5
+        uses: docker/metadata-action@318604b99e75e41977312d83839a89be02ca4893 #5.9.0
         with:
           images: |
             ${{ vars.DOCKERHUB_SLUG }}
@@ -208,21 +215,31 @@ jobs:
         working-directory: /tmp/digests
         run: |
           docker buildx imagetools create $(jq -cr '.tags | map("-t " + .) | join(" ")' <<< "$DOCKER_METADATA_OUTPUT_JSON") \
-            $(printf '${{ vars.DOCKERHUB_SLUG }}@sha256:%s ' *)
+            $(printf '${VARS_DOCKERHUB_SLUG}@sha256:%s ' *)
+        env:
+          VARS_DOCKERHUB_SLUG: ${{ vars.DOCKERHUB_SLUG }}
       
       - name: Create manifest list and push gchr
         if: ${{ vars.GHCR_SLUG != '' }}
         working-directory: /tmp/digests
         run: |
           docker buildx imagetools create $(jq -cr '.tags | map("-t " + .) | join(" ")' <<< "$DOCKER_METADATA_OUTPUT_JSON") \
-            $(printf '${{ vars.GHCR_SLUG }}@sha256:%s ' *)    
+            $(printf '${VARS_GHCR_SLUG}@sha256:%s ' *)
+        env:
+          VARS_GHCR_SLUG: ${{ vars.GHCR_SLUG }}    
       
       - name: Inspect image dockerhub
         if: ${{ vars.DOCKERHUB_SLUG != '' }}
         run: |
-          docker buildx imagetools inspect ${{ vars.DOCKERHUB_SLUG }}:${{ steps.meta.outputs.version }}
+          docker buildx imagetools inspect ${VARS_DOCKERHUB_SLUG}:${STEPS_META_OUTPUTS_VERSION}
+        env:
+          VARS_DOCKERHUB_SLUG: ${{ vars.DOCKERHUB_SLUG }}
+          STEPS_META_OUTPUTS_VERSION: ${{ steps.meta.outputs.version }}
 
       - name: Inspect image ghcr
         if: ${{ vars.GHCR_SLUG != '' }}
         run: |
-            docker buildx imagetools inspect ${{ vars.GHCR_SLUG }}:${{ steps.meta.outputs.version }}   
+            docker buildx imagetools inspect ${VARS_GHCR_SLUG}:${STEPS_META_OUTPUTS_VERSION}   
+        env:
+          VARS_GHCR_SLUG: ${{ vars.GHCR_SLUG }}
+          STEPS_META_OUTPUTS_VERSION: ${{ steps.meta.outputs.version }}
