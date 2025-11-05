@@ -48,10 +48,13 @@ jobs:
           # list all registries to push to and join all non-empty with comma
           # https://unix.stackexchange.com/a/693165/116849
           # https://stackoverflow.com/a/9429887/1469797
-          strings=("${{vars.DOCKERHUB_SLUG}}" "${{vars.GHCR_SLUG}}")
+          strings=("${VARS_DOCKERHUB_SLUG}" "${VARS_GHCR_SLUG}")
           for i in ${!strings[@]}; do [[ -z ${strings[i]} ]] && unset strings[i]; done
           joined_string=$(IFS=, ; echo "${strings[*]}")
           echo "REGISTRIES_JOINED=$joined_string" >> $GITHUB_ENV 
+        env:
+          VARS_DOCKERHUB_SLUG: ${{ vars.DOCKERHUB_SLUG }}
+          VARS_GHCR_SLUG: ${{vars.GHCR_SLUG}}
 
       # do not use here!
       # instead we can specify repo#sha in build-push-action so we only deal with foreign SHA for actually building image
@@ -73,14 +76,14 @@ jobs:
 
       - name: Login to Docker Hub
         if: ${{ vars.DOCKERHUB_SLUG != '' }}
-        uses: docker/login-action@v3
+        uses: docker/login-action@5e57cd118135c172c3672efd75eb46360885c0ef # v3.6.0
         with:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
   
       - name: Login to GitHub Container Registry
         if: ${{ vars.GHCR_SLUG != '' }}
-        uses: docker/login-action@v3
+        uses: docker/login-action@5e57cd118135c172c3672efd75eb46360885c0ef # v3.6.0
         with:
           registry: ghcr.io
           username: ${{ github.repository_owner }}
@@ -89,13 +92,13 @@ jobs:
       # metadata extract for docker labels/image names is done in merge job
 
       - name: Set up Buildx
-        uses: docker/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@e468171a9de216ec08956ac3ada2f0791b6bd435 #v3.11.1
 
       # https://github.com/docker/build-push-action/issues/671#issuecomment-1619353328
       # for caching
       - name: Build and push by digest
         id: build
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@263435318d21b8e681c14492fe198d362a7d2c83 #v6.18.0
         with:
           # specify foreign repo#sha from PR that is used to build image
           context: ${{github.event.pull_request.head.repo.clone_url}}#${{github.event.pull_request.head.sha}}
@@ -114,7 +117,7 @@ jobs:
           touch "/tmp/digests/${digest#sha256:}"          
       
       - name: Upload digest
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 #4.6.2
         with:
           name: digests-${{ env.PLATFORM_PAIR }}
           path: /tmp/digests/*
@@ -133,7 +136,7 @@ jobs:
       - test
     steps:
       - name: Download digests
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 #4.3.0
         with:
           path: /tmp/digests
           pattern: digests-*
@@ -141,25 +144,25 @@ jobs:
 
       - name: Login to Docker Hub
         if: ${{ vars.DOCKERHUB_SLUG != '' }}
-        uses: docker/login-action@v3
+        uses: docker/login-action@5e57cd118135c172c3672efd75eb46360885c0ef # v3.6.0
         with:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
 
       - name: Login to GitHub Container Registry
         if: ${{ vars.GHCR_SLUG != '' }}
-        uses: docker/login-action@v3
+        uses: docker/login-action@5e57cd118135c172c3672efd75eb46360885c0ef # v3.6.0
         with:
           registry: ghcr.io
           username: ${{ github.repository_owner }}
           password: ${{ secrets.GITHUB_TOKEN }}
       
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@e468171a9de216ec08956ac3ada2f0791b6bd435 
       
       - name: Extract metadata (tags, labels)
         id: meta
-        uses: docker/metadata-action@v5
+        uses: docker/metadata-action@318604b99e75e41977312d83839a89be02ca4893 #5.9.0
         with:
           images: |
             ${{ vars.DOCKERHUB_SLUG }}
@@ -180,24 +183,34 @@ jobs:
         working-directory: /tmp/digests
         run: |
           docker buildx imagetools create $(jq -cr '.tags | map("-t " + .) | join(" ")' <<< "$DOCKER_METADATA_OUTPUT_JSON") \
-            $(printf '${{ vars.DOCKERHUB_SLUG }}@sha256:%s ' *)
+            $(printf "${VARS_DOCKERHUB_SLUG}@sha256:%s " *)
+        env:
+          VARS_DOCKERHUB_SLUG: ${{ vars.DOCKERHUB_SLUG }}
       
       - name: Create manifest list and push gchr
         if: ${{ vars.GHCR_SLUG != '' }}
         working-directory: /tmp/digests
         run: |
           docker buildx imagetools create $(jq -cr '.tags | map("-t " + .) | join(" ")' <<< "$DOCKER_METADATA_OUTPUT_JSON") \
-            $(printf '${{ vars.GHCR_SLUG }}@sha256:%s ' *)    
+            $(printf "${VARS_GHCR_SLUG}@sha256:%s " *)
+        env:
+          VARS_GHCR_SLUG: ${{ vars.GHCR_SLUG }}    
       
       - name: Inspect image dockerhub
         if: ${{ vars.DOCKERHUB_SLUG != '' }}
         run: |
-          docker buildx imagetools inspect ${{ vars.DOCKERHUB_SLUG }}:${{ steps.meta.outputs.version }}
+          docker buildx imagetools inspect ${VARS_DOCKERHUB_SLUG}:${STEPS_META_OUTPUTS_VERSION}
+        env:
+          VARS_DOCKERHUB_SLUG: ${{ vars.DOCKERHUB_SLUG }}
+          STEPS_META_OUTPUTS_VERSION: ${{ steps.meta.outputs.version }}
 
       - name: Inspect image ghcr
         if: ${{ vars.GHCR_SLUG != '' }}
         run: |
-            docker buildx imagetools inspect ${{ vars.GHCR_SLUG }}:${{ steps.meta.outputs.version }}   
+            docker buildx imagetools inspect ${VARS_GHCR_SLUG}:${STEPS_META_OUTPUTS_VERSION}
+        env:
+          VARS_GHCR_SLUG: ${{ vars.GHCR_SLUG }}
+          STEPS_META_OUTPUTS_VERSION: ${{ steps.meta.outputs.version }}   
 
 
   combine-and-comment:
@@ -207,7 +220,7 @@ jobs:
     if: contains(github.event.pull_request.labels.*.name, 'safe to test')
     steps:
       - name: Create comment
-        uses: marocchino/sticky-pull-request-comment@v2
+        uses: marocchino/sticky-pull-request-comment@773744901bac0e8cbb5a0dc842800d45e9b2b405 #2.9.4
         with:
           recreate: true
           header: "pr-release"
