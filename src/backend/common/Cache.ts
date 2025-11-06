@@ -13,7 +13,7 @@ import { childLogger, Logger } from '@foxxmd/logging';
 import { projectDir } from './index.js';
 import path from 'path';
 import { fileOrDirectoryIsWriteable } from '../utils.js';
-import { asCacheMetadataProvider, asCacheScrobbleProvider, CacheConfig, CacheConfigOptions, CacheMetadaProvider, CacheProvider, CacheScrobbleProvider } from './infrastructure/Atomic.js';
+import { asCacheAuthProvider, asCacheMetadataProvider, asCacheScrobbleProvider, CacheAuthProvider, CacheConfig, CacheConfigOptions, CacheMetadataProvider, CacheProvider, CacheScrobbleProvider } from './infrastructure/Atomic.js';
 import { Typeson } from 'typeson';
 import { builtin } from 'typeson-registry';
 import { MaybeLogger } from './logging.js';
@@ -46,6 +46,7 @@ export class MSCache {
 
     cacheMetadata: Cacheable;
     cacheScrobble: Cacheable;
+    cacheAuth: Cacheable;
 
     logger: Logger;
 
@@ -54,7 +55,7 @@ export class MSCache {
 
         const {
             metadata: {
-                provider: mProvider = (process.env.CACHE_METADATA as (CacheMetadaProvider | undefined) ?? 'memory'),
+                provider: mProvider = (process.env.CACHE_METADATA as (CacheMetadataProvider | undefined) ?? 'memory'),
                 connection: mConn = process.env.CACHE_METADATA_CONN,
                 ...restMetadata
             } = {},
@@ -62,6 +63,11 @@ export class MSCache {
                 provider: sProvider = (process.env.CACHE_SCROBBLE as (CacheScrobbleProvider | undefined) ?? 'file'),
                 connection = (process.env.CACHE_SCROBBLE_CONN ?? configDir),
                 ...restScrobble
+            } = {},
+            auth: {
+                provider: aProvider = (process.env.CACHE_AUTH as (CacheAuthProvider | undefined) ?? 'file'),
+                connection: aConn = (process.env.CACHE_AUTH_CONN ?? configDir),
+                ...restAuth
             } = {},
         } = config;
 
@@ -75,6 +81,11 @@ export class MSCache {
                 provider: sProvider,
                 connection,
                 ...restScrobble
+            },
+            auth: {
+                provider: aProvider,
+                connection: aConn,
+                ...restAuth
             }
         };
     }
@@ -83,6 +94,7 @@ export class MSCache {
         // disabled for now
         //await this.initMetadataCache();
         await this.initScrobbleCache();
+        await this.initAuthCache();
     }
 
     protected initCacheable = async (config: CacheConfig, cacheFor: string) => {
@@ -147,6 +159,17 @@ export class MSCache {
             this.cacheMetadata = await this.initCacheable(this.config.metadata, 'Metadata');
         }
     }
+
+    initAuthCache = async () => {
+        if (this.cacheAuth === undefined) {
+            if (!asCacheAuthProvider(this.config.auth.provider)) {
+                throw new Error(`Cache Auth provider '${this.config.auth.provider}' must be one of: memory, valkey, file`);
+            }
+
+            this.cacheAuth = await this.initCacheable(this.config.auth, 'Auth');
+        }
+    }
+
 }
 
 

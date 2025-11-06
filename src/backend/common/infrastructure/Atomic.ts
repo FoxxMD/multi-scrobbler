@@ -72,12 +72,14 @@ export type ClientType =
     'maloja'
     | 'lastfm'
     | 'listenbrainz'
-    | 'koito';
+    | 'koito'
+    | 'tealfm';
 export const clientTypes: ClientType[] = [
     'maloja',
     'lastfm',
     'listenbrainz',
-    'koito'
+    'koito',
+    'tealfm'
 ];
 export const isClientType = (data: string): data is ClientType => {
     return clientTypes.includes(data as ClientType);
@@ -355,8 +357,8 @@ export interface CacheConfig<T extends CacheProvider = CacheProvider> {
     connection?: string;
     [key: string]: any
 }
-export type CacheMetadaProvider = CacheProvider;//Exclude<CacheProvider, 'file'>;
-export type CacheMetadataConfig = CacheConfig<CacheMetadaProvider>;
+export type CacheMetadataProvider = CacheProvider;//Exclude<CacheProvider, 'file'>;
+export type CacheMetadataConfig = CacheConfig<CacheMetadataProvider>;
 export const asCacheProvider = (val: boolean | string): val is CacheProvider => {
     if(typeof val === 'string') {
         return ['memory', 'valkey', 'file'].includes(val);
@@ -367,8 +369,13 @@ export const asCacheMetadataProvider = (val: any): val is CacheScrobbleProvider 
 export type CacheScrobbleProvider = CacheProvider;
 export type CacheScrobbleConfig = CacheConfig<CacheScrobbleProvider>;
 export const asCacheScrobbleProvider = (val: any): val is CacheScrobbleProvider => asCacheProvider(val);
+
+export type CacheAuthProvider = CacheProvider;
+export type CacheAuthConfig = CacheConfig<CacheAuthProvider>;
+export const asCacheAuthProvider = (val: any): val is CacheAuthProvider => asCacheProvider(val);
 export interface CacheConfigOptions {
     metadata?: CacheMetadataConfig;
     scrobble?: CacheScrobbleConfig;
+    auth?: CacheAuthConfig;
 }
 

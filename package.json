@@ -43,6 +43,8 @@
   "homepage": ".",
   "dependencies": {
     "@astronautlabs/mdns": "^1.0.7",
+    "@atproto/api": "^0.18.0",
+    "@atproto/oauth-client-node": "^0.3.10",
     "@awaitjs/express": "^0.6.3",
     "@curvenote/ansi-to-react": "^7.0.0",
     "@donedeal0/superdiff": "^1.1.1",

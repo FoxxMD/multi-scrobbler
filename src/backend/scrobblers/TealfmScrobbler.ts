@@ -1,0 +1,103 @@
+import { Logger } from "@foxxmd/logging";
+import EventEmitter from "events";
+import { PlayObject } from "../../core/Atomic.js";
+import { buildTrackString, capitalize } from "../../core/StringUtils.js";
+import { isNodeNetworkException } from "../common/errors/NodeErrors.js";
+import { UpstreamError } from "../common/errors/UpstreamError.js";
+import { FormatPlayObjectOptions } from "../common/infrastructure/Atomic.js";
+import { playToListenPayload } from "../common/vendor/ListenbrainzApiClient.js";
+import { Notifiers } from "../notifier/Notifiers.js";
+
+import AbstractScrobbleClient from "./AbstractScrobbleClient.js";
+import { isDebugMode } from "../utils.js";
+import { KoitoClientConfig } from "../common/infrastructure/config/client/koito.js";
+import { KoitoApiClient, listenObjectResponseToPlay } from "../common/vendor/koito/KoitoApiClient.js";
+import { TealClientConfig } from "../common/infrastructure/config/client/tealfm.js";
+import { BlueSkyApiClient } from "../common/vendor/bluesky/BlueSkyApiClient.js";
+
+export default class TealScrobbler extends AbstractScrobbleClient {
+
+    requiresAuth = true;
+    requiresAuthInteraction = true;
+
+    declare config: TealClientConfig;
+
+    client: BlueSkyApiClient;
+
+    constructor(name: any, config: TealClientConfig, options = {}, notifier: Notifiers, emitter: EventEmitter, logger: Logger) {
+        super('tealfm', name, config, notifier, emitter, logger);
+        // https://listenbrainz.readthedocs.io/en/latest/users/api/core.html#get--1-user-(user_name)-listens
+        // 1000 is way too high. maxing at 100
+        this.MAX_INITIAL_SCROBBLES_FETCH = 100;
+        this.supportsNowPlaying = false;
+        this.client = new BlueSkyApiClient(name, config.data, {...options, logger});
+    }
+
+    formatPlayObj = (obj: any, options: FormatPlayObjectOptions = {}) => listenObjectResponseToPlay(obj, options);
+
+    public playToClientPayload(playObject: PlayObject): object {
+        return playToListenPayload(playObject);
+    }
+
+
+    protected async doBuildInitData(): Promise<true | string | undefined> {
+        const {
+            data: {
+                handle,
+            } = {}
+        } = this.config;
+        if (handle === undefined) {
+            throw new Error('Must provide a handle');
+        }
+        this.client.initClient();
+        return true;
+    }
+
+    protected async doCheckConnection(): Promise<true | string | undefined> {
+        return true;
+    }
+
+    async getAuthorizeUrl(): Promise<string> {
+        return await this.client.createAuthorizeUrl(this.config.data.handle);
+    }
+
+    doAuthentication = async () => {
+
+        try {
+            return await this.client.restoreSession();
+        } catch (e) {
+            if(isNodeNetworkException(e)) {
+                this.logger.error('Could not communicate with Koito API');
+            }
+            throw e;
+        }
+    }
+
+    getScrobblesForRefresh = async (limit: number) => {
+        return [];
+    }
+
+    alreadyScrobbled = async (playObj: PlayObject, log = false) => (await this.existingScrobble(playObj)) !== undefined
+
+    doScrobble = async (playObj: PlayObject) => {
+        const {
+            meta: {
+                source,
+                newFromSource = false,
+            } = {}
+        } = playObj;
+
+        try {
+
+            if (newFromSource) {
+                this.logger.info(`Scrobbled (New)     => (${source}) ${buildTrackString(playObj)}`);
+            } else {
+                this.logger.info(`Scrobbled (Backlog) => (${source}) ${buildTrackString(playObj)}`);
+            }
+            return playObj;
+        } catch (e) {
+            await this.notifier.notify({title: `Client - ${capitalize(this.type)} - ${this.name} - Scrobble Error`, message: `Failed to scrobble => ${buildTrackString(playObj)} | Error: ${e.message}`, priority: 'error'});
+            throw new UpstreamError(`Error occurred while making Teal API scrobble request: ${e.message}`, {cause: e, showStopper: !(e instanceof UpstreamError)});
+        }
+    }
+}

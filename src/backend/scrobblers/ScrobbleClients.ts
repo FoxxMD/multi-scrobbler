@@ -21,6 +21,8 @@ import MalojaScrobbler from "./MalojaScrobbler.js";
 import { Definition } from 'ts-json-schema-generator';
 import KoitoScrobbler from './KoitoScrobbler.js';
 import { KoitoClientConfig } from '../common/infrastructure/config/client/koito.js';
+import TealScrobbler from './TealfmScrobbler.js';
+import { TealClientConfig } from '../common/infrastructure/config/client/tealfm.js';
 
 type groupedNamedConfigs = {[key: string]: ParsedConfig[]};
 
@@ -29,7 +31,7 @@ type ParsedConfig = ClientAIOConfig & ConfigMeta;
 export default class ScrobbleClients {
 
     /** @type AbstractScrobbleClient[] */
-    clients: (MalojaScrobbler | LastfmScrobbler)[] = [];
+    clients: (MalojaScrobbler | LastfmScrobbler | TealScrobbler)[] = [];
     logger: Logger;
     configDir: string;
     localUrl: URL;
@@ -104,6 +106,9 @@ export default class ScrobbleClients {
                 case 'koito':
                     this.schemaDefinitions[type] = getTypeSchemaFromConfigGenerator("KoitoClientConfig");
                     break;
+                case 'tealfm':
+                    this.schemaDefinitions[type] = getTypeSchemaFromConfigGenerator("TealClientConfig");
+                    break;
             }
         }
         return this.schemaDefinitions[type];
@@ -143,7 +148,7 @@ export default class ScrobbleClients {
                     this.logger.error(invalidTypeMsg);
                     continue;
                 }
-                if(['lastfm','listenbrainz','koito'].includes(c.type.toLocaleLowerCase()) && ((c as LastfmClientConfig | ListenBrainzClientConfig).configureAs === 'source')) {
+                if(['lastfm','listenbrainz','koito','tealfm'].includes(c.type.toLocaleLowerCase()) && ((c as LastfmClientConfig | ListenBrainzClientConfig).configureAs === 'source')) {
                        this.logger.debug(`Skipping config ${index + 1} (${name}) in config.json because it is configured as a source.`);
                        continue;
                 }
@@ -354,6 +359,9 @@ ${sources.join('\n')}`);
                 break;
             case 'koito':
                 newClient = new KoitoScrobbler(name, {...clientConfig, data: {configDir: this.configDir, ...data} } as unknown as KoitoClientConfig, {}, notifier, this.emitter, this.logger);
+                break;
+            case 'tealfm':
+                newClient = new TealScrobbler(name, {...clientConfig, data: {baseUri: `${this.localUrl}/api/tealfm/${name}`, ...data}} as unknown as TealClientConfig, {}, notifier, this.emitter, this.logger);
                 break;
             default:
                 break;
