@@ -75,3 +75,8 @@ export interface ListRecord<T> {
   cid: string;
   value: T;
 }
+export interface RecordOptions {
+    web?: string;
+    playId?: string;
+    user?: string;
+}

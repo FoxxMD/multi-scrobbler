@@ -4,6 +4,11 @@ import { ListRecord, ScrobbleRecord, TealClientData } from "../../infrastructure
 import AbstractApiClient from "../AbstractApiClient.js";
 import { Agent } from "@atproto/api";
 import { MSCache } from "../../Cache.js";
+import { PlayObject } from "../../../../core/Atomic.js";
+import { musicServiceToCononical } from "../ListenbrainzApiClient.js";
+import { parseRegexSingle } from "@foxxmd/regex-buddy-core";
+import { RecordOptions } from "../../infrastructure/config/client/tealfm.js";
+import dayjs from "dayjs";
 
 
 export abstract class AbstractBlueSkyApiClient extends AbstractApiClient {
@@ -49,3 +54,62 @@ export abstract class AbstractBlueSkyApiClient extends AbstractApiClient {
         }
     }
 }
+
+export const playToRecord = (play: PlayObject): ScrobbleRecord => {
+
+    const record: ScrobbleRecord = {
+        $type: "fm.teal.alpha.feed.play",
+        trackName: play.data.track,
+        artists: play.data.artists.map(x => ({ artistName: x })),
+        duration: play.data.duration,
+        playedTime: play.data.playDate.toISOString(),
+        releaseName: play.data.album,
+        submissionClientAgent: `multi-scrobbler/${getRoot().items.version}`,
+        musicServiceBaseDomain: play.meta.musicService !== undefined ? musicServiceToCononical(play.meta.musicService) : undefined,
+        recordingMbId: play.data.meta?.brainz?.track,
+        releaseMbId: play.data.meta?.brainz?.album
+    };
+
+    return record;
+};export const listRecordToPlay = (listRecord: ListRecord<ScrobbleRecord>): PlayObject => {
+    const opts: RecordOptions = {};
+    const uriRes = parseRegexSingle(ATPROTO_URI_REGEX, listRecord.uri);
+    if (uriRes !== undefined) {
+        opts.web = `https://atp.tools/at:/${uriRes.named.resource}`;
+        opts.playId = uriRes.named.tid;
+        opts.user = uriRes.named.did;
+    }
+    return recordToPlay(listRecord.value, opts);
+};
+export const recordToPlay = (record: ScrobbleRecord, options: RecordOptions = {}): PlayObject => {
+
+    const play: PlayObject = {
+        data: {
+            track: record.trackName,
+            artists: record.artists.filter(x => x.artistName !== undefined).map(x => x.artistName),
+            duration: record.duration,
+            playDate: dayjs(record.playedTime),
+            album: record.releaseName,
+            meta: {
+                brainz: {
+                    track: record.recordingMbId,
+                    album: record.releaseMbId,
+                    artist: record.artists.filter(x => x.artistMbId !== undefined).map(x => x.artistMbId)
+                }
+            }
+        },
+        meta: {
+            source: 'tealfm',
+            parsedFrom: 'history',
+            playId: options.playId,
+            url: {
+                web: options.web
+            },
+            user: options.user
+        }
+    };
+
+    return play;
+};
+export const ATPROTO_URI_REGEX = new RegExp(/at:\/\/(?<resource>(?<did>did.*?)\/fm.teal.alpha.feed.play\/(?<tid>.*))/);
+
