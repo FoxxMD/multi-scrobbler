@@ -241,6 +241,26 @@ export default class ScrobbleClients {
                         })
                     }
                     break;
+                case 'tealfm':
+                    const teal = {
+                        identifier: process.env.TEALFM_IDENTIFIER,
+                        appPassword: process.env.TEALFM_APP_PW,
+                        pds: process.env.TEALFM_PDS
+                    };
+                    if (!Object.values(teal).every(x => x === undefined)) {
+                        configs.push({
+                            type: 'tealfm',
+                            name: 'unnamed-tealfm',
+                            source: 'ENV',
+                            mode: 'single',
+                            configureAs: 'client',
+                            data: teal,
+                            options: {
+                                pds: teal.pds
+                            }
+                        })
+                    }
+                    break;
                 default:
                     break;
             }
