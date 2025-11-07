@@ -75,7 +75,7 @@ export const playToRecord = (play: PlayObject): ScrobbleRecord => {
     const opts: RecordOptions = {};
     const uriRes = parseRegexSingle(ATPROTO_URI_REGEX, listRecord.uri);
     if (uriRes !== undefined) {
-        opts.web = `https://atp.tools/at:/${uriRes.named.resource}`;
+        opts.web = `https://atproto.at/viewer?uri=${uriRes.named.resource}`;
         opts.playId = uriRes.named.tid;
         opts.user = uriRes.named.did;
     }
