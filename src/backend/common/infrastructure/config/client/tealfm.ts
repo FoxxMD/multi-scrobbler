@@ -6,7 +6,8 @@ export interface TealData extends RequestRetryOptions {
 
 export interface TealClientData extends TealData, CommonClientData {
     baseUri?: string
-    handle: string
+    identifier: string
+    appPassword?: string
 }
 
 export interface TealClientConfig extends CommonClientConfig {

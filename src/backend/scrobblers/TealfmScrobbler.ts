@@ -31,6 +31,9 @@ export default class TealScrobbler extends AbstractScrobbleClient {
         this.MAX_INITIAL_SCROBBLES_FETCH = 100;
         this.supportsNowPlaying = false;
         this.client = new BlueSkyApiClient(name, config.data, {...options, logger});
+        if(this.config.data.appPassword !== undefined) {
+            this.requiresAuthInteraction = false;
+        }
     }
 
     formatPlayObj = (obj: any, options: FormatPlayObjectOptions = {}) => listenObjectResponseToPlay(obj, options);
@@ -43,11 +46,11 @@ export default class TealScrobbler extends AbstractScrobbleClient {
     protected async doBuildInitData(): Promise<true | string | undefined> {
         const {
             data: {
-                handle,
+                identifier,
             } = {}
         } = this.config;
-        if (handle === undefined) {
-            throw new Error('Must provide a handle');
+        if (identifier === undefined) {
+            throw new Error('Must provide an identifier');
         }
         this.client.initClient();
         return true;
@@ -58,16 +61,22 @@ export default class TealScrobbler extends AbstractScrobbleClient {
     }
 
     async getAuthorizeUrl(): Promise<string> {
-        return await this.client.createAuthorizeUrl(this.config.data.handle);
+        return await this.client.createAuthorizeUrl(this.config.data.identifier);
     }
 
     doAuthentication = async () => {
 
         try {
-            return await this.client.restoreSession();
+            const sessionRes = await this.client.restoreSession();
+            if(sessionRes) {
+                return true;
+            }
+            if(this.config.data.appPassword !== undefined) {
+                return await this.client.appLogin();
+            }
         } catch (e) {
             if(isNodeNetworkException(e)) {
-                this.logger.error('Could not communicate with Koito API');
+                this.logger.error('Could not communicate with ATProto API');
             }
             throw e;
         }
