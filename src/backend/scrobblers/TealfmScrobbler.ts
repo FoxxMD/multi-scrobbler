@@ -13,7 +13,9 @@ import { isDebugMode } from "../utils.js";
 import { KoitoClientConfig } from "../common/infrastructure/config/client/koito.js";
 import { KoitoApiClient, listenObjectResponseToPlay } from "../common/vendor/koito/KoitoApiClient.js";
 import { TealClientConfig } from "../common/infrastructure/config/client/tealfm.js";
-import { BlueSkyApiClient } from "../common/vendor/bluesky/BlueSkyApiClient.js";
+import { BlueSkyAppApiClient } from "../common/vendor/bluesky/BlueSkyAppApiClient.js";
+import { BlueSkyOauthApiClient } from "../common/vendor/bluesky/BlueSkyOauthApiClient.js";
+import { AbstractBlueSkyApiClient } from "../common/vendor/bluesky/AbstractBlueSkyApiClient.js";
 
 export default class TealScrobbler extends AbstractScrobbleClient {
 
@@ -22,7 +24,7 @@ export default class TealScrobbler extends AbstractScrobbleClient {
 
     declare config: TealClientConfig;
 
-    client: BlueSkyApiClient;
+    client: AbstractBlueSkyApiClient;
 
     constructor(name: any, config: TealClientConfig, options = {}, notifier: Notifiers, emitter: EventEmitter, logger: Logger) {
         super('tealfm', name, config, notifier, emitter, logger);
@@ -30,9 +32,13 @@ export default class TealScrobbler extends AbstractScrobbleClient {
         // 1000 is way too high. maxing at 100
         this.MAX_INITIAL_SCROBBLES_FETCH = 100;
         this.supportsNowPlaying = false;
-        this.client = new BlueSkyApiClient(name, config.data, {...options, logger});
-        if(this.config.data.appPassword !== undefined) {
+        if(config.data.appPassword !== undefined) {
+            this.client = new BlueSkyAppApiClient(name, config.data, {...options, logger});
             this.requiresAuthInteraction = false;
+        } else if(config.data.baseUri !== undefined) {
+            this.client = new BlueSkyOauthApiClient(name, config.data, {...options, logger});
+        } else {
+            throw new Error(`Must define either 'baseUri' or 'appPassword' in configuration!`);
         }
     }
 
@@ -61,7 +67,7 @@ export default class TealScrobbler extends AbstractScrobbleClient {
     }
 
     async getAuthorizeUrl(): Promise<string> {
-        return await this.client.createAuthorizeUrl(this.config.data.identifier);
+        return await (this.client as BlueSkyOauthApiClient).createAuthorizeUrl(this.config.data.identifier);
     }
 
     doAuthentication = async () => {
@@ -71,7 +77,7 @@ export default class TealScrobbler extends AbstractScrobbleClient {
             if(sessionRes) {
                 return true;
             }
-            if(this.config.data.appPassword !== undefined) {
+            if(this.client instanceof BlueSkyAppApiClient) {
                 return await this.client.appLogin();
             }
         } catch (e) {

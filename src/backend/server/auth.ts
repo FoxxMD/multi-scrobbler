@@ -12,6 +12,7 @@ import { sortAndDeduplicateDiagnostics } from "typescript";
 import { source } from "common-tags";
 import TealScrobbler from "../scrobblers/TealfmScrobbler.js";
 import { parseRegexSingle } from "@foxxmd/regex-buddy-core";
+import { BlueSkyOauthApiClient } from "../common/vendor/bluesky/BlueSkyOauthApiClient.js";
 
 export const setupAuthRoutes = (app: ExpressWithAsync, logger: Logger, sourceMiddle: ExpressHandler, clientMiddle: ExpressHandler, scrobbleSources: ScrobbleSources, scrobbleClients: ScrobbleClients) => {
     app.use('/api/client/auth', clientMiddle);
@@ -171,16 +172,16 @@ export const setupAuthRoutes = (app: ExpressWithAsync, logger: Logger, sourceMid
                 handle
             } = {}
         } = req;
-            const url = await validClient.client.createAuthorizeUrl(handle as string);
+            const url = await (validClient.client as BlueSkyOauthApiClient).createAuthorizeUrl(handle as string);
             res.redirect(url)
         }
 
         if(intents[1].includes('client-metadata.json')) {
-            return res.json(validClient.client.getMetadata());
+            return res.json((validClient.client as BlueSkyOauthApiClient).getMetadata());
         }
 
         if(intents[1].includes('oauth/callback')) {
-            const result = await validClient.client.handleCallback(new URLSearchParams(req.query as Record<string, string>));
+            const result = await (validClient.client as BlueSkyOauthApiClient).handleCallback(new URLSearchParams(req.query as Record<string, string>));
             if(result) {
                 return res.status(200);
             }
