@@ -1,0 +1,75 @@
+---
+title: Teal.fm
+toc_min_heading_level: 2
+toc_max_heading_level: 5
+---
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+import CodeBlock from '@theme/CodeBlock';
+import JsonConfig from '!!raw-loader!@site/../config/tealfm.json.example';
+
+:::tip[Other Uses]
+
+To monitor and re-scrobble activity from a ATProto Profile create a [teal.fm (Source)](/configuration/sources/tealfm-source)
+
+:::
+
+[**teal.fm**](https://teal.fm/) is a social discovery and web viewing service for scrobbles stored/available on the ATProto network/your repository in a [PDS (Personal Data Server)](https://github.com/Bluesky-social/pds).
+
+<details>
+
+<summary>How does that work?</summary>
+
+The [AT Protocol](https://docs.bsky.app/docs/advanced-guides/atproto) is a standard to allow different applications to share and interpret your social data.
+
+Your data is stored in a personal [repository](https://atproto.com/guides/data-repos) in a [PDS (Personal Data Server)](https://github.com/Bluesky-social/pds), which is data-type agnostic (it's just JSON). Each application defines their own datatypes and pulls data from your repository to render to you, your network, etc...
+
+Even though the application and the PDS/repository are independent, all of this is done for you automatically when you create a [Bluesky](https://bsky.social/about) account.
+
+So...
+
+* multi-scrobbler "scrobbles" your plays to your repository
+  * in a JSON data structure which includes [teal.fm's data type and structure](https://atproto.com/specs/lexicon)
+  * at a [known location for teal.fm's data](https://atproto.com/guides/glossary#collection) (`fm.teal.alpha.feed.play`), in a list that is appended to as you continue to scrobble
+* when accessing teal.fm, or another application that knows how to read it, your data is pulled from the repository to render the app
+
+</details>
+
+:::warning
+
+The default Bluesky PDS is **public**, meaning your scrobbles are also public (read-only). This isn't any different than using Last.fm or Listenbrainz, in terms of privacy.
+
+Multi-scrobbler lets you define a different **PDS** so you can store your scrobbles on **any** ATProto PDS/instance you have access to.
+
+:::
+
+:::note
+
+[teal.fm is still in developement](https://notes.teal.fm/3lzlwe6puis2l) and does not have a public website, yet.
+
+To view your teal.fm scrobbles you can:
+
+* use [wrapped.baileytownsend.dev](https://wrapped.baileytownsend.dev/) which gives a simple stats overview of your scrobbles
+* use [atproto.at](https://atproto.at) to view the raw data (convenience URLs are generated in multi-scrobbler for you to do this)
+
+:::
+
+## Setup
+
+#### Bluesky
+
+* Create a [Bluesky](https://bsky.app) account, if you don't already have one
+* Navigate to https://bsky.app/settings/app-passwords
+  * Settings -> Privacy and Security -> App passwords
+* Create a new **App Password** and save it somewhere, it will not be shown again
+
+## Configuration
+
+<Config config="TealClientConfig" fileContent={JsonConfig} client name="tealfm">
+        | Environmental Variable | Required? | Default               | Description                                    |
+        | :--------------------- | --------- | --------------------- | ---------------------------------------------- |
+        | TEALFM_IDENTIFIER      | Yes       |                       | Email used to login to Bluesky/ATProto network |
+        | TEALFM_APP_PW          | Yes       |                       | Bluesky/ATProto network App Password           |
+        | TEALFM_PDS             | No        | `https://bsky.social` | The URL for the PDS                            |
+</Config>
