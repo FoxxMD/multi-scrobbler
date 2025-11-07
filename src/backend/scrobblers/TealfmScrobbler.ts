@@ -5,17 +5,17 @@ import { buildTrackString, capitalize } from "../../core/StringUtils.js";
 import { isNodeNetworkException } from "../common/errors/NodeErrors.js";
 import { UpstreamError } from "../common/errors/UpstreamError.js";
 import { FormatPlayObjectOptions } from "../common/infrastructure/Atomic.js";
-import { playToListenPayload } from "../common/vendor/ListenbrainzApiClient.js";
+import { musicServiceToCononical, playToListenPayload } from "../common/vendor/ListenbrainzApiClient.js";
 import { Notifiers } from "../notifier/Notifiers.js";
 
 import AbstractScrobbleClient from "./AbstractScrobbleClient.js";
-import { isDebugMode } from "../utils.js";
-import { KoitoClientConfig } from "../common/infrastructure/config/client/koito.js";
-import { KoitoApiClient, listenObjectResponseToPlay } from "../common/vendor/koito/KoitoApiClient.js";
-import { TealClientConfig } from "../common/infrastructure/config/client/tealfm.js";
+import { ListRecord, ScrobbleRecord, TealClientConfig } from "../common/infrastructure/config/client/tealfm.js";
 import { BlueSkyAppApiClient } from "../common/vendor/bluesky/BlueSkyAppApiClient.js";
 import { BlueSkyOauthApiClient } from "../common/vendor/bluesky/BlueSkyOauthApiClient.js";
 import { AbstractBlueSkyApiClient } from "../common/vendor/bluesky/AbstractBlueSkyApiClient.js";
+import { getRoot } from "../ioc.js";
+import dayjs from "dayjs";
+import { parseRegexSingle } from "@foxxmd/regex-buddy-core";
 
 export default class TealScrobbler extends AbstractScrobbleClient {
 
@@ -28,9 +28,8 @@ export default class TealScrobbler extends AbstractScrobbleClient {
 
     constructor(name: any, config: TealClientConfig, options = {}, notifier: Notifiers, emitter: EventEmitter, logger: Logger) {
         super('tealfm', name, config, notifier, emitter, logger);
-        // https://listenbrainz.readthedocs.io/en/latest/users/api/core.html#get--1-user-(user_name)-listens
-        // 1000 is way too high. maxing at 100
-        this.MAX_INITIAL_SCROBBLES_FETCH = 100;
+        this.MAX_INITIAL_SCROBBLES_FETCH = 20;
+        this.scrobbleDelay = 1500;
         this.supportsNowPlaying = false;
         if(config.data.appPassword !== undefined) {
             this.client = new BlueSkyAppApiClient(name, config.data, {...options, logger});
@@ -42,7 +41,7 @@ export default class TealScrobbler extends AbstractScrobbleClient {
         }
     }
 
-    formatPlayObj = (obj: any, options: FormatPlayObjectOptions = {}) => listenObjectResponseToPlay(obj, options);
+    formatPlayObj = (obj: any, options: FormatPlayObjectOptions = {}) => recordToPlay(obj);
 
     public playToClientPayload(playObject: PlayObject): object {
         return playToListenPayload(playObject);
@@ -89,7 +88,13 @@ export default class TealScrobbler extends AbstractScrobbleClient {
     }
 
     getScrobblesForRefresh = async (limit: number) => {
-        return [];
+        let list: ListRecord<ScrobbleRecord>[];
+        try {
+            list = await this.client.listScrobbleRecord(limit)
+        } catch (e) {
+            throw new Error('Error occurred while trying to fetch records', {cause: e});
+        }
+        return list.map(x => listRecordToPlay(x));
     }
 
     alreadyScrobbled = async (playObj: PlayObject, log = false) => (await this.existingScrobble(playObj)) !== undefined
@@ -103,7 +108,7 @@ export default class TealScrobbler extends AbstractScrobbleClient {
         } = playObj;
 
         try {
-
+            await this.client.createScrobbleRecord(playToRecord(playObj))
             if (newFromSource) {
                 this.logger.info(`Scrobbled (New)     => (${source}) ${buildTrackString(playObj)}`);
             } else {
@@ -116,3 +121,70 @@ export default class TealScrobbler extends AbstractScrobbleClient {
         }
     }
 }
+
+export const playToRecord = (play: PlayObject): ScrobbleRecord => {
+
+    const record: ScrobbleRecord = {
+        $type: "fm.teal.alpha.feed.play",
+        trackName: play.data.track,
+        artists: play.data.artists.map(x => ({artistName: x})),
+        duration: play.data.duration,
+        playedTime: play.data.playDate.toISOString(),
+        releaseName: play.data.album,
+        submissionClientAgent: `multi-scrobbler/${getRoot().items.version}`,
+        musicServiceBaseDomain: play.meta.musicService !== undefined ? musicServiceToCononical(play.meta.musicService) : undefined,
+        recordingMbId: play.data.meta?.brainz?.track,
+        releaseMbId: play.data.meta?.brainz?.album
+    }
+
+    return record;
+}
+
+export const listRecordToPlay = (listRecord: ListRecord<ScrobbleRecord>): PlayObject => {
+    const opts: RecordOptions = {};
+    const uriRes = parseRegexSingle(ATPROTO_URI_REGEX, listRecord.uri);
+    if(uriRes !== undefined) {
+        opts.web = `https://atp.tools/at:/${uriRes.named.resource}`;
+        opts.playId = uriRes.named.tid;
+        opts.user = uriRes.named.did;
+    }
+    return recordToPlay(listRecord.value, opts);
+}
+
+interface RecordOptions {
+    web?: string, 
+    playId?: string,
+    user?: string
+}
+export const recordToPlay = (record: ScrobbleRecord, options: RecordOptions = {}): PlayObject => {
+
+    const play: PlayObject = {
+        data: {
+            track: record.trackName,
+            artists: record.artists.filter(x => x.artistName !== undefined).map(x => x.artistName),
+            duration: record.duration,
+            playDate: dayjs(record.playedTime),
+            album: record.releaseName,
+            meta: {
+                brainz: {
+                    track: record.recordingMbId,
+                    album: record.releaseMbId,
+                    artist: record.artists.filter(x => x.artistMbId !== undefined).map(x => x.artistMbId)
+                }
+            }
+        },
+        meta: {
+            source: 'tealfm',
+            parsedFrom: 'history',
+            playId: options.playId,
+            url: {
+                web: options.web
+            },
+            user: options.user
+        }
+    };
+
+    return play;
+}
+
+const ATPROTO_URI_REGEX = new RegExp(/at:\/\/(?<resource>(?<did>did.*?)\/fm.teal.alpha.feed.play\/(?<tid>.*))/);

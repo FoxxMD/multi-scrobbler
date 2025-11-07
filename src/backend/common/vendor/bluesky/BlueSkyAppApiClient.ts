@@ -6,25 +6,28 @@ import { AbstractBlueSkyApiClient } from "./AbstractBlueSkyApiClient.js";
 
 export class BlueSkyAppApiClient extends AbstractBlueSkyApiClient {
 
+    declare config: TealClientData;
+
+    pds: string
     appSession?: CredentialSession;
     appPwAuth: boolean
 
 
-    constructor(name: any, config: TealClientData, options: AbstractApiOptions) {
+    constructor(name: any, config: TealClientData & {pds?: string}, options: AbstractApiOptions) {
         super(name, config, options);
-
-        this.logger.verbose('Using App Password auth for session');
+        this.pds = config.pds ?? 'https://bsky.social';
+        this.logger.verbose(`Using App Password auth for session with PDS ${this.pds}`);
     }
 
     protected initClientApp() {
-        this.appSession = new CredentialSession(new URL('https://bsky.social'), undefined, (evt: AtpSessionEvent, sess?: AtpSessionData) => {
+        this.appSession = new CredentialSession(new URL(this.pds), undefined, (evt: AtpSessionEvent, sess?: AtpSessionData) => {
             this.cache.cacheAuth.set(`appPwSession-${this.name}`, sess);
         });
         this.agent = new Agent(this.appSession);
     }
 
     initClient() {
-        this.appSession = new CredentialSession(new URL('https://bsky.social'), undefined, (evt: AtpSessionEvent, sess?: AtpSessionData) => {
+        this.appSession = new CredentialSession(new URL(this.pds), undefined, (evt: AtpSessionEvent, sess?: AtpSessionData) => {
             this.cache.cacheAuth.set(`appPwSession-${this.name}`, sess);
         });
         this.agent = new Agent(this.appSession);
@@ -58,7 +61,6 @@ export class BlueSkyAppApiClient extends AbstractBlueSkyApiClient {
                 return false;
             }
             this.logger.debug('Logged in.');
-            //this.cache.cacheAuth.set(`appPwSession-${this.name}`, f.data);
             return true;
         } catch (e) {
             this.logger.error('Could not login using app password', { cause: e });

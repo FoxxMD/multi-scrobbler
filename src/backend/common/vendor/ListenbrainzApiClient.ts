@@ -773,7 +773,7 @@ const musicServices = {
  *  Converts MS musicService to LZ cononical Music Service Name, if one exists 
  * @see https://listenbrainz.readthedocs.io/en/latest/users/json.html#payload-json-details
  * */
-const musicServiceToCononical = (str: string): string | undefined => {
+export const musicServiceToCononical = (str: string): string | undefined => {
     const lower = str.trim().toLocaleLowerCase();
     for(const [k, v] of Object.entries(musicServices)) {
         if(lower.includes(k)) {
