@@ -1,0 +1,10 @@
+[
+    {
+        "name": "myTeal",
+        "configureAs": "client",
+        "data": {
+            "identifier": "myemail@gmail.com",
+            "appPassword": "twog-phu7-4dhe-y4j3"
+        }
+    }
+]
