@@ -29,7 +29,8 @@ export interface SourceStatusData {
     | 'vlc'
     | 'icecast'
     | 'azuracast'
-    | 'koito';
+    | 'koito'
+    | 'tealfm';
     display: string;
     tracksDiscovered: number;
     name: string;
@@ -47,7 +48,7 @@ export interface SourceStatusData {
 
 export interface ClientStatusData {
     status: string;
-    type: "maloja" | "lastfm" | "listenbrainz" | "koito";
+    type: "maloja" | "lastfm" | "listenbrainz" | "koito" | "tealfm";
     display: string;
     scrobbled: number;
     deadLetterScrobbles: number
