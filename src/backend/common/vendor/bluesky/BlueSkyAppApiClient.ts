@@ -2,32 +2,36 @@ import { AbstractApiOptions } from "../../infrastructure/Atomic.js";
 import { TealClientData } from "../../infrastructure/config/client/tealfm.js";
 import { Agent, CredentialSession, AtpSessionEvent, AtpSessionData } from "@atproto/api";
 import { AbstractBlueSkyApiClient } from "./AbstractBlueSkyApiClient.js";
+import { isPortReachableConnect, normalizeWebAddress } from "../../../utils/NetworkUtils.js";
+import { URLData } from "../../../../core/Atomic.js";
+import { isNodeNetworkException } from "../../errors/NodeErrors.js";
 
 
 export class BlueSkyAppApiClient extends AbstractBlueSkyApiClient {
 
     declare config: TealClientData;
 
-    pds: string
+    pds: URLData
     appSession?: CredentialSession;
     appPwAuth: boolean
 
 
     constructor(name: any, config: TealClientData & {pds?: string}, options: AbstractApiOptions) {
         super(name, config, options);
-        this.pds = config.pds ?? 'https://bsky.social';
-        this.logger.verbose(`Using App Password auth for session with PDS ${this.pds}`);
+        
+        this.pds = normalizeWebAddress(config.pds ?? 'https://bsky.social');
+        this.logger.verbose(`Using App Password auth for session with PDS ${this.pds.url}`);
     }
 
     protected initClientApp() {
-        this.appSession = new CredentialSession(new URL(this.pds), undefined, (evt: AtpSessionEvent, sess?: AtpSessionData) => {
+        this.appSession = new CredentialSession(this.pds.url, undefined, (evt: AtpSessionEvent, sess?: AtpSessionData) => {
             this.cache.cacheAuth.set(`appPwSession-${this.name}`, sess);
         });
         this.agent = new Agent(this.appSession);
     }
 
     initClient() {
-        this.appSession = new CredentialSession(new URL(this.pds), undefined, (evt: AtpSessionEvent, sess?: AtpSessionData) => {
+        this.appSession = new CredentialSession(this.pds.url, undefined, (evt: AtpSessionEvent, sess?: AtpSessionData) => {
             this.cache.cacheAuth.set(`appPwSession-${this.name}`, sess);
         });
         this.agent = new Agent(this.appSession);
@@ -63,8 +67,20 @@ export class BlueSkyAppApiClient extends AbstractBlueSkyApiClient {
             this.logger.debug('Logged in.');
             return true;
         } catch (e) {
-            this.logger.error('Could not login using app password', { cause: e });
+            this.logger.error(new Error('Could not login using app password', { cause: e }));
             return false;
+        }
+    }
+
+    async checkPds(): Promise<true> {
+        try {
+            await isPortReachableConnect(this.pds.port, {host: this.pds.url.hostname});
+            return true;
+        } catch (e) {
+            if(isNodeNetworkException(e)) {
+                throw new Error('Could not communicate with PDS server', {cause: e});
+            }
+            throw new Error('Unexpected error when trying to communicate with PDS server', {cause: e});
         }
     }
 

@@ -59,7 +59,15 @@ export default class TealScrobbler extends AbstractScrobbleClient {
     }
 
     protected async doCheckConnection(): Promise<true | string | undefined> {
-        return true;
+        if (this.client instanceof BlueSkyAppApiClient) {
+            try {
+                return await this.client.checkPds();
+            } catch (e) {
+                throw e;
+            }
+        } else {
+            return true;
+        }
     }
 
     async getAuthorizeUrl(): Promise<string> {
