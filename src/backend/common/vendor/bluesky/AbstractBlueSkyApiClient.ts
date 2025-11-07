@@ -25,7 +25,7 @@ export abstract class AbstractBlueSkyApiClient extends AbstractApiClient {
         this.cache = getRoot().items.cache();
     }
 
-    abstract initClient(): void;
+    abstract initClient(): Promise<void>;
 
     abstract restoreSession(): Promise<boolean>;
 

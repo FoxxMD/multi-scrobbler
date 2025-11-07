@@ -24,7 +24,7 @@ export class BlueSkyOauthApiClient extends AbstractBlueSkyApiClient {
         this.logger.verbose('Will use oauth for session');
     }
 
-    initClient = () => {
+    initClient = async () => {
         const sessionStore: NodeSavedSessionStore = {
             set: (k: string, state) => this.cache.cacheAuth.set(`session-${this.name}-${k}`, state).then(() => null),
             get: (k: string) => this.cache.cacheAuth.get(`session-${this.name}-${k}`),

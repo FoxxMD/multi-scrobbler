@@ -40,8 +40,6 @@ So...
 
 The default Bluesky PDS is **public**, meaning your scrobbles are also public (read-only). This isn't any different than using Last.fm or Listenbrainz, in terms of privacy.
 
-Multi-scrobbler lets you define a different **PDS** so you can store your scrobbles on **any** ATProto PDS/instance you have access to.
-
 :::
 
 :::note
@@ -66,10 +64,19 @@ To view your teal.fm scrobbles you can:
 
 ## Configuration
 
+### Handle
+
+The handle used with multi-scrobbler should be your **full** ATProto handle, including TLD.
+
+* For regular Bluesky account this will be like: `alice.bsky.social`
+* For Bluesky accounts that [use their website as their account](https://bsky.social/about/blog/4-28-2023-domain-handle-tutorial) this is your domain: `mydomain.com`
+* For non-Bluesky users, you probably already know your handle
+
+If you do not include a TLD then multi-scrobbler will automatically append `.bsky.social` to your handle value.
+
 <Config config="TealClientConfig" fileContent={JsonConfig} client name="tealfm">
-        | Environmental Variable | Required? | Default               | Description                                    |
-        | :--------------------- | --------- | --------------------- | ---------------------------------------------- |
-        | TEALFM_IDENTIFIER      | Yes       |                       | Email used to login to Bluesky/ATProto network |
-        | TEALFM_APP_PW          | Yes       |                       | Bluesky/ATProto network App Password           |
-        | TEALFM_PDS             | No        | `https://bsky.social` | The URL for the PDS                            |
+        | Environmental Variable | Required? | Default | Description                                                                         |
+        | :--------------------- | --------- | ------- | ----------------------------------------------------------------------------------- |
+        | TEALFM_IDENTIFIER      | Yes       |         | Your **full** ATProto handle. For Bluesky account this is like `myUser.bsky.social` |
+        | TEALFM_APP_PW          | Yes       |         | Bluesky/ATProto network App Password                                                |
 </Config>

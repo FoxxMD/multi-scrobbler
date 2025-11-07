@@ -41,12 +41,6 @@ export interface TealClientConfig extends CommonClientConfig {
 }
 
 export interface TealOptions {
-    /** The [PDS (Personal Data Server)](https://github.com/bluesky-social/pds) to use
-     * 
-     * @default "https://bsky.social"
-     * @examples ["https://bsky.social"]
-     */
-    pds?: string
 }
 
 

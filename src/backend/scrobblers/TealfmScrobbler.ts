@@ -29,10 +29,10 @@ export default class TealScrobbler extends AbstractScrobbleClient {
         this.scrobbleDelay = 1500;
         this.supportsNowPlaying = false;
         if(config.data.appPassword !== undefined) {
-            this.client = new BlueSkyAppApiClient(name, {...config.data, pds: config.options?.pds}, {...options, logger});
+            this.client = new BlueSkyAppApiClient(name, config.data, {...options, logger});
             this.requiresAuthInteraction = false;
         } else if(config.data.baseUri !== undefined) {
-            this.client = new BlueSkyOauthApiClient(name, {...config.data, pds: config.options?.pds}, {...options, logger});
+            this.client = new BlueSkyOauthApiClient(name, config.data, {...options, logger});
         } else {
             throw new Error(`Must define either 'baseUri' or 'appPassword' in configuration!`);
         }
@@ -54,7 +54,7 @@ export default class TealScrobbler extends AbstractScrobbleClient {
         if (identifier === undefined) {
             throw new Error('Must provide an identifier');
         }
-        this.client.initClient();
+        await this.client.initClient();
         return true;
     }
 

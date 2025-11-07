@@ -30,10 +30,10 @@ export default class TealfmSource extends MemorySource {
         this.canPoll = true;
         this.canBacklog = true;
         if(config.data.appPassword !== undefined) {
-            this.client = new BlueSkyAppApiClient(name, {...config.data, pds: config.options?.pds}, {...internal, logger: internal.logger});
+            this.client = new BlueSkyAppApiClient(name, config.data, {...internal, logger: internal.logger});
             this.requiresAuthInteraction = false;
         } else if(config.data.baseUri !== undefined) {
-            this.client = new BlueSkyOauthApiClient(name, {...config.data, pds: config.options?.pds}, {...internal, logger: internal.logger});
+            this.client = new BlueSkyOauthApiClient(name, config.data, {...internal, logger: internal.logger});
         } else {
             throw new Error(`Must define either 'baseUri' or 'appPassword' in configuration!`);
         }
@@ -53,7 +53,7 @@ export default class TealfmSource extends MemorySource {
         if (identifier === undefined) {
             throw new Error('Must provide an identifier');
         }
-        this.client.initClient();
+        await this.client.initClient();
         return true;
     }
 

@@ -3,7 +3,7 @@
         "name": "myTeal",
         "configureAs": "client",
         "data": {
-            "identifier": "myemail@gmail.com",
+            "identifier": "alice.bsky.social",
             "appPassword": "twog-phu7-4dhe-y4j3"
         }
     },
@@ -11,7 +11,7 @@
         "name": "myTealSource",
         "configureAs": "source",
         "data": {
-            "identifier": "myemail@gmail.com",
+            "identifier": "alice.bsky.social",
             "appPassword": "twog-phu7-4dhe-y4j3"
         }
     }
