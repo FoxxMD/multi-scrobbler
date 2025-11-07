@@ -1,12 +1,9 @@
 import EventEmitter from "events";
-import request from "superagent";
 import { PlayObject, SOURCE_SOT } from "../../core/Atomic.js";
 import { isNodeNetworkException } from "../common/errors/NodeErrors.js";
-import { FormatPlayObjectOptions, InternalConfig } from "../common/infrastructure/Atomic.js";
+import { InternalConfig } from "../common/infrastructure/Atomic.js";
 import { RecentlyPlayedOptions } from "./AbstractSource.js";
 import MemorySource from "./MemorySource.js";
-import { KoitoApiClient, listenObjectResponseToPlay } from "../common/vendor/koito/KoitoApiClient.js";
-import { KoitoSourceConfig } from "../common/infrastructure/config/source/koito.js";
 import { MalojaApiClient } from "../common/vendor/maloja/MalojaApiClient.js";
 import { MalojaSourceConfig } from "../common/infrastructure/config/source/maloja.js";
 

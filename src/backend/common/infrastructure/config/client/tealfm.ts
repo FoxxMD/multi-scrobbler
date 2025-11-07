@@ -2,10 +2,7 @@ import { RequestRetryOptions } from "../common.js"
 import { CommonClientConfig, CommonClientData, CommonClientOptions } from "./index.js"
 
 export interface TealData extends RequestRetryOptions {
-}
-
-export interface TealClientData extends TealData, CommonClientData {
-    /**
+        /**
      * The base URI of the Multi-Scrobbler to use for ATProto OAuth
      * 
      * Only include this if you want to use OAuth. The URI must be a non-IP/non-local domain using https: protocol.
@@ -28,9 +25,12 @@ export interface TealClientData extends TealData, CommonClientData {
     appPassword?: string
 }
 
+export interface TealClientData extends TealData, CommonClientData {
+
+}
 export interface TealClientConfig extends CommonClientConfig {
     /**
-     * Should always be `client` when using Koito as a client
+     * Should always be `client` when using Tealfm as a client
      *
      * @default client
      * @examples ["client"]
@@ -40,13 +40,18 @@ export interface TealClientConfig extends CommonClientConfig {
     options?: TealClientOptions
 }
 
-export interface TealClientOptions extends CommonClientOptions {
+export interface TealOptions {
     /** The [PDS (Personal Data Server)](https://github.com/bluesky-social/pds) to use
      * 
      * @default "https://bsky.social"
      * @examples ["https://bsky.social"]
      */
     pds?: string
+}
+
+
+export interface TealClientOptions extends TealOptions,CommonClientOptions {
+
 }
 
 export interface TealClientAIOConfig extends TealClientConfig {

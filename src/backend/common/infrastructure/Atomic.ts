@@ -32,7 +32,8 @@ export type SourceType =
     | 'vlc'
     | 'icecast'
     | 'azuracast'
-    | 'koito';
+    | 'koito'
+    | 'tealfm';
 
 export const sourceTypes: SourceType[] = [
     'spotify',
@@ -59,7 +60,8 @@ export const sourceTypes: SourceType[] = [
     'vlc',
     'icecast',
     'azuracast',
-    'koito'
+    'koito',
+    'tealfm'
 ];
 
 export const isSourceType = (data: string): data is SourceType => {

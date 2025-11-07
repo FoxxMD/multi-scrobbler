@@ -17,7 +17,7 @@ import { AbstractBlueSkyApiClient, listRecordToPlay, playToRecord, recordToPlay 
 export default class TealScrobbler extends AbstractScrobbleClient {
 
     requiresAuth = true;
-    requiresAuthInteraction = true;
+    requiresAuthInteraction = false;
 
     declare config: TealClientConfig;
 
@@ -29,10 +29,10 @@ export default class TealScrobbler extends AbstractScrobbleClient {
         this.scrobbleDelay = 1500;
         this.supportsNowPlaying = false;
         if(config.data.appPassword !== undefined) {
-            this.client = new BlueSkyAppApiClient(name, config.data, {...options, logger});
+            this.client = new BlueSkyAppApiClient(name, {...config.data, pds: config.options?.pds}, {...options, logger});
             this.requiresAuthInteraction = false;
         } else if(config.data.baseUri !== undefined) {
-            this.client = new BlueSkyOauthApiClient(name, config.data, {...options, logger});
+            this.client = new BlueSkyOauthApiClient(name, {...config.data, pds: config.options?.pds}, {...options, logger});
         } else {
             throw new Error(`Must define either 'baseUri' or 'appPassword' in configuration!`);
         }
