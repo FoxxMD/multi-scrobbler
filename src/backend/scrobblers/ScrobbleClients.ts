@@ -254,10 +254,7 @@ export default class ScrobbleClients {
                             source: 'ENV',
                             mode: 'single',
                             configureAs: 'client',
-                            data: teal,
-                            options: {
-                                pds: teal.pds
-                            }
+                            data: teal
                         })
                     }
                     break;
