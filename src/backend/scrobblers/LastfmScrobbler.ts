@@ -1,4 +1,5 @@
 import { Logger } from "@foxxmd/logging";
+import dayjs, { Dayjs } from "dayjs";
 import EventEmitter from "events";
 import { NowPlayingResponse, TrackScrobbleResponse, UserGetRecentTracksResponse } from "lastfm-node-client";
 import { PlayObject } from "../../core/Atomic.js";
@@ -94,6 +95,51 @@ export default class LastfmScrobbler extends AbstractScrobbleClient {
             this.logger.debug(resp);
             throw e;
         }
+    }
+
+    getScrobblesForTimeRange = async (fromDate?: Dayjs, toDate?: Dayjs, limit: number = 1000): Promise<PlayObject[]> => {
+        const allPlays: PlayObject[] = [];
+        let currentPage = 1;
+        const perPage = 200;
+
+        while (allPlays.length < limit) {
+            const resp = await this.api.getRecentTracksWithPagination({
+                page: currentPage,
+                limit: perPage,
+                from: fromDate?.unix(),
+                to: toDate?.unix(),
+            });
+
+            const {
+                recenttracks: {
+                    track: rawTracks = [],
+                    '@attr': pageInfo
+                } = {}
+            } = resp;
+
+            if (rawTracks.length === 0) {
+                break;
+            }
+
+            const plays = rawTracks
+                .filter(t => t.date !== undefined)
+                .map(t => LastfmApiClient.formatPlayObj(t))
+                .filter(p => p.data.playDate && p.data.playDate.isValid()); // Filter out plays with invalid dates
+
+            allPlays.push(...plays);
+
+            if (allPlays.length >= limit) {
+                break;
+            }
+
+            if (pageInfo && currentPage >= parseInt(pageInfo.totalPages, 10)) {
+                break;
+            }
+
+            currentPage++;
+        }
+
+        return allPlays.slice(0, limit);
     }
 
     cleanSourceSearchTitle = (playObj: PlayObject) => {

@@ -90,11 +90,21 @@ declare module 'lastfm-node-client' {
         user: string
         limit?: number
         extended?: boolean
+        page?: number
+        from?: number
+        to?: number
     }
 
     export interface UserGetRecentTracksResponse {
         recenttracks: {
             track: TrackObject[]
+            '@attr'?: {
+                user: string
+                totalPages: string
+                page: string
+                perPage: string
+                total: string
+            }
         }
     }
 

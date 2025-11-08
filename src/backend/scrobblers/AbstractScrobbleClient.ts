@@ -792,7 +792,9 @@ ${closestMatch.breakdowns.join('\n')}`, {leaf: ['Dupe Check']});
                     }
                     const currQueuedPlay = this.queuedScrobbles.shift();
 
-                    const [timeFrameValid, timeFrameValidLog] = this.timeFrameIsValid(currQueuedPlay.play);
+                    // Skip timeframe validation for transfers (historical data)
+                    const isTransfer = currQueuedPlay.source?.startsWith('transfer-');
+                    const [timeFrameValid, timeFrameValidLog] = isTransfer ? [true, ''] : this.timeFrameIsValid(currQueuedPlay.play);
                     if (timeFrameValid && !(await this.alreadyScrobbled(this.transformPlay(currQueuedPlay.play, TRANSFORM_HOOK.preCompare)))) {
                         const transformedScrobble = this.transformPlay(currQueuedPlay.play, TRANSFORM_HOOK.postCompare);
                         try {
@@ -877,7 +879,9 @@ ${closestMatch.breakdowns.join('\n')}`, {leaf: ['Dupe Check']});
         if (this.getLatestQueuePlayDate() !== undefined && this.scrobblesLastCheckedAt().unix() < this.getLatestQueuePlayDate().unix()) {
             await this.refreshScrobbles();
         }
-        const [timeFrameValid, timeFrameValidLog] = this.timeFrameIsValid(deadScrobble.play);
+        // Skip timeframe validation for transfers (historical data)
+        const isTransfer = deadScrobble.source?.startsWith('transfer-');
+        const [timeFrameValid, timeFrameValidLog] = isTransfer ? [true, ''] : this.timeFrameIsValid(deadScrobble.play);
         if (timeFrameValid && !(await this.alreadyScrobbled(this.transformPlay(deadScrobble.play, TRANSFORM_HOOK.preCompare)))) {
             const transformedScrobble = this.transformPlay(deadScrobble.play, TRANSFORM_HOOK.postCompare);
             try {
@@ -936,6 +940,19 @@ ${closestMatch.breakdowns.join('\n')}`, {leaf: ['Dupe Check']});
         }
         this.queuedScrobbles.sort((a, b) => sortByOldestPlayDate(a.play, b.play));
         this.updateQueuedScrobblesCache();
+    }
+
+    cancelQueuedItemsBySource = (source: string): number => {
+        const beforeMain = this.queuedScrobbles.length;
+        const beforeDead = this.deadLetterScrobbles.length;
+
+        this.queuedScrobbles = this.queuedScrobbles.filter(item => item.source !== source);
+        this.deadLetterScrobbles = this.deadLetterScrobbles.filter(item => item.source !== source);
+
+        this.updateQueuedScrobblesCache();
+        this.updateDeadLetterCache();
+
+        return (beforeMain + beforeDead) - (this.queuedScrobbles.length + this.deadLetterScrobbles.length);
     }
 
     protected addDeadLetterScrobble = (data: QueuedScrobble<PlayObject>, error: (Error | string) = 'Unspecified error') => {
