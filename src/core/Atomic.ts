@@ -30,7 +30,8 @@ export interface SourceStatusData {
     | 'icecast'
     | 'azuracast'
     | 'koito'
-    | 'tealfm';
+    | 'tealfm'
+    | 'rocksky';
     display: string;
     tracksDiscovered: number;
     name: string;
@@ -48,7 +49,7 @@ export interface SourceStatusData {
 
 export interface ClientStatusData {
     status: string;
-    type: "maloja" | "lastfm" | "listenbrainz" | "koito" | "tealfm";
+    type: "maloja" | "lastfm" | "listenbrainz" | "koito" | "tealfm" | "rocksky";
     display: string;
     scrobbled: number;
     deadLetterScrobbles: number

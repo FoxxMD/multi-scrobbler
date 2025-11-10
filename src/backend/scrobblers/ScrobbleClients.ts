@@ -23,6 +23,8 @@ import KoitoScrobbler from './KoitoScrobbler.js';
 import { KoitoClientConfig } from '../common/infrastructure/config/client/koito.js';
 import TealScrobbler from './TealfmScrobbler.js';
 import { TealClientConfig } from '../common/infrastructure/config/client/tealfm.js';
+import RockskyScrobbler from './RockskyScrobbler.js';
+import { RockSkyClientConfig } from '../common/infrastructure/config/client/rocksky.js';
 
 type groupedNamedConfigs = {[key: string]: ParsedConfig[]};
 
@@ -109,6 +111,9 @@ export default class ScrobbleClients {
                 case 'tealfm':
                     this.schemaDefinitions[type] = getTypeSchemaFromConfigGenerator("TealClientConfig");
                     break;
+                case 'rocksky':
+                    this.schemaDefinitions[type] = getTypeSchemaFromConfigGenerator("RockSkyClientConfig");
+                    break;
             }
         }
         return this.schemaDefinitions[type];
@@ -148,7 +153,7 @@ export default class ScrobbleClients {
                     this.logger.error(invalidTypeMsg);
                     continue;
                 }
-                if(['lastfm','listenbrainz','koito','tealfm'].includes(c.type.toLocaleLowerCase()) && ((c as LastfmClientConfig | ListenBrainzClientConfig | KoitoClientConfig | TealClientConfig).configureAs === 'source')) {
+                if(c.configureAs === 'source') {
                        this.logger.debug(`Skipping config ${index + 1} (${name}) in config.json because it is configured as a source.`);
                        continue;
                 }
@@ -258,6 +263,22 @@ export default class ScrobbleClients {
                         })
                     }
                     break;
+                case 'rocksky':
+                    const rocksky = {
+                        key: process.env.ROCKSKY_KEY,
+                        handle: process.env.ROCKSKY_HANDLE
+                    };
+                    if (!Object.values(rocksky).every(x => x === undefined)) {
+                        configs.push({
+                            type: 'rocksky',
+                            name: 'unnamed-koito',
+                            source: 'ENV',
+                            mode: 'single',
+                            configureAs: 'client',
+                            data: rocksky
+                        })
+                    }
+                    break;
                 default:
                     break;
             }
@@ -284,8 +305,7 @@ export default class ScrobbleClients {
                     continue;
                 }
                 for(const [i,rawConf] of rawClientConfigs.entries()) {
-                    if(['lastfm','listenbrainz','koito','tealfm'].includes(clientType) && 
-                    ((rawConf as LastfmClientConfig | ListenBrainzClientConfig | KoitoClientConfig | TealClientConfig).configureAs === 'source')) 
+                    if(rawConf.configureAs === 'source') 
                     {
                         this.logger.debug(`Skipping config ${i + 1} from ${clientType}.json because it is configured as a source.`);
                        continue;
@@ -379,6 +399,9 @@ ${sources.join('\n')}`);
                 break;
             case 'tealfm':
                 newClient = new TealScrobbler(name, {...clientConfig, data: {...data}} as unknown as TealClientConfig, {}, notifier, this.emitter, this.logger);
+                break;
+            case 'rocksky':
+                newClient = new RockskyScrobbler(name, {...clientConfig, data: {configDir: this.configDir, ...data} } as unknown as RockSkyClientConfig, {}, notifier, this.emitter, this.logger);
                 break;
             default:
                 break;

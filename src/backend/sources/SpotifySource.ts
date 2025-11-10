@@ -531,7 +531,7 @@ export default class SpotifySource extends MemoryPositionalSource {
         return true;
     }
 
-    protected getBackloggedPlays = async (options: RecentlyPlayedOptions = {}) => await this.getPlayHistory({formatted: true, ...options})
+    protected getBackloggedPlays = async (options: RecentlyPlayedOptions = {}) => ([]);
 }
 
 const asPlayHistoryObject = (obj: object): obj is PlayHistoryObject => 'played_at' in obj
