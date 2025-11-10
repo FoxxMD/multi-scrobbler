@@ -318,7 +318,7 @@ export abstract class AbstractPlayerState {
      *     * Listened duraton is more than 2 minutes/50% of Play OR...
      *     * Previous Position was close to end of Play
      */
-    protected isSessionRepeat(position?: number, reportedTS?: Dayjs) {
+    protected isSessionRepeat(position?: number, reportedTS?: Dayjs): boolean {
         if(this.currentListenRange === undefined) {
             return false;
         }

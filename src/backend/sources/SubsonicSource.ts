@@ -6,13 +6,16 @@ import request, { Request } from 'superagent';
 import { PlayObject } from "../../core/Atomic.js";
 import { isNodeNetworkException } from "../common/errors/NodeErrors.js";
 import { UpstreamError } from "../common/errors/UpstreamError.js";
-import { DEFAULT_RETRY_MULTIPLIER, FormatPlayObjectOptions, InternalConfig } from "../common/infrastructure/Atomic.js";
+import { DEFAULT_RETRY_MULTIPLIER, FormatPlayObjectOptions, InternalConfig, PlayPlatformId } from "../common/infrastructure/Atomic.js";
 import { SubSonicSourceConfig } from "../common/infrastructure/config/source/subsonic.js";
 import { getSubsonicResponse, SubsonicResponse, SubsonicResponseCommon } from "../common/vendor/subsonic/interfaces.js";
 import { parseRetryAfterSecsFromObj, removeDuplicates, sleep } from "../utils.js";
 import { findCauseByFunc } from "../utils/ErrorUtils.js";
 import { RecentlyPlayedOptions } from "./AbstractSource.js";
 import MemorySource from "./MemorySource.js";
+import { SubsonicPlayerState } from './PlayerState/SubsonicPlayerState.js';
+import { PlayerStateOptions } from './PlayerState/AbstractPlayerState.js';
+import { Logger } from '@foxxmd/logging';
 
 dayjs.extend(isSameOrAfter);
 
@@ -291,6 +294,8 @@ export class SubsonicSource extends MemorySource {
         const userFiltered = this.usersAllow.length == 0 ? deduped : deduped.filter(x => x.meta.user === undefined || this.usersAllow.map(x => x.toLocaleLowerCase()).includes(x.meta.user.toLocaleLowerCase()));
         return this.processRecentPlays(userFiltered);
     }
+
+    getNewPlayer = (logger: Logger, id: PlayPlatformId, opts: PlayerStateOptions) => new SubsonicPlayerState(logger, id, opts);
 }
 
 export const getSubsonicResponseFromError = (error: unknown): UpstreamError => findCauseByFunc(error, (err) => {
