@@ -1,30 +1,18 @@
-import { stringSameness } from '@foxxmd/string-sameness';
 import dayjs from "dayjs";
 import request, { Request, Response } from 'superagent';
-import { BrainzMeta, PlayObject, URLData } from "../../../core/Atomic.js";
-import { combinePartsToString, nonEmptyStringOrDefault, slice } from "../../../core/StringUtils.js";
-import {
-    findDelimiters,
-    normalizeListenbrainzUrl,
-    normalizeStr,
-    parseArtistCredits,
-    parseCredits,
-    parseTrackCredits,
-    uniqueNormalizedStrArr,
-} from "../../utils/StringUtils.js";
-import { getScrobbleTsSOCDate } from "../../utils/TimeUtils.js";
+import { PlayObject, URLData } from "../../../core/Atomic.js";
+import { nonEmptyStringOrDefault } from "../../../core/StringUtils.js";
 import { UpstreamError } from "../errors/UpstreamError.js";
-import { AbstractApiOptions, DEFAULT_RETRY_MULTIPLIER, DELIMITERS, FormatPlayObjectOptions } from "../infrastructure/Atomic.js";
+import { AbstractApiOptions, DEFAULT_RETRY_MULTIPLIER, FormatPlayObjectOptions } from "../infrastructure/Atomic.js";
 import { RockSkyClientData, RockSkyData, RockSkyOptions } from "../infrastructure/config/client/rocksky.js";
 import AbstractApiClient from "./AbstractApiClient.js";
-import { getBaseFromUrl, isPortReachableConnect, joinedUrl, normalizeWebAddress } from '../../utils/NetworkUtils.js';
-import { removeUndefinedKeys, unique } from '../../utils.js';
-import {ListensResponse as KoitoListensResponse} from '../infrastructure/config/client/koito.js'
-import { listenObjectResponseToPlay } from './koito/KoitoApiClient.js';
-import { version } from '../../ioc.js';
-import { ListenPayload, ListenResponse, ListenType, MinimumTrack, SubmitListenAdditionalTrackInfo, SubmitPayload } from './listenbrainz/interfaces.js';
-import { ListenbrainzApiClient, playToListenPayload } from './ListenbrainzApiClient.js';
+import { isPortReachableConnect, joinedUrl, normalizeWebAddress } from '../../utils/NetworkUtils.js';
+import { unique } from '../../utils.js';
+import { ListenPayload, ListenResponse, ListenType, SubmitPayload } from './listenbrainz/interfaces.js';
+import { playToListenPayload } from './ListenbrainzApiClient.js';
 import { RockskyScrobble } from './rocksky/interfaces.js';
+import { Handle } from "@atcute/lexicons";
+import { identifierToAtProtoHandle } from './bluesky/bsUtils.js';
 
 interface SubmitOptions {
     log?: boolean
@@ -42,6 +30,7 @@ export class RockSkyApiClient extends AbstractApiClient {
     lzUrl: URLData;
     apiUrl: URLData;
     isKoito: boolean = false;
+    handle: Handle;
 
     constructor(name: any, config: RockSkyData & RockSkyOptions, options: AbstractApiOptions) {
         super('RockSky', name, config, options);
@@ -55,6 +44,7 @@ export class RockSkyApiClient extends AbstractApiClient {
 
         this.logger.verbose(`Audioscrobbler URL: '${audioScrobblerUrl ?? '(None Given)'}' => Normalized: '${this.lzUrl.url}'`);
         this.logger.verbose(`API URL: '${apiUrl ?? '(None Given)'}' => Normalized: '${this.apiUrl.url}'`);
+        this.handle = identifierToAtProtoHandle(this.config.handle, {logger: this.logger, defaultDomain: 'bsky.social'});
     }
 
 
