@@ -1,7 +1,7 @@
 import { stringSameness } from '@foxxmd/string-sameness';
 import dayjs from "dayjs";
 import request, { Request, Response } from 'superagent';
-import { BrainzMeta, PlayObject, URLData } from "../../../core/Atomic.js";
+import { BrainzMeta, PlayObject, SCROBBLE_TS_SOC_START, URLData } from "../../../core/Atomic.js";
 import { combinePartsToString, slice } from "../../../core/StringUtils.js";
 import {
     findDelimiters,
@@ -263,7 +263,10 @@ export class ListenbrainzApiClient extends AbstractApiClient {
                     release_mbid,
                     release_group_mbid,
                     release_artist_name,
-                    release_artist_names = []
+                    release_artist_names = [],
+                    scrobble_ts_soc = SCROBBLE_TS_SOC_START,
+                    listened_for,
+                    listened_at_completed
                 } = {}
             } = {},
         } = payload;
@@ -276,7 +279,7 @@ export class ListenbrainzApiClient extends AbstractApiClient {
             albumArtists = unique([...(albumArtists ?? []), ...release_artist_names])
         }
 
-        return {
+        const play: PlayObject = {
             data: {
                 playDate: typeof listened_at === 'number' ? dayjs.unix(listened_at) : dayjs(listened_at),
                 track: track_name,
@@ -295,8 +298,18 @@ export class ListenbrainzApiClient extends AbstractApiClient {
             },
             meta: {
                 nowPlaying,
+                scrobbleTsSOC: scrobble_ts_soc
             }
         }
+
+        if(listened_at_completed !== undefined) {
+            play.data.playDateCompleted = dayjs.unix(listened_at_completed);
+        }
+        if(listened_for !== undefined) {
+            play.data.listenedFor = listened_for;
+        }
+
+        return play;
     }
 
     static listenResponseToPlay(listen: ListenResponse): PlayObject {
