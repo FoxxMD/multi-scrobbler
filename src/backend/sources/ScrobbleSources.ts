@@ -69,6 +69,8 @@ import DeezerInternalSource from './DeezerInternalSource.js';
 import KoitoSource from './KoitoSource.js';
 import { KoitoSourceConfig } from '../common/infrastructure/config/source/koito.js';
 import MalojaSource from './MalojaSource.js';
+import TealfmSource from './TealfmSource.js';
+import { TealSourceConfig } from '../common/infrastructure/config/source/tealfm.js';
 
 type groupedNamedConfigs = {[key: string]: ParsedConfig[]};
 
@@ -209,6 +211,9 @@ export default class ScrobbleSources {
                 case 'koito':
                     this.schemaDefinitions[type] = getTypeSchemaFromConfigGenerator("KoitoSourceConfig");
                     break;
+                case 'tealfm':
+                    this.schemaDefinitions[type] = getTypeSchemaFromConfigGenerator("TealSourceConfig");
+                    break;
             }
         }
         return this.schemaDefinitions[type];
@@ -287,7 +292,7 @@ export default class ScrobbleSources {
                     this.logger.error(invalidMsgType);
                     continue;
                 }
-                if(['lastfm','listenbrainz','koito'].includes(c.type.toLocaleLowerCase()) && ((c as LastfmSourceConfig | ListenBrainzSourceConfig | KoitoSourceConfig).configureAs !== 'source')) 
+                if(['lastfm','listenbrainz','koito','tealfm'].includes(c.type.toLocaleLowerCase()) && ((c as LastfmSourceConfig | ListenBrainzSourceConfig | KoitoSourceConfig | TealSourceConfig).configureAs !== 'source')) 
                 {
                    this.logger.debug(`Skipping config ${index + 1} (${name}) in config.json because it is configured as a client.`);
                    continue;
@@ -703,8 +708,8 @@ export default class ScrobbleSources {
                     continue;
                 }
                 for (const [i,rawConf] of sourceConfigs.entries()) {
-                    if(['lastfm','listenbrainz','koito','maloja'].includes(sourceType) && 
-                    ((rawConf as LastfmSourceConfig | ListenBrainzSourceConfig | KoitoSourceConfig | MalojaSourceConfig).configureAs !== 'source')) 
+                    if(['lastfm','listenbrainz','koito','maloja','tealfm'].includes(sourceType) && 
+                    ((rawConf as LastfmSourceConfig | ListenBrainzSourceConfig | KoitoSourceConfig | MalojaSourceConfig | TealSourceConfig).configureAs !== 'source')) 
                     {
                         this.logger.debug(`Skipping config ${i + 1} from ${sourceType}.json because it is configured as a client.`);
                         continue;
@@ -881,6 +886,9 @@ export default class ScrobbleSources {
                 break;
             case 'maloja':
                 newSource = await new MalojaSource(name, compositeConfig as MalojaSourceConfig, this.internalConfig, this.emitter);
+                break;
+            case 'tealfm':
+                newSource = await new TealfmSource(name, compositeConfig as TealSourceConfig, this.internalConfig, this.emitter);
                 break;
             default:
                 break;

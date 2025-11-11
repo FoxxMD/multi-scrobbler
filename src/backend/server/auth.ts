@@ -10,6 +10,9 @@ import SpotifySource from "../sources/SpotifySource.js";
 import YTMusicSource from "../sources/YTMusicSource.js";
 import { sortAndDeduplicateDiagnostics } from "typescript";
 import { source } from "common-tags";
+import TealScrobbler from "../scrobblers/TealfmScrobbler.js";
+import { parseRegexSingle } from "@foxxmd/regex-buddy-core";
+import { BlueSkyOauthApiClient } from "../common/vendor/bluesky/BlueSkyOauthApiClient.js";
 
 export const setupAuthRoutes = (app: ExpressWithAsync, logger: Logger, sourceMiddle: ExpressHandler, clientMiddle: ExpressHandler, scrobbleSources: ScrobbleSources, scrobbleClients: ScrobbleClients) => {
     app.use('/api/client/auth', clientMiddle);
@@ -21,6 +24,10 @@ export const setupAuthRoutes = (app: ExpressWithAsync, logger: Logger, sourceMid
         switch (scrobbleClient.type) {
             case 'lastfm':
                 res.redirect(scrobbleClient.api.getAuthUrl());
+                break;
+            case 'tealfm':
+                const url = await scrobbleClient.getAuthorizeUrl();
+                res.redirect(url);
                 break;
             default:
                 return res.status(400).send(`Specified client does not have auth implemented (${scrobbleClient.type})`);
@@ -124,4 +131,70 @@ export const setupAuthRoutes = (app: ExpressWithAsync, logger: Logger, sourceMid
             return res.send(responseContent);
         }
     });
+
+    app.getAsync(/(\/api\/tealfm\/.*)/, async function (req, res) {
+
+        const clients = scrobbleClients.getByType('tealfm') as TealScrobbler[];
+        if (clients.length === 0) {
+            logger.warn('Received callback to Teal OAuth but no TealFM scrobble clients are configured');
+        }
+
+        // const {
+        //     query: {
+        //         state
+        //     } = {}
+        // } = req;
+
+        // const name = (state as string).replace('tfm','');
+
+        // const validClient = clients.find(x => x.name === name);
+
+        // if (validClient === undefined) {
+        //     logger.warn(`No Tealfm scrobble matched => URL: ${req.originalUrl} | State: ${state}`);
+        // }
+
+        const intents = getTealUrlIntent(req.originalUrl);
+
+        if(intents === undefined) {
+            logger.warn(`Tealfm url was not formed correctly. Should be '/api/tealfm/SCROBBLER_NAME/SOME_ACTION' but found ${req.originalUrl}`);
+            return res.status(404);
+        }
+
+        const validClient = clients.find(x => x.name === intents[0]);
+        if(validClient === undefined) {
+            logger.warn(`No Tealfm client found with the name ${intents[0]}. Url: ${req.originalUrl}`);
+            return res.status(404);
+        }
+
+        if(intents[1].includes('login')) {
+                    const {
+            query: {
+                handle
+            } = {}
+        } = req;
+            const url = await (validClient.client as BlueSkyOauthApiClient).createAuthorizeUrl(handle as string);
+            res.redirect(url)
+        }
+
+        if(intents[1].includes('client-metadata.json')) {
+            return res.json((validClient.client as BlueSkyOauthApiClient).getMetadata());
+        }
+
+        if(intents[1].includes('oauth/callback')) {
+            const result = await (validClient.client as BlueSkyOauthApiClient).handleCallback(new URLSearchParams(req.query as Record<string, string>));
+            if(result) {
+                return res.status(200);
+            }
+            return res.status(500);
+        }
+    });
+}
+
+const TEAL_NAME_REGEX = new RegExp(/\/api\/tealfm\/([^\/])\/(.*)/);
+const getTealUrlIntent = (url: string): [string, string] | undefined => {
+    const res = parseRegexSingle(TEAL_NAME_REGEX, url);
+    if(res === undefined) {
+        return undefined;
+    }
+    return res.groups as [string, string];
 }

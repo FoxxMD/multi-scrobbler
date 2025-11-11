@@ -23,6 +23,7 @@ import { YTMusicSourceAIOConfig, YTMusicSourceConfig } from "./ytmusic.js";
 import { IcecastSourceAIOConfig, IcecastSourceConfig } from "./icecast.js";
 import { KoitoSourceAIOConfig, KoitoSourceConfig } from "./koito.js";
 import { MalojaSourceAIOConfig, MalojaSourceConfig } from "./maloja.js";
+import { TealSourceAIOConfig, TealSourceConfig } from "./tealfm.js";
 
 
 export type SourceConfig =
@@ -53,7 +54,8 @@ export type SourceConfig =
     | VLCSourceConfig
     | IcecastSourceConfig
     | AzuracastSourceConfig
-    | KoitoSourceConfig;
+    | KoitoSourceConfig
+    | TealSourceConfig;
 
 export type SourceAIOConfig =
     SpotifySourceAIOConfig
@@ -83,4 +85,5 @@ export type SourceAIOConfig =
     | VLCSourceAIOConfig
     | IcecastSourceAIOConfig
     | AzuracastSourceAIOConfig
-    | KoitoSourceAIOConfig;
+    | KoitoSourceAIOConfig
+    | TealSourceAIOConfig;
