@@ -93,7 +93,8 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
     supportsNowPlaying: boolean = false;
     nowPlayingEnabled: boolean;
     nowPlayingFilter: (queue: NowPlayingQueue) => PlayObject | undefined;
-    nowPlayingThresholds: [number,number] = [10,30];
+    nowPlayingMinThreshold: (play?: PlayObject) => number = (_) => 10;
+    nowPlayingMaxThreshold: (play?: PlayObject) => number = (_) => 30;
     nowPlayingLastUpdated?: Dayjs;
     nowPlayingLastPlay?: PlayObject;
     nowPlayingQueue: NowPlayingQueue = new Map();
@@ -978,10 +979,8 @@ ${closestMatch.breakdowns.join('\n')}`, {leaf: ['Dupe Check']});
                 }
                 this.nowPlayingLastPlay = play;
                 this.nowPlayingLastUpdated = dayjs();
-                // only clear queue after we have updated Now Playing, this way we always have the latest and "most complete"
-                // set of Source Player updates available for filtering/sorting
-                this.nowPlayingQueue = new Map();
             }
+            this.nowPlayingQueue = new Map();
         }
     }
 
@@ -997,23 +996,23 @@ ${closestMatch.breakdowns.join('\n')}`, {leaf: ['Dupe Check']});
 
         // update if play *has* changed and time since last update is greater than min interval
         // this prevents spamming scrobbler API with updates if user is skipping tracks and source updates frequently
-        if(!playObjDataMatch(data, this.nowPlayingLastPlay) && this.nowPlayingThresholds[0] < lastUpdateDiff) {
+        if(!playObjDataMatch(data, this.nowPlayingLastPlay) && this.nowPlayingMinThreshold(data) < lastUpdateDiff) {
             if(isDebugMode()) {
-                this.npLogger.debug(`New Play differs from previous Now Playing and time since update > ${lastUpdateDiff}s, should update`);
+                this.npLogger.debug(`New Play differs from previous Now Playing and time since update ${lastUpdateDiff}s, greater than threshold ${this.nowPlayingMinThreshold(data)}. Should update`);
             }
             return true;
         }
         // update if play *has not* changed but last update is greater than max interval
         // this keeps scrobbler Now Playing fresh ("active" indicator) in the event play is long
-        if(playObjDataMatch(data, this.nowPlayingLastPlay) && this.nowPlayingThresholds[1] < lastUpdateDiff) {
+        if(playObjDataMatch(data, this.nowPlayingLastPlay) && this.nowPlayingMaxThreshold(data) < lastUpdateDiff) {
             if(isDebugMode()) {
-                this.npLogger.debug(`Now Playing has not been updated in > ${lastUpdateDiff}s, should update`);
+                this.npLogger.debug(`Now Playing last updated ${lastUpdateDiff}s ago, greater than threshold ${this.nowPlayingMaxThreshold(data)}s. Should update`);
             }
             return true;
         }
 
         if(isDebugMode()) {
-            this.npLogger.debug(`Updated Now Playing ${playObjDataMatch(data, this.nowPlayingLastPlay) ? 'matches' : 'does not match'} and was last updated ${lastUpdateDiff}s ago, not updating`);
+            this.npLogger.debug(`Now Playing ${playObjDataMatch(data, this.nowPlayingLastPlay) ? 'matches' : 'does not match'} and was last updated ${lastUpdateDiff}s ago (threshold ${this.nowPlayingMaxThreshold(data)}s), not updating`);
         }
         return false;
     }
@@ -1041,4 +1040,8 @@ ${closestMatch.breakdowns.join('\n')}`, {leaf: ['Dupe Check']});
         .then(() => isDebugMode() ? this.logger.debug('Updated queued scrobble cache') : null)
         .catch((e) => this.logger.warn(new Error('Error while updating queued scrobble cache', {cause: e})));
     }
+}
+
+export const nowPlayingUpdateByPlayDuration = (play: PlayObject) => {
+    return (play.data.duration ?? 30) + 1;
 }

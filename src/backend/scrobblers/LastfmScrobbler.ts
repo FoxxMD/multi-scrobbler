@@ -9,7 +9,7 @@ import { FormatPlayObjectOptions } from "../common/infrastructure/Atomic.js";
 import { LastfmClientConfig } from "../common/infrastructure/config/client/lastfm.js";
 import LastfmApiClient, { playToClientPayload } from "../common/vendor/LastfmApiClient.js";
 import { Notifiers } from "../notifier/Notifiers.js";
-import AbstractScrobbleClient from "./AbstractScrobbleClient.js";
+import AbstractScrobbleClient, { nowPlayingUpdateByPlayDuration } from "./AbstractScrobbleClient.js";
 
 export default class LastfmScrobbler extends AbstractScrobbleClient {
 
@@ -24,8 +24,10 @@ export default class LastfmScrobbler extends AbstractScrobbleClient {
         // @ts-expect-error sloppy data structure assign
         this.api = new LastfmApiClient(name, config.data, {...options, logger})
         // https://www.last.fm/api/show/user.getRecentTracks
-        this.MAX_INITIAL_SCROBBLES_FETCH = 200;
+        this.MAX_INITIAL_SCROBBLES_FETCH = 100;
         this.supportsNowPlaying = true;
+        // last.fm shows Now Playing for the same time as the duration of the track being submitted
+        this.nowPlayingMaxThreshold = nowPlayingUpdateByPlayDuration;
     }
 
     formatPlayObj = (obj: any, options: FormatPlayObjectOptions = {}) => LastfmApiClient.formatPlayObj(obj, options);
@@ -177,6 +179,7 @@ export default class LastfmScrobbler extends AbstractScrobbleClient {
     }
 
     doPlayingNow = async (data: PlayObject) => {
+        // last.fm shows Now Playing for the same time as the duration of the track being submitted
         try {
             const {timestamp, mbid, ...rest} = playToClientPayload(data);
             const response = await this.api.callApi<NowPlayingResponse>((client: any) => client.trackUpdateNowPlaying(rest));

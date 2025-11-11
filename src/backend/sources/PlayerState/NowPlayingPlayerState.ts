@@ -19,9 +19,14 @@ export class NowPlayingPlayerState extends GenericPlayerState {
 
     protected getOrphanedInterval() {
         if(this.currentPlay !== undefined && this.currentPlay.data.duration !== undefined) {
-            return this.currentPlay.data.duration;
+            // want this player to clear Now Playing as soon as track is finished
+            return (this.currentPlay.data.duration / 2) + 1;
         }
         return super.getOrphanedInterval();
+    }
+
+    public isDead() {
+        return this.isOrphaned();
     }
 
     public getApiState(): SourcePlayerObj {
