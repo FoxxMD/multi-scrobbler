@@ -122,6 +122,7 @@ config/mscache
 config/yti-*
 config/*.cache
 *.txt
+!robots.txt
 .idea/
 
 src/**/**.js
