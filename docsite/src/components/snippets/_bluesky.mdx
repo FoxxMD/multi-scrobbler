@@ -1,0 +1,14 @@
+import CodeInline from '@theme/CodeInline';
+
+The [AT Protocol](https://docs.bsky.app/docs/advanced-guides/atproto) is a standard to allow different applications to share and interpret your social data.
+
+Your data is stored in a personal [repository](https://atproto.com/guides/data-repos) in a [PDS (Personal Data Server)](https://github.com/Bluesky-social/pds), which is data-type agnostic (it's just JSON). Each application defines their own datatypes and pulls data from your repository to render to you, your network, etc...
+
+Even though the application and the PDS/repository are independent, all of this is done for you automatically when you create a [Bluesky](https://bsky.social/about) account.
+
+So...
+
+* multi-scrobbler "scrobbles" your plays to your repository
+  * in a JSON data structure which includes [{props.name}'s data type and structure](https://atproto.com/specs/lexicon)
+  * at a [known location for {props.name}'s data](https://atproto.com/guides/glossary#collection) (<CodeInline>{props.lexicon}</CodeInline>), in a list that is appended to as you continue to scrobble
+* when accessing {props.name}, or another application that knows how to read it, your data is pulled from the repository to render the app

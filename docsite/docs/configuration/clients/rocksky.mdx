@@ -4,19 +4,59 @@ toc_min_heading_level: 2
 toc_max_heading_level: 5
 ---
 
-[**Rocksky**](https://docs.rocksky.app/) is music tracking and discovery platform built on the AT Protocol (Bluesky). It is compatible with the Listenbrainz API and so can be configured as a multi-scrobbler [Listenbrainz Client](/configuration/clients/listenbrainz) using a custom URL.
+import Bluesky from "@site/src/components/snippets/_bluesky.mdx";
+import JsonConfig from '!!raw-loader!@site/../config/rocksky.json.example';
+
+:::tip[Other Uses]
+
+To monitor and re-scrobble activity **from** Rocksky create a [Rocksky (Source)](/configuration/sources/rocksky-source)
+
+:::
+
+[**Rocksky**](https://docs.rocksky.app/) is music tracking and discovery platform built on the AT Protocol (Bluesky).
+
+<details>
+
+<summary>How does that work?</summary>
+
+<Bluesky name="Rocksky" lexicon="app.rocksky"/>
+
+</details>
+
+:::warning
+
+The default Bluesky PDS is **public**, meaning your scrobbles are also public (read-only). This isn't any different than using Last.fm or Listenbrainz, in terms of privacy.
+
+:::
+
+## Setup
 
 You will need a [Bluesky](https://bsky.app/) account to use Rocksky.
 
 :::note 
 
-Usage is adapted from [the Listenbrainz to Rocksky docs](https://docs.rocksky.app/migrating-from-listenbrainz-to-rocksky-1040189m0) on [docs.rocksky.app](https://docs.rocksky.app)
+Usage is adapted from [Rocksky docs](https://docs.rocksky.app/migrating-to-rocksky-scrobble-api-957839m0) on [docs.rocksky.app](https://docs.rocksky.app)
 
 :::
 
-While logged in to Bluesky, navigate to [RockSky API Application](https://rocksky.app/apikeys) and obtain an API Key.
+* Navigate to [rocksky.app](https://rocksky.app/) and sign up/logn using your Bluesky account
+* Then, navigate to the [RockSky developer dashboard](https://rocksky.app/apikeys) and obtain an API Key
 
-Then, follow the directions to create a normal multi-scrobbler [Listenbrainz Client](/configuration/clients/listenbrainz) and use:
+## Configuration
 
-* **Listenbrainz Token** (`LZ_TOKEN`) - The API Key from RockSky
-* **Listenbrainz URL** (`LZ_URL`) - `https://audioscrobbler.rocksky.app`
+### Handle
+
+The handle used with multi-scrobbler should be your **full** ATProto handle, including TLD.
+
+* For regular Bluesky account this will be like: `alice.bsky.social`
+* For Bluesky accounts that [use their website as their account](https://bsky.social/about/blog/4-28-2023-domain-handle-tutorial) this is your domain: `mydomain.com`
+* For non-Bluesky users, you probably already know your handle
+
+If you do not include a TLD then multi-scrobbler will automatically append `.bsky.social` to your handle value.
+
+<Config config="RockskyClientConfig" fileContent={JsonConfig} client name="rocksky">
+        | Environmental Variable | Required? | Default | Description                                                                         |
+        | :--------------------- | --------- | ------- | ----------------------------------------------------------------------------------- |
+        | ROCKSKY_HANDLE         | Yes       |         | Your **full** ATProto handle. For Bluesky account this is like `myUser.bsky.social` |
+        | ROCKSKY_KEY            | Yes       |         | API Key obtained from Rocksky developer dashboard                                   |
+</Config>
