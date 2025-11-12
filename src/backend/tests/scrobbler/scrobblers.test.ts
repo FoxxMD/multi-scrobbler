@@ -895,7 +895,7 @@ describe('Now Playing', function() {
             await npScrobbler.initialize();
 
             const lastUpdate = generatePlay({}, {deviceId: genGroupIdStr(generatePlayPlatformId())});
-            npScrobbler.nowPlayingLastUpdated = dayjs().subtract(npScrobbler.nowPlayingThresholds[1] + 1, 's');
+            npScrobbler.nowPlayingLastUpdated = dayjs().subtract(npScrobbler.nowPlayingMaxThreshold(lastUpdate) + 1, 's');
             npScrobbler.nowPlayingLastPlay = lastUpdate;
 
             const res = npScrobbler.shouldUpdatePlayingNow(lastUpdate);
@@ -908,7 +908,7 @@ describe('Now Playing', function() {
             await npScrobbler.initialize();
 
             const lastUpdate = generatePlay({}, {deviceId: genGroupIdStr(generatePlayPlatformId())});
-            npScrobbler.nowPlayingLastUpdated = dayjs().subtract(npScrobbler.nowPlayingThresholds[1] - 1, 's');
+            npScrobbler.nowPlayingLastUpdated = dayjs().subtract(npScrobbler.nowPlayingMaxThreshold(lastUpdate) - 1, 's');
             npScrobbler.nowPlayingLastPlay = lastUpdate;
 
             const res = npScrobbler.shouldUpdatePlayingNow(lastUpdate);
@@ -921,7 +921,7 @@ describe('Now Playing', function() {
             await npScrobbler.initialize();
 
             const lastUpdate = generatePlay({}, {deviceId: genGroupIdStr(generatePlayPlatformId())});
-            npScrobbler.nowPlayingLastUpdated = dayjs().subtract(npScrobbler.nowPlayingThresholds[0] + 1, 's');
+            npScrobbler.nowPlayingLastUpdated = dayjs().subtract(npScrobbler.nowPlayingMinThreshold(lastUpdate) + 1, 's');
             npScrobbler.nowPlayingLastPlay = lastUpdate;
 
             const res = npScrobbler.shouldUpdatePlayingNow(generatePlay({}, {deviceId: genGroupIdStr(generatePlayPlatformId())}));
@@ -934,7 +934,7 @@ describe('Now Playing', function() {
             await npScrobbler.initialize();
 
             const lastUpdate = generatePlay({}, {deviceId: genGroupIdStr(generatePlayPlatformId())});
-            npScrobbler.nowPlayingLastUpdated = dayjs().subtract(npScrobbler.nowPlayingThresholds[0] - 1, 's');
+            npScrobbler.nowPlayingLastUpdated = dayjs().subtract(npScrobbler.nowPlayingMinThreshold(lastUpdate) - 1, 's');
             npScrobbler.nowPlayingLastPlay = lastUpdate;
 
             const res = npScrobbler.shouldUpdatePlayingNow(generatePlay({}, {deviceId: genGroupIdStr(generatePlayPlatformId())}));
@@ -978,7 +978,7 @@ describe('Now Playing', function() {
 
             expect(res).is.not.undefined;
 
-            MockDate.set(now.add(npScrobbler.nowPlayingThresholds[0] + 3, 's').toDate());
+            MockDate.set(now.add(npScrobbler.nowPlayingMinThreshold() + 3, 's').toDate());
 
             npScrobbler.queuePlayingNow(generatePlay({}, {deviceId: genGroupIdStr(generatePlayPlatformId())}), {type: 'jellyfin', name: 'test'});
 

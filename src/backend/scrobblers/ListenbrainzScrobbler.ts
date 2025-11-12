@@ -10,7 +10,7 @@ import { ListenbrainzApiClient, playToListenPayload } from "../common/vendor/Lis
 import { ListenPayload } from '../common/vendor/listenbrainz/interfaces.js';
 import { Notifiers } from "../notifier/Notifiers.js";
 
-import AbstractScrobbleClient from "./AbstractScrobbleClient.js";
+import AbstractScrobbleClient, { nowPlayingUpdateByPlayDuration } from "./AbstractScrobbleClient.js";
 import { isDebugMode } from "../utils.js";
 
 export default class ListenbrainzScrobbler extends AbstractScrobbleClient {
@@ -29,6 +29,8 @@ export default class ListenbrainzScrobbler extends AbstractScrobbleClient {
         // 1000 is way too high. maxing at 100
         this.MAX_INITIAL_SCROBBLES_FETCH = 100;
         this.supportsNowPlaying = true;
+        // listenbrainz shows Now Playing for the same time as the duration of the track being submitted
+        this.nowPlayingMaxThreshold = nowPlayingUpdateByPlayDuration;
     }
 
     formatPlayObj = (obj: any, options: FormatPlayObjectOptions = {}) => ListenbrainzApiClient.formatPlayObj(obj, options);
@@ -97,6 +99,7 @@ export default class ListenbrainzScrobbler extends AbstractScrobbleClient {
     }
 
     doPlayingNow = async (data: PlayObject) => {
+        // listenbrainz shows Now Playing for the same time as the duration of the track being submitted
         try {
             await this.api.submitListen(data, { listenType: 'playing_now'});
         } catch (e) {

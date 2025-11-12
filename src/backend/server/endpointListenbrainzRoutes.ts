@@ -6,6 +6,7 @@ import { EndpointListenbrainzSource, playStateFromRequest, parseDisplayIdentifie
 import { LZEndpointNotifier } from "../sources/ingressNotifiers/LZEndpointNotifier.js";
 import ScrobbleSources from "../sources/ScrobbleSources.js";
 import { nonEmptyBody } from "./middleware.js";
+import { isDebugMode } from "../utils.js";
 
 export const setupLZEndpointRoutes = (app: ExpressWithAsync, parentLogger: Logger, scrobbleSources: ScrobbleSources) => {
 
@@ -45,6 +46,9 @@ export const setupLZEndpointRoutes = (app: ExpressWithAsync, parentLogger: Logge
                 logger.warn(`No Listenbrainz endpoint config matched => Slug: ${slug} | Token: ${token}`);
             }
 
+            if(isDebugMode()) {
+                logger.debug({body: req.body}, "Recieved request Body");
+            }
             const playerState = playStateFromRequest(req.body);
 
             for (const source of validSources) {
