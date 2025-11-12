@@ -33,7 +33,8 @@ export type SourceType =
     | 'icecast'
     | 'azuracast'
     | 'koito'
-    | 'tealfm';
+    | 'tealfm'
+    | 'rocksky';
 
 export const sourceTypes: SourceType[] = [
     'spotify',
@@ -61,7 +62,8 @@ export const sourceTypes: SourceType[] = [
     'icecast',
     'azuracast',
     'koito',
-    'tealfm'
+    'tealfm',
+    'rocksky'
 ];
 
 export const isSourceType = (data: string): data is SourceType => {
@@ -75,13 +77,15 @@ export type ClientType =
     | 'lastfm'
     | 'listenbrainz'
     | 'koito'
-    | 'tealfm';
+    | 'tealfm'
+    | 'rocksky';
 export const clientTypes: ClientType[] = [
     'maloja',
     'lastfm',
     'listenbrainz',
     'koito',
-    'tealfm'
+    'tealfm',
+    'rocksky'
 ];
 export const isClientType = (data: string): data is ClientType => {
     return clientTypes.includes(data as ClientType);

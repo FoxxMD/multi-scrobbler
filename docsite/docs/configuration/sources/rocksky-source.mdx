@@ -1,0 +1,39 @@
+---
+title: Rocksky
+toc_min_heading_level: 2
+toc_max_heading_level: 5
+---
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+import CodeBlock from '@theme/CodeBlock';
+import JsonConfig from '!!raw-loader!@site/../config/rocksky.json.example';
+
+:::tip[Other Uses]
+
+* To **scrobble to** Rocksky, create a [Rocksky (Client)](/configuration/clients/rocksky)
+
+:::
+
+[**Rocksky**](https://docs.rocksky.app/) is music tracking and discovery platform built on the AT Protocol (Bluesky).
+
+This Source monitors the Rocksky scrobbles in your PDS and then re-scrobbles discovered tracks to configured clients.
+
+Learn more about how Rocksky scrobbles work in the [Rocksky (Client)](/configuration/clients/rocksky) docs. 
+
+## Setup
+
+Follow the **Setup** instructions in the [Rocksky (Client)](/configuration/clients/rocksky#setup) docs to get access to your Bluesky PDS repository and scrobble data.
+
+## Configuration
+
+See the [Rocksky (Client)](/configuration/clients/rocksky#setup) configuration for general setup. The only difference for **Source** configuration:
+
+* Cannot be setup with ENV config 
+* [File/AIO config](/configuration?configType=file#configuration-types) must include `"configureAs": "source"`
+
+<Config config="RockskyClientConfig" fileContent={JsonConfig} name="rocksky">
+        :::note
+            You cannot use ENV variables shown in the [Rocksky Client config](/configuration/clients/rocksky#configuration) -- multi-scrobbler assumes Rocksky ENVs are always used for the **client** configuration. You must use the [File or AIO](/configuration?configType=file#configuration-types) config to setup Rocksky as a Source.
+        :::
+</Config>

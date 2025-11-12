@@ -24,6 +24,7 @@ import { IcecastSourceAIOConfig, IcecastSourceConfig } from "./icecast.js";
 import { KoitoSourceAIOConfig, KoitoSourceConfig } from "./koito.js";
 import { MalojaSourceAIOConfig, MalojaSourceConfig } from "./maloja.js";
 import { TealSourceAIOConfig, TealSourceConfig } from "./tealfm.js";
+import { RockskySourceAIOConfig, RockskySourceConfig } from "./rocksky.js";
 
 
 export type SourceConfig =
@@ -55,7 +56,8 @@ export type SourceConfig =
     | IcecastSourceConfig
     | AzuracastSourceConfig
     | KoitoSourceConfig
-    | TealSourceConfig;
+    | TealSourceConfig
+    | RockskySourceConfig;
 
 export type SourceAIOConfig =
     SpotifySourceAIOConfig
@@ -86,4 +88,5 @@ export type SourceAIOConfig =
     | IcecastSourceAIOConfig
     | AzuracastSourceAIOConfig
     | KoitoSourceAIOConfig
-    | TealSourceAIOConfig;
+    | TealSourceAIOConfig
+    | RockskySourceAIOConfig;

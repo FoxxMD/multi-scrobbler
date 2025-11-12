@@ -14,15 +14,12 @@ import {
   WellKnownHandleResolver,
 } from "@atcute/identity-resolver";
 import { AtprotoDid, DidDocument } from "@atproto/oauth-client-node";
-import { parseRegexSingle } from "@foxxmd/regex-buddy-core";
+import { identifierToAtProtoHandle } from "./bsUtils.js";
 
 interface HandleData {
     did: string
     pds: string
 }
-
-const HANDLE_REGEX = new RegExp(/.+\..+/);
-const ATSIGN_REGEX = new RegExp(/^@(.+)/);
 
 export class BlueSkyAppApiClient extends AbstractBlueSkyApiClient {
 
@@ -34,16 +31,7 @@ export class BlueSkyAppApiClient extends AbstractBlueSkyApiClient {
     constructor(name: any, config: TealClientData, options: AbstractApiOptions) {
         super(name, config, options);
         this.logger.verbose(`Using App Password auth for session`);
-        const atRes = parseRegexSingle(ATSIGN_REGEX, this.config.identifier);
-        if(atRes !== undefined) {
-            this.logger.warn(`Handle '${this.config.identifier}' has '@' at beginning, removing this.`);
-            this.config.identifier = atRes.groups[0];
-        }
-        if(undefined == parseRegexSingle(HANDLE_REGEX, config.identifier)) {
-            const fqId = `${this.config.identifier}.bsky.social`;
-            this.logger.warn(`Handle '${this.config.identifier}' was not in the form 'handle.TLD', assuming this is a Bluesky account and appending TLD: ${fqId}`);
-            this.config.identifier = fqId;
-        }
+        this.config.identifier = identifierToAtProtoHandle(this.config.identifier, {logger: this.logger, defaultDomain: 'bsky.social'});
     }
 
     async initClient(): Promise<void> {
