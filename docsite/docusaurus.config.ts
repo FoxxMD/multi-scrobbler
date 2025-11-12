@@ -90,6 +90,38 @@ const config: Config = {
     'docusaurus-theme-github-codeblock'
   ],
   plugins: [
+    [
+      '@docusaurus/plugin-client-redirects',
+      {
+        redirects: [
+          // /docs/oldDoc -> /docs/newDoc
+          {
+            to: '/configuration',
+            from: '/docs/configuration',
+          },
+          {
+            to: '/configuration/kitchensink',
+            from: '/docs/configuration/kitchensink',
+          },
+          {
+            to: '/installation',
+            from: '/docs/installation',
+          },
+          {
+            to: '/quickstart',
+            from: '/docs/quickstart',
+          },
+          {
+            to: '/FAQ',
+            from: '/docs/FAQ',
+          },
+          {
+            to: '/',
+            from: '/docs',
+          },
+        ]
+      }
+    ]
   ],
   themeConfig:
     {
