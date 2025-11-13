@@ -89,6 +89,14 @@ export interface AdditionalTrackInfo {
     duration_ms?: number;
     track_mbid?: string;
     work_mbids?: WorkMbid[];
+
+    release_artist_name?: string;
+    release_artist_names?: string[];
+    spotify_album_id?: string;
+    spotify_album_artist_ids?: string[];
+    spotify_artist_ids?: string[];
+    artist_names?: string[];
+    albumartist?: string;
 }
 export interface Track {
     artist_name: string;
@@ -103,57 +111,60 @@ export interface Track {
 
     duration?: number;
 }
-export interface AdditionalTrackInfoResponse extends AdditionalTrackInfo {
-    recording_msid?: RecordingMsid;
-    release_artist_name?: string;
-    release_artists_names?: string;
-    spotify_album_id?: string;
-    spotify_album_artist_ids?: string[];
-    spotify_artist_ids?: string[];
+
+export type ListenType = 'single' | 'playing_now';
+export interface MbidMapping {
+    recording_name?: string;
+    artist_mbids?: ArtistMbid[];
+    artists?: ArtistMBIDMapping[];
+    caa_id?: number;
+    /** cover album archive mbid, not related to anything else I think */
+    caa_release_mbid?: string;
+    recording_mbid?: RecordingMbid;
+    release_mbid?: ReleaseMbid;
 }
+
 // using submit-listens example from openapi https://rain0r.github.io/listenbrainz-openapi/index.html#/lbCore/submitListens
 // which is documented in official docs https://listenbrainz.readthedocs.io/en/latest/users/api/index.html#openapi-specification
 // and based on this LZ developer comment https://github.com/lyarenei/jellyfin-plugin-listenbrainz/issues/10#issuecomment-1253867941
 
+//
+// data structures for submitting a listen
+//
 export interface SubmitListenAdditionalTrackInfo extends AdditionalTrackInfo {
-    artist_names?: string[];
-    release_artist_name?: string;
-    release_artist_names?: string[];
-    spotify_album_id?: string;
-    spotify_album_artist_ids?: string[];
-    spotify_artist_ids?: string[];
-    albumartist?: string;
+
 }
 export interface TrackPayload extends MinimumTrack {
     additional_info?: SubmitListenAdditionalTrackInfo;
+    mbid_mapping?: MbidMapping
 }
 export interface ListenPayload {
     listened_at: Date | number;
-    recording_msid?: RecordingMsid;
     track_metadata: TrackPayload;
 }
-export type ListenType = 'single' | 'playing_now';
+
+// this is what is sent to submit-listens
 export interface SubmitPayload {
     listen_type: ListenType;
     payload: [ListenPayload];
 }
-export interface TrackResponse extends MinimumTrack {
-    duration: number;
-    additional_info: AdditionalTrackInfoResponse;
-    mbid_mapping: {
-        recording_name?: string;
-        artist_mbids?: ArtistMbid[];
-        artists?: ArtistMBIDMapping[];
-        caa_id?: number;
-        /** cover album archive mbid, not related to anything else I think */
-        caa_release_mbid?: string;
-        recording_mbid?: RecordingMbid;
-        release_mbid?: ReleaseMbid;
-    };
+
+//
+// data structures returned from listens
+//
+
+export interface AdditionalTrackInfoResponse extends SubmitListenAdditionalTrackInfo {
+    recording_msid?: RecordingMsid;
 }
+
+export interface TrackResponse extends TrackPayload {
+    additional_info: AdditionalTrackInfoResponse;
+}
+
+// this is what is received from listens endpoint
 export interface ListenResponse {
 
-    inserted_at: number;
+    inserted_at?: number;
     listened_at: number;
     recording_msid?: RecordingMsid;
     track_metadata: TrackResponse;

@@ -249,6 +249,27 @@ export class ListenbrainzApiClient extends AbstractApiClient {
     }
 
     static listenPayloadToPlay(payload: ListenPayload, nowPlaying: boolean = false): PlayObject {
+
+        // const listened = payload.listened_at ?? dayjs().unix();
+        // const listenedAt = typeof listened === 'number' ? dayjs.unix(listened) : dayjs(listened);
+
+        // const {
+        //     track_metadata: {
+        //         additional_info = {}
+        //     } = {},
+        // } = payload;
+
+        // const play = ListenbrainzApiClient.listenResponseToPlay({
+        //     ...payload, 
+        //     track_metadata: {
+        //         ...payload.track_metadata, 
+        //         additional_info
+        //     }, 
+        //     listened_at: listenedAt.unix()
+        // });
+
+        // play.meta.nowPlaying = nowPlaying;
+
         const {
             listened_at = dayjs().unix(),
             track_metadata: {
@@ -282,7 +303,7 @@ export class ListenbrainzApiClient extends AbstractApiClient {
             dur = duration_ms/1000;
         }
 
-        return {
+        const oldPlay = {
             data: {
                 playDate: typeof listened_at === 'number' ? dayjs.unix(listened_at) : dayjs(listened_at),
                 track: track_name,
@@ -303,6 +324,8 @@ export class ListenbrainzApiClient extends AbstractApiClient {
                 nowPlaying,
             }
         }
+
+        return oldPlay;
     }
 
     static listenResponseToPlay(listen: ListenResponse): PlayObject {
@@ -318,7 +341,7 @@ export class ListenbrainzApiClient extends AbstractApiClient {
                     release_mbid
                 } = {},
                 additional_info: {
-                    release_artists_names = [],
+                    release_artist_names = [],
                     release_group_mbid
                 } = {}
             } = {}
@@ -545,7 +568,7 @@ export class ListenbrainzApiClient extends AbstractApiClient {
         const primaryArtistMBMapping = artistMappings.find(x => x.artist_credit_name === primaryArtist);
         if(primaryArtistMBMapping !== undefined) {
             // only include as primary if musicbrainz does not disagree with us
-            if(release_artists_names.length === 0 || (release_artists_names.length > 0 && release_artists_names.includes(primaryArtist))) {
+            if(release_artist_names.length === 0 || (release_artist_names.length > 0 && release_artist_names.includes(primaryArtist))) {
                 brainzMetaRaw.albumArtist = primaryArtistMBMapping.artist_mbid;
             }
         }
@@ -581,7 +604,6 @@ export class ListenbrainzApiClient extends AbstractApiClient {
                 track_name,
                 artist_name,
                 release_name,
-                duration,
                 additional_info: {
                     recording_msid: aRecordingMsid,
                     recording_mbid: aRecordingMbid,
@@ -601,7 +623,7 @@ export class ListenbrainzApiClient extends AbstractApiClient {
 
         const playId = recording_msid ?? aRecordingMsid;
         const trackId = aRecordingMbid ?? mRecordingMbid;
-        let dur = duration ?? aDuration;
+        let dur = aDuration;
         if (dur === undefined && aDurationMs !== undefined) {
             dur = Math.round(aDurationMs / 1000);
         }
@@ -788,3 +810,5 @@ export const musicServiceToCononical = (str: string): string | undefined => {
     }
     return undefined;
 }
+
+const FEAT_REGEX = new RegExp(/(.+) feat\. (.+)/);
