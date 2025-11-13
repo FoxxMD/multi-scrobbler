@@ -9,6 +9,7 @@ import { musicServiceToCononical } from "../ListenbrainzApiClient.js";
 import { parseRegexSingle } from "@foxxmd/regex-buddy-core";
 import { RecordOptions } from "../../infrastructure/config/client/tealfm.js";
 import dayjs from "dayjs";
+import { getScrobbleTsSOCDateWithContext } from "../../../utils/TimeUtils.js";
 
 
 export abstract class AbstractBlueSkyApiClient extends AbstractApiClient {
@@ -62,7 +63,7 @@ export const playToRecord = (play: PlayObject): ScrobbleRecord => {
         trackName: play.data.track,
         artists: play.data.artists.map(x => ({ artistName: x })),
         duration: play.data.duration,
-        playedTime: play.data.playDate.toISOString(),
+        playedTime: getScrobbleTsSOCDateWithContext(play)[0].toISOString(),
         releaseName: play.data.album,
         submissionClientAgent: `multi-scrobbler/${getRoot().items.version}`,
         musicServiceBaseDomain: play.meta.musicService !== undefined ? musicServiceToCononical(play.meta.musicService) : undefined,
