@@ -82,7 +82,11 @@ export default class RockskyScrobbler extends AbstractScrobbleClient {
         } = playObj;
 
         try {
-            await this.api.submitListen(playObj, { log: isDebugMode()});
+            const resp = await this.api.submitListen(playObj, { log: isDebugMode()});
+
+            if((resp.payload?.ignored_listens ?? 0) > 0) {
+                throw new UpstreamError('Scrobble was successfully submitted but Rocksky ignored it', {showStopper: false});
+            }
 
             if (newFromSource) {
                 this.logger.info(`Scrobbled (New)     => (${source}) ${buildTrackString(playObj)}`);

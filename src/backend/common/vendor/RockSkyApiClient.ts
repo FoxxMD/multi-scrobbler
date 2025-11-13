@@ -24,6 +24,14 @@ export interface ListensResponse {
     listens: ListenResponse[];
 }
 
+export interface SubmitResponse {
+    payload?: {
+        ignored_listens: number
+        submitted_listens: number
+    },
+    status: string
+}
+
 export class RockSkyApiClient extends AbstractApiClient {
 
     declare config: RockSkyClientData;
@@ -180,7 +188,7 @@ export class RockSkyApiClient extends AbstractApiClient {
             if(log) {
                 this.logger.debug(`Submit Response: ${resp.text}`)
             }
-            return listenPayload;
+            return resp.body as SubmitResponse;
         } catch (e) {
             throw e;
         }
