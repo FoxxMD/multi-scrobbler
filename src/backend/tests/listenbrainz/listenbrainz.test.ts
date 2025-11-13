@@ -6,8 +6,8 @@ import { http, HttpResponse } from "msw";
 import { PlayObject } from "../../../core/Atomic.js";
 import { UpstreamError } from "../../common/errors/UpstreamError.js";
 
-import { ListenbrainzApiClient, playToListenPayload } from "../../common/vendor/ListenbrainzApiClient.js";
-import { ListenResponse } from '../../common/vendor/listenbrainz/interfaces.js';
+import { ListenbrainzApiClient, playToListenPayload, listenResponseToPlay, listenPayloadToPlay } from "../../common/vendor/ListenbrainzApiClient.js";
+import { ListenPayload, ListenResponse, SubmitPayload } from '../../common/vendor/listenbrainz/interfaces.js';
 import { ExpectedResults } from "../utils/interfaces.js";
 import { withRequestInterception } from "../utils/networking.js";
 import artistWithProperJoiner from './correctlyMapped/artistProperHasJoinerInName.json' with { type: "json" };
@@ -33,7 +33,7 @@ describe('#PlayParse Listenbrainz Listen Parsing', function () {
     describe('When user-submitted artist/track do NOT match MB mappings', function() {
         it('Uses user submitted values when no artist mappings', async function () {
             for(const test of noArtistMapping as unknown as LZTestFixture[]) {
-                const play = ListenbrainzApiClient.listenResponseToPlay(test.data);
+                const play = listenResponseToPlay(test.data);
                 assert.equal(play.data.track, test.expected.track);
                 assert.sameDeepMembers(play.data.artists, test.expected.artists);
             }
@@ -41,7 +41,7 @@ describe('#PlayParse Listenbrainz Listen Parsing', function () {
 
         it('Uses user-submitted values when when either mapped track/artist do not match', async function () {
             for(const test of veryWrong as unknown as LZTestFixture[]) {
-                const play = ListenbrainzApiClient.listenResponseToPlay(test.data);
+                const play = listenResponseToPlay(test.data);
                 assert.equal(play.data.track, test.expected.track);
                 assert.sameDeepMembers( play.data.artists, test.expected.artists);
             }
@@ -49,7 +49,7 @@ describe('#PlayParse Listenbrainz Listen Parsing', function () {
 
         it('Should extract additional artists from track name', async function () {
             for(const test of incorrectMultiArtistsTrackName as unknown as LZTestFixture[]) {
-                const play = ListenbrainzApiClient.listenResponseToPlay(test.data);
+                const play = listenResponseToPlay(test.data);
                 assert.equal(play.data.track, test.expected.track);
                 assert.sameDeepMembers(play.data.artists, test.expected.artists);
             }
@@ -61,7 +61,7 @@ describe('#PlayParse Listenbrainz Listen Parsing', function () {
 
         it('Detects slightly different track names as equal', async function () {
             for(const test of slightlyDifferentNames as unknown as LZTestFixture[]) {
-                const play = ListenbrainzApiClient.listenResponseToPlay(test.data);
+                const play = listenResponseToPlay(test.data);
                 assert.equal(play.data.track, test.expected.track);
                 assert.sameDeepMembers(play.data.artists, test.expected.artists);
             }
@@ -69,7 +69,7 @@ describe('#PlayParse Listenbrainz Listen Parsing', function () {
 
         it('Uses all mapped artists', async function () {
             for(const test of multiMappedArtistsWithSingleUserArtist as unknown as LZTestFixture[]) {
-                const play = ListenbrainzApiClient.listenResponseToPlay(test.data);
+                const play = listenResponseToPlay(test.data);
                 assert.equal(play.data.track, test.expected.track);
                 assert.sameDeepMembers(play.data.artists, test.expected.artists);
             }
@@ -77,7 +77,7 @@ describe('#PlayParse Listenbrainz Listen Parsing', function () {
 
         it('Respects artists with joiner symbols in proper names', async function () {
             for(const test of artistWithProperJoiner as unknown as LZTestFixture[]) {
-                const play = ListenbrainzApiClient.listenResponseToPlay(test.data);
+                const play = listenResponseToPlay(test.data);
                 assert.equal(play.data.track, test.expected.track);
                 assert.sameDeepMembers( play.data.artists, test.expected.artists);
             }
@@ -85,7 +85,7 @@ describe('#PlayParse Listenbrainz Listen Parsing', function () {
 
         it('Detects user-submitted artists have joiners', async function () {
             for(const test of multiArtistInArtistName as unknown as LZTestFixture[]) {
-                const play = ListenbrainzApiClient.listenResponseToPlay(test.data);
+                const play = listenResponseToPlay(test.data);
                 assert.equal(play.data.track, test.expected.track);
                 assert.sameDeepMembers(play.data.artists, test.expected.artists);
             }
@@ -93,7 +93,7 @@ describe('#PlayParse Listenbrainz Listen Parsing', function () {
 
         it('Detects artists in user-submitted track', async function () {
             for(const test of multiArtistsInTrackName as unknown as LZTestFixture[]) {
-                const play = ListenbrainzApiClient.listenResponseToPlay(test.data);
+                const play = listenResponseToPlay(test.data);
                 assert.equal(play.data.track, test.expected.track);
                 assert.sameDeepMembers( play.data.artists, test.expected.artists);
             }
@@ -101,7 +101,7 @@ describe('#PlayParse Listenbrainz Listen Parsing', function () {
 
         it('Detects and uses normalized artist/track names', async function () {
             for(const test of normalizedValues as unknown as LZTestFixture[]) {
-                const play = ListenbrainzApiClient.listenResponseToPlay(test.data);
+                const play = listenResponseToPlay(test.data);
                 assert.equal(play.data.track, test.expected.track);
                 assert.sameDeepMembers( play.data.artists, test.expected.artists);
             }
@@ -164,7 +164,7 @@ describe('Listenbrainz Endpoint Behavior', function() {
 
         submitPayload.track_metadata.additional_info.artist_names = additionalArtists;
 
-        const playFromPayload = ListenbrainzApiClient.listenPayloadToPlay(submitPayload);
+        const playFromPayload = listenPayloadToPlay(submitPayload);
 
         expect(playFromPayload.data.artists).to.be.eql(additionalArtists)
         
@@ -179,7 +179,7 @@ describe('Listenbrainz Endpoint Behavior', function() {
 
         submitPayload.track_metadata.additional_info.artist_names = additionalArtists;
 
-        const playFromPayload = ListenbrainzApiClient.listenPayloadToPlay(submitPayload);
+        const playFromPayload = listenPayloadToPlay(submitPayload);
 
         expect(playFromPayload.data.artists).to.be.eql(['Artist A', 'Artist B'])
         
@@ -194,4 +194,38 @@ describe('Listenbrainz Endpoint Behavior', function() {
         
     });
 
+    it('Should use artist_names if provided, rather than parse artist from string', function () {
+
+        const playFromPayload = listenPayloadToPlay(submit);
+
+        expect(playFromPayload.data.artists).to.be.eql(submit.track_metadata.additional_info.artist_names);
+
+    });
+
 });
+
+
+const submit: ListenPayload = {
+    track_metadata: {
+        artist_name: "Télépopmusik feat. Mau",
+        track_name: "15 Minutes",
+        release_name: "Angel Milk",
+        additional_info: {
+            submission_client: "navidrome",
+            submission_client_version: "0.58.5 (131c0c56)",
+            tracknumber: 15,
+            artist_names: [
+                "Télépopmusik",
+                "Mau",
+            ],
+            artist_mbids: [
+                "265f242e-cf4e-4fbe-a3fe-43112387172f",
+                "",
+            ],
+            recording_mbid: "69864bde-4958-484e-bbeb-f9d8f06eb932",
+            release_mbid: "90e011e2-1a3b-483c-9684-355601689c0f",
+            release_group_mbid: "d1456679-3901-30a6-929c-39d6d84f49a0",
+            duration_ms: 939020,
+        },
+    },
+};

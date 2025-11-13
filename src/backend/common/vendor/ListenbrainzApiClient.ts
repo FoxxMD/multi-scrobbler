@@ -206,7 +206,7 @@ export class ListenbrainzApiClient extends AbstractApiClient {
 
         try {
             const resp = await this.getUserListens(maxTracks, user);
-            return resp.listens.map(x => ListenbrainzApiClient.listenResponseToPlay(x));
+            return resp.listens.map(x => listenResponseToPlay(x));
         } catch (e) {
             this.logger.error(`Error encountered while getting User listens | Error =>  ${e.message}`);
             return [];
@@ -248,64 +248,52 @@ export class ListenbrainzApiClient extends AbstractApiClient {
         }
     }
 
-    static listenPayloadToPlay(payload: ListenPayload, nowPlaying: boolean = false): PlayObject {
+    static submitToPlayObj(submitObj: SubmitPayload, playObj: PlayObject): PlayObject {
+        if (submitObj.payload.length > 0) {
+            const respPlay = {
+                ...playObj,
+            };
+            respPlay.data = {
+                ...playObj.data,
+                album: submitObj.payload[0].track_metadata?.release_name ?? playObj.data.album,
+                track: submitObj.payload[0].track_metadata?.track_name ?? playObj.data.album,
+            };
+            return respPlay;
+        }
+        return playObj;
+    }
+
+    static formatPlayObj(obj: any, options: FormatPlayObjectOptions): PlayObject {
+        return listenResponseToPlay(obj);
+    }
+}
+
+export const listenPayloadToPlay = (payload: ListenPayload, nowPlaying: boolean = false): PlayObject => {
+
+        const listened = payload.listened_at ?? dayjs().unix();
+        const listenedAt = typeof listened === 'number' ? dayjs.unix(listened) : dayjs(listened);
+
         const {
-            listened_at = dayjs().unix(),
             track_metadata: {
-                artist_name,
-                track_name,
-                release_name,
-                additional_info: {
-                    duration,
-                    duration_ms,
-                    track_mbid,
-                    artist_mbids,
-                    artist_names = [],
-                    release_mbid,
-                    release_group_mbid,
-                    release_artist_name,
-                    release_artist_names = []
-                } = {}
+                additional_info = {}
             } = {},
         } = payload;
 
-        let albumArtists: string[];
-        if(release_artist_name !== undefined) {
-            albumArtists = [release_artist_name];
-        }
-        if(release_artist_names.length > 0) {
-            albumArtists = unique([...(albumArtists ?? []), ...release_artist_names])
-        }
+        const play = listenResponseToPlay({
+            ...payload, 
+            track_metadata: {
+                ...payload.track_metadata, 
+                additional_info,
+            }, 
+            listened_at: listenedAt.unix()
+        });
 
-        let dur: number = duration;
-        if(dur === undefined && duration_ms !== undefined) {
-            dur = duration_ms/1000;
-        }
+        play.meta.nowPlaying = nowPlaying;
 
-        return {
-            data: {
-                playDate: typeof listened_at === 'number' ? dayjs.unix(listened_at) : dayjs(listened_at),
-                track: track_name,
-                artists: unique([artist_name, ...artist_names]),
-                albumArtists,
-                album: release_name,
-                duration: dur,
-                meta: {
-                    brainz: {
-                        artist: artist_mbids !== undefined ? artist_mbids : undefined,
-                        album: release_mbid,
-                        albumArtist: release_group_mbid,
-                        track: track_mbid
-                    }
-                }
-            },
-            meta: {
-                nowPlaying,
-            }
-        }
+        return play;
     }
 
-    static listenResponseToPlay(listen: ListenResponse): PlayObject {
+export const listenResponseToPlay = (listen: ListenResponse): PlayObject => {
         const {
             listened_at,
             track_metadata: {
@@ -318,13 +306,13 @@ export class ListenbrainzApiClient extends AbstractApiClient {
                     release_mbid
                 } = {},
                 additional_info: {
-                    release_artists_names = [],
+                    release_artist_names = [],
                     release_group_mbid
                 } = {}
             } = {}
         } = listen;
 
-        const naivePlay = ListenbrainzApiClient.listenResponseToNaivePlay(listen);
+        const naivePlay = listenToNaivePlay(listen);
 
         if(artistMappings.length === 0) {
             // if there are no artist mappings its likely MB doesn't have info on this track so just use our internally derived attempt
@@ -545,7 +533,7 @@ export class ListenbrainzApiClient extends AbstractApiClient {
         const primaryArtistMBMapping = artistMappings.find(x => x.artist_credit_name === primaryArtist);
         if(primaryArtistMBMapping !== undefined) {
             // only include as primary if musicbrainz does not disagree with us
-            if(release_artists_names.length === 0 || (release_artists_names.length > 0 && release_artists_names.includes(primaryArtist))) {
+            if(release_artist_names.length === 0 || (release_artist_names.length > 0 && release_artist_names.includes(primaryArtist))) {
                 brainzMetaRaw.albumArtist = primaryArtistMBMapping.artist_mbid;
             }
         }
@@ -570,10 +558,10 @@ export class ListenbrainzApiClient extends AbstractApiClient {
         return play;
     }
 
-    /**
-     * Try to parse true artists and track name without using MB information
-     * */
-    static listenResponseToNaivePlay(listen: ListenResponse): PlayObject {
+/**
+ * Try to parse true artists and track name without using MB information
+ * */
+export const listenToNaivePlay = (listen: ListenResponse): PlayObject => {
         const {
             listened_at,
             recording_msid,
@@ -581,16 +569,21 @@ export class ListenbrainzApiClient extends AbstractApiClient {
                 track_name,
                 artist_name,
                 release_name,
-                duration,
                 additional_info: {
                     recording_msid: aRecordingMsid,
                     recording_mbid: aRecordingMbid,
+                    release_artist_name,
+                    release_artist_names = [],
+                    release_group_mbid,
+                    release_mbid,
+                    artist_mbids = [],
                     duration: aDuration,
                     duration_ms: aDurationMs,
                     music_service_name,
                     music_service,
                     submission_client,
-                    submission_client_version
+                    submission_client_version,
+                    artist_names = [],
                 } = {},
                 mbid_mapping: {
                     recording_mbid: mRecordingMbid
@@ -601,30 +594,45 @@ export class ListenbrainzApiClient extends AbstractApiClient {
 
         const playId = recording_msid ?? aRecordingMsid;
         const trackId = aRecordingMbid ?? mRecordingMbid;
-        let dur = duration ?? aDuration;
+        let dur = aDuration;
         if (dur === undefined && aDurationMs !== undefined) {
             dur = Math.round(aDurationMs / 1000);
         }
 
         let normalTrackName = track_name;
-        let artists: string[] = [artist_name];
+        let artists: string[] = [];
 
-        // since we aren't using MB mappings we should be conservative and assume artist string with & are proper names (not joiner)
-        const parsedArtists = parseCredits(artist_name, [',', '/', '\\']);
-        if (parsedArtists !== undefined) {
-            if (parsedArtists.primary !== undefined) {
-                artists.push(parsedArtists.primary);
+        if(artist_names.length > 0) {
+            artists = artist_names;
+        } else {
+            artists = [artist_name];
+
+            // since we aren't using MB mappings we should be conservative and assume artist string with & are proper names (not joiner)
+            const parsedArtists = parseCredits(artist_name, [',', '/', '\\']);
+            if (parsedArtists !== undefined) {
+                if (parsedArtists.primary !== undefined) {
+                    artists.push(parsedArtists.primary);
+                }
+                artists = artists.concat(parsedArtists.secondary);
             }
-            artists = artists.concat(parsedArtists.secondary);
+            // use all delimiters when trying to find artists in track name
+            const parsedTrackArtists = parseCredits(track_name);
+            if (parsedTrackArtists !== undefined) {
+                // if we found "ft. something" in track string then we now have a "real" track name and more artists
+                normalTrackName = parsedTrackArtists.primary;
+                artists = artists.concat(parsedTrackArtists.secondary)
+            }
+            artists = uniqueNormalizedStrArr(artists);
         }
-        // use all delimiters when trying to find artists in track name
-        const parsedTrackArtists = parseCredits(track_name);
-        if (parsedTrackArtists !== undefined) {
-            // if we found "ft. something" in track string then we now have a "real" track name and more artists
-            normalTrackName = parsedTrackArtists.primary;
-            artists = artists.concat(parsedTrackArtists.secondary)
+
+        let albumArtists: string[];
+        if(release_artist_name !== undefined) {
+            albumArtists = [release_artist_name];
         }
-        artists = uniqueNormalizedStrArr(artists);
+        if(release_artist_names.length > 0) {
+            albumArtists = unique([...(albumArtists ?? []), ...release_artist_names])
+        }
+
 
         const play: PlayObject = {
             data: {
@@ -632,24 +640,35 @@ export class ListenbrainzApiClient extends AbstractApiClient {
                 track: normalTrackName,
                 artists: artists,
                 album: release_name,
-                duration: dur
+                albumArtists,
+                duration: dur,
+                meta: {
+                }
             },
             meta: {
-                source: 'listenbrainz',
+                source: submission_client ?? 'listenbrainz',
                 playId,
                 deviceId: combinePartsToString([music_service_name ?? music_service, submission_client, submission_client_version])
             }
         }
 
-        const brainzMeta: BrainzMeta = {};
-        if(Object.keys(additional_info).length > 0) {
-            brainzMeta.additionalInfo = additional_info;
+        if(trackId !== undefined) {
+            play.meta.trackid = trackId;
         }
 
-        // we shouldn't include more metdata here because we don't know if the MB mapped data is actually correct
-        if(trackId !== undefined) {
-            brainzMeta.track = trackId;
-            play.meta.trackid = trackId;
+        const brainzMeta: BrainzMeta = removeUndefinedKeys({
+            album: release_mbid,
+            releaseGroup: release_group_mbid,
+            track: trackId
+        }) ?? {};
+
+        if(Object.keys(additional_info).length > 0) {
+            brainzMeta.additionalInfo = additional_info;
+            
+        }
+        if(artist_mbids.filter(x => x.trim() !== "").length > 0) {
+            brainzMeta.artist = artist_mbids.filter(x => x.trim() !== "");
+            brainzMeta.additionalInfo.artist_mbids = brainzMeta.artist;
         }
 
         if(Object.keys(brainzMeta).length > 0) {
@@ -660,26 +679,6 @@ export class ListenbrainzApiClient extends AbstractApiClient {
 
         return play;
     }
-
-    static submitToPlayObj(submitObj: SubmitPayload, playObj: PlayObject): PlayObject {
-        if (submitObj.payload.length > 0) {
-            const respPlay = {
-                ...playObj,
-            };
-            respPlay.data = {
-                ...playObj.data,
-                album: submitObj.payload[0].track_metadata?.release_name ?? playObj.data.album,
-                track: submitObj.payload[0].track_metadata?.track_name ?? playObj.data.album,
-            };
-            return respPlay;
-        }
-        return playObj;
-    }
-
-    static formatPlayObj(obj: any, options: FormatPlayObjectOptions): PlayObject {
-        return ListenbrainzApiClient.listenResponseToPlay(obj);
-    }
-}
 
 
 export const playToListenPayload = (play: PlayObject): ListenPayload => {
