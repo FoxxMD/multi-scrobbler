@@ -25,9 +25,10 @@ import {
     ScrobbledPlayObject,
     SourceIdentifier,
     TIME_WEIGHT,
-    TITLE_WEIGHT, TRANSFORM_HOOK,
+    TITLE_WEIGHT,
 } from "../common/infrastructure/Atomic.js";
 import { CommonClientConfig, NowPlayingOptions, UpstreamRefreshOptions } from "../common/infrastructure/config/client/index.js";
+import { TRANSFORM_HOOK } from "../common/infrastructure/Transform.js";
 import { Notifiers } from "../notifier/Notifiers.js";
 import {
     comparingMultipleArtists,
