@@ -7,7 +7,7 @@ import { PlayObject } from "../../../core/Atomic.js";
 import { UpstreamError } from "../../common/errors/UpstreamError.js";
 
 import { ListenbrainzApiClient, playToListenPayload, listenResponseToPlay, listenPayloadToPlay } from "../../common/vendor/ListenbrainzApiClient.js";
-import { ListenResponse } from '../../common/vendor/listenbrainz/interfaces.js';
+import { ListenPayload, ListenResponse, SubmitPayload } from '../../common/vendor/listenbrainz/interfaces.js';
 import { ExpectedResults } from "../utils/interfaces.js";
 import { withRequestInterception } from "../utils/networking.js";
 import artistWithProperJoiner from './correctlyMapped/artistProperHasJoinerInName.json' with { type: "json" };
@@ -194,4 +194,38 @@ describe('Listenbrainz Endpoint Behavior', function() {
         
     });
 
+    it('Should use artist_names if provided, rather than parse artist from string', function () {
+
+        const playFromPayload = listenPayloadToPlay(submit);
+
+        expect(playFromPayload.data.artists).to.be.eql(submit.track_metadata.additional_info.artist_names);
+
+    });
+
 });
+
+
+const submit: ListenPayload = {
+    track_metadata: {
+        artist_name: "Télépopmusik feat. Mau",
+        track_name: "15 Minutes",
+        release_name: "Angel Milk",
+        additional_info: {
+            submission_client: "navidrome",
+            submission_client_version: "0.58.5 (131c0c56)",
+            tracknumber: 15,
+            artist_names: [
+                "Télépopmusik",
+                "Mau",
+            ],
+            artist_mbids: [
+                "265f242e-cf4e-4fbe-a3fe-43112387172f",
+                "",
+            ],
+            recording_mbid: "69864bde-4958-484e-bbeb-f9d8f06eb932",
+            release_mbid: "90e011e2-1a3b-483c-9684-355601689c0f",
+            release_group_mbid: "d1456679-3901-30a6-929c-39d6d84f49a0",
+            duration_ms: 939020,
+        },
+    },
+};

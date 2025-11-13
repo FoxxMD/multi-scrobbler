@@ -97,6 +97,8 @@ export interface AdditionalTrackInfo {
     spotify_artist_ids?: string[];
     artist_names?: string[];
     albumartist?: string;
+
+    tracknumber?: number
 }
 export interface Track {
     artist_name: string;
@@ -139,7 +141,7 @@ export interface TrackPayload extends MinimumTrack {
     mbid_mapping?: MbidMapping
 }
 export interface ListenPayload {
-    listened_at: Date | number;
+    listened_at?: Date | number;
     track_metadata: TrackPayload;
 }
 
