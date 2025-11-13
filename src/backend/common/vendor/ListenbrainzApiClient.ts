@@ -206,7 +206,7 @@ export class ListenbrainzApiClient extends AbstractApiClient {
 
         try {
             const resp = await this.getUserListens(maxTracks, user);
-            return resp.listens.map(x => ListenbrainzApiClient.listenResponseToPlay(x));
+            return resp.listens.map(x => listenResponseToPlay(x));
         } catch (e) {
             this.logger.error(`Error encountered while getting User listens | Error =>  ${e.message}`);
             return [];
@@ -248,7 +248,27 @@ export class ListenbrainzApiClient extends AbstractApiClient {
         }
     }
 
-    static listenPayloadToPlay(payload: ListenPayload, nowPlaying: boolean = false): PlayObject {
+    static submitToPlayObj(submitObj: SubmitPayload, playObj: PlayObject): PlayObject {
+        if (submitObj.payload.length > 0) {
+            const respPlay = {
+                ...playObj,
+            };
+            respPlay.data = {
+                ...playObj.data,
+                album: submitObj.payload[0].track_metadata?.release_name ?? playObj.data.album,
+                track: submitObj.payload[0].track_metadata?.track_name ?? playObj.data.album,
+            };
+            return respPlay;
+        }
+        return playObj;
+    }
+
+    static formatPlayObj(obj: any, options: FormatPlayObjectOptions): PlayObject {
+        return listenResponseToPlay(obj);
+    }
+}
+
+export const listenPayloadToPlay = (payload: ListenPayload, nowPlaying: boolean = false): PlayObject => {
 
         // const listened = payload.listened_at ?? dayjs().unix();
         // const listenedAt = typeof listened === 'number' ? dayjs.unix(listened) : dayjs(listened);
@@ -328,7 +348,7 @@ export class ListenbrainzApiClient extends AbstractApiClient {
         return oldPlay;
     }
 
-    static listenResponseToPlay(listen: ListenResponse): PlayObject {
+export const listenResponseToPlay = (listen: ListenResponse): PlayObject => {
         const {
             listened_at,
             track_metadata: {
@@ -347,7 +367,7 @@ export class ListenbrainzApiClient extends AbstractApiClient {
             } = {}
         } = listen;
 
-        const naivePlay = ListenbrainzApiClient.listenResponseToNaivePlay(listen);
+        const naivePlay = listenResponseToNaivePlay(listen);
 
         if(artistMappings.length === 0) {
             // if there are no artist mappings its likely MB doesn't have info on this track so just use our internally derived attempt
@@ -593,10 +613,10 @@ export class ListenbrainzApiClient extends AbstractApiClient {
         return play;
     }
 
-    /**
-     * Try to parse true artists and track name without using MB information
-     * */
-    static listenResponseToNaivePlay(listen: ListenResponse): PlayObject {
+/**
+ * Try to parse true artists and track name without using MB information
+ * */
+export const listenResponseToNaivePlay = (listen: ListenResponse): PlayObject => {
         const {
             listened_at,
             recording_msid,
@@ -682,26 +702,6 @@ export class ListenbrainzApiClient extends AbstractApiClient {
 
         return play;
     }
-
-    static submitToPlayObj(submitObj: SubmitPayload, playObj: PlayObject): PlayObject {
-        if (submitObj.payload.length > 0) {
-            const respPlay = {
-                ...playObj,
-            };
-            respPlay.data = {
-                ...playObj.data,
-                album: submitObj.payload[0].track_metadata?.release_name ?? playObj.data.album,
-                track: submitObj.payload[0].track_metadata?.track_name ?? playObj.data.album,
-            };
-            return respPlay;
-        }
-        return playObj;
-    }
-
-    static formatPlayObj(obj: any, options: FormatPlayObjectOptions): PlayObject {
-        return ListenbrainzApiClient.listenResponseToPlay(obj);
-    }
-}
 
 
 export const playToListenPayload = (play: PlayObject): ListenPayload => {
