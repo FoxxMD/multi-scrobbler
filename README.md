@@ -30,8 +30,10 @@ A javascript app to scrobble music you listen to, to [Maloja](https://github.com
     * [MPRIS (Linux Desktop)](https://foxxmd.github.io/multi-scrobbler/configuration/sources/mpris)
     * [Musikcube](https://foxxmd.github.io/multi-scrobbler/configuration/sources/musikcube)
     * [Plex](https://foxxmd.github.io/multi-scrobbler/configuration/sources/plex)
+    * [Rocksky](https://foxxmd.github.io/multi-scrobbler/configuration/sources/rocksky-source)
     * [Spotify](https://foxxmd.github.io/multi-scrobbler/configuration/sources/spotify)
     * [Subsonic-compatible APIs](https://foxxmd.github.io/multi-scrobbler/configuration/sources/subsonic) (like [Airsonic](https://airsonic.github.io/) and [Navidrome](https://www.navidrome.org/))
+    * [teal.fm](https://foxxmd.github.io/multi-scrobbler/configuration/sources/tealfm-source)
     * [WebScrobbler](https://foxxmd.github.io/multi-scrobbler/configuration/sources/webscrobbler)
     * [VLC](https://foxxmd.github.io/multi-scrobbler/configuration/sources/vlc)
     * [Yamaha MusicCast](https://foxxmd.github.io/multi-scrobbler/configuration/sources/yamaha-musiccast)
@@ -42,6 +44,7 @@ A javascript app to scrobble music you listen to, to [Maloja](https://github.com
     * [ListenBrainz](https://foxxmd.github.io/multi-scrobbler/configuration/clients/listenbrainz)
     * [Maloja](https://foxxmd.github.io/multi-scrobbler/configuration/clients/maloja)
     * [Rocksky](https://foxxmd.github.io/multi-scrobbler/configuration/clients/rocksky)
+    * [teal.fm](https://foxxmd.github.io/multi-scrobbler/configuration/clients/tealfm)
 * Monitor status of Sources and Clients using [webhooks (Gotify, Ntfy, Apprise)](https://foxxmd.github.io/multi-scrobbler/configuration#webhook-configurations) or [healthcheck endpoint](https://foxxmd.github.io/multi-scrobbler/configuration#health-endpoint)
 * Supports [Now Playing](https://foxxmd.github.io/multi-scrobbler/configuration/clients#now-playing) for scrobble Clients
 * Supports configuring for single or multiple users (scrobbling for your friends and family!)
