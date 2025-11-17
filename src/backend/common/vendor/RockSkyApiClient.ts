@@ -130,7 +130,7 @@ export class RockSkyApiClient extends AbstractApiClient {
 
     testAuth = async () => {
         try {
-            const resp = await this.callApi(request.get(`${joinedUrl(this.lzUrl.url,'1/validate-token')}`));
+            const resp = await this.callLZApi(request.get(`${joinedUrl(this.lzUrl.url,'1/validate-token')}`));
             return true;
         } catch (e) {
             throw e;
