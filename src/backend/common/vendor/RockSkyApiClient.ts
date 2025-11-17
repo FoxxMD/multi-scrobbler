@@ -173,18 +173,22 @@ export class RockSkyApiClient extends AbstractApiClient {
     submitListen = async (play: PlayObject, options: SubmitOptions = {}) => {
         const { log = false, listenType = 'single'} = options;
         try {
-            const listenPayload: SubmitPayload = {listen_type: listenType, payload: [playToListenPayload(play)]};
+
+            const listenPayload = playToListenPayload(play);
             if(listenType === 'playing_now') {
-                delete listenPayload.payload[0].listened_at;
+                delete listenPayload.listened_at;
             }
+            // https://tangled.org/rocksky.app/rocksky/blob/main/crates/scrobbler/src/listenbrainz/types.rs#L11
+            // rocksky only uses duration_ms
+            if(play.data.duration !== undefined && listenPayload.track_metadata.additional_info?.duration !== undefined) {
+                delete listenPayload.track_metadata.additional_info.duration;
+                listenPayload.track_metadata.additional_info.duration_ms = play.data.duration * 1000;
+            }
+            const submitPayload: SubmitPayload = {listen_type: listenType, payload: [listenPayload]};
             if(log) {
-                this.logger.debug(`Submit Payload: ${JSON.stringify(listenPayload)}`);
+                this.logger.debug(`Submit Payload: ${JSON.stringify(submitPayload)}`);
             }
-            // response consists of {"status": "ok"}
-            // so no useful information
-            // https://listenbrainz.readthedocs.io/en/latest/users/api-usage.html#submitting-listens
-            // TODO may we should make a call to recent-listens to get the parsed scrobble?
-            const resp = await this.callLZApi(request.post(`${joinedUrl(this.lzUrl.url,'1/submit-listens')}`).type('json').send(listenPayload));
+            const resp = await this.callLZApi(request.post(`${joinedUrl(this.lzUrl.url,'1/submit-listens')}`).type('json').send(submitPayload));
             if(log) {
                 this.logger.debug(`Submit Response: ${resp.text}`)
             }
@@ -192,72 +196,6 @@ export class RockSkyApiClient extends AbstractApiClient {
         } catch (e) {
             throw e;
         }
-    }
-
-    static listenPayloadToPlay(payload: ListenPayload, nowPlaying: boolean = false): PlayObject {
-        const {
-            listened_at = dayjs().unix(),
-            track_metadata: {
-                artist_name,
-                track_name,
-                release_name,
-                additional_info: {
-                    duration,
-                    track_mbid,
-                    artist_mbids,
-                    artist_names = [],
-                    release_mbid,
-                    release_group_mbid,
-                    release_artist_name,
-                    release_artist_names = []
-                } = {}
-            } = {},
-        } = payload;
-
-        let albumArtists: string[];
-        if(release_artist_name !== undefined) {
-            albumArtists = [release_artist_name];
-        }
-        if(release_artist_names.length > 0) {
-            albumArtists = unique([...(albumArtists ?? []), ...release_artist_names])
-        }
-
-        return {
-            data: {
-                playDate: typeof listened_at === 'number' ? dayjs.unix(listened_at) : dayjs(listened_at),
-                track: track_name,
-                artists: unique([artist_name, ...artist_names]),
-                albumArtists,
-                album: release_name,
-                duration,
-                meta: {
-                    brainz: {
-                        artist: artist_mbids !== undefined ? artist_mbids : undefined,
-                        album: release_mbid,
-                        albumArtist: release_group_mbid,
-                        track: track_mbid
-                    }
-                }
-            },
-            meta: {
-                nowPlaying,
-            }
-        }
-    }
-
-    static submitToPlayObj(submitObj: SubmitPayload, playObj: PlayObject): PlayObject {
-        if (submitObj.payload.length > 0) {
-            const respPlay = {
-                ...playObj,
-            };
-            respPlay.data = {
-                ...playObj.data,
-                album: submitObj.payload[0].track_metadata?.release_name ?? playObj.data.album,
-                track: submitObj.payload[0].track_metadata?.track_name ?? playObj.data.album,
-            };
-            return respPlay;
-        }
-        return playObj;
     }
 
     static formatPlayObj(obj: any, options: FormatPlayObjectOptions): PlayObject {
