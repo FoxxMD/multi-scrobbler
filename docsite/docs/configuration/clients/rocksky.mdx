@@ -23,9 +23,19 @@ To monitor and re-scrobble activity **from** Rocksky create a [Rocksky (Source)]
 
 </details>
 
-:::warning
+:::warning[Public Data]
 
 The default Bluesky PDS is **public**, meaning your scrobbles are also public (read-only). This isn't any different than using Last.fm or Listenbrainz, in terms of privacy.
+
+:::
+
+:::warning[No Scrobbling Guarantee]
+
+Rocksky **does not guarantee** that every scrobble you send will be persisted. Rocksky's design goal is to store scrobbles with **metdata-complete, 3rd party verifiable track information** so that it can be a metadata-rich discovery platform, rather than an exhaustive scrobble data source-of-truth.
+
+To do this it *asynchronously* matches your scrobble data against Musicbrainz's and/or Spotify's catalogs, *after the scrobble has been submitted.* **If the scrobble does not end up matching then it is not persisted.**
+
+If you need your scrobbles to be 100% captured then you should scrobble to an *additional* [Scrobble Client](/configuration/clients).
 
 :::
 
