@@ -30,6 +30,8 @@ export default class RockskyScrobbler extends AbstractScrobbleClient {
         // 1000 is way too high. maxing at 100
         this.MAX_INITIAL_SCROBBLES_FETCH = 100;
         this.supportsNowPlaying = false;
+        // PDS rate limit for operations is ~2/sec
+        this.scrobbleDelay = 2000;
     }
 
     formatPlayObj = (obj: any, options: FormatPlayObjectOptions = {}) => ListenbrainzApiClient.formatPlayObj(obj, options);
