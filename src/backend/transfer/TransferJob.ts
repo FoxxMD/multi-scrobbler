@@ -2,7 +2,7 @@ import { childLogger, Logger } from "@foxxmd/logging";
 import dayjs, { Dayjs } from "dayjs";
 import { PlayObject } from "../../core/Atomic.js";
 import { buildTrackString } from "../../core/StringUtils.js";
-import { TRANSFORM_HOOK } from "../common/infrastructure/Atomic.js";
+import { hasPagelessTimeRangeListens, hasPaginagedListens, hasPaginatedTimeRangeListens, PaginatedSource, TRANSFORM_HOOK } from "../common/infrastructure/Atomic.js";
 import LastfmApiClient from "../common/vendor/LastfmApiClient.js";
 import { ListenbrainzApiClient } from "../common/vendor/ListenbrainzApiClient.js";
 import AbstractScrobbleClient from "../scrobblers/AbstractScrobbleClient.js";
@@ -139,12 +139,10 @@ export class TransferJob {
                 throw new Error(`Client '${this.clientName}' is not ready`);
             }
 
-            if (source instanceof LastfmSource) {
-                await this.runLastfmTransfer(source as LastfmSource, client);
-            } else if (source instanceof ListenbrainzSource) {
-                await this.runListenbrainzTransfer(source as ListenbrainzSource, client);
+            if(this.playCount !== undefined) {
+                await this.runPlayCountTransfer(source as unknown as PaginatedSource, client);
             } else {
-                await this.runGenericTransfer(source, client);
+                await this.runTimeRangeTransfer(source as unknown as PaginatedSource, client);
             }
 
             this.progress.status = 'completed';
@@ -302,6 +300,154 @@ export class TransferJob {
 
         const sortedPlays = [...plays].sort(sortByOldestPlayDate);
         await this.processPlaysWithSlidingWindow(sortedPlays, client);
+    }
+
+    private async runPlayCountTransfer(source: PaginatedSource, client: AbstractScrobbleClient): Promise<void> {
+
+        let currentPage = 1; 
+        let hasMorePages = true;
+        let totalPages: number | undefined;
+        let totalPagesKnown = false;
+        let pageSize = this.PAGE_SIZE;
+
+        let fromDate: number | undefined;
+        let toDate: number | undefined;
+
+         while(hasMorePages) {
+            this.progress.currentPage = currentPage;
+
+            const remaining = this.playCount - this.progress.processed;
+            pageSize = Math.min(this.PAGE_SIZE, remaining);
+            if (pageSize <= 0) {
+                this.logger.info(`Reached play count limit of ${this.playCount}`);
+                break;
+            }
+
+
+            let plays: PlayObject[] = [];
+
+            if(hasPagelessTimeRangeListens(source)) {
+                const resp = await source.getPagelessTimeRangeListens({
+                    from: fromDate,
+                    to: toDate,
+                    limit: pageSize
+                });
+                if(resp.meta.total !== undefined) {
+                    totalPages = resp.meta.total;
+                }
+                if(resp.data.length === 0) {
+                    hasMorePages = false;
+                }
+                plays = [...resp.data];
+                plays.sort(sortByOldestPlayDate);
+                toDate = plays[0].data.playDate.unix() - 1;
+            } else if(hasPaginagedListens(source)) {
+
+                const resp = await source.getPaginatedListens({
+                    page: currentPage,
+                    limit: pageSize
+                });
+                if(resp.meta.total !== undefined) {
+                    totalPages = resp.meta.total;
+                }
+                plays = [...resp.data];
+                plays.sort(sortByOldestPlayDate);
+            } else {
+                throw new Error('Source does not support recent listens without a time range');
+            }
+
+            if(!totalPagesKnown && totalPages !== undefined) {
+                this.progress.total = this.playCount ? Math.min(this.playCount, totalPages) : totalPages;
+                this.progress.totalPages = Math.ceil(this.progress.total / this.PAGE_SIZE);
+
+                totalPagesKnown = true;
+                this.logger.info(`Total plays in source: ${totalPages}, Will transfer: ${this.progress.total}, Expected pages: ${this.progress.totalPages}`);
+            }
+
+            if(!hasMorePages) {
+                break;
+            }
+
+            if (plays.length > 0) {
+                await this.processPlaysWithSlidingWindow(plays, client);
+            }
+
+            if (this.playCount && this.progress.processed >= this.playCount) {
+                this.logger.info(`Reached play count limit of ${this.playCount}`);
+                hasMorePages = false;
+            } else {
+                currentPage++;
+            }
+         }
+    }
+
+
+    private async runTimeRangeTransfer(source: PaginatedSource, client: AbstractScrobbleClient): Promise<void> {
+
+        let currentPage = 1; 
+        let hasMorePages = true;
+        let totalPages: number | undefined;
+        let totalPagesKnown = false;
+        let pageSize = this.PAGE_SIZE;
+
+        let fromDate: number | undefined = this.fromDate.unix();
+        let toDate: number | undefined = this.toDate.unix();
+
+         while(hasMorePages) {
+            this.progress.currentPage = currentPage;
+
+            let plays: PlayObject[] = [];
+
+            if(hasPagelessTimeRangeListens(source)) {
+                const resp = await source.getPagelessTimeRangeListens({
+                    from: fromDate,
+                    to: toDate,
+                    limit: pageSize
+                });
+                if(resp.meta.total !== undefined) {
+                    totalPages = resp.meta.total;
+                }
+                if(resp.data.length === 0) {
+                    hasMorePages = false;
+                }
+                plays = [...resp.data];
+                plays.sort(sortByOldestPlayDate);
+                fromDate = plays[plays.length - 1].data.playDate.unix() + 1;
+            } else if(hasPaginatedTimeRangeListens(source)) {
+
+                const resp = await source.getPaginatedTimeRangeListens({
+                    page: currentPage,
+                    from: fromDate,
+                    to: toDate,
+                    limit: pageSize
+                });
+                if(resp.meta.total !== undefined) {
+                    totalPages = resp.meta.total;
+                }
+                plays = [...resp.data];
+                plays.sort(sortByOldestPlayDate);
+            } else {
+                throw new Error('Source does not support time ranges');
+            }
+
+            if(!totalPagesKnown && totalPages !== undefined) {
+                this.progress.total = this.playCount ? Math.min(this.playCount, totalPages) : totalPages;
+                this.progress.totalPages = Math.ceil(this.progress.total / this.PAGE_SIZE);
+
+                totalPagesKnown = true;
+                this.logger.info(`Total plays in source: ${totalPages}, Will transfer: ${this.progress.total}, Expected pages: ${this.progress.totalPages}`);
+            }
+
+            if(!hasMorePages) {
+                break;
+            }
+
+            if (plays.length > 0) {
+                await this.processPlaysWithSlidingWindow(plays, client);
+            }
+
+            currentPage++;
+         }
     }
 
     private timeRangeScrobbles: PlayObject[] = [];

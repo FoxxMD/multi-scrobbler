@@ -1,5 +1,6 @@
 import { Logger } from '@foxxmd/logging';
-import { Dayjs } from "dayjs";
+import { SearchAndReplaceRegExp } from "@foxxmd/regex-buddy-core";
+import { Dayjs, ManipulateType } from "dayjs";
 import { Request, Response } from "express";
 import { NextFunction, ParamsDictionary, Query } from "express-serve-static-core";
 import { FixedSizeList } from 'fixed-size-list';
@@ -399,4 +400,55 @@ export interface MusicbrainzApiConfigData {
 export const MUSICBRAINZ_URL = 'https://musicbrainz.org';
 export const MBID_VARIOUS_ARTISTS = "89ad4ac3-39f7-470e-963a-56509c546377";
 
-export type MusicBrainzSingletonMap = Map<string,MusicBrainzApi>;
+export type MusicBrainzSingletonMap = Map<string,MusicBrainzApi>;export interface PaginatedLimit {
+    /** per page max number of results to return */
+    limit?: number
+}
+
+export interface PaginatedTimeRangeOptions {
+    /** Unix timestamp */
+    from: number
+    /** Unix timestamp */
+    to: number
+}
+
+export interface PaginatedListensOptions extends PaginatedLimit {
+    page: number
+}
+
+export interface PagelessListensTimeRangeOptions extends Partial<PaginatedTimeRangeOptions>, PaginatedLimit {
+}
+
+export interface PaginatedListensTimeRangeOptions extends Partial<PaginatedTimeRangeOptions>, PaginatedListensOptions {
+}
+
+export interface PaginatedResults {
+    total?: number
+}
+
+export interface PaginatedListens {
+    getPaginatedListens(params: PaginatedListensOptions): Promise<{data: PlayObject[], meta: PaginatedListensOptions & PaginatedResults}>
+}
+
+export const hasPaginagedListens = (obj: Object): obj is PaginatedListens => {
+    return 'getPaginatedListens' in obj;
+}
+
+export interface PaginatedTimeRangeListens {
+    getPaginatedTimeRangeListens(params: PaginatedListensTimeRangeOptions): Promise<{data: PlayObject[], meta: PaginatedListensTimeRangeOptions & PaginatedResults}>
+    getPaginatedUnitOfTime(): ManipulateType;
+}
+
+export const hasPaginatedTimeRangeListens = (obj: Object): obj is PaginatedTimeRangeListens => {
+    return 'getPaginatedTimeRangeListens' in obj;
+}
+
+export interface PagelessTimeRangeListens {
+    getPagelessTimeRangeListens(params: PagelessListensTimeRangeOptions): Promise<{data: PlayObject[], meta: PagelessListensTimeRangeOptions & PaginatedResults}>
+}
+
+export const hasPagelessTimeRangeListens = (obj: Object): obj is PagelessTimeRangeListens => {
+    return 'getPaginatedTimeRangeListens' in obj;
+}
+
+export type PaginatedSource = PaginatedListens | PaginatedTimeRangeListens | PagelessTimeRangeListens;

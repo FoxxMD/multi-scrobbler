@@ -1,6 +1,6 @@
 import dayjs from "dayjs";
 import { PlayObject, PlayObjectLifecycleless, ScrobbleActionResult, URLData } from "../../../../core/Atomic.js";
-import { AbstractApiOptions, DEFAULT_RETRY_MULTIPLIER } from "../../infrastructure/Atomic.js";
+import { AbstractApiOptions, DEFAULT_RETRY_MULTIPLIER, PaginatedListensTimeRangeOptions, PaginatedTimeRangeListens } from "../../infrastructure/Atomic.js";
 import { KoitoData, ListenObjectResponse, ListensResponse } from "../../infrastructure/config/client/koito.js";
 import AbstractApiClient from "../AbstractApiClient.js";
 import { getBaseFromUrl, isPortReachableConnect, joinedUrl, normalizeWebAddress } from "../../../utils/NetworkUtils.js";
@@ -20,7 +20,7 @@ interface SubmitOptions {
 
 const KOITO_LZ_PATH: RegExp = new RegExp(/^\/apis\/listenbrainz(\/?1?\/?)?$/);
 
-export class KoitoApiClient extends AbstractApiClient {
+export class KoitoApiClient extends AbstractApiClient implements PaginatedTimeRangeListens {
 
     declare config: KoitoData;
     url: URLData;
@@ -175,6 +175,52 @@ export class KoitoApiClient extends AbstractApiClient {
         } catch (e) {
             throw e;
         }
+    }
+
+    getPaginatedTimeRangeListens = async (params: PaginatedListensTimeRangeOptions) => {
+        let dateData: {week?: number, month?: number, year?: number} = {};
+        if(params.from !== undefined && params.to !== undefined) {
+            const from = dayjs.unix(params.from);
+            const to = dayjs.unix(params.to);
+            if(from.week() === to.week()) {
+                from.subtract
+                dateData = {
+                    year: from.year(),
+                    month: from.month(),
+                    week: from.week()
+                }
+            } else if(from.month() === to.month()) {
+                dateData = {
+                    year: from.year(),
+                    month: from.month(),
+                }
+            } else {
+                dateData = {
+                    year: from.year()
+                } 
+            }
+        }
+        const resp = await this.callApi(request
+        .get(`${joinedUrl(this.url.url, '/apis/web/v1/listens')}`)
+        .query({
+            page: params.page,
+            limit: params.limit,
+            ...dateData
+        }));
+
+        const r = resp.body as ListensResponse;
+
+        return {
+            data: r.items.map((x => listenObjectResponseToPlay(x))),
+            meta: {
+                ...params,
+                total: r.total_record_count
+            }
+        }
+    }
+
+    getPaginatedUnitOfTime(): dayjs.ManipulateType {
+        return 'week';
     }
 
     getRecentlyPlayed = async (maxTracks: number): Promise<PlayObject[]> => {
