@@ -182,7 +182,7 @@ export class RockSkyApiClient extends AbstractApiClient {
             // rocksky only uses duration_ms
             if(play.data.duration !== undefined && listenPayload.track_metadata.additional_info?.duration !== undefined) {
                 delete listenPayload.track_metadata.additional_info.duration;
-                listenPayload.track_metadata.additional_info.duration_ms = play.data.duration * 1000;
+                listenPayload.track_metadata.additional_info.duration_ms = Math.round(play.data.duration) * 1000;
             }
             const submitPayload: SubmitPayload = {listen_type: listenType, payload: [listenPayload]};
             if(log) {
