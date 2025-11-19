@@ -62,7 +62,7 @@ export const playToRecord = (play: PlayObject): ScrobbleRecord => {
         $type: "fm.teal.alpha.feed.play",
         trackName: play.data.track,
         artists: play.data.artists.map(x => ({ artistName: x })),
-        duration: play.data.duration,
+        duration: Math.round(play.data.duration),
         playedTime: getScrobbleTsSOCDateWithContext(play)[0].toISOString(),
         releaseName: play.data.album,
         submissionClientAgent: `multi-scrobbler/${getRoot().items.version}`,

@@ -51,7 +51,7 @@ export interface TealClientOptions extends TealOptions,CommonClientOptions {
 export interface TealClientAIOConfig extends TealClientConfig {
     type: 'tealfm'
 }
-
+/** https://github.com/teal-fm/piper/blob/main/service/atproto/submission.go */
 export interface ScrobbleRecord {
     $type: "fm.teal.alpha.feed.play",
     trackName: string,
