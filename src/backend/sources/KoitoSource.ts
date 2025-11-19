@@ -1,17 +1,13 @@
 import EventEmitter from "events";
-import request from "superagent";
 import { PlayObject, SOURCE_SOT } from "../../core/Atomic.js";
 import { isNodeNetworkException } from "../common/errors/NodeErrors.js";
-import { FormatPlayObjectOptions, InternalConfig } from "../common/infrastructure/Atomic.js";
-import { ListenBrainzSourceConfig } from "../common/infrastructure/config/source/listenbrainz.js";
-import { ListenbrainzApiClient } from "../common/vendor/ListenbrainzApiClient.js";
+import { FormatPlayObjectOptions, InternalConfig, PaginatedListensTimeRangeOptions, PaginatedTimeRangeListens } from "../common/infrastructure/Atomic.js";
 import { RecentlyPlayedOptions } from "./AbstractSource.js";
 import MemorySource from "./MemorySource.js";
-import { isPortReachableConnect } from "../utils/NetworkUtils.js";
 import { KoitoApiClient, listenObjectResponseToPlay } from "../common/vendor/koito/KoitoApiClient.js";
 import { KoitoSourceConfig } from "../common/infrastructure/config/source/koito.js";
 
-export default class KoitoSource extends MemorySource {
+export default class KoitoSource extends MemorySource implements PaginatedTimeRangeListens {
 
     api: KoitoApiClient;
     requiresAuth = true;
@@ -71,6 +67,14 @@ export default class KoitoSource extends MemorySource {
         } catch (e) {
             throw e;
         }
+    }
+
+    getPaginatedTimeRangeListens = async (params: PaginatedListensTimeRangeOptions) => {
+        return await this.api.getPaginatedTimeRangeListens(params);
+    }
+
+    getPaginatedUnitOfTime() {
+        return this.api.getPaginatedUnitOfTime();
     }
 
     protected getBackloggedPlays = async (options: RecentlyPlayedOptions = {}) =>  await this.getRecentlyPlayed({formatted: true, ...options})
