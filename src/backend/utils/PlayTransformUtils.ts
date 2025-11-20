@@ -2,13 +2,20 @@ import { Logger, loggerTest } from "@foxxmd/logging";
 import { searchAndReplace as searchAndReplaceFunc, testMaybeRegex as testMaybeRegexFunc } from "@foxxmd/regex-buddy-core";
 import { ObjectPlayData, PlayObject } from "../../core/Atomic.js";
 import { buildTrackString } from "../../core/StringUtils.js";
+
 import {
     ConditionalSearchAndReplaceRegExp,
-    PlayTransformParts, PlayTransformPartsArray, PlayTransformPartsConfig, PlayTransformRules,
-    SearchAndReplaceTerm,
+    ConditionalSearchAndReplaceTerm,
+    ExternalMetadataTerm,
+    PlayTransformParts,
+    PlayTransformPartsArray,
+    PlayTransformPartsConfig,
+    PlayTransformRules, PlayTransformStage, PlayTransformUserParts, PlayTransformUserStage, SearchAndReplaceTerm,
+    STAGE_TYPES,
+    StageType,
     WhenConditionsConfig,
     WhenParts
-} from "../common/infrastructure/Atomic.js";
+} from "../common/infrastructure/Transform.js";
 
 export const isWhenCondition = (val: unknown): val is WhenParts<string> => {
     if (val !== null && typeof val === 'object') {
@@ -49,6 +56,79 @@ export const isConditionalSearchAndReplace = (val: unknown): val is ConditionalS
         && ('replace' in val && typeof val.replace === 'string')
         && (!('when' in val) || isWhenConditionConfig(val.when));
 }
+
+export const isSearchAndReplaceTerm = (val: unknown | string | ConditionalSearchAndReplaceTerm): val is SearchAndReplaceTerm => {
+    const tf = typeof val;
+    if(tf === 'string') {
+        return true;
+    }
+    if(!(tf == 'object')) {
+        throw new Error(`Must be a string or an object, but found ${tf}`);
+    }
+    if(tf === null) {
+        throw new Error('Cannot be null');
+    }
+    return isConditionalSearchAndReplace(val);
+}
+
+export const isExternalMetadataTerm = (val: unknown): val is ExternalMetadataTerm => {
+    if(val === undefined) {
+        return true;
+    }
+    const tf = typeof val;
+    if(tf === 'boolean') {
+        return true;
+    }
+    if(tf === null) {
+        throw new Error(`Value is null but must be one of: true, undefined, or object with 'when'`);
+    }
+    if(tf === 'object') {
+        if(isWhenConditionConfig(val)) {
+            return true;
+        }
+        throw new Error(`Value is not a proper 'when' object`);
+    }
+    throw new Error(`Value is type of ${tf} but must be one of: boolean, undefined, or object with 'when'`);
+}
+
+export const isPlayTransformStage = (val: object | Partial<PlayTransformStage<SearchAndReplaceTerm[]>>): val is PlayTransformStage<SearchAndReplaceTerm[]> => {
+    if (!('type' in val)) {
+        throw new Error(`Stage is missing 'type'. Must be one of: ${STAGE_TYPES.join(', ')}`);
+    }
+    if (!STAGE_TYPES.includes(val.type)) {
+        throw new Error(`Stage has invalid 'type'. Must be one of: ${STAGE_TYPES.join(', ')}`);
+    }
+
+    for (const k of ['artist', 'title', 'album']) {
+        if (!(k in val)) {
+            continue;
+        }
+        if (val.type === 'user') {
+            if (!Array.isArray(val[k])) {
+                throw new Error(`${k} must be an array`);
+            }
+            try {
+                isSearchAndReplaceTerm(val[k]);
+            } catch (e) {
+                throw new Error(`Property '${k}' was not a valid type`, { cause: e });
+            }
+        } else {
+            try {
+                isExternalMetadataTerm(val[k]);
+
+            } catch (e) {
+                throw new Error(`Property '${k}' was not a valid type`, { cause: e });
+            }
+        }
+    }
+
+    return true;
+}
+
+export const isUserStage = <T>(val: PlayTransformStage<T>): val is PlayTransformUserStage<T> => {
+    return val.type === 'user';
+}
+
 export const configPartsToStrongParts = (val: PlayTransformPartsConfig<SearchAndReplaceTerm> | undefined): PlayTransformPartsArray<ConditionalSearchAndReplaceRegExp> => {
     if (val === undefined) {
         return []
@@ -60,43 +140,51 @@ export const configPartsToStrongParts = (val: PlayTransformPartsConfig<SearchAnd
             title: titleConfig,
             artists: artistConfig,
             album: albumConfig,
-            when: whenConfig
+            when: whenConfig,
+            type = 'user',
+            ...rest
         } = x;
+
+        let stage: PlayTransformStage<SearchAndReplaceTerm[]>;
+        try {
+            const candidateStage = {...x, type};
+            if(isPlayTransformStage(candidateStage)) {
+                stage = candidateStage;
+            }
+        } catch (e) {
+            throw e;
+        }
+
+        if (whenConfig !== undefined) {
+            if (!isWhenConditionConfig(whenConfig)) {
+                throw new Error(`'when' must be an array of artist/title/album objects and each object's property must be a string`);
+            }
+        }
+
         let title,
             artists,
             album,
             when;
 
-        if (titleConfig !== undefined) {
-            if (!Array.isArray(titleConfig)) {
-                throw new Error('title must be an array');
-            }
-            title = titleConfig.map(configValToSearchReplace);
+        if(isUserStage(stage)) {
+            title = stage.title?.map(configValToSearchReplace);
+            artists = stage.artists?.map(configValToSearchReplace);
+            album = stage.album?.map(configValToSearchReplace);
+        } else {
+            title = stage.title;
+            artists = stage.artists;
+            album = stage.album;
         }
-        if (artistConfig !== undefined) {
-            if (!Array.isArray(artistConfig)) {
-                throw new Error('arist must be an array');
-            }
-            artists = artistConfig.map(configValToSearchReplace);
-        }
-        if (albumConfig !== undefined) {
-            if (!Array.isArray(albumConfig)) {
-                throw new Error('album must be an array');
-            }
-            album = albumConfig.map(configValToSearchReplace);
-        }
-        if (whenConfig !== undefined) {
-            if (!isWhenConditionConfig(whenConfig)) {
-                throw new Error('when must be an array of artist/title/album objects and each object\'s property must be a string');
-            }
-            when = whenConfig;
-        }
+
+        when = whenConfig;
 
         return {
             title,
             artists,
             album,
-            when
+            when,
+            type,
+            ...rest
         }
     });
 
@@ -139,7 +227,7 @@ export interface TransformPlayPartsOptions {
     regex?: SuppliedRegex
 }
 
-export const transformPlayUsingParts = (play: PlayObject, parts: PlayTransformParts<ConditionalSearchAndReplaceRegExp>, options?: TransformPlayPartsOptions): PlayObject => {
+export const transformPlayUsingParts = (play: PlayObject, parts: PlayTransformUserParts<ConditionalSearchAndReplaceRegExp>, options?: TransformPlayPartsOptions): PlayObject => {
     const {
         data: {
             track,

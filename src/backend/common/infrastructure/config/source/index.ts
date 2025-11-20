@@ -1,5 +1,6 @@
 import { FileLogOptions, LogLevel } from "@foxxmd/logging";
-import { PlayTransformConfig, PlayTransformOptions } from "../../Atomic.js";
+
+import { PlayTransformConfig, PlayTransformOptions } from "../../Transform.js";
 import { CommonConfig, CommonData, RequestRetryOptions } from "../common.js";
 
 export interface SourceRetryOptions extends RequestRetryOptions {
