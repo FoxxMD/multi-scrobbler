@@ -107,7 +107,7 @@ export const isPlayTransformStage = (val: object | Partial<PlayTransformStage<Se
         if(!(k in val)) {
             continue;
         }
-        if(!Array.isArray[val[k]]) {
+        if(!Array.isArray(val[k])) {
             throw new Error(`${k} must be an array`);
         }
         for(const term of val[k]) {
@@ -154,7 +154,7 @@ export const configPartsToStrongParts = (val: PlayTransformPartsConfig<SearchAnd
                 stage = candidateStage;
             }
         } catch (e) {
-            throw new Error('')
+            throw e;
         }
 
         if (whenConfig !== undefined) {
