@@ -16,7 +16,6 @@ import {
     WhenConditionsConfig,
     WhenParts
 } from "../common/infrastructure/Transform.js";
-import e from "express";
 
 export const isWhenCondition = (val: unknown): val is WhenParts<string> => {
     if (val !== null && typeof val === 'object') {
@@ -78,10 +77,7 @@ export const isExternalMetadataTerm = (val: unknown): val is ExternalMetadataTer
     }
     const tf = typeof val;
     if(tf === 'boolean') {
-        if(val === true) {
-            return true;
-        }
-        throw new Error(`Value must be one of: true, undefined, or object with 'when'`);
+        return true;
     }
     if(tf === null) {
         throw new Error(`Value is null but must be one of: true, undefined, or object with 'when'`);
@@ -92,34 +88,36 @@ export const isExternalMetadataTerm = (val: unknown): val is ExternalMetadataTer
         }
         throw new Error(`Value is not a proper 'when' object`);
     }
-    throw new Error(`Value is type of ${tf} but must be one of:  true, undefined, or object with 'when'`);
+    throw new Error(`Value is type of ${tf} but must be one of: boolean, undefined, or object with 'when'`);
 }
 
 export const isPlayTransformStage = (val: object | Partial<PlayTransformStage<SearchAndReplaceTerm[]>>): val is PlayTransformStage<SearchAndReplaceTerm[]> => {
-    if(!('type' in val)) {
+    if (!('type' in val)) {
         throw new Error(`Stage is missing 'type'. Must be one of: ${STAGE_TYPES.join(', ')}`);
     }
-    if(!STAGE_TYPES.includes(val.type)) {
+    if (!STAGE_TYPES.includes(val.type)) {
         throw new Error(`Stage has invalid 'type'. Must be one of: ${STAGE_TYPES.join(', ')}`);
     }
 
-    for(const k of ['artist', 'title', 'album']) {
-        if(!(k in val)) {
+    for (const k of ['artist', 'title', 'album']) {
+        if (!(k in val)) {
             continue;
         }
-        if(!Array.isArray(val[k])) {
-            throw new Error(`${k} must be an array`);
-        }
-        for(const term of val[k]) {
+        if (val.type === 'user') {
+            if (!Array.isArray(val[k])) {
+                throw new Error(`${k} must be an array`);
+            }
             try {
-                if(val.type === 'user') {
-                    isSearchAndReplaceTerm(val[k]);
-                } else {
-                    isExternalMetadataTerm(val[k]);
-                }
-                
+                isSearchAndReplaceTerm(val[k]);
             } catch (e) {
-                throw new Error(`Property '${k}' was not a valid type`, {cause: e});
+                throw new Error(`Property '${k}' was not a valid type`, { cause: e });
+            }
+        } else {
+            try {
+                isExternalMetadataTerm(val[k]);
+
+            } catch (e) {
+                throw new Error(`Property '${k}' was not a valid type`, { cause: e });
             }
         }
     }

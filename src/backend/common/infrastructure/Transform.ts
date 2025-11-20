@@ -6,7 +6,7 @@ export interface ConditionalSearchAndReplaceRegExp extends SearchAndReplaceRegEx
 
 export type ConditionalSearchAndReplaceTerm = Omit<ConditionalSearchAndReplaceRegExp, 'test'>
 export type SearchAndReplaceTerm = string | ConditionalSearchAndReplaceTerm;
-export type ExternalMetadataTerm = true | undefined | { when: WhenConditionsConfig };
+export type ExternalMetadataTerm = boolean | undefined | { when: WhenConditionsConfig };
 
 export type PlayTransformParts<T, Y = MaybeStageTyped> = Extract<PlayTransformStage<T[]>, Y> & { when?: WhenConditionsConfig };
 export type PlayTransformUserParts<T> = PlayTransformUserStage<T[]> & { when?: WhenConditionsConfig };
@@ -21,8 +21,12 @@ export interface PlayTransformPartsAtomic<T> {
     album?: T
 }
 
-export type StageType = 'spotify' | 'listenbrainz' | 'native' | 'user';
-export const STAGE_TYPES: StageType[] = ['spotify','listenbrainz','native','user']
+export type StageTypeMetadata = 'spotify' | 'listenbrainz' | 'native';
+export type StageTypeUser = 'user';
+export type StageType = StageTypeMetadata | StageTypeUser;
+export const STAGE_TYPES_USER: StageTypeUser[] = ['user'];
+export const STAGE_TYPES_METADATA: StageTypeMetadata[] = ['spotify','listenbrainz','native'];
+export const STAGE_TYPES: StageType[] = [...STAGE_TYPES_METADATA, ...STAGE_TYPES_USER];
 
 export interface StageTyped {
     type: StageType
@@ -38,14 +42,14 @@ export interface PlayTransformStageTyped<T> extends PlayTransformPartsAtomic<T> 
     type: StageType
 }
 
-export interface PlayTransformMetadataStage extends PlayTransformStageTyped<ExternalMetadataTerm[]> {
+export interface PlayTransformMetadataStage extends PlayTransformStageTyped<ExternalMetadataTerm> {
     score?: number
-    all?: ExternalMetadataTerm
-    type: 'spotify' | 'listenbrainz' | 'native'
+//    all?: ExternalMetadataTerm
+    type: StageTypeMetadata
 }
 
 export interface PlayTransformUserStage<T> extends PlayTransformStageTyped<T> {
-    type: 'user'
+    type: StageTypeUser
 }
 export type UntypedPlayTransformUserStage<T> = Omit<PlayTransformUserStage<T>, 'type'> & {type?: never};
 

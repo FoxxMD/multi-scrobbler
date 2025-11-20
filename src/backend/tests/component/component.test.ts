@@ -4,12 +4,13 @@ import asPromised from 'chai-as-promised';
 import { after, before, describe, it } from 'mocha';
 import AbstractComponent from "../../common/AbstractComponent.js";
 
-import { ConditionalSearchAndReplaceRegExp, TRANSFORM_HOOK } from "../../common/infrastructure/Transform.js";
+import { ConditionalSearchAndReplaceRegExp, STAGE_TYPES, STAGE_TYPES_METADATA, TRANSFORM_HOOK } from "../../common/infrastructure/Transform.js";
 
 import { isConditionalSearchAndReplace } from "../../utils/PlayTransformUtils.js";
 import { asPlays, generatePlay, normalizePlays } from "../utils/PlayTestUtils.js";
 import { WebhookPayload } from "../../common/infrastructure/config/health/webhooks.js";
 import { findCauseByMessage } from "../../utils/ErrorUtils.js";
+import { ComAtprotoServerDescribeServer } from "@atproto/api";
 
 chai.use(asPromised);
 
@@ -220,6 +221,37 @@ describe('Play Transforms', function () {
             });
         });
 
+        describe('Non-User Stage Parsing', function () {
+
+            describe('Non-User Stage Types', function () {
+
+                for(const t of STAGE_TYPES_METADATA) {
+
+                    it(`Allows non-user Stage Type ${t}`, function () {
+                        component.config = {
+                            options: {
+                                playTransform: {
+                                    preCompare: {
+                                        type: t,
+                                        title: true
+                                    }
+                                }
+                            }
+                        }
+
+                        expect(() => component.buildTransformRules()).to.not.throw();
+                        expect(component.transformRules.preCompare).to.be.an('array');
+                        expect(component.transformRules.preCompare).to.be.length(1);
+                        expect(component.transformRules.preCompare).to.have.nested.property('0.type');
+                        expect(component.transformRules.preCompare[0].type).eq(t);
+                    });
+
+                }
+
+            });
+
+        });
+
         describe('Play Transforming', function () {
 
             it('Returns original play if no hooks are defined', function () {
@@ -230,136 +262,139 @@ describe('Play Transforms', function () {
                 expect(JSON.stringify(play)).equal(JSON.stringify(transformed));
             });
 
-            it('Transforms when hook is present', function () {
-                component.config = {
-                    options: {
-                        playTransform: {
-                            preCompare: {
-                                title: ['something']
+            describe('User Play Transforming', function () {
+                it('Transforms when hook is present', function () {
+                    component.config = {
+                        options: {
+                            playTransform: {
+                                preCompare: {
+                                    title: ['something']
+                                }
                             }
                         }
                     }
-                }
-                component.buildTransformRules();
+                    component.buildTransformRules();
 
-                const play = generatePlay({ track: 'My coolsomething track' });
-                const transformed = component.transformPlay(play, TRANSFORM_HOOK.preCompare);
-                expect(transformed.data.track).equal('My cool track');
-            });
+                    const play = generatePlay({ track: 'My coolsomething track' });
+                    const transformed = component.transformPlay(play, TRANSFORM_HOOK.preCompare);
+                    expect(transformed.data.track).equal('My cool track');
+                });
 
-            it('Transforms consecutively when hook is present with multiple values', function () {
-                component.config = {
-                    options: {
-                        playTransform: {
-                            preCompare: {
-                                title: ['something', 'cool']
+                it('Transforms consecutively when hook is present with multiple values', function () {
+                    component.config = {
+                        options: {
+                            playTransform: {
+                                preCompare: {
+                                    title: ['something', 'cool']
+                                }
                             }
                         }
                     }
-                }
-                component.buildTransformRules();
+                    component.buildTransformRules();
 
-                const play = generatePlay({ track: 'My coolsomething track' });
-                const transformed = component.transformPlay(play, TRANSFORM_HOOK.preCompare);
-                expect(transformed.data.track).equal('My  track');
-            });
+                    const play = generatePlay({ track: 'My coolsomething track' });
+                    const transformed = component.transformPlay(play, TRANSFORM_HOOK.preCompare);
+                    expect(transformed.data.track).equal('My  track');
+                });
 
-            it('Transforms using parsed regex', function () {
-                component.config = {
-                    options: {
-                        playTransform: {
-                            preCompare: {
-                                title: [
-                                    {
-                                        search: '/(cool )(some)(thing)/i',
-                                        replace: '$1$3'
-                                    }
-                                ]
+                it('Transforms using parsed regex', function () {
+                    component.config = {
+                        options: {
+                            playTransform: {
+                                preCompare: {
+                                    title: [
+                                        {
+                                            search: '/(cool )(some)(thing)/i',
+                                            replace: '$1$3'
+                                        }
+                                    ]
+                                }
                             }
                         }
                     }
-                }
-                component.buildTransformRules();
+                    component.buildTransformRules();
 
-                const play = generatePlay({ track: 'My cool something track' });
-                const transformed = component.transformPlay(play, TRANSFORM_HOOK.preCompare);
-                expect(transformed.data.track).equal('My cool thing track');
-            });
+                    const play = generatePlay({ track: 'My cool something track' });
+                    const transformed = component.transformPlay(play, TRANSFORM_HOOK.preCompare);
+                    expect(transformed.data.track).equal('My cool thing track');
+                });
 
 
-            it('Transforms using parsed regex to get primary artist from delimited artist string', function () {
-                component.config = {
-                    options: {
-                        playTransform: {
-                            preCompare: {
-                                artists: [
-                                    {
-                                        search: '/(.*?)(\\s*\\/\\s*)(.*$)/i',
-                                        replace: '$1'
-                                    }
-                                ]
+                it('Transforms using parsed regex to get primary artist from delimited artist string', function () {
+                    component.config = {
+                        options: {
+                            playTransform: {
+                                preCompare: {
+                                    artists: [
+                                        {
+                                            search: '/(.*?)(\\s*\\/\\s*)(.*$)/i',
+                                            replace: '$1'
+                                        }
+                                    ]
+                                }
                             }
                         }
                     }
-                }
-                component.buildTransformRules();
+                    component.buildTransformRules();
 
-                const play = generatePlay({ artists: ['My Artist One / My Artist Two / Another Guy'] });
-                const transformed = component.transformPlay(play, TRANSFORM_HOOK.preCompare);
-                expect(transformed.data.artists).length(1)
-                expect(transformed.data.artists[0]).equal('My Artist One');
-            });
+                    const play = generatePlay({ artists: ['My Artist One / My Artist Two / Another Guy'] });
+                    const transformed = component.transformPlay(play, TRANSFORM_HOOK.preCompare);
+                    expect(transformed.data.artists).length(1)
+                    expect(transformed.data.artists[0]).equal('My Artist One');
+                });
 
-            it('Removes title when transform replaces with empty string', function () {
-                component.config = {
-                    options: {
-                        playTransform: {
-                            preCompare: {
-                                title: ['something']
+                it('Removes title when transform replaces with empty string', function () {
+                    component.config = {
+                        options: {
+                            playTransform: {
+                                preCompare: {
+                                    title: ['something']
+                                }
                             }
                         }
                     }
-                }
-                component.buildTransformRules();
+                    component.buildTransformRules();
 
-                const play = generatePlay({ track: 'something' });
-                const transformed = component.transformPlay(play, TRANSFORM_HOOK.preCompare);
-                expect(transformed.data.track).is.undefined;
-            });
+                    const play = generatePlay({ track: 'something' });
+                    const transformed = component.transformPlay(play, TRANSFORM_HOOK.preCompare);
+                    expect(transformed.data.track).is.undefined;
+                });
 
-            it('Removes album when transform replaces with empty string', function () {
-                component.config = {
-                    options: {
-                        playTransform: {
-                            preCompare: {
-                                album: ['something']
+                it('Removes album when transform replaces with empty string', function () {
+                    component.config = {
+                        options: {
+                            playTransform: {
+                                preCompare: {
+                                    album: ['something']
+                                }
                             }
                         }
                     }
-                }
-                component.buildTransformRules();
+                    component.buildTransformRules();
 
-                const play = generatePlay({ album: 'something' });
-                const transformed = component.transformPlay(play, TRANSFORM_HOOK.preCompare);
-                expect(transformed.data.album).is.undefined;
-            });
+                    const play = generatePlay({ album: 'something' });
+                    const transformed = component.transformPlay(play, TRANSFORM_HOOK.preCompare);
+                    expect(transformed.data.album).is.undefined;
+                });
 
-            it('Removes an artist when transform replaces with empty string', function () {
-                component.config = {
-                    options: {
-                        playTransform: {
-                            preCompare: {
-                                artists: ['something']
+                it('Removes an artist when transform replaces with empty string', function () {
+                    component.config = {
+                        options: {
+                            playTransform: {
+                                preCompare: {
+                                    artists: ['something']
+                                }
                             }
                         }
                     }
-                }
-                component.buildTransformRules();
+                    component.buildTransformRules();
 
-                const play = generatePlay({ artists: ['something', 'big'] });
-                const transformed = component.transformPlay(play, TRANSFORM_HOOK.preCompare);
-                expect(transformed.data.artists!.length).is.eq(1)
-                expect(transformed.data.artists![0]).is.eq('big')
+                    const play = generatePlay({ artists: ['something', 'big'] });
+                    const transformed = component.transformPlay(play, TRANSFORM_HOOK.preCompare);
+                    expect(transformed.data.artists!.length).is.eq(1)
+                    expect(transformed.data.artists![0]).is.eq('big')
+                });
+
             });
 
         });
