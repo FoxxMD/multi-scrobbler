@@ -8,8 +8,9 @@ export type ConditionalSearchAndReplaceTerm = Omit<ConditionalSearchAndReplaceRe
 export type SearchAndReplaceTerm = string | ConditionalSearchAndReplaceTerm;
 export type ExternalMetadataTerm = boolean | undefined | { when: WhenConditionsConfig };
 
-export type PlayTransformParts<T, Y = MaybeStageTyped> = Extract<PlayTransformStage<T[]>, Y> & { when?: WhenConditionsConfig };
+export type PlayTransformParts<T, Y = MaybeStageTyped> = Extract<PlayTransformStage<T>, Y> & { when?: WhenConditionsConfig };
 export type PlayTransformUserParts<T> = PlayTransformUserStage<T[]> & { when?: WhenConditionsConfig };
+export type PlayTransformMetaParts<T = ExternalMetadataTerm> = PlayTransformMetadataStage<T> & { when?: WhenConditionsConfig };
 export type PlayTransformPartsArray<T, Y = MaybeStageTyped> = PlayTransformParts<T, Y>[];
 
 /** Represents the weakly-defined user config. May be an array of parts or one parts object */
@@ -42,7 +43,7 @@ export interface PlayTransformStageTyped<T> extends PlayTransformPartsAtomic<T> 
     type: StageType
 }
 
-export interface PlayTransformMetadataStage extends PlayTransformStageTyped<ExternalMetadataTerm> {
+export interface PlayTransformMetadataStage<T = ExternalMetadataTerm> extends PlayTransformStageTyped<T> {
     score?: number
 //    all?: ExternalMetadataTerm
     type: StageTypeMetadata
@@ -53,7 +54,7 @@ export interface PlayTransformUserStage<T> extends PlayTransformStageTyped<T> {
 }
 export type UntypedPlayTransformUserStage<T> = Omit<PlayTransformUserStage<T>, 'type'> & {type?: never};
 
-export type PlayTransformStage<T> = PlayTransformMetadataStage | PlayTransformUserStage<T> | UntypedPlayTransformUserStage<T>;
+export type PlayTransformStage<T> = PlayTransformMetadataStage<T> | PlayTransformUserStage<T> | UntypedPlayTransformUserStage<T>;
 
 /** Represents the plain json user-configured structure (input) */
 export interface PlayTransformHooksConfig<T> {
@@ -75,7 +76,7 @@ export interface PlayTransformHooks<T> extends PlayTransformHooksConfig<T> {
     postCompare?: PlayTransformPartsArray<T, StageTyped>
 }
 
-export type PlayTransformRules = PlayTransformHooks<ConditionalSearchAndReplaceRegExp>
+export type PlayTransformRules = PlayTransformHooks<ConditionalSearchAndReplaceRegExp[] | ExternalMetadataTerm>
 export type TransformHook = 'preCompare' | 'compare' | 'candidate' | 'existing' | 'postCompare';
 export const TRANSFORM_HOOK = {
     preCompare: 'preCompare' as TransformHook,
@@ -83,7 +84,7 @@ export const TRANSFORM_HOOK = {
     existing: 'existing' as TransformHook,
     postCompare: 'postCompare' as TransformHook,
 }
-export type PlayTransformConfig = PlayTransformHooksConfig<SearchAndReplaceTerm>;
+export type PlayTransformConfig = PlayTransformHooksConfig<SearchAndReplaceTerm[] | ExternalMetadataTerm>;
 export type PlayTransformOptions = PlayTransformConfig & { log?: boolean | 'all' }
 export type WhenParts<T> = PlayTransformPartsAtomic<T>;
 export type WhenConditions<T> = WhenParts<T>[];

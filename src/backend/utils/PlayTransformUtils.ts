@@ -129,7 +129,7 @@ export const isUserStage = <T>(val: PlayTransformStage<T>): val is PlayTransform
     return val.type === 'user';
 }
 
-export const configPartsToStrongParts = (val: PlayTransformPartsConfig<SearchAndReplaceTerm> | undefined): PlayTransformPartsArray<ConditionalSearchAndReplaceRegExp> => {
+export const configPartsToStrongParts = (val: PlayTransformPartsConfig<SearchAndReplaceTerm[] | ExternalMetadataTerm> | undefined): PlayTransformPartsArray<ConditionalSearchAndReplaceRegExp[] | ExternalMetadataTerm> => {
     if (val === undefined) {
         return []
     }
@@ -343,33 +343,33 @@ export const transformPlayUsingParts = (play: PlayObject, parts: PlayTransformUs
     return play;
 }
 
-export const countRegexes = (rules: PlayTransformRules): number => {
-    let rulesCount = 0;
-    if(rules.preCompare !== undefined) {
-        for(const hookItem of rules.preCompare) {
-            rulesCount = countRulesInParts(hookItem) + countWhens(hookItem.when);
-        }
+// export const countRegexes = (rules: PlayTransformRules): number => {
+//     let rulesCount = 0;
+//     if(rules.preCompare !== undefined) {
+//         for(const hookItem of rules.preCompare) {
+//             rulesCount = countRulesInParts(hookItem) + countWhens(hookItem.when);
+//         }
 
-    }
-    if(rules.postCompare !== undefined) {
-        for(const hookItem of rules.postCompare) {
-            rulesCount = countRulesInParts(hookItem) + countWhens(hookItem.when);
-        }
-    }
-    if(rules.compare !== undefined) {
-        if(rules.compare.existing !== undefined) {
-            for(const hookItem of rules.compare.existing) {
-                rulesCount = countRulesInParts(hookItem) + countWhens(hookItem.when);
-            }
-        }
-        if(rules.compare.candidate !== undefined) {
-            for(const hookItem of rules.compare.candidate) {
-                rulesCount = countRulesInParts(hookItem) + countWhens(hookItem.when);
-            }
-        }
-    }
-    return rulesCount;
-}
+//     }
+//     if(rules.postCompare !== undefined) {
+//         for(const hookItem of rules.postCompare) {
+//             rulesCount = countRulesInParts(hookItem) + countWhens(hookItem.when);
+//         }
+//     }
+//     if(rules.compare !== undefined) {
+//         if(rules.compare.existing !== undefined) {
+//             for(const hookItem of rules.compare.existing) {
+//                 rulesCount = countRulesInParts(hookItem) + countWhens(hookItem.when);
+//             }
+//         }
+//         if(rules.compare.candidate !== undefined) {
+//             for(const hookItem of rules.compare.candidate) {
+//                 rulesCount = countRulesInParts(hookItem) + countWhens(hookItem.when);
+//             }
+//         }
+//     }
+//     return rulesCount;
+// }
 
 const countWhens = (when: WhenConditionsConfig | undefined): number => {
     if(when === undefined) {

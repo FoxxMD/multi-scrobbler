@@ -2,7 +2,7 @@ import { ObjectPlayData, PlayObject, TrackMeta } from "../../../core/Atomic.js";
 import { getRoot } from "../../ioc.js";
 import { testWhenConditions } from "../../utils/PlayTransformUtils.js";
 import AbstractInitializable from "../AbstractInitializable.js";
-import { ConditionalSearchAndReplaceRegExp, PlayTransformParts } from "../infrastructure/Transform.js";
+import { ConditionalSearchAndReplaceRegExp, PlayTransformMetaParts, PlayTransformParts, PlayTransformUserParts } from "../infrastructure/Transform.js";
 import { cacheFunctions } from "@foxxmd/regex-buddy-core";
 
 export interface TransformerCommonConfig {
@@ -12,18 +12,23 @@ export interface TransformerCommonConfig {
         throwOnFailure?: boolean | ('artists' | 'title' | 'albumArtists' | 'album')[]
     }
 }
-export default abstract class AbstractTransformer<T = any> extends AbstractInitializable {
+
+export interface TransformerCommon extends TransformerCommonConfig {
+    regexCache?: ReturnType<typeof cacheFunctions>
+}
+
+export default abstract class AbstractTransformer<Y, T = any> extends AbstractInitializable {
 
     declare config: TransformerCommonConfig;
 
     regexCache: ReturnType<typeof cacheFunctions>
 
-    protected constructor(config: TransformerCommonConfig) {
+    protected constructor(config: TransformerCommon) {
         super(config);
-        this.regexCache = getRoot().items.cache().regexCache;
+        this.regexCache = config.regexCache ?? getRoot().items.cache().regexCache;
     }
 
-    public async handle(parts: PlayTransformParts<ConditionalSearchAndReplaceRegExp>, play: PlayObject): Promise<PlayObject> {
+    public async handle(parts: PlayTransformParts<Y>, play: PlayObject): Promise<PlayObject> {
 
         if (parts.when !== undefined) {
             if (!testWhenConditions(parts.when, play, { testMaybeRegex: this.regexCache.testMaybeRegex })) {
@@ -57,51 +62,57 @@ export default abstract class AbstractTransformer<T = any> extends AbstractIniti
 
         const transformedPlayData: Partial<ObjectPlayData> = {};
 
-        try {
-            const title = await this.handleTitle(play, transformData);
-            transformedPlayData.track = title;
-        } catch (e) {
-            const err = new Error(`Failed to transform title: ${play.data.track}`, { cause: e });
-            if (throwOnFailure === true || (throwOnFailure !== false && throwOnFailure.includes('title'))) {
-                throw err;
-            } else {
-                this.logger.warn(err);
+        if (parts.title !== undefined) {
+            try {
+                const title = await this.handleTitle(play, parts.title, transformData);
+                transformedPlayData.track = title;
+            } catch (e) {
+                const err = new Error(`Failed to transform title: ${play.data.track}`, { cause: e });
+                if (throwOnFailure === true || (throwOnFailure !== false && throwOnFailure.includes('title'))) {
+                    throw err;
+                } else {
+                    this.logger.warn(err);
+                }
             }
         }
 
-        try {
-            const artists = await this.handleArtists(play, transformData);
-            transformedPlayData.artists = artists;
-        } catch (e) {
-            const err = new Error(`Failed to transform artists`, { cause: e });
-            if (throwOnFailure === true || (throwOnFailure !== false && throwOnFailure.includes('artists'))) {
-                throw err;
-            } else {
-                this.logger.warn(err);
+        if (parts.artists !== undefined) {
+            try {
+                const artists = await this.handleArtists(play, parts.artists, transformData);
+                transformedPlayData.artists = artists;
+            } catch (e) {
+                const err = new Error(`Failed to transform artists`, { cause: e });
+                if (throwOnFailure === true || (throwOnFailure !== false && throwOnFailure.includes('artists'))) {
+                    throw err;
+                } else {
+                    this.logger.warn(err);
+                }
+            }
+
+            try {
+                const albumArtists = await this.handleAlbumArtists(play, parts.artists, transformData);
+                transformedPlayData.albumArtists = albumArtists;
+            } catch (e) {
+                const err = new Error(`Failed to transform album artists`, { cause: e });
+                if (throwOnFailure === true || (throwOnFailure !== false && throwOnFailure.includes('albumArtists'))) {
+                    throw err;
+                } else {
+                    this.logger.warn(err);
+                }
             }
         }
 
-        try {
-            const albumArtists = await this.handleArtists(play, transformData);
-            transformedPlayData.albumArtists = albumArtists;
-        } catch (e) {
-            const err = new Error(`Failed to transform album artists`, { cause: e });
-            if (throwOnFailure === true || (throwOnFailure !== false && throwOnFailure.includes('albumArtists'))) {
-                throw err;
-            } else {
-                this.logger.warn(err);
-            }
-        }
-
-        try {
-            const album = await this.handleTitle(play, transformData);
-            transformedPlayData.album = album;
-        } catch (e) {
-            const err = new Error(`Failed to transform album: ${play.data.album}`, { cause: e });
-            if (throwOnFailure === true || (throwOnFailure !== false && throwOnFailure.includes('album'))) {
-                throw err;
-            } else {
-                this.logger.warn(err);
+        if (parts.album !== undefined) {
+            try {
+                const album = await this.handleTitle(play, parts.album, transformData);
+                transformedPlayData.album = album;
+            } catch (e) {
+                const err = new Error(`Failed to transform album: ${play.data.album}`, { cause: e });
+                if (throwOnFailure === true || (throwOnFailure !== false && throwOnFailure.includes('album'))) {
+                    throw err;
+                } else {
+                    this.logger.warn(err);
+                }
             }
         }
 
@@ -116,16 +127,18 @@ export default abstract class AbstractTransformer<T = any> extends AbstractIniti
         return transformedPlay;
     }
 
-    public abstract getTransformerData(play: PlayObject): Promise<T>;
+    public async getTransformerData(play: PlayObject): Promise<T> {
+        return undefined;
+    }
 
     public async checkShouldTransform(play: PlayObject, transformData: T): Promise<void> {
         return;
     }
 
-    protected abstract handleTitle(play: PlayObject, transformData: T): Promise<string>;
-    protected abstract handleArtists(play: PlayObject, transformData: T): Promise<string[]>;
-    protected abstract handleAlbumArtists(play: PlayObject, transformData: T): Promise<string[]>;
-    protected abstract handleAlbum(play: PlayObject, transformData: T): Promise<string | undefined>;
+    protected abstract handleTitle(play: PlayObject, parts: Y, transformData: T): Promise<string | undefined>;
+    protected abstract handleArtists(play: PlayObject, parts: Y, transformData: T): Promise<string[] | undefined>;
+    protected abstract handleAlbumArtists(play: PlayObject, parts: Y, transformData: T): Promise<string[] | undefined>;
+    protected abstract handleAlbum(play: PlayObject, parts: Y, transformData: T): Promise<string | undefined>;
 
     protected async handleMeta(play: PlayObject, transformData: T): Promise<TrackMeta | undefined> {
         return play.data.meta;

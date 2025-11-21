@@ -8,13 +8,13 @@ import { PlayObject } from "../../core/Atomic.js";
 import { buildTrackString } from "../../core/StringUtils.js";
 
 import {
-    configPartsToStrongParts, countRegexes, transformPlayUsingParts
+    configPartsToStrongParts, isUserStage, transformPlayUsingParts
 } from "../utils/PlayTransformUtils.js";
 import { CommonClientConfig } from "./infrastructure/config/client/index.js";
 import { CommonSourceConfig } from "./infrastructure/config/source/index.js";
 import { TransformRulesError } from "./errors/MSErrors.js";
 import {
-    ConditionalSearchAndReplaceRegExp, PlayTransformPartsArray,
+    ConditionalSearchAndReplaceRegExp, ExternalMetadataTerm, PlayTransformPartsArray,
     PlayTransformRules,
     TRANSFORM_HOOK,
     TransformHook
@@ -50,8 +50,8 @@ export default abstract class AbstractComponent extends AbstractInitializable {
             throw new TransformRulesError('Could not build playTransform rules. Check your configuration is valid.', {cause: e});
         }
         try {
-            const ruleCount = countRegexes(this.transformRules);
-            this.regexCache = cacheFunctions(ruleCount);
+            //const ruleCount = countRegexes(this.transformRules);
+            this.regexCache = cacheFunctions(200);
         } catch (e) {
             this.logger.warn(new TransformRulesError('Failed to count number of rule regexes for caching but will continue will fallback to 100', {cause: e}));
         }
@@ -123,7 +123,7 @@ export default abstract class AbstractComponent extends AbstractInitializable {
         const getLogger = () => logger !== undefined ? logger : childLogger(this.logger, labels);
 
         try {
-            let hook: PlayTransformPartsArray<ConditionalSearchAndReplaceRegExp> | undefined;
+            let hook: PlayTransformPartsArray<ConditionalSearchAndReplaceRegExp[] | ExternalMetadataTerm> | undefined;
 
             switch (hookType) {
                 case TRANSFORM_HOOK.preCompare:
@@ -147,7 +147,7 @@ export default abstract class AbstractComponent extends AbstractInitializable {
             let transformedPlay: PlayObject = play;
             const transformDetails: string[] = [];
             for(const hookItem of hook) {
-                if(hookItem.type === 'user') {
+                if(isUserStage<ConditionalSearchAndReplaceRegExp[]>(hookItem)) {
                     const newTransformedPlay = transformPlayUsingParts(transformedPlay, hookItem, {
                         logger: getLogger,
                         regex: {
