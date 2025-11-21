@@ -33,7 +33,7 @@ export default abstract class AbstractInitializable {
 
     initializing: boolean = false;
 
-    config: CommonClientConfig | CommonSourceConfig;
+    config: Record<string, any>;
 
     logger: Logger;
     componentLogger?: Logger;

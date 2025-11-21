@@ -327,5 +327,10 @@ export interface CacheConfigOptions {
     metadata?: CacheMetadataConfig;
     scrobble?: CacheScrobbleConfig;
     auth?: CacheAuthConfig;
+    /** Number of regex functions to cache (LRU)
+     * 
+     * @default 200
+     */
+    regex?: number
 }
 

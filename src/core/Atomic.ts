@@ -136,6 +136,11 @@ export interface SpotifyMeta {
     track?: string
 }
 
+export interface TrackMeta {
+    brainz?: BrainzMeta
+    spotify?: SpotifyMeta
+}
+
 export interface TrackData {
     artists?: string[]
     albumArtists?: string[]
@@ -146,10 +151,7 @@ export interface TrackData {
      * */
     duration?: number
 
-    meta?: {
-        brainz?: BrainzMeta
-        spotify?: SpotifyMeta
-    }
+    meta?: TrackMeta
 }
 
 export interface PlayData extends TrackData {

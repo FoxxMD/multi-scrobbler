@@ -12,6 +12,7 @@ import clone from 'clone';
 import { childLogger, Logger } from '@foxxmd/logging';
 import { projectDir } from './index.js';
 import path from 'path';
+import { cacheFunctions } from "@foxxmd/regex-buddy-core";
 import { fileOrDirectoryIsWriteable } from '../utils.js';
 import { asCacheAuthProvider, asCacheMetadataProvider, asCacheScrobbleProvider, CacheAuthProvider, CacheConfig, CacheConfigOptions, CacheMetadataProvider, CacheProvider, CacheScrobbleProvider } from './infrastructure/Atomic.js';
 import { Typeson } from 'typeson';
@@ -47,6 +48,7 @@ export class MSCache {
     cacheMetadata: Cacheable;
     cacheScrobble: Cacheable;
     cacheAuth: Cacheable;
+    regexCache: ReturnType<typeof cacheFunctions>;
 
     logger: Logger;
 
@@ -69,6 +71,7 @@ export class MSCache {
                 connection: aConn = (process.env.CACHE_AUTH_CONN ?? configDir),
                 ...restAuth
             } = {},
+            regex = 200,
         } = config;
 
         this.config = {
@@ -86,8 +89,11 @@ export class MSCache {
                 provider: aProvider,
                 connection: aConn,
                 ...restAuth
-            }
+            },
+            regex
         };
+
+        this.regexCache = cacheFunctions(this.config.regex);
     }
 
     init = async () => {
