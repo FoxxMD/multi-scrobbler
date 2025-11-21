@@ -21,7 +21,8 @@ const badErrors = [
     'api key suspended',
     'invalid session key',
     'invalid api key',
-    'authentication failed'
+    'authentication failed',
+    'invalid parameters'
 ];
 
 const retryErrors = [
@@ -120,7 +121,7 @@ export default class LastfmApiClient extends AbstractApiClient {
             } = e;
             // for now check for exceptional errors by matching error code text
             const retryError = retryErrors.find(x => message.toLocaleLowerCase().includes(x));
-            let networkError =  null;
+            let networkError =  undefined;
             if(retryError === undefined) {
                 const nError = getNodeNetworkException(e);
                 if(nError !== undefined) {
