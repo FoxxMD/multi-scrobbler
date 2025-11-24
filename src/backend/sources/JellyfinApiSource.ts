@@ -33,6 +33,11 @@ import {
     getLibraryStructureApi,
     // @ts-expect-error weird typings?
     getImageApi,
+    // @ts-expect-error weird typings?
+    getUserViewsApi,
+    // @ts-expect-error weird typings?
+    getLibraryApi,
+    //getAncestors
 
 } from "@jellyfin/sdk/lib/utils/api/index.js";
 import {
@@ -42,17 +47,13 @@ import {
 from "@jellyfin/sdk/lib/index.js";
 import dayjs from "dayjs";
 import EventEmitter from "events";
-import { nanoid } from "nanoid";
-import pEvent from "p-event";
-import { Simulate } from "react-dom/test-utils";
 import { BrainzMeta, PlayObject } from "../../core/Atomic.js";
 import { buildTrackString, combinePartsToString, truncateStringToLength } from "../../core/StringUtils.js";
 import {
     FormatPlayObjectOptions,
     InternalConfig,
-    PlayerStateData,
     PlayerStateDataMaybePlay,
-    PlayPlatformId, REPORTED_PLAYER_STATUSES
+    REPORTED_PLAYER_STATUSES
 } from "../common/infrastructure/Atomic.js";
 import { JellyApiSourceConfig } from "../common/infrastructure/config/source/jellyfin.js";
 import { genGroupIdStr, getPlatformIdFromData, isDebugMode, parseBool, } from "../utils.js";
@@ -86,9 +87,10 @@ export default class JellyfinApiSource extends MemoryPositionalSource {
     logFilterFailure: false | 'debug' | 'warn';
 
     mediaIdsSeen: FixedSizeList<string>;
+    mediaIdLibrary: FixedSizeList<{id: string, libraryId: string | false}>;
     uniqueDropReasons: FixedSizeList<string>;
 
-    libraries: {name: string, paths: string[], collectionType: CollectionType}[] = [];
+    libraries: {name: string, id: string, paths: string[], collectionType: CollectionType}[] = [];
 
     declare config: JellyApiSourceConfig;
 
@@ -112,6 +114,7 @@ export default class JellyfinApiSource extends MemoryPositionalSource {
 
         this.uniqueDropReasons = new FixedSizeList<string>(100);
         this.mediaIdsSeen = new FixedSizeList<string>(100);
+        this.mediaIdLibrary = new FixedSizeList<{id: string, libraryId: string}>(15);
     }
 
     protected async doBuildInitData(): Promise<true | string | undefined> {
@@ -254,14 +257,22 @@ export default class JellyfinApiSource extends MemoryPositionalSource {
     // }
 
     protected buildLibraryInfo = async () => {
-        try {
-            const virtualResp = await getLibraryStructureApi(this.api).getVirtualFolders();
-            const folders = virtualResp.data as VirtualFolderInfo[];
-            this.libraries = folders.map(x => ({name: x.Name, paths: x.Locations, collectionType: x.CollectionType}));
-        } catch (e) {
-            throw new Error('Unable to get server Libraries and paths', {cause: e});
+        if (this.config.data.apiKey !== undefined) {
+            try {
+                const virtualResp = await getLibraryStructureApi(this.api).getVirtualFolders();
+                const folders = virtualResp.data as VirtualFolderInfo[];
+                this.libraries = folders.map(x => ({ name: x.Name, id: x.ItemId, paths: x.Locations, collectionType: x.CollectionType }));
+            } catch (e) {
+                throw new Error('Unable to get server Libraries and paths', { cause: e });
+            }
+        } else {
+            try {
+                const views = await getUserViewsApi(this.api).getUserViews();
+                this.libraries = views.data.Items.map(x => ({ name: x.Name, id: x.Id, paths: [], collectionType: x.CollectionType }));
+            } catch (e) {
+                throw new Error('Unable to get server Libraries and paths', { cause: e });
+            }
         }
-
     }
 
     getAllowedLibraries = () => {
@@ -308,34 +319,91 @@ export default class JellyfinApiSource extends MemoryPositionalSource {
 
         if(session.NowPlayingItem !== undefined) {
             const {
-                Path
+                Path,
+                Id,
             } = session.NowPlayingItem;
 
-            const allowedLibraries = this.getAllowedLibraries();
-            if(allowedLibraries.length > 0 && (Path === undefined || !allowedLibraries.map(x => x.paths).flat(1).some(x => Path.includes(x)))) {
+            const libraryEntry = this.mediaIdLibrary.data.find(x => x.id === Id);
+            const libraryId = libraryEntry === undefined ? undefined : libraryEntry.libraryId;
+            let isValidToFilter = true;
+            const invalidReasons: string[] = [];
+
+            if(libraryId === undefined) {
+                this.logger.warn(`No library entry found for ${Id}`);
+                invalidReasons.push('No CollectionFolder was fetched for media, cannot determine if its in an allowed library');
+                isValidToFilter = false;
+            } else if(libraryId === false) {
+                invalidReasons.push('No CollectionFolder (library) was found for media');
+                isValidToFilter = false;
+            }
+            if(!isValidToFilter && this.config.data.apiKey !== undefined) {
                 if(Path === undefined) {
-                    return 'media does not have a path, cannot be included in librariesAllow';
+                    invalidReasons.push('Media does not have a path');
+                } else {
+                    isValidToFilter = true;
                 }
-                return `media not included in librariesAllow`;
+            }
+
+            if(!isValidToFilter) {
+                return invalidReasons.join(' | ');
+            }
+
+            const allowedLibraries = this.getAllowedLibraries();
+
+
+            if(allowedLibraries.length > 0) {
+                let anyPass = false;
+                const reasons = [];
+                if(allowedLibraries.some(x => x.id === libraryId)) {
+                    anyPass = true;
+                } else {
+                    reasons.push('Media does not belong to an allowed library (using CollectionFolder filter)');
+                     if(Path !== undefined) {
+                        if(!allowedLibraries.map(x => x.paths).flat(1).some(x => Path.includes(x))) {
+                            reasons.push('media path not found in any allowedLibraries');
+                        } else {
+                            anyPass = true;
+                        } 
+                    }
+                }
+                if(!anyPass) {
+                    return reasons.join(' | ');
+                }
             }
             
             if(allowedLibraries.length === 0) {
                 const blockedLibraries = this.getBlockedLibraries();
                 if(blockedLibraries.length > 0) {
-                    let blockedLibrary = undefined;
-                    if(Path !== undefined) {
-                        blockedLibrary = blockedLibraries.find(x => x.paths.some(y => Path.includes(y)));
+                    let allPass = true;
+                    const reasons = [];
+                    const blocked = blockedLibraries.find(x => x.id === libraryId || (Path !== undefined && x.paths.flat(1).some(y => Path.includes(y))));
+                    if(blocked === undefined) {
+                        allPass = true;
+                    } else {
+                        reasons.push(`Media belongs to a blocked library: ${blocked.name}`);
+                        allPass = false;
                     }
-                    if(blockedLibrary !== undefined) {
-                        return `media included in librariesBlock '${blockedLibrary.name}'`;
+                    if(!allPass) {
+                        return reasons.join(' | ');
                     }
                 }
-    
-                if(Path === undefined || !this.getValidLibraries().map(x => x.paths).flat(1).some(x => Path.includes(x))) {
-                    if(Path === undefined) {
-                        return 'media does not have a path, cannot be part of a valid library';
+
+                let anyPass = false;
+                const reasons = [];
+                if(this.getValidLibraries().some(x => x.id === libraryId)) {
+                    anyPass = true;
+                } else {
+                    reasons.push('Media does not belong to a valid library (using CollectionFolder filter)');
+                     if(Path !== undefined) {
+                        if(!this.getValidLibraries().map(x => x.paths).flat(1).some(x => Path.includes(x))) {
+                            reasons.push('media path not found in any valid libraries');
+                        } else {
+                            anyPass = true;
+                        } 
                     }
-                    return `media not included in a valid library`;
+                }
+                if(!anyPass) {
+                    return reasons.join(' | ');
                 }
             }
         }
@@ -481,6 +549,17 @@ export default class JellyfinApiSource extends MemoryPositionalSource {
         const validSessions: PlayerStateDataMaybePlay[] = [];
 
         for(const sessionData of nonMSSessions) {
+            const id = sessionData[1].NowPlayingItem.Id;
+            const mediaLibraryEntry = this.mediaIdLibrary.data.find(x => x.id === id)
+            if(mediaLibraryEntry === undefined) {
+                const ancestors = await getLibraryApi(this.api).getAncestors({itemId: id, userId: sessionData[1].UserId});
+                const f = ancestors.data.find(x => x.Type === 'CollectionFolder');
+                const entry: {id: string, libraryId: false | string} = {id, libraryId: false};
+                if(f !== undefined) {
+                    entry.libraryId = f.Id;
+                }
+                this.mediaIdLibrary.add(entry);
+            }
             const validPlay = this.isActivityValid(sessionData[0], sessionData[1]);
             if(validPlay === true) {
                 validSessions.push(sessionData[0]);

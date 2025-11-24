@@ -33,7 +33,15 @@ const createJfApi = (data: JellyApiData): JellyfinApiSource => {
         data,
         options: {}
     }, { localUrl: new URL('http://test'), configDir: 'test', logger: loggerTest, version: 'test' }, new EventEmitter());
-    jf.libraries = [{name: 'music', paths: ['/data/allmusic'], collectionType: 'music'}];
+    jf.libraries = [{name: 'music', paths: ['/data/allmusic'], id: '1234', collectionType: 'music'}];
+    return jf;
+}
+const createJfUser = (data: JellyApiData): JellyfinApiSource => {
+    const jf = new JellyfinApiSource('Test', {
+        data,
+        options: {}
+    }, { localUrl: new URL('http://test'), configDir: 'test', logger: loggerTest, version: 'test' }, new EventEmitter());
+    jf.libraries = [{name: 'music', paths: [], id: '1234', collectionType: 'music'}];
     return jf;
 }
 
@@ -293,7 +301,7 @@ describe("Jellyfin API Source", function() {
             it('Should allow activity based on additional libraries typed allowed', async function () {
                 const jf = createJfApi({...defaultJfApiCreds, additionalAllowedLibraryTypes: ['musicvideos']});
                 await jf.buildInitData();
-                jf.libraries.push({name: 'CoolVideos', paths: ['/data/someOtherFolder'], collectionType: 'musicvideos'});
+                jf.libraries.push({name: 'CoolVideos', paths: ['/data/someOtherFolder'], id: '1234', collectionType: 'musicvideos'});
     
                 expect(jf.isActivityValid(validPlayerState, nowPlayingSession({Path: '/data/someOtherFolder/myMusic.mp3'}))).to.be.true;
                 await jf.destroy();
@@ -308,10 +316,20 @@ describe("Jellyfin API Source", function() {
                 await jf.destroy();
             });
 
+            it('Should allow activity based on libraries allow with library id only', async function () {
+                const jf = createJfUser({...defaultJfApiCreds, librariesAllow: ['music']});
+                await jf.buildInitData();
+    
+                expect(jf.isActivityValid(validPlayerState, validSession)).to.not.be.true;
+                jf.mediaIdLibrary.add({id: '7648c5d1a50b1e03f225a2ce76baef07', 'libraryId': '1234'});
+                expect(jf.isActivityValid(validPlayerState, nowPlayingSession({}))).to.be.true;
+                await jf.destroy();
+            });
+
             it('Should allow activity based on libraries allow and override library type restriction', async function () {
                 const jf = createJfApi({...defaultJfApiCreds, librariesAllow: ['CoolVideos','music']});
                 await jf.buildInitData();
-                jf.libraries.push({name: 'CoolVideos', paths: ['/data/someOtherFolder'], collectionType: 'musicvideos'});
+                jf.libraries.push({name: 'CoolVideos', paths: ['/data/someOtherFolder'], id: '1234', collectionType: 'musicvideos'});
     
                 expect(jf.isActivityValid(validPlayerState, validSession)).to.be.true;
                 expect(jf.isActivityValid(validPlayerState, nowPlayingSession({Path: '/data/someOtherFolder/myMusic.mp3'}))).to.be.true;
@@ -321,10 +339,23 @@ describe("Jellyfin API Source", function() {
             it('Should disallow activity based on libraries block', async function () {
                 const jf = createJfApi({...defaultJfApiCreds, librariesBlock: ['music']});
                 await jf.buildInitData();
-                jf.libraries.push({name: 'CoolMusic', paths: ['/data/someOtherFolder'], collectionType: 'music'});
+                jf.libraries.push({name: 'CoolMusic', paths: ['/data/someOtherFolder'], id: '1234', collectionType: 'music'});
     
                 expect(jf.isActivityValid(validPlayerState, validSession)).to.not.be.true;
                 expect(jf.isActivityValid(validPlayerState, nowPlayingSession({Path: '/data/someOtherFolder/myMusic.mp3'}))).to.be.true;
+                await jf.destroy();
+            });
+
+            it('Should disallow activity based on libraries block with library id only', async function () {
+                const jf = createJfUser({...defaultJfApiCreds, librariesBlock: ['music']});
+                await jf.buildInitData();
+                jf.libraries.push({name: 'CoolMusic', paths: [], id: '4567', collectionType: 'music'});
+    
+                jf.mediaIdLibrary.add({id: '7648c5d1a50b1e03f225a2ce76baef07', 'libraryId': '4567'});
+                expect(jf.isActivityValid(validPlayerState, validSession)).to.be.true;
+                jf.mediaIdLibrary.reset();
+                jf.mediaIdLibrary.add({id: '7648c5d1a50b1e03f225a2ce76baef07', 'libraryId': '1234'});
+                expect(jf.isActivityValid(validPlayerState, nowPlayingSession({}))).to.not.be.true;
                 await jf.destroy();
             });
 
@@ -343,7 +374,7 @@ describe("Jellyfin API Source", function() {
             it('Should disallow activity with invalid library type', async function () {
                 const jf = createJfApi({...defaultJfApiCreds});
                 await jf.buildInitData();
-                jf.libraries.push({name: 'CoolVideos', paths: ['/data/someOtherFolder'], collectionType: 'musicvideos'});
+                jf.libraries.push({name: 'CoolVideos', paths: ['/data/someOtherFolder'], id: '1234', collectionType: 'musicvideos'});
     
                 expect(jf.isActivityValid(validPlayerState, nowPlayingSession({Path: '/data/someOtherFolder/myMusic.mp3'}))).to.not.be.true;
                 await jf.destroy();
