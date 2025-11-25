@@ -6,21 +6,19 @@ import deepEqual from 'fast-deep-equal';
 import { Simulate } from "react-dom/test-utils";
 import { PlayObject } from "../../core/Atomic.js";
 import { buildTrackString } from "../../core/StringUtils.js";
-
-import {
-    configPartsToStrongParts, isUserStage, transformPlayUsingParts
-} from "../utils/PlayTransformUtils.js";
 import { CommonClientConfig } from "./infrastructure/config/client/index.js";
 import { CommonSourceConfig } from "./infrastructure/config/source/index.js";
 import { TransformRulesError } from "./errors/MSErrors.js";
 import {
-    ConditionalSearchAndReplaceRegExp, ExternalMetadataTerm, PlayTransformPartsArray,
     PlayTransformRules,
+    StageConfig,
     TRANSFORM_HOOK,
     TransformHook
 } from "./infrastructure/Transform.js";
 import AbstractInitializable from "./AbstractInitializable.js";
 import play = Simulate.play;
+import TransformerManager from "./transforms/TransformerManager.js";
+import { getRoot } from "../ioc.js";
 
 export default abstract class AbstractComponent extends AbstractInitializable {
 
@@ -28,9 +26,11 @@ export default abstract class AbstractComponent extends AbstractInitializable {
 
     transformRules: PlayTransformRules = {};
     regexCache!: ReturnType<typeof cacheFunctions>;
+    protected transformManager: TransformerManager;
 
     protected constructor(config: CommonClientConfig | CommonSourceConfig) {
         super(config);
+        this.transformManager = getRoot().items.transformerManager;
     }
 
     protected postCache(): Promise<void> {
@@ -83,25 +83,25 @@ export default abstract class AbstractComponent extends AbstractInitializable {
             postCompare;
 
         try {
-            preCompare = configPartsToStrongParts(preConfig)
+            preCompare = this.transformPartToStrong(preConfig);
         } catch (e) {
             throw new Error('preCompare was not valid', {cause: e});
         }
 
         try {
-            candidate = configPartsToStrongParts(candidateConfig)
+            candidate = this.transformPartToStrong(candidateConfig);
         } catch (e) {
             throw new Error('candidate was not valid', {cause: e});
         }
 
         try {
-            existing = configPartsToStrongParts(existingConfig)
+            existing = this.transformPartToStrong(existingConfig);
         } catch (e) {
             throw new Error('existing was not valid', {cause: e});
         }
 
         try {
-            postCompare = configPartsToStrongParts(postConfig)
+            postCompare = this.transformPartToStrong(postConfig);
         } catch (e) {
             throw new Error('postCompare was not valid', {cause: e});
         }
@@ -116,14 +116,24 @@ export default abstract class AbstractComponent extends AbstractInitializable {
         }
     }
 
-    public transformPlay = (play: PlayObject, hookType: TransformHook, log?: boolean) => {
+    protected transformPartToStrong(data: any) {
+        if(data === undefined) {
+            return undefined;
+        }
+        // default to user transform type for backward compatibility
+        const partArr = (Array.isArray(data) ? data : [data]).map(x => ({type: 'user', ...x}));
+
+        return partArr.map(x => this.transformManager.parseTransformerConfig(x));
+    }
+
+    public transformPlay = async (play: PlayObject, hookType: TransformHook, log?: boolean) => {
 
         let logger: Logger;
         const labels = ['Play Transform', hookType];
         const getLogger = () => logger !== undefined ? logger : childLogger(this.logger, labels);
 
         try {
-            let hook: PlayTransformPartsArray<ConditionalSearchAndReplaceRegExp[] | ExternalMetadataTerm> | undefined;
+            let hook: StageConfig[];
 
             switch (hookType) {
                 case TRANSFORM_HOOK.preCompare:
@@ -147,19 +157,13 @@ export default abstract class AbstractComponent extends AbstractInitializable {
             let transformedPlay: PlayObject = play;
             const transformDetails: string[] = [];
             for(const hookItem of hook) {
-                if(isUserStage<ConditionalSearchAndReplaceRegExp[]>(hookItem)) {
-                    const newTransformedPlay = transformPlayUsingParts(transformedPlay, hookItem, {
-                        logger: getLogger,
-                        regex: {
-                            searchAndReplace: this.regexCache.searchAndReplace,
-                            testMaybeRegex: this.regexCache.testMaybeRegex,
-                        }
-                    });
-                    if(!deepEqual(newTransformedPlay, transformedPlay)) {
-                        transformDetails.push(buildTrackString(transformedPlay, {include: ['artist', 'track', 'album']}));
-                    }
-                    transformedPlay = newTransformedPlay;
+
+                const newTransformedPlay = await this.transformManager.handleStage(hookItem, transformedPlay);
+
+                if(!deepEqual(newTransformedPlay, transformedPlay)) {
+                    transformDetails.push(`${hookItem.type} - ${buildTrackString(transformedPlay, {include: ['artist', 'track', 'album']})}`);
                 }
+                transformedPlay = newTransformedPlay;
             }
 
             if(transformDetails.length > 0) {

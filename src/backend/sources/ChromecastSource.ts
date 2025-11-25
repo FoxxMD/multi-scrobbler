@@ -641,7 +641,7 @@ export class ChromecastSource extends MemoryPositionalSource {
             }
         }
 
-        const playsToReturn = this.processRecentPlays(plays);
+        const playsToReturn = await this.processRecentPlays(plays);
 
         this.pruneApplications();
 

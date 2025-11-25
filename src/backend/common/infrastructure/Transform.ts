@@ -24,7 +24,7 @@ export interface PlayTransformPartsAtomic<T> {
 
 export type StageTypeMetadata = 'spotify' | 'listenbrainz' | 'native';
 export type StageTypeUser = 'user';
-export type StageType = StageTypeMetadata | StageTypeUser;
+export type StageType = StageTypeMetadata | StageTypeUser | string;
 export const STAGE_TYPES_USER: StageTypeUser[] = ['user'];
 export const STAGE_TYPES_METADATA: StageTypeMetadata[] = ['spotify','listenbrainz','native'];
 export const STAGE_TYPES: StageType[] = [...STAGE_TYPES_METADATA, ...STAGE_TYPES_USER];
@@ -39,6 +39,18 @@ export interface NotStageTyped {
 
 export type MaybeStageTyped = StageTyped | NotStageTyped;
 
+export interface StageTypedConfig {
+    type: StageType
+}
+
+export interface Whennable {
+    when?: WhenConditionsConfig
+}
+
+export interface StageConfig extends StageTypedConfig, Whennable {}
+
+export interface AtomicStageConfig<T> extends StageConfig, PlayTransformPartsAtomic<T> {}
+
 export interface PlayTransformStageTyped<T> extends PlayTransformPartsAtomic<T> {
     type: StageType
 }
@@ -49,7 +61,7 @@ export interface PlayTransformMetadataStage<T = ExternalMetadataTerm> extends Pl
     type: StageTypeMetadata
 }
 
-export interface PlayTransformUserStage<T> extends PlayTransformStageTyped<T> {
+export interface PlayTransformUserStage<T> extends StageTypedConfig, PlayTransformPartsAtomic<T> {
     type: StageTypeUser
 }
 export type UntypedPlayTransformUserStage<T> = Omit<PlayTransformUserStage<T>, 'type'> & {type?: never};

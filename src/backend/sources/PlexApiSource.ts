@@ -406,7 +406,7 @@ export default class PlexApiSource extends MemoryPositionalSource {
                 }
             }
         }
-        return this.processRecentPlays(validSessions);
+        return await this.processRecentPlays(validSessions);
     }
 
     getSourceArt = async (data: string): Promise<[Readable, string]> => {

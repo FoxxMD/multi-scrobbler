@@ -56,6 +56,7 @@ import { AsyncTask, SimpleIntervalJob, Task, ToadScheduler } from "toad-schedule
 import { MSCache } from "../common/Cache.js";
 import { getRoot } from "../ioc.js";
 import { rehydratePlay } from "../utils/CacheUtils.js";
+import { findAsyncSequential } from "../utils/AsyncUtils.js";
 
 type PlatformMappedPlays = Map<string, {play: PlayObject, source: SourceIdentifier}>;
 type NowPlayingQueue = Map<string, PlatformMappedPlays>;
@@ -469,12 +470,12 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
 
     getScrobbledPlays = () => this.scrobbledPlayObjs.data.map(x => x.scrobble)
 
-    findExistingSubmittedPlayObj = (playObjPre: PlayObject): ([undefined, undefined] | [ScrobbledPlayObject, ScrobbledPlayObject[]]) => {
+    findExistingSubmittedPlayObj = async (playObjPre: PlayObject): Promise<([undefined, undefined] | [ScrobbledPlayObject, ScrobbledPlayObject[]])> => {
 
-        const playObj = this.transformPlay(playObjPre, TRANSFORM_HOOK.candidate);
+        const playObj = await this.transformPlay(playObjPre, TRANSFORM_HOOK.candidate);
 
-        const dtInvariantMatches = this.scrobbledPlayObjs.data
-            .map(x => ({...x, play: this.transformPlay(x.play, TRANSFORM_HOOK.existing)}))
+        const dtInvariantMatches = (await Promise.all(this.scrobbledPlayObjs.data
+            .map(async x => ({...x, play: await this.transformPlay(x.play, TRANSFORM_HOOK.existing)}))))
             .filter(x => playObjDataMatch(playObj, x.play));
 
         if (dtInvariantMatches.length === 0) {
@@ -514,7 +515,7 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
 
     existingScrobble = async (playObjPre: PlayObject) => {
 
-        const playObj = this.transformPlay(playObjPre, TRANSFORM_HOOK.candidate);
+        const playObj = await this.transformPlay(playObjPre, TRANSFORM_HOOK.candidate);
 
         const tr = truncateStringToLength(27);
         const scoreTrackOpts: TrackStringOptions = {include: ['track', 'artist', 'time'], transformers: {track: (t: any, data, existing) => `${existing ? '- ': ''}${tr(t)}`}};
@@ -531,7 +532,7 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
         let closestMatch: {score: number, breakdowns: string[], confidence: string, scrobble?: PlayObject} = {score: 0, breakdowns: [], confidence: 'No existing scrobble matched with a score higher than 0'};
 
         // then check if we have already recorded this
-        const [existingExactSubmitted, existingDataSubmitted = []] = this.findExistingSubmittedPlayObj(playObjPre);
+        const [existingExactSubmitted, existingDataSubmitted = []] = await this.findExistingSubmittedPlayObj(playObjPre);
 
         // if we have an submitted play with matching data and play date then we can just return the response from the original scrobble
         if (existingExactSubmitted !== undefined) {
@@ -567,9 +568,10 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
             // -- this is info we only know if play was generated from MS player so we can be reasonably sure
             const looseTimeAccuracy = playObj.data.repeat ? [TA_DURING] : [TA_FUZZY, TA_DURING];
 
-            existingScrobble = this.recentScrobbles.find((xPre) => {
+            
+            existingScrobble = findAsyncSequential(this.recentScrobbles, async (xPre) => {
 
-                const x = this.transformPlay(xPre, TRANSFORM_HOOK.existing);
+                const x = await this.transformPlay(xPre, TRANSFORM_HOOK.existing);
 
                 //const referenceMatch = referenceApiScrobbleResponse !== undefined && playObjDataMatch(x, referenceApiScrobbleResponse);
 
@@ -795,8 +797,8 @@ ${closestMatch.breakdowns.join('\n')}`, {leaf: ['Dupe Check']});
                     const currQueuedPlay = this.queuedScrobbles.shift();
 
                     const [timeFrameValid, timeFrameValidLog] = this.timeFrameIsValid(currQueuedPlay.play);
-                    if (timeFrameValid && !(await this.alreadyScrobbled(this.transformPlay(currQueuedPlay.play, TRANSFORM_HOOK.preCompare)))) {
-                        const transformedScrobble = this.transformPlay(currQueuedPlay.play, TRANSFORM_HOOK.postCompare);
+                    if (timeFrameValid && !(await this.alreadyScrobbled((await this.transformPlay(currQueuedPlay.play, TRANSFORM_HOOK.preCompare))))) {
+                        const transformedScrobble = await this.transformPlay(currQueuedPlay.play, TRANSFORM_HOOK.postCompare);
                         try {
                             const scrobbledPlay = await this.scrobble(transformedScrobble);
                             this.emitEvent('scrobble', {play: transformedScrobble});
@@ -880,8 +882,8 @@ ${closestMatch.breakdowns.join('\n')}`, {leaf: ['Dupe Check']});
             await this.refreshScrobbles();
         }
         const [timeFrameValid, timeFrameValidLog] = this.timeFrameIsValid(deadScrobble.play);
-        if (timeFrameValid && !(await this.alreadyScrobbled(this.transformPlay(deadScrobble.play, TRANSFORM_HOOK.preCompare)))) {
-            const transformedScrobble = this.transformPlay(deadScrobble.play, TRANSFORM_HOOK.postCompare);
+        if (timeFrameValid && !(await this.alreadyScrobbled((await this.transformPlay(deadScrobble.play, TRANSFORM_HOOK.preCompare))))) {
+            const transformedScrobble = await this.transformPlay(deadScrobble.play, TRANSFORM_HOOK.postCompare);
             try {
                 const scrobbledPlay = await this.scrobble(transformedScrobble);
                 this.emitEvent('scrobble', {play: transformedScrobble});

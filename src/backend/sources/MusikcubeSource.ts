@@ -240,7 +240,7 @@ export class MusikcubeSource extends MemoryPositionalSource {
             position: playbackOverview.options.playing_current_time
         }
 
-        return this.processRecentPlays([playerState]);
+        return await this.processRecentPlays([playerState]);
     }
 
 }

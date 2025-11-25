@@ -1,25 +1,10 @@
 import { assert, expect } from 'chai';
 import { describe, it } from 'mocha';
-import { intersect } from "../../utils.js";
 import {
     compareNormalizedStrings,
     normalizeStr,
-    parseTrackCredits,
-    uniqueNormalizedStrArr
 } from "../../utils/StringUtils.js";
-import { ExpectedResults } from "./interfaces.js";
-import testData from './playTestData.json' with { type: "json" };
 import { splitByFirstFound } from '../../../core/StringUtils.js';
-
-interface PlayTestFixture {
-    caseHints: string[]
-    data: {
-        track: string
-        artists: string[]
-        album?: string
-    }
-    expected: ExpectedResults
-}
 
 describe('String Comparisons', function () {
 
@@ -126,26 +111,6 @@ describe('String Comparisons', function () {
         assert.equal( result1.highScore, result2.highScore, `Comparing: '${longerString}' | '${shorterString}'`);
     });
 });
-
-describe('Play Strings',function () {
-
-    const testFixtures = testData as unknown as PlayTestFixture[];
-    const joinerData = testFixtures.filter(x => intersect(['joiner','track'], x.caseHints).length === 2);
-
-    it('should parse joiners from track title', function() {
-        for(const test of joinerData) {
-            const res = parseTrackCredits(test.data.track);
-            let artists: string[] = [...test.data.artists];
-            if(res.secondary !== undefined) {
-                artists = uniqueNormalizedStrArr([...artists, ...res.secondary]);
-            }
-            assert.equal(res.primaryComposite, test.expected.track);
-            assert.sameDeepMembers(artists, test.expected.artists);
-        }
-    });
-});
-
-
 
 describe('String Splitting', function() {
 

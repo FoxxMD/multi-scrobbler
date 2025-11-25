@@ -95,7 +95,7 @@ export default class TealfmSource extends MemorySource {
         } catch (e) {
             throw new Error('Error occurred while trying to fetch records', {cause: e});
         }
-        this.processRecentPlays([]);
+        await this.processRecentPlays([]);
         const plays = list.map(x => listRecordToPlay(x));
         return plays;
     }

@@ -224,7 +224,7 @@ export class AzuracastSource extends MemorySource {
             position: online && play !== undefined ? play.meta.trackProgressPosition : undefined
         }
 
-        return this.processRecentPlays([playerState]);
+        return await this.processRecentPlays([playerState]);
     }
 
 }

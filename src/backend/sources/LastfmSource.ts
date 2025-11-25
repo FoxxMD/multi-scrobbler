@@ -131,7 +131,7 @@ export default class LastfmSource extends MemorySource {
     getRecentlyPlayed = async(options: RecentlyPlayedOptions = {}): Promise<PlayObject[]> => {
         try {
             const [history, now] = await this.getLastfmRecentTrack(options);
-            this.processRecentPlays(now);
+            await this.processRecentPlays(now);
             return  history;
         } catch (e) {
             throw e;

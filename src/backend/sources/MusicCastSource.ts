@@ -112,12 +112,12 @@ export class MusicCastSource extends MemoryPositionalSource {
         }
         if ((statusResp.body as DeviceStatusResponse).power !== 'on') {
             this.logger.debug('MusicCast device is offline');
-            return this.processRecentPlays([]);
+            return await this.processRecentPlays([]);
         }
 
         const playInfo = await this.getAnyPlayInfo();
         if(playInfo === undefined) {
-            return this.processRecentPlays([]);
+            return await this.processRecentPlays([]);
         }
 
         const play = formatPlayObj(playInfo);
@@ -130,7 +130,7 @@ export class MusicCastSource extends MemoryPositionalSource {
             position: play.meta.trackProgressPosition
         }
 
-        return this.processRecentPlays([playerState]);
+        return await this.processRecentPlays([playerState]);
     }
 }
 

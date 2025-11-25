@@ -10,6 +10,8 @@ import { generateBaseURL } from "./utils/NetworkUtils.js";
 import { PassThrough } from "stream";
 import { CacheConfigOptions } from "./common/infrastructure/Atomic.js";
 import { MSCache } from "./common/Cache.js";
+import TransformerManager from "./common/transforms/TransformerManager.js";
+import { TransformerCommonConfig } from "../core/Atomic.js";
 
 export let version: string = 'unknown';
 
@@ -27,6 +29,7 @@ export interface RootOptions {
     loggerStream?: PassThrough
     loggingConfig?: LogOptions
     cache?: CacheConfigOptions | MSCache | (() => MSCache)
+    transformerConfigs?: TransformerCommonConfig[]
 }
 
 const createRoot = (options: RootOptions = {logger: loggerDebug}) => {
@@ -37,7 +40,8 @@ const createRoot = (options: RootOptions = {logger: loggerDebug}) => {
         loggerStream,
         loggingConfig,
         logger,
-        cache
+        cache,
+        transformerConfigs = [],
     } = options || {};
     const configDir = process.env.CONFIG_DIR || path.resolve(projectDir, `./config`);
     let disableWeb = dw;
@@ -65,6 +69,16 @@ const createRoot = (options: RootOptions = {logger: loggerDebug}) => {
         const f = e;
     });
 
+    const transformerManager = new TransformerManager(logger, maybeSingletonCache !== undefined ? maybeSingletonCache : cacheFunc());
+    transformerManager.register({type: 'user'});
+    for(const c of transformerConfigs) {
+        try {
+            transformerManager.register(c);
+        } catch (e) {
+            logger.warn(new Error('Could not register a transformer', {cause: e}));
+        }
+    }
+
     const portVal: number | string = process.env.PORT ?? port;
 
     return createContainer().add({
@@ -80,6 +94,7 @@ const createRoot = (options: RootOptions = {logger: loggerDebug}) => {
         loggerStream,
         loggingConfig,
         logger: logger,
+        transformerManager,
         cache: () => maybeSingletonCache !== undefined ? () => maybeSingletonCache : cacheFunc
     }).add((items) => {
         const localUrl = generateBaseURL(baseUrl, items.port)

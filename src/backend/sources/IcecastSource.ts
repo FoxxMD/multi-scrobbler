@@ -122,7 +122,7 @@ export class IcecastSource extends MemorySource {
         }
 
         if (this.currentMetadata === undefined) {
-            return this.processRecentPlays([]);
+            return await this.processRecentPlays([]);
         }
 
         // if (this.manualListening === false || (this.config.options.scrobbleOnStart === false && this.manualListening === undefined)) {
@@ -146,7 +146,7 @@ export class IcecastSource extends MemorySource {
             play
         }
 
-        return this.processRecentPlays([playerState]);
+        return await this.processRecentPlays([playerState]);
     }
 }
 

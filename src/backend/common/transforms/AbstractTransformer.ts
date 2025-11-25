@@ -1,37 +1,45 @@
-import { ObjectPlayData, PlayObject, TrackMeta } from "../../../core/Atomic.js";
+import { childLogger, Logger } from "@foxxmd/logging";
+import { PlayObject, TransformerCommonConfig } from "../../../core/Atomic.js";
 import { getRoot } from "../../ioc.js";
-import { testWhenConditions } from "../../utils/PlayTransformUtils.js";
+import { isStageTyped, testWhenConditions } from "../../utils/PlayTransformUtils.js";
 import AbstractInitializable from "../AbstractInitializable.js";
-import { ConditionalSearchAndReplaceRegExp, PlayTransformMetaParts, PlayTransformParts, PlayTransformUserParts } from "../infrastructure/Transform.js";
+import { StageConfig } from "../infrastructure/Transform.js";
 import { cacheFunctions } from "@foxxmd/regex-buddy-core";
 
-export interface TransformerCommonConfig {
-    data?: Record<string, any>
-    options?: {
-        failOnFetch?: boolean
-        throwOnFailure?: boolean | ('artists' | 'title' | 'albumArtists' | 'album')[]
-    }
-}
-
 export interface TransformerCommon extends TransformerCommonConfig {
-    regexCache?: ReturnType<typeof cacheFunctions>
+    regexCache: ReturnType<typeof cacheFunctions>
+    name: string
+    logger: Logger
 }
 
-export default abstract class AbstractTransformer<Y, T = any> extends AbstractInitializable {
+export default abstract class AbstractTransformer<T = any> extends AbstractInitializable {
 
     declare config: TransformerCommonConfig;
 
+    transformType: string
+
     regexCache: ReturnType<typeof cacheFunctions>
 
-    protected constructor(config: TransformerCommon) {
+    public constructor(config: TransformerCommon) {
         super(config);
-        this.regexCache = config.regexCache ?? getRoot().items.cache().regexCache;
+        this.logger = childLogger(config.logger, ['Transformer', this.config.type, this.config.name]);
+        this.transformType = config.type;
+        this.regexCache = config.regexCache;
     }
 
-    public async handle(parts: PlayTransformParts<Y>, play: PlayObject): Promise<PlayObject> {
+    public parseConfig(data: any) {
+        if (!isStageTyped(data)) {
+            throw new Error(`Must be an object with a 'type' property.`);
+        }
+        return this.doParseConfig(data);
+    }
 
-        if (parts.when !== undefined) {
-            if (!testWhenConditions(parts.when, play, { testMaybeRegex: this.regexCache.testMaybeRegex })) {
+    protected abstract doParseConfig(data: StageConfig): StageConfig;
+
+    public async handle(data: StageConfig, play: PlayObject): Promise<PlayObject> {
+
+        if (data.when !== undefined) {
+            if (!testWhenConditions(data.when, play, { testMaybeRegex: this.regexCache.testMaybeRegex })) {
                 this.logger.debug('When condition not met, returning original Play');
                 return play;
             }
@@ -60,72 +68,10 @@ export default abstract class AbstractTransformer<Y, T = any> extends AbstractIn
             return play;
         }
 
-        const transformedPlayData: Partial<ObjectPlayData> = {};
-
-        if (parts.title !== undefined) {
-            try {
-                const title = await this.handleTitle(play, parts.title, transformData);
-                transformedPlayData.track = title;
-            } catch (e) {
-                const err = new Error(`Failed to transform title: ${play.data.track}`, { cause: e });
-                if (throwOnFailure === true || (throwOnFailure !== false && throwOnFailure.includes('title'))) {
-                    throw err;
-                } else {
-                    this.logger.warn(err);
-                }
-            }
-        }
-
-        if (parts.artists !== undefined) {
-            try {
-                const artists = await this.handleArtists(play, parts.artists, transformData);
-                transformedPlayData.artists = artists;
-            } catch (e) {
-                const err = new Error(`Failed to transform artists`, { cause: e });
-                if (throwOnFailure === true || (throwOnFailure !== false && throwOnFailure.includes('artists'))) {
-                    throw err;
-                } else {
-                    this.logger.warn(err);
-                }
-            }
-
-            try {
-                const albumArtists = await this.handleAlbumArtists(play, parts.artists, transformData);
-                transformedPlayData.albumArtists = albumArtists;
-            } catch (e) {
-                const err = new Error(`Failed to transform album artists`, { cause: e });
-                if (throwOnFailure === true || (throwOnFailure !== false && throwOnFailure.includes('albumArtists'))) {
-                    throw err;
-                } else {
-                    this.logger.warn(err);
-                }
-            }
-        }
-
-        if (parts.album !== undefined) {
-            try {
-                const album = await this.handleTitle(play, parts.album, transformData);
-                transformedPlayData.album = album;
-            } catch (e) {
-                const err = new Error(`Failed to transform album: ${play.data.album}`, { cause: e });
-                if (throwOnFailure === true || (throwOnFailure !== false && throwOnFailure.includes('album'))) {
-                    throw err;
-                } else {
-                    this.logger.warn(err);
-                }
-            }
-        }
-
-        const transformedPlay = {
-            ...play,
-            data: {
-                ...play.data,
-                ...transformedPlayData
-            }
-        }
-
-        return transformedPlay;
+        return await this.doHandle(data, play, transformData);
     }
+
+    protected abstract doHandle(data: StageConfig, play: PlayObject, transformData: T): Promise<PlayObject>;
 
     public async getTransformerData(play: PlayObject): Promise<T> {
         return undefined;
@@ -133,14 +79,5 @@ export default abstract class AbstractTransformer<Y, T = any> extends AbstractIn
 
     public async checkShouldTransform(play: PlayObject, transformData: T): Promise<void> {
         return;
-    }
-
-    protected abstract handleTitle(play: PlayObject, parts: Y, transformData: T): Promise<string | undefined>;
-    protected abstract handleArtists(play: PlayObject, parts: Y, transformData: T): Promise<string[] | undefined>;
-    protected abstract handleAlbumArtists(play: PlayObject, parts: Y, transformData: T): Promise<string[] | undefined>;
-    protected abstract handleAlbum(play: PlayObject, parts: Y, transformData: T): Promise<string | undefined>;
-
-    protected async handleMeta(play: PlayObject, transformData: T): Promise<TrackMeta | undefined> {
-        return play.data.meta;
     }
 }

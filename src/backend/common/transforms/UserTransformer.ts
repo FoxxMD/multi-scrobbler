@@ -1,14 +1,42 @@
 import { searchAndReplace } from "@foxxmd/regex-buddy-core";
 import { PlayObject } from "../../../core/Atomic.js";
-import { testWhenConditions } from "../../utils/PlayTransformUtils.js";
+import { configValToSearchReplace, isSearchAndReplaceTerm, isStageTyped, isUserStage, testWhenConditions } from "../../utils/PlayTransformUtils.js";
 import { WebhookPayload } from "../infrastructure/config/health/webhooks.js";
-import { ConditionalSearchAndReplaceRegExp, PlayTransformUserParts } from "../infrastructure/Transform.js";
+import { ConditionalSearchAndReplaceRegExp, PlayTransformUserParts, PlayTransformUserStage, StageConfig } from "../infrastructure/Transform.js";
 import AbstractTransformer, { TransformerCommon } from "./AbstractTransformer.js"
+import AtomicPartsTransformer from "./AtomicPartsTransformer.js";
 
-export default class UserTransformer extends AbstractTransformer<ConditionalSearchAndReplaceRegExp[], undefined> {
+export default class UserTransformer extends AtomicPartsTransformer<ConditionalSearchAndReplaceRegExp[], undefined> {
 
-    protected constructor(config: TransformerCommon) {
-        super(config);
+    // protected constructor(config: TransformerCommon) {
+    //     super(name, config);
+    // }
+
+    protected doParseConfig(data: StageConfig) {
+        if (!isUserStage(data)) {
+            throw new Error(`UserTransformer is only usable with 'user' type stages`);
+        }
+
+        const stage: PlayTransformUserStage<ConditionalSearchAndReplaceRegExp[]> = {
+            ...data,
+            type: 'user'
+        }
+
+        for (const k of ['artists', 'title', 'album']) {
+            if (!(k in data)) {
+                continue;
+            }
+            if (!Array.isArray(data[k])) {
+                throw new Error(`${k} must be an array`);
+            }
+            try {
+                isSearchAndReplaceTerm(data[k]);
+                stage[k] = data[k].map(configValToSearchReplace);
+            } catch (e) {
+                throw new Error(`Property '${k}' was not a valid type`, { cause: e });
+            }
+        }
+        return stage;
     }
 
     protected generateMapper(play: PlayObject) {
@@ -20,7 +48,11 @@ export default class UserTransformer extends AbstractTransformer<ConditionalSear
             return undefined;
         }
         const mapper = this.generateMapper(play);
-        return searchAndReplace(play.data.track, parts.map(mapper));
+        const result = searchAndReplace(play.data.track, parts.map(mapper));
+        if(result.trim() === '') {
+            return undefined;
+        }
+        return result.trim();
     }
     protected async handleArtists(play: PlayObject, parts: ConditionalSearchAndReplaceRegExp[], _transformData: undefined): Promise<string[] | undefined> {
         if(play.data.artists === undefined || play.data.artists.length === 0) {
@@ -51,11 +83,15 @@ export default class UserTransformer extends AbstractTransformer<ConditionalSear
         return transformedArtists;
     }
     protected async handleAlbum(play: PlayObject, parts: ConditionalSearchAndReplaceRegExp[], _transformData: undefined): Promise<string | undefined> {
-        if (play.data.track === undefined) {
+        if (play.data.album === undefined) {
             return undefined;
         }
         const mapper = this.generateMapper(play);
-        return searchAndReplace(play.data.album, parts.map(mapper));
+        const result = searchAndReplace(play.data.album, parts.map(mapper));
+        if(result.trim() === '') {
+            return undefined;
+        }
+        return result.trim();
     }
 
     public notify(payload: WebhookPayload): Promise<void> {

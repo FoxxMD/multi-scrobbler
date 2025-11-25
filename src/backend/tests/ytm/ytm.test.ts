@@ -174,7 +174,7 @@ describe('Handles interim tracks', function () {
         expect(source.parseRecentAgainstResponse(plays).plays).length(20);
 
         source.polling = true;
-        source.discover(plays);
+        await source.discover(plays);
 
         // first true poll emulating no new tracks played (should not add new tracks from base truth)
         expect(source.parseRecentAgainstResponse(plays).plays).length(0);
@@ -201,7 +201,7 @@ describe('Handles interim tracks', function () {
         expect(source.parseRecentAgainstResponse(plays).plays).length(20);
 
         source.polling = true;
-        source.discover(plays);
+        await source.discover(plays);
 
         // first true poll emulating no new tracks played (should not add new tracks from base truth)
         expect(source.parseRecentAgainstResponse(plays).plays).length(0);

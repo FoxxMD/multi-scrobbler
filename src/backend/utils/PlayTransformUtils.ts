@@ -13,6 +13,7 @@ import {
     PlayTransformRules, PlayTransformStage, PlayTransformUserParts, PlayTransformUserStage, SearchAndReplaceTerm,
     STAGE_TYPES,
     StageType,
+    StageTypedConfig,
     WhenConditionsConfig,
     WhenParts
 } from "../common/infrastructure/Transform.js";
@@ -91,6 +92,13 @@ export const isExternalMetadataTerm = (val: unknown): val is ExternalMetadataTer
     throw new Error(`Value is type of ${tf} but must be one of: boolean, undefined, or object with 'when'`);
 }
 
+export const isStageTyped = (val: unknown): val is StageTypedConfig => {
+    if(typeof val !== 'object' || val === null) {
+        return false;
+    }
+    return 'type' in val;
+}
+
 export const isPlayTransformStage = (val: object | Partial<PlayTransformStage<SearchAndReplaceTerm[]>>): val is PlayTransformStage<SearchAndReplaceTerm[]> => {
     if (!('type' in val)) {
         throw new Error(`Stage is missing 'type'. Must be one of: ${STAGE_TYPES.join(', ')}`);
@@ -125,69 +133,8 @@ export const isPlayTransformStage = (val: object | Partial<PlayTransformStage<Se
     return true;
 }
 
-export const isUserStage = <T>(val: PlayTransformStage<T>): val is PlayTransformUserStage<T> => {
+export const isUserStage = <T>(val: StageTypedConfig): val is StageTypedConfig => {
     return val.type === 'user';
-}
-
-export const configPartsToStrongParts = (val: PlayTransformPartsConfig<SearchAndReplaceTerm[] | ExternalMetadataTerm> | undefined): PlayTransformPartsArray<ConditionalSearchAndReplaceRegExp[] | ExternalMetadataTerm> => {
-    if (val === undefined) {
-        return []
-    }
-    const arr = Array.isArray(val) ? val : [val];
-
-    return arr.map((x) => {
-        const {
-            title: titleConfig,
-            artists: artistConfig,
-            album: albumConfig,
-            when: whenConfig,
-            type = 'user',
-            ...rest
-        } = x;
-
-        let stage: PlayTransformStage<SearchAndReplaceTerm[]>;
-        try {
-            const candidateStage = {...x, type};
-            if(isPlayTransformStage(candidateStage)) {
-                stage = candidateStage;
-            }
-        } catch (e) {
-            throw e;
-        }
-
-        if (whenConfig !== undefined) {
-            if (!isWhenConditionConfig(whenConfig)) {
-                throw new Error(`'when' must be an array of artist/title/album objects and each object's property must be a string`);
-            }
-        }
-
-        let title,
-            artists,
-            album,
-            when;
-
-        if(isUserStage(stage)) {
-            title = stage.title?.map(configValToSearchReplace);
-            artists = stage.artists?.map(configValToSearchReplace);
-            album = stage.album?.map(configValToSearchReplace);
-        } else {
-            title = stage.title;
-            artists = stage.artists;
-            album = stage.album;
-        }
-
-        when = whenConfig;
-
-        return {
-            title,
-            artists,
-            album,
-            when,
-            type,
-            ...rest
-        }
-    });
-
 }
 
 export const testWhen = (parts: WhenParts<string>, play: PlayObject, options?: SuppliedRegex): boolean => {
