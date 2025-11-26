@@ -1,7 +1,7 @@
 import { strategies, stringSameness, StringSamenessResult } from "@foxxmd/string-sameness";
 import { hasher } from 'node-object-hash';
 import { PlayObject } from "../../core/Atomic.js";
-import { asPlayerStateData, DELIMITERS, PlayerStateDataMaybePlay } from "../common/infrastructure/Atomic.js";
+import { asPlayerStateData, DELIMITERS, DELIMITERS_NO_AMP, PlayerStateDataMaybePlay } from "../common/infrastructure/Atomic.js";
 import { genGroupIdStr, getPlatformIdFromData, intersect, parseRegexSingleOrFail } from "../utils.js";
 import { buildTrackString } from "../../core/StringUtils.js";
 
@@ -183,7 +183,7 @@ export const parseStringList = (str: string, delimiters: string[] = DELIMITERS):
         return explodedStrings.flat(1);
     }, [str]).map(x => x.trim());
 }
-export const parseContextAwareStringList = (str: string, delimiters: string[] = [',', '/', '\\'], opts: {ignoreGlobalAmpersand?: boolean} = {}): string[] => {
+export const parseContextAwareStringList = (str: string, delimiters: string[] = DELIMITERS_NO_AMP, opts: {ignoreGlobalAmpersand?: boolean} = {}): string[] => {
     if (delimiters.length === 0) {
         return [str];
     }

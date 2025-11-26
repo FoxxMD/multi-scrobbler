@@ -1,15 +1,14 @@
 import { childLogger, Logger } from "@foxxmd/logging";
-import { PlayObject, TransformerCommonConfig } from "../../../core/Atomic.js";
+import { PlayObject, TransformerCommon, TransformerCommonConfig } from "../../../core/Atomic.js";
 import { getRoot } from "../../ioc.js";
 import { isStageTyped, testWhenConditions } from "../../utils/PlayTransformUtils.js";
 import AbstractInitializable from "../AbstractInitializable.js";
 import { StageConfig } from "../infrastructure/Transform.js";
 import { cacheFunctions } from "@foxxmd/regex-buddy-core";
 
-export interface TransformerCommon extends TransformerCommonConfig {
-    regexCache: ReturnType<typeof cacheFunctions>
-    name: string
-    logger: Logger
+export interface TransformerOptions {
+        logger: Logger
+        regexCache: ReturnType<typeof cacheFunctions>
 }
 
 export default abstract class AbstractTransformer<T = any> extends AbstractInitializable {
@@ -20,11 +19,11 @@ export default abstract class AbstractTransformer<T = any> extends AbstractIniti
 
     regexCache: ReturnType<typeof cacheFunctions>
 
-    public constructor(config: TransformerCommon) {
+    public constructor(config: TransformerCommon, options: TransformerOptions) {
         super(config);
-        this.logger = childLogger(config.logger, ['Transformer', this.config.type, this.config.name]);
+        this.logger = childLogger(options.logger, ['Transformer', this.config.type, this.config.name]);
         this.transformType = config.type;
-        this.regexCache = config.regexCache;
+        this.regexCache = options.regexCache;
     }
 
     public parseConfig(data: any) {

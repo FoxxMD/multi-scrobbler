@@ -1,9 +1,5 @@
 import { ObjectPlayData, PlayObject, TrackMeta } from "../../../core/Atomic.js";
-import { getRoot } from "../../ioc.js";
-import { testWhenConditions } from "../../utils/PlayTransformUtils.js";
-import AbstractInitializable from "../AbstractInitializable.js";
-import { AtomicStageConfig, ConditionalSearchAndReplaceRegExp, PlayTransformMetaParts, PlayTransformParts, PlayTransformUserParts } from "../infrastructure/Transform.js";
-import { cacheFunctions } from "@foxxmd/regex-buddy-core";
+import { AtomicStageConfig } from "../infrastructure/Transform.js";
 import AbstractTransformer from "./AbstractTransformer.js";
 
 export default abstract class AtomicPartsTransformer<Y, T = any> extends AbstractTransformer<T> {
