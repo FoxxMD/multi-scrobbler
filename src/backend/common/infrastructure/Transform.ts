@@ -1,16 +1,15 @@
 import { SearchAndReplaceRegExp } from "@foxxmd/regex-buddy-core";
 
-export interface ConditionalSearchAndReplaceRegExp extends SearchAndReplaceRegExp {
-    when?: WhenConditionsConfig
+export interface ConditionalSearchAndReplaceRegExp extends SearchAndReplaceRegExp, Whennable {
 }
 
 export type ConditionalSearchAndReplaceTerm = Omit<ConditionalSearchAndReplaceRegExp, 'test'>
 export type SearchAndReplaceTerm = string | ConditionalSearchAndReplaceTerm;
 export type ExternalMetadataTerm = boolean | undefined | Whennable;
 
-export type PlayTransformParts<T, Y = MaybeStageTyped> = Extract<PlayTransformStage<T>, Y> & { when?: WhenConditionsConfig };
-export type PlayTransformUserParts<T> = PlayTransformUserStage<T[]> & { when?: WhenConditionsConfig };
-export type PlayTransformMetaParts<T = ExternalMetadataTerm> = PlayTransformMetadataStage<T> & { when?: WhenConditionsConfig };
+export type PlayTransformParts<T, Y = MaybeStageTyped> = Extract<PlayTransformStage<T>, Y> & Whennable;
+//export type PlayTransformUserParts<T> = PlayTransformUserStage<T[]> & { when?: WhenConditionsConfig };
+//export type PlayTransformMetaParts<T = ExternalMetadataTerm> = PlayTransformMetadataStage<T> & { when?: WhenConditionsConfig };
 export type PlayTransformPartsArray<T, Y = MaybeStageTyped> = PlayTransformParts<T, Y>[];
 
 /** Represents the weakly-defined user config. May be an array of parts or one parts object */
@@ -47,7 +46,15 @@ export interface Whennable {
     when?: WhenConditionsConfig
 }
 
-export interface StageConfig extends StageTypedConfig, Whennable {}
+export type FlowControlTerm = 'continue' | 'stop'
+
+export interface FlowControl {
+    onSuccess: FlowControlTerm
+    onFailure: FlowControlTerm
+    failureReturnPartial: boolean
+}
+
+export interface StageConfig extends StageTypedConfig, Whennable, Partial<FlowControl> {}
 
 export interface AtomicStageConfig<T> extends StageConfig, PlayTransformPartsAtomic<T> {}
 
@@ -55,24 +62,27 @@ export interface PlayTransformStageTyped<T> extends PlayTransformPartsAtomic<T> 
     type: StageType
 }
 
-export interface PlayTransformMetadataStage<T = ExternalMetadataTerm> extends PlayTransformStageTyped<T> {
+export interface PlayTransformMetadataStage extends StageConfig, PlayTransformPartsAtomic<ExternalMetadataTerm> {
     score?: number
 //    all?: ExternalMetadataTerm
     type: StageTypeMetadata
 }
 
-export interface PlayTransformUserStage<T> extends StageTypedConfig, PlayTransformPartsAtomic<T> {
+export interface PlayTransformUserStage<T> extends StageConfig, PlayTransformPartsAtomic<T> {
     type: StageTypeUser
 }
 
-export interface PlayTransformNativeStage<T> extends StageTypedConfig, PlayTransformPartsAtomic<T> {
+export interface PlayTransformNativeStage extends StageConfig, PlayTransformPartsAtomic<ExternalMetadataTerm> {
     type: 'native'
 }
 
+export interface PlayTransformGenericStage<T> extends StageConfig, PlayTransformPartsAtomic<T> {
+    type: string
+}
 
 export type UntypedPlayTransformUserStage<T> = Omit<PlayTransformUserStage<T>, 'type'> & {type?: never};
 
-export type PlayTransformStage<T> = PlayTransformMetadataStage<T> | PlayTransformUserStage<T> | UntypedPlayTransformUserStage<T>;
+export type PlayTransformStage<T> = PlayTransformMetadataStage | PlayTransformUserStage<T> | PlayTransformNativeStage | UntypedPlayTransformUserStage<T> | PlayTransformGenericStage<any>;
 
 /** Represents the plain json user-configured structure (input) */
 export interface PlayTransformHooksConfig<T> {

@@ -49,6 +49,7 @@ export class MSCache {
     cacheScrobble: Cacheable;
     cacheAuth: Cacheable;
     regexCache: ReturnType<typeof cacheFunctions>;
+    cacheTransform: Cacheable;
 
     logger: Logger;
 
@@ -94,6 +95,7 @@ export class MSCache {
         };
 
         this.regexCache = cacheFunctions(this.config.regex);
+        this.cacheTransform = new Cacheable({primary: initMemoryCache({lruSize: 500})});
     }
 
     init = async () => {
@@ -101,6 +103,7 @@ export class MSCache {
         //await this.initMetadataCache();
         await this.initScrobbleCache();
         await this.initAuthCache();
+        //this.cacheTransform = await this.initCacheable({provider: false, memory: {lruSize: 500}}, 'transform');
     }
 
     protected initCacheable = async (config: CacheConfig, cacheFor: string) => {
@@ -115,7 +118,7 @@ export class MSCache {
         const ns = `ms-${cacheFor.toLocaleLowerCase()}`;
 
         const cacheOpts: CacheableOptions = {
-            primary: initMemoryCache({ namespace: ns })
+            primary: initMemoryCache({ namespace: ns, lruSize: config.memory?.lruSize, ttl: config.memory?.ttl })
         }
 
         let secondaryCache: Keyv | KeyvStoreAdapter | undefined;
@@ -180,10 +183,15 @@ export class MSCache {
 
 
 export const initMemoryCache = (opts: Parameters<typeof createKeyv>[0] = {}): Keyv | KeyvStoreAdapter => {
+    const {
+        ttl = '1h',
+        lruSize = 200,
+        ...restOpts
+    } = opts;
     const memory = createKeyv({
-        ttl: '1h',
-        lruSize: 200,
-        ...opts,
+        ttl,
+        lruSize,
+        ...restOpts,
         useClone: false,
     });
     // structuredClone does not work well with dayjs https://github.com/iamkun/dayjs/issues/2236

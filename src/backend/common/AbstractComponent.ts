@@ -43,6 +43,7 @@ export default abstract class AbstractComponent extends AbstractInitializable {
     }
 
     public buildTransformRules() {
+        this.logger.debug('Building transformer rules...');
         try {
             this.doBuildTransformRules();
         } catch (e) {
@@ -65,6 +66,7 @@ export default abstract class AbstractComponent extends AbstractInitializable {
         } = this.config;
 
         if (playTransform === undefined) {
+            this.logger.debug(`No rules found under property 'playTransform'`);
             return;
         }
 
@@ -82,29 +84,53 @@ export default abstract class AbstractComponent extends AbstractInitializable {
             existing,
             postCompare;
 
+        const builtHooks: string[] = [];
+        const emptyHooks: string[] = [];
         try {
             preCompare = this.transformPartToStrong(preConfig);
+            if(preCompare === undefined) {
+                emptyHooks.push('preCompare')
+            } else {
+                builtHooks.push('preCompare');
+            }
         } catch (e) {
             throw new Error('preCompare was not valid', {cause: e});
         }
 
         try {
             candidate = this.transformPartToStrong(candidateConfig);
+            if(candidate === undefined) {
+                emptyHooks.push('candidate')
+            } else {
+                builtHooks.push('candidate');
+            }
         } catch (e) {
             throw new Error('candidate was not valid', {cause: e});
         }
 
         try {
             existing = this.transformPartToStrong(existingConfig);
+             if(existing === undefined) {
+                emptyHooks.push('existing')
+            } else {
+                builtHooks.push('existing');
+            }
         } catch (e) {
             throw new Error('existing was not valid', {cause: e});
         }
 
         try {
             postCompare = this.transformPartToStrong(postConfig);
+             if(postCompare === undefined) {
+                emptyHooks.push('postCompare')
+            } else {
+                builtHooks.push('postCompare');
+            }
         } catch (e) {
             throw new Error('postCompare was not valid', {cause: e});
         }
+
+        this.logger.debug(`Hooks built. Configured: ${builtHooks.join(', ')} | Empty: ${emptyHooks.join(', ')}`);
 
         this.transformRules = {
             preCompare,
@@ -155,15 +181,46 @@ export default abstract class AbstractComponent extends AbstractInitializable {
             }
 
             let transformedPlay: PlayObject = play;
-            const transformDetails: string[] = [];
+            let transformDetails: string[] = [];
             for(const hookItem of hook) {
 
-                const newTransformedPlay = await this.transformManager.handleStage(hookItem, transformedPlay);
+                const {
+                    onSuccess = 'continue',
+                    onFailure = 'stop',
+                    failureReturnPartial = false
+                } = hookItem;
+
+                let newTransformedPlay: PlayObject;
+                let err: Error;
+                try {
+                    newTransformedPlay = await this.transformManager.handleStage(hookItem, transformedPlay);
+                } catch (e) {
+                    err = e;
+                }
+
+                if(err !== undefined) {
+                    if(onFailure === 'continue') {
+                        this.logger.warn(new Error('A transform encountered an error but continuing due to onFailure: continue', {cause: err}));
+                    } else {
+                        this.logger.error(new Error('Transform encountered an error', {cause: err}));
+                        if(!failureReturnPartial) {
+                            // rewind to original play so we don't return partial transform
+                            transformedPlay = play;
+                            transformDetails = [];
+                        }
+                        break;
+                    }
+                }
 
                 if(!deepEqual(newTransformedPlay, transformedPlay)) {
                     transformDetails.push(`${hookItem.type} - ${buildTrackString(transformedPlay, {include: ['artist', 'track', 'album']})}`);
                 }
                 transformedPlay = newTransformedPlay;
+
+                if(err === undefined && onSuccess === 'stop') {
+                    this.logger.debug('Stopping transform due to onSuccess: stop');
+                    break;
+                }
             }
 
             if(transformDetails.length > 0) {

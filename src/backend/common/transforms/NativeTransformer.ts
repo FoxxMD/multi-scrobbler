@@ -24,9 +24,9 @@ export default class NativeTransformer extends AtomicPartsTransformer<ExternalMe
     ignoreArtistsRegex: RegExp[] = [];
     delimiters?: string[]
 
-    // public constructor(config: NativeTransformerConfig, options: TransformerOptions) {
-    //     super(config, options);
-    // }
+    public constructor(config: NativeTransformerConfig, options: TransformerOptions) {
+        super(config, options);
+    }
 
     protected async doBuildInitData(): Promise<true | string | undefined> {
         if(this.config.data === undefined) {
@@ -69,22 +69,23 @@ export default class NativeTransformer extends AtomicPartsTransformer<ExternalMe
             throw new Error(`NativeTransformer is only usable with 'native' type stages`);
         }
 
-        const stage: PlayTransformNativeStage<ExternalMetadataTerm> = {
+        const stage: PlayTransformNativeStage = {
             ...data,
             type: 'native'
         }
 
         for (const k of ['artists', 'title', 'album']) {
-            if (!(k in data)) {
+            if (!(k in stage)) {
+                stage[k] = true;
                 continue;
             }
-            if (Array.isArray(data[k])) {
+            if (Array.isArray(stage[k])) {
                 throw new Error(`${k} must be a boolean or when object`);
             }
-            if (typeof data[k] === 'boolean') {
+            if (typeof stage[k] === 'boolean') {
                 continue;
             }
-            if (typeof data[k] === 'object' && !isWhenCondition(data[k])) {
+            if (typeof stage[k] === 'object' && !isWhenCondition(stage[k])) {
                 throw new Error(`${k} is not a valid when object`);
             }
         }
@@ -132,12 +133,12 @@ export default class NativeTransformer extends AtomicPartsTransformer<ExternalMe
         return play.data.track;
     }
     protected async handleArtists(play: PlayObject, parts: ExternalMetadataTerm, transformData: PlayObject): Promise<string[] | undefined> {
-        if (parts === false || parts === undefined) {
+        if (parts === false) {
             return play.data.artists;
         }
         if (typeof parts === 'object') {
             if (parts.when !== undefined) {
-                if (!testWhenConditions(parts.when, play, { testMaybeRegex: this.regexCache.testMaybeRegex })) {
+                if (!testWhenConditions(parts.when, play, { testMaybeRegex: this.regex.testMaybeRegex })) {
                     this.logger.debug('When condition for artists not met, returning original artists');
                     return play.data.artists;
                 }

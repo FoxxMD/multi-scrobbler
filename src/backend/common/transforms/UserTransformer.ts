@@ -39,7 +39,7 @@ export default class UserTransformer extends AtomicPartsTransformer<ConditionalS
     }
 
     protected generateMapper(play: PlayObject) {
-        return (x: ConditionalSearchAndReplaceRegExp): ConditionalSearchAndReplaceRegExp => ({ ...x, test: (x.when !== undefined ? () => testWhenConditions(x.when, play, { testMaybeRegex: this.regexCache.testMaybeRegex }) : undefined) });
+        return (x: ConditionalSearchAndReplaceRegExp): ConditionalSearchAndReplaceRegExp => ({ ...x, test: (x.when !== undefined ? () => testWhenConditions(x.when, play, { testMaybeRegex: this.regex.testMaybeRegex }) : undefined) });
     }
 
     protected async handleTitle(play: PlayObject, parts: ConditionalSearchAndReplaceRegExp[], _transformData: undefined): Promise<string | undefined> {

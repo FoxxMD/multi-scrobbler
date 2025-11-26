@@ -10,10 +10,10 @@ import NativeTransformer from "./NativeTransformer.js";
 
 export default class TransformerManager {
 
-    logger: Logger;
-    parentLogger: Logger;
-    transformers: Map<string, AbstractTransformer[]> = new Map();
-    cache: MSCache;
+    protected logger: Logger;
+    protected parentLogger: Logger;
+    protected transformers: Map<string, AbstractTransformer[]> = new Map();
+    protected cache: MSCache;
 
     public constructor(logger: Logger, cache: MSCache) {
         this.logger = childLogger(logger, 'Transformer Manager');
@@ -30,26 +30,29 @@ export default class TransformerManager {
         }
 
         if (config.name !== undefined && transformers.some(x => x.config.name === config.name)) {
-            throw new Error(`Cannot register ${config.type} with name '${config.name}' because an existing transformer already has that name`);
+            throw new Error(`Cannot register ${config.type} transformer with name '${config.name}' because an existing transformer already has that name`);
         }
         const tName = config.name ?? `unnamed-${transformers.length + 1}`;
+
+        this.logger.verbose(`Registering ${config.type} transformer with name '${tName}'`);
 
         let t: AbstractTransformer;
         switch (config.type) {
             case 'user':
-                t = new UserTransformer({ name: tName, logger: this.parentLogger, regexCache: this.cache.regexCache,  ...config });
+                t = new UserTransformer({ name: tName, ...config }, {logger: this.parentLogger, regexCache: this.cache.regexCache, cache: this.cache.cacheTransform});
                 break;
             case 'native':
-                t = new NativeTransformer({ name: tName, logger: this.parentLogger, regexCache: this.cache.regexCache,  ...config });
+                t = new NativeTransformer({ name: tName,  ...config }, {logger: this.parentLogger, regexCache: this.cache.regexCache, cache: this.cache.cacheTransform});
                 break;
             default:
                 throw new Error(`No transformer of type '${config.type}' exists.`);
         }
-
         this.transformers.set(config.type, [...transformers, t]);
+        this.logger.verbose(`${config.type} transformer with name '${tName}' registered`);        
     }
 
     public async initTransformers() {
+        this.logger.verbose('Initializing transformers...');
         for (const list of this.transformers.values()) {
             for (const transformer of list) {
                 if (!transformer.isReady()) {
@@ -64,6 +67,11 @@ export default class TransformerManager {
                 }
             }
         }
+        this.logger.verbose('Done initializing transformers');
+    }
+
+    public hasTransformerType(type: string): boolean {
+        return this.transformers.has(type);
     }
 
     protected getTransformerByStage(data: StageConfig): AbstractTransformer {
@@ -72,7 +80,7 @@ export default class TransformerManager {
             throw new Error(`No transformer of type '${data.type}' is registered.`);
         }
 
-        if (list.length > 0 && (data as any).name === undefined) {
+        if (list.length > 1 && (data as any).name === undefined) {
             this.logger.warn(`More than one '${data.type}' transformer but name was not specified, using first registered`);
             return list[0];
         } else {

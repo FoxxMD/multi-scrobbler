@@ -4,26 +4,40 @@ import { getRoot } from "../../ioc.js";
 import { isStageTyped, testWhenConditions } from "../../utils/PlayTransformUtils.js";
 import AbstractInitializable from "../AbstractInitializable.js";
 import { StageConfig } from "../infrastructure/Transform.js";
-import { cacheFunctions } from "@foxxmd/regex-buddy-core";
+import { cacheFunctions,  parseToRegexOrLiteralSearch, testMaybeRegex, searchAndReplace} from "@foxxmd/regex-buddy-core";
+import { Cacheable } from "cacheable";
+import { hashObject } from "../../utils/StringUtils.js";
+import { playContentInvariantTransform } from "../../utils/PlayComparisonUtils.js";
 
 export interface TransformerOptions {
         logger: Logger
-        regexCache: ReturnType<typeof cacheFunctions>
+        regexCache?: ReturnType<typeof cacheFunctions>
+        cache: Cacheable
+}
+
+export interface RegexObject {
+    parseToRegexOrLiteralSearch: typeof parseToRegexOrLiteralSearch
+    testMaybeRegex: typeof testMaybeRegex,
+    searchAndReplace: typeof searchAndReplace
 }
 
 export default abstract class AbstractTransformer<T = any> extends AbstractInitializable {
 
     declare config: TransformerCommonConfig;
+    configHash: string;
 
     transformType: string
 
-    regexCache: ReturnType<typeof cacheFunctions>
+    regex: RegexObject
+    cache: Cacheable;
 
     public constructor(config: TransformerCommon, options: TransformerOptions) {
         super(config);
         this.logger = childLogger(options.logger, ['Transformer', this.config.type, this.config.name]);
         this.transformType = config.type;
-        this.regexCache = options.regexCache;
+        this.regex = options.regexCache ?? { searchAndReplace, testMaybeRegex, parseToRegexOrLiteralSearch };
+        this.cache = options.cache;
+        this.configHash = hashObject(this.config);        
     }
 
     public parseConfig(data: any) {
@@ -37,27 +51,26 @@ export default abstract class AbstractTransformer<T = any> extends AbstractIniti
 
     public async handle(data: StageConfig, play: PlayObject): Promise<PlayObject> {
 
+        const cacheKey = `${this.configHash}-${hashObject(data)}-${hashObject(playContentInvariantTransform(play))}`
+        const cachedTransform = await this.cache.get<PlayObject>(cacheKey);
+        if(cachedTransform !== undefined) {
+            this.logger.debug('Cache hit');
+            return cachedTransform;
+        }
+
         if (data.when !== undefined) {
-            if (!testWhenConditions(data.when, play, { testMaybeRegex: this.regexCache.testMaybeRegex })) {
+            if (!testWhenConditions(data.when, play, { testMaybeRegex: this.regex.testMaybeRegex })) {
                 this.logger.debug('When condition not met, returning original Play');
+                await this.cache.set(cacheKey, play, '15s');
                 return play;
             }
         }
-
-        const {
-            failOnFetch = false,
-            throwOnFailure = false,
-        } = this.config.options || {};
 
         let transformData: T;
         try {
             transformData = await this.getTransformerData(play);
         } catch (e) {
-            if (failOnFetch) {
-                throw new Error(`Could not fetch transformer data`, { cause: e });
-            }
-            this.logger.warn(new Error(`Could not fetch transformer data, returning original Play`, { cause: e }));
-            return play;
+            throw new Error(`Could not fetch transformer data`, { cause: e });
         }
 
         try {
@@ -67,7 +80,9 @@ export default abstract class AbstractTransformer<T = any> extends AbstractIniti
             return play;
         }
 
-        return await this.doHandle(data, play, transformData);
+        const transformed = await this.doHandle(data, play, transformData);
+        await this.cache.set(cacheKey, transformed, '15s');
+        return transformed;
     }
 
     protected abstract doHandle(data: StageConfig, play: PlayObject, transformData: T): Promise<PlayObject>;
