@@ -6,7 +6,7 @@ export interface ConditionalSearchAndReplaceRegExp extends SearchAndReplaceRegEx
 
 export type ConditionalSearchAndReplaceTerm = Omit<ConditionalSearchAndReplaceRegExp, 'test'>
 export type SearchAndReplaceTerm = string | ConditionalSearchAndReplaceTerm;
-export type ExternalMetadataTerm = boolean | undefined | { when: WhenConditionsConfig };
+export type ExternalMetadataTerm = boolean | undefined | Whennable;
 
 export type PlayTransformParts<T, Y = MaybeStageTyped> = Extract<PlayTransformStage<T>, Y> & { when?: WhenConditionsConfig };
 export type PlayTransformUserParts<T> = PlayTransformUserStage<T[]> & { when?: WhenConditionsConfig };
@@ -64,6 +64,12 @@ export interface PlayTransformMetadataStage<T = ExternalMetadataTerm> extends Pl
 export interface PlayTransformUserStage<T> extends StageTypedConfig, PlayTransformPartsAtomic<T> {
     type: StageTypeUser
 }
+
+export interface PlayTransformNativeStage<T> extends StageTypedConfig, PlayTransformPartsAtomic<T> {
+    type: 'native'
+}
+
+
 export type UntypedPlayTransformUserStage<T> = Omit<PlayTransformUserStage<T>, 'type'> & {type?: never};
 
 export type PlayTransformStage<T> = PlayTransformMetadataStage<T> | PlayTransformUserStage<T> | UntypedPlayTransformUserStage<T>;

@@ -6,6 +6,7 @@ import { StageConfig } from "../infrastructure/Transform.js";
 import { PlayObject } from "../../../core/Atomic.js";
 import { isStageTyped } from "../../utils/PlayTransformUtils.js";
 import { MSCache } from "../Cache.js";
+import NativeTransformer from "./NativeTransformer.js";
 
 export default class TransformerManager {
 
@@ -37,6 +38,9 @@ export default class TransformerManager {
         switch (config.type) {
             case 'user':
                 t = new UserTransformer({ name: tName, logger: this.parentLogger, regexCache: this.cache.regexCache,  ...config });
+                break;
+            case 'native':
+                t = new NativeTransformer({ name: tName, logger: this.parentLogger, regexCache: this.cache.regexCache,  ...config });
                 break;
             default:
                 throw new Error(`No transformer of type '${config.type}' exists.`);

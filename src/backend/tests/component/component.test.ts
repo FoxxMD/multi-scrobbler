@@ -220,36 +220,37 @@ describe('Play Transforms', function () {
             });
         });
 
-        // describe('Non-User Stage Parsing', function () {
+        describe('Non-User Stage Parsing', function () {
 
-        //     describe('Non-User Stage Types', function () {
+            describe('Non-User Stage Types', function () {
 
-        //         for(const t of STAGE_TYPES_USER) {
+                for(const t of ['native']) {
 
-        //             it(`Allows non-user Stage Type ${t}`, function () {
-        //                 component.config = {
-        //                     options: {
-        //                         playTransform: {
-        //                             preCompare: {
-        //                                 type: t,
-        //                                 title: true
-        //                             }
-        //                         }
-        //                     }
-        //                 }
+                    it(`Allows non-user Stage Type ${t}`, function () {
+                        component.config = {
+                            options: {
+                                playTransform: {
+                                    preCompare: {
+                                        // @ts-expect-error
+                                        type: t,
+                                        title: true
+                                    }
+                                }
+                            }
+                        }
 
-        //                 expect(() => component.buildTransformRules()).to.not.throw();
-        //                 expect(component.transformRules.preCompare).to.be.an('array');
-        //                 expect(component.transformRules.preCompare).to.be.length(1);
-        //                 expect(component.transformRules.preCompare).to.have.nested.property('0.type');
-        //                 expect(component.transformRules.preCompare[0].type).eq(t);
-        //             });
+                        expect(() => component.buildTransformRules()).to.not.throw();
+                        expect(component.transformRules.preCompare).to.be.an('array');
+                        expect(component.transformRules.preCompare).to.be.length(1);
+                        expect(component.transformRules.preCompare).to.have.nested.property('0.type');
+                        expect(component.transformRules.preCompare[0].type).eq(t);
+                    });
 
-        //         }
+                }
 
-        //     });
+            });
 
-        // });
+        });
 
         describe('Play Transforming', function () {
 

@@ -71,6 +71,7 @@ const createRoot = (options: RootOptions = {logger: loggerDebug}) => {
 
     const transformerManager = new TransformerManager(logger, maybeSingletonCache !== undefined ? maybeSingletonCache : cacheFunc());
     transformerManager.register({type: 'user'});
+    transformerManager.register({type: 'native'});
     for(const c of transformerConfigs) {
         try {
             transformerManager.register(c);
