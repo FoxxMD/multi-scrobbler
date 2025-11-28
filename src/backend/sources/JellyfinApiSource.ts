@@ -190,25 +190,29 @@ export default class JellyfinApiSource extends MemoryPositionalSource {
             if(servers.length === 0) {
                 throw new Error(`No servers were parseable from the given Jellyfin URL ${this.config.data.url}`);
             }
-            const best = this.client.discovery.findBestServer(servers);
-            if(best === undefined) {
-                for(const s of servers) {
-                    const sysError = s.issues.find(x => x instanceof SystemInfoIssue);
-                    if(sysError !== undefined) {
-                        this.logger.warn(new Error(`Server ${s.address} failed to communicate or something went wrong (SystemInfoIssue)`, {cause: sysError.error}));
-                    } else {
-                        for(const i of s.issues) {
+            this.logger.verbose(`Found ${servers.length} server candidates with given url ${this.config.data.url}`);
+            for(const s of servers) {
+                this.logger.verbose(`Server ${s.systemInfo?.ServerName ?? 'No Server Name'} ${s.systemInfo?.Version ?? 'No Version'} at ${s.address} with ${s.issues.length} issues | ResponseTime ${s.responseTime} | Score ${s.score}`);
+                if(s.issues.length > 0) {
+                    for(const i of s.issues) {
+                        if(i instanceof SystemInfoIssue) {
+                            this.logger.warn(new Error(`Server ${s.address} failed to communicate or something went wrong (SystemInfoIssue)`, {cause: i.error}));
+                        } else {
                             this.logger.warn(`Server ${s.address} has an issue (${i.constructor.name})`)
                         }
                     }
                 }
+            }
+            const best = this.client.discovery.findBestServer(servers);
+            if(best === undefined) {
                 throw new Error('Unable to determine a valid Server to connect to. See warnings above.');
             }
+            this.logger.debug(`Jellyfin SDK chose ${best.address} as best Server`);
             this.api = this.client.createApi(best.address);
             this.imageApi = getImageApi(this.api);
             this.address = best.address;
             const info = await getSystemApi(this.api).getPublicSystemInfo();
-            return `Found Server ${info.data.ServerName} (${info.data.Version})`;
+            return `Using Server ${info.data.ServerName} (${info.data.Version})`;
         } catch (e) {
             throw e;
         }
