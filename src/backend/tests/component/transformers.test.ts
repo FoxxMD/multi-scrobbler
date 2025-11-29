@@ -420,7 +420,7 @@ describe('Play Transforms', function () {
 
             const [str, primaries, secondaries] = generateArtistsStr({primary: {max: 3, ambiguousJoinedNames: true, trailingAmpersand: true, finalJoiner: false}});
 
-            const t = new NativeTransformer({name: 'test', type: 'native', data: {ignoreArtists: [str]}}, {logger: loggerTest, cache: memorycache()});
+            const t = new NativeTransformer({name: 'test', type: 'native', data: {artistsIgnore: [str]}}, {logger: loggerTest, cache: memorycache()});
 
             await t.tryInitialize();
 
@@ -441,7 +441,7 @@ describe('Play Transforms', function () {
                 finalJoiner: false
             }});
 
-            const t = new NativeTransformer({name: 'test', type: 'native', data: {extraDelimiters: ['•']}}, {logger: loggerTest, cache: memorycache()});
+            const t = new NativeTransformer({name: 'test', type: 'native', data: {delimitersExtra: ['•']}}, {logger: loggerTest, cache: memorycache()});
 
             await t.tryInitialize();
 
