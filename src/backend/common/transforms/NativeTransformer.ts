@@ -29,6 +29,7 @@ export interface NativeTransformerData {
     delimitersExtra?: string[]
     artistsIgnore?: string[]
     artistsParseFrom?: ArtistParseSource[]
+    artistsParseMonolithicOnly?: boolean
 }
 
 export type NativeTransformerConfig = TransformerCommon<NativeTransformerData>;
@@ -83,8 +84,8 @@ export default class NativeTransformer extends AtomicPartsTransformer<ExternalMe
         if(this.config.data.artistsParseFrom !== undefined) {
             const arr = asArray(this.config.data.artistsParseFrom);
             this.parseArtistsFrom = arr.map(asArtistParseSource);
+            this.logger.debug(`Will try to parse artists from ${this.parseArtistsFrom.join(' and ')} string`);
         }
-        this.logger.debug(`Will try to parse artists from ${this.parseArtistsFrom.join(' and ')} string`);
     }
 
     protected doParseConfig(data: StageConfig) {
@@ -118,27 +119,43 @@ export default class NativeTransformer extends AtomicPartsTransformer<ExternalMe
     public async getTransformerData(play: PlayObject): Promise<PlayObject> {
         let artists = [];
         const {
-            artistsParseFrom: parseArtistsFrom = ['artists', 'title']
-        } = this.config.data;
+            artistsParseFrom: parseArtistsFrom = ['artists', 'title'],
+            artistsParseMonolithicOnly = true
+        } = this.config.data || {};
 
-        if (play.data.artists.length === 1 && parseArtistsFrom.includes('artists')) {
-            const matchedIgnoreArtists = this.ignoreArtistsRegex.map(x => ({reg: x.toString(), res: parseRegexSingle(x, play.data.artists[0])})).filter(x => x !== undefined);
-            if(matchedIgnoreArtists.length > 0) {
-                this.logger.debug(`Will not parse artist because it matched an ignore regex:\n${matchedIgnoreArtists.map(x => `Reg: ${x.reg} => ${x.res.match}`).join('\n')}`)
-            } else {
-                const artistCredits = parseArtistCredits(play.data.artists[0], this.delimiters);
-                if (artistCredits !== undefined) {
-                    if (artistCredits.primary !== undefined) {
-                        artists.push(artistCredits.primary);
+        if(parseArtistsFrom.includes('artists')) {
+
+            if(play.data.artists.length === 1 || (play.data.artists.length > 1 && artistsParseMonolithicOnly === false)) {
+
+                for(const artist of play.data.artists) {
+                
+                    const matchedIgnoreArtists = this.ignoreArtistsRegex.map(x => ({reg: x.toString(), res: parseRegexSingle(x, artist)})).filter(x => x !== undefined);
+                    if(matchedIgnoreArtists.length > 0) {
+                        this.logger.debug(`Will not parse artist because it matched an ignore regex:\n${matchedIgnoreArtists.map(x => `Reg: ${x.reg} => ${x.res.match}`).join('\n')}`);
+                        artists.push(artist);
+                    } else {
+                        const artistCredits = parseArtistCredits(artist, this.delimiters);
+                        if (artistCredits !== undefined) {
+                            if (artistCredits.primary !== undefined) {
+                                artists.push(artistCredits.primary);
+                            }
+                            if (artistCredits.secondary !== undefined) {
+                                artists = artists.concat(artistCredits.secondary);
+                            }
+                        } else {
+                            // couldn't parse anything from artist string, use as-is
+                            artists.push(artist);
+                        }
                     }
-                    if (artistCredits.secondary !== undefined) {
-                        artists = artists.concat(artistCredits.secondary);
-                    }
+
                 }
+
+            } else {
+                // user does not want to try to parse artists when we already have more than one artist string
+                // -- likely this is because the user knows the artist data is already good and shouldn't be modified
+                artists = play.data.artists;
             }
-            if(artists.length === 0) {
-                artists.push(play.data.artists[0]);
-            }
+
         }
 
         if(parseArtistsFrom.includes('title')) {
