@@ -94,7 +94,7 @@ export default class UserTransformer extends AtomicPartsTransformer<ConditionalS
     }
 
     public notify(payload: WebhookPayload): Promise<void> {
-        throw new Error("Method not implemented.");
+        return;
     }
     protected getIdentifier(): string {
         return 'User Transformer';

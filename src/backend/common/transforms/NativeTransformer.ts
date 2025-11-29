@@ -155,7 +155,7 @@ export default class NativeTransformer extends AtomicPartsTransformer<ExternalMe
     }
 
     public notify(payload: WebhookPayload): Promise<void> {
-        throw new Error("Method not implemented.");
+        return;
     }
     protected getIdentifier(): string {
         return 'Native Transformer';
