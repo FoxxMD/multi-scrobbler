@@ -270,14 +270,14 @@ export default class PlexApiSource extends MemoryPositionalSource {
 
         if(state.play !== undefined) {
             const allowedLibraries = this.getAllowedLibraries();
-            if(allowedLibraries.length > 0 && !allowedLibraries.some(x => state.play.meta.library.toLocaleLowerCase() === x.name.toLocaleLowerCase())) {
+            if(allowedLibraries.length > 0 && !allowedLibraries.some(x => (state.play.meta.library ?? '').toLocaleLowerCase() === x.name.toLocaleLowerCase())) {
                 return `media not included in librariesAllow`;
             }
             
             if(allowedLibraries.length === 0) {
                 const blockedLibraries = this.getBlockedLibraries();
                 if(blockedLibraries.length > 0) {
-                    const blockedLibrary = blockedLibraries.find(x => state.play.meta.library.toLocaleLowerCase() === x.name.toLocaleLowerCase());
+                    const blockedLibrary = blockedLibraries.find(x => (state.play.meta.library ?? '').toLocaleLowerCase() === x.name.toLocaleLowerCase());
                     if(blockedLibrary !== undefined) {
                         return `media included in librariesBlock '${blockedLibrary.name}'`;
                     }
@@ -286,7 +286,7 @@ export default class PlexApiSource extends MemoryPositionalSource {
                 // this is inside this block because we SHOULD allow non-music libraries if
                 // user specified name in librariesAllow
                 // -- so only check for this if nothing is specified
-                if(!this.getValidLibraries().some(x => state.play.meta.library === x.name)) {
+                if(!this.getValidLibraries().some(x => (state.play.meta.library ?? '') === x.name)) {
                     return `media not included in a valid library`;
                 }
             }
