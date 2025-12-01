@@ -1,0 +1,475 @@
+---
+sidebar_position: 4
+title: Enhancing Scrobbles
+toc_max_heading_level: 5
+---
+
+Multi-scrobbler configs support the ability to enhance scrobble data in an automated fashion by matching and replacing strings in **title, artists, and album** at many different times in multi-scrobbler's lifecycle.
+
+<details>
+
+<summary>Why Would I Do This?</summary>
+
+You may need to "clean up" data from a Source or before sending to a scrobble Client due to any number of reasons:
+
+* ID3 tags in your music collection are dirty or have repeating garbage IE `[YourMusicSource.com] My Artist - My Title`
+* A Source's service often incorrectly adds data to some field IE `My Artist - My Title (Album Version)` when the title should just be `My Title`
+* An Artist you listen to often is spelled different between a Source and a Client which causes duplicate scrobbles
+
+In any scenario where a repeating pattern can be found in the data it would be nice to be able to fix it before the data gets downstream or to help prevent duplicate scrobbling. Multi-scrobbler can help you do this.
+
+</details>
+
+## Journey of a Scrobble
+
+First, let's recap the lifecycle of a scrobble in multi-scrobbler:
+
+**Sources** are the beginning of the journey for a **Play** (song you've listened to long enough to be scrobblable)
+
+* A Source finds a new valid **Play**
+* The Source **compares** this new Play to all the other Plays it has already seen, if the Play is unique (title/artist/album/listened datetime) then...
+* The Source **discovers** the Play, adds it to Plays it has seen already, and broadcasts the Play should be scrobbled to all Clients
+
+Scrobble **Clients** listen for discovered Plays from Sources, then...
+
+* A Client receives a **Play** from a Source
+* The Client **compares** this Play to all the other scrobbles it has already seen, if the Play is unique (title/artist/album/listened datetime) then...
+* The Client **scrobbles** the Play downstream to the scrobble service and adds it as a Scrobble it has seen already
+
+## Lifecyle Hooks
+
+You'll notice there is a pattern above that looks like this:
+
+* **Before** data is compared
+* Data is **compared**
+* **After** data is compared
+
+These points, during both Source and Client processes, are when you can hook into the scrobble lifecycle and modify it.
+
+##### TLDR
+
+In more concrete terms this is the structure of hooks within a configuration (can be used in any **Source** or **Client**):
+
+```json5 title="lastfm.json" {10-14}
+[
+  {
+    "name": "myLastFm",
+    "enable": true,
+    "configureAs": "source",
+    "data": {
+      // ...
+    },
+    "options": {
+      "playTransform": {
+        "preCompare": [/* ... */],
+        "compare": [/* ... */],
+        "postCompare": [/* ... */]
+      }
+    }
+  }
+]
+```
+
+### Hook
+
+For **Sources**:
+
+* `preCompare` - modify Play data immediately when received
+* `compare` - temporarily modify Play data when it is being compared to see if Play was already discovered
+* `postCompare` - modify Play data before sending to scrobble **Clients**
+
+For **Clients**:
+
+* `preCompare` - modify Play data immediately when received
+* `compare` - temporarily modify Play data when it is being compared to see if it was already scrobbled
+* `postCompare` - modify Play data before scrobbling it to downstream service and adding to already seen scrobbles
+
+:::tip
+
+Keep in mind that modifying Scrobble/Play data earlier in the lifecycle will affect that data at all times later in the lifecycle (except when using the **compare** hook).
+
+For example, to modify the track so it's the same anywhere it is processed in multi-scrobbler you only need to modify it in the **Source's** `preCompare` hook because all later processes will receive the data with the modified track.
+
+:::
+
+<details>
+
+<summary>Using `compare` hook</summary>
+
+The `compare` [hook](#hook) is slightly different than `preCompare` and `postCompare`. It consists of an object where you define which side(s) of the comparison should be modified. It also **does not modify downstream data!** Instead, the modifications are made only for use in the comparison.
+
+```json5 title="lastfm.json"
+[
+  {
+    "name": "myLastFm",
+    // ...
+    "options": {
+      "playTransform": {
+        "compare": [
+          {
+            "candidate": {/* ... */}, // modify the "new" Play being compared
+            "existing": {/* ... */}, // modify all "existing" Play/Scrobbles the new Play is being compared against
+          }
+        ],
+      }
+    }
+  }
+]
+```
+
+</details>
+
+## Modification Stage {#stage}
+
+Each [**hook**](#hook) is made up of one or more **Stages**. A Stage is a self-contained, unique way of enhancing or modifying the Play data. Some examples of a Stage:
+
+* The [User](/configuration/transforms/user) Stage allows a user to define search-and-replace terms for Artist/Title/Album
+* The [Native](/configuration/transforms/native) Stage uses MS's built-in heuristics to extract Artists from a single Artist string
+* The Musicbrainz Stage tries to match Play data with the Musicbrainz database and to standardize the Artist/Title/Album data
+
+Each Stage in a Hook receives Play data from the previous Stage.
+
+Within a hook, each Stage minimally consists of a `type` to identify what Stage it is along with any other data specific to that stage:
+
+```json5
+{
+  "type": "native"
+  // optional, stage specific data here...
+}
+```
+
+### Configuring Stages {#configuring-stages}
+
+Stages may be globally configured using [AIO Config](/configuration?configType=aio#configuration-types) `config.json` file in the top-level `transformers` block.
+
+Each Stage consists of:
+
+* `type` the type of Stage
+* `name` a unique name for the Stage, to be (potentially) used with hooks
+* `defaults` - An object defining default configuration for this stage, when used in a Hook.
+* `data` - An object containing any data required to initially configure the stage itself (Example: API URL, username, password, etc...)
+
+<details>
+
+<summary>Example</summary>
+
+Your [AIO Config](/configuration?configType=aio#configuration-types):
+
+```json5 title="config.json"
+{
+  // ...
+  "transformers": [
+    {
+      "type": "native",
+      "name": "MyNativeTransformer",
+      "defaults": {
+        // default delimiters when this Stage is used in a hook
+        "delimiters": [
+          "•"
+        ],
+        // default delimiters when this Stage is used in a hook
+        "artistsParseFrom": ["artists"]
+      }
+    }
+  ]
+}
+```
+
+In a [Subsonic](/configuration/sources/subsonic) [File Config](/configuration?configType=file#configuration-types):
+
+```json5 title="subsonic.json"
+[
+  { 
+    "name": "MySubsonic",
+    "data": { /* ... */},
+    "options": {
+      "playTransform": {
+        "preCompare": [
+          {
+            "type": "native"
+            // when "name" is not defined, uses first found "native" transformer
+          }
+        ]
+      }
+    }
+  }
+]
+```
+
+
+</details>
+
+Multiple stages of the same type may be configured, allowing you to define several sets of default behavior.
+
+<details>
+
+<summary>Example</summary>
+
+Your [AIO Config](/configuration?configType=aio#configuration-types):
+
+```json5 title="config.json"
+{
+  // ...
+  "transformers": [
+    {
+      "type": "native",
+      "name": "DotTransformer",
+      "defaults": {
+        "delimiters": [
+          "•"
+        ],
+        "artistsParseFrom": ["artists"]
+      }
+    },
+    {
+      "type": "native",
+      "name": "TitleOnly",
+      "defaults": {
+        // extracts and uses *only* artists found in title string
+        "artistsParseFrom": ["title"]
+      }
+    }
+  ]
+}
+```
+
+In a [Subsonic](/configuration/sources/subsonic) [File Config](/configuration?configType=file#configuration-types):
+
+```json5 title="subsonic.json"
+[
+  { 
+    "name": "MySubsonic",
+    "data": { /* ... */},
+    "options": {
+      "playTransform": {
+        "preCompare": [
+          {
+            "type": "native"
+            "name": "DotTransformer"
+          }
+        ]
+      }
+    }
+  }
+]
+```
+
+In a [VLC](/configuration/sources/vlc) [File Config](/configuration?configType=file#configuration-types):
+
+```json5 title="vlc.json"
+[
+  { 
+    "name": "MyVLC",
+    "data": { /* ... */},
+    "options": {
+      "playTransform": {
+        "preCompare": [
+          {
+            "type": "native"
+            "name": "TitleOnly"
+          }
+        ]
+      }
+    }
+  }
+]
+```
+
+</details>
+
+#### Overriding Configuration
+
+The default configuration you set for your Stage may be overridden in any usage of the Stage within a Hook.
+
+<details>
+
+<summary>Example</summary>
+
+Your [AIO Config](/configuration?configType=aio#configuration-types):
+
+```json5 title="config.json"
+{
+  // ...
+  "transformers": [
+    {
+      "type": "native",
+      "name": "MyNativeTransformer",
+      "defaults": {
+        // default delimiters when this Stage is used in a hook
+        "delimiters": [
+          "•"
+        ],
+        // default delimiters when this Stage is used in a hook
+        "artistsParseFrom": ["artists"]
+      }
+    }
+  ]
+}
+```
+
+In a [Subsonic](/configuration/sources/subsonic) [File Config](/configuration?configType=file#configuration-types):
+
+```json5 title="subsonic.json"
+[
+  { 
+    "name": "MySubsonic",
+    "data": { /* ... */},
+    "options": {
+      "playTransform": {
+        "preCompare": [
+          {
+            "type": "native"
+            "name": "MyNativeTransformer",
+            // overrides property from "defaults"
+            "artistsParseFrom": ["artists", "title"]
+          }
+        ]
+      }
+    }
+  }
+]
+```
+
+</details>
+
+
+### Rules for Play Data {#stage-rules}
+
+Each [Stage](#stage) may specify whether it should apply the resulting transformation to different parts of the Play data by specifying `title`, `artists` and/or `album` in the Stage object.
+
+```json5
+{
+    "type": "native",
+    // ...
+    "title": false, // will not apply any changes to Play title
+    "artists": {
+      "when": {/* ... */}, // will only apply changes to Play artists if "when" is satisfied
+    /* ... */
+    },
+    "album": true // will always apply changes to Play album
+}
+```
+
+The actual value of each property may be different for each Stage. Check the docs for the Stage you want to use to see its usage of `title`, `artists`, and `album`.
+
+Generically, though, each property may be some value **or** an object combining a [`when` condition](#conditional-modification) and that value.
+
+If none of the properties are specified in the stage then it's assumed all transformed data should be used.
+
+:::note
+
+Specifying these Rules is **not** the same as [configuring the Stage](#configuring-stages). Rules only determine if the *result* of the transformation should be used (replace) the existing Play Data.
+
+:::
+
+## Conditional Modification
+
+[Stages](#stage) within a [Hook](#hook), and [Rules](#stage-rules) within each Stage, support a `when` object for testing **if they should be run.**
+
+The `when` object may have propertes for `artist`, `title` and/or `album`. Each property may be a string or regular expression.  The value of the property is used to match the **pre-transformation** values from Play data.
+
+All parts of an individual `when` clause must test true to "pass" but if **any** `when` clauses pass the Stage/Rule is processed.
+
+```json5
+{
+  "when":
+    {
+      "artist": "Elephant Gym", // Play must have an artist matching "Elephant Gym" (AND)
+      "album": "Dreams" // Play object must have an album  matching "Dreams" (AND)
+    }
+}
+```
+
+```json5
+{
+  "when": [
+    {
+      "artist": "Elephant Gym", // Play must have an artist matching "Elephant Gym" (AND)
+      "album": "Dreams" // Play object must have an album  matching "Dreams" (AND)
+    },
+    // OR
+    {
+      "title": "/(Remastered)$/", // Play title must match regular expression (AND)
+      "album": "Various Artists" // Play album must match "Various Artists" (AND)
+    }
+  ]
+}
+```
+
+More succinctly:
+
+* All parts (`artist` `album` `title`) of a `when` are `AND` conditions
+* All part-objects in the `when` array are `OR` conditions
+
+<details>
+
+<summary>Example of Stage with `when` condition</summary>
+
+```json5
+{
+  // IF the artist is Elephant Gym 
+  // THEN Run native stage
+  "playTransform": {
+    "preCompare": [
+      {
+        "type": "native",
+        "when": [
+          {
+            "artist": "/Elephant Gym/"
+          }
+        ]
+      }
+    ],
+  }
+}
+```
+
+</details>
+
+<details>
+
+<summary>Example of individual rule with when condition</summary>
+
+```json5
+{
+  // Always run native Stage
+  //
+  //     IF artist matches "Elephant Gym"
+  //     THEN use result of native stage for "artists" of Play data
+  "playTransform": {
+    "preCompare": {
+      "type": "native",
+      "artists":
+        {
+          "when": [
+            {
+              "artist": "/Elephant Gym/"
+            }
+          ]
+        },
+    }
+  }
+}
+```
+
+</details>
+
+## Logging
+
+MS can log the output of Stage transformations if/when they occur. In the `playTransform` object of a Source/Client config use `log`:
+
+* `"log": true` => Output original play + final transformed output of last Stage in the array
+* `"log": "all"` => Output original play + final transformed output of **each** Stage in the array
+
+```json5
+{
+  "name": "myThing",
+  "data": {/*...*/},
+  "options": {
+    "playTransform": {
+      "preCompare": {/*...*/},
+      "log": true
+    }
+  }
+}
+```
