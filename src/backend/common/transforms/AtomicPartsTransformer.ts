@@ -1,17 +1,19 @@
 import { ObjectPlayData, PlayObject, TrackMeta } from "../../../core/Atomic.js";
-import { AtomicStageConfig } from "../infrastructure/Transform.js";
+import { AtomicStageConfig, StageConfig } from "../infrastructure/Transform.js";
 import AbstractTransformer from "./AbstractTransformer.js";
 
-export default abstract class AtomicPartsTransformer<Y, T = any> extends AbstractTransformer<T> {
+//export type GenericAtomicStageConfig<A> = 
 
-        protected async doHandle(parts: AtomicStageConfig<Y>, play: PlayObject, transformData: T): Promise<PlayObject> {
+export default abstract class AtomicPartsTransformer<Y, T = any, Z extends AtomicStageConfig<Y> = StageConfig> extends AbstractTransformer<T, Z> {
+
+        protected async doHandle(parts: Z, play: PlayObject, transformData: T): Promise<PlayObject> {
     
             const {
                 throwOnFailure = false,
             } = this.config.options || {};
     
             try {
-                await this.checkShouldTransform(play, transformData);
+                await this.checkShouldTransform(play, transformData, parts);
             } catch (e) {
                 this.logger.debug(new Error('checkShouldTransform did not pass, returning original Play', { cause: e }));
                 return play;
@@ -84,11 +86,11 @@ export default abstract class AtomicPartsTransformer<Y, T = any> extends Abstrac
             return transformedPlay;
         }
     
-        public async getTransformerData(play: PlayObject): Promise<T> {
+        public async getTransformerData(play: PlayObject, stageConfig: Z): Promise<T> {
             return undefined;
         }
     
-        public async checkShouldTransform(play: PlayObject, transformData: T): Promise<void> {
+        public async checkShouldTransform(play: PlayObject, transformData: T, stageConfig: Z): Promise<void> {
             return;
         }
     

@@ -21,7 +21,7 @@ export interface RegexObject {
     searchAndReplace: typeof searchAndReplace
 }
 
-export default abstract class AbstractTransformer<T = any> extends AbstractInitializable {
+export default abstract class AbstractTransformer<T = any, Y extends StageConfig = StageConfig> extends AbstractInitializable {
 
     declare config: TransformerCommonConfig;
     configHash: string;
@@ -40,16 +40,16 @@ export default abstract class AbstractTransformer<T = any> extends AbstractIniti
         this.configHash = hashObject(this.config);        
     }
 
-    public parseConfig(data: any) {
+    public parseConfig(data: any): Y {
         if (!isStageTyped(data)) {
             throw new Error(`Must be an object with a 'type' property.`);
         }
         return this.doParseConfig(data);
     }
 
-    protected abstract doParseConfig(data: StageConfig): StageConfig;
+    protected abstract doParseConfig(data: StageConfig): Y;
 
-    public async handle(data: StageConfig, play: PlayObject): Promise<PlayObject> {
+    public async handle(data: Y, play: PlayObject): Promise<PlayObject> {
 
         const cacheKey = `${this.configHash}-${hashObject(data)}-${hashObject(playContentInvariantTransform(play))}`
         const cachedTransform = await this.cache.get<PlayObject>(cacheKey);
@@ -68,13 +68,13 @@ export default abstract class AbstractTransformer<T = any> extends AbstractIniti
 
         let transformData: T;
         try {
-            transformData = await this.getTransformerData(play);
+            transformData = await this.getTransformerData(play, data);
         } catch (e) {
             throw new Error(`Could not fetch transformer data`, { cause: e });
         }
 
         try {
-            await this.checkShouldTransform(play, transformData);
+            await this.checkShouldTransform(play, transformData, data);
         } catch (e) {
             this.logger.debug(new Error('checkShouldTransform did not pass, returning original Play', { cause: e }));
             return play;
@@ -87,11 +87,11 @@ export default abstract class AbstractTransformer<T = any> extends AbstractIniti
 
     protected abstract doHandle(data: StageConfig, play: PlayObject, transformData: T): Promise<PlayObject>;
 
-    public async getTransformerData(play: PlayObject): Promise<T> {
+    public async getTransformerData(play: PlayObject, stageConfig: Y): Promise<T> {
         return undefined;
     }
 
-    public async checkShouldTransform(play: PlayObject, transformData: T): Promise<void> {
+    public async checkShouldTransform(play: PlayObject, transformData: T, stageConfig: Y): Promise<void> {
         return;
     }
 }

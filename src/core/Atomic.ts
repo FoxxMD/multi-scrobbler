@@ -390,8 +390,9 @@ export const JOINERS_FINAL: FinalJoiners[] = ['&'];
 
 export type Feat = 'ft' | 'feat' | 'vs' | 'ft.' | 'feat.' | 'vs.' | 'featuring'
 export const FEAT: Feat[] = ['ft','feat','vs','ft.','feat.','vs.','featuring'];
-export interface TransformerCommonConfig<T = Record<string, any>> {
-    data?: T;
+export interface TransformerCommonConfig<T = Record<string, any>, Y = Record<string, any>> {
+    defaults?: T;
+    data?: Y
     type: string;
     name?: string;
     options?: {

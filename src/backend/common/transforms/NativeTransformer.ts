@@ -8,6 +8,8 @@ import { parseRegexSingle, parseToRegexOrLiteralSearch } from "@foxxmd/regex-bud
 import { TransformerOptions } from "./AbstractTransformer.js";
 import { DELIMITERS_NO_AMP } from "../infrastructure/Atomic.js";
 import { asArray } from "../../utils/DataUtils.js";
+import { MaybeLogger } from "../logging.js";
+import { childLogger } from "@foxxmd/logging";
 
 export type ArtistParseSource = 'artists' | 'title'
 
@@ -32,11 +34,73 @@ export interface NativeTransformerData {
     artistsParseMonolithicOnly?: boolean
 }
 
+export interface NativeTransformerDataStrong {
+    artistsParseFrom?: ArtistParseSource[]
+    artistsParseMonolithicOnly?: boolean
+    ignoreArtistsRegex?: RegExp[]
+    delimiters?: string[]
+}
+
+export interface NativeTransformerDataStage extends NativeTransformerDataStrong,PlayTransformNativeStage {
+}
+
 export type NativeTransformerConfig = TransformerCommon<NativeTransformerData>;
 
-export default class NativeTransformer extends AtomicPartsTransformer<ExternalMetadataTerm, PlayObject | undefined> {
+export const parseStageConfig = (data: NativeTransformerData | undefined, logger: MaybeLogger = new MaybeLogger()): NativeTransformerDataStrong => {
+
+    if (data === undefined) {
+        return {};
+    }
+
+    const config: NativeTransformerDataStrong = {
+    };
+
+    if (data === null || typeof data !== 'object') {
+        throw new Error('Native Transformer data should be an object or not defined.');
+    }
+    if (data.artistsIgnore !== undefined) {
+        data.artistsIgnore = asArray(data.artistsIgnore);
+        const nonStr = data.artistsIgnore.filter(x => typeof x !== 'string');
+        if (nonStr.length > 0) {
+            throw new Error(`ignoreArtists must be an array of strings but non-strings found: ${nonStr.map(x => (x as unknown).toString()).join(' | ')}`)
+        }
+        config.ignoreArtistsRegex = [];
+        for (const i of data.artistsIgnore) {
+            try {
+                config.ignoreArtistsRegex.push(parseToRegexOrLiteralSearch(i));
+            } catch (e) {
+                throw new Error(`Could not convert ignoreArtist string to regex (or literal): ${i}`);
+            }
+        }
+        logger.debug(`Defaults - Ignoring artists using ${data.artistsIgnore.length} rules`);
+    }
+
+    if (data.delimiters !== undefined) {
+        config.delimiters = asArray(data.delimiters);
+        logger.debug(`Defaults - Using user-defined delimiters '${data.delimitersExtra.join(' ')}' instead of built-ins`);
+    } else if (data.delimitersExtra !== undefined) {
+        config.delimiters = [...DELIMITERS_NO_AMP, ...(asArray(data.delimitersExtra))];
+        logger.debug(`Defaults - Using extra delimiters '${data.delimitersExtra.join(' ')}' with built-in delimiters '${DELIMITERS_NO_AMP.join(' ')}'`);
+    }
+
+    if (config.delimiters !== undefined) {
+        config.delimiters.map(x => x.trim());
+    }
+
+    if (data.artistsParseFrom !== undefined) {
+        const arr = asArray(data.artistsParseFrom);
+        config.artistsParseFrom = arr.map(asArtistParseSource);
+        logger.debug(`Defaults - Will try to parse artists from ${config.artistsParseFrom.join(' and ')} string`);
+    }
+
+    return config;
+}
+
+export default class NativeTransformer extends AtomicPartsTransformer<ExternalMetadataTerm, PlayObject | undefined, NativeTransformerDataStage> {
 
     declare config: NativeTransformerConfig;
+
+    protected defaults: NativeTransformerDataStrong = {};
 
     ignoreArtistsRegex: RegExp[] = [];
     delimiters?: string[]
@@ -47,54 +111,18 @@ export default class NativeTransformer extends AtomicPartsTransformer<ExternalMe
     }
 
     protected async doBuildInitData(): Promise<true | string | undefined> {
-        if(this.config.data === undefined) {
-            return true;
-        }
-        if(this.config.data === null || typeof this.config.data !== 'object') {
-            throw new Error('Native Transformer data should be an object or not defined.');
-        }
-        if(this.config.data.artistsIgnore !== undefined) {
-            this.config.data.artistsIgnore = asArray(this.config.data.artistsIgnore);
-            const nonStr = this.config.data.artistsIgnore.filter(x => typeof x !== 'string');
-            if(nonStr.length > 0) {
-                throw new Error(`ignoreArtists must be an array of strings but non-strings found: ${nonStr.map(x => (x as unknown).toString()).join(' | ')}`)
-            }
-            for(const i of this.config.data.artistsIgnore) {
-                try {
-                    this.ignoreArtistsRegex.push(parseToRegexOrLiteralSearch(i));
-                } catch (e) {
-                    throw new Error(`Could not convert ignoreArtist string to regex (or literal): ${i}`);
-                }
-            }
-            this.logger.debug(`Ignoring artists using ${this.config.data.artistsIgnore.length} rules`);
-        }
-
-        if(this.config.data.delimiters !== undefined) {
-            this.delimiters = asArray(this.config.data.delimiters);
-            this.logger.debug(`Using user-defined delimiters '${this.config.data.delimitersExtra.join(' ')}' instead of built-ins`);
-        } else if(this.config.data.delimitersExtra !== undefined) {
-            this.delimiters = [...DELIMITERS_NO_AMP, ...(asArray(this.config.data.delimitersExtra))];
-            this.logger.debug(`Using extra delimiters '${this.config.data.delimitersExtra.join(' ')}' with built-in delimiters '${DELIMITERS_NO_AMP.join(' ')}'`);
-        }
-
-        if(this.delimiters !== undefined) {
-            this.delimiters.map(x => x.trim());
-        }
-
-        if(this.config.data.artistsParseFrom !== undefined) {
-            const arr = asArray(this.config.data.artistsParseFrom);
-            this.parseArtistsFrom = arr.map(asArtistParseSource);
-            this.logger.debug(`Will try to parse artists from ${this.parseArtistsFrom.join(' and ')} string`);
-        }
+        this.defaults = parseStageConfig(this.config.defaults, childLogger(this.logger, 'Defaults'));
+        return true;
     }
 
-    protected doParseConfig(data: StageConfig) {
+    protected doParseConfig(data: NativeTransformerDataStage) {
         if (data.type !== 'native') {
             throw new Error(`NativeTransformer is only usable with 'native' type stages`);
         }
 
-        const stage: PlayTransformNativeStage = {
+        const stage: NativeTransformerDataStage = {
             ...data,
+            ...parseStageConfig(data),
             type: 'native'
         }
 
@@ -116,12 +144,14 @@ export default class NativeTransformer extends AtomicPartsTransformer<ExternalMe
         return stage;
     }
 
-    public async getTransformerData(play: PlayObject): Promise<PlayObject> {
+    public async getTransformerData(play: PlayObject, stageConfig: NativeTransformerDataStage): Promise<PlayObject> {
         let artists = [];
         const {
-            artistsParseFrom: parseArtistsFrom = ['artists', 'title'],
-            artistsParseMonolithicOnly = true
-        } = this.config.data || {};
+            artistsParseFrom: parseArtistsFrom = this.defaults.artistsParseFrom ?? ['artists', 'title'],
+            artistsParseMonolithicOnly = this.defaults.artistsParseMonolithicOnly ?? true,
+            ignoreArtistsRegex = this.defaults.ignoreArtistsRegex ?? [],
+            delimiters = this.defaults.delimiters
+        } = stageConfig || {};
 
         if(parseArtistsFrom.includes('artists')) {
 
@@ -129,12 +159,12 @@ export default class NativeTransformer extends AtomicPartsTransformer<ExternalMe
 
                 for(const artist of play.data.artists) {
                 
-                    const matchedIgnoreArtists = this.ignoreArtistsRegex.map(x => ({reg: x.toString(), res: parseRegexSingle(x, artist)})).filter(x => x !== undefined);
+                    const matchedIgnoreArtists = ignoreArtistsRegex.map(x => ({reg: x.toString(), res: parseRegexSingle(x, artist)})).filter(x => x !== undefined);
                     if(matchedIgnoreArtists.length > 0) {
                         this.logger.debug(`Will not parse artist because it matched an ignore regex:\n${matchedIgnoreArtists.map(x => `Reg: ${x.reg} => ${x.res.match}`).join('\n')}`);
                         artists.push(artist);
                     } else {
-                        const artistCredits = parseArtistCredits(artist, this.delimiters);
+                        const artistCredits = parseArtistCredits(artist, delimiters);
                         if (artistCredits !== undefined) {
                             if (artistCredits.primary !== undefined) {
                                 artists.push(artistCredits.primary);
@@ -159,7 +189,7 @@ export default class NativeTransformer extends AtomicPartsTransformer<ExternalMe
         }
 
         if(parseArtistsFrom.includes('title')) {
-            const trackArtists = parseTrackCredits(play.data.track, this.delimiters);
+            const trackArtists = parseTrackCredits(play.data.track, delimiters);
             if (trackArtists !== undefined && trackArtists.secondary !== undefined) {
                 artists = artists.concat(trackArtists.secondary);
             }
