@@ -1,6 +1,7 @@
 import type * as Preset from '@docusaurus/preset-classic';
 import type { Config } from '@docusaurus/types';
 import * as themes from 'prism-react-renderer';
+import glossaryPlugin from 'docusaurus-plugin-glossary';
 //import sidebars from './sidebars';
 
 const config: Config = {
@@ -50,10 +51,15 @@ const config: Config = {
         docs: {
           sidebarPath: './sidebars.ts',
           routeBasePath: '/',
-          // Please change this to your repo.
-          // Remove this to remove the "edit this page" links.
-          editUrl:
-            'https://github.com/facebook/docusaurus/tree/main/packages/create-docusaurus/templates/shared/',
+          remarkPlugins: [
+            glossaryPlugin.getRemarkPlugin(
+              {
+                glossaryPath: 'glossary/glossary.json',
+                routePath: '/glossary',
+              },
+              { siteDir: __dirname }
+            ),
+          ],
         },
         // blog: {
         //   showReadingTime: true,
@@ -121,7 +127,14 @@ const config: Config = {
           },
         ]
       }
-    ]
+    ],
+        [
+      'docusaurus-plugin-glossary',
+      {
+        glossaryPath: 'glossary/glossary.json',
+        routePath: '/glossary',
+      },
+    ],
   ],
   themeConfig:
     {

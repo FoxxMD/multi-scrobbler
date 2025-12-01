@@ -1,0 +1,56 @@
+{
+  "description": "A collection of technical terms and their definitions",
+  "terms": [
+    {
+      "term": "AIO",
+      "abbreviation": "All-In-One",
+      "definition": "Configuration type that uses the config.json file to configure Sources, Clients, and all application configuration together",
+      "relatedTerms": ["File Config", "ENV Config"]
+    },
+    {
+      "term": "Client",
+      "definition": "Services that recieve/store Scrobbles sent by Multi-Scrobbler.",
+      "relatedTerms": ["Source"]
+    },
+    {
+      "term": "ENV Config",
+      "definition": "Configuration type that uses environmental variales to configure Sources and Clients",
+      "relatedTerms": ["AIO", "File Config"]
+    },
+    {
+      "term": "ENV",
+      "abbreviation": "Environmental Variable",
+      "definition": "A variable passed to a docker container or present in the operating environment.",
+      "relatedTerms": ["Env Config"]
+    },
+    {
+      "term": "File Config",
+      "definition": "Configuration type that uses individual JSON files to configure Sources and Clients",
+      "relatedTerms": ["AIO", "ENV Config"]
+    },
+    {
+      "term": "MS",
+      "abbreviation": "Multi-Scrobbler",
+      "definition": "Multi-Scrobbler"
+    },
+        {
+      "term": "Play",
+      "definition": "The data related to a specific piece of audio you listened to, without a timestamp. EX: Artist, Title, Album...",
+      "relatedTerms": ["Scrobble"]
+    },
+    {
+      "term": "Source",
+      "definition": "A service/app that Multi-Scrobbler can get listening activity/history from.",
+      "relatedTerms": ["Client"]
+    },
+    {
+      "term": "Scrobble",
+      "definition": "The data (Play) and timestamp related to a certain song you listened to at a specific time"
+    },
+    {
+      "term": "Scrobbling",
+      "definition": "The verb for sending a Scrobble to one or more Clients",
+      "relatedTerms": ["Scrobble", "Client"]
+    }
+  ]
+}

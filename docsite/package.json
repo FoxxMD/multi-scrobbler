@@ -22,13 +22,14 @@
     "@mdx-js/react": "^3.0.0",
     "clsx": "^2.0.0",
     "docusaurus-json-schema-plugin": "^1.15.0",
+    "docusaurus-plugin-glossary": "^3.0.0",
     "docusaurus-theme-github-codeblock": "^2.0.2",
     "json5": "^2.2.3",
     "micromark-extension-directive": "^3.0.1",
     "prism-react-renderer": "^2.3.0",
     "raw-loader": "^4.0.2",
-    "react": "^19.0.0",
-    "react-dom": "^19.0.0"
+    "react": "^18.0.0",
+    "react-dom": "^18.0.0"
   },
   "devDependencies": {
     "@docusaurus/module-type-aliases": "^3.9.2",
