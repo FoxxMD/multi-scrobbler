@@ -136,6 +136,11 @@ export interface SpotifyMeta {
     track?: string
 }
 
+export interface TrackMeta {
+    brainz?: BrainzMeta
+    spotify?: SpotifyMeta
+}
+
 export interface TrackData {
     artists?: string[]
     albumArtists?: string[]
@@ -146,10 +151,7 @@ export interface TrackData {
      * */
     duration?: number
 
-    meta?: {
-        brainz?: BrainzMeta
-        spotify?: SpotifyMeta
-    }
+    meta?: TrackMeta
 }
 
 export interface PlayData extends TrackData {
@@ -388,3 +390,17 @@ export const JOINERS_FINAL: FinalJoiners[] = ['&'];
 
 export type Feat = 'ft' | 'feat' | 'vs' | 'ft.' | 'feat.' | 'vs.' | 'featuring'
 export const FEAT: Feat[] = ['ft','feat','vs','ft.','feat.','vs.','featuring'];
+export interface TransformerCommonConfig<T = Record<string, any>, Y = Record<string, any>> {
+    defaults?: T;
+    data?: Y
+    type: string;
+    name?: string;
+    options?: {
+        failOnFetch?: boolean;
+        throwOnFailure?: boolean | ('artists' | 'title' | 'albumArtists' | 'album')[];
+    };
+}
+
+export interface TransformerCommon<T = Record<string, any>> extends TransformerCommonConfig<T> {
+    name: string
+}

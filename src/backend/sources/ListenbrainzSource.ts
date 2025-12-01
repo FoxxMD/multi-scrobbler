@@ -79,7 +79,7 @@ export default class ListenbrainzSource extends MemorySource {
             return await this.api.getRecentlyPlayedKoito(limit);
         } 
         const now = await this.api.getPlayingNow();
-        this.processRecentPlays(now.listens.map(x => ListenbrainzSource.formatPlayObj(x)));
+        await this.processRecentPlays(now.listens.map(x => ListenbrainzSource.formatPlayObj(x)));
         return await this.api.getRecentlyPlayed(limit);
     }
 

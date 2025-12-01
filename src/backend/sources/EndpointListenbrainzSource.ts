@@ -89,12 +89,12 @@ export class EndpointListenbrainzSource extends MemorySource {
 
     handle = async (stateData: PlayerStateData) => {
 
-        this.processRecentPlays([stateData]);
+        await this.processRecentPlays([stateData]);
 
         if (stateData.play.meta.nowPlaying === false && this.isValidScrobble(stateData.play)) {
-            const discovered = this.discover([stateData.play]);
+            const discovered = await this.discover([stateData.play]);
             if (discovered.length > 0) {
-                this.scrobble(discovered);
+                await this.scrobble(discovered);
             }
         }
     }

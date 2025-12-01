@@ -213,7 +213,7 @@ export class MopidySource extends MemoryPositionalSource {
             play
         }
 
-        return this.processRecentPlays([playerState]);
+        return await this.processRecentPlays([playerState]);
     }
 
 }

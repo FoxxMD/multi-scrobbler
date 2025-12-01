@@ -228,7 +228,7 @@ export class MPDSource extends MemoryPositionalSource {
             position: state.elapsed
         }
 
-        return this.processRecentPlays([playerState]);
+        return await this.processRecentPlays([playerState]);
     }
 
 }

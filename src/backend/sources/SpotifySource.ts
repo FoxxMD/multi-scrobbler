@@ -356,7 +356,7 @@ export default class SpotifySource extends MemoryPositionalSource {
                 plays.push(currPlay);
             }
         }
-        const newPlays = this.processRecentPlays(plays);
+        const newPlays = await this.processRecentPlays(plays);
         // hint that scrobble timestamp source of truth should be when the track ended (player changed tracks)
         // rather than when we first saw the track
         //

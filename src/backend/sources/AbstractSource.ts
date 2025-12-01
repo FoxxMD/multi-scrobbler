@@ -40,6 +40,7 @@ import { componentFileLogger } from '../common/logging.js';
 import { WebhookPayload } from '../common/infrastructure/config/health/webhooks.js';
 import { messageWithCauses, messageWithCausesTruncatedDefault } from '../utils/ErrorUtils.js';
 import { genericSourcePlayMatch } from '../utils/PlayComparisonUtils.js';
+import { findAsync } from '../utils/AsyncUtils.js';
 
 export interface RecentlyPlayedOptions {
     limit?: number
@@ -173,12 +174,13 @@ export default abstract class AbstractSource extends AbstractComponent implement
         return lists;
     }
 
-    existingDiscovered = (play: PlayObject, opts: {checkAll?: boolean} = {}): PlayObject | undefined => {
+    existingDiscovered = async (play: PlayObject, opts: {checkAll?: boolean} = {}): Promise<PlayObject | undefined> => {
         const lists: PlayObject[][] = this.getExistingDiscoveredLists(play, opts);
-        const candidate = this.transformPlay(play, TRANSFORM_HOOK.candidate);
+        const candidate = await this.transformPlay(play, TRANSFORM_HOOK.candidate);
         for(const list of lists) {
-            const existing = list.find(x => {
-                const e = this.transformPlay(x, TRANSFORM_HOOK.existing);
+            
+            const existing = await findAsync(list,async x => {
+                const e = await this.transformPlay(x, TRANSFORM_HOOK.existing);
                 return genericSourcePlayMatch(e, candidate);
             });
             if(existing) {
@@ -188,18 +190,18 @@ export default abstract class AbstractSource extends AbstractComponent implement
         return undefined;
     }
 
-    alreadyDiscovered = (play: PlayObject, opts: {checkAll?: boolean} = {}): boolean => {
-        const existing = this.existingDiscovered(play, opts);
+    alreadyDiscovered = async (play: PlayObject, opts: {checkAll?: boolean} = {}): Promise<boolean> => {
+        const existing = await this.existingDiscovered(play, opts);
         return existing !== undefined;
     }
 
-    discover = (plays: PlayObject[], options: { checkAll?: boolean, [key: string]: any } = {}): PlayObject[] => {
+    discover = async (plays: PlayObject[], options: { checkAll?: boolean, [key: string]: any } = {}): Promise<PlayObject[]> => {
         const newDiscoveredPlays: PlayObject[] = [];
 
-        const transformedPlayed = plays.map(x => this.transformPlay(x, TRANSFORM_HOOK.preCompare));
+        const transformedPlayed = await Promise.all(plays.map(x => this.transformPlay(x, TRANSFORM_HOOK.preCompare)));
 
         for(const play of transformedPlayed) {
-            if(!this.alreadyDiscovered(play, options)) {
+            if(!(await this.alreadyDiscovered(play, options))) {
                 this.addPlayToDiscovered(play);
                 newDiscoveredPlays.push(play);
             }
@@ -222,7 +224,7 @@ export default abstract class AbstractSource extends AbstractComponent implement
     }
 
 
-    protected scrobble = (newDiscoveredPlays: PlayObject[], options: { forceRefresh?: boolean, [key: string]: any, discoverLocation?: 'backlog' | [key: string] } = {}) => {
+    protected scrobble = async (newDiscoveredPlays: PlayObject[], options: { forceRefresh?: boolean, [key: string]: any, discoverLocation?: 'backlog' | [key: string] } = {}) => {
 
         if(newDiscoveredPlays.length > 0) {
             if(!this.shouldScrobble(options.discoverLocation)) {
@@ -230,7 +232,7 @@ export default abstract class AbstractSource extends AbstractComponent implement
             }
             newDiscoveredPlays.sort(sortByOldestPlayDate);
             this.emitter.emit('discoveredToScrobble', {
-                data: newDiscoveredPlays.map(x => this.transformPlay(x, TRANSFORM_HOOK.postCompare)),
+                data: await Promise.all(newDiscoveredPlays.map(x => this.transformPlay(x, TRANSFORM_HOOK.postCompare))),
                 options: {
                     ...options,
                     checkTime: newDiscoveredPlays[newDiscoveredPlays.length-1].data.playDate.add(2, 'second'),
@@ -259,7 +261,7 @@ export default abstract class AbstractSource extends AbstractComponent implement
             } catch (e) {
                 throw new Error('Error occurred while fetching backlogged plays', {cause: e});
             }
-            const discovered = this.discover(backlogPlays, {discoverLocation: 'backlog'});
+            const discovered = await this.discover(backlogPlays, {discoverLocation: 'backlog'});
 
             const {
                 options: {
@@ -270,7 +272,7 @@ export default abstract class AbstractSource extends AbstractComponent implement
             if (scrobbleBacklog) {
                 if (discovered.length > 0) {
                     this.logger.info('Scrobbling backlogged tracks...');
-                    this.scrobble(discovered);
+                    await this.scrobble(discovered);
                     this.logger.info('Backlog scrobbling complete.');
                 } else {
                     this.logger.info('All tracks already discovered!');
@@ -451,7 +453,7 @@ export default abstract class AbstractSource extends AbstractComponent implement
                         this.logger.info(`Potential plays were discovered close to polling interval! Delaying scrobble clients refresh by ${maxDelay} seconds so other clients have time to scrobble first`);
                         await sleep(maxDelay * 1000);
                     }
-                    newDiscovered = this.discover(playObjs);
+                    newDiscovered = await this.discover(playObjs);
                     this.scrobble(newDiscovered,
                         {
                             forceRefresh: closeToInterval

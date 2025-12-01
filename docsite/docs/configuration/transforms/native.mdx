@@ -1,0 +1,174 @@
+---
+title: Native Stage
+toc_min_heading_level: 2
+toc_max_heading_level: 5
+---
+
+The **Native** [Stage](/configuration/transforms#stage) uses [built-in heuristics](https://github.com/FoxxMD/multi-scrobbler/blob/master/src/backend/tests/plays/playParsing.test.ts) to try to extract Artists from Play artist/track data.
+
+This Stage is most useful for Sources that report limited data such as:
+
+* [Subsonic](/configuration/sources/subsonic) - Reports Artists as a single string
+
+A non-exhaustive list of heuristics:
+
+* Splits artists in artist string using common delimiters EX `Foo Artist, Bar Guy, Baz Band - My Cool Song`
+  * Does not split artists with `&` in name, if other delimiters are present
+  * Does not split artist name when only one delimiter is present
+* Splits artists on common joiner phrases (ft. feat. vs. etc...)
+  * Extracts artists from Play title using joiner phrases EX `My Cool Song (feat. SomeGuy)`
+
+
+## Configuration
+
+Available properties for [Stage Configuration](/configuration/transforms#configuring-stages):
+
+
+* `delimitersExtra` - A list of string characters that should be considered delimiters for artists **in addition to** multi-scrobbler's default list (`,  /   \ `)
+* `delimiters` - A list of string characters that should be considered delimiters for artists. 
+  * **Replaces** all delimiters (MS not use any defaults, only what you give it)
+* `artistsIgnore` - a list of strings and/or regular expressions. Any monolothic artist string that matches from the list _will not be modified._
+* `artistsParseFrom` a list of the properties that should be used to try to extract artists. Can be `artists` `title` or both. Defaults to both when not provided in options ( `["artists", "title"]` )
+  * When `artists` is present it tries to extract additional artists from artist strings
+  * When `title` is present it tries to extract artists from ft. feat. vs. etc... found in the track title
+  * Importantly, if `artists` is _not_ present in `artistsParseFrom` then _no artists_ are used at all (only those from `title`, if present)
+* `artistsParseMonolithicOnly` - boolean value, defaults to `true`. When `true` native tranformer will only attempt to extract artists if the scrobble data has _only one string for artist_ (pre-transform)
+  * This means that, for Sources like Spotify/Jellyfin/etc. that provide proper lists of artists in their data _and the list has more than one string_, it will not try to extract artists from their strings
+
+<details>
+
+<summary>Example of the behavior for `artistsParseFrom`</summary>
+
+```
+The Foos, The Bars - My Cool Track (ft. Frank)
+```
+
+Config => extracted artists
+
+```
+"artistsParseFrom": ["artists", "title"]        => The Foos, The Bars, Frank
+"artistsParseFrom": ["artists"]                 => The Foos, The Bars
+"artistsParseFrom": ["title"]                   => Frank
+"artistsParseFrom": []                          =>
+```
+
+</details>
+
+### Rules
+
+Each [Rule](/configuration/transforms#stage-rules) should be either a boolean, specifying if the transformed data should be used for this field, or a [`when` condition.](/configuration/transforms#conditional-moditication):
+
+```json5
+{
+    "type": "native",
+    // ...
+    "title": false, // will not apply any changes to Play title
+    "artists": {
+      "when": {/* ... */}, // will only apply changes to Play artists if "when" is satisfied
+    /* ... */
+    },
+    "album": true // will always apply changes to Play album
+}
+```
+
+If a rule is not present then multi-scrobbler defaults it to `true`.
+
+## Examples
+
+### Parse only artists string using a custom delimiter
+
+<details>
+
+<summary>Example</summary>
+
+Your [AIO Config](/configuration?configType=aio#configuration-types):
+
+```json5 title="config.json"
+{
+  // ...
+  "transformers": [
+    {
+      "type": "native",
+      "name": "MyNativeTransformer",
+      "defaults": {
+        // default delimiters when this Stage is used in a hook
+        "delimiters": [
+          "•"
+        ],
+        // default delimiters when this Stage is used in a hook
+        "artistsParseFrom": ["artists"]
+      }
+    }
+  ]
+}
+```
+
+In a [Subsonic](/configuration/sources/subsonic) [File Config](/configuration?configType=file#configuration-types):
+
+```json5 title="subsonic.json"
+[
+  { 
+    "name": "MySubsonic",
+    "data": { /* ... */},
+    "options": {
+      "playTransform": {
+        "preCompare": [
+          {
+            "type": "native",
+            "name": "MyNativeTransformer"
+          }
+        ]
+      }
+    }
+  }
+]
+```
+</details>
+
+### Don't parse specific artists
+
+<details>
+
+<summary>Example</summary>
+
+Your [AIO Config](/configuration?configType=aio#configuration-types):
+
+```json5 title="config.json"
+{
+  // ...
+  "transformers": [
+    {
+      "type": "native",
+      "name": "MyNativeTransformer",
+      "defaults": {
+        "artistsIgnore": [
+            "Crosby, Stills, Nash & Young",
+            "Polo & Pan"
+        ]
+      }
+    }
+  ]
+}
+```
+
+In a [Subsonic](/configuration/sources/subsonic) [File Config](/configuration?configType=file#configuration-types):
+
+```json5 title="subsonic.json"
+[
+  { 
+    "name": "MySubsonic",
+    "data": { /* ... */},
+    "options": {
+      "playTransform": {
+        "preCompare": [
+          {
+            "type": "native",
+            "name": "MyNativeTransformer"
+          }
+        ]
+      }
+    }
+  }
+]
+```
+</details>

@@ -259,7 +259,7 @@ export class VLCSource extends MemoryPositionalSource {
             position: state.time
         }
 
-        return this.processRecentPlays([playerState]);
+        return await this.processRecentPlays([playerState]);
     }
 
 }

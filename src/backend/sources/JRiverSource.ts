@@ -142,7 +142,7 @@ export class JRiverSource extends MemoryPositionalSource {
             }
         }
 
-        return this.processRecentPlays(play);
+        return await this.processRecentPlays(play);
     }
 
 }

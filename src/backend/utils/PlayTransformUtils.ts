@@ -8,11 +8,11 @@ import {
     ConditionalSearchAndReplaceTerm,
     ExternalMetadataTerm,
     PlayTransformParts,
-    PlayTransformPartsArray,
-    PlayTransformPartsConfig,
-    PlayTransformRules, PlayTransformStage, PlayTransformUserParts, PlayTransformUserStage, SearchAndReplaceTerm,
+    PlayTransformStage,
+    SearchAndReplaceTerm,
     STAGE_TYPES,
     StageType,
+    StageTypedConfig,
     WhenConditionsConfig,
     WhenParts
 } from "../common/infrastructure/Transform.js";
@@ -91,6 +91,13 @@ export const isExternalMetadataTerm = (val: unknown): val is ExternalMetadataTer
     throw new Error(`Value is type of ${tf} but must be one of: boolean, undefined, or object with 'when'`);
 }
 
+export const isStageTyped = (val: unknown): val is StageTypedConfig => {
+    if(typeof val !== 'object' || val === null) {
+        return false;
+    }
+    return 'type' in val;
+}
+
 export const isPlayTransformStage = (val: object | Partial<PlayTransformStage<SearchAndReplaceTerm[]>>): val is PlayTransformStage<SearchAndReplaceTerm[]> => {
     if (!('type' in val)) {
         throw new Error(`Stage is missing 'type'. Must be one of: ${STAGE_TYPES.join(', ')}`);
@@ -125,69 +132,8 @@ export const isPlayTransformStage = (val: object | Partial<PlayTransformStage<Se
     return true;
 }
 
-export const isUserStage = <T>(val: PlayTransformStage<T>): val is PlayTransformUserStage<T> => {
+export const isUserStage = <T>(val: StageTypedConfig): val is StageTypedConfig => {
     return val.type === 'user';
-}
-
-export const configPartsToStrongParts = (val: PlayTransformPartsConfig<SearchAndReplaceTerm> | undefined): PlayTransformPartsArray<ConditionalSearchAndReplaceRegExp> => {
-    if (val === undefined) {
-        return []
-    }
-    const arr = Array.isArray(val) ? val : [val];
-
-    return arr.map((x) => {
-        const {
-            title: titleConfig,
-            artists: artistConfig,
-            album: albumConfig,
-            when: whenConfig,
-            type = 'user',
-            ...rest
-        } = x;
-
-        let stage: PlayTransformStage<SearchAndReplaceTerm[]>;
-        try {
-            const candidateStage = {...x, type};
-            if(isPlayTransformStage(candidateStage)) {
-                stage = candidateStage;
-            }
-        } catch (e) {
-            throw e;
-        }
-
-        if (whenConfig !== undefined) {
-            if (!isWhenConditionConfig(whenConfig)) {
-                throw new Error(`'when' must be an array of artist/title/album objects and each object's property must be a string`);
-            }
-        }
-
-        let title,
-            artists,
-            album,
-            when;
-
-        if(isUserStage(stage)) {
-            title = stage.title?.map(configValToSearchReplace);
-            artists = stage.artists?.map(configValToSearchReplace);
-            album = stage.album?.map(configValToSearchReplace);
-        } else {
-            title = stage.title;
-            artists = stage.artists;
-            album = stage.album;
-        }
-
-        when = whenConfig;
-
-        return {
-            title,
-            artists,
-            album,
-            when,
-            type,
-            ...rest
-        }
-    });
-
 }
 
 export const testWhen = (parts: WhenParts<string>, play: PlayObject, options?: SuppliedRegex): boolean => {
@@ -225,173 +171,4 @@ export interface SuppliedRegex {
 export interface TransformPlayPartsOptions {
     logger?: () => Logger,
     regex?: SuppliedRegex
-}
-
-export const transformPlayUsingParts = (play: PlayObject, parts: PlayTransformUserParts<ConditionalSearchAndReplaceRegExp>, options?: TransformPlayPartsOptions): PlayObject => {
-    const {
-        data: {
-            track,
-            artists,
-            albumArtists,
-            album
-        } = {}
-    } = play;
-
-    const {
-        logger = () => loggerTest,
-        regex: {
-            searchAndReplace = searchAndReplaceFunc,
-            testMaybeRegex = testMaybeRegexFunc,
-        } = {},
-    } = options || {};
-
-    const transformedPlayData: Partial<ObjectPlayData> = {};
-
-    let isTransformed = false;
-
-    if(parts.when !== undefined) {
-        if(!testWhenConditions(parts.when, play, {testMaybeRegex})) {
-            return play;
-        }
-    }
-
-    const searchAndReplaceMapper = (x: ConditionalSearchAndReplaceRegExp): ConditionalSearchAndReplaceRegExp  => ({...x, test: (x.when !== undefined ? () => testWhenConditions(x.when, play, {testMaybeRegex}) : undefined)})
-
-    if (parts.title !== undefined && track !== undefined) {
-        try {
-            const t = searchAndReplace(track, parts.title.map(x => ({...x, test: (x.when !== undefined ? () => testWhenConditions(x.when, play, {testMaybeRegex}) : undefined)})));
-            if (t !== track) {
-                transformedPlayData.track = t.trim() === '' ? undefined : t;
-                isTransformed = true;
-            }
-        } catch (e) {
-            logger().warn(new Error(`Failed to transform title: ${track}`, {cause: e}));
-        }
-    }
-
-    if (parts.artists !== undefined && artists !== undefined && artists.length > 0) {
-        const transformedArtists: string[] = [];
-        let anyArtistTransformed = false;
-        for (const artist of artists) {
-            try {
-                const t = searchAndReplace(artist, parts.artists.map(searchAndReplaceMapper));
-                if (t !== artist) {
-                    anyArtistTransformed = true;
-                    isTransformed = true;
-                }
-                if (t.trim() !== '') {
-                    transformedArtists.push(t);
-                }
-            } catch (e) {
-                logger().warn(new Error(`Failed to transform artist: ${artist}`, {cause: e}));
-                transformedArtists.push(artist);
-            }
-        }
-        if (anyArtistTransformed) {
-            transformedPlayData.artists = transformedArtists;
-        }
-    }
-
-    if (parts.artists !== undefined && albumArtists !== undefined && albumArtists.length > 0) {
-        const transformedArtists: string[] = [];
-        let anyArtistTransformed = false;
-        for (const artist of albumArtists) {
-            try {
-                const t = searchAndReplace(artist, parts.artists.map(searchAndReplaceMapper));
-                if (t !== artist) {
-                    anyArtistTransformed = true;
-                    isTransformed = true;
-                }
-                if (t.trim() !== '') {
-                    transformedArtists.push(t);
-                }
-            } catch (e) {
-                logger().warn(new Error(`Failed to transform albumArtist: ${artist}`, {cause: e}));
-                transformedArtists.push(artist);
-            }
-        }
-        if (anyArtistTransformed) {
-            transformedPlayData.albumArtists = transformedArtists;
-        }
-    }
-
-    if (parts.album !== undefined && album !== undefined) {
-        try {
-            const t = searchAndReplace(album, parts.album.map(searchAndReplaceMapper));
-            if (t !== album) {
-                isTransformed = true;
-                transformedPlayData.album = t.trim() === '' ? undefined : t;
-            }
-        } catch (e) {
-            logger().warn(new Error(`Failed to transform album: ${album}`, {cause: e}));
-        }
-    }
-
-    if (isTransformed) {
-
-        const transformedPlay = {
-            ...play,
-            data: {
-                ...play.data,
-                ...transformedPlayData
-            }
-        }
-
-        return transformedPlay;
-    }
-
-    return play;
-}
-
-export const countRegexes = (rules: PlayTransformRules): number => {
-    let rulesCount = 0;
-    if(rules.preCompare !== undefined) {
-        for(const hookItem of rules.preCompare) {
-            rulesCount = countRulesInParts(hookItem) + countWhens(hookItem.when);
-        }
-
-    }
-    if(rules.postCompare !== undefined) {
-        for(const hookItem of rules.postCompare) {
-            rulesCount = countRulesInParts(hookItem) + countWhens(hookItem.when);
-        }
-    }
-    if(rules.compare !== undefined) {
-        if(rules.compare.existing !== undefined) {
-            for(const hookItem of rules.compare.existing) {
-                rulesCount = countRulesInParts(hookItem) + countWhens(hookItem.when);
-            }
-        }
-        if(rules.compare.candidate !== undefined) {
-            for(const hookItem of rules.compare.candidate) {
-                rulesCount = countRulesInParts(hookItem) + countWhens(hookItem.when);
-            }
-        }
-    }
-    return rulesCount;
-}
-
-const countWhens = (when: WhenConditionsConfig | undefined): number => {
-    if(when === undefined) {
-        return 0;
-    }
-    return when.reduce((acc, curr) => {
-        return acc + Object.keys(curr).length;
-    },0)
-}
-
-/**
- * Counts all rules within title/artist/album + whens WITHIN those rules
- * */
-const countRulesInParts = (parts: PlayTransformParts<ConditionalSearchAndReplaceRegExp>): number => {
-    return Object.entries(parts).reduce((acc: number, entries: [string, ConditionalSearchAndReplaceRegExp[]]) => {
-        let curr = acc;
-        for(const rule of (entries[1] ?? [])) {
-            curr++;
-            if(typeof rule !== 'string' && rule.when !== undefined) {
-                curr += countWhens(rule.when);
-            }
-        }
-        return curr;
-    }, 0)
 }

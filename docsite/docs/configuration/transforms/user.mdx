@@ -1,0 +1,275 @@
+---
+title: User Stage
+toc_min_heading_level: 2
+toc_max_heading_level: 5
+---
+
+The **User** [Stage](/configuration/transforms#stage) uses [**search-and-replace** expressions](#search-and-replace-expression), provided by you, to modify/replace parts of Play data.
+
+This Stage is most useful for correcting individual instances of bad data, or patterns, in your known data. Example scenarios:
+
+* Removing `(Album Version)` from all Titles
+* Removing `Various Artists` from Artist data
+* Correcting spelling mistakes for individual Artist names
+
+The user [Stage `type`](/configuration/transforms#stage) is `user`.
+
+## Configuration
+
+All [Stage Configuration](/configuration/transforms#configuring-stage) is done using [**search-and-replace** expressions](#search-and-replace-expression) inside individual [rules](#rules). Default configuration for all Rules can still be done using Stage `defaults`.
+
+<details>
+
+<summary>Example</summary>
+
+```json5 title="config.json"
+{
+  // ...
+  "transformers": [
+    {
+      "type": "user",
+      "name": "Normalizer",
+      "defaults": {
+        "title": [
+          "(Album Version)"
+        ],
+        "artists": [
+            "Various Artists"
+        ]
+      }
+    }
+  ]
+}
+```
+
+</details>
+
+### Search-And-Replace Expression
+
+A Search-And-Replace Expression can be a plain string that matches a literal, then removes it:
+
+```
+Expression: "badTerm"
+
+"this is badTerm cool string" => "this is a cool string"
+```
+
+or a regular expression that matches and removes the match:
+
+```
+Expression: "/bad\w+/i"
+
+"this is badSomething cool string" => "this is a cool string"
+```
+
+Or it may be an object that specifies what to match (using either plain string or regular expression) and what to replace it with:
+
+```json5
+{
+    "search": "anotherBadTerm", // match all instances of 'anotherBadTerm'
+    "replace": "goodTerm" // replace with the string 'goodTerm'
+}
+```
+
+```
+"this is anotherBadTerm cool string" => "this is goodTerm cool string"
+```
+
+```json5
+{
+    "search": "/^\(\w+.com)/i", // matches any string that starts with EX '(YourMusic.com)'
+    "replace": "[MySite.com]" // replace with the string '[MySite.com]'
+}
+```
+
+```
+"(Foo.com) this is a cool string" => "[MySite.com] this is a cool string"
+```
+
+The `replace` property uses javascript's [`replace()` function and so can use any special string characters.](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String/replace#specifying_a_string_as_the_replacement)
+
+### Rules
+
+Each [Rule](/configuration/transforms#stage-rules) must be an array of [search-and-replace expressions](#search-and-replace-expressions):
+
+```json5 title="lastfm.json"
+[
+  {
+    "name": "myLastFm",
+    "configureAs": "source",
+    "data": {
+      // ...
+    },
+    "options": {
+      "playTransform": {
+        "type": "user",
+        "preCompare": [
+            {
+                "title": [
+                    // removes "badTerm" from title
+                    "badTerm",
+                    {
+                        // removes "fooTerm" from title and replaces it with "barTerm"
+                        "search": "fooTerm",
+                        "replace": "barTerm"
+                    }
+                ]
+            }
+        ],
+      }
+    }
+  }
+]
+```
+
+:::note
+
+If the value of the field (title, an artist, album) is an empty string after transforming then the field is **removed.**
+
+:::
+
+
+## Examples
+
+### Usage with `when` condition
+
+Using `when` for [Conditional Modification](/configuration/transforms#conditional-modification)
+<details>
+
+<summary>Example</summary>
+
+```json5
+//   On search-replace in title...
+//     IF artist matches "Elephant Gym"
+//     THEN Run regex search-replace ELSE skip this rule
+//
+//   Run live|remastered regex remove on title
+{
+    "title": [
+        {
+            "search": "/\\s\\-\\s滾石40\\s滾石撞樂隊\\s40團拚經典(.+)$/i",
+            "replace": "",
+            "when": [
+                {
+                    "artist": "/Elephant Gym/"
+                }
+            ]
+        },
+        "/(\\s\\-\\s|\\s)(feat\\.(.+)|live|remastered(.+))$/i"
+    ],
+}
+```
+
+</details>
+
+### Remove phrase from Title in all new Plays
+
+Removes the phrase `(Album Version)` from the Title of a Play
+
+
+<details>
+
+<summary>Example</summary>
+
+```json5
+{
+    "title": [
+        "(Album Version)"
+    ]
+}
+
+```
+</details>
+
+### Remove all parenthesized content from the end of a title
+
+<details>
+
+    <summary>Example</summary>
+```json5
+{
+"compare": {
+        "candidate": {
+            "title": [
+                "/(\(.+\))\s*$/"
+            ]
+        },
+        "existing": {
+            "title": [
+                "/(\(.+\))\s*$/"
+            ]
+        },
+    },
+}
+```
+</details>
+
+### Rename misspelled artist in all new Plays
+
+<details>
+
+    <summary>Example</summary>
+```json5
+{
+    "artists": [
+        {
+        "search": "Boz Skaggs",
+        "replace": "Boz Scaggs"
+        }
+    ]
+}
+```
+</details>
+
+### Remove "Various Artists" albums in all new Plays
+
+<details>
+
+    <summary>Example</summary>
+```json5
+{
+    "album": [
+        {
+        "search": "Various Artists",
+        "replace": ""
+        }
+    ]
+}
+```
+</details>
+
+### Extract primary Artist from delimited, multi-Artist string
+
+<details>
+
+  When the Artist string is actually a multi-artist, delimited string, this search-and-replace will replace the string with just the first artist found.
+
+  Ex
+
+  ```
+  My Artist One / My Artist Two / Another Guy
+  My Artist One
+  ```
+
+  Artists are delimited with a spaced forward slash (`/`) in the regex below. Replace the contents of the `delim` capture group with the delimiter for your use case. Some more common scenarios:
+
+  * `(?<delim>\\/)` No spaces between slash IE `My Artist One/My Artist Two/Another Guy`
+  * `(?<delim>\\s*\\\\\s*)` Backslash instead of forward slash IE `My Artist One \ My Artist Two \ Another Guy`
+  * `(?<delim>,)` Comma IE `My Artist One, My Artist Two, Another Guy`
+
+  <details>
+
+      <summary>Example</summary>
+```json
+{
+    "artists": [
+        {
+            "search": "(.*?)(?<delim>\\s*\\/\\s*)(.*$)",
+            "replace": "$1"
+        }
+    ]
+}
+```
+  </details>
+
+</details>

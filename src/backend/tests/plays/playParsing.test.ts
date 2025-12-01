@@ -4,7 +4,20 @@ import asPromised from 'chai-as-promised';
 import { after, before, describe, it } from 'mocha';
 
 import { asPlays, generateArtistsStr, generatePlay, normalizePlays } from "../utils/PlayTestUtils.js";
-import { parseArtistCredits, parseContextAwareStringList, parseCredits } from "../../utils/StringUtils.js";
+import { parseArtistCredits, parseContextAwareStringList, parseCredits, parseTrackCredits, uniqueNormalizedStrArr } from "../../utils/StringUtils.js";
+import testData from '../utils/playTestData.json' with { type: "json" };
+import { intersect } from "../../utils.js";
+import { ExpectedResults } from "../utils/interfaces.js";
+
+interface PlayTestFixture {
+    caseHints: string[]
+    data: {
+        track: string
+        artists: string[]
+        album?: string
+    }
+    expected: ExpectedResults
+}
 
 describe('#PlayParse Parsing Artists from String', function() {
 
@@ -137,4 +150,22 @@ Found    => ${parsed.join(' || ')}`)
     });
 
 
+});
+
+describe('Play Track Strings',function () {
+
+    const testFixtures = testData as unknown as PlayTestFixture[];
+    const joinerData = testFixtures.filter(x => intersect(['joiner','track'], x.caseHints).length === 2);
+
+    it('should parse joiners from track title', function() {
+        for(const test of joinerData) {
+            const res = parseTrackCredits(test.data.track);
+            let artists: string[] = [...test.data.artists];
+            if(res.secondary !== undefined) {
+                artists = uniqueNormalizedStrArr([...artists, ...res.secondary]);
+            }
+            assert.equal(res.primaryComposite, test.expected.track);
+            assert.sameDeepMembers(artists, test.expected.artists);
+        }
+    });
 });

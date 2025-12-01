@@ -1,7 +1,7 @@
 import { Logger } from "@foxxmd/logging";
 import dayjs, { Dayjs } from "dayjs";
 import { EventEmitter } from "events";
-import { SimpleIntervalJob, Task, ToadScheduler } from "toad-scheduler";
+import { AsyncTask, SimpleIntervalJob, Task, ToadScheduler } from "toad-scheduler";
 import { PlayObject, SOURCE_SOT, SOURCE_SOT_TYPES, SourcePlayerObj } from "../../core/Atomic.js";
 import { buildTrackString } from "../../core/StringUtils.js";
 import {
@@ -24,6 +24,7 @@ import {
     thresholdResultSummary,
 } from "../utils.js";
 import { timePassesScrobbleThreshold, timeToHumanTimestamp } from "../utils/TimeUtils.js";
+import { PromisePool } from "@supercharge/promise-pool";
 import AbstractSource from "./AbstractSource.js";
 import { AbstractPlayerState, createPlayerOptions, PlayerStateOptions } from "./PlayerState/AbstractPlayerState.js";
 import { GenericPlayerState } from "./PlayerState/GenericPlayerState.js";
@@ -56,10 +57,17 @@ export default class MemorySource extends AbstractSource {
 
         // player cleanup on *schedule* is needed when the Source is non-polling (ingress)
         // because if the source stops sending updates then processRecentPlays() was never called so we never remove old players
-        this.scheduler.addSimpleIntervalJob(new SimpleIntervalJob({seconds: 15}, new Task('Player Cleanup', () => {
-            if(!this.canPoll) {
-                this.cleanupPlayers();
+        this.scheduler.addSimpleIntervalJob(new SimpleIntervalJob({ seconds: 15 }, new AsyncTask('Player Cleanup', (): Promise<any> => {
+            if (!this.canPoll) {
+                return Promise.resolve();
             }
+            return PromisePool
+                .withConcurrency(1)
+                .for(this.players.keys())
+                .process(async (key) => {
+
+                    await this.cleanupPlayer(key);
+                });
         })));
     }
 
@@ -69,7 +77,7 @@ export default class MemorySource extends AbstractSource {
         }
     }
 
-    cleanupPlayer = (key: string): PlayObject | undefined => {
+    cleanupPlayer = async (key: string): Promise<PlayObject | undefined> => {
         const player = this.players.get(key);
         if(player === undefined) {
             this.logger.warn({labels: 'Player Cleanup'},`No Player with ID ${key} exists! Cannot cleanup.`);
@@ -113,7 +121,7 @@ export default class MemorySource extends AbstractSource {
             const cleanupPlay = player.getPlayedObject(true);
             let discoverablePlay: boolean;
             if(cleanupPlay !== undefined) {
-                const [discoverable, discoverableReason] = this.isListenedPlayDiscoverable(cleanupPlay);
+                const [discoverable, discoverableReason] = await this.isListenedPlayDiscoverable(cleanupPlay);
                 discoverablePlay = discoverable;
                 if(this.playerSourceOfTruth === SOURCE_SOT.PLAYER) {
                     player.logger.verbose({labels: label}, discoverableReason);
@@ -188,7 +196,7 @@ export default class MemorySource extends AbstractSource {
         return sessions[0];
     }
     
-    processRecentPlays = (datas: (PlayObject | PlayerStateDataMaybePlay)[], reportedTS?: Dayjs) => {
+    processRecentPlays = async (datas: (PlayObject | PlayerStateDataMaybePlay)[], reportedTS?: Dayjs) => {
 
         const {
             options: {
@@ -250,7 +258,7 @@ export default class MemorySource extends AbstractSource {
                 // wait to discover play until it is stale or current play has changed
                 // so that our discovered track has an accurate "listenedFor" count
                 if (candidate !== undefined && (playChanged || player.isUpdateStale())) {
-                    const [discoverable, discoverableReason] = this.isListenedPlayDiscoverable(candidate);
+                    const [discoverable, discoverableReason] = await this.isListenedPlayDiscoverable(candidate);
                     if(discoverable) {
                         if(this.playerSourceOfTruth === SOURCE_SOT.PLAYER) {
                             player.logger.verbose(discoverableReason);
@@ -273,7 +281,7 @@ export default class MemorySource extends AbstractSource {
                     }
                 });
             } else {
-                const playFromCleanup = this.cleanupPlayer(key);
+                const playFromCleanup = await this.cleanupPlayer(key);
                 if(playFromCleanup !== undefined) {
                     newStatefulPlays.push(playFromCleanup);
                 }
@@ -283,7 +291,7 @@ export default class MemorySource extends AbstractSource {
         return newStatefulPlays;
     }
 
-    protected isListenedPlayDiscoverable = (candidate: PlayObject): [boolean, string] => {
+    protected isListenedPlayDiscoverable = async (candidate: PlayObject): Promise<[boolean, string]> => {
 
         const {
             options: {
@@ -295,7 +303,7 @@ export default class MemorySource extends AbstractSource {
         const thresholdResults = timePassesScrobbleThreshold(scrobbleThresholds, candidate.data.listenedFor, candidate.data.duration);
 
         if (thresholdResults.passes) {
-            const matchingRecent = this.existingDiscovered(candidate); //sRecentlyPlayed.find(x => playObjDataMatch(x, candidate));
+            const matchingRecent = await this.existingDiscovered(candidate); //sRecentlyPlayed.find(x => playObjDataMatch(x, candidate));
             if (matchingRecent === undefined) {
                 return [true,`${stPrefix} added after ${thresholdResultSummary(thresholdResults)} and not matching any prior plays`];
             } else {

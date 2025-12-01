@@ -223,8 +223,8 @@ export default class PlexSource extends AbstractSource {
         }
 
         try {
-            const discovered = this.discover([playObj]);
-            this.scrobble(discovered);
+            const discovered = await this.discover([playObj]);
+            await this.scrobble(discovered);
         } catch (e) {
             this.logger.error('Encountered error while scrobbling')
             this.logger.error(e)

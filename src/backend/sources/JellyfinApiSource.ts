@@ -497,7 +497,7 @@ export default class JellyfinApiSource extends MemoryPositionalSource {
                 this.logger[this.logFilterFailure](dropReason);
             }
         }
-        return this.processRecentPlays(validSessions);
+        return await this.processRecentPlays(validSessions);
     }
 
     sessionToPlayerState = (obj: SessionInfo): PlayerStateDataMaybePlay => {

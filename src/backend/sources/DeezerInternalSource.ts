@@ -12,6 +12,7 @@ import { MixedCookieAgent } from 'http-cookie-agent/http';
 import MemorySource from "./MemorySource.js";
 import { genericSourcePlayMatch } from "../utils/PlayComparisonUtils.js";
 import { TemporalPlayComparisonOptions } from "../utils/TimeUtils.js";
+import { findAsync, findIndexAsync } from "../utils/AsyncUtils.js";
 
 interface DeezerHistoryResponse {
     errors: []
@@ -202,20 +203,20 @@ export default class DeezerInternalSource extends MemorySource {
     protected getBackloggedPlays = async (options: RecentlyPlayedOptions = {}) => await this.getRecentlyPlayed({formatted: true, ...options})
 
 
-    existingDiscovered = (play: PlayObject, opts: {checkAll?: boolean} = {}): PlayObject | undefined => {
+    existingDiscovered = async (play: PlayObject, opts: {checkAll?: boolean} = {}): Promise<PlayObject | undefined> => {
         const lists: PlayObject[][] = this.getExistingDiscoveredLists(play, opts);
-        const candidate = this.transformPlay(play, TRANSFORM_HOOK.candidate);
+        const candidate = await this.transformPlay(play, TRANSFORM_HOOK.candidate);
         for(const list of lists) {
-            const existing = list.find(x => {
-                const e = this.transformPlay(x, TRANSFORM_HOOK.existing);
+            const existing = await findAsync(list, async x => {
+                const e = await this.transformPlay(x, TRANSFORM_HOOK.existing);
                 return genericSourcePlayMatch(e, candidate);
             });
             if(existing) {
                 return existing;
             }
             if(this.config.options?.fuzzyDiscoveryIgnore === true || this.config.options?.fuzzyDiscoveryIgnore === 'aggressive') {
-                const fuzzyIndex = list.findIndex(x => {
-                    const e = this.transformPlay(x, TRANSFORM_HOOK.existing);
+                const fuzzyIndex = await findIndexAsync(list, async x => {
+                    const e = await this.transformPlay(x, TRANSFORM_HOOK.existing);
                     let temporalOptions: TemporalPlayComparisonOptions = {};
                     const temporalAccuracy: TemporalAccuracy[] = [TA_EXACT, TA_CLOSE, TA_FUZZY];
                     if(this.config.options?.fuzzyDiscoveryIgnore === 'aggressive') {

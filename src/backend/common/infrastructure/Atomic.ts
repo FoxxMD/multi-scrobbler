@@ -267,6 +267,7 @@ export interface numberFormatOptions {
 }
 
 export const DELIMITERS = [',','&','/','\\'];
+export const DELIMITERS_NO_AMP = [',','/','\\'];
 
 export const ARTIST_WEIGHT = 0.3;
 export const TITLE_WEIGHT = 0.4;
@@ -327,5 +328,10 @@ export interface CacheConfigOptions {
     metadata?: CacheMetadataConfig;
     scrobble?: CacheScrobbleConfig;
     auth?: CacheAuthConfig;
+    /** Number of regex functions to cache (LRU)
+     * 
+     * @default 200
+     */
+    regex?: number
 }
 

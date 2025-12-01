@@ -5,188 +5,45 @@ import {
 import deepEqual from 'fast-deep-equal';
 import { Simulate } from "react-dom/test-utils";
 import { PlayObject } from "../../core/Atomic.js";
-import { buildTrackString, truncateStringToLength } from "../../core/StringUtils.js";
-
-import {
-    configPartsToStrongParts, countRegexes,
-    isUserStage,
-    transformPlayUsingParts
-} from "../utils/PlayTransformUtils.js";
-import { hasNodeNetworkException } from "./errors/NodeErrors.js";
-import { hasUpstreamError } from "./errors/UpstreamError.js";
+import { buildTrackString } from "../../core/StringUtils.js";
 import { CommonClientConfig } from "./infrastructure/config/client/index.js";
 import { CommonSourceConfig } from "./infrastructure/config/source/index.js";
-import play = Simulate.play;
-import { WebhookPayload } from "./infrastructure/config/health/webhooks.js";
-import { AuthCheckError, BuildDataError, ConnectionCheckError, ParseCacheError, PostInitError, TransformRulesError } from "./errors/MSErrors.js";
-import { messageWithCauses, messageWithCausesTruncatedDefault } from "../utils/ErrorUtils.js";
+import { TransformRulesError } from "./errors/MSErrors.js";
 import {
-    ConditionalSearchAndReplaceRegExp,
-    PlayTransformParts,
-    PlayTransformPartsArray,
     PlayTransformRules,
+    StageConfig,
     TRANSFORM_HOOK,
     TransformHook
 } from "./infrastructure/Transform.js";
+import AbstractInitializable from "./AbstractInitializable.js";
+import play = Simulate.play;
+import TransformerManager from "./transforms/TransformerManager.js";
+import { getRoot } from "../ioc.js";
 
-export default abstract class AbstractComponent {
-    requiresAuth: boolean = false;
-    requiresAuthInteraction: boolean = false;
-    authed: boolean = false;
-    authFailure?: boolean;
+export default abstract class AbstractComponent extends AbstractInitializable {
 
-    buildOK?: boolean | null;
-    connectionOK?: boolean | null;
-    cacheOK?: boolean | null;
-
-    initializing: boolean = false;
-
-    config: CommonClientConfig | CommonSourceConfig;
+    declare config: CommonClientConfig | CommonSourceConfig;
 
     transformRules: PlayTransformRules = {};
     regexCache!: ReturnType<typeof cacheFunctions>;
-
-    logger: Logger;
-    componentLogger?: Logger;
+    protected transformManager: TransformerManager;
 
     protected constructor(config: CommonClientConfig | CommonSourceConfig) {
-        this.config = config;
+        super(config);
+        this.transformManager = getRoot().items.transformerManager;
     }
 
-    public abstract notify(payload: WebhookPayload): Promise<void>;
-
-    protected abstract getIdentifier(): string;
-
-    initialize = async (options: {force?: boolean, notify?: boolean, notifyTitle?: string} = {}) => {
-
-        const {force = false, notify = false, notifyTitle = 'Init Error'} = options;
-
-        this.logger.debug('Attempting to initialize...');
+    protected postCache(): Promise<void> {
         try {
-            this.initializing = true;
-            if(this.componentLogger === undefined) {
-                await this.buildComponentLogger();
-            }
-            await this.buildInitData(force);
-            await this.parseCache(force);
             this.buildTransformRules();
-            await this.checkConnection(force);
-            await this.testAuth(force);
-            this.logger.info('Fully Initialized!');
-            try {
-                await this.postInitialize();
-            } catch (e) {
-                throw new PostInitError('Error occurred during post-initialization hook', {cause: e});
-            }
-            return true;
-        } catch(e) {
-            if(notify) {
-                await this.notify({title: `${this.getIdentifier()} - ${notifyTitle}`, message: truncateStringToLength(500)(messageWithCausesTruncatedDefault(e)), priority: 'error'});
-            }
-            throw new Error('Initialization failed', {cause: e});
-        } finally {
-            this.initializing = false;
-        }
-    }
-
-    private async buildComponentLogger() {
-        await this.doBuildComponentLogger();
-        return;
-    }
-
-    protected async doBuildComponentLogger() {
-        return;
-    }
-
-    tryInitialize = async (options: {force?: boolean, notify?: boolean, notifyTitle?: string} = {}) => {
-        if(this.initializing) {
-            throw new Error(`Already trying to initialize, cannot attempt while an existing initialization attempt is running.`)
-        }
-        try {
-            return await this.initialize(options);
+            return;
         } catch (e) {
             throw e;
         }
     }
 
-    public async parseCache(force: boolean = false) {
-        if(this.cacheOK) {
-            if(!force) {
-                return;
-            }
-            this.logger.debug('Cache OK but step was forced');
-        }
-        try {
-            const res = await this.doParseCache();
-            if(res === undefined) {
-                this.cacheOK = null;
-                this.logger.debug('No cache to parse.');
-                return;
-            }
-            if (res === true) {
-                this.logger.verbose('Parsing caching succeeded');
-            } else if (typeof res === 'string') {
-                this.logger.verbose(`Parsing caching succeeded => ${res}`);
-            }
-            this.cacheOK = true;
-        } catch (e) {
-            this.cacheOK = false;
-            throw new ParseCacheError('Parsing cache for initialization failed', {cause: e});
-        }
-    }
-
-    /**
-     * Build or parse any cache required for this Component
-     *
-     * * Return undefined if not possible or not required
-     * * Return TRUE if build succeeded
-     * * Return string if build succeeded and should log result
-     * * Throw error on failure
-     * */
-    protected async doParseCache(): Promise<true | string | undefined> {
-        return;
-    }
-
-
-    public async buildInitData(force: boolean = false) {
-        if(this.buildOK) {
-            if(!force) {
-                return;
-            }
-            this.logger.debug('Build OK but step was forced');
-        }
-        try {
-            const res = await this.doBuildInitData();
-            if(res === undefined) {
-                this.buildOK = null;
-                this.logger.debug('No required data to build.');
-                return;
-            }
-            if (res === true) {
-                this.logger.verbose('Building required data init succeeded');
-            } else if (typeof res === 'string') {
-                this.logger.verbose(`Building required data init succeeded => ${res}`);
-            }
-            this.buildOK = true;
-        } catch (e) {
-            this.buildOK = false;
-            throw new BuildDataError('Building required data for initialization failed', {cause: e});
-        }
-    }
-
-    /**
-     * Build any data/config/objects required for this Source to communicate with upstream service
-     *
-     * * Return undefined if not possible or not required
-     * * Return TRUE if build succeeded
-     * * Return string if build succeeded and should log result
-     * * Throw error on failure
-     * */
-    protected async doBuildInitData(): Promise<true | string | undefined> {
-        return;
-    }
-
     public buildTransformRules() {
+        this.logger.debug('Building transformer rules...');
         try {
             this.doBuildTransformRules();
         } catch (e) {
@@ -194,8 +51,8 @@ export default abstract class AbstractComponent {
             throw new TransformRulesError('Could not build playTransform rules. Check your configuration is valid.', {cause: e});
         }
         try {
-            const ruleCount = countRegexes(this.transformRules);
-            this.regexCache = cacheFunctions(ruleCount);
+            //const ruleCount = countRegexes(this.transformRules);
+            this.regexCache = cacheFunctions(200);
         } catch (e) {
             this.logger.warn(new TransformRulesError('Failed to count number of rule regexes for caching but will continue will fallback to 100', {cause: e}));
         }
@@ -209,6 +66,7 @@ export default abstract class AbstractComponent {
         } = this.config;
 
         if (playTransform === undefined) {
+            this.logger.debug(`No rules found under property 'playTransform'`);
             return;
         }
 
@@ -226,29 +84,53 @@ export default abstract class AbstractComponent {
             existing,
             postCompare;
 
+        const builtHooks: string[] = [];
+        const emptyHooks: string[] = [];
         try {
-            preCompare = configPartsToStrongParts(preConfig)
+            preCompare = this.transformPartToStrong(preConfig);
+            if(preCompare === undefined) {
+                emptyHooks.push('preCompare')
+            } else {
+                builtHooks.push('preCompare');
+            }
         } catch (e) {
             throw new Error('preCompare was not valid', {cause: e});
         }
 
         try {
-            candidate = configPartsToStrongParts(candidateConfig)
+            candidate = this.transformPartToStrong(candidateConfig);
+            if(candidate === undefined) {
+                emptyHooks.push('candidate')
+            } else {
+                builtHooks.push('candidate');
+            }
         } catch (e) {
             throw new Error('candidate was not valid', {cause: e});
         }
 
         try {
-            existing = configPartsToStrongParts(existingConfig)
+            existing = this.transformPartToStrong(existingConfig);
+             if(existing === undefined) {
+                emptyHooks.push('existing')
+            } else {
+                builtHooks.push('existing');
+            }
         } catch (e) {
             throw new Error('existing was not valid', {cause: e});
         }
 
         try {
-            postCompare = configPartsToStrongParts(postConfig)
+            postCompare = this.transformPartToStrong(postConfig);
+             if(postCompare === undefined) {
+                emptyHooks.push('postCompare')
+            } else {
+                builtHooks.push('postCompare');
+            }
         } catch (e) {
             throw new Error('postCompare was not valid', {cause: e});
         }
+
+        this.logger.debug(`Hooks built. Configured: ${builtHooks.join(', ')} | Empty: ${emptyHooks.join(', ')}`);
 
         this.transformRules = {
             preCompare,
@@ -260,112 +142,24 @@ export default abstract class AbstractComponent {
         }
     }
 
-    public async checkConnection(force: boolean = false) {
-        if(this.connectionOK) {
-            if(!force) {
-                return;
-            }
-            this.logger.debug('Connection OK but step was forced')
+    protected transformPartToStrong(data: any) {
+        if(data === undefined) {
+            return undefined;
         }
-        try {
-            const res = await this.doCheckConnection();
-            if (res === undefined) {
-                this.logger.debug('Connection check was not required.');
-                this.connectionOK = null;
-                return;
-            } else if (res === true) {
-                this.logger.verbose('Connection check succeeded');
-            } else {
-                this.logger.verbose(`Connection check succeeded => ${res}`);
-            }
-            this.connectionOK = true;
-        } catch (e) {
-            this.connectionOK = false;
-            throw new ConnectionCheckError('Communicating with upstream service failed', {cause: e});
-        }
+        // default to user transform type for backward compatibility
+        const partArr = (Array.isArray(data) ? data : [data]).map(x => ({type: 'user', ...x}));
+
+        return partArr.map(x => this.transformManager.parseTransformerConfig(x));
     }
 
-    /**
-     * Check Scrobbler upstream API/connection to ensure we can communicate
-     *
-     * * Return undefined if not possible or not required to check
-     * * Return TRUE if communication succeeded
-     * * Return string if communication succeeded and should log result
-     * * Throw error if communication failed
-     * */
-    protected async doCheckConnection(): Promise<true | string | undefined> {
-        return;
-    }
-
-    authGated = () => this.requiresAuth && !this.authed
-
-    canTryAuth = () => this.isUsable() && this.authGated() && this.authFailure !== true
-
-    canAuthUnattended = () => !this.authGated || !this.requiresAuthInteraction || (this.requiresAuthInteraction && !this.authFailure);
-
-    protected doAuthentication = async (): Promise<boolean> => this.authed
-
-    // default init function, should be overridden if auth stage is required
-    testAuth = async (force: boolean = false) => {
-        if(!this.requiresAuth) {
-            return;
-        }
-        if(this.authed) {
-            if(!force) {
-                return;
-            }
-            this.logger.debug('Auth OK but step was forced');
-        }
-
-        if(this.authFailure) {
-            if(!force) {
-                if(this.requiresAuthInteraction) {
-                    throw new AuthCheckError('Authentication failure: Will not retry auth because user interaction is required for authentication');
-                }
-                throw new AuthCheckError('Authentication failure: Will not retry auth because authentication previously failed and must be reauthenticated');
-            }
-            this.logger.debug('Auth previously failed for non upstream/network reasons but retry is being forced');
-        }
-
-        try {
-            this.authed = await this.doAuthentication();
-            this.authFailure = !this.authed;
-        } catch (e) {
-            // only signal as auth failure if error was NOT either a node network error or a non-showstopping upstream error
-            this.authFailure = !(hasNodeNetworkException(e) || hasUpstreamError(e, false));
-            this.authed = false;
-            throw new AuthCheckError(`Authentication test failed!${this.authFailure === false ? ' Due to a network issue. Will retry authentication on next heartbeat.' : ''}`, {cause: e});
-        }
-    }
-
-    public isReady() {
-        return (this.buildOK === null || this.buildOK === true) &&
-            (this.connectionOK === null || this.connectionOK === true)
-            && !this.authGated();
-    }
-
-    public isUsable() {
-        return (this.buildOK === null || this.buildOK === true) &&
-            (this.connectionOK === null || this.connectionOK === true);
-    }
-
-    /**
-     * Override to perform some action after successfully initializing
-     *
-     * Results will be try-catched and swallowed/logged if an error is thrown. This will not affect initialized state.
-     * */
-    protected async postInitialize(): Promise<void> {
-        return;
-    }
-
-    public transformPlay = (play: PlayObject, hookType: TransformHook, log?: boolean) => {
+    public transformPlay = async (play: PlayObject, hookType: TransformHook, log?: boolean) => {
 
         let logger: Logger;
         const labels = ['Play Transform', hookType];
         const getLogger = () => logger !== undefined ? logger : childLogger(this.logger, labels);
 
         try {
-            let hook: PlayTransformPartsArray<ConditionalSearchAndReplaceRegExp> | undefined;
+            let hook: StageConfig[];
 
             switch (hookType) {
                 case TRANSFORM_HOOK.preCompare:
@@ -387,20 +181,45 @@ export default abstract class AbstractComponent {
             }
 
             let transformedPlay: PlayObject = play;
-            const transformDetails: string[] = [];
+            let transformDetails: string[] = [];
             for(const hookItem of hook) {
-                if(hookItem.type === 'user') {
-                    const newTransformedPlay = transformPlayUsingParts(transformedPlay, hookItem, {
-                        logger: getLogger,
-                        regex: {
-                            searchAndReplace: this.regexCache.searchAndReplace,
-                            testMaybeRegex: this.regexCache.testMaybeRegex,
+
+                const {
+                    onSuccess = 'continue',
+                    onFailure = 'stop',
+                    failureReturnPartial = false
+                } = hookItem;
+
+                let newTransformedPlay: PlayObject;
+                let err: Error;
+                try {
+                    newTransformedPlay = await this.transformManager.handleStage(hookItem, transformedPlay);
+                } catch (e) {
+                    err = e;
+                }
+
+                if(err !== undefined) {
+                    if(onFailure === 'continue') {
+                        this.logger.warn(new Error('A transform encountered an error but continuing due to onFailure: continue', {cause: err}));
+                    } else {
+                        this.logger.error(new Error('Transform encountered an error', {cause: err}));
+                        if(!failureReturnPartial) {
+                            // rewind to original play so we don't return partial transform
+                            transformedPlay = play;
+                            transformDetails = [];
                         }
-                    });
-                    if(!deepEqual(newTransformedPlay, transformedPlay)) {
-                        transformDetails.push(buildTrackString(transformedPlay, {include: ['artist', 'track', 'album']}));
+                        break;
                     }
-                    transformedPlay = newTransformedPlay;
+                }
+
+                if(!deepEqual(newTransformedPlay, transformedPlay)) {
+                    transformDetails.push(`${hookItem.type} - ${buildTrackString(transformedPlay, {include: ['artist', 'track', 'album']})}`);
+                }
+                transformedPlay = newTransformedPlay;
+
+                if(err === undefined && onSuccess === 'stop') {
+                    this.logger.debug('Stopping transform due to onSuccess: stop');
+                    break;
                 }
             }
 
@@ -421,9 +240,5 @@ export default abstract class AbstractComponent {
             getLogger().warn(new Error(`Unexpected error occurred, returning original play.`, {cause: e}));
             return play;
         }
-    }
-
-    public additionalApiData(): Record<string, any> {
-        return {};
     }
 }

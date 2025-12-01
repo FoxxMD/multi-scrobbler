@@ -453,7 +453,7 @@ describe('Detects duplicate and unique scrobbles using actively tracked scrobble
             playDate: normalizedWithMixedDur[normalizedWithMixedDur.length - 3].data.playDate.add(3, 'seconds')
         });
 
-        const [matchedPlay, matchedData] = testScrobbler.findExistingSubmittedPlayObj(newScrobble);
+        const [matchedPlay, matchedData] = await testScrobbler.findExistingSubmittedPlayObj(newScrobble);
 
         assert.isUndefined(matchedPlay);
         assert.isEmpty(matchedData);
@@ -465,7 +465,7 @@ describe('Detects duplicate and unique scrobbles using actively tracked scrobble
         });
         testScrobbler.addScrobbledTrack(newScrobble, newScrobble);
 
-        const [matchedPlay, matchedData] = testScrobbler.findExistingSubmittedPlayObj(newScrobble);
+        const [matchedPlay, matchedData] = await testScrobbler.findExistingSubmittedPlayObj(newScrobble);
 
         assert.isDefined(matchedPlay);
         assert.isNotEmpty(matchedData);
@@ -480,7 +480,7 @@ describe('Detects duplicate and unique scrobbles using actively tracked scrobble
         const dupScrobble = clone(newScrobble);
         dupScrobble.data.playDate = newScrobble.data.playDate.add(2, 'seconds');
 
-        const [matchedPlay, matchedData] = testScrobbler.findExistingSubmittedPlayObj(dupScrobble);
+        const [matchedPlay, matchedData] = await testScrobbler.findExistingSubmittedPlayObj(dupScrobble);
 
         assert.isDefined(matchedPlay);
         assert.isNotEmpty(matchedData);

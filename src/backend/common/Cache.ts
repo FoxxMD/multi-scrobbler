@@ -12,6 +12,7 @@ import clone from 'clone';
 import { childLogger, Logger } from '@foxxmd/logging';
 import { projectDir } from './index.js';
 import path from 'path';
+import { cacheFunctions } from "@foxxmd/regex-buddy-core";
 import { fileOrDirectoryIsWriteable } from '../utils.js';
 import { asCacheAuthProvider, asCacheMetadataProvider, asCacheScrobbleProvider, CacheAuthProvider, CacheConfig, CacheConfigOptions, CacheMetadataProvider, CacheProvider, CacheScrobbleProvider } from './infrastructure/Atomic.js';
 import { Typeson } from 'typeson';
@@ -47,6 +48,8 @@ export class MSCache {
     cacheMetadata: Cacheable;
     cacheScrobble: Cacheable;
     cacheAuth: Cacheable;
+    regexCache: ReturnType<typeof cacheFunctions>;
+    cacheTransform: Cacheable;
 
     logger: Logger;
 
@@ -69,6 +72,7 @@ export class MSCache {
                 connection: aConn = (process.env.CACHE_AUTH_CONN ?? configDir),
                 ...restAuth
             } = {},
+            regex = 200,
         } = config;
 
         this.config = {
@@ -86,8 +90,12 @@ export class MSCache {
                 provider: aProvider,
                 connection: aConn,
                 ...restAuth
-            }
+            },
+            regex
         };
+
+        this.regexCache = cacheFunctions(this.config.regex);
+        this.cacheTransform = new Cacheable({primary: initMemoryCache({lruSize: 500})});
     }
 
     init = async () => {
@@ -95,6 +103,7 @@ export class MSCache {
         //await this.initMetadataCache();
         await this.initScrobbleCache();
         await this.initAuthCache();
+        //this.cacheTransform = await this.initCacheable({provider: false, memory: {lruSize: 500}}, 'transform');
     }
 
     protected initCacheable = async (config: CacheConfig, cacheFor: string) => {
@@ -109,7 +118,7 @@ export class MSCache {
         const ns = `ms-${cacheFor.toLocaleLowerCase()}`;
 
         const cacheOpts: CacheableOptions = {
-            primary: initMemoryCache({ namespace: ns })
+            primary: initMemoryCache({ namespace: ns, lruSize: config.memory?.lruSize, ttl: config.memory?.ttl })
         }
 
         let secondaryCache: Keyv | KeyvStoreAdapter | undefined;
@@ -174,10 +183,15 @@ export class MSCache {
 
 
 export const initMemoryCache = (opts: Parameters<typeof createKeyv>[0] = {}): Keyv | KeyvStoreAdapter => {
+    const {
+        ttl = '1h',
+        lruSize = 200,
+        ...restOpts
+    } = opts;
     const memory = createKeyv({
-        ttl: '1h',
-        lruSize: 200,
-        ...opts,
+        ttl,
+        lruSize,
+        ...restOpts,
         useClone: false,
     });
     // structuredClone does not work well with dayjs https://github.com/iamkun/dayjs/issues/2236

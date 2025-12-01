@@ -51,7 +51,7 @@ describe('Sources use transform plays correctly', function () {
         source = generateSource();
     });
 
-    it('Transforms play on preCompare', function() {
+    it('Transforms play on preCompare', async function() {
         source.config.options = {
             playTransform: {
                 preCompare: {
@@ -68,7 +68,7 @@ describe('Sources use transform plays correctly', function () {
         const newScrobble = generatePlay({
             track: 'my cool track'
         });
-        const discovered = source.discover([newScrobble])
+        const discovered = await source.discover([newScrobble])
         expect(discovered.length).eq(1);
         expect(discovered[0].data.track).is.eq('my fun track');
     });
@@ -90,7 +90,7 @@ describe('Sources use transform plays correctly', function () {
         const newScrobble = generatePlay({
             track: 'my cool track'
         });
-        const discovered = source.discover([newScrobble])
+        const discovered = await source.discover([newScrobble])
         expect(discovered.length).eq(1);
         expect(discovered[0].data.track).is.eq('my cool track');
 
@@ -101,7 +101,7 @@ describe('Sources use transform plays correctly', function () {
         expect(e.data[0].data.track).is.eq('my fun track');
     });
 
-    it('Transforms play existing comparison', function() {
+    it('Transforms play existing comparison', async function() {
         source.config.options = {
             playTransform: {
                 compare: {
@@ -120,14 +120,14 @@ describe('Sources use transform plays correctly', function () {
         const newScrobble = generatePlay({
             track: 'my hugely cool and very different track title',
         });
-        const discovered = source.discover([newScrobble])
+        const discovered = await source.discover([newScrobble])
         expect(discovered.length).eq(1);
         expect(discovered[0].data.track).is.eq('my hugely cool and very different track title');
 
-        expect(source.discover([newScrobble]).length).is.eq(1);
+        expect((await source.discover([newScrobble])).length).is.eq(1);
     });
 
-    it('Transforms play candidate comparison', function() {
+    it('Transforms play candidate comparison', async function() {
         source.config.options = {
             playTransform: {
                 compare: {
@@ -146,11 +146,11 @@ describe('Sources use transform plays correctly', function () {
         const newScrobble = generatePlay({
             track: 'my hugely cool and very different track title',
         });
-        const discovered = source.discover([newScrobble])
+        const discovered = await source.discover([newScrobble])
         expect(discovered.length).eq(1);
         expect(discovered[0].data.track).is.eq('my hugely cool and very different track title');
 
-        expect(source.discover([newScrobble]).length).is.eq(1);
+        expect((await source.discover([newScrobble])).length).is.eq(1);
     });
 })
 
@@ -200,7 +200,7 @@ describe('Player Cleanup', function () {
         const source = generateSource({data: {staleAfter: 21, orphanedAfter: 40}, options: {}});
         const initialDate = dayjs();
         const initialState = generatePlayerStateData({position: 0, playData: {duration: 50}, timestamp: initialDate, status: REPORTED_PLAYER_STATUSES.playing});
-        expect(source.processRecentPlays([initialState]).length).to.be.eq(0);
+        expect((await source.processRecentPlays([initialState])).length).to.be.eq(0);
 
         let position = 0;
         let timeSince = 0;
@@ -212,7 +212,7 @@ describe('Player Cleanup', function () {
             MockDate.set(initialDate.add(position, 'seconds').toDate());
             await sleep(1);
             const advancedState = generatePlayerStateData({play: initialState.play, timestamp: dayjs(), position, status: REPORTED_PLAYER_STATUSES.playing});
-            expect(source.processRecentPlays([advancedState]).length).to.be.eq(0);
+            expect((await source.processRecentPlays([advancedState])).length).to.be.eq(0);
         }
 
         // simulate polling another 20 seconds without any updates from the Source
@@ -220,12 +220,12 @@ describe('Player Cleanup', function () {
             timeSince += 10;
             MockDate.set(initialDate.add(timeSince, 'seconds').toDate());
             await sleep(1);
-            expect(source.processRecentPlays([]).length).to.be.eq(0);
+            expect((await source.processRecentPlays([])).length).to.be.eq(0);
         }
 
         MockDate.set(initialDate.add(timeSince + 2, 'seconds').toDate());
         await sleep(1);
-        const discoveredPlays = source.processRecentPlays([]);
+        const discoveredPlays = await source.processRecentPlays([]);
         // cleanup should discover stale play
         expect(discoveredPlays.length).to.be.eq(1);
         expect(discoveredPlays[0].data.listenedFor).closeTo(30, 2);
@@ -244,7 +244,7 @@ describe('Player Cleanup', function () {
         const source = generateSource({data: {staleAfter: 21, orphanedAfter: 40}, options: {}});
         const initialDate = dayjs();
         const initialState = generatePlayerStateData({position: 0, playData: {duration: 50}, timestamp: initialDate, status: REPORTED_PLAYER_STATUSES.playing});
-        expect(source.processRecentPlays([initialState]).length).to.be.eq(0);
+        expect((await source.processRecentPlays([initialState])).length).to.be.eq(0);
 
         let position = 0;
         let timeSince = 0;
@@ -256,7 +256,7 @@ describe('Player Cleanup', function () {
             MockDate.set(initialDate.add(position, 'seconds').toDate());
             await sleep(1);
             const advancedState = generatePlayerStateData({play: initialState.play, timestamp: dayjs(), position, status: REPORTED_PLAYER_STATUSES.playing});
-            expect(source.processRecentPlays([advancedState]).length).to.be.eq(0);
+            expect((await source.processRecentPlays([advancedState])).length).to.be.eq(0);
         }
 
         // simulate polling another 20 seconds without any updates from the Source
@@ -264,14 +264,14 @@ describe('Player Cleanup', function () {
             timeSince += 10;
             MockDate.set(initialDate.add(timeSince, 'seconds').toDate());
             await sleep(1);
-            expect(source.processRecentPlays([]).length).to.be.eq(0);
+            expect((await source.processRecentPlays([])).length).to.be.eq(0);
         }
 
         timeSince += 2;
 
         MockDate.set(initialDate.add(timeSince, 'seconds').toDate());
         await sleep(1);
-        const discoveredPlays = source.processRecentPlays([]);
+        const discoveredPlays = await source.processRecentPlays([]);
         // cleanup should discover stale play
         expect(discoveredPlays.length).to.be.eq(1);
         expect(discoveredPlays[0].data.listenedFor).closeTo(30, 2);
@@ -285,7 +285,7 @@ describe('Player Cleanup', function () {
             MockDate.set(initialDate.add(timeSince, 'seconds').toDate());
             await sleep(1);
             const advancedState = generatePlayerStateData({play: initialState.play, timestamp: dayjs(), position, status: REPORTED_PLAYER_STATUSES.playing});
-            expect(source.processRecentPlays([advancedState]).length).to.be.eq(0);
+            expect((await source.processRecentPlays([advancedState])).length).to.be.eq(0);
         }
 
         timeSince += 10;
@@ -294,7 +294,7 @@ describe('Player Cleanup', function () {
         // new Play
         const advancedState = generatePlayerStateData({timestamp: dayjs(), position: 0, status: REPORTED_PLAYER_STATUSES.playing});
         // should not return play because it has only been played for ~20 seconds, less than 50% of duration
-        const plays = source.processRecentPlays([advancedState])
+        const plays = await source.processRecentPlays([advancedState])
         expect(plays.length).to.be.eq(0);
     }
 
@@ -314,7 +314,7 @@ describe('Player Cleanup', function () {
 
         // if player incorrectly counted stale time then 30s of actual play + 20s of stale time > scrobble threshold of 50% of 90s
         const initialState = generatePlayerStateData({position: 0, playData: {duration: 90}, timestamp: initialDate, status: REPORTED_PLAYER_STATUSES.playing});
-        expect(source.processRecentPlays([initialState]).length).to.be.eq(0);
+        expect((await source.processRecentPlays([initialState])).length).to.be.eq(0);
 
         let position = 0;
         let timeSince = 0;
@@ -326,7 +326,7 @@ describe('Player Cleanup', function () {
             MockDate.set(initialDate.add(position, 'seconds').toDate());
             await sleep(1);
             const advancedState = generatePlayerStateData({play: initialState.play, timestamp: initialDate, position, status: REPORTED_PLAYER_STATUSES.playing});
-            expect(source.processRecentPlays([advancedState]).length).to.be.eq(0);
+            expect((await source.processRecentPlays([advancedState])).length).to.be.eq(0);
         }
 
         // simulate polling another 20 seconds without any updates from the Source
@@ -334,11 +334,11 @@ describe('Player Cleanup', function () {
             timeSince += 10;
             MockDate.set(initialDate.add(timeSince, 'seconds').toDate());
             await sleep(1);
-            expect(source.processRecentPlays([]).length).to.be.eq(0);
+            expect((await source.processRecentPlays([])).length).to.be.eq(0);
         }
 
         MockDate.set(initialDate.add(timeSince + 2, 'seconds').toDate());
-        const discoveredPlays = source.processRecentPlays([]);
+        const discoveredPlays = await source.processRecentPlays([]);
         // cleanup should not discover stale play
         expect(discoveredPlays.length).to.be.eq(0);
 
@@ -359,7 +359,7 @@ describe('Player Cleanup', function () {
 
         // if player incorrectly counted stale time then 30s of actual play + 20s of stale time > scrobble threshold of 50% of 90s
         const initialState = generatePlayerStateData({position: 0, playData: {duration: 90}, timestamp: initialDate, status: REPORTED_PLAYER_STATUSES.playing});
-        expect(source.processRecentPlays([initialState]).length).to.be.eq(0);
+        expect((await source.processRecentPlays([initialState])).length).to.be.eq(0);
 
         let position = 0;
         let timeSince = 0;
@@ -371,7 +371,7 @@ describe('Player Cleanup', function () {
             MockDate.set(initialDate.add(position, 'seconds').toDate());
             await sleep(1);
             const advancedState = generatePlayerStateData({play: initialState.play, timestamp: dayjs(), position, status: REPORTED_PLAYER_STATUSES.playing});
-            expect(source.processRecentPlays([advancedState]).length).to.be.eq(0);
+            expect((await source.processRecentPlays([advancedState])).length).to.be.eq(0);
         }
 
         // simulate polling another 20 seconds without any updates from the Source
@@ -379,14 +379,14 @@ describe('Player Cleanup', function () {
             timeSince += 10;
             MockDate.set(initialDate.add(timeSince, 'seconds').toDate());
             await sleep(1);
-            expect(source.processRecentPlays([]).length).to.be.eq(0);
+            expect((await source.processRecentPlays([])).length).to.be.eq(0);
         }
 
         timeSince += 2;
 
         MockDate.set(initialDate.add(timeSince, 'seconds').toDate());
         await sleep(1);
-        const discoveredPlays = source.processRecentPlays([]);
+        const discoveredPlays = await source.processRecentPlays([]);
         // cleanup should not discover stale play
         expect(discoveredPlays.length).to.be.eq(0);
 
@@ -401,7 +401,7 @@ describe('Player Cleanup', function () {
             MockDate.set(initialDate.add(position, 'seconds').toDate());
             await sleep(1);
             const advancedState = generatePlayerStateData({play: initialState.play, timestamp: dayjs(), position, status: REPORTED_PLAYER_STATUSES.playing});
-            expect(source.processRecentPlays([advancedState]).length).to.be.eq(0);
+            expect((await source.processRecentPlays([advancedState])).length).to.be.eq(0);
         }
 
         timeSince += 10;
@@ -410,7 +410,7 @@ describe('Player Cleanup', function () {
         // new Play
         const advancedState = generatePlayerStateData({timestamp: dayjs(), position: 0, status: REPORTED_PLAYER_STATUSES.playing});
         // should return discovered play with ~90 seconds of duration
-        const plays = source.processRecentPlays([advancedState])
+        const plays = await source.processRecentPlays([advancedState])
         expect(plays.length).to.be.eq(1);
         expect(plays[0].data.duration).to.be.closeTo(90, 2);
 
@@ -436,7 +436,7 @@ describe('Deezer Internal Source', function() {
 
     describe('When fuzzyDiscoveryIgnore is not defined or false', function () {
 
-        it('discovers fuzzy play', function() {
+        it('discovers fuzzy play', async function() {
             const interimPlay = generatePlay({playDate: lastPlay.data.playDate.add(15, 's'), duration: 80});
             const targetPlay = normalizedPlays[normalizedPlays.length - 2]
             const fuzzyPlay = clone(targetPlay);
@@ -445,7 +445,7 @@ describe('Deezer Internal Source', function() {
             const source = generateDeezerSource();
             source.discover([...normalizedPlays, interimPlay]);
 
-            const discovered = source.discover([fuzzyPlay]);
+            const discovered = await source.discover([fuzzyPlay]);
 
             expect(discovered.length).to.eq(1);
         });
@@ -453,41 +453,41 @@ describe('Deezer Internal Source', function() {
 
     describe('When fuzzyDiscoveryIgnore is true', function () {
 
-        it('does not discover fuzzy play with interim plays', function() {
+        it('does not discover fuzzy play with interim plays', async function() {
             const interimPlay = generatePlay({playDate: lastPlay.data.playDate.add(15, 's'), duration: 80});
             const targetPlay = normalizedPlays[normalizedPlays.length - 2]
             const fuzzyPlay = clone(targetPlay);
             fuzzyPlay.data.playDate = targetPlay.data.playDate.add(targetPlay.data.duration, 's');
 
             const source = generateDeezerSource({fuzzyDiscoveryIgnore: true});
-            source.discover([...normalizedPlays, interimPlay]);
+            await source.discover([...normalizedPlays, interimPlay]);
 
-            const discovered = source.discover([fuzzyPlay]);
+            const discovered = await source.discover([fuzzyPlay]);
 
             expect(discovered.length).to.eq(0);
         });
 
-        it('discovers fuzzy play when it is the last play ', function() {
+        it('discovers fuzzy play when it is the last play ', async function() {
             const targetPlay = normalizedPlays[normalizedPlays.length - 1]
             const fuzzyPlay = clone(targetPlay);
             fuzzyPlay.data.playDate = targetPlay.data.playDate.add(targetPlay.data.duration, 's');
 
             const source = generateDeezerSource({fuzzyDiscoveryIgnore: true});
-            source.discover(normalizedPlays);
+            await source.discover(normalizedPlays);
 
-            const discovered = source.discover([fuzzyPlay]);
+            const discovered = await source.discover([fuzzyPlay]);
 
             expect(discovered.length).to.eq(1);
         });
 
-        it('discovers fuzzy play when it is played consecutively', function() {
+        it('discovers fuzzy play when it is played consecutively', async function() {
             const targetPlay = normalizedPlays[normalizedPlays.length - 1]
             const fuzzyPlay = clone(targetPlay);
             fuzzyPlay.data.playDate = targetPlay.data.playDate.add(targetPlay.data.duration, 's');
             const morePlays = normalizePlays([...normalizedPlays, fuzzyPlay, ...generatePlays(2)], {initialDate: firstPlayDate});
 
             const source = generateDeezerSource({fuzzyDiscoveryIgnore: true});
-            const discovered = source.discover(morePlays);
+            const discovered = await source.discover(morePlays);
 
             expect(discovered.length).to.eq(morePlays.length);
         });
@@ -495,69 +495,69 @@ describe('Deezer Internal Source', function() {
 
         describe('When fuzzyDiscoveryIgnore is aggressive', function () {
 
-            it('does not discover fuzzy play with interim plays', function() {
+            it('does not discover fuzzy play with interim plays', async function() {
                 const interimPlay = generatePlay({playDate: lastPlay.data.playDate.add(15, 's'), duration: 80});
                 const targetPlay = normalizedPlays[normalizedPlays.length - 2]
                 const fuzzyPlay = clone(targetPlay);
                 fuzzyPlay.data.playDate = targetPlay.data.playDate.add(targetPlay.data.duration, 's');
 
                 const source = generateDeezerSource({fuzzyDiscoveryIgnore: 'aggressive'});
-                source.discover([...normalizedPlays, interimPlay]);
+                await source.discover([...normalizedPlays, interimPlay]);
 
-                const discovered = source.discover([fuzzyPlay]);
+                const discovered = await source.discover([fuzzyPlay]);
 
                 expect(discovered.length).to.eq(0);
             });
 
-            it('does not discover play found during duration of previous', function() {
+            it('does not discover play found during duration of previous', async function() {
                 const interimPlay = generatePlay({playDate: lastPlay.data.playDate.add(15, 's'), duration: 80});
                 const targetPlay = normalizedPlays[normalizedPlays.length - 2]
                 const duringPlay = clone(targetPlay);
                 duringPlay.data.playDate = targetPlay.data.playDate.add(targetPlay.data.duration * 0.5, 's');
 
                 const source = generateDeezerSource({fuzzyDiscoveryIgnore: 'aggressive'});
-                source.discover([...normalizedPlays, interimPlay]);
+                await source.discover([...normalizedPlays, interimPlay]);
 
-                const discovered = source.discover([duringPlay]);
+                const discovered = await source.discover([duringPlay]);
 
                 expect(discovered.length).to.eq(0);
             });
 
-            it('does not discover fuzzy play with delay of up to 40 seconds', function() {
+            it('does not discover fuzzy play with delay of up to 40 seconds', async function() {
                 const interimPlay = generatePlay({playDate: lastPlay.data.playDate.add(15, 's'), duration: 80});
                 const targetPlay = normalizedPlays[normalizedPlays.length - 2]
                 const fuzzyPlay = clone(targetPlay);
                 fuzzyPlay.data.playDate = targetPlay.data.playDate.add(targetPlay.data.duration + 39, 's');
 
                 const source = generateDeezerSource({fuzzyDiscoveryIgnore: 'aggressive'});
-                source.discover([...normalizedPlays, interimPlay]);
+                await source.discover([...normalizedPlays, interimPlay]);
 
-                const discovered = source.discover([fuzzyPlay]);
+                const discovered = await source.discover([fuzzyPlay]);
 
                 expect(discovered.length).to.eq(0);
             });
 
-            it('it does not discover fuzzy play when it is the last play ', function() {
+            it('it does not discover fuzzy play when it is the last play ', async function() {
                 const targetPlay = normalizedPlays[normalizedPlays.length - 1]
                 const fuzzyPlay = clone(targetPlay);
                 fuzzyPlay.data.playDate = targetPlay.data.playDate.add(targetPlay.data.duration, 's');
 
                 const source = generateDeezerSource({fuzzyDiscoveryIgnore: 'aggressive'});
-                source.discover(normalizedPlays);
+                await source.discover(normalizedPlays);
 
-                const discovered = source.discover([fuzzyPlay]);
+                const discovered = await source.discover([fuzzyPlay]);
 
                 expect(discovered.length).to.eq(0);
             });
 
-            it('does not discover fuzzy play when it is played consecutively', function() {
+            it('does not discover fuzzy play when it is played consecutively', async function() {
                 const targetPlay = normalizedPlays[normalizedPlays.length - 1]
                 const fuzzyPlay = clone(targetPlay);
                 fuzzyPlay.data.playDate = targetPlay.data.playDate.add(targetPlay.data.duration, 's');
                 const morePlays = normalizePlays([...normalizedPlays, fuzzyPlay, ...generatePlays(2)], {initialDate: firstPlayDate});
 
                 const source = generateDeezerSource({fuzzyDiscoveryIgnore: 'aggressive'});
-                const discovered = source.discover(morePlays);
+                const discovered = await source.discover(morePlays);
 
                 expect(discovered.length).to.eq(morePlays.length - 1);
             });

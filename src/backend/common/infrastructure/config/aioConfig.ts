@@ -6,6 +6,7 @@ import { WebhookConfig } from "./health/webhooks.js";
 import { CommonSourceOptions, SourceRetryOptions } from "./source/index.js";
 import { SourceAIOConfig } from "./source/sources.js";
 import { CacheConfigOptions, ClientType, SourceType } from "../Atomic.js";
+import { TransformerCommonConfig } from "../../../../core/Atomic.js";
 
 
 export interface SourceDefaults extends CommonSourceOptions {
@@ -66,6 +67,8 @@ export interface AIOConfig {
     debugMode?: boolean
 
     cache?: CacheConfigOptions
+
+    transformers?: TransformerCommonConfig[]
 }
 
 export interface AIOClientConfig {
