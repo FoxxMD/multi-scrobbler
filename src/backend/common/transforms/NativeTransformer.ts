@@ -77,10 +77,10 @@ export const parseStageConfig = (data: NativeTransformerData | undefined, logger
 
     if (data.delimiters !== undefined) {
         config.delimiters = asArray(data.delimiters);
-        logger.debug(`Defaults - Using user-defined delimiters '${data.delimitersExtra.join(' ')}' instead of built-ins`);
+        logger.debug(`Defaults - Using user-defined delimiters '${config.delimiters.join(' ')}' instead of built-ins`);
     } else if (data.delimitersExtra !== undefined) {
         config.delimiters = [...DELIMITERS_NO_AMP, ...(asArray(data.delimitersExtra))];
-        logger.debug(`Defaults - Using extra delimiters '${data.delimitersExtra.join(' ')}' with built-in delimiters '${DELIMITERS_NO_AMP.join(' ')}'`);
+        logger.debug(`Defaults - Using extra delimiters '${asArray(data.delimitersExtra).join(' ')}' with built-in delimiters '${DELIMITERS_NO_AMP.join(' ')}'`);
     }
 
     if (config.delimiters !== undefined) {
