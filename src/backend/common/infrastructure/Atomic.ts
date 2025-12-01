@@ -335,3 +335,8 @@ export interface CacheConfigOptions {
     regex?: number
 }
 
+export interface MusicbrainzConfigData {
+    url?: string
+    rateLimit?: number
+    contact: string
+}
