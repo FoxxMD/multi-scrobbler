@@ -74,12 +74,30 @@ export default abstract class AtomicPartsTransformer<Y, T = any, Z extends Atomi
                     }
                 }
             }
+
+            const meta = await this.handleMeta(play, transformData);
+            const mergedMeta = {
+                ...(play.data.meta ?? {})
+            };
+            if(meta !== undefined) {
+                for(const [k,v] of Object.entries(meta)) {
+                    if(mergedMeta[k] !== undefined) {
+                        mergedMeta[k] = {
+                            ...mergedMeta[k],
+                            ...v
+                        }
+                    } else {
+                        mergedMeta[k] = v;
+                    }
+                }
+            }
     
             const transformedPlay = {
                 ...play,
                 data: {
                     ...play.data,
-                    ...transformedPlayData
+                    ...transformedPlayData,
+                    meta: mergedMeta
                 }
             }
     

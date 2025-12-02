@@ -7,6 +7,11 @@ import { PlayObject } from "../../../core/Atomic.js";
 import { isStageTyped } from "../../utils/PlayTransformUtils.js";
 import { MSCache } from "../Cache.js";
 import NativeTransformer from "./NativeTransformer.js";
+import { MusicbrainzApiClient } from "../vendor/musicbrainz/MusicbrainzApiClient.js";
+import { MUSICBRAINZ_URL, MusicbrainzApiConfigData } from "../infrastructure/Atomic.js";
+import { normalizeWebAddress } from "../../utils/NetworkUtils.js";
+import { MusicBrainzApi } from "musicbrainz-api";
+import MusicbrainzTransformer, { MusicbrainzTransformerConfig } from "./MusicbrainzTransformer.js";
 
 export default class TransformerManager {
 
@@ -43,6 +48,9 @@ export default class TransformerManager {
                 break;
             case 'native':
                 t = new NativeTransformer({ name: tName,  ...config }, {logger: this.parentLogger, regexCache: this.cache.regexCache, cache: this.cache.cacheTransform});
+                break;
+            case 'musicbrainz':
+                t = new MusicbrainzTransformer({ name: tName, ...config as MusicbrainzTransformerConfig }, {logger: this.parentLogger, regexCache: this.cache.regexCache, cache: this.cache.cacheTransform});
                 break;
             default:
                 throw new Error(`No transformer of type '${config.type}' exists.`);
@@ -110,6 +118,10 @@ export default class TransformerManager {
             t = list[0];
         }
 
-        return await t.handle(data, play);
+        try {
+            return await t.handle(data, play);
+        } catch (e) {
+            throw new Error('Stage processing failed', {cause: e});
+        }
     }
 }

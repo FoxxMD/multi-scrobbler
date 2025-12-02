@@ -9,7 +9,7 @@ import JSON5 from 'json5';
 // https://github.com/jfromaniello/url-join#in-nodejs
 import pathUtil from "path";
 import { TimeoutError, WebapiError } from "spotify-web-api-node/src/response-error.js";
-import { PlayObject } from "../core/Atomic.js";
+import { DEFAULT_MISSING_TYPES, MissingMbidType, PlayObject } from "../core/Atomic.js";
 import {
     asPlayerStateDataMaybePlay,
     NO_DEVICE,
@@ -610,6 +610,32 @@ export const comparingMultipleArtists = (existing: PlayObject, candidate: PlayOb
 
     return eArtists.length > 1 || cArtists.length > 1;
 }
+
+export const missingMbidTypes = (play: PlayObject): MissingMbidType[] => {
+    let missing: MissingMbidType[] = [];
+
+    if(play.data.meta?.brainz === undefined) {
+        return DEFAULT_MISSING_TYPES;
+    }
+
+    const {
+        track,
+        album,
+        artist
+    } = play.data.meta.brainz;
+
+    if(track === undefined) {
+        missing.push('title');
+    }
+    if(album === undefined) {
+        missing.push('album');
+    }
+    if((artist ?? []).length !== (play.data.artists ?? []).length) {
+        missing.push('artists')
+    }
+    return missing;
+}
+
 
 export interface NonEmptyOptions<T> {
     ofType?: string, 

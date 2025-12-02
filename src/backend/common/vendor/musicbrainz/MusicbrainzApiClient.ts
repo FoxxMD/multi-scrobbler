@@ -1,13 +1,18 @@
 import dayjs from "dayjs";
 import request, { Request, Response } from 'superagent';
 import { PlayObject, URLData } from "../../../../core/Atomic.js";
-import { nonEmptyStringOrDefault } from "../../../../core/StringUtils.js";
+import { buildTrackString, nonEmptyStringOrDefault } from "../../../../core/StringUtils.js";
 import { UpstreamError } from "../../errors/UpstreamError.js";
-import { AbstractApiOptions, DEFAULT_RETRY_MULTIPLIER, FormatPlayObjectOptions, MusicbrainzConfigData } from "../../infrastructure/Atomic.js";
+import { AbstractApiOptions, DEFAULT_RETRY_MULTIPLIER, FormatPlayObjectOptions, MUSICBRAINZ_URL, MusicbrainzApiConfigData } from "../../infrastructure/Atomic.js";
 import AbstractApiClient from "../AbstractApiClient.js";
 import { isPortReachableConnect, joinedUrl, normalizeWebAddress } from '../../../utils/NetworkUtils.js';
-import { MusicBrainzApi, IRecording, ISearchResult, IRecordingList, ISearchQuery } from 'musicbrainz-api';
+import { MusicBrainzApi, IRecording, ISearchResult, IRecordingList, ISearchQuery, IRecordingMatch, IRelease } from 'musicbrainz-api';
 import { sleep } from "../../../utils.js";
+import {SequentialRoundRobin} from 'round-robin-js';
+import { Cacheable } from "cacheable";
+import { getRoot } from "../../../ioc.js";
+import { hashObject } from "../../../utils/StringUtils.js";
+import { playContentInvariantTransform } from "../../../utils/PlayComparisonUtils.js";
 
 export interface SubmitResponse {
     payload?: {
@@ -17,50 +22,70 @@ export interface SubmitResponse {
     status: string
 }
 
+export interface MusicbrainzApiConfig extends MusicbrainzApiConfigData {
+    api: MusicBrainzApi
+}
+
+export interface MusicbrainzApiClientConfig {
+    apis: MusicbrainzApiConfig[]
+}
+
 export class MusicbrainzApiClient extends AbstractApiClient {
 
-    declare config: MusicbrainzConfigData;
-    protected api: MusicBrainzApi;
+    declare config: MusicbrainzApiClientConfig;
+    protected apis: MusicBrainzApi[];
+    protected rrApis: SequentialRoundRobin<MusicBrainzApi>;
     protected url: URLData;
+    cache: Cacheable;
 
-    constructor(name: any, config: MusicbrainzConfigData & { version: string }, options: AbstractApiOptions) {
+    constructor(name: any, config: MusicbrainzApiClientConfig, options: AbstractApiOptions & {cache?: Cacheable}) {
         super('Musicbrainz', name, config, options);
-        const {
-            url = 'https://musicbrainz.org',
-        } = config;
+        this.apis = config.apis.map(x => x.api);
+        this.rrApis = new SequentialRoundRobin(this.apis);
+        this.cache = options.cache ?? getRoot().items.cache().cacheMetadata;
 
-        this.url = normalizeWebAddress(url);
-
-        this.api = new MusicBrainzApi({
-            appName: 'multi-scrobbler',
-            appVersion: config.version,
-            appContactInfo: config.contact,
-            baseUrl: url
-        });
+        this.logger.debug(`Round Robin API calls using hosts: ${config.apis.map(x => x.url ?? MUSICBRAINZ_URL).join(' | ')}`);
     }
 
     callApi = async <T = Response>(func: (mb: MusicBrainzApi) => Promise<any>, options?: { timeout?: number }): Promise<T> => {
         const {
-            timeout = 15000
+            timeout = 30000
         } = options || {};
 
         try {
-            const res = Promise.race([
-                func(this.api),
+            const res = await Promise.race([
+                func(this.rrApis.next().value),
                 sleep(timeout)
             ]);
-            await res;
             if (res === undefined) {
                 throw new Error('Timeout occurred while waiting for Musicbrainz API rate limit');
             }
             return res as T;
         } catch (e) {
+            if(e.message.includes('Timeout occurred')) {
+                throw e;
+            }
             throw new UpstreamError('Error occurred in Musicbrainz API', { cause: e });
         }
     }
 
-    searchByRecording = async(play: PlayObject): Promise<IRecordingList> => {
-        return await this.callApi((mb) => {
+    searchByRecording = async(play: PlayObject): Promise<IRecordingList | undefined> => {
+
+        const cacheKey = `mb-recSearch-${hashObject(playContentInvariantTransform(play))}`;
+
+        try {
+            const cachedTransform = await this.cache.get<IRecordingList>(cacheKey);
+            if(cachedTransform !== undefined) {
+                this.logger.debug('Cache hit');
+                return cachedTransform;
+            }
+        } catch (e) {
+            this.logger.warn(new Error('Could not fetch cache key', {cause: e}));
+        }
+
+
+        this.logger.debug(`Starting search for ${buildTrackString(play)}`);
+        const res = await this.callApi<IRecordingList>((mb) => {
             const query: Record<string, any> = {
                 recording: play.data.track
             };
@@ -74,18 +99,57 @@ export class MusicbrainzApiClient extends AbstractApiClient {
                 query
             });
         });
+
+        await this.cache.set(cacheKey, res, '1hr');
+        return res;
     }
 
     testConnection = async () => {
-        try {
-            await isPortReachableConnect(this.url.port, { host: this.url.url.hostname });
-        } catch (e) {
-            throw new Error('Could not reach API URL endpoint', { cause: e });
+        for(const a of this.config.apis) {
+            try {
+                const u = normalizeWebAddress(a.url);
+                await isPortReachableConnect(u.port, { host: u.url.hostname });
+            } catch (e) {
+                throw new Error('Could not reach API URL endpoint', { cause: e });
+            }
+            return true;
         }
-        return true;
     }
 
     static formatPlayObj(obj: any, options: FormatPlayObjectOptions): PlayObject {
-        return obj;
+        return recordingToPlay(obj);
     }
+}
+
+export const recordingToPlay = (data: IRecording): PlayObject => {
+
+    let album: IRelease;
+    // try to find official album first
+    album = data.releases.find(x => x.status === 'Official');
+    if(album === undefined) {
+        // find the first album that isn't "bad"
+        album = data.releases.find(x => !['Expunged','Withdrawn'].includes(x.status));
+    }
+
+    const play: PlayObject = {
+        data: {
+            // TODO figure out album artists
+            track: data.title,
+            artists: (data["artist-credit"] ?? []).map(x => x.name),
+            album: album !== undefined ? album.title : undefined,
+            meta: {
+                brainz: {
+                    track: data.id,
+                    artist: data["artist-credit"].map(x => x.artist.id),
+                    album: album !== undefined ? album.id : undefined,
+                }
+            }
+        },
+        meta: {
+            source: 'musicbrainz',
+            trackId: data.id
+        }
+    }
+
+    return play;
 }

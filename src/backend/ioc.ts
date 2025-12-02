@@ -8,7 +8,7 @@ import { WildcardEmitter } from "./common/WildcardEmitter.js";
 
 import { generateBaseURL } from "./utils/NetworkUtils.js";
 import { PassThrough } from "stream";
-import { CacheConfigOptions } from "./common/infrastructure/Atomic.js";
+import { CacheConfigOptions, MusicBrainzSingletonMap } from "./common/infrastructure/Atomic.js";
 import { MSCache } from "./common/Cache.js";
 import TransformerManager from "./common/transforms/TransformerManager.js";
 import { TransformerCommonConfig } from "../core/Atomic.js";
@@ -17,6 +17,7 @@ export let version: string = 'unknown';
 
 export const parseVersion = async () => {
     version = await getVersion({priority: ['env', 'git', 'file']});
+    return version;
 }
 
 let root: ReturnType<typeof createRoot>;
@@ -29,6 +30,7 @@ export interface RootOptions {
     loggerStream?: PassThrough
     loggingConfig?: LogOptions
     cache?: CacheConfigOptions | MSCache | (() => MSCache)
+    mbMap?: MusicBrainzSingletonMap | (() => MusicBrainzSingletonMap)
     transformers?: TransformerCommonConfig[]
 }
 
@@ -41,6 +43,7 @@ const createRoot = (options: RootOptions = {logger: loggerDebug}) => {
         loggingConfig,
         logger,
         cache,
+        mbMap,
         transformers = [],
     } = options || {};
     const configDir = process.env.CONFIG_DIR || path.resolve(projectDir, `./config`);
@@ -58,6 +61,16 @@ const createRoot = (options: RootOptions = {logger: loggerDebug}) => {
         cacheFunc = cache;
     } else {
         maybeSingletonCache = new MSCache(logger, cache);
+    }
+
+    let mbFunc: () => MusicBrainzSingletonMap;
+    let maybeSingletonMb: MusicBrainzSingletonMap;
+    if(typeof mbMap === 'function') {
+        mbFunc = mbMap;
+    } else if(maybeSingletonMb !== undefined) {
+        maybeSingletonMb = mbMap;
+    } else {
+        maybeSingletonMb = new Map();
     }
 
 
@@ -103,7 +116,8 @@ const createRoot = (options: RootOptions = {logger: loggerDebug}) => {
         loggingConfig,
         logger: logger,
         transformerManager,
-        cache: () => maybeSingletonCache !== undefined ? () => maybeSingletonCache : cacheFunc
+        cache: () => maybeSingletonCache !== undefined ? () => maybeSingletonCache : cacheFunc,
+        mbMap: () => maybeSingletonMb !== undefined ? () => maybeSingletonMb : mbFunc
     }).add((items) => {
         const localUrl = generateBaseURL(baseUrl, items.port)
         return {

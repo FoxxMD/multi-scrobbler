@@ -5,6 +5,7 @@ import { NextFunction, ParamsDictionary, Query } from "express-serve-static-core
 import { FixedSizeList } from 'fixed-size-list';
 import { isPlayObject, PlayMeta, PlayObject } from "../../../core/Atomic.js";
 import TupleMap from "../TupleMap.js";
+import { MusicBrainzApi } from 'musicbrainz-api';
 
 export type SourceType =
     'spotify'
@@ -335,8 +336,12 @@ export interface CacheConfigOptions {
     regex?: number
 }
 
-export interface MusicbrainzConfigData {
+export interface MusicbrainzApiConfigData {
     url?: string
     rateLimit?: number
     contact: string
 }
+
+export const MUSICBRAINZ_URL = 'https://musicbrainz.org';
+
+export type MusicBrainzSingletonMap = Map<string,MusicBrainzApi>;

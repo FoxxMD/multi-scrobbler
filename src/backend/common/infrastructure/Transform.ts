@@ -21,11 +21,11 @@ export interface PlayTransformPartsAtomic<T> {
     album?: T
 }
 
-export type StageTypeMetadata = 'spotify' | 'listenbrainz' | 'native';
+export type StageTypeMetadata = 'spotify' | 'musicbrainz' | 'native';
 export type StageTypeUser = 'user';
 export type StageType = StageTypeMetadata | StageTypeUser | string;
 export const STAGE_TYPES_USER: StageTypeUser[] = ['user'];
-export const STAGE_TYPES_METADATA: StageTypeMetadata[] = ['spotify','listenbrainz','native'];
+export const STAGE_TYPES_METADATA: StageTypeMetadata[] = ['spotify','musicbrainz','native'];
 export const STAGE_TYPES: StageType[] = [...STAGE_TYPES_METADATA, ...STAGE_TYPES_USER];
 
 export interface StageTyped {

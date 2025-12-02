@@ -401,6 +401,9 @@ export interface TransformerCommonConfig<T = Record<string, any>, Y = Record<str
     };
 }
 
-export interface TransformerCommon<T = Record<string, any>> extends TransformerCommonConfig<T> {
+export interface TransformerCommon<T = Record<string, any>, Y = Record<string, any>> extends TransformerCommonConfig<T,Y> {
     name: string
 }
+
+export type MissingMbidType = 'artists' | 'title' | 'album';
+export const DEFAULT_MISSING_TYPES: MissingMbidType[] = ['artists','title','album'];

@@ -8,6 +8,8 @@ import { cacheFunctions,  parseToRegexOrLiteralSearch, testMaybeRegex, searchAnd
 import { Cacheable } from "cacheable";
 import { hashObject } from "../../utils/StringUtils.js";
 import { playContentInvariantTransform } from "../../utils/PlayComparisonUtils.js";
+import e from "express";
+import { isSimpleError } from "../errors/MSErrors.js";
 
 export interface TransformerOptions {
         logger: Logger
@@ -52,10 +54,14 @@ export default abstract class AbstractTransformer<T = any, Y extends StageConfig
     public async handle(data: Y, play: PlayObject): Promise<PlayObject> {
 
         const cacheKey = `${this.configHash}-${hashObject(data)}-${hashObject(playContentInvariantTransform(play))}`
-        const cachedTransform = await this.cache.get<PlayObject>(cacheKey);
-        if(cachedTransform !== undefined) {
-            this.logger.debug('Cache hit');
-            return cachedTransform;
+        try {
+            const cachedTransform = await this.cache.get<PlayObject>(cacheKey);
+            if(cachedTransform !== undefined) {
+                this.logger.debug('Cache hit');
+                return cachedTransform;
+            }
+        } catch (e) {
+            this.logger.warn(new Error('Could not fetch cache key', {cause: e}));
         }
 
         if (data.when !== undefined) {
@@ -64,6 +70,17 @@ export default abstract class AbstractTransformer<T = any, Y extends StageConfig
                 await this.cache.set(cacheKey, play, '15s');
                 return play;
             }
+        }
+
+        try {
+            await this.checkShouldTransformPreData(play, data);
+        } catch (e) {
+            if(isSimpleError(e) && e.simple) {
+                this.logger.debug(`preData check did not pass with reason: ${e.message}`);
+            } else {
+                this.logger.debug(new Error('preData check did not pass', { cause: e }));
+            }
+            return play;
         }
 
         let transformData: T;
@@ -76,7 +93,11 @@ export default abstract class AbstractTransformer<T = any, Y extends StageConfig
         try {
             await this.checkShouldTransform(play, transformData, data);
         } catch (e) {
-            this.logger.debug(new Error('checkShouldTransform did not pass, returning original Play', { cause: e }));
+            if(isSimpleError(e) && e.simple) {
+                this.logger.debug(`postData check did not pass with reason: ${e.message}`);
+            } else {
+                this.logger.debug(new Error('post check did not pass', { cause: e }));
+            }
             return play;
         }
 
@@ -93,5 +114,9 @@ export default abstract class AbstractTransformer<T = any, Y extends StageConfig
 
     public async checkShouldTransform(play: PlayObject, transformData: T, stageConfig: Y): Promise<void> {
         return;
+    }
+
+    public async checkShouldTransformPreData(play: PlayObject, stageConfig: Y): Promise<void> {
+        return
     }
 }
