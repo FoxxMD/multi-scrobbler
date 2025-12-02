@@ -16,6 +16,7 @@ import { getRoot, version } from "../../ioc.js";
 import { normalizeWebAddress } from "../../utils/NetworkUtils.js";
 import { intersect, missingMbidTypes } from "../../utils.js";
 import { isSimpleError, SimpleError } from "../errors/MSErrors.js";
+import { buildTrackString } from "../../../core/StringUtils.js";
 
 export const asMissingMbid = (str: string): MissingMbidType => {
     const clean = str.trim().toLocaleLowerCase();
@@ -156,9 +157,9 @@ export default class MusicbrainzTransformer extends AtomicPartsTransformer<Exter
 
         const missing = missingMbidTypes(play);
         if(intersect(searchWhenMissing, missing).length > 0) {
-            this.logger.debug(`Missing desired MBIDs for ${missing.join(', ')}`);
+            this.logger.debug(`${buildTrackString(play)} - Missing desired MBIDs for ${missing.join(', ')}`);
         } else if(forceSearch) {
-            this.logger.debug('No desired MBIDs are missing but forceSearch = true');
+            this.logger.debug(`${buildTrackString(play)} - No desired MBIDs are missing but forceSearch = true`);
         } else {
             throw new SimpleError('No desired MBIDs are missing');
         }
@@ -168,8 +169,9 @@ export default class MusicbrainzTransformer extends AtomicPartsTransformer<Exter
 
         // TODO maybe search more broadly if first query doesn't hit?
         const results = await this.api.searchByRecording(play);
+        this.logger.debug(`${buildTrackString(play)} Got results`);
 
-        if(results === undefined || results.recordings.length === 0) {
+        if(results === undefined || results.recordings?.length === 0) {
             return undefined;
         }
 

@@ -40,7 +40,9 @@ import { componentFileLogger } from '../common/logging.js';
 import { WebhookPayload } from '../common/infrastructure/config/health/webhooks.js';
 import { messageWithCauses, messageWithCausesTruncatedDefault } from '../utils/ErrorUtils.js';
 import { genericSourcePlayMatch } from '../utils/PlayComparisonUtils.js';
-import { findAsync } from '../utils/AsyncUtils.js';
+import { findAsync, staggerMapper } from '../utils/AsyncUtils.js';
+import pMap, {pMapIterable} from 'p-map';
+import { randomInt } from 'crypto';
 
 export interface RecentlyPlayedOptions {
     limit?: number
@@ -198,9 +200,8 @@ export default abstract class AbstractSource extends AbstractComponent implement
     discover = async (plays: PlayObject[], options: { checkAll?: boolean, [key: string]: any } = {}): Promise<PlayObject[]> => {
         const newDiscoveredPlays: PlayObject[] = [];
 
-        const transformedPlayed = await Promise.all(plays.map(x => this.transformPlay(x, TRANSFORM_HOOK.preCompare)));
-
-        for(const play of transformedPlayed) {
+        const sm = staggerMapper<PlayObject, PlayObject>({concurrency: 2});
+        for await(const play of pMapIterable(plays, sm(async x => await this.transformPlay(x, TRANSFORM_HOOK.preCompare)), {concurrency: 2})) {
             if(!(await this.alreadyDiscovered(play, options))) {
                 this.addPlayToDiscovered(play);
                 newDiscoveredPlays.push(play);
@@ -231,8 +232,9 @@ export default abstract class AbstractSource extends AbstractComponent implement
                 return;
             }
             newDiscoveredPlays.sort(sortByOldestPlayDate);
+            const sm = staggerMapper<PlayObject, PlayObject>({concurrency: 2});
             this.emitter.emit('discoveredToScrobble', {
-                data: await Promise.all(newDiscoveredPlays.map(x => this.transformPlay(x, TRANSFORM_HOOK.postCompare))),
+                data: await pMap(newDiscoveredPlays, sm(async (x) =>  await this.transformPlay(x, TRANSFORM_HOOK.postCompare)), {concurrency: 2}), // Promise.all(newDiscoveredPlays.map(x => this.transformPlay(x, TRANSFORM_HOOK.postCompare))),
                 options: {
                     ...options,
                     checkTime: newDiscoveredPlays[newDiscoveredPlays.length-1].data.playDate.add(2, 'second'),

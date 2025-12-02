@@ -109,6 +109,7 @@
     "normalize-url": "^8.0.1",
     "ntfy": "^1.7.6",
     "p-event": "^4.2.0",
+    "p-map": "^7.0.4",
     "passport": "^0.6.0",
     "passport-deezer": "^0.2.0",
     "patch-package": "^8.0.0",

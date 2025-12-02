@@ -1,3 +1,7 @@
+import { randomInt } from "crypto";
+import pMap, { Mapper, Options, pMapIterable } from "p-map";
+import { sleep } from "../utils.js";
+
 /** https://stackoverflow.com/a/63795192/1469797 */
 export async function findAsyncSequential<T>(
   array: T[],
@@ -42,4 +46,24 @@ export async function findIndexAsync<T>(
   const results = await Promise.all(promises);
   const index = results.findIndex(result => result);
   return index;
+}
+
+export function staggerMapper<Element, NewElement>(options: { maxRandomStagger?: number, initialInterval?: number, concurrency: number }) {
+  const {
+    initialInterval = 300,
+    maxRandomStagger = 300,
+    concurrency
+  } = options;
+  let initialStagger = 0;
+
+  return (mapper: Mapper<Element, NewElement>) => async (x: Element, index: number) => {
+    if (index < concurrency) {
+      sleep(initialStagger);
+      initialStagger += initialInterval;
+    } else {
+      const s = randomInt(maxRandomStagger)
+      await sleep(s);
+    }
+    return await mapper(x, index);
+  }
 }

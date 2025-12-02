@@ -56,7 +56,7 @@ import { AsyncTask, SimpleIntervalJob, Task, ToadScheduler } from "toad-schedule
 import { MSCache } from "../common/Cache.js";
 import { getRoot } from "../ioc.js";
 import { rehydratePlay } from "../utils/CacheUtils.js";
-import { findAsyncSequential } from "../utils/AsyncUtils.js";
+import { findAsyncSequential, staggerMapper } from "../utils/AsyncUtils.js";
 
 type PlatformMappedPlays = Map<string, {play: PlayObject, source: SourceIdentifier}>;
 type NowPlayingQueue = Map<string, PlatformMappedPlays>;
