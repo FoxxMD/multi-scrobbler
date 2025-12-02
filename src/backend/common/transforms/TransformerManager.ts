@@ -111,9 +111,17 @@ export default class TransformerManager {
         }
 
         let t: AbstractTransformer;
-        if (list.length > 0 && (data as any).name === undefined) {
-            this.logger.warn(`More than one '${data.type}' transformer but name was not specified, using first registered`);
-            t = list[0];
+        if (list.length > 1) {
+            if((data as any).name === undefined) {
+                this.logger.warn(`More than one '${data.type}' transformer but name was not specified, using first registered`);
+                t = list[0];
+            } else {
+               const named = list.find(x => x.name === (data as any).name);
+               if(named === undefined) {
+                throw new Error(`No ${data.type} transformer with name '${(data as any).name}'`)
+               }
+               t = named;
+            }
         } else {
             t = list[0];
         }

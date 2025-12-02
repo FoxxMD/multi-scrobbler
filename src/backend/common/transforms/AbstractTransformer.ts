@@ -33,8 +33,11 @@ export default abstract class AbstractTransformer<T = any, Y extends StageConfig
     regex: RegexObject
     cache: Cacheable;
 
+    name: string;
+
     public constructor(config: TransformerCommon, options: TransformerOptions) {
         super(config);
+        this.name = config.name;
         this.logger = childLogger(options.logger, ['Transformer', this.config.type, this.config.name]);
         this.transformType = config.type;
         this.regex = options.regexCache ?? { searchAndReplace, testMaybeRegex, parseToRegexOrLiteralSearch };
