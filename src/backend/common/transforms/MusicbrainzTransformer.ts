@@ -40,7 +40,6 @@ export interface MusicbrainzTransformerData {
 
 export interface MusicbrainzTransformerDataStrong extends MusicbrainzTransformerData {
     searchWhenMissing: MissingMbidType[]
-    score: number
 }
 
 export interface MusicbrainzTransformerDataStage extends MusicbrainzTransformerDataStrong,PlayTransformMetadataStage {
@@ -183,7 +182,7 @@ export default class MusicbrainzTransformer extends AtomicPartsTransformer<Exter
         }
 
         const {
-            score = this.defaults.score
+            score = this.defaults.score ?? 90
         } = stageConfig;
 
         if(transformData.score < score) {
