@@ -1,6 +1,5 @@
 import { childLogger, Logger } from "@foxxmd/logging";
 import { PlayObject, TransformerCommon, TransformerCommonConfig } from "../../../core/Atomic.js";
-import { getRoot } from "../../ioc.js";
 import { isStageTyped, testWhenConditions } from "../../utils/PlayTransformUtils.js";
 import AbstractInitializable from "../AbstractInitializable.js";
 import { StageConfig } from "../infrastructure/Transform.js";
@@ -8,8 +7,8 @@ import { cacheFunctions,  parseToRegexOrLiteralSearch, testMaybeRegex, searchAnd
 import { Cacheable } from "cacheable";
 import { hashObject } from "../../utils/StringUtils.js";
 import { playContentInvariantTransform } from "../../utils/PlayComparisonUtils.js";
-import e from "express";
 import { isSimpleError } from "../errors/MSErrors.js";
+import { capitalize } from "../../../core/StringUtils.js";
 
 export interface TransformerOptions {
         logger: Logger
@@ -38,11 +37,15 @@ export default abstract class AbstractTransformer<T = any, Y extends StageConfig
     public constructor(config: TransformerCommon, options: TransformerOptions) {
         super(config);
         this.name = config.name;
-        this.logger = childLogger(options.logger, ['Transformer', this.config.type, this.config.name]);
         this.transformType = config.type;
         this.regex = options.regexCache ?? { searchAndReplace, testMaybeRegex, parseToRegexOrLiteralSearch };
         this.cache = options.cache;
-        this.configHash = hashObject(this.config);        
+        this.configHash = hashObject(this.config);
+        this.logger = childLogger(options.logger, [this.getIdentifier()]);
+    }
+
+    protected getIdentifier() {
+        return `${capitalize(this.transformType)} - ${this.name}`
     }
 
     public parseConfig(data: any): Y {
@@ -55,21 +58,20 @@ export default abstract class AbstractTransformer<T = any, Y extends StageConfig
     protected abstract doParseConfig(data: StageConfig): Y;
 
     public async handle(data: Y, play: PlayObject): Promise<PlayObject> {
-
         const cacheKey = `${this.configHash}-${hashObject(data)}-${hashObject(playContentInvariantTransform(play))}`
         try {
             const cachedTransform = await this.cache.get<PlayObject>(cacheKey);
             if(cachedTransform !== undefined) {
-                this.logger.debug('Cache hit');
+                this.logger.debug('Transform cache hit');
                 return cachedTransform;
             }
         } catch (e) {
-            this.logger.warn(new Error('Could not fetch cache key', {cause: e}));
+            this.logger.warn(new Error(`Could not fetch cache key ${cacheKey}`, {cause: e}));
         }
 
         if (data.when !== undefined) {
             if (!testWhenConditions(data.when, play, { testMaybeRegex: this.regex.testMaybeRegex })) {
-                this.logger.debug('When condition not met, returning original Play');
+                this.logger.debug('Returning original Play because because when condition not met');
                 await this.cache.set(cacheKey, play, '15s');
                 return play;
             }
@@ -79,9 +81,9 @@ export default abstract class AbstractTransformer<T = any, Y extends StageConfig
             await this.checkShouldTransformPreData(play, data);
         } catch (e) {
             if(isSimpleError(e) && e.simple) {
-                this.logger.debug(`preData check did not pass with reason: ${e.message}`);
+                this.logger.debug(`Returning original Play because preData check did not pass: ${e.message}`);
             } else {
-                this.logger.debug(new Error('preData check did not pass', { cause: e }));
+                this.logger.debug(new Error('Returning original Play because preData check did not pass', { cause: e }));
             }
             return play;
         }
@@ -97,9 +99,9 @@ export default abstract class AbstractTransformer<T = any, Y extends StageConfig
             await this.checkShouldTransform(play, transformData, data);
         } catch (e) {
             if(isSimpleError(e) && e.simple) {
-                this.logger.debug(`postData check did not pass with reason: ${e.message}`);
+                this.logger.debug(`Returning original Play because postData check did not pass: ${e.message}`);
             } else {
-                this.logger.debug(new Error('post check did not pass', { cause: e }));
+                this.logger.debug(new Error('Returning original Play because post check did not pass', { cause: e }));
             }
             return play;
         }

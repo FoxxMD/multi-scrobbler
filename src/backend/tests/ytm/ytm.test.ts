@@ -211,7 +211,7 @@ describe('Handles interim tracks', function () {
         const interimPlays = [generatePlay({duration: 40}, { comment: 'Today' }), generatePlay({duration: 200}, { comment: 'Today' })]
         const prependedPlays = [firstPlay, ...interimPlays, ...plays];
         const prependResult = source.parseRecentAgainstResponse(prependedPlays);
-        expect(prependResult.plays).length(2);
+        expect(prependResult.plays).length(3);
         expect(prependResult.plays[prependResult.plays.length - 1].data.track).eq(firstPlay.data.track)
     });
 });

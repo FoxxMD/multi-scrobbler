@@ -1,13 +1,10 @@
 import { DEFAULT_MISSING_TYPES, MissingMbidType, PlayObject, TrackMeta, TransformerCommon } from "../../../core/Atomic.js";
 import { isWhenCondition, testWhenConditions } from "../../utils/PlayTransformUtils.js";
 import { WebhookPayload } from "../infrastructure/config/health/webhooks.js";
-import { ExternalMetadataTerm, PlayTransformNativeStage, PlayTransformMetadataStage, StageConfig } from "../infrastructure/Transform.js";
+import { ExternalMetadataTerm, PlayTransformMetadataStage } from "../infrastructure/Transform.js";
 import AtomicPartsTransformer from "./AtomicPartsTransformer.js";
-import { parseArtistCredits, parseTrackCredits, uniqueNormalizedStrArr } from "../../utils/StringUtils.js";
-import { parseRegexSingle, parseToRegexOrLiteralSearch } from "@foxxmd/regex-buddy-core";
 import { TransformerOptions } from "./AbstractTransformer.js";
-import { DELIMITERS_NO_AMP, MUSICBRAINZ_URL, MusicbrainzApiConfigData } from "../infrastructure/Atomic.js";
-import { asArray } from "../../utils/DataUtils.js";
+import { MUSICBRAINZ_URL, MusicbrainzApiConfigData } from "../infrastructure/Atomic.js";
 import { MaybeLogger } from "../logging.js";
 import { childLogger } from "@foxxmd/logging";
 import { MusicbrainzApiClient, MusicbrainzApiConfig, recordingToPlay } from "../vendor/musicbrainz/MusicbrainzApiClient.js";
@@ -15,8 +12,7 @@ import { MusicBrainzApi } from "musicbrainz-api";
 import { getRoot, version } from "../../ioc.js";
 import { normalizeWebAddress } from "../../utils/NetworkUtils.js";
 import { intersect, missingMbidTypes } from "../../utils.js";
-import { isSimpleError, SimpleError } from "../errors/MSErrors.js";
-import { buildTrackString } from "../../../core/StringUtils.js";
+import { SimpleError } from "../errors/MSErrors.js";
 
 export const asMissingMbid = (str: string): MissingMbidType => {
     const clean = str.trim().toLocaleLowerCase();
@@ -115,7 +111,7 @@ export default class MusicbrainzTransformer extends AtomicPartsTransformer<Exter
         }
 
         this.api = new MusicbrainzApiClient(this.config.name, {apis: Object.values(mbApis)}, {
-            logger: this.logger
+            logger: this.logger,
         });
 
         return true;
@@ -158,9 +154,9 @@ export default class MusicbrainzTransformer extends AtomicPartsTransformer<Exter
 
         const missing = missingMbidTypes(play);
         if(intersect(searchWhenMissing, missing).length > 0) {
-            this.logger.debug(`${buildTrackString(play)} - Missing desired MBIDs for ${missing.join(', ')}`);
+            this.logger.debug(`Missing desired MBIDs for: ${missing.join(', ')}`);
         } else if(forceSearch) {
-            this.logger.debug(`${buildTrackString(play)} - No desired MBIDs are missing but forceSearch = true`);
+            this.logger.debug(`No desired MBIDs are missing but forceSearch = true`);
         } else {
             throw new SimpleError('No desired MBIDs are missing');
         }
@@ -170,9 +166,11 @@ export default class MusicbrainzTransformer extends AtomicPartsTransformer<Exter
 
         // TODO maybe search more broadly if first query doesn't hit?
         const results = await this.api.searchByRecording(play);
-        this.logger.debug(`${buildTrackString(play)} Got results`);
 
         if(results === undefined || results.recordings?.length === 0) {
+            if(results === undefined) {
+                this.logger.warn('results were unexpectedly undefined! API should have thrown...');
+            }
             return undefined;
         }
 
@@ -181,7 +179,7 @@ export default class MusicbrainzTransformer extends AtomicPartsTransformer<Exter
 
     public async checkShouldTransform(play: PlayObject, transformData: MusicbrainzBestMatch | undefined, stageConfig: MusicbrainzTransformerDataStage): Promise<void> {
         if(transformData === undefined) {
-            throw new SimpleError('No match returned from Musicbrainz API');
+            throw new SimpleError('No matches returned from Musicbrainz API');
         }
 
         const {
@@ -192,6 +190,8 @@ export default class MusicbrainzTransformer extends AtomicPartsTransformer<Exter
             this.logger.debug({bestMatch: transformData.play}, 'Best Match');
             throw new SimpleError(`Musicbrainz best match score of ${transformData.score} was less than minimum score of ${stageConfig.score}`);
         }
+
+        this.logger.debug(`Got valid match`);
     }
 
     protected async handleTitle(play: PlayObject, parts: ExternalMetadataTerm, transformData: MusicbrainzBestMatch): Promise<string | undefined> {
@@ -250,9 +250,6 @@ export default class MusicbrainzTransformer extends AtomicPartsTransformer<Exter
 
     public notify(payload: WebhookPayload): Promise<void> {
         return;
-    }
-    protected getIdentifier(): string {
-        return 'Musicbrainz Transformer';
     }
 
 }

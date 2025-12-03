@@ -87,7 +87,7 @@ export class MusicbrainzApiClient extends AbstractApiClient {
         }
 
 
-        this.logger.debug(`Starting search for ${buildTrackString(play)}`);
+        this.logger.debug(`Starting search`);
         const res = await this.callApi<IRecordingList>((mb) => {
             const query: Record<string, any> = {
                 recording: play.data.track

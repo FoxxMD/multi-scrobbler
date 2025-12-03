@@ -19,6 +19,7 @@ import AbstractInitializable from "./AbstractInitializable.js";
 import play = Simulate.play;
 import TransformerManager from "./transforms/TransformerManager.js";
 import { getRoot } from "../ioc.js";
+import { nanoid } from "nanoid";
 
 export default abstract class AbstractComponent extends AbstractInitializable {
 
@@ -154,9 +155,9 @@ export default abstract class AbstractComponent extends AbstractInitializable {
 
     public transformPlay = async (play: PlayObject, hookType: TransformHook, log?: boolean) => {
 
-        let logger: Logger;
-        const labels = ['Play Transform', hookType];
-        const getLogger = () => logger !== undefined ? logger : childLogger(this.logger, labels);
+
+        const asyncId = nanoid(6);
+        let logger = childLogger(this.logger, ['Play Transform', hookType, asyncId]);
 
         try {
             let hook: StageConfig[];
@@ -180,6 +181,7 @@ export default abstract class AbstractComponent extends AbstractInitializable {
                 return play;
             }
 
+            logger.debug(`Transform start for => ${buildTrackString(play)}`);
             let transformedPlay: PlayObject = play;
             let transformDetails: string[] = [];
             for(const hookItem of hook) {
@@ -193,16 +195,16 @@ export default abstract class AbstractComponent extends AbstractInitializable {
                 let newTransformedPlay: PlayObject;
                 let err: Error;
                 try {
-                    newTransformedPlay = await this.transformManager.handleStage(hookItem, transformedPlay);
+                    newTransformedPlay = await this.transformManager.handleStage(hookItem, transformedPlay, asyncId);
                 } catch (e) {
                     err = e;
                 }
 
                 if(err !== undefined) {
                     if(onFailure === 'continue') {
-                        this.logger.warn(new Error('A transform encountered an error but continuing due to onFailure: continue', {cause: err}));
+                        logger.warn(new Error(`A transform encountered an error but continuing due to onFailure: continue`, {cause: err}));
                     } else {
-                        this.logger.error(new Error('Transform encountered an error', {cause: err}));
+                        logger.error(new Error(`Transform encountered an error`, {cause: err}));
                         if(!failureReturnPartial) {
                             // rewind to original play so we don't return partial transform
                             transformedPlay = play;
@@ -218,7 +220,7 @@ export default abstract class AbstractComponent extends AbstractInitializable {
                 transformedPlay = newTransformedPlay;
 
                 if(err === undefined && onSuccess === 'stop') {
-                    this.logger.debug('Stopping transform due to onSuccess: stop');
+                    logger.debug(`${nanoid} Stopping transform due to onSuccess: stop`);
                     break;
                 }
             }
@@ -232,12 +234,12 @@ export default abstract class AbstractComponent extends AbstractInitializable {
                     } else {
                         transformStatements.push(`=> ${transformDetails[transformDetails.length - 1]}`);
                     }
-                    this.logger.debug({labels: [...labels, hookType]}, `Transform Pipeline:\n${transformStatements.join('\n')}`);
+                    logger.debug({labels: [hookType]}, `Transform Pipeline:\n${transformStatements.join('\n')}`);
                 }
             }
             return transformedPlay;
         } catch (e) {
-            getLogger().warn(new Error(`Unexpected error occurred, returning original play.`, {cause: e}));
+            logger.warn(new Error(`Unexpected error occurred, returning original play.`, {cause: e}));
             return play;
         }
     }

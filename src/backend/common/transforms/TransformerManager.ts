@@ -7,11 +7,9 @@ import { PlayObject } from "../../../core/Atomic.js";
 import { isStageTyped } from "../../utils/PlayTransformUtils.js";
 import { MSCache } from "../Cache.js";
 import NativeTransformer from "./NativeTransformer.js";
-import { MusicbrainzApiClient } from "../vendor/musicbrainz/MusicbrainzApiClient.js";
-import { MUSICBRAINZ_URL, MusicbrainzApiConfigData } from "../infrastructure/Atomic.js";
-import { normalizeWebAddress } from "../../utils/NetworkUtils.js";
-import { MusicBrainzApi } from "musicbrainz-api";
 import MusicbrainzTransformer, { MusicbrainzTransformerConfig } from "./MusicbrainzTransformer.js";
+import { AsyncLocalStorage } from 'node:async_hooks';
+import { nanoid } from "nanoid";
 
 export default class TransformerManager {
 
@@ -19,11 +17,13 @@ export default class TransformerManager {
     protected parentLogger: Logger;
     protected transformers: Map<string, AbstractTransformer[]> = new Map();
     protected cache: MSCache;
+    protected asyncStore: AsyncLocalStorage<string>;
 
     public constructor(logger: Logger, cache: MSCache) {
         this.logger = childLogger(logger, 'Transformer Manager');
         this.parentLogger = logger;
         this.cache = cache;
+        this.asyncStore = new AsyncLocalStorage();
     }
 
     public register(config: TransformerCommonConfig): void {
@@ -41,16 +41,18 @@ export default class TransformerManager {
 
         this.logger.verbose(`Registering ${config.type} transformer with name '${tName}'`);
 
+        const tLogger = childLogger(this.parentLogger, ['Transformer', () => this.asyncStore.getStore() ?? undefined]);
+
         let t: AbstractTransformer;
         switch (config.type) {
             case 'user':
-                t = new UserTransformer({ name: tName, ...config }, {logger: this.parentLogger, regexCache: this.cache.regexCache, cache: this.cache.cacheTransform});
+                t = new UserTransformer({ name: tName, ...config }, {logger: tLogger, regexCache: this.cache.regexCache, cache: this.cache.cacheTransform});
                 break;
             case 'native':
-                t = new NativeTransformer({ name: tName,  ...config }, {logger: this.parentLogger, regexCache: this.cache.regexCache, cache: this.cache.cacheTransform});
+                t = new NativeTransformer({ name: tName,  ...config }, {logger: tLogger, regexCache: this.cache.regexCache, cache: this.cache.cacheTransform});
                 break;
             case 'musicbrainz':
-                t = new MusicbrainzTransformer({ name: tName, ...config as MusicbrainzTransformerConfig }, {logger: this.parentLogger, regexCache: this.cache.regexCache, cache: this.cache.cacheTransform});
+                t = new MusicbrainzTransformer({ name: tName, ...config as MusicbrainzTransformerConfig }, {logger: tLogger, regexCache: this.cache.regexCache, cache: this.cache.cacheTransform});
                 break;
             default:
                 throw new Error(`No transformer of type '${config.type}' exists.`);
@@ -104,7 +106,7 @@ export default class TransformerManager {
         return t.parseConfig(data);
     }
 
-    public async handleStage(data: StageConfig, play: PlayObject): Promise<PlayObject> {
+    public async handleStage(data: StageConfig, play: PlayObject, asyncId: string = nanoid(6)): Promise<PlayObject> {
         const list = this.transformers.get(data.type);
         if (list === undefined || list.length === 0) {
             throw new Error(`No transformer of type '${data.type}' is registered.`);
@@ -127,7 +129,9 @@ export default class TransformerManager {
         }
 
         try {
-            return await t.handle(data, play);
+            return this.asyncStore.run(asyncId, async () => {
+                return await t.handle(data, play);
+            });
         } catch (e) {
             throw new Error('Stage processing failed', {cause: e});
         }
