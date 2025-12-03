@@ -12,13 +12,6 @@ export default abstract class AtomicPartsTransformer<Y, T = any, Z extends Atomi
                 throwOnFailure = false,
             } = this.config.options || {};
     
-            try {
-                await this.handlePostFetch(play, transformData, parts);
-            } catch (e) {
-                this.logger.debug(new Error('checkShouldTransform did not pass, returning original Play', { cause: e }));
-                return play;
-            }
-    
             const transformedPlayData: Partial<ObjectPlayData> = {};
     
             if (parts.title !== undefined) {
