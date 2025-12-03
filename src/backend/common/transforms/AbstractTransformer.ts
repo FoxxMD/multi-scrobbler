@@ -78,30 +78,31 @@ export default abstract class AbstractTransformer<T = any, Y extends StageConfig
         }
 
         try {
-            await this.checkShouldTransformPreData(play, data);
+            await this.handlePreFetch(play, data);
         } catch (e) {
             if(isSimpleError(e) && e.simple) {
-                this.logger.debug(`Returning original Play because preData check did not pass: ${e.message}`);
+                this.logger.debug(`Returning original Play because preFetch did not pass: ${e.message}`);
             } else {
-                this.logger.debug(new Error('Returning original Play because preData check did not pass', { cause: e }));
+                this.logger.debug(new Error('Returning original Play because preFetch check did not pass', { cause: e }));
             }
             return play;
         }
 
         let transformData: T;
+        let fetchedTransformData: any;
         try {
-            transformData = await this.getTransformerData(play, data);
+            fetchedTransformData = await this.getTransformerData(play, data);
         } catch (e) {
             throw new Error(`Could not fetch transformer data`, { cause: e });
         }
 
         try {
-            await this.checkShouldTransform(play, transformData, data);
+            transformData = await this.handlePostFetch(play, fetchedTransformData, data);
         } catch (e) {
             if(isSimpleError(e) && e.simple) {
-                this.logger.debug(`Returning original Play because postData check did not pass: ${e.message}`);
+                this.logger.debug(`Returning original Play because postFetch did not pass: ${e.message}`);
             } else {
-                this.logger.debug(new Error('Returning original Play because post check did not pass', { cause: e }));
+                this.logger.debug(new Error('Returning original Play because postFetch did not pass', { cause: e }));
             }
             return play;
         }
@@ -113,15 +114,15 @@ export default abstract class AbstractTransformer<T = any, Y extends StageConfig
 
     protected abstract doHandle(data: StageConfig, play: PlayObject, transformData: T): Promise<PlayObject>;
 
-    public async getTransformerData(play: PlayObject, stageConfig: Y): Promise<T> {
+    public async getTransformerData(play: PlayObject, stageConfig: Y): Promise<any> {
         return undefined;
     }
 
-    public async checkShouldTransform(play: PlayObject, transformData: T, stageConfig: Y): Promise<void> {
-        return;
+    public async handlePostFetch(play: PlayObject, transformData: any, stageConfig: Y): Promise<T> {
+        return transformData;
     }
 
-    public async checkShouldTransformPreData(play: PlayObject, stageConfig: Y): Promise<void> {
+    public async handlePreFetch(play: PlayObject, stageConfig: Y): Promise<void> {
         return
     }
 }

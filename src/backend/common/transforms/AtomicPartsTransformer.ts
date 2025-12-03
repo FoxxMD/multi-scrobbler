@@ -13,7 +13,7 @@ export default abstract class AtomicPartsTransformer<Y, T = any, Z extends Atomi
             } = this.config.options || {};
     
             try {
-                await this.checkShouldTransform(play, transformData, parts);
+                await this.handlePostFetch(play, transformData, parts);
             } catch (e) {
                 this.logger.debug(new Error('checkShouldTransform did not pass, returning original Play', { cause: e }));
                 return play;
@@ -102,14 +102,6 @@ export default abstract class AtomicPartsTransformer<Y, T = any, Z extends Atomi
             }
     
             return transformedPlay;
-        }
-    
-        public async getTransformerData(play: PlayObject, stageConfig: Z): Promise<T> {
-            return undefined;
-        }
-    
-        public async checkShouldTransform(play: PlayObject, transformData: T, stageConfig: Z): Promise<void> {
-            return;
         }
     
         protected abstract handleTitle(play: PlayObject, parts: Y, transformData: T): Promise<string | undefined>;

@@ -1,4 +1,4 @@
-import { DEFAULT_MISSING_TYPES, MissingMbidType, PlayObject, TrackMeta, TransformerCommon } from "../../../core/Atomic.js";
+import { asMBReleasePrimaryGroupType, asMBReleaseSecondaryGroupType, asMBReleaseStatus, DEFAULT_MISSING_TYPES, isMBReleasePrimaryGroupType, MBReleaseGroupPrimaryType, MBReleaseGroupSecondaryType, MBReleaseStatus, MissingMbidType, PlayObject, TrackMeta, TransformerCommon } from "../../../core/Atomic.js";
 import { isWhenCondition, testWhenConditions } from "../../utils/PlayTransformUtils.js";
 import { WebhookPayload } from "../infrastructure/config/health/webhooks.js";
 import { ExternalMetadataTerm, PlayTransformMetadataStage } from "../infrastructure/Transform.js";
@@ -6,13 +6,15 @@ import AtomicPartsTransformer from "./AtomicPartsTransformer.js";
 import { TransformerOptions } from "./AbstractTransformer.js";
 import { MUSICBRAINZ_URL, MusicbrainzApiConfigData } from "../infrastructure/Atomic.js";
 import { MaybeLogger } from "../logging.js";
-import { childLogger } from "@foxxmd/logging";
+import { childLogger, Logger } from "@foxxmd/logging";
 import { MusicbrainzApiClient, MusicbrainzApiConfig, recordingToPlay } from "../vendor/musicbrainz/MusicbrainzApiClient.js";
-import { MusicBrainzApi } from "musicbrainz-api";
+import { IRecordingList, IRecordingMatch, MusicBrainzApi } from "musicbrainz-api";
 import { getRoot, version } from "../../ioc.js";
 import { normalizeWebAddress } from "../../utils/NetworkUtils.js";
 import { intersect, missingMbidTypes } from "../../utils.js";
 import { SimpleError } from "../errors/MSErrors.js";
+import { parseArrayFromMaybeString } from "../../utils/StringUtils.js";
+import clone from "clone";
 
 export const asMissingMbid = (str: string): MissingMbidType => {
     const clean = str.trim().toLocaleLowerCase();
@@ -33,10 +35,78 @@ export interface MusicbrainzTransformerData {
     searchWhenMissing?: MissingMbidType[]
     forceSearch?: boolean
     score?: number
+    
+    /** Allow only releases with release groups with these primary types 
+     * 
+     * @see https://wiki.musicbrainz.org/Release_Group/Type#Primary_types
+    */
+    releaseGroupPrimaryTypeAllow?: string[]
+    /** Filter out any releases with release groups with these primary types 
+     * 
+     * @see https://wiki.musicbrainz.org/Release_Group/Type#Primary_types
+    */
+    releaseGroupPrimaryTypeDeny?: string[]
+   /** Prioritise releases to use based on the order of these release group types
+     * 
+     * @see https://wiki.musicbrainz.org/Release_Group/Type#Primary_types
+    */
+    releaseGroupPrimaryTypePriority?: string[]
+
+    /** Allow only releases with release groups with these secondary types 
+     * 
+     * @see https://wiki.musicbrainz.org/Release_Group/Type#Secondary_types
+    */
+    releaseGroupSecondaryTypeAllow?: string[]
+    /** Filter out any releases with release groups with these secondary types 
+     * 
+     * @see https://wiki.musicbrainz.org/Release_Group/Type#Secondary_types
+    */
+    releaseGroupSecondaryTypeDeny?: string[]
+    /** Prioritise releases to use based on the order of these release group secondary types
+     * 
+     * @see https://wiki.musicbrainz.org/Release_Group/Type#Secondary_types
+    */
+    releaseGroupSecondaryTypePriority?: string[]
+
+    /** Allow only releases with these statuses
+     * 
+     * @see https://wiki.musicbrainz.org/Release#Status
+    */
+    releaseStatusAllow?: string[]
+    /** Filter out any releases with these statuses
+     * 
+     * @see https://wiki.musicbrainz.org/Release#Status
+    */
+    releaseStatusDeny?: string[]
+    /** Prioritise releases to used based on the order of these statuses
+     * 
+     * @see https://wiki.musicbrainz.org/Release#Status
+    */
+    releaseStatusPriority?: string[]
+
+    /** Do not filter out a recording if it initially has no releases
+     * 
+     * Use in conjunction with release filters by setting to `true`
+     * to prevent recordings from being filtered out solely becauase they don't have any releases to begin with
+     * 
+     */
+    releaseAllowEmpty?: boolean
 }
 
 export interface MusicbrainzTransformerDataStrong extends MusicbrainzTransformerData {
     searchWhenMissing: MissingMbidType[]
+
+    releaseGroupPrimaryTypeAllow?: MBReleaseGroupPrimaryType[]
+    releaseGroupPrimaryTypeDeny?: MBReleaseGroupPrimaryType[]
+    releaseGroupPrimaryTypePriority?: MBReleaseGroupPrimaryType[]
+
+    releaseGroupSecondaryTypeAllow?: MBReleaseGroupSecondaryType[]
+    releaseGroupSecondaryTypeDeny?: MBReleaseGroupSecondaryType[]
+    releaseGroupSecondaryTypePriority?: MBReleaseGroupSecondaryType[]
+
+    releaseStatusAllow?: MBReleaseStatus[]
+    releaseStatusDeny?: MBReleaseStatus[]
+    releaseStatusPriority?: MBReleaseStatus[]
 }
 
 export interface MusicbrainzTransformerDataStage extends MusicbrainzTransformerDataStrong,PlayTransformMetadataStage {
@@ -50,11 +120,27 @@ export type MusicbrainzBestMatch = {play: PlayObject, score: number};
 
 export type MusicbrainzTransformerConfig = TransformerCommon<MusicbrainzTransformerData, MusicbrainzTransformerDataConfig>;
 
+export type RecordingRankedMatched = IRecordingMatch & {rankScore: number}
+
 export const parseStageConfig = (data: MusicbrainzTransformerData | undefined = {}, logger: MaybeLogger = new MaybeLogger()): MusicbrainzTransformerDataStrong => {
 
     const config: MusicbrainzTransformerDataStrong = {
         searchWhenMissing: DEFAULT_MISSING_TYPES,
-        score: 90
+        score: 90,
+
+        releaseGroupPrimaryTypeAllow: data.releaseGroupPrimaryTypeAllow !== undefined ? parseArrayFromMaybeString(data.releaseGroupPrimaryTypeAllow, {lower: true}).map(asMBReleasePrimaryGroupType) : undefined,
+        releaseGroupPrimaryTypeDeny: data.releaseGroupPrimaryTypeDeny !== undefined  ?parseArrayFromMaybeString(data.releaseGroupPrimaryTypeDeny, {lower: true}).map(asMBReleasePrimaryGroupType) : undefined,
+        releaseGroupPrimaryTypePriority: data.releaseGroupPrimaryTypePriority !== undefined ? parseArrayFromMaybeString(data.releaseGroupPrimaryTypePriority, {lower: true}).map(asMBReleasePrimaryGroupType) : undefined,
+
+        releaseGroupSecondaryTypeAllow: data.releaseGroupSecondaryTypeAllow !== undefined ? parseArrayFromMaybeString(data.releaseGroupSecondaryTypeAllow, {lower: true}).map(asMBReleaseSecondaryGroupType) : undefined,
+        releaseGroupSecondaryTypeDeny: data.releaseGroupSecondaryTypeDeny !== undefined ?  parseArrayFromMaybeString(data.releaseGroupSecondaryTypeDeny, {lower: true}).map(asMBReleaseSecondaryGroupType) : undefined,
+        releaseGroupSecondaryTypePriority: data.releaseGroupSecondaryTypePriority !== undefined ?  parseArrayFromMaybeString(data.releaseGroupSecondaryTypePriority, {lower: true}).map(asMBReleaseSecondaryGroupType) : undefined,
+
+        releaseStatusAllow: data.releaseStatusAllow !== undefined ? parseArrayFromMaybeString(data.releaseStatusAllow, {lower: true}).map(asMBReleaseStatus) : undefined,
+        releaseStatusDeny: data.releaseStatusAllow !== undefined ?  parseArrayFromMaybeString(data.releaseStatusDeny, {lower: true}).map(asMBReleaseStatus) : undefined,
+        releaseStatusPriority: data.releaseStatusAllow !== undefined ? parseArrayFromMaybeString(data.releaseStatusPriority, {lower: true}).map(asMBReleaseStatus) : undefined,
+
+        releaseAllowEmpty: data.releaseAllowEmpty
     };
 
     if (data === null || typeof data !== 'object') {
@@ -71,10 +157,16 @@ export const parseStageConfig = (data: MusicbrainzTransformerData | undefined = 
 
     logger.debug(`Will search if missing: ${config.searchWhenMissing.join(', ')} | Match if (default) score is >= ${config.score}`);
 
+    for(const [k,v] of Object.entries(config)) {
+        if(k.includes('release') && v !== undefined) {
+            logger.debug(`${k}: ${v.join(' | ')}`);
+        }
+    }
+
     return config;
 }
 
-export default class MusicbrainzTransformer extends AtomicPartsTransformer<ExternalMetadataTerm, MusicbrainzBestMatch | undefined, MusicbrainzTransformerDataStage> {
+export default class MusicbrainzTransformer extends AtomicPartsTransformer<ExternalMetadataTerm, PlayObject, MusicbrainzTransformerDataStage> {
 
     declare config: MusicbrainzTransformerConfig;
 
@@ -146,7 +238,7 @@ export default class MusicbrainzTransformer extends AtomicPartsTransformer<Exter
         return stage;
     }
 
-    public async checkShouldTransformPreData(play: PlayObject, stageConfig: MusicbrainzTransformerDataStage): Promise<void> {
+    public async handlePreFetch(play: PlayObject, stageConfig: MusicbrainzTransformerDataStage): Promise<void> {
         const {
             searchWhenMissing = this.defaults.searchWhenMissing,
             forceSearch = false
@@ -162,23 +254,24 @@ export default class MusicbrainzTransformer extends AtomicPartsTransformer<Exter
         }
     }
 
-    public async getTransformerData(play: PlayObject, stageConfig: MusicbrainzTransformerDataStage): Promise<MusicbrainzBestMatch> {
+    public async getTransformerData(play: PlayObject, stageConfig: MusicbrainzTransformerDataStage): Promise<IRecordingList> {
 
         // TODO maybe search more broadly if first query doesn't hit?
         const results = await this.api.searchByRecording(play);
 
-        if(results === undefined || results.recordings?.length === 0) {
-            if(results === undefined) {
-                this.logger.warn('results were unexpectedly undefined! API should have thrown...');
-            }
-            return undefined;
+        if(results === undefined) {
+            throw new Error('results were unexpectedly undefined! API should have thrown...');
+        }
+        if(results.recordings === undefined) {
+            this.logger.debug(results);
+            throw new Error('results returned by no recordings list in response data, something handled incorrectly?');
         }
 
-        return { play: recordingToPlay(results.recordings[0]), score: results.recordings[0].score };
+        return results;
     }
 
-    public async checkShouldTransform(play: PlayObject, transformData: MusicbrainzBestMatch | undefined, stageConfig: MusicbrainzTransformerDataStage): Promise<void> {
-        if(transformData === undefined) {
+    public async handlePostFetch(play: PlayObject, transformData: IRecordingList, stageConfig: MusicbrainzTransformerDataStage): Promise<PlayObject> {
+        if(transformData.recordings.length === 0) {
             throw new SimpleError('No matches returned from Musicbrainz API');
         }
 
@@ -186,15 +279,27 @@ export default class MusicbrainzTransformer extends AtomicPartsTransformer<Exter
             score = this.defaults.score ?? 90
         } = stageConfig;
 
-        if(transformData.score < score) {
-            this.logger.debug({bestMatch: transformData.play}, 'Best Match');
-            throw new SimpleError(`Musicbrainz best match score of ${transformData.score} was less than minimum score of ${stageConfig.score}`);
+        let filteredList = transformData.recordings.filter(x => x.score >= score);
+        if(filteredList.length === 0) {
+             throw new SimpleError(`All ${transformData.count} fetched matches had a score < ${score}, best match was ${transformData.recordings[0].score}`);
+        }
+        const mergedConfig = Object.assign({}, this.defaults, stageConfig);
+        filteredList = filterByValidReleaseStatus(filteredList, mergedConfig);
+        filteredList = filterByValidReleaseGroupPrimary(filteredList, mergedConfig);
+        filteredList = filterByValidReleaseGroupSecondary(filteredList, mergedConfig);
+
+        if(filteredList.length === 0) {
+            throw new SimpleError(`All ${transformData.count} recordings were filtered out by allow/deny release config`);
         }
 
-        this.logger.debug(`Got valid match`);
+        filteredList = rankReleasesByPriority(filteredList, mergedConfig);
+
+        this.logger.debug(`${filteredList.length} of ${transformData.count} were valid, filtered matches. Using match with best score of ${filteredList[0].score}`);
+
+        return recordingToPlay(filteredList[0]);
     }
 
-    protected async handleTitle(play: PlayObject, parts: ExternalMetadataTerm, transformData: MusicbrainzBestMatch): Promise<string | undefined> {
+    protected async handleTitle(play: PlayObject, parts: ExternalMetadataTerm, transformData: PlayObject): Promise<string | undefined> {
         if (parts === false) {
             return play.data.track;
         }
@@ -207,9 +312,9 @@ export default class MusicbrainzTransformer extends AtomicPartsTransformer<Exter
             }
         }
 
-        return transformData.play.data.track;
+        return transformData.data.track;
     }
-    protected async handleArtists(play: PlayObject, parts: ExternalMetadataTerm, transformData: MusicbrainzBestMatch): Promise<string[] | undefined> {
+    protected async handleArtists(play: PlayObject, parts: ExternalMetadataTerm, transformData: PlayObject): Promise<string[] | undefined> {
         if (parts === false) {
             return play.data.artists;
         }
@@ -222,13 +327,13 @@ export default class MusicbrainzTransformer extends AtomicPartsTransformer<Exter
             }
         }
 
-        return transformData.play.data.artists;
+        return transformData.data.artists;
     }
-    protected async handleAlbumArtists(play: PlayObject, parts: ExternalMetadataTerm, transformData: MusicbrainzBestMatch): Promise<string[] | undefined> {
+    protected async handleAlbumArtists(play: PlayObject, parts: ExternalMetadataTerm, transformData: PlayObject): Promise<string[] | undefined> {
         // TODO
         return play.data.albumArtists;
     }
-    protected async handleAlbum(play: PlayObject, parts: ExternalMetadataTerm, transformData: MusicbrainzBestMatch): Promise<string | undefined> {
+    protected async handleAlbum(play: PlayObject, parts: ExternalMetadataTerm, transformData: PlayObject): Promise<string | undefined> {
         if (parts === false) {
             return play.data.album;
         }
@@ -241,11 +346,11 @@ export default class MusicbrainzTransformer extends AtomicPartsTransformer<Exter
             }
         }
 
-        return transformData.play.data.album;
+        return transformData.data.album;
     }
 
-    protected async handleMeta(play: PlayObject, transformData: MusicbrainzBestMatch): Promise<TrackMeta | undefined> {
-        return transformData.play.data.meta;
+    protected async handleMeta(play: PlayObject, transformData: PlayObject): Promise<TrackMeta | undefined> {
+        return transformData.data.meta;
     }
 
     public notify(payload: WebhookPayload): Promise<void> {
@@ -253,3 +358,115 @@ export default class MusicbrainzTransformer extends AtomicPartsTransformer<Exter
     }
 
 }
+
+export const filterByValidReleaseStatus = (list: IRecordingMatch[], stageConfig: MusicbrainzTransformerDataStage, logger: MaybeLogger = new MaybeLogger()) => {
+    const {
+        releaseStatusAllow = [],
+        releaseStatusDeny = [],
+        releaseAllowEmpty
+    } = stageConfig;
+    if(releaseStatusAllow.length === 0 && releaseStatusDeny.length === 0) {
+        return list;
+    }
+    const releaseFiltered = list.map(x => {
+        return {
+            ...x,
+            releases: x.releases.filter(y => {
+                if(releaseStatusAllow.length > 0) {
+                    return releaseStatusAllow.includes(y.status.toLocaleLowerCase() as MBReleaseStatus)
+                }
+                 return !releaseStatusAllow.includes(y.status.toLocaleLowerCase() as MBReleaseStatus)
+            })
+        }
+    });
+    return releaseFiltered.filter(x => (
+        list.find(y => y.id === x.id).releases.length === 0 
+        && releaseAllowEmpty
+    ) 
+    || x.releases.length > 0);
+}
+
+export const filterByValidReleaseGroupPrimary = (list: IRecordingMatch[], stageConfig: MusicbrainzTransformerDataStage, logger: MaybeLogger = new MaybeLogger()) => {
+    const {
+        releaseGroupPrimaryTypeAllow = [],
+        releaseGroupPrimaryTypeDeny = [],
+        releaseAllowEmpty
+    } = stageConfig;
+    if(releaseGroupPrimaryTypeAllow.length === 0 && releaseGroupPrimaryTypeAllow.length === 0) {
+        return list;
+    }
+    const releaseFiltered = list.map(x => {
+        return {
+            ...x,
+            releases: x.releases.filter(y => {
+                if(releaseGroupPrimaryTypeAllow.length > 0) {
+                    return releaseGroupPrimaryTypeAllow.includes(y["release-group"]["primary-type"].toLocaleLowerCase() as MBReleaseGroupPrimaryType)
+                }
+                 return !releaseGroupPrimaryTypeDeny.includes(y["release-group"]["primary-type"].toLocaleLowerCase() as MBReleaseGroupPrimaryType)
+            })
+        }
+    });
+    return releaseFiltered.filter(x => (
+        list.find(y => y.id === x.id).releases.length === 0 
+        && releaseAllowEmpty
+    ) 
+    || x.releases.length > 0);
+}
+
+export const filterByValidReleaseGroupSecondary = (list: IRecordingMatch[], stageConfig: MusicbrainzTransformerDataStage, logger: MaybeLogger = new MaybeLogger()) => {
+    const {
+        releaseGroupSecondaryTypeAllow = [],
+        releaseGroupSecondaryTypeDeny = [],
+        releaseAllowEmpty
+    } = stageConfig;
+    if(releaseGroupSecondaryTypeAllow.length === 0 && releaseGroupSecondaryTypeDeny.length === 0) {
+        return list;
+    }
+    const releaseFiltered = list.map(x => {
+        return {
+            ...x,
+            releases: x.releases.filter(y => {
+                if(releaseGroupSecondaryTypeAllow.length > 0) {
+                    return intersect(releaseGroupSecondaryTypeAllow, (y["release-group"]["secondary-types"] ?? []).map(x => x.toLocaleLowerCase()) as MBReleaseGroupSecondaryType[]).length > 0;
+                }
+                  return intersect(releaseGroupSecondaryTypeDeny, (y["release-group"]["secondary-types"] ?? []).map(x => x.toLocaleLowerCase()) as MBReleaseGroupSecondaryType[]).length === 0;
+            })
+        }
+    });
+    return releaseFiltered.filter(x => (
+        list.find(y => y.id === x.id).releases.length === 0 
+        && releaseAllowEmpty
+    )
+    || x.releases.length > 0);
+}
+
+export const rankReleasesByPriority = (list: IRecordingMatch[], stageConfig: MusicbrainzTransformerDataStage, logger: MaybeLogger = new MaybeLogger()) => {
+        const {
+        releaseStatusPriority = [],
+        releaseGroupPrimaryTypePriority = [],
+        releaseGroupSecondaryTypePriority = []
+    } = stageConfig;
+    if(releaseStatusPriority.length === 0 && releaseGroupPrimaryTypePriority.length === 0 && releaseGroupSecondaryTypePriority.length === 0) {
+        return list;
+    }
+
+    const cList = clone(list);
+    const rankedList = cList.map((x) => {
+        return {
+            ...x,
+            releases: (x.releases ?? []).map((a) => {
+            const statAScore = releaseStatusPriority.findIndex(x => x === a.status.toLocaleLowerCase()) + 1;
+            const grpPAScore = releaseGroupPrimaryTypePriority.findIndex(x => x === a["release-group"]["primary-type"].toLocaleLowerCase()) + 1;
+            const grpSAScore = (a["release-group"]["secondary-types"] ?? []).reduce((acc: number, curr: MBReleaseGroupSecondaryType) => acc + releaseGroupSecondaryTypePriority.findIndex(x => x === (curr as MBReleaseGroupSecondaryType).toLocaleLowerCase()) + 1,0);
+
+            return {
+                ...a,
+                rankedScore: statAScore + grpPAScore + grpSAScore
+            };
+        })
+        }
+    });
+    for(const rec of rankedList) {
+        rec.releases.sort((a, b) => b.rankedScore - a.rankedScore);
+    }
+};

@@ -407,3 +407,42 @@ export interface TransformerCommon<T = Record<string, any>, Y = Record<string, a
 
 export type MissingMbidType = 'artists' | 'title' | 'album';
 export const DEFAULT_MISSING_TYPES: MissingMbidType[] = ['artists','title','album'];
+
+export type MBReleaseStatus = 'official' | 'promotion' | 'bootleg' | 'pseudo-release' | 'withdrawn' | 'expunged' | 'cancelled';
+export const MB_RELEASE_STATUSES: MBReleaseStatus[] = ['official','promotion','bootleg','pseudo-release','withdrawn','expunged' ,'cancelled'];
+export const isMBReleaseStatus = (str: string): str is MBReleaseStatus => {
+    return MB_RELEASE_STATUSES.includes(str as MBReleaseStatus);
+}
+export const asMBReleaseStatus = (str: string): MBReleaseStatus => {
+    if(isMBReleaseStatus(str)) {
+        return str;
+    } else {
+        throw new Error(`Release Status is not valid: ${str}`);
+    }
+}
+
+export type MBReleaseGroupPrimaryType = 'album' | 'single' | 'ep' | 'broadcast' | 'other';
+export const MB_RELEASE_GROUP_PRIMARY_TYPES: MBReleaseGroupPrimaryType[] = ['album','single','ep','broadcast','other'];
+export const isMBReleasePrimaryGroupType = (str: string): str is MBReleaseGroupPrimaryType => {
+    return MB_RELEASE_GROUP_PRIMARY_TYPES.includes(str as MBReleaseGroupPrimaryType);
+}
+export const asMBReleasePrimaryGroupType = (str: string): MBReleaseGroupPrimaryType => {
+    if(isMBReleasePrimaryGroupType(str)) {
+        return str;
+    } else {
+        throw new Error(`Primary Release Group is not valid: ${str}`);
+    }
+}
+
+export type MBReleaseGroupSecondaryType = 'compilation' | 'soundtrack' | 'live' | 'remix';
+export const MB_RELEASE_GROUP_SECONDARY_TYPES: MBReleaseGroupSecondaryType[] = ['compilation','soundtrack','live','remix'];
+export const isMBReleaseSecondaryGroupType = (str: string): str is MBReleaseGroupSecondaryType => {
+    return MB_RELEASE_GROUP_SECONDARY_TYPES.includes(str as MBReleaseGroupSecondaryType);
+}
+export const asMBReleaseSecondaryGroupType = (str: string): MBReleaseGroupSecondaryType => {
+    if(isMBReleaseSecondaryGroupType(str)) {
+        return str;
+    } else {
+        throw new Error(`Secondary Release Group is not valid: ${str}`);
+    }
+}
