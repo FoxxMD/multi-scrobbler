@@ -234,7 +234,7 @@ export default abstract class AbstractSource extends AbstractComponent implement
             newDiscoveredPlays.sort(sortByOldestPlayDate);
             const sm = staggerMapper<PlayObject, PlayObject>({concurrency: 2});
             this.emitter.emit('discoveredToScrobble', {
-                data: await pMap(newDiscoveredPlays, sm(async (x) =>  await this.transformPlay(x, TRANSFORM_HOOK.postCompare)), {concurrency: 2}), // Promise.all(newDiscoveredPlays.map(x => this.transformPlay(x, TRANSFORM_HOOK.postCompare))),
+                data: await pMap(newDiscoveredPlays, sm(async (x) =>  await this.transformPlay(x, TRANSFORM_HOOK.postCompare)), {concurrency: 2}),
                 options: {
                     ...options,
                     checkTime: newDiscoveredPlays[newDiscoveredPlays.length-1].data.playDate.add(2, 'second'),
