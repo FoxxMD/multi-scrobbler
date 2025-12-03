@@ -103,7 +103,8 @@ export default class MusicbrainzTransformer extends AtomicPartsTransformer<Exter
                     appName: 'multi-scrobbler',
                     appVersion: version,
                     appContactInfo: mbConfig.contact,
-                    baseUrl: u.url.toString()
+                    baseUrl: u.url.toString(),
+                    rateLimit: [1,1]
                 });
                 mbApis[u.url.hostname] = {api, ...mbConfig};
                 mbMap.set(u.url.hostname, api);
