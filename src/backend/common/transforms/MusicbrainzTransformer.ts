@@ -84,6 +84,22 @@ export interface MusicbrainzTransformerData {
     */
     releaseStatusPriority?: string[]
 
+        /** Allow only releases from these ISO2 countries
+     * 
+     * @see https://beta.musicbrainz.org/doc/Release/Country
+    */
+    releaseCountryAllow?: string[]
+    /** Filter out any releases rom these ISO2 countries
+     * 
+     * @see https://beta.musicbrainz.org/doc/Release/Country
+    */
+    releaseCountryDeny?: string[]
+    /** Prioritise releases to used based on the order of these ISO2 countries
+     * 
+     * @see https://beta.musicbrainz.org/doc/Release/Country
+    */
+    releaseCountryPriority?: string[]
+
     /** Do not filter out a recording if it initially has no releases
      * 
      * Use in conjunction with release filters by setting to `true`
@@ -145,6 +161,10 @@ export const parseStageConfig = (data: MusicbrainzTransformerData | undefined = 
         releaseStatusAllow: data.releaseStatusAllow !== undefined ? parseArrayFromMaybeString(data.releaseStatusAllow, {lower: true}).map(asMBReleaseStatus) : undefined,
         releaseStatusDeny: data.releaseStatusAllow !== undefined ?  parseArrayFromMaybeString(data.releaseStatusDeny, {lower: true}).map(asMBReleaseStatus) : undefined,
         releaseStatusPriority: data.releaseStatusAllow !== undefined ? parseArrayFromMaybeString(data.releaseStatusPriority, {lower: true}).map(asMBReleaseStatus) : undefined,
+
+        releaseCountryAllow: data.releaseCountryAllow !== undefined ? parseArrayFromMaybeString(data.releaseCountryAllow, {lower: true}) : undefined,
+        releaseCountryDeny:  data.releaseCountryDeny !== undefined ? parseArrayFromMaybeString(data.releaseCountryDeny, {lower: true}) : undefined,
+        releaseCountryPriority:  data.releaseCountryPriority !== undefined ? parseArrayFromMaybeString(data.releaseCountryPriority, {lower: true}) : undefined,
 
         releaseAllowEmpty: data.releaseAllowEmpty,
         ignoreVA: data.ignoreVA
@@ -294,6 +314,8 @@ export default class MusicbrainzTransformer extends AtomicPartsTransformer<Exter
         filteredList = filterByValidReleaseStatus(filteredList, mergedConfig);
         filteredList = filterByValidReleaseGroupPrimary(filteredList, mergedConfig);
         filteredList = filterByValidReleaseGroupSecondary(filteredList, mergedConfig);
+        filteredList = filterByValidReleaseCountry(filteredList, mergedConfig);
+
 
         if(filteredList.length === 0) {
             throw new SimpleError(`All ${transformData.count} recordings were filtered out by allow/deny release config`);
@@ -392,7 +414,7 @@ export const filterByValidReleaseStatus = (list: IRecordingMatch[], stageConfig:
                 if(releaseStatusAllow.length > 0) {
                     return releaseStatusAllow.includes(y.status.toLocaleLowerCase() as MBReleaseStatus)
                 }
-                 return !releaseStatusAllow.includes(y.status.toLocaleLowerCase() as MBReleaseStatus)
+                 return !releaseStatusDeny.includes(y.status.toLocaleLowerCase() as MBReleaseStatus)
             })
         }
     });
@@ -457,13 +479,41 @@ export const filterByValidReleaseGroupSecondary = (list: IRecordingMatch[], stag
     || x.releases.length > 0);
 }
 
+export const filterByValidReleaseCountry = (list: IRecordingMatch[], stageConfig: MusicbrainzTransformerDataStage, logger: MaybeLogger = new MaybeLogger()) => {
+    const {
+        releaseCountryAllow = [],
+        releaseCountryDeny = [],
+        releaseAllowEmpty
+    } = stageConfig;
+    if(releaseCountryAllow.length === 0 && releaseCountryDeny.length === 0) {
+        return list;
+    }
+    const releaseFiltered = list.map(x => {
+        return {
+            ...x,
+            releases: x.releases.filter(y => {
+                if(releaseCountryAllow.length > 0) {
+                    return releaseCountryAllow.includes(y.country?.toLocaleLowerCase())
+                }
+                 return !releaseCountryDeny.includes(y.country?.toLocaleLowerCase())
+            })
+        }
+    });
+    return releaseFiltered.filter(x => (
+        list.find(y => y.id === x.id).releases.length === 0 
+        && releaseAllowEmpty
+    ) 
+    || x.releases.length > 0);
+}
+
 export const rankReleasesByPriority = (list: IRecordingMatch[], stageConfig: MusicbrainzTransformerDataStage, logger: MaybeLogger = new MaybeLogger()) => {
         const {
         releaseStatusPriority = [],
         releaseGroupPrimaryTypePriority = [],
-        releaseGroupSecondaryTypePriority = []
+        releaseGroupSecondaryTypePriority = [],
+        releaseCountryPriority = []
     } = stageConfig;
-    if(releaseStatusPriority.length === 0 && releaseGroupPrimaryTypePriority.length === 0 && releaseGroupSecondaryTypePriority.length === 0) {
+    if(releaseStatusPriority.length === 0 && releaseGroupPrimaryTypePriority.length === 0 && releaseGroupSecondaryTypePriority.length === 0 && releaseCountryPriority.length === 0) {
         return list;
     }
 
@@ -475,10 +525,10 @@ export const rankReleasesByPriority = (list: IRecordingMatch[], stageConfig: Mus
             const statAScore = releaseStatusPriority.findIndex(x => x === a.status.toLocaleLowerCase()) + 1;
             const grpPAScore = releaseGroupPrimaryTypePriority.findIndex(x => x === a["release-group"]["primary-type"].toLocaleLowerCase()) + 1;
             const grpSAScore = (a["release-group"]["secondary-types"] ?? []).reduce((acc: number, curr: MBReleaseGroupSecondaryType) => acc + releaseGroupSecondaryTypePriority.findIndex(x => x === (curr as MBReleaseGroupSecondaryType).toLocaleLowerCase()) + 1,0);
-
+            const countryAScore = releaseCountryPriority.findIndex(x => x === a.country.toLocaleLowerCase()) + 1;
             return {
                 ...a,
-                rankedScore: statAScore + grpPAScore + grpSAScore
+                rankedScore: statAScore + grpPAScore + grpSAScore + countryAScore
             };
         })
         }
@@ -486,4 +536,5 @@ export const rankReleasesByPriority = (list: IRecordingMatch[], stageConfig: Mus
     for(const rec of rankedList) {
         rec.releases.sort((a, b) => b.rankedScore - a.rankedScore);
     }
+    return rankedList;
 };
