@@ -360,17 +360,17 @@ export default class MusicbrainzTransformer extends AtomicPartsTransformer<Exter
     }
     protected async handleAlbumArtists(play: PlayObject, parts: ExternalMetadataTerm, transformData: PlayObject): Promise<string[] | undefined> {
         if (parts === false) {
-            return play.data.artists;
+            return play.data.albumArtists;
         }
         if (typeof parts === 'object') {
             if (parts.when !== undefined) {
                 if (!testWhenConditions(parts.when, play, { testMaybeRegex: this.regex.testMaybeRegex })) {
                     this.logger.debug('When condition for albumArtists not met, returning original artists');
-                    return play.data.artists;
+                    return play.data.albumArtists;
                 }
             }
         }
-        return play.data.albumArtists;
+        return transformData.data.albumArtists;
     }
     protected async handleAlbum(play: PlayObject, parts: ExternalMetadataTerm, transformData: PlayObject): Promise<string | undefined> {
         if (parts === false) {

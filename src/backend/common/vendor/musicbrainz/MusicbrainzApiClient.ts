@@ -159,7 +159,7 @@ export const recordingToPlay = (data: IRecording, options?: {ignoreVA?: boolean}
                 brainz: {
                     track: data.id,
                     artist: data["artist-credit"] !== undefined ? data["artist-credit"].map(x => x.artist.id) : undefined,
-                    albumArtist: albumArtists,
+                    albumArtist: albumArtistIds,
                     album: album !== undefined ? album.id : undefined,
                     releaseGroup: album !== undefined ? album["release-group"]?.id : undefined
                 }
