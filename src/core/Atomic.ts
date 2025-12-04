@@ -2,6 +2,8 @@ import { LogDataPretty, LogLevel } from "@foxxmd/logging";
 import { Dayjs } from "dayjs";
 import { ListenProgress } from "../backend/sources/PlayerState/ListenProgress.js";
 import { AdditionalTrackInfoResponse } from "../backend/common/vendor/listenbrainz/interfaces.js";
+import { Name } from "ajv";
+import { StringMap } from "ts-json-schema-generator";
 
 export interface SourceStatusData {
     status: string;
@@ -448,4 +450,10 @@ export const asMBReleaseSecondaryGroupType = (str: string): MBReleaseGroupSecond
     } else {
         throw new Error(`Secondary Release Group is not valid: ${str}`);
     }
+}
+
+export interface TransformResult {
+    type: string,
+    name: string,
+    play: PlayData
 }
