@@ -127,24 +127,31 @@ export class MusicbrainzApiClient extends AbstractApiClient {
 export const recordingToPlay = (data: IRecording): PlayObject => {
 
     let album: IRelease;
-    // try to find official album first
-    album = data.releases.find(x => x.status === 'Official');
-    if(album === undefined) {
-        // find the first album that isn't "bad"
-        album = data.releases.find(x => !['Expunged','Withdrawn'].includes(x.status));
+
+    let albumArtists: string[];
+    const artists = (data["artist-credit"] ?? []).map(x => x.name);
+    if(data.releases !== undefined && data.releases.length > 0) {
+        album = data.releases[0];
+        const aa = album["artist-credit"].map(x => x.name);
+        // if not every artist of the recording is also on the album
+        // then use release album artists
+        if(!artists.every(x => aa.includes(x))) {
+            albumArtists = aa;
+        }
     }
 
     const play: PlayObject = {
         data: {
-            // TODO figure out album artists
             track: data.title,
-            artists: (data["artist-credit"] ?? []).map(x => x.name),
+            artists,
             album: album !== undefined ? album.title : undefined,
+            albumArtists,
             meta: {
                 brainz: {
                     track: data.id,
                     artist: data["artist-credit"].map(x => x.artist.id),
                     album: album !== undefined ? album.id : undefined,
+                    releaseGroup: album !== undefined ? album["release-group"]?.id : undefined
                 }
             }
         },
