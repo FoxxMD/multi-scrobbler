@@ -91,6 +91,12 @@ export interface MusicbrainzTransformerData {
      * 
      */
     releaseAllowEmpty?: boolean
+
+    /** Ignore album artist if it is "Various Artists"
+     * 
+     * @default true
+     */
+    ignoreVA?: boolean
 }
 
 export interface MusicbrainzTransformerDataStrong extends MusicbrainzTransformerData {
@@ -140,7 +146,8 @@ export const parseStageConfig = (data: MusicbrainzTransformerData | undefined = 
         releaseStatusDeny: data.releaseStatusAllow !== undefined ?  parseArrayFromMaybeString(data.releaseStatusDeny, {lower: true}).map(asMBReleaseStatus) : undefined,
         releaseStatusPriority: data.releaseStatusAllow !== undefined ? parseArrayFromMaybeString(data.releaseStatusPriority, {lower: true}).map(asMBReleaseStatus) : undefined,
 
-        releaseAllowEmpty: data.releaseAllowEmpty
+        releaseAllowEmpty: data.releaseAllowEmpty,
+        ignoreVA: data.ignoreVA
     };
 
     if (data === null || typeof data !== 'object') {
@@ -296,7 +303,7 @@ export default class MusicbrainzTransformer extends AtomicPartsTransformer<Exter
 
         this.logger.debug(`${filteredList.length} of ${transformData.count} were valid, filtered matches. Using match with best score of ${filteredList[0].score}`);
 
-        return recordingToPlay(filteredList[0]);
+        return recordingToPlay(filteredList[0], {ignoreVA: stageConfig.ignoreVA});
     }
 
     protected async handleTitle(play: PlayObject, parts: ExternalMetadataTerm, transformData: PlayObject): Promise<string | undefined> {

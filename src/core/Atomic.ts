@@ -112,8 +112,8 @@ export interface BrainzMeta {
     /**
      * artists_mbid
      * 
-     *  If multiple artists for track this is the "original" artist who is releasing the single/album */
-    albumArtist?: string
+     *  If multiple artists for track this is the "original" artist(s) who is releasing the single/album */
+    albumArtist?: string[]
     /** 
      * release_mbid
      * 

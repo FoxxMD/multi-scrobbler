@@ -534,7 +534,7 @@ export const listenResponseToPlay = (listen: ListenResponse): PlayObject => {
         if(primaryArtistMBMapping !== undefined) {
             // only include as primary if musicbrainz does not disagree with us
             if(release_artist_names.length === 0 || (release_artist_names.length > 0 && release_artist_names.includes(primaryArtist))) {
-                brainzMetaRaw.albumArtist = primaryArtistMBMapping.artist_mbid;
+                brainzMetaRaw.albumArtist = [primaryArtistMBMapping.artist_mbid];
             }
         }
 
@@ -711,11 +711,11 @@ export const playToListenPayload = (play: PlayObject): ListenPayload => {
         const msAdditionalInfo = brainz.additionalInfo ?? {};
 
         let addInfo: SubmitListenAdditionalTrackInfo = {
-            // all artists
-            artist_names: Array.from(new Set([...artists, ...albumArtists])),
+            // primary artists
+            artist_names: Array.from(new Set([...artists])),
             // primary artist
-            release_artist_name: artists[0],
-            release_artist_names: [artists[0]],
+            release_artist_name: albumArtists.length === 1  ? albumArtists[0] : undefined,
+            release_artist_names: albumArtists.length > 0 ? albumArtists : undefined,
             // use data from LZ response, if this Play was originally from LZ Source
             media_player: mediaPlayerName ?? msAdditionalInfo.media_player,
             media_player_version: mediaPlayerVersion ?? msAdditionalInfo.media_player_version,
@@ -737,7 +737,7 @@ export const playToListenPayload = (play: PlayObject): ListenPayload => {
         }
 
         const minTrackData: MinimumTrack = removeUndefinedKeys({
-                artist_name: Array.from(new Set([...artists, ...albumArtists])).join(', '),
+                artist_name: Array.from(new Set([...artists])).join(', '),
                 track_name: track,
                 release_name: al,
         });

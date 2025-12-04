@@ -7,7 +7,7 @@ import { AbstractApiOptions, DEFAULT_RETRY_MULTIPLIER, FormatPlayObjectOptions, 
 import AbstractApiClient from "../AbstractApiClient.js";
 import { isPortReachableConnect, joinedUrl, normalizeWebAddress } from '../../../utils/NetworkUtils.js';
 import { MusicBrainzApi, IRecording, ISearchResult, IRecordingList, ISearchQuery, IRecordingMatch, IRelease } from 'musicbrainz-api';
-import { sleep } from "../../../utils.js";
+import { difference, sleep } from "../../../utils.js";
 import {SequentialRoundRobin} from 'round-robin-js';
 import { Cacheable } from "cacheable";
 import { getRoot } from "../../../ioc.js";
@@ -124,19 +124,28 @@ export class MusicbrainzApiClient extends AbstractApiClient {
     }
 }
 
-export const recordingToPlay = (data: IRecording): PlayObject => {
+export const recordingToPlay = (data: IRecording, options?: {ignoreVA?: boolean}): PlayObject => {
+
+    const {
+        ignoreVA = true,
+    } = options || {};
 
     let album: IRelease;
 
     let albumArtists: string[];
+    let albumArtistIds: string[];
     const artists = (data["artist-credit"] ?? []).map(x => x.name);
     if(data.releases !== undefined && data.releases.length > 0) {
         album = data.releases[0];
-        const aa = album["artist-credit"].map(x => x.name);
-        // if not every artist of the recording is also on the album
-        // then use release album artists
-        if(!artists.every(x => aa.includes(x))) {
-            albumArtists = aa;
+        if(album["artist-credit"] !== undefined) {
+            if(difference(album["artist-credit"].map(x => x.artist.id), (data["artist-credit"] ?? []).map(x => x.artist.id)).length > 0) {
+                albumArtists = album["artist-credit"].map(x => x.artist.name);
+                albumArtistIds = album["artist-credit"].map(x => x.artist.id);
+            }
+            if(albumArtists !== undefined && ignoreVA && albumArtists.includes('Various Artists')) {
+                albumArtists = undefined;
+                albumArtistIds = undefined;
+            }
         }
     }
 
@@ -149,7 +158,8 @@ export const recordingToPlay = (data: IRecording): PlayObject => {
             meta: {
                 brainz: {
                     track: data.id,
-                    artist: data["artist-credit"].map(x => x.artist.id),
+                    artist: data["artist-credit"] !== undefined ? data["artist-credit"].map(x => x.artist.id) : undefined,
+                    albumArtist: albumArtists,
                     album: album !== undefined ? album.id : undefined,
                     releaseGroup: album !== undefined ? album["release-group"]?.id : undefined
                 }

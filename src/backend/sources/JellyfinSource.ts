@@ -168,7 +168,7 @@ export default class JellyfinSource extends MemorySource {
                     brainz: {
                         artist: splitByFirstFound<undefined>(Provider_musicbrainzartist, [';'], undefined),
                         album: Provider_musicbrainzalbum,
-                        albumArtist: Provider_musicbrainzalbumartist,
+                        albumArtist: [Provider_musicbrainzalbumartist],
                         track: Provider_musicbrainztrack,
                         releaseGroup: Provider_musicbrainzreleasegroup
                     }
