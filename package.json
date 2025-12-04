@@ -97,6 +97,7 @@
     "icecast-metadata-stats": "^0.1.12",
     "iso-websocket": "^0.3.0",
     "iti": "^0.7.0",
+    "jest-diff": "^30.2.0",
     "json5": "^2.2.3",
     "keyv": "^5.5.0",
     "kodi-api": "^0.2.1",

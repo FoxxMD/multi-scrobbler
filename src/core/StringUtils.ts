@@ -6,6 +6,8 @@ import timezone from "dayjs/plugin/timezone.js";
 import utc from "dayjs/plugin/utc.js";
 import {
     AmbPlayObject,
+    PlayData,
+    PlayObject,
     SCROBBLE_TS_SOC_END,
     SCROBBLE_TS_SOC_START,
     ScrobbleTsSOC,
@@ -131,6 +133,47 @@ export const buildTrackString = <T = string>(playObj: AmbPlayObject, options: Tr
     // @ts-ignore
     return reducer(strParts); //strParts.join(' ');
 }
+
+export const buildPlayHumanDiffable = (play: PlayData, options?: {expandMeta?: boolean}): string => {
+    const {
+        expandMeta = false
+    } = options || {};
+
+    let meta: string[] = [];
+    if(play.meta !== undefined) {
+        for(const [metaType,metaObject] of Object.entries(play.meta)) {
+            for(const [metaKey, metaValue] of Object.entries(metaObject)) {
+                if(metaValue === undefined) {
+                    continue;
+                }
+                const id  = `${metaType}-${metaKey}`;
+                if(expandMeta) {
+                    meta.push(`${id}: ${metaValue}`);
+                } else {
+                    meta.push(id);
+                }
+            }
+        }
+    }
+    let metaStr = '(None)';
+    if(meta.length > 0) {
+        if(expandMeta) {
+            metaStr = `\n${meta.map(x => `* ${x}`).join('\n')}`;
+        } else {
+            metaStr = meta.join(', ');
+        }
+    }
+    const parts: string[] = [
+        `${'Title'.padEnd(13)}: ${play.track ?? '(None)'}`,
+        `${'Artists'.padEnd(13)}: ${play.artists === undefined || play.artists.length === 0 ? '(None)' : play.artists.join(', ')}`,
+        `${'Album Artists'.padEnd(13)}: ${play.albumArtists === undefined || play.albumArtists.length === 0 ? '(None)' : play.albumArtists.join(', ')}`,
+        `${'Album'.padEnd(13)}: ${play.album ?? '(None)'}`,
+        `${'Meta'.padEnd(13)}: ${metaStr}`
+    ];
+
+    const final = parts.join('\n');
+    return final;
+} 
 
 export const slice = (str: string, index: number, count: number, add?: string): string => {
     // We cannot pass negative indexes directly to the 2nd slicing operation.

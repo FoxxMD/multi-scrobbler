@@ -54,7 +54,9 @@ export interface FlowControl {
     failureReturnPartial: boolean
 }
 
-export interface StageConfig extends StageTypedConfig, Whennable, Partial<FlowControl> {}
+export interface StageConfig extends StageTypedConfig, Whennable, Partial<FlowControl> {
+    name?: string
+}
 
 export interface AtomicStageConfig<T> extends StageConfig, PlayTransformPartsAtomic<T> {}
 
