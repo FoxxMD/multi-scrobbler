@@ -1,0 +1,343 @@
+---
+title: Musicbrainz Stage
+toc_min_heading_level: 2
+toc_max_heading_level: 5
+---
+
+The **Musicbrainz** [Stage](/configuration/transforms#stage) matches your Play data with the [MusicBrainz](https://musicbrainz.org/) database. If the match score is high enough then Multi-Scrobbler uses the match to correct and fill-in missing information in your Play data.
+
+**This Stage is useful for standardizing your Scrobble's Play data, regardless of the Source it is coming from.**
+
+Unless you have strong opinions about the way your existing music is already tagged/organized you should consider adding the Musicbrainz Stage to all of your Sources, in some capacity. [Even if it's only MBIDs.](#using-partial-match)
+
+<details>
+
+<summary>Why Should I Prefer MusicBrainz?</summary>
+
+<h3>More Than Mainstream Data</h3>
+
+The [MusicBrainz database contains](https://musicbrainz.org/statistics)
+
+* 37 million+ tracks
+* 5 million+ albums
+* 2.7 million+ artists
+
+in over 200 languages, contributed by 10,000+ editors each year with many more users voting on edits. 
+
+The database covers a much wider range of music than most commercial services since it isn't restricted by licensing or incentivized to prioritize mainstream music due to business interests. You are much more likely to find data for obscure, indie, and international artists.
+
+<h3>As The Artist Intended</h3>
+
+While some large services (Spotify) may be more consistent in data structure, the MusicBrainz equivalent data is likely to be more true to the way the Artist originally intended since individuals can devote effort to individual artists. A fan of an artist is much more likely to "get it right" for their favorite band than a corporate business trying to do the least amount of work for the largest result.
+
+</details>
+
+## Configuration
+
+### API Setup
+
+To avoid rate limiting, MusicBrainz requires API users to identify themself using a [User-Agent that contains an email or URL.](https://wiki.musicbrainz.org/MusicBrainz_API/Rate_Limiting#How_can_I_be_a_good_citizen_and_be_smart_about_using_the_Web_Service?) You must set this in the `data` for your [stage configuration](http://localhost:3000/docs/configuration/transforms/#configuring-stages) in your [AIO Config](/configuration?configType=aio#configuration-types):
+
+```json5 title="config.json"
+{
+  // ...
+  "transformers": [
+    {
+      "type": "musicbrainz",
+      "name": "MyMB",
+      "data": {
+        "apis": [
+          {
+            "contact": "contact@mydomain.com"
+          }
+        ]
+      },
+    }
+  ]
+}
+```
+
+### Search
+
+Available properties for [Stage Configuration](/configuration/transforms#configuring-stages):
+
+:::note
+
+**All of the below parameters are optional.**
+
+If you just want a sensible default for configuraion refer to the [Best Practices](#best-practices) section.
+
+:::
+
+#### Score
+
+Each match returned by MusicBrainz contains a numeric score representing how close it was to the search parameters. Set `score` in configuration to set a minimum score that must be met by matches. Default is `90`.
+
+```json5
+{
+  // ...
+  "score": 90 // matches must score 90 or higher to be considered
+}
+```
+
+#### Filtering and Sorting
+
+There are several attributes associated with the [Release](https://wiki.musicbrainz.org/Release) a [Recording](https://wiki.musicbrainz.org/Recording) (individual Track/song) belongs to that you may be interested in controlling. MS can use these attributes to filter what the final Recording selected to match against your Play data is.
+
+An easy way to think about this:
+
+* Do you prefer Albums, Singles, or EPs?
+* Do you always want to use an official album release, or are bootleg or cancelled albums okay to use?
+* Should a track that belongs to a Compilation album be allowed to match?
+* What country do you prefer an album release to be from?
+
+These attributes (`attribute_name` in config) are:
+
+* [Release **Status**](https://wiki.musicbrainz.org/Release#Status) (`releaseStatus`) - Is this release/album/ep official, promotional, bootleg, etc...
+* [Release Group **Primary Type**](https://wiki.musicbrainz.org/Release_Group/Type#Primary_types) (`releaseGroupPrimaryType`) - Is this release an Album, Single, EP, etc...
+* [Release Group **Secondary Type**](https://wiki.musicbrainz.org/Release_Group/Type#Secondary_types) (`releaseGroupSecondaryType`) - Is this release a compilation, soundtrack, remix, etc...
+* [Release **Country**](https://beta.musicbrainz.org/doc/Release/Country) (`releaseCountry`) - What ISO2 country was this released in? US, GB, MX, etc...
+  * MusicBrainz uses the special code `XW` to represent a "Worldwide" release AKA release not made specifically for a country
+
+Each of the above attributes can be used to **filter** matches using `allow` (explicitly include) or `deny` (exclude) terms. The correct property name for each is like so:
+
+```
+[attribute_name]Allow = [...]
+[attribute_name]Deny
+
+EX to explicitly allow only release status "official"
+
+"releaseStatusAllow": ["official"]
+
+EX to exclude compilations
+
+"releaseGroupSecondaryTypeDeny": ["compilation"]
+```
+
+##### Sorting
+
+Each of the above attributes has one additional property that can be used to **rank** releases based on the order of the values you give it. This is the `priority` property.
+
+*After* matches have been [filtered](#filtering-and-sorting), the remaining matches will have their releases sorted. Release with an attribute that does not match are **not** removed, but they are sorted lower than releases that do match.
+
+Sorting can be a good alternative to filtering: with filters there is a possibility your filters may eliminate all matches; if you want to ensure that **some** match will be used then sorting can ensure that the **best choice** out of those given will always be used, without accidentally ending up with **no choice**.
+
+Sorting can be used instead of filters, or in conjunction with filters, it's your choice.
+
+In configuration:
+
+```
+[attribute_name]Priority = [...]
+
+EX to prefer "official" releases over everything else
+
+"releaseStatusPriority": ["official"]
+
+EX to prefer albums, then singles, over everything else
+
+"releaseGroupPrimaryTypePriority": ["album", "single"]
+```
+
+#### Empty Releases
+
+Sometimes a Recording may not have any associated Releases. This may be because there is not enough information about the Recording yet, or it was never included on an actual Release.
+
+You may want to filter/sort the majority of your Play data by releases but allow matching a Recording if it does not have a release, in this instance. To allow this set `releaseAllowEmpty` to `true` in configuration:
+
+```json5
+{
+  // ...
+  "releaseAllowEmpty": true // don't remove a match during filtering just because it has no releases
+}
+```
+
+### Rules
+
+Each [Rule](/configuration/transforms#stage-rules) should be either a boolean, specifying if the transformed data should be used for this field, or a [`when` condition](/configuration/transforms#conditional-moditication):
+
+```json5
+{
+    "type": "musicbrainz",
+    "name": "MyMB"
+    // ...
+    "title": false, // will not apply any changes to Play title
+    "artists": {
+      "when": {/* ... */}, // will only apply changes to Play artists if "when" is satisfied
+    /* ... */
+    },
+    "album": true // will always apply changes to Play album
+    "meta": true // adds MusicBrainz MBIDs to scrobble data
+}
+```
+
+If a rule is not present then multi-scrobbler defaults it to `true`.
+
+## Best Practices
+
+### Sensible Default
+
+Generally, the Musicbrainz Stage can be used without any of the [optional configuration](#configuration) and you should still see good results from matches. The top [scored](#score) match is, anecdotally, good enough for correcting and filling in surface-level play data like Title and Artist names.
+
+For a more opinionated match that will mirror what you would expect from data from large music services:
+
+```json5
+{
+    // use official release over anything else
+    "releaseStatusPriority": ["official"],
+    // prefer album, then single, then ep
+    "releaseGroupPrimaryTypePriority": ["album", "single", "ep"],
+    // prefer worldwide release
+    "releaseCountryPriority": ["XW"]
+}
+```
+
+### Filter Considerations
+
+When using your own filters consider:
+
+* Prefer `deny` over `allow`
+  * Releases come in all kinds of formats. Since `allow` is explicit you may filter out your desired match without realizing it (correct data except for release type). Or the Musicbrainz data for a higher scored match may be appropriate but you did not include it, exhaustively.
+* Prefer [Sorting](#sorting) over [Filtering](#filtering-and-sorting)
+  * Sorting does not eliminate any matches. It is, generally, better to get **some** match than it is to have your Play data completely uncorrected because filtering eliminated all matches
+
+### Using Partial Match
+
+Use [Rules](#rules) to apply MusicBrainz match data selectively.
+
+If you know that your music collection is well organized and you do not want to change the artists/title/album etc... sent to a [Client](/configuration/clients), you can still benefit from matches by only applying MBIDs using `meta` so that any Client that supports Musicbrainz data ([Koito](/configuration/clients/koito), [Tealfm](/configuration/clients/tealfm), [Listenbrainz](/configuration/clients/listenbrainz), [Rocksky](/configuration/clients/rocksky)) can still get that data.
+
+<details>
+
+<summary>Example</summary>
+
+```json5 title="subsonic.json"
+[
+  { 
+    "name": "MySubsonic",
+    "data": { /* ... */},
+    "options": {
+      "playTransform": {
+        "preCompare": [
+          {
+            "type": "musicbrainz",
+            "name": "MyMB",
+            "title": false,
+            "artists": false,
+            "album": false,
+            "meta": true
+          }
+        ]
+      }
+    }
+  }
+]
+```
+
+</details>
+
+## Examples
+
+### Minimal
+
+<details>
+
+<summary>Example</summary>
+
+Your [AIO Config](/configuration?configType=aio#configuration-types):
+
+```json5 title="config.json"
+{
+  // ...
+  "transformers": [
+    {
+      "type": "musicbrainz",
+      "name": "MyMB",
+      "data": {
+        "apis": [
+          {
+            "contact": "contact@mydomain.com"
+          }
+        ]
+      },
+    }
+  ]
+}
+```
+
+In a [Subsonic](/configuration/sources/subsonic) [File Config](/configuration?configType=file#configuration-types):
+
+```json5 title="subsonic.json"
+[
+  { 
+    "name": "MySubsonic",
+    "data": { /* ... */},
+    "options": {
+      "playTransform": {
+        "preCompare": [
+          {
+            "type": "musicbrainz",
+            "name": "MyMB"
+          }
+        ]
+      }
+    }
+  }
+]
+```
+</details>
+
+### Sensible Default
+
+Using the config shown in [Sensible Default](#sensible-default).
+
+<details>
+
+<summary>Example</summary>
+
+Your [AIO Config](/configuration?configType=aio#configuration-types):
+
+```json5 title="config.json"
+{
+  // ...
+  "transformers": [
+    {
+      "type": "musicbrainz",
+      "name": "MyMB",
+      "data": {
+        "apis": [
+          {
+            "contact": "contact@mydomain.com"
+          }
+        ]
+      },
+      "defaults": {
+        "releaseStatusPriority": ["official"],
+        "releaseGroupPrimaryTypePriority": ["album", "single", "ep"],
+        "releaseCountryPriority": ["XW"]
+      }
+    }
+  ]
+}
+```
+
+In a [Subsonic](/configuration/sources/subsonic) [File Config](/configuration?configType=file#configuration-types):
+
+```json5 title="subsonic.json"
+[
+  { 
+    "name": "MySubsonic",
+    "data": { /* ... */},
+    "options": {
+      "playTransform": {
+        "preCompare": [
+          {
+            "type": "musicbrainz",
+            "name": "MyMB"
+          }
+        ]
+      }
+    }
+  }
+]
+```
+</details>
