@@ -414,8 +414,9 @@ export const isMBReleaseStatus = (str: string): str is MBReleaseStatus => {
     return MB_RELEASE_STATUSES.includes(str as MBReleaseStatus);
 }
 export const asMBReleaseStatus = (str: string): MBReleaseStatus => {
-    if(isMBReleaseStatus(str)) {
-        return str;
+    const clean = str.toLocaleLowerCase();
+    if(isMBReleaseStatus(clean)) {
+        return clean;
     } else {
         throw new Error(`Release Status is not valid: ${str}`);
     }
@@ -427,8 +428,9 @@ export const isMBReleasePrimaryGroupType = (str: string): str is MBReleaseGroupP
     return MB_RELEASE_GROUP_PRIMARY_TYPES.includes(str as MBReleaseGroupPrimaryType);
 }
 export const asMBReleasePrimaryGroupType = (str: string): MBReleaseGroupPrimaryType => {
-    if(isMBReleasePrimaryGroupType(str)) {
-        return str;
+    const clean = str.toLocaleLowerCase();
+    if(isMBReleasePrimaryGroupType(clean)) {
+        return clean;
     } else {
         throw new Error(`Primary Release Group is not valid: ${str}`);
     }
@@ -440,8 +442,9 @@ export const isMBReleaseSecondaryGroupType = (str: string): str is MBReleaseGrou
     return MB_RELEASE_GROUP_SECONDARY_TYPES.includes(str as MBReleaseGroupSecondaryType);
 }
 export const asMBReleaseSecondaryGroupType = (str: string): MBReleaseGroupSecondaryType => {
-    if(isMBReleaseSecondaryGroupType(str)) {
-        return str;
+    const clean = str.toLocaleLowerCase();
+    if(isMBReleaseSecondaryGroupType(clean)) {
+        return clean;
     } else {
         throw new Error(`Secondary Release Group is not valid: ${str}`);
     }

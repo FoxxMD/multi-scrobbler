@@ -11,7 +11,7 @@ import { MusicbrainzApiClient, MusicbrainzApiConfig, recordingToPlay } from "../
 import { IRecordingList, IRecordingMatch, MusicBrainzApi } from "musicbrainz-api";
 import { getRoot, version } from "../../ioc.js";
 import { normalizeWebAddress } from "../../utils/NetworkUtils.js";
-import { intersect, missingMbidTypes } from "../../utils.js";
+import { intersect, missingMbidTypes, removeUndefinedKeys } from "../../utils.js";
 import { SimpleError } from "../errors/MSErrors.js";
 import { parseArrayFromMaybeString } from "../../utils/StringUtils.js";
 import clone from "clone";
@@ -310,7 +310,7 @@ export default class MusicbrainzTransformer extends AtomicPartsTransformer<Exter
         if(filteredList.length === 0) {
              throw new SimpleError(`All ${transformData.count} fetched matches had a score < ${score}, best match was ${transformData.recordings[0].score}`);
         }
-        const mergedConfig = Object.assign({}, this.defaults, stageConfig);
+        const mergedConfig = Object.assign({}, removeUndefinedKeys({...this.defaults}), removeUndefinedKeys({...stageConfig}));
         filteredList = filterByValidReleaseStatus(filteredList, mergedConfig);
         filteredList = filterByValidReleaseGroupPrimary(filteredList, mergedConfig);
         filteredList = filterByValidReleaseGroupSecondary(filteredList, mergedConfig);
@@ -412,9 +412,9 @@ export const filterByValidReleaseStatus = (list: IRecordingMatch[], stageConfig:
             ...x,
             releases: x.releases.filter(y => {
                 if(releaseStatusAllow.length > 0) {
-                    return releaseStatusAllow.includes(y.status.toLocaleLowerCase() as MBReleaseStatus)
+                    return releaseStatusAllow.includes(y.status?.toLocaleLowerCase() as MBReleaseStatus)
                 }
-                 return !releaseStatusDeny.includes(y.status.toLocaleLowerCase() as MBReleaseStatus)
+                 return !releaseStatusDeny.includes(y.status?.toLocaleLowerCase() as MBReleaseStatus)
             })
         }
     });
@@ -439,9 +439,9 @@ export const filterByValidReleaseGroupPrimary = (list: IRecordingMatch[], stageC
             ...x,
             releases: x.releases.filter(y => {
                 if(releaseGroupPrimaryTypeAllow.length > 0) {
-                    return releaseGroupPrimaryTypeAllow.includes(y["release-group"]["primary-type"].toLocaleLowerCase() as MBReleaseGroupPrimaryType)
+                    return releaseGroupPrimaryTypeAllow.includes(y["release-group"]?.["primary-type"]?.toLocaleLowerCase() as MBReleaseGroupPrimaryType)
                 }
-                 return !releaseGroupPrimaryTypeDeny.includes(y["release-group"]["primary-type"].toLocaleLowerCase() as MBReleaseGroupPrimaryType)
+                 return !releaseGroupPrimaryTypeDeny.includes(y["release-group"]?.["primary-type"]?.toLocaleLowerCase() as MBReleaseGroupPrimaryType)
             })
         }
     });
@@ -466,9 +466,9 @@ export const filterByValidReleaseGroupSecondary = (list: IRecordingMatch[], stag
             ...x,
             releases: x.releases.filter(y => {
                 if(releaseGroupSecondaryTypeAllow.length > 0) {
-                    return intersect(releaseGroupSecondaryTypeAllow, (y["release-group"]["secondary-types"] ?? []).map(x => x.toLocaleLowerCase()) as MBReleaseGroupSecondaryType[]).length > 0;
+                    return intersect(releaseGroupSecondaryTypeAllow, (y["release-group"]?.["secondary-types"] ?? []).map(x => x.toLocaleLowerCase()) as MBReleaseGroupSecondaryType[]).length > 0;
                 }
-                  return intersect(releaseGroupSecondaryTypeDeny, (y["release-group"]["secondary-types"] ?? []).map(x => x.toLocaleLowerCase()) as MBReleaseGroupSecondaryType[]).length === 0;
+                  return intersect(releaseGroupSecondaryTypeDeny, (y["release-group"]?.["secondary-types"] ?? []).map(x => x.toLocaleLowerCase()) as MBReleaseGroupSecondaryType[]).length === 0;
             })
         }
     });
@@ -523,9 +523,9 @@ export const rankReleasesByPriority = (list: IRecordingMatch[], stageConfig: Mus
             ...x,
             releases: (x.releases ?? []).map((a) => {
             const statAScore = releaseStatusPriority.findIndex(x => x === a.status.toLocaleLowerCase()) + 1;
-            const grpPAScore = releaseGroupPrimaryTypePriority.findIndex(x => x === a["release-group"]["primary-type"].toLocaleLowerCase()) + 1;
-            const grpSAScore = (a["release-group"]["secondary-types"] ?? []).reduce((acc: number, curr: MBReleaseGroupSecondaryType) => acc + releaseGroupSecondaryTypePriority.findIndex(x => x === (curr as MBReleaseGroupSecondaryType).toLocaleLowerCase()) + 1,0);
-            const countryAScore = releaseCountryPriority.findIndex(x => x === a.country.toLocaleLowerCase()) + 1;
+            const grpPAScore = releaseGroupPrimaryTypePriority.findIndex(x => x === a["release-group"]?.["primary-type"]?.toLocaleLowerCase()) + 1;
+            const grpSAScore = (a["release-group"]?.["secondary-types"] ?? []).reduce((acc: number, curr: MBReleaseGroupSecondaryType) => acc + releaseGroupSecondaryTypePriority.findIndex(x => x === (curr as MBReleaseGroupSecondaryType).toLocaleLowerCase()) + 1,0);
+            const countryAScore = releaseCountryPriority.findIndex(x => a.country === undefined ? false : x === a.country.toLocaleLowerCase()) + 1;
             return {
                 ...a,
                 rankedScore: statAScore + grpPAScore + grpSAScore + countryAScore
