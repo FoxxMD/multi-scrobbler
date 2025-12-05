@@ -216,6 +216,7 @@ export const recordingToPlay = (data: IRecording, options?: {ignoreVA?: boolean}
             artists,
             album: album !== undefined ? album.title : undefined,
             albumArtists,
+            duration: data.length,
             meta: {
                 brainz: {
                     track: data.id,

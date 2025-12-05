@@ -436,8 +436,34 @@ export default class MusicbrainzTransformer extends AtomicPartsTransformer<Exter
 
         return transformData.data.album;
     }
+    protected async handleDuration(play: PlayObject, parts: ExternalMetadataTerm, transformData: PlayObject): Promise<number | undefined> {
+        if (parts === false) {
+            return play.data.duration;
+        }
+        if (typeof parts === 'object') {
+            if (parts.when !== undefined) {
+                if (!testWhenConditions(parts.when, play, { testMaybeRegex: this.regex.testMaybeRegex })) {
+                    this.logger.debug('When condition for duration not met, returning original duration');
+                    return play.data.duration;
+                }
+            }
+        }
 
-    protected async handleMeta(play: PlayObject, transformData: PlayObject): Promise<TrackMeta | undefined> {
+        return transformData.data.duration;
+    }
+
+    protected async handleMeta(play: PlayObject, parts: ExternalMetadataTerm, transformData: PlayObject): Promise<TrackMeta | undefined> {
+        if (parts === false) {
+            return play.data.meta;
+        }
+        if (typeof parts === 'object') {
+            if (parts.when !== undefined) {
+                if (!testWhenConditions(parts.when, play, { testMaybeRegex: this.regex.testMaybeRegex })) {
+                    this.logger.debug('When condition for duration not met, returning original duration');
+                    return play.data.meta;
+                }
+            }
+        }
         return transformData.data.meta;
     }
 

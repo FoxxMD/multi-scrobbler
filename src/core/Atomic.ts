@@ -395,7 +395,7 @@ export const FEAT: Feat[] = ['ft','feat','vs','ft.','feat.','vs.','featuring'];
 
 export interface TransformOptions {
         failOnFetch?: boolean;
-        throwOnFailure?: boolean | ('artists' | 'title' | 'albumArtists' | 'album')[];
+        throwOnFailure?: boolean | ('artists' | 'title' | 'albumArtists' | 'album' | 'duration' | 'meta')[];
         ttl?: string
 }
 export interface TransformerCommonConfig<T = Record<string, any>, Y = Record<string, any>> {
@@ -410,8 +410,8 @@ export interface TransformerCommon<T = Record<string, any>, Y = Record<string, a
     name: string
 }
 
-export type MissingMbidType = 'artists' | 'title' | 'album';
-export const DEFAULT_MISSING_TYPES: MissingMbidType[] = ['artists','title','album'];
+export type MissingMbidType = 'artists' | 'title' | 'album' | 'duration';
+export const DEFAULT_MISSING_TYPES: MissingMbidType[] = ['artists','title','album','duration'];
 
 export type MBReleaseStatus = 'official' | 'promotion' | 'bootleg' | 'pseudo-release' | 'withdrawn' | 'expunged' | 'cancelled';
 export const MB_RELEASE_STATUSES: MBReleaseStatus[] = ['official','promotion','bootleg','pseudo-release','withdrawn','expunged' ,'cancelled'];

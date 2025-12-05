@@ -18,7 +18,10 @@ export type PlayTransformPartsConfig<T, Y = MaybeStageTyped> = PlayTransformPart
 export interface PlayTransformPartsAtomic<T> {
     title?: T
     artists?: T
+    albumArtists?: T
     album?: T
+    duration?: T
+    meta?: T
 }
 
 export type StageTypeMetadata = 'spotify' | 'musicbrainz' | 'native';
