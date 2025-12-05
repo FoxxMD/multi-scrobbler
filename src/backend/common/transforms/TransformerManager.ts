@@ -106,7 +106,7 @@ export default class TransformerManager {
         return t.parseConfig(data);
     }
 
-    public async handleStage(data: StageConfig, play: PlayObject, asyncId: string = nanoid(6)): Promise<PlayObject> {
+    public async handleStage(data: StageConfig, play: PlayObject, asyncId: string = nanoid(6)): Promise<[PlayObject, string]> {
         const list = this.transformers.get(data.type);
         if (list === undefined || list.length === 0) {
             throw new Error(`No transformer of type '${data.type}' is registered.`);
@@ -114,13 +114,13 @@ export default class TransformerManager {
 
         let t: AbstractTransformer;
         if (list.length > 1) {
-            if((data as any).name === undefined) {
+            if(data.name === undefined) {
                 this.logger.warn(`More than one '${data.type}' transformer but name was not specified, using first registered`);
                 t = list[0];
             } else {
-               const named = list.find(x => x.name === (data as any).name);
+               const named = list.find(x => x.name === data.name);
                if(named === undefined) {
-                throw new Error(`No ${data.type} transformer with name '${(data as any).name}'`)
+                throw new Error(`No ${data.type} transformer with name '${data.name}'`)
                }
                t = named;
             }
@@ -129,9 +129,10 @@ export default class TransformerManager {
         }
 
         try {
-            return this.asyncStore.run(asyncId, async () => {
+            const transformedPlay = await this.asyncStore.run(asyncId, async () => {
                 return await t.handle(data, play);
             });
+            return [transformedPlay, t.name];
         } catch (e) {
             throw new Error('Stage processing failed', {cause: e});
         }

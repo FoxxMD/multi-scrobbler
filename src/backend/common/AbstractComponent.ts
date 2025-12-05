@@ -194,10 +194,11 @@ export default abstract class AbstractComponent extends AbstractInitializable {
                     failureReturnPartial = false
                 } = hookItem;
 
-                let newTransformedPlay: PlayObject;
-                let err: Error;
+                let newTransformedPlay: PlayObject,
+                stageName: string,
+                err: Error;
                 try {
-                    newTransformedPlay = await this.transformManager.handleStage(hookItem, transformedPlay, asyncId);
+                    [newTransformedPlay, stageName] = await this.transformManager.handleStage(hookItem, transformedPlay, asyncId);
                 } catch (e) {
                     err = e;
                 }
@@ -218,7 +219,7 @@ export default abstract class AbstractComponent extends AbstractInitializable {
 
                 transformHistory.push({
                     type: hookItem.type,
-                    name: hookItem.name,
+                    name: stageName,
                     play: newTransformedPlay.data
                 });
 
