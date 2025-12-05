@@ -3,6 +3,8 @@ title: Musicbrainz Stage
 toc_min_heading_level: 2
 toc_max_heading_level: 5
 ---
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
 
 The **Musicbrainz** [Stage](/configuration/transforms#stage) matches your Play data with the [MusicBrainz](https://musicbrainz.org/) database. If the match score is high enough then Multi-Scrobbler uses the match to correct and fill-in missing information in your Play data.
 
@@ -57,19 +59,214 @@ To avoid rate limiting, MusicBrainz requires API users to identify themself usin
 }
 ```
 
-### Search
+### Stage Configuration
 
-Available properties for [Stage Configuration](/configuration/transforms#configuring-stages):
+All of the properties found in [**Matching with Musicbrainz**](#matching-with-musicbrainz) section are configured in [Stage Configuration](/configuration/transforms#configuring-stages) as `defaults`.
+
+Example:
+
+```json5 title="config.json"
+{
+  // ...
+  "transformers": [
+    {
+      "type": "musicbrainz",
+      "name": "MyMB",
+      "data": {
+        "apis": [
+          {
+            "contact": "contact@mydomain.com"
+          }
+        ],
+        "defaults": {
+          "releaseStatusPriority": ["official"],
+          "fallbackArtistSearch": "native",
+          "releaseAllowEmpty": true
+        }
+      },
+    }
+  ]
+}
+```
+
+### Rules
+
+Each [Rule](/configuration/transforms#stage-rules) should be either a boolean, specifying if the transformed data should be used for this field, or a [`when` condition](/configuration/transforms#conditional-moditication):
+
+```json5
+{
+    "type": "musicbrainz",
+    "name": "MyMB"
+    // ...
+    "title": false, // will not apply any changes to Play title
+    "artists": {
+      "when": {/* ... */}, // will only apply changes to Play artists if "when" is satisfied
+    /* ... */
+    },
+    "album": true // will always apply changes to Play album
+    "meta": true // adds MusicBrainz MBIDs to scrobble data
+}
+```
+
+## Matching with Musicbrainz
 
 :::note
 
-**All of the below parameters are optional.**
+**All properties found in this section are optional.**
 
 If you just want a sensible default for configuraion refer to the [Best Practices](#best-practices) section.
 
 :::
 
-#### Score
+Matching your Scrobble's Play data with a result from Musicbrainz is comprised of two steps:
+
+* [**Searching**](#searching) Musicbrainz using parts of your Scrobble as queries
+* [**Refining**](#refining) matched results to select the desired/allowed match
+
+Both steps have separate configuration.
+
+### Searching
+
+The first step is making [search queries to the Musicbrainz database](https://musicbrainz.org/doc/MusicBrainz_API/Search) to try to get potential candidates. Multi-scrobbler uses the **title, artist(s), and album** from your Scrobble data to query for matches.
+
+Musicbrainz agressively normalizes these fields in its database which means that if your Scrobble data contains major innaccuracies or phrases fields in a non-normal way, it's possible Musicbrainz won't find any matches. This is a more common occurrence when trying to match Scrobble data from Sources that don't support multiple artist data, like [Subsonic](/configuration/sources/subsonic) and [Last.fm](/configuration/sources/lastfm).
+
+<details>
+
+<summary>Examples of Bad Data</summary>
+
+Last.fm Scrobble returns an Artist in the title and combines two artists into one string:
+
+```json
+{
+    "title": "Endless Possibility (feat. Wheatus)",
+    "artists": ["Bowling For Soup & Punk Rock Factory"]
+}
+```
+
+The corresponding [Musicbrainz Recording](https://musicbrainz.org/release/85bf284b-8b39-414e-8ad9-61f593072588) has all artists separated and no artist in the title:
+
+```json
+{
+    "title": "Endless Possibility",
+    "artists": ["Bowling For Soup", "Punk Rock Factory", "Wheatus"]
+}
+```
+
+</details>
+
+If a normal search using all the fields mentioned above does not return any matches Multi-scrobbler can try two additional searches with modified queries:
+
+#### Album Only
+
+If your Scrobble data contains a title, artist(s), and an album (all three fields) then Multi-scrobbler will **automatically** retry the search using only title and album.
+
+#### Artist Extraction
+
+If...
+
+* [Album Only](#album-only) returns no results or did not run due to missing an album
+* Your scrobble data contains only **one** artist string
+* `fallbackArtistSearch` is set in [Stage Configuration](/configuration/transforms#configuring-stages)
+
+Then Multi-scrobbler will attempt to extract multiple artists from your artist and track string. **This is not automatic. You must set `fallbackArtistSearch` to enable this additional search.**
+
+`fallbackArtistSearch` can be set to **Native** or **Naive** mode:
+
+<Tabs groupId="fallbackArtist" queryString>
+    <TabItem value="native" label="Native (Recommended)">
+
+    **Native** (`native`) mode uses an aggressive configuration of the [Native Stage](/configuration/transforms/native) to extract artists using common delimiters and common "joined" artist patterns from the artist and title string of your Scrobble data.
+
+
+    :::tip
+
+    If you already have a Native Stage configured you should use that instead, running it before the Musicbrainz stage.
+
+    :::
+
+    <details>
+
+    <summary>Native Mode Example</summary>
+
+    ```json
+    {
+        "title": "Endless Possibility (feat. Wheatus)",
+        "artists": ["Bowling For Soup & Punk Rock Factory, My Cool Band"]
+    }
+    ```
+
+    * Extracts `Bowling For Soup` `Punk Rock Factory` `My Cool Band` from artist string
+    * Extracts `Wheatus` from title string
+      * Removes `(feat. Wheatus)` from title string because it found an artist there
+
+    Resulting data used for Musicbrainz search:
+
+    ```json
+    {
+        "title": "Endless Possibility",
+        "artists": ["Bowling For Soup", "Punk Rock Factory", "My Cool Band", "Wheatus"]
+    }
+    ```
+
+    </details>
+
+    [Stage Configuration](/configuration/transforms#configuring-stages) example:
+
+    ```json5
+    // ...
+    "defaults": {
+        "releaseStatusPriority": ["official"],
+        // ...
+        "fallbackArtistSearch": "native"
+      }
+    ```
+
+    </TabItem>
+    <TabItem value="naive" label="Naive">
+
+    **Naive** (`naive`) mode looks for the first found common delimiter in the artist string. If it finds one then it uses the preceding value as the only artist in the Musicbrainz search. It does not try to extract additional artists from the artist string, or extract anything from the title string.
+
+    <details>
+
+    <summary>Naive Mode Example</summary>
+
+    ```json
+    {
+        "title": "Endless Possibility (feat. Wheatus)",
+        "artists": ["Bowling For Soup, Punk Rock Factory & Wheatus"]
+    }
+    ```
+
+    * Finds `&` as first common delimiter, extracts "Bowling For Soup"
+
+    Resulting data used for Musicbrainz search:
+
+    ```json
+    {
+        "title": "Endless Possibility (feat. Wheatus)",
+        "artists": ["Bowling For Soup"]
+    }
+    ```
+    </details>
+
+    [Stage Configuration](/configuration/transforms#configuring-stages) example:
+
+    ```json5
+    // ...
+    "defaults": {
+        "releaseStatusPriority": ["official"],
+        // ...
+        "fallbackArtistSearch": "naive"
+      }
+    ```
+
+    </TabItem>
+</Tabs>
+
+### Refining
+
+### Score
 
 Each match returned by MusicBrainz contains a numeric score representing how close it was to the search parameters. Set `score` in configuration to set a minimum score that must be met by matches. Default is `90`.
 
@@ -80,7 +277,7 @@ Each match returned by MusicBrainz contains a numeric score representing how clo
 }
 ```
 
-#### Filtering and Sorting
+### Filtering
 
 There are several attributes associated with the [Release](https://wiki.musicbrainz.org/Release) a [Recording](https://wiki.musicbrainz.org/Recording) (individual Track/song) belongs to that you may be interested in controlling. MS can use these attributes to filter what the final Recording selected to match against your Play data is.
 
@@ -90,6 +287,8 @@ An easy way to think about this:
 * Do you always want to use an official album release, or are bootleg or cancelled albums okay to use?
 * Should a track that belongs to a Compilation album be allowed to match?
 * What country do you prefer an album release to be from?
+
+##### Release Attributes
 
 These attributes (`attribute_name` in config) are:
 
@@ -114,11 +313,24 @@ EX to exclude compilations
 "releaseGroupSecondaryTypeDeny": ["compilation"]
 ```
 
-##### Sorting
+#### Empty Releases
 
-Each of the above attributes has one additional property that can be used to **rank** releases based on the order of the values you give it. This is the `priority` property.
+Sometimes a Recording may not have any associated Releases. This may be because there is not enough information about the Recording yet, or it was never included on an actual Release.
 
-*After* matches have been [filtered](#filtering-and-sorting), the remaining matches will have their releases sorted. Release with an attribute that does not match are **not** removed, but they are sorted lower than releases that do match.
+You may want to filter the majority of your matches by releases but allow matching a Recording that has no releases to begin with. To allow this set `releaseAllowEmpty` to `true` in configuration:
+
+```json5
+{
+  // ...
+  "releaseAllowEmpty": true // don't remove a match during filtering just because it has no releases
+}
+```
+
+### Sorting
+
+Each [Release Attribute](#release-attribute) has one additional property that can be used to **rank** releases based on the order of the values you give it. This is the `priority` property.
+
+*After* matches have been [filtered](#filtering), the remaining matches will have their releases sorted. Release with an attribute that does not match are **not** removed, but they are sorted lower than releases that do match.
 
 Sorting can be a good alternative to filtering: with filters there is a possibility your filters may eliminate all matches; if you want to ensure that **some** match will be used then sorting can ensure that the **best choice** out of those given will always be used, without accidentally ending up with **no choice**.
 
@@ -136,38 +348,6 @@ EX to prefer "official" releases over everything else
 EX to prefer albums, then singles, over everything else
 
 "releaseGroupPrimaryTypePriority": ["album", "single"]
-```
-
-#### Empty Releases
-
-Sometimes a Recording may not have any associated Releases. This may be because there is not enough information about the Recording yet, or it was never included on an actual Release.
-
-You may want to filter/sort the majority of your Play data by releases but allow matching a Recording if it does not have a release, in this instance. To allow this set `releaseAllowEmpty` to `true` in configuration:
-
-```json5
-{
-  // ...
-  "releaseAllowEmpty": true // don't remove a match during filtering just because it has no releases
-}
-```
-
-### Rules
-
-Each [Rule](/configuration/transforms#stage-rules) should be either a boolean, specifying if the transformed data should be used for this field, or a [`when` condition](/configuration/transforms#conditional-moditication):
-
-```json5
-{
-    "type": "musicbrainz",
-    "name": "MyMB"
-    // ...
-    "title": false, // will not apply any changes to Play title
-    "artists": {
-      "when": {/* ... */}, // will only apply changes to Play artists if "when" is satisfied
-    /* ... */
-    },
-    "album": true // will always apply changes to Play album
-    "meta": true // adds MusicBrainz MBIDs to scrobble data
-}
 ```
 
 If a rule is not present then multi-scrobbler defaults it to `true`.
@@ -191,13 +371,23 @@ For a more opinionated match that will mirror what you would expect from data fr
 }
 ```
 
+Consider adding [Artist Extraction](./?fallbackArtist=native#artist-extraction) in **Native Mode** if any of your Sources do not support multiple artists or your music collection is not tagged well.
+
+```json5
+{
+ // add the line below to the sensible defaults above
+ // (don't forget commas)
+ "fallbackArtistSearch": "native"
+}
+```
+
 ### Filter Considerations
 
 When using your own filters consider:
 
 * Prefer `deny` over `allow`
   * Releases come in all kinds of formats. Since `allow` is explicit you may filter out your desired match without realizing it (correct data except for release type). Or the Musicbrainz data for a higher scored match may be appropriate but you did not include it, exhaustively.
-* Prefer [Sorting](#sorting) over [Filtering](#filtering-and-sorting)
+* Prefer [Sorting](#sorting) over [Filtering](#filtering)
   * Sorting does not eliminate any matches. It is, generally, better to get **some** match than it is to have your Play data completely uncorrected because filtering eliminated all matches
 
 ### Using Partial Match
@@ -225,6 +415,48 @@ If you know that your music collection is well organized and you do not want to 
             "artists": false,
             "album": false,
             "meta": true
+          }
+        ]
+      }
+    }
+  }
+]
+```
+
+</details>
+
+## Logging
+
+If
+
+* Musicbrainz is not returning matches
+* Multi-scrobbler is using the wrong match
+* or the resulting enhanced Scrobble is not what you expected
+
+Enable logging by turning on [**Debug Mode**](/configuration#debug-mode) to help diagnose any issues with the Musicbrainz API and Scrobble enhancement. **Before creating an issue** please enable logging and include any logs with your issue as this is needed to debug.
+
+If you have multiple Modification Stages and need to see the diff for your Play between each Stage, enable `"log":  "all"` in the individual [Modification Stage](http://localhost:3000/docs/configuration/transforms/musicbrainz/?fallbackArtist=native#artist-extraction).
+
+<details>
+
+<summary>Example</summary>
+
+In a [Subsonic](/configuration/sources/subsonic) [File Config](/configuration?configType=file#configuration-types):
+
+```json5 title="subsonic.json"
+[
+  { 
+    "name": "MySubsonic",
+    "data": { /* ... */},
+    "options": {
+      "playTransform": {
+        // highlight-start
+        "log": "all",
+        // highlight-end
+        "preCompare": [
+          {
+            "type": "musicbrainz",
+            "name": "MyMB",
           }
         ]
       }
@@ -313,7 +545,8 @@ Your [AIO Config](/configuration?configType=aio#configuration-types):
       "defaults": {
         "releaseStatusPriority": ["official"],
         "releaseGroupPrimaryTypePriority": ["album", "single", "ep"],
-        "releaseCountryPriority": ["XW"]
+        "releaseCountryPriority": ["XW"],
+        "fallbackArtistSearch": "native"
       }
     }
   ]
