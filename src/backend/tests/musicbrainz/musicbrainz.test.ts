@@ -32,7 +32,7 @@ const mbTransformer = new MusicbrainzTransformer({
         ttl: '1ms'
     }
 }, {
-    logger: loggerDebug,
+    logger: loggerTest,
     clientCache: memorycache(),
     cache: memorycache()
 })
@@ -46,6 +46,8 @@ describe('Musicbrainz API', function () {
     });
 
     it('escapes lucene special characters', async function () {
+
+        this.timeout(3500);
 
         const play: PlayObject = {
             data: {
@@ -74,6 +76,8 @@ describe('Musicbrainz API', function () {
 
     it('tries second query using only track and album', async function () {
 
+        this.timeout(3500);
+
         const play: PlayObject = {
             data: {
                 track: "Roulette Road (CrossWorlds Remix)",
@@ -94,6 +98,8 @@ describe('Musicbrainz API', function () {
 
     it('tries additional query using only track and native parsing', async function () {
 
+        this.timeout(3500);
+
         const play: PlayObject = {
             data: {
                 track: "Endless Possibility (feat. Wheatus)",
@@ -113,6 +119,9 @@ describe('Musicbrainz API', function () {
     });
 
     it('handles non-ascii', async function () {
+
+        this.timeout(3500);
+        
         const play: PlayObject = {
             data: {
                 track: "Bad Apple!! feat.SEKAI",
