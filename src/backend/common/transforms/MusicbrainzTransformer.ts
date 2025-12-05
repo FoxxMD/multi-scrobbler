@@ -1,4 +1,4 @@
-import { asMBReleasePrimaryGroupType, asMBReleaseSecondaryGroupType, asMBReleaseStatus, DEFAULT_MISSING_TYPES, isMBReleasePrimaryGroupType, MBReleaseGroupPrimaryType, MBReleaseGroupSecondaryType, MBReleaseStatus, MissingMbidType, PlayObject, TrackMeta, TransformerCommon } from "../../../core/Atomic.js";
+import { asMBReleasePrimaryGroupType, asMBReleaseSecondaryGroupType, asMBReleaseStatus, DEFAULT_MISSING_TYPES, isMBReleasePrimaryGroupType, MBReleaseGroupPrimaryType, MBReleaseGroupSecondaryType, MBReleaseStatus, MissingMbidType, PlayObject, TrackMeta, TransformerCommon, TransformOptions } from "../../../core/Atomic.js";
 import { isWhenCondition, testWhenConditions } from "../../utils/PlayTransformUtils.js";
 import { WebhookPayload } from "../infrastructure/config/health/webhooks.js";
 import { ExternalMetadataTerm, PlayTransformMetadataStage } from "../infrastructure/Transform.js";
@@ -11,7 +11,7 @@ import { MusicbrainzApiClient, MusicbrainzApiConfig, recordingToPlay } from "../
 import { IRecordingList, IRecordingMatch, MusicBrainzApi } from "musicbrainz-api";
 import { getRoot, version } from "../../ioc.js";
 import { normalizeWebAddress } from "../../utils/NetworkUtils.js";
-import { intersect, missingMbidTypes, removeUndefinedKeys } from "../../utils.js";
+import { intersect, isDebugMode, missingMbidTypes, removeUndefinedKeys } from "../../utils.js";
 import { SimpleError } from "../errors/MSErrors.js";
 import { parseArrayFromMaybeString } from "../../utils/StringUtils.js";
 import clone from "clone";
@@ -144,7 +144,7 @@ export interface MusicbrainzTransformerDataConfig {
 
 export type MusicbrainzBestMatch = {play: PlayObject, score: number};
 
-export type MusicbrainzTransformerConfig = TransformerCommon<MusicbrainzTransformerData, MusicbrainzTransformerDataConfig>;
+export type MusicbrainzTransformerConfig = TransformerCommon<MusicbrainzTransformerData, MusicbrainzTransformerDataConfig> & {options?: TransformOptions & {logUrl?: boolean}}
 
 export type RecordingRankedMatched = IRecordingMatch & {rankScore: number}
 
@@ -225,7 +225,8 @@ export default class MusicbrainzTransformer extends AtomicPartsTransformer<Exter
                     appVersion: version,
                     appContactInfo: mbConfig.contact,
                     baseUrl: u.url.toString(),
-                    rateLimit: [1,1]
+                    rateLimit: [1,1],
+                    logger: this.config.options.logUrl === true || isDebugMode() ? childLogger(this.logger, ['Musicbrainz', 'API Client']) : undefined
                 });
                 mbApis[u.url.hostname] = {api, ...mbConfig};
                 mbMap.set(u.url.hostname, api);

@@ -32,7 +32,7 @@ const mbTransformer = new MusicbrainzTransformer({
         ttl: '1ms'
     }
 }, {
-    logger: loggerTest,
+    logger: loggerDebug,
     clientCache: memorycache(),
     cache: memorycache()
 })
