@@ -226,7 +226,7 @@ export default class MusicbrainzTransformer extends AtomicPartsTransformer<Exter
                     appContactInfo: mbConfig.contact,
                     baseUrl: u.url.toString(),
                     rateLimit: [1,1],
-                    logger: this.config.options.logUrl === true || isDebugMode() ? childLogger(this.logger, ['Musicbrainz', 'API Client']) : undefined
+                    logger: this.config.options?.logUrl === true || isDebugMode() ? childLogger(this.logger, ['Musicbrainz', 'API Client']) : undefined
                 });
                 mbApis[u.url.hostname] = {api, ...mbConfig};
                 mbMap.set(u.url.hostname, api);
