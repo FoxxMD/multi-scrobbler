@@ -30,31 +30,41 @@ export interface MusicbrainzApiClientConfig {
     apis: MusicbrainzApiConfig[]
 }
 
+export interface SearchOptions {
+    escapeCharacters?: boolean
+    removeCharacters?: boolean,
+    using?: ('artist' | 'album' | 'title')[]
+    ttl?: string
+}
+
 export class MusicbrainzApiClient extends AbstractApiClient {
 
     declare config: MusicbrainzApiClientConfig;
-    protected apis: MusicBrainzApi[];
-    protected rrApis: SequentialRoundRobin<MusicBrainzApi>;
+    protected rrApis: SequentialRoundRobin<MusicbrainzApiConfig>;
     protected url: URLData;
     cache: Cacheable;
 
     constructor(name: any, config: MusicbrainzApiClientConfig, options: AbstractApiOptions & {cache?: Cacheable}) {
         super('Musicbrainz', name, config, options);
-        this.apis = config.apis.map(x => x.api);
-        this.rrApis = new SequentialRoundRobin(this.apis);
+        this.rrApis = new SequentialRoundRobin(this.config.apis);
         this.cache = options.cache ?? getRoot().items.cache().cacheMetadata;
 
         this.logger.debug(`Round Robin API calls using hosts: ${config.apis.map(x => x.url ?? MUSICBRAINZ_URL).join(' | ')}`);
     }
 
-    callApi = async <T = Response>(func: (mb: MusicBrainzApi) => Promise<any>, options?: { timeout?: number }): Promise<T> => {
+    callApi = async <T = Response>(func: (mb: MusicBrainzApi) => Promise<any>, options?: { timeout?: number, ttl?: string, cacheKey?: string }): Promise<T> => {
+
+        const apiConfig = this.rrApis.next().value;
+
         const {
-            timeout = 30000
+            timeout = 30000,
+            ttl = apiConfig.ttl ?? '1hr',
+            cacheKey
         } = options || {};
 
         try {
             const res = await Promise.race([
-                func(this.rrApis.next().value),
+                func(apiConfig.api),
                 sleep(timeout)
             ]);
             if (res === undefined) {
@@ -62,6 +72,9 @@ export class MusicbrainzApiClient extends AbstractApiClient {
             }
             if(`error` in res) {
                 throw Error(res.error);
+            }
+            if(cacheKey !== undefined) {
+                await this.cache.set(cacheKey, res, ttl);
             }
             return res as T;
         } catch (e) {
@@ -72,7 +85,7 @@ export class MusicbrainzApiClient extends AbstractApiClient {
         }
     }
 
-    searchByRecording = async(play: PlayObject): Promise<IRecordingList | undefined> => {
+    searchByRecording = async(play: PlayObject, options?: SearchOptions): Promise<IRecordingList | undefined> => {
 
         const cacheKey = `mb-recSearch-${hashObject(playContentInvariantTransform(play))}`;
 
@@ -86,24 +99,49 @@ export class MusicbrainzApiClient extends AbstractApiClient {
             this.logger.warn(new Error('Could not fetch cache key', {cause: e}));
         }
 
+        const {
+            escapeCharacters = true,
+            removeCharacters = false,
+            using = ['album','artist','title'],
+            ttl
+        } = options || {};
 
         this.logger.debug(`Starting search`);
+        // https://github.com/Borewit/musicbrainz-api?tab=readme-ov-file#search-function
+        // https://wiki.musicbrainz.org/MusicBrainz_API/Search#Recording
+        // https://beta.musicbrainz.org/doc/MusicBrainz_API/Search
         const res = await this.callApi<IRecordingList>((mb) => {
             const query: Record<string, any> = {
-                recording: play.data.track
-            };
-            if(play.data.artists !== undefined && play.data.artists.length > 0) {
+                };
+            
+            
+            if(using.includes('title')) {
+                query.recording = play.data.track;
+            }
+            if(play.data.artists !== undefined && play.data.artists.length > 0 && using.includes('artist')) {
                 query.artist = play.data.artists[0];
             }
-            if(play.data.album !== undefined) {
+            if(play.data.album !== undefined && using.includes('album')) {
                 query.release = play.data.album;
+            }
+            if(escapeCharacters) {
+                for(const [k,v] of Object.entries(query)) {
+                    query[k] = escapeLuceneSpecialChars(v);
+                }
+            }
+            if(removeCharacters) {
+                 for(const [k,v] of Object.entries(query)) {
+                    query[k] = removeNonWordCharacters(v);
+                }
             }
             return mb.search('recording', {
                 query
             });
+        }, {
+            ttl,
+            cacheKey
         });
 
-        await this.cache.set(cacheKey, res, '1hr');
         return res;
     }
 
@@ -172,4 +210,31 @@ export const recordingToPlay = (data: IRecording, options?: {ignoreVA?: boolean}
     }
 
     return play;
+}
+
+
+export const LUCENE_SPECIAL_CHARACTER_REGEX: string[] = ['\\','+','-','&&','||','!','(',')','{','}','[',']','^','"','~','*','?',':','/'];
+/** 
+ * https://lucene.apache.org/core/7_7_2/queryparser/org/apache/lucene/queryparser/classic/package-summary.html#package.description 
+ * https://beta.musicbrainz.org/doc/MusicBrainz_API/Search
+ * */
+export const escapeLuceneSpecialChars = (str: string): string => {
+    let cleaned = str;
+    for(const char of LUCENE_SPECIAL_CHARACTER_REGEX) {
+        cleaned = cleaned.replaceAll(char, `\\$&`);
+    }
+    return cleaned;
+}
+
+const NON_WORD_ADJACENT_BOUNDARY_REGEX: RegExp = new RegExp(/\w([^a-zA-Z\d\s])\w/g);
+const NON_WORDWHITESPACE_REGEX: RegExp = new RegExp(/[^a-zA-Z\d\s]/g);
+export const removeNonWordCharacters = (str: string): string => {
+    // replace any non-alphanumeric, non-whitespace characters that are surrounded by non-whitespace characters
+    // with a whitespace EX "My Cool-Fun Title" => "My Cool Fun Title"
+    let cleaned = str.replaceAll(NON_WORD_ADJACENT_BOUNDARY_REGEX, ' ');
+
+    // remove any non-alphanumeric, non-whitespace characters
+    // with a whitespace EX "My Cool (Title)" => "My Cool Title"
+    cleaned = str.replaceAll(NON_WORDWHITESPACE_REGEX, '');
+    return cleaned;
 }

@@ -392,15 +392,18 @@ export const JOINERS_FINAL: FinalJoiners[] = ['&'];
 
 export type Feat = 'ft' | 'feat' | 'vs' | 'ft.' | 'feat.' | 'vs.' | 'featuring'
 export const FEAT: Feat[] = ['ft','feat','vs','ft.','feat.','vs.','featuring'];
+
+export interface TransformOptions {
+        failOnFetch?: boolean;
+        throwOnFailure?: boolean | ('artists' | 'title' | 'albumArtists' | 'album')[];
+        ttl?: string
+}
 export interface TransformerCommonConfig<T = Record<string, any>, Y = Record<string, any>> {
     defaults?: T;
     data?: Y
     type: string;
     name?: string;
-    options?: {
-        failOnFetch?: boolean;
-        throwOnFailure?: boolean | ('artists' | 'title' | 'albumArtists' | 'album')[];
-    };
+    options?: TransformOptions
 }
 
 export interface TransformerCommon<T = Record<string, any>, Y = Record<string, any>> extends TransformerCommonConfig<T,Y> {

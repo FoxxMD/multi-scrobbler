@@ -15,6 +15,7 @@ import { intersect, missingMbidTypes, removeUndefinedKeys } from "../../utils.js
 import { SimpleError } from "../errors/MSErrors.js";
 import { parseArrayFromMaybeString } from "../../utils/StringUtils.js";
 import clone from "clone";
+import { Cacheable } from "cacheable";
 
 export const asMissingMbid = (str: string): MissingMbidType => {
     const clean = str.trim().toLocaleLowerCase();
@@ -200,9 +201,11 @@ export default class MusicbrainzTransformer extends AtomicPartsTransformer<Exter
     protected defaults: MusicbrainzTransformerDataStrong;
 
     protected api: MusicbrainzApiClient;
+    protected clientCache?: Cacheable;
 
-    public constructor(config: MusicbrainzTransformerConfig, options: TransformerOptions) {
+    public constructor(config: MusicbrainzTransformerConfig, options: TransformerOptions & {clientCache?: Cacheable}) {
         super(config, options);
+        this.clientCache = options.clientCache;
     }
 
     protected async doBuildInitData(): Promise<true | string | undefined> {
@@ -231,6 +234,7 @@ export default class MusicbrainzTransformer extends AtomicPartsTransformer<Exter
 
         this.api = new MusicbrainzApiClient(this.config.name, {apis: Object.values(mbApis)}, {
             logger: this.logger,
+            cache: this.clientCache
         });
 
         return true;

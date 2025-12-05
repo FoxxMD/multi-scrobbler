@@ -72,7 +72,7 @@ export default abstract class AbstractTransformer<T = any, Y extends StageConfig
         if (data.when !== undefined) {
             if (!testWhenConditions(data.when, play, { testMaybeRegex: this.regex.testMaybeRegex })) {
                 this.logger.debug('Returning original Play because because when condition not met');
-                await this.cache.set(cacheKey, play, '15s');
+                await this.cache.set(cacheKey, play, this.config.options?.ttl ?? '15s');
                 return play;
             }
         }
@@ -108,7 +108,7 @@ export default abstract class AbstractTransformer<T = any, Y extends StageConfig
         }
 
         const transformed = await this.doHandle(data, play, transformData);
-        await this.cache.set(cacheKey, transformed, '15s');
+        await this.cache.set(cacheKey, transformed, this.config.options?.ttl ?? '15s');
         return transformed;
     }
 
