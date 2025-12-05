@@ -16,6 +16,7 @@ import { SimpleError } from "../errors/MSErrors.js";
 import { parseArrayFromMaybeString } from "../../utils/StringUtils.js";
 import clone from "clone";
 import { Cacheable } from "cacheable";
+import { splitByFirstRegexFound } from "../../../core/StringUtils.js";
 
 export const asMissingMbid = (str: string): MissingMbidType => {
     const clean = str.trim().toLocaleLowerCase();
@@ -303,6 +304,20 @@ export default class MusicbrainzTransformer extends AtomicPartsTransformer<Exter
             if(play.data.album !== undefined && play.data.artists !== undefined && play.data.artists.length > 0) {
                 this.logger.debug('No matches found, trying search with only track+album');
                 results = await this.api.searchByRecording(play, {using: ['title','album']});
+            }
+            // if no artists or still have not found by track+album
+            // then, if artist is one string (likely combined), try a naive split but any common delimiter found and use the first value as artist
+            // -- this will likely result in a less accurate match but at least it might find something
+            // -- usually the "primary artist" is listed first in a combined artist string so cross your fingers this works
+            if(results.recordings.length === 0 && play.data.artists !== undefined && play.data.artists.length === 1) {
+                const naiveSplit = splitByFirstRegexFound(play.data.artists[0], [play.data.artists[0]]).map(x => x.trim());
+                if(naiveSplit.length > 1) {
+                    this.logger.debug('No matches found, trying search with track + first value from artist string split');
+                    results = await this.api.searchByRecording({...play, data: {
+                        ...play.data,
+                        artists: [naiveSplit[0]]
+                    }}, {using: ['title','artist']});
+                }
             }
         }
 

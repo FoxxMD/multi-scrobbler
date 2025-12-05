@@ -5,9 +5,6 @@ import asPromised from 'chai-as-promised';
 import { after, before, describe, it } from 'mocha';
 import { initMemoryCache } from "../../common/Cache.js";
 import { Cacheable } from "cacheable";
-import LastfmApiClient from "../../common/vendor/LastfmApiClient.js";
-import badapple from './badapple.json' with { type: "json" };
-import { TrackObject } from "lastfm-node-client";
 import MusicbrainzTransformer from "../../common/transforms/MusicbrainzTransformer.js";
 import { PlayObject } from "../../../core/Atomic.js";
 import { projectDir } from '../../common/index.js';
@@ -33,7 +30,7 @@ const mbTransformer = new MusicbrainzTransformer({
         ttl: '1ms'
     }
 }, {
-    logger: loggerTest,
+    logger: loggerDebug,
     clientCache: memorycache(),
     cache: memorycache()
 })
@@ -80,6 +77,25 @@ describe('Musicbrainz API', function () {
                 track: "Roulette Road (CrossWorlds Remix)",
                 artists: ["Takahiro Kai, SEGA GAME MUSIC & SEGA SOUND TEAM"],
                 album: "Sonic Racing: CrossWorlds Original Soundtrack - Echoes of Dimensions"
+            },
+            meta: {}
+        }
+        await mbTransformer.tryInitialize();
+
+        const res = await mbTransformer.getTransformerData(play, {
+            type: "musicbrainz",
+            searchWhenMissing: ["artists", "album", "title"]
+        });
+        expect(res.recordings).to.exist;
+        expect(res.recordings).to.not.be.empty;
+    });
+
+    it('tries additional query using only track and naively split artist', async function () {
+
+        const play: PlayObject = {
+            data: {
+                track: "Endless Possibility (feat. Wheatus)",
+                artists: ["Bowling For Soup & Punk Rock Factory"],
             },
             meta: {}
         }

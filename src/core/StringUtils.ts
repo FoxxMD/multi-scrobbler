@@ -13,6 +13,8 @@ import {
     ScrobbleTsSOC,
     TrackStringOptions
 } from "./Atomic.js";
+import { DELIMETERS_REGEX } from "../backend/common/infrastructure/Atomic.js";
+import { parseRegexSingle } from "@foxxmd/regex-buddy-core";
 
 dayjs.extend(utc)
 dayjs.extend(isBetween);
@@ -204,6 +206,22 @@ export const splitByFirstFound = <T>(str: any, delims = [','], onNotAStringVal: 
         if(split.length > 1) {
             return split;
         }
+    }
+    return [str];
+}
+
+/**
+ * Split a string-ish variable by a regex and return the first actually split array or default to returning the string as the first element.
+ *
+ * Returns empty array, or user defined value, if variable is undefined / null / not a string / or an empty string.
+ * */
+export const splitByFirstRegexFound = <T>(str: any, onNotAStringVal: T, delimsReg: RegExp = DELIMETERS_REGEX): string[] | T => {
+    if (str === undefined || str === null || typeof str !== 'string' || str.trim() === '') {
+        return onNotAStringVal;
+    }
+    const res = parseRegexSingle(delimsReg, str);
+    if (res !== undefined) {
+        return [str.slice(0, res.index - 1), str.slice(res.index + 1)];
     }
     return [str];
 }
