@@ -22,6 +22,7 @@ import { getRoot } from "../ioc.js";
 import { nanoid } from "nanoid";
 import {diffStringsUnified, DiffOptionsColor} from 'jest-diff';
 import chalk from 'chalk';
+import { isDebugMode } from "../utils.js";
 
 export default abstract class AbstractComponent extends AbstractInitializable {
 
@@ -231,7 +232,7 @@ export default abstract class AbstractComponent extends AbstractInitializable {
                 }
             }
 
-            const shouldLog = log ?? this.config.options?.playTransform?.log ?? false;
+            const shouldLog = log ?? this.config.options?.playTransform?.log ?? isDebugMode();
 
             if(transformedPlay.meta.transforms === undefined) {
                 transformedPlay.meta.transforms = {
