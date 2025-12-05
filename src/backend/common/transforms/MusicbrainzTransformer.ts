@@ -287,8 +287,7 @@ export default class MusicbrainzTransformer extends AtomicPartsTransformer<Exter
 
     public async getTransformerData(play: PlayObject, stageConfig: MusicbrainzTransformerDataStage): Promise<IRecordingList> {
 
-        // TODO maybe search more broadly if first query doesn't hit?
-        const results = await this.api.searchByRecording(play);
+        let results = await this.api.searchByRecording(play);
 
         if(results === undefined) {
             throw new Error('results were unexpectedly undefined! API should have thrown...');
@@ -296,6 +295,15 @@ export default class MusicbrainzTransformer extends AtomicPartsTransformer<Exter
         if(results.recordings === undefined) {
             this.logger.debug(results);
             throw new Error('results returned by no recordings list in response data, something handled incorrectly?');
+        }
+
+        if(results.recordings.length === 0) {
+            // possibly the artist is incorrect (may be combined as one string)
+            // if we have an album we can likely still get a decent hit w/o using artist
+            if(play.data.album !== undefined && play.data.artists !== undefined && play.data.artists.length > 0) {
+                this.logger.debug('No matches found, trying search with only track+album');
+                results = await this.api.searchByRecording(play, {using: ['title','album']});
+            }
         }
 
         return results;

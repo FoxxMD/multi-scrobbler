@@ -87,7 +87,14 @@ export class MusicbrainzApiClient extends AbstractApiClient {
 
     searchByRecording = async(play: PlayObject, options?: SearchOptions): Promise<IRecordingList | undefined> => {
 
-        const cacheKey = `mb-recSearch-${hashObject(playContentInvariantTransform(play))}`;
+        const {
+            escapeCharacters = true,
+            removeCharacters = false,
+            using = ['album','artist','title'],
+            ttl
+        } = options || {};
+
+        const cacheKey = `mb-recSearch-${hashObject({...playContentInvariantTransform(play), using})}`;
 
         try {
             const cachedTransform = await this.cache.get<IRecordingList>(cacheKey);
@@ -99,43 +106,59 @@ export class MusicbrainzApiClient extends AbstractApiClient {
             this.logger.warn(new Error('Could not fetch cache key', {cause: e}));
         }
 
-        const {
-            escapeCharacters = true,
-            removeCharacters = false,
-            using = ['album','artist','title'],
-            ttl
-        } = options || {};
-
         this.logger.debug(`Starting search`);
         // https://github.com/Borewit/musicbrainz-api?tab=readme-ov-file#search-function
         // https://wiki.musicbrainz.org/MusicBrainz_API/Search#Recording
         // https://beta.musicbrainz.org/doc/MusicBrainz_API/Search
         const res = await this.callApi<IRecordingList>((mb) => {
             const query: Record<string, any> = {
-                };
-            
+            };
             
             if(using.includes('title')) {
                 query.recording = play.data.track;
             }
             if(play.data.artists !== undefined && play.data.artists.length > 0 && using.includes('artist')) {
-                query.artist = play.data.artists[0];
+                query.artist = play.data.artists;
             }
             if(play.data.album !== undefined && using.includes('album')) {
                 query.release = play.data.album;
             }
             if(escapeCharacters) {
                 for(const [k,v] of Object.entries(query)) {
-                    query[k] = escapeLuceneSpecialChars(v);
+                    query[k] = Array.isArray(v) ? v.map(escapeLuceneSpecialChars) : escapeLuceneSpecialChars(v);
                 }
             }
             if(removeCharacters) {
                  for(const [k,v] of Object.entries(query)) {
-                    query[k] = removeNonWordCharacters(v);
+                    query[k] = Array.isArray(v) ? v.map(removeNonWordCharacters) : removeNonWordCharacters(v);
                 }
             }
+
+            let q = '';
+
+            if(query.recording !== undefined) {
+                q += `recording:"${query.recording}"`;
+            }
+            if(query.artist !== undefined) {
+                if(q !== '') {
+                    q += ' AND ';
+                }
+                if(Array.isArray(query.artist)) {
+                    q += `artist:(${query.artist.map(x => `"${x}"`).join(' OR ')})`
+                } else {
+                    q += `artist:"${query.artist}"`;
+                }
+            }
+            if(query.release !== undefined) {
+                if(q !== '') {
+                    q += ' AND ';
+                }
+                q += `release:"${query.release}"`
+            }
+            this.logger.debug(`Search Query => ${q}`);
+
             return mb.search('recording', {
-                query
+                query: q
             });
         }, {
             ttl,
