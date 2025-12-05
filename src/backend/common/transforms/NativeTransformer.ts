@@ -32,9 +32,10 @@ export interface NativeTransformerData {
     artistsIgnore?: string[]
     artistsParseFrom?: ArtistParseSource[]
     artistsParseMonolithicOnly?: boolean
+    titleClean?: boolean
 }
 
-export interface NativeTransformerDataStrong {
+export interface NativeTransformerDataStrong extends Omit<NativeTransformerData, 'delimitersExtra'> {
     artistsParseFrom?: ArtistParseSource[]
     artistsParseMonolithicOnly?: boolean
     ignoreArtistsRegex?: RegExp[]
@@ -145,7 +146,6 @@ export default class NativeTransformer extends AtomicPartsTransformer<ExternalMe
     }
 
     public async getTransformerData(play: PlayObject, stageConfig: NativeTransformerDataStage): Promise<PlayObject> {
-        let artists = [];
         const {
             artistsParseFrom: parseArtistsFrom = this.defaults.artistsParseFrom ?? ['artists', 'title'],
             artistsParseMonolithicOnly = this.defaults.artistsParseMonolithicOnly ?? true,
@@ -153,57 +153,15 @@ export default class NativeTransformer extends AtomicPartsTransformer<ExternalMe
             delimiters = this.defaults.delimiters
         } = stageConfig || {};
 
-        if(parseArtistsFrom.includes('artists')) {
+        const transformedPlay = nativeParse(play, {
+            artistsParseFrom: parseArtistsFrom,
+            artistsParseMonolithicOnly,
+            ignoreArtistsRegex,
+            delimiters,
+            logger: this.logger
+        });
 
-            if(play.data.artists.length === 1 || (play.data.artists.length > 1 && artistsParseMonolithicOnly === false)) {
-
-                for(const artist of play.data.artists) {
-                
-                    const matchedIgnoreArtists = ignoreArtistsRegex.map(x => ({reg: x.toString(), res: parseRegexSingle(x, artist)})).filter(x => x !== undefined);
-                    if(matchedIgnoreArtists.length > 0) {
-                        this.logger.debug(`Will not parse artist because it matched an ignore regex:\n${matchedIgnoreArtists.map(x => `Reg: ${x.reg} => ${x.res.match}`).join('\n')}`);
-                        artists.push(artist);
-                    } else {
-                        const artistCredits = parseArtistCredits(artist, delimiters);
-                        if (artistCredits !== undefined) {
-                            if (artistCredits.primary !== undefined) {
-                                artists.push(artistCredits.primary);
-                            }
-                            if (artistCredits.secondary !== undefined) {
-                                artists = artists.concat(artistCredits.secondary);
-                            }
-                        } else {
-                            // couldn't parse anything from artist string, use as-is
-                            artists.push(artist);
-                        }
-                    }
-
-                }
-
-            } else {
-                // user does not want to try to parse artists when we already have more than one artist string
-                // -- likely this is because the user knows the artist data is already good and shouldn't be modified
-                artists = play.data.artists;
-            }
-
-        }
-
-        if(parseArtistsFrom.includes('title')) {
-            const trackArtists = parseTrackCredits(play.data.track, delimiters);
-            if (trackArtists !== undefined && trackArtists.secondary !== undefined) {
-                artists = artists.concat(trackArtists.secondary);
-            }
-        }
-
-        artists = uniqueNormalizedStrArr([...artists]);
-
-        return {
-            ...play,
-            data: {
-                ...play.data,
-                artists
-            }
-        };
+        return transformedPlay;
     }
 
     protected async handleTitle(play: PlayObject, parts: ExternalMetadataTerm, _transformData: undefined): Promise<string | undefined> {
@@ -235,4 +193,74 @@ export default class NativeTransformer extends AtomicPartsTransformer<ExternalMe
         return;
     }
 
+}
+
+export const nativeParse = (play: PlayObject, options?: NativeTransformerDataStrong & {logger?: MaybeLogger}): PlayObject => {
+        const {
+            artistsParseFrom = ['artists', 'title'],
+            titleClean = false,
+            artistsParseMonolithicOnly = true,
+            ignoreArtistsRegex = [],
+            delimiters,
+            logger = new MaybeLogger()
+        } = options || {};
+
+        let artists = [];
+        let track = play.data.track;
+
+        if(artistsParseFrom.includes('artists')) {
+
+            if(play.data.artists.length === 1 || (play.data.artists.length > 1 && artistsParseMonolithicOnly === false)) {
+
+                for(const artist of play.data.artists) {
+                
+                    const matchedIgnoreArtists = ignoreArtistsRegex.map(x => ({reg: x.toString(), res: parseRegexSingle(x, artist)})).filter(x => x !== undefined);
+                    if(matchedIgnoreArtists.length > 0) {
+                        logger.debug(`Will not parse artist because it matched an ignore regex:\n${matchedIgnoreArtists.map(x => `Reg: ${x.reg} => ${x.res.match}`).join('\n')}`);
+                        artists.push(artist);
+                    } else {
+                        const artistCredits = parseArtistCredits(artist, delimiters);
+                        if (artistCredits !== undefined) {
+                            if (artistCredits.primary !== undefined) {
+                                artists.push(artistCredits.primary);
+                            }
+                            if (artistCredits.secondary !== undefined) {
+                                artists = artists.concat(artistCredits.secondary);
+                            }
+                        } else {
+                            // couldn't parse anything from artist string, use as-is
+                            artists.push(artist);
+                        }
+                    }
+
+                }
+
+            } else {
+                // user does not want to try to parse artists when we already have more than one artist string
+                // -- likely this is because the user knows the artist data is already good and shouldn't be modified
+                artists = play.data.artists;
+            }
+
+        }
+
+        if(artistsParseFrom.includes('title')) {
+            const trackArtists = parseTrackCredits(play.data.track, delimiters);
+            if (trackArtists !== undefined && trackArtists.secondary !== undefined) {
+                artists = artists.concat(trackArtists.secondary);
+                if(titleClean) {
+                    track = trackArtists.primary;
+                }
+            }
+        }
+
+        artists = uniqueNormalizedStrArr([...artists]);
+
+        return {
+            ...play,
+            data: {
+                ...play.data,
+                track,
+                artists
+            }
+        };
 }

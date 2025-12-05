@@ -4,7 +4,7 @@ import { WebhookPayload } from "../infrastructure/config/health/webhooks.js";
 import { ExternalMetadataTerm, PlayTransformMetadataStage } from "../infrastructure/Transform.js";
 import AtomicPartsTransformer from "./AtomicPartsTransformer.js";
 import { TransformerOptions } from "./AbstractTransformer.js";
-import { MUSICBRAINZ_URL, MusicbrainzApiConfigData } from "../infrastructure/Atomic.js";
+import { DELIMITERS, MUSICBRAINZ_URL, MusicbrainzApiConfigData } from "../infrastructure/Atomic.js";
 import { MaybeLogger } from "../logging.js";
 import { childLogger, Logger } from "@foxxmd/logging";
 import { MusicbrainzApiClient, MusicbrainzApiConfig, recordingToPlay } from "../vendor/musicbrainz/MusicbrainzApiClient.js";
@@ -17,6 +17,7 @@ import { parseArrayFromMaybeString } from "../../utils/StringUtils.js";
 import clone from "clone";
 import { Cacheable } from "cacheable";
 import { splitByFirstRegexFound } from "../../../core/StringUtils.js";
+import { nativeParse } from "./NativeTransformer.js";
 
 export const asMissingMbid = (str: string): MissingMbidType => {
     const clean = str.trim().toLocaleLowerCase();
@@ -37,6 +38,13 @@ export interface MusicbrainzTransformerData {
     searchWhenMissing?: MissingMbidType[]
     forceSearch?: boolean
     score?: number
+    fallbackArtistSearch?: ('naive' | 'native')
+
+    /** Ignore album artist if it is "Various Artists"
+     * 
+     * @default true
+     */
+    ignoreVA?: boolean
     
     /** Allow only releases with release groups with these primary types 
      * 
@@ -109,12 +117,6 @@ export interface MusicbrainzTransformerData {
      * 
      */
     releaseAllowEmpty?: boolean
-
-    /** Ignore album artist if it is "Various Artists"
-     * 
-     * @default true
-     */
-    ignoreVA?: boolean
 }
 
 export interface MusicbrainzTransformerDataStrong extends MusicbrainzTransformerData {
@@ -273,7 +275,7 @@ export default class MusicbrainzTransformer extends AtomicPartsTransformer<Exter
     public async handlePreFetch(play: PlayObject, stageConfig: MusicbrainzTransformerDataStage): Promise<void> {
         const {
             searchWhenMissing = this.defaults.searchWhenMissing,
-            forceSearch = false
+            forceSearch = this.defaults.forceSearch ?? false
         } = stageConfig;
 
         const missing = missingMbidTypes(play);
@@ -305,18 +307,38 @@ export default class MusicbrainzTransformer extends AtomicPartsTransformer<Exter
                 this.logger.debug('No matches found, trying search with only track+album');
                 results = await this.api.searchByRecording(play, {using: ['title','album']});
             }
-            // if no artists or still have not found by track+album
-            // then, if artist is one string (likely combined), try a naive split but any common delimiter found and use the first value as artist
-            // -- this will likely result in a less accurate match but at least it might find something
-            // -- usually the "primary artist" is listed first in a combined artist string so cross your fingers this works
+            // if no album or still have not found by track+album, and only one artist
+            // then its likely artist string is combined
             if(results.recordings.length === 0 && play.data.artists !== undefined && play.data.artists.length === 1) {
-                const naiveSplit = splitByFirstRegexFound(play.data.artists[0], [play.data.artists[0]]).map(x => x.trim());
-                if(naiveSplit.length > 1) {
-                    this.logger.debug('No matches found, trying search with track + first value from artist string split');
-                    results = await this.api.searchByRecording({...play, data: {
-                        ...play.data,
-                        artists: [naiveSplit[0]]
-                    }}, {using: ['title','artist']});
+
+                const {
+                    fallbackArtistSearch = this.defaults.fallbackArtistSearch
+                } = stageConfig;
+
+                if(fallbackArtistSearch === 'naive') {
+                    // try a naive split using any common delimiter found and use the first value as artist
+                    // -- this will likely result in a less accurate match but at least it might find something
+                    // -- usually the "primary artist" is listed first in a combined artist string so cross your fingers this works
+                    const naiveSplit = splitByFirstRegexFound(play.data.artists[0], [play.data.artists[0]]).map(x => x.trim());
+                    if(naiveSplit.length > 1) {
+                        this.logger.debug('No matches found, trying search with track + first value from artist string split');
+                        results = await this.api.searchByRecording({...play, data: {
+                            ...play.data,
+                            artists: [naiveSplit[0]]
+                        }}, {using: ['title','artist']});
+                    }
+                } else if(fallbackArtistSearch === 'native') {
+                    // use MS native parsing to extract artists from artist string and title
+                    // -- cleaning title is aggressive but at this point MB has not found anything which means its likely not "proper"
+                    // IE "My Track (Cool Remix)" is a proper recording name but "My Track (feat. Someone)" is not bc MB would have removed the joiner from the name
+                    // so we do the same to hopefully get a match
+                    //
+                    // ...additionally, since MB hasn't found anything with single artist string its likely the artist name does not have a common delimiter as part of their proper name
+                    // IE "Crosby, Stills, Nash & Young" is a proper artist name with delimiters included but "My Artist & My Feat Artists" is not
+                    // so we split out all artists by all found delimiters
+                    const nativePlay = nativeParse(play, {titleClean: true, delimiters: DELIMITERS})
+                    this.logger.debug('No matches found, trying search with aggressive native parsing');
+                    results = await this.api.searchByRecording(nativePlay, {using: ['title','artist']});
                 }
             }
         }

@@ -9,6 +9,8 @@ import MusicbrainzTransformer from "../../common/transforms/MusicbrainzTransform
 import { PlayObject } from "../../../core/Atomic.js";
 import { projectDir } from '../../common/index.js';
 import path from 'path';
+import { nativeParse } from '../../common/transforms/NativeTransformer.js';
+import { DELIMITERS } from '../../common/infrastructure/Atomic.js';
 
 const envPath = path.join(projectDir, '.env');
 dotenv.config({path: envPath});
@@ -90,7 +92,7 @@ describe('Musicbrainz API', function () {
         expect(res.recordings).to.not.be.empty;
     });
 
-    it('tries additional query using only track and naively split artist', async function () {
+    it('tries additional query using only track and native parsing', async function () {
 
         const play: PlayObject = {
             data: {
@@ -103,7 +105,8 @@ describe('Musicbrainz API', function () {
 
         const res = await mbTransformer.getTransformerData(play, {
             type: "musicbrainz",
-            searchWhenMissing: ["artists", "album", "title"]
+            searchWhenMissing: ["artists", "album", "title"],
+            fallbackArtistSearch: 'native'
         });
         expect(res.recordings).to.exist;
         expect(res.recordings).to.not.be.empty;
