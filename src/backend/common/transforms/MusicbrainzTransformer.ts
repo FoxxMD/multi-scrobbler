@@ -255,7 +255,7 @@ export default class MusicbrainzTransformer extends AtomicPartsTransformer<Exter
             type: 'musicbrainz'
         }
 
-        for (const k of ['artists', 'title', 'album']) {
+        for (const k of ['artists', 'albumArtists', 'title', 'album', 'meta', 'duration']) {
             if (!(k in stage)) {
                 stage[k] = true;
                 continue;

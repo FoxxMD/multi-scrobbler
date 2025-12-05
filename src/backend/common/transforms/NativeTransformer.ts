@@ -127,7 +127,7 @@ export default class NativeTransformer extends AtomicPartsTransformer<ExternalMe
             type: 'native'
         }
 
-        for (const k of ['artists', 'title', 'album']) {
+        for (const k of ['artists', 'albumArtists', 'title', 'album']) {
             if (!(k in stage)) {
                 stage[k] = true;
                 continue;
