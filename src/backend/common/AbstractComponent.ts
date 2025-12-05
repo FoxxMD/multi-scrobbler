@@ -4,8 +4,8 @@ import {
 } from "@foxxmd/regex-buddy-core";
 import deepEqual from 'fast-deep-equal';
 import { Simulate } from "react-dom/test-utils";
-import { PlayObject } from "../../core/Atomic.js";
-import { buildTrackString } from "../../core/StringUtils.js";
+import { PlayData, PlayObject, TransformResult } from "../../core/Atomic.js";
+import { buildPlayHumanDiffable, buildTrackString } from "../../core/StringUtils.js";
 import { CommonClientConfig } from "./infrastructure/config/client/index.js";
 import { CommonSourceConfig } from "./infrastructure/config/source/index.js";
 import { TransformRulesError } from "./errors/MSErrors.js";
@@ -19,6 +19,10 @@ import AbstractInitializable from "./AbstractInitializable.js";
 import play = Simulate.play;
 import TransformerManager from "./transforms/TransformerManager.js";
 import { getRoot } from "../ioc.js";
+import { nanoid } from "nanoid";
+import {diffStringsUnified, DiffOptionsColor} from 'jest-diff';
+import chalk from 'chalk';
+import { isDebugMode } from "../utils.js";
 
 export default abstract class AbstractComponent extends AbstractInitializable {
 
@@ -154,9 +158,9 @@ export default abstract class AbstractComponent extends AbstractInitializable {
 
     public transformPlay = async (play: PlayObject, hookType: TransformHook, log?: boolean) => {
 
-        let logger: Logger;
-        const labels = ['Play Transform', hookType];
-        const getLogger = () => logger !== undefined ? logger : childLogger(this.logger, labels);
+
+        const asyncId = nanoid(6);
+        let logger = childLogger(this.logger, ['Play Transform', hookType, asyncId]);
 
         try {
             let hook: StageConfig[];
@@ -180,8 +184,9 @@ export default abstract class AbstractComponent extends AbstractInitializable {
                 return play;
             }
 
+            logger.debug(`Transform start for => ${buildTrackString(play)}`);
             let transformedPlay: PlayObject = play;
-            let transformDetails: string[] = [];
+            let transformHistory: TransformResult[] = [];
             for(const hookItem of hook) {
 
                 const {
@@ -190,54 +195,93 @@ export default abstract class AbstractComponent extends AbstractInitializable {
                     failureReturnPartial = false
                 } = hookItem;
 
-                let newTransformedPlay: PlayObject;
-                let err: Error;
+                let newTransformedPlay: PlayObject,
+                stageName: string,
+                err: Error;
                 try {
-                    newTransformedPlay = await this.transformManager.handleStage(hookItem, transformedPlay);
+                    [newTransformedPlay, stageName] = await this.transformManager.handleStage(hookItem, transformedPlay, asyncId);
                 } catch (e) {
                     err = e;
                 }
 
                 if(err !== undefined) {
                     if(onFailure === 'continue') {
-                        this.logger.warn(new Error('A transform encountered an error but continuing due to onFailure: continue', {cause: err}));
+                        logger.warn(new Error(`A transform encountered an error but continuing due to onFailure: continue`, {cause: err}));
                     } else {
-                        this.logger.error(new Error('Transform encountered an error', {cause: err}));
+                        logger.error(new Error(`Transform encountered an error`, {cause: err}));
                         if(!failureReturnPartial) {
                             // rewind to original play so we don't return partial transform
                             transformedPlay = play;
-                            transformDetails = [];
+                            transformHistory = [];
                         }
                         break;
                     }
                 }
 
-                if(!deepEqual(newTransformedPlay, transformedPlay)) {
-                    transformDetails.push(`${hookItem.type} - ${buildTrackString(transformedPlay, {include: ['artist', 'track', 'album']})}`);
-                }
+                transformHistory.push({
+                    type: hookItem.type,
+                    name: stageName,
+                    play: newTransformedPlay.data
+                });
+
                 transformedPlay = newTransformedPlay;
 
                 if(err === undefined && onSuccess === 'stop') {
-                    this.logger.debug('Stopping transform due to onSuccess: stop');
+                    logger.debug(`${nanoid} Stopping transform due to onSuccess: stop`);
                     break;
                 }
             }
 
-            if(transformDetails.length > 0) {
-                let transformStatements = [`Original: ${buildTrackString(play, {include: ['artist', 'track', 'album']})}`];
-                const shouldLog = log ?? this.config.options?.playTransform?.log ?? false;
-                if (shouldLog === true || shouldLog === 'all') {
-                    if(shouldLog === 'all') {
-                        transformStatements = transformStatements.concat(transformDetails.map(x => `=> ${x}`));
-                    } else {
-                        transformStatements.push(`=> ${transformDetails[transformDetails.length - 1]}`);
-                    }
-                    this.logger.debug({labels: [...labels, hookType]}, `Transform Pipeline:\n${transformStatements.join('\n')}`);
-                }
+            const shouldLog = log ?? this.config.options?.playTransform?.log ?? isDebugMode();
+
+            if(transformedPlay.meta.transforms === undefined) {
+                transformedPlay.meta.transforms = {
+                    original: play.data
+                };
             }
+            if(shouldLog !== false) {
+                if(transformHistory.length === 0) {
+                    logger.debug('Transform Diff: No Change');
+                }
+                const historyToDiff: {name: string, data: PlayData}[] = [
+                    {name: 'Original', data: transformedPlay.meta.transforms.original}
+                ];
+                if(shouldLog === true) {
+                    const last = transformHistory[transformHistory.length - 1];
+                    historyToDiff.push({name: `${last.type}-${last.name}`, data: last.play});
+                } else {
+                    for(const t of transformHistory) {
+                        historyToDiff.push({name: `${t.type}-${t.name}`, data: t.play})
+                    }
+                }
+                const diffs: string[] = [];
+                historyToDiff.forEach((curr, index) => {
+                    if(index === 0) {
+                        return;
+                    }
+                    const last = historyToDiff[index - 1];
+                    if(deepEqual(last.data, curr.data)) {
+                        diffs.push(`${last.name} => ${curr.name} -- No Change`);
+                    } else {
+                        diffs.push(diffStringsUnified(
+                        buildPlayHumanDiffable(last.data, {expandMeta: true}), 
+                        buildPlayHumanDiffable(curr.data, {expandMeta: true}),
+                        {
+                            aAnnotation: last.name,
+                            aColor: chalk.red,
+                            bAnnotation: curr.name,
+                            bColor: chalk.green
+                        }
+                    ))
+                    }
+                });
+                logger.debug(`Transform Diff\n${diffs}`)
+            }
+            const previousHistory = transformedPlay.meta.transforms[hookType] ?? [];
+            transformedPlay.meta.transforms[hookType] = [...previousHistory, ...transformHistory];
             return transformedPlay;
         } catch (e) {
-            getLogger().warn(new Error(`Unexpected error occurred, returning original play.`, {cause: e}));
+            logger.warn(new Error(`Unexpected error occurred, returning original play.`, {cause: e}));
             return play;
         }
     }

@@ -2,6 +2,8 @@ import { LogDataPretty, LogLevel } from "@foxxmd/logging";
 import { Dayjs } from "dayjs";
 import { ListenProgress } from "../backend/sources/PlayerState/ListenProgress.js";
 import { AdditionalTrackInfoResponse } from "../backend/common/vendor/listenbrainz/interfaces.js";
+import { Name } from "ajv";
+import { StringMap } from "ts-json-schema-generator";
 
 export interface SourceStatusData {
     status: string;
@@ -112,8 +114,8 @@ export interface BrainzMeta {
     /**
      * artists_mbid
      * 
-     *  If multiple artists for track this is the "original" artist who is releasing the single/album */
-    albumArtist?: string
+     *  If multiple artists for track this is the "original" artist(s) who is releasing the single/album */
+    albumArtist?: string[]
     /** 
      * release_mbid
      * 
@@ -390,17 +392,71 @@ export const JOINERS_FINAL: FinalJoiners[] = ['&'];
 
 export type Feat = 'ft' | 'feat' | 'vs' | 'ft.' | 'feat.' | 'vs.' | 'featuring'
 export const FEAT: Feat[] = ['ft','feat','vs','ft.','feat.','vs.','featuring'];
+
+export interface TransformOptions {
+        failOnFetch?: boolean;
+        throwOnFailure?: boolean | ('artists' | 'title' | 'albumArtists' | 'album' | 'duration' | 'meta')[];
+        ttl?: string
+}
 export interface TransformerCommonConfig<T = Record<string, any>, Y = Record<string, any>> {
     defaults?: T;
     data?: Y
     type: string;
     name?: string;
-    options?: {
-        failOnFetch?: boolean;
-        throwOnFailure?: boolean | ('artists' | 'title' | 'albumArtists' | 'album')[];
-    };
+    options?: TransformOptions
 }
 
-export interface TransformerCommon<T = Record<string, any>> extends TransformerCommonConfig<T> {
+export interface TransformerCommon<T = Record<string, any>, Y = Record<string, any>> extends TransformerCommonConfig<T,Y> {
     name: string
+}
+
+export type MissingMbidType = 'artists' | 'title' | 'album' | 'duration';
+export const DEFAULT_MISSING_TYPES: MissingMbidType[] = ['artists','title','album','duration'];
+
+export type MBReleaseStatus = 'official' | 'promotion' | 'bootleg' | 'pseudo-release' | 'withdrawn' | 'expunged' | 'cancelled';
+export const MB_RELEASE_STATUSES: MBReleaseStatus[] = ['official','promotion','bootleg','pseudo-release','withdrawn','expunged' ,'cancelled'];
+export const isMBReleaseStatus = (str: string): str is MBReleaseStatus => {
+    return MB_RELEASE_STATUSES.includes(str as MBReleaseStatus);
+}
+export const asMBReleaseStatus = (str: string): MBReleaseStatus => {
+    const clean = str.toLocaleLowerCase();
+    if(isMBReleaseStatus(clean)) {
+        return clean;
+    } else {
+        throw new Error(`Release Status is not valid: ${str}`);
+    }
+}
+
+export type MBReleaseGroupPrimaryType = 'album' | 'single' | 'ep' | 'broadcast' | 'other';
+export const MB_RELEASE_GROUP_PRIMARY_TYPES: MBReleaseGroupPrimaryType[] = ['album','single','ep','broadcast','other'];
+export const isMBReleasePrimaryGroupType = (str: string): str is MBReleaseGroupPrimaryType => {
+    return MB_RELEASE_GROUP_PRIMARY_TYPES.includes(str as MBReleaseGroupPrimaryType);
+}
+export const asMBReleasePrimaryGroupType = (str: string): MBReleaseGroupPrimaryType => {
+    const clean = str.toLocaleLowerCase();
+    if(isMBReleasePrimaryGroupType(clean)) {
+        return clean;
+    } else {
+        throw new Error(`Primary Release Group is not valid: ${str}`);
+    }
+}
+
+export type MBReleaseGroupSecondaryType = 'compilation' | 'soundtrack' | 'live' | 'remix';
+export const MB_RELEASE_GROUP_SECONDARY_TYPES: MBReleaseGroupSecondaryType[] = ['compilation','soundtrack','live','remix'];
+export const isMBReleaseSecondaryGroupType = (str: string): str is MBReleaseGroupSecondaryType => {
+    return MB_RELEASE_GROUP_SECONDARY_TYPES.includes(str as MBReleaseGroupSecondaryType);
+}
+export const asMBReleaseSecondaryGroupType = (str: string): MBReleaseGroupSecondaryType => {
+    const clean = str.toLocaleLowerCase();
+    if(isMBReleaseSecondaryGroupType(clean)) {
+        return clean;
+    } else {
+        throw new Error(`Secondary Release Group is not valid: ${str}`);
+    }
+}
+
+export interface TransformResult {
+    type: string,
+    name: string,
+    play: PlayData
 }

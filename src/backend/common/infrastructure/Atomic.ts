@@ -5,6 +5,7 @@ import { NextFunction, ParamsDictionary, Query } from "express-serve-static-core
 import { FixedSizeList } from 'fixed-size-list';
 import { isPlayObject, PlayMeta, PlayObject } from "../../../core/Atomic.js";
 import TupleMap from "../TupleMap.js";
+import { MusicBrainzApi } from 'musicbrainz-api';
 
 export type SourceType =
     'spotify'
@@ -268,6 +269,7 @@ export interface numberFormatOptions {
 
 export const DELIMITERS = [',','&','/','\\'];
 export const DELIMITERS_NO_AMP = [',','/','\\'];
+export const DELIMETERS_REGEX: RegExp = new RegExp(/[,&\/\\]/);
 
 export const ARTIST_WEIGHT = 0.3;
 export const TITLE_WEIGHT = 0.4;
@@ -335,3 +337,13 @@ export interface CacheConfigOptions {
     regex?: number
 }
 
+export interface MusicbrainzApiConfigData {
+    url?: string
+    rateLimit?: number
+    contact: string,
+    ttl?: string
+}
+
+export const MUSICBRAINZ_URL = 'https://musicbrainz.org';
+
+export type MusicBrainzSingletonMap = Map<string,MusicBrainzApi>;

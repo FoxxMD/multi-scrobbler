@@ -12,13 +12,6 @@ export default abstract class AtomicPartsTransformer<Y, T = any, Z extends Atomi
                 throwOnFailure = false,
             } = this.config.options || {};
     
-            try {
-                await this.checkShouldTransform(play, transformData, parts);
-            } catch (e) {
-                this.logger.debug(new Error('checkShouldTransform did not pass, returning original Play', { cause: e }));
-                return play;
-            }
-    
             const transformedPlayData: Partial<ObjectPlayData> = {};
     
             if (parts.title !== undefined) {
@@ -47,9 +40,11 @@ export default abstract class AtomicPartsTransformer<Y, T = any, Z extends Atomi
                         this.logger.warn(err);
                     }
                 }
-    
+            }
+
+            if(parts.albumArtists !== undefined) {
                 try {
-                    const albumArtists = await this.handleAlbumArtists(play, parts.artists, transformData);
+                    const albumArtists = await this.handleAlbumArtists(play, parts.albumArtists, transformData);
                     transformedPlayData.albumArtists = albumArtists;
                 } catch (e) {
                     const err = new Error(`Failed to transform album artists`, { cause: e });
@@ -74,32 +69,71 @@ export default abstract class AtomicPartsTransformer<Y, T = any, Z extends Atomi
                     }
                 }
             }
-    
+
+            if (parts.duration !== undefined) {
+                try {
+                    const duration = await this.handleDuration(play, parts.duration, transformData);
+                    transformedPlayData.duration = duration;
+                } catch (e) {
+                    const err = new Error(`Failed to transform duration: ${play.data.duration}`, { cause: e });
+                    if (throwOnFailure === true || (throwOnFailure !== false && throwOnFailure.includes('duration'))) {
+                        throw err;
+                    } else {
+                        this.logger.warn(err);
+                    }
+                }
+            }
+
+            const mergedMeta = {
+                ...(play.data.meta ?? {})
+            };
+            if (parts.meta !== undefined) {
+                try {
+                    const meta = await this.handleMeta(play, parts.duration, transformData);
+
+                    if (meta !== undefined) {
+                        for (const [k, v] of Object.entries(meta)) {
+                            if (mergedMeta[k] !== undefined) {
+                                mergedMeta[k] = {
+                                    ...mergedMeta[k],
+                                    ...v
+                                }
+                            } else {
+                                mergedMeta[k] = v;
+                            }
+                        }
+                    }
+                } catch (e) {
+                    const err = new Error(`Failed to transform meta: ${play.data.meta}`, { cause: e });
+                    if (throwOnFailure === true || (throwOnFailure !== false && throwOnFailure.includes('meta'))) {
+                        throw err;
+                    } else {
+                        this.logger.warn(err);
+                    }
+                }
+            }
+
             const transformedPlay = {
                 ...play,
                 data: {
                     ...play.data,
-                    ...transformedPlayData
+                    ...transformedPlayData,
+                    meta: mergedMeta
                 }
             }
-    
+
             return transformedPlay;
-        }
-    
-        public async getTransformerData(play: PlayObject, stageConfig: Z): Promise<T> {
-            return undefined;
-        }
-    
-        public async checkShouldTransform(play: PlayObject, transformData: T, stageConfig: Z): Promise<void> {
-            return;
         }
     
         protected abstract handleTitle(play: PlayObject, parts: Y, transformData: T): Promise<string | undefined>;
         protected abstract handleArtists(play: PlayObject, parts: Y, transformData: T): Promise<string[] | undefined>;
         protected abstract handleAlbumArtists(play: PlayObject, parts: Y, transformData: T): Promise<string[] | undefined>;
         protected abstract handleAlbum(play: PlayObject, parts: Y, transformData: T): Promise<string | undefined>;
+        protected async handleDuration(play: PlayObject, parts: Y, transformData: T): Promise<number | undefined> {
+            return play.data.duration;
+        }
     
-        protected async handleMeta(play: PlayObject, transformData: T): Promise<TrackMeta | undefined> {
+        protected async handleMeta(play: PlayObject, parts: Y, transformData: T): Promise<TrackMeta | undefined> {
             return play.data.meta;
         }
 

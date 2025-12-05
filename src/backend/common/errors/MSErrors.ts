@@ -27,3 +27,26 @@ export class AuthCheckError extends StageError {
 export class PostInitError extends StageError {
     name = 'Post Initialization';
 }
+
+export class SimpleError extends Error implements HasSimpleError {
+    simple: boolean;
+
+    public constructor(msg: string, options?: ErrorOptions & { simple?: boolean }) {
+        super(msg, options);
+        const {
+            simple = true
+        } = options || {};
+        this.simple = simple;
+    }
+}
+
+export interface HasSimpleError extends Error {
+    simple: boolean
+}
+
+export const isSimpleError = (e: unknown): e is HasSimpleError => {
+    if(!(e instanceof Error)) {
+        return false;
+    }
+    return 'simple' in e;
+}

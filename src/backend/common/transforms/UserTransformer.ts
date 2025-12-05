@@ -96,8 +96,5 @@ export default class UserTransformer extends AtomicPartsTransformer<ConditionalS
     public notify(payload: WebhookPayload): Promise<void> {
         return;
     }
-    protected getIdentifier(): string {
-        return 'User Transformer';
-    }
 
 }

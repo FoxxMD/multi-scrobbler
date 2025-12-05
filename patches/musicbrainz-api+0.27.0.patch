@@ -1,0 +1,62 @@
+diff --git a/node_modules/musicbrainz-api/lib/http-client.js b/node_modules/musicbrainz-api/lib/http-client.js
+index a5ca5f7..14227ca 100644
+--- a/node_modules/musicbrainz-api/lib/http-client.js
++++ b/node_modules/musicbrainz-api/lib/http-client.js
+@@ -9,6 +9,7 @@ function isConnectionReset(err) {
+ export class HttpClient {
+     constructor(httpOptions) {
+         this.httpOptions = httpOptions;
++        this.logger = (httpOptions ?? {}).logger;
+     }
+     get(path, options) {
+         return this._fetch('get', path, options);
+@@ -30,6 +31,9 @@ export class HttpClient {
+         let retryLimit = options.retryLimit && options.retryLimit > 1 ? options.retryLimit : 1;
+         const retryTimeout = this.httpOptions.timeout ? this.httpOptions.timeout : 500;
+         const url = this._buildUrl(path, options.query);
++        if(this.logger !== undefined) {
++            this.logger.debug(`${method} ${url}`);
++        }
+         const cookies = await this.getCookies();
+         const headers = new Headers(options.headers);
+         headers.set('User-Agent', this.httpOptions.userAgent);
+diff --git a/node_modules/musicbrainz-api/lib/musicbrainz-api-node.js b/node_modules/musicbrainz-api/lib/musicbrainz-api-node.js
+index c9cad5a..7d772a9 100644
+--- a/node_modules/musicbrainz-api/lib/musicbrainz-api-node.js
++++ b/node_modules/musicbrainz-api/lib/musicbrainz-api-node.js
+@@ -15,7 +15,8 @@ export class MusicBrainzApi extends MusicBrainzApiDefault {
+         return new HttpClientNode({
+             baseUrl: this.config.baseUrl,
+             timeout: 500,
+-            userAgent: `${this.config.appName}/${this.config.appVersion} ( ${this.config.appContactInfo} )`
++            userAgent: `${this.config.appName}/${this.config.appVersion} ( ${this.config.appContactInfo} )`,
++            logger: this.config.logger
+         });
+     }
+     async login() {
+diff --git a/node_modules/musicbrainz-api/lib/musicbrainz-api.d.ts b/node_modules/musicbrainz-api/lib/musicbrainz-api.d.ts
+index cd05017..487404f 100644
+--- a/node_modules/musicbrainz-api/lib/musicbrainz-api.d.ts
++++ b/node_modules/musicbrainz-api/lib/musicbrainz-api.d.ts
+@@ -75,6 +75,7 @@ export interface IMusicBrainzConfig {
+      * Default is [15, 18], which allows up to 15 requests every 18 seconds
+      */
+     rateLimit?: [number, number];
++    logger?: any
+ }
+ interface IInternalConfig extends IMusicBrainzConfig {
+     baseUrl: string;
+diff --git a/node_modules/musicbrainz-api/lib/musicbrainz-api.js b/node_modules/musicbrainz-api/lib/musicbrainz-api.js
+index 72fb15d..0e9c32d 100644
+--- a/node_modules/musicbrainz-api/lib/musicbrainz-api.js
++++ b/node_modules/musicbrainz-api/lib/musicbrainz-api.js
+@@ -43,7 +43,8 @@ export class MusicBrainzApi {
+         return new HttpClient({
+             baseUrl: this.config.baseUrl,
+             timeout: 500,
+-            userAgent: `${this.config.appName}/${this.config.appVersion} ( ${this.config.appContactInfo} )`
++            userAgent: `${this.config.appName}/${this.config.appVersion} ( ${this.config.appContactInfo} )`,
++            logger: this.config.logger
+         });
+     }
+     async restGet(relUrl, query = {}) {

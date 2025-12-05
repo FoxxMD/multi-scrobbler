@@ -99,8 +99,7 @@ export class MSCache {
     }
 
     init = async () => {
-        // disabled for now
-        //await this.initMetadataCache();
+        await this.initMetadataCache();
         await this.initScrobbleCache();
         await this.initAuthCache();
         //this.cacheTransform = await this.initCacheable({provider: false, memory: {lruSize: 500}}, 'transform');
