@@ -65,17 +65,7 @@ export default class LastfmSource extends MemorySource {
     }
     doAuthentication = async () => {
         try {
-            await this.api.testAuth();
-
-            //5e6f41d4-9021-4d5d-b4a6-e39be60abac5
-            const resp = await this.api.callApi<any>((client: any) => client.trackGetInfo({
-                //mbid: '5e6f41d4-9021-4d5d-b4a6-e39be60abac5',
-                artist: "Bowling For Soup & Punk Rock Factory",
-                track: "Endless Possibility (feat. Wheatus)",
-                sk: this.api.client.sessionKey
-            }));
-            const play = LastfmApiClient.formatPlayObj(resp.track);
-            return true;
+            return await this.api.testAuth();
         } catch (e) {
             throw e;
         }
