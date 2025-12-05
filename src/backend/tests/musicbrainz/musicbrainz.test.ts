@@ -93,16 +93,23 @@ describe('Musicbrainz API', function () {
         expect(res.recordings).to.not.be.empty;
     });
 
-    // it('handles non-ascii', async function () {
-    //     const play = LastfmApiClient.formatPlayObj(badapple as unknown as TrackObject);
-    //     await mbTransformer.tryInitialize();
+    it('handles non-ascii', async function () {
+        const play: PlayObject = {
+            data: {
+                track: "Bad Apple!! feat.SEKAI",
+                artists: ["、ナイトコードで。"],
+                album: "25時、ナイトコードで。 SEKAI ALBUM Vol.3"
+            },
+            meta: {}
+        }
+        await mbTransformer.tryInitialize();
 
-    //     const res = await mbTransformer.getTransformerData(play, {
-    //         type: "musicbrainz",
-    //         searchWhenMissing: ["artists", "album", "title"]
-    //     });
-    //     expect(res.recordings).to.exist;
-    //     expect(res.recordings).to.not.be.empty;
-    // });
+        const res = await mbTransformer.getTransformerData(play, {
+            type: "musicbrainz",
+            searchWhenMissing: ["artists", "album", "title"]
+        });
+        expect(res.recordings).to.exist;
+        expect(res.recordings).to.not.be.empty;
+    });
 
 });
