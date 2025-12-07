@@ -188,6 +188,15 @@ export const parseStageConfig = (data: MusicbrainzTransformerData | undefined = 
 
     logger.debug(`Will search if missing: ${config.searchWhenMissing.join(', ')} | Match if (default) score is >= ${config.score}`);
 
+    if(data.fallbackArtistSearch !== undefined) {
+        const cleanFallback = data.fallbackArtistSearch;
+        if(['native','naive'].includes(cleanFallback)) {
+            throw new Error(`fallbackArtistSearch must be one of 'native' or 'naive', given: ${cleanFallback}`);
+        }
+        config.fallbackArtistSearch = cleanFallback;
+        logger.debug(`Will make an additional search using ${config.fallbackArtistSearch} method as fallback`);
+    }
+
     for(const [k,v] of Object.entries(config)) {
         if(k.includes('release') && v !== undefined) {
             logger.debug(`${k}: ${v.join(' | ')}`);
