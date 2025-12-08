@@ -190,7 +190,7 @@ export const parseStageConfig = (data: MusicbrainzTransformerData | undefined = 
 
     if(data.fallbackArtistSearch !== undefined) {
         const cleanFallback = data.fallbackArtistSearch;
-        if(['native','naive'].includes(cleanFallback)) {
+        if(!['native','naive'].includes(cleanFallback)) {
             throw new Error(`fallbackArtistSearch must be one of 'native' or 'naive', given: ${cleanFallback}`);
         }
         config.fallbackArtistSearch = cleanFallback;
