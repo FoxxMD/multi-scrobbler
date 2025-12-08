@@ -39,6 +39,7 @@ export interface MusicbrainzTransformerData {
     forceSearch?: boolean
     score?: number
     fallbackArtistSearch?: ('naive' | 'native')
+    fallbackFreeText?: boolean
 
     /** Ignore album artist if it is "Various Artists"
      * 
@@ -146,7 +147,12 @@ export type MusicbrainzBestMatch = {play: PlayObject, score: number};
 
 export type MusicbrainzTransformerConfig = TransformerCommon<MusicbrainzTransformerData, MusicbrainzTransformerDataConfig> & {options?: TransformOptions & {logUrl?: boolean}}
 
-export type RecordingRankedMatched = IRecordingMatch & {rankScore: number}
+export type RecordingRankedMatched = IRecordingMatch & {rankScore?: number}
+
+export interface IRecordingMSList extends IRecordingList {
+    recordings: RecordingRankedMatched[]
+    freeText?: boolean
+}
 
 export const parseStageConfig = (data: MusicbrainzTransformerData | undefined = {}, logger: MaybeLogger = new MaybeLogger()): MusicbrainzTransformerDataStrong => {
 
@@ -195,6 +201,11 @@ export const parseStageConfig = (data: MusicbrainzTransformerData | undefined = 
         }
         config.fallbackArtistSearch = cleanFallback;
         logger.debug(`Will make an additional search using ${config.fallbackArtistSearch} method as fallback`);
+    }
+
+    if(data.fallbackFreeText === true) {
+        config.fallbackFreeText = true;
+        logger.debug('Will make an additional search with free text');
     }
 
     for(const [k,v] of Object.entries(config)) {
@@ -298,9 +309,9 @@ export default class MusicbrainzTransformer extends AtomicPartsTransformer<Exter
         }
     }
 
-    public async getTransformerData(play: PlayObject, stageConfig: MusicbrainzTransformerDataStage): Promise<IRecordingList> {
+    public async getTransformerData(play: PlayObject, stageConfig: MusicbrainzTransformerDataStage): Promise<IRecordingMSList> {
 
-        let results = await this.api.searchByRecording(play);
+        let results: IRecordingMSList = await this.api.searchByRecording(play);
 
         if(results === undefined) {
             throw new Error('results were unexpectedly undefined! API should have thrown...');
@@ -311,6 +322,12 @@ export default class MusicbrainzTransformer extends AtomicPartsTransformer<Exter
         }
 
         if(results.recordings.length === 0) {
+
+        const {
+            fallbackArtistSearch = this.defaults.fallbackArtistSearch,
+            fallbackFreeText = this.defaults.fallbackFreeText
+        } = stageConfig;
+
             // possibly the artist is incorrect (may be combined as one string)
             // if we have an album we can likely still get a decent hit w/o using artist
             if(play.data.album !== undefined && play.data.artists !== undefined && play.data.artists.length > 0) {
@@ -320,10 +337,6 @@ export default class MusicbrainzTransformer extends AtomicPartsTransformer<Exter
             // if no album or still have not found by track+album, and only one artist
             // then its likely artist string is combined
             if(results.recordings.length === 0 && play.data.artists !== undefined && play.data.artists.length === 1) {
-
-                const {
-                    fallbackArtistSearch = this.defaults.fallbackArtistSearch
-                } = stageConfig;
 
                 if(fallbackArtistSearch === 'naive') {
                     // try a naive split using any common delimiter found and use the first value as artist
@@ -346,17 +359,24 @@ export default class MusicbrainzTransformer extends AtomicPartsTransformer<Exter
                     // ...additionally, since MB hasn't found anything with single artist string its likely the artist name does not have a common delimiter as part of their proper name
                     // IE "Crosby, Stills, Nash & Young" is a proper artist name with delimiters included but "My Artist & My Feat Artists" is not
                     // so we split out all artists by all found delimiters
-                    const nativePlay = nativeParse(play, {titleClean: true, delimiters: DELIMITERS})
+                    const nativePlay = nativeParse(play, {titleClean: true, delimiters: DELIMITERS});
                     this.logger.debug('No matches found, trying search with aggressive native parsing');
                     results = await this.api.searchByRecording(nativePlay, {using: ['title','artist']});
                 }
+            }
+
+            if(results.recordings.length === 0 && fallbackFreeText) {
+                this.logger.debug('No matches found, trying search with freetext');
+                results = await this.api.searchByRecording(play, {freetext: true});
+                results.freeText = true;
+
             }
         }
 
         return results;
     }
 
-    public async handlePostFetch(play: PlayObject, transformData: IRecordingList, stageConfig: MusicbrainzTransformerDataStage): Promise<PlayObject> {
+    public async handlePostFetch(play: PlayObject, transformData: IRecordingMSList, stageConfig: MusicbrainzTransformerDataStage): Promise<PlayObject> {
         if(transformData.recordings.length === 0) {
             throw new SimpleError('No matches returned from Musicbrainz API');
         }
@@ -365,7 +385,7 @@ export default class MusicbrainzTransformer extends AtomicPartsTransformer<Exter
             score = this.defaults.score ?? 90
         } = stageConfig;
 
-        let filteredList = transformData.recordings.filter(x => x.score >= score);
+        let filteredList: RecordingRankedMatched[] = transformData.recordings.filter(x => x.score >= score);
         if(filteredList.length === 0) {
              throw new SimpleError(`All ${transformData.count} fetched matches had a score < ${score}, best match was ${transformData.recordings[0].score}`);
         }
@@ -483,7 +503,7 @@ export default class MusicbrainzTransformer extends AtomicPartsTransformer<Exter
 
 }
 
-export const filterByValidReleaseStatus = (list: IRecordingMatch[], stageConfig: MusicbrainzTransformerDataStage, logger: MaybeLogger = new MaybeLogger()) => {
+export const filterByValidReleaseStatus = <T extends IRecordingMatch[]>(list: T, stageConfig: MusicbrainzTransformerDataStage, logger: MaybeLogger = new MaybeLogger()) => {
     const {
         releaseStatusAllow = [],
         releaseStatusDeny = [],
@@ -510,7 +530,7 @@ export const filterByValidReleaseStatus = (list: IRecordingMatch[], stageConfig:
     || x.releases.length > 0);
 }
 
-export const filterByValidReleaseGroupPrimary = (list: IRecordingMatch[], stageConfig: MusicbrainzTransformerDataStage, logger: MaybeLogger = new MaybeLogger()) => {
+export const filterByValidReleaseGroupPrimary = <T extends IRecordingMatch[]>(list: T, stageConfig: MusicbrainzTransformerDataStage, logger: MaybeLogger = new MaybeLogger()) => {
     const {
         releaseGroupPrimaryTypeAllow = [],
         releaseGroupPrimaryTypeDeny = [],

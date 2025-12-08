@@ -34,7 +34,8 @@ export interface SearchOptions {
     escapeCharacters?: boolean
     removeCharacters?: boolean,
     using?: ('artist' | 'album' | 'title')[]
-    ttl?: string
+    ttl?: string,
+    freetext?: boolean
 }
 
 export class MusicbrainzApiClient extends AbstractApiClient {
@@ -91,7 +92,8 @@ export class MusicbrainzApiClient extends AbstractApiClient {
             escapeCharacters = true,
             removeCharacters = false,
             using = ['album','artist','title'],
-            ttl
+            ttl,
+            freetext
         } = options || {};
 
         const cacheKey = `mb-recSearch-${hashObject({...playContentInvariantTransform(play), using})}`;
@@ -136,25 +138,37 @@ export class MusicbrainzApiClient extends AbstractApiClient {
 
             let q = '';
 
-            if(query.recording !== undefined) {
-                q += `recording:"${query.recording}"`;
-            }
-            if(query.artist !== undefined) {
-                if(q !== '') {
-                    q += ' AND ';
+            if(freetext) {
+
+                q += `${query.recording ?? ''} `;
+                if(query.artist !== undefined) {
+                    q += `${(Array.isArray(query.artist) ? query.artist : [query.artist]).join(' ')} `;
                 }
-                if(Array.isArray(query.artist) && query.artist.length > 1) {
-                    q += `(artist:(${query.artist.map(x => `"${x}"`).join(' AND ')})) OR (artist:(${query.artist.map(x => `"${x}"`).join(' OR ')}))`
-                } else {
-                    q += `artist:"${Array.isArray(query.artist) ? query.artist[0] : query.artist}"`;
+                q += `${query.release ?? ''}`
+                
+            } else {
+                if(query.recording !== undefined) {
+                    q += `recording:"${query.recording}"`;
+                }
+                if(query.artist !== undefined) {
+                    if(q !== '') {
+                        q += ' AND ';
+                    }
+                    if(Array.isArray(query.artist) && query.artist.length > 1) {
+                        q += `(artist:(${query.artist.map(x => `"${x}"`).join(' AND ')})) OR (artist:(${query.artist.map(x => `"${x}"`).join(' OR ')}))`
+                    } else if(query.artist !== undefined) {
+                        q += `artist:"${Array.isArray(query.artist) ? query.artist[0] : query.artist}"`;
+                    }
+                }
+                if(query.release !== undefined) {
+                    if(q !== '') {
+                        q += ' AND ';
+                    }
+                    q += `release:"${query.release}"`
                 }
             }
-            if(query.release !== undefined) {
-                if(q !== '') {
-                    q += ' AND ';
-                }
-                q += `release:"${query.release}"`
-            }
+
+
             this.logger.debug(`Search Query => ${q}`);
 
             return mb.search('recording', {

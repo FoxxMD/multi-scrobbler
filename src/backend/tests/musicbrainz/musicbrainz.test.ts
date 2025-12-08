@@ -5,7 +5,7 @@ import asPromised from 'chai-as-promised';
 import { after, before, describe, it } from 'mocha';
 import { initMemoryCache } from "../../common/Cache.js";
 import { Cacheable } from "cacheable";
-import MusicbrainzTransformer from "../../common/transforms/MusicbrainzTransformer.js";
+import MusicbrainzTransformer, { MusicbrainzTransformerDataStage } from "../../common/transforms/MusicbrainzTransformer.js";
 import { PlayObject } from "../../../core/Atomic.js";
 import { projectDir } from '../../common/index.js';
 import path from 'path';
@@ -32,7 +32,7 @@ const mbTransformer = new MusicbrainzTransformer({
         ttl: '1ms'
     }
 }, {
-    logger: loggerTest,
+    logger: loggerDebug,
     clientCache: memorycache(),
     cache: memorycache()
 })
@@ -136,6 +136,33 @@ describe('Musicbrainz API', function () {
             type: "musicbrainz",
             searchWhenMissing: ["artists", "album", "title"]
         });
+        expect(res.recordings).to.exist;
+        expect(res.recordings).to.not.be.empty;
+    });
+
+        it('psuedo-releases', async function () {
+
+        //this.timeout(500000);
+        
+        const play: PlayObject = {
+            data: {
+                track: "Lagtrain (feat. 宵崎奏, 暁山瑞希 & MEIKO)",
+                artists: ["Nightcord at 25:00"],
+                album: "Nightcord at 25:00 SEKAI ALBUM vol.3"
+            },
+            meta: {}
+        }
+        await mbTransformer.tryInitialize();
+
+        const stageConfig: MusicbrainzTransformerDataStage = {
+            type: "musicbrainz",
+            searchWhenMissing: ["artists", "album", "title"],
+            fallbackArtistSearch: "native",
+            fallbackFreeText: true
+        };
+
+        const res = await mbTransformer.getTransformerData(play, stageConfig);
+        const postFetch = mbTransformer.handlePostFetch(play, res, stageConfig);
         expect(res.recordings).to.exist;
         expect(res.recordings).to.not.be.empty;
     });
