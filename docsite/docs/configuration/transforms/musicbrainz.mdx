@@ -155,7 +155,7 @@ The corresponding [Musicbrainz Recording](https://musicbrainz.org/release/85bf28
 
 </details>
 
-If a normal search using all the fields mentioned above does not return any matches Multi-scrobbler can try two additional searches with modified queries:
+**If a normal search using all the fields mentioned above does not return any matches Multi-scrobbler can try additional searches with modified queries:**
 
 #### Album Only
 
@@ -263,6 +263,35 @@ Then Multi-scrobbler will attempt to extract multiple artists from your artist a
 
     </TabItem>
 </Tabs>
+
+#### Free Text
+
+If both [Album Only](#album-only) and [Artist Extraction](#artist-extraction) searches fail to return results you can additionally enable **Free Text** search. This will search Musicbrainz for **all** text of your Scrobble data artist/title/album, without constraint. **This is not automatic. You must set `fallbackFreeTextSeach: true` to enable this additional search.**
+
+:::warning
+
+Free text search is **unconstrained** which means that Musicbrainz will match text in **any** part of a Recording (artist, release, or recording field), regardless of where it is found. This may lead to results that are unexpected and undesired.
+
+If you know your Source's Play data is well organized you should not enable this. Free Text search should only be used if:
+
+* your music is not well organized or
+* there may be many alternative titles/artists for the music you listen to (such as with [psuedo-releases](https://wiki.musicbrainz.org/Release#Status))
+* you can tolerate that matches may not be accurate for releases.
+  * Generally, if you keep [score](#score) high then matched releases should *at least* be the right artist or what you would expect within a reason, as a match. The release may not be the one you actually listened to but it would be "close enough".
+
+:::
+
+[Stage Configuration](/configuration/transforms#configuring-stages) example:
+
+```json5
+// ...
+"defaults": {
+    "releaseStatusPriority": ["official"],
+    // ...
+    "fallbackArtistSearch": "native",
+    "fallbackFreeTextSearch": true
+  }
+```
 
 ### Refining
 
