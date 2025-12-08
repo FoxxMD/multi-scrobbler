@@ -142,13 +142,13 @@ describe('Musicbrainz API', function () {
 
         it('psuedo-releases', async function () {
 
-        //this.timeout(500000);
+        this.timeout(3500);
         
         const play: PlayObject = {
             data: {
-                track: "Lagtrain (feat. 宵崎奏, 暁山瑞希 & MEIKO)",
-                artists: ["Nightcord at 25:00"],
-                album: "Nightcord at 25:00 SEKAI ALBUM vol.3"
+                track: "HIBANA - Reloaded - (feat. 星乃一歌 & Hatsune Miku)",
+                artists: ["Leo/need"],
+                album: "Leo / need SEKAI ALBUM Vol.1"
             },
             meta: {}
         }
