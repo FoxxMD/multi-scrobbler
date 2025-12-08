@@ -119,6 +119,8 @@ const configDir = process.env.CONFIG_DIR || path.resolve(projectDir, `./config`)
         const notifiers = new Notifiers(root.get('notifierEmitter'), root.get('clientEmitter'), root.get('sourceEmitter'), root.get('logger')); //root.get('notifiers');
         await notifiers.buildWebhooks(webhooks);
 
+        await root.items.transformerManager.registerFromEnv();
+        await root.items.transformerManager.registeryDefaults();
         await root.items.transformerManager.initTransformers();
 
         /*

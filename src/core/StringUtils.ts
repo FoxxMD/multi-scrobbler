@@ -6,11 +6,15 @@ import timezone from "dayjs/plugin/timezone.js";
 import utc from "dayjs/plugin/utc.js";
 import {
     AmbPlayObject,
+    PlayData,
+    PlayObject,
     SCROBBLE_TS_SOC_END,
     SCROBBLE_TS_SOC_START,
     ScrobbleTsSOC,
     TrackStringOptions
 } from "./Atomic.js";
+import { DELIMETERS_REGEX } from "../backend/common/infrastructure/Atomic.js";
+import { parseRegexSingle } from "@foxxmd/regex-buddy-core";
 
 dayjs.extend(utc)
 dayjs.extend(isBetween);
@@ -132,6 +136,47 @@ export const buildTrackString = <T = string>(playObj: AmbPlayObject, options: Tr
     return reducer(strParts); //strParts.join(' ');
 }
 
+export const buildPlayHumanDiffable = (play: PlayData, options?: {expandMeta?: boolean}): string => {
+    const {
+        expandMeta = false
+    } = options || {};
+
+    let meta: string[] = [];
+    if(play.meta !== undefined) {
+        for(const [metaType,metaObject] of Object.entries(play.meta)) {
+            for(const [metaKey, metaValue] of Object.entries(metaObject)) {
+                if(metaValue === undefined) {
+                    continue;
+                }
+                const id  = `${metaType}-${metaKey}`;
+                if(expandMeta) {
+                    meta.push(`${id}: ${metaValue}`);
+                } else {
+                    meta.push(id);
+                }
+            }
+        }
+    }
+    let metaStr = '(None)';
+    if(meta.length > 0) {
+        if(expandMeta) {
+            metaStr = `\n${meta.map(x => `* ${x}`).join('\n')}`;
+        } else {
+            metaStr = meta.join(', ');
+        }
+    }
+    const parts: string[] = [
+        `${'Title'.padEnd(13)}: ${play.track ?? '(None)'}`,
+        `${'Artists'.padEnd(13)}: ${play.artists === undefined || play.artists.length === 0 ? '(None)' : play.artists.join(', ')}`,
+        `${'Album Artists'.padEnd(13)}: ${play.albumArtists === undefined || play.albumArtists.length === 0 ? '(None)' : play.albumArtists.join(', ')}`,
+        `${'Album'.padEnd(13)}: ${play.album ?? '(None)'}`,
+        `${'Meta'.padEnd(13)}: ${metaStr}`
+    ];
+
+    const final = parts.join('\n');
+    return final;
+} 
+
 export const slice = (str: string, index: number, count: number, add?: string): string => {
     // We cannot pass negative indexes directly to the 2nd slicing operation.
     if (index < 0) {
@@ -161,6 +206,22 @@ export const splitByFirstFound = <T>(str: any, delims = [','], onNotAStringVal: 
         if(split.length > 1) {
             return split;
         }
+    }
+    return [str];
+}
+
+/**
+ * Split a string-ish variable by a regex and return the first actually split array or default to returning the string as the first element.
+ *
+ * Returns empty array, or user defined value, if variable is undefined / null / not a string / or an empty string.
+ * */
+export const splitByFirstRegexFound = <T>(str: any, onNotAStringVal: T, delimsReg: RegExp = DELIMETERS_REGEX): string[] | T => {
+    if (str === undefined || str === null || typeof str !== 'string' || str.trim() === '') {
+        return onNotAStringVal;
+    }
+    const res = parseRegexSingle(delimsReg, str);
+    if (res !== undefined) {
+        return [str.slice(0, res.index - 1), str.slice(res.index + 1)];
     }
     return [str];
 }

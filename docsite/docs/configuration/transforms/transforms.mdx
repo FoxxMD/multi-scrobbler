@@ -346,11 +346,14 @@ Each [Stage](#stage) may specify whether it should apply the resulting transform
       "when": {/* ... */}, // will only apply changes to Play artists if "when" is satisfied
     /* ... */
     },
-    "album": true // will always apply changes to Play album
+    "albumArtists": true, // will always apply changes to Play album artists
+    "album": true, // will always apply changes to Play album
+    "duration": true, // will always apply changes to Play duration (length of track)
+    "meta": true, // will always apply changes to Play meta (MBIDs, spotify links, etc...)
 }
 ```
 
-The actual value of each property may be different for each Stage. Check the docs for the Stage you want to use to see its usage of `title`, `artists`, and `album`.
+The actual value of each property may be different for each Stage. Check the docs for the Stage you want to use to see its usage of each.
 
 Generically, though, each property may be some value **or** an object combining a [`when` condition](#conditional-modification) and that value.
 
@@ -366,7 +369,7 @@ Specifying these Rules is **not** the same as [configuring the Stage](#configuri
 
 [Stages](#stage) within a [Hook](#hook), and [Rules](#stage-rules) within each Stage, support a `when` object for testing **if they should be run.**
 
-The `when` object may have propertes for `artist`, `title` and/or `album`. Each property may be a string or regular expression.  The value of the property is used to match the **pre-transformation** values from Play data.
+The `when` object may have propertes for rule. Each property may be a string or regular expression.  The value of the property is used to match the **pre-transformation** values from Play data.
 
 All parts of an individual `when` clause must test true to "pass" but if **any** `when` clauses pass the Stage/Rule is processed.
 
@@ -398,7 +401,7 @@ All parts of an individual `when` clause must test true to "pass" but if **any**
 
 More succinctly:
 
-* All parts (`artist` `album` `title`) of a `when` are `AND` conditions
+* All parts (`artist` `album` `albumArtist` `duration` `meta` `title`) of a `when` are `AND` conditions
 * All part-objects in the `when` array are `OR` conditions
 
 <details>

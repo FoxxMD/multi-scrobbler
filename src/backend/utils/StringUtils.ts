@@ -426,3 +426,8 @@ type HashFunction = (obj: object) => string;
 const defaultHasher = hasher();
 const defaultHashFunc: HashFunction = (obj) => defaultHasher.hash(obj);
 export const hashObject = (obj: object, h: HashFunction = defaultHashFunc): string => h(obj);
+
+const NON_ALPHANUMWHITESPACE_CHARS: RegExp = new RegExp(/[^a-zA-Z\d\s]/);
+export const hasNonAlphanumericChars = (str: string): boolean => {
+    return NON_ALPHANUMWHITESPACE_CHARS.test(str);
+}

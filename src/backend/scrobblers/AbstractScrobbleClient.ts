@@ -56,7 +56,8 @@ import { AsyncTask, SimpleIntervalJob, Task, ToadScheduler } from "toad-schedule
 import { MSCache } from "../common/Cache.js";
 import { getRoot } from "../ioc.js";
 import { rehydratePlay } from "../utils/CacheUtils.js";
-import { findAsyncSequential } from "../utils/AsyncUtils.js";
+import { findAsyncSequential, staggerMapper } from "../utils/AsyncUtils.js";
+import pMap from "p-map";
 
 type PlatformMappedPlays = Map<string, {play: PlayObject, source: SourceIdentifier}>;
 type NowPlayingQueue = Map<string, PlatformMappedPlays>;
@@ -474,8 +475,8 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
 
         const playObj = await this.transformPlay(playObjPre, TRANSFORM_HOOK.candidate);
 
-        const dtInvariantMatches = (await Promise.all(this.scrobbledPlayObjs.data
-            .map(async x => ({...x, play: await this.transformPlay(x.play, TRANSFORM_HOOK.existing)}))))
+        const sm = staggerMapper<ScrobbledPlayObject, ScrobbledPlayObject>({concurrency: 2});
+        const dtInvariantMatches = (await pMap(this.scrobbledPlayObjs.data, sm(async x => ({...x, play: await this.transformPlay(x.play, TRANSFORM_HOOK.existing)})), {concurrency: 2}))
             .filter(x => playObjDataMatch(playObj, x.play));
 
         if (dtInvariantMatches.length === 0) {
