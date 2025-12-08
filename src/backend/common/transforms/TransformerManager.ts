@@ -7,9 +7,11 @@ import { PlayObject } from "../../../core/Atomic.js";
 import { isStageTyped } from "../../utils/PlayTransformUtils.js";
 import { MSCache } from "../Cache.js";
 import NativeTransformer from "./NativeTransformer.js";
-import MusicbrainzTransformer, { MusicbrainzTransformerConfig } from "./MusicbrainzTransformer.js";
+import MusicbrainzTransformer, { configFromEnv, MusicbrainzTransformerConfig } from "./MusicbrainzTransformer.js";
 import { AsyncLocalStorage } from 'node:async_hooks';
 import { nanoid } from "nanoid";
+import { SimpleError } from "../errors/MSErrors.js";
+import { toHaveStyle } from "@testing-library/jest-dom/matchers.js";
 
 export default class TransformerManager {
 
@@ -59,6 +61,27 @@ export default class TransformerManager {
         }
         this.transformers.set(config.type, [...transformers, t]);
         this.logger.verbose(`${config.type} transformer with name '${tName}' registered`);        
+    }
+
+    public async registeryDefaults() {
+        if(!this.hasTransformerType('user')) {
+            this.register({type: 'user', name: 'MSDefault'});
+        }
+        if(!this.hasTransformerType('native')) {
+            this.register({type: 'native', name: 'MSDefault'});
+        }
+    }
+
+    public async registerFromEnv() {
+        try {
+            const mbConfig = configFromEnv(this.logger);
+            this.register(mbConfig);
+        } catch (e) {
+            if(e instanceof SimpleError) {
+                this.logger.error(`Unable to build Musicbrainz Transformer from ENV: ${e.message}`);
+            }
+            this.logger.error(new Error('Unable to build Musicbrainz Transformer from ENV', {cause: e}));
+        }
     }
 
     public async initTransformers() {

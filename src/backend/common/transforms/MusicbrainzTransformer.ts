@@ -643,3 +643,72 @@ export const rankReleasesByPriority = (list: IRecordingMatch[], stageConfig: Mus
     }
     return rankedList;
 };
+
+export const DEFAULTS_SENSIBLE = {
+    // use official release over anything else
+    "releaseStatusPriority": ["official"],
+    // prefer album, then single, then ep
+    "releaseGroupPrimaryTypePriority": ["album", "single", "ep"],
+    // prefer worldwide release
+    "releaseCountryPriority": ["XW"]
+}
+export const DEFAULTS_NATIVE: {fallbackArtistSearch: "native"} = {
+    "fallbackArtistSearch": "native"
+}
+
+export const DEFAULTS_AGGRESSIVE = {
+    "fallbackFreeText": true
+}
+
+export const configFromEnv = (logger: MaybeLogger = new MaybeLogger()) => {
+    const mbEnv = process.env.MB_PRESETS;
+    const mbContact = process.env.MB_CONTACT;
+    let mbConfig: MusicbrainzTransformerConfig;
+    if (mbEnv !== undefined && mbEnv.trim() !== '') {
+        if (mbContact === undefined || mbContact.trim() === '') {
+            throw new SimpleError('Must provide a contact url/email for musicbrainz ENV present!');
+        }
+        mbConfig = {
+            type: 'musicbrainz',
+            name: 'MSDefault',
+        data: {
+                apis: [
+                    {
+                        contact: mbEnv
+                    }
+                ]
+            },
+            defaults: {
+
+            }
+        }
+        const presets = mbEnv.split(',').map(x => x.trim().toLocaleLowerCase());
+        for (const p of presets) {
+            switch (p) {
+                case 'default':
+                    break;
+                case 'sensible':
+                    mbConfig.defaults = {
+                        ...mbConfig.defaults,
+                        ...DEFAULTS_SENSIBLE
+                    }
+                    break;
+                case 'native':
+                    mbConfig.defaults = {
+                        ...mbConfig.defaults,
+                        ...DEFAULTS_NATIVE
+                    }
+                    break;
+                case 'aggressive':
+                    mbConfig.defaults = {
+                        ...mbConfig.defaults,
+                        ...DEFAULTS_AGGRESSIVE
+                    }
+                    break;
+            }
+        }
+        logger.debug(`Using presets: ${presets.join(',')}`);
+    }
+
+    return mbConfig;
+}

@@ -20,7 +20,7 @@ import { LastfmSourceConfig } from "../common/infrastructure/config/source/lastf
 import { ListenBrainzSourceConfig } from "../common/infrastructure/config/source/listenbrainz.js";
 import { MopidySourceConfig } from "../common/infrastructure/config/source/mopidy.js";
 import { MusicCastData, MusicCastSourceConfig } from "../common/infrastructure/config/source/musiccast.js";
-import { IcecastData, IcecastSourceConfig } from "../common/infrastructure/config/source/icecast.js";
+import { IcecastData, IcecastSourceConfig, IcecastSourceOptions } from "../common/infrastructure/config/source/icecast.js";
 import { MPDSourceConfig } from "../common/infrastructure/config/source/mpd.js";
 import { MPRISData, MPRISSourceConfig } from "../common/infrastructure/config/source/mpris.js";
 import { MusikcubeData, MusikcubeSourceConfig } from "../common/infrastructure/config/source/musikcube.js";
@@ -73,6 +73,8 @@ import TealfmSource from './TealfmSource.js';
 import { TealSourceConfig } from '../common/infrastructure/config/source/tealfm.js';
 import { RockskySourceConfig } from '../common/infrastructure/config/source/rocksky.js';
 import RockskySource from './RockskySource.js';
+import { CommonSourceOptions } from '../common/infrastructure/config/source/index.js';
+import { ExternalMetadataTerm, PlayTransformHooks, PlayTransformOptions } from '../common/infrastructure/Transform.js';
 
 type groupedNamedConfigs = {[key: string]: ParsedConfig[]};
 
@@ -339,7 +341,8 @@ export default class ScrobbleSources {
                             source: 'ENV',
                             mode: 'single',
                             configureAs: defaultConfigureAs,
-                            data: s as SpotifySourceData
+                            data: s as SpotifySourceData,
+                            options: transformPresetEnv('SPOTIFY')
                         })
                     }
                     break;
@@ -358,7 +361,7 @@ export default class ScrobbleSources {
                             source: 'ENV',
                             mode: 'single',
                             configureAs: defaultConfigureAs,
-                            data: t
+                            data: t,
                         })
                     }
                     break;
@@ -381,7 +384,8 @@ export default class ScrobbleSources {
                             source: 'ENV',
                             mode: 'single',
                             configureAs: defaultConfigureAs,
-                            data: p
+                            data: p,
+                            options: transformPresetEnv('PLEX')
                         })
                     }
                     break;
@@ -398,7 +402,8 @@ export default class ScrobbleSources {
                             source: 'ENV',
                             mode: 'single',
                             configureAs: defaultConfigureAs,
-                            data: sub as SubsonicData
+                            data: sub as SubsonicData,
+                            options: transformPresetEnv('SUBSONIC')
                         })
                     }
                     break;
@@ -425,7 +430,8 @@ export default class ScrobbleSources {
                             source: 'ENV',
                             mode: 'single',
                             configureAs: defaultConfigureAs,
-                            data: j
+                            data: j,
+                            options: transformPresetEnv('JELLYFIN')
                         })
                     }
                     break;
@@ -448,7 +454,8 @@ export default class ScrobbleSources {
                             source: 'ENV',
                             mode: 'single',
                             configureAs: defaultConfigureAs,
-                            data: d as DeezerData
+                            data: d as DeezerData,
+                            options: transformPresetEnv('DEEZER')
                         });
                     }
                     break;
@@ -465,7 +472,8 @@ export default class ScrobbleSources {
                             source: 'ENV',
                             mode: 'single',
                             configureAs: defaultConfigureAs,
-                            data: mp as MPRISData
+                            data: mp as MPRISData,
+                            options: transformPresetEnv('MPRIS')
                         });
                     }
                     break;
@@ -486,7 +494,8 @@ export default class ScrobbleSources {
                             source: 'ENV',
                             mode: 'single',
                             configureAs: defaultConfigureAs,
-                            data: lze as ListenbrainzEndpointData
+                            data: lze as ListenbrainzEndpointData,
+                            options: transformPresetEnv('LZE')
                         });
                     }
                     break;
@@ -502,7 +511,8 @@ export default class ScrobbleSources {
                             source: 'ENV',
                             mode: 'single',
                             configureAs: defaultConfigureAs,
-                            data: lfme as LastFMEndpointData
+                            data: lfme as LastFMEndpointData,
+                            options: transformPresetEnv('LFM')
                         });
                     }
                     break;
@@ -519,9 +529,9 @@ export default class ScrobbleSources {
                             mode: 'single',
                             configureAs: defaultConfigureAs,
                             data: icecast as IcecastData,
-                            options: {
+                            options: transformPresetEnv<IcecastSourceOptions>('ICECAST', {
                                 systemScrobble: parseBool(icecast.scrobbleOnStart)
-                            }
+                            })
                         });
                     }
                     break;
@@ -538,7 +548,8 @@ export default class ScrobbleSources {
                             source: 'ENV',
                             mode: 'single',
                             configureAs: defaultConfigureAs,
-                            data: jr as JRiverData
+                            data: jr as JRiverData,
+                            options: transformPresetEnv('JRIVER')
                         });
                     }
                     break;
@@ -555,7 +566,8 @@ export default class ScrobbleSources {
                             source: 'ENV',
                             mode: 'single',
                             configureAs: defaultConfigureAs,
-                            data: ko as KodiData
+                            data: ko as KodiData,
+                            options: transformPresetEnv('KODI')
                         });
                     }
                     break;
@@ -575,7 +587,8 @@ export default class ScrobbleSources {
                             data: {
                                 blacklist: ws.blacklist !== undefined ? ws.blacklist.split(',') : [],
                                 whitelist: ws.whitelist !== undefined ? ws.whitelist.split(',') : [],
-                            }
+                            },
+                            options: transformPresetEnv('WS')
                         });
                     }
                     break;
@@ -599,7 +612,8 @@ export default class ScrobbleSources {
                                 whitelistDevices: cc.whitelistDevices !== undefined ? cc.whitelistDevices.split(',') : [],
                                 blacklistApps: cc.blacklistApps !== undefined ? cc.blacklistApps.split(',') : [],
                                 whitelistApps: cc.whitelistApps !== undefined ? cc.whitelistApps.split(',') : [],
-                            }
+                            },
+                            options: transformPresetEnv('CC')
                         });
                     }
                     break;
@@ -614,7 +628,8 @@ export default class ScrobbleSources {
                             source: 'ENV',
                             mode: 'single',
                             configureAs: defaultConfigureAs,
-                            data: musecase as MusicCastData
+                            data: musecase as MusicCastData,
+                            options: transformPresetEnv('MCAST')
                         });
                     }
                     break;
@@ -630,7 +645,8 @@ export default class ScrobbleSources {
                             source: 'ENV',
                             mode: 'single',
                             configureAs: defaultConfigureAs,
-                            data: mc as MusikcubeData
+                            data: mc as MusikcubeData,
+                            options: transformPresetEnv('MC')
                         });
                     }
                     break;
@@ -646,7 +662,8 @@ export default class ScrobbleSources {
                             source: 'ENV',
                             mode: 'single',
                             configureAs: defaultConfigureAs,
-                            data: vlc as VLCData
+                            data: vlc as VLCData,
+                            options: transformPresetEnv('VLC')
                         });
                     }
                     break;
@@ -664,7 +681,8 @@ export default class ScrobbleSources {
                             source: 'ENV',
                             mode: 'single',
                             configureAs: defaultConfigureAs,
-                            data: ytm as YTMusicData
+                            data: ytm as YTMusicData,
+                            options: transformPresetEnv('YTM')
                         });
                     }
                     break;
@@ -683,7 +701,8 @@ export default class ScrobbleSources {
                             source: 'ENV',
                             mode: 'single',
                             configureAs: defaultConfigureAs,
-                            data: azura as unknown as AzuracastData
+                            data: azura as unknown as AzuracastData,
+                            options: transformPresetEnv('AZURA')
                         });
                     }
                     break;                    
@@ -910,4 +929,33 @@ export default class ScrobbleSources {
         this.sources.push(newSource);
         newSource.logger.info(`Source Added from ${source}`);
     }
+}
+
+const transformPresetEnv = <T extends CommonSourceOptions = CommonSourceOptions>(prefix: string, existing: T = undefined): undefined | T => {
+
+    const env = process.env[`${prefix}_TRANSFORMS`];
+    if(env === undefined || env.trim() === '') {
+        return existing;
+    }
+
+    const popts: PlayTransformHooks<ExternalMetadataTerm> = {
+        preCompare: [
+        ]
+    }
+    for(const p of env.split(',').map(x => x.trim().toLocaleLowerCase())) {
+        switch(p) {
+            case 'native':
+                popts.preCompare.push({type: 'native'});
+                break;
+            case 'musicbrainz':
+                popts.preCompare.push({type: 'musicbrainz'});
+                break;
+        }
+    }
+
+    // @ts-ignore
+    return {
+        ...(existing || {}),
+        playTransform: popts
+    };
 }

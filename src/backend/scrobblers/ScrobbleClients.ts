@@ -25,6 +25,8 @@ import TealScrobbler from './TealfmScrobbler.js';
 import { TealClientConfig } from '../common/infrastructure/config/client/tealfm.js';
 import RockskyScrobbler from './RockskyScrobbler.js';
 import { RockSkyClientConfig } from '../common/infrastructure/config/client/rocksky.js';
+import { CommonClientOptions } from '../common/infrastructure/config/client/index.js';
+import { ExternalMetadataTerm, PlayTransformHooks } from '../common/infrastructure/Transform.js';
 
 type groupedNamedConfigs = {[key: string]: ParsedConfig[]};
 
@@ -192,7 +194,8 @@ export default class ScrobbleClients {
                             data: {
                                 url,
                                 apiKey
-                            }
+                            },
+                            options: transformPresetEnv('MALOJA')
                         })
                     }
                     break;
@@ -210,7 +213,8 @@ export default class ScrobbleClients {
                             source: 'ENV',
                             mode: 'single',
                             configureAs: 'client',
-                            data: {...lfm, redirectUri: lfm.redirectUri ?? joinedUrl(this.localUrl, 'lastfm/callback').toString()}
+                            data: {...lfm, redirectUri: lfm.redirectUri ?? joinedUrl(this.localUrl, 'lastfm/callback').toString()},
+                            options: transformPresetEnv('LASTFM')
                         })
                     }
                     break;
@@ -227,7 +231,8 @@ export default class ScrobbleClients {
                             source: 'ENV',
                             mode: 'single',
                             configureAs: 'client',
-                            data: lz
+                            data: lz,
+                            options: transformPresetEnv('LZ')
                         })
                     }
                     break;
@@ -244,7 +249,8 @@ export default class ScrobbleClients {
                             source: 'ENV',
                             mode: 'single',
                             configureAs: 'client',
-                            data: koit
+                            data: koit,
+                            options: transformPresetEnv('KOITO')
                         })
                     }
                     break;
@@ -261,7 +267,8 @@ export default class ScrobbleClients {
                             source: 'ENV',
                             mode: 'single',
                             configureAs: 'client',
-                            data: teal
+                            data: teal,
+                            options: transformPresetEnv('TEALFM')
                         })
                     }
                     break;
@@ -277,7 +284,8 @@ export default class ScrobbleClients {
                             source: 'ENV',
                             mode: 'single',
                             configureAs: 'client',
-                            data: rocksky
+                            data: rocksky,
+                            options: transformPresetEnv('ROCKSKY')
                         })
                     }
                     break;
@@ -467,4 +475,33 @@ ${sources.join('\n')}`);
             }
         }
     }
+}
+
+const transformPresetEnv = <T extends CommonClientOptions = CommonClientOptions>(prefix: string, existing: T = undefined): undefined | T => {
+
+    const env = process.env[`${prefix}_TRANSFORMS`];
+    if(env === undefined || env.trim() === '') {
+        return existing;
+    }
+
+    const popts: PlayTransformHooks<ExternalMetadataTerm> = {
+        preCompare: [
+        ]
+    }
+    for(const p of env.split(',').map(x => x.trim().toLocaleLowerCase())) {
+        switch(p) {
+            case 'native':
+                popts.preCompare.push({type: 'native'});
+                break;
+            case 'musicbrainz':
+                popts.preCompare.push({type: 'musicbrainz'});
+                break;
+        }
+    }
+
+    // @ts-ignore
+    return {
+        ...(existing || {}),
+        playTransform: popts
+    };
 }
