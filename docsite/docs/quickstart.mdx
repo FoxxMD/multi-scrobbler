@@ -10,8 +10,8 @@ This guide will get you up and running with multi-scrobbler using [Docker](https
 
 * the dashboard served on port `9078` of a host machine which has an IP of `192.168.0.100`
 * data saved to the same directory as the `docker-compose.yml` file
-* multi-scrobbler monitoring [Spotify](/configuration/sources/spotify) and/or [Jellyfin](/configuration/sources/jellyfin) for listening activity
-* multi-scrobbler scrobbling to [Lastfm](/configuration/clients/lastfm) and/or [Maloja](/configuration/clients/maloja)
+* multi-scrobbler monitoring [Spotify](/configuration/sources/spotify), [Jellyfin](/configuration/sources/jellyfin), Navidrome, [Plex](/configuration/sources/plex), and/or [Last.fm](/configurations/sources/lastfm) for listening activity
+* multi-scrobbler scrobbling to [Lastfm](/configuration/clients/lastfm), [Maloja](/configuration/clients/maloja), and/or [Koito](/configuration/clients/koito)
 
 :::note
 
@@ -71,6 +71,78 @@ services:
         ```
 
         Later, after [starting multi-scrobbler](#start-multi-scrobbler), visit the dashboard at `http://192.168.0.100:9078` and click **(Re)authenticate** on the Spotify card to authorize multi-scrobbler to use your account. Monitoring will begin automatically after authorization is complete.
+    </TabItem>
+    <TabItem value="navidrome" label="Navidrome">
+        Navidrome supports [scrobbling using Listenbrainz](https://www.navidrome.org/docs/usage/scrobbling/#listenbrainz). You should use this, rather than a [Subsonic Source](/configuration/sources/subsonic) because Navidrome's internal scrobbling functionality supports providing multiple artists and offline scrobbling while the Subsonic Source does not.
+
+        To setup Navidrome to scrobble to multi-scrobbler via the Listenbrainz option:
+
+        #### Create Listenbrainz Endpoint Source
+
+        Create a new [Listenbrainz Endpoint](/configuration/sources/listenbrainz-endpoint) [Source](/configuration/sources) in multi-scrobbler by creating a token to use with the endpoint via [ENV Config](/configuration?configType=env#configuration-types) in `environment` section in the [`docker-compose.yml` you created.](#create-docker-compose-file)
+
+        ```yaml title="~/msData/docker-compose.yml"
+        - LZE_TOKEN=myCoolToken
+        ```
+
+        The token can be anything. [(Re)start multi-scrobbler](#start-multi-scrobbler) after making this change.
+
+        #### Configure Navidrome
+
+        Set the [**ListenBrainz.BaseURL**](https://www.navidrome.org/docs/usage/configuration-options/#advanced-configuration) (env `ND_LISTENBRAINZ_BASEURL`) to `http://myMultiScrobblerIP:9078/1/` in your Navidrome installation. Assuming you are using the [docker installation](https://www.navidrome.org/docs/installation/docker/), modify `environment` to add:
+
+        ```yaml title="docker-compose.yml"
+        - ND_LISTENBRAINZ_BASEURL=http://192.168.0.100:9078/1/
+        ```
+
+        Restart Navidrome after making this change. Then, [follow the directions for enabling Listenbrainz scrobbling in Navidrome](https://www.navidrome.org/docs/usage/scrobbling/#listenbrainz). The **Listenbrainz user token** is the token you created for `LZE_TOKEN` earlier.
+    </TabItem>
+    <TabItem value="plex" label="Plex">
+        Find your [**Plex Token**](https://support.plex.tv/articles/204059436-finding-an-authentication-token-x-plex-token/) and make note of the **URL** and **Port** used to connect to your Plex instance.
+
+        Add these values to the `environment` section in the [`docker-compose.yml` you created.](#create-docker-compose-file)
+
+        ```yaml title="~/msData/docker-compose.yml"
+        - PLEX_URL=http://192.168.0.101:32400
+        - PLEX_TOKEN=6c0ihz8j7__f5r18oa0zm8
+        # optional, restrict scrobbling to a list of comma-delimited users
+        #- PLEX_USERS_ALLOW=myPlexUsername
+        ```
+
+        [Restart multi-scrobbler](#start-multi-scrobbler) to create the new Source. You may wish to refer to the [User and Library defaults/filtering](/configuration/sources/plex) in the Plex Source docs for a more granular setup.
+    </TabItem>
+    <TabItem value="lastfm" label="Last.fm">
+        If you are already scrobbling to Last.fm and wish to mirror your scrobbling activity to one or more other [Clients](#setup-clients), use this Source.
+        
+        If, instead, you want to scrobble **from** multi-scrobbler **to** Last.fm then see the Last.fm tab in the [Setup Clients](#setup-clients) section below.
+
+        [Register for an API account at Last.fm.](https://www.last.fm/api/account/create)
+
+        Use the following for **Callback URL**:
+
+        ```
+        http://192.168.0.100:9078/lastfm/callback
+        ```
+
+        After account creation make note of the **Api Key** and **Secret** that are displayed.
+
+        Create a new [File](/configuration?configType=file#configuration-types) named `lastfm.json` in the `./config` directory that will be used with your [`docker-compose.yml` stack](#create-docker-compose-file) and copy the below contents, replacing placeholders with the data you got from Last.fm API account creation:
+
+        ```json title="~/msData/config/lastfm.json"
+        [
+          {
+            "name": "myLastFmSource",
+            "configureAs": "source",
+            "data": {
+              "apiKey": "MY_API_KEY_PLACEDHOLDER",
+              "secret": "MY_SECRET_PLACEHOLDER",
+              "redirectUri": "http://192.168.0.100:9078/lastfm/callback"
+            }
+          }
+        ]
+        ```
+
+        Later, after [starting multi-scrobbler](#start-multi-scrobbler), visit the dashboard at `http://192.168.0.100:9078` and click **(Re)authenticate** on the **Last.fm (Source)** card to authorize multi-scrobbler to use your account. Monitoring will begin automatically after authorization is complete.
     </TabItem>
 </Tabs>
 
