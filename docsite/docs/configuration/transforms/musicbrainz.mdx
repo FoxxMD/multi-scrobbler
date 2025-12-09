@@ -124,7 +124,7 @@ You must **always** include the `MB_CONTACT` ENV to [identify your application](
 MB_CONTACT=contact@mydomain.com
 ```
 
-To configure [stage defaults](http://localhost:3000/docs/configuration/transforms/musicbrainz/#stage-configuration) use `MB_PRESETS` with a comma-delimited list of presets you wish to apply. More than one preset can be applied, in which case they combine. You must choose at least one of the presets below:
+To configure [stage defaults](#stage-configuration) use `MB_PRESETS` with a comma-delimited list of presets you wish to apply. More than one preset can be applied, in which case they combine. You must choose at least one of the presets below:
 
 * `default` - Applies no defaults. This is the same as using no options from [Matching With Musicbrainz](#matching-with-musicbrainz)
 * `sensible` - Applies the [Sensible Default](#sensible-default) configuration for sorting releases
@@ -282,7 +282,6 @@ Then Multi-scrobbler will attempt to extract multiple artists from your artist a
     ```json5
     // ...
     "defaults": {
-        "releaseStatusPriority": ["official"],
         // ...
         "fallbackArtistSearch": "native"
       }
@@ -321,7 +320,6 @@ Then Multi-scrobbler will attempt to extract multiple artists from your artist a
     ```json5
     // ...
     "defaults": {
-        "releaseStatusPriority": ["official"],
         // ...
         "fallbackArtistSearch": "naive"
       }
@@ -352,9 +350,7 @@ If you know your Source's Play data is well organized you should not enable this
 ```json5
 // ...
 "defaults": {
-    "releaseStatusPriority": ["official"],
     // ...
-    "fallbackArtistSearch": "native",
     "fallbackFreeTextSearch": true
   }
 ```
@@ -415,7 +411,8 @@ Sometimes a Recording may not have any associated Releases. This may be because 
 You may want to filter the majority of your matches by releases but allow matching a Recording that has no releases to begin with. To allow this set `releaseAllowEmpty` to `true` in configuration:
 
 ```json5
-{
+// ...
+"defaults": {
   // ...
   "releaseAllowEmpty": true // don't remove a match during filtering just because it has no releases
 }
@@ -662,6 +659,65 @@ In a [Subsonic](/configuration/sources/subsonic) [File Config](/configuration?co
           {
             "type": "musicbrainz",
             "name": "MyMB"
+          }
+        ]
+      }
+    }
+  }
+]
+```
+</details>
+
+### Add Metadata Only (No Scrobble Modification)
+
+If you do not want your scrobble data to be modified (artists/album/title) but still want to benefit from associating the scrobble with a Musicbrainz match (for Scrobble [Clients](/configuration/clients) like [Tealfm](/configuration/clients/tealfm), [Rocksky](/configuration/clients/rocksky), and [Koito](/configuration/clients/koito)), then use [Partial Match](#using-partial-match) rules to specify only `meta` to be updated.
+
+<details>
+
+<summary>Example</summary>
+
+Your [AIO Config](/configuration?configType=aio#configuration-types):
+
+```json5 title="config.json"
+{
+  // ...
+  "transformers": [
+    {
+      "type": "musicbrainz",
+      "name": "MyMB",
+      "data": {
+        "apis": [
+          {
+            "contact": "contact@mydomain.com"
+          }
+        ]
+      },
+      "defaults": {
+        // maybe something like Sensible Default?
+      }
+    }
+  ]
+}
+```
+
+In a [Jellyfin](/configuration/clients/jellyfin) [File Config](/configuration?configType=file#configuration-types):
+
+```json5 title="subsonic.json"
+[
+  { 
+    "name": "MyJellyfin",
+    "data": { /* ... */},
+    "options": {
+      "playTransform": {
+        "preCompare": [
+          {
+            "type": "musicbrainz",
+            "name": "MyMB",
+            "title": false,
+            "artists": false,
+            "album": false,
+            "albumArtists": false,
+            "meta": true // only update scrobble metadata with MBIDs
           }
         ]
       }
