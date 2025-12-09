@@ -10,7 +10,7 @@ The **Musicbrainz** [Stage](/configuration/transforms#stage) matches your Play d
 
 **This Stage is useful for standardizing your Scrobble's Play data, regardless of the Source it is coming from.**
 
-Unless you have strong opinions about the way your existing music is already tagged/organized you should consider adding the Musicbrainz Stage to all of your Sources, in some capacity. [Even if it's only MBIDs.](#using-partial-match)
+Even if you have have strong opinions about the way your existing music is already tagged/organized you should consider adding the Musicbrainz Stage to your Sources, if only to benefit from adding [MBIDs to scrobbled metadata.](#using-partial-match)
 
 <details>
 
@@ -33,6 +33,12 @@ The database covers a much wider range of music than most commercial services si
 While some large services (Spotify) may be more consistent in data structure, the MusicBrainz equivalent data is likely to be more true to the way the Artist originally intended since individuals can devote effort to individual artists. A fan of an artist is much more likely to "get it right" for their favorite band than a corporate business trying to do the least amount of work for the largest result.
 
 </details>
+
+:::tip
+
+If you are using [ENV Config](/configuration?config-type=env#configuration-types) for multi-scrobbler and just want a quick and easy setup, skip to [**ENV Configuration**](#env-configuration).
+
+:::
 
 ## Configuration
 
@@ -503,6 +509,7 @@ If you know that your music collection is well organized and you do not want to 
             "title": false,
             "artists": false,
             "album": false,
+            "albumArtists": false,
             "meta": true
           }
         ]
