@@ -45,6 +45,28 @@ describe('Musicbrainz API', function () {
         }
     });
 
+    it('responds', async function () {
+
+        this.timeout(3500);
+
+        const play: PlayObject = {
+            data: {
+                track: "Little Joe and Mary ii",
+                artists: ["Khruangbin"],
+                album: "The Universe Smiles Upon You ii"
+            },
+            meta: {}
+        }
+        await mbTransformer.tryInitialize();
+
+        const res = await mbTransformer.getTransformerData(play, {
+            type: "musicbrainz",
+            searchWhenMissing: ["artists", "album", "title"]
+        });
+        expect(res.recordings).to.exist;
+        expect(res.recordings).to.not.be.empty;
+    });
+
     it('escapes lucene special characters', async function () {
 
         this.timeout(3500);
