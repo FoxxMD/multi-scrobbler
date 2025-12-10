@@ -1,27 +1,27 @@
 diff --git a/node_modules/musicbrainz-api/lib/http-client.js b/node_modules/musicbrainz-api/lib/http-client.js
-index a5ca5f7..14227ca 100644
+index a5ca5f7..04b9ef8 100644
 --- a/node_modules/musicbrainz-api/lib/http-client.js
 +++ b/node_modules/musicbrainz-api/lib/http-client.js
 @@ -9,6 +9,7 @@ function isConnectionReset(err) {
  export class HttpClient {
      constructor(httpOptions) {
          this.httpOptions = httpOptions;
-+        this.logger = (httpOptions ?? {}).logger;
++        this.preRequest = (httpOptions ?? {}).preRequest
      }
      get(path, options) {
          return this._fetch('get', path, options);
-@@ -30,6 +31,9 @@ export class HttpClient {
-         let retryLimit = options.retryLimit && options.retryLimit > 1 ? options.retryLimit : 1;
-         const retryTimeout = this.httpOptions.timeout ? this.httpOptions.timeout : 500;
-         const url = this._buildUrl(path, options.query);
-+        if(this.logger !== undefined) {
-+            this.logger.debug(`${method} ${url}`);
+@@ -36,6 +37,9 @@ export class HttpClient {
+         if (cookies !== null) {
+             headers.set('Cookie', cookies);
+         }
++        if(this.preRequest !== undefined) {
++            this.preRequest(method, url, headers);
 +        }
-         const cookies = await this.getCookies();
-         const headers = new Headers(options.headers);
-         headers.set('User-Agent', this.httpOptions.userAgent);
+         while (retryLimit > 0) {
+             let response;
+             try {
 diff --git a/node_modules/musicbrainz-api/lib/musicbrainz-api-node.js b/node_modules/musicbrainz-api/lib/musicbrainz-api-node.js
-index c9cad5a..7d772a9 100644
+index c9cad5a..e2cf725 100644
 --- a/node_modules/musicbrainz-api/lib/musicbrainz-api-node.js
 +++ b/node_modules/musicbrainz-api/lib/musicbrainz-api-node.js
 @@ -15,7 +15,8 @@ export class MusicBrainzApi extends MusicBrainzApiDefault {
@@ -30,24 +30,32 @@ index c9cad5a..7d772a9 100644
              timeout: 500,
 -            userAgent: `${this.config.appName}/${this.config.appVersion} ( ${this.config.appContactInfo} )`
 +            userAgent: `${this.config.appName}/${this.config.appVersion} ( ${this.config.appContactInfo} )`,
-+            logger: this.config.logger
++            preRequest: this.config.preRequest
          });
      }
      async login() {
 diff --git a/node_modules/musicbrainz-api/lib/musicbrainz-api.d.ts b/node_modules/musicbrainz-api/lib/musicbrainz-api.d.ts
-index cd05017..487404f 100644
+index cd05017..684c7cf 100644
 --- a/node_modules/musicbrainz-api/lib/musicbrainz-api.d.ts
 +++ b/node_modules/musicbrainz-api/lib/musicbrainz-api.d.ts
-@@ -75,6 +75,7 @@ export interface IMusicBrainzConfig {
+@@ -2,6 +2,7 @@ import type { XmlMetadata } from './xml/xml-metadata.js';
+ import { RateLimitThreshold } from 'rate-limit-threshold';
+ import * as mb from './musicbrainz.types.js';
+ import { HttpClient, type MultiQueryFormData } from "./http-client.js";
++import { Url } from 'node:url';
+ export { XmlMetadata } from './xml/xml-metadata.js';
+ export { XmlIsrc } from './xml/xml-isrc.js';
+ export { XmlIsrcList } from './xml/xml-isrc-list.js';
+@@ -75,6 +76,7 @@ export interface IMusicBrainzConfig {
       * Default is [15, 18], which allows up to 15 requests every 18 seconds
       */
      rateLimit?: [number, number];
-+    logger?: any
++    preRequest?: (method: string, url: string, headers: Headers) => void
  }
  interface IInternalConfig extends IMusicBrainzConfig {
      baseUrl: string;
 diff --git a/node_modules/musicbrainz-api/lib/musicbrainz-api.js b/node_modules/musicbrainz-api/lib/musicbrainz-api.js
-index 72fb15d..0e9c32d 100644
+index 72fb15d..a860223 100644
 --- a/node_modules/musicbrainz-api/lib/musicbrainz-api.js
 +++ b/node_modules/musicbrainz-api/lib/musicbrainz-api.js
 @@ -43,7 +43,8 @@ export class MusicBrainzApi {
@@ -56,7 +64,7 @@ index 72fb15d..0e9c32d 100644
              timeout: 500,
 -            userAgent: `${this.config.appName}/${this.config.appVersion} ( ${this.config.appContactInfo} )`
 +            userAgent: `${this.config.appName}/${this.config.appVersion} ( ${this.config.appContactInfo} )`,
-+            logger: this.config.logger
++            preRequest: this.config.preRequest
          });
      }
      async restGet(relUrl, query = {}) {

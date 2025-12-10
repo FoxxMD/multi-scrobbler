@@ -9,8 +9,6 @@ import { MaybeLogger } from "../logging.js";
 import { childLogger, Logger } from "@foxxmd/logging";
 import { MusicbrainzApiClient, MusicbrainzApiConfig, recordingToPlay } from "../vendor/musicbrainz/MusicbrainzApiClient.js";
 import { IRecordingList, IRecordingMatch, MusicBrainzApi } from "musicbrainz-api";
-import { getRoot, version } from "../../ioc.js";
-import { normalizeWebAddress } from "../../utils/NetworkUtils.js";
 import { intersect, isDebugMode, missingMbidTypes, removeUndefinedKeys } from "../../utils.js";
 import { SimpleError } from "../errors/MSErrors.js";
 import { parseArrayFromMaybeString } from "../../utils/StringUtils.js";
@@ -234,31 +232,10 @@ export default class MusicbrainzTransformer extends AtomicPartsTransformer<Exter
     protected async doBuildInitData(): Promise<true | string | undefined> {
         this.defaults = parseStageConfig(this.config.defaults, childLogger(this.logger, 'Defaults'));
 
-        const mbMap = getRoot().items.mbMap();
-        const mbApis: Record<string, MusicbrainzApiConfig> = {};
-        for(const mbConfig of this.config.data.apis) {
-            const u = normalizeWebAddress(mbConfig.url ?? MUSICBRAINZ_URL);
-            let mb = mbMap.get(u.url.hostname);
-            if(mb === undefined) {
-                const api = new MusicBrainzApi({
-                    appName: 'multi-scrobbler',
-                    appVersion: version,
-                    appContactInfo: mbConfig.contact,
-                    baseUrl: u.url.toString(),
-                    rateLimit: [1,1],
-                    logger: this.config.options?.logUrl === true || isDebugMode() ? childLogger(this.logger, ['Musicbrainz', 'API Client']) : undefined
-                });
-                mbApis[u.url.hostname] = {api, ...mbConfig};
-                mbMap.set(u.url.hostname, api);
-                mb = api;
-            } else if(mbApis[u.url.hostname] === undefined) {
-                mbApis[u.url.hostname] = {api: mb, ...mbConfig};
-            }
-        }
-
-        this.api = new MusicbrainzApiClient(this.config.name, {apis: Object.values(mbApis)}, {
+        this.api = new MusicbrainzApiClient(this.config.name, {apis: this.config.data.apis}, {
             logger: this.logger,
-            cache: this.clientCache
+            cache: this.clientCache,
+            logUrl: this.config.options?.logUrl
         });
 
         return true;

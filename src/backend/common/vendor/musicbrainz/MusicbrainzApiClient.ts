@@ -1,18 +1,20 @@
-import dayjs from "dayjs";
-import request, { Request, Response } from 'superagent';
+import { Response } from 'superagent';
 import { PlayObject, URLData } from "../../../../core/Atomic.js";
-import { buildTrackString, nonEmptyStringOrDefault } from "../../../../core/StringUtils.js";
 import { UpstreamError } from "../../errors/UpstreamError.js";
-import { AbstractApiOptions, DEFAULT_RETRY_MULTIPLIER, FormatPlayObjectOptions, MUSICBRAINZ_URL, MusicbrainzApiConfigData } from "../../infrastructure/Atomic.js";
+import { AbstractApiOptions, FormatPlayObjectOptions, MUSICBRAINZ_URL, MusicbrainzApiConfigData } from "../../infrastructure/Atomic.js";
 import AbstractApiClient from "../AbstractApiClient.js";
-import { isPortReachableConnect, joinedUrl, normalizeWebAddress } from '../../../utils/NetworkUtils.js';
-import { MusicBrainzApi, IRecording, ISearchResult, IRecordingList, ISearchQuery, IRecordingMatch, IRelease } from 'musicbrainz-api';
-import { difference, sleep } from "../../../utils.js";
+import { isPortReachableConnect, normalizeWebAddress } from '../../../utils/NetworkUtils.js';
+import { MusicBrainzApi, IRecording, IRecordingList, IRelease } from 'musicbrainz-api';
+import { difference, isDebugMode, sleep } from "../../../utils.js";
 import {SequentialRoundRobin} from 'round-robin-js';
 import { Cacheable } from "cacheable";
-import { getRoot } from "../../../ioc.js";
+import { getRoot, version } from "../../../ioc.js";
 import { hashObject } from "../../../utils/StringUtils.js";
 import { playContentInvariantTransform } from "../../../utils/PlayComparisonUtils.js";
+import { childLogger } from "@foxxmd/logging";;
+import { AsyncLocalStorage } from "async_hooks";
+import { nanoid } from "nanoid";
+import { stripIndents } from "common-tags";
 
 export interface SubmitResponse {
     payload?: {
@@ -27,7 +29,7 @@ export interface MusicbrainzApiConfig extends MusicbrainzApiConfigData {
 }
 
 export interface MusicbrainzApiClientConfig {
-    apis: MusicbrainzApiConfig[]
+    apis: MusicbrainzApiConfigData[]
 }
 
 export interface SearchOptions {
@@ -44,13 +46,44 @@ export class MusicbrainzApiClient extends AbstractApiClient {
     protected rrApis: SequentialRoundRobin<MusicbrainzApiConfig>;
     protected url: URLData;
     cache: Cacheable;
+    protected asyncStore: AsyncLocalStorage<string>;
 
-    constructor(name: any, config: MusicbrainzApiClientConfig, options: AbstractApiOptions & {cache?: Cacheable}) {
+    constructor(name: any, config: MusicbrainzApiClientConfig, options: AbstractApiOptions & {cache?: Cacheable, logUrl?: boolean}) {
         super('Musicbrainz', name, config, options);
-        this.rrApis = new SequentialRoundRobin(this.config.apis);
-        this.cache = options.cache ?? getRoot().items.cache().cacheMetadata;
 
+        this.asyncStore = new AsyncLocalStorage();
+        this.cache = options.cache ?? getRoot().items.cache().cacheMetadata;
+        const mbMap = getRoot().items.mbMap();
+        const mbApis: Record<string, MusicbrainzApiConfig> = {};
+        for(const mbConfig of this.config.apis) {
+            const u = normalizeWebAddress(mbConfig.url ?? MUSICBRAINZ_URL);
+            let mb = mbMap.get(u.url.hostname);
+            if(mb === undefined) {
+                const api = new MusicBrainzApi({
+                    appName: 'multi-scrobbler',
+                    appVersion: version,
+                    appContactInfo: mbConfig.contact,
+                    baseUrl: u.url.toString(),
+                    rateLimit: [1,1],
+                    preRequest: options.logUrl === true || isDebugMode() ? (method, url, headers) => {
+                        const cacheKey = this.asyncStore.getStore() ?? nanoid();
+                        this.cache.set(`${cacheKey}-url`, `${method} - ${url}`, mbConfig.ttl ?? '1hr');
+                    } : () => null
+                });
+                mbApis[u.url.hostname] = {api, ...mbConfig};
+                mbMap.set(u.url.hostname, api);
+                mb = api;
+            } else if(mbApis[u.url.hostname] === undefined) {
+                mbApis[u.url.hostname] = {api: mb, ...mbConfig};
+            }
+        }
+
+        this.rrApis = new SequentialRoundRobin(Object.values(mbApis));
         this.logger.debug(`Round Robin API calls using hosts: ${config.apis.map(x => x.url ?? MUSICBRAINZ_URL).join(' | ')}`);
+    }
+
+    protected getIdentifier(): string {
+        return 'API';
     }
 
     callApi = async <T = Response>(func: (mb: MusicBrainzApi) => Promise<any>, options?: { timeout?: number, ttl?: string, cacheKey?: string }): Promise<T> => {
@@ -64,10 +97,27 @@ export class MusicbrainzApiClient extends AbstractApiClient {
         } = options || {};
 
         try {
-            const res = await Promise.race([
-                func(apiConfig.api),
-                sleep(timeout)
-            ]);
+            const cachedTransform = await this.cache.get<T>(cacheKey);
+            if(cachedTransform !== undefined) {
+                const cacheUrl = await this.cache.get<string>(`${cacheKey}-url`);
+                const cacheQs = await this.cache.get<string>(`${cacheKey}-qs`);
+                this.logger.debug(stripIndents`Cache hit =>
+                    Query String: ${cacheQs}
+                    URL: ${cacheUrl}`);
+
+                return cachedTransform;
+            }
+        } catch (e) {
+            this.logger.warn(new Error('Could not fetch cache keys', {cause: e}));
+        }
+
+        try {
+            const res = await this.asyncStore.run(cacheKey, async () => {
+                return await Promise.race([
+                    func(apiConfig.api),
+                    sleep(timeout)
+                ]);
+            });
             if (res === undefined) {
                 throw new Error('Timeout occurred while waiting for Musicbrainz API rate limit');
             }
@@ -97,16 +147,6 @@ export class MusicbrainzApiClient extends AbstractApiClient {
         } = options || {};
 
         const cacheKey = `mb-recSearch-${hashObject({...playContentInvariantTransform(play), using})}`;
-
-        try {
-            const cachedTransform = await this.cache.get<IRecordingList>(cacheKey);
-            if(cachedTransform !== undefined) {
-                this.logger.debug('Cache hit');
-                return cachedTransform;
-            }
-        } catch (e) {
-            this.logger.warn(new Error('Could not fetch cache key', {cause: e}));
-        }
 
         this.logger.debug(`Starting search`);
         // https://github.com/Borewit/musicbrainz-api?tab=readme-ov-file#search-function
@@ -170,6 +210,7 @@ export class MusicbrainzApiClient extends AbstractApiClient {
 
 
             this.logger.debug(`Search Query => ${q}`);
+            this.cache.set(`${cacheKey}-qs`, q, '1hr');
 
             return mb.search('recording', {
                 query: q

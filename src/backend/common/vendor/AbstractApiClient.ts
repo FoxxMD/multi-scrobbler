@@ -19,14 +19,17 @@ export default abstract class AbstractApiClient {
     constructor(type: any, name: any, config = {}, options: AbstractApiOptions) {
         this.type = type;
         this.name = name;
-        const identifier = `API - ${capitalize(this.type)} - ${name}`;
         const {
             logger: parentLogger,
             ...restOptions
         } =  options;
-        this.logger = childLogger(parentLogger, identifier);
+        this.logger = childLogger(parentLogger, this.getIdentifier());
         this.config = config;
         this.options = restOptions;
+    }
+
+    protected getIdentifier() {
+        return `API - ${capitalize(this.type)} - ${this.name}`;
     }
 
     static formatPlayObj(obj: any, options: FormatPlayObjectOptions): PlayObject {
