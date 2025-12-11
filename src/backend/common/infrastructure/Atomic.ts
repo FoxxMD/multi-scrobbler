@@ -343,6 +343,7 @@ export interface MusicbrainzApiConfigData {
     contact: string,
     ttl?: string
     apiKey?: string
+    requestTimeout?: number
 }
 
 export const MUSICBRAINZ_URL = 'https://musicbrainz.org';

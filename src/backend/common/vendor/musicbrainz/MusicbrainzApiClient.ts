@@ -76,7 +76,7 @@ export class MusicbrainzApiClient extends AbstractApiClient {
                         }
                         return [method, url, headers];
                     } : () => null,
-                    requestTimeout: 6000,
+                    requestTimeout: mbConfig.requestTimeout ?? 6000,
                     retryLimit: 2
                 });
                 mbApis[u.url.hostname] = {api, ...mbConfig, hostname: u.url.hostname};

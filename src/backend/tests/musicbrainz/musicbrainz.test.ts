@@ -34,7 +34,7 @@ const createMbTransformer = (apis: MusicbrainzApiConfigData[] = [defaultApiConfi
             ttl: '1ms'
         }
     }, {
-        logger: loggerDebug,
+        logger: loggerTest,
         clientCache: memorycache(),
         cache: memorycache()
     });
@@ -170,7 +170,7 @@ describe('Musicbrainz API', function () {
 
         it('psuedo-releases', async function () {
 
-            this.timeout(3500);
+            this.timeout(5500);
 
             const play: PlayObject = {
                 data: {
@@ -198,36 +198,67 @@ describe('Musicbrainz API', function () {
     });
 
     describe('Multiple Endpoints', function () {
-        it('should fallback to another endpoint if current one fails', withRequestInterception([
-            http.get(/mbtest\.local\/?\/ws/, async () => {
-                //
-                await delay(5000);
-                throw new MockNetworkError('EAI_AGAIN');
-            })
-        ],async function() {
 
-            //this.timeout(3500);
+        it('should fallback to another endpoint if current one fails', async function () {
+            this.timeout(5000);
+            await withRequestInterception([
+                http.get(/mbtest\.local\/?\/ws/, async () => {
+                    throw new MockNetworkError('EAI_AGAIN');
+                })
+            ], async function () {
 
-            const multiMb = createMbTransformer([{contact: 'test@foxxmd.dev', url: 'https://mbtest.local'}, defaultApiConfig]);
+                const multiMb = createMbTransformer([{ contact: 'test@foxxmd.dev', url: 'https://mbtest.local' }, defaultApiConfig]);
 
-            const play: PlayObject = {
-                data: {
-                    track: "Little Joe and Mary ii",
-                    artists: ["Khruangbin"],
-                    album: "The Universe Smiles Upon You ii"
-                },
-                meta: {}
-            }
-            await multiMb.tryInitialize();
+                const play: PlayObject = {
+                    data: {
+                        track: "Little Joe and Mary ii",
+                        artists: ["Khruangbin"],
+                        album: "The Universe Smiles Upon You ii"
+                    },
+                    meta: {}
+                }
+                await multiMb.tryInitialize();
 
-            const res = await multiMb.getTransformerData(play, {
-                type: "musicbrainz",
-                searchWhenMissing: ["artists", "album", "title"]
-            });
-            expect(res.recordings).to.exist;
-            expect(res.recordings).to.not.be.empty;
+                const res = await multiMb.getTransformerData(play, {
+                    type: "musicbrainz",
+                    searchWhenMissing: ["artists", "album", "title"]
+                });
+                expect(res.recordings).to.exist;
+                expect(res.recordings).to.not.be.empty;
 
-        }));
+            })();
+        });
+
+        it('should fallback to another endpoint if current one takes too long to respond', async function () {
+            this.timeout(10000);
+            await withRequestInterception([
+                http.get(/mbtest\.local\/?\/ws/, async () => {
+                    await delay(3000);
+                    throw new MockNetworkError('EAI_AGAIN');
+                })
+            ], async function () {
+
+                const multiMb = createMbTransformer([{ contact: 'test@foxxmd.dev', url: 'https://mbtest.local' }, { ...defaultApiConfig, requestTimeout: 1000 }]);
+
+                const play: PlayObject = {
+                    data: {
+                        track: "Little Joe and Mary ii",
+                        artists: ["Khruangbin"],
+                        album: "The Universe Smiles Upon You ii"
+                    },
+                    meta: {}
+                }
+                await multiMb.tryInitialize();
+
+                const res = await multiMb.getTransformerData(play, {
+                    type: "musicbrainz",
+                    searchWhenMissing: ["artists", "album", "title"]
+                });
+                expect(res.recordings).to.exist;
+                expect(res.recordings).to.not.be.empty;
+
+            })();
+        });
     });
 
 });
