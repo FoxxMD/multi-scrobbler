@@ -39,6 +39,7 @@ The default Bluesky PDS is **public**, meaning your scrobbles are also public (r
 To view your teal.fm scrobbles you can:
 
 * use [wrapped.baileytownsend.dev](https://wrapped.baileytownsend.dev/) which gives a simple stats overview of your scrobbles
+* use [teal-slice.wisp.place](https://tealfm-slice.wisp.place/) for a preview of teal.fm
 * use [atproto.at](https://atproto.at) to view the raw data (convenience URLs are generated in multi-scrobbler for you to do this)
 
 :::
@@ -54,19 +55,24 @@ To view your teal.fm scrobbles you can:
 
 ## Configuration
 
-### Handle
+### Identifier
 
-The handle used with multi-scrobbler should be your **full** ATProto handle, including TLD.
+The ATPRoto identifier used with multi-scrobbler should be either:
+
+* A valid [DID](https://atproto.com/specs/did#at-protocol-did-identifier-syntax), starting with `did:plc:...` or `did:web:...`
+* Your **full** ATProto handle, including TLD
+
+If using a handle:
 
 * For regular Bluesky account this will be like: `alice.bsky.social`
-* For Bluesky accounts that [use their website as their account](https://bsky.social/about/blog/4-28-2023-domain-handle-tutorial) this is your domain: `mydomain.com`
-* For non-Bluesky users, you probably already know your handle
+* For Bluesky accounts that [use their domain as their account](https://bsky.social/about/blog/4-28-2023-domain-handle-tutorial) this is your domain: `mydomain.com`
+* For non-Bluesky-PDS users, you probably already know your handle
 
-If you do not include a TLD then multi-scrobbler will automatically append `.bsky.social` to your handle value.
+If your identifier does not look like a DID and does not include a TLD then multi-scrobbler will automatically append `.bsky.social` to your handle value.
 
 <Config config="TealClientConfig" fileContent={JsonConfig} client name="tealfm">
         | Environmental Variable | Required? | Default | Description                                                                         |
         | :--------------------- | --------- | ------- | ----------------------------------------------------------------------------------- |
-        | TEALFM_IDENTIFIER      | Yes       |         | Your **full** ATProto handle. For Bluesky account this is like `myUser.bsky.social` |
+        | TEALFM_IDENTIFIER      | Yes       |         | Your **full** ATProto handle or DID. For Bluesky account this is like `myUser.bsky.social` |
         | TEALFM_APP_PW          | Yes       |         | Bluesky/ATProto network App Password                                                |
 </Config>

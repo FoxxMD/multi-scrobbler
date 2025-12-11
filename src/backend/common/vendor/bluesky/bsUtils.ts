@@ -3,15 +3,18 @@ import { isHandle } from "@atcute/lexicons/syntax";
 import { Logger } from "@foxxmd/logging";
 import { parseRegexSingle } from "@foxxmd/regex-buddy-core";
 import { MaybeLogger } from "../../logging.js";
-import { BskyAgent } from "@atproto/api";
+import { AtprotoDid } from "@atproto/oauth-client-node";
 
 export const HANDLE_REGEX = new RegExp(/.+\..+/);
 export const ATSIGN_REGEX = new RegExp(/^@(.+)/);
+export const DID_REGEX = new RegExp(/did:(?:plc|web):.+/);
 
 export interface HandleOptions {
     logger?: Logger
     defaultDomain?: string
 }
+
+export const isDID = (str: string): str is AtprotoDid => DID_REGEX.test(str);
 
 export const identifierToAtProtoHandle = (str: string, options: HandleOptions = {}): Handle => {
     if(isHandle(str)) {

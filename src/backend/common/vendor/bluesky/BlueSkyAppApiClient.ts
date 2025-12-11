@@ -14,7 +14,7 @@ import {
   WellKnownHandleResolver,
 } from "@atcute/identity-resolver";
 import { AtprotoDid, DidDocument } from "@atproto/oauth-client-node";
-import { identifierToAtProtoHandle } from "./bsUtils.js";
+import { identifierToAtProtoHandle, isDID } from "./bsUtils.js";
 
 interface HandleData {
     did: string
@@ -23,7 +23,7 @@ interface HandleData {
 
 export class BlueSkyAppApiClient extends AbstractBlueSkyApiClient {
 
-    declare config: TealClientData;
+    declare config: TealClientData & {did?: AtprotoDid};
     appSession?: CredentialSession;
     appPwAuth: boolean
 
@@ -31,7 +31,13 @@ export class BlueSkyAppApiClient extends AbstractBlueSkyApiClient {
     constructor(name: any, config: TealClientData, options: AbstractApiOptions) {
         super(name, config, options);
         this.logger.verbose(`Using App Password auth for session`);
-        this.config.identifier = identifierToAtProtoHandle(this.config.identifier, {logger: this.logger, defaultDomain: 'bsky.social'});
+        const cleanIdentifier = this.config.identifier;
+        if(isDID(cleanIdentifier)) {
+            this.logger.debug(`Identifier ${cleanIdentifier} looks like a DID, skipping parsing as a handle.`);
+            this.config.did = cleanIdentifier;
+        } else {
+            this.config.identifier = identifierToAtProtoHandle(this.config.identifier, {logger: this.logger, defaultDomain: 'bsky.social'});
+        }
     }
 
     async initClient(): Promise<void> {
@@ -64,12 +70,14 @@ export class BlueSkyAppApiClient extends AbstractBlueSkyApiClient {
             },
         });
 
-        let did: AtprotoDid;
-        try {
-            did = await handleResolver.resolve(this.config.identifier as `${string}.${string}`);
-            this.logger.debug(`Resolved ${did}`);
-        } catch (e) {
-            throw new Error('Unable to resolve handle', { cause: e });
+        let did: AtprotoDid = this.config.did;
+        if(did === undefined) {
+            try {
+                did = await handleResolver.resolve(this.config.identifier as `${string}.${string}`);
+                this.logger.debug(`Resolved ${did}`);
+            } catch (e) {
+                throw new Error('Unable to resolve handle', { cause: e });
+            }
         }
 
         const docResolver = new CompositeDidDocumentResolver({
