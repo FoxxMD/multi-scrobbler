@@ -5,8 +5,8 @@
 <meta name="generator" content="Docusaurus v3.8.1">
 <title data-rh="true">Overview | Multi-Scrobbler</title><meta data-rh="true" name="viewport" content="width=device-width,initial-scale=1"><meta data-rh="true" name="twitter:card" content="summary_large_image"><meta data-rh="true" property="og:image" content="https://foxxmd.github.io/multi-scrobbler/img/icon.png"><meta data-rh="true" name="twitter:image" content="https://foxxmd.github.io/multi-scrobbler/img/icon.png"><meta data-rh="true" property="og:url" content="https://foxxmd.github.io/multi-scrobbler/"><meta data-rh="true" property="og:locale" content="en"><meta data-rh="true" name="docusaurus_locale" content="en"><meta data-rh="true" name="docsearch:language" content="en"><meta data-rh="true" name="docusaurus_version" content="current"><meta data-rh="true" name="docusaurus_tag" content="docs-default-current"><meta data-rh="true" name="docsearch:version" content="current"><meta data-rh="true" name="docsearch:docusaurus_tag" content="docs-default-current"><meta data-rh="true" property="og:title" content="Overview | Multi-Scrobbler"><meta data-rh="true" name="description" content="Latest Release"><meta data-rh="true" property="og:description" content="Latest Release"><link data-rh="true" rel="icon" href="/multi-scrobbler/img/favicon.ico"><link data-rh="true" rel="canonical" href="https://foxxmd.github.io/multi-scrobbler/"><link data-rh="true" rel="alternate" href="https://foxxmd.github.io/multi-scrobbler/" hreflang="en"><link data-rh="true" rel="alternate" href="https://foxxmd.github.io/multi-scrobbler/" hreflang="x-default"><script data-rh="true">function insertBanner(){var n=document.createElement("div");n.id="__docusaurus-base-url-issue-banner-container";n.innerHTML='\n<div id="__docusaurus-base-url-issue-banner" style="border: thick solid red; background-color: rgb(255, 230, 179); margin: 20px; padding: 20px; font-size: 20px;">\n   <p style="font-weight: bold; font-size: 30px;">Your Docusaurus site did not load properly.</p>\n   <p>A very common reason is a wrong site <a href="https://docusaurus.io/docs/docusaurus.config.js/#baseUrl" style="font-weight: bold;">baseUrl configuration</a>.</p>\n   <p>Current configured baseUrl = <span style="font-weight: bold; color: red;">/multi-scrobbler/</span> </p>\n   <p>We suggest trying baseUrl = <span id="__docusaurus-base-url-issue-banner-suggestion-container" style="font-weight: bold; color: green;"></span></p>\n</div>\n',document.body.prepend(n);var e=document.getElementById("__docusaurus-base-url-issue-banner-suggestion-container"),s=window.location.pathname,o="/"===s.substr(-1)?s:s+"/";e.innerHTML=o}document.addEventListener("DOMContentLoaded",(function(){void 0===window.docusaurus&&insertBanner()}))</script><script data-rh="true" type="application/ld+json">{"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Overview","item":"https://foxxmd.github.io/multi-scrobbler/"}]}</script><meta name="google-site-verification" content="8hqrPhw4yuoTBM6c3S10aC8L4tu4aIBe8Q-oSP3OES0">
 <script src="https://ry.foxxmd.dev/api/script.js" defer="defer" data-site-id="3" data-session-replay="true"></script><link rel="stylesheet" href="/multi-scrobbler/assets/css/styles.5e084d52.css">
-<script src="/multi-scrobbler/assets/js/runtime~main.c24199ff.js" defer="defer"></script>
-<script src="/multi-scrobbler/assets/js/main.f89376eb.js" defer="defer"></script>
+<script src="/multi-scrobbler/assets/js/runtime~main.bfd6f5fc.js" defer="defer"></script>
+<script src="/multi-scrobbler/assets/js/main.b53e0ddf.js" defer="defer"></script>
 </head>
 <body class="navigation-with-keyboard">
 <svg xmlns="http://www.w3.org/2000/svg" style="display: none;"><defs>
@@ -58,6 +58,7 @@
 <li><a href="/multi-scrobbler/configuration/clients/tealfm/">teal.fm</a></li>
 </ul>
 </li>
+<li>Enhance/correct scrobble data with <a href="/multi-scrobbler/configuration/transforms/">search patterns</a>, <a href="/multi-scrobbler/configuration/transforms/">built-in corrections</a>, or the <a href="/multi-scrobbler/configuration/transforms/musicbrainz/">Musicbrainz</a> database</li>
 <li>Monitor status of Sources and Clients using <a href="/multi-scrobbler/configuration/#webhook-configurations">webhooks (Gotify, Ntfy, Apprise)</a> or <a href="/multi-scrobbler/configuration/#health-endpoint">healthcheck endpoint</a></li>
 <li>Supports <a href="/multi-scrobbler/configuration/clients/#now-playing">Now Playing</a> for scrobble Clients</li>
 <li>Supports configuring for single or multiple users (scrobbling for your friends and family!)</li>
@@ -65,7 +66,6 @@
 <li>Graceful network and client failure handling (queued scrobbles that auto-retry)</li>
 <li>Smart handling of credentials (persistent, authorization through app)</li>
 <li>Easy configuration through <a href="/multi-scrobbler/configuration/#configuration-types">ENVs or JSON</a></li>
-<li>Modify data before scrobbling with <a href="/multi-scrobbler/configuration/transforms/">regular expression or search patterns</a></li>
 <li>Install using <a href="/multi-scrobbler/installation/#docker">Docker images for x86/ARM</a> or <a href="/multi-scrobbler/installation/#nodejs">locally with NodeJS</a></li>
 </ul>
 <p><a href="/multi-scrobbler/quickstart/"><strong>Quick Start Guide</strong></a></p>
@@ -76,9 +76,11 @@
 <li><strong>Open-source</strong> -- Get peace of mind knowing exactly how your personal data is being handled.</li>
 <li><strong>Track your activity regardless of where you listen</strong> -- Scrobble from many Sources to one Client with ease and without duplicating tracks.</li>
 <li><strong>Manage scrobbling for others</strong> -- Scrobble for your friends and family without any setup on their part. Easily silo sources to specific clients to keep plays separate.</li>
+<li><strong>Standardize your data</strong> -- Match your scrobbles with the <a href="/multi-scrobbler/configuration/transforms/musicbrainz/">Musicbrainz</a> database to ensure scrobbled data is as correct and rich as possible.</li>
 </ul>
 <p><strong>But I already scrobble my music to Last.fm/ListenBrainz, is multi-scrobbler for me?</strong></p>
 <p>Yes! You can use <a href="/multi-scrobbler/configuration/sources/lastfm-source/">Last.fm as a <strong>Source</strong></a> or <a href="/multi-scrobbler/configuration/sources/listenbrainz-source/">Listenbrainz as a <strong>Source</strong></a> to forward scrobbles from your profile to any other Client! That way you can keep your current scrobble setup as-is but still get the benefit of capturing your data to a self-hosted location.</p>
+<p>Use the <strong>Last.fm</strong> tab in the <a href="/multi-scrobbler/quickstart/#setup-sources">Quickstart Sources</a> to get started.</p>
 <h2 class="anchor anchorWithHideOnScrollNavbar_WYt5" id="how-does-multi-scrobbler-ms-work">How Does multi-scrobbler (MS) Work?<a href="#how-does-multi-scrobbler-ms-work" class="hash-link" aria-label="Direct link to How Does multi-scrobbler (MS) Work?" title="Direct link to How Does multi-scrobbler (MS) Work?">​</a></h2>
 <p>You set up <a href="/multi-scrobbler/configuration/">configurations</a> for one or more <a href="/multi-scrobbler/configuration/sources/"><strong>Sources</strong></a> and one or more <a href="/multi-scrobbler/configuration/clients/"><strong>Clients</strong></a>. MS monitors all of your configured <strong>Sources</strong>. When new tracks are played by a Source MS grabs that information and then sends it (scrobbles it) to all <strong>Clients</strong> that Source is configured to forward to.</p>
 <h3 class="anchor anchorWithHideOnScrollNavbar_WYt5" id="source">Source<a href="#source" class="hash-link" aria-label="Direct link to Source" title="Direct link to Source">​</a></h3>
