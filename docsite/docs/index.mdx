@@ -46,6 +46,7 @@ A javascript app to scrobble music you listened to, to [Maloja](https://github.c
     * [Maloja](/configuration/clients/maloja)
     * [Rocksky](/configuration/clients/rocksky)
     * [teal.fm](/configuration/clients/tealfm)
+* Enhance/correct scrobble data with [search patterns](/configuration/transforms), [built-in corrections](/configuration/transforms), or the [Musicbrainz](/configuration/transforms/musicbrainz) database
 * Monitor status of Sources and Clients using [webhooks (Gotify, Ntfy, Apprise)](/configuration#webhook-configurations) or [healthcheck endpoint](/configuration#health-endpoint)
 * Supports [Now Playing](/configuration/clients#now-playing) for scrobble Clients
 * Supports configuring for single or multiple users (scrobbling for your friends and family!)
@@ -53,7 +54,6 @@ A javascript app to scrobble music you listened to, to [Maloja](https://github.c
 * Graceful network and client failure handling (queued scrobbles that auto-retry)
 * Smart handling of credentials (persistent, authorization through app)
 * Easy configuration through [ENVs or JSON](/configuration#configuration-types)
-* Modify data before scrobbling with [regular expression or search patterns](/configuration/transforms)
 * Install using [Docker images for x86/ARM](/installation#docker) or [locally with NodeJS](/installation#nodejs)
 
 [**Quick Start Guide**](/quickstart)
@@ -66,10 +66,13 @@ A javascript app to scrobble music you listened to, to [Maloja](https://github.c
 * **Open-source** -- Get peace of mind knowing exactly how your personal data is being handled.
 * **Track your activity regardless of where you listen** -- Scrobble from many Sources to one Client with ease and without duplicating tracks.
 * **Manage scrobbling for others** -- Scrobble for your friends and family without any setup on their part. Easily silo sources to specific clients to keep plays separate.
+* **Standardize your data** -- Match your scrobbles with the [Musicbrainz](/configuration/transforms/musicbrainz) database to ensure scrobbled data is as correct and rich as possible.
 
 **But I already scrobble my music to Last.fm/ListenBrainz, is multi-scrobbler for me?**
 
 Yes! You can use [Last.fm as a **Source**](/configuration/sources/lastfm-source) or [Listenbrainz as a **Source**](configuration/sources/listenbrainz-source) to forward scrobbles from your profile to any other Client! That way you can keep your current scrobble setup as-is but still get the benefit of capturing your data to a self-hosted location.
+
+Use the **Last.fm** tab in the [Quickstart Sources](/quickstart/#setup-sources) to get started.
 
 ## How Does multi-scrobbler (MS) Work?
 
