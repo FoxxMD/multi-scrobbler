@@ -249,7 +249,7 @@ export class MusicbrainzApiClient extends AbstractApiClient {
                         q += ' AND ';
                     }
                     if(Array.isArray(query.artist) && query.artist.length > 1) {
-                        q += `(artist:(${query.artist.map(x => `"${x}"`).join(' AND ')})) OR (artist:(${query.artist.map(x => `"${x}"`).join(' OR ')}))`
+                        q += `(artist:(${query.artist.map(x => `"${x}"`).join(' AND ')}) OR artist:(${query.artist.map(x => `"${x}"`).join(' OR ')}))`
                     } else if(query.artist !== undefined) {
                         q += `artist:"${Array.isArray(query.artist) ? query.artist[0] : query.artist}"`;
                     }

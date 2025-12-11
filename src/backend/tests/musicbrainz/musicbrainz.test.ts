@@ -34,7 +34,7 @@ const createMbTransformer = (apis: MusicbrainzApiConfigData[] = [defaultApiConfi
             ttl: '1ms'
         }
     }, {
-        logger: loggerTest,
+        logger: loggerDebug,
         clientCache: memorycache(),
         cache: memorycache()
     });
@@ -130,8 +130,8 @@ describe('Musicbrainz API', function () {
 
             const play: PlayObject = {
                 data: {
-                    track: "Endless Possibility (feat. Wheatus)",
-                    artists: ["Bowling For Soup & Punk Rock Factory"],
+                    track: "Undefeatable (feat. Kellin Quinn)",
+                    artists: ["SEGA Sound Team / Tomoya Ohtani"],
                 },
                 meta: {}
             }
