@@ -72,7 +72,8 @@ export class MusicbrainzApiClient extends AbstractApiClient {
                         const cacheKey = this.asyncStore.getStore() ?? nanoid();
                         this.cache.set(`${cacheKey}-url`, `${method} - ${url}`, mbConfig.ttl ?? '1hr');
                     } : () => null,
-                    requestTimeout: 2000
+                    requestTimeout: 6000,
+                    retryLimit: 2
                 });
                 mbApis[u.url.hostname] = {api, ...mbConfig, hostname: u.url.hostname};
                 mbMap.set(u.url.hostname, api);
