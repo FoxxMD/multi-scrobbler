@@ -203,39 +203,162 @@ Useful when running with [docker](../installation/installation.mdx#docker) so th
 
 ### Caching
 
-Multi-scrobbler can cache some of its data for the purpose of **persisting queued and dead scrobbles** after restarting.
+Multi-scrobbler caches some activities to persist important data across restarts, reduce external API calls, and make some actions faster.
 
-It supports caching using either:
+All of the activities below are **always** cached **in-memory** with an optional, configurable [**secondary** store](#secondary-caching-configuration) for persistence.
 
-* **File** cache stored in the `CONFIG_DIR` directory (next to your File/[AIO](./?configType=aio#configuration-types) file)
-* [**Valkey**](https://valkey.io/), an open-source fork of Redis.
+<Tabs groupId="cachedThings" queryString>
+<TabItem value="scrobbles" label="Scrobbles">
 
-**File** caching is **enabled by default** when no other configuration is present.
+**Queued** and **Failed** Scrobbles are cached so that any un-scrobbled data you have is persisted across restarts of multi-scrobbler.
 
-The type of cache used, and it's connection properties, can be configured through ENV or **AIO** config.
+:::tip
 
-##### Caching Configuration
+By default, this data use a [Secondary](#secondary-caching-configuration) [File](./?cacheType=file#secondary-caching-configuration) store, configured for you automatically.
 
-<Tabs groupId="cache" queryString>
+If you have configured a [persisted volume/bind mount](/installation#storage) for configuration (`/config` is mounted in [docker compose](/quickstart#create-docker-compose-file)) then you are already done. If you are not persisting this directory then you should consider setting up [Valkey Cache](./?cacheType=valkey#secondary-caching-configuration) for this.
+
+:::
+
+##### Configuration
+
+Use any [Secondary Cache](#secondary-caching-configuration), the config examples below show the default values:
+
+<Tabs>
+<TabItem value="env" label="ENV">
+
+| Environmental Variable | Required? | Default   | Description           |
+| :--------------------- | --------- | --------- | --------------------- |
+| `CACHE_SCROBBLE`       | No        | `file`    | The cache type to use |
+| `CACHE_SCROBBLE_CONN`  | No        | `/config` |                       |
+
+</TabItem>
+
+<TabItem value="aio" label="AIO">
+
+```json5 title="config.json"
+{
+    "cache": {
+        "scrobble": {
+            "provider": "file",
+            "connection": "/config"
+        }
+    },
+    // ...
+}
+```
+</TabItem>
+</Tabs>
+
+</TabItem>
+<TabItem value="auth" label="Auth Data">
+
+Authentication sessions/tokens/etc... are cached for quicker requests and for persistence across restarts.
+
+:::tip
+
+By default, this data use a [Secondary](#secondary-caching-configuration) [File](./?cacheType=file#secondary-caching-configuration) store, configured for you automatically.
+
+If you have configured a [persisted volume/bind mount](/installation#storage) for configuration (`/config` is mounted in [docker compose](/quickstart#create-docker-compose-file)) then you are already done. If you are not persisting this directory then you should consider setting up [Valkey Cache](./?cacheType=valkey#secondary-caching-configuration) for this.
+
+:::
+
+##### Configuration
+
+Use any [Secondary Cache](#secondary-caching-configuration), the config examples below show the default values:
+
+<Tabs>
+<TabItem value="env" label="ENV">
+
+| Environmental Variable | Required? | Default   | Description           |
+| :--------------------- | --------- | --------- | --------------------- |
+| `CACHE_AUTH`           | No        | `file`    | The cache type to use |
+| `CACHE_AUTH_CONN`      | No        | `/config` |                       |
+
+</TabItem>
+
+<TabItem value="aio" label="AIO">
+
+```json5 title="config.json"
+{
+    "cache": {
+        "auth": {
+            "provider": "file",
+            "connection": "/config"
+        }
+    },
+    // ...
+}
+```
+</TabItem>
+</Tabs>
+
+</TabItem>
+<TabItem value="metadata" label="Transform API Calls">
+
+API Calls to external (metadata) services used to [Enhance Scrobbles](/configuration/transforms), like calls to [Musicbrainz](/configuration/transforms/musicbrainz), can be cached to avoid duplicate calls and speed up scrobble transformations.
+
+By default, these calls are only cached in memory. If you wish for cached calls to be persisted across restarts then setup [Valkey Cache](./?cacheType=valkey#secondary-caching-configuration).
+
+##### Configuration
+
+Use any [Secondary Cache](#secondary-caching-configuration), the config examples below show the default values:
+
+<Tabs>
+<TabItem value="env" label="ENV">
+
+| Environmental Variable | Required? | Default | Description           |
+| :--------------------- | --------- | ------- | --------------------- |
+| `CACHE_METADATA`       | No        |         | The cache type to use |
+| `CACHE_METADATA_CONN`  | No        |         |                       |
+
+</TabItem>
+
+<TabItem value="aio" label="AIO">
+
+```json5 title="config.json"
+{
+    "cache": {
+        "metadata": {
+            "provider": "valkey",
+            "connection": "yourConnectionStringHere"
+        }
+    },
+    // ...
+}
+```
+</TabItem>
+</Tabs>
+
+</TabItem>
+</Tabs>
+
+#### Secondary Caching Configuration
+
+The type of cache used, and its connection properties, can be configured through **ENV** or **AIO** config.
+
+<Tabs groupId="cacheType" queryString>
 
 <TabItem value="file" label="File">
 
-**File** cache is stored in the `CONFIG_DIR` directory using the pre-defined file name `ms-scrobble.cache`.
-
-It is **enabled by default** if `CACHE_SCROBBLE`, or the respective AIO configuration, is not defined.
+**File** cache is stored in the `CONFIG_DIR` directory using the pre-defined file name `ms-[cacheName].cache`.
 
 <Tabs groupId="configType" queryString>
 
 <TabItem value="env" label="ENV">
 
-| Environmental Variable | Required? | Default              | Description                                                  |
-| :--------------------- | --------- | -------------------- | ------------------------------------------------------------ |
-| `CACHE_SCROBBLE`       | No        | `file`               | The cache type to use                                        |
-| `CACHE_SCROBBLE_CONN`  | No        | The config directory | The directory, within the container, to store the cache file |
+Example
+
+| Environmental Variable | Required? | Default   | Description                                                  |
+| :--------------------- | --------- | --------- | ------------------------------------------------------------ |
+| `CACHE_SCROBBLE`       | No        | `file`    | The cache type to use                                        |
+| `CACHE_SCROBBLE_CONN`  | No        | `/config` | The directory, within the container, to store the cache file |
 
 </TabItem>
 
 <TabItem value="aio" label="AIO">
+
+Example
 
 ```json5 title="config.json"
 {
@@ -256,23 +379,60 @@ It is **enabled by default** if `CACHE_SCROBBLE`, or the respective AIO configur
 
 <TabItem value="valkey" label="Valkey">
 
+[**Valkey**](https://valkey.io/) is an open-source fork of Redis.
+
+<details>
+
+<summary>Adding Valkey container to multi-scrobbler</summary>
+
+A valkey container can be added to the [multi-scrobbler docker compose stack](/installation?runType=docker-compose#docker):
+
+```yaml title="docker-compose.yml"
+services:
+  multi-scrobbler:
+  # ...
+  # adding everything below
+  // highlight-start
+  valkey:
+    image: valkey/valkey
+    volumes:
+      - valkeydata:/data
+
+volumes:
+  valkeydata:
+    driver: local
+  // highlight-end
+```
+
+</details>
+
+The connection string used by multi-scrobbler to connect to your Valkey instance must be in the form:
+
+```
+redis://HOST_IP:HOST_PORT
+```
+
 <Tabs groupId="configType" queryString>
 
 <TabItem value="env" label="ENV">
 
-| Environmental Variable | Required? | Default              | Description                                                  |
-| :--------------------- | --------- | -------------------- | ------------------------------------------------------------ |
-| `CACHE_SCROBBLE`       | Yes        | `valkey`               | The cache type to use                                      |
-| `CACHE_SCROBBLE_CONN`  | Yes        |  | The host/IP and port to connect to, prefixed with `redis://` -- EX: `redis://192.168.0.120:6379` |
+Example
+
+| Environmental Variable | Required? | Default  | Description                                                         |
+| :--------------------- | --------- | -------- | ------------------------------------------------------------------- |
+| `CACHE_METADATA`       | Yes       | `valkey` | The cache type to use                                               |
+| `CACHE_METADATA_CONN`  | Yes       |          | The host/IP and port to connect to EX: `redis://192.168.0.120:6379` |
 
 </TabItem>
 
 <TabItem value="aio" label="AIO">
 
+Example
+
 ```json5 title="config.json"
 {
     "cache": {
-        "scrobble": {
+        "metadata": {
             "provider": "valkey",
             "connection": "redis://192.168.0.120:6379"
         }
