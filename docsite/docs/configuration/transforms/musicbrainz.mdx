@@ -71,6 +71,43 @@ To avoid rate limiting, MusicBrainz requires API users to identify themself usin
 }
 ```
 
+<details>
+
+<summary>Additional Musicbrainz Servers</summary>
+
+Other, or additional, Musicbrainz Servers/Mirrors can be added to the API configuration. If more than one server is defined then multi-scrobbler will round-robin load balance API calls.
+
+Use `url` to define the base URL of the Musicbrainz server to use. If `url` is not defined multi-scrobbler assumes it is the primary Musicbrainz server, `https://musicbrainz.org`.
+
+Example of multiple servers:
+
+```json5 title="config.json"
+{
+  // ...
+  "transformers": [
+    {
+      "type": "musicbrainz",
+      "name": "MyMB",
+      "data": {
+        "apis": [
+          {
+            "contact": "contact@mydomain.com"
+            // uses default Musicbrainz server https://musicbrainz.org
+          },
+          // additional server
+          {
+            "contact": "contact@mydomain.com",
+            "url": "https://my.mb.mirror.domain.com"
+          }
+        ]
+      },
+    }
+  ]
+}
+```
+
+</details>
+
 ### Stage Configuration
 
 All of the properties found in [**Matching with Musicbrainz**](#matching-with-musicbrainz) section are configured in [Stage Configuration](/configuration/transforms#configuring-stages) as `defaults`.
