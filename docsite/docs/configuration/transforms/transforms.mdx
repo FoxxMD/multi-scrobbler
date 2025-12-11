@@ -92,6 +92,12 @@ For example, to modify the track so it's the same anywhere it is processed in mu
 
 :::
 
+:::tip[TLDR]
+
+**To modify a scrobble coming from one of your Sources use the `preCompare` hook.**
+
+:::
+
 <details>
 
 <summary>Using `compare` hook</summary>
@@ -125,7 +131,7 @@ Each [**hook**](#hook) is made up of one or more **Stages**. A Stage is a self-c
 
 * The [User](/configuration/transforms/user) Stage allows a user to define search-and-replace terms for Artist/Title/Album
 * The [Native](/configuration/transforms/native) Stage uses MS's built-in heuristics to extract Artists from a single Artist string
-* The Musicbrainz Stage tries to match Play data with the Musicbrainz database and to standardize the Artist/Title/Album data
+* The [Musicbrainz](/configuration/transforms/musicbrainz) Stage tries to match Play data with the Musicbrainz database and to standardize the Artist/Title/Album data
 
 Each Stage in a Hook receives Play data from the previous Stage.
 

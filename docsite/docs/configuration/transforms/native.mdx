@@ -18,6 +18,25 @@ A non-exhaustive list of heuristics:
 * Splits artists on common joiner phrases (ft. feat. vs. etc...)
   * Extracts artists from Play title using joiner phrases EX `My Cool Song (feat. SomeGuy)`
 
+A practical example of what the Native Stage will do to Play data:
+
+This Scrobble from [Subsonic](/configuration/sources/subsonic)
+
+```json
+{
+    "title": "Endless Possibility (feat. Wheatus)",
+    "artists": ["Bowling For Soup & Punk Rock Factory"]
+}
+```
+
+Will be transformed into this
+
+```json
+{
+    "title": "Endless Possibility",
+    "artists": ["Bowling For Soup", "Punk Rock Factory", "Wheatus"]
+}
+```
 
 ## Configuration
 
@@ -72,6 +91,38 @@ Each [Rule](/configuration/transforms#stage-rules) should be either a boolean, s
 ```
 
 If a rule is not present then multi-scrobbler defaults it to `true`.
+
+### Default Stage
+
+For your convenience, if you do not define any Native [Stage Configurations](/configuration/transforms#configuring-stages) then multi-scrobbler automatically builds one using the defaults shown in [configuration](#configuration).
+
+This can be used by omitting the `name` in your [modification Stage](/configuration/transforms#modification-stage).
+
+<details>
+
+<summary>Example</summary>
+
+In a [Subsonic](/configuration/sources/subsonic) [File Config](/configuration?configType=file#configuration-types):
+
+```json5 title="subsonic.json"
+[
+  { 
+    "name": "MySubsonic",
+    "data": { /* ... */},
+    "options": {
+      "playTransform": {
+        "preCompare": [
+          {
+            "type": "native",
+            // do not include name, the default native stage will be used
+          }
+        ]
+      }
+    }
+  }
+]
+```
+</details>
 
 ## ENV Configuration
 
@@ -208,6 +259,38 @@ In a [Subsonic](/configuration/sources/subsonic) [File Config](/configuration?co
           {
             "type": "native",
             "name": "MyNativeTransformer"
+          }
+        ]
+      }
+    }
+  }
+]
+```
+</details>
+
+### Extract Artists from Title but do not modify Title
+
+In the scenario where you want to extract Artists from Track titles with joiners like `My Cool Track (feat. Foobar)` but want to keep the title as-is:
+
+<details>
+
+<summary>Example</summary>
+
+No additional [stage configuration](#configuration) is required so we can use the [default Stage](#default-stage).
+
+In a [Subsonic](/configuration/sources/subsonic) [File Config](/configuration?configType=file#configuration-types):
+
+```json5 title="subsonic.json"
+[
+  { 
+    "name": "MySubsonic",
+    "data": { /* ... */},
+    "options": {
+      "playTransform": {
+        "preCompare": [
+          {
+            "type": "native",
+            "title": false // do not modify title
           }
         ]
       }

@@ -44,6 +44,42 @@ All [Stage Configuration](/configuration/transforms#configuring-stage) is done u
 
 </details>
 
+#### Default Stage
+
+For your convenience, if you do not define any User [Stage Configurations](/configuration/transforms#configuration) then multi-scrobbler automatically builds an empty one for you.
+
+This can be used by omitting the `name` in your [modification Stage](/configuration/transforms#modification-stage).
+
+<details>
+
+<summary>Example</summary>
+
+In a [Subsonic](/configuration/sources/subsonic) [File Config](/configuration?configType=file#configuration-types):
+
+```json5 title="subsonic.json"
+[
+  { 
+    "name": "MySubsonic",
+    "data": { /* ... */},
+    "options": {
+      "playTransform": {
+        "preCompare": [
+          {
+            "type": "user",
+            // do not include name, the default user stage will be used
+            "title": [
+                // removes badterm from track title
+                "badterm"
+            ]
+          }
+        ]
+      }
+    }
+  }
+]
+```
+</details>
+
 ### Search-And-Replace Expression
 
 A Search-And-Replace Expression can be a plain string that matches a literal, then removes it:
