@@ -128,15 +128,12 @@ In a [Subsonic](/configuration/sources/subsonic) [File Config](/configuration?co
 
 The default configuration shown above can also be applied using [ENV Config](/configuration?configType=env#configuration-types) for individual Sources/Clients.
 
-Use ENV `*_TRANSFORMS=native` on each Source/Client you wish to apply this stage to. This applies the stage in the [`preTransform` Hook](#/configuration/transforms#lifecycle-hooks) with all [Rules](#rules) enabled.
+Use ENV `*_TRANSFORMS=native` on each Source/Client you wish to apply this stage to. This applies the stage in the [`preTransform` Hook](/configuration/transforms#lifecycle-hooks) with all [Rules](#rules) enabled.
 
-The `*` stands for the prefix used for each Source/Client's ENV keys. Refer to the individual Source/Client Configuration sections to find this.
+The `*` stands for the prefix used for each Source/Client's ENV keys. Refer to the individual Source/Client Configuration sections to find this. Example
 
-:::tip
-
-Enhancing a scrobble with the `preTransform` hook for a Source means that all Clients that recieve the scrobble get the enhanced version. You only need to apply the transform once, for a Source, to use it everywhere for downstream Clients.
-
-:::
+* All [Subsonic Source](http://localhost:3000/docs/configuration/sources/subsonic/) ENVs look like `SUBSONIC_USER=myuser` etc...
+* Use `SUBSONIC_TRANSFORMS=native`
 
 <details>
 
