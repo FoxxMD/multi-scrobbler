@@ -1,5 +1,5 @@
 diff --git a/node_modules/musicbrainz-api/lib/http-client.js b/node_modules/musicbrainz-api/lib/http-client.js
-index a5ca5f7..0c3705b 100644
+index a5ca5f7..f693ca3 100644
 --- a/node_modules/musicbrainz-api/lib/http-client.js
 +++ b/node_modules/musicbrainz-api/lib/http-client.js
 @@ -9,6 +9,7 @@ function isConnectionReset(err) {
@@ -10,12 +10,23 @@ index a5ca5f7..0c3705b 100644
      }
      get(path, options) {
          return this._fetch('get', path, options);
-@@ -36,11 +37,16 @@ export class HttpClient {
+@@ -29,18 +30,25 @@ export class HttpClient {
+             options = {};
+         let retryLimit = options.retryLimit && options.retryLimit > 1 ? options.retryLimit : 1;
+         const retryTimeout = this.httpOptions.timeout ? this.httpOptions.timeout : 500;
+-        const url = this._buildUrl(path, options.query);
++        let url = this._buildUrl(path, options.query);
+         const cookies = await this.getCookies();
+-        const headers = new Headers(options.headers);
++        let headers = new Headers(options.headers);
+         headers.set('User-Agent', this.httpOptions.userAgent);
          if (cookies !== null) {
              headers.set('Cookie', cookies);
          }
 +        if(this.preRequest !== undefined) {
-+            this.preRequest(method, url, headers);
++            const [m, u, h] = this.preRequest(method, url, headers);
++            url = u;
++            headers = h;
 +        }
 +        let signal = this.httpOptions.requestTimeout !== undefined ? AbortSignal.timeout(this.httpOptions.requestTimeout) : undefined;
          while (retryLimit > 0) {
@@ -27,7 +38,7 @@ index a5ca5f7..0c3705b 100644
                      ...options,
                      headers,
                      body: options.body,
-@@ -56,8 +62,8 @@ export class HttpClient {
+@@ -56,8 +64,8 @@ export class HttpClient {
                  throw err;
              }
              if (response.status === 429 || response.status === 503) {
@@ -53,7 +64,7 @@ index c9cad5a..226cd5e 100644
      }
      async login() {
 diff --git a/node_modules/musicbrainz-api/lib/musicbrainz-api.d.ts b/node_modules/musicbrainz-api/lib/musicbrainz-api.d.ts
-index cd05017..b37e0b2 100644
+index cd05017..4664ff0 100644
 --- a/node_modules/musicbrainz-api/lib/musicbrainz-api.d.ts
 +++ b/node_modules/musicbrainz-api/lib/musicbrainz-api.d.ts
 @@ -2,6 +2,7 @@ import type { XmlMetadata } from './xml/xml-metadata.js';
@@ -68,7 +79,7 @@ index cd05017..b37e0b2 100644
       * Default is [15, 18], which allows up to 15 requests every 18 seconds
       */
      rateLimit?: [number, number];
-+    preRequest?: (method: string, url: string, headers: Headers) => void
++    preRequest?: (method: string, url: string, headers: Headers) => [string,string,Headers]
 +    requestTimeout?: number
 +    retryLimit?: number
  }

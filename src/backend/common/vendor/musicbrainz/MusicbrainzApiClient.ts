@@ -67,10 +67,14 @@ export class MusicbrainzApiClient extends AbstractApiClient {
                     appVersion: version,
                     appContactInfo: mbConfig.contact,
                     baseUrl: u.url.toString(),
-                    rateLimit: [1,1],
+                    rateLimit: mbConfig.rateLimit ?? [1,1],
                     preRequest: options.logUrl === true || isDebugMode() ? (method, url, headers) => {
                         const cacheKey = this.asyncStore.getStore() ?? nanoid();
                         this.cache.set(`${cacheKey}-url`, `${method} - ${url}`, mbConfig.ttl ?? '1hr');
+                        if(mbConfig.apiKey !== undefined) {
+                            headers.set('X-Api_key', mbConfig.apiKey);
+                        }
+                        return [method, url, headers];
                     } : () => null,
                     requestTimeout: 6000,
                     retryLimit: 2

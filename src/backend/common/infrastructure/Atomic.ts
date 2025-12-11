@@ -339,9 +339,10 @@ export interface CacheConfigOptions {
 
 export interface MusicbrainzApiConfigData {
     url?: string
-    rateLimit?: number
+    rateLimit?: [number, number]
     contact: string,
     ttl?: string
+    apiKey?: string
 }
 
 export const MUSICBRAINZ_URL = 'https://musicbrainz.org';
