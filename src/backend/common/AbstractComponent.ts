@@ -242,40 +242,42 @@ export default abstract class AbstractComponent extends AbstractInitializable {
             if(shouldLog !== false) {
                 if(transformHistory.length === 0) {
                     logger.debug('Transform Diff: No Change');
-                }
-                const historyToDiff: {name: string, data: PlayData}[] = [
-                    {name: 'Original', data: transformedPlay.meta.transforms.original}
-                ];
-                if(shouldLog === true) {
-                    const last = transformHistory[transformHistory.length - 1];
-                    historyToDiff.push({name: `${last.type}-${last.name}`, data: last.play});
                 } else {
-                    for(const t of transformHistory) {
-                        historyToDiff.push({name: `${t.type}-${t.name}`, data: t.play})
-                    }
-                }
-                const diffs: string[] = [];
-                historyToDiff.forEach((curr, index) => {
-                    if(index === 0) {
-                        return;
-                    }
-                    const last = historyToDiff[index - 1];
-                    if(deepEqual(last.data, curr.data)) {
-                        diffs.push(`${last.name} => ${curr.name} -- No Change`);
+                    const historyToDiff: {name: string, data: PlayData}[] = [
+                        {name: 'Original', data: transformedPlay.meta.transforms.original}
+                    ];
+                    if(shouldLog === true) {
+                        const last = transformHistory[transformHistory.length - 1];
+                        historyToDiff.push({name: `${last.type}-${last.name}`, data: last.play});
                     } else {
-                        diffs.push(diffStringsUnified(
-                        buildPlayHumanDiffable(last.data, {expandMeta: true}), 
-                        buildPlayHumanDiffable(curr.data, {expandMeta: true}),
-                        {
-                            aAnnotation: last.name,
-                            aColor: chalk.red,
-                            bAnnotation: curr.name,
-                            bColor: chalk.green
+                        for(const t of transformHistory) {
+                            historyToDiff.push({name: `${t.type}-${t.name}`, data: t.play})
                         }
-                    ))
                     }
-                });
-                logger.debug(`Transform Diff\n${diffs}`)
+                    const diffs: string[] = [];
+                    historyToDiff.forEach((curr, index) => {
+                        if(index === 0) {
+                            return;
+                        }
+                        const last = historyToDiff[index - 1];
+                        if(deepEqual(last.data, curr.data)) {
+                            diffs.push(`${last.name} => ${curr.name} -- No Change`);
+                        } else {
+                            diffs.push(diffStringsUnified(
+                            buildPlayHumanDiffable(last.data, {expandMeta: true}), 
+                            buildPlayHumanDiffable(curr.data, {expandMeta: true}),
+                            {
+                                aAnnotation: last.name,
+                                aColor: chalk.red,
+                                bAnnotation: curr.name,
+                                bColor: chalk.green
+                            }
+                        ))
+                        }
+                    });
+                    logger.debug(`Transform Diff\n${diffs}`);
+                }
+
             }
             const previousHistory = transformedPlay.meta.transforms[hookType] ?? [];
             transformedPlay.meta.transforms[hookType] = [...previousHistory, ...transformHistory];
