@@ -406,7 +406,7 @@ export default class SpotifySource extends MemoryPositionalSource {
                     progress_ms,
                 } = {}
             } = res;
-            if(device !== undefined) {
+            if(device !== undefined && item !== undefined && item !== null) {
                 let status: ReportedPlayerStatus = 'stopped';
                 if(is_playing) {
                     status = 'playing';
