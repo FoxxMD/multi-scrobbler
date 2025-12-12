@@ -75,7 +75,7 @@ export class MusicbrainzApiClient extends AbstractApiClient {
                             headers.set('X-Api_key', mbConfig.apiKey);
                         }
                         return [method, url, headers];
-                    } : () => null,
+                    } : undefined,
                     requestTimeout: mbConfig.requestTimeout ?? 6000,
                     retryLimit: 2
                 });
