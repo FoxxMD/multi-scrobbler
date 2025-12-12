@@ -75,7 +75,11 @@ export default class TransformerManager {
     public async registerFromEnv() {
         try {
             const mbConfig = configFromEnv(this.logger);
-            this.register(mbConfig);
+            if(mbConfig !== undefined) {
+                this.register(mbConfig);
+            } else {
+                this.logger.debug('No transformers to build from ENV');
+            }
         } catch (e) {
             if(e instanceof SimpleError) {
                 this.logger.error(`Unable to build Musicbrainz Transformer from ENV: ${e.message}`);
