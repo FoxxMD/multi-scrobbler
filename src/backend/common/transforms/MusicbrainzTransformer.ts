@@ -38,6 +38,7 @@ export interface MusicbrainzTransformerData {
     score?: number
     fallbackArtistSearch?: ('naive' | 'native')
     fallbackFreeText?: boolean
+    fallbackAlbumSearch?: boolean
 
     /** Ignore album artist if it is "Various Artists"
      * 
@@ -192,6 +193,11 @@ export const parseStageConfig = (data: MusicbrainzTransformerData | undefined = 
 
     logger.debug(`Will search if missing: ${config.searchWhenMissing.join(', ')} | Match if (default) score is >= ${config.score}`);
 
+    if(data.fallbackAlbumSearch === true) {
+        config.fallbackAlbumSearch = true;
+        logger.debug('Will make an additional search with title + album');
+    }
+
     if(data.fallbackArtistSearch !== undefined) {
         const cleanFallback = data.fallbackArtistSearch;
         if(!['native','naive'].includes(cleanFallback)) {
@@ -302,12 +308,13 @@ export default class MusicbrainzTransformer extends AtomicPartsTransformer<Exter
 
         const {
             fallbackArtistSearch = this.defaults.fallbackArtistSearch,
-            fallbackFreeText = this.defaults.fallbackFreeText
+            fallbackFreeText = this.defaults.fallbackFreeText,
+            fallbackAlbumSearch = this.defaults.fallbackAlbumSearch
         } = stageConfig;
 
             // possibly the artist is incorrect (may be combined as one string)
             // if we have an album we can likely still get a decent hit w/o using artist
-            if(play.data.album !== undefined && play.data.artists !== undefined && play.data.artists.length > 0) {
+            if(fallbackAlbumSearch && play.data.album !== undefined && play.data.artists !== undefined && play.data.artists.length > 0) {
                 this.logger.debug('No matches found, trying search with only track+album');
                 results = await this.api.searchByRecording(play, {using: ['title','album']});
             }
