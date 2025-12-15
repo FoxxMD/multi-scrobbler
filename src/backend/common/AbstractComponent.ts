@@ -84,10 +84,10 @@ export default abstract class AbstractComponent extends AbstractInitializable {
             postCompare: postConfig
         } = playTransform;
 
-        let preCompare,
-            candidate,
-            existing,
-            postCompare;
+        let preCompare: StageConfig[],
+            candidate: StageConfig[],
+            existing: StageConfig[],
+            postCompare: StageConfig[];
 
         const builtHooks: string[] = [];
         const emptyHooks: string[] = [];
@@ -96,7 +96,7 @@ export default abstract class AbstractComponent extends AbstractInitializable {
             if(preCompare === undefined) {
                 emptyHooks.push('preCompare')
             } else {
-                builtHooks.push('preCompare');
+                builtHooks.push(`preCompare => ${preCompare.map(x => `${x.type}${x.name !== undefined ? `-${x.name}` : ''}`)}`);
             }
         } catch (e) {
             throw new Error('preCompare was not valid', {cause: e});
@@ -107,7 +107,7 @@ export default abstract class AbstractComponent extends AbstractInitializable {
             if(candidate === undefined) {
                 emptyHooks.push('candidate')
             } else {
-                builtHooks.push('candidate');
+                builtHooks.push(`canidate => ${candidate.map(x => `${x.type}${x.name !== undefined ? `-${x.name}` : ''}`)}`);
             }
         } catch (e) {
             throw new Error('candidate was not valid', {cause: e});
@@ -118,7 +118,7 @@ export default abstract class AbstractComponent extends AbstractInitializable {
              if(existing === undefined) {
                 emptyHooks.push('existing')
             } else {
-                builtHooks.push('existing');
+                builtHooks.push(`existing => ${existing.map(x => `${x.type}${x.name !== undefined ? `-${x.name}` : ''}`)}`);
             }
         } catch (e) {
             throw new Error('existing was not valid', {cause: e});
@@ -129,13 +129,13 @@ export default abstract class AbstractComponent extends AbstractInitializable {
              if(postCompare === undefined) {
                 emptyHooks.push('postCompare')
             } else {
-                builtHooks.push('postCompare');
+                builtHooks.push(`postCompare => ${postCompare.map(x => `${x.type}${x.name !== undefined ? `-${x.name}` : ''}`)}`);
             }
         } catch (e) {
             throw new Error('postCompare was not valid', {cause: e});
         }
 
-        this.logger.debug(`Hooks built. Configured: ${builtHooks.join(', ')} | Empty: ${emptyHooks.join(', ')}`);
+        this.logger.debug(`Hooks built! Empty: ${emptyHooks.join(', ')} | Configured: ${builtHooks.length === 0 ? 'None' : `\n${builtHooks.join('\n')}`}`);
 
         this.transformRules = {
             preCompare,
