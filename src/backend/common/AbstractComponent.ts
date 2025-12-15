@@ -8,7 +8,7 @@ import { PlayData, PlayObject, TransformResult } from "../../core/Atomic.js";
 import { buildPlayHumanDiffable, buildTrackString } from "../../core/StringUtils.js";
 import { CommonClientConfig } from "./infrastructure/config/client/index.js";
 import { CommonSourceConfig } from "./infrastructure/config/source/index.js";
-import { TransformRulesError } from "./errors/MSErrors.js";
+import { mergeSimpleError, TransformRulesError } from "./errors/MSErrors.js";
 import {
     PlayTransformRules,
     StageConfig,
@@ -206,9 +206,9 @@ export default abstract class AbstractComponent extends AbstractInitializable {
 
                 if(err !== undefined) {
                     if(onFailure === 'continue') {
-                        logger.warn(new Error(`A transform encountered an error but continuing due to onFailure: continue`, {cause: err}));
+                        logger.warn(mergeSimpleError(err), 'A transform encountered an error but continuing due to onFailure: continue');
                     } else {
-                        logger.error(new Error(`Transform encountered an error`, {cause: err}));
+                        logger.error(mergeSimpleError(err), 'Transform encountered an error');
                         if(!failureReturnPartial) {
                             // rewind to original play so we don't return partial transform
                             transformedPlay = play;
@@ -216,13 +216,13 @@ export default abstract class AbstractComponent extends AbstractInitializable {
                         }
                         break;
                     }
+                } else {
+                    transformHistory.push({
+                        type: hookItem.type,
+                        name: stageName,
+                        play: newTransformedPlay.data
+                    });
                 }
-
-                transformHistory.push({
-                    type: hookItem.type,
-                    name: stageName,
-                    play: newTransformedPlay.data
-                });
 
                 transformedPlay = newTransformedPlay;
 

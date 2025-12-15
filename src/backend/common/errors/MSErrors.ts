@@ -1,3 +1,7 @@
+import { parseRegexSingle } from "@foxxmd/regex-buddy-core";
+import mergeErrorCause from 'merge-error-cause';
+import { findCauseByFunc, findCauseByReference } from "../../utils/ErrorUtils.js";
+
 export abstract class NamedError extends Error {
     public abstract name: string;
 }
@@ -28,15 +32,27 @@ export class PostInitError extends StageError {
     name = 'Post Initialization';
 }
 
+const STACK_AT_REGEX = new RegExp(/[\n\r]\s*at/);
+
 export class SimpleError extends Error implements HasSimpleError {
     simple: boolean;
 
-    public constructor(msg: string, options?: ErrorOptions & { simple?: boolean }) {
+    public constructor(msg: string, options?: ErrorOptions & { simple?: boolean, shortStack?: boolean }) {
         super(msg, options);
         const {
-            simple = true
+            simple = true,
+            shortStack = false
         } = options || {};
         this.simple = simple;
+        if(shortStack) {
+            const atIndex = parseRegexSingle(STACK_AT_REGEX,this.stack);
+            if(atIndex !== undefined) {
+                const firstn = this.stack.indexOf('\n', atIndex.index + atIndex.match.length);
+                if(firstn !== -1) {
+                    this.stack = this.stack.slice(0, firstn);
+                }
+            }
+        }
     }
 }
 
@@ -49,4 +65,12 @@ export const isSimpleError = (e: unknown): e is HasSimpleError => {
         return false;
     }
     return 'simple' in e;
+}
+
+export const mergeSimpleError = (err: Error): Error => {
+    const anySimple = findCauseByReference(err, SimpleError);
+    if(anySimple && anySimple.simple) {
+        return mergeErrorCause(err);
+    }
+    return err;
 }
