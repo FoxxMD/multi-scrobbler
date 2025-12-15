@@ -7,7 +7,7 @@ import { cacheFunctions,  parseToRegexOrLiteralSearch, testMaybeRegex, searchAnd
 import { Cacheable } from "cacheable";
 import { hashObject } from "../../utils/StringUtils.js";
 import { playContentInvariantTransform } from "../../utils/PlayComparisonUtils.js";
-import { isSimpleError } from "../errors/MSErrors.js";
+import { isSimpleError, SkipTransformStageError } from "../errors/MSErrors.js";
 import { capitalize } from "../../../core/StringUtils.js";
 
 export interface TransformerOptions {
@@ -71,9 +71,8 @@ export default abstract class AbstractTransformer<T = any, Y extends StageConfig
 
         if (data.when !== undefined) {
             if (!testWhenConditions(data.when, play, { testMaybeRegex: this.regex.testMaybeRegex })) {
-                this.logger.debug('Returning original Play because because when condition not met');
                 await this.cache.set(cacheKey, play, this.config.options?.ttl ?? '15s');
-                return play;
+                throw new SkipTransformStageError('When condition not met', {shortStack: true});
             }
         }
 

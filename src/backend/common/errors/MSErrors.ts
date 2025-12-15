@@ -36,6 +36,7 @@ const STACK_AT_REGEX = new RegExp(/[\n\r]\s*at/);
 
 export class SimpleError extends Error implements HasSimpleError {
     simple: boolean;
+    name = 'Error';
 
     public constructor(msg: string, options?: ErrorOptions & { simple?: boolean, shortStack?: boolean }) {
         super(msg, options);
@@ -56,6 +57,19 @@ export class SimpleError extends Error implements HasSimpleError {
     }
 }
 
+export class StageTransformError extends NamedError {
+    name = 'Stage Transform';
+    stageName: string;
+    constructor(name: string, message: string, options?: ErrorOptions) {
+        super(message, options);
+        this.stageName = name;
+    }
+}
+
+export class SkipTransformStageError extends SimpleError {
+    name = 'Skip Transform Stage';
+}
+
 export interface HasSimpleError extends Error {
     simple: boolean
 }
@@ -68,7 +82,7 @@ export const isSimpleError = (e: unknown): e is HasSimpleError => {
 }
 
 export const mergeSimpleError = (err: Error): Error => {
-    const anySimple = findCauseByReference(err, SimpleError);
+    const anySimple = findCauseByFunc<SimpleError>(err, (e) => isSimpleError(e));
     if(anySimple && anySimple.simple) {
         return mergeErrorCause(err);
     }

@@ -10,7 +10,7 @@ import { childLogger, Logger } from "@foxxmd/logging";
 import { MusicbrainzApiClient, MusicbrainzApiConfig, recordingToPlay } from "../vendor/musicbrainz/MusicbrainzApiClient.js";
 import { IRecordingList, IRecordingMatch, MusicBrainzApi } from "musicbrainz-api";
 import { intersect, isDebugMode, missingMbidTypes, removeUndefinedKeys } from "../../utils.js";
-import { SimpleError } from "../errors/MSErrors.js";
+import { SimpleError, SkipTransformStageError } from "../errors/MSErrors.js";
 import { parseArrayFromMaybeString } from "../../utils/StringUtils.js";
 import clone from "clone";
 import { Cacheable } from "cacheable";
@@ -288,7 +288,7 @@ export default class MusicbrainzTransformer extends AtomicPartsTransformer<Exter
         } else if(forceSearch) {
             this.logger.debug(`No desired MBIDs are missing but forceSearch = true`);
         } else {
-            throw new SimpleError('No desired MBIDs are missing', {shortStack: true});
+            throw new SkipTransformStageError('No desired MBIDs are missing', {shortStack: true});
         }
     }
 

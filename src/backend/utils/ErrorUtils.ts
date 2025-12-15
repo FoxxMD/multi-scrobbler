@@ -3,7 +3,7 @@ import { truncateStringToLength } from "../../core/StringUtils.js";
 /**
  * Adapted from https://github.com/voxpelli/pony-cause/blob/main/lib/helpers.js to find cause by truthy function
  * */
-export const findCauseByFunc = (err: any, func: (e: Error) => boolean) => {
+export const findCauseByFunc = <T extends Error = Error>(err: any, func: (e: Error) => boolean): T | undefined => {
     if (!err || !func) return;
     if (!(err instanceof Error)) return;
     if (typeof func !== 'function') {
@@ -21,7 +21,7 @@ export const findCauseByFunc = (err: any, func: (e: Error) => boolean) => {
         seen.add(currentErr);
 
         if (func(currentErr)) {
-            return currentErr;
+            return currentErr as T;
         }
 
         currentErr = getErrorCause(currentErr);

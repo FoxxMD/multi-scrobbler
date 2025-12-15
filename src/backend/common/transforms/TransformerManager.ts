@@ -10,8 +10,7 @@ import NativeTransformer from "./NativeTransformer.js";
 import MusicbrainzTransformer, { configFromEnv, MusicbrainzTransformerConfig } from "./MusicbrainzTransformer.js";
 import { AsyncLocalStorage } from 'node:async_hooks';
 import { nanoid } from "nanoid";
-import { SimpleError } from "../errors/MSErrors.js";
-import { toHaveStyle } from "@testing-library/jest-dom/matchers.js";
+import { SimpleError, StageTransformError } from "../errors/MSErrors.js";
 
 export default class TransformerManager {
 
@@ -161,7 +160,7 @@ export default class TransformerManager {
             });
             return [transformedPlay, t.name];
         } catch (e) {
-            throw new Error('Stage processing failed', {cause: e});
+            throw new StageTransformError(t.name, 'Stage processing stopped early', {cause: e});
         }
     }
 }

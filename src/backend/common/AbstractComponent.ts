@@ -8,7 +8,7 @@ import { PlayData, PlayObject, TransformResult } from "../../core/Atomic.js";
 import { buildPlayHumanDiffable, buildTrackString } from "../../core/StringUtils.js";
 import { CommonClientConfig } from "./infrastructure/config/client/index.js";
 import { CommonSourceConfig } from "./infrastructure/config/source/index.js";
-import { mergeSimpleError, TransformRulesError } from "./errors/MSErrors.js";
+import { mergeSimpleError, SkipTransformStageError, StageTransformError, TransformRulesError } from "./errors/MSErrors.js";
 import {
     PlayTransformRules,
     StageConfig,
@@ -23,6 +23,7 @@ import { nanoid } from "nanoid";
 import {diffStringsUnified, DiffOptionsColor} from 'jest-diff';
 import chalk from 'chalk';
 import { isDebugMode } from "../utils.js";
+import { findCauseByReference } from "../utils/ErrorUtils.js";
 
 export default abstract class AbstractComponent extends AbstractInitializable {
 
@@ -192,20 +193,34 @@ export default abstract class AbstractComponent extends AbstractInitializable {
                 const {
                     onSuccess = 'continue',
                     onFailure = 'stop',
+                    onSkip = 'continue',
                     failureReturnPartial = false
                 } = hookItem;
 
                 let newTransformedPlay: PlayObject,
-                stageName: string,
+                stageName: string = 'Unnamed',
                 err: Error;
                 try {
                     [newTransformedPlay, stageName] = await this.transformManager.handleStage(hookItem, transformedPlay, asyncId);
                 } catch (e) {
                     err = e;
+                    if(e instanceof StageTransformError) {
+                        stageName = e.stageName;
+                    }
                 }
 
                 if(err !== undefined) {
-                    if(onFailure === 'continue') {
+                    const skipError = findCauseByReference(err, SkipTransformStageError);
+                    if(skipError !== undefined) {
+                        let skipMsg = `Stage '${stageName}' was skipped`;
+                        if(onSkip === 'stop') {
+                            skipMsg += ' and will stop transform due to onSkip: stop';
+                        }
+                        logger.debug(mergeSimpleError(err), skipMsg);
+                        if(onSkip === 'stop') {
+                            break;
+                        }
+                    } else if(onFailure === 'continue') {
                         logger.warn(mergeSimpleError(err), 'A transform encountered an error but continuing due to onFailure: continue');
                     } else {
                         logger.error(mergeSimpleError(err), 'Transform encountered an error');
@@ -222,12 +237,11 @@ export default abstract class AbstractComponent extends AbstractInitializable {
                         name: stageName,
                         play: newTransformedPlay.data
                     });
+                    transformedPlay = newTransformedPlay;
                 }
 
-                transformedPlay = newTransformedPlay;
-
                 if(err === undefined && onSuccess === 'stop') {
-                    logger.debug(`${nanoid} Stopping transform due to onSuccess: stop`);
+                    logger.debug(`Stopping transform due to onSuccess: stop`);
                     break;
                 }
             }
