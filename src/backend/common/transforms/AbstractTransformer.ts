@@ -80,12 +80,7 @@ export default abstract class AbstractTransformer<T = any, Y extends StageConfig
         try {
             await this.handlePreFetch(play, data);
         } catch (e) {
-            if(isSimpleError(e) && e.simple) {
-                this.logger.debug(`Returning original Play because preFetch did not pass: ${e.message}`);
-            } else {
-                this.logger.debug(new Error('Returning original Play because preFetch check did not pass', { cause: e }));
-            }
-            return play;
+            throw new Error('preFetch check did not pass', { cause: e });
         }
 
         let transformData: T;
@@ -99,12 +94,7 @@ export default abstract class AbstractTransformer<T = any, Y extends StageConfig
         try {
             transformData = await this.handlePostFetch(play, fetchedTransformData, data);
         } catch (e) {
-            if(isSimpleError(e) && e.simple) {
-                this.logger.debug(`Returning original Play because postFetch did not pass: ${e.message}`);
-            } else {
-                this.logger.debug(new Error('Returning original Play because postFetch did not pass', { cause: e }));
-            }
-            return play;
+            throw new Error('postFetch did not pass', { cause: e });
         }
 
         const transformed = await this.doHandle(data, play, transformData);
