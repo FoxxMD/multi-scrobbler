@@ -101,7 +101,7 @@ export async function readJson(this: any, path: any, options: ReadJsonOptions = 
             const replaced = replaceInterpolatedValues(data, process.env, logger);
             return JSON5.parse(replaced);
         }
-        return data;
+        return JSON5.parse(data);
     } catch (e) {
         const { code } = e;
         if (code === 'ENOENT') {
