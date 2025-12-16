@@ -44,7 +44,7 @@ services:
 
 [**Sources**](/configuration/sources) are the services/music players multi-scrobbler monitors to look for listening activity.
 
-<Tabs>
+<Tabs groupId="qsSource">
     <TabItem value="jellyfin" label="Jellyfin">
         Follow the Jellyfin configuration [instructions for setting up an **API Key**.](/configuration/sources/jellyfin)
 
@@ -146,11 +146,101 @@ services:
     </TabItem>
 </Tabs>
 
+## (Optional) Correct Scrobbles with Musicbrainz
+
+Multi-scrobbler can use [Musicbrainz](https://musicbrainz.org/) to match activity from your Sources in order to [fill in missing data](/configuration/transforms/musicbrainz), or correct/normalize existing data, before it is scrobbled to the [Clients](#setup-clients) below. This step is optional.
+
+Open this section for instructions on how to do this. The instructions are customized depending on which [Source](#setup-sources) is currently selected.
+
+<details>
+
+<summary>Setup Musicbrainz</summary>
+
+<h3>Configure Musicbrainz API</h3>
+
+:::note
+
+**This step only needs to be performed once** regardless of how many Sources you want to use Musicbrainz for.
+
+:::
+
+You must provide a way for Musicbrainz to [contact you.](https://wiki.musicbrainz.org/MusicBrainz_API/Rate_Limiting#How_can_I_be_a_good_citizen_and_be_smart_about_using_the_Web_Service?)
+
+Add these value to the `environment` section in the [`docker-compose.yml` you created.](#create-docker-compose-file)
+
+```yaml title="~/msData/docker-compose.yml"
+# an email or personal website musicbrainz can use to contact you
+- MB_CONTACT=myCoolName@emailProvider.com 
+# how musicbrainz searches and selects matches
+- MB_PRESETS=sensible,native
+```
+
+**Presets** are found [here](http://localhost:3000/docs/configuration/transforms/musicbrainz/#env-configuration). 
+
+<h3>Enable Musicbrainz For A Source</h3>
+
+Musicbrainz can be enabled for multiple Sources. Follow the directions in each tab to enable it for that Source.
+
+<Tabs groupId="qsSource">
+<TabItem value="jellyfin" label="Jellyfin">
+Add this value to the `environment` section in the [`docker-compose.yml` you created.](#create-docker-compose-file)
+```yaml title="~/msData/docker-compose.yml"
+- JELLYFIN_TRANSFORMS=musicbrainz
+```
+</TabItem>
+<TabItem value="spotify" label="Spotify">
+Add this value to the `environment` section in the [`docker-compose.yml` you created.](#create-docker-compose-file)
+```yaml title="~/msData/docker-compose.yml"
+- SPOTIFY_TRANSFORMS=musicbrainz
+```
+</TabItem>
+<TabItem value="navidrome" label="Navidrome">
+Add this value to the `environment` section in the [`docker-compose.yml` you created.](#create-docker-compose-file)
+```yaml title="~/msData/docker-compose.yml"
+- LZE_TRANSFORMS=musicbrainz
+```
+</TabItem>
+<TabItem value="plex" label="Plex">
+Add this value to the `environment` section in the [`docker-compose.yml` you created.](#create-docker-compose-file)
+```yaml title="~/msData/docker-compose.yml"
+- PLEX_TRANSFORMS=musicbrainz
+```
+</TabItem>
+<TabItem value="lastfm" label="Last.fm">
+Modify the `lastfm.json` file you created in the [Setup Sources](#setup-sources) step to add the highlighted section in the example below. The comma at the top highlighted section is important!
+
+```json title="~/msData/config/lastfm.json"
+[
+  {
+    "name": "myLastFmSource",
+    "configureAs": "source",
+    "data": {
+      "apiKey": "MY_API_KEY_PLACEDHOLDER",
+      "secret": "MY_SECRET_PLACEHOLDER",
+      "redirectUri": "http://192.168.0.100:9078/lastfm/callback"
+    // highlight-start
+    },
+    "options": {
+      "playTransform": {
+        "preCompare": {
+          "type": "musicbrainz"
+        }
+      }
+    }
+    // highlight-end
+  }
+]
+```
+</TabItem>
+</Tabs>
+
+</details>
+
 ## Setup Clients
 
 [**Clients**](/configuration/clients) are services that store scrobbles. Multi-scrobbler will scrobble all listening activity from the **Sources** you configured to all **Clients** you configure here.
 
-<Tabs>
+<Tabs groupId="qsClient">
     <TabItem value="maloja" label="Maloja">
         Setup a [Maloja server](https://github.com/krateng/maloja?tab=readme-ov-file#how-to-install) if you have not already done this.
 
