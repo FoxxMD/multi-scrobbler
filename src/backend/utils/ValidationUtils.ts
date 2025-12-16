@@ -1,11 +1,13 @@
 import { Logger } from "@foxxmd/logging";
 import * as AjvNS from "ajv";
 import Ajv, { Schema } from "ajv";
+import f from "ajv-formats"
 
 export const createAjvFactory = (logger: Logger): AjvNS.default => {
-    const validator = new Ajv.default({logger: logger, verbose: true, strict: "log", allowUnionTypes: true});
+    const validator = new Ajv.default({logger: logger, verbose: true, strict: "log", strictSchema: "log", allowUnionTypes: true});
     // https://ajv.js.org/strict-mode.html#unknown-keywords
     validator.addKeyword('deprecationMessage');
+    f.default(validator);
     return validator;
 }
 export const validateJson = <T>(config: object, schema: Schema, logger: Logger): T => {

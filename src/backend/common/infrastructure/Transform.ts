@@ -3,7 +3,7 @@ import { SearchAndReplaceRegExp } from "@foxxmd/regex-buddy-core";
 export interface ConditionalSearchAndReplaceRegExp extends SearchAndReplaceRegExp, Whennable {
 }
 
-export type ConditionalSearchAndReplaceTerm = Omit<ConditionalSearchAndReplaceRegExp, 'test'>
+export type ConditionalSearchAndReplaceTerm = Exclude<ConditionalSearchAndReplaceRegExp, 'test'>
 export type SearchAndReplaceTerm = string | ConditionalSearchAndReplaceTerm;
 export type ExternalMetadataTerm = boolean | undefined | Whennable;
 
@@ -36,7 +36,7 @@ export interface StageTyped {
 }
 
 export interface NotStageTyped {
-    type?: never
+    //type?: never
 }
 
 export type MaybeStageTyped = StageTyped | NotStageTyped;
@@ -59,6 +59,10 @@ export interface FlowControl {
 }
 
 export interface StageConfig extends StageTypedConfig, Whennable, Partial<FlowControl> {
+    name?: string
+}
+
+export interface UntypedStageConfig extends Whennable, Partial<FlowControl> {
     name?: string
 }
 
@@ -86,7 +90,9 @@ export interface PlayTransformGenericStage<T> extends StageConfig, PlayTransform
     type: string
 }
 
-export type UntypedPlayTransformUserStage<T> = Omit<PlayTransformUserStage<T>, 'type'> & {type?: never};
+export interface UntypedPlayTransformUserStage<T> extends UntypedStageConfig, PlayTransformPartsAtomic<T> {
+
+}
 
 export type PlayTransformStage<T> = PlayTransformMetadataStage | PlayTransformUserStage<T> | PlayTransformNativeStage | UntypedPlayTransformUserStage<T> | PlayTransformGenericStage<any>;
 
@@ -120,6 +126,7 @@ export const TRANSFORM_HOOK = {
 }
 export type PlayTransformConfig = PlayTransformHooksConfig<SearchAndReplaceTerm[] | ExternalMetadataTerm>;
 export type PlayTransformOptions = PlayTransformConfig & { log?: boolean | 'all' }
+
 export type WhenParts<T> = PlayTransformPartsAtomic<T>;
 export type WhenConditions<T> = WhenParts<T>[];
 export type WhenConditionsConfig = WhenConditions<string>;

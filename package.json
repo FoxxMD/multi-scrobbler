@@ -69,6 +69,7 @@
     "@types/express-serve-static-core": "^4.19.6",
     "address": "^1.2.2",
     "ajv": "^8.12.0",
+    "ajv-formats": "^3.0.1",
     "autoprefixer": "^10.4.17",
     "avahi-browse": "^1.1.4",
     "better-sse": "^0.8.0",
