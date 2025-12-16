@@ -668,6 +668,21 @@ const nonEmptyStringOpts: NonEmptyOptions<string> = { ofType: 'string', test: (v
 export const getFirstNonEmptyString = (values: unknown[]) => getFirstNonEmptyVal<string>(values, nonEmptyStringOpts);
 export const getNonEmptyString = (value: unknown) => getNonEmptyVal<string>(value, nonEmptyStringOpts);
 
+const nonEmptyValueOpts: NonEmptyOptions<any> = { test: (v) => v !== undefined && v !== null && typeof v !== 'string' || v.trim() !== '' };
+export const isEmptyArrayOrUndefined = <T = unknown>(arr: unknown[] | undefined, options: NonEmptyOptions<T> = {}): boolean => {
+    if(arr === undefined || arr === null || arr.length === 0) {
+        return true;
+    }
+    const opts = {...nonEmptyValueOpts, ...options};
+    for(const v of arr) {
+        const nonEmptyVal = getNonEmptyVal(v, opts);
+        if(nonEmptyVal !== undefined) {
+            return false;
+        }
+    }
+    return true;
+}
+
   /**
  * Runs the function `fn`
  * and retries automatically if it fails.
