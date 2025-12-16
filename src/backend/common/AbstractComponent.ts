@@ -8,7 +8,7 @@ import { PlayData, PlayObject, TransformResult } from "../../core/Atomic.js";
 import { buildPlayHumanDiffable, buildTrackString } from "../../core/StringUtils.js";
 import { CommonClientConfig } from "./infrastructure/config/client/index.js";
 import { CommonSourceConfig } from "./infrastructure/config/source/index.js";
-import { TransformRulesError } from "./errors/MSErrors.js";
+import { mergeSimpleError, SkipTransformStageError, StageTransformError, TransformRulesError } from "./errors/MSErrors.js";
 import {
     PlayTransformRules,
     StageConfig,
@@ -23,6 +23,7 @@ import { nanoid } from "nanoid";
 import {diffStringsUnified, DiffOptionsColor} from 'jest-diff';
 import chalk from 'chalk';
 import { isDebugMode } from "../utils.js";
+import { findCauseByReference } from "../utils/ErrorUtils.js";
 
 export default abstract class AbstractComponent extends AbstractInitializable {
 
@@ -83,10 +84,10 @@ export default abstract class AbstractComponent extends AbstractInitializable {
             postCompare: postConfig
         } = playTransform;
 
-        let preCompare,
-            candidate,
-            existing,
-            postCompare;
+        let preCompare: StageConfig[],
+            candidate: StageConfig[],
+            existing: StageConfig[],
+            postCompare: StageConfig[];
 
         const builtHooks: string[] = [];
         const emptyHooks: string[] = [];
@@ -95,7 +96,7 @@ export default abstract class AbstractComponent extends AbstractInitializable {
             if(preCompare === undefined) {
                 emptyHooks.push('preCompare')
             } else {
-                builtHooks.push('preCompare');
+                builtHooks.push(`preCompare => ${preCompare.map(x => `${x.type}${x.name !== undefined ? `-${x.name}` : ''}`)}`);
             }
         } catch (e) {
             throw new Error('preCompare was not valid', {cause: e});
@@ -106,7 +107,7 @@ export default abstract class AbstractComponent extends AbstractInitializable {
             if(candidate === undefined) {
                 emptyHooks.push('candidate')
             } else {
-                builtHooks.push('candidate');
+                builtHooks.push(`canidate => ${candidate.map(x => `${x.type}${x.name !== undefined ? `-${x.name}` : ''}`)}`);
             }
         } catch (e) {
             throw new Error('candidate was not valid', {cause: e});
@@ -117,7 +118,7 @@ export default abstract class AbstractComponent extends AbstractInitializable {
              if(existing === undefined) {
                 emptyHooks.push('existing')
             } else {
-                builtHooks.push('existing');
+                builtHooks.push(`existing => ${existing.map(x => `${x.type}${x.name !== undefined ? `-${x.name}` : ''}`)}`);
             }
         } catch (e) {
             throw new Error('existing was not valid', {cause: e});
@@ -128,13 +129,13 @@ export default abstract class AbstractComponent extends AbstractInitializable {
              if(postCompare === undefined) {
                 emptyHooks.push('postCompare')
             } else {
-                builtHooks.push('postCompare');
+                builtHooks.push(`postCompare => ${postCompare.map(x => `${x.type}${x.name !== undefined ? `-${x.name}` : ''}`)}`);
             }
         } catch (e) {
             throw new Error('postCompare was not valid', {cause: e});
         }
 
-        this.logger.debug(`Hooks built. Configured: ${builtHooks.join(', ')} | Empty: ${emptyHooks.join(', ')}`);
+        this.logger.debug(`Hooks built! Empty: ${emptyHooks.join(', ')} | Configured: ${builtHooks.length === 0 ? 'None' : `\n${builtHooks.join('\n')}`}`);
 
         this.transformRules = {
             preCompare,
@@ -192,23 +193,37 @@ export default abstract class AbstractComponent extends AbstractInitializable {
                 const {
                     onSuccess = 'continue',
                     onFailure = 'stop',
+                    onSkip = 'continue',
                     failureReturnPartial = false
                 } = hookItem;
 
                 let newTransformedPlay: PlayObject,
-                stageName: string,
+                stageName: string = 'Unnamed',
                 err: Error;
                 try {
                     [newTransformedPlay, stageName] = await this.transformManager.handleStage(hookItem, transformedPlay, asyncId);
                 } catch (e) {
                     err = e;
+                    if(e instanceof StageTransformError) {
+                        stageName = e.stageName;
+                    }
                 }
 
                 if(err !== undefined) {
-                    if(onFailure === 'continue') {
-                        logger.warn(new Error(`A transform encountered an error but continuing due to onFailure: continue`, {cause: err}));
+                    const skipError = findCauseByReference(err, SkipTransformStageError);
+                    if(skipError !== undefined) {
+                        let skipMsg = `Stage '${stageName}' was skipped`;
+                        if(onSkip === 'stop') {
+                            skipMsg += ' and will stop transform due to onSkip: stop';
+                        }
+                        logger.debug(mergeSimpleError(err), skipMsg);
+                        if(onSkip === 'stop') {
+                            break;
+                        }
+                    } else if(onFailure === 'continue') {
+                        logger.warn(mergeSimpleError(err), 'A transform encountered an error but continuing due to onFailure: continue');
                     } else {
-                        logger.error(new Error(`Transform encountered an error`, {cause: err}));
+                        logger.error(mergeSimpleError(err), 'Transform encountered an error');
                         if(!failureReturnPartial) {
                             // rewind to original play so we don't return partial transform
                             transformedPlay = play;
@@ -216,18 +231,17 @@ export default abstract class AbstractComponent extends AbstractInitializable {
                         }
                         break;
                     }
+                } else {
+                    transformHistory.push({
+                        type: hookItem.type,
+                        name: stageName,
+                        play: newTransformedPlay.data
+                    });
+                    transformedPlay = newTransformedPlay;
                 }
 
-                transformHistory.push({
-                    type: hookItem.type,
-                    name: stageName,
-                    play: newTransformedPlay.data
-                });
-
-                transformedPlay = newTransformedPlay;
-
                 if(err === undefined && onSuccess === 'stop') {
-                    logger.debug(`${nanoid} Stopping transform due to onSuccess: stop`);
+                    logger.debug(`Stopping transform due to onSuccess: stop`);
                     break;
                 }
             }

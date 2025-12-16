@@ -54,6 +54,7 @@ export type FlowControlTerm = 'continue' | 'stop'
 export interface FlowControl {
     onSuccess: FlowControlTerm
     onFailure: FlowControlTerm
+    onSkip: FlowControlTerm
     failureReturnPartial: boolean
 }
 

@@ -371,7 +371,80 @@ Specifying these Rules is **not** the same as [configuring the Stage](#configuri
 
 :::
 
-## Conditional Modification
+### Flow Control
+
+Stages may be optionally configured to **continue** to the next Stage or **stop** (end early) all subsequent Stages, based on the outcome of the currently running Stage.
+
+These three properties can be added to the [Modification Stage](#modification-stage) data, alongside [Rules](#rules-for-play-data):
+
+* `onSuccess` (default `continue`) - If the Stage successfully finishes processing
+* `onFailure` (default `stop`) - If the Stage encounters an error while processing, or otherwise fails to achieve the transformation result
+* `onSkip` (default `continue`) - If the Stage does not process the Play data due to stage-level [`when`](#conditional-modification) or other stage-specific skip conditions
+
+:::tip
+
+The default behaviors for Flow Control are the same as you would intuitively think Stages should run IE the next Stage you have defined runs if the current Stage does not fail. 
+
+Specifying Flow Control is only necessary if the above assumptions are not true for your scenario.
+
+<details>
+
+<summary>Default Flow Control Example</summary>
+
+```json5 title="subsonic.json"
+    // ...
+    "options": {
+      "playTransform": {
+        "preCompare": [
+          {
+            // if this stage is successful, native is run
+            // if this stage fails, native does not run
+            "type": "musicbrainz",
+            "name": "MyMB"
+          },
+          {
+            "type": "native",
+            "name": "MyNative"
+          }
+        ]
+      }
+    }
+```
+
+</details>
+
+:::
+
+<details>
+
+<summary>Customized Flow Control Example</summary>
+
+
+```json5 title="subsonic.json"
+    // ...
+    "options": {
+      "playTransform": {
+        "preCompare": [
+          {
+            // if musicbrainz is successful then do NOT run native,
+            // only run native if musicbrainz fails to find a match (onFailure)
+            "type": "musicbrainz",
+            "name": "MyMB"
+            "onSuccess": "stop",
+            "onFailure": "continue"
+          },
+          {
+            "type": "native",
+            "name": "MyNative"
+          }
+        ]
+      }
+    }
+```
+
+</details>
+
+### Conditional Modification
 
 [Stages](#stage) within a [Hook](#hook), and [Rules](#stage-rules) within each Stage, support a `when` object for testing **if they should be run.**
 
@@ -482,3 +555,11 @@ MS can log the output of Stage transformations if/when they occur. In the `playT
   }
 }
 ```
+
+## Examples
+
+See **Examples** sections in specific Stage docs (also in the sidebar):
+
+* [User Stage](/configuration/transforms/user#examples)
+* [Native Stage](/configuration/transforms/native#examples)
+* [Musicbrainz Stage](/configuration/transforms/musicbrainz#examples)
