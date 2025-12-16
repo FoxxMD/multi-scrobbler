@@ -233,7 +233,38 @@ Both steps have separate configuration.
 
 ### Searching
 
-The first step is making [search queries to the Musicbrainz database](https://musicbrainz.org/doc/MusicBrainz_API/Search) to try to get potential candidates. Multi-scrobbler uses the **title, artist(s), and album** from your Scrobble data to query for matches.
+Before MS begins a search it checks Scrobble data it checks if your data already contains:
+
+* [MBIDs](https://musicbrainz.org/doc/MusicBrainz_Identifier) for [artists](https://musicbrainz.org/doc/Artist), [album](https://musicbrainz.org/doc/Release), and specific [track/recording](https://musicbrainz.org/doc/Recording)
+* and duration
+
+If it already has all required data types then the entire Musicbrainz Stage [is **skipped**.](/configuration/transforms/#flow-control) If any are missing then a search is performed.
+
+Define which data types are required using:
+
+* `searchWhenMissing` (defaults to all) - A list containing any of: `artists` `title` `album` `duration`
+* `forceSearch` (default `false`) - Force searching even if all required data is present
+
+<details>
+
+<summary>Example</summary>
+
+[Stage Configuration](/configuration/transforms#configuring-stages) example:
+
+```json5
+// ...
+"defaults": {
+    // only search if MBIDs for artists or album is missing
+    "searchWithMissing": ['artists', 'album']
+
+    // uncomment to make the stage always search, even if above data is present
+    //forceSearch: true
+  }
+```
+
+</details>
+
+If required data is missing then the next step is making [search queries to the Musicbrainz database](https://musicbrainz.org/doc/MusicBrainz_API/Search) to try to get potential candidates. Multi-scrobbler uses the **title, artist(s), and album** from your Scrobble data to query for matches.
 
 Musicbrainz agressively normalizes these fields in its database which means that if your Scrobble data contains major innaccuracies or phrases fields in a non-normal way, it's possible Musicbrainz won't find any matches. This is a more common occurrence when trying to match Scrobble data from Sources that don't support multiple artist data, like [Subsonic](/configuration/sources/subsonic) and [Last.fm](/configuration/sources/lastfm).
 
@@ -261,17 +292,43 @@ The corresponding [Musicbrainz Recording](https://musicbrainz.org/release/85bf28
 
 </details>
 
-**If a normal search using all the fields mentioned above does not return any matches Multi-scrobbler can try additional searches with modified queries:**
 
-#### Album Only
+:::note
 
-If your Scrobble data contains a title, artist(s), and an album (all three fields) then Multi-scrobbler will **automatically** retry the search using only title and album.
+If the initial search, and any [retried searches](#retrying-search), do not return any results then the stage is marked as [**failed** (`onFailure`) for **Flow Control**](/configuration/transforms/#flow-control).
 
-#### Artist Extraction
+:::
+
+#### Retrying Search
+
+If a normal search using all the fields mentioned above does not return any matches Multi-scrobbler can try additional searches with modified queries.
+
+<details>
+
+<summary>Album Only</summary>
+
+If your Scrobble data contains a title, artist(s), and an album (all three fields) then Multi-scrobbler can retry the search using only title and album, if `fallbackAlbumSearch` is set in [Stage Configuration](/configuration/transforms#configuring-stages):
+
+
+[Stage Configuration](/configuration/transforms#configuring-stages) example:
+
+```json5
+// ...
+"defaults": {
+    // will try an additional search using only title + album name
+    "fallbackAlbumSearch": "true"
+  }
+```
+
+</details>
+
+<details>
+
+<summary>Artist Extraction</summary>
 
 If...
 
-* [Album Only](#album-only) returns no results or did not run due to missing an album
+* [Album Only](#album-only) returns no results or did not run
 * Your scrobble data contains only **one** artist string
 * `fallbackArtistSearch` is set in [Stage Configuration](/configuration/transforms#configuring-stages)
 
@@ -368,15 +425,19 @@ Then Multi-scrobbler will attempt to extract multiple artists from your artist a
     </TabItem>
 </Tabs>
 
-#### Free Text
+</details>
 
-If both [Album Only](#album-only) and [Artist Extraction](#artist-extraction) searches fail to return results you can additionally enable **Free Text** search. This will search Musicbrainz for **all** text of your Scrobble data artist/title/album, without constraint. **This is not automatic. You must set `fallbackFreeTextSeach: true` to enable this additional search.**
+<details>
+
+<summary>Free Text</summary>
+
+If both [Album Only](#album-only) and [Artist Extraction](#artist-extraction) searches fail to return results, or were not run, you can additionally enable **Free Text** search. This will search Musicbrainz for **all** text of your Scrobble data artist/title/album, without constraint.
 
 :::warning
 
 Free text search is **unconstrained** which means that Musicbrainz will match text in **any** part of a Recording (artist, release, or recording field), regardless of where it is found. This may lead to results that are unexpected and undesired.
 
-If you know your Source's Play data is well organized you should not enable this. Free Text search should only be used if:
+If you know your Source's Play data is well organized you **should not** enable this. Free Text search should only be used if:
 
 * your music is not well organized or
 * there may be many alternative titles/artists for the music you listen to (such as with [psuedo-releases](https://wiki.musicbrainz.org/Release#Status))
@@ -394,6 +455,8 @@ If you know your Source's Play data is well organized you should not enable this
     "fallbackFreeTextSearch": true
   }
 ```
+
+</details>
 
 ### Refining
 
@@ -742,7 +805,7 @@ Your [AIO Config](/configuration?configType=aio#configuration-types):
 
 In a [Jellyfin](/configuration/clients/jellyfin) [File Config](/configuration?configType=file#configuration-types):
 
-```json5 title="subsonic.json"
+```json5 title="jellyfin.json"
 [
   { 
     "name": "MyJellyfin",
@@ -758,6 +821,74 @@ In a [Jellyfin](/configuration/clients/jellyfin) [File Config](/configuration?co
             "album": false,
             "albumArtists": false,
             "meta": true // only update scrobble metadata with MBIDs
+          }
+        ]
+      }
+    }
+  }
+]
+```
+</details>
+
+### Use Native Stage if no Musicbrainz Matches
+
+* Musicbrainz Stage configured with
+  * [Sensible Defaults](#sensible-default)
+  * Fallback search with [Artist Extraction](#retrying-search)
+* [Default Native Stage](/configuration/transforms/native/#default-stage)
+* Uses [Flow Control](/configurations/transforms#flow-control) to run Native only if there are no Musicbrainz matches
+
+<details>
+
+<summary>Example</summary>
+
+Your [AIO Config](/configuration?configType=aio#configuration-types):
+
+```json5 title="config.json"
+{
+  // ...
+  "transformers": [
+    {
+      "type": "musicbrainz",
+      "name": "MyMB",
+      "data": {
+        "apis": [
+          {
+            "contact": "contact@mydomain.com"
+          }
+        ]
+      },
+      "defaults": {
+        "releaseStatusPriority": ["official"],
+        "releaseGroupPrimaryTypePriority": ["album", "single", "ep"],
+        "releaseCountryPriority": ["XW"],
+        "fallbackArtistSearch": "native",
+      }
+    }
+  ]
+}
+```
+
+In a [Jellyfin](/configuration/clients/jellyfin) [File Config](/configuration?configType=file#configuration-types):
+
+```json5 title="jellyfin.json"
+[
+  { 
+    "name": "MyJellyfin",
+    "data": { /* ... */},
+    "options": {
+      "playTransform": {
+        "preCompare": [
+          {
+            // if musicbrainz is successful then do NOT run native,
+            // only run native if musicbrainz fails to find a match (onFailure)
+            "type": "musicbrainz",
+            "name": "MyMB"
+            "onSuccess": "stop",
+            "onFailure": "continue"
+          },
+          {
+            "type": "native"
           }
         ]
       }
