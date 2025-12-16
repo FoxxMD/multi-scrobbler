@@ -18,7 +18,7 @@ import { AbstractApiOptions, DEFAULT_RETRY_MULTIPLIER, DELIMITERS, FormatPlayObj
 import { ListenBrainzClientData } from "../infrastructure/config/client/listenbrainz.js";
 import AbstractApiClient from "./AbstractApiClient.js";
 import { getBaseFromUrl, isPortReachableConnect, joinedUrl, normalizeWebAddress } from '../../utils/NetworkUtils.js';
-import { removeUndefinedKeys, unique } from '../../utils.js';
+import { isEmptyArrayOrUndefined, removeUndefinedKeys, unique } from '../../utils.js';
 import {ListensResponse as KoitoListensResponse} from '../infrastructure/config/client/koito.js'
 import { listenObjectResponseToPlay } from './koito/KoitoApiClient.js';
 import { version } from '../../ioc.js';
@@ -584,6 +584,8 @@ export const listenToNaivePlay = (listen: ListenResponse): PlayObject => {
                     submission_client,
                     submission_client_version,
                     artist_names = [],
+                    isrc,
+                    tracknumber
                 } = {},
                 mbid_mapping: {
                     recording_mbid: mRecordingMbid
@@ -659,7 +661,9 @@ export const listenToNaivePlay = (listen: ListenResponse): PlayObject => {
         const brainzMeta: BrainzMeta = removeUndefinedKeys({
             album: release_mbid,
             releaseGroup: release_group_mbid,
-            track: trackId
+            track: trackId,
+            isrc: isrc !== undefined ? [isrc] : undefined,
+            trackNumber: tracknumber
         }) ?? {};
 
         if(Object.keys(additional_info).length > 0) {
@@ -721,10 +725,34 @@ export const playToListenPayload = (play: PlayObject): ListenPayload => {
             media_player_version: mediaPlayerVersion ?? msAdditionalInfo.media_player_version,
             music_service: musicService !== undefined ? musicServiceToCononical(musicService) : msAdditionalInfo.music_service,
             music_service_name: source,
-            spotify_id: spotify.track ?? msAdditionalInfo.spotify_id,
-            spotify_album_id: spotify.album ?? msAdditionalInfo.spotify_album_id,
-            spotify_artist_ids: spotify.artist ?? msAdditionalInfo.spotify_artist_ids
+            spotify_id: msAdditionalInfo.spotify_id,
+            spotify_album_id: msAdditionalInfo.spotify_album_id,
+            spotify_artist_ids: msAdditionalInfo.spotify_artist_ids,
+            origin_url: msAdditionalInfo.origin_url,
+            isrc: brainz.isrc !== undefined ? brainz.isrc[0] : msAdditionalInfo.isrc,
+            tracknumber: brainz.trackNumber ?? msAdditionalInfo.tracknumber
         };
+
+        if(Object.keys(spotify).length > 0) {
+            if(spotify.track !== undefined) {
+                const trackUrl = `https://open.spotify.com/track/${spotify.track}`;
+                if(addInfo.origin_url === undefined) {
+                    addInfo.origin_url = trackUrl;
+                }
+                if(addInfo.spotify_id === undefined) {
+                    addInfo.spotify_id = trackUrl;
+                }
+            }
+            if(isEmptyArrayOrUndefined(addInfo.spotify_artist_ids) && !isEmptyArrayOrUndefined(spotify.artist)) {
+                addInfo.spotify_artist_ids = spotify.artist.map(x => `https://open.spotify.com/artist/${x}`)
+            }
+            if(isEmptyArrayOrUndefined(addInfo.spotify_album_artist_ids) && !isEmptyArrayOrUndefined(spotify.albumArtist)) {
+                addInfo.spotify_album_artist_ids = spotify.albumArtist.map(x => `https://open.spotify.com/artist/${x}`)
+            }
+            if(addInfo.spotify_album_id === undefined && spotify.album !== undefined) {
+                addInfo.spotify_album_id = `https://open.spotify.com/album/${spotify.album}`
+            }
+        }
 
         addInfo = removeUndefinedKeys(addInfo)
 

@@ -2,7 +2,7 @@ import dayjs, { Dayjs } from "dayjs";
 import EventEmitter from "events";
 import SpotifyWebApi from "spotify-web-api-node";
 import request from 'superagent';
-import { PlayObject, SCROBBLE_TS_SOC_END, SCROBBLE_TS_SOC_START, ScrobbleTsSOC, SpotifyMeta } from "../../core/Atomic.js";
+import { BrainzMeta, PlayObject, SCROBBLE_TS_SOC_END, SCROBBLE_TS_SOC_START, ScrobbleTsSOC, SpotifyMeta } from "../../core/Atomic.js";
 import { combinePartsToString, truncateStringToLength } from "../../core/StringUtils.js";
 import { isNodeNetworkException } from "../common/errors/NodeErrors.js";
 import { hasUpstreamError, UpstreamError } from "../common/errors/UpstreamError.js";
@@ -88,6 +88,8 @@ export default class SpotifySource extends MemoryPositionalSource {
         let url: string;
         let playbackPosition: number | undefined;
         let deviceId: string | undefined;
+        let isrcString: string | undefined;
+        let trackNumber: number | undefined;
         let scrobbleTsSOC: ScrobbleTsSOC;
 
 
@@ -104,7 +106,11 @@ export default class SpotifySource extends MemoryPositionalSource {
                 album: a,
                 external_urls: {
                     spotify,
-                } = {}
+                } = {},
+                external_ids: {
+                    isrc
+                },
+                track_number
             } = track;
 
             scrobbleTsSOC = SCROBBLE_TS_SOC_END;
@@ -116,6 +122,8 @@ export default class SpotifySource extends MemoryPositionalSource {
             duration_ms = dm;
             album = a;
             url = spotify;
+            isrcString = isrc;
+            trackNumber = track_number;
 
         } else if (asCurrentlyPlayingObject(obj)) {
             const {
@@ -136,7 +144,11 @@ export default class SpotifySource extends MemoryPositionalSource {
                 album: a,
                 external_urls: {
                     spotify,
-                } = {}
+                } = {},
+                external_ids: {
+                    isrc
+                },
+                track_number
             } = item as TrackObjectFull;
 
             scrobbleTsSOC = SCROBBLE_TS_SOC_START;
@@ -149,6 +161,8 @@ export default class SpotifySource extends MemoryPositionalSource {
             url = spotify;
             playbackPosition = progress_ms / 1000;
             deviceId = combinePartsToString([shortDeviceId(deviceIdentifier), deviceName]);
+            isrcString = isrc;
+            trackNumber = track_number
 
         } else {
             throw new Error('Could not determine format of spotify response data');
@@ -207,6 +221,19 @@ export default class SpotifySource extends MemoryPositionalSource {
                 }
             }
         };
+
+        const brainz: BrainzMeta =  {};
+
+
+        if(isrcString !== undefined) {
+            brainz.isrc = [isrcString];
+        }
+        if(trackNumber !== undefined) {
+            brainz.trackNumber = trackNumber;
+        }
+        if(Object.keys(brainz).length > 0) {
+            play.data.meta.brainz = brainz;
+        }
 
         if(imageData !== undefined) {
             play.meta.art = {album: imageData.url};

@@ -77,6 +77,7 @@ export interface AdditionalTrackInfo {
     submission_client?: string;
     submission_client_version?: string;
     spotify_id?: string;
+    isrc?: string
     media_player?: string;
     media_player_version?: string;
 

@@ -332,7 +332,8 @@ export const recordingToPlay = (data: IRecording, options?: {ignoreVA?: boolean}
                     artist: data["artist-credit"] !== undefined ? data["artist-credit"].map(x => x.artist.id) : undefined,
                     albumArtist: albumArtistIds,
                     album: album !== undefined ? album.id : undefined,
-                    releaseGroup: album !== undefined ? album["release-group"]?.id : undefined
+                    releaseGroup: album !== undefined ? album["release-group"]?.id : undefined,
+                    isrc: data.isrcs !== undefined && data.isrcs.length > 0 ? data.isrcs : undefined
                 }
             }
         },
