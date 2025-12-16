@@ -7,7 +7,8 @@ import LastFm, {
 } from "lastfm-node-client";
 import { PlayObject } from "../../../core/Atomic.js";
 import { nonEmptyStringOrDefault, splitByFirstFound } from "../../../core/StringUtils.js";
-import { readJson, removeUndefinedKeys, sleep, writeFile } from "../../utils.js";
+import { removeUndefinedKeys, sleep, writeFile } from "../../utils.js";
+import { readJson } from '../../utils/DataUtils.js';
 import { joinedUrl } from "../../utils/NetworkUtils.js";
 import { getScrobbleTsSOCDate } from "../../utils/TimeUtils.js";
 import { getNodeNetworkException, isNodeNetworkException } from "../errors/NodeErrors.js";
@@ -169,7 +170,7 @@ export default class LastfmApiClient extends AbstractApiClient {
     initialize = async (): Promise<true> => {
 
         try {
-            const creds = await readJson(this.workingCredsPath, {throwOnNotFound: false});
+            const creds = await readJson(this.workingCredsPath, {throwOnNotFound: false, interpolateEnvs: false});
             const {sessionKey} = creds || {};
             if (this.client.sessionKey === undefined && sessionKey !== undefined) {
                 this.client.sessionKey = sessionKey;

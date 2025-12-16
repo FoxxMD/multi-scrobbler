@@ -34,7 +34,8 @@ import { VLCData, VLCSourceConfig } from "../common/infrastructure/config/source
 import { WebScrobblerSourceConfig } from "../common/infrastructure/config/source/webscrobbler.js";
 import { YTMusicData, YTMusicSourceConfig } from "../common/infrastructure/config/source/ytmusic.js";
 import { WildcardEmitter } from "../common/WildcardEmitter.js";
-import { parseBool, readJson } from "../utils.js";
+import { parseBool } from "../utils.js";
+import { readJson } from '../utils/DataUtils.js';
 import { validateJson } from "../utils/ValidationUtils.js";
 import AbstractSource from "./AbstractSource.js";
 import { AzuracastSource } from "./AzuracastSource.js";
@@ -270,7 +271,7 @@ export default class ScrobbleSources {
 
         let configFile;
         try {
-            configFile = await readJson(`${this.internalConfig.configDir}/config.json`, {throwOnNotFound: false});
+            configFile = await readJson(`${this.internalConfig.configDir}/config.json`, {throwOnNotFound: false, logger: childLogger(this.logger, `Secrets`)});
         } catch (e) {
             throw new Error('config.json could not be parsed');
         }
@@ -711,7 +712,7 @@ export default class ScrobbleSources {
             }
             let rawSourceConfigs;
             try {
-                rawSourceConfigs = await readJson(`${this.internalConfig.configDir}/${sourceType}.json`, {throwOnNotFound: false});
+                rawSourceConfigs = await readJson(`${this.internalConfig.configDir}/${sourceType}.json`, {throwOnNotFound: false, logger: childLogger(this.logger, `${sourceType} Secrets`)});
             } catch (e) {
                 const errMsg = `${sourceType}.json config file could not be parsed`;
                 this.emitter.emit('error', errMsg);

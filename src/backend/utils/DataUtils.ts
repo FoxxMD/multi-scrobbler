@@ -1,3 +1,7 @@
+import JSON5 from "json5";
+import { constants, promises } from "fs";
+import { MaybeLogger } from "../common/logging.js";
+
 export const asArray = <T>(data: T | T[]): T[] => {
     if (Array.isArray(data)) {
         return data;
@@ -83,3 +87,55 @@ export const noCasePropObj = <T>(obj: T): T => {
     }
     return newObj; // object with upper cased keys
 }
+export async function readJson(this: any, path: any, options: ReadJsonOptions = {}) {
+    const {
+        throwOnNotFound = true, 
+        interpolateEnvs = true,
+        logger
+    } = options;
+
+    try {
+        await promises.access(path, constants.R_OK);
+        const data = (await promises.readFile(path)).toString();
+        if(interpolateEnvs) {
+            const replaced = replaceInterpolatedValues(data, process.env, logger);
+            return JSON5.parse(replaced);
+        }
+        return data;
+    } catch (e) {
+        const { code } = e;
+        if (code === 'ENOENT') {
+            if (throwOnNotFound) {
+                throw new Error(`No file found at given path: ${path}`, { cause: e });
+            } else {
+                return;
+            }
+        }
+        throw new Error(`Encountered error while parsing file: ${path}`, { cause: e });
+    }
+}export interface ReadJsonOptions {
+    throwOnNotFound?: boolean;
+    interpolateEnvs?: boolean;
+    logger?: MaybeLogger
+}
+export const replaceInterpolatedValues = (str: string, fromVals: Record<string, any>, logger: MaybeLogger = new MaybeLogger()): string => {
+    const cleanFromValKeys = noCasePropObj(fromVals);
+
+    const matched = new Set(), unmatched = new Set();
+    const replaced = str.replaceAll(INTERPOLATION_WRAPPED_REGEX, (match, p1) => {
+        //const fv = cleanFromValKeys[p1.toLocaleLowerCase().trim()];
+        const fv = cleanFromValKeys[p1.trim()];
+        if (fv !== undefined) {
+            matched.add(p1);
+            return fv;
+        }
+        unmatched.add(p1);
+        return match;
+    });
+    if (matched.size !== 0 || unmatched.size !== 0) {
+        logger.debug(`Matched: ${matched.size === 0 ? 'None' : Array.from(matched.values()).join(', ')} | Unmatched: ${unmatched.size === 0 ? 'None' : Array.from(unmatched.values()).join(', ')}`);
+    }
+    return replaced;
+};
+export const INTERPOLATION_WRAPPED_REGEX: RegExp = new RegExp(/\[\[([^\r\n\[\]]+?)\]\]/g);
+

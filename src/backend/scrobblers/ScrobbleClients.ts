@@ -10,7 +10,8 @@ import { ListenBrainzClientConfig } from "../common/infrastructure/config/client
 import { MalojaClientConfig } from "../common/infrastructure/config/client/maloja.js";
 import { WildcardEmitter } from "../common/WildcardEmitter.js";
 import { Notifiers } from "../notifier/Notifiers.js";
-import { isDebugMode, readJson } from "../utils.js";
+import { isDebugMode } from "../utils.js";
+import { readJson } from '../utils/DataUtils.js';
 import { joinedUrl } from "../utils/NetworkUtils.js";
 import { getTypeSchemaFromConfigGenerator } from "../utils/SchemaUtils.js";
 import { validateJson } from "../utils/ValidationUtils.js";
@@ -128,7 +129,7 @@ export default class ScrobbleClients {
 
         let configFile;
         try {
-            configFile = await readJson(`${this.configDir}/config.json`, {throwOnNotFound: false});
+            configFile = await readJson(`${this.configDir}/config.json`, {throwOnNotFound: false, logger: childLogger(this.logger, `Secrets`)});
         } catch (e) {
             // think this should stay as show-stopper since config could include important defaults (delay, retries) we don't want to ignore
             throw new Error('config.json could not be parsed');
@@ -294,7 +295,7 @@ export default class ScrobbleClients {
             }
             let rawClientConfigs;
             try {
-                rawClientConfigs = await readJson(`${this.configDir}/${clientType}.json`, {throwOnNotFound: false});
+                rawClientConfigs = await readJson(`${this.configDir}/${clientType}.json`, {throwOnNotFound: false, logger: childLogger(this.logger, `${clientType} Secrets`)});
             } catch (e) {
                 const errMsg = `${clientType}.json config file could not be parsed`;
                 this.emitter.emit('error', errMsg);

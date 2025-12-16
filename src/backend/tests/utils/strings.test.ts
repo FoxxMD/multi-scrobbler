@@ -3,8 +3,8 @@ import { describe, it } from 'mocha';
 import {
     compareNormalizedStrings,
     normalizeStr,
-    replaceInterpolatedValues,
 } from "../../utils/StringUtils.js";
+import { replaceInterpolatedValues } from "../../utils/DataUtils.js";
 import { splitByFirstFound } from '../../../core/StringUtils.js';
 import { noCasePropObj } from '../../utils/DataUtils.js';
 

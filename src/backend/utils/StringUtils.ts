@@ -4,8 +4,6 @@ import { PlayObject } from "../../core/Atomic.js";
 import { asPlayerStateData, DELIMITERS, DELIMITERS_NO_AMP, PlayerStateDataMaybePlay } from "../common/infrastructure/Atomic.js";
 import { genGroupIdStr, getPlatformIdFromData, intersect, parseRegexSingleOrFail } from "../utils.js";
 import { buildTrackString } from "../../core/StringUtils.js";
-import { MaybeLogger } from "../common/logging.js";
-import { noCasePropObj } from "./DataUtils.js";
 
 const {levenStrategy, diceStrategy} = strategies;
 
@@ -434,24 +432,4 @@ export const hasNonAlphanumericChars = (str: string): boolean => {
     return NON_ALPHANUMWHITESPACE_CHARS.test(str);
 }
 
-export const INTERPOLATION_WRAPPED_REGEX: RegExp = new RegExp(/\[\[([^\r\n\[\]]+?)\]\]/g);
-export const replaceInterpolatedValues = (str: string, fromVals: Record<string, any>, logger: MaybeLogger = new MaybeLogger()): string => {
-    const cleanFromValKeys = noCasePropObj(fromVals);
 
-    const matched = new Set(),
-    unmatched = new Set();
-    const replaced = str.replaceAll(INTERPOLATION_WRAPPED_REGEX, (match, p1) => {
-        //const fv = cleanFromValKeys[p1.toLocaleLowerCase().trim()];
-        const fv = cleanFromValKeys[p1.trim()];
-        if(fv !== undefined) {
-            matched.add(p1);
-            return fv;
-        }
-        unmatched.add(p1);
-        return match;
-    });
-    if(matched.size !== 0 || unmatched.size !== 0) {
-        logger.debug(`Matched: ${matched.size === 0 ? 'None' : Array.from(matched.values()).join(', ')} | Unmatched: ${unmatched.size === 0 ? 'None' : Array.from(unmatched.values()).join(', ')}`);
-    }
-    return replaced;
-}

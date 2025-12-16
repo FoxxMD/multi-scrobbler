@@ -16,7 +16,8 @@ import { getRoot, parseVersion } from "./ioc.js";
 import { initServer } from "./server/index.js";
 import { createHeartbeatClientsTask } from "./tasks/heartbeatClients.js";
 import { createHeartbeatSourcesTask } from "./tasks/heartbeatSources.js";
-import { isDebugMode, parseBool, readJson, retry, sleep } from "./utils.js";
+import { isDebugMode, parseBool, retry, sleep } from "./utils.js";
+import { readJson } from './utils/DataUtils.js';
 import { createVegaGenerator } from './utils/SchemaUtils.js';
 import ScrobbleClients from './scrobblers/ScrobbleClients.js';
 import ScrobbleSources from './sources/ScrobbleSources.js';
@@ -62,7 +63,7 @@ const configDir = process.env.CONFIG_DIR || path.resolve(projectDir, `./config`)
         let appConfigFail: Error | undefined = undefined;
         let config = {};
         try {
-            config = await readJson(`${configDir}/config.json`, {throwOnNotFound: false});
+            config = await readJson(`${configDir}/config.json`, {throwOnNotFound: false, logger: childLogger(initLogger, 'Secrets')});
         } catch (e) {
             appConfigFail = e;
         }
