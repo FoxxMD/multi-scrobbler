@@ -28,8 +28,10 @@ export const asMissingMbid = (str: string): MissingMbidType => {
             return 'artists';
         case 'album':
             return 'album';
+        case 'duration':
+            return 'duration'
     }
-    throw new Error(`MissingMbidType must be one of 'artist' or 'title' or 'album', given: ${clean}`);
+    throw new Error(`MissingMbidType must be one of 'artist' or 'title' or 'album' or 'duration', given: ${clean}`);
 }
 
 export interface MusicbrainzTransformerData {

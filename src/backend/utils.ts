@@ -633,6 +633,9 @@ export const missingMbidTypes = (play: PlayObject): MissingMbidType[] => {
     if((artist ?? []).length !== (play.data.artists ?? []).length) {
         missing.push('artists')
     }
+    if(play.data.duration === undefined) {
+        missing.push('duration');
+    }
     return missing;
 }
 
