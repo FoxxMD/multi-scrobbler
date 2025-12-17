@@ -19,11 +19,11 @@ import {
 import { SpotifySourceConfig } from "../common/infrastructure/config/source/spotify.js";
 import {
     parseRetryAfterSecsFromObj,
-    readJson,
     sleep,
     sortByOldestPlayDate,
     writeFile,
 } from "../utils.js";
+import { readJson } from '../utils/DataUtils.js';
 import { findCauseByFunc } from "../utils/ErrorUtils.js";
 import { joinedUrl } from "../utils/NetworkUtils.js";
 import { RecentlyPlayedOptions } from "./AbstractSource.js";
@@ -246,7 +246,7 @@ export default class SpotifySource extends MemoryPositionalSource {
 
         let spotifyCreds = {};
         try {
-            spotifyCreds = await readJson(this.workingCredsPath, {throwOnNotFound: false}) as any;
+            spotifyCreds = await readJson(this.workingCredsPath, {throwOnNotFound: false, interpolateEnvs: false}) as any;
         } catch (e) {
             this.logger.warn('Current spotify credentials file exists but could not be parsed', { path: this.workingCredsPath });
         }

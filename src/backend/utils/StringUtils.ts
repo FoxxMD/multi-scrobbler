@@ -431,3 +431,5 @@ const NON_ALPHANUMWHITESPACE_CHARS: RegExp = new RegExp(/[^a-zA-Z\d\s]/);
 export const hasNonAlphanumericChars = (str: string): boolean => {
     return NON_ALPHANUMWHITESPACE_CHARS.test(str);
 }
+
+

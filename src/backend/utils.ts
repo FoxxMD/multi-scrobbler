@@ -5,7 +5,6 @@ import { Duration } from "dayjs/plugin/duration.js";
 import utc from 'dayjs/plugin/utc.js';
 import { Request } from "express";
 import { accessSync, constants, promises } from "fs";
-import JSON5 from 'json5';
 // https://github.com/jfromaniello/url-join#in-nodejs
 import pathUtil from "path";
 import { TimeoutError, WebapiError } from "spotify-web-api-node/src/response-error.js";
@@ -25,24 +24,6 @@ import {
 
 //const { default: Ajv } = AjvNS;
 dayjs.extend(utc);
-
-export async function readJson(this: any, path: any, {throwOnNotFound = true} = {}) {
-    try {
-        await promises.access(path, constants.R_OK);
-        const data = await promises.readFile(path);
-        return JSON5.parse(data as unknown as string);
-    } catch (e) {
-        const {code} = e;
-        if (code === 'ENOENT') {
-            if (throwOnNotFound) {
-                throw new Error(`No file found at given path: ${path}`, {cause: e});
-            } else {
-                return;
-            }
-        }
-        throw new Error(`Encountered error while parsing file: ${path}`, {cause: e})
-    }
-}
 
 export async function readText(path: any) {
     await promises.access(path, constants.R_OK);

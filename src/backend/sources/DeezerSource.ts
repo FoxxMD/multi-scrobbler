@@ -6,7 +6,8 @@ import request from 'superagent';
 import { PlayObject } from "../../core/Atomic.js";
 import { DEFAULT_RETRY_MULTIPLIER, FormatPlayObjectOptions, InternalConfig } from "../common/infrastructure/Atomic.js";
 import { DeezerSourceConfig } from "../common/infrastructure/config/source/deezer.js";
-import { parseRetryAfterSecsFromObj, readJson, sleep, sortByOldestPlayDate, writeFile, } from "../utils.js";
+import { parseRetryAfterSecsFromObj, sleep, sortByOldestPlayDate, writeFile, } from "../utils.js";
+import { readJson } from '../utils/DataUtils.js';
 import { joinedUrl } from "../utils/NetworkUtils.js";
 import AbstractSource, { RecentlyPlayedOptions } from "./AbstractSource.js";
 
@@ -95,7 +96,7 @@ export default class DeezerSource extends AbstractSource {
         this.logger.warn('This Source is DEPRECATED! Deezer has dropped support official API support. New apps cannot be created and existing apps are not guaranteed to continue working. Refer to the MS documentation for a new Deezer Source implementation.');
 
         try {
-            const credFile = await readJson(this.workingCredsPath, {throwOnNotFound: false});
+            const credFile = await readJson(this.workingCredsPath, {throwOnNotFound: false, interpolateEnvs: false});
             if(credFile !== undefined) {
                 this.config.data.accessToken = credFile.accessToken;
             } else {

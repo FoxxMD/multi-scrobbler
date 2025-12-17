@@ -4,7 +4,9 @@ import {
     compareNormalizedStrings,
     normalizeStr,
 } from "../../utils/StringUtils.js";
+import { replaceInterpolatedValues } from "../../utils/DataUtils.js";
 import { splitByFirstFound } from '../../../core/StringUtils.js';
+import { noCasePropObj } from '../../utils/DataUtils.js';
 
 describe('String Comparisons', function () {
 
@@ -119,6 +121,42 @@ describe('String Splitting', function() {
         const artist = "Phil Collins";
         const artistStrings = splitByFirstFound(artist, [','], [artistName]);
         expect(artistStrings).to.eql(['Phil Collins'])
+    });
+});
+
+it('Proxy object has case-insensitive keys', function() {
+    const myObj: Record<string, any> = {FOO: 'bar'};
+
+    const iObj = noCasePropObj(myObj);
+
+    expect(iObj.foO).is.not.undefined;
+    expect(iObj.foo).eq('bar');
+});
+
+describe('Interpolation', function() {
+
+    it('interpolates values', function() {
+        const replaced = replaceInterpolatedValues('My cool string has [[asecret]] in it', {asecret: 'foo'});
+        expect(replaced).not.includes('[');
+        expect(replaced).not.includes(']');
+        expect(replaced).includes('foo');
+    });
+
+    it('interpolates values case-insensitive', function() {
+        const replaced = replaceInterpolatedValues('My cool string has [[ASECREt]] in it', {aSeCrEt: 'foo'});
+        expect(replaced).includes('foo');
+    });
+
+    it('interpolates values after trimming', function() {
+        const replaced = replaceInterpolatedValues('My cool string has [[  ASECREt  ]] in it', {aSeCrEt: 'foo'});
+        expect(replaced).includes('foo');
+    });
+
+    it('leaves match in place if not interpolated', function() {
+        const replaced = replaceInterpolatedValues('My cool string has [[asecret]] and [[coolsecret]] in it', {bar: 'foo', coolsecret: 'xxx'});
+        expect(replaced).includes('[[asecret]]');
+        expect(replaced).includes('xxx');
+        expect(replaced).not.includes('[[coolsecret]]');
     });
 });
 

@@ -5,7 +5,7 @@ import { PlayObject, SOURCE_SOT, TA_CLOSE, TA_DURING, TA_EXACT, TA_FUZZY, Tempor
 import { DEFAULT_RETRY_MULTIPLIER, FormatPlayObjectOptions, InternalConfig } from "../common/infrastructure/Atomic.js";
 import { DeezerInternalSourceConfig, DeezerInternalTrackData, DeezerSourceConfig } from "../common/infrastructure/config/source/deezer.js";
 import { TRANSFORM_HOOK } from "../common/infrastructure/Transform.js";
-import { parseRetryAfterSecsFromObj, playObjDataMatch, readJson, sleep, sortByOldestPlayDate, writeFile, } from "../utils.js";
+import { parseRetryAfterSecsFromObj, playObjDataMatch, sleep, sortByOldestPlayDate} from "../utils.js";
 import AbstractSource, { RecentlyPlayedOptions } from "./AbstractSource.js";
 import { CookieJar, Cookie } from 'tough-cookie';
 import { MixedCookieAgent } from 'http-cookie-agent/http';
