@@ -543,6 +543,7 @@ More succinctly:
 MS can log a diff of Stage transformations if/when they occur. In the `playTransform` object of a Source/Client config use `log`:
 
 * `"log": true` => Output original play + final transformed output of last Stage in the array
+  * This can also be enabled by using [`DEBUG_MODE=true`](/configuration/#debug-mode)
 * `"log": "all"` => Output original play + final transformed output of **each** Stage in the array
 
 ```json5
