@@ -266,6 +266,12 @@ Define which data types are required using:
 
 If required data is missing then the next step is making [search queries to the Musicbrainz database](https://musicbrainz.org/doc/MusicBrainz_API/Search) to try to get potential candidates. Multi-scrobbler uses the **title, artist(s), and album** from your Scrobble data to query for matches.
 
+:::note
+
+If your Scrobble data contains an [ISRC](https://musicbrainz.org/doc/ISRC) (usually from Spotify) then Multi-scrobbler will search using this ID first, before the above criteria. If no match is found with the ISRC then it automatically retries with the title, artist(s), and album.
+
+:::
+
 Musicbrainz agressively normalizes these fields in its database which means that if your Scrobble data contains major innaccuracies or phrases fields in a non-normal way, it's possible Musicbrainz won't find any matches. This is a more common occurrence when trying to match Scrobble data from Sources that don't support multiple artist data, like [Subsonic](/configuration/sources/subsonic) and [Last.fm](/configuration/sources/lastfm).
 
 <details>
@@ -295,13 +301,13 @@ The corresponding [Musicbrainz Recording](https://musicbrainz.org/release/85bf28
 
 :::note
 
-If the initial search, and any [retried searches](#retrying-search), do not return any results then the stage is marked as [**failed** (`onFailure`) for **Flow Control**](/configuration/transforms/#flow-control).
+If the initial search(es), and any [retried searches](#retrying-search), do not return any results then the stage is marked as [**failed** (`onFailure`) for **Flow Control**](/configuration/transforms/#flow-control).
 
 :::
 
 #### Retrying Search
 
-If a normal search using all the fields mentioned above does not return any matches Multi-scrobbler can try additional searches with modified queries.
+If normal searches using all the fields mentioned above does not return any matches Multi-scrobbler can try additional searches with modified queries.
 
 <details>
 

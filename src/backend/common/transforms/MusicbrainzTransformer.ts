@@ -296,14 +296,17 @@ export default class MusicbrainzTransformer extends AtomicPartsTransformer<Exter
 
     public async getTransformerData(play: PlayObject, stageConfig: MusicbrainzTransformerDataStage): Promise<IRecordingMSList> {
 
-        let results: IRecordingMSList = await this.api.searchByRecording(play);
+        let results: IRecordingMSList;
 
-        if(results === undefined) {
-            throw new Error('results were unexpectedly undefined! API should have thrown...');
-        }
-        if(results.recordings === undefined) {
-            this.logger.debug(results);
-            throw new Error('results returned by no recordings list in response data, something handled incorrectly?');
+        if(play.data.meta?.brainz?.isrc !== undefined) {
+            this.logger.debug('Play has ISRC present, trying search using only ISRC');
+            results = await this.api.searchByRecording(play, {using: ['isrc']});
+            if(results.recordings.length === 0) {
+                this.logger.debug('No matches found, trying regular search');
+                results = await this.api.searchByRecording(play);
+            }
+        } else {
+            results = await this.api.searchByRecording(play);
         }
 
         if(results.recordings.length === 0) {

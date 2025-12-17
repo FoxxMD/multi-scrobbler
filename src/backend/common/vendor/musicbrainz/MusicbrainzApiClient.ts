@@ -5,7 +5,7 @@ import { AbstractApiOptions, FormatPlayObjectOptions, MUSICBRAINZ_URL, Musicbrai
 import AbstractApiClient from "../AbstractApiClient.js";
 import { isPortReachableConnect, normalizeWebAddress } from '../../../utils/NetworkUtils.js';
 import { MusicBrainzApi, IRecording, IRecordingList, IRelease } from 'musicbrainz-api';
-import { difference, isDebugMode, sleep } from "../../../utils.js";
+import { difference, isDebugMode, isEmptyArrayOrUndefined, sleep } from "../../../utils.js";
 import {SequentialRoundRobin} from 'round-robin-js';
 import { Cacheable } from "cacheable";
 import { getRoot, version } from "../../../ioc.js";
@@ -17,6 +17,7 @@ import { nanoid } from "nanoid";
 import { stripIndents } from "common-tags";
 import { getNodeNetworkException, hasNodeNetworkException, isNodeNetworkException } from '../../errors/NodeErrors.js';
 import { SimpleError } from '../../errors/MSErrors.js';
+import { resourceLimits } from 'worker_threads';
 
 export interface SubmitResponse {
     payload?: {
@@ -38,7 +39,7 @@ export interface MusicbrainzApiClientConfig {
 export interface SearchOptions {
     escapeCharacters?: boolean
     removeCharacters?: boolean,
-    using?: ('artist' | 'album' | 'title')[]
+    using?: ('artist' | 'album' | 'title' | 'isrc')[]
     ttl?: string,
     freetext?: boolean
 }
@@ -209,7 +210,10 @@ export class MusicbrainzApiClient extends AbstractApiClient {
         const res = await this.callApi<IRecordingList>((mb) => {
             const query: Record<string, any> = {
             };
-            
+
+            if(!isEmptyArrayOrUndefined(play.data.meta?.brainz?.isrc) && using.includes('isrc')) {
+                query.isrc = play.data.meta.brainz.isrc;
+            }
             if(using.includes('title')) {
                 query.recording = play.data.track;
             }
@@ -260,6 +264,12 @@ export class MusicbrainzApiClient extends AbstractApiClient {
                     }
                     q += `release:"${query.release}"`
                 }
+                if(query.isrc !== undefined) {
+                    if(q !== '') {
+                        q += ' AND ';
+                    }
+                    q+= `isrc:${query.isrc}`;
+                }
             }
 
 
@@ -273,6 +283,15 @@ export class MusicbrainzApiClient extends AbstractApiClient {
             ttl,
             cacheKey
         });
+
+        if(res === undefined) {
+            throw new Error('results were unexpectedly undefined! API should have thrown...');
+        }
+
+        if(res.recordings === undefined) {
+            this.logger.debug(res);
+            throw new Error('results returned but no recordings list in response data, something handled incorrectly?');
+        }
 
         return res;
     }
