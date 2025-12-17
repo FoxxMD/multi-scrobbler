@@ -111,11 +111,7 @@ describe('Musicbrainz API', function () {
                     track: "Fake",
                     artists: ["Fake"],
                     album: "Fake",
-                    meta: {
-                        brainz: {
-                            isrc: ['GBAHT1600302']
-                        }
-                    }
+                    isrc: 'GBAHT1600302'
                 },
                 meta: {}
             }

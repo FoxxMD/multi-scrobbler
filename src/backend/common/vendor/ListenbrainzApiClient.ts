@@ -695,6 +695,7 @@ export const playToListenPayload = (play: PlayObject): ListenPayload => {
                 albumArtists = [],
                 album,
                 track,
+                isrc,
                 duration,
                 meta: {
                     brainz = {},
@@ -724,12 +725,12 @@ export const playToListenPayload = (play: PlayObject): ListenPayload => {
             media_player: mediaPlayerName ?? msAdditionalInfo.media_player,
             media_player_version: mediaPlayerVersion ?? msAdditionalInfo.media_player_version,
             music_service: musicService !== undefined ? musicServiceToCononical(musicService) : msAdditionalInfo.music_service,
-            music_service_name: source,
+            music_service_name: musicService ?? source ?? msAdditionalInfo.music_service_name,
             spotify_id: msAdditionalInfo.spotify_id,
             spotify_album_id: msAdditionalInfo.spotify_album_id,
             spotify_artist_ids: msAdditionalInfo.spotify_artist_ids,
             origin_url: msAdditionalInfo.origin_url,
-            isrc: brainz.isrc !== undefined ? brainz.isrc[0] : msAdditionalInfo.isrc,
+            isrc: isrc ?? msAdditionalInfo.isrc,
             tracknumber: brainz.trackNumber ?? msAdditionalInfo.tracknumber
         };
 
@@ -806,7 +807,10 @@ const musicServices = {
  *  Converts MS musicService to LZ cononical Music Service Name, if one exists 
  * @see https://listenbrainz.readthedocs.io/en/latest/users/json.html#payload-json-details
  * */
-export const musicServiceToCononical = (str: string): string | undefined => {
+export const musicServiceToCononical = (str?: string): string | undefined => {
+    if(str === undefined) {
+        return undefined;
+    }
     const lower = str.trim().toLocaleLowerCase();
     for(const [k, v] of Object.entries(musicServices)) {
         if(lower.includes(k)) {

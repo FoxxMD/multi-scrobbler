@@ -199,6 +199,7 @@ export default class SpotifySource extends MemoryPositionalSource {
                 duration: duration_ms / 1000,
                 playDate: played_at,
                 playDateCompleted,
+                isrc: isrcString,
                 meta: {
                     spotify: {
                         track: id,
@@ -224,10 +225,6 @@ export default class SpotifySource extends MemoryPositionalSource {
 
         const brainz: BrainzMeta =  {};
 
-
-        if(isrcString !== undefined) {
-            brainz.isrc = [isrcString];
-        }
         if(trackNumber !== undefined) {
             brainz.trackNumber = trackNumber;
         }

@@ -129,11 +129,6 @@ export interface BrainzMeta {
      *  The "consolidated" album like -->  "The Wall" by "Pink Floyd" */
     releaseGroup?: string
     additionalInfo?: AdditionalTrackInfoResponse
-    /** International Standard Recording Code (ISRC) for this track 
-     * 
-     * https://beta.musicbrainz.org/doc/ISRC
-     */
-    isrc?: string[]
 
     /** Position of track within Release */
     trackNumber?: number
@@ -162,6 +157,12 @@ export interface TrackData {
     duration?: number
 
     meta?: TrackMeta
+
+    /** International Standard Recording Code (ISRC) for this track 
+     * 
+     * https://musicbrainz.org/doc/ISRC
+     */
+    isrc?: string
 }
 
 export interface PlayData extends TrackData {

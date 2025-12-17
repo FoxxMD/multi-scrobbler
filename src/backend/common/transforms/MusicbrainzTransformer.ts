@@ -298,7 +298,7 @@ export default class MusicbrainzTransformer extends AtomicPartsTransformer<Exter
 
         let results: IRecordingMSList;
 
-        if(play.data.meta?.brainz?.isrc !== undefined) {
+        if(play.data.isrc !== undefined) {
             this.logger.debug('Play has ISRC present, trying search using only ISRC');
             results = await this.api.searchByRecording(play, {using: ['isrc']});
             if(results.recordings.length === 0) {
