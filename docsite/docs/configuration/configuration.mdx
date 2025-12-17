@@ -166,6 +166,77 @@ See the [Configuration Types](#configuration-types) above for your options for c
 
 Each entry for a Source/Client includes a **Configuration** section that describes how to configure it using a [configuration type](#configuration-types).
 
+## Secrets Interpolation
+
+When using [File](./?configType=file#configuration-types) or [AIO](./?configType=aio#configuration-types) Configuration, Multi-Scrobbler can interpolate Environmental Variables into your json files. This can be used, for example, to keep sensitive data (like [Last.fm Client/Secret](/configurations/clients/lastfm#configuration)) out of your configuration files so that they can be committed to git.
+
+Multi-scrobbler will look for patterns in text fields within _all_ of your json files:
+
+* Some part of the text field matches: `[[MY_ENV]]`
+* Is replaced by the value of the Environmental Variable named `MY_ENV`
+
+<details>
+
+<summary>Example</summary>
+
+Given this [Last.fm](/configurations/clients/lastfm#configuration) [File](./?configType=file#configuration-types) config:
+
+```json title="lastfm.json"
+[
+  {
+    "name": "myLastFmClient",
+    "configureAs": "client",
+    "data": {
+      "apiKey": "[[MY_APIKEY]]",
+      "secret": "[[MY_SECRET]]",
+      "redirectUri": "http://localhost:9078/lastfm/callback"
+    }
+  }
+]
+```
+
+And these environmental variables, in this scenario set through `environment` in the [docker compose installation](/quickstart#create-docker-compose-file):
+
+```
+MY_APIKEY=a89cba1569901a0671d5a9875fed4be1
+MY_SECRET=ec42e09d5ae0ee0f0816ca151008412a
+```
+
+The resulting json multi-scrobbler would use:
+
+```json title="lastfm.json"
+[
+  {
+    "name": "myLastFmClient",
+    "configureAs": "client",
+    "data": {
+      "apiKey": "a89cba1569901a0671d5a9875fed4be1",
+      "secret": "ec42e09d5ae0ee0f0816ca151008412a",
+      "redirectUri": "http://localhost:9078/lastfm/callback"
+    }
+  }
+]
+```
+
+</details>
+
+:::note[Caveats]
+
+* ENV variable names/interpolation keys are case-insensitive
+* Interpolation only works for **string** values within json. This cannot be used for numbers, booleans, objects, etc...
+
+:::
+
+:::warning
+
+Multi-scrobbler **will not** throw an error if the environmental value is not found. It will instead leave the string as-is and log a warning (`WARN` level) with the names of the missing environmental variable names like so:
+
+```
+[2025-12-16 15:49:03.532 -0500] DEBUG  : [App] [Sources] [spotify Secrets] Matched: None | Unmatched: SPOTIFY_SECRET
+```
+
+:::
+
 ## Application Options
 
 These options affect multi-scrobbler's behavior and are not specific to any source/client.
