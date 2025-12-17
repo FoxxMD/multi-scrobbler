@@ -371,7 +371,7 @@ Specifying these Rules is **not** the same as [configuring the Stage](#configuri
 
 :::
 
-### Flow Control
+## Stage Flow Control {#flow-control}
 
 Stages may be optionally configured to **continue** to the next Stage or **stop** (end early) all subsequent Stages, based on the outcome of the currently running Stage.
 
@@ -444,13 +444,15 @@ Specifying Flow Control is only necessary if the above assumptions are not true 
 
 </details>
 
-### Conditional Modification
+### Conditionally Run {#conditional-modification}
 
 [Stages](#stage) within a [Hook](#hook), and [Rules](#stage-rules) within each Stage, support a `when` object for testing **if they should be run.**
 
 The `when` object may have propertes for rule. Each property may be a string or regular expression.  The value of the property is used to match the **pre-transformation** values from Play data.
 
 All parts of an individual `when` clause must test true to "pass" but if **any** `when` clauses pass the Stage/Rule is processed.
+
+If the `when` test does not pass then the Stage is [**skipped (`onSkip`)**](#flow-control).
 
 ```json5
 {
@@ -538,7 +540,7 @@ More succinctly:
 
 ## Logging
 
-MS can log the output of Stage transformations if/when they occur. In the `playTransform` object of a Source/Client config use `log`:
+MS can log a diff of Stage transformations if/when they occur. In the `playTransform` object of a Source/Client config use `log`:
 
 * `"log": true` => Output original play + final transformed output of last Stage in the array
 * `"log": "all"` => Output original play + final transformed output of **each** Stage in the array
@@ -555,6 +557,31 @@ MS can log the output of Stage transformations if/when they occur. In the `playT
   }
 }
 ```
+
+<details>
+
+<summary>Example</summary>
+
+The output shows the diff between the previous stage (or original Play) and the current stage. In docker logs this is highlighted with diff syntax:
+
+```diff
+[2025-12-17 08:53:10.467 -0500] DEBUG  : [App] [Sources] [Lastfm - mylfm] [Play Transform] [preCompare] [VLDJJo] Transform Diff
+- Original
++ musicbrainz-MyMB
+
+  Title        : Demons Theme Part II (original 12" mix)
+  Artists      : LTJ Bukem
+  Album Artists: (None)
+- Album        : Producer 05: Rarities (Original 12" Version)
++ Album        : Producer 05: Rarities (original 12" version)
+  Meta         : 
+  * brainz-album: 36759a8a-d3df-47da-a236-60f84fdc0cab
++ * brainz-artist: 28c1b7b7-355a-48b1-b2c4-75b8eb8080ef
++ * brainz-track: a0d51240-7ef1-4676-882e-be9f354075cb
++ * brainz-releaseGroup: e0cce74f-abcc-343b-9390-1673e4d57ce7
+```
+
+</details>
 
 ## Examples
 
