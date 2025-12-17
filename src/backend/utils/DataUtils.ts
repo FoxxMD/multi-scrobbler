@@ -133,7 +133,13 @@ export const replaceInterpolatedValues = (str: string, fromVals: Record<string, 
         return match;
     });
     if (matched.size !== 0 || unmatched.size !== 0) {
-        logger.debug(`Matched: ${matched.size === 0 ? 'None' : Array.from(matched.values()).join(', ')} | Unmatched: ${unmatched.size === 0 ? 'None' : Array.from(unmatched.values()).join(', ')}`);
+        const logMsg = `Matched: ${matched.size === 0 ? 'None' : Array.from(matched.values()).join(', ')} | Unmatched: ${unmatched.size === 0 ? 'None' : Array.from(unmatched.values()).join(', ')}`;
+        if(unmatched.size > 0) {
+            logger.warn(logMsg);
+        } else {
+            logger.debug(logMsg);
+        }
+
     }
     return replaced;
 };
