@@ -9,12 +9,16 @@ import { TealSourceConfig } from "../common/infrastructure/config/source/tealfm.
 import { BlueSkyAppApiClient } from "../common/vendor/bluesky/BlueSkyAppApiClient.js";
 import { BlueSkyOauthApiClient } from "../common/vendor/bluesky/BlueSkyOauthApiClient.js";
 import { ListRecord, ScrobbleRecord } from "../common/infrastructure/config/client/tealfm.js";
+import { parseArrayFromMaybeString } from "../utils/StringUtils.js";
 
 export default class TealfmSource extends MemorySource {
 
     client: AbstractBlueSkyApiClient;
     requiresAuth = true;
     requiresAuthInteraction = false;
+
+    serviceAllow: string[]
+    serviceDeny: string[]
 
     declare config: TealSourceConfig;
 
@@ -48,12 +52,26 @@ export default class TealfmSource extends MemorySource {
         const {
             data: {
                 identifier,
+                serviceAllow = [],
+                serviceDeny = []
             } = {}
         } = this.config;
         if (identifier === undefined) {
             throw new Error('Must provide an identifier');
         }
+
         await this.client.initClient();
+
+        this.serviceAllow = parseArrayFromMaybeString(serviceAllow, {lower: true});
+        if(this.serviceAllow.length > 0) {
+            this.logger.debug(`Discover Plays from these services only: ${this.serviceAllow.join(',')}`);
+        } else {
+            this.serviceDeny = parseArrayFromMaybeString(serviceDeny, {lower: true});
+            if(this.serviceDeny.length > 0) {
+                this.logger.debug(`Do not discover Plays from these services: ${this.serviceDeny.join(',')}`);
+            }
+        }
+
         return true;
     }
 
@@ -96,7 +114,18 @@ export default class TealfmSource extends MemorySource {
             throw new Error('Error occurred while trying to fetch records', {cause: e});
         }
         await this.processRecentPlays([]);
-        const plays = list.map(x => listRecordToPlay(x));
+        let plays = list.map(x => listRecordToPlay(x));
+        if(this.serviceAllow.length > 0) {
+            plays = plays.filter(x => 
+                (x.meta.musicService !== undefined && this.serviceAllow.some(y => x.meta.musicService.toLocaleLowerCase().includes(y)))
+            || (x.meta.musicService === undefined && this.serviceAllow.includes('unknown'))
+        );
+        } else if(this.serviceDeny.length > 0) {
+            plays = plays.filter(x => 
+                (x.meta.musicService !== undefined && !this.serviceDeny.some(y => x.meta.musicService.toLocaleLowerCase().includes(y)))
+                || (x.meta.musicService === undefined && !this.serviceAllow.includes('unknown'))
+            );
+        }
         return plays;
     }
 

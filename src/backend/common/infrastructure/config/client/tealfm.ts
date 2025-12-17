@@ -51,7 +51,10 @@ export interface TealClientOptions extends TealOptions,CommonClientOptions {
 export interface TealClientAIOConfig extends TealClientConfig {
     type: 'tealfm'
 }
-/** https://github.com/teal-fm/piper/blob/main/service/atproto/submission.go */
+/**
+ *  https://github.com/teal-fm/teal/blob/main/lexicons/fm.teal.alpha/feed/play.json
+ *  https://github.com/teal-fm/teal/blob/main/lexicons/fm.teal.alpha/feed/defs.json
+ * */
 export interface ScrobbleRecord {
     $type: "fm.teal.alpha.feed.play",
     trackName: string,
@@ -60,12 +63,15 @@ export interface ScrobbleRecord {
     artists?: {artistName?: string, artistMbId?: string}[]
     /** Album name  */
     releaseName?: string
+    /** A metadata string specifying the user agent where the format is `<app-identifier>/<version> (<kernel/OS-base>; <platform/OS-version>; <device-model>)` */
     submissionClientAgent: string,
     musicServiceBaseDomain?: string
     // musicbrainz
     recordingMbId?: string
     releaseMbId?: string
     isrc?: string,
+    /** The URL associated with this track */
+    originUrl?: string
     [x: string]: unknown
 }
 

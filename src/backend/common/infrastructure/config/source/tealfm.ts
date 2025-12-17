@@ -4,7 +4,8 @@ import { CommonSourceConfig, CommonSourceData, CommonSourceOptions } from "./ind
 
 
 export interface TealSourceData extends TealData, CommonSourceData, PollingOptions {
-
+    serviceAllow?: string[]
+    serviceDeny?: string[]
 }
 
 export interface TealSourceConfig extends CommonSourceConfig {

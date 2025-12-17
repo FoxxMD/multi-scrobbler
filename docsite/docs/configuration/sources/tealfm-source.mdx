@@ -27,10 +27,81 @@ Follow the **Setup** instructions in the [teal.fm (Client)](/configuration/clien
 
 ## Configuration
 
-See the [teal.fm (Client)](/configuration/clients/tealfm#setup) configuration for general setup. The only difference for **Source** configuration:
+See the [teal.fm (Client)](/configuration/clients/tealfm#setup) configuration for general setup. The main differences for **Source** configuration:
 
 * Cannot be setup with ENV config 
 * [File/AIO config](/configuration?configType=file#configuration-types) must include `"configureAs": "source"`
+
+### Service Filtering
+
+`serviceAllow` and `serviceDeny` are lists that can be used to filter what Plays are scrobbles from teal.fm. These correspond to the base domain of the music service where the Play is from, originally. The values in the list can be a subset of the actual service name (they do not need to be exact matches).
+
+Only one filter can be used at a time. If `serviceAllow` is configured then `serviceDeny` will be ignored.
+
+If a Play does not have an associated music service it can be allowed/denied using the special keyword `unknown`.
+
+If you are unsure what services are being used for your scrobbles you can check this by:
+
+* use [atproto.at](https://atproto.at/) to lookup your DID/handle
+* View the **Raw Data** for the PDS Collection `fm.teal.alpha.feed.play`
+* Check the `musicServiceBaseDomain` property for each record
+
+<details>
+
+<summary>Examples</summary>
+
+Allowing only scrobbles from [plyr.fm](https://plyr.fm/):
+
+```json title="tealfm.json"
+[
+    {
+        "name": "myTealSource",
+        "configureAs": "source",
+        "data": {
+            "identifier": "alice.bsky.social",
+            "appPassword": "twog-phu7-4dhe-y4j3",
+
+            "serviceAllow": ["plyr"],
+        }
+    }
+]
+```
+
+Deny scrobbles from last.fm:
+
+```json title="tealfm.json"
+[
+    {
+        "name": "myTealSource",
+        "configureAs": "source",
+        "data": {
+            "identifier": "alice.bsky.social",
+            "appPassword": "twog-phu7-4dhe-y4j3",
+
+            "serviceDeny": ["last"],
+        }
+    }
+]
+```
+
+Allow scrobbles from plyr.fm and unknown services:
+
+```json title="tealfm.json"
+[
+    {
+        "name": "myTealSource",
+        "configureAs": "source",
+        "data": {
+            "identifier": "alice.bsky.social",
+            "appPassword": "twog-phu7-4dhe-y4j3",
+
+            "serviceAllow": ["plyr", "unknown"],
+        }
+    }
+]
+```
+
+</details>
 
 <Config config="TealClientConfig" fileContent={JsonConfig} name="tealfm">
         :::note

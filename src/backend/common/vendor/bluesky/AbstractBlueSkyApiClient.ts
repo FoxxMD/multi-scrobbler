@@ -66,7 +66,8 @@ export const playToRecord = (play: PlayObject): ScrobbleRecord => {
         playedTime: getScrobbleTsSOCDateWithContext(play)[0].toISOString(),
         releaseName: play.data.album,
         submissionClientAgent: `multi-scrobbler/${getRoot().items.version}`,
-        musicServiceBaseDomain: play.meta.musicService !== undefined ? musicServiceToCononical(play.meta.musicService) : undefined,
+        musicServiceBaseDomain: musicServiceToCononical(play.meta.musicService) ?? play.meta.musicService,
+        isrc: play.data.isrc,
         recordingMbId: play.data.meta?.brainz?.track,
         releaseMbId: play.data.meta?.brainz?.album
     };
@@ -91,6 +92,7 @@ export const recordToPlay = (record: ScrobbleRecord, options: RecordOptions = {}
             duration: record.duration,
             playDate: dayjs(record.playedTime),
             album: record.releaseName,
+            isrc: record.isrc,
             meta: {
                 brainz: {
                     track: record.recordingMbId,
@@ -102,6 +104,7 @@ export const recordToPlay = (record: ScrobbleRecord, options: RecordOptions = {}
         meta: {
             source: 'tealfm',
             parsedFrom: 'history',
+            musicService: record.musicServiceBaseDomain,
             playId: options.playId,
             url: {
                 web: options.web

@@ -12,7 +12,11 @@
         "configureAs": "source",
         "data": {
             "identifier": "alice.bsky.social",
-            "appPassword": "twog-phu7-4dhe-y4j3"
+            "appPassword": "twog-phu7-4dhe-y4j3",
+
+            // everything below is optional
+            "serviceAllow": ["plyr"],
+            "serviceDeny": ["last.fm"]
         }
     }
 ]
