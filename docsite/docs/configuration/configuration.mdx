@@ -227,13 +227,19 @@ The resulting json multi-scrobbler would use:
 
 :::
 
-:::warning
+:::warning[Missing ENVS]
 
-Multi-scrobbler **will not** throw an error if the environmental value is not found. It will instead leave the string as-is and log a warning (`WARN` level) with the names of the missing environmental variable names like so:
+Multi-scrobbler **will not** throw an error if the environmental value is not found. Instead, it will leave the string as-is and log a warning (`WARN` level) with the names of the missing environmental variable names like so:
 
 ```
-[2025-12-16 15:49:03.532 -0500] DEBUG  : [App] [Sources] [spotify Secrets] Matched: None | Unmatched: SPOTIFY_SECRET
+WARN : [App] [Sources] [spotify Secrets] Matched: None | Unmatched: SPOTIFY_SECRET
 ```
+
+:::
+
+:::warning[ENV Name Collisions]
+
+**Verify that interpolation keys/environmental variable names you will use do not collide with existing ENV names used by multi-scrobbler.** Use the docs search to verify the name you want to use is not already used elsewhere by multi-scrobbler.
 
 :::
 
