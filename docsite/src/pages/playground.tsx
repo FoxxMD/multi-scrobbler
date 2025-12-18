@@ -32,7 +32,7 @@ export default function Playground(): JSX.Element {
     return (
         <Layout
             title={`Playground`}
-            description="Playground of docusaurus-json-schema-plugin"
+            description="Config Playground"
         >
             <PlaygroundComponent />
         </Layout>

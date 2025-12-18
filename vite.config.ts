@@ -41,7 +41,8 @@ export default defineConfig(() => {
             tailwindcss(),
         ],
         build: {
-            sourcemap: true
+            sourcemap: true,
+            cssCodeSplit: true
         },
         define: {
             "__USE_HASH_ROUTER__": JSON.stringify((process.env.USE_HASH_ROUTER ?? false))

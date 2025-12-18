@@ -1,6 +1,9 @@
 import Tabs from '@theme/Tabs';
 import TabItem from '@theme/TabItem';
 import CodeBlock from '@theme/CodeBlock';
+import ExplorerFetch from '@site/src/components/Schema/ExplorerFetch';
+import EditorFetch from '@site/src/components/Schema/SchemaEditorFetch';
+import './GenericConfiguration.scss';
 
 <Tabs groupId="configType" queryString>
     <TabItem value="env" label="ENV">
@@ -10,10 +13,20 @@ import CodeBlock from '@theme/CodeBlock';
     </TabItem>
     <TabItem value="file" label="File">
     <FileType>
-
-    <FileExample title={`CONFIG/${props.name}.json`} client={props.client ?? false} data={props.fileContent}/>
-
-        or <SchemaLink lower objectName={props.config}/>
+            <div
+            className="schemaWrapper"
+                style={{
+                    display: "flex"
+                }}
+            >
+            <div style={{ padding: '0 1em 0 1em', flexBasis: 'min-content', flexGrow: 2}}>
+                <ExplorerFetch name={`schemas/${props.config}`} />
+            </div>
+            <div className="fileEditor" style={{ flexBasis: 'auto', flexGrow: 3 }}>
+            <EditorFetch schemaName={`schemas/${props.config}`} configContent={props.fileContent}/>
+                {/* <FileExample title={`CONFIG/${props.name}.json`} client={props.client ?? false} data={props.fileContent}/> */}
+            </div>
+        </div>
     </FileType>
     </TabItem>
     <TabItem value="aio" label="AIO">

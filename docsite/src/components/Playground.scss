@@ -1,0 +1,19 @@
+.schemaWrapper2 {
+    margin: 1em;
+    display: flex;
+    flex-direction: row;
+    row-gap: 1em;
+    column-gap: 1em;
+}
+
+@media screen and (max-width: 1280px) {
+  .schemaWrapper2 {
+    flex-direction: column;
+  }
+}
+
+@media screen and (max-width: 500px) {
+  .fileEditor2 {
+    display: none;
+  }
+}
