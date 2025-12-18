@@ -90,6 +90,7 @@ const config: Config = {
     'docusaurus-theme-github-codeblock'
   ],
   plugins: [
+          'docusaurus-plugin-sass',
     [
       '@docusaurus/plugin-client-redirects',
       {
@@ -160,7 +161,7 @@ const config: Config = {
         ],
       },
       footer: {
-        style: 'dark',
+
         links: [
           {
             title: 'Docs',

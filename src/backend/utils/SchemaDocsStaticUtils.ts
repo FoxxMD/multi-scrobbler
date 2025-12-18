@@ -1,4 +1,4 @@
-import { writeFileSync } from "node:fs";
+import { writeFileSync, mkdirSync } from "node:fs";
 import { resolve } from "path";
 import { projectDir } from "../common/index.js";
 import {getTypeSchemaFromConfigGenerator} from "./SchemaUtils.js";
@@ -20,3 +20,8 @@ writeFileSync(resolve(projectDir, 'src/backend/common/schema/aio-client.json'), 
 
 const aio_source = getTypeSchemaFromConfigGenerator('AIOSourceConfig');
 writeFileSync(resolve(projectDir, 'src/backend/common/schema/aio-source.json'), JSON.stringify(aio_source));
+
+mkdirSync(resolve(projectDir, 'docsite/static/schemas'), {recursive: true});
+
+const plex = getTypeSchemaFromConfigGenerator('PlexApiSourceConfig');
+writeFileSync(resolve(projectDir, 'docsite/static/schemas/PlexApiSourceConfig.json'), JSON.stringify(plex));
