@@ -1,0 +1,42 @@
+diff --git a/node_modules/@stoplight/json-schema-viewer/index.mjs b/node_modules/@stoplight/json-schema-viewer/index.mjs
+index e298a9e..19850f6 100644
+--- a/node_modules/@stoplight/json-schema-viewer/index.mjs
++++ b/node_modules/@stoplight/json-schema-viewer/index.mjs
+@@ -2,8 +2,8 @@ import { isRegularNode, SchemaNodeKind, isReferenceNode, isRootNode, isBooleanis
+ import { Box, HStack, Flex, Icon, Text, Link, Tooltip, NodeAnnotation, VStack, Select, Menu, Pressable, Provider } from '@stoplight/mosaic';
+ import { withErrorBoundary } from '@stoplight/react-error-boundary';
+ import cn from 'classnames';
+-import { atom, useAtom, Provider as Provider$1 } from 'jotai';
+-import { atomFamily, useUpdateAtom, useAtomValue } from 'jotai/utils';
++import { atom, useAtom, Provider as Provider$1, useSetAtom, useAtomValue } from 'jotai';
++import { atomFamily, useUpdateAtom } from 'jotai/utils';
+ import * as React from 'react';
+ import { useState, useEffect } from 'react';
+ import { isPlainObject, getLastPathSegment, extractPointerFromRef, pointerToPath } from '@stoplight/json';
+@@ -706,7 +706,7 @@ const shouldShowChildSelector = (schemaNode) => { var _a, _b; return isNonEmptyP
+ const SchemaRow = React.memo(({ schemaNode, nestingLevel, pl, parentNodeId, parentChangeType }) => {
+     var _a, _b, _c;
+     const { defaultExpandedDepth, renderRowAddon, renderExtensionAddon, onGoToRef, hideExamples, renderRootTreeLines, nodeHasChanged, viewMode, } = useJSVOptionsContext();
+-    const setHoveredNode = useUpdateAtom(hoveredNodeAtom);
++    const setHoveredNode = useSetAtom(hoveredNodeAtom);
+     const nodeId = getNodeId(schemaNode, parentNodeId);
+     const originalNodeId = ((_a = schemaNode.originalFragment) === null || _a === void 0 ? void 0 : _a.$ref) ? getOriginalNodeId(schemaNode, parentNodeId) : nodeId;
+     const mode = viewMode === 'standalone' ? undefined : viewMode;
+@@ -876,7 +876,7 @@ const TopLevelSchemaRow = ({ schemaNode, skipDescription, }) => {
+ function ScrollCheck() {
+     const elementRef = React.useRef(null);
+     const isOnScreen = useIsOnScreen(elementRef);
+-    const setShowPathCrumbs = useUpdateAtom(showPathCrumbsAtom);
++    const setShowPathCrumbs = useSetAtom(showPathCrumbsAtom);
+     React.useEffect(() => {
+         setShowPathCrumbs(!isOnScreen);
+     }, [isOnScreen, setShowPathCrumbs]);
+@@ -916,7 +916,7 @@ const JsonSchemaViewerComponent = (_a) => {
+                 React.createElement(JsonSchemaViewerInner, Object.assign({ viewMode: viewMode, skipTopLevelDescription: skipTopLevelDescription }, rest))))));
+ };
+ const JsonSchemaViewerInner = ({ schema, viewMode, className, resolveRef, maxRefDepth, emptyText = 'No schema defined', onTreePopulated, maxHeight, parentCrumbs, skipTopLevelDescription, }) => {
+-    const setHoveredNode = useUpdateAtom(hoveredNodeAtom);
++    const setHoveredNode = useSetAtom(hoveredNodeAtom);
+     const onMouseLeave = React.useCallback(() => {
+         setHoveredNode(null);
+     }, [setHoveredNode]);

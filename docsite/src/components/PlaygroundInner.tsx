@@ -6,10 +6,14 @@ import ConfigExample from "@site/static/configExample.json";
 import JSONSchemaViewer from "@theme/JSONSchemaViewer"
 import JSONSchemaEditor from "@theme/JSONSchemaEditor";
 import {useColorMode} from "@docusaurus/theme-common";
+import { JsonSchemaViewer } from "@stoplight/json-schema-viewer";
+import {injectStyles} from '@stoplight/mosaic' 
 const STRINGIFY_JSON = (json: unknown) => JSON.stringify(json, null, "\t")
 
 // based on https://github.com/jy95/docusaurus-json-schema-plugin/blob/main/testsite/src/components/PlaygroundInner.tsx
 function PlaygroundInner(): JSX.Element {
+
+    injectStyles();
 
     const { colorMode } = useColorMode()
 
@@ -30,10 +34,19 @@ function PlaygroundInner(): JSX.Element {
                 }}
             >
                 <div style={{width: '50%'}}>
-                <JSONSchemaViewer
+                {/* <JSONSchemaViewer
                     schema={Schema}
                     showExamples={true}
-                />
+                /> */}
+                <JsonSchemaViewer
+  name="Todos Model"
+  schema={Schema}
+  expanded={false}
+  hideTopBar={false}
+  renderRootTreeLines={true}
+  emptyText="No schema defined"
+  defaultExpandedDepth={0}
+/>
                 </div>
                 <div style={{ boxSizing: "border-box", width: "50%" }}>
                 <JSONSchemaEditor
