@@ -281,7 +281,7 @@ export default class ScrobbleClients {
                     if (!Object.values(rocksky).every(x => x === undefined)) {
                         configs.push({
                             type: 'rocksky',
-                            name: 'unnamed-koito',
+                            name: 'unnamed-rocksky',
                             source: 'ENV',
                             mode: 'single',
                             configureAs: 'client',
