@@ -61,7 +61,12 @@ export const playToRecord = (play: PlayObject): ScrobbleRecord => {
     const record: ScrobbleRecord = {
         $type: "fm.teal.alpha.feed.play",
         trackName: play.data.track,
-        artists: play.data.artists.map(x => ({ artistName: x })),
+        artists: play.data.artists.map((x, i) => ({
+            artistName: x,
+            ...(play.data.meta?.brainz?.artist?.[i]
+                ? { artistMbId: play.data.meta.brainz.artist[i] }
+                : {})
+        })),
         duration: Math.round(play.data.duration),
         playedTime: getScrobbleTsSOCDateWithContext(play)[0].toISOString(),
         releaseName: play.data.album,
@@ -116,4 +121,3 @@ export const recordToPlay = (record: ScrobbleRecord, options: RecordOptions = {}
     return play;
 };
 export const ATPROTO_URI_REGEX = new RegExp(/at:\/\/(?<resource>(?<did>did.*?)\/fm.teal.alpha.feed.play\/(?<tid>.*))/);
-
