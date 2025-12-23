@@ -33,6 +33,10 @@ export const LOCAL_USER = 'PLEX_LOCAL_USER';
 
 const THUMB_REGEX = new RegExp(/\/library\/metadata\/(?<ratingkey>\d+)\/thumb\/\d+/)
 
+type MbIdCacheEntry = { value: string | null, expiresAt: number };
+const MBID_CACHE_TTL_MS = 10 * 60 * 1000;
+const MBID_CACHE_SIZE = 1000;
+
 export default class PlexApiSource extends MemoryPositionalSource {
     users: string[] = [];
 
@@ -58,6 +62,8 @@ export default class PlexApiSource extends MemoryPositionalSource {
     uniqueDropReasons: FixedSizeList<string>;
 
     libraries: {name: string, collectionType: string, uuid: string}[] = [];
+    
+    private mbIdCache = new Map<string, MbIdCacheEntry>();
 
     declare config: PlexApiSourceConfig;
 
@@ -519,6 +525,11 @@ ${JSON.stringify(obj)}`);
             return null;
         }
         
+        const cachedMbId = this.getCachedMbId(ratingKey);
+        if (cachedMbId !== undefined) {
+            return cachedMbId;
+        }
+        
         try {
             // The current version of plexjs (0.39.0) does not return the GUID
             // fields, so we make the call manually.
@@ -542,7 +553,10 @@ ${JSON.stringify(obj)}`);
             for (const metadata of result.MediaContainer.Metadata ?? []) {
                 for (const guid of metadata.Guid ?? []) {
                     if (typeof guid.id === "string" && guid.id.startsWith("mbid://")) {
-                        return guid.id.replace("mbid://", "");
+                        const mbid = guid.id.replace("mbid://", "");
+                        
+                        this.setCachedMbId(ratingKey, mbid);
+                        return mbid;
                     }
                 }
             }
@@ -550,7 +564,46 @@ ${JSON.stringify(obj)}`);
             this.logger.warn(`Failed to get MusicBrainz IDs from Plex for item ${ratingKey}: ${e}`);
         }
         
+        this.setCachedMbId(ratingKey, null);
         return null;
+    }
+    
+    getCachedMbId = (ratingKey: string): string | null | undefined => {
+        const cachedMbId = this.mbIdCache.get(ratingKey);
+        
+        if (!cachedMbId) {
+            return undefined;
+        }
+        
+        if (cachedMbId.expiresAt < Date.now()) {
+            this.mbIdCache.delete(ratingKey);
+            return undefined;
+        }
+        
+        return cachedMbId.value;
+    }
+    
+    setCachedMbId = (ratingKey: string, value: string | null) => {
+        this.mbIdCache.set(ratingKey, {
+            value,
+            expiresAt: Date.now() + MBID_CACHE_TTL_MS,
+        });
+        
+        // Clean up cache.
+        if (this.mbIdCache.size > MBID_CACHE_SIZE) {
+            const now = Date.now();
+            
+            for (const [key, entry] of this.mbIdCache) {
+                if (entry.expiresAt <= now) {
+                    this.mbIdCache.delete(key);
+                }
+            }
+            
+            while (this.mbIdCache.size > MBID_CACHE_SIZE) {
+                const oldestKey = this.mbIdCache.keys().next().value;
+                this.mbIdCache.delete(oldestKey);
+            }
+        }
     }
 }
 
