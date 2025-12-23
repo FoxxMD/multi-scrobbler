@@ -39,6 +39,8 @@ export default class PlexApiSource extends MemoryPositionalSource {
     plexApi: PlexAPI;
     plexUser: string;
 
+    httpClient: HTTPClient;
+
     deviceId: string;
 
     address: URLData;
@@ -123,8 +125,6 @@ export default class PlexApiSource extends MemoryPositionalSource {
         this.address = normalizeWebAddress(this.config.data.url);
         this.logger.debug(`Config URL: ${this.config.data.url} | Normalized: ${this.address.toString()}`);
 
-        let httpClient: HTTPClient | undefined;
-
         if(ignoreInvalidCert) {
             this.logger.debug('Using http client that ignores self-signed certs');
 
@@ -145,13 +145,15 @@ export default class PlexApiSource extends MemoryPositionalSource {
                     return fetch(input, {...init, dispatcher: bypassAgent});
                 }
             };
-            httpClient = new HTTPClient({ fetcher: bypassFetcher });
+            this.httpClient = new HTTPClient({ fetcher: bypassFetcher });
+        } else {
+            this.httpClient = new HTTPClient();
         }
 
         this.plexApi = new PlexAPI({
             serverURL: this.address.url.toString(),
             accessToken: this.config.data.token,
-            httpClient
+            httpClient: this.httpClient
         });
 
         return true;
@@ -396,6 +398,32 @@ export default class PlexApiSource extends MemoryPositionalSource {
         for(const sessionData of allSessions) {
             const validPlay = this.isActivityValid(sessionData[0], sessionData[1]);
             if(validPlay === true) {
+                // Pull MBIDs for track, album, and artist.
+                const [trackMbId, albumMbId, albumArtistMbId] = await Promise.all([
+                    this.getMusicBrainzId(sessionData[1].ratingKey),
+                    this.getMusicBrainzId(sessionData[1].parentRatingKey),
+                    this.getMusicBrainzId(sessionData[1].grandparentRatingKey),
+                ]);
+                
+                if (!sessionData[0].play.data.meta) {
+                    sessionData[0].play.data.meta = {};
+                }
+                
+                const prevBrainzMeta = sessionData[0].play.data.meta.brainz ?? {};
+                sessionData[0].play.data.meta.brainz = {
+                    ...prevBrainzMeta,
+                    track: trackMbId ?? undefined,
+                    album: albumMbId ?? undefined,
+                    // Plex doesn't track MBIDs for track artists, so we use the
+                    // album artist MBID instead.
+                    artist: albumArtistMbId
+                        ? [...new Set([...(prevBrainzMeta.artist ?? []), albumArtistMbId])]
+                        : prevBrainzMeta.artist,
+                    albumArtist: albumArtistMbId
+                        ? [...new Set([...(prevBrainzMeta.albumArtist ?? []), albumArtistMbId])]
+                        : prevBrainzMeta.albumArtist,
+                };
+              
                 validSessions.push(sessionData[0]);
             } else if(this.logFilterFailure !== false) {
                 const stateIdentifyingInfo = buildStatePlayerPlayIdententifyingInfo(sessionData[0]);
@@ -485,6 +513,45 @@ ${JSON.stringify(obj)}`);
     }
 
     getNewPlayer = (logger: Logger, id: PlayPlatformId, opts: PlayerStateOptions) => new PlexPlayerState(logger, id, opts);
+    
+    getMusicBrainzId = async (ratingKey: string | undefined): Promise<string | null> => {
+        if (!ratingKey) {
+            return null;
+        }
+        
+        try {
+            // The current version of plexjs (0.39.0) does not return the GUID
+            // fields, so we make the call manually.
+            const request = await this.httpClient.request(
+                new Request(
+                    new URL(`/library/metadata/${ratingKey}`, this.address.url),
+                    {
+                        method: "GET",
+                        headers: {
+                            "X-Plex-Token": this.config.data.token,
+                            "Accept": "application/json",
+                        },
+                    }
+                )
+            );
+        
+            const result = await request.json();
+        
+            // There shouldn't be multiple metadata or GUID objects, but we return
+            // the first MBID to be safe.
+            for (const metadata of result.MediaContainer.Metadata ?? []) {
+                for (const guid of metadata.Guid ?? []) {
+                    if (typeof guid.id === "string" && guid.id.startsWith("mbid://")) {
+                        return guid.id.replace("mbid://", "");
+                    }
+                }
+            }
+        } catch (e) {
+            this.logger.warn(`Failed to get MusicBrainz IDs from Plex for item ${ratingKey}: ${e}`);
+        }
+        
+        return null;
+    }
 }
 
 async function streamToString(stream: any) {
