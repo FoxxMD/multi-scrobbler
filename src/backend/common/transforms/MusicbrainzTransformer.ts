@@ -456,7 +456,7 @@ export default class MusicbrainzTransformer extends AtomicPartsTransformer<Exter
         return transformData.data.album;
     }
     protected async handleDuration(play: PlayObject, parts: ExternalMetadataTerm, transformData: PlayObject): Promise<number | undefined> {
-        if (parts === false) {
+        if (parts === false || transformData.data.duration === undefined) {
             return play.data.duration;
         }
         if (typeof parts === 'object') {
