@@ -420,7 +420,8 @@ export interface TransformerCommon<T = Record<string, any>, Y = Record<string, a
 }
 
 export type MissingMbidType = 'artists' | 'title' | 'album' | 'duration';
-export const DEFAULT_MISSING_TYPES: MissingMbidType[] = ['artists','title','album','duration'];
+export const DEFAULT_MISSING_TYPES: MissingMbidType[] = ['artists','title','album', 'duration'];
+export const DEFAULT_MISSING_MBIDS_TYPES: MissingMbidType[] = ['artists','title','album'];
 
 export type MBReleaseStatus = 'official' | 'promotion' | 'bootleg' | 'pseudo-release' | 'withdrawn' | 'expunged' | 'cancelled';
 export const MB_RELEASE_STATUSES: MBReleaseStatus[] = ['official','promotion','bootleg','pseudo-release','withdrawn','expunged' ,'cancelled'];

@@ -8,7 +8,7 @@ import { accessSync, constants, promises } from "fs";
 // https://github.com/jfromaniello/url-join#in-nodejs
 import pathUtil from "path";
 import { TimeoutError, WebapiError } from "spotify-web-api-node/src/response-error.js";
-import { DEFAULT_MISSING_TYPES, MissingMbidType, PlayObject } from "../core/Atomic.js";
+import { DEFAULT_MISSING_MBIDS_TYPES, DEFAULT_MISSING_TYPES, MissingMbidType, PlayObject } from "../core/Atomic.js";
 import {
     asPlayerStateDataMaybePlay,
     NO_DEVICE,
@@ -595,10 +595,14 @@ export const comparingMultipleArtists = (existing: PlayObject, candidate: PlayOb
 export const missingMbidTypes = (play: PlayObject): MissingMbidType[] => {
     let missing: MissingMbidType[] = [];
 
-    if(play.data.meta?.brainz === undefined) {
-        return DEFAULT_MISSING_TYPES;
+     if(play.data.duration === undefined) {
+        missing.push('duration');
     }
 
+    if(play.data.meta?.brainz === undefined) {
+        missing = missing.concat(DEFAULT_MISSING_MBIDS_TYPES);
+        return missing;
+    }
     const {
         track,
         album,
@@ -614,9 +618,7 @@ export const missingMbidTypes = (play: PlayObject): MissingMbidType[] => {
     if((artist ?? []).length !== (play.data.artists ?? []).length) {
         missing.push('artists')
     }
-    if(play.data.duration === undefined) {
-        missing.push('duration');
-    }
+
     return missing;
 }
 
