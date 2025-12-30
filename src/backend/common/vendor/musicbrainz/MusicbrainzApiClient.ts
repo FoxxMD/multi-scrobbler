@@ -39,7 +39,7 @@ export interface MusicbrainzApiClientConfig {
 export interface SearchOptions {
     escapeCharacters?: boolean
     removeCharacters?: boolean,
-    using?: ('artist' | 'album' | 'title' | 'isrc')[]
+    using?: ('artist' | 'album' | 'title' | 'isrc' | 'recording_mbid')[]
     ttl?: string,
     freetext?: boolean
 }
@@ -211,6 +211,9 @@ export class MusicbrainzApiClient extends AbstractApiClient {
             const query: Record<string, any> = {
             };
 
+            if(play.data?.meta?.brainz?.track && using.includes('recording_mbid')) {
+                query.recording_mbid = play.data.meta.brainz.track
+            }
             if(play.data.isrc !== undefined && using.includes('isrc')) {
                 query.isrc = play.data.isrc;
             }
@@ -269,6 +272,12 @@ export class MusicbrainzApiClient extends AbstractApiClient {
                         q += ' AND ';
                     }
                     q+= `isrc:${query.isrc}`;
+                }
+                if(query.recording_mbid !== undefined) {
+                    if(q !== '') {
+                        q += ' AND ';
+                    }
+                    q += `rid:"${query.recording_mbid}"`
                 }
             }
 

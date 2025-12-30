@@ -102,6 +102,35 @@ describe('Musicbrainz API', function () {
             expect(res.recordings).to.not.be.empty;
         });
 
+        it('tries pre-regular query using only recording MBID, if present', async function (){
+            this.timeout(3500);
+
+            const play: PlayObject = {
+                data: {
+                    track: "Fake",
+                    artists: ["Fake"],
+                    album: "Fake",
+                    meta: {
+                        brainz: {
+                            track: '026fa041-3917-4c73-9079-ed16e36f20f8'
+                        }
+                    }
+                },
+                meta: {}
+            }
+            await mbTransformer.tryInitialize();
+
+            const res = await mbTransformer.getTransformerData(play, {
+                type: "musicbrainz",
+                searchWhenMissing: ["artists", "album", "title"]
+            });
+            expect(res.recordings).to.exist;
+            expect(res.recordings).to.not.be.empty;
+            expect(res.recordings[0].isrcs).to.exist;
+            expect(res.recordings[0].isrcs).to.not.be.empty;
+            expect(res.recordings[0].isrcs).to.include('GBAHT1600302');
+        })
+
         it('tries pre-regular query using only ISRC, if present', async function () {
 
             this.timeout(3500);
