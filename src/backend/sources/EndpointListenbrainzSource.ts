@@ -76,7 +76,9 @@ export class EndpointListenbrainzSource extends MemorySource {
     static formatPlayObj(obj: ListenPayload, options: FormatPlayObjectOptions & {
         nowPlaying?: boolean
     } = {}): PlayObject {
-        return listenPayloadToPlay(obj, options.nowPlaying);
+        const play = listenPayloadToPlay(obj, options.nowPlaying);
+        play.meta.newFromSource = true;
+        return play;
     }
 
     getRecentlyPlayed = async (options = {}) => {
