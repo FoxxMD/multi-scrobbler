@@ -100,7 +100,7 @@ declare module 'lastfm-node-client' {
 
     export interface TrackObject {
         artist: {
-            '#text': string,
+            '#text'?: string,
             name: string,
             mbid: string,
         },
@@ -109,9 +109,10 @@ declare module 'lastfm-node-client' {
             '#text': string,
             mbid: string
         },
-        duration: number,
+        duration?: number,
         date?: {
-            uts: number,
+            uts: number | string,
+            '#text': string
         },
         '@attr'?: {
             nowplaying: 'true' | 'false'

@@ -5,10 +5,10 @@ import LastFm, {
     TrackScrobblePayload,
     UserGetInfoResponse
 } from "lastfm-node-client";
-import { PlayObject } from "../../../core/Atomic.js";
+import { BrainzMeta, PlayObject } from "../../../core/Atomic.js";
 import { nonEmptyStringOrDefault, splitByFirstFound } from "../../../core/StringUtils.js";
 import { removeUndefinedKeys, sleep, writeFile } from "../../utils.js";
-import { readJson } from '../../utils/DataUtils.js';
+import { objectIsEmpty, readJson } from '../../utils/DataUtils.js';
 import { joinedUrl } from "../../utils/NetworkUtils.js";
 import { getScrobbleTsSOCDate } from "../../utils/TimeUtils.js";
 import { getNodeNetworkException, isNodeNetworkException } from "../errors/NodeErrors.js";
@@ -72,7 +72,7 @@ export default class LastfmApiClient extends AbstractApiClient {
             mbid,
         } = obj;
         // arbitrary decision yikes
-        const artistStrings = splitByFirstFound(artists, [','], [artistName]);
+        const artistStrings = splitByFirstFound(artists, [','], artistName === undefined || artistName.trim() === '' ? [] : [artistName]);
         let al = album;
         if(al !== undefined) {
             if(al === null) {
@@ -82,20 +82,19 @@ export default class LastfmApiClient extends AbstractApiClient {
                 al = undefined;
             }
         }
-        return {
+        const brainz: BrainzMeta = removeUndefinedKeys({
+            album: nonEmptyStringOrDefault<undefined>(albumMbid),
+            artist: splitByFirstFound<undefined>(artistMbid, [',',';'], undefined),
+            track: nonEmptyStringOrDefault<undefined>(mbid)
+        });
+
+        const play: PlayObject = {
             data: {
                 artists: [...new Set(artistStrings)] as string[],
                 track: title,
                 album: al,
                 duration,
-                playDate: time !== undefined ? dayjs.unix(time) : undefined,
-                meta: {
-                    brainz: {
-                        album: nonEmptyStringOrDefault<undefined>(albumMbid),
-                        artist: splitByFirstFound<undefined>(artistMbid, [',',';'], undefined),
-                        track: nonEmptyStringOrDefault<undefined>(mbid)
-                    }
-                }
+                playDate: time !== undefined ? dayjs.unix(typeof time === 'string' ? Number.parseInt(time, 10) : time) : undefined
             },
             meta: {
                 nowPlaying: nowplaying === 'true',
@@ -106,6 +105,13 @@ export default class LastfmApiClient extends AbstractApiClient {
                 }
             }
         }
+
+        if(brainz !== undefined && !objectIsEmpty(brainz)) {
+            play.data.meta = {
+                brainz
+            }
+        }
+        return play;
     }
 
     callApi = async <T>(func: any, retries = 0): Promise<T> => {

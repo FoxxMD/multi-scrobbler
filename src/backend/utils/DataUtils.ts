@@ -145,3 +145,14 @@ export const replaceInterpolatedValues = (str: string, fromVals: Record<string, 
 };
 export const INTERPOLATION_WRAPPED_REGEX: RegExp = new RegExp(/\[\[([^\r\n\[\]]+?)\]\]/g);
 
+export const objectIsEmpty = (obj: object, valueIsEmpty?: undefined | ((val: any) => boolean)): boolean => {
+    if(Object.keys(obj).length === 0) {
+        return true;
+    }
+
+    if(valueIsEmpty === undefined) {
+        return false;
+    }
+
+    return Object.values(obj).every(x => valueIsEmpty(x));
+}

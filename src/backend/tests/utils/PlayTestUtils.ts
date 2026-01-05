@@ -10,6 +10,7 @@ import { sortByNewestPlayDate } from "../../utils.js";
 import { NO_DEVICE, NO_USER, PlayerStateDataMaybePlay, PlayPlatformId, ReportedPlayerStatus } from '../../common/infrastructure/Atomic.js';
 import { arrayListAnd } from '../../../core/StringUtils.js';
 import { findDelimiters } from '../../utils/StringUtils.js';
+import { TrackObject } from 'lastfm-node-client';
 
 dayjs.extend(utc)
 dayjs.extend(isBetween);
@@ -295,4 +296,40 @@ export const generateArtistsStr = (options: CompoundArtistGenerateOptions = {}):
     const artistStr = `${primaryStr} ${sec}`;
 
     return [artistStr, primaryArt, secondaryArt];
+}
+
+export const generateLastfmTrackObject = (): TrackObject => {
+    const now = dayjs();
+    const artist = faker.music.artist();
+    return {
+        album: {
+            '#text': faker.music.album(),
+            mbid: ""
+        },
+        artist: {
+            '#text': artist,
+            mbid: "",
+            name: artist
+        },
+        date: {
+            uts: now.unix().toString(),
+            '#text': now.format('DD MMM YYYY, HH:ss')
+        },
+        name: faker.music.songName(),
+        url: "https://www.last.fm/music/test/_/test",
+        '@attr': {
+            nowplaying: 'false'
+        },
+        mbid: ""
+    }
+}
+
+export const generateMbid = (): string => {
+    return [
+        faker.string.alphanumeric({length: 8}),
+        faker.string.alphanumeric({length: 4}),
+        faker.string.alphanumeric({length: 4}),
+        faker.string.alphanumeric({length: 4}),
+        faker.string.alphanumeric({length: 12})
+    ].join('-')
 }
