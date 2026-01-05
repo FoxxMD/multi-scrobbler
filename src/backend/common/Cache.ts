@@ -181,7 +181,7 @@ export class MSCache {
 }
 
 
-export const initMemoryCache = (opts: Parameters<typeof createKeyv>[0] = {}): Keyv | KeyvStoreAdapter => {
+export const initMemoryCache = <T = any>(opts: Parameters<typeof createKeyv>[0] = {}): Keyv<T> | KeyvStoreAdapter => {
     const {
         ttl = '1h',
         lruSize = 200,
