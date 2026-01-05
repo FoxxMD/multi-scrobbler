@@ -26,16 +26,14 @@ import { Logger } from '@foxxmd/logging';
 import { MemoryPositionalSource } from './MemoryPositionalSource.js';
 import { FixedSizeList } from 'fixed-size-list';
 import { SDKValidationError } from '@lukehagar/plexjs/sdk/models/errors/sdkvalidationerror.js';
+import { Keyv } from 'cacheable';
+import { initMemoryCache } from "../common/Cache.js";
 
 const shortDeviceId = truncateStringToLength(10, '');
 
 export const LOCAL_USER = 'PLEX_LOCAL_USER';
 
 const THUMB_REGEX = new RegExp(/\/library\/metadata\/(?<ratingkey>\d+)\/thumb\/\d+/)
-
-type MbIdCacheEntry = { value: string | null, expiresAt: number };
-const MBID_CACHE_TTL_MS = 10 * 60 * 1000;
-const MBID_CACHE_SIZE = 1000;
 
 export default class PlexApiSource extends MemoryPositionalSource {
     users: string[] = [];
@@ -63,7 +61,7 @@ export default class PlexApiSource extends MemoryPositionalSource {
 
     libraries: {name: string, collectionType: string, uuid: string}[] = [];
     
-    private mbIdCache = new Map<string, MbIdCacheEntry>();
+    private mbIdCache: Keyv<string>;
 
     declare config: PlexApiSourceConfig;
 
@@ -76,9 +74,11 @@ export default class PlexApiSource extends MemoryPositionalSource {
         this.deviceId = `${name}-ms${internal.version}-${truncateStringToLength(10, '')(hashObject(config))}`;
         this.uniqueDropReasons = new FixedSizeList<string>(100);
         this.mediaIdsSeen = new FixedSizeList<string>(100);
+        this.mbIdCache = initMemoryCache<string | null>({lruSize: 1000, ttl: '1m'}) as Keyv<string | null>;
     }
 
     protected async doBuildInitData(): Promise<true | string | undefined> {
+        this.regexCache
         const {
             data: {
                 token,
@@ -418,14 +418,14 @@ export default class PlexApiSource extends MemoryPositionalSource {
                 const prevBrainzMeta = sessionData[0].play.data.meta.brainz ?? {};
                 sessionData[0].play.data.meta.brainz = {
                     ...prevBrainzMeta,
-                    track: trackMbId ?? undefined,
-                    album: albumMbId ?? undefined,
+                    track: trackMbId,
+                    album: albumMbId,
                     // Plex doesn't track MBIDs for track artists, so we use the
                     // album artist MBID instead.
-                    artist: albumArtistMbId
+                    artist: albumArtistMbId !== undefined
                         ? [...new Set([...(prevBrainzMeta.artist ?? []), albumArtistMbId])]
                         : prevBrainzMeta.artist,
-                    albumArtist: albumArtistMbId
+                    albumArtist: albumArtistMbId !== undefined
                         ? [...new Set([...(prevBrainzMeta.albumArtist ?? []), albumArtistMbId])]
                         : prevBrainzMeta.albumArtist,
                 };
@@ -520,14 +520,17 @@ ${JSON.stringify(obj)}`);
 
     getNewPlayer = (logger: Logger, id: PlayPlatformId, opts: PlayerStateOptions) => new PlexPlayerState(logger, id, opts);
     
-    getMusicBrainzId = async (ratingKey: string | undefined): Promise<string | null> => {
+    getMusicBrainzId = async (ratingKey: string | undefined): Promise<string | undefined> => {
         if (!ratingKey) {
             return null;
         }
         
-        const cachedMbId = this.getCachedMbId(ratingKey);
-        if (cachedMbId !== undefined) {
+        const cachedMbId = await this.mbIdCache.get(ratingKey);
+        if (cachedMbId !== undefined && cachedMbId !== null) {
             return cachedMbId;
+        }
+        if(cachedMbId === null) {
+            return undefined;
         }
         
         try {
@@ -555,55 +558,17 @@ ${JSON.stringify(obj)}`);
                     if (typeof guid.id === "string" && guid.id.startsWith("mbid://")) {
                         const mbid = guid.id.replace("mbid://", "");
                         
-                        this.setCachedMbId(ratingKey, mbid);
+                        await this.mbIdCache.set(ratingKey, mbid);
                         return mbid;
                     }
                 }
             }
         } catch (e) {
-            this.logger.warn(`Failed to get MusicBrainz IDs from Plex for item ${ratingKey}: ${e}`);
+            this.logger.warn(new Error(`Failed to get MusicBrainz IDs from Plex for item ${ratingKey}`, {cause: e}));
         }
         
-        this.setCachedMbId(ratingKey, null);
-        return null;
-    }
-    
-    getCachedMbId = (ratingKey: string): string | null | undefined => {
-        const cachedMbId = this.mbIdCache.get(ratingKey);
-        
-        if (!cachedMbId) {
-            return undefined;
-        }
-        
-        if (cachedMbId.expiresAt < Date.now()) {
-            this.mbIdCache.delete(ratingKey);
-            return undefined;
-        }
-        
-        return cachedMbId.value;
-    }
-    
-    setCachedMbId = (ratingKey: string, value: string | null) => {
-        this.mbIdCache.set(ratingKey, {
-            value,
-            expiresAt: Date.now() + MBID_CACHE_TTL_MS,
-        });
-        
-        // Clean up cache.
-        if (this.mbIdCache.size > MBID_CACHE_SIZE) {
-            const now = Date.now();
-            
-            for (const [key, entry] of this.mbIdCache) {
-                if (entry.expiresAt <= now) {
-                    this.mbIdCache.delete(key);
-                }
-            }
-            
-            while (this.mbIdCache.size > MBID_CACHE_SIZE) {
-                const oldestKey = this.mbIdCache.keys().next().value;
-                this.mbIdCache.delete(oldestKey);
-            }
-        }
+        this.mbIdCache.set(ratingKey, null);
+        return undefined;
     }
 }
 
