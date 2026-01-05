@@ -41,6 +41,7 @@ export interface MusicbrainzTransformerData {
     fallbackArtistSearch?: ('naive' | 'native')
     fallbackFreeText?: boolean
     fallbackAlbumSearch?: boolean
+    logPreMbid?: boolean
 
     /** Ignore album artist if it is "Various Artists"
      * 
@@ -157,51 +158,64 @@ export interface IRecordingMSList extends IRecordingList {
 
 export const parseStageConfig = (data: MusicbrainzTransformerData | undefined = {}, logger: MaybeLogger = new MaybeLogger()): MusicbrainzTransformerDataStrong => {
 
-    const config: MusicbrainzTransformerDataStrong = {
-        searchWhenMissing: DEFAULT_MISSING_TYPES,
-        score: 90,
-
-        releaseGroupPrimaryTypeAllow: data.releaseGroupPrimaryTypeAllow !== undefined ? parseArrayFromMaybeString(data.releaseGroupPrimaryTypeAllow, {lower: true}).map(asMBReleasePrimaryGroupType) : undefined,
-        releaseGroupPrimaryTypeDeny: data.releaseGroupPrimaryTypeDeny !== undefined  ?parseArrayFromMaybeString(data.releaseGroupPrimaryTypeDeny, {lower: true}).map(asMBReleasePrimaryGroupType) : undefined,
-        releaseGroupPrimaryTypePriority: data.releaseGroupPrimaryTypePriority !== undefined ? parseArrayFromMaybeString(data.releaseGroupPrimaryTypePriority, {lower: true}).map(asMBReleasePrimaryGroupType) : undefined,
-
-        releaseGroupSecondaryTypeAllow: data.releaseGroupSecondaryTypeAllow !== undefined ? parseArrayFromMaybeString(data.releaseGroupSecondaryTypeAllow, {lower: true}).map(asMBReleaseSecondaryGroupType) : undefined,
-        releaseGroupSecondaryTypeDeny: data.releaseGroupSecondaryTypeDeny !== undefined ?  parseArrayFromMaybeString(data.releaseGroupSecondaryTypeDeny, {lower: true}).map(asMBReleaseSecondaryGroupType) : undefined,
-        releaseGroupSecondaryTypePriority: data.releaseGroupSecondaryTypePriority !== undefined ?  parseArrayFromMaybeString(data.releaseGroupSecondaryTypePriority, {lower: true}).map(asMBReleaseSecondaryGroupType) : undefined,
-
-        releaseStatusAllow: data.releaseStatusAllow !== undefined ? parseArrayFromMaybeString(data.releaseStatusAllow, {lower: true}).map(asMBReleaseStatus) : undefined,
-        releaseStatusDeny: data.releaseStatusAllow !== undefined ?  parseArrayFromMaybeString(data.releaseStatusDeny, {lower: true}).map(asMBReleaseStatus) : undefined,
-        releaseStatusPriority: data.releaseStatusAllow !== undefined ? parseArrayFromMaybeString(data.releaseStatusPriority, {lower: true}).map(asMBReleaseStatus) : undefined,
-
-        releaseCountryAllow: data.releaseCountryAllow !== undefined ? parseArrayFromMaybeString(data.releaseCountryAllow, {lower: true}) : undefined,
-        releaseCountryDeny:  data.releaseCountryDeny !== undefined ? parseArrayFromMaybeString(data.releaseCountryDeny, {lower: true}) : undefined,
-        releaseCountryPriority:  data.releaseCountryPriority !== undefined ? parseArrayFromMaybeString(data.releaseCountryPriority, {lower: true}) : undefined,
-
-        releaseAllowEmpty: data.releaseAllowEmpty,
-        ignoreVA: data.ignoreVA
-    };
-
     if (data === null || typeof data !== 'object') {
         throw new Error('Musicbrainz Transformer data should be an object or not defined.');
     }
 
-    if(data.searchWhenMissing !== undefined) {
-        config.searchWhenMissing = data.searchWhenMissing.map(asMissingMbid);
-    }
+    const {
+        releaseGroupPrimaryTypeAllow,
+        releaseGroupPrimaryTypeDeny,
+        releaseGroupPrimaryTypePriority,
+        releaseGroupSecondaryTypeAllow,
+        releaseGroupSecondaryTypeDeny,
+        releaseGroupSecondaryTypePriority,
+        releaseStatusAllow,
+        releaseStatusDeny,
+        releaseStatusPriority,
+        releaseCountryAllow,
+        releaseCountryDeny,
+        releaseCountryPriority,
 
-    if(data.score !== undefined) {
-        config.score = data.score;
+        searchWhenMissing,
+        fallbackArtistSearch,
+        ...rest
+    } = data;
+
+    const config: MusicbrainzTransformerDataStrong = {
+        searchWhenMissing: DEFAULT_MISSING_TYPES,
+        score: 90,
+
+        releaseGroupPrimaryTypeAllow: releaseGroupPrimaryTypeAllow !== undefined ? parseArrayFromMaybeString(releaseGroupPrimaryTypeAllow, {lower: true}).map(asMBReleasePrimaryGroupType) : undefined,
+        releaseGroupPrimaryTypeDeny: releaseGroupPrimaryTypeDeny !== undefined  ?parseArrayFromMaybeString(releaseGroupPrimaryTypeDeny, {lower: true}).map(asMBReleasePrimaryGroupType) : undefined,
+        releaseGroupPrimaryTypePriority: releaseGroupPrimaryTypePriority !== undefined ? parseArrayFromMaybeString(releaseGroupPrimaryTypePriority, {lower: true}).map(asMBReleasePrimaryGroupType) : undefined,
+
+        releaseGroupSecondaryTypeAllow: releaseGroupSecondaryTypeAllow !== undefined ? parseArrayFromMaybeString(releaseGroupSecondaryTypeAllow, {lower: true}).map(asMBReleaseSecondaryGroupType) : undefined,
+        releaseGroupSecondaryTypeDeny: releaseGroupSecondaryTypeDeny !== undefined ?  parseArrayFromMaybeString(releaseGroupSecondaryTypeDeny, {lower: true}).map(asMBReleaseSecondaryGroupType) : undefined,
+        releaseGroupSecondaryTypePriority: releaseGroupSecondaryTypePriority !== undefined ?  parseArrayFromMaybeString(releaseGroupSecondaryTypePriority, {lower: true}).map(asMBReleaseSecondaryGroupType) : undefined,
+
+        releaseStatusAllow: releaseStatusAllow !== undefined ? parseArrayFromMaybeString(releaseStatusAllow, {lower: true}).map(asMBReleaseStatus) : undefined,
+        releaseStatusDeny: releaseStatusDeny !== undefined ?  parseArrayFromMaybeString(releaseStatusDeny, {lower: true}).map(asMBReleaseStatus) : undefined,
+        releaseStatusPriority: releaseStatusPriority !== undefined ? parseArrayFromMaybeString(releaseStatusPriority, {lower: true}).map(asMBReleaseStatus) : undefined,
+
+        releaseCountryAllow: releaseCountryAllow !== undefined ? parseArrayFromMaybeString(releaseCountryAllow, {lower: true}) : undefined,
+        releaseCountryDeny:  releaseCountryDeny !== undefined ? parseArrayFromMaybeString(releaseCountryDeny, {lower: true}) : undefined,
+        releaseCountryPriority:  releaseCountryPriority !== undefined ? parseArrayFromMaybeString(releaseCountryPriority, {lower: true}) : undefined,
+
+        ...rest,
+    };
+
+    if(searchWhenMissing !== undefined) {
+        config.searchWhenMissing = searchWhenMissing.map(asMissingMbid);
     }
 
     logger.debug(`Will search if missing: ${config.searchWhenMissing.join(', ')} | Match if (default) score is >= ${config.score}`);
 
-    if(data.fallbackAlbumSearch === true) {
-        config.fallbackAlbumSearch = true;
+    if(config.fallbackAlbumSearch === true) {
         logger.debug('Will make an additional search with title + album');
     }
 
-    if(data.fallbackArtistSearch !== undefined) {
-        const cleanFallback = data.fallbackArtistSearch;
+    if(fallbackArtistSearch !== undefined) {
+        const cleanFallback = fallbackArtistSearch;
         if(!['native','naive'].includes(cleanFallback)) {
             throw new Error(`fallbackArtistSearch must be one of 'native' or 'naive', given: ${cleanFallback}`);
         }
@@ -209,8 +223,7 @@ export const parseStageConfig = (data: MusicbrainzTransformerData | undefined = 
         logger.debug(`Will make an additional search using ${config.fallbackArtistSearch} method as fallback`);
     }
 
-    if(data.fallbackFreeText === true) {
-        config.fallbackFreeText = true;
+    if(config.fallbackFreeText === true) {
         logger.debug('Will make an additional search with free text');
     }
 
@@ -281,8 +294,20 @@ export default class MusicbrainzTransformer extends AtomicPartsTransformer<Exter
     public async handlePreFetch(play: PlayObject, stageConfig: MusicbrainzTransformerDataStage): Promise<void> {
         const {
             searchWhenMissing = this.defaults.searchWhenMissing,
-            forceSearch = this.defaults.forceSearch ?? false
+            forceSearch = this.defaults.forceSearch ?? false,
+            logPreMbid = this.defaults.logPreMbid ?? false
         } = stageConfig;
+
+        if(logPreMbid) {
+            const a = play.data.meta?.brainz?.artist;
+            const parts: string[] = [
+                `Recording ${play.data.meta?.brainz?.track ?? '(None)'}`,
+                `Release ${play.data.meta?.brainz?.album ?? '(None)'}`,
+                `Artists ${a === undefined || a.length === 0 ? '(None)' : a.join(', ')}`,
+                `ISRC ${play.data.isrc ?? '(None)'}`
+            ];
+            this.logger.debug(`Original MBIDS => ${parts.join(' | ')}`);
+        }
 
         const missing = missingMbidTypes(play);
         if(intersect(searchWhenMissing, missing).length > 0) {
