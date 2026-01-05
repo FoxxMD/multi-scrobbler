@@ -5,7 +5,7 @@ import asPromised from 'chai-as-promised';
 import { after, before, describe, it } from 'mocha';
 import { initMemoryCache } from "../../common/Cache.js";
 import { Cacheable } from "cacheable";
-import MusicbrainzTransformer, { MusicbrainzTransformerDataStage } from "../../common/transforms/MusicbrainzTransformer.js";
+import MusicbrainzTransformer, { DEFAULT_SEARCHTYPE_ORDER, MusicbrainzTransformerDataStage } from "../../common/transforms/MusicbrainzTransformer.js";
 import { DEFAULT_MISSING_TYPES, PlayObject } from "../../../core/Atomic.js";
 import { projectDir } from '../../common/index.js';
 import path from 'path';
@@ -69,7 +69,8 @@ describe('Musicbrainz API', function () {
 
             const res = await mbTransformer.getTransformerData(play, {
                 type: "musicbrainz",
-                searchWhenMissing: ["artists", "album", "title"]
+                searchWhenMissing: ["artists", "album", "title"],
+                searchOrder: DEFAULT_SEARCHTYPE_ORDER
             });
             expect(res.recordings).to.exist;
             expect(res.recordings).to.not.be.empty;
@@ -98,7 +99,8 @@ describe('Musicbrainz API', function () {
 
             const res = await mbTransformer.getTransformerData(play, {
                 type: "musicbrainz",
-                searchWhenMissing: ["artists", "album", "title"]
+                searchWhenMissing: ["artists", "album", "title"],
+                searchOrder: DEFAULT_SEARCHTYPE_ORDER
             });
             expect(res.recordings).to.exist;
             expect(res.recordings).to.not.be.empty;
@@ -121,7 +123,8 @@ describe('Musicbrainz API', function () {
 
             const res = await mbTransformer.getTransformerData(play, {
                 type: "musicbrainz",
-                searchWhenMissing: ["artists", "album", "title"]
+                searchWhenMissing: ["artists", "album", "title"],
+                searchOrder: DEFAULT_SEARCHTYPE_ORDER
             });
             expect(res.recordings).to.exist;
             expect(res.recordings).to.not.be.empty;
@@ -146,7 +149,7 @@ describe('Musicbrainz API', function () {
             const res = await mbTransformer.getTransformerData(play, {
                 type: "musicbrainz",
                 searchWhenMissing: ["artists", "album", "title"],
-                fallbackAlbumSearch: true
+                searchOrder: ['basic','album']
             });
             expect(res.recordings).to.exist;
             expect(res.recordings).to.not.be.empty;
@@ -168,7 +171,8 @@ describe('Musicbrainz API', function () {
             const res = await mbTransformer.getTransformerData(play, {
                 type: "musicbrainz",
                 searchWhenMissing: ["artists", "album", "title"],
-                fallbackArtistSearch: 'native'
+                searchArtistMethod: "native",
+                searchOrder: ['basic','artist']
             });
             expect(res.recordings).to.exist;
             expect(res.recordings).to.not.be.empty;
@@ -190,7 +194,8 @@ describe('Musicbrainz API', function () {
 
             const res = await mbTransformer.getTransformerData(play, {
                 type: "musicbrainz",
-                searchWhenMissing: ["artists", "album", "title"]
+                searchWhenMissing: ["artists", "album", "title"],
+                searchOrder: ['basic']
             });
             expect(res.recordings).to.exist;
             expect(res.recordings).to.not.be.empty;
@@ -213,8 +218,8 @@ describe('Musicbrainz API', function () {
             const stageConfig: MusicbrainzTransformerDataStage = {
                 type: "musicbrainz",
                 searchWhenMissing: ["artists", "album", "title"],
-                fallbackArtistSearch: "native",
-                fallbackFreeText: true
+                searchArtistMethod: "native",
+                searchOrder: ['artist', 'freetext'],
             };
 
             const res = await mbTransformer.getTransformerData(play, stageConfig);
@@ -249,7 +254,8 @@ describe('Musicbrainz API', function () {
 
                 const res = await multiMb.getTransformerData(play, {
                     type: "musicbrainz",
-                    searchWhenMissing: ["artists", "album", "title"]
+                    searchWhenMissing: ["artists", "album", "title"],
+                    searchOrder: ['basic']
                 });
                 expect(res.recordings).to.exist;
                 expect(res.recordings).to.not.be.empty;
@@ -280,7 +286,8 @@ describe('Musicbrainz API', function () {
 
                 const res = await multiMb.getTransformerData(play, {
                     type: "musicbrainz",
-                    searchWhenMissing: ["artists", "album", "title"]
+                    searchWhenMissing: ["artists", "album", "title"],
+                    searchOrder: ['basic']
                 });
                 expect(res.recordings).to.exist;
                 expect(res.recordings).to.not.be.empty;

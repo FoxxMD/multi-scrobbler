@@ -34,6 +34,33 @@ export const asMissingMbid = (str: string): MissingMbidType => {
     throw new Error(`MissingMbidType must be one of 'artist' or 'title' or 'album' or 'duration', given: ${clean}`);
 }
 
+export const asSearchType = (str: string): SearchType => {
+    const clean = str.trim().toLocaleLowerCase();
+    switch(clean) {
+        case 'artist':
+        case 'artists':
+            return 'artist';
+        case 'album':
+            return 'album';
+        case 'freetext':
+            return 'freetext'
+        case 'basic':
+            return 'basic';
+        case 'isrc':
+            return 'isrc';
+        case 'mbidrecording':
+            return 'mbidrecording'
+        case 'basicwithid':
+        case 'basicwithids':
+            return 'basicwithids';
+    }
+    throw new Error(`SearchType must be one of 'freetext' | 'album' | 'artist' | 'basic' | 'basicWithIds' | 'isrc' | 'mbidRecording' -- given: ${clean}`);
+}
+
+export type SearchType = 'freetext' | 'album' | 'artist' | 'basic' | 'basicwithids' | 'isrc' | 'mbidrecording';
+
+export const DEFAULT_SEARCHTYPE_ORDER: SearchType[] = ['isrc','basic'];
+
 export interface MusicbrainzTransformerData {
     searchWhenMissing?: MissingMbidType[]
     forceSearch?: boolean
@@ -42,6 +69,8 @@ export interface MusicbrainzTransformerData {
     fallbackFreeText?: boolean
     fallbackAlbumSearch?: boolean
     logPreMbid?: boolean
+    searchOrder?: SearchType[]
+    searchArtistMethod?: ('naive' | 'native')
 
     /** Ignore album artist if it is "Various Artists"
      * 
@@ -136,6 +165,7 @@ export interface MusicbrainzTransformerDataStrong extends MusicbrainzTransformer
     releaseStatusAllow?: MBReleaseStatus[]
     releaseStatusDeny?: MBReleaseStatus[]
     releaseStatusPriority?: MBReleaseStatus[]
+    searchOrder: SearchType[]
 }
 
 export interface MusicbrainzTransformerDataStage extends MusicbrainzTransformerDataStrong,PlayTransformMetadataStage {
@@ -178,6 +208,10 @@ export const parseStageConfig = (data: MusicbrainzTransformerData | undefined = 
 
         searchWhenMissing,
         fallbackArtistSearch,
+        searchArtistMethod,
+        fallbackFreeText,
+        fallbackAlbumSearch,
+        searchOrder = [],
         ...rest
     } = data;
 
@@ -200,6 +234,7 @@ export const parseStageConfig = (data: MusicbrainzTransformerData | undefined = 
         releaseCountryAllow: releaseCountryAllow !== undefined ? parseArrayFromMaybeString(releaseCountryAllow, {lower: true}) : undefined,
         releaseCountryDeny:  releaseCountryDeny !== undefined ? parseArrayFromMaybeString(releaseCountryDeny, {lower: true}) : undefined,
         releaseCountryPriority:  releaseCountryPriority !== undefined ? parseArrayFromMaybeString(releaseCountryPriority, {lower: true}) : undefined,
+        searchOrder: ['isrc','basic'],
 
         ...rest,
     };
@@ -210,8 +245,19 @@ export const parseStageConfig = (data: MusicbrainzTransformerData | undefined = 
 
     logger.debug(`Will search if missing: ${config.searchWhenMissing.join(', ')} | Match if (default) score is >= ${config.score}`);
 
-    if(config.fallbackAlbumSearch === true) {
-        logger.debug('Will make an additional search with title + album');
+    const soSet = searchOrder.length > 0 ? new Set<SearchType>(searchOrder.map(asSearchType)) : new Set<SearchType>();
+    const depSearch = [];
+
+    // preserve order of search from before searchOrder
+    // by adding fallback properties in same order they were in getTransformerData
+    if(searchOrder.length === 0) {
+        soSet.add('isrc');
+        soSet.add('basic');
+    }
+
+    if(fallbackAlbumSearch === true) {
+        soSet.add('album');
+        depSearch.push('fallbackAlbumSearch');
     }
 
     if(fallbackArtistSearch !== undefined) {
@@ -219,13 +265,43 @@ export const parseStageConfig = (data: MusicbrainzTransformerData | undefined = 
         if(!['native','naive'].includes(cleanFallback)) {
             throw new Error(`fallbackArtistSearch must be one of 'native' or 'naive', given: ${cleanFallback}`);
         }
-        config.fallbackArtistSearch = cleanFallback;
-        logger.debug(`Will make an additional search using ${config.fallbackArtistSearch} method as fallback`);
+        config.searchArtistMethod = cleanFallback;
+        depSearch.push('fallbackArtistSearch');
+        soSet.add('artist');
     }
 
-    if(config.fallbackFreeText === true) {
-        logger.debug('Will make an additional search with free text');
+    if(fallbackFreeText === true) {
+        soSet.add('freetext');
+        depSearch.push('fallbackFreeText');
     }
+
+    if(depSearch.length > 0) {
+        logger.warn(`fallback search options are DEPRECATED and will be removed in a future release. Please switch to 'searchOrder'. See Release 0.11.0 for migrating. Deprecated options used: ${depSearch.join(',')}`);
+        if(depSearch.includes('fallbackArtistSearch')){
+            logger.warn(`'fallbackArtistSearch' is DEPRECATED and will removed in a future release. Please switch to 'searchOrder' with 'artist', and 'searchArtistMethod' for naive/native. See Release 0.11.0 for migrating.`);
+        }
+    }
+
+    if(soSet.has('artist') && config.searchArtistMethod === undefined) {
+        const cleanFallback = (searchArtistMethod ?? 'native');
+        if(!['native','naive'].includes(cleanFallback)) {
+            throw new Error(`searchArtistMethod must be one of 'native' or 'naive', given: ${cleanFallback}`);
+        }
+        config.searchArtistMethod = cleanFallback;
+        logger.debug(`Artist search using ${config.fallbackArtistSearch} method`);
+    }
+
+    const so = Array.from(soSet);
+    const soHint: string[] = [];
+    for(const s of so) {
+        if(s === 'artist') {
+            soHint.push(`artist (${config.searchArtistMethod})`);
+        } else {
+            soHint.push(s);
+        }
+    }
+    logger.debug(`Search Order => ${soHint.join(' | ')}`);
+    config.searchOrder = so;
 
     for(const [k,v] of Object.entries(config)) {
         if(k.includes('release') && v !== undefined) {
@@ -320,51 +396,111 @@ export default class MusicbrainzTransformer extends AtomicPartsTransformer<Exter
     }
 
     public async getTransformerData(play: PlayObject, stageConfig: MusicbrainzTransformerDataStage): Promise<IRecordingMSList> {
+        
+        const {
+            searchOrder = this.defaults.searchOrder
+        } = stageConfig;
 
         let results: IRecordingMSList;
 
-        if(play.data.isrc !== undefined) {
-            this.logger.debug('Play has ISRC present, trying search using only ISRC');
-            results = await this.api.searchByRecording(play, {using: ['isrc']});
-            if(results.recordings.length === 0) {
-                this.logger.debug('No matches found, trying regular search');
-                results = await this.api.searchByRecording(play);
+        for(const searchType of searchOrder) {
+            try {
+                switch(searchType) {
+                    case 'isrc':
+                        results = await this.searchByIsrc(play, stageConfig);
+                        break;
+                    case 'album':
+                        results = await this.searchByAlbum(play, stageConfig);
+                        break;
+                    case 'artist':
+                        results = await this.searchByArtist(play, stageConfig);
+                        break;
+                    case 'basic':
+                        results = await this.searchByBasicFields(play, stageConfig);
+                        break;
+                    case 'freetext':
+                        results = await this.searchByFreeText(play, stageConfig);
+                        break;
+                    case 'basicwithids':
+                        throw new Error('Not Implemented!');
+                    case 'mbidrecording':
+                        throw new Error('Not Implemented!');
+
+                }
+                if(results.recordings.length === 0) {
+                    this.logger.debug(`'${searchType}' search type returned no matches`);
+                } else {
+                    break;
+                }
+            } catch (e) {
+                if(e instanceof SearchPrerequisiteError) {
+                    this.logger.debug(`Search type ${searchType} did not meet prerequesites: ${e.message}`);
+                } else {
+                    // we should be catching any unrecoverable errors in api calls
+                    // so we should only get here if something truly bad has happened
+                    // and we probably don't want to try additional api calls
+                    throw e;
+                }
             }
-        } else {
-            results = await this.api.searchByRecording(play);
         }
 
-        if(results.recordings.length === 0) {
+        return results;
+    }
 
+    public async searchByBasicFields(play: PlayObject, stageConfig: MusicbrainzTransformerDataStage): Promise<IRecordingMSList> {
+        this.logger.debug({labels: ['Basic Search']}, 'Searching by artist/album/track');
+        return await this.api.searchByRecording(play);
+    }
+
+    public async searchByIsrc(play: PlayObject, stageConfig: MusicbrainzTransformerDataStage): Promise<IRecordingMSList> {
+        if(play.data.isrc !== undefined) {
+            this.logger.debug({labels: ['ISRC Search']},'Searching with ISRC');
+            return await this.api.searchByRecording(play, {using: ['isrc']});
+        }
+        throw new SearchPrerequisiteError('Play does not have ISRC');
+    }
+
+    public async searchByAlbum(play: PlayObject, stageConfig: MusicbrainzTransformerDataStage): Promise<IRecordingMSList> {
+        // possibly the artist is incorrect (may be combined as one string)
+        // if we have an album we can likely still get a decent hit w/o using artist
+        if(play.data.album !== undefined && play.data.artists !== undefined && play.data.artists.length > 0) {
+            this.logger.debug({labels: ['Album Search']},'Searching with only track+album');
+            return await this.api.searchByRecording(play, {using: ['title','album']});
+        }
+        if(play.data.album === undefined) {
+            throw new SearchPrerequisiteError('Play does not have an album');
+        }
+        if(play.data.artists === undefined) {
+            throw new SearchPrerequisiteError('Play does not have any artists');
+        }
+        if(play.data.artists.length === 1) {
+            throw new SearchPrerequisiteError('Play only has one artist');
+        }
+    }
+
+    public async searchByArtist(play: PlayObject, stageConfig: MusicbrainzTransformerDataStage): Promise<IRecordingMSList> {
         const {
-            fallbackArtistSearch = this.defaults.fallbackArtistSearch,
-            fallbackFreeText = this.defaults.fallbackFreeText,
-            fallbackAlbumSearch = this.defaults.fallbackAlbumSearch
+            searchArtistMethod = this.defaults.searchArtistMethod,
         } = stageConfig;
-
-            // possibly the artist is incorrect (may be combined as one string)
-            // if we have an album we can likely still get a decent hit w/o using artist
-            if(fallbackAlbumSearch && play.data.album !== undefined && play.data.artists !== undefined && play.data.artists.length > 0) {
-                this.logger.debug('No matches found, trying search with only track+album');
-                results = await this.api.searchByRecording(play, {using: ['title','album']});
-            }
-            // if no album or still have not found by track+album, and only one artist
+            // if only one artist
             // then its likely artist string is combined
-            if(results.recordings.length === 0 && play.data.artists !== undefined && play.data.artists.length === 1) {
+            if(play.data.artists !== undefined && play.data.artists.length === 1) {
 
-                if(fallbackArtistSearch === 'naive') {
+                if(searchArtistMethod === 'naive') {
                     // try a naive split using any common delimiter found and use the first value as artist
                     // -- this will likely result in a less accurate match but at least it might find something
                     // -- usually the "primary artist" is listed first in a combined artist string so cross your fingers this works
                     const naiveSplit = splitByFirstRegexFound(play.data.artists[0], [play.data.artists[0]]).map(x => x.trim());
                     if(naiveSplit.length > 1) {
-                        this.logger.debug('No matches found, trying search with track + first value from artist string split');
-                        results = await this.api.searchByRecording({...play, data: {
+                        this.logger.debug({labels: ['Parsed Artist Search']},'Searching with track + first value from artist string split');
+                        return await this.api.searchByRecording({...play, data: {
                             ...play.data,
                             artists: [naiveSplit[0]]
                         }}, {using: ['title','artist']});
+                    } else {
+                        throw new SearchPrerequisiteError('Naive parsing did not produce multiple artists');
                     }
-                } else if(fallbackArtistSearch === 'native') {
+                } else if(searchArtistMethod === 'native') {
                     // use MS native parsing to extract artists from artist string and title
                     // -- cleaning title is aggressive but at this point MB has not found anything which means its likely not "proper"
                     // IE "My Track (Cool Remix)" is a proper recording name but "My Track (feat. Someone)" is not bc MB would have removed the joiner from the name
@@ -374,19 +510,23 @@ export default class MusicbrainzTransformer extends AtomicPartsTransformer<Exter
                     // IE "Crosby, Stills, Nash & Young" is a proper artist name with delimiters included but "My Artist & My Feat Artists" is not
                     // so we split out all artists by all found delimiters
                     const nativePlay = nativeParse(play, {titleClean: true, delimiters: DELIMITERS});
-                    this.logger.debug('No matches found, trying search with aggressive native parsing');
-                    results = await this.api.searchByRecording(nativePlay, {using: ['title','artist']});
+                    this.logger.debug({labels: ['Parsed Artist Search']},'Searching with aggressive native parsing');
+                    return await this.api.searchByRecording(nativePlay, {using: ['title','artist']});
                 }
             }
 
-            if(results.recordings.length === 0 && fallbackFreeText) {
-                this.logger.debug('No matches found, trying search with freetext');
-                results = await this.api.searchByRecording(play, {freetext: true});
-                results.freeText = true;
-
+            if(play.data.artists === undefined) {
+                throw new SearchPrerequisiteError('Play does not have any artists');
             }
-        }
+            if(play.data.artists.length > 1) {
+                throw new SearchPrerequisiteError('Play has more than one artist already');
+            }
+    }
 
+    public async searchByFreeText(play: PlayObject, stageConfig: MusicbrainzTransformerDataStage): Promise<IRecordingMSList> {
+        this.logger.debug({labels: ['Freetext Search']},'Trying freetext search');
+        const results = await this.api.searchByRecording(play, {freetext: true}) as IRecordingMSList;
+        results.freeText = true;
         return results;
     }
 
@@ -664,14 +804,16 @@ export const DEFAULTS_SENSIBLE = {
     // prefer album, then single, then ep
     "releaseGroupPrimaryTypePriority": ["album", "single", "ep"],
     // prefer worldwide release
-    "releaseCountryPriority": ["XW"]
+    "releaseCountryPriority": ["XW"],
+    "searchOrder": ["isrc", "basic"]
 }
-export const DEFAULTS_NATIVE: {fallbackArtistSearch: "native"} = {
-    "fallbackArtistSearch": "native"
+export const DEFAULTS_NATIVE: {searchArtistMethod: "native", "searchOrder": ["artist"]} = {
+    "searchArtistMethod": "native",
+    "searchOrder": ["artist"]
 }
 
 export const DEFAULTS_AGGRESSIVE = {
-    "fallbackFreeText": true
+    "searchOrder": ["freetext"]
 }
 
 export const configFromEnv = (logger: MaybeLogger = new MaybeLogger()) => {
@@ -697,6 +839,7 @@ export const configFromEnv = (logger: MaybeLogger = new MaybeLogger()) => {
             }
         }
         const presets = mbEnv.split(',').map(x => x.trim().toLocaleLowerCase());
+        const soSet = new Set<SearchType>();
         for (const p of presets) {
             switch (p) {
                 case 'default':
@@ -704,25 +847,42 @@ export const configFromEnv = (logger: MaybeLogger = new MaybeLogger()) => {
                 case 'sensible':
                     mbConfig.defaults = {
                         ...mbConfig.defaults,
-                        ...DEFAULTS_SENSIBLE
+                        ...DEFAULTS_SENSIBLE,
+                        searchOrder: undefined,
+                    }
+                    for(const o of DEFAULTS_SENSIBLE.searchOrder) {
+                        soSet.add(o as SearchType);
                     }
                     break;
                 case 'native':
                     mbConfig.defaults = {
                         ...mbConfig.defaults,
-                        ...DEFAULTS_NATIVE
+                        ...DEFAULTS_NATIVE,
+                        searchOrder: undefined,
+                    }
+                    for(const o of DEFAULTS_NATIVE.searchOrder) {
+                        soSet.add(o as SearchType);
                     }
                     break;
                 case 'aggressive':
                     mbConfig.defaults = {
                         ...mbConfig.defaults,
-                        ...DEFAULTS_AGGRESSIVE
+                        ...DEFAULTS_AGGRESSIVE,
+                        searchOrder: undefined,
+                    }
+                     for(const o of DEFAULTS_AGGRESSIVE.searchOrder) {
+                        soSet.add(o as SearchType);
                     }
                     break;
             }
         }
+        mbConfig.defaults.searchOrder = Array.from(soSet);
         logger.debug(`Using presets: ${presets.join(',')}`);
     }
 
     return mbConfig;
+}
+
+export class SearchPrerequisiteError extends SimpleError {
+    name = 'Search Prerequistie Failure';
 }
