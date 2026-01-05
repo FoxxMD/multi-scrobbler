@@ -21,7 +21,7 @@ import { ListenBrainzSourceConfig } from "../common/infrastructure/config/source
 import { MopidySourceConfig } from "../common/infrastructure/config/source/mopidy.js";
 import { MusicCastData, MusicCastSourceConfig } from "../common/infrastructure/config/source/musiccast.js";
 import { IcecastData, IcecastSourceConfig, IcecastSourceOptions } from "../common/infrastructure/config/source/icecast.js";
-import { MPDSourceConfig } from "../common/infrastructure/config/source/mpd.js";
+import { MPDData, MPDSourceConfig } from "../common/infrastructure/config/source/mpd.js";
 import { MPRISData, MPRISSourceConfig } from "../common/infrastructure/config/source/mpris.js";
 import { MusikcubeData, MusikcubeSourceConfig } from "../common/infrastructure/config/source/musikcube.js";
 import { PlexApiSourceConfig, PlexCompatConfig, PlexSourceConfig } from "../common/infrastructure/config/source/plex.js";
@@ -648,6 +648,23 @@ export default class ScrobbleSources {
                             configureAs: defaultConfigureAs,
                             data: mc as MusikcubeData,
                             options: transformPresetEnv('MC')
+                        });
+                    }
+                    break;
+                case 'mpd':
+                    const mpd = {
+                        url: process.env.MPD_URL,
+                        password: process.env.MPD_PASSWORD
+                    }
+                    if (!Object.values(mpd).every(x => x === undefined)) {
+                        configs.push({
+                            type: 'mpd',
+                            name: 'unnamed',
+                            source: 'ENV',
+                            mode: 'single',
+                            configureAs: defaultConfigureAs,
+                            data: mpd as MPDData,
+                            options: transformPresetEnv('MPD')
                         });
                     }
                     break;
