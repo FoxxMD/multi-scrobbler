@@ -11,6 +11,8 @@ import { NO_DEVICE, NO_USER, PlayerStateDataMaybePlay, PlayPlatformId, ReportedP
 import { arrayListAnd } from '../../../core/StringUtils.js';
 import { findDelimiters } from '../../utils/StringUtils.js';
 import { TrackObject } from 'lastfm-node-client';
+import { ListRecord, ScrobbleRecord } from '../../common/infrastructure/config/client/tealfm.js';
+import { nanoid } from 'nanoid';
 
 dayjs.extend(utc)
 dayjs.extend(isBetween);
@@ -333,3 +335,44 @@ export const generateMbid = (): string => {
         faker.string.alphanumeric({length: 12})
     ].join('-')
 }
+
+export const generateTealPlayRecord = (opts: {
+    withMbids?: boolean,
+    withIsrc?: boolean
+} = {}): [ListRecord<ScrobbleRecord>, { did: string, tid: string }] => {
+    const {
+        withMbids = true,
+        withIsrc = true,
+    } = opts;
+
+    const now = dayjs();
+    const artists = generateArtists(2);
+
+    const did = nanoid(12);
+    const tid = nanoid(10);
+
+    const rec: ListRecord<ScrobbleRecord> = {
+        uri: `at://did:plc:${did}/fm.teal.alpha.feed.play/${tid}`,
+        cid: nanoid(12),
+        value: {
+            '$type': 'fm.teal.alpha.feed.play',
+            artists: artists.map(x => withMbids ? { artistName: x, artistMbId: generateMbid() } : { artistName: x }),
+            releaseName: faker.music.album(),
+            trackName: faker.music.songName(),
+            playedTime: now.toISOString(),
+            submissionClientAgent: 'test',
+            duration: faker.number.int({ min: 1, max: 300 })
+        }
+    }
+
+    if (withMbids) {
+        rec.value.releaseMbId = generateMbid();
+        rec.value.recordingMbId = generateMbid();
+    }
+
+    if (withIsrc) {
+        rec.value.isrc = nanoid(12);
+    }
+
+    return [rec, { did, tid }];
+} 

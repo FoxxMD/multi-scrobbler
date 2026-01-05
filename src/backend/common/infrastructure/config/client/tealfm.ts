@@ -51,6 +51,10 @@ export interface TealClientOptions extends TealOptions,CommonClientOptions {
 export interface TealClientAIOConfig extends TealClientConfig {
     type: 'tealfm'
 }
+export interface TealArtistCredit {
+    artistName?: string,
+    artistMbId?: string
+}
 /**
  *  https://github.com/teal-fm/teal/blob/main/lexicons/fm.teal.alpha/feed/play.json
  *  https://github.com/teal-fm/teal/blob/main/lexicons/fm.teal.alpha/feed/defs.json
@@ -60,7 +64,7 @@ export interface ScrobbleRecord {
     trackName: string,
     playedTime: string,
     duration?: number
-    artists?: {artistName?: string, artistMbId?: string}[]
+    artists?: TealArtistCredit[]
     /** Album name  */
     releaseName?: string
     /** A metadata string specifying the user agent where the format is `<app-identifier>/<version> (<kernel/OS-base>; <platform/OS-version>; <device-model>)` */

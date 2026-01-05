@@ -4,12 +4,13 @@ import { ListRecord, ScrobbleRecord, TealClientData } from "../../infrastructure
 import AbstractApiClient from "../AbstractApiClient.js";
 import { Agent } from "@atproto/api";
 import { MSCache } from "../../Cache.js";
-import { PlayObject } from "../../../../core/Atomic.js";
+import { BrainzMeta, PlayObject } from "../../../../core/Atomic.js";
 import { musicServiceToCononical } from "../ListenbrainzApiClient.js";
 import { parseRegexSingle } from "@foxxmd/regex-buddy-core";
 import { RecordOptions } from "../../infrastructure/config/client/tealfm.js";
 import dayjs from "dayjs";
 import { getScrobbleTsSOCDateWithContext } from "../../../utils/TimeUtils.js";
+import { removeUndefinedKeys } from "../../../utils.js";
 
 
 export abstract class AbstractBlueSkyApiClient extends AbstractApiClient {
@@ -73,7 +74,9 @@ export const playToRecord = (play: PlayObject): ScrobbleRecord => {
     };
 
     return record;
-};export const listRecordToPlay = (listRecord: ListRecord<ScrobbleRecord>): PlayObject => {
+}
+
+export const listRecordToPlay = (listRecord: ListRecord<ScrobbleRecord>): PlayObject => {
     const opts: RecordOptions = {};
     const uriRes = parseRegexSingle(ATPROTO_URI_REGEX, listRecord.uri);
     if (uriRes !== undefined) {
@@ -82,7 +85,8 @@ export const playToRecord = (play: PlayObject): ScrobbleRecord => {
         opts.user = uriRes.named.did;
     }
     return recordToPlay(listRecord.value, opts);
-};
+}
+
 export const recordToPlay = (record: ScrobbleRecord, options: RecordOptions = {}): PlayObject => {
 
     const play: PlayObject = {
@@ -92,14 +96,7 @@ export const recordToPlay = (record: ScrobbleRecord, options: RecordOptions = {}
             duration: record.duration,
             playDate: dayjs(record.playedTime),
             album: record.releaseName,
-            isrc: record.isrc,
-            meta: {
-                brainz: {
-                    track: record.recordingMbId,
-                    album: record.releaseMbId,
-                    artist: record.artists.filter(x => x.artistMbId !== undefined).map(x => x.artistMbId)
-                }
-            }
+            isrc: record.isrc
         },
         meta: {
             source: 'tealfm',
@@ -112,6 +109,16 @@ export const recordToPlay = (record: ScrobbleRecord, options: RecordOptions = {}
             user: options.user
         }
     };
+
+    const brainz: BrainzMeta | undefined = removeUndefinedKeys({
+        track: record.recordingMbId,
+        album: record.releaseMbId,
+        artist: record.artists.filter(x => x.artistMbId !== undefined).length > 0 ? record.artists.filter(x => x.artistMbId !== undefined).map(x => x.artistMbId) : undefined
+    });
+
+    if(brainz !== undefined) {
+        play.data.meta = {brainz};
+    }
 
     return play;
 };
