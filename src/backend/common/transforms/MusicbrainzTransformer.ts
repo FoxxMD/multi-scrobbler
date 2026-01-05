@@ -286,11 +286,11 @@ export default class MusicbrainzTransformer extends AtomicPartsTransformer<Exter
 
         const missing = missingMbidTypes(play);
         if(intersect(searchWhenMissing, missing).length > 0) {
-            this.logger.debug(`Missing desired MBIDs for: ${missing.join(', ')}`);
+            this.logger.debug(`Desired MBIDs for ${searchWhenMissing.join(',')} and Play is missing: ${missing.join(', ')}`);
         } else if(forceSearch) {
-            this.logger.debug(`No desired MBIDs are missing but forceSearch = true`);
+            this.logger.debug(`All desired MBIDs (${searchWhenMissing.join(',')}) exist but forceSearch = true`);
         } else {
-            throw new SkipTransformStageError('No desired MBIDs are missing', {shortStack: true});
+            throw new SkipTransformStageError(`No desired MBIDs (${searchWhenMissing.join(',')}) are missing`, {shortStack: true});
         }
     }
 

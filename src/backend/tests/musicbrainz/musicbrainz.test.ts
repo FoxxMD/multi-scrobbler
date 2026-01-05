@@ -6,12 +6,14 @@ import { after, before, describe, it } from 'mocha';
 import { initMemoryCache } from "../../common/Cache.js";
 import { Cacheable } from "cacheable";
 import MusicbrainzTransformer, { MusicbrainzTransformerDataStage } from "../../common/transforms/MusicbrainzTransformer.js";
-import { PlayObject } from "../../../core/Atomic.js";
+import { DEFAULT_MISSING_TYPES, PlayObject } from "../../../core/Atomic.js";
 import { projectDir } from '../../common/index.js';
 import path from 'path';
 import { MusicbrainzApiConfigData } from '../../common/infrastructure/Atomic.js';
 import { MockNetworkError, withRequestInterception } from '../utils/networking.js';
 import { http, HttpResponse, delay } from "msw";
+import { generatePlay, withBrainz } from '../utils/PlayTestUtils.js';
+import { intersect, missingMbidTypes } from '../../utils.js';
 
 const envPath = path.join(projectDir, '.env');
 dotenv.config({ path: envPath });
@@ -285,6 +287,49 @@ describe('Musicbrainz API', function () {
 
             })();
         });
+    });
+
+});
+
+describe('#MB Missing Types', function() {
+
+    it('Finds none missing when all mbids are defined', function() {
+
+        const play = withBrainz(generatePlay(), ['album', 'artist', 'track']);
+        const missing = missingMbidTypes(play);
+        expect(missing.length).eq(0);
+    });
+
+    it('Finds all brainz missing when no brainz are defined', function() {
+
+        const play = generatePlay();
+        const missing = missingMbidTypes(play);
+        expect(missing).to.have.members(['title','album','artists']);
+    });
+
+    it('Finds duration missing', function() {
+
+        const play = withBrainz(generatePlay(), ['album', 'artist', 'track']);
+        delete play.data.duration;
+        const missing = missingMbidTypes(play);
+        expect(missing.length).eq(1);
+        expect(missing[0]).eq('duration');
+    });
+
+    it('Finds brainz missing when fields are undefined', function() {
+
+        const play = generatePlay();
+        play.data.meta = {brainz: {}};
+        const missing = missingMbidTypes(play);
+        expect(missing).to.have.members(['title','album','artists']);
+    });
+
+    it('intersect is not empty when missing any desired types', function() {
+
+        const play = withBrainz(generatePlay(), ['album', 'track']);
+        const missing = missingMbidTypes(play);
+        expect(missing).to.have.members(['artists']);
+        expect(intersect(DEFAULT_MISSING_TYPES, missing)).length.is.greaterThan(0);
     });
 
 });

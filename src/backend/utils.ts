@@ -615,7 +615,7 @@ export const missingMbidTypes = (play: PlayObject): MissingMbidType[] => {
     if(album === undefined) {
         missing.push('album');
     }
-    if((artist ?? []).length !== (play.data.artists ?? []).length) {
+    if(artist === undefined || (artist ?? []).length !== (play.data.artists ?? []).length) {
         missing.push('artists')
     }
 

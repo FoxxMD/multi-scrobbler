@@ -5,7 +5,7 @@ import isBetween from "dayjs/plugin/isBetween.js";
 import relativeTime from "dayjs/plugin/relativeTime.js";
 import timezone from "dayjs/plugin/timezone.js";
 import utc from "dayjs/plugin/utc.js";
-import { FEAT, JOINERS, JOINERS_FINAL, JsonPlayObject, ObjectPlayData, PlayMeta, PlayObject } from "../../../core/Atomic.js";
+import { FEAT, JOINERS, JOINERS_FINAL, JsonPlayObject, MissingMbidType, ObjectPlayData, PlayMeta, PlayObject } from "../../../core/Atomic.js";
 import { sortByNewestPlayDate } from "../../utils.js";
 import { NO_DEVICE, NO_USER, PlayerStateDataMaybePlay, PlayPlatformId, ReportedPlayerStatus } from '../../common/infrastructure/Atomic.js';
 import { arrayListAnd } from '../../../core/StringUtils.js';
@@ -170,6 +170,49 @@ export const generatePlay = (data: ObjectPlayData = {}, meta: PlayMeta = {}): Pl
             ...meta,
         }
     }
+}
+
+export const withBrainz = (play: PlayObject, include: ('track' | 'artist' | 'album')[]): PlayObject => {
+    for(const i of include) {
+        switch(i) {
+            case 'track':
+                if(play.data.meta?.brainz?.track === undefined) {
+                    play.data.meta = {
+                        ...(play.data.meta ?? {}),
+                        brainz: {
+                            ...(play.data.meta?.brainz ?? {}),
+                            track: generateMbid()
+                        }
+                    }
+                }
+                break;
+            case 'album':
+                if(play.data.meta?.brainz?.album === undefined) {
+                    play.data.meta = {
+                        ...(play.data.meta ?? {}),
+                        brainz: {
+                            ...(play.data.meta?.brainz ?? {}),
+                            album: generateMbid()
+                        }
+                    }
+                }
+                break;
+            case 'artist':
+                if(play.data.meta?.brainz?.artist === undefined) {
+                    const artistMbids = play.data.artists.map(x => generateMbid());
+                    play.data.meta = {
+                        ...(play.data.meta ?? {}),
+                        brainz: {
+                            ...(play.data.meta?.brainz ?? {}),
+                            artist: artistMbids
+                        }
+                    }
+                }
+                break;
+        }
+    }
+
+    return play;
 }
 
 export const generatePlayPlatformId = (deviceId?: string, userId?: string): PlayPlatformId => {
