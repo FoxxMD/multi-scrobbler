@@ -534,6 +534,8 @@ ${JSON.stringify(obj)}`);
         }
         
         try {
+            const signal = AbortSignal.timeout(5000); // reasonable 5s timeout
+
             // The current version of plexjs (0.39.0) does not return the GUID
             // fields, so we make the call manually.
             const request = await this.httpClient.request(
@@ -545,6 +547,7 @@ ${JSON.stringify(obj)}`);
                             "X-Plex-Token": this.config.data.token,
                             "Accept": "application/json",
                         },
+                        signal
                     }
                 )
             );
