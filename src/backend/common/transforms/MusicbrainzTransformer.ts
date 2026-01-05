@@ -825,7 +825,7 @@ export const rankReleasesByPriority = (list: IRecordingMatch[], stageConfig: Mus
     return rankedList;
 };
 
-export const DEFAULTS_SENSIBLE = {
+export const DEFAULTS_SENSIBLE: {searchArtistMethod: "native", [key: string]: any} = {
     // use official release over anything else
     "releaseStatusPriority": ["official"],
     // prefer album, then single, then ep
