@@ -238,7 +238,7 @@ Both steps have separate configuration.
 
 #### Should MS Search?
 
-Before MS begins a search it checks Scrobble data it checks if your data already contains:
+Before MS begins a search it checks if your Scrobble data already contains:
 
 * [MBIDs](https://musicbrainz.org/doc/MusicBrainz_Identifier) for [artists](https://musicbrainz.org/doc/Artist), [album](https://musicbrainz.org/doc/Release), and specific [track/recording](https://musicbrainz.org/doc/Recording)
 * and duration
@@ -294,7 +294,7 @@ To set search methods and their order use the `searchOrder` option in your [Stag
 
 :::tip[Default Search Methods]
 
-If you do not define `searchOrder`, or use the [Sensible Default/Preset](#sensible-default), then Multi-scrobbler will default to using `isrc` and `basic` methods, in that order.
+If `searchOrder` is undefined, or you use the [Sensible Default/Preset](#sensible-default), then Multi-scrobbler will default to using `isrc` and `basic` methods, in that order.
 
 :::
 
@@ -302,7 +302,7 @@ If you do not define `searchOrder`, or use the [Sensible Default/Preset](#sensib
 
 <details>
 
-<summary>ISRC</summary>
+<summary>ISRC (`isrc`)</summary>
 
 If your Scrobble data contains an [ISRC](https://musicbrainz.org/doc/ISRC) (usually from Spotify) then Multi-scrobbler can search using this ID, only.
 
@@ -320,7 +320,7 @@ If your Scrobble data contains an [ISRC](https://musicbrainz.org/doc/ISRC) (usua
 
 <details>
 
-<summary>Track MBID</summary>
+<summary>Track MBID (`mbidrecording`)</summary>
 
 If your Scrobble data contains an [Track (Recording) MBID](https://musicbrainz.org/doc/Recording) then Multi-scrobbler can search using this MBID, only.
 
@@ -338,7 +338,7 @@ If your Scrobble data contains an [Track (Recording) MBID](https://musicbrainz.o
 
 <details>
 
-<summary>Album, Artist, and Title Fields</summary>
+<summary>Album, Artist, and Title Fields (`basic`)</summary>
 
 Will search Musicbrainz using any/all available text fields from your scrobble: Album, Artists(s), and Title. Does not leverage any existing MBIDs.
 
@@ -356,7 +356,7 @@ Will search Musicbrainz using any/all available text fields from your scrobble: 
 
 <details>
 
-<summary>Album/Artist/Title OR MBIDs</summary>
+<summary>Album/Artist/Title OR MBIDs (`basicOrIds`)</summary>
 
 This is the same as the above **Album, Artist, and Title Fields** search except that if the scrobble data contains any corresponding MBIDs it will use those instead of the plain text field.
 
@@ -387,7 +387,7 @@ Multi-scrobbler will search Musicbrainz using `title`, `artists`, and `albumMbid
 
 <details>
 
-<summary>Album And Title Only</summary>
+<summary>Album And Title Only (`album`)</summary>
 
 If your Scrobble data contains a title, artist(s), and an album (all three fields) then Multi-scrobbler can search using only title and album by using `album` for `searchOrder`:
 
@@ -405,7 +405,7 @@ If your Scrobble data contains a title, artist(s), and an album (all three field
 
 <details>
 
-<summary>Extracted Artists</summary>
+<summary>Extracted Artists (`artist`)</summary>
 
 If your scrobble data contains only **one** artist string then Multi-scrobbler can attempt to extract multiple artists from your artist and track string.
 
@@ -519,9 +519,9 @@ Use `artist` with `searchOrder` and optionally specify the extraction mode with 
 
 <details>
 
-<summary>Free Text</summary>
+<summary>Free Text (`freetext`)</summary>
 
-If both [Album Only](#album-only) and [Artist Extraction](#artist-extraction) searches fail to return results, or were not run, you can additionally enable **Free Text** search. This will search Musicbrainz for **all** text of your Scrobble data artist/title/album, without constraint.
+This will search Musicbrainz for **all** text of your Scrobble data artist/title/album, without constraint.
 
 :::warning
 
