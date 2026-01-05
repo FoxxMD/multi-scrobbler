@@ -832,7 +832,8 @@ export const DEFAULTS_SENSIBLE = {
     "releaseGroupPrimaryTypePriority": ["album", "single", "ep"],
     // prefer worldwide release
     "releaseCountryPriority": ["XW"],
-    "searchOrder": ["mbidrecording", "isrc", "basic"]
+    "searchArtistMethod": "native",
+    "searchOrder": ["isrc","basic","artist"]
 }
 export const DEFAULTS_NATIVE: {searchArtistMethod: "native", "searchOrder": ["artist"]} = {
     "searchArtistMethod": "native",
