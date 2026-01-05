@@ -43,13 +43,13 @@ export const asSearchType = (str: string): SearchType => {
         case 'album':
             return 'album';
         case 'freetext':
-            return 'freetext'
+            return 'freetext';
         case 'basic':
             return 'basic';
         case 'isrc':
             return 'isrc';
         case 'mbidrecording':
-            return 'mbidrecording'
+            return 'mbidrecording';
         case 'basicwithid':
         case 'basicwithids':
             return 'basicwithids';
@@ -424,8 +424,8 @@ export default class MusicbrainzTransformer extends AtomicPartsTransformer<Exter
                     case 'basicwithids':
                         throw new Error('Not Implemented!');
                     case 'mbidrecording':
-                        throw new Error('Not Implemented!');
-
+                        results = await this.searchByRecordingMbid(play, stageConfig);
+                        break;
                 }
                 if(results.recordings.length === 0) {
                     this.logger.debug(`'${searchType}' search type returned no matches`);
@@ -458,6 +458,14 @@ export default class MusicbrainzTransformer extends AtomicPartsTransformer<Exter
             return await this.api.searchByRecording(play, {using: ['isrc']});
         }
         throw new SearchPrerequisiteError('Play does not have ISRC');
+    }
+
+    public async searchByRecordingMbid(play: PlayObject, stageConfig: MusicbrainzTransformerDataStage): Promise<IRecordingMSList> {
+        if(play.data.meta?.brainz?.track !== undefined) {
+            this.logger.debug({labels: ['MBID Search']},'Searching with Recording MBID');
+            return await this.api.searchByRecording(play, {using: ['mbidrecording']});
+        }
+        throw new SearchPrerequisiteError('Play does not have recording MBID');
     }
 
     public async searchByAlbum(play: PlayObject, stageConfig: MusicbrainzTransformerDataStage): Promise<IRecordingMSList> {
@@ -805,7 +813,7 @@ export const DEFAULTS_SENSIBLE = {
     "releaseGroupPrimaryTypePriority": ["album", "single", "ep"],
     // prefer worldwide release
     "releaseCountryPriority": ["XW"],
-    "searchOrder": ["isrc", "basic"]
+    "searchOrder": ["mbidrecording", "isrc", "basic"]
 }
 export const DEFAULTS_NATIVE: {searchArtistMethod: "native", "searchOrder": ["artist"]} = {
     "searchArtistMethod": "native",
