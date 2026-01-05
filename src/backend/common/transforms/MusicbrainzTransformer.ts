@@ -7,7 +7,7 @@ import { TransformerOptions } from "./AbstractTransformer.js";
 import { DELIMITERS, MUSICBRAINZ_URL, MusicbrainzApiConfigData } from "../infrastructure/Atomic.js";
 import { MaybeLogger } from "../logging.js";
 import { childLogger, Logger } from "@foxxmd/logging";
-import { MusicbrainzApiClient, MusicbrainzApiConfig, recordingToPlay } from "../vendor/musicbrainz/MusicbrainzApiClient.js";
+import { MusicbrainzApiClient, MusicbrainzApiConfig, recordingToPlay, UsingTypes } from "../vendor/musicbrainz/MusicbrainzApiClient.js";
 import { IRecordingList, IRecordingMatch, MusicBrainzApi } from "musicbrainz-api";
 import { intersect, isDebugMode, missingMbidTypes, removeUndefinedKeys } from "../../utils.js";
 import { SimpleError, SkipTransformStageError } from "../errors/MSErrors.js";
@@ -50,14 +50,14 @@ export const asSearchType = (str: string): SearchType => {
             return 'isrc';
         case 'mbidrecording':
             return 'mbidrecording';
-        case 'basicwithid':
-        case 'basicwithids':
-            return 'basicwithids';
+        case 'basicorid':
+        case 'basicorids':
+            return 'basicorids';
     }
-    throw new Error(`SearchType must be one of 'freetext' | 'album' | 'artist' | 'basic' | 'basicWithIds' | 'isrc' | 'mbidRecording' -- given: ${clean}`);
+    throw new Error(`SearchType must be one of 'freetext' | 'album' | 'artist' | 'basic' | 'basicOrids' | 'isrc' | 'mbidRecording' -- given: ${clean}`);
 }
 
-export type SearchType = 'freetext' | 'album' | 'artist' | 'basic' | 'basicwithids' | 'isrc' | 'mbidrecording';
+export type SearchType = 'freetext' | 'album' | 'artist' | 'basic' | 'basicorids' | 'isrc' | 'mbidrecording';
 
 export const DEFAULT_SEARCHTYPE_ORDER: SearchType[] = ['isrc','basic'];
 
@@ -421,8 +421,9 @@ export default class MusicbrainzTransformer extends AtomicPartsTransformer<Exter
                     case 'freetext':
                         results = await this.searchByFreeText(play, stageConfig);
                         break;
-                    case 'basicwithids':
-                        throw new Error('Not Implemented!');
+                    case 'basicorids':
+                        results = await this.searchByBasicFieldsOrMBIDs(play, stageConfig);
+                        break;
                     case 'mbidrecording':
                         results = await this.searchByRecordingMbid(play, stageConfig);
                         break;
@@ -450,6 +451,24 @@ export default class MusicbrainzTransformer extends AtomicPartsTransformer<Exter
     public async searchByBasicFields(play: PlayObject, stageConfig: MusicbrainzTransformerDataStage): Promise<IRecordingMSList> {
         this.logger.debug({labels: ['Basic Search']}, 'Searching by artist/album/track');
         return await this.api.searchByRecording(play);
+    }
+
+    public async searchByBasicFieldsOrMBIDs(play: PlayObject, stageConfig: MusicbrainzTransformerDataStage): Promise<IRecordingMSList> {
+        const using: UsingTypes[] = [];
+        const {
+            data: {
+                meta: {
+                    brainz = {}
+                } = {}
+            } = {}
+        } = play;
+
+        using.push(brainz.track !== undefined ? 'mbidrecording' : 'title');
+        using.push(brainz.album !== undefined ? 'mbidrelease' : 'album');
+        using.push((brainz.artist ?? []).length > 0 ? 'mbidartist' : 'artist');
+
+        this.logger.debug({labels: ['Basic Or MBID Search']}, `Searching using ${using.join(', ')}}`);
+        return await this.api.searchByRecording(play, {using});
     }
 
     public async searchByIsrc(play: PlayObject, stageConfig: MusicbrainzTransformerDataStage): Promise<IRecordingMSList> {
