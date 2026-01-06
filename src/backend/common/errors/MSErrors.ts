@@ -70,6 +70,10 @@ export class SkipTransformStageError extends SimpleError {
     name = 'Skip Transform Stage';
 }
 
+export class StagePrerequisiteError extends SimpleError {
+    name = 'Stage Prerequisite';
+}
+
 export interface HasSimpleError extends Error {
     simple: boolean
 }
@@ -84,7 +88,10 @@ export const isSimpleError = (e: unknown): e is HasSimpleError => {
 export const mergeSimpleError = (err: Error): Error => {
     const anySimple = findCauseByFunc<SimpleError>(err, (e) => isSimpleError(e));
     if(anySimple && anySimple.simple) {
-        return mergeErrorCause(err);
+        // mergeErrorCause mutates the argument
+        // and we want to be able to do more cause/error parsing after merging for logging
+        // so give it a copy instead of the original
+        return mergeErrorCause(structuredClone(err));
     }
     return err;
 }
