@@ -104,8 +104,6 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
     nowPlayingTaskInterval: number = 5000;
     npLogger: Logger;
 
-    cache: MSCache;
-
     declare config: CommonClientConfig;
 
     notifier: Notifiers;
@@ -119,8 +117,6 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
         this.npLogger = childLogger(this.logger, 'Now Playing');
         this.notifier = notifier;
         this.emitter = emitter;
-        this.cache = getRoot().items.cache();
-
         this.scrobbledPlayObjs = new FixedSizeList<ScrobbledPlayObject>(this.MAX_STORED_SCROBBLES);
 
         const {
