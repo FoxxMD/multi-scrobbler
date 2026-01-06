@@ -1,8 +1,11 @@
 import { getListDiff, ListDiff } from "@donedeal0/superdiff";
 import { PlayObject, TA_CLOSE, TA_DEFAULT_ACCURACY, TA_EXACT, TemporalAccuracy } from "../../core/Atomic.js";
 import { buildTrackString } from "../../core/StringUtils.js";
-import { playObjDataMatch } from "../utils.js";
+import { playObjDataMatch, setIntersection } from "../utils.js";
 import { comparePlayTemporally, hasAcceptableTemporalAccuracy, TemporalPlayComparisonOptions } from "./TimeUtils.js";
+import { compareNormalizedStrings, compareScrobbleArtists, compareScrobbleTracks, compareTracks, normalizeStr, TrackSamenessResults } from "./StringUtils.js";
+import { ARTIST_WEIGHT, TITLE_WEIGHT } from "../common/infrastructure/Atomic.js";
+import { StringSamenessResult } from "@foxxmd/string-sameness";
 
 
 export const metaInvariantTransform = (play: PlayObject): PlayObject => {
@@ -243,3 +246,118 @@ export const humanReadableDiff = (aPlay: PlayObject[], bPlay: PlayObject[], resu
 export const genericSourcePlayMatch = (a: PlayObject, b: PlayObject, t?: TemporalAccuracy[], temporalOptions?: TemporalPlayComparisonOptions): boolean =>
     playObjDataMatch(a, b)
     && hasAcceptableTemporalAccuracy(comparePlayTemporally(a, b, temporalOptions).match, t);
+
+export const comparePlayArtistsNormalized = (existing: PlayObject, candidate: PlayObject): [number, number] => {
+    const {
+        data: {
+            artists: existingArtists = [],
+        } = {}
+    } = existing;
+    const {
+        data: {
+            artists: candidateArtists = [],
+        } = {}
+    } = candidate;
+    const normExisting = existingArtists.map(x => normalizeStr(x, {keepSingleWhitespace: true}));
+    const candidateExisting = candidateArtists.map(x => normalizeStr(x, {keepSingleWhitespace: true}));
+
+    const wholeMatches = setIntersection(new Set(normExisting), new Set(candidateExisting)).size;
+    return [Math.min(compareScrobbleArtists(existing, candidate)/100, 1), wholeMatches]
+}
+
+export const comparePlayTracksNormalized = (existing: PlayObject, candidate: PlayObject): [number,TrackSamenessResults]  => {
+    const [highest, results] = compareScrobbleTracks(existing, candidate);
+    return [Math.min(highest.highScore/100, 1), results];
+}
+
+export const scoreTrackWeightedAndNormalized = (ref: string, candidate: string, weight?: number, bonuses: {exact?: number, naive?: number} = {}): [number,TrackSamenessResults] => {
+    const {
+        exact,
+        naive
+    } = bonuses;
+    const [trackSameness, trackRes] = compareTracks(ref, candidate);
+    const trackHigh = Math.min(trackSameness.highScore/100, 1)
+
+    let trackBonus = 0;
+    if(trackRes.exact) {
+        trackBonus = exact;
+    } else if(trackRes.naive.highScore > trackRes.cleaned.highScore) {
+        trackBonus = naive;
+    }
+    const trackScore = trackHigh * (weight + trackBonus);
+
+    return [trackScore, trackRes];
+}
+
+export const comparePlayAlbumNormalized = (existing: PlayObject, candidate: PlayObject): [number,{result: StringSamenessResult, exact: boolean}]  => {
+    const sameness = compareNormalizedStrings(existing.data.album ?? '', candidate.data.album ?? '');
+
+    const exact = existing.data.album === candidate.data.album;
+
+    return [Math.min(sameness.highScore/100, 1), {result: sameness, exact}];
+}
+
+export interface SamenessScoreOptions {
+    weights?: {
+        track?: number
+        trackBonuses?: {
+            exact?: number
+            naive?: number
+        }
+        artist?: number
+        artistBonuses?: {
+            exact?: number
+        }
+        album?: number
+        albumBonuses?: {
+            exact?: number
+            naive?: number
+        }
+    }
+}
+export const scorePlaySameness = (ref: PlayObject, candidate: PlayObject, options: SamenessScoreOptions = {}) => {
+
+    const {
+        weights: {
+            track: trackWeight = TITLE_WEIGHT,
+            trackBonuses: {
+                exact: tExact = 0.05,
+                naive: tNaive = 0.03,
+            } = {},
+            artist: artistWeight = ARTIST_WEIGHT,
+            artistBonuses: {
+                exact: arExact = 0.05
+            } = {},
+            album: albumWeight = 0.3,
+            albumBonuses: {
+                exact: alExact = 0.05,
+            } =  {}
+        } = {}
+    } = options;
+
+    const [trackHigh, trackRes] = comparePlayTracksNormalized(ref, candidate);
+    const [artistHigh, artistRes] = comparePlayArtistsNormalized(ref, candidate);
+    const [albumHigh, albumRes] = comparePlayAlbumNormalized(ref, candidate);
+
+    let trackBonus = 0;
+    if(trackRes.exact) {
+        trackBonus = tExact;
+    } else if(trackRes.naive.highScore > trackRes.cleaned.highScore) {
+        trackBonus = tNaive;
+    }
+    const trackScore = trackHigh * (trackWeight + trackBonus);
+
+    let artistBonus = 0;
+    if(artistRes > 0) {
+        artistBonus = arExact;
+    }
+    const artistScore = artistHigh * (artistWeight + artistBonus);
+
+    let albumBonus = 0;
+    if(albumRes.exact) {
+        albumBonus = alExact;
+    }
+    const albumScore = albumHigh * (albumWeight + albumBonus);
+
+    return trackScore + artistScore + albumScore;
+}

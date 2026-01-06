@@ -259,6 +259,39 @@ describe('Musicbrainz API', function () {
             expect(res.recordings).to.not.be.empty;
         });
 
+        it('sorts by text weight', async function () {
+
+            this.timeout(3500);
+
+            const play: PlayObject = {
+                data: {
+                    track: "Price",
+                    artists: ["ATLUS Sound Team"],
+                    album: "PERSONA5 ORIGINAL SOUNDTRACK",
+                    isrc: 'JPK651601515'
+                },
+                meta: {}
+            }
+            await mbTransformer.tryInitialize();
+
+            const res = await mbTransformer.getTransformerData(play, {
+                type: "musicbrainz",
+                searchWhenMissing: ["artists", "album", "title"],
+                searchOrder: ["isrc"],
+            });
+            expect(res.recordings).to.exist;
+            expect(res.recordings).to.not.be.empty;
+            const chosenPlay = await mbTransformer.handlePostFetch(play,res, {
+                type: "musicbrainz",
+                searchWhenMissing: ["artists", "album", "title"],
+                searchOrder: DEFAULT_SEARCHTYPE_ORDER,
+                albumWeight: 0.4,
+                titleWeight: 0.3,
+                artistWeight: 0.3,
+            });
+            expect(chosenPlay.data.meta.brainz.album).to.eq("82de33b1-1cd6-4236-b116-561d0ecc8acf")
+        });
+
     });
 
     describe('Multiple Endpoints', function () {

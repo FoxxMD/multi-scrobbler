@@ -620,13 +620,16 @@ You may want to filter the majority of your matches by releases but allow matchi
 
 ### Sorting
 
-Each [Release Attribute](#release-attribute) has one additional property that can be used to **rank** releases based on the order of the values you give it. This is the `priority` property.
 
-*After* matches have been [filtered](#filtering), the remaining matches will have their releases sorted. Release with an attribute that does not match are **not** removed, but they are sorted lower than releases that do match.
+*After* matches have been [filtered](#filtering), the remaining matches *and their releases** can be sorted. Matches/Releases with an attribute that does not match are **not** removed, but they are sorted lower than matches that do match.
 
 Sorting can be a good alternative to filtering: with filters there is a possibility your filters may eliminate all matches; if you want to ensure that **some** match will be used then sorting can ensure that the **best choice** out of those given will always be used, without accidentally ending up with **no choice**.
 
 Sorting can be used instead of filters, or in conjunction with filters, it's your choice.
+
+#### Release Attributes {#sorting-releases}
+
+Each [Release Attribute](#release-attribute) has one additional property that can be used to **rank** releases based on the order of the values you give it. This is the `priority` property.
 
 In configuration:
 
@@ -642,7 +645,58 @@ EX to prefer albums, then singles, over everything else
 "releaseGroupPrimaryTypePriority": ["album", "single"]
 ```
 
-If a rule is not present then multi-scrobbler defaults it to `true`.
+#### Field Scoring
+
+Matches can additionally be sorted/ranked based on how similar their fields are to the original Scrobble. Use these properties for sorting when you want the final Musicbrainz match to be as closely matched to the original Scrobble, as opposed to what may be the most "correct" match based on the Musicbrainz score or suggested Release.
+
+<details>
+
+<summary>Example Scenario</summary>
+
+You scrobble [this track from spotify](https://open.spotify.com/track/21trRQA61afzljSK9V0SHX), which has an English title, Album name, and Artist name.
+
+```json                    
+{ 
+  "track": "Price",
+  "artists": ["ATLUS Sound Team"],
+  "album": "PERSONA5 ORIGINAL SOUNDTRACK"
+}
+```
+
+However, the [Recording found by Musicbrainz](https://beta.musicbrainz.org/search?query=isrc%3AJPK651601515&type=recording&limit=25&method=advanced) has multiple Releases (albums). The first suggested release is a *related* Album with similar name (`Persona 25th Anniversary Deluxe Vinyl Box Set`) but it's not the same as your album. Additionally, the artists for this album are in Japanese, rather than English.
+
+You have used `releaseStatusPriority` to prioritize `psuedo-release` which does work but there are still multiple releases chosen, and some are non-English (`『ペルソナ5』オリジナル・サウンドトラック`).
+
+Using `"albumWeight": 0.4` and `"artistWeight": 0.3` ensures that the releases that have an album name, and artist names, more similar to your original scrobble are ranked higher. Resulting in [the correct Release (`PERSONA5 ORIGINAL SOUNDTRACK`)](https://beta.musicbrainz.org/release/82de33b1-1cd6-4236-b116-561d0ecc8acf) being chosen as the final match.
+
+</details>
+
+Add one or more of these weight properties to your [Stage Configuration](/configuration/transforms#configuring-stages) to enable Field Scoring:
+
+```json5
+// ...
+"defaults": {
+    // ...
+    // enables album text similiarity scoring
+    "albumWeight": 0.33,
+    // enables title text similiarity scoring
+    "titleWeight": 0.33,
+    // enables artist text similiarity scoring
+    "artistWeight": 0.33
+  }
+```
+
+While not enforced, it's a good idea to keep these weights under `1`. And if using more than one weight, they should be add up to `1`.
+
+<details>
+
+<summary>How Scoring is Combined</summary>
+
+The score similarity from `albumWeight` will be added to the score accumulated by [Release Attributes](#sorting-releases) to affect the final ranking of each Release for a Match/Recording.
+
+In the final sorting of Recordings, title score + artist score is combined with the top ranked release album score. The top ranked score is then used to choose the matched Recording.
+
+</details>
 
 ## Best Practices
 

@@ -4,18 +4,19 @@ import { WebhookPayload } from "../infrastructure/config/health/webhooks.js";
 import { ExternalMetadataTerm, PlayTransformMetadataStage } from "../infrastructure/Transform.js";
 import AtomicPartsTransformer from "./AtomicPartsTransformer.js";
 import { TransformerOptions } from "./AbstractTransformer.js";
-import { DELIMITERS, MUSICBRAINZ_URL, MusicbrainzApiConfigData } from "../infrastructure/Atomic.js";
+import { ARTIST_WEIGHT, DELIMITERS, MUSICBRAINZ_URL, MusicbrainzApiConfigData, TITLE_WEIGHT } from "../infrastructure/Atomic.js";
 import { MaybeLogger } from "../logging.js";
 import { childLogger, Logger } from "@foxxmd/logging";
 import { MusicbrainzApiClient, MusicbrainzApiConfig, recordingToPlay, UsingTypes } from "../vendor/musicbrainz/MusicbrainzApiClient.js";
 import { IRecordingList, IRecordingMatch, MusicBrainzApi } from "musicbrainz-api";
 import { intersect, isDebugMode, missingMbidTypes, removeUndefinedKeys } from "../../utils.js";
 import { SimpleError, SkipTransformStageError, StagePrerequisiteError } from "../errors/MSErrors.js";
-import { parseArrayFromMaybeString } from "../../utils/StringUtils.js";
+import { parseArrayFromMaybeString, scoreNormalizedStringsWeighted } from "../../utils/StringUtils.js";
 import clone from "clone";
 import { Cacheable } from "cacheable";
 import { splitByFirstRegexFound } from "../../../core/StringUtils.js";
 import { nativeParse } from "./NativeTransformer.js";
+import { comparePlayArtistsNormalized, scoreTrackWeightedAndNormalized } from "../../utils/PlayComparisonUtils.js";
 
 export const asMissingMbid = (str: string): MissingMbidType => {
     const clean = str.trim().toLocaleLowerCase();
@@ -149,6 +150,10 @@ export interface MusicbrainzTransformerData {
      * 
      */
     releaseAllowEmpty?: boolean
+
+    titleWeight?: number | true
+    artistWeight?: number | true
+    albumWeight?: number | true
 }
 
 export interface MusicbrainzTransformerDataStrong extends MusicbrainzTransformerData {
@@ -166,6 +171,10 @@ export interface MusicbrainzTransformerDataStrong extends MusicbrainzTransformer
     releaseStatusDeny?: MBReleaseStatus[]
     releaseStatusPriority?: MBReleaseStatus[]
     searchOrder: SearchType[]
+
+    titleWeight?: number
+    artistWeight?: number
+    albumWeight?: number
 }
 
 export interface MusicbrainzTransformerDataStage extends MusicbrainzTransformerDataStrong,PlayTransformMetadataStage {
@@ -179,7 +188,7 @@ export type MusicbrainzBestMatch = {play: PlayObject, score: number};
 
 export type MusicbrainzTransformerConfig = TransformerCommon<MusicbrainzTransformerData, MusicbrainzTransformerDataConfig> & {options?: TransformOptions & {logUrl?: boolean}}
 
-export type RecordingRankedMatched = IRecordingMatch & {rankScore?: number}
+export type RecordingRankedMatched = IRecordingMatch & {rankScore?: number, artistScore?: number, titleScore?: number, albumScore?: number}
 
 export interface IRecordingMSList extends IRecordingList {
     recordings: RecordingRankedMatched[]
@@ -212,6 +221,9 @@ export const parseStageConfig = (data: MusicbrainzTransformerData | undefined = 
         fallbackFreeText,
         fallbackAlbumSearch,
         searchOrder = [],
+        titleWeight,
+        albumWeight,
+        artistWeight,
         ...rest
     } = data;
 
@@ -235,6 +247,9 @@ export const parseStageConfig = (data: MusicbrainzTransformerData | undefined = 
         releaseCountryDeny:  releaseCountryDeny !== undefined ? parseArrayFromMaybeString(releaseCountryDeny, {lower: true}) : undefined,
         releaseCountryPriority:  releaseCountryPriority !== undefined ? parseArrayFromMaybeString(releaseCountryPriority, {lower: true}) : undefined,
         searchOrder: ['isrc','basic'],
+        artistWeight: 0,
+        titleWeight: 0,
+        albumWeight: 0,
 
         ...rest,
     };
@@ -307,6 +322,20 @@ export const parseStageConfig = (data: MusicbrainzTransformerData | undefined = 
         if(k.includes('release') && v !== undefined) {
             logger.debug(`${k}: ${v.join(' | ')}`);
         }
+    }
+
+    if(titleWeight !== undefined) {
+        config.titleWeight = titleWeight === true ? TITLE_WEIGHT : titleWeight;
+    }
+    if(artistWeight !== undefined) {
+        config.artistWeight = artistWeight === true ? ARTIST_WEIGHT : artistWeight;
+    }
+    if(albumWeight !== undefined) {
+        config.albumWeight = albumWeight === true ? 0.3 : albumWeight;
+    }
+
+    if(albumWeight !== undefined || titleWeight !== undefined || artistWeight !== undefined) {
+        logger.debug(`Ranking matches based on scrobble text. Weights => Title ${config.titleWeight} | Artist ${config.artistWeight} | Album ${config.albumWeight}`);
     }
 
     return config;
@@ -581,7 +610,7 @@ export default class MusicbrainzTransformer extends AtomicPartsTransformer<Exter
             throw new StagePrerequisiteError(`All ${transformData.count} recordings were filtered out by allow/deny release config`, {shortStack: true});
         }
 
-        filteredList = rankReleasesByPriority(filteredList, mergedConfig);
+        filteredList = rankReleasesByPriority(filteredList, mergedConfig, play);
 
         this.logger.debug(`${filteredList.length} of ${transformData.count} were valid, filtered matches. Using match with best score of ${filteredList[0].score}`);
 
@@ -792,36 +821,53 @@ export const filterByValidReleaseCountry = (list: IRecordingMatch[], stageConfig
     || x.releases.length > 0);
 }
 
-export const rankReleasesByPriority = (list: IRecordingMatch[], stageConfig: MusicbrainzTransformerDataStage, logger: MaybeLogger = new MaybeLogger()) => {
+export const rankReleasesByPriority = (list: IRecordingMatch[], stageConfig: MusicbrainzTransformerDataStage, play: PlayObject, logger: MaybeLogger = new MaybeLogger()): RecordingRankedMatched[] => {
         const {
         releaseStatusPriority = [],
         releaseGroupPrimaryTypePriority = [],
         releaseGroupSecondaryTypePriority = [],
-        releaseCountryPriority = []
+        releaseCountryPriority = [],
+        albumWeight,
+        titleWeight,
+        artistWeight
     } = stageConfig;
-    if(releaseStatusPriority.length === 0 && releaseGroupPrimaryTypePriority.length === 0 && releaseGroupSecondaryTypePriority.length === 0 && releaseCountryPriority.length === 0) {
-        return list;
-    }
 
-    const cList = clone(list);
+    const cList = clone(list) as RecordingRankedMatched[];
     const rankedList = cList.map((x) => {
-        return {
-            ...x,
-            releases: (x.releases ?? []).map((a) => {
+        let artistScore = 0;
+        if(artistWeight !== 0) {
+            const artistRes = comparePlayArtistsNormalized(play, recordingToPlay(x));
+            artistScore = artistRes[0] * (artistWeight + (artistRes[1] > 0 ? 0.05 : 0));
+        }
+        const releases = (x.releases ?? []).map((a) => {
             const statAScore = releaseStatusPriority.findIndex(x => x === a.status.toLocaleLowerCase()) + 1;
             const grpPAScore = releaseGroupPrimaryTypePriority.findIndex(x => x === a["release-group"]?.["primary-type"]?.toLocaleLowerCase()) + 1;
             const grpSAScore = (a["release-group"]?.["secondary-types"] ?? []).reduce((acc: number, curr: MBReleaseGroupSecondaryType) => acc + releaseGroupSecondaryTypePriority.findIndex(x => x === (curr as MBReleaseGroupSecondaryType).toLocaleLowerCase()) + 1,0);
             const countryAScore = releaseCountryPriority.findIndex(x => a.country === undefined ? false : x === a.country.toLocaleLowerCase()) + 1;
+            const compareScore = scoreNormalizedStringsWeighted(play.data.album, a.title, albumWeight, albumWeight !== 0 ? 0.05 : 0);
             return {
                 ...a,
-                rankedScore: statAScore + grpPAScore + grpSAScore + countryAScore
+                albumScore: statAScore + grpPAScore + grpSAScore + countryAScore + compareScore,
+                albumCompareScore: compareScore
             };
-        })
+        });
+        releases.sort((a, b) => b.albumScore - a.albumScore);
+        let albumScore = 0;
+        if(releases.length > 0) {
+            albumScore = releases[0].albumCompareScore;
+        }
+        const titleScore = titleWeight === 0 ? 0 : scoreTrackWeightedAndNormalized(play.data.track, x.title, titleWeight, {exact: 0.05, naive: 0.03})[0];
+
+        return {
+            ...x,
+            titleScore,
+            artistScore,
+            albumScore,
+            rankScore: titleScore + artistScore + albumScore,
+            releases
         }
     });
-    for(const rec of rankedList) {
-        rec.releases.sort((a, b) => b.rankedScore - a.rankedScore);
-    }
+    rankedList.sort((a, b) => b.rankScore - a.rankScore)
     return rankedList;
 };
 

@@ -241,7 +241,12 @@ export const findDelimiters = (str: string, delimiters = DELIMITERS) => {
     return found;
 }
 
-export const compareScrobbleTracks = (existing: PlayObject, candidate: PlayObject): StringSamenessResult => {
+export interface TrackSamenessResults {
+    naive: StringSamenessResult, 
+    cleaned: StringSamenessResult, 
+    exact: boolean}
+
+export const compareScrobbleTracks = (existing: PlayObject, candidate: PlayObject): [StringSamenessResult, TrackSamenessResults] => {
     const {
         data: {
             track: existingTrack,
@@ -254,6 +259,12 @@ export const compareScrobbleTracks = (existing: PlayObject, candidate: PlayObjec
         }
     } = candidate;
 
+    return compareTracks(existingTrack, candidateTrack);
+}
+
+export const compareTracks = (existingTrack: string, candidateTrack: string): [StringSamenessResult, TrackSamenessResults] => {
+        const exact = existingTrack === candidateTrack;
+
     // try to remove any joiners based on existing artists
     const existingCredits = parseTrackCredits(existingTrack);
     const existingPrimary = existingCredits !== undefined ? existingCredits.primaryComposite : existingTrack;
@@ -265,10 +276,9 @@ export const compareScrobbleTracks = (existing: PlayObject, candidate: PlayObjec
     const creditsCleanedTrackSameness = compareNormalizedStrings(existingPrimary, candidatePrimary);
     const naiveTrackSameness = compareNormalizedStrings(existingTrack, candidateTrack);
 
-    if(creditsCleanedTrackSameness.highScore > naiveTrackSameness.highScore) {
-        return creditsCleanedTrackSameness;
-    }
-    return naiveTrackSameness;
+    const highest = creditsCleanedTrackSameness.highScore > naiveTrackSameness.highScore ? creditsCleanedTrackSameness : naiveTrackSameness;
+
+    return [highest, {naive: naiveTrackSameness, cleaned: creditsCleanedTrackSameness, exact}];
 }
 
 export const compareScrobbleArtists = (existing: PlayObject, candidate: PlayObject): number => {
@@ -370,6 +380,15 @@ export const compareNormalizedStrings = (existing: string, candidate: string): S
         transforms: [],
         strategies: [levenStrategy, diceStrategy]
     })
+}
+
+export const scoreNormalizedStringsWeighted = (reference: string, candidate: string, weight: number, exactBonus?: number): number => {
+    const sameness = compareNormalizedStrings(reference ?? '', candidate ?? '');
+    const exact = reference === candidate;
+
+    const normalScore = Math.min(sameness.highScore/100, 1);
+
+    return normalScore * (weight + (exact ? exactBonus : 0));
 }
 
 interface ArrParseOpts {

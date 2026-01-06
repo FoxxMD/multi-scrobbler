@@ -44,7 +44,6 @@ import {
     sortByOldestPlayDate,
 } from "../utils.js";
 import { messageWithCauses, messageWithCausesTruncatedDefault } from "../utils/ErrorUtils.js";
-import { compareScrobbleArtists, compareScrobbleTracks, normalizeStr } from "../utils/StringUtils.js";
 import {
     comparePlayTemporally,
     hasAcceptableTemporalAccuracy,
@@ -58,6 +57,7 @@ import { getRoot } from "../ioc.js";
 import { rehydratePlay } from "../utils/CacheUtils.js";
 import { findAsyncSequential, staggerMapper } from "../utils/AsyncUtils.js";
 import pMap, { pMapIterable } from "p-map";
+import { comparePlayArtistsNormalized, comparePlayTracksNormalized } from "../utils/PlayComparisonUtils.js";
 
 type PlatformMappedPlays = Map<string, {play: PlayObject, source: SourceIdentifier}>;
 type NowPlayingQueue = Map<string, PlatformMappedPlays>;
@@ -487,29 +487,6 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
         return [matchPlayDate, dtInvariantMatches];
     }
 
-    protected compareExistingScrobbleTitle = (existing: PlayObject, candidate: PlayObject): number => {
-        const result = compareScrobbleTracks(existing, candidate);
-        return Math.min(result.highScore/100, 1);
-    }
-
-    protected compareExistingScrobbleArtist = (existing: PlayObject, candidate: PlayObject): [number, number] => {
-        const {
-            data: {
-                artists: existingArtists = [],
-            } = {}
-        } = existing;
-        const {
-            data: {
-                artists: candidateArtists = [],
-            } = {}
-        } = candidate;
-        const normExisting = existingArtists.map(x => normalizeStr(x, {keepSingleWhitespace: true}));
-        const candidateExisting = candidateArtists.map(x => normalizeStr(x, {keepSingleWhitespace: true}));
-
-        const wholeMatches = setIntersection(new Set(normExisting), new Set(candidateExisting)).size;
-        return [Math.min(compareScrobbleArtists(existing, candidate)/100, 1), wholeMatches]
-    }
-
     existingScrobble = async (playObjPre: PlayObject) => {
 
         const playObj = await this.transformPlay(playObjPre, TRANSFORM_HOOK.candidate);
@@ -581,9 +558,9 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
                     timeMatch = 0.6;
                 }
 
-                const titleMatch = this.compareExistingScrobbleTitle(x, playObj);
+                const [titleMatch, titleResults] = comparePlayTracksNormalized(x, playObj);
 
-                const [artistMatch, wholeMatches] = this.compareExistingScrobbleArtist(x, playObj);
+                const [artistMatch, wholeMatches] = comparePlayArtistsNormalized(x, playObj);
 
                 let artistScore = ARTIST_WEIGHT * artistMatch;
                 const titleScore = TITLE_WEIGHT * titleMatch;
