@@ -320,7 +320,7 @@ export const parseStageConfig = (data: MusicbrainzTransformerData | undefined = 
 
     for(const [k,v] of Object.entries(config)) {
         if(k.includes('release') && v !== undefined) {
-            logger.debug(`${k}: ${v.join(' | ')}`);
+            logger.debug(`${k}: ${Array.isArray(v) ? v.join(' | ') : v}`);
         }
     }
 
