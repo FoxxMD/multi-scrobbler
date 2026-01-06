@@ -7,7 +7,7 @@ import { cacheFunctions,  parseToRegexOrLiteralSearch, testMaybeRegex, searchAnd
 import { Cacheable } from "cacheable";
 import { hashObject } from "../../utils/StringUtils.js";
 import { playContentInvariantTransform } from "../../utils/PlayComparisonUtils.js";
-import { isSimpleError, SkipTransformStageError } from "../errors/MSErrors.js";
+import { isSimpleError, SkipTransformStageError, StagePrerequisiteError } from "../errors/MSErrors.js";
 import { capitalize } from "../../../core/StringUtils.js";
 
 export interface TransformerOptions {
@@ -79,6 +79,9 @@ export default abstract class AbstractTransformer<T = any, Y extends StageConfig
         try {
             await this.handlePreFetch(play, data);
         } catch (e) {
+            if(e instanceof SkipTransformStageError) {
+                await this.cache.set(cacheKey, play, this.config.options?.ttl ?? '15s');
+            }
             throw new Error('preFetch check did not pass', { cause: e });
         }
 
@@ -93,6 +96,9 @@ export default abstract class AbstractTransformer<T = any, Y extends StageConfig
         try {
             transformData = await this.handlePostFetch(play, fetchedTransformData, data);
         } catch (e) {
+            if(e instanceof StagePrerequisiteError) {
+                await this.cache.set(cacheKey, play, this.config.options?.ttl ?? '15s');
+            }
             throw new Error('postFetch did not pass', { cause: e });
         }
 

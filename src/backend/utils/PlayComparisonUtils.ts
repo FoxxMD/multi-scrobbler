@@ -3,7 +3,6 @@ import { PlayObject, TA_CLOSE, TA_DEFAULT_ACCURACY, TA_EXACT, TemporalAccuracy }
 import { buildTrackString } from "../../core/StringUtils.js";
 import { playObjDataMatch } from "../utils.js";
 import { comparePlayTemporally, hasAcceptableTemporalAccuracy, TemporalPlayComparisonOptions } from "./TimeUtils.js";
-import { RestType } from "ts-json-schema-generator";
 
 
 export const metaInvariantTransform = (play: PlayObject): PlayObject => {

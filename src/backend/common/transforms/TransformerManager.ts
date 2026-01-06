@@ -129,7 +129,9 @@ export default class TransformerManager {
             throw new Error(`Must be an object with a 'type' property.`);
         }
         const t = this.getTransformerByStage(data);
-        return t.parseConfig(data);
+        const config = t.parseConfig(data);
+        config.stageHash = t.configHash;
+        return config;
     }
 
     public async handleStage(data: StageConfig, play: PlayObject, asyncId: string = nanoid(6)): Promise<[PlayObject, string]> {

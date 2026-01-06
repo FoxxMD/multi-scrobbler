@@ -10,7 +10,7 @@ import { childLogger, Logger } from "@foxxmd/logging";
 import { MusicbrainzApiClient, MusicbrainzApiConfig, recordingToPlay, UsingTypes } from "../vendor/musicbrainz/MusicbrainzApiClient.js";
 import { IRecordingList, IRecordingMatch, MusicBrainzApi } from "musicbrainz-api";
 import { intersect, isDebugMode, missingMbidTypes, removeUndefinedKeys } from "../../utils.js";
-import { SimpleError, SkipTransformStageError } from "../errors/MSErrors.js";
+import { SimpleError, SkipTransformStageError, StagePrerequisiteError } from "../errors/MSErrors.js";
 import { parseArrayFromMaybeString } from "../../utils/StringUtils.js";
 import clone from "clone";
 import { Cacheable } from "cacheable";
@@ -559,7 +559,7 @@ export default class MusicbrainzTransformer extends AtomicPartsTransformer<Exter
 
     public async handlePostFetch(play: PlayObject, transformData: IRecordingMSList, stageConfig: MusicbrainzTransformerDataStage): Promise<PlayObject> {
         if(transformData.recordings.length === 0) {
-            throw new SimpleError('No matches returned from Musicbrainz API', {shortStack: true});
+            throw new StagePrerequisiteError('No matches returned from Musicbrainz API', {shortStack: true});
         }
 
         const {
@@ -568,7 +568,7 @@ export default class MusicbrainzTransformer extends AtomicPartsTransformer<Exter
 
         let filteredList: RecordingRankedMatched[] = transformData.recordings.filter(x => x.score >= score);
         if(filteredList.length === 0) {
-             throw new SimpleError(`All ${transformData.count} fetched matches had a score < ${score}, best match was ${transformData.recordings[0].score}`, {shortStack: true});
+             throw new StagePrerequisiteError(`All ${transformData.count} fetched matches had a score < ${score}, best match was ${transformData.recordings[0].score}`, {shortStack: true});
         }
         const mergedConfig = Object.assign({}, removeUndefinedKeys({...this.defaults}), removeUndefinedKeys({...stageConfig}));
         filteredList = filterByValidReleaseStatus(filteredList, mergedConfig);
@@ -578,7 +578,7 @@ export default class MusicbrainzTransformer extends AtomicPartsTransformer<Exter
 
 
         if(filteredList.length === 0) {
-            throw new SimpleError(`All ${transformData.count} recordings were filtered out by allow/deny release config`, {shortStack: true});
+            throw new StagePrerequisiteError(`All ${transformData.count} recordings were filtered out by allow/deny release config`, {shortStack: true});
         }
 
         filteredList = rankReleasesByPriority(filteredList, mergedConfig);

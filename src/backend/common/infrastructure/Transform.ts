@@ -60,6 +60,7 @@ export interface FlowControl {
 
 export interface StageConfig extends StageTypedConfig, Whennable, Partial<FlowControl> {
     name?: string
+    stageHash?: string
 }
 
 export interface UntypedStageConfig extends Whennable, Partial<FlowControl> {
