@@ -170,7 +170,6 @@ export interface MusicbrainzTransformerDataStrong extends MusicbrainzTransformer
     releaseStatusAllow?: MBReleaseStatus[]
     releaseStatusDeny?: MBReleaseStatus[]
     releaseStatusPriority?: MBReleaseStatus[]
-    searchOrder: SearchType[]
 
     titleWeight?: number
     artistWeight?: number
@@ -246,7 +245,6 @@ export const parseStageConfig = (data: MusicbrainzTransformerData | undefined = 
         releaseCountryAllow: releaseCountryAllow !== undefined ? parseArrayFromMaybeString(releaseCountryAllow, {lower: true}) : undefined,
         releaseCountryDeny:  releaseCountryDeny !== undefined ? parseArrayFromMaybeString(releaseCountryDeny, {lower: true}) : undefined,
         releaseCountryPriority:  releaseCountryPriority !== undefined ? parseArrayFromMaybeString(releaseCountryPriority, {lower: true}) : undefined,
-        searchOrder: ['isrc','basic'],
         artistWeight: 0,
         titleWeight: 0,
         albumWeight: 0,
@@ -260,16 +258,11 @@ export const parseStageConfig = (data: MusicbrainzTransformerData | undefined = 
 
     logger.debug(`Will search if missing: ${config.searchWhenMissing.join(', ')} | Match if (default) score is >= ${config.score}`);
 
-    const soSet = searchOrder.length > 0 ? new Set<SearchType>(searchOrder.map(asSearchType)) : new Set<SearchType>();
+    let soSet = searchOrder.length > 0 ? new Set<SearchType>(searchOrder.map(asSearchType)) : new Set<SearchType>();
     const depSearch = [];
 
     // preserve order of search from before searchOrder
     // by adding fallback properties in same order they were in getTransformerData
-    if(searchOrder.length === 0) {
-        soSet.add('isrc');
-        soSet.add('basic');
-    }
-
     if(fallbackAlbumSearch === true) {
         soSet.add('album');
         depSearch.push('fallbackAlbumSearch');
@@ -295,6 +288,10 @@ export const parseStageConfig = (data: MusicbrainzTransformerData | undefined = 
         if(depSearch.includes('fallbackArtistSearch')){
             logger.warn(`'fallbackArtistSearch' is DEPRECATED and will removed in a future release. Please switch to 'searchOrder' with 'artist', and 'searchArtistMethod' for naive/native. See Release 0.11.0 for migrating.`);
         }
+        // preserve order of search from before searchOrder
+        // where isrc/basic ran before fallbacks
+        // -- only add here if we know any fallbacks were used
+        soSet = new Set<SearchType>(['isrc','basic', ...soSet]);
     }
 
     if(soSet.has('artist') && config.searchArtistMethod === undefined) {
@@ -315,8 +312,12 @@ export const parseStageConfig = (data: MusicbrainzTransformerData | undefined = 
             soHint.push(s);
         }
     }
-    logger.debug(`Search Order => ${soHint.join(' | ')}`);
-    config.searchOrder = so;
+    if(so.length > 0) {
+        logger.debug(`Search Order => ${soHint.join(' | ')}`);
+        config.searchOrder = so;
+    } else {
+        logger.debug(`Search Order => default (isrc, basic) or stage default`);
+    }
 
     for(const [k,v] of Object.entries(config)) {
         if(k.includes('release') && v !== undefined) {
@@ -427,7 +428,8 @@ export default class MusicbrainzTransformer extends AtomicPartsTransformer<Exter
     public async getTransformerData(play: PlayObject, stageConfig: MusicbrainzTransformerDataStage): Promise<IRecordingMSList> {
         
         const {
-            searchOrder = this.defaults.searchOrder
+            // preserve order of search from before searchOrder
+            searchOrder = this.defaults.searchOrder ?? ['isrc', 'basic']
         } = stageConfig;
 
         let results: IRecordingMSList;
