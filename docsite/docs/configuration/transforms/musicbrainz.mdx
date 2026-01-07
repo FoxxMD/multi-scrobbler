@@ -129,7 +129,6 @@ Example:
         ],
         "defaults": {
           "releaseStatusPriority": ["official"],
-          "fallbackArtistSearch": "native",
           "releaseAllowEmpty": true
         }
       },
@@ -138,24 +137,96 @@ Example:
 }
 ```
 
-### Rules
+### Rules and Hooks
 
-Each [Rule](/configuration/transforms#stage-rules) should be either a boolean, specifying if the transformed data should be used for this field, or a [`when` condition](/configuration/transforms#conditional-moditication):
+[Add your Stage](https://foxxmd.github.io/multi-scrobbler/configuration/transforms/#stage) to a Source or Client by specifying it in a [Hook](/configuration/transforms/#hook):
 
-```json5
-{
-    "type": "musicbrainz",
-    "name": "MyMB"
-    // ...
-    "title": false, // will not apply any changes to Play title
-    "artists": {
-      "when": {/* ... */}, // will only apply changes to Play artists if "when" is satisfied
-    /* ... */
-    },
-    "album": true // will always apply changes to Play album
-    "meta": true // adds MusicBrainz MBIDs to scrobble data
-}
+```json5 title="subsonic.json"
+[
+  { 
+    "name": "MySubsonic",
+    "data": { /* ... */},
+    "options": {
+      "playTransform": {
+        "preCompare": [
+          {
+            "type": "musicbrainz",
+            "name": "MyMB"
+          }
+        ]
+      }
+    }
+  }
+]
 ```
+
+Each [**Stage Rule**](/configuration/transforms#stage-rules) should be either a boolean, specifying if the transformed data should be used for this field, or a [`when` condition](/configuration/transforms#conditional-moditication):
+
+<details>
+
+<summary>Example</summary>
+
+```json5 title="subsonic.json"
+[
+  { 
+    "name": "MySubsonic",
+    "data": { /* ... */},
+    "options": {
+      "playTransform": {
+        "preCompare": [
+          {
+            "type": "musicbrainz",
+            "name": "MyMB"
+            // ...
+            "title": false, // will not apply any changes to Play title
+            "artists": {
+              "when": {/* ... */}, // will only apply changes to Play artists if "when" is satisfied
+            /* ... */
+            },
+            "album": true // will always apply changes to Play album
+            "meta": true // adds MusicBrainz MBIDs to scrobble data
+          }
+        ]
+      }
+    }
+  }
+]
+```
+
+</details>
+
+:::tip[Per Component Override]
+
+The `defaults` you set in [Stage Configuration](#stage-configuration) [can be overriden/added  to](/configuration/transforms/#overriding-configuration) (per property) in each Hook.
+
+<details>
+
+<summary>Example</summary>
+
+```json5 title="subsonic.json"
+[
+  { 
+    "name": "MySubsonic",
+    "data": { /* ... */},
+    "options": {
+      "playTransform": {
+        "preCompare": [
+          {
+            "type": "musicbrainz",
+            "name": "MyMB",
+            "releaseStatusPriority": ["psuedo-release"], // override from defaults
+            "searchOrder": ["freetext"] // add new property, combined with defaults
+          }
+        ]
+      }
+    }
+  }
+]
+```
+
+</details>
+
+:::
 
 ## ENV Configuration
 
@@ -1093,4 +1164,90 @@ In a [Jellyfin](/configuration/clients/jellyfin) [File Config](/configuration?co
   }
 ]
 ```
+</details>
+
+### Different Search Methods Based on Source (Last.fm and Spotify) {#override-stage-configuration-example}
+
+[Last.fm has unreliable MBIDs](#search-considerations) and Spotify provides an [ISRC](https://musicbrainz.org/doc/ISRC) and consistent formatting.
+
+* For Spotify, we want to rely on ID [searches](#search-methods) and matches that are [close to original scrobble text](#field-scoring)
+* For Last.fm, we want to use only text searches and take whatever correction is given to us
+
+Use [**Per Component Overrides**](#rules-and-hooks) with the default (or [sensible](#sensible-default)) [Stage Configuration](#stage-configuration) to specify different search behavior for each Source.
+
+<details>
+
+<summary>Example</summary>
+
+Stage Configuration
+
+```json5 title="config.json"
+{
+  // ...
+  "transformers": [
+    {
+      "type": "musicbrainz",
+      "name": "MyMB",
+      "data": {
+        "apis": [
+          {
+            "contact": "contact@mydomain.com"
+          }
+        ],
+        "defaults": {} // maybe use sensible?
+      },
+    }
+  ]
+}
+```
+
+```json5 title="lastfm.json"
+[
+  { 
+    "name": "MyLFM",
+    "configureAs": "source"
+    "data": { /* ... */},
+    "options": {
+      "playTransform": {
+        "preCompare": [
+          {
+            "type": "musicbrainz",
+            "name": "MyMB",
+            "searchArtistMethod": "native"
+            // does not use any ID searches
+            // fallback to more aggressive/broad searches
+            "searchOrder": ["basic", "artist", "freetext"]
+          }
+        ]
+      }
+    }
+  }
+]
+```
+
+```json5 title="spotify.json"
+[
+  { 
+    "name": "MySpotify",
+    "data": { /* ... */},
+    "options": {
+      "playTransform": {
+        "preCompare": [
+          {
+            "type": "musicbrainz",
+            "name": "MyMB",
+            // use ISRC as first search
+            "searchOrder": ["isrc", "basic"]
+            // bias matches towards similarity to original data
+            "albumWeight": 0.33,
+            "titleWeight": 0.33,
+            "artistWeight": 0.33
+          }
+        ]
+      }
+    }
+  }
+]
+```
+
 </details>
