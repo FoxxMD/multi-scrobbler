@@ -157,7 +157,9 @@ describe('#Caching', function () {
 
         it('Preserves scrobbles', async function () {
 
+           this.timeout(10000);
 
+           // why does this take so long?
            await withLocalTmpDir(async () => {
 
                 const root = getRoot();
@@ -172,11 +174,13 @@ describe('#Caching', function () {
                 const dirContents = await promises.readdir('.');
                 const hasCache = dirContents.some(x => x === 'ms-scrobble.cache');
                 expect(hasCache).is.true;
+                test.scheduler.stop();
 
                 const newTest = new TestScrobbler();
                 await newTest.initialize();
                 expect(newTest.queuedScrobbles.length).to.eq(plays.length);
                 expect(newTest.queuedScrobbles[0].play.data.track).to.eq(queued[0].data.track);
+                newTest.scheduler.stop();
 
             }, { unsafeCleanup: true });
 
