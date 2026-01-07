@@ -14,6 +14,7 @@ export class TestScrobbler extends AbstractScrobbleClient {
         const logger = loggerTest;
         const notifier = new Notifiers(new EventEmitter(), new EventEmitter(), new EventEmitter(), logger);
         super('test', 'Test', {name: 'test', ...config}, notifier, new EventEmitter(), logger);
+        this.supportsNowPlaying = false;
     }
 
     protected async getScrobblesForRefresh(limit: number): Promise<PlayObject[]> {

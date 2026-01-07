@@ -472,7 +472,7 @@ ${sources.join('\n')}`);
                 continue;
             }
             for (const playObj of playObjs) {
-                client.queueScrobble(playObj, scrobbleFrom);
+                await client.queueScrobble(playObj, scrobbleFrom);
             }
         }
     }
