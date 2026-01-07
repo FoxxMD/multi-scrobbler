@@ -166,7 +166,7 @@ describe('#Caching', function () {
                 const test = new TestScrobbler();
                 await test.initialize();
                 const plays = generatePlays(100);
-                test.queueScrobble(plays, 'testSource');
+                await test.queueScrobble(plays, 'testSource');
                 const queued = test.queuedScrobbles.map(x => x.play);
                 await sleep(101);
                 const dirContents = await promises.readdir('.');

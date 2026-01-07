@@ -515,7 +515,7 @@ describe('Upstream Scrobbles', function() {
                 playDate: dayjs()
             });
 
-            testScrobbler.queueScrobble(newScrobble, 'test');
+            await testScrobbler.queueScrobble(newScrobble, 'test');
             assert.isTrue(testScrobbler.shouldRefreshScrobble());
         });
 
@@ -524,7 +524,7 @@ describe('Upstream Scrobbles', function() {
                 playDate: dayjs().subtract(120, 'seconds')
             });
 
-            testScrobbler.queueScrobble(newScrobble, 'test');
+            await testScrobbler.queueScrobble(newScrobble, 'test');
             assert.isTrue(testScrobbler.shouldRefreshScrobble());
         });
 
@@ -535,7 +535,7 @@ describe('Upstream Scrobbles', function() {
                 playDate: dayjs().subtract(80, 'seconds')
             });
 
-            testScrobbler.queueScrobble(newScrobble, 'test');
+            await testScrobbler.queueScrobble(newScrobble, 'test');
             assert.isTrue(testScrobbler.shouldRefreshScrobble());
         });
 
@@ -545,7 +545,7 @@ describe('Upstream Scrobbles', function() {
                 playDate: dayjs().subtract(80, 'seconds')
             });
 
-            testScrobbler.queueScrobble(newScrobble, 'test');
+            await testScrobbler.queueScrobble(newScrobble, 'test');
             assert.isFalse(testScrobbler.shouldRefreshScrobble());
         });
     });
@@ -602,7 +602,7 @@ describe('Scrobble client uses transform plays correctly', function() {
         const newScrobble = generatePlay({
             track: 'my cool track'
         });
-        testScrobbler.queueScrobble(newScrobble, 'test');
+        await testScrobbler.queueScrobble(newScrobble, 'test');
         expect(testScrobbler.queuedScrobbles[0].play.data.track).is.eq('my cool track');
         testScrobbler.scrobbleSleep = 100;
         testScrobbler.initScrobbleMonitoring().catch(console.error);
@@ -678,7 +678,7 @@ describe('Manages scrobble queue', function() {
         const newScrobble = generatePlay({
             playDate: normalizedWithMixedDur[normalizedWithMixedDur.length - 3].data.playDate.add(3, 'seconds')
         });
-        testScrobbler.queueScrobble(newScrobble, 'test');
+        await testScrobbler.queueScrobble(newScrobble, 'test');
         const res = await Promise.race([pEvent(testScrobbler.emitter, 'scrobble'), sleep(3000)]);
 
         assert.isDefined(res);
@@ -694,13 +694,13 @@ describe('Manages scrobble queue', function() {
         const dupScrobble = clone(newScrobble);
         dupScrobble.data.playDate = newScrobble.data.playDate.add(2, 'seconds');
 
-        testScrobbler.queueScrobble(newScrobble, 'test');
+        await testScrobbler.queueScrobble(newScrobble, 'test');
         const res = await Promise.race([pEvent(testScrobbler.emitter, 'scrobble'), sleep(1500)]);
 
         assert.isDefined(res);
         assert.isDefined(res.data);
 
-        testScrobbler.queueScrobble(dupScrobble, 'test');
+        await testScrobbler.queueScrobble(dupScrobble, 'test');
         const resDup = await Promise.race([pEvent(testScrobbler.emitter, 'scrobble'), sleep(1100)]);
 
         assert.isUndefined(resDup);
@@ -715,8 +715,8 @@ describe('Manages scrobble queue', function() {
         const dupScrobble = clone(newScrobble);
         dupScrobble.data.playDate = newScrobble.data.playDate.add(2, 'seconds');
 
-        testScrobbler.queueScrobble(newScrobble, 'test');
-        testScrobbler.queueScrobble(dupScrobble, 'test');
+        await testScrobbler.queueScrobble(newScrobble, 'test');
+        await testScrobbler.queueScrobble(dupScrobble, 'test');
         const res = await Promise.race([pEvent(testScrobbler.emitter, 'scrobble'), sleep(1500)]);
 
         assert.isDefined(res);
@@ -742,7 +742,7 @@ describe('Manages scrobble queue', function() {
 
         testScrobbler.scrobbleDelay = 600;
 
-        testScrobbler.queueScrobble([newScrobble1, newScrobble2, newScrobble3], 'test');
+        await testScrobbler.queueScrobble([newScrobble1, newScrobble2, newScrobble3], 'test');
         await pEvent(testScrobbler.emitter, 'scrobble');
         const initial = dayjs();
         await pEvent(testScrobbler.emitter, 'scrobble');
