@@ -57,7 +57,7 @@ import { MSCache } from "../common/Cache.js";
 import { getRoot } from "../ioc.js";
 import { rehydratePlay } from "../utils/CacheUtils.js";
 import { findAsyncSequential, staggerMapper } from "../utils/AsyncUtils.js";
-import pMap from "p-map";
+import pMap, { pMapIterable } from "p-map";
 
 type PlatformMappedPlays = Map<string, {play: PlayObject, source: SourceIdentifier}>;
 type NowPlayingQueue = Map<string, PlatformMappedPlays>;
@@ -798,7 +798,7 @@ ${closestMatch.breakdowns.join('\n')}`, {leaf: ['Dupe Check']});
                     const currQueuedPlay = this.queuedScrobbles.shift();
 
                     const [timeFrameValid, timeFrameValidLog] = this.timeFrameIsValid(currQueuedPlay.play);
-                    if (timeFrameValid && !(await this.alreadyScrobbled((await this.transformPlay(currQueuedPlay.play, TRANSFORM_HOOK.preCompare))))) {
+                    if (timeFrameValid && !(await this.alreadyScrobbled(currQueuedPlay.play))) {
                         const transformedScrobble = await this.transformPlay(currQueuedPlay.play, TRANSFORM_HOOK.postCompare);
                         try {
                             const scrobbledPlay = await this.scrobble(transformedScrobble);
@@ -883,7 +883,7 @@ ${closestMatch.breakdowns.join('\n')}`, {leaf: ['Dupe Check']});
             await this.refreshScrobbles();
         }
         const [timeFrameValid, timeFrameValidLog] = this.timeFrameIsValid(deadScrobble.play);
-        if (timeFrameValid && !(await this.alreadyScrobbled((await this.transformPlay(deadScrobble.play, TRANSFORM_HOOK.preCompare))))) {
+        if (timeFrameValid && !(await this.alreadyScrobbled(deadScrobble.play))) {
             const transformedScrobble = await this.transformPlay(deadScrobble.play, TRANSFORM_HOOK.postCompare);
             try {
                 const scrobbledPlay = await this.scrobble(transformedScrobble);
@@ -932,14 +932,16 @@ ${closestMatch.breakdowns.join('\n')}`, {leaf: ['Dupe Check']});
         return this.queuedScrobbles[this.queuedScrobbles.length - 1].play.data.playDate;
     }
 
-    queueScrobble = (data: PlayObject | PlayObject[], source: string) => {
+    queueScrobble = async (data: PlayObject | PlayObject[], source: string) => {
         const plays = Array.isArray(data) ? data : [data];
-        for(const p of plays) {
-            const queuedPlay = {id: nanoid(), source, play: p}
+        const sm = staggerMapper<PlayObject, PlayObject>({concurrency: 2});
+        for await(const play of pMapIterable(plays, sm(async x => await this.transformPlay(x, TRANSFORM_HOOK.preCompare)), {concurrency: 2})) {
+            const queuedPlay = {id: nanoid(), source, play: play}
             this.emitEvent('scrobbleQueued', {queuedPlay: queuedPlay});
             this.queuedScrobbles.push(queuedPlay);
+            // this is wasteful but we don't want the processing loop popping out-of-order (by date) scrobbles
+            this.queuedScrobbles.sort((a, b) => sortByOldestPlayDate(a.play, b.play));
         }
-        this.queuedScrobbles.sort((a, b) => sortByOldestPlayDate(a.play, b.play));
         this.updateQueuedScrobblesCache();
     }
 
