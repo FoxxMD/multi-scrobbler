@@ -8,7 +8,7 @@ import { PlayData, PlayObject, TransformResult } from "../../core/Atomic.js";
 import { buildPlayHumanDiffable, buildTrackString } from "../../core/StringUtils.js";
 import { CommonClientConfig } from "./infrastructure/config/client/index.js";
 import { CommonSourceConfig } from "./infrastructure/config/source/index.js";
-import { mergeSimpleError, SkipTransformStageError, StageTransformError, TransformRulesError } from "./errors/MSErrors.js";
+import { mergeSimpleError, SkipTransformStageError, StagePrerequisiteError, StageTransformError, TransformRulesError } from "./errors/MSErrors.js";
 import {
     PlayTransformRules,
     StageConfig,
@@ -24,6 +24,9 @@ import {diffStringsUnified, DiffOptionsColor} from 'jest-diff';
 import chalk from 'chalk';
 import { isDebugMode } from "../utils.js";
 import { findCauseByReference } from "../utils/ErrorUtils.js";
+import { hashObject } from "../utils/StringUtils.js";
+import { metaInvariantTransform, playContentInvariantTransform } from "../utils/PlayComparisonUtils.js";
+import { MSCache } from "./Cache.js";
 
 export default abstract class AbstractComponent extends AbstractInitializable {
 
@@ -32,10 +35,12 @@ export default abstract class AbstractComponent extends AbstractInitializable {
     transformRules: PlayTransformRules = {};
     regexCache!: ReturnType<typeof cacheFunctions>;
     protected transformManager: TransformerManager;
+    protected cache: MSCache;
 
     protected constructor(config: CommonClientConfig | CommonSourceConfig) {
         super(config);
         this.transformManager = getRoot().items.transformerManager;
+        this.cache = getRoot().items.cache();
     }
 
     protected postCache(): Promise<void> {
@@ -185,6 +190,18 @@ export default abstract class AbstractComponent extends AbstractInitializable {
                 return play;
             }
 
+            const shouldLog = log ?? this.config.options?.playTransform?.log ?? isDebugMode();
+
+            const transformHash = `playTransform-${hashObject(hook)}-${hashObject(metaInvariantTransform(play))}`;
+            const cachedTransformPlay = await this.cache.cacheTransform.get<PlayObject>(transformHash);
+            if(cachedTransformPlay !== undefined) {
+                // if(shouldLog) {
+                //     logger.debug(`Used cached Transform for => ${buildTrackString(play)}`);
+                // }
+                //logger.debug(`Cache hit ${transformHash}`);
+                return cachedTransformPlay;
+            }
+
             logger.debug(`Transform start for => ${buildTrackString(play)}`);
             let transformedPlay: PlayObject = play;
             let transformHistory: TransformResult[] = [];
@@ -199,7 +216,8 @@ export default abstract class AbstractComponent extends AbstractInitializable {
 
                 let newTransformedPlay: PlayObject,
                 stageName: string = 'Unnamed',
-                err: Error;
+                err: Error,
+                cacheOk: boolean = true;
                 try {
                     [newTransformedPlay, stageName] = await this.transformManager.handleStage(hookItem, transformedPlay, asyncId);
                 } catch (e) {
@@ -210,20 +228,28 @@ export default abstract class AbstractComponent extends AbstractInitializable {
                 }
 
                 if(err !== undefined) {
+                    const merged = mergeSimpleError(err);
                     const skipError = findCauseByReference(err, SkipTransformStageError);
                     if(skipError !== undefined) {
                         let skipMsg = `Stage '${stageName}' was skipped`;
                         if(onSkip === 'stop') {
                             skipMsg += ' and will stop transform due to onSkip: stop';
                         }
-                        logger.debug(mergeSimpleError(err), skipMsg);
+                        logger.debug(merged, skipMsg);
                         if(onSkip === 'stop') {
                             break;
                         }
                     } else if(onFailure === 'continue') {
-                        logger.warn(mergeSimpleError(err), 'A transform encountered an error but continuing due to onFailure: continue');
+                        logger.warn(merged, 'A transform encountered an error but continuing due to onFailure: continue');
                     } else {
-                        logger.error(mergeSimpleError(err), 'Transform encountered an error');
+                        const reqError = findCauseByReference(err, StagePrerequisiteError);
+                        if(reqError !== undefined) {
+                            logger.warn(merged, 'Transform could not be completed due to prerequisite failure');
+                        } else {
+                            logger.error(merged, 'Transform encountered an error');
+                            cacheOk = false;
+                        }
+
                         if(!failureReturnPartial) {
                             // rewind to original play so we don't return partial transform
                             transformedPlay = play;
@@ -245,8 +271,6 @@ export default abstract class AbstractComponent extends AbstractInitializable {
                     break;
                 }
             }
-
-            const shouldLog = log ?? this.config.options?.playTransform?.log ?? isDebugMode();
 
             if(transformedPlay.meta.transforms === undefined) {
                 transformedPlay.meta.transforms = {
@@ -295,6 +319,8 @@ export default abstract class AbstractComponent extends AbstractInitializable {
             }
             const previousHistory = transformedPlay.meta.transforms[hookType] ?? [];
             transformedPlay.meta.transforms[hookType] = [...previousHistory, ...transformHistory];
+            await this.cache.cacheTransform.set<PlayObject>(transformHash, transformedPlay, '5m');
+            //logger.debug(`Cache set ${transformHash}`)
             return transformedPlay;
         } catch (e) {
             logger.warn(new Error(`Unexpected error occurred, returning original play.`, {cause: e}));

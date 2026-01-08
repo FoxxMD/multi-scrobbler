@@ -5,7 +5,7 @@ import asPromised from 'chai-as-promised';
 import { after, before, describe, it } from 'mocha';
 import { initMemoryCache } from "../../common/Cache.js";
 import { Cacheable } from "cacheable";
-import MusicbrainzTransformer, { MusicbrainzTransformerDataStage } from "../../common/transforms/MusicbrainzTransformer.js";
+import MusicbrainzTransformer, { DEFAULT_SEARCHTYPE_ORDER, MusicbrainzTransformerDataStage } from "../../common/transforms/MusicbrainzTransformer.js";
 import { DEFAULT_MISSING_TYPES, PlayObject } from "../../../core/Atomic.js";
 import { projectDir } from '../../common/index.js';
 import path from 'path';
@@ -69,7 +69,8 @@ describe('Musicbrainz API', function () {
 
             const res = await mbTransformer.getTransformerData(play, {
                 type: "musicbrainz",
-                searchWhenMissing: ["artists", "album", "title"]
+                searchWhenMissing: ["artists", "album", "title"],
+                searchOrder: DEFAULT_SEARCHTYPE_ORDER
             });
             expect(res.recordings).to.exist;
             expect(res.recordings).to.not.be.empty;
@@ -98,11 +99,43 @@ describe('Musicbrainz API', function () {
 
             const res = await mbTransformer.getTransformerData(play, {
                 type: "musicbrainz",
-                searchWhenMissing: ["artists", "album", "title"]
+                searchWhenMissing: ["artists", "album", "title"],
+                searchOrder: DEFAULT_SEARCHTYPE_ORDER
             });
             expect(res.recordings).to.exist;
             expect(res.recordings).to.not.be.empty;
         });
+
+
+        it('tries pre-regular query using only recording MBID, if present', async function (){
+            this.timeout(3500);
+
+            const play: PlayObject = {
+                data: {
+                    track: "Fake",
+                    artists: ["Fake"],
+                    album: "Fake",
+                    meta: {
+                        brainz: {
+                            track: '026fa041-3917-4c73-9079-ed16e36f20f8'
+                        }
+                    }
+                },
+                meta: {}
+            }
+            await mbTransformer.tryInitialize();
+
+            const res = await mbTransformer.getTransformerData(play, {
+                type: "musicbrainz",
+                searchWhenMissing: ["artists", "album", "title"],
+                searchOrder: ['mbidrecording']
+            });
+            expect(res.recordings).to.exist;
+            expect(res.recordings).to.not.be.empty;
+            expect(res.recordings[0].isrcs).to.exist;
+            expect(res.recordings[0].isrcs).to.not.be.empty;
+            expect(res.recordings[0].isrcs).to.include('GBAHT1600302');
+        })
 
         it('tries pre-regular query using only ISRC, if present', async function () {
 
@@ -121,7 +154,8 @@ describe('Musicbrainz API', function () {
 
             const res = await mbTransformer.getTransformerData(play, {
                 type: "musicbrainz",
-                searchWhenMissing: ["artists", "album", "title"]
+                searchWhenMissing: ["artists", "album", "title"],
+                searchOrder: DEFAULT_SEARCHTYPE_ORDER
             });
             expect(res.recordings).to.exist;
             expect(res.recordings).to.not.be.empty;
@@ -146,7 +180,7 @@ describe('Musicbrainz API', function () {
             const res = await mbTransformer.getTransformerData(play, {
                 type: "musicbrainz",
                 searchWhenMissing: ["artists", "album", "title"],
-                fallbackAlbumSearch: true
+                searchOrder: ['basic','album']
             });
             expect(res.recordings).to.exist;
             expect(res.recordings).to.not.be.empty;
@@ -168,7 +202,8 @@ describe('Musicbrainz API', function () {
             const res = await mbTransformer.getTransformerData(play, {
                 type: "musicbrainz",
                 searchWhenMissing: ["artists", "album", "title"],
-                fallbackArtistSearch: 'native'
+                searchArtistMethod: "native",
+                searchOrder: ['basic','artist']
             });
             expect(res.recordings).to.exist;
             expect(res.recordings).to.not.be.empty;
@@ -190,7 +225,8 @@ describe('Musicbrainz API', function () {
 
             const res = await mbTransformer.getTransformerData(play, {
                 type: "musicbrainz",
-                searchWhenMissing: ["artists", "album", "title"]
+                searchWhenMissing: ["artists", "album", "title"],
+                searchOrder: ['basic']
             });
             expect(res.recordings).to.exist;
             expect(res.recordings).to.not.be.empty;
@@ -213,14 +249,47 @@ describe('Musicbrainz API', function () {
             const stageConfig: MusicbrainzTransformerDataStage = {
                 type: "musicbrainz",
                 searchWhenMissing: ["artists", "album", "title"],
-                fallbackArtistSearch: "native",
-                fallbackFreeText: true
+                searchArtistMethod: "native",
+                searchOrder: ['artist', 'freetext'],
             };
 
             const res = await mbTransformer.getTransformerData(play, stageConfig);
             const postFetch = mbTransformer.handlePostFetch(play, res, stageConfig);
             expect(res.recordings).to.exist;
             expect(res.recordings).to.not.be.empty;
+        });
+
+        it('sorts by text weight', async function () {
+
+            this.timeout(3500);
+
+            const play: PlayObject = {
+                data: {
+                    track: "Price",
+                    artists: ["ATLUS Sound Team"],
+                    album: "PERSONA5 ORIGINAL SOUNDTRACK",
+                    isrc: 'JPK651601515'
+                },
+                meta: {}
+            }
+            await mbTransformer.tryInitialize();
+
+            const res = await mbTransformer.getTransformerData(play, {
+                type: "musicbrainz",
+                searchWhenMissing: ["artists", "album", "title"],
+                searchOrder: ["isrc"],
+            });
+            expect(res.recordings).to.exist;
+            expect(res.recordings).to.not.be.empty;
+            const chosenPlay = await mbTransformer.handlePostFetch(play,res, {
+                type: "musicbrainz",
+                searchWhenMissing: ["artists", "album", "title"],
+                searchOrder: DEFAULT_SEARCHTYPE_ORDER,
+                albumWeight: 0.4,
+                titleWeight: 0.3,
+                artistWeight: 0.3,
+            });
+            expect(chosenPlay.data.meta.brainz.album).to.eq("82de33b1-1cd6-4236-b116-561d0ecc8acf")
         });
 
     });
@@ -249,7 +318,8 @@ describe('Musicbrainz API', function () {
 
                 const res = await multiMb.getTransformerData(play, {
                     type: "musicbrainz",
-                    searchWhenMissing: ["artists", "album", "title"]
+                    searchWhenMissing: ["artists", "album", "title"],
+                    searchOrder: ['basic']
                 });
                 expect(res.recordings).to.exist;
                 expect(res.recordings).to.not.be.empty;
@@ -280,7 +350,8 @@ describe('Musicbrainz API', function () {
 
                 const res = await multiMb.getTransformerData(play, {
                     type: "musicbrainz",
-                    searchWhenMissing: ["artists", "album", "title"]
+                    searchWhenMissing: ["artists", "album", "title"],
+                    searchOrder: ['basic']
                 });
                 expect(res.recordings).to.exist;
                 expect(res.recordings).to.not.be.empty;

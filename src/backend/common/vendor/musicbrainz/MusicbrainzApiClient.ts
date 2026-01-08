@@ -36,10 +36,12 @@ export interface MusicbrainzApiClientConfig {
     apis: MusicbrainzApiConfigData[]
 }
 
+export type UsingTypes = 'artist' | 'album' | 'title' | 'isrc' | 'mbidrecording' | 'mbidrelease' | 'mbidartist';
+
 export interface SearchOptions {
     escapeCharacters?: boolean
     removeCharacters?: boolean,
-    using?: ('artist' | 'album' | 'title' | 'isrc')[]
+    using?: UsingTypes[]
     ttl?: string,
     freetext?: boolean
 }
@@ -211,6 +213,15 @@ export class MusicbrainzApiClient extends AbstractApiClient {
             const query: Record<string, any> = {
             };
 
+            if(play.data?.meta?.brainz?.track !== undefined && using.includes('mbidrecording')) {
+                query.recording_mbid = play.data.meta.brainz.track
+            }
+            if(play.data?.meta?.brainz?.album !== undefined && using.includes('mbidrelease')) {
+                query.release_mbid = play.data.meta.brainz.album
+            }
+            if(play.data?.meta?.brainz?.artist !== undefined && play.data?.meta?.brainz?.artist.length > 0 && using.includes('mbidartist')) {
+                query.artist_mbids = play.data.meta.brainz.artist
+            }
             if(play.data.isrc !== undefined && using.includes('isrc')) {
                 query.isrc = play.data.isrc;
             }
@@ -269,6 +280,21 @@ export class MusicbrainzApiClient extends AbstractApiClient {
                         q += ' AND ';
                     }
                     q+= `isrc:${query.isrc}`;
+                }
+                if(query.recording_mbid !== undefined) {
+                    if(q !== '') {
+                        q += ' AND ';
+                    }
+                    q += `rid:"${query.recording_mbid}"`
+                }
+                if(query.artist_mbids !== undefined) {
+                    q += `(arid:(${query.artist_mbids.map(x => `"${x}"`).join(' AND ')}) OR arid:(${query.artist_mbids.map(x => `"${x}"`).join(' OR ')}))`
+                }
+                if(query.release_mbid !== undefined) {
+                    if(q !== '') {
+                        q += ' AND ';
+                    }
+                    q += `reid:"${query.release_mbid}"`
                 }
             }
 

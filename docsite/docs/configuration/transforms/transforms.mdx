@@ -193,7 +193,7 @@ In a [Subsonic](/configuration/sources/subsonic) [File Config](/configuration?co
         "preCompare": [
           {
             "type": "native"
-            // when "name" is not defined, uses first found "native" transformer
+            "name": "MyNativeTransformer" // when "name" is not defined, uses first found "native" transformer
           }
         ]
       }
@@ -363,7 +363,7 @@ The actual value of each property may be different for each Stage. Check the doc
 
 Generically, though, each property may be some value **or** an object combining a [`when` condition](#conditional-modification) and that value.
 
-If none of the properties are specified in the stage then it's assumed all transformed data should be used.
+**If none of the properties are specified in the stage then it's assumed all transformed data should be used.**
 
 :::note
 

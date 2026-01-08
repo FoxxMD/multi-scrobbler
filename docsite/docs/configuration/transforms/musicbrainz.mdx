@@ -129,7 +129,6 @@ Example:
         ],
         "defaults": {
           "releaseStatusPriority": ["official"],
-          "fallbackArtistSearch": "native",
           "releaseAllowEmpty": true
         }
       },
@@ -138,24 +137,96 @@ Example:
 }
 ```
 
-### Rules
+### Rules and Hooks
 
-Each [Rule](/configuration/transforms#stage-rules) should be either a boolean, specifying if the transformed data should be used for this field, or a [`when` condition](/configuration/transforms#conditional-moditication):
+[Add your Stage](https://foxxmd.github.io/multi-scrobbler/configuration/transforms/#stage) to a Source or Client by specifying it in a [Hook](/configuration/transforms/#hook):
 
-```json5
-{
-    "type": "musicbrainz",
-    "name": "MyMB"
-    // ...
-    "title": false, // will not apply any changes to Play title
-    "artists": {
-      "when": {/* ... */}, // will only apply changes to Play artists if "when" is satisfied
-    /* ... */
-    },
-    "album": true // will always apply changes to Play album
-    "meta": true // adds MusicBrainz MBIDs to scrobble data
-}
+```json5 title="subsonic.json"
+[
+  { 
+    "name": "MySubsonic",
+    "data": { /* ... */},
+    "options": {
+      "playTransform": {
+        "preCompare": [
+          {
+            "type": "musicbrainz",
+            "name": "MyMB"
+          }
+        ]
+      }
+    }
+  }
+]
 ```
+
+Each [**Stage Rule**](/configuration/transforms#stage-rules) should be either a boolean, specifying if the transformed data should be used for this field, or a [`when` condition](/configuration/transforms#conditional-moditication):
+
+<details>
+
+<summary>Example</summary>
+
+```json5 title="subsonic.json"
+[
+  { 
+    "name": "MySubsonic",
+    "data": { /* ... */},
+    "options": {
+      "playTransform": {
+        "preCompare": [
+          {
+            "type": "musicbrainz",
+            "name": "MyMB"
+            // ...
+            "title": false, // will not apply any changes to Play title
+            "artists": {
+              "when": {/* ... */}, // will only apply changes to Play artists if "when" is satisfied
+            /* ... */
+            },
+            "album": true // will always apply changes to Play album
+            "meta": true // adds MusicBrainz MBIDs to scrobble data
+          }
+        ]
+      }
+    }
+  }
+]
+```
+
+</details>
+
+:::tip[Per Component Override]
+
+The `defaults` you set in [Stage Configuration](#stage-configuration) [can be overriden/added  to](/configuration/transforms/#overriding-configuration) (per property) in each Hook.
+
+<details>
+
+<summary>Example</summary>
+
+```json5 title="subsonic.json"
+[
+  { 
+    "name": "MySubsonic",
+    "data": { /* ... */},
+    "options": {
+      "playTransform": {
+        "preCompare": [
+          {
+            "type": "musicbrainz",
+            "name": "MyMB",
+            "releaseStatusPriority": ["psuedo-release"], // override from defaults
+            "searchOrder": ["freetext"] // add new property, combined with defaults
+          }
+        ]
+      }
+    }
+  }
+]
+```
+
+</details>
+
+:::
 
 ## ENV Configuration
 
@@ -236,7 +307,9 @@ Both steps have separate configuration.
 
 ### Searching
 
-Before MS begins a search it checks Scrobble data it checks if your data already contains:
+#### Should MS Search?
+
+Before MS begins a search it checks if your Scrobble data already contains:
 
 * [MBIDs](https://musicbrainz.org/doc/MusicBrainz_Identifier) for [artists](https://musicbrainz.org/doc/Artist), [album](https://musicbrainz.org/doc/Release), and specific [track/recording](https://musicbrainz.org/doc/Recording)
 * and duration
@@ -258,7 +331,7 @@ Define which data types are required using:
 // ...
 "defaults": {
     // only search if MBIDs for artists or album is missing
-    "searchWithMissing": ['artists', 'album']
+    "searchWithMissing": ["artists", "album"]
 
     // uncomment to make the stage always search, even if above data is present
     //forceSearch: true
@@ -267,65 +340,50 @@ Define which data types are required using:
 
 </details>
 
-If required data is missing then the next step is making [search queries to the Musicbrainz database](https://musicbrainz.org/doc/MusicBrainz_API/Search) to try to get potential candidates. Multi-scrobbler uses the **title, artist(s), and album** from your Scrobble data to query for matches.
+If required data is missing then the next step is making [search queries to the Musicbrainz database](https://musicbrainz.org/doc/MusicBrainz_API/Search) to try to get potential candidates.
 
-:::note
+#### Search Methods
 
-If your Scrobble data contains an [ISRC](https://musicbrainz.org/doc/ISRC) (usually from Spotify) then Multi-scrobbler will search using this ID first, before the above criteria. If no match is found with the ISRC then it automatically retries with the title, artist(s), and album.
+Multi-scrobbler can search for Musicbrainz matches using **multiple** methods. You control:
+
+* the search methods that are used
+* **the order** in which search methods are executed
+
+All search methods will be run in the order they were defined until one method returns at least one match.
+
+**The methods you choose, and the order they run in, can drastically change how many API calls are needed to get a match, and what types of matches are returned.** See [**Search Considerations**](#search-considerations) for guidance on how to decide on methods based on Source.
+
+To set search methods and their order use the `searchOrder` option in your [Stage Configuration](/configuration/transforms#configuring-stages):
+
+```json5
+// ...
+"defaults": {
+    // only searches using these methods, in the order they are listed here
+    "searchOrder": ["isrc", "mbidrecording", "basic","freetext"]
+  }
+```
+
+:::tip[Default Search Methods]
+
+If `searchOrder` is undefined, or you use the [Sensible Default/Preset](#sensible-default), then Multi-scrobbler will default to using `isrc` and `basic` methods, in that order.
 
 :::
 
-Musicbrainz agressively normalizes these fields in its database which means that if your Scrobble data contains major innaccuracies or phrases fields in a non-normal way, it's possible Musicbrainz won't find any matches. This is a more common occurrence when trying to match Scrobble data from Sources that don't support multiple artist data, like [Subsonic](/configuration/sources/subsonic) and [Last.fm](/configuration/sources/lastfm).
+<h4>Available Methods</h4>
 
 <details>
 
-<summary>Examples of Bad Data</summary>
+<summary>ISRC (`isrc`)</summary>
 
-Last.fm Scrobble returns an Artist in the title and combines two artists into one string:
-
-```json
-{
-    "title": "Endless Possibility (feat. Wheatus)",
-    "artists": ["Bowling For Soup & Punk Rock Factory"]
-}
-```
-
-The corresponding [Musicbrainz Recording](https://musicbrainz.org/release/85bf284b-8b39-414e-8ad9-61f593072588) has all artists separated and no artist in the title:
-
-```json
-{
-    "title": "Endless Possibility",
-    "artists": ["Bowling For Soup", "Punk Rock Factory", "Wheatus"]
-}
-```
-
-</details>
-
-
-:::note
-
-If the initial search(es), and any [retried searches](#retrying-search), do not return any results then the stage is marked as [**failed** (`onFailure`) for **Flow Control**](/configuration/transforms/#flow-control).
-
-:::
-
-#### Retrying Search
-
-If normal searches using all the fields mentioned above does not return any matches Multi-scrobbler can try additional searches with modified queries.
-
-<details>
-
-<summary>Album Only</summary>
-
-If your Scrobble data contains a title, artist(s), and an album (all three fields) then Multi-scrobbler can retry the search using only title and album, if `fallbackAlbumSearch` is set in [Stage Configuration](/configuration/transforms#configuring-stages):
-
+If your Scrobble data contains an [ISRC](https://musicbrainz.org/doc/ISRC) (usually from Spotify) then Multi-scrobbler can search using this ID, only.
 
 [Stage Configuration](/configuration/transforms#configuring-stages) example:
 
 ```json5
 // ...
 "defaults": {
-    // will try an additional search using only title + album name
-    "fallbackAlbumSearch": "true"
+    // will only search using isrc
+    "searchOrder": ["isrc"]
   }
 ```
 
@@ -333,19 +391,111 @@ If your Scrobble data contains a title, artist(s), and an album (all three field
 
 <details>
 
-<summary>Artist Extraction</summary>
+<summary>Track MBID (`mbidrecording`)</summary>
 
-If...
+If your Scrobble data contains an [Track (Recording) MBID](https://musicbrainz.org/doc/Recording) then Multi-scrobbler can search using this MBID, only.
 
-* [Album Only](#album-only) returns no results or did not run
-* Your scrobble data contains only **one** artist string
-* `fallbackArtistSearch` is set in [Stage Configuration](/configuration/transforms#configuring-stages)
+[Stage Configuration](/configuration/transforms#configuring-stages) example:
 
-Then Multi-scrobbler will attempt to extract multiple artists from your artist and track string. **This is not automatic. You must set `fallbackArtistSearch` to enable this additional search.**
+```json5
+// ...
+"defaults": {
+  // will only search using recording mbid
+    "searchOrder": ["mbidrecording"]
+  }
+```
 
-`fallbackArtistSearch` can be set to **Native** or **Naive** mode:
+</details>
 
-<Tabs groupId="fallbackArtist" queryString>
+<details>
+
+<summary>Album, Artist, and Title Fields (`basic`)</summary>
+
+Will search Musicbrainz using any/all available text fields from your scrobble: Album, Artists(s), and Title. Does not leverage any existing MBIDs.
+
+[Stage Configuration](/configuration/transforms#configuring-stages) example:
+
+```json5
+// ...
+"defaults": {
+    // will only search using album, artist(s), and title
+    "searchOrder": ["basic"]
+  }
+```
+
+</details>
+
+<details>
+
+<summary>Album/Artist/Title OR MBIDs (`basicOrIds`)</summary>
+
+This is the same as the above **Album, Artist, and Title Fields** search except that if the scrobble data contains any corresponding MBIDs it will use those instead of the plain text field.
+
+[Stage Configuration](/configuration/transforms#configuring-stages) example:
+
+```json5
+// ...
+"defaults": {
+    // will only search using album, artist(s), and title
+    "searchOrder": ["basicOrIds"]
+  }
+```
+
+Example:
+
+```json
+{
+    "title": "Endless Possibility (feat. Wheatus)",
+    "artists": ["Bowling For Soup"]
+    "albumMbid": "c9f91cdc-984e-4303-9a51-4ac0dfa2348f",
+    "album": "My Cool Album"
+}
+```
+
+Multi-scrobbler will search Musicbrainz using `title`, `artists`, and `albumMbid` but NOT `album`.
+
+</details>
+
+<details>
+
+<summary>Album And Title Only (`album`)</summary>
+
+If your Scrobble data contains a title, artist(s), and an album (all three fields) then Multi-scrobbler can search using only title and album by using `album` for `searchOrder`:
+
+[Stage Configuration](/configuration/transforms#configuring-stages) example:
+
+```json5
+// ...
+"defaults": {
+    // will only search using only title + album name
+    "searchOrder": ["album"]
+  }
+```
+
+</details>
+
+<details>
+
+<summary>Extracted Artists (`artist`)</summary>
+
+If your scrobble data contains only **one** artist string then Multi-scrobbler can attempt to extract multiple artists from your artist and track string.
+
+Use `artist` with `searchOrder` and optionally specify the extraction mode with `searchArtistMethod`:
+
+[Stage Configuration](/configuration/transforms#configuring-stages) example:
+
+```json5
+// ...
+"defaults": {
+    // will only search using title/album + extracted artists
+    "searchOrder": ["artist"],
+    //searchArtistMethod: 'native' // optional
+  }
+```
+
+`searchArtistMethod` can be set to **Native** or **Naive** mode:
+
+<Tabs groupId="searchArtistMethod" queryString>
     <TabItem value="native" label="Native (Recommended)">
 
     **Native** (`native`) mode uses an aggressive configuration of the [Native Stage](/configuration/transforms/native) to extract artists using common delimiters and common "joined" artist patterns from the artist and title string of your Scrobble data.
@@ -388,8 +538,9 @@ Then Multi-scrobbler will attempt to extract multiple artists from your artist a
     ```json5
     // ...
     "defaults": {
-        // ...
-        "fallbackArtistSearch": "native"
+      // will only search using title/album + native extracted artists
+      "searchOrder": ["artist"],
+      "searchArtistMethod": "native"
       }
     ```
 
@@ -426,8 +577,9 @@ Then Multi-scrobbler will attempt to extract multiple artists from your artist a
     ```json5
     // ...
     "defaults": {
-        // ...
-        "fallbackArtistSearch": "naive"
+      // will only search using title/album + naive extracted artists
+      "searchOrder": ["artist"],
+      "searchArtistMethod": "naive"
       }
     ```
 
@@ -438,9 +590,9 @@ Then Multi-scrobbler will attempt to extract multiple artists from your artist a
 
 <details>
 
-<summary>Free Text</summary>
+<summary>Free Text (`freetext`)</summary>
 
-If both [Album Only](#album-only) and [Artist Extraction](#artist-extraction) searches fail to return results, or were not run, you can additionally enable **Free Text** search. This will search Musicbrainz for **all** text of your Scrobble data artist/title/album, without constraint.
+This will search Musicbrainz for **all** text of your Scrobble data artist/title/album, without constraint.
 
 :::warning
 
@@ -461,11 +613,18 @@ If you know your Source's Play data is well organized you **should not** enable 
 // ...
 "defaults": {
     // ...
-    "fallbackFreeTextSearch": true
+    // will only search using free text search of all artist/album/title
+    "searchOrder": ["freetext"],
   }
 ```
 
 </details>
+
+:::note
+
+If all defined search methods do not return any results then the stage is marked as [**failed** (`onFailure`) for **Flow Control**](/configuration/transforms/#flow-control).
+
+:::
 
 ### Refining
 
@@ -532,13 +691,16 @@ You may want to filter the majority of your matches by releases but allow matchi
 
 ### Sorting
 
-Each [Release Attribute](#release-attribute) has one additional property that can be used to **rank** releases based on the order of the values you give it. This is the `priority` property.
 
-*After* matches have been [filtered](#filtering), the remaining matches will have their releases sorted. Release with an attribute that does not match are **not** removed, but they are sorted lower than releases that do match.
+*After* matches have been [filtered](#filtering), the remaining matches *and their releases** can be sorted. Matches/Releases with an attribute that does not match are **not** removed, but they are sorted lower than matches that do match.
 
 Sorting can be a good alternative to filtering: with filters there is a possibility your filters may eliminate all matches; if you want to ensure that **some** match will be used then sorting can ensure that the **best choice** out of those given will always be used, without accidentally ending up with **no choice**.
 
 Sorting can be used instead of filters, or in conjunction with filters, it's your choice.
+
+#### Release Attributes {#sorting-releases}
+
+Each [Release Attribute](#release-attribute) has one additional property that can be used to **rank** releases based on the order of the values you give it. This is the `priority` property.
 
 In configuration:
 
@@ -554,7 +716,58 @@ EX to prefer albums, then singles, over everything else
 "releaseGroupPrimaryTypePriority": ["album", "single"]
 ```
 
-If a rule is not present then multi-scrobbler defaults it to `true`.
+#### Field Scoring
+
+Matches can additionally be sorted/ranked based on how similar their fields are to the original Scrobble. Use these properties for sorting when you want the final Musicbrainz match to be as closely matched to the original Scrobble, as opposed to what may be the most "correct" match based on the Musicbrainz score or suggested Release.
+
+<details>
+
+<summary>Example Scenario</summary>
+
+You scrobble [this track from spotify](https://open.spotify.com/track/21trRQA61afzljSK9V0SHX), which has an English title, Album name, and Artist name.
+
+```json                    
+{ 
+  "track": "Price",
+  "artists": ["ATLUS Sound Team"],
+  "album": "PERSONA5 ORIGINAL SOUNDTRACK"
+}
+```
+
+However, the [Recording found by Musicbrainz](https://beta.musicbrainz.org/search?query=isrc%3AJPK651601515&type=recording&limit=25&method=advanced) has multiple Releases (albums). The first suggested release is a *related* Album with similar name (`Persona 25th Anniversary Deluxe Vinyl Box Set`) but it's not the same as your album. Additionally, the artists for this album are in Japanese, rather than English.
+
+You have used `releaseStatusPriority` to prioritize `psuedo-release` which does work but there are still multiple releases chosen, and some are non-English (`『ペルソナ5』オリジナル・サウンドトラック`).
+
+Using `"albumWeight": 0.4` and `"artistWeight": 0.3` ensures that the releases that have an album name, and artist names, more similar to your original scrobble are ranked higher. Resulting in [the correct Release (`PERSONA5 ORIGINAL SOUNDTRACK`)](https://beta.musicbrainz.org/release/82de33b1-1cd6-4236-b116-561d0ecc8acf) being chosen as the final match.
+
+</details>
+
+Add one or more of these weight properties to your [Stage Configuration](/configuration/transforms#configuring-stages) to enable Field Scoring:
+
+```json5
+// ...
+"defaults": {
+    // ...
+    // enables album text similiarity scoring
+    "albumWeight": 0.33,
+    // enables title text similiarity scoring
+    "titleWeight": 0.33,
+    // enables artist text similiarity scoring
+    "artistWeight": 0.33
+  }
+```
+
+While not enforced, it's a good idea to keep these weights under `1`. And if using more than one weight, they should be add up to `1`.
+
+<details>
+
+<summary>How Scoring is Combined</summary>
+
+The score similarity from `albumWeight` will be added to the score accumulated by [Release Attributes](#sorting-releases) to affect the final ranking of each Release for a Match/Recording.
+
+In the final sorting of Recordings, title score + artist score is combined with the top ranked release album score. The top ranked score is then used to choose the matched Recording.
+
+</details>
 
 ## Best Practices
 
@@ -584,6 +797,50 @@ Consider adding [Artist Extraction](./?fallbackArtist=native#artist-extraction) 
  "fallbackArtistSearch": "native"
 }
 ```
+
+### Search Considerations
+
+How complete, and accurate, your scrobble data is from a certain Source should dictate what [Search Methods](#search-methods) you should use for matching.
+
+Musicbrainz agressively normalizes **artist, album, and title** fields in its database which means that if your Scrobble data contains major innaccuracies or phrases fields in a non-normal way, it's possible Musicbrainz won't find any matches. This is a more common occurrence when trying to match Scrobble data from Sources that don't support multiple artist data, like [Subsonic](/configuration/sources/subsonic) and [Last.fm](/configuration/sources/lastfm).
+
+<details>
+
+<summary>Examples of Bad Data</summary>
+
+Last.fm Scrobble returns an Artist in the title and combines two artists into one string:
+
+```json
+{
+    "title": "Endless Possibility (feat. Wheatus)",
+    "artists": ["Bowling For Soup & Punk Rock Factory"]
+}
+```
+
+The corresponding [Musicbrainz Recording](https://musicbrainz.org/release/85bf284b-8b39-414e-8ad9-61f593072588) has all artists separated and no artist in the title:
+
+```json
+{
+    "title": "Endless Possibility",
+    "artists": ["Bowling For Soup", "Punk Rock Factory", "Wheatus"]
+}
+```
+
+</details>
+
+**In general, you should prioritize methods that search by unique identifiers** (`isrc` `mbidRecording` `basicOrIds`) if you know your Sources may contain *accurate* data for these. Such as: Spotify, Jellyfin, Plex, and Listenbrainz (Source).
+
+Use field-based methods if your Sources do not return IDs consistently (or at all). Add more field-based methods the more inaccurate your scrobble data may be, but be aware that more aggressive/broad searches may return less accurate results.
+
+:::tip[Lastfm]
+
+Last.fm is inconsistent when it comes to matching your scrobbles. It will accept (almost) any fields for track/title/album and aggressively attempt to match/correct these, regardless of your intentions.
+
+Unless the client scrobbling to Last.fm is also sending an `mbid`, it's likely your scrobble will not be **consistently** matched correctly and so the `mbid` supplied by last.fm in its scrobble data will be wrong.
+
+Therefore, you should *avoid* using `mbidRecording` and `basicOrIds` as the primary search methods (or understand the risks of using them). Instead, prefer to use field-based methods *before* falling back to id-based methods.
+
+:::
 
 ### Filter Considerations
 
@@ -751,7 +1008,8 @@ Your [AIO Config](/configuration?configType=aio#configuration-types):
         "releaseStatusPriority": ["official"],
         "releaseGroupPrimaryTypePriority": ["album", "single", "ep"],
         "releaseCountryPriority": ["XW"],
-        "fallbackArtistSearch": "native"
+        "searchArtistMethod": "native"
+        "searchOrder": ["isrc", "basic", "artist"]
       }
     }
   ]
@@ -871,7 +1129,8 @@ Your [AIO Config](/configuration?configType=aio#configuration-types):
         "releaseStatusPriority": ["official"],
         "releaseGroupPrimaryTypePriority": ["album", "single", "ep"],
         "releaseCountryPriority": ["XW"],
-        "fallbackArtistSearch": "native",
+        "searchArtistMethod": "native",
+        "searchOrder": ["isrc","basic", "artist"]
       }
     }
   ]
@@ -905,4 +1164,90 @@ In a [Jellyfin](/configuration/clients/jellyfin) [File Config](/configuration?co
   }
 ]
 ```
+</details>
+
+### Different Search Methods Based on Source (Last.fm and Spotify) {#override-stage-configuration-example}
+
+[Last.fm has unreliable MBIDs](#search-considerations) and Spotify provides an [ISRC](https://musicbrainz.org/doc/ISRC) and consistent formatting.
+
+* For Spotify, we want to rely on ID [searches](#search-methods) and matches that are [close to original scrobble text](#field-scoring)
+* For Last.fm, we want to use only text searches and take whatever correction is given to us
+
+Use [**Per Component Overrides**](#rules-and-hooks) with the default (or [sensible](#sensible-default)) [Stage Configuration](#stage-configuration) to specify different search behavior for each Source.
+
+<details>
+
+<summary>Example</summary>
+
+Stage Configuration
+
+```json5 title="config.json"
+{
+  // ...
+  "transformers": [
+    {
+      "type": "musicbrainz",
+      "name": "MyMB",
+      "data": {
+        "apis": [
+          {
+            "contact": "contact@mydomain.com"
+          }
+        ],
+        "defaults": {} // maybe use sensible?
+      },
+    }
+  ]
+}
+```
+
+```json5 title="lastfm.json"
+[
+  { 
+    "name": "MyLFM",
+    "configureAs": "source"
+    "data": { /* ... */},
+    "options": {
+      "playTransform": {
+        "preCompare": [
+          {
+            "type": "musicbrainz",
+            "name": "MyMB",
+            "searchArtistMethod": "native"
+            // does not use any ID searches
+            // fallback to more aggressive/broad searches
+            "searchOrder": ["basic", "artist", "freetext"]
+          }
+        ]
+      }
+    }
+  }
+]
+```
+
+```json5 title="spotify.json"
+[
+  { 
+    "name": "MySpotify",
+    "data": { /* ... */},
+    "options": {
+      "playTransform": {
+        "preCompare": [
+          {
+            "type": "musicbrainz",
+            "name": "MyMB",
+            // use ISRC as first search
+            "searchOrder": ["isrc", "basic"]
+            // bias matches towards similarity to original data
+            "albumWeight": 0.33,
+            "titleWeight": 0.33,
+            "artistWeight": 0.33
+          }
+        ]
+      }
+    }
+  }
+]
+```
+
 </details>
