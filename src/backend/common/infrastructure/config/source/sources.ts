@@ -13,10 +13,9 @@ import { MPDSourceAIOConfig, MPDSourceConfig } from "./mpd.js";
 import { MPRISSourceAIOConfig, MPRISSourceConfig } from "./mpris.js";
 import { MusikcubeSourceAIOConfig, MusikcubeSourceConfig } from "./musikcube.js";
 import { MusicCastSourceConfig, MusicCastSourceAIOConfig } from "./musiccast.js";
-import { PlexSourceAIOConfig, PlexSourceConfig, PlexApiSourceConfig, PlexApiSourceAIOConfig } from "./plex.js";
+import { PlexApiSourceConfig, PlexApiSourceAIOConfig } from "./plex.js";
 import { SpotifySourceAIOConfig, SpotifySourceConfig } from "./spotify.js";
 import { SubsonicSourceAIOConfig, SubSonicSourceConfig } from "./subsonic.js";
-import { TautulliSourceAIOConfig, TautulliSourceConfig } from "./tautulli.js";
 import { VLCSourceAIOConfig, VLCSourceConfig } from "./vlc.js";
 import { WebScrobblerSourceAIOConfig, WebScrobblerSourceConfig } from "./webscrobbler.js";
 import { YTMusicSourceAIOConfig, YTMusicSourceConfig } from "./ytmusic.js";
@@ -29,9 +28,7 @@ import { RockskySourceAIOConfig, RockskySourceConfig } from "./rocksky.js";
 
 export type SourceConfig =
     SpotifySourceConfig
-    | PlexSourceConfig
     | PlexApiSourceConfig
-    | TautulliSourceConfig
     | DeezerSourceConfig
     | DeezerInternalSourceConfig
     | ListenbrainzEndpointSourceConfig
@@ -60,9 +57,7 @@ export type SourceConfig =
 
 export type SourceAIOConfig =
     SpotifySourceAIOConfig
-    | PlexSourceAIOConfig
     | PlexApiSourceAIOConfig
-    | TautulliSourceAIOConfig
     | DeezerSourceAIOConfig
     | DeezerInternalAIOConfig
     | ListenbrainzEndpointSourceAIOConfig

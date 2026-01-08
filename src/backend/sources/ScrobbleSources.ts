@@ -22,12 +22,11 @@ import { IcecastData, IcecastSourceConfig, IcecastSourceOptions } from "../commo
 import { MPDData, MPDSourceConfig } from "../common/infrastructure/config/source/mpd.js";
 import { MPRISData, MPRISSourceConfig } from "../common/infrastructure/config/source/mpris.js";
 import { MusikcubeData, MusikcubeSourceConfig } from "../common/infrastructure/config/source/musikcube.js";
-import { PlexApiSourceConfig, PlexCompatConfig, PlexSourceConfig } from "../common/infrastructure/config/source/plex.js";
+import { PlexApiSourceConfig } from "../common/infrastructure/config/source/plex.js";
 import { MalojaSourceConfig } from "../common/infrastructure/config/source/maloja.js";
 import { SourceAIOConfig, SourceConfig } from "../common/infrastructure/config/source/sources.js";
 import { SpotifySourceConfig, SpotifySourceData } from "../common/infrastructure/config/source/spotify.js";
 import { SubsonicData, SubSonicSourceConfig } from "../common/infrastructure/config/source/subsonic.js";
-import { TautulliSourceConfig } from "../common/infrastructure/config/source/tautulli.js";
 import { VLCData, VLCSourceConfig } from "../common/infrastructure/config/source/vlc.js";
 import { WebScrobblerSourceConfig } from "../common/infrastructure/config/source/webscrobbler.js";
 import { YTMusicData, YTMusicSourceConfig } from "../common/infrastructure/config/source/ytmusic.js";
@@ -51,10 +50,8 @@ import { MPDSource } from "./MPDSource.js";
 import { MPRISSource } from "./MPRISSource.js";
 import { MusikcubeSource } from "./MusikcubeSource.js";
 import { MusicCastSource } from "./MusicCastSource.js";
-import PlexSource from "./PlexSource.js";
 import SpotifySource from "./SpotifySource.js";
 import { SubsonicSource } from "./SubsonicSource.js";
-import TautulliSource from "./TautulliSource.js";
 import { VLCSource } from "./VLCSource.js";
 import { WebScrobblerSource } from "./WebScrobblerSource.js";
 import YTMusicSource from "./YTMusicSource.js";
@@ -143,9 +140,6 @@ export default class ScrobbleSources {
                     break;
                 case 'plex':
                     this.schemaDefinitions[type] = getTypeSchemaFromConfigGenerator("PlexCompatConfig");
-                    break;
-                case 'tautulli':
-                    this.schemaDefinitions[type] = getTypeSchemaFromConfigGenerator("TautulliSourceConfig");
                     break;
                 case 'deezer':
                     this.schemaDefinitions[type] = getTypeSchemaFromConfigGenerator("DeezerCompatConfig");
@@ -341,25 +335,6 @@ export default class ScrobbleSources {
                             configureAs: defaultConfigureAs,
                             data: s as SpotifySourceData,
                             options: transformPresetEnv('SPOTIFY')
-                        })
-                    }
-                    break;
-                case 'tautulli':
-                    const t = {
-                        // support this for now
-                        user: process.env.TAUTULLI_USER
-                    };
-                    if(t.user === undefined) {
-                        t.user = process.env.PLEX_USER;
-                    }
-                    if (!Object.values(t).every(x => x === undefined)) {
-                        configs.push({
-                            type: 'tautulli',
-                            name: 'unnamed',
-                            source: 'ENV',
-                            mode: 'single',
-                            configureAs: defaultConfigureAs,
-                            data: t,
                         })
                     }
                     break;
@@ -838,15 +813,7 @@ export default class ScrobbleSources {
                 newSource = new SpotifySource(name, compositeConfig as SpotifySourceConfig, this.internalConfig, this.emitter);
                 break;
             case 'plex':
-                const plexConfig = compositeConfig as PlexCompatConfig;
-                if(plexConfig.data.token !== undefined) {
-                    newSource = await new PlexApiSource(name, compositeConfig as PlexApiSourceConfig, this.internalConfig, this.emitter); 
-                } else {
-                    newSource = await new PlexSource(name, compositeConfig as PlexSourceConfig, this.internalConfig, 'plex', this.emitter);
-                }
-                break;
-            case 'tautulli':
-                newSource = await new TautulliSource(name, compositeConfig as TautulliSourceConfig, this.internalConfig, this.emitter);
+                newSource = await new PlexApiSource(name, compositeConfig as PlexApiSourceConfig, this.internalConfig, this.emitter); 
                 break;
             case 'subsonic':
                 newSource = new SubsonicSource(name, compositeConfig as SubSonicSourceConfig, this.internalConfig, this.emitter);

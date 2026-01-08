@@ -27,8 +27,6 @@ import { setupDeezerRoutes } from "./deezerRoutes.js";
 import {setupLZEndpointRoutes} from "./endpointListenbrainzRoutes.js";
 import {setupLastfmEndpointRoutes} from "./endpointLastfmRoutes.js";
 import { makeClientCheckMiddle, makeSourceCheckMiddle } from "./middleware.js";
-import { setupPlexRoutes } from "./plexRoutes.js";
-import { setupTautulliRoutes } from "./tautulliRoutes.js";
 import { setupWebscrobblerRoutes } from "./webscrobblerRoutes.js";
 import ScrobbleSources from "../sources/ScrobbleSources.js";
 import ScrobbleClients from "../scrobblers/ScrobbleClients.js";
@@ -147,8 +145,6 @@ export const setupApi = (app: ExpressWithAsync, logger: Logger, appLoggerStream:
         });
     });
 
-    setupTautulliRoutes(app, logger, scrobbleSources);
-    setupPlexRoutes(app, logger, scrobbleSources);
     setupDeezerRoutes(app, logger, scrobbleSources);
     setupWebscrobblerRoutes(app, logger, scrobbleSources);
     setupLZEndpointRoutes(app, logger, scrobbleSources);

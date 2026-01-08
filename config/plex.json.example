@@ -16,7 +16,7 @@
     "options": {
       "logPayload": true,
       "logFilterFailure": "debug",
-      "ignoreInvalidCert": "false"
+      "ignoreInvalidCert": false
       }
   }
 ]

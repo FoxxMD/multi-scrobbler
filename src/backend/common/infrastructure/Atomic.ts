@@ -10,7 +10,6 @@ import { MusicBrainzApi } from 'musicbrainz-api';
 export type SourceType =
     'spotify'
     | 'plex'
-    | 'tautulli'
     | 'subsonic'
     | 'jellyfin'
     | 'lastfm'
@@ -39,7 +38,6 @@ export type SourceType =
 export const sourceTypes: SourceType[] = [
     'spotify',
     'plex',
-    'tautulli',
     'subsonic',
     'jellyfin',
     'lastfm',
