@@ -873,23 +873,44 @@ export const rankReleasesByPriority = (list: IRecordingMatch[], stageConfig: Mus
     return rankedList;
 };
 
-export const DEFAULTS_SENSIBLE: {searchArtistMethod: "native", [key: string]: any} = {
+export const DEFAULTS_SENSIBLE: MusicbrainzTransformerData = {
     // use official release over anything else
     "releaseStatusPriority": ["official"],
     // prefer album, then single, then ep
     "releaseGroupPrimaryTypePriority": ["album", "single", "ep"],
     // prefer worldwide release
-    "releaseCountryPriority": ["XW"],
-    "searchArtistMethod": "native",
-    "searchOrder": ["isrc","basic","artist"]
+    "releaseCountryPriority": ["XW"]
 }
-export const DEFAULTS_NATIVE: {searchArtistMethod: "native", "searchOrder": ["artist"]} = {
+export const DEFAULTS_NATIVE: MusicbrainzTransformerData = {
     "searchArtistMethod": "native",
     "searchOrder": ["artist"]
 }
 
-export const DEFAULTS_AGGRESSIVE = {
+export const DEFAULTS_AGGRESSIVE: MusicbrainzTransformerData = {
     "searchOrder": ["freetext"]
+}
+
+export const DEFAULTS_FIELDS_BIAS = {
+    "titleWeight": 0.33,
+    "albumWeight": 0.33,
+    "artistWeight": 0.33
+}
+
+export const DEFAULTS_PRESET: MusicbrainzTransformerData = {
+    "searchOrder": ["isrc", "basic"]
+}
+
+export const DEFAULTS_ID: MusicbrainzTransformerData = {
+    "searchOrder": ["isrc", "mbidrecording", "basicorids", "basic"]
+};
+
+const PRESETS: Record<string, MusicbrainzTransformerData> = {
+    default: DEFAULTS_PRESET,
+    sensible: DEFAULTS_SENSIBLE,
+    native: DEFAULTS_NATIVE,
+    aggressive: DEFAULTS_AGGRESSIVE,
+    fields: DEFAULTS_FIELDS_BIAS,
+    'id': DEFAULTS_ID
 }
 
 export const configFromEnv = (logger: MaybeLogger = new MaybeLogger()) => {
@@ -916,43 +937,25 @@ export const configFromEnv = (logger: MaybeLogger = new MaybeLogger()) => {
         }
         const presets = mbEnv.split(',').map(x => x.trim().toLocaleLowerCase());
         const soSet = new Set<SearchType>();
-        for (const p of presets) {
-            switch (p) {
-                case 'default':
-                    break;
-                case 'sensible':
-                    mbConfig.defaults = {
-                        ...mbConfig.defaults,
-                        ...DEFAULTS_SENSIBLE,
-                        searchOrder: undefined,
-                    }
-                    for(const o of DEFAULTS_SENSIBLE.searchOrder) {
-                        soSet.add(o as SearchType);
-                    }
-                    break;
-                case 'native':
-                    mbConfig.defaults = {
-                        ...mbConfig.defaults,
-                        ...DEFAULTS_NATIVE,
-                        searchOrder: undefined,
-                    }
-                    for(const o of DEFAULTS_NATIVE.searchOrder) {
-                        soSet.add(o as SearchType);
-                    }
-                    break;
-                case 'aggressive':
-                    mbConfig.defaults = {
-                        ...mbConfig.defaults,
-                        ...DEFAULTS_AGGRESSIVE,
-                        searchOrder: undefined,
-                    }
-                     for(const o of DEFAULTS_AGGRESSIVE.searchOrder) {
-                        soSet.add(o as SearchType);
-                    }
-                    break;
+        for (const pName of presets) {
+            const p = PRESETS[pName];
+            if(p === undefined) {
+                logger.warn(`No preset with name '${p}'`);
+                continue;
+            }
+            const { searchOrder = [], ...rest } = p;
+            mbConfig.defaults = {
+                ...mbConfig.defaults,
+                ...rest,
+            }
+            for (const o of searchOrder) {
+                soSet.add(o);
             }
         }
-        mbConfig.defaults.searchOrder = Array.from(soSet);
+        
+        if(soSet.size > 0) {
+            mbConfig.defaults.searchOrder = Array.from(soSet);
+        }
         logger.debug(`Using presets: ${presets.join(',')}`);
     }
 

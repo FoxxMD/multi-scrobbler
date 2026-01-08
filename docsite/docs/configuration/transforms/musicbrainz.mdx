@@ -240,10 +240,12 @@ MB_CONTACT=contact@mydomain.com
 
 To configure [stage defaults](#stage-configuration) use `MB_PRESETS` with a comma-delimited list of presets you wish to apply. More than one preset can be applied, in which case they combine. You must choose at least one of the presets below:
 
-* `default` - Applies no defaults. This is the same as using no options from [Matching With Musicbrainz](#matching-with-musicbrainz)
-* `sensible` - Applies the [Sensible Default](#sensible-default) configuration for sorting releases
-* `native` - Applies `fallbackArtistSearch: native` for [Artist Extraction](#artist-extraction) if the first search fails to find matches
-* `aggressive` - Applies [Free Text Search](#free-text) `fallbackFreeTextSearch: true` if all other searches fail
+* `default` - Adds the default [`searchOrder`](#search-methods) `isrc`+`basic` (same as using no presets that affect `searchOrder`)
+* `id` - Adds [`searchOrder`](#search-methods) methods that priorites searching by ID: `isrc` + `mbidrecording` + `basicOrIds` + `basic`
+* `native` - Adds **Extracted Artists** (`artist`) in `native` mode to [`searchOrder`](#search-methods)
+* `aggressive` - Adds **Free Text Search** (`freetext`) to [`searchOrder`](#search-methods)
+* `fields` - Applies [Field Scoring](#field-scoring) to match sorting so match text is baised towards similarity to original scrobble
+* `sensible` - Applies the [Sensible Default](#sensible-default) configuration for [sorting releases](#sorting-releases)
 
 Finally, use ENV `*_TRANSFORMS=musicbrainz` on each Source/Client you wish to apply this stage to. This applies the stage in the [`preTransform` Hook](/configuration/transforms#lifecycle-hooks) with all [Rules](#rules) enabled.
 
@@ -266,16 +268,20 @@ services:
     environment:
       // highlight-start
       - MB_CONTACT=contact@mydomain.com
-      - MB_PRESETS=sensible,native # creates sensible defaults with native fallback searching
+       # searches with sensible release sorting with the searchOrder
+       # isrc => basic => artist (native mode)
+      - MB_PRESETS=default,sensible,native
       // highlight-end
       - JELLYFIN_URL=192.168.0.110:8096
       - JELLYFIN_APIKEY=c9fae8756fbf481ebd9c5bb56b
       - JELLYFIN_USER=MyUser
       // highlight-start
-      - JELLYFIN_TRANSFORMS=musicbrainz # applies musicbrainz Stage to preTransform of Jellyfin source
+       # applies musicbrainz Stage to preTransform of Jellyfin source
+      - JELLYFIN_TRANSFORMS=musicbrainz
       // highlight-end
 
-      - MALOJA_URL=http://192.168.0.100:42010 # maloja receives enhanced scrobble from Jellyfin
+      # maloja receives enhanced scrobble from Jellyfin
+      - MALOJA_URL=http://192.168.0.100:42010
       - MALOJA_API_KEY=myApiKey
 
 
@@ -365,7 +371,7 @@ To set search methods and their order use the `searchOrder` option in your [Stag
 
 :::tip[Default Search Methods]
 
-If `searchOrder` is undefined, or you use the [Sensible Default/Preset](#sensible-default), then Multi-scrobbler will default to using `isrc` and `basic` methods, in that order.
+If `searchOrder` is undefined then Multi-scrobbler will default to using `isrc` then `basic` method.
 
 :::
 
@@ -788,15 +794,25 @@ For a more opinionated match that will mirror what you would expect from data fr
 }
 ```
 
-Consider adding [Artist Extraction](./?fallbackArtist=native#artist-extraction) in **Native Mode** if any of your Sources do not support multiple artists or your music collection is not tagged well.
+Consider adding [Artist Extraction (`artist`)](#search-methods) in **Native Mode** if any of your Sources do not support multiple artists or your music collection is not tagged well.
+
+<details>
 
 ```json5
 {
- // add the line below to the sensible defaults above
- // (don't forget commas)
- "fallbackArtistSearch": "native"
+  // use official release over anything else
+  "releaseStatusPriority": ["official"],
+  // prefer album, then single, then ep
+  "releaseGroupPrimaryTypePriority": ["album", "single", "ep"],
+  // prefer worldwide release
+  "releaseCountryPriority": ["XW"],
+  // search using extracted artist as last search attempt
+  "searchOrder": ["isrc", "basic", "artist"],
+  "searchArtistMethod": "native"
 }
 ```
+
+</details>
 
 ### Search Considerations
 
@@ -897,7 +913,7 @@ If
 
 Enable logging by turning on [**Debug Mode**](/configuration#debug-mode) to help diagnose any issues with the Musicbrainz API and Scrobble enhancement. **Before creating an issue** please enable logging and include any logs with your issue as this is needed to debug.
 
-If you have multiple Modification Stages and need to see the diff for your Play between each Stage, enable `"log":  "all"` in the individual [Modification Stage](http://localhost:3000/docs/configuration/transforms/musicbrainz/?fallbackArtist=native#artist-extraction).
+If you have multiple Modification Stages and need to see the diff for your Play between each Stage, enable `"log":  "all"` in the individual [Modification Stage](#rules-and-hooks).
 
 <details>
 
@@ -1101,7 +1117,7 @@ In a [Jellyfin](/configuration/clients/jellyfin) [File Config](/configuration?co
 
 * Musicbrainz Stage configured with
   * [Sensible Defaults](#sensible-default)
-  * Fallback search with [Artist Extraction](#retrying-search)
+  * Fallback search with [Artist Extraction](#search-methods)
 * [Default Native Stage](/configuration/transforms/native/#default-stage)
 * Uses [Flow Control](/configurations/transforms#flow-control) to run Native only if there are no Musicbrainz matches
 
