@@ -300,7 +300,7 @@ export const parseStageConfig = (data: MusicbrainzTransformerData | undefined = 
             throw new Error(`searchArtistMethod must be one of 'native' or 'naive', given: ${cleanFallback}`);
         }
         config.searchArtistMethod = cleanFallback;
-        logger.debug(`Artist search using ${config.fallbackArtistSearch} method`);
+        logger.debug(`Artist search using${searchArtistMethod === undefined ? ' default' : ''} '${config.searchArtistMethod}' method`);
     }
 
     const so = Array.from(soSet);
