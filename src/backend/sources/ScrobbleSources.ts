@@ -11,8 +11,6 @@ import { LastFMEndpointSourceConfig, LastFMEndpointData } from "../common/infras
 import {
     JellyApiData,
     JellyApiSourceConfig,
-    JellyData,
-    JellySourceConfig
 } from "../common/infrastructure/config/source/jellyfin.js";
 import { JRiverData, JRiverSourceConfig } from "../common/infrastructure/config/source/jriver.js";
 import { KodiData, KodiSourceConfig } from "../common/infrastructure/config/source/kodi.js";
@@ -44,7 +42,6 @@ import DeezerSource from "./DeezerSource.js";
 import { EndpointListenbrainzSource } from "./EndpointListenbrainzSource.js";
 import { EndpointLastfmSource } from "./EndpointLastfmSource.js";
 import JellyfinApiSource from "./JellyfinApiSource.js";
-import JellyfinSource from "./JellyfinSource.js";
 import { JRiverSource } from "./JRiverSource.js";
 import { KodiSource } from "./KodiSource.js";
 import LastfmSource from "./LastfmSource.js";
@@ -409,9 +406,7 @@ export default class ScrobbleSources {
                     }
                     break;
                 case 'jellyfin':
-                    const j: (JellyData | JellyApiData) = {
-                        users: process.env.JELLYFIN_USER,
-                        servers: process.env.JELLYFIN_SERVER,
+                    const j: JellyApiData = {
                         user: process.env.JELLYFIN_USER,
                         password: process.env.JELLYFIN_PASSWORD,
                         apiKey: process.env.JELLYFIN_APIKEY,
@@ -857,12 +852,7 @@ export default class ScrobbleSources {
                 newSource = new SubsonicSource(name, compositeConfig as SubSonicSourceConfig, this.internalConfig, this.emitter);
                 break;
             case 'jellyfin':
-                const jfConfig = compositeConfig as (JellySourceConfig | JellyApiSourceConfig);
-                if(jfConfig.data.user !== undefined) {
-                    newSource = await new JellyfinApiSource(name, compositeConfig as JellyApiSourceConfig, this.internalConfig, this.emitter);
-                } else {
-                    newSource = await new JellyfinSource(name, compositeConfig as JellySourceConfig, this.internalConfig, this.emitter);
-                }
+                newSource = await new JellyfinApiSource(name, compositeConfig as JellyApiSourceConfig, this.internalConfig, this.emitter);
                 break;
             case 'lastfm':
                 newSource = await new LastfmSource(name, compositeConfig as LastfmSourceConfig, this.internalConfig, this.emitter);

@@ -4,25 +4,6 @@ import {
     CollectionType
 } from "@jellyfin/sdk/lib/generated-client/index.js";
 
-export interface JellyData extends CommonSourceData {
-    /**
-     * optional list of users to scrobble tracks from
-     *
-     * If none are provided tracks from all users will be scrobbled
-     *
-     * @examples [["MyUser1","MyUser2"]]
-     * */
-    users?: string | string[]
-    /**
-     * optional list of servers to scrobble tracks from
-     *
-     * If none are provided tracks from all servers will be scrobbled
-     *
-     * @examples [["MyServerName1"]]
-     * */
-    servers?: string | string[]
-}
-
 export interface JellyApiData extends CommonSourceData {
     /**
      * HOST:PORT of the Jellyfin server to connect to
@@ -101,14 +82,6 @@ export interface JellyApiData extends CommonSourceData {
 export interface JellyApiOptions extends CommonSourceOptions {
 }
 
-export interface JellySourceConfig extends CommonSourceConfig {
-    data: JellyData
-}
-
-export interface JellySourceAIOConfig extends JellySourceConfig {
-    type: 'jellyfin'
-}
-
 export interface JellyApiSourceConfig extends CommonSourceConfig {
     data: JellyApiData
     options: JellyApiOptions
@@ -119,4 +92,4 @@ export interface JellyApiSourceAIOConfig extends JellyApiSourceConfig {
 }
 
 
-export type JellyfinCompatConfig = JellyApiSourceConfig | JellySourceConfig;
+export type JellyfinCompatConfig = JellyApiSourceConfig;

@@ -24,7 +24,6 @@ import MemorySource from "../sources/MemorySource.js";
 import { parseBool, sortByNewestPlayDate } from "../utils.js";
 import { setupAuthRoutes } from "./auth.js";
 import { setupDeezerRoutes } from "./deezerRoutes.js";
-import { setupJellyfinRoutes } from "./jellyfinRoutes.js";
 import {setupLZEndpointRoutes} from "./endpointListenbrainzRoutes.js";
 import {setupLastfmEndpointRoutes} from "./endpointLastfmRoutes.js";
 import { makeClientCheckMiddle, makeSourceCheckMiddle } from "./middleware.js";
@@ -150,7 +149,6 @@ export const setupApi = (app: ExpressWithAsync, logger: Logger, appLoggerStream:
 
     setupTautulliRoutes(app, logger, scrobbleSources);
     setupPlexRoutes(app, logger, scrobbleSources);
-    setupJellyfinRoutes(app, logger, scrobbleSources);
     setupDeezerRoutes(app, logger, scrobbleSources);
     setupWebscrobblerRoutes(app, logger, scrobbleSources);
     setupLZEndpointRoutes(app, logger, scrobbleSources);
