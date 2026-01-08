@@ -162,6 +162,21 @@ To get the UID and GID for the current user run these commands from a terminal:
 
 ::::
 
+#### Read Only
+
+MS can be hardended by setting the file system as read only with [`read_only`](https://docs.docker.com/reference/compose-file/services/#read_only), with a few exceptions:
+
+```yaml title="docker-compose.yml"
+services:
+    multi-scrobbler:
+        image: foxxmd/multi-scrobbler
+        # ...
+        read_only: true
+        tmpfs:
+            - /run:exec
+            - /tmp:noexec        
+```
+
 ### Docker Usage Example
 
 :::tip
