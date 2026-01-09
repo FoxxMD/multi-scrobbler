@@ -28,8 +28,19 @@ export interface LastfmData extends CommonClientData, RequestRetryOptions {
 
     /**
      * Use Libre.fm instead of Last.fm
+     * 
+     * A convenience flag for automatically defining host/path data to use the official libre.fm instance
      * */
     librefm?: boolean
+
+    /** 
+     * The host/domain.tld for your self-hosted Libre.fm instance
+    */
+    host?: string
+    /** 
+     * The path (after host) for your self-hosted Libre.fm instance
+    */
+    path?: string
 }
 
 export interface LastfmClientOptions extends CommonClientOptions, NowPlayingOptions {

@@ -18,5 +18,27 @@
       "secret": "ec42e09d5ae0ee0f0816ca151008412a",
       "redirectUri": "http://localhost:9078/lastfm/callback"
     }
+  },
+  {
+    "name": "myLibreFmClient",
+    "enable": true,
+    "configureAs": "client",
+    "data": {
+      "apiKey": "anything",
+      "secret": "anything",
+      "librefm": true,
+      "redirectUri": "http://localhost:9078/lastfm/callback"
+    }
+  },
+  {
+    "name": "myLibreFmSource",
+    "enable": true,
+    "configureAs": "source",
+    "data": {
+      "apiKey": "anything",
+      "secret": "anything",
+      "librefm": true,
+      "redirectUri": "http://localhost:9078/lastfm/callback"
+    }
   }
 ]

@@ -13,6 +13,7 @@ import AbstractApiClient from "./AbstractApiClient.js";
 import { parseArtistCredits } from "../../utils/StringUtils.js";
 import { LastFMUser, LastFMAuth, LastFMTrack, LastFMUserGetRecentTracksResponse, LastFMBooleanNumber, LastFMUpdateNowPlayingResponse, LastFMUserGetInfoResponse } from 'lastfm-ts-api';
 import clone from 'clone';
+import e from "express";
 
 const badErrors = [
     'api key suspended',
@@ -29,14 +30,19 @@ const retryErrors = [
     'rate limit'
 ]
 
+const LIBREFM_HOST = 'libre.fm';
+const LIBREFM_PATH = '/2.0/';
+const LASTFM_HOST = 'ws.audioscrobbler.com';
+const LASTFM_PATH = '/2.0';
+
 export default class LastfmApiClient extends AbstractApiClient {
 
     user?: string;
     declare config: LastfmData;
     sessionKey?: string;
 
-    urlBase: string = 'ws.audioscrobbler.com'
-    path: string = '/2.0'
+    urlBase: string;
+    path: string;
     upstreamName: string = 'Last.fm';
 
     userApi!: LastFMUser;
@@ -44,17 +50,44 @@ export default class LastfmApiClient extends AbstractApiClient {
 
     constructor(name: any, config: Partial<LastfmData> & {configDir: string, localUrl: URL}, options: AbstractApiOptions) {
         super('lastfm', name, config, options);
-        const {redirectUri, apiKey, secret, session, configDir} = config;
+        const {
+            redirectUri, 
+            apiKey, 
+            secret, 
+            session, 
+            configDir,
+            path: configPath,
+            host: configHost,
+            librefm
+        } = config;
         this.redirectUri = `${redirectUri ?? joinedUrl(config.localUrl, 'lastfm/callback').href}?state=${name}`;
         if (apiKey === undefined) {
-            this.logger.warn("'apiKey' not found in config!");
+            this.logger.warn(`'apiKey' not found in config!`);
         }
-        if(config.librefm === true) {
-            this.urlBase = 'libre.fm'
-            this.path = '/2.0/';
-            this.logger.info('Libre.fm mode enabled');
+
+        let path = configPath,
+        host = configHost;
+
+        if(path === undefined && host === undefined) {
+            if(librefm) {
+                this.logger.info('Libre.fm flag set, using official instance host/path');
+                host = LIBREFM_HOST;
+                path = LIBREFM_PATH;
+            } else {
+                this.logger.info('Using official Last.fm instance host/path');
+                host = LASTFM_HOST;
+                path = LASTFM_PATH;
+            }
+        } else {
+            this.logger.info('path/host were already set! Assuming custom Libre.fm instance');
+        }
+
+        if(host !== LASTFM_HOST) {
             this.upstreamName = 'Libre.fm';
         }
+        this.urlBase = host;
+        this.path = path;
+
         this.logger.info(`Using ${this.urlBase}${this.path} for API calls`);
         this.workingCredsPath = `${configDir}/currentCreds-lastfm-${name}.json`;
     }
@@ -102,10 +135,10 @@ export default class LastfmApiClient extends AbstractApiClient {
     }
 
     getAuthUrl = () => {
-        if(this.config.librefm) {
-            return `https://libre.fm/api/auth/?api_key=${this.config.apiKey}&cb=${encodeURIComponent(this.redirectUri)}`;
+        if(this.urlBase === LASTFM_HOST) {
+            return `http://www.last.fm/api/auth/?api_key=${this.config.apiKey}&cb=${encodeURIComponent(this.redirectUri)}`;
         }
-        return `http://www.last.fm/api/auth/?api_key=${this.config.apiKey}&cb=${encodeURIComponent(this.redirectUri)}`;
+        return `https://${this.urlBase}/api/auth/?api_key=${this.config.apiKey}&cb=${encodeURIComponent(this.redirectUri)}`;
     }
 
     authenticate = async (token: any) => {
@@ -171,7 +204,7 @@ export default class LastfmApiClient extends AbstractApiClient {
             // but libre throws an error
             // so, if not libre allow empty user and set user from response to comply with new librefm implementation/refactor
             const infoPayload: Record<string, any> = {};
-            if(this.config.librefm) {
+            if(this.urlBase !== LASTFM_HOST) {
                 infoPayload.user = this.user;
             }
             const resp = await this.callApi<LastFMUserGetInfoResponse>(() => this.userApi.getInfo(infoPayload));
