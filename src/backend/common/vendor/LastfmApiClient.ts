@@ -194,7 +194,13 @@ export default class LastfmApiClient extends AbstractApiClient {
 
         let resp: LastFMUserGetRecentTracksResponse;
         try {
-            resp = await this.callApi<LastFMUserGetRecentTracksResponse>(() => this.userApi.getRecentTracks({...options, user: this.user, api_key: this.config.apiKey, extended: 1})); // await this.userApi.getRecentTracks({...options, user: this.user, extended: 1});
+            resp = await this.callApi<LastFMUserGetRecentTracksResponse>(() => this.userApi.getRecentTracks({
+                ...options, 
+                user: this.user,
+                // sk is required if user has "Hide recent listening" enabled on their profile
+                sk: this.sessionKey,
+                extended: 1
+            }));
 
             const {
                 recenttracks: {
