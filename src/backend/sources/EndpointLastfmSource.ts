@@ -14,8 +14,7 @@ import {
 import { parseRegexSingleOrFail } from "../utils.js";
 import MemorySource from "./MemorySource.js";
 import { LastFMEndpointSourceConfig } from "../common/infrastructure/config/source/endpointlfm.js";
-import { LastfmTrackUpdateRequest, NowPlayingPayload, TrackScrobblePayload } from "lastfm-node-client";
-import { scrobblePayloadToPlay } from "../common/vendor/LastfmApiClient.js";
+import { LastFMScrobbleRequestPayload, scrobblePayloadToPlay } from "../common/vendor/LastfmApiClient.js";
 import { Logger } from "@foxxmd/logging";
 import { PlayerStateOptions } from "./PlayerState/AbstractPlayerState.js";
 import { NowPlayingPlayerState } from "./PlayerState/NowPlayingPlayerState.js";
@@ -58,7 +57,7 @@ export class EndpointLastfmSource extends MemorySource {
         return matchesPath;
     }
 
-    static formatPlayObj(obj: LastfmTrackUpdateRequest, options: FormatPlayObjectOptions = {}): PlayObject {
+    static formatPlayObj(obj: LastFMScrobbleRequestPayload, options: FormatPlayObjectOptions = {}): PlayObject {
         return scrobblePayloadToPlay(obj);
     }
 
@@ -85,7 +84,7 @@ export class EndpointLastfmSource extends MemorySource {
     getNewPlayer = (logger: Logger, id: PlayPlatformId, opts: PlayerStateOptions) => new NowPlayingPlayerState(logger,  id, opts);
 }
 
-export const playStateFromRequest = (obj: LastfmTrackUpdateRequest): PlayerStateData => {
+export const playStateFromRequest = (obj: LastFMScrobbleRequestPayload): PlayerStateData => {
 
     const play = scrobblePayloadToPlay(obj);
     return {

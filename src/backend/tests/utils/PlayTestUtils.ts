@@ -10,9 +10,9 @@ import { sortByNewestPlayDate } from "../../utils.js";
 import { NO_DEVICE, NO_USER, PlayerStateDataMaybePlay, PlayPlatformId, ReportedPlayerStatus } from '../../common/infrastructure/Atomic.js';
 import { arrayListAnd } from '../../../core/StringUtils.js';
 import { findDelimiters } from '../../utils/StringUtils.js';
-import { TrackObject } from 'lastfm-node-client';
 import { ListRecord, ScrobbleRecord } from '../../common/infrastructure/config/client/tealfm.js';
 import { nanoid } from 'nanoid';
+import { LastFMTrackObject } from '../../common/vendor/LastfmApiClient.js';
 
 dayjs.extend(utc)
 dayjs.extend(isBetween);
@@ -343,7 +343,7 @@ export const generateArtistsStr = (options: CompoundArtistGenerateOptions = {}):
     return [artistStr, primaryArt, secondaryArt];
 }
 
-export const generateLastfmTrackObject = (): TrackObject => {
+export const generateLastfmTrackObject = (): LastFMTrackObject => {
     const now = dayjs();
     const artist = faker.music.artist();
     return {

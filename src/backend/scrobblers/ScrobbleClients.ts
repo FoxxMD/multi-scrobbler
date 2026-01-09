@@ -10,7 +10,7 @@ import { ListenBrainzClientConfig } from "../common/infrastructure/config/client
 import { MalojaClientConfig } from "../common/infrastructure/config/client/maloja.js";
 import { WildcardEmitter } from "../common/WildcardEmitter.js";
 import { Notifiers } from "../notifier/Notifiers.js";
-import { isDebugMode } from "../utils.js";
+import { isDebugMode, parseBool } from "../utils.js";
 import { readJson } from '../utils/DataUtils.js';
 import { joinedUrl } from "../utils/NetworkUtils.js";
 import { getTypeSchemaFromConfigGenerator } from "../utils/SchemaUtils.js";
@@ -206,6 +206,9 @@ export default class ScrobbleClients {
                         secret: process.env.LASTFM_SECRET,
                         redirectUri: process.env.LASTFM_REDIRECT_URI,
                         session: process.env.LASTFM_SESSION,
+                        librefm: process.env.LASTFM_LIBREFM_MODE !== undefined ? parseBool(process.env.LASTFM_LIBREFM_MODE, undefined) : undefined,
+                        host: process.env.LASTFM_HOST,
+                        path: process.env. LASTFM_PORT
                     };
                     if (!Object.values(lfm).every(x => x === undefined)) {
                         configs.push({
