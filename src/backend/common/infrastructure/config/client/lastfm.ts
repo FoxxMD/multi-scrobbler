@@ -25,6 +25,11 @@ export interface LastfmData extends CommonClientData, RequestRetryOptions {
      * @examples ["http://localhost:9078/lastfm/callback"]
      * */
     redirectUri?: string
+
+    /**
+     * Use Libre.fm instead of Last.fm
+     * */
+    librefm?: boolean
 }
 
 export interface LastfmClientOptions extends CommonClientOptions, NowPlayingOptions {

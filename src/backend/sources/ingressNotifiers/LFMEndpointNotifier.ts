@@ -2,7 +2,7 @@ import { Logger } from "@foxxmd/logging";
 import { Request } from "express";
 import { parseIdentifiersFromRequest } from "../EndpointLastfmSource.js";
 import { IngressNotifier } from "./IngressNotifier.js";
-import { LastfmTrackUpdateRequest } from "lastfm-node-client";
+import { LastFMScrobbleRequestPayload } from "../../common/vendor/LastfmApiClient.js";
 
 export class LFMEndpointNotifier extends IngressNotifier {
 
@@ -40,7 +40,7 @@ export class LFMEndpointNotifier extends IngressNotifier {
             if(!('method' in req.body)) {
                 return `Body is missing 'method' param`
             }
-            const method = (req.body as LastfmTrackUpdateRequest).method;
+            const method = (req.body as LastFMScrobbleRequestPayload).method;
             if(!['track.updateNowPlaying','track.scrobble'].includes(method)) {
                 return `Unexpected 'method' param value '${method}', expected either 'track.updateNowPlaying' or 'track.scrobble'`
             }
