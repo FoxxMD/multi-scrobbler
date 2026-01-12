@@ -30,6 +30,7 @@ import { SubsonicData, SubSonicSourceConfig } from "../common/infrastructure/con
 import { VLCData, VLCSourceConfig } from "../common/infrastructure/config/source/vlc.js";
 import { WebScrobblerSourceConfig } from "../common/infrastructure/config/source/webscrobbler.js";
 import { YTMusicData, YTMusicSourceConfig } from "../common/infrastructure/config/source/ytmusic.js";
+import { SonosData, SonosSourceConfig } from "../common/infrastructure/config/source/sonos.js";
 import { WildcardEmitter } from "../common/WildcardEmitter.js";
 import { parseBool } from "../utils.js";
 import { readJson } from '../utils/DataUtils.js';
@@ -70,6 +71,7 @@ import { CommonSourceOptions } from '../common/infrastructure/config/source/inde
 import { ExternalMetadataTerm, PlayTransformHooks, PlayTransformOptions } from '../common/infrastructure/Transform.js';
 //import LibrefmSource from './LibrefmSource.js';
 import { LibrefmSourceConfig } from '../common/infrastructure/config/source/librefm.js';
+import { SonosSource } from './SonosSource.js';
 
 type groupedNamedConfigs = {[key: string]: ParsedConfig[]};
 
@@ -184,6 +186,8 @@ export default class ScrobbleSources {
                     return "TealSourceConfig";
                 case 'rocksky':
                     return "RockskySourceConfig";
+                case 'sonos':
+                    return 'SonosSourceConfig';
             }
     }
 
@@ -790,7 +794,23 @@ export default class ScrobbleSources {
                             options: transformPresetEnv('AZURA')
                         });
                     }
-                    break;                    
+                    break;
+                case 'sonos': {
+                    const sonos = {
+                        host: process.env.SONOS_HOST,
+                    }
+                    if (!Object.values(sonos).every(x => x === undefined)) {
+                        configs.push({
+                            type: 'sonos',
+                            name: 'unnamed',
+                            source: 'ENV',
+                            mode: 'single',
+                            configureAs: defaultConfigureAs,
+                            data: sonos as unknown as SonosData,
+                            options: transformPresetEnv('SONOS')
+                        });
+                    }
+                }    break;                       
                 default:
                     break;
             }
@@ -1019,6 +1039,9 @@ export default class ScrobbleSources {
             case 'rocksky':
                 const RockskySource = (await import('./RockskySource.js')).default;
                 newSource = await new RockskySource(name, compositeConfig as RockskySourceConfig, this.internalConfig, this.emitter);
+                break;
+            case 'sonos':
+                newSource = await new SonosSource(name, compositeConfig as SonosSourceConfig, this.internalConfig, this.emitter);
                 break;
             default:
                 break;
