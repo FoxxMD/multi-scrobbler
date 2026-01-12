@@ -9,6 +9,7 @@ import Player from "../player/Player";
 import {useStartSourceMutation, useListenSourceMutation} from "./sourceDucks";
 import './statusCard.scss';
 
+const ambiguousTypes = ['lastfm','listenbrainz','koito','librefm','maloja','rocksky'];
 export interface SourceStatusCardData extends StatusCardSkeletonData, PropsFromRedux {
     loading?: boolean
 }
@@ -81,7 +82,7 @@ const SourceStatusCard = (props: SourceStatusCardData) => {
             manualListening,
             systemListeningBehavior
         } = data;
-        if(type === 'listenbrainz' || type === 'lastfm') {
+        if(ambiguousTypes.includes(type)) {
             header = `${display} (Source)`;
         }
 

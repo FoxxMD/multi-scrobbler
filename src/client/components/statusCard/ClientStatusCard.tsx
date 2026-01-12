@@ -58,7 +58,6 @@ const ClientStatusCard = (props: ClientStatusCardData) => {
             authed,
             initialized
         } = data;
-        if(type === 'lastfm' || type === 'listenbrainz')
         header = `${display} (Client)`;
 
         const scrobbled = initialized && (!hasAuth || (hasAuth && authed)) ? <Link to={`/scrobbled?type=${type}&name=${name}`}>Tracks Scrobbled</Link> : <span>Tracks Scrobbled</span>;
