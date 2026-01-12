@@ -20,10 +20,10 @@ const createSource = async (data: SonosData): Promise<SonosSource> => {
     return source;
 }
 
-it('does stuff', async function() {
+// it('does stuff', async function() {
 
-    const s = await createSource({host: process.env.SONOS_HOST});
-    await s.checkConnection();
-    await s.getRecentlyPlayed();
-    const f = 1;
-});
+//     const s = await createSource({host: process.env.SONOS_HOST});
+//     await s.checkConnection();
+//     await s.getRecentlyPlayed();
+//     const f = 1;
+// });
