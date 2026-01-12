@@ -1,0 +1,40 @@
+---
+title: Sonos
+toc_min_heading_level: 2
+toc_max_heading_level: 5
+---
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+import CodeBlock from '@theme/CodeBlock';
+import JsonConfig from '!!raw-loader!@site/../config/sonos.json.example';
+
+Multi-scrobbler can use the [Sonos](https://www.sonos.com) [local API](https://docs.sonos.com/docs/control) to monitor what your Sonos system is playing.
+
+MS supports scrobbling simultaneous, different Plays based on what each Group/Zone is playing.
+
+:::note
+
+For some services, including Spotify, Sonos only reports the **first** artist for a Track. You will most likely want to enable [Musicbrainz scrobble enhancements](/configuration/transforms/musicbrainz) so that your plays have correct information, including all artists, when scrobbled.
+
+:::
+
+:::tip
+
+Activity reporting for **other [Sources](/configuration/sources)** does not work well **when played through Sonos.**
+
+If you have other Sources configured for Multi-Scrobbler that you may play *through Sonos* you should try to add Sonos to the "deny" list for that Source so that it does not try to monitor Sonos activity. Check the documentation for each individual Source to see how to configure this exclusion.
+
+An example of this for [Plex](/configuration/sources/plex) would be to add Sonos to the "block" list ENV EX: `PLEX_DEVICES_BLOCK=sonos`
+
+:::
+
+## Configuration
+
+You **must** define the IP address of at least one Sonos/accessory in order for Multi-scrobbler to connect to your Sonos system.
+
+<Config config="SonosSourceConfig" fileContent={JsonConfig} name="sonos">
+        | Environmental Variable | Required? | Default | Description                                                            |
+        | ---------------------- | --------- | ------- | ---------------------------------------------------------------------- |
+        | `SONOS_HOST`           | Yes       |         | The IP address of any active Sonos device/accessory EX `192.168.0.150` |
+</Config>
