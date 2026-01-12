@@ -1,9 +1,9 @@
 import dayjs, { Dayjs } from "dayjs";
-import { BrainzMeta, PlayObject } from "../../../core/Atomic.js";
+import { BrainzMeta, PlayObject, URLData } from "../../../core/Atomic.js";
 import { nonEmptyStringOrDefault, splitByFirstFound } from "../../../core/StringUtils.js";
 import { removeUndefinedKeys, sleep, writeFile } from "../../utils.js";
 import { objectIsEmpty, readJson } from '../../utils/DataUtils.js';
-import { joinedUrl } from "../../utils/NetworkUtils.js";
+import { isPortReachableConnect, joinedUrl, normalizeWebAddress } from "../../utils/NetworkUtils.js";
 import { getScrobbleTsSOCDate } from "../../utils/TimeUtils.js";
 import { getNodeNetworkException, isNodeNetworkException } from "../errors/NodeErrors.js";
 import { UpstreamError } from "../errors/UpstreamError.js";
@@ -13,7 +13,6 @@ import AbstractApiClient from "./AbstractApiClient.js";
 import { parseArtistCredits } from "../../utils/StringUtils.js";
 import { LastFMUser, LastFMAuth, LastFMTrack, LastFMUserGetRecentTracksResponse, LastFMBooleanNumber, LastFMUpdateNowPlayingResponse, LastFMUserGetInfoResponse } from 'lastfm-ts-api';
 import clone from 'clone';
-import e from "express";
 
 const badErrors = [
     'api key suspended',
@@ -45,43 +44,42 @@ export default class LastfmApiClient extends AbstractApiClient {
     path: string;
     upstreamName: string = 'Last.fm';
 
+    url: URLData;
+
     userApi!: LastFMUser;
     trackApi!: LastFMTrack;
 
-    constructor(name: any, config: Partial<LastfmData> & {configDir: string, localUrl: URL}, options: AbstractApiOptions) {
-        super('lastfm', name, config, options);
+    constructor(name: any, config: Partial<LastfmData> & {urlBase?: string, configDir: string, localUrl: URL}, options: AbstractApiOptions & {type?: string}) {
+        const {type = 'lastfm'} = options ?? {};
+        super(type, name, config, options);
         const {
             redirectUri, 
             apiKey, 
             secret, 
             session, 
             configDir,
-            path: configPath = LASTFM_HOST,
-            host: configHost = LASTFM_PATH,
+            urlBase = `https://${LASTFM_HOST}${LASTFM_PATH}`
         } = config;
         this.redirectUri = `${redirectUri ?? joinedUrl(config.localUrl, 'lastfm/callback').href}?state=${name}`;
         if (apiKey === undefined) {
             this.logger.warn(`'apiKey' not found in config!`);
         }
 
-        let path = configPath,
-        host = configHost;
+        this.url = normalizeWebAddress(urlBase, {removeTrailingSlash: false});
 
-        if(host === LASTFM_HOST) {
+        if(this.url.url.host === LASTFM_HOST) {
             this.logger.info('Using official Last.fm instance host/path');
         } else {
             this.upstreamName = 'Libre.fm';
-            if(host === LIBREFM_HOST) {
+            if(this.url.url.host === LIBREFM_HOST) {
                 this.logger.info('Using official Libre.fm instance host/path');
             } else {
                 this.logger.info('Assuming custom Libre.fm instance');
             }
         }
-        this.urlBase = host;
-        this.path = path;
 
-        this.logger.info(`Using ${this.urlBase}${this.path} for API calls`);
-        this.workingCredsPath = `${configDir}/currentCreds-lastfm-${name}.json`;
+        this.logger.info(`Using ${this.url.normal} for API calls`);
+        this.workingCredsPath = `${configDir}/currentCreds-${this.url.url.host === LIBREFM_HOST ? 'lastfm' : 'librefm'}-${name}.json`;
     }
 
     callApi = async <T>(func: any, retries = 0): Promise<T> => {
@@ -127,17 +125,22 @@ export default class LastfmApiClient extends AbstractApiClient {
     }
 
     getAuthUrl = () => {
-        if(this.urlBase === LASTFM_HOST) {
+
+        if(this.url.url.host === LASTFM_HOST) {
             return `http://www.last.fm/api/auth/?api_key=${this.config.apiKey}&cb=${encodeURIComponent(this.redirectUri)}`;
         }
-        return `https://${this.urlBase}/api/auth/?api_key=${this.config.apiKey}&cb=${encodeURIComponent(this.redirectUri)}`;
+
+        const aUrl = new URL(this.url.url.toString());
+        aUrl.search = `?api_key=${this.config.apiKey}&cb=${encodeURIComponent(this.redirectUri)}`;
+        aUrl.pathname = '/api/auth';
+        return aUrl.toString();
     }
 
     authenticate = async (token: any) => {
 
         const auth = new LastFMAuth(this.config.apiKey, this.config.secret, undefined, {
-                hostname: this.urlBase,
-                path: this.path
+                hostname: this.url.url.host,
+                path: this.url.url.pathname
         });
 
         const sessionRes = await auth.getSession({token});
@@ -160,12 +163,12 @@ export default class LastfmApiClient extends AbstractApiClient {
 
     protected initApi = () => {
         this.userApi = new LastFMUser(this.config.apiKey, this.config.secret, this.sessionKey, {
-                hostname: this.urlBase,
-                path: this.path
+                hostname: this.url.url.host,
+                path: this.url.url.pathname
         });
         this.trackApi = new LastFMTrack(this.config.apiKey, this.config.secret, this.sessionKey, {
-                hostname: this.urlBase,
-                path: this.path
+                hostname: this.url.url.host,
+                path: this.url.url.pathname
         });
     }
 
@@ -182,6 +185,17 @@ export default class LastfmApiClient extends AbstractApiClient {
             return true;
         } catch (e) {
             throw new Error(`Current ${this.upstreamName} credentials file exists but could not be parsed`, {cause: e});
+        }
+    }
+
+    testConnection = async() => {
+        try {
+            await isPortReachableConnect(this.url.port, { host: this.url.url.hostname });
+            this.logger.verbose(`${this.url.url.hostname}:${this.url.port} is reachable.`);
+            return true;
+        } catch (e) {
+            const hint = e.error?.cause?.message ?? undefined;
+            throw new Error(`Could not connect to ${this.upstreamName} API server${hint !== undefined ? ` (${hint})` : ''}`, { cause: e.error ?? e });
         }
     }
 

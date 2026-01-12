@@ -35,7 +35,7 @@ export default class LastfmSource extends MemorySource {
         this.canBacklog = true;
         this.supportsUpstreamRecentlyPlayed = true;
         this.supportsUpstreamNowPlaying = true;
-        this.api = new LastfmApiClient(name, {...config.data, configDir: internal.configDir, localUrl: internal.localUrl}, {logger: this.logger});
+        this.api = new LastfmApiClient(name, {...config.data, configDir: internal.configDir, localUrl: internal.localUrl}, {logger: this.logger, type});
         this.playerSourceOfTruth = SOURCE_SOT.HISTORY;
         // https://www.last.fm/api/show/user.getRecentTracks
         this.SCROBBLE_BACKLOG_COUNT = 200;
@@ -50,19 +50,15 @@ export default class LastfmSource extends MemorySource {
         return await this.api.initialize();
     }
 
-    protected async doCheckConnection():Promise<true | string | undefined> {
+    protected async doCheckConnection(): Promise<true | string | undefined> {
         try {
-            await request.get('http://ws.audioscrobbler.com/2.0/');
+            await this.api.testConnection();
             return true;
         } catch (e) {
-            if(isNodeNetworkException(e)) {
-                throw new Error('Could not communicate with Last.fm API server', {cause: e});
-            } else if(e.status >= 500) {
-                throw new Error('Last.fm API server returning an unexpected response', {cause: e})
-            }
-            return true;
+            throw e;
         }
     }
+
     doAuthentication = async () => {
         try {
             return await this.api.testAuth();

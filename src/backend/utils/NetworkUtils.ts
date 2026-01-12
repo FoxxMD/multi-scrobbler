@@ -87,16 +87,16 @@ export const isPortReachableConnect = async (port: number, opts: PortReachableOp
 
 const QUOTES_UNWRAP_REGEX: RegExp = new RegExp(/^"(.*)"$/);
 
-export const normalizeWebAddress = (val: string, options: {defaultPath?: string} = {}): URLData => {
+export const normalizeWebAddress = (val: string, options: {defaultPath?: string, removeTrailingSlash?: boolean} = {}): URLData => {
     let cleanUserUrl = val.trim();
     const results = parseRegexSingle(QUOTES_UNWRAP_REGEX, val);
     if (results !== undefined && results.groups && results.groups.length > 0) {
         cleanUserUrl = results.groups[0];
     }
 
-    const {defaultPath} = options;
+    const {defaultPath, removeTrailingSlash = true} = options;
 
-    let normal = normalizeUrl(cleanUserUrl, {removeTrailingSlash: true});
+    let normal = normalizeUrl(cleanUserUrl, {removeTrailingSlash});
     const u = new URL(normal);
     let port: number;
 

@@ -37,6 +37,15 @@ export default class LastfmScrobbler extends AbstractScrobbleClient {
         return true;
     }
 
+    protected async doCheckConnection(): Promise<true | string | undefined> {
+        try {
+            await this.api.testConnection();
+            return true;
+        } catch (e) {
+            throw e;
+        }
+    }
+
     doAuthentication = async () => {
         try {
             return await this.api.testAuth();

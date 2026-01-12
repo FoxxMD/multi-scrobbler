@@ -10,6 +10,13 @@ export interface LibrefmData extends LastfmData {
          * (Optional) The path (after host) for your self-hosted Libre.fm instance
         */
         path?: string
+
+        /** 
+         * (Optional) The host and path prefix for your Libre.fm instance
+         * 
+         * @default 'https://libre.fm/2.0/'
+        */
+        urlBase?: string
 }
 
 export interface LibrefmClientOptions extends LastfmClientOptions {

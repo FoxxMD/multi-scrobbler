@@ -14,13 +14,12 @@ export default class LibrefmScrobbler extends LastfmScrobbler {
         constructor(name: any, config: LibrefmClientConfig, options = {}, notifier: Notifiers, emitter: EventEmitter, logger: Logger) {
             const {
                 data: {
-                    path = LIBREFM_PATH,
-                    host = LIBREFM_HOST,
+                    urlBase = `https://${LIBREFM_HOST}${LIBREFM_PATH}`,
                     ...rest
                 } = {},
             } = config;
-            config.data = {...(rest as LastfmData), path, host};
-            super(name, config, options, notifier, emitter, logger, 'librefm');
+            config.data = {...(rest as LastfmData), urlBase};
+            super(name, config, {...options, type: 'librefm'}, notifier, emitter, logger, 'librefm');
             this.upstreamType = 'Libre.fm';
         }
 

@@ -13,12 +13,11 @@ export default class LibrefmSource extends LastfmSource {
     constructor(name: any, config: LibrefmSourceConfig, internal: InternalConfig, emitter: EventEmitter) {
         const {
             data: {
-                path = LIBREFM_PATH,
-                host = LIBREFM_HOST,
+                urlBase = `https://${LIBREFM_HOST}${LIBREFM_PATH}`,
                 ...rest
             } = {},
         } = config;
-        config.data = {...(rest as LastfmData), path, host};
+        config.data = {...(rest as LastfmData), urlBase};
         super(name, config, internal, emitter, 'librefm');
         this.upstreamType = 'Libre.fm';
     }

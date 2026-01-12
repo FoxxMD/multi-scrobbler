@@ -233,8 +233,7 @@ export default class ScrobbleClients {
                         secret: process.env.LIBREFM_SECRET,
                         redirectUri: process.env.LIBREFM_REDIRECT_URI,
                         session: process.env.LIBREFM_SESSION,
-                        host: process.env.LIBREFM_HOST,
-                        path: process.env. LIBREFM_PORT
+                        urlBase: process.env.LIBREFM_URLBASE,
                     };
                     if (!Object.values(libre).every(x => x === undefined)) {
                         configs.push({
