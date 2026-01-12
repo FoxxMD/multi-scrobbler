@@ -16,6 +16,7 @@ import { BlueSkyOauthApiClient } from "../common/vendor/bluesky/BlueSkyOauthApiC
 import LibrefmScrobbler from "../scrobblers/LibrefmScrobbler.js";
 import LibrefmSource from "../sources/LibrefmSource.js";
 import e from "express";
+import AbstractSource from "../sources/AbstractSource.js";
 
 export const setupAuthRoutes = (app: ExpressWithAsync, logger: Logger, sourceMiddle: ExpressHandler, clientMiddle: ExpressHandler, scrobbleSources: ScrobbleSources, scrobbleClients: ScrobbleClients) => {
     app.use('/api/client/auth', clientMiddle);
@@ -109,10 +110,14 @@ export const setupAuthRoutes = (app: ExpressWithAsync, logger: Logger, sourceMid
                 }
                 await entity.api.authenticate(token);
                 entity.authFailure = false;
-                if(entity instanceof LastfmSource) {
+                if(entity instanceof AbstractSource) {
                     entity.poll().catch((e) => logger.error(e));
                 } else {
-                    entity.tryInitialize().catch((e) => logger.error(e));
+                    entity.tryInitialize()
+                    .catch((e) => logger.error(e))
+                    .then(() => {
+                        entity.initScrobbleMonitoring().catch((e) => logger.error(e));
+                    })
                 }
                 return res.send('OK');
             } catch (e) {
