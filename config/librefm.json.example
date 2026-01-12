@@ -1,21 +1,21 @@
 [
   {
-    "name": "myLastFmClient",
+    "name": "myLibreFmClient",
     "enable": true,
     "configureAs": "client",
     "data": {
-      "apiKey": "a89cba1569901a0671d5a9875fed4be1",
-      "secret": "ec42e09d5ae0ee0f0816ca151008412a",
+      "apiKey": "anything",
+      "secret": "anything",
       "redirectUri": "http://localhost:9078/lastfm/callback"
     }
   },
   {
-    "name": "myLastFmSource",
+    "name": "myLibreFmSource",
     "enable": true,
     "configureAs": "source",
     "data": {
-      "apiKey": "a89cba1569901a0671d5a9875fed4be1",
-      "secret": "ec42e09d5ae0ee0f0816ca151008412a",
+      "apiKey": "anything",
+      "secret": "anything",
       "redirectUri": "http://localhost:9078/lastfm/callback"
     }
   }

@@ -3,7 +3,7 @@ import EventEmitter from "events";
 import request from "superagent";
 import { PlayObject, SOURCE_SOT } from "../../core/Atomic.js";
 import { isNodeNetworkException } from "../common/errors/NodeErrors.js";
-import { FormatPlayObjectOptions, InternalConfig, PlayPlatformId } from "../common/infrastructure/Atomic.js";
+import { FormatPlayObjectOptions, InternalConfig, PlayPlatformId, SourceType } from "../common/infrastructure/Atomic.js";
 import { LastfmSourceConfig } from "../common/infrastructure/config/source/lastfm.js";
 import LastfmApiClient, { formatPlayObj } from "../common/vendor/LastfmApiClient.js";
 import { sortByOldestPlayDate } from "../utils.js";
@@ -18,10 +18,11 @@ export default class LastfmSource extends MemorySource {
     api: LastfmApiClient;
     requiresAuth = true;
     requiresAuthInteraction = true;
+    upstreamType: string = 'Last.fm';
 
     declare config: LastfmSourceConfig;
 
-    constructor(name: any, config: LastfmSourceConfig, internal: InternalConfig, emitter: EventEmitter) {
+    constructor(name: any, config: LastfmSourceConfig, internal: InternalConfig, emitter: EventEmitter, type: SourceType = 'lastfm') {
         const {
             data: {
                 interval = 15,
@@ -29,7 +30,7 @@ export default class LastfmSource extends MemorySource {
                 ...restData
             } = {}
         } = config;
-        super('lastfm', name, {...config, data: {interval, maxInterval, ...restData}}, internal, emitter);
+        super(type, name, {...config, data: {interval, maxInterval, ...restData}}, internal, emitter);
         this.canPoll = true;
         this.canBacklog = true;
         this.supportsUpstreamRecentlyPlayed = true;

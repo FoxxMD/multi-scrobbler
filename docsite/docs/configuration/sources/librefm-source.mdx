@@ -1,0 +1,28 @@
+---
+title: Libre.fm
+toc_min_heading_level: 2
+toc_max_heading_level: 5
+---
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+import CodeBlock from '@theme/CodeBlock';
+import JsonConfig from '!!raw-loader!@site/../config/librefm.json.example';
+
+This Source **monitors your Libre.fm scrobble history** and re-scrobbles new activity to configured [Clients.](/configuration/clients)
+
+:::tip[Other Uses]
+
+* To **scrobble to** Libre.fm, create a [Libre.fm (Client)](/configuration/clients/librefm)
+
+:::
+
+To configure this Source use the same registration instructions and configuration data shown in [Libre.fm (Client)](/configuration/clients/librefm) with the difference being `"configureAs": "source"` defined in the File/AIO configuration below.
+
+## Configuration
+
+<Config config="LibrefmSourceConfig" fileContent={JsonConfig} name="librefm">
+:::note
+        You cannot use ENV variables shown in the [Libre.fm Client config](/configuration/clients/librefm) -- multi-scrobbler assumes Libre.fm ENVs are always used for the **client** configuration. You must use the [File or AIO](/configuration?configType=file#configuration-types) config to setup Libre.fm as a Source.
+:::
+</Config>

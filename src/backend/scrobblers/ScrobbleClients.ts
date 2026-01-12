@@ -28,6 +28,8 @@ import RockskyScrobbler from './RockskyScrobbler.js';
 import { RockSkyClientConfig } from '../common/infrastructure/config/client/rocksky.js';
 import { CommonClientOptions } from '../common/infrastructure/config/client/index.js';
 import { ExternalMetadataTerm, PlayTransformHooks } from '../common/infrastructure/Transform.js';
+import LibrefmScrobbler from './LibrefmScrobbler.js';
+import { LibrefmClientConfig } from '../common/infrastructure/config/client/librefm.js';
 
 type groupedNamedConfigs = {[key: string]: ParsedConfig[]};
 
@@ -106,6 +108,9 @@ export default class ScrobbleClients {
                     break;
                 case 'lastfm':
                     this.schemaDefinitions[type] = getTypeSchemaFromConfigGenerator("LastfmClientConfig");
+                    break;
+                case 'librefm':
+                    this.schemaDefinitions[type] = getTypeSchemaFromConfigGenerator("LibrefmClientConfig");
                     break;
                 case 'listenbrainz':
                     this.schemaDefinitions[type] = getTypeSchemaFromConfigGenerator("ListenBrainzClientConfig");
@@ -222,6 +227,27 @@ export default class ScrobbleClients {
                         })
                     }
                     break;
+                case 'librefm': {
+                    const libre = {
+                        apiKey: process.env.LIBREFM_API_KEY,
+                        secret: process.env.LIBREFM_SECRET,
+                        redirectUri: process.env.LIBREFM_REDIRECT_URI,
+                        session: process.env.LIBREFM_SESSION,
+                        host: process.env.LIBREFM_HOST,
+                        path: process.env. LIBREFM_PORT
+                    };
+                    if (!Object.values(libre).every(x => x === undefined)) {
+                        configs.push({
+                            type: 'librefm',
+                            name: 'unnamed-librefm',
+                            source: 'ENV',
+                            mode: 'single',
+                            configureAs: 'client',
+                            data: {...libre, redirectUri: libre.redirectUri ?? joinedUrl(this.localUrl, 'lastfm/callback').toString()},
+                            options: transformPresetEnv('LIBREFM')
+                        })
+                    }
+                }    break;
                 case 'listenbrainz':
                     const lz = {
                         url: process.env.LZ_URL,
@@ -404,6 +430,9 @@ ${sources.join('\n')}`);
                 break;
             case 'lastfm':
                 newClient = new LastfmScrobbler(name, {...clientConfig, data: {configDir: this.configDir, ...data} } as unknown as LastfmClientConfig, {}, notifier, this.emitter, this.logger);
+                break;
+            case 'librefm':
+                newClient = new LibrefmScrobbler(name, {...clientConfig, data: {configDir: this.configDir, ...data} } as unknown as LibrefmClientConfig, {}, notifier, this.emitter, this.logger);
                 break;
             case 'listenbrainz':
                 newClient = new ListenbrainzScrobbler(name, {...clientConfig, data: {configDir: this.configDir, ...data} } as unknown as ListenBrainzClientConfig, {}, notifier, this.emitter, this.logger);

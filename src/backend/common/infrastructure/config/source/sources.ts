@@ -24,6 +24,7 @@ import { KoitoSourceAIOConfig, KoitoSourceConfig } from "./koito.js";
 import { MalojaSourceAIOConfig, MalojaSourceConfig } from "./maloja.js";
 import { TealSourceAIOConfig, TealSourceConfig } from "./tealfm.js";
 import { RockskySourceAIOConfig, RockskySourceConfig } from "./rocksky.js";
+import { LibrefmSouceAIOConfig, LibrefmSourceConfig } from "./librefm.js";
 
 
 export type SourceConfig =
@@ -36,6 +37,7 @@ export type SourceConfig =
     | SubSonicSourceConfig
     | JellyApiSourceConfig
     | LastfmSourceConfig
+    | LibrefmSourceConfig
     | YTMusicSourceConfig
     | MPRISSourceConfig
     | MopidySourceConfig
@@ -65,6 +67,7 @@ export type SourceAIOConfig =
     | SubsonicSourceAIOConfig
     | JellyApiSourceAIOConfig
     | LastFmSouceAIOConfig
+    | LibrefmSouceAIOConfig
     | YTMusicSourceAIOConfig
     | MPRISSourceAIOConfig
     | MopidySourceAIOConfig

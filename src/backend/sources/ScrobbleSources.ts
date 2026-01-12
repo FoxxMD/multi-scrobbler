@@ -70,6 +70,8 @@ import { RockskySourceConfig } from '../common/infrastructure/config/source/rock
 import RockskySource from './RockskySource.js';
 import { CommonSourceOptions } from '../common/infrastructure/config/source/index.js';
 import { ExternalMetadataTerm, PlayTransformHooks, PlayTransformOptions } from '../common/infrastructure/Transform.js';
+import LibrefmSource from './LibrefmSource.js';
+import { LibrefmSourceConfig } from '../common/infrastructure/config/source/librefm.js';
 
 type groupedNamedConfigs = {[key: string]: ParsedConfig[]};
 
@@ -161,6 +163,9 @@ export default class ScrobbleSources {
                     break;
                 case 'lastfm':
                     this.schemaDefinitions[type] = getTypeSchemaFromConfigGenerator("LastfmSourceConfig");
+                    break;
+                case 'librefm':
+                    this.schemaDefinitions[type] = getTypeSchemaFromConfigGenerator("LibrefmSourceConfig");
                     break;
                 case 'ytmusic':
                     this.schemaDefinitions[type] = getTypeSchemaFromConfigGenerator("YTMusicSourceConfig");
@@ -720,8 +725,8 @@ export default class ScrobbleSources {
                     continue;
                 }
                 for (const [i,rawConf] of sourceConfigs.entries()) {
-                    if(['lastfm','listenbrainz','koito','maloja','tealfm','rocksky'].includes(sourceType) && 
-                    ((rawConf as LastfmSourceConfig | ListenBrainzSourceConfig | KoitoSourceConfig | MalojaSourceConfig | TealSourceConfig | RockskySourceConfig).configureAs !== 'source')) 
+                    if(['lastfm','listenbrainz','koito','maloja','tealfm','rocksky','librefm'].includes(sourceType) && 
+                    ((rawConf as LastfmSourceConfig | LibrefmSourceConfig | ListenBrainzSourceConfig | KoitoSourceConfig | MalojaSourceConfig | TealSourceConfig | RockskySourceConfig).configureAs !== 'source')) 
                     {
                         this.logger.debug(`Skipping config ${i + 1} from ${sourceType}.json because it is configured as a client.`);
                         continue;
@@ -823,6 +828,9 @@ export default class ScrobbleSources {
                 break;
             case 'lastfm':
                 newSource = await new LastfmSource(name, compositeConfig as LastfmSourceConfig, this.internalConfig, this.emitter);
+                break;
+            case 'librefm':
+                newSource = await new LibrefmSource(name, compositeConfig as LibrefmSourceConfig, this.internalConfig, this.emitter);
                 break;
             case 'deezer':
                 const deezerConfig = compositeConfig as DeezerCompatConfig;

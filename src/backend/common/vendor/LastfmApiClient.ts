@@ -30,10 +30,10 @@ const retryErrors = [
     'rate limit'
 ]
 
-const LIBREFM_HOST = 'libre.fm';
-const LIBREFM_PATH = '/2.0/';
-const LASTFM_HOST = 'ws.audioscrobbler.com';
-const LASTFM_PATH = '/2.0';
+export const LIBREFM_HOST = 'libre.fm';
+export const LIBREFM_PATH = '/2.0/';
+export const LASTFM_HOST = 'ws.audioscrobbler.com';
+export const LASTFM_PATH = '/2.0';
 
 export default class LastfmApiClient extends AbstractApiClient {
 
@@ -56,9 +56,8 @@ export default class LastfmApiClient extends AbstractApiClient {
             secret, 
             session, 
             configDir,
-            path: configPath,
-            host: configHost,
-            librefm
+            path: configPath = LASTFM_HOST,
+            host: configHost = LASTFM_PATH,
         } = config;
         this.redirectUri = `${redirectUri ?? joinedUrl(config.localUrl, 'lastfm/callback').href}?state=${name}`;
         if (apiKey === undefined) {
@@ -68,22 +67,15 @@ export default class LastfmApiClient extends AbstractApiClient {
         let path = configPath,
         host = configHost;
 
-        if(path === undefined && host === undefined) {
-            if(librefm) {
-                this.logger.info('Libre.fm flag set, using official instance host/path');
-                host = LIBREFM_HOST;
-                path = LIBREFM_PATH;
-            } else {
-                this.logger.info('Using official Last.fm instance host/path');
-                host = LASTFM_HOST;
-                path = LASTFM_PATH;
-            }
+        if(host === LASTFM_HOST) {
+            this.logger.info('Using official Last.fm instance host/path');
         } else {
-            this.logger.info('path/host were already set! Assuming custom Libre.fm instance');
-        }
-
-        if(host !== LASTFM_HOST) {
             this.upstreamName = 'Libre.fm';
+            if(host === LIBREFM_HOST) {
+                this.logger.info('Using official Libre.fm instance host/path');
+            } else {
+                this.logger.info('Assuming custom Libre.fm instance');
+            }
         }
         this.urlBase = host;
         this.path = path;
@@ -496,7 +488,7 @@ export const playToClientPayload = (playObj: PlayObject): LastFMScrobblePayload 
         return removeUndefinedKeys(rawPayload);
     }
 
-export const formatPlayObj = (obj: LastFMTrackObject, options: FormatPlayObjectOptions = {}): PlayObject => {
+export const formatPlayObj = (obj: LastFMTrackObject, options: FormatPlayObjectOptions & {source?: string} = {}): PlayObject => {
     const {
         artist: {
             '#text': artists,
@@ -518,6 +510,9 @@ export const formatPlayObj = (obj: LastFMTrackObject, options: FormatPlayObjectO
         url,
         mbid,
     } = obj;
+    const {
+        source = 'Lastfm'
+    } = options;
     // arbitrary decision yikes
     const artistStrings = splitByFirstFound(artists, [','], artistName === undefined || artistName.trim() === '' ? [] : [artistName]);
     let al = album;
@@ -546,7 +541,7 @@ export const formatPlayObj = (obj: LastFMTrackObject, options: FormatPlayObjectO
         meta: {
             nowPlaying: nowplaying === 'true',
             mbid,
-            source: 'Lastfm',
+            source,
             url: {
                 web: url,
             }
