@@ -4,7 +4,7 @@ import { PlayObject } from "../../core/Atomic.js";
 import { buildTrackString, capitalize } from "../../core/StringUtils.js";
 import { isNodeNetworkException } from "../common/errors/NodeErrors.js";
 import { UpstreamError } from "../common/errors/UpstreamError.js";
-import { FormatPlayObjectOptions } from "../common/infrastructure/Atomic.js";
+import { FormatPlayObjectOptions, InternalConfigOptional } from "../common/infrastructure/Atomic.js";
 import { LastfmClientConfig } from "../common/infrastructure/config/client/lastfm.js";
 import LastfmApiClient, { LastFMIgnoredScrobble, playToClientPayload, formatPlayObj, LASTFM_HOST, LASTFM_PATH } from "../common/vendor/LastfmApiClient.js";
 import { Notifiers } from "../notifier/Notifiers.js";
@@ -19,9 +19,8 @@ export default class LastfmScrobbler extends AbstractScrobbleClient {
 
     declare config: LastfmClientConfig;
 
-    constructor(name: any, config: LastfmClientConfig, options = {}, notifier: Notifiers, emitter: EventEmitter, logger: Logger, type = 'lastfm') {
+    constructor(name: any, config: LastfmClientConfig, options: InternalConfigOptional & {[key: string]: any}, notifier: Notifiers, emitter: EventEmitter, logger: Logger, type = 'lastfm') {
         super(type, name, config, notifier, emitter, logger);
-        // @ts-expect-error sloppy data structure assign
         this.api = new LastfmApiClient(name, config.data, {...options, logger});
         // https://www.last.fm/api/show/user.getRecentTracks
         this.MAX_INITIAL_SCROBBLES_FETCH = 100;

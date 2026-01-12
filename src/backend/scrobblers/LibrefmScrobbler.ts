@@ -5,13 +5,13 @@ import { Notifiers } from "../notifier/Notifiers.js";
 import { LibrefmClientConfig } from "../common/infrastructure/config/client/librefm.js";
 import { formatPlayObj, LIBREFM_HOST, LIBREFM_PATH } from "../common/vendor/LastfmApiClient.js";
 import { LastfmData } from "../common/infrastructure/config/client/lastfm.js";
-import { FormatPlayObjectOptions } from "../common/infrastructure/Atomic.js";
+import { FormatPlayObjectOptions, InternalConfigOptional } from "../common/infrastructure/Atomic.js";
 
 export default class LibrefmScrobbler extends LastfmScrobbler {
 
         declare config: LibrefmClientConfig;
 
-        constructor(name: any, config: LibrefmClientConfig, options = {}, notifier: Notifiers, emitter: EventEmitter, logger: Logger) {
+        constructor(name: any, config: LibrefmClientConfig, options: InternalConfigOptional & {[key: string]: any}, notifier: Notifiers, emitter: EventEmitter, logger: Logger) {
             const {
                 data: {
                     urlBase = `https://${LIBREFM_HOST}${LIBREFM_PATH}`,

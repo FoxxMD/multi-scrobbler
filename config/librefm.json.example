@@ -6,7 +6,7 @@
     "data": {
       "apiKey": "anything",
       "secret": "anything",
-      "redirectUri": "http://localhost:9078/lastfm/callback"
+      "redirectUri": "http://localhost:9078/librefm/callback"
     }
   },
   {
@@ -16,7 +16,7 @@
     "data": {
       "apiKey": "anything",
       "secret": "anything",
-      "redirectUri": "http://localhost:9078/lastfm/callback"
+      "redirectUri": "http://localhost:9078/librefm/callback"
     }
   }
 ]

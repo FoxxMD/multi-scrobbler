@@ -35,7 +35,7 @@ export default class LastfmSource extends MemorySource {
         this.canBacklog = true;
         this.supportsUpstreamRecentlyPlayed = true;
         this.supportsUpstreamNowPlaying = true;
-        this.api = new LastfmApiClient(name, {...config.data, configDir: internal.configDir, localUrl: internal.localUrl}, {logger: this.logger, type});
+        this.api = new LastfmApiClient(name, config.data, {logger: this.logger, type, ...internal});
         this.playerSourceOfTruth = SOURCE_SOT.HISTORY;
         // https://www.last.fm/api/show/user.getRecentTracks
         this.SCROBBLE_BACKLOG_COUNT = 200;

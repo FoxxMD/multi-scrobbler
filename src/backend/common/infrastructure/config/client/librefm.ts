@@ -17,6 +17,13 @@ export interface LibrefmData extends LastfmData {
          * @default 'https://libre.fm/2.0/'
         */
         urlBase?: string
+    /**
+     * Optional URI to use for callback. Specify this if callback should be different than the default. MUST have "librefm/callback" in the URL somewhere.
+     *
+     * @default "http://localhost:9078/librefm/callback"
+     * @examples ["http://localhost:9078/librefm/callback"]
+     * */
+    redirectUri?: string
 }
 
 export interface LibrefmClientOptions extends LastfmClientOptions {

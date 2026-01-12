@@ -90,7 +90,12 @@ describe('Sample Configs', function () {
 
                     let emitter = new EventEmitter();
                     await copyFile(samplePath(componentType), `${componentType}.json`);
-                    const clients = new ScrobbleClients(emitter, new EventEmitter, new URL('http://example.com'), process.cwd(), loggerTest);
+                    const clients = new ScrobbleClients(emitter, new EventEmitter, {
+                        localUrl: new URL('http://example.com'),
+                        configDir: process.cwd(),
+                        version: 'test'
+                    },
+                    loggerTest);
                     await clients.buildClientsFromConfig(new Notifiers(new EventEmitter, new EventEmitter, new EventEmitter, loggerTest));
                     expect(clients.clients).length(1);
                 });

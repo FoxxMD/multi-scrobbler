@@ -126,6 +126,8 @@ export interface InternalConfig {
     logger: Logger
 }
 
+export type InternalConfigOptional = Omit<InternalConfig, 'logger'>
+
 export type ReportedPlayerStatus = 'playing' | 'stopped' | 'paused' | 'unknown';
 export const REPORTED_PLAYER_STATUSES = {
     playing: 'playing' as ReportedPlayerStatus,

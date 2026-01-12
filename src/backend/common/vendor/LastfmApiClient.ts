@@ -7,7 +7,7 @@ import { isPortReachableConnect, joinedUrl, normalizeWebAddress } from "../../ut
 import { getScrobbleTsSOCDate } from "../../utils/TimeUtils.js";
 import { getNodeNetworkException, isNodeNetworkException } from "../errors/NodeErrors.js";
 import { UpstreamError } from "../errors/UpstreamError.js";
-import { AbstractApiOptions, DEFAULT_RETRY_MULTIPLIER, FormatPlayObjectOptions } from "../infrastructure/Atomic.js";
+import { AbstractApiOptions, DEFAULT_RETRY_MULTIPLIER, FormatPlayObjectOptions, InternalConfigOptional } from "../infrastructure/Atomic.js";
 import { LastfmData } from "../infrastructure/config/client/lastfm.js";
 import AbstractApiClient from "./AbstractApiClient.js";
 import { parseArtistCredits } from "../../utils/StringUtils.js";
@@ -49,28 +49,30 @@ export default class LastfmApiClient extends AbstractApiClient {
     userApi!: LastFMUser;
     trackApi!: LastFMTrack;
 
-    constructor(name: any, config: Partial<LastfmData> & {urlBase?: string, configDir: string, localUrl: URL}, options: AbstractApiOptions & {type?: string}) {
-        const {type = 'lastfm'} = options ?? {};
+    constructor(name: any, config: Partial<LastfmData> & {urlBase?: string}, options: AbstractApiOptions & InternalConfigOptional & {type?: string}) {
+        const {type = 'lastfm', configDir, localUrl} = options ?? {};
         super(type, name, config, options);
         const {
             redirectUri, 
             apiKey, 
             secret, 
             session, 
-            configDir,
             urlBase = `https://${LASTFM_HOST}${LASTFM_PATH}`
         } = config;
-        this.redirectUri = `${redirectUri ?? joinedUrl(config.localUrl, 'lastfm/callback').href}?state=${name}`;
+
         if (apiKey === undefined) {
             this.logger.warn(`'apiKey' not found in config!`);
         }
 
         this.url = normalizeWebAddress(urlBase, {removeTrailingSlash: false});
+        let cbPrefix = 'lastfm';
 
         if(this.url.url.host === LASTFM_HOST) {
             this.logger.info('Using official Last.fm instance host/path');
+            cbPrefix = 'lastfm';
         } else {
             this.upstreamName = 'Libre.fm';
+            cbPrefix = 'librefm';
             if(this.url.url.host === LIBREFM_HOST) {
                 this.logger.info('Using official Libre.fm instance host/path');
             } else {
@@ -78,8 +80,12 @@ export default class LastfmApiClient extends AbstractApiClient {
             }
         }
 
+        this.redirectUri = `${redirectUri ?? joinedUrl(localUrl, `${cbPrefix}/callback`).href}?state=${name}`;
+
         this.logger.info(`Using ${this.url.normal} for API calls`);
-        this.workingCredsPath = `${configDir}/currentCreds-${this.url.url.host === LIBREFM_HOST ? 'lastfm' : 'librefm'}-${name}.json`;
+        this.logger.info(`Redirect Uri: ${this.redirectUri}`);
+        this.workingCredsPath = `${configDir}/currentCreds-${this.url.url.host === LASTFM_HOST ? 'lastfm' : 'librefm'}-${name}.json`;
+        const f = 1;
     }
 
     callApi = async <T>(func: any, retries = 0): Promise<T> => {

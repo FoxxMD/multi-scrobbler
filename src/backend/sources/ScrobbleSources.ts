@@ -1,7 +1,7 @@
 /* eslint-disable no-case-declarations */
 import { childLogger, Logger } from '@foxxmd/logging';
 import EventEmitter from "events";
-import { ConfigMeta, InternalConfig, isSourceType, SourceType, sourceTypes } from "../common/infrastructure/Atomic.js";
+import { ConfigMeta, InternalConfig, InternalConfigOptional, isSourceType, SourceType, sourceTypes } from "../common/infrastructure/Atomic.js";
 import { AIOConfig, SourceDefaults } from "../common/infrastructure/config/aioConfig.js";
 import { AzuracastData, AzuracastSourceConfig } from "../common/infrastructure/config/source/azuracast.js";
 import { ChromecastSourceConfig } from "../common/infrastructure/config/source/chromecast.js";
@@ -76,8 +76,6 @@ import { LibrefmSourceConfig } from '../common/infrastructure/config/source/libr
 type groupedNamedConfigs = {[key: string]: ParsedConfig[]};
 
 type ParsedConfig = SourceAIOConfig & ConfigMeta;
-
-type InternalConfigOptional = Omit<InternalConfig, 'logger'>
 
 export default class ScrobbleSources {
 

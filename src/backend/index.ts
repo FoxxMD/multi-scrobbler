@@ -97,12 +97,14 @@ const configDir = process.env.CONFIG_DIR || path.resolve(projectDir, `./config`)
         createVegaGenerator()
         initLogger.info('Schema definitions generated');
 
-        const scrobbleClients = new ScrobbleClients(root.get('clientEmitter'), root.get('sourceEmitter'), root.get('localUrl'), root.get('configDir'), root.get('logger'));
-        const scrobbleSources = new ScrobbleSources(root.get('sourceEmitter'), {
+        const internalConfigOptional = {
              localUrl: root.get('localUrl'),
             configDir: root.get('configDir'),
              version: root.get('version')
-             }, root.get('logger'));
+             };
+
+        const scrobbleClients = new ScrobbleClients(root.get('clientEmitter'), root.get('sourceEmitter'), internalConfigOptional, root.get('logger'));
+        const scrobbleSources = new ScrobbleSources(root.get('sourceEmitter'), internalConfigOptional, root.get('logger'));
 
         await root.items.cache().init();
 
