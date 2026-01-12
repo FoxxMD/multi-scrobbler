@@ -60,16 +60,15 @@ export default class LastfmApiClient extends AbstractApiClient {
             urlBase = `https://${LASTFM_HOST}${LASTFM_PATH}`
         } = config;
 
-        if (apiKey === undefined) {
-            this.logger.warn(`'apiKey' not found in config!`);
-        }
-
         this.url = normalizeWebAddress(urlBase, {removeTrailingSlash: false});
         let cbPrefix = 'lastfm';
 
         if(this.url.url.host === LASTFM_HOST) {
             this.logger.info('Using official Last.fm instance host/path');
             cbPrefix = 'lastfm';
+            if (apiKey === undefined) {
+                this.logger.warn(`'apiKey' not found in config!`);
+            }
         } else {
             this.upstreamName = 'Libre.fm';
             cbPrefix = 'librefm';
@@ -85,7 +84,6 @@ export default class LastfmApiClient extends AbstractApiClient {
         this.logger.info(`Using ${this.url.normal} for API calls`);
         this.logger.info(`Redirect Uri: ${this.redirectUri}`);
         this.workingCredsPath = `${configDir}/currentCreds-${this.url.url.host === LASTFM_HOST ? 'lastfm' : 'librefm'}-${name}.json`;
-        const f = 1;
     }
 
     callApi = async <T>(func: any, retries = 0): Promise<T> => {

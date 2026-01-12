@@ -232,6 +232,7 @@ export default class ScrobbleClients {
                     }
                     break;
                 case 'librefm': {
+                    const shouldUse = parseBool(process.env.LIBRFM_ENABLE)
                     const libre = {
                         apiKey: process.env.LIBREFM_API_KEY,
                         secret: process.env.LIBREFM_SECRET,
@@ -239,14 +240,14 @@ export default class ScrobbleClients {
                         session: process.env.LIBREFM_SESSION,
                         urlBase: process.env.LIBREFM_URLBASE,
                     };
-                    if (!Object.values(libre).every(x => x === undefined)) {
+                    if (!Object.values(libre).every(x => x === undefined) || shouldUse) {
                         configs.push({
                             type: 'librefm',
                             name: 'unnamed-librefm',
                             source: 'ENV',
                             mode: 'single',
                             configureAs: 'client',
-                            data: lfm,
+                            data: libre,
                             options: transformPresetEnv('LIBREFM')
                         })
                     }

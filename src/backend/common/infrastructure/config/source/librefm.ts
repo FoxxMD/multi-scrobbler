@@ -6,7 +6,7 @@ export interface librefmSourceData extends CommonSourceData, PollingOptions, Lib
 
 export interface LibrefmSourceConfig extends CommonSourceConfig {
     /**
-     * When used in `lastfm.config` this tells multi-scrobbler whether to use this data to configure a source or client.
+     * When used in `librefm.config` this tells multi-scrobbler whether to use this data to configure a source or client.
      *
      * @default source
      * @examples ["source"]
