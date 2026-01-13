@@ -8,7 +8,7 @@ import Tabs from '@theme/Tabs';
 import TabItem from '@theme/TabItem';
 import CodeBlock from '@theme/CodeBlock';
 import IcecastConfig from '!!raw-loader!@site/../config/icecast.json.example';
-import ShouldScrobble from "@site/src/components/snippets/_should-scrobble.mdx"
+import ShouldScrobble from "@site/src/components/snippets/_should-scrobble-details.mdx"
 
 Parse metadata from any Icecast Station (streams) to use for scrobbling.
 
@@ -20,13 +20,9 @@ Multi-scrobbler will do its best to parse Artist/Album/Track information from th
 
 :::
 
-:::note[Scrobbling Behavior]
+Multi-scrobbler cannot automatically determine if you are listening to a Station. Therefore, **automatic scrobbling for Icecast Sources is off by default.** Use **Should Scrobble Behavior** to initiate scrobbling or configure automatic scrobble.
 
-Multi-scrobbler cannot automatically determine if you are listening to a Station. Therefore, **automatic scrobbling for Icecast Sources is off by default.**
-
-Use [Should Scrobble Behavior](/configuration/sources#should-scrobble-behavior) to initiate scrobbling or configure automatic scrobble.
-
-:::
+<ShouldScrobble filename="icecast"/>
 
 :::tip[Scrobbling Threshold]
 

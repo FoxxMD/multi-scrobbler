@@ -42,6 +42,10 @@ If the file being played in VLC does not have ID3 tags/metadata information mult
 
 To extract this information use [named capture groups](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Regular_expressions/Named_capturing_group) in your expression matching the field that should be extracted: `artist` `title` and/or `album`. MS accepts multiple expressions, the first one that matches a filename will be used.
 
+<details>
+
+<summary>Example</summary>
+
 Example usage in [a file-based config:](/configuration?configType=file#configuration-types)
 
 ```json5 title="config/vlc.json" {10-15}
@@ -65,9 +69,15 @@ Example usage in [a file-based config:](/configuration?configType=file#configura
 ]
 ```
 
+</details>
+
 #### Vlc Information Reporting
 
 If you find that VLC is incorrectly reporting track information (in its interface) but multi-scrobbler is not parsing it correctly it may be due to the _name_ of the fields VLC is reporting. mutli-scrobbler uses the most common field name but does not cover all use cases. Before reporting an issue please turn on metadata logging and include output from your logs while it is turned on:
+
+<details>
+
+<summary>Metadata Logging Configuration</summary>
 
 ```json5 title="config/vlc.json" {9-9}
     [
@@ -83,6 +93,8 @@ If you find that VLC is incorrectly reporting track information (in its interfac
       }
     ]
 ```
+
+</details>
 
 ## Configuration
 
