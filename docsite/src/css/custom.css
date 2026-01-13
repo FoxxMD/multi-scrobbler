@@ -28,3 +28,57 @@
   --ifm-color-primary-lightest: #4fddbf;
   --docusaurus-highlighted-code-line-bg: rgba(0, 0, 0, 0.3);
 }
+
+/* https://github.com/facebook/docusaurus/discussions/5749 */
+details[class^='details_'].alert--info {
+  --ifm-alert-border-color: var(--ifm-color-emphasis-400);
+  /* --ifm-alert-background-color: transparent; */
+  --ifm-code-background: #{palette.$background};
+  --ifm-alert-padding-vertical: calc(var(--ifm-spacing-vertical) * 0.8);
+
+  margin-bottom: var(--ifm-paragraph-margin-bottom);
+
+  &:not(.alert--warning,.alert--success,.alert--secondary,.alert--danger) {
+    --ifm-alert-background-color: transparent;
+
+    > summary::before {
+      top: 0.15rem;
+    }
+  }
+
+  &.alert--success {
+    --ifm-alert-background-color: var(--ifm-color-success-contrast-background);
+    --ifm-alert-foreground-color: var(--ifm-color-info-contrast-foreground);
+  }
+  &.alert--secondary {
+    --ifm-alert-background-color: var(--ifm-color-secondary-contrast-background);
+    --ifm-alert-foreground-color: var(--ifm-color-secondary-contrast-foreground);
+  }
+
+  > summary {
+    --docusaurus-details-decoration-color: currentColor;
+    font: var(--ifm-heading-font-weight) var(--ifm-h5-font-size) / var(--ifm-heading-line-height) var(--ifm-heading-font-family);
+
+    .admoIcon {
+      display: inline-block;
+      vertical-align: middle;
+      margin-right: 0.4em;
+
+      > svg { 
+        display: inline-block;
+        height: 1.6em;
+        width: 1.6em;
+        fill: var(--ifm-alert-foreground-color);
+      }
+    }
+  }
+  > div > div[class^='collapsibleContent_'] {
+    margin-top: var(--ifm-alert-padding-vertical);
+  }
+
+
+  dl {
+    --ifm-spacing-vertical: 0.5rem;
+  }
+
+}
