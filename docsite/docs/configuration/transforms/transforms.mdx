@@ -84,13 +84,14 @@ For **Clients**:
 * `compare` - temporarily modify Play data when it is being compared to see if it was already scrobbled
 * `postCompare` - modify Play data before scrobbling it to downstream service and adding to already seen scrobbles
 
-:::tip
+<DetailsAdmo type="tip" summary="Transformed Scrobbles Are Permanently Modified">
 
 Keep in mind that modifying Scrobble/Play data earlier in the lifecycle will affect that data at all times later in the lifecycle (except when using the **compare** hook).
 
 For example, to modify the track so it's the same anywhere it is processed in multi-scrobbler you only need to modify it in the **Source's** `preCompare` hook because all later processes will receive the data with the modified track.
 
-:::
+
+</DetailsAdmo>
 
 :::tip[TLDR]
 

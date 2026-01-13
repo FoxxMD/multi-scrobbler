@@ -8,7 +8,7 @@ import Tabs from '@theme/Tabs';
 import TabItem from '@theme/TabItem';
 import CodeBlock from '@theme/CodeBlock';
 import AzuracastConfig from '!!raw-loader!@site/../config/azuracast.json.example';
-import ShouldScrobble from "@site/src/components/snippets/_should-scrobble.mdx"
+import ShouldScrobble from "@site/src/components/snippets/_should-scrobble-details.mdx"
 
 :::tip[Scrobbling Threshold]
 
@@ -36,13 +36,7 @@ URL From Config                => MS Uses
 'wss://mydomain.com/custom/azura/ws' => wss://mydomain.com/custom/azura/ws
 ```
 
-#### Scrobble Behavior
-
-:::info
-
 <ShouldScrobble filename="azuracast"/>
-
-:::
 
 Multi-scrobbler will set the default **scrobbling behavior** based on if either of these settings is configured:
 

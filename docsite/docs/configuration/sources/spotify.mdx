@@ -8,14 +8,11 @@ import Tabs from '@theme/Tabs';
 import TabItem from '@theme/TabItem';
 import CodeBlock from '@theme/CodeBlock';
 import SpotifyConfig from '!!raw-loader!@site/../config/spotify.json.example';
+import IconWarning from '@theme/Admonition/Icon/Warning';
 
-<details>
-
-<summary>Spotify and Automix</summary>
-
+<DetailsAdmo type="note" summary="Spotify and Automix">
 If your Spotify player has [Automix](https://community.spotify.com/t5/FAQs/What-is-Automix/ta-p/5257278) enabled and Spotify uses it for your playlist/queue then MS cannot accurately determine when a track will end. This is because the track is "mixed" in your queue with a shorter play time than its actual length and [Spotify does not report this modified play time in its API.](https://community.spotify.com/t5/Spotify-for-Developers/Wrong-duration-ms-of-track-with-Automix/m-p/5429147) This **does not affect MS's ability to scrobble** from Spotify but it will affect the accuracy of the duration MS reports was played.
-
-</details>
+</DetailsAdmo>
 
 #### Authenticate Spotify with Multi-Scrobbler
 

@@ -848,7 +848,7 @@ The corresponding [Musicbrainz Recording](https://musicbrainz.org/release/85bf28
 
 Use field-based methods if your Sources do not return IDs consistently (or at all). Add more field-based methods the more inaccurate your scrobble data may be, but be aware that more aggressive/broad searches may return less accurate results.
 
-:::tip[Lastfm]
+<DetailsAdmo type="tip" summary="Matching Scrobbles from Last.fm">
 
 Last.fm is inconsistent when it comes to matching your scrobbles. It will accept (almost) any fields for track/title/album and aggressively attempt to match/correct these, regardless of your intentions.
 
@@ -856,7 +856,7 @@ Unless the client scrobbling to Last.fm is also sending an `mbid`, it's likely y
 
 Therefore, you should *avoid* using `mbidRecording` and `basicOrIds` as the primary search methods (or understand the risks of using them). Instead, prefer to use field-based methods *before* falling back to id-based methods.
 
-:::
+</DetailsAdmo>
 
 ### Filter Considerations
 

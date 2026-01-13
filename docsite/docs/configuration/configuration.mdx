@@ -220,14 +220,15 @@ The resulting json multi-scrobbler would use:
 
 </details>
 
-:::note[Caveats]
+
+<DetailsAdmo type="note" summary="Caveats">
 
 * ENV variable names/interpolation keys are case-insensitive
 * Interpolation only works for **string** values within json. This cannot be used for numbers, booleans, objects, etc...
 
-:::
+</DetailsAdmo>
 
-:::warning[Missing ENVS]
+<DetailsAdmo type="warning" summary="Missing ENVs">
 
 Multi-scrobbler **will not** throw an error if the environmental value is not found. Instead, it will leave the string as-is and log a warning (`WARN` level) with the names of the missing environmental variable names like so:
 
@@ -235,13 +236,13 @@ Multi-scrobbler **will not** throw an error if the environmental value is not fo
 WARN : [App] [Sources] [spotify Secrets] Matched: None | Unmatched: SPOTIFY_SECRET
 ```
 
-:::
+</DetailsAdmo>
 
-:::warning[ENV Name Collisions]
+<DetailsAdmo type="warning" summary="ENV Name Collisions">
 
 **Verify that interpolation keys/environmental variable names you will use do not collide with existing ENV names used by multi-scrobbler.** Use the docs search to verify the name you want to use is not already used elsewhere by multi-scrobbler.
 
-:::
+</DetailsAdmo>
 
 ## Application Options
 
