@@ -2,7 +2,7 @@
 import { childLogger, Logger } from '@foxxmd/logging';
 import dayjs, { Dayjs } from "dayjs";
 import { PlayObject, SourcePlayerObj } from "../../core/Atomic.js";
-import { ClientType, clientTypes, ConfigMeta, isClientType, REPORTED_PLAYER_STATUSES, SourceIdentifier } from "../common/infrastructure/Atomic.js";
+import { ClientType, clientTypes, ConfigMeta, InternalConfig, InternalConfigOptional, isClientType, REPORTED_PLAYER_STATUSES, SourceIdentifier } from "../common/infrastructure/Atomic.js";
 import { AIOConfig } from "../common/infrastructure/config/aioConfig.js";
 import { ClientAIOConfig, ClientConfig } from "../common/infrastructure/config/client/clients.js";
 import { LastfmClientConfig } from "../common/infrastructure/config/client/lastfm.js";
@@ -10,7 +10,7 @@ import { ListenBrainzClientConfig } from "../common/infrastructure/config/client
 import { MalojaClientConfig } from "../common/infrastructure/config/client/maloja.js";
 import { WildcardEmitter } from "../common/WildcardEmitter.js";
 import { Notifiers } from "../notifier/Notifiers.js";
-import { isDebugMode } from "../utils.js";
+import { isDebugMode, parseBool } from "../utils.js";
 import { readJson } from '../utils/DataUtils.js';
 import { joinedUrl } from "../utils/NetworkUtils.js";
 import { getTypeSchemaFromConfigGenerator } from "../utils/SchemaUtils.js";
@@ -28,6 +28,8 @@ import RockskyScrobbler from './RockskyScrobbler.js';
 import { RockSkyClientConfig } from '../common/infrastructure/config/client/rocksky.js';
 import { CommonClientOptions } from '../common/infrastructure/config/client/index.js';
 import { ExternalMetadataTerm, PlayTransformHooks } from '../common/infrastructure/Transform.js';
+import LibrefmScrobbler from './LibrefmScrobbler.js';
+import { LibrefmClientConfig } from '../common/infrastructure/config/client/librefm.js';
 
 type groupedNamedConfigs = {[key: string]: ParsedConfig[]};
 
@@ -38,8 +40,8 @@ export default class ScrobbleClients {
     /** @type AbstractScrobbleClient[] */
     clients: (MalojaScrobbler | LastfmScrobbler | KoitoScrobbler | TealScrobbler)[] = [];
     logger: Logger;
-    configDir: string;
-    localUrl: URL;
+
+    internalConfig: InternalConfig;
 
     private schemaDefinitions: Record<string, Definition> = {};
 
@@ -47,12 +49,14 @@ export default class ScrobbleClients {
 
     sourceEmitter: WildcardEmitter;
 
-    constructor(emitter: WildcardEmitter, sourceEmitter: WildcardEmitter, localUrl: URL, configDir: string, parentLogger: Logger) {
+    constructor(emitter: WildcardEmitter, sourceEmitter: WildcardEmitter, internal: InternalConfigOptional, parentLogger: Logger) {
         this.emitter = emitter;
         this.sourceEmitter = sourceEmitter;
-        this.configDir = configDir;
-        this.localUrl = localUrl;
         this.logger = childLogger(parentLogger, 'Scrobblers'); // winston.loggers.get('app').child({labels: ['Scrobblers']}, mergeArr);
+        this.internalConfig = {
+            ...internal,
+            logger: this.logger
+        }
 
         this.sourceEmitter.on('playerUpdate', async (payload: { data: SourcePlayerObj & { options: { scrobbleTo: string[] } }} & SourceIdentifier) => {
             // agressively update Now Playing so scrobblers that display based on duration are mostly synced
@@ -70,6 +74,8 @@ export default class ScrobbleClients {
     getByName = (name: any) => this.clients.find(x => x.name === name)
 
     getByType = (type: any) => this.clients.filter(x => x.type === type)
+
+    getByNameAndType = (name: string, type: ClientType) => this.clients.find(x => x.name === name && x.type === type)
 
     async getStatusSummary(type?: string, name?: string): Promise<[boolean, string[]]> {
         let clients: AbstractScrobbleClient[] = [];
@@ -107,6 +113,9 @@ export default class ScrobbleClients {
                 case 'lastfm':
                     this.schemaDefinitions[type] = getTypeSchemaFromConfigGenerator("LastfmClientConfig");
                     break;
+                case 'librefm':
+                    this.schemaDefinitions[type] = getTypeSchemaFromConfigGenerator("LibrefmClientConfig");
+                    break;
                 case 'listenbrainz':
                     this.schemaDefinitions[type] = getTypeSchemaFromConfigGenerator("ListenBrainzClientConfig");
                     break;
@@ -129,7 +138,7 @@ export default class ScrobbleClients {
 
         let configFile;
         try {
-            configFile = await readJson(`${this.configDir}/config.json`, {throwOnNotFound: false, logger: childLogger(this.logger, `Secrets`)});
+            configFile = await readJson(`${this.internalConfig.configDir}/config.json`, {throwOnNotFound: false, logger: childLogger(this.logger, `Secrets`)});
         } catch (e) {
             // think this should stay as show-stopper since config could include important defaults (delay, retries) we don't want to ignore
             throw new Error('config.json could not be parsed');
@@ -206,6 +215,9 @@ export default class ScrobbleClients {
                         secret: process.env.LASTFM_SECRET,
                         redirectUri: process.env.LASTFM_REDIRECT_URI,
                         session: process.env.LASTFM_SESSION,
+                        librefm: process.env.LASTFM_LIBREFM_MODE !== undefined ? parseBool(process.env.LASTFM_LIBREFM_MODE, undefined) : undefined,
+                        host: process.env.LASTFM_HOST,
+                        path: process.env. LASTFM_PORT
                     };
                     if (!Object.values(lfm).every(x => x === undefined)) {
                         configs.push({
@@ -214,11 +226,32 @@ export default class ScrobbleClients {
                             source: 'ENV',
                             mode: 'single',
                             configureAs: 'client',
-                            data: {...lfm, redirectUri: lfm.redirectUri ?? joinedUrl(this.localUrl, 'lastfm/callback').toString()},
+                            data: lfm,
                             options: transformPresetEnv('LASTFM')
                         })
                     }
                     break;
+                case 'librefm': {
+                    const shouldUse = parseBool(process.env.LIBRFM_ENABLE)
+                    const libre = {
+                        apiKey: process.env.LIBREFM_API_KEY,
+                        secret: process.env.LIBREFM_SECRET,
+                        redirectUri: process.env.LIBREFM_REDIRECT_URI,
+                        session: process.env.LIBREFM_SESSION,
+                        urlBase: process.env.LIBREFM_URLBASE,
+                    };
+                    if (!Object.values(libre).every(x => x === undefined) || shouldUse) {
+                        configs.push({
+                            type: 'librefm',
+                            name: 'unnamed-librefm',
+                            source: 'ENV',
+                            mode: 'single',
+                            configureAs: 'client',
+                            data: libre,
+                            options: transformPresetEnv('LIBREFM')
+                        })
+                    }
+                }    break;
                 case 'listenbrainz':
                     const lz = {
                         url: process.env.LZ_URL,
@@ -295,7 +328,7 @@ export default class ScrobbleClients {
             }
             let rawClientConfigs;
             try {
-                rawClientConfigs = await readJson(`${this.configDir}/${clientType}.json`, {throwOnNotFound: false, logger: childLogger(this.logger, `${clientType} Secrets`)});
+                rawClientConfigs = await readJson(`${this.internalConfig.configDir}/${clientType}.json`, {throwOnNotFound: false, logger: childLogger(this.logger, `${clientType} Secrets`)});
             } catch (e) {
                 const errMsg = `${clientType}.json config file could not be parsed`;
                 this.emitter.emit('error', errMsg);
@@ -400,19 +433,22 @@ ${sources.join('\n')}`);
                 newClient = new MalojaScrobbler(name, ({...clientConfig, data} as unknown as MalojaClientConfig), notifier, this.emitter, this.logger);
                 break;
             case 'lastfm':
-                newClient = new LastfmScrobbler(name, {...clientConfig, data: {configDir: this.configDir, ...data} } as unknown as LastfmClientConfig, {}, notifier, this.emitter, this.logger);
+                newClient = new LastfmScrobbler(name, {...clientConfig, data } as unknown as LastfmClientConfig, this.internalConfig, notifier, this.emitter, this.logger);
+                break;
+            case 'librefm':
+                newClient = new LibrefmScrobbler(name, {...clientConfig, data } as unknown as LibrefmClientConfig, this.internalConfig, notifier, this.emitter, this.logger);
                 break;
             case 'listenbrainz':
-                newClient = new ListenbrainzScrobbler(name, {...clientConfig, data: {configDir: this.configDir, ...data} } as unknown as ListenBrainzClientConfig, {}, notifier, this.emitter, this.logger);
+                newClient = new ListenbrainzScrobbler(name, {...clientConfig, data: {configDir: this.internalConfig.configDir, ...data} } as unknown as ListenBrainzClientConfig, {}, notifier, this.emitter, this.logger);
                 break;
             case 'koito':
-                newClient = new KoitoScrobbler(name, {...clientConfig, data: {configDir: this.configDir, ...data} } as unknown as KoitoClientConfig, {}, notifier, this.emitter, this.logger);
+                newClient = new KoitoScrobbler(name, {...clientConfig, data: {configDir: this.internalConfig.configDir, ...data} } as unknown as KoitoClientConfig, {}, notifier, this.emitter, this.logger);
                 break;
             case 'tealfm':
                 newClient = new TealScrobbler(name, {...clientConfig, data: {...data}} as unknown as TealClientConfig, {}, notifier, this.emitter, this.logger);
                 break;
             case 'rocksky':
-                newClient = new RockskyScrobbler(name, {...clientConfig, data: {configDir: this.configDir, ...data} } as unknown as RockSkyClientConfig, {}, notifier, this.emitter, this.logger);
+                newClient = new RockskyScrobbler(name, {...clientConfig, data: {configDir: this.internalConfig.configDir, ...data} } as unknown as RockSkyClientConfig, {}, notifier, this.emitter, this.logger);
                 break;
             default:
                 break;

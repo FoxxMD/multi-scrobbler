@@ -6,7 +6,7 @@ import ScrobbleSources from "../sources/ScrobbleSources.js";
 import { nonEmptyBody } from "./middleware.js";
 import { LFMEndpointNotifier } from "../sources/ingressNotifiers/LFMEndpointNotifier.js";
 import { EndpointLastfmSource, playStateFromRequest, parseDisplayIdentifiersFromRequest } from "../sources/EndpointLastfmSource.js";
-import { LastfmTrackUpdateRequest } from "lastfm-node-client";
+import { LastFMScrobbleRequestPayload } from "../common/vendor/LastfmApiClient.js";
 
 export const setupLastfmEndpointRoutes = (app: ExpressWithAsync, parentLogger: Logger, scrobbleSources: ScrobbleSources) => {
 
@@ -43,7 +43,7 @@ export const setupLastfmEndpointRoutes = (app: ExpressWithAsync, parentLogger: L
             if(!('method' in req.body)) {
                 return res.status(400).json({error: `Missing 'method' param`});
             }
-            const method = (req.body as LastfmTrackUpdateRequest).method;
+            const method = (req.body as LastFMScrobbleRequestPayload).method;
             if(!['track.updateNowPlaying','track.scrobble'].includes(method)) {
                 return res.status(400).json({error: `Unexpected 'method' param value '${method}', expected either 'track.updateNowPlaying' or 'track.scrobble'`});
             }

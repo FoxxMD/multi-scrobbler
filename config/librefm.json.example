@@ -1,0 +1,22 @@
+[
+  {
+    "name": "myLibreFmClient",
+    "enable": true,
+    "configureAs": "client",
+    "data": {
+      "apiKey": "anything",
+      "secret": "anything",
+      "redirectUri": "http://localhost:9078/librefm/callback"
+    }
+  },
+  {
+    "name": "myLibreFmSource",
+    "enable": true,
+    "configureAs": "source",
+    "data": {
+      "apiKey": "anything",
+      "secret": "anything",
+      "redirectUri": "http://localhost:9078/librefm/callback"
+    }
+  }
+]

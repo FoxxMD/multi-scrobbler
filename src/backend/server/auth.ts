@@ -13,6 +13,10 @@ import { source } from "common-tags";
 import TealScrobbler from "../scrobblers/TealfmScrobbler.js";
 import { parseRegexSingle } from "@foxxmd/regex-buddy-core";
 import { BlueSkyOauthApiClient } from "../common/vendor/bluesky/BlueSkyOauthApiClient.js";
+import LibrefmScrobbler from "../scrobblers/LibrefmScrobbler.js";
+import LibrefmSource from "../sources/LibrefmSource.js";
+import e from "express";
+import AbstractSource from "../sources/AbstractSource.js";
 
 export const setupAuthRoutes = (app: ExpressWithAsync, logger: Logger, sourceMiddle: ExpressHandler, clientMiddle: ExpressHandler, scrobbleSources: ScrobbleSources, scrobbleClients: ScrobbleClients) => {
     app.use('/api/client/auth', clientMiddle);
@@ -23,6 +27,7 @@ export const setupAuthRoutes = (app: ExpressWithAsync, logger: Logger, sourceMid
 
         switch (scrobbleClient.type) {
             case 'lastfm':
+            case 'librefm':
                 res.redirect(scrobbleClient.api.getAuthUrl());
                 break;
             case 'tealfm':
@@ -53,6 +58,7 @@ export const setupAuthRoutes = (app: ExpressWithAsync, logger: Logger, sourceMid
                 }
                 break;
             case 'lastfm':
+            case 'librefm':
                 res.redirect(source.api.getAuthUrl());
                 break;
             case 'deezer':
@@ -78,23 +84,40 @@ export const setupAuthRoutes = (app: ExpressWithAsync, logger: Logger, sourceMid
                 name
             } = {}
         } = req;
-        if (req.url.includes('lastfm')) {
+        const entityTypeHint = req.url.includes('lastfm') ? 'lastfm' : 'librefm';
+
+        if (req.url.includes('lastfm') || req.url.includes('librefm')) {
             const {
                 query: {
                     token
                 } = {}
             } = req;
-            let entity: LastfmScrobbler | LastfmSource | undefined = scrobbleClients.getByName(state) as (LastfmScrobbler | undefined);
+            let entity: LastfmScrobbler | LastfmSource | LibrefmScrobbler | LibrefmSource | undefined;
+            if(req.url.includes('lastfm')) {
+                entity = scrobbleClients.getByNameAndType(state as string, 'lastfm') as (LastfmScrobbler | LastfmSource | undefined);
+            } else {
+                entity = scrobbleClients.getByNameAndType(state as string, 'librefm') as (LibrefmScrobbler | LibrefmSource | undefined);
+            }
+
             if(entity === undefined) {
-                entity = scrobbleSources.getByName(state) as LastfmSource;
+                entity = scrobbleSources.getByName(state) as LastfmSource | LibrefmSource;
             }
             try {
+                if(entity === undefined) {
+                    const error = new Error(`No source/client with type '${entityTypeHint}' and name ${state} was found`);
+                    logger.error(error);
+                    throw error;
+                }
                 await entity.api.authenticate(token);
                 entity.authFailure = false;
-                if(entity instanceof LastfmSource) {
+                if(entity instanceof AbstractSource) {
                     entity.poll().catch((e) => logger.error(e));
                 } else {
-                    entity.tryInitialize().catch((e) => logger.error(e));
+                    entity.tryInitialize()
+                    .catch((e) => logger.error(e))
+                    .then(() => {
+                        entity.initScrobbleMonitoring().catch((e) => logger.error(e));
+                    })
                 }
                 return res.send('OK');
             } catch (e) {

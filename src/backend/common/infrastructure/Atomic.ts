@@ -13,6 +13,7 @@ export type SourceType =
     | 'subsonic'
     | 'jellyfin'
     | 'lastfm'
+    | 'librefm'
     | 'deezer'
     | 'endpointlz'
     | 'endpointlfm'
@@ -41,6 +42,7 @@ export const sourceTypes: SourceType[] = [
     'subsonic',
     'jellyfin',
     'lastfm',
+    'librefm',
     'deezer',
     'endpointlz',
     'endpointlfm',
@@ -73,6 +75,7 @@ export const lowGranularitySources: SourceType[] = ['subsonic', 'ytmusic'];
 export type ClientType =
     'maloja'
     | 'lastfm'
+    | 'librefm'
     | 'listenbrainz'
     | 'koito'
     | 'tealfm'
@@ -80,6 +83,7 @@ export type ClientType =
 export const clientTypes: ClientType[] = [
     'maloja',
     'lastfm',
+    'librefm',
     'listenbrainz',
     'koito',
     'tealfm',
@@ -121,6 +125,8 @@ export interface InternalConfig {
 
     logger: Logger
 }
+
+export type InternalConfigOptional = Omit<InternalConfig, 'logger'>
 
 export type ReportedPlayerStatus = 'playing' | 'stopped' | 'paused' | 'unknown';
 export const REPORTED_PLAYER_STATUSES = {

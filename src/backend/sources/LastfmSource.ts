@@ -1,12 +1,11 @@
 import dayjs from "dayjs";
 import EventEmitter from "events";
-import { TrackObject, UserGetRecentTracksResponse } from "lastfm-node-client";
 import request from "superagent";
 import { PlayObject, SOURCE_SOT } from "../../core/Atomic.js";
 import { isNodeNetworkException } from "../common/errors/NodeErrors.js";
-import { FormatPlayObjectOptions, InternalConfig, PlayPlatformId } from "../common/infrastructure/Atomic.js";
+import { FormatPlayObjectOptions, InternalConfig, PlayPlatformId, SourceType } from "../common/infrastructure/Atomic.js";
 import { LastfmSourceConfig } from "../common/infrastructure/config/source/lastfm.js";
-import LastfmApiClient from "../common/vendor/LastfmApiClient.js";
+import LastfmApiClient, { formatPlayObj } from "../common/vendor/LastfmApiClient.js";
 import { sortByOldestPlayDate } from "../utils.js";
 import { RecentlyPlayedOptions } from "./AbstractSource.js";
 import MemorySource from "./MemorySource.js";
@@ -19,10 +18,11 @@ export default class LastfmSource extends MemorySource {
     api: LastfmApiClient;
     requiresAuth = true;
     requiresAuthInteraction = true;
+    upstreamType: string = 'Last.fm';
 
     declare config: LastfmSourceConfig;
 
-    constructor(name: any, config: LastfmSourceConfig, internal: InternalConfig, emitter: EventEmitter) {
+    constructor(name: any, config: LastfmSourceConfig, internal: InternalConfig, emitter: EventEmitter, type: SourceType = 'lastfm') {
         const {
             data: {
                 interval = 15,
@@ -30,12 +30,12 @@ export default class LastfmSource extends MemorySource {
                 ...restData
             } = {}
         } = config;
-        super('lastfm', name, {...config, data: {interval, maxInterval, ...restData}}, internal, emitter);
+        super(type, name, {...config, data: {interval, maxInterval, ...restData}}, internal, emitter);
         this.canPoll = true;
         this.canBacklog = true;
         this.supportsUpstreamRecentlyPlayed = true;
         this.supportsUpstreamNowPlaying = true;
-        this.api = new LastfmApiClient(name, {...config.data, configDir: internal.configDir, localUrl: internal.localUrl}, {logger: this.logger});
+        this.api = new LastfmApiClient(name, config.data, {logger: this.logger, type, ...internal});
         this.playerSourceOfTruth = SOURCE_SOT.HISTORY;
         // https://www.last.fm/api/show/user.getRecentTracks
         this.SCROBBLE_BACKLOG_COUNT = 200;
@@ -43,26 +43,22 @@ export default class LastfmSource extends MemorySource {
     }
 
     static formatPlayObj(obj: any, options: FormatPlayObjectOptions = {}): PlayObject {
-        return LastfmApiClient.formatPlayObj(obj, options);
+        return formatPlayObj(obj, options);
     }
 
     protected async doBuildInitData(): Promise<true | string | undefined> {
         return await this.api.initialize();
     }
 
-    protected async doCheckConnection():Promise<true | string | undefined> {
+    protected async doCheckConnection(): Promise<true | string | undefined> {
         try {
-            await request.get('http://ws.audioscrobbler.com/2.0/');
+            await this.api.testConnection();
             return true;
         } catch (e) {
-            if(isNodeNetworkException(e)) {
-                throw new Error('Could not communicate with Last.fm API server', {cause: e});
-            } else if(e.status >= 500) {
-                throw new Error('Last.fm API server returning an unexpected response', {cause: e})
-            }
-            return true;
+            throw e;
         }
     }
+
     doAuthentication = async () => {
         try {
             return await this.api.testAuth();
@@ -74,48 +70,9 @@ export default class LastfmSource extends MemorySource {
 
     getLastfmRecentTrack = async(options: RecentlyPlayedOptions = {}): Promise<[PlayObject[], PlayObject[]]> => {
         const {limit = 20} = options;
-        const resp = await this.api.callApi<UserGetRecentTracksResponse>((client: any) => client.userGetRecentTracks({
-            user: this.api.user,
-            sk: this.api.client.sessionKey,
-            limit,
-            extended: true
-        }));
         try {
-            const {
-                recenttracks: {
-                    track: list = [],
-                } = {}
-            } = resp;
-
-            const plays = list.reduce((acc: PlayObject[], x: TrackObject) => {
-                try {
-                    const formatted = LastfmApiClient.formatPlayObj(x);
-                    const {
-                        data: {
-                            track,
-                            playDate,
-                        },
-                        meta: {
-                            mbid,
-                            nowPlaying,
-                        }
-                    } = formatted;
-                    if (playDate === undefined) {
-                        if (nowPlaying === true) {
-                            formatted.data.playDate = dayjs();
-                            return acc.concat(formatted);
-                        }
-                        this.logger.warn(`Last.fm recently scrobbled track did not contain a timestamp, omitting from time frame check`, { track, mbid });
-                        return acc;
-                    }
-                    return acc.concat(formatted);
-                } catch (e) {
-                    this.logger.warn('Failed to format Last.fm recently scrobbled track, omitting from time frame check', { error: e.message });
-                    this.logger.debug('Full api response object:');
-                    this.logger.debug(x);
-                    return acc;
-                }
-            }, []).sort(sortByOldestPlayDate);
+            const plays = await this.api.getRecentTracks({limit});
+            plays.sort(sortByOldestPlayDate);
             // if the track is "now playing" it doesn't get a timestamp so we can't determine when it started playing
             // and don't want to accidentally count the same track at different timestamps by artificially assigning it 'now' as a timestamp
             // so we'll just ignore it in the context of recent tracks since really we only want "tracks that have already finished being played" anyway
@@ -123,7 +80,6 @@ export default class LastfmSource extends MemorySource {
             const now = plays.filter(x => x.meta.nowPlaying === true);
             return [history, now];
         } catch (e) {
-            this.logger.debug(resp);
             throw e;
         }
     }
