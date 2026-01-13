@@ -129,9 +129,13 @@ export class SonosSource extends MemoryPositionalSource {
                 let status = CLIENT_PLAYER_STATE[x.state.transportState];
 
                 let seen = true;
-                if (!this.mediaIdsSeen.data.includes(x.state.positionInfo.TrackURI)) {
+
+                // TrackURI seems to correspond to 1) the device/group playing and 2) the service/source playing
+                // but NOT the content actually playing -- 2) does not update when content playing changes on the same service
+                const mediaId = `${x.state.positionInfo.TrackURI}--${typeof x.state.positionInfo.TrackMetaData !== 'string' ? x.state.positionInfo.TrackMetaData.TrackUri : x.state.positionInfo.TrackMetaData}`;
+                if (!this.mediaIdsSeen.data.includes(mediaId)) {
                     seen = false;
-                    this.mediaIdsSeen.add(x.state.positionInfo.TrackURI);
+                    this.mediaIdsSeen.add(mediaId);
                     if (this.config.options?.logPayload || isDebugMode()) {
                         this.logger.debug({ device: { Name, GroupName, Uuid }, state: x.state }, 'Sonos Data');
                     }
