@@ -19,7 +19,7 @@ import { GroupTransportState } from "@svrooij/sonos/lib/models/transport-state.j
 import { Track } from "@svrooij/sonos/lib/models/track.js";
 import { parseDurationFromTimestamp } from "../utils/TimeUtils.js";
 import { FixedSizeList } from "fixed-size-list";
-import { buildStatePlayerPlayIdententifyingInfo } from "../utils/StringUtils.js";
+import { buildStatePlayerPlayIdententifyingInfo, parseArrayFromMaybeString } from "../utils/StringUtils.js";
 import { isDebugMode } from "../utils.js";
 
 export interface UniquePlay {
@@ -46,6 +46,11 @@ export class SonosSource extends MemoryPositionalSource {
     uniqueDropReasons: FixedSizeList<string>;
     logFilterFailure: false | 'debug' | 'warn';
 
+    devicesAllow: string[] = [];
+    devicesBlock: string[] = [];
+    groupsAllow: string[] = [];
+    groupsBlock: string[] = [];
+
     constructor(name: any, config: SonosSourceConfig, internal: InternalConfig, emitter: EventEmitter) {
         const {
             data,
@@ -67,6 +72,12 @@ export class SonosSource extends MemoryPositionalSource {
         const {
             options: {
                 logFilterFailure = (isDebugMode() ? 'debug' : 'warn'),
+            } = {},
+            data: {
+                devicesAllow = [],
+                devicesBlock = [],
+                groupsAllow = [],
+                groupsBlock = []
             } = {}
         } = this.config;
         if (logFilterFailure !== false && !['debug', 'warn'].includes(logFilterFailure)) {
@@ -74,6 +85,11 @@ export class SonosSource extends MemoryPositionalSource {
         } else {
             this.logFilterFailure = logFilterFailure;
         }
+
+        this.devicesAllow = parseArrayFromMaybeString(devicesAllow, {lower: true});
+        this.devicesBlock = parseArrayFromMaybeString(devicesBlock, {lower: true});
+        this.groupsAllow = parseArrayFromMaybeString(groupsAllow, {lower: true});
+        this.groupsBlock = parseArrayFromMaybeString(groupsBlock, {lower: true});
 
         return true;
     }
@@ -94,6 +110,19 @@ export class SonosSource extends MemoryPositionalSource {
         }
         if (!data.state.positionInfo.TrackMetaData.UpnpClass.toLocaleLowerCase().includes('musictrack')) {
             return `UpnpClass does include 'musictrack', found '${data.state.positionInfo.TrackMetaData.UpnpClass}'`;
+        }
+
+        if(this.devicesAllow.length > 0 && !this.devicesAllow.some(x => data.device.Name.toLocaleLowerCase().includes(x))) {
+            return `'devicesAllow does not include a phrase found in ${data.device.Name}`;
+        }
+        if(this.devicesBlock.length > 0 && this.devicesBlock.some(x => data.device.Name.toLocaleLowerCase().includes(x))) {
+            return `'devicesBlock includes a phrase found in ${data.device.Name}`;
+        }
+        if(this.groupsAllow.length > 0 && !this.groupsAllow.some(x => data.device.GroupName.toLocaleLowerCase().includes(x))) {
+            return `'groupsAllow does not include a phrase found in ${data.device.GroupName}`;
+        }
+        if(this.groupsBlock.length > 0 && this.groupsBlock.some(x => data.device.GroupName.toLocaleLowerCase().includes(x))) {
+            return `'groupsBlock includes a phrase found in ${data.device.GroupName}`;
         }
         return;
     }

@@ -798,6 +798,10 @@ export default class ScrobbleSources {
                 case 'sonos': {
                     const sonos = {
                         host: process.env.SONOS_HOST,
+                        devicesAllow: process.env.SONOS_DEVICES_ALLOW,
+                        devicesBlock: process.env.SONOS_DEVICES_BLOCK,
+                        groupsAllow: process.env.SONOS_GROUPS_ALLOW,
+                        groupsBlocks: process.env.SONOS_GROUPS_BLOCK
                     }
                     if (!Object.values(sonos).every(x => x === undefined)) {
                         configs.push({
