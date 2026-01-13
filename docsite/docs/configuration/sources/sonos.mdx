@@ -81,12 +81,20 @@ Please include these additional logs when creating a bug report. They are essent
 
 </details>
 
+### Filtering Activity
+
+The **optional** `devices` and `groups` related properties found in the config below can be used to include or exclude Sonos devices/groups by name, case-insensitive.
+
 ## Configuration
 
 You **must** define the IP address of at least one Sonos/accessory in order for Multi-scrobbler to connect to your Sonos system.
 
 <Config config="SonosSourceConfig" fileContent={JsonConfig} name="sonos">
         | Environmental Variable | Required? | Default | Description                                                            |
-        | ---------------------- | --------- | ------- | ---------------------------------------------------------------------- |
+        | ---------------------- | --------- | ------- | :--------------------------------------------------------------------- |
         | `SONOS_HOST`           | Yes       |         | The IP address of any active Sonos device/accessory EX `192.168.0.150` |
+        | `SONOS_DEVICES_ALLOW`  | No        |         | Comma-separated list of Sonos device names to scrobble from            |
+        | `SONOS_DEVICES_BLOCK`  | No        |         | Comma-separated list of Sonos device names to disallow scrobbles from  |
+        | `SONOS_GROUPS_ALLOW`   | No        |         | Comma-separated list of device group names to scrobble from            |
+        | `SONOS_GROUPS_BLOCK`   | No        |         | Comma-separated list of devices group names to disallow scrobbles from |
 </Config>
