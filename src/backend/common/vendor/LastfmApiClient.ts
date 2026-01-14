@@ -267,21 +267,29 @@ export default class LastfmApiClient extends AbstractApiClient {
                         // if the track is "now playing" it doesn't get a timestamp so we can't determine when it started playing
                         // and don't want to accidentally count the same track at different timestamps by artificially assigning it 'now' as a timestamp
                         // so we'll just ignore it in the context of recent tracks since really we only want "tracks that have already finished being played" anyway
-                        this.logger.debug(`Ignoring 'now playing' track returned from ${this.upstreamName} client`, { track, mbid });
+                        this.logger.debug( { track, mbid }, `Ignoring 'now playing' track returned from ${this.upstreamName} client`);
                         return acc;
                     } else if (playDate === undefined) {
-                        this.logger.warn(`${this.upstreamName} recently scrobbled track did not contain a timestamp, omitting from time frame check`, { track, mbid });
+                        this.logger.warn({ track, mbid }, `${this.upstreamName} recently scrobbled track did not contain a timestamp, omitting from time frame check`);
                         return acc;
                     }
                     return acc.concat(formatted);
                 } catch (e) {
-                    this.logger.warn(`Failed to format ${this.upstreamName} recently scrobbled track, omitting from time frame check`, { error: e.message });
+                    this.logger.warn(new Error(`Failed to format ${this.upstreamName} recently scrobbled track, omitting from time frame check`, { cause: e }));
                     this.logger.debug('Full api response object:');
                     this.logger.debug(x);
                     return acc;
                 }
             }, []);
         } catch (e) {
+            if(e.message.includes('Invalid resource specified')) {
+                // likely the user does not have any scrobbles on their profile yet
+                // https://github.com/FoxxMD/multi-scrobbler/issues/401#issuecomment-3749489057
+                // https://github.com/libre-fm/libre-fm/discussions/91#discussioncomment-15456070
+                // so we log as a warning and return empty array instead
+                this.logger.warn(new Error('This error occurs when a librefm (and lastfm?) account has no existing scrobbles yet. If you are seeing this warning and this is not the case, please create an issue', {cause: e}));
+                return [];
+            }
             this.logger.debug(resp);
             throw e;
         }
