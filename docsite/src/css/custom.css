@@ -41,6 +41,11 @@ details[class^='details_'].alert--info {
   &:not(.alert--warning,.alert--success,.alert--secondary,.alert--danger) {
     --ifm-alert-background-color: transparent;
 
+    > summary {
+      min-height: 1.3rem;
+      display: inline-block;
+      width: 100%;
+    }
     > summary::before {
       top: 0.15rem;
     }
