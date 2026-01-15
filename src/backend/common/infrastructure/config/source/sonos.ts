@@ -1,5 +1,5 @@
 import { PollingOptions } from "../common.js";
-import { CommonSourceConfig, CommonSourceData } from "./index.js";
+import { CommonSourceConfig, CommonSourceData, CommonSourceOptions } from "./index.js";
 
 export interface SonosData extends CommonSourceData, PollingOptions {
     /**
@@ -27,8 +27,13 @@ export interface SonosData extends CommonSourceData, PollingOptions {
      * */
     groupsBlock?: string | string[]
 }
+
+export interface SonosSourceOptions extends CommonSourceOptions {
+    logEmptyPlayer?: boolean
+}
 export interface SonosSourceConfig extends CommonSourceConfig {
     data: SonosData
+    options?: SonosSourceOptions
 }
 
 export interface SonosSourceAIOConfig extends SonosSourceConfig {
