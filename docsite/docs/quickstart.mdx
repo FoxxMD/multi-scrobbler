@@ -170,7 +170,8 @@ Add these value to the `environment` section in the [`docker-compose.yml` you cr
 # an email or personal website musicbrainz can use to contact you
 - MB_CONTACT=myCoolName@emailProvider.com 
 # how musicbrainz searches and selects matches
-- MB_PRESETS=sensible,native
+# isrc => then tries basic text fields => then tries extracted artists
+- MB_PRESETS=default,sensible,native
 ```
 
 **Presets** are found [here](http://localhost:3000/docs/configuration/transforms/musicbrainz/#env-configuration). 
