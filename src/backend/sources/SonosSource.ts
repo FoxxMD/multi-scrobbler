@@ -19,11 +19,19 @@ import { GroupTransportState } from "@svrooij/sonos/lib/models/transport-state.j
 import { Track } from "@svrooij/sonos/lib/models/track.js";
 import { parseDurationFromTimestamp } from "../utils/TimeUtils.js";
 import { FixedSizeList } from "fixed-size-list";
-import { buildStatePlayerPlayIdententifyingInfo, parseArrayFromMaybeString } from "../utils/StringUtils.js";
-import { isDebugMode } from "../utils.js";
+import { buildStatePlayerPlayIdententifyingInfo, hashObject, parseArrayFromMaybeString } from "../utils/StringUtils.js";
+import { isDebugMode, playObjDataMatch, sleep } from "../utils.js";
+import { playContentInvariantTransform } from "../utils/PlayComparisonUtils.js";
 
-export interface UniquePlay {
+export interface DeviceState {
     device: SonosDevice
+    state: SonosState
+}
+
+export type SimpleDevice = Pick<SonosDevice, 'Name' | 'GroupName' | 'Uuid' | 'Host'>;
+
+export interface SimpleDeviceState {
+    device: SimpleDevice
     state: SonosState
 }
 
@@ -42,9 +50,10 @@ export class SonosSource extends MemoryPositionalSource {
     declare config: SonosSourceConfig;
 
     manager: SonosManager;
-    mediaIdsSeen: FixedSizeList<string>;
+    deviceHashSeen: FixedSizeList<string>;
     uniqueDropReasons: FixedSizeList<string>;
     logFilterFailure: false | 'debug' | 'warn';
+    logEmptyPlayer: boolean
 
     devicesAllow: string[] = [];
     devicesBlock: string[] = [];
@@ -64,7 +73,7 @@ export class SonosSource extends MemoryPositionalSource {
         this.requiresAuth = false;
         this.canPoll = true;
         this.manager = new SonosManager();
-        this.mediaIdsSeen = new FixedSizeList<string>(100);
+        this.deviceHashSeen = new FixedSizeList<string>(100);
         this.uniqueDropReasons = new FixedSizeList<string>(100);
     }
 
@@ -72,6 +81,7 @@ export class SonosSource extends MemoryPositionalSource {
         const {
             options: {
                 logFilterFailure = (isDebugMode() ? 'debug' : 'warn'),
+                logEmptyPlayer = isDebugMode()
             } = {},
             data: {
                 devicesAllow = [],
@@ -85,6 +95,7 @@ export class SonosSource extends MemoryPositionalSource {
         } else {
             this.logFilterFailure = logFilterFailure;
         }
+        this.logEmptyPlayer = logEmptyPlayer;
 
         this.devicesAllow = parseArrayFromMaybeString(devicesAllow, {lower: true});
         this.devicesBlock = parseArrayFromMaybeString(devicesBlock, {lower: true});
@@ -97,13 +108,22 @@ export class SonosSource extends MemoryPositionalSource {
     protected async doCheckConnection(): Promise<true | string | undefined> {
         try {
             await this.manager.InitializeFromDevice(this.config.data.host);
+            const devicesSummary = [];
+            // something about .map isn't iterating all devices?
+            // see if this works instead
+            // for good measure advanced to next tick
+            await sleep(500);
+            for (const x of this.manager.Devices) {
+                devicesSummary.push(`Name: ${x.Name} | IP: ${x.Host} | Group: ${x.GroupName}`);
+            }
+            this.logger.debug(`Devices in Sonos network\n${devicesSummary.join('\n')}`);
             return `Sonos network is available with ${this.manager.Devices.length} devices`;
         } catch (e) {
             throw e;
         }
     }
 
-    public isValidState = (data: UniquePlay, play: PlayObject): string | undefined => {
+    public isValidState = (data: DeviceState, play: PlayObject): string | undefined => {
         if (typeof data.state.positionInfo.TrackMetaData === 'string') {
             // ???
             return;
@@ -129,68 +149,73 @@ export class SonosSource extends MemoryPositionalSource {
 
     getRecentlyPlayed = async (options: RecentlyPlayedOptions = {}) => {
 
-        // only need to get one device per group
-        const uniqueDevices: Record<string, SonosDevice> = {}
-        for (const d of this.manager.Devices) {
-            if (uniqueDevices[d.GroupName] === undefined) {
-                uniqueDevices[d.GroupName] = d;
-            }
-        }
-        const uniquePlayers: UniquePlay[] = [];
-        for (const [k, v] of Object.entries(uniqueDevices)) {
-            const state = await v.GetState();
-            // unsure if devices in the same group can play different things if they are in different zones?
-            // so double check some unique-ish data is not the same
-            if (!uniquePlayers.some(x => x.state.mediaInfo.CurrentURI === state.mediaInfo.CurrentURI)) {
-                uniquePlayers.push({ device: v, state });
-            }
-        }
-
         const playerStates: PlayerStateData[] = [];
-        for (const x of uniquePlayers) {
+        for (const d of this.manager.Devices) {
+            const state = await d.GetState();
+            const x = {
+                state,
+                device: d
+            };
+
             const {
                 Name,
                 GroupName,
-                Uuid
+                Uuid,
+                Host
             } = x.device
+
+            const deviceId = Name === undefined ? NO_DEVICE : `${Name}-${GroupName ?? 'NoGroup'}`;
 
             try {
                 let status = CLIENT_PLAYER_STATE[x.state.transportState];
 
+                // TODO if status is stopped then drop state if player is also stopped?
+
                 let seen = true;
 
-                // TrackURI seems to correspond to 1) the device/group playing and 2) the service/source playing
-                // but NOT the content actually playing -- 2) does not update when content playing changes on the same service
-                const mediaId = `${x.state.positionInfo.TrackURI}--${typeof x.state.positionInfo.TrackMetaData !== 'string' ? x.state.positionInfo.TrackMetaData.TrackUri : x.state.positionInfo.TrackMetaData}`;
-                if (!this.mediaIdsSeen.data.includes(mediaId)) {
+                const {
+                    positionInfo: {
+                        TrackURI: posTrackURI,
+                        TrackMetaData
+                    } = {}
+                } = state;
+
+                const invariantData = getInvariantDeviceData(x);
+
+                const hash = hashObject(invariantData);
+                if (!this.deviceHashSeen.data.includes(hash)) {
                     seen = false;
-                    this.mediaIdsSeen.add(mediaId);
+                    this.deviceHashSeen.add(hash);
                     if (this.config.options?.logPayload || isDebugMode()) {
-                        this.logger.debug({ device: { Name, GroupName, Uuid }, state: x.state }, 'Sonos Data');
+                        this.logger.debug({...invariantData}, 'Sonos Data');
                     }
                 }
 
-                const deviceId = Name === undefined ? NO_DEVICE : `${Name}-${GroupName ?? 'NoGroup'}`;
+                let play: PlayObject | undefined = status === REPORTED_PLAYER_STATUSES.stopped || posTrackURI === undefined ? undefined : formatPlayObj(x.state, { device: x.device });
+                let playIsEmpty = false;
 
-                let play = status === REPORTED_PLAYER_STATUSES.stopped ? undefined : formatPlayObj(x.state, { device: x.device });
-
-                if (play.data.track === undefined && play.data.artists === undefined) {
+                if (play !== undefined && (play.data?.track === undefined && play.data?.artists === undefined)) {
                     // likely sonos is paused and reporting an empty play
-                    play = undefined;
-                    status = REPORTED_PLAYER_STATUSES.stopped;
+                    playIsEmpty = true;
                 }
 
                 const position = play !== undefined ? play.meta.trackProgressPosition : undefined;
 
                 const playerState: PlayerStateData = {
                     platformId: [deviceId, NO_USER],
-                    status,
-                    play,
+                    status: playIsEmpty ? REPORTED_PLAYER_STATUSES.stopped : status,
+                    play: playIsEmpty ? undefined : play,
                     position
                 }
 
-                if (play !== undefined) {
-                    const reason = this.isValidState(x, play);
+                if (!playIsEmpty && play !== undefined) {
+                    let reason = this.isValidState(x, play);
+                    if(reason === undefined) {
+                        const dup = playerStates.find(x => x.play !== undefined && playObjDataMatch(x.play, play));
+                        if(dup !== undefined) {
+                            reason = 'Another player is playing the same track';
+                        }
+                    }
                     if(reason !== undefined) {
                         const dropReason = `Player State for  -> ${buildStatePlayerPlayIdententifyingInfo(playerState)} <-- is being dropped because ${reason}`;
                         if (!this.uniqueDropReasons.data.some(x => x === dropReason)) {
@@ -201,11 +226,14 @@ export class SonosSource extends MemoryPositionalSource {
                         }
                         continue;
                     }
+                } else if(this.logEmptyPlayer) {
+                    this.logger.debug(`Player State for  -> ${deviceId} <-- is being dropped because it is empty`);
+                    continue;
                 }
 
                 playerStates.push(playerState);
             } catch (e) {
-                this.logger.debug({ device: { Name, GroupName, Uuid }, state: x.state }, 'Sonos Data');
+                this.logger.error({ device: { Name, GroupName, Uuid, Host }, state: x.state }, 'Sonos Data');
                 throw new Error('Failed to parse Sonos data', { cause: e });
             }
         }
@@ -307,7 +335,39 @@ export const formatPlayObj = (obj: SonosState, options: FormatPlayObjectOptions 
             trackProgressPosition: progress,
             art: {
                 album: AlbumArtUri
-            }
+            },
+            source: 'Sonos'
+        }
+    }
+}
+
+export const getInvariantDeviceData = (data: DeviceState): SimpleDeviceState => {
+
+    const { device, state } = data;
+
+    const {
+        positionInfo: {
+            RelTime,
+            ...restPos
+        } = {},
+        ...restState
+    } = state;
+
+    return {
+        device: {
+            Name: device.Name,
+            GroupName: device.GroupName,
+            Host: device.Host,
+            Uuid: device.Uuid
+        },
+        state: {
+            ...restState,
+            // @ts-expect-error
+            positionInfo: {
+                ...restPos,
+                RelTime: '0',
+            },
+            volume: 0
         }
     }
 }
