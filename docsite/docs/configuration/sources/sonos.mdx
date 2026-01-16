@@ -1,0 +1,100 @@
+---
+title: Sonos
+toc_min_heading_level: 2
+toc_max_heading_level: 5
+---
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+import CodeBlock from '@theme/CodeBlock';
+import JsonConfig from '!!raw-loader!@site/../config/sonos.json.example';
+
+Multi-scrobbler can use the [Sonos](https://www.sonos.com) [local API](https://docs.sonos.com/docs/control) to monitor what your Sonos system is playing.
+
+MS supports scrobbling simultaneous, different Plays based on what each Group/Zone is playing.
+
+:::note
+
+For some services, including Spotify, Sonos only reports the **first** artist for a Track. You will most likely want to enable [Musicbrainz scrobble enhancements](/configuration/transforms/musicbrainz) so that your plays have correct information, including all artists, when scrobbled.
+
+:::
+
+:::tip
+
+Activity reporting for **other [Sources](/configuration/sources)** does not work well **when played through Sonos.**
+
+If you have other Sources configured for Multi-Scrobbler that you may play *through Sonos* you should try to add Sonos to the "deny" list for that Source so that it does not try to monitor Sonos activity. Check the documentation for each individual Source to see how to configure this exclusion.
+
+For example, to prevent the [Plex](/configuration/sources/plex) Source from monitoring audio played through Sonos, add Sonos to the "block" list ENV EX: `PLEX_DEVICES_BLOCK=sonos`
+
+:::
+
+<details>
+
+<summary>How to report issues</summary>
+
+If your Sonos Source is logging errors or the scrobble data is not as expected please [create a bug report](https://github.com/FoxxMD/multi-scrobbler/issues/new?template=01-bug-report.yml) **after** enabling the following debug logging options based on the config type you have:
+
+<Tabs groupdId="sonosBugConfig">
+<TabItem value="env" label="ENV">
+
+Enable [Debug Mode](/configuration#debug-mode) using `DEBUG_MODE=true`
+
+</TabItem>
+<TabItem value="file" label="File">
+
+Enable `logPayload` and `logFitlerFailure` in your `sonos.json`, or AIO file, config:
+
+```json
+[
+  {
+    "enable": true,
+    "name": "MySonos",
+    "data": {
+      "host": "192.168.0.150"
+    },
+    "options": {
+      "logFilterFailure":  "warn",
+      "logPayload": true
+     }
+  }
+]
+```
+
+</TabItem>
+
+</Tabs>
+
+Additional logging for the Sonos library may be enabled by including this environmental variable (regardless of config type):
+
+```
+DEBUG=sonos:*
+```
+
+The above changes:
+
+* Triggers multi-scrobbler to log the raw data recieved from Sonos when a new track/device/service is seen for the first time
+* Trigger multi-scrobbler to log the reason it considers a play from Sonos as invalid (and will not monitor it)
+* Logs low-level activity from the Sonos library
+
+Please include these additional logs when creating a bug report. They are essential to troubleshooting your issue.
+
+</details>
+
+### Filtering Activity
+
+The **optional** `devices` and `groups` related properties found in the config below can be used to include or exclude Sonos devices/groups by name, case-insensitive.
+
+## Configuration
+
+You **must** define the IP address of at least one Sonos/accessory in order for Multi-scrobbler to connect to your Sonos system.
+
+<Config config="SonosSourceConfig" fileContent={JsonConfig} name="sonos">
+        | Environmental Variable | Required? | Default | Description                                                            |
+        | ---------------------- | --------- | ------- | :--------------------------------------------------------------------- |
+        | `SONOS_HOST`           | Yes       |         | The IP address of any active Sonos device/accessory EX `192.168.0.150` |
+        | `SONOS_DEVICES_ALLOW`  | No        |         | Comma-separated list of Sonos device names to scrobble from            |
+        | `SONOS_DEVICES_BLOCK`  | No        |         | Comma-separated list of Sonos device names to disallow scrobbles from  |
+        | `SONOS_GROUPS_ALLOW`   | No        |         | Comma-separated list of device group names to scrobble from            |
+        | `SONOS_GROUPS_BLOCK`   | No        |         | Comma-separated list of devices group names to disallow scrobbles from |
+</Config>

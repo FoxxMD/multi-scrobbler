@@ -25,6 +25,7 @@ import { MalojaSourceAIOConfig, MalojaSourceConfig } from "./maloja.js";
 import { TealSourceAIOConfig, TealSourceConfig } from "./tealfm.js";
 import { RockskySourceAIOConfig, RockskySourceConfig } from "./rocksky.js";
 import { LibrefmSouceAIOConfig, LibrefmSourceConfig } from "./librefm.js";
+import { SonosSourceAIOConfig, SonosSourceConfig } from "./sonos.js";
 
 
 export type SourceConfig =
@@ -55,7 +56,8 @@ export type SourceConfig =
     | AzuracastSourceConfig
     | KoitoSourceConfig
     | TealSourceConfig
-    | RockskySourceConfig;
+    | RockskySourceConfig
+    | SonosSourceConfig;
 
 export type SourceAIOConfig =
     SpotifySourceAIOConfig
@@ -85,4 +87,5 @@ export type SourceAIOConfig =
     | AzuracastSourceAIOConfig
     | KoitoSourceAIOConfig
     | TealSourceAIOConfig
-    | RockskySourceAIOConfig;
+    | RockskySourceAIOConfig
+    | SonosSourceAIOConfig;

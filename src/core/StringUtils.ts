@@ -36,7 +36,7 @@ export const truncateStringToLength = (length: any, truncStr = '...') => (val: a
 }
 export const defaultTrackTransformer = (input: any, data: AmbPlayObject, hasExistingParts: boolean = false) => hasExistingParts ? `- ${input}` : input;
 export const defaultReducer = (acc, curr) => `${acc} ${curr}`;
-export const defaultArtistFunc = (a: string[]) => a.join(' / ');
+export const defaultArtistFunc = (a: string[]) => a === undefined ? '' : a.join(' / ');
 export const defaultAlbumFunc = (input: any, data: AmbPlayObject, hasExistingParts: boolean = false) => {
     if(input === undefined) {
         return undefined;
