@@ -197,6 +197,10 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
         return `${this.type}-${normalizeStr(this.name, {keepSingleWhitespace: false})}`;
     }
 
+    protected getPrometheusLabels() {
+        return {name: this.getSafeExternalName(), type: this.type};
+    }
+
     public notify = async (payload: WebhookPayload) => {
         this.emitEvent('notify', payload);
     }
@@ -475,7 +479,7 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
 
     addScrobbledTrack = (playObj: PlayObject, scrobbledPlay: PlayObject) => {
         this.scrobbledPlayObjs.add({play: playObj, scrobble: scrobbledPlay});
-        this.scrobbledCounter.labels({name: this.getSafeExternalId()}).inc();
+        this.scrobbledCounter.labels(this.getPrometheusLabels()).inc();
         this.lastScrobbledPlayDate = playObj.data.playDate;
         this.tracksScrobbled++;
     }
@@ -810,7 +814,7 @@ ${closestMatch.breakdowns.join('\n')}`, {leaf: ['Dupe Check']});
                         this.logger.debug(`Will not scrobble ${buildTrackString(currQueuedPlay.play)} from Source '${currQueuedPlay.source}' because it ${timeFrameValidLog}`);
                     }
                     this.updateQueuedScrobblesCache();
-                    this.queuedGauge.labels({name: this.getSafeExternalId()}).set(this.queuedScrobbles.length);
+                    this.queuedGauge.labels(this.getPrometheusLabels()).set(this.queuedScrobbles.length);
                     this.emitEvent('scrobbleDequeued', {queuedScrobble: currQueuedPlay})
                 }
                 await sleep(this.scrobbleSleep);
@@ -909,14 +913,14 @@ ${closestMatch.breakdowns.join('\n')}`, {leaf: ['Dupe Check']});
         }
         this.logger.info(`Removed scrobble ${buildTrackString(this.deadLetterScrobbles[index].play)} from queue`, {leaf: 'Dead Letter'});
         this.deadLetterScrobbles.splice(index, 1);
-        this.deadLetterGauge.labels({name: this.getSafeExternalId()}).set(this.deadLetterScrobbles.length);
+        this.deadLetterGauge.labels(this.getPrometheusLabels()).set(this.deadLetterScrobbles.length);
         this.updateDeadLetterCache();
     }
 
     removeDeadLetterScrobbles = () => {
         this.deadLetterScrobbles = [];
         this.updateDeadLetterCache();
-        this.deadLetterGauge.labels({name: this.getSafeExternalId()}).set(this.deadLetterScrobbles.length);
+        this.deadLetterGauge.labels(this.getPrometheusLabels()).set(this.deadLetterScrobbles.length);
         this.logger.info('Removed all scrobbles from queue', {leaf: 'Dead Letter'});
     }
 
@@ -934,7 +938,7 @@ ${closestMatch.breakdowns.join('\n')}`, {leaf: ['Dupe Check']});
             const queuedPlay = {id: nanoid(), source, play: play}
             this.emitEvent('scrobbleQueued', {queuedPlay: queuedPlay});
             this.queuedScrobbles.push(queuedPlay);
-            this.queuedGauge.labels({name: this.getSafeExternalId()}).inc();
+            this.queuedGauge.labels(this.getPrometheusLabels()).inc();
             // this is wasteful but we don't want the processing loop popping out-of-order (by date) scrobbles
             this.queuedScrobbles.sort((a, b) => sortByOldestPlayDate(a.play, b.play));
         }
@@ -952,7 +956,7 @@ ${closestMatch.breakdowns.join('\n')}`, {leaf: ['Dupe Check']});
         this.deadLetterScrobbles.push(deadData);
         this.deadLetterScrobbles.sort((a, b) => sortByOldestPlayDate(a.play, b.play));
         this.emitEvent('deadLetter', {dead: deadData});
-        this.deadLetterGauge.labels({name: this.getSafeExternalId()}).set(this.deadLetterScrobbles.length);
+        this.deadLetterGauge.labels(this.getPrometheusLabels()).set(this.deadLetterScrobbles.length);
         this.updateDeadLetterCache();
     }
 

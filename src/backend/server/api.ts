@@ -514,14 +514,14 @@ export const setupApi = (app: ExpressWithAsync, logger: Logger, appLoggerStream:
     const issuesClientGauge = new prom.Gauge({
                 name: 'multiscrobbler_client_issues',
                 help: 'Number of errors/issues with Client',
-                labelNames: ['name'],
+                labelNames: ['name', 'type'],
                 async collect() {
                     for(const client of scrobbleClients.clients) {
                         let issues = 0;
                         if(!(await client.isReady())) {
                             issues++;
                         }
-                        this.labels({name: client.getSafeExternalId()}).set(issues);
+                        this.labels({name: client.getSafeExternalName(), type: client.type}).set(issues);
                     }
                 }
     });
@@ -529,7 +529,7 @@ export const setupApi = (app: ExpressWithAsync, logger: Logger, appLoggerStream:
     const sourceIssues = new prom.Gauge({
                 name: 'multiscrobbler_source_issues',
                 help: 'Number of errors/issues with Source',
-                labelNames: ['name'],
+                labelNames: ['name', 'type'],
                 async collect() {
                     for(const source of scrobbleSources.sources) {
                         let issues = 0;
@@ -539,7 +539,7 @@ export const setupApi = (app: ExpressWithAsync, logger: Logger, appLoggerStream:
                         if(source.canPoll && !source.polling) {
                             issues++;
                         }
-                        this.labels({name: source.getSafeExternalId()}).set(issues);
+                        this.labels({name: source.getSafeExternalName(), type: source.type}).set(issues);
                     }
                 }
     });

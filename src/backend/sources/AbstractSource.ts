@@ -125,6 +125,10 @@ export default abstract class AbstractSource extends AbstractComponent implement
         return `${this.type}-${normalizeStr(this.name, {keepSingleWhitespace: false})}`;
     }
 
+    protected getPrometheusLabels() {
+        return {name: this.getSafeExternalName(), type: this.type};
+    }
+
     getSystemListeningBehavior = (): boolean | undefined => {
         if(this.supportsManualListening) {
             return this.config.options !== undefined && 'systemScrobble' in this.config.options ? this.config.options?.systemScrobble : undefined;
@@ -155,7 +159,7 @@ export default abstract class AbstractSource extends AbstractComponent implement
         this.tracksDiscovered++;
         this.logger.info(`Discovered => ${buildTrackString(play)}`);
         this.emitEvent('discovered', {play});
-        this.discoveredCounter.labels({name: this.getSafeExternalId()}).inc();
+        this.discoveredCounter.labels(this.getPrometheusLabels()).inc();
     }
 
     getFlatRecentlyDiscoveredPlays = (): PlayObject[] =>
