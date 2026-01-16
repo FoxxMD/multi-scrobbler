@@ -20,7 +20,7 @@ import { Track } from "@svrooij/sonos/lib/models/track.js";
 import { parseDurationFromTimestamp } from "../utils/TimeUtils.js";
 import { FixedSizeList } from "fixed-size-list";
 import { buildStatePlayerPlayIdententifyingInfo, hashObject, parseArrayFromMaybeString } from "../utils/StringUtils.js";
-import { isDebugMode, playObjDataMatch } from "../utils.js";
+import { isDebugMode, playObjDataMatch, sleep } from "../utils.js";
 import { playContentInvariantTransform } from "../utils/PlayComparisonUtils.js";
 
 export interface DeviceState {
@@ -108,7 +108,15 @@ export class SonosSource extends MemoryPositionalSource {
     protected async doCheckConnection(): Promise<true | string | undefined> {
         try {
             await this.manager.InitializeFromDevice(this.config.data.host);
-            this.logger.debug(`Devices in Sonos network:\n${this.manager.Devices.map((x: SonosDevice) => `Name: ${x.Name} | IP: ${x.Host} | Group: ${x.GroupName}`).join('\n')}`);
+            const devicesSummary = [];
+            // something about .map isn't iterating all devices?
+            // see if this works instead
+            // for good measure advanced to next tick
+            await sleep(500);
+            for (const x of this.manager.Devices) {
+                devicesSummary.push(`Name: ${x.Name} | IP: ${x.Host} | Group: ${x.GroupName}`);
+            }
+            this.logger.debug(`Devices in Sonos network\n${devicesSummary.join('\n')}`);
             return `Sonos network is available with ${this.manager.Devices.length} devices`;
         } catch (e) {
             throw e;
@@ -140,23 +148,6 @@ export class SonosSource extends MemoryPositionalSource {
     }
 
     getRecentlyPlayed = async (options: RecentlyPlayedOptions = {}) => {
-
-        // only need to get one device per group
-        // const uniqueDevices: Record<string, SonosDevice> = {}
-        // for (const d of this.manager.Devices) {
-        //     if (uniqueDevices[d.GroupName] === undefined) {
-        //         uniqueDevices[d.GroupName] = d;
-        //     }
-        // }
-        // const uniquePlayers: UniquePlay[] = [];
-        // for (const [k, v] of Object.entries(uniqueDevices)) {
-        //     const state = await v.GetState();
-        //     // unsure if devices in the same group can play different things if they are in different zones?
-        //     // so double check some unique-ish data is not the same
-        //     if (!uniquePlayers.some(x => x.state.mediaInfo.CurrentURI === state.mediaInfo.CurrentURI)) {
-        //         uniquePlayers.push({ device: v, state });
-        //     }
-        // }
 
         const playerStates: PlayerStateData[] = [];
         for (const d of this.manager.Devices) {
@@ -199,29 +190,6 @@ export class SonosSource extends MemoryPositionalSource {
                         this.logger.debug({...invariantData}, 'Sonos Data');
                     }
                 }
-
-                // let metaTrackUri: string;
-                // if(TrackMetaData !== undefined) {
-                //     if(typeof TrackMetaData === 'string') {
-                //         metaTrackUri = TrackMetaData;
-                //     } else {
-                //         metaTrackUri = TrackMetaData.TrackUri;
-                //     }
-                // }
-
-                // if(posTrackURI !== undefined && metaTrackUri !== undefined) {
-
-                //     // TrackURI seems to correspond to 1) the device/group playing and 2) the service/source playing
-                //     // but NOT the content actually playing -- 2) does not update when content playing changes on the same service
-                //     const mediaId = `${posTrackURI}--${metaTrackUri}`;
-                //     if (!this.deviceHashSeen.data.includes(mediaId)) {
-                //         seen = false;
-                //         this.deviceHashSeen.add(mediaId);
-                //         if (this.config.options?.logPayload || isDebugMode()) {
-                //             this.logger.debug({ device: { Name, GroupName, Uuid }, state: x.state }, 'Sonos Data');
-                //         }
-                //     }
-                // }
 
                 let play: PlayObject | undefined = status === REPORTED_PLAYER_STATUSES.stopped || posTrackURI === undefined ? undefined : formatPlayObj(x.state, { device: x.device });
                 let playIsEmpty = false;
