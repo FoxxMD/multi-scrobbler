@@ -30,6 +30,7 @@ import { makeClientCheckMiddle, makeSourceCheckMiddle } from "./middleware.js";
 import { setupWebscrobblerRoutes } from "./webscrobblerRoutes.js";
 import ScrobbleSources from "../sources/ScrobbleSources.js";
 import ScrobbleClients from "../scrobblers/ScrobbleClients.js";
+import prom from 'prom-client';
 
 const maxBufferSize = 300;
 const output: Record<number, FixedSizeList<LogDataPretty>> =  {};
@@ -508,6 +509,50 @@ export const setupApi = (app: ExpressWithAsync, logger: Logger, appLoggerStream:
 
 
         return res.status((clientsReady && sourcesReady) ? 200 : 500).json({messages: sourceMessages.concat(clientMessages)});
+    });
+
+    const issuesClientGauge = new prom.Gauge({
+                name: 'multiscrobbler_client_issues',
+                help: 'Number of errors/issues with Client',
+                labelNames: ['name'],
+                async collect() {
+                    for(const client of scrobbleClients.clients) {
+                        let issues = 0;
+                        if(!(await client.isReady())) {
+                            issues++;
+                        }
+                        this.labels({name: client.getSafeExternalId()}).set(issues);
+                    }
+                }
+    });
+
+    const sourceIssues = new prom.Gauge({
+                name: 'multiscrobbler_source_issues',
+                help: 'Number of errors/issues with Source',
+                labelNames: ['name'],
+                async collect() {
+                    for(const source of scrobbleSources.sources) {
+                        let issues = 0;
+                        if(source.requiresAuth && !source.authed) {
+                            issues++;
+                        }
+                        if(source.canPoll && !source.polling) {
+                            issues++;
+                        }
+                        this.labels({name: source.getSafeExternalId()}).set(issues);
+                    }
+                }
+    });
+
+    if(process.env.PROMETHEUS_FULL === 'true') {
+        prom.collectDefaultMetrics();
+    }
+
+    app.getAsync('/api/metrics', async (req, res) => {
+
+        const metricsString = await prom.register.metrics();
+        return res.status(200).send(metricsString);
+
     });
 
     app.getAsync('/api/version', async (req, res) => {

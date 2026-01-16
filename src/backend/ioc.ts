@@ -12,6 +12,7 @@ import { CacheConfigOptions, MusicBrainzSingletonMap } from "./common/infrastruc
 import { MSCache } from "./common/Cache.js";
 import TransformerManager from "./common/transforms/TransformerManager.js";
 import { TransformerCommonConfig } from "../core/Atomic.js";
+import prom, { Counter, Gauge } from 'prom-client';
 
 export let version: string = 'unknown';
 
@@ -33,6 +34,39 @@ export interface RootOptions {
     mbMap?: MusicBrainzSingletonMap | (() => MusicBrainzSingletonMap)
     transformers?: TransformerCommonConfig[]
 }
+
+const discovered = new prom.Counter({
+            name: 'multiscrobbler_source_discovered',
+            help: 'Number of discovered plays for a Source',
+            labelNames: ['name']
+});
+
+// const sourceIssues = new prom.Gauge({
+//             name: 'multiscrobbler_source_issues',
+//             help: 'Number of errors/issues with Source',
+//             labelNames: ['name']
+// });
+
+const queuedGauge = new prom.Gauge({
+            name: 'multiscrobbler_client_queued',
+            help: 'Number of queued plays for a Client',
+            labelNames: ['name']
+        });
+const deadLetterGauge = new prom.Gauge({
+            name: 'multiscrobbler_client_deadletter',
+            help: 'Number of deadletter plays for a Client',
+            labelNames: ['name']
+});
+// const issuesClientGauge = new prom.Gauge({
+//             name: 'multiscrobbler_client_issues',
+//             help: 'Number of errors/issues with Client',
+//             labelNames: ['name']
+// });
+const scrobbledCounter = new prom.Counter({
+            name: 'multiscrobbler_client_scrobbled',
+            help: 'Number of discovered plays for a Source',
+            labelNames: ['name']
+});
 
 const createRoot = (options: RootOptions = {logger: loggerDebug}) => {
     const {
@@ -114,6 +148,16 @@ const createRoot = (options: RootOptions = {logger: loggerDebug}) => {
         notifierEmitter: () => new EventEmitter(),
         loggerStream,
         loggingConfig,
+        sourceMetics: {
+            discovered: discovered,
+            //issues: sourceIssues
+        },
+        clientMetrics: {
+            queued: queuedGauge,
+            scrobbled: scrobbledCounter,
+            //issues: issuesClientGauge,
+            deadLetter: deadLetterGauge
+        },
         logger: logger,
         transformerManager,
         cache: () => maybeSingletonCache !== undefined ? () => maybeSingletonCache : cacheFunc,
