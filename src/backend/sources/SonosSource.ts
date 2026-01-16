@@ -167,7 +167,7 @@ export class SonosSource extends MemoryPositionalSource {
             const deviceId = Name === undefined ? NO_DEVICE : `${Name}-${GroupName ?? 'NoGroup'}`;
 
             try {
-                let status = CLIENT_PLAYER_STATE[x.state.transportState];
+                let status = CLIENT_PLAYER_STATE[x.state.transportState] ?? REPORTED_PLAYER_STATUSES.unknown;
 
                 // TODO if status is stopped then drop state if player is also stopped?
 
@@ -226,9 +226,23 @@ export class SonosSource extends MemoryPositionalSource {
                         }
                         continue;
                     }
-                } else if(this.logEmptyPlayer) {
-                    this.logger.debug(`Player State for  -> ${deviceId} <-- is being dropped because it is empty`);
-                    continue;
+                } else  {
+                    let allowOneNonProgress = false;
+
+                    const playerId = this.genPlayerId(playerState);
+                    if(this.hasPlayer(playerId) && this.players.get(playerId).isProgressing()) {
+                        // update player state with a stopped/paused/unknown reported state so that player scrobbles any existing play
+                        allowOneNonProgress = true;
+                    }
+
+                    if(!allowOneNonProgress) {
+                        // if no player or status is not progressing then drop
+                        // so sonos devices that aren't doing anything get stale/orphaned/pruned
+                        if(this.logEmptyPlayer) {
+                            this.logger.debug(`Player State for  -> ${deviceId} <-- is being dropped because it is empty`);
+                        }
+                        continue;
+                    }
                 }
 
                 playerStates.push(playerState);
