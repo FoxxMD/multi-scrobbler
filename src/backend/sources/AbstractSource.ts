@@ -42,7 +42,8 @@ import { messageWithCauses, messageWithCausesTruncatedDefault } from '../utils/E
 import { genericSourcePlayMatch } from '../utils/PlayComparisonUtils.js';
 import { findAsync, staggerMapper } from '../utils/AsyncUtils.js';
 import pMap, {pMapIterable} from 'p-map';
-import { randomInt } from 'crypto';
+import prom, { Counter, Gauge } from 'prom-client';
+import { normalizeStr } from '../utils/StringUtils.js';
 
 export interface RecentlyPlayedOptions {
     limit?: number
@@ -91,6 +92,8 @@ export default abstract class AbstractSource extends AbstractComponent implement
 
     protected loggerLabel: string;
 
+    protected discoveredCounter: Counter;
+
     constructor(type: SourceType, name: string, config: SourceConfig, internal: InternalConfig, emitter: EventEmitter) {
         super(config);
         const {clients = [] } = config;
@@ -105,10 +108,25 @@ export default abstract class AbstractSource extends AbstractComponent implement
         this.localUrl = internal.localUrl;
         this.configDir = internal.configDir;
         this.emitter = emitter;
+        
+        this.discoveredCounter = getRoot().items.sourceMetics.discovered;
     }
 
     protected getIdentifier() {
         return `${capitalize(this.type)} - ${this.name}`
+    }
+    protected getMachineId() {
+        return `${this.type}-${this.name}`;
+    }
+    public getSafeExternalName() {
+        return normalizeStr(this.name, {keepSingleWhitespace: false});
+    }
+    public getSafeExternalId() {
+        return `${this.type}-${normalizeStr(this.name, {keepSingleWhitespace: false})}`;
+    }
+
+    protected getPrometheusLabels() {
+        return {name: this.getSafeExternalName(), type: this.type};
     }
 
     getSystemListeningBehavior = (): boolean | undefined => {
@@ -141,6 +159,7 @@ export default abstract class AbstractSource extends AbstractComponent implement
         this.tracksDiscovered++;
         this.logger.info(`Discovered => ${buildTrackString(play)}`);
         this.emitEvent('discovered', {play});
+        this.discoveredCounter.labels(this.getPrometheusLabels()).inc();
     }
 
     getFlatRecentlyDiscoveredPlays = (): PlayObject[] =>

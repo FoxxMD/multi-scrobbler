@@ -694,11 +694,24 @@ multi-scrobbler supports [stateless](https://github.com/caronc/apprise-api?tab=r
 
 ### Health Endpoint
 
-An endpoint for monitoring the health of sources/clients is available at GET `http://YourMultiScrobblerDomain/health`
+An endpoint for monitoring the health of sources/clients is available at GET `http://YourMultiScrobblerDomain/api/health`
 
 * Returns `200 OK` when **everything** is working or `500 Internal Server Error` if **anything** is not 
-* The plain url (`/health`) aggregates status of **all clients/sources** -- so any failing client/source will make status return 500 
-  * Use query params `type` or `name` to restrict client/sources aggregated IE `/health?type=spotify` or `/health?name=MyMaloja`
+* The plain url (`/api/health`) aggregates status of **all clients/sources** -- so any failing client/source will make status return 500 
+  * Use query params `type` or `name` to restrict client/sources aggregated IE `/api/health?type=spotify` or `/api/health?name=MyMaloja`
 * On 500 the response returns a JSON payload with `messages` array that describes any issues
-  * For any clients/sources that require authentication `/health` will return 500 if they are **not authenticated** 
-  * For sources that poll (spotify, yt music, subsonic) `/health` will 500 if they are **not polling**
+  * For any clients/sources that require authentication `/api/health` will return 500 if they are **not authenticated** 
+  * For sources that poll (spotify, yt music, subsonic) `/api/health` will 500 if they are **not polling**
+
+### Prometheus
+
+A [Prometheus](https://prometheus.io/) export endpoint is available at GET `http://YourMultiScrobblerDomain/api/metrics`
+
+It includes metrics for:
+
+* Count of discovered plays per [Source](/configuration/sources)
+* Count of Queued/Scrobbled/Deadletter scrobbles per [Client](/configuration/clients)
+* Number of issues per Source/Client
+  * If any of these metrics is > 0 it means your Source/Client is not operating normally
+
+Additionally, general process metrics like cpu and memory usage can be enabled with the env `PROMETHEUS_FULL=true`
