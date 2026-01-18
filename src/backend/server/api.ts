@@ -551,7 +551,10 @@ export const setupApi = (app: ExpressWithAsync, logger: Logger, appLoggerStream:
     app.getAsync('/api/metrics', async (req, res) => {
 
         const metricsString = await prom.register.metrics();
-        return res.status(200).send(metricsString);
+        return res
+        .status(200)
+        .set('Content-Type', 'text/plain')
+        .send(metricsString);
 
     });
 
