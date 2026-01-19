@@ -23,6 +23,16 @@ body:
       placeholder: The app should have scrobbled from Spotify but instead it crashed with an error about undefined properties, etc...
     validations:
       required: true
+  - type: checkboxes
+    attributes:
+      label: What configuration types are you using for multi-scrobbler? Check all that apply.
+      options:
+      - label: "[Environmental Variables (ENV)](https://foxxmd.github.io/multi-scrobbler/configuration/?configType=env#configuration-types)"
+        required: false
+      - label: "[Individual](https://foxxmd.github.io/multi-scrobbler/configuration/?configType=file#configuration-types) Config Files"
+        required: false
+      - label: "[All-In-One](https://foxxmd.github.io/multi-scrobbler/configuration/?configType=aio#configuration-types) Config File"
+        required: false
   - type: dropdown
     id: platform
     attributes:
