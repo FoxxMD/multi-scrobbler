@@ -23,7 +23,8 @@ See the [Maloja (Client)](/configuration/clients/maloja) configuration for gener
 ## Configuration
 
 <Config config="MalojaSourceConfig" fileContent={MalojaConfig} name="maloja">
-        :::note
-            You cannot use ENV variables shown in the [Maloja Client config](/configuration/clients/maloja) -- multi-scrobbler assumes Maloja ENVs are always used for the **client** configuration. You must use the [[File or AIO](/configuration?configType=file#configuration-types) config to setup Maloja as a Source.
-        :::
+        | Environmental Variable  | Required? | Default | Description                   |
+        | ----------------------- | --------- | ------- | ----------------------------- |
+        | `SOURCE_MALOJA_URL`     | Yes       |         | Base URL of your installation |
+        | `SOURCE_MALOJA_API_KEY` | Yes       |         | Api Key                       |
 </Config>

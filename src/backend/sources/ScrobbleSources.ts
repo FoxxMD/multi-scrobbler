@@ -410,8 +410,25 @@ export default class ScrobbleSources {
                     }
                     break;
                 case 'lastfm':
-                    // sane default for lastfm is that user want to scrobble TO it, not FROM it -- this is also existing behavior
-                    defaultConfigureAs = 'client';
+                        {
+                        const lfm = {
+                            apiKey: process.env.SOURCE_LASTFM_API_KEY,
+                            secret: process.env.SOURCE_LASTFM_SECRET,
+                            redirectUri: process.env.SOURCE_LASTFM_REDIRECT_URI,
+                            session: process.env.SOURCE_LASTFM_SESSION,
+                        };
+                        if (!Object.values(lfm).every(x => x === undefined)) {
+                            configs.push({
+                                type: 'lastfm',
+                                name: 'unnamed-lfm-source',
+                                source: 'ENV',
+                                mode: 'single',
+                                configureAs: 'source',
+                                data: lfm,
+                                options: transformPresetEnv('SOURCE_LASTFM')
+                            })
+                        }
+                    }
                     break;
                 case 'deezer':
                     const d = {
@@ -451,9 +468,122 @@ export default class ScrobbleSources {
                         });
                     }
                     break;
-                case 'listenbrainz':
-                    // sane default for lastfm is that user want to scrobble TO it, not FROM it -- this is also existing behavior
-                    defaultConfigureAs = 'client';
+                case 'maloja': {
+                    // env builder for single user mode
+                    const url = process.env.SOURCE_MALOJA_URL;
+                    const apiKey = process.env.SOURCE_MALOJA_API_KEY;
+                    if (url !== undefined || apiKey !== undefined) {
+                        configs.push({
+                            type: 'maloja',
+                            name: 'unnamed-mlj-source',
+                            source: 'ENV',
+                            mode: 'single',
+                            configureAs: 'source',
+                            data: {
+                                url,
+                                apiKey
+                            },
+                            options: transformPresetEnv('SOURCE_MALOJA')
+                        })
+                    }
+                }
+                    break;
+                case 'librefm':{
+                    const shouldUse = parseBool(process.env.LIBRFM_ENABLE)
+                    const libre = {
+                        apiKey: process.env.SOURCE_LIBREFM_API_KEY,
+                        secret: process.env.SOURCE_LIBREFM_SECRET,
+                        redirectUri: process.env.SOURCE_LIBREFM_REDIRECT_URI,
+                        session: process.env.SOURCE_LIBREFM_SESSION,
+                        urlBase: process.env.SOURCE_LIBREFM_URLBASE,
+                    };
+                    if (!Object.values(libre).every(x => x === undefined) || shouldUse) {
+                        configs.push({
+                            type: 'librefm',
+                            name: 'unnamed-librefm-source',
+                            source: 'ENV',
+                            mode: 'single',
+                            configureAs: 'source',
+                            data: libre,
+                            options: transformPresetEnv('SOURCE_LIBREFM')
+                        })
+                    }
+                }
+                    break;
+                case 'listenbrainz': {
+                    const lz = {
+                        url: process.env.SOURCE_LZ_URL,
+                        token: process.env.SOURCE_LZ_TOKEN,
+                        username: process.env.SOURCE_LZ_USER
+                    };
+                    if (!Object.values(lz).every(x => x === undefined)) {
+                        configs.push({
+                            type: 'listenbrainz',
+                            name: 'unnamed-lz-source',
+                            source: 'ENV',
+                            mode: 'single',
+                            configureAs: 'source',
+                            data: lz,
+                            options: transformPresetEnv('SOURCE_LZ')
+                        })
+                    }
+                }
+                    break;
+                case 'koito': {
+                    const koit = {
+                        url: process.env.SOURCE_KOITO_URL,
+                        token: process.env.SOURCE_KOITO_TOKEN,
+                        username: process.env.SOURCE_KOITO_USER
+                    };
+                    if (!Object.values(koit).every(x => x === undefined)) {
+                        configs.push({
+                            type: 'koito',
+                            name: 'unnamed-koito-source',
+                            source: 'ENV',
+                            mode: 'single',
+                            configureAs: 'source',
+                            data: koit,
+                            options: transformPresetEnv('SOURCE_KOITO')
+                        })
+                    }
+                }
+                    break;
+                case 'tealfm': {
+                    const teal = {
+                        identifier: process.env.SOURCE_TEALFM_IDENTIFIER,
+                        appPassword: process.env.SOURCE_TEALFM_APP_PW,
+                        pds: process.env.SOURCE_TEALFM_PDS
+                    };
+                    if (!Object.values(teal).every(x => x === undefined)) {
+                        configs.push({
+                            type: 'tealfm',
+                            name: 'unnamed-tealfm-source',
+                            source: 'ENV',
+                            mode: 'single',
+                            configureAs: 'source',
+                            data: teal,
+                            options: transformPresetEnv('SOURCE_TEALFM')
+                        })
+                    }
+                }
+                    break;
+                case 'rocksky': {
+                    const rocksky = {
+                        key: process.env.SOURCE_ROCKSKY_KEY,
+                        handle: process.env.SOURCE_ROCKSKY_HANDLE
+                    };
+                    if (!Object.values(rocksky).every(x => x === undefined)) {
+                        configs.push({
+                            type: 'rocksky',
+                            name: 'unnamed-rocksky-source',
+                            source: 'ENV',
+                            mode: 'single',
+                            configureAs: 'source',
+                            data: rocksky,
+                            options: transformPresetEnv('SOURCE_ROCKSKY')
+                        })
+                    }
+                }
                     break;
                 case 'endpointlz':
                     const lzShouldUse = parseBool(process.env.LZENDPOINT_ENABLE);

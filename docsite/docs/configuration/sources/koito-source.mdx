@@ -25,7 +25,9 @@ See the [Koito (Client)](/configuration/clients/koito) configuration for general
 #### Configuration
 
 <Config config="KoitoSourceConfig" fileContent={KoitoConfig} name="koito">
-:::note
-        You cannot use ENV variables shown in the [Koito Client config](/configuration/clients/koito) -- multi-scrobbler assumes Koito ENVs are always used for the **client** configuration. You must use the [File or AIO](/configuration?configType=file#configuration-types) config to setup Koito as a Source.
-:::
+        | Environmental Variable | Required? | Default | Description                       |
+        | :--------------------- | --------- | ------- | --------------------------------- |
+        | `SOURCE_KOITO_TOKEN`   | Yes       |         | API Key from your Koito Account   |
+        | `SOURCE_KOITO_USER`    | Yes       |         | Your Koito username               |
+        | `SOURCE_KOITO_URL`     | No        |         | The base URL for the Koito server |
 </Config>

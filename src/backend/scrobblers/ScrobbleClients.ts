@@ -214,10 +214,7 @@ export default class ScrobbleClients {
                         apiKey: process.env.LASTFM_API_KEY,
                         secret: process.env.LASTFM_SECRET,
                         redirectUri: process.env.LASTFM_REDIRECT_URI,
-                        session: process.env.LASTFM_SESSION,
-                        librefm: process.env.LASTFM_LIBREFM_MODE !== undefined ? parseBool(process.env.LASTFM_LIBREFM_MODE, undefined) : undefined,
-                        host: process.env.LASTFM_HOST,
-                        path: process.env. LASTFM_PORT
+                        session: process.env.LASTFM_SESSION
                     };
                     if (!Object.values(lfm).every(x => x === undefined)) {
                         configs.push({

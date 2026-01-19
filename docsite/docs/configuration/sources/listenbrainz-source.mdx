@@ -25,7 +25,9 @@ On your [profile page](https://listenbrainz.org/profile/) find your **User Token
 ## Configuration
 
 <Config config="ListenBrainzSourceConfig" fileContent={ListenbrainzConfig} name="listenbrainz">
-        :::note
-            You cannot use ENV variables shown in the [Listenbrainz Client config](/configuration/clients/listenbrainz) -- multi-scrobbler assumes Listenbrainz ENVs are always used for the **client** configuration. You must use the [File or AIO](/configuration?configType=file#configuration-types) config to setup Listenbrainz as a Source.
-        :::
+        | Environmental Variable | Required? | Default                       | Description                     |
+        | ---------------------- | --------- | ----------------------------- | ------------------------------- |
+        | `SOURCE_LZ_TOKEN`      | Yes       |                               | User token from your LZ profile |
+        | `SOURCE_LZ_USER`       | Yes       |                               | Your LZ username                |
+        | `SOURCE_LZ_URL`        | No        | https://api.listenbrainz.org/ | The base URL for the LZ server  |
 </Config>

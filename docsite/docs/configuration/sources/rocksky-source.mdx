@@ -33,7 +33,8 @@ See the [Rocksky (Client)](/configuration/clients/rocksky#setup) configuration f
 * [File/AIO config](/configuration?configType=file#configuration-types) must include `"configureAs": "source"`
 
 <Config config="RockskyClientConfig" fileContent={JsonConfig} name="rocksky">
-        :::note
-            You cannot use ENV variables shown in the [Rocksky Client config](/configuration/clients/rocksky#configuration) -- multi-scrobbler assumes Rocksky ENVs are always used for the **client** configuration. You must use the [File or AIO](/configuration?configType=file#configuration-types) config to setup Rocksky as a Source.
-        :::
+        | Environmental Variable  | Required? | Default | Description                                                                         |
+        | :---------------------- | --------- | ------- | ----------------------------------------------------------------------------------- |
+        | `SOURCE_ROCKSKY_HANDLE` | Yes       |         | Your **full** ATProto handle. For Bluesky account this is like `myUser.bsky.social` |
+        | `SOURCE_ROCKSKY_KEY`    | Yes       |         | API Key obtained from Rocksky developer dashboard                                   |
 </Config>

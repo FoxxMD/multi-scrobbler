@@ -104,7 +104,8 @@ Allow scrobbles from plyr.fm and unknown services:
 </details>
 
 <Config config="TealClientConfig" fileContent={JsonConfig} name="tealfm">
-        :::note
-            You cannot use ENV variables shown in the [teal.fm Client config](/configuration/clients/tealfm#configuration) -- multi-scrobbler assumes teal.fm ENVs are always used for the **client** configuration. You must use the [File or AIO](/configuration?configType=file#configuration-types) config to setup teal.fm as a Source.
-        :::
+        | Environmental Variable     | Required? | Default | Description                                                                                |
+        | :------------------------- | --------- | ------- | ------------------------------------------------------------------------------------------ |
+        | `SOURCE_TEALFM_IDENTIFIER` | Yes       |         | Your **full** ATProto handle or DID. For Bluesky account this is like `myUser.bsky.social` |
+        | `SOURCE_TEALFM_APP_PW`     | Yes       |         | Bluesky/ATProto network App Password                                                       |
 </Config>
