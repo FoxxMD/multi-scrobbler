@@ -8,7 +8,7 @@ import { ARTIST_WEIGHT, DELIMITERS, MUSICBRAINZ_URL, MusicbrainzApiConfigData, T
 import { MaybeLogger } from "../logging.js";
 import { childLogger, Logger } from "@foxxmd/logging";
 import { MusicbrainzApiClient, MusicbrainzApiConfig, recordingToPlay, UsingTypes } from "../vendor/musicbrainz/MusicbrainzApiClient.js";
-import { IRecordingList, IRecordingMatch, MusicBrainzApi } from "musicbrainz-api";
+import { IRecordingList, IRecordingMatch, IRelease, MusicBrainzApi } from "musicbrainz-api";
 import { intersect, isDebugMode, missingMbidTypes, removeUndefinedKeys } from "../../utils.js";
 import { SimpleError, SkipTransformStageError, StagePrerequisiteError } from "../errors/MSErrors.js";
 import { parseArrayFromMaybeString, scoreNormalizedStringsWeighted } from "../../utils/StringUtils.js";
@@ -603,6 +603,20 @@ export default class MusicbrainzTransformer extends AtomicPartsTransformer<Exter
             score = this.defaults.score ?? 90
         } = stageConfig;
 
+        // if brainz meta contains track MBID then we should be able to get the exact release
+        let explicitList: IRecordingMatch[];
+        let filtered = false;
+        [explicitList, filtered] = filterByExplicitTrackMbid(transformData.recordings, play);
+        if(filtered) {
+            this.logger.debug(`Found exact release using track MBID`);
+            return recordingToPlay(explicitList[0], {ignoreVA: stageConfig.ignoreVA});
+        }
+        [explicitList, filtered] = filterByExplicitReleaseMbid(transformData.recordings, play);
+        if(filtered) {
+            this.logger.debug(`Found exact release using release MBID`);
+            return recordingToPlay(explicitList[0], {ignoreVA: stageConfig.ignoreVA});
+        }
+
         let filteredList: RecordingRankedMatched[] = transformData.recordings.filter(x => x.score >= score);
         if(filteredList.length === 0) {
              throw new StagePrerequisiteError(`All ${transformData.count} fetched matches had a score < ${score}, best match was ${transformData.recordings[0].score}`, {shortStack: true});
@@ -827,6 +841,58 @@ export const filterByValidReleaseCountry = (list: IRecordingMatch[], stageConfig
         && releaseAllowEmpty
     ) 
     || x.releases.length > 0);
+}
+
+export const filterByExplicitTrackMbid = (list: IRecordingMatch[], play: PlayObject): [IRecordingMatch[], boolean] => {
+    if (play.data.meta?.brainz?.track === undefined) {
+        return [list, false];
+    }
+    let recMatch: IRecordingMatch,
+        releaseMatchId: string;
+    for (const rec of list) {
+        if (recMatch !== undefined) {
+            break;
+        }
+        for (const rel of rec.releases) {
+            // @ts-ignore
+            if (rel.media.some(x => x.track.some(y => y.id === play.data.meta.brainz.track))) {
+                releaseMatchId = rel.id;
+                recMatch = rec;
+                break;
+            }
+        }
+    }
+    if (recMatch !== undefined) {
+        const r = structuredClone(recMatch);
+        r.releases = r.releases.filter(x => x.id === releaseMatchId);
+        return [[r], true];
+    }
+    return [list, false];
+}
+
+export const filterByExplicitReleaseMbid = (list: IRecordingMatch[], play: PlayObject): [IRecordingMatch[], boolean] => {
+    if (play.data.meta?.brainz?.album === undefined) {
+        return [list, false];
+    }
+    let recMatch: IRecordingMatch,
+        releaseMatchId: string;
+    for (const rec of list) {
+        if (recMatch !== undefined) {
+            break;
+        }
+        for (const rel of rec.releases) {
+            if(rel.id === play.data.meta.brainz.album) {
+                releaseMatchId = rel.id;
+                recMatch = rec;
+            }
+        }
+    }
+    if (recMatch !== undefined) {
+        const r = structuredClone(recMatch);
+        r.releases = r.releases.filter(x => x.id === releaseMatchId);
+        return [[r], true];
+    }
+    return [list, false];
 }
 
 export const rankReleasesByPriority = (list: IRecordingMatch[], stageConfig: MusicbrainzTransformerDataStage, play: PlayObject, logger: MaybeLogger = new MaybeLogger()): RecordingRankedMatched[] => {
