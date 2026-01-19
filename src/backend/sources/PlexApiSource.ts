@@ -418,7 +418,7 @@ export default class PlexApiSource extends MemoryPositionalSource {
                 const prevBrainzMeta = sessionData[0].play.data.meta.brainz ?? {};
                 sessionData[0].play.data.meta.brainz = {
                     ...prevBrainzMeta,
-                    recording: trackMbId,
+                    track: trackMbId,
                     album: albumMbId,
                     // Plex doesn't track MBIDs for track artists, so we use the
                     // album artist MBID instead.

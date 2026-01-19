@@ -133,6 +133,12 @@ export interface BrainzMeta {
 
     /** Position of track within Release */
     trackNumber?: number
+
+    /** Track MBID (tid), not visible to end users and is only relevant in the context of a Release
+     * 
+     * Specifies the track on a specific Release. Not the same as the Recording MBID.
+     */
+    track?: string
 }
 
 export interface SpotifyMeta {

@@ -494,7 +494,13 @@ export default class MusicbrainzTransformer extends AtomicPartsTransformer<Exter
             } = {}
         } = play;
 
-        using.push(brainz.recording !== undefined ? 'mbidrecording' : 'title');
+        if(brainz.recording !== undefined) {
+            using.push('mbidrecording');
+        } else if(brainz.track !== undefined) {
+            using.push('mbidtrack');
+        } else {
+            using.push('title');
+        }
         using.push(brainz.album !== undefined ? 'mbidrelease' : 'album');
         using.push((brainz.artist ?? []).length > 0 ? 'mbidartist' : 'artist');
 
