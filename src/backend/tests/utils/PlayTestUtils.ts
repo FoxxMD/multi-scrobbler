@@ -176,12 +176,12 @@ export const withBrainz = (play: PlayObject, include: ('track' | 'artist' | 'alb
     for(const i of include) {
         switch(i) {
             case 'track':
-                if(play.data.meta?.brainz?.track === undefined) {
+                if(play.data.meta?.brainz?.recording === undefined) {
                     play.data.meta = {
                         ...(play.data.meta ?? {}),
                         brainz: {
                             ...(play.data.meta?.brainz ?? {}),
-                            track: generateMbid()
+                            recording: generateMbid()
                         }
                     }
                 }

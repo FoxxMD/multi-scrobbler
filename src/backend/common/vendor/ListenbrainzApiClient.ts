@@ -777,8 +777,8 @@ export const playToListenPayload = (play: PlayObject): ListenPayload => {
                 ...minTrackData,
                 additional_info: {
                     duration: play.data.duration !== undefined ? Math.round(duration) : undefined,
-                    track_mbid: brainz.track,
-                    recording_mbid: brainz.track,
+                    track_mbid: brainz.recording,
+                    recording_mbid: brainz.recording,
                     artist_mbids: brainz.artist,
                     release_mbid: brainz.album,
                     release_group_mbid: brainz.releaseGroup,

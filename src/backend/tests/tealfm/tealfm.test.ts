@@ -31,7 +31,7 @@ describe('#tealfm Record to Play', function() {
 
         expect(play.data.meta.brainz).to.not.be.undefined;
         expect(play.data.meta.brainz.album).eq(rec.value.releaseMbId);
-        expect(play.data.meta.brainz.track).eq(rec.value.recordingMbId);
+        expect(play.data.meta.brainz.recording).eq(rec.value.recordingMbId);
         expect(play.data.meta.brainz.artist).eql(rec.value.artists.map(x => x.artistMbId));
         expect(play.data.isrc).eq(rec.value.isrc);
     });

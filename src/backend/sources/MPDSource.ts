@@ -181,7 +181,7 @@ export class MPDSource extends MemoryPositionalSource {
         const brainz: BrainzMeta = {
             albumArtist: [musicbrainz_albumartistid],
             album: musicbrainz_albumid,
-            track: musicbrainz_trackid,
+            recording: musicbrainz_trackid,
         };
         if(musicbrainz_artistid !== undefined) {
             brainz.artist = [musicbrainz_artistid];

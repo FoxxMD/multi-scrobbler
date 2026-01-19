@@ -117,7 +117,7 @@ describe('Musicbrainz API', function () {
                     album: "Fake",
                     meta: {
                         brainz: {
-                            track: '026fa041-3917-4c73-9079-ed16e36f20f8'
+                            recording: '026fa041-3917-4c73-9079-ed16e36f20f8'
                         }
                     }
                 },

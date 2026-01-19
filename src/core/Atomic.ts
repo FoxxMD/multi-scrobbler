@@ -124,7 +124,7 @@ export interface BrainzMeta {
      * */
     album?: string
     /** Unique track id, recording_mbid */
-    track?: string
+    recording?: string
     /**
      * 
      *  The "consolidated" album like -->  "The Wall" by "Pink Floyd" */

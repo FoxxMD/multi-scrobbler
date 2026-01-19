@@ -213,8 +213,8 @@ export class MusicbrainzApiClient extends AbstractApiClient {
             const query: Record<string, any> = {
             };
 
-            if(play.data?.meta?.brainz?.track !== undefined && using.includes('mbidrecording')) {
-                query.recording_mbid = play.data.meta.brainz.track
+            if(play.data?.meta?.brainz?.recording !== undefined && using.includes('mbidrecording')) {
+                query.recording_mbid = play.data.meta.brainz.recording
             }
             if(play.data?.meta?.brainz?.album !== undefined && using.includes('mbidrelease')) {
                 query.release_mbid = play.data.meta.brainz.album
@@ -375,7 +375,7 @@ export const recordingToPlay = (data: IRecording, options?: {ignoreVA?: boolean}
             isrc: data.isrcs !== undefined && data.isrcs.length > 0 ? data.isrcs[0] : undefined,
             meta: {
                 brainz: {
-                    track: data.id,
+                    recording: data.id,
                     artist: data["artist-credit"] !== undefined ? data["artist-credit"].map(x => x.artist.id) : undefined,
                     albumArtist: albumArtistIds,
                     album: album !== undefined ? album.id : undefined,

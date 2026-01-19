@@ -407,7 +407,7 @@ export default class MusicbrainzTransformer extends AtomicPartsTransformer<Exter
         if(logPreMbid) {
             const a = play.data.meta?.brainz?.artist;
             const parts: string[] = [
-                `Recording ${play.data.meta?.brainz?.track ?? '(None)'}`,
+                `Recording ${play.data.meta?.brainz?.recording ?? '(None)'}`,
                 `Release ${play.data.meta?.brainz?.album ?? '(None)'}`,
                 `Artists ${a === undefined || a.length === 0 ? '(None)' : a.join(', ')}`,
                 `ISRC ${play.data.isrc ?? '(None)'}`
@@ -494,7 +494,7 @@ export default class MusicbrainzTransformer extends AtomicPartsTransformer<Exter
             } = {}
         } = play;
 
-        using.push(brainz.track !== undefined ? 'mbidrecording' : 'title');
+        using.push(brainz.recording !== undefined ? 'mbidrecording' : 'title');
         using.push(brainz.album !== undefined ? 'mbidrelease' : 'album');
         using.push((brainz.artist ?? []).length > 0 ? 'mbidartist' : 'artist');
 
@@ -511,7 +511,7 @@ export default class MusicbrainzTransformer extends AtomicPartsTransformer<Exter
     }
 
     public async searchByRecordingMbid(play: PlayObject, stageConfig: MusicbrainzTransformerDataStage): Promise<IRecordingMSList> {
-        if(play.data.meta?.brainz?.track !== undefined) {
+        if(play.data.meta?.brainz?.recording !== undefined) {
             this.logger.debug({labels: ['MBID Search']},'Searching with Recording MBID');
             return await this.api.searchByRecording(play, {using: ['mbidrecording']});
         }

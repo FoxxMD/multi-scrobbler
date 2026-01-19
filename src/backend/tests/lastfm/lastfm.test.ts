@@ -27,7 +27,7 @@ describe('#LFM Track to Play', function() {
 
         expect(play.data.meta?.brainz?.album).to.be.undefined;
         expect(play.data.meta?.brainz?.artist).to.be.undefined;
-        expect(play.data.meta?.brainz?.track).to.be.undefined;
+        expect(play.data.meta?.brainz?.recording).to.be.undefined;
     });
 
     it('Sets brainz if any mbid is not undefined', function() {
@@ -42,7 +42,7 @@ describe('#LFM Track to Play', function() {
 
         const toTrack = generateLastfmTrackObject();
         toTrack.mbid = generateMbid();
-        expect(formatPlayObj(toTrack).data.meta?.brainz?.track).to.not.be.undefined;
+        expect(formatPlayObj(toTrack).data.meta?.brainz?.recording).to.not.be.undefined;
     });
 
         it('Sets artist correctly from #text or name', function() {

@@ -136,7 +136,7 @@ describe('Listenbrainz Response Behavior', function() {
                             // @ts-expect-error wrong on purpose
                             artist: 'fad8967c-a327-4af5-a64a-d4de66ece652;100846a7-06f6-4129-97ce-4409b9a9a311',
                             album: '2eb6a8fb-14f6-436e-9bdf-2f9d0d8cbae0',
-                            track: '677862e0-3603-4120-8c44-ee9a70893647',
+                            recording: '677862e0-3603-4120-8c44-ee9a70893647',
                             releaseGroup: 'bd3bb964-6da7-4d59-b0aa-f8bf639cd419'
                         }
                     }
