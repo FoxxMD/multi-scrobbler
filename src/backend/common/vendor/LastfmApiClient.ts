@@ -13,6 +13,7 @@ import AbstractApiClient from "./AbstractApiClient.js";
 import { parseArtistCredits } from "../../utils/StringUtils.js";
 import { LastFMUser, LastFMAuth, LastFMTrack, LastFMUserGetRecentTracksResponse, LastFMBooleanNumber, LastFMUpdateNowPlayingResponse, LastFMUserGetInfoResponse } from 'lastfm-ts-api';
 import clone from 'clone';
+import { IncomingMessage } from "http";
 
 const badErrors = [
     'api key suspended',
@@ -98,6 +99,13 @@ export default class LastfmApiClient extends AbstractApiClient {
             const {
                 message,
             } = e;
+            if('content' in e) {
+                let msg = 'Raw Response';
+                if('response' in e) {
+                    msg = `(${(e.response as IncomingMessage).statusCode}) ${msg}`;
+                }
+                this.logger.error(`${msg}:\n${e.content}`);
+            }
             // for now check for exceptional errors by matching error code text
             const retryError = retryErrors.find(x => message.toLocaleLowerCase().includes(x));
             let networkError =  undefined;
