@@ -14,18 +14,18 @@ import { isDebugMode, parseBool } from "../utils.js";
 import { readJson } from '../utils/DataUtils.js';
 import { validateJson } from "../utils/ValidationUtils.js";
 import AbstractScrobbleClient from "./AbstractScrobbleClient.js";
-import LastfmScrobbler from "./LastfmScrobbler.js";
-import ListenbrainzScrobbler from "./ListenbrainzScrobbler.js";
-import MalojaScrobbler from "./MalojaScrobbler.js";
-import KoitoScrobbler from './KoitoScrobbler.js';
+//import LastfmScrobbler from "./LastfmScrobbler.js";
+//import ListenbrainzScrobbler from "./ListenbrainzScrobbler.js";
+//import MalojaScrobbler from "./MalojaScrobbler.js";
+//import KoitoScrobbler from './KoitoScrobbler.js';
 import { KoitoClientConfig } from '../common/infrastructure/config/client/koito.js';
-import TealScrobbler from './TealfmScrobbler.js';
+//import TealScrobbler from './TealfmScrobbler.js';
 import { TealClientConfig } from '../common/infrastructure/config/client/tealfm.js';
-import RockskyScrobbler from './RockskyScrobbler.js';
+//import RockskyScrobbler from './RockskyScrobbler.js';
 import { RockSkyClientConfig } from '../common/infrastructure/config/client/rocksky.js';
 import { CommonClientOptions } from '../common/infrastructure/config/client/index.js';
 import { ExternalMetadataTerm, PlayTransformHooks } from '../common/infrastructure/Transform.js';
-import LibrefmScrobbler from './LibrefmScrobbler.js';
+//import LibrefmScrobbler from './LibrefmScrobbler.js';
 import { LibrefmClientConfig } from '../common/infrastructure/config/client/librefm.js';
 
 type groupedNamedConfigs = {[key: string]: ParsedConfig[]};
@@ -34,8 +34,7 @@ type ParsedConfig = ClientAIOConfig & ConfigMeta;
 
 export default class ScrobbleClients {
 
-    /** @type AbstractScrobbleClient[] */
-    clients: (MalojaScrobbler | LastfmScrobbler | KoitoScrobbler | TealScrobbler)[] = [];
+    clients: AbstractScrobbleClient[] = [];
     logger: Logger;
 
     internalConfig: InternalConfig;
@@ -410,24 +409,31 @@ ${sources.join('\n')}`);
         this.logger.debug({labels: [`${type} - ${name}`]}, `Constructing Client from ${source}`);
         switch (type) {
             case 'maloja':
+                const MalojaScrobbler = (await import('./MalojaScrobbler.js')).default;
                 newClient = new MalojaScrobbler(name, ({...clientConfig, data} as unknown as MalojaClientConfig), notifier, this.emitter, this.logger);
                 break;
             case 'lastfm':
+                const LastfmScrobbler = (await import('./LastfmScrobbler.js')).default;
                 newClient = new LastfmScrobbler(name, {...clientConfig, data } as unknown as LastfmClientConfig, this.internalConfig, notifier, this.emitter, this.logger);
                 break;
             case 'librefm':
+                const LibrefmScrobbler = (await import('./LibrefmScrobbler.js')).default;
                 newClient = new LibrefmScrobbler(name, {...clientConfig, data } as unknown as LibrefmClientConfig, this.internalConfig, notifier, this.emitter, this.logger);
                 break;
             case 'listenbrainz':
+                const ListenbrainzScrobbler = (await import('./ListenbrainzScrobbler.js')).default;
                 newClient = new ListenbrainzScrobbler(name, {...clientConfig, data: {configDir: this.internalConfig.configDir, ...data} } as unknown as ListenBrainzClientConfig, {}, notifier, this.emitter, this.logger);
                 break;
             case 'koito':
+                const KoitoScrobbler = (await import('./KoitoScrobbler.js')).default;
                 newClient = new KoitoScrobbler(name, {...clientConfig, data: {configDir: this.internalConfig.configDir, ...data} } as unknown as KoitoClientConfig, {}, notifier, this.emitter, this.logger);
                 break;
             case 'tealfm':
+                const TealScrobbler = (await import('./TealfmScrobbler.js')).default;
                 newClient = new TealScrobbler(name, {...clientConfig, data: {...data}} as unknown as TealClientConfig, {}, notifier, this.emitter, this.logger);
                 break;
             case 'rocksky':
+                const RockskyScrobbler = (await import('./RockskyScrobbler.js')).default;
                 newClient = new RockskyScrobbler(name, {...clientConfig, data: {configDir: this.internalConfig.configDir, ...data} } as unknown as RockSkyClientConfig, {}, notifier, this.emitter, this.logger);
                 break;
             default:
