@@ -12,14 +12,11 @@ import { WildcardEmitter } from "../common/WildcardEmitter.js";
 import { Notifiers } from "../notifier/Notifiers.js";
 import { isDebugMode, parseBool } from "../utils.js";
 import { readJson } from '../utils/DataUtils.js';
-import { joinedUrl } from "../utils/NetworkUtils.js";
-import { getTypeSchemaFromConfigGenerator } from "../utils/SchemaUtils.js";
 import { validateJson } from "../utils/ValidationUtils.js";
 import AbstractScrobbleClient from "./AbstractScrobbleClient.js";
 import LastfmScrobbler from "./LastfmScrobbler.js";
 import ListenbrainzScrobbler from "./ListenbrainzScrobbler.js";
 import MalojaScrobbler from "./MalojaScrobbler.js";
-import { Definition } from 'ts-json-schema-generator';
 import KoitoScrobbler from './KoitoScrobbler.js';
 import { KoitoClientConfig } from '../common/infrastructure/config/client/koito.js';
 import TealScrobbler from './TealfmScrobbler.js';
@@ -42,8 +39,6 @@ export default class ScrobbleClients {
     logger: Logger;
 
     internalConfig: InternalConfig;
-
-    private schemaDefinitions: Record<string, Definition> = {};
 
     emitter: WildcardEmitter;
 
@@ -104,33 +99,23 @@ export default class ScrobbleClients {
         return [clientsReady, messages];
     }
 
-    private getSchemaByType = (type: ClientType): Definition => {
-        if(this.schemaDefinitions[type] === undefined) {
+    private getSchemaByType = (type: ClientType): string => {
             switch(type) {
                 case 'maloja':
-                    this.schemaDefinitions[type] = getTypeSchemaFromConfigGenerator("MalojaClientConfig");
-                    break;
+                    return "MalojaClientConfig";
                 case 'lastfm':
-                    this.schemaDefinitions[type] = getTypeSchemaFromConfigGenerator("LastfmClientConfig");
-                    break;
+                    return "LastfmClientConfig";
                 case 'librefm':
-                    this.schemaDefinitions[type] = getTypeSchemaFromConfigGenerator("LibrefmClientConfig");
-                    break;
+                    return "LibrefmClientConfig";
                 case 'listenbrainz':
-                    this.schemaDefinitions[type] = getTypeSchemaFromConfigGenerator("ListenBrainzClientConfig");
-                    break;
+                    return "ListenBrainzClientConfig";
                 case 'koito':
-                    this.schemaDefinitions[type] = getTypeSchemaFromConfigGenerator("KoitoClientConfig");
-                    break;
+                    return "KoitoClientConfig";
                 case 'tealfm':
-                    this.schemaDefinitions[type] = getTypeSchemaFromConfigGenerator("TealClientConfig");
-                    break;
+                    return "TealClientConfig";
                 case 'rocksky':
-                    this.schemaDefinitions[type] = getTypeSchemaFromConfigGenerator("RockSkyClientConfig");
-                    break;
+                    return "RockSkyClientConfig";
             }
-        }
-        return this.schemaDefinitions[type];
     }
 
     buildClientsFromConfig = async (notifier: Notifiers) => {
@@ -144,11 +129,9 @@ export default class ScrobbleClients {
             throw new Error('config.json could not be parsed');
         }
 
-        const relaxedSchema = getTypeSchemaFromConfigGenerator("AIOClientRelaxedConfig");
-
         let clientDefaults = {};
         if (configFile !== undefined) {
-            const aioConfig = validateJson<AIOConfig>(configFile, relaxedSchema, this.logger);
+            const aioConfig = await validateJson<AIOConfig>('client', configFile, 'AIOClientRelaxedConfig', this.logger);
             const {
                 clients: mainConfigClientConfigs = [],
                 clientDefaults: cd = {},
@@ -172,7 +155,7 @@ export default class ScrobbleClients {
                        continue;
                 }
                 try {
-                    validateJson<AIOConfig>(c, this.getSchemaByType(c.type.toLocaleLowerCase() as ClientType), this.logger);
+                    await validateJson<AIOConfig>('client', c, this.getSchemaByType(c.type.toLocaleLowerCase() as ClientType), this.logger);
                 } catch (e) {
                     const err = new Error(`Client config ${index + 1} (${c.type} - ${name}) in config.json is invalid and will not be used.`, {cause: e});
                     this.emitter.emit('error', err);
@@ -352,7 +335,7 @@ export default class ScrobbleClients {
                        continue;
                     }
                     try {
-                        const validConfig = validateJson<ClientConfig>(rawConf, this.getSchemaByType(clientType), this.logger);
+                        const validConfig = await validateJson<ClientConfig>('client', rawConf, this.getSchemaByType(clientType), this.logger);
                         const {configureAs = defaultConfigureAs} = validConfig;
                         if (configureAs === 'client') {
                             const parsedConfig: ParsedConfig = {

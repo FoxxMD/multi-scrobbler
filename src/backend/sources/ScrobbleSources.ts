@@ -55,8 +55,6 @@ import { SubsonicSource } from "./SubsonicSource.js";
 import { VLCSource } from "./VLCSource.js";
 import { WebScrobblerSource } from "./WebScrobblerSource.js";
 import YTMusicSource from "./YTMusicSource.js";
-import { Definition } from 'ts-json-schema-generator';
-import { getTypeSchemaFromConfigGenerator } from '../utils/SchemaUtils.js';
 import PlexApiSource from './PlexApiSource.js';
 import { nonEmptyStringOrDefault } from '../../core/StringUtils.js';
 import { IcecastSource } from './IcecastSource.js';
@@ -82,8 +80,6 @@ export default class ScrobbleSources {
     sources: AbstractSource[] = [];
     logger: Logger;
     internalConfig: InternalConfig;
-
-    private schemaDefinitions: Record<string, Definition> = {};
 
     emitter: WildcardEmitter;
 
@@ -132,93 +128,63 @@ export default class ScrobbleSources {
         return [sourcesReady, messages];
     }
 
-    private getSchemaByType = (type: SourceType): Definition => {
-        if(this.schemaDefinitions[type] === undefined) {
+    private getSchemaByType = (type: SourceType): string => {
             switch(type) {
                 case 'spotify':
-                    this.schemaDefinitions[type] = getTypeSchemaFromConfigGenerator("SpotifySourceConfig");
-                    break;
+                    return "SpotifySourceConfig";
                 case 'plex':
-                    this.schemaDefinitions[type] = getTypeSchemaFromConfigGenerator("PlexCompatConfig");
-                    break;
+                    return "PlexCompatConfig";
                 case 'deezer':
-                    this.schemaDefinitions[type] = getTypeSchemaFromConfigGenerator("DeezerCompatConfig");
-                    break;
+                    return "DeezerCompatConfig";
                 case 'endpointlz':
-                    this.schemaDefinitions[type] = getTypeSchemaFromConfigGenerator("ListenbrainzEndpointSourceConfig");
-                    break;
+                    return "ListenbrainzEndpointSourceConfig";
                 case 'endpointlfm':
-                    this.schemaDefinitions[type] = getTypeSchemaFromConfigGenerator("LastFMEndpointSourceConfig");
-                    break;
+                    return "LastFMEndpointSourceConfig";
                 case 'icecast':
-                    this.schemaDefinitions[type] = getTypeSchemaFromConfigGenerator("IcecastSourceConfig");
-                    break;
+                    return "IcecastSourceConfig";
                 case 'subsonic':
-                    this.schemaDefinitions[type] = getTypeSchemaFromConfigGenerator("SubSonicSourceConfig");
-                    break;
+                    return "SubSonicSourceConfig";
                 case 'jellyfin':
-                    this.schemaDefinitions[type] = getTypeSchemaFromConfigGenerator("JellyfinCompatConfig");
-                    break;
+                    return "JellyfinCompatConfig";
                 case 'lastfm':
-                    this.schemaDefinitions[type] = getTypeSchemaFromConfigGenerator("LastfmSourceConfig");
-                    break;
+                    return "LastfmSourceConfig";
                 case 'librefm':
-                    this.schemaDefinitions[type] = getTypeSchemaFromConfigGenerator("LibrefmSourceConfig");
-                    break;
+                    return "LibrefmSourceConfig";
                 case 'ytmusic':
-                    this.schemaDefinitions[type] = getTypeSchemaFromConfigGenerator("YTMusicSourceConfig");
-                    break;
+                    return "YTMusicSourceConfig";
                 case 'maloja':
-                    this.schemaDefinitions[type] = getTypeSchemaFromConfigGenerator("MalojaSourceConfig");
-                    break;
+                    return "MalojaSourceConfig";
                 case 'mpris':
-                    this.schemaDefinitions[type] = getTypeSchemaFromConfigGenerator("MPRISSourceConfig");
-                    break;
+                    return "MPRISSourceConfig";
                 case 'mopidy':
-                    this.schemaDefinitions[type] = getTypeSchemaFromConfigGenerator("MopidySourceConfig");
-                    break;
+                    return "MopidySourceConfig";
                 case 'listenbrainz':
-                    this.schemaDefinitions[type] = getTypeSchemaFromConfigGenerator("ListenBrainzSourceConfig");
-                    break;
+                    return "ListenBrainzSourceConfig";
                 case 'jriver':
-                    this.schemaDefinitions[type] = getTypeSchemaFromConfigGenerator("JRiverSourceConfig");
-                    break;
+                    return "JRiverSourceConfig";
                 case 'kodi':
-                    this.schemaDefinitions[type] = getTypeSchemaFromConfigGenerator("KodiSourceConfig");
-                    break;
+                    return "KodiSourceConfig";
                 case 'chromecast':
-                    this.schemaDefinitions[type] = getTypeSchemaFromConfigGenerator("ChromecastSourceConfig");
-                    break;
+                    return "ChromecastSourceConfig";
                 case 'webscrobbler':
-                    this.schemaDefinitions[type] = getTypeSchemaFromConfigGenerator("WebScrobblerSourceConfig");
-                    break;
+                    return "WebScrobblerSourceConfig";
                 case 'musikcube':
-                    this.schemaDefinitions[type] = getTypeSchemaFromConfigGenerator("MusikcubeSourceConfig");
-                    break;
+                    return "MusikcubeSourceConfig";
                 case 'musiccast':
-                    this.schemaDefinitions[type] = getTypeSchemaFromConfigGenerator("MusicCastSourceConfig");
-                    break;
+                    return "MusicCastSourceConfig";
                 case 'mpd':
-                    this.schemaDefinitions[type] = getTypeSchemaFromConfigGenerator("MPDSourceConfig");
-                    break;
+                    return "MPDSourceConfig";
                 case 'vlc':
-                    this.schemaDefinitions[type] = getTypeSchemaFromConfigGenerator("VLCSourceConfig");
-                    break;
+                    return "VLCSourceConfig";
                 case 'azuracast':
-                    this.schemaDefinitions[type] = getTypeSchemaFromConfigGenerator("AzuracastSourceConfig");
-                    break;
+                    return "AzuracastSourceConfig";
                 case 'koito':
-                    this.schemaDefinitions[type] = getTypeSchemaFromConfigGenerator("KoitoSourceConfig");
-                    break;
+                    return "KoitoSourceConfig";
                 case 'tealfm':
-                    this.schemaDefinitions[type] = getTypeSchemaFromConfigGenerator("TealSourceConfig");
-                    break;
+                    return "TealSourceConfig";
                 case 'rocksky':
-                    this.schemaDefinitions[type] = getTypeSchemaFromConfigGenerator("RockskySourceConfig");
-                    break;
+                    return "RockskySourceConfig";
             }
-        }
-        return this.schemaDefinitions[type];
     }
 
     buildSourceDefaults = (fileDefaults: SourceDefaults = {}): SourceDefaults => {
@@ -270,11 +236,9 @@ export default class ScrobbleSources {
             throw new Error('config.json could not be parsed');
         }
 
-        const relaxedSchema = getTypeSchemaFromConfigGenerator("AIOSourceRelaxedConfig");
-
         let sourceDefaults = {};
         if (configFile !== undefined) {
-            const aioConfig = validateJson<AIOConfig>(configFile, relaxedSchema, this.logger);
+            const aioConfig = await validateJson<AIOConfig>('source', configFile, 'AIOSourceRelaxedConfig', this.logger);
             const {
                 sources: mainConfigSourcesConfigs = [],
                 sourceDefaults: sd = {},
@@ -300,7 +264,7 @@ export default class ScrobbleSources {
                    continue;
                 }
                 try {
-                    validateJson<SourceConfig>(c, this.getSchemaByType(c.type.toLocaleLowerCase() as SourceType), this.logger);
+                    await validateJson<SourceConfig>('source', c, this.getSchemaByType(c.type.toLocaleLowerCase() as SourceType), this.logger);
                 } catch (e) {
                     const err = new Error(`Source config ${index + 1} (${c.type} - ${name}) in config.json is invalid and will not be used.`, {cause: e});
                     this.emitter.emit('error', err);
@@ -860,7 +824,7 @@ export default class ScrobbleSources {
                         continue;
                     }
                     try {
-                        const validConfig = validateJson<SourceConfig>(rawConf, this.getSchemaByType(sourceType), this.logger);
+                        const validConfig = await validateJson<SourceConfig>('source', rawConf, this.getSchemaByType(sourceType), this.logger);
 
                         // @ts-expect-error will eventually have all info (lazy)
                         const parsedConfig: ParsedConfig = {

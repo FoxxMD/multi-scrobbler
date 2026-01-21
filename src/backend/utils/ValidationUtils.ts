@@ -2,6 +2,10 @@ import { Logger } from "@foxxmd/logging";
 import * as AjvNS from "ajv";
 import Ajv, { Schema } from "ajv";
 import f from "ajv-formats"
+import { resolve } from "path";
+import { projectDir } from "../common/index.js";
+
+const ajvInstances: Record<string, AjvNS.Ajv> = {};
 
 export const createAjvFactory = (logger: Logger): AjvNS.default => {
     const validator = new Ajv.default({logger: logger, verbose: true, strict: "log", strictSchema: "log", allowUnionTypes: true});
@@ -10,12 +14,27 @@ export const createAjvFactory = (logger: Logger): AjvNS.default => {
     f.default(validator);
     return validator;
 }
-export const validateJson = <T>(config: object, schema: Schema, logger: Logger): T => {
-    const ajv = createAjvFactory(logger);
-    if(schema === null) {
-        throw new Error('Schema cannot be null');
+export const validateJson = async <T>(type: string, config: object, schemaIdentifier: string, logger: Logger): Promise<T> => {
+    if(ajvInstances[type] === undefined) {
+        ajvInstances[type] = createAjvFactory(logger);
     }
-    const valid = ajv.validate(schema, config);
+    const ajv = ajvInstances[type];
+
+    let validate = ajv.getSchema(schemaIdentifier);
+    if(validate === undefined) {
+        const func = await getSchemaFunc();
+        let schema;
+        try {
+            schema = await func(schemaIdentifier, logger);
+        } catch (e) {
+            logger.warn(new Error(`Could not retrieve schema for ${schemaIdentifier}, skipping validation`, {cause: e}));
+            return config as unknown as T;
+        }
+        ajv.addSchema(schema, schemaIdentifier);
+        validate = ajv.getSchema(schemaIdentifier);
+    }
+
+    const valid = validate(config);
     if (valid) {
         return config as unknown as T;
     } else {
@@ -61,3 +80,24 @@ export const validateJson = <T>(config: object, schema: Schema, logger: Logger):
         throw new Error(schemaErrors.join('\n\n'));
     }
 }
+
+let schemaFetchFunc;
+
+const compiledPath = 'src/backend/utils/SchemaCompiledUtils.js',
+dynamicPath = 'src/backend/utils/SchemaUtils.js';
+
+const getSchemaFunc = async () => {
+    if(schemaFetchFunc !== undefined) {
+        return schemaFetchFunc;
+    }
+    const useCompiled = process.env.NODE_ENV === 'production' || process.env.COMPILED_VALIDATION === 'true';
+    const schemaFuncPath = resolve(projectDir, useCompiled ? compiledPath : dynamicPath);
+    try {
+        const module = await import(resolve(projectDir, schemaFuncPath))
+        schemaFetchFunc = module.getSchemaForType;
+    } catch (e) {
+        throw new Error(`Could not load module from path: ${schemaFuncPath}`);
+    }
+    return schemaFetchFunc;
+}
+

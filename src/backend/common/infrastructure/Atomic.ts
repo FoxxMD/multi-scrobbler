@@ -66,6 +66,37 @@ export const sourceTypes: SourceType[] = [
     'rocksky'
 ];
 
+export const sourceInterfaces = [
+    'AIOSourceRelaxedConfig',
+    'SpotifySourceConfig',
+    'PlexCompatConfig',
+    'DeezerCompatConfig',
+    'ListenbrainzEndpointSourceConfig',
+    'LastFMEndpointSourceConfig',
+    'IcecastSourceConfig',
+    'SubSonicSourceConfig',
+    'JellyfinCompatConfig',
+    'LastfmSourceConfig',
+    'LibrefmSourceConfig',
+    'YTMusicSourceConfig',
+    'MalojaSourceConfig',
+    'MPRISSourceConfig',
+    'MopidySourceConfig',
+    'ListenBrainzSourceConfig',
+    'JRiverSourceConfig',
+    'KodiSourceConfig',
+    'ChromecastSourceConfig',
+    'WebScrobblerSourceConfig',
+    'MusikcubeSourceConfig',
+    'MusicCastSourceConfig',
+    'MPDSourceConfig',
+    'VLCSourceConfig',
+    'AzuracastSourceConfig',
+    'KoitoSourceConfig',
+    'TealSourceConfig',
+    'RockskySourceConfig'
+]
+
 export const isSourceType = (data: string): data is SourceType => {
     return sourceTypes.includes(data as SourceType);
 }
@@ -89,6 +120,18 @@ export const clientTypes: ClientType[] = [
     'tealfm',
     'rocksky'
 ];
+
+export const clientInterfaces = [
+    'AIOClientRelaxedConfig',
+    'MalojaClientConfig',
+    'LastfmClientConfig',
+    'LibrefmClientConfig',
+    'ListenBrainzClientConfig',
+    'KoitoClientConfig',
+    'TealClientConfig',
+    'RockSkyClientConfig'
+];
+
 export const isClientType = (data: string): data is ClientType => {
     return clientTypes.includes(data as ClientType);
 }

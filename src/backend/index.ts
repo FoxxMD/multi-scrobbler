@@ -18,7 +18,7 @@ import { createHeartbeatClientsTask } from "./tasks/heartbeatClients.js";
 import { createHeartbeatSourcesTask } from "./tasks/heartbeatSources.js";
 import { isDebugMode, parseBool, retry, sleep } from "./utils.js";
 import { readJson } from './utils/DataUtils.js';
-import { createVegaGenerator } from './utils/SchemaUtils.js';
+//import { createVegaGenerator } from './utils/SchemaUtils.js';
 import ScrobbleClients from './scrobblers/ScrobbleClients.js';
 import ScrobbleSources from './sources/ScrobbleSources.js';
 import { Notifiers } from './notifier/Notifiers.js';
@@ -93,9 +93,9 @@ const configDir = process.env.CONFIG_DIR || path.resolve(projectDir, `./config`)
         const root = getRoot({...config, logger, loggingConfig: logging, loggerStream: appLoggerStream});
         initLogger.info(`Version: ${root.get('version')}`);
 
-        initLogger.info('Generating schema definitions...');
-        createVegaGenerator()
-        initLogger.info('Schema definitions generated');
+        //initLogger.info('Generating schema definitions...');
+        //createVegaGenerator()
+        //initLogger.info('Schema definitions generated');
 
         const internalConfigOptional = {
              localUrl: root.get('localUrl'),

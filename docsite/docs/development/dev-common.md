@@ -178,3 +178,15 @@ For more refer to the TS documentation for `PlayObject` or [`AmbPlayObject`](htt
 
 * [Source Development and Tutorial](dev-source.md)
 * [Client Development and Tutorial](dev-client.md)
+
+## Profiling
+
+Run tsx with inspect args
+
+```
+NODE_ENV=production node node_modules/.bin/tsx --inspect --heap-prof src/backend/index.ts
+```
+
+Use `chrome://inspect` from a chromium-based browser and attach to the running process, usually `localhost:9229`
+
+From the opened DevTools window use Performance or Memory to profile the running process.
