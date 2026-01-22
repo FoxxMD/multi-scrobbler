@@ -14,18 +14,11 @@ import { isDebugMode, parseBool } from "../utils.js";
 import { readJson } from '../utils/DataUtils.js';
 import { validateJson } from "../utils/ValidationUtils.js";
 import AbstractScrobbleClient from "./AbstractScrobbleClient.js";
-//import LastfmScrobbler from "./LastfmScrobbler.js";
-//import ListenbrainzScrobbler from "./ListenbrainzScrobbler.js";
-//import MalojaScrobbler from "./MalojaScrobbler.js";
-//import KoitoScrobbler from './KoitoScrobbler.js';
 import { KoitoClientConfig } from '../common/infrastructure/config/client/koito.js';
-//import TealScrobbler from './TealfmScrobbler.js';
 import { TealClientConfig } from '../common/infrastructure/config/client/tealfm.js';
-//import RockskyScrobbler from './RockskyScrobbler.js';
 import { RockSkyClientConfig } from '../common/infrastructure/config/client/rocksky.js';
 import { CommonClientOptions } from '../common/infrastructure/config/client/index.js';
 import { ExternalMetadataTerm, PlayTransformHooks } from '../common/infrastructure/Transform.js';
-//import LibrefmScrobbler from './LibrefmScrobbler.js';
 import { LibrefmClientConfig } from '../common/infrastructure/config/client/librefm.js';
 
 type groupedNamedConfigs = {[key: string]: ParsedConfig[]};
