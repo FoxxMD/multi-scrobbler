@@ -117,7 +117,7 @@ describe('Musicbrainz API', function () {
                     album: "Fake",
                     meta: {
                         brainz: {
-                            track: '026fa041-3917-4c73-9079-ed16e36f20f8'
+                            recording: '026fa041-3917-4c73-9079-ed16e36f20f8'
                         }
                     }
                 },
@@ -162,6 +162,69 @@ describe('Musicbrainz API', function () {
             expect(res.recordings[0].id).to.eq('026fa041-3917-4c73-9079-ed16e36f20f8')
         });
 
+        it('uses correct release if track mbid is explict', async function (){
+            this.timeout(3500);
+
+            const play: PlayObject = {
+                data: {
+                    track: "Berghain",
+                    artists: ["ROSALÍA", "Björk", "Yves Tumor"],
+                    albumArtists: ["ROSALÍA"],
+                    album: "LUX",
+                    meta: {
+                        brainz: {
+                            track: '47d5358a-d9eb-48db-babb-56284da8056b'
+                        }
+                    }
+                },
+                meta: {}
+            }
+            await mbTransformer.tryInitialize();
+
+            const stageConfig: MusicbrainzTransformerDataStage = {
+                type: "musicbrainz",
+                searchWhenMissing: ["artists", "album", "title"],
+                searchOrder: ['basicorids']
+            };
+
+            const res = await mbTransformer.getTransformerData(play, stageConfig);
+            expect(res.recordings).to.exist;
+            expect(res.recordings).to.not.be.empty;
+            const postFetch = await mbTransformer.handlePostFetch(play, res, stageConfig);
+            expect(postFetch.data.meta.brainz.album).to.eq('e5913eac-3d74-47af-a3f2-7aa6618f140a');
+        });
+
+        it('uses correct release if release mbid is explict', async function (){
+            this.timeout(3500);
+
+            const play: PlayObject = {
+                data: {
+                    track: "Berghain",
+                    artists: ["ROSALÍA", "Björk", "Yves Tumor"],
+                    albumArtists: ["ROSALÍA"],
+                    album: "LUX",
+                    meta: {
+                        brainz: {
+                            album: 'e5913eac-3d74-47af-a3f2-7aa6618f140a'
+                        }
+                    }
+                },
+                meta: {}
+            }
+            await mbTransformer.tryInitialize();
+
+            const stageConfig: MusicbrainzTransformerDataStage = {
+                type: "musicbrainz",
+                searchWhenMissing: ["artists", "album", "title"],
+                searchOrder: ['basicorids']
+            };
+
+            const res = await mbTransformer.getTransformerData(play, stageConfig);
+            expect(res.recordings).to.exist;
+            expect(res.recordings).to.not.be.empty;
+            const postFetch = await mbTransformer.handlePostFetch(play, res, stageConfig);
+            expect(postFetch.data.meta.brainz.album).to.eq('e5913eac-3d74-47af-a3f2-7aa6618f140a');
+        });
 
         it('tries second query using only track and album', async function () {
 

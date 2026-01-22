@@ -200,7 +200,7 @@ export const listenObjectResponseToPlay = (obj: ListenObjectResponse, options: {
     if (obj.track.musicbrainz_id !== null) {
         play.data.meta = {
             brainz: {
-                track: obj.track.musicbrainz_id
+                recording: obj.track.musicbrainz_id
             }
         }
     }

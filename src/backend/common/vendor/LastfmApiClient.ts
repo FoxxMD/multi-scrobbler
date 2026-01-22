@@ -456,7 +456,7 @@ export const scrobblePayloadToPlay = (obj: LastFMScrobbleRequestPayload): PlayOb
     if(nonEmptyStringOrDefault(mbid) !== undefined) {
         play.data.meta = {
             brainz: {
-                track: mbid
+                recording: mbid
             }
         };
     }
@@ -475,7 +475,7 @@ export const playToClientPayload = (playObj: PlayObject): LastFMScrobblePayload 
                 playDate,
                 meta: {
                     brainz: {
-                        track: mbid
+                        recording: mbid
                     } = {},
                 } = {}
             } = {}
@@ -561,7 +561,7 @@ export const formatPlayObj = (obj: LastFMTrackObject, options: FormatPlayObjectO
     const brainz: BrainzMeta = removeUndefinedKeys({
         album: nonEmptyStringOrDefault<undefined>(albumMbid),
         artist: splitByFirstFound<undefined>(artistMbid, [',',';'], undefined),
-        track: nonEmptyStringOrDefault<undefined>(mbid)
+        recording: nonEmptyStringOrDefault<undefined>(mbid)
     });
 
     const play: PlayObject = {

@@ -429,10 +429,10 @@ export default class JellyfinApiSource extends MemoryPositionalSource {
             meta.album = ProviderIds.MusicBrainzAlbum;
         }
         if(ProviderIds.MusicBrainzTrack !== undefined) {
-            meta.track = ProviderIds.MusicBrainzTrack;
+            meta.recording = ProviderIds.MusicBrainzTrack;
         }
         if(ProviderIds.MusicBrainzTrack !== undefined) {
-            meta.track = ProviderIds.MusicBrainzTrack;
+            meta.recording = ProviderIds.MusicBrainzTrack;
         }
         if(ProviderIds.MusicBrainzArtist !== undefined) {
             meta.artist = [ProviderIds.MusicBrainzArtist];

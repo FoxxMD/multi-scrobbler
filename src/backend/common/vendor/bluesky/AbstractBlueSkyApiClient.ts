@@ -69,7 +69,7 @@ export const playToRecord = (play: PlayObject): ScrobbleRecord => {
         submissionClientAgent: `multi-scrobbler/${getRoot().items.version}`,
         musicServiceBaseDomain: musicServiceToCononical(play.meta.musicService) ?? play.meta.musicService,
         isrc: play.data.isrc,
-        recordingMbId: play.data.meta?.brainz?.track,
+        recordingMbId: play.data.meta?.brainz?.recording,
         releaseMbId: play.data.meta?.brainz?.album
     };
 
@@ -111,7 +111,7 @@ export const recordToPlay = (record: ScrobbleRecord, options: RecordOptions = {}
     };
 
     const brainz: BrainzMeta | undefined = removeUndefinedKeys({
-        track: record.recordingMbId,
+        recording: record.recordingMbId,
         album: record.releaseMbId,
         artist: record.artists.filter(x => x.artistMbId !== undefined).length > 0 ? record.artists.filter(x => x.artistMbId !== undefined).map(x => x.artistMbId) : undefined
     });

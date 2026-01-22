@@ -36,7 +36,7 @@ export interface MusicbrainzApiClientConfig {
     apis: MusicbrainzApiConfigData[]
 }
 
-export type UsingTypes = 'artist' | 'album' | 'title' | 'isrc' | 'mbidrecording' | 'mbidrelease' | 'mbidartist';
+export type UsingTypes = 'artist' | 'album' | 'title' | 'isrc' | 'mbidrecording' | 'mbidrelease' | 'mbidartist' | 'mbidtrack';
 
 export interface SearchOptions {
     escapeCharacters?: boolean
@@ -213,8 +213,11 @@ export class MusicbrainzApiClient extends AbstractApiClient {
             const query: Record<string, any> = {
             };
 
-            if(play.data?.meta?.brainz?.track !== undefined && using.includes('mbidrecording')) {
-                query.recording_mbid = play.data.meta.brainz.track
+            if(play.data?.meta?.brainz?.recording !== undefined && using.includes('mbidrecording')) {
+                query.recording_mbid = play.data.meta.brainz.recording
+            }
+            if(play.data?.meta?.brainz?.track !== undefined && using.includes('mbidtrack')) {
+                query.track_mbid = play.data.meta.brainz.track
             }
             if(play.data?.meta?.brainz?.album !== undefined && using.includes('mbidrelease')) {
                 query.release_mbid = play.data.meta.brainz.album
@@ -286,6 +289,12 @@ export class MusicbrainzApiClient extends AbstractApiClient {
                         q += ' AND ';
                     }
                     q += `rid:"${query.recording_mbid}"`
+                }
+                if(query.track_mbid !== undefined) {
+                    if(q !== '') {
+                        q += ' AND ';
+                    }
+                    q += `tid:"${query.track_mbid}"`
                 }
                 if(query.artist_mbids !== undefined) {
                     q += `(arid:(${query.artist_mbids.map(x => `"${x}"`).join(' AND ')}) OR arid:(${query.artist_mbids.map(x => `"${x}"`).join(' OR ')}))`
@@ -375,7 +384,7 @@ export const recordingToPlay = (data: IRecording, options?: {ignoreVA?: boolean}
             isrc: data.isrcs !== undefined && data.isrcs.length > 0 ? data.isrcs[0] : undefined,
             meta: {
                 brainz: {
-                    track: data.id,
+                    recording: data.id,
                     artist: data["artist-credit"] !== undefined ? data["artist-credit"].map(x => x.artist.id) : undefined,
                     albumArtist: albumArtistIds,
                     album: album !== undefined ? album.id : undefined,

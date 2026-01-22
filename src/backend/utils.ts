@@ -604,7 +604,7 @@ export const missingMbidTypes = (play: PlayObject): MissingMbidType[] => {
         return missing;
     }
     const {
-        track,
+        recording: track,
         album,
         artist
     } = play.data.meta.brainz;
