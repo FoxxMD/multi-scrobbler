@@ -29,6 +29,7 @@ import AbstractSource from "./AbstractSource.js";
 import { AbstractPlayerState, createPlayerOptions, PlayerStateOptions } from "./PlayerState/AbstractPlayerState.js";
 import { GenericPlayerState } from "./PlayerState/GenericPlayerState.js";
 import { hashObject } from "../utils/StringUtils.js";
+import { useDebugValue } from "react";
 
 const EXPECTED_NON_DISCOVERED_REASON = 'not added because an identical play with the same timestamp was already discovered.';
 
@@ -177,6 +178,10 @@ export default class MemorySource extends AbstractSource {
         return this.players.has(id);
     }
 
+    genPlayerId = (data: PlayObject | PlayerStateDataMaybePlay): string => {
+        return genGroupIdStr(getPlatformIdFromData(data));
+    }
+
     deletePlayer = (id: string, reason?: string) => {
         if(!this.players.has(id)) {
             return;
@@ -209,7 +214,7 @@ export default class MemorySource extends AbstractSource {
         // create any new players from incoming data
         for (const data of datas) {
             const id = getPlatformIdFromData(data);
-            const idStr = genGroupIdStr(id);
+            const idStr = this.genPlayerId(data);
             if (!this.players.has(idStr)) {
                 this.setNewPlayer(idStr, this.logger, id);
 

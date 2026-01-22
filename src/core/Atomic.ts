@@ -32,7 +32,8 @@ export interface SourceStatusData {
     | 'azuracast'
     | 'koito'
     | 'tealfm'
-    | 'rocksky';
+    | 'rocksky'
+    | 'sonos';
     display: string;
     tracksDiscovered: number;
     name: string;
