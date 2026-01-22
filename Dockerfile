@@ -106,6 +106,8 @@ ARG APP_BUILD_VERSION
 ENV APP_VERSION=$APP_BUILD_VERSION
 
 RUN npm ci --omit=dev --no-audit \
+    # we used compiled schema json for production so this isn't needed
+    && npm uninstall ts-json-schema-generator \
     && npm cache clean --force \
     && chown -R abc:abc node_modules \
     && rm -rf /root/.cache

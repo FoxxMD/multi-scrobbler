@@ -2,8 +2,6 @@ import { LogDataPretty, LogLevel } from "@foxxmd/logging";
 import { Dayjs } from "dayjs";
 import { ListenProgress } from "../backend/sources/PlayerState/ListenProgress.js";
 import { AdditionalTrackInfoResponse } from "../backend/common/vendor/listenbrainz/interfaces.js";
-import { Name } from "ajv";
-import { StringMap } from "ts-json-schema-generator";
 
 export interface SourceStatusData {
     status: string;

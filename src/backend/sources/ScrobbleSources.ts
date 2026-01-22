@@ -35,42 +35,40 @@ import { parseBool } from "../utils.js";
 import { readJson } from '../utils/DataUtils.js';
 import { validateJson } from "../utils/ValidationUtils.js";
 import AbstractSource from "./AbstractSource.js";
-import { AzuracastSource } from "./AzuracastSource.js";
-import { ChromecastSource } from "./ChromecastSource.js";
-import DeezerSource from "./DeezerSource.js";
-import { EndpointListenbrainzSource } from "./EndpointListenbrainzSource.js";
-import { EndpointLastfmSource } from "./EndpointLastfmSource.js";
-import JellyfinApiSource from "./JellyfinApiSource.js";
-import { JRiverSource } from "./JRiverSource.js";
-import { KodiSource } from "./KodiSource.js";
-import LastfmSource from "./LastfmSource.js";
-import ListenbrainzSource from "./ListenbrainzSource.js";
-import { MopidySource } from "./MopidySource.js";
-import { MPDSource } from "./MPDSource.js";
-import { MPRISSource } from "./MPRISSource.js";
-import { MusikcubeSource } from "./MusikcubeSource.js";
-import { MusicCastSource } from "./MusicCastSource.js";
-import SpotifySource from "./SpotifySource.js";
-import { SubsonicSource } from "./SubsonicSource.js";
-import { VLCSource } from "./VLCSource.js";
-import { WebScrobblerSource } from "./WebScrobblerSource.js";
-import YTMusicSource from "./YTMusicSource.js";
-import { Definition } from 'ts-json-schema-generator';
-import { getTypeSchemaFromConfigGenerator } from '../utils/SchemaUtils.js';
-import PlexApiSource from './PlexApiSource.js';
+//import { AzuracastSource } from "./AzuracastSource.js";
+//import { ChromecastSource } from "./ChromecastSource.js";
+//import DeezerSource from "./DeezerSource.js";
+//import { EndpointListenbrainzSource } from "./EndpointListenbrainzSource.js";
+//import { EndpointLastfmSource } from "./EndpointLastfmSource.js";
+//import JellyfinApiSource from "./JellyfinApiSource.js";
+//import { JRiverSource } from "./JRiverSource.js";
+//import { KodiSource } from "./KodiSource.js";
+//import LastfmSource from "./LastfmSource.js";
+//import ListenbrainzSource from "./ListenbrainzSource.js";
+//import { MopidySource } from "./MopidySource.js";
+//import { MPDSource } from "./MPDSource.js";
+//import { MPRISSource } from "./MPRISSource.js";
+//import { MusikcubeSource } from "./MusikcubeSource.js";
+//import { MusicCastSource } from "./MusicCastSource.js";
+//import SpotifySource from "./SpotifySource.js";
+//import { SubsonicSource } from "./SubsonicSource.js";
+//import { VLCSource } from "./VLCSource.js";
+//import { WebScrobblerSource } from "./WebScrobblerSource.js";
+//import YTMusicSource from "./YTMusicSource.js";
+//import PlexApiSource from './PlexApiSource.js';
 import { nonEmptyStringOrDefault } from '../../core/StringUtils.js';
-import { IcecastSource } from './IcecastSource.js';
-import DeezerInternalSource from './DeezerInternalSource.js';
-import KoitoSource from './KoitoSource.js';
+//import { IcecastSource } from './IcecastSource.js';
+//import DeezerInternalSource from './DeezerInternalSource.js';
+//import KoitoSource from './KoitoSource.js';
 import { KoitoSourceConfig } from '../common/infrastructure/config/source/koito.js';
-import MalojaSource from './MalojaSource.js';
-import TealfmSource from './TealfmSource.js';
+//import MalojaSource from './MalojaSource.js';
+//import TealfmSource from './TealfmSource.js';
 import { TealSourceConfig } from '../common/infrastructure/config/source/tealfm.js';
 import { RockskySourceConfig } from '../common/infrastructure/config/source/rocksky.js';
-import RockskySource from './RockskySource.js';
+//import RockskySource from './RockskySource.js';
 import { CommonSourceOptions } from '../common/infrastructure/config/source/index.js';
 import { ExternalMetadataTerm, PlayTransformHooks, PlayTransformOptions } from '../common/infrastructure/Transform.js';
-import LibrefmSource from './LibrefmSource.js';
+//import LibrefmSource from './LibrefmSource.js';
 import { LibrefmSourceConfig } from '../common/infrastructure/config/source/librefm.js';
 
 type groupedNamedConfigs = {[key: string]: ParsedConfig[]};
@@ -82,8 +80,6 @@ export default class ScrobbleSources {
     sources: AbstractSource[] = [];
     logger: Logger;
     internalConfig: InternalConfig;
-
-    private schemaDefinitions: Record<string, Definition> = {};
 
     emitter: WildcardEmitter;
 
@@ -132,93 +128,63 @@ export default class ScrobbleSources {
         return [sourcesReady, messages];
     }
 
-    private getSchemaByType = (type: SourceType): Definition => {
-        if(this.schemaDefinitions[type] === undefined) {
+    private getSchemaByType = (type: SourceType): string => {
             switch(type) {
                 case 'spotify':
-                    this.schemaDefinitions[type] = getTypeSchemaFromConfigGenerator("SpotifySourceConfig");
-                    break;
+                    return "SpotifySourceConfig";
                 case 'plex':
-                    this.schemaDefinitions[type] = getTypeSchemaFromConfigGenerator("PlexCompatConfig");
-                    break;
+                    return "PlexCompatConfig";
                 case 'deezer':
-                    this.schemaDefinitions[type] = getTypeSchemaFromConfigGenerator("DeezerCompatConfig");
-                    break;
+                    return "DeezerCompatConfig";
                 case 'endpointlz':
-                    this.schemaDefinitions[type] = getTypeSchemaFromConfigGenerator("ListenbrainzEndpointSourceConfig");
-                    break;
+                    return "ListenbrainzEndpointSourceConfig";
                 case 'endpointlfm':
-                    this.schemaDefinitions[type] = getTypeSchemaFromConfigGenerator("LastFMEndpointSourceConfig");
-                    break;
+                    return "LastFMEndpointSourceConfig";
                 case 'icecast':
-                    this.schemaDefinitions[type] = getTypeSchemaFromConfigGenerator("IcecastSourceConfig");
-                    break;
+                    return "IcecastSourceConfig";
                 case 'subsonic':
-                    this.schemaDefinitions[type] = getTypeSchemaFromConfigGenerator("SubSonicSourceConfig");
-                    break;
+                    return "SubSonicSourceConfig";
                 case 'jellyfin':
-                    this.schemaDefinitions[type] = getTypeSchemaFromConfigGenerator("JellyfinCompatConfig");
-                    break;
+                    return "JellyfinCompatConfig";
                 case 'lastfm':
-                    this.schemaDefinitions[type] = getTypeSchemaFromConfigGenerator("LastfmSourceConfig");
-                    break;
+                    return "LastfmSourceConfig";
                 case 'librefm':
-                    this.schemaDefinitions[type] = getTypeSchemaFromConfigGenerator("LibrefmSourceConfig");
-                    break;
+                    return "LibrefmSourceConfig";
                 case 'ytmusic':
-                    this.schemaDefinitions[type] = getTypeSchemaFromConfigGenerator("YTMusicSourceConfig");
-                    break;
+                    return "YTMusicSourceConfig";
                 case 'maloja':
-                    this.schemaDefinitions[type] = getTypeSchemaFromConfigGenerator("MalojaSourceConfig");
-                    break;
+                    return "MalojaSourceConfig";
                 case 'mpris':
-                    this.schemaDefinitions[type] = getTypeSchemaFromConfigGenerator("MPRISSourceConfig");
-                    break;
+                    return "MPRISSourceConfig";
                 case 'mopidy':
-                    this.schemaDefinitions[type] = getTypeSchemaFromConfigGenerator("MopidySourceConfig");
-                    break;
+                    return "MopidySourceConfig";
                 case 'listenbrainz':
-                    this.schemaDefinitions[type] = getTypeSchemaFromConfigGenerator("ListenBrainzSourceConfig");
-                    break;
+                    return "ListenBrainzSourceConfig";
                 case 'jriver':
-                    this.schemaDefinitions[type] = getTypeSchemaFromConfigGenerator("JRiverSourceConfig");
-                    break;
+                    return "JRiverSourceConfig";
                 case 'kodi':
-                    this.schemaDefinitions[type] = getTypeSchemaFromConfigGenerator("KodiSourceConfig");
-                    break;
+                    return "KodiSourceConfig";
                 case 'chromecast':
-                    this.schemaDefinitions[type] = getTypeSchemaFromConfigGenerator("ChromecastSourceConfig");
-                    break;
+                    return "ChromecastSourceConfig";
                 case 'webscrobbler':
-                    this.schemaDefinitions[type] = getTypeSchemaFromConfigGenerator("WebScrobblerSourceConfig");
-                    break;
+                    return "WebScrobblerSourceConfig";
                 case 'musikcube':
-                    this.schemaDefinitions[type] = getTypeSchemaFromConfigGenerator("MusikcubeSourceConfig");
-                    break;
+                    return "MusikcubeSourceConfig";
                 case 'musiccast':
-                    this.schemaDefinitions[type] = getTypeSchemaFromConfigGenerator("MusicCastSourceConfig");
-                    break;
+                    return "MusicCastSourceConfig";
                 case 'mpd':
-                    this.schemaDefinitions[type] = getTypeSchemaFromConfigGenerator("MPDSourceConfig");
-                    break;
+                    return "MPDSourceConfig";
                 case 'vlc':
-                    this.schemaDefinitions[type] = getTypeSchemaFromConfigGenerator("VLCSourceConfig");
-                    break;
+                    return "VLCSourceConfig";
                 case 'azuracast':
-                    this.schemaDefinitions[type] = getTypeSchemaFromConfigGenerator("AzuracastSourceConfig");
-                    break;
+                    return "AzuracastSourceConfig";
                 case 'koito':
-                    this.schemaDefinitions[type] = getTypeSchemaFromConfigGenerator("KoitoSourceConfig");
-                    break;
+                    return "KoitoSourceConfig";
                 case 'tealfm':
-                    this.schemaDefinitions[type] = getTypeSchemaFromConfigGenerator("TealSourceConfig");
-                    break;
+                    return "TealSourceConfig";
                 case 'rocksky':
-                    this.schemaDefinitions[type] = getTypeSchemaFromConfigGenerator("RockskySourceConfig");
-                    break;
+                    return "RockskySourceConfig";
             }
-        }
-        return this.schemaDefinitions[type];
     }
 
     buildSourceDefaults = (fileDefaults: SourceDefaults = {}): SourceDefaults => {
@@ -270,11 +236,9 @@ export default class ScrobbleSources {
             throw new Error('config.json could not be parsed');
         }
 
-        const relaxedSchema = getTypeSchemaFromConfigGenerator("AIOSourceRelaxedConfig");
-
         let sourceDefaults = {};
         if (configFile !== undefined) {
-            const aioConfig = validateJson<AIOConfig>(configFile, relaxedSchema, this.logger);
+            const aioConfig = await validateJson<AIOConfig>('source', configFile, 'AIOSourceRelaxedConfig', this.logger);
             const {
                 sources: mainConfigSourcesConfigs = [],
                 sourceDefaults: sd = {},
@@ -300,7 +264,7 @@ export default class ScrobbleSources {
                    continue;
                 }
                 try {
-                    validateJson<SourceConfig>(c, this.getSchemaByType(c.type.toLocaleLowerCase() as SourceType), this.logger);
+                    await validateJson<SourceConfig>('source', c, this.getSchemaByType(c.type.toLocaleLowerCase() as SourceType), this.logger);
                 } catch (e) {
                     const err = new Error(`Source config ${index + 1} (${c.type} - ${name}) in config.json is invalid and will not be used.`, {cause: e});
                     this.emitter.emit('error', err);
@@ -860,7 +824,7 @@ export default class ScrobbleSources {
                         continue;
                     }
                     try {
-                        const validConfig = validateJson<SourceConfig>(rawConf, this.getSchemaByType(sourceType), this.logger);
+                        const validConfig = await validateJson<SourceConfig>('source', rawConf, this.getSchemaByType(sourceType), this.logger);
 
                         // @ts-expect-error will eventually have all info (lazy)
                         const parsedConfig: ParsedConfig = {
@@ -943,89 +907,117 @@ export default class ScrobbleSources {
         let newSource: AbstractSource;
         switch (type) {
             case 'spotify':
+                const SpotifySource = (await import('./SpotifySource.js')).default;
                 newSource = new SpotifySource(name, compositeConfig as SpotifySourceConfig, this.internalConfig, this.emitter);
                 break;
             case 'plex':
+                const PlexApiSource = (await import('./PlexApiSource.js')).default;
                 newSource = await new PlexApiSource(name, compositeConfig as PlexApiSourceConfig, this.internalConfig, this.emitter); 
                 break;
             case 'subsonic':
+                const {SubsonicSource} = (await import('./SubsonicSource.js'));
                 newSource = new SubsonicSource(name, compositeConfig as SubSonicSourceConfig, this.internalConfig, this.emitter);
                 break;
             case 'jellyfin':
+                const JellyfinApiSource = (await import('./JellyfinApiSource.js')).default;
                 newSource = await new JellyfinApiSource(name, compositeConfig as JellyApiSourceConfig, this.internalConfig, this.emitter);
                 break;
             case 'lastfm':
+                const LastfmSource = (await import('./LastfmSource.js')).default;
                 newSource = await new LastfmSource(name, compositeConfig as LastfmSourceConfig, this.internalConfig, this.emitter);
                 break;
             case 'librefm':
+                const LibrefmSource = (await import('./LibrefmSource.js')).default;
                 newSource = await new LibrefmSource(name, compositeConfig as LibrefmSourceConfig, this.internalConfig, this.emitter);
                 break;
             case 'deezer':
                 const deezerConfig = compositeConfig as DeezerCompatConfig;
                 if(deezerConfig.data.arl !== undefined) {
+                    const DeezerInternalSource = (await import('./DeezerInternalSource.js')).default;
                     newSource = await new DeezerInternalSource(name, compositeConfig as DeezerInternalSourceConfig, this.internalConfig, this.emitter);
                 } else {
+                    const DeezerSource = (await import('./DeezerSource.js')).default;
                     newSource = await new DeezerSource(name, compositeConfig as DeezerSourceConfig, this.internalConfig, this.emitter);
                 }
                 break;
             case 'ytmusic':
+                const YTMusicSource = (await import('./YTMusicSource.js')).default;
                 newSource = await new YTMusicSource(name, compositeConfig as YTMusicSourceConfig, this.internalConfig, this.emitter);
                 break;
             case 'mpris':
+                const {MPRISSource} = (await import('./MPRISSource.js'));
                 newSource = await new MPRISSource(name, compositeConfig as MPRISSourceConfig, this.internalConfig, this.emitter);
                 break;
             case 'mopidy':
+                const {MopidySource} = (await import('./MopidySource.js'));
                 newSource = await new MopidySource(name, compositeConfig as MopidySourceConfig, this.internalConfig, this.emitter);
                 break;
             case 'listenbrainz':
+                const ListenbrainzSource = (await import('./ListenbrainzSource.js')).default;
                 newSource = await new ListenbrainzSource(name, compositeConfig as ListenBrainzSourceConfig, this.internalConfig, this.emitter);
                 break;
             case 'endpointlz':
+                const {EndpointListenbrainzSource} = (await import('./EndpointListenbrainzSource.js'));
                 newSource = await new EndpointListenbrainzSource(name, compositeConfig as ListenbrainzEndpointSourceConfig, this.internalConfig, this.emitter);
                 break;
             case 'endpointlfm':
+                const {EndpointLastfmSource} = (await import('./EndpointLastfmSource.js'));
                 newSource = await new EndpointLastfmSource(name, compositeConfig as LastFMEndpointSourceConfig, this.internalConfig, this.emitter);
                 break;
             case 'icecast':
+                const {IcecastSource} = (await import('./IcecastSource.js'));
                 newSource = await new IcecastSource(name, compositeConfig as IcecastSourceConfig, this.internalConfig, this.emitter);
                 break;
             case 'jriver':
+                const {JRiverSource} = (await import('./JRiverSource.js'));
                 newSource = await new JRiverSource(name, compositeConfig as JRiverSourceConfig, this.internalConfig, this.emitter);
                 break;
             case 'kodi':
+                const {KodiSource} = (await import('./KodiSource.js'));
                 newSource = await new KodiSource(name, compositeConfig as KodiSourceConfig, this.internalConfig, this.emitter);
                 break;
             case 'webscrobbler':
+                const {WebScrobblerSource} = (await import('./WebScrobblerSource.js'));
                 newSource = await new WebScrobblerSource(name, compositeConfig as WebScrobblerSourceConfig, this.internalConfig, this.emitter);
                 break;
             case 'chromecast':
+                const {ChromecastSource} = (await import('./ChromecastSource.js'));
                 newSource = await new ChromecastSource(name, compositeConfig as ChromecastSourceConfig, this.internalConfig, this.emitter);
                 break;
             case 'musikcube':
+                const {MusikcubeSource} = (await import('./MusikcubeSource.js'));
                 newSource = await new MusikcubeSource(name, compositeConfig as MusikcubeSourceConfig, this.internalConfig, this.emitter);
                 break;
             case 'musiccast':
+                const {MusicCastSource} = (await import('./MusicCastSource.js'));
                 newSource = await new MusicCastSource(name, compositeConfig as MusicCastSourceConfig, this.internalConfig, this.emitter);
                 break;
             case 'mpd':
+                const {MPDSource} = (await import('./MPDSource.js'));
                 newSource = await new MPDSource(name, compositeConfig as MPDSourceConfig, this.internalConfig, this.emitter);
                 break;
             case 'vlc':
+                const {VLCSource} = (await import('./VLCSource.js'));
                 newSource = await new VLCSource(name, compositeConfig as VLCSourceConfig, this.internalConfig, this.emitter);
                 break;
             case 'azuracast':
+                const {AzuracastSource} = (await import('./AzuracastSource.js'));
                 newSource = await new AzuracastSource(name, compositeConfig as AzuracastSourceConfig, this.internalConfig, this.emitter);
                 break;
             case 'koito':
+                const KoitoSource = (await import('./KoitoSource.js')).default;
                 newSource = await new KoitoSource(name, compositeConfig as KoitoSourceConfig, this.internalConfig, this.emitter);
                 break;
             case 'maloja':
+                const MalojaSource = (await import('./MalojaSource.js')).default;
                 newSource = await new MalojaSource(name, compositeConfig as MalojaSourceConfig, this.internalConfig, this.emitter);
                 break;
             case 'tealfm':
+                const TealfmSource = (await import('./TealfmSource.js')).default;
                 newSource = await new TealfmSource(name, compositeConfig as TealSourceConfig, this.internalConfig, this.emitter);
                 break;
             case 'rocksky':
+                const RockskySource = (await import('./RockskySource.js')).default;
                 newSource = await new RockskySource(name, compositeConfig as RockskySourceConfig, this.internalConfig, this.emitter);
                 break;
             default:

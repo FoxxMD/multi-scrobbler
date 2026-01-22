@@ -127,6 +127,13 @@ config/*.cache
 
 src/**/**.js
 src/**/**.js.map
+src/backend/common/schema/*.json
+!src/backend/common/schema/aio-client.json
+!src/backend/common/schema/aio-source.json
+!src/backend/common/schema/aio.json
+!src/backend/common/schema/client.json
+!src/backend/common/schema/source.json
+
 
 *.bak
 *.p8
