@@ -96,7 +96,8 @@ export const sourceInterfaces = [
     'AzuracastSourceConfig',
     'KoitoSourceConfig',
     'TealSourceConfig',
-    'RockskySourceConfig'
+    'RockskySourceConfig',
+    'SonosSourceConfig'
 ]
 
 export const isSourceType = (data: string): data is SourceType => {

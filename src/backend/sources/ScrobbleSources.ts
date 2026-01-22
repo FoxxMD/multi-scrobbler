@@ -71,7 +71,7 @@ import { CommonSourceOptions } from '../common/infrastructure/config/source/inde
 import { ExternalMetadataTerm, PlayTransformHooks, PlayTransformOptions } from '../common/infrastructure/Transform.js';
 //import LibrefmSource from './LibrefmSource.js';
 import { LibrefmSourceConfig } from '../common/infrastructure/config/source/librefm.js';
-import { SonosSource } from './SonosSource.js';
+//import { SonosSource } from './SonosSource.js';
 
 type groupedNamedConfigs = {[key: string]: ParsedConfig[]};
 
@@ -1045,6 +1045,7 @@ export default class ScrobbleSources {
                 newSource = await new RockskySource(name, compositeConfig as RockskySourceConfig, this.internalConfig, this.emitter);
                 break;
             case 'sonos':
+                const {SonosSource} = (await import('./SonosSource.js'));
                 newSource = await new SonosSource(name, compositeConfig as SonosSourceConfig, this.internalConfig, this.emitter);
                 break;
             default:
