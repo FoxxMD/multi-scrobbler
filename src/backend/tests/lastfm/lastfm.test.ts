@@ -3,7 +3,12 @@ import asPromised from 'chai-as-promised';
 import { after, before, describe, it } from 'mocha';
 import { generateLastfmTrackObject, generateMbid, generatePlay } from "../utils/PlayTestUtils.js";
 
-import { playToClientPayload, formatPlayObj } from '../../common/vendor/LastfmApiClient.js';
+import LastfmApiClient, { playToClientPayload, formatPlayObj } from '../../common/vendor/LastfmApiClient.js';
+import { MockNetworkError, withRequestInterception } from '../utils/networking.js';
+import { http, HttpResponse, delay } from "msw";
+import { loggerDebug } from '@foxxmd/logging';
+import { configDir, projectDir } from '../../common/index.js';
+import { LastFMGeo } from 'lastfm-ts-api';
 
 chai.use(asPromised);
 
@@ -64,3 +69,27 @@ describe('#LFM Track to Play', function() {
     });
 
 });
+
+// it('should catch error and log contents on api failure', async function () {
+//     this.timeout(50000);
+//     await withRequestInterception([
+//         http.post('ws.audioscrobbler.com/2.0', async () => {
+//             return HttpResponse.html('<html>This is a test</html>', {status: 200});
+//         })
+//     ], async function () {
+
+//         const lfm = new LastfmApiClient('mylfm-client-test', {
+//             apiKey: '',
+//             secret: ''
+//         }, {
+//             logger: loggerDebug,
+//             localUrl: new URL('http://localhost:9078'),
+//             configDir: configDir,
+//             version: 'test'
+//         });
+
+//         await lfm.initialize();
+
+//         await lfm.testAuth();
+//     })();
+// });
