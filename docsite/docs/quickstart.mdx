@@ -126,20 +126,12 @@ services:
 
         After account creation make note of the **Api Key** and **Secret** that are displayed.
 
-        Create a new [File](/configuration?configType=file#configuration-types) named `lastfm.json` in the `./config` directory that will be used with your [`docker-compose.yml` stack](#create-docker-compose-file) and copy the below contents, replacing placeholders with the data you got from Last.fm API account creation:
+        Add these values to the `environment` section in the [`docker-compose.yml` you created.](#create-docker-compose-file)
 
-        ```json title="~/msData/config/lastfm.json"
-        [
-          {
-            "name": "myLastFmSource",
-            "configureAs": "source",
-            "data": {
-              "apiKey": "MY_API_KEY_PLACEDHOLDER",
-              "secret": "MY_SECRET_PLACEHOLDER",
-              "redirectUri": "http://192.168.0.100:9078/lastfm/callback"
-            }
-          }
-        ]
+        ```yaml title="~/msData/docker-compose.yml"
+        - SOURCE_LASTFM_API_KEY=MY_API_KEY_PLACEDHOLDER
+        - SOURCE_LASTFM_SECRET=MY_SECRET_PLACEHOLDER
+        - SOURCE_LASTFM_REDIRECT_URI=http://192.168.0.100:9078/lastfm/callback
         ```
 
         Later, after [starting multi-scrobbler](#start-multi-scrobbler), visit the dashboard at `http://192.168.0.100:9078` and click **(Re)authenticate** on the **Last.fm (Source)** card to authorize multi-scrobbler to use your account. Monitoring will begin automatically after authorization is complete.
