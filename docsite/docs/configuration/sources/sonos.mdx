@@ -13,13 +13,13 @@ Multi-scrobbler can use the [Sonos](https://www.sonos.com) [local API](https://d
 
 MS supports scrobbling simultaneous, different Plays based on what each Group/Zone is playing.
 
-:::note
+<DetailsAdmo type="tip" summary="Use Musicbrainz for better scrobbling">
 
 For some services, including Spotify, Sonos only reports the **first** artist for a Track. You will most likely want to enable [Musicbrainz scrobble enhancements](/configuration/transforms/musicbrainz) so that your plays have correct information, including all artists, when scrobbled.
 
-:::
+</DetailsAdmo>
 
-:::tip
+<DetailsAdmo type="note" summary="Avoid Sonos activity through other Sources">
 
 Activity reporting for **other [Sources](/configuration/sources)** does not work well **when played through Sonos.**
 
@@ -27,7 +27,7 @@ If you have other Sources configured for Multi-Scrobbler that you may play *thro
 
 For example, to prevent the [Plex](/configuration/sources/plex) Source from monitoring audio played through Sonos, add Sonos to the "block" list ENV EX: `PLEX_DEVICES_BLOCK=sonos`
 
-:::
+</DetailsAdmo>
 
 <details>
 
