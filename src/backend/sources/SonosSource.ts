@@ -22,6 +22,7 @@ import { FixedSizeList } from "fixed-size-list";
 import { buildStatePlayerPlayIdententifyingInfo, hashObject, parseArrayFromMaybeString } from "../utils/StringUtils.js";
 import { isDebugMode, playObjDataMatch, sleep } from "../utils.js";
 import { playContentInvariantTransform } from "../utils/PlayComparisonUtils.js";
+import dayjs, { Dayjs } from "dayjs";
 
 export interface DeviceState {
     device: SonosDevice
@@ -59,6 +60,8 @@ export class SonosSource extends MemoryPositionalSource {
     devicesBlock: string[] = [];
     groupsAllow: string[] = [];
     groupsBlock: string[] = [];
+
+    protected badDeviceError: Record<string, {err: string, time?: Dayjs}> = {};
 
     constructor(name: any, config: SonosSourceConfig, internal: InternalConfig, emitter: EventEmitter) {
         const {
@@ -151,7 +154,41 @@ export class SonosSource extends MemoryPositionalSource {
 
         const playerStates: PlayerStateData[] = [];
         for (const d of this.manager.Devices) {
-            const state = await d.GetState();
+            let state: SonosState;
+            try {
+                state = await d.GetState();
+            } catch (e) {
+                if(e instanceof Error) {
+                    let muted = false,
+                    seen = false;
+                    if(this.badDeviceError[d.Name] !== undefined) {
+                        seen = this.badDeviceError[d.Name].err === e.message;
+                        if(seen && this.badDeviceError[d.Name].time !== undefined && Math.abs(this.badDeviceError[d.Name].time.diff(dayjs(), 's')) < 60) {
+                            muted = true;
+                        }
+                    }
+                    if(muted) {
+                        // already logged in the last minute
+                        continue;
+                    }
+                    if(seen) {
+                        // already logged full error, just log that its still happening
+                        this.logger.debug(`Could not get Device '${d.Name}' state due to already seen error. Will mute for 1 minute => ${e.message}`);
+                        this.badDeviceError[d.Name] = {err: e.message, time: dayjs()};
+                        continue;
+                    }
+                    this.logger.warn(new Error(`Could not get Device '${d.Name}' state`, {cause: e}));
+                    this.badDeviceError[d.Name] = {err: e.message};
+                    continue;
+                } else {
+                    this.logger.error(new Error(`Uncaught exception of unknown type when getting Device '${d.Name}' state`, {cause: e}));
+                    continue;
+                }
+            }
+            // clear any state errors for this device
+            if(this.badDeviceError[d.Name] !== undefined) {
+                delete this.badDeviceError[d.Name];
+            }
             const x = {
                 state,
                 device: d
