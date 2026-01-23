@@ -110,7 +110,7 @@ export const recordToPlay = (record: ScrobbleRecord, options: RecordOptions = {}
         }
     };
 
-    const brainz: BrainzMeta | undefined = removeUndefinedKeys({
+    const brainz = removeUndefinedKeys<BrainzMeta>({
         recording: record.recordingMbId,
         album: record.releaseMbId,
         artist: record.artists.filter(x => x.artistMbId !== undefined).length > 0 ? record.artists.filter(x => x.artistMbId !== undefined).map(x => x.artistMbId) : undefined

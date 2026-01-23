@@ -644,6 +644,7 @@ export const listenToNaivePlay = (listen: ListenResponse): PlayObject => {
                 album: release_name,
                 albumArtists,
                 duration: dur,
+                isrc: isrc !== undefined ? isrc : undefined,
                 meta: {
                 }
             },
@@ -658,11 +659,10 @@ export const listenToNaivePlay = (listen: ListenResponse): PlayObject => {
             play.meta.trackid = trackId;
         }
 
-        const brainzMeta: BrainzMeta = removeUndefinedKeys({
+        const brainzMeta = removeUndefinedKeys<BrainzMeta>({
             album: release_mbid,
             releaseGroup: release_group_mbid,
-            track: trackId,
-            isrc: isrc !== undefined ? [isrc] : undefined,
+            recording: trackId,
             trackNumber: tracknumber
         }) ?? {};
 
@@ -765,7 +765,7 @@ export const playToListenPayload = (play: PlayObject): ListenPayload => {
             }
         }
 
-        const minTrackData: MinimumTrack = removeUndefinedKeys({
+        const minTrackData = removeUndefinedKeys<MinimumTrack>({
                 artist_name: Array.from(new Set([...artists])).join(', '),
                 track_name: track,
                 release_name: al,
@@ -777,7 +777,7 @@ export const playToListenPayload = (play: PlayObject): ListenPayload => {
                 ...minTrackData,
                 additional_info: {
                     duration: play.data.duration !== undefined ? Math.round(duration) : undefined,
-                    track_mbid: brainz.recording,
+                    track_mbid: brainz.track,
                     recording_mbid: brainz.recording,
                     artist_mbids: brainz.artist,
                     release_mbid: brainz.album,

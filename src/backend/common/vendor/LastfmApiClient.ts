@@ -558,7 +558,7 @@ export const formatPlayObj = (obj: LastFMTrackObject, options: FormatPlayObjectO
             al = undefined;
         }
     }
-    const brainz: BrainzMeta = removeUndefinedKeys({
+    const brainz = removeUndefinedKeys<BrainzMeta>({
         album: nonEmptyStringOrDefault<undefined>(albumMbid),
         artist: splitByFirstFound<undefined>(artistMbid, [',',';'], undefined),
         recording: nonEmptyStringOrDefault<undefined>(mbid)
