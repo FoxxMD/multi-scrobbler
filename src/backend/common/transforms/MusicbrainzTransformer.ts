@@ -914,7 +914,7 @@ export const rankReleasesByPriority = (list: IRecordingMatch[], stageConfig: Mus
             artistScore = artistRes[0] * (artistWeight + (artistRes[1] > 0 ? 0.05 : 0));
         }
         const releases = (x.releases ?? []).map((a) => {
-            const statAScore = releaseStatusPriority.findIndex(x => x === a.status.toLocaleLowerCase()) + 1;
+            const statAScore = releaseStatusPriority.findIndex(x => a.status !== undefined && x === a.status.toLocaleLowerCase()) + 1;
             const grpPAScore = releaseGroupPrimaryTypePriority.findIndex(x => x === a["release-group"]?.["primary-type"]?.toLocaleLowerCase()) + 1;
             const grpSAScore = (a["release-group"]?.["secondary-types"] ?? []).reduce((acc: number, curr: MBReleaseGroupSecondaryType) => acc + releaseGroupSecondaryTypePriority.findIndex(x => x === (curr as MBReleaseGroupSecondaryType).toLocaleLowerCase()) + 1,0);
             const countryAScore = releaseCountryPriority.findIndex(x => a.country === undefined ? false : x === a.country.toLocaleLowerCase()) + 1;
