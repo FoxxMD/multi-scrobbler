@@ -4,6 +4,8 @@ import {recentIncludes} from "../../core/Atomic";
 import {useSearchParams} from "react-router-dom";
 import {useGetRecentQuery} from "./scrobbledDucks";
 import { useCopyToClipboard } from '../components/copyToClipboardHook';
+import { faBug } from "@fortawesome/free-solid-svg-icons";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import clsx from "clsx";
 
 const displayOpts = {
@@ -44,7 +46,8 @@ const scrobbled = () => {
                     <ul>{data.map(x => {
                         const classes = [...baseClass].concat(copiedIndex !== x.index ? ['underline','cursor-pointer'] : []);
                         
-                        return <li key={x.index}><PlayDisplay data={x} buildOptions={displayOpts}/> <button className={clsx(classes)} onClick={() => copyActionCB(x.meta.lifecycle, x.index)}>{copiedIndex === x.index ? 'Copied!' : 'Copy Debug Info'}</button></li>;
+                        return <li key={x.index}><PlayDisplay data={x} buildOptions={displayOpts}/> <button className={clsx(classes)} onClick={() => copyActionCB(x.meta.lifecycle, x.index)}>{copiedIndex === x.index ? 'Copied!' : <FontAwesomeIcon
+                                                color="white" icon={faBug}/>}</button></li>;
                 })} </ul>
                 </div>
             </div>

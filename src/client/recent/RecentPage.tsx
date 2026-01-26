@@ -4,7 +4,7 @@ import { recentIncludes } from "../../core/Atomic";
 import { useSearchParams } from "react-router-dom";
 import { useGetRecentQuery } from "./recentDucks";
 import Tooltip from "../components/Tooltip";
-import { faQuestionCircle, faClipboard, faFileClipboard, faBug } from "@fortawesome/free-solid-svg-icons";
+import { faQuestionCircle, faBug } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { useCopyToClipboard } from '../components/copyToClipboardHook';
 import clsx from "clsx";
