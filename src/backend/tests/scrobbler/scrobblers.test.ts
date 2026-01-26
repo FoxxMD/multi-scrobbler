@@ -16,6 +16,7 @@ import MockDate from 'mockdate';
 
 import { NowPlayingScrobbler, TestAuthScrobbler, TestScrobbler } from "./TestScrobbler.js";
 import { PlayPlatformId } from '../../common/infrastructure/Atomic.js';
+import { defaultLifecycle } from '../../utils/PlayTransformUtils.js';
 
 chai.use(asPromised);
 
@@ -396,7 +397,8 @@ describe('Detects duplicate and unique scrobbles from client recent history', fu
                     "playDate": dayjs().subtract(1, 'hour').set('minute', 29).set('second', 27)
                 },
                 meta: {
-                    source: 'Spotify'
+                    source: 'Spotify',
+                    lifecycle: defaultLifecycle()
                 }
             }
 

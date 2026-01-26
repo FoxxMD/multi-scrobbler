@@ -14,6 +14,7 @@ import { MockNetworkError, withRequestInterception } from '../utils/networking.j
 import { http, HttpResponse, delay } from "msw";
 import { generatePlay, withBrainz } from '../utils/PlayTestUtils.js';
 import { intersect, missingMbidTypes } from '../../utils.js';
+import { defaultLifecycle } from '../../utils/PlayTransformUtils.js';
 
 const envPath = path.join(projectDir, '.env');
 dotenv.config({ path: envPath });
@@ -63,7 +64,9 @@ describe('Musicbrainz API', function () {
                     artists: ["Khruangbin"],
                     album: "The Universe Smiles Upon You ii"
                 },
-                meta: {}
+                meta: {
+                    lifecycle: defaultLifecycle()
+                }
             }
             await mbTransformer.tryInitialize();
 
@@ -93,6 +96,7 @@ describe('Musicbrainz API', function () {
                     url: {
                         web: "https://www.last.fm/music/Kanon+Oguni/_/Cyber+Space+(CrossWorlds+Remix):+Final+Lap+-+No+Chants",
                     },
+                    lifecycle: defaultLifecycle()
                 }
             };
             await mbTransformer.tryInitialize();
@@ -121,7 +125,9 @@ describe('Musicbrainz API', function () {
                         }
                     }
                 },
-                meta: {}
+                meta: {
+                    lifecycle: defaultLifecycle()
+                }
             }
             await mbTransformer.tryInitialize();
 
@@ -148,7 +154,9 @@ describe('Musicbrainz API', function () {
                     album: "Fake",
                     isrc: 'GBAHT1600302'
                 },
-                meta: {}
+                meta: {
+                    lifecycle: defaultLifecycle()
+                }
             }
             await mbTransformer.tryInitialize();
 
@@ -177,7 +185,9 @@ describe('Musicbrainz API', function () {
                         }
                     }
                 },
-                meta: {}
+                meta: {
+                    lifecycle: defaultLifecycle()
+                }
             }
             await mbTransformer.tryInitialize();
 
@@ -209,7 +219,9 @@ describe('Musicbrainz API', function () {
                         }
                     }
                 },
-                meta: {}
+                meta: {
+                    lifecycle: defaultLifecycle()
+                }
             }
             await mbTransformer.tryInitialize();
 
@@ -236,7 +248,9 @@ describe('Musicbrainz API', function () {
                     artists: ["Takahiro Kai, SEGA GAME MUSIC & SEGA SOUND TEAM"],
                     album: "Sonic Racing: CrossWorlds Original Soundtrack - Echoes of Dimensions"
                 },
-                meta: {}
+                meta: {
+                    lifecycle: defaultLifecycle()
+                }
             }
             await mbTransformer.tryInitialize();
 
@@ -258,7 +272,9 @@ describe('Musicbrainz API', function () {
                     track: "Undefeatable (feat. Kellin Quinn)",
                     artists: ["SEGA Sound Team / Tomoya Ohtani"],
                 },
-                meta: {}
+                meta: {
+                    lifecycle: defaultLifecycle()
+                }
             }
             await mbTransformer.tryInitialize();
 
@@ -282,7 +298,9 @@ describe('Musicbrainz API', function () {
                     artists: ["、ナイトコードで。"],
                     album: "25時、ナイトコードで。 SEKAI ALBUM Vol.3"
                 },
-                meta: {}
+                meta: {
+                    lifecycle: defaultLifecycle()
+                }
             }
             await mbTransformer.tryInitialize();
 
@@ -305,7 +323,9 @@ describe('Musicbrainz API', function () {
                     artists: ["Leo/need"],
                     album: "Leo / need SEKAI ALBUM Vol.1"
                 },
-                meta: {}
+                meta: {
+                    lifecycle: defaultLifecycle()
+                }
             }
             await mbTransformer.tryInitialize();
 
@@ -333,7 +353,9 @@ describe('Musicbrainz API', function () {
                     album: "PERSONA5 ORIGINAL SOUNDTRACK",
                     isrc: 'JPK651601515'
                 },
-                meta: {}
+                meta: {
+                    lifecycle: defaultLifecycle()
+                }
             }
             await mbTransformer.tryInitialize();
 
@@ -375,7 +397,9 @@ describe('Musicbrainz API', function () {
                         artists: ["Khruangbin"],
                         album: "The Universe Smiles Upon You ii"
                     },
-                    meta: {}
+                    meta: {
+                        lifecycle: defaultLifecycle()
+                    }
                 }
                 await multiMb.tryInitialize();
 
@@ -407,7 +431,9 @@ describe('Musicbrainz API', function () {
                         artists: ["Khruangbin"],
                         album: "The Universe Smiles Upon You ii"
                     },
-                    meta: {}
+                    meta: {
+                        lifecycle: defaultLifecycle()
+                    }
                 }
                 await multiMb.tryInitialize();
 

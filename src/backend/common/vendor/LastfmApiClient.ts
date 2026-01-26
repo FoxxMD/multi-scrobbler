@@ -1,5 +1,5 @@
 import dayjs, { Dayjs } from "dayjs";
-import { BrainzMeta, PlayObject, URLData } from "../../../core/Atomic.js";
+import { BrainzMeta, PlayObject, PlayObjectLifecycleless, URLData } from "../../../core/Atomic.js";
 import { nonEmptyStringOrDefault, splitByFirstFound } from "../../../core/StringUtils.js";
 import { removeUndefinedKeys, sleep, writeFile } from "../../utils.js";
 import { objectIsEmpty, readJson } from '../../utils/DataUtils.js';
@@ -14,6 +14,7 @@ import { parseArtistCredits } from "../../utils/StringUtils.js";
 import { LastFMUser, LastFMAuth, LastFMTrack, LastFMUserGetRecentTracksResponse, LastFMBooleanNumber, LastFMUpdateNowPlayingResponse, LastFMUserGetInfoResponse } from 'lastfm-ts-api';
 import clone from 'clone';
 import { IncomingMessage } from "http";
+import { baseFormatPlayObj } from "../../utils/PlayTransformUtils.js";
 
 const badErrors = [
     'api key suspended',
@@ -438,7 +439,7 @@ export const scrobblePayloadToPlay = (obj: LastFMScrobbleRequestPayload): PlayOb
         artists = [artist];
     }
 
-    const play: PlayObject = {
+    const play: PlayObjectLifecycleless = {
         data: {
             track,
             album: nonEmptyStringOrDefault(album),
@@ -461,7 +462,7 @@ export const scrobblePayloadToPlay = (obj: LastFMScrobbleRequestPayload): PlayOb
         };
     }
 
-    return play;
+    return baseFormatPlayObj(obj, play);
 }
 
 export const playToClientPayload = (playObj: PlayObject): LastFMScrobblePayload => {
@@ -564,7 +565,7 @@ export const formatPlayObj = (obj: LastFMTrackObject, options: FormatPlayObjectO
         recording: nonEmptyStringOrDefault<undefined>(mbid)
     });
 
-    const play: PlayObject = {
+    const play: PlayObjectLifecycleless = {
         data: {
             artists: [...new Set(artistStrings)] as string[],
             track: title,
@@ -587,7 +588,7 @@ export const formatPlayObj = (obj: LastFMTrackObject, options: FormatPlayObjectO
             brainz
         }
     }
-    return play;
+    return baseFormatPlayObj(obj, play);
 }
 
 type LastFMTrackScrobbleResponse = Readonly<{

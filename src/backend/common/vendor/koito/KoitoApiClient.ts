@@ -1,5 +1,5 @@
 import dayjs from "dayjs";
-import { PlayObject, URLData } from "../../../../core/Atomic.js";
+import { PlayObject, PlayObjectLifecycleless, URLData } from "../../../../core/Atomic.js";
 import { AbstractApiOptions, DEFAULT_RETRY_MULTIPLIER } from "../../infrastructure/Atomic.js";
 import { KoitoData, ListenObjectResponse, ListensResponse } from "../../infrastructure/config/client/koito.js";
 import AbstractApiClient from "../AbstractApiClient.js";
@@ -10,6 +10,7 @@ import { playToListenPayload } from "../ListenbrainzApiClient.js";
 import { SubmitPayload } from '../listenbrainz/interfaces.js';
 import { ListenType } from '../listenbrainz/interfaces.js';
 import { parseRegexSingleOrFail } from "../../../utils.js";
+import { baseFormatPlayObj } from "../../../utils/PlayTransformUtils.js";
 
 interface SubmitOptions {
     log?: boolean
@@ -181,7 +182,7 @@ export class KoitoApiClient extends AbstractApiClient {
 }
 
 export const listenObjectResponseToPlay = (obj: ListenObjectResponse, options: { newFromSource?: boolean, url?: URL } = {}): PlayObject => {
-    const play: PlayObject = {
+    const play: PlayObjectLifecycleless = {
         data: {
             track: obj.track.title,
             artists: (obj.track.artists ?? []).map(x => x.name),
@@ -204,5 +205,5 @@ export const listenObjectResponseToPlay = (obj: ListenObjectResponse, options: {
             }
         }
     }
-    return play;
+    return baseFormatPlayObj(obj, play);
 }

@@ -1,6 +1,6 @@
 import dayjs, { Dayjs } from "dayjs";
 import EventEmitter from "events";
-import { PlayObject } from "../../core/Atomic.js";
+import { PlayObject, PlayObjectLifecycleless } from "../../core/Atomic.js";
 import { FormatPlayObjectOptions, InternalConfig } from "../common/infrastructure/Atomic.js";
 import { YTMusicSourceConfig } from "../common/infrastructure/config/source/ytmusic.js";
 import { Innertube, UniversalCache, Parser, YTNodes, ApiResponse, IBrowseResponse, Log, SessionOptions } from 'youtubei.js';
@@ -21,6 +21,7 @@ import { buildTrackString, truncateStringToLength } from "../../core/StringUtils
 import { joinedUrl } from "../utils/NetworkUtils.js";
 import { todayAwareFormat } from "../utils/TimeUtils.js";
 import { parseArrayFromMaybeString, parseArtistCredits, parseCredits } from "../utils/StringUtils.js";
+import { baseFormatPlayObj } from "../utils/PlayTransformUtils.js";
 
 export interface HistoryIngressResult {
     plays: PlayObject[], 
@@ -411,7 +412,7 @@ Redirect URI  : ${this.redirectUri}`);
             const durObj = dayjs.duration(dur.seconds, 's')
             duration = durObj.asSeconds();
         }
-        return {
+        const play: PlayObjectLifecycleless = {
             data: {
                 artists,
                 albumArtists,
@@ -429,6 +430,7 @@ Redirect URI  : ${this.redirectUri}`);
                 comment: shelf
             }
         }
+        return baseFormatPlayObj(obj, play);
     }
 
     recentlyPlayedTrackIsValid = (playObj: PlayObject) => playObj.meta.newFromSource

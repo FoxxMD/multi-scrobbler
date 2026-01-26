@@ -27,6 +27,10 @@ import { findCauseByReference } from "../utils/ErrorUtils.js";
 import { hashObject } from "../utils/StringUtils.js";
 import { metaInvariantTransform, playContentInvariantTransform } from "../utils/PlayComparisonUtils.js";
 import { MSCache } from "./Cache.js";
+import { jdiff } from "../utils/DataUtils.js";
+import ConsoleFormatter from "jsondiffpatch/formatters/console";
+
+const console = new ConsoleFormatter();
 
 export default abstract class AbstractComponent extends AbstractInitializable {
 
@@ -240,7 +244,7 @@ export default abstract class AbstractComponent extends AbstractInitializable {
                             break;
                         }
                     } else if(onFailure === 'continue') {
-                        logger.warn(merged, 'A transform encountered an error but continuing due to onFailure: continue');
+                        logger.warn(merged, 'A transform encounte[red an error but continuing due to onFailure: continue');
                     } else {
                         const reqError = findCauseByReference(err, StagePrerequisiteError);
                         if(reqError !== undefined) {
@@ -272,17 +276,24 @@ export default abstract class AbstractComponent extends AbstractInitializable {
                 }
             }
 
-            if(transformedPlay.meta.transforms === undefined) {
-                transformedPlay.meta.transforms = {
-                    original: play.data
-                };
-            }
+            const orig = play.data;
+
+            // if(transformedPlay.meta.transforms === undefined) {
+            //     transformedPlay.meta.transforms = {
+            //         original: play.data
+            //     };
+            // }
+
+            const o = JSON.parse(JSON.stringify(play));
+            const t = JSON.parse(JSON.stringify(transformedPlay));
+            const patch = jdiff.diff(o,t);
+
             if(shouldLog !== false) {
                 if(transformHistory.length === 0) {
                     logger.debug('Transform Diff: No Change');
                 } else {
                     const historyToDiff: {name: string, data: PlayData}[] = [
-                        {name: 'Original', data: transformedPlay.meta.transforms.original}
+                        {name: 'Original', data: play.data}
                     ];
                     if(shouldLog === true) {
                         const last = transformHistory[transformHistory.length - 1];
@@ -301,26 +312,44 @@ export default abstract class AbstractComponent extends AbstractInitializable {
                         if(deepEqual(last.data, curr.data)) {
                             diffs.push(`${last.name} => ${curr.name} -- No Change`);
                         } else {
-                            diffs.push(diffStringsUnified(
-                            buildPlayHumanDiffable(last.data, {expandMeta: true}), 
-                            buildPlayHumanDiffable(curr.data, {expandMeta: true}),
-                            {
-                                aAnnotation: last.name,
-                                aColor: chalk.red,
-                                bAnnotation: curr.name,
-                                bColor: chalk.green
-                            }
-                        ))
+                            const unchanged = index - 1 === 0 ? last.data : undefined;
+
+                            const formattedDiff = console.format(jdiff.diff(last.data, curr.data), unchanged);
+                            diffs.push(`${last.name} => ${curr.name}\n${formattedDiff}`);
                         }
                     });
-                    logger.debug(`Transform Diff\n${diffs}`);
+                    logger.debug(`Transform Diff\n${diffs.join('\n')}`);
                 }
-
             }
-            const previousHistory = transformedPlay.meta.transforms[hookType] ?? [];
-            transformedPlay.meta.transforms[hookType] = [...previousHistory, ...transformHistory];
+
+            const existingStepIndex = transformedPlay.meta.lifecycle.steps.findIndex(x => x.name === 'hookType' && x.source === this.getIdentifier());
+            if(existingStepIndex !== -1) {
+                transformedPlay.meta.lifecycle.steps[existingStepIndex].patch = patch;
+                transformedPlay.meta.lifecycle.steps[existingStepIndex].inputs = transformedPlay.meta.lifecycleInputs;
+            } else {
+                transformedPlay.meta.lifecycle.steps.push({
+                        name: hookType,
+                        source: this.getIdentifier(),
+                        patch: patch,
+                        inputs: transformedPlay.meta.lifecycleInputs
+                    });
+            }
+            delete transformedPlay.meta.lifecycleInputs;
+
+            // transformedPlay.meta.lifecycle = {
+            //     ...(transformedPlay.meta.lifecycle ?? {
+            //         original: play
+            //     }),
+            //     steps: [
+            //         ...(transformedPlay.meta.lifecycle?.steps ?? []),
+            //         {
+            //             name: hookType,
+            //             source: this.getIdentifier(),
+            //             patch: patch
+            //         }
+            //     ]
+            // }
             await this.cache.cacheTransform.set<PlayObject>(transformHash, transformedPlay, '5m');
-            //logger.debug(`Cache set ${transformHash}`)
             return transformedPlay;
         } catch (e) {
             logger.warn(new Error(`Unexpected error occurred, returning original play.`, {cause: e}));

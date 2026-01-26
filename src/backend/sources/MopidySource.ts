@@ -5,7 +5,7 @@ import Mopidy, { models } from "mopidy";
 import normalizeUrl from 'normalize-url';
 import pEvent from 'p-event';
 import { URL } from "url";
-import { PlayObject } from "../../core/Atomic.js";
+import { PlayObject, PlayObjectLifecycleless } from "../../core/Atomic.js";
 import { buildTrackString } from "../../core/StringUtils.js";
 import {
     FormatPlayObjectOptions,
@@ -16,6 +16,7 @@ import {
 import { MopidySourceConfig } from "../common/infrastructure/config/source/mopidy.js";
 import { RecentlyPlayedOptions } from "./AbstractSource.js";
 import { MemoryPositionalSource } from "./MemoryPositionalSource.js";
+import { baseFormatPlayObj } from "../utils/PlayTransformUtils.js";
 
 export class MopidySource extends MemoryPositionalSource {
     declare config: MopidySourceConfig;
@@ -159,7 +160,7 @@ export class MopidySource extends MemoryPositionalSource {
             artists = performers;
         }
 
-        return {
+        const play: PlayObjectLifecycleless = {
             data: {
                 track: name,
                 album: albumName,
@@ -177,6 +178,7 @@ export class MopidySource extends MemoryPositionalSource {
                 //deviceId: name,
             }
         }
+        return baseFormatPlayObj({...obj, trackProgressPosition}, play);
     }
 
     getRecentlyPlayed = async (options: RecentlyPlayedOptions = {}) => {

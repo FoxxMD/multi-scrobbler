@@ -1,7 +1,7 @@
 import { stringSameness } from '@foxxmd/string-sameness';
 import dayjs from "dayjs";
 import request, { Request, Response } from 'superagent';
-import { BrainzMeta, PlayObject, URLData } from "../../../core/Atomic.js";
+import { BrainzMeta, PlayObject, PlayObjectLifecycleless, URLData } from "../../../core/Atomic.js";
 import { combinePartsToString, slice } from "../../../core/StringUtils.js";
 import {
     findDelimiters,
@@ -23,6 +23,7 @@ import {ListensResponse as KoitoListensResponse} from '../infrastructure/config/
 import { listenObjectResponseToPlay } from './koito/KoitoApiClient.js';
 import { version } from '../../ioc.js';
 import { ListenPayload, ListenResponse, ListenType, MinimumTrack, SubmitListenAdditionalTrackInfo, SubmitPayload } from './listenbrainz/interfaces.js';
+import { baseFormatPlayObj } from '../../utils/PlayTransformUtils.js';
 
 interface SubmitOptions {
     log?: boolean
@@ -555,7 +556,7 @@ export const listenResponseToPlay = (listen: ListenResponse): PlayObject => {
             }
         }
 
-        return play;
+        return baseFormatPlayObj(listen, play);
     }
 
 /**
@@ -636,7 +637,7 @@ export const listenToNaivePlay = (listen: ListenResponse): PlayObject => {
         }
 
 
-        const play: PlayObject = {
+        const play: PlayObjectLifecycleless = {
             data: {
                 playDate: dayjs.unix(listened_at),
                 track: normalTrackName,
@@ -681,7 +682,7 @@ export const listenToNaivePlay = (listen: ListenResponse): PlayObject => {
             }
         }
 
-        return play;
+        return baseFormatPlayObj(listen, play);
     }
 
 

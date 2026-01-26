@@ -2,7 +2,7 @@ import dayjs, { Dayjs } from "dayjs";
 import EventEmitter from "events";
 import SpotifyWebApi from "spotify-web-api-node";
 import request from 'superagent';
-import { BrainzMeta, PlayObject, SCROBBLE_TS_SOC_END, SCROBBLE_TS_SOC_START, ScrobbleTsSOC, SpotifyMeta } from "../../core/Atomic.js";
+import { BrainzMeta, PlayObject, PlayObjectLifecycleless, SCROBBLE_TS_SOC_END, SCROBBLE_TS_SOC_START, ScrobbleTsSOC, SpotifyMeta } from "../../core/Atomic.js";
 import { combinePartsToString, truncateStringToLength } from "../../core/StringUtils.js";
 import { isNodeNetworkException } from "../common/errors/NodeErrors.js";
 import { hasUpstreamError, UpstreamError } from "../common/errors/UpstreamError.js";
@@ -34,6 +34,7 @@ import PlayHistoryObject = SpotifyApi.PlayHistoryObject;
 import TrackObjectFull = SpotifyApi.TrackObjectFull;
 import UserDevice = SpotifyApi.UserDevice;
 import { MemoryPositionalSource } from "./MemoryPositionalSource.js";
+import { baseFormatPlayObj } from "../utils/PlayTransformUtils.js";
 
 const scopes = ['user-read-recently-played', 'user-read-currently-playing', 'user-read-playback-state', 'user-read-playback-position'];
 const state = 'random';
@@ -110,8 +111,10 @@ export default class SpotifySource extends MemoryPositionalSource {
                 external_ids: {
                     isrc
                 },
-                track_number
+                track_number,
             } = track;
+
+            delete obj.track.available_markets;
 
             scrobbleTsSOC = SCROBBLE_TS_SOC_END;
             played_at = dayjs(pa);
@@ -150,6 +153,8 @@ export default class SpotifySource extends MemoryPositionalSource {
                 },
                 track_number
             } = item as TrackObjectFull;
+
+            delete (obj.item as TrackObjectFull).available_markets;
 
             scrobbleTsSOC = SCROBBLE_TS_SOC_START;
             played_at = dayjs(timestamp);
@@ -190,7 +195,7 @@ export default class SpotifySource extends MemoryPositionalSource {
             }
         }
 
-        const play: PlayObject = {
+        const play: PlayObjectLifecycleless = {
             data: {
                 artists: artists.map(x => x.name),
                 albumArtists: actualAlbumArtists.map(x => x.name),
@@ -236,7 +241,7 @@ export default class SpotifySource extends MemoryPositionalSource {
             play.meta.art = {album: imageData.url};
         }
 
-        return play;
+        return baseFormatPlayObj(obj, play);
     }
 
     buildSpotifyApi = async () => {
@@ -392,7 +397,7 @@ export default class SpotifySource extends MemoryPositionalSource {
     getPlayHistory = async (options: RecentlyPlayedOptions = {}) => {
         const {limit = 20} = options;
         const func = (api: SpotifyWebApi) => api.getMyRecentlyPlayedTracks({
-            limit
+            limit: 3
         });
         const result = await this.callApi<ReturnType<typeof this.spotifyApi.getMyRecentlyPlayedTracks>>(func);
         return result.body.items.map((x: PlayHistoryObject) => SpotifySource.formatPlayObj(x)).sort(sortByOldestPlayDate);

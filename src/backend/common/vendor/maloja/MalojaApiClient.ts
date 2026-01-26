@@ -4,7 +4,7 @@ import compareVersions from "compare-versions";
 import AbstractApiClient from "../AbstractApiClient.js";
 import { getBaseFromUrl, isPortReachableConnect, joinedUrl, normalizeWebAddress } from "../../../utils/NetworkUtils.js";
 import { MalojaData } from "../../infrastructure/config/client/maloja.js";
-import { PlayObject, URLData } from "../../../../core/Atomic.js";
+import { PlayObject, PlayObjectLifecycleless, URLData } from "../../../../core/Atomic.js";
 import { AbstractApiOptions, DEFAULT_RETRY_MULTIPLIER, FormatPlayObjectOptions } from "../../infrastructure/Atomic.js";
 import { isNodeNetworkException } from "../../errors/NodeErrors.js";
 import { isSuperAgentResponseError } from "../../errors/ErrorUtils.js";
@@ -13,6 +13,7 @@ import { UpstreamError } from "../../errors/UpstreamError.js";
 import { getMalojaResponseError, isMalojaAPIErrorBody, MalojaResponseV3CommonData, MalojaScrobbleData, MalojaScrobbleRequestData, MalojaScrobbleV3RequestData, MalojaScrobbleV3ResponseData, MalojaScrobbleWarning } from "./interfaces.js";
 import { getScrobbleTsSOCDate, getScrobbleTsSOCDateWithContext } from '../../../utils/TimeUtils.js';
 import { buildTrackString } from '../../../../core/StringUtils.js';
+import { baseFormatPlayObj } from '../../../utils/PlayTransformUtils.js';
 
 
 
@@ -368,7 +369,7 @@ export const formatPlayObj = (obj: MalojaScrobbleData, options: FormatPlayObject
         return [...acc, ...aStrings];
     }, []);
     const urlParams = new URLSearchParams([['artist', artists[0]], ['title', title]]);
-    return {
+    const play: PlayObjectLifecycleless = {
         data: removeUndefinedKeys({
             artists: [...new Set(artistStrings)] as string[],
             track: title,
@@ -384,6 +385,7 @@ export const formatPlayObj = (obj: MalojaScrobbleData, options: FormatPlayObject
             }
         }
     }
+    return baseFormatPlayObj(obj, play);
 }
 
 export const playToScrobblePayload = (playObj: PlayObject, apiKey?: string): MalojaScrobbleV3RequestData => {

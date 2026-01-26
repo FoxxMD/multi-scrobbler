@@ -5,7 +5,7 @@ import { randomUUID } from "node:crypto";
 import normalizeUrl from 'normalize-url';
 import pEvent from 'p-event';
 import { URL } from "url";
-import { PlayObject, URLData } from "../../core/Atomic.js";
+import { PlayObject, PlayObjectLifecycleless, URLData } from "../../core/Atomic.js";
 import { UpstreamError } from "../common/errors/UpstreamError.js";
 import {
     FormatPlayObjectOptions,
@@ -24,6 +24,7 @@ import { sleep } from "../utils.js";
 import { RecentlyPlayedOptions } from "./AbstractSource.js";
 import { MemoryPositionalSource } from "./MemoryPositionalSource.js";
 import { normalizeWSAddress } from "../utils/NetworkUtils.js";
+import { baseFormatPlayObj } from "../utils/PlayTransformUtils.js";
 
 const CLIENT_STATE = {
     0: 'connecting',
@@ -188,7 +189,7 @@ export class MusikcubeSource extends MemoryPositionalSource {
         if(album_artist !== undefined && album_artist !== artist) {
             albumArtists.push(album_artist);
         }
-        return {
+        const play: PlayObjectLifecycleless = {
             data: {
                 artists: artists,
                 albumArtists,
@@ -204,6 +205,7 @@ export class MusikcubeSource extends MemoryPositionalSource {
                 mediaPlayerVersion: this.version
             }
         }
+        return baseFormatPlayObj(obj, play);
     }
 
     getRecentlyPlayed = async (options: RecentlyPlayedOptions = {}) => {

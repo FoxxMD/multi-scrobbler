@@ -1,6 +1,14 @@
 import JSON5 from "json5";
 import { constants, promises } from "fs";
 import { MaybeLogger } from "../common/logging.js";
+import { create as diffCreate } from 'jsondiffpatch';
+
+export const jdiff = diffCreate({
+    propertyFilter(name, context) {
+        return name !== 'lifecycle';
+    },
+    //omitRemovedValues: true
+});
 
 export const asArray = <T>(data: T | T[]): T[] => {
     if (Array.isArray(data)) {

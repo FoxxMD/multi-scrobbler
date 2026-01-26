@@ -1,6 +1,6 @@
 import dayjs from "dayjs";
 import EventEmitter from "events";
-import { PlayObject, SOURCE_SOT } from "../../core/Atomic.js";
+import { PlayObject, PlayObjectLifecycleless, SOURCE_SOT } from "../../core/Atomic.js";
 import {
     FormatPlayObjectOptions,
     InternalConfig,
@@ -22,6 +22,7 @@ import MemorySource from "./MemorySource.js";
 import { Logger } from "@foxxmd/logging";
 import { PlayerStateOptions } from "./PlayerState/AbstractPlayerState.js";
 import { NowPlayingPlayerState } from "./PlayerState/NowPlayingPlayerState.js";
+import { baseFormatPlayObj } from "../utils/PlayTransformUtils.js";
 
 export class WebScrobblerSource extends MemorySource {
 
@@ -122,7 +123,7 @@ export class WebScrobblerSource extends MemorySource {
         const albumArtist = processed.albumArtist ?? parsed.albumArtist;
         const duration = parsed.duration ?? processed.duration;
 
-        return {
+        const play: PlayObjectLifecycleless = {
             data: {
                 track,
                 artists: [artist],
@@ -149,6 +150,7 @@ export class WebScrobblerSource extends MemorySource {
                 nowPlaying: options.nowPlaying ?? false
             }
         }
+        return baseFormatPlayObj(obj, play);
     }
 
     getRecentlyPlayed = async (options = {}) => this.getFlatRecentlyDiscoveredPlays()
