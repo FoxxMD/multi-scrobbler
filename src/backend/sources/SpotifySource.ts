@@ -114,7 +114,12 @@ export default class SpotifySource extends MemoryPositionalSource {
                 track_number,
             } = track;
 
+            // we don't use available markets for anything and it can be 100+ strings
+            // so delete for debugging sake
             delete obj.track.available_markets;
+            if(obj.track.album !== undefined) {
+                delete obj.track.album?.available_markets;
+            }
 
             scrobbleTsSOC = SCROBBLE_TS_SOC_END;
             played_at = dayjs(pa);
@@ -155,6 +160,9 @@ export default class SpotifySource extends MemoryPositionalSource {
             } = item as TrackObjectFull;
 
             delete (obj.item as TrackObjectFull).available_markets;
+            if((obj.item as TrackObjectFull).album !== undefined) {
+              delete (obj.item as TrackObjectFull).album.available_markets;  
+            }
 
             scrobbleTsSOC = SCROBBLE_TS_SOC_START;
             played_at = dayjs(timestamp);
@@ -397,7 +405,7 @@ export default class SpotifySource extends MemoryPositionalSource {
     getPlayHistory = async (options: RecentlyPlayedOptions = {}) => {
         const {limit = 20} = options;
         const func = (api: SpotifyWebApi) => api.getMyRecentlyPlayedTracks({
-            limit: 3
+            limit
         });
         const result = await this.callApi<ReturnType<typeof this.spotifyApi.getMyRecentlyPlayedTracks>>(func);
         return result.body.items.map((x: PlayHistoryObject) => SpotifySource.formatPlayObj(x)).sort(sortByOldestPlayDate);
