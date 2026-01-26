@@ -127,17 +127,6 @@ export class SonosSource extends MemoryPositionalSource {
     }
 
     public isValidState = (data: DeviceState, play: PlayObject): string | undefined => {
-        if (typeof data.state.positionInfo?.TrackMetaData === 'string') {
-            // ???
-            return;
-        }
-        if(data.state.positionInfo?.TrackMetaData?.UpnpClass === undefined) {
-            return `UpnpClass does not exist, likely not a valid play`;
-        }
-        if (!data.state.positionInfo.TrackMetaData.UpnpClass.toLocaleLowerCase().includes('musictrack')) {
-            return `UpnpClass does include 'musictrack', found '${data.state.positionInfo.TrackMetaData.UpnpClass}'`;
-        }
-
         if(this.devicesAllow.length > 0 && !this.devicesAllow.some(x => data.device.Name.toLocaleLowerCase().includes(x))) {
             return `'devicesAllow does not include a phrase found in ${data.device.Name}`;
         }
@@ -149,6 +138,16 @@ export class SonosSource extends MemoryPositionalSource {
         }
         if(this.groupsBlock.length > 0 && this.groupsBlock.some(x => data.device.GroupName.toLocaleLowerCase().includes(x))) {
             return `'groupsBlock includes a phrase found in ${data.device.GroupName}`;
+        }
+        if (typeof data.state.positionInfo?.TrackMetaData === 'string') {
+            // ???
+            return;
+        }
+        if(data.state.positionInfo?.TrackMetaData?.UpnpClass === undefined) {
+            return `UpnpClass does not exist, likely not a valid play`;
+        }
+        if (!data.state.positionInfo.TrackMetaData.UpnpClass.toLocaleLowerCase().includes('musictrack')) {
+            return `UpnpClass does include 'musictrack', found '${data.state.positionInfo.TrackMetaData.UpnpClass}'`;
         }
         return;
     }
