@@ -127,9 +127,12 @@ export class SonosSource extends MemoryPositionalSource {
     }
 
     public isValidState = (data: DeviceState, play: PlayObject): string | undefined => {
-        if (typeof data.state.positionInfo.TrackMetaData === 'string') {
+        if (typeof data.state.positionInfo?.TrackMetaData === 'string') {
             // ???
             return;
+        }
+        if(data.state.positionInfo?.TrackMetaData?.UpnpClass === undefined) {
+            return `UpnpClass does not exist, likely not a valid play`;
         }
         if (!data.state.positionInfo.TrackMetaData.UpnpClass.toLocaleLowerCase().includes('musictrack')) {
             return `UpnpClass does include 'musictrack', found '${data.state.positionInfo.TrackMetaData.UpnpClass}'`;
