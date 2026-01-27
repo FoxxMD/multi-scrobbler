@@ -261,14 +261,14 @@ export class MalojaApiClient extends AbstractApiClient {
 
             return [scrobbleResponse, responseBody, warnStr]
         } catch (e) {
-            this.logger.error(`Scrobble Error (${sType})`, { playInfo: buildTrackString(playObj), payload: scrobbleData });
+            this.logger.error({ playInfo: buildTrackString(playObj), payload: scrobbleData }, `Scrobble Error (${sType})`);
             const responseError = getMalojaResponseError(e);
             if (responseError !== undefined) {
                 if (responseError.status < 500 && e instanceof UpstreamError) {
                     e.showStopper = false;
                 }
                 if (responseError.response?.text !== undefined) {
-                    this.logger.error('Raw Response:', { text: responseError.response?.text });
+                    this.logger.error({ text: responseError.response?.text }, 'Raw Response');
                 }
             }
             throw e;
