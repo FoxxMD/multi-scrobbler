@@ -192,6 +192,7 @@ export type RecordingRankedMatched = IRecordingMatch & {rankScore?: number, arti
 export interface IRecordingMSList extends IRecordingList {
     recordings: RecordingRankedMatched[]
     freeText?: boolean
+    requestQuery: string
 }
 
 export const parseStageConfig = (data: MusicbrainzTransformerData | undefined = {}, logger: MaybeLogger = new MaybeLogger()): MusicbrainzTransformerDataStrong => {
@@ -636,7 +637,9 @@ export default class MusicbrainzTransformer extends AtomicPartsTransformer<Exter
 
         this.logger.debug(`${filteredList.length} of ${transformData.count} were valid, filtered matches. Using match with best score of ${filteredList[0].score}`);
 
-        return recordingToPlay(filteredList[0], {ignoreVA: stageConfig.ignoreVA});
+        const recordingPlay = recordingToPlay(filteredList[0], {ignoreVA: stageConfig.ignoreVA});
+        recordingPlay.meta.lifecycleInputs = [...(recordingPlay.meta.lifecycleInputs ?? []), {type: 'mbQuery', input: transformData.requestQuery}, {type: 'mbRecording', input: filteredList[0]}];
+        return recordingPlay;
     }
 
     protected async handleTitle(play: PlayObject, parts: ExternalMetadataTerm, transformData: PlayObject): Promise<string | undefined> {

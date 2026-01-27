@@ -4,7 +4,7 @@ import compareVersions from "compare-versions";
 import AbstractApiClient from "../AbstractApiClient.js";
 import { getBaseFromUrl, isPortReachableConnect, joinedUrl, normalizeWebAddress } from "../../../utils/NetworkUtils.js";
 import { MalojaData } from "../../infrastructure/config/client/maloja.js";
-import { PlayObject, URLData } from "../../../../core/Atomic.js";
+import { PlayObject, PlayObjectLifecycleless, URLData } from "../../../../core/Atomic.js";
 import { AbstractApiOptions, DEFAULT_RETRY_MULTIPLIER, FormatPlayObjectOptions } from "../../infrastructure/Atomic.js";
 import { isNodeNetworkException } from "../../errors/NodeErrors.js";
 import { isSuperAgentResponseError } from "../../errors/ErrorUtils.js";
@@ -13,6 +13,7 @@ import { UpstreamError } from "../../errors/UpstreamError.js";
 import { getMalojaResponseError, isMalojaAPIErrorBody, MalojaResponseV3CommonData, MalojaScrobbleData, MalojaScrobbleRequestData, MalojaScrobbleV3RequestData, MalojaScrobbleV3ResponseData, MalojaScrobbleWarning } from "./interfaces.js";
 import { getScrobbleTsSOCDate, getScrobbleTsSOCDateWithContext } from '../../../utils/TimeUtils.js';
 import { buildTrackString } from '../../../../core/StringUtils.js';
+import { baseFormatPlayObj } from '../../../utils/PlayTransformUtils.js';
 
 
 
@@ -260,14 +261,14 @@ export class MalojaApiClient extends AbstractApiClient {
 
             return [scrobbleResponse, responseBody, warnStr]
         } catch (e) {
-            this.logger.error(`Scrobble Error (${sType})`, { playInfo: buildTrackString(playObj), payload: scrobbleData });
+            this.logger.error({ playInfo: buildTrackString(playObj), payload: scrobbleData }, `Scrobble Error (${sType})`);
             const responseError = getMalojaResponseError(e);
             if (responseError !== undefined) {
                 if (responseError.status < 500 && e instanceof UpstreamError) {
                     e.showStopper = false;
                 }
                 if (responseError.response?.text !== undefined) {
-                    this.logger.error('Raw Response:', { text: responseError.response?.text });
+                    this.logger.error({ text: responseError.response?.text }, 'Raw Response');
                 }
             }
             throw e;
@@ -368,7 +369,7 @@ export const formatPlayObj = (obj: MalojaScrobbleData, options: FormatPlayObject
         return [...acc, ...aStrings];
     }, []);
     const urlParams = new URLSearchParams([['artist', artists[0]], ['title', title]]);
-    return {
+    const play: PlayObjectLifecycleless = {
         data: removeUndefinedKeys({
             artists: [...new Set(artistStrings)] as string[],
             track: title,
@@ -384,6 +385,7 @@ export const formatPlayObj = (obj: MalojaScrobbleData, options: FormatPlayObject
             }
         }
     }
+    return baseFormatPlayObj(obj, play);
 }
 
 export const playToScrobblePayload = (playObj: PlayObject, apiKey?: string): MalojaScrobbleV3RequestData => {
@@ -414,9 +416,16 @@ export const playToScrobblePayload = (playObj: PlayObject, apiKey?: string): Mal
         scrobbleData.duration = listenedFor;
     }
 
+    // leaving this undefined should result in compilation albums when
+    // multiple artists are listed for the same album -- see Manual Scrobble page in Maloja UI
+    // https://github.com/krateng/maloja/blob/master/maloja/web/static/js/manualscrobble.js#L101
+    // https://github.com/krateng/maloja/blob/master/maloja/web/static/js/manualscrobble.js#L136
+    // BUT this is not actually working!
     if (albumArtists.length > 0) {
         scrobbleData.albumartists = albumArtists;
     }
+    // see also https://github.com/krateng/maloja/issues/96#issuecomment-1490562761
+    // https://github.com/FoxxMD/multi-scrobbler/issues/454#issuecomment-3806367420
 
     return scrobbleData;
 }

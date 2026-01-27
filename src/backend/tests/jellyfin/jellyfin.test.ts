@@ -16,6 +16,8 @@ import {
 // @ts-expect-error weird typings?
 import { getImageApi } from "@jellyfin/sdk/lib/utils/api/index.js";
 import { PlayerStateDataMaybePlay } from "../../common/infrastructure/Atomic.js";
+import { MarkOptional } from "ts-essentials";
+import { defaultLifecycle } from "../../utils/PlayTransformUtils.js";
 
 const dataAsFixture = (data: any): TestFixture => {
     return data as TestFixture;
@@ -41,7 +43,7 @@ const validPlayerState: PlayerStateDataMaybePlay = {
     platformId: ['1234', 'MyUser'],
     play: generatePlay({}, {mediaType: 'Audio', user: 'MyUser', deviceId: '1234'})
 }
-const playWithMeta = (meta: PlayMeta): PlayerStateDataMaybePlay => {
+const playWithMeta = (meta: MarkOptional<PlayMeta, 'lifecycle'>): PlayerStateDataMaybePlay => {
     const {user, deviceId} = meta;
     const platformId = validPlayerState.platformId;
     return {
@@ -50,6 +52,7 @@ const playWithMeta = (meta: PlayMeta): PlayerStateDataMaybePlay => {
     play: {
         ...validPlayerState.play,
         meta: {
+            lifecycle: defaultLifecycle(),
             ...validPlayerState.play?.meta,
             ...meta
         }

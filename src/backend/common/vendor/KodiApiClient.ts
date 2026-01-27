@@ -2,11 +2,12 @@ import dayjs from "dayjs";
 import { KodiClient } from 'kodi-api'
 import normalizeUrl from "normalize-url";
 import { URL } from "url";
-import { PlayObject } from "../../../core/Atomic.js";
+import { PlayObject, PlayObjectLifecycleless } from "../../../core/Atomic.js";
 import { RecentlyPlayedOptions } from "../../sources/AbstractSource.js";
 import { AbstractApiOptions, FormatPlayObjectOptions } from "../infrastructure/Atomic.js";
 import { KodiData } from "../infrastructure/config/source/kodi.js";
 import AbstractApiClient from "./AbstractApiClient.js";
+import { baseFormatPlayObj } from "../../utils/PlayTransformUtils.js";
 
 interface KodiDuration {
     hours: number
@@ -104,7 +105,7 @@ export class KodiApiClient extends AbstractApiClient {
         const album = albumVal === null || albumVal === '' ? undefined : albumVal;
         const trackProgressPosition = time !== undefined ? Math.round(dayjs.duration(time).asSeconds()) : undefined;
 
-        return {
+        const play: PlayObjectLifecycleless = {
             data: {
                 track: title,
                 album: album,
@@ -123,6 +124,7 @@ export class KodiApiClient extends AbstractApiClient {
                 deviceId: playerid !== undefined ? `Player${playerid}` : undefined,
             }
         }
+        return baseFormatPlayObj(obj, play);
     }
 
     testConnection = async () => {

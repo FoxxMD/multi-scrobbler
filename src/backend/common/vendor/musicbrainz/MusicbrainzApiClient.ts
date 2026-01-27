@@ -1,5 +1,5 @@
 import { Response } from 'superagent';
-import { PlayObject, URLData } from "../../../../core/Atomic.js";
+import { PlayObject, PlayObjectLifecycleless, URLData } from "../../../../core/Atomic.js";
 import { UpstreamError } from "../../errors/UpstreamError.js";
 import { AbstractApiOptions, FormatPlayObjectOptions, MUSICBRAINZ_URL, MusicbrainzApiConfigData } from "../../infrastructure/Atomic.js";
 import AbstractApiClient from "../AbstractApiClient.js";
@@ -18,6 +18,8 @@ import { stripIndents } from "common-tags";
 import { getNodeNetworkException, hasNodeNetworkException, isNodeNetworkException } from '../../errors/NodeErrors.js';
 import { SimpleError } from '../../errors/MSErrors.js';
 import { resourceLimits } from 'worker_threads';
+import { baseFormatPlayObj } from '../../../utils/PlayTransformUtils.js';
+import { IRecordingMSList } from '../../transforms/MusicbrainzTransformer.js';
 
 export interface SubmitResponse {
     payload?: {
@@ -193,7 +195,7 @@ export class MusicbrainzApiClient extends AbstractApiClient {
         }
     }
 
-    searchByRecording = async(play: PlayObject, options?: SearchOptions): Promise<IRecordingList | undefined> => {
+    searchByRecording = async(play: PlayObject, options?: SearchOptions): Promise<IRecordingMSList | undefined> => {
 
         const {
             escapeCharacters = true,
@@ -206,6 +208,7 @@ export class MusicbrainzApiClient extends AbstractApiClient {
         const cacheKey = `mb-recSearch-${hashObject({...playContentInvariantTransform(play), using})}`;
 
         this.logger.debug(`Starting search`);
+        let q = '';
         // https://github.com/Borewit/musicbrainz-api?tab=readme-ov-file#search-function
         // https://wiki.musicbrainz.org/MusicBrainz_API/Search#Recording
         // https://beta.musicbrainz.org/doc/MusicBrainz_API/Search
@@ -247,8 +250,6 @@ export class MusicbrainzApiClient extends AbstractApiClient {
                     query[k] = Array.isArray(v) ? v.map(removeNonWordCharacters) : removeNonWordCharacters(v);
                 }
             }
-
-            let q = '';
 
             if(freetext) {
 
@@ -328,7 +329,9 @@ export class MusicbrainzApiClient extends AbstractApiClient {
             throw new Error('results returned but no recordings list in response data, something handled incorrectly?');
         }
 
-        return res;
+        (res as IRecordingMSList).requestQuery = q;
+
+        return res as IRecordingMSList;
     }
 
     testConnection = async () => {
@@ -373,7 +376,7 @@ export const recordingToPlay = (data: IRecording, options?: {ignoreVA?: boolean}
         }
     }
 
-    const play: PlayObject = {
+    const play: PlayObjectLifecycleless = {
         data: {
             track: data.title,
             artists,
@@ -398,7 +401,7 @@ export const recordingToPlay = (data: IRecording, options?: {ignoreVA?: boolean}
         }
     }
 
-    return play;
+    return baseFormatPlayObj(data, play);
 }
 
 

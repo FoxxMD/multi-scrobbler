@@ -488,7 +488,7 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
         this.scrobbledPlayObjs = new FixedSizeList<ScrobbledPlayObject>(this.MAX_STORED_SCROBBLES, this.scrobbledPlayObjs.data.filter(x => this.timeFrameIsValid(x.play)[0])) ;
     }
 
-    getScrobbledPlays = () => this.scrobbledPlayObjs.data.map(x => x.scrobble)
+    getScrobbledPlays = () => this.scrobbledPlayObjs.data.map(x => x.play)
 
     findExistingSubmittedPlayObj = async (playObjPre: PlayObject): Promise<([undefined, undefined] | [ScrobbledPlayObject, ScrobbledPlayObject[]])> => {
 
@@ -796,11 +796,13 @@ ${closestMatch.breakdowns.join('\n')}`, {leaf: ['Dupe Check']});
                     const [timeFrameValid, timeFrameValidLog] = this.timeFrameIsValid(currQueuedPlay.play);
                     if (timeFrameValid && !(await this.alreadyScrobbled(currQueuedPlay.play))) {
                         const transformedScrobble = await this.transformPlay(currQueuedPlay.play, TRANSFORM_HOOK.postCompare);
+                        transformedScrobble.meta.lifecycle.scrobble = this.playToClientPayload(transformedScrobble);
                         try {
                             const scrobbledPlay = await this.scrobble(transformedScrobble);
                             this.emitEvent('scrobble', {play: transformedScrobble});
                             this.addScrobbledTrack(transformedScrobble, scrobbledPlay);
                         } catch (e) {
+                            currQueuedPlay.play.meta.lifecycle.scrobble = this.playToClientPayload(transformedScrobble);
                             if (e instanceof UpstreamError && e.showStopper === false) {
                                 this.addDeadLetterScrobble(currQueuedPlay, e);
                                 this.logger.warn(new Error(`Could not scrobble ${buildTrackString(transformedScrobble)} from Source '${currQueuedPlay.source}' but error was not show stopping. Adding scrobble to Dead Letter Queue and will retry on next heartbeat.`, {cause: e}));

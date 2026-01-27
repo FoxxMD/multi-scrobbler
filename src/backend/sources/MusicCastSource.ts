@@ -1,7 +1,7 @@
 import { MemoryPositionalSource } from "./MemoryPositionalSource.js";
 import { RecentlyPlayedOptions } from "./AbstractSource.js";
 import { EventEmitter } from "events";
-import { PlayObject, URLData } from "../../core/Atomic.js";
+import { PlayObject, PlayObjectLifecycleless, URLData } from "../../core/Atomic.js";
 import {
     FormatPlayObjectOptions,
     InternalConfig,
@@ -11,6 +11,7 @@ import {
 import { isPortReachable, isPortReachableConnect, joinedUrl, normalizeWebAddress } from "../utils/NetworkUtils.js";
 import { DeviceInfoResponse, DeviceStatusResponse, MusicCastResponseCodes, MusicCastSourceConfig, playbackToReportedStatus, PlayInfoCDResponse, PlayInfoNetResponse } from "../common/infrastructure/config/source/musiccast.js";
 import request, { Request, Response } from 'superagent';
+import { baseFormatPlayObj } from "../utils/PlayTransformUtils.js";
 
 
 export class MusicCastSource extends MemoryPositionalSource {
@@ -146,7 +147,7 @@ const formatPlayObj = (obj: PlayInfoCDResponse | PlayInfoNetResponse, options: F
         playback
     } = obj;
 
-    return {
+    const play: PlayObjectLifecycleless = {
         data: {
             artists: artist !== undefined && artist !== '' ? [artist] : [],
             album: album !== '' ? album : undefined,
@@ -161,4 +162,5 @@ const formatPlayObj = (obj: PlayInfoCDResponse | PlayInfoNetResponse, options: F
             mediaPlayerVersion: options.version
         }
     }
+    return baseFormatPlayObj(obj, play);
 }

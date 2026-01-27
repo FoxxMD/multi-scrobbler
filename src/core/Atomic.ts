@@ -2,6 +2,8 @@ import { LogDataPretty, LogLevel } from "@foxxmd/logging";
 import { Dayjs } from "dayjs";
 import { ListenProgress } from "../backend/sources/PlayerState/ListenProgress.js";
 import { AdditionalTrackInfoResponse } from "../backend/common/vendor/listenbrainz/interfaces.js";
+import { Delta } from 'jsondiffpatch';
+import { MarkOptional } from "ts-essentials";
 
 export interface SourceStatusData {
     status: string;
@@ -262,7 +264,37 @@ export interface PlayMeta {
 
     comment?: string
 
+    lifecycle: PlayLifecycle
+    lifecycleInputs?: LifecycleInput[]
+
     [key: string]: any
+}
+
+export interface LifecycleInput {
+    type: string, input: (object | string)
+}
+
+export interface PlayObjectLifecycleless {
+    data: ObjectPlayData,
+    meta: MarkOptional<PlayMeta, 'lifecycle'>
+}
+
+// export interface PlayMetaLifecycled extends PlayMeta {
+//     lifecycle: PlayLifecycle
+// }
+
+export interface PlayLifecycle {
+    input?: object
+    original: PlayObjectLifecycleless
+    steps: LifecycleStep[]
+    scrobble?: object
+}
+
+export interface LifecycleStep {
+    name: string
+    source: string
+    patch?: Delta
+    inputs?: LifecycleInput[]
 }
 
 export type ScrobbleTsSOC = 1 | 2;
@@ -282,6 +314,10 @@ export const isPlayObject = (obj: object): obj is PlayObject => {
 export interface PlayObject extends AmbPlayObject {
     data: ObjectPlayData,
 }
+
+// export interface PlayObjectLifecycled extends PlayObject {
+//     meta: PlayMetaLifecycled
+// }
 
 export interface JsonPlayObject extends AmbPlayObject {
     data: JsonPlayData

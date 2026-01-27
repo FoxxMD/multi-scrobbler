@@ -1,6 +1,6 @@
 import { RecentlyPlayedOptions } from "./AbstractSource.js";
 import { EventEmitter } from "events";
-import { PlayObject, URLData } from "../../core/Atomic.js";
+import { PlayObject, PlayObjectLifecycleless, URLData } from "../../core/Atomic.js";
 import {
     FormatPlayObjectOptions,
     InternalConfig,
@@ -14,6 +14,7 @@ import { IcecastMetadata, IcecastSourceConfig } from "../common/infrastructure/c
 import IcecastMetadataStats from "icecast-metadata-stats";
 import { parseArtistCredits, parseTrackCredits } from "../utils/StringUtils.js";
 import { isDebugMode, sleep } from "../utils.js";
+import { baseFormatPlayObj } from "../utils/PlayTransformUtils.js";
 
 
 export class IcecastSource extends MemorySource {
@@ -207,7 +208,7 @@ const formatPlayObj = (obj: IcecastMetadata, options: FormatPlayObjectOptions = 
         }
     }
 
-    return {
+    const play: PlayObjectLifecycleless = {
         data: {
             track,
             artists
@@ -217,4 +218,5 @@ const formatPlayObj = (obj: IcecastMetadata, options: FormatPlayObjectOptions = 
             mediaPlayerName: 'Icecast'
         }
     }
+    return baseFormatPlayObj(obj, play);
 }

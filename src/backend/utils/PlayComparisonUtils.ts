@@ -1,5 +1,5 @@
 import { getListDiff, ListDiff } from "@donedeal0/superdiff";
-import { PlayObject, TA_CLOSE, TA_DEFAULT_ACCURACY, TA_EXACT, TemporalAccuracy } from "../../core/Atomic.js";
+import { PlayObject, PlayObjectLifecycleless, TA_CLOSE, TA_DEFAULT_ACCURACY, TA_EXACT, TemporalAccuracy } from "../../core/Atomic.js";
 import { buildTrackString } from "../../core/StringUtils.js";
 import { playObjDataMatch, setIntersection } from "../utils.js";
 import { comparePlayTemporally, hasAcceptableTemporalAccuracy, TemporalPlayComparisonOptions } from "./TimeUtils.js";
@@ -8,7 +8,7 @@ import { ARTIST_WEIGHT, TITLE_WEIGHT } from "../common/infrastructure/Atomic.js"
 import { StringSamenessResult } from "@foxxmd/string-sameness";
 
 
-export const metaInvariantTransform = (play: PlayObject): PlayObject => {
+export const metaInvariantTransform = (play: PlayObject): PlayObjectLifecycleless => {
     const {
         meta: {
             trackId
@@ -37,7 +37,7 @@ export const playDateInvariantTransform = (play: PlayObject): PlayObject => {
     }
 }
 
-export const playContentInvariantTransform = (play: PlayObject): PlayObject => {
+export const playContentInvariantTransform = (play: PlayObject): PlayObjectLifecycleless => {
     const {
         data: {
             playDate,
@@ -54,7 +54,7 @@ export const playContentInvariantTransform = (play: PlayObject): PlayObject => {
 }
 
 
-export type PlayTransformer = (play: PlayObject) => PlayObject;
+export type PlayTransformer = (play: PlayObject) => PlayObjectLifecycleless;
 export type ListTransformers = PlayTransformer[];
 
 export const defaultListTransformers: ListTransformers = [metaInvariantTransform, playDateInvariantTransform];

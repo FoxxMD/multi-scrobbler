@@ -2,7 +2,7 @@ import { Interfaces as Notifications } from '@dbus-types/notifications'
 import dayjs from "dayjs";
 import { DBusInterface, MessageBus, sessionBus, Connection, ConnectOpts } from 'dbus-ts';
 import EventEmitter from "events";
-import { PlayObject } from "../../core/Atomic.js";
+import { PlayObject, PlayObjectLifecycleless } from "../../core/Atomic.js";
 import { FormatPlayObjectOptions, InternalConfig } from "../common/infrastructure/Atomic.js";
 import {
     MPRIS_IFACE,
@@ -20,6 +20,7 @@ import MemorySource from "./MemorySource.js";
 import { Readable, Writable } from 'stream';
 import net from 'net';
 import pEvent from 'p-event';
+import { baseFormatPlayObj } from '../utils/PlayTransformUtils.js';
 
 
 export class MPRISSource extends MemorySource {
@@ -71,7 +72,7 @@ export class MPRISSource extends MemorySource {
             actualAlbumArtists = albumArtist;
         }
 
-        return {
+        const play: PlayObjectLifecycleless = {
             data: {
                 track: title,
                 album,
@@ -91,6 +92,7 @@ export class MPRISSource extends MemorySource {
                 deviceId: name,
             }
         }
+        return baseFormatPlayObj(obj, play);
     }
 
     protected async doCheckConnection(): Promise<true | string | undefined> {

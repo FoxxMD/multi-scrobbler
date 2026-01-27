@@ -1,6 +1,6 @@
 import dayjs from "dayjs";
 import request, { Request, Response } from 'superagent';
-import { PlayObject, URLData } from "../../../core/Atomic.js";
+import { PlayObject, PlayObjectLifecycleless, URLData } from "../../../core/Atomic.js";
 import { nonEmptyStringOrDefault } from "../../../core/StringUtils.js";
 import { UpstreamError } from "../errors/UpstreamError.js";
 import { AbstractApiOptions, DEFAULT_RETRY_MULTIPLIER, FormatPlayObjectOptions } from "../infrastructure/Atomic.js";
@@ -13,6 +13,7 @@ import { playToListenPayload } from './ListenbrainzApiClient.js';
 import { RockskyScrobble } from './rocksky/interfaces.js';
 import { Handle } from "@atcute/lexicons";
 import { identifierToAtProtoHandle } from './bluesky/bsUtils.js';
+import { baseFormatPlayObj } from "../../utils/PlayTransformUtils.js";
 
 interface SubmitOptions {
     log?: boolean
@@ -208,7 +209,7 @@ interface UserScrobbleResponse {
 }
 
 export const rockskyScrobbleToPlay = (obj: RockskyScrobble): PlayObject => {
-    const play: PlayObject = {
+    const play: PlayObjectLifecycleless = {
         data: {
             track: obj.title,
             artists: nonEmptyStringOrDefault(obj.artist) ? [obj.artist] : [],
@@ -222,5 +223,5 @@ export const rockskyScrobbleToPlay = (obj: RockskyScrobble): PlayObject => {
         }
     };
 
-    return play;
+    return baseFormatPlayObj(obj, play);
 }

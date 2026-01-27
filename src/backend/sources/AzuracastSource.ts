@@ -4,7 +4,7 @@ import { childLogger, Logger } from "@foxxmd/logging";
 import { EventEmitter } from "events";
 import { WS, CloseEvent, ErrorEvent, RetryEvent } from 'iso-websocket'
 import pEvent from 'p-event';
-import { PlayObject, URLData } from "../../core/Atomic.js";
+import { PlayObject, PlayObjectLifecycleless, URLData } from "../../core/Atomic.js";
 import { UpstreamError } from "../common/errors/UpstreamError.js";
 import {
     FormatPlayObjectOptions,
@@ -16,6 +16,7 @@ import {
 } from "../common/infrastructure/Atomic.js";
 import { AzuracastSourceConfig, AzuraNowPlayingResponse, AzuraStationResponse } from "../common/infrastructure/config/source/azuracast.js";
 import { isPortReachable, normalizeWSAddress } from "../utils/NetworkUtils.js";
+import { baseFormatPlayObj } from "../utils/PlayTransformUtils.js";
 
 
 export class AzuracastSource extends MemorySource {
@@ -247,7 +248,7 @@ const formatPlayObj = (obj: AzuraNowPlayingResponse, options: FormatPlayObjectOp
 
     const track: string = title ?? text;
 
-    return {
+    const play: PlayObjectLifecycleless = {
         data: {
             artists: artist !== undefined && artist !== '' ? [artist] : [],
             album: album !== '' ? album : undefined,
@@ -260,6 +261,7 @@ const formatPlayObj = (obj: AzuraNowPlayingResponse, options: FormatPlayObjectOp
             mediaPlayerName: 'Azuracast'
         }
     }
+    return baseFormatPlayObj(obj, play);
 }
 
 const getMessageData = <T>(e: any): T => {

@@ -103,6 +103,7 @@
     "iti": "^0.7.0",
     "jest-diff": "^30.2.0",
     "json5": "^2.2.3",
+    "jsondiffpatch": "^0.7.3",
     "keyv": "^5.5.0",
     "kodi-api": "^0.2.1",
     "lastfm-ts-api": "^2.5.0",

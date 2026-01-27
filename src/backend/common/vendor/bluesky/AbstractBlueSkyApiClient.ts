@@ -4,13 +4,14 @@ import { ListRecord, ScrobbleRecord, TealClientData } from "../../infrastructure
 import AbstractApiClient from "../AbstractApiClient.js";
 import { Agent } from "@atproto/api";
 import { MSCache } from "../../Cache.js";
-import { BrainzMeta, PlayObject } from "../../../../core/Atomic.js";
+import { BrainzMeta, PlayObject, PlayObjectLifecycleless } from "../../../../core/Atomic.js";
 import { musicServiceToCononical } from "../ListenbrainzApiClient.js";
 import { parseRegexSingle } from "@foxxmd/regex-buddy-core";
 import { RecordOptions } from "../../infrastructure/config/client/tealfm.js";
 import dayjs from "dayjs";
 import { getScrobbleTsSOCDateWithContext } from "../../../utils/TimeUtils.js";
 import { removeUndefinedKeys } from "../../../utils.js";
+import { baseFormatPlayObj } from "../../../utils/PlayTransformUtils.js";
 
 
 export abstract class AbstractBlueSkyApiClient extends AbstractApiClient {
@@ -89,7 +90,7 @@ export const listRecordToPlay = (listRecord: ListRecord<ScrobbleRecord>): PlayOb
 
 export const recordToPlay = (record: ScrobbleRecord, options: RecordOptions = {}): PlayObject => {
 
-    const play: PlayObject = {
+    const play: PlayObjectLifecycleless = {
         data: {
             track: record.trackName,
             artists: record.artists.filter(x => x.artistName !== undefined).map(x => x.artistName),
@@ -120,7 +121,7 @@ export const recordToPlay = (record: ScrobbleRecord, options: RecordOptions = {}
         play.data.meta = {brainz};
     }
 
-    return play;
+    return baseFormatPlayObj(record, play);
 };
 export const ATPROTO_URI_REGEX = new RegExp(/at:\/\/(?<resource>(?<did>did.*?)\/fm.teal.alpha.feed.play\/(?<tid>.*))/);
 

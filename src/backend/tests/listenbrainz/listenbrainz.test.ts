@@ -23,6 +23,7 @@ import slightlyDifferentNames from './correctlyMapped/trackNameSlightlyDifferent
 import incorrectMultiArtistsTrackName from './incorrectlyMapped/multiArtistsInTrackName.json' with { type: "json" };
 import veryWrong from './incorrectlyMapped/veryWrong.json' with { type: "json" };
 import { generatePlay } from "../utils/PlayTestUtils.js";
+import { defaultLifecycle } from "../../utils/PlayTransformUtils.js";
 
 interface LZTestFixture {
     data: ListenResponse
@@ -141,7 +142,9 @@ describe('Listenbrainz Response Behavior', function() {
                         }
                     }
                 },
-                meta: {}
+                meta: {
+                    lifecycle: defaultLifecycle()
+                }
             }
             try {
                 await client.submitListen(play);

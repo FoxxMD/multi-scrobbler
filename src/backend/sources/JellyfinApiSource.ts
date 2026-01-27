@@ -45,7 +45,7 @@ import EventEmitter from "events";
 import { nanoid } from "nanoid";
 import pEvent from "p-event";
 import { Simulate } from "react-dom/test-utils";
-import { BrainzMeta, PlayObject } from "../../core/Atomic.js";
+import { BrainzMeta, PlayObject, PlayObjectLifecycleless } from "../../core/Atomic.js";
 import { buildTrackString, combinePartsToString, truncateStringToLength } from "../../core/StringUtils.js";
 import {
     FormatPlayObjectOptions,
@@ -60,6 +60,7 @@ import { joinedUrl } from "../utils/NetworkUtils.js";
 import { hashObject, parseArrayFromMaybeString } from "../utils/StringUtils.js";
 import { MemoryPositionalSource } from "./MemoryPositionalSource.js";
 import { FixedSizeList } from "fixed-size-list";
+import { baseFormatPlayObj } from "../utils/PlayTransformUtils.js";
 
 const shortDeviceId = truncateStringToLength(10, '');
 
@@ -438,7 +439,7 @@ export default class JellyfinApiSource extends MemoryPositionalSource {
             meta.albumArtist = [ProviderIds.MusicBrainzAlbumArtist];
         }
 
-        const play: PlayObject = {
+        const play: PlayObjectLifecycleless = {
             data: {
                 artists: Artists,
                 album: Album,
@@ -457,7 +458,7 @@ export default class JellyfinApiSource extends MemoryPositionalSource {
         if(Object.keys(meta).length > 0) {
             play.data.meta = { brainz: meta };
         }
-        return play;
+        return baseFormatPlayObj(obj,play);
     }
 
     getRecentlyPlayed = async (options = {}) => {

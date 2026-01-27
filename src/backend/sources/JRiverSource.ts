@@ -2,12 +2,13 @@ import dayjs from "dayjs";
 import { EventEmitter } from "events";
 import normalizeUrl from 'normalize-url';
 import { URL } from "url";
-import { PlayObject } from "../../core/Atomic.js";
+import { PlayObject, PlayObjectLifecycleless } from "../../core/Atomic.js";
 import { FormatPlayObjectOptions, InternalConfig } from "../common/infrastructure/Atomic.js";
 import { JRiverSourceConfig } from "../common/infrastructure/config/source/jriver.js";
 import { Info, JRiverApiClient, PLAYER_STATE } from "../common/vendor/JRiverApiClient.js";
 import { RecentlyPlayedOptions } from "./AbstractSource.js";
 import { MemoryPositionalSource } from "./MemoryPositionalSource.js";
+import { baseFormatPlayObj } from "../utils/PlayTransformUtils.js";
 
 export class JRiverSource extends MemoryPositionalSource {
     declare config: JRiverSourceConfig;
@@ -99,7 +100,7 @@ export class JRiverSource extends MemoryPositionalSource {
         const album = Album === null || Album === '' ? undefined : Album;
         const length = Number.parseInt(DurationMS.toString()) / 1000;
 
-        return {
+        const play: PlayObjectLifecycleless = {
             data: {
                 track: Name,
                 album: album,
@@ -117,6 +118,7 @@ export class JRiverSource extends MemoryPositionalSource {
                 deviceId: `Zone${ZoneID}${ZoneName !== undefined ? `-${ZoneName}` : ''}`,
             }
         }
+        return baseFormatPlayObj(obj, play);
     }
 
     getRecentlyPlayed = async (options: RecentlyPlayedOptions = {}) => {

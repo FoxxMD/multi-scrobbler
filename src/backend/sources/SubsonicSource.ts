@@ -3,7 +3,7 @@ import dayjs from "dayjs";
 import isSameOrAfter from "dayjs/plugin/isSameOrAfter.js";
 import EventEmitter from "events";
 import request, { Request } from 'superagent';
-import { PlayObject } from "../../core/Atomic.js";
+import { PlayObject, PlayObjectLifecycleless } from "../../core/Atomic.js";
 import { isNodeNetworkException } from "../common/errors/NodeErrors.js";
 import { UpstreamError } from "../common/errors/UpstreamError.js";
 import { DEFAULT_RETRY_MULTIPLIER, FormatPlayObjectOptions, InternalConfig, PlayPlatformId } from "../common/infrastructure/Atomic.js";
@@ -16,6 +16,7 @@ import MemorySource from "./MemorySource.js";
 import { SubsonicPlayerState } from './PlayerState/SubsonicPlayerState.js';
 import { PlayerStateOptions } from './PlayerState/AbstractPlayerState.js';
 import { Logger } from '@foxxmd/logging';
+import { baseFormatPlayObj } from '../utils/PlayTransformUtils.js';
 
 dayjs.extend(isSameOrAfter);
 
@@ -74,7 +75,7 @@ export class SubsonicSource extends MemorySource {
             username,
         } = obj;
 
-        return {
+        const play: PlayObjectLifecycleless = {
             data: {
                 artists: [artist],
                 album,
@@ -94,6 +95,7 @@ export class SubsonicSource extends MemorySource {
                 mediaPlayerVersion: type !== undefined && serverVersion !== undefined ? serverVersion : version
             }
         }
+        return baseFormatPlayObj(obj, play);
     }
 
     callApi = async <T extends SubsonicResponseCommon = SubsonicResponseCommon>(req: Request, retries = 0): Promise<T> => {

@@ -20,6 +20,7 @@ import { RockSkyClientConfig } from '../common/infrastructure/config/client/rock
 import { CommonClientOptions } from '../common/infrastructure/config/client/index.js';
 import { ExternalMetadataTerm, PlayTransformHooks } from '../common/infrastructure/Transform.js';
 import { LibrefmClientConfig } from '../common/infrastructure/config/client/librefm.js';
+import clone from 'clone';
 
 type groupedNamedConfigs = {[key: string]: ParsedConfig[]};
 
@@ -487,7 +488,7 @@ ${sources.join('\n')}`);
                 continue;
             }
             for (const playObj of playObjs) {
-                await client.queueScrobble(playObj, scrobbleFrom);
+                await client.queueScrobble(clone(playObj), scrobbleFrom);
             }
         }
     }

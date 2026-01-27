@@ -1,7 +1,7 @@
 import dayjs from "dayjs";
 import EventEmitter from "events";
 import request, { Request, Response, SuperAgent } from 'superagent';
-import { PlayObject, SOURCE_SOT, TA_CLOSE, TA_DURING, TA_EXACT, TA_FUZZY, TemporalAccuracy } from "../../core/Atomic.js";
+import { PlayObject, PlayObjectLifecycleless, SOURCE_SOT, TA_CLOSE, TA_DURING, TA_EXACT, TA_FUZZY, TemporalAccuracy } from "../../core/Atomic.js";
 import { DEFAULT_RETRY_MULTIPLIER, FormatPlayObjectOptions, InternalConfig } from "../common/infrastructure/Atomic.js";
 import { DeezerInternalSourceConfig, DeezerInternalTrackData, DeezerSourceConfig } from "../common/infrastructure/config/source/deezer.js";
 import { TRANSFORM_HOOK } from "../common/infrastructure/Transform.js";
@@ -13,6 +13,7 @@ import MemorySource from "./MemorySource.js";
 import { genericSourcePlayMatch } from "../utils/PlayComparisonUtils.js";
 import { TemporalPlayComparisonOptions } from "../utils/TimeUtils.js";
 import { findAsync, findIndexAsync } from "../utils/AsyncUtils.js";
+import { baseFormatPlayObj } from "../utils/PlayTransformUtils.js";
 
 interface DeezerHistoryResponse {
     errors: []
@@ -68,7 +69,7 @@ export default class DeezerInternalSource extends MemorySource {
 
     static formatPlayObj(obj: DeezerInternalTrackData, options: FormatPlayObjectOptions = {}): PlayObject {
         const {newFromSource = false} = options;
-        const play: PlayObject = {
+        const play: PlayObjectLifecycleless = {
             data: {
                 artists: [obj.ART_NAME],
                 album: obj.ALB_TITLE,
@@ -91,7 +92,7 @@ export default class DeezerInternalSource extends MemorySource {
                 album: `https://cdn-images.dzcdn.net/images/cover/${obj.ALB_PICTURE}/500x500-000000-80-0-0.jpg`
             }
         }
-        return play;
+        return baseFormatPlayObj(obj, play);
     }
 
     protected async doBuildInitData(): Promise<true | string | undefined> {

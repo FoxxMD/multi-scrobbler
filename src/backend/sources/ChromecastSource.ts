@@ -5,7 +5,7 @@ import { Client as CastClient } from 'castv2';
 import dayjs from "dayjs";
 import { EventEmitter } from "events";
 import e from "express";
-import { PlayObject } from "../../core/Atomic.js";
+import { PlayObject, PlayObjectLifecycleless } from "../../core/Atomic.js";
 import { buildTrackString } from "../../core/StringUtils.js";
 import { NETWORK_ERROR_FAILURE_CODES } from "../common/errors/NodeErrors.js";
 import {
@@ -35,6 +35,7 @@ import { findCauseByReference } from "../utils/ErrorUtils.js";
 import { discoveryAvahi, discoveryNative } from "../utils/MDNSUtils.js";
 import { RecentlyPlayedOptions } from "./AbstractSource.js";
 import { MemoryPositionalSource } from "./MemoryPositionalSource.js";
+import { baseFormatPlayObj } from "../utils/PlayTransformUtils.js";
 
 interface ChromecastDeviceInfo {
     mdns: MdnsDeviceInfo
@@ -716,7 +717,7 @@ export class ChromecastSource extends MemoryPositionalSource {
             trackProgressPosition = currentTime;
         }
 
-        return {
+        const play: PlayObjectLifecycleless = {
             data: {
                 track,
                 album,
@@ -731,6 +732,7 @@ export class ChromecastSource extends MemoryPositionalSource {
                 deviceId,
                 source
             }
-        }
+        };
+        return baseFormatPlayObj(obj, play);
     }
 }

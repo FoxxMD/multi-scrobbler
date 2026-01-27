@@ -1,5 +1,5 @@
 import EventEmitter from "events";
-import { PlayObject, URLData } from "../../core/Atomic.js";
+import { PlayObject, PlayObjectLifecycleless, URLData } from "../../core/Atomic.js";
 import { buildTrackString, combinePartsToString, truncateStringToLength } from "../../core/StringUtils.js";
 import {
     asPlayerStateDataMaybePlay,
@@ -28,6 +28,7 @@ import { FixedSizeList } from 'fixed-size-list';
 import { SDKValidationError } from '@lukehagar/plexjs/sdk/models/errors/sdkvalidationerror.js';
 import { Keyv } from 'cacheable';
 import { initMemoryCache } from "../common/Cache.js";
+import { baseFormatPlayObj } from "../utils/PlayTransformUtils.js";
 
 const shortDeviceId = truncateStringToLength(10, '');
 
@@ -368,7 +369,7 @@ export default class PlexApiSource extends MemoryPositionalSource {
             realArtists.push(artist);
         }
 
-        return {
+        const play: PlayObjectLifecycleless = {
             data: {
                 artists: realArtists,
                 albumArtists,
@@ -391,6 +392,7 @@ export default class PlexApiSource extends MemoryPositionalSource {
                 trackProgressPosition: viewOffset / 1000,
             }
         }
+        return baseFormatPlayObj(obj, play);
     }
 
     getRecentlyPlayed = async (options = {}) => {
