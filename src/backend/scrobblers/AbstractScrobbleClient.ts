@@ -488,7 +488,7 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
         this.scrobbledPlayObjs = new FixedSizeList<ScrobbledPlayObject>(this.MAX_STORED_SCROBBLES, this.scrobbledPlayObjs.data.filter(x => this.timeFrameIsValid(x.play)[0])) ;
     }
 
-    getScrobbledPlays = () => this.scrobbledPlayObjs.data.map(x => x.scrobble)
+    getScrobbledPlays = () => this.scrobbledPlayObjs.data.map(x => x.play)
 
     findExistingSubmittedPlayObj = async (playObjPre: PlayObject): Promise<([undefined, undefined] | [ScrobbledPlayObject, ScrobbledPlayObject[]])> => {
 
