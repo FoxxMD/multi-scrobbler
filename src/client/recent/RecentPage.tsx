@@ -54,7 +54,7 @@ const recent = () => {
         setIndex(index);
     },[copy, setIndex]);
 
-    const baseClass = ['float-right'];
+    const baseClass = ['mr-3'];
 
     const isUpstream = searchParams.get('upstream') === '1';
 
@@ -93,8 +93,11 @@ const recent = () => {
                         //     }
                         //     return y;
                         // });
-                        return <li key={x.index}><PlayDisplay data={x} buildOptions={displayOpts}/> <button className={clsx(classes)} onClick={() => copyActionCB(x.meta.lifecycle, x.index)}>{copiedIndex === x.index ? 'Copied!' : <FontAwesomeIcon
-                        color="white" icon={faBug}/>}</button></li>
+                        return <li key={x.index}>
+                            <button className={clsx(classes)} onClick={() => copyActionCB(x.meta.lifecycle, x.index)}>{copiedIndex === x.index ? 'Copied!' : <FontAwesomeIcon
+                        color="white" icon={faBug}/>}</button>
+                            <PlayDisplay data={x} buildOptions={displayOpts}/>
+                        </li>
                 })}</ul>
                 </div>
             </div>

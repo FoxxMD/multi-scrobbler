@@ -31,7 +31,7 @@ const scrobbled = () => {
         setIndex(index);
     },[copy, setIndex]);
 
-    const baseClass = ['float-right'];
+    const baseClass = ['mr-3'];
 
 
     return (
@@ -46,8 +46,11 @@ const scrobbled = () => {
                     <ul>{data.map(x => {
                         const classes = [...baseClass].concat(copiedIndex !== x.index ? ['underline','cursor-pointer'] : []);
                         
-                        return <li key={x.index}><PlayDisplay data={x} buildOptions={displayOpts}/> <button className={clsx(classes)} onClick={() => copyActionCB(x.meta.lifecycle, x.index)}>{copiedIndex === x.index ? 'Copied!' : <FontAwesomeIcon
-                                                color="white" icon={faBug}/>}</button></li>;
+                        return <li key={x.index}>
+                            <button className={clsx(classes)} onClick={() => copyActionCB(x.meta.lifecycle, x.index)}>{copiedIndex === x.index ? 'Copied!' : <FontAwesomeIcon
+                                                color="white" icon={faBug}/>}</button>
+                                                <PlayDisplay data={x} buildOptions={displayOpts}/>
+                                </li>;
                 })} </ul>
                 </div>
             </div>
