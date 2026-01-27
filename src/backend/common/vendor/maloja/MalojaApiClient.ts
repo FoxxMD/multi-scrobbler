@@ -416,9 +416,16 @@ export const playToScrobblePayload = (playObj: PlayObject, apiKey?: string): Mal
         scrobbleData.duration = listenedFor;
     }
 
+    // leaving this undefined should result in compilation albums when
+    // multiple artists are listed for the same album -- see Manual Scrobble page in Maloja UI
+    // https://github.com/krateng/maloja/blob/master/maloja/web/static/js/manualscrobble.js#L101
+    // https://github.com/krateng/maloja/blob/master/maloja/web/static/js/manualscrobble.js#L136
+    // BUT this is not actually working!
     if (albumArtists.length > 0) {
         scrobbleData.albumartists = albumArtists;
     }
+    // see also https://github.com/krateng/maloja/issues/96#issuecomment-1490562761
+    // https://github.com/FoxxMD/multi-scrobbler/issues/454#issuecomment-3806367420
 
     return scrobbleData;
 }
