@@ -911,6 +911,17 @@ ${closestMatch.breakdowns.join('\n')}`, {leaf: ['Dupe Check']});
                 this.emitEvent('scrobble', {play: transformedScrobble});
                 this.addScrobbledTrack(transformedScrobble, scrobbledPlay);
             } catch (e) {
+
+                const submitError = findCauseByReference(e, ScrobbleSubmitError);
+                if(submitError !== undefined) {
+                    deadScrobble.play.meta.lifecycle.scrobble.payload = submitError.payload;
+                    deadScrobble.play.meta.lifecycle.scrobble.response = submitError.responseBody;
+                    deadScrobble.play.meta.lifecycle.scrobble.error = serializeError(submitError);
+                } else {
+                    deadScrobble.play.meta.lifecycle.scrobble.payload = this.playToClientPayload(transformedScrobble);
+                    deadScrobble.play.meta.lifecycle.scrobble.error = serializeError(e);
+                }
+
                 deadScrobble.retries++;
                 deadScrobble.error = messageWithCauses(e);
                 deadScrobble.lastRetry = dayjs();
