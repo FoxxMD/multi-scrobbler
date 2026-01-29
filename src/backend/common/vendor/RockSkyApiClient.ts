@@ -1,6 +1,6 @@
 import dayjs from "dayjs";
 import request, { Request, Response } from 'superagent';
-import { PlayObject, URLData } from "../../../core/Atomic.js";
+import { PlayObject, PlayObjectLifecycleless, ScrobbleActionResult, URLData } from "../../../core/Atomic.js";
 import { nonEmptyStringOrDefault } from "../../../core/StringUtils.js";
 import { UpstreamError } from "../errors/UpstreamError.js";
 import { AbstractApiOptions, DEFAULT_RETRY_MULTIPLIER, FormatPlayObjectOptions } from "../infrastructure/Atomic.js";
@@ -13,6 +13,8 @@ import { playToListenPayload } from './ListenbrainzApiClient.js';
 import { RockskyScrobble } from './rocksky/interfaces.js';
 import { Handle } from "@atcute/lexicons";
 import { identifierToAtProtoHandle } from './bluesky/bsUtils.js';
+import { baseFormatPlayObj } from "../../utils/PlayTransformUtils.js";
+import { ScrobbleSubmitError } from "../errors/MSErrors.js";
 
 interface SubmitOptions {
     log?: boolean
@@ -170,21 +172,21 @@ export class RockSkyApiClient extends AbstractApiClient {
     }
 
 
-    submitListen = async (play: PlayObject, options: SubmitOptions = {}) => {
+    submitListen = async (play: PlayObject, options: SubmitOptions = {}): Promise<ScrobbleActionResult> => {
         const { log = false, listenType = 'single'} = options;
-        try {
-
-            const listenPayload = playToListenPayload(play);
-            if(listenType === 'playing_now') {
+        const listenPayload = playToListenPayload(play);
+        if(listenType === 'playing_now') {
                 delete listenPayload.listened_at;
             }
-            // https://tangled.org/rocksky.app/rocksky/blob/main/crates/scrobbler/src/listenbrainz/types.rs#L11
-            // rocksky only uses duration_ms
-            if(play.data.duration !== undefined && listenPayload.track_metadata.additional_info?.duration !== undefined) {
-                delete listenPayload.track_metadata.additional_info.duration;
-                listenPayload.track_metadata.additional_info.duration_ms = Math.round(play.data.duration) * 1000;
-            }
-            const submitPayload: SubmitPayload = {listen_type: listenType, payload: [listenPayload]};
+        // https://tangled.org/rocksky.app/rocksky/blob/main/crates/scrobbler/src/listenbrainz/types.rs#L11
+        // rocksky only uses duration_ms
+        if(play.data.duration !== undefined && listenPayload.track_metadata.additional_info?.duration !== undefined) {
+            delete listenPayload.track_metadata.additional_info.duration;
+            listenPayload.track_metadata.additional_info.duration_ms = Math.round(play.data.duration) * 1000;
+        }
+        const submitPayload: SubmitPayload = {listen_type: listenType, payload: [listenPayload]};
+
+        try {
             if(log) {
                 this.logger.debug(`Submit Payload: ${JSON.stringify(submitPayload)}`);
             }
@@ -192,9 +194,9 @@ export class RockSkyApiClient extends AbstractApiClient {
             if(log) {
                 this.logger.debug(`Submit Response: ${resp.text}`)
             }
-            return resp.body as SubmitResponse;
+            return {payload: submitPayload, response: resp.body as SubmitResponse};
         } catch (e) {
-            throw e;
+            throw new ScrobbleSubmitError(`Error occurred while making Rocksky API scrobble (${listenType}) request`, {cause: e, payload: submitPayload});
         }
     }
 
@@ -208,7 +210,7 @@ interface UserScrobbleResponse {
 }
 
 export const rockskyScrobbleToPlay = (obj: RockskyScrobble): PlayObject => {
-    const play: PlayObject = {
+    const play: PlayObjectLifecycleless = {
         data: {
             track: obj.title,
             artists: nonEmptyStringOrDefault(obj.artist) ? [obj.artist] : [],
@@ -222,5 +224,5 @@ export const rockskyScrobbleToPlay = (obj: RockskyScrobble): PlayObject => {
         }
     };
 
-    return play;
+    return baseFormatPlayObj(obj, play);
 }

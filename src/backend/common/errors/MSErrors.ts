@@ -1,6 +1,7 @@
 import { parseRegexSingle } from "@foxxmd/regex-buddy-core";
 import mergeErrorCause from 'merge-error-cause';
 import { findCauseByFunc, findCauseByReference } from "../../utils/ErrorUtils.js";
+import { UpstreamError, UpstreamErrorOptions } from "./UpstreamError.js";
 
 export abstract class NamedError extends Error {
     public abstract name: string;
@@ -94,4 +95,13 @@ export const mergeSimpleError = (err: Error): Error => {
         return mergeErrorCause(structuredClone(err));
     }
     return err;
+}
+
+export class ScrobbleSubmitError<T extends (object | string) = object> extends UpstreamError {
+    name = 'Scrobble Submit Error';
+    payload?: T;
+    constructor(message: string, options?: UpstreamErrorOptions & {payload?: T}) {
+        super(message, options);
+        this.payload = options?.payload;
+    }
 }

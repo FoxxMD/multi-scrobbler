@@ -1,4 +1,4 @@
-import { ObjectPlayData, PlayObject, TrackMeta } from "../../../core/Atomic.js";
+import { isPlayObject, ObjectPlayData, PlayObject, TrackMeta } from "../../../core/Atomic.js";
 import { AtomicStageConfig, StageConfig } from "../infrastructure/Transform.js";
 import AbstractTransformer from "./AbstractTransformer.js";
 
@@ -120,6 +120,15 @@ export default abstract class AtomicPartsTransformer<Y, T = any, Z extends Atomi
                     ...transformedPlayData,
                     meta: mergedMeta
                 }
+            }
+
+            if(typeof transformData === 'object' && isPlayObject(transformData) && transformData.meta?.lifecycleInputs !== undefined) {
+                const {
+                    meta: {
+                        lifecycleInputs = [],
+                    } = {},
+                } = transformedPlay;
+                transformedPlay.meta.lifecycleInputs = lifecycleInputs.concat(transformData.meta?.lifecycleInputs);
             }
 
             return transformedPlay;

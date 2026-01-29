@@ -1,5 +1,5 @@
 import { EventEmitter } from "events";
-import { PlayObject } from "../../core/Atomic.js";
+import { PlayObject, PlayObjectLifecycleless } from "../../core/Atomic.js";
 import {
     FormatPlayObjectOptions,
     InternalConfig,
@@ -23,6 +23,7 @@ import { buildStatePlayerPlayIdententifyingInfo, hashObject, parseArrayFromMaybe
 import { isDebugMode, playObjDataMatch, sleep } from "../utils.js";
 import { playContentInvariantTransform } from "../utils/PlayComparisonUtils.js";
 import dayjs, { Dayjs } from "dayjs";
+import { baseFormatPlayObj } from "../utils/PlayTransformUtils.js";
 
 export interface DeviceState {
     device: SonosDevice
@@ -374,7 +375,7 @@ export const formatPlayObj = (obj: SonosState, options: FormatPlayObjectOptions 
         titleStr = Title;
     }
 
-    return {
+    const play: PlayObjectLifecycleless = {
         data: {
             track: titleStr,
             album: Album,
@@ -392,6 +393,7 @@ export const formatPlayObj = (obj: SonosState, options: FormatPlayObjectOptions 
             source: 'Sonos'
         }
     }
+    return baseFormatPlayObj({...obj, device: options.device}, play);
 }
 
 export const getInvariantDeviceData = (data: DeviceState): SimpleDeviceState => {

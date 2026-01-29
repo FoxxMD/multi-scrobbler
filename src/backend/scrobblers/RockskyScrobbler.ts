@@ -3,7 +3,7 @@ import EventEmitter from "events";
 import { PlayObject } from "../../core/Atomic.js";
 import { buildTrackString, capitalize } from "../../core/StringUtils.js";
 import { isNodeNetworkException } from "../common/errors/NodeErrors.js";
-import { UpstreamError } from "../common/errors/UpstreamError.js";
+import { hasUpstreamError, UpstreamError } from "../common/errors/UpstreamError.js";
 import { FormatPlayObjectOptions } from "../common/infrastructure/Atomic.js";
 import { ListenBrainzClientConfig } from "../common/infrastructure/config/client/listenbrainz.js";
 import { ListenbrainzApiClient, playToListenPayload } from "../common/vendor/ListenbrainzApiClient.js";
@@ -12,8 +12,9 @@ import { Notifiers } from "../notifier/Notifiers.js";
 
 import AbstractScrobbleClient from "./AbstractScrobbleClient.js";
 import { isDebugMode } from "../utils.js";
-import { RockSkyApiClient } from "../common/vendor/RockSkyApiClient.js";
+import { RockSkyApiClient, SubmitResponse } from "../common/vendor/RockSkyApiClient.js";
 import { RockSkyClientConfig } from "../common/infrastructure/config/client/rocksky.js";
+import { ScrobbleSubmitError } from "../common/errors/MSErrors.js";
 
 export default class RockskyScrobbler extends AbstractScrobbleClient {
 
@@ -84,10 +85,10 @@ export default class RockskyScrobbler extends AbstractScrobbleClient {
         } = playObj;
 
         try {
-            const resp = await this.api.submitListen(playObj, { log: isDebugMode()});
+            const result = await this.api.submitListen(playObj, { log: isDebugMode()});
 
-            if((resp.payload?.ignored_listens ?? 0) > 0) {
-                throw new UpstreamError('Scrobble was successfully submitted but Rocksky ignored it', {showStopper: false});
+            if(((result.response as SubmitResponse).payload?.ignored_listens ?? 0) > 0) {
+                throw new ScrobbleSubmitError('Scrobble was successfully submitted but Rocksky ignored it', {showStopper: false, responseBody: result.response, payload: result.payload});
             }
 
             if (newFromSource) {
@@ -95,10 +96,10 @@ export default class RockskyScrobbler extends AbstractScrobbleClient {
             } else {
                 this.logger.info(`Scrobbled (Backlog) => (${source}) ${buildTrackString(playObj)}`);
             }
-            return playObj;
+            return result;
         } catch (e) {
             await this.notifier.notify({title: `Client - ${capitalize(this.type)} - ${this.name} - Scrobble Error`, message: `Failed to scrobble => ${buildTrackString(playObj)} | Error: ${e.message}`, priority: 'error'});
-            throw new UpstreamError(`Error occurred while making Rocksky API scrobble request: ${e.message}`, {cause: e, showStopper: !(e instanceof UpstreamError)});
+            throw e;
         }
     }
 
@@ -106,7 +107,7 @@ export default class RockskyScrobbler extends AbstractScrobbleClient {
         try {
             await this.api.submitListen(data, { listenType: 'playing_now'});
         } catch (e) {
-            throw new UpstreamError(`Error occurred while making Rocksky API Playing Now request: ${e.message}`, {cause: e, showStopper: !(e instanceof UpstreamError)});
+            throw e;
         }
     }
 }

@@ -13,6 +13,8 @@ import { findDelimiters } from '../../utils/StringUtils.js';
 import { ListRecord, ScrobbleRecord } from '../../common/infrastructure/config/client/tealfm.js';
 import { nanoid } from 'nanoid';
 import { LastFMTrackObject } from '../../common/vendor/LastfmApiClient.js';
+import { MarkOptional } from 'ts-essentials';
+import { defaultLifecycle } from '../../utils/PlayTransformUtils.js';
 
 dayjs.extend(utc)
 dayjs.extend(isBetween);
@@ -40,7 +42,7 @@ export const normalizePlays = (plays: PlayObject[],
                                    endDate?: Dayjs
                                    defaultDuration?: number,
                                    defaultData?: ObjectPlayData,
-                                   defaultMeta?: PlayMeta
+                                   defaultMeta?: MarkOptional<PlayMeta, 'lifecycle'>
                                }
 ): PlayObject[] => {
     const {
@@ -80,6 +82,7 @@ export const normalizePlays = (plays: PlayObject[],
                 ...defaultData
             }
             cleanPlay.meta = {
+                lifecycle: defaultLifecycle(),
                 ...cleanPlay.meta,
                 ...defaultMeta
             }
@@ -155,7 +158,7 @@ export const generatePlayerStateData = (options: Omit<PlayerStateDataMaybePlay, 
     }
 }
 
-export const generatePlay = (data: ObjectPlayData = {}, meta: PlayMeta = {}): PlayObject => {
+export const generatePlay = (data: ObjectPlayData = {}, meta: MarkOptional<PlayMeta, 'lifecycle'> = {}): PlayObject => {
     return {
         data: {
             track: faker.music.songName(),
@@ -168,6 +171,13 @@ export const generatePlay = (data: ObjectPlayData = {}, meta: PlayMeta = {}): Pl
         meta: {
             source: ['Spotify', 'Listenbrainz', 'Lastfm', 'Jellyfin', 'Plex'][faker.number.int({min: 0, max: 4})],
             ...meta,
+            lifecycle: {
+                original: {
+                    data: {},
+                    meta: {}
+                },
+                steps: []
+            }
         }
     }
 }
@@ -221,7 +231,7 @@ export const generatePlayPlatformId = (deviceId?: string, userId?: string): Play
     return [did, uid];
 }
 
-export const generatePlays = (numberOfPlays: number, data: ObjectPlayData = {}, meta: PlayMeta = {}): PlayObject[] => {
+export const generatePlays = (numberOfPlays: number, data: ObjectPlayData = {}, meta: MarkOptional<PlayMeta, 'lifecycle'> = {}): PlayObject[] => {
     return Array.from(Array(numberOfPlays), () => generatePlay(data, meta));
 }
 

@@ -1,10 +1,11 @@
 import EventEmitter from "events";
-import { PlayObject, URLData } from "../../core/Atomic.js";
+import { PlayObject, PlayObjectLifecycleless, URLData } from "../../core/Atomic.js";
 import { buildTrackString, combinePartsToString, truncateStringToLength } from "../../core/StringUtils.js";
 import {
     asPlayerStateDataMaybePlay,
     FormatPlayObjectOptions,
     InternalConfig,
+    MBID_VARIOUS_ARTISTS,
     NO_USER,
     PlayerStateData,
     PlayerStateDataMaybePlay,
@@ -28,6 +29,8 @@ import { FixedSizeList } from 'fixed-size-list';
 import { SDKValidationError } from '@lukehagar/plexjs/sdk/models/errors/sdkvalidationerror.js';
 import { Keyv } from 'cacheable';
 import { initMemoryCache } from "../common/Cache.js";
+import { baseFormatPlayObj } from "../utils/PlayTransformUtils.js";
+import clone from 'clone';
 
 const shortDeviceId = truncateStringToLength(10, '');
 
@@ -368,7 +371,7 @@ export default class PlexApiSource extends MemoryPositionalSource {
             realArtists.push(artist);
         }
 
-        return {
+        const play: PlayObjectLifecycleless = {
             data: {
                 artists: realArtists,
                 albumArtists,
@@ -391,6 +394,7 @@ export default class PlexApiSource extends MemoryPositionalSource {
                 trackProgressPosition: viewOffset / 1000,
             }
         }
+        return baseFormatPlayObj(obj, play);
     }
 
     getRecentlyPlayed = async (options = {}) => {
@@ -421,14 +425,22 @@ export default class PlexApiSource extends MemoryPositionalSource {
                     track: trackMbId,
                     album: albumMbId,
                     // Plex doesn't track MBIDs for track artists, so we use the
-                    // album artist MBID instead.
-                    artist: albumArtistMbId !== undefined
+                    // album artist MBID instead BUT ONLY if
+                    // * artists aren't populated 
+                    // * or artists == albumArtists
+                    // AND explicitly *do not* allow Various Artists MBID for artists
+                    // --
+                    // otherwise we might accidentally set "Various Artists" like MBIDs as actual artist
+                    artist: albumArtistMbId !== undefined && albumArtistMbId !== MBID_VARIOUS_ARTISTS && (sessionData[0].play.data.artists.length === 0 || sessionData[0].play.data.artists.every(y => (sessionData[0].play.data.albumArtists ?? []).includes(y)))
                         ? [...new Set([...(prevBrainzMeta.artist ?? []), albumArtistMbId])]
                         : prevBrainzMeta.artist,
                     albumArtist: albumArtistMbId !== undefined
                         ? [...new Set([...(prevBrainzMeta.albumArtist ?? []), albumArtistMbId])]
                         : prevBrainzMeta.albumArtist,
                 };
+
+                // need to add this to original object since lifecycle has already been set in sessionToPlayerState
+                sessionData[0].play.meta.lifecycle.original = clone(sessionData[0].play);
               
                 validSessions.push(sessionData[0]);
             } else if(this.logFilterFailure !== false) {

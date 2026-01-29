@@ -1,5 +1,5 @@
 import dayjs, { Dayjs } from "dayjs";
-import { BrainzMeta, PlayObject, URLData } from "../../../core/Atomic.js";
+import { BrainzMeta, PlayObject, PlayObjectLifecycleless, ScrobbleActionResult, URLData } from "../../../core/Atomic.js";
 import { nonEmptyStringOrDefault, splitByFirstFound } from "../../../core/StringUtils.js";
 import { removeUndefinedKeys, sleep, writeFile } from "../../utils.js";
 import { objectIsEmpty, readJson } from '../../utils/DataUtils.js';
@@ -14,6 +14,8 @@ import { parseArtistCredits } from "../../utils/StringUtils.js";
 import { LastFMUser, LastFMAuth, LastFMTrack, LastFMUserGetRecentTracksResponse, LastFMBooleanNumber, LastFMUpdateNowPlayingResponse, LastFMUserGetInfoResponse } from 'lastfm-ts-api';
 import clone from 'clone';
 import { IncomingMessage } from "http";
+import { baseFormatPlayObj } from "../../utils/PlayTransformUtils.js";
+import { ScrobbleSubmitError } from "../errors/MSErrors.js";
 
 const badErrors = [
     'api key suspended',
@@ -303,7 +305,7 @@ export default class LastfmApiClient extends AbstractApiClient {
         }
     }
 
-    scrobble = async (playObj: PlayObject): Promise<PlayObject> => {
+    scrobble = async (playObj: PlayObject): Promise<ScrobbleActionResult> => {
                 const {
             meta: {
                 source,
@@ -355,15 +357,17 @@ export default class LastfmApiClient extends AbstractApiClient {
                 modifiedPlay.data.album = albumName;
             }
 
-            return modifiedPlay;
+            return {payload: scrobblePayload, response, mergedScrobble: modifiedPlay};
             // last fm has rate limits but i can't find a specific example of what that limit is. going to default to 1 scrobble/sec to be safe
             //await sleep(1000);
         } catch (e) {
+            let apiError: Error;
             if(!(e instanceof UpstreamError)) {
-                throw new UpstreamError(`Error received from ${this.upstreamName} API`, {cause: e, showStopper: true});
+                apiError = new UpstreamError(`Error received from ${this.upstreamName} API`, {cause: e, showStopper: true});
             } else {
-                throw e;
+                apiError = e;
             }
+            throw new ScrobbleSubmitError('Failed to submit scrobble to Last.fm', {cause: apiError, payload: scrobblePayload});
         } finally {
             this.logger.debug({payload: scrobblePayload}, 'Raw Payload');
         }
@@ -438,7 +442,7 @@ export const scrobblePayloadToPlay = (obj: LastFMScrobbleRequestPayload): PlayOb
         artists = [artist];
     }
 
-    const play: PlayObject = {
+    const play: PlayObjectLifecycleless = {
         data: {
             track,
             album: nonEmptyStringOrDefault(album),
@@ -461,7 +465,7 @@ export const scrobblePayloadToPlay = (obj: LastFMScrobbleRequestPayload): PlayOb
         };
     }
 
-    return play;
+    return baseFormatPlayObj(obj, play);
 }
 
 export const playToClientPayload = (playObj: PlayObject): LastFMScrobblePayload => {
@@ -564,7 +568,7 @@ export const formatPlayObj = (obj: LastFMTrackObject, options: FormatPlayObjectO
         recording: nonEmptyStringOrDefault<undefined>(mbid)
     });
 
-    const play: PlayObject = {
+    const play: PlayObjectLifecycleless = {
         data: {
             artists: [...new Set(artistStrings)] as string[],
             track: title,
@@ -587,7 +591,7 @@ export const formatPlayObj = (obj: LastFMTrackObject, options: FormatPlayObjectO
             brainz
         }
     }
-    return play;
+    return baseFormatPlayObj(obj, play);
 }
 
 type LastFMTrackScrobbleResponse = Readonly<{

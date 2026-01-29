@@ -1,5 +1,5 @@
 import dayjs from "dayjs";
-import { PlayObject, URLData } from "../../../../core/Atomic.js";
+import { PlayObject, PlayObjectLifecycleless, ScrobbleActionResult, URLData } from "../../../../core/Atomic.js";
 import { AbstractApiOptions, DEFAULT_RETRY_MULTIPLIER } from "../../infrastructure/Atomic.js";
 import { KoitoData, ListenObjectResponse, ListensResponse } from "../../infrastructure/config/client/koito.js";
 import AbstractApiClient from "../AbstractApiClient.js";
@@ -10,6 +10,8 @@ import { playToListenPayload } from "../ListenbrainzApiClient.js";
 import { SubmitPayload } from '../listenbrainz/interfaces.js';
 import { ListenType } from '../listenbrainz/interfaces.js';
 import { parseRegexSingleOrFail } from "../../../utils.js";
+import { baseFormatPlayObj } from "../../../utils/PlayTransformUtils.js";
+import { ScrobbleSubmitError } from "../../errors/MSErrors.js";
 
 interface SubmitOptions {
     log?: boolean
@@ -154,10 +156,10 @@ export class KoitoApiClient extends AbstractApiClient {
         }
     }
 
-    submitListen = async (play: PlayObject, options: SubmitOptions = {}) => {
+    submitListen = async (play: PlayObject, options: SubmitOptions = {}): Promise<ScrobbleActionResult> => {
         const { log = false, listenType = 'single' } = options;
+        const listenPayload: SubmitPayload = { listen_type: listenType, payload: [playToListenPayload(play)] };
         try {
-            const listenPayload: SubmitPayload = { listen_type: listenType, payload: [playToListenPayload(play)] };
             if (listenType === 'playing_now') {
                 delete listenPayload.payload[0].listened_at;
             }
@@ -172,16 +174,16 @@ export class KoitoApiClient extends AbstractApiClient {
             if (log) {
                 this.logger.debug(`Submit Response: ${resp.text}`)
             }
-            return listenPayload;
+            return {payload: listenPayload, response: resp.text};
         } catch (e) {
-            throw e;
+            throw new ScrobbleSubmitError(`Error occurred while making Koito API submit request (listen_type ${listenPayload.listen_type})`, {cause: e, payload: listenPayload, response: e.response, responseBody: e.response?.text});
         }
     }
 
 }
 
 export const listenObjectResponseToPlay = (obj: ListenObjectResponse, options: { newFromSource?: boolean, url?: URL } = {}): PlayObject => {
-    const play: PlayObject = {
+    const play: PlayObjectLifecycleless = {
         data: {
             track: obj.track.title,
             artists: (obj.track.artists ?? []).map(x => x.name),
@@ -204,5 +206,5 @@ export const listenObjectResponseToPlay = (obj: ListenObjectResponse, options: {
             }
         }
     }
-    return play;
+    return baseFormatPlayObj(obj, play);
 }

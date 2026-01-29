@@ -2,7 +2,7 @@ import dayjs from "dayjs";
 import { EventEmitter } from "events";
 import mpdapiNS, { MPDApi } from 'mpd-api';
 import mpd2 from 'mpd2';
-import { BrainzMeta, PlayObject } from "../../core/Atomic.js";
+import { BrainzMeta, PlayObject, PlayObjectLifecycleless } from "../../core/Atomic.js";
 import {
     FormatPlayObjectOptions,
     InternalConfig,
@@ -20,6 +20,7 @@ import {
 import { isPortReachable } from "../utils/NetworkUtils.js";
 import { RecentlyPlayedOptions } from "./AbstractSource.js";
 import { MemoryPositionalSource } from "./MemoryPositionalSource.js";
+import { baseFormatPlayObj } from "../utils/PlayTransformUtils.js";
 
 const mpdClient = mpdapiNS.default;
 
@@ -187,7 +188,7 @@ export class MPDSource extends MemoryPositionalSource {
             brainz.artist = [musicbrainz_artistid];
         }
 
-        return {
+        const play: PlayObjectLifecycleless = {
             data: {
                 artists: artists,
                 albumArtists,
@@ -201,6 +202,7 @@ export class MPDSource extends MemoryPositionalSource {
                 mediaPlayerName: 'mpd'
             }
         }
+        return baseFormatPlayObj({...obj, trackProgressPosition: options.trackProgressPosition}, play);
     }
 
     getRecentlyPlayed = async (options: RecentlyPlayedOptions = {}) => {

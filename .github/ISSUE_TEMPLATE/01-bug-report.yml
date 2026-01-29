@@ -7,6 +7,8 @@ body:
     attributes:
       label: Please check existing knowledge before opening an issue
       options:
+      - label: I have [read the Help docs](https://foxxmd.github.io/multi-scrobbler/docs/help/)
+        required: true
       - label: I have [checked the FAQ](https://foxxmd.github.io/multi-scrobbler/docs/FAQ/) and [documentation](https://foxxmd.github.io/multi-scrobbler/docs/configuration/)
         required: true
       - label: I have [searched through existing issues](https://github.com/FoxxMD/multi-scrobbler/issues?q=sort%3Aupdated-desc) and [discussions.](https://github.com/FoxxMD/multi-scrobbler/discussions)
@@ -62,7 +64,7 @@ body:
       description: |
         Please copy and paste any/all relevant from the DEBUG level log output. 
         Even if your issue does not seem to be shown in the logs you should still add as much detail as possible, a _lack_ of issues in logs may be a good hint during debugging.
-        Your logs will be automatically formatted into code, do not need use backticks.
+        Your logs will be automatically formatted into code. Do not use fenced code blocks (backticks).
         If possible reproduce the issue with [**Debug Mode** enabled](https://foxxmd.github.io/multi-scrobbler/docs/configuration#debug-mode).
       render: shell
       placeholder: |
@@ -71,6 +73,22 @@ body:
         [2025-02-14 12:47:57.258 -0500] INFO   : [Init] Version: master
         [2025-02-14 12:47:57.259 -0500] INFO   : [Init] Generating schema definitions...
         [2025-02-14 12:47:59.148 -0500] DEBUG  : [App] [Scrobblers] [Maloja - default] Found 100 recent scrobbles
+  - type: textarea
+    id: playDebug
+    attributes:
+      label: Play Debug Data
+      description: |
+        If relevent, please copy and paste all [**Debug Data**](https://foxxmd.github.io/multi-scrobbler/help#copy-play-debug-data) related to the Plays you are having issues with.
+        Your data will be automatically formatted into code. Do not use fenced code blocks (backticks) in the text area below.
+      render: shell
+      placeholder: |
+        {
+          "input": {
+            "addedAt": 1690250024,
+             "art": "/library/metadata/186983/art/1698213665",
+             "duration": 243983,
+              "grandparentArt": "/library/metadata/186983/art/1698213665",
+        ...
   - type: textarea
     attributes:
       label: Additional Context

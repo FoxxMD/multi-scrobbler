@@ -2,7 +2,7 @@ import { parseRegexSingle, parseToRegex } from "@foxxmd/regex-buddy-core";
 import { EventEmitter } from "events";
 import * as VLC from "vlc-client"
 import { VlcMeta, VlcStatus } from "vlc-client/dist/Types.js";
-import { PlayObject } from "../../core/Atomic.js";
+import { PlayObject, PlayObjectLifecycleless } from "../../core/Atomic.js";
 import {
     FormatPlayObjectOptions,
     InternalConfig,
@@ -17,6 +17,7 @@ import { firstNonEmptyStr } from "../utils/StringUtils.js";
 import { RecentlyPlayedOptions } from "./AbstractSource.js";
 import { MemoryPositionalSource } from "./MemoryPositionalSource.js";
 import { isDebugMode } from "../utils.js";
+import { baseFormatPlayObj } from "../utils/PlayTransformUtils.js";
 
 const CLIENT_PLAYER_STATE: Record<PlayerState, ReportedPlayerStatus> = {
     'playing': REPORTED_PLAYER_STATUSES.playing,
@@ -214,7 +215,7 @@ export class VLCSource extends MemoryPositionalSource {
             state
         } = vlcState || {};
 
-        return {
+        const play: PlayObjectLifecycleless = {
             data: {
                 artists: artists,
                 albumArtists,
@@ -229,6 +230,7 @@ export class VLCSource extends MemoryPositionalSource {
                 mediaPlayerVersion: this.vlcVersion
             }
         }
+        return baseFormatPlayObj({...obj, vlcState}, play);
     }
 
     getRecentlyPlayed = async (options: RecentlyPlayedOptions = {}) => {

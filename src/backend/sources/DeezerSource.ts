@@ -3,13 +3,14 @@ import EventEmitter from "events";
 import passport from "passport";
 import { Strategy as DeezerStrategy } from 'passport-deezer';
 import request from 'superagent';
-import { PlayObject } from "../../core/Atomic.js";
+import { PlayObject, PlayObjectLifecycleless } from "../../core/Atomic.js";
 import { DEFAULT_RETRY_MULTIPLIER, FormatPlayObjectOptions, InternalConfig } from "../common/infrastructure/Atomic.js";
 import { DeezerSourceConfig } from "../common/infrastructure/config/source/deezer.js";
 import { parseRetryAfterSecsFromObj, sleep, sortByOldestPlayDate, writeFile, } from "../utils.js";
 import { readJson } from '../utils/DataUtils.js';
 import { joinedUrl } from "../utils/NetworkUtils.js";
 import AbstractSource, { RecentlyPlayedOptions } from "./AbstractSource.js";
+import { baseFormatPlayObj } from "../utils/PlayTransformUtils.js";
 
 export default class DeezerSource extends AbstractSource {
     workingCredsPath;
@@ -72,7 +73,7 @@ export default class DeezerSource extends AbstractSource {
                 title: albumName,
             } = {},
         } = obj;
-        return {
+        const play: PlayObjectLifecycleless = {
             data: {
                 artists: [artistName],
                 album: albumName,
@@ -90,6 +91,7 @@ export default class DeezerSource extends AbstractSource {
                 }
             }
         }
+        return baseFormatPlayObj(obj, play);
     }
 
     protected async doBuildInitData(): Promise<true | string | undefined> {

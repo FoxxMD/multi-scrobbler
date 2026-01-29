@@ -81,17 +81,17 @@ export default class KoitoScrobbler extends AbstractScrobbleClient {
         } = playObj;
 
         try {
-            await this.api.submitListen(playObj, { log: isDebugMode()});
+            const result = await this.api.submitListen(playObj, { log: isDebugMode()});
 
             if (newFromSource) {
                 this.logger.info(`Scrobbled (New)     => (${source}) ${buildTrackString(playObj)}`);
             } else {
                 this.logger.info(`Scrobbled (Backlog) => (${source}) ${buildTrackString(playObj)}`);
             }
-            return playObj;
+            return result;
         } catch (e) {
             await this.notifier.notify({title: `Client - ${capitalize(this.type)} - ${this.name} - Scrobble Error`, message: `Failed to scrobble => ${buildTrackString(playObj)} | Error: ${e.message}`, priority: 'error'});
-            throw new UpstreamError(`Error occurred while making Koito API scrobble request: ${e.message}`, {cause: e, showStopper: !(e instanceof UpstreamError)});
+            throw e;
         }
     }
 
@@ -99,7 +99,7 @@ export default class KoitoScrobbler extends AbstractScrobbleClient {
         try {
             await this.api.submitListen(data, { listenType: 'playing_now'});
         } catch (e) {
-            throw new UpstreamError(`Error occurred while making Koito API Playing Now request: ${e.message}`, {cause: e, showStopper: !(e instanceof UpstreamError)});
+            throw e;
         }
     }
 }

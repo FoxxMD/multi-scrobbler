@@ -2,7 +2,7 @@ import dayjs, { Dayjs } from "dayjs";
 import EventEmitter from "events";
 import SpotifyWebApi from "spotify-web-api-node";
 import request from 'superagent';
-import { BrainzMeta, PlayObject, SCROBBLE_TS_SOC_END, SCROBBLE_TS_SOC_START, ScrobbleTsSOC, SpotifyMeta } from "../../core/Atomic.js";
+import { BrainzMeta, PlayObject, PlayObjectLifecycleless, SCROBBLE_TS_SOC_END, SCROBBLE_TS_SOC_START, ScrobbleTsSOC, SpotifyMeta } from "../../core/Atomic.js";
 import { combinePartsToString, truncateStringToLength } from "../../core/StringUtils.js";
 import { isNodeNetworkException } from "../common/errors/NodeErrors.js";
 import { hasUpstreamError, UpstreamError } from "../common/errors/UpstreamError.js";
@@ -34,6 +34,7 @@ import PlayHistoryObject = SpotifyApi.PlayHistoryObject;
 import TrackObjectFull = SpotifyApi.TrackObjectFull;
 import UserDevice = SpotifyApi.UserDevice;
 import { MemoryPositionalSource } from "./MemoryPositionalSource.js";
+import { baseFormatPlayObj } from "../utils/PlayTransformUtils.js";
 
 const scopes = ['user-read-recently-played', 'user-read-currently-playing', 'user-read-playback-state', 'user-read-playback-position'];
 const state = 'random';
@@ -110,8 +111,15 @@ export default class SpotifySource extends MemoryPositionalSource {
                 external_ids: {
                     isrc
                 },
-                track_number
+                track_number,
             } = track;
+
+            // we don't use available markets for anything and it can be 100+ strings
+            // so delete for debugging sake
+            delete obj.track.available_markets;
+            if(obj.track.album !== undefined) {
+                delete obj.track.album?.available_markets;
+            }
 
             scrobbleTsSOC = SCROBBLE_TS_SOC_END;
             played_at = dayjs(pa);
@@ -150,6 +158,11 @@ export default class SpotifySource extends MemoryPositionalSource {
                 },
                 track_number
             } = item as TrackObjectFull;
+
+            delete (obj.item as TrackObjectFull).available_markets;
+            if((obj.item as TrackObjectFull).album !== undefined) {
+              delete (obj.item as TrackObjectFull).album.available_markets;  
+            }
 
             scrobbleTsSOC = SCROBBLE_TS_SOC_START;
             played_at = dayjs(timestamp);
@@ -190,7 +203,7 @@ export default class SpotifySource extends MemoryPositionalSource {
             }
         }
 
-        const play: PlayObject = {
+        const play: PlayObjectLifecycleless = {
             data: {
                 artists: artists.map(x => x.name),
                 albumArtists: actualAlbumArtists.map(x => x.name),
@@ -236,7 +249,7 @@ export default class SpotifySource extends MemoryPositionalSource {
             play.meta.art = {album: imageData.url};
         }
 
-        return play;
+        return baseFormatPlayObj(obj, play);
     }
 
     buildSpotifyApi = async () => {

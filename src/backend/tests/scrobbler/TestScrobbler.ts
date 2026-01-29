@@ -21,8 +21,8 @@ export class TestScrobbler extends AbstractScrobbleClient {
         return this.testRecentScrobbles;
     }
 
-    doScrobble(playObj: PlayObject): Promise<PlayObject> {
-        return Promise.resolve(playObj);
+    doScrobble(playObj: PlayObject) {
+        return Promise.resolve({payload: {}, mergedScrobble: playObj});
     }
 
     alreadyScrobbled = async (playObj: PlayObject, log?: boolean): Promise<boolean> => {

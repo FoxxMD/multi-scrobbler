@@ -7,13 +7,14 @@ import { MarkOptional } from "ts-essentials";
 import {
     DeadLetterScrobble,
     PlayObject,
-    QueuedScrobble, TA_DURING,
+    PlayObjectLifecycleless,
+    QueuedScrobble, ScrobbleActionResult, ScrobblePayload, ScrobbleResponse, TA_DURING,
     TA_FUZZY,
     TrackStringOptions
 } from "../../core/Atomic.js";
 import { buildTrackString, capitalize, truncateStringToLength } from "../../core/StringUtils.js";
 import AbstractComponent from "../common/AbstractComponent.js";
-import { UpstreamError } from "../common/errors/UpstreamError.js";
+import { hasUpstreamError, UpstreamError } from "../common/errors/UpstreamError.js";
 import {
     ARTIST_WEIGHT,
     Authenticatable,
@@ -43,7 +44,7 @@ import {
     sleep,
     sortByOldestPlayDate,
 } from "../utils.js";
-import { messageWithCauses, messageWithCausesTruncatedDefault } from "../utils/ErrorUtils.js";
+import { findCauseByReference, messageWithCauses, messageWithCausesTruncatedDefault } from "../utils/ErrorUtils.js";
 import {
     comparePlayTemporally,
     hasAcceptableTemporalAccuracy,
@@ -60,6 +61,8 @@ import pMap, { pMapIterable } from "p-map";
 import { comparePlayArtistsNormalized, comparePlayTracksNormalized } from "../utils/PlayComparisonUtils.js";
 import { normalizeStr } from "../utils/StringUtils.js";
 import prom, { Counter, Gauge } from 'prom-client';
+import { ScrobbleSubmitError } from "../common/errors/MSErrors.js";
+import {serializeError} from 'serialize-error';
 
 type PlatformMappedPlays = Map<string, {play: PlayObject, source: SourceIdentifier}>;
 type NowPlayingQueue = Map<string, PlatformMappedPlays>;
@@ -477,7 +480,7 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
         return [validTime, log]
     }
 
-    addScrobbledTrack = (playObj: PlayObject, scrobbledPlay: PlayObject) => {
+    addScrobbledTrack = (playObj: PlayObject, scrobbledPlay: PlayObjectLifecycleless) => {
         this.scrobbledPlayObjs.add({play: playObj, scrobble: scrobbledPlay});
         this.scrobbledCounter.labels(this.getPrometheusLabels()).inc();
         this.lastScrobbledPlayDate = playObj.data.playDate;
@@ -488,7 +491,7 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
         this.scrobbledPlayObjs = new FixedSizeList<ScrobbledPlayObject>(this.MAX_STORED_SCROBBLES, this.scrobbledPlayObjs.data.filter(x => this.timeFrameIsValid(x.play)[0])) ;
     }
 
-    getScrobbledPlays = () => this.scrobbledPlayObjs.data.map(x => x.scrobble)
+    getScrobbledPlays = () => this.scrobbledPlayObjs.data.map(x => x.play)
 
     findExistingSubmittedPlayObj = async (playObjPre: PlayObject): Promise<([undefined, undefined] | [ScrobbledPlayObject, ScrobbledPlayObject[]])> => {
 
@@ -669,13 +672,20 @@ ${closestMatch.breakdowns.join('\n')}`, {leaf: ['Dupe Check']});
             }
         }
         try {
-            return this.doScrobble(playObj);
+            const result = await this.doScrobble(playObj);
+            playObj.meta.lifecycle.scrobble = {
+                payload: result.payload,
+                warnings: result.warnings,
+                response: result.response,
+                mergedScrobble: result.mergedScrobble
+            }
+            return playObj;
         } finally {
             this.lastScrobbleAttempt = dayjs();
         }
     }
 
-    protected abstract doScrobble(playObj: PlayObject): Promise<PlayObject>
+    protected abstract doScrobble(playObj: PlayObject): Promise<ScrobbleActionResult & {play?: PlayObject}>
 
     public abstract playToClientPayload(playObject: PlayObject): object
 
@@ -796,12 +806,26 @@ ${closestMatch.breakdowns.join('\n')}`, {leaf: ['Dupe Check']});
                     const [timeFrameValid, timeFrameValidLog] = this.timeFrameIsValid(currQueuedPlay.play);
                     if (timeFrameValid && !(await this.alreadyScrobbled(currQueuedPlay.play))) {
                         const transformedScrobble = await this.transformPlay(currQueuedPlay.play, TRANSFORM_HOOK.postCompare);
+                        transformedScrobble.meta.lifecycle.scrobble = this.playToClientPayload(transformedScrobble);
                         try {
                             const scrobbledPlay = await this.scrobble(transformedScrobble);
                             this.emitEvent('scrobble', {play: transformedScrobble});
-                            this.addScrobbledTrack(transformedScrobble, scrobbledPlay);
+                            this.addScrobbledTrack(scrobbledPlay, scrobbledPlay.meta.lifecycle.scrobble.mergedScrobble ?? scrobbledPlay);
                         } catch (e) {
-                            if (e instanceof UpstreamError && e.showStopper === false) {
+                            currQueuedPlay.play.meta.lifecycle.scrobble = {
+                            };
+
+                            const submitError = findCauseByReference(e, ScrobbleSubmitError);
+                            if(submitError !== undefined) {
+                                currQueuedPlay.play.meta.lifecycle.scrobble.payload = submitError.payload;
+                                currQueuedPlay.play.meta.lifecycle.scrobble.response = submitError.responseBody;
+                                currQueuedPlay.play.meta.lifecycle.scrobble.error = serializeError(submitError);
+                            } else {
+                                currQueuedPlay.play.meta.lifecycle.scrobble.payload = this.playToClientPayload(transformedScrobble);
+                                currQueuedPlay.play.meta.lifecycle.scrobble.error = serializeError(e);
+                            }
+
+                            if (hasUpstreamError(e, false)) {
                                 this.addDeadLetterScrobble(currQueuedPlay, e);
                                 this.logger.warn(new Error(`Could not scrobble ${buildTrackString(transformedScrobble)} from Source '${currQueuedPlay.source}' but error was not show stopping. Adding scrobble to Dead Letter Queue and will retry on next heartbeat.`, {cause: e}));
                             } else {
@@ -887,6 +911,17 @@ ${closestMatch.breakdowns.join('\n')}`, {leaf: ['Dupe Check']});
                 this.emitEvent('scrobble', {play: transformedScrobble});
                 this.addScrobbledTrack(transformedScrobble, scrobbledPlay);
             } catch (e) {
+
+                const submitError = findCauseByReference(e, ScrobbleSubmitError);
+                if(submitError !== undefined) {
+                    deadScrobble.play.meta.lifecycle.scrobble.payload = submitError.payload;
+                    deadScrobble.play.meta.lifecycle.scrobble.response = submitError.responseBody;
+                    deadScrobble.play.meta.lifecycle.scrobble.error = serializeError(submitError);
+                } else {
+                    deadScrobble.play.meta.lifecycle.scrobble.payload = this.playToClientPayload(transformedScrobble);
+                    deadScrobble.play.meta.lifecycle.scrobble.error = serializeError(e);
+                }
+
                 deadScrobble.retries++;
                 deadScrobble.error = messageWithCauses(e);
                 deadScrobble.lastRetry = dayjs();

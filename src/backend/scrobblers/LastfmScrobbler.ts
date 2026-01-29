@@ -9,6 +9,7 @@ import { LastfmClientConfig } from "../common/infrastructure/config/client/lastf
 import LastfmApiClient, { LastFMIgnoredScrobble, playToClientPayload, formatPlayObj, LASTFM_HOST, LASTFM_PATH } from "../common/vendor/LastfmApiClient.js";
 import { Notifiers } from "../notifier/Notifiers.js";
 import AbstractScrobbleClient, { nowPlayingUpdateByPlayDuration } from "./AbstractScrobbleClient.js";
+import { findCauseByReference } from "../utils/ErrorUtils.js";
 
 export default class LastfmScrobbler extends AbstractScrobbleClient {
 
@@ -95,17 +96,14 @@ export default class LastfmScrobbler extends AbstractScrobbleClient {
         }
         return respPlay;
         } catch (e) {
-            if(e instanceof LastFMIgnoredScrobble) {
+            const ignored = findCauseByReference(e, LastFMIgnoredScrobble);
+            if(ignored !== undefined) {
                 await this.notifier.notify({title: `Client - ${capitalize(this.type)} - ${this.name} - Scrobble Ignored`, message: `Failed to scrobble => ${buildTrackString(playObj)} | ${e.message}`, priority: 'warn'});
             } else {
                 await this.notifier.notify({title: `Client - ${capitalize(this.type)} - ${this.name} - Scrobble Error`, message: `Failed to scrobble => ${buildTrackString(playObj)} | Error: ${e.message}`, priority: 'error'});
             }
             this.logger.error({playInfo: buildTrackString(playObj), payload: playToClientPayload(playObj)}, `Scrobble Error (${sType})`);
-            if(!(e instanceof UpstreamError)) {
-                throw new UpstreamError(`Error received from ${this.upstreamType} API`, {cause: e, showStopper: true});
-            } else {
-                throw e;
-            }
+            throw e;
         }
     }
 

@@ -1,6 +1,6 @@
 import { Logger, loggerTest } from "@foxxmd/logging";
 import { searchAndReplace as searchAndReplaceFunc, testMaybeRegex as testMaybeRegexFunc } from "@foxxmd/regex-buddy-core";
-import { ObjectPlayData, PlayObject } from "../../core/Atomic.js";
+import { ObjectPlayData, PlayLifecycle, PlayObject, PlayObjectLifecycleless } from "../../core/Atomic.js";
 import { buildTrackString } from "../../core/StringUtils.js";
 
 import {
@@ -171,4 +171,33 @@ export interface SuppliedRegex {
 export interface TransformPlayPartsOptions {
     logger?: () => Logger,
     regex?: SuppliedRegex
+}
+
+export const baseFormatPlayObj = (data: any, play: PlayObjectLifecycleless): PlayObject => {
+    return {
+        data: {
+            ...play.data
+        },
+        meta: {
+            ...play.meta,
+            lifecycle: {
+                input: data,
+                original: play,
+                steps: []
+            }
+        }
+    }
+}
+
+export const defaultLifecycle = (extra?: PlayLifecycle): PlayLifecycle => {
+    const {
+        original = {data: {}, meta: {}},
+        steps = [],
+        ...rest
+    } = extra ?? {};
+    return {
+        original,
+        steps,
+        ...rest,
+    }
 }

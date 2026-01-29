@@ -12,6 +12,7 @@ import {
 import { Notifiers } from "../notifier/Notifiers.js";
 import AbstractScrobbleClient from "./AbstractScrobbleClient.js";
 import { MalojaApiClient, formatPlayObj as formatMalojaScrobbleToPlay, playToScrobblePayload } from "../common/vendor/maloja/MalojaApiClient.js";
+import { ScrobbleSubmitError } from "../common/errors/MSErrors.js";
 
 const feat = ["ft.", "ft", "feat.", "feat", "featuring", "Ft.", "Ft", "Feat.", "Feat", "Featuring"];
 
@@ -98,31 +99,18 @@ export default class MalojaScrobbler extends AbstractScrobbleClient {
 
         const scrobbleData = playToScrobblePayload(playObj);
 
-        let scrobbledPlay: PlayObject;
-
         try {
-            const [scrobbleResp, respBody, warnStr] = await this.api.scrobble(playObj);
-
-            let warning = '';
-            if (scrobbleResp === undefined) {
-                warning = `WARNING: Maloja did not return track data in scrobble response! Maybe it didn't scrobble correctly??`;
-                scrobbledPlay = playObj;
-            } else {
-                scrobbledPlay = this.formatPlayObj(scrobbleResp)
-            }
+            const result = await this.api.scrobble(playObj);
             const scrobbleInfo = `Scrobbled (${newFromSource ? 'New' : 'Backlog'})     => (${source}) ${buildTrackString(playObj)}`;
-            if (warning !== '') {
-                this.logger.warn(`${scrobbleInfo} | ${warning}`);
-                this.logger.debug(`Response: ${this.logger.debug(JSON.stringify(respBody))}`);
+            if (result.warnings?.length > 0) {
+                this.logger.warn(`${scrobbleInfo} | ${result.warnings.join(' | ')}`);
             } else {
                 this.logger.info(scrobbleInfo);
             }
-            return scrobbledPlay;
+            return result;
         } catch (e) {
             await this.notifier.notify({ title: `Client - ${capitalize(this.type)} - ${this.name} - Scrobble Error`, message: `Failed to scrobble => ${buildTrackString(playObj)} | Error: ${e.message}`, priority: 'error' });
             throw e;
-        } finally {
-            this.logger.debug('Raw Payload:', scrobbleData);
         }
     }
 }

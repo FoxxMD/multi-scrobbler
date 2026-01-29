@@ -10,6 +10,8 @@ import { PlayerStateDataMaybePlay } from "../../common/infrastructure/Atomic.js"
 import { PlexApiData } from "../../common/infrastructure/config/source/plex.js";
 import PlexApiSource from "../../sources/PlexApiSource.js";
 import { GetSessionsMetadata } from "@lukehagar/plexjs/sdk/models/operations/getsessions.js";
+import { MarkOptional } from "ts-essentials";
+import { defaultLifecycle } from "../../utils/PlayTransformUtils.js";
 
 const validSession = validSessionResponse.object.mediaContainer.metadata[0];
 
@@ -33,7 +35,7 @@ const validPlayerState: PlayerStateDataMaybePlay = {
     platformId: ['1234', 'MyUser'],
     play: generatePlay({}, {mediaType: 'track', user: 'MyUser', deviceId: '1234', library: 'Music'})
 }
-const playWithMeta = (meta: PlayMeta): PlayerStateDataMaybePlay => {
+const playWithMeta = (meta: MarkOptional<PlayMeta, 'lifecycle'>): PlayerStateDataMaybePlay => {
     const {user, deviceId} = meta;
     const platformId = validPlayerState.platformId;
     return {
@@ -42,6 +44,7 @@ const playWithMeta = (meta: PlayMeta): PlayerStateDataMaybePlay => {
     play: {
         ...validPlayerState.play,
         meta: {
+            lifecycle: defaultLifecycle(),
             ...validPlayerState.play?.meta,
             ...meta
         }
