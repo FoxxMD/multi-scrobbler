@@ -29,6 +29,7 @@ import { SDKValidationError } from '@lukehagar/plexjs/sdk/models/errors/sdkvalid
 import { Keyv } from 'cacheable';
 import { initMemoryCache } from "../common/Cache.js";
 import { baseFormatPlayObj } from "../utils/PlayTransformUtils.js";
+import clone from 'clone';
 
 const shortDeviceId = truncateStringToLength(10, '');
 
@@ -431,6 +432,9 @@ export default class PlexApiSource extends MemoryPositionalSource {
                         ? [...new Set([...(prevBrainzMeta.albumArtist ?? []), albumArtistMbId])]
                         : prevBrainzMeta.albumArtist,
                 };
+
+                // need to add this to original object since lifecycle has already been set in sessionToPlayerState
+                sessionData[0].play.meta.lifecycle.original = clone(sessionData[0].play);
               
                 validSessions.push(sessionData[0]);
             } else if(this.logFilterFailure !== false) {
