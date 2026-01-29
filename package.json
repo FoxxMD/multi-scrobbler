@@ -127,6 +127,7 @@
     "react-router-dom": "^6.15.0",
     "round-robin-js": "^3.0.10",
     "sass": "^1.93.3",
+    "serialize-error": "^13.0.1",
     "spotify-web-api-node": "^5.0.2",
     "superagent": "^8.0.9",
     "tailwindcss": "^4.1.16",

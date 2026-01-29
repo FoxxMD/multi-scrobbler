@@ -4,6 +4,7 @@ import { ListenProgress } from "../backend/sources/PlayerState/ListenProgress.js
 import { AdditionalTrackInfoResponse } from "../backend/common/vendor/listenbrainz/interfaces.js";
 import { Delta } from 'jsondiffpatch';
 import { MarkOptional } from "ts-essentials";
+import { ErrorObject } from "serialize-error";
 
 export interface SourceStatusData {
     status: string;
@@ -290,7 +291,7 @@ export interface PlayLifecycle {
     scrobble?: {
         payload?: ScrobblePayload
         warnings?: string[]
-        error?: Error
+        error?: Error | ErrorObject
         response?: ScrobbleResponse
         mergedScrobble?: PlayObjectLifecycleless
     }

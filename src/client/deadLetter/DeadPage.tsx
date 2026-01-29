@@ -14,6 +14,10 @@ import {
 import dayjs from "dayjs";
 import {RootState} from "../store";
 import {connect, ConnectedProps} from "react-redux";
+import { faBug } from "@fortawesome/free-solid-svg-icons";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import clsx from "clsx";
+import { useCopyToClipboard } from '../components/copyToClipboardHook';
 
 const displayOpts = {
     include: recentIncludes,
@@ -30,6 +34,17 @@ const dead = (props: PropsFromRedux) => {
         isLoading,
         isSuccess
     } = useGetDeadQuery({name: searchParams.get('name'), type: searchParams.get('type')});
+
+    const { copy, isCopied } = useCopyToClipboard();
+
+    const [copiedIndex, setIndex] = useState(null);
+
+    const copyActionCB = useCallback((obj, index) => {
+        copy(JSON.stringify(obj, null, 2));
+        setIndex(index);
+    },[copy, setIndex]);
+
+    const baseClass = ['mr-3'];
 
     const [removeDeadFetch, removeResult] = useRemoveDeadSingleMutation();
     const [retryDeadFetch, processResult] = useProcessDeadSingleMutation();
@@ -51,15 +66,23 @@ const dead = (props: PropsFromRedux) => {
                 </div>
                 <div className="p-5">
                     {isSuccess && !isLoading && data.length === 0 ? 'No failed scrobbles!' : null}
-                    <ul>{data.map(x => (<li className="my-2.5" key={x.id}>
-                        <div className="text-lg"><PlayDisplay data={x.play} buildOptions={displayOpts}/></div>
+                    <ul>{data.map(x => 
+                        {
+                            const classes = [...baseClass].concat(copiedIndex !== x.id ? ['underline','cursor-pointer'] : []);
+                            return (<li className="my-2.5" key={x.id}>
+                        <div className="text-lg">
+                            <button className={clsx(classes)} onClick={() => copyActionCB(x.play.meta.lifecycle, x.id)}>{copiedIndex === x.id ? 'Copied!' : <FontAwesomeIcon
+                                                                            color="white" icon={faBug}/>}</button>
+                            <PlayDisplay data={x.play} buildOptions={displayOpts}/></div>
                         <div><span className="font-semibold">Source</span>:{x.source.replace('Source -', '')}</div>
                         <div><span className="font-semibold">Retries</span>: {x.retries}</div>
                         <div><span className="font-semibold">Last Retried</span>: {x.lastRetry === undefined ? 'Never' : dayjs.duration(dayjs(x.lastRetry).diff(dayjs())).humanize(true)}</div>
                         <div><span className="font-semibold">Error</span>: <span className="font-mono text-sm">{x.error}</span></div>
                         <div onClick={() => retryDead(x.id)} className="capitalize underline cursor-pointer max-w-fit">Retry</div>
                         <div onClick={() => removeDead(x.id)} className="capitalize underline cursor-pointer max-w-fit">Remove</div>
-                    </li>))}</ul>
+                    </li>)
+                }
+                )}</ul>
                 </div>
             </div>
         </div>

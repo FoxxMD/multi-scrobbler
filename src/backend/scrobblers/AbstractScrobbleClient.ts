@@ -62,6 +62,7 @@ import { comparePlayArtistsNormalized, comparePlayTracksNormalized } from "../ut
 import { normalizeStr } from "../utils/StringUtils.js";
 import prom, { Counter, Gauge } from 'prom-client';
 import { ScrobbleSubmitError } from "../common/errors/MSErrors.js";
+import {serializeError} from 'serialize-error';
 
 type PlatformMappedPlays = Map<string, {play: PlayObject, source: SourceIdentifier}>;
 type NowPlayingQueue = Map<string, PlatformMappedPlays>;
@@ -812,15 +813,16 @@ ${closestMatch.breakdowns.join('\n')}`, {leaf: ['Dupe Check']});
                             this.addScrobbledTrack(scrobbledPlay, scrobbledPlay.meta.lifecycle.scrobble.mergedScrobble ?? scrobbledPlay);
                         } catch (e) {
                             currQueuedPlay.play.meta.lifecycle.scrobble = {
-                                error: e,
-                                payload: this.playToClientPayload(transformedScrobble)
                             };
 
                             const submitError = findCauseByReference(e, ScrobbleSubmitError);
                             if(submitError !== undefined) {
-                                currQueuedPlay.play.meta.lifecycle.scrobble.error = submitError;
                                 currQueuedPlay.play.meta.lifecycle.scrobble.payload = submitError.payload;
                                 currQueuedPlay.play.meta.lifecycle.scrobble.response = submitError.responseBody;
+                                currQueuedPlay.play.meta.lifecycle.scrobble.error = serializeError(submitError);
+                            } else {
+                                currQueuedPlay.play.meta.lifecycle.scrobble.payload = this.playToClientPayload(transformedScrobble);
+                                currQueuedPlay.play.meta.lifecycle.scrobble.error = serializeError(e);
                             }
 
                             if (hasUpstreamError(e, false)) {
