@@ -5,6 +5,7 @@ import {
     asPlayerStateDataMaybePlay,
     FormatPlayObjectOptions,
     InternalConfig,
+    MBID_VARIOUS_ARTISTS,
     NO_USER,
     PlayerStateData,
     PlayerStateDataMaybePlay,
@@ -424,8 +425,13 @@ export default class PlexApiSource extends MemoryPositionalSource {
                     track: trackMbId,
                     album: albumMbId,
                     // Plex doesn't track MBIDs for track artists, so we use the
-                    // album artist MBID instead.
-                    artist: albumArtistMbId !== undefined
+                    // album artist MBID instead BUT ONLY if
+                    // * artists aren't populated 
+                    // * or artists == albumArtists
+                    // AND explicitly *do not* allow Various Artists MBID for artists
+                    // --
+                    // otherwise we might accidentally set "Various Artists" like MBIDs as actual artist
+                    artist: albumArtistMbId !== undefined && albumArtistMbId !== MBID_VARIOUS_ARTISTS && (sessionData[0].play.data.artists.length === 0 || sessionData[0].play.data.artists.every(y => (sessionData[0].play.data.albumArtists ?? []).includes(y)))
                         ? [...new Set([...(prevBrainzMeta.artist ?? []), albumArtistMbId])]
                         : prevBrainzMeta.artist,
                     albumArtist: albumArtistMbId !== undefined

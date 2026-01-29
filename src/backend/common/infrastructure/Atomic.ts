@@ -397,5 +397,6 @@ export interface MusicbrainzApiConfigData {
 }
 
 export const MUSICBRAINZ_URL = 'https://musicbrainz.org';
+export const MBID_VARIOUS_ARTISTS = "89ad4ac3-39f7-470e-963a-56509c546377";
 
 export type MusicBrainzSingletonMap = Map<string,MusicBrainzApi>;
