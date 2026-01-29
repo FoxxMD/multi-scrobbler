@@ -287,7 +287,13 @@ export interface PlayLifecycle {
     input?: object
     original: PlayObjectLifecycleless
     steps: LifecycleStep[]
-    scrobble?: object
+    scrobble?: {
+        payload?: ScrobblePayload
+        warnings?: string[]
+        error?: Error
+        response?: ScrobbleResponse
+        mergedScrobble?: PlayObjectLifecycleless
+    }
 }
 
 export interface LifecycleStep {
@@ -295,6 +301,16 @@ export interface LifecycleStep {
     source: string
     patch?: Delta
     inputs?: LifecycleInput[]
+}
+
+export type ScrobblePayload = object | string;
+export type ScrobbleResponse = object | string;
+
+export interface ScrobbleActionResult {
+    payload: ScrobblePayload, 
+    response?: ScrobbleResponse, 
+    mergedScrobble?: PlayObject
+    warnings?: string[]
 }
 
 export type ScrobbleTsSOC = 1 | 2;

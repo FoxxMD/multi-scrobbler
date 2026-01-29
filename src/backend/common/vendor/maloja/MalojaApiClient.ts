@@ -4,7 +4,7 @@ import compareVersions from "compare-versions";
 import AbstractApiClient from "../AbstractApiClient.js";
 import { getBaseFromUrl, isPortReachableConnect, joinedUrl, normalizeWebAddress } from "../../../utils/NetworkUtils.js";
 import { MalojaData } from "../../infrastructure/config/client/maloja.js";
-import { PlayObject, PlayObjectLifecycleless, URLData } from "../../../../core/Atomic.js";
+import { PlayObject, PlayObjectLifecycleless, ScrobbleActionResult, URLData } from "../../../../core/Atomic.js";
 import { AbstractApiOptions, DEFAULT_RETRY_MULTIPLIER, FormatPlayObjectOptions } from "../../infrastructure/Atomic.js";
 import { isNodeNetworkException } from "../../errors/NodeErrors.js";
 import { isSuperAgentResponseError } from "../../errors/ErrorUtils.js";
@@ -14,6 +14,7 @@ import { getMalojaResponseError, isMalojaAPIErrorBody, MalojaResponseV3CommonDat
 import { getScrobbleTsSOCDate, getScrobbleTsSOCDateWithContext } from '../../../utils/TimeUtils.js';
 import { buildTrackString } from '../../../../core/StringUtils.js';
 import { baseFormatPlayObj } from '../../../utils/PlayTransformUtils.js';
+import { ScrobbleSubmitError } from '../../errors/MSErrors.js';
 
 
 
@@ -188,7 +189,7 @@ export class MalojaApiClient extends AbstractApiClient {
         return list.map(formatPlayObj);
     }
 
-    scrobble = async (playObj: PlayObject): Promise<[(MalojaScrobbleData | undefined), MalojaScrobbleV3ResponseData, string?]> => {
+    scrobble = async (playObj: PlayObject): Promise<ScrobbleActionResult> => {
 
         const {
             data: {
@@ -214,11 +215,10 @@ export class MalojaApiClient extends AbstractApiClient {
                 .type('json')
                 .send(scrobbleData));
 
-            let scrobbleResponse: MalojaScrobbleData,
-                scrobbledPlay: PlayObject;
-
+            let scrobbleResponse: MalojaScrobbleData;
             let responseBody: MalojaScrobbleV3ResponseData;
             let warnStr: string;
+            const msWarnings: string[] = [];
 
             responseBody = response.body;
             const {
@@ -245,22 +245,32 @@ export class MalojaApiClient extends AbstractApiClient {
                             ...malojaAlbum,
                         }
                     }
+                } else {
+                    msWarnings.push('Maloja did not return track data in scrobble response! Maybe it didn\'t scrobble correctly?');
                 }
                 if (warnings.length > 0) {
                     for (const w of warnings) {
                         warnStr = builMalojadWarningString(w);
                         if (warnStr.includes('The submitted scrobble was not added')) {
-                            throw new UpstreamError(`Maloja returned a warning but MS treating as error: ${warnStr}`, { showStopper: false });
+                            throw new ScrobbleSubmitError(`Maloja returned a warning but MS treating as error: ${warnStr}`, { showStopper: false, payload: scrobbleData, response, responseBody });
                         }
-                        this.logger.warn(`Maloja Warning: ${warnStr}`);
+                        const wstring = `Maloja Warning: ${warnStr}`;
+                        msWarnings.push(wstring);
+                        this.logger.warn(wstring);
                     }
                 }
             } else {
-                throw new UpstreamError(buildMalojaErrorString(response.body), { showStopper: false });
+                throw new ScrobbleSubmitError(buildMalojaErrorString(response.body), { showStopper: false, payload: scrobbleData, response, responseBody });
             }
 
-            return [scrobbleResponse, responseBody, warnStr]
+            return {payload: scrobbleData, warnings: msWarnings.length > 0 ? msWarnings : undefined, response: responseBody, mergedScrobble: scrobbleResponse !== undefined ? formatPlayObj(scrobbleResponse, {url: this.url.normal}) : undefined};
         } catch (e) {
+            let scrobbleError: ScrobbleSubmitError;
+            if(e instanceof ScrobbleSubmitError) {
+                scrobbleError = e;
+            } else {
+                scrobbleError = new ScrobbleSubmitError('Error occurred while submitting scrobble to Maloja', {cause: e, payload: scrobbleData, response: 'response' in e ? e.response : undefined});
+            }
             this.logger.error({ playInfo: buildTrackString(playObj), payload: scrobbleData }, `Scrobble Error (${sType})`);
             const responseError = getMalojaResponseError(e);
             if (responseError !== undefined) {

@@ -405,7 +405,7 @@ export default class SpotifySource extends MemoryPositionalSource {
     getPlayHistory = async (options: RecentlyPlayedOptions = {}) => {
         const {limit = 20} = options;
         const func = (api: SpotifyWebApi) => api.getMyRecentlyPlayedTracks({
-            limit
+            limit: 1
         });
         const result = await this.callApi<ReturnType<typeof this.spotifyApi.getMyRecentlyPlayedTracks>>(func);
         return result.body.items.map((x: PlayHistoryObject) => SpotifySource.formatPlayObj(x)).sort(sortByOldestPlayDate);

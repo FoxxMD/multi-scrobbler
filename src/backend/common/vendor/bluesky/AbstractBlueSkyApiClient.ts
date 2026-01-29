@@ -2,9 +2,9 @@ import { getRoot } from "../../../ioc.js";
 import { AbstractApiOptions } from "../../infrastructure/Atomic.js";
 import { ListRecord, ScrobbleRecord, TealClientData } from "../../infrastructure/config/client/tealfm.js";
 import AbstractApiClient from "../AbstractApiClient.js";
-import { Agent } from "@atproto/api";
+import { Agent, ComAtprotoRepoCreateRecord } from "@atproto/api";
 import { MSCache } from "../../Cache.js";
-import { BrainzMeta, PlayObject, PlayObjectLifecycleless } from "../../../../core/Atomic.js";
+import { BrainzMeta, PlayObject, PlayObjectLifecycleless, ScrobbleActionResult } from "../../../../core/Atomic.js";
 import { musicServiceToCononical } from "../ListenbrainzApiClient.js";
 import { parseRegexSingle } from "@foxxmd/regex-buddy-core";
 import { RecordOptions } from "../../infrastructure/config/client/tealfm.js";
@@ -12,6 +12,8 @@ import dayjs from "dayjs";
 import { getScrobbleTsSOCDateWithContext } from "../../../utils/TimeUtils.js";
 import { removeUndefinedKeys } from "../../../utils.js";
 import { baseFormatPlayObj } from "../../../utils/PlayTransformUtils.js";
+import { ScrobbleSubmitError } from "../../errors/MSErrors.js";
+import { UpstreamError } from "../../errors/UpstreamError.js";
 
 
 export abstract class AbstractBlueSkyApiClient extends AbstractApiClient {
@@ -32,15 +34,17 @@ export abstract class AbstractBlueSkyApiClient extends AbstractApiClient {
 
     abstract restoreSession(): Promise<boolean>;
 
-    async createScrobbleRecord(record: ScrobbleRecord): Promise<void> {
+    async createScrobbleRecord(record: ScrobbleRecord): Promise<ScrobbleActionResult> {
+        const input: ComAtprotoRepoCreateRecord.InputSchema = {
+            repo: this.agent.sessionManager.did,
+            collection: "fm.teal.alpha.feed.play",
+            record
+        };
         try {
-            await this.agent.com.atproto.repo.createRecord({
-                repo: this.agent.sessionManager.did,
-                collection: "fm.teal.alpha.feed.play",
-                record
-            });
+            const resp = await this.agent.com.atproto.repo.createRecord(input);
+            return {payload: input, response: resp.data};
         } catch (e) {
-            throw new Error(`Failed to create record`, { cause: e });
+            throw new ScrobbleSubmitError(`Failed to create record for scrobble`, { cause: e, payload: input, response: 'response' in e ? e.response : undefined });
         }
     }
 
@@ -53,7 +57,7 @@ export abstract class AbstractBlueSkyApiClient extends AbstractApiClient {
             });
             return response.data.records as unknown as ListRecord<ScrobbleRecord>[];
         } catch (e) {
-            throw new Error(`Failed to create record`, { cause: e });
+            throw new UpstreamError(`Failed to list scrobble record`, { cause: e, response: 'response' in e ? e.response : undefined });
         }
     }
 }

@@ -3,7 +3,7 @@ import EventEmitter from "events";
 import { PlayObject } from "../../core/Atomic.js";
 import { buildTrackString, capitalize } from "../../core/StringUtils.js";
 import { isNodeNetworkException } from "../common/errors/NodeErrors.js";
-import { UpstreamError } from "../common/errors/UpstreamError.js";
+import { hasUpstreamError, UpstreamError } from "../common/errors/UpstreamError.js";
 import { FormatPlayObjectOptions } from "../common/infrastructure/Atomic.js";
 import { playToListenPayload } from "../common/vendor/ListenbrainzApiClient.js";
 import { Notifiers } from "../notifier/Notifiers.js";
@@ -113,16 +113,16 @@ export default class TealScrobbler extends AbstractScrobbleClient {
         } = playObj;
 
         try {
-            await this.client.createScrobbleRecord(playToRecord(playObj))
+            const res = await this.client.createScrobbleRecord(playToRecord(playObj))
             if (newFromSource) {
                 this.logger.info(`Scrobbled (New)     => (${source}) ${buildTrackString(playObj)}`);
             } else {
                 this.logger.info(`Scrobbled (Backlog) => (${source}) ${buildTrackString(playObj)}`);
             }
-            return playObj;
+            return res;
         } catch (e) {
             await this.notifier.notify({title: `Client - ${capitalize(this.type)} - ${this.name} - Scrobble Error`, message: `Failed to scrobble => ${buildTrackString(playObj)} | Error: ${e.message}`, priority: 'error'});
-            throw new UpstreamError(`Error occurred while making Teal API scrobble request: ${e.message}`, {cause: e, showStopper: !(e instanceof UpstreamError)});
+            throw e;
         }
     }
 }

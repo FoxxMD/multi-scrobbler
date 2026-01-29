@@ -1,7 +1,7 @@
 import { stringSameness } from '@foxxmd/string-sameness';
 import dayjs from "dayjs";
 import request, { Request, Response } from 'superagent';
-import { BrainzMeta, PlayObject, PlayObjectLifecycleless, URLData } from "../../../core/Atomic.js";
+import { BrainzMeta, PlayObject, PlayObjectLifecycleless, ScrobbleActionResult, URLData } from "../../../core/Atomic.js";
 import { combinePartsToString, slice } from "../../../core/StringUtils.js";
 import {
     findDelimiters,
@@ -24,6 +24,7 @@ import { listenObjectResponseToPlay } from './koito/KoitoApiClient.js';
 import { version } from '../../ioc.js';
 import { ListenPayload, ListenResponse, ListenType, MinimumTrack, SubmitListenAdditionalTrackInfo, SubmitPayload } from './listenbrainz/interfaces.js';
 import { baseFormatPlayObj } from '../../utils/PlayTransformUtils.js';
+import { ScrobbleSubmitError } from '../errors/MSErrors.js';
 
 interface SubmitOptions {
     log?: boolean
@@ -225,13 +226,10 @@ export class ListenbrainzApiClient extends AbstractApiClient {
     }
 
 
-    submitListen = async (play: PlayObject, options: SubmitOptions = {}) => {
-        const { log = false, listenType = 'single'} = options;
+    submitListen = async (play: PlayObject, options: SubmitOptions = {}): Promise<ScrobbleActionResult> => {
+        const listenPayload = playToSubmitPayload(play, {listenType: options.listenType});
+        const { log = false} = options;
         try {
-            const listenPayload: SubmitPayload = {listen_type: listenType, payload: [playToListenPayload(play)]};
-            if(listenType === 'playing_now') {
-                delete listenPayload.payload[0].listened_at;
-            }
             if(log) {
                 this.logger.debug(`Submit Payload: ${JSON.stringify(listenPayload)}`);
             }
@@ -243,9 +241,9 @@ export class ListenbrainzApiClient extends AbstractApiClient {
             if(log) {
                 this.logger.debug(`Submit Response: ${resp.text}`)
             }
-            return listenPayload;
+            return {payload: listenPayload, response: resp.text};
         } catch (e) {
-            throw e;
+            throw new ScrobbleSubmitError(`Failed to submit to Listenbrainz (listen_type ${listenPayload.listen_type})`, {cause: e, payload: listenPayload, response: e.response, responseBody: e.response?.text});
         }
     }
 
@@ -819,4 +817,13 @@ export const musicServiceToCononical = (str?: string): string | undefined => {
         }
     }
     return undefined;
+}
+
+export const playToSubmitPayload = (play: PlayObject, options: SubmitOptions = {}): SubmitPayload => {
+    const { listenType = 'single'} = options;  
+    const listenPayload: SubmitPayload = {listen_type: listenType, payload: [playToListenPayload(play)]};
+    if(listenType === 'playing_now') {
+        delete listenPayload.payload[0].listened_at;
+    }
+    return listenPayload;
 }

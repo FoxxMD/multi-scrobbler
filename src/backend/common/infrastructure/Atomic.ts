@@ -3,7 +3,7 @@ import { Dayjs } from "dayjs";
 import { Request, Response } from "express";
 import { NextFunction, ParamsDictionary, Query } from "express-serve-static-core";
 import { FixedSizeList } from 'fixed-size-list';
-import { isPlayObject, PlayMeta, PlayObject } from "../../../core/Atomic.js";
+import { isPlayObject, PlayMeta, PlayObject, PlayObjectLifecycleless } from "../../../core/Atomic.js";
 import TupleMap from "../TupleMap.js";
 import { MusicBrainzApi } from 'musicbrainz-api';
 
@@ -242,7 +242,7 @@ export const SINGLE_USER_PLATFORM_ID: PlayPlatformId = [NO_DEVICE, NO_USER];
 
 export interface ScrobbledPlayObject {
     play: PlayObject
-    scrobble: PlayObject
+    scrobble: PlayObjectLifecycleless
 }
 
 
