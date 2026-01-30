@@ -7,7 +7,7 @@ body:
     attributes:
       label: Please check existing knowledge before opening an issue
       options:
-      - label: I have checked the [documentation](https://foxxmd.github.io/multi-scrobbler/docs/configuration/)
+      - label: I have checked the [documentation](https://foxxmd.github.io/multi-scrobbler/configuration/)
         required: true
       - label: I have [searched through existing issues](https://github.com/FoxxMD/multi-scrobbler/issues?q=sort%3Aupdated-desc) and [discussions.](https://github.com/FoxxMD/multi-scrobbler/discussions)
         required: true
