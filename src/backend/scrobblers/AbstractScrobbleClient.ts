@@ -806,6 +806,12 @@ ${closestMatch.breakdowns.join('\n')}`, {leaf: ['Dupe Check']});
                     const [timeFrameValid, timeFrameValidLog] = this.timeFrameIsValid(currQueuedPlay.play);
                     if (timeFrameValid && !(await this.alreadyScrobbled(currQueuedPlay.play))) {
                         const transformedScrobble = await this.transformPlay(currQueuedPlay.play, TRANSFORM_HOOK.postCompare);
+                        if(transformedScrobble.meta.lifecycle === undefined) {
+                            transformedScrobble.meta.lifecycle = {
+                                original: transformedScrobble,
+                                steps: []
+                            };
+                        }
                         transformedScrobble.meta.lifecycle.scrobble = this.playToClientPayload(transformedScrobble);
                         try {
                             const scrobbledPlay = await this.scrobble(transformedScrobble);
