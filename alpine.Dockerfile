@@ -44,6 +44,8 @@ RUN npm run docs:install && npm run build && rm -rf node_modules && rm -rf docsi
 
 FROM base as app
 
+LABEL org.opencontainers.image.source="https://github.com/FoxxMD/multi-scrobbler"
+
 #COPY --chown=abc:abc package.json yarn.lock ./
 COPY --chown=abc:abc package*.json ./
 COPY --chown=abc:abc patches ./patches
