@@ -90,6 +90,8 @@ RUN npm run build:parallel && rm -rf node_modules && rm -rf docsite/node_modules
 
 FROM base AS app
 
+LABEL org.opencontainers.image.source="https://github.com/FoxxMD/multi-scrobbler"
+
 COPY --chown=abc:abc *.json *.js *.ts index.html ./
 COPY --chown=abc:abc patches ./patches
 COPY --from=build --chown=abc:abc /app/dist /app/dist
