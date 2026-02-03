@@ -10,7 +10,7 @@ import { UpstreamError } from "../errors/UpstreamError.js";
 import { AbstractApiOptions, DEFAULT_RETRY_MULTIPLIER, FormatPlayObjectOptions, InternalConfigOptional } from "../infrastructure/Atomic.js";
 import { LastfmData } from "../infrastructure/config/client/lastfm.js";
 import AbstractApiClient from "./AbstractApiClient.js";
-import { parseArtistCredits } from "../../utils/StringUtils.js";
+import { normalizeStr, parseArtistCredits } from "../../utils/StringUtils.js";
 import { LastFMUser, LastFMAuth, LastFMTrack, LastFMUserGetRecentTracksResponse, LastFMBooleanNumber, LastFMUpdateNowPlayingResponse, LastFMUserGetInfoResponse } from 'lastfm-ts-api';
 import clone from 'clone';
 import { IncomingMessage } from "http";
@@ -82,7 +82,7 @@ export default class LastfmApiClient extends AbstractApiClient {
             }
         }
 
-        this.redirectUri = `${redirectUri ?? joinedUrl(localUrl, `${cbPrefix}/callback`).href}?state=${name}`;
+        this.redirectUri = `${redirectUri ?? joinedUrl(localUrl, `${cbPrefix}/callback`).href}?state=${normalizeStr(this.name, {keepSingleWhitespace: false})}`;
 
         this.logger.info(`Using ${this.url.normal} for API calls`);
         this.logger.info(`Redirect Uri: ${this.redirectUri}`);

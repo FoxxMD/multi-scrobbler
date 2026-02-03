@@ -59,11 +59,11 @@ export default class ScrobbleClients {
         });
     }
 
-    getByName = (name: any) => this.clients.find(x => x.name === name)
+    getByName = (name: any, safe: boolean = false) => this.clients.find(x => (safe ? x.getSafeExternalName() : x.name) === name)
 
     getByType = (type: any) => this.clients.filter(x => x.type === type)
 
-    getByNameAndType = (name: string, type: ClientType) => this.clients.find(x => x.name === name && x.type === type)
+    getByNameAndType = (name: string, type: ClientType, safe: boolean = false) => this.clients.find(x => (safe ? x.getSafeExternalName() : x.name) === name && x.type === type)
 
     async getStatusSummary(type?: string, name?: string): Promise<[boolean, string[]]> {
         let clients: AbstractScrobbleClient[] = [];

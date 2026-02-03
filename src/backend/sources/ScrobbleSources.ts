@@ -65,11 +65,11 @@ export default class ScrobbleSources {
         }
     }
 
-    getByName = (name: any) => this.sources.find(x => x.name === name)
+    getByName = (name: any, safe: boolean = false) => this.sources.find(x => (safe ? x.getSafeExternalName() : x.name) === name)
 
     getByType = (type: any) => this.sources.filter(x => x.type === type)
 
-    getByNameAndType = (name: string, type: SourceType) => this.sources.find(x => x.name === name && x.type === type)
+    getByNameAndType = (name: string, type: SourceType, safe: boolean = false) => this.sources.find(x => (safe ? x.getSafeExternalName() : x.name) === name && x.type === type)
 
     async getStatusSummary(type?: string, name?: string): Promise<[boolean, string[]]> {
         let sources: AbstractSource[] = [];

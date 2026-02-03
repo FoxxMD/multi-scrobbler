@@ -346,7 +346,7 @@ export default class SpotifySource extends MemoryPositionalSource {
         }
     }
 
-    createAuthUrl = () => this.spotifyApi.createAuthorizeURL(scopes, this.name)
+    createAuthUrl = () => this.spotifyApi.createAuthorizeURL(scopes, this.getSafeExternalName())
 
     handleAuthCodeCallback = async ({
         error,

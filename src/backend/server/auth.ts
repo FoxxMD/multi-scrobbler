@@ -94,13 +94,13 @@ export const setupAuthRoutes = (app: ExpressWithAsync, logger: Logger, sourceMid
             } = req;
             let entity: LastfmScrobbler | LastfmSource | LibrefmScrobbler | LibrefmSource | undefined;
             if(req.url.includes('lastfm')) {
-                entity = scrobbleClients.getByNameAndType(state as string, 'lastfm') as (LastfmScrobbler | LastfmSource | undefined);
+                entity = scrobbleClients.getByNameAndType(state as string, 'lastfm', true) as (LastfmScrobbler | LastfmSource | undefined);
             } else {
-                entity = scrobbleClients.getByNameAndType(state as string, 'librefm') as (LibrefmScrobbler | LibrefmSource | undefined);
+                entity = scrobbleClients.getByNameAndType(state as string, 'librefm', true) as (LibrefmScrobbler | LibrefmSource | undefined);
             }
 
             if(entity === undefined) {
-                entity = scrobbleSources.getByName(state) as LastfmSource | LibrefmSource;
+                entity = scrobbleSources.getByName(state, true) as LastfmSource | LibrefmSource;
             }
             try {
                 if(entity === undefined) {
@@ -142,7 +142,7 @@ export const setupAuthRoutes = (app: ExpressWithAsync, logger: Logger, sourceMid
             // but eventually should update all source callbacks to url specific URLS to avoid ambiguity...
             // wish we could use state param to identify name/source but not all auth strategies and auth provides may provide access to that
             logger.info('Received auth code callback from Spotify', {label: 'Spotify'});
-            const source = scrobbleSources.getByNameAndType(state as string, 'spotify') as SpotifySource;
+            const source = scrobbleSources.getByNameAndType(state as string, 'spotify', true) as SpotifySource;
             const tokenResult = await source.handleAuthCodeCallback(req.query);
             let responseContent = 'OK';
             if (tokenResult === true) {
