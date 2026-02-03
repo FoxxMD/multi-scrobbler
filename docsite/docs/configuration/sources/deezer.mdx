@@ -91,6 +91,47 @@ import DeezerDeprecatedConfig from '!!raw-loader!@site/../config/deezer-deprecat
 
         This option comes with some trade-offs: MS will aggressively detect repeated tracks within a window of time that should eliminate all duplicates. However, this will also prevent *intentionally* repeated tracks from being scrobbled. See [this thread](https://github.com/FoxxMD/multi-scrobbler/pull/296#issuecomment-2970417070) for more information on how this works.
 
+        ### Family account
+
+        Multi-scrobbler can monitor listening history for accounts linked to a [Deezer Family Account](https://www.deezer.com/en/offers/family).
+
+        <details>
+
+        <summary>Instructions</summary>
+
+        Start multi-scrobbler using the [ARL](#retrieve-arl) for the **main account**.
+
+        In the logs look for **Linked Accounts** associated with the Deezer Source. It will look something like this:
+
+        ```
+        VERBOSE: [App] [Sources] [Deezer - MyDeezer] Linked Accounts:
+        Name: Joe | ID: 166276334 | Private?: Yes
+        Name: Mary | ID: 48475231 | Private?: Yes
+        Name: FoxxMD | ID: 896225281 | Private?: No
+        Name: Cool Guy | ID: 128522478 | Private?: Yes
+        ```
+
+        The Account **ID** you want to monitor should be set:
+
+        * ENV Config => `DEEZER_ACCOUNT_ID=896225281`
+        * File Config => `"accountId": "896225281"` in the `data` section of your config
+
+        Restart multi-scrobbler to start monitoring that account.
+
+        :::warning[Restrictions]
+
+        Deezer may not return the correct listening history under these circumstances:
+
+        * The ARL used is **not** for the main account
+          * If you can get an ARL specifically for the linked account (login as the linked account), use that **instead** of family `accountId`
+        * The ARL account is private
+        * The linked account to be monitored ( using `accountId`) is private
+
+        :::
+        </details>
+
+
+
     </TabItem>
     <TabItem value="official" label="Official API">
 

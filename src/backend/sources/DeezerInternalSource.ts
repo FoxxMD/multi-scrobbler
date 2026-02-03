@@ -14,6 +14,7 @@ import { genericSourcePlayMatch } from "../utils/PlayComparisonUtils.js";
 import { TemporalPlayComparisonOptions } from "../utils/TimeUtils.js";
 import { findAsync, findIndexAsync } from "../utils/AsyncUtils.js";
 import { baseFormatPlayObj } from "../utils/PlayTransformUtils.js";
+import { UpstreamError } from "../common/errors/UpstreamError.js";
 
 interface DeezerHistoryResponse {
     errors: []
@@ -23,9 +24,50 @@ interface DeezerHistoryResponse {
     }
 }
 
+interface DeezerAccountData {
+    USER_ID: string,
+    /** account name */
+    BLOG_NAME: string,
+    /** https://github.com/FoxxMD/multi-scrobbler/issues/344#issuecomment-3347915743 */
+    EXTRA_FAMILY?: {
+        /** if false then this account is private */
+        IS_LOGGABLE_AS: boolean
+        /** true if private? */
+        IS_DELINKABLE: boolean
+    }
+}
+
+interface DeezerAccountResponse {
+    error?: {PERMISSION_ERROR: "No Permission"}
+    results: DeezerAccountData[]
+}
+
+interface DeezerUserDataResponse {
+    results: DeezerAuthedUserData & {
+        checkForm: string
+    }
+}
+
+interface DeezerAuthedUserData {
+            USER: {
+            USER_ID: string
+            /** account name */
+            BLOG_NAME: string
+            MULTI_ACCOUNT: {
+                /** true if its a sub account */
+                IS_SUB_ACCOUNT: boolean
+            }
+        }
+}
+
 export default class DeezerInternalSource extends MemorySource {
     requiresAuth = true;
     requiresAuthInteraction = false;
+    isSubAccount: boolean = false;
+
+    authedAccount: DeezerAuthedUserData;
+
+    accounts?: DeezerAccountData[] = []
 
     csrfToken?: string;
 
@@ -119,7 +161,42 @@ export default class DeezerInternalSource extends MemorySource {
             .query({
                 method: 'deezer.getUserData'
             })
-            const resp = await this.callApi(req);
+            const resp = (await this.callApi(req)) as DeezerUserDataResponse;
+            this.authedAccount = resp.results;
+            this.logger.verbose(`Authenticated for User ${resp.results.USER.BLOG_NAME}`);
+            const enumerated = await this.enumerateChildAccounts();
+
+            // still a bit unsure about this
+            // https://github.com/FoxxMD/multi-scrobbler/issues/344#issuecomment-3357187332
+            // but it seems like if the authed account is not the *main* account in the family then it is always considered private?
+            if(resp.results.USER.MULTI_ACCOUNT.IS_SUB_ACCOUNT) {
+                this.logger.verbose('This account is a child account, will not enumerate other accounts');
+                this.isSubAccount = true;
+                if(this.config.data.accountId !== undefined) {
+                    this.logger.warn('Cannot use accountId when authenticated account is a child account!');
+                }
+            } else {
+                const enumerated = await this.enumerateChildAccounts();
+                if(this.config.data.accountId !== undefined) {
+                    if(!enumerated) {
+                        this.logger.warn('Unable to verify if account history is available for accountId due to enumeration issue.');
+                    } else {
+                        const requestedAccount = this.accounts.find(x => x.USER_ID === this.config.data.accountId);
+                        if(requestedAccount === undefined) {
+                            this.logger.warn(`Could not find a linked account matching ${this.config.data.accountId}. History fetching may fail.`);
+                        } else {
+                            const authedAccount = this.accounts.find(x => x.USER_ID === this.authedAccount.USER.USER_ID);
+                            if(!authedAccount.EXTRA_FAMILY.IS_LOGGABLE_AS && this.config.data.accountId !== this.authedAccount.USER.USER_ID) {
+                                this.logger.warn(`Authed Account (${this.authedAccount.USER.USER_ID}) is private and specified accountId is not the same (${this.config.data.accountId}), likely history returned will not be correct.`);
+                            } else if(!requestedAccount.EXTRA_FAMILY.IS_LOGGABLE_AS) {
+                                this.logger.warn('Account specified by accountId is private, likely returned will not be correct!');
+                            }
+                        }
+                    }
+                    this.jar.setCookie(`account_id=${this.config.data.accountId}`, 'https://www.deezer.com');
+                    this.logger.verbose(`Set account_id=${this.config.data.accountId}`);
+                }
+            }
             return true;
         } catch (e) {
             throw e;
@@ -164,6 +241,44 @@ export default class DeezerInternalSource extends MemorySource {
             return resp.results.data.filter(x => x.__TYPE__ === 'song').map(x => DeezerInternalSource.formatPlayObj(x)).sort(sortByOldestPlayDate);
         } catch (e) {
             throw new Error('Failed to get recently played tracks', {cause: e});
+        }
+    }
+
+    enumerateChildAccounts = async (): Promise<boolean> => {
+        try {
+            const resp = await this.getChildAccounts();
+            this.accounts = resp;
+            const accountSummaries: string[] = [];
+            for(const a of this.accounts) {
+                accountSummaries.push(`Name: ${a.BLOG_NAME} | ID: ${a.USER_ID} | Private?: ${a.EXTRA_FAMILY.IS_LOGGABLE_AS ? 'No' : 'Yes'}`);
+            }
+            this.logger.verbose(`Linked Accounts:\n${accountSummaries.join('\n')}`)
+            return true;
+        } catch (e) {
+            if(this.config.data.accountId !== undefined) {
+                this.logger.warn(new Error(`Could not fetch child accounts, likely using 'accountId' will not work!`));
+            } else {
+                this.logger.warn(new Error('Could not enumerate child accounts. You can ignore this if there is no family account or accountId being used.', {cause: e}));
+            }
+            return false;
+        }
+    }
+
+    getChildAccounts = async () => {
+        try {
+            const req = this.agent.post('https://www.deezer.com/ajax/gw-light.php')
+                .query({
+                    method: 'deezer.getChildAccounts'
+                })
+                .set('Content-Type', 'application/json')
+                .send({
+                    nb: 30,
+                    start: 0
+                });
+            const resp = (await this.callApi(req)) as DeezerAccountResponse;
+            return resp.results;
+        } catch (e) {
+            throw new UpstreamError('Unable to get child accounts', {cause: e});
         }
     }
 
