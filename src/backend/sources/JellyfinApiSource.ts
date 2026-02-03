@@ -83,6 +83,7 @@ export default class JellyfinApiSource extends MemoryPositionalSource {
     librariesAllow: string[] = [];
     librariesBlock: string[] = [];
     allowedLibraryTypes: CollectionType[] = [];
+    allowedMediaTypes: MediaType = [MediaType.Audio];
 
     logFilterFailure: false | 'debug' | 'warn';
 
@@ -128,6 +129,8 @@ export default class JellyfinApiSource extends MemoryPositionalSource {
                 librariesAllow = [],
                 librariesBlock = [],
                 additionalAllowedLibraryTypes = [],
+                allowMediaTypes = [],
+                allowUnknown
             } = {},
             options: {
                 logFilterFailure = (isDebugMode() ? 'debug' : 'warn')
@@ -160,6 +163,25 @@ export default class JellyfinApiSource extends MemoryPositionalSource {
         this.librariesAllow = parseArrayFromMaybeString(librariesAllow, {lower: true});
         this.librariesBlock = parseArrayFromMaybeString(librariesBlock, {lower: true});
         this.allowedLibraryTypes = Array.from(new Set(['music', ...parseArrayFromMaybeString(additionalAllowedLibraryTypes, {lower: true})]));
+        let mt = parseArrayFromMaybeString(allowMediaTypes, {lower: true});
+        if(mt.length > 0) {
+            this.allowedMediaTypes = [];
+            for(const a of allowMediaTypes) {
+                try {
+                    this.allowedMediaTypes.push(stringToMediaType(a));
+                } catch (e) {
+                    throw e;
+                }
+            }
+        }
+        if(allowUnknown !== undefined) {
+            this.logger.warn('allowUnknown is deprecated! use allowMediaTypes (`JELLYFIN_MEDIATYPES_ALLOW`) instead.');
+            if(mt.length > 0) {
+                this.logger.warn('allowUnknown and allowMediaTypes are both set. Ignoring allowUnknown.')
+            } else if(allowUnknown === true) {
+                this.allowedMediaTypes.push(MediaType.Unknown);
+            }
+        }
 
         return true;
     }
@@ -342,12 +364,11 @@ export default class JellyfinApiSource extends MemoryPositionalSource {
         }
 
         if(state.play !== undefined) {
-            if(state.play.meta.mediaType !== MediaType.Audio
-                && (state.play.meta.mediaType !== MediaType.Unknown
-                    || state.play.meta.mediaType === MediaType.Unknown && !this.config.data.allowUnknown
-                )
-            ) {
-                return `media detected as ${state.play.meta.mediaType} (MediaType) is not allowed`;
+            if(state.play.meta?.mediaType === undefined && !this.allowedMediaTypes.includes(MediaType.Unknown)) {
+                return `media without a MediaType detected is not allowed (Unknown not included in allowMediaTypes)`;
+            }
+            if(!this.allowedMediaTypes.includes(state.play.meta.mediaType)) {
+                return `media detected as ${state.play.meta.mediaType} (MediaType) is not included in allowMediaTypes`;
             }
         }
 
@@ -575,5 +596,26 @@ const ticksToMs = (ticks: number) => {
         return ticks / 10000;
     } else {
         return ticks; // Undefined or not a number.
+    }
+}
+
+const stringToMediaType = (str: string): MediaType => {
+    switch(str.trim().toLocaleLowerCase()) {
+        case 'unknown':
+            return MediaType.Unknown;
+        case 'video':
+        case 'videos':
+            return MediaType.Video;
+        case 'audio':
+        case 'music':
+            return MediaType.Audio;
+        case 'photo':
+        case 'photos':
+            return MediaType.Photo;
+        case 'book':
+        case 'books':
+            return MediaType.Book;
+        default:
+            throw new Error(`Not a valid MediaType: ${str}`);
     }
 }

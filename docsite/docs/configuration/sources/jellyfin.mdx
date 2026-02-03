@@ -27,9 +27,11 @@ By default...
   * Allowed Users (`usersAllow` or `JELLYFIN_USERS_ALLOW`) are only necessary if you want to scrobble for additional users.
 * multi-scrobbler will **only** scrobble media found in Jellyfin libraries that were labelled as **Music.**
   * `librariesAllow` or `JELLYFIN_LIBRARIES_ALLOW` will override this
-  * OR use `additionalAllowedLibraryTypes` to allow more types (like `mixed` or `book` for audiobooks)
-* multi-scrobbler will **only** scrobble media Jellyfin detects as **Audio.**
-  * To force multi-scrobbler to scrobble when media is detected as **Unknown** use `"allowUnknown": true` in file/aio configuration.
+  * OR use `additionalAllowedLibraryTypes` to allow more *library* types (like those labelled as `mixed` or `book` for audiobooks)
+* multi-scrobbler will **only** scrobble media Jellyfin detects as **Audio**.
+  * To allow other media types to be scrobbled set `allowMediaTypes` or `JELLYFIN_MEDIATYPES_ALLOW` with a list of [official types](https://github.com/jellyfin/jellyfin-sdk-typescript/blob/master/src/generated-client/models/media-type.ts#L22).
+    * One or more of: `Unknown`, `Video`, `Audio`, `Photo`, `Book`
+    * If you use this setting **you must explicitly specify `Audio`**, it will no longer be provided as a default
 
 </DetailsAdmo>
 
@@ -37,18 +39,19 @@ By default...
 
 <Tabs groupId="configType" queryString>
     <TabItem value="env" label="ENV">
-        | Environmental Variable     | Required? | Default | Description                                                                                |
-        | -------------------------- | --------- | ------- | ------------------------------------------------------------------------------------------ |
-        | `JELLYFIN_URL`             | **Yes**   |         | The URL of the Jellyfin server IE `http://localhost:8096`                                  |
-        | `JELLYFIN_USER`            | **Yes**   |         | The user to authenticate with the API                                                      |
-        | `JELLYFIN_APIKEY`          | No        |         | The API Key to use for authentication **(Must provide either apikey or password)**         |
-        | `JELLYFIN_PASSWORD`        | No        |         | The password of the user to authenticate for. **(Must provide either apikey or password)** |
-        | `JELLYFIN_USERS_ALLOW`     | No        |         | Comma-separated list of usernames (from Jellyfin) to scrobble for                          |
-        | `JELLYFIN_USERS_BLOCK`     | No        |         | Comma-separated list of usernames (from Jellyfin) to disallow scrobble for                 |
-        | `JELLYFIN_DEVICES_ALLOW`   | No        |         | Comma-separated list of devices to scrobble from                                           |
-        | `JELLYFIN_DEVICES_BLOCK`   | No        |         | Comma-separated list of devices to disallow scrobbles from                                 |
-        | `JELLYFIN_LIBRARIES_ALLOW` | No        |         | Comma-separated list of libraries to allow scrobbles from                                  |
-        | `JELLYFIN_LIBRARIES_BLOCK` | No        |         | Comma-separated list of libraries to disallow scrobbles from                               |
+        | Environmental Variable      | Required? | Default | Description                                                                                                                                                                                   |
+        | --------------------------- | --------- | ------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+        | `JELLYFIN_URL`              | **Yes**   |         | The URL of the Jellyfin server IE `http://localhost:8096`                                                                                                                                     |
+        | `JELLYFIN_USER`             | **Yes**   |         | The user to authenticate with the API                                                                                                                                                         |
+        | `JELLYFIN_APIKEY`           | No        |         | The API Key to use for authentication **(Must provide either apikey or password)**                                                                                                            |
+        | `JELLYFIN_PASSWORD`         | No        |         | The password of the user to authenticate for. **(Must provide either apikey or password)**                                                                                                    |
+        | `JELLYFIN_USERS_ALLOW`      | No        |         | Comma-separated list of usernames (from Jellyfin) to scrobble for                                                                                                                             |
+        | `JELLYFIN_USERS_BLOCK`      | No        |         | Comma-separated list of usernames (from Jellyfin) to disallow scrobble for                                                                                                                    |
+        | `JELLYFIN_DEVICES_ALLOW`    | No        |         | Comma-separated list of devices to scrobble from                                                                                                                                              |
+        | `JELLYFIN_DEVICES_BLOCK`    | No        |         | Comma-separated list of devices to disallow scrobbles from                                                                                                                                    |
+        | `JELLYFIN_LIBRARIES_ALLOW`  | No        |         | Comma-separated list of libraries to allow scrobbles from                                                                                                                                     |
+        | `JELLYFIN_LIBRARIES_BLOCK`  | No        |         | Comma-separated list of libraries to disallow scrobbles from                                                                                                                                  |
+        | `JELLYFIN_MEDIATYPES_ALLOW` | No        |         | Comma-separated list of [media types](https://github.com/jellyfin/jellyfin-sdk-typescript/blob/master/src/generated-client/models/media-type.ts#L22) to allow scrobbling. Defaults to `audio` |
     </TabItem>
     <TabItem value="file" label="File">
 
