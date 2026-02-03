@@ -130,31 +130,41 @@ export default class DeezerInternalSource extends MemorySource {
 
     getRecentlyPlayed = async (options: RecentlyPlayedOptions = {}) => {
 
-        const req = this.agent.post('https://www.deezer.com/ajax/gw-light.php')
-        .query({
-            method: 'user.getSongsHistory'
-        })
-        .set('Content-Type', 'application/json')
-        .send({
-            nb: 30,
-            start: 0
-        });
-        // returns listening history in descending order (newest to oldest)
-        const resp = (await this.callApi(req)) as DeezerHistoryResponse;
-        for(const e of resp.results.error) {
-            this.logger.warn(`Error returned in history response: ${e}`);
-        }
-        const nonSong = resp.results.data.filter(x => x.__TYPE__ !== 'song');
-        if(nonSong.length > 0) {
-            const nonSongTypes = [];
-            for(const n of nonSong) {
-                if(!nonSongTypes.includes(n.__TYPE__)) {
-                    nonSongTypes.push(n.__TYPE__);
-                }
+        try {
+            const req = this.agent.post('https://www.deezer.com/ajax/gw-light.php')
+                .query({
+                    method: 'user.getSongsHistory'
+                })
+                .set('Content-Type', 'application/json')
+                .send({
+                    nb: 30,
+                    start: 0
+                });
+            // returns listening history in descending order (newest to oldest)
+            const resp = (await this.callApi(req)) as DeezerHistoryResponse;
+            let errList: string[] = [];
+            if('error' in resp.results) {
+                errList = resp.results.error;
+            } else if('errors' in resp) {
+                errList = resp.errors;
             }
-            this.logger.debug(`Ignoring ${nonSong.length} entries in history with types of ${nonSongTypes.join(',')}`);
+            for (const e of errList) {
+                this.logger.warn(`Error returned in history response: ${e}`);
+            }
+            const nonSong = resp.results.data.filter(x => x.__TYPE__ !== 'song');
+            if (nonSong.length > 0) {
+                const nonSongTypes = [];
+                for (const n of nonSong) {
+                    if (!nonSongTypes.includes(n.__TYPE__)) {
+                        nonSongTypes.push(n.__TYPE__);
+                    }
+                }
+                this.logger.debug(`Ignoring ${nonSong.length} entries in history with types of ${nonSongTypes.join(',')}`);
+            }
+            return resp.results.data.filter(x => x.__TYPE__ === 'song').map(x => DeezerInternalSource.formatPlayObj(x)).sort(sortByOldestPlayDate);
+        } catch (e) {
+            throw new Error('Failed to get recently played tracks', {cause: e});
         }
-        return resp.results.data.filter(x => x.__TYPE__ === 'song').map(x => DeezerInternalSource.formatPlayObj(x)).sort(sortByOldestPlayDate);
     }
 
     callApi = async (req: request.SuperAgentRequest, retries = 0) => {
