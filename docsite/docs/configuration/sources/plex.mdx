@@ -63,6 +63,134 @@ By default multi-scrobbler will only scrobble media found in Plex libraries that
 
 </details>
 
+<DetailsAdmo type="tip" summary="Use Plex metadata with Musicbrainz for better scrobbling">
+
+<h3>Matching With Plex</h3>
+
+In Plex, if the **Plex Music** Agent is set on a Music Library then Plex attempts to match your music with Musicbrainz when it is first imported.
+
+<img src={require('/img/plex_music_agent.jpg').default} height="400"/>
+
+Plex uses ID3/metdata tags to match or falls back to matching based on file name and folder names. If it cannot find a match it can be fixed through a **Fix Match** option in the album/track context menu. See [plex documentation for more information](https://support.plex.tv/articles/correcting-your-music-content-matches/).
+
+You can verify if an Item has been matched by:
+
+* Clicking on the Item context menu (...)
+* Get Info
+* View XML
+
+If a node like this is present then it has been matched: `<Guid id="mbid://4e631558-13b0..."/>`
+
+<h3>Using Musicbrainz With Multi-Scrobbler</h3>
+
+The MBID from the above `<Guid>` node is a [Track](https://musicbrainz.org/doc/Track), a special type of ID that specifically identifies a song on a specific album. If this is present then Multi-scrobbler can use it to gaurantee your scrobble, and all its metadata, is matched 1:1 with what is in your Plex library when using the [Musicbrainz Stage](/configuration/transforms/musicbrainz) to enrich your scrobble.
+
+To configure MS to use Musicbrainz with your Plex metadata use one of the methods below:
+
+<Tabs groupId="configType" queryString>
+    <TabItem value="env" label="ENV">
+    Add to your multi-scrobbler docker compose file `environment` section for [Musicbrainz ENV Configuration](/configuration/transforms/musicbrainz#env-configuration):
+    ```yaml
+    # a real email that Musicbrainz can use to contact you in case of issues
+    - MB_CONTACT=myEmail@myEmailProvider.com
+    - MB_PRESETS=id,default
+    - PLEX_TRANSFORMS=musicbrainz
+    ```
+    </TabItem>
+
+    <TabItem value="file" label="File">
+    Your [AIO Config](/configuration?configType=aio#configuration-types):
+
+    ```json5 title="config.json"
+    {
+      // ...
+      "transformers": [
+        {
+          "type": "musicbrainz",
+          "name": "MyMB",
+          "data": {
+            "apis": [
+              {
+                // a real email that Musicbrainz can use to contact you in case of issues
+                "contact": "myEmail@myEmailProvider.com"
+              }
+            ]
+          }
+        }
+      ]
+    }
+    ```
+
+    In your [File Config](/configuration?configType=file#configuration-types):
+
+    ```json5 title="plex.json"
+    [
+      { 
+        "name": "MyPlex",
+        "data": { /* ... */},
+        "options": {
+          "playTransform": {
+            "preCompare": [
+              {
+                "type": "musicbrainz",
+                "name": "MyMB"
+                "searchOrder": ["mbidrecording", "basicOrIds", "basic"]
+              }
+            ]
+          }
+        }
+      }
+    ]
+    ```
+    </TabItem>
+    <TabItem value="aio" label="File AIO">
+    Your [AIO Config](/configuration?configType=aio#configuration-types):
+
+    ```json5 title="config.json"
+    {
+      // ...
+      "transformers": [
+        {
+          "type": "musicbrainz",
+          "name": "MyMB",
+          "data": {
+            "apis": [
+              {
+                // a real email that Musicbrainz can use to contact you in case of issues
+                "contact": "myEmail@myEmailProvider.com"
+              }
+            ]
+          }
+        }
+      ]
+      // ...
+      "sources": [
+        // ...
+        { 
+          "name": "MyPlex",
+          "type": "plex",
+          "data": { /* ... */},
+          "options": {
+            "playTransform": {
+              "preCompare": [
+                {
+                  "type": "musicbrainz",
+                  "name": "MyMB",
+                  "searchOrder": ["mbidrecording", "basicOrIds", "basic"]
+                }
+              ]
+            }
+          }
+        }
+      ]
+    }
+    ```
+    </TabItem>
+    </Tabs>
+</DetailsAdmo>
+
+
+
 #### Configuration
 
 <Config config="PlexApiSourceConfig" fileContent={PlexConfig} name="plex">
