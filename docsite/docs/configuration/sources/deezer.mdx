@@ -113,8 +113,31 @@ import DeezerDeprecatedConfig from '!!raw-loader!@site/../config/deezer-deprecat
 
         The Account **ID** you want to monitor should be set:
 
-        * ENV Config => `DEEZER_ACCOUNT_ID=896225281`
-        * File Config => `"accountId": "896225281"` in the `data` section of your config
+        <Tabs groupId="configType" queryString>
+            <TabItem value="env" label="ENV">
+            Set in your docker compose `environment` section:
+
+            ```yaml
+            - DEEZER_ACCOUNT_ID=896225281
+            ```
+            </TabItem>
+            <TabItem value="file" label="File or AIO">
+                Add an `accountId` property to the `data` section
+                ```json
+                [
+                    {
+                        "name": "DeezerARL",
+                        "enable": true,
+                        "clients": [],
+                        "data": {
+                        "arl": "UOsRPjT3U5Dhaaup3xQ30D...",
+                        "accountId": "896225281"
+                        }
+                    }
+                ]
+                ```
+            </TabItem>
+        </Tabs>
 
         Restart multi-scrobbler to start monitoring that account.
 
