@@ -2,7 +2,7 @@ import EventEmitter from "events";
 import request from "superagent";
 import { PlayObject, SOURCE_SOT } from "../../core/Atomic.js";
 import { isNodeNetworkException } from "../common/errors/NodeErrors.js";
-import { FormatPlayObjectOptions, InternalConfig, PlayPlatformId } from "../common/infrastructure/Atomic.js";
+import { FormatPlayObjectOptions, InternalConfig, PagelessListensTimeRangeOptions, PagelessTimeRangeListens, PlayPlatformId } from "../common/infrastructure/Atomic.js";
 import { ListenBrainzSourceConfig } from "../common/infrastructure/config/source/listenbrainz.js";
 import { ListenbrainzApiClient } from "../common/vendor/ListenbrainzApiClient.js";
 import { RecentlyPlayedOptions } from "./AbstractSource.js";
@@ -11,8 +11,9 @@ import { isPortReachableConnect } from "../utils/NetworkUtils.js";
 import { Logger } from "@foxxmd/logging";
 import { PlayerStateOptions } from "./PlayerState/AbstractPlayerState.js";
 import { NowPlayingPlayerState } from "./PlayerState/NowPlayingPlayerState.js";
+import { ManipulateType } from "dayjs";
 
-export default class ListenbrainzSource extends MemorySource {
+export default class ListenbrainzSource extends MemorySource implements PagelessTimeRangeListens {
 
     api: ListenbrainzApiClient;
     requiresAuth = true;
@@ -89,6 +90,19 @@ export default class ListenbrainzSource extends MemorySource {
         } catch (e) {
             throw e;
         }
+    }
+
+    getPagelessTimeRangeListens = async (options: PagelessListensTimeRangeOptions) => {
+        const resp = await this.api.getUserListensWithPagination({
+            count: options.limit,
+            minTs: options.from,
+            maxTs: options.to
+        });
+        return {data: resp.listens.map(x => ListenbrainzSource.formatPlayObj(x)), meta: {...options, total: resp.count}};
+    }
+
+    getPaginatedUnitOfTime(): ManipulateType {
+        return 'second';
     }
 
     protected getBackloggedPlays = async (options: RecentlyPlayedOptions = {}) =>  await this.getRecentlyPlayed({formatted: true, ...options})

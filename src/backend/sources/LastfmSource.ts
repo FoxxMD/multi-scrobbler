@@ -1,9 +1,9 @@
-import dayjs from "dayjs";
+import dayjs, { ManipulateType } from "dayjs";
 import EventEmitter from "events";
 import request from "superagent";
 import { PlayObject, SOURCE_SOT } from "../../core/Atomic.js";
 import { isNodeNetworkException } from "../common/errors/NodeErrors.js";
-import { FormatPlayObjectOptions, InternalConfig, PlayPlatformId, SourceType } from "../common/infrastructure/Atomic.js";
+import { FormatPlayObjectOptions, InternalConfig, PaginatedListensTimeRangeOptions, PaginatedTimeRangeListens, PlayPlatformId, SourceType } from "../common/infrastructure/Atomic.js";
 import { LastfmSourceConfig } from "../common/infrastructure/config/source/lastfm.js";
 import LastfmApiClient, { formatPlayObj } from "../common/vendor/LastfmApiClient.js";
 import { sortByOldestPlayDate } from "../utils.js";
@@ -13,7 +13,7 @@ import { Logger } from "@foxxmd/logging";
 import { PlayerStateOptions } from "./PlayerState/AbstractPlayerState.js";
 import { NowPlayingPlayerState } from "./PlayerState/NowPlayingPlayerState.js";
 
-export default class LastfmSource extends MemorySource {
+export default class LastfmSource extends MemorySource implements PaginatedTimeRangeListens {
 
     api: LastfmApiClient;
     requiresAuth = true;
@@ -110,6 +110,37 @@ export default class LastfmSource extends MemorySource {
         } catch (e) {
             throw e;
         }
+    }
+
+    getPaginatedTimeRangeListens = async (params: PaginatedListensTimeRangeOptions) => {
+        const resp = await this.api.getRecentTracksWithPagination({
+            page: params.page,
+            to: params.to,
+            from: params.from,
+            limit: params.limit
+        });
+
+        const {
+            recenttracks: {
+                track: rawTracks = [],
+                '@attr': pageInfo
+            }
+        } = resp;
+
+        return {
+            data: rawTracks
+                .filter(t => t.date !== undefined)
+                .map(t => LastfmApiClient.formatPlayObj(t, {})),
+            meta: {
+                ...params,
+                total: parseInt(pageInfo.total)
+            }
+        }
+
+    }
+
+    getPaginatedUnitOfTime(): ManipulateType {
+        return 'second';
     }
 
     protected getBackloggedPlays = async (options: RecentlyPlayedOptions = {}) => await this.getRecentlyPlayed({formatted: true, ...options})
