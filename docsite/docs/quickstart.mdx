@@ -232,6 +232,50 @@ Modify the `lastfm.json` file you created in the [Setup Sources](#setup-sources)
 [**Clients**](/configuration/clients) are services that store scrobbles. Multi-scrobbler will scrobble all listening activity from the **Sources** you configured to all **Clients** you configure here.
 
 <Tabs groupId="qsClient">
+    <TabItem value="koito" label="Koito">
+        Setup a [Koito server](https://koito.io/guides/installation/) if you have not already done this.
+
+        * [Create (or get) an API Key](https://koito.io/guides/scrobbler/)
+          * From your Koito server dashboard navigate to **Settings** (bottom-left icon) => **API Keys**
+          * Create a new Key (or use an existing) and Copy the key using the copy icon to the right of the key
+            * EX `pM195xPV98CDpk0QW47FIIOR8AKATAX5DblBF-Jq0t1MbbKL`
+        * Take note of your Koito username (used below as `myUser`)
+        * Determine your Koito URL
+          * This is the URL you use to access your Koito dashboard OR whatever URL is accessible from your multi-scrobbler instance.
+          * EX dashboard at `http://192.168.0.100:4110` => replace `myURL` below with `http://192.168.0.100:4110`
+          * [More info on the URL to use is the full docs](/configuration/clients/koito)
+
+        Add/Substitute values above into these examples values and add them to the `environment` section in the [`docker-compose.yml` you created for multi-scrobbler earlier.](#create-docker-compose-file)
+
+        ```yaml title="~/msData/docker-compose.yml"
+        - KOITO_TOKEN=myToken
+        - KOITO_USER=myUser
+        - KOITO_URL=myURL
+        ```
+
+        :::tip
+
+        Ensure that Koito is configured to allow requests from multi-scrobbler! In Koito config set [`KOITO_ALLOWED_HOSTS`](https://koito.io/reference/configuration/#koito_allowed_hosts) to the IP the multi-scrobbler dashboard is accessible from.
+
+        :::
+
+    </TabItem>
+    <TabItem value="lastfm" label="Last.fm">
+        [Register for an API account at Last.fm.](https://www.last.fm/api/account/create)
+
+        Use the following for **Callback URL**:
+
+        ```
+        http://192.168.0.100:9078/lastfm/callback
+        ```
+
+        After account creation use the displayed information and add these values to the `environment` section in the [`docker-compose.yml` you created for multi-scrobbler earlier.](#create-docker-compose-file)
+
+        ```yaml title="~/msData/docker-compose.yml"
+        - LASTFM_API_KEY=myApiKey
+        - LASTFM_SECRET=myApiSecret
+        ```
+    </TabItem>
     <TabItem value="maloja" label="Maloja">
         Setup a [Maloja server](https://github.com/krateng/maloja?tab=readme-ov-file#how-to-install) if you have not already done this.
 
@@ -263,50 +307,6 @@ Modify the `lastfm.json` file you created in the [Setup Sources](#setup-sources)
         - MALOJA_URL=http://192.168.0.100:42010
         - MALOJA_API_KEY=myApiKey
         ```
-    </TabItem>
-    <TabItem value="lastfm" label="Last.fm">
-        [Register for an API account at Last.fm.](https://www.last.fm/api/account/create)
-
-        Use the following for **Callback URL**:
-
-        ```
-        http://192.168.0.100:9078/lastfm/callback
-        ```
-
-        After account creation use the displayed information and add these values to the `environment` section in the [`docker-compose.yml` you created for multi-scrobbler earlier.](#create-docker-compose-file)
-
-        ```yaml title="~/msData/docker-compose.yml"
-        - LASTFM_API_KEY=myApiKey
-        - LASTFM_SECRET=myApiSecret
-        ```
-    </TabItem>
-    <TabItem value="koito" label="Koito">
-        Setup a [Koito server](https://koito.io/guides/installation/) if you have not already done this.
-
-        * [Create (or get) an API Key](https://koito.io/guides/scrobbler/)
-          * From your Koito server dashboard navigate to **Settings** (bottom-left icon) => **API Keys**
-          * Create a new Key (or use an existing) and Copy the key using the copy icon to the right of the key
-            * EX `pM195xPV98CDpk0QW47FIIOR8AKATAX5DblBF-Jq0t1MbbKL`
-        * Take note of your Koito username (used below as `myUser`)
-        * Determine your Koito URL
-          * This is the URL you use to access your Koito dashboard OR whatever URL is accessible from your multi-scrobbler instance.
-          * EX dashboard at `http://192.168.0.100:4110` => replace `myURL` below with `http://192.168.0.100:4110`
-          * [More info on the URL to use is the full docs](/configuration/clients/koito)
-
-        Add/Substitute values above into these examples values and add them to the `environment` section in the [`docker-compose.yml` you created for multi-scrobbler earlier.](#create-docker-compose-file)
-
-        ```yaml title="~/msData/docker-compose.yml"
-        - KOITO_TOKEN=myToken
-        - KOITO_USER=myUser
-        - KOITO_URL=myURL
-        ```
-
-        :::tip
-
-        Ensure that Koito is configured to allow requests from multi-scrobbler! In Koito config set [`KOITO_ALLOWED_HOSTS`](https://koito.io/reference/configuration/#koito_allowed_hosts) to the IP the multi-scrobbler dashboard is accessible from.
-
-        :::
-
     </TabItem>
 </Tabs>
 

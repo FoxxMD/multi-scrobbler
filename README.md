@@ -9,7 +9,7 @@
 <img src="/assets/icon.png" align="right"
 alt="multi-scrobbler logo" width="180" height="180">
 
-A javascript app to scrobble music you listen to, to [Maloja](https://github.com/krateng/maloja), [Last.fm](https://www.last.fm), [ListenBrainz](https://listenbrainz.org), and other services.
+A dockerized app that monitors your music listening activity from *everywhere* and scrobbles it *anywhere*.
 
 * Supports scrobbling from many [**Sources**](https://foxxmd.github.io/multi-scrobbler/configuration/sources)
     * [Azuracast](https://foxxmd.github.io/multi-scrobbler/configuration/sources/azuracast)
@@ -79,7 +79,7 @@ You set up [configurations](https://foxxmd.github.io/multi-scrobbler/configurati
 
 ### Source
 
-A [**Source**](https://foxxmd.github.io/multi-scrobbler/configuration/sources) is a data source that contains information about music you are playing or have listened to, like a desktop player, web music player, or cloud music service. Examples are **Spotify, Jellyfin, Plex, Youtube Music, Navidrome**, etc...
+A [**Source**](https://foxxmd.github.io/multi-scrobbler/configuration/sources) is a data source that contains information about music you are playing or have listened to, such as: a desktop player, web music player, or cloud music service. Examples are **Spotify, Jellyfin, Plex, Youtube Music, Navidrome**, etc...
 
 Source configurations consist of:
 
@@ -89,7 +89,7 @@ Source configurations consist of:
 
 ### Client
 
-A [**Client**](https://foxxmd.github.io/multi-scrobbler/configuration/clients) is an application that stores the historical information about what music you have played (scrobbles). Examples are **Maloja, Last.fm, Listenbrainz**...
+A [**Client**](https://foxxmd.github.io/multi-scrobbler/configuration/clients) is an application that stores the historical information about what music you have played (scrobbles). Examples are **Koito, Last.fm, Listenbrainz**...
 
 Client configurations consist of:
 

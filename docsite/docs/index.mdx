@@ -10,9 +10,9 @@ sidebar_position: 1
 
 <img src={require('/img/icon.png').default} align="right" alt="multi-scrobbler logo" width="180" height="180"/>
 
-A javascript app to scrobble music you listened to, to [Maloja](https://github.com/krateng/maloja), [Last.fm](https://www.last.fm), [ListenBrainz](https://listenbrainz.org), and [Koito](https://koito.io/).
+A dockerized app that monitors your music listening activity from *everywhere* and scrobbles it *anywhere*.
 
-* Supports scrobbling from many [**Sources**](/configuration/sources)
+* Supports monitoring activity from many [**Sources**](/configuration/sources)
     * [Azuracast](/configuration/sources/azuracast)
     * [Deezer](/configuration/sources/deezer)
     * [Google Cast (Chromecast)](/configuration/sources/google-cast)
@@ -83,7 +83,7 @@ You set up [configurations](/configuration) for one or more [**Sources**](/confi
 
 ### Source
 
-A [**Source**](/configuration/sources) is a data source that contains information about music you are playing or have listened to, like a desktop player, web music player, or cloud music service. Examples are **Spotify, Jellyfin, Plex, Youtube Music, Navidrome**, etc...
+A [**Source**](/configuration/sources) is a data source that contains information about music you are playing or have listened to, such as: a desktop player, web music player, or cloud music service. Examples are **Spotify, Jellyfin, Plex, Youtube Music, Navidrome**, etc...
 
 Source configurations consist of:
 
@@ -93,7 +93,7 @@ Source configurations consist of:
 
 ### Client
 
-A [**Client**](/configuration/clients) is an application that stores the historical information about what music you have played (scrobbles). Examples are **Maloja, Last.fm, Listenbrainz**...
+A [**Client**](/configuration/clients) is an application that stores the historical information about what music you have played (scrobbles). Examples are **Koito, Last.fm, Listenbrainz**...
 
 Client configurations consist of:
 
