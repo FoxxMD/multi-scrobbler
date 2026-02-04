@@ -207,20 +207,6 @@ export class MalojaApiClient extends AbstractApiClient implements PaginatedTimeR
         return 'day';
     }
 
-    getPaginatedTimeRangeListens = async (params: PaginatedListensTimeRangeOptions) => {
-        const resp = await this.callApi(request.get(`${this.url.url}/apis/mlj_1/scrobbles`).query({
-            perpage: params.limit,
-            page: params.page,
-            from: params.from !== undefined ? dayjs.unix(params.from).format('YYYY/MM/DD') : undefined,
-            to: params.to !== undefined ? dayjs.unix(params.from).format('YYYY/MM/DD') : undefined
-        }));
-
-        return {
-            data: resp.body.list.map(formatPlayObj),
-            meta: params
-        }
-    }
-    
     scrobble = async (playObj: PlayObject): Promise<ScrobbleActionResult> => {
 
         const {

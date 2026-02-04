@@ -130,7 +130,7 @@ export default class LastfmSource extends MemorySource implements PaginatedTimeR
         return {
             data: rawTracks
                 .filter(t => t.date !== undefined)
-                .map(t => LastfmApiClient.formatPlayObj(t)),
+                .map(t => LastfmApiClient.formatPlayObj(t, {})),
             meta: {
                 ...params,
                 total: parseInt(pageInfo.total)
