@@ -5,7 +5,7 @@
 <meta name="generator" content="Docusaurus v3.8.1">
 <title data-rh="true">Overview | Multi-Scrobbler</title><meta data-rh="true" name="viewport" content="width=device-width,initial-scale=1"><meta data-rh="true" name="twitter:card" content="summary_large_image"><meta data-rh="true" property="og:image" content="https://foxxmd.github.io/multi-scrobbler/img/icon.png"><meta data-rh="true" name="twitter:image" content="https://foxxmd.github.io/multi-scrobbler/img/icon.png"><meta data-rh="true" property="og:url" content="https://foxxmd.github.io/multi-scrobbler/"><meta data-rh="true" property="og:locale" content="en"><meta data-rh="true" name="docusaurus_locale" content="en"><meta data-rh="true" name="docsearch:language" content="en"><meta data-rh="true" name="docusaurus_version" content="current"><meta data-rh="true" name="docusaurus_tag" content="docs-default-current"><meta data-rh="true" name="docsearch:version" content="current"><meta data-rh="true" name="docsearch:docusaurus_tag" content="docs-default-current"><meta data-rh="true" property="og:title" content="Overview | Multi-Scrobbler"><meta data-rh="true" name="description" content="Latest Release"><meta data-rh="true" property="og:description" content="Latest Release"><link data-rh="true" rel="icon" href="/multi-scrobbler/img/favicon.ico"><link data-rh="true" rel="canonical" href="https://foxxmd.github.io/multi-scrobbler/"><link data-rh="true" rel="alternate" href="https://foxxmd.github.io/multi-scrobbler/" hreflang="en"><link data-rh="true" rel="alternate" href="https://foxxmd.github.io/multi-scrobbler/" hreflang="x-default"><script data-rh="true">function insertBanner(){var n=document.createElement("div");n.id="__docusaurus-base-url-issue-banner-container";n.innerHTML='\n<div id="__docusaurus-base-url-issue-banner" style="border: thick solid red; background-color: rgb(255, 230, 179); margin: 20px; padding: 20px; font-size: 20px;">\n   <p style="font-weight: bold; font-size: 30px;">Your Docusaurus site did not load properly.</p>\n   <p>A very common reason is a wrong site <a href="https://docusaurus.io/docs/docusaurus.config.js/#baseUrl" style="font-weight: bold;">baseUrl configuration</a>.</p>\n   <p>Current configured baseUrl = <span style="font-weight: bold; color: red;">/multi-scrobbler/</span> </p>\n   <p>We suggest trying baseUrl = <span id="__docusaurus-base-url-issue-banner-suggestion-container" style="font-weight: bold; color: green;"></span></p>\n</div>\n',document.body.prepend(n);var e=document.getElementById("__docusaurus-base-url-issue-banner-suggestion-container"),s=window.location.pathname,o="/"===s.substr(-1)?s:s+"/";e.innerHTML=o}document.addEventListener("DOMContentLoaded",(function(){void 0===window.docusaurus&&insertBanner()}))</script><script data-rh="true" type="application/ld+json">{"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Overview","item":"https://foxxmd.github.io/multi-scrobbler/"}]}</script><meta name="google-site-verification" content="8hqrPhw4yuoTBM6c3S10aC8L4tu4aIBe8Q-oSP3OES0">
 <script src="https://ry.foxxmd.dev/api/script.js" defer="defer" data-site-id="3" data-session-replay="true"></script><link rel="stylesheet" href="/multi-scrobbler/assets/css/styles.c6d98630.css">
-<script src="/multi-scrobbler/assets/js/runtime~main.036ecce4.js" defer="defer"></script>
+<script src="/multi-scrobbler/assets/js/runtime~main.07272dd5.js" defer="defer"></script>
 <script src="/multi-scrobbler/assets/js/main.3c967893.js" defer="defer"></script>
 </head>
 <body class="navigation-with-keyboard">
@@ -16,9 +16,9 @@
 <img decoding="async" loading="lazy" src="https://img.shields.io/badge/License-MIT-yellow.svg" alt="License: MIT" class="img_ev3q">
 <img decoding="async" loading="lazy" src="https://img.shields.io/docker/pulls/foxxmd/multi-scrobbler" alt="Docker Pulls" class="img_ev3q"></p>
 <img src="/multi-scrobbler/assets/images/icon-ae97f2044a6600a69b9c4eeb60cef68e.png" align="right" alt="multi-scrobbler logo" width="180" height="180">
-<p>A javascript app to scrobble music you listened to, to <a href="https://github.com/krateng/maloja" target="_blank" rel="noopener noreferrer">Maloja</a>, <a href="https://www.last.fm" target="_blank" rel="noopener noreferrer">Last.fm</a>, <a href="https://listenbrainz.org" target="_blank" rel="noopener noreferrer">ListenBrainz</a>, and <a href="https://koito.io/" target="_blank" rel="noopener noreferrer">Koito</a>.</p>
+<p>A dockerized app that monitors your music listening activity from <em>everywhere</em> and scrobbles it <em>anywhere</em>.</p>
 <ul>
-<li>Supports scrobbling from many <a href="/multi-scrobbler/configuration/sources/"><strong>Sources</strong></a>
+<li>Supports monitoring activity from many <a href="/multi-scrobbler/configuration/sources/"><strong>Sources</strong></a>
 <ul>
 <li><a href="/multi-scrobbler/configuration/sources/azuracast/">Azuracast</a></li>
 <li><a href="/multi-scrobbler/configuration/sources/deezer/">Deezer</a></li>
@@ -87,7 +87,7 @@
 <h2 class="anchor anchorWithHideOnScrollNavbar_WYt5" id="how-does-multi-scrobbler-ms-work">How Does multi-scrobbler (MS) Work?<a href="#how-does-multi-scrobbler-ms-work" class="hash-link" aria-label="Direct link to How Does multi-scrobbler (MS) Work?" title="Direct link to How Does multi-scrobbler (MS) Work?">​</a></h2>
 <p>You set up <a href="/multi-scrobbler/configuration/">configurations</a> for one or more <a href="/multi-scrobbler/configuration/sources/"><strong>Sources</strong></a> and one or more <a href="/multi-scrobbler/configuration/clients/"><strong>Clients</strong></a>. MS monitors all of your configured <strong>Sources</strong>. When new tracks are played by a Source MS grabs that information and then sends it (scrobbles it) to all <strong>Clients</strong> that Source is configured to forward to.</p>
 <h3 class="anchor anchorWithHideOnScrollNavbar_WYt5" id="source">Source<a href="#source" class="hash-link" aria-label="Direct link to Source" title="Direct link to Source">​</a></h3>
-<p>A <a href="/multi-scrobbler/configuration/sources/"><strong>Source</strong></a> is a data source that contains information about music you are playing or have listened to, like a desktop player, web music player, or cloud music service. Examples are <strong>Spotify, Jellyfin, Plex, Youtube Music, Navidrome</strong>, etc...</p>
+<p>A <a href="/multi-scrobbler/configuration/sources/"><strong>Source</strong></a> is a data source that contains information about music you are playing or have listened to, such as: a desktop player, web music player, or cloud music service. Examples are <strong>Spotify, Jellyfin, Plex, Youtube Music, Navidrome</strong>, etc...</p>
 <p>Source configurations consist of:</p>
 <ul>
 <li>A friendly name.</li>
@@ -95,7 +95,7 @@
 <li>An optional list of Client names that the Source should scrobble to. If omitted the Source also scrobbles to all configured Clients.</li>
 </ul>
 <h3 class="anchor anchorWithHideOnScrollNavbar_WYt5" id="client">Client<a href="#client" class="hash-link" aria-label="Direct link to Client" title="Direct link to Client">​</a></h3>
-<p>A <a href="/multi-scrobbler/configuration/clients/"><strong>Client</strong></a> is an application that stores the historical information about what music you have played (scrobbles). Examples are <strong>Maloja, Last.fm, Listenbrainz</strong>...</p>
+<p>A <a href="/multi-scrobbler/configuration/clients/"><strong>Client</strong></a> is an application that stores the historical information about what music you have played (scrobbles). Examples are <strong>Koito, Last.fm, Listenbrainz</strong>...</p>
 <p>Client configurations consist of:</p>
 <ul>
 <li>A friendly name.</li>
