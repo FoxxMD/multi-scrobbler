@@ -64,7 +64,7 @@ You should bind a host directory into the container for storing configurations a
         docker run ... -v "$(pwd)/config:/config" foxxmd/multi-scrobbler
         ```
     </TabItem>
-    <TabItem value="docker-compose" label="Docker Compose">
+    <TabItem value="docker-compose" label="Docker Compose" default>
         [Using docker-compose](https://docs.docker.com/compose/compose-file/compose-file-v3/#short-syntax-3):
 
         ```yaml title="docker-compose.yml"
@@ -94,7 +94,7 @@ If you are using a [bridge network](https://www.appsdeveloperblog.com/docker-net
         docker run ... -p 9078:9078 foxxmd/multi-scrobbler
         ```
     </TabItem>
-    <TabItem value="docker-compose" label="Docker Compose">
+    <TabItem value="docker-compose" label="Docker Compose" default>
         [docker-compose](https://docs.docker.com/compose/compose-file/compose-file-v3/#short-syntax-1):
 
         ```yaml title="docker-compose.yml"
@@ -130,7 +130,7 @@ set the [Base URL](../configuration/configuration.mdx#base-url) as the IP of the
         docker run ... -e BASE_URL="http://hostMachineIP" foxxmd/multi-scrobbler
         ```
     </TabItem>
-    <TabItem value="docker-compose" label="Docker Compose">
+    <TabItem value="docker-compose" label="Docker Compose" default>
         [docker-compose](https://docs.docker.com/compose/compose-file/compose-file-v3/#short-syntax-1):
 
         ```yaml title="docker-compose.yml"
@@ -209,7 +209,7 @@ The example scenario:
             </TabItem>
         </Tabs>
     </TabItem>
-    <TabItem value="docker-compose" label="Docker Compose">
+    <TabItem value="docker-compose" label="Docker Compose" default>
         See [`docker-compose.yml`](#docker) sample above for more options and annotations.
 
         ```yaml title="docker-compose.yml"
