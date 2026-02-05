@@ -43,6 +43,7 @@ import { RockskySourceConfig } from '../common/infrastructure/config/source/rock
 import { CommonSourceOptions } from '../common/infrastructure/config/source/index.js';
 import { ExternalMetadataTerm, PlayTransformHooks, PlayTransformOptions } from '../common/infrastructure/Transform.js';
 import { LibrefmSourceConfig } from '../common/infrastructure/config/source/librefm.js';
+import { AppleMusicSourceConfig } from '../common/infrastructure/config/source/apple.js';
 
 type groupedNamedConfigs = {[key: string]: ParsedConfig[]};
 
@@ -159,6 +160,8 @@ export default class ScrobbleSources {
                     return "RockskySourceConfig";
                 case 'sonos':
                     return 'SonosSourceConfig';
+                case 'apple':
+                    return 'AppleMusicSourceConfig';
             }
     }
 
@@ -1018,6 +1021,10 @@ export default class ScrobbleSources {
             case 'sonos':
                 const {SonosSource} = (await import('./SonosSource.js'));
                 newSource = await new SonosSource(name, compositeConfig as SonosSourceConfig, this.internalConfig, this.emitter);
+                break;
+            case 'apple':
+                const {AppleSource} = (await import('./AppleSource.js'));
+                newSource = await new AppleSource(name, compositeConfig as AppleMusicSourceConfig, this.internalConfig, this.emitter);
                 break;
             default:
                 break;

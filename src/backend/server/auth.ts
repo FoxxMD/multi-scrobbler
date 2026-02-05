@@ -17,6 +17,7 @@ import LibrefmScrobbler from "../scrobblers/LibrefmScrobbler.js";
 import LibrefmSource from "../sources/LibrefmSource.js";
 import e from "express";
 import AbstractSource from "../sources/AbstractSource.js";
+import { AppleSource } from "../sources/AppleSource.js";
 
 export const setupAuthRoutes = (app: ExpressWithAsync, logger: Logger, sourceMiddle: ExpressHandler, clientMiddle: ExpressHandler, scrobbleSources: ScrobbleSources, scrobbleClients: ScrobbleClients) => {
     app.use('/api/client/auth', clientMiddle);
@@ -65,6 +66,8 @@ export const setupAuthRoutes = (app: ExpressWithAsync, logger: Logger, sourceMid
                 // @ts-expect-error TS(2339): Property 'deezerSource' does not exist on type 'Se... Remove this comment to see the full error message
                 req.session.deezerSource = name;
                 return passport.authenticate(`deezer-${source.name}`)(req,res,next);
+            case 'apple':
+                return res.render('apple', {token: source.generateDeveloperToken()});
             case 'ytmusic':
                 await (source as YTMusicSource).reauthenticate();
                 res.redirect((source as YTMusicSource).verificationUrl);
@@ -137,6 +140,14 @@ export const setupAuthRoutes = (app: ExpressWithAsync, logger: Logger, sourceMid
                 responseContent = result;
             }
             return res.send(responseContent);
+        } else if(req.url.includes('apple')) {
+            const {
+                query: {
+                    token
+                } = {}
+            } = req;
+            const entity = scrobbleSources.getByName(state) as AppleSource;
+            await entity.handleAuthCodeCallback({token});
         } else {
             // TODO right now all sources requiring source interaction are covered by logic branches (deezer above and spotify here)
             // but eventually should update all source callbacks to url specific URLS to avoid ambiguity...

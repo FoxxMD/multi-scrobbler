@@ -25,19 +25,22 @@ import {
 //const { default: Ajv } = AjvNS;
 dayjs.extend(utc);
 
-export async function readText(path: any) {
-    await promises.access(path, constants.R_OK);
-    const data = await promises.readFile(path);
-    return data.toString();
-
-    // return new Promise((resolve, reject) => {
-    //     fs.readFile(path, 'utf8', function (err, data) {
-    //         if (err) {
-    //             reject(err);
-    //         }
-    //         resolve(JSON.parse(data));
-    //     });
-    // });
+export async function readText(path: any, {throwOnNotFound = true} = {}) {
+    try {
+        await promises.access(path, constants.R_OK);
+        const data = await promises.readFile(path);
+        return data.toString();
+    }  catch (e) {
+        const {code} = e;
+        if (code === 'ENOENT') {
+            if (throwOnNotFound) {
+                throw new Error(`No file found at given path: ${path}`, {cause: e});
+            } else {
+                return;
+            }
+        }
+        throw new Error(`Encountered error while parsing file: ${path}`, {cause: e})
+    }
 }
 
 export async function writeFile(path: any, text: any) {

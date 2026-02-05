@@ -26,6 +26,7 @@ import { TealSourceAIOConfig, TealSourceConfig } from "./tealfm.js";
 import { RockskySourceAIOConfig, RockskySourceConfig } from "./rocksky.js";
 import { LibrefmSouceAIOConfig, LibrefmSourceConfig } from "./librefm.js";
 import { SonosSourceAIOConfig, SonosSourceConfig } from "./sonos.js";
+import { AppleMusicAIOSourceConfig, AppleMusicSourceConfig } from "./apple.js";
 
 
 export type SourceConfig =
@@ -57,7 +58,8 @@ export type SourceConfig =
     | KoitoSourceConfig
     | TealSourceConfig
     | RockskySourceConfig
-    | SonosSourceConfig;
+    | SonosSourceConfig
+    | AppleMusicSourceConfig;
 
 export type SourceAIOConfig =
     SpotifySourceAIOConfig
@@ -88,4 +90,5 @@ export type SourceAIOConfig =
     | KoitoSourceAIOConfig
     | TealSourceAIOConfig
     | RockskySourceAIOConfig
-    | SonosSourceAIOConfig;
+    | SonosSourceAIOConfig
+    | AppleMusicAIOSourceConfig;

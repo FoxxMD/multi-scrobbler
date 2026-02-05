@@ -36,7 +36,8 @@ export interface SourceStatusData {
     | 'koito'
     | 'tealfm'
     | 'rocksky'
-    | 'sonos';
+    | 'sonos'
+    | 'apple';
     display: string;
     tracksDiscovered: number;
     name: string;

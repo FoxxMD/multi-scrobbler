@@ -35,7 +35,8 @@ export type SourceType =
     | 'koito'
     | 'tealfm'
     | 'rocksky'
-    | 'sonos';
+    | 'sonos'
+    | 'apple';
 
 export const sourceTypes: SourceType[] = [
     'spotify',
@@ -65,7 +66,8 @@ export const sourceTypes: SourceType[] = [
     'koito',
     'tealfm',
     'rocksky',
-    'sonos'
+    'sonos',
+    'apple'
 ];
 
 export const sourceInterfaces = [
@@ -97,7 +99,8 @@ export const sourceInterfaces = [
     'KoitoSourceConfig',
     'TealSourceConfig',
     'RockskySourceConfig',
-    'SonosSourceConfig'
+    'SonosSourceConfig',
+    'AppleMusicSourceConfig'
 ]
 
 export const isSourceType = (data: string): data is SourceType => {
