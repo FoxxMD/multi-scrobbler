@@ -60,7 +60,7 @@ A dockerized app that monitors your music listening activity from *everywhere* a
 
 [**Quick Start Guide**](https://foxxmd.github.io/multi-scrobbler//quickstart)
 
-<img src="/assets/status-ui.png" width="800">
+<img src="/docsite/static/img/status-ui.png" width="800">
 
 **Why should I use this over a browser extension and/or mobile app scrobbler?**
 
