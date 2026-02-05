@@ -1,7 +1,9 @@
 import { CommonSourceConfig, CommonSourceData, CommonSourceOptions } from "./index.js";
 import {
     // @ts-expect-error weird typings?
-    CollectionType
+    CollectionType,
+        // @ts-expect-error weird typings?
+    MediaType,
 } from "@jellyfin/sdk/lib/generated-client/index.js";
 
 export interface JellyApiData extends CommonSourceData {
@@ -66,8 +68,21 @@ export interface JellyApiData extends CommonSourceData {
     * Force media with a type of "Unknown" to be counted as Audio
     * 
     * @default false
+    * @deprecated use allowMediaTypes instead
     */
     allowUnknown?: boolean
+
+    /**
+    * Allow these media types to be scrobbled.
+    * 
+    * If not defined or empty, uses 'Audio' as default. If non-empty then *only* uses these types (make sure you include Audio!)
+    * 
+    * Values are case-insensitive.
+    * 
+    * See https://github.com/jellyfin/jellyfin-sdk-typescript/blob/master/src/generated-client/models/media-type.ts#L22 for possible types
+    * 
+    */
+    allowMediaTypes?: MediaType[] | string
 
     /**
      * HOST:PORT of the Jellyfin server that your browser will be able to access from the frontend (and thus load images and links from)
