@@ -39,6 +39,9 @@ export interface DeezerInternalData extends CommonSourceData, PollingOptions {
      * @default "Mozilla/5.0 (X11; Linux i686; rv:135.0) Gecko/20100101 Firefox/135.0"
      */
     userAgent?: string
+
+    /** The ID (USER_ID) of the linked account to monitor. If not set, monitors the main ARL account */
+    accountId?: string
 }
 
 export interface DeezerInternalSourceConfig extends CommonSourceConfig {
