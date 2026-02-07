@@ -15,11 +15,12 @@ import { getAddress } from "../utils/NetworkUtils.js";
 import { setupApi } from "./api.js";
 import ScrobbleSources from '../sources/ScrobbleSources.js';
 import ScrobbleClients from '../scrobblers/ScrobbleClients.js';
+import { TransferManager } from '../transfer/TransferManager.js';
 
 const app = addAsync(express());
 const router = Router();
 
-export const initServer = async (parentLogger: Logger, appLoggerStream: PassThrough, initialOutput: LogDataPretty[] = [], sources: ScrobbleSources, clients: ScrobbleClients) => {
+export const initServer = async (parentLogger: Logger, appLoggerStream: PassThrough, initialOutput: LogDataPretty[] = [], sources: ScrobbleSources, clients: ScrobbleClients, transferManager: TransferManager) => {
 
     const logger = childLogger(parentLogger, 'API'); // parentLogger.child({labels: ['API']}, mergeArr);
 
@@ -50,7 +51,7 @@ export const initServer = async (parentLogger: Logger, appLoggerStream: PassThro
         const local = root.get('localUrl');
         const localDefined = root.get('hasDefinedBaseUrl');
 
-        setupApi(app, logger, appLoggerStream, initialOutput, sources, clients);
+        setupApi(app, logger, appLoggerStream, initialOutput, sources, clients, transferManager);
 
         const addy = getAddress();
         const addresses: string[] = [];
