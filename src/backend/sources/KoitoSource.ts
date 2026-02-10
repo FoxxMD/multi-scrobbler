@@ -58,12 +58,14 @@ export default class KoitoSource extends MemorySource implements PaginatedTimeRa
     getRecentlyPlayed = async(options: RecentlyPlayedOptions = {}) => {
         const {limit = 20} = options;
         await this.processRecentPlays([]);
-        return await this.api.getRecentlyPlayed(limit);
+        const resp = await this.api.getPaginatedTimeRangeListens({limit, page: 0 });
+        return resp.data;
     }
 
     getUpstreamRecentlyPlayed = async (options: RecentlyPlayedOptions = {}): Promise<PlayObject[]> => {
         try {
-            return await this.api.getRecentlyPlayed(20);
+        const resp = await this.api.getPaginatedTimeRangeListens({limit: 20, page: 0 });
+        return resp.data;
         } catch (e) {
             throw e;
         }

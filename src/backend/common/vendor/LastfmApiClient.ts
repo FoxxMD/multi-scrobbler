@@ -1,5 +1,5 @@
-import dayjs, { Dayjs } from "dayjs";
-import { BrainzMeta, PlayObject, PlayObjectLifecycleless, ScrobbleActionResult, URLData } from "../../../core/Atomic.js";
+import dayjs, { Dayjs, ManipulateType } from "dayjs";
+import { BrainzMeta, PlayObject, PlayObjectLifecycleless, ScrobbleActionResult, UnixTimestamp, URLData, Writeable } from "../../../core/Atomic.js";
 import { nonEmptyStringOrDefault, splitByFirstFound } from "../../../core/StringUtils.js";
 import { removeUndefinedKeys, sleep, writeFile } from "../../utils.js";
 import { objectIsEmpty, readJson } from '../../utils/DataUtils.js';
@@ -7,11 +7,11 @@ import { isPortReachableConnect, joinedUrl, normalizeWebAddress } from "../../ut
 import { getScrobbleTsSOCDate } from "../../utils/TimeUtils.js";
 import { getNodeNetworkException, isNodeNetworkException } from "../errors/NodeErrors.js";
 import { UpstreamError } from "../errors/UpstreamError.js";
-import { AbstractApiOptions, DEFAULT_RETRY_MULTIPLIER, FormatPlayObjectOptions, InternalConfigOptional } from "../infrastructure/Atomic.js";
+import { AbstractApiOptions, DEFAULT_RETRY_MULTIPLIER, FormatPlayObjectOptions, InternalConfigOptional, PaginatedListensTimeRangeOptions, PaginatedTimeRangeListens, PaginatedTimeRangeListensResult } from "../infrastructure/Atomic.js";
 import { LastfmData } from "../infrastructure/config/client/lastfm.js";
 import AbstractApiClient from "./AbstractApiClient.js";
 import { normalizeStr, parseArtistCredits } from "../../utils/StringUtils.js";
-import { LastFMUser, LastFMAuth, LastFMTrack, LastFMUserGetRecentTracksResponse, LastFMBooleanNumber, LastFMUpdateNowPlayingResponse, LastFMUserGetInfoResponse } from 'lastfm-ts-api';
+import { LastFMUser, LastFMAuth, LastFMTrack, LastFMUserGetRecentTracksResponse, LastFMBooleanNumber, LastFMUpdateNowPlayingResponse, LastFMUserGetInfoResponse, LastFMUserGetRecentTracksParams } from 'lastfm-ts-api';
 import clone from 'clone';
 import { IncomingMessage } from "http";
 import { baseFormatPlayObj } from "../../utils/PlayTransformUtils.js";
@@ -37,7 +37,7 @@ export const LIBREFM_PATH = '/2.0/';
 export const LASTFM_HOST = 'ws.audioscrobbler.com';
 export const LASTFM_PATH = '/2.0';
 
-export default class LastfmApiClient extends AbstractApiClient {
+export default class LastfmApiClient extends AbstractApiClient implements PaginatedTimeRangeListens {
 
     user?: string;
     declare config: LastfmData;
@@ -249,24 +249,28 @@ export default class LastfmApiClient extends AbstractApiClient {
         return await this.getRecentTracks({limit, from, to, page, extended: 1});
     }
 
-    getRecentTracks = async (options: TracksFetchOptions = {}): Promise<PlayObject[]> => {
+    getPaginatedUnitOfTime(): ManipulateType {
+        return 'second';
+    }
 
-        let resp: LastFMUserGetRecentTracksResponse;
-        try {
-            resp = await this.callApi<LastFMUserGetRecentTracksResponse>(() => this.userApi.getRecentTracks({
-                ...options, 
-                user: this.user,
-                // sk is required if user has "Hide recent listening" enabled on their profile
-                sk: this.sessionKey,
-                extended: 1
-            }));
+    getPaginatedTimeRangeListens = async (fetchOptions: PaginatedListensTimeRangeOptions, options: {includeNowPlaying?: boolean} = {}): Promise<PaginatedTimeRangeListensResult> => {
 
-            const {
-                recenttracks: {
-                    track: list = [],
-                } = {}
-            } = resp;
-            return list.reduce((acc: any, x: any) => {
+        const resp = await this.getRecentTracksWithPagination(fetchOptions);
+
+        const {includeNowPlaying = false} =  options;
+
+        const {
+            recenttracks: {
+                track: list = [],
+                '@attr': {
+                    total,
+                    totalPages,
+                    page
+                }
+            } = {},
+        } = resp;
+
+        const plays = list.reduce((acc: any, x: any) => {
                 try {
                     const formatted = formatPlayObj(x);
                     const {
@@ -279,7 +283,7 @@ export default class LastfmApiClient extends AbstractApiClient {
                             nowPlaying,
                         }
                     } = formatted;
-                    if (nowPlaying === true) {
+                    if (nowPlaying === true && !includeNowPlaying) {
                         // if the track is "now playing" it doesn't get a timestamp so we can't determine when it started playing
                         // and don't want to accidentally count the same track at different timestamps by artificially assigning it 'now' as a timestamp
                         // so we'll just ignore it in the context of recent tracks since really we only want "tracks that have already finished being played" anyway
@@ -292,11 +296,37 @@ export default class LastfmApiClient extends AbstractApiClient {
                     return acc.concat(formatted);
                 } catch (e) {
                     this.logger.warn(new Error(`Failed to format ${this.upstreamName} recently scrobbled track, omitting from time frame check`, { cause: e }));
-                    this.logger.debug('Full api response object:');
-                    this.logger.debug(x);
+                    this.logger.debug({data: x}, 'Full api response object:');
                     return acc;
                 }
             }, []);
+
+        return {data: plays, meta: {...fetchOptions, total: parseInt(total, 10), more: fetchOptions.page < parseInt(totalPages, 10)}};
+
+    }
+
+    getRecentTracks = async (options: TracksFetchOptions = {}): Promise<LastFMUserGetRecentTracksResponse> => {
+
+        const { to, from, extended = 1, ...rest} = options;
+
+        const requestOpts: Writeable<LastFMUserGetRecentTracksParams> = {
+            ...rest,
+            // sk is required if user has "Hide recent listening" enabled on their profile
+            sk: this.sessionKey,
+            user: this.user,
+            extended
+        };
+
+        if(to !== undefined) {
+            requestOpts.to = to.toString();
+        }
+        if(from !== undefined) {
+            requestOpts.from = from.toString();
+        }
+
+        let resp: LastFMUserGetRecentTracksResponse;
+        try {
+            return await this.callApi<LastFMUserGetRecentTracksResponse>(() => this.userApi.getRecentTracks(requestOpts));
         } catch (e) {
             if(e.message.includes('Invalid resource specified')) {
                 // likely the user does not have any scrobbles on their profile yet
@@ -304,7 +334,18 @@ export default class LastfmApiClient extends AbstractApiClient {
                 // https://github.com/libre-fm/libre-fm/discussions/91#discussioncomment-15456070
                 // so we log as a warning and return empty array instead
                 this.logger.warn(new Error('This error occurs when a librefm (and lastfm?) account has no existing scrobbles yet. If you are seeing this warning and this is not the case, please create an issue', {cause: e}));
-                return [];
+                return {
+                    recenttracks: {
+                        track: [],
+                        '@attr': {
+                            user: this.user,
+                            totalPages: '0',
+                            total: '0',
+                            page: '1',
+                            perPage: '50'
+                        }
+                    }
+                }
             }
             this.logger.debug(resp);
             throw e;
@@ -406,10 +447,11 @@ export default class LastfmApiClient extends AbstractApiClient {
 }
 
 export interface TracksFetchOptions {
-    to?: string
-    from?: string
+    to?: UnixTimestamp
+    from?: UnixTimestamp
     extended?: 0 | 1
     page?: number
+    /** Max 200. Default is 50 */
     limit?: number
 }
 
