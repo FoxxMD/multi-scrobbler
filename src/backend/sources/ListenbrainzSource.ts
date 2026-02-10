@@ -13,7 +13,7 @@ import { PlayerStateOptions } from "./PlayerState/AbstractPlayerState.js";
 import { NowPlayingPlayerState } from "./PlayerState/NowPlayingPlayerState.js";
 import { ManipulateType } from "dayjs";
 
-export default class ListenbrainzSource extends MemorySource implements PagelessTimeRangeListens {
+export default class ListenbrainzSource extends MemorySource {
 
     api: ListenbrainzApiClient;
     requiresAuth = true;
@@ -90,15 +90,6 @@ export default class ListenbrainzSource extends MemorySource implements Pageless
         } catch (e) {
             throw e;
         }
-    }
-
-    getPagelessTimeRangeListens = async (options: PagelessListensTimeRangeOptions) => {
-        const resp = await this.api.getUserListensWithPagination({
-            count: options.limit,
-            minTs: options.from,
-            maxTs: options.to
-        });
-        return {data: resp.listens.map(x => ListenbrainzSource.formatPlayObj(x)), meta: {...options, total: resp.count}};
     }
 
     getPaginatedUnitOfTime(): ManipulateType {
