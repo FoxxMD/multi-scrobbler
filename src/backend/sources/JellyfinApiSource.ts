@@ -378,8 +378,11 @@ export default class JellyfinApiSource extends MemoryPositionalSource {
                 (play.data.artists === undefined || play.data.artists.length === 0) */) {
                     return `media detected as a ThemeSong (ExtraType) is not allowed`;
             }
-            if(session.NowPlayingItem.Type !== 'Audio') {
-                    return `media detected as a ${session.NowPlayingItem.Type} (Type) is not allowed`;
+            if(session.NowPlayingItem === undefined && !this.allowedMediaTypes.includes(MediaType.Unknown)) {
+                return `media without a Type detected is not allowed (Unknown not included in allowMediaTypes)`;
+            }
+            if(!this.allowedMediaTypes.includes(session.NowPlayingItem.Type)) {
+                return `media detected as a ${session.NowPlayingItem.Type} (Type) is not allowed`;
             }
         }
 
@@ -615,6 +618,9 @@ const stringToMediaType = (str: string): MediaType => {
         case 'book':
         case 'books':
             return MediaType.Book;
+        case 'musicvideo':
+        case 'musicvideos':
+            return 'MusicVideo' as MediaType;
         default:
             throw new Error(`Not a valid MediaType: ${str}`);
     }
