@@ -84,7 +84,7 @@ export interface JellyApiOptions extends CommonSourceOptions {
 
 export interface JellyApiSourceConfig extends CommonSourceConfig {
     data: JellyApiData
-    options: JellyApiOptions
+    options?: JellyApiOptions
 }
 
 export interface JellyApiSourceAIOConfig extends JellyApiSourceConfig {
