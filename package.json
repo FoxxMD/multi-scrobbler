@@ -47,6 +47,7 @@
   "dependencies": {
     "@astronautlabs/mdns": "^1.0.7",
     "@atcute/identity-resolver-node": "^1.0.3",
+    "@atcute/tid": "^1.1.1",
     "@atproto/api": "^0.18.0",
     "@atproto/oauth-client-node": "^0.3.10",
     "@awaitjs/express": "^0.6.3",
