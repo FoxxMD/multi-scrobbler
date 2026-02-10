@@ -70,43 +70,43 @@ export default class ListenbrainzScrobbler extends AbstractScrobbleClient {
         return await this.api.getRecentlyPlayed(limit);
     }
 
-    getScrobblesForTimeRange = async (fromDate?: Dayjs, toDate?: Dayjs, limit: number = 1000): Promise<PlayObject[]> => {
-        const allPlays: PlayObject[] = [];
-        let maxTs = toDate?.unix();
-        const minTs = fromDate?.unix();
+    // getScrobblesForTimeRange = async (fromDate?: Dayjs, toDate?: Dayjs, limit: number = 1000): Promise<PlayObject[]> => {
+    //     const allPlays: PlayObject[] = [];
+    //     let maxTs = toDate?.unix();
+    //     const minTs = fromDate?.unix();
 
-        while (allPlays.length < limit) {
-            const batchSize = Math.min(100, limit - allPlays.length);
-            const resp = await this.api.getUserListensWithPagination({
-                count: batchSize,
-                minTs,
-                maxTs,
-            });
+    //     while (allPlays.length < limit) {
+    //         const batchSize = Math.min(100, limit - allPlays.length);
+    //         const resp = await this.api.getUserListensWithPagination({
+    //             count: batchSize,
+    //             minTs,
+    //             maxTs,
+    //         });
 
-            if (!resp.listens || resp.listens.length === 0) {
-                break;
-            }
+    //         if (!resp.listens || resp.listens.length === 0) {
+    //             break;
+    //         }
 
-            const plays = resp.listens
-                .map(l => ListenbrainzApiClient.formatPlayObj(l, {}))
-                .filter(p => p.data.playDate && p.data.playDate.isValid()); // Filter out plays with invalid dates
+    //         const plays = resp.listens
+    //             .map(l => ListenbrainzApiClient.formatPlayObj(l, {}))
+    //             .filter(p => p.data.playDate && p.data.playDate.isValid()); // Filter out plays with invalid dates
 
-            allPlays.push(...plays);
+    //         allPlays.push(...plays);
 
-            if (plays.length < batchSize) {
-                break;
-            }
+    //         if (plays.length < batchSize) {
+    //             break;
+    //         }
 
-            const oldestPlay = plays[plays.length - 1];
-            if (oldestPlay.data.playDate) {
-                maxTs = oldestPlay.data.playDate.unix() - 1;
-            } else {
-                break;
-            }
-        }
+    //         const oldestPlay = plays[plays.length - 1];
+    //         if (oldestPlay.data.playDate) {
+    //             maxTs = oldestPlay.data.playDate.unix() - 1;
+    //         } else {
+    //             break;
+    //         }
+    //     }
 
-        return allPlays;
-    }
+    //     return allPlays;
+    // }
 
     alreadyScrobbled = async (playObj: PlayObject, log = false) => (await this.existingScrobble(playObj)) !== undefined
 

@@ -4,7 +4,7 @@ import { Dayjs, ManipulateType } from "dayjs";
 import { Request, Response } from "express";
 import { NextFunction, ParamsDictionary, Query } from "express-serve-static-core";
 import { FixedSizeList } from 'fixed-size-list';
-import { isPlayObject, PlayMeta, PlayObject, PlayObjectLifecycleless } from "../../../core/Atomic.js";
+import { isPlayObject, PlayMeta, PlayObject, PlayObjectLifecycleless, UnixTimestamp } from "../../../core/Atomic.js";
 import TupleMap from "../TupleMap.js";
 import { MusicBrainzApi } from 'musicbrainz-api';
 
@@ -400,16 +400,18 @@ export interface MusicbrainzApiConfigData {
 export const MUSICBRAINZ_URL = 'https://musicbrainz.org';
 export const MBID_VARIOUS_ARTISTS = "89ad4ac3-39f7-470e-963a-56509c546377";
 
-export type MusicBrainzSingletonMap = Map<string,MusicBrainzApi>;export interface PaginatedLimit {
+export type MusicBrainzSingletonMap = Map<string,MusicBrainzApi>;
+
+export interface PaginatedLimit {
     /** per page max number of results to return */
     limit?: number
 }
 
 export interface PaginatedTimeRangeOptions {
     /** Unix timestamp */
-    from: number
+    from: UnixTimestamp
     /** Unix timestamp */
-    to: number
+    to: UnixTimestamp
 }
 
 export interface PaginatedListensOptions extends PaginatedLimit {
@@ -424,6 +426,7 @@ export interface PaginatedListensTimeRangeOptions extends Partial<PaginatedTimeR
 
 export interface PaginatedResults {
     total?: number
+    more?: boolean
 }
 
 export interface PaginatedListens {
@@ -434,8 +437,12 @@ export const hasPaginagedListens = (obj: Object): obj is PaginatedListens => {
     return 'getPaginatedListens' in obj;
 }
 
+export interface PaginatedTimeRangeListensResult {
+    data: PlayObject[];
+    meta: PaginatedListensTimeRangeOptions & PaginatedResults;
+}
 export interface PaginatedTimeRangeListens {
-    getPaginatedTimeRangeListens(params: PaginatedListensTimeRangeOptions): Promise<{data: PlayObject[], meta: PaginatedListensTimeRangeOptions & PaginatedResults}>
+    getPaginatedTimeRangeListens(params: PaginatedListensTimeRangeOptions): Promise<PaginatedTimeRangeListensResult>
     getPaginatedUnitOfTime(): ManipulateType;
 }
 
@@ -443,12 +450,17 @@ export const hasPaginatedTimeRangeListens = (obj: Object): obj is PaginatedTimeR
     return 'getPaginatedTimeRangeListens' in obj;
 }
 
+export interface PagelessTimeRangeListensResult {
+    data: PlayObject[]
+    meta: PagelessListensTimeRangeOptions & PaginatedResults
+}
 export interface PagelessTimeRangeListens {
-    getPagelessTimeRangeListens(params: PagelessListensTimeRangeOptions): Promise<{data: PlayObject[], meta: PagelessListensTimeRangeOptions & PaginatedResults}>
+    getPagelessTimeRangeListens(params: PagelessListensTimeRangeOptions): Promise<PagelessTimeRangeListensResult>
+    getPaginatedUnitOfTime(): ManipulateType;
 }
 
 export const hasPagelessTimeRangeListens = (obj: Object): obj is PagelessTimeRangeListens => {
-    return 'getPaginatedTimeRangeListens' in obj;
+    return 'getPagelessTimeRangeListens' in obj;
 }
 
 export type PaginatedSource = PaginatedListens | PaginatedTimeRangeListens | PagelessTimeRangeListens;

@@ -5,7 +5,7 @@ import AbstractApiClient from "../AbstractApiClient.js";
 import { getBaseFromUrl, isPortReachableConnect, joinedUrl, normalizeWebAddress } from "../../../utils/NetworkUtils.js";
 import { MalojaData } from "../../infrastructure/config/client/maloja.js";
 import { PlayObject, PlayObjectLifecycleless, ScrobbleActionResult, URLData } from "../../../../core/Atomic.js";
-import { AbstractApiOptions, DEFAULT_RETRY_MULTIPLIER, FormatPlayObjectOptions, PaginatedListensTimeRangeOptions, PaginatedTimeRangeListens } from "../../infrastructure/Atomic.js";
+import { AbstractApiOptions, DEFAULT_RETRY_MULTIPLIER, FormatPlayObjectOptions, PaginatedListensTimeRangeOptions, PaginatedTimeRangeListens, PaginatedTimeRangeListensResult } from "../../infrastructure/Atomic.js";
 import { isNodeNetworkException } from "../../errors/NodeErrors.js";
 import { isSuperAgentResponseError } from "../../errors/ErrorUtils.js";
 import { getNonEmptyVal, parseRetryAfterSecsFromObj, removeUndefinedKeys, sleep } from "../../../utils.js";
@@ -179,28 +179,40 @@ export class MalojaApiClient extends AbstractApiClient implements PaginatedTimeR
         }
     }
 
-    getRecentScrobbles = async (limit: number) => {
-        const resp = await this.callApi(request.get(`${this.url.url}/apis/mlj_1/scrobbles?perpage=${limit}`));
-        const {
-            body: {
-                list = [],
-            } = {},
-        } = resp;
-        return list.map(formatPlayObj);
-    }
+    // getRecentScrobbles = async (limit: number) => {
+    //     const resp = await this.callApi(request.get(`${this.url.url}/apis/mlj_1/scrobbles?perpage=${limit}`));
+    //     const {
+    //         body: {
+    //             list = [],
+    //         } = {},
+    //     } = resp;
+    //     return list.map(formatPlayObj);
+    // }
 
-    getPaginatedTimeRangeListens = async (params: PaginatedListensTimeRangeOptions) => {
-        const resp = await this.callApi(request.get(`${this.url.url}/apis/mlj_1/scrobbles`).query({
+    getPaginatedTimeRangeListens = async (params: PaginatedListensTimeRangeOptions): Promise<PaginatedTimeRangeListensResult> => {
+
+        const opts: RecentlyPlayedRequestOptions = {
             perpage: params.limit,
             page: params.page,
             from: params.from !== undefined ? dayjs.unix(params.from).format('YYYY/MM/DD') : undefined,
-            to: params.to !== undefined ? dayjs.unix(params.from).format('YYYY/MM/DD') : undefined
-        }));
+            until: params.to !== undefined ? dayjs.unix(params.from).format('YYYY/MM/DD') : undefined
+        };
+
+        const resp = await this.getScrobbles(opts);
 
         return {
-            data: resp.body.list.map(formatPlayObj),
-            meta: params
+            data: resp.list.map(x => formatPlayObj(x)),
+            meta: {...params, more: resp.pagination.next_page !== null}
         }
+    }
+
+    getScrobbles = async (options: RecentlyPlayedRequestOptions = {}): Promise<RecentlyPlayedResponse> => {
+        const resp = await this.callApi(request.get(`${this.url.url}/apis/mlj_1/scrobbles`).query(removeUndefinedKeys(options)));
+                const {
+            body
+        } = resp;
+
+        return body as RecentlyPlayedResponse;
     }
 
     getPaginatedUnitOfTime(): ManipulateType {
@@ -456,4 +468,24 @@ export const playToScrobblePayload = (playObj: PlayObject, apiKey?: string): Mal
     // https://github.com/FoxxMD/multi-scrobbler/issues/454#issuecomment-3806367420
 
     return scrobbleData;
+}
+
+export interface RecentlyPlayedRequestOptions {
+    page?: number;
+    perpage?: number;
+    /** start of timerange, smallest granularity like '2026/02/10 */
+    from?: string;
+    /** end of timerange, smallest granularity like '2026/02/10 */
+    until?: string;
+}
+
+export interface RecentlyPlayedResponse {
+    list: MalojaScrobbleData[];
+    pagination: {
+        next_page: null |string
+        prev_page: null | string
+        page: number
+        perpage: number
+    }
+    status: string;
 }
