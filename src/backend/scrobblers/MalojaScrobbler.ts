@@ -77,7 +77,8 @@ export default class MalojaScrobbler extends AbstractScrobbleClient {
     }
 
     getScrobblesForRefresh = async (limit: number) => {
-        return await this.api.getRecentScrobbles(limit);
+        const resp = await this.api.getPaginatedTimeRangeListens({limit, page: 0});
+        return resp.data;
     }
 
     alreadyScrobbled = async (playObj: any, log = false) => (await this.existingScrobble(playObj)) !== undefined

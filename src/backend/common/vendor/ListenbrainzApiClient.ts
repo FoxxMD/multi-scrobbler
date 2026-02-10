@@ -1,7 +1,7 @@
 import { stringSameness } from '@foxxmd/string-sameness';
 import dayjs from "dayjs";
 import request, { Request, Response } from 'superagent';
-import { BrainzMeta, PlayObject, PlayObjectLifecycleless, ScrobbleActionResult, URLData } from "../../../core/Atomic.js";
+import { BrainzMeta, PlayObject, PlayObjectLifecycleless, ScrobbleActionResult, UnixTimestamp, URLData } from "../../../core/Atomic.js";
 import { combinePartsToString, slice } from "../../../core/StringUtils.js";
 import {
     findDelimiters,
@@ -14,7 +14,7 @@ import {
 } from "../../utils/StringUtils.js";
 import { getScrobbleTsSOCDate } from "../../utils/TimeUtils.js";
 import { UpstreamError } from "../errors/UpstreamError.js";
-import { AbstractApiOptions, DEFAULT_RETRY_MULTIPLIER, DELIMITERS, FormatPlayObjectOptions } from "../infrastructure/Atomic.js";
+import { AbstractApiOptions, DEFAULT_RETRY_MULTIPLIER, DELIMITERS, FormatPlayObjectOptions, PagelessListensTimeRangeOptions, PagelessTimeRangeListens, PagelessTimeRangeListensResult } from "../infrastructure/Atomic.js";
 import { ListenBrainzClientData } from "../infrastructure/config/client/listenbrainz.js";
 import AbstractApiClient from "./AbstractApiClient.js";
 import { getBaseFromUrl, isPortReachableConnect, joinedUrl, normalizeWebAddress } from '../../utils/NetworkUtils.js';
@@ -34,9 +34,29 @@ interface SubmitOptions {
 export interface ListensResponse {
     count: number;
     listens: ListenResponse[];
+    latest_listen_ts: number;
+    oldest_listen_ts: number;
 }
 
-export class ListenbrainzApiClient extends AbstractApiClient {
+export interface UserListensOptions {
+    /** unix epoch timestamp, listens with listened_at less than (but not including) this value will be returned. */
+    max_ts?: UnixTimestamp
+    /** unix epoch timestamp, listens with listened_at greater than (but not including) this value will be returned. */
+    min_ts?: UnixTimestamp
+    /** number of listens to return. Max is `MAX_ITEMS_PER_GET`
+     * 
+     * @default 25
+     */
+    count?: number
+}
+
+/** https://github.com/metabrainz/listenbrainz-server/pull/2572
+ * https://github.com/metabrainz/listenbrainz-server/blob/master/listenbrainz/webserver/views/api_tools.py#L48
+ */
+const MAX_ITEMS_PER_GET = 1000;
+const DEFAULT_ITEMS_PER_GET = 25;
+
+export class ListenbrainzApiClient extends AbstractApiClient implements PagelessTimeRangeListens {
 
     declare config: ListenBrainzClientData;
     url: URLData;
@@ -262,36 +282,65 @@ export class ListenbrainzApiClient extends AbstractApiClient {
         return playObj;
     }
 
-    getUserListensWithPagination = async (options: {
-        count?: number;
-        minTs?: number;
-        maxTs?: number;
-        user?: string;
-    } = {}): Promise<ListensResponse> => {
-        const { count = 100, minTs, maxTs, user } = options;
+    getUserListensWithPagination = async (options: UserListensOptions & {user?: string} = {}): Promise<ListensResponse> => {
+        const { count = 100, user } = options;
 
         try {
-            const query: any = { count };
-            if (minTs !== undefined) {
-                query.min_ts = minTs;
-            }
-            if (maxTs !== undefined) {
-                query.max_ts = maxTs;
-            }
-
+            /** https://rain0r.github.io/listenbrainz-openapi/#/lbCore/listensForUser
+             *  https://listenbrainz.readthedocs.io/en/latest/users/api/core.html#get--1-user-(mb_username-user_name)-listens
+             */
             const resp = await this.callApi(request
                 .get(`${joinedUrl(this.url.url,'1/user', user ?? this.config.username, 'listens')}`)
                 .timeout({
                     response: 15000,
                     deadline: 30000
                 })
-                .query(query));
+                .query({...options, count: Math.min(count, MAX_ITEMS_PER_GET)}));
 
             const {body: {payload}} = resp as any;
             return payload as ListensResponse;
         } catch (e) {
             throw e;
         }
+    }
+
+    getPagelessTimeRangeListens = async (options: PagelessListensTimeRangeOptions & {user?: string} = {}): Promise<PagelessTimeRangeListensResult> => {
+        const { limit = 100, to, from, user } = options;
+
+        const lzListensOptions: UserListensOptions = {
+            count: Math.min(limit, MAX_ITEMS_PER_GET),
+        };
+
+        try {
+            if (from !== undefined) {
+                lzListensOptions.min_ts = from;
+            }
+            if (to !== undefined) {
+                lzListensOptions.max_ts = to;
+            }
+
+            /** https://rain0r.github.io/listenbrainz-openapi/#/lbCore/listensForUser
+             *  https://listenbrainz.readthedocs.io/en/latest/users/api/core.html#get--1-user-(mb_username-user_name)-listens
+             */
+            const resp = await this.callApi(request
+                .get(`${joinedUrl(this.url.url,'1/user', user ?? this.config.username, 'listens')}`)
+                .timeout({
+                    response: 15000,
+                    deadline: 30000
+                })
+                .query(lzListensOptions));
+
+            const {body: {payload}} = resp as any;
+            const lr = payload as ListensResponse;
+            const more = to > lr.latest_listen_ts;
+            return {data: lr.listens.map(x => listenResponseToPlay(x)), meta: {...options, total: lr.count, more}};
+        } catch (e) {
+            throw e;
+        }
+    }
+
+    getPaginatedUnitOfTime(): dayjs.ManipulateType {
+        return 'second';
     }
 
 

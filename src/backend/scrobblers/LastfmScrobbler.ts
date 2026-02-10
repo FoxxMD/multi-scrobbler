@@ -59,51 +59,52 @@ export default class LastfmScrobbler extends AbstractScrobbleClient {
     }
 
     getScrobblesForRefresh = async (limit: number) => {
-        return await this.api.getRecentTracks({limit});
+        const {data: plays} = await this.api.getPaginatedTimeRangeListens({limit, page: 1});
+        return plays;
     }
 
-    getScrobblesForTimeRange = async (fromDate?: Dayjs, toDate?: Dayjs, limit: number = 1000): Promise<PlayObject[]> => {
-        const allPlays: PlayObject[] = [];
-        let currentPage = 1;
-        const perPage = 200;
+    // getScrobblesForTimeRange = async (fromDate?: Dayjs, toDate?: Dayjs, limit: number = 1000): Promise<PlayObject[]> => {
+    //     const allPlays: PlayObject[] = [];
+    //     let currentPage = 1;
+    //     const perPage = 200;
 
-        while (allPlays.length < limit) {
-            const resp = await this.api.getRecentTracksWithPagination({
-                page: currentPage,
-                limit: perPage,
-                from: fromDate?.unix().toString(),
-                to: toDate?.unix().toString(),
-            });
+    //     while (allPlays.length < limit) {
+    //         const resp = await this.api.getRecentTracksWithPagination({
+    //             page: currentPage,
+    //             limit: perPage,
+    //             from: fromDate?.unix(),
+    //             to: toDate?.unix(),
+    //         });
 
-            const {
-                recenttracks: {
-                    track: rawTracks = [],
-                    '@attr': pageInfo
-                } = {}
-            } = resp;
+    //         const {
+    //             recenttracks: {
+    //                 track: rawTracks = [],
+    //                 '@attr': pageInfo
+    //             } = {}
+    //         } = resp;
 
-            if (rawTracks.length === 0) {
-                break;
-            }
+    //         if (rawTracks.length === 0) {
+    //             break;
+    //         }
 
-            const plays = resp
-                .filter(p => p.data.playDate !== undefined && p.data.playDate.isValid()); // Filter out plays with invalid dates
+    //         const plays = resp
+    //             .filter(p => p.data.playDate !== undefined && p.data.playDate.isValid()); // Filter out plays with invalid dates
 
-            allPlays.push(...plays);
+    //         allPlays.push(...plays);
 
-            if (allPlays.length >= limit) {
-                break;
-            }
+    //         if (allPlays.length >= limit) {
+    //             break;
+    //         }
 
-            if (pageInfo && currentPage >= parseInt(pageInfo.totalPages, 10)) {
-                break;
-            }
+    //         if (pageInfo && currentPage >= parseInt(pageInfo.totalPages, 10)) {
+    //             break;
+    //         }
 
-            currentPage++;
-        }
+    //         currentPage++;
+    //     }
 
-        return allPlays.slice(0, limit);
-    }
+    //     return allPlays.slice(0, limit);
+    // }
 
     cleanSourceSearchTitle = (playObj: PlayObject) => {
         const {

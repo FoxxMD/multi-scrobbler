@@ -1,7 +1,7 @@
 import dayjs from "dayjs";
 import { PlayObject, PlayObjectLifecycleless, ScrobbleActionResult, URLData } from "../../../../core/Atomic.js";
-import { AbstractApiOptions, DEFAULT_RETRY_MULTIPLIER, PaginatedListensTimeRangeOptions, PaginatedTimeRangeListens } from "../../infrastructure/Atomic.js";
-import { KoitoData, ListenObjectResponse, ListensResponse } from "../../infrastructure/config/client/koito.js";
+import { AbstractApiOptions, DEFAULT_RETRY_MULTIPLIER, PaginatedListensTimeRangeOptions, PaginatedTimeRangeListens, PaginatedTimeRangeListensResult } from "../../infrastructure/Atomic.js";
+import { GetListensOptions, KoitoData, ListenObjectResponse, ListensResponse } from "../../infrastructure/config/client/koito.js";
 import AbstractApiClient from "../AbstractApiClient.js";
 import { getBaseFromUrl, isPortReachableConnect, joinedUrl, normalizeWebAddress } from "../../../utils/NetworkUtils.js";
 import request, { Request, Response } from 'superagent';
@@ -128,15 +128,16 @@ export class KoitoApiClient extends AbstractApiClient implements PaginatedTimeRa
         }
     }
 
-    getUserListens = async (maxTracks: number): Promise<ListensResponse> => {
+    getUserListens = async (options: GetListensOptions): Promise<ListensResponse> => {
+        const {page = 0} = options;
         try {
 
             const resp = await this.callApi(request
                 .get(`${joinedUrl(this.url.url, '/apis/web/v1/listens')}`)
                 .query({
                     period: 'all_time',
-                    page: 0,
-                    limit: maxTracks
+                    page,
+                    ...options
                 })
             );
             const { body } = resp as any;
@@ -146,92 +147,39 @@ export class KoitoApiClient extends AbstractApiClient implements PaginatedTimeRa
         }
     }
 
-    getUserListensWithPagination = async (options: {
-        count?: number;
-        minTs?: number;
-        maxTs?: number;
-    } = {}): Promise<ListensResponse> => {
-        const { count = 100, minTs, maxTs } = options;
+    getPaginatedTimeRangeListens = async (params: PaginatedListensTimeRangeOptions): Promise<PaginatedTimeRangeListensResult> => {
 
+        let resp: ListensResponse;
         try {
-            const query: any = { count };
-            if (minTs !== undefined) {
-                query.min_ts = minTs;
-            }
-            if (maxTs !== undefined) {
-                query.max_ts = maxTs;
-            }
-
-            const resp = await this.callApi(request
-                .get(`${joinedUrl(this.url.url, '/apis/listenbrainz/1/user', this.config.username, 'listens')}`)
-                .timeout({
-                    response: 15000,
-                    deadline: 30000
-                })
-                .query(query));
-
-            const { body: { payload } } = resp as any;
-            return payload as ListensResponse;
-        } catch (e) {
-            throw e;
-        }
+        resp = await this.getUserListens(params);    
+    } catch (e) {
+        throw new Error('Error occurred while getting Koito paginated listens', { cause: e });
     }
 
-    getPaginatedTimeRangeListens = async (params: PaginatedListensTimeRangeOptions) => {
-        let dateData: {week?: number, month?: number, year?: number} = {};
-        if(params.from !== undefined && params.to !== undefined) {
-            const from = dayjs.unix(params.from);
-            const to = dayjs.unix(params.to);
-            if(from.week() === to.week()) {
-                from.subtract
-                dateData = {
-                    year: from.year(),
-                    month: from.month(),
-                    week: from.week()
-                }
-            } else if(from.month() === to.month()) {
-                dateData = {
-                    year: from.year(),
-                    month: from.month(),
-                }
-            } else {
-                dateData = {
-                    year: from.year()
-                } 
-            }
-        }
-        const resp = await this.callApi(request
-        .get(`${joinedUrl(this.url.url, '/apis/web/v1/listens')}`)
-        .query({
-            page: params.page,
-            limit: params.limit,
-            ...dateData
-        }));
-
-        const r = resp.body as ListensResponse;
-
         return {
-            data: r.items.map((x => listenObjectResponseToPlay(x))),
+            data: resp.items.map((x => listenObjectResponseToPlay(x, { url: this.url.url }))),
             meta: {
                 ...params,
-                total: r.total_record_count
+                total: resp.total_record_count,
+                page: resp.current_page,
+                more: resp.has_next_page
             }
         }
     }
 
     getPaginatedUnitOfTime(): dayjs.ManipulateType {
-        return 'week';
+        return 'second';
     }
 
-    getRecentlyPlayed = async (maxTracks: number): Promise<PlayObject[]> => {
-        try {
-            const resp = await this.getUserListens(maxTracks);
-            return resp.items.map(x => listenObjectResponseToPlay(x, { url: this.url.url }));
-        } catch (e) {
-            this.logger.error(`Error encountered while getting User listens | Error =>  ${e.message}`);
-            return [];
-        }
-    }
+    // getRecentlyPlayed = async (maxTracks: number): Promise<PlayObject[]> => {
+    //     try {
+    //         const resp = await this.getUserListens({limit: maxTracks});
+    //         return resp.items.map(x => listenObjectResponseToPlay(x, { url: this.url.url }));
+    //     } catch (e) {
+    //         this.logger.error(`Error encountered while getting User listens | Error =>  ${e.message}`);
+    //         return [];
+    //     }
+    // }
 
     submitListen = async (play: PlayObject, options: SubmitOptions = {}): Promise<ScrobbleActionResult> => {
         const { log = false, listenType = 'single' } = options;
