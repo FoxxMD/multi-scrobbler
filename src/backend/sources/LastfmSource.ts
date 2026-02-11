@@ -3,7 +3,7 @@ import EventEmitter from "events";
 import request from "superagent";
 import { PlayObject, SOURCE_SOT } from "../../core/Atomic.js";
 import { isNodeNetworkException } from "../common/errors/NodeErrors.js";
-import { FormatPlayObjectOptions, InternalConfig, PaginatedListensTimeRangeOptions, PaginatedTimeRangeListens, PlayPlatformId, SourceType } from "../common/infrastructure/Atomic.js";
+import { FormatPlayObjectOptions, InternalConfig, PaginatedListensTimeRangeOptions, PaginatedTimeRangeListens, PlayPlatformId, SourceType, TimeRangeListensFetcher } from "../common/infrastructure/Atomic.js";
 import { LastfmSourceConfig } from "../common/infrastructure/config/source/lastfm.js";
 import LastfmApiClient, { formatPlayObj } from "../common/vendor/LastfmApiClient.js";
 import { sortByOldestPlayDate } from "../utils.js";
@@ -12,6 +12,7 @@ import MemorySource from "./MemorySource.js";
 import { Logger } from "@foxxmd/logging";
 import { PlayerStateOptions } from "./PlayerState/AbstractPlayerState.js";
 import { NowPlayingPlayerState } from "./PlayerState/NowPlayingPlayerState.js";
+import { createGetScrobblesForTimeRangeFunc } from "../utils/ListenFetchUtils.js";
 
 export default class LastfmSource extends MemorySource implements PaginatedTimeRangeListens {
 
@@ -19,6 +20,7 @@ export default class LastfmSource extends MemorySource implements PaginatedTimeR
     requiresAuth = true;
     requiresAuthInteraction = true;
     upstreamType: string = 'Last.fm';
+    getScrobblesForTimeRange: TimeRangeListensFetcher
 
     declare config: LastfmSourceConfig;
 
@@ -39,7 +41,8 @@ export default class LastfmSource extends MemorySource implements PaginatedTimeR
         this.playerSourceOfTruth = SOURCE_SOT.HISTORY;
         // https://www.last.fm/api/show/user.getRecentTracks
         this.SCROBBLE_BACKLOG_COUNT = 200;
-        this.logger.info(`Note: The player for this source is an analogue for the 'Now Playing' status exposed by ${this.type} which is NOT used for scrobbling. Instead, the 'recently played' or 'history' information provided by this source is used for scrobbles.`)
+        this.logger.info(`Note: The player for this source is an analogue for the 'Now Playing' status exposed by ${this.type} which is NOT used for scrobbling. Instead, the 'recently played' or 'history' information provided by this source is used for scrobbles.`);
+        this.getScrobblesForTimeRange = createGetScrobblesForTimeRangeFunc(this.api, this.api.logger);
     }
 
     static formatPlayObj(obj: any, options: FormatPlayObjectOptions = {}): PlayObject {
