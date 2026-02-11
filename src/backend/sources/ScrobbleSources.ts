@@ -377,6 +377,7 @@ export default class ScrobbleSources {
                         redirectUri: process.env.DEEZER_REDIRECT_URI,
                         accessToken: process.env.DEEZER_ACCESS_TOKEN,
                         arl: process.env.DEEZER_ARL,
+                        accountId: process.env.DEEZER_ACCOUNT_ID
                     };
                     if (!Object.values(d).every(x => x === undefined)) {
                         configs.push({
