@@ -20,7 +20,8 @@
     "docs:start": "cd docsite && npm start",
     "docs:build": "npm run -s schema:docs && cd docsite && npm run build",
     "postinstall": "patch-package",
-    "install:parallel": "concurrently --kill-others-on-fail --names app,docs \"npm ci --no-audit\" \"npm run docs:install\""
+    "install:parallel": "concurrently --kill-others-on-fail --names app,docs \"npm ci --no-audit\" \"npm run docs:install\"",
+    "cliff": "git-cliff --unreleased"
   },
   "exports": {
     ".": {
@@ -179,6 +180,7 @@
     "chai-as-promised": "^7.1.1",
     "eslint": "^8.56.0",
     "eslint-plugin-prefer-arrow-functions": "^3.2.4",
+    "git-cliff": "^2.12.0",
     "mocha": "^10.3.0",
     "mockdate": "^3.0.5",
     "msw": "^2.1.2",
