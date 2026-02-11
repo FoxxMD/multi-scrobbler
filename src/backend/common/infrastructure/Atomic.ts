@@ -443,11 +443,13 @@ export interface PaginatedTimeRangeOptions {
     to: UnixTimestamp
 }
 
+export type PaginatedTimeRangeCommonOptions = Partial<PaginatedTimeRangeOptions> & PaginatedLimit;
+
 export interface PaginatedListensOptions extends PaginatedLimit {
     page: number
 }
 
-export interface PagelessListensTimeRangeOptions extends Partial<PaginatedTimeRangeOptions>, PaginatedLimit {
+export interface PagelessListensTimeRangeOptions extends PaginatedTimeRangeCommonOptions {
 }
 
 export interface PaginatedListensTimeRangeOptions extends Partial<PaginatedTimeRangeOptions>, PaginatedListensOptions {
@@ -456,6 +458,7 @@ export interface PaginatedListensTimeRangeOptions extends Partial<PaginatedTimeR
 export interface PaginatedResults {
     total?: number
     more?: boolean
+    order?: 'desc' | 'asc'
 }
 
 export interface PaginatedListens {
@@ -492,4 +495,7 @@ export const hasPagelessTimeRangeListens = (obj: Object): obj is PagelessTimeRan
     return 'getPagelessTimeRangeListens' in obj;
 }
 
-export type PaginatedSource = PaginatedListens | PaginatedTimeRangeListens | PagelessTimeRangeListens;
+export type PaginatedTimeRangeSource = PaginatedTimeRangeListens | PagelessTimeRangeListens;
+export type PaginatedSource = PaginatedListens | PaginatedTimeRangeSource;
+
+export type TimeRangeListensFetcher = (opts: PaginatedTimeRangeCommonOptions | PaginatedListensTimeRangeOptions) => Promise<PlayObject[]>

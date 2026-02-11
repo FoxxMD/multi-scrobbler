@@ -15,7 +15,7 @@ import {
 import { getScrobbleTsSOCDate } from "../../utils/TimeUtils.js";
 import { UpstreamError } from "../errors/UpstreamError.js";
 import { AbstractApiOptions, DEFAULT_RETRY_MULTIPLIER, DELIMITERS, FormatPlayObjectOptions, PagelessListensTimeRangeOptions, PagelessTimeRangeListens, PagelessTimeRangeListensResult } from "../infrastructure/Atomic.js";
-import { ListenBrainzClientData } from "../infrastructure/config/client/listenbrainz.js";
+import { DEFAULT_ITEMS_PER_GET_LZ, ListenBrainzClientData, MAX_ITEMS_PER_GET_LZ } from "../infrastructure/config/client/listenbrainz.js";
 import AbstractApiClient from "./AbstractApiClient.js";
 import { getBaseFromUrl, isPortReachableConnect, joinedUrl, normalizeWebAddress } from '../../utils/NetworkUtils.js';
 import { isEmptyArrayOrUndefined, removeUndefinedKeys, unique } from '../../utils.js';
@@ -43,18 +43,12 @@ export interface UserListensOptions {
     max_ts?: UnixTimestamp
     /** unix epoch timestamp, listens with listened_at greater than (but not including) this value will be returned. */
     min_ts?: UnixTimestamp
-    /** number of listens to return. Max is `MAX_ITEMS_PER_GET`
+    /** number of listens to return. Max is `MAX_ITEMS_PER_GET_LZ`
      * 
      * @default 25
      */
     count?: number
 }
-
-/** https://github.com/metabrainz/listenbrainz-server/pull/2572
- * https://github.com/metabrainz/listenbrainz-server/blob/master/listenbrainz/webserver/views/api_tools.py#L48
- */
-const MAX_ITEMS_PER_GET = 1000;
-const DEFAULT_ITEMS_PER_GET = 25;
 
 export class ListenbrainzApiClient extends AbstractApiClient implements PagelessTimeRangeListens {
 
@@ -295,7 +289,7 @@ export class ListenbrainzApiClient extends AbstractApiClient implements Pageless
                     response: 15000,
                     deadline: 30000
                 })
-                .query({...options, count: Math.min(count, MAX_ITEMS_PER_GET)}));
+                .query({...options, count: Math.min(count, DEFAULT_ITEMS_PER_GET_LZ)}));
 
             const {body: {payload}} = resp as any;
             return payload as ListensResponse;
@@ -308,7 +302,7 @@ export class ListenbrainzApiClient extends AbstractApiClient implements Pageless
         const { limit = 100, to, from, user } = options;
 
         const lzListensOptions: UserListensOptions = {
-            count: Math.min(limit, MAX_ITEMS_PER_GET),
+            count: Math.min(limit, MAX_ITEMS_PER_GET_LZ),
         };
 
         try {
