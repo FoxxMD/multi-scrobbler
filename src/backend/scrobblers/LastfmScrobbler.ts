@@ -5,12 +5,13 @@ import { PlayObject, SourcePlayerObj } from "../../core/Atomic.js";
 import { buildTrackString, capitalize } from "../../core/StringUtils.js";
 import { isNodeNetworkException } from "../common/errors/NodeErrors.js";
 import { UpstreamError } from "../common/errors/UpstreamError.js";
-import { FormatPlayObjectOptions, InternalConfigOptional } from "../common/infrastructure/Atomic.js";
+import { FormatPlayObjectOptions, InternalConfigOptional, TimeRangeListensFetcher } from "../common/infrastructure/Atomic.js";
 import { LastfmClientConfig } from "../common/infrastructure/config/client/lastfm.js";
 import LastfmApiClient, { LastFMIgnoredScrobble, playToClientPayload, formatPlayObj, LASTFM_HOST, LASTFM_PATH } from "../common/vendor/LastfmApiClient.js";
 import { Notifiers } from "../notifier/Notifiers.js";
 import AbstractScrobbleClient, { nowPlayingUpdateByPlayDuration, shouldUpdatePlayingNowPlatformWhenPlayingOnly } from "./AbstractScrobbleClient.js";
 import { findCauseByReference } from "../utils/ErrorUtils.js";
+import { createGetScrobblesForTimeRangeFunc } from "../utils/ListenFetchUtils.js";
 
 export default class LastfmScrobbler extends AbstractScrobbleClient {
 
@@ -18,6 +19,7 @@ export default class LastfmScrobbler extends AbstractScrobbleClient {
     requiresAuth = true;
     requiresAuthInteraction = true;
     upstreamType: string = 'Last.fm';
+    getScrobblesForTimeRange: TimeRangeListensFetcher
 
     declare config: LastfmClientConfig;
 
@@ -29,6 +31,7 @@ export default class LastfmScrobbler extends AbstractScrobbleClient {
         this.supportsNowPlaying = true;
         // last.fm shows Now Playing for the same time as the duration of the track being submitted
         this.nowPlayingMaxThreshold = nowPlayingUpdateByPlayDuration;
+        this.getScrobblesForTimeRange = createGetScrobblesForTimeRangeFunc(this.api, this.api.logger);
     }
 
     formatPlayObj = (obj: any, options: FormatPlayObjectOptions = {}) => formatPlayObj(obj, options);
@@ -59,8 +62,11 @@ export default class LastfmScrobbler extends AbstractScrobbleClient {
     }
 
     getScrobblesForRefresh = async (limit: number) => {
-        const {data: plays} = await this.api.getPaginatedTimeRangeListens({limit, page: 1});
-        return plays;
+        if(this.queuedScrobbles.length === 0) {
+            return await this.getScrobblesForTimeRange({limit, page: 1});
+        } else {
+            return await this.getScrobblesForTimeRange({limit, page: 1, from: this.queuedScrobbles[0].play.data.playDate.unix(), to: dayjs().unix()});
+        }
     }
 
     // getScrobblesForTimeRange = async (fromDate?: Dayjs, toDate?: Dayjs, limit: number = 1000): Promise<PlayObject[]> => {
