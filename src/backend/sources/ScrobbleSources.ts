@@ -334,7 +334,8 @@ export default class ScrobbleSources {
                         deviceBlock: process.env.JELLYFIN_DEVICES_BLOCK,
                         librariesAllow: process.env.JELLYFIN_LIBRARIES_ALLOW,
                         librariesBlock: process.env.JELLYFIN_LIBRARIES_BLOCK,
-                        frontendUrlOverride: process.env.JELLYFIN_FRONTEND_URL_OVERRIDE 
+                        frontendUrlOverride: process.env.JELLYFIN_FRONTEND_URL_OVERRIDE,
+                        allowMediaTypes: process.env.JELLYFIN_MEDIATYPES_ALLOW
                     };
                     if (!Object.values(j).every(x => x === undefined)) {
                         configs.push({

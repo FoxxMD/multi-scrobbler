@@ -16,7 +16,7 @@
       "librariesAllow": ["GoodMusic"],
       "librariesBlock": ["BadMusic"],
       "additionalAllowedLibraryTypes": ["musicvideos"],
-      "allowUnknown": false,
+      "allowMediaTypes": ["audio"],
     },
     "options": {
       "logPayload": true,

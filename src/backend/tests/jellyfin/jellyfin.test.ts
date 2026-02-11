@@ -73,6 +73,7 @@ describe("Jellyfin API Source", function() {
                 librariesAllow: ['MuSiCoNe'],
                 librariesBlock: ['MuSiCbAd'],
                 additionalAllowedLibraryTypes: ['TVShowS'],
+                allowMediaTypes: ['Unknown'],
                 ...defaultJfApiCreds});
             await jf.buildInitData();
 
@@ -83,6 +84,7 @@ describe("Jellyfin API Source", function() {
             expect(jf.librariesAllow).to.be.eql(['musicone']);
             expect(jf.librariesBlock).to.be.eql(['musicbad']);
             expect(jf.allowedLibraryTypes).to.be.eql(['music','tvshows']);
+            expect(jf.allowedMediaTypes).to.be.eql(['Unknown']);
             await jf.destroy();
         });
 
@@ -343,9 +345,17 @@ describe("Jellyfin API Source", function() {
                 await jf.destroy();
             });
     
-            it('Should allow Play with unknown mediaType if specified in options', async function () {
+            it('Should allow Play with unknown mediaType if specified in deprecated allowUnknown option', async function () {
                 const jf = createJfApi({...defaultJfApiCreds});
                 jf.config.data.allowUnknown = true;
+                await jf.buildInitData();
+    
+                expect(jf.isActivityValid(playWithMeta({mediaType: 'Unknown'}), validSession)).to.be.true;
+                await jf.destroy();
+            });
+
+            it('Should allow Play with unknown mediaType if specified in allowMediaTypes option', async function () {
+                const jf = createJfApi({...defaultJfApiCreds, allowMediaTypes: ['Unknown','Audio']});
                 await jf.buildInitData();
     
                 expect(jf.isActivityValid(playWithMeta({mediaType: 'Unknown'}), validSession)).to.be.true;
