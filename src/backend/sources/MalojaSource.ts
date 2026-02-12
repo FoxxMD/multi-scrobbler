@@ -56,13 +56,13 @@ export default class MalojaSource extends MemorySource {
     getRecentlyPlayed = async (options: RecentlyPlayedOptions = {}) => {
         const { limit = 20 } = options;
         await this.processRecentPlays([]);
-        const resp = await this.api.getPaginatedTimeRangeListens({limit, page: 0});
+        const resp = await this.api.getPaginatedTimeRangeListens({limit, cursor: 0});
         return resp.data;
     }
 
     getUpstreamRecentlyPlayed = async (options: RecentlyPlayedOptions = {}): Promise<PlayObject[]> => {
         try {
-            const resp = await this.api.getPaginatedTimeRangeListens({limit: 20, page: 0});
+            const resp = await this.api.getPaginatedTimeRangeListens({limit: 20, cursor: 0});
             return resp.data;
         } catch (e) {
             throw e;

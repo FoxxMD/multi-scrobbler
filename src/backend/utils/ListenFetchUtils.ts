@@ -1,10 +1,15 @@
-import { childLogger } from "@foxxmd/logging";
+import { childLogger, Logger } from "@foxxmd/logging";
 import dayjs from "dayjs";
 import { PlayObject } from "../../core/Atomic.js";
 import { hasPagelessTimeRangeListens, hasPaginatedTimeRangeListens, PagelessListensTimeRangeOptions, PagelessTimeRangeListens, PaginatedListensTimeRangeOptions, PaginatedTimeRangeCommonOptions, PaginatedTimeRangeListens, PaginatedTimeRangeSource, TimeRangeListensFetcher } from "../common/infrastructure/Atomic.js";
 import { MaybeLogger } from "../common/logging.js";
 import { sortByNewestPlayDate, sortByOldestPlayDate } from "../utils.js";
 import { todayAwareFormat } from "./TimeUtils.js";
+
+export interface TimeRangeFetchOptions {
+    logger?: MaybeLogger | Logger
+
+}
 
 export const createGetScrobblesForTimeRangeFunc = <T extends PaginatedTimeRangeSource>(fetcher: T, pLogger: MaybeLogger = new MaybeLogger()): TimeRangeListensFetcher => {
     let requestCount: number;
@@ -89,10 +94,10 @@ export const createGetScrobblesForTimeRangeFunc = <T extends PaginatedTimeRangeS
             return plays;
         }
     } else if (hasPaginatedTimeRangeListens(fetcher)) {
-        return async (opts: PaginatedTimeRangeCommonOptions | PaginatedListensTimeRangeOptions): Promise<PlayObject[]> => {
+        return async (opts: PaginatedListensTimeRangeOptions): Promise<PlayObject[]> => {
             requestCount = 0;
             let more = true;
-            let currOpts: PaginatedListensTimeRangeOptions = { page: 1, ...opts };
+            let currOpts: PaginatedListensTimeRangeOptions = opts;
             let initial = true;
             let timeRangeHint: string;
             if(currOpts.to !== undefined && currOpts.from !== undefined) {
@@ -105,7 +110,7 @@ export const createGetScrobblesForTimeRangeFunc = <T extends PaginatedTimeRangeS
             while (more) {
                 requestCount++;
                 const reqOptsHint: string[] = [
-                    `Page ${currOpts.page}`
+                    `Page ${currOpts.cursor}`
                 ];
                 if(timeRangeHint !== undefined) {
                     reqOptsHint.push(timeRangeHint);
@@ -151,7 +156,13 @@ export const createGetScrobblesForTimeRangeFunc = <T extends PaginatedTimeRangeS
                 }
 
                 if(more) {
-                    currOpts.page++;
+                    if(results.meta.cursorNext !== undefined) {
+                        currOpts.cursor = results.meta.cursorNext;
+                    } else if(typeof currOpts.cursor === 'number') {
+                        currOpts.cursor++;
+                    } else {
+                        throw new Error('Next cursor is not defined and current cursor is not a number, unable to determine how to increment pagination');
+                    }
                 }
             }
             return plays;

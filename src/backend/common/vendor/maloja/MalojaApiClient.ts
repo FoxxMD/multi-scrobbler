@@ -18,7 +18,7 @@ import { ScrobbleSubmitError } from '../../errors/MSErrors.js';
 
 
 
-export class MalojaApiClient extends AbstractApiClient implements PaginatedTimeRangeListens {
+export class MalojaApiClient extends AbstractApiClient implements PaginatedTimeRangeListens<number> {
 
     declare config: MalojaData;
     url: URLData;
@@ -189,11 +189,11 @@ export class MalojaApiClient extends AbstractApiClient implements PaginatedTimeR
     //     return list.map(formatPlayObj);
     // }
 
-    getPaginatedTimeRangeListens = async (params: PaginatedListensTimeRangeOptions): Promise<PaginatedTimeRangeListensResult> => {
+    getPaginatedTimeRangeListens = async (params: PaginatedListensTimeRangeOptions<number>): Promise<PaginatedTimeRangeListensResult<number>> => {
 
         const opts: RecentlyPlayedRequestOptions = {
             perpage: params.limit,
-            page: params.page,
+            page: params.cursor,
             from: params.from !== undefined ? dayjs.unix(params.from).format('YYYY/MM/DD') : undefined,
             until: params.to !== undefined ? dayjs.unix(params.from).format('YYYY/MM/DD') : undefined
         };

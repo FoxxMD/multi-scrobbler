@@ -37,7 +37,7 @@ export const LIBREFM_PATH = '/2.0/';
 export const LASTFM_HOST = 'ws.audioscrobbler.com';
 export const LASTFM_PATH = '/2.0';
 
-export default class LastfmApiClient extends AbstractApiClient implements PaginatedTimeRangeListens {
+export default class LastfmApiClient extends AbstractApiClient implements PaginatedTimeRangeListens<number> {
 
     user?: string;
     declare config: LastfmData;
@@ -253,7 +253,7 @@ export default class LastfmApiClient extends AbstractApiClient implements Pagina
         return 'second';
     }
 
-    getPaginatedTimeRangeListens = async (fetchOptions: PaginatedListensTimeRangeOptions, options: {includeNowPlaying?: boolean} = {}): Promise<PaginatedTimeRangeListensResult> => {
+    getPaginatedTimeRangeListens = async (fetchOptions: PaginatedListensTimeRangeOptions<number>, options: {includeNowPlaying?: boolean} = {}): Promise<PaginatedTimeRangeListensResult<number>> => {
 
         const resp = await this.getRecentTracksWithPagination(fetchOptions);
 
@@ -301,7 +301,7 @@ export default class LastfmApiClient extends AbstractApiClient implements Pagina
                 }
             }, []);
 
-        return {data: plays, meta: {...fetchOptions, total: parseInt(total, 10), more: fetchOptions.page < parseInt(totalPages, 10)}};
+        return {data: plays, meta: {...fetchOptions, total: parseInt(total, 10), more: fetchOptions.cursor < parseInt(totalPages, 10)}};
 
     }
 

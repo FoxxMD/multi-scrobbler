@@ -61,13 +61,13 @@ export default class KoitoSource extends MemorySource {
     getRecentlyPlayed = async(options: RecentlyPlayedOptions = {}) => {
         const {limit = 20} = options;
         await this.processRecentPlays([]);
-        const resp = await this.getScrobblesForTimeRange({limit, page: 0 });
+        const resp = await this.getScrobblesForTimeRange({limit, cursor: 0 });
         return resp;
     }
 
     getUpstreamRecentlyPlayed = async (options: RecentlyPlayedOptions = {}): Promise<PlayObject[]> => {
         try {
-        const resp = await this.getScrobblesForTimeRange({limit: 20, page: 0 });
+        const resp = await this.getScrobblesForTimeRange({limit: 20, cursor: 0 });
         return resp;
         } catch (e) {
             throw e;
