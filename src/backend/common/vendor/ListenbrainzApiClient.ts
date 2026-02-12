@@ -19,8 +19,6 @@ import { DEFAULT_ITEMS_PER_GET_LZ, ListenBrainzClientData, MAX_ITEMS_PER_GET_LZ 
 import AbstractApiClient from "./AbstractApiClient.js";
 import { getBaseFromUrl, isPortReachableConnect, joinedUrl, normalizeWebAddress } from '../../utils/NetworkUtils.js';
 import { isEmptyArrayOrUndefined, removeUndefinedKeys, unique } from '../../utils.js';
-import {ListensResponse as KoitoListensResponse} from '../infrastructure/config/client/koito.js'
-import { listenObjectResponseToPlay } from './koito/KoitoApiClient.js';
 import { version } from '../../ioc.js';
 import { ListenPayload, ListenResponse, ListenType, MinimumTrack, SubmitListenAdditionalTrackInfo, SubmitPayload } from './listenbrainz/interfaces.js';
 import { baseFormatPlayObj } from '../../utils/PlayTransformUtils.js';
@@ -54,7 +52,6 @@ export class ListenbrainzApiClient extends AbstractApiClient implements Pageless
 
     declare config: ListenBrainzClientData;
     url: URLData;
-    isKoito: boolean = false;
 
     constructor(name: any, config: ListenBrainzClientData, options: AbstractApiOptions) {
         super('ListenBrainz', name, config, options);
@@ -126,7 +123,6 @@ export class ListenbrainzApiClient extends AbstractApiClient implements Pageless
     testConnection = async () => {
         try {
             await isPortReachableConnect(this.url.port, {host: this.url.url.hostname});
-            this.isKoito = await this.checkKoito();
             return true;
         } catch (e) {
             if(e.status === 410 || e.message.includes('HTTP Status 410')) {
@@ -148,13 +144,10 @@ export class ListenbrainzApiClient extends AbstractApiClient implements Pageless
     async checkKoito(): Promise<boolean> {
         try {
             const resp = await this.callApi(request.get(`${joinedUrl(getBaseFromUrl(this.url.url), 'apis/web/v1/stats')}`));
-            this.logger.info('Listenbrainz Host looks like a Koito server, API client will now operate in Koito mode!');
-            this.logger.warn('Koito has limited support for the Listenbrainz API spec. It does not support Now Playing or retrieving full metabrainz data for a play. Please consider switching to the full Koito Source/Client.');
             return true;
         } catch (e) {
-            this.logger.verbose('Listenbrainz Host does not look like a Koito server.');
+            return false;
         }
-        return false;
     }
 
     getUserListens = async (maxTracks: number, user?: string): Promise<ListensResponse> => {
@@ -172,24 +165,6 @@ export class ListenbrainzApiClient extends AbstractApiClient implements Pageless
                 }));
             const {body: {payload}} = resp as any;
             return payload as ListensResponse;
-        } catch (e) {
-            throw e;
-        }
-    }
-
-    getUserListensKoito = async (maxTracks: number): Promise<KoitoListensResponse> => {
-        try {
-
-            const resp = await this.callApi(request
-                .get(`${joinedUrl(getBaseFromUrl(this.url.url), '/apis/web/v1/listens')}`)
-                .query({
-                    period: 'all_time',
-                    page: 0,
-                    limit: maxTracks
-                })
-            );
-            const { body } = resp as any;
-            return body as KoitoListensResponse;
         } catch (e) {
             throw e;
         }
@@ -216,23 +191,9 @@ export class ListenbrainzApiClient extends AbstractApiClient implements Pageless
     }
 
     getRecentlyPlayed = async (maxTracks: number, user?: string): Promise<PlayObject[]> => {
-        if(this.isKoito) {
-            return this.getRecentlyPlayedKoito(maxTracks)
-        }
-
         try {
             const resp = await this.getUserListens(maxTracks, user);
             return resp.listens.map(x => listenResponseToPlay(x));
-        } catch (e) {
-            this.logger.error(`Error encountered while getting User listens | Error =>  ${e.message}`);
-            return [];
-        }
-    }
-
-    getRecentlyPlayedKoito = async (maxTracks: number): Promise<PlayObject[]> => {
-        try {
-            const resp = await this.getUserListensKoito(maxTracks);
-            return resp.items.map(x => listenObjectResponseToPlay(x));
         } catch (e) {
             this.logger.error(`Error encountered while getting User listens | Error =>  ${e.message}`);
             return [];
