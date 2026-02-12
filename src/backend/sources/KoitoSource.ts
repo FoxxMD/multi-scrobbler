@@ -1,17 +1,19 @@
 import EventEmitter from "events";
 import { PlayObject, SOURCE_SOT } from "../../core/Atomic.js";
 import { isNodeNetworkException } from "../common/errors/NodeErrors.js";
-import { FormatPlayObjectOptions, InternalConfig, PaginatedListensTimeRangeOptions, PaginatedTimeRangeListens } from "../common/infrastructure/Atomic.js";
+import { FormatPlayObjectOptions, InternalConfig, PaginatedListensTimeRangeOptions, PaginatedTimeRangeListens, TimeRangeListensFetcher } from "../common/infrastructure/Atomic.js";
 import { RecentlyPlayedOptions } from "./AbstractSource.js";
 import MemorySource from "./MemorySource.js";
 import { KoitoApiClient, listenObjectResponseToPlay } from "../common/vendor/koito/KoitoApiClient.js";
 import { KoitoSourceConfig } from "../common/infrastructure/config/source/koito.js";
+import { createGetScrobblesForTimeRangeFunc } from "../utils/ListenFetchUtils.js";
 
-export default class KoitoSource extends MemorySource implements PaginatedTimeRangeListens {
+export default class KoitoSource extends MemorySource {
 
     api: KoitoApiClient;
     requiresAuth = true;
     requiresAuthInteraction = false;
+    getScrobblesForTimeRange: TimeRangeListensFetcher
 
     declare config: KoitoSourceConfig;
 
@@ -31,6 +33,7 @@ export default class KoitoSource extends MemorySource implements PaginatedTimeRa
         this.supportsUpstreamRecentlyPlayed = true
         this.SCROBBLE_BACKLOG_COUNT = 100;
         this.logger.info(`Note: The player for this source is an analogue for the 'Now Playing' status exposed by ${this.type} which is NOT used for scrobbling. Instead, the 'recently played' or 'history' information provided by this source is used for scrobbles.`)
+        this.getScrobblesForTimeRange = createGetScrobblesForTimeRangeFunc(this.api, this.api.logger);
     }
 
     static formatPlayObj(obj: any, options: FormatPlayObjectOptions = {}){ return listenObjectResponseToPlay(obj, options); }
@@ -58,25 +61,17 @@ export default class KoitoSource extends MemorySource implements PaginatedTimeRa
     getRecentlyPlayed = async(options: RecentlyPlayedOptions = {}) => {
         const {limit = 20} = options;
         await this.processRecentPlays([]);
-        const resp = await this.api.getPaginatedTimeRangeListens({limit, page: 0 });
-        return resp.data;
+        const resp = await this.getScrobblesForTimeRange({limit, page: 0 });
+        return resp;
     }
 
     getUpstreamRecentlyPlayed = async (options: RecentlyPlayedOptions = {}): Promise<PlayObject[]> => {
         try {
-        const resp = await this.api.getPaginatedTimeRangeListens({limit: 20, page: 0 });
-        return resp.data;
+        const resp = await this.getScrobblesForTimeRange({limit: 20, page: 0 });
+        return resp;
         } catch (e) {
             throw e;
         }
-    }
-
-    getPaginatedTimeRangeListens = async (params: PaginatedListensTimeRangeOptions) => {
-        return await this.api.getPaginatedTimeRangeListens(params);
-    }
-
-    getPaginatedUnitOfTime() {
-        return this.api.getPaginatedUnitOfTime();
     }
 
     protected getBackloggedPlays = async (options: RecentlyPlayedOptions = {}) =>  await this.getRecentlyPlayed({formatted: true, ...options})
