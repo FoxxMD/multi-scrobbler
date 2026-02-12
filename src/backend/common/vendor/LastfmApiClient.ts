@@ -257,7 +257,7 @@ export default class LastfmApiClient extends AbstractApiClient implements Pagina
 
         const resp = await this.getRecentTracksWithPagination(fetchOptions);
 
-        const {includeNowPlaying = false} =  options;
+        const {includeNowPlaying = true} =  options;
 
         const {
             recenttracks: {

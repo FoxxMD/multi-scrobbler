@@ -4,10 +4,9 @@ import EventEmitter from "events";
 import { PlayObject, SourcePlayerObj } from "../../core/Atomic.js";
 import { buildTrackString, capitalize } from "../../core/StringUtils.js";
 import { isNodeNetworkException } from "../common/errors/NodeErrors.js";
-import { UpstreamError } from "../common/errors/UpstreamError.js";
 import { FormatPlayObjectOptions, InternalConfigOptional, TimeRangeListensFetcher } from "../common/infrastructure/Atomic.js";
 import { LastfmClientConfig } from "../common/infrastructure/config/client/lastfm.js";
-import LastfmApiClient, { LastFMIgnoredScrobble, playToClientPayload, formatPlayObj, LASTFM_HOST, LASTFM_PATH } from "../common/vendor/LastfmApiClient.js";
+import LastfmApiClient, { LastFMIgnoredScrobble, playToClientPayload, formatPlayObj } from "../common/vendor/LastfmApiClient.js";
 import { Notifiers } from "../notifier/Notifiers.js";
 import AbstractScrobbleClient, { nowPlayingUpdateByPlayDuration, shouldUpdatePlayingNowPlatformWhenPlayingOnly } from "./AbstractScrobbleClient.js";
 import { findCauseByReference } from "../utils/ErrorUtils.js";
@@ -62,55 +61,14 @@ export default class LastfmScrobbler extends AbstractScrobbleClient {
     }
 
     getScrobblesForRefresh = async (limit: number) => {
+        let plays: PlayObject[] = [];
         if(this.queuedScrobbles.length === 0) {
-            return await this.getScrobblesForTimeRange({limit, page: 1});
+            plays = await this.getScrobblesForTimeRange({limit, page: 1});
         } else {
-            return await this.getScrobblesForTimeRange({limit, page: 1, from: this.queuedScrobbles[0].play.data.playDate.unix(), to: dayjs().unix()});
+            plays = await this.getScrobblesForTimeRange({limit, page: 1, from: this.queuedScrobbles[0].play.data.playDate.unix(), to: dayjs().unix()});
         }
+        return plays.filter(x => !x.meta.nowPlaying);
     }
-
-    // getScrobblesForTimeRange = async (fromDate?: Dayjs, toDate?: Dayjs, limit: number = 1000): Promise<PlayObject[]> => {
-    //     const allPlays: PlayObject[] = [];
-    //     let currentPage = 1;
-    //     const perPage = 200;
-
-    //     while (allPlays.length < limit) {
-    //         const resp = await this.api.getRecentTracksWithPagination({
-    //             page: currentPage,
-    //             limit: perPage,
-    //             from: fromDate?.unix(),
-    //             to: toDate?.unix(),
-    //         });
-
-    //         const {
-    //             recenttracks: {
-    //                 track: rawTracks = [],
-    //                 '@attr': pageInfo
-    //             } = {}
-    //         } = resp;
-
-    //         if (rawTracks.length === 0) {
-    //             break;
-    //         }
-
-    //         const plays = resp
-    //             .filter(p => p.data.playDate !== undefined && p.data.playDate.isValid()); // Filter out plays with invalid dates
-
-    //         allPlays.push(...plays);
-
-    //         if (allPlays.length >= limit) {
-    //             break;
-    //         }
-
-    //         if (pageInfo && currentPage >= parseInt(pageInfo.totalPages, 10)) {
-    //             break;
-    //         }
-
-    //         currentPage++;
-    //     }
-
-    //     return allPlays.slice(0, limit);
-    // }
 
     cleanSourceSearchTitle = (playObj: PlayObject) => {
         const {
