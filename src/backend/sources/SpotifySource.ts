@@ -110,7 +110,7 @@ export default class SpotifySource extends MemoryPositionalSource {
                 } = {},
                 external_ids: {
                     isrc
-                },
+                } = {},
                 track_number,
             } = track;
 
@@ -155,7 +155,7 @@ export default class SpotifySource extends MemoryPositionalSource {
                 } = {},
                 external_ids: {
                     isrc
-                },
+                } = {},
                 track_number
             } = item as TrackObjectFull;
 
