@@ -4,7 +4,7 @@ import { ListRecord, ScrobbleRecord, TealClientData } from "../../infrastructure
 import AbstractApiClient from "../AbstractApiClient.js";
 import { Agent, ComAtprotoRepoCreateRecord, ComAtprotoRepoListRecords } from "@atproto/api";
 import { MSCache } from "../../Cache.js";
-import { BrainzMeta, PlayObject, PlayObjectLifecycleless, ScrobbleActionResult } from "../../../../core/Atomic.js";
+import { BrainzMeta, PlayObject, PlayObjectLifecycleless, ScrobbleActionResult, UnixTimestamp } from "../../../../core/Atomic.js";
 import { musicServiceToCononical } from "../ListenbrainzApiClient.js";
 import { parseRegexSingle } from "@foxxmd/regex-buddy-core";
 import { RecordOptions } from "../../infrastructure/config/client/tealfm.js";
@@ -14,8 +14,7 @@ import { removeUndefinedKeys } from "../../../utils.js";
 import { baseFormatPlayObj } from "../../../utils/PlayTransformUtils.js";
 import { ScrobbleSubmitError } from "../../errors/MSErrors.js";
 import { UpstreamError } from "../../errors/UpstreamError.js";
-import * as TID from '@atcute/tid';
-import { randomInt } from "node:crypto";
+import { decodeTIDToUnix, naiveTID } from "./TIDUtils.js";
 
 export abstract class AbstractBlueSkyApiClient extends AbstractApiClient implements PagelessTimeRangeListens {
 
@@ -70,15 +69,18 @@ export abstract class AbstractBlueSkyApiClient extends AbstractApiClient impleme
 
         let cursor: string;
         if(to !== undefined) {
-            cursor = TID.create(to, randomInt(1023));
+            cursor = naiveTID(to);
         }
 
         const resp = await this.listScrobbleRecord({cursor, limit});
-        const fromTS = TID.parse(resp.data.cursor);
+        let fromTS: UnixTimestamp;
+        if(resp.data.cursor !== undefined) {
+            fromTS = decodeTIDToUnix(resp.data.cursor);
+        }
 
         const plays = (resp.data.records as unknown as ListRecord<ScrobbleRecord>[]).map(x => listRecordToPlay(x));
 
-        return {data: plays, meta: {to, from: fromTS.timestamp, limit}};
+        return {data: plays, meta: {to, from: fromTS, limit}};
     }
 
     getPaginatedUnitOfTime(): ManipulateType {
