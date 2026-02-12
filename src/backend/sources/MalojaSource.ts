@@ -7,7 +7,7 @@ import MemorySource from "./MemorySource.js";
 import { MalojaApiClient } from "../common/vendor/maloja/MalojaApiClient.js";
 import { MalojaSourceConfig } from "../common/infrastructure/config/source/maloja.js";
 
-export default class MalojaSource extends MemorySource implements PaginatedTimeRangeListens {
+export default class MalojaSource extends MemorySource {
 
     api: MalojaApiClient;
     requiresAuth = true;
@@ -68,15 +68,6 @@ export default class MalojaSource extends MemorySource implements PaginatedTimeR
             throw e;
         }
     }
-
-    getPaginatedTimeRangeListens = async (params: PaginatedListensTimeRangeOptions) => {
-        return await this.api.getPaginatedTimeRangeListens(params);
-    }
-
-    getPaginatedUnitOfTime() {
-        return this.api.getPaginatedUnitOfTime();
-    }
-    
 
     protected getBackloggedPlays = async (options: RecentlyPlayedOptions = {}) => await this.getRecentlyPlayed({ formatted: true, ...options })
 
