@@ -12,9 +12,13 @@ import {
     InternalConfig,
     NO_DEVICE,
     NO_USER,
+    PaginatedListensTimeRangeOptions,
+    PaginatedTimeRangeListens,
+    PaginatedTimeRangeListensResult,
     PlayerStateData,
     ReportedPlayerStatus,
     SourceData,
+    TimeRangeListensFetcher,
 } from "../common/infrastructure/Atomic.js";
 import { SpotifySourceConfig } from "../common/infrastructure/config/source/spotify.js";
 import {
@@ -35,13 +39,15 @@ import TrackObjectFull = SpotifyApi.TrackObjectFull;
 import UserDevice = SpotifyApi.UserDevice;
 import { MemoryPositionalSource } from "./MemoryPositionalSource.js";
 import { baseFormatPlayObj } from "../utils/PlayTransformUtils.js";
+import { metaFromJSON } from "@lukehagar/plexjs/sdk/models/operations/getrecentlyadded.js";
+import { createGetScrobblesForTimeRangeFunc } from "../utils/ListenFetchUtils.js";
 
 const scopes = ['user-read-recently-played', 'user-read-currently-playing', 'user-read-playback-state', 'user-read-playback-position'];
 const state = 'random';
 
 const shortDeviceId = truncateStringToLength(10, '');
 
-export default class SpotifySource extends MemoryPositionalSource {
+export default class SpotifySource extends MemoryPositionalSource implements PaginatedTimeRangeListens<string> {
 
     spotifyApi: SpotifyWebApi;
     workingCredsPath: string;
@@ -52,6 +58,8 @@ export default class SpotifySource extends MemoryPositionalSource {
     canGetState = false;
 
     declare config: SpotifySourceConfig;
+
+    getScrobblesForTimeRange: TimeRangeListensFetcher
 
     constructor(name: any, config: SpotifySourceConfig, internal: InternalConfig, emitter: EventEmitter) {
         super('spotify', name, config, internal, emitter);
@@ -71,6 +79,7 @@ export default class SpotifySource extends MemoryPositionalSource {
         this.supportsUpstreamRecentlyPlayed = true;
         // https://developer.spotify.com/documentation/web-api/reference/get-recently-played
         this.SCROBBLE_BACKLOG_COUNT = 50
+        this.getScrobblesForTimeRange = createGetScrobblesForTimeRangeFunc(this, this.logger);
     }
 
     static formatPlayObj(obj: PlayHistoryObject | CurrentlyPlayingObject, options: FormatPlayObjectOptions = {}): PlayObject {
@@ -402,13 +411,68 @@ export default class SpotifySource extends MemoryPositionalSource {
         return newPlays.map(x => ({...x, meta: {...x.meta, scrobbleTsSOC: SCROBBLE_TS_SOC_END}}))
     }
 
+    getPaginatedUnitOfTime(): dayjs.ManipulateType {
+            return 'second';
+    }
+
+    getPaginatedTimeRangeListens = async (params: PaginatedListensTimeRangeOptions<string>): Promise<PaginatedTimeRangeListensResult<string>> => {
+
+        // spotify expects before/after to be unix timestamps WITH millseconds, as number
+        // https://developer.spotify.com/documentation/web-api/reference/get-recently-played
+        const options: Parameters<typeof this.spotifyApi.getMyRecentlyPlayedTracks>[0]  = {
+            limit: params.limit,
+            after: undefined
+        };
+        const {
+            from,
+            to,
+            cursor
+        } = params;
+
+         if(cursor !== undefined) {
+            options.after = parseInt(cursor, 10);
+        } else if(from !== undefined) {
+            options.after = from * 1000;
+        }
+
+        try {
+            const result = await this.callApi<ReturnType<typeof this.spotifyApi.getMyRecentlyPlayedTracks>>((api: SpotifyWebApi) => api.getMyRecentlyPlayedTracks(options));
+
+            let more = true;
+            let plays = result.body.items.map((x: PlayHistoryObject) => SpotifySource.formatPlayObj(x)).sort(sortByOldestPlayDate);
+
+            if(to !== undefined) {
+                const toDate = dayjs.unix(to);
+                plays = plays.filter(x => x.data.playDate.isBefore(toDate));
+            }
+            // if no plays returned
+            // or if filtered plays are less than results then we've hit the to date
+            if(plays.length === 0 || plays.length < result.body.items.length) {
+                more = false;
+            }
+            // failsafe, check the body for next values
+            if(more && result.body.next === null || result.body.cursors === null) {
+                more = false;
+            }
+
+            return {
+                data: result.body.items.map((x: PlayHistoryObject) => SpotifySource.formatPlayObj(x)).sort(sortByOldestPlayDate),
+                meta: {
+                    ...params,
+                    total: result.body.total,
+                    limit: result.body.limit,
+                    more,
+                    cursorNext: more && result.body.cursors !== null ? result.body.cursors.after : undefined
+                }
+            }
+        } catch (e) {
+            throw new Error('Error occurred while getting Spotify paginated listens', { cause: e });
+        }
+    }
+
     getPlayHistory = async (options: RecentlyPlayedOptions = {}) => {
         const {limit = 20} = options;
-        const func = (api: SpotifyWebApi) => api.getMyRecentlyPlayedTracks({
-            limit
-        });
-        const result = await this.callApi<ReturnType<typeof this.spotifyApi.getMyRecentlyPlayedTracks>>(func);
-        return result.body.items.map((x: PlayHistoryObject) => SpotifySource.formatPlayObj(x)).sort(sortByOldestPlayDate);
+        return await this.getScrobblesForTimeRange({limit});
     }
 
     getUpstreamRecentlyPlayed = async (options: RecentlyPlayedOptions = {}): Promise<PlayObject[]> => {

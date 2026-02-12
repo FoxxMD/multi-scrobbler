@@ -109,9 +109,10 @@ export const createGetScrobblesForTimeRangeFunc = <T extends PaginatedTimeRangeS
             }
             while (more) {
                 requestCount++;
-                const reqOptsHint: string[] = [
-                    `Page ${currOpts.cursor}`
-                ];
+                const reqOptsHint: string[] = [];
+                if(currOpts.cursor !== undefined) {
+                    `${typeof currOpts.cursor === 'number' ? 'Page' : 'Cursor'} ${currOpts.cursor}`;
+                }
                 if(timeRangeHint !== undefined) {
                     reqOptsHint.push(timeRangeHint);
                 }
