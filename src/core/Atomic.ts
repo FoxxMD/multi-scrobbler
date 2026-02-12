@@ -529,3 +529,8 @@ export interface TransformResult {
     name: string,
     play: PlayData
 }
+
+/** Number of SECONDS since 1970 */
+export type UnixTimestamp = number;
+
+export type Writeable<T> = { -readonly [P in keyof T]: T[P] };
