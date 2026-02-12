@@ -14,7 +14,7 @@ import { PlayerStateOptions } from "./PlayerState/AbstractPlayerState.js";
 import { NowPlayingPlayerState } from "./PlayerState/NowPlayingPlayerState.js";
 import { createGetScrobblesForTimeRangeFunc } from "../utils/ListenFetchUtils.js";
 
-export default class LastfmSource extends MemorySource implements PaginatedTimeRangeListens {
+export default class LastfmSource extends MemorySource {
 
     api: LastfmApiClient;
     requiresAuth = true;
@@ -113,37 +113,6 @@ export default class LastfmSource extends MemorySource implements PaginatedTimeR
         } catch (e) {
             throw e;
         }
-    }
-
-    getPaginatedTimeRangeListens = async (params: PaginatedListensTimeRangeOptions) => {
-        const resp = await this.api.getRecentTracksWithPagination({
-            page: params.page,
-            to: params.to,
-            from: params.from,
-            limit: params.limit
-        });
-
-        const {
-            recenttracks: {
-                track: rawTracks = [],
-                '@attr': pageInfo
-            }
-        } = resp;
-
-        return {
-            data: rawTracks
-                .filter(t => t.date !== undefined)
-                .map(t => LastfmApiClient.formatPlayObj(t, {})),
-            meta: {
-                ...params,
-                total: parseInt(pageInfo.total)
-            }
-        }
-
-    }
-
-    getPaginatedUnitOfTime(): ManipulateType {
-        return 'second';
     }
 
     protected getBackloggedPlays = async (options: RecentlyPlayedOptions = {}) => await this.getRecentlyPlayed({formatted: true, ...options})
