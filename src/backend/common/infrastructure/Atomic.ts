@@ -445,36 +445,39 @@ export interface PaginatedTimeRangeOptions {
 
 export type PaginatedTimeRangeCommonOptions = Partial<PaginatedTimeRangeOptions> & PaginatedLimit;
 
-export interface PaginatedListensOptions extends PaginatedLimit {
-    page: number
+export type CursorType = number | string;
+
+export interface PaginatedListensOptions<T extends CursorType> extends PaginatedLimit {
+    cursor: T
 }
 
 export interface PagelessListensTimeRangeOptions extends PaginatedTimeRangeCommonOptions {
 }
 
-export interface PaginatedListensTimeRangeOptions extends Partial<PaginatedTimeRangeOptions>, PaginatedListensOptions {
+export interface PaginatedListensTimeRangeOptions<T extends CursorType = CursorType> extends Partial<PaginatedTimeRangeOptions>, PaginatedListensOptions<T> {
 }
 
-export interface PaginatedResults {
+export interface PaginatedResults<T extends CursorType = CursorType> {
     total?: number
     more?: boolean
+    cursorNext?: T
     order?: 'desc' | 'asc'
 }
 
 export interface PaginatedListens {
-    getPaginatedListens(params: PaginatedListensOptions): Promise<{data: PlayObject[], meta: PaginatedListensOptions & PaginatedResults}>
+    getPaginatedListens(params: PaginatedListensOptions<CursorType>): Promise<{data: PlayObject[], meta: PaginatedListensOptions<CursorType> & PaginatedResults<CursorType>}>
 }
 
 export const hasPaginagedListens = (obj: Object): obj is PaginatedListens => {
     return 'getPaginatedListens' in obj;
 }
 
-export interface PaginatedTimeRangeListensResult {
+export interface PaginatedTimeRangeListensResult<T extends CursorType> {
     data: PlayObject[];
-    meta: PaginatedListensTimeRangeOptions & PaginatedResults;
+    meta: PaginatedListensTimeRangeOptions<T> & PaginatedResults<T>;
 }
-export interface PaginatedTimeRangeListens {
-    getPaginatedTimeRangeListens(params: PaginatedListensTimeRangeOptions): Promise<PaginatedTimeRangeListensResult>
+export interface PaginatedTimeRangeListens<T extends CursorType = CursorType> {
+    getPaginatedTimeRangeListens(params: PaginatedListensTimeRangeOptions<T>): Promise<PaginatedTimeRangeListensResult<T>>
     getPaginatedUnitOfTime(): ManipulateType;
 }
 
@@ -498,4 +501,4 @@ export const hasPagelessTimeRangeListens = (obj: Object): obj is PagelessTimeRan
 export type PaginatedTimeRangeSource = PaginatedTimeRangeListens | PagelessTimeRangeListens;
 export type PaginatedSource = PaginatedListens | PaginatedTimeRangeSource;
 
-export type TimeRangeListensFetcher = (opts: PaginatedTimeRangeCommonOptions | PaginatedListensTimeRangeOptions) => Promise<PlayObject[]>
+export type TimeRangeListensFetcher<T extends CursorType = CursorType> = (opts: PaginatedTimeRangeCommonOptions | PaginatedListensTimeRangeOptions<T>) => Promise<PlayObject[]>

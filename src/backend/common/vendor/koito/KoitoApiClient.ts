@@ -20,7 +20,7 @@ interface SubmitOptions {
 
 const KOITO_LZ_PATH: RegExp = new RegExp(/^\/apis\/listenbrainz(\/?1?\/?)?$/);
 
-export class KoitoApiClient extends AbstractApiClient implements PaginatedTimeRangeListens {
+export class KoitoApiClient extends AbstractApiClient implements PaginatedTimeRangeListens<number> {
 
     declare config: KoitoData;
     url: URLData;
@@ -147,7 +147,7 @@ export class KoitoApiClient extends AbstractApiClient implements PaginatedTimeRa
         }
     }
 
-    getPaginatedTimeRangeListens = async (params: PaginatedListensTimeRangeOptions): Promise<PaginatedTimeRangeListensResult> => {
+    getPaginatedTimeRangeListens = async (params: PaginatedListensTimeRangeOptions<number>): Promise<PaginatedTimeRangeListensResult<number>> => {
 
         let resp: ListensResponse;
         try {
@@ -161,7 +161,7 @@ export class KoitoApiClient extends AbstractApiClient implements PaginatedTimeRa
             meta: {
                 ...params,
                 total: resp.total_record_count,
-                page: resp.current_page,
+                cursor: resp.current_page,
                 more: resp.has_next_page
             }
         }
