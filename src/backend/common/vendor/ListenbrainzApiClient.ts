@@ -150,26 +150,6 @@ export class ListenbrainzApiClient extends AbstractApiClient implements Pageless
         }
     }
 
-    getUserListens = async (maxTracks: number, user?: string): Promise<ListensResponse> => {
-        try {
-
-            const resp = await this.callApi(request
-                .get(`${joinedUrl(this.url.url,'1/user',user ?? this.config.username, 'listens')}`)
-                // this endpoint can take forever, sometimes, and we want to make sure we timeout in a reasonable amount of time for polling sources to continue trying to scrobble
-                .timeout({
-                    response: 15000, // wait 15 seconds before timeout if server doesn't response at all
-                    deadline: 30000 // wait 30 seconds overall for request to complete
-                })
-                .query({
-                    count: maxTracks
-                }));
-            const {body: {payload}} = resp as any;
-            return payload as ListensResponse;
-        } catch (e) {
-            throw e;
-        }
-    }
-
     getPlayingNow = async (user?: string): Promise<ListensResponse> => {
         try {
 
@@ -189,17 +169,6 @@ export class ListenbrainzApiClient extends AbstractApiClient implements Pageless
             throw e;
         }
     }
-
-    getRecentlyPlayed = async (maxTracks: number, user?: string): Promise<PlayObject[]> => {
-        try {
-            const resp = await this.getUserListens(maxTracks, user);
-            return resp.listens.map(x => listenResponseToPlay(x));
-        } catch (e) {
-            this.logger.error(`Error encountered while getting User listens | Error =>  ${e.message}`);
-            return [];
-        }
-    }
-
 
     submitListen = async (play: PlayObject, options: SubmitOptions = {}): Promise<ScrobbleActionResult> => {
         const listenPayload = playToSubmitPayload(play, {listenType: options.listenType});
@@ -237,25 +206,24 @@ export class ListenbrainzApiClient extends AbstractApiClient implements Pageless
         return playObj;
     }
 
-    getUserListensWithPagination = async (options: UserListensOptions & {user?: string} = {}): Promise<ListensResponse> => {
-        const { count = 100, user } = options;
-
+    getUserListens = async (options: UserListensOptions & {user?: string} = {}): Promise<ListensResponse> => {
+        const { user } = options;
         try {
             /** https://rain0r.github.io/listenbrainz-openapi/#/lbCore/listensForUser
              *  https://listenbrainz.readthedocs.io/en/latest/users/api/core.html#get--1-user-(mb_username-user_name)-listens
              */
             const resp = await this.callApi(request
-                .get(`${joinedUrl(this.url.url,'1/user', user ?? this.config.username, 'listens')}`)
+                .get(`${joinedUrl(this.url.url,'1/user',user ?? this.config.username, 'listens')}`)
+                // this endpoint can take forever, sometimes, and we want to make sure we timeout in a reasonable amount of time for polling sources to continue trying to scrobble
                 .timeout({
-                    response: 15000,
-                    deadline: 30000
+                    response: 15000, // wait 15 seconds before timeout if server doesn't respond at all
+                    deadline: 30000 // wait 30 seconds overall for request to complete
                 })
-                .query({...options, count: Math.min(count, DEFAULT_ITEMS_PER_GET_LZ)}));
-
+                .query(options));
             const {body: {payload}} = resp as any;
             return payload as ListensResponse;
         } catch (e) {
-            throw e;
+            throw new UpstreamError('Getting user listens failed', {cause: e});
         }
     }
 
@@ -266,27 +234,15 @@ export class ListenbrainzApiClient extends AbstractApiClient implements Pageless
             count: Math.min(limit, MAX_ITEMS_PER_GET_LZ),
         };
 
+        if (from !== undefined) {
+            lzListensOptions.min_ts = from;
+        }
+        if (to !== undefined) {
+            lzListensOptions.max_ts = to;
+        }
+
         try {
-            if (from !== undefined) {
-                lzListensOptions.min_ts = from;
-            }
-            if (to !== undefined) {
-                lzListensOptions.max_ts = to;
-            }
-
-            /** https://rain0r.github.io/listenbrainz-openapi/#/lbCore/listensForUser
-             *  https://listenbrainz.readthedocs.io/en/latest/users/api/core.html#get--1-user-(mb_username-user_name)-listens
-             */
-            const resp = await this.callApi(request
-                .get(`${joinedUrl(this.url.url,'1/user', user ?? this.config.username, 'listens')}`)
-                .timeout({
-                    response: 15000,
-                    deadline: 30000
-                })
-                .query(lzListensOptions));
-
-            const {body: {payload}} = resp as any;
-            const lr = payload as ListensResponse;
+            const lr = await this.getUserListens({...lzListensOptions, user});
             const more = to > lr.latest_listen_ts;
             return {data: lr.listens.map(x => listenResponseToPlay(x)), meta: {...options, total: lr.count, more}};
         } catch (e) {
