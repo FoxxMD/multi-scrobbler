@@ -18,8 +18,6 @@ export default class ListenbrainzSource extends MemorySource {
     api: ListenbrainzApiClient;
     requiresAuth = true;
     requiresAuthInteraction = false;
-    isKoito: boolean = false;
-
     declare config: ListenBrainzSourceConfig;
 
     constructor(name: any, config: ListenBrainzSourceConfig, internal: InternalConfig, emitter: EventEmitter) {
@@ -48,8 +46,9 @@ export default class ListenbrainzSource extends MemorySource {
         try {
             await isPortReachableConnect(this.api.url.port, {host: this.api.url.url.hostname});
             const isKoito = await this.api.checkKoito();
-            this.api.isKoito = isKoito;
-            this.isKoito = isKoito;
+            if(isKoito) {
+                throw new Error('The given URL looks like a Koito instance. Use the Koito Source instead of Listenbrainz.')
+            }
             return true;
         } catch (e) {
             if(isNodeNetworkException(e)) {
@@ -76,9 +75,6 @@ export default class ListenbrainzSource extends MemorySource {
 
     getRecentlyPlayed = async(options: RecentlyPlayedOptions = {}) => {
         const {limit = 20} = options;
-        if(this.isKoito) {
-            return await this.api.getRecentlyPlayedKoito(limit);
-        } 
         const now = await this.api.getPlayingNow();
         await this.processRecentPlays(now.listens.map(x => ListenbrainzSource.formatPlayObj(x)));
         return await this.api.getRecentlyPlayed(limit);
