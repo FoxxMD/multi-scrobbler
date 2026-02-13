@@ -1,0 +1,531 @@
+import { childLogger } from "@foxxmd/logging";
+import { WS } from 'iso-websocket'
+import { DiscordClientData } from "../../infrastructure/config/client/discord.js";
+import { _DataPayload, _NonDispatchPayload, APIUser, GatewayActivity, GatewayActivityUpdateData, GatewayDispatchEvents, GatewayHeartbeatRequest, GatewayHelloData, GatewayIdentify, GatewayIdentifyData, GatewayInvalidSessionData, GatewayOpcodes, GatewayPresenceUpdateData, GatewayReadyDispatchData, GatewayResumeData, GatewayUpdatePresence, PresenceUpdateStatus } from "discord.js";
+import { isDebugMode, removeUndefinedKeys, sleep } from "../../../utils.js";
+import pEvent from 'p-event';
+import { randomInt } from "crypto";
+import request from 'superagent';
+import AbstractApiClient from "../AbstractApiClient.js";
+import { AbstractApiOptions, asPlayerStateData, SourceData } from "../../infrastructure/Atomic.js";
+import { isPlayObject, PlayObject } from "../../../../core/Atomic.js";
+import dayjs from "dayjs";
+import { capitalize } from "../../../../core/StringUtils.js";
+
+const ARTWORK_PLACEHOLDER = 'https://raw.githubusercontent.com/FoxxMD/multi-scrobbler/master/assets/icon128.png';
+const API_GATEWAY_ENDPOINT = 'https://discord.com/api/gateway';
+
+/**
+ * Implementation largely based on
+ * 
+ * https://github.com/n0thhhing/Discord-rich-presence
+ * https://github.com/logixism/navicord
+ * 
+ * Existing implementations of Rich Presence all use the local RPC gateway from a running Discord app
+ * and the impl that actually uses the remote gateway, @discord/ws, is only built for bot use
+ * so we need to roll our own Gateway API interface https://docs.discord.com/developers/events/gateway
+ * 
+ */
+export class DiscordWSClient extends AbstractApiClient {
+
+    declare config: DiscordClientData;
+
+    heartbeatInterval: NodeJS.Timeout
+    acknowledged: boolean = true;
+
+    // https://docs.discord.com/developers/events/gateway#ready-event
+    // used for resuming session, if possible
+    session_id: string;
+    resume_gateway_url: string;
+    sequence: number;
+
+    initialGatewayUrl?: string;
+
+    user: APIUser;
+
+    declare client: WS;
+
+    canReconnect?: boolean = false;
+    ready: boolean = false;
+
+    lastActiveStatus?: PresenceUpdateStatus = PresenceUpdateStatus.Offline;
+
+    activityTimeout: NodeJS.Timeout;
+
+    constructor(name: any, config: DiscordClientData, options: AbstractApiOptions) {
+        super('Discord', name, config, options);
+        this.logger = childLogger(options.logger, 'WS Gateway');
+    }
+
+    initClient = async (baseUrl?: string) => {
+        if (baseUrl === undefined && this.initialGatewayUrl === undefined) {
+            try {
+                await this.fetchGatewayUrl();
+                baseUrl = this.initialGatewayUrl;
+            } catch (e) {
+                throw new Error('Could not get initial gateway url', { cause: e });
+            }
+        }
+
+        const gatewayUrl = `${baseUrl}?encoding=json&v=10`;
+        this.logger.debug(`Using Gateway URL ${gatewayUrl}`);
+
+        this.client = new WS(gatewayUrl, {
+            automaticOpen: false,
+            retry: {
+                retries: 0
+            }
+        });
+
+        this.client.addEventListener('retry', (e) => {
+            this.logger.verbose(`Retrying connection, attempt ${e.attempt}`);
+        });
+        this.client.addEventListener('close', (e) => {
+            // should receive a close code https://docs.discord.com/developers/topics/opcodes-and-status-codes#gateway-gateway-close-event-codes
+            // which determines if reconnect is possible
+            this.logger.warn(`Connection was closed: ${e.code} => ${e.reason}`);
+        });
+        this.client.addEventListener('open', (e) => {
+            this.logger.verbose(`Connection was established.`);
+
+            if (this.canReconnect && this.session_id !== undefined) {
+                // using resume
+                this.handleResume();
+            } else {
+                // initial identify
+                this.handleIdentify();
+            }
+        });
+        this.client.addEventListener('error', (e) => {
+            // may return a close code?
+            this.logger.error(new Error(`Error from Discord Gateway`, { cause: e.error }));
+        });
+
+        this.client.addEventListener('message', async (e) => {
+            try {
+                await this.handleMessage(JSON.parse(e.data));
+            } catch (e) {
+                this.logger.error(e);
+            }
+        });
+    }
+
+    fetchGatewayUrl = async () => {
+        const resp = await request.get(API_GATEWAY_ENDPOINT);
+        this.initialGatewayUrl = resp.body.url;
+        this.logger.debug(`Got Initial Gateway Base: ${this.initialGatewayUrl}`);
+    }
+
+    connect = async () => {
+        try {
+            this.client.open();
+            const opened = await pEvent(this.client, 'open');
+            return true;
+        } catch (e) {
+            this.client.close();
+            throw new Error(`Could not connect to Discord Gateway`, { cause: e.error ?? e });
+        }
+    }
+
+    handleIdentify() {
+        const data: GatewayIdentify = {
+            op: GatewayOpcodes.Identify,
+            d: {
+                token: this.config.token,
+                intents: 0,
+                properties: {
+                    os: "linux",
+                    device: "Discord Client",
+                    browser: "Discord Client"
+                }
+            }
+        };
+        this.client.send(JSON.stringify(data));
+    }
+
+    async handleHello(data: GatewayHelloData) {
+        // jitter
+        // https://docs.discord.com/developers/events/gateway#heartbeat-interval
+        const sleepTime = randomInt(data.heartbeat_interval - 1);
+        this.logger.debug(`Heartbeat Interval: ${data.heartbeat_interval}ms (${Math.floor(data.heartbeat_interval / 1000)}s), waiting ${Math.floor(sleepTime / 1000)}s before sending first heartbeat.`);
+        await sleep(sleepTime);
+        this.sendHeartbeat();
+        this.heartbeatInterval = setInterval(() => {
+            if (!this.acknowledged) {
+                // zombied!
+                return this.handleReconnect().then(() => null).catch((e) => this.logger.error(e));
+            }
+            this.sendHeartbeat();
+        }, data.heartbeat_interval);
+    }
+
+    sendHeartbeat() {
+
+        const heartbeatRequest: GatewayHeartbeatRequest = {
+            op: GatewayOpcodes.Heartbeat,
+            // @ts-expect-error
+            d: this.sequence ?? null
+        }
+        this.acknowledged = false;
+        if (!this.client.OPEN) {
+            this.logger.warn('Cannot send heartbeat because connection is closed.');
+            return;
+        }
+        this.client.send(JSON.stringify(heartbeatRequest));
+        if (isDebugMode()) {
+            this.logger.debug('Sent heartbeat');
+        }
+    }
+
+    /** 
+     * https://docs.discord.com/developers/events/gateway#identifying
+     * https://docs.discord.com/developers/events/gateway#ready-event
+     * https://docs.discord.com/developers/events/gateway-events#ready  */
+    handleReady(data: GatewayReadyDispatchData) {
+        this.session_id = data.session_id;
+        this.resume_gateway_url = data.resume_gateway_url;
+        this.user = data.user;
+        this.canReconnect = true;
+        this.ready = true;
+        this.logger.verbose(`Gateway Connection READY for ${this.user.username}`);
+    }
+
+    /** https://docs.discord.com/developers/events/gateway-events#invalid-session */
+    handleInvalidSession(data: GatewayInvalidSessionData) {
+        this.canReconnect = data !== false;
+        return this.handleReconnect().then(() => null).catch((e) => this.logger.error(e));
+    }
+
+    async handleReconnect() {
+        await this.cleanupConnection();
+        //  maybe don't do this if we've failed N times
+        this.initClient();
+        this.connect();
+    }
+
+    handleResume() {
+        const data: GatewayResumeData = {
+            token: this.config.token,
+            session_id: this.session_id,
+            seq: this.sequence
+        }
+
+        this.client.send(JSON.stringify({ op: GatewayOpcodes.Resume, d: data }));
+    }
+
+    async cleanupConnection() {
+        clearInterval(this.heartbeatInterval);
+        this.heartbeatInterval = undefined;
+        clearTimeout(this.activityTimeout);
+        this.activityTimeout = undefined;
+
+        if (!this.client.CLOSED) {
+            this.client.close();
+            // wait for close or just give it a few seconds
+            await Promise.race([
+                pEvent(this.client, 'close'),
+                sleep(3000),
+            ]);
+        }
+        if (!this.canReconnect) {
+            this.session_id = undefined;
+            this.sequence = undefined;
+            this.resume_gateway_url = undefined;
+            this.user = undefined;
+        }
+    }
+
+    handleUserSessionUpdates = (data: UserSession[]) => {
+        this.logger.debug('Recieved updated user sessions');
+        const otherSessions = data.filter(x => x.session_id !== this.session_id);
+        if (otherSessions.length === 0) {
+            this.logger.debug('No other user sessions exist, marking our session presence as inactive');
+            this.lastActiveStatus = PresenceUpdateStatus.Offline;
+        }
+        if (otherSessions.some(x => x.status === 'online')) {
+            this.lastActiveStatus = PresenceUpdateStatus.Online;
+        } else if (otherSessions.some(x => x.status === 'dnd')) {
+            this.lastActiveStatus = PresenceUpdateStatus.DoNotDisturb;
+        } else if (otherSessions.some(x => x.status === 'idle')) {
+            this.lastActiveStatus = PresenceUpdateStatus.Idle;
+        } else if (otherSessions.some(x => x.status === 'invisible')) {
+            this.lastActiveStatus = PresenceUpdateStatus.Invisible;
+        } else {
+            this.lastActiveStatus = PresenceUpdateStatus.Offline;
+        }
+        this.logger.debug(`Best status found: ${this.lastActiveStatus}`);
+    }
+
+    async handleMessage(message: _DataPayload<GatewayDispatchEvents> | _NonDispatchPayload) {
+        try {
+            const { op, s } = message;
+            if (s !== null && s !== undefined) {
+                this.sequence = s;
+            }
+            if (isDebugMode()) {
+                const friendlyOp = opcodeToFriendly(op);
+                let handleHint = `Got opcode ${op}${friendlyOp !== op ? ` (${friendlyOp})` : ''}`;
+                if (op === GatewayOpcodes.Dispatch) {
+                    handleHint += ` w/ Dispatch Event ${message.t}`;
+                }
+                this.logger.debug(handleHint);
+            }
+
+            switch (op) {
+                case GatewayOpcodes.Hello:
+                    this.handleHello(message.d as GatewayHelloData).catch(e => this.logger.error(e));
+                    break;
+                case GatewayOpcodes.HeartbeatAck:
+                    if (isDebugMode()) {
+                        this.logger.debug("Heartbeat acknowledged");
+                    }
+                    this.acknowledged = true;
+                    break;
+                case GatewayOpcodes.Heartbeat:
+                    if (isDebugMode()) {
+                        this.logger.debug("Received Heartbeat");
+                    }
+                    this.sendHeartbeat();
+                    break;
+                case GatewayOpcodes.Dispatch:
+                    const { t } = message;
+                    switch (t) {
+                        case GatewayDispatchEvents.Ready:
+                            this.handleReady(message.d as GatewayReadyDispatchData);
+                            break;
+                        // @ts-expect-error
+                        case 'SESSIONS_REPLACE':
+                            if (isDebugMode()) {
+                                // @ts-expect-error
+                                this.logger.debug({ data: message.d }, t);
+                            }
+                            break;
+                    };
+                    break;
+                case GatewayOpcodes.InvalidSession:
+                    this.handleInvalidSession(message.d as GatewayInvalidSessionData);
+                    break;
+                case GatewayOpcodes.Reconnect:
+                    await this.handleReconnect();
+                    break;
+                case GatewayOpcodes.Resume:
+                    this.logger.debug({ data: message.d }, 'Resumed session');
+                    this.canReconnect = true;
+                    this.ready = true;
+                    break;
+                case GatewayOpcodes.Identify:
+                    this.logger.debug({ data: message.d }, 'Recieved Identifiy opcode');
+                    break;
+                case GatewayOpcodes.PresenceUpdate:
+                    this.logger.debug({ data: message.d }, 'Recieved Presence Update opcode');
+                    break;
+                default:
+                    this.logger.debug(`Recieved unhandled opcode: ${op}`);
+                    break;
+            }
+        } catch (error) {
+            throw new Error('Error handling gateway message', { cause: error });
+        }
+    }
+
+    playStateToActivity = (data: SourceData): GatewayActivity => {
+        const { activity, artUrl } = playStateToActivityData(data);
+        const {
+            artwork = false
+        } = this.config;
+
+        let art = ARTWORK_PLACEHOLDER;
+        if (artUrl !== undefined && artwork !== false) {
+            if (Array.isArray(artwork)) {
+                const allowed = artwork.some(x => artUrl.toLocaleLowerCase().includes(x.toLocaleLowerCase()));
+                if (allowed) {
+                    art = artUrl;
+                }
+            } else {
+                const u = new URL(artUrl);
+                // only allow secure protocol as this is likely to be a real domain that is public accessible
+                // IP domain usually uses http only
+                if (u.protocol === 'https://') {
+                    art = artUrl;
+                }
+            }
+        }
+        // https://docs.discord.com/developers/events/gateway-events#activity-object-activity-assets
+        // https://docs.discord.com/developers/events/gateway-events#activity-object-activity-asset-image
+        activity.assets.large_image = art;
+
+        return activity;
+    }
+
+    sendActivity = async (data: SourceData) => {
+
+        if ([PresenceUpdateStatus.Offline, PresenceUpdateStatus.Invisible].includes(this.lastActiveStatus)) {
+            this.logger.debug('Not updating presence because no user sessions have a visible status');
+            return;
+        }
+        const [sendOk, reasons] = this.checkOkToSend();
+        if (!sendOk) {
+            this.logger.warn(`Cannot send activity because client is ${reasons}`);
+            return;
+        }
+        const activity = this.playStateToActivity(data);
+
+        let clearTime = dayjs().add(5, 'minutes');
+        if (activity.timestamps.end !== undefined) {
+            clearTime = dayjs.unix(Math.floor(activity.timestamps.end as number / 1000));
+        }
+
+        const updateData = this.generatePresenceUpdate();
+        updateData.activities.push(activity);
+
+        const currentActivity: GatewayUpdatePresence = {
+            op: GatewayOpcodes.PresenceUpdate,
+            d: updateData
+        }
+
+        this.client.send(JSON.stringify(currentActivity));
+
+        if (this.activityTimeout !== undefined) {
+            clearTimeout(this.activityTimeout);
+        }
+        this.activityTimeout = setTimeout(() => {
+            this.clearActivity();
+        }, Math.abs(clearTime.diff(dayjs(), 'ms')));
+    }
+
+    clearActivity = () => {
+        if (this.activityTimeout !== undefined) {
+            clearTimeout(this.activityTimeout);
+            this.activityTimeout = undefined;
+        }
+
+        const [sendOk, reasons] = this.checkOkToSend();
+        if (!sendOk) {
+            this.logger.warn(`Cannot clear activity because client is ${reasons}`);
+            return;
+        }
+
+        const clearedActivity: GatewayUpdatePresence = {
+            op: GatewayOpcodes.PresenceUpdate,
+            d: this.generatePresenceUpdate()
+        }
+        this.client.send(JSON.stringify(clearedActivity));
+
+    }
+
+    generatePresenceUpdate = (): GatewayPresenceUpdateData => {
+        return {
+            since: null,
+            activities: [],
+            status: this.lastActiveStatus,
+            // TODO determine this?
+            afk: this.lastActiveStatus === PresenceUpdateStatus.Idle
+        }
+    }
+
+    checkOkToSend = (): [boolean, string?] => {
+        if (this.ready && this.client.OPEN) {
+            return [true];
+        }
+        const reasons = [];
+        if (!this.ready) {
+            reasons.push('not ready');
+        }
+        if (!this.client.OPEN) {
+            reasons.push('socket not open');
+        }
+        return [false, reasons.join(' and ')];
+    }
+}
+
+const opcodeToFriendly = (op: number) => {
+    switch (op) {
+        case GatewayOpcodes.Hello:
+            return 'Hello';
+        case GatewayOpcodes.HeartbeatAck:
+            return 'HeartbeatAck'
+        case GatewayOpcodes.Heartbeat:
+            return 'Heartbeat';
+        case GatewayOpcodes.Dispatch:
+            return 'Dispatch';
+        case GatewayOpcodes.InvalidSession:
+            return 'InvalidSession';
+        case GatewayOpcodes.Reconnect:
+            return 'Reconnect';
+        case GatewayOpcodes.Resume:
+            return 'Resume';
+        case GatewayOpcodes.Identify:
+            return 'Identify';
+        case GatewayOpcodes.PresenceUpdate:
+            return 'PresenceUpdate'
+        default:
+            return op;
+    }
+}
+
+interface UserSession {
+    status: 'online' | 'invisible' | 'dnd' | 'idle'
+    active?: boolean
+    session_id: string
+    activities: []
+}
+
+export const playStateToActivityData = (data: SourceData, opts: { useArt?: boolean } = {}): { activity: GatewayActivity, artUrl?: string } => {
+    // unix timestamps in milliseconds
+    let startTime: number,
+        endTime: number;
+
+    let play: PlayObject;
+    if (isPlayObject(data)) {
+        play = data;
+        if (data.meta.trackProgressPosition !== undefined && play.data.duration !== undefined) {
+            startTime = dayjs().subtract(data.meta.trackProgressPosition, 's').unix() * 1000;
+            endTime = dayjs().add(data.data.duration - data.meta.trackProgressPosition, 's').unix() * 1000;
+        } else if (asPlayerStateData(data)) {
+            play = data.play;
+            if (data.position !== undefined && play.data.duration !== undefined) {
+                startTime = dayjs().subtract(data.position, 's').unix() * 1000;
+                endTime = dayjs().add(data.data.duration - data.position, 's').unix() * 1000;
+            }
+        }
+    }
+
+    let activityName = 'Music';
+    if (play.meta?.source !== undefined) {
+        activityName = capitalize(play.meta.source)
+    }
+
+    // @ts-expect-error
+    const activity = removeUndefinedKeys<GatewayActivity>({
+        // https://docs.discord.com/developers/events/gateway-events#activity-object
+        type: 2, // Listening
+        // https://docs.discord.com/developers/events/gateway-events#activity-object
+        status_display_type: 1, // state
+        name: activityName,
+        details: play.data.track,
+        state: play.data.artists !== undefined && play.data.artists.length > 0 ? play.data.artists.join(' / ') : undefined,
+        // https://docs.discord.com/developers/events/gateway-events#activity-object-activity-assets
+        // https://docs.discord.com/developers/events/gateway-events#activity-object-activity-asset-image
+        assets: {
+            large_text: play.data.album
+        }
+    });
+    if (endTime !== undefined && startTime !== undefined) {
+        activity.timestamps = {
+            start: startTime,
+            end: endTime
+        }
+    }
+
+    const {
+        art: {
+            album,
+            track,
+            artist
+        } = {}
+    } = play.meta ?? {};
+
+    const artUrl = album ?? track ?? artist;
+
+    return { activity, artUrl };
+}

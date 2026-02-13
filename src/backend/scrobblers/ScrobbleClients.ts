@@ -21,6 +21,7 @@ import { CommonClientOptions } from '../common/infrastructure/config/client/inde
 import { ExternalMetadataTerm, PlayTransformHooks } from '../common/infrastructure/Transform.js';
 import { LibrefmClientConfig } from '../common/infrastructure/config/client/librefm.js';
 import clone from 'clone';
+import { DiscordClientConfig } from '../common/infrastructure/config/client/discord.js';
 
 type groupedNamedConfigs = {[key: string]: ParsedConfig[]};
 
@@ -108,6 +109,8 @@ export default class ScrobbleClients {
                     return "TealClientConfig";
                 case 'rocksky':
                     return "RockSkyClientConfig";
+                case 'discord':
+                    return 'DiscordClientConfig';
             }
     }
 
@@ -430,6 +433,10 @@ ${sources.join('\n')}`);
                 const RockskyScrobbler = (await import('./RockskyScrobbler.js')).default;
                 newClient = new RockskyScrobbler(name, {...clientConfig, data: {configDir: this.internalConfig.configDir, ...data} } as unknown as RockSkyClientConfig, {}, notifier, this.emitter, this.logger);
                 break;
+            case 'discord':
+                const DiscordScrobbler = (await import('./DiscordScrobbler.js')).default;
+                newClient = new DiscordScrobbler(name, {...clientConfig, data: {configDir: this.internalConfig.configDir, ...data} } as unknown as DiscordClientConfig, {}, notifier, this.emitter, this.logger);
+                break;                
             default:
                 break;
         }

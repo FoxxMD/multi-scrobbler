@@ -113,7 +113,8 @@ export type ClientType =
     | 'listenbrainz'
     | 'koito'
     | 'tealfm'
-    | 'rocksky';
+    | 'rocksky'
+    | 'discord';
 export const clientTypes: ClientType[] = [
     'maloja',
     'lastfm',
@@ -121,7 +122,8 @@ export const clientTypes: ClientType[] = [
     'listenbrainz',
     'koito',
     'tealfm',
-    'rocksky'
+    'rocksky',
+    'discord'
 ];
 
 export const clientInterfaces = [
@@ -132,7 +134,8 @@ export const clientInterfaces = [
     'ListenBrainzClientConfig',
     'KoitoClientConfig',
     'TealClientConfig',
-    'RockSkyClientConfig'
+    'RockSkyClientConfig',
+    'DiscordClientConfig'
 ];
 
 export const isClientType = (data: string): data is ClientType => {
