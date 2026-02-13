@@ -635,15 +635,7 @@ export const playStateToActivityData = (data: SourceData, opts: { useArt?: boole
         }
     }
 
-    const {
-        art: {
-            album,
-            track,
-            artist
-        } = {}
-    } = play.meta ?? {};
-
-    const artUrl = album ?? track ?? artist;
+    const artUrl = play.meta?.art?.album ?? play.meta.art.track ?? play.meta.art.artist;
 
     return { activity, artUrl };
 }
