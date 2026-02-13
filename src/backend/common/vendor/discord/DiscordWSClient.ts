@@ -1,9 +1,10 @@
 import { childLogger } from "@foxxmd/logging";
 import { WS } from 'iso-websocket'
 import { DiscordClientData } from "../../infrastructure/config/client/discord.js";
-import { _DataPayload, _NonDispatchPayload, APIUser, GatewayActivity, GatewayActivityUpdateData, GatewayDispatchEvents, GatewayHeartbeatRequest, GatewayHelloData, GatewayIdentify, GatewayIdentifyData, GatewayInvalidSessionData, GatewayOpcodes, GatewayPresenceUpdateData, GatewayReadyDispatchData, GatewayResumeData, GatewayUpdatePresence, PresenceUpdateStatus } from "discord.js";
+import { _DataPayload, _NonDispatchPayload, APIUser, GatewayActivity, GatewayActivityUpdateData, GatewayCloseCodes, GatewayDispatchEvents, GatewayHeartbeatRequest, GatewayHelloData, GatewayIdentify, GatewayIdentifyData, GatewayInvalidSessionData, GatewayOpcodes, GatewayPresenceUpdateData, GatewayReadyDispatchData, GatewayResumeData, GatewayUpdatePresence, PresenceUpdateStatus } from "discord.js";
 import { isDebugMode, parseBool, removeUndefinedKeys, sleep } from "../../../utils.js";
 import pEvent from 'p-event';
+import EventEmitter from "events";
 import { randomInt } from "crypto";
 import request from 'superagent';
 import AbstractApiClient from "../AbstractApiClient.js";
@@ -48,6 +49,8 @@ export class DiscordWSClient extends AbstractApiClient {
 
     canReconnect?: boolean = false;
     ready: boolean = false;
+    authOK?: boolean
+    closeEvents: number = 0;
 
     lastActiveStatus?: PresenceUpdateStatus = PresenceUpdateStatus.Offline;
 
@@ -55,9 +58,12 @@ export class DiscordWSClient extends AbstractApiClient {
 
     artworkOpt: boolean | string[] = false;
 
+    emitter: EventEmitter;
+
     constructor(name: any, config: DiscordClientData, options: AbstractApiOptions) {
         super('Discord', name, config, options);
         this.logger = childLogger(options.logger, 'WS Gateway');
+        this.emitter = new EventEmitter();
         if(typeof this.config.artwork === 'boolean' || Array.isArray(this.config.artwork)) {
             this.artworkOpt = this.config.artwork;
         } else if(typeof this.config.artwork === 'string') {
@@ -69,13 +75,20 @@ export class DiscordWSClient extends AbstractApiClient {
         }
     }
 
-    initClient = async (baseUrl?: string) => {
-        if (baseUrl === undefined && this.initialGatewayUrl === undefined) {
-            try {
-                await this.fetchGatewayUrl();
+    initClient = async () => {
+        let baseUrl: string;
+        if(this.resume_gateway_url !== undefined) {
+            baseUrl = this.resume_gateway_url;
+        } else {
+            if (this.initialGatewayUrl === undefined) {
+                try {
+                    await this.fetchGatewayUrl();
+                    baseUrl = this.initialGatewayUrl;
+                } catch (e) {
+                    throw new Error('Could not get initial gateway url', { cause: e });
+                }
+            } else {
                 baseUrl = this.initialGatewayUrl;
-            } catch (e) {
-                throw new Error('Could not get initial gateway url', { cause: e });
             }
         }
 
@@ -92,10 +105,32 @@ export class DiscordWSClient extends AbstractApiClient {
         this.client.addEventListener('retry', (e) => {
             this.logger.verbose(`Retrying connection, attempt ${e.attempt}`);
         });
-        this.client.addEventListener('close', (e) => {
+        this.client.addEventListener('close', async (e) => {
             // should receive a close code https://docs.discord.com/developers/topics/opcodes-and-status-codes#gateway-gateway-close-event-codes
             // which determines if reconnect is possible
             this.logger.warn(`Connection was closed: ${e.code} => ${e.reason}`);
+            if([
+                GatewayCloseCodes.AuthenticationFailed,
+                GatewayCloseCodes.InvalidShard,
+                GatewayCloseCodes.ShardingRequired,
+                GatewayCloseCodes.InvalidAPIVersion,
+                GatewayCloseCodes.InvalidIntents,
+                GatewayCloseCodes.DisallowedIntents
+            ].includes(e.code)) {
+                this.canReconnect = false;
+            }
+            if(GatewayCloseCodes.AuthenticationFailed === e.code) {
+                await this.cleanupConnection();
+                this.authOK = false;
+                this.emitter.emit('stopped', {authFailure: true});
+                // don't attempt to reconnect, will always fail
+            } else if(this.closeEvents < 3) {
+                this.closeEvents++;
+                await this.handleReconnect();
+            } else {
+                await this.cleanupConnection();
+                this.emitter.emit('stopped', {authFailure: false});
+            }
         });
         this.client.addEventListener('open', (e) => {
             this.logger.verbose(`Connection was established.`);
@@ -109,7 +144,6 @@ export class DiscordWSClient extends AbstractApiClient {
             }
         });
         this.client.addEventListener('error', (e) => {
-            // may return a close code?
             this.logger.error(new Error(`Error from Discord Gateway`, { cause: e.error }));
         });
 
@@ -161,8 +195,18 @@ export class DiscordWSClient extends AbstractApiClient {
         const sleepTime = randomInt(data.heartbeat_interval - 1);
         this.logger.debug(`Heartbeat Interval: ${data.heartbeat_interval}ms (${Math.floor(data.heartbeat_interval / 1000)}s), waiting ${Math.floor(sleepTime / 1000)}s before sending first heartbeat.`);
         await sleep(sleepTime);
+        const [isOk] = this.checkOkToSend();
+        if(!isOk) {
+            return;
+        }
         this.sendHeartbeat();
         this.heartbeatInterval = setInterval(() => {
+            if(this.client.OPEN !== this.client.readyState) {
+                if(this.heartbeatInterval !== undefined) {
+                    clearInterval(this.heartbeatInterval);
+                }
+                return;
+            }
             if (!this.acknowledged) {
                 // zombied!
                 return this.handleReconnect().then(() => null).catch((e) => this.logger.error(e));
@@ -179,8 +223,8 @@ export class DiscordWSClient extends AbstractApiClient {
             d: this.sequence ?? null
         }
         this.acknowledged = false;
-        if (!this.client.OPEN) {
-            this.logger.warn('Cannot send heartbeat because connection is closed.');
+        if (this.client.OPEN !== this.client.readyState) {
+            this.logger.debug('Cannot send heartbeat because connection is closed.');
             return;
         }
         this.client.send(JSON.stringify(heartbeatRequest));
@@ -199,6 +243,8 @@ export class DiscordWSClient extends AbstractApiClient {
         this.user = data.user;
         this.canReconnect = true;
         this.ready = true;
+        this.authOK = true;
+        this.closeEvents = 0;
         this.logger.verbose(`Gateway Connection READY for ${this.user.username}`);
     }
 
@@ -231,7 +277,7 @@ export class DiscordWSClient extends AbstractApiClient {
         clearTimeout(this.activityTimeout);
         this.activityTimeout = undefined;
 
-        if (!this.client.CLOSED) {
+        if (this.client.CLOSED !== this.client.readyState) {
             this.client.close();
             // wait for close or just give it a few seconds
             await Promise.race([
@@ -239,6 +285,7 @@ export class DiscordWSClient extends AbstractApiClient {
                 sleep(3000),
             ]);
         }
+        this.ready = false;
         if (!this.canReconnect) {
             this.session_id = undefined;
             this.sequence = undefined;
@@ -311,19 +358,25 @@ export class DiscordWSClient extends AbstractApiClient {
                                 // @ts-expect-error
                                 this.logger.debug({ data: message.d }, t);
                             }
+                            // @ts-expect-error
+                            this.handleUserSessionUpdates(message.d as UserSession[]);
                             break;
                     };
                     break;
                 case GatewayOpcodes.InvalidSession:
+                    this.logger.debug('Recieved invalid session opcode');
                     this.handleInvalidSession(message.d as GatewayInvalidSessionData);
                     break;
                 case GatewayOpcodes.Reconnect:
+                    this.logger.debug('Recieved reconnect opcode');
                     await this.handleReconnect();
                     break;
                 case GatewayOpcodes.Resume:
-                    this.logger.debug({ data: message.d }, 'Resumed session');
+                    this.logger.debug({ data: message.d }, 'Recieved Resumed session');
                     this.canReconnect = true;
                     this.ready = true;
+                    this.authOK = true;
+                    this.closeEvents = 0;
                     break;
                 case GatewayOpcodes.Identify:
                     this.logger.debug({ data: message.d }, 'Recieved Identifiy opcode');
@@ -437,15 +490,15 @@ export class DiscordWSClient extends AbstractApiClient {
     }
 
     checkOkToSend = (): [boolean, string?] => {
-        if (this.ready && this.client.OPEN) {
+        if (this.ready && this.client.OPEN === this.client.readyState) {
             return [true];
         }
         const reasons = [];
         if (!this.ready) {
             reasons.push('not ready');
         }
-        if (!this.client.OPEN) {
-            reasons.push('socket not open');
+        if (this.client.OPEN !== this.client.readyState) {
+            reasons.push(`socket not open (${this.client.readyState})`);
         }
         return [false, reasons.join(' and ')];
     }

@@ -19,6 +19,13 @@ export default class DiscordScrobbler extends AbstractScrobbleClient {
     constructor(name: any, config: DiscordClientConfig, options = {}, notifier: Notifiers, emitter: EventEmitter, logger: Logger) {
         super('discord', name, config, notifier, emitter, logger);
         this.api = new DiscordWSClient(name, { ...config.data, ...config.options }, { logger: this.logger });
+        this.api.emitter.on('stopped', async (e) => {
+            if(e.authFailure) {
+                this.authFailure = true;
+                this.authed = false;
+            }
+            await this.tryStopScrobbling();
+        });
         this.supportsNowPlaying = true;
         this.nowPlayingMaxThreshold = nowPlayingUpdateByPlayDuration;
     }
