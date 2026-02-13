@@ -6,7 +6,7 @@ import { Notifiers } from "../notifier/Notifiers.js";
 
 import AbstractScrobbleClient, { nowPlayingUpdateByPlayDuration } from "./AbstractScrobbleClient.js";
 import { DiscordClientConfig } from "../common/infrastructure/config/client/discord.js";
-import { DiscordWSClient } from "../common/vendor/discord/DiscordWSClient.js";
+import { DiscordWSClient, playStateToActivityData } from "../common/vendor/discord/DiscordWSClient.js";
 
 export default class DiscordScrobbler extends AbstractScrobbleClient {
 
@@ -61,7 +61,7 @@ export default class DiscordScrobbler extends AbstractScrobbleClient {
     alreadyScrobbled = async (playObj: PlayObject, log = false) => true
 
     public playToClientPayload(playObj: PlayObject): any {
-        return this.api.playStateToActivity(playObj);
+        return playStateToActivityData(playObj).activity;
     }
 
     doScrobble = async (playObj: PlayObject) => {

@@ -11,6 +11,8 @@ import JsonConfig from '!!raw-loader!@site/../config/discord.json.example';
 
 This scrobbler uses **[Now Playing](/configuration/clients#now-playing)** functionality to set your Discord [Rich Presence](https://docs.discord.com/developers/rich-presence/overview) to the music you are currently monitoring with multi-scrobbler.
 
+<img src={require('/img/discord_presence.png').default} height="131"/>
+
 :::warning[Discord TOS Violation]
 
 This functionality requires you to use your own **User Token** in a way that is **against Discord's policies/terms of service.** If you use this scrobbler you do so **at your risk**.
@@ -49,9 +51,28 @@ When finding instructions for obtaining this token only run commands, or follow 
 
 ## Artwork
 
-For some Sources, MS parses album art and displays it in the dashboard. This image can be displayed on Discord alongside your listening status.
+For some Sources, MS parses album art and displays it in the dashboard. If a Discord **Application Id** is provided then this image can be displayed on Discord alongside your listening status.
 
-However, Discord needs a *direct, internet-facing* URL to correctly display this image which may not be feasible, or desirable, based on each of your Sources. For example:
+If no Application Id is provided Discord will always show a default image next to your status.
+
+<details>
+
+<summary>Create An Application</summary>
+
+Go to the [Discord Developer Portal](https://discord.com/developers/applications)
+
+* Click on "New Application" and give it a name
+* Copy the **Application Id** (Client Id) shown after creation
+
+</details>
+
+Discord needs an **external, internet-facing** URL to correctly display this image which may not be feasible, or desirable, based on the Sources you are using. Multi-scrobbler disallows **all** external URLs by default.
+
+<details>
+
+<summary>Using External URLs</summary>
+
+There are some scenarios where you may not want to use your artwork URLs, for example:
 
 * A Source may be accessible only on your LAN (Jellyfin at `http://192.168.0.101`)
 * A Source may be internet-facing but you do not want to expose this information to discord/other users
@@ -62,14 +83,18 @@ MS is conservative in this context by **disallowing** use of album art URLs **by
 * To allow **any** `https` album art URLs set ENV `DISCORD_ARTWORK=true`
 * To allow only `https` album art URLs from certain domains use a list of keywords like `DISCORD_ARTWORK=spotify,jellyfin` (or in file as `"artwork": ["spotify","jellyfin"]`)
 
-If listening activity does not have album art, or the URL is disallowed, MS will use a fallback image of the multi-scrobbler logo. You can customize this fallback image with ENV `DISCORD_ARTWORK_DEFAULT_URL` or in file config with `artworkDefaultUrl`
+If a listening activity does not have album art, or the URL is disallowed, MS will use the [multi-scrobbler logo](https://github.com/FoxxMD/multi-scrobbler/blob/master/assets/icon.png) as a fallback image.
+
+You can customize this fallback image with ENV `DISCORD_ARTWORK_DEFAULT_URL` or in file config with `artworkDefaultUrl`. If you were prefer to use the discord default image set this value to `false`.
+
+</details>
 
 ## Configuration
 
 <Config config="DiscordClientConfig" fileContent={JsonConfig} client name="discord">
-        | Environmental Variable        | Required? | Default | Description                                                                                                |
-        | :---------------------------- | --------- | ------- | :--------------------------------------------------------------------------------------------------------- |
-        | `DISCORD_TOKEN`               | Yes       |         | User Token acquired from an active Discord sessions                                                        |
-        | `DISCORD_ARTWORK`             | No        |         | A boolean indicating if external artwork URLs should be used. Or a comma-separated list of allowed domains |
-        | `DISCORD_ARTWORK_DEFAULT_URL` | No        |         | A URL of an image to use as a fallback if the album art URL cannot be used                                 |
+        | Environmental Variable        | Required? | Default | Description                                                                                                      |
+        | :---------------------------- | --------- | ------- | :--------------------------------------------------------------------------------------------------------------- |
+        | `DISCORD_TOKEN`               | Yes       |         | User Token acquired from an active Discord sessions                                                              |
+        | `DISCORD_ARTWORK`             | No        |         | A boolean indicating if external artwork URLs should be used. Or a comma-separated list of allowed domains       |
+        | `DISCORD_ARTWORK_DEFAULT_URL` | No        |         | A URL of an image to use as a fallback if the album art URL cannot be used. Or `false` to use discord's default. |
 </Config>

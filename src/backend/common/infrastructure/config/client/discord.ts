@@ -3,8 +3,9 @@ import { CommonClientConfig, CommonClientData } from "./index.js"
 
 export interface DiscordData {
     token: string
+    applicationId?: string
     artwork?: boolean | string | string[]
-    artworkDefaultUrl?: string
+    artworkDefaultUrl?: string | false
 }
 
 export interface DiscordClientData extends DiscordData, CommonClientData {}

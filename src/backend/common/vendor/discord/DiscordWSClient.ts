@@ -13,8 +13,11 @@ import { isPlayObject, PlayObject } from "../../../../core/Atomic.js";
 import dayjs from "dayjs";
 import { capitalize } from "../../../../core/StringUtils.js";
 import { parseArrayFromMaybeString } from "../../../utils/StringUtils.js";
+import { getRoot } from "../../../ioc.js";
+import { MSCache } from "../../Cache.js";
+import { isSuperAgentResponseError } from "../../errors/ErrorUtils.js";
 
-const ARTWORK_PLACEHOLDER = 'https://raw.githubusercontent.com/FoxxMD/multi-scrobbler/master/assets/icon128.png';
+const ARTWORK_PLACEHOLDER = 'https://raw.githubusercontent.com/FoxxMD/multi-scrobbler/master/assets/icon.png';
 const API_GATEWAY_ENDPOINT = 'https://discord.com/api/gateway';
 
 /**
@@ -60,24 +63,32 @@ export class DiscordWSClient extends AbstractApiClient {
 
     emitter: EventEmitter;
 
+    cache: MSCache;
+    artFail: boolean = false;
+    artFailCount = 0;
+
     constructor(name: any, config: DiscordClientData, options: AbstractApiOptions) {
         super('Discord', name, config, options);
         this.logger = childLogger(options.logger, 'WS Gateway');
         this.emitter = new EventEmitter();
-        if(typeof this.config.artwork === 'boolean' || Array.isArray(this.config.artwork)) {
+        if (typeof this.config.artwork === 'boolean' || Array.isArray(this.config.artwork)) {
             this.artworkOpt = this.config.artwork;
-        } else if(typeof this.config.artwork === 'string') {
-            if(['true','false'].includes(this.config.artwork.toLocaleLowerCase())) {
+        } else if (typeof this.config.artwork === 'string') {
+            if (['true', 'false'].includes(this.config.artwork.toLocaleLowerCase())) {
                 this.artworkOpt = parseBool(this.config.artwork)
             } else {
                 this.artworkOpt = parseArrayFromMaybeString(this.config.artwork)
             }
         }
+        if(this.config.artworkDefaultUrl !== undefined && typeof this.config.artworkDefaultUrl === 'string' && this.config.artworkDefaultUrl.toLocaleLowerCase().trim() === 'false') {
+            this.config.artworkDefaultUrl = false;
+        }
+        this.cache = getRoot().items.cache();
     }
 
     initClient = async () => {
         let baseUrl: string;
-        if(this.resume_gateway_url !== undefined) {
+        if (this.resume_gateway_url !== undefined) {
             baseUrl = this.resume_gateway_url;
         } else {
             if (this.initialGatewayUrl === undefined) {
@@ -109,7 +120,7 @@ export class DiscordWSClient extends AbstractApiClient {
             // should receive a close code https://docs.discord.com/developers/topics/opcodes-and-status-codes#gateway-gateway-close-event-codes
             // which determines if reconnect is possible
             this.logger.warn(`Connection was closed: ${e.code} => ${e.reason}`);
-            if([
+            if ([
                 GatewayCloseCodes.AuthenticationFailed,
                 GatewayCloseCodes.InvalidShard,
                 GatewayCloseCodes.ShardingRequired,
@@ -119,17 +130,17 @@ export class DiscordWSClient extends AbstractApiClient {
             ].includes(e.code)) {
                 this.canReconnect = false;
             }
-            if(GatewayCloseCodes.AuthenticationFailed === e.code) {
+            if (GatewayCloseCodes.AuthenticationFailed === e.code) {
                 await this.cleanupConnection();
                 this.authOK = false;
-                this.emitter.emit('stopped', {authFailure: true});
+                this.emitter.emit('stopped', { authFailure: true });
                 // don't attempt to reconnect, will always fail
-            } else if(this.closeEvents < 3) {
+            } else if (this.closeEvents < 3) {
                 this.closeEvents++;
                 await this.handleReconnect();
             } else {
                 await this.cleanupConnection();
-                this.emitter.emit('stopped', {authFailure: false});
+                this.emitter.emit('stopped', { authFailure: false });
             }
         });
         this.client.addEventListener('open', (e) => {
@@ -196,13 +207,13 @@ export class DiscordWSClient extends AbstractApiClient {
         this.logger.debug(`Heartbeat Interval: ${data.heartbeat_interval}ms (${Math.floor(data.heartbeat_interval / 1000)}s), waiting ${Math.floor(sleepTime / 1000)}s before sending first heartbeat.`);
         await sleep(sleepTime);
         const [isOk] = this.checkOkToSend();
-        if(!isOk) {
+        if (!isOk) {
             return;
         }
         this.sendHeartbeat();
         this.heartbeatInterval = setInterval(() => {
-            if(this.client.OPEN !== this.client.readyState) {
-                if(this.heartbeatInterval !== undefined) {
+            if (this.client.OPEN !== this.client.readyState) {
+                if (this.heartbeatInterval !== undefined) {
                     clearInterval(this.heartbeatInterval);
                 }
                 return;
@@ -393,7 +404,7 @@ export class DiscordWSClient extends AbstractApiClient {
         }
     }
 
-    playStateToActivity = (data: SourceData): GatewayActivity => {
+    playStateToActivity = async (data: SourceData): Promise<GatewayActivity> => {
         const { activity, artUrl } = playStateToActivityData(data);
         const artwork = this.artworkOpt;
         const {
@@ -418,7 +429,12 @@ export class DiscordWSClient extends AbstractApiClient {
         }
         // https://docs.discord.com/developers/events/gateway-events#activity-object-activity-assets
         // https://docs.discord.com/developers/events/gateway-events#activity-object-activity-asset-image
-        activity.assets.large_image = art;
+        if(art !== false) {
+            const usedUrl = await this.getArtworkUrl(art);
+            if(usedUrl !== undefined) {
+                activity.assets.large_image = usedUrl;
+            }
+        }
 
         return activity;
     }
@@ -434,7 +450,7 @@ export class DiscordWSClient extends AbstractApiClient {
             this.logger.warn(`Cannot send activity because client is ${reasons}`);
             return;
         }
-        const activity = this.playStateToActivity(data);
+        const activity = await this.playStateToActivity(data);
 
         let clearTime = dayjs().add(5, 'minutes');
         if (activity.timestamps.end !== undefined) {
@@ -501,6 +517,42 @@ export class DiscordWSClient extends AbstractApiClient {
             reasons.push(`socket not open (${this.client.readyState})`);
         }
         return [false, reasons.join(' and ')];
+    }
+
+    getArtworkUrl = async (artUrl: string): Promise<string | undefined> => {
+
+        const cachedUrl = await this.cache.cacheMetadata.get<string>(artUrl);
+        if (cachedUrl !== undefined) {
+            return cachedUrl;
+        }
+
+        if (this.config.applicationId === undefined || this.artFail) {
+            return;
+        }
+
+        try {
+            const imgResp = await request.post(`https://discord.com/api/v10/applications/${this.config.applicationId}/external-assets`)
+                .set('Authorization', this.config.token)
+                .type('json')
+                .send({ "urls": [artUrl] });
+            this.artFailCount = 0;
+            const proxied = `mp:${imgResp.body[0].external_asset_path}`
+            await this.cache.cacheMetadata.set(artUrl, proxied);
+            return proxied;
+        } catch (e) {
+            this.artFailCount++;
+            this.logger.warn(new Error('Failed to upload art url', { cause: e }));
+            if (isSuperAgentResponseError(e)) {
+                if (e.status === 401 || e.status === 403) {
+                    this.artFail = true;
+                }
+            } else if (this.artFailCount > 3) {
+                this.logger.verbose('More than 3 consecutive failures to upload art...turning off to stop spamming bad requests');
+                this.artFail = true;
+            }
+            return;
+        }
+
     }
 }
 
