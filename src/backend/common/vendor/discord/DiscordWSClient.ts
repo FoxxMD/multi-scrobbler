@@ -2,7 +2,7 @@ import { childLogger } from "@foxxmd/logging";
 import { WS } from 'iso-websocket'
 import { DiscordClientData } from "../../infrastructure/config/client/discord.js";
 import { _DataPayload, _NonDispatchPayload, APIUser, GatewayActivity, GatewayActivityUpdateData, GatewayDispatchEvents, GatewayHeartbeatRequest, GatewayHelloData, GatewayIdentify, GatewayIdentifyData, GatewayInvalidSessionData, GatewayOpcodes, GatewayPresenceUpdateData, GatewayReadyDispatchData, GatewayResumeData, GatewayUpdatePresence, PresenceUpdateStatus } from "discord.js";
-import { isDebugMode, removeUndefinedKeys, sleep } from "../../../utils.js";
+import { isDebugMode, parseBool, removeUndefinedKeys, sleep } from "../../../utils.js";
 import pEvent from 'p-event';
 import { randomInt } from "crypto";
 import request from 'superagent';
@@ -11,6 +11,7 @@ import { AbstractApiOptions, asPlayerStateData, SourceData } from "../../infrast
 import { isPlayObject, PlayObject } from "../../../../core/Atomic.js";
 import dayjs from "dayjs";
 import { capitalize } from "../../../../core/StringUtils.js";
+import { parseArrayFromMaybeString } from "../../../utils/StringUtils.js";
 
 const ARTWORK_PLACEHOLDER = 'https://raw.githubusercontent.com/FoxxMD/multi-scrobbler/master/assets/icon128.png';
 const API_GATEWAY_ENDPOINT = 'https://discord.com/api/gateway';
@@ -52,9 +53,20 @@ export class DiscordWSClient extends AbstractApiClient {
 
     activityTimeout: NodeJS.Timeout;
 
+    artworkOpt: boolean | string[] = false;
+
     constructor(name: any, config: DiscordClientData, options: AbstractApiOptions) {
         super('Discord', name, config, options);
         this.logger = childLogger(options.logger, 'WS Gateway');
+        if(typeof this.config.artwork === 'boolean' || Array.isArray(this.config.artwork)) {
+            this.artworkOpt = this.config.artwork;
+        } else if(typeof this.config.artwork === 'string') {
+            if(['true','false'].includes(this.config.artwork.toLocaleLowerCase())) {
+                this.artworkOpt = parseBool(this.config.artwork)
+            } else {
+                this.artworkOpt = parseArrayFromMaybeString(this.config.artwork)
+            }
+        }
     }
 
     initClient = async (baseUrl?: string) => {
@@ -330,11 +342,12 @@ export class DiscordWSClient extends AbstractApiClient {
 
     playStateToActivity = (data: SourceData): GatewayActivity => {
         const { activity, artUrl } = playStateToActivityData(data);
+        const artwork = this.artworkOpt;
         const {
-            artwork = false
+            artworkDefaultUrl = ARTWORK_PLACEHOLDER
         } = this.config;
 
-        let art = ARTWORK_PLACEHOLDER;
+        let art = artworkDefaultUrl;
         if (artUrl !== undefined && artwork !== false) {
             if (Array.isArray(artwork)) {
                 const allowed = artwork.some(x => artUrl.toLocaleLowerCase().includes(x.toLocaleLowerCase()));

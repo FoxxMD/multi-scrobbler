@@ -2,9 +2,9 @@ import { RequestRetryOptions } from "../common.js"
 import { CommonClientConfig, CommonClientData } from "./index.js"
 
 export interface DiscordData {
-    //applicationId: string
     token: string
-    artwork?: boolean | string[]
+    artwork?: boolean | string | string[]
+    artworkDefaultUrl?: string
 }
 
 export interface DiscordClientData extends DiscordData, CommonClientData {}

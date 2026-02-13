@@ -299,6 +299,24 @@ export default class ScrobbleClients {
                         })
                     }
                     break;
+                case 'discord': {
+                    const discord = {
+                        token: process.env.DISCORD_TOKEN,
+                        artwork: process.env.DISCORD_ARTWORK,
+                        artworkDefaultUrl: process.env.DISCORD_ARTWORK_DEFAULT_URL
+                    }
+                    if (!Object.values(discord).every(x => x === undefined)) {
+                        configs.push({
+                            type: 'discord',
+                            name: 'unnamed-discord',
+                            source: 'ENV',
+                            mode: 'single',
+                            configureAs: 'client',
+                            data: discord,
+                            options: transformPresetEnv('DISCORD')
+                        })
+                    }
+                }   break;
                 default:
                     break;
             }
