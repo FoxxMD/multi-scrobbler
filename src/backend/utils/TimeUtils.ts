@@ -35,10 +35,16 @@ dayjs.extend(isToday);
 export const temporalPlayComparisonSummary = (data: TemporalPlayComparison, existingPlay?: PlayObject, candidatePlay?: PlayObject) => {
     const parts: string[] = [];
     if (existingPlay !== undefined && candidatePlay !== undefined) {
-        if (existingPlay.data.playDate.isSame(candidatePlay.data.playDate, 'day')) {
-            parts.push(`Existing: ${existingPlay.data.playDate.format('HH:mm:ssZ')} - Candidate: ${candidatePlay.data.playDate.format('HH:mm:ssZ')}`);
+        const existingDate = existingPlay.data.playDate;
+        const candidateDate = candidatePlay.data.playDate;
+
+        // Check if dates are valid before comparing/formatting
+        if (!existingDate?.isValid() || !candidateDate?.isValid()) {
+            parts.push(`Existing: ${existingDate?.isValid() ? existingDate.toISOString() : 'Invalid Date'} - Candidate: ${candidateDate?.isValid() ? candidateDate.toISOString() : 'Invalid Date'}`);
+        } else if (existingDate.isSame(candidateDate, 'day')) {
+            parts.push(`Existing: ${existingDate.format('HH:mm:ssZ')} - Candidate: ${candidateDate.format('HH:mm:ssZ')}`);
         } else {
-            parts.push(`Existing: ${existingPlay.data.playDate.toISOString()} - Candidate: ${candidatePlay.data.playDate.toISOString()}`);
+            parts.push(`Existing: ${existingDate.toISOString()} - Candidate: ${candidateDate.toISOString()}`);
         }
     }
     parts.push(`Temporal Sameness: ${capitalize(temporalAccuracyToString(data.match))}`);
