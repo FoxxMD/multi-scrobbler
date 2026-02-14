@@ -54,7 +54,7 @@ export interface SourceStatusData {
 
 export interface ClientStatusData {
     status: string;
-    type: "maloja" | "lastfm" | "librefm" | "listenbrainz" | "koito" | "tealfm" | "rocksky";
+    type: "maloja" | "lastfm" | "librefm" | "listenbrainz" | "koito" | "tealfm" | "rocksky" | "discord";
     display: string;
     scrobbled: number;
     deadLetterScrobbles: number
