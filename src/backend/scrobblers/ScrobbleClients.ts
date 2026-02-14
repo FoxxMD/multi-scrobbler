@@ -303,6 +303,7 @@ export default class ScrobbleClients {
                     const discord = {
                         token: process.env.DISCORD_TOKEN,
                         artwork: process.env.DISCORD_ARTWORK,
+                        applicationId: process.env.DISCORD_APPLICATION_ID,
                         artworkDefaultUrl: process.env.DISCORD_ARTWORK_DEFAULT_URL
                     }
                     if (!Object.values(discord).every(x => x === undefined)) {
