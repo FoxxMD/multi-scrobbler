@@ -36,6 +36,8 @@ const shortDeviceId = truncateStringToLength(10, '');
 
 export const LOCAL_USER = 'PLEX_LOCAL_USER';
 
+const MBID_PREFIX = "mbid://";
+
 const THUMB_REGEX = new RegExp(/\/library\/metadata\/(?<ratingkey>\d+)\/thumb\/\d+/)
 
 export default class PlexApiSource extends MemoryPositionalSource {
@@ -532,7 +534,7 @@ ${JSON.stringify(obj)}`);
 
     getNewPlayer = (logger: Logger, id: PlayPlatformId, opts: PlayerStateOptions) => new PlexPlayerState(logger, id, opts);
     
-    getMusicBrainzId = async (ratingKey: string | undefined): Promise<string | undefined> => {
+    getMusicBrainzId = async (ratingKey: string | undefined): Promise<string | null | undefined> => {
         if (!ratingKey) {
             return null;
         }
@@ -565,24 +567,37 @@ ${JSON.stringify(obj)}`);
             );
         
             const result = await request.json();
+            
+            let mbid: string | null = null;
         
             // There shouldn't be multiple metadata or GUID objects, but we return
             // the first MBID to be safe.
-            for (const metadata of result.MediaContainer.Metadata ?? []) {
+            metadataLoop: for (const metadata of result?.MediaContainer?.Metadata ?? []) {
+                this.logger.verbose(`Guid: '${metadata.Guid?.map(g => g.id)?.join(", ")}', guid: '${metadata.guid}'`)
+                
                 for (const guid of metadata.Guid ?? []) {
-                    if (typeof guid.id === "string" && guid.id.startsWith("mbid://")) {
-                        const mbid = guid.id.replace("mbid://", "");
-                        
-                        await this.mbIdCache.set(ratingKey, mbid);
-                        return mbid;
+                    if (typeof guid.id === "string" && guid.id.startsWith(MBID_PREFIX)) {
+                        mbid = guid.id.replace(MBID_PREFIX, "");
+                        break metadataLoop;
                     }
                 }
+                
+                // Some matched items store the MBID in the `MediaContainer.Metadata.guid` field,
+                // so we check that as a fallback if there are no objects in the `Guid` field.
+                if (typeof metadata.guid === "string" && metadata.guid.startsWith(MBID_PREFIX)) {
+                    mbid = metadata.guid.replace(MBID_PREFIX, "");
+                    break metadataLoop;
+                }
             }
+            
+            this.logger.verbose(`Extracted MBID: '${mbid}'`);
+            
+            await this.mbIdCache.set(ratingKey, mbid);
+            return mbid;
         } catch (e) {
             this.logger.warn(new Error(`Failed to get MusicBrainz IDs from Plex for item ${ratingKey}`, {cause: e}));
         }
         
-        this.mbIdCache.set(ratingKey, null);
         return undefined;
     }
 }
