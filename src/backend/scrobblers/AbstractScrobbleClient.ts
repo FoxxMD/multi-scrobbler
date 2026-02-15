@@ -1017,7 +1017,7 @@ ${closestMatch.breakdowns.join('\n')}`, {leaf: ['Dupe Check']});
             if(play === undefined) {
                 return;
             }
-            if(this.shouldUpdatePlayingNow(play)) {
+            if(this.shouldUpdatePlayingNow(play) && (await this.shouldUpdatePlayingNowPlatformSpecific(play))) {
                 try {
                     await this.doPlayingNow(play);
                     this.npLogger.debug(`Now Playing updated.`);
@@ -1063,6 +1063,11 @@ ${closestMatch.breakdowns.join('\n')}`, {leaf: ['Dupe Check']});
             this.npLogger.debug(`Now Playing ${playObjDataMatch(data, this.nowPlayingLastPlay) ? 'matches' : 'does not match'} and was last updated ${lastUpdateDiff}s ago (threshold ${this.nowPlayingMaxThreshold(data)}s), not updating`);
         }
         return false;
+    }
+
+    /** If there are specific requirements for updating playing now based on the scrobbler platform they should implement this */
+    protected shouldUpdatePlayingNowPlatformSpecific = async (data: PlayObject): Promise<boolean> => {
+        return true;
     }
 
     protected doPlayingNow = (data: PlayObject): Promise<any> => Promise.resolve(undefined)

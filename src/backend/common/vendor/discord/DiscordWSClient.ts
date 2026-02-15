@@ -440,11 +440,6 @@ export class DiscordWSClient extends AbstractApiClient {
     }
 
     sendActivity = async (data: SourceData) => {
-
-        if ([PresenceUpdateStatus.Offline, PresenceUpdateStatus.Invisible].includes(this.lastActiveStatus)) {
-            this.logger.debug('Not updating presence because no user sessions have a visible status');
-            return;
-        }
         const [sendOk, reasons] = this.checkOkToSend();
         if (!sendOk) {
             this.logger.warn(`Cannot send activity because client is ${reasons}`);

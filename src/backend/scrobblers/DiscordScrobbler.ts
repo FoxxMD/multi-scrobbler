@@ -7,6 +7,7 @@ import { Notifiers } from "../notifier/Notifiers.js";
 import AbstractScrobbleClient, { nowPlayingUpdateByPlayDuration } from "./AbstractScrobbleClient.js";
 import { DiscordClientConfig } from "../common/infrastructure/config/client/discord.js";
 import { DiscordWSClient, playStateToActivityData } from "../common/vendor/discord/DiscordWSClient.js";
+import { PresenceUpdateStatus } from "discord.js";
 
 export default class DiscordScrobbler extends AbstractScrobbleClient {
 
@@ -74,5 +75,18 @@ export default class DiscordScrobbler extends AbstractScrobbleClient {
         } catch (e) {
             throw e;
         }
+    }
+
+    shouldUpdatePlayingNowPlatformSpecific = async (data: PlayObject) => {
+        if ([PresenceUpdateStatus.Offline, PresenceUpdateStatus.Invisible].includes(this.api.lastActiveStatus)) {
+            this.logger.debug('Not updating presence because no user sessions have a visible status');
+            return false;
+        }
+        const [sendOk, reasons] = this.api.checkOkToSend();
+        if (!sendOk) {
+            this.logger.warn(`Cannot update playing now because api client is ${reasons}`);
+            return false;
+        }
+        return true;
     }
 }
