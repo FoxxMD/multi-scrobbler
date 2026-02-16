@@ -50,9 +50,7 @@ export default class ScrobbleClients {
         this.sourceEmitter.on('playerUpdate', async (payload: { data: SourcePlayerObj & { options: { scrobbleTo: string[] } }} & SourceIdentifier) => {
             // agressively update Now Playing so scrobblers that display based on duration are mostly synced
             // but aggressively *stop* updating if state becomes stale/orphaned
-            if(payload.data.status.reported === REPORTED_PLAYER_STATUSES.playing && (!payload.data.status.stale && !payload.data.status.orphaned)) {
-                this.playingNow(payload.data.play, {...payload.data.options, scrobbleFrom: { type: payload.type, name: payload.name}});
-            }
+            this.playingNow(payload.data, {...payload.data.options, scrobbleFrom: { type: payload.type, name: payload.name}});
         });
 
         this.sourceEmitter.on('discoveredToScrobble', async (payload: { data: (PlayObject | PlayObject[]), options: { forceRefresh?: boolean, checkTime?: Dayjs, scrobbleTo?: string[], scrobbleFrom?: string } }) => {
@@ -468,7 +466,7 @@ ${sources.join('\n')}`);
         this.clients.push(newClient);
     }
 
-    playingNow = async (data: (PlayObject | PlayObject[]), options: {scrobbleTo: string[], scrobbleFrom: SourceIdentifier}) => {
+    playingNow = async (data: SourcePlayerObj, options: {scrobbleTo: string[], scrobbleFrom: SourceIdentifier}) => {
         const playObjs = Array.isArray(data) ? data : [data];
         const {
             scrobbleTo = [],

@@ -1,6 +1,6 @@
 import { Logger } from "@foxxmd/logging";
 import EventEmitter from "events";
-import { PlayObject } from "../../core/Atomic.js";
+import { PlayObject, SourcePlayerObj } from "../../core/Atomic.js";
 import { buildTrackString, capitalize } from "../../core/StringUtils.js";
 import { isNodeNetworkException } from "../common/errors/NodeErrors.js";
 import { UpstreamError } from "../common/errors/UpstreamError.js";
@@ -8,7 +8,7 @@ import { FormatPlayObjectOptions } from "../common/infrastructure/Atomic.js";
 import { playToListenPayload } from "../common/vendor/ListenbrainzApiClient.js";
 import { Notifiers } from "../notifier/Notifiers.js";
 
-import AbstractScrobbleClient from "./AbstractScrobbleClient.js";
+import AbstractScrobbleClient, { shouldUpdatePlayingNowPlatformWhenPlayingOnly } from "./AbstractScrobbleClient.js";
 import { isDebugMode } from "../utils.js";
 import { KoitoClientConfig } from "../common/infrastructure/config/client/koito.js";
 import { KoitoApiClient, listenObjectResponseToPlay } from "../common/vendor/koito/KoitoApiClient.js";
@@ -95,9 +95,9 @@ export default class KoitoScrobbler extends AbstractScrobbleClient {
         }
     }
 
-    doPlayingNow = async (data: PlayObject) => {
+    doPlayingNow = async (data: SourcePlayerObj) => {
         try {
-            await this.api.submitListen(data, { listenType: 'playing_now'});
+            await this.api.submitListen(data.play, { listenType: 'playing_now'});
         } catch (e) {
             throw e;
         }

@@ -5,9 +5,9 @@ import isBetween from "dayjs/plugin/isBetween.js";
 import relativeTime from "dayjs/plugin/relativeTime.js";
 import timezone from "dayjs/plugin/timezone.js";
 import utc from "dayjs/plugin/utc.js";
-import { FEAT, JOINERS, JOINERS_FINAL, JsonPlayObject, MissingMbidType, ObjectPlayData, PlayMeta, PlayObject } from "../../../core/Atomic.js";
-import { sortByNewestPlayDate } from "../../utils.js";
-import { NO_DEVICE, NO_USER, PlayerStateDataMaybePlay, PlayPlatformId, ReportedPlayerStatus } from '../../common/infrastructure/Atomic.js';
+import { FEAT, JOINERS, JOINERS_FINAL, JsonPlayObject, MissingMbidType, ObjectPlayData, PlayMeta, PlayObject, SourcePlayerObj } from "../../../core/Atomic.js";
+import { genGroupIdStr, getPlatformIdFromData, sortByNewestPlayDate } from "../../utils.js";
+import { CALCULATED_PLAYER_STATUSES, NO_DEVICE, NO_USER, PlayerStateDataMaybePlay, PlayPlatformId, REPORTED_PLAYER_STATUSES, ReportedPlayerStatus, SINGLE_USER_PLATFORM_ID, SourceIdentifier } from '../../common/infrastructure/Atomic.js';
 import { arrayListAnd } from '../../../core/StringUtils.js';
 import { findDelimiters } from '../../utils/StringUtils.js';
 import { ListRecord, ScrobbleRecord } from '../../common/infrastructure/config/client/tealfm.js';
@@ -428,4 +428,44 @@ export const generateTealPlayRecord = (opts: {
     }
 
     return [rec, { did, tid }];
-} 
+}
+
+export interface GenerateSourcePlayerObjOptions {
+    playOpts?: Parameters<typeof generatePlay>[0]
+    play?: PlayObject
+    playPlatform?: string, 
+    sourcePlayOpts?: Partial<SourcePlayerObj>
+}
+
+export const generateSourcePlayerObj = (opts: GenerateSourcePlayerObjOptions): SourcePlayerObj => {
+    let play: PlayObject;
+    let platformId: string;
+    if(opts.play !== undefined) {
+        platformId = opts.play.meta.deviceId;
+    } else {
+        platformId = opts.playPlatform ?? genGroupIdStr(SINGLE_USER_PLATFORM_ID);
+    }
+    play = opts.play ?? generatePlay(opts.playOpts, {deviceId:platformId});
+
+    const {
+        status = {},
+        play: oPlay,
+        platformId: oplat,
+        ...rest
+    } = opts.sourcePlayOpts ?? {};
+
+    return {
+        platformId,
+        play,
+        listenedDuration: 60,
+        playerLastUpdatedAt: dayjs().toISOString(),
+        status: {
+            reported: REPORTED_PLAYER_STATUSES.playing,
+            calculated: CALCULATED_PLAYER_STATUSES.playing,
+            stale: false,
+            orphaned: false,
+            ...status
+        },
+        ...rest
+    }
+}

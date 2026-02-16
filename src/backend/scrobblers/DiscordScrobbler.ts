@@ -1,7 +1,7 @@
 import { Logger } from "@foxxmd/logging";
 import EventEmitter from "events";
-import { PlayObject } from "../../core/Atomic.js";
-import { FormatPlayObjectOptions } from "../common/infrastructure/Atomic.js";
+import { PlayObject, SourcePlayerObj } from "../../core/Atomic.js";
+import { CALCULATED_PLAYER_STATUSES, CalculatedPlayerStatus, FormatPlayObjectOptions, REPORTED_PLAYER_STATUSES, ReportedPlayerStatus } from "../common/infrastructure/Atomic.js";
 import { Notifiers } from "../notifier/Notifiers.js";
 
 import AbstractScrobbleClient, { nowPlayingUpdateByPlayDuration } from "./AbstractScrobbleClient.js";
@@ -29,6 +29,7 @@ export default class DiscordScrobbler extends AbstractScrobbleClient {
         });
         this.supportsNowPlaying = true;
         this.nowPlayingMaxThreshold = nowPlayingUpdateByPlayDuration;
+        this.nowPlayingMinThreshold = (_) => 5;
     }
 
     formatPlayObj = (obj: any, options: FormatPlayObjectOptions = {}) => obj;
@@ -69,15 +70,22 @@ export default class DiscordScrobbler extends AbstractScrobbleClient {
         return { play: playObj, payload: {} };
     }
 
-    doPlayingNow = async (data: PlayObject) => {
+    doPlayingNow = async (data: SourcePlayerObj) => {
         try {
-            await this.api.sendActivity(data);
+            if([CALCULATED_PLAYER_STATUSES.stopped, CALCULATED_PLAYER_STATUSES.paused].includes(data.status.calculated as ReportedPlayerStatus)) {
+                await this.api.sendActivity(undefined);
+            } else {
+                await this.api.sendActivity(data.play);
+            }
         } catch (e) {
             throw e;
         }
     }
 
-    shouldUpdatePlayingNowPlatformSpecific = async (data: PlayObject) => {
+    shouldUpdatePlayingNowPlatformSpecific = async (data: SourcePlayerObj) => {
+        if(data.status.reported === REPORTED_PLAYER_STATUSES.playing
+             || [CALCULATED_PLAYER_STATUSES.stopped, CALCULATED_PLAYER_STATUSES.paused].includes(data.status.calculated as ReportedPlayerStatus)
+             || data.status.stale)
         if ([PresenceUpdateStatus.Offline, PresenceUpdateStatus.Invisible].includes(this.api.lastActiveStatus)) {
             this.logger.debug('Not updating presence because no user sessions have a visible status');
             return false;

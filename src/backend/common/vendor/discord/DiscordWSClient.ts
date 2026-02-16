@@ -439,12 +439,17 @@ export class DiscordWSClient extends AbstractApiClient {
         return activity;
     }
 
-    sendActivity = async (data: SourceData) => {
+    sendActivity = async (data: SourceData | undefined) => {
         const [sendOk, reasons] = this.checkOkToSend();
         if (!sendOk) {
             this.logger.warn(`Cannot send activity because client is ${reasons}`);
             return;
         }
+        if(data === undefined) {
+            this.clearActivity();
+            return;
+        }
+
         const activity = await this.playStateToActivity(data);
 
         let clearTime = dayjs().add(5, 'minutes');

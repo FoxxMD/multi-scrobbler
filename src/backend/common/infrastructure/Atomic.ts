@@ -233,6 +233,7 @@ export interface ProgressAwarePlayObject extends PlayObject {
 export type DeviceId = string;
 export type PlayUserId = string;
 export type PlayPlatformId = [DeviceId, PlayUserId];
+export type PlayPlatformIdStr = string;
 
 export type GroupedPlays = TupleMap<DeviceId,PlayUserId,ProgressAwarePlayObject[]>;
 
