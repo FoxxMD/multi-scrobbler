@@ -1,7 +1,7 @@
 import { childLogger } from "@foxxmd/logging";
 import { WS } from 'iso-websocket'
-import { DiscordClientData } from "../../infrastructure/config/client/discord.js";
-import { _DataPayload, _NonDispatchPayload, APIUser, GatewayActivity, GatewayActivityUpdateData, GatewayCloseCodes, GatewayDispatchEvents, GatewayHeartbeatRequest, GatewayHelloData, GatewayIdentify, GatewayIdentifyData, GatewayInvalidSessionData, GatewayOpcodes, GatewayPresenceUpdateData, GatewayReadyDispatchData, GatewayResumeData, GatewayUpdatePresence, PresenceUpdateStatus } from "discord.js";
+import { DiscordClientData, DiscordData, DiscordStrongData, StatusType, ActivityType as MSActivityType, ActivityTypes } from "../../infrastructure/config/client/discord.js";
+import { _DataPayload, _NonDispatchPayload, ActivityType, APIUser, GatewayActivity, GatewayActivityUpdateData, GatewayCloseCodes, GatewayDispatchEvents, GatewayHeartbeatRequest, GatewayHelloData, GatewayIdentify, GatewayIdentifyData, GatewayInvalidSessionData, GatewayOpcodes, GatewayPresenceUpdateData, GatewayReadyDispatchData, GatewayResumeData, GatewayUpdatePresence, PresenceUpdateStatus } from "discord.js";
 import { isDebugMode, parseBool, removeUndefinedKeys, sleep } from "../../../utils.js";
 import pEvent from 'p-event';
 import EventEmitter from "events";
@@ -12,7 +12,7 @@ import { AbstractApiOptions, asPlayerStateData, SourceData } from "../../infrast
 import { isPlayObject, PlayObject } from "../../../../core/Atomic.js";
 import dayjs from "dayjs";
 import { capitalize } from "../../../../core/StringUtils.js";
-import { parseArrayFromMaybeString } from "../../../utils/StringUtils.js";
+import { parseArrayFromMaybeString, parseBoolOrArrayFromMaybeString } from "../../../utils/StringUtils.js";
 import { getRoot } from "../../../ioc.js";
 import { MSCache } from "../../Cache.js";
 import { isSuperAgentResponseError } from "../../errors/ErrorUtils.js";
@@ -33,7 +33,7 @@ const API_GATEWAY_ENDPOINT = 'https://discord.com/api/gateway';
  */
 export class DiscordWSClient extends AbstractApiClient {
 
-    declare config: DiscordClientData;
+    declare config: DiscordStrongData;
 
     heartbeatInterval: NodeJS.Timeout
     acknowledged: boolean = true;
@@ -56,10 +56,9 @@ export class DiscordWSClient extends AbstractApiClient {
     closeEvents: number = 0;
 
     lastActiveStatus?: PresenceUpdateStatus = PresenceUpdateStatus.Offline;
+    lastActivities: GatewayActivity[] = [];
 
     activityTimeout: NodeJS.Timeout;
-
-    artworkOpt: boolean | string[] = false;
 
     emitter: EventEmitter;
 
@@ -67,22 +66,10 @@ export class DiscordWSClient extends AbstractApiClient {
     artFail: boolean = false;
     artFailCount = 0;
 
-    constructor(name: any, config: DiscordClientData, options: AbstractApiOptions) {
+    constructor(name: any, config: DiscordStrongData, options: AbstractApiOptions) {
         super('Discord', name, config, options);
         this.logger = childLogger(options.logger, 'WS Gateway');
         this.emitter = new EventEmitter();
-        if (typeof this.config.artwork === 'boolean' || Array.isArray(this.config.artwork)) {
-            this.artworkOpt = this.config.artwork;
-        } else if (typeof this.config.artwork === 'string') {
-            if (['true', 'false'].includes(this.config.artwork.toLocaleLowerCase())) {
-                this.artworkOpt = parseBool(this.config.artwork)
-            } else {
-                this.artworkOpt = parseArrayFromMaybeString(this.config.artwork)
-            }
-        }
-        if(this.config.artworkDefaultUrl !== undefined && typeof this.config.artworkDefaultUrl === 'string' && this.config.artworkDefaultUrl.toLocaleLowerCase().trim() === 'false') {
-            this.config.artworkDefaultUrl = false;
-        }
         this.cache = getRoot().items.cache();
     }
 
@@ -302,16 +289,34 @@ export class DiscordWSClient extends AbstractApiClient {
             this.sequence = undefined;
             this.resume_gateway_url = undefined;
             this.user = undefined;
+            this.lastActiveStatus = PresenceUpdateStatus.Offline;
+            this.lastActivities = [];
         }
     }
 
     handleUserSessionUpdates = (data: UserSession[]) => {
         this.logger.debug('Recieved updated user sessions');
-        const otherSessions = data.filter(x => x.session_id !== this.session_id);
-        if (otherSessions.length === 0) {
+        if (data.filter(x => x.session_id !== this.session_id && x.session_id !== 'all').length === 0) {
             this.logger.debug('No other user sessions exist, marking our session presence as inactive');
             this.lastActiveStatus = PresenceUpdateStatus.Offline;
+            this.lastActivities = [];
+            return;
         }
+        const otherSessions = data.filter(x => x.session_id !== this.session_id);
+        const sessionSummaries = otherSessions.map(x => {
+            let sessionId = `${x.session_id === 'all' ? '(All) | ' : ''}OS ${x.client_info.os} | Client ${x.client_info.client} | Status ${x.status} | Active ${x.active === true}`;
+            if(x.activities.length === 0) {
+                sessionId += " | 0 Activities"
+            } else {
+                const activitySummary = x.activities.map(x => x.type === 4 ? 'Custom Status' : `${activityIdToStr(x.type)} ${x.name}`).join(', ');
+                sessionId += ` | Activities => ${activitySummary}`;
+            };
+            return sessionId;
+        });
+        this.logger.debug(sessionSummaries.join('\n'));
+
+        const last = this.lastActiveStatus;
+
         if (otherSessions.some(x => x.status === 'online')) {
             this.lastActiveStatus = PresenceUpdateStatus.Online;
         } else if (otherSessions.some(x => x.status === 'dnd')) {
@@ -324,6 +329,20 @@ export class DiscordWSClient extends AbstractApiClient {
             this.lastActiveStatus = PresenceUpdateStatus.Offline;
         }
         this.logger.debug(`Best status found: ${this.lastActiveStatus}`);
+
+        this.lastActivities = otherSessions.filter(x => x.session_id !== 'all').map(x => x.activities).flat(1);
+
+        const [allowed, reason] = this.presenceIsAllowed();
+        if(!allowed) {
+            // if updated sessions now disallow updating presence
+            // and we have a current presence in our session
+            // then we need to remove it so it doesn't override anything
+            const ourSession = data.find(x => x.session_id === this.session_id);
+            if(ourSession !== undefined && ourSession.activities.length > 0) {
+                this.logger.debug(`Clearing our session presence, MS presence no longer allowed because ${reason}`);
+                this.clearActivity();
+            }
+        }
     }
 
     async handleMessage(message: _DataPayload<GatewayDispatchEvents> | _NonDispatchPayload) {
@@ -367,7 +386,7 @@ export class DiscordWSClient extends AbstractApiClient {
                         case 'SESSIONS_REPLACE':
                             if (isDebugMode()) {
                                 // @ts-expect-error
-                                this.logger.debug({ data: message.d }, t);
+                                this.logger.debug(`${t}   => ${JSON.stringify(message.d)}`);
                             }
                             // @ts-expect-error
                             this.handleUserSessionUpdates(message.d as UserSession[]);
@@ -406,7 +425,9 @@ export class DiscordWSClient extends AbstractApiClient {
 
     playStateToActivity = async (data: SourceData): Promise<GatewayActivity> => {
         const { activity, artUrl } = playStateToActivityData(data);
-        const artwork = this.artworkOpt;
+        const {
+            artwork = false
+        } = this.config;
         const {
             artworkDefaultUrl = ARTWORK_PLACEHOLDER
         } = this.config;
@@ -552,7 +573,43 @@ export class DiscordWSClient extends AbstractApiClient {
             }
             return;
         }
+    }
 
+    presenceIsAllowedByStatus = (status?: PresenceUpdateStatus | StatusType): [boolean, string?] => {
+        if (!this.config.statusOverrideAllow.includes(status as StatusType ?? this.lastActiveStatus as StatusType)) {
+            return [false, `most active session has a disallowed status: ${status ?? this.lastActiveStatus}`];
+        }
+        return [true];
+    }
+
+    presenceIsAllowedByActivity = (manualActivities?: GatewayActivity[]): [boolean, string?] => {
+        const activities = manualActivities ?? this.lastActivities;
+        if (activities.length !== 0) {
+            const disallowedActivityType = activities.find(x => !this.config.activitiesOverrideAllow.includes(activityIdToStr(x.type)));
+            if (disallowedActivityType !== undefined) {
+                return [false, `a session has an activity type MS is not allowed to override: ${activityIdToStr(disallowedActivityType.type)}`];
+            }
+            const disallowedActivityName = activities.find(x => !this.config.applicationsOverrideDisallow.some(y => x.name.toLocaleLowerCase().includes(y.toLocaleLowerCase())));
+            if (disallowedActivityType !== undefined) {
+                return [false, `a session has an activity name MS is not allowed to override: ${disallowedActivityName.name}`];
+            }
+        }
+
+        return [true];
+    }
+
+    presenceIsAllowed = (): [boolean, string?] => {
+        const [statusAllowed, statusReason] = this.presenceIsAllowedByStatus();
+        if(!statusAllowed) {
+            return [statusAllowed, statusReason];
+        }
+
+        const [activityAllowed, activityReason] = this.presenceIsAllowedByActivity();
+        if(!activityAllowed) {
+            return [activityAllowed, activityReason];
+        }
+
+        return [true];
     }
 }
 
@@ -583,9 +640,21 @@ const opcodeToFriendly = (op: number) => {
 
 interface UserSession {
     status: 'online' | 'invisible' | 'dnd' | 'idle'
+    client_info: {
+        version: number
+        os: string
+        client: string
+    }
+    processed_at_timestamp?: number
     active?: boolean
     session_id: string
-    activities: []
+    // activities: {
+    //     state: string
+    //     created_at: number
+    //     type: ActivityType
+    //     name: string
+    // }[]
+    activities: GatewayActivity[]
 }
 
 export const playStateToActivityData = (data: SourceData, opts: { useArt?: boolean } = {}): { activity: GatewayActivity, artUrl?: string } => {
@@ -638,4 +707,103 @@ export const playStateToActivityData = (data: SourceData, opts: { useArt?: boole
     const artUrl = play.meta?.art?.album ?? play.meta.art.track ?? play.meta.art.artist;
 
     return { activity, artUrl };
+}
+
+export const statusStringToType = (str: string): StatusType => {
+    switch(str.trim().toLocaleLowerCase()) {
+        case 'online':
+            return PresenceUpdateStatus.Online;
+        case 'idle':
+            return PresenceUpdateStatus.Idle;
+        case 'dnd':
+            return PresenceUpdateStatus.DoNotDisturb;
+        case 'invisible':
+            return PresenceUpdateStatus.Invisible;
+        default:
+            throw new Error(`Not a valid status type. Must be one of: online | idle | dnd | invisible`);
+    }
+}
+
+export const activityStringToType = (str: string): MSActivityType => {
+    switch(str.trim().toLocaleLowerCase()) {
+        case 'playing':
+            return 'playing';
+        case 'streaming':
+            return 'streaming';
+        case 'listening':
+            return 'listening';
+        case 'watching':
+            return 'watching';
+        case 'custom':
+            return 'custom';
+        case 'competing':
+            return 'competing';
+        default:
+            throw new Error(`Not a valid activity type. Must be one of: playing | streaming | listening | watching | custom | competing`);
+    }
+}
+
+export const activityIdToStr = (id: number): MSActivityType => {
+    switch(id) {
+        case 0:
+            return 'playing';
+        case 1:
+            return 'streaming';
+        case 2:
+            return 'listening';
+        case 3:
+            return 'watching';
+        case 4:
+            return 'custom';
+        case 5:
+            return 'competing';
+        default:
+            throw new Error(`Not a valid activity type. Must be one of: playing | streaming | listening | watching | custom | competing`);
+    }
+}
+
+export const configToStrong = (data: DiscordData): DiscordStrongData => {
+            const {
+            token,
+            applicationId,
+            artwork,
+            artworkDefaultUrl,
+            statusOverrideAllow = ['online','idle','dnd'],
+            activitiesOverrideAllow = ['custom'],
+            applicationsOverrideDisallow = []
+        } = data;
+
+        const strongConfig: DiscordStrongData = {
+            token,
+            applicationId,
+            applicationsOverrideDisallow: parseArrayFromMaybeString(applicationsOverrideDisallow)
+        }
+
+        if (typeof artwork === 'boolean' || Array.isArray(artwork)) {
+            strongConfig.artwork = artwork;
+        } else if (typeof artwork === 'string') {
+            if (['true', 'false'].includes(artwork.toLocaleLowerCase())) {
+                strongConfig.artwork = parseBool(artwork)
+            } else {
+                strongConfig.artwork = parseArrayFromMaybeString(artwork)
+            }
+        }
+
+        if(artworkDefaultUrl !== undefined && typeof artworkDefaultUrl === 'string' && artworkDefaultUrl.toLocaleLowerCase().trim() === 'false') {
+            strongConfig.artworkDefaultUrl = false;
+        } else {
+            strongConfig.artworkDefaultUrl = artworkDefaultUrl;
+        }
+
+        const saRaw = parseArrayFromMaybeString(statusOverrideAllow);
+        strongConfig.statusOverrideAllow = saRaw.map(statusStringToType);
+
+        const aaRaw = parseBoolOrArrayFromMaybeString(activitiesOverrideAllow);
+        if(typeof aaRaw === 'boolean') {
+            strongConfig.activitiesOverrideAllow = aaRaw ? ActivityTypes : [];
+        } else {
+            strongConfig.activitiesOverrideAllow = aaRaw.map(activityStringToType);
+        }
+
+        return strongConfig;
 }

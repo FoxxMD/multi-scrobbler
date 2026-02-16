@@ -1,13 +1,12 @@
 import { Logger } from "@foxxmd/logging";
 import EventEmitter from "events";
 import { PlayObject, SourcePlayerObj } from "../../core/Atomic.js";
-import { CALCULATED_PLAYER_STATUSES, CalculatedPlayerStatus, FormatPlayObjectOptions, REPORTED_PLAYER_STATUSES, ReportedPlayerStatus } from "../common/infrastructure/Atomic.js";
+import { CALCULATED_PLAYER_STATUSES, FormatPlayObjectOptions, REPORTED_PLAYER_STATUSES, ReportedPlayerStatus } from "../common/infrastructure/Atomic.js";
 import { Notifiers } from "../notifier/Notifiers.js";
 
 import AbstractScrobbleClient, { nowPlayingUpdateByPlayDuration } from "./AbstractScrobbleClient.js";
-import { DiscordClientConfig } from "../common/infrastructure/config/client/discord.js";
-import { DiscordWSClient, playStateToActivityData } from "../common/vendor/discord/DiscordWSClient.js";
-import { PresenceUpdateStatus } from "discord.js";
+import { DiscordClientConfig, DiscordStrongData, StatusType } from "../common/infrastructure/config/client/discord.js";
+import { configToStrong, DiscordWSClient, playStateToActivityData } from "../common/vendor/discord/DiscordWSClient.js";
 
 export default class DiscordScrobbler extends AbstractScrobbleClient {
 
@@ -15,11 +14,12 @@ export default class DiscordScrobbler extends AbstractScrobbleClient {
     requiresAuth = true;
     requiresAuthInteraction = false;
 
-    declare config: DiscordClientConfig;
+    declare config: DiscordClientConfig & {data: DiscordStrongData };
 
     constructor(name: any, config: DiscordClientConfig, options = {}, notifier: Notifiers, emitter: EventEmitter, logger: Logger) {
-        super('discord', name, config, notifier, emitter, logger);
-        this.api = new DiscordWSClient(name, { ...config.data, ...config.options }, { logger: this.logger });
+        const strong = configToStrong(config.data);
+        super('discord', name, {...config, data: strong}, notifier, emitter, logger);
+        this.api = new DiscordWSClient(name, { ...strong, ...config.options }, { logger: this.logger });
         this.api.emitter.on('stopped', async (e) => {
             if(e.authFailure) {
                 this.authFailure = true;
@@ -43,6 +43,15 @@ export default class DiscordScrobbler extends AbstractScrobbleClient {
         if (token === undefined) {
             throw new Error('Must provide a user token');
         }
+        if(typeof this.config.data.artwork === 'boolean') {
+            this.logger.verbose(`Artwork: ${this.config.data.artwork ? 'Allow any with HTTPS' : 'Allow none'}`);
+        } else {
+            this.logger.verbose(`Artwork: Allow HTTPS with these domains: ${this.config.data.artwork.join(', ')}`);
+        }
+        this.logger.verbose(`Artwork Fallback Url: ${this.config.data.artworkDefaultUrl}`);
+        this.logger.verbose(`Allow override statuses: ${this.config.data.statusOverrideAllow.join(', ')}`);
+        this.logger.verbose(`Allow override activity types: ${this.config.data.activitiesOverrideAllow.join(', ')}`);
+        this.logger.verbose(`Disallow override activity names: ${this.config.data.applicationsOverrideDisallow.join(', ')}`);
         await this.api.initClient();
         return true;
     }
@@ -83,18 +92,23 @@ export default class DiscordScrobbler extends AbstractScrobbleClient {
     }
 
     shouldUpdatePlayingNowPlatformSpecific = async (data: SourcePlayerObj) => {
-        if(data.status.reported === REPORTED_PLAYER_STATUSES.playing
-             || [CALCULATED_PLAYER_STATUSES.stopped, CALCULATED_PLAYER_STATUSES.paused].includes(data.status.calculated as ReportedPlayerStatus)
-             || data.status.stale)
-        if ([PresenceUpdateStatus.Offline, PresenceUpdateStatus.Invisible].includes(this.api.lastActiveStatus)) {
-            this.logger.debug('Not updating presence because no user sessions have a visible status');
-            return false;
+        if ([CALCULATED_PLAYER_STATUSES.stopped, CALCULATED_PLAYER_STATUSES.paused, CALCULATED_PLAYER_STATUSES.playing].includes(data.status.calculated as ReportedPlayerStatus)
+            || data.status.stale) {
+
+            const [sendOk, reasons] = this.api.checkOkToSend();
+            if (!sendOk) {
+                this.logger.warn(`Cannot update playing now because api client is ${reasons}`);
+                return false;
+            }
+
+            const [allowed, reason] = this.api.presenceIsAllowed();
+            if(!allowed) {
+                this.logger.debug(reason);
+            }
+
+            return true;
+
         }
-        const [sendOk, reasons] = this.api.checkOkToSend();
-        if (!sendOk) {
-            this.logger.warn(`Cannot update playing now because api client is ${reasons}`);
-            return false;
-        }
-        return true;
+        return false;
     }
 }

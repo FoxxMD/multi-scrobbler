@@ -27,15 +27,27 @@ Multi-scrobbler does its upmost to implement, to-spec, [Gateway API communicatio
 
 Aside from the on-paper violation of using a user token programmatically (on your behalf), there is no misuse of the API to achieve rich presence.
 
-Additionally, MS uses the state of non-MS sessions to determine if it should update presence at all. Essentially, it will not act on your behalf unless you are:
-
-* using an official client
-* physically online
-* not invisible
+Additionally, MS uses the state of non-MS sessions to conservatively update presence. [By default it will not conflict](#configure-when-presence-is-used) with any other official presence activities and is only used when you are actually active on a device.
 
 </DetailsAdmo>
 
-## User Token
+<DetailsAdmo type="note" summary="REQUIRED Interaction after Starting Multi-Scrobbler">
+
+Every time multi-scrobbler is started a discord session update needs to be triggered so that [MS can capture the signals it uses to determine if presence can be updated.](#configure-when-presence-is-used) This only needs to be *once*, after starting multi-scrobbler. But it does need to be *every time* multi-scrobbler is (re)started. Without these signals MS will not update presence.
+
+This session update can happen automatically after *some* time so you may not need to do anything. If you want to force the update then do one of the following:
+
+* Open discord on a device it was not recently active on
+* Exit discord on an active device
+* Change your status (online, idle, etc...)
+* Set a custom status
+* Cause a presence update with a different app (listening to..., playing..., etc.)
+
+</DetailsAdmo>
+
+## Required Setup
+
+### User Token
 
 You must provide a User Token for this scrobbler to work.
 
@@ -49,11 +61,167 @@ When finding instructions for obtaining this token only run commands, or follow 
 
 :::
 
-## Artwork
+## Optional Setup
+
+### Configure When Presence Is Used
+
+MS uses several signals from your "real" Discord sessions to determine if it should update presence. The default configuration is **extremely** conservative to ensure that MS does not conflict with other apps using presence. Additionally, it only updates if a "real" user device is active on discord.
+
+:::tip[TLDR]
+
+Without any additional configuration, MS will only update presence if:
+
+* you have discord open on a real device
+* your status is either: online, idle, or dnd (not invisible)
+* no other apps are broadcasting presence (no other listening, playing, competing, etc... activities on your profile)
+
+:::
+
+#### Online Status
+
+Configure if MS is allowed to update presence based on your online status. If this setting is not defined MS will only update if your status is **online**, **idle**, or **dnd**.
+
+Allowed Values: `online` `idle` `dnd` `invisible`
+
+<details>
+
+<summary>Example</summary>
+
+Only allow presence updating when all of your "real" sessions are either online or idle.
+
+
+In File/AIO:
+
+```json
+[
+    {
+      "name": "MS",
+      "enable": true,
+      "data": {
+        "token": "Ma7XBvzRERK3gQdkX4dkb3OQ.6aaGmJ.rvFiiVrzG4VXHHL3LyhZYhpWdG3Ph_if9aKz5E",
+        "applicationId": "8190211179716453570",
+        "statusOverrideAllow": ["online", "idle"]
+      }
+    }
+  ]
+```
+
+In ENV:
+
+```
+DISCORD_STATUS_OVERRIDE_ALLOW=online,idle
+```
+
+</details>
+
+#### Activity Type
+
+Configure the activity types of **other** activities that MS is allowed to broadcast at the same time as. If this setting is not defined MS will only update if no other activities or  only `custom`.
+
+Note: Discord shows both `custom` and other non `custom` activities at the same time. All other activities are mutually exclusive.
+
+Allowed Values:
+
+* `playing` `streaming` `listening` `custom` `competing`
+* `true` => allow presence during *any*
+* `false` => allow presence during *none*
+
+<details>
+
+<summary>Example</summary>
+
+You want to allow MS to update presence when you are normally playing any game but not when any other activity (streaming, listening, competing) is happening.
+
+In File/AIO:
+
+```json
+[
+    {
+      "name": "MS",
+      "enable": true,
+      "data": {
+        "token": "Ma7XBvzRERK3gQdkX4dkb3OQ.6aaGmJ.rvFiiVrzG4VXHHL3LyhZYhpWdG3Ph_if9aKz5E",
+        "applicationId": "8190211179716453570",
+        "activitiesOverrideAllow": ["playing", "custom"]
+      }
+    }
+  ]
+```
+
+In ENV:
+
+```
+DISCORD_ACTIVITIES_OVERRIDE_ALLOW=playing,custom
+```
+
+___ 
+
+You **do not** want to allow MS to update presence if **any** other activity is occurring, including `custom`.
+
+```json
+[
+    {
+      "name": "MS",
+      "enable": true,
+      "data": {
+        "token": "Ma7XBvzRERK3gQdkX4dkb3OQ.6aaGmJ.rvFiiVrzG4VXHHL3LyhZYhpWdG3Ph_if9aKz5E",
+        "applicationId": "8190211179716453570",
+        "activitiesOverrideAllow": false
+      }
+    }
+  ]
+```
+
+In ENV:
+
+```
+DISCORD_ACTIVITIES_OVERRIDE_ALLOW=false
+```
+
+</details>
+
+#### Activity Name
+
+Configure the names of **other** activities that MS is **not** allowed to broadcast at the same time as.
+
+It is not required to use [Activity Type](#activity-type) with this setting, but it is useful.
+
+<details>
+
+<summary>Example</summary>
+
+You want to allow MS to update presence when you are normally playing any game but not when any other activity (streaming, listening, competing) is happening. You also do not want to allow MS to update presence if the game is fortnite.
+
+In File/AIO:
+
+```json
+[
+    {
+      "name": "MS",
+      "enable": true,
+      "data": {
+        "token": "Ma7XBvzRERK3gQdkX4dkb3OQ.6aaGmJ.rvFiiVrzG4VXHHL3LyhZYhpWdG3Ph_if9aKz5E",
+        "applicationId": "8190211179716453570",
+        "activitiesOverrideAllow": ["playing", "custom"],
+        "applicationsOverrideDisallow": ["fortnite"]
+      }
+    }
+  ]
+```
+
+In ENV:
+
+```
+DISCORD_ACTIVITIES_OVERRIDE_ALLOW=playing,custom
+DISCORD_APPNAME_OVERRIDE_DISALLOW=fortnite
+```
+</details>
+
+### Artwork
 
 For some Sources, MS parses album art and displays it in the dashboard. If a Discord **Application Id** is provided then this image can be displayed on Discord alongside your listening status.
 
-If no Application Id is provided Discord will always show a default image next to your status.
+**If no Application Id is provided Discord will use its own default image next to your status.**
 
 <details>
 
@@ -80,7 +248,7 @@ There are some scenarios where you may not want to use your artwork URLs, for ex
 
 MS is conservative in this context by **disallowing** use of album art URLs **by default.** Additionally, it **always** disallows use of these URLs if they do not start with `https`.
 
-* To allow **any** `https` album art URLs set ENV `DISCORD_ARTWORK=true`
+* To allow **any** `https` album art URLs set ENV `DISCORD_ARTWORK=true` (or in file as `"artwork": true`)
 * To allow only `https` album art URLs from certain domains use a list of keywords like `DISCORD_ARTWORK=spotify,jellyfin` (or in file as `"artwork": ["spotify","jellyfin"]`)
 
 If a listening activity does not have album art, or the URL is disallowed, MS will use the [multi-scrobbler logo](https://github.com/FoxxMD/multi-scrobbler/blob/master/assets/icon.png) as a fallback image.
@@ -92,10 +260,13 @@ You can customize this fallback image with ENV `DISCORD_ARTWORK_DEFAULT_URL` or 
 ## Configuration
 
 <Config config="DiscordClientConfig" fileContent={JsonConfig} client name="discord">
-        | Environmental Variable        | Required? | Default | Description                                                                                                      |
-        | :---------------------------- | --------- | ------- | :--------------------------------------------------------------------------------------------------------------- |
-        | `DISCORD_TOKEN`               | Yes       |         | User Token acquired from an active Discord sessions                                                              |
-        | `DISCORD_APPLICATION_ID`      | Yes       |         | Application ID for user with album art                                                                           |
-        | `DISCORD_ARTWORK`             | No        |         | A boolean indicating if external artwork URLs should be used. Or a comma-separated list of allowed domains       |
-        | `DISCORD_ARTWORK_DEFAULT_URL` | No        |         | A URL of an image to use as a fallback if the album art URL cannot be used. Or `false` to use discord's default. |
+        | Environmental Variable              | Required? | Default           | Description                                                                                                      |
+        | :---------------------------------- | --------- | ----------------- | :--------------------------------------------------------------------------------------------------------------- |
+        | `DISCORD_TOKEN`                     | Yes       |                   | User Token acquired from an active Discord sessions                                                              |
+        | `DISCORD_APPLICATION_ID`            | No        |                   | Application ID used to display album art                                                                         |
+        | `DISCORD_ARTWORK`                   | No        |                   | A boolean indicating if external artwork URLs should be used. Or a comma-separated list of allowed domains       |
+        | `DISCORD_ARTWORK_DEFAULT_URL`       | No        |                   | A URL of an image to use as a fallback if the album art URL cannot be used. Or `false` to use discord's default. |
+        | `DISCORD_STATUS_OVERRIDE_ALLOW`     | No        | `online,idle,dnd` | A comma-separated list of statuses are allowed to have presence.                                                 |
+        | `DISCORD_ACTIVITIES_OVERRIDE_ALLOW` | No        | `custom`          | A comma-seperated list of *other* activity types MS can broadcast presence at the same time as.                  |
+        | `DISCORD_APPNAME_OVERRIDE_DISALLOW` | No        |                   | A commera-seperated list of activity names MS is *not* allowed to broadcast presence at the same time as.        |
 </Config>
