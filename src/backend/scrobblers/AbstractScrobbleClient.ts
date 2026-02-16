@@ -70,6 +70,8 @@ import { redactString } from "@foxxmd/redact-string";
 type PlatformMappedPlays = Map<string, {player: SourcePlayerObj, source: SourceIdentifier}>;
 type NowPlayingQueue = Map<string, PlatformMappedPlays>;
 
+const platformTruncate = truncateStringToLength(10);
+
 export default abstract class AbstractScrobbleClient extends AbstractComponent implements Authenticatable {
 
     name: string;
@@ -1010,7 +1012,7 @@ ${closestMatch.breakdowns.join('\n')}`, {leaf: ['Dupe Check']});
             if(data.play !== undefined) {
                 playHint = ` with Play ${buildTrackString(data.play, {include: ['artist', 'track', 'platform']})}`
             }
-            this.npLogger.debug(`Queueing Player ${redactString(data.platformId, 10)} ${data.status.calculated.toLocaleUpperCase()}${playHint} from ${sourceId}`);
+            this.npLogger.debug(`Queueing Player ${platformTruncate(data.platformId)} ${data.status.calculated.toLocaleUpperCase()}${playHint} from ${sourceId}`);
         }
         const platformPlays = this.nowPlayingQueue.get(sourceId) ?? new Map();
         platformPlays.set(data.platformId, {player: data, source});
@@ -1048,13 +1050,14 @@ ${closestMatch.breakdowns.join('\n')}`, {leaf: ['Dupe Check']});
 
         const lastUpdateDiff = Math.abs(dayjs().diff(this.nowPlayingLastUpdated, 's'));
 
-        const removedPlay = this.nowPlayingLastPlay.play !== undefined && data.play === undefined;
+        const playExistingDiscrepancy = (this.nowPlayingLastPlay.play !== undefined && data.play === undefined) || (this.nowPlayingLastPlay === undefined && data.play !== undefined);
+        const bothPlaysExist = this.nowPlayingLastPlay.play !== undefined && data.play !== undefined;
 
-        const playerStatusChanged = this.nowPlayingLastPlay.status.calculated !== data.status.calculated || this.nowPlayingLastPlay.status.reported !== data.status.reported;
+        const playerStatusChanged = this.nowPlayingLastPlay.status.calculated !== data.status.calculated;
 
         // update if play *has* changed and time since last update is greater than min interval
         // this prevents spamming scrobbler API with updates if user is skipping tracks and source updates frequently
-        if(this.nowPlayingMinThreshold(data.play) < lastUpdateDiff && (removedPlay || playerStatusChanged || !playObjDataMatch(data.play, this.nowPlayingLastPlay.play))) {
+        if(this.nowPlayingMinThreshold(data.play) < lastUpdateDiff && (playExistingDiscrepancy || playerStatusChanged || (bothPlaysExist && !playObjDataMatch(data.play, this.nowPlayingLastPlay.play)))) {
             if(isDebugMode()) {
                 this.npLogger.debug(`New Play differs from previous Now Playing and time since update ${lastUpdateDiff}s, greater than threshold ${this.nowPlayingMinThreshold(data.play)}. Should update`);
             }
@@ -1062,7 +1065,7 @@ ${closestMatch.breakdowns.join('\n')}`, {leaf: ['Dupe Check']});
         }
         // update if play *has not* changed but last update is greater than max interval
         // this keeps scrobbler Now Playing fresh ("active" indicator) in the event play is long
-        if(this.nowPlayingMaxThreshold(data.play) < lastUpdateDiff && playObjDataMatch(data.play, this.nowPlayingLastPlay.play)) {
+        if(this.nowPlayingMaxThreshold(data.play) < lastUpdateDiff && (bothPlaysExist && playObjDataMatch(data.play, this.nowPlayingLastPlay.play))) {
             if(isDebugMode()) {
                 this.npLogger.debug(`Now Playing last updated ${lastUpdateDiff}s ago, greater than threshold ${this.nowPlayingMaxThreshold(data.play)}s. Should update`);
             }
@@ -1070,7 +1073,7 @@ ${closestMatch.breakdowns.join('\n')}`, {leaf: ['Dupe Check']});
         }
 
         if(isDebugMode()) {
-            this.npLogger.debug(`Now Playing ${playObjDataMatch(data.play, this.nowPlayingLastPlay.play) ? 'matches' : 'does not match'} and was last updated ${lastUpdateDiff}s ago (threshold ${this.nowPlayingMaxThreshold(data.play)}s), not updating`);
+            this.npLogger.debug(`Now Playing ${bothPlaysExist && playObjDataMatch(data.play, this.nowPlayingLastPlay.play) ? 'matches' : 'does not match'} and was last updated ${lastUpdateDiff}s ago (threshold ${this.nowPlayingMaxThreshold(data.play)}s), not updating`);
         }
         return false;
     }

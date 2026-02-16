@@ -302,7 +302,10 @@ export default class ScrobbleClients {
                         token: process.env.DISCORD_TOKEN,
                         artwork: process.env.DISCORD_ARTWORK,
                         applicationId: process.env.DISCORD_APPLICATION_ID,
-                        artworkDefaultUrl: process.env.DISCORD_ARTWORK_DEFAULT_URL
+                        artworkDefaultUrl: process.env.DISCORD_ARTWORK_DEFAULT_URL,
+                        statusOverrideAllow: process.env.DISCORD_STATUS_OVERRIDE_ALLOW,
+                        activitiesOverrideAllow: process.env.DISCORD_ACTIVITIES_OVERRIDE_ALLOW,
+                        applicationsOverrideDisallow: process.env.DISCORD_APPNAME_OVERRIDE_DISALLOW
                     }
                     if (!Object.values(discord).every(x => x === undefined)) {
                         configs.push({

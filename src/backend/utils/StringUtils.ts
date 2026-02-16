@@ -2,7 +2,7 @@ import { strategies, stringSameness, StringSamenessResult } from "@foxxmd/string
 import { hasher } from 'node-object-hash';
 import { PlayObject } from "../../core/Atomic.js";
 import { asPlayerStateData, DELIMITERS, DELIMITERS_NO_AMP, PlayerStateDataMaybePlay } from "../common/infrastructure/Atomic.js";
-import { genGroupIdStr, getPlatformIdFromData, intersect, parseRegexSingleOrFail } from "../utils.js";
+import { genGroupIdStr, getPlatformIdFromData, intersect, parseBool, parseBoolStrict, parseRegexSingleOrFail } from "../utils.js";
 import { buildTrackString } from "../../core/StringUtils.js";
 
 const {levenStrategy, diceStrategy} = strategies;
@@ -410,6 +410,21 @@ export const parseArrayFromMaybeString = (value: string | string[] = '', opts: A
         arr = arr.map(x => x.toLowerCase());
     }
     return arr;
+}
+
+export const parseBoolOrArrayFromMaybeString = (value: string | string[] | boolean = '', opts: ArrParseOpts = {}): string[] | boolean => {
+    if (typeof value === 'boolean') {
+        return value;  
+    }
+    if(Array.isArray(value)) {
+        return value;
+    }
+    try {
+        return parseBoolStrict(value);
+    } catch (e) {
+        // not a strict bool value
+    }
+    return parseArrayFromMaybeString(value, opts);
 }
 
 export const firstNonEmptyStr = (vals: unknown[]): string | undefined => {
