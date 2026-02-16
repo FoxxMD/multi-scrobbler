@@ -270,36 +270,41 @@ export default class LastfmApiClient extends AbstractApiClient implements Pagina
             } = {},
         } = resp;
 
-        const plays = list.reduce((acc: any, x: any) => {
-                try {
-                    const formatted = formatPlayObj(x);
-                    const {
-                        data: {
-                            track,
-                            playDate,
-                        },
-                        meta: {
-                            mbid,
-                            nowPlaying,
+        let plays = [];
+        if(Array.isArray(list)) {
+            plays = list.reduce((acc: any, x: any) => {
+                    try {
+                        const formatted = formatPlayObj(x);
+                        const {
+                            data: {
+                                track,
+                                playDate,
+                            },
+                            meta: {
+                                mbid,
+                                nowPlaying,
+                            }
+                        } = formatted;
+                        if (nowPlaying === true && !includeNowPlaying) {
+                            // if the track is "now playing" it doesn't get a timestamp so we can't determine when it started playing
+                            // and don't want to accidentally count the same track at different timestamps by artificially assigning it 'now' as a timestamp
+                            // so we'll just ignore it in the context of recent tracks since really we only want "tracks that have already finished being played" anyway
+                            this.logger.debug( { track, mbid }, `Ignoring 'now playing' track returned from ${this.upstreamName} client`);
+                            return acc;
+                        } else if (playDate === undefined) {
+                            this.logger.warn({ track, mbid }, `${this.upstreamName} recently scrobbled track did not contain a timestamp, omitting from time frame check`);
+                            return acc;
                         }
-                    } = formatted;
-                    if (nowPlaying === true && !includeNowPlaying) {
-                        // if the track is "now playing" it doesn't get a timestamp so we can't determine when it started playing
-                        // and don't want to accidentally count the same track at different timestamps by artificially assigning it 'now' as a timestamp
-                        // so we'll just ignore it in the context of recent tracks since really we only want "tracks that have already finished being played" anyway
-                        this.logger.debug( { track, mbid }, `Ignoring 'now playing' track returned from ${this.upstreamName} client`);
-                        return acc;
-                    } else if (playDate === undefined) {
-                        this.logger.warn({ track, mbid }, `${this.upstreamName} recently scrobbled track did not contain a timestamp, omitting from time frame check`);
+                        return acc.concat(formatted);
+                    } catch (e) {
+                        this.logger.warn(new Error(`Failed to format ${this.upstreamName} recently scrobbled track, omitting from time frame check`, { cause: e }));
+                        this.logger.debug({data: x}, 'Full api response object:');
                         return acc;
                     }
-                    return acc.concat(formatted);
-                } catch (e) {
-                    this.logger.warn(new Error(`Failed to format ${this.upstreamName} recently scrobbled track, omitting from time frame check`, { cause: e }));
-                    this.logger.debug({data: x}, 'Full api response object:');
-                    return acc;
-                }
-            }, []);
+                }, []);
+        } else {
+            this.logger.warn({list: list},`Expected tracks to be a list but it was ${typeof list}`);
+        }
 
         return {data: plays, meta: {...fetchOptions, total: parseInt(total, 10), more: fetchOptions.cursor < parseInt(totalPages, 10)}};
 
