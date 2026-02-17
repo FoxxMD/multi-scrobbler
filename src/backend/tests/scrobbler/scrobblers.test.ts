@@ -11,7 +11,7 @@ import { genGroupIdStr, sleep } from "../../utils.js";
 import mixedDuration from '../plays/mixedDuration.json' with { type: 'json' };
 import withDuration from '../plays/withDuration.json' with { type: 'json' };
 import { MockNetworkError, withRequestInterception } from "../utils/networking.js";
-import { asPlays, generatePlay, generatePlayPlatformId, generatePlays, normalizePlays } from "../utils/PlayTestUtils.js";
+import { asPlays, generatePlay, generatePlayPlatformId, generatePlays, generateSourcePlayerObj, normalizePlays } from "../utils/PlayTestUtils.js";
 import MockDate from 'mockdate';
 
 import { NowPlayingScrobbler, TestAuthScrobbler, TestScrobbler } from "./TestScrobbler.js";
@@ -776,12 +776,12 @@ describe('Now Playing', function() {
 
                 const pt = dayjs().subtract(15, 's');
 
-                npScrobbler.queuePlayingNow(generatePlay({playDate: pt}, {deviceId: genGroupIdStr(secondPlatform)}), {type: 'spotify', name: 'test'});
-                npScrobbler.queuePlayingNow(generatePlay({playDate: pt}, {deviceId: genGroupIdStr(firstPlatform)}), {type: 'spotify', name: 'test'});
+                npScrobbler.queuePlayingNow(generateSourcePlayerObj({play: generatePlay({playDate: pt}, {deviceId: genGroupIdStr(secondPlatform)})}) , {type: 'spotify', name: 'test'});
+                npScrobbler.queuePlayingNow(generateSourcePlayerObj({play: generatePlay({playDate: pt}, {deviceId: genGroupIdStr(firstPlatform)})}), {type: 'spotify', name: 'test'});
 
                 const toReport = npScrobbler.nowPlayingFilter(npScrobbler.nowPlayingQueue);
 
-                expect(toReport.meta.deviceId).eq(genGroupIdStr(firstPlatform));
+                expect(toReport.play.meta.deviceId).eq(genGroupIdStr(firstPlatform));
 
             });
 
@@ -793,16 +793,16 @@ describe('Now Playing', function() {
                 const firstPlatform: PlayPlatformId = ['aaa', 'NO_USER'];
                 const secondPlatform: PlayPlatformId = ['bbbb', 'NO_USER'];
 
-                npScrobbler.nowPlayingLastPlay = generatePlay({}, {deviceId: genGroupIdStr(generatePlayPlatformId())});
+                npScrobbler.nowPlayingLastPlay = generateSourcePlayerObj({play: generatePlay({}, {deviceId: genGroupIdStr(generatePlayPlatformId())})});
 
                 const pt = dayjs().subtract(15, 's');
 
-                npScrobbler.queuePlayingNow(generatePlay({playDate: pt}, {deviceId: genGroupIdStr(secondPlatform)}), {type: 'spotify', name: 'test'});
-                npScrobbler.queuePlayingNow(generatePlay({playDate: pt}, {deviceId: genGroupIdStr(firstPlatform)}), {type: 'spotify', name: 'test'});
+                npScrobbler.queuePlayingNow(generateSourcePlayerObj({play:generatePlay({playDate: pt}, {deviceId: genGroupIdStr(secondPlatform)})}), {type: 'spotify', name: 'test'});
+                npScrobbler.queuePlayingNow(generateSourcePlayerObj({play:generatePlay({playDate: pt}, {deviceId: genGroupIdStr(firstPlatform)})}), {type: 'spotify', name: 'test'});
 
                 const toReport = npScrobbler.nowPlayingFilter(npScrobbler.nowPlayingQueue);
 
-                expect(toReport.meta.deviceId).eq(genGroupIdStr(firstPlatform));
+                expect(toReport.play.meta.deviceId).eq(genGroupIdStr(firstPlatform));
 
             });
 
@@ -816,17 +816,17 @@ describe('Now Playing', function() {
 
                 const pt = dayjs().subtract(15, 's');
 
-                const stickyNp = generatePlay({playDate: pt}, {deviceId: genGroupIdStr(secondPlatform)});
+                const stickyNp = generateSourcePlayerObj({play: generatePlay({playDate: pt}, {deviceId: genGroupIdStr(secondPlatform)})});
 
                 npScrobbler.nowPlayingLastPlay = stickyNp
             
 
-                npScrobbler.queuePlayingNow(generatePlay({playDate: pt}, {deviceId: genGroupIdStr(firstPlatform)}), {type: 'spotify', name: 'test'});
+                npScrobbler.queuePlayingNow(generateSourcePlayerObj({play:generatePlay({playDate: pt}, {deviceId: genGroupIdStr(firstPlatform)})}), {type: 'spotify', name: 'test'});
                 npScrobbler.queuePlayingNow(stickyNp, {type: 'spotify', name: 'test'});
 
                 const toReport = npScrobbler.nowPlayingFilter(npScrobbler.nowPlayingQueue);
 
-                expect(toReport.meta.deviceId).eq(genGroupIdStr(secondPlatform));
+                expect(toReport.play.meta.deviceId).eq(genGroupIdStr(secondPlatform));
 
             });
 
@@ -835,15 +835,15 @@ describe('Now Playing', function() {
                 const npScrobbler = new NowPlayingScrobbler();
                 await npScrobbler.initialize();
 
-                const a = generatePlay({}, {deviceId: genGroupIdStr(generatePlayPlatformId())});
-                const b = generatePlay({}, {deviceId: genGroupIdStr(generatePlayPlatformId())});
+                const a = generateSourcePlayerObj({play:generatePlay({}, {deviceId: genGroupIdStr(generatePlayPlatformId())})});
+                const b = generateSourcePlayerObj({play:generatePlay({}, {deviceId: genGroupIdStr(generatePlayPlatformId())})});
 
                 npScrobbler.queuePlayingNow(b, {type: 'jellyfin', name: 'btest'})
                 npScrobbler.queuePlayingNow(a, {type: 'subsonic', name: 'atest'})
 
                 const toReport = npScrobbler.nowPlayingFilter(npScrobbler.nowPlayingQueue);
 
-                expect(toReport.meta.deviceId).eq(a.meta.deviceId);
+                expect(toReport.play.meta.deviceId).eq(a.play.meta.deviceId);
 
             });
 
@@ -852,15 +852,15 @@ describe('Now Playing', function() {
                 const npScrobbler = new NowPlayingScrobbler({name: 'test', options: {nowPlaying: ['btest', 'atest']}});
                 await npScrobbler.initialize();
 
-                const a = generatePlay({}, {deviceId: genGroupIdStr(generatePlayPlatformId())});
-                const b = generatePlay({}, {deviceId: genGroupIdStr(generatePlayPlatformId())});
+                const a = generateSourcePlayerObj({play:generatePlay({}, {deviceId: genGroupIdStr(generatePlayPlatformId())})});
+                const b = generateSourcePlayerObj({play:generatePlay({}, {deviceId: genGroupIdStr(generatePlayPlatformId())})});
 
                 npScrobbler.queuePlayingNow(a, {type: 'subsonic', name: 'atest'})
                 npScrobbler.queuePlayingNow(b, {type: 'jellyfin', name: 'btest'})
 
                 const toReport = npScrobbler.nowPlayingFilter(npScrobbler.nowPlayingQueue);
 
-                expect(toReport.meta.deviceId).eq(b.meta.deviceId);
+                expect(toReport.play.meta.deviceId).eq(b.play.meta.deviceId);
 
             });
 
@@ -869,7 +869,7 @@ describe('Now Playing', function() {
                 const npScrobbler = new NowPlayingScrobbler({name: 'test', options: {nowPlaying: ['btest', 'atest']}});
                 await npScrobbler.initialize();
 
-                const c = generatePlay({}, {deviceId: genGroupIdStr(generatePlayPlatformId())});
+                const c = generateSourcePlayerObj({play:generatePlay({}, {deviceId: genGroupIdStr(generatePlayPlatformId())})});
 
                 npScrobbler.queuePlayingNow(c, {type: 'jellyfin', name: 'ctest'})
 
@@ -887,7 +887,7 @@ describe('Now Playing', function() {
             const npScrobbler = new NowPlayingScrobbler();
             await npScrobbler.initialize();
 
-            const res = npScrobbler.shouldUpdatePlayingNow(generatePlay({}, {deviceId: genGroupIdStr(generatePlayPlatformId())}));
+            const res = npScrobbler.shouldUpdatePlayingNow(generateSourcePlayerObj({play:generatePlay({}, {deviceId: genGroupIdStr(generatePlayPlatformId())})}));
             expect(res).to.be.true;
         });
 
@@ -896,8 +896,8 @@ describe('Now Playing', function() {
             const npScrobbler = new NowPlayingScrobbler();
             await npScrobbler.initialize();
 
-            const lastUpdate = generatePlay({}, {deviceId: genGroupIdStr(generatePlayPlatformId())});
-            npScrobbler.nowPlayingLastUpdated = dayjs().subtract(npScrobbler.nowPlayingMaxThreshold(lastUpdate) + 1, 's');
+            const lastUpdate = generateSourcePlayerObj({play:generatePlay({}, {deviceId: genGroupIdStr(generatePlayPlatformId())})});
+            npScrobbler.nowPlayingLastUpdated = dayjs().subtract(npScrobbler.nowPlayingMaxThreshold(lastUpdate.play) + 1, 's');
             npScrobbler.nowPlayingLastPlay = lastUpdate;
 
             const res = npScrobbler.shouldUpdatePlayingNow(lastUpdate);
@@ -909,8 +909,8 @@ describe('Now Playing', function() {
             const npScrobbler = new NowPlayingScrobbler();
             await npScrobbler.initialize();
 
-            const lastUpdate = generatePlay({}, {deviceId: genGroupIdStr(generatePlayPlatformId())});
-            npScrobbler.nowPlayingLastUpdated = dayjs().subtract(npScrobbler.nowPlayingMaxThreshold(lastUpdate) - 1, 's');
+            const lastUpdate = generateSourcePlayerObj({play:generatePlay({}, {deviceId: genGroupIdStr(generatePlayPlatformId())})});
+            npScrobbler.nowPlayingLastUpdated = dayjs().subtract(npScrobbler.nowPlayingMaxThreshold(lastUpdate.play) - 1, 's');
             npScrobbler.nowPlayingLastPlay = lastUpdate;
 
             const res = npScrobbler.shouldUpdatePlayingNow(lastUpdate);
@@ -922,11 +922,11 @@ describe('Now Playing', function() {
             const npScrobbler = new NowPlayingScrobbler();
             await npScrobbler.initialize();
 
-            const lastUpdate = generatePlay({}, {deviceId: genGroupIdStr(generatePlayPlatformId())});
-            npScrobbler.nowPlayingLastUpdated = dayjs().subtract(npScrobbler.nowPlayingMinThreshold(lastUpdate) + 1, 's');
+            const lastUpdate = generateSourcePlayerObj({play:generatePlay({}, {deviceId: genGroupIdStr(generatePlayPlatformId())})});
+            npScrobbler.nowPlayingLastUpdated = dayjs().subtract(npScrobbler.nowPlayingMinThreshold(lastUpdate.play) + 1, 's');
             npScrobbler.nowPlayingLastPlay = lastUpdate;
 
-            const res = npScrobbler.shouldUpdatePlayingNow(generatePlay({}, {deviceId: genGroupIdStr(generatePlayPlatformId())}));
+            const res = npScrobbler.shouldUpdatePlayingNow(generateSourcePlayerObj({play:generatePlay({}, {deviceId: genGroupIdStr(generatePlayPlatformId())})}));
             expect(res).to.be.true;
         });
 
@@ -935,11 +935,11 @@ describe('Now Playing', function() {
             const npScrobbler = new NowPlayingScrobbler();
             await npScrobbler.initialize();
 
-            const lastUpdate = generatePlay({}, {deviceId: genGroupIdStr(generatePlayPlatformId())});
-            npScrobbler.nowPlayingLastUpdated = dayjs().subtract(npScrobbler.nowPlayingMinThreshold(lastUpdate) - 1, 's');
+            const lastUpdate = generateSourcePlayerObj({play:generatePlay({}, {deviceId: genGroupIdStr(generatePlayPlatformId())})});
+            npScrobbler.nowPlayingLastUpdated = dayjs().subtract(npScrobbler.nowPlayingMinThreshold(lastUpdate.play) - 1, 's');
             npScrobbler.nowPlayingLastPlay = lastUpdate;
 
-            const res = npScrobbler.shouldUpdatePlayingNow(generatePlay({}, {deviceId: genGroupIdStr(generatePlayPlatformId())}));
+            const res = npScrobbler.shouldUpdatePlayingNow(generateSourcePlayerObj({play:generatePlay({}, {deviceId: genGroupIdStr(generatePlayPlatformId())})}));
             expect(res).to.be.false;
         });
 
@@ -958,7 +958,7 @@ describe('Now Playing', function() {
             await npScrobbler.initialize();
             npScrobbler.scheduler.startById('pn_task');
 
-            npScrobbler.queuePlayingNow(generatePlay({}, {deviceId: genGroupIdStr(generatePlayPlatformId())}), {type: 'jellyfin', name: 'test'});
+            npScrobbler.queuePlayingNow(generateSourcePlayerObj({play:generatePlay({}, {deviceId: genGroupIdStr(generatePlayPlatformId())})}), {type: 'jellyfin', name: 'test'});
 
             const res = await Promise.race([pEvent(npScrobbler.emitter, 'nowPlayingUpdated'), sleep(12)]);
 
@@ -974,7 +974,7 @@ describe('Now Playing', function() {
 
             const now = dayjs();
 
-            npScrobbler.queuePlayingNow(generatePlay({}, {deviceId: genGroupIdStr(generatePlayPlatformId())}), {type: 'jellyfin', name: 'test'});
+            npScrobbler.queuePlayingNow(generateSourcePlayerObj({play:generatePlay({}, {deviceId: genGroupIdStr(generatePlayPlatformId())})}), {type: 'jellyfin', name: 'test'});
 
             const res = await Promise.race([pEvent(npScrobbler.emitter, 'nowPlayingUpdated'), sleep(12)]);
 
@@ -982,7 +982,7 @@ describe('Now Playing', function() {
 
             MockDate.set(now.add(npScrobbler.nowPlayingMinThreshold() + 3, 's').toDate());
 
-            npScrobbler.queuePlayingNow(generatePlay({}, {deviceId: genGroupIdStr(generatePlayPlatformId())}), {type: 'jellyfin', name: 'test'});
+            npScrobbler.queuePlayingNow(generateSourcePlayerObj({play:generatePlay({}, {deviceId: genGroupIdStr(generatePlayPlatformId())})}), {type: 'jellyfin', name: 'test'});
 
             const resUpdate = await Promise.race([pEvent(npScrobbler.emitter, 'nowPlayingUpdated'), sleep(12)]);
 

@@ -39,8 +39,8 @@ export const validateJson = async <T>(type: string, config: object, schemaIdenti
         return config as unknown as T;
     } else {
         const schemaErrors = ['Json config was not valid. Please use schema to check validity.'];
-        if (Array.isArray(ajv.errors)) {
-            for (const err of ajv.errors) {
+        if (Array.isArray(validate.errors)) {
+            for (const err of validate.errors) {
                 const parts = [
                     `At: ${err.instancePath}`,
                 ];

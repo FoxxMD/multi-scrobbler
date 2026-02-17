@@ -88,6 +88,7 @@
     "cors": "^2.8.5",
     "dayjs": "^1.10.4",
     "dbus-ts": "^0.0.7",
+    "discord.js": "^14.25.1",
     "dotenv": "^10.0.0",
     "express": "^4.17.1",
     "express-session": "^1.17.2",

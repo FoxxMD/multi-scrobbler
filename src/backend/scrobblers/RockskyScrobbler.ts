@@ -1,6 +1,6 @@
 import { Logger } from "@foxxmd/logging";
 import EventEmitter from "events";
-import { PlayObject } from "../../core/Atomic.js";
+import { PlayObject, SourcePlayerObj } from "../../core/Atomic.js";
 import { buildTrackString, capitalize } from "../../core/StringUtils.js";
 import { isNodeNetworkException } from "../common/errors/NodeErrors.js";
 import { hasUpstreamError, UpstreamError } from "../common/errors/UpstreamError.js";
@@ -103,9 +103,9 @@ export default class RockskyScrobbler extends AbstractScrobbleClient {
         }
     }
 
-    doPlayingNow = async (data: PlayObject) => {
+    doPlayingNow = async (data: SourcePlayerObj) => {
         try {
-            await this.api.submitListen(data, { listenType: 'playing_now'});
+            await this.api.submitListen(data.play, { listenType: 'playing_now'});
         } catch (e) {
             throw e;
         }

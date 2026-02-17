@@ -1,0 +1,1 @@
+* Attribution for [`default-artwork.png`](/assets/default-artwork.png): https://www.flaticon.com/free-icon/music_15795471

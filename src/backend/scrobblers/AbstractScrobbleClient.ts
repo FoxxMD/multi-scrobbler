@@ -6,9 +6,10 @@ import { nanoid } from "nanoid";
 import { MarkOptional } from "ts-essentials";
 import {
     DeadLetterScrobble,
+    NowPlayingUpdateThreshold,
     PlayObject,
     PlayObjectLifecycleless,
-    QueuedScrobble, ScrobbleActionResult, ScrobblePayload, ScrobbleResponse, TA_DURING,
+    QueuedScrobble, ScrobbleActionResult, ScrobblePayload, ScrobbleResponse, SourcePlayerObj, TA_DURING,
     TA_FUZZY,
     TrackStringOptions
 } from "../../core/Atomic.js";
@@ -18,6 +19,7 @@ import { hasUpstreamError, UpstreamError } from "../common/errors/UpstreamError.
 import {
     ARTIST_WEIGHT,
     Authenticatable,
+    CALCULATED_PLAYER_STATUSES,
     ClientType,
     DEFAULT_RETRY_MULTIPLIER,
     DUP_SCORE_THRESHOLD,
@@ -63,9 +65,12 @@ import { normalizeStr } from "../utils/StringUtils.js";
 import prom, { Counter, Gauge } from 'prom-client';
 import { ScrobbleSubmitError } from "../common/errors/MSErrors.js";
 import {serializeError} from 'serialize-error';
+import { redactString } from "@foxxmd/redact-string";
 
-type PlatformMappedPlays = Map<string, {play: PlayObject, source: SourceIdentifier}>;
+type PlatformMappedPlays = Map<string, {player: SourcePlayerObj, source: SourceIdentifier}>;
 type NowPlayingQueue = Map<string, PlatformMappedPlays>;
+
+const platformTruncate = truncateStringToLength(10);
 
 export default abstract class AbstractScrobbleClient extends AbstractComponent implements Authenticatable {
 
@@ -100,11 +105,11 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
 
     supportsNowPlaying: boolean = false;
     nowPlayingEnabled: boolean;
-    nowPlayingFilter: (queue: NowPlayingQueue) => PlayObject | undefined;
-    nowPlayingMinThreshold: (play?: PlayObject) => number = (_) => 10;
-    nowPlayingMaxThreshold: (play?: PlayObject) => number = (_) => 30;
+    nowPlayingFilter: (queue: NowPlayingQueue) => SourcePlayerObj | undefined;
+    nowPlayingMinThreshold: NowPlayingUpdateThreshold = (_) => 10;
+    nowPlayingMaxThreshold: NowPlayingUpdateThreshold = (_) => 30;
     nowPlayingLastUpdated?: Dayjs;
-    nowPlayingLastPlay?: PlayObject;
+    nowPlayingLastPlay?: SourcePlayerObj;
     nowPlayingQueue: NowPlayingQueue = new Map();
     nowPlayingTaskInterval: number = 5000;
     npLogger: Logger;
@@ -292,7 +297,7 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
                 }
             }
 
-            this.nowPlayingFilter = (queue: NowPlayingQueue) => {
+            this.nowPlayingFilter = (queue: NowPlayingQueue): SourcePlayerObj => {
                 if (queue.size === 0) {
                     return undefined;
                 }
@@ -305,7 +310,7 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
                 // if only one player then return it
                 const plays = Array.from(platformPlays);
                 if (plays.length === 1) {
-                    return plays[0][1].play;
+                    return plays[0][1].player;
                 }
                 // else we need to sort players to determine which to report
 
@@ -313,18 +318,17 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
                 // this way we aren't flip-flopping between multiple players for reporting now playing
                 // (keeps reporting sticky based on first reported)
                 if (this.nowPlayingLastPlay !== undefined) {
-                    const lastNowPlayingPlat = genGroupIdStrFromPlay(this.nowPlayingLastPlay);
 
                     for (const [platform, data] of plays) {
-                        if (platform === lastNowPlayingPlat) {
-                            return data.play;
+                        if (platform === this.nowPlayingLastPlay.platformId) {
+                            return data.player;
                         }
                     }
                 }
 
                 // otherwise sort platform alphabetically and take first
                 plays.sort((a, b) => a[0].localeCompare(b[0]));
-                return plays[0][1].play;
+                return plays[0][1].player;
             }
         }
     }
@@ -1001,38 +1005,42 @@ ${closestMatch.breakdowns.join('\n')}`, {leaf: ['Dupe Check']});
         this.updateDeadLetterCache();
     }
 
-    queuePlayingNow = (data: PlayObject, source: SourceIdentifier) => {
+    queuePlayingNow = (data: SourcePlayerObj, source: SourceIdentifier) => {
         const sourceId = `${source.name}-${source.type}`;
         if(isDebugMode()) {
-            this.npLogger.debug(`Queueing ${buildTrackString(data, {include: ['artist', 'track', 'platform']})} from ${sourceId}`);
+            let playHint = '';
+            if(data.play !== undefined) {
+                playHint = ` with Play ${buildTrackString(data.play, {include: ['artist', 'track', 'platform']})}`
+            }
+            this.npLogger.debug(`Queueing Player ${platformTruncate(data.platformId)} ${data.status.calculated.toLocaleUpperCase()}${playHint} from ${sourceId}`);
         }
         const platformPlays = this.nowPlayingQueue.get(sourceId) ?? new Map();
-        platformPlays.set(genGroupIdStrFromPlay(data), {play: data, source});
+        platformPlays.set(data.platformId, {player: data, source});
         this.nowPlayingQueue.set(sourceId, platformPlays);
     }
 
     processingPlayingNow = async (): Promise<void> => {
         if(this.supportsNowPlaying && this.nowPlayingEnabled) {
-            const play = this.nowPlayingFilter(this.nowPlayingQueue);
-            if(play === undefined) {
+            const sourcePlayerData = this.nowPlayingFilter(this.nowPlayingQueue);
+            if(sourcePlayerData === undefined) {
                 return;
             }
-            if(this.shouldUpdatePlayingNow(play)) {
+            if(this.shouldUpdatePlayingNow(sourcePlayerData) && (await this.shouldUpdatePlayingNowPlatformSpecific(sourcePlayerData))) {
                 try {
-                    await this.doPlayingNow(play);
+                    await this.doPlayingNow(sourcePlayerData);
                     this.npLogger.debug(`Now Playing updated.`);
-                    this.emitEvent('nowPlayingUpdated', play);
+                    this.emitEvent('nowPlayingUpdated', sourcePlayerData);
                 } catch (e) {
                     this.npLogger.warn(new Error('Error occurred while trying to update upstream Client, will ignore', {cause: e}));
                 }
-                this.nowPlayingLastPlay = play;
+                this.nowPlayingLastPlay = sourcePlayerData;
                 this.nowPlayingLastUpdated = dayjs();
             }
             this.nowPlayingQueue = new Map();
         }
     }
 
-    shouldUpdatePlayingNow = (data: PlayObject): boolean => {
+    shouldUpdatePlayingNow = (data: SourcePlayerObj): boolean => {
         if(this.nowPlayingLastPlay === undefined || this.nowPlayingLastUpdated === undefined) {
             if(isDebugMode()) {
                 this.npLogger.debug(`Now Playing has not yet been set! Should update`);
@@ -1042,30 +1050,40 @@ ${closestMatch.breakdowns.join('\n')}`, {leaf: ['Dupe Check']});
 
         const lastUpdateDiff = Math.abs(dayjs().diff(this.nowPlayingLastUpdated, 's'));
 
+        const playExistingDiscrepancy = (this.nowPlayingLastPlay.play !== undefined && data.play === undefined) || (this.nowPlayingLastPlay === undefined && data.play !== undefined);
+        const bothPlaysExist = this.nowPlayingLastPlay.play !== undefined && data.play !== undefined;
+
+        const playerStatusChanged = this.nowPlayingLastPlay.status.calculated !== data.status.calculated;
+
         // update if play *has* changed and time since last update is greater than min interval
         // this prevents spamming scrobbler API with updates if user is skipping tracks and source updates frequently
-        if(!playObjDataMatch(data, this.nowPlayingLastPlay) && this.nowPlayingMinThreshold(data) < lastUpdateDiff) {
+        if(this.nowPlayingMinThreshold(data.play) < lastUpdateDiff && (playExistingDiscrepancy || playerStatusChanged || (bothPlaysExist && !playObjDataMatch(data.play, this.nowPlayingLastPlay.play)))) {
             if(isDebugMode()) {
-                this.npLogger.debug(`New Play differs from previous Now Playing and time since update ${lastUpdateDiff}s, greater than threshold ${this.nowPlayingMinThreshold(data)}. Should update`);
+                this.npLogger.debug(`New Play differs from previous Now Playing and time since update ${lastUpdateDiff}s, greater than threshold ${this.nowPlayingMinThreshold(data.play)}. Should update`);
             }
             return true;
         }
         // update if play *has not* changed but last update is greater than max interval
         // this keeps scrobbler Now Playing fresh ("active" indicator) in the event play is long
-        if(playObjDataMatch(data, this.nowPlayingLastPlay) && this.nowPlayingMaxThreshold(data) < lastUpdateDiff) {
+        if(this.nowPlayingMaxThreshold(data.play) < lastUpdateDiff && (bothPlaysExist && playObjDataMatch(data.play, this.nowPlayingLastPlay.play))) {
             if(isDebugMode()) {
-                this.npLogger.debug(`Now Playing last updated ${lastUpdateDiff}s ago, greater than threshold ${this.nowPlayingMaxThreshold(data)}s. Should update`);
+                this.npLogger.debug(`Now Playing last updated ${lastUpdateDiff}s ago, greater than threshold ${this.nowPlayingMaxThreshold(data.play)}s. Should update`);
             }
             return true;
         }
 
         if(isDebugMode()) {
-            this.npLogger.debug(`Now Playing ${playObjDataMatch(data, this.nowPlayingLastPlay) ? 'matches' : 'does not match'} and was last updated ${lastUpdateDiff}s ago (threshold ${this.nowPlayingMaxThreshold(data)}s), not updating`);
+            this.npLogger.debug(`Now Playing ${bothPlaysExist && playObjDataMatch(data.play, this.nowPlayingLastPlay.play) ? 'matches' : 'does not match'} and was last updated ${lastUpdateDiff}s ago (threshold ${this.nowPlayingMaxThreshold(data.play)}s), not updating`);
         }
         return false;
     }
 
-    protected doPlayingNow = (data: PlayObject): Promise<any> => Promise.resolve(undefined)
+    /** Implement this for specific requirements for updating playing now based on the scrobbler platform */
+    protected shouldUpdatePlayingNowPlatformSpecific(data: SourcePlayerObj): Promise<boolean> {
+        return shouldUpdatePlayingNowPlatformWhenPlayingOnly(data);
+    }
+
+    protected doPlayingNow = (data: SourcePlayerObj): Promise<any> => Promise.resolve(undefined)
 
 
     public emitEvent = (eventName: string, payload: object) => {
@@ -1090,6 +1108,13 @@ ${closestMatch.breakdowns.join('\n')}`, {leaf: ['Dupe Check']});
     }
 }
 
-export const nowPlayingUpdateByPlayDuration = (play: PlayObject) => {
-    return (play.data.duration ?? 30) + 1;
+export const nowPlayingUpdateByPlayDuration: NowPlayingUpdateThreshold = (play?: PlayObject) => {
+    if(play === undefined) {
+        31;
+    }
+    return (play?.data?.duration ?? 30) + 1;
+}
+
+export const shouldUpdatePlayingNowPlatformWhenPlayingOnly = async (data: SourcePlayerObj): Promise<boolean> => {
+    return data.status.calculated === CALCULATED_PLAYER_STATUSES.playing;
 }

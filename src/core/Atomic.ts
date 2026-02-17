@@ -5,6 +5,7 @@ import { AdditionalTrackInfoResponse } from "../backend/common/vendor/listenbrai
 import { Delta } from 'jsondiffpatch';
 import { MarkOptional } from "ts-essentials";
 import { ErrorObject } from "serialize-error";
+import { PlayPlatformIdStr } from "../backend/common/infrastructure/Atomic.js";
 
 export interface SourceStatusData {
     status: string;
@@ -54,7 +55,7 @@ export interface SourceStatusData {
 
 export interface ClientStatusData {
     status: string;
-    type: "maloja" | "lastfm" | "librefm" | "listenbrainz" | "koito" | "tealfm" | "rocksky";
+    type: "maloja" | "lastfm" | "librefm" | "listenbrainz" | "koito" | "tealfm" | "rocksky" | "discord";
     display: string;
     scrobbled: number;
     deadLetterScrobbles: number
@@ -357,8 +358,8 @@ export interface LogOutputConfig {
 }
 
 export interface SourcePlayerObj {
-    platformId: string,
-    play: PlayObject,
+    platformId: PlayPlatformIdStr,
+    play?: PlayObject,
     playFirstSeenAt?: string,
     playLastUpdatedAt?: string,
     playerLastUpdatedAt: string
@@ -374,7 +375,7 @@ export interface SourcePlayerObj {
 }
 
 export interface SourcePlayerJson extends Omit<SourcePlayerObj, 'play'> {
-    play: JsonPlayObject
+    play?: JsonPlayObject
 }
 
 export interface SourceScrobble<PlayType> {
@@ -385,6 +386,8 @@ export interface SourceScrobble<PlayType> {
 export interface QueuedScrobble<PlayType> extends SourceScrobble<PlayType> {
     id: string
 }
+
+export type NowPlayingUpdateThreshold = (play?: PlayObject) => number;
 
 export interface DeadLetterScrobble<PlayType, RetryType = Dayjs> extends QueuedScrobble<PlayType> {
     id: string
@@ -529,3 +532,18 @@ export interface TransformResult {
     name: string,
     play: PlayData
 }
+
+export const KNOWN_MEDIA_PROVIDER_URLS = [
+'spotify.com',
+'bandcamp.com',
+'youtube.com',
+'deezer.com',
+'tidal.com',
+'apple.com',
+'archive.org',
+'soundcloud.com',
+'jamendo.com',
+'play.google.com',
+'listenbrainz.org',
+'musicbrainz.org'
+];

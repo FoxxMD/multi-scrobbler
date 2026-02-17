@@ -1,6 +1,6 @@
 import { Logger } from "@foxxmd/logging";
 import EventEmitter from "events";
-import { PlayObject } from "../../core/Atomic.js";
+import { PlayObject, SourcePlayerObj } from "../../core/Atomic.js";
 import { buildTrackString, capitalize } from "../../core/StringUtils.js";
 import { isNodeNetworkException } from "../common/errors/NodeErrors.js";
 import { UpstreamError } from "../common/errors/UpstreamError.js";
@@ -8,7 +8,7 @@ import { FormatPlayObjectOptions, InternalConfigOptional } from "../common/infra
 import { LastfmClientConfig } from "../common/infrastructure/config/client/lastfm.js";
 import LastfmApiClient, { LastFMIgnoredScrobble, playToClientPayload, formatPlayObj, LASTFM_HOST, LASTFM_PATH } from "../common/vendor/LastfmApiClient.js";
 import { Notifiers } from "../notifier/Notifiers.js";
-import AbstractScrobbleClient, { nowPlayingUpdateByPlayDuration } from "./AbstractScrobbleClient.js";
+import AbstractScrobbleClient, { nowPlayingUpdateByPlayDuration, shouldUpdatePlayingNowPlatformWhenPlayingOnly } from "./AbstractScrobbleClient.js";
 import { findCauseByReference } from "../utils/ErrorUtils.js";
 
 export default class LastfmScrobbler extends AbstractScrobbleClient {
@@ -107,10 +107,10 @@ export default class LastfmScrobbler extends AbstractScrobbleClient {
         }
     }
 
-    doPlayingNow = async (data: PlayObject) => {
+    doPlayingNow = async (data: SourcePlayerObj) => {
         // last.fm shows Now Playing for the same time as the duration of the track being submitted
         try {
-            return this.api.playingNow(data);
+            return this.api.playingNow(data.play);
         } catch (e) {
             throw e;
         }

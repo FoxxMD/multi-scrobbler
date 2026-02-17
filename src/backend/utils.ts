@@ -353,6 +353,18 @@ export function parseBool(value: any, prev: any = false): boolean {
     throw new Error(`'${value.toString()}' is not a boolean value.`);
 }
 
+export function parseBoolStrict(value: string): boolean {
+    const strTrue = ['1', 'true', 'yes'].includes(value.toLocaleLowerCase().trim());
+    if (strTrue) {
+        return strTrue;
+    }
+    const strFalse = ['0', 'false', 'no'].includes(value.toLocaleLowerCase().trim());
+    if (strFalse) {
+        return false;
+    }
+    throw new Error(`'${value.toString()}' is not a strict boolean value.`);
+}
+
 export const genGroupIdStrFromPlay = (play: PlayObject) => {
     const groupId = genGroupId(play);
     return genGroupIdStr(groupId);

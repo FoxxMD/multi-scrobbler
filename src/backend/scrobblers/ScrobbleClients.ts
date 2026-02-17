@@ -21,6 +21,7 @@ import { CommonClientOptions } from '../common/infrastructure/config/client/inde
 import { ExternalMetadataTerm, PlayTransformHooks } from '../common/infrastructure/Transform.js';
 import { LibrefmClientConfig } from '../common/infrastructure/config/client/librefm.js';
 import clone from 'clone';
+import { DiscordClientConfig } from '../common/infrastructure/config/client/discord.js';
 
 type groupedNamedConfigs = {[key: string]: ParsedConfig[]};
 
@@ -49,9 +50,7 @@ export default class ScrobbleClients {
         this.sourceEmitter.on('playerUpdate', async (payload: { data: SourcePlayerObj & { options: { scrobbleTo: string[] } }} & SourceIdentifier) => {
             // agressively update Now Playing so scrobblers that display based on duration are mostly synced
             // but aggressively *stop* updating if state becomes stale/orphaned
-            if(payload.data.status.reported === REPORTED_PLAYER_STATUSES.playing && (!payload.data.status.stale && !payload.data.status.orphaned)) {
-                this.playingNow(payload.data.play, {...payload.data.options, scrobbleFrom: { type: payload.type, name: payload.name}});
-            }
+            this.playingNow(payload.data, {...payload.data.options, scrobbleFrom: { type: payload.type, name: payload.name}});
         });
 
         this.sourceEmitter.on('discoveredToScrobble', async (payload: { data: (PlayObject | PlayObject[]), options: { forceRefresh?: boolean, checkTime?: Dayjs, scrobbleTo?: string[], scrobbleFrom?: string } }) => {
@@ -108,6 +107,8 @@ export default class ScrobbleClients {
                     return "TealClientConfig";
                 case 'rocksky':
                     return "RockSkyClientConfig";
+                case 'discord':
+                    return 'DiscordClientConfig';
             }
     }
 
@@ -296,6 +297,28 @@ export default class ScrobbleClients {
                         })
                     }
                     break;
+                case 'discord': {
+                    const discord = {
+                        token: process.env.DISCORD_TOKEN,
+                        artwork: process.env.DISCORD_ARTWORK,
+                        applicationId: process.env.DISCORD_APPLICATION_ID,
+                        artworkDefaultUrl: process.env.DISCORD_ARTWORK_DEFAULT_URL,
+                        statusOverrideAllow: process.env.DISCORD_STATUS_OVERRIDE_ALLOW,
+                        activitiesOverrideAllow: process.env.DISCORD_ACTIVITIES_OVERRIDE_ALLOW,
+                        applicationsOverrideDisallow: process.env.DISCORD_APPNAME_OVERRIDE_DISALLOW
+                    }
+                    if (!Object.values(discord).every(x => x === undefined)) {
+                        configs.push({
+                            type: 'discord',
+                            name: 'unnamed-discord',
+                            source: 'ENV',
+                            mode: 'single',
+                            configureAs: 'client',
+                            data: discord,
+                            options: transformPresetEnv('DISCORD')
+                        })
+                    }
+                }   break;
                 default:
                     break;
             }
@@ -430,6 +453,10 @@ ${sources.join('\n')}`);
                 const RockskyScrobbler = (await import('./RockskyScrobbler.js')).default;
                 newClient = new RockskyScrobbler(name, {...clientConfig, data: {configDir: this.internalConfig.configDir, ...data} } as unknown as RockSkyClientConfig, {}, notifier, this.emitter, this.logger);
                 break;
+            case 'discord':
+                const DiscordScrobbler = (await import('./DiscordScrobbler.js')).default;
+                newClient = new DiscordScrobbler(name, {...clientConfig, data: {configDir: this.internalConfig.configDir, ...data} } as unknown as DiscordClientConfig, {}, notifier, this.emitter, this.logger);
+                break;                
             default:
                 break;
         }
@@ -442,7 +469,7 @@ ${sources.join('\n')}`);
         this.clients.push(newClient);
     }
 
-    playingNow = async (data: (PlayObject | PlayObject[]), options: {scrobbleTo: string[], scrobbleFrom: SourceIdentifier}) => {
+    playingNow = async (data: SourcePlayerObj, options: {scrobbleTo: string[], scrobbleFrom: SourceIdentifier}) => {
         const playObjs = Array.isArray(data) ? data : [data];
         const {
             scrobbleTo = [],

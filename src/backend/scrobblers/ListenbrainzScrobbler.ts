@@ -1,6 +1,6 @@
 import { Logger } from "@foxxmd/logging";
 import EventEmitter from "events";
-import { PlayObject } from "../../core/Atomic.js";
+import { PlayObject, SourcePlayerObj } from "../../core/Atomic.js";
 import { buildTrackString, capitalize } from "../../core/StringUtils.js";
 import { isNodeNetworkException } from "../common/errors/NodeErrors.js";
 import { hasUpstreamError, UpstreamError } from "../common/errors/UpstreamError.js";
@@ -10,7 +10,7 @@ import { ListenbrainzApiClient, playToListenPayload, playToSubmitPayload } from 
 import { ListenPayload } from '../common/vendor/listenbrainz/interfaces.js';
 import { Notifiers } from "../notifier/Notifiers.js";
 
-import AbstractScrobbleClient, { nowPlayingUpdateByPlayDuration } from "./AbstractScrobbleClient.js";
+import AbstractScrobbleClient, { nowPlayingUpdateByPlayDuration, shouldUpdatePlayingNowPlatformWhenPlayingOnly } from "./AbstractScrobbleClient.js";
 import { isDebugMode } from "../utils.js";
 
 export default class ListenbrainzScrobbler extends AbstractScrobbleClient {
@@ -98,10 +98,10 @@ export default class ListenbrainzScrobbler extends AbstractScrobbleClient {
         }
     }
 
-    doPlayingNow = async (data: PlayObject) => {
+    doPlayingNow = async (data: SourcePlayerObj) => {
         // listenbrainz shows Now Playing for the same time as the duration of the track being submitted
         try {
-            await this.api.submitListen(data, { listenType: 'playing_now'});
+            await this.api.submitListen(data.play, { listenType: 'playing_now'});
         } catch (e) {
             throw e;
         }

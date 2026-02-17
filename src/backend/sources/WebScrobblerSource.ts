@@ -146,6 +146,7 @@ export class WebScrobblerSource extends MemorySource {
                 },
                 deviceId: `${connectorLabel}-${controllerTabId}`,
                 musicService: connectorL,
+                source: 'WebScrobbler',
                 scrobbleAllowed: isScrobblingAllowed,
                 nowPlaying: options.nowPlaying ?? false
             }
