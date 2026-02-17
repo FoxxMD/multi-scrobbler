@@ -461,6 +461,9 @@ export class DiscordWSClient extends AbstractApiClient {
                 const smallArt = await this.getArtworkUrl(MB_ART);
                 if(smallArt !== undefined) {
                     activity.assets.small_image = smallArt;
+                } else {
+                    delete activity.assets.small_text;
+                    delete activity.assets.small_url;
                 }
             }
         }
