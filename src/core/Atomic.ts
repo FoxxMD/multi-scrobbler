@@ -532,3 +532,18 @@ export interface TransformResult {
     name: string,
     play: PlayData
 }
+
+export const KNOWN_MEDIA_PROVIDER_URLS = [
+'spotify.com',
+'bandcamp.com',
+'youtube.com',
+'deezer.com',
+'tidal.com',
+'apple.com',
+'archive.org',
+'soundcloud.com',
+'jamendo.com',
+'play.google.com',
+'listenbrainz.org',
+'musicbrainz.org'
+];

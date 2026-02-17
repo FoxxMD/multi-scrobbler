@@ -18,6 +18,7 @@ import { MSCache } from "../../Cache.js";
 import { isSuperAgentResponseError } from "../../errors/ErrorUtils.js";
 import { urlToMusicService } from "../ListenbrainzApiClient.js";
 import { fa } from "@faker-js/faker";
+import { urlContainsKnownMediaDomain } from "../../../utils/RequestUtils.js";
 
 const ARTWORK_PLACEHOLDER = 'https://raw.githubusercontent.com/FoxxMD/multi-scrobbler/master/assets/default-artwork.png';
 const MS_ART = 'https://raw.githubusercontent.com/FoxxMD/multi-scrobbler/master/assets/icon.png';
@@ -437,18 +438,22 @@ export class DiscordWSClient extends AbstractApiClient {
         } = this.config;
 
         let art = artworkDefaultUrl;
-        if (artUrl !== undefined && artwork !== false) {
-            if (Array.isArray(artwork)) {
-                const allowed = artwork.some(x => artUrl.toLocaleLowerCase().includes(x.toLocaleLowerCase()));
-                if (allowed) {
-                    art = artUrl;
-                }
-            } else {
-                const u = new URL(artUrl);
-                // only allow secure protocol as this is likely to be a real domain that is public accessible
-                // IP domain usually uses http only
-                if (u.protocol === 'https://') {
-                    art = artUrl;
+        if(artUrl !== undefined) {
+            if(urlContainsKnownMediaDomain(artUrl)) {
+                art = artUrl;
+            } else if (artwork !== false) {
+                if (Array.isArray(artwork)) {
+                    const allowed = artwork.some(x => artUrl.toLocaleLowerCase().includes(x.toLocaleLowerCase()));
+                    if (allowed) {
+                        art = artUrl;
+                    }
+                } else {
+                    const u = new URL(artUrl);
+                    // only allow secure protocol as this is likely to be a real domain that is public accessible
+                    // IP domain usually uses http only
+                    if (u.protocol === 'https://') {
+                        art = artUrl;
+                    }
                 }
             }
         }

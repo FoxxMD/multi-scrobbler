@@ -1,5 +1,6 @@
 import { Files, File } from "formidable";
 import VolatileFile from "formidable/VolatileFile.js";
+import { KNOWN_MEDIA_PROVIDER_URLS } from "../../core/Atomic.js";
 
 // typings from Formidable are all nuts.
 // VolatileFile is missing buffer and also does not extend File even though it should
@@ -68,4 +69,13 @@ const isVolatileFile = (val: unknown): val is File => {
 
 export const getFileIdentifier = (f: File): string => {
     return f.originalFilename === null ? f.newFilename : f.originalFilename;
+}
+
+export const urlContainsDomains = (url: string | URL, domains: string[]): boolean => {
+    const u = typeof url === 'string' ? url : url.hostname;
+    return domains.some(x => u.includes(x));
+}
+
+export const urlContainsKnownMediaDomain = (url: string | URL): boolean => {
+    return urlContainsDomains(url, KNOWN_MEDIA_PROVIDER_URLS);
 }
