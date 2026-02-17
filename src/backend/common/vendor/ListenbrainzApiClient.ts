@@ -819,6 +819,23 @@ export const musicServiceToCononical = (str?: string): string | undefined => {
     return undefined;
 }
 
+/**
+ *  Returns a known music service based on the given URL 
+ * @see https://listenbrainz.readthedocs.io/en/latest/users/json.html#payload-json-details
+ * */
+export const urlToMusicService = (url?: string): string | undefined => {
+    if(url === undefined) {
+        return undefined;
+    }
+    const lower = url.trim().toLocaleLowerCase();
+    for(const [k, v] of Object.entries(musicServices)) {
+        if(url.includes(v)) {
+            return k;
+        }
+    }
+    return undefined;
+}
+
 export const playToSubmitPayload = (play: PlayObject, options: SubmitOptions = {}): SubmitPayload => {
     const { listenType = 'single'} = options;  
     const listenPayload: SubmitPayload = {listen_type: listenType, payload: [playToListenPayload(play)]};

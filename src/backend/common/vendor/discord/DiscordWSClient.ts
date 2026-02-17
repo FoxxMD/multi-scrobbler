@@ -1,7 +1,7 @@
 import { childLogger } from "@foxxmd/logging";
 import { WS } from 'iso-websocket'
 import { DiscordClientData, DiscordData, DiscordStrongData, StatusType, ActivityType as MSActivityType, ActivityTypes } from "../../infrastructure/config/client/discord.js";
-import { _DataPayload, _NonDispatchPayload, ActivityType, APIUser, GatewayActivity, GatewayActivityUpdateData, GatewayCloseCodes, GatewayDispatchEvents, GatewayHeartbeatRequest, GatewayHelloData, GatewayIdentify, GatewayIdentifyData, GatewayInvalidSessionData, GatewayOpcodes, GatewayPresenceUpdateData, GatewayReadyDispatchData, GatewayResumeData, GatewayUpdatePresence, PresenceUpdateStatus } from "discord.js";
+import { _DataPayload, _NonDispatchPayload, ActivityType, APIUser, GatewayActivity, GatewayActivityButton, GatewayActivityUpdateData, GatewayCloseCodes, GatewayDispatchEvents, GatewayHeartbeatRequest, GatewayHelloData, GatewayIdentify, GatewayIdentifyData, GatewayInvalidSessionData, GatewayOpcodes, GatewayPresenceUpdateData, GatewayReadyDispatchData, GatewayResumeData, GatewayUpdatePresence, PresenceUpdateStatus } from "discord.js";
 import { isDebugMode, parseBool, removeUndefinedKeys, sleep } from "../../../utils.js";
 import pEvent from 'p-event';
 import EventEmitter from "events";
@@ -16,8 +16,10 @@ import { parseArrayFromMaybeString, parseBoolOrArrayFromMaybeString } from "../.
 import { getRoot } from "../../../ioc.js";
 import { MSCache } from "../../Cache.js";
 import { isSuperAgentResponseError } from "../../errors/ErrorUtils.js";
+import { urlToMusicService } from "../ListenbrainzApiClient.js";
 
 const ARTWORK_PLACEHOLDER = 'https://raw.githubusercontent.com/FoxxMD/multi-scrobbler/master/assets/icon.png';
+const MB_ART = 'https://raw.githubusercontent.com/FoxxMD/multi-scrobbler/master/assets/musicbrainz-logo-small.png';
 const API_GATEWAY_ENDPOINT = 'https://discord.com/api/gateway';
 
 /**
@@ -455,6 +457,12 @@ export class DiscordWSClient extends AbstractApiClient {
             if(usedUrl !== undefined) {
                 activity.assets.large_image = usedUrl;
             }
+            if(activity.assets.small_text !== undefined) {
+                const smallArt = await this.getArtworkUrl(MB_ART);
+                if(smallArt !== undefined) {
+                    activity.assets.small_image = smallArt;
+                }
+            }
         }
 
         return activity;
@@ -473,9 +481,13 @@ export class DiscordWSClient extends AbstractApiClient {
 
         const activity = await this.playStateToActivity(data);
 
-        let clearTime = dayjs().add(5, 'minutes');
-        if (activity.timestamps.end !== undefined) {
+        const play = isPlayObject(data) ? data : data.play;
+
+        let clearTime = dayjs().add(260, 'seconds'); // funny number
+        if (activity.timestamps?.end !== undefined) {
             clearTime = dayjs.unix(Math.floor(activity.timestamps.end as number / 1000));
+        } else if (play.data?.duration !== undefined) {
+            clearTime = dayjs().add(play.data.duration, 'seconds')
         }
 
         const updateData = this.generatePresenceUpdate();
@@ -677,10 +689,7 @@ export const playStateToActivityData = (data: SourceData, opts: { useArt?: boole
         }
     }
 
-    let activityName = 'Music';
-    if (play.meta?.source !== undefined) {
-        activityName = capitalize(play.meta.source)
-    }
+    let activityName = capitalize(play.meta?.musicService ?? play.meta?.mediaPlayerName ?? play.meta?.source ?? 'music')
 
     // @ts-expect-error
     const activity = removeUndefinedKeys<GatewayActivity>({
@@ -703,8 +712,58 @@ export const playStateToActivityData = (data: SourceData, opts: { useArt?: boole
             end: endTime
         }
     }
+    
+    //let buttons: GatewayActivityButton[] = [];
 
-    const artUrl = play.meta?.art?.album ?? play.meta.art.track ?? play.meta.art.artist;
+    const {
+        meta: {
+            url: {
+                web,
+                origin
+            } = {},
+        },
+        data: {
+            meta: {
+                brainz: {
+                    recording
+                } = {}
+            } = {}
+        } = {}
+    } = play;
+    const url = origin ?? web;
+    if(url !== undefined) {
+        const knownService = urlToMusicService(url);
+        if(knownService !== undefined) {
+            activity.assets.large_url = url;
+
+            // when including buttons discord accepts the presence update but does not actually use it
+            // I think buttons may now be limited to official RPC or restricted to preset actions via things like secrets or registering commands
+            // https://docs.discord.com/developers/developer-tools/game-sdk#activitysecrets-struct
+
+            // buttons.push({
+            //     label: `Listen on ${capitalize(knownService)}`,
+            //     url: web
+            // });
+        }
+    }
+    if(recording !== undefined) {
+        const mb = `https://musicbrainz.org/recording/${recording}`;
+        if(activity.assets.large_url === undefined) {
+            activity.assets.large_url = mb;
+        } else {
+            activity.assets.small_url = mb;
+            activity.assets.small_text = 'Open On Musicbrainz';
+        }
+        // buttons.push({
+        //     label: 'Open on Musicbrainz',
+        //     url: `https://musicbrainz.org/recording/${recording}`
+        // });
+    }
+    // if(buttons.length > 0) {
+    //     activity.buttons = buttons;
+    // }
+
+    const artUrl = play.meta?.art?.album ?? play.meta?.art?.track ?? play.meta?.art?.artist;
 
     return { activity, artUrl };
 }
