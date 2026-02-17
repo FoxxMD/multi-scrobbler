@@ -2,7 +2,7 @@ import EventEmitter from "events";
 import request from "superagent";
 import { PlayObject, SOURCE_SOT } from "../../core/Atomic.js";
 import { isNodeNetworkException } from "../common/errors/NodeErrors.js";
-import { FormatPlayObjectOptions, InternalConfig, PlayPlatformId } from "../common/infrastructure/Atomic.js";
+import { FormatPlayObjectOptions, InternalConfig, PagelessListensTimeRangeOptions, PagelessTimeRangeListens, PlayPlatformId, TimeRangeListensFetcher } from "../common/infrastructure/Atomic.js";
 import { ListenBrainzSourceConfig } from "../common/infrastructure/config/source/listenbrainz.js";
 import { ListenbrainzApiClient } from "../common/vendor/ListenbrainzApiClient.js";
 import { RecentlyPlayedOptions } from "./AbstractSource.js";
@@ -11,14 +11,15 @@ import { isPortReachableConnect } from "../utils/NetworkUtils.js";
 import { Logger } from "@foxxmd/logging";
 import { PlayerStateOptions } from "./PlayerState/AbstractPlayerState.js";
 import { NowPlayingPlayerState } from "./PlayerState/NowPlayingPlayerState.js";
+import { ManipulateType } from "dayjs";
+import { createGetScrobblesForTimeRangeFunc } from "../utils/ListenFetchUtils.js";
 
 export default class ListenbrainzSource extends MemorySource {
 
     api: ListenbrainzApiClient;
     requiresAuth = true;
     requiresAuthInteraction = false;
-    isKoito: boolean = false;
-
+    getScrobblesForTimeRange: TimeRangeListensFetcher
     declare config: ListenBrainzSourceConfig;
 
     constructor(name: any, config: ListenBrainzSourceConfig, internal: InternalConfig, emitter: EventEmitter) {
@@ -39,6 +40,7 @@ export default class ListenbrainzSource extends MemorySource {
         // 1000 is way too high. maxing at 100
         this.SCROBBLE_BACKLOG_COUNT = 100;
         this.logger.info(`Note: The player for this source is an analogue for the 'Now Playing' status exposed by ${this.type} which is NOT used for scrobbling. Instead, the 'recently played' or 'history' information provided by this source is used for scrobbles.`)
+        this.getScrobblesForTimeRange = createGetScrobblesForTimeRangeFunc(this.api, this.api.logger);
     }
 
     static formatPlayObj(obj: any, options: FormatPlayObjectOptions = {}){ return ListenbrainzApiClient.formatPlayObj(obj, options); }
@@ -47,8 +49,9 @@ export default class ListenbrainzSource extends MemorySource {
         try {
             await isPortReachableConnect(this.api.url.port, {host: this.api.url.url.hostname});
             const isKoito = await this.api.checkKoito();
-            this.api.isKoito = isKoito;
-            this.isKoito = isKoito;
+            if(isKoito) {
+                throw new Error('The given URL looks like a Koito instance. Use the Koito Source instead of Listenbrainz.')
+            }
             return true;
         } catch (e) {
             if(isNodeNetworkException(e)) {
@@ -75,20 +78,21 @@ export default class ListenbrainzSource extends MemorySource {
 
     getRecentlyPlayed = async(options: RecentlyPlayedOptions = {}) => {
         const {limit = 20} = options;
-        if(this.isKoito) {
-            return await this.api.getRecentlyPlayedKoito(limit);
-        } 
         const now = await this.api.getPlayingNow();
         await this.processRecentPlays(now.listens.map(x => ListenbrainzSource.formatPlayObj(x)));
-        return await this.api.getRecentlyPlayed(limit);
+        return await this.getScrobblesForTimeRange({limit});
     }
 
     getUpstreamRecentlyPlayed = async (options: RecentlyPlayedOptions = {}): Promise<PlayObject[]> => {
         try {
-            return await this.api.getRecentlyPlayed(20);
+            return await this.getScrobblesForTimeRange({limit: 20});
         } catch (e) {
             throw e;
         }
+    }
+
+    getPaginatedUnitOfTime(): ManipulateType {
+        return 'second';
     }
 
     protected getBackloggedPlays = async (options: RecentlyPlayedOptions = {}) =>  await this.getRecentlyPlayed({formatted: true, ...options})

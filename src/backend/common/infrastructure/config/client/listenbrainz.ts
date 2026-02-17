@@ -38,3 +38,11 @@ export interface ListenBrainzClientConfig extends CommonClientConfig {
 export interface ListenBrainzClientAIOConfig extends ListenBrainzClientConfig {
     type: 'listenbrainz'
 }
+
+
+/** https://github.com/metabrainz/listenbrainz-server/pull/2572
+ * https://github.com/metabrainz/listenbrainz-server/blob/master/listenbrainz/webserver/views/api_tools.py#L48
+ */
+export const MAX_ITEMS_PER_GET_LZ = 1000;
+export const DEFAULT_ITEMS_PER_GET_LZ = 25;
+export const DEFAULT_MS_ITEMS_PER_GET_LZ = 100;
