@@ -17,6 +17,7 @@ import { getRoot } from "../../../ioc.js";
 import { MSCache } from "../../Cache.js";
 import { isSuperAgentResponseError } from "../../errors/ErrorUtils.js";
 import { urlToMusicService } from "../ListenbrainzApiClient.js";
+import { fa } from "@faker-js/faker";
 
 const ARTWORK_PLACEHOLDER = 'https://raw.githubusercontent.com/FoxxMD/multi-scrobbler/master/assets/icon.png';
 const MB_ART = 'https://raw.githubusercontent.com/FoxxMD/multi-scrobbler/master/assets/musicbrainz-logo-small.png';
@@ -853,6 +854,8 @@ export const configToStrong = (data: DiscordData): DiscordStrongData => {
 
         if(artworkDefaultUrl !== undefined && typeof artworkDefaultUrl === 'string' && artworkDefaultUrl.toLocaleLowerCase().trim() === 'false') {
             strongConfig.artworkDefaultUrl = false;
+        } else if (typeof artworkDefaultUrl === 'boolean') {
+            strongConfig.artworkDefaultUrl = artworkDefaultUrl ? ARTWORK_PLACEHOLDER : false;
         } else {
             strongConfig.artworkDefaultUrl = artworkDefaultUrl;
         }
