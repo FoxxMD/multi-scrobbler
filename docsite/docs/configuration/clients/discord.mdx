@@ -11,7 +11,7 @@ import JsonConfig from '!!raw-loader!@site/../config/discord.json.example';
 
 This scrobbler uses **[Now Playing](/configuration/clients#now-playing)** functionality to set your Discord [Rich Presence](https://docs.discord.com/developers/rich-presence/overview) to the music you are currently monitoring with multi-scrobbler.
 
-<img src={require('/img/discord_presence.png').default} height="131"/>
+<img src={require('/img/discord_presence_art.png').default} height="127"/>
 
 :::warning[Discord TOS Violation]
 
@@ -257,7 +257,7 @@ Discord needs an **external, internet-facing** URL to correctly display this ima
         <TabItem label="Discord Default" value="discord-default">
         When [**Application Id**](#discord-application) is **not** configured Discord will show its own default image.
 
-        <img src={require('/img/discord_presence_default.png').default} height="127"/>
+        <img src={require('/img/discord_presence_discord_default.png').default} height="127"/>
         </TabItem>
         <TabItem label="MS Default" value="ms-default">
         When [**Application Id**](#discord-application) **is** configured and any of these conditions is true:
@@ -272,7 +272,7 @@ Discord needs an **external, internet-facing** URL to correctly display this ima
         
         Without any other configuration, the default URL is for the the MS logo:
 
-        <img src={require('/img/discord_presence.png').default} height="131"/>
+        <img src={require('/img/discord_presence_ms_default.png').default} height="127"/>
 
         This default image can be customized:
 

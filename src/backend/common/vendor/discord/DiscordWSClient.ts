@@ -19,8 +19,8 @@ import { isSuperAgentResponseError } from "../../errors/ErrorUtils.js";
 import { urlToMusicService } from "../ListenbrainzApiClient.js";
 import { fa } from "@faker-js/faker";
 
-const ARTWORK_PLACEHOLDER = 'https://raw.githubusercontent.com/FoxxMD/multi-scrobbler/master/assets/icon.png';
-const MB_ART = 'https://raw.githubusercontent.com/FoxxMD/multi-scrobbler/master/assets/musicbrainz-logo-small.png';
+const ARTWORK_PLACEHOLDER = 'https://raw.githubusercontent.com/FoxxMD/multi-scrobbler/master/assets/default-artwork.png';
+const MS_ART = 'https://raw.githubusercontent.com/FoxxMD/multi-scrobbler/master/assets/icon.png';
 const API_GATEWAY_ENDPOINT = 'https://discord.com/api/gateway';
 
 /**
@@ -432,7 +432,8 @@ export class DiscordWSClient extends AbstractApiClient {
             artwork = false
         } = this.config;
         const {
-            artworkDefaultUrl = ARTWORK_PLACEHOLDER
+            artworkDefaultUrl = ARTWORK_PLACEHOLDER,
+            applicationId
         } = this.config;
 
         let art = artworkDefaultUrl;
@@ -458,15 +459,14 @@ export class DiscordWSClient extends AbstractApiClient {
             if(usedUrl !== undefined) {
                 activity.assets.large_image = usedUrl;
             }
-            if(activity.assets.small_text !== undefined) {
-                const smallArt = await this.getArtworkUrl(MB_ART);
-                if(smallArt !== undefined) {
+        }
+        if(art !== MS_ART && applicationId !== undefined) {
+            const smallArt = await this.getArtworkUrl(MS_ART);
+            if(smallArt !== undefined) {
                     activity.assets.small_image = smallArt;
-                } else {
-                    delete activity.assets.small_text;
-                    delete activity.assets.small_url;
-                }
-            }
+                    activity.assets.small_text = 'Via Multi-Scrobbler'
+                    activity.assets.small_url = 'https://multi-scrobbler.app'
+            } 
         }
 
         return activity;
@@ -738,7 +738,7 @@ export const playStateToActivityData = (data: SourceData, opts: { useArt?: boole
     if(url !== undefined) {
         const knownService = urlToMusicService(url);
         if(knownService !== undefined) {
-            activity.assets.large_url = url;
+            activity.details_url = url;
 
             // when including buttons discord accepts the presence update but does not actually use it
             // I think buttons may now be limited to official RPC or restricted to preset actions via things like secrets or registering commands
@@ -752,11 +752,10 @@ export const playStateToActivityData = (data: SourceData, opts: { useArt?: boole
     }
     if(recording !== undefined) {
         const mb = `https://musicbrainz.org/recording/${recording}`;
-        if(activity.assets.large_url === undefined) {
-            activity.assets.large_url = mb;
+        if(activity.details_url === undefined) {
+            activity.details_url = mb;
         } else {
-            activity.assets.small_url = mb;
-            activity.assets.small_text = 'Open On Musicbrainz';
+            activity.state_url = mb;
         }
         // buttons.push({
         //     label: 'Open on Musicbrainz',
