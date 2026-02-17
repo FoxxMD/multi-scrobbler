@@ -253,11 +253,11 @@ export default class LastfmApiClient extends AbstractApiClient implements Pagina
         return 'second';
     }
 
-    getPaginatedTimeRangeListens = async (fetchOptions: PaginatedListensTimeRangeOptions<number>, options: {includeNowPlaying?: boolean} = {}): Promise<PaginatedTimeRangeListensResult<number>> => {
+    getPaginatedTimeRangeListens = async (fetchOptions: PaginatedListensTimeRangeOptions<number>, options: { includeNowPlaying?: boolean } = {}): Promise<PaginatedTimeRangeListensResult<number>> => {
 
         const resp = await this.getRecentTracksWithPagination(fetchOptions);
 
-        const {includeNowPlaying = true} =  options;
+        const { includeNowPlaying = true } = options;
 
         const {
             recenttracks: {
@@ -270,49 +270,44 @@ export default class LastfmApiClient extends AbstractApiClient implements Pagina
             } = {},
         } = resp;
 
-        let plays = [];
-        if(Array.isArray(list)) {
-            plays = list.reduce((acc: any, x: any) => {
-                    try {
-                        const formatted = formatPlayObj(x);
-                        const {
-                            data: {
-                                track,
-                                playDate,
-                            },
-                            meta: {
-                                mbid,
-                                nowPlaying,
-                            }
-                        } = formatted;
-                        if (nowPlaying === true && !includeNowPlaying) {
-                            // if the track is "now playing" it doesn't get a timestamp so we can't determine when it started playing
-                            // and don't want to accidentally count the same track at different timestamps by artificially assigning it 'now' as a timestamp
-                            // so we'll just ignore it in the context of recent tracks since really we only want "tracks that have already finished being played" anyway
-                            this.logger.debug( { track, mbid }, `Ignoring 'now playing' track returned from ${this.upstreamName} client`);
-                            return acc;
-                        } else if (playDate === undefined) {
-                            this.logger.warn({ track, mbid }, `${this.upstreamName} recently scrobbled track did not contain a timestamp, omitting from time frame check`);
-                            return acc;
-                        }
-                        return acc.concat(formatted);
-                    } catch (e) {
-                        this.logger.warn(new Error(`Failed to format ${this.upstreamName} recently scrobbled track, omitting from time frame check`, { cause: e }));
-                        this.logger.debug({data: x}, 'Full api response object:');
-                        return acc;
+        const plays = list.reduce((acc: any, x: any) => {
+            try {
+                const formatted = formatPlayObj(x);
+                const {
+                    data: {
+                        track,
+                        playDate,
+                    },
+                    meta: {
+                        mbid,
+                        nowPlaying,
                     }
-                }, []);
-        } else {
-            this.logger.warn({list: list},`Expected tracks to be a list but it was ${typeof list}`);
-        }
+                } = formatted;
+                if (nowPlaying === true && !includeNowPlaying) {
+                    // if the track is "now playing" it doesn't get a timestamp so we can't determine when it started playing
+                    // and don't want to accidentally count the same track at different timestamps by artificially assigning it 'now' as a timestamp
+                    // so we'll just ignore it in the context of recent tracks since really we only want "tracks that have already finished being played" anyway
+                    this.logger.debug({ track, mbid }, `Ignoring 'now playing' track returned from ${this.upstreamName} client`);
+                    return acc;
+                } else if (playDate === undefined) {
+                    this.logger.warn({ track, mbid }, `${this.upstreamName} recently scrobbled track did not contain a timestamp, omitting from time frame check`);
+                    return acc;
+                }
+                return acc.concat(formatted);
+            } catch (e) {
+                this.logger.warn(new Error(`Failed to format ${this.upstreamName} recently scrobbled track, omitting from time frame check`, { cause: e }));
+                this.logger.debug({ data: x }, 'Full api response object:');
+                return acc;
+            }
+        }, []);
 
-        return {data: plays, meta: {...fetchOptions, total: parseInt(total, 10), more: fetchOptions.cursor < parseInt(totalPages, 10)}};
+        return { data: plays, meta: { ...fetchOptions, total: parseInt(total, 10), more: fetchOptions.cursor < parseInt(totalPages, 10) } };
 
     }
 
     getRecentTracks = async (options: TracksFetchOptions = {}): Promise<LastFMUserGetRecentTracksResponse> => {
 
-        const { to, from, extended = 1, ...rest} = options;
+        const { to, from, extended = 1, ...rest } = options;
 
         const requestOpts: Writeable<LastFMUserGetRecentTracksParams> = {
             ...rest,
@@ -322,23 +317,50 @@ export default class LastfmApiClient extends AbstractApiClient implements Pagina
             extended
         };
 
-        if(to !== undefined) {
+        if (to !== undefined) {
             requestOpts.to = to.toString();
         }
-        if(from !== undefined) {
+        if (from !== undefined) {
             requestOpts.from = from.toString();
         }
 
-        let resp: LastFMUserGetRecentTracksResponse;
         try {
-            return await this.callApi<LastFMUserGetRecentTracksResponse>(() => this.userApi.getRecentTracks(requestOpts));
+            const resp = await this.callApi<LastFMUserGetRecentTracksResponse>(() => this.userApi.getRecentTracks(requestOpts));
+            const {
+                recenttracks: {
+                    track = [],
+                    ...rest
+                } = {},
+                ...restResp
+            } = resp;
+            const correctedResp: Writeable<LastFMUserGetRecentTracksResponse> = {
+                ...restResp,
+                // @ts-expect-error
+                recenttracks: {
+                    ...rest,
+                    track: [],
+                }
+            }
+            // when the lfm api response only returns one scrobble it formats `track` as a singular scrobble object INSTEAD of an array
+            // and in all other cases it should return an array of scrobble objects
+            if (!Array.isArray(track)) {
+                if (typeof track === 'object' && track !== null) {
+                    correctedResp.recenttracks.track = [track];
+                    this.logger.debug('Converted `track` property to an array');
+                } else {
+                    this.logger.warn({ track }, `Expected track to be an array or object but it was ${track === null ? 'null' : typeof track}`);
+                }
+            } else {
+                correctedResp.recenttracks.track = track;
+            }
+            return correctedResp;
         } catch (e) {
-            if(e.message.includes('Invalid resource specified')) {
+            if (e.message.includes('Invalid resource specified')) {
                 // likely the user does not have any scrobbles on their profile yet
                 // https://github.com/FoxxMD/multi-scrobbler/issues/401#issuecomment-3749489057
                 // https://github.com/libre-fm/libre-fm/discussions/91#discussioncomment-15456070
                 // so we log as a warning and return empty array instead
-                this.logger.warn(new Error('This error occurs when a librefm (and lastfm?) account has no existing scrobbles yet. If you are seeing this warning and this is not the case, please create an issue', {cause: e}));
+                this.logger.warn(new Error('This error occurs when a librefm (and lastfm?) account has no existing scrobbles yet. If you are seeing this warning and this is not the case, please create an issue', { cause: e }));
                 return {
                     recenttracks: {
                         track: [],
@@ -352,7 +374,6 @@ export default class LastfmApiClient extends AbstractApiClient implements Pagina
                     }
                 }
             }
-            this.logger.debug(resp);
             throw e;
         }
     }
