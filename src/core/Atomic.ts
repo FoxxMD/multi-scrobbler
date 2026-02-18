@@ -187,6 +187,12 @@ export interface PlayData extends TrackData {
     repeat?: boolean
 }
 
+export interface ArtMeta {
+    album?: string
+    track?: string
+    artist?: string
+}
+
 export interface PlayMeta {
     source?: string
 
@@ -230,11 +236,7 @@ export interface PlayMeta {
     /**
      * Hot-linkable images for use with displaying art for this play
      */
-    art?: {
-        album?: string
-        track?: string
-        artist?: string
-    }
+    art?: ArtMeta
     user?: string
     mediaType?: string
     server?: string
@@ -466,7 +468,7 @@ export const FEAT: Feat[] = ['ft','feat','vs','ft.','feat.','vs.','featuring'];
 
 export interface TransformOptions {
         failOnFetch?: boolean;
-        throwOnFailure?: boolean | ('artists' | 'title' | 'albumArtists' | 'album' | 'duration' | 'meta')[];
+        throwOnFailure?: boolean | ('artists' | 'title' | 'albumArtists' | 'album' | 'duration' | 'meta' | 'art')[];
         ttl?: string
 }
 export interface TransformerCommonConfig<T = Record<string, any>, Y = Record<string, any>> {
