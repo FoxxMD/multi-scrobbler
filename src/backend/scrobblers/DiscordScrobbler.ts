@@ -37,16 +37,17 @@ export default class DiscordScrobbler extends AbstractScrobbleClient {
     protected async doBuildInitData(): Promise<true | string | undefined> {
         const {
             data: {
-                token
+                token,
+                artwork = false
             } = {}
         } = this.config;
         if (token === undefined) {
             throw new Error('Must provide a user token');
         }
-        if(typeof this.config.data.artwork === 'boolean') {
-            this.logger.verbose(`Artwork: ${this.config.data.artwork ? 'Allow any with HTTPS' : 'Allow none'}`);
-        } else {
-            this.logger.verbose(`Artwork: Allow HTTPS with these domains: ${this.config.data.artwork.join(', ')}`);
+        if(typeof artwork === 'boolean') {
+            this.logger.verbose(`Artwork: ${artwork ? 'Allow any non-known domains with HTTPS' : 'Allow no non-known domains'}`);
+        } else if(artwork === 'string') {
+            this.logger.verbose(`Artwork: Allow non-known domains with HTTPS containing: ${artwork.join(', ')}`);
         }
         this.logger.verbose(`Artwork Fallback Url: ${this.config.data.artworkDefaultUrl}`);
         this.logger.verbose(`Allow override statuses: ${this.config.data.statusOverrideAllow.join(', ')}`);
