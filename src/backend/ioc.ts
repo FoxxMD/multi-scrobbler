@@ -13,6 +13,7 @@ import { MSCache } from "./common/Cache.js";
 import TransformerManager from "./common/transforms/TransformerManager.js";
 import { TransformerCommonConfig } from "../core/Atomic.js";
 import prom, { Counter, Gauge } from 'prom-client';
+import { CoverArtApiClient } from "./common/vendor/musicbrainz/CoverArtApiClient.js";
 
 export let version: string = 'unknown';
 
@@ -122,6 +123,9 @@ const createRoot = (options: RootOptions = {logger: loggerDebug}) => {
         transformerManager.register({type: 'native', name: 'MSDefault'});
     }
 
+    const metadataCache = (maybeSingletonCache !== undefined ? maybeSingletonCache : cacheFunc()).cacheMetadata;
+    const coverArtApi = new CoverArtApiClient('', {}, {logger, cache: metadataCache});
+
     const portVal: number | string = process.env.PORT ?? port;
 
     return createContainer().add({
@@ -149,7 +153,8 @@ const createRoot = (options: RootOptions = {logger: loggerDebug}) => {
         logger: logger,
         transformerManager,
         cache: () => maybeSingletonCache !== undefined ? () => maybeSingletonCache : cacheFunc,
-        mbMap: () => maybeSingletonMb !== undefined ? () => maybeSingletonMb : mbFunc
+        mbMap: () => maybeSingletonMb !== undefined ? () => maybeSingletonMb : mbFunc,
+        coverArtApi
     }).add((items) => {
         const localUrl = generateBaseURL(baseUrl, items.port)
         return {
