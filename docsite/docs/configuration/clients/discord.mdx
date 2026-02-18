@@ -219,7 +219,7 @@ DISCORD_APPNAME_OVERRIDE_DISALLOW=fortnite
 
 ### Discord Application
 
-Creating a [Discord App](https://docs.discord.com/developers/quick-start/overview-of-apps) enables you to use custom album cover art and secondary status images for more links. Creating an App is free and simple, it is recommended you do this to get the most functionality of our Rich Presence.
+Creating a [Discord App](https://docs.discord.com/developers/quick-start/overview-of-apps) enables you to use custom album cover art and secondary status images for more links. Creating an App is free and simple, it is recommended you do this to get the most functionality from Rich Presence.
 
 <details>
 
@@ -234,10 +234,6 @@ Go to the [Discord Developer Portal](https://discord.com/developers/applications
   * File Config => `"applicationId": "12345678"`
 
 </details>
-
-The created application is used to enable the features/config below:
-
-* [Artwork](#artwork)
 
 ### Artwork
 
@@ -255,7 +251,7 @@ The order in which multi-scrobbler determines what image to use is the same as t
 
 <Tabs groupId="artworkUrl" queryString>
         <TabItem label="External URLs" value="external">
-        When [**Application Id**](#discord-application) **is** configured MS can use external URLS for artwork.
+        When [**Application Id**](#discord-application) **is** configured MS can use external URLs for artwork.
 
         <img src={require('/img/discord_presence_art.png').default} height="127"/>
 
@@ -263,7 +259,7 @@ The order in which multi-scrobbler determines what image to use is the same as t
 
         <details>
 
-        <summary>Why Do I Care?</summary>
+        <summary>Why Should I Care?</summary>
 
         There are some scenarios where you may not want your artwork URLs to be visible, for example:
 
@@ -320,7 +316,9 @@ The order in which multi-scrobbler determines what image to use is the same as t
         Remember, this URL need to be accessible on the public internet.
         </TabItem>
         <TabItem label="Discord Default" value="discord-default">
-        When [**Application Id**](#discord-application) is **not** configured Discord will show its own default image. No custom artwork can be used in this configuration.
+        When [**Application Id**](#discord-application) is **not** configured Discord will show its own image. No custom artwork can be used in this configuration.
+
+        This is also the image Discord will display if the artwork URL cannot be fetched.
 
         <img src={require('/img/discord_presence_discord_default.png').default} height="127"/>
         </TabItem>
