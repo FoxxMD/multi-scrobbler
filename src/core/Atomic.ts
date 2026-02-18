@@ -543,6 +543,7 @@ export const KNOWN_MEDIA_PROVIDER_URLS = [
 'tidal.com',
 'apple.com',
 'archive.org',
+'coverartarchive.org',
 'soundcloud.com',
 'jamendo.com',
 'play.google.com',

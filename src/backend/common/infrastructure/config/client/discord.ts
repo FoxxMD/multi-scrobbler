@@ -4,7 +4,7 @@ export interface DiscordData {
     token: string
     applicationId?: string
     artwork?: boolean | string | string[]
-    artworkDefaultUrl?: string | boolean
+    artworkDefaultUrl?: string
     statusOverrideAllow?: string | StatusType[]
     activitiesOverrideAllow?: boolean | string | ActivityType[]
     applicationsOverrideDisallow?: string | string[]
@@ -33,7 +33,6 @@ export type StatusType = 'online' | 'idle' | 'dnd' | 'invisible';
 
 export interface DiscordStrongData extends DiscordData {
     artwork?: boolean | string[]
-    artworkDefaultUrl?: string | false
     statusOverrideAllow?: StatusType[]
     activitiesOverrideAllow?: ActivityType[]
     applicationsOverrideDisallow?: string[]

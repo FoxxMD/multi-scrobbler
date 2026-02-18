@@ -19,6 +19,7 @@ import { isSuperAgentResponseError } from "../../errors/ErrorUtils.js";
 import { urlToMusicService } from "../ListenbrainzApiClient.js";
 import { fa } from "@faker-js/faker";
 import { urlContainsKnownMediaDomain } from "../../../utils/RequestUtils.js";
+import { CoverArtApiClient } from "../musicbrainz/CoverArtApiClient.js";
 
 const ARTWORK_PLACEHOLDER = 'https://raw.githubusercontent.com/FoxxMD/multi-scrobbler/master/assets/default-artwork.png';
 const MS_ART = 'https://raw.githubusercontent.com/FoxxMD/multi-scrobbler/master/assets/icon.png';
@@ -67,6 +68,7 @@ export class DiscordWSClient extends AbstractApiClient {
     emitter: EventEmitter;
 
     cache: MSCache;
+    covertArtApi: CoverArtApiClient;
     artFail: boolean = false;
     artFailCount = 0;
 
@@ -75,6 +77,7 @@ export class DiscordWSClient extends AbstractApiClient {
         this.logger = childLogger(options.logger, 'WS Gateway');
         this.emitter = new EventEmitter();
         this.cache = getRoot().items.cache();
+        this.covertArtApi = getRoot().items.coverArtApi;
     }
 
     initClient = async () => {
@@ -437,41 +440,53 @@ export class DiscordWSClient extends AbstractApiClient {
             applicationId
         } = this.config;
 
-        let art = artworkDefaultUrl;
-        if(artUrl !== undefined) {
-            if(urlContainsKnownMediaDomain(artUrl)) {
-                art = artUrl;
-            } else if (artwork !== false) {
-                if (Array.isArray(artwork)) {
-                    const allowed = artwork.some(x => artUrl.toLocaleLowerCase().includes(x.toLocaleLowerCase()));
-                    if (allowed) {
-                        art = artUrl;
-                    }
-                } else {
-                    const u = new URL(artUrl);
-                    // only allow secure protocol as this is likely to be a real domain that is public accessible
-                    // IP domain usually uses http only
-                    if (u.protocol === 'https://') {
-                        art = artUrl;
+        if(applicationId !== undefined) {
+
+            let art = artworkDefaultUrl;
+            if(artUrl !== undefined) {
+                if(urlContainsKnownMediaDomain(artUrl)) {
+                    art = artUrl;
+                } else if (artwork !== false) {
+                    if (Array.isArray(artwork)) {
+                        const allowed = artwork.some(x => artUrl.toLocaleLowerCase().includes(x.toLocaleLowerCase()));
+                        if (allowed) {
+                            art = artUrl;
+                        }
+                    } else {
+                        const u = new URL(artUrl);
+                        // only allow secure protocol as this is likely to be a real domain that is public accessible
+                        // IP domain usually uses http only
+                        if (u.protocol === 'https://') {
+                            art = artUrl;
+                        }
                     }
                 }
             }
-        }
-        // https://docs.discord.com/developers/events/gateway-events#activity-object-activity-assets
-        // https://docs.discord.com/developers/events/gateway-events#activity-object-activity-asset-image
-        if(art !== false) {
+
+            if(art === artworkDefaultUrl) {
+                const play = isPlayObject(data) ? data : data.play;
+                if(play.data.meta?.brainz?.album !== undefined) {
+                    const albumArt = await this.covertArtApi.getCoverThumb(play.data.meta?.brainz?.album, {size: 250});
+                    if(albumArt !== undefined) {
+                        art = albumArt;
+                    }
+                }
+            }
+
+            // https://docs.discord.com/developers/events/gateway-events#activity-object-activity-assets
+            // https://docs.discord.com/developers/events/gateway-events#activity-object-activity-asset-image
             const usedUrl = await this.getArtworkUrl(art);
             if(usedUrl !== undefined) {
                 activity.assets.large_image = usedUrl;
             }
-        }
-        if(art !== MS_ART && applicationId !== undefined) {
-            const smallArt = await this.getArtworkUrl(MS_ART);
-            if(smallArt !== undefined) {
-                    activity.assets.small_image = smallArt;
-                    activity.assets.small_text = 'Via Multi-Scrobbler'
-                    activity.assets.small_url = 'https://multi-scrobbler.app'
-            } 
+            if(art !== MS_ART) {
+                const smallArt = await this.getArtworkUrl(MS_ART);
+                if(smallArt !== undefined) {
+                        activity.assets.small_image = smallArt;
+                        activity.assets.small_text = 'Via Multi-Scrobbler'
+                        activity.assets.small_url = 'https://multi-scrobbler.app'
+                } 
+            }
         }
 
         return activity;
@@ -843,7 +858,8 @@ export const configToStrong = (data: DiscordData): DiscordStrongData => {
         const strongConfig: DiscordStrongData = {
             token,
             applicationId,
-            applicationsOverrideDisallow: parseArrayFromMaybeString(applicationsOverrideDisallow)
+            applicationsOverrideDisallow: parseArrayFromMaybeString(applicationsOverrideDisallow),
+            artworkDefaultUrl
         }
 
         if (typeof artwork === 'boolean' || Array.isArray(artwork)) {
@@ -854,14 +870,6 @@ export const configToStrong = (data: DiscordData): DiscordStrongData => {
             } else {
                 strongConfig.artwork = parseArrayFromMaybeString(artwork)
             }
-        }
-
-        if(artworkDefaultUrl !== undefined && typeof artworkDefaultUrl === 'string' && artworkDefaultUrl.toLocaleLowerCase().trim() === 'false') {
-            strongConfig.artworkDefaultUrl = false;
-        } else if (typeof artworkDefaultUrl === 'boolean') {
-            strongConfig.artworkDefaultUrl = artworkDefaultUrl ? ARTWORK_PLACEHOLDER : false;
-        } else {
-            strongConfig.artworkDefaultUrl = artworkDefaultUrl;
         }
 
         const saRaw = parseArrayFromMaybeString(statusOverrideAllow);
