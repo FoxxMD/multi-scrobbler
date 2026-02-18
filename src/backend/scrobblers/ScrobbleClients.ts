@@ -491,7 +491,7 @@ ${sources.join('\n')}`);
                 continue;
             }
             for (const playObj of playObjs) {
-                client.queuePlayingNow(playObj, scrobbleFrom);
+                await client.queuePlayingNow(playObj, scrobbleFrom);
             }
         }
     }

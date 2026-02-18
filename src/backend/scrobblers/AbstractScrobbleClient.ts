@@ -1005,8 +1005,12 @@ ${closestMatch.breakdowns.join('\n')}`, {leaf: ['Dupe Check']});
         this.updateDeadLetterCache();
     }
 
-    queuePlayingNow = (data: SourcePlayerObj, source: SourceIdentifier) => {
+    queuePlayingNow = async (data: SourcePlayerObj, source: SourceIdentifier) => {
         const sourceId = `${source.name}-${source.type}`;
+        if(data.play !== undefined) {
+            const transformed = await this.transformPlay(data.play, TRANSFORM_HOOK.preCompare);
+            data.play = transformed;
+        }
         if(isDebugMode()) {
             let playHint = '';
             if(data.play !== undefined) {
