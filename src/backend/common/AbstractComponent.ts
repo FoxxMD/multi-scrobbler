@@ -196,7 +196,7 @@ export default abstract class AbstractComponent extends AbstractInitializable {
 
             const shouldLog = log ?? this.config.options?.playTransform?.log ?? isDebugMode();
 
-            const transformHash = `playTransform-${hashObject(hook)}-${hashObject(metaInvariantTransform(play))}`;
+            const transformHash = `playTransform-${hashObject(hook)}-${hashObject(playContentInvariantTransform(play))}`;
             const cachedTransformPlay = await this.cache.cacheTransform.get<PlayObject>(transformHash);
             if(cachedTransformPlay !== undefined) {
                 // if(shouldLog) {
@@ -349,7 +349,7 @@ export default abstract class AbstractComponent extends AbstractInitializable {
             //         }
             //     ]
             // }
-            await this.cache.cacheTransform.set<PlayObject>(transformHash, transformedPlay, '5m');
+            await this.cache.cacheTransform.set<PlayObject>(transformHash, transformedPlay, '10m');
             return transformedPlay;
         } catch (e) {
             logger.warn(new Error(`Unexpected error occurred, returning original play.`, {cause: e}));

@@ -42,6 +42,8 @@ export const playContentInvariantTransform = (play: PlayObject): PlayObjectLifec
         data: {
             playDate,
             playDateCompleted,
+            listenRanges,
+            listenedFor,
             ...rest
         }
     } = play;
