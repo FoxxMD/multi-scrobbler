@@ -241,7 +241,7 @@ The created application is used to enable the features/config below:
 
 ### Artwork
 
-For some Sources, MS parses album art and displays it in the dashboard. This image can be displayed on Discord alongside your listening status.
+Multi-scrobbler can display Album Art in your Discord status. The image that is used differs based on if the image URL is publically accessible.
 
 :::note
 
@@ -249,38 +249,17 @@ If no [**Application Id**](#discord-application) is configured the status art wi
 
 :::
 
+The order in which multi-scrobbler determines what image to use is the same as the order of the tabs shown below.
+
 #### Artwork URL Types
 
 <Tabs groupId="artworkUrl" queryString>
-        <TabItem label="Discord Default" value="discord-default">
-        When [**Application Id**](#discord-application) is **not** configured Discord will show its own default image. No custom artwork can be used in this configuration.
-
-        <img src={require('/img/discord_presence_discord_default.png').default} height="127"/>
-        </TabItem>
-        <TabItem label="MS Default" value="ms-default">
-        When [**Application Id**](#discord-application) **is** configured and any of these conditions is true:
-
-        * Play does not contain artwork information (no artwork shown in dashboard)
-        * or artwork url is not a known music service domain and...
-          * `artwork` is set to false or **not defined**
-          * or `artwork` is a list of custom domains keywords and external artwork url does not contain any of these keywords
-          * or external artwork url is `http`
-
-        The status artwork will use a default URL instead of your artwork URL. This is to preserve *your* privacy because Discord does not host status images, it only links to them and the URL is visible to other users.
-        
-        Without any other configuration, the default URL is for the the MS logo:
-
-        <img src={require('/img/discord_presence_ms_default.png').default} height="127"/>
-
-        This default image can be customized:
-
-        * ENV Config => `DISCORD_ARTWORK_DEFAULT_URL=https://cooldomain.com/art.png`
-        * File Config => `artworkDefaultUrl`
-        </TabItem>
         <TabItem label="External URLs" value="external">
         When [**Application Id**](#discord-application) **is** configured MS can use external URLS for artwork.
 
-        External URLs that are not from known music services are **disabled by default.** This is to preserve *your* privacy because Discord does not host status images, it only links to them and the URL is visible to other users.
+        <img src={require('/img/discord_presence_art.png').default} height="127"/>
+
+        External URLs that are not from known music services are **disabled by default.** This is to preserve *your* privacy because Discord does not host images, it only links to them and the URL is visible to other users.
 
         <details>
 
@@ -293,14 +272,57 @@ If no [**Application Id**](#discord-application) is configured the status art wi
         * A Source may be internet-facing but requires authentication to view the image
         </details>
 
-        Regardless of the config below MS will **never** use an external URL if it it not `https`.
+        MS will use your artwork URLs only if:
 
-        MS will use your artwork URLs when:
+        * artwork url is from a known music service/[Cover Art Archive](./?artworkUrl=caa#artwork-url-types) or
+        * artwork url starts with `https` and
+          * `artwork` (`DISCORD_ARTWORK`) is
+            * `true` => always uses the url
+            * a list of custom domains keywords an external artwork url should contain EX 
+               * ENV => `DISCORD_ARTWORK=mycdn,jellyfin`
+               * File Config => `"artwork": ["mycdn","jellyfin"]`
 
-        * `artwork` (`DISCORD_ARTWORK`) is `true`
-        * `artwork` is a list of custom domains keywords and external artwork url contains any of these keywords like `DISCORD_ARTWORK=mycdn,jellyfin` (or in file as `"artwork": ["mycdn","jellyfin"]`)
+        </TabItem>
+        <TabItem label="Musicbrainz/Cover Art Achive" value="caa">
+        When [**Application Id**](#discord-application) **is** configured MS can try to use [Cover Art Archive](http://coverartarchive.org/) to get album art. The URL it retrieves is public which means it acts like an External URL that is always available for you.
 
         <img src={require('/img/discord_presence_art.png').default} height="127"/>
+        
+        MS will try to use Cover Art Archive if:
+        
+        * The scrobble data does not contain an album art url (no art in dashboard) or the existing url has failed an [External URL](./?artworkUrl=external#artwork-url-types) condition
+        * and **the scrobble data contains a [Musicbrainz](/configuration/transforms/musicbrainz) Release (Album) MBID** 
+        
+        Basically, if MS would normally use the [MS Default](./?artworkUrl=ms-default#artwork-url-types) art, it will first try to use Cover Art Archive if the scrobble has a Release MBID.
+
+        Some Source, like [Jellyfin](/configuration/sources/jellyfin) and [Plex](/configuration/sources/plex), can automatically provide this ID if the music is "matched" in your library.
+        
+        For all others, you can [**configure MS to use the Musicbrainz Stage**](/configuration/transforms/musicbrainz#use-metadata-for-discord-album-art) for Discord to try to get this MBID.
+        </TabItem>
+        <TabItem label="MS Default" value="ms-default">
+        When [**Application Id**](#discord-application) **is** configured and these conditions are true:
+
+        * Cannot use an [External URL](./?artworkUrl=external#artwork-url-types) and
+        * Cannot get album art from [Cover Art Archive](./?artworkUrl=caa#artwork-url-types) and
+        * Play does not contain artwork information (no artwork shown in dashboard)
+
+        The status artwork will use a default URL instead of your artwork URL.
+        
+        Without any other configuration, the default URL is an icon from the [multi-scrobbler repository](https://github.com/FoxxMD/multi-scrobbler/blob/master/assets/default-artwork.png):
+
+        <img src={require('/img/discord_presence_ms_default.png').default} height="127"/>
+
+        This default image can be customized:
+
+        * ENV Config => `DISCORD_ARTWORK_DEFAULT_URL=https://cooldomain.com/art.png`
+        * File Config => `"artworkDefaultUrl": "https://cooldomain.com/art.png"`
+
+        Remember, this URL need to be accessible on the public internet.
+        </TabItem>
+        <TabItem label="Discord Default" value="discord-default">
+        When [**Application Id**](#discord-application) is **not** configured Discord will show its own default image. No custom artwork can be used in this configuration.
+
+        <img src={require('/img/discord_presence_discord_default.png').default} height="127"/>
         </TabItem>
     </Tabs>
 

@@ -1267,3 +1267,121 @@ Stage Configuration
 ```
 
 </details>
+
+### Use Metadata for Discord Album Art
+
+The [Discord](/configuration/clients/discord) Client can fetch album art images from [Cover Art Archive](http://coverartarchive.org/) if the Scrobble data contains a Release MBID. Use the Musicbrainz Stage on the `preCompare` hook for your Discord client so that missing Musicbrainz IDs are populated for this functionality.
+
+<details>
+
+<summary>Example</summary>
+
+<Tabs groupId="configType" queryString>
+    <TabItem value="env" label="ENV">
+    Using the [ENV Configuration](#env-configuration) from above, add these fields to your docker compose `environment:`
+
+    ```yaml
+    - MB_CONTACT=contact@mydomain.com
+    - MB_PRESETS=id,native,sensible
+    - DISCORD_TRANSFORMS=musicbrainz
+    ```
+    </TabItem>
+    <TabItem value="file" label="File">
+    Your [AIO Config](/configuration?configType=aio#configuration-types):
+
+    ```json5 title="config.json"
+    {
+      // ...
+      "transformers": [
+        {
+          "type": "musicbrainz",
+          "name": "MyMB",
+          "data": {
+            "apis": [
+              {
+                "contact": "contact@mydomain.com"
+              }
+            ]
+          },
+          "defaults": {
+            // sensible defaults
+            "releaseStatusPriority": ["official"],
+            "releaseGroupPrimaryTypePriority": ["album", "single", "ep"],
+            "releaseCountryPriority": ["XW"],
+            "searchArtistMethod": "native",
+            "searchOrder": ["isrc","basic", "artist"]
+          }
+        }
+      ]
+    }
+    ```
+
+    In your [Discord](/configuration/clients/discord) [File Config](/configuration?configType=file#configuration-types):
+
+    ```json5 title="discord.json"
+    [
+      { 
+        "name": "MS",
+        "data": { /* ... */},
+        "options": {
+          "playTransform": {
+            "preCompare": [
+              {
+                "type": "musicbrainz",
+              }
+            ]
+          }
+        }
+      }
+    ]
+    ```
+    </TabItem>
+    <TabItem value="aio" label="AIO">
+    Your [AIO Config](/configuration?configType=aio#configuration-types):
+
+    ```json5 title="config.json"
+    {
+      // ...
+      "transformers": [
+        {
+          "type": "musicbrainz",
+          "name": "MyMB",
+          "data": {
+            "apis": [
+              {
+                "contact": "contact@mydomain.com"
+              }
+            ]
+          },
+          "defaults": {
+            // sensible defaults
+            "releaseStatusPriority": ["official"],
+            "releaseGroupPrimaryTypePriority": ["album", "single", "ep"],
+            "releaseCountryPriority": ["XW"],
+            "searchArtistMethod": "native",
+            "searchOrder": ["isrc","basic", "artist"]
+          }
+        }
+      ],
+      "sources": [
+        { 
+          "name": "MS",
+          "type": "discord",
+          "data": { /* ... */},
+          "options": {
+            "playTransform": {
+              "preCompare": [
+                {
+                  "type": "musicbrainz",
+                }
+              ]
+            }
+          }
+        }
+      ]
+    }
+    ```
+    </TabItem>
+</Tabs>
+
+</details>
