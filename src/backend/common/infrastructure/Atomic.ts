@@ -404,3 +404,27 @@ export const MUSICBRAINZ_URL = 'https://musicbrainz.org';
 export const MBID_VARIOUS_ARTISTS = "89ad4ac3-39f7-470e-963a-56509c546377";
 
 export type MusicBrainzSingletonMap = Map<string,MusicBrainzApi>;
+
+/* https://websocket.org/reference/close-codes/ */
+export const WEBSOCKET_CLOSE_CODE_REASONS = {
+    1000: 'Closed gracefully',
+    1001: 'Going Away',
+    1002: 'Protocol Error',
+    1003: 'Unsupported Data',
+    1005: 'No Status Received',
+    1006: 'Abnormal Closure (Connection lost unexpectedly)',
+    1008: 'Policy Violation',
+    1009: 'Message Too Big',
+    1011: 'Server-side exception',
+    1012: 'Service Restart',
+    1013: 'Try Again Later',
+    1014: 'Bad Gateway',
+    1015: 'TLD handshake fail'
+}
+
+export const WEBSOCKET_CLOSE_CODE = {
+    AbnormalClosure: 1006,
+    InternalError: 1011
+}
+
+export const WEBSOCKET_CLOSE_CODES_RETRY = [1006,1011,1001];

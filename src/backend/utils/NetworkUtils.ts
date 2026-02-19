@@ -1,4 +1,4 @@
-import { Logger } from "@foxxmd/logging";
+import { Logger, LogLevel } from "@foxxmd/logging";
 import { parseRegexSingle } from "@foxxmd/regex-buddy-core";
 import address from "address";
 import net from 'node:net';
@@ -6,6 +6,8 @@ import normalizeUrl from "normalize-url";
 import { join as joinPath } from "path";
 import { getFirstNonEmptyVal, isDebugMode, parseRegexSingleOrFail } from "../utils.js";
 import { URLData } from "../../core/Atomic.js";
+import { CloseEvent } from "iso-websocket";
+import { WEBSOCKET_CLOSE_CODE_REASONS } from "../common/infrastructure/Atomic.js";
 
 export interface PortReachableOpts {
     host: string,
@@ -224,4 +226,18 @@ export const getAddress = (host = '0.0.0.0', logger?: Logger): { v4?: string, v6
 const IPV4_REGEX = new RegExp(/^((25[0-5]|(2[0-4]|1\d|[1-9]|)\d)\.?\b){4}$/);
 export const isIPv4 = (address: string): boolean => {
     return parseRegexSingleOrFail(IPV4_REGEX, address) !== undefined;
+}
+
+export const logWebsocketClose = (e: CloseEvent, logger: Logger, logLevel: LogLevel = 'warn') => {
+    let closeParts = [];
+    let code = `${e.code}`;
+    const codeHint = WEBSOCKET_CLOSE_CODE_REASONS[e.code];
+    if(codeHint !== undefined) {
+        code = `(${e.code}) ${codeHint}`;
+    }
+    closeParts.push(`Connection was close: ${code}`);
+    if(e.reason !== undefined) {
+        closeParts.push(e.reason);
+    }
+    logger[logLevel](closeParts.join(' => '));
 }

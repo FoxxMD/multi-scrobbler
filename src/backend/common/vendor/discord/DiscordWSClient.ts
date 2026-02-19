@@ -20,6 +20,7 @@ import { urlToMusicService } from "../ListenbrainzApiClient.js";
 import { fa } from "@faker-js/faker";
 import { urlContainsKnownMediaDomain } from "../../../utils/RequestUtils.js";
 import { CoverArtApiClient } from "../musicbrainz/CoverArtApiClient.js";
+import { logWebsocketClose } from "../../../utils/NetworkUtils.js";
 
 const ARTWORK_PLACEHOLDER = 'https://raw.githubusercontent.com/FoxxMD/multi-scrobbler/master/assets/default-artwork.png';
 const MS_ART = 'https://raw.githubusercontent.com/FoxxMD/multi-scrobbler/master/assets/icon.png';
@@ -104,7 +105,8 @@ export class DiscordWSClient extends AbstractApiClient {
             automaticOpen: false,
             retry: {
                 retries: 0
-            }
+            },
+            shouldRetry: () => false
         });
 
         this.client.addEventListener('retry', (e) => {
@@ -113,7 +115,7 @@ export class DiscordWSClient extends AbstractApiClient {
         this.client.addEventListener('close', async (e) => {
             // should receive a close code https://docs.discord.com/developers/topics/opcodes-and-status-codes#gateway-gateway-close-event-codes
             // which determines if reconnect is possible
-            this.logger.warn(`Connection was closed: ${e.code} => ${e.reason}`);
+            logWebsocketClose(e, this.logger);
             if ([
                 GatewayCloseCodes.AuthenticationFailed,
                 GatewayCloseCodes.InvalidShard,
@@ -131,6 +133,7 @@ export class DiscordWSClient extends AbstractApiClient {
                 // don't attempt to reconnect, will always fail
             } else if (this.closeEvents < 3) {
                 this.closeEvents++;
+                this.logger.debug(`Trying to reconnect, attempt ${this.closeEvents}`);
                 await this.handleReconnect();
             } else {
                 await this.cleanupConnection();
@@ -285,10 +288,13 @@ export class DiscordWSClient extends AbstractApiClient {
         if (this.client.CLOSED !== this.client.readyState) {
             this.client.close();
             // wait for close or just give it a few seconds
-            await Promise.race([
+            const result = await Promise.race([
                 pEvent(this.client, 'close'),
                 sleep(3000),
             ]);
+        } else if(this.client.CLOSING === this.client.readyState) {
+            this.logger.debug('Giving the client time to close...');
+            await sleep(3000);
         }
         this.ready = false;
         if (!this.canReconnect) {
