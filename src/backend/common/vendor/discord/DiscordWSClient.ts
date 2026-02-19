@@ -340,7 +340,8 @@ export class DiscordWSClient extends AbstractApiClient {
                 return this.handleReconnect().then(() => null).catch((e) => this.logger.error(e));
             }
             this.sendHeartbeat();
-        }, data.heartbeat_interval);
+            // send heartbeat a little early to account for slower event loop when many things are happening in MS
+        }, data.heartbeat_interval - 1500);
     }
 
     sendHeartbeat() {
