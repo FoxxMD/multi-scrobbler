@@ -6,7 +6,7 @@ import normalizeUrl from "normalize-url";
 import { join as joinPath } from "path";
 import { getFirstNonEmptyVal, isDebugMode, parseRegexSingleOrFail } from "../utils.js";
 import { URLData } from "../../core/Atomic.js";
-import { CloseEvent } from "iso-websocket";
+import { CloseEvent, ErrorEvent, RetryEvent } from 'iso-websocket'
 import { WEBSOCKET_CLOSE_CODE_REASONS } from "../common/infrastructure/Atomic.js";
 
 export interface PortReachableOpts {
@@ -228,16 +228,26 @@ export const isIPv4 = (address: string): boolean => {
     return parseRegexSingleOrFail(IPV4_REGEX, address) !== undefined;
 }
 
-export const logWebsocketClose = (e: CloseEvent, logger: Logger, logLevel: LogLevel = 'warn') => {
+export const formatWebsocketClose = (e: CloseEvent): string => {
     let closeParts = [];
     let code = `${e.code}`;
     const codeHint = WEBSOCKET_CLOSE_CODE_REASONS[e.code];
     if(codeHint !== undefined) {
         code = `(${e.code}) ${codeHint}`;
     }
-    closeParts.push(`Connection was close: ${code}`);
+    closeParts.push(code);
     if(e.reason !== undefined) {
         closeParts.push(e.reason);
     }
-    logger[logLevel](closeParts.join(' => '));
+    return closeParts.join(' => ');
+}
+
+export const isCloseEvent = (e: Event): e is CloseEvent => {
+    return e.type === 'close';
+}
+export const isErrorEvent = (e: Event): e is ErrorEvent => {
+    return e.type === 'error';
+}
+export const isRetryEvent = (e: Event): e is RetryEvent => {
+    return e.type === 'retry';
 }

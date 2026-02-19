@@ -17,10 +17,9 @@ import { getRoot } from "../../../ioc.js";
 import { MSCache } from "../../Cache.js";
 import { isSuperAgentResponseError } from "../../errors/ErrorUtils.js";
 import { urlToMusicService } from "../ListenbrainzApiClient.js";
-import { fa } from "@faker-js/faker";
 import { urlContainsKnownMediaDomain } from "../../../utils/RequestUtils.js";
 import { CoverArtApiClient } from "../musicbrainz/CoverArtApiClient.js";
-import { logWebsocketClose } from "../../../utils/NetworkUtils.js";
+import { formatWebsocketClose, isCloseEvent, isErrorEvent } from "../../../utils/NetworkUtils.js";
 
 const ARTWORK_PLACEHOLDER = 'https://raw.githubusercontent.com/FoxxMD/multi-scrobbler/master/assets/default-artwork.png';
 const MS_ART = 'https://raw.githubusercontent.com/FoxxMD/multi-scrobbler/master/assets/icon.png';
@@ -56,7 +55,7 @@ export class DiscordWSClient extends AbstractApiClient {
 
     declare client: WS;
 
-    canReconnect?: boolean = false;
+    canResume?: boolean = false;
     ready: boolean = false;
     authOK?: boolean
     closeEvents: number = 0;
@@ -82,68 +81,118 @@ export class DiscordWSClient extends AbstractApiClient {
     }
 
     initClient = async () => {
-        let baseUrl: string;
-        if (this.resume_gateway_url !== undefined) {
-            baseUrl = this.resume_gateway_url;
-        } else {
-            if (this.initialGatewayUrl === undefined) {
-                try {
-                    await this.fetchGatewayUrl();
-                    baseUrl = this.initialGatewayUrl;
-                } catch (e) {
-                    throw new Error('Could not get initial gateway url', { cause: e });
-                }
+        // let baseUrl: string;
+        // if (this.resume_gateway_url !== undefined) {
+        //     baseUrl = this.resume_gateway_url;
+        // } else {
+        //     if (this.initialGatewayUrl === undefined) {
+        //         try {
+        //             await this.fetchGatewayUrl();
+        //             baseUrl = this.initialGatewayUrl;
+        //         } catch (e) {
+        //             throw new Error('Could not get initial gateway url', { cause: e });
+        //         }
+        //     } else {
+        //         baseUrl = this.initialGatewayUrl;
+        //     }
+        // }
+
+        // const gatewayUrl = `${baseUrl}?encoding=json&v=10`;
+        // this.logger.debug(`Using Gateway URL ${gatewayUrl}`);
+
+        const url = () => {
+            let baseUrl: string;
+            if (this.resume_gateway_url !== undefined) {
+                baseUrl = this.resume_gateway_url;
             } else {
                 baseUrl = this.initialGatewayUrl;
             }
+            const gatewayUrl = `${baseUrl}?encoding=json&v=10`;
+            this.logger.debug(`Using Gateway URL ${gatewayUrl}`);
+            return gatewayUrl;
         }
 
-        const gatewayUrl = `${baseUrl}?encoding=json&v=10`;
-        this.logger.debug(`Using Gateway URL ${gatewayUrl}`);
-
-        this.client = new WS(gatewayUrl, {
+        this.client = new WS(url, {
             automaticOpen: false,
+            debug: true,
             retry: {
-                retries: 0
+                retries: 3
             },
-            shouldRetry: () => false
+            shouldRetry: (e) => {
+                if(isCloseEvent(e)) {
+                    const err = e as CloseEvent;
+                    const closeHint = formatWebsocketClose(err);
+                    this.logger.warn(`Connection was closed: ${closeHint}`);
+
+                    let discordImmediateStop = false;
+
+                    if ([
+                        GatewayCloseCodes.AuthenticationFailed,
+                        GatewayCloseCodes.InvalidShard,
+                        GatewayCloseCodes.ShardingRequired,
+                        GatewayCloseCodes.InvalidAPIVersion,
+                        GatewayCloseCodes.InvalidIntents,
+                        GatewayCloseCodes.DisallowedIntents
+                    ].includes(e.code)) {
+                        this.canResume = false;
+                    }
+                    // don't attempt to reconnect, will always fail
+                    if (GatewayCloseCodes.AuthenticationFailed === e.code) {
+                        this.authOK = false;
+                        discordImmediateStop = true;
+                    }
+                    this.cleanupConnectionSync();
+
+                    const shouldRetry = !discordImmediateStop && e.code !== 1008 && e.code !== 1011;
+                    this.logger.debug(`Should Retry? ${shouldRetry}`);
+                    return shouldRetry;
+                } else if(isErrorEvent(e)) {
+                    if(e.message === 'Connection timeout') {
+                        if(this.authOK === false) {
+                            // discord immediately told us that auth was not good and we closed the connection
+                            //
+                            // iso-websockets initial connect assumes if connection is closed after 5 seconds it was a timeout
+                            // when in reality we closed it before the timeout check occurred
+                            // https://github.com/hugomrdias/iso-repo/issues/466
+                            return false; 
+                        }
+                        this.logger.warn(`Connection was closed due to timeout, will retry`);
+                        return true;
+                    }
+                    this.logger.debug('Will not retry');
+                    return false;
+                }
+                this.logger.debug('Will not retry');
+                return false;
+            }
         });
 
         this.client.addEventListener('retry', (e) => {
             this.logger.verbose(`Retrying connection, attempt ${e.attempt}`);
         });
+
         this.client.addEventListener('close', async (e) => {
-            // should receive a close code https://docs.discord.com/developers/topics/opcodes-and-status-codes#gateway-gateway-close-event-codes
-            // which determines if reconnect is possible
-            logWebsocketClose(e, this.logger);
-            if ([
-                GatewayCloseCodes.AuthenticationFailed,
-                GatewayCloseCodes.InvalidShard,
-                GatewayCloseCodes.ShardingRequired,
-                GatewayCloseCodes.InvalidAPIVersion,
-                GatewayCloseCodes.InvalidIntents,
-                GatewayCloseCodes.DisallowedIntents
-            ].includes(e.code)) {
-                this.canReconnect = false;
-            }
-            if (GatewayCloseCodes.AuthenticationFailed === e.code) {
-                await this.cleanupConnection();
-                this.authOK = false;
-                this.emitter.emit('stopped', { authFailure: true });
-                // don't attempt to reconnect, will always fail
-            } else if (this.closeEvents < 3) {
-                this.closeEvents++;
-                this.logger.debug(`Trying to reconnect, attempt ${this.closeEvents}`);
-                await this.handleReconnect();
+            this.logger.debug('onClose event');
+            if (isCloseEvent(e)) {
+                if (GatewayCloseCodes.AuthenticationFailed === e.code) {
+                    // don't attempt to reconnect, will always fail
+                    //this.cleanupConnectionSync();
+                    this.authOK = false;
+                    this.emitter.emit('stopped', { authFailure: true });
+                } else if (e.code === 1008 || e.code === 1011) {
+                    //this.cleanupConnectionSync();
+                    this.emitter.emit('stopped', { authFailure: false });
+                }
             } else {
-                await this.cleanupConnection();
+                this.logger.error(new Error('Connection closed and retry did not occur due to unexpected error', { cause: e }));
+                this.cleanupConnectionSync();
                 this.emitter.emit('stopped', { authFailure: false });
             }
         });
         this.client.addEventListener('open', (e) => {
             this.logger.verbose(`Connection was established.`);
 
-            if (this.canReconnect && this.session_id !== undefined) {
+            if (this.canResume && this.session_id !== undefined) {
                 // using resume
                 this.handleResume();
             } else {
@@ -151,8 +200,12 @@ export class DiscordWSClient extends AbstractApiClient {
                 this.handleIdentify();
             }
         });
+
         this.client.addEventListener('error', (e) => {
             this.logger.error(new Error(`Error from Discord Gateway`, { cause: e.error }));
+            this.canResume = false;
+            this.cleanupConnectionSync();
+            this.emitter.emit('stopped', { authFailure: false });
         });
 
         this.client.addEventListener('message', async (e) => {
@@ -173,10 +226,22 @@ export class DiscordWSClient extends AbstractApiClient {
     connect = async () => {
         try {
             this.client.open();
-            const opened = await pEvent(this.client, 'open');
+            const result = await Promise.race([
+                pEvent(this.emitter, 'ready'),
+                pEvent(this.emitter, 'stopped'),
+                sleep(6000),
+            ]);
+            if(result === undefined) {
+                throw new Error('Timeout waiting for Discord WS to be ready');
+            } else if('authFailure' in result) {
+                if(result.authFailure) {
+                    throw new Error('Could not authenticate with Discord WS');
+                } else {
+                    throw new Error('Could not establish a valid connection with Discord WS');
+                }
+            }
             return true;
         } catch (e) {
-            this.client.close();
             throw new Error(`Could not connect to Discord Gateway`, { cause: e.error ?? e });
         }
     }
@@ -194,6 +259,12 @@ export class DiscordWSClient extends AbstractApiClient {
                 }
             }
         };
+        if(this.client.OPEN !== this.client.readyState) {
+            this.logger.warn(`Cannot send Identify because connection is not open`);
+            return;
+        } else if(isDebugMode()) {
+            this.logger.debug('Sending identify');
+        }
         this.client.send(JSON.stringify(data));
     }
 
@@ -203,8 +274,9 @@ export class DiscordWSClient extends AbstractApiClient {
         const sleepTime = randomInt(data.heartbeat_interval - 1);
         this.logger.debug(`Heartbeat Interval: ${data.heartbeat_interval}ms (${Math.floor(data.heartbeat_interval / 1000)}s), waiting ${Math.floor(sleepTime / 1000)}s before sending first heartbeat.`);
         await sleep(sleepTime);
-        const [isOk] = this.checkOkToSend();
+        const [isOk, reasons] = this.checkOkToSend();
         if (!isOk) {
+            this.logger.warn(`Not continuing with heartbeat because ${reasons}`);
             return;
         }
         this.sendHeartbeat();
@@ -231,14 +303,14 @@ export class DiscordWSClient extends AbstractApiClient {
             d: this.sequence ?? null
         }
         this.acknowledged = false;
-        if (this.client.OPEN !== this.client.readyState) {
-            this.logger.debug('Cannot send heartbeat because connection is closed.');
+        const [sendOk, reasons] = this.checkOkToSend();
+        if (!sendOk) {
+            this.logger.warn(`Cannot send heartbeat because client is ${reasons}`);
             return;
+        } else if(isDebugMode()) {
+            this.logger.debug('Sending heartbeat');
         }
         this.client.send(JSON.stringify(heartbeatRequest));
-        if (isDebugMode()) {
-            this.logger.debug('Sent heartbeat');
-        }
     }
 
     /** 
@@ -249,24 +321,26 @@ export class DiscordWSClient extends AbstractApiClient {
         this.session_id = data.session_id;
         this.resume_gateway_url = data.resume_gateway_url;
         this.user = data.user;
-        this.canReconnect = true;
+        this.canResume = true;
         this.ready = true;
         this.authOK = true;
         this.closeEvents = 0;
         this.logger.verbose(`Gateway Connection READY for ${this.user.username}`);
+        this.emitter.emit('ready', {ready: true});
     }
 
     /** https://docs.discord.com/developers/events/gateway-events#invalid-session */
     handleInvalidSession(data: GatewayInvalidSessionData) {
-        this.canReconnect = data !== false;
+        this.canResume = data !== false;
         return this.handleReconnect().then(() => null).catch((e) => this.logger.error(e));
     }
 
     async handleReconnect() {
-        await this.cleanupConnection();
+        this.client.close();
+        //await this.cleanupConnection();
         //  maybe don't do this if we've failed N times
-        this.initClient();
-        this.connect();
+        //this.initClient();
+        //this.connect();
     }
 
     handleResume() {
@@ -276,6 +350,12 @@ export class DiscordWSClient extends AbstractApiClient {
             seq: this.sequence
         }
 
+        if(this.client.OPEN !== this.client.readyState) {
+            this.logger.warn(`Cannot send resume because connection is not open`);
+            return;
+        } else if(isDebugMode()) {
+            this.logger.debug('Sending resume');
+        }
         this.client.send(JSON.stringify({ op: GatewayOpcodes.Resume, d: data }));
     }
 
@@ -297,7 +377,29 @@ export class DiscordWSClient extends AbstractApiClient {
             await sleep(3000);
         }
         this.ready = false;
-        if (!this.canReconnect) {
+        if (!this.canResume) {
+            this.logger.debug('Cannot resume session, clearing session data for clean reconnect');
+            this.session_id = undefined;
+            this.sequence = undefined;
+            this.resume_gateway_url = undefined;
+            this.user = undefined;
+            this.lastActiveStatus = PresenceUpdateStatus.Offline;
+            this.lastActivities = [];
+        }
+    }
+
+    cleanupConnectionSync() {
+        if(this.heartbeatInterval !== undefined) {
+            clearInterval(this.heartbeatInterval);
+            this.heartbeatInterval = undefined;
+        }
+        if(this.activityTimeout !== undefined) {
+            clearTimeout(this.activityTimeout);
+            this.activityTimeout = undefined;
+        }
+        this.ready = false;
+        if (!this.canResume) {
+            this.logger.debug('Cannot resume session, clearing session data for clean reconnect');
             this.session_id = undefined;
             this.sequence = undefined;
             this.resume_gateway_url = undefined;
@@ -416,10 +518,11 @@ export class DiscordWSClient extends AbstractApiClient {
                     break;
                 case GatewayOpcodes.Resume:
                     this.logger.debug({ data: message.d }, 'Recieved Resumed session');
-                    this.canReconnect = true;
+                    this.canResume = true;
                     this.ready = true;
                     this.authOK = true;
                     this.closeEvents = 0;
+                    this.emitter.emit('ready', {ready: true});
                     break;
                 case GatewayOpcodes.Identify:
                     this.logger.debug({ data: message.d }, 'Recieved Identifiy opcode');
@@ -499,14 +602,16 @@ export class DiscordWSClient extends AbstractApiClient {
     }
 
     sendActivity = async (data: SourceData | undefined) => {
+        if(data === undefined) {
+            this.clearActivity();
+            return;
+        }
         const [sendOk, reasons] = this.checkOkToSend();
         if (!sendOk) {
             this.logger.warn(`Cannot send activity because client is ${reasons}`);
             return;
-        }
-        if(data === undefined) {
-            this.clearActivity();
-            return;
+        } else if(isDebugMode()) {
+            this.logger.debug('Sending activity');
         }
 
         const activity = await this.playStateToActivity(data);
@@ -548,6 +653,8 @@ export class DiscordWSClient extends AbstractApiClient {
         if (!sendOk) {
             this.logger.warn(`Cannot clear activity because client is ${reasons}`);
             return;
+        } else if(isDebugMode()) {
+            this.logger.debug('Sending clear activity');
         }
 
         const clearedActivity: GatewayUpdatePresence = {

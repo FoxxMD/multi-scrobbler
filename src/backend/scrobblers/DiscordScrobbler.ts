@@ -53,6 +53,7 @@ export default class DiscordScrobbler extends AbstractScrobbleClient {
         this.logger.verbose(`Allow override statuses: ${this.config.data.statusOverrideAllow.join(', ')}`);
         this.logger.verbose(`Allow override activity types: ${this.config.data.activitiesOverrideAllow.join(', ')}`);
         this.logger.verbose(`Disallow override activity names: ${this.config.data.applicationsOverrideDisallow.join(', ')}`);
+        await this.api.fetchGatewayUrl();
         await this.api.initClient();
         return true;
     }
@@ -60,7 +61,8 @@ export default class DiscordScrobbler extends AbstractScrobbleClient {
     doAuthentication = async () => {
 
         try {
-            return await this.api.connect();
+            await this.api.connect();
+            return true;
         } catch (e) {
             throw e;
         }
