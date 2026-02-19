@@ -58,7 +58,7 @@ export class DiscordWSClient extends AbstractApiClient {
     canResume?: boolean = false;
     ready: boolean = false;
     authOK?: boolean
-    closeEvents: number = 0;
+    reconnecting?: boolean = false;
 
     lastActiveStatus?: PresenceUpdateStatus = PresenceUpdateStatus.Offline;
     lastActivities: GatewayActivity[] = [];
@@ -169,6 +169,7 @@ export class DiscordWSClient extends AbstractApiClient {
 
         this.client.addEventListener('retry', (e) => {
             this.logger.verbose(`Retrying connection, attempt ${e.attempt}`);
+            this.reconnecting = true;
         });
 
         this.client.addEventListener('close', async (e) => {
@@ -178,10 +179,12 @@ export class DiscordWSClient extends AbstractApiClient {
                     // don't attempt to reconnect, will always fail
                     //this.cleanupConnectionSync();
                     this.authOK = false;
+                    this.reconnecting = false;
                     this.emitter.emit('stopped', { authFailure: true });
                 } else if (e.code === 1008 || e.code === 1011) {
                     //this.cleanupConnectionSync();
                     this.emitter.emit('stopped', { authFailure: false });
+                    this.reconnecting = false;
                 }
             } else {
                 this.logger.error(new Error('Connection closed and retry did not occur due to unexpected error', { cause: e }));
@@ -191,19 +194,15 @@ export class DiscordWSClient extends AbstractApiClient {
         });
         this.client.addEventListener('open', (e) => {
             this.logger.verbose(`Connection was established.`);
-
-            if (this.canResume && this.session_id !== undefined) {
-                // using resume
-                this.handleResume();
-            } else {
-                // initial identify
-                this.handleIdentify();
+            if(this.reconnecting) {
+                this.authenticate();
             }
         });
 
         this.client.addEventListener('error', (e) => {
             this.logger.error(new Error(`Error from Discord Gateway`, { cause: e.error }));
             this.canResume = false;
+            this.reconnecting = false;
             this.cleanupConnectionSync();
             this.emitter.emit('stopped', { authFailure: false });
         });
@@ -217,24 +216,38 @@ export class DiscordWSClient extends AbstractApiClient {
         });
     }
 
-    fetchGatewayUrl = async () => {
-        const resp = await request.get(API_GATEWAY_ENDPOINT);
-        this.initialGatewayUrl = resp.body.url;
-        this.logger.debug(`Got Initial Gateway Base: ${this.initialGatewayUrl}`);
+    protected authenticate = () => {
+        if (this.canResume && this.session_id !== undefined) {
+            // using resume
+            this.handleResume();
+        } else {
+            // initial identify
+            this.handleIdentify();
+        }
     }
 
-    connect = async () => {
+    tryAuthenticate = async () => {
+        if (this.ready) {
+            return;
+        }
+        if(this.client.readyState !== this.client.OPEN) {
+            try {
+                await this.tryConnect();
+            } catch (e) {
+                throw e;
+            }
+        }
         try {
-            this.client.open();
+            this.authenticate();
             const result = await Promise.race([
                 pEvent(this.emitter, 'ready'),
                 pEvent(this.emitter, 'stopped'),
                 sleep(6000),
             ]);
-            if(result === undefined) {
-                throw new Error('Timeout waiting for Discord WS to be ready');
-            } else if('authFailure' in result) {
-                if(result.authFailure) {
+            if (result === undefined) {
+                throw new Error('Timeout waiting for Discord WS to open');
+            } else if ('authFailure' in result) {
+                if (result.authFailure) {
                     throw new Error('Could not authenticate with Discord WS');
                 } else {
                     throw new Error('Could not establish a valid connection with Discord WS');
@@ -242,7 +255,43 @@ export class DiscordWSClient extends AbstractApiClient {
             }
             return true;
         } catch (e) {
-            throw new Error(`Could not connect to Discord Gateway`, { cause: e.error ?? e });
+            throw e;
+        }
+    }
+
+    fetchGatewayUrl = async () => {
+        const resp = await request.get(API_GATEWAY_ENDPOINT);
+        this.initialGatewayUrl = resp.body.url;
+        this.logger.debug(`Got Initial Gateway Base: ${this.initialGatewayUrl}`);
+    }
+
+    tryConnect = async () => {
+        try {
+            if(this.client.readyState === this.client.OPEN) {
+                return true;
+            }
+            if(this.client.readyState === this.client.CLOSING) {
+                throw new Error('Client is trying to close, cannot try to connect right now');
+            }
+            this.client.open();
+            const result = await Promise.race([
+                pEvent(this.client, 'open'),
+                pEvent(this.emitter, 'stopped'),
+                pEvent(this.emitter, 'error'),
+                sleep(6000),
+            ]);
+            if (result === undefined) {
+                throw new Error('Timeout waiting for Discord WS to open');
+            } else if (isErrorEvent(result)) {
+                throw new Error('Could not establish a connection with Discord WS', { cause: result.error });
+            } else if (result instanceof Error) {
+                throw new Error('Could not establish a connection with Discord WS', { cause: result });
+            } else if ('authFailure' in result) {
+                throw new Error('Could not establish a connection with Discord WS');
+            }
+            return true;
+        } catch (e) {
+            throw e;
         }
     }
 
@@ -274,9 +323,8 @@ export class DiscordWSClient extends AbstractApiClient {
         const sleepTime = randomInt(data.heartbeat_interval - 1);
         this.logger.debug(`Heartbeat Interval: ${data.heartbeat_interval}ms (${Math.floor(data.heartbeat_interval / 1000)}s), waiting ${Math.floor(sleepTime / 1000)}s before sending first heartbeat.`);
         await sleep(sleepTime);
-        const [isOk, reasons] = this.checkOkToSend();
-        if (!isOk) {
-            this.logger.warn(`Not continuing with heartbeat because ${reasons}`);
+        if (this.client.readyState !== this.client.OPEN) {
+            this.logger.warn(`Not continuing with heartbeat because connection is not open`);
             return;
         }
         this.sendHeartbeat();
@@ -303,9 +351,8 @@ export class DiscordWSClient extends AbstractApiClient {
             d: this.sequence ?? null
         }
         this.acknowledged = false;
-        const [sendOk, reasons] = this.checkOkToSend();
-        if (!sendOk) {
-            this.logger.warn(`Cannot send heartbeat because client is ${reasons}`);
+        if (this.client.readyState !== this.client.OPEN) {
+            this.logger.warn(`Cannot send heartbeat because connection is not open`);
             return;
         } else if(isDebugMode()) {
             this.logger.debug('Sending heartbeat');
@@ -324,7 +371,7 @@ export class DiscordWSClient extends AbstractApiClient {
         this.canResume = true;
         this.ready = true;
         this.authOK = true;
-        this.closeEvents = 0;
+        this.reconnecting = false;
         this.logger.verbose(`Gateway Connection READY for ${this.user.username}`);
         this.emitter.emit('ready', {ready: true});
     }
@@ -336,7 +383,22 @@ export class DiscordWSClient extends AbstractApiClient {
     }
 
     async handleReconnect() {
+
+        // on a manual close ws-isosocket does not retry
+        // so we need to do it manually
         this.client.close();
+        const result = await Promise.race([
+            pEvent(this.client, 'close'),
+            sleep(3000),
+        ]);
+        if(result === undefined) {
+            throw new Error('Waited too long for client to close');
+        }
+        try {
+            await this.tryAuthenticate();
+        } catch (e) {
+            throw new Error('Could not manually reconnect', {cause: e});
+        }
         //await this.cleanupConnection();
         //  maybe don't do this if we've failed N times
         //this.initClient();
@@ -521,7 +583,7 @@ export class DiscordWSClient extends AbstractApiClient {
                     this.canResume = true;
                     this.ready = true;
                     this.authOK = true;
-                    this.closeEvents = 0;
+                    this.reconnecting = false;
                     this.emitter.emit('ready', {ready: true});
                     break;
                 case GatewayOpcodes.Identify:

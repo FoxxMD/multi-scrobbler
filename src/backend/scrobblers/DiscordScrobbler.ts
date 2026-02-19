@@ -24,6 +24,11 @@ export default class DiscordScrobbler extends AbstractScrobbleClient {
             if(e.authFailure) {
                 this.authFailure = true;
                 this.authed = false;
+                this.connectionOK = false;
+            } else {
+                this.authFailure = false;
+                this.authed = false;
+                this.connectionOK = false;
             }
             await this.tryStopScrobbling();
         });
@@ -58,10 +63,19 @@ export default class DiscordScrobbler extends AbstractScrobbleClient {
         return true;
     }
 
+    protected async doCheckConnection(): Promise<true | string | undefined> {
+        try {
+            await this.api.tryConnect();
+            return true;
+        } catch (e) {
+            throw e;
+        }
+    }
+
     doAuthentication = async () => {
 
         try {
-            await this.api.connect();
+            await this.api.tryAuthenticate();
             return true;
         } catch (e) {
             throw e;
