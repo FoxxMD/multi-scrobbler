@@ -262,6 +262,39 @@ export class ListenbrainzApiClient extends AbstractApiClient {
         return playObj;
     }
 
+    getUserListensWithPagination = async (options: {
+        count?: number;
+        minTs?: number;
+        maxTs?: number;
+        user?: string;
+    } = {}): Promise<ListensResponse> => {
+        const { count = 100, minTs, maxTs, user } = options;
+
+        try {
+            const query: any = { count };
+            if (minTs !== undefined) {
+                query.min_ts = minTs;
+            }
+            if (maxTs !== undefined) {
+                query.max_ts = maxTs;
+            }
+
+            const resp = await this.callApi(request
+                .get(`${joinedUrl(this.url.url,'1/user', user ?? this.config.username, 'listens')}`)
+                .timeout({
+                    response: 15000,
+                    deadline: 30000
+                })
+                .query(query));
+
+            const {body: {payload}} = resp as any;
+            return payload as ListensResponse;
+        } catch (e) {
+            throw e;
+        }
+    }
+
+
     static formatPlayObj(obj: any, options: FormatPlayObjectOptions): PlayObject {
         return listenResponseToPlay(obj);
     }

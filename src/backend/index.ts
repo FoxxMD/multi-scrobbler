@@ -7,6 +7,7 @@ import relativeTime from 'dayjs/plugin/relativeTime.js';
 import isToday from 'dayjs/plugin/isToday.js';
 import timezone from 'dayjs/plugin/timezone.js';
 import utc from 'dayjs/plugin/utc.js';
+import week from 'dayjs/plugin/weekOfYear.js';
 import * as path from "path";
 import { SimpleIntervalJob, ToadScheduler } from "toad-scheduler";
 import { projectDir } from "./common/index.js";
@@ -22,6 +23,7 @@ import { readJson } from './utils/DataUtils.js';
 import ScrobbleClients from './scrobblers/ScrobbleClients.js';
 import ScrobbleSources from './sources/ScrobbleSources.js';
 import { Notifiers } from './notifier/Notifiers.js';
+import { TransferManager } from './transfer/TransferManager.js';
 
 dayjs.extend(utc)
 dayjs.extend(isBetween);
@@ -29,6 +31,7 @@ dayjs.extend(relativeTime);
 dayjs.extend(duration);
 dayjs.extend(timezone);
 dayjs.extend(isToday);
+dayjs.extend(week);
 
 // eslint-disable-next-line prefer-arrow-functions/prefer-arrow-functions
 (async function () {
@@ -108,7 +111,9 @@ const configDir = process.env.CONFIG_DIR || path.resolve(projectDir, `./config`)
 
         await root.items.cache().init();
 
-        initServer(logger, appLoggerStream, output, scrobbleSources, scrobbleClients);
+        const transferManager = new TransferManager(scrobbleSources, scrobbleClients, logger);
+
+        initServer(logger, appLoggerStream, output, scrobbleSources, scrobbleClients, transferManager);
 
         if(process.env.IS_LOCAL === 'true') {
             logger.info('multi-scrobbler can be run as a background service! See: https://foxxmd.github.io/multi-scrobbler/docs/installation/service');

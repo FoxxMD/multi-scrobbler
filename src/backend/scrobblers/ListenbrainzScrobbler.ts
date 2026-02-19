@@ -1,4 +1,5 @@
 import { Logger } from "@foxxmd/logging";
+import dayjs, { Dayjs } from "dayjs";
 import EventEmitter from "events";
 import { PlayObject, SourcePlayerObj } from "../../core/Atomic.js";
 import { buildTrackString, capitalize } from "../../core/StringUtils.js";
@@ -67,6 +68,44 @@ export default class ListenbrainzScrobbler extends AbstractScrobbleClient {
 
     getScrobblesForRefresh = async (limit: number) => {
         return await this.api.getRecentlyPlayed(limit);
+    }
+
+    getScrobblesForTimeRange = async (fromDate?: Dayjs, toDate?: Dayjs, limit: number = 1000): Promise<PlayObject[]> => {
+        const allPlays: PlayObject[] = [];
+        let maxTs = toDate?.unix();
+        const minTs = fromDate?.unix();
+
+        while (allPlays.length < limit) {
+            const batchSize = Math.min(100, limit - allPlays.length);
+            const resp = await this.api.getUserListensWithPagination({
+                count: batchSize,
+                minTs,
+                maxTs,
+            });
+
+            if (!resp.listens || resp.listens.length === 0) {
+                break;
+            }
+
+            const plays = resp.listens
+                .map(l => ListenbrainzApiClient.formatPlayObj(l, {}))
+                .filter(p => p.data.playDate && p.data.playDate.isValid()); // Filter out plays with invalid dates
+
+            allPlays.push(...plays);
+
+            if (plays.length < batchSize) {
+                break;
+            }
+
+            const oldestPlay = plays[plays.length - 1];
+            if (oldestPlay.data.playDate) {
+                maxTs = oldestPlay.data.playDate.unix() - 1;
+            } else {
+                break;
+            }
+        }
+
+        return allPlays;
     }
 
     alreadyScrobbled = async (playObj: PlayObject, log = false) => (await this.existingScrobble(playObj)) !== undefined

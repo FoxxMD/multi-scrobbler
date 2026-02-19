@@ -11,6 +11,7 @@ import { scrobbledApi } from "./scrobbled/scrobbledDucks";
 import { clientSlice, sourceSlice } from "./status/ducks";
 import { statusApi } from './status/statusApi';
 import { versionApi } from "./Version";
+import { transferApi } from "./transfer/transferApi";
 
 export const store = configureStore({
     reducer: {
@@ -23,6 +24,7 @@ export const store = configureStore({
         [scrobblerApi.reducerPath]: scrobblerApi.reducer,
         [sourceApi.reducerPath]: sourceApi.reducer,
         [versionApi.reducerPath]: versionApi.reducer,
+        [transferApi.reducerPath]: transferApi.reducer,
         //parts: statusReducer
         clients: clientSlice.reducer,
         sources: sourceSlice.reducer,
@@ -32,7 +34,7 @@ export const store = configureStore({
     // Adding the api middleware enables caching, invalidation, polling,
     // and other useful features of `rtk-query`.
     middleware: (getDefaultMiddleware) =>
-        getDefaultMiddleware().concat([statusApi.middleware, logsApi.middleware, recentApi.middleware, scrobbledApi.middleware, deadApi.middleware, scrobblerApi.middleware, sourceApi.middleware, versionApi.middleware]),
+        getDefaultMiddleware().concat([statusApi.middleware, logsApi.middleware, recentApi.middleware, scrobbledApi.middleware, deadApi.middleware, scrobblerApi.middleware, sourceApi.middleware, versionApi.middleware, transferApi.middleware]),
 })
 
 // optional, but required for refetchOnFocus/refetchOnReconnect behaviors

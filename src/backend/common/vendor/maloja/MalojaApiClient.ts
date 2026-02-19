@@ -1,11 +1,11 @@
-import dayjs from 'dayjs';
+import dayjs, { ManipulateType } from 'dayjs';
 import request, { SuperAgentRequest, Response } from 'superagent';
 import compareVersions from "compare-versions";
 import AbstractApiClient from "../AbstractApiClient.js";
 import { getBaseFromUrl, isPortReachableConnect, joinedUrl, normalizeWebAddress } from "../../../utils/NetworkUtils.js";
 import { MalojaData } from "../../infrastructure/config/client/maloja.js";
 import { PlayObject, PlayObjectLifecycleless, ScrobbleActionResult, URLData } from "../../../../core/Atomic.js";
-import { AbstractApiOptions, DEFAULT_RETRY_MULTIPLIER, FormatPlayObjectOptions } from "../../infrastructure/Atomic.js";
+import { AbstractApiOptions, DEFAULT_RETRY_MULTIPLIER, FormatPlayObjectOptions, PaginatedListensTimeRangeOptions, PaginatedTimeRangeListens } from "../../infrastructure/Atomic.js";
 import { isNodeNetworkException } from "../../errors/NodeErrors.js";
 import { isSuperAgentResponseError } from "../../errors/ErrorUtils.js";
 import { getNonEmptyVal, parseRetryAfterSecsFromObj, removeUndefinedKeys, sleep } from "../../../utils.js";
@@ -18,7 +18,7 @@ import { ScrobbleSubmitError } from '../../errors/MSErrors.js';
 
 
 
-export class MalojaApiClient extends AbstractApiClient {
+export class MalojaApiClient extends AbstractApiClient implements PaginatedTimeRangeListens {
 
     declare config: MalojaData;
     url: URLData;
@@ -187,6 +187,24 @@ export class MalojaApiClient extends AbstractApiClient {
             } = {},
         } = resp;
         return list.map(formatPlayObj);
+    }
+
+    getPaginatedTimeRangeListens = async (params: PaginatedListensTimeRangeOptions) => {
+        const resp = await this.callApi(request.get(`${this.url.url}/apis/mlj_1/scrobbles`).query({
+            perpage: params.limit,
+            page: params.page,
+            from: params.from !== undefined ? dayjs.unix(params.from).format('YYYY/MM/DD') : undefined,
+            to: params.to !== undefined ? dayjs.unix(params.from).format('YYYY/MM/DD') : undefined
+        }));
+
+        return {
+            data: resp.body.list.map(formatPlayObj),
+            meta: params
+        }
+    }
+
+    getPaginatedUnitOfTime(): ManipulateType {
+        return 'day';
     }
 
     scrobble = async (playObj: PlayObject): Promise<ScrobbleActionResult> => {
