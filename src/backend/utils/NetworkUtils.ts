@@ -251,3 +251,18 @@ export const isErrorEvent = (e: Event): e is ErrorEvent => {
 export const isRetryEvent = (e: Event): e is RetryEvent => {
     return e.type === 'retry';
 }
+
+export const wsReadyStateToStr = (state: number): string => {
+    switch(state) {
+        case 0:
+            return 'connecting';
+        case 1:
+            return 'open';
+        case 2:
+            return 'closing';
+        case 3:
+            return 'closed';
+        default:
+            return state.toString();
+    }
+}
