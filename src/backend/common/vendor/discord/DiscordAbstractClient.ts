@@ -66,7 +66,7 @@ export class DiscordAbstractClient extends AbstractApiClient {
         }
     }
 
-    getArtAsset = async (data: SourceData, artUrl?: string): Promise<ActivityAssets | undefined> => {
+    getArtAsset = async (data: SourceData, artUrl?: string, useMediaProxy: boolean = true): Promise<ActivityAssets | undefined> => {
         const {
             artwork = false
         } = this.config;
@@ -112,12 +112,12 @@ export class DiscordAbstractClient extends AbstractApiClient {
 
             // https://docs.discord.com/developers/events/gateway-events#activity-object-activity-assets
             // https://docs.discord.com/developers/events/gateway-events#activity-object-activity-asset-image
-            const usedUrl = await this.getArtworkUrl(art);
+            const usedUrl = useMediaProxy ? await this.getArtworkUrl(art) : art;
             if(usedUrl !== undefined) {
                 assets.largeImage = usedUrl;
             }
             if(art !== MS_ART) {
-                const smallArt = await this.getArtworkUrl(MS_ART);
+                const smallArt = useMediaProxy ? await this.getArtworkUrl(MS_ART) : MS_ART;
                 if(smallArt !== undefined) {
                         assets.smallImage = smallArt;
                         assets.smallText = 'Via Multi-Scrobbler'

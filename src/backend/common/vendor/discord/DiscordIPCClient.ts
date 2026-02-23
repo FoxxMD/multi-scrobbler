@@ -86,7 +86,7 @@ export class DiscordIPCClient extends DiscordAbstractClient {
             return;
         }
         const { activity: msActivity, artUrl } = playStateToActivityData(data);
-        const assets = await this.getArtAsset(data, artUrl);
+        const assets = await this.getArtAsset(data, artUrl, false);
         if (assets !== undefined) {
             const {
                 assets: msAssets = {}
