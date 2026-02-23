@@ -1,9 +1,6 @@
 import { childLogger } from "@foxxmd/logging";
-import { MSCache } from "../../Cache.js";
 import { AbstractApiOptions, SourceData } from "../../infrastructure/Atomic.js";
 import { ActivityData, DiscordIPCData, DiscordStrongData } from "../../infrastructure/config/client/discord.js";
-import AbstractApiClient from "../AbstractApiClient.js";
-import { CoverArtApiClient } from "../musicbrainz/CoverArtApiClient.js";
 import EventEmitter from "events";
 import { getRoot } from "../../../ioc.js";
 import { Client, SetActivity } from "@xhayper/discord-rpc";
@@ -12,18 +9,13 @@ import {sep, join} from 'path';
 import { PathData } from "@xhayper/discord-rpc/dist/transport/IPC.js";
 import { removeUndefinedKeys } from "../../../utils.js";
 import { playStateToActivityData } from "./DiscordUtils.js";
+import { DiscordAbstractClient } from "./DiscordAbstractClient.js";
 
-export class DiscordIPCClient extends AbstractApiClient {
+export class DiscordIPCClient extends DiscordAbstractClient {
 
     declare config: DiscordIPCData;
 
     ready: boolean = false;
-
-    emitter: EventEmitter;
-    cache: MSCache;
-    covertArtApi: CoverArtApiClient;
-    artFail: boolean = false;
-    artFailCount = 0;
 
     declare client: Client;
 
@@ -82,14 +74,23 @@ export class DiscordIPCClient extends AbstractApiClient {
     }
 
     async sendActivity(data?: SourceData | undefined) {
-        if(data === undefined) {
-            this.sendClearActivity();
+        if (data === undefined) {
+            await this.sendClearActivity();
             return;
         }
-        const {activity: msActivity, artUrl} = playStateToActivityData(data);
+        const { activity: msActivity, artUrl } = playStateToActivityData(data);
+        const assets = await this.getArtAsset(data, artUrl);
+        if (assets !== undefined) {
+            const {
+                assets: msAssets = {}
+            } = msActivity;
+            msActivity.assets = {
+                ...msAssets,
+                ...assets
+            }
+        }
         const activity = activityDataToSetActivity(msActivity);
-
-         this.client.user?.setActivity(activity);
+        await this.client.user?.setActivity(activity);
     }
 
     async sendClearActivity() {
@@ -106,11 +107,15 @@ export const configToIPCConfig = (data: DiscordStrongData): DiscordIPCData => {
     } = data;
     const parsedPaths: (string | [number, string])[] = [];
     for(const p of ipcLocations) {
-        const sp = p.split(':');
-        if(sp.length > 1) {
-            parsedPaths.push([parseInt(sp[1]), sp[0]]);
+        if(Array.isArray(p)) {
+            parsedPaths.push(p)
         } else {
-            parsedPaths.push(p);
+            const sp = p.split(':');
+            if(sp.length > 1) {
+                parsedPaths.push([parseInt(sp[1]), sp[0]]);
+            } else {
+                parsedPaths.push(p);
+            }
         }
     }
     return {

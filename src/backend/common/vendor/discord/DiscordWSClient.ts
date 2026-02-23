@@ -1,30 +1,22 @@
 import { childLogger, Logger } from "@foxxmd/logging";
 import { WS } from 'iso-websocket'
-import { DiscordClientData, DiscordData, DiscordStrongData, StatusType, ActivityType as MSActivityType, ActivityTypes, DiscordWSData, ActivityData } from "../../infrastructure/config/client/discord.js";
-import { _DataPayload, _NonDispatchPayload, ActivityType, APIUser, GatewayActivity, GatewayActivityAssets, GatewayActivityButton, GatewayActivityUpdateData, GatewayCloseCodes, GatewayDispatchEvents, GatewayHeartbeatRequest, GatewayHelloData, GatewayIdentify, GatewayIdentifyData, GatewayInvalidSessionData, GatewayOpcodes, GatewayPresenceUpdateData, GatewayReadyDispatchData, GatewayResumeData, GatewayUpdatePresence, PresenceUpdateStatus } from "discord.js";
+import { DiscordData, DiscordStrongData, StatusType, ActivityType as MSActivityType, ActivityTypes, DiscordWSData, ActivityData } from "../../infrastructure/config/client/discord.js";
+import { _DataPayload, _NonDispatchPayload, APIUser, GatewayActivity, GatewayActivityAssets, GatewayCloseCodes, GatewayDispatchEvents, GatewayHeartbeatRequest, GatewayHelloData, GatewayIdentify, GatewayInvalidSessionData, GatewayOpcodes, GatewayPresenceUpdateData, GatewayReadyDispatchData, GatewayResumeData, GatewayUpdatePresence, PresenceUpdateStatus } from "discord.js";
 import { isDebugMode, parseBool, removeUndefinedKeys, sleep } from "../../../utils.js";
 import pEvent from 'p-event';
 import EventEmitter from "events";
 import { randomInt } from "crypto";
 import request from 'superagent';
-import AbstractApiClient from "../AbstractApiClient.js";
-import { AbstractApiOptions, asPlayerStateData, SourceData } from "../../infrastructure/Atomic.js";
-import { isPlayObject, PlayObject } from "../../../../core/Atomic.js";
+import { AbstractApiOptions,SourceData } from "../../infrastructure/Atomic.js";
+import { isPlayObject } from "../../../../core/Atomic.js";
 import dayjs, { Dayjs } from "dayjs";
-import { capitalize } from "../../../../core/StringUtils.js";
 import { parseArrayFromMaybeString, parseBoolOrArrayFromMaybeString } from "../../../utils/StringUtils.js";
 import { getRoot } from "../../../ioc.js";
-import { MSCache } from "../../Cache.js";
 import { isSuperAgentResponseError } from "../../errors/ErrorUtils.js";
-import { urlToMusicService } from "../ListenbrainzApiClient.js";
-import { urlContainsKnownMediaDomain } from "../../../utils/RequestUtils.js";
-import { CoverArtApiClient } from "../musicbrainz/CoverArtApiClient.js";
 import { formatWebsocketClose, isCloseEvent, isErrorEvent, wsReadyStateToStr } from "../../../utils/NetworkUtils.js";
-import { RestType } from "ts-json-schema-generator";
 import { playStateToActivityData } from "./DiscordUtils.js";
+import { DiscordAbstractClient } from "./DiscordAbstractClient.js";
 
-const ARTWORK_PLACEHOLDER = 'https://raw.githubusercontent.com/FoxxMD/multi-scrobbler/master/assets/default-artwork.png';
-const MS_ART = 'https://raw.githubusercontent.com/FoxxMD/multi-scrobbler/master/assets/icon.png';
 const API_GATEWAY_ENDPOINT = 'https://discord.com/api/gateway';
 
 /**
@@ -38,7 +30,7 @@ const API_GATEWAY_ENDPOINT = 'https://discord.com/api/gateway';
  * so we need to roll our own Gateway API interface https://docs.discord.com/developers/events/gateway
  * 
  */
-export class DiscordWSClient extends AbstractApiClient {
+export class DiscordWSClient extends DiscordAbstractClient {
 
     declare config: DiscordWSData;
 
@@ -75,13 +67,6 @@ export class DiscordWSClient extends AbstractApiClient {
     clearLastActivitiesTimeout?: NodeJS.Timeout;
 
     get friendlySocketState() { return `Socket state: ${wsReadyStateToStr(this.client.readyState)}`}
-
-    emitter: EventEmitter;
-
-    cache: MSCache;
-    covertArtApi: CoverArtApiClient;
-    artFail: boolean = false;
-    artFailCount = 0;
 
     constructor(name: any, config: DiscordStrongData, options: AbstractApiOptions) {
         if(config.token !== undefined) {
@@ -657,65 +642,21 @@ export class DiscordWSClient extends AbstractApiClient {
     }
 
     playStateToActivity = async (data: SourceData): Promise<GatewayActivity> => {
-        const {activity: msActivity, artUrl} = playStateToActivityData(data)
-        const activity = activityDataToGatewayActivity(msActivity);
-        const {
-            artwork = false
-        } = this.config;
-        const {
-            artworkDefaultUrl = ARTWORK_PLACEHOLDER,
-            applicationId
-        } = this.config;
-
-        if(applicationId !== undefined) {
-
-            let art = artworkDefaultUrl;
-            if(artUrl !== undefined) {
-                if(urlContainsKnownMediaDomain(artUrl)) {
-                    art = artUrl;
-                } else if (artwork !== false) {
-                    if (Array.isArray(artwork)) {
-                        const allowed = artwork.some(x => artUrl.toLocaleLowerCase().includes(x.toLocaleLowerCase()));
-                        if (allowed) {
-                            art = artUrl;
-                        }
-                    } else {
-                        const u = new URL(artUrl);
-                        // only allow secure protocol as this is likely to be a real domain that is public accessible
-                        // IP domain usually uses http only
-                        if (u.protocol === 'https://') {
-                            art = artUrl;
-                        }
-                    }
-                }
+        const {activity: msActivity, artUrl} = playStateToActivityData(data);
+        const assets = await this.getArtAsset(data, artUrl);
+        if(assets !== undefined) {
+            const {
+                assets: msAssets = {}
+            } = msActivity;
+            msActivity.assets = {
+                ...msAssets,
+                ...assets
             }
-
-            if(art === artworkDefaultUrl) {
-                const play = isPlayObject(data) ? data : data.play;
-                if(play.data.meta?.brainz?.album !== undefined) {
-                    const albumArt = await this.covertArtApi.getCoverThumb(play.data.meta?.brainz?.album, {size: 250});
-                    if(albumArt !== undefined) {
-                        art = albumArt;
-                    }
-                }
-            }
-
-            // https://docs.discord.com/developers/events/gateway-events#activity-object-activity-assets
-            // https://docs.discord.com/developers/events/gateway-events#activity-object-activity-asset-image
-            const usedUrl = await this.getArtworkUrl(art);
-            if(usedUrl !== undefined) {
-                activity.assets.large_image = usedUrl;
-            }
-            if(art !== MS_ART) {
-                const smallArt = await this.getArtworkUrl(MS_ART);
-                if(smallArt !== undefined) {
-                        activity.assets.small_image = smallArt;
-                        activity.assets.small_text = 'Via Multi-Scrobbler'
-                        activity.assets.small_url = 'https://multi-scrobbler.app'
-                } 
-            }
+        } else if(Object.keys(msActivity.assets ?? {}).length === 1 && msActivity.assets.largeText !== undefined) {
+            // this means we can't set any artwork, likely because there is no applicationId. So delete all assets to ensure activity is accepted
+            delete msActivity.assets;
         }
-
+        const activity = activityDataToGatewayActivity(msActivity);
         return activity;
     }
 
@@ -807,41 +748,6 @@ export class DiscordWSClient extends AbstractApiClient {
         return [false, reasons.join(' and ')];
     }
 
-    getArtworkUrl = async (artUrl: string): Promise<string | undefined> => {
-
-        const cachedUrl = await this.cache.cacheMetadata.get<string>(artUrl);
-        if (cachedUrl !== undefined) {
-            return cachedUrl;
-        }
-
-        if (this.config.applicationId === undefined || this.artFail) {
-            return;
-        }
-
-        try {
-            const imgResp = await request.post(`https://discord.com/api/v10/applications/${this.config.applicationId}/external-assets`)
-                .set('Authorization', this.config.token)
-                .type('json')
-                .send({ "urls": [artUrl] });
-            this.artFailCount = 0;
-            const proxied = `mp:${imgResp.body[0].external_asset_path}`
-            await this.cache.cacheMetadata.set(artUrl, proxied);
-            return proxied;
-        } catch (e) {
-            this.artFailCount++;
-            this.logger.warn(new Error('Failed to upload art url', { cause: e }));
-            if (isSuperAgentResponseError(e)) {
-                if (e.status === 401 || e.status === 403) {
-                    this.artFail = true;
-                }
-            } else if (this.artFailCount > 3) {
-                this.logger.verbose('More than 3 consecutive failures to upload art...turning off to stop spamming bad requests');
-                this.artFail = true;
-            }
-            return;
-        }
-    }
-
     presenceIsAllowedByStatus = (status?: PresenceUpdateStatus | StatusType): [boolean, string?] => {
         if (!this.config.statusOverrideAllow.includes(status as StatusType ?? this.lastActiveStatus as StatusType)) {
             return [false, `most active session has a disallowed status: ${status ?? this.lastActiveStatus}`];
@@ -922,104 +828,6 @@ interface UserSession {
     //     name: string
     // }[]
     activities: GatewayActivity[]
-}
-
-export const oldplayStateToActivityData = (data: SourceData, opts: { useArt?: boolean } = {}): { activity: GatewayActivity, artUrl?: string } => {
-    // unix timestamps in milliseconds
-    let startTime: number,
-        endTime: number;
-
-    let play: PlayObject;
-    if (isPlayObject(data)) {
-        play = data;
-        if (data.meta.trackProgressPosition !== undefined && play.data.duration !== undefined) {
-            startTime = dayjs().subtract(data.meta.trackProgressPosition, 's').unix() * 1000;
-            endTime = dayjs().add(data.data.duration - data.meta.trackProgressPosition, 's').unix() * 1000;
-        } else if (asPlayerStateData(data)) {
-            play = data.play;
-            if (data.position !== undefined && play.data.duration !== undefined) {
-                startTime = dayjs().subtract(data.position, 's').unix() * 1000;
-                endTime = dayjs().add(data.data.duration - data.position, 's').unix() * 1000;
-            }
-        }
-    }
-
-    let activityName = capitalize(play.meta?.musicService ?? play.meta?.mediaPlayerName ?? play.meta?.source ?? 'music')
-
-    // @ts-expect-error
-    const activity = removeUndefinedKeys<GatewayActivity>({
-        // https://docs.discord.com/developers/events/gateway-events#activity-object
-        type: 2, // Listening
-        // https://docs.discord.com/developers/events/gateway-events#activity-object
-        status_display_type: 1, // state
-        name: activityName,
-        details: play.data.track,
-        state: play.data.artists !== undefined && play.data.artists.length > 0 ? play.data.artists.join(' / ') : undefined,
-        // https://docs.discord.com/developers/events/gateway-events#activity-object-activity-assets
-        // https://docs.discord.com/developers/events/gateway-events#activity-object-activity-asset-image
-        assets: {
-            large_text: play.data.album
-        }
-    });
-    if (endTime !== undefined && startTime !== undefined) {
-        activity.timestamps = {
-            start: startTime,
-            end: endTime
-        }
-    }
-    
-    //let buttons: GatewayActivityButton[] = [];
-
-    const {
-        meta: {
-            url: {
-                web,
-                origin
-            } = {},
-        },
-        data: {
-            meta: {
-                brainz: {
-                    recording
-                } = {}
-            } = {}
-        } = {}
-    } = play;
-    const url = origin ?? web;
-    if(url !== undefined) {
-        const knownService = urlToMusicService(url);
-        if(knownService !== undefined) {
-            activity.details_url = url;
-
-            // when including buttons discord accepts the presence update but does not actually use it
-            // I think buttons may now be limited to official RPC or restricted to preset actions via things like secrets or registering commands
-            // https://docs.discord.com/developers/developer-tools/game-sdk#activitysecrets-struct
-
-            // buttons.push({
-            //     label: `Listen on ${capitalize(knownService)}`,
-            //     url: web
-            // });
-        }
-    }
-    if(recording !== undefined) {
-        const mb = `https://musicbrainz.org/recording/${recording}`;
-        if(activity.details_url === undefined) {
-            activity.details_url = mb;
-        } else {
-            activity.state_url = mb;
-        }
-        // buttons.push({
-        //     label: 'Open on Musicbrainz',
-        //     url: `https://musicbrainz.org/recording/${recording}`
-        // });
-    }
-    // if(buttons.length > 0) {
-    //     activity.buttons = buttons;
-    // }
-
-    const artUrl = play.meta?.art?.album ?? play.meta?.art?.track ?? play.meta?.art?.artist;
-
-    return { activity, artUrl };
 }
 
 export const statusStringToType = (str: string): StatusType => {

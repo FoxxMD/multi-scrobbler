@@ -8,7 +8,7 @@ export interface DiscordData {
     statusOverrideAllow?: string | StatusType[]
     activitiesOverrideAllow?: boolean | string | ActivityType[]
     applicationsOverrideDisallow?: string | string[]
-    ipcLocations?: string[]
+    ipcLocations?: (string | [number, string])[]
 }
 
 export interface DiscordClientData extends DiscordData, CommonClientData {}
@@ -43,9 +43,9 @@ export interface DiscordWSData extends DiscordStrongData {
     token: string
 }
 
-export interface DiscordIPCData extends Omit<DiscordStrongData, 'ipcLocations'> {
+export interface DiscordIPCData extends DiscordStrongData {
     applicationId: string
-    ipcLocations: (string | [number, string])[]
+    //ipcLocations: (string | [number, string])[]
 }
 
 export interface ActivityAssets {
@@ -77,3 +77,6 @@ export interface ActivityData {
 
     createdAt: number
 }
+
+export const ARTWORK_PLACEHOLDER = 'https://raw.githubusercontent.com/FoxxMD/multi-scrobbler/master/assets/default-artwork.png';
+export const MS_ART = 'https://raw.githubusercontent.com/FoxxMD/multi-scrobbler/master/assets/icon.png';
