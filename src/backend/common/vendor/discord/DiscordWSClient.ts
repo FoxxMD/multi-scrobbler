@@ -1,4 +1,4 @@
-import { childLogger } from "@foxxmd/logging";
+import { childLogger, Logger } from "@foxxmd/logging";
 import { WS } from 'iso-websocket'
 import { DiscordClientData, DiscordData, DiscordStrongData, StatusType, ActivityType as MSActivityType, ActivityTypes } from "../../infrastructure/config/client/discord.js";
 import { _DataPayload, _NonDispatchPayload, ActivityType, APIUser, GatewayActivity, GatewayActivityButton, GatewayActivityUpdateData, GatewayCloseCodes, GatewayDispatchEvents, GatewayHeartbeatRequest, GatewayHelloData, GatewayIdentify, GatewayIdentifyData, GatewayInvalidSessionData, GatewayOpcodes, GatewayPresenceUpdateData, GatewayReadyDispatchData, GatewayResumeData, GatewayUpdatePresence, PresenceUpdateStatus } from "discord.js";
@@ -10,7 +10,7 @@ import request from 'superagent';
 import AbstractApiClient from "../AbstractApiClient.js";
 import { AbstractApiOptions, asPlayerStateData, SourceData } from "../../infrastructure/Atomic.js";
 import { isPlayObject, PlayObject } from "../../../../core/Atomic.js";
-import dayjs from "dayjs";
+import dayjs, { Dayjs } from "dayjs";
 import { capitalize } from "../../../../core/StringUtils.js";
 import { parseArrayFromMaybeString, parseBoolOrArrayFromMaybeString } from "../../../utils/StringUtils.js";
 import { getRoot } from "../../../ioc.js";
@@ -40,7 +40,11 @@ export class DiscordWSClient extends AbstractApiClient {
 
     declare config: DiscordStrongData;
 
-    heartbeatInterval?: NodeJS.Timeout
+    heartbeatInterval: number
+    // used for debugging/troubleshooting weird interval speed up
+    // can remove once this bug is for sure squashed
+    lastHeartbeatIntervalSentAt?: Dayjs;
+    heartbeatTimeout?: NodeJS.Timeout;
     acknowledged: boolean = true;
 
     // https://docs.discord.com/developers/events/gateway#ready-event
@@ -50,6 +54,8 @@ export class DiscordWSClient extends AbstractApiClient {
     sequence: number;
 
     initialGatewayUrl?: string;
+
+    gatewayMsgLogger: Logger;
 
     user: APIUser;
 
@@ -77,10 +83,16 @@ export class DiscordWSClient extends AbstractApiClient {
 
     constructor(name: any, config: DiscordStrongData, options: AbstractApiOptions) {
         super('Discord', name, config, options);
-        this.logger = childLogger(options.logger, 'WS Gateway');
+        //const gatewaySeq =  `Gateway${this.sequence !== undefined ? ` Seq ${this.sequence}` : ''}`;
+        this.logger = childLogger(options.logger, [() => this.gatewaySeqLabel()]);
+        this.gatewayMsgLogger = childLogger(this.logger, 'Received Message');
         this.emitter = new EventEmitter();
         this.cache = getRoot().items.cache();
         this.covertArtApi = getRoot().items.coverArtApi;
+    }
+
+    protected gatewaySeqLabel() {
+        return `Gateway${this.sequence !== undefined ? ` Seq ${this.sequence}` : ''}`;
     }
 
     initClient = async () => {
@@ -126,7 +138,7 @@ export class DiscordWSClient extends AbstractApiClient {
                         this.authOK = false;
                         discordImmediateStop = true;
                     }
-                    this.cleanupConnectionSync();
+                    this.cleanupConnection();
 
                     const shouldRetry = !discordImmediateStop && e.code !== 1008 && e.code !== 1011;
                     this.logger.debug(`Should Retry? ${shouldRetry}`);
@@ -173,7 +185,7 @@ export class DiscordWSClient extends AbstractApiClient {
                 }
             } else {
                 this.logger.error(new Error('Connection closed and retry did not occur due to unexpected error', { cause: e }));
-                this.cleanupConnectionSync();
+                this.cleanupConnection();
                 this.emitter.emit('stopped', { authFailure: false });
             }
         });
@@ -188,7 +200,7 @@ export class DiscordWSClient extends AbstractApiClient {
             this.logger.error(new Error(`Error from Discord Gateway`, { cause: e.error }));
             this.canResume = false;
             this.reconnecting = false;
-            this.cleanupConnectionSync();
+            this.cleanupConnection();
             this.emitter.emit('stopped', { authFailure: false });
         });
 
@@ -305,45 +317,76 @@ export class DiscordWSClient extends AbstractApiClient {
     async handleHello(data: GatewayHelloData) {
         // jitter
         // https://docs.discord.com/developers/events/gateway#heartbeat-interval
-        const sleepTime = randomInt(data.heartbeat_interval - 1);
-        this.logger.debug(`Heartbeat Interval: ${data.heartbeat_interval}ms (${Math.floor(data.heartbeat_interval / 1000)}s), waiting ${Math.floor(sleepTime / 1000)}s before sending first heartbeat. (Seq ${this.sequence})`);
+        this.gatewayMsgLogger.debug(`Hello! Heartbeat Interval is ${data.heartbeat_interval}ms`);
+        this.heartbeatInterval = data.heartbeat_interval - 500;
+        this.lastHeartbeatIntervalSentAt = undefined;
+        const sleepTime = this.heartbeatInterval * (randomInt(100) / 100);
+
+        this.logger.debug(`Waiting ${Math.floor(sleepTime / 1000)}s before sending first heartbeat.`);
         await sleep(sleepTime);
-        if (this.client.readyState !== this.client.OPEN) {
-            this.logger.warn(`Not continuing with heartbeat because connection is not open`);
-            return;
+        const sent = this.sendHeartbeat();
+        if(sent) {
+            this.createHeartbeatInterval();
         }
-        this.sendHeartbeat();
-        this.heartbeatInterval = setInterval(() => {
-            if (this.client.OPEN !== this.client.readyState) {
-                if (this.heartbeatInterval !== undefined) {
-                    clearInterval(this.heartbeatInterval);
-                }
-                return;
-            }
-            if (!this.acknowledged) {
-                this.logger.warn('Did not recieve heartbeat acknowledgment! May be a zombie so trying to reconnect.');
-                return this.handleReconnect().then(() => null).catch((e) => this.logger.error(e));
-            }
-            this.sendHeartbeat();
-            // send heartbeat a little early to account for slower event loop when many things are happening in MS
-        }, data.heartbeat_interval - 1500);
     }
 
-    sendHeartbeat() {
+    doHeartbeatInteval() {
 
+        if (this.heartbeatTimeout !== undefined) {
+            clearTimeout(this.heartbeatTimeout);
+            this.heartbeatTimeout = undefined;
+        }
+
+        if(!this.acknowledged) {
+            this.logger.warn('Did not recieve Heartbeat ACK! May be a zombie so trying to reconnect.');
+            return this.handleReconnect().then(() => null).catch((e) => this.logger.error(e));
+        } else {
+            if(this.lastHeartbeatIntervalSentAt !== undefined) {
+                const diff = dayjs().diff(this.lastHeartbeatIntervalSentAt, 'ms');
+                if(diff < this.heartbeatInterval && this.heartbeatInterval - diff > 2000) {
+                    this.logger.warn(`Time since last heartbeat interval sent is ${this.heartbeatInterval - diff}ms shorter than interval (${this.heartbeatInterval})`)
+                }
+            }
+            const sent = this.sendHeartbeat(true);
+            this.acknowledged = false;
+            if(sent) {
+                this.lastHeartbeatIntervalSentAt = dayjs();
+                this.createHeartbeatInterval();
+            }
+        }
+    }
+
+    createHeartbeatInterval() {
+        if (this.heartbeatTimeout !== undefined) {
+            clearTimeout(this.heartbeatTimeout);
+            this.heartbeatTimeout = undefined;
+        }
+
+        if(this.heartbeatInterval !== undefined) {
+            this.heartbeatTimeout = setTimeout(() => {
+                this.doHeartbeatInteval();
+            }, this.heartbeatInterval);
+        } else {
+            this.logger.warn('Cannot create heartbeat timeout because no interval is set.');
+        }
+    }
+
+    sendHeartbeat(includeInterval: boolean = false): boolean {
+        if (this.client.readyState !== this.client.OPEN) {
+            this.logger.warn(`Cannot send heartbeat because connection is not open`);
+            return false;
+        }
         const heartbeatRequest: GatewayHeartbeatRequest = {
             op: GatewayOpcodes.Heartbeat,
             // @ts-expect-error
             d: this.sequence ?? null
         }
-        this.acknowledged = false;
-        if (this.client.readyState !== this.client.OPEN) {
-            this.logger.warn(`Cannot send heartbeat because connection is not open`);
-            return;
-        } else if(isDebugMode()) {
-            this.logger.debug(`Sending heartbeat (Seq ${this.sequence})`);
+
+        if (isDebugMode()) {
+            this.logger.debug(`Sending heartbeat${includeInterval ? `, interval is ${this.heartbeatInterval}ms` : ''}`);
         }
         this.client.send(JSON.stringify(heartbeatRequest));
+        return true;
     }
 
     /** 
@@ -358,19 +401,24 @@ export class DiscordWSClient extends AbstractApiClient {
         this.ready = true;
         this.authOK = true;
         this.reconnecting = false;
-        this.logger.verbose(`Gateway Connection READY for ${this.user.username} | Session ${this.session_id} (Seq ${this.sequence})`);
+        this.gatewayMsgLogger.verbose(` Connection READY for ${this.user.username} | Session ${this.session_id}`);
         this.cancelClearLastActivities();
         this.emitter.emit('ready', {ready: true});
     }
 
     handleResume() {
-        this.logger.verbose(`Recieved Resumed | Session ${this.session_id} (Seq ${this.sequence})`);
+        this.gatewayMsgLogger.verbose(`Connection RESUMED | Session ${this.session_id}`);
         this.canResume = true;
         this.ready = true;
         this.authOK = true;
         this.reconnecting = false;
         this.cancelClearLastActivities();
         this.emitter.emit('ready', {ready: true});
+        // extra careful to make sure we restart heartbeat in the event a heartbeat tried to run
+        // while client was reconnecting and not open
+        if(this.heartbeatTimeout === undefined) {
+            this.createHeartbeatInterval();
+        }
     }
 
     /** https://docs.discord.com/developers/events/gateway-events#invalid-session */
@@ -401,7 +449,7 @@ export class DiscordWSClient extends AbstractApiClient {
             throw new Error('Waited too long for socket to close');
         }
         this.logger.debug('Socket closed, reconnecting');
-        this.cleanupConnectionSync();
+        this.cleanupConnection();
         try {
             await this.tryAuthenticate();
         } catch (e) {
@@ -420,7 +468,7 @@ export class DiscordWSClient extends AbstractApiClient {
             this.logger.warn(`Cannot send resume because connection is not open`);
             return;
         } else if(isDebugMode()) {
-            this.logger.verbose(`Sending resume | Session ${this.session_id} | Seq ${this.sequence}`);
+            this.logger.verbose(`Sending resume | Session ${this.session_id}`);
         }
         this.client.send(JSON.stringify({ op: GatewayOpcodes.Resume, d: data }));
     }
@@ -456,10 +504,10 @@ export class DiscordWSClient extends AbstractApiClient {
         }
     }
 
-    cleanupConnectionSync() {
-        if(this.heartbeatInterval !== undefined) {
-            clearInterval(this.heartbeatInterval);
-            this.heartbeatInterval = undefined;
+    cleanupConnection() {
+        if(this.heartbeatTimeout !== undefined) {
+            clearInterval(this.heartbeatTimeout);
+            this.heartbeatTimeout = undefined;
         }
         if(this.activityTimeout !== undefined) {
             clearTimeout(this.activityTimeout);
@@ -472,13 +520,15 @@ export class DiscordWSClient extends AbstractApiClient {
             this.sequence = undefined;
             this.resume_gateway_url = undefined;
             this.user = undefined;
+            this.heartbeatInterval = undefined;
+            this.acknowledged = false;
             this.clearLastActivities();
         }
     }
 
     handleUserSessionUpdates = (data: UserSession[]) => {
         if (data.filter(x => x.session_id !== this.session_id && x.session_id !== 'all').length === 0) {
-            this.logger.debug(`Recieved updated user sessions (Seq ${this.sequence}) => No other user sessions exist, marking our session presence as inactive`);
+            this.gatewayMsgLogger.debug(`Updated user sessions => No other user sessions exist, marking our session presence as inactive`);
             this.lastActiveStatus = PresenceUpdateStatus.Offline;
             this.lastActivities = [];
             return;
@@ -494,7 +544,7 @@ export class DiscordWSClient extends AbstractApiClient {
             };
             return sessionId;
         });
-        this.logger.debug(`Recieved updated user sessions (Seq ${this.sequence})\n${sessionSummaries.join('\n')}`);
+        this.gatewayMsgLogger.debug(`Updated user sessions\n${sessionSummaries.join('\n')}`);
 
         const last = this.lastActiveStatus;
 
@@ -531,7 +581,6 @@ export class DiscordWSClient extends AbstractApiClient {
         if (s !== null && s !== undefined) {
             this.sequence = s;
         }
-        const seqHint = `Seq ${this.sequence}`;
         try {
 
             switch (op) {
@@ -540,13 +589,13 @@ export class DiscordWSClient extends AbstractApiClient {
                     break;
                 case GatewayOpcodes.HeartbeatAck:
                     if (isDebugMode()) {
-                        this.logger.debug(`Received Heartbeat acknowledgement (${seqHint})`);
+                        this.gatewayMsgLogger.debug(`Heartbeat ACK`);
                     }
                     this.acknowledged = true;
                     break;
                 case GatewayOpcodes.Heartbeat:
                     if (isDebugMode()) {
-                        this.logger.debug(`Received Heartbeat request (${seqHint})`);
+                        this.gatewayMsgLogger.debug(`Heartbeat REQ`);
                     }
                     this.sendHeartbeat();
                     break;
@@ -570,26 +619,26 @@ export class DiscordWSClient extends AbstractApiClient {
                             break;
                         default:
                             if (isDebugMode()) {
-                                this.logger.debug(`Recieved Dispatch Event ${message.t} (${seqHint})`);
+                                this.gatewayMsgLogger.debug(`Dispatch Event ${message.t}`);
                             }
                     };
                     break;
                 case GatewayOpcodes.InvalidSession:
-                    this.logger.verbose(`Recieved invalid session opcode (${seqHint})`);
+                    this.gatewayMsgLogger.verbose(`Invalid session opcode`);
                     this.handleInvalidSession(message.d as GatewayInvalidSessionData);
                     break;
                 case GatewayOpcodes.Reconnect:
-                    this.logger.verbose(`Recieved reconnect opcode (${seqHint})`);
+                    this.gatewayMsgLogger.verbose(`Reconnect opcode`);
                     await this.handleReconnect();
                     break;
                 case GatewayOpcodes.Identify:
-                    this.logger.debug({ data: message.d }, `Recieved Identify opcode (${seqHint})`);
+                    this.gatewayMsgLogger.debug({ data: message.d }, `Identify opcode`);
                     break;
                 case GatewayOpcodes.PresenceUpdate:
-                    this.logger.debug({ data: message.d }, `Recieved Presence Update opcode (${seqHint})`);
+                    this.gatewayMsgLogger.debug({ data: message.d }, `Presence Update opcode`);
                     break;
                 default:
-                    this.logger.debug(`Recieved opcode: ${op} (${seqHint})`);
+                    this.gatewayMsgLogger.debug(`opcode: ${op}`);
                     break;
             }
         } catch (error) {
@@ -598,7 +647,7 @@ export class DiscordWSClient extends AbstractApiClient {
             if (op === GatewayOpcodes.Dispatch) {
                 handleHint += ` w/ Dispatch Event ${message.t}`;
             }
-            throw new Error(`Error handling gateway message for ${handleHint} (${seqHint})`, { cause: error });
+            throw new Error(`Error handling gateway message for ${handleHint} (Seq ${this.sequence})`, { cause: error });
         }
     }
 
