@@ -8,7 +8,7 @@ export interface DiscordData {
     statusOverrideAllow?: string | StatusType[]
     activitiesOverrideAllow?: boolean | string | ActivityType[]
     applicationsOverrideDisallow?: string | string[]
-    ipcLocations?: (string | [number, string])[]
+    ipcLocations?: string | (string | [number, string])[]
 }
 
 export interface DiscordClientData extends DiscordData, CommonClientData {}
@@ -37,6 +37,7 @@ export interface DiscordStrongData extends DiscordData {
     statusOverrideAllow?: StatusType[]
     activitiesOverrideAllow?: ActivityType[]
     applicationsOverrideDisallow?: string[]
+    ipcLocations?: (string | [number, string])[]
 }
 
 export interface DiscordWSData extends DiscordStrongData {

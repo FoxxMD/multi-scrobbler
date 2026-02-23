@@ -1,0 +1,35 @@
+---
+sidebar_position: 2
+title: Discord
+toc_max_heading_level: 4
+---
+
+This scrobbler uses **[Now Playing](/configuration/clients#now-playing)** functionality to set your Discord [Rich Presence](https://docs.discord.com/developers/rich-presence/overview) to the music you are currently monitoring with multi-scrobbler.
+
+<img src={require('/img/discord_presence_art.png').default} height="127"/>
+
+There are two types of Discord integrations to choose from:
+
+## Local
+
+The **Local** integration uses an **existing** Discord application on Linux/MacOS to set Rich Presence.
+
+* Uses "permitted" access to Discord, no TOS issues
+* More restricted customization compares to Headless
+* Only active when your existing Discord application is open
+* For instances where Multi-Scrobbler is not on the same machine as Discord
+  * Requires an additional program to relay the Discord connection
+  * This is potentially insecure, or less secure, then Headless
+
+[**Local Docs**](#/configuration/client/discord/discord-local)
+
+## Headless
+
+The **Headless** integration uses Discord cloud Gateway/API, directly, to set Rich Presence.
+
+* Does not require an existing Discord application (uses Discord cloud API)
+* Using this **Violates Discord TOS** because it requires a user token
+* More customization than Local
+* Active if **any** Discord application is online
+
+[**Headless Docs**](#/configuration/client/discord/discord-headless)

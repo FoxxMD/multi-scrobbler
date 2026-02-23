@@ -1,17 +1,18 @@
 ---
-title: Discord
+title: Discord (Headless)
 toc_min_heading_level: 2
 toc_max_heading_level: 5
 ---
 
 import Tabs from '@theme/Tabs';
 import TabItem from '@theme/TabItem';
-import CodeBlock from '@theme/CodeBlock';
 import JsonConfig from '!!raw-loader!@site/../config/discord.json.example';
 
 This scrobbler uses **[Now Playing](/configuration/clients#now-playing)** functionality to set your Discord [Rich Presence](https://docs.discord.com/developers/rich-presence/overview) to the music you are currently monitoring with multi-scrobbler.
 
 <img src={require('/img/discord_presence_art.png').default} height="127"/>
+
+This integration is **headless**, it does not depend on any specific Discord application to be running.
 
 :::warning[Discord TOS Violation]
 

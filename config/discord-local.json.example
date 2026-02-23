@@ -1,0 +1,11 @@
+[
+    {
+      "name": "MS",
+      "enable": true,
+      "data": {
+        "applicationId": "8190211179716453570",
+        "ipcLocations": ["192.168.0.105:6655"]
+      }
+    }
+  ]
+  

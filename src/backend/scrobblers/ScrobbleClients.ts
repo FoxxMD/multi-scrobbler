@@ -302,6 +302,7 @@ export default class ScrobbleClients {
                         token: process.env.DISCORD_TOKEN,
                         artwork: process.env.DISCORD_ARTWORK,
                         applicationId: process.env.DISCORD_APPLICATION_ID,
+                        ipcLocations: process.env.DISCORD_IPC_LOCATIONS,
                         artworkDefaultUrl: process.env.DISCORD_ARTWORK_DEFAULT_URL,
                         statusOverrideAllow: process.env.DISCORD_STATUS_OVERRIDE_ALLOW,
                         activitiesOverrideAllow: process.env.DISCORD_ACTIVITIES_OVERRIDE_ALLOW,

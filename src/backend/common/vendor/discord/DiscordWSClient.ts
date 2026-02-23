@@ -900,7 +900,6 @@ export const configToStrong = (data: DiscordData): DiscordStrongData => {
             applicationId,
             applicationsOverrideDisallow: parseArrayFromMaybeString(applicationsOverrideDisallow),
             artworkDefaultUrl,
-            ipcLocations
         }
 
         if (typeof artwork === 'boolean' || Array.isArray(artwork)) {
@@ -923,6 +922,15 @@ export const configToStrong = (data: DiscordData): DiscordStrongData => {
             strongConfig.activitiesOverrideAllow = aaRaw.map(activityStringToType);
         }
 
+        if(ipcLocations !== undefined) {
+            if(typeof ipcLocations === 'string') {
+                const ipcRaw = parseArrayFromMaybeString(ipcLocations);
+                strongConfig.ipcLocations = ipcRaw;
+            } else {
+                strongConfig.ipcLocations = ipcLocations;
+            }
+        }
+        
         return strongConfig;
 }
 
