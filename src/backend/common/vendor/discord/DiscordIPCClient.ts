@@ -10,10 +10,14 @@ import { PathData } from "@xhayper/discord-rpc/dist/transport/IPC.js";
 import { removeUndefinedKeys } from "../../../utils.js";
 import { playStateToActivityData } from "./DiscordUtils.js";
 import { DiscordAbstractClient } from "./DiscordAbstractClient.js";
+import dayjs from "dayjs";
+import { isPlayObject } from "../../../../core/Atomic.js";
 
 export class DiscordIPCClient extends DiscordAbstractClient {
 
     declare config: DiscordIPCData;
+
+    activityTimeout?: NodeJS.Timeout;
 
     ready: boolean = false;
 
@@ -52,7 +56,7 @@ export class DiscordIPCClient extends DiscordAbstractClient {
         this.client.on("ready", async () => {
             this.ready = true;
             this.logger.info('IPC Connection READY');
-            
+            this.emitter.emit('ready', {ready: true});
         });
         this.client.on('error', (e) => {
             this.logger.error(e);
@@ -62,6 +66,9 @@ export class DiscordIPCClient extends DiscordAbstractClient {
         });
         this.client.on("close", (e) => {
             this.ready = false;
+            clearTimeout(this.activityTimeout);
+            this.activityTimeout = undefined;
+            this.emitter.emit('stopped', { authFailure: false });
         });
      }
 
@@ -91,9 +98,28 @@ export class DiscordIPCClient extends DiscordAbstractClient {
         }
         const activity = activityDataToSetActivity(msActivity);
         await this.client.user?.setActivity(activity);
+
+        const play = isPlayObject(data) ? data : data.play;
+
+        let clearTime = dayjs().add(260, 'seconds'); // funny number
+        if (msActivity.timestamps?.end !== undefined) {
+            clearTime = dayjs.unix(Math.floor(msActivity.timestamps.end as number / 1000));
+        } else if (play.data?.duration !== undefined) {
+            clearTime = dayjs().add(play.data.duration, 'seconds')
+        }
+        if (this.activityTimeout !== undefined) {
+            clearTimeout(this.activityTimeout);
+        }
+        this.activityTimeout = setTimeout(() => {
+            this.sendClearActivity();
+        }, Math.abs(clearTime.diff(dayjs(), 'ms')));
     }
 
     async sendClearActivity() {
+        if (this.activityTimeout !== undefined) {
+            clearTimeout(this.activityTimeout);
+            this.activityTimeout = undefined;
+        }
         await this.client.user.clearActivity();
     }
 }

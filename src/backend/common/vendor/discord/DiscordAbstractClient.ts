@@ -30,13 +30,16 @@ export class DiscordAbstractClient extends AbstractApiClient {
 
     getArtworkUrl = async (artUrl: string): Promise<string | undefined> => {
 
-        const cachedUrl = await this.cache.cacheMetadata.get<string>(artUrl);
-        if (cachedUrl !== undefined) {
-            return cachedUrl;
+        if (this.config.applicationId === undefined) {
+            return;
+        }
+        if(this.artFail) {
+            return;
         }
 
-        if (this.config.applicationId === undefined || this.artFail) {
-            return;
+        const cachedUrl = await this.cache.cacheMetadata.get<string>(`${this.config.applicationId}-${artUrl}`);
+        if (cachedUrl !== undefined) {
+            return cachedUrl;
         }
 
         try {

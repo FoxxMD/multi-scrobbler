@@ -5,7 +5,7 @@ import { CALCULATED_PLAYER_STATUSES, FormatPlayObjectOptions, REPORTED_PLAYER_ST
 import { Notifiers } from "../notifier/Notifiers.js";
 
 import AbstractScrobbleClient, { nowPlayingUpdateByPlayDuration } from "./AbstractScrobbleClient.js";
-import { DiscordClientConfig, DiscordStrongData, DiscordWSData, StatusType } from "../common/infrastructure/config/client/discord.js";
+import { DiscordClientConfig, DiscordStrongData } from "../common/infrastructure/config/client/discord.js";
 import { configToStrong, DiscordWSClient } from "../common/vendor/discord/DiscordWSClient.js";
 import { DiscordIPCClient } from "../common/vendor/discord/DiscordIPCClient.js";
 import { playStateToActivityData } from "../common/vendor/discord/DiscordUtils.js";
@@ -15,14 +15,37 @@ export default class DiscordScrobbler extends AbstractScrobbleClient {
     api: DiscordWSClient | DiscordIPCClient;
     requiresAuth = true;
     requiresAuthInteraction = false;
+    apiMode!: 'ws' | 'ipc';
 
     declare config: DiscordClientConfig & {data: DiscordStrongData };
 
     constructor(name: any, config: DiscordClientConfig, options = {}, notifier: Notifiers, emitter: EventEmitter, logger: Logger) {
         const strong = configToStrong(config.data);
         super('discord', name, {...config, data: strong}, notifier, emitter, logger);
-        if(strong.token !== undefined) {
-            this.api = new DiscordWSClient(name, { ...strong, ...config.options }, { logger: this.logger });
+        this.supportsNowPlaying = true;
+        this.nowPlayingMaxThreshold = nowPlayingUpdateByPlayDuration;
+        this.nowPlayingMinThreshold = (_) => 5;
+    }
+
+    formatPlayObj = (obj: any, options: FormatPlayObjectOptions = {}) => obj;
+
+    protected async doBuildInitData(): Promise<true | string | undefined> {
+        const {
+            data: {
+                token,
+                applicationId,
+                artwork = false
+            } = {}
+        } = this.config;
+
+        if(token !== undefined) {
+            this.logger.info('Detected token, using WS (Headless) Discord Client');
+            this.apiMode = 'ws';
+
+            this.logger.verbose(`Allow override statuses: ${this.config.data.statusOverrideAllow.join(', ')}`);
+            this.logger.verbose(`Allow override activity types: ${this.config.data.activitiesOverrideAllow.join(', ')}`);
+            this.logger.verbose(`Disallow override activity names: ${this.config.data.applicationsOverrideDisallow.join(', ')}`);
+            this.api = new DiscordWSClient(this.name, { ...this.config.data, ...this.config.options }, { logger: this.logger });
             this.api.emitter.on('stopped', async (e) => {
                 if(e.authFailure) {
                     this.authFailure = true;
@@ -35,43 +58,26 @@ export default class DiscordScrobbler extends AbstractScrobbleClient {
                 }
                 await this.tryStopScrobbling();
             });
-        } else if(strong.applicationId !== undefined) {
-            this.api = new DiscordIPCClient(name, { ...strong, ...config.options }, { logger: this.logger })
+        } else if(applicationId !== undefined) {
+            this.logger.info('Detected applicationId, using IPC Discord Client');
+            this.api = new DiscordIPCClient(this.name, { ...this.config.data, ...this.config.options }, { logger: this.logger });
+            this.apiMode = 'ipc';
         } else {
-            throw new Error('Config must include token, applicationdId, or both');
+            throw new Error('Config must include token, applicationId, or both');
         }
-        this.supportsNowPlaying = true;
-        this.nowPlayingMaxThreshold = nowPlayingUpdateByPlayDuration;
-        this.nowPlayingMinThreshold = (_) => 5;
-    }
 
-    formatPlayObj = (obj: any, options: FormatPlayObjectOptions = {}) => obj;
-
-    protected async doBuildInitData(): Promise<true | string | undefined> {
-        const {
-            data: {
-                token,
-                artwork = false
-            } = {}
-        } = this.config;
-        // if (token === undefined) {
-        //     throw new Error('Must provide a user token');
-        // }
         if(typeof artwork === 'boolean') {
             this.logger.verbose(`Artwork: ${artwork ? 'Allow any non-known domains with HTTPS' : 'Allow no non-known domains'}`);
         } else if(artwork === 'string') {
             this.logger.verbose(`Artwork: Allow non-known domains with HTTPS containing: ${artwork.join(', ')}`);
         }
         this.logger.verbose(`Artwork Fallback Url: ${this.config.data.artworkDefaultUrl}`);
-        this.logger.verbose(`Allow override statuses: ${this.config.data.statusOverrideAllow.join(', ')}`);
-        this.logger.verbose(`Allow override activity types: ${this.config.data.activitiesOverrideAllow.join(', ')}`);
-        this.logger.verbose(`Disallow override activity names: ${this.config.data.applicationsOverrideDisallow.join(', ')}`);
+
         if(this.api instanceof DiscordWSClient) {
             await this.api.fetchGatewayUrl();
-            await this.api.initClient();
-        } else {
-            await this.api.initClient();
         }
+
+        await this.api.initClient();
         return true;
     }
 
