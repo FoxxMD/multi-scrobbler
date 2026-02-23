@@ -1,7 +1,7 @@
 import { childLogger, Logger } from "@foxxmd/logging";
 import { WS } from 'iso-websocket'
-import { DiscordClientData, DiscordData, DiscordStrongData, StatusType, ActivityType as MSActivityType, ActivityTypes } from "../../infrastructure/config/client/discord.js";
-import { _DataPayload, _NonDispatchPayload, ActivityType, APIUser, GatewayActivity, GatewayActivityButton, GatewayActivityUpdateData, GatewayCloseCodes, GatewayDispatchEvents, GatewayHeartbeatRequest, GatewayHelloData, GatewayIdentify, GatewayIdentifyData, GatewayInvalidSessionData, GatewayOpcodes, GatewayPresenceUpdateData, GatewayReadyDispatchData, GatewayResumeData, GatewayUpdatePresence, PresenceUpdateStatus } from "discord.js";
+import { DiscordClientData, DiscordData, DiscordStrongData, StatusType, ActivityType as MSActivityType, ActivityTypes, DiscordWSData, ActivityData } from "../../infrastructure/config/client/discord.js";
+import { _DataPayload, _NonDispatchPayload, ActivityType, APIUser, GatewayActivity, GatewayActivityAssets, GatewayActivityButton, GatewayActivityUpdateData, GatewayCloseCodes, GatewayDispatchEvents, GatewayHeartbeatRequest, GatewayHelloData, GatewayIdentify, GatewayIdentifyData, GatewayInvalidSessionData, GatewayOpcodes, GatewayPresenceUpdateData, GatewayReadyDispatchData, GatewayResumeData, GatewayUpdatePresence, PresenceUpdateStatus } from "discord.js";
 import { isDebugMode, parseBool, removeUndefinedKeys, sleep } from "../../../utils.js";
 import pEvent from 'p-event';
 import EventEmitter from "events";
@@ -20,6 +20,8 @@ import { urlToMusicService } from "../ListenbrainzApiClient.js";
 import { urlContainsKnownMediaDomain } from "../../../utils/RequestUtils.js";
 import { CoverArtApiClient } from "../musicbrainz/CoverArtApiClient.js";
 import { formatWebsocketClose, isCloseEvent, isErrorEvent, wsReadyStateToStr } from "../../../utils/NetworkUtils.js";
+import { RestType } from "ts-json-schema-generator";
+import { playStateToActivityData } from "./DiscordUtils.js";
 
 const ARTWORK_PLACEHOLDER = 'https://raw.githubusercontent.com/FoxxMD/multi-scrobbler/master/assets/default-artwork.png';
 const MS_ART = 'https://raw.githubusercontent.com/FoxxMD/multi-scrobbler/master/assets/icon.png';
@@ -38,7 +40,7 @@ const API_GATEWAY_ENDPOINT = 'https://discord.com/api/gateway';
  */
 export class DiscordWSClient extends AbstractApiClient {
 
-    declare config: DiscordStrongData;
+    declare config: DiscordWSData;
 
     heartbeatInterval: number
     // used for debugging/troubleshooting weird interval speed up
@@ -82,7 +84,10 @@ export class DiscordWSClient extends AbstractApiClient {
     artFailCount = 0;
 
     constructor(name: any, config: DiscordStrongData, options: AbstractApiOptions) {
-        super('Discord', name, config, options);
+        if(config.token !== undefined) {
+            throw new Error('token must be defined');
+        }
+        super('WS', name, config as DiscordWSData, options);
         //const gatewaySeq =  `Gateway${this.sequence !== undefined ? ` Seq ${this.sequence}` : ''}`;
         this.logger = childLogger(options.logger, [() => this.gatewaySeqLabel()]);
         this.gatewayMsgLogger = childLogger(this.logger, 'Received Message');
@@ -652,7 +657,8 @@ export class DiscordWSClient extends AbstractApiClient {
     }
 
     playStateToActivity = async (data: SourceData): Promise<GatewayActivity> => {
-        const { activity, artUrl } = playStateToActivityData(data);
+        const {activity: msActivity, artUrl} = playStateToActivityData(data)
+        const activity = activityDataToGatewayActivity(msActivity);
         const {
             artwork = false
         } = this.config;
@@ -918,7 +924,7 @@ interface UserSession {
     activities: GatewayActivity[]
 }
 
-export const playStateToActivityData = (data: SourceData, opts: { useArt?: boolean } = {}): { activity: GatewayActivity, artUrl?: string } => {
+export const oldplayStateToActivityData = (data: SourceData, opts: { useArt?: boolean } = {}): { activity: GatewayActivity, artUrl?: string } => {
     // unix timestamps in milliseconds
     let startTime: number,
         endTime: number;
@@ -1077,14 +1083,16 @@ export const configToStrong = (data: DiscordData): DiscordStrongData => {
             artworkDefaultUrl,
             statusOverrideAllow = ['online','idle','dnd'],
             activitiesOverrideAllow = ['custom'],
-            applicationsOverrideDisallow = []
+            applicationsOverrideDisallow = [],
+            ipcLocations
         } = data;
 
         const strongConfig: DiscordStrongData = {
             token,
             applicationId,
             applicationsOverrideDisallow: parseArrayFromMaybeString(applicationsOverrideDisallow),
-            artworkDefaultUrl
+            artworkDefaultUrl,
+            ipcLocations
         }
 
         if (typeof artwork === 'boolean' || Array.isArray(artwork)) {
@@ -1108,4 +1116,44 @@ export const configToStrong = (data: DiscordData): DiscordStrongData => {
         }
 
         return strongConfig;
+}
+
+export const activityDataToGatewayActivity = (data: ActivityData): GatewayActivity => {
+    const {
+        statusDisplayType,
+        activityType,
+        detailsUrl,
+        stateUrl,
+        createdAt,
+        assets: {
+            largeImage,
+            largeText,
+            largeUrl,
+            smallImage,
+            smallText,
+            smallUrl,
+        } = {},
+        ...rest
+    } = data;
+
+    const assets = removeUndefinedKeys<GatewayActivityAssets>({
+        large_image: largeImage,
+        large_text: largeText,
+        large_url: largeUrl,
+        small_image: smallImage,
+        small_text: smallText,
+        small_url: smallUrl
+    });
+
+    const activity: Omit<GatewayActivity, 'id'> = removeUndefinedKeys<Omit<GatewayActivity, 'id'>>({
+        status_display_type: statusDisplayType,
+        type: activityType,
+        details_url: detailsUrl,
+        state_url: stateUrl,
+        created_at: createdAt,
+        assets,
+        ...rest,
+    }
+    );
+    return activity as GatewayActivity;
 }

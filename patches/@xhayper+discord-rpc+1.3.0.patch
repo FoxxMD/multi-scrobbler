@@ -1,0 +1,54 @@
+diff --git a/node_modules/@xhayper/discord-rpc/dist/transport/IPC.d.ts b/node_modules/@xhayper/discord-rpc/dist/transport/IPC.d.ts
+index 6da3fb1..796344d 100644
+--- a/node_modules/@xhayper/discord-rpc/dist/transport/IPC.d.ts
++++ b/node_modules/@xhayper/discord-rpc/dist/transport/IPC.d.ts
+@@ -6,7 +6,7 @@ export declare enum IPC_OPCODE {
+     PING = 3,
+     PONG = 4
+ }
+-export type FormatFunction = (id: number) => string;
++export type FormatFunction = (id: number) => string | [number, string];
+ export type PathData = {
+     platform: NodeJS.Platform[];
+     format: FormatFunction;
+diff --git a/node_modules/@xhayper/discord-rpc/dist/transport/IPC.js b/node_modules/@xhayper/discord-rpc/dist/transport/IPC.js
+index 2a9a7b3..70b2b16 100644
+--- a/node_modules/@xhayper/discord-rpc/dist/transport/IPC.js
++++ b/node_modules/@xhayper/discord-rpc/dist/transport/IPC.js
+@@ -59,7 +59,9 @@ const createSocket = async (path) => {
+             socket.removeListener("error", onError);
+             resolve(socket);
+         };
+-        const socket = node_net_1.default.createConnection(path);
++        let socket;
++        if (typeof path === "string") socket = node_net_1.default.createConnection(path);
++        else socket = node_net_1.default.createConnection(path[0], path[1]);
+         socket.once("connect", onConnect);
+         socket.once("error", onError);
+     });
+@@ -100,14 +102,19 @@ class IPCTransport extends Transport_1.Transport {
+                 else
+                     for (let i = 0; i < 10; i++)
+                         pipeIdList.push(i);
+-                for (const pipeId of pipeIdList) {
+-                    const socketPath = pat.format(pipeId);
+-                    if (process.platform !== "win32" && !node_fs_1.default.existsSync(socketPath))
+-                        continue;
+-                    useablePath.push(socketPath);
++                const test = pat.format(pipeId);
++                if(Array.isArray(test)) {
++                    useablePath.push(test);
++                } else {
++                    for (const pipeId of pipeIdList) {
++                        const socketPath = pat.format(pipeId);
++                        if (process.platform !== "win32" && typeof socketPath === 'string' && !node_fs_1.default.existsSync(socketPath))
++                            continue;
++                        useablePath.push(socketPath);
++                    }
+                 }
+             }
+-            this.client.emit("debug", `CLIENT | Found ${useablePath.length} Discord client path;\n${useablePath.join("\n")}`);
++            this.client.emit("debug", `CLIENT | Found ${useablePath.length} Discord client path;\n${useablePath.map(x => Array.isArray(x) ? `${x[1]}:${x[0]}` : x).join("\n")}`);
+             if (useablePath.length < 0)
+                 return reject(new RPCError_1.RPCError(Transport_1.CUSTOM_RPC_ERROR_CODE.COULD_NOT_FIND_CLIENT, "Unable to find any Discord client"));
+             for (const path of useablePath) {

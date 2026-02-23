@@ -1,13 +1,14 @@
 import { CommonClientConfig, CommonClientData } from "./index.js"
 
 export interface DiscordData {
-    token: string
+    token?: string
     applicationId?: string
     artwork?: boolean | string | string[]
     artworkDefaultUrl?: string
     statusOverrideAllow?: string | StatusType[]
     activitiesOverrideAllow?: boolean | string | ActivityType[]
     applicationsOverrideDisallow?: string | string[]
+    ipcLocations?: string[]
 }
 
 export interface DiscordClientData extends DiscordData, CommonClientData {}
@@ -36,4 +37,43 @@ export interface DiscordStrongData extends DiscordData {
     statusOverrideAllow?: StatusType[]
     activitiesOverrideAllow?: ActivityType[]
     applicationsOverrideDisallow?: string[]
+}
+
+export interface DiscordWSData extends DiscordStrongData {
+    token: string
+}
+
+export interface DiscordIPCData extends Omit<DiscordStrongData, 'ipcLocations'> {
+    applicationId: string
+    ipcLocations: (string | [number, string])[]
+}
+
+export interface ActivityAssets {
+    largeImage?: string
+    largeText?: string
+    largeUrl?: string        
+    smallImage?: string
+    smallText?: string
+    smallUrl?: string
+}
+
+export interface ActivityTimestamps {
+    start?: number
+    end?: number
+}
+
+export interface ActivityData {
+    name: string
+    details?: string
+    detailsUrl?: string
+    state?: string
+    stateUrl?: string
+
+    activityType?: 0 | 1 | 2 | 3 | 4 | 5
+    statusDisplayType?: 0 | 1 | 2
+
+    assets?: ActivityAssets
+    timestamps?: ActivityTimestamps
+
+    createdAt: number
 }
