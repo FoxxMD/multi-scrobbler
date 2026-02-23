@@ -16,7 +16,7 @@ export const createHeartbeatClientsTask = (clients: ScrobbleClients, parentLogge
                 .process(async (client) => {
                     if(!client.isReady()) {
                         if(!client.canAuthUnattended()) {
-                            client.logger.warn({label: 'Heartbeat'}, 'Client is not ready but will not try to initialize because auth state is not good and cannot be correct unattended.')
+                            client.logger.warn({labels: 'Heartbeat'}, 'Client is not ready but will not try to initialize because auth state is not good and cannot be correct unattended.')
                             return 0;
                         }
                         try {
@@ -34,7 +34,7 @@ export const createHeartbeatClientsTask = (clients: ScrobbleClients, parentLogge
 
                     await client.processDeadLetterQueue();
                     if(!client.scrobbling) {
-                        client.logger.info({label: 'Heartbeat'}, 'Should be processing scrobbles! Attempting to restart scrobbling...');
+                        client.logger.info({labels: 'Heartbeat'}, 'Should be processing scrobbles! Attempting to restart scrobbling...');
                         client.initScrobbleMonitoring();
                         return 1;
                     }
