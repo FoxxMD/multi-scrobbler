@@ -1006,6 +1006,10 @@ ${closestMatch.breakdowns.join('\n')}`, {leaf: ['Dupe Check']});
     }
 
     queuePlayingNow = async (data: SourcePlayerObj, source: SourceIdentifier) => {
+        if(!this.isReady()) {
+            this.logger.debug('Not queueing play because scrobbler is not ready');
+            return;
+        }
         const sourceId = `${source.name}-${source.type}`;
         if(data.play !== undefined) {
             const transformed = await this.transformPlay(data.play, TRANSFORM_HOOK.preCompare);
