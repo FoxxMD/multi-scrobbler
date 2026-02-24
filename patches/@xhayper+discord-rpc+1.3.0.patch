@@ -12,10 +12,10 @@ index 6da3fb1..796344d 100644
      platform: NodeJS.Platform[];
      format: FormatFunction;
 diff --git a/node_modules/@xhayper/discord-rpc/dist/transport/IPC.js b/node_modules/@xhayper/discord-rpc/dist/transport/IPC.js
-index 2a9a7b3..70b2b16 100644
+index 2a9a7b3..ee27d82 100644
 --- a/node_modules/@xhayper/discord-rpc/dist/transport/IPC.js
 +++ b/node_modules/@xhayper/discord-rpc/dist/transport/IPC.js
-@@ -59,7 +59,9 @@ const createSocket = async (path) => {
+@@ -59,9 +59,12 @@ const createSocket = async (path) => {
              socket.removeListener("error", onError);
              resolve(socket);
          };
@@ -25,8 +25,11 @@ index 2a9a7b3..70b2b16 100644
 +        else socket = node_net_1.default.createConnection(path[0], path[1]);
          socket.once("connect", onConnect);
          socket.once("error", onError);
++        socket.setKeepAlive(true, 10000);
      });
-@@ -100,14 +102,19 @@ class IPCTransport extends Transport_1.Transport {
+ };
+ class IPCTransport extends Transport_1.Transport {
+@@ -100,14 +103,19 @@ class IPCTransport extends Transport_1.Transport {
                  else
                      for (let i = 0; i < 10; i++)
                          pipeIdList.push(i);
@@ -52,3 +55,21 @@ index 2a9a7b3..70b2b16 100644
              if (useablePath.length < 0)
                  return reject(new RPCError_1.RPCError(Transport_1.CUSTOM_RPC_ERROR_CODE.COULD_NOT_FIND_CLIENT, "Unable to find any Discord client"));
              for (const path of useablePath) {
+@@ -134,11 +142,12 @@ class IPCTransport extends Transport_1.Transport {
+                 const chunk = this.socket?.read();
+                 if (!chunk)
+                     break;
+-                this.client.emit("debug", `SERVER => CLIENT | ${chunk
+-                    .toString("hex")
+-                    .match(/.{1,2}/g)
+-                    ?.join(" ")
+-                    .toUpperCase()}`);
++                // this.client.emit("debug", `SERVER => CLIENT | ${chunk
++                //     .toString("hex")
++                //     .match(/.{1,2}/g)
++                //     ?.join(" ")
++                //     .toUpperCase()}`);
++                this.client.emit("debug", `SERVER => CLIENT | ${chunk.toString()}`);
+                 data = Buffer.concat([data, chunk]);
+             } while (true);
+             if (data.length < 8) {
