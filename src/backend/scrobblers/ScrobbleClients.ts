@@ -305,8 +305,7 @@ export default class ScrobbleClients {
                         ipcLocations: process.env.DISCORD_IPC_LOCATIONS,
                         artworkDefaultUrl: process.env.DISCORD_ARTWORK_DEFAULT_URL,
                         statusOverrideAllow: process.env.DISCORD_STATUS_OVERRIDE_ALLOW,
-                        activitiesOverrideAllow: process.env.DISCORD_ACTIVITIES_OVERRIDE_ALLOW,
-                        applicationsOverrideDisallow: process.env.DISCORD_APPNAME_OVERRIDE_DISALLOW
+                        listeningActivityAllow: process.env.DISCORD_LISTENING_ACTIVITY_ALLOW
                     }
                     if (!Object.values(discord).every(x => x === undefined)) {
                         configs.push({

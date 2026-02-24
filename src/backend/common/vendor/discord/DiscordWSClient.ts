@@ -1,8 +1,8 @@
 import { childLogger, Logger } from "@foxxmd/logging";
 import { WS } from 'iso-websocket'
-import { DiscordData, DiscordStrongData, StatusType, ActivityType as MSActivityType, ActivityTypes, DiscordWSData, ActivityData } from "../../infrastructure/config/client/discord.js";
+import { DiscordStrongData, StatusType, DiscordWSData, ActivityData, ACTIVITY_TYPE } from "../../infrastructure/config/client/discord.js";
 import { _DataPayload, _NonDispatchPayload, APIUser, GatewayActivity, GatewayActivityAssets, GatewayCloseCodes, GatewayDispatchEvents, GatewayHeartbeatRequest, GatewayHelloData, GatewayIdentify, GatewayInvalidSessionData, GatewayOpcodes, GatewayPresenceUpdateData, GatewayReadyDispatchData, GatewayResumeData, GatewayUpdatePresence, PresenceUpdateStatus } from "discord.js";
-import { isDebugMode, parseBool, removeUndefinedKeys, sleep } from "../../../utils.js";
+import { isDebugMode, removeUndefinedKeys, sleep } from "../../../utils.js";
 import pEvent from 'p-event';
 import EventEmitter from "events";
 import { randomInt } from "crypto";
@@ -10,11 +10,9 @@ import request from 'superagent';
 import { AbstractApiOptions,SourceData } from "../../infrastructure/Atomic.js";
 import { isPlayObject } from "../../../../core/Atomic.js";
 import dayjs, { Dayjs } from "dayjs";
-import { parseArrayFromMaybeString, parseBoolOrArrayFromMaybeString } from "../../../utils/StringUtils.js";
 import { getRoot } from "../../../ioc.js";
-import { isSuperAgentResponseError } from "../../errors/ErrorUtils.js";
 import { formatWebsocketClose, isCloseEvent, isErrorEvent, wsReadyStateToStr } from "../../../utils/NetworkUtils.js";
-import { playStateToActivityData } from "./DiscordUtils.js";
+import { activityIdToStr, opcodeToFriendly, playStateToActivityData } from "./DiscordUtils.js";
 import { DiscordAbstractClient } from "./DiscordAbstractClient.js";
 
 const API_GATEWAY_ENDPOINT = 'https://discord.com/api/gateway';
@@ -757,14 +755,11 @@ export class DiscordWSClient extends DiscordAbstractClient {
 
     presenceIsAllowedByActivity = (manualActivities?: GatewayActivity[]): [boolean, string?] => {
         const activities = manualActivities ?? this.lastActivities;
-        if (activities.length !== 0) {
-            const disallowedActivityType = activities.find(x => !this.config.activitiesOverrideAllow.includes(activityIdToStr(x.type)));
-            if (disallowedActivityType !== undefined) {
-                return [false, `a session has an activity type MS is not allowed to override: ${activityIdToStr(disallowedActivityType.type)}`];
-            }
-            const disallowedActivityName = activities.find(x => !this.config.applicationsOverrideDisallow.some(y => x.name.toLocaleLowerCase().includes(y.toLocaleLowerCase())));
-            if (disallowedActivityType !== undefined) {
-                return [false, `a session has an activity name MS is not allowed to override: ${disallowedActivityName.name}`];
+        const listeningActivities = activities.filter(x => x.type === ACTIVITY_TYPE.Listening);
+        if (listeningActivities.length !== 0) {
+            const disallowedActivityName = activities.find(x => !this.config.listeningActivityAllow.some(y => x.name.toLocaleLowerCase().includes(y.toLocaleLowerCase())));
+            if (disallowedActivityName !== undefined) {
+                return [false, `a session has a listening activity MS is not allowed to broadcast at the same time as: ${disallowedActivityName.name}`];
             }
         }
 
@@ -786,31 +781,6 @@ export class DiscordWSClient extends DiscordAbstractClient {
     }
 }
 
-const opcodeToFriendly = (op: number) => {
-    switch (op) {
-        case GatewayOpcodes.Hello:
-            return 'Hello';
-        case GatewayOpcodes.HeartbeatAck:
-            return 'HeartbeatAck'
-        case GatewayOpcodes.Heartbeat:
-            return 'Heartbeat';
-        case GatewayOpcodes.Dispatch:
-            return 'Dispatch';
-        case GatewayOpcodes.InvalidSession:
-            return 'InvalidSession';
-        case GatewayOpcodes.Reconnect:
-            return 'Reconnect';
-        case GatewayOpcodes.Resume:
-            return 'Resume';
-        case GatewayOpcodes.Identify:
-            return 'Identify';
-        case GatewayOpcodes.PresenceUpdate:
-            return 'PresenceUpdate'
-        default:
-            return op;
-    }
-}
-
 interface UserSession {
     status: 'online' | 'invisible' | 'dnd' | 'idle'
     client_info: {
@@ -821,117 +791,7 @@ interface UserSession {
     processed_at_timestamp?: number
     active?: boolean
     session_id: string
-    // activities: {
-    //     state: string
-    //     created_at: number
-    //     type: ActivityType
-    //     name: string
-    // }[]
     activities: GatewayActivity[]
-}
-
-export const statusStringToType = (str: string): StatusType => {
-    switch(str.trim().toLocaleLowerCase()) {
-        case 'online':
-            return PresenceUpdateStatus.Online;
-        case 'idle':
-            return PresenceUpdateStatus.Idle;
-        case 'dnd':
-            return PresenceUpdateStatus.DoNotDisturb;
-        case 'invisible':
-            return PresenceUpdateStatus.Invisible;
-        default:
-            throw new Error(`Not a valid status type. Must be one of: online | idle | dnd | invisible`);
-    }
-}
-
-export const activityStringToType = (str: string): MSActivityType => {
-    switch(str.trim().toLocaleLowerCase()) {
-        case 'playing':
-            return 'playing';
-        case 'streaming':
-            return 'streaming';
-        case 'listening':
-            return 'listening';
-        case 'watching':
-            return 'watching';
-        case 'custom':
-            return 'custom';
-        case 'competing':
-            return 'competing';
-        default:
-            throw new Error(`Not a valid activity type. Must be one of: playing | streaming | listening | watching | custom | competing`);
-    }
-}
-
-export const activityIdToStr = (id: number): MSActivityType => {
-    switch(id) {
-        case 0:
-            return 'playing';
-        case 1:
-            return 'streaming';
-        case 2:
-            return 'listening';
-        case 3:
-            return 'watching';
-        case 4:
-            return 'custom';
-        case 5:
-            return 'competing';
-        default:
-            throw new Error(`Not a valid activity type. Must be one of: playing | streaming | listening | watching | custom | competing`);
-    }
-}
-
-export const configToStrong = (data: DiscordData): DiscordStrongData => {
-            const {
-            token,
-            applicationId,
-            artwork,
-            artworkDefaultUrl,
-            statusOverrideAllow = ['online','idle','dnd'],
-            activitiesOverrideAllow = ['custom'],
-            applicationsOverrideDisallow = [],
-            ipcLocations
-        } = data;
-
-        const strongConfig: DiscordStrongData = {
-            token,
-            applicationId,
-            applicationsOverrideDisallow: parseArrayFromMaybeString(applicationsOverrideDisallow),
-            artworkDefaultUrl,
-        }
-
-        if (typeof artwork === 'boolean' || Array.isArray(artwork)) {
-            strongConfig.artwork = artwork;
-        } else if (typeof artwork === 'string') {
-            if (['true', 'false'].includes(artwork.toLocaleLowerCase())) {
-                strongConfig.artwork = parseBool(artwork)
-            } else {
-                strongConfig.artwork = parseArrayFromMaybeString(artwork)
-            }
-        }
-
-        const saRaw = parseArrayFromMaybeString(statusOverrideAllow);
-        strongConfig.statusOverrideAllow = saRaw.map(statusStringToType);
-
-        const aaRaw = parseBoolOrArrayFromMaybeString(activitiesOverrideAllow);
-        if(typeof aaRaw === 'boolean') {
-            strongConfig.activitiesOverrideAllow = aaRaw ? ActivityTypes : [];
-        } else {
-            strongConfig.activitiesOverrideAllow = aaRaw.map(activityStringToType);
-        }
-
-        if(ipcLocations !== undefined) {
-            if(typeof ipcLocations === 'string') {
-                const ipcRaw = parseArrayFromMaybeString(ipcLocations);
-                strongConfig.ipcLocations = ipcRaw;
-            } else {
-                strongConfig.ipcLocations = ipcLocations;
-            }
-        }
-        
-        return strongConfig;
 }
 
 export const activityDataToGatewayActivity = (data: ActivityData): GatewayActivity => {

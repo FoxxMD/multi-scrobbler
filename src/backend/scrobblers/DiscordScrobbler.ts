@@ -6,7 +6,8 @@ import { Notifiers } from "../notifier/Notifiers.js";
 
 import AbstractScrobbleClient, { nowPlayingUpdateByPlayDuration } from "./AbstractScrobbleClient.js";
 import { DiscordClientConfig, DiscordStrongData } from "../common/infrastructure/config/client/discord.js";
-import { configToStrong, DiscordWSClient } from "../common/vendor/discord/DiscordWSClient.js";
+import { DiscordWSClient } from "../common/vendor/discord/DiscordWSClient.js";
+import { configToStrong } from "../common/vendor/discord/DiscordUtils.js";
 import { DiscordIPCClient } from "../common/vendor/discord/DiscordIPCClient.js";
 import { playStateToActivityData } from "../common/vendor/discord/DiscordUtils.js";
 
@@ -43,8 +44,7 @@ export default class DiscordScrobbler extends AbstractScrobbleClient {
             this.apiMode = 'ws';
 
             this.logger.verbose(`Allow override statuses: ${this.config.data.statusOverrideAllow.join(', ')}`);
-            this.logger.verbose(`Allow override activity types: ${this.config.data.activitiesOverrideAllow.join(', ')}`);
-            this.logger.verbose(`Disallow override activity names: ${this.config.data.applicationsOverrideDisallow.join(', ')}`);
+            this.logger.verbose(`Allow broadcasting during other listening activities: ${this.config.data.listeningActivityAllow.join(', ')}`);
             this.api = new DiscordWSClient(this.name, { ...this.config.data, ...this.config.options }, { logger: this.logger });
             this.api.emitter.on('stopped', async (e) => {
                 if(e.authFailure) {

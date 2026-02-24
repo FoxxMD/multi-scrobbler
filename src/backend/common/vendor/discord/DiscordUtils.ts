@@ -1,11 +1,12 @@
 import dayjs from "dayjs";
 import { isPlayObject, PlayObject } from "../../../../core/Atomic.js";
 import { asPlayerStateData, SourceData } from "../../infrastructure/Atomic.js";
-import { GatewayActivity } from "discord.js";
+import { GatewayActivity, GatewayOpcodes, PresenceUpdateStatus } from "discord.js";
 import { capitalize } from "../../../../core/StringUtils.js";
 import { urlToMusicService } from "../ListenbrainzApiClient.js";
-import { ActivityData } from "../../infrastructure/config/client/discord.js";
-import { removeUndefinedKeys } from "../../../utils.js";
+import { ACTIVITY_TYPE, ActivityData, ActivityTypes, DiscordData, DiscordStrongData, ActivityTypeString as MSActivityType, StatusType } from "../../infrastructure/config/client/discord.js";
+import { parseBool, removeUndefinedKeys } from "../../../utils.js";
+import { parseArrayFromMaybeString, parseBoolOrArrayFromMaybeString } from "../../../utils/StringUtils.js";
 
 export const playStateToActivityData = (data: SourceData, opts: { useArt?: boolean } = {}): { activity: ActivityData, artUrl?: string } => {
     // unix timestamps in milliseconds
@@ -104,4 +105,125 @@ export const playStateToActivityData = (data: SourceData, opts: { useArt?: boole
     const artUrl = play.meta?.art?.album ?? play.meta?.art?.track ?? play.meta?.art?.artist;
 
     return { activity, artUrl };
-}
+};
+export const configToStrong = (data: DiscordData): DiscordStrongData => {
+    const {
+        token, 
+        applicationId, 
+        artwork, 
+        artworkDefaultUrl, 
+        statusOverrideAllow = ['online', 'idle', 'dnd'], 
+        listeningActivityAllow = [], 
+        ipcLocations
+    } = data;
+
+    const strongConfig: DiscordStrongData = {
+        token,
+        applicationId,
+        listeningActivityAllow: parseArrayFromMaybeString(listeningActivityAllow),
+        artworkDefaultUrl,
+    };
+
+    if (typeof artwork === 'boolean' || Array.isArray(artwork)) {
+        strongConfig.artwork = artwork;
+    } else if (typeof artwork === 'string') {
+        if (['true', 'false'].includes(artwork.toLocaleLowerCase())) {
+            strongConfig.artwork = parseBool(artwork);
+        } else {
+            strongConfig.artwork = parseArrayFromMaybeString(artwork);
+        }
+    }
+
+    const saRaw = parseArrayFromMaybeString(statusOverrideAllow);
+    strongConfig.statusOverrideAllow = saRaw.map(statusStringToType);
+
+    if (ipcLocations !== undefined) {
+        if (typeof ipcLocations === 'string') {
+            const ipcRaw = parseArrayFromMaybeString(ipcLocations);
+            strongConfig.ipcLocations = ipcRaw;
+        } else {
+            strongConfig.ipcLocations = ipcLocations;
+        }
+    }
+
+    return strongConfig;
+};
+
+export const activityIdToStr = (id: number): MSActivityType => {
+    switch (id) {
+        case ACTIVITY_TYPE.Playing:
+            return 'playing';
+        case ACTIVITY_TYPE.Streaming:
+            return 'streaming';
+        case ACTIVITY_TYPE.Listening:
+            return 'listening';
+        case ACTIVITY_TYPE.Watching:
+            return 'watching';
+        case ACTIVITY_TYPE.Custom:
+            return 'custom';
+        case ACTIVITY_TYPE.Competing:
+            return 'competing';
+        default:
+            throw new Error(`Not a valid activity type. Must be one of: playing | streaming | listening | watching | custom | competing`);
+    }
+};
+
+export const activityStringToType = (str: string): MSActivityType => {
+    switch (str.trim().toLocaleLowerCase()) {
+        case 'playing':
+            return 'playing';
+        case 'streaming':
+            return 'streaming';
+        case 'listening':
+            return 'listening';
+        case 'watching':
+            return 'watching';
+        case 'custom':
+            return 'custom';
+        case 'competing':
+            return 'competing';
+        default:
+            throw new Error(`Not a valid activity type. Must be one of: playing | streaming | listening | watching | custom | competing`);
+    }
+};
+
+export const statusStringToType = (str: string): StatusType => {
+    switch (str.trim().toLocaleLowerCase()) {
+        case 'online':
+            return PresenceUpdateStatus.Online;
+        case 'idle':
+            return PresenceUpdateStatus.Idle;
+        case 'dnd':
+            return PresenceUpdateStatus.DoNotDisturb;
+        case 'invisible':
+            return PresenceUpdateStatus.Invisible;
+        default:
+            throw new Error(`Not a valid status type. Must be one of: online | idle | dnd | invisible`);
+    }
+};
+
+export const opcodeToFriendly = (op: number) => {
+    switch (op) {
+        case GatewayOpcodes.Hello:
+            return 'Hello';
+        case GatewayOpcodes.HeartbeatAck:
+            return 'HeartbeatAck';
+        case GatewayOpcodes.Heartbeat:
+            return 'Heartbeat';
+        case GatewayOpcodes.Dispatch:
+            return 'Dispatch';
+        case GatewayOpcodes.InvalidSession:
+            return 'InvalidSession';
+        case GatewayOpcodes.Reconnect:
+            return 'Reconnect';
+        case GatewayOpcodes.Resume:
+            return 'Resume';
+        case GatewayOpcodes.Identify:
+            return 'Identify';
+        case GatewayOpcodes.PresenceUpdate:
+            return 'PresenceUpdate';
+        default:
+            return op;
+    }
+};
+

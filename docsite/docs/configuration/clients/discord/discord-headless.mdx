@@ -66,7 +66,7 @@ When finding instructions for obtaining this token only run commands, or follow 
 
 ### Configure When Presence Is Used
 
-MS uses several signals from your "real" Discord sessions to determine if it should update presence. The default configuration is **extremely** conservative to ensure that MS does not conflict with other apps using presence. Additionally, it only updates if a "real" user device is active on discord.
+MS uses several signals from your "real" Discord sessions to determine if it should update presence. The default configuration is conservative to ensure that MS does not conflict with other apps using presence. Additionally, it only updates if a "real" user device is active on discord.
 
 :::tip[TLDR]
 
@@ -74,7 +74,7 @@ Without any additional configuration, MS will only update presence if:
 
 * you have discord open on a real device
 * your status is either: online, idle, or dnd (not invisible)
-* no other apps are broadcasting presence (no other listening, playing, competing, etc... activities on your profile)
+* no other apps are broadcasting listening activities (listening to spotify, etc...)
 
 :::
 
@@ -115,83 +115,30 @@ DISCORD_STATUS_OVERRIDE_ALLOW=online,idle
 
 </details>
 
-#### Activity Type
+#### Other Listening Activities
 
-Configure the activity types of **other** activities that MS is allowed to broadcast at the same time as. If this setting is not defined MS will only update if no other activities or  only `custom`.
-
-Note: Discord shows both `custom` and other non `custom` activities at the same time. All other activities are mutually exclusive.
-
-Allowed Values:
-
-* `playing` `streaming` `listening` `custom` `competing`
-* `true` => allow presence during *any*
-* `false` => allow presence during *none*
+Without any additional configuration, MS will not set Rich Presence if **other** apps are broadcasting **listening** activities EX "Listening to Spotify".
 
 <details>
 
-<summary>Example</summary>
+<summary>What about other activity types?</summary>
 
-You want to allow MS to update presence when you are normally playing any game but not when any other activity (streaming, listening, competing) is happening.
+Discord uses an undocumented activity type priority to determine what activity is shown "first" for your profile. The Listening activity type has the *lowest priority*.
 
-In File/AIO:
+This means that if you start any other type of activity (streaming, watching, competing, etc...) it will take precedence over MS's listening activity.
 
-```json
-[
-    {
-      "name": "MS",
-      "enable": true,
-      "data": {
-        "token": "Ma7XBvzRERK3gQdkX4dkb3OQ.6aaGmJ.rvFiiVrzG4VXHHL3LyhZYhpWdG3Ph_if9aKz5E",
-        "applicationId": "8190211179716453570",
-        "activitiesOverrideAllow": ["playing", "custom"]
-      }
-    }
-  ]
-```
-
-In ENV:
-
-```
-DISCORD_ACTIVITIES_OVERRIDE_ALLOW=playing,custom
-```
-
-___ 
-
-You **do not** want to allow MS to update presence if **any** other activity is occurring, including `custom`.
-
-```json
-[
-    {
-      "name": "MS",
-      "enable": true,
-      "data": {
-        "token": "Ma7XBvzRERK3gQdkX4dkb3OQ.6aaGmJ.rvFiiVrzG4VXHHL3LyhZYhpWdG3Ph_if9aKz5E",
-        "applicationId": "8190211179716453570",
-        "activitiesOverrideAllow": false
-      }
-    }
-  ]
-```
-
-In ENV:
-
-```
-DISCORD_ACTIVITIES_OVERRIDE_ALLOW=false
-```
+Your listening activity will still be visible by clicking into your full profile.
 
 </details>
 
-#### Activity Name
 
-Configure the names of **other** activities that MS is **not** allowed to broadcast at the same time as.
-
-It is not required to use [Activity Type](#activity-type) with this setting, but it is useful.
+Configure the names of **other** listening activities that MS **is allowed** to broadcast at the same time as.
 
 <details>
 
 <summary>Example</summary>
 
-You want to allow MS to update presence when you are normally playing any game but not when any other activity (streaming, listening, competing) is happening. You also do not want to allow MS to update presence if the game is fortnite.
+You want to allow MS to update presence even if Spotify is also broadcasting a listening activity.
 
 In File/AIO:
 
@@ -203,8 +150,7 @@ In File/AIO:
       "data": {
         "token": "Ma7XBvzRERK3gQdkX4dkb3OQ.6aaGmJ.rvFiiVrzG4VXHHL3LyhZYhpWdG3Ph_if9aKz5E",
         "applicationId": "8190211179716453570",
-        "activitiesOverrideAllow": ["playing", "custom"],
-        "applicationsOverrideDisallow": ["fortnite"]
+        "listeningActivityAllow": ["spotify"]
       }
     }
   ]
@@ -213,8 +159,7 @@ In File/AIO:
 In ENV:
 
 ```
-DISCORD_ACTIVITIES_OVERRIDE_ALLOW=playing,custom
-DISCORD_APPNAME_OVERRIDE_DISALLOW=fortnite
+DISCORD_LISTENING_ACTIVITY_ALLOW=spotify
 ```
 </details>
 
@@ -328,13 +273,12 @@ The order in which multi-scrobbler determines what image to use is the same as t
 ## Configuration
 
 <Config config="DiscordClientConfig" fileContent={JsonConfig} client name="discord">
-        | Environmental Variable              | Required? | Default           | Description                                                                                                      |
-        | :---------------------------------- | --------- | ----------------- | :--------------------------------------------------------------------------------------------------------------- |
-        | `DISCORD_TOKEN`                     | Yes       |                   | User Token acquired from an active Discord sessions                                                              |
-        | `DISCORD_APPLICATION_ID`            | No        |                   | Application ID used to display album art                                                                         |
-        | `DISCORD_ARTWORK`                   | No        |                   | A boolean indicating if external artwork URLs should be used. Or a comma-separated list of allowed domains       |
-        | `DISCORD_ARTWORK_DEFAULT_URL`       | No        |                   | A URL of an image to use as a fallback if the album art URL cannot be used. Or `false` to use discord's default. |
-        | `DISCORD_STATUS_OVERRIDE_ALLOW`     | No        | `online,idle,dnd` | A comma-separated list of statuses are allowed to have presence.                                                 |
-        | `DISCORD_ACTIVITIES_OVERRIDE_ALLOW` | No        | `custom`          | A comma-seperated list of *other* activity types MS can broadcast presence at the same time as.                  |
-        | `DISCORD_APPNAME_OVERRIDE_DISALLOW` | No        |                   | A commera-seperated list of activity names MS is *not* allowed to broadcast presence at the same time as.        |
+        | Environmental Variable             | Required? | Default           | Description                                                                                                       |
+        | :--------------------------------- | --------- | ----------------- | :---------------------------------------------------------------------------------------------------------------- |
+        | `DISCORD_TOKEN`                    | Yes       |                   | User Token acquired from an active Discord sessions                                                               |
+        | `DISCORD_APPLICATION_ID`           | No        |                   | Application ID used to display album art                                                                          |
+        | `DISCORD_ARTWORK`                  | No        |                   | A boolean indicating if external artwork URLs should be used. Or a comma-separated list of allowed domains        |
+        | `DISCORD_ARTWORK_DEFAULT_URL`      | No        |                   | A URL of an image to use as a fallback if the album art URL cannot be used. Or `false` to use discord's default.  |
+        | `DISCORD_STATUS_OVERRIDE_ALLOW`    | No        | `online,idle,dnd` | A comma-separated list of statuses are allowed to have presence.                                                  |
+        | `DISCORD_LISTENING_ACTIVITY_ALLOW` | No        |                   | A commera-seperated list of listening activity names MS **is allowed** to broadcast presence at the same time as. |
 </Config>

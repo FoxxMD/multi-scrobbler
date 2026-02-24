@@ -1,3 +1,4 @@
+import { ActivityType, StatusDisplayType } from "discord.js"
 import { CommonClientConfig, CommonClientData } from "./index.js"
 
 export interface DiscordData {
@@ -6,8 +7,7 @@ export interface DiscordData {
     artwork?: boolean | string | string[]
     artworkDefaultUrl?: string
     statusOverrideAllow?: string | StatusType[]
-    activitiesOverrideAllow?: boolean | string | ActivityType[]
-    applicationsOverrideDisallow?: string | string[]
+    listeningActivityAllow?: string | string[]
     ipcLocations?: string | (string | [number, string])[]
 }
 
@@ -28,15 +28,14 @@ export interface DiscordClientAIOConfig extends DiscordClientConfig {
     type: 'discord'
 }
 
-export type ActivityType = 'playing' | 'streaming' | 'listening' | 'watching' | 'custom' | 'competing';
-export const ActivityTypes: ActivityType[] = ['playing','streaming','listening','watching','custom','competing'];
+export type ActivityTypeString = 'playing' | 'streaming' | 'listening' | 'watching' | 'custom' | 'competing';
+export const ActivityTypes: ActivityTypeString[] = ['playing','streaming','listening','watching','custom','competing'];
 export type StatusType = 'online' | 'idle' | 'dnd' | 'invisible';
 
 export interface DiscordStrongData extends DiscordData {
     artwork?: boolean | string[]
     statusOverrideAllow?: StatusType[]
-    activitiesOverrideAllow?: ActivityType[]
-    applicationsOverrideDisallow?: string[]
+    listeningActivityAllow?: string[]
     ipcLocations?: (string | [number, string])[]
 }
 
@@ -70,14 +69,23 @@ export interface ActivityData {
     state?: string
     stateUrl?: string
 
-    activityType?: 0 | 1 | 2 | 3 | 4 | 5
-    statusDisplayType?: 0 | 1 | 2
+    activityType?: ActivityType
+    statusDisplayType?: StatusDisplayType
 
     assets?: ActivityAssets
     timestamps?: ActivityTimestamps
 
     createdAt: number
 }
+
+export const ACTIVITY_TYPE = {
+    Playing: 0,
+    Streaming: 1,
+    Listening: 2,
+    Watching: 3,
+    Custom: 4,
+    Competing: 5
+} as const satisfies Record<string, ActivityType>
 
 export const ARTWORK_PLACEHOLDER = 'https://raw.githubusercontent.com/FoxxMD/multi-scrobbler/master/assets/default-artwork.png';
 export const MS_ART = 'https://raw.githubusercontent.com/FoxxMD/multi-scrobbler/master/assets/icon.png';
