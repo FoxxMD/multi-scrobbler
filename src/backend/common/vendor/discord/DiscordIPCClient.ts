@@ -11,7 +11,7 @@ import { removeUndefinedKeys, sleep } from "../../../utils.js";
 import { playStateToActivityData } from "./DiscordUtils.js";
 import { DiscordAbstractClient } from "./DiscordAbstractClient.js";
 import dayjs from "dayjs";
-import { isPlayObject } from "../../../../core/Atomic.js";
+import { isPlayObject, SourcePlayerObj } from "../../../../core/Atomic.js";
 import { mergeSimpleError, SimpleError } from "../../errors/MSErrors.js";
 import { UpstreamError } from "../../errors/UpstreamError.js";
 
@@ -113,13 +113,13 @@ export class DiscordIPCClient extends DiscordAbstractClient {
         return true;
     }
 
-    async sendActivity(data?: SourceData | undefined) {
+    async sendActivity(data?: SourcePlayerObj | undefined) {
         if (data === undefined) {
             await this.sendClearActivity();
             return;
         }
         const { activity: msActivity, artUrl } = playStateToActivityData(data);
-        const assets = await this.getArtAsset(data, artUrl, false);
+        const assets = await this.getArtAsset(data.play, artUrl, false);
         if (assets !== undefined) {
             const {
                 assets: msAssets = {}

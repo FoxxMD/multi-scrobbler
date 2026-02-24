@@ -8,7 +8,7 @@ import EventEmitter from "events";
 import { randomInt } from "crypto";
 import request from 'superagent';
 import { AbstractApiOptions,SourceData } from "../../infrastructure/Atomic.js";
-import { isPlayObject } from "../../../../core/Atomic.js";
+import { isPlayObject, SourcePlayerObj } from "../../../../core/Atomic.js";
 import dayjs, { Dayjs } from "dayjs";
 import { getRoot } from "../../../ioc.js";
 import { formatWebsocketClose, isCloseEvent, isErrorEvent, wsReadyStateToStr } from "../../../utils/NetworkUtils.js";
@@ -639,9 +639,9 @@ export class DiscordWSClient extends DiscordAbstractClient {
         }
     }
 
-    playStateToActivity = async (data: SourceData): Promise<GatewayActivity> => {
+    playStateToActivity = async (data: SourcePlayerObj): Promise<GatewayActivity> => {
         const {activity: msActivity, artUrl} = playStateToActivityData(data);
-        const assets = await this.getArtAsset(data, artUrl);
+        const assets = await this.getArtAsset(data.play, artUrl);
         if(assets !== undefined) {
             const {
                 assets: msAssets = {}
@@ -658,7 +658,7 @@ export class DiscordWSClient extends DiscordAbstractClient {
         return activity;
     }
 
-    sendActivity = async (data: SourceData | undefined) => {
+    sendActivity = async (data: SourcePlayerObj | undefined) => {
         if(data === undefined) {
             this.sendClearActivity();
             return;

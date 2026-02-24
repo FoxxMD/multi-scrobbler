@@ -435,6 +435,7 @@ export abstract class AbstractPlayerState {
             playLastUpdatedAt: this.playLastUpdatedAt !== undefined ? this.playLastUpdatedAt.toISOString() : undefined,
             playFirstSeenAt: this.playFirstSeenAt !== undefined ? this.playFirstSeenAt.toISOString() : undefined,
             playerLastUpdatedAt: this.stateLastUpdatedAt.toISOString(),
+            createdAt: dayjs().unix(),
             position: this.getPosition(),
             listenedDuration: this.getListenDuration(),
             status: {

@@ -1,5 +1,5 @@
 import dayjs from "dayjs";
-import { isPlayObject, PlayObject } from "../../../../core/Atomic.js";
+import { isPlayObject, PlayObject, SourcePlayerObj } from "../../../../core/Atomic.js";
 import { asPlayerStateData, SourceData } from "../../infrastructure/Atomic.js";
 import { GatewayActivity, GatewayOpcodes, PresenceUpdateStatus } from "discord.js";
 import { capitalize } from "../../../../core/StringUtils.js";
@@ -8,24 +8,25 @@ import { ACTIVITY_TYPE, ActivityData, ActivityTypes, DiscordData, DiscordStrongD
 import { parseBool, removeUndefinedKeys } from "../../../utils.js";
 import { parseArrayFromMaybeString, parseBoolOrArrayFromMaybeString } from "../../../utils/StringUtils.js";
 
-export const playStateToActivityData = (data: SourceData, opts: { useArt?: boolean } = {}): { activity: ActivityData, artUrl?: string } => {
+export const playStateToActivityData = (data: SourcePlayerObj, opts: { useArt?: boolean } = {}): { activity: ActivityData, artUrl?: string } => {
     // unix timestamps in milliseconds
     let startTime: number,
         endTime: number;
 
-    let play: PlayObject;
-    if (isPlayObject(data)) {
-        play = data;
-        if (data.meta.trackProgressPosition !== undefined && play.data.duration !== undefined) {
-            startTime = dayjs().subtract(data.meta.trackProgressPosition, 's').unix() * 1000;
-            endTime = dayjs().add(data.data.duration - data.meta.trackProgressPosition, 's').unix() * 1000;
-        } else if (asPlayerStateData(data)) {
-            play = data.play;
-            if (data.position !== undefined && play.data.duration !== undefined) {
-                startTime = dayjs().subtract(data.position, 's').unix() * 1000;
-                endTime = dayjs().add(data.data.duration - data.position, 's').unix() * 1000;
-            }
+    let play: PlayObject = data.play;
+
+    const position = data.position ?? data.play.meta?.trackProgressPosition;
+    if(position !== undefined && play.data.duration !== undefined) {
+        let realPosition = position;
+        if(data.playerLastUpdatedAt !== undefined) {
+            // if we know when player was last updated then we can forward-correct actual position
+            // by adding last known position + time since update
+            const lastUpdated = dayjs(data.playerLastUpdatedAt);
+            const sinceUpdate = dayjs().diff(lastUpdated, 's');
+            realPosition = position + sinceUpdate;
         }
+        startTime = dayjs().subtract(realPosition, 's').unix() * 1000;
+        endTime = dayjs().add(play.data.duration - realPosition, 's').unix() * 1000;
     }
 
     let activityName = capitalize(play.meta?.musicService ?? play.meta?.mediaPlayerName ?? play.meta?.source ?? 'music')

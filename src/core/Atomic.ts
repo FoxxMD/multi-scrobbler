@@ -365,6 +365,7 @@ export interface SourcePlayerObj {
     playFirstSeenAt?: string,
     playLastUpdatedAt?: string,
     playerLastUpdatedAt: string
+    createdAt?: number
     position?: Second
     listenedDuration: Second
     nowPlayingMode?: boolean

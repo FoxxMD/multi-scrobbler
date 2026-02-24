@@ -1,7 +1,7 @@
 import { Logger } from "@foxxmd/logging";
 import EventEmitter from "events";
 import { PlayObject, SourcePlayerObj } from "../../core/Atomic.js";
-import { CALCULATED_PLAYER_STATUSES, FormatPlayObjectOptions, REPORTED_PLAYER_STATUSES, ReportedPlayerStatus } from "../common/infrastructure/Atomic.js";
+import { CALCULATED_PLAYER_STATUSES, FormatPlayObjectOptions, REPORTED_PLAYER_STATUSES, ReportedPlayerStatus, SINGLE_USER_PLATFORM_ID_STR } from "../common/infrastructure/Atomic.js";
 import { Notifiers } from "../notifier/Notifiers.js";
 
 import AbstractScrobbleClient, { nowPlayingUpdateByPlayDuration } from "./AbstractScrobbleClient.js";
@@ -11,6 +11,7 @@ import { configToStrong } from "../common/vendor/discord/DiscordUtils.js";
 import { DiscordIPCClient } from "../common/vendor/discord/DiscordIPCClient.js";
 import { playStateToActivityData } from "../common/vendor/discord/DiscordUtils.js";
 import { mergeSimpleError, SimpleError } from "../common/errors/MSErrors.js";
+import dayjs from "dayjs";
 
 export default class DiscordScrobbler extends AbstractScrobbleClient {
 
@@ -127,7 +128,18 @@ export default class DiscordScrobbler extends AbstractScrobbleClient {
     alreadyScrobbled = async (playObj: PlayObject, log = false) => true
 
     public playToClientPayload(playObj: PlayObject): any {
-        return playStateToActivityData(playObj).activity;
+        return playStateToActivityData({
+            play: playObj, 
+            platformId: SINGLE_USER_PLATFORM_ID_STR,
+            playerLastUpdatedAt: dayjs().toISOString(),
+            listenedDuration: 0,
+            status: {
+                reported: REPORTED_PLAYER_STATUSES.unknown,
+                calculated: CALCULATED_PLAYER_STATUSES.unknown,
+                stale: false,
+                orphaned: false
+            }
+        }).activity;
     }
 
     doScrobble = async (playObj: PlayObject) => {
@@ -139,7 +151,7 @@ export default class DiscordScrobbler extends AbstractScrobbleClient {
             if([CALCULATED_PLAYER_STATUSES.stopped, CALCULATED_PLAYER_STATUSES.paused].includes(data.status.calculated as ReportedPlayerStatus)) {
                 await this.api.sendActivity(undefined);
             } else {
-                await this.api.sendActivity(data.play);
+                await this.api.sendActivity(data);
             }
         } catch (e) {
             throw e;
