@@ -47,18 +47,6 @@ export default class DiscordScrobbler extends AbstractScrobbleClient {
             this.logger.verbose(`Allow override statuses: ${this.config.data.statusOverrideAllow.join(', ')}`);
             this.logger.verbose(`Allow broadcasting during other listening activities: ${this.config.data.listeningActivityAllow.join(', ')}`);
             this.api = new DiscordWSClient(this.name, { ...this.config.data, ...this.config.options }, { logger: this.logger });
-            this.api.emitter.on('stopped', async (e) => {
-                if(e.authFailure) {
-                    this.authFailure = true;
-                    this.authed = false;
-                    this.connectionOK = false;
-                } else {
-                    this.authFailure = false;
-                    this.authed = false;
-                    this.connectionOK = false;
-                }
-                await this.tryStopScrobbling();
-            });
         } else if(applicationId !== undefined) {
             this.logger.info('Detected applicationId, using IPC Discord Client');
             this.api = new DiscordIPCClient(this.name, { ...this.config.data, ...this.config.options }, { logger: this.logger });
@@ -66,6 +54,19 @@ export default class DiscordScrobbler extends AbstractScrobbleClient {
         } else {
             throw new Error('Config must include token, applicationId, or both');
         }
+
+        this.api.emitter.on('stopped', async (e) => {
+            if(e.authFailure) {
+                this.authFailure = true;
+                this.authed = false;
+                this.connectionOK = this.api instanceof DiscordIPCClient ? true : false;
+            } else {
+                this.authFailure = false;
+                this.authed = false;
+                this.connectionOK = false;
+            }
+            await this.tryStopScrobbling();
+        });
 
         if(typeof artwork === 'boolean') {
             this.logger.verbose(`Artwork: ${artwork ? 'Allow any non-known domains with HTTPS' : 'Allow no non-known domains'}`);

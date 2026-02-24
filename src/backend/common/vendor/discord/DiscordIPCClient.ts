@@ -82,6 +82,7 @@ export class DiscordIPCClient extends DiscordAbstractClient {
             if(typeof e !== 'string') {
                 if(e.code === 4000) {
                     this.appError = true;
+                    this.emitter.emit('stopped', { authFailure: true });
                 }
             }
             this.ready = false;
