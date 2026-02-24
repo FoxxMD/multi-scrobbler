@@ -7,11 +7,13 @@ import { Client, SetActivity } from "@xhayper/discord-rpc";
 import {realpathSync} from 'fs';
 import {sep, join} from 'path';
 import { PathData } from "@xhayper/discord-rpc/dist/transport/IPC.js";
-import { removeUndefinedKeys } from "../../../utils.js";
+import { removeUndefinedKeys, sleep } from "../../../utils.js";
 import { playStateToActivityData } from "./DiscordUtils.js";
 import { DiscordAbstractClient } from "./DiscordAbstractClient.js";
 import dayjs from "dayjs";
 import { isPlayObject } from "../../../../core/Atomic.js";
+import { mergeSimpleError, SimpleError } from "../../errors/MSErrors.js";
+import { UpstreamError } from "../../errors/UpstreamError.js";
 
 export class DiscordIPCClient extends DiscordAbstractClient {
 
@@ -20,6 +22,10 @@ export class DiscordIPCClient extends DiscordAbstractClient {
     activityTimeout?: NodeJS.Timeout;
 
     ready: boolean = false;
+
+    closeErrors: string[] = [];
+
+    appError: boolean = false;
 
     declare client: Client;
 
@@ -57,6 +63,8 @@ export class DiscordIPCClient extends DiscordAbstractClient {
             this.ready = true;
             this.logger.info('IPC Connection READY');
             this.emitter.emit('ready', {ready: true});
+            this.closeErrors = [];
+            this.appError = false;
         });
         this.client.on('error', (e) => {
             this.logger.error(e);
@@ -64,20 +72,44 @@ export class DiscordIPCClient extends DiscordAbstractClient {
         this.client.on('debug', (e) => {
             this.logger.debug(e);
         });
-        this.client.on("close", (e) => {
+        this.client.transport.on('message', (e) => {
+            this.logger.debug(e);
+        });
+        this.client.transport.on('close', (e) => {
+            const closeError = typeof e === 'string' ? e : `${e.code} - ${e.message}`;
+            this.closeErrors.push(closeError);
+            this.logger.warn(`Closed by transport: ${closeError}`);
+            if(typeof e !== 'string') {
+                if(e.code === 4000) {
+                    this.appError = true;
+                }
+            }
             this.ready = false;
             clearTimeout(this.activityTimeout);
             this.activityTimeout = undefined;
-            this.emitter.emit('stopped', { authFailure: false });
         });
      }
 
     async tryConnect() {
+        this.closeErrors = [];
         try {
             await this.client.login();
         } catch(e) {
-            throw new Error('Unable to connect to Discord Client using IPC', {cause: e});
+            if(e.message.includes('Unable to find any Discord client')) {
+                throw new SimpleError('There are no files paths to existing unix sockets and no TCP connections available', {shortStack: true});
+            }
+            if(e.message.includes('Connection timed out') || e.message.includes('Could not connect')) {
+                throw new SimpleError(`Unable to connect to Discord Client using IPC => ${e.message}${this.closeErrors.length > 0 ? ` | Close Error => ${this.closeErrors.join(', ')}` : ''}`, {shortStack: true});
+            }
+            throw new UpstreamError(`Unable to connect to Discord Client using IPC${this.closeErrors.length > 0 ? ` | Close Error => ${this.closeErrors.join(', ')}` : ''}`, {cause: e});
         }
+    }
+
+    async tryAuthenticate() {
+        if(this.appError) {
+            throw new SimpleError('Client ID is not valid');
+        }
+        return true;
     }
 
     async sendActivity(data?: SourceData | undefined) {
@@ -121,6 +153,21 @@ export class DiscordIPCClient extends DiscordAbstractClient {
             this.activityTimeout = undefined;
         }
         await this.client.user.clearActivity();
+    }
+
+    async checkOkToSend(): Promise<[boolean, string?, string?]> {
+        if(this.appError) {
+            return [false, 'applicationId is invalid', 'debug'];
+        }
+        if(!this.ready || !this.client.transport.isConnected) {
+            try {
+                await this.tryConnect();
+            } catch (e) {
+                const err = mergeSimpleError(e);
+                return [false, err.message, 'debug'];
+            }
+        }
+        return [true];
     }
 }
 

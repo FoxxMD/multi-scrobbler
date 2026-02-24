@@ -732,7 +732,7 @@ export class DiscordWSClient extends DiscordAbstractClient {
         }
     }
 
-    checkOkToSend = (): [boolean, string?] => {
+    checkOkToSend = (): [boolean, string?, string?] => {
         if (this.ready && this.client.OPEN === this.client.readyState) {
             return [true];
         }

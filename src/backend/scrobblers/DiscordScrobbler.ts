@@ -10,6 +10,7 @@ import { DiscordWSClient } from "../common/vendor/discord/DiscordWSClient.js";
 import { configToStrong } from "../common/vendor/discord/DiscordUtils.js";
 import { DiscordIPCClient } from "../common/vendor/discord/DiscordIPCClient.js";
 import { playStateToActivityData } from "../common/vendor/discord/DiscordUtils.js";
+import { mergeSimpleError, SimpleError } from "../common/errors/MSErrors.js";
 
 export default class DiscordScrobbler extends AbstractScrobbleClient {
 
@@ -86,21 +87,29 @@ export default class DiscordScrobbler extends AbstractScrobbleClient {
             await this.api.tryConnect();
             return true;
         } catch (e) {
+            if(this.api instanceof DiscordIPCClient) {
+                if(e.message.includes(4000)) {
+                    // swallow this for now since we know that comms work but auth is bad
+                    return true;
+                } else {
+                    const err = new SimpleError('Ignoring IPC connection failure. This will be retried each time Now Playing is updated.', {cause: e, shortStack: true});
+                    mergeSimpleError(err);
+                    this.logger.warn(err);
+                    return true;
+                }
+            }
             throw e;
         }
     }
 
     doAuthentication = async () => {
 
-        if (this.api instanceof DiscordWSClient) {
-            try {
-                await this.api.tryAuthenticate();
-                return true;
-            } catch (e) {
-                throw e;
-            }
+        try {
+            await this.api.tryAuthenticate();
+            return true;
+        } catch (e) {
+            throw e;
         }
-        return true;
     }
 
     getScrobblesForRefresh = async (limit: number) => {
@@ -133,25 +142,22 @@ export default class DiscordScrobbler extends AbstractScrobbleClient {
         if ([CALCULATED_PLAYER_STATUSES.stopped, CALCULATED_PLAYER_STATUSES.paused, CALCULATED_PLAYER_STATUSES.playing].includes(data.status.calculated as ReportedPlayerStatus)
             || data.status.stale) {
 
-            if(this.api instanceof DiscordWSClient) {
-                const [sendOk, reasons] = this.api.checkOkToSend();
-                if (!sendOk) {
-                    this.logger.warn(`Cannot update playing now because api client is ${reasons}`);
-                    return false;
-                }
+            const [sendOk, reasons, level = 'warn'] = await this.api.checkOkToSend();
+            if (!sendOk) {
+                this.logger[level](`Cannot update playing now because api client is ${reasons}`);
+                return false;
+            }
 
+            if(this.api instanceof DiscordWSClient) {
                 const [allowed, reason] = this.api.presenceIsAllowed();
                 if(!allowed) {
                     this.logger.debug(reason);
                 }
 
                 return true;
-            } else {
-                if(!this.api.ready) {
-                    return false;
-                }
-                return true;
             }
+
+            return true;
         }
     }
 }
