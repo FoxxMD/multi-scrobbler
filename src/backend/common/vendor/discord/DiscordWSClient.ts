@@ -69,7 +69,7 @@ export class DiscordWSClient extends DiscordAbstractClient {
     get friendlySocketState() { return `Socket state: ${wsReadyStateToStr(this.client.readyState)}`}
 
     constructor(name: any, config: DiscordStrongData, options: AbstractApiOptions) {
-        if(config.token !== undefined) {
+        if(config.token === undefined) {
             throw new Error('token must be defined');
         }
         super('WS', name, config as DiscordWSData, options);
