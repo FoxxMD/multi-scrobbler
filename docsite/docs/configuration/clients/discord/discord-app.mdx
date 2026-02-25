@@ -1,0 +1,396 @@
+---
+title: Discord (App)
+toc_min_heading_level: 2
+toc_max_heading_level: 5
+---
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+import TcpWarning from "@site/src/components/snippets/_discord-port-warn.mdx";
+import JsonConfig from '!!raw-loader!@site/../config/discord-local.json.example';
+
+This scrobbler uses **[Now Playing](/configuration/clients#now-playing)** functionality to set your Discord [Rich Presence](https://docs.discord.com/developers/rich-presence/overview) to the music you are currently monitoring with multi-scrobbler.
+
+<img src={require('/img/discord_presence_art.png').default} height="127"/>
+
+This integration uses an **existing Discord application** to set your Rich Presence.
+
+## Required Setup
+
+### Discord Application
+
+You must create a [Discord App](https://docs.discord.com/developers/quick-start/overview-of-apps) in order to use this integration. Creating an App is free and simple.
+
+Go to the [Discord Developer Portal](https://discord.com/developers/applications)
+
+* Click on "New Application" and give it a name
+* Copy the **Application Id** (Client Id) shown after creation
+* Add this Id to your Multi-Scrobbler config
+  * Env Config => `DISCORD_APPLICATION_ID=12345678`
+  * File Config => `"applicationId": "12345678"`
+
+### Discord Connection
+
+This integration uses an existing, running Discord application to communicate with Discord and set Rich Presence. Multi-scrobbler must be able to communicate with the Discord application, either by being on the same machine or over a network.
+
+:::note
+
+If MS was [installed locally](/installation#local-installation) (not Docker) on the same machine as the Discord App then MS should [automatically detect the correct method](#find-ipc-connection) and [use it](#pass-ipc-to-multi-scrobbler) **without** any configuration from you. This will work for **any OS**.
+
+If MS cannot determine this automatically, follow the steps for your OS below.
+
+:::
+
+Follow the sections below to configure MS for your specific environment.
+
+#### Find IPC Connection
+
+Discord uses OS-specific methods to communicate with other applications on the same host, called [IPC](https://en.wikipedia.org/wiki/Inter-process_communication). You may need to determine some details about the IPC method in order for MS to communicate with it correctly.
+
+
+<Tabs groupId="osType" queryString>
+
+<TabItem value="linux" label="Discord on Linux">
+
+On Linux, Discord uses a [Unix Socket](https://en.wikipedia.org/wiki/Unix_domain_socket) for IPC.
+
+With Discord running, run this command:
+
+```
+$ sudo netstat -apeen | grep discord
+
+unix  2      [ ACC ]     STREAM     LISTENING     11026149 1641787/Discord      /home/foxx/.var/app/com.discordapp.Discord/cache/scoped_dirnnxNIn/SingletonSocket
+unix  2      [ ACC ]     STREAM     LISTENING     11036791 1642030/exe          /run/user/1000/discord-ipc-0
+```
+
+We see that the path we need is:
+
+```
+/run/user/1000/discord-ipc-0
+```
+
+</TabItem>
+
+<TabItem value="macos" label="Discord on MacOS">
+
+On MacOS, Discord uses a [Unix Socket](https://en.wikipedia.org/wiki/Unix_domain_socket) for IPC.
+
+With Discord running, run this command:
+
+```
+$ sudo netstat -apeen | grep discord
+
+unix  2      [ ACC ]     STREAM     LISTENING     11026149 1641787/Discord      /home/foxx/.var/app/com.discordapp.Discord/cache/scoped_dirnnxNIn/SingletonSocket
+unix  2      [ ACC ]     STREAM     LISTENING     11036791 1642030/exe          /run/user/1000/discord-ipc-0
+```
+
+We see that the path we need is:
+
+```
+/run/user/1000/discord-ipc-0
+```
+
+</TabItem>
+
+<TabItem value="windows" label="Discord on Windows">
+
+Windows uses [**Named Pipes**](https://learn.microsoft.com/en-us/windows/win32/ipc/named-pipes) for IPC. These aren't easily iteratable without external software, like [Pipetap](https://github.com/sensepost/pipetap).
+
+The syntax for a named pipe is like this:
+
+```
+\\.\pipe\app_named_pipe_foo
+```
+
+and Discord's names follow this pattern:
+
+```
+\\.\pipe\discord-ipc-0
+```
+
+Where `0` increments for each different instance of Discord (official, canary, nightly, etc...).
+
+The default Discord pipe name is: `discord-ipc-0`
+
+</TabItem>
+
+</Tabs>
+
+#### Pass IPC to Multi-Scrobbler
+
+After [finding your IPC connection path](#find-ipc-connection) you will need to make it accessible to Multi-Scrobbler.
+
+<Tabs groupId="osType" queryString>
+
+<TabItem value="linux" label="Discord on Linux">
+
+  <Tabs groupId="msConnection">
+
+  <TabItem value="remote" label="MS on Different Host">
+
+  <TcpWarning/>
+
+  Use [`socat`](https://linux.die.net/man/1/socat) to bidirectionally relay communication from Discord's [unix socket](#find-ipc-connection) to a listening TCP port on the same host. Likely, you will want to setup a service to start this command on login.
+
+  ```shell
+  $ socat -v TCP-LISTEN:6655,reuseaddr,fork UNIX-CONNECT:/run/user/1000/discord-ipc-0
+  ```
+
+  In your MS docker compose file add the `host:port` of the host running Discord/`socat` to `DISCORD_IPC_LOCATIONS` `environment:`
+
+  ```yaml title="docker-compose.yaml"
+
+      environment:
+        # ...
+        DISCORD_IPC_LOCATIONS=192.168.DISCORD_HOST.IP:6655
+  ```
+  </TabItem>
+  <TabItem value="local-docker" label="MS on Same Host (Docker)">
+
+  In your MS docker compose file, pass the path of Discord's [unix socket](#find-ipc-connection) as a volume and add this path to `DISCORD_IPC_LOCATIONS` in `environment:`
+
+  ```yaml title="docker-compose.yaml"
+
+      environment:
+        # ...
+        DISCORD_IPC_LOCATIONS=/run/discord-ipc-0
+      volumes:
+        - /run/user/1000/discord-ipc-0:/run/discord-ipc-0
+  ```
+
+  </TabItem>
+  <TabItem value="local" label="MS on Same Host (Non-Docker)">
+
+  No configuration is required. If MS does not automatically work for you then try the **MS on Same Host (Docker)** method using the `DISCORD_IPC_LOCATIONS` environment variable.
+
+  </TabItem>
+
+  </Tabs>
+
+</TabItem>
+
+<TabItem value="macos" label="Discord on MacOS">
+
+  <Tabs groupId="msConnection">
+
+  <TabItem value="remote" label="MS on Different Host">
+
+  <TcpWarning/>
+
+  Use one of the methods below to setup `socat` on your macOS machine.
+
+  <details>
+
+  <summary>`socat` installed natively</summary>
+
+    Install [`socat`](https://formulae.brew.sh/formula/socat) using homebrew to use it as a native command on your host.
+
+    Then, use [`socat`](https://linux.die.net/man/1/socat) to bidirectionally relay communication from Discord's [unix socket](#find-ipc-connection) to a listening TCP port on the same host. Likely, you will want to setup a service to start this command on login.
+
+    ```shell
+    $ socat -v TCP-LISTEN:6655,reuseaddr,fork UNIX-CONNECT:/run/user/1000/discord-ipc-0
+  ```
+
+  </details>
+
+  <details>
+
+  <summary>`socat` in Docker</summary>
+
+  Use the [`socat` container](https://hub.docker.com/r/alpine/socat) in combination with the Discord [unix socket](#find-ipc-connection) found earlier:
+
+  ```yaml title="docker-compose.yaml"
+  services:
+    socat:
+      image: alpine/socat
+      ports:
+        - "6655:6655"
+      volumes:
+        - /run/user/1000/discord-ipc-0:/run/discord-ipc-0
+      command:
+        - '-v'
+        - 'TCP-LISTEN:6655,reuseaddr,fork'
+        - 'UNIX-CONNECT:/run/discord-ipc-0'
+  ```
+  </details>
+
+  In your MS docker compose file add the `host:port` of the host running Discord/`socat` to `DISCORD_IPC_LOCATIONS` `environment:`
+
+  ```yaml title="docker-compose.yaml"
+
+      environment:
+        # ...
+        DISCORD_IPC_LOCATIONS=192.168.DISCORD_HOST.IP:6655
+  ```
+  </TabItem>
+  <TabItem value="local-docker" label="MS on Same Host (Docker)">
+
+  In your MS docker compose file, pass the path of Discord's [unix socket](#find-ipc-connection) as a volume and add this path to `DISCORD_IPC_LOCATIONS` in `environment:`
+
+  ```yaml title="docker-compose.yaml"
+
+      environment:
+        # ...
+        DISCORD_IPC_LOCATIONS=/discord-ipc-0
+      volumes:
+        - /run/user/1000/discord-ipc-0:/run/discord-ipc-0
+  ```
+
+  </TabItem>
+  <TabItem value="local" label="MS on Same Host (Non-Docker)">
+
+  No configuration is required. If MS does not automatically work for you then try the **MS on Same Host (Docker)** method using the `DISCORD_IPC_LOCATIONS` environment variable.
+
+  </TabItem>
+
+  </Tabs>
+
+</TabItem>
+
+<TabItem value="windows" label="Discord on Windows">
+
+  <Tabs groupId="msConnection">
+
+  <TabItem value="remote" label="MS in Docker">
+
+  :::note
+
+  While it is possible to use [named pipes directly in Docker](https://forums.docker.com/t/volume-mount-path-error/143626/3) this has not been tested and [may only work for windows containers](https://github.com/docker/for-win/issues/6813#issuecomment-632859857). If you are adventurous, try this out and if you can get it working please [report your findings in an issue.](https://github.com/FoxxMD/multi-scrobbler/issues)
+
+  :::
+
+  :::warning
+
+  This method is **experimental** and may be buggy and prone to crashes. If you are a Windows or Rust developer please consider helping improve the [pipe proxy implementation](https://github.com/FoxxMD/named-pipe-to-tcp-proxy).
+
+  :::
+
+  <TcpWarning/>
+
+  Use [**pipeProxy**](https://github.com/FoxxMD/named-pipe-to-tcp-proxy) to connect to the Discord named pipe and expose it on a TCP port.
+
+  Download the latest [`pipeProxy.exe`](https://github.com/FoxxMD/named-pipe-to-tcp-proxy/releases) from the releases page.
+
+  The host/ip should be the IP of the machine running discord.
+
+  Run pipeProxy from the windows command line:
+
+  ```
+  pipeProxy.exe --pipe "\\.\pipe\discord-ipc-0" --tcp "192.168.0.100:6655"
+  ```
+
+  In your MS docker compose file add the `host:port` of the host running `pipeProxy` to `DISCORD_IPC_LOCATIONS` `environment:`
+
+  ```yaml title="docker-compose.yaml"
+
+      environment:
+        # ...
+        DISCORD_IPC_LOCATIONS=192.168.0.100:6655
+  ```
+  
+  </TabItem>
+  <TabItem value="local" label="MS on Same Host (Non-Docker)">
+
+  No configuration is required. If MS does not automatically work for you then try the **MS in Docker** method using the `DISCORD_IPC_LOCATIONS` environment variable.
+
+  </TabItem>
+
+  </Tabs>
+
+</TabItem>
+</Tabs>
+
+## Optional Setup
+
+:::note
+
+Due to the limitations of the Discord local API the other listening activity detection and online status customizations found in [Headless](/configuration/discord/discord-headless#optional-setup) are not available for the Local integration.
+
+:::
+
+### Artwork
+
+Multi-scrobbler can display Album Art in your Discord status. The image that is used differs based on if the image URL is publically accessible.
+
+The order in which multi-scrobbler determines what image to use is the same as the order of the tabs shown below.
+
+#### Artwork URL Types
+
+<Tabs groupId="artworkUrl" queryString>
+<TabItem label="External URLs" value="external">
+MS can use external URLs for artwork.
+
+<img src={require('/img/discord_presence_art.png').default} height="127"/>
+
+External URLs that are not from known music services are **disabled by default.** This is to preserve *your* privacy because Discord does not host images, it only links to them and the URL is visible to other users.
+
+<details>
+
+<summary>Why Should I Care?</summary>
+
+There are some scenarios where you may not want your artwork URLs to be visible, for example:
+
+* A Source may be accessible only on your LAN (Jellyfin at `http://192.168.0.101`)
+* A Source may be internet-facing but you do not want to expose this information to discord/other users
+* A Source may be internet-facing but requires authentication to view the image
+</details>
+
+MS will use your artwork URLs only if:
+
+* artwork url is from a known music service/[Cover Art Archive](./?artworkUrl=caa#artwork-url-types) or
+* artwork url starts with `https` and
+    * `artwork` (`DISCORD_ARTWORK`) is
+    * `true` => always uses the url
+    * a list of custom domains keywords an external artwork url should contain EX 
+        * ENV => `DISCORD_ARTWORK=mycdn,jellyfin`
+        * File Config => `"artwork": ["mycdn","jellyfin"]`
+
+</TabItem>
+<TabItem label="Musicbrainz/Cover Art Achive" value="caa">
+MS can try to use [Cover Art Archive](http://coverartarchive.org/) to get album art. The URL it retrieves is public which means it acts like an External URL that is always available for you.
+
+<img src={require('/img/discord_presence_art.png').default} height="127"/>
+
+MS will try to use Cover Art Archive if:
+
+* The scrobble data does not contain an album art url (no art in dashboard) or the existing url has failed an [External URL](./?artworkUrl=external#artwork-url-types) condition
+* and **the scrobble data contains a [Musicbrainz](/configuration/transforms/musicbrainz) Release (Album) MBID** 
+
+Basically, if MS would normally use the [MS Default](./?artworkUrl=ms-default#artwork-url-types) art, it will first try to use Cover Art Archive if the scrobble has a Release MBID.
+
+Some Source, like [Jellyfin](/configuration/sources/jellyfin) and [Plex](/configuration/sources/plex), can automatically provide this ID if the music is "matched" in your library.
+
+For all others, you can [**configure MS to use the Musicbrainz Stage**](/configuration/transforms/musicbrainz#use-metadata-for-discord-album-art) for Discord to try to get this MBID.
+</TabItem>
+<TabItem label="MS Default" value="ms-default">
+When these conditions are true:
+
+* Cannot use an [External URL](./?artworkUrl=external#artwork-url-types) and
+* Cannot get album art from [Cover Art Archive](./?artworkUrl=caa#artwork-url-types) and
+* Play does not contain artwork information (no artwork shown in dashboard)
+
+The status artwork will use a default URL instead of your artwork URL.
+
+Without any other configuration, the default URL is an icon from the [multi-scrobbler repository](https://github.com/FoxxMD/multi-scrobbler/blob/master/assets/default-artwork.png):
+
+<img src={require('/img/discord_presence_ms_default.png').default} height="127"/>
+
+This default image can be customized:
+
+* ENV Config => `DISCORD_ARTWORK_DEFAULT_URL=https://cooldomain.com/art.png`
+* File Config => `"artworkDefaultUrl": "https://cooldomain.com/art.png"`
+
+Remember, this URL need to be accessible on the public internet.
+</TabItem>
+</Tabs>
+
+## Configuration
+
+<Config config="DiscordClientConfig" fileContent={JsonConfig} client name="discord">
+        | Environmental Variable        | Required? | Default | Description                                                                                                      |
+        | :---------------------------- | --------- | ------- | :--------------------------------------------------------------------------------------------------------------- |
+        | `DISCORD_APPLICATION_ID`      | Yes       |         | Application ID                                                                                                   |
+        | `DISCORD_IPC_LOCATIONS`       | No        |         | A commera-separated list of `host:port` network locations or file paths to unix socket for Discord               |
+        | `DISCORD_ARTWORK`             | No        |         | A boolean indicating if external artwork URLs should be used. Or a comma-separated list of allowed domains       |
+        | `DISCORD_ARTWORK_DEFAULT_URL` | No        |         | A URL of an image to use as a fallback if the album art URL cannot be used. Or `false` to use discord's default. |
+</Config>

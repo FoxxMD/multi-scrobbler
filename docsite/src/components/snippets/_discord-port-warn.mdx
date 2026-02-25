@@ -1,0 +1,10 @@
+<DetailsAdmo type="warning" summary="Insecure Communication">
+
+This method of exposing Discord IPC is **not secure**. There is no authentication used for the traffic relayed to/from the opened TCP port.
+
+You should only use this method if you trust the network your machine is on. Additionally:
+
+* **Do** use a firewall to limit source (IP) of incoming traffic to this TCP port
+* **Do not** expose this port to the public internet
+
+</DetailsAdmo>

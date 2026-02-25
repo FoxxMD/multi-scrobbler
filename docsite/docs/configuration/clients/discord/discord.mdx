@@ -10,18 +10,18 @@ This scrobbler uses **[Now Playing](/configuration/clients#now-playing)** functi
 
 There are two types of Discord integrations to choose from:
 
-## Local
+## App
 
-The **Local** integration uses an **existing** Discord application on Linux/MacOS to set Rich Presence.
+The **App** integration uses an **existing** Discord application on a desktop computer to set Rich Presence.
 
 * Uses "permitted" access to Discord, no TOS issues
 * More restricted customization compared to Headless
 * Only active when your existing Discord application is open
-* For scenarios where Multi-Scrobbler is not on the same machine as Discord
-  * Requires an additional program to relay the Discord connection
+* For more scenarios it requires additional, OS-specific steps to setup correctly 
+  * May require an additional program on your machine to relay the Discord connection
   * This is potentially insecure, or less secure, then Headless
 
-[**Local Docs**](/configuration/clients/discord/discord-local)
+[**App Docs**](/configuration/clients/discord/discord-app)
 
 ## Headless
 
@@ -29,7 +29,7 @@ The **Headless** integration uses Discord cloud Gateway/API, directly, to set Ri
 
 * Does not require an existing Discord application (uses Discord cloud API)
 * Using this **Violates Discord TOS** because it requires a user token
-* More customization than Local
+* More customization than App integration
 * Active if **any** Discord application is online
 
 [**Headless Docs**](/configuration/clients/discord/discord-headless)
