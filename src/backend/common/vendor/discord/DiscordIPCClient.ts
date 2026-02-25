@@ -69,6 +69,9 @@ export class DiscordIPCClient extends DiscordAbstractClient {
         this.client.on('error', (e) => {
             this.logger.error(e);
         });
+        this.client.transport.on('error', (e) => {
+            this.logger.error(e);
+        });
         this.client.on('debug', (e) => {
             this.logger.debug(e);
         });

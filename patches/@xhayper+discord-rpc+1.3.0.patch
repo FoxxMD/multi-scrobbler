@@ -12,7 +12,7 @@ index 6da3fb1..796344d 100644
      platform: NodeJS.Platform[];
      format: FormatFunction;
 diff --git a/node_modules/@xhayper/discord-rpc/dist/transport/IPC.js b/node_modules/@xhayper/discord-rpc/dist/transport/IPC.js
-index 2a9a7b3..ee27d82 100644
+index 2a9a7b3..074f5bb 100644
 --- a/node_modules/@xhayper/discord-rpc/dist/transport/IPC.js
 +++ b/node_modules/@xhayper/discord-rpc/dist/transport/IPC.js
 @@ -59,9 +59,12 @@ const createSocket = async (path) => {
@@ -73,3 +73,13 @@ index 2a9a7b3..ee27d82 100644
                  data = Buffer.concat([data, chunk]);
              } while (true);
              if (data.length < 8) {
+@@ -187,6 +196,9 @@ class IPCTransport extends Transport_1.Transport {
+             this.socket = undefined;
+             this.emit("close", "Closed by Discord");
+         });
++        this.socket.on("error", (e) => {
++            this.emit("error", e);
++        });
+     }
+     send(message, op = IPC_OPCODE.FRAME) {
+         this.client.emit("debug", `CLIENT => SERVER | OPCODE.${IPC_OPCODE[op]} |`, message);
