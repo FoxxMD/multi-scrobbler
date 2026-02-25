@@ -43,7 +43,7 @@ If MS cannot determine this automatically, follow the steps for your OS below.
 
 <DetailsAdmo type="tip" summary="Discord in a Container as an Alternative">
 
-[Kasm Workspaces](https://kasm.com) provides a self-hostable [Discord container image](https://hub.docker.com/r/kasmweb/discord) for intel/amd hosts. This image provides a desktop-like experience, through browsed-based VNC, to use the official Discord application.
+[Kasm Workspaces](https://kasm.com) provides a self-hostable [Discord container image](https://hub.docker.com/r/kasmweb/discord) for intel/amd hosts. This image provides a desktop-like experience, through browser-based VNC, to use the official Discord application.
 
 <img src={require('/img/discord_kasm.png').default} height="600"/>
 
@@ -99,7 +99,7 @@ services:
       # ...
       # add below line
       // highlight-start
-      - ./kasmcord:/run/
+      - ./kasmcord/run:/run/
       // highlight-end
     # ...
 
@@ -116,7 +116,8 @@ services:
       VNC_PW:
       XDG_RUNTIME_DIR: /run/user/1000
     volumes:
-      - ./kasmcord:/run/user/1000
+      - ./kasmcord/run:/run/user/1000
+      - ./kasmcord/config:/home/kasm-default-profile/.config
     user: "0"
     entrypoint: sh -c "chmod 700 /run/user/1000 && chown -R kasm-user:kasm-user /run/user/1000 && su kasm-user -c '/dockerstartup/kasm_default_profile.sh /dockerstartup/vnc_startup.sh /dockerstartup/kasm_startup.sh'"
   // highlight-end
