@@ -99,7 +99,7 @@ export class DiscordAbstractClient extends AbstractApiClient {
                     const u = new URL(art);
                     // only allow secure protocol as this is likely to be a real domain that is public accessible
                     // IP domain usually uses http only
-                    if (u.protocol !== 'https://') {
+                    if (u.protocol !== 'https:') {
                         if(isDebugMode()) {
                             this.logger.debug(`${artUrl} is not https`);
                         }
