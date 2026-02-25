@@ -88,7 +88,7 @@ export class CoverArtApiClient extends AbstractApiClient {
                         await this.cache.set(cacheKey, e.response.header['location'], '1hr');
                         return e.response.header['location'];
                     } else if ([404].includes(e.status)) {
-                        // no image
+                        this.logger.debug(`No front album art found for release ${mbid}`);
                     } else {
                         this.logger.warn(new UpstreamError(`Unexpected response when trying to get album art`, { cause: e }));
                     }
