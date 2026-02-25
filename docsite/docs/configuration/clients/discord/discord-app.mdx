@@ -33,13 +33,112 @@ Go to the [Discord Developer Portal](https://discord.com/developers/applications
 
 This integration uses an existing, running Discord application to communicate with Discord and set Rich Presence. Multi-scrobbler must be able to communicate with the Discord application, either by being on the same machine or over a network.
 
-:::note
+<DetailsAdmo type="tip" summary="Local MS Installation Requires No Config">
 
 If MS was [installed locally](/installation#local-installation) (not Docker) on the same machine as the Discord App then MS should [automatically detect the correct method](#find-ipc-connection) and [use it](#pass-ipc-to-multi-scrobbler) **without** any configuration from you. This will work for **any OS**.
 
 If MS cannot determine this automatically, follow the steps for your OS below.
 
-:::
+</DetailsAdmo>
+
+<DetailsAdmo type="tip" summary="Discord in a Container as an Alternative">
+
+[Kasm Workspaces](https://kasm.com) provides a self-hostable [Discord container image](https://hub.docker.com/r/kasmweb/discord) for intel/amd hosts. This image provides a desktop-like experience, through browsed-based VNC, to use the official Discord application.
+
+<img src={require('/img/discord_kasm.png').default} height="600"/>
+
+Using this containerized approach, instead of configuring MS to use the native Discord app on a specific machine, has a few advantages:
+
+* Setup is much simpler
+  * Discord runs in the same stack as multi-scrobbler
+  * **Configuration is copy-paste.** Skip all of the [Discord Connection](#discord-connection) instructions.
+* Get a [Headless](/configuration/clients/discord/discord-headless)-like experience without needing to break Discord TOS
+
+There are a few disadvantages that affect Quality of Life experience with Discord:
+
+* Discord does not notify *other* clients of notifications in a channel if *any* client is viewing that channel.
+  * To avoid this, make sure your container discord instance is not viewing any server/channel/dm.
+* Sometimes, Discord does not deliver "notifications you missed" to mobile because this depends on *all* clients being offline.
+
+<h2>Setup</h2>
+
+Setup is basically the same as using the instructions for [Discord on Linux](./?osType=linux#find-ipc-connection) with [MS on Same Host (Docker)](./?osType=linux#pass-ipc-to-multi-scrobbler).
+
+<h3>1. Add Discord Service to Multi-Scrobbler Docker Compose Stack</h3>
+
+<details>
+
+<summary>Detailed Explanation</summary>
+
+* Add the `kasmweb/discord` service to your compose stack
+  * Mount the directory containing Discord's unix socket to your host
+* Configure MS to use Discord's unix socket
+  * Mount the unix socket directory into MS's container
+  * Add ENV `DISCORD_IPC_LOCATIONS` to point to the mounted directory
+
+</details>
+
+Use this example `docker-compose.yaml` to modify your existing multi-scrobbler `docker-compose.yaml`:
+
+<details>
+
+<summary>Example</summary>
+
+```yaml title="docker-compose.yaml"
+services:
+  multi-scrobbler:
+    image: foxxmd/multi-scrobbler:latest
+    environment:
+      # ...
+      - DISCORD_APPLICATION_ID=12345678
+      # add below line
+      // highlight-start
+      - DISCORD_IPC_LOCATIONS=/run/discord-ipc-0
+      // highlight-end
+    volumes:
+      # ...
+      # add below line
+      // highlight-start
+      - ./kasmcord:/run/
+      // highlight-end
+    # ...
+
+  # .. add discord service below
+  // highlight-start
+  kasmcord:
+    container_name: kasmcord
+    image: kasmweb/discord:1.14.0
+    ports:
+      # vnc port to use in web browser
+      - 6901:6901
+    shm_size: 512m
+    environment:
+      VNC_PW:
+      XDG_RUNTIME_DIR: /run/user/1000
+    volumes:
+      - ./kasmcord:/run/user/1000
+    user: "0"
+    entrypoint: sh -c "chmod 700 /run/user/1000 && chown -R kasm-user:kasm-user /run/user/1000 && su kasm-user -c '/dockerstartup/kasm_default_profile.sh /dockerstartup/vnc_startup.sh /dockerstartup/kasm_startup.sh'"
+  // highlight-end
+```
+
+</details>
+
+Then re-deploy your stack.
+
+<h3>2. Login to Discord</h3>
+
+Navigate in your browser to the IP/host Multi-Scrobbler/Discord are running on. Use the `port` set in the `kasmcord` service:
+
+```
+http://192.168.MY.HOST:6901
+```
+
+Login to Discord normally. After login is complete MS should connect automatically when a Now Playing event happens. If it does not or reports authentication failure then restart MS (but not Discord).
+
+If MS works then you are done and can move on to [Optional Setup](#optional-setup).
+
+</DetailsAdmo>
 
 Follow the sections below to configure MS for your specific environment.
 
