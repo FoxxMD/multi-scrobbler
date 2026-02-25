@@ -1,5 +1,6 @@
 import { isPlayObject } from "../../../../core/Atomic.js";
 import { getRoot } from "../../../ioc.js";
+import { isDebugMode } from "../../../utils.js";
 import { urlContainsKnownMediaDomain } from "../../../utils/RequestUtils.js";
 import { MSCache } from "../../Cache.js";
 import { isSuperAgentResponseError } from "../../errors/ErrorUtils.js";
@@ -88,14 +89,21 @@ export class DiscordAbstractClient extends AbstractApiClient {
                         const allowed = artwork.some(x => artUrl.toLocaleLowerCase().includes(x.toLocaleLowerCase()));
                         if (allowed) {
                             art = artUrl;
+                        } else if(isDebugMode()) {
+                            this.logger.debug(`${artUrl} does not contain any allowed domains`);
                         }
                     } else {
-                        const u = new URL(artUrl);
-                        // only allow secure protocol as this is likely to be a real domain that is public accessible
-                        // IP domain usually uses http only
-                        if (u.protocol === 'https://') {
-                            art = artUrl;
+                        art = artUrl;
+                    }
+
+                    const u = new URL(art);
+                    // only allow secure protocol as this is likely to be a real domain that is public accessible
+                    // IP domain usually uses http only
+                    if (u.protocol !== 'https://') {
+                        if(isDebugMode()) {
+                            this.logger.debug(`${artUrl} is not https`);
                         }
+                        art = artworkDefaultUrl;
                     }
                 }
             }
@@ -107,6 +115,8 @@ export class DiscordAbstractClient extends AbstractApiClient {
                     if(albumArt !== undefined) {
                         art = albumArt;
                     }
+                } else if(isDebugMode()) {
+                    this.logger.debug('No brainz Release MBID to use for cover art archive');
                 }
             }
 
