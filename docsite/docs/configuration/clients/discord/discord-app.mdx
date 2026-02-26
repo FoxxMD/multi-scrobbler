@@ -65,10 +65,10 @@ Setup is basically the same as using the instructions for [Discord on Linux](./?
 <summary>Detailed Explanation</summary>
 
 * Add the `kasmweb/discord` service to your compose stack
-  * Mount the directory containing Discord's unix socket to your host
+  * Mount the directory containing Discord's unix socket to a named volume
 * Configure MS to use Discord's unix socket
-  * Mount the unix socket directory into MS's container
-  * Add ENV `DISCORD_IPC_LOCATIONS` to point to the mounted directory
+  * Mount the unix socket volume into MS's container
+  * Add ENV `DISCORD_IPC_LOCATIONS` to point to the mounted volume
 
 </details>
 
@@ -93,7 +93,7 @@ services:
       # ...
       # add below line
       // highlight-start
-      - ./kasmcord/run:/run/
+      - kener_run:/run
       // highlight-end
     # ...
 
@@ -103,17 +103,24 @@ services:
     container_name: kasmcord
     image: kasmweb/discord:1.14.0
     ports:
-      # vnc port to use in web browser
+      # VNC port to use in web browser
       - 6901:6901
     shm_size: 512m
     environment:
+      # optionally set a password for VNC access
       VNC_PW:
       XDG_RUNTIME_DIR: /run/user/1000
     volumes:
-      - ./kasmcord/run:/run/user/1000
-      - ./kasmcord/config:/home/kasm-default-profile/.config
+      - kener_run:/run/user/1000
+      - kener_config:/home/kasm-default-profile/.config
     user: "0"
     entrypoint: sh -c "chmod 700 /run/user/1000 && chown -R kasm-user:kasm-user /run/user/1000 && su kasm-user -c '/dockerstartup/kasm_default_profile.sh /dockerstartup/vnc_startup.sh /dockerstartup/kasm_startup.sh'"
+
+volumes:
+  kener_run:
+    name: kener_run
+  kener_config:
+    name: kener_config
   // highlight-end
 ```
 
