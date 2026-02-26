@@ -28,3 +28,4 @@ build
 **/act/*
 tmp-*
 .env
+*.env

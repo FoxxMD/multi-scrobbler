@@ -5,9 +5,11 @@
 	// Or use a Dockerfile or Docker Compose file. More info: https://containers.dev/guide/dockerfile
 	"dockerComposeFile": [
 		"compose.yml"
+		// uncomment to add kasm/discord service
+		//"../deploy/docker-compose.discord.yml"
 	],
 
-	"service": "app",
+	"service": "multi-scrobbler",
 
 	"workspaceFolder": "/workspaces",
 
