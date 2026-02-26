@@ -14,11 +14,9 @@ This scrobbler uses **[Now Playing](/configuration/clients#now-playing)** functi
 
 This integration is **headless**, it does not depend on any specific Discord application to be running.
 
-:::warning[Discord TOS Violation]
+:::tip
 
-This functionality requires you to use your own **User Token** in a way that is **against Discord's policies/terms of service.** If you use this scrobbler you do so **at your risk**.
-
-Refer to the **How MS Uses Discord API** section below to gauge whether this risk is acceptable to you.
+Check the [main Discord docs page](/configuration/clients/discord) for a comparison between **App** and **Headless**.
 
 :::
 
@@ -50,7 +48,18 @@ This session update can happen automatically after *some* time so you may not ne
 
 ### User Token
 
-You must provide a User Token for this scrobbler to work.
+You must provide a **Discord User Token** for your account in order to authenticate with Discord.
+
+<DetailsAdmo type="warning" summary="User Token usage violates Discord TOS">
+
+This functionality requires you to use your own **Discord User Token** in a way that is **against Discord's policies/terms of service.** If you use this scrobbler you do so **at your risk**.
+
+There is no precedent for Discord punishing users who use their own token for non-abuse/spam reasons but there is also no guarantee this lack of enforcement will continue.
+
+Refer to the **How MS Uses Discord API** section above to gauge whether this risk is acceptable to you.
+
+</DetailsAdmo>
+
 
 <DetailsAdmo type="warning" summary="User Token is a Sensitive Credential">
 
