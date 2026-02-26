@@ -224,6 +224,47 @@ The order in which multi-scrobbler determines what image to use is the same as t
                * ENV => `DISCORD_ARTWORK=mycdn,jellyfin`
                * File Config => `"artwork": ["mycdn","jellyfin"]`
 
+        <details>
+
+        <summary>Examples</summary>
+
+        None of the below URLs will **ever** be used because they are not `https`
+
+        ```
+        http://foobar.com/cool.jpg <-- NOT allowed, not http
+        http://192.168.0.112/fun.png <-- NOT allowed, not http
+        ```
+
+        When `DISCORD_ARTWORK` is not set:
+
+        ```
+        https://archive.org/download/dir/myimage.jpg <-- allowed, is https and known service
+        https://spotify.com/assets/cover.png?size=1000 <-- allowed, is https and known service
+        https://example.com/cool.jpg <-- NOT allowed, is https but not a known service and DISCORD_ARTWORK is not set
+        https://anything.com/neat.jpg <-- NOT allowed, is https but not a known service and DISCORD_ARTWORK is not set
+        ```
+
+        Setting `DISCORD_ARTWORK=true`
+
+        ```
+        https://archive.org/my/dir/myimage.jpg <-- allowed, is https and known service
+        http://foobar.com/cool.jpg <-- NOT allowed, not http
+        https://example.com/cool.jpg <-- allowed, is https
+        https://anything.com/neat.jpg <-- allowed, is https
+        ```
+
+        Setting `DISCORD_ARTWORK=mycdn,jellyfin`
+
+        ```
+        https://archive.org/my/dir/myimage.jpg <-- allowed, is https and known service
+        http://foobar.com/cool.jpg <-- NOT allowed, not http
+        https://example.com/cool.jpg <-- NOT allowed, is https but does not contain "mycdn" or "jellyfin"
+        https://jellyfin.mydomain.com/neat.jpg <-- allowed, is https and contains "jellyfin"
+        ```
+
+        </details>
+
+
         </TabItem>
         <TabItem label="Musicbrainz/Cover Art Achive" value="caa">
         When [**Application Id**](#discord-application) **is** configured MS can try to use [Cover Art Archive](http://coverartarchive.org/) to get album art. The URL it retrieves is public which means it acts like an External URL that is always available for you.
@@ -268,7 +309,7 @@ The order in which multi-scrobbler determines what image to use is the same as t
 
         <img src={require('/img/discord_presence_discord_default.png').default} height="127"/>
         </TabItem>
-    </Tabs>
+</Tabs>
 
 ## Configuration
 

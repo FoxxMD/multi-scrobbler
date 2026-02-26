@@ -33,21 +33,15 @@ Go to the [Discord Developer Portal](https://discord.com/developers/applications
 
 This integration uses an existing, running Discord application to communicate with Discord and set Rich Presence. Multi-scrobbler must be able to communicate with the Discord application, either by being on the same machine or over a network.
 
-<DetailsAdmo type="tip" summary="Local MS Installation Requires No Config">
+<Tabs groupId="discordType" queryString>
 
-If MS was [installed locally](/installation#local-installation) (not Docker) on the same machine as the Discord App then MS should [automatically detect the correct method](#find-ipc-connection) and [use it](#pass-ipc-to-multi-scrobbler) **without** any configuration from you. This will work for **any OS**.
-
-If MS cannot determine this automatically, follow the steps for your OS below.
-
-</DetailsAdmo>
-
-<DetailsAdmo type="tip" summary="Discord in a Container as an Alternative">
+<TabItem value="container" label="Containerized Discord">
 
 [Kasm Workspaces](https://kasm.com) provides a self-hostable [Discord container image](https://hub.docker.com/r/kasmweb/discord) for intel/amd hosts. This image provides a desktop-like experience, through browser-based VNC, to use the official Discord application.
 
-<img src={require('/img/discord_kasm.png').default} height="600"/>
+<img src={require('/img/discord_kasm.png').default} height="400"/>
 
-Using this containerized approach, instead of configuring MS to use the native Discord app on a specific machine, has a few advantages:
+Using this containerized approach, instead of configuring MS to use a [Native Discord](./?discordType=native#dicord-connection) application on a specific machine, has a few advantages:
 
 * Setup is much simpler
   * Discord runs in the same stack as multi-scrobbler
@@ -62,7 +56,7 @@ There are a few disadvantages that affect Quality of Life experience with Discor
 
 <h2>Setup</h2>
 
-Setup is basically the same as using the instructions for [Discord on Linux](./?osType=linux#find-ipc-connection) with [MS on Same Host (Docker)](./?osType=linux#pass-ipc-to-multi-scrobbler).
+Setup is basically the same as using the instructions for [Discord on Linux](./?osType=linux&discordType=native#find-ipc-connection) with [MS on Same Host (Docker)](./?osType=linux&discordType=native#pass-ipc-to-multi-scrobbler).
 
 <h3>1. Add Discord Service to Multi-Scrobbler Docker Compose Stack</h3>
 
@@ -138,6 +132,18 @@ http://192.168.MY.HOST:6901
 Login to Discord normally. After login is complete MS should connect automatically when a Now Playing event happens. If it does not or reports authentication failure then restart MS (but not Discord).
 
 If MS works then you are done and can move on to [Optional Setup](#optional-setup).
+
+</TabItem>
+
+<TabItem value="native" label="Native Discord">
+
+Use this method if you want to connect MS to Discord running on a physical desktop.
+
+<DetailsAdmo type="tip" summary="Local MS Installation Requires No Config">
+
+If MS was [installed locally](/installation#local-installation) (not Docker) on the same machine as the Discord application then MS should [automatically detect the correct method](#find-ipc-connection) and [use it](#pass-ipc-to-multi-scrobbler) **without** any configuration from you. This will work for **any OS**.
+
+If MS cannot determine this automatically, follow the steps for your OS below.
 
 </DetailsAdmo>
 
@@ -400,6 +406,10 @@ After [finding your IPC connection path](#find-ipc-connection) you will need to 
 </TabItem>
 </Tabs>
 
+</TabItem>
+
+</Tabs>
+
 ## Optional Setup
 
 :::note
@@ -444,6 +454,46 @@ MS will use your artwork URLs only if:
     * a list of custom domains keywords an external artwork url should contain EX 
         * ENV => `DISCORD_ARTWORK=mycdn,jellyfin`
         * File Config => `"artwork": ["mycdn","jellyfin"]`
+
+<details>
+
+<summary>Examples</summary>
+
+None of the below URLs will **ever** be used because they are not `https`
+
+```
+http://foobar.com/cool.jpg <-- NOT allowed, not http
+http://192.168.0.112/fun.png <-- NOT allowed, not http
+```
+
+When `DISCORD_ARTWORK` is not set:
+
+```
+https://archive.org/download/dir/myimage.jpg <-- allowed, is https and known service
+https://spotify.com/assets/cover.png?size=1000 <-- allowed, is https and known service
+https://example.com/cool.jpg <-- NOT allowed, is https but not a known service and DISCORD_ARTWORK is not set
+https://anything.com/neat.jpg <-- NOT allowed, is https but not a known service and DISCORD_ARTWORK is not set
+```
+
+Setting `DISCORD_ARTWORK=true`
+
+```
+https://archive.org/my/dir/myimage.jpg <-- allowed, is https and known service
+http://foobar.com/cool.jpg <-- NOT allowed, not http
+https://example.com/cool.jpg <-- allowed, is https
+https://anything.com/neat.jpg <-- allowed, is https
+```
+
+Setting `DISCORD_ARTWORK=mycdn,jellyfin`
+
+```
+https://archive.org/my/dir/myimage.jpg <-- allowed, is https and known service
+http://foobar.com/cool.jpg <-- NOT allowed, not http
+https://example.com/cool.jpg <-- NOT allowed, is https but does not contain "mycdn" or "jellyfin"
+https://jellyfin.mydomain.com/neat.jpg <-- allowed, is https and contains "jellyfin"
+```
+
+</details>
 
 </TabItem>
 <TabItem label="Musicbrainz/Cover Art Achive" value="caa">
