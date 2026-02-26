@@ -566,7 +566,19 @@ Disable using either:
 
 ## Monitoring
 
-Multi-scrobbler supports some common webhooks and a healthcheck endpoint in order to monitor Sources and Clients for errors.
+### Upstream Services Status
+
+A status page for monitoring the reachability of public services used by some Sources/Clients is available at
+
+**https://status.multi-scrobbler.app**
+
+This monitor runs on a VPS and checks the uptime of *actual* APIs for these services, not just landing pages. On a ~minute interval it checks:
+
+* Listenbrainz API
+* Musicbrainz API
+* CoverArtArchive API
+* Last.fm API
+* A few MS-hosted support services
 
 ### Webhook Configurations
 
