@@ -15,6 +15,12 @@ This scrobbler uses **[Now Playing](/configuration/clients#now-playing)** functi
 
 This integration uses an **existing Discord application** to set your Rich Presence.
 
+:::tip
+
+Check the [main Discord docs page](/configuration/clients/discord) for a comparison between **App** and **Headless**.
+
+:::
+
 ## Required Setup
 
 ### Discord Application
@@ -37,19 +43,23 @@ This integration uses an existing, running Discord application to communicate wi
 
 <TabItem value="container" label="Containerized Discord">
 
-[Kasm Workspaces](https://kasm.com) provides a self-hostable [Discord container image](https://hub.docker.com/r/kasmweb/discord) for intel/amd hosts. This image provides a desktop-like experience, through browser-based VNC, to use the official Discord application.
+[Kasm Workspaces](https://kasm.com) provides a self-hostable [Discord container image](https://hub.docker.com/r/kasmweb/discord). This image provides a desktop-like experience, through browser-based VNC, to use the official Discord application.
 
 <img src={require('/img/discord_kasm.png').default} height="400"/>
 
-Using this containerized approach, instead of configuring MS to use a [Native Discord](./?discordType=native#dicord-connection) application on a specific machine, has a few advantages:
+This containerized approach can be used instead of configuring MS to use a [Native Discord](./?discordType=native#dicord-connection) application on a specific machine.
+
+**Advantages**
 
 * Setup is much simpler
   * Discord runs in the same stack as multi-scrobbler
   * **Configuration is copy-paste.** Skip all of the [Discord Connection](#discord-connection) instructions.
 * Get a [Headless](/configuration/clients/discord/discord-headless)-like experience without needing to break Discord TOS
 
-There are a few disadvantages that affect Quality of Life experience with Discord:
+**Disadvantages**
 
+* Image only available for x86 arch
+* Image and container are large (1GB+)
 * Discord does not notify *other* clients of notifications in a channel if *any* client is viewing that channel.
   * To avoid this, make sure your container discord instance is not viewing any server/channel/dm.
 * Sometimes, Discord does not deliver "notifications you missed" to mobile because this depends on *all* clients being offline.
@@ -93,7 +103,7 @@ services:
       # ...
       # add below line
       // highlight-start
-      - kener_run:/run
+      - kasm_run:/run
       // highlight-end
     # ...
 
@@ -107,20 +117,20 @@ services:
       - 6901:6901
     shm_size: 512m
     environment:
-      # optionally set a password for VNC access
-      VNC_PW:
+      # set a password for VNC access
+      VNC_PW: hunter2
       XDG_RUNTIME_DIR: /run/user/1000
     volumes:
-      - kener_run:/run/user/1000
-      - kener_config:/home/kasm-default-profile/.config
+      - kasm_run:/run/user/1000
+      - kasm_config:/home/kasm-user/.config
     user: "0"
-    entrypoint: sh -c "chmod 700 /run/user/1000 && chown -R kasm-user:kasm-user /run/user/1000 && su kasm-user -c '/dockerstartup/kasm_default_profile.sh /dockerstartup/vnc_startup.sh /dockerstartup/kasm_startup.sh'"
+    entrypoint: sh -c "chmod 700 /run/user/1000 && chown -R kasm-user:kasm-user /run/user/1000 && chown -R kasm-user:kasm-user /home/kasm-user/.config && su kasm-user -c '/dockerstartup/kasm_default_profile.sh /dockerstartup/vnc_startup.sh /dockerstartup/kasm_startup.sh'"
 
 volumes:
-  kener_run:
-    name: kener_run
-  kener_config:
-    name: kener_config
+  kasm_run:
+    name: kasm_run
+  kasm_config:
+    name: kasm_config
   // highlight-end
 ```
 
@@ -133,7 +143,10 @@ Then re-deploy your stack.
 Navigate in your browser to the IP/host Multi-Scrobbler/Discord are running on. Use the `port` set in the `kasmcord` service:
 
 ```
-http://192.168.MY.HOST:6901
+# basic auth login
+# user: kasm_user
+# pass is what was set in env VNC_PW
+https://192.168.MY.HOST:6901
 ```
 
 Login to Discord normally. After login is complete MS should connect automatically when a Now Playing event happens. If it does not or reports authentication failure then restart MS (but not Discord).
