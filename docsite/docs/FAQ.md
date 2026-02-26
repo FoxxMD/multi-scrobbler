@@ -60,6 +60,21 @@ If multi-scrobbler is not running on the same machine your browser is on then th
 
 EX `http://localhost:9078/lastfm/callback` -> `http://192.168.0.220:9078/lastfm/callback`
 
+### I get errors with `ECONNRESET` `ETIMEDOUT` `ENOTFOUND` `EAI_AGAIN`
+
+These are errors indicating a network issue is occuring between you and the Source/Client.
+
+* `ECONNRESET` means the upstream service unexpectedly closed the connection
+* `ETIMEDOUT` means the upstream service did not respond to a request MS
+* `ENOTFOUND` means that MS could not find a DNS record for the domain of the upstream service
+* `EAI_AGAIN` means that a DNS server did not respond to MS's request to lookup the record for a domain
+
+`ECONNRESET` and timeout issues can occur when you have a poor connection or if the upstream service is overloaded or is generally not behaving well. This is a common occurrence for Listenbrainz/Musicbrainz related requests.
+
+Please check the [Upstream Services Status Page](https://status.multi-scrobbler.app) to independently verify if the service is misbehaving. If the service is up and has good uptime then the issue may be in your network.
+
+`ENOTFOUND` and `EAI_AGAIN` and generally caused by DNS caching (stale records) or misbehaving DNS servers. Though this can happen at the upstream service's end, it is *usually* an issue in your network. If you run a Pihole, AdGaurd, or other DNS solution try flushing the cache for the mishaving domain and check that your DNS application is working correctly. 
+
 ### Youtube Music fails after some time
 
 If you see errors in multi-scrobbler for YTM that contain **401** or **403** like
