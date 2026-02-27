@@ -41,6 +41,7 @@ A dockerized app that monitors your music listening activity from *everywhere* a
     * [Yamaha MusicCast](https://foxxmd.github.io/multi-scrobbler/configuration/sources/yamaha-musiccast)
     * [Youtube Music](https://foxxmd.github.io/multi-scrobbler/configuration/sources/youtube-music)
 * Supports scrobbling to many [**Clients**](https://foxxmd.github.io/multi-scrobbler/configuration/clients)
+    * [Discord](https://foxxmd.github.io/multi-scrobbler/configuration/clients/discord) (Now Playing)
     * [Koito](https://foxxmd.github.io/multi-scrobbler/configuration/clients/koito)
     * [Last.fm](https://foxxmd.github.io/multi-scrobbler/configuration/clients/lastfm)
     * [Libre.fm](https://foxxmd.github.io/multi-scrobbler/configuration/clients/librefm)
