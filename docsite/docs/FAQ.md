@@ -85,7 +85,7 @@ Error: Could not send the specified request to browse. Status code: 401
 
 then YTM has invalidated your authentication.
 
-First, ensure you are NOT using [YoutubeTV authentication.](/configuration/sources/youtube-music?ytmAuth=ytt#authentication) If you completed authentication by entering a "User Code" you are using YoutubeTV which has stopped working. You should reauthenticate using **Cookies** or **Custom OAuth.**
+First, ensure you are NOT using [YoutubeTV authentication.](/configuration/sources/youtube-music?ytmAuth=ytt#ytm-auth) If you completed authentication by entering a "User Code" you are using YoutubeTV which has stopped working. You should reauthenticate using **Cookies** or **Custom OAuth.**
 
 #### When using OAuth Client Authentication
 
@@ -95,7 +95,7 @@ Refresh your authentication by using the **(Re)authenticate** link from MS's web
 
 The library MS uses relies on scraping the YTM site by using cookies from your actual browser to pretend it is a browser. It does its best to keep these up to date but since this is not an official way to access the service YTM may invalidate your access _to the authenticated session_ at any time. How this is triggered is unknown and not something multi-scrobbler can control. You can help limit the chance of your session being invalidated by [getting the cookie from an Incognito/Private Session](https://github.com/LuanRT/YouTube.js/issues/803#issuecomment-2504032666) and then immediately closing the browser afterwards.
 
-To re-authenticate MS [follow the YTM instructions to retrieve a new set of cookies for multi-scrobbler](/configuration/sources/youtube-music?ytmAuth=cookie#authentication) and then restart MS to potentially resolve the problem.
+To re-authenticate MS [follow the YTM instructions to retrieve a new set of cookies for multi-scrobbler](/configuration/sources/youtube-music?ytmAuth=cookie#ytm-auth) and then restart MS to potentially resolve the problem.
 
 ## Configuration Issues
 

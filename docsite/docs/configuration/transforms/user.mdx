@@ -16,7 +16,7 @@ The user [Stage `type`](/configuration/transforms#stage) is `user`.
 
 ## Configuration
 
-All [Stage Configuration](/configuration/transforms#configuring-stage) is done using [**search-and-replace** expressions](#search-and-replace-expression) inside individual [rules](#rules). Default configuration for all Rules can still be done using Stage `defaults`.
+All [Stage Configuration](/configuration/transforms#configuring-stages) is done using [**search-and-replace** expressions](#search-and-replace-expression) inside individual [rules](#rules). Default configuration for all Rules can still be done using Stage `defaults`.
 
 <details>
 
@@ -46,9 +46,9 @@ All [Stage Configuration](/configuration/transforms#configuring-stage) is done u
 
 #### Default Stage
 
-For your convenience, if you do not define any User [Stage Configurations](/configuration/transforms#configuration) then multi-scrobbler automatically builds an empty one for you.
+For your convenience, if you do not define any User [Stage Configurations](/configuration/transforms#configuring-stages) then multi-scrobbler automatically builds an empty one for you.
 
-This can be used by omitting the `name` in your [modification Stage](/configuration/transforms#modification-stage).
+This can be used by omitting the `name` in your [modification Stage](/configuration/transforms#stage).
 
 <details>
 
@@ -126,7 +126,7 @@ The `replace` property uses javascript's [`replace()` function and so can use an
 
 ### Rules
 
-Each [Rule](/configuration/transforms#stage-rules) must be an array of [search-and-replace expressions](#search-and-replace-expressions):
+Each [Rule](/configuration/transforms#stage-rules) must be an array of [search-and-replace expressions](#search-and-replace-expression):
 
 ```json5 title="lastfm.json"
 [

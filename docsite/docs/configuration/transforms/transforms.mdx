@@ -36,7 +36,7 @@ Scrobble **Clients** listen for discovered Plays from Sources, then...
 * The Client **compares** this Play to all the other scrobbles it has already seen, if the Play is unique (title/artist/album/listened datetime) then...
 * The Client **scrobbles** the Play downstream to the scrobble service and adds it as a Scrobble it has seen already
 
-## Lifecyle Hooks
+## Lifecycle Hooks
 
 You'll notice there is a pattern above that looks like this:
 
@@ -376,7 +376,7 @@ Specifying these Rules is **not** the same as [configuring the Stage](#configuri
 
 Stages may be optionally configured to **continue** to the next Stage or **stop** (end early) all subsequent Stages, based on the outcome of the currently running Stage.
 
-These three properties can be added to the [Modification Stage](#modification-stage) data, alongside [Rules](#rules-for-play-data):
+These three properties can be added to the [Modification Stage](#stage) data, alongside [Rules](#stage-rules):
 
 * `onSuccess` (default `continue`) - If the Stage successfully finishes processing
 * `onFailure` (default `stop`) - If the Stage encounters an error while processing, or otherwise fails to achieve the transformation result

@@ -50,7 +50,7 @@ Set up [Valkey Caching](/configuration?cachedThings=metadata#caching) to cache M
 
 ### API Setup
 
-To avoid rate limiting, MusicBrainz requires API users to identify themself using a [User-Agent that contains an email or URL.](https://wiki.musicbrainz.org/MusicBrainz_API/Rate_Limiting#How_can_I_be_a_good_citizen_and_be_smart_about_using_the_Web_Service?) You must set this in the `data` for your [stage configuration](http://localhost:3000/docs/configuration/transforms/#configuring-stages) in your [AIO Config](/configuration?configType=aio#configuration-types):
+To avoid rate limiting, MusicBrainz requires API users to identify themself using a [User-Agent that contains an email or URL.](https://wiki.musicbrainz.org/MusicBrainz_API/Rate_Limiting#How_can_I_be_a_good_citizen_and_be_smart_about_using_the_Web_Service?) You must set this in the `data` for your [stage configuration](/configuration/transforms/#configuring-stages) in your [AIO Config](/configuration?configType=aio#configuration-types):
 
 ```json5 title="config.json"
 {
@@ -160,7 +160,7 @@ Example:
 ]
 ```
 
-Each [**Stage Rule**](/configuration/transforms#stage-rules) should be either a boolean, specifying if the transformed data should be used for this field, or a [`when` condition](/configuration/transforms#conditional-moditication):
+Each [**Stage Rule**](/configuration/transforms#stage-rules) should be either a boolean, specifying if the transformed data should be used for this field, or a [`when` condition](/configuration/transforms#conditional-modification):
 
 <details>
 
@@ -247,11 +247,11 @@ To configure [stage defaults](#stage-configuration) use `MB_PRESETS` with a comm
 * `fields` - Applies [Field Scoring](#field-scoring) to match sorting so match text is baised towards similarity to original scrobble
 * `sensible` - Applies the [Sensible Default](#sensible-default) configuration for [sorting releases](#sorting-releases)
 
-Finally, use ENV `*_TRANSFORMS=musicbrainz` on each Source/Client you wish to apply this stage to. This applies the stage in the [`preTransform` Hook](/configuration/transforms#lifecycle-hooks) with all [Rules](#rules) enabled.
+Finally, use ENV `*_TRANSFORMS=musicbrainz` on each Source/Client you wish to apply this stage to. This applies the stage in the [`preTransform` Hook](/configuration/transforms#lifecycle-hooks) with all [Rules](#rules-and-hooks) enabled.
 
 The `*` stands for the prefix used for each Source/Client's ENV keys. Refer to the individual Source/Client Configuration sections to find this. Example:
 
-* All [Subsonic Source](http://localhost:3000/docs/configuration/sources/subsonic/) ENVs look like `SUBSONIC_USER=myuser` etc...
+* All [Subsonic Source](/configuration/sources/subsonic) ENVs look like `SUBSONIC_USER=myuser` etc...
 * Use `SUBSONIC_TRANSFORMS=musicbrainz`
 
 <details>
@@ -706,7 +706,7 @@ Sorting can be used instead of filters, or in conjunction with filters, it's you
 
 #### Release Attributes {#sorting-releases}
 
-Each [Release Attribute](#release-attribute) has one additional property that can be used to **rank** releases based on the order of the values you give it. This is the `priority` property.
+Each [Release Attribute](#release-attributes) has one additional property that can be used to **rank** releases based on the order of the values you give it. This is the `priority` property.
 
 In configuration:
 
@@ -818,7 +818,7 @@ Consider adding [Artist Extraction (`artist`)](#search-methods) in **Native Mode
 
 How complete, and accurate, your scrobble data is from a certain Source should dictate what [Search Methods](#search-methods) you should use for matching.
 
-Musicbrainz agressively normalizes **artist, album, and title** fields in its database which means that if your Scrobble data contains major innaccuracies or phrases fields in a non-normal way, it's possible Musicbrainz won't find any matches. This is a more common occurrence when trying to match Scrobble data from Sources that don't support multiple artist data, like [Subsonic](/configuration/sources/subsonic) and [Last.fm](/configuration/sources/lastfm).
+Musicbrainz agressively normalizes **artist, album, and title** fields in its database which means that if your Scrobble data contains major innaccuracies or phrases fields in a non-normal way, it's possible Musicbrainz won't find any matches. This is a more common occurrence when trying to match Scrobble data from Sources that don't support multiple artist data, like [Subsonic](/configuration/sources/subsonic) and [Last.fm](/configuration/sources/lastfm-source).
 
 <details>
 
@@ -869,7 +869,7 @@ When using your own filters consider:
 
 ### Using Partial Match
 
-Use [Rules](#rules) to apply MusicBrainz match data selectively.
+Use [Rules](#rules-and-hooks) to apply MusicBrainz match data selectively.
 
 If you know that your music collection is well organized and you do not want to change the artists/title/album etc... sent to a [Client](/configuration/clients), you can still benefit from matches by only applying MBIDs using `meta` so that any Client that supports Musicbrainz data ([Koito](/configuration/clients/koito), [Tealfm](/configuration/clients/tealfm), [Listenbrainz](/configuration/clients/listenbrainz), [Rocksky](/configuration/clients/rocksky)) can still get that data.
 
@@ -1086,7 +1086,7 @@ Your [AIO Config](/configuration?configType=aio#configuration-types):
 }
 ```
 
-In a [Jellyfin](/configuration/clients/jellyfin) [File Config](/configuration?configType=file#configuration-types):
+In a [Jellyfin](/configuration/sources/jellyfin) [File Config](/configuration?configType=file#configuration-types):
 
 ```json5 title="jellyfin.json"
 [
@@ -1119,7 +1119,7 @@ In a [Jellyfin](/configuration/clients/jellyfin) [File Config](/configuration?co
   * [Sensible Defaults](#sensible-default)
   * Fallback search with [Artist Extraction](#search-methods)
 * [Default Native Stage](/configuration/transforms/native/#default-stage)
-* Uses [Flow Control](/configurations/transforms#flow-control) to run Native only if there are no Musicbrainz matches
+* Uses [Flow Control](/configuration/transforms#flow-control) to run Native only if there are no Musicbrainz matches
 
 <details>
 
@@ -1153,7 +1153,7 @@ Your [AIO Config](/configuration?configType=aio#configuration-types):
 }
 ```
 
-In a [Jellyfin](/configuration/clients/jellyfin) [File Config](/configuration?configType=file#configuration-types):
+In a [Jellyfin](/configuration/sources/jellyfin) [File Config](/configuration?configType=file#configuration-types):
 
 ```json5 title="jellyfin.json"
 [

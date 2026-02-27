@@ -75,7 +75,7 @@ Config => extracted artists
 
 ### Rules
 
-Each [Rule](/configuration/transforms#stage-rules) should be either a boolean, specifying if the transformed data should be used for this field, or a [`when` condition.](/configuration/transforms#conditional-moditication):
+Each [Rule](/configuration/transforms#stage-rules) should be either a boolean, specifying if the transformed data should be used for this field, or a [`when` condition.](/configuration/transforms#conditional-modification):
 
 ```json5
 {
@@ -96,7 +96,7 @@ If a rule is not present then multi-scrobbler defaults it to `true`.
 
 For your convenience, if you do not define any Native [Stage Configurations](/configuration/transforms#configuring-stages) then multi-scrobbler automatically builds one using the defaults shown in [configuration](#configuration).
 
-This can be used by omitting the `name` in your [modification Stage](/configuration/transforms#modification-stage).
+This can be used by omitting the `name` in your [modification Stage](/configuration/transforms#stage).
 
 <details>
 
@@ -132,7 +132,7 @@ Use ENV `*_TRANSFORMS=native` on each Source/Client you wish to apply this stage
 
 The `*` stands for the prefix used for each Source/Client's ENV keys. Refer to the individual Source/Client Configuration sections to find this. Example
 
-* All [Subsonic Source](http://localhost:3000/docs/configuration/sources/subsonic/) ENVs look like `SUBSONIC_USER=myuser` etc...
+* All [Subsonic Source](/configuration/sources/subsonic/) ENVs look like `SUBSONIC_USER=myuser` etc...
 * Use `SUBSONIC_TRANSFORMS=native`
 
 <details>

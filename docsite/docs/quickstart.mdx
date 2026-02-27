@@ -10,7 +10,7 @@ This guide will get you up and running with multi-scrobbler using [Docker](https
 
 * the dashboard served on port `9078` of a host machine which has an IP of `192.168.0.100`
 * data saved to the same directory as the `docker-compose.yml` file
-* multi-scrobbler monitoring [Spotify](/configuration/sources/spotify), [Jellyfin](/configuration/sources/jellyfin), Navidrome, [Plex](/configuration/sources/plex), and/or [Last.fm](/configurations/sources/lastfm) for listening activity
+* multi-scrobbler monitoring [Spotify](/configuration/sources/spotify), [Jellyfin](/configuration/sources/jellyfin), Navidrome, [Plex](/configuration/sources/plex), and/or [Last.fm](/configuration/sources/lastfm-source) for listening activity
 * multi-scrobbler scrobbling to [Lastfm](/configuration/clients/lastfm), [Maloja](/configuration/clients/maloja), and/or [Koito](/configuration/clients/koito)
 
 :::note
@@ -166,7 +166,7 @@ Add these value to the `environment` section in the [`docker-compose.yml` you cr
 - MB_PRESETS=default,sensible,native
 ```
 
-**Presets** are found [here](http://localhost:3000/docs/configuration/transforms/musicbrainz/#env-configuration). 
+**Presets** are found [here](/configuration/transforms/musicbrainz/#env-configuration). 
 
 <h3>Enable Musicbrainz For A Source</h3>
 

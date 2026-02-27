@@ -168,7 +168,7 @@ Each entry for a Source/Client includes a **Configuration** section that describ
 
 ## Secrets Interpolation
 
-When using [File](./?configType=file#configuration-types) or [AIO](./?configType=aio#configuration-types) Configuration, Multi-Scrobbler can interpolate Environmental Variables into your json files. This can be used, for example, to keep sensitive data (like [Last.fm Client/Secret](/configurations/clients/lastfm#configuration)) out of your configuration files so that they can be committed to git.
+When using [File](./?configType=file#configuration-types) or [AIO](./?configType=aio#configuration-types) Configuration, Multi-Scrobbler can interpolate Environmental Variables into your json files. This can be used, for example, to keep sensitive data (like [Last.fm Client/Secret](/configuration/clients/lastfm#configuration)) out of your configuration files so that they can be committed to git.
 
 Multi-scrobbler will look for patterns in text fields within _all_ of your json files:
 
@@ -179,7 +179,7 @@ Multi-scrobbler will look for patterns in text fields within _all_ of your json 
 
 <summary>Example</summary>
 
-Given this [Last.fm](/configurations/clients/lastfm#configuration) [File](./?configType=file#configuration-types) config:
+Given this [Last.fm](/configuration/clients/lastfm#configuration) [File](./?configType=file#configuration-types) config:
 
 ```json title="lastfm.json"
 [
@@ -555,7 +555,7 @@ If you do not need the dashboard and/or ingress sources, or have security concer
 
 :::warning
 
-Any **[ingress-based sources](/configuration/sources#ingress) will be unusable** (Webscrobbler, etc...) if this is disabled.
+Any **[ingress-based sources](/configuration/sources?sourceComm=ingress#by-communication-method) will be unusable** (Webscrobbler, etc...) if this is disabled.
 
 :::
 
