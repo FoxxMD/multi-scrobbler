@@ -3,13 +3,12 @@ import EventEmitter from "events";
 import { PlayObject } from "../../core/Atomic.js";
 import { buildTrackString, capitalize } from "../../core/StringUtils.js";
 import { isNodeNetworkException } from "../common/errors/NodeErrors.js";
-import { hasUpstreamError, UpstreamError } from "../common/errors/UpstreamError.js";
 import { FormatPlayObjectOptions } from "../common/infrastructure/Atomic.js";
 import { playToListenPayload } from "../common/vendor/ListenbrainzApiClient.js";
 import { Notifiers } from "../notifier/Notifiers.js";
 
 import AbstractScrobbleClient from "./AbstractScrobbleClient.js";
-import { ListRecord, ScrobbleRecord, TealClientConfig } from "../common/infrastructure/config/client/tealfm.js";
+import { TealClientConfig } from "../common/infrastructure/config/client/tealfm.js";
 import { BlueSkyAppApiClient } from "../common/vendor/bluesky/BlueSkyAppApiClient.js";
 import { BlueSkyOauthApiClient } from "../common/vendor/bluesky/BlueSkyOauthApiClient.js";
 import { AbstractBlueSkyApiClient, listRecordToPlay, playToRecord, recordToPlay } from "../common/vendor/bluesky/AbstractBlueSkyApiClient.js";
@@ -93,13 +92,12 @@ export default class TealScrobbler extends AbstractScrobbleClient {
     }
 
     getScrobblesForRefresh = async (limit: number) => {
-        let list: ListRecord<ScrobbleRecord>[];
         try {
-            list = await this.client.listScrobbleRecord(limit)
+            const {data} = await this.client.getPagelessTimeRangeListens({limit})
+            return data;
         } catch (e) {
             throw new Error('Error occurred while trying to fetch records', {cause: e});
         }
-        return list.map(x => listRecordToPlay(x));
     }
 
     alreadyScrobbled = async (playObj: PlayObject, log = false) => (await this.existingScrobble(playObj)) !== undefined

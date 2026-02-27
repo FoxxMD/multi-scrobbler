@@ -6,6 +6,7 @@ import isBetween from 'dayjs/plugin/isBetween.js';
 import relativeTime from 'dayjs/plugin/relativeTime.js';
 import isToday from 'dayjs/plugin/isToday.js';
 import timezone from 'dayjs/plugin/timezone.js';
+import week from 'dayjs/plugin/weekOfYear.js';
 import utc from 'dayjs/plugin/utc.js';
 import * as path from "path";
 import { SimpleIntervalJob, ToadScheduler } from "toad-scheduler";
@@ -29,6 +30,7 @@ dayjs.extend(relativeTime);
 dayjs.extend(duration);
 dayjs.extend(timezone);
 dayjs.extend(isToday);
+dayjs.extend(week);
 
 // eslint-disable-next-line prefer-arrow-functions/prefer-arrow-functions
 (async function () {

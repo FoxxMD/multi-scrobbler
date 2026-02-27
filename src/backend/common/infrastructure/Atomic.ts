@@ -1,9 +1,10 @@
 import { Logger } from '@foxxmd/logging';
-import { Dayjs } from "dayjs";
+import { SearchAndReplaceRegExp } from "@foxxmd/regex-buddy-core";
+import { Dayjs, ManipulateType } from "dayjs";
 import { Request, Response } from "express";
 import { NextFunction, ParamsDictionary, Query } from "express-serve-static-core";
 import { FixedSizeList } from 'fixed-size-list';
-import { isPlayObject, PlayMeta, PlayObject, PlayObjectLifecycleless } from "../../../core/Atomic.js";
+import { isPlayObject, PlayMeta, PlayObject, PlayObjectLifecycleless, UnixTimestamp } from "../../../core/Atomic.js";
 import TupleMap from "../TupleMap.js";
 import { MusicBrainzApi } from 'musicbrainz-api';
 
@@ -406,6 +407,8 @@ export const MBID_VARIOUS_ARTISTS = "89ad4ac3-39f7-470e-963a-56509c546377";
 
 export type MusicBrainzSingletonMap = Map<string,MusicBrainzApi>;
 
+
+
 /* https://websocket.org/reference/close-codes/ */
 export const WEBSOCKET_CLOSE_CODE_REASONS = {
     1000: 'Closed gracefully',
@@ -428,4 +431,74 @@ export const WEBSOCKET_CLOSE_CODE = {
     InternalError: 1011
 }
 
-export const WEBSOCKET_CLOSE_CODES_RETRY = [1006,1011,1001];
+export const WEBSOCKET_CLOSE_CODES_RETRY = [1006,1011,1001];export interface PaginatedLimit {
+    /** per page max number of results to return */
+    limit?: number
+}
+
+export interface PaginatedTimeRangeOptions {
+    /** Unix timestamp */
+    from: UnixTimestamp
+    /** Unix timestamp */
+    to: UnixTimestamp
+}
+
+export type PaginatedTimeRangeCommonOptions = Partial<PaginatedTimeRangeOptions> & PaginatedLimit;
+
+export type CursorType = number | string;
+
+export interface PaginatedListensOptions<T extends CursorType> extends PaginatedLimit {
+    cursor: T
+}
+
+export interface PagelessListensTimeRangeOptions extends PaginatedTimeRangeCommonOptions {
+}
+
+export interface PaginatedListensTimeRangeOptions<T extends CursorType = CursorType> extends Partial<PaginatedTimeRangeOptions>, PaginatedListensOptions<T> {
+}
+
+export interface PaginatedResults<T extends CursorType = CursorType> {
+    total?: number
+    more?: boolean
+    cursorNext?: T
+    order?: 'desc' | 'asc'
+}
+
+export interface PaginatedListens {
+    getPaginatedListens(params: PaginatedListensOptions<CursorType>): Promise<{data: PlayObject[], meta: PaginatedListensOptions<CursorType> & PaginatedResults<CursorType>}>
+}
+
+export const hasPaginagedListens = (obj: Object): obj is PaginatedListens => {
+    return 'getPaginatedListens' in obj;
+}
+
+export interface PaginatedTimeRangeListensResult<T extends CursorType> {
+    data: PlayObject[];
+    meta: PaginatedListensTimeRangeOptions<T> & PaginatedResults<T>;
+}
+export interface PaginatedTimeRangeListens<T extends CursorType = CursorType> {
+    getPaginatedTimeRangeListens(params: PaginatedListensTimeRangeOptions<T>): Promise<PaginatedTimeRangeListensResult<T>>
+    getPaginatedUnitOfTime(): ManipulateType;
+}
+
+export const hasPaginatedTimeRangeListens = (obj: Object): obj is PaginatedTimeRangeListens => {
+    return 'getPaginatedTimeRangeListens' in obj;
+}
+
+export interface PagelessTimeRangeListensResult {
+    data: PlayObject[]
+    meta: PagelessListensTimeRangeOptions & PaginatedResults
+}
+export interface PagelessTimeRangeListens {
+    getPagelessTimeRangeListens(params: PagelessListensTimeRangeOptions): Promise<PagelessTimeRangeListensResult>
+    getPaginatedUnitOfTime(): ManipulateType;
+}
+
+export const hasPagelessTimeRangeListens = (obj: Object): obj is PagelessTimeRangeListens => {
+    return 'getPagelessTimeRangeListens' in obj;
+}
+
+export type PaginatedTimeRangeSource = PaginatedTimeRangeListens | PagelessTimeRangeListens;
+export type PaginatedSource = PaginatedListens | PaginatedTimeRangeSource;
+
+export type TimeRangeListensFetcher<T extends CursorType = CursorType> = (opts: PaginatedTimeRangeCommonOptions | PaginatedListensTimeRangeOptions<T>) => Promise<PlayObject[]>

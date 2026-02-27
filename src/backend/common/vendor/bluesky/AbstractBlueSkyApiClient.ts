@@ -1,22 +1,22 @@
 import { getRoot } from "../../../ioc.js";
-import { AbstractApiOptions } from "../../infrastructure/Atomic.js";
+import { AbstractApiOptions, PagelessListensTimeRangeOptions, PagelessTimeRangeListens, PagelessTimeRangeListensResult } from "../../infrastructure/Atomic.js";
 import { ListRecord, ScrobbleRecord, TealClientData } from "../../infrastructure/config/client/tealfm.js";
 import AbstractApiClient from "../AbstractApiClient.js";
-import { Agent, ComAtprotoRepoCreateRecord } from "@atproto/api";
+import { Agent, ComAtprotoRepoCreateRecord, ComAtprotoRepoListRecords } from "@atproto/api";
 import { MSCache } from "../../Cache.js";
-import { BrainzMeta, PlayObject, PlayObjectLifecycleless, ScrobbleActionResult } from "../../../../core/Atomic.js";
+import { BrainzMeta, PlayObject, PlayObjectLifecycleless, ScrobbleActionResult, UnixTimestamp } from "../../../../core/Atomic.js";
 import { musicServiceToCononical } from "../ListenbrainzApiClient.js";
 import { parseRegexSingle } from "@foxxmd/regex-buddy-core";
 import { RecordOptions } from "../../infrastructure/config/client/tealfm.js";
-import dayjs from "dayjs";
+import dayjs, { ManipulateType } from "dayjs";
 import { getScrobbleTsSOCDateWithContext } from "../../../utils/TimeUtils.js";
 import { removeUndefinedKeys } from "../../../utils.js";
 import { baseFormatPlayObj } from "../../../utils/PlayTransformUtils.js";
 import { ScrobbleSubmitError } from "../../errors/MSErrors.js";
 import { UpstreamError } from "../../errors/UpstreamError.js";
+import { decodeTIDToUnix, naiveTID } from "./TIDUtils.js";
 
-
-export abstract class AbstractBlueSkyApiClient extends AbstractApiClient {
+export abstract class AbstractBlueSkyApiClient extends AbstractApiClient implements PagelessTimeRangeListens {
 
     declare config: TealClientData;
 
@@ -48,17 +48,43 @@ export abstract class AbstractBlueSkyApiClient extends AbstractApiClient {
         }
     }
 
-    async listScrobbleRecord(limit: number = 20): Promise<ListRecord<ScrobbleRecord>[]> {
+    async listScrobbleRecord(options: {limit?: number, cursor?: string} = {}): Promise<ComAtprotoRepoListRecords.Response> {
+        const {limit = 20, cursor} = options;
         try {
+            // records are returned newest to oldest
             const response = await this.agent.com.atproto.repo.listRecords({
                 repo: this.agent.sessionManager.did,
                 collection: "fm.teal.alpha.feed.play",
-                limit
+                limit,
+                cursor // cursor TID is EXCLUSIVE IE first record returned will be the first older than cursor
             });
-            return response.data.records as unknown as ListRecord<ScrobbleRecord>[];
+            return response;
         } catch (e) {
             throw new UpstreamError(`Failed to list scrobble record`, { cause: e, response: 'response' in e ? e.response : undefined });
         }
+    }
+
+    async getPagelessTimeRangeListens(params: PagelessListensTimeRangeOptions): Promise<PagelessTimeRangeListensResult> {
+        const {to, limit} = params;
+
+        let cursor: string;
+        if(to !== undefined) {
+            cursor = naiveTID(to);
+        }
+
+        const resp = await this.listScrobbleRecord({cursor, limit});
+        let fromTS: UnixTimestamp;
+        if(resp.data.cursor !== undefined) {
+            fromTS = decodeTIDToUnix(resp.data.cursor);
+        }
+
+        const plays = (resp.data.records as unknown as ListRecord<ScrobbleRecord>[]).map(x => listRecordToPlay(x));
+
+        return {data: plays, meta: {to, from: fromTS, limit}};
+    }
+
+    getPaginatedUnitOfTime(): ManipulateType {
+        return 'second';
     }
 }
 

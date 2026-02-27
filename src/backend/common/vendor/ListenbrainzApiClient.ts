@@ -1,7 +1,7 @@
 import { stringSameness } from '@foxxmd/string-sameness';
 import dayjs from "dayjs";
 import request, { Request, Response } from 'superagent';
-import { BrainzMeta, PlayObject, PlayObjectLifecycleless, ScrobbleActionResult, URLData } from "../../../core/Atomic.js";
+import { BrainzMeta, PlayObject, PlayObjectLifecycleless, ScrobbleActionResult, UnixTimestamp, URLData } from "../../../core/Atomic.js";
 import { combinePartsToString, slice } from "../../../core/StringUtils.js";
 import {
     findDelimiters,
@@ -14,13 +14,11 @@ import {
 } from "../../utils/StringUtils.js";
 import { getScrobbleTsSOCDate } from "../../utils/TimeUtils.js";
 import { UpstreamError } from "../errors/UpstreamError.js";
-import { AbstractApiOptions, DEFAULT_RETRY_MULTIPLIER, DELIMITERS, FormatPlayObjectOptions } from "../infrastructure/Atomic.js";
-import { ListenBrainzClientData } from "../infrastructure/config/client/listenbrainz.js";
+import { AbstractApiOptions, DEFAULT_RETRY_MULTIPLIER, DELIMITERS, FormatPlayObjectOptions, PagelessListensTimeRangeOptions, PagelessTimeRangeListens, PagelessTimeRangeListensResult } from "../infrastructure/Atomic.js";
+import { DEFAULT_ITEMS_PER_GET_LZ, ListenBrainzClientData, MAX_ITEMS_PER_GET_LZ } from "../infrastructure/config/client/listenbrainz.js";
 import AbstractApiClient from "./AbstractApiClient.js";
 import { getBaseFromUrl, isPortReachableConnect, joinedUrl, normalizeWebAddress } from '../../utils/NetworkUtils.js';
 import { isEmptyArrayOrUndefined, removeUndefinedKeys, unique } from '../../utils.js';
-import {ListensResponse as KoitoListensResponse} from '../infrastructure/config/client/koito.js'
-import { listenObjectResponseToPlay } from './koito/KoitoApiClient.js';
 import { version } from '../../ioc.js';
 import { ListenPayload, ListenResponse, ListenType, MinimumTrack, SubmitListenAdditionalTrackInfo, SubmitPayload } from './listenbrainz/interfaces.js';
 import { baseFormatPlayObj } from '../../utils/PlayTransformUtils.js';
@@ -34,13 +32,26 @@ interface SubmitOptions {
 export interface ListensResponse {
     count: number;
     listens: ListenResponse[];
+    latest_listen_ts: number;
+    oldest_listen_ts: number;
 }
 
-export class ListenbrainzApiClient extends AbstractApiClient {
+export interface UserListensOptions {
+    /** unix epoch timestamp, listens with listened_at less than (but not including) this value will be returned. */
+    max_ts?: UnixTimestamp
+    /** unix epoch timestamp, listens with listened_at greater than (but not including) this value will be returned. */
+    min_ts?: UnixTimestamp
+    /** number of listens to return. Max is `MAX_ITEMS_PER_GET_LZ`
+     * 
+     * @default 25
+     */
+    count?: number
+}
+
+export class ListenbrainzApiClient extends AbstractApiClient implements PagelessTimeRangeListens {
 
     declare config: ListenBrainzClientData;
     url: URLData;
-    isKoito: boolean = false;
 
     constructor(name: any, config: ListenBrainzClientData, options: AbstractApiOptions) {
         super('ListenBrainz', name, config, options);
@@ -112,7 +123,6 @@ export class ListenbrainzApiClient extends AbstractApiClient {
     testConnection = async () => {
         try {
             await isPortReachableConnect(this.url.port, {host: this.url.url.hostname});
-            this.isKoito = await this.checkKoito();
             return true;
         } catch (e) {
             if(e.status === 410 || e.message.includes('HTTP Status 410')) {
@@ -134,50 +144,9 @@ export class ListenbrainzApiClient extends AbstractApiClient {
     async checkKoito(): Promise<boolean> {
         try {
             const resp = await this.callApi(request.get(`${joinedUrl(getBaseFromUrl(this.url.url), 'apis/web/v1/stats')}`));
-            this.logger.info('Listenbrainz Host looks like a Koito server, API client will now operate in Koito mode!');
-            this.logger.warn('Koito has limited support for the Listenbrainz API spec. It does not support Now Playing or retrieving full metabrainz data for a play. Please consider switching to the full Koito Source/Client.');
             return true;
         } catch (e) {
-            this.logger.verbose('Listenbrainz Host does not look like a Koito server.');
-        }
-        return false;
-    }
-
-    getUserListens = async (maxTracks: number, user?: string): Promise<ListensResponse> => {
-        try {
-
-            const resp = await this.callApi(request
-                .get(`${joinedUrl(this.url.url,'1/user',user ?? this.config.username, 'listens')}`)
-                // this endpoint can take forever, sometimes, and we want to make sure we timeout in a reasonable amount of time for polling sources to continue trying to scrobble
-                .timeout({
-                    response: 15000, // wait 15 seconds before timeout if server doesn't response at all
-                    deadline: 30000 // wait 30 seconds overall for request to complete
-                })
-                .query({
-                    count: maxTracks
-                }));
-            const {body: {payload}} = resp as any;
-            return payload as ListensResponse;
-        } catch (e) {
-            throw e;
-        }
-    }
-
-    getUserListensKoito = async (maxTracks: number): Promise<KoitoListensResponse> => {
-        try {
-
-            const resp = await this.callApi(request
-                .get(`${joinedUrl(getBaseFromUrl(this.url.url), '/apis/web/v1/listens')}`)
-                .query({
-                    period: 'all_time',
-                    page: 0,
-                    limit: maxTracks
-                })
-            );
-            const { body } = resp as any;
-            return body as KoitoListensResponse;
-        } catch (e) {
-            throw e;
+            return false;
         }
     }
 
@@ -200,31 +169,6 @@ export class ListenbrainzApiClient extends AbstractApiClient {
             throw e;
         }
     }
-
-    getRecentlyPlayed = async (maxTracks: number, user?: string): Promise<PlayObject[]> => {
-        if(this.isKoito) {
-            return this.getRecentlyPlayedKoito(maxTracks)
-        }
-
-        try {
-            const resp = await this.getUserListens(maxTracks, user);
-            return resp.listens.map(x => listenResponseToPlay(x));
-        } catch (e) {
-            this.logger.error(`Error encountered while getting User listens | Error =>  ${e.message}`);
-            return [];
-        }
-    }
-
-    getRecentlyPlayedKoito = async (maxTracks: number): Promise<PlayObject[]> => {
-        try {
-            const resp = await this.getUserListensKoito(maxTracks);
-            return resp.items.map(x => listenObjectResponseToPlay(x));
-        } catch (e) {
-            this.logger.error(`Error encountered while getting User listens | Error =>  ${e.message}`);
-            return [];
-        }
-    }
-
 
     submitListen = async (play: PlayObject, options: SubmitOptions = {}): Promise<ScrobbleActionResult> => {
         const listenPayload = playToSubmitPayload(play, {listenType: options.listenType});
@@ -261,6 +205,55 @@ export class ListenbrainzApiClient extends AbstractApiClient {
         }
         return playObj;
     }
+
+    getUserListens = async (options: UserListensOptions & {user?: string} = {}): Promise<ListensResponse> => {
+        const { user } = options;
+        try {
+            /** https://rain0r.github.io/listenbrainz-openapi/#/lbCore/listensForUser
+             *  https://listenbrainz.readthedocs.io/en/latest/users/api/core.html#get--1-user-(mb_username-user_name)-listens
+             */
+            const resp = await this.callApi(request
+                .get(`${joinedUrl(this.url.url,'1/user',user ?? this.config.username, 'listens')}`)
+                // this endpoint can take forever, sometimes, and we want to make sure we timeout in a reasonable amount of time for polling sources to continue trying to scrobble
+                .timeout({
+                    response: 15000, // wait 15 seconds before timeout if server doesn't respond at all
+                    deadline: 30000 // wait 30 seconds overall for request to complete
+                })
+                .query(options));
+            const {body: {payload}} = resp as any;
+            return payload as ListensResponse;
+        } catch (e) {
+            throw new UpstreamError('Getting user listens failed', {cause: e});
+        }
+    }
+
+    getPagelessTimeRangeListens = async (options: PagelessListensTimeRangeOptions & {user?: string} = {}): Promise<PagelessTimeRangeListensResult> => {
+        const { limit = 100, to, from, user } = options;
+
+        const lzListensOptions: UserListensOptions = {
+            count: Math.min(limit, MAX_ITEMS_PER_GET_LZ),
+        };
+
+        if (from !== undefined) {
+            lzListensOptions.min_ts = from;
+        }
+        if (to !== undefined) {
+            lzListensOptions.max_ts = to;
+        }
+
+        try {
+            const lr = await this.getUserListens({...lzListensOptions, user});
+            const more = to > lr.latest_listen_ts;
+            return {data: lr.listens.map(x => listenResponseToPlay(x)), meta: {...options, total: lr.count, more}};
+        } catch (e) {
+            throw e;
+        }
+    }
+
+    getPaginatedUnitOfTime(): dayjs.ManipulateType {
+        return 'second';
+    }
+
 
     static formatPlayObj(obj: any, options: FormatPlayObjectOptions): PlayObject {
         return listenResponseToPlay(obj);

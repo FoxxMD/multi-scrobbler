@@ -551,3 +551,8 @@ export const KNOWN_MEDIA_PROVIDER_URLS = [
 'listenbrainz.org',
 'musicbrainz.org'
 ];
+
+/** Number of SECONDS since 1970 */
+export type UnixTimestamp = number;
+
+export type Writeable<T> = { -readonly [P in keyof T]: T[P] };

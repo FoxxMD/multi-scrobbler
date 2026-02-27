@@ -1,7 +1,7 @@
 import EventEmitter from "events";
 import { PlayObject, SOURCE_SOT } from "../../core/Atomic.js";
 import { isNodeNetworkException } from "../common/errors/NodeErrors.js";
-import { InternalConfig } from "../common/infrastructure/Atomic.js";
+import { InternalConfig, PaginatedListensTimeRangeOptions, PaginatedTimeRangeListens } from "../common/infrastructure/Atomic.js";
 import { RecentlyPlayedOptions } from "./AbstractSource.js";
 import MemorySource from "./MemorySource.js";
 import { MalojaApiClient } from "../common/vendor/maloja/MalojaApiClient.js";
@@ -56,12 +56,14 @@ export default class MalojaSource extends MemorySource {
     getRecentlyPlayed = async (options: RecentlyPlayedOptions = {}) => {
         const { limit = 20 } = options;
         await this.processRecentPlays([]);
-        return await this.api.getRecentScrobbles(limit);
+        const resp = await this.api.getPaginatedTimeRangeListens({limit, cursor: 0});
+        return resp.data;
     }
 
     getUpstreamRecentlyPlayed = async (options: RecentlyPlayedOptions = {}): Promise<PlayObject[]> => {
         try {
-            return await this.api.getRecentScrobbles(20);
+            const resp = await this.api.getPaginatedTimeRangeListens({limit: 20, cursor: 0});
+            return resp.data;
         } catch (e) {
             throw e;
         }

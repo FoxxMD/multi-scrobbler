@@ -1,3 +1,4 @@
+import { UnixTimestamp } from "../../../../../core/Atomic.js"
 import { RequestRetryOptions } from "../common.js"
 import { CommonClientConfig, CommonClientData } from "./index.js"
 
@@ -13,6 +14,18 @@ export interface ListenObjectResponse {
     /** ISO8601 timestamp */
     time: string
     track: TrackResponse
+}
+
+export interface GetListensOptions {
+    limit?: number
+    page?: number
+    week?: number
+    month?: number
+    year?: number
+
+    // new in 0.1.0
+    to?: UnixTimestamp
+    from?: UnixTimestamp
 }
 
 export interface TrackResponse {

@@ -1,25 +1,26 @@
 import { Logger } from "@foxxmd/logging";
+import dayjs, { Dayjs } from "dayjs";
 import EventEmitter from "events";
 import { PlayObject, SourcePlayerObj } from "../../core/Atomic.js";
 import { buildTrackString, capitalize } from "../../core/StringUtils.js";
 import { isNodeNetworkException } from "../common/errors/NodeErrors.js";
 import { hasUpstreamError, UpstreamError } from "../common/errors/UpstreamError.js";
-import { FormatPlayObjectOptions } from "../common/infrastructure/Atomic.js";
-import { ListenBrainzClientConfig } from "../common/infrastructure/config/client/listenbrainz.js";
+import { FormatPlayObjectOptions, TimeRangeListensFetcher } from "../common/infrastructure/Atomic.js";
+import { DEFAULT_MS_ITEMS_PER_GET_LZ, ListenBrainzClientConfig } from "../common/infrastructure/config/client/listenbrainz.js";
 import { ListenbrainzApiClient, playToListenPayload, playToSubmitPayload } from "../common/vendor/ListenbrainzApiClient.js";
 import { ListenPayload } from '../common/vendor/listenbrainz/interfaces.js';
 import { Notifiers } from "../notifier/Notifiers.js";
 
 import AbstractScrobbleClient, { nowPlayingUpdateByPlayDuration, shouldUpdatePlayingNowPlatformWhenPlayingOnly } from "./AbstractScrobbleClient.js";
 import { isDebugMode } from "../utils.js";
+import { createGetScrobblesForTimeRangeFunc } from "../utils/ListenFetchUtils.js";
 
 export default class ListenbrainzScrobbler extends AbstractScrobbleClient {
 
-    api: ListenbrainzApiClient;
+    api: ListenbrainzApiClient;d
     requiresAuth = true;
     requiresAuthInteraction = false;
-    isKoito: boolean = false;
-
+    getScrobblesForTimeRange: TimeRangeListensFetcher
     declare config: ListenBrainzClientConfig;
 
     constructor(name: any, config: ListenBrainzClientConfig, options = {}, notifier: Notifiers, emitter: EventEmitter, logger: Logger) {
@@ -27,10 +28,11 @@ export default class ListenbrainzScrobbler extends AbstractScrobbleClient {
         this.api = new ListenbrainzApiClient(name, config.data, {logger: this.logger});
         // https://listenbrainz.readthedocs.io/en/latest/users/api/core.html#get--1-user-(user_name)-listens
         // 1000 is way too high. maxing at 100
-        this.MAX_INITIAL_SCROBBLES_FETCH = 100;
+        this.MAX_INITIAL_SCROBBLES_FETCH = DEFAULT_MS_ITEMS_PER_GET_LZ;
         this.supportsNowPlaying = true;
         // listenbrainz shows Now Playing for the same time as the duration of the track being submitted
         this.nowPlayingMaxThreshold = nowPlayingUpdateByPlayDuration;
+        this.getScrobblesForTimeRange = createGetScrobblesForTimeRangeFunc(this.api, this.api.logger);
     }
 
     formatPlayObj = (obj: any, options: FormatPlayObjectOptions = {}) => ListenbrainzApiClient.formatPlayObj(obj, options);
@@ -49,7 +51,10 @@ export default class ListenbrainzScrobbler extends AbstractScrobbleClient {
 
     protected async doCheckConnection(): Promise<true | string | undefined> {
         await this.api.testConnection();
-        this.isKoito = this.api.isKoito;
+        const isKoito = await this.api.checkKoito();
+        if(isKoito) {
+            throw new Error('The given URL looks like a Koito instance. Use the Koito Scrobbler instead of Listenbrainz.')
+        }
         return true;
     }
 
@@ -66,7 +71,11 @@ export default class ListenbrainzScrobbler extends AbstractScrobbleClient {
     }
 
     getScrobblesForRefresh = async (limit: number) => {
-        return await this.api.getRecentlyPlayed(limit);
+        if(this.queuedScrobbles.length === 0) {
+            return await this.getScrobblesForTimeRange({limit});
+        } else {
+            return await this.getScrobblesForTimeRange({limit, from: this.queuedScrobbles[0].play.data.playDate.unix(), to: dayjs().unix()});
+        }
     }
 
     alreadyScrobbled = async (playObj: PlayObject, log = false) => (await this.existingScrobble(playObj)) !== undefined
