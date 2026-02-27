@@ -24,8 +24,8 @@ export const initLogger = (): [Logger, Transform] => {
 export const appLogger = async (config: LogOptions = {}): Promise<[Logger, PassThrough]> => {
     const stream = new PassThrough({objectMode: true});
     const { file } = config;
-    const opts = parseLogOptions(isDebugMode() ? {...config, file: typeof file === 'object' ? {...file, level: 'debug'} : 'debug', console: 'debug', level: 'debug'} : config);
-    const logger = await loggerAppRolling(config, {
+    const opts = parseLogOptions(isDebugMode() ? {...config, file: typeof file === 'object' ? {...file, level: 'trace'} : 'trace', console: 'trace', level: 'trace'} : config);
+    const logger = await loggerAppRolling(opts, {
         logBaseDir: typeof process.env.CONFIG_DIR === 'string' ? process.env.CONFIG_DIR : undefined,
         logDefaultPath: './logs/scrobble.log',
         destinations: [
