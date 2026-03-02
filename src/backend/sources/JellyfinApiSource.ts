@@ -453,6 +453,8 @@ export default class JellyfinApiSource extends MemoryPositionalSource {
         if(ProviderIds.MusicBrainzAlbum !== undefined) {
             meta.album = ProviderIds.MusicBrainzAlbum;
         }
+        // jellyfin can return both the Track MBID and Recording MBID
+        // https://github.com/jellyfin/jellyfin/blob/0a0aaefad55ed16f88d3a3d61549331342e52377/MediaBrowser.Providers/MediaInfo/AudioFileProber.cs#L421
         if(ProviderIds.MusicBrainzTrack !== undefined) {
             meta.track = ProviderIds.MusicBrainzTrack;
         }
