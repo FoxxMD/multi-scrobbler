@@ -11,26 +11,45 @@ export default class UserTransformer extends AtomicPartsTransformer<ConditionalS
     //     super(name, config);
     // }
 
-    protected doParseConfig(data: StageConfig) {
+    protected doParseConfig(data: PlayTransformUserStage<ConditionalSearchAndReplaceRegExp[]>) {
         if (!isUserStage(data)) {
             throw new Error(`UserTransformer is only usable with 'user' type stages`);
         }
 
+        const {
+            title = [],
+            artists = [],
+            album = [],
+            albumArtists = [],
+            ...rest
+        } = data;
+
+        const {
+            title: defTitle = [],
+            artists: defArtist = [],
+            album: defAlbum = [],
+            albumArtists: defAA = [],
+        } = this.config.defaults;
+
         const stage: PlayTransformUserStage<ConditionalSearchAndReplaceRegExp[]> = {
-            ...data,
+            ...rest,
+            title: [...title, ...defTitle],
+            artists: [...artists, ...defArtist],
+            album: [...album, ...defAlbum],
+            albumArtists: [...albumArtists, ...defAA],
             type: 'user'
         }
 
-        for (const k of ['artists', 'title', 'album']) {
-            if (!(k in data)) {
+        for (const k of ['artists', 'title', 'album', 'albumArtists']) {
+            if (!(k in stage)) {
                 continue;
             }
-            if (!Array.isArray(data[k])) {
+            if (!Array.isArray(stage[k])) {
                 throw new Error(`${k} must be an array`);
             }
             try {
-                isSearchAndReplaceTerm(data[k]);
-                stage[k] = data[k].map(configValToSearchReplace);
+                isSearchAndReplaceTerm(stage[k]);
+                stage[k] = stage[k].map(configValToSearchReplace);
             } catch (e) {
                 throw new Error(`Property '${k}' was not a valid type`, { cause: e });
             }
