@@ -28,8 +28,8 @@ export interface DiscordClientAIOConfig extends DiscordClientConfig {
     type: 'discord'
 }
 
-export type ActivityTypeString = 'playing' | 'streaming' | 'listening' | 'watching' | 'custom' | 'competing';
-export const ActivityTypes: ActivityTypeString[] = ['playing','streaming','listening','watching','custom','competing'];
+export type ActivityTypeString = 'playing' | 'streaming' | 'listening' | 'watching' | 'custom' | 'competing' | 'hanging';
+export const ActivityTypes: ActivityTypeString[] = ['playing','streaming','listening','watching','custom','competing', 'hanging'];
 export type StatusType = 'online' | 'idle' | 'dnd' | 'invisible';
 
 export interface DiscordStrongData extends DiscordData {
@@ -62,6 +62,39 @@ export interface ActivityTimestamps {
     end?: number
 }
 
+export enum ActivityTypeOthers {
+    Hanging = 6
+}
+
+export declare enum ActivityTypeReal {
+    /**
+     * Playing \{game\}
+     */
+    Playing = 0,
+    /**
+     * Streaming \{details\}
+     */
+    Streaming = 1,
+    /**
+     * Listening to \{name\}
+     */
+    Listening = 2,
+    /**
+     * Watching \{details\}
+     */
+    Watching = 3,
+    /**
+     * \{emoji\} \{state\}
+     */
+    Custom = 4,
+    /**
+     * Competing in \{name\}
+     */
+    Competing = 5,
+
+    Hanging = 6
+}
+
 export interface ActivityData {
     name: string
     details?: string
@@ -84,8 +117,9 @@ export const ACTIVITY_TYPE = {
     Listening: 2,
     Watching: 3,
     Custom: 4,
-    Competing: 5
-} as const satisfies Record<string, ActivityType>
+    Competing: 5,
+    Hanging: 6
+} as const satisfies Record<string, ActivityTypeReal>
 
 export const ARTWORK_PLACEHOLDER = 'https://raw.githubusercontent.com/FoxxMD/multi-scrobbler/master/assets/default-artwork.png';
 export const MS_ART = 'https://raw.githubusercontent.com/FoxxMD/multi-scrobbler/master/assets/icon.png';

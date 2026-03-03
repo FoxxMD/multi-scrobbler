@@ -164,8 +164,10 @@ export const activityIdToStr = (id: number): MSActivityType => {
             return 'custom';
         case ACTIVITY_TYPE.Competing:
             return 'competing';
+        case ACTIVITY_TYPE.Hanging:
+            return 'hanging';
         default:
-            throw new Error(`Not a valid activity type. Must be one of: playing | streaming | listening | watching | custom | competing`);
+            throw new Error(`Not a valid activity type ID (${id}). Must be one of: playing (0) | streaming (1) | listening (2) | watching (3) | custom (4) | competing (5) | hanging (6)`);
     }
 };
 
@@ -183,8 +185,10 @@ export const activityStringToType = (str: string): MSActivityType => {
             return 'custom';
         case 'competing':
             return 'competing';
+        case 'hanging':
+            return 'hanging';
         default:
-            throw new Error(`Not a valid activity type. Must be one of: playing | streaming | listening | watching | custom | competing`);
+            throw new Error(`Not a valid activity type (${str}). Must be one of: playing | streaming | listening | watching | custom | competing | hanging`);
     }
 };
 
