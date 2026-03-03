@@ -25,11 +25,13 @@ export default class UserTransformer extends AtomicPartsTransformer<ConditionalS
         } = data;
 
         const {
-            title: defTitle = [],
-            artists: defArtist = [],
-            album: defAlbum = [],
-            albumArtists: defAA = [],
-        } = this.config.defaults;
+            defaults: {
+                title: defTitle = [],
+                artists: defArtist = [],
+                album: defAlbum = [],
+                albumArtists: defAA = [],
+            } = {},
+        } = this.config;
 
         const stage: PlayTransformUserStage<ConditionalSearchAndReplaceRegExp[]> = {
             ...rest,
