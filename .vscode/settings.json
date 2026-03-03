@@ -4,7 +4,8 @@
     "mochaExplorer.exit": true,
     "search.exclude": {
         "**/.docusaurus": true,
-        "**/build": true
+        "**/build": true,
+        "**/schema": true
     },
     "tailwindCSS.files.exclude": [
         "docsite/**"
