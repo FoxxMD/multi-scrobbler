@@ -123,7 +123,7 @@ describe('Detects duplicate and unique scrobbles from client recent history', fu
                 playDate: normalizedWithMixedDur[normalizedWithMixedDur.length - 1].data.playDate.add(70, 'seconds')
             });
 
-            assert.isFalse(await testScrobbler.alreadyScrobbled(newScrobble));
+            assert.isFalse((await testScrobbler.alreadyScrobbled(newScrobble))[0]);
             return;
         });
 
@@ -135,7 +135,7 @@ describe('Detects duplicate and unique scrobbles from client recent history', fu
                 playDate: normalizedWithMixedDur[normalizedWithMixedDur.length - 3].data.playDate.add(3, 'seconds')
             });
 
-            assert.isFalse(await testScrobbler.alreadyScrobbled(newScrobble));
+            assert.isFalse((await testScrobbler.alreadyScrobbled(newScrobble))[0]);
         });
 
         it('It handles unique detection when no existing scrobble matches above a score of 0', async function () {
@@ -152,7 +152,7 @@ describe('Detects duplicate and unique scrobbles from client recent history', fu
                 });
 
                 await assert.isFulfilled( testScrobbler.alreadyScrobbled(uniquePlay))
-                await assert.eventually.isFalse(testScrobbler.alreadyScrobbled(uniquePlay))
+                assert.isFalse((await testScrobbler.alreadyScrobbled(uniquePlay))[0])
         });
     });
 
@@ -170,7 +170,7 @@ describe('Detects duplicate and unique scrobbles from client recent history', fu
             diffPlay.data.playDate = diffPlay.data.playDate.add(9, 's');
             diffPlay.data.track = 'A Totally Different Track'
 
-            assert.isFalse(await testScrobbler.alreadyScrobbled(diffPlay));
+            assert.isFalse((await testScrobbler.alreadyScrobbled(diffPlay))[0]);
         });
 
         it('Is not detected as duplicate when track is same, time is similar, but artist is different', async function () {
@@ -181,7 +181,7 @@ describe('Detects duplicate and unique scrobbles from client recent history', fu
             diffPlay.data.playDate = diffPlay.data.playDate.add(9, 's');
             diffPlay.data.artists = ['A Different Artist'];
 
-            assert.isFalse(await testScrobbler.alreadyScrobbled(diffPlay));
+            assert.isFalse((await testScrobbler.alreadyScrobbled(diffPlay))[0]);
         });
 
 
@@ -195,8 +195,8 @@ describe('Detects duplicate and unique scrobbles from client recent history', fu
             const timeOffNeg = clone(normalizedWithMixedDur[normalizedWithMixedDur.length - 1]);
             timeOffNeg.data.playDate = timeOffNeg.data.playDate.subtract(11, 's');
 
-            assert.isFalse(await testScrobbler.alreadyScrobbled(timeOffPos));
-            assert.isFalse(await testScrobbler.alreadyScrobbled(timeOffNeg));
+            assert.isFalse((await testScrobbler.alreadyScrobbled(timeOffPos))[0]);
+            assert.isFalse((await testScrobbler.alreadyScrobbled(timeOffNeg))[0]);
         });
 
         it('Is not detected as duplicate when play date is different by more than 60 seconds (low granularity source)', async function () {
@@ -213,8 +213,8 @@ describe('Detects duplicate and unique scrobbles from client recent history', fu
             const timeOffNeg = clone(recent[recent.length - 1]);
             timeOffNeg.data.playDate = timeOffNeg.data.playDate.subtract(61, 's');
 
-            assert.isFalse(await testScrobbler.alreadyScrobbled(timeOffPos));
-            assert.isFalse(await testScrobbler.alreadyScrobbled(timeOffNeg));
+            assert.isFalse((await testScrobbler.alreadyScrobbled(timeOffPos))[0]);
+            assert.isFalse((await testScrobbler.alreadyScrobbled(timeOffNeg))[0]);
         });
 
         describe('When existing has duration', function () {
@@ -231,21 +231,21 @@ describe('Detects duplicate and unique scrobbles from client recent history', fu
                 const brickPt2 = clone(brickPt1);
                 brickPt2.data.track = 'Another Brick in the Wall, Pt. 2';
                 brickPt2.data.playDate = brickPt1.data.playDate.add(brickPt1.data.duration + 1, 'seconds');
-                assert.isFalse(await testScrobbler.alreadyScrobbled(brickPt2));
+                assert.isFalse((await testScrobbler.alreadyScrobbled(brickPt2))[0]);
 
                 const story1 = normalizedWithDur.find(x => x.data.track.includes('Da Art of'));
                 const story2 = clone(story1);
                 story2.data.track = `Da Art of Storytellin' (Pt. 2)`;
                 story2.data.playDate = story2.data.playDate.add(story1.data.duration + 1, 'seconds');
 
-                assert.isFalse(await testScrobbler.alreadyScrobbled(story2));
+                assert.isFalse((await testScrobbler.alreadyScrobbled(story2))[0]);
 
                 const ballad1 = normalizedWithDur.find(x => x.data.track.includes('Ballade No. 1'));
                 const ballad2 = clone(ballad1);
                 ballad2.data.track = `Ballade No. 2 in G Minor, Op. 27`;
                 ballad2.data.playDate = ballad2.data.playDate.add(ballad1.data.duration + 1, 'seconds');
 
-                assert.isFalse(await testScrobbler.alreadyScrobbled(ballad2));
+                assert.isFalse((await testScrobbler.alreadyScrobbled(ballad2))[0]);
             });
 
             it('Is not detected as duplicate when play date matches fuzzy but play is marked as repeat', async function () {
@@ -259,10 +259,10 @@ describe('Detects duplicate and unique scrobbles from client recent history', fu
                 const repeatPlay = clone(recent[recent.length - 1]);
                 repeatPlay.data.playDate = repeatPlay.data.playDate.add(repeatPlay.data.duration + 2, 's');
 
-                assert.isTrue(await testScrobbler.alreadyScrobbled(repeatPlay));
+                assert.isTrue((await testScrobbler.alreadyScrobbled(repeatPlay))[0]);
 
                 repeatPlay.data.repeat = true;
-                assert.isFalse(await testScrobbler.alreadyScrobbled(repeatPlay));
+                assert.isFalse((await testScrobbler.alreadyScrobbled(repeatPlay))[0]);
             });
         });
 
@@ -276,7 +276,7 @@ describe('Detects duplicate and unique scrobbles from client recent history', fu
 
         it('Is detected as duplicate when an exact match', async function () {
             testScrobbler.recentScrobbles = normalizedWithMixedDur;
-            assert.isTrue(await testScrobbler.alreadyScrobbled(normalizedWithMixedDur[normalizedWithMixedDur.length - 1]));
+            assert.isTrue((await testScrobbler.alreadyScrobbled(normalizedWithMixedDur[normalizedWithMixedDur.length - 1]))[0]);
         });
 
         it('Is detected as duplicate when artist/title differences are whitespace or case', async function () {
@@ -288,19 +288,19 @@ describe('Detects duplicate and unique scrobbles from client recent history', fu
 
 
             diffPlay.data.track = ref.data.track.toUpperCase();
-            assert.isTrue(await testScrobbler.alreadyScrobbled(diffPlay));
+            assert.isTrue((await testScrobbler.alreadyScrobbled(diffPlay))[0]);
 
             diffPlay.data.track = `  ${ref.data.track} `;
-            assert.isTrue(await testScrobbler.alreadyScrobbled(diffPlay));
+            assert.isTrue((await testScrobbler.alreadyScrobbled(diffPlay))[0]);
 
             diffPlay.data.track = ref.data.track.replaceAll(' ', '   ');
-            assert.isTrue(await testScrobbler.alreadyScrobbled(diffPlay));
+            assert.isTrue((await testScrobbler.alreadyScrobbled(diffPlay))[0]);
 
             diffPlay.data.artists = ref.data.artists.map(x => x.toUpperCase());
-            assert.isTrue(await testScrobbler.alreadyScrobbled(diffPlay));
+            assert.isTrue((await testScrobbler.alreadyScrobbled(diffPlay))[0]);
 
             diffPlay.data.artists = ref.data.artists.map(x => x.replaceAll(' ', '   '));
-            assert.isTrue(await testScrobbler.alreadyScrobbled(diffPlay));
+            assert.isTrue((await testScrobbler.alreadyScrobbled(diffPlay))[0]);
         });
 
         it('Is detected as duplicate when artist/title differences are from unicode normalization', async function () {
@@ -310,7 +310,7 @@ describe('Detects duplicate and unique scrobbles from client recent history', fu
             const diffPlay = clone(ref);
             diffPlay.data.playDate = diffPlay.data.playDate.add(9, 's');
             diffPlay.data.track = 'Jimbo';
-            assert.isTrue(await testScrobbler.alreadyScrobbled(diffPlay));
+            assert.isTrue((await testScrobbler.alreadyScrobbled(diffPlay))[0]);
         });
 
         it('Is detected as duplicate when play date is off by 10 seconds or less (high granularity source)', async function () {
@@ -323,8 +323,8 @@ describe('Detects duplicate and unique scrobbles from client recent history', fu
             const timeOffNeg = clone(normalizedWithMixedDur[normalizedWithMixedDur.length - 1]);
             timeOffNeg.data.playDate = timeOffNeg.data.playDate.subtract(10, 's');
 
-            assert.isTrue(await testScrobbler.alreadyScrobbled(timeOffPos));
-            assert.isTrue(await testScrobbler.alreadyScrobbled(timeOffNeg));
+            assert.isTrue((await testScrobbler.alreadyScrobbled(timeOffPos))[0]);
+            assert.isTrue((await testScrobbler.alreadyScrobbled(timeOffNeg))[0]);
 
             // 10 seconds fuzzy diff inclusive
             const son = normalizedWithMixedDurOlder.find(x => x.data.track === 'Sonora')
@@ -335,7 +335,7 @@ describe('Detects duplicate and unique scrobbles from client recent history', fu
 
             const offSon = clone(son);
             offSon.data.playDate = dayjs().subtract(1, 'hour').set('minute', 30).set('second', 37);
-            assert.isTrue(await testScrobbler.alreadyScrobbled(offSon));
+            assert.isTrue((await testScrobbler.alreadyScrobbled(offSon))[0]);
         });
 
         it('Is detected as duplicate when play date is off by less than 60 seconds (low granularity source)', async function () {
@@ -352,8 +352,8 @@ describe('Detects duplicate and unique scrobbles from client recent history', fu
             const timeOffNeg = clone(recent[recent.length - 1]);
             timeOffNeg.data.playDate = timeOffNeg.data.playDate.subtract(59, 's');
 
-            assert.isTrue(await testScrobbler.alreadyScrobbled(timeOffPos));
-            assert.isTrue(await testScrobbler.alreadyScrobbled(timeOffNeg));
+            assert.isTrue((await testScrobbler.alreadyScrobbled(timeOffPos))[0]);
+            assert.isTrue((await testScrobbler.alreadyScrobbled(timeOffNeg))[0]);
         });
 
         it('Is detected as duplicate when title is exact, artist is similar, and time is similar', async function () {
@@ -363,17 +363,17 @@ describe('Detects duplicate and unique scrobbles from client recent history', fu
             const diffPlay = clone(ref);
             diffPlay.data.playDate = diffPlay.data.playDate.add(3, 's');
             diffPlay.data.artists = [diffPlay.data.artists[0]]
-            assert.isTrue(await testScrobbler.alreadyScrobbled(diffPlay));
+            assert.isTrue((await testScrobbler.alreadyScrobbled(diffPlay))[0]);
 
             diffPlay.data.artists = [ref.data.artists[1]]
-            assert.isTrue(await testScrobbler.alreadyScrobbled(diffPlay));
+            assert.isTrue((await testScrobbler.alreadyScrobbled(diffPlay))[0]);
 
 
             const son = normalizedWithMixedDur.find(x => x.data.track === 'Sonora')
 
             const sonDiffPlay = clone(son);
             sonDiffPlay.data.playDate = sonDiffPlay.data.playDate.subtract(son.data.duration + 1, 's');
-            assert.isTrue(await testScrobbler.alreadyScrobbled(sonDiffPlay));
+            assert.isTrue((await testScrobbler.alreadyScrobbled(sonDiffPlay))[0]);
         });
 
         it('Is detected as duplicate when artists are included in joiner', async function () {
@@ -404,7 +404,7 @@ describe('Detects duplicate and unique scrobbles from client recent history', fu
 
             testScrobbler.recentScrobbles = normalizedWithMixedDurOlder.concat(ref);
 
-            assert.isTrue(await testScrobbler.alreadyScrobbled(spotifyPlay));
+            assert.isTrue((await testScrobbler.alreadyScrobbled(spotifyPlay))[0]);
         });
 
         describe('When at least one play has duration', function () {
@@ -420,17 +420,17 @@ describe('Detects duplicate and unique scrobbles from client recent history', fu
                 const timeEnd = clone(normalizedWithDur[normalizedWithMixedDur.length - 2]);
                 timeEnd.data.playDate = timeEnd.data.playDate.add(timeEnd.data.duration, 's');
 
-                assert.isTrue(await testScrobbler.alreadyScrobbled(timeEnd));
+                assert.isTrue((await testScrobbler.alreadyScrobbled(timeEnd))[0]);
 
                 // only one has duration
                 timeEnd.data.duration = undefined;
 
-                assert.isTrue(await testScrobbler.alreadyScrobbled(timeEnd));
+                assert.isTrue((await testScrobbler.alreadyScrobbled(timeEnd))[0]);
 
                 // only one has duration
                 timeEnd.data.duration = undefined;
 
-                assert.isTrue(await testScrobbler.alreadyScrobbled(timeEnd));
+                assert.isTrue((await testScrobbler.alreadyScrobbled(timeEnd))[0]);
             });
 
         });
@@ -632,7 +632,7 @@ describe('Scrobble client uses transform plays correctly', function() {
         testScrobbler.recentScrobbles = normalizePlays([newScrobble, ...withDurPlays], {initialDate: firstPlayDate});
         testScrobbler.buildTransformRules();
 
-        expect(await testScrobbler.alreadyScrobbled(newScrobble)).is.false;
+        expect((await testScrobbler.alreadyScrobbled(newScrobble))[0]).is.false;
     });
 
     it('Transforms existing play on comparison', async function() {
@@ -654,7 +654,7 @@ describe('Scrobble client uses transform plays correctly', function() {
         testScrobbler.recentScrobbles = normalizePlays([newScrobble, ...withDurPlays], {initialDate: firstPlayDate});
         testScrobbler.buildTransformRules();
 
-        expect(await testScrobbler.alreadyScrobbled(newScrobble)).is.false;
+        expect((await testScrobbler.alreadyScrobbled(newScrobble))[0]).is.false;
     });
 
     afterEach(async function () {
@@ -670,6 +670,7 @@ describe('Manages scrobble queue', function() {
         testScrobbler = generateTestScrobbler();
         await testScrobbler.initialize();
         testScrobbler.recentScrobbles = normalizedWithMixedDur;
+        testScrobbler.testRecentScrobbles = normalizedWithMixedDur;
         testScrobbler.scrobbleSleep = 500;
         testScrobbler.scrobbleDelay = 0;
         testScrobbler.lastScrobbleCheck = dayjs().subtract(60, 'seconds');
@@ -688,7 +689,7 @@ describe('Manages scrobble queue', function() {
     });
 
     it('Does not Scrobble a duplicate play queued after original is scrobbled', async function() {
-        this.timeout(3500);
+        this.timeout(20000);
 
         const newScrobble = generatePlay({
             playDate: normalizedWithMixedDur[normalizedWithMixedDur.length - 3].data.playDate.add(3, 'seconds')

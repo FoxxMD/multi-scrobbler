@@ -55,6 +55,21 @@ export const playContentInvariantTransform = (play: PlayObject): PlayObjectLifec
     }
 }
 
+export const lifecyclelessInvariantTransform = (play: PlayObject): PlayObjectLifecycleless => {
+    const {
+        meta: {
+            lifecycle,
+            ...rest
+        } = {},
+    } = play;
+    return {
+        ...play,
+        meta: {
+            ...rest
+        }
+    }
+}
+
 
 export type PlayTransformer = (play: PlayObject) => PlayObjectLifecycleless;
 export type ListTransformers = PlayTransformer[];

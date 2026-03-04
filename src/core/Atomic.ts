@@ -292,6 +292,7 @@ export interface PlayLifecycle {
     original: PlayObjectLifecycleless
     steps: LifecycleStep[]
     scrobble?: {
+        match?: PlayMatchResult
         payload?: ScrobblePayload
         warnings?: string[]
         error?: Error | ErrorObject
@@ -317,6 +318,15 @@ export interface ScrobbleActionResult {
     warnings?: string[]
 }
 
+export interface PlayMatchResult {
+    match: boolean
+    score: number
+    breakdowns: string[]
+    reason?: string
+    closestMatchedPlay?: PlayObjectLifecycleless
+    transformedPlay?: PlayObjectLifecycleless
+}
+
 export type ScrobbleTsSOC = 1 | 2;
 
 export const SCROBBLE_TS_SOC_START: ScrobbleTsSOC = 1;
@@ -324,7 +334,7 @@ export const SCROBBLE_TS_SOC_END: ScrobbleTsSOC = 2;
 
 export interface AmbPlayObject {
     data: PlayData,
-    meta: PlayMeta
+    meta: PlayMeta | MarkOptional<PlayMeta, 'lifecycle'>
 }
 
 export const isPlayObject = (obj: object): obj is PlayObject => {

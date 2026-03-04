@@ -5,6 +5,7 @@ import { PlayObject } from "../../../core/Atomic.js";
 import { Notifiers } from "../../notifier/Notifiers.js";
 import AbstractScrobbleClient from "../../scrobblers/AbstractScrobbleClient.js";
 import { CommonClientConfig, CommonClientOptions, NowPlayingOptions } from "../../common/infrastructure/config/client/index.js";
+import clone from "clone";
 
 export class TestScrobbler extends AbstractScrobbleClient {
 
@@ -22,7 +23,7 @@ export class TestScrobbler extends AbstractScrobbleClient {
     }
 
     doScrobble(playObj: PlayObject) {
-        return Promise.resolve({payload: {}, mergedScrobble: playObj});
+        return Promise.resolve({payload: {}, mergedScrobble: clone(playObj, true)});
     }
 
     protected async doParseCache() {

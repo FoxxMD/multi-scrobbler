@@ -1,6 +1,6 @@
 import { Logger } from "@foxxmd/logging";
 import EventEmitter from "events";
-import { PlayObject, SourcePlayerObj } from "../../core/Atomic.js";
+import { PlayMatchResult, PlayObject, SourcePlayerObj } from "../../core/Atomic.js";
 import { CALCULATED_PLAYER_STATUSES, FormatPlayObjectOptions, REPORTED_PLAYER_STATUSES, ReportedPlayerStatus, SINGLE_USER_PLATFORM_ID_STR } from "../common/infrastructure/Atomic.js";
 import { Notifiers } from "../notifier/Notifiers.js";
 
@@ -125,7 +125,7 @@ export default class DiscordScrobbler extends AbstractScrobbleClient {
         return;
     }
 
-    alreadyScrobbled = async (playObj: PlayObject, log = false) => true
+    alreadyScrobbled = async (playObj: PlayObject, log = false): Promise<[boolean, PlayMatchResult]> => ([false, {match: false, breakdowns: [], score: 0}])
 
     public playToClientPayload(playObj: PlayObject): any {
         return playStateToActivityData({
