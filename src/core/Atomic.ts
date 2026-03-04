@@ -278,9 +278,11 @@ export interface LifecycleInput {
     type: string, input: (object | string)
 }
 
+export type PlayMetaLifecycleless = MarkOptional<PlayMeta, 'lifecycle'>;
+
 export interface PlayObjectLifecycleless {
     data: ObjectPlayData,
-    meta: MarkOptional<PlayMeta, 'lifecycle'>
+    meta: PlayMetaLifecycleless
 }
 
 // export interface PlayMetaLifecycled extends PlayMeta {

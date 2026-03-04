@@ -3,7 +3,7 @@ import { Dayjs } from "dayjs";
 import { Request, Response } from "express";
 import { NextFunction, ParamsDictionary, Query } from "express-serve-static-core";
 import { FixedSizeList } from 'fixed-size-list';
-import { isPlayObject, PlayMeta, PlayObject, PlayObjectLifecycleless } from "../../../core/Atomic.js";
+import { isPlayObject, PlayMeta, PlayMetaLifecycleless, PlayObject, PlayObjectLifecycleless } from "../../../core/Atomic.js";
 import TupleMap from "../TupleMap.js";
 import { MusicBrainzApi } from 'musicbrainz-api';
 
@@ -225,8 +225,8 @@ export interface FormatPlayObjectOptions {
     [key: string]: any
 }
 
-export interface ProgressAwarePlayObject extends PlayObject {
-    meta: PlayMeta & {
+export interface ProgressAwarePlayObject extends PlayObjectLifecycleless {
+    meta: PlayMetaLifecycleless & {
         initialTrackProgressPosition?: number
     }
 }
