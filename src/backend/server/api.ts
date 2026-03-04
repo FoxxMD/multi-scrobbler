@@ -70,6 +70,10 @@ export const setupApi = (app: ExpressWithAsync, logger: Logger, appLoggerStream:
         sort: 'descending',
         limit: 50,
     }
+    if(logConfig.level === 'trace') {
+        // init web logging with debug so its easier to see startup logs
+        logConfig.level = 'debug';
+    }
 
     let logObjectStream: Transform;
     try {

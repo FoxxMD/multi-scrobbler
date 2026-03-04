@@ -12,9 +12,9 @@ if (typeof process.env.CONFIG_DIR === 'string') {
 }
 
 export const initLogger = (): [Logger, Transform] => {
-    const opts = parseLogOptions({file: false, console: 'debug'})
+    const opts = parseLogOptions({file: false, console: 'trace'})
     const stream = new PassThrough({objectMode: true});
-    const logger = buildLogger('debug', [
+    const logger = buildLogger('trace', [
         buildDestinationStdout(opts.console),
         buildDestinationJsonPrettyStream(opts.console, {destination: stream, object: true, colorize: true})
     ]);
@@ -29,7 +29,7 @@ export const appLogger = async (config: LogOptions = {}): Promise<[Logger, PassT
         logBaseDir: typeof process.env.CONFIG_DIR === 'string' ? process.env.CONFIG_DIR : undefined,
         logDefaultPath: './logs/scrobble.log',
         destinations: [
-            buildDestinationJsonPrettyStream(opts.console, {destination: stream, object: true, colorize: true})
+            buildDestinationJsonPrettyStream('trace', {destination: stream, object: true, colorize: true})
         ]
     });
     return [logger, stream];
@@ -45,7 +45,7 @@ export const componentFileLogger = async (type: string, name: string, fileConfig
     const componentLogPath = path.join(base, `${type}-${name}.log`);
 
     const componentConfig: LogOptions = {
-        level: opts.level ?? 'debug'
+        level: opts.level ?? 'trace'
     };
     if (fileConfig === true) {
         componentConfig.file = {
@@ -68,7 +68,7 @@ export const componentFileLogger = async (type: string, name: string, fileConfig
         const file = await buildDestinationRollingFile(componentConfig.file.level ?? componentConfig.level, {...strongOpts.file})
         streams.push(file);
 
-        return buildLogger('debug' as LogLevel, streams);
+        return buildLogger('trace' as LogLevel, streams);
     } else {
         throw new Error('File must be set');
     }

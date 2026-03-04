@@ -89,7 +89,8 @@ const LogsSection = (props: PropsFromRedux) => {
                     </h2>
                 </div>
                 <div className="p-6">
-                    <div>Level : <LogLevelButton name="debug" active={logLevel === 'debug'} onClick={fetchLevel}/> |
+                    <div>Level : <LogLevelButton name="trace" active={logLevel === 'trace'} onClick={fetchLevel}/> |
+                        <LogLevelButton name="debug" active={logLevel === 'debug'} onClick={fetchLevel}/> |
                         <LogLevelButton name="verbose" active={logLevel === 'verbose'} onClick={fetchLevel}/> |
                         <LogLevelButton name="info" active={logLevel === 'info'} onClick={fetchLevel}/> |
                         <LogLevelButton name="warn" active={logLevel === 'warn'} onClick={fetchLevel}/> |
