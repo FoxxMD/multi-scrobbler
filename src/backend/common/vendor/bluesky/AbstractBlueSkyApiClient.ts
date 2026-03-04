@@ -9,12 +9,12 @@ import { musicServiceToCononical } from "../ListenbrainzApiClient.js";
 import { parseRegexSingle } from "@foxxmd/regex-buddy-core";
 import { RecordOptions } from "../../infrastructure/config/client/tealfm.js";
 import dayjs, { ManipulateType } from "dayjs";
-import { getScrobbleTsSOCDateWithContext } from "../../../utils/TimeUtils.js";
+import { getScrobbleTsSOCDateWithContext, usecToUnix } from "../../../utils/TimeUtils.js";
 import { removeUndefinedKeys } from "../../../utils.js";
 import { baseFormatPlayObj } from "../../../utils/PlayTransformUtils.js";
 import { ScrobbleSubmitError } from "../../errors/MSErrors.js";
 import { UpstreamError } from "../../errors/UpstreamError.js";
-import { decodeTIDToUnix, naiveTID } from "./TIDUtils.js";
+import { decodeTid, generateTID } from '@ewanc26/tid';
 
 export abstract class AbstractBlueSkyApiClient extends AbstractApiClient implements PagelessTimeRangeListens {
 
@@ -69,13 +69,14 @@ export abstract class AbstractBlueSkyApiClient extends AbstractApiClient impleme
 
         let cursor: string;
         if(to !== undefined) {
-            cursor = naiveTID(to);
+            cursor = generateTID(dayjs.unix(to).toISOString());
         }
 
         const resp = await this.listScrobbleRecord({cursor, limit});
         let fromTS: UnixTimestamp;
         if(resp.data.cursor !== undefined) {
-            fromTS = decodeTIDToUnix(resp.data.cursor);
+            const { timestampUs } = decodeTid(resp.data.cursor);
+            fromTS = usecToUnix(timestampUs);
         }
 
         const plays = (resp.data.records as unknown as ListRecord<ScrobbleRecord>[]).map(x => listRecordToPlay(x));
