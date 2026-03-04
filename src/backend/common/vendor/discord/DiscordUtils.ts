@@ -150,7 +150,7 @@ export const configToStrong = (data: DiscordData): DiscordStrongData => {
     return strongConfig;
 };
 
-export const activityIdToStr = (id: number): MSActivityType => {
+export const activityIdToStr = (id: number): MSActivityType | string => {
     switch (id) {
         case ACTIVITY_TYPE.Playing:
             return 'playing';
@@ -164,8 +164,10 @@ export const activityIdToStr = (id: number): MSActivityType => {
             return 'custom';
         case ACTIVITY_TYPE.Competing:
             return 'competing';
+        case ACTIVITY_TYPE.Hanging:
+            return 'hanging';
         default:
-            throw new Error(`Not a valid activity type. Must be one of: playing | streaming | listening | watching | custom | competing`);
+            return `unknown activity type (${id})`;
     }
 };
 
@@ -183,8 +185,10 @@ export const activityStringToType = (str: string): MSActivityType => {
             return 'custom';
         case 'competing':
             return 'competing';
+        case 'hanging':
+            return 'hanging';
         default:
-            throw new Error(`Not a valid activity type. Must be one of: playing | streaming | listening | watching | custom | competing`);
+            throw new Error(`Not a valid activity type (${str}). Must be one of: playing | streaming | listening | watching | custom | competing | hanging`);
     }
 };
 
