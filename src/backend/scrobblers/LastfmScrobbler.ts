@@ -70,8 +70,6 @@ export default class LastfmScrobbler extends AbstractScrobbleClient {
         return track.toLocaleLowerCase().trim();
     }
 
-    alreadyScrobbled = async (playObj: PlayObject, log = false) => (await this.existingScrobble(playObj)) !== undefined
-
     public playToClientPayload(playObject: PlayObject): object {
         return playToClientPayload(playObject);
     }

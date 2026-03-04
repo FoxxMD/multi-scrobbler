@@ -455,7 +455,9 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
         return this.scrobblesLastCheckedAtDiff() >= refreshMinInterval;
     }
 
-    public abstract alreadyScrobbled(playObj: PlayObject, log?: boolean): Promise<boolean>;
+    public async alreadyScrobbled(playObj: PlayObject, log?: boolean): Promise<boolean> {
+        return (await this.existingScrobble(playObj)) !== undefined;
+    }
 
     formatPlayObj = (obj: any, options: FormatPlayObjectOptions = {}) => {
         this.logger.warn('formatPlayObj should be defined by concrete class!');

@@ -80,8 +80,6 @@ export default class MalojaScrobbler extends AbstractScrobbleClient {
         return await this.api.getRecentScrobbles(limit);
     }
 
-    alreadyScrobbled = async (playObj: any, log = false) => (await this.existingScrobble(playObj)) !== undefined
-
     public playToClientPayload(playObj: PlayObject): MalojaScrobbleRequestData {
 
         const { apiKey } = this.config.data;

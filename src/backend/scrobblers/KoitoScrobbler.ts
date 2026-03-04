@@ -70,8 +70,6 @@ export default class KoitoScrobbler extends AbstractScrobbleClient {
         return await this.api.getRecentlyPlayed(limit);
     }
 
-    alreadyScrobbled = async (playObj: PlayObject, log = false) => (await this.existingScrobble(playObj)) !== undefined
-
     doScrobble = async (playObj: PlayObject) => {
         const {
             meta: {

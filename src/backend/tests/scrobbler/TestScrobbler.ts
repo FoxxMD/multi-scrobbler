@@ -25,10 +25,6 @@ export class TestScrobbler extends AbstractScrobbleClient {
         return Promise.resolve({payload: {}, mergedScrobble: playObj});
     }
 
-    alreadyScrobbled = async (playObj: PlayObject, log?: boolean): Promise<boolean> => {
-        return (await this.existingScrobble(playObj)) !== undefined;
-    }
-
     protected async doParseCache() {
         await this.cache.init();
         return super.doParseCache();
