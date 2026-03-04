@@ -150,7 +150,7 @@ export const configToStrong = (data: DiscordData): DiscordStrongData => {
     return strongConfig;
 };
 
-export const activityIdToStr = (id: number): MSActivityType => {
+export const activityIdToStr = (id: number): MSActivityType | string => {
     switch (id) {
         case ACTIVITY_TYPE.Playing:
             return 'playing';
@@ -167,7 +167,7 @@ export const activityIdToStr = (id: number): MSActivityType => {
         case ACTIVITY_TYPE.Hanging:
             return 'hanging';
         default:
-            throw new Error(`Not a valid activity type ID (${id}). Must be one of: playing (0) | streaming (1) | listening (2) | watching (3) | custom (4) | competing (5) | hanging (6)`);
+            return `unknown activity type (${id})`;
     }
 };
 
