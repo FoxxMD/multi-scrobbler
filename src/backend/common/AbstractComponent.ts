@@ -32,6 +32,8 @@ import ConsoleFormatter from "jsondiffpatch/formatters/console";
 
 const console = new ConsoleFormatter();
 
+export type AbstractComponentConfig = (CommonClientConfig | CommonSourceConfig) & { transformManager?: TransformerManager };
+
 export default abstract class AbstractComponent extends AbstractInitializable {
 
     declare config: CommonClientConfig | CommonSourceConfig;
@@ -41,9 +43,9 @@ export default abstract class AbstractComponent extends AbstractInitializable {
     protected transformManager: TransformerManager;
     protected cache: MSCache;
 
-    protected constructor(config: CommonClientConfig | CommonSourceConfig) {
+    protected constructor(config: AbstractComponentConfig) {
         super(config);
-        this.transformManager = getRoot().items.transformerManager;
+        this.transformManager = config.transformManager ?? getRoot().items.transformerManager;
         this.cache = getRoot().items.cache();
     }
 

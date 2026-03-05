@@ -116,9 +116,17 @@ export default class TransformerManager {
             throw new Error(`No transformer of type '${data.type}' is registered.`);
         }
 
-        if (list.length > 1 && (data as any).name === undefined) {
-            this.logger.warn(`More than one '${data.type}' transformer but name was not specified, using first registered`);
-            return list[0];
+        if (list.length > 1) {
+            if(data.name === undefined) {
+                this.logger.warn(`More than one '${data.type}' transformer but name was not specified, using first registered`);
+                return list[0];
+            } else {
+                const namedTransformers = list.find(x => x.name.toLocaleLowerCase().trim() === data.name.toLocaleLowerCase().trim());
+                if(namedTransformers === undefined) {
+                    throw new SimpleError(`Component wanted transformer type ${data.type} with name ${data.name}. Transforms of this type are registered but none have this name.`);
+                }
+                return namedTransformers;
+            }
         } else {
             return list[0]
         }
