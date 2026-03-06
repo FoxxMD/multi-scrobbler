@@ -3,7 +3,7 @@ import dayjs, { Dayjs } from "dayjs";
 import { Duration } from "dayjs/plugin/duration.js";
 import { PlayObject, UnixTimestamp } from "../../core/Atomic.js";
 import { hasPagelessTimeRangeListens, hasPaginatedTimeRangeListens, PagelessListensTimeRangeOptions, PagelessTimeRangeListens, PaginatedListensTimeRangeOptions, PaginatedTimeRangeCommonOptions, PaginatedTimeRangeListens, PaginatedTimeRangeOptions, PaginatedTimeRangeSource, REFRESH_STALE_DEFAULT, TimeRangeListensFetcher } from "../common/infrastructure/Atomic.js";
-import { MaybeLogger } from "../common/logging.js";
+import { loggerNoop, MaybeLogger } from "../common/logging.js";
 import { sortByNewestPlayDate, sortByOldestPlayDate } from "../utils.js";
 import { todayAwareFormat } from "./TimeUtils.js";
 import { playDateWithinDurationOfAny } from "./PlayComparisonUtils.js";
@@ -13,12 +13,12 @@ export interface TimeRangeFetchOptions {
 
 }
 
-export const createGetScrobblesForTimeRangeFunc = <T extends PaginatedTimeRangeSource>(fetcher: T, pLogger: MaybeLogger = new MaybeLogger()): TimeRangeListensFetcher => {
+export const createGetScrobblesForTimeRangeFunc = <T extends PaginatedTimeRangeSource>(fetcher: T, pLogger = loggerNoop): TimeRangeListensFetcher => {
     let requestCount: number;
-    const logger = pLogger instanceof MaybeLogger ? pLogger : childLogger(pLogger, ['Pagination']);
+    const logger = childLogger(pLogger, ['Pagination']); 
     const reqLabel = () => `Request ${requestCount}`;
-    const reqLogger = logger instanceof MaybeLogger ? pLogger : childLogger(logger, [reqLabel]);
-
+    const reqLogger = childLogger(logger, [reqLabel]);
+ 
     let plays: PlayObject[] = [];
 
     if (hasPagelessTimeRangeListens(fetcher)) {
@@ -59,10 +59,10 @@ export const createGetScrobblesForTimeRangeFunc = <T extends PaginatedTimeRangeS
                         logger.debug(initialFetchLog.join(' | '));
                     }
                 }
-                reqLogger.debug(`${results.data.length} results returned${results.data.length === 0 ? ', ending fetch' : ''}`);
+                reqLogger.trace(`${results.data.length} results returned${results.data.length === 0 ? ', ending fetch' : ''}`);
                 plays = plays.concat(results.data);
                 if (!results.meta.more) {
-                    logger.debug('API indicated no more results, ending fetch');
+                    logger.trace('API indicated no more results, ending fetch');
                     more = false;
                 }
                 if (results.data.length === 0) {
@@ -70,13 +70,13 @@ export const createGetScrobblesForTimeRangeFunc = <T extends PaginatedTimeRangeS
                 }
                 // failsafe?
                 if(more && results.meta.limit !== undefined && results.data.length < results.meta.limit) {
-                    reqLogger.debug(`Number of returned results was less than reported/defined limit (${results.meta.limit}), ending fetch`);
+                    reqLogger.trace(`Number of returned results was less than reported/defined limit (${results.meta.limit}), ending fetch`);
                     more = false;
                 }
 
                 if(more && opts.to === undefined && opts.from === undefined) {
                     // only wanted one fetch
-                    logger.debug('No to/from defined, ending fetch');
+                    logger.trace('No to/from defined, ending fetch');
                     more = false;
                 }
 
@@ -137,10 +137,10 @@ export const createGetScrobblesForTimeRangeFunc = <T extends PaginatedTimeRangeS
                         logger.debug(initialFetchLog.join(' | '));
                     }
                 }
-                reqLogger.debug(`${results.data.length} results returned${results.data.length === 0 ? ', ending fetch' : ''}`);
+                reqLogger.trace(`${results.data.length} results returned${results.data.length === 0 ? ', ending fetch' : ''}`);
                 plays = plays.concat(results.data);
                 if (!results.meta.more) {
-                    logger.debug('API indicated no more results, ending fetch');
+                    logger.trace('API indicated no more results, ending fetch');
                     more = false;
                 }
                 if (results.data.length === 0) {
@@ -148,13 +148,13 @@ export const createGetScrobblesForTimeRangeFunc = <T extends PaginatedTimeRangeS
                 }
                 // failsafe?
                 if(more && results.meta.limit !== undefined && results.data.length < results.meta.limit) {
-                    reqLogger.debug(`Number of returned results was less than reported/defined limit (${results.meta.limit}), ending fetch`);
+                    reqLogger.trace(`Number of returned results was less than reported/defined limit (${results.meta.limit}), ending fetch`);
                     more = false;
                 }
 
                 if(more && opts.to === undefined && opts.from === undefined) {
                     // only wanted one fetch
-                    logger.debug('No to/from defined, ending fetch');
+                    logger.trace('No to/from defined, ending fetch');
                     more = false;
                 }
 
@@ -179,18 +179,21 @@ export interface GroupPlaysTimeRangeOptions {
     groupDuration?: Duration
     newPadding?: Duration
     staleNowBuffer?: number
+    consolidateDuration?: Duration
     logger?: Logger
 }
 
 export const DEFAULT_GROUP_DURATION = dayjs.duration(15, 'm');
 export const DEFAULT_NEW_PADDING = dayjs.duration(10, 'm');
+export const DEFAULT_CONSOLIDATE_DURATION = dayjs.duration(3, 'h');
 
 export const groupPlaysToTimeRanges = (plays: PlayObject[], existingRanges: PaginatedTimeRangeOptions[], opts: GroupPlaysTimeRangeOptions = {}) => {
     const {
         groupDuration = DEFAULT_GROUP_DURATION,
         newPadding = DEFAULT_NEW_PADDING,
         staleNowBuffer = REFRESH_STALE_DEFAULT,
-        logger = loggerTest
+        consolidateDuration = DEFAULT_CONSOLIDATE_DURATION,
+        logger = loggerNoop
     } = opts;
     const newRanges: PaginatedTimeRangeOptions[] = [];
 
@@ -208,8 +211,66 @@ export const groupPlaysToTimeRanges = (plays: PlayObject[], existingRanges: Pagi
         }
     }
 
+    // make sure each grouped list is sorted
     temporallyClosePlaySets.forEach((x) => x.sort(sortByOldestPlayDate));
-    for(const tc of temporallyClosePlaySets) {
+    // sort all lists so oldest list of plays is first
+    temporallyClosePlaySets.sort((a, b) => {
+    const aPlayDate = a[0].data.playDate;
+    const bPlayDate = b[0].data.playDate;
+        if(aPlayDate === undefined && bPlayDate === undefined) {
+            return 0;
+        }
+        if(aPlayDate === undefined) {
+            return 1;
+        }
+        if(bPlayDate === undefined) {
+            return -1;
+        }
+        return aPlayDate.isAfter(bPlayDate) ? 1 : -1
+    });
+
+    // try to consolidate lists if they are within a few hours (or consolidateDuration) of their neighbors
+    interface NeighorAcc {
+        lists: PlayObject[][]
+        open: PlayObject[] | undefined
+    }
+    let consolidated: PlayObject[][] = temporallyClosePlaySets;
+
+    if(consolidated.length > 1) {
+        consolidated = temporallyClosePlaySets.reduce((acc: NeighorAcc, curr, index) => {
+            // if no list is currently being evaluated then open this one and iterate
+            if(index === 0) {
+                acc.open = curr;
+                //return acc;
+            } else {
+                // if a list is open then we need to see if time b/w oldest and newest of curr is less than allowed time
+
+                if(curr[curr.length - 1].data.playDate.diff(acc.open[0].data.playDate, 's') < consolidateDuration.asSeconds()) {
+                    // if less than consolidateDuration then consolidate and iterate
+                    acc.open = acc.open.concat(curr);
+                    //return acc;
+                } else {
+                    // if its not less than consolidateDuration then close list
+                    acc.lists.push(acc.open);
+
+                    // and open with curr
+                    acc.open = curr;
+                }
+            }
+
+            if(index === temporallyClosePlaySets.length - 1) {
+                // if this is the last iteration then push current as well
+                acc.lists.push(acc.open)
+            }
+
+            return acc;
+            
+
+        }, {lists: [], open: undefined}).lists;
+        logger.trace(`Reduced timerange groups ${temporallyClosePlaySets.length} => ${consolidated.length}`);
+    }
+
+    for(const tc of consolidated) {
         let oldest: Dayjs,
         newest: Dayjs;
         if(tc.length === 1) {

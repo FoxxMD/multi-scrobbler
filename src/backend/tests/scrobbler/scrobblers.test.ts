@@ -18,7 +18,7 @@ import { NowPlayingScrobbler, TestAuthScrobbler, TestScrobbler } from "./TestScr
 import { PaginatedTimeRangeOptions, PlayPlatformId, REFRESH_STALE_DEFAULT } from '../../common/infrastructure/Atomic.js';
 import { defaultLifecycle } from '../../utils/PlayTransformUtils.js';
 import { shuffleArray } from '../../utils/DataUtils.js';
-import { DEFAULT_GROUP_DURATION, groupPlaysToTimeRanges } from '../../utils/ListenFetchUtils.js';
+import { DEFAULT_CONSOLIDATE_DURATION, DEFAULT_GROUP_DURATION, groupPlaysToTimeRanges } from '../../utils/ListenFetchUtils.js';
 
 chai.use(asPromised);
 
@@ -1025,7 +1025,7 @@ describe('Scrobble Temporal Grouping', function () {
         const plays = [...plays1, ...plays2];
         shuffleArray(plays);
 
-        const ranges = groupPlaysToTimeRanges(plays, []);
+        const ranges = groupPlaysToTimeRanges(plays, [], {consolidateDuration: dayjs.duration(1, 's')});
         expect(ranges.length).eq(2);
         expect(ranges.some(x => x.from < oldest1 && x.to > newest1)).is.true;
         expect(ranges.some(x => x.from < oldest2 && x.to > newest2)).is.true;
@@ -1047,10 +1047,31 @@ describe('Scrobble Temporal Grouping', function () {
 
         const existing: PaginatedTimeRangeOptions = {from: oldest1.subtract(10, 's').unix(), to: newest1.add(10, 's').unix()};
 
-        const ranges = groupPlaysToTimeRanges(plays, [existing]);
+        const ranges = groupPlaysToTimeRanges(plays, [existing], {consolidateDuration: dayjs.duration(1, 's')});
         expect(ranges.length).eq(2);
         expect(ranges.some(x => x.from < oldest1.unix() && x.to > newest1.unix())).is.true;
         expect(ranges.some(x => x.from < oldest2.unix() && x.to > newest2.unix())).is.true;
         expect(ranges.some(x => x.to === existing.to && x.from && existing.from));
+    });
+
+        it('Consolidates time ranges', function() {
+        const plays1 = normalizePlays(generatePlays(3), {initialDate: dayjs().subtract(1, 'hour')});
+        plays1.sort(sortByOldestPlayDate);
+
+        const plays2 = normalizePlays(generatePlays(3), {initialDate: dayjs().subtract(5, 'hour')});
+        plays2.sort(sortByOldestPlayDate);
+
+        const singlePlay1 = generatePlay({playDate: dayjs().subtract(9, 'h')})
+        const singlePlay2 = generatePlay({playDate: dayjs().subtract(9, 'h').subtract(20, 'm')});
+        const singlePlay3 = generatePlay({playDate: dayjs().subtract(9, 'h').subtract(40, 'm')});
+
+        const plays = [...plays1, ...plays2, singlePlay1, singlePlay2, singlePlay3];
+        shuffleArray(plays);
+
+        const ranges = groupPlaysToTimeRanges(plays, [], {consolidateDuration: dayjs.duration(1, 's')});
+        expect(ranges.length).eq(5);
+
+        const consolidatedRanges = groupPlaysToTimeRanges(plays, [], {consolidateDuration: DEFAULT_CONSOLIDATE_DURATION});
+        expect(consolidatedRanges.length).eq(3);
     });
 })
