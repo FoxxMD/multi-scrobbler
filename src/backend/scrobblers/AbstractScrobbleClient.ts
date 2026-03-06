@@ -9,13 +9,13 @@ import {
     NowPlayingUpdateThreshold,
     PlayObject,
     PlayObjectLifecycleless,
-    QueuedScrobble, ScrobbleActionResult, PlayMatchResult, ScrobblePayload, ScrobbleResponse, SourcePlayerObj, TA_DURING,
+    QueuedScrobble, ScrobbleActionResult, PlayMatchResult, SourcePlayerObj, TA_DURING,
     TA_FUZZY,
     TrackStringOptions
 } from "../../core/Atomic.js";
 import { buildTrackString, capitalize, truncateStringToLength } from "../../core/StringUtils.js";
 import AbstractComponent from "../common/AbstractComponent.js";
-import { hasUpstreamError, UpstreamError } from "../common/errors/UpstreamError.js";
+import { hasUpstreamError } from "../common/errors/UpstreamError.js";
 import {
     ARTIST_WEIGHT,
     Authenticatable,
@@ -24,10 +24,12 @@ import {
     DEFAULT_RETRY_MULTIPLIER,
     DUP_SCORE_THRESHOLD,
     FormatPlayObjectOptions,
-    PlayPlatformId,
+    PaginatedTimeRangeOptions,
+    REFRESH_STALE_DEFAULT,
     ScrobbledPlayObject,
     SourceIdentifier,
     TIME_WEIGHT,
+    TimeRangeListensFetcher,
     TITLE_WEIGHT,
 } from "../common/infrastructure/Atomic.js";
 import { CommonClientConfig, NowPlayingOptions, UpstreamRefreshOptions } from "../common/infrastructure/config/client/index.js";
@@ -35,14 +37,10 @@ import { TRANSFORM_HOOK } from "../common/infrastructure/Transform.js";
 import { Notifiers } from "../notifier/Notifiers.js";
 import {
     comparingMultipleArtists,
-    genGroupId,
-    genGroupIdStr,
-    genGroupIdStrFromPlay,
     isDebugMode,
     parseBool,
     playObjDataMatch,
     pollingBackoff,
-    setIntersection,
     sleep,
     sortByOldestPlayDate,
 } from "../utils.js";
@@ -52,10 +50,10 @@ import {
     hasAcceptableTemporalAccuracy,
     temporalAccuracyToString,
     temporalPlayComparisonSummary,
+    todayAwareFormat,
 } from "../utils/TimeUtils.js";
 import { WebhookPayload } from "../common/infrastructure/config/health/webhooks.js";
 import { AsyncTask, SimpleIntervalJob, Task, ToadScheduler } from "toad-scheduler";
-import { MSCache } from "../common/Cache.js";
 import { getRoot } from "../ioc.js";
 import { rehydratePlay } from "../utils/CacheUtils.js";
 import { findAsyncSequential, staggerMapper } from "../utils/AsyncUtils.js";
@@ -65,8 +63,7 @@ import { normalizeStr } from "../utils/StringUtils.js";
 import prom, { Counter, Gauge } from 'prom-client';
 import { ScrobbleSubmitError } from "../common/errors/MSErrors.js";
 import {serializeError} from 'serialize-error';
-import { redactString } from "@foxxmd/redact-string";
-import clone from "clone";
+import { DEFAULT_NEW_PADDING, groupPlaysToTimeRanges } from "../utils/ListenFetchUtils.js";
 
 type PlatformMappedPlays = Map<string, {player: SourcePlayerObj, source: SourceIdentifier}>;
 type NowPlayingQueue = Map<string, PlatformMappedPlays>;
@@ -83,14 +80,10 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
     protected MAX_STORED_SCROBBLES = 40;
     protected MAX_INITIAL_SCROBBLES_FETCH = this.MAX_STORED_SCROBBLES;
 
-    #recentScrobblesList: PlayObject[] = [];
+    scrobbleSOTRanges: PaginatedTimeRangeOptions[] = [];
     scrobbledPlayObjs: FixedSizeList<ScrobbledPlayObject>;
-    lastScrobbledPlayDate?: Dayjs;
-    newestScrobbleTime?: Dayjs
-    oldestScrobbleTime?: Dayjs
     tracksScrobbled: number = 0;
 
-    lastScrobbleCheck: Dayjs = dayjs(0)
     lastScrobbleAttempt: Dayjs = dayjs(0)
     upstreamRefresh: MarkOptional<Required<UpstreamRefreshOptions>, 'refreshInitialCount'>;
     checkExistingScrobbles: boolean;
@@ -142,7 +135,7 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
                 refreshEnabled = true,
                 refreshInitialCount,
                 refreshMinInterval = 5,
-                refreshStaleAfter = 60,
+                refreshStaleAfter = REFRESH_STALE_DEFAULT,
                 checkExistingScrobbles = true,
                 verbose = {},
             } = {},
@@ -183,16 +176,6 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
         this.queuedGauge = clientMetrics.queued;
         this.deadLetterGauge = clientMetrics.deadLetter;
         this.scrobbledCounter = clientMetrics.scrobbled;
-    }
-
-    set recentScrobbles(scrobbles: PlayObject[]) {
-        const sorted = [...scrobbles];
-        sorted.sort(sortByOldestPlayDate);
-        this.#recentScrobblesList = sorted;
-    }
-
-    get recentScrobbles() {
-        return this.#recentScrobblesList;
     }
 
     protected getIdentifier() {
@@ -359,107 +342,59 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
         this.initializeNowPlaying();
 
         let initialLimit = refreshInitialCount;
-        if(refreshInitialCount > this.MAX_INITIAL_SCROBBLES_FETCH) {
+        if (refreshInitialCount > this.MAX_INITIAL_SCROBBLES_FETCH) {
             this.logger.warn(`Defined initial scrobbles count (${refreshInitialCount}) higher than maximum allowed (${this.MAX_INITIAL_SCROBBLES_FETCH}). Will use max instead.`);
             initialLimit = this.MAX_INITIAL_SCROBBLES_FETCH;
         }
 
-        this.logger.verbose(`Fetching up to ${initialLimit} initial scrobbles...`);
-        await this.refreshScrobbles(initialLimit);
-        this.lastScrobbledPlayDate = this.newestScrobbleTime;
+        this.logger.verbose(`Preloading up to ${initialLimit} initial scrobbles...`);
+
+        const preload = await this.getScrobblesForTimeRange({
+            limit: initialLimit,
+            fetchMax: initialLimit
+        });
+        if(preload.length === 0) {
+            this.logger.verbose(`Preloaded 0 scrobbles.`);
+        } else {
+            preload.sort(sortByOldestPlayDate);
+            const from = preload[0].data.playDate;
+            // we are assuming that all fetchers return latest scrobbles first (pretty sure this is the case)
+            const to = dayjs();// preload[preload.length - 1].data.playDate;
+            await this.cache.cacheClientScrobbles.set<PlayObject[]>(this.getScrobbleCacheKey(from, to), preload, '60s');
+            this.scrobbleSOTRanges.push({from: from.unix(), to: to.unix()});
+            this.logger.verbose(`Preloaded ${preload.length} scrobbles from ${todayAwareFormat(from)} to ${todayAwareFormat(to)}`);
+        }
     }
 
-    refreshScrobbles = async (limit: number = this.MAX_STORED_SCROBBLES) => {
-        if (this.upstreamRefresh.refreshEnabled) {
-            this.logger.debug('Refreshing recent scrobbles');
-            const recent = await this.getScrobblesForRefresh(limit);
-            this.logger.debug(`Found ${recent.length} recent scrobbles`);
-            this.recentScrobbles = recent;
-            if (this.recentScrobbles.length > 0) {
-                const [{data: {playDate: newestScrobbleTime = dayjs()} = {}} = {}] = this.recentScrobbles.slice(-1);
-                const [{data: {playDate: oldestScrobbleTime = dayjs()} = {}} = {}] = this.recentScrobbles.slice(0, 1);
-                this.newestScrobbleTime = newestScrobbleTime;
-                this.oldestScrobbleTime = oldestScrobbleTime;
+    abstract getScrobblesForTimeRange: TimeRangeListensFetcher;
 
-                this.filterScrobbledTracks();
-            }
-        }
-        this.lastScrobbleCheck = dayjs();
+    protected getScrobbleCacheKey = (from: Dayjs | number, to: Dayjs | number): string => {
+        return `${this.name}-scrobbleRange-${typeof from === 'number' ? from : from.unix()}-${typeof to === 'number' ? to :to.unix()}`;
     }
 
-    protected abstract getScrobblesForRefresh(limit: number): Promise<PlayObject[]>;
-
-    shouldRefreshScrobble = () => {
-        const {
-            refreshStaleAfter,
-            refreshMinInterval,
-            refreshEnabled
-        } = this.upstreamRefresh;
-
-        if (!refreshEnabled) {
-            this.logger.debug({labels: ['Upstream Refresh']}, `Should NOT refresh => refreshEnabled is false`);
-            return false;
-        }
-
-        if(this.queuedScrobbles.length === 0) {
-            this.logger.debug({labels: ['Upstream Refresh']}, `Should NOT refresh => no scrobbles in queue!`);
-            return false;
-        }
-
-        const queuedPlayedDate = this.getLatestQueuePlayDate();
-
-        // if newest queued play was played more recently than the last time we refreshed upstream scrobbles
-        if (this.scrobblesLastCheckedAt().unix() < queuedPlayedDate.unix()) {
-            if(!this.scrobblesRefreshMinIntervalPassed()) {
-                this.logger.debug({labels: ['Upstream Refresh']}, `Should refresh but WILL NOT => queued scrobble playDate is newer than last refresh but refreshMinInterval (${refreshMinInterval}ms) has not passed since last check`);
-                return false;
-            } else {
-                this.logger.debug({labels: ['Upstream Refresh']}, 'Should refresh => newest queued scrobble playDate is newer than last refresh');
-                return true;
-            }
-        }
-
-        // if the play date of the last Play scrobbled is *newer*
-        // than the queued scrobble we are about to scrobble
-        // then we are inserting a scrobble out of order which can happen if
-        // * backlogging and upstream returned plays out of order
-        // * processing dead letter queue
-        // * two sources have different history
-        //
-        // in all cases we probably want to refresh
-        if(this.lastScrobbledPlayDate !== undefined && this.queuedScrobbles[0].play.meta.newFromSource && this.lastScrobbledPlayDate.unix() > this.queuedScrobbles[0].play.data.playDate.unix()) {
-            if(!this.scrobblesRefreshMinIntervalPassed()) {
-                this.logger.debug({labels: ['Upstream Refresh']}, `Should refresh but WILL NOT => queued scrobble playDate is older than last scrobbled play (out-of-order insert) but refreshMinInterval (${refreshMinInterval}ms) has not passed since last check`);
-                return false;
-            } else {
-                this.logger.debug({labels: ['Upstream Refresh']}, 'Should refresh => queued scrobble playDate is older than last scrobbled play (out-of-order insert)');
-                return true;
-            }
-        }
-
-        // if it's been X seconds since we last refreshed
-        if(refreshStaleAfter !== undefined) {
-            const diff = dayjs().diff(this.scrobblesLastCheckedAt(), 's');
-            if(diff > refreshStaleAfter) {
-                this.logger.debug({labels: ['Upstream Refresh']}, `Should refresh => last refresh (${diff}s ago) was longer than refreshStaleAfter (${refreshStaleAfter}s)`);
-                return true;
-            }
-        }
-
-        return false;
+    handleQueuedScrobbleRanges = () => {
+        this.scrobbleSOTRanges = groupPlaysToTimeRanges(this.queuedScrobbles.map(x => x.play).concat(this.deadLetterScrobbles.map(x => x.play)), this.scrobbleSOTRanges, {staleNowBuffer: this.config.options?.refreshStaleAfter});
     }
 
-    protected scrobblesLastCheckedAt = () => this.lastScrobbleCheck
-    protected scrobblesLastCheckedAtDiff = () => dayjs().diff(this.scrobblesLastCheckedAt(), 'ms')
-    protected scrobblesRefreshMinIntervalPassed = () => {
-        const {
-            refreshMinInterval,
-        } = this.upstreamRefresh;
-        return this.scrobblesLastCheckedAtDiff() >= refreshMinInterval;
+    getSOTScrobblesForPlay = async (play: PlayObject): Promise<PlayObject[]> => {
+        let range: PaginatedTimeRangeOptions = this.scrobbleSOTRanges.find(x => x.from <= play.data.playDate.unix() && x.to > Math.min(dayjs().subtract(this.config.options?.refreshStaleAfter ?? REFRESH_STALE_DEFAULT, 's').unix(), play.data.playDate.unix()));
+        if(range === undefined) {
+            this.logger.warn(`No Scrobble SOT range found! Should have been handled before this. Creating a new one for ${buildTrackString(play)}`);
+            range = {
+                from: play.data.playDate.subtract(DEFAULT_NEW_PADDING).unix(), 
+                to: Math.min(play.data.playDate.add(DEFAULT_NEW_PADDING).unix(), dayjs().subtract(this.config.options?.refreshStaleAfter ?? REFRESH_STALE_DEFAULT, 's').unix()) 
+            };
+            this.scrobbleSOTRanges.push(range);
+        }
+        const plays = await this.cache.cacheClientScrobbles.getOrSet<PlayObject[]>(this.getScrobbleCacheKey(range.from, range.to), async () => {
+            const plays = await this.getScrobblesForTimeRange(range);
+            plays.sort(sortByOldestPlayDate);
+            return plays;
+        }, {ttl: (this.config.options?.refreshStaleAfter ?? REFRESH_STALE_DEFAULT) * 1000});
+        return plays;
     }
-
     public async alreadyScrobbled(playObj: PlayObject, log?: boolean): Promise<[boolean, PlayMatchResult]> {
-        const result = await this.existingScrobble(playObj);
+        const result = await this.existingScrobble(playObj, await this.getSOTScrobblesForPlay(playObj));
         return [result.match, result];
     }
 
@@ -468,37 +403,11 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
         return obj;
     }
 
-    // time frame is valid as long as the play date for the source track is newer than the oldest play time from the scrobble client
-    // ...this is assuming the scrobble client is returning "most recent" scrobbles
-    timeFrameIsValid = (playObj: PlayObject) => {
-
-        if(this.oldestScrobbleTime === undefined) {
-            return [true, ''];
-        }
-
-        const {
-            data: {
-                playDate,
-            } = {},
-        } = playObj;
-        const validTime = playDate.isAfter(this.oldestScrobbleTime);
-        let log = '';
-        if (!validTime) {
-            const dur = dayjs.duration(Math.abs(playDate.diff(this.oldestScrobbleTime))).humanize(false);
-            log = `occurred ${dur} before the oldest scrobble returned by this client (${this.oldestScrobbleTime.format()})`;
-        }
-        return [validTime, log]
-    }
-
     addScrobbledTrack = (playObj: PlayObject, scrobbledPlay: PlayObjectLifecycleless) => {
         this.scrobbledPlayObjs.add({play: playObj, scrobble: scrobbledPlay});
         this.scrobbledCounter.labels(this.getPrometheusLabels()).inc();
-        this.lastScrobbledPlayDate = playObj.data.playDate;
+        //this.lastScrobbledPlayDate = playObj.data.playDate;
         this.tracksScrobbled++;
-    }
-
-    filterScrobbledTracks = () => {
-        this.scrobbledPlayObjs = new FixedSizeList<ScrobbledPlayObject>(this.MAX_STORED_SCROBBLES, this.scrobbledPlayObjs.data.filter(x => this.timeFrameIsValid(x.play)[0])) ;
     }
 
     getScrobbledPlays = () => this.scrobbledPlayObjs.data.map(x => x.play)
@@ -523,7 +432,7 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
         return [matchPlayDate, dtInvariantMatches];
     }
 
-    existingScrobble = async (playObjPre: PlayObject): Promise<PlayMatchResult> => {
+    existingScrobble = async (playObjPre: PlayObject, existingScrobbles: PlayObject[]): Promise<PlayMatchResult> => {
 
         const result: PlayMatchResult = {
             match: false,
@@ -568,8 +477,8 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
 
             // if no recent scrobbles found then assume we haven't submitted it
             // (either user doesnt want to check history or there is no history to check!)
-            if (this.recentScrobbles.length === 0) {
-                this.dupeLogger.trace(`${buildTrackString(playObj, scoreTrackOpts)} => No Match because no recent scrobbles returned from API`);
+            if (existingScrobbles.length === 0) {
+                this.dupeLogger.trace(`${buildTrackString(playObj, scoreTrackOpts)} => No Match because no existing scrobbles returned from API`);
                 result.reason = 'no recent scrobbles returned from API';
                 return result;
             }
@@ -584,7 +493,7 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
             const looseTimeAccuracy = playObj.data.repeat ? [TA_DURING] : [TA_FUZZY, TA_DURING];
 
             
-            existingScrobble = await findAsyncSequential(this.recentScrobbles, async (xPre) => {
+            existingScrobble = await findAsyncSequential(existingScrobbles, async (xPre) => {
 
                 const x = await this.transformPlay(xPre, TRANSFORM_HOOK.existing);
 
@@ -809,16 +718,24 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
 
         try {
             this.scrobbling = true;
+            if(!this.upstreamRefresh.refreshEnabled) {
+                this.logger.verbose('Scrobble refresh is DISABLED. All queued scrobbles will likely always be scrobbled (nothing to check duplicates against).');
+            }
             while (!this.shouldStopScrobbleProcessing()) {
+                let queueEmpty = this.queuedScrobbles.length === 0;
                 while (this.queuedScrobbles.length > 0) {
-                    if (this.shouldRefreshScrobble()) {
-                        await this.refreshScrobbles();
+                    this.handleQueuedScrobbleRanges();
+                    if(!this.upstreamRefresh.refreshEnabled) {
+                        this.logger.trace('Scrobble refresh is DISABLED.');
                     }
+
                     const currQueuedPlay = this.queuedScrobbles.shift();
 
-                    const [timeFrameValid, timeFrameValidLog] = this.timeFrameIsValid(currQueuedPlay.play);
-                    if (timeFrameValid) {
-                        const [matched, matchResult] = await this.alreadyScrobbled(currQueuedPlay.play);
+                        let historicalPlays: PlayObject[] = [];
+                        if(this.upstreamRefresh.refreshEnabled) {
+                            historicalPlays = await this.getSOTScrobblesForPlay(currQueuedPlay.play);
+                        }
+                        const matchResult = await this.existingScrobble(currQueuedPlay.play, historicalPlays);
                         const {
                             scrobble = {},
                             ...lifeRest
@@ -830,7 +747,7 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
                                 match: matchResult
                             }
                         }
-                        if(!matched) {
+                        if(!matchResult.match) {
                             const transformedScrobble = await this.transformPlay(currQueuedPlay.play, TRANSFORM_HOOK.postCompare);
                             if(transformedScrobble.meta.lifecycle === undefined) {
                                 transformedScrobble.meta.lifecycle = {
@@ -866,12 +783,12 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
                                 }
                             }
                         }
-                    } else if (!timeFrameValid) {
-                        this.logger.debug(`Will not scrobble ${buildTrackString(currQueuedPlay.play)} from Source '${currQueuedPlay.source}' because it ${timeFrameValidLog}`);
-                    }
                     this.updateQueuedScrobblesCache();
                     this.queuedGauge.labels(this.getPrometheusLabels()).set(this.queuedScrobbles.length);
                     this.emitEvent('scrobbleDequeued', {queuedScrobble: currQueuedPlay})
+                }
+                if(!queueEmpty) {
+                    this.emitEvent('queueEmptied', {});
                 }
                 await sleep(this.scrobbleSleep);
             }
@@ -905,10 +822,14 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
         const processable = this.deadLetterScrobbles.filter(x => x.retries < retries);
         const queueStatus = `${processable.length} of ${this.deadLetterScrobbles.length} dead scrobbles have less than ${retries} retries, ${processable.length === 0 ? 'will skip processing.': 'processing now...'}`;
         if (processable.length === 0) {
-            this.logger.verbose(queueStatus, {leaf: 'Dead Letter'});
+            this.logger.verbose({labels: 'Dead Letter'}, queueStatus);
             return;
         }
-        this.logger.info(queueStatus, {leaf: 'Dead Letter'});
+        this.logger.info({labels: 'Dead Letter'}, queueStatus);
+        if(!this.upstreamRefresh.refreshEnabled) {
+            this.logger.verbose({labels: 'Dead Letter'}, 'Scrobble refresh is DISABLED. All dead scrobbles will likely always be scrobbled (nothing to check duplicates against).');
+        }
+        this.handleQueuedScrobbleRanges();
 
         const removedIds = [];
         for (const deadScrobble of this.deadLetterScrobbles) {
@@ -920,7 +841,7 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
             }
         }
         if (removedIds.length > 0) {
-            this.logger.info(`Removed ${removedIds.length} scrobbles from dead letter queue`, {leaf: 'Dead Letter'});
+            this.logger.info({labels: 'Dead Letter'}, `Removed ${removedIds.length} scrobbles from dead letter queue`);
         }
     }
 
@@ -929,56 +850,52 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
         const deadScrobble = this.deadLetterScrobbles[deadScrobbleIndex];
 
         if (!(await this.isReady())) {
-            this.logger.warn('Cannot process dead letter scrobble because client is not ready.', {leaf: 'Dead Letter'});
+            this.logger.warn({labels: 'Dead Letter'}, 'Cannot process dead letter scrobble because client is not ready.');
             return [false, deadScrobble];
         }
-        if (this.getLatestQueuePlayDate() !== undefined && this.scrobblesLastCheckedAt().unix() < this.getLatestQueuePlayDate().unix()) {
-            await this.refreshScrobbles();
+        let historicalPlays: PlayObject[] = [];
+        if(this.upstreamRefresh.refreshEnabled) {
+            historicalPlays = await this.getSOTScrobblesForPlay(deadScrobble.play);
         }
-        const [timeFrameValid, timeFrameValidLog] = this.timeFrameIsValid(deadScrobble.play);
-        if (timeFrameValid) {
-            const [matched, matchResult] = await this.alreadyScrobbled(deadScrobble.play);
-            const {
-                scrobble = {},
-                ...lifeRest
-            } = deadScrobble.play.meta.lifecycle ?? {steps: [], original: deadScrobble.play};
-            deadScrobble.play.meta.lifecycle = {
-                ...lifeRest,
-                scrobble: {
-                    ...scrobble,
-                    match: matchResult[1]
-                }
+        const matchResult = await this.existingScrobble(deadScrobble.play, historicalPlays);
+        const {
+            scrobble = {},
+            ...lifeRest
+        } = deadScrobble.play.meta.lifecycle ?? {steps: [], original: deadScrobble.play};
+        deadScrobble.play.meta.lifecycle = {
+            ...lifeRest,
+            scrobble: {
+                ...scrobble,
+                match: matchResult
             }
-            if(!matched) {
-                const transformedScrobble = await this.transformPlay(deadScrobble.play, TRANSFORM_HOOK.postCompare);
-                try {
-                    const scrobbledPlay = await this.scrobble(transformedScrobble);
-                    this.emitEvent('scrobble', {play: transformedScrobble});
-                    this.addScrobbledTrack(transformedScrobble, scrobbledPlay);
-                } catch (e) {
+        }
+        if(!matchResult.match) {
+            const transformedScrobble = await this.transformPlay(deadScrobble.play, TRANSFORM_HOOK.postCompare);
+            try {
+                const scrobbledPlay = await this.scrobble(transformedScrobble);
+                this.emitEvent('scrobble', {play: transformedScrobble});
+                this.addScrobbledTrack(transformedScrobble, scrobbledPlay);
+            } catch (e) {
 
-                    const submitError = findCauseByReference(e, ScrobbleSubmitError);
-                    if(submitError !== undefined) {
-                        deadScrobble.play.meta.lifecycle.scrobble.payload = submitError.payload;
-                        deadScrobble.play.meta.lifecycle.scrobble.response = submitError.responseBody;
-                        deadScrobble.play.meta.lifecycle.scrobble.error = serializeError(submitError);
-                    } else {
-                        deadScrobble.play.meta.lifecycle.scrobble.payload = this.playToClientPayload(transformedScrobble);
-                        deadScrobble.play.meta.lifecycle.scrobble.error = serializeError(e);
-                    }
-
-                    deadScrobble.retries++;
-                    deadScrobble.error = messageWithCauses(e);
-                    deadScrobble.lastRetry = dayjs();
-                    this.logger.error(new Error(`Could not scrobble ${buildTrackString(transformedScrobble)} from Source '${deadScrobble.source}' due to error`, {cause: e}));
-                    this.deadLetterScrobbles[deadScrobbleIndex] = deadScrobble;
-                    return [false, deadScrobble];
-                } finally {
-                    await sleep(1000);
+                const submitError = findCauseByReference(e, ScrobbleSubmitError);
+                if(submitError !== undefined) {
+                    deadScrobble.play.meta.lifecycle.scrobble.payload = submitError.payload;
+                    deadScrobble.play.meta.lifecycle.scrobble.response = submitError.responseBody;
+                    deadScrobble.play.meta.lifecycle.scrobble.error = serializeError(submitError);
+                } else {
+                    deadScrobble.play.meta.lifecycle.scrobble.payload = this.playToClientPayload(transformedScrobble);
+                    deadScrobble.play.meta.lifecycle.scrobble.error = serializeError(e);
                 }
+
+                deadScrobble.retries++;
+                deadScrobble.error = messageWithCauses(e);
+                deadScrobble.lastRetry = dayjs();
+                this.logger.error(new Error(`Could not scrobble ${buildTrackString(transformedScrobble)} from Source '${deadScrobble.source}' due to error`, {cause: e}));
+                this.deadLetterScrobbles[deadScrobbleIndex] = deadScrobble;
+                return [false, deadScrobble];
+            } finally {
+                await sleep(1000);
             }
-        } else if (!timeFrameValid) {
-            this.logger.debug(`Will not scrobble ${buildTrackString(deadScrobble.play)} from Source '${deadScrobble.source}' because it ${timeFrameValidLog}`, {leaf: 'Dead Letter'});
         }
         if(deadScrobble !== undefined) {
             this.removeDeadLetterScrobble(deadScrobble.id)
@@ -1024,6 +941,19 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
             this.queuedScrobbles.sort((a, b) => sortByOldestPlayDate(a.play, b.play));
         }
         this.updateQueuedScrobblesCache();
+    }
+
+    cancelQueuedItemsBySource = (source: string): number => {
+        const beforeMain = this.queuedScrobbles.length;
+        const beforeDead = this.deadLetterScrobbles.length;
+
+        this.queuedScrobbles = this.queuedScrobbles.filter(item => item.source !== source);
+        this.deadLetterScrobbles = this.deadLetterScrobbles.filter(item => item.source !== source);
+
+        this.updateQueuedScrobblesCache();
+        this.updateDeadLetterCache();
+
+        return (beforeMain + beforeDead) - (this.queuedScrobbles.length + this.deadLetterScrobbles.length);
     }
 
     protected addDeadLetterScrobble = (data: QueuedScrobble<PlayObject>, error: (Error | string) = 'Unspecified error') => {
@@ -1141,13 +1071,13 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
 
     protected updateDeadLetterCache = () => {
         this.cache.cacheScrobble.set(`${this.getMachineId()}-dead`, this.deadLetterScrobbles)
-        .then(() => isDebugMode() ? this.logger.debug('Updated dead letter cache') : null)
+        .then(() => null)
         .catch((e) => this.logger.warn(new Error('Error while updating dead letter cache', {cause: e})));
     }
 
     protected updateQueuedScrobblesCache = () => {
         this.cache.cacheScrobble.set(`${this.getMachineId()}-queue`, this.queuedScrobbles)
-        .then(() => isDebugMode() ? this.logger.debug('Updated queued scrobble cache') : null)
+        .then(() => null)
         .catch((e) => this.logger.warn(new Error('Error while updating queued scrobble cache', {cause: e})));
     }
 }

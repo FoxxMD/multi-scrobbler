@@ -4,7 +4,7 @@ import normalizeUrl from "normalize-url";
 import { PlayObject } from "../../core/Atomic.js";
 import { buildTrackString, capitalize } from "../../core/StringUtils.js";
 import { isNodeNetworkException } from "../common/errors/NodeErrors.js";
-import { FormatPlayObjectOptions } from "../common/infrastructure/Atomic.js";
+import { FormatPlayObjectOptions, TimeRangeListensFetcher } from "../common/infrastructure/Atomic.js";
 import { MalojaClientConfig } from "../common/infrastructure/config/client/maloja.js";
 import {
     MalojaScrobbleRequestData,
@@ -13,6 +13,8 @@ import { Notifiers } from "../notifier/Notifiers.js";
 import AbstractScrobbleClient from "./AbstractScrobbleClient.js";
 import { MalojaApiClient, formatPlayObj as formatMalojaScrobbleToPlay, playToScrobblePayload } from "../common/vendor/maloja/MalojaApiClient.js";
 import { ScrobbleSubmitError } from "../common/errors/MSErrors.js";
+import { createGetScrobblesForTimeRangeFunc } from "../utils/ListenFetchUtils.js";
+import dayjs from "dayjs";
 
 const feat = ["ft.", "ft", "feat.", "feat", "featuring", "Ft.", "Ft", "Feat.", "Feat", "Featuring"];
 
@@ -23,6 +25,7 @@ export default class MalojaScrobbler extends AbstractScrobbleClient {
     webUrl: string;
 
     api: MalojaApiClient;
+    getScrobblesForTimeRange: TimeRangeListensFetcher
 
     declare config: MalojaClientConfig
 
@@ -30,6 +33,7 @@ export default class MalojaScrobbler extends AbstractScrobbleClient {
         super('maloja', name, config, notifier, emitter, logger);
         this.api = new MalojaApiClient(name, this.config.data, { logger: childLogger(this.logger, 'API') });
         this.MAX_INITIAL_SCROBBLES_FETCH = 100;
+        this.getScrobblesForTimeRange = createGetScrobblesForTimeRangeFunc(this.api, this.api.logger);
     }
 
     formatPlayObj = (obj: any, options: FormatPlayObjectOptions = {}) => formatMalojaScrobbleToPlay(obj, { url: this.webUrl });
@@ -75,11 +79,7 @@ export default class MalojaScrobbler extends AbstractScrobbleClient {
             throw e;
         }
     }
-
-    getScrobblesForRefresh = async (limit: number) => {
-        return await this.api.getRecentScrobbles(limit);
-    }
-
+    
     public playToClientPayload(playObj: PlayObject): MalojaScrobbleRequestData {
 
         const { apiKey } = this.config.data;

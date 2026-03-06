@@ -63,7 +63,7 @@ export function sleep(ms: any) {
     return new Promise(resolve => setTimeout(resolve, ms));
 }
 
-// sorts playObj formatted objects by playDate in ascending (oldest first) order
+/** sorts playObj formatted objects by playDate in ascending (oldest first) order */
 export const sortByOldestPlayDate = (a: PlayObject, b: PlayObject) => {
     const {
         data: {
@@ -87,6 +87,7 @@ export const sortByOldestPlayDate = (a: PlayObject, b: PlayObject) => {
     return aPlayDate.isAfter(bPlayDate) ? 1 : -1
 };
 
+/** sorts playObj formatted objects by playDate in descending (newest first) order */
 export const sortByNewestPlayDate = (a: PlayObject, b: PlayObject) => {
     const {
         data: {

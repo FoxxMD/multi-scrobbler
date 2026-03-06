@@ -1,7 +1,7 @@
 import { Logger } from "@foxxmd/logging";
 import EventEmitter from "events";
 import { PlayMatchResult, PlayObject, SourcePlayerObj } from "../../core/Atomic.js";
-import { CALCULATED_PLAYER_STATUSES, FormatPlayObjectOptions, REPORTED_PLAYER_STATUSES, ReportedPlayerStatus, SINGLE_USER_PLATFORM_ID_STR } from "../common/infrastructure/Atomic.js";
+import { CALCULATED_PLAYER_STATUSES, FormatPlayObjectOptions, REPORTED_PLAYER_STATUSES, ReportedPlayerStatus, SINGLE_USER_PLATFORM_ID_STR, TimeRangeListensFetcher } from "../common/infrastructure/Atomic.js";
 import { Notifiers } from "../notifier/Notifiers.js";
 
 import AbstractScrobbleClient, { nowPlayingUpdateByPlayDuration } from "./AbstractScrobbleClient.js";
@@ -29,6 +29,8 @@ export default class DiscordScrobbler extends AbstractScrobbleClient {
         this.nowPlayingMaxThreshold = nowPlayingUpdateByPlayDuration;
         this.nowPlayingMinThreshold = (_) => 5;
     }
+
+    getScrobblesForTimeRange = async (_) => [];
 
     formatPlayObj = (obj: any, options: FormatPlayObjectOptions = {}) => obj;
 
@@ -112,10 +114,6 @@ export default class DiscordScrobbler extends AbstractScrobbleClient {
         } catch (e) {
             throw e;
         }
-    }
-
-    getScrobblesForRefresh = async (limit: number) => {
-        return [];
     }
 
     queueScrobble = async (data: PlayObject | PlayObject[], source: string) => {

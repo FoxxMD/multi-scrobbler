@@ -50,6 +50,7 @@ export class MSCache {
     cacheAuth: Cacheable;
     regexCache: ReturnType<typeof cacheFunctions>;
     cacheTransform: Cacheable;
+    cacheClientScrobbles: Cacheable;
 
     logger: Logger;
 
@@ -96,6 +97,7 @@ export class MSCache {
 
         this.regexCache = cacheFunctions(this.config.regex);
         this.cacheTransform = new Cacheable({primary: initMemoryCache({lruSize: 500})});
+        this.cacheClientScrobbles = new Cacheable({primary: initMemoryCache({lruSize: 100, ttl: '5m'})});
     }
 
     init = async () => {

@@ -8,7 +8,6 @@ import { AbstractBlueSkyApiClient, listRecordToPlay, recordToPlay } from "../com
 import { TealSourceConfig } from "../common/infrastructure/config/source/tealfm.js";
 import { BlueSkyAppApiClient } from "../common/vendor/bluesky/BlueSkyAppApiClient.js";
 import { BlueSkyOauthApiClient } from "../common/vendor/bluesky/BlueSkyOauthApiClient.js";
-import { ListRecord, ScrobbleRecord } from "../common/infrastructure/config/client/tealfm.js";
 import { parseArrayFromMaybeString } from "../utils/StringUtils.js";
 
 export default class TealfmSource extends MemorySource {
@@ -107,14 +106,14 @@ export default class TealfmSource extends MemorySource {
 
     getRecentlyPlayed = async(options: RecentlyPlayedOptions = {}) => {
         const {limit = 20} = options;
-        let list: ListRecord<ScrobbleRecord>[];
+        let plays: PlayObject[];
         try {
-            list = await this.client.listScrobbleRecord(limit)
+            const {data} = await this.client.getPagelessTimeRangeListens({limit})
+            plays = data;
         } catch (e) {
             throw new Error('Error occurred while trying to fetch records', {cause: e});
         }
         await this.processRecentPlays([]);
-        let plays = list.map(x => listRecordToPlay(x));
         if(this.serviceAllow.length > 0) {
             plays = plays.filter(x => 
                 (x.meta.musicService !== undefined && this.serviceAllow.some(y => x.meta.musicService.toLocaleLowerCase().includes(y)))

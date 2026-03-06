@@ -66,8 +66,8 @@ export default class RockskyScrobbler extends AbstractScrobbleClient {
         }
     }
 
-    getScrobblesForRefresh = async (limit: number) => {
-        return await this.api.getRecentlyPlayed(limit);
+    getScrobblesForTimeRange = async (_) => {
+        return await this.api.getRecentlyPlayed(this.MAX_INITIAL_SCROBBLES_FETCH);
     }
 
     public playToClientPayload(playObj: PlayObject): ListenPayload {
