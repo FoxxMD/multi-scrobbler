@@ -2,7 +2,7 @@ import { loggerTest, loggerDebug, childLogger } from "@foxxmd/logging";
 import chai, { assert, expect } from 'chai';
 import asPromised from 'chai-as-promised';
 import { after, before, describe, it } from 'mocha';
-import AbstractComponent from "../../common/AbstractComponent.js";
+import AbstractComponent, { AbstractComponentConfig } from "../../common/AbstractComponent.js";
 
 import { ConditionalSearchAndReplaceRegExp, STAGE_TYPES, STAGE_TYPES_METADATA, STAGE_TYPES_USER, TRANSFORM_HOOK } from "../../common/infrastructure/Transform.js";
 
@@ -13,6 +13,9 @@ import { findCauseByMessage } from "../../utils/ErrorUtils.js";
 import NativeTransformer from "../../common/transforms/NativeTransformer.js";
 import { initMemoryCache } from "../../common/Cache.js";
 import { Cacheable } from "cacheable";
+import { TransformerCommonConfig } from "../../../core/Atomic.js";
+import TransformerManager from "../../common/transforms/TransformerManager.js";
+import { transientCache } from "../utils/CacheTestUtils.js";
 
 chai.use(asPromised);
 
@@ -23,9 +26,15 @@ class TestComponent extends AbstractComponent {
     protected getIdentifier(): string {
         return 'test';
     }
-    constructor() {
-        super({});
+    constructor(config?: AbstractComponentConfig) {
+        super(config ?? {});
     }
+}
+
+const createTestComponent = (config?: AbstractComponentConfig): TestComponent => {
+    const component = new TestComponent(config);
+    component.logger = childLogger(loggerTest, 'App');
+    return component;
 }
 
 const component = new TestComponent();
@@ -628,4 +637,66 @@ describe('Play Transforms', function () {
         });
 
     });
+
+    describe('Transform Manager', function() {
+
+        it('Uses user transforms in the order supplied within component', async function() {
+            const tConfigs: TransformerCommonConfig[] = [
+                {
+                    type: 'user',
+                    name: 't1',
+                    defaults: {
+                        title: [
+                            {
+                                search: "Cool",
+                                replace: "Fun"
+                            },
+                            {
+                                search: "Track",
+                                replace: "Title"
+                            }
+                        ]
+                    }
+                },
+                                {
+                    type: 'user',
+                    name: 't2',
+                    defaults: {
+                        title: [
+                            {
+                                search: "Cool",
+                                replace: "Bar"
+                            }
+                        ]
+                    }
+                }
+            ];
+            const tmanager = new TransformerManager(loggerTest, transientCache());
+            for(const t of tConfigs) {
+                tmanager.register(t);
+            }
+
+            const play = generatePlay({track: 'My Cool Track'});
+
+            const multiTransformComponent = createTestComponent({transformManager: tmanager});
+            multiTransformComponent.config.options = {
+                playTransform: {
+                    preCompare: [
+                        {
+                            type: "user",
+                            name: "t2"
+                        },
+                        {
+                            type: "user",
+                            name: "t1"
+                        }
+                    ]
+                }
+            };
+            multiTransformComponent.buildTransformRules();
+            const transformed = await multiTransformComponent.transformPlay(play, TRANSFORM_HOOK.preCompare);
+            expect(transformed.data.track).eq('My Bar Title');
+        });
+    });
+
 })
