@@ -493,8 +493,9 @@ describe('Upstream Scrobbles', function() {
     it('Calls timerange func to get SOT scrobbles when none exists', async function() {
         const existingPlays = normalizePlays(generatePlays(3), {initialDate: dayjs().subtract(1, 'hour')});
         const scrobbler = generateTestScrobbler();
-        scrobbler.testRecentScrobbles = existingPlays;
+        scrobbler.testRecentScrobbles = [];
         await scrobbler.tryInitialize();
+        scrobbler.testRecentScrobbles = existingPlays;
 
         const sp = spy(scrobbler, 'getScrobblesForTimeRange');
 
@@ -510,8 +511,9 @@ describe('Upstream Scrobbles', function() {
     it('Uses cached timerange for closely grouped scrobbles', async function() {
         const existingPlays = normalizePlays(generatePlays(3), {initialDate: dayjs().subtract(1, 'hour')});
         const scrobbler = generateTestScrobbler();
-        scrobbler.testRecentScrobbles = existingPlays;
+        scrobbler.testRecentScrobbles = [];
         await scrobbler.tryInitialize();
+        scrobbler.testRecentScrobbles = existingPlays;
 
         const sp = spy(scrobbler, 'getScrobblesForTimeRange');
 
@@ -528,14 +530,15 @@ describe('Upstream Scrobbles', function() {
     it('Uses separate timerange calls when scrobbles are not closely grouped', async function() {
         const existingPlays = normalizePlays(generatePlays(3), {initialDate: dayjs().subtract(1, 'hour')});
         const scrobbler = generateTestScrobbler();
-        scrobbler.testRecentScrobbles = existingPlays;
+        scrobbler.testRecentScrobbles = [];
         await scrobbler.tryInitialize();
+        scrobbler.testRecentScrobbles = existingPlays;
 
         const sp = spy(scrobbler, 'getScrobblesForTimeRange');
 
         const play1 = generatePlay({playDate: dayjs().subtract(3, 'm')});
         const play2 = generatePlay({playDate: dayjs().subtract(1, 'm')});
-        const play3 = generatePlay({playDate: dayjs().subtract(DEFAULT_GROUP_DURATION.add(4, 'm'))});
+        const play3 = generatePlay({playDate: dayjs().subtract(DEFAULT_CONSOLIDATE_DURATION.add(4, 'm'))});
         await scrobbler.queueScrobble([play1, play2, play3], 'test');
         const emptied = pEvent(scrobbler.emitter, 'queueEmptied');
         scrobbler.startScrobbling().then(() => null);
@@ -547,8 +550,9 @@ describe('Upstream Scrobbles', function() {
     it('Gets fresh timerange if TTL of staleAfter has passed', async function() {
         const existingPlays = normalizePlays(generatePlays(3), {initialDate: dayjs().subtract(1, 'hour')});
         const scrobbler = generateTestScrobbler();
-        scrobbler.testRecentScrobbles = existingPlays;
+        scrobbler.testRecentScrobbles = [];
         await scrobbler.tryInitialize();
+        scrobbler.testRecentScrobbles = existingPlays;
 
         const sp = spy(scrobbler, 'getScrobblesForTimeRange');
 
