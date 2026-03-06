@@ -80,6 +80,11 @@ export const createGetScrobblesForTimeRangeFunc = <T extends PaginatedTimeRangeS
                     more = false;
                 }
 
+                if(currOpts.fetchMax !== undefined && plays.length >= currOpts.fetchMax) {
+                    logger.trace(`Total fetched (${plays.length}) is >= desired max (${currOpts.fetchMax}), ending fetch`);
+                    more = false;
+                }
+
                 if(more) {
                     if (results.meta.order === undefined || results.meta.order === 'asc') {
                         // if meta.order is ascending then assumption the response returns *oldest first* list
@@ -155,6 +160,11 @@ export const createGetScrobblesForTimeRangeFunc = <T extends PaginatedTimeRangeS
                 if(more && opts.to === undefined && opts.from === undefined) {
                     // only wanted one fetch
                     logger.trace('No to/from defined, ending fetch');
+                    more = false;
+                }
+
+                if(currOpts.fetchMax !== undefined && plays.length >= currOpts.fetchMax) {
+                    logger.trace(`Total fetched (${plays.length}) is >= desired max (${currOpts.fetchMax}), ending fetch`);
                     more = false;
                 }
 

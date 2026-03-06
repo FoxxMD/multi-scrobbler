@@ -445,6 +445,8 @@ export interface PaginatedTimeRangeOptions {
     from: UnixTimestamp
     /** Unix timestamp */
     to: UnixTimestamp
+    /** maximum number of results to fetch before returning early */
+    fetchMax?: number
 }
 
 export type PaginatedTimeRangeCommonOptions = Partial<PaginatedTimeRangeOptions> & PaginatedLimit;

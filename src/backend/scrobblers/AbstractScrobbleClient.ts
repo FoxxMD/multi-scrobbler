@@ -50,6 +50,7 @@ import {
     hasAcceptableTemporalAccuracy,
     temporalAccuracyToString,
     temporalPlayComparisonSummary,
+    todayAwareFormat,
 } from "../utils/TimeUtils.js";
 import { WebhookPayload } from "../common/infrastructure/config/health/webhooks.js";
 import { AsyncTask, SimpleIntervalJob, Task, ToadScheduler } from "toad-scheduler";
@@ -339,9 +340,37 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
         } = this.config;
 
         this.initializeNowPlaying();
+
+        let initialLimit = refreshInitialCount;
+        if (refreshInitialCount > this.MAX_INITIAL_SCROBBLES_FETCH) {
+            this.logger.warn(`Defined initial scrobbles count (${refreshInitialCount}) higher than maximum allowed (${this.MAX_INITIAL_SCROBBLES_FETCH}). Will use max instead.`);
+            initialLimit = this.MAX_INITIAL_SCROBBLES_FETCH;
+        }
+
+        this.logger.verbose(`Preloading up to ${initialLimit} initial scrobbles...`);
+
+        const preload = await this.getScrobblesForTimeRange({
+            limit: initialLimit,
+            fetchMax: initialLimit
+        });
+        if(preload.length === 0) {
+            this.logger.verbose(`Preloaded 0 scrobbles.`);
+        } else {
+            preload.sort(sortByOldestPlayDate);
+            const from = preload[0].data.playDate;
+            // we are assuming that all fetchers return latest scrobbles first (pretty sure this is the case)
+            const to = dayjs();// preload[preload.length - 1].data.playDate;
+            await this.cache.cacheClientScrobbles.set<PlayObject[]>(this.getScrobbleCacheKey(from, to), preload, '60s');
+            this.scrobbleSOTRanges.push({from: from.unix(), to: to.unix()});
+            this.logger.verbose(`Preloaded ${preload.length} scrobbles from ${todayAwareFormat(from)} to ${todayAwareFormat(to)}`);
+        }
     }
 
     abstract getScrobblesForTimeRange: TimeRangeListensFetcher;
+
+    protected getScrobbleCacheKey = (from: Dayjs | number, to: Dayjs | number): string => {
+        return `${this.name}-scrobbleRange-${typeof from === 'number' ? from : from.unix()}-${typeof to === 'number' ? to :to.unix()}`;
+    }
 
     handleQueuedScrobbleRanges = () => {
         this.scrobbleSOTRanges = groupPlaysToTimeRanges(this.queuedScrobbles.map(x => x.play).concat(this.deadLetterScrobbles.map(x => x.play)), this.scrobbleSOTRanges, {staleNowBuffer: this.config.options?.refreshStaleAfter});
@@ -357,9 +386,10 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
             };
             this.scrobbleSOTRanges.push(range);
         }
-        const cacheKey = `${this.name}-scrobbleRange-${range.from}-${range.to}`;
-        const plays = await this.cache.cacheClientScrobbles.getOrSet<PlayObject[]>(cacheKey, async () => {
-            return await this.getScrobblesForTimeRange(range);
+        const plays = await this.cache.cacheClientScrobbles.getOrSet<PlayObject[]>(this.getScrobbleCacheKey(range.from, range.to), async () => {
+            const plays = await this.getScrobblesForTimeRange(range);
+            plays.sort(sortByOldestPlayDate);
+            return plays;
         }, {ttl: (this.config.options?.refreshStaleAfter ?? REFRESH_STALE_DEFAULT) * 1000});
         return plays;
     }
@@ -1041,13 +1071,13 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
 
     protected updateDeadLetterCache = () => {
         this.cache.cacheScrobble.set(`${this.getMachineId()}-dead`, this.deadLetterScrobbles)
-        .then(() => isDebugMode() ? this.logger.trace('Updated dead letter cache') : null)
+        .then(() => null)
         .catch((e) => this.logger.warn(new Error('Error while updating dead letter cache', {cause: e})));
     }
 
     protected updateQueuedScrobblesCache = () => {
         this.cache.cacheScrobble.set(`${this.getMachineId()}-queue`, this.queuedScrobbles)
-        .then(() => isDebugMode() ? this.logger.trace('Updated queued scrobble cache') : null)
+        .then(() => null)
         .catch((e) => this.logger.warn(new Error('Error while updating queued scrobble cache', {cause: e})));
     }
 }
