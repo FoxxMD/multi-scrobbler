@@ -6,6 +6,7 @@ import { comparePlayTemporally, hasAcceptableTemporalAccuracy, TemporalPlayCompa
 import { compareNormalizedStrings, compareScrobbleArtists, compareScrobbleTracks, compareTracks, normalizeStr, TrackSamenessResults } from "./StringUtils.js";
 import { ARTIST_WEIGHT, TITLE_WEIGHT } from "../common/infrastructure/Atomic.js";
 import { StringSamenessResult } from "@foxxmd/string-sameness";
+import { Duration } from "dayjs/plugin/duration.js";
 
 
 export const metaInvariantTransform = (play: PlayObject): PlayObjectLifecycleless => {
@@ -377,4 +378,8 @@ export const scorePlaySameness = (ref: PlayObject, candidate: PlayObject, option
     const albumScore = albumHigh * (albumWeight + albumBonus);
 
     return trackScore + artistScore + albumScore;
+}
+
+export const playDateWithinDurationOfAny = (play: PlayObject, plays:  PlayObject[], dur: Duration): PlayObject | undefined => {
+    return plays.find(x => Math.abs(x.data.playDate.diff(play.data.playDate, 's')) <= dur.asSeconds());
 }

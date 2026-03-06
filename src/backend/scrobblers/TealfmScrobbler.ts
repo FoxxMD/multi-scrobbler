@@ -91,9 +91,9 @@ export default class TealScrobbler extends AbstractScrobbleClient {
         }
     }
 
-    getScrobblesForRefresh = async (limit: number) => {
+    getScrobblesForTimeRange = async (_) => {
         try {
-            const {data} = await this.client.getPagelessTimeRangeListens({limit})
+            const {data} = await this.client.getPagelessTimeRangeListens({limit: 100})
             return data;
         } catch (e) {
             throw new Error('Error occurred while trying to fetch records', {cause: e});

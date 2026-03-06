@@ -8,7 +8,7 @@ import { FormatPlayObjectOptions, TimeRangeListensFetcher } from "../common/infr
 import { playToListenPayload } from "../common/vendor/ListenbrainzApiClient.js";
 import { Notifiers } from "../notifier/Notifiers.js";
 
-import AbstractScrobbleClient, { shouldUpdatePlayingNowPlatformWhenPlayingOnly } from "./AbstractScrobbleClient.js";
+import AbstractScrobbleClient from "./AbstractScrobbleClient.js";
 import { isDebugMode } from "../utils.js";
 import { KoitoClientConfig } from "../common/infrastructure/config/client/koito.js";
 import { KoitoApiClient, listenObjectResponseToPlay } from "../common/vendor/koito/KoitoApiClient.js";
@@ -66,14 +66,6 @@ export default class KoitoScrobbler extends AbstractScrobbleClient {
                 this.logger.error('Could not communicate with Koito API');
             }
             throw e;
-        }
-    }
-
-    getScrobblesForRefresh = async (limit: number) => {
-        if(this.queuedScrobbles.length === 0) {
-            return await this.getScrobblesForTimeRange({limit, cursor: 0});
-        } else {
-            return await this.getScrobblesForTimeRange({limit, cursor: 0, from: this.queuedScrobbles[0].play.data.playDate.unix(), to: dayjs().unix()});
         }
     }
 

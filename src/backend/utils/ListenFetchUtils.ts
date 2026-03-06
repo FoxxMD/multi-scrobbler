@@ -1,10 +1,12 @@
-import { childLogger, Logger } from "@foxxmd/logging";
-import dayjs from "dayjs";
-import { PlayObject } from "../../core/Atomic.js";
-import { hasPagelessTimeRangeListens, hasPaginatedTimeRangeListens, PagelessListensTimeRangeOptions, PagelessTimeRangeListens, PaginatedListensTimeRangeOptions, PaginatedTimeRangeCommonOptions, PaginatedTimeRangeListens, PaginatedTimeRangeSource, TimeRangeListensFetcher } from "../common/infrastructure/Atomic.js";
+import { childLogger, Logger, loggerTest } from "@foxxmd/logging";
+import dayjs, { Dayjs } from "dayjs";
+import { Duration } from "dayjs/plugin/duration.js";
+import { PlayObject, UnixTimestamp } from "../../core/Atomic.js";
+import { hasPagelessTimeRangeListens, hasPaginatedTimeRangeListens, PagelessListensTimeRangeOptions, PagelessTimeRangeListens, PaginatedListensTimeRangeOptions, PaginatedTimeRangeCommonOptions, PaginatedTimeRangeListens, PaginatedTimeRangeOptions, PaginatedTimeRangeSource, REFRESH_STALE_DEFAULT, TimeRangeListensFetcher } from "../common/infrastructure/Atomic.js";
 import { MaybeLogger } from "../common/logging.js";
 import { sortByNewestPlayDate, sortByOldestPlayDate } from "../utils.js";
 import { todayAwareFormat } from "./TimeUtils.js";
+import { playDateWithinDurationOfAny } from "./PlayComparisonUtils.js";
 
 export interface TimeRangeFetchOptions {
     logger?: MaybeLogger | Logger
@@ -171,4 +173,65 @@ export const createGetScrobblesForTimeRangeFunc = <T extends PaginatedTimeRangeS
     }
 
     throw new Error('fetcher does not implement pagination interface');
+}
+
+export interface GroupPlaysTimeRangeOptions {
+    groupDuration?: Duration
+    newPadding?: Duration
+    staleNowBuffer?: number
+    logger?: Logger
+}
+
+export const DEFAULT_GROUP_DURATION = dayjs.duration(15, 'm');
+export const DEFAULT_NEW_PADDING = dayjs.duration(10, 'm');
+
+export const groupPlaysToTimeRanges = (plays: PlayObject[], existingRanges: PaginatedTimeRangeOptions[], opts: GroupPlaysTimeRangeOptions = {}) => {
+    const {
+        groupDuration = DEFAULT_GROUP_DURATION,
+        newPadding = DEFAULT_NEW_PADDING,
+        staleNowBuffer = REFRESH_STALE_DEFAULT,
+        logger = loggerTest
+    } = opts;
+    const newRanges: PaginatedTimeRangeOptions[] = [];
+
+    const temporallyClosePlaySets: PlayObject[][] = [];
+
+    const sorted = [...plays];
+    sorted.sort(sortByOldestPlayDate);
+
+    for(const p of sorted) {
+        const closePlaySetIndex = temporallyClosePlaySets.findIndex(x => playDateWithinDurationOfAny(p, x, groupDuration));
+        if(closePlaySetIndex === -1) {
+            temporallyClosePlaySets.push([p]);
+        } else {
+            temporallyClosePlaySets[closePlaySetIndex].push(p);
+        }
+    }
+
+    temporallyClosePlaySets.forEach((x) => x.sort(sortByOldestPlayDate));
+    for(const tc of temporallyClosePlaySets) {
+        let oldest: Dayjs,
+        newest: Dayjs;
+        if(tc.length === 1) {
+            oldest = tc[0].data.playDate;
+            newest = oldest;
+            //newest = tc[0].data.playDate.add(1, 'hour').unix();
+        } else {
+            oldest = tc[0].data.playDate;
+            newest = tc[tc.length - 1].data.playDate;
+        }
+
+        let bufferedNewest = newest;
+        if(dayjs().diff(bufferedNewest, 's') < staleNowBuffer) {
+            bufferedNewest = bufferedNewest.subtract(staleNowBuffer, 's');
+        }
+        const existingWithin = existingRanges.find(x => x.from <= oldest.unix() && x.to >= bufferedNewest.unix());
+        if(!existingWithin) {
+            newRanges.push({from: oldest.subtract(newPadding).unix(), to: Math.min(newest.add(newPadding).unix(), dayjs().unix())});
+        } else {
+            newRanges.push(existingWithin);
+        }
+    }
+
+    return newRanges;
 }

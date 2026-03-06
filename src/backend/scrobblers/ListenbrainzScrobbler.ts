@@ -69,15 +69,7 @@ export default class ListenbrainzScrobbler extends AbstractScrobbleClient {
             throw e;
         }
     }
-
-    getScrobblesForRefresh = async (limit: number) => {
-        if(this.queuedScrobbles.length === 0) {
-            return await this.getScrobblesForTimeRange({limit});
-        } else {
-            return await this.getScrobblesForTimeRange({limit, from: this.queuedScrobbles[0].play.data.playDate.unix(), to: dayjs().unix()});
-        }
-    }
-
+    
     public playToClientPayload(playObj: PlayObject): ListenPayload {
         return playToListenPayload(playObj);
     }

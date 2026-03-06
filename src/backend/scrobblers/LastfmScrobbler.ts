@@ -60,16 +60,6 @@ export default class LastfmScrobbler extends AbstractScrobbleClient {
         }
     }
 
-    getScrobblesForRefresh = async (limit: number) => {
-        let plays: PlayObject[] = [];
-        if(this.queuedScrobbles.length === 0) {
-            plays = await this.getScrobblesForTimeRange({limit, cursor: 1});
-        } else {
-            plays = await this.getScrobblesForTimeRange({limit, cursor: 1, from: this.queuedScrobbles[0].play.data.playDate.unix(), to: dayjs().unix()});
-        }
-        return plays.filter(x => !x.meta.nowPlaying);
-    }
-
     cleanSourceSearchTitle = (playObj: PlayObject) => {
         const {
             data: {

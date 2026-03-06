@@ -347,6 +347,10 @@ export interface Authenticatable {
     testAuth: () => Promise<any>
 }
 
+export interface ScrobbleRangeFetchable {
+    getScrobblesForTimeRange: TimeRangeListensFetcher
+}
+
 export interface MdnsDeviceInfo {
     name: string
     type: string
@@ -502,3 +506,10 @@ export type PaginatedTimeRangeSource = PaginatedTimeRangeListens | PagelessTimeR
 export type PaginatedSource = PaginatedListens | PaginatedTimeRangeSource;
 
 export type TimeRangeListensFetcher<T extends CursorType = CursorType> = (opts: PaginatedTimeRangeCommonOptions | PaginatedListensTimeRangeOptions<T>) => Promise<PlayObject[]>
+
+export interface ScrobbleRangeResult {
+    plays: PlayObject[]
+    fetchedAt: Dayjs
+}
+
+export const REFRESH_STALE_DEFAULT = 60;

@@ -6,20 +6,21 @@ import { Notifiers } from "../../notifier/Notifiers.js";
 import AbstractScrobbleClient from "../../scrobblers/AbstractScrobbleClient.js";
 import { CommonClientConfig, CommonClientOptions, NowPlayingOptions } from "../../common/infrastructure/config/client/index.js";
 import clone from "clone";
+import { TimeRangeListensFetcher } from "../../common/infrastructure/Atomic.js";
 
 export class TestScrobbler extends AbstractScrobbleClient {
 
     testRecentScrobbles: PlayObject[] = [];
+    getScrobblesForTimeRange: TimeRangeListensFetcher;
 
     constructor(config: CommonClientConfig = {name: 'test'}) {
         const logger = loggerTest;
         const notifier = new Notifiers(new EventEmitter(), new EventEmitter(), new EventEmitter(), logger);
         super('test', 'Test', {name: 'test', ...config}, notifier, new EventEmitter(), logger);
         this.supportsNowPlaying = false;
-    }
-
-    protected async getScrobblesForRefresh(limit: number): Promise<PlayObject[]> {
-        return this.testRecentScrobbles;
+        this.getScrobblesForTimeRange = async (_) =>  this.testRecentScrobbles;
+        this.scrobbleDelay = 10;
+        this.scrobbleSleep = 20;
     }
 
     doScrobble(playObj: PlayObject) {

@@ -79,15 +79,7 @@ export default class MalojaScrobbler extends AbstractScrobbleClient {
             throw e;
         }
     }
-
-    getScrobblesForRefresh = async (limit: number) => {
-        if(this.queuedScrobbles.length === 0) {
-            return await this.getScrobblesForTimeRange({limit, cursor: 0});
-        } else {
-            return await this.getScrobblesForTimeRange({limit, cursor: 0, from: this.queuedScrobbles[0].play.data.playDate.unix(), to: dayjs().unix()});
-        }
-    }
-
+    
     public playToClientPayload(playObj: PlayObject): MalojaScrobbleRequestData {
 
         const { apiKey } = this.config.data;
