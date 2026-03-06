@@ -358,9 +358,9 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
             this.scrobbleSOTRanges.push(range);
         }
         const cacheKey = `${this.name}-scrobbleRange-${range.from}-${range.to}`;
-        const plays = this.cache.cacheClientScrobbles.getOrSet<PlayObject[]>(cacheKey, async () => {
+        const plays = await this.cache.cacheClientScrobbles.getOrSet<PlayObject[]>(cacheKey, async () => {
             return await this.getScrobblesForTimeRange(range);
-        }, {ttl: this.config.options?.refreshStaleAfter ?? REFRESH_STALE_DEFAULT});
+        }, {ttl: (this.config.options?.refreshStaleAfter ?? REFRESH_STALE_DEFAULT) * 1000});
         return plays;
     }
     public async alreadyScrobbled(playObj: PlayObject, log?: boolean): Promise<[boolean, PlayMatchResult]> {
@@ -701,8 +701,11 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
 
                     const currQueuedPlay = this.queuedScrobbles.shift();
 
-                    //const [timeFrameValid, timeFrameValidLog] = this.timeFrameIsValid(currQueuedPlay.play);
-                        const matchResult = await this.existingScrobble(currQueuedPlay.play, !this.upstreamRefresh.refreshEnabled ? [] : await this.getSOTScrobblesForPlay(currQueuedPlay.play));
+                        let historicalPlays: PlayObject[] = [];
+                        if(this.upstreamRefresh.refreshEnabled) {
+                            historicalPlays = await this.getSOTScrobblesForPlay(currQueuedPlay.play);
+                        }
+                        const matchResult = await this.existingScrobble(currQueuedPlay.play, historicalPlays);
                         const {
                             scrobble = {},
                             ...lifeRest
@@ -820,50 +823,50 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
             this.logger.warn({labels: 'Dead Letter'}, 'Cannot process dead letter scrobble because client is not ready.');
             return [false, deadScrobble];
         }
-        // if (this.getLatestQueuePlayDate() !== undefined && this.scrobblesLastCheckedAt().unix() < this.getLatestQueuePlayDate().unix()) {
-        //     await this.refreshScrobbles();
-        // }
-        //const [timeFrameValid, timeFrameValidLog] = this.timeFrameIsValid(deadScrobble.play);
-            const matchResult = await this.existingScrobble(deadScrobble.play, !this.upstreamRefresh.refreshEnabled ? [] : await this.getSOTScrobblesForPlay(deadScrobble.play));
-            const {
-                scrobble = {},
-                ...lifeRest
-            } = deadScrobble.play.meta.lifecycle ?? {steps: [], original: deadScrobble.play};
-            deadScrobble.play.meta.lifecycle = {
-                ...lifeRest,
-                scrobble: {
-                    ...scrobble,
-                    match: matchResult
-                }
+        let historicalPlays: PlayObject[] = [];
+        if(this.upstreamRefresh.refreshEnabled) {
+            historicalPlays = await this.getSOTScrobblesForPlay(deadScrobble.play);
+        }
+        const matchResult = await this.existingScrobble(deadScrobble.play, historicalPlays);
+        const {
+            scrobble = {},
+            ...lifeRest
+        } = deadScrobble.play.meta.lifecycle ?? {steps: [], original: deadScrobble.play};
+        deadScrobble.play.meta.lifecycle = {
+            ...lifeRest,
+            scrobble: {
+                ...scrobble,
+                match: matchResult
             }
-            if(!matchResult.match) {
-                const transformedScrobble = await this.transformPlay(deadScrobble.play, TRANSFORM_HOOK.postCompare);
-                try {
-                    const scrobbledPlay = await this.scrobble(transformedScrobble);
-                    this.emitEvent('scrobble', {play: transformedScrobble});
-                    this.addScrobbledTrack(transformedScrobble, scrobbledPlay);
-                } catch (e) {
+        }
+        if(!matchResult.match) {
+            const transformedScrobble = await this.transformPlay(deadScrobble.play, TRANSFORM_HOOK.postCompare);
+            try {
+                const scrobbledPlay = await this.scrobble(transformedScrobble);
+                this.emitEvent('scrobble', {play: transformedScrobble});
+                this.addScrobbledTrack(transformedScrobble, scrobbledPlay);
+            } catch (e) {
 
-                    const submitError = findCauseByReference(e, ScrobbleSubmitError);
-                    if(submitError !== undefined) {
-                        deadScrobble.play.meta.lifecycle.scrobble.payload = submitError.payload;
-                        deadScrobble.play.meta.lifecycle.scrobble.response = submitError.responseBody;
-                        deadScrobble.play.meta.lifecycle.scrobble.error = serializeError(submitError);
-                    } else {
-                        deadScrobble.play.meta.lifecycle.scrobble.payload = this.playToClientPayload(transformedScrobble);
-                        deadScrobble.play.meta.lifecycle.scrobble.error = serializeError(e);
-                    }
-
-                    deadScrobble.retries++;
-                    deadScrobble.error = messageWithCauses(e);
-                    deadScrobble.lastRetry = dayjs();
-                    this.logger.error(new Error(`Could not scrobble ${buildTrackString(transformedScrobble)} from Source '${deadScrobble.source}' due to error`, {cause: e}));
-                    this.deadLetterScrobbles[deadScrobbleIndex] = deadScrobble;
-                    return [false, deadScrobble];
-                } finally {
-                    await sleep(1000);
+                const submitError = findCauseByReference(e, ScrobbleSubmitError);
+                if(submitError !== undefined) {
+                    deadScrobble.play.meta.lifecycle.scrobble.payload = submitError.payload;
+                    deadScrobble.play.meta.lifecycle.scrobble.response = submitError.responseBody;
+                    deadScrobble.play.meta.lifecycle.scrobble.error = serializeError(submitError);
+                } else {
+                    deadScrobble.play.meta.lifecycle.scrobble.payload = this.playToClientPayload(transformedScrobble);
+                    deadScrobble.play.meta.lifecycle.scrobble.error = serializeError(e);
                 }
+
+                deadScrobble.retries++;
+                deadScrobble.error = messageWithCauses(e);
+                deadScrobble.lastRetry = dayjs();
+                this.logger.error(new Error(`Could not scrobble ${buildTrackString(transformedScrobble)} from Source '${deadScrobble.source}' due to error`, {cause: e}));
+                this.deadLetterScrobbles[deadScrobbleIndex] = deadScrobble;
+                return [false, deadScrobble];
+            } finally {
+                await sleep(1000);
             }
+        }
         if(deadScrobble !== undefined) {
             this.removeDeadLetterScrobble(deadScrobble.id)
         }
@@ -1038,13 +1041,13 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
 
     protected updateDeadLetterCache = () => {
         this.cache.cacheScrobble.set(`${this.getMachineId()}-dead`, this.deadLetterScrobbles)
-        .then(() => isDebugMode() ? this.logger.debug('Updated dead letter cache') : null)
+        .then(() => isDebugMode() ? this.logger.trace('Updated dead letter cache') : null)
         .catch((e) => this.logger.warn(new Error('Error while updating dead letter cache', {cause: e})));
     }
 
     protected updateQueuedScrobblesCache = () => {
         this.cache.cacheScrobble.set(`${this.getMachineId()}-queue`, this.queuedScrobbles)
-        .then(() => isDebugMode() ? this.logger.debug('Updated queued scrobble cache') : null)
+        .then(() => isDebugMode() ? this.logger.trace('Updated queued scrobble cache') : null)
         .catch((e) => this.logger.warn(new Error('Error while updating queued scrobble cache', {cause: e})));
     }
 }
