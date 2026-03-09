@@ -290,8 +290,12 @@ export default class LastfmApiClient extends AbstractApiClient implements Pagina
                     this.logger.debug({ track, mbid }, `Ignoring 'now playing' track returned from ${this.upstreamName} client`);
                     return acc;
                 } else if (playDate === undefined) {
-                    this.logger.warn({ track, mbid }, `${this.upstreamName} recently scrobbled track did not contain a timestamp, omitting from time frame check`);
-                    return acc;
+                    if(nowPlaying === true) {
+                        formatted.data.playDate = dayjs();
+                    } else {
+                        this.logger.warn({ track, mbid }, `${this.upstreamName} recently scrobbled track did not contain a timestamp, omitting from time frame check`);
+                        return acc;
+                    }
                 }
                 return acc.concat(formatted);
             } catch (e) {
