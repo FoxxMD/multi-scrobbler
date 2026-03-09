@@ -22,7 +22,11 @@ import { isEmptyArrayOrUndefined, removeUndefinedKeys, unique } from '../../util
 import { version } from '../../ioc.js';
 import { ListenPayload, ListenResponse, ListenType, MinimumTrack, SubmitListenAdditionalTrackInfo, SubmitPayload } from './listenbrainz/interfaces.js';
 import { baseFormatPlayObj } from '../../utils/PlayTransformUtils.js';
-import { ScrobbleSubmitError } from '../errors/MSErrors.js';
+import { ScrobbleSubmitError, SimpleError } from '../errors/MSErrors.js';
+import pRetry from 'p-retry';
+import { findCauseByFunc } from '../../utils/ErrorUtils.js';
+import { isSuperAgentResponseError } from '../errors/ErrorUtils.js';
+
 
 interface SubmitOptions {
     log?: boolean
@@ -69,8 +73,7 @@ export class ListenbrainzApiClient extends AbstractApiClient implements Pageless
         this.logger.verbose(`Config URL: '${url ?? '(None Given)'}' => Normalized: '${this.url.url}'`)
     }
 
-
-    callApi = async <T = Response>(req: Request, retries = 0): Promise<T> => {
+    doCallApi = async <T = Response>(req: Request, retries = 0): Promise<T> => {
         const {
             maxRequestRetries = 2,
             retryMultiplier = DEFAULT_RETRY_MULTIPLIER
@@ -120,6 +123,47 @@ export class ListenbrainzApiClient extends AbstractApiClient implements Pageless
         }
     }
 
+
+    callApi = async <T = Response>(reqFunc: () => Request, opts: {retries?: number, logFailure?: boolean} = {}): Promise<T> => {
+        const {
+            maxRequestRetries = 2,
+            retryMultiplier = DEFAULT_RETRY_MULTIPLIER
+        } = this.config;
+
+        const thisInstance = this;
+
+        const {
+            retries = maxRequestRetries,
+            logFailure = true
+        } = opts;
+
+        try {
+            return await pRetry(() => this.doCallApi(reqFunc()), {
+                retries: retries,
+                factor: retryMultiplier,
+                minTimeout: 1000,
+                maxRetryTime: 30000,
+                onFailedAttempt(context) {
+                    if(logFailure) {
+                        thisInstance.logger.warn(new SimpleError(`Request attempt ${context.attemptNumber} failed. ${context.retriesLeft} retries left`, {cause: context.error, shortStack: true}));                
+                    }
+                   },
+                shouldRetry(context) {
+                    const cause = findCauseByFunc<request.ResponseError>(context.error, (e) => isSuperAgentResponseError(e));
+                    if(cause === undefined) {
+                        return false;
+                    }
+                    if([400,403,401].includes(cause.status)) {
+                        return false;
+                    }
+                    return true;
+                }
+            })
+        } catch (e) {
+            throw e;
+        }
+    }
+
     testConnection = async () => {
         try {
             await isPortReachableConnect(this.url.port, {host: this.url.url.hostname});
@@ -134,7 +178,7 @@ export class ListenbrainzApiClient extends AbstractApiClient implements Pageless
 
     testAuth = async () => {
         try {
-            const resp = await this.callApi(request.get(`${joinedUrl(this.url.url,'1/validate-token')}`));
+            const resp = await this.callApi(() => request.get(`${joinedUrl(this.url.url,'1/validate-token')}`));
             return true;
         } catch (e) {
             throw e;
@@ -143,7 +187,7 @@ export class ListenbrainzApiClient extends AbstractApiClient implements Pageless
 
     async checkKoito(): Promise<boolean> {
         try {
-            const resp = await this.callApi(request.get(`${joinedUrl(getBaseFromUrl(this.url.url), 'apis/web/v1/stats')}`));
+            const resp = await this.callApi(() => request.get(`${joinedUrl(getBaseFromUrl(this.url.url), 'apis/web/v1/stats')}`), {retries: 0, logFailure: false});
             return true;
         } catch (e) {
             return false;
@@ -153,7 +197,7 @@ export class ListenbrainzApiClient extends AbstractApiClient implements Pageless
     getPlayingNow = async (user?: string): Promise<ListensResponse> => {
         try {
 
-            const resp = await this.callApi(request
+            const resp = await this.callApi(() => request
                 .get(`${joinedUrl(this.url.url,'1/user',user ?? this.config.username, 'playing-now')}`)
                 // this endpoint can take forever, sometimes, and we want to make sure we timeout in a reasonable amount of time for polling sources to continue trying to scrobble
                 .timeout({
@@ -181,7 +225,7 @@ export class ListenbrainzApiClient extends AbstractApiClient implements Pageless
             // so no useful information
             // https://listenbrainz.readthedocs.io/en/latest/users/api-usage.html#submitting-listens
             // TODO may we should make a call to recent-listens to get the parsed scrobble?
-            const resp = await this.callApi(request.post(`${joinedUrl(this.url.url,'1/submit-listens')}`).type('json').send(listenPayload));
+            const resp = await this.callApi(() => request.post(`${joinedUrl(this.url.url,'1/submit-listens')}`).type('json').send(listenPayload));
             if(log) {
                 this.logger.debug(`Submit Response: ${resp.text}`)
             }
@@ -212,7 +256,7 @@ export class ListenbrainzApiClient extends AbstractApiClient implements Pageless
             /** https://rain0r.github.io/listenbrainz-openapi/#/lbCore/listensForUser
              *  https://listenbrainz.readthedocs.io/en/latest/users/api/core.html#get--1-user-(mb_username-user_name)-listens
              */
-            const resp = await this.callApi(request
+            const resp = await this.callApi(() => request
                 .get(`${joinedUrl(this.url.url,'1/user',user ?? this.config.username, 'listens')}`)
                 // this endpoint can take forever, sometimes, and we want to make sure we timeout in a reasonable amount of time for polling sources to continue trying to scrobble
                 .timeout({
