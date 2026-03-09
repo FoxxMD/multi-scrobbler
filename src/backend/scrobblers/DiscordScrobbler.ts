@@ -158,6 +158,7 @@ export default class DiscordScrobbler extends AbstractScrobbleClient {
 
     shouldUpdatePlayingNowPlatformSpecific = async (data: SourcePlayerObj) => {
         if ([CALCULATED_PLAYER_STATUSES.stopped, CALCULATED_PLAYER_STATUSES.paused, CALCULATED_PLAYER_STATUSES.playing].includes(data.status.calculated as ReportedPlayerStatus)
+            || (data.nowPlayingMode && !CALCULATED_PLAYER_STATUSES.stopped)
             || data.status.stale) {
 
             const [sendOk, reasons, level = 'warn'] = await this.api.checkOkToSend();

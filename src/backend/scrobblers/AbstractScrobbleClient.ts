@@ -1141,5 +1141,6 @@ export const nowPlayingUpdateByPlayDuration: NowPlayingUpdateThreshold = (play?:
 }
 
 export const shouldUpdatePlayingNowPlatformWhenPlayingOnly = async (data: SourcePlayerObj): Promise<boolean> => {
-    return data.status.calculated === CALCULATED_PLAYER_STATUSES.playing;
+    return (data.status.calculated === CALCULATED_PLAYER_STATUSES.playing)
+    || (data.nowPlayingMode && !CALCULATED_PLAYER_STATUSES.stopped);
 }
