@@ -17,7 +17,7 @@ import { fileOrDirectoryIsWriteable } from '../utils.js';
 import { asCacheAuthProvider, asCacheMetadataProvider, asCacheScrobbleProvider, CacheAuthProvider, CacheConfig, CacheConfigOptions, CacheMetadataProvider, CacheProvider, CacheScrobbleProvider } from './infrastructure/Atomic.js';
 import { Typeson } from 'typeson';
 import { builtin } from 'typeson-registry';
-import { MaybeLogger } from './logging.js';
+import { loggerNoop } from './logging.js';
 import { ListenProgressPositional, ListenProgressTS } from '../sources/PlayerState/ListenProgress.js';
 const configDir = process.env.CONFIG_DIR || path.resolve(projectDir, `./config`);
 
@@ -215,7 +215,7 @@ export const flatCacheCreate = (opts: FlatCacheOptions) => {
     });
 }
 
-export const flatCacheLoad = async (flatCache: FlatCache, logger: MaybeLogger): Promise<void> => {
+export const flatCacheLoad = async (flatCache: FlatCache, logger: Logger = loggerNoop): Promise<void> => {
 
     const cachePath = path.join(flatCache.cacheDir, flatCache.cacheId);
     try {
@@ -226,7 +226,7 @@ export const flatCacheLoad = async (flatCache: FlatCache, logger: MaybeLogger): 
 
     const streamPromise = new Promise((resolve, reject) => {
         flatCache.loadFileStream(cachePath, (progress: number, total: number) => {
-            logger.debug(`Loading ${progress}/${total} chunks...`);
+            logger.trace(`Loading ${progress}/${total} chunks...`);
         }, () => {
             resolve(true);
         }, (err: Error) => {
@@ -262,7 +262,7 @@ export const flatCacheLoad = async (flatCache: FlatCache, logger: MaybeLogger): 
     }
 }
 
-export const initFileCache = async (opts: FlatCacheOptions = {}, logger: MaybeLogger = new MaybeLogger()): Promise<[Keyv | KeyvStoreAdapter | undefined, FlatCache | undefined]> => {
+export const initFileCache = async (opts: FlatCacheOptions = {}, logger: Logger = loggerNoop): Promise<[Keyv | KeyvStoreAdapter | undefined, FlatCache | undefined]> => {
     const flatCache = flatCacheCreate(opts);
     try {
         await flatCacheLoad(flatCache, logger);
