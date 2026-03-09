@@ -61,7 +61,7 @@ import pMap, { pMapIterable } from "p-map";
 import { comparePlayArtistsNormalized, comparePlayTracksNormalized, lifecyclelessInvariantTransform } from "../utils/PlayComparisonUtils.js";
 import { normalizeStr } from "../utils/StringUtils.js";
 import prom, { Counter, Gauge } from 'prom-client';
-import { ScrobbleSubmitError } from "../common/errors/MSErrors.js";
+import { ScrobbleSubmitError, SimpleError } from "../common/errors/MSErrors.js";
 import {serializeError} from 'serialize-error';
 import { DEFAULT_NEW_PADDING, groupPlaysToTimeRanges } from "../utils/ListenFetchUtils.js";
 
@@ -349,20 +349,28 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
 
         this.logger.verbose(`Preloading up to ${initialLimit} initial scrobbles...`);
 
-        const preload = await this.getScrobblesForTimeRange({
-            limit: initialLimit,
-            fetchMax: initialLimit
-        });
-        if(preload.length === 0) {
-            this.logger.verbose(`Preloaded 0 scrobbles.`);
-        } else {
-            preload.sort(sortByOldestPlayDate);
-            const from = preload[0].data.playDate;
-            // we are assuming that all fetchers return latest scrobbles first (pretty sure this is the case)
-            const to = dayjs();// preload[preload.length - 1].data.playDate;
-            await this.cache.cacheClientScrobbles.set<PlayObject[]>(this.getScrobbleCacheKey(from, to), preload, '60s');
-            this.scrobbleSOTRanges.push({from: from.unix(), to: to.unix()});
-            this.logger.verbose(`Preloaded ${preload.length} scrobbles from ${todayAwareFormat(from)} to ${todayAwareFormat(to)}`);
+        try  {
+            const preload = await this.getScrobblesForTimeRange({
+                limit: initialLimit,
+                fetchMax: initialLimit
+            });
+            if(preload === undefined) {
+                this.logger.warn('Preload result was undefined!');
+            } else {
+                if(preload.length === 0) {
+                    this.logger.verbose(`Preloaded 0 scrobbles.`);
+                } else {
+                    preload.sort(sortByOldestPlayDate);
+                    const from = preload[0].data.playDate;
+                    // we are assuming that all fetchers return latest scrobbles first (pretty sure this is the case)
+                    const to = dayjs();// preload[preload.length - 1].data.playDate;
+                    await this.cache.cacheClientScrobbles.set<PlayObject[]>(this.getScrobbleCacheKey(from, to), preload, '60s');
+                    this.scrobbleSOTRanges.push({from: from.unix(), to: to.unix()});
+                    this.logger.verbose(`Preloaded ${preload.length} scrobbles from ${todayAwareFormat(from)} to ${todayAwareFormat(to)}`);
+                }
+            }
+        } catch (e) {
+            this.logger.warn(new SimpleError('Could not preload scrobbles', {cause: e, shortStack: true}));
         }
     }
 
@@ -386,12 +394,22 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
             };
             this.scrobbleSOTRanges.push(range);
         }
-        const plays = await this.cache.cacheClientScrobbles.getOrSet<PlayObject[]>(this.getScrobbleCacheKey(range.from, range.to), async () => {
+        const cachedPlaysRes = await this.cache.cacheClientScrobbles.get<PlayObject[] | Error>(this.getScrobbleCacheKey(range.from, range.to));
+        if(cachedPlaysRes instanceof Error) {
+            throw new SimpleError('Cannot get historical plays due to cached error', {cause: cachedPlaysRes, shortStack: true});
+        }
+        if(cachedPlaysRes !== undefined) {
+            return cachedPlaysRes;
+        }
+        try {
             const plays = await this.getScrobblesForTimeRange(range);
             plays.sort(sortByOldestPlayDate);
+            await this.cache.cacheClientScrobbles.set<PlayObject[] | Error>(this.getScrobbleCacheKey(range.from, range.to), plays, (this.config.options?.refreshStaleAfter ?? REFRESH_STALE_DEFAULT) * 1000);
             return plays;
-        }, {ttl: (this.config.options?.refreshStaleAfter ?? REFRESH_STALE_DEFAULT) * 1000});
-        return plays;
+        } catch (e) {
+            await this.cache.cacheClientScrobbles.set<PlayObject[] | Error>(this.getScrobbleCacheKey(range.from, range.to), e, '10s');
+            throw new SimpleError('Cannot get historical plays', {cause: e, shortStack: true});
+        }
     }
     public async alreadyScrobbled(playObj: PlayObject, log?: boolean): Promise<[boolean, PlayMatchResult]> {
         const result = await this.existingScrobble(playObj, await this.getSOTScrobblesForPlay(playObj));
@@ -731,10 +749,24 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
 
                     const currQueuedPlay = this.queuedScrobbles.shift();
 
-                        let historicalPlays: PlayObject[] = [];
-                        if(this.upstreamRefresh.refreshEnabled) {
+                    let historicalPlays: PlayObject[] = [];
+                    let historicalError: Error | undefined;
+
+                    if(this.upstreamRefresh.refreshEnabled) {
+                        try {
                             historicalPlays = await this.getSOTScrobblesForPlay(currQueuedPlay.play);
+                        } catch (e) {
+                            historicalError = e;
+                            if(e.message === 'Cannot get historical plays due to cached error') {
+                                this.logger.warn(`${buildTrackString(currQueuedPlay.play)} from Source '${currQueuedPlay.source}' => Previous error while getting historical scrobbles means this scrobble cannot be compared, will queue as dead for now.`);
+                                this.logger.trace(e);
+                            } else {
+                                this.logger.warn(new SimpleError(`${buildTrackString(currQueuedPlay.play)} from Source '${currQueuedPlay.source}' => cannot get historical scrobbles, will queue as dead for now.`, {cause: e, shortStack: true}));
+                            }
+                            this.addDeadLetterScrobble(currQueuedPlay, e);
                         }
+                    }
+                    if(historicalError === undefined) {
                         const matchResult = await this.existingScrobble(currQueuedPlay.play, historicalPlays);
                         const {
                             scrobble = {},
@@ -783,6 +815,7 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
                                 }
                             }
                         }
+                    }
                     this.updateQueuedScrobblesCache();
                     this.queuedGauge.labels(this.getPrometheusLabels()).set(this.queuedScrobbles.length);
                     this.emitEvent('scrobbleDequeued', {queuedScrobble: currQueuedPlay})
@@ -855,7 +888,24 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
         }
         let historicalPlays: PlayObject[] = [];
         if(this.upstreamRefresh.refreshEnabled) {
-            historicalPlays = await this.getSOTScrobblesForPlay(deadScrobble.play);
+            try {
+                historicalPlays = await this.getSOTScrobblesForPlay(deadScrobble.play);
+            } catch (e) {
+                if(e.message === 'Cannot get historical plays due to cached error') {
+                    this.logger.warn(`${buildTrackString(deadScrobble.play)} from Source '${deadScrobble.source}' => Previous error while getting historical scrobbles means this scrobble cannot be compared`);
+                    this.logger.trace(e);
+                } else {
+                    this.logger.warn(new SimpleError(`${buildTrackString(deadScrobble.play)} from Source '${deadScrobble.source}' => cannot get historical scrobbles`, {cause: e, shortStack: true}));
+                }
+                deadScrobble.retries++;
+                deadScrobble.error = messageWithCauses(e);
+                deadScrobble.lastRetry = dayjs();
+                this.deadLetterScrobbles[deadScrobbleIndex] = deadScrobble;
+                this.updateDeadLetterCache();
+                return [false, deadScrobble];
+            } finally {
+                await sleep(1000);
+            }
         }
         const matchResult = await this.existingScrobble(deadScrobble.play, historicalPlays);
         const {
@@ -892,6 +942,7 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
                 deadScrobble.lastRetry = dayjs();
                 this.logger.error(new Error(`Could not scrobble ${buildTrackString(transformedScrobble)} from Source '${deadScrobble.source}' due to error`, {cause: e}));
                 this.deadLetterScrobbles[deadScrobbleIndex] = deadScrobble;
+                this.updateDeadLetterCache();
                 return [false, deadScrobble];
             } finally {
                 await sleep(1000);
