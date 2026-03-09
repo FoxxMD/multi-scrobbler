@@ -2,7 +2,7 @@ import { childLogger, Logger, loggerTest } from "@foxxmd/logging";
 import dayjs, { Dayjs } from "dayjs";
 import { Duration } from "dayjs/plugin/duration.js";
 import { PlayObject, UnixTimestamp } from "../../core/Atomic.js";
-import { hasPagelessTimeRangeListens, hasPaginatedTimeRangeListens, PagelessListensTimeRangeOptions, PagelessTimeRangeListens, PaginatedListensTimeRangeOptions, PaginatedTimeRangeCommonOptions, PaginatedTimeRangeListens, PaginatedTimeRangeOptions, PaginatedTimeRangeSource, REFRESH_STALE_DEFAULT, TimeRangeListensFetcher } from "../common/infrastructure/Atomic.js";
+import { CursorType, hasPagelessTimeRangeListens, hasPaginatedTimeRangeListens, PagelessListensTimeRangeOptions, PagelessTimeRangeListens, PagelessTimeRangeListensResult, PaginatedListensTimeRangeOptions, PaginatedTimeRangeCommonOptions, PaginatedTimeRangeListens, PaginatedTimeRangeListensResult, PaginatedTimeRangeOptions, PaginatedTimeRangeSource, REFRESH_STALE_DEFAULT, TimeRangeListensFetcher } from "../common/infrastructure/Atomic.js";
 import { loggerNoop, MaybeLogger } from "../common/logging.js";
 import { sortByNewestPlayDate, sortByOldestPlayDate } from "../utils.js";
 import { todayAwareFormat } from "./TimeUtils.js";
@@ -44,7 +44,12 @@ export const createGetScrobblesForTimeRangeFunc = <T extends PaginatedTimeRangeS
                     reqOptsHint.push(`Limit ${currOpts.limit}`);
                 }
                 reqLogger.debug(`Fetching => ${reqOptsHint.join(' | ')}`);
-                const results = await fetcher.getPagelessTimeRangeListens(currOpts);
+                let results: PagelessTimeRangeListensResult;
+                try {
+                    results = await fetcher.getPagelessTimeRangeListens(currOpts);
+                } catch (e) {
+                    throw new Error(`API error occurred on Request ${requestCount} with these parameters ${JSON.stringify(currOpts)}`, {cause: e});
+                }
                 if(initial) {
                     initial = false;
                     const initialFetchLog = [];
@@ -127,7 +132,12 @@ export const createGetScrobblesForTimeRangeFunc = <T extends PaginatedTimeRangeS
                     reqOptsHint.push(`Limit ${currOpts.limit}`);
                 }
                 reqLogger.debug(`Fetching => ${reqOptsHint.join(' | ')}`);
-                const results = await fetcher.getPaginatedTimeRangeListens(currOpts);
+                let results: PaginatedTimeRangeListensResult<CursorType>;
+                try {
+                    results = await fetcher.getPaginatedTimeRangeListens(currOpts);
+                } catch (e) {
+                    throw new Error(`API error occurred on Request ${requestCount} with these parameters ${JSON.stringify(currOpts)}`, {cause: e});
+                }
                 if(initial) {
                     initial = false;
                     const initialFetchLog = [];
@@ -137,6 +147,10 @@ export const createGetScrobblesForTimeRangeFunc = <T extends PaginatedTimeRangeS
                     if(results.meta.limit !== undefined && results.meta.limit !== currOpts.limit) {
                         initialFetchLog.push(`API reported new limit ${results.meta.limit}`);
                         currOpts.limit = results.meta.limit;
+                    }
+                    if(results.meta.cursor !== undefined && results.meta.cursor !== currOpts.cursor) {
+                        initialFetchLog.push(`API reported new cursor ${results.meta.cursor}`);
+                        currOpts.cursor = results.meta.cursor;
                     }
                     if(initialFetchLog.length > 0) {
                         logger.debug(initialFetchLog.join(' | '));
