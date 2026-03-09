@@ -151,7 +151,7 @@ export class KoitoApiClient extends AbstractApiClient implements PaginatedTimeRa
 
         let resp: ListensResponse;
         try {
-        resp = await this.getUserListens(params);    
+        resp = await this.getUserListens({...params, page: params.cursor});    
     } catch (e) {
         throw new Error('Error occurred while getting Koito paginated listens', { cause: e });
     }
