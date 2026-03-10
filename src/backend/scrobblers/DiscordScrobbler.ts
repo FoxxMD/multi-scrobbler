@@ -163,20 +163,28 @@ export default class DiscordScrobbler extends AbstractScrobbleClient {
 
             const [sendOk, reasons, level = 'warn'] = await this.api.checkOkToSend();
             if (!sendOk) {
-                this.logger[level](`Cannot update playing now because api client is ${reasons}`);
+                this.npLogger[level](`Cannot update playing now because api client is ${reasons}`);
                 return false;
             }
 
             if(this.api instanceof DiscordWSClient) {
                 const [allowed, reason] = this.api.presenceIsAllowed();
                 if(!allowed) {
-                    this.logger.debug(reason);
+                    this.npLogger.debug(reason);
                 }
 
                 return true;
             }
 
             return true;
+        } else {
+            if(!data.nowPlayingMode && ![CALCULATED_PLAYER_STATUSES.stopped, CALCULATED_PLAYER_STATUSES.paused, CALCULATED_PLAYER_STATUSES.playing].includes(data.status.calculated as ReportedPlayerStatus)) {
+                this.npLogger.trace(`Will not update because player is not in state: stopped | paused | playing => Found '${data.status.calculated }'`);
+            } else if(data.nowPlayingMode && CALCULATED_PLAYER_STATUSES.stopped) {
+                this.npLogger.trace(`Will not update because now playing player is stopped => Found ${data.status.calculated}`);
+            } else {
+                this.npLogger.trace('Will not update because now player is in an unexpected state for discord usage');
+            }
         }
     }
 }
