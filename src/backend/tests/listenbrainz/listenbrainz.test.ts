@@ -116,7 +116,7 @@ describe('Listenbrainz Response Behavior', function() {
         {
             token: 'test',
             username: 'test'
-        }, {logger: loggerDebug});
+        }, {logger: loggerTest});
 
     it('Should recognize bad requests as non-showstopping',withRequestInterception(
         [

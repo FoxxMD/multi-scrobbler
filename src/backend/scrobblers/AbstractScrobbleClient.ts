@@ -11,7 +11,8 @@ import {
     PlayObjectLifecycleless,
     QueuedScrobble, ScrobbleActionResult, PlayMatchResult, SourcePlayerObj, TA_DURING,
     TA_FUZZY,
-    TrackStringOptions
+    TrackStringOptions,
+    TA_EXACT
 } from "../../core/Atomic.js";
 import { buildTrackString, capitalize, truncateStringToLength } from "../../core/StringUtils.js";
 import AbstractComponent from "../common/AbstractComponent.js";
@@ -450,7 +451,7 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
         return [matchPlayDate, dtInvariantMatches];
     }
 
-    existingScrobble = async (playObjPre: PlayObject, existingScrobbles: PlayObject[]): Promise<PlayMatchResult> => {
+    existingScrobble = async (playObjPre: PlayObject, existingScrobbles: PlayObject[], log: boolean = true): Promise<PlayMatchResult> => {
 
         const result: PlayMatchResult = {
             match: false,
@@ -578,7 +579,15 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
                     result.match = score >= DUP_SCORE_THRESHOLD;
                     result.breakdowns = scoreBreakdowns;
                     result.score = score;
-                    //closestMatch = scoreInfo
+                    
+                    if(result.match === false && temporalComparison.match === TA_EXACT && score >= 0.90) {
+                        // if we have a score >= 90 and time is an exact match
+                        // it's likely the differences are due to source-scrobbler data presentation, or deficiencies,
+                        // rather than actually being unique
+                        // so force match in this instance
+                        result.match = true;
+                        result.reason = `Score ${score.toFixed(2)} is not greater than threshold (${DUP_SCORE_THRESHOLD}) but it is very close and timestamp is an exact match, vibe matching.`;
+                    }
                 }
 
                 return score >= DUP_SCORE_THRESHOLD;
@@ -590,9 +599,12 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
             closestScrobbleParts.push(`Closest Scrobble: ${buildTrackString(result.closestMatchedPlay, scoreTrackOpts)}`);
         }
         closestScrobbleParts.push(result.reason);
-        let summary = `${capitalize(playObj.meta.source ?? 'Source')}: ${buildTrackString(playObj, scoreTrackOpts)} => ${closestScrobbleParts.join(' => ')}`;
-        this.dupeLogger.trace(`${summary}${result.breakdowns.length > 0 ? `\n${result.breakdowns.join('\n')}` : ''}`);
-
+        let summaryStart = `${capitalize(playObj.meta.source ?? 'Source')}: ${buildTrackString(playObj, scoreTrackOpts)} => ${closestScrobbleParts.join(' => ')}`;
+        const summary = `${summaryStart}${result.breakdowns.length > 0 ? `\n${result.breakdowns.join('\n')}` : ''}`
+        result.summary = summary;
+        if(log) {
+            this.dupeLogger.trace(summary);
+        }
         return result;
     }
 
@@ -767,7 +779,7 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
                         }
                     }
                     if(historicalError === undefined) {
-                        const matchResult = await this.existingScrobble(currQueuedPlay.play, historicalPlays);
+                        const {summary, ...matchResult} = await this.existingScrobble(currQueuedPlay.play, historicalPlays);
                         const {
                             scrobble = {},
                             ...lifeRest
@@ -907,7 +919,7 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
                 await sleep(1000);
             }
         }
-        const matchResult = await this.existingScrobble(deadScrobble.play, historicalPlays);
+        const {summary, ...matchResult} = await this.existingScrobble(deadScrobble.play, historicalPlays);
         const {
             scrobble = {},
             ...lifeRest
@@ -984,6 +996,16 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
         const plays = Array.isArray(data) ? data : [data];
         const sm = staggerMapper<PlayObject, PlayObject>({concurrency: 2});
         for await(const play of pMapIterable(plays, sm(async x => await this.transformPlay(x, TRANSFORM_HOOK.preCompare)), {concurrency: 2})) {
+            try {
+                const existingQueued = await this.existingScrobble(play, this.queuedScrobbles.map(x => x.play), false);
+                // want to be very confident of this
+                if(existingQueued.match && existingQueued.score > 0.99) {
+                    this.logger.trace(`Not adding to queue because it is already in the queue\n${existingQueued.summary}`);
+                    return;
+                }
+            } catch (e) {
+                this.logger.warn(new SimpleError('Failed to check queued scrobble for existing before adding', {cause: e}));
+            }
             const queuedPlay = {id: nanoid(), source, play: play}
             this.emitEvent('scrobbleQueued', {queuedPlay: queuedPlay});
             this.queuedScrobbles.push(queuedPlay);

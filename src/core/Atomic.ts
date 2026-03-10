@@ -327,6 +327,7 @@ export interface PlayMatchResult {
     reason?: string
     closestMatchedPlay?: PlayObjectLifecycleless
     transformedPlay?: PlayObjectLifecycleless
+    summary?: String
 }
 
 export type ScrobbleTsSOC = 1 | 2;
