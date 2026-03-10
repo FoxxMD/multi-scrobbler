@@ -12,6 +12,7 @@ import { ListenType } from '../listenbrainz/interfaces.js';
 import { parseRegexSingleOrFail } from "../../../utils.js";
 import { baseFormatPlayObj } from "../../../utils/PlayTransformUtils.js";
 import { ScrobbleSubmitError } from "../../errors/MSErrors.js";
+import { tryApiCall } from "../../../utils/RequestUtils.js";
 
 interface SubmitOptions {
     log?: boolean
@@ -46,11 +47,7 @@ export class KoitoApiClient extends AbstractApiClient implements PaginatedTimeRa
         this.logger.verbose(`Config URL: '${url ?? '(None Given)'}' => Normalized: '${this.url.url}'`)
     }
 
-    callApi = async <T = Response>(req: Request, retries = 0): Promise<T> => {
-        const {
-            maxRequestRetries = 2,
-            retryMultiplier = DEFAULT_RETRY_MULTIPLIER
-        } = this.config;
+    doCallApi = async <T = Response>(req: Request, retries = 0): Promise<T> => {
 
         try {
             req.set('Authorization', `Token ${this.config.token}`);
@@ -95,6 +92,16 @@ export class KoitoApiClient extends AbstractApiClient implements PaginatedTimeRa
         }
     }
 
+    callApi = async <T = Response>(reqFunc: () => Request, retries = 0): Promise<T> => {
+        const apiCall = async () => await reqFunc();
+
+        try {
+            return await tryApiCall(() => this.doCallApi(reqFunc()), {...this.config, logger: this.logger}) as T;
+        } catch (e) {
+            throw e;
+        }
+    }
+
     testConnection = async () => {
         try {
             await isPortReachableConnect(this.url.port, { host: this.url.url.hostname });
@@ -103,7 +110,7 @@ export class KoitoApiClient extends AbstractApiClient implements PaginatedTimeRa
         }
 
         try {
-            const resp = await this.callApi(request.get(`${joinedUrl(this.url.url, 'apis/web/v1/stats')}`));
+            const resp = await this.callApi(() => request.get(`${joinedUrl(this.url.url, 'apis/web/v1/stats')}`));
             if(resp.type !== 'application/json') {
                 throw new Error(`Expected response from ${resp.request.url} to be 'application/json' but got ${resp.type}. Is the Normalized Koito URL correct?`);
             }
@@ -121,7 +128,7 @@ export class KoitoApiClient extends AbstractApiClient implements PaginatedTimeRa
 
     testAuth = async () => {
         try {
-            const resp = await this.callApi(request.get(`${joinedUrl(this.url.url, '/apis/listenbrainz/1/validate-token')}`));
+            const resp = await this.callApi(() => request.get(`${joinedUrl(this.url.url, '/apis/listenbrainz/1/validate-token')}`));
             return true;
         } catch (e) {
             throw new Error('Could not validate Koito API Key', { cause: e });
@@ -132,7 +139,7 @@ export class KoitoApiClient extends AbstractApiClient implements PaginatedTimeRa
         const {page = 0} = options;
         try {
 
-            const resp = await this.callApi(request
+            const resp = await this.callApi(() => request
                 .get(`${joinedUrl(this.url.url, '/apis/web/v1/listens')}`)
                 .query({
                     period: 'all_time',
@@ -195,7 +202,7 @@ export class KoitoApiClient extends AbstractApiClient implements PaginatedTimeRa
             // so no useful information
             // https://listenbrainz.readthedocs.io/en/latest/users/api-usage.html#submitting-listens
             // TODO may we should make a call to recent-listens to get the parsed scrobble?
-            const resp = await this.callApi(request.post(`${joinedUrl(this.url.url, '/apis/listenbrainz/1/submit-listens')}`).type('json').send(listenPayload));
+            const resp = await this.callApi(() => request.post(`${joinedUrl(this.url.url, '/apis/listenbrainz/1/submit-listens')}`).type('json').send(listenPayload));
             if (log) {
                 this.logger.debug(`Submit Response: ${resp.text}`)
             }

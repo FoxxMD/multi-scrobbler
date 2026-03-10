@@ -1,8 +1,7 @@
 import EventEmitter from "events";
-import request from "superagent";
 import { PlayObject, SOURCE_SOT } from "../../core/Atomic.js";
 import { isNodeNetworkException } from "../common/errors/NodeErrors.js";
-import { FormatPlayObjectOptions, InternalConfig, PagelessListensTimeRangeOptions, PagelessTimeRangeListens, PlayPlatformId, TimeRangeListensFetcher } from "../common/infrastructure/Atomic.js";
+import { FormatPlayObjectOptions, InternalConfig, PlayPlatformId, TimeRangeListensFetcher } from "../common/infrastructure/Atomic.js";
 import { ListenBrainzSourceConfig } from "../common/infrastructure/config/source/listenbrainz.js";
 import { ListenbrainzApiClient } from "../common/vendor/ListenbrainzApiClient.js";
 import { RecentlyPlayedOptions } from "./AbstractSource.js";

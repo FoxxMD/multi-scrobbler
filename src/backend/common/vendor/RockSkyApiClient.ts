@@ -15,6 +15,7 @@ import { Handle } from "@atcute/lexicons";
 import { identifierToAtProtoHandle } from './bluesky/bsUtils.js';
 import { baseFormatPlayObj } from "../../utils/PlayTransformUtils.js";
 import { ScrobbleSubmitError } from "../errors/MSErrors.js";
+import { tryApiCall } from "../../utils/RequestUtils.js";
 
 interface SubmitOptions {
     log?: boolean
@@ -58,7 +59,7 @@ export class RockSkyApiClient extends AbstractApiClient {
     }
 
 
-    callLZApi = async <T = Response>(req: Request, retries = 0): Promise<T> => {
+    doCallLZApi = async <T = Response>(req: Request, retries = 0): Promise<T> => {
         try {
             req.set('Authorization', `Token ${this.config.key ?? this.config.token}`);
             return await req as T;
@@ -103,14 +104,21 @@ export class RockSkyApiClient extends AbstractApiClient {
         }
     }
 
-    callApi = async <T = Response>(req: Request, retries = 0): Promise<T> => {
-        const {
-            maxRequestRetries = 2,
-            retryMultiplier = DEFAULT_RETRY_MULTIPLIER
-        } = this.config;
+    callLZApi = async <T = Response>(reqFunc: () => Request, retries = 0): Promise<T> => {
 
         try {
-            return await req as T;
+            return await tryApiCall(() => this.doCallLZApi(reqFunc()), {...this.config, logger: this.logger}) as T;
+        } catch (e) {
+            throw e;
+        }
+    }
+
+
+    callApi = async <T = Response>(reqFunc: () => Request, retries = 0): Promise<T> => {
+        const apiCall = async () => await reqFunc();
+
+        try {
+            return await tryApiCall(apiCall, {...this.config, logger: this.logger}) as T;
         } catch (e) {
             throw e;
         }
@@ -132,7 +140,7 @@ export class RockSkyApiClient extends AbstractApiClient {
 
     testAuth = async () => {
         try {
-            const resp = await this.callLZApi(request.get(`${joinedUrl(this.lzUrl.url,'1/validate-token')}`));
+            const resp = await this.callLZApi(() => request.get(`${joinedUrl(this.lzUrl.url,'1/validate-token')}`));
             return true;
         } catch (e) {
             throw e;
@@ -142,7 +150,7 @@ export class RockSkyApiClient extends AbstractApiClient {
     getUserListens = async (maxTracks: number, user?: string): Promise<UserScrobbleResponse> => {
         try {
 
-            const resp = await this.callApi(request
+            const resp = await this.callApi(() => request
                 .get(`${joinedUrl(this.apiUrl.url,`app.rocksky.actor.getActorScrobbles`)}`)
                 // this endpoint can take forever, sometimes, and we want to make sure we timeout in a reasonable amount of time for polling sources to continue trying to scrobble
                 .timeout({
@@ -190,7 +198,7 @@ export class RockSkyApiClient extends AbstractApiClient {
             if(log) {
                 this.logger.debug(`Submit Payload: ${JSON.stringify(submitPayload)}`);
             }
-            const resp = await this.callLZApi(request.post(`${joinedUrl(this.lzUrl.url,'1/submit-listens')}`).type('json').send(submitPayload));
+            const resp = await this.callLZApi(() => request.post(`${joinedUrl(this.lzUrl.url,'1/submit-listens')}`).type('json').send(submitPayload));
             if(log) {
                 this.logger.debug(`Submit Response: ${resp.text}`)
             }
