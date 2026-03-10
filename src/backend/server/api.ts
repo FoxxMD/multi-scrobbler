@@ -66,13 +66,9 @@ export const setupApi = (app: ExpressWithAsync, logger: Logger, appLoggerStream:
     //let logWebLevel: LogLevel = logger.level as LogLevel || (process.env.LOG_LEVEL || 'info') as LogLevel;
 
     const logConfig: LogOutputConfig = {
-        level: logger.level as LogLevel || (process.env.LOG_LEVEL || 'info') as LogLevel,
+        level: logger.level as LogLevel || (process.env.LOG_LEVEL || 'trace') as LogLevel,
         sort: 'descending',
         limit: 50,
-    }
-    if(logConfig.level === 'trace') {
-        // init web logging with debug so its easier to see startup logs
-        logConfig.level = 'debug';
     }
 
     let logObjectStream: Transform;
