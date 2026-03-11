@@ -12,7 +12,8 @@ import {
     QueuedScrobble, ScrobbleActionResult, PlayMatchResult, SourcePlayerObj, TA_DURING,
     TA_FUZZY,
     TrackStringOptions,
-    TA_EXACT
+    TA_EXACT,
+    SOURCE_SOT
 } from "../../core/Atomic.js";
 import { buildTrackString, capitalize, truncateStringToLength } from "../../core/StringUtils.js";
 import AbstractComponent from "../common/AbstractComponent.js";
@@ -502,14 +503,13 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
                 return result;
             }
 
-            // we have found an existing submission but without an exact date
-            // in which case we can check the scrobble api response against recent scrobbles (also from api) for a more accurate comparison
-            //const referenceApiScrobbleResponse = existingDataSubmitted.length > 0 ? existingDataSubmitted[0].scrobble : undefined;
-
             // only check for fuzzy if we know this play is NOT a repeat
             // otherwise we may get a false positive on the previously played track ending time == repeat start time
             // -- this is info we only know if play was generated from MS player so we can be reasonably sure
-            const looseTimeAccuracy = playObj.data.repeat ? [TA_DURING] : [TA_FUZZY, TA_DURING];
+            //
+            // OR if play was generated from a source that uses History (endpoint sources, lfm or lz history sources)
+            // then we can be reasonably sure that our candidate play has an accurate timestamp and wouldn't fuzzy match a previous scrobble
+            const looseTimeAccuracy = playObj.data.repeat || playObj.meta.sourceSOT === SOURCE_SOT.HISTORY ? [TA_DURING] : [TA_FUZZY, TA_DURING];
 
             
             existingScrobble = await findAsyncSequential(existingScrobbles, async (xPre) => {

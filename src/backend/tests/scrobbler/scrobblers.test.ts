@@ -6,7 +6,7 @@ import dayjs from "dayjs";
 import { after, before, describe, it } from 'mocha';
 import { http, HttpResponse } from 'msw';
 import pEvent from 'p-event';
-import { PlayObject } from "../../../core/Atomic.js";
+import { PlayObject, SOURCE_SOT } from "../../../core/Atomic.js";
 import { genGroupIdStr, sleep, sortByOldestPlayDate } from "../../utils.js";
 import mixedDuration from '../plays/mixedDuration.json' with { type: 'json' };
 import withDuration from '../plays/withDuration.json' with { type: 'json' };
@@ -264,6 +264,25 @@ describe('Detects duplicate and unique scrobbles from client recent history', fu
 
                 repeatPlay.data.repeat = true;
                 assert.isFalse((await testScrobbler.alreadyScrobbled(repeatPlay))[0]);
+            });
+
+            it('Is not detected as duplicate when play date matches fuzzy and play source SOT is history', async function () {
+
+                const play = generatePlay({
+                    artists: ['Nejad'], 
+                    track: 'CODE', 
+                    album: undefined, 
+                    playDate: dayjs().subtract(179, 's'),
+                    duration: 179
+                });
+                testScrobbler.testRecentScrobbles = [play];
+
+                const newPlay = clone(play);
+                newPlay.data.playDate = dayjs();
+                newPlay.meta.sourceSOT = SOURCE_SOT.HISTORY;
+
+                const res = await testScrobbler.existingScrobble(newPlay, [play]);
+                expect(res.match).is.false;
             });
         });
 

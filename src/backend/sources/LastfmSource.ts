@@ -72,12 +72,13 @@ export default class LastfmSource extends MemorySource {
         const {limit = 20} = options;
         try {
             const {data: plays} = await this.api.getPaginatedTimeRangeListens({limit, cursor: 1}, {includeNowPlaying: true});
-            plays.sort(sortByOldestPlayDate);
+            const mappedPlayed: PlayObject[] = plays.map(x => ({...x, meta: {...x.meta, sourceSOT: SOURCE_SOT.HISTORY}}));
+            mappedPlayed.sort(sortByOldestPlayDate);
             // if the track is "now playing" it doesn't get a timestamp so we can't determine when it started playing
             // and don't want to accidentally count the same track at different timestamps by artificially assigning it 'now' as a timestamp
             // so we'll just ignore it in the context of recent tracks since really we only want "tracks that have already finished being played" anyway
-            const history = plays.filter(x => x.meta.nowPlaying !== true);
-            const now = plays.filter(x => x.meta.nowPlaying === true);
+            const history = mappedPlayed.filter(x => x.meta.nowPlaying !== true);
+            const now = mappedPlayed.filter(x => x.meta.nowPlaying === true);
             return [history, now];
         } catch (e) {
             throw e;

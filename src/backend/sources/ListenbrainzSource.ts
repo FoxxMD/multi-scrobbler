@@ -42,7 +42,11 @@ export default class ListenbrainzSource extends MemorySource {
         this.getScrobblesForTimeRange = createGetScrobblesForTimeRangeFunc(this.api, this.api.logger);
     }
 
-    static formatPlayObj(obj: any, options: FormatPlayObjectOptions = {}){ return ListenbrainzApiClient.formatPlayObj(obj, options); }
+    static formatPlayObj(obj: any, options: FormatPlayObjectOptions = {}){
+         const play = ListenbrainzApiClient.formatPlayObj(obj, options);
+         play.meta.sourceSOT = SOURCE_SOT.HISTORY;
+         return play;
+    }
 
     protected async doCheckConnection(): Promise<true | string | undefined> {
         try {

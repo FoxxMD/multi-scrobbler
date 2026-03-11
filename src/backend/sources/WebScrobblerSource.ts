@@ -85,6 +85,7 @@ export class WebScrobblerSource extends MemorySource {
         } = obj;
 
         const play = WebScrobblerSource.formatPlayObj(obj.data.song, {nowPlaying: eventName !== 'scrobble'});
+        play.meta.sourceSOT = SOURCE_SOT.HISTORY;
         return {
             platformId: [play.meta.deviceId, NO_USER],
             play,

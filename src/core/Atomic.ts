@@ -195,6 +195,7 @@ export interface ArtMeta {
 
 export interface PlayMeta {
     source?: string
+    sourceSOT?: SOURCE_SOT_TYPES
 
     /*
     * If applicable, the name of the Service providing the track (Spotify, Tidal, etc...)
