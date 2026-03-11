@@ -16,6 +16,23 @@ If your Spotify player has [Automix](https://community.spotify.com/t5/FAQs/What-
 
 #### Authenticate Spotify with Multi-Scrobbler
 
+<DetailsAdmo type="warning" summary="Premium Account Required">
+
+Starting [March 9th 2026](https://developer.spotify.com/blog/2026-02-06-update-on-developer-access-and-platform-security) all applications on the Spotify Developer platform will only continue to work if they are **owned** by a **Spotify Premium** account.
+
+If your App is not created by a Premium account you will likely recieve a 403 error when trying to use MS with Spotify.
+
+If you do not have a Spotify Premium account *you can still use Spotify with MS* but it will require you to coordinate with a (friend?) user who *does* have Spotify Premium:
+
+* Follow the steps below **logged in as the Spotify Premium account user**
+  * After completing App creation (step 4 or 5), navigate to the **User Management** page for the created App
+  * Add **your** (non-premium) account here using your account email/name
+* Complete the rest of the authentication/configuration process normally
+
+Assure your friend: **Creating a Spotify Developer app does not give anyone access to the owner's account.** The authentication process within MS is where authorization is given: it requires clicking the link in MS's dashboard and following a separate auth flow. This auth flow only authorizes access to the specific account used in the flow, unrelated to the owner of the developer app.
+
+</DetailsAdmo>
+
 To access your Spotify history you must [create a Spotify App](https://developer.spotify.com/dashboard) to get a
 Client ID/Secret.
 
