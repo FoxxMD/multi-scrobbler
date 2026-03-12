@@ -1,4 +1,4 @@
-import { childLogger, LogDataPretty } from '@foxxmd/logging';
+import { childLogger, LogDataPretty, LogLevel } from '@foxxmd/logging';
 import dayjs, { Dayjs } from "dayjs";
 import { EventEmitter } from "events";
 import { FixedSizeList } from "fixed-size-list";
@@ -440,12 +440,14 @@ export default abstract class AbstractSource extends AbstractComponent implement
         let checkCount = 0;
         let checksOverThreshold = 0;
 
-        const {checkActiveFor = 300, maxInterval = DEFAULT_POLLING_MAX_INTERVAL} = this.config.data;
+        const {checkActiveFor = 120, maxInterval = DEFAULT_POLLING_MAX_INTERVAL} = this.config.data;
+        let isInactive = false;
 
         try {
             this.polling = true;
             while (!this.shouldStopPolling()) {
                 const pollFrom = dayjs();
+                let lastActivityLogLevel: LogLevel = 'trace';
 
                 let playObjs: PlayObject[];
                 try {
@@ -481,7 +483,7 @@ export default abstract class AbstractSource extends AbstractComponent implement
                         });
                 }
 
-                const debugMsgs: string[] = [];
+                const activityMsgs: string[] = [];
 
                 if(newDiscovered.length > 0) {
                     // only update date if the play date is after the current activity date (in the case of backlogged plays)
@@ -494,8 +496,9 @@ export default abstract class AbstractSource extends AbstractComponent implement
                 const inactiveFor = dayjs.duration(Math.abs(activeThreshold.diff(dayjs(), 'millisecond'))).humanize(false);
                 const relativeActivity = dayjs.duration(this.lastActivityAt.diff(dayjs(), 'ms'));
                 const humanRelativeActivity = relativeActivity.asSeconds() > -3 ? '' : ` (${timeToHumanTimestamp(relativeActivity)} ago)`;
-                let friendlyInterval = '';
+                let friendlyInterval = `${formatNumber(sleepTime)}`;
                 const friendlyLastFormat = todayAwareFormat(this.lastActivityAt);
+                activityMsgs.push(`Last activity at ${friendlyLastFormat}${humanRelativeActivity}`);
                 if (activeThreshold.isBefore(dayjs())) {
                     friendlyInterval = formatNumber(maxInterval);
                     checksOverThreshold++;
@@ -505,20 +508,18 @@ export default abstract class AbstractSource extends AbstractComponent implement
                         friendlyInterval = `(${interval} + ${backoff})`;
                         sleepTime = interval + backoff;
                     }
-                    if(isDebugMode()) {
-                        debugMsgs.push(`Last activity ${friendlyLastFormat}${humanRelativeActivity} is ${inactiveFor} outside of polling period (last activity + ${checkActiveFor}s)`);
-                    } else {
-                        debugMsgs.push(`Last activity was at ${friendlyLastFormat}${humanRelativeActivity}`);
+                    if(!isInactive) {
+                        lastActivityLogLevel = 'debug';
+                        isInactive = true;
                     }
-                } else {
-                    debugMsgs.push(`Last activity was at ${friendlyLastFormat}${humanRelativeActivity}`);
-                    friendlyInterval = `${formatNumber(sleepTime)}s`;
+                    activityMsgs.push(`Inactive for ${inactiveFor} (last + ${checkActiveFor}s)`);
+                } else if(isInactive) {
+                    activityMsgs.push('New Activity after inactive period');
+                    lastActivityLogLevel = 'debug';
+                    isInactive = false;
                 }
-                debugMsgs.push(`Next check in ${friendlyInterval}`);
-                if(newDiscovered.length === 0) {
-                    debugMsgs.push('No new tracks discovered');
-                }
-                this.logger.debug(debugMsgs.join(' | '));
+                activityMsgs.push(`Next check in ${friendlyInterval}s`);
+                this.logger[lastActivityLogLevel](activityMsgs.join(' | '));
                 this.setWakeAt(pollFrom.add(sleepTime, 'seconds'));
                 this.setIsSleeping(true);
                 while(!this.shouldStopPolling() && dayjs().isBefore(this.getWakeAt())) {

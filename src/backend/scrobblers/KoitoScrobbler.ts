@@ -4,21 +4,23 @@ import { PlayObject, SourcePlayerObj } from "../../core/Atomic.js";
 import { buildTrackString, capitalize } from "../../core/StringUtils.js";
 import { isNodeNetworkException } from "../common/errors/NodeErrors.js";
 import { UpstreamError } from "../common/errors/UpstreamError.js";
-import { FormatPlayObjectOptions } from "../common/infrastructure/Atomic.js";
+import { FormatPlayObjectOptions, TimeRangeListensFetcher } from "../common/infrastructure/Atomic.js";
 import { playToListenPayload } from "../common/vendor/ListenbrainzApiClient.js";
 import { Notifiers } from "../notifier/Notifiers.js";
 
-import AbstractScrobbleClient, { shouldUpdatePlayingNowPlatformWhenPlayingOnly } from "./AbstractScrobbleClient.js";
+import AbstractScrobbleClient from "./AbstractScrobbleClient.js";
 import { isDebugMode } from "../utils.js";
 import { KoitoClientConfig } from "../common/infrastructure/config/client/koito.js";
 import { KoitoApiClient, listenObjectResponseToPlay } from "../common/vendor/koito/KoitoApiClient.js";
+import { createGetScrobblesForTimeRangeFunc } from "../utils/ListenFetchUtils.js";
+import dayjs from "dayjs";
 
 export default class KoitoScrobbler extends AbstractScrobbleClient {
 
     api: KoitoApiClient;
     requiresAuth = true;
     requiresAuthInteraction = false;
-
+    getScrobblesForTimeRange: TimeRangeListensFetcher
     declare config: KoitoClientConfig;
 
     constructor(name: any, config: KoitoClientConfig, options = {}, notifier: Notifiers, emitter: EventEmitter, logger: Logger) {
@@ -28,6 +30,7 @@ export default class KoitoScrobbler extends AbstractScrobbleClient {
         // 1000 is way too high. maxing at 100
         this.MAX_INITIAL_SCROBBLES_FETCH = 100;
         this.supportsNowPlaying = true;
+        this.getScrobblesForTimeRange = createGetScrobblesForTimeRangeFunc(this.api, this.api.logger);
     }
 
     formatPlayObj = (obj: any, options: FormatPlayObjectOptions = {}) => listenObjectResponseToPlay(obj, options);
@@ -64,10 +67,6 @@ export default class KoitoScrobbler extends AbstractScrobbleClient {
             }
             throw e;
         }
-    }
-
-    getScrobblesForRefresh = async (limit: number) => {
-        return await this.api.getRecentlyPlayed(limit);
     }
 
     doScrobble = async (playObj: PlayObject) => {

@@ -8,6 +8,9 @@ import { initMemoryCache } from "../../Cache.js";
 import { joinedUrl } from "../../../utils/NetworkUtils.js";
 import { hasNodeNetworkException } from "../../errors/NodeErrors.js";
 import { sleep } from "../../../utils.js";
+import { RequestRetryOptions } from "../../infrastructure/config/common.js";
+import { RetryContext } from "p-retry";
+import { NO_RETRY_HTTP_STATUS, tryApiCall } from "../../../utils/RequestUtils.js";
 
 export type ThumbSize = 250 | 500 | 1200;
 const THUMB_SIZES = [250, 500, 1200];
@@ -41,7 +44,7 @@ export interface CoverArtReleaseResponse {
     images: CoverArtReleaseImage[]
 }
 
-export interface CoverArtApiConfig {
+export interface CoverArtApiConfig extends RequestRetryOptions {
     url?: URL;
 }
 
@@ -83,31 +86,20 @@ export class CoverArtApiClient extends AbstractApiClient {
             return cachedArt;
         } else {
             let result = undefined,
-            retries = 0,
             err: Error;
 
             const url = joinedUrl(this.baseUrl, `/release/${mbid}/${thumbParams}`);
 
-            while(result === undefined && retries < 2) {
-                try {
-                    const resp = await this.coverThumbRequest(url.toString());
-                    if(resp === undefined) {
-                        result = false;
-                    } else {
-                        result = resp;
-                    }
-                    err = undefined;
-                } catch (e) {
-                    err = e;
-                    if(hasNodeNetworkException(e)) {
-                        this.logger.warn(`Request to ${url.toString()} failed but retries (${retries}) are not greater than max (1), retrying request after a short break... Error Message: ${e.message}`);
-                        retries++;
-                        await sleep(500);
-                        continue;
-                    } else {
-                        break;
-                    }
+            try {
+                const resp = await this.coverThumbRequest(url.toString());
+                if(resp === undefined) {
+                    result = false;
+                } else {
+                    result = resp;
                 }
+                err = undefined;
+            } catch (e) {
+                err = e;
             }
 
             if(result === false) {
@@ -127,10 +119,14 @@ export class CoverArtApiClient extends AbstractApiClient {
     protected coverThumbRequest = async (url: string): Promise<string | undefined> => {
         try {
             // https://musicbrainz.org/doc/Cover_Art_Archive/API#/release/{mbid}/({id}|front|back)-(250|500|1200)
-            const resp = await request
+            const resp = await tryApiCall(() => request
                 .get(url)
                 // only follow first redirect so we get the url without actually downloading the image
-                .redirects(1);
+                .redirects(1), {
+                    ...this.config,
+                    logFailure: logUnexpectedStatus,
+                    noRetryStatus: [...NO_RETRY_HTTP_STATUS, 404, 302, 307]
+                });
                 throw new Error('Should not be getting this far');
         } catch (e) {
             if (isSuperAgentResponseError(e)) {
@@ -173,4 +169,8 @@ export class CoverArtApiClient extends AbstractApiClient {
             }
         }
     }
+}
+
+const logUnexpectedStatus = (context: RetryContext): boolean => {
+    return !isSuperAgentResponseError(context.error) || ![404,302,307].includes(context.error.status);
 }

@@ -111,6 +111,7 @@ export const playStateFromRequest = (obj: SubmitPayload): PlayerStateData => {
     } = obj;
 
     const play = listenPayloadToPlay(payload[0], listen_type === 'playing_now');
+    play.meta.sourceSOT = SOURCE_SOT.HISTORY;
     return {
         platformId: [play.meta.deviceId, NO_USER],
         play,

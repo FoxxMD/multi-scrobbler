@@ -115,3 +115,19 @@ export class MaybeLogger {
         }
     }
 }
+
+const noopLog = (_: any, ...rest: any) => undefined;
+
+export const loggerNoop: Logger = {
+    trace: noopLog,
+    debug: noopLog,
+    log: noopLog,
+    info: noopLog,
+    verbose: noopLog,
+    warn: noopLog,
+    error: noopLog,
+    fatal: noopLog,
+    silent: noopLog,
+    level: 'silent',
+    child: (_: any, ...rest: any) => loggerNoop as Logger
+} as unknown as Logger;

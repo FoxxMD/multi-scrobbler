@@ -1,7 +1,7 @@
 import dayjs from "dayjs";
 import { PlayObject, PlayObjectLifecycleless, ScrobbleActionResult, URLData } from "../../../../core/Atomic.js";
-import { AbstractApiOptions, DEFAULT_RETRY_MULTIPLIER } from "../../infrastructure/Atomic.js";
-import { KoitoData, ListenObjectResponse, ListensResponse } from "../../infrastructure/config/client/koito.js";
+import { AbstractApiOptions, DEFAULT_RETRY_MULTIPLIER, PaginatedListensTimeRangeOptions, PaginatedTimeRangeListens, PaginatedTimeRangeListensResult } from "../../infrastructure/Atomic.js";
+import { GetListensOptions, KoitoData, ListenObjectResponse, ListensResponse } from "../../infrastructure/config/client/koito.js";
 import AbstractApiClient from "../AbstractApiClient.js";
 import { getBaseFromUrl, isPortReachableConnect, joinedUrl, normalizeWebAddress } from "../../../utils/NetworkUtils.js";
 import request, { Request, Response } from 'superagent';
@@ -12,6 +12,7 @@ import { ListenType } from '../listenbrainz/interfaces.js';
 import { parseRegexSingleOrFail } from "../../../utils.js";
 import { baseFormatPlayObj } from "../../../utils/PlayTransformUtils.js";
 import { ScrobbleSubmitError } from "../../errors/MSErrors.js";
+import { tryApiCall } from "../../../utils/RequestUtils.js";
 
 interface SubmitOptions {
     log?: boolean
@@ -20,7 +21,7 @@ interface SubmitOptions {
 
 const KOITO_LZ_PATH: RegExp = new RegExp(/^\/apis\/listenbrainz(\/?1?\/?)?$/);
 
-export class KoitoApiClient extends AbstractApiClient {
+export class KoitoApiClient extends AbstractApiClient implements PaginatedTimeRangeListens<number> {
 
     declare config: KoitoData;
     url: URLData;
@@ -46,11 +47,7 @@ export class KoitoApiClient extends AbstractApiClient {
         this.logger.verbose(`Config URL: '${url ?? '(None Given)'}' => Normalized: '${this.url.url}'`)
     }
 
-    callApi = async <T = Response>(req: Request, retries = 0): Promise<T> => {
-        const {
-            maxRequestRetries = 2,
-            retryMultiplier = DEFAULT_RETRY_MULTIPLIER
-        } = this.config;
+    doCallApi = async <T = Response>(req: Request, retries = 0): Promise<T> => {
 
         try {
             req.set('Authorization', `Token ${this.config.token}`);
@@ -95,6 +92,16 @@ export class KoitoApiClient extends AbstractApiClient {
         }
     }
 
+    callApi = async <T = Response>(reqFunc: () => Request, retries = 0): Promise<T> => {
+        const apiCall = async () => await reqFunc();
+
+        try {
+            return await tryApiCall(() => this.doCallApi(reqFunc()), {...this.config, logger: this.logger}) as T;
+        } catch (e) {
+            throw e;
+        }
+    }
+
     testConnection = async () => {
         try {
             await isPortReachableConnect(this.url.port, { host: this.url.url.hostname });
@@ -103,7 +110,7 @@ export class KoitoApiClient extends AbstractApiClient {
         }
 
         try {
-            const resp = await this.callApi(request.get(`${joinedUrl(this.url.url, 'apis/web/v1/stats')}`));
+            const resp = await this.callApi(() => request.get(`${joinedUrl(this.url.url, 'apis/web/v1/stats')}`));
             if(resp.type !== 'application/json') {
                 throw new Error(`Expected response from ${resp.request.url} to be 'application/json' but got ${resp.type}. Is the Normalized Koito URL correct?`);
             }
@@ -121,22 +128,23 @@ export class KoitoApiClient extends AbstractApiClient {
 
     testAuth = async () => {
         try {
-            const resp = await this.callApi(request.get(`${joinedUrl(this.url.url, '/apis/listenbrainz/1/validate-token')}`));
+            const resp = await this.callApi(() => request.get(`${joinedUrl(this.url.url, '/apis/listenbrainz/1/validate-token')}`));
             return true;
         } catch (e) {
             throw new Error('Could not validate Koito API Key', { cause: e });
         }
     }
 
-    getUserListens = async (maxTracks: number): Promise<ListensResponse> => {
+    getUserListens = async (options: GetListensOptions): Promise<ListensResponse> => {
+        const {page = 0} = options;
         try {
 
-            const resp = await this.callApi(request
+            const resp = await this.callApi(() => request
                 .get(`${joinedUrl(this.url.url, '/apis/web/v1/listens')}`)
                 .query({
                     period: 'all_time',
-                    page: 0,
-                    limit: maxTracks
+                    page,
+                    ...options
                 })
             );
             const { body } = resp as any;
@@ -146,15 +154,39 @@ export class KoitoApiClient extends AbstractApiClient {
         }
     }
 
-    getRecentlyPlayed = async (maxTracks: number): Promise<PlayObject[]> => {
+    getPaginatedTimeRangeListens = async (params: PaginatedListensTimeRangeOptions<number>): Promise<PaginatedTimeRangeListensResult<number>> => {
+
+        let resp: ListensResponse;
         try {
-            const resp = await this.getUserListens(maxTracks);
-            return resp.items.map(x => listenObjectResponseToPlay(x, { url: this.url.url }));
-        } catch (e) {
-            this.logger.error(`Error encountered while getting User listens | Error =>  ${e.message}`);
-            return [];
+        resp = await this.getUserListens({...params, page: params.cursor});    
+    } catch (e) {
+        throw new Error('Error occurred while getting Koito paginated listens', { cause: e });
+    }
+
+        return {
+            data: resp.items.map((x => listenObjectResponseToPlay(x, { url: this.url.url }))),
+            meta: {
+                ...params,
+                total: resp.total_record_count,
+                cursor: resp.current_page,
+                more: resp.has_next_page
+            }
         }
     }
+
+    getPaginatedUnitOfTime(): dayjs.ManipulateType {
+        return 'second';
+    }
+
+    // getRecentlyPlayed = async (maxTracks: number): Promise<PlayObject[]> => {
+    //     try {
+    //         const resp = await this.getUserListens({limit: maxTracks});
+    //         return resp.items.map(x => listenObjectResponseToPlay(x, { url: this.url.url }));
+    //     } catch (e) {
+    //         this.logger.error(`Error encountered while getting User listens | Error =>  ${e.message}`);
+    //         return [];
+    //     }
+    // }
 
     submitListen = async (play: PlayObject, options: SubmitOptions = {}): Promise<ScrobbleActionResult> => {
         const { log = false, listenType = 'single' } = options;
@@ -170,7 +202,7 @@ export class KoitoApiClient extends AbstractApiClient {
             // so no useful information
             // https://listenbrainz.readthedocs.io/en/latest/users/api-usage.html#submitting-listens
             // TODO may we should make a call to recent-listens to get the parsed scrobble?
-            const resp = await this.callApi(request.post(`${joinedUrl(this.url.url, '/apis/listenbrainz/1/submit-listens')}`).type('json').send(listenPayload));
+            const resp = await this.callApi(() => request.post(`${joinedUrl(this.url.url, '/apis/listenbrainz/1/submit-listens')}`).type('json').send(listenPayload));
             if (log) {
                 this.logger.debug(`Submit Response: ${resp.text}`)
             }

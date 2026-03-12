@@ -15,6 +15,7 @@ import {
     TA_NONE,
     TemporalAccuracy,
     TemporalPlayComparison,
+    UnixTimestamp,
 } from "../../core/Atomic.js";
 import { capitalize } from "../../core/StringUtils.js";
 import {
@@ -412,4 +413,9 @@ export const repeatDurationPlayed = (play: PlayObject, duration: number, thresho
         }
 
         return [absPlayed || majorityDurationPercent, `${hintStart}${hints.join(' and ')}`];
+}
+
+/** Convert unix timestamp in microseconds to unix timestamp in seconds */
+export const usecToUnix = (usec: number): UnixTimestamp => {
+    return Math.floor(usec / 1000);
 }

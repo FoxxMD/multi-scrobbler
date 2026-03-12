@@ -87,6 +87,7 @@ export class EndpointLastfmSource extends MemorySource {
 export const playStateFromRequest = (obj: LastFMScrobbleRequestPayload): PlayerStateData => {
 
     const play = scrobblePayloadToPlay(obj);
+    play.meta.sourceSOT = SOURCE_SOT.HISTORY;
     return {
         platformId: [play.meta.deviceId, NO_USER],
         play,

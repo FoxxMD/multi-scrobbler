@@ -9,7 +9,7 @@ export interface LogsState {
     data: (LogDataPretty & {levelLabel: string})[],
     settings: LogOutputConfig
 }
-const initialState: LogsState = {data: [], settings: {level: 'debug', sort: 'asc', limit: 50}};
+const initialState: LogsState = {data: [], settings: {level: 'trace', sort: 'desc', limit: 50}};
 const logsReducer = createReducer(initialState, (builder) => {
    builder
        .addMatcher(

@@ -46,12 +46,13 @@ const LogsSection = (props: PropsFromRedux) => {
         logs,
         settings,
         settings: {
-            limit = 50
+            limit = 50,
+            level
         }
     } = props;
 
     const [logList, setLogList] = useState(logBuffer);
-    const [logLevel, setLogLevel] = useState('debug')
+    const [logLevel, setLogLevel] = useState(level ?? 'trace')
 
     useGetLogsQuery(undefined);
 

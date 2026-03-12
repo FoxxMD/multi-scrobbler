@@ -195,6 +195,7 @@ export interface ArtMeta {
 
 export interface PlayMeta {
     source?: string
+    sourceSOT?: SOURCE_SOT_TYPES
 
     /*
     * If applicable, the name of the Service providing the track (Spotify, Tidal, etc...)
@@ -327,6 +328,7 @@ export interface PlayMatchResult {
     reason?: string
     closestMatchedPlay?: PlayObjectLifecycleless
     transformedPlay?: PlayObjectLifecycleless
+    summary?: String
 }
 
 export type ScrobbleTsSOC = 1 | 2;
@@ -563,3 +565,8 @@ export const KNOWN_MEDIA_PROVIDER_URLS = [
 'listenbrainz.org',
 'musicbrainz.org'
 ];
+
+/** Number of SECONDS since 1970 */
+export type UnixTimestamp = number;
+
+export type Writeable<T> = { -readonly [P in keyof T]: T[P] };

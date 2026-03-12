@@ -17,6 +17,7 @@ import { SubsonicPlayerState } from './PlayerState/SubsonicPlayerState.js';
 import { PlayerStateOptions } from './PlayerState/AbstractPlayerState.js';
 import { Logger } from '@foxxmd/logging';
 import { baseFormatPlayObj } from '../utils/PlayTransformUtils.js';
+import { noRetryOnUpstreamError, tryApiCall } from '../utils/RequestUtils.js';
 
 dayjs.extend(isSameOrAfter);
 
@@ -98,7 +99,7 @@ export class SubsonicSource extends MemorySource {
         return baseFormatPlayObj(obj, play);
     }
 
-    callApi = async <T extends SubsonicResponseCommon = SubsonicResponseCommon>(req: Request, retries = 0): Promise<T> => {
+    doCallApi = async <T extends SubsonicResponseCommon = SubsonicResponseCommon>(req: Request, retries = 0): Promise<T> => {
         const {
             data: {
                 user,
@@ -175,12 +176,14 @@ export class SubsonicSource extends MemorySource {
                         } else {
                             this.logger.error(`${tokenError} Your config settings do not allow legacy authentication to be used.`);
                         }
+                        uError.showStopper = true;
                         throw uError;
                     } else {
-                        this.logger.warn(`${parseApiResponseErrorToThrowable(resp)} | ${tokenError} MS will attempt to use legacy authentication since 'legacyAuthentication' is not explicitly defined (or disabled) in config.`);
                         this.config.data.legacyAuthentication = true;
-                        return await this.callApi(req);
+                        throw new UpstreamError(`${tokenError} MS will attempt to use legacy authentication since 'legacyAuthentication' is not explicitly defined (or disabled) in config.`, {cause: uError, showStopper: false});
                     }
+                } else {
+                    throw uError;
                 }
             }
 
@@ -191,22 +194,23 @@ export class SubsonicSource extends MemorySource {
                 throw e;
             }
 
-            if((isNodeNetworkException(e) || e.status >= 500) && retries < maxRequestRetries) {
-                const retryAfter = parseRetryAfterSecsFromObj(e) ?? (retryMultiplier * (retries + 1));
-                this.logger.warn(`Request failed but retries (${retries}) less than max (${maxRequestRetries}), retrying request after ${retryAfter} seconds...`);
-                await sleep(retryAfter * 1000);
-                return await this.callApi(req, retries + 1)
-            }
-
-            if(isNodeNetworkException(e)) {
-                throw new UpstreamError('Could not communicate with Subsonic Server', {cause: e, showStopper: true});
-            }
-
             if(e.message.includes('self-signed certificate')) {
                 throw new UpstreamError(`Subsonic server uses self-signed certs which MS does not allow by default. This error can be ignored by setting 'ignoreTlsErrors: true' in config. WARNING this can result in cleartext communication which is insecure.`, {cause: e, showStopper: true});
             }
 
             throw new UpstreamError('Subsonic server response was unexpected', {cause: e});
+        }
+    }
+
+    callApi = async <T extends SubsonicResponseCommon = SubsonicResponseCommon>(reqFunc: () => Request): Promise<T> => {
+        try {
+            return await tryApiCall(() => this.doCallApi(reqFunc()), {
+                ...this.config,
+                logger: this.logger,
+                shouldRetry: noRetryOnUpstreamError
+            }) as T;
+        } catch (e) {
+            throw e;
         }
     }
 
@@ -245,7 +249,7 @@ export class SubsonicSource extends MemorySource {
     protected async doCheckConnection(): Promise<true | string | undefined> {
         const {url} = this.config.data;
         try {
-            const resp = await this.callApi(request.get(`${url}/rest/ping`));
+            const resp = await this.callApi(() => request.get(`${url}/rest/ping`));
             this.sourceData = resp as SourceIdentifierData;
             this.logger.info(`Subsonic Server reachable: ${identifiersFromResponse(resp)}`);
             return true;
@@ -274,7 +278,7 @@ export class SubsonicSource extends MemorySource {
     doAuthentication = async () => {
         const {url} = this.config.data;
         try {
-            await this.callApi(request.get(`${url}/rest/ping`));
+            await this.callApi(() => request.get(`${url}/rest/ping`));
             this.logger.info('Subsonic API Status: ok');
             return true;
         } catch (e) {
@@ -285,7 +289,7 @@ export class SubsonicSource extends MemorySource {
     getRecentlyPlayed = async (options: RecentlyPlayedOptions = {}) => {
         const {formatted = false} = options;
         const {url} = this.config.data;
-        const resp = await this.callApi(request.get(`${url}/rest/getNowPlaying`));
+        const resp = await this.callApi(() => request.get(`${url}/rest/getNowPlaying`));
         const {
             nowPlaying: {
                 entry = []

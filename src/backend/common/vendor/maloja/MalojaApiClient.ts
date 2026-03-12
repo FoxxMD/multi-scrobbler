@@ -1,11 +1,11 @@
-import dayjs from 'dayjs';
-import request, { SuperAgentRequest, Response } from 'superagent';
+import dayjs, { ManipulateType } from 'dayjs';
+import request, { Response, Request } from 'superagent';
 import compareVersions from "compare-versions";
 import AbstractApiClient from "../AbstractApiClient.js";
 import { getBaseFromUrl, isPortReachableConnect, joinedUrl, normalizeWebAddress } from "../../../utils/NetworkUtils.js";
 import { MalojaData } from "../../infrastructure/config/client/maloja.js";
 import { PlayObject, PlayObjectLifecycleless, ScrobbleActionResult, URLData } from "../../../../core/Atomic.js";
-import { AbstractApiOptions, DEFAULT_RETRY_MULTIPLIER, FormatPlayObjectOptions } from "../../infrastructure/Atomic.js";
+import { AbstractApiOptions, DEFAULT_RETRY_MULTIPLIER, FormatPlayObjectOptions, PaginatedListensTimeRangeOptions, PaginatedTimeRangeListens, PaginatedTimeRangeListensResult } from "../../infrastructure/Atomic.js";
 import { isNodeNetworkException } from "../../errors/NodeErrors.js";
 import { isSuperAgentResponseError } from "../../errors/ErrorUtils.js";
 import { getNonEmptyVal, parseRetryAfterSecsFromObj, removeUndefinedKeys, sleep } from "../../../utils.js";
@@ -15,10 +15,11 @@ import { getScrobbleTsSOCDate, getScrobbleTsSOCDateWithContext } from '../../../
 import { buildTrackString } from '../../../../core/StringUtils.js';
 import { baseFormatPlayObj } from '../../../utils/PlayTransformUtils.js';
 import { ScrobbleSubmitError } from '../../errors/MSErrors.js';
+import { NO_RETRY_HTTP_STATUS, tryApiCall } from '../../../utils/RequestUtils.js';
 
 
 
-export class MalojaApiClient extends AbstractApiClient {
+export class MalojaApiClient extends AbstractApiClient implements PaginatedTimeRangeListens<number> {
 
     declare config: MalojaData;
     url: URLData;
@@ -37,24 +38,12 @@ export class MalojaApiClient extends AbstractApiClient {
         this.logger.verbose(`Config URL: '${url ?? '(None Given)'}' => Normalized: '${this.url.url}'`)
     }
 
-    callApi = async <T = Response>(req: SuperAgentRequest, retries = 0): Promise<T> => {
-        const {
-            maxRequestRetries = 1,
-            retryMultiplier = DEFAULT_RETRY_MULTIPLIER
-        } = this.config;
-
+    doCallApi = async <T = Response>(req: Request): Promise<T> => {
         try {
             return await req as T;
         } catch (e) {
             if ((isNodeNetworkException(e) || isSuperAgentResponseError(e) && e.timeout)) {
-                if (retries < maxRequestRetries) {
-                    const retryAfter = parseRetryAfterSecsFromObj(e) ?? (retryMultiplier * (retries + 1));
-                    this.logger.warn(`Request failed but retries (${retries}) less than max (${maxRequestRetries}), retrying request after ${retryAfter} seconds...`);
-                    await sleep(retryAfter * 1000);
-                    return await this.callApi(req, retries + 1)
-                } else {
-                    throw new UpstreamError(`Request continued to fail after reach max retries (${maxRequestRetries})`, { cause: e, showStopper: true });
-                }
+                throw new UpstreamError(`API Call failed`, { cause: e });
             } else if (isSuperAgentResponseError(e)) {
                 const {
                     message,
@@ -75,6 +64,18 @@ export class MalojaApiClient extends AbstractApiClient {
         }
     }
 
+    callApi = async <T = Response>(reqFunc: () => Request): Promise<T> => {
+        try {
+            return await tryApiCall(() => this.doCallApi(reqFunc()), {
+                ...this.config,
+                logger: this.logger,
+                noRetryStatus: [...NO_RETRY_HTTP_STATUS, 409]
+            }) as T;
+        } catch (e) {
+            throw e;
+        }
+    }
+
     testConnection = async () => {
         try {
             await isPortReachableConnect(this.url.port, { host: this.url.url.hostname });
@@ -83,7 +84,7 @@ export class MalojaApiClient extends AbstractApiClient {
         }
 
         try {
-            const serverInfoResp = await this.callApi(request.get(`${this.url.url}/apis/mlj_1/serverinfo`));
+            const serverInfoResp = await this.callApi(() => request.get(`${this.url.url}/apis/mlj_1/serverinfo`));
             const {
                 statusCode,
                 body: {
@@ -119,7 +120,7 @@ export class MalojaApiClient extends AbstractApiClient {
     testHealth = async () => {
 
         try {
-            const serverInfoResp = await this.callApi(request.get(`${this.url.url}/apis/mlj_1/serverinfo`), 0);
+            const serverInfoResp = await this.callApi(() => request.get(`${this.url.url}/apis/mlj_1/serverinfo`));
             const {
                 statusCode,
                 body: {
@@ -151,7 +152,7 @@ export class MalojaApiClient extends AbstractApiClient {
 
     testAuth = async () => {
         try {
-            const resp = await this.callApi(request
+            const resp = await this.callApi(() => request
                 .get(`${this.url.url}/apis/mlj_1/test`)
                 .query({ key: this.config.apiKey }));
 
@@ -179,14 +180,44 @@ export class MalojaApiClient extends AbstractApiClient {
         }
     }
 
-    getRecentScrobbles = async (limit: number) => {
-        const resp = await this.callApi(request.get(`${this.url.url}/apis/mlj_1/scrobbles?perpage=${limit}`));
-        const {
-            body: {
-                list = [],
-            } = {},
+    // getRecentScrobbles = async (limit: number) => {
+    //     const resp = await this.callApi(request.get(`${this.url.url}/apis/mlj_1/scrobbles?perpage=${limit}`));
+    //     const {
+    //         body: {
+    //             list = [],
+    //         } = {},
+    //     } = resp;
+    //     return list.map(formatPlayObj);
+    // }
+
+    getPaginatedTimeRangeListens = async (params: PaginatedListensTimeRangeOptions<number>): Promise<PaginatedTimeRangeListensResult<number>> => {
+
+        const opts: RecentlyPlayedRequestOptions = {
+            perpage: params.limit,
+            page: params.cursor,
+            from: params.from !== undefined ? dayjs.unix(params.from).format('YYYY/MM/DD') : undefined,
+            until: params.to !== undefined ? dayjs.unix(params.from).format('YYYY/MM/DD') : undefined
+        };
+
+        const resp = await this.getScrobbles(opts);
+
+        return {
+            data: resp.list.map(x => formatPlayObj(x)),
+            meta: {...params, more: resp.pagination.next_page !== null}
+        }
+    }
+
+    getScrobbles = async (options: RecentlyPlayedRequestOptions = {}): Promise<RecentlyPlayedResponse> => {
+        const resp = await this.callApi(() => request.get(`${this.url.url}/apis/mlj_1/scrobbles`).query(removeUndefinedKeys(options)));
+                const {
+            body
         } = resp;
-        return list.map(formatPlayObj);
+
+        return body as RecentlyPlayedResponse;
+    }
+
+    getPaginatedUnitOfTime(): ManipulateType {
+        return 'day';
     }
 
     scrobble = async (playObj: PlayObject): Promise<ScrobbleActionResult> => {
@@ -211,7 +242,7 @@ export class MalojaApiClient extends AbstractApiClient {
         try {
 
 
-            const response = await this.callApi(request.post(`${this.url.url}/apis/mlj_1/newscrobble`)
+            const response = await this.callApi(() => request.post(`${this.url.url}/apis/mlj_1/newscrobble`)
                 .type('json')
                 .send(scrobbleData));
 
@@ -438,4 +469,24 @@ export const playToScrobblePayload = (playObj: PlayObject, apiKey?: string): Mal
     // https://github.com/FoxxMD/multi-scrobbler/issues/454#issuecomment-3806367420
 
     return scrobbleData;
+}
+
+export interface RecentlyPlayedRequestOptions {
+    page?: number;
+    perpage?: number;
+    /** start of timerange, smallest granularity like '2026/02/10 */
+    from?: string;
+    /** end of timerange, smallest granularity like '2026/02/10 */
+    until?: string;
+}
+
+export interface RecentlyPlayedResponse {
+    list: MalojaScrobbleData[];
+    pagination: {
+        next_page: null |string
+        prev_page: null | string
+        page: number
+        perpage: number
+    }
+    status: string;
 }
