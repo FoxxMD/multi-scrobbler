@@ -17,6 +17,7 @@
       "librariesBlock": ["BadMusic"],
       "additionalAllowedLibraryTypes": ["musicvideos"],
       "allowMediaTypes": ["audio"],
+      "frontendUrlOverride": "https://myJellyfinExternal.tld"
     },
     "options": {
       "logPayload": true,

@@ -35,23 +35,38 @@ By default...
 
 </DetailsAdmo>
 
+<DetailsAdmo type="tip" summary="External Asset URL">
+
+If you use MS and Jellyfin on an internal or otherwise inaccessible network but still want album art assets used in the UI or for [Discord](/config/clients/discord) to be accessible you can specify a URL to replace your internal url.
+
+Use (file) `frontendUrlOverride` or (env) `JELLYFIN_FRONTEND_URL_OVERRIDE` to replace `url`/`JELLYFIN_URL`, respectively, when rendering links for the dashboard UI or other resources.
+
+Example:
+
+Your `JELLYFIN_URL` is `http://jellyfin:8096` but your Jellyfin instance is externally accessible (by MS or in general) at `https://jellyfin.mydomain.com`.
+
+Use `JELLYFIN_FRONTEND_URL_OVERRIDE=https://jellyfin.mydomain.com` in order for the MS dashboard to use `https://jellyfin.mydomain.com/art/1234.jpg` when linking to album art.
+
+</DetailsAdmo>
+
 #### Configuration
 
 <Tabs groupId="configType" queryString>
     <TabItem value="env" label="ENV">
-        | Environmental Variable      | Required? | Default | Description                                                                                                                                                                                   |
-        | --------------------------- | --------- | ------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-        | `JELLYFIN_URL`              | **Yes**   |         | The URL of the Jellyfin server IE `http://localhost:8096`                                                                                                                                     |
-        | `JELLYFIN_USER`             | **Yes**   |         | The user to authenticate with the API                                                                                                                                                         |
-        | `JELLYFIN_APIKEY`           | No        |         | The API Key to use for authentication **(Must provide either apikey or password)**                                                                                                            |
-        | `JELLYFIN_PASSWORD`         | No        |         | The password of the user to authenticate for. **(Must provide either apikey or password)**                                                                                                    |
-        | `JELLYFIN_USERS_ALLOW`      | No        |         | Comma-separated list of usernames (from Jellyfin) to scrobble for                                                                                                                             |
-        | `JELLYFIN_USERS_BLOCK`      | No        |         | Comma-separated list of usernames (from Jellyfin) to disallow scrobble for                                                                                                                    |
-        | `JELLYFIN_DEVICES_ALLOW`    | No        |         | Comma-separated list of devices to scrobble from                                                                                                                                              |
-        | `JELLYFIN_DEVICES_BLOCK`    | No        |         | Comma-separated list of devices to disallow scrobbles from                                                                                                                                    |
-        | `JELLYFIN_LIBRARIES_ALLOW`  | No        |         | Comma-separated list of libraries to allow scrobbles from                                                                                                                                     |
-        | `JELLYFIN_LIBRARIES_BLOCK`  | No        |         | Comma-separated list of libraries to disallow scrobbles from                                                                                                                                  |
-        | `JELLYFIN_MEDIATYPES_ALLOW` | No        |         | Comma-separated list of [media types](https://github.com/jellyfin/jellyfin-sdk-typescript/blob/master/src/generated-client/models/media-type.ts#L22) to allow scrobbling. Defaults to `audio` |
+        | Environmental Variable           | Required? | Default | Description                                                                                                                                                                                   |
+        | -------------------------------- | --------- | ------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+        | `JELLYFIN_URL`                   | **Yes**   |         | The URL of the Jellyfin server IE `http://localhost:8096`                                                                                                                                     |
+        | `JELLYFIN_USER`                  | **Yes**   |         | The user to authenticate with the API                                                                                                                                                         |
+        | `JELLYFIN_APIKEY`                | No        |         | The API Key to use for authentication **(Must provide either apikey or password)**                                                                                                            |
+        | `JELLYFIN_PASSWORD`              | No        |         | The password of the user to authenticate for. **(Must provide either apikey or password)**                                                                                                    |
+        | `JELLYFIN_USERS_ALLOW`           | No        |         | Comma-separated list of usernames (from Jellyfin) to scrobble for                                                                                                                             |
+        | `JELLYFIN_USERS_BLOCK`           | No        |         | Comma-separated list of usernames (from Jellyfin) to disallow scrobble for                                                                                                                    |
+        | `JELLYFIN_DEVICES_ALLOW`         | No        |         | Comma-separated list of devices to scrobble from                                                                                                                                              |
+        | `JELLYFIN_DEVICES_BLOCK`         | No        |         | Comma-separated list of devices to disallow scrobbles from                                                                                                                                    |
+        | `JELLYFIN_LIBRARIES_ALLOW`       | No        |         | Comma-separated list of libraries to allow scrobbles from                                                                                                                                     |
+        | `JELLYFIN_LIBRARIES_BLOCK`       | No        |         | Comma-separated list of libraries to disallow scrobbles from                                                                                                                                  |
+        | `JELLYFIN_MEDIATYPES_ALLOW`      | No        |         | Comma-separated list of [media types](https://github.com/jellyfin/jellyfin-sdk-typescript/blob/master/src/generated-client/models/media-type.ts#L22) to allow scrobbling. Defaults to `audio` |
+        | `JELLYFIN_FRONTEND_URL_OVERRIDE` | No        |         | The external URL to use for album art assets instead of `JELLYFIN_URL`                                                                                                                        |
     </TabItem>
     <TabItem value="file" label="File">
 
