@@ -2,7 +2,7 @@ import { AzuracastSourceAIOConfig, AzuracastSourceConfig } from "./azuracast.js"
 import { ChromecastSourceAIOConfig, ChromecastSourceConfig } from "./chromecast.js";
 import { ListenbrainzEndpointSourceAIOConfig, ListenbrainzEndpointSourceConfig } from "./endpointlz.js";
 import { LastFMEndpointSourceAIOConfig, LastFMEndpointSourceConfig } from "./endpointlfm.js";
-import { DeezerInternalSourceConfig, DeezerInternalAIOConfig, DeezerSourceAIOConfig, DeezerSourceConfig } from "./deezer.js";
+import { DeezerInternalSourceConfig, DeezerInternalAIOConfig, DeezerSourceAIOConfig, DeezerSourceConfig, DeezerCompatConfig } from "./deezer.js";
 import { JellyApiSourceAIOConfig, JellyApiSourceConfig } from "./jellyfin.js";
 import { JRiverSourceAIOConfig, JRiverSourceConfig } from "./jriver.js";
 import { KodiSourceAIOConfig, KodiSourceConfig } from "./kodi.js";
@@ -90,6 +90,44 @@ export type SourceAIOConfig =
     | RockskySourceAIOConfig
     | SonosSourceAIOConfig;
 
+/** Used for docusaurus schemas
+ *  We need to show "array of" for each type of config when looking at File Config
+ * 
+ *  This is defined in the AIO config and we *assume* arrays in individual files when parsing in builders
+ *  But we don't have any actual definitions for this that we can pull for generating individual schema files
+ */
+export type SpotifySourceConfigs = SpotifySourceConfig[];
+export type PlexApiSourceConfigs = PlexApiSourceConfig[];
+export type DeezerSourceConfigs = DeezerSourceConfig[];
+export type DeezerInternalSourceConfigs = DeezerInternalSourceConfig[];
+export type DeezerCompatConfigs = DeezerCompatConfig[];
+export type ListenbrainzEndpointSourceConfigs = ListenbrainzEndpointSourceConfig[];
+export type LastFMEndpointSourceConfigs = LastFMEndpointSourceConfig[];
+export type SubSonicSourceConfigs = SubSonicSourceConfig[];
+export type JellyApiSourceConfigs = JellyApiSourceConfig[];
+export type LastfmSourceConfigs = LastfmSourceConfig[];
+export type LibrefmSourceConfigs = LibrefmSourceConfig[];
+export type YTMusicSourceConfigs = YTMusicSourceConfig[];
+export type MPRISSourceConfigs = MPRISSourceConfig[];
+export type MopidySourceConfigs = MopidySourceConfig[];
+export type ListenBrainzSourceConfigs = ListenBrainzSourceConfig[];
+export type JRiverSourceConfigs = JRiverSourceConfig[];
+export type KodiSourceConfigs = KodiSourceConfig[];
+export type WebScrobblerSourceConfigs = WebScrobblerSourceConfig[];
+export type ChromecastSourceConfigs = ChromecastSourceConfig[];
+export type MalojaSourceConfigs = MalojaSourceConfig[];
+export type MusikcubeSourceConfigs = MusikcubeSourceConfig[];
+export type MusicCastSourceConfigs = MusicCastSourceConfig[];
+export type MPDSourceConfigs = MPDSourceConfig[];
+export type VLCSourceConfigs = VLCSourceConfig[];
+export type IcecastSourceConfigs = IcecastSourceConfig[];
+export type AzuracastSourceConfigs = AzuracastSourceConfig[];
+export type KoitoSourceConfigs = KoitoSourceConfig[];
+export type TealSourceConfigs = TealSourceConfig[];
+export type RockskySourceConfigs = RockskySourceConfig[];
+export type SonosSourceConfigs = SonosSourceConfig[];
+
+
 export type SourceType =
     'spotify'
     | 'plex'
@@ -151,16 +189,15 @@ export const sourceTypes: SourceType[] = [
     'sonos'
 ];
 
-export const sourceInterfaces = [
-    'AIOSourceRelaxedConfig',
+export const atomicSourceInterfaces = [
     'SpotifySourceConfig',
-    'PlexCompatConfig',
+    'PlexApiSourceConfig',
     'DeezerCompatConfig',
     'ListenbrainzEndpointSourceConfig',
     'LastFMEndpointSourceConfig',
     'IcecastSourceConfig',
     'SubSonicSourceConfig',
-    'JellyfinCompatConfig',
+    'JellyApiSourceConfig',
     'LastfmSourceConfig',
     'LibrefmSourceConfig',
     'YTMusicSourceConfig',
@@ -181,6 +218,11 @@ export const sourceInterfaces = [
     'TealSourceConfig',
     'RockskySourceConfig',
     'SonosSourceConfig'
+];
+
+export const sourceInterfaces = [
+    'AIOSourceRelaxedConfig',
+    ...atomicSourceInterfaces
 ];
 
 export const isSourceType = (data: string): data is SourceType => {

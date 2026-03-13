@@ -134,6 +134,7 @@ src/backend/common/schema/*.json
 !src/backend/common/schema/aio.json
 !src/backend/common/schema/client.json
 !src/backend/common/schema/source.json
+docsite/static/schemas/*.json
 
 
 *.bak

@@ -109,7 +109,7 @@ export default class ScrobbleSources {
                 case 'spotify':
                     return "SpotifySourceConfig";
                 case 'plex':
-                    return "PlexCompatConfig";
+                    return "PlexApiSourceConfig";
                 case 'deezer':
                     return "DeezerCompatConfig";
                 case 'endpointlz':
@@ -121,7 +121,7 @@ export default class ScrobbleSources {
                 case 'subsonic':
                     return "SubSonicSourceConfig";
                 case 'jellyfin':
-                    return "JellyfinCompatConfig";
+                    return "JellyApiSourceConfig";
                 case 'lastfm':
                     return "LastfmSourceConfig";
                 case 'librefm':

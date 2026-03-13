@@ -7,7 +7,8 @@ import { RockSkyClientAIOConfig, RockSkyClientConfig } from "./rocksky.js";
 import { LibrefmClientConfig, LibrefmClientAIOConfig } from "./librefm.js";
 import { DiscordClientAIOConfig, DiscordClientConfig } from "./discord.js";
 
-export type ClientConfig = MalojaClientConfig 
+export type ClientConfig = 
+MalojaClientConfig 
 | LastfmClientConfig 
 | LibrefmClientConfig 
 | ListenBrainzClientConfig 
@@ -25,8 +26,22 @@ export type ClientAIOConfig = MalojaClientAIOConfig
 | RockSkyClientAIOConfig 
 | DiscordClientAIOConfig;
 
-export const clientInterfaces = [
-    'AIOClientRelaxedConfig',
+/** Used for docusaurus schemas
+ *  We need to show "array of" for each type of config when looking at File Config
+ * 
+ *  This is defined in the AIO config and we *assume* arrays in individual files when parsing in builders
+ *  But we don't have any actual definitions for this that we can pull for generating individual schema files
+ */
+export type MalojaClientConfigs = MalojaClientConfig[];
+export type LastfmClientConfigs = LastfmClientConfig[];
+export type LibrefmClientConfigs = LibrefmClientConfig[];
+export type ListenBrainzClientConfigs = ListenBrainzClientConfig[];
+export type KoitoClientConfigs = KoitoClientConfig[];
+export type TealClientConfigs = TealClientConfig[];
+export type RockSkyClientConfigs = RockSkyClientConfig[];
+export type DiscordClientConfigs = DiscordClientConfig[];
+
+export const atomicClientInterfaces = [
     'MalojaClientConfig',
     'LastfmClientConfig',
     'LibrefmClientConfig',
@@ -35,6 +50,11 @@ export const clientInterfaces = [
     'TealClientConfig',
     'RockSkyClientConfig',
     'DiscordClientConfig'
+];
+
+export const clientInterfaces = [
+    'AIOClientRelaxedConfig',
+    ...atomicClientInterfaces
 ];
 
 export type ClientType =

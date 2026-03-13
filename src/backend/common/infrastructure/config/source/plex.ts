@@ -56,8 +56,6 @@ export interface PlexApiSourceConfig extends CommonSourceConfig {
     options?: PlexApiOptions
 }
 
-export type PlexApiSourceConfigs = PlexApiSourceConfig[];
-
 export interface PlexApiSourceAIOConfig extends PlexApiSourceConfig {
     type: 'plex'
 }
