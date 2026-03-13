@@ -1,6 +1,7 @@
 import EventEmitter from "events";
 import { PlayObject, SOURCE_SOT } from "../../core/Atomic.js";
-import { FormatPlayObjectOptions, InternalConfig, PlayPlatformId, SourceType, TimeRangeListensFetcher } from "../common/infrastructure/Atomic.js";
+import { FormatPlayObjectOptions, InternalConfig, PlayPlatformId, TimeRangeListensFetcher } from "../common/infrastructure/Atomic.js";
+import { SourceType } from '../common/infrastructure/config/source/sources.js';
 import { LastfmSourceConfig } from "../common/infrastructure/config/source/lastfm.js";
 import LastfmApiClient, { formatPlayObj } from "../common/vendor/LastfmApiClient.js";
 import { sortByOldestPlayDate } from "../utils.js";

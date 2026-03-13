@@ -5,7 +5,7 @@ import { RequestRetryOptions } from "./common.js";
 import { WebhookConfig } from "./health/webhooks.js";
 import { CommonSourceOptions, SourceRetryOptions } from "./source/index.js";
 import { SourceAIOConfig } from "./source/sources.js";
-import { CacheConfigOptions, ClientType, SourceType } from "../Atomic.js";
+import { CacheConfigOptions } from "../Atomic.js";
 import { TransformerCommonConfig } from "../../../../core/Atomic.js";
 
 

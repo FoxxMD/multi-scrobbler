@@ -2,7 +2,8 @@
 import { childLogger, Logger } from '@foxxmd/logging';
 import dayjs, { Dayjs } from "dayjs";
 import { PlayObject, SourcePlayerObj } from "../../core/Atomic.js";
-import { ClientType, clientTypes, ConfigMeta, InternalConfig, InternalConfigOptional, isClientType, REPORTED_PLAYER_STATUSES, SourceIdentifier } from "../common/infrastructure/Atomic.js";
+import { ConfigMeta, InternalConfig, InternalConfigOptional, isClientType, SourceIdentifier } from "../common/infrastructure/Atomic.js";
+import { clientTypes, ClientType } from '../common/infrastructure/config/client/clients.js';
 import { AIOConfig } from "../common/infrastructure/config/aioConfig.js";
 import { ClientAIOConfig, ClientConfig } from "../common/infrastructure/config/client/clients.js";
 import { LastfmClientConfig } from "../common/infrastructure/config/client/lastfm.js";

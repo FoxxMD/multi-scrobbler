@@ -1,6 +1,11 @@
 import Tabs from '@theme/Tabs';
 import TabItem from '@theme/TabItem';
 import CodeBlock from '@theme/CodeBlock';
+import ExplorerFetch from '@site/src/components/Schema/ExplorerFetch';
+import EditorFetch from '@site/src/components/Schema/SchemaEditorFetch';
+import './GenericConfiguration.scss';
+import FileConfigExample from './FileConfigExample';
+import {useWindowSize} from '@docusaurus/theme-common';
 
 <Tabs groupId="configType" queryString>
     <TabItem value="env" label="ENV">
@@ -10,19 +15,96 @@ import CodeBlock from '@theme/CodeBlock';
     </TabItem>
     <TabItem value="file" label="File">
     <FileType>
+            <div
+            className="schemaWrapper"
+                style={{
+                    display: "flex"
+                }}
+            >
+            <div style={{ padding: '0 1em 0 1em', flexBasis: 'min-content', flexGrow: 2}}>
+            <DetailsAdmo type="note" summary="Config Structure">
+                This displays the **structure** of the [File Configuration](/configuration?configType=aio#configuration-types) for a <strong children={props.name}/> type <strong children={props.client ? 'Client' : 'Source'}/> with all possible properties, their shape, and descriptions/types. Use this to understand how to write a valid config.
+            </DetailsAdmo>
+                <ExplorerFetch name={`schemas/${props.config}`} />
+            </div>
+            <div style={{ flexBasis: 'auto', flexGrow: 3 }}>
+            <div className="fileEditor">
+            <DetailsAdmo type="note" summary="Config Example">
+                This displays an **example config file** of a <strong children={props.name}/> <span children={props.client ? 'Client' : 'Source'}/> [File Configuration](/configuration?configType=aio#configuration-types) that adheres to the shown **Config Structure**.
 
-    <FileExample title={`CONFIG/${props.name}.json`} client={props.client ?? false} data={props.fileContent}/>
+                * **text** mode lets you edit the JSON directly.
+                * **tree** mode gives you a guided point-and-click editing experience that always keeps the JSON *syntax* valid.
 
-        or <SchemaLink lower objectName={props.config}/>
+                Both modes **validate** that the configuraion is correct. Any errors show up as squiggly lines.
+
+                After you finish editing, switch to **text** and then copy all text to get a completed config.
+            </DetailsAdmo>
+            </div>
+            <div className="fileEditorMobile">
+                <DetailsAdmo type="warning" summary="Config Example Mobile Experience">
+                    This displays an **example config file** of a <strong children={props.name}/> <span children={props.client ? 'Client' : 'Source'}/> [File Configuration](/configuration?configType=aio#configuration-types) that adheres to the shown **Config Structure**.
+
+                    The example config file editor is meant for a larger screen experience so **only the read-only example is shown.** Please use this site on a tablet/laptop/desktop to enable file editor features.
+                </DetailsAdmo>
+            </div>
+            <FileConfigExample 
+                filePathName={`CONFIG/${props.name}.json`}
+                configureAs={props.client ? 'client' : 'source'} 
+                data={props.fileContent}
+                schemaName={props.config}
+                readOnlyAtWidth={500}
+             />
+            </div>
+        </div>
     </FileType>
     </TabItem>
     <TabItem value="aio" label="AIO">
     <AIOType>
+            <div
+                className="schemaWrapper"
+                style={{
+                    display: "flex"
+                }}
+            >
+            <div style={{ padding: '0 1em 0 1em', flexBasis: 'min-content', flexGrow: 2}}>
+            <DetailsAdmo type="note" summary="Config Structure">
+                This displays the **structure** of the [all-in-one (`config.json`) configuration](/configuration?configType=aio#configuration-types) with all possible properties, their shape, and descriptions/types. Use this to understand how to write a valid config.
 
-        <AIOExample data={props.fileContent} client={props.client ?? false} name={props.name}/>
+                Select the <strong children={props.name}/> type from the respective <code children={props.client ? 'clients' : 'sources'}/> node below, then expand it.
+            </DetailsAdmo>
+                <ExplorerFetch name={`schemas/aio`} />
+            </div>
+             <div style={{ flexBasis: 'auto', flexGrow: 3 }}>
+             <div className="fileEditor">
+                <DetailsAdmo type="note" summary="Config Example">
+                    This displays an **example config file** of a [all-in-one (`config.json`) configuration](/configuration?configType=aio#configuration-types) that includes a <strong children={props.name}/> <span children={props.client ? 'Client' : 'Source'}/> that adheres to the shown **Config Structure**.
 
+                    * **text** mode lets you edit the JSON directly.
+                    * **tree** mode gives you a guided point-and-click editing experience that always keeps the JSON *syntax* valid.
 
-        or <SchemaLink lower objectName={props.config}/>
+                    Both modes **validate** that the configuraion is correct. Any errors show up as squiggly lines.
+
+                    After you finish editing, switch to **text** and then copy all text to get a completed config.
+                </DetailsAdmo>
+            </div>
+            <div className="fileEditorMobile">
+                <DetailsAdmo type="warning" summary="Config Example Mobile Experience">
+                    This displays an **example config file** of a [all-in-one (`config.json`) configuration](/configuration?configType=aio#configuration-types) that includes a <strong children={props.name}/> <span children={props.client ? 'Client' : 'Source'}/> that adheres to the shown **Config Structure**.
+                
+                    The example config file editor is meant for a larger screen experience so **only the read-only example is shown.** Please use this site on a tablet/laptop/desktop to enable file editor features.
+                </DetailsAdmo>
+            </div>
+                <FileConfigExample 
+                    filePathName={`CONFIG/config.json`}
+                    configureAs={props.client ? 'client' : 'source'} 
+                    data={props.fileContent}
+                    schemaName="aio"
+                    name={props.name}
+                    readOnlyAtWidth={500}
+                    aio
+                />
+            </div>
+             </div>
         </AIOType>
     </TabItem>
 </Tabs>

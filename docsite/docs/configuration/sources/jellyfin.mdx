@@ -51,8 +51,7 @@ Use `JELLYFIN_FRONTEND_URL_OVERRIDE=https://jellyfin.mydomain.com` in order for 
 
 #### Configuration
 
-<Tabs groupId="configType" queryString>
-    <TabItem value="env" label="ENV">
+<Config config="JellyApiSourceConfig" fileContent={JellyfinConfig} name="jellyfin">
         | Environmental Variable           | Required? | Default | Description                                                                                                                                                                                   |
         | -------------------------------- | --------- | ------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
         | `JELLYFIN_URL`                   | **Yes**   |         | The URL of the Jellyfin server IE `http://localhost:8096`                                                                                                                                     |
@@ -67,19 +66,4 @@ Use `JELLYFIN_FRONTEND_URL_OVERRIDE=https://jellyfin.mydomain.com` in order for 
         | `JELLYFIN_LIBRARIES_BLOCK`       | No        |         | Comma-separated list of libraries to disallow scrobbles from                                                                                                                                  |
         | `JELLYFIN_MEDIATYPES_ALLOW`      | No        |         | Comma-separated list of [media types](https://github.com/jellyfin/jellyfin-sdk-typescript/blob/master/src/generated-client/models/media-type.ts#L22) to allow scrobbling. Defaults to `audio` |
         | `JELLYFIN_FRONTEND_URL_OVERRIDE` | No        |         | The external URL to use for album art assets instead of `JELLYFIN_URL`                                                                                                                        |
-    </TabItem>
-    <TabItem value="file" label="File">
-
-        <CodeBlock title="CONFIG_DIR/jellyfin.json" language="json5">{JellyfinConfig}</CodeBlock>
-
-        or <SchemaLink lower objectName="JellyApiSourceConfig"/>
-
-    </TabItem>
-    <TabItem value="aio" label="AIO">
-
-        <AIOExample data={JellyfinConfig} name="jellyfin"/>
-
-
-        or <SchemaLink lower objectName="JellyApiSourceConfig"/>
-    </TabItem>
-</Tabs>
+</Config>

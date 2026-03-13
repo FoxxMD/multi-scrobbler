@@ -19,6 +19,7 @@
     "docs:install": "cd docsite && npm ci --no-audit",
     "docs:start": "cd docsite && npm start",
     "docs:build": "npm run -s schema:docs && cd docsite && npm run build",
+    "docs:netlify": "npm run -s docs:install && npm run -s docs:build",
     "postinstall": "patch-package",
     "install:parallel": "concurrently --kill-others-on-fail --names app,docs \"npm ci --no-audit\" \"npm run docs:install\"",
     "cliff": "git-cliff --unreleased"

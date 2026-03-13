@@ -9,6 +9,8 @@ import EnvType from "@site/src/components/snippets/_env-config.mdx";
 import FileType from "@site/src/components/snippets/_file-config.mdx";
 import AIOType from "@site/src/components/snippets/_aio-config.mdx";
 import Config from "@site/src/components/GenericConfiguration.mdx";
+import Button from '../components/Button';
+import ButtonGroup from '../components/ButtonGroup';
 
 export default {
   // Re-use the default mapping
@@ -20,5 +22,7 @@ export default {
   FileType,
   AIOType,
   Config,
-  DetailsAdmo
+  DetailsAdmo,
+  Button,
+  ButtonGroup
 };

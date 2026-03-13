@@ -62,32 +62,8 @@ If no `sources` are configured for multi-scrobbler it will automatically try to 
 
 ## Configuration
 
-<Tabs groupId="configType" queryString>
-    <TabItem value="env" label="ENV">
+<Config config="IcecastSourceConfig" fileContent={IcecastConfig} name="icecast">
         | Environmental Variable | Required? | Default | Description |
         | :--------------------- | :-------- | :------ | ----------- |
         | `ICECAST_URL`          | Yes       |         | Icecast URL |
-    </TabItem>
-    <TabItem value="file" label="File">
-        <details>
-
-            <summary>Example</summary>
-
-            <CodeBlock title="CONFIG_DIR/icecast.json" language="json5">{IcecastConfig}</CodeBlock>
-
-        </details>
-
-        or <SchemaLink lower objectName="IcecastSourceConfig"/>
-    </TabItem>
-    <TabItem value="aio" label="AIO">
-        <details>
-
-            <summary>Example</summary>
-
-            <AIOExample data={IcecastConfig} name="icecast"/>
-
-        </details>
-
-        or <SchemaLink lower objectName="IcecastSourceConfig"/>                                                
-    </TabItem>
-</Tabs>
+</Config>

@@ -9,11 +9,9 @@ import {
     CALCULATED_PLAYER_STATUSES,
     InternalConfig, PlayerStateDataMaybePlay,
     PlayPlatformId,
-    ProgressAwarePlayObject,
-    SourceType
-} from "../common/infrastructure/Atomic.js";
+    ProgressAwarePlayObject} from "../common/infrastructure/Atomic.js";
+import { SourceType, SourceConfig } from '../common/infrastructure/config/source/sources.js';
 import { PollingOptions } from "../common/infrastructure/config/common.js";
-import { SourceConfig } from "../common/infrastructure/config/source/sources.js";
 import {
     formatNumber,
     genGroupId,

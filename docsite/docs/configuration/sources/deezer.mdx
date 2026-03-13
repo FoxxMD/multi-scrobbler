@@ -44,28 +44,6 @@ import DeezerDeprecatedConfig from '!!raw-loader!@site/../config/deezer-deprecat
             </TabItem>
         </Tabs>
 
-        ## Configuration
-
-        <Tabs groupId="configType" queryString>
-            <TabItem value="env" label="ENV">
-                | Environmental Variable | Required? | Default | Description                                      |
-                | :--------------------- | --------- | ------- | ------------------------------------------------ |
-                | `DEEZER_ARL`           | Yes       |         | The ARL cookie value retrieved from your browser |
-            </TabItem>
-            <TabItem value="file" label="File">
-
-                <CodeBlock title="CONFIG_DIR/deezer.json" language="json5">{DeezerConfig}</CodeBlock>
-
-                or <SchemaLink lower objectName="DeezerSourceConfig"/>
-            </TabItem>
-            <TabItem value="aio" label="AIO">
-
-                <AIOExample data={DeezerConfig} name="deezer"/>
-
-                or <SchemaLink lower objectName="DeezerSourceConfig"/>
-            </TabItem>
-        </Tabs>
-
         ### Duplicate detection
 
         Third party integrations with Deezer (Sonos) may cause Deezer to [report the same track many times in listening history.](https://github.com/FoxxMD/multi-scrobbler/pull/296#issuecomment-2922374738) If you experience this issue modify your Deezer Source config (file-based only) to include the option `"fuzzyDiscoveryIgnore": "aggressive"`
@@ -153,7 +131,13 @@ import DeezerDeprecatedConfig from '!!raw-loader!@site/../config/deezer-deprecat
         :::
         </details>
 
+        ## Configuration
 
+        <Config config="DeezerCompatConfig" fileContent={DeezerConfig} name="deezer">
+                | Environmental Variable | Required? | Default | Description                                      |
+                | :--------------------- | --------- | ------- | ------------------------------------------------ |
+                | `DEEZER_ARL`           | Yes       |         | The ARL cookie value retrieved from your browser |
+        </Config>
 
     </TabItem>
     <TabItem value="official" label="Official API">
