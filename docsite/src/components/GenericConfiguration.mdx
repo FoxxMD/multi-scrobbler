@@ -5,6 +5,7 @@ import ExplorerFetch from '@site/src/components/Schema/ExplorerFetch';
 import EditorFetch from '@site/src/components/Schema/SchemaEditorFetch';
 import './GenericConfiguration.scss';
 import FileConfigExample from './FileConfigExample';
+import {useWindowSize} from '@docusaurus/theme-common';
 
 <Tabs groupId="configType" queryString>
     <TabItem value="env" label="ENV">
@@ -26,7 +27,8 @@ import FileConfigExample from './FileConfigExample';
             </DetailsAdmo>
                 <ExplorerFetch name={`schemas/${props.config}`} />
             </div>
-            <div className="fileEditor" style={{ flexBasis: 'auto', flexGrow: 3 }}>
+            <div style={{ flexBasis: 'auto', flexGrow: 3 }}>
+            <div className="fileEditor">
             <DetailsAdmo type="note" summary="Config Example">
                 This displays an **example config file** of a <strong children={props.name}/> <span children={props.client ? 'Client' : 'Source'}/> [File Configuration](/configuration?configType=aio#configuration-types) that adheres to the shown **Config Structure**.
 
@@ -37,11 +39,20 @@ import FileConfigExample from './FileConfigExample';
 
                 After you finish editing, switch to **text** and then copy all text to get a completed config.
             </DetailsAdmo>
+            </div>
+            <div className="fileEditorMobile">
+                <DetailsAdmo type="warning" summary="Config Example Mobile Experience">
+                    This displays an **example config file** of a <strong children={props.name}/> <span children={props.client ? 'Client' : 'Source'}/> [File Configuration](/configuration?configType=aio#configuration-types) that adheres to the shown **Config Structure**.
+
+                    The example config file editor is meant for a larger screen experience so **only the read-only example is shown.** Please use this site on a tablet/laptop/desktop to enable file editor features.
+                </DetailsAdmo>
+            </div>
             <FileConfigExample 
                 filePathName={`CONFIG/${props.name}.json`}
                 configureAs={props.client ? 'client' : 'source'} 
                 data={props.fileContent}
                 schemaName={props.config}
+                readOnlyAtWidth={500}
              />
             </div>
         </div>
@@ -63,7 +74,8 @@ import FileConfigExample from './FileConfigExample';
             </DetailsAdmo>
                 <ExplorerFetch name={`schemas/aio`} />
             </div>
-             <div className="fileEditor" style={{ flexBasis: 'auto', flexGrow: 3 }}>
+             <div style={{ flexBasis: 'auto', flexGrow: 3 }}>
+             <div className="fileEditor">
                 <DetailsAdmo type="note" summary="Config Example">
                     This displays an **example config file** of a [all-in-one (`config.json`) configuration](/configuration?configType=aio#configuration-types) that includes a <strong children={props.name}/> <span children={props.client ? 'Client' : 'Source'}/> that adheres to the shown **Config Structure**.
 
@@ -74,12 +86,21 @@ import FileConfigExample from './FileConfigExample';
 
                     After you finish editing, switch to **text** and then copy all text to get a completed config.
                 </DetailsAdmo>
+            </div>
+            <div className="fileEditorMobile">
+                <DetailsAdmo type="warning" summary="Config Example Mobile Experience">
+                    This displays an **example config file** of a [all-in-one (`config.json`) configuration](/configuration?configType=aio#configuration-types) that includes a <strong children={props.name}/> <span children={props.client ? 'Client' : 'Source'}/> that adheres to the shown **Config Structure**.
+                
+                    The example config file editor is meant for a larger screen experience so **only the read-only example is shown.** Please use this site on a tablet/laptop/desktop to enable file editor features.
+                </DetailsAdmo>
+            </div>
                 <FileConfigExample 
                     filePathName={`CONFIG/config.json`}
                     configureAs={props.client ? 'client' : 'source'} 
                     data={props.fileContent}
                     schemaName="aio"
                     name={props.name}
+                    readOnlyAtWidth={500}
                     aio
                 />
             </div>

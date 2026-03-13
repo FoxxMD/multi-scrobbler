@@ -7,6 +7,7 @@ import { Simulate } from "react-dom/test-utils";
 import { useTypedLocalStorage } from "./useLocalStorage";
 import ButtonGroup from "./ButtonGroup";
 import EditorFetch from '@site/src/components/Schema/SchemaEditorFetch';
+import {useWindowSize} from '@docusaurus/theme-common';
 
 export interface FileProps extends Omit<CodeBlockProps, 'children'> {
     data: string | object
@@ -14,6 +15,7 @@ export interface FileProps extends Omit<CodeBlockProps, 'children'> {
     schemaName?: string
     interactive?: boolean
     defaultDisplay?: 'plain' | 'interactive'
+    readOnlyAtWidth?: number
 }
 
 const FileExample = (props: FileProps) => {
@@ -23,14 +25,19 @@ const FileExample = (props: FileProps) => {
         defaultDisplay = 'interactive',
         schemaName,
         filePathName,
+        readOnlyAtWidth = 1,
         ...rest
     } = props;
 
     const [fileExampleShow, setFileExampleShow] = useTypedLocalStorage('docusaurus.tab.fileExampleShow', defaultDisplay, false);
 
+    const windowSize = useWindowSize({desktopBreakpoint: readOnlyAtWidth});
+
     let displaySwitch = null;
 
-    if (interactive) {
+    const isInteractive = interactive && windowSize === 'desktop'
+
+    if (isInteractive) {
         displaySwitch = (
             <ButtonGroup
                 options={[['plain', 'Plain'], ['interactive', 'Interactive']]}
@@ -44,12 +51,12 @@ const FileExample = (props: FileProps) => {
     }
 
     let fileNameContent = null;
-    if(filePathName !== undefined && (!interactive || fileExampleShow === 'interactive')) {
+    if(filePathName !== undefined && (isInteractive && fileExampleShow === 'interactive')) {
         fileNameContent = <code style={{float: 'right', paddingRight: '0.5em', paddingLeft: '0.5em'}}>{filePathName}</code>
     }
 
     let header = null;
-    if(displaySwitch !== null || filePathName !== null) {
+    if(displaySwitch !== null || fileNameContent !== null) {
         header = (
         <div style={{marginBottom: '1em'}}>
             {displaySwitch}{fileNameContent}
@@ -58,7 +65,7 @@ const FileExample = (props: FileProps) => {
     }
 
     const codeBlockContent = useMemo(() =>{
-        if(interactive && fileExampleShow === 'interactive') {
+        if(isInteractive && fileExampleShow === 'interactive') {
             return null;
         }
         if(typeof data !== 'string') {
@@ -69,8 +76,8 @@ const FileExample = (props: FileProps) => {
 
     return (<Fragment>
         {header}
-        {!interactive || fileExampleShow === 'plain' ? <CodeBlock title={filePathName} language="json5">{codeBlockContent}</CodeBlock> : null}
-        {interactive && fileExampleShow === 'interactive' ? <EditorFetch configContent={data} schemaName={schemaName}/> : null}
+        {!isInteractive || fileExampleShow === 'plain' ? <CodeBlock title={filePathName} language="json5">{codeBlockContent}</CodeBlock> : null}
+        {isInteractive && fileExampleShow === 'interactive' ? <EditorFetch configContent={data} schemaName={schemaName}/> : null}
         </Fragment>
     );
 }

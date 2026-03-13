@@ -1,6 +1,7 @@
 import React, {useEffect, useState} from "react"
 import BrowserOnly from "@docusaurus/BrowserOnly"
-import {useColorMode} from '@docusaurus/theme-common';
+import {useColorMode, useWindowSize} from '@docusaurus/theme-common';
+import CodeBlock from '@theme/CodeBlock';
 
 import Schema from "@site/static/schemas/aio.json";
 import ConfigExample from "@site/static/configExample.json";
@@ -33,6 +34,7 @@ function PlaygroundInner(): JSX.Element {
     // colorModeChoice, // the color mode chosen by the user, can be null
     // setColorMode, // set the color mode chosen by the user
   } = useColorMode();
+  const windowSize = useWindowSize({desktopBreakpoint: 500});
 
     const [data, setData] = useState<Content>({json: ConfigExample });
 
@@ -45,17 +47,18 @@ function PlaygroundInner(): JSX.Element {
                     <p>Use this to understand how to write a valid config.</p>
                 </DetailsAdmo>
                 <JsonSchemaViewer
-  name="Todos Model"
-  schema={Schema}
-  expanded={false}
-  hideTopBar={false}
-  renderRootTreeLines={true}
-  emptyText="No schema defined"
-  defaultExpandedDepth={0}
-  markup
-/>
+                name="Todos Model"
+                schema={Schema}
+                expanded={false}
+                hideTopBar={false}
+                renderRootTreeLines={true}
+                emptyText="No schema defined"
+                defaultExpandedDepth={0}
+                markup
+                />
                 </div>
-                <div className="fileEditor2" style={{ flexBasis: 'auto', flexGrow: 3 }}>
+                <div style={{ flexBasis: 'auto', flexGrow: 3 }}>
+                    <div className="fileEditor2">
                     <DetailsAdmo type="note" summary="Config Example">
                     <p>
                         This displays an <strong>example config file</strong> of a <a href="/configuration?configType=aio#configuration-types">all-in-one (<code>config.json</code>) configuration</a>  that adheres to the shown <strong>Config Structure.</strong>
@@ -74,15 +77,29 @@ function PlaygroundInner(): JSX.Element {
 
                     <p>After you finish editing, switch to <strong>text</strong> and then copy all text to get a completed config.</p>
                 </DetailsAdmo>
-    <ReactJsonEditor 
+                </div>
+                <div className="fileEditorMobile2">
+                <DetailsAdmo type="warning" summary="Config Example Mobile Experience">
+                    <p>
+                        This displays an <strong>example config file</strong> of a <a href="/configuration?configType=aio#configuration-types">all-in-one (<code>config.json</code>) configuration</a>  that adheres to the shown <strong>Config Structure.</strong>
+                    </p>
+                    <p>
+                        The example config file editor is meant for a larger screen experience so <strong>only the read-only example is shown.</strong> Please use this site on a tablet/laptop/desktop to enable file editor features.
+                    </p>
+                </DetailsAdmo>
+                </div>
+                {windowSize === 'mobile' ? (<CodeBlock title={`CONFIG/config.json`} language="json5">{JSON.stringify(data, null, 2)}</CodeBlock>) : (
+                        <ReactJsonEditor 
     validator={validator} 
     theme={colorMode} 
     content={data}
+    mode="text"
     style={{height: 'initial'}}
      />
-               
+                )}
                 </div>
             </div>
+            
     )
 }
 
