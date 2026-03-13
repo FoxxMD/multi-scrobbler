@@ -58,6 +58,7 @@ function SchemaEditorInner(props: SchemaEditorProps): JSX.Element {
             <ReactJsonEditor
                 validator={validator}
                 theme={colorMode}
+                mode="text"
                 content={initialData}
                 style={{height: 'initial'}}
             />

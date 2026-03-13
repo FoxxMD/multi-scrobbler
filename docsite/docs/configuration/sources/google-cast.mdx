@@ -144,8 +144,7 @@ To diagnose bad/incomplete track information or strange MS player behavior pleas
 
 ## Configuration
 
-<Tabs groupId="configType" queryString>
-    <TabItem value="env" label="ENV">
+<Config config="ChromecastSourceConfig" fileContent={ChromecastConfig} name="chromecast">
         :::note
         [Manually configuring cast device connections](#connecting-devices) is only available through file-based config.
         :::
@@ -157,28 +156,4 @@ To diagnose bad/incomplete track information or strange MS player behavior pleas
         | CC_BLACKLIST_DEVICES   | No        |         | Do not scrobble from these Cast devices. Comma-delimited list                        |
         | CC_WHITELIST_APPS      | No        |         | Only scrobble from these casted Apps. Comma-delimited list. EX spotify, pandora      |
         | CC_BLACKLIST_APPS      | No        |         | Do not scrobble from these casted Apps. Comma-delimited list                         |
-    </TabItem>
-    <TabItem value="file" label="File">
-
-        <details>
-
-            <summary>Example</summary>
-
-            <CodeBlock title="CONFIG_DIR/chromecast.json" language="json5">{ChromecastConfig}</CodeBlock>
-
-        </details>
-
-        or <SchemaLink lower objectName="ChromecastSourceConfig"/>
-    </TabItem>
-    <TabItem value="aio" label="AIO">
-        <details>
-
-            <summary>Example</summary>
-
-            <AIOExample data={ChromecastConfig} name="chromecast"/>
-
-        </details>
-
-        or <SchemaLink lower objectName="ChromecastSourceConfig"/>
-    </TabItem>
-</Tabs>
+</Config>
