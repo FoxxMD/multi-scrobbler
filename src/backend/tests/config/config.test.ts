@@ -9,7 +9,8 @@ import ScrobbleClients from '../../scrobblers/ScrobbleClients.js';
 import ScrobbleSources from '../../sources/ScrobbleSources.js';
 import EventEmitter from "events";
 import {loggerTest, loggerDebug} from '@foxxmd/logging';
-import { clientTypes, SourceType, sourceTypes } from '../../common/infrastructure/Atomic.js';
+import { clientTypes } from '../../common/infrastructure/config/client/clients.js';
+import { sourceTypes } from '../../common/infrastructure/config/source/sources.js';
 import { Notifiers } from '../../notifier/Notifiers.js';
 import { difference, intersect } from '../../utils.js';
 

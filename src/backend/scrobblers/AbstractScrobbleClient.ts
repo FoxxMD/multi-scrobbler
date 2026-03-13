@@ -22,7 +22,6 @@ import {
     ARTIST_WEIGHT,
     Authenticatable,
     CALCULATED_PLAYER_STATUSES,
-    ClientType,
     DEFAULT_RETRY_MULTIPLIER,
     DUP_SCORE_THRESHOLD,
     FormatPlayObjectOptions,
@@ -34,6 +33,7 @@ import {
     TimeRangeListensFetcher,
     TITLE_WEIGHT,
 } from "../common/infrastructure/Atomic.js";
+import { ClientType } from '../common/infrastructure/config/client/clients.js';
 import { CommonClientConfig, NowPlayingOptions, UpstreamRefreshOptions } from "../common/infrastructure/config/client/index.js";
 import { TRANSFORM_HOOK } from "../common/infrastructure/Transform.js";
 import { Notifiers } from "../notifier/Notifiers.js";

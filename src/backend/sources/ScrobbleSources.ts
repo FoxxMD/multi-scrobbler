@@ -1,7 +1,10 @@
 /* eslint-disable no-case-declarations */
 import { childLogger, Logger } from '@foxxmd/logging';
 import EventEmitter from "events";
-import { ConfigMeta, InternalConfig, InternalConfigOptional, isSourceType, SourceType, sourceTypes } from "../common/infrastructure/Atomic.js";
+import { ConfigMeta, InternalConfig, InternalConfigOptional } from "../common/infrastructure/Atomic.js";
+import { isSourceType } from '../common/infrastructure/config/source/sources.js';
+import { sourceTypes } from '../common/infrastructure/config/source/sources.js';
+import { SourceType } from '../common/infrastructure/config/source/sources.js';
 import { AIOConfig, SourceDefaults } from "../common/infrastructure/config/aioConfig.js";
 import { AzuracastData, AzuracastSourceConfig } from "../common/infrastructure/config/source/azuracast.js";
 import { ChromecastSourceConfig } from "../common/infrastructure/config/source/chromecast.js";

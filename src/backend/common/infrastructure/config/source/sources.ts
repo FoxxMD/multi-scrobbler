@@ -89,3 +89,101 @@ export type SourceAIOConfig =
     | TealSourceAIOConfig
     | RockskySourceAIOConfig
     | SonosSourceAIOConfig;
+
+export type SourceType =
+    'spotify'
+    | 'plex'
+    | 'subsonic'
+    | 'jellyfin'
+    | 'lastfm'
+    | 'librefm'
+    | 'deezer'
+    | 'endpointlz'
+    | 'endpointlfm'
+    | 'ytmusic'
+    | 'mpris'
+    | 'mopidy'
+    | 'musiccast'
+    | 'listenbrainz'
+    | 'jriver'
+    | 'kodi'
+    | 'webscrobbler'
+    | 'chromecast'
+    | 'maloja'
+    | 'musikcube'
+    | 'mpd'
+    | 'vlc'
+    | 'icecast'
+    | 'azuracast'
+    | 'koito'
+    | 'tealfm'
+    | 'rocksky'
+    | 'sonos';
+    
+export const sourceTypes: SourceType[] = [
+    'spotify',
+    'plex',
+    'subsonic',
+    'jellyfin',
+    'lastfm',
+    'librefm',
+    'deezer',
+    'endpointlz',
+    'endpointlfm',
+    'ytmusic',
+    'mpris',
+    'mopidy',
+    'musiccast',
+    'listenbrainz',
+    'jriver',
+    'kodi',
+    'webscrobbler',
+    'chromecast',
+    'maloja',
+    'musikcube',
+    'mpd',
+    'vlc',
+    'icecast',
+    'azuracast',
+    'koito',
+    'tealfm',
+    'rocksky',
+    'sonos'
+];
+
+export const sourceInterfaces = [
+    'AIOSourceRelaxedConfig',
+    'SpotifySourceConfig',
+    'PlexCompatConfig',
+    'DeezerCompatConfig',
+    'ListenbrainzEndpointSourceConfig',
+    'LastFMEndpointSourceConfig',
+    'IcecastSourceConfig',
+    'SubSonicSourceConfig',
+    'JellyfinCompatConfig',
+    'LastfmSourceConfig',
+    'LibrefmSourceConfig',
+    'YTMusicSourceConfig',
+    'MalojaSourceConfig',
+    'MPRISSourceConfig',
+    'MopidySourceConfig',
+    'ListenBrainzSourceConfig',
+    'JRiverSourceConfig',
+    'KodiSourceConfig',
+    'ChromecastSourceConfig',
+    'WebScrobblerSourceConfig',
+    'MusikcubeSourceConfig',
+    'MusicCastSourceConfig',
+    'MPDSourceConfig',
+    'VLCSourceConfig',
+    'AzuracastSourceConfig',
+    'KoitoSourceConfig',
+    'TealSourceConfig',
+    'RockskySourceConfig',
+    'SonosSourceConfig'
+];
+
+export const isSourceType = (data: string): data is SourceType => {
+    return sourceTypes.includes(data as SourceType);
+};
+

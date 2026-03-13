@@ -7,6 +7,53 @@ import { RockSkyClientAIOConfig, RockSkyClientConfig } from "./rocksky.js";
 import { LibrefmClientConfig, LibrefmClientAIOConfig } from "./librefm.js";
 import { DiscordClientAIOConfig, DiscordClientConfig } from "./discord.js";
 
-export type ClientConfig = MalojaClientConfig | LastfmClientConfig | LibrefmClientConfig | ListenBrainzClientConfig | KoitoClientConfig | TealClientConfig | RockSkyClientConfig | DiscordClientConfig;
+export type ClientConfig = MalojaClientConfig 
+| LastfmClientConfig 
+| LibrefmClientConfig 
+| ListenBrainzClientConfig 
+| KoitoClientConfig 
+| TealClientConfig 
+| RockSkyClientConfig 
+| DiscordClientConfig;
 
-export type ClientAIOConfig = MalojaClientAIOConfig | LastfmClientAIOConfig | LibrefmClientAIOConfig | ListenBrainzClientAIOConfig | KoitoClientAIOConfig | TealClientAIOConfig | RockSkyClientAIOConfig | DiscordClientAIOConfig;
+export type ClientAIOConfig = MalojaClientAIOConfig 
+| LastfmClientAIOConfig 
+| LibrefmClientAIOConfig 
+| ListenBrainzClientAIOConfig 
+| KoitoClientAIOConfig 
+| TealClientAIOConfig 
+| RockSkyClientAIOConfig 
+| DiscordClientAIOConfig;
+
+export const clientInterfaces = [
+    'AIOClientRelaxedConfig',
+    'MalojaClientConfig',
+    'LastfmClientConfig',
+    'LibrefmClientConfig',
+    'ListenBrainzClientConfig',
+    'KoitoClientConfig',
+    'TealClientConfig',
+    'RockSkyClientConfig',
+    'DiscordClientConfig'
+];
+
+export type ClientType =
+    'maloja'
+    | 'lastfm'
+    | 'librefm'
+    | 'listenbrainz'
+    | 'koito'
+    | 'tealfm'
+    | 'rocksky'
+    | 'discord';
+    
+export const clientTypes: ClientType[] = [
+    'maloja',
+    'lastfm',
+    'librefm',
+    'listenbrainz',
+    'koito',
+    'tealfm',
+    'rocksky',
+    'discord'
+];

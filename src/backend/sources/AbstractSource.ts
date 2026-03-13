@@ -2,7 +2,7 @@ import { childLogger, LogDataPretty, LogLevel } from '@foxxmd/logging';
 import dayjs, { Dayjs } from "dayjs";
 import { EventEmitter } from "events";
 import { FixedSizeList } from "fixed-size-list";
-import { PlayObject, TA_CLOSE, TA_DEFAULT_ACCURACY } from "../../core/Atomic.js";
+import { PlayObject } from "../../core/Atomic.js";
 import { buildTrackString, capitalize, truncateStringToLength } from "../../core/StringUtils.js";
 import AbstractComponent from "../common/AbstractComponent.js";
 import {
@@ -18,9 +18,8 @@ import {
     PlayUserId,
     ProgressAwarePlayObject,
     SINGLE_USER_PLATFORM_ID,
-    SourceType,
 } from "../common/infrastructure/Atomic.js";
-import { SourceConfig } from "../common/infrastructure/config/source/sources.js";
+import { SourceType, SourceConfig } from '../common/infrastructure/config/source/sources.js';
 import { TRANSFORM_HOOK } from "../common/infrastructure/Transform.js";
 import TupleMap from "../common/TupleMap.js";
 import {
