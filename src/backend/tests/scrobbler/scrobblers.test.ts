@@ -600,7 +600,6 @@ describe('Upstream Scrobbles', function() {
 describe('Dead Scrobbles', function() {
 
     it('Processes all dead scrobbles', async function () {
-
         testScrobbler = generateTestScrobbler();
         await testScrobbler.initialize();
         testScrobbler.testRecentScrobbles = [];
@@ -610,6 +609,7 @@ describe('Dead Scrobbles', function() {
             testScrobbler.addDeadLetterScrobble({source: 'test', play: dead, id: nanoid()});
         }
         await testScrobbler.processDeadLetterQueue();
+        await testScrobbler.tryStopScrobbling()
         expect(testScrobbler.deadLetterScrobbles.length).eq(0);
     });
 

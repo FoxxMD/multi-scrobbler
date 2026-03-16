@@ -779,6 +779,7 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
             if (scrobbled) {
                 removedIds.push(deadScrobble.id);
             }
+            await sleep(this.scrobbleSleep);
         }
         if (removedIds.length > 0) {
             this.deadLogger.info(`Removed ${removedIds.length} scrobbles from dead letter queue`);
@@ -817,8 +818,6 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
                 this.updateDeadLetterCache();
                 this.emitEvent('updateDeadLetter', {dead: deadScrobble});
                 return [false, deadScrobble];
-            } finally {
-                await sleep(1000);
             }
         }
         const {summary, ...matchResult} = await this.existingScrobble(deadScrobble.play, historicalPlays);
@@ -860,8 +859,6 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
                 this.updateDeadLetterCache();
                 this.emitEvent('updateDeadLetter', {dead: deadScrobble});
                 return [false, deadScrobble];
-            } finally {
-                await sleep(1000);
             }
         } else {
             this.deadLogger.verbose(`Looks like ${buildTrackString(deadScrobble.play)} was already scrobbled!\n${summary}`);
