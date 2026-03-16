@@ -99,8 +99,8 @@ export interface CommonClientOptions extends RequestRetryOptions, UpstreamRefres
     /**
      * Number of times MS should automatically retry scrobbles in dead letter queue
      *
-     * @default 1
-     * @examples [1]
+     * @default 3
+     * @examples [3]
      * */
     deadLetterRetries?: number
 

@@ -753,7 +753,7 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
 
         const {
             options: {
-                deadLetterRetries = 1
+                deadLetterRetries = 3
             } = {}
         } = this.config;
 
