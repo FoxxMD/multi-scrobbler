@@ -815,6 +815,7 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
                 deadScrobble.lastRetry = dayjs();
                 this.deadLetterScrobbles[deadScrobbleIndex] = deadScrobble;
                 this.updateDeadLetterCache();
+                this.emitEvent('updateDeadLetter', {dead: deadScrobble});
                 return [false, deadScrobble];
             } finally {
                 await sleep(1000);
@@ -857,6 +858,7 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
                 this.deadLogger.error(new Error(`${id} - Could not scrobble ${buildTrackString(transformedScrobble)} from Source '${deadScrobble.source}' due to error`, {cause: e}));
                 this.deadLetterScrobbles[deadScrobbleIndex] = deadScrobble;
                 this.updateDeadLetterCache();
+                this.emitEvent('updateDeadLetter', {dead: deadScrobble});
                 return [false, deadScrobble];
             } finally {
                 await sleep(1000);
@@ -873,11 +875,13 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
         const index = this.deadLetterScrobbles.findIndex(x => x.id === id);
         if (index === -1) {
             this.deadLogger.warn(`No scrobble found with ID ${id}`);
+            return;
         }
         this.deadLogger.info({labels: id}, `Removed scrobble ${buildTrackString(this.deadLetterScrobbles[index].play)} from queue`);
         this.deadLetterScrobbles.splice(index, 1);
         this.deadLetterGauge.labels(this.getPrometheusLabels()).set(this.deadLetterScrobbles.length);
         this.updateDeadLetterCache();
+        this.emitEvent('removeDeadLetter', { dead: { id } });
     }
 
     removeDeadLetterScrobbles = () => {

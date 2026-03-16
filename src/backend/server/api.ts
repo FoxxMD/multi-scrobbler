@@ -331,11 +331,9 @@ export const setupApi = (app: ExpressWithAsync, logger: Logger, appLoggerStream:
 
         (client as AbstractScrobbleClient).logger.verbose('User requested processing of all dead letter scrobbles via API');
 
+        res.status(200).send('OK');
+
         await ((client as AbstractScrobbleClient).processDeadLetterQueue(1000));
-
-        const result: DeadLetterScrobble<PlayObject>[] = (client as AbstractScrobbleClient).deadLetterScrobbles;
-
-        return res.json(result);
     });
 
     app.putAsync('/api/dead/:id', clientMiddleFunc(true), async (req, res, next) => {
