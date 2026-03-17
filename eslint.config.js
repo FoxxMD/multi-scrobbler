@@ -1,3 +1,6 @@
+// For more info, see https://github.com/storybookjs/eslint-plugin-storybook#configuration-flat-config-format
+import storybook from "eslint-plugin-storybook";
+
 // @ts-check
 
 import eslint from '@eslint/js';
@@ -33,4 +36,4 @@ export default tsEslint.config({
         "arrow-body-style": ["warn", "as-needed"],
         "@typescript-eslint/no-explicit-any": "warn"
     }
-});
+}, storybook.configs["flat/recommended"]);
