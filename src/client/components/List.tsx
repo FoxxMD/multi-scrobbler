@@ -1,51 +1,89 @@
-import { Accordion, For, Span, Stack, Text, Box, AbsoluteCenter, Button, Separator, HStack } from '@chakra-ui/react';
+import { Accordion, For, Span, Stack, Text, Box, AbsoluteCenter, Button, Separator, HStack, Flex, Badge, IconButton } from '@chakra-ui/react';
 import { JsonPlayObject } from '../../core/Atomic';
 import { ShortDateDisplay } from './DateDisplay';
-import { truncateStringToLength } from '../../core/StringUtils';
 import { TextMuted } from './TextMuted';
-
-const shortArtist = truncateStringToLength(20);
-
-const items = [
-  { value: 'a', title: 'First Item', text: 'Some value 1..' },
-  { value: 'b', title: 'Second Item', text: 'Some value 2...' },
-  { value: 'c', title: 'Third Item', text: 'Some value 3...' },
-];
-
-export interface ActivityLogProps {
-  plays: JsonPlayObject[]
+import { capitalize } from '../../core/StringUtils';
+import { ComponentProps } from "react"
+import { VscDebugRestart } from "react-icons/vsc";
+export interface PlayActivity {
+  play: JsonPlayObject
+  status: string
 }
-
-// shortArtist(item.data.artists.join(' / '))
+export interface ActivityLogProps {
+  data: PlayActivity[]
+}
 
 export const CList = (props: ActivityLogProps) => {
   return (
     <Stack gap="2">
-      <Text fontWeight="semibold">Today</Text>
+      <Box>
+        <Flex direction="row" justify="space-between">
+
+          <Text fontWeight="semibold">Today</Text>
+
+          <IconButton variant="ghost" size="xs" maxWidth="fit-content">
+            <VscDebugRestart />
+          </IconButton>
+        </Flex>
+        <Separator orientation="horizontal" height="4" />
+      </Box>
       <Accordion.Root variant="enclosed" collapsible>
-        {props.plays.map((item, index) => (
-          <Accordion.Item key={index} value={index.toString()}>
-            <Box position="relative">
-              <Accordion.ItemTrigger>
-                <Accordion.ItemIndicator />
-                <Stack gap="1">
-                  <Span flex="1">{item.data.track}</Span>
-                  <TextMuted overflow="hidden" textOverflow="ellipsis">{item.data.artists.join(' / ')}</TextMuted>
-                  <HStack gap="1"><ShortDateDisplay date={item.data.playDate} prefix="Played"/><Separator orientation="vertical" height="4" /><TextMuted>{item.meta?.source}</TextMuted></HStack>
+        {props.data.map((activity, index) => {
+          const { play } = activity;
+          return (
+            <Accordion.Item key={index} value={index.toString()}>
+              <Flex justify="space-between">
+                <Accordion.ItemTrigger truncate cursor="pointer">
+                  <Accordion.ItemIndicator />
+                  <Stack gap="1" truncate>
+                    <Span>{play.data.track}</Span>
+                    <TextMuted truncate>{play.data.artists.join(' / ')}</TextMuted>
+                    <HStack gap="1">
+                      <ShortDateDisplay date={play.data.playDate} prefix="Played" /><Separator orientation="vertical" height="4" />
+                      <TextMuted>{play.meta?.source}</TextMuted>
+                    </HStack>
+                  </Stack>
+                </Accordion.ItemTrigger>
+                <Stack style={{
+                  paddingBlock: "var(--accordion-padding-y)",
+                  paddingInline: "var(--accordion-padding-x)"
+                }} justify="flex-start" alignItems="flex-end">
+                  <StatusBadge maxWidth="fit-content" data={activity} />
+                  {activity.status === 'error' ? <IconButton variant="ghost" size="xs" maxWidth="fit-content">
+                    <VscDebugRestart />
+                  </IconButton> : null}
                 </Stack>
-              </Accordion.ItemTrigger>
-              <AbsoluteCenter axis="vertical" insetEnd="0" padding="1em">
-                <Button variant="subtle" size="xs">
-                  Retry
-                </Button>
-              </AbsoluteCenter>
-            </Box>
-            <Accordion.ItemContent>
-              <Accordion.ItemBody borderTopColor="gray.border" borderTopWidth="1px">{item.data.track}</Accordion.ItemBody>
-            </Accordion.ItemContent>
-          </Accordion.Item>
-        ))}
+
+              </Flex>
+              <Accordion.ItemContent>
+                <Accordion.ItemBody borderTopColor="gray.border" borderTopWidth="1px">{play.data.track}</Accordion.ItemBody>
+              </Accordion.ItemContent>
+            </Accordion.Item>
+          )
+        })}
       </Accordion.Root>
     </Stack>
   );
+}
+
+const StatusBadge = (props: ComponentProps<typeof Badge> & { data: PlayActivity }) => {
+
+  const { data, ...rest } = props;
+
+  let badgeColor = undefined,
+    badgeText = capitalize(data.status);
+
+  switch (data.status) {
+    case 'queued':
+      badgeColor = 'gray';
+      break;
+    case 'scrobbled':
+      badgeColor = 'green';
+      break;
+    case 'error':
+      badgeColor = 'red';
+      break;
+  }
+
+  return <Badge variant="surface" colorPalette={badgeColor} {...rest}>{badgeText}</Badge>
 }

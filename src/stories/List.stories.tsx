@@ -20,7 +20,7 @@ const meta = preview.meta({
   tags: ['autodocs'],
   // More on argTypes: https://storybook.js.org/docs/api/argtypes
   args: {
-     plays: generateJsonPlays(2, undefined, {source: 'Spotify'}),
+     data: (generateJsonPlays(3, undefined, {source: 'Spotify'})).map((x, index) => ({play: x, status: index === 0 ? 'queued' : index === 1 ? 'scrobbled' : index === 2 ? 'error' : 'unknown'})),
   },
 decorators: [
     (Story) => (<Provider><Story/></Provider>),
