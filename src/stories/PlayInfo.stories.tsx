@@ -4,11 +4,14 @@ import React from 'react';
 import { fn } from 'storybook/test';
 import { PlayInfo } from "../client/components/PlayInfo";
 import {Provider} from "../client/components/Provider";
-import { generateJsonPlay, generatePlay } from "../backend/tests/utils/PlayTestUtils"
+import { generateArtists, generateJsonPlay, generatePlay } from "../backend/tests/utils/PlayTestUtils"
 import clone from "clone";
 
+type PropsAndCustomArgs = React.ComponentProps<typeof PlayInfo> & {
+  includeAlbumArtists?: boolean;
+};
 // More on how to set up stories at: https://storybook.js.org/docs/writing-stories#default-export
-const meta = preview.meta({
+const meta = preview.type<{args: PropsAndCustomArgs}>().meta({
   title: 'Examples/PlayInfo',
   component: PlayInfo,
   parameters: {
@@ -19,7 +22,7 @@ const meta = preview.meta({
   tags: ['autodocs'],
 decorators: [
     (Story) => (<Provider><Story/></Provider>),
-  ]
+  ],
   // Use `fn` to spy on the onClick arg, which will appear in the actions panel once invoked: https://storybook.js.org/docs/essentials/actions#story-args
 });
 
@@ -32,7 +35,17 @@ final.data.track = `${final.data.track} (Album Version)`;
 export const PlayInfoStory = meta.story({
   args: {
     play: orig,
-    final
+    final,
+    includeAlbumArtists: false,
+    showCodeToggle: true
   },
-  //render: function Render(args) { return (<ChakraProvider><MyList></MyList></ChakraProvider>) }
+  render: function Render(args) {
+    
+    if(args.includeAlbumArtists && (args.play.data.albumArtists === undefined || args.play.data.albumArtists.length === 0)) {
+      const aa = generateArtists(undefined, 2);
+      args.play.data.albumArtists = aa;
+      args.final.data.albumArtists = aa;
+    }
+    return (<PlayInfo {...args}/>) 
+  }
 });

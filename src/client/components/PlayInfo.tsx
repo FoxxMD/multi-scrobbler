@@ -1,9 +1,11 @@
 import React, { Fragment, useMemo, useState } from 'react';
-import { EmptyState, DataList, HStack, Tag, Wrap, Box, Flex, SegmentGroup, Stack, Text, Separator } from "@chakra-ui/react"
+import { EmptyState, DataList, HStack, Tag, Wrap, Box, Flex, SegmentGroup, Stack, Text, Separator, IconButton } from "@chakra-ui/react"
+import { LuCode, LuText } from "react-icons/lu"
 import { JsonPlayObject } from '../../core/Atomic';
-import { ChakraClip } from './ChakraClipboard';
-import { shortTodayAwareFormat, todayAwareFormat } from '../../core/TimeUtils';
+import { shortTodayAwareFormat } from '../../core/TimeUtils';
 import dayjs from 'dayjs';
+import { ChakraCodeBlock } from './CodeBlock';
+import { safeStringify } from '../../core/StringUtils';
 
 const EmptyPlay = () => {
     return (
@@ -21,7 +23,7 @@ const EmptyPlay = () => {
 export interface PlayInfoProps {
     play?: JsonPlayObject
     final?: JsonPlayObject
-    showCopy?: boolean
+    showCodeToggle?: boolean
     showCompare?: boolean
     showDates?: false | 'all' | 'played' | 'seen'
 }
@@ -30,7 +32,7 @@ export const PlayInfo = (props?: PlayInfoProps) => {
     const {
         play,
         final,
-        showCopy = true,
+        showCodeToggle = true,
         showCompare = true,
         showDates = 'all'
     } = props ?? {};
@@ -40,6 +42,7 @@ export const PlayInfo = (props?: PlayInfoProps) => {
     }
 
     const [compareVal, setCompareVal] = useState('Original')
+    const [codeMode, setCodeMode] = useState(false);
 
     const displayedPlay = compareVal === 'Original' ? play : final;
 
@@ -48,14 +51,18 @@ export const PlayInfo = (props?: PlayInfoProps) => {
 
     if (showCompare && final !== undefined) {
         comparer = (
-            <SegmentGroup.Root size="xs" value={compareVal} onValueChange={(e) => setCompareVal(e.value)}>
+            <SegmentGroup.Root size="sm" value={compareVal} onValueChange={(e) => setCompareVal(e.value)}>
                 <SegmentGroup.Indicator />
                 <SegmentGroup.Items items={["Original", "Final"]} />
             </SegmentGroup.Root>
         );
     }
-    if (showCopy) {
-        copy = <ChakraClip value={displayedPlay} />;
+    if (showCodeToggle) {
+        copy = (
+            <IconButton variant="outline" size="xs" onClick={() => setCodeMode(!codeMode)}>
+                {codeMode ? <LuText /> : <LuCode />}
+            </IconButton>
+        );
     }
 
     const dates = useMemo(() => {
@@ -63,11 +70,11 @@ export const PlayInfo = (props?: PlayInfoProps) => {
         if (showDates !== false) {
             let playDate: JSX.Element,
                 seenDate: JSX.Element;
-            if (play.data.playDate !== undefined && ['all','played'].includes(showDates)) {
+            if (play.data.playDate !== undefined && ['all', 'played'].includes(showDates)) {
                 playDate = <Text textStyle="xs" color="fg.muted">{`Played ${shortTodayAwareFormat(dayjs(play.data.playDate))}`}</Text>
             }
             // TODO implement seenAt for play data
-            if (play.data.playDateCompleted !== undefined && ['all','seen'].includes(showDates)) {
+            if (play.data.playDateCompleted !== undefined && ['all', 'seen'].includes(showDates)) {
                 seenDate = <Text textStyle="xs" color="fg.muted">{`Seen ${shortTodayAwareFormat(dayjs(play.data.playDateCompleted))}`}</Text>
             }
             if (playDate !== undefined && seenDate !== undefined) {
@@ -112,30 +119,37 @@ export const PlayInfo = (props?: PlayInfoProps) => {
                 <Flex justify="flex-end">
                     <HStack>{comparer}{copy}</HStack>
                 </Flex>
-                <DataList.Root>
-                    <DataList.Item>
-                        <DataList.ItemLabel flexShrink="1">Title</DataList.ItemLabel>
-                        <DataList.ItemValue>{displayedPlay.data.track}</DataList.ItemValue>
-                    </DataList.Item>
-                    <DataList.Item>
-                        <DataList.ItemLabel>Artists</DataList.ItemLabel>
-                        <DataList.ItemValue>
-                            {artists.length === 0 ? <Text color="fg.muted">(No Artists)</Text> : 
-                            <HStack>{displayedPlay.data.artists.map((x, index) => {
-                                return (
-                                    <Tag.Root key={index}>
-                                        <Tag.Label>{x}</Tag.Label>
-                                    </Tag.Root>
-                                );
-                            })}</HStack> }
-                        </DataList.ItemValue>
-                    </DataList.Item>
-                    <DataList.Item>
-                        <DataList.ItemLabel>Album</DataList.ItemLabel>
-                        <DataList.ItemValue>{displayedPlay.data.album}</DataList.ItemValue>
-                    </DataList.Item>
-                </DataList.Root>
-                {dates}
+                {
+                    codeMode ? <ChakraCodeBlock code={safeStringify(displayedPlay)} /> : (
+                        <Fragment>
+                            <DataList.Root>
+                                <DataList.Item>
+                                    <DataList.ItemLabel flexShrink="1">Title</DataList.ItemLabel>
+                                    <DataList.ItemValue>{displayedPlay.data.track}</DataList.ItemValue>
+                                </DataList.Item>
+                                <DataList.Item>
+                                    <DataList.ItemLabel>Artists</DataList.ItemLabel>
+                                    <DataList.ItemValue>
+                                        {artists.length === 0 ? <Text color="fg.muted">(No Artists)</Text> :
+                                            <HStack>{displayedPlay.data.artists.map((x, index) => {
+                                                return (
+                                                    <Tag.Root key={index}>
+                                                        <Tag.Label>{x}</Tag.Label>
+                                                    </Tag.Root>
+                                                );
+                                            })}</HStack>}
+                                    </DataList.ItemValue>
+                                </DataList.Item>
+                                {albumArtistElm}
+                                <DataList.Item>
+                                    <DataList.ItemLabel>Album</DataList.ItemLabel>
+                                    <DataList.ItemValue>{displayedPlay.data.album}</DataList.ItemValue>
+                                </DataList.Item>
+                            </DataList.Root>
+                            {dates}
+                        </Fragment>
+                    )
+                }
             </Stack>
         </Fragment>
     )
