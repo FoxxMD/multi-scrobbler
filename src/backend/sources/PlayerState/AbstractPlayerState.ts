@@ -16,7 +16,8 @@ import { PollingOptions } from "../../common/infrastructure/config/common.js";
 import { formatNumber, genGroupIdStr, playObjDataMatch, progressBar } from "../../utils.js";
 import { ListenProgress } from "./ListenProgress.js";
 import { ListenRange, ListenRangePositional } from "./ListenRange.js";
-import { closeToPlayEnd, closeToPlayStart, repeatDurationPlayed, timeToHumanTimestamp, todayAwareFormat } from "../../utils/TimeUtils.js";
+import { closeToPlayEnd, closeToPlayStart, repeatDurationPlayed, timeToHumanTimestamp } from "../../utils/TimeUtils.js";
+import { todayAwareFormat } from "../../../core/TimeUtils.js";
 
 export interface PlayerStateIntervals {
     staleInterval?: number

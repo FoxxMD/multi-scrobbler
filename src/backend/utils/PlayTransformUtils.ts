@@ -1,7 +1,6 @@
 import { Logger, loggerTest } from "@foxxmd/logging";
 import { searchAndReplace as searchAndReplaceFunc, testMaybeRegex as testMaybeRegexFunc } from "@foxxmd/regex-buddy-core";
-import { ObjectPlayData, PlayLifecycle, PlayObject, PlayObjectLifecycleless } from "../../core/Atomic.js";
-import { buildTrackString } from "../../core/StringUtils.js";
+import { PlayLifecycle, PlayObject, PlayObjectLifecycleless } from "../../core/Atomic.js";
 
 import {
     ConditionalSearchAndReplaceRegExp,

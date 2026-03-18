@@ -570,3 +570,6 @@ export const KNOWN_MEDIA_PROVIDER_URLS = [
 export type UnixTimestamp = number;
 
 export type Writeable<T> = { -readonly [P in keyof T]: T[P] };
+
+export const SHORT_CALENDAR_NOTZ_FORMAT = 'MMM D HH:mm:ss';
+export const SHORT_TODAY_NOTZ_FORMAT = 'HH:mm:ss';

@@ -182,6 +182,16 @@ export const generatePlay = (data: ObjectPlayData = {}, meta: MarkOptional<PlayM
     }
 }
 
+export const generateJsonPlay = (...args: Parameters<typeof generatePlay>): JsonPlayObject => {
+    const play = generatePlay(...args);
+    return JSON.parse(JSON.stringify(play));
+}
+
+export const generateJsonPlays = (...args: Parameters<typeof generatePlays>): JsonPlayObject[] => {
+    const plays = generatePlays(...args);
+    return JSON.parse(JSON.stringify(plays));
+}
+
 export const withBrainz = (play: PlayObject, include: ('track' | 'artist' | 'album')[]): PlayObject => {
     for(const i of include) {
         switch(i) {

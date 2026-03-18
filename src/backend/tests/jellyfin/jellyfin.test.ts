@@ -5,7 +5,7 @@ import { describe, it } from 'mocha';
 import { JsonPlayObject, PlayMeta, PlayObject } from "../../../core/Atomic.js";
 
 import JellyfinApiSource from "../../sources/JellyfinApiSource.js";
-import validSession from './validSession.json';
+import validSession from './validSession.json' with { type: "json" };
 import { JellyApiData } from "../../common/infrastructure/config/source/jellyfin.js";
 import { generatePlay } from "../utils/PlayTestUtils.js";
 import { fakerJA } from "@faker-js/faker";

@@ -19,7 +19,7 @@ import {
 import AbstractSource, { RecentlyPlayedOptions } from "./AbstractSource.js";
 import { buildTrackString, truncateStringToLength } from "../../core/StringUtils.js";
 import { joinedUrl } from "../utils/NetworkUtils.js";
-import { todayAwareFormat } from "../utils/TimeUtils.js";
+import { todayAwareFormat } from "../../core/TimeUtils.js";
 import { parseArrayFromMaybeString, parseArtistCredits, parseCredits } from "../utils/StringUtils.js";
 import { baseFormatPlayObj } from "../utils/PlayTransformUtils.js";
 

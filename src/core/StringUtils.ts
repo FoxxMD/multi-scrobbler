@@ -288,3 +288,5 @@ export const arrayListAnd = (list: string[], joiner: string, finalJoiner: string
 
     return [start.join(joinerProper), end].join(finalProper);
 }
+
+export const safeStringify = (json: unknown) => JSON.stringify(json, null, 2);

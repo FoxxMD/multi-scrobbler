@@ -33,7 +33,8 @@ import {
     sortByNewestPlayDate,
     sortByOldestPlayDate,
 } from "../utils.js";
-import { timeToHumanTimestamp, todayAwareFormat } from "../utils/TimeUtils.js";
+import { timeToHumanTimestamp } from "../utils/TimeUtils.js";
+import { todayAwareFormat } from "../../core/TimeUtils.js";
 import { getRoot } from '../ioc.js';
 import { componentFileLogger } from '../common/logging.js';
 import { WebhookPayload } from '../common/infrastructure/config/health/webhooks.js';

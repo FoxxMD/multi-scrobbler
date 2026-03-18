@@ -19,7 +19,8 @@
   "include": [
     "*.stories.ts",
     "*.tsx",
-    "..src/client/**/*.tsx"
+    "..src/client/**/*.tsx",
+    "..src/backend/tests/**/*.ts"
   ],
   "exclude": [
     "node_modules"
