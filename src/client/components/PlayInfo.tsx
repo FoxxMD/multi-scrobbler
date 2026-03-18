@@ -51,7 +51,7 @@ export const PlayInfo = (props?: PlayInfoProps) => {
 
     if (showCompare && final !== undefined) {
         comparer = (
-            <SegmentGroup.Root size="sm" value={compareVal} onValueChange={(e) => setCompareVal(e.value)}>
+            <SegmentGroup.Root size="xs" value={compareVal} onValueChange={(e) => setCompareVal(e.value)}>
                 <SegmentGroup.Indicator />
                 <SegmentGroup.Items items={["Original", "Final"]} />
             </SegmentGroup.Root>

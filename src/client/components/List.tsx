@@ -5,6 +5,7 @@ import { TextMuted } from './TextMuted';
 import { capitalize } from '../../core/StringUtils';
 import { ComponentProps } from "react"
 import { VscDebugRestart } from "react-icons/vsc";
+import { PlayInfo } from './PlayInfo';
 export interface PlayActivity {
   play: JsonPlayObject
   status: string
@@ -27,7 +28,7 @@ export const CList = (props: ActivityLogProps) => {
         </Flex>
         <Separator orientation="horizontal" height="4" />
       </Box>
-      <Accordion.Root variant="enclosed" collapsible>
+      <Accordion.Root variant="enclosed" collapsible multiple>
         {props.data.map((activity, index) => {
           const { play } = activity;
           return (
@@ -56,7 +57,34 @@ export const CList = (props: ActivityLogProps) => {
 
               </Flex>
               <Accordion.ItemContent>
-                <Accordion.ItemBody borderTopColor="gray.border" borderTopWidth="1px">{play.data.track}</Accordion.ItemBody>
+                <Accordion.ItemBody borderTopColor="gray.border" >
+                  <Box >
+                  <Accordion.Root variant="enclosed" collapsible multiple>
+                    <Accordion.Item value="info">
+                      <Accordion.ItemTrigger>
+                        <Accordion.ItemIndicator />
+                        Play Info
+                      </Accordion.ItemTrigger>
+                      <Accordion.ItemContent>
+                        <Accordion.ItemBody>
+                          <PlayInfo play={play} final={play}/>
+                        </Accordion.ItemBody>
+                      </Accordion.ItemContent>
+                    </Accordion.Item>
+                    <Accordion.Item value="timeline">
+                      <Accordion.ItemTrigger>
+                        <Accordion.ItemIndicator />
+                        Timeline
+                      </Accordion.ItemTrigger>
+                      <Accordion.ItemContent>
+                        <Accordion.ItemBody>
+                          test
+                          </Accordion.ItemBody>
+                      </Accordion.ItemContent>
+                    </Accordion.Item>
+                  </Accordion.Root>
+                </Box>
+                </Accordion.ItemBody>
               </Accordion.ItemContent>
             </Accordion.Item>
           )
