@@ -1,11 +1,11 @@
-import { Accordion, For, Span, Stack, Text, Box, AbsoluteCenter, Button, Separator, HStack, Flex, Badge, IconButton } from '@chakra-ui/react';
+import { Accordion, For, Span, Stack, Text, Box, AbsoluteCenter, Button, Separator, HStack, Flex, Badge, IconButton, Container } from '@chakra-ui/react';
 import { JsonPlayObject } from '../../core/Atomic';
 import { ShortDateDisplay } from './DateDisplay';
 import { TextMuted } from './TextMuted';
 import { capitalize } from '../../core/StringUtils';
 import { ComponentProps } from "react"
 import { VscDebugRestart } from "react-icons/vsc";
-import { PlayInfo } from './PlayInfo';
+import { PlayInfo, PlayInfoContainer } from './PlayInfo';
 export interface PlayActivity {
   play: JsonPlayObject
   status: string
@@ -114,4 +114,8 @@ const StatusBadge = (props: ComponentProps<typeof Badge> & { data: PlayActivity 
   }
 
   return <Badge variant="surface" colorPalette={badgeColor} {...rest}>{badgeText}</Badge>
+}
+
+export const ListContainer = (props?: ComponentProps<typeof CList>) => {
+    return <Container maxWidth="3xl"><CList {...props}/></Container>
 }

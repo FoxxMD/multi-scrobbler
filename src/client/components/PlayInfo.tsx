@@ -1,11 +1,12 @@
 import React, { Fragment, useMemo, useState } from 'react';
-import { EmptyState, DataList, HStack, Tag, Wrap, Box, Flex, SegmentGroup, Stack, Text, Separator, IconButton, Container } from "@chakra-ui/react"
+import { EmptyState, DataList, HStack, Tag, Wrap, Box, Flex, SegmentGroup, Stack, Text, Separator, IconButton, Container, SimpleGrid } from "@chakra-ui/react"
 import { LuCode, LuText } from "react-icons/lu"
 import { JsonPlayObject } from '../../core/Atomic';
 import { shortTodayAwareFormat } from '../../core/TimeUtils';
 import dayjs from 'dayjs';
 import { ChakraCodeBlock } from './CodeBlock';
 import { safeStringify } from '../../core/StringUtils';
+import { TextMuted } from './TextMuted';
 
 const EmptyPlay = () => {
     return (
@@ -34,7 +35,7 @@ export const PlayInfo = (props?: PlayInfoProps) => {
         final,
         showCodeToggle = true,
         showCompare = true,
-        showDates = 'all'
+        showDates = false
     } = props ?? {};
 
     if (play === undefined) {
@@ -65,7 +66,7 @@ export const PlayInfo = (props?: PlayInfoProps) => {
         );
     }
 
-    const dates = useMemo(() => {
+    const datesFooter = useMemo(() => {
         let dateElm: JSX.Element;
         if (showDates !== false) {
             let playDate: JSX.Element,
@@ -113,41 +114,64 @@ export const PlayInfo = (props?: PlayInfoProps) => {
         } = {}
     } = displayedPlay;
 
+    const datesItem = (
+        <DataList.Item>
+            <DataList.ItemLabel>Dates</DataList.ItemLabel>
+            <DataList.ItemValue>
+                <Stack gap="1">
+                    <TextMuted>
+                    {`Played ${shortTodayAwareFormat(dayjs(play.data.playDate))}`}
+                    </TextMuted>
+                    {play.data.playDate !== undefined ? <TextMuted>{`Played Until ${shortTodayAwareFormat(dayjs(play.data.playDate))}`}</TextMuted> : null }
+                    {/* TODO seenAt */}
+                    {play.data.playDate !== undefined ? <TextMuted>{`Seen ${shortTodayAwareFormat(dayjs(play.data.playDate))}`}</TextMuted> : null }
+                </Stack>
+            </DataList.ItemValue>
+        </DataList.Item>
+    )
+
     return (
         <Fragment>
             <Stack gap="3">
-                <Flex justify="flex-end">
-                    <HStack>{comparer}{copy}</HStack>
+                <Flex justify="space-between">
+                   <Box>{comparer}</Box> <Box>{copy}</Box>
                 </Flex>
                 {
                     codeMode ? <ChakraCodeBlock code={safeStringify(displayedPlay)} /> : (
-                        <Fragment>
-                            <DataList.Root>
-                                <DataList.Item>
-                                    <DataList.ItemLabel flexShrink="1">Title</DataList.ItemLabel>
-                                    <DataList.ItemValue>{displayedPlay.data.track}</DataList.ItemValue>
-                                </DataList.Item>
-                                <DataList.Item>
-                                    <DataList.ItemLabel>Artists</DataList.ItemLabel>
-                                    <DataList.ItemValue>
-                                        {artists.length === 0 ? <Text color="fg.muted">(No Artists)</Text> :
-                                            <HStack>{displayedPlay.data.artists.map((x, index) => {
-                                                return (
-                                                    <Tag.Root key={index}>
-                                                        <Tag.Label>{x}</Tag.Label>
-                                                    </Tag.Root>
-                                                );
-                                            })}</HStack>}
-                                    </DataList.ItemValue>
-                                </DataList.Item>
-                                {albumArtistElm}
-                                <DataList.Item>
-                                    <DataList.ItemLabel>Album</DataList.ItemLabel>
-                                    <DataList.ItemValue>{displayedPlay.data.album}</DataList.ItemValue>
-                                </DataList.Item>
-                            </DataList.Root>
-                            {dates}
-                        </Fragment>
+                        <Flex gap="2" wrap="wrap">
+                            <Box marginEnd="auto">
+                                <DataList.Root>
+                                    <DataList.Item>
+                                        <DataList.ItemLabel flexShrink="1">Title</DataList.ItemLabel>
+                                        <DataList.ItemValue>{displayedPlay.data.track}</DataList.ItemValue>
+                                    </DataList.Item>
+                                    <DataList.Item>
+                                        <DataList.ItemLabel>Artists</DataList.ItemLabel>
+                                        <DataList.ItemValue>
+                                            {artists.length === 0 ? <Text color="fg.muted">(No Artists)</Text> :
+                                                <HStack>{displayedPlay.data.artists.map((x, index) => {
+                                                    return (
+                                                        <Tag.Root key={index}>
+                                                            <Tag.Label>{x}</Tag.Label>
+                                                        </Tag.Root>
+                                                    );
+                                                })}</HStack>}
+                                        </DataList.ItemValue>
+                                    </DataList.Item>
+                                    {albumArtistElm}
+                                    <DataList.Item>
+                                        <DataList.ItemLabel>Album</DataList.ItemLabel>
+                                        <DataList.ItemValue>{displayedPlay.data.album}</DataList.ItemValue>
+                                    </DataList.Item>
+                                </DataList.Root>
+                            </Box>
+                            <Box>
+                                <DataList.Root>
+                                    {datesItem}
+                                </DataList.Root>
+                            </Box>
+                            {datesFooter}
+                        </Flex>
                     )
                 }
             </Stack>
@@ -156,5 +180,5 @@ export const PlayInfo = (props?: PlayInfoProps) => {
 }
 
 export const PlayInfoContainer = (props?: PlayInfoProps) => {
-    return <Container maxWidth="lg"><PlayInfo {...props}/></Container>
+    return <Container maxWidth="lg"><PlayInfo {...props} /></Container>
 }
