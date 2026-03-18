@@ -1,5 +1,5 @@
 import type { HighlighterGeneric } from "shiki"
-import { createShikiAdapter, CodeBlock, IconButton, ClientOnly } from "@chakra-ui/react"
+import { createShikiAdapter, CodeBlock, IconButton, ClientOnly, ScrollArea } from "@chakra-ui/react"
 import { useColorMode } from "./Color-Mode";
 
 const shikiAdapter = createShikiAdapter<HighlighterGeneric<any, any>>({
@@ -20,6 +20,7 @@ export interface ChakraCodeBlockProps {
   code: string
   language?: string
   title?: string
+  maxHeight?: string
 }
 
 export const ChakraCodeBlock = (props: ChakraCodeBlockProps) => {
@@ -36,7 +37,7 @@ export const ChakraCodeBlock = (props: ChakraCodeBlockProps) => {
                 </IconButton>
               </CodeBlock.CopyTrigger>
             </CodeBlock.Header>
-            <CodeBlock.Content>
+            <CodeBlock.Content maxHeight={props.maxHeight ?? '70vh'} overflowY="auto">
               <CodeBlock.Code>
                 <CodeBlock.CodeText />
               </CodeBlock.Code>
