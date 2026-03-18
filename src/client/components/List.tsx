@@ -7,36 +7,37 @@ const items = [
 ];
 
 
-export const CList = (props) => 
-    (
-        <Stack gap="8">
-      <For each={['outline', 'subtle', 'enclosed', 'plain']}>
-        {(variant) => (
-          <Stack gap="2" key={variant}>
-            <Text fontWeight="semibold">{variant}</Text>
-            <Accordion.Root variant={variant} collapsible defaultValue={['b']}>
-              {items.map((item, index) => (
-                <Accordion.Item key={index} value={item.value}>
-                  <Box position="relative">
-                  <Accordion.ItemTrigger>
-                  <Accordion.ItemIndicator />
-                    <Span flex="1">{item.title}</Span>
-                  </Accordion.ItemTrigger>
-                  <AbsoluteCenter axis="vertical" insetEnd="0">
-              <Button variant="subtle" colorPalette="blue">
-                Action
-              </Button>
-            </AbsoluteCenter>
-                  </Box>
-                  <Accordion.ItemContent>
-                    <Accordion.ItemBody>{item.text}</Accordion.ItemBody>
-                  </Accordion.ItemContent>
-                </Accordion.Item>
-              ))}
-            </Accordion.Root>
-          </Stack>
-        )}
-      </For>
+export const CList = (props) =>
+(
+  <Stack gap="8">
+    <Stack gap="2">
+      <Text fontWeight="semibold">Today</Text>
+      <Accordion.Root variant="enclosed" collapsible defaultValue={['b']}>
+        {items.map((item, index) => (
+          <Accordion.Item key={index} value={item.value}>
+            <Box position="relative">
+              <Accordion.ItemTrigger>
+                <Accordion.ItemIndicator />
+                <Stack gap="1">
+                  <Span flex="1">{item.title}</Span>
+                  <Text fontSize="sm" color="fg.muted">
+                    Click to expand
+                  </Text>
+                </Stack>
+              </Accordion.ItemTrigger>
+              <AbsoluteCenter axis="vertical" insetEnd="0" padding="1em">
+                <Button variant="subtle" size="xs">
+                  Retry
+                </Button>
+              </AbsoluteCenter>
+            </Box>
+            <Accordion.ItemContent>
+              <Accordion.ItemBody borderTopColor="gray.border" borderTopWidth="1px">{item.text}</Accordion.ItemBody>
+            </Accordion.ItemContent>
+          </Accordion.Item>
+        ))}
+      </Accordion.Root>
     </Stack>
-    
-    );
+  </Stack>
+
+);

@@ -27,6 +27,5 @@ decorators: [
 
 // More on writing stories with args: https://storybook.js.org/docs/writing-stories/args
 export const List = meta.story({
-  args: {},
   //render: function Render(args) { return (<ChakraProvider><MyList></MyList></ChakraProvider>) }
 });
