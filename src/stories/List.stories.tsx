@@ -4,6 +4,9 @@ import React from 'react';
 import { fn } from 'storybook/test';
 import { CList } from "../client/components/List";
 import {Provider} from "../client/components/Provider";
+import { generateJsonPlays } from "../backend/tests/utils/PlayTestUtils.js";
+
+
 
 // More on how to set up stories at: https://storybook.js.org/docs/writing-stories#default-export
 const meta = preview.meta({
@@ -16,8 +19,8 @@ const meta = preview.meta({
   // This component will have an automatically generated Autodocs entry: https://storybook.js.org/docs/writing-docs/autodocs
   tags: ['autodocs'],
   // More on argTypes: https://storybook.js.org/docs/api/argtypes
-  argTypes: {
-    backgroundColor: { control: 'color' },
+  args: {
+     plays: generateJsonPlays(2, undefined, {source: 'Spotify'}),
   },
 decorators: [
     (Story) => (<Provider><Story/></Provider>),
