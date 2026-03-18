@@ -1,5 +1,5 @@
 import React, { Fragment, useMemo, useState } from 'react';
-import { EmptyState, DataList, HStack, Tag, Wrap, Box, Flex, SegmentGroup, Stack, Text, Separator, IconButton } from "@chakra-ui/react"
+import { EmptyState, DataList, HStack, Tag, Wrap, Box, Flex, SegmentGroup, Stack, Text, Separator, IconButton, Container } from "@chakra-ui/react"
 import { LuCode, LuText } from "react-icons/lu"
 import { JsonPlayObject } from '../../core/Atomic';
 import { shortTodayAwareFormat } from '../../core/TimeUtils';
@@ -153,4 +153,8 @@ export const PlayInfo = (props?: PlayInfoProps) => {
             </Stack>
         </Fragment>
     )
+}
+
+export const PlayInfoContainer = (props?: PlayInfoProps) => {
+    return <Container maxWidth="lg"><PlayInfo {...props}/></Container>
 }
