@@ -292,18 +292,20 @@ export interface PlayObjectLifecycleless {
 
 export type ErrorLike = Error | ErrorObject;
 
+export interface ScrobbleResult {
+    match?: PlayMatchResult
+    payload?: ScrobblePayload
+    warnings?: string[]
+    error?: Error | ErrorObject
+    response?: ScrobbleResponse
+    mergedScrobble?: PlayObjectLifecycleless
+}
+
 export interface PlayLifecycle {
     input?: object
     original: PlayObjectLifecycleless
     steps: LifecycleStep[]
-    scrobble?: {
-        match?: PlayMatchResult
-        payload?: ScrobblePayload
-        warnings?: string[]
-        error?: Error | ErrorObject
-        response?: ScrobbleResponse
-        mergedScrobble?: PlayObjectLifecycleless
-    }
+    scrobble?: ScrobbleResult
 }
 
 export interface LifecycleStep {

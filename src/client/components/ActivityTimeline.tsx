@@ -6,6 +6,7 @@ import { ErrorAlert } from "./ErrorAlert";
 import { IoMdCodeDownload } from "react-icons/io";
 import { BiWrench } from "react-icons/bi";
 import { IoMusicalNoteOutline } from "react-icons/io5";
+import { TbDatabaseEdit } from "react-icons/tb";
 import { MdFiberNew } from "react-icons/md";
 import { capitalize } from "../../core/StringUtils";
 import { shortTodayAwareFormat, todayAwareFormat } from "../../core/TimeUtils";
@@ -13,6 +14,7 @@ import dayjs from "dayjs";
 import { ChakraCodeBlockShort, ChakraPlainBlockShort } from "./CodeBlock";
 import { TransformSteps } from "./TransformSteps";
 import { ScrobbleMatchResult } from "./ScrobbleMatchResult";
+import { ScrobbleActionResult } from "./ScrobbleActionResult";
 
 
 export interface ActivityDetailProps {
@@ -35,7 +37,9 @@ export const ActivityTimeline = (props: ActivityDetailProps) => {
                 steps = [],
                 scrobble: {
                     match,
-                } = {}
+                    payload
+                } = {},
+                scrobble
             },
         } = {}
     } = play;
@@ -112,22 +116,24 @@ export const ActivityTimeline = (props: ActivityDetailProps) => {
                     </Timeline.Content>
                 </Timeline.Item>
             ) : null}
-            {/* <Timeline.Item>
-                <Timeline.Connector>
-                    <Timeline.Separator />
-                    <Timeline.Indicator>
-                        <Icon fontSize="xs">
-                            <IoMusicalNoteOutline />
-                        </Icon>
-                    </Timeline.Indicator>
-                </Timeline.Connector>
-                <Timeline.Content>
-                    <Timeline.Title>
-                        <Span color="fg.muted">Created new</Span> Play
-                    </Timeline.Title>
-                    test
-                </Timeline.Content>
-            </Timeline.Item> */}
+            {payload !== undefined ? (
+                <Timeline.Item>
+                    <Timeline.Connector>
+                        <Timeline.Separator />
+                        <Timeline.Indicator>
+                            <Icon fontSize="xs">
+                                <TbDatabaseEdit />
+                            </Icon>
+                        </Timeline.Indicator>
+                    </Timeline.Connector>
+                    <Timeline.Content gap="4">
+                        <Timeline.Title>
+                            <Span color="fg.muted">Attmpted to</Span> Scrobble
+                        </Timeline.Title>
+                        <ScrobbleActionResult result={scrobble} scrobbler="Koito"/>
+                    </Timeline.Content>
+                </Timeline.Item>
+            ) : null}
         </Timeline.Root>
     )
 }

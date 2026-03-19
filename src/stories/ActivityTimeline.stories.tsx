@@ -928,6 +928,10 @@ const exampleLifecycle = (): PlayLifecycle => ({
       "mbid": "379db622-cc58-4bbf-9a3e-a7fa50b25fd1",
       "duration": 320
     },
+    "warnings": [
+      "test warning",
+      "missing data in response"
+    ],
     "response": {
       "scrobbles": {
         "scrobble": {
