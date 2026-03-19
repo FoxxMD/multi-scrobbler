@@ -3,6 +3,7 @@ import { createShikiAdapter, CodeBlock, IconButton, ClientOnly, ScrollArea } fro
 import { useColorMode } from "./Color-Mode";
 import { ComponentProps, PropsWithChildren, useMemo } from "react";
 import { safeStringify } from "../../core/StringUtils";
+import { MarkOptional } from "ts-essentials";
 
 const shikiAdapter = createShikiAdapter<HighlighterGeneric<any, any>>({
   async load() {
@@ -101,7 +102,7 @@ export const ChakraCodeBlock = (props: ChakraCodeBlockProps) => {
 
 export const ChakraCodeBlockShort = (props: ChakraCodeBlockProps) => <ChakraCodeBlock maxLines={6} collapsedMaxHeight="10em" hideBelow="sm" {...props} />;
 
-export type ChakraPlainBlockProps = ChakraCodelessBlock & ChakraCodeBaseProps & {code?: string | object};
+export type ChakraPlainBlockProps = MarkOptional<ChakraCodelessBlock, 'children'> & ChakraCodeBaseProps & {code?: string | object};
 
 export const ChakraPlainBlock = (props: ChakraPlainBlockProps) => {
   const {
@@ -124,6 +125,26 @@ export const ChakraPlainBlock = (props: ChakraPlainBlockProps) => {
     return safeStringify(code);
   }, [code]);
 
+  let header: JSX.Element | null;
+  if(props.title === undefined && maxLines === undefined) {
+    header = null;
+  } else {
+    header = (
+      <CodeBlock.Header>
+        <CodeBlock.Title>{props.title}</CodeBlock.Title>
+        <CodeBlock.Control>
+          {maxLines !== undefined ? (
+             <CodeBlock.CollapseTrigger asChild>
+            <IconButton variant="ghost" size="2xs">
+              <CodeBlock.CollapseIndicator />
+            </IconButton>
+          </CodeBlock.CollapseTrigger>
+          ) : null}
+        </CodeBlock.Control>
+      </CodeBlock.Header>
+    );
+  }
+
   return (
     <CodeBlock.Root
       code={codeVal}
@@ -131,19 +152,10 @@ export const ChakraPlainBlock = (props: ChakraPlainBlockProps) => {
       maxLines={maxLines}
       {...rest}
     >
-      <CodeBlock.Header>
-        <CodeBlock.Title>{props.title ?? ' '}</CodeBlock.Title>
-        <CodeBlock.Control>
-          <CodeBlock.CollapseTrigger asChild>
-            <IconButton variant="ghost" size="2xs">
-              <CodeBlock.CollapseIndicator />
-            </IconButton>
-          </CodeBlock.CollapseTrigger>
-        </CodeBlock.Control>
-      </CodeBlock.Header>
+      {header}
       <CodeBlock.Content {...contentProps}>
         <CodeBlock.Code>
-          {props.children}
+          {props.children ?? <CodeBlock.CodeText />}
         </CodeBlock.Code>
         <CodeBlock.Overlay>
           <CodeBlock.CollapseTrigger>

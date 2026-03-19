@@ -184,18 +184,6 @@ export type ExpressRequest = Request<ParamsDictionary, any, any, Query, Record<s
 export type ExpressResponse = Response<any, Record<string, any>>;
 export type ExpressHandler = (req: ExpressRequest, res: ExpressResponse, next: NextFunction) => Promise<void | Response<any, Record<string, any>>>
 
-export interface numberFormatOptions {
-    toFixed: number,
-    defaultVal?: any,
-    prefix?: string,
-    suffix?: string,
-    round?: {
-        type?: string,
-        enable: boolean,
-        indicate?: boolean,
-    }
-}
-
 export const DELIMITERS = [',','&','/','\\'];
 export const DELIMITERS_NO_AMP = [',','/','\\'];
 export const DELIMETERS_REGEX: RegExp = new RegExp(/[,&\/\\]/);

@@ -24,7 +24,6 @@ import { TRANSFORM_HOOK } from "../common/infrastructure/Transform.js";
 import TupleMap from "../common/TupleMap.js";
 import {
     difference,
-    formatNumber,
     genGroupId,
     isDebugMode,
     playObjDataMatch,
@@ -33,6 +32,7 @@ import {
     sortByNewestPlayDate,
     sortByOldestPlayDate,
 } from "../utils.js";
+import { formatNumber } from '../../core/DataUtils.js';
 import { timeToHumanTimestamp } from "../utils/TimeUtils.js";
 import { todayAwareFormat } from "../../core/TimeUtils.js";
 import { getRoot } from '../ioc.js';

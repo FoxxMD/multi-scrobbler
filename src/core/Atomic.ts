@@ -580,3 +580,14 @@ export type Writeable<T> = { -readonly [P in keyof T]: T[P] };
 
 export const SHORT_CALENDAR_NOTZ_FORMAT = 'MMM D HH:mm:ss';
 export const SHORT_TODAY_NOTZ_FORMAT = 'HH:mm:ss';
+export interface numberFormatOptions {
+    toFixed: number;
+    defaultVal?: any;
+    prefix?: string;
+    suffix?: string;
+    round?: {
+        type?: string;
+        enable: boolean;
+        indicate?: boolean;
+    };
+}

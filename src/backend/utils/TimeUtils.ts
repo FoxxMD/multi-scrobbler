@@ -29,7 +29,7 @@ import {
     ScrobbleThresholdResult,
 } from "../common/infrastructure/Atomic.js";
 import { ScrobbleThresholds } from "../common/infrastructure/config/source/index.js";
-import { formatNumber } from "../utils.js";
+import { formatNumber } from '../../core/DataUtils.js';
 
 //dayjs.extend(isToday);
 

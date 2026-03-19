@@ -6,7 +6,8 @@ import { YTMusicSourceConfig } from "../common/infrastructure/config/source/ytmu
 import { Innertube, UniversalCache, Parser, YTNodes, ApiResponse, IBrowseResponse, Log, SessionOptions } from 'youtubei.js';
 import { GenerateAuthUrlOpts, OAuth2Client } from 'google-auth-library';
 import {resolve} from 'path';
-import { formatNumber, isDebugMode, parseBool, sleep } from "../utils.js";
+import { isDebugMode, parseBool, sleep } from "../utils.js";
+import { formatNumber } from '../../core/DataUtils.js';
 import {
     getPlaysDiff,
     humanReadableDiff,

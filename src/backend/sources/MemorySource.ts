@@ -13,7 +13,6 @@ import {
 import { SourceType, SourceConfig } from '../common/infrastructure/config/source/sources.js';
 import { PollingOptions } from "../common/infrastructure/config/common.js";
 import {
-    formatNumber,
     genGroupId,
     genGroupIdStr,
     getPlatformIdFromData,
@@ -21,6 +20,7 @@ import {
     playObjDataMatch,
     thresholdResultSummary,
 } from "../utils.js";
+import { formatNumber } from '../../core/DataUtils.js';
 import { timePassesScrobbleThreshold, timeToHumanTimestamp } from "../utils/TimeUtils.js";
 import { PromisePool } from "@supercharge/promise-pool";
 import AbstractSource from "./AbstractSource.js";
