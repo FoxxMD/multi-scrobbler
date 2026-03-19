@@ -1,0 +1,17 @@
+.jsondiffpatch-added .jsondiffpatch-property-name,
+.jsondiffpatch-added .jsondiffpatch-value pre,
+.jsondiffpatch-modified .jsondiffpatch-right-value pre,
+.jsondiffpatch-textdiff-added {
+	background: #0e2e1b;
+}
+
+.jsondiffpatch-deleted .jsondiffpatch-property-name,
+.jsondiffpatch-deleted pre,
+.jsondiffpatch-modified .jsondiffpatch-left-value pre,
+.jsondiffpatch-textdiff-deleted {
+	background: #371516 ;
+}
+
+/* .jsondiffpatch-delta, .jsondiffpatch-delta ul {
+    padding: 0 0 0 0;
+} */

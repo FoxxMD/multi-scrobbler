@@ -26,7 +26,9 @@ export interface PlayInfoProps {
     final?: JsonPlayObject
     showCodeToggle?: boolean
     showCompare?: boolean
-    showDates?: false | 'all' | 'played' | 'seen'
+    compareDefault?: 'Initial' | 'Final'
+    datesFooter?: false | 'all' | 'played' | 'seen'
+    dates?: false | 'all' | 'played' | 'seen'
 }
 
 export const PlayData = (props?: PlayInfoProps) => {
@@ -35,26 +37,28 @@ export const PlayData = (props?: PlayInfoProps) => {
         final,
         showCodeToggle = true,
         showCompare = true,
-        showDates = false
+        compareDefault = 'Initial',
+        datesFooter = false,
+        dates = 'all'
     } = props ?? {};
 
     if (play === undefined) {
         return <EmptyPlayData />
     }
 
-    const [compareVal, setCompareVal] = useState('Original')
+    const [compareVal, setCompareVal] = useState(compareDefault)
     const [codeMode, setCodeMode] = useState(false);
 
-    const displayedPlay = compareVal === 'Original' ? play : final;
+    const displayedPlay = compareVal === 'Initial' ? play : final;
 
     let comparer: JSX.Element | null = null,
         copy: JSX.Element | null = null;
 
     if (showCompare && final !== undefined) {
         comparer = (
-            <SegmentGroup.Root size="xs" value={compareVal} onValueChange={(e) => setCompareVal(e.value)}>
+            <SegmentGroup.Root size="xs" value={compareVal} onValueChange={(e) => setCompareVal(e.value as 'Initial' | 'Final')}>
                 <SegmentGroup.Indicator />
-                <SegmentGroup.Items items={["Original", "Final"]} />
+                <SegmentGroup.Items items={["Initial", "Final"]} />
             </SegmentGroup.Root>
         );
     }
@@ -66,16 +70,16 @@ export const PlayData = (props?: PlayInfoProps) => {
         );
     }
 
-    const datesFooter = useMemo(() => {
+    const datesFooterContent = useMemo(() => {
         let dateElm: JSX.Element;
-        if (showDates !== false) {
+        if (datesFooter !== false) {
             let playDate: JSX.Element,
                 seenDate: JSX.Element;
-            if (play.data.playDate !== undefined && ['all', 'played'].includes(showDates)) {
+            if (play.data.playDate !== undefined && ['all', 'played'].includes(datesFooter)) {
                 playDate = <Text textStyle="xs" color="fg.muted">{`Played ${shortTodayAwareFormat(dayjs(play.data.playDate))}`}</Text>
             }
             // TODO implement seenAt for play data
-            if (play.data.playDateCompleted !== undefined && ['all', 'seen'].includes(showDates)) {
+            if (play.data.playDateCompleted !== undefined && ['all', 'seen'].includes(datesFooter)) {
                 seenDate = <Text textStyle="xs" color="fg.muted">{`Seen ${shortTodayAwareFormat(dayjs(play.data.playDateCompleted))}`}</Text>
             }
             if (playDate !== undefined && seenDate !== undefined) {
@@ -87,7 +91,7 @@ export const PlayData = (props?: PlayInfoProps) => {
             }
         }
         return dateElm;
-    }, [play, showDates]);
+    }, [play, datesFooter]);
 
     let albumArtistElm: JSX.Element;
 
@@ -114,21 +118,31 @@ export const PlayData = (props?: PlayInfoProps) => {
         } = {}
     } = displayedPlay;
 
-    const datesItem = (
-        <DataList.Item>
-            <DataList.ItemLabel>Dates</DataList.ItemLabel>
-            <DataList.ItemValue>
-                <Stack gap="1">
-                    <TextMuted>
-                    {`Played ${shortTodayAwareFormat(dayjs(play.data.playDate))}`}
-                    </TextMuted>
-                    {play.data.playDate !== undefined ? <TextMuted>{`Played Until ${shortTodayAwareFormat(dayjs(play.data.playDate))}`}</TextMuted> : null }
-                    {/* TODO seenAt */}
-                    {play.data.playDate !== undefined ? <TextMuted>{`Seen ${shortTodayAwareFormat(dayjs(play.data.playDate))}`}</TextMuted> : null }
-                </Stack>
-            </DataList.ItemValue>
-        </DataList.Item>
-    )
+    let datesItem: JSX.Element | null;
+    if(dates === false) {
+        datesItem = null;
+    } else {
+        const dateElements = [];
+        if(dates.includes('played') || dates.includes('all')) {
+            dateElements.push((<TextMuted>{`Played ${shortTodayAwareFormat(dayjs(play.data.playDate))}`}</TextMuted>));
+            if(play.data.playDateCompleted !== undefined) {
+                dateElements.push((<TextMuted>{`Played Until ${shortTodayAwareFormat(dayjs(play.data.playDateCompleted))}`}</TextMuted>));
+            }
+        }
+        if(dates.includes('seen') || dates.includes('all')) {
+            dateElements.push((<TextMuted>{`Seen ${shortTodayAwareFormat(dayjs(play.data.playDate))}`}</TextMuted>));
+        }
+        datesItem = (
+            <DataList.Item>
+                <DataList.ItemLabel>Dates</DataList.ItemLabel>
+                <DataList.ItemValue>
+                    <Stack gap="1">
+                        {dateElements}
+                    </Stack>
+                </DataList.ItemValue>
+            </DataList.Item>
+        )
+    }
 
     return (
         <Fragment>
@@ -170,7 +184,7 @@ export const PlayData = (props?: PlayInfoProps) => {
                                     {datesItem}
                                 </DataList.Root>
                             </Box>
-                            {datesFooter}
+                            {datesFooterContent}
                         </Flex>
                     )
                 }

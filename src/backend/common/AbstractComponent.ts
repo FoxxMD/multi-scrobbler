@@ -27,7 +27,7 @@ import { findCauseByReference } from "../utils/ErrorUtils.js";
 import { hashObject } from "../utils/StringUtils.js";
 import { metaInvariantTransform, playContentInvariantTransform } from "../utils/PlayComparisonUtils.js";
 import { MSCache } from "./Cache.js";
-import { jdiff } from "../utils/DataUtils.js";
+import { jdiff } from "../../core/DataUtils.js";
 import ConsoleFormatter from "jsondiffpatch/formatters/console";
 
 const console = new ConsoleFormatter();

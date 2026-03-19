@@ -1,7 +1,8 @@
 import type { HighlighterGeneric } from "shiki"
 import { createShikiAdapter, CodeBlock, IconButton, ClientOnly, ScrollArea } from "@chakra-ui/react"
 import { useColorMode } from "./Color-Mode";
-import { ComponentProps } from "react";
+import { ComponentProps, PropsWithChildren, useMemo } from "react";
+import { safeStringify } from "../../core/StringUtils";
 
 const shikiAdapter = createShikiAdapter<HighlighterGeneric<any, any>>({
   async load() {
@@ -17,8 +18,7 @@ const shikiAdapter = createShikiAdapter<HighlighterGeneric<any, any>>({
   },
 });
 
-export type ChakraCodeBlockProps = Omit<ComponentProps<typeof CodeBlock.Root>, 'children'> & {
-  code: string
+export interface ChakraCodeBaseProps {
   language?: string
   title?: string
   maxHeight?: string
@@ -26,27 +26,45 @@ export type ChakraCodeBlockProps = Omit<ComponentProps<typeof CodeBlock.Root>, '
   collapsedMaxHeight?: string
 }
 
+export type ChakraCodelessBlock = Omit<ComponentProps<typeof CodeBlock.Root>, 'code'>
+
+export type ChakraCodeBlockProps = Omit<ChakraCodelessBlock, 'children'> & ChakraCodeBaseProps & {
+  code: string | object
+}
+
+const DEFAULT_MAX_HEIGHT = '70vh',
+  DEFAULT_COLLAPSED_MAX_HEIGHT = '320px',
+  DEFAULT_LANGUAGE = 'json';
+
 export const ChakraCodeBlock = (props: ChakraCodeBlockProps) => {
   const {
-    maxHeight = '70vh',
+    maxHeight = DEFAULT_MAX_HEIGHT,
     maxLines,
-    collapsedMaxHeight = '320px',
-    language = 'json',
+    collapsedMaxHeight = DEFAULT_COLLAPSED_MAX_HEIGHT,
+    language = DEFAULT_LANGUAGE,
+    code,
     ...rest
   } = props;
 
-  const contentProps: ComponentProps<typeof CodeBlock.Content> = maxLines === undefined ? { maxHeight, overflowY: 'auto' } : { css: {"--code-block-max-height": collapsedMaxHeight}};
+  const contentProps: ComponentProps<typeof CodeBlock.Content> = maxLines === undefined ? { maxHeight, overflowY: 'auto' } : { css: { "--code-block-max-height": collapsedMaxHeight } };
+
+  const codeVal = useMemo(() => {
+    if (typeof code === 'string') {
+      return code;
+    }
+    return safeStringify(code);
+  }, [code]);
 
   return (
     <CodeBlock.AdapterProvider value={shikiAdapter}>
       <ClientOnly fallback={<div>Loading...</div>}>
         {() => (
-          <CodeBlock.Root 
-          code={props.code} 
-          language={language ?? 'json'} 
-          maxLines={maxLines}
-          meta={{ wordWrap: true }}
-          {...rest}
+          <CodeBlock.Root
+            code={codeVal}
+            language={language ?? 'json'}
+            maxLines={maxLines}
+            meta={{ wordWrap: true }}
+            {...rest}
           >
             <CodeBlock.Header>
               <CodeBlock.Title>{props.title ?? ' '}</CodeBlock.Title>
@@ -67,12 +85,12 @@ export const ChakraCodeBlock = (props: ChakraCodeBlockProps) => {
               <CodeBlock.Code>
                 <CodeBlock.CodeText />
               </CodeBlock.Code>
-              
+
               <CodeBlock.Overlay>
-            <CodeBlock.CollapseTrigger>
-              <CodeBlock.CollapseText textStyle="sm" />
-            </CodeBlock.CollapseTrigger>
-          </CodeBlock.Overlay>
+                <CodeBlock.CollapseTrigger>
+                  <CodeBlock.CollapseText textStyle="sm" />
+                </CodeBlock.CollapseTrigger>
+              </CodeBlock.Overlay>
             </CodeBlock.Content>
           </CodeBlock.Root>
         )}
@@ -80,3 +98,61 @@ export const ChakraCodeBlock = (props: ChakraCodeBlockProps) => {
     </CodeBlock.AdapterProvider>
   )
 }
+
+export const ChakraCodeBlockShort = (props: ChakraCodeBlockProps) => <ChakraCodeBlock maxLines={6} collapsedMaxHeight="10em" hideBelow="sm" {...props} />;
+
+export type ChakraPlainBlockProps = ChakraCodelessBlock & ChakraCodeBaseProps & {code?: string | object};
+
+export const ChakraPlainBlock = (props: ChakraPlainBlockProps) => {
+  const {
+    maxHeight = DEFAULT_MAX_HEIGHT,
+    maxLines,
+    collapsedMaxHeight = DEFAULT_COLLAPSED_MAX_HEIGHT,
+    code,
+    ...rest
+  } = props;
+
+  const contentProps: ComponentProps<typeof CodeBlock.Content> = maxLines === undefined ? { maxHeight, overflowY: 'auto' } : { css: { "--code-block-max-height": collapsedMaxHeight } };
+
+    const codeVal = useMemo(() => {
+    if(code === undefined) {
+      return ' ';
+    }
+    if (typeof code === 'string') {
+      return code;
+    }
+    return safeStringify(code);
+  }, [code]);
+
+  return (
+    <CodeBlock.Root
+      code={codeVal}
+      language="plaintext"
+      maxLines={maxLines}
+      {...rest}
+    >
+      <CodeBlock.Header>
+        <CodeBlock.Title>{props.title ?? ' '}</CodeBlock.Title>
+        <CodeBlock.Control>
+          <CodeBlock.CollapseTrigger asChild>
+            <IconButton variant="ghost" size="2xs">
+              <CodeBlock.CollapseIndicator />
+            </IconButton>
+          </CodeBlock.CollapseTrigger>
+        </CodeBlock.Control>
+      </CodeBlock.Header>
+      <CodeBlock.Content {...contentProps}>
+        <CodeBlock.Code>
+          {props.children}
+        </CodeBlock.Code>
+        <CodeBlock.Overlay>
+          <CodeBlock.CollapseTrigger>
+            <CodeBlock.CollapseText textStyle="sm" />
+          </CodeBlock.CollapseTrigger>
+        </CodeBlock.Overlay>
+      </CodeBlock.Content>
+    </CodeBlock.Root>
+  );
+}
+
+export const ChakraPlainBlockShort = (props: ChakraPlainBlockProps) => <ChakraPlainBlock maxLines={6} collapsedMaxHeight="10em" hideBelow="sm" {...props} />;
