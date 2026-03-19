@@ -1,5 +1,5 @@
 import { ComponentProps, useState } from "react"
-import { Accordion, Timeline, Icon, Span, Stack, Heading, Card, Box } from '@chakra-ui/react';
+import { Accordion, Timeline, Icon, Span, Stack, Heading, Card, Box, Tabs } from '@chakra-ui/react';
 import { ErrorLike, JsonPlayObject, PlayActivity } from "../../core/Atomic";
 import { PlayData } from "./PlayData";
 import { ErrorAlert } from "./ErrorAlert";
@@ -63,28 +63,26 @@ export const ActivityTimeline = (props: ActivityDetailProps) => {
                 </Timeline.Connector>
                 <Timeline.Content>
                     <Timeline.Title>
-                        Discovered <Span color="fg.muted">new activity from</Span>
+                        Discovered <Span color="fg.muted">new (Play) activity from</Span>
                         <Span fontWeight="medium">{capitalize(source)}</Span>
                         <Span color="fg.muted">at {shortTodayAwareFormat(dayjs(playDate))}</Span>
                     </Timeline.Title>
-                    <ChakraCodeBlockShort code={input} />
-                </Timeline.Content>
-            </Timeline.Item>
-
-            <Timeline.Item>
-                <Timeline.Connector>
-                    <Timeline.Separator />
-                    <Timeline.Indicator>
-                        <Icon fontSize="xs">
-                            <IoMusicalNoteOutline />
-                        </Icon>
-                    </Timeline.Indicator>
-                </Timeline.Connector>
-                <Timeline.Content>
-                    <Timeline.Title>
-                        <Span color="fg.muted">Created new</Span> Play
-                    </Timeline.Title>
-                    <PlayData play={original} />
+                    <Card.Root bgColor="bg.muted" size="sm" hideBelow="sm">
+                        <Card.Body textStyle="sm">
+                            <Tabs.Root size="sm" variant="outline" defaultValue="play">
+                                <Tabs.List>
+                                    <Tabs.Trigger value="play">Play</Tabs.Trigger>
+                                    <Tabs.Trigger value="source">Source Data</Tabs.Trigger>
+                                </Tabs.List>
+                                <Tabs.Content value="play">
+                                    <PlayData play={original} />
+                                </Tabs.Content>
+                                <Tabs.Content value="source">
+                                    <ChakraCodeBlockShort code={input} />
+                                </Tabs.Content>
+                            </Tabs.Root>
+                        </Card.Body>
+                    </Card.Root>
                 </Timeline.Content>
             </Timeline.Item>
             {steps.length > 0 ? (
@@ -99,9 +97,13 @@ export const ActivityTimeline = (props: ActivityDetailProps) => {
                     </Timeline.Connector>
                     <Timeline.Content gap="4">
                         <Timeline.Title>
-                            Transforms
+                            Transformed Play <Span color="fg.muted">using configured Rules</Span>
                         </Timeline.Title>
-                        <TransformSteps steps={steps} original={original} collapsibleOpen={collapsibleOpen}/>
+                        <Card.Root bgColor="bg.muted" size="sm">
+                            <Card.Body textStyle="sm">
+                                <TransformSteps steps={steps} original={original} collapsibleOpen={collapsibleOpen} />
+                            </Card.Body>
+                        </Card.Root>
                     </Timeline.Content>
                 </Timeline.Item>
             ) : null}
@@ -117,12 +119,15 @@ export const ActivityTimeline = (props: ActivityDetailProps) => {
                     </Timeline.Connector>
                     <Timeline.Content gap="4">
                         <Timeline.Title>
-                            Duplicate Match Check
+                            <Span color="fg.muted">Found </Span>{match.match ? <Span color="orange.solid"> a duplicate Scrobble</Span> : 'no duplicate Scrobbles'}
                         </Timeline.Title>
-                        {match.reason}
-                        <MSCollapsible indicator="Show Details" defaultOpen={collapsibleOpen}>
-                            <ScrobbleMatchResult match={match}/>
-                        </MSCollapsible>
+                        <Card.Root bgColor="bg.muted" size="sm" hideBelow="sm">
+                            <Card.Body textStyle="sm">
+                                <MSCollapsible indicator="Show Details" defaultOpen={collapsibleOpen}>
+                                    <ScrobbleMatchResult match={match} />
+                                </MSCollapsible>
+                            </Card.Body>
+                        </Card.Root>
                     </Timeline.Content>
                 </Timeline.Item>
             ) : null}
@@ -140,7 +145,11 @@ export const ActivityTimeline = (props: ActivityDetailProps) => {
                         <Timeline.Title>
                             <Span color="fg.muted">Attmpted to</Span> Scrobble
                         </Timeline.Title>
-                        <ScrobbleActionResult result={scrobble} scrobbler="Koito" collapsibleOpen={collapsibleOpen}/>
+                        <Card.Root bgColor="bg.muted" size="sm">
+                            <Card.Body textStyle="sm">
+                                <ScrobbleActionResult result={scrobble} scrobbler="Koito" collapsibleOpen={collapsibleOpen} />
+                            </Card.Body>
+                        </Card.Root>
                     </Timeline.Content>
                 </Timeline.Item>
             ) : null}

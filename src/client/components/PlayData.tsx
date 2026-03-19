@@ -61,15 +61,15 @@ export const PlayData = (props?: PlayInfoProps) => {
 
     if (!comparable) {
         return (<Box position="relative">
-            <Float placement="top-end" offsetX="3" hideBelow="sm" zIndex={100}>{code}</Float>
+            <Float placement="top-end" offsetX="4" offsetY="2" hideBelow="sm" zIndex={100}>{code}</Float>
             {codeMode ? <ChakraCodeBlock code={play} /> : <PlayDataDataList play={play} dates={dates} />}
         </Box>);
     }
 
     return (
         <Box position="relative">
-            <Float placement="top-end" offsetX="3" offsetY="2" hideBelow="sm" zIndex={100}>{code}</Float>
-            <Tabs.Root  defaultValue={compareDefault}>
+            <Float placement="top-end" offsetX="4" offsetY="2" hideBelow="sm" zIndex={100}>{code}</Float>
+            <Tabs.Root size="sm" variant="outline" defaultValue={compareDefault}>
                 <Tabs.List>
                     <Tabs.Trigger value="Initial">Initial</Tabs.Trigger>
                     <Tabs.Trigger value="Final">Final</Tabs.Trigger>

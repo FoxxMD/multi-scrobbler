@@ -47,7 +47,7 @@ export const ScrobbleActionResult = (props: ScrobbleActionResultProps) => {
                     <Timeline.Title>
                         <Span color="fg.muted">Sent</Span> Scrobble Payload{scrobbler !== undefined ? <Fragment><Span color="fg.muted">to</Span> {capitalize(scrobbler)}</Fragment> : null}
                     </Timeline.Title>
-                    <MSCollapsible indicator="Show Payload" defaultOpen={collapsibleOpen}>
+                    <MSCollapsible indicator="Show Payload" defaultOpen={collapsibleOpen} hideBelow="sm">
                         <ChakraCodeBlockShort code={payload} language="json" maxLines={20} />
                     </MSCollapsible>
                 </Timeline.Content>
@@ -66,7 +66,7 @@ export const ScrobbleActionResult = (props: ScrobbleActionResultProps) => {
                         <Timeline.Title>
                             <Span color="fg.muted">Received</Span> Response{scrobbler !== undefined ? <Fragment><Span color="fg.muted">from</Span> {capitalize(scrobbler)}</Fragment> : null}{warnings.length > 0 ? <Span color="orange.solid"> with warnings</Span> : null}
                         </Timeline.Title>
-                        <MSCollapsible indicator="Show Response" defaultOpen={collapsibleOpen}>
+                        <MSCollapsible indicator="Show Response" defaultOpen={collapsibleOpen} hideBelow="sm">
                         <ChakraCodeBlockShort code={response} language="json" maxLines={20} />
                         {warnings.length > 0 ? (
                             <Alert.Root status="warning">

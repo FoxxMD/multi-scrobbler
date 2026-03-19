@@ -50,7 +50,7 @@ export const TransformSteps = (props: LifeycleStepsTimelineProps) => {
                         <Timeline.Title>
                             {x.name} <Span color="fg.muted">with</Span> {x.source}
                         </Timeline.Title>
-                        <MSCollapsible indicator="Show Details" defaultOpen={collapsibleOpen}>
+                        <MSCollapsible indicator="Show Details" defaultOpen={collapsibleOpen} hideBelow="sm">
                             <Heading size="sm">Diff</Heading>
                             {err !== undefined ? <ErrorAlert error={err} /> : null}
 
@@ -70,7 +70,7 @@ export const TransformSteps = (props: LifeycleStepsTimelineProps) => {
                 </Timeline.Item>
             })}
             {currentPlay !== false ? (
-                <Timeline.Item>
+                <Timeline.Item hideBelow="sm">
                     <Timeline.Connector>
                         <Timeline.Separator />
                         <Timeline.Indicator>
