@@ -51,7 +51,7 @@ export const ActivityTimeline = (props: ActivityDetailProps) => {
     const [scrobbleCollapsibleOpen, setScrobbleCollapsibleOpen] = useState(false);
 
     return (
-        <Timeline.Root size="lg" variant="subtle" maxW="lg">
+        <Timeline.Root size="lg" variant="subtle">
             <Timeline.Item>
                 <Timeline.Connector>
                     <Timeline.Separator />

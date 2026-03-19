@@ -25,7 +25,7 @@ export const TransformSteps = (props: LifeycleStepsTimelineProps) => {
     let currentPlay: JsonPlayObject | false = JSON.parse(JSON.stringify(original));
 
     return (
-        <Timeline.Root size="lg" variant="subtle" maxW="lg" css={{ "--timeline-separator-display": 'block' }}>
+        <Timeline.Root size="lg" variant="subtle" css={{ "--timeline-separator-display": 'block' }}>
             {steps.map((x, index) => {
                 let err: Error;
                 const left = JSON.parse(JSON.stringify(currentPlay));

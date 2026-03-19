@@ -1,5 +1,5 @@
 import { ComponentProps, Fragment } from "react"
-import { Timeline, Icon, Span, Stack, Heading, Tabs, DataList } from '@chakra-ui/react';
+import { Timeline, Icon, Span, Stack, Heading, Tabs, DataList, List } from '@chakra-ui/react';
 import { JsonPlayObject, LifecycleStep, PlayMatchResult } from "../../core/Atomic";
 import { PlayData } from "./PlayData";
 import { ErrorAlert } from "./ErrorAlert";
@@ -47,7 +47,22 @@ export const ScrobbleMatchResult = (props: ScrobbleMatchResultProps) => {
                     </DataList.Item>
                     <DataList.Item>
                         <DataList.ItemLabel flexShrink="1">Breakdown</DataList.ItemLabel>
-                        <DataList.ItemValue><ChakraPlainBlock code={match.breakdowns} /></DataList.ItemValue>
+                        <DataList.ItemValue>
+                            <List.Root>
+                                {match.breakdowns.map((x) => {
+                                    if (x.includes('Time Detail')) {
+                                        const sub = x.substring(15).split('|');
+                                        return (
+                                            <List.Root ps="5">
+                                                {sub.map((y) => <List.Item>{y}</List.Item>)}
+                                            </List.Root>
+
+                                        )
+                                    }
+                                    return <List.Item>{x}</List.Item>
+                                })}
+                            </List.Root>
+                        </DataList.ItemValue>
                     </DataList.Item>
                 </DataList.Root>
             </Tabs.Content>
