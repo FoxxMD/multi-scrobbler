@@ -1,14 +1,14 @@
 import React, { Fragment, useMemo, useState } from 'react';
 import { EmptyState, DataList, HStack, Tag, Wrap, Box, Flex, SegmentGroup, Stack, Text, Separator, IconButton, Container, SimpleGrid } from "@chakra-ui/react"
 import { LuCode, LuText } from "react-icons/lu"
-import { JsonPlayObject } from '../../core/Atomic';
-import { shortTodayAwareFormat } from '../../core/TimeUtils';
+import { JsonPlayObject } from '../../core/Atomic.js';
+import { shortTodayAwareFormat } from '../../core/TimeUtils.js';
 import dayjs from 'dayjs';
-import { ChakraCodeBlock } from './CodeBlock';
-import { safeStringify } from '../../core/StringUtils';
-import { TextMuted } from './TextMuted';
+import { ChakraCodeBlock } from './CodeBlock.js';
+import { safeStringify } from '../../core/StringUtils.js';
+import { TextMuted } from './TextMuted.js';
 
-const EmptyPlay = () => {
+const EmptyPlayData = () => {
     return (
         <EmptyState.Root size="sm">
             <EmptyState.Content>
@@ -29,7 +29,7 @@ export interface PlayInfoProps {
     showDates?: false | 'all' | 'played' | 'seen'
 }
 
-export const PlayInfo = (props?: PlayInfoProps) => {
+export const PlayData = (props?: PlayInfoProps) => {
     const {
         play,
         final,
@@ -39,7 +39,7 @@ export const PlayInfo = (props?: PlayInfoProps) => {
     } = props ?? {};
 
     if (play === undefined) {
-        return <EmptyPlay />
+        return <EmptyPlayData />
     }
 
     const [compareVal, setCompareVal] = useState('Original')
@@ -180,5 +180,5 @@ export const PlayInfo = (props?: PlayInfoProps) => {
 }
 
 export const PlayInfoContainer = (props?: PlayInfoProps) => {
-    return <Container maxWidth="lg"><PlayInfo {...props} /></Container>
+    return <Container maxWidth="lg"><PlayData {...props} /></Container>
 }

@@ -290,6 +290,8 @@ export interface PlayObjectLifecycleless {
 //     lifecycle: PlayLifecycle
 // }
 
+export type ErrorLike = Error | ErrorObject;
+
 export interface PlayLifecycle {
     input?: object
     original: PlayObjectLifecycleless
@@ -353,6 +355,11 @@ export interface PlayObject extends AmbPlayObject {
 //     meta: PlayMetaLifecycled
 // }
 
+export interface PlayActivity {
+  play: JsonPlayObject
+  status: string
+  error?: ErrorLike
+}
 export interface JsonPlayObject extends AmbPlayObject {
     data: JsonPlayData
 }

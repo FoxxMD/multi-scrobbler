@@ -2,12 +2,12 @@ import preview from "../../.storybook/preview.js";
 import React from 'react';
 
 import { fn } from 'storybook/test';
-import { PlayInfo, PlayInfoContainer } from "../client/components/PlayInfo";
+import { PlayData, PlayInfoContainer } from "../client/components/PlayData.js";
 import {Provider} from "../client/components/Provider";
 import { generateArtists, generateJsonPlay, generatePlay } from "../backend/tests/utils/PlayTestUtils"
 import clone from "clone";
 
-type PropsAndCustomArgs = React.ComponentProps<typeof PlayInfo> & {
+type PropsAndCustomArgs = React.ComponentProps<typeof PlayData> & {
   includeAlbumArtists?: boolean;
   defaultFinal?: boolean
 };
