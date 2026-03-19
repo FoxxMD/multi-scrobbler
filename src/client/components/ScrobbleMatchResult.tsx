@@ -1,4 +1,4 @@
-import { ComponentProps } from "react"
+import { ComponentProps, Fragment } from "react"
 import { Timeline, Icon, Span, Stack, Heading, Tabs, DataList } from '@chakra-ui/react';
 import { JsonPlayObject, LifecycleStep, PlayMatchResult } from "../../core/Atomic";
 import { PlayData } from "./PlayData";

@@ -8,9 +8,9 @@ import { IoMusicalNoteOutline } from "react-icons/io5";
 import { ChakraCodeBlockShort, ChakraPlainBlockShort } from "./CodeBlock";
 import { JsonDiffPatch } from "./JsonDiff";
 import { jdiff } from "../../core/DataUtils";
+import { MSCollapsible, MSCollapsibleExternalProps } from "./MSCollapsible";
 
-
-export interface LifeycleStepsTimelineProps {
+export interface LifeycleStepsTimelineProps extends MSCollapsibleExternalProps {
     steps: LifecycleStep[]
     original: JsonPlayObject
 }
@@ -18,7 +18,8 @@ export interface LifeycleStepsTimelineProps {
 export const TransformSteps = (props: LifeycleStepsTimelineProps) => {
     const {
         steps,
-        original
+        original,
+        collapsibleOpen
     } = props;
 
     let currentPlay: JsonPlayObject | false = JSON.parse(JSON.stringify(original));
@@ -49,20 +50,22 @@ export const TransformSteps = (props: LifeycleStepsTimelineProps) => {
                         <Timeline.Title>
                             {x.name} <Span color="fg.muted">with</Span> {x.source}
                         </Timeline.Title>
-                        <Heading size="sm">Diff</Heading>
-                        {err !== undefined ? <ErrorAlert error={err} /> : null}
+                        <MSCollapsible indicator="Show Details" defaultOpen={collapsibleOpen}>
+                            <Heading size="sm">Diff</Heading>
+                            {err !== undefined ? <ErrorAlert error={err} /> : null}
 
-                        {left !== false && currentPlay !== false ? (
-                            <ChakraPlainBlockShort code={left}>
-                                <JsonDiffPatch left={left} right={currentPlay} />
-                            </ChakraPlainBlockShort>
-                        ) : <ChakraCodeBlockShort code={x.patch} />}
-                        <Heading size="sm">Inputs</Heading>
-                        <Stack gap="1">
-                            {x.inputs.map((y) => {
-                                return <ChakraCodeBlockShort code={y.input} title={y.type} />
-                            })}
-                        </Stack>
+                            {left !== false && currentPlay !== false ? (
+                                <ChakraPlainBlockShort code={left}>
+                                    <JsonDiffPatch left={left} right={currentPlay} />
+                                </ChakraPlainBlockShort>
+                            ) : <ChakraCodeBlockShort code={x.patch} />}
+                            <Heading size="sm">Inputs</Heading>
+                            <Stack gap="1">
+                                {x.inputs.map((y) => {
+                                    return <ChakraCodeBlockShort code={y.input} title={y.type} />
+                                })}
+                            </Stack>
+                        </MSCollapsible>
                     </Timeline.Content>
                 </Timeline.Item>
             })}

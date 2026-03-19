@@ -1,9 +1,11 @@
-import { ComponentProps } from "react"
+import { ComponentProps, useState } from "react"
 import { Accordion, For, Span, Stack, Text, Box, AbsoluteCenter, Button, Separator, HStack, Flex, Badge, IconButton, Container, Icon } from '@chakra-ui/react';
 import { ErrorLike, PlayActivity } from "../../core/Atomic";
 import { PlayData } from "./PlayData";
 import { ErrorAlert } from "./ErrorAlert";
 import { AiOutlineExclamationCircle } from "react-icons/ai";
+import { ActivityTimeline } from "./ActivityTimeline";
+import { ExpandCollapse } from "./ExpandCollapse";
 
 export interface ActivityDetailProps {
     activity: PlayActivity
@@ -13,9 +15,19 @@ export const ActivityDetails = (props: ActivityDetailProps) => {
     const {
         activity,
         activity: {
-            error
+            error,
+            play: {
+                meta: {
+                    lifecycle: {
+                        scrobble
+                    } = {},
+                } = {},
+            } = {}
         }
     } = props;
+
+    const [collapsibleOpen, setCollapsibleOpen] = useState(undefined);
+
     return (
         <Accordion.Root variant="enclosed" collapsible multiple>
             <Accordion.Item value="info">
@@ -30,15 +42,24 @@ export const ActivityDetails = (props: ActivityDetailProps) => {
                 </Accordion.ItemContent>
             </Accordion.Item>
             <Accordion.Item value="timeline">
-                <Accordion.ItemTrigger>
-                    <Accordion.ItemIndicator />
-                    Timeline {error !== undefined ? (<Icon size="sm" color="red.focusRing">
-                        <AiOutlineExclamationCircle />
-                    </Icon>) : null}
-                </Accordion.ItemTrigger>
+                <Flex justify="flex-start">
+                    <Accordion.ItemTrigger>
+                        <Accordion.ItemIndicator />
+                        Timeline {error !== undefined ? (<Icon size="sm" color="red.focusRing">
+                            <AiOutlineExclamationCircle />
+                        </Icon>) : null}
+                    </Accordion.ItemTrigger>
+                    <Stack style={{
+                        paddingBlock: "var(--accordion-padding-y)",
+                        paddingInline: "var(--accordion-padding-x)"
+                    }} justify="flex-start" alignItems="flex-end">
+                        <ExpandCollapse onClick={(val) => setCollapsibleOpen(val)} />
+                    </Stack>
+                </Flex>
                 <Accordion.ItemContent>
                     <Accordion.ItemBody>
                         {error !== undefined ? <ErrorAlert error={error} /> : null}
+                        {scrobble !== undefined ? <ActivityTimeline play={activity.play} collapsibleOpen={collapsibleOpen} /> : null}
                     </Accordion.ItemBody>
                 </Accordion.ItemContent>
             </Accordion.Item>

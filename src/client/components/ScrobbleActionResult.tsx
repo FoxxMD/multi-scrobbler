@@ -11,10 +11,11 @@ import { ChakraCodeBlockShort, ChakraPlainBlock, ChakraPlainBlockShort } from ".
 import { JsonDiffPatch } from "./JsonDiff";
 import { formatNumber, jdiff } from "../../core/DataUtils";
 import { capitalize } from "../../core/StringUtils";
+import { MSCollapsible, MSCollapsibleExternalProps } from "./MSCollapsible";
 
-export interface ScrobbleActionResultProps {
+export interface ScrobbleActionResultProps extends MSCollapsibleExternalProps {
     result: ScrobbleResult,
-    scrobbler?: string
+    scrobbler?: string,
 }
 
 export const ScrobbleActionResult = (props: ScrobbleActionResultProps) => {
@@ -27,7 +28,8 @@ export const ScrobbleActionResult = (props: ScrobbleActionResultProps) => {
             response,
             mergedScrobble
         } = {},
-        scrobbler
+        scrobbler,
+        collapsibleOpen
     } = props;
 
     return (
@@ -45,7 +47,9 @@ export const ScrobbleActionResult = (props: ScrobbleActionResultProps) => {
                     <Timeline.Title>
                         <Span color="fg.muted">Sent</Span> Scrobble Payload{scrobbler !== undefined ? <Fragment><Span color="fg.muted">to</Span> {capitalize(scrobbler)}</Fragment> : null}
                     </Timeline.Title>
-                    <ChakraCodeBlockShort code={payload} language="json" maxLines={20} />
+                    <MSCollapsible indicator="Show Payload" defaultOpen={collapsibleOpen}>
+                        <ChakraCodeBlockShort code={payload} language="json" maxLines={20} />
+                    </MSCollapsible>
                 </Timeline.Content>
             </Timeline.Item>
             {response !== undefined ? (
@@ -62,6 +66,7 @@ export const ScrobbleActionResult = (props: ScrobbleActionResultProps) => {
                         <Timeline.Title>
                             <Span color="fg.muted">Received</Span> Response{scrobbler !== undefined ? <Fragment><Span color="fg.muted">from</Span> {capitalize(scrobbler)}</Fragment> : null}{warnings.length > 0 ? <Span color="orange.solid"> with warnings</Span> : null}
                         </Timeline.Title>
+                        <MSCollapsible indicator="Show Response" defaultOpen={collapsibleOpen}>
                         <ChakraCodeBlockShort code={response} language="json" maxLines={20} />
                         {warnings.length > 0 ? (
                             <Alert.Root status="warning">
@@ -76,6 +81,7 @@ export const ScrobbleActionResult = (props: ScrobbleActionResultProps) => {
                                 </Alert.Content>
                             </Alert.Root>
                         ) : null}
+                        </MSCollapsible>
                     </Timeline.Content>
                 </Timeline.Item>
             ) : null}

@@ -1,4 +1,4 @@
-import { ComponentProps } from "react"
+import { ComponentProps, useState } from "react"
 import { Accordion, Timeline, Icon, Span, Stack, Heading, Card, Box } from '@chakra-ui/react';
 import { ErrorLike, JsonPlayObject, PlayActivity } from "../../core/Atomic";
 import { PlayData } from "./PlayData";
@@ -15,15 +15,19 @@ import { ChakraCodeBlockShort, ChakraPlainBlockShort } from "./CodeBlock";
 import { TransformSteps } from "./TransformSteps";
 import { ScrobbleMatchResult } from "./ScrobbleMatchResult";
 import { ScrobbleActionResult } from "./ScrobbleActionResult";
+import { ExpandCollapse } from "./ExpandCollapse";
+import { MSCollapsible } from "./MSCollapsible";
 
 
 export interface ActivityDetailProps {
     play: JsonPlayObject
+    collapsibleOpen?: boolean
 }
 
 export const ActivityTimeline = (props: ActivityDetailProps) => {
     const {
-        play
+        play,
+        collapsibleOpen
     } = props;
     const {
         data: {
@@ -43,6 +47,9 @@ export const ActivityTimeline = (props: ActivityDetailProps) => {
             },
         } = {}
     } = play;
+
+    const [scrobbleCollapsibleOpen, setScrobbleCollapsibleOpen] = useState(false);
+
     return (
         <Timeline.Root size="lg" variant="subtle" maxW="lg">
             <Timeline.Item>
@@ -94,7 +101,7 @@ export const ActivityTimeline = (props: ActivityDetailProps) => {
                         <Timeline.Title>
                             Transforms
                         </Timeline.Title>
-                        <TransformSteps steps={steps} original={original} />
+                        <TransformSteps steps={steps} original={original} collapsibleOpen={collapsibleOpen}/>
                     </Timeline.Content>
                 </Timeline.Item>
             ) : null}
@@ -112,7 +119,10 @@ export const ActivityTimeline = (props: ActivityDetailProps) => {
                         <Timeline.Title>
                             Duplicate Match Check
                         </Timeline.Title>
-                        <ScrobbleMatchResult match={match}/>
+                        {match.reason}
+                        <MSCollapsible indicator="Show Details" defaultOpen={collapsibleOpen}>
+                            <ScrobbleMatchResult match={match}/>
+                        </MSCollapsible>
                     </Timeline.Content>
                 </Timeline.Item>
             ) : null}
@@ -130,7 +140,7 @@ export const ActivityTimeline = (props: ActivityDetailProps) => {
                         <Timeline.Title>
                             <Span color="fg.muted">Attmpted to</Span> Scrobble
                         </Timeline.Title>
-                        <ScrobbleActionResult result={scrobble} scrobbler="Koito"/>
+                        <ScrobbleActionResult result={scrobble} scrobbler="Koito" collapsibleOpen={collapsibleOpen}/>
                     </Timeline.Content>
                 </Timeline.Item>
             ) : null}

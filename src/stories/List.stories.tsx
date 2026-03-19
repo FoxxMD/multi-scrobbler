@@ -6,7 +6,8 @@ import { Container } from '@chakra-ui/react';
 import { CList } from "../client/components/List";
 import {Provider} from "../client/components/Provider";
 import { generateJsonPlays } from "../backend/tests/utils/PlayTestUtils.js";
-import { ErrorLike } from "../core/Atomic.js";
+import { ErrorLike, JsonPlayObject } from "../core/Atomic.js";
+import {examplePlay} from './storyUtils.js';
 
 const stack = "Scrobble Submit Error: Failed to submit to Listenbrainz (listen_type single)\n    at ListenbrainzApiClient.submitListen (/app/src/backend/common/vendor/ListenbrainzApiClient.ts:246:19)\n    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)\n    at async ListenbrainzScrobbler.doScrobble (/app/src/backend/scrobblers/ListenbrainzScrobbler.ts:87:28)\n    at async ListenbrainzScrobbler.scrobble (/app/src/backend/scrobblers/AbstractScrobbleClient.ts:679:28)\n    at async ListenbrainzScrobbler.processDeadLetterScrobble (/app/src/backend/scrobblers/AbstractScrobbleClient.ts:920:39)\n    at async ListenbrainzScrobbler.processDeadLetterQueue (/app/src/backend/scrobblers/AbstractScrobbleClient.ts:894:43)\n    at async PromisePoolExecutor.handler (/app/src/backend/tasks/heartbeatClients.ts:35:21)\n    at async PromisePoolExecutor.waitForActiveTaskToFinish (/app/node_modules/@supercharge/promise-pool/dist/promise-pool-executor.js:375:9)\n    at async PromisePoolExecutor.waitForProcessingSlot (/app/node_modules/@supercharge/promise-pool/dist/promise-pool-executor.js:368:13)\n    at async PromisePoolExecutor.process (/app/node_modules/@supercharge/promise-pool/dist/promise-pool-executor.js:354:13)";
 
@@ -43,7 +44,7 @@ const meta = preview.meta({
         case 1:
           return {play: x, status: 'queued'}
         case 2:
-          return {play: x, status: 'scrobbled'}
+          return {play: examplePlay(), status: 'scrobbled'}
         case 0:
           return {play: x, status: 'error', error: errorExample};
       }
