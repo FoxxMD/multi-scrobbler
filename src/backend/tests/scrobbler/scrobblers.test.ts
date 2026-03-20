@@ -7,11 +7,12 @@ import { after, before, describe, it } from 'mocha';
 import { http, HttpResponse } from 'msw';
 import pEvent from 'p-event';
 import { PlayObject, SOURCE_SOT } from "../../../core/Atomic.js";
-import { genGroupIdStr, sleep, sortByOldestPlayDate } from "../../utils.js";
+import { sleep, sortByOldestPlayDate } from "../../utils.js";
+import { genGroupIdStr } from '../../../core/PlayUtils.js';
 import mixedDuration from '../plays/mixedDuration.json' with { type: 'json' };
 import withDuration from '../plays/withDuration.json' with { type: 'json' };
 import { MockNetworkError, withRequestInterception } from "../utils/networking.js";
-import { asPlays, generatePlay, generatePlayPlatformId, generatePlays, generateSourcePlayerObj, normalizePlays } from "../utils/PlayTestUtils.js";
+import { asPlays, generatePlay, generatePlayPlatformId, generatePlays, generateSourcePlayerObj, normalizePlays } from "../../../core/PlayTestUtils.js";
 import MockDate from 'mockdate';
 
 import { NowPlayingScrobbler, TestAuthScrobbler, TestScrobbler } from "./TestScrobbler.js";

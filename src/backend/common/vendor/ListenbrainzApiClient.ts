@@ -4,7 +4,6 @@ import request, { Request, Response } from 'superagent';
 import { BrainzMeta, PlayObject, PlayObjectLifecycleless, ScrobbleActionResult, UnixTimestamp, URLData } from "../../../core/Atomic.js";
 import { combinePartsToString, slice } from "../../../core/StringUtils.js";
 import {
-    findDelimiters,
     normalizeListenbrainzUrl,
     normalizeStr,
     parseArtistCredits,
@@ -12,6 +11,7 @@ import {
     parseTrackCredits,
     uniqueNormalizedStrArr,
 } from "../../utils/StringUtils.js";
+import { findDelimiters } from "../../../core/StringUtils.js";
 import { getScrobbleTsSOCDate } from "../../utils/TimeUtils.js";
 import { UpstreamError } from "../errors/UpstreamError.js";
 import { AbstractApiOptions, DEFAULT_RETRY_MULTIPLIER, DELIMITERS, FormatPlayObjectOptions, PagelessListensTimeRangeOptions, PagelessTimeRangeListens, PagelessTimeRangeListensResult } from "../infrastructure/Atomic.js";

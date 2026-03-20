@@ -12,7 +12,7 @@ import path from 'path';
 import { MusicbrainzApiConfigData } from '../../common/infrastructure/Atomic.js';
 import { MockNetworkError, withRequestInterception } from '../utils/networking.js';
 import { http, HttpResponse, delay } from "msw";
-import { generatePlay, withBrainz } from '../utils/PlayTestUtils.js';
+import { generatePlay, withBrainz } from '../../../core/PlayTestUtils.js';
 import { intersect, missingMbidTypes } from '../../utils.js';
 import { defaultLifecycle } from '../../utils/PlayTransformUtils.js';
 import { CoverArtApiClient, CoverArtApiConfig } from '../../common/vendor/musicbrainz/CoverArtApiClient.js';

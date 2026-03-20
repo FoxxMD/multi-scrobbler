@@ -5,7 +5,7 @@ import { describe, it } from 'mocha';
 import { JsonPlayObject, PlayMeta, PlayObject } from "../../../core/Atomic.js";
 
 import validSessionResponse from './validSession.json' with { type: "json" };
-import { generatePlay } from "../utils/PlayTestUtils.js";
+import { generatePlay } from "../../../core/PlayTestUtils.js";
 import { PlayerStateDataMaybePlay } from "../../common/infrastructure/Atomic.js";
 import { PlexApiData } from "../../common/infrastructure/config/source/plex.js";
 import PlexApiSource from "../../sources/PlexApiSource.js";

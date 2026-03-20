@@ -29,9 +29,9 @@ import {
     playObjDataMatch,
     pollingBackoff,
     sleep,
-    sortByNewestPlayDate,
     sortByOldestPlayDate,
 } from "../utils.js";
+import { sortByNewestPlayDate } from '../../core/PlayUtils.js';
 import { formatNumber } from '../../core/DataUtils.js';
 import { timeToHumanTimestamp } from "../utils/TimeUtils.js";
 import { todayAwareFormat } from "../../core/TimeUtils.js";

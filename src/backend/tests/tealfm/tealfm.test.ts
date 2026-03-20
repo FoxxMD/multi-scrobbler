@@ -1,7 +1,7 @@
 import chai, { expect } from 'chai';
 import asPromised from 'chai-as-promised';
 import { after, before, describe, it } from 'mocha';
-import { generateLastfmTrackObject, generateMbid, generatePlay, generateTealPlayRecord } from "../utils/PlayTestUtils.js";
+import { generateLastfmTrackObject, generateMbid, generatePlay, generateTealPlayRecord } from "../../../core/PlayTestUtils.js";
 import { AbstractBlueSkyApiClient, listRecordToPlay } from '../../common/vendor/bluesky/AbstractBlueSkyApiClient.js';
 import dayjs from 'dayjs';
 

@@ -5,7 +5,7 @@ import { fn } from 'storybook/test';
 import { Container } from '@chakra-ui/react';
 import { CList } from "../client/components/List";
 import {Provider} from "../client/components/Provider";
-import { generateJsonPlays } from "../backend/tests/utils/PlayTestUtils.js";
+import { generateJsonPlays } from "../core/PlayTestUtils.js";
 import { ErrorLike, JsonPlayObject } from "../core/Atomic.js";
 import {examplePlay, lastfmErrorExample} from './storyUtils.js';
 

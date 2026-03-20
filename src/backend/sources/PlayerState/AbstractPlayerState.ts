@@ -13,7 +13,8 @@ import {
     ReportedPlayerStatus,
 } from "../../common/infrastructure/Atomic.js";
 import { PollingOptions } from "../../common/infrastructure/config/common.js";
-import { genGroupIdStr, playObjDataMatch, progressBar } from "../../utils.js";
+import { playObjDataMatch, progressBar } from "../../utils.js";
+import { genGroupIdStr } from '../../../core/PlayUtils.js';
 import { formatNumber } from '../../../core/DataUtils.js';
 import { ListenProgress } from "./ListenProgress.js";
 import { ListenRange, ListenRangePositional } from "./ListenRange.js";

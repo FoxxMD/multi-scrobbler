@@ -6,7 +6,7 @@ import clone from "clone";
 import YTMusicSource, { ytiHistoryResponseFromShelfToPlays, ytiHistoryResponseToListItems } from "../../sources/YTMusicSource.js";
 import ytHistoryRes from './ytres.json' with {type: 'json'};
 import EventEmitter from "events";
-import { generatePlay, generatePlays, normalizePlays } from '../utils/PlayTestUtils.js';
+import { generatePlay, generatePlays, normalizePlays } from '../../../core/PlayTestUtils.js';
 import { YTMusicSourceConfig } from '../../common/infrastructure/config/source/ytmusic.js';
 import { sleep } from '../../utils.js';
 import dayjs from 'dayjs';

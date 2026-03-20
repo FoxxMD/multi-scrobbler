@@ -4,7 +4,7 @@ import React from 'react';
 import { fn } from 'storybook/test';
 import { PlayData, PlayInfoContainer } from "../client/components/PlayData.js";
 import {Provider} from "../client/components/Provider";
-import { generateArtists, generateJsonPlay, generatePlay } from "../backend/tests/utils/PlayTestUtils"
+import { generateArtists, generateJsonPlay, generatePlay } from "../core/PlayTestUtils.js"
 import clone from "clone";
 
 type PropsAndCustomArgs = React.ComponentProps<typeof PlayData> & {

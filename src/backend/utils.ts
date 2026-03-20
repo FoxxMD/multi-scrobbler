@@ -18,6 +18,7 @@ import {
     RemoteIdentityParts,
     ScrobbleThresholdResult,
 } from "./common/infrastructure/Atomic.js";
+import { genGroupIdStr } from '../core/PlayUtils.js';
 
 //const { default: Ajv } = AjvNS;
 dayjs.extend(utc);
@@ -48,30 +49,6 @@ export const sortByOldestPlayDate = (a: PlayObject, b: PlayObject) => {
         return -1;
     }
     return aPlayDate.isAfter(bPlayDate) ? 1 : -1
-};
-
-/** sorts playObj formatted objects by playDate in descending (newest first) order */
-export const sortByNewestPlayDate = (a: PlayObject, b: PlayObject) => {
-    const {
-        data: {
-            playDate: aPlayDate
-        } = {}
-    } = a;
-    const {
-        data: {
-            playDate: bPlayDate
-        } = {}
-    } = b;
-    if(aPlayDate === undefined && bPlayDate === undefined) {
-        return 0;
-    }
-    if(aPlayDate === undefined) {
-        return 1;
-    }
-    if(bPlayDate === undefined) {
-        return -1;
-    }
-    return aPlayDate.isBefore(bPlayDate) ? 1 : -1
 };
 
 export const setIntersection = (setA: any, setB: any) => {
@@ -332,9 +309,6 @@ export const genGroupIdStrFromPlay = (play: PlayObject) => {
     const groupId = genGroupId(play);
     return genGroupIdStr(groupId);
 };
-export const genGroupIdStr = (id: PlayPlatformId) => {
-    return `${id[0]}-${id[1]}`;
-}
 export const genGroupId = (play: PlayObject): PlayPlatformId => [play.meta.deviceId ?? NO_DEVICE, play.meta.user ?? NO_USER];
 
 export const getPlatformIdFromData = (data: PlayObject | PlayerStateDataMaybePlay) => {
