@@ -19,8 +19,10 @@ export const ActivityDetails = (props: ActivityDetailProps) => {
             play: {
                 meta: {
                     lifecycle: {
+                        original,
                         scrobble
                     } = {},
+                    lifecycle
                 } = {},
             } = {}
         }
@@ -29,6 +31,7 @@ export const ActivityDetails = (props: ActivityDetailProps) => {
     const [collapsibleOpen, setCollapsibleOpen] = useState(undefined);
 
     return (
+        <Box>
         <Accordion.Root variant="enclosed" collapsible multiple>
             <Accordion.Item value="info">
                 <Accordion.ItemTrigger>
@@ -37,7 +40,7 @@ export const ActivityDetails = (props: ActivityDetailProps) => {
                 </Accordion.ItemTrigger>
                 <Accordion.ItemContent>
                     <Accordion.ItemBody>
-                        <PlayData play={activity.play} final={activity.play} />
+                        <PlayData play={original ?? activity.play} final={activity.play} />
                     </Accordion.ItemBody>
                 </Accordion.ItemContent>
             </Accordion.Item>
@@ -58,11 +61,12 @@ export const ActivityDetails = (props: ActivityDetailProps) => {
                 </Flex>
                 <Accordion.ItemContent>
                     <Accordion.ItemBody>
-                        {error !== undefined ? <ErrorAlert error={error} /> : null}
                         {scrobble !== undefined ? <ActivityTimeline play={activity.play} collapsibleOpen={collapsibleOpen} /> : null}
                     </Accordion.ItemBody>
                 </Accordion.ItemContent>
             </Accordion.Item>
         </Accordion.Root>
+        {error !== undefined ? <ErrorAlert error={error} /> : null}
+        </Box>
     )
 }

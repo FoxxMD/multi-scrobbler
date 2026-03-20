@@ -1,10 +1,10 @@
-import { ComponentProps } from "react"
-import { Timeline, Icon, Span, Stack, Heading } from '@chakra-ui/react';
+import { ComponentProps, Fragment } from "react"
+import { Timeline, Icon, Span, Stack, Heading, Box } from '@chakra-ui/react';
 import { JsonPlayObject, LifecycleStep } from "../../core/Atomic";
 import { PlayData } from "./PlayData";
 import { ErrorAlert } from "./ErrorAlert";
 import { BiWrench } from "react-icons/bi";
-import { IoMusicalNoteOutline } from "react-icons/io5";
+import { MdMusicNote } from "react-icons/md";
 import { ChakraCodeBlockShort, ChakraPlainBlockShort } from "./CodeBlock";
 import { JsonDiffPatch } from "./JsonDiff";
 import { jdiff } from "../../core/DataUtils";
@@ -25,47 +25,63 @@ export const TransformSteps = (props: LifeycleStepsTimelineProps) => {
     let currentPlay: JsonPlayObject | false = JSON.parse(JSON.stringify(original));
 
     return (
-        <Timeline.Root size="lg" variant="subtle" css={{ "--timeline-separator-display": 'block' }}>
+        <Timeline.Root  variant="subtle" css={{ "--timeline-separator-display": 'block' }}>
             {steps.map((x, index) => {
+                const {
+                    patch,
+                    inputs,
+                    source,
+                    name
+                } = x;
                 let err: Error;
-                const left = JSON.parse(JSON.stringify(currentPlay));
-                if (currentPlay !== false) {
+                const left = currentPlay !== false ? JSON.parse(JSON.stringify(currentPlay)) : false;
+                if (currentPlay !== false && patch !== undefined) {
                     try {
-                        currentPlay = jdiff.patch(currentPlay, x.patch) as JsonPlayObject;
+                        currentPlay = jdiff.patch(currentPlay, patch) as JsonPlayObject;
                     } catch (e) {
                         err = new Error('Could not patch Play object', { cause: e });
                         currentPlay = false;
                     }
+                } else {
+                    currentPlay = false;
                 }
+                let diffElm: JSX.Element;
+                if(left !== false && currentPlay !== false) {
+                    diffElm = <ChakraPlainBlockShort code={left}>
+                                    <JsonDiffPatch left={left} right={currentPlay} />
+                                </ChakraPlainBlockShort>;
+                } else if(patch !== undefined) {
+                    diffElm = <ChakraCodeBlockShort code={patch} />;
+                }
+                const showAnyDetails = inputs !== undefined || diffElm !== undefined || err !== undefined;
                 return <Timeline.Item>
                     <Timeline.Connector>
                         <Timeline.Separator />
                         <Timeline.Indicator>
-                            <Icon fontSize="xs">
+                            <Icon fontSize="lg">
                                 <BiWrench />
                             </Icon>
                         </Timeline.Indicator>
                     </Timeline.Connector>
                     <Timeline.Content>
                         <Timeline.Title>
-                            {x.name} <Span color="fg.muted">with</Span> {x.source}
+                            {name} <Span color="fg.muted">with</Span> {source}
                         </Timeline.Title>
-                        <MSCollapsible indicator="Show Details" defaultOpen={collapsibleOpen} hideBelow="sm">
-                            <Heading size="sm">Diff</Heading>
-                            {err !== undefined ? <ErrorAlert error={err} /> : null}
 
-                            {left !== false && currentPlay !== false ? (
-                                <ChakraPlainBlockShort code={left}>
-                                    <JsonDiffPatch left={left} right={currentPlay} />
-                                </ChakraPlainBlockShort>
-                            ) : <ChakraCodeBlockShort code={x.patch} />}
-                            <Heading size="sm">Inputs</Heading>
-                            <Stack gap="1">
-                                {x.inputs.map((y) => {
-                                    return <ChakraCodeBlockShort code={y.input} title={y.type} />
-                                })}
+                        {showAnyDetails ? <MSCollapsible indicator="Show Details" defaultOpen={collapsibleOpen} hideBelow="sm">
+                            <Stack gap="2">
+                                {err !== undefined ? <ErrorAlert error={err} /> : null}
+                                {diffElm !== undefined ? <Fragment><Heading size="sm">Diff</Heading>{diffElm}</Fragment> : null }
+                                {inputs !== undefined ? (
+                                    <Fragment>
+                                        <Heading size="sm">Inputs</Heading>
+                                        <Stack gap="1">
+                                            {x.inputs.map((y) => {
+                                                return <ChakraCodeBlockShort code={y.input} title={y.type} />
+                                            })}
+                                        </Stack></Fragment>) : null}
                             </Stack>
-                        </MSCollapsible>
+                        </MSCollapsible> : null }
                     </Timeline.Content>
                 </Timeline.Item>
             })}
@@ -74,8 +90,8 @@ export const TransformSteps = (props: LifeycleStepsTimelineProps) => {
                     <Timeline.Connector>
                         <Timeline.Separator />
                         <Timeline.Indicator>
-                            <Icon fontSize="xs">
-                                <IoMusicalNoteOutline />
+                            <Icon fontSize="lg">
+                                <MdMusicNote />
                             </Icon>
                         </Timeline.Indicator>
                     </Timeline.Connector>

@@ -1100,3 +1100,323 @@ export const examplePlay = (): JsonPlayObject => ({
         lifecycle: exampleLifecycle()
       }
 });
+
+const lastfmErrorLifcycle: PlayLifecycle = {
+  "input": {
+    "track": {
+      "album": {
+        "album_type": "single",
+        "artists": [
+          {
+            "external_urls": {
+              "spotify": "https://open.spotify.com/artist/4l8MDydHy2RGwcGscG0uCB"
+            },
+            "href": "https://api.spotify.com/v1/artists/4l8MDydHy2RGwcGscG0uCB",
+            "id": "4l8MDydHy2RGwcGscG0uCB",
+            "name": "Mpho.Wav",
+            "type": "artist",
+            "uri": "spotify:artist:4l8MDydHy2RGwcGscG0uCB"
+          }
+        ],
+        "external_urls": {
+          "spotify": "https://open.spotify.com/album/1TCD8jrQdFclnpYVQxjon2"
+        },
+        "href": "https://api.spotify.com/v1/albums/1TCD8jrQdFclnpYVQxjon2",
+        "id": "1TCD8jrQdFclnpYVQxjon2",
+        "images": [
+          {
+            "height": 640,
+            "url": "https://i.scdn.co/image/ab67616d0000b273b0e9752208d1c426fcda8820",
+            "width": 640
+          },
+          {
+            "height": 300,
+            "url": "https://i.scdn.co/image/ab67616d00001e02b0e9752208d1c426fcda8820",
+            "width": 300
+          },
+          {
+            "height": 64,
+            "url": "https://i.scdn.co/image/ab67616d00004851b0e9752208d1c426fcda8820",
+            "width": 64
+          }
+        ],
+        "name": "Into The Deep",
+        "release_date": "2026-02-27",
+        "release_date_precision": "day",
+        "total_tracks": 3,
+        "type": "album",
+        "uri": "spotify:album:1TCD8jrQdFclnpYVQxjon2"
+      },
+      "artists": [
+        {
+          "external_urls": {
+            "spotify": "https://open.spotify.com/artist/4l8MDydHy2RGwcGscG0uCB"
+          },
+          "href": "https://api.spotify.com/v1/artists/4l8MDydHy2RGwcGscG0uCB",
+          "id": "4l8MDydHy2RGwcGscG0uCB",
+          "name": "Mpho.Wav",
+          "type": "artist",
+          "uri": "spotify:artist:4l8MDydHy2RGwcGscG0uCB"
+        }
+      ],
+      "disc_number": 1,
+      "duration_ms": 318875,
+      "explicit": false,
+      "external_ids": {
+        "isrc": "US23A9495906"
+      },
+      "external_urls": {
+        "spotify": "https://open.spotify.com/track/3Uar9flTUlakmFt9nkJdNZ"
+      },
+      "href": "https://api.spotify.com/v1/tracks/3Uar9flTUlakmFt9nkJdNZ",
+      "id": "3Uar9flTUlakmFt9nkJdNZ",
+      "is_local": false,
+      "name": "Bab'omdala",
+      "popularity": 26,
+      "preview_url": "https://p.scdn.co/mp3-preview/ec6e58ff47870192adfa02cd02b963e269ff330e?cid=f85f5aa4211f4ea78aa364547798b340",
+      "track_number": 1,
+      "type": "track",
+      "uri": "spotify:track:3Uar9flTUlakmFt9nkJdNZ"
+    },
+    "played_at": "2026-03-10T18:20:34.606Z",
+    "context": {
+      "type": "album",
+      "external_urls": {
+        "spotify": "https://open.spotify.com/album/4JgbPlF06nOTO03mSBSgtq"
+      },
+      "href": "https://api.spotify.com/v1/albums/4JgbPlF06nOTO03mSBSgtq",
+      "uri": "spotify:album:4JgbPlF06nOTO03mSBSgtq"
+    }
+  },
+  "original": {
+    "data": {
+      "album": "Into The Deep",
+      "track": "Bab'omdala",
+      "duration": 318.875,
+      "isrc": "US23A9495906",
+      "artists": [
+        "Mpho.Wav"
+      ],
+      "albumArtists": [],
+      // @ts-ignore
+      "playDate": "2026-03-10T18:20:34.606Z",
+      // @ts-ignore
+      "playDateCompleted": "2026-03-10T18:20:34.606Z",
+      "meta": {
+        "spotify": {
+          "track": "3Uar9flTUlakmFt9nkJdNZ",
+          "artist": [
+            "4l8MDydHy2RGwcGscG0uCB"
+          ],
+          "albumArtist": [],
+          "album": "1TCD8jrQdFclnpYVQxjon2"
+        },
+        "brainz": {
+          "trackNumber": 1
+        }
+      }
+    },
+    "meta": {
+      "deviceId": "NoDevice-SingleUser",
+      "source": "Spotify",
+      "musicService": "Spotify",
+      "trackId": "3Uar9flTUlakmFt9nkJdNZ",
+      "scrobbleTsSOC": 2,
+      "newFromSource": false,
+      "url": {
+        "web": "https://open.spotify.com/track/3Uar9flTUlakmFt9nkJdNZ"
+      },
+      "art": {
+        "album": "https://i.scdn.co/image/ab67616d00001e02b0e9752208d1c426fcda8820"
+      }
+    }
+  },
+  "steps": [
+    {
+      "name": "preCompare",
+      "source": "Spotify - default"
+    }
+  ],
+  "scrobble": {
+    "payload": {
+      "artist": "Mpho.Wav",
+      "track": "Bab'omdala",
+      "album": "Into The Deep",
+      "timestamp": 1773166834,
+      "duration": 318.875
+    },
+    "error": {
+      "showStopper": false,
+      "name": "Scrobble Submit Error",
+      "payload": {
+        "artist": "Mpho.Wav",
+        "track": "Bab'omdala",
+        "album": "Into The Deep",
+        "timestamp": 1773166834,
+        "duration": 318.875
+      },
+      "message": "Failed to submit scrobble to Last.fm",
+      "stack": "Scrobble Submit Error: Failed to submit scrobble to Last.fm\n    at LastfmApiClient.scrobble (/app/src/backend/common/vendor/LastfmApiClient.ts:447:19)\n    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)\n    at async LastfmScrobbler.doScrobble (/app/src/backend/scrobblers/LastfmScrobbler.ts:88:28)\n    at async LastfmScrobbler.scrobble (/app/src/backend/scrobblers/AbstractScrobbleClient.ts:623:28)\n    at async LastfmScrobbler.processDeadLetterScrobble (/app/src/backend/scrobblers/AbstractScrobbleClient.ts:937:39)\n    at async LastfmScrobbler.processDeadLetterQueue (/app/src/backend/scrobblers/AbstractScrobbleClient.ts:882:43)\n    at async PromisePoolExecutor.handler (/app/src/backend/tasks/heartbeatClients.ts:35:21)\n    at async PromisePoolExecutor.waitForActiveTaskToFinish (/app/node_modules/@supercharge/promise-pool/dist/promise-pool-executor.js:375:9)\n    at async PromisePoolExecutor.waitForProcessingSlot (/app/node_modules/@supercharge/promise-pool/dist/promise-pool-executor.js:368:13)\n    at async PromisePoolExecutor.process (/app/node_modules/@supercharge/promise-pool/dist/promise-pool-executor.js:354:13)",
+      "cause": {
+        "showStopper": false,
+        "name": "Error",
+        "message": "Last.fm ignored scrobble => (Code 1) (No error message returned) -- See https://www.last.fm/api/errorcodes for more information",
+        "stack": "Error: Last.fm ignored scrobble => (Code 1) (No error message returned) -- See https://www.last.fm/api/errorcodes for more information\n    at LastfmApiClient.scrobble (/app/src/backend/common/vendor/LastfmApiClient.ts:424:23)\n    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)\n    at async LastfmScrobbler.doScrobble (/app/src/backend/scrobblers/LastfmScrobbler.ts:88:28)\n    at async LastfmScrobbler.scrobble (/app/src/backend/scrobblers/AbstractScrobbleClient.ts:623:28)\n    at async LastfmScrobbler.processDeadLetterScrobble (/app/src/backend/scrobblers/AbstractScrobbleClient.ts:937:39)\n    at async LastfmScrobbler.processDeadLetterQueue (/app/src/backend/scrobblers/AbstractScrobbleClient.ts:882:43)\n    at async PromisePoolExecutor.handler (/app/src/backend/tasks/heartbeatClients.ts:35:21)\n    at async PromisePoolExecutor.waitForActiveTaskToFinish (/app/node_modules/@supercharge/promise-pool/dist/promise-pool-executor.js:375:9)\n    at async PromisePoolExecutor.waitForProcessingSlot (/app/node_modules/@supercharge/promise-pool/dist/promise-pool-executor.js:368:13)\n    at async PromisePoolExecutor.process (/app/node_modules/@supercharge/promise-pool/dist/promise-pool-executor.js:354:13)"
+      }
+    },
+    "match": {
+      "match": false,
+      "score": 0.32285714285714284,
+      "breakdowns": [
+        "Artist: 0.00 * 0.3 = 0.00",
+        "Title: 0.06 * 0.4 = 0.02",
+        "Time: (Fuzzy) 0.6 * 0.5 = 0.30",
+        "Time Detail => Existing: 14:15:15-04:00 - Candidate: 14:20:34-04:00 | Temporal Sameness: Fuzzy | Play Diff: 319s (Needed <10s) | Fuzzy Duration Diff: 0s (Needed <= 10s) | Range Comparison N/A",
+        "Score 0.32 => No Match"
+      ],
+      "reason": "Score 0.32 => No Match",
+      "closestMatchedPlay": {
+        "data": {
+          "artists": [
+            "Monique Bingham"
+          ],
+          "track": "Deep In The Bottom (of Africa) (feat. Black Coffee) - JazzWRLD Remix Edit (Radio Edit)",
+          "album": "Deep In The Bottom (Of Africa) The Remixes [Pt. 1]",
+          // @ts-ignore
+          "playDate": "2026-03-10T18:15:15.000Z"
+        },
+        "meta": {
+          "nowPlaying": false,
+          "mbid": "",
+          "source": "Lastfm",
+          "url": {
+            "web": "https://www.last.fm/music/Monique+Bingham/_/Deep+In+The+Bottom+(of+Africa)+(feat.+Black+Coffee)+-+JazzWRLD+Remix+Edit+(Radio+Edit)"
+          },
+          "lifecycle": {
+            "input": {
+              "artist": {
+                "url": "https://www.last.fm/music/Monique+Bingham",
+                "name": "Monique Bingham",
+                "image": [
+                  {
+                    "size": "small",
+                    "#text": "https://lastfm.freetls.fastly.net/i/u/34s/2a96cbd8b46e442fc41c2b86b821562f.png"
+                  },
+                  {
+                    "size": "medium",
+                    "#text": "https://lastfm.freetls.fastly.net/i/u/64s/2a96cbd8b46e442fc41c2b86b821562f.png"
+                  },
+                  {
+                    "size": "large",
+                    "#text": "https://lastfm.freetls.fastly.net/i/u/174s/2a96cbd8b46e442fc41c2b86b821562f.png"
+                  },
+                  {
+                    "size": "extralarge",
+                    "#text": "https://lastfm.freetls.fastly.net/i/u/300x300/2a96cbd8b46e442fc41c2b86b821562f.png"
+                  }
+                ],
+                "mbid": ""
+              },
+              "date": {
+                "uts": "1773166515",
+                "#text": "10 Mar 2026, 18:15"
+              },
+              "mbid": "",
+              "name": "Deep In The Bottom (of Africa) (feat. Black Coffee) - JazzWRLD Remix Edit (Radio Edit)",
+              "image": [
+                {
+                  "size": "small",
+                  "#text": "https://lastfm.freetls.fastly.net/i/u/34s/2a96cbd8b46e442fc41c2b86b821562f.png"
+                },
+                {
+                  "size": "medium",
+                  "#text": "https://lastfm.freetls.fastly.net/i/u/64s/2a96cbd8b46e442fc41c2b86b821562f.png"
+                },
+                {
+                  "size": "large",
+                  "#text": "https://lastfm.freetls.fastly.net/i/u/174s/2a96cbd8b46e442fc41c2b86b821562f.png"
+                },
+                {
+                  "size": "extralarge",
+                  "#text": "https://lastfm.freetls.fastly.net/i/u/300x300/2a96cbd8b46e442fc41c2b86b821562f.png"
+                }
+              ],
+              "url": "https://www.last.fm/music/Monique+Bingham/_/Deep+In+The+Bottom+(of+Africa)+(feat.+Black+Coffee)+-+JazzWRLD+Remix+Edit+(Radio+Edit)",
+              "streamable": "0",
+              "album": {
+                "mbid": "",
+                "#text": "Deep In The Bottom (Of Africa) The Remixes [Pt. 1]"
+              },
+              "loved": "0"
+            },
+            "original": {
+              "data": {
+                "track": "Deep In The Bottom (of Africa) (feat. Black Coffee) - JazzWRLD Remix Edit (Radio Edit)",
+                "album": "Deep In The Bottom (Of Africa) The Remixes [Pt. 1]",
+                "artists": [
+                  "Monique Bingham"
+                ],
+                // @ts-ignore
+                "playDate": "2026-03-10T18:15:15.000Z"
+              },
+              "meta": {
+                "nowPlaying": false,
+                "mbid": "",
+                "source": "Lastfm",
+                "url": {
+                  "web": "https://www.last.fm/music/Monique+Bingham/_/Deep+In+The+Bottom+(of+Africa)+(feat.+Black+Coffee)+-+JazzWRLD+Remix+Edit+(Radio+Edit)"
+                }
+              }
+            },
+            "steps": []
+          }
+        }
+      }
+    }
+  }
+}
+
+export const lastfmErrorExample = (): JsonPlayObject => ({
+    "data": {
+      "album": "Into The Deep",
+      "track": "Bab'omdala",
+      "duration": 318.875,
+      "isrc": "US23A9495906",
+      "artists": [
+        "Mpho.Wav"
+      ],
+      "albumArtists": [],
+      // @ts-ignore
+      "playDate": "2026-03-10T18:20:34.606Z",
+      // @ts-ignore
+      "playDateCompleted": "2026-03-10T18:20:34.606Z",
+      "meta": {
+        "spotify": {
+          "track": "3Uar9flTUlakmFt9nkJdNZ",
+          "artist": [
+            "4l8MDydHy2RGwcGscG0uCB"
+          ],
+          "albumArtist": [],
+          "album": "1TCD8jrQdFclnpYVQxjon2"
+        },
+        "brainz": {
+          "trackNumber": 1
+        }
+      }
+    },
+    "meta": {
+      "deviceId": "NoDevice-SingleUser",
+      "source": "Spotify",
+      "musicService": "Spotify",
+      "trackId": "3Uar9flTUlakmFt9nkJdNZ",
+      "scrobbleTsSOC": 2,
+      "newFromSource": false,
+      "url": {
+        "web": "https://open.spotify.com/track/3Uar9flTUlakmFt9nkJdNZ"
+      },
+      "art": {
+        "album": "https://i.scdn.co/image/ab67616d00001e02b0e9752208d1c426fcda8820"
+      },
+      lifecycle: lastfmErrorLifcycle
+    }
+  });

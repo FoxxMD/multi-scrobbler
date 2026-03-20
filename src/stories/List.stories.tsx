@@ -7,7 +7,7 @@ import { CList } from "../client/components/List";
 import {Provider} from "../client/components/Provider";
 import { generateJsonPlays } from "../backend/tests/utils/PlayTestUtils.js";
 import { ErrorLike, JsonPlayObject } from "../core/Atomic.js";
-import {examplePlay} from './storyUtils.js';
+import {examplePlay, lastfmErrorExample} from './storyUtils.js';
 
 const stack = "Scrobble Submit Error: Failed to submit to Listenbrainz (listen_type single)\n    at ListenbrainzApiClient.submitListen (/app/src/backend/common/vendor/ListenbrainzApiClient.ts:246:19)\n    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)\n    at async ListenbrainzScrobbler.doScrobble (/app/src/backend/scrobblers/ListenbrainzScrobbler.ts:87:28)\n    at async ListenbrainzScrobbler.scrobble (/app/src/backend/scrobblers/AbstractScrobbleClient.ts:679:28)\n    at async ListenbrainzScrobbler.processDeadLetterScrobble (/app/src/backend/scrobblers/AbstractScrobbleClient.ts:920:39)\n    at async ListenbrainzScrobbler.processDeadLetterQueue (/app/src/backend/scrobblers/AbstractScrobbleClient.ts:894:43)\n    at async PromisePoolExecutor.handler (/app/src/backend/tasks/heartbeatClients.ts:35:21)\n    at async PromisePoolExecutor.waitForActiveTaskToFinish (/app/node_modules/@supercharge/promise-pool/dist/promise-pool-executor.js:375:9)\n    at async PromisePoolExecutor.waitForProcessingSlot (/app/node_modules/@supercharge/promise-pool/dist/promise-pool-executor.js:368:13)\n    at async PromisePoolExecutor.process (/app/node_modules/@supercharge/promise-pool/dist/promise-pool-executor.js:354:13)";
 
@@ -28,7 +28,7 @@ const errorExample: ErrorLike = {
 
 // More on how to set up stories at: https://storybook.js.org/docs/writing-stories#default-export
 const meta = preview.meta({
-  title: 'List',
+  title: 'Examples/ActivityLog',
   component: CList,
   parameters: {
     // Optional parameter to center the component in the Canvas. More info: https://storybook.js.org/docs/configure/story-layout
@@ -38,17 +38,11 @@ const meta = preview.meta({
   tags: ['autodocs'],
   // More on argTypes: https://storybook.js.org/docs/api/argtypes
   args: {
-     data: (generateJsonPlays(3, undefined, {source: 'Spotify'})).map((x, index) => {
-      const mod = (index + 1) % 3;
-      switch(mod) {
-        case 1:
-          return {play: x, status: 'queued'}
-        case 2:
-          return {play: examplePlay(), status: 'scrobbled'}
-        case 0:
-          return {play: x, status: 'error', error: errorExample};
-      }
-    }),
+     data:[
+      ...generateJsonPlays(2).map((x) => ({play: x, status: 'queued'})),
+      {play: examplePlay(), status: 'scrobbled'},
+      {play: lastfmErrorExample(), status: 'error'}
+     ] ,
   },
 decorators: [
     (Story) => (<Provider><Container maxWidth="4xl"><Story/></Container></Provider>),

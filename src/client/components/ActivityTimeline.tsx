@@ -6,6 +6,7 @@ import { ErrorAlert } from "./ErrorAlert";
 import { IoMdCodeDownload } from "react-icons/io";
 import { BiWrench } from "react-icons/bi";
 import { IoMusicalNoteOutline } from "react-icons/io5";
+import { PiMagnifyingGlassDuotone } from "react-icons/pi";
 import { TbDatabaseEdit } from "react-icons/tb";
 import { MdFiberNew } from "react-icons/md";
 import { capitalize } from "../../core/StringUtils";
@@ -17,6 +18,7 @@ import { ScrobbleMatchResult } from "./ScrobbleMatchResult";
 import { ScrobbleActionResult } from "./ScrobbleActionResult";
 import { ExpandCollapse } from "./ExpandCollapse";
 import { MSCollapsible } from "./MSCollapsible";
+import { TimelineErrorIcon } from "./timeline/TimelineIcon";
 
 
 export interface ActivityDetailProps {
@@ -41,7 +43,8 @@ export const ActivityTimeline = (props: ActivityDetailProps) => {
                 steps = [],
                 scrobble: {
                     match,
-                    payload
+                    payload,
+                    error
                 } = {},
                 scrobble
             },
@@ -51,12 +54,12 @@ export const ActivityTimeline = (props: ActivityDetailProps) => {
     const [scrobbleCollapsibleOpen, setScrobbleCollapsibleOpen] = useState(false);
 
     return (
-        <Timeline.Root size="lg" variant="subtle">
+        <Timeline.Root variant="subtle" size="lg">
             <Timeline.Item>
                 <Timeline.Connector>
                     <Timeline.Separator />
                     <Timeline.Indicator>
-                        <Icon fontSize="xs">
+                        <Icon fontSize="lg">
                             <IoMdCodeDownload />
                         </Icon>
                     </Timeline.Indicator>
@@ -90,7 +93,7 @@ export const ActivityTimeline = (props: ActivityDetailProps) => {
                     <Timeline.Connector>
                         <Timeline.Separator />
                         <Timeline.Indicator>
-                            <Icon fontSize="xs">
+                            <Icon fontSize="lg">
                                 <BiWrench />
                             </Icon>
                         </Timeline.Indicator>
@@ -112,8 +115,8 @@ export const ActivityTimeline = (props: ActivityDetailProps) => {
                     <Timeline.Connector>
                         <Timeline.Separator />
                         <Timeline.Indicator>
-                            <Icon fontSize="xs">
-                                <BiWrench />
+                            <Icon fontSize="lg" color={`${match.match ? 'orange' : 'green'}.focusRing`}>
+                                <PiMagnifyingGlassDuotone />
                             </Icon>
                         </Timeline.Indicator>
                     </Timeline.Connector>
@@ -136,9 +139,11 @@ export const ActivityTimeline = (props: ActivityDetailProps) => {
                     <Timeline.Connector>
                         <Timeline.Separator />
                         <Timeline.Indicator>
-                            <Icon fontSize="xs">
-                                <TbDatabaseEdit />
-                            </Icon>
+                            {error !== undefined ? <TimelineErrorIcon /> : (
+                                <Icon fontSize="sm">
+                                    <TbDatabaseEdit />
+                                </Icon>
+                            )}
                         </Timeline.Indicator>
                     </Timeline.Connector>
                     <Timeline.Content gap="4">

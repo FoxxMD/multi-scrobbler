@@ -7,7 +7,7 @@ import { ActivityTimeline } from "../client/components/ActivityTimeline";
 import {Provider} from "../client/components/Provider";
 import { generateJsonPlays } from "../backend/tests/utils/PlayTestUtils.js";
 import { ErrorLike, JsonPlayObject, PlayLifecycle } from "../core/Atomic.js";
-import { examplePlay } from "./storyUtils.js";
+import { examplePlay, lastfmErrorExample } from "./storyUtils.js";
 
 // More on how to set up stories at: https://storybook.js.org/docs/writing-stories#default-export
 const meta = preview.meta({
@@ -33,3 +33,10 @@ decorators: [
 export const ActivityTimelineStory = meta.story({
   //render: function Render(args) { return (<ChakraProvider><MyList></MyList></ChakraProvider>) }
 });
+
+export const ScrobbleError = meta.story({
+  args: {
+    play: lastfmErrorExample()
+  }
+});
+

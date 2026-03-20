@@ -12,6 +12,7 @@ import { JsonDiffPatch } from "./JsonDiff";
 import { formatNumber, jdiff } from "../../core/DataUtils";
 import { capitalize } from "../../core/StringUtils";
 import { MSCollapsible, MSCollapsibleExternalProps } from "./MSCollapsible";
+import { TimelineErrorIcon } from "./timeline/TimelineIcon";
 
 export interface ScrobbleActionResultProps extends MSCollapsibleExternalProps {
     result: ScrobbleResult,
@@ -32,13 +33,30 @@ export const ScrobbleActionResult = (props: ScrobbleActionResultProps) => {
         collapsibleOpen
     } = props;
 
+    let responseSuffix: JSX.Element,
+        warningsElm: JSX.Element,
+        errorElm: JSX.Element | null;
+
+    if (warnings.length > 0) {
+        warningsElm = <Span color="orange.solid">warnings</Span>
+    }
+    if (error !== undefined) {
+        errorElm = <Span color="red.solid">an error</Span>
+    }
+
+    if (warningsElm !== undefined && errorElm !== undefined) {
+        responseSuffix = <Fragment> with {warningsElm} and {errorElm}</Fragment>;
+    } else if (warningsElm !== undefined || errorElm !== undefined) {
+        responseSuffix = <Fragment> with {warningsElm ?? errorElm}</Fragment>;
+    }
+
     return (
-        <Timeline.Root size="lg" variant="subtle" maxW="lg" css={{ "--timeline-separator-display": 'block' }}>
+        <Timeline.Root variant="subtle" css={{ "--timeline-separator-display": 'block' }}>
             <Timeline.Item>
                 <Timeline.Connector>
                     <Timeline.Separator />
                     <Timeline.Indicator>
-                        <Icon fontSize="xs">
+                        <Icon fontSize="lg">
                             <HiOutlineCloudUpload />
                         </Icon>
                     </Timeline.Indicator>
@@ -52,35 +70,40 @@ export const ScrobbleActionResult = (props: ScrobbleActionResultProps) => {
                     </MSCollapsible>
                 </Timeline.Content>
             </Timeline.Item>
-            {response !== undefined ? (
+            {response !== undefined || error !== undefined ? (
                 <Timeline.Item>
                     <Timeline.Connector>
                         <Timeline.Separator />
                         <Timeline.Indicator>
-                            <Icon fontSize="xs">
-                                <HiOutlineCloudDownload />
-                            </Icon>
+                            {error !== undefined ? <TimelineErrorIcon /> : (
+                                <Icon fontSize="lg">
+                                    <HiOutlineCloudDownload />
+                                </Icon>
+                            )}
                         </Timeline.Indicator>
                     </Timeline.Connector>
                     <Timeline.Content>
                         <Timeline.Title>
-                            <Span color="fg.muted">Received</Span> Response{scrobbler !== undefined ? <Fragment><Span color="fg.muted">from</Span> {capitalize(scrobbler)}</Fragment> : null}{warnings.length > 0 ? <Span color="orange.solid"> with warnings</Span> : null}
+                            <Span color="fg.muted">Received</Span> Response{scrobbler !== undefined ? <Fragment><Span color="fg.muted">from</Span> {capitalize(scrobbler)}</Fragment> : null}{responseSuffix !== undefined ? <Span> {responseSuffix}</Span> : null}
                         </Timeline.Title>
                         <MSCollapsible indicator="Show Response" defaultOpen={collapsibleOpen} hideBelow="sm">
-                        <ChakraCodeBlockShort code={response} language="json" maxLines={20} />
-                        {warnings.length > 0 ? (
-                            <Alert.Root status="warning">
-                                <Alert.Indicator />
-                                <Alert.Content>
-                                    <Alert.Title>Warnings in Response</Alert.Title>
-                                    <Alert.Description>
-                                        <List.Root>
-                                            {warnings.map((x) => <List.Item>{x}</List.Item>)}
-                                        </List.Root>
-                                    </Alert.Description>
-                                </Alert.Content>
-                            </Alert.Root>
-                        ) : null}
+                            <Stack gap="4">
+                                {error !== undefined ? <ErrorAlert error={error} /> : null}
+                                {response !== undefined ? <ChakraCodeBlockShort code={response} language="json" maxLines={20} /> : null}
+                                {warnings.length > 0 ? (
+                                    <Alert.Root status="warning">
+                                        <Alert.Indicator />
+                                        <Alert.Content>
+                                            <Alert.Title>Warnings in Response</Alert.Title>
+                                            <Alert.Description>
+                                                <List.Root>
+                                                    {warnings.map((x) => <List.Item>{x}</List.Item>)}
+                                                </List.Root>
+                                            </Alert.Description>
+                                        </Alert.Content>
+                                    </Alert.Root>
+                                ) : null}
+                            </Stack>
                         </MSCollapsible>
                     </Timeline.Content>
                 </Timeline.Item>
