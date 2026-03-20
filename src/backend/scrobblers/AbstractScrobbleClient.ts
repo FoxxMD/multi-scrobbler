@@ -60,7 +60,8 @@ import { getRoot } from "../ioc.js";
 import { rehydratePlay } from "../utils/CacheUtils.js";
 import { findAsyncSequential, staggerMapper } from "../utils/AsyncUtils.js";
 import pMap, { pMapIterable } from "p-map";
-import { comparePlayArtistsNormalized, comparePlayTracksNormalized, lifecyclelessInvariantTransform } from "../utils/PlayComparisonUtils.js";
+import { comparePlayArtistsNormalized, comparePlayTracksNormalized, existingScrobble, ExistingScrobbleOpts } from "../utils/PlayComparisonUtils.js";
+import { lifecyclelessInvariantTransform } from "../../core/PlayUtils.js";
 import { normalizeStr } from "../utils/StringUtils.js";
 import prom, { Counter, Gauge } from 'prom-client';
 import { ScrobbleSubmitError, SimpleError } from "../common/errors/MSErrors.js";
@@ -110,6 +111,8 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
     nowPlayingTaskInterval: number = 5000;
     npLogger: Logger;
     dupeLogger: Logger;
+
+    existingScrobble: (playObjPre: PlayObject, existingScrobbles: PlayObject[], log?: boolean) => Promise<PlayMatchResult>
 
     declare config: CommonClientConfig;
 
@@ -178,6 +181,13 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
         this.queuedGauge = clientMetrics.queued;
         this.deadLetterGauge = clientMetrics.deadLetter;
         this.scrobbledCounter = clientMetrics.scrobbled;
+        const existingScrobbleOpts: ExistingScrobbleOpts = {
+            logger: this.dupeLogger,
+            transformRules: this.transformRules,
+            transformPlay: this.transformPlay,
+            existingSubmitted: this.findExistingSubmittedPlayObj
+        }
+        this.existingScrobble = (playObjPre: PlayObject, existingScrobbles: PlayObject[], log?: boolean) => existingScrobble(playObjPre, existingScrobbles, existingScrobbleOpts, log)
     }
 
     protected getIdentifier() {
@@ -450,162 +460,6 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
         });
 
         return [matchPlayDate, dtInvariantMatches];
-    }
-
-    existingScrobble = async (playObjPre: PlayObject, existingScrobbles: PlayObject[], log: boolean = true): Promise<PlayMatchResult> => {
-
-        const result: PlayMatchResult = {
-            match: false,
-            score: 0,
-            breakdowns: [],
-            reason: 'No existing scrobble matched with a score higher than 0'
-        };
-
-        const playObj = await this.transformPlay(playObjPre, TRANSFORM_HOOK.candidate);
-        if(this.transformRules.compare?.candidate !== undefined) {
-            result.transformedPlay = playObj;
-        }
-
-        const tr = truncateStringToLength(27);
-        const scoreTrackOpts: TrackStringOptions = {include: ['track', 'artist', 'time'], transformers: {track: (t: any, data, existing) => `${existing ? '- ': ''}${tr(t)}`}};
-
-        // return early if we don't care about checking existing
-        if (false === this.checkExistingScrobbles) {
-            this.dupeLogger.trace(`${capitalize(playObj.meta.source ?? 'Source')}: ${buildTrackString(playObj, scoreTrackOpts)} => No Match because existing scrobble check is FALSE`);
-            result.reason = 'existing scrobble check is FALSE';
-            return result;
-        }
-
-        let existingScrobble;
-
-        // then check if we have already recorded this
-        const [existingExactSubmitted, existingDataSubmitted = []] = await this.findExistingSubmittedPlayObj(playObjPre);
-
-        // if we have an submitted play with matching data and play date then we can just return the response from the original scrobble
-        if (existingExactSubmitted !== undefined) {
-            result.closestMatchedPlay = lifecyclelessInvariantTransform(existingExactSubmitted.play);
-            result.score = 1;
-            result.match = true;
-            result.reason = 'Exact Match found in previously successfully scrobbled plays';
-
-            existingScrobble = existingExactSubmitted.scrobble;
-        }
-        // if not though then we need to check recent scrobbles from scrobble api.
-        // this will be less accurate than checking existing submitted (obv) but will happen if backlogging or on a fresh server start
-
-        if (existingScrobble === undefined) {
-
-            // if no recent scrobbles found then assume we haven't submitted it
-            // (either user doesnt want to check history or there is no history to check!)
-            if (existingScrobbles.length === 0) {
-                this.dupeLogger.trace(`${buildTrackString(playObj, scoreTrackOpts)} => No Match because no existing scrobbles returned from API`);
-                result.reason = 'no recent scrobbles returned from API';
-                return result;
-            }
-
-            // only check for fuzzy if we know this play is NOT a repeat
-            // otherwise we may get a false positive on the previously played track ending time == repeat start time
-            // -- this is info we only know if play was generated from MS player so we can be reasonably sure
-            //
-            // OR if play was generated from a source that uses History (endpoint sources, lfm or lz history sources)
-            // then we can be reasonably sure that our candidate play has an accurate timestamp and wouldn't fuzzy match a previous scrobble
-            const looseTimeAccuracy = playObj.data.repeat || playObj.meta.sourceSOT === SOURCE_SOT.HISTORY ? [TA_DURING] : [TA_FUZZY, TA_DURING];
-
-            
-            existingScrobble = await findAsyncSequential(existingScrobbles, async (xPre) => {
-
-                const x = await this.transformPlay(xPre, TRANSFORM_HOOK.existing);
-
-                //const referenceMatch = referenceApiScrobbleResponse !== undefined && playObjDataMatch(x, referenceApiScrobbleResponse);
-
-
-                const temporalComparison = comparePlayTemporally(x, playObj);
-                let timeMatch = 0;
-                if(hasAcceptableTemporalAccuracy(temporalComparison.match)) {
-                    timeMatch = 1;
-                } else if(hasAcceptableTemporalAccuracy(temporalComparison.match, looseTimeAccuracy)) {
-                    timeMatch = 0.6;
-                }
-
-                const [titleMatch, titleResults] = comparePlayTracksNormalized(x, playObj);
-
-                const [artistMatch, wholeMatches] = comparePlayArtistsNormalized(x, playObj);
-
-                let artistScore = ARTIST_WEIGHT * artistMatch;
-                const titleScore = TITLE_WEIGHT * titleMatch;
-                const timeScore = TIME_WEIGHT * timeMatch;
-                //const referenceScore = REFERENCE_WEIGHT * (referenceMatch ? 1 : 0);
-                let score = artistScore + titleScore + timeScore;
-
-                let artistWholeMatchBonus = 0;
-                let artistBreakdown =  `Artist: ${artistMatch.toFixed(2)} * ${ARTIST_WEIGHT} = ${artistScore.toFixed(2)}`;
-
-                if(score < 1 && timeMatch > 0 && titleMatch > 0.98 && artistMatch > 0.1 && wholeMatches > 0 && comparingMultipleArtists(x, playObj)) {
-                    // address scenario where:
-                    // * title is very close
-                    // * time falls within plausible dup range
-                    // * artist is not totally different
-                    // * AND score is still not high enough for a dup
-                    //
-                    // if we detect the plays have multiple artists and we have at least one whole match (stricter comparison than regular score)
-                    // then bump artist score a little to see if it gets it over the fence
-                    //
-                    // EX: Source: The Bongo Hop - Sonora @ 2023-09-28T10:54:06-04:00 => Closest Scrobble: Nidia Gongora / The Bongo Hop - Sonora @ 2023-09-28T10:59:34-04:00 => Score 0.83 => No Match
-                    // one play is only returning primary artist, and timestamp is at beginning instead of end of play
-
-                    const scoreBonus = artistMatch * 0.5;
-                    const scoreGapBonus = (1 - artistMatch) * 0.75;
-                    // use the smallest bump or 0.1
-                    artistWholeMatchBonus = Math.max(scoreBonus, scoreGapBonus, 0.1);
-                    artistScore = (ARTIST_WEIGHT + 0.05) * (artistMatch + artistWholeMatchBonus);
-                    score = artistScore + titleScore + timeScore;
-                    artistBreakdown = `Artist: (${artistMatch.toFixed(2)} + Whole Match Bonus ${artistWholeMatchBonus.toFixed(2)}) * (${ARTIST_WEIGHT} + Whole Match Bonus 0.05) = ${artistScore.toFixed(2)}`;
-                }
-
-                const scoreBreakdowns = [
-                    //`Reference: ${(referenceMatch ? 1 : 0)} * ${REFERENCE_WEIGHT} = ${referenceScore.toFixed(2)}`,
-                    artistBreakdown,
-                    `Title: ${titleMatch.toFixed(2)} * ${TITLE_WEIGHT} = ${titleScore.toFixed(2)}`,
-                    `Time: (${capitalize(temporalAccuracyToString(temporalComparison.match))}) ${timeMatch} * ${TIME_WEIGHT} = ${timeScore.toFixed(2)}`,
-                    `Time Detail => ${temporalPlayComparisonSummary(temporalComparison, x, playObj)}`,
-                    `Score ${score.toFixed(2)} => ${score >= DUP_SCORE_THRESHOLD ? 'Matched!' : 'No Match'}`
-                ];
-
-                const confidence = `Score ${score.toFixed(2)} => ${score >= DUP_SCORE_THRESHOLD ? 'Matched!' : 'No Match'}`
-
-                if (result.score <= score && score > 0) {
-                    result.reason = confidence;
-                    result.closestMatchedPlay = x;
-                    result.match = score >= DUP_SCORE_THRESHOLD;
-                    result.breakdowns = scoreBreakdowns;
-                    result.score = score;
-                    
-                    if(result.match === false && temporalComparison.match === TA_EXACT && score >= 0.90) {
-                        // if we have a score >= 90 and time is an exact match
-                        // it's likely the differences are due to source-scrobbler data presentation, or deficiencies,
-                        // rather than actually being unique
-                        // so force match in this instance
-                        result.match = true;
-                        result.reason = `Score ${score.toFixed(2)} is not greater than threshold (${DUP_SCORE_THRESHOLD}) but it is very close and timestamp is an exact match, vibe matching.`;
-                    }
-                }
-
-                return score >= DUP_SCORE_THRESHOLD;
-            });
-        }
-
-        const closestScrobbleParts: string[] = [];
-        if(result.closestMatchedPlay !== undefined) {
-            closestScrobbleParts.push(`Closest Scrobble: ${buildTrackString(result.closestMatchedPlay, scoreTrackOpts)}`);
-        }
-        closestScrobbleParts.push(result.reason);
-        let summaryStart = `${capitalize(playObj.meta.source ?? 'Source')}: ${buildTrackString(playObj, scoreTrackOpts)} => ${closestScrobbleParts.join(' => ')}`;
-        const summary = `${summaryStart}${result.breakdowns.length > 0 ? `\n${result.breakdowns.join('\n')}` : ''}`
-        result.summary = summary;
-        if(log) {
-            this.dupeLogger.trace(summary);
-        }
-        return result;
     }
 
     public scrobble = async (playObj: PlayObject, opts?: { delay?: number | false }): Promise<PlayObject> => {

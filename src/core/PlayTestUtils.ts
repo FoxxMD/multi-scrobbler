@@ -5,7 +5,7 @@ import isBetween from "dayjs/plugin/isBetween.js";
 import relativeTime from "dayjs/plugin/relativeTime.js";
 import timezone from "dayjs/plugin/timezone.js";
 import utc from "dayjs/plugin/utc.js";
-import { FEAT, JOINERS, JOINERS_FINAL, JsonPlayObject, MissingMbidType, ObjectPlayData, PlayMeta, PlayObject, SourcePlayerObj } from "./Atomic.js";
+import { BrainzMeta, FEAT, JOINERS, JOINERS_FINAL, JsonPlayObject, MissingMbidType, ObjectPlayData, PlayMeta, PlayObject, SourcePlayerObj } from "./Atomic.js";
 import { genGroupIdStr } from './PlayUtils.js';
 import { sortByNewestPlayDate } from './PlayUtils.js';
 import { CALCULATED_PLAYER_STATUSES, NO_DEVICE, NO_USER, PlayerStateDataMaybePlay, PlayPlatformId, REPORTED_PLAYER_STATUSES, SINGLE_USER_PLATFORM_ID } from '../backend/common/infrastructure/Atomic.js';
@@ -146,8 +146,15 @@ export const generatePlayerStateData = (options: Omit<PlayerStateDataMaybePlay, 
     }
 }
 
-export const generatePlay = (data: ObjectPlayData = {}, meta: MarkOptional<PlayMeta, 'lifecycle'> = {}): PlayObject => {
-    return {
+export interface GeneratePlayOpts {
+    playDateCompleted?: boolean
+}
+export const generatePlay = (data: ObjectPlayData = {}, meta: MarkOptional<PlayMeta, 'lifecycle'> = {}, opts: GeneratePlayOpts = {}): PlayObject => {
+    const {
+        playDateCompleted = false
+    } = opts;
+
+    const play: PlayObject = {
         data: {
             track: faker.music.songName(),
             artists: faker.helpers.multiple(faker.music.artist, {count: {min: 1, max: 3}}),
@@ -168,6 +175,12 @@ export const generatePlay = (data: ObjectPlayData = {}, meta: MarkOptional<PlayM
             }
         }
     }
+
+    if(play.data.playDateCompleted === undefined && playDateCompleted) {
+        play.data.playDateCompleted = play.data.playDate.add(play.data.duration)
+    }
+
+    return play;
 }
 
 export const generateJsonPlay = (...args: Parameters<typeof generatePlay>): JsonPlayObject => {
@@ -183,47 +196,42 @@ export const generateJsonPlays = (...args: Parameters<typeof generatePlays>): Js
 export interface WithBrainzOptions {
     include: ('track' | 'artist' | 'album')[]
 }
-export const withBrainz = (play: PlayObject, opts: WithBrainzOptions): PlayObject => {
+export const generateBrainz = (play: PlayObject, opts: WithBrainzOptions): BrainzMeta => {
     const {include} = opts;
+    const brainz: BrainzMeta = {};
     for(const i of include) {
         switch(i) {
             case 'track':
                 if(play.data.meta?.brainz?.recording === undefined) {
-                    play.data.meta = {
-                        ...(play.data.meta ?? {}),
-                        brainz: {
-                            ...(play.data.meta?.brainz ?? {}),
-                            recording: generateMbid()
-                        }
-                    }
+                    brainz.recording = generateMbid();
                 }
                 break;
             case 'album':
-                if(play.data.meta?.brainz?.album === undefined) {
-                    play.data.meta = {
-                        ...(play.data.meta ?? {}),
-                        brainz: {
-                            ...(play.data.meta?.brainz ?? {}),
-                            album: generateMbid()
-                        }
-                    }
+                if(play.data.meta?.brainz?.album === undefined && play.data.album !== undefined) {
+                    brainz.album = generateMbid();
                 }
                 break;
             case 'artist':
-                if(play.data.meta?.brainz?.artist === undefined) {
+                if(play.data.meta?.brainz?.artist === undefined && (play.data.artists ?? []).length > 0) {
                     const artistMbids = play.data.artists.map(x => generateMbid());
-                    play.data.meta = {
-                        ...(play.data.meta ?? {}),
-                        brainz: {
-                            ...(play.data.meta?.brainz ?? {}),
-                            artist: artistMbids
-                        }
-                    }
+                    brainz.artist = artistMbids;
                 }
                 break;
         }
     }
 
+    return brainz
+}
+
+export const withBrainz = (play: PlayObject, opts: WithBrainzOptions): PlayObject => {
+    const brainz = generateBrainz(play, opts);
+    play.data.meta = {
+        ...(play.data.meta ?? {}),
+        brainz : {
+            ...(play.data.meta?.brainz ?? {}),
+            ...brainz
+        }
+    }
     return play;
 }
 

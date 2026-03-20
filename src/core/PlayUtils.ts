@@ -1,5 +1,5 @@
 import { PlayPlatformId } from "../backend/common/infrastructure/Atomic.js";
-import { PlayObject } from "./Atomic.js";
+import { PlayObject, PlayObjectLifecycleless } from "./Atomic.js";
 
 
 /** sorts playObj formatted objects by playDate in descending (newest first) order */
@@ -26,5 +26,18 @@ export const sortByNewestPlayDate = (a: PlayObject, b: PlayObject) => {
     return aPlayDate.isBefore(bPlayDate) ? 1 : -1;
 };export const genGroupIdStr = (id: PlayPlatformId) => {
     return `${id[0]}-${id[1]}`;
+};
+export const lifecyclelessInvariantTransform = (play: PlayObject): PlayObjectLifecycleless => {
+    const {
+        meta: {
+            lifecycle, ...rest
+        } = {},
+    } = play;
+    return {
+        ...play,
+        meta: {
+            ...rest
+        }
+    };
 };
 
