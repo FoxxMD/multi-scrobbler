@@ -175,15 +175,15 @@ export interface TrackData {
     isrc?: string
 }
 
-export interface PlayData extends TrackData {
+export interface PlayData<D extends DateLike = Dayjs> extends TrackData {
     /**
      * The date the track was played at
      * */
-    playDate?: Dayjs | string
+    playDate?: D
     /** Number of seconds the track was listened to */
     listenedFor?: number
     listenRanges?: ListenRangeData[]
-    playDateCompleted?: Dayjs | string
+    playDateCompleted?: D
     repeat?: boolean
 }
 
@@ -193,7 +193,7 @@ export interface ArtMeta {
     artist?: string
 }
 
-export interface PlayMeta {
+export interface PlayMeta<D extends DateLike = Dayjs> {
     source?: string
     sourceSOT?: SOURCE_SOT_TYPES
 
@@ -269,7 +269,7 @@ export interface PlayMeta {
 
     comment?: string
 
-    lifecycle: PlayLifecycle
+    lifecycle: PlayLifecycle<D>
     lifecycleInputs?: LifecycleInput[]
 
     [key: string]: any
@@ -279,16 +279,12 @@ export interface LifecycleInput {
     type: string, input: (object | string)
 }
 
-export type PlayMetaLifecycleless = MarkOptional<PlayMeta, 'lifecycle'>;
+export type PlayMetaLifecycleless<D extends DateLike = Dayjs> = MarkOptional<PlayMeta<D>, 'lifecycle'>;
 
-export interface PlayObjectLifecycleless {
-    data: ObjectPlayData,
-    meta: PlayMetaLifecycleless
+export interface PlayObjectLifecycleless<D extends DateLike = Dayjs> {
+    data: PlayData<D>,
+    meta: PlayMetaLifecycleless<D>
 }
-
-// export interface PlayMetaLifecycled extends PlayMeta {
-//     lifecycle: PlayLifecycle
-// }
 
 export type ErrorLike = Error | ErrorObject;
 
@@ -301,7 +297,7 @@ export interface ScrobbleResult {
     mergedScrobble?: PlayObjectLifecycleless
 }
 
-export interface PlayLifecycle {
+export interface PlayLifecycle<D extends DateLike = Dayjs> {
     input?: object
     original: PlayObjectLifecycleless
     steps: LifecycleStep[]
@@ -340,38 +336,26 @@ export type ScrobbleTsSOC = 1 | 2;
 export const SCROBBLE_TS_SOC_START: ScrobbleTsSOC = 1;
 export const SCROBBLE_TS_SOC_END: ScrobbleTsSOC = 2;
 
-export interface AmbPlayObject {
-    data: PlayData,
-    meta: PlayMeta | MarkOptional<PlayMeta, 'lifecycle'>
+export type DateLike = Dayjs | string
+
+export interface AmbPlayObject<D extends DateLike = Dayjs> {
+    data: PlayData<D>,
+    meta: PlayMeta<D> | MarkOptional<PlayMeta<D>, 'lifecycle'>
 }
 
 export const isPlayObject = (obj: object): obj is PlayObject => {
    return obj !== undefined && obj !== null &&  'data' in obj && typeof obj.data === 'object' && 'meta' in obj && typeof obj.meta === 'object';
 }
 
-export interface PlayObject extends AmbPlayObject {
-    data: ObjectPlayData,
-}
-
-// export interface PlayObjectLifecycled extends PlayObject {
-//     meta: PlayMetaLifecycled
-// }
-
+export type PlayObject = AmbPlayObject<Dayjs>;
 export interface PlayActivity {
   play: JsonPlayObject
   status: string
   error?: ErrorLike
 }
-export interface JsonPlayObject extends AmbPlayObject {
-    data: JsonPlayData
-}
+export type JsonPlayObject = AmbPlayObject<string>;
 
 export interface ObjectPlayData extends PlayData {
-    playDate?: Dayjs
-    playDateCompleted?: Dayjs
-}
-
-export interface JsonPlayData extends PlayData {
     playDate?: Dayjs
     playDateCompleted?: Dayjs
 }
@@ -382,9 +366,9 @@ export interface LogOutputConfig {
     limit: number
 }
 
-export interface SourcePlayerObj {
+export interface SourcePlayerObj<D extends DateLike = Dayjs> {
     platformId: PlayPlatformIdStr,
-    play?: PlayObject,
+    play?: AmbPlayObject<D>,
     playFirstSeenAt?: string,
     playLastUpdatedAt?: string,
     playerLastUpdatedAt: string
@@ -400,9 +384,7 @@ export interface SourcePlayerObj {
     }
 }
 
-export interface SourcePlayerJson extends Omit<SourcePlayerObj, 'play'> {
-    play?: JsonPlayObject
-}
+export type SourcePlayerJson = SourcePlayerObj<string>;
 
 export interface SourceScrobble<PlayType> {
     source: string

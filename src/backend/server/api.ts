@@ -13,6 +13,7 @@ import {
     PlayObject,
     SOURCE_SOT,
     SOURCE_SOT_TYPES,
+    SourcePlayerJson,
     SourceStatusData,
 } from "../../core/Atomic.js";
 import { capitalize } from "../../core/StringUtils.js";
@@ -186,7 +187,7 @@ export const setupApi = (app: ExpressWithAsync, logger: Logger, appLoggerStream:
                 hasAuth: requiresAuth,
                 hasAuthInteraction: requiresAuthInteraction,
                 authed,
-                players: 'players' in x ? (x as MemorySource).playersToObject() : {},
+                players: 'players' in x ? (x as MemorySource).playersToObject() as unknown as Record<string,SourcePlayerJson> : {},
                 sot: ('playerSourceOfTruth' in x) ? x.playerSourceOfTruth as SOURCE_SOT_TYPES : SOURCE_SOT.HISTORY,
                 supportsUpstreamRecentlyPlayed: x.supportsUpstreamRecentlyPlayed,
                 supportsManualListening: x.supportsManualListening,

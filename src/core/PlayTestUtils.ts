@@ -30,7 +30,8 @@ export const asPlays = (data: object[]): PlayObject[] => {
             ...y,
             data: {
                 ...y.data,
-                playDate: dayjs(y.data.playDate)
+                playDate: dayjs(y.data.playDate),
+                playDateCompleted: y.data.playDateCompleted !== undefined ? dayjs(y.data.playDateCompleted) : undefined
             }
         }
     });
