@@ -17,7 +17,7 @@ import { fileOrDirectoryIsWriteable } from '../utils/FSUtils.js';
 import { asCacheAuthProvider, asCacheMetadataProvider, asCacheScrobbleProvider, CacheAuthProvider, CacheConfig, CacheConfigOptions, CacheMetadataProvider, CacheProvider, CacheScrobbleProvider } from './infrastructure/Atomic.js';
 import { Typeson } from 'typeson';
 import { builtin } from 'typeson-registry';
-import { loggerNoop } from './logging.js';
+import { loggerNoop } from './MaybeLogger.js';
 import { ListenProgressPositional, ListenProgressTS } from '../sources/PlayerState/ListenProgress.js';
 const configDir = process.env.CONFIG_DIR || path.resolve(projectDir, `./config`);
 

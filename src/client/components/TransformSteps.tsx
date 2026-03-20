@@ -23,6 +23,11 @@ export const TransformSteps = (props: LifeycleStepsTimelineProps) => {
     } = props;
 
     let currentPlay: JsonPlayObject | false = JSON.parse(JSON.stringify(original));
+    if(currentPlay !== false) {
+        currentPlay.data.meta = {
+            ...(currentPlay.data.meta ?? {}),
+        }
+    }
 
     return (
         <Timeline.Root  variant="subtle" css={{ "--timeline-separator-display": 'block' }}>

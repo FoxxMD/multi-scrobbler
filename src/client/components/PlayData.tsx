@@ -1,7 +1,7 @@
 import React, { Fragment, useMemo, useState } from 'react';
 import { EmptyState, DataList, HStack, Tag, Tabs, Wrap, Box, Flex, SegmentGroup, Stack, Text, Separator, IconButton, Container, SimpleGrid, Float } from "@chakra-ui/react"
 import { LuCode, LuText } from "react-icons/lu"
-import { JsonPlayObject } from '../../core/Atomic.js';
+import { JsonPlayObject, PlayObjectLifecycleless } from '../../core/Atomic.js';
 import { shortTodayAwareFormat } from '../../core/TimeUtils.js';
 import dayjs from 'dayjs';
 import { ChakraCodeBlock } from './CodeBlock.js';
@@ -23,7 +23,7 @@ const EmptyPlayData = () => {
 export type DisplayDates = false | 'all' | 'played' | 'seen';
 
 export interface PlayInfoProps {
-    play?: JsonPlayObject
+    play?: JsonPlayObject | PlayObjectLifecycleless<string>
     final?: JsonPlayObject
     showCodeToggle?: boolean
     showCompare?: boolean

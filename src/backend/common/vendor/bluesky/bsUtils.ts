@@ -2,7 +2,7 @@ import { Handle } from "@atcute/lexicons";
 import { isHandle } from "@atcute/lexicons/syntax";
 import { Logger } from "@foxxmd/logging";
 import { parseRegexSingle } from "@foxxmd/regex-buddy-core";
-import { MaybeLogger } from "../../logging.js";
+import { MaybeLogger } from '../../MaybeLogger.js';
 import { AtprotoDid } from "@atproto/oauth-client-node";
 
 export const HANDLE_REGEX = new RegExp(/.+\..+/);

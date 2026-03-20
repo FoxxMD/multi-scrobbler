@@ -5,7 +5,7 @@ import AbstractApiClient from "../AbstractApiClient.js";
 import { Agent, ComAtprotoRepoCreateRecord, ComAtprotoRepoListRecords } from "@atproto/api";
 import { MSCache } from "../../Cache.js";
 import { BrainzMeta, PlayObject, PlayObjectLifecycleless, ScrobbleActionResult, UnixTimestamp } from "../../../../core/Atomic.js";
-import { musicServiceToCononical } from "../ListenbrainzApiClient.js";
+import { musicServiceToCononical } from '../listenbrainz/lzUtils.js';
 import { parseRegexSingle } from "@foxxmd/regex-buddy-core";
 import { RecordOptions } from "../../infrastructure/config/client/tealfm.js";
 import dayjs, { ManipulateType } from "dayjs";

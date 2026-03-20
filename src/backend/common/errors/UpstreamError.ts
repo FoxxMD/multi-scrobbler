@@ -12,7 +12,7 @@ export class UpstreamError extends Error {
 
     constructor(message: string, options?: UpstreamErrorOptions | undefined) {
         super(message, options);
-        const {showStopper = false, response, responseBody} = options;
+        const {showStopper = false, response, responseBody} = options ?? {};
         this.showStopper = showStopper;
         this.response = response;
         this.responseBody = responseBody;

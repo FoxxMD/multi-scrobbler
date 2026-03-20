@@ -6,7 +6,8 @@ import { http, HttpResponse } from "msw";
 import { PlayObject } from "../../../core/Atomic.js";
 import { UpstreamError } from "../../common/errors/UpstreamError.js";
 
-import { ListenbrainzApiClient, playToListenPayload, listenResponseToPlay, listenPayloadToPlay } from "../../common/vendor/ListenbrainzApiClient.js";
+import { ListenbrainzApiClient, listenResponseToPlay, listenPayloadToPlay } from "../../common/vendor/ListenbrainzApiClient.js";
+import { playToListenPayload } from '../../common/vendor/listenbrainz/lzUtils.js';
 import { ListenPayload, ListenResponse, SubmitPayload } from '../../common/vendor/listenbrainz/interfaces.js';
 import { ExpectedResults } from "../utils/interfaces.js";
 import { withRequestInterception } from "../utils/networking.js";

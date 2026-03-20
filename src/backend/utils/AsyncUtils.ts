@@ -1,4 +1,3 @@
-import { randomInt } from "crypto";
 import pMap, { Mapper, Options, pMapIterable } from "p-map";
 import { sleep } from "../utils.js";
 
@@ -61,7 +60,7 @@ export function staggerMapper<Element, NewElement>(options: { maxRandomStagger?:
       sleep(initialStagger);
       initialStagger += initialInterval;
     } else {
-      const s = randomInt(maxRandomStagger)
+      const s = Math.max((Math.random() * 1000), maxRandomStagger)
       await sleep(s);
     }
     return await mapper(x, index);

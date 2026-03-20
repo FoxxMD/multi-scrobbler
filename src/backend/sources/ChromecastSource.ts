@@ -17,7 +17,7 @@ import {
     SourceData,
 } from "../common/infrastructure/Atomic.js";
 import { ChromecastSourceConfig } from "../common/infrastructure/config/source/chromecast.js";
-import { MaybeLogger } from "../common/logging.js";
+import { MaybeLogger } from '../common/MaybeLogger.js';
 import {
     chromePlayerStateToReported,
     genDeviceId,

@@ -9,7 +9,7 @@ import {
     createParser,
     SchemaGenerator, LiteralType, LiteralTypeFormatter
 } from "ts-json-schema-generator";
-import { MaybeLogger } from "../common/logging.js";
+import { MaybeLogger } from '../common/MaybeLogger.js';
 
 // https://github.com/vega/ts-json-schema-generator/issues/1899#issuecomment-2407674526
 // https://github.com/vega/ts-json-schema-generator?tab=readme-ov-file#custom-formatting

@@ -1,4 +1,3 @@
-import { getVersion } from "@foxxmd/get-version";
 import { Logger, loggerDebug, LogOptions } from "@foxxmd/logging";
 import { EventEmitter } from "events";
 import { createContainer } from "iti";
@@ -14,16 +13,9 @@ import TransformerManager from "./common/transforms/TransformerManager.js";
 import { TransformerCommonConfig } from "../core/Atomic.js";
 import prom, { Counter, Gauge } from 'prom-client';
 import { CoverArtApiClient } from "./common/vendor/musicbrainz/CoverArtApiClient.js";
-
-export let version: string = 'unknown';
-
-export const parseVersion = async () => {
-    version = await getVersion({priority: ['env', 'git', 'file']});
-    return version;
-}
+import { version } from "./version.js";
 
 let root: ReturnType<typeof createRoot>;
-
 export interface RootOptions {
     baseUrl?: string,
     port?: number

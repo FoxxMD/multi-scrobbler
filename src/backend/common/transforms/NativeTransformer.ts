@@ -8,7 +8,7 @@ import { parseRegexSingle, parseToRegexOrLiteralSearch } from "@foxxmd/regex-bud
 import { TransformerOptions } from "./AbstractTransformer.js";
 import { DELIMITERS_NO_AMP } from "../infrastructure/Atomic.js";
 import { asArray } from "../../utils/DataUtils.js";
-import { MaybeLogger } from "../logging.js";
+import { MaybeLogger } from '../MaybeLogger.js';
 import { childLogger } from "@foxxmd/logging";
 
 export type ArtistParseSource = 'artists' | 'title'

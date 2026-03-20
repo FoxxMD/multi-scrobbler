@@ -6,7 +6,7 @@ import AbstractApiClient from "../AbstractApiClient.js";
 import { getBaseFromUrl, isPortReachableConnect, joinedUrl, normalizeWebAddress } from "../../../utils/NetworkUtils.js";
 import request, { Request, Response } from 'superagent';
 import { UpstreamError } from "../../errors/UpstreamError.js";
-import { playToListenPayload } from "../ListenbrainzApiClient.js";
+import { playToListenPayload } from '../listenbrainz/lzUtils.js';
 import { SubmitPayload } from '../listenbrainz/interfaces.js';
 import { ListenType } from '../listenbrainz/interfaces.js';
 import { parseRegexSingleOrFail } from "../../../utils.js";

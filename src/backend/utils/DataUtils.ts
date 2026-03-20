@@ -1,6 +1,6 @@
 import JSON5 from "json5";
 import { constants, promises } from "fs";
-import { MaybeLogger } from "../common/logging.js";
+import { MaybeLogger } from '../common/MaybeLogger.js';
 
 export const asArray = <T>(data: T | T[]): T[] => {
     if (Array.isArray(data)) {

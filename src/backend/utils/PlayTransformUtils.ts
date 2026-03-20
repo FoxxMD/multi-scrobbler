@@ -1,4 +1,4 @@
-import { Logger, loggerTest } from "@foxxmd/logging";
+import { Logger } from "@foxxmd/logging";
 import { searchAndReplace as searchAndReplaceFunc, testMaybeRegex as testMaybeRegexFunc } from "@foxxmd/regex-buddy-core";
 import { PlayLifecycle, PlayObject, PlayObjectLifecycleless } from "../../core/Atomic.js";
 

@@ -7,7 +7,8 @@ import { isNodeNetworkException } from "../common/errors/NodeErrors.js";
 import { hasUpstreamError, UpstreamError } from "../common/errors/UpstreamError.js";
 import { FormatPlayObjectOptions, TimeRangeListensFetcher } from "../common/infrastructure/Atomic.js";
 import { DEFAULT_MS_ITEMS_PER_GET_LZ, ListenBrainzClientConfig } from "../common/infrastructure/config/client/listenbrainz.js";
-import { ListenbrainzApiClient, playToListenPayload, playToSubmitPayload } from "../common/vendor/ListenbrainzApiClient.js";
+import { ListenbrainzApiClient } from "../common/vendor/ListenbrainzApiClient.js";
+import { playToListenPayload } from '../common/vendor/listenbrainz/lzUtils.js';
 import { ListenPayload } from '../common/vendor/listenbrainz/interfaces.js';
 import { Notifiers } from "../notifier/Notifiers.js";
 

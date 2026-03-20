@@ -11,7 +11,7 @@ import { JsonDiffPatch } from "./JsonDiff";
 import { formatNumber, jdiff } from "../../core/DataUtils";
 
 export interface ScrobbleMatchResultProps {
-    match: PlayMatchResult
+    match: PlayMatchResult<string>
 }
 
 export const ScrobbleMatchResult = (props: ScrobbleMatchResultProps) => {

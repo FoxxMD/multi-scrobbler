@@ -28,6 +28,7 @@ export const ActivityDetails = (props: ActivityDetailProps) => {
         }
     } = props;
 
+    debugger;
     const [collapsibleOpen, setCollapsibleOpen] = useState(undefined);
 
     return (

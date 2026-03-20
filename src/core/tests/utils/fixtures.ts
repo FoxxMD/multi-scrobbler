@@ -10,8 +10,8 @@ import { lifecyclelessInvariantTransform } from '../../PlayUtils.js';
 import clone from 'clone';
 import { jdiff } from '../../DataUtils.js';
 import { existingScrobble } from '../../../backend/utils/PlayComparisonUtils.js';
-import { playToListenPayload } from '../../../backend/common/vendor/ListenbrainzApiClient.js';
 import { UpstreamError } from '../../../backend/common/errors/UpstreamError.js';
+import { playToListenPayload } from '../../../backend/common/vendor/listenbrainz/lzUtils.js';
 
 interface BlockPath { key: string, parent: string };
 type BlockPaths = BlockPath[];
@@ -204,7 +204,7 @@ export const generateLifecycleStep = (play: PlayObject, opts: GenerateLifecycleO
 
   const {
     name = ['preCompare', 'postCompare'][faker.number.int({ min: 0, max: 1 })],
-    source = `${play.meta.source}-${faker.word.noun()}`,
+    source = `${play.meta?.source}-${faker.word.noun()}`,
     equal = faker.datatype.boolean(0.1),
     inputCount
   } = opts;
@@ -235,6 +235,9 @@ export const generateLifecycleStep = (play: PlayObject, opts: GenerateLifecycleO
     new Traverse(modifiedPlay).forEach((ctx, x) => {
       if (modifiableKeys.includes(ctx.key)) {
         if (faker.datatype.boolean(0.3)) {
+          if(ctx.key === 'meta' && (ctx.parent === undefined || ctx.parent.key !== 'data')) {
+            return;
+          }
           somethingModified = true;
           if(ctx.key === 'brainz' && Object.keys(x).length === 0) {
               ctx.update(generateBrainz(play, {include: ['album', 'artist', 'track']}), true);
