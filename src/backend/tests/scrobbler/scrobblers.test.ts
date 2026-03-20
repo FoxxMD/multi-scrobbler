@@ -12,7 +12,7 @@ import { genGroupIdStr } from '../../../core/PlayUtils.js';
 import mixedDuration from '../plays/mixedDuration.json' with { type: 'json' };
 import withDuration from '../plays/withDuration.json' with { type: 'json' };
 import { MockNetworkError, withRequestInterception } from "../utils/networking.js";
-import { asPlays, generatePlay, generatePlayPlatformId, generatePlays, generateSourcePlayerObj, normalizePlays } from "../../../core/PlayTestUtils.js";
+import { generatePlay, generatePlayPlatformId, generatePlays, generateSourcePlayerObj, normalizePlays } from "../../../core/PlayTestUtils.js";
 import MockDate from 'mockdate';
 
 import { NowPlayingScrobbler, TestAuthScrobbler, TestScrobbler } from "./TestScrobbler.js";
@@ -20,14 +20,16 @@ import { PaginatedTimeRangeOptions, PlayPlatformId, REFRESH_STALE_DEFAULT } from
 import { defaultLifecycle } from '../../utils/PlayTransformUtils.js';
 import { shuffleArray } from '../../utils/DataUtils.js';
 import { DEFAULT_CONSOLIDATE_DURATION, DEFAULT_GROUP_DURATION, groupPlaysToTimeRanges } from '../../utils/ListenFetchUtils.js';
+import { asPlay } from '../../../core/tests/utils/fixtures.js';
 
 chai.use(asPromised);
 
 const firstPlayDate = dayjs().subtract(1, 'hour');
 const olderFirstPlayDate = dayjs().subtract(4, 'hour');
 
-const withDurPlays = asPlays(withDuration);
-const mixedDurPlays = asPlays(mixedDuration);
+const withDurPlays = withDuration.map(asPlay);
+// @ts-expect-error mixed duration is missing meta but not used for tests
+const mixedDurPlays = mixedDuration.map(asPlay);
 const normalizedWithDur = normalizePlays(withDurPlays, {initialDate: firstPlayDate});
 const normalizedWithMixedDur = normalizePlays(mixedDurPlays, {initialDate: firstPlayDate});
 

@@ -84,8 +84,8 @@ export interface TrackStringOptions<T = string> {
     }
 }
 
-export interface PlayProgressAmb {
-    timestamp: string | Dayjs
+export interface PlayProgressAmb<D extends DateLike = Dayjs> {
+    timestamp: D
     position?: number
     positionPercent?: number
 }
@@ -299,7 +299,7 @@ export interface ScrobbleResult {
 
 export interface PlayLifecycle<D extends DateLike = Dayjs> {
     input?: object
-    original: PlayObjectLifecycleless
+    original: PlayObjectLifecycleless<D>
     steps: LifecycleStep[]
     scrobble?: ScrobbleResult
 }
@@ -321,13 +321,13 @@ export interface ScrobbleActionResult {
     warnings?: string[]
 }
 
-export interface PlayMatchResult {
+export interface PlayMatchResult<D extends DateLike = Dayjs> {
     match: boolean
     score: number
     breakdowns: string[]
     reason?: string
-    closestMatchedPlay?: PlayObjectLifecycleless
-    transformedPlay?: PlayObjectLifecycleless
+    closestMatchedPlay?: PlayObjectLifecycleless<D>
+    transformedPlay?: PlayObjectLifecycleless<D>
     summary?: String
 }
 
@@ -575,3 +575,8 @@ export interface numberFormatOptions {
         indicate?: boolean;
     };
 }
+/** Only checks for DateT since we can reasonbly sure if this exists its a date we can parse with dayjs
+ * 
+ * It needs to be cheap since we mostly use this when walking play objects to transform strings back to dayjs and there may be many strings to check
+ */
+export const REGEX_ISO8601_LOOSE = new RegExp(/\d{4}-[01]\d-[0-3]\dT/);

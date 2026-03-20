@@ -23,20 +23,6 @@ dayjs.extend(relativeTime);
 dayjs.extend(duration);
 dayjs.extend(timezone);
 
-export const asPlays = (data: object[]): PlayObject[] => {
-    return data.map(x => {
-        const y = x as JsonPlayObject;
-        return {
-            ...y,
-            data: {
-                ...y.data,
-                playDate: dayjs(y.data.playDate),
-                playDateCompleted: y.data.playDateCompleted !== undefined ? dayjs(y.data.playDateCompleted) : undefined
-            }
-        }
-    });
-}
-
 export const normalizePlays = (plays: PlayObject[],
                                options?: {
                                    //sortFunc?: (a: PlayObject, b: PlayObject) => 0 | 1 | -1
@@ -194,7 +180,11 @@ export const generateJsonPlays = (...args: Parameters<typeof generatePlays>): Js
     return JSON.parse(JSON.stringify(plays));
 }
 
-export const withBrainz = (play: PlayObject, include: ('track' | 'artist' | 'album')[]): PlayObject => {
+export interface WithBrainzOptions {
+    include: ('track' | 'artist' | 'album')[]
+}
+export const withBrainz = (play: PlayObject, opts: WithBrainzOptions): PlayObject => {
+    const {include} = opts;
     for(const i of include) {
         switch(i) {
             case 'track':

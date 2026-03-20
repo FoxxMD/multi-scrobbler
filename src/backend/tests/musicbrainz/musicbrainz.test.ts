@@ -460,7 +460,7 @@ describe('#MB Missing Types', function() {
 
     it('Finds none missing when all mbids are defined', function() {
 
-        const play = withBrainz(generatePlay(), ['album', 'artist', 'track']);
+        const play = withBrainz(generatePlay(), {include: ['album', 'artist', 'track']});
         const missing = missingMbidTypes(play);
         expect(missing.length).eq(0);
     });
@@ -474,7 +474,7 @@ describe('#MB Missing Types', function() {
 
     it('Finds duration missing', function() {
 
-        const play = withBrainz(generatePlay(), ['album', 'artist', 'track']);
+        const play = withBrainz(generatePlay(), {include: ['album', 'artist', 'track']});
         delete play.data.duration;
         const missing = missingMbidTypes(play);
         expect(missing.length).eq(1);
@@ -491,7 +491,7 @@ describe('#MB Missing Types', function() {
 
     it('intersect is not empty when missing any desired types', function() {
 
-        const play = withBrainz(generatePlay(), ['album', 'track']);
+        const play = withBrainz(generatePlay(), {include: ['album', 'track']});
         const missing = missingMbidTypes(play);
         expect(missing).to.have.members(['artists']);
         expect(intersect(DEFAULT_MISSING_TYPES, missing)).length.is.greaterThan(0);
