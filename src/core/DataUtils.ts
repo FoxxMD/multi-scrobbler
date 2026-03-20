@@ -8,7 +8,9 @@ export const jdiff = diffCreate({
     },
     cloneDiffValues: true
     //omitRemovedValues: true
-});export const formatNumber = (val: number | string, options?: numberFormatOptions) => {
+});
+
+export const formatNumber = (val: number | string, options?: numberFormatOptions) => {
     const {
         toFixed = 2, defaultVal = null, prefix = '', suffix = '', round,
     } = options || {};
@@ -42,4 +44,8 @@ export const jdiff = diffCreate({
     });
     return `${prefixStr}${localeString}${suffix}`;
 };
+
+export const generateArray = (size: number, gen: (index: number) => any) => {
+    return Array.from(Array(size), (v,k) => gen(k));
+}
 

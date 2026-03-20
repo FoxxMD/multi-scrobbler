@@ -1,9 +1,11 @@
 import { Traverse, TraverseContext } from 'neotraverse/modern';
+import { faker } from '@faker-js/faker';
 import dayjs from 'dayjs';
-import { AmbPlayObject, JsonPlayObject, PlayObject, PlayProgressAmb, REGEX_ISO8601_LOOSE } from '../../Atomic.js';
+import { AmbPlayObject, JsonPlayObject, ObjectPlayData, PlayMeta, PlayObject, PlayProgressAmb, REGEX_ISO8601_LOOSE } from '../../Atomic.js';
 import { ListenRange } from '../../../backend/sources/PlayerState/ListenRange.js';
 import { ListenProgressPositional, ListenProgressTS } from '../../../backend/sources/PlayerState/ListenProgress.js';
 import { clone } from 'jsondiffpatch';
+import { MarkOptional } from 'ts-essentials';
 
 interface BlockPath { key: string, parent: string };
 type BlockPaths = BlockPath[];
@@ -78,4 +80,58 @@ export const asPlay = (data: JsonPlayObject): PlayObject => {
     }
   });
   return cloned as unknown as PlayObject;
+}
+
+export interface GeneratePlayWithLifecycleOptions {
+  original: {
+    data?: ObjectPlayData,
+    meta?: MarkOptional<PlayMeta, 'lifecycle'>
+  }
+}
+export const generatePlayWithLifecycle = (opts: GeneratePlayWithLifecycleOptions) => {
+
+}
+
+export interface RandomObjOptions {
+  maxObjSize?: number
+  maxKeyLength?: number
+  keyCount?: number
+  maxDepth?: number
+}
+
+const generateRandomVal = (depth: number = 0, opt: RandomObjOptions = {}, typeId?: number) => {
+  const i = typeId ?? faker.number.int({ min: 1, max: depth > (opt.maxDepth ?? 3) ? 6 : 8 });
+  switch (i) {
+    case 1:
+      return undefined;
+    case 2:
+      return faker.datatype.boolean();
+    case 3:
+      return faker.date.recent().toISOString();
+    case 4:
+      return faker.lorem.word();
+    case 5:
+      return faker.lorem.sentences({ min: 0, max: 5 });
+    case 6:
+      return faker.helpers.arrayElement([faker.number.int({ min: 1, max: 1000 }), faker.number.float()]);
+    case 7:
+      return generateRandomObj(depth + 1, opt);
+    case 8:
+      const typeId = faker.number.int({ min: 4, max: depth > (opt.maxDepth ?? 3) ? 6 : 7 });
+      return faker.helpers.multiple(() => generateRandomVal(depth + 1, opt, typeId), { count: { min: 1, max: opt.maxObjSize ?? 7 } })
+  }
+}
+
+export const generateRandomObj = (depth: number = 0, opt: RandomObjOptions = {}) => {
+  const tgrt: any = {}
+
+  const keyCount = opt.keyCount ?? faker.number.int({ min: 1, max: 13 });
+
+    for (let i = 0; i < keyCount; i++) {
+      const key = faker.lorem.slug({ min: 1, max: 3 })
+      if (tgrt[key] === undefined) {
+        tgrt[key] = generateRandomVal(depth + 1, opt)
+      }
+    }
+  return tgrt
 }
