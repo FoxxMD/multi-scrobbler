@@ -30,7 +30,8 @@ import {
     PlatformApplicationWithContext,
     PlatformType
 } from "../common/vendor/chromecast/interfaces.js";
-import { difference, genGroupIdStr, isDebugMode, parseBool } from "../utils.js";
+import { difference, isDebugMode, parseBool } from "../utils.js";
+import { genGroupIdStr } from '../../core/PlayUtils.js';
 import { findCauseByReference } from "../utils/ErrorUtils.js";
 import { discoveryAvahi, discoveryNative } from "../utils/MDNSUtils.js";
 import { RecentlyPlayedOptions } from "./AbstractSource.js";

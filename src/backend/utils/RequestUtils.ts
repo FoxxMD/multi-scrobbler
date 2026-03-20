@@ -11,7 +11,7 @@ import { loggerNoop } from "../common/logging.js";
 import { findCauseByFunc } from "./ErrorUtils.js";
 import { isSuperAgentResponseError } from "../common/errors/ErrorUtils.js";
 import { isNodeNetworkException, NodeNetworkException } from "../common/errors/NodeErrors.js";
-import { formatNumber } from "../utils.js";
+import { formatNumber } from '../../core/DataUtils.js';
 import { UpstreamError } from "../common/errors/UpstreamError.js";
 
 // typings from Formidable are all nuts.

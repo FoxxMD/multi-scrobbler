@@ -3,7 +3,7 @@ import chai, { assert, expect } from 'chai';
 import asPromised from 'chai-as-promised';
 import { after, before, describe, it } from 'mocha';
 
-import { asPlays, generateArtistsStr, generatePlay, normalizePlays } from "../utils/PlayTestUtils.js";
+import { asPlays, generateArtistsStr, generatePlay, normalizePlays } from "../../../core/PlayTestUtils.js";
 import { parseArtistCredits, parseContextAwareStringList, parseCredits, parseTrackCredits, uniqueNormalizedStrArr } from "../../utils/StringUtils.js";
 import testData from '../utils/playTestData.json' with { type: "json" };
 import { intersect } from "../../utils.js";

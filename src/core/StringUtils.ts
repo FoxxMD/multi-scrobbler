@@ -13,7 +13,7 @@ import {
     ScrobbleTsSOC,
     TrackStringOptions
 } from "./Atomic.js";
-import { DELIMETERS_REGEX } from "../backend/common/infrastructure/Atomic.js";
+import { DELIMETERS_REGEX, DELIMITERS } from "../backend/common/infrastructure/Atomic.js";
 import { parseRegexSingle } from "@foxxmd/regex-buddy-core";
 
 dayjs.extend(utc)
@@ -288,3 +288,18 @@ export const arrayListAnd = (list: string[], joiner: string, finalJoiner: string
 
     return [start.join(joinerProper), end].join(finalProper);
 }
+
+export const safeStringify = (json: unknown) => JSON.stringify(json, null, 2);
+export const findDelimiters = (str: string, delimiters = DELIMITERS) => {
+    const found: string[] = [];
+    for (const d of delimiters) {
+        if (str.indexOf(d) !== -1) {
+            found.push(d);
+        }
+    }
+    if (found.length === 0) {
+        return undefined;
+    }
+    return found;
+};export const containsDelimiters = (str: string) => null !== str.match(/[,&/\\]+/i);
+

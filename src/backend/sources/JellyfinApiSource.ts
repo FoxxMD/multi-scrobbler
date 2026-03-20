@@ -55,7 +55,8 @@ import {
     PlayPlatformId, REPORTED_PLAYER_STATUSES
 } from "../common/infrastructure/Atomic.js";
 import { JellyApiSourceConfig } from "../common/infrastructure/config/source/jellyfin.js";
-import { genGroupIdStr, getPlatformIdFromData, isDebugMode, parseBool, } from "../utils.js";
+import { getPlatformIdFromData, isDebugMode, parseBool, } from "../utils.js";
+import { genGroupIdStr } from '../../core/PlayUtils.js';
 import { joinedUrl } from "../utils/NetworkUtils.js";
 import { hashObject, parseArrayFromMaybeString } from "../utils/StringUtils.js";
 import { MemoryPositionalSource } from "./MemoryPositionalSource.js";

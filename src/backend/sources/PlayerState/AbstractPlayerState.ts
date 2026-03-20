@@ -13,10 +13,13 @@ import {
     ReportedPlayerStatus,
 } from "../../common/infrastructure/Atomic.js";
 import { PollingOptions } from "../../common/infrastructure/config/common.js";
-import { formatNumber, genGroupIdStr, playObjDataMatch, progressBar } from "../../utils.js";
+import { playObjDataMatch, progressBar } from "../../utils.js";
+import { genGroupIdStr } from '../../../core/PlayUtils.js';
+import { formatNumber } from '../../../core/DataUtils.js';
 import { ListenProgress } from "./ListenProgress.js";
 import { ListenRange, ListenRangePositional } from "./ListenRange.js";
-import { closeToPlayEnd, closeToPlayStart, repeatDurationPlayed, timeToHumanTimestamp, todayAwareFormat } from "../../utils/TimeUtils.js";
+import { closeToPlayEnd, closeToPlayStart, repeatDurationPlayed, timeToHumanTimestamp } from "../../utils/TimeUtils.js";
+import { todayAwareFormat } from "../../../core/TimeUtils.js";
 
 export interface PlayerStateIntervals {
     staleInterval?: number

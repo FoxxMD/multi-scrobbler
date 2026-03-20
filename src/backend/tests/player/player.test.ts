@@ -13,7 +13,7 @@ import {
 } from "../../common/infrastructure/Atomic.js";
 import { GenericPlayerState } from "../../sources/PlayerState/GenericPlayerState.js";
 import { playObjDataMatch } from "../../utils.js";
-import { generatePlay } from "../utils/PlayTestUtils.js";
+import { generatePlay } from "../../../core/PlayTestUtils.js";
 import { PositionalPlayerState } from "../../sources/PlayerState/PositionalPlayerState.js";
 import { ListenProgressPositional } from "../../sources/PlayerState/ListenProgress.js";
 import { ListenRangePositional } from "../../sources/PlayerState/ListenRange.js";

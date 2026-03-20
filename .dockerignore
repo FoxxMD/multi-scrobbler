@@ -29,3 +29,5 @@ build
 tmp-*
 .env
 *.env
+.storybook
+.stories

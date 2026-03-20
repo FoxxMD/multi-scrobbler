@@ -1,6 +1,6 @@
 
 import dayjs, { Dayjs } from "dayjs";
-import isToday from 'dayjs/plugin/isToday.js';
+//import isToday from 'dayjs/plugin/isToday.js';
 import {
     AcceptableTemporalDuringReference,
     PlayObject,
@@ -29,9 +29,9 @@ import {
     ScrobbleThresholdResult,
 } from "../common/infrastructure/Atomic.js";
 import { ScrobbleThresholds } from "../common/infrastructure/config/source/index.js";
-import { formatNumber } from "../utils.js";
+import { formatNumber } from '../../core/DataUtils.js';
 
-dayjs.extend(isToday);
+//dayjs.extend(isToday);
 
 export const temporalPlayComparisonSummary = (data: TemporalPlayComparison, existingPlay?: PlayObject, candidatePlay?: PlayObject) => {
     const parts: string[] = [];
@@ -277,13 +277,6 @@ export const getScrobbleTsSOCDate = (data: PlayObject): Dayjs => {
     return date;
 }
 
-export const todayAwareFormat = (date: Dayjs, opts: {fullFormat?: string, todayFormat?: string} = {}): string => {
-    const {
-        fullFormat,
-        todayFormat = 'HH:mm:ssZ'
-    } = opts;
-    return date.format(date.isToday() ? todayFormat : fullFormat);
-};
 export const parseDurationFromTimestamp = (timestamp: any) => {
     if (timestamp === null || timestamp === undefined) {
         return undefined;

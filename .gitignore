@@ -148,3 +148,6 @@ build
 **/generated-sources.*
 .github/act/out
 tmp-*
+
+*storybook.log
+storybook-static

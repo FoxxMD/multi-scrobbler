@@ -22,7 +22,7 @@ import slightlyDifferentNames from './correctlyMapped/trackNameSlightlyDifferent
 // incorrect mappings
 import incorrectMultiArtistsTrackName from './incorrectlyMapped/multiArtistsInTrackName.json' with { type: "json" };
 import veryWrong from './incorrectlyMapped/veryWrong.json' with { type: "json" };
-import { generatePlay } from "../utils/PlayTestUtils.js";
+import { generatePlay } from "../../../core/PlayTestUtils.js";
 import { defaultLifecycle } from "../../utils/PlayTransformUtils.js";
 
 interface LZTestFixture {

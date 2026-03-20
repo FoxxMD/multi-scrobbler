@@ -13,7 +13,7 @@ import { childLogger, Logger } from '@foxxmd/logging';
 import { projectDir } from './index.js';
 import path from 'path';
 import { cacheFunctions } from "@foxxmd/regex-buddy-core";
-import { fileOrDirectoryIsWriteable } from '../utils.js';
+import { fileOrDirectoryIsWriteable } from '../utils/FSUtils.js';
 import { asCacheAuthProvider, asCacheMetadataProvider, asCacheScrobbleProvider, CacheAuthProvider, CacheConfig, CacheConfigOptions, CacheMetadataProvider, CacheProvider, CacheScrobbleProvider } from './infrastructure/Atomic.js';
 import { Typeson } from 'typeson';
 import { builtin } from 'typeson-registry';

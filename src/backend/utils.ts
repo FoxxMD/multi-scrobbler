@@ -4,16 +4,13 @@ import dayjs, { Dayjs } from 'dayjs';
 import { Duration } from "dayjs/plugin/duration.js";
 import utc from 'dayjs/plugin/utc.js';
 import { Request } from "express";
-import { accessSync, constants, promises } from "fs";
 // https://github.com/jfromaniello/url-join#in-nodejs
-import pathUtil from "path";
 import { TimeoutError, WebapiError } from "spotify-web-api-node/src/response-error.js";
 import { DEFAULT_MISSING_MBIDS_TYPES, DEFAULT_MISSING_TYPES, MissingMbidType, PlayObject } from "../core/Atomic.js";
 import {
     asPlayerStateDataMaybePlay,
     NO_DEVICE,
     NO_USER,
-    numberFormatOptions,
     PlayerStateDataMaybePlay,
     PlayPlatformId,
     ProgressAwarePlayObject,
@@ -21,43 +18,10 @@ import {
     RemoteIdentityParts,
     ScrobbleThresholdResult,
 } from "./common/infrastructure/Atomic.js";
+import { genGroupIdStr } from '../core/PlayUtils.js';
 
 //const { default: Ajv } = AjvNS;
 dayjs.extend(utc);
-
-export async function readText(path: any) {
-    await promises.access(path, constants.R_OK);
-    const data = await promises.readFile(path);
-    return data.toString();
-
-    // return new Promise((resolve, reject) => {
-    //     fs.readFile(path, 'utf8', function (err, data) {
-    //         if (err) {
-    //             reject(err);
-    //         }
-    //         resolve(JSON.parse(data));
-    //     });
-    // });
-}
-
-export async function writeFile(path: any, text: any) {
-    // await promises.access(path, constants.W_OK | constants.O_CREAT);
-    try {
-        await promises.writeFile(path, text, 'utf8');
-    } catch (e) {
-        throw e;
-    }
-
-    // return new Promise((resolve, reject) => {
-    //     fs.readFile(path, 'utf8', function (err, data) {
-    //         if (err) {
-    //             reject(err);
-    //         }
-    //         resolve(JSON.parse(data));
-    //     });
-    // });
-}
-
 
 export function sleep(ms: any) {
     return new Promise(resolve => setTimeout(resolve, ms));
@@ -85,30 +49,6 @@ export const sortByOldestPlayDate = (a: PlayObject, b: PlayObject) => {
         return -1;
     }
     return aPlayDate.isAfter(bPlayDate) ? 1 : -1
-};
-
-/** sorts playObj formatted objects by playDate in descending (newest first) order */
-export const sortByNewestPlayDate = (a: PlayObject, b: PlayObject) => {
-    const {
-        data: {
-            playDate: aPlayDate
-        } = {}
-    } = a;
-    const {
-        data: {
-            playDate: bPlayDate
-        } = {}
-    } = b;
-    if(aPlayDate === undefined && bPlayDate === undefined) {
-        return 0;
-    }
-    if(aPlayDate === undefined) {
-        return 1;
-    }
-    if(bPlayDate === undefined) {
-        return -1;
-    }
-    return aPlayDate.isBefore(bPlayDate) ? 1 : -1
 };
 
 export const setIntersection = (setA: any, setB: any) => {
@@ -212,7 +152,6 @@ export const parseRetryAfterSecsFromObj = (err: any) => {
     // }
     const {
         response: {
-            // @ts-expect-error
             headers, // returned in superagent error
         } = {},
         retryAfter: ra // possible custom property we have set
@@ -370,9 +309,6 @@ export const genGroupIdStrFromPlay = (play: PlayObject) => {
     const groupId = genGroupId(play);
     return genGroupIdStr(groupId);
 };
-export const genGroupIdStr = (id: PlayPlatformId) => {
-    return `${id[0]}-${id[1]}`;
-}
 export const genGroupId = (play: PlayObject): PlayPlatformId => [play.meta.deviceId ?? NO_DEVICE, play.meta.user ?? NO_USER];
 
 export const getPlatformIdFromData = (data: PlayObject | PlayerStateDataMaybePlay) => {
@@ -380,36 +316,6 @@ export const getPlatformIdFromData = (data: PlayObject | PlayerStateDataMaybePla
         return data.platformId;
     }
     return genGroupId(data);
-}
-
-export const fileOrDirectoryIsWriteable = (location: string) => {
-    const pathInfo = pathUtil.parse(location);
-    const isDir = pathInfo.ext === '';
-    try {
-        accessSync(location, constants.R_OK | constants.W_OK);
-        return true;
-    } catch (err: any) {
-        const {code} = err;
-        if (code === 'ENOENT') {
-            // file doesn't exist, see if we can write to directory in which case we are good
-            try {
-                accessSync(pathInfo.dir, constants.R_OK | constants.W_OK)
-                // we can write to dir
-                return true;
-            } catch (accessError: any) {
-                if(accessError.code === 'EACCES') {
-                    // also can't access directory :(
-                    throw new Error(`No ${isDir ? 'directory' : 'file'} exists at ${location} and application does not have permission to write to the parent directory`);
-                } else {
-                    throw new Error(`No ${isDir ? 'directory' : 'file'} exists at ${location} and application is unable to access the parent directory due to a system error`, {cause: accessError});
-                }
-            }
-        } else if(code === 'EACCES') {
-            throw new Error(`${isDir ? 'Directory' : 'File'} exists at ${location} but application does not have permission to write to it.`);
-        } else {
-            throw new Error(`${isDir ? 'Directory' : 'File'} exists at ${location} but application is unable to access it due to a system error`, {cause: err});
-        }
-    }
 }
 
 export const mergeArr = (objValue: [], srcValue: []): (any[] | undefined) => {
@@ -501,45 +407,6 @@ export const progressBar = (value: number, maxValue: number, size: number) => {
 
     const bar = `[${progressText}${emptyProgressText}]${percentageText}`;
     return bar;
-};
-
-export const formatNumber = (val: number | string, options?: numberFormatOptions) => {
-    const {
-        toFixed = 2,
-        defaultVal = null,
-        prefix = '',
-        suffix = '',
-        round,
-    } = options || {};
-    let parsedVal = typeof val === 'number' ? val : Number.parseFloat(val);
-    if (Number.isNaN(parsedVal)) {
-        return defaultVal;
-    }
-    if(!Number.isFinite(val)) {
-        return 'Infinite';
-    }
-    let prefixStr = prefix;
-    const {enable = false, indicate = true, type = 'round'} = round || {};
-    if (enable && !Number.isInteger(parsedVal)) {
-        switch (type) {
-            case 'round':
-                parsedVal = Math.round(parsedVal);
-                break;
-            case 'ceil':
-                parsedVal = Math.ceil(parsedVal);
-                break;
-            case 'floor':
-                parsedVal = Math.floor(parsedVal);
-        }
-        if (indicate) {
-            prefixStr = `~${prefix}`;
-        }
-    }
-    const localeString = parsedVal.toLocaleString(undefined, {
-        minimumFractionDigits: toFixed,
-        maximumFractionDigits: toFixed,
-    });
-    return `${prefixStr}${localeString}${suffix}`;
 };
 
 export const durationToNormalizedTime = (dur: Duration): { hours: number, minutes: number, seconds: number } => {

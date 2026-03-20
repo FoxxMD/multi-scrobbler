@@ -1,0 +1,28 @@
+{
+  "compilerOptions": {
+    "moduleResolution": "bundler",
+    "module": "preserve",
+    "target": "esnext",
+    "jsx": "react-jsx",
+    "esModuleInterop": true,
+    "resolveJsonModule": true,
+    "lib": [
+      "esnext",
+      "dom",
+      "dom.iterable"
+    ],
+    "rootDirs": [
+      ".",
+      "..src/client"
+    ],
+  },
+  "include": [
+    "*.stories.ts",
+    "*.tsx",
+    "..src/client/**/*.tsx",
+    "..src/backend/tests/**/*.ts"
+  ],
+  "exclude": [
+    "node_modules"
+  ]
+}

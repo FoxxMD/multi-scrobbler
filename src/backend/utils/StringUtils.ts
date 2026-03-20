@@ -2,7 +2,8 @@ import { strategies, stringSameness, StringSamenessResult } from "@foxxmd/string
 import { hasher } from 'node-object-hash';
 import { PlayObject } from "../../core/Atomic.js";
 import { asPlayerStateData, DELIMITERS, DELIMITERS_NO_AMP, PlayerStateDataMaybePlay } from "../common/infrastructure/Atomic.js";
-import { genGroupIdStr, getPlatformIdFromData, intersect, parseBool, parseBoolStrict, parseRegexSingleOrFail } from "../utils.js";
+import { getPlatformIdFromData, intersect, parseBool, parseBoolStrict, parseRegexSingleOrFail } from "../utils.js";
+import { genGroupIdStr } from '../../core/PlayUtils.js';
 import { buildTrackString } from "../../core/StringUtils.js";
 
 const {levenStrategy, diceStrategy} = strategies;
@@ -227,20 +228,6 @@ export const rejoinBypassed = (str: string): string => {
     }
     return bypassed;
 }
-export const containsDelimiters = (str: string) => null !== str.match(/[,&/\\]+/i)
-export const findDelimiters = (str: string, delimiters = DELIMITERS) => {
-    const found: string[] = [];
-    for (const d of delimiters) {
-        if (str.indexOf(d) !== -1) {
-            found.push(d);
-        }
-    }
-    if (found.length === 0) {
-        return undefined;
-    }
-    return found;
-}
-
 export interface TrackSamenessResults {
     naive: StringSamenessResult, 
     cleaned: StringSamenessResult, 

@@ -290,18 +290,22 @@ export interface PlayObjectLifecycleless {
 //     lifecycle: PlayLifecycle
 // }
 
+export type ErrorLike = Error | ErrorObject;
+
+export interface ScrobbleResult {
+    match?: PlayMatchResult
+    payload?: ScrobblePayload
+    warnings?: string[]
+    error?: Error | ErrorObject
+    response?: ScrobbleResponse
+    mergedScrobble?: PlayObjectLifecycleless
+}
+
 export interface PlayLifecycle {
     input?: object
     original: PlayObjectLifecycleless
     steps: LifecycleStep[]
-    scrobble?: {
-        match?: PlayMatchResult
-        payload?: ScrobblePayload
-        warnings?: string[]
-        error?: Error | ErrorObject
-        response?: ScrobbleResponse
-        mergedScrobble?: PlayObjectLifecycleless
-    }
+    scrobble?: ScrobbleResult
 }
 
 export interface LifecycleStep {
@@ -353,6 +357,11 @@ export interface PlayObject extends AmbPlayObject {
 //     meta: PlayMetaLifecycled
 // }
 
+export interface PlayActivity {
+  play: JsonPlayObject
+  status: string
+  error?: ErrorLike
+}
 export interface JsonPlayObject extends AmbPlayObject {
     data: JsonPlayData
 }
@@ -570,3 +579,17 @@ export const KNOWN_MEDIA_PROVIDER_URLS = [
 export type UnixTimestamp = number;
 
 export type Writeable<T> = { -readonly [P in keyof T]: T[P] };
+
+export const SHORT_CALENDAR_NOTZ_FORMAT = 'MMM D HH:mm:ss';
+export const SHORT_TODAY_NOTZ_FORMAT = 'HH:mm:ss';
+export interface numberFormatOptions {
+    toFixed: number;
+    defaultVal?: any;
+    prefix?: string;
+    suffix?: string;
+    round?: {
+        type?: string;
+        enable: boolean;
+        indicate?: boolean;
+    };
+}

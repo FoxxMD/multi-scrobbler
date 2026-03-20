@@ -1,7 +1,8 @@
 import dayjs, { Dayjs, ManipulateType } from "dayjs";
 import { BrainzMeta, PlayObject, PlayObjectLifecycleless, ScrobbleActionResult, UnixTimestamp, URLData, Writeable } from "../../../core/Atomic.js";
 import { nonEmptyStringOrDefault, splitByFirstFound } from "../../../core/StringUtils.js";
-import { removeUndefinedKeys, sleep, writeFile } from "../../utils.js";
+import { removeUndefinedKeys, sleep } from "../../utils.js";
+import { writeFile } from '../../utils/FSUtils.js';
 import { objectIsEmpty, readJson } from '../../utils/DataUtils.js';
 import { isPortReachableConnect, joinedUrl, normalizeWebAddress } from "../../utils/NetworkUtils.js";
 import { getScrobbleTsSOCDate } from "../../utils/TimeUtils.js";

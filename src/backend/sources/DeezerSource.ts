@@ -6,7 +6,8 @@ import request from 'superagent';
 import { PlayObject, PlayObjectLifecycleless } from "../../core/Atomic.js";
 import { DEFAULT_RETRY_MULTIPLIER, FormatPlayObjectOptions, InternalConfig } from "../common/infrastructure/Atomic.js";
 import { DeezerSourceConfig } from "../common/infrastructure/config/source/deezer.js";
-import { parseRetryAfterSecsFromObj, sleep, sortByOldestPlayDate, writeFile, } from "../utils.js";
+import { parseRetryAfterSecsFromObj, sleep, sortByOldestPlayDate, } from "../utils.js";
+import { writeFile } from '../utils/FSUtils.js';
 import { readJson } from '../utils/DataUtils.js';
 import { joinedUrl } from "../utils/NetworkUtils.js";
 import AbstractSource, { RecentlyPlayedOptions } from "./AbstractSource.js";
@@ -61,7 +62,6 @@ export default class DeezerSource extends AbstractSource {
         const {
             title: name,
             artist: {
-                // @ts-expect-error TS(2525): Initializer provides no value for this binding ele... Remove this comment to see the full error message
                 name: artistName,
             } = {},
             duration,
@@ -69,7 +69,6 @@ export default class DeezerSource extends AbstractSource {
             id,
             link,
             album: {
-                // @ts-expect-error TS(2525): Initializer provides no value for this binding ele... Remove this comment to see the full error message
                 title: albumName,
             } = {},
         } = obj;
@@ -162,7 +161,6 @@ export default class DeezerSource extends AbstractSource {
             const {
                 body = {},
                 body: {
-                    // @ts-expect-error TS(2525): Initializer provides no value for this binding ele... Remove this comment to see the full error message
                     error,
                 } = {}
             } = resp;
@@ -187,23 +185,17 @@ export default class DeezerSource extends AbstractSource {
             const {
                 message,
                 response: {
-                    // @ts-expect-error TS(2525): Initializer provides no value for this binding ele... Remove this comment to see the full error message
                     status,
                     body: {
                         "subsonic-response": {
-                            // @ts-expect-error TS(2525): Initializer provides no value for this binding ele... Remove this comment to see the full error message
                             status: ssStatus,
                             error: {
-                                // @ts-expect-error TS(2525): Initializer provides no value for this binding ele... Remove this comment to see the full error message
                                 code,
-                                // @ts-expect-error TS(2525): Initializer provides no value for this binding ele... Remove this comment to see the full error message
                                 message: ssMessage,
                             } = {},
                         } = {},
-                        // @ts-expect-error TS(2525): Initializer provides no value for this binding ele... Remove this comment to see the full error message
                         "subsonic-response": ssResp
                     } = {},
-                    // @ts-expect-error TS(2525): Initializer provides no value for this binding ele... Remove this comment to see the full error message
                     text,
                 } = {},
                 response,
