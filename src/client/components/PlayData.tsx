@@ -171,13 +171,13 @@ export const PlayDatesStack = (props: { play: JsonPlayObject, dates: DisplayDate
     } else {
         const dateElements = [];
         if (dates.includes('played') || dates.includes('all')) {
-            dateElements.push((<TextMuted>{`Played ${shortTodayAwareFormat(dayjs(play.data.playDate))}`}</TextMuted>));
+            dateElements.push((<TextMuted key="playDate">{`Played ${shortTodayAwareFormat(dayjs(play.data.playDate))}`}</TextMuted>));
             if (play.data.playDateCompleted !== undefined) {
-                dateElements.push((<TextMuted>{`Played Until ${shortTodayAwareFormat(dayjs(play.data.playDateCompleted))}`}</TextMuted>));
+                dateElements.push((<TextMuted key="playDateCompleted">{`Played Until ${shortTodayAwareFormat(dayjs(play.data.playDateCompleted))}`}</TextMuted>));
             }
         }
         if (dates.includes('seen') || dates.includes('all')) {
-            dateElements.push((<TextMuted>{`Seen ${shortTodayAwareFormat(dayjs(play.data.playDate))}`}</TextMuted>));
+            dateElements.push((<TextMuted key="seen">{`Seen ${shortTodayAwareFormat(dayjs(play.data.playDate))}`}</TextMuted>));
         }
         datesItem = (
             <DataList.Item>
