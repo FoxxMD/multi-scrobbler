@@ -98,6 +98,10 @@ export interface GeneratePlayWithLifecycleOptions {
     data?: ObjectPlayData,
     meta?: MarkOptional<PlayMeta, 'lifecycle'>
     opts?: GeneratePlayOpts
+  },
+  lifecycleSteps?: {
+    preCompare?: boolean | number
+    postCompare?: boolean | number
   }
 }
 
@@ -105,6 +109,10 @@ export const generatePlayWithLifecycle = (opts: GeneratePlayWithLifecycleOptions
 
   const {
     original: originalOpts = {},
+    lifecycleSteps: {
+      preCompare = true,
+      postCompare = true
+    } = {}
   } = opts;
 
   const original = generatePlay(originalOpts.data, originalOpts.meta, originalOpts.opts);
@@ -120,25 +128,42 @@ export const generatePlayWithLifecycle = (opts: GeneratePlayWithLifecycleOptions
 
   let steps: LifecycleStep[] = [];
   let transformedPlay = clone(original);
-  const firstStep = faker.datatype.boolean(0.7) ? generateLifecycleStep(transformedPlay, {name: 'preCompare'}) : undefined;
-  if(firstStep !== undefined) {
-    transformedPlay = firstStep[1];
-    steps.push(firstStep[0]);
-    while(faker.datatype.boolean(0.2)) {
-      const [pc, modified] = generateLifecycleStep(transformedPlay, {name: 'preCompare'});
-      steps.push(pc);
-      transformedPlay = modified;
+
+  if(typeof preCompare === 'number') {
+    for(let i = 0; i < preCompare; i++) {
+       const step = generateLifecycleStep(transformedPlay, {name: 'preCompare'});
+       steps.push(step[0]);
+       transformedPlay = step[1];
+    }
+  } else if(preCompare === true) {
+    const firstStep = faker.datatype.boolean(0.7) ? generateLifecycleStep(transformedPlay, {name: 'preCompare'}) : undefined;
+    if(firstStep !== undefined) {
+      transformedPlay = firstStep[1];
+      steps.push(firstStep[0]);
+      while(faker.datatype.boolean(0.2)) {
+        const [pc, modified] = generateLifecycleStep(transformedPlay, {name: 'preCompare'});
+        steps.push(pc);
+        transformedPlay = modified;
+      }
     }
   }
 
-  const lastStep = faker.datatype.boolean(0.5) ? generateLifecycleStep(transformedPlay, {name: 'postCompare'}) : undefined;
-  if(lastStep !== undefined) {
-    transformedPlay = lastStep[1];
-    steps.push(lastStep[0]);
-    while(faker.datatype.boolean(0.1)) {
-      const [pc, modified] = generateLifecycleStep(transformedPlay, {name: 'postCompare'});
-      steps.push(pc);
-      transformedPlay = modified;
+  if(typeof postCompare === 'number') {
+        for(let i = 0; i < postCompare; i++) {
+       const step = generateLifecycleStep(transformedPlay, {name: 'postCompare'});
+       steps.push(step[0]);
+       transformedPlay = step[1];
+    }
+  } else if(postCompare === true) {
+    const lastStep = faker.datatype.boolean(0.5) ? generateLifecycleStep(transformedPlay, {name: 'postCompare'}) : undefined;
+    if(lastStep !== undefined) {
+      transformedPlay = lastStep[1];
+      steps.push(lastStep[0]);
+      while(faker.datatype.boolean(0.1)) {
+        const [pc, modified] = generateLifecycleStep(transformedPlay, {name: 'postCompare'});
+        steps.push(pc);
+        transformedPlay = modified;
+      }
     }
   }
 

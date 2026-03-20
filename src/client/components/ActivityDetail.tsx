@@ -28,7 +28,6 @@ export const ActivityDetails = (props: ActivityDetailProps) => {
         }
     } = props;
 
-    debugger;
     const [collapsibleOpen, setCollapsibleOpen] = useState(undefined);
 
     return (
@@ -62,7 +61,7 @@ export const ActivityDetails = (props: ActivityDetailProps) => {
                 </Flex>
                 <Accordion.ItemContent>
                     <Accordion.ItemBody>
-                        {scrobble !== undefined ? <ActivityTimeline play={activity.play} collapsibleOpen={collapsibleOpen} /> : null}
+                        <ActivityTimeline play={activity.play} collapsibleOpen={collapsibleOpen} />
                     </Accordion.ItemBody>
                 </Accordion.ItemContent>
             </Accordion.Item>

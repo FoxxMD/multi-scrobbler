@@ -51,8 +51,6 @@ export const ActivityTimeline = (props: ActivityDetailProps) => {
         } = {}
     } = play;
 
-    const [scrobbleCollapsibleOpen, setScrobbleCollapsibleOpen] = useState(false);
-
     return (
         <Timeline.Root variant="subtle" size="lg">
             <Timeline.Item>

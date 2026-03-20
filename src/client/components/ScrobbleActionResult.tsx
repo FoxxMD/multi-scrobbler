@@ -15,7 +15,7 @@ import { MSCollapsible, MSCollapsibleExternalProps } from "./MSCollapsible";
 import { TimelineErrorIcon } from "./timeline/TimelineIcon";
 
 export interface ScrobbleActionResultProps extends MSCollapsibleExternalProps {
-    result: ScrobbleResult,
+    result: ScrobbleResult<string>,
     scrobbler?: string,
 }
 

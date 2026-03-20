@@ -288,20 +288,20 @@ export interface PlayObjectLifecycleless<D extends DateLike = Dayjs> {
 
 export type ErrorLike = Error | ErrorObject;
 
-export interface ScrobbleResult {
-    match?: PlayMatchResult
+export interface ScrobbleResult<D extends DateLike = Dayjs> {
+    match?: PlayMatchResult<D>
     payload?: ScrobblePayload
     warnings?: string[]
     error?: Error | ErrorObject
     response?: ScrobbleResponse
-    mergedScrobble?: PlayObjectLifecycleless
+    mergedScrobble?: PlayObjectLifecycleless<D>
 }
 
 export interface PlayLifecycle<D extends DateLike = Dayjs> {
     input?: object
     original: PlayObjectLifecycleless<D>
     steps: LifecycleStep[]
-    scrobble?: ScrobbleResult
+    scrobble?: ScrobbleResult<D>
 }
 
 export interface LifecycleStep {
@@ -314,10 +314,10 @@ export interface LifecycleStep {
 export type ScrobblePayload = object | string;
 export type ScrobbleResponse = object | string;
 
-export interface ScrobbleActionResult {
+export interface ScrobbleActionResult<D extends DateLike = Dayjs> {
     payload: ScrobblePayload, 
     response?: ScrobbleResponse, 
-    mergedScrobble?: PlayObject
+    mergedScrobble?: AmbPlayObject<D>
     warnings?: string[]
 }
 
