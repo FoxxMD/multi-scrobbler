@@ -6,6 +6,7 @@ import { Delta } from 'jsondiffpatch';
 import { MarkOptional } from "ts-essentials";
 import { ErrorObject } from "serialize-error";
 import { PlayPlatformIdStr } from "../backend/common/infrastructure/Atomic.js";
+import { FlowControlTerm } from "../backend/common/infrastructure/Transform.js";
 
 export interface SourceStatusData {
     status: string;
@@ -307,6 +308,10 @@ export interface PlayLifecycle<D extends DateLike = Dayjs> {
 export interface LifecycleStep {
     name: string
     source: string
+    flowResult?: FlowControlTerm
+    flowReason?: string
+    flowKnownState?: 'skip' | 'prereq'
+    error?: ErrorLike
     patch?: Delta
     inputs?: LifecycleInput[]
 }

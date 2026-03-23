@@ -4,7 +4,7 @@ import {
 } from "@foxxmd/regex-buddy-core";
 import deepEqual from 'fast-deep-equal';
 import { Simulate } from "react-dom/test-utils";
-import { PlayData, PlayObject, TransformResult } from "../../core/Atomic.js";
+import { LifecycleStep, PlayData, PlayObject, TransformResult } from "../../core/Atomic.js";
 import { buildPlayHumanDiffable, buildTrackString } from "../../core/StringUtils.js";
 import { CommonClientConfig } from "./infrastructure/config/client/index.js";
 import { CommonSourceConfig } from "./infrastructure/config/source/index.js";
@@ -29,6 +29,7 @@ import { metaInvariantTransform, playContentInvariantTransform } from "../utils/
 import { MSCache } from "./Cache.js";
 import { jdiff } from "../../core/DataUtils.js";
 import ConsoleFormatter from "jsondiffpatch/formatters/console";
+import clone from "clone";
 
 const console = new ConsoleFormatter();
 
@@ -211,6 +212,7 @@ export default abstract class AbstractComponent extends AbstractInitializable {
             logger.debug(`Transform start for => ${buildTrackString(play)}`);
             let transformedPlay: PlayObject = play;
             let transformHistory: TransformResult[] = [];
+            let shouldBreak = false;
             for(const hookItem of hook) {
 
                 const {
@@ -219,6 +221,12 @@ export default abstract class AbstractComponent extends AbstractInitializable {
                     onSkip = 'continue',
                     failureReturnPartial = false
                 } = hookItem;
+
+                const existingStepIndex = transformedPlay.meta.lifecycle.steps.findIndex(x => x.name === 'hookType' && x.source === this.getIdentifier());
+                const step: LifecycleStep = existingStepIndex !== -1 ? transformedPlay.meta.lifecycle.steps[existingStepIndex] : {
+                    name: hookType,
+                    source: this.getIdentifier(),
+                }
 
                 let newTransformedPlay: PlayObject,
                 stageName: string = 'Unnamed',
@@ -235,35 +243,69 @@ export default abstract class AbstractComponent extends AbstractInitializable {
 
                 if(err !== undefined) {
                     const merged = mergeSimpleError(err);
+                    step.error = merged;
+
                     const skipError = findCauseByReference(err, SkipTransformStageError);
                     if(skipError !== undefined) {
                         let skipMsg = `Stage '${stageName}' was skipped`;
+                        step.flowResult = onSkip;
+                        step.flowKnownState = 'skip';
+
                         if(onSkip === 'stop') {
                             skipMsg += ' and will stop transform due to onSkip: stop';
                         }
+                        step.flowReason = skipMsg;
+
                         logger.debug(merged, skipMsg);
                         if(onSkip === 'stop') {
-                            break;
+                            shouldBreak = true;
                         }
                     } else if(onFailure === 'continue') {
-                        logger.warn(merged, 'A transform encounte[red an error but continuing due to onFailure: continue');
+                        logger.warn(merged, 'Transform encountered an error but continuing due to onFailure: continue');
+                        step.flowReason = 'Transform encountered an error but continuing due to onFailure: continue';
+                        step.flowResult = onFailure;
                     } else {
+                        step.flowResult = onFailure;
                         const reqError = findCauseByReference(err, StagePrerequisiteError);
                         if(reqError !== undefined) {
-                            logger.warn(merged, 'Transform could not be completed due to prerequisite failure');
+                            const prereqMsg = 'Transform could not be completed due to prerequisite failure';
+                            logger.warn(merged, prereqMsg);
+                            step.flowKnownState = 'prereq';
+                            step.flowReason = prereqMsg;
                         } else {
                             logger.error(merged, 'Transform encountered an error');
                             cacheOk = false;
+                            step.flowReason = 'Transform encountered an error';
                         }
 
                         if(!failureReturnPartial) {
                             // rewind to original play so we don't return partial transform
                             transformedPlay = play;
                             transformHistory = [];
+                        } else if(transformHistory.length > 0) {
+                            step.flowReason += ' | Preserving play transformations up to this point due to failureReturnPartial=true'
                         }
-                        break;
+                        shouldBreak = true;
                     }
                 } else {
+                    step.flowResult = onSuccess;
+
+                    if(!deepEqual(play, newTransformedPlay)) {
+                        const o = JSON.parse(JSON.stringify(play));
+                        const t = JSON.parse(JSON.stringify(newTransformedPlay));
+                        const patch = jdiff.diff(o,t);
+                        step.patch = patch;
+                    }
+
+                    if(newTransformedPlay.meta.lifecycleInputs?.length > 0) {
+                        step.inputs = clone(newTransformedPlay.meta.lifecycleInputs)
+                    } else if(transformedPlay.meta.lifecycleInputs?.length > 0) {
+                        step.inputs = clone(transformedPlay.meta.lifecycleInputs)
+                    }
+                    
+                    delete transformedPlay.meta.lifecycleInputs;
+
+                    // for logging only
                     transformHistory.push({
                         type: hookItem.type,
                         name: stageName,
@@ -274,21 +316,19 @@ export default abstract class AbstractComponent extends AbstractInitializable {
 
                 if(err === undefined && onSuccess === 'stop') {
                     logger.debug(`Stopping transform due to onSuccess: stop`);
+                    shouldBreak = true;
+                }
+
+                if(existingStepIndex !== -1) {
+                    transformedPlay.meta.lifecycle.steps[existingStepIndex] = step;
+                } else {
+                    transformedPlay.meta.lifecycle.steps.push(step);
+                }
+
+                if(shouldBreak) {
                     break;
                 }
             }
-
-            const orig = play.data;
-
-            // if(transformedPlay.meta.transforms === undefined) {
-            //     transformedPlay.meta.transforms = {
-            //         original: play.data
-            //     };
-            // }
-
-            const o = JSON.parse(JSON.stringify(play));
-            const t = JSON.parse(JSON.stringify(transformedPlay));
-            const patch = jdiff.diff(o,t);
 
             if(shouldLog !== false) {
                 if(transformHistory.length === 0) {
@@ -324,33 +364,6 @@ export default abstract class AbstractComponent extends AbstractInitializable {
                 }
             }
 
-            const existingStepIndex = transformedPlay.meta.lifecycle.steps.findIndex(x => x.name === 'hookType' && x.source === this.getIdentifier());
-            if(existingStepIndex !== -1) {
-                transformedPlay.meta.lifecycle.steps[existingStepIndex].patch = patch;
-                transformedPlay.meta.lifecycle.steps[existingStepIndex].inputs = transformedPlay.meta.lifecycleInputs;
-            } else {
-                transformedPlay.meta.lifecycle.steps.push({
-                        name: hookType,
-                        source: this.getIdentifier(),
-                        patch: patch,
-                        inputs: transformedPlay.meta.lifecycleInputs
-                    });
-            }
-            delete transformedPlay.meta.lifecycleInputs;
-
-            // transformedPlay.meta.lifecycle = {
-            //     ...(transformedPlay.meta.lifecycle ?? {
-            //         original: play
-            //     }),
-            //     steps: [
-            //         ...(transformedPlay.meta.lifecycle?.steps ?? []),
-            //         {
-            //             name: hookType,
-            //             source: this.getIdentifier(),
-            //             patch: patch
-            //         }
-            //     ]
-            // }
             await this.cache.cacheTransform.set<PlayObject>(transformHash, transformedPlay, '10m');
             return transformedPlay;
         } catch (e) {
