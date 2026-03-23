@@ -97,7 +97,7 @@ export const PlayDataDataList = (props: { play: JsonPlayObject, dates: DisplayDa
 
     if (play.data.albumArtists !== undefined && play.data.albumArtists.length > 0) {
         albumArtistElm = (
-            <DataList.Item>
+            <DataList.Item flexGrow="1">
                 <DataList.ItemLabel>Album Artists</DataList.ItemLabel>
                 <DataList.ItemValue>
                     <HStack>{play.data.albumArtists.map((x, index) => {
@@ -119,39 +119,31 @@ export const PlayDataDataList = (props: { play: JsonPlayObject, dates: DisplayDa
     } = play;
 
     return (
-        <Flex gap="4" wrap="wrap">
-            <Box>
-                <DataList.Root>
-                    <DataList.Item>
-                        <DataList.ItemLabel flexShrink="1">Title</DataList.ItemLabel>
-                        <DataList.ItemValue>{play.data.track}</DataList.ItemValue>
-                    </DataList.Item>
-                    <DataList.Item>
-                        <DataList.ItemLabel>Artists</DataList.ItemLabel>
-                        <DataList.ItemValue>
-                            {artists.length === 0 ? <Text color="fg.muted">(No Artists)</Text> :
-                                <HStack>{play.data.artists.map((x, index) => {
-                                    return (
-                                        <Tag.Root key={index}>
-                                            <Tag.Label>{x}</Tag.Label>
-                                        </Tag.Root>
-                                    );
-                                })}</HStack>}
-                        </DataList.ItemValue>
-                    </DataList.Item>
-                    {albumArtistElm}
-                    <DataList.Item>
-                        <DataList.ItemLabel>Album</DataList.ItemLabel>
-                        <DataList.ItemValue>{play.data.album}</DataList.ItemValue>
-                    </DataList.Item>
-                </DataList.Root>
-            </Box>
-            <Box>
-                <DataList.Root>
-                    <PlayDatesStack play={play} dates={dates} />
-                </DataList.Root>
-            </Box>
-        </Flex>
+        <DataList.Root flexWrap="wrap" flexDirection="row">
+            <DataList.Item flexGrow="1">
+                <DataList.ItemLabel flexShrink="1">Title</DataList.ItemLabel>
+                <DataList.ItemValue>{play.data.track}</DataList.ItemValue>
+            </DataList.Item>
+            <DataList.Item flexGrow="1">
+                <DataList.ItemLabel>Artists</DataList.ItemLabel>
+                <DataList.ItemValue>
+                    {artists.length === 0 ? <Text color="fg.muted">(No Artists)</Text> :
+                        <HStack>{play.data.artists.map((x, index) => {
+                            return (
+                                <Tag.Root key={index}>
+                                    <Tag.Label>{x}</Tag.Label>
+                                </Tag.Root>
+                            );
+                        })}</HStack>}
+                </DataList.ItemValue>
+            </DataList.Item>
+            {albumArtistElm}
+            <DataList.Item flexGrow="1">
+                <DataList.ItemLabel>Album</DataList.ItemLabel>
+                <DataList.ItemValue>{play.data.album}</DataList.ItemValue>
+            </DataList.Item>
+            <PlayDatesStack play={play} dates={dates} />
+        </DataList.Root>
     )
 }
 
@@ -180,7 +172,7 @@ export const PlayDatesStack = (props: { play: JsonPlayObject, dates: DisplayDate
             dateElements.push((<TextMuted key="seen">{`Seen ${shortTodayAwareFormat(dayjs(play.data.playDate))}`}</TextMuted>));
         }
         datesItem = (
-            <DataList.Item>
+            <DataList.Item flexGrow="1">
                 <DataList.ItemLabel>Dates</DataList.ItemLabel>
                 <DataList.ItemValue>
                     <Stack gap="1">

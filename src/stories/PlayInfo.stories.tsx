@@ -2,8 +2,9 @@ import preview from "../../.storybook/preview.js";
 import React from 'react';
 
 import { fn } from 'storybook/test';
-import { PlayData, PlayInfoContainer } from "../client/components/PlayData.js";
+import { PlayData } from "../client/components/PlayData.js";
 import {Provider} from "../client/components/Provider";
+import { Container } from '@chakra-ui/react';
 import { generateArtists, generateJsonPlay, generatePlay } from "../core/PlayTestUtils.js"
 import clone from "clone";
 
@@ -14,7 +15,7 @@ type PropsAndCustomArgs = React.ComponentProps<typeof PlayData> & {
 // More on how to set up stories at: https://storybook.js.org/docs/writing-stories#default-export
 const meta = preview.type<{args: PropsAndCustomArgs}>().meta({
   title: 'Examples/PlayInfo',
-  component: PlayInfoContainer,
+  component: PlayData,
   parameters: {
     // Optional parameter to center the component in the Canvas. More info: https://storybook.js.org/docs/configure/story-layout
     layout: 'padded',
@@ -22,7 +23,7 @@ const meta = preview.type<{args: PropsAndCustomArgs}>().meta({
   // This component will have an automatically generated Autodocs entry: https://storybook.js.org/docs/writing-docs/autodocs
   tags: ['autodocs'],
 decorators: [
-    (Story) => (<Provider><Story/></Provider>),
+    (Story) => (<Provider><Container maxWidth="2xl"><Story/></Container></Provider>),
   ],
 args: {
     play: generateJsonPlay(),
@@ -50,6 +51,6 @@ export const PlayInfoStory = meta.story({
         args.final.data.albumArtists = aa;
       }
     }
-    return (<PlayInfoContainer {...args}/>) 
+    return (<PlayData {...args}/>) 
   }
 });
