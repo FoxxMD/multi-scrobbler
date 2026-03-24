@@ -75,6 +75,13 @@ export const normalizePlays = (plays: PlayObject[],
                 ...defaultMeta
             }
 
+            if(cleanPlay.meta.lifecycle?.original?.data?.playDate !== undefined) {
+                cleanPlay.meta.lifecycle.original.data.playDate = lastDate;
+            }
+            if(cleanPlay.meta.lifecycle?.original?.data?.playDateCompleted !== undefined) {
+                cleanPlay.meta.lifecycle.original.data.playDate = lastDate.add(cleanPlay.data.listenedFor ?? cleanPlay.data.duration, 's');
+            }
+
             if(index + 1 <= plays.length - 1) {
                 const listenTime = (plays[index+1].data.duration ?? defaultDuration) + faker.number.int({min: 0, max: 2});
                 lastDate = cleanPlay.data.playDate.subtract(listenTime, 'seconds');
@@ -109,6 +116,13 @@ export const normalizePlays = (plays: PlayObject[],
             cleanPlay.meta = {
                 ...cleanPlay.meta,
                 ...defaultMeta
+            }
+
+            if(cleanPlay.meta.lifecycle?.original?.data?.playDate !== undefined) {
+                cleanPlay.meta.lifecycle.original.data.playDate = lastDate;
+            }
+            if(cleanPlay.meta.lifecycle?.original?.data?.playDateCompleted !== undefined) {
+                cleanPlay.meta.lifecycle.original.data.playDate = lastDate.add(cleanPlay.data.listenedFor ?? cleanPlay.data.duration, 's');
             }
 
             if(progressDirection === 'newer') {

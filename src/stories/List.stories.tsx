@@ -3,12 +3,14 @@ import React from 'react';
 
 import { fn } from 'storybook/test';
 import { Container } from '@chakra-ui/react';
-import { CList } from "../client/components/List";
+import { PlayList } from "../client/components/playActivity/PlayList.js";
 import {Provider} from "../client/components/Provider";
-import { generateJsonPlays } from "../core/PlayTestUtils.js";
+import { generateJsonPlays, normalizePlays } from "../core/PlayTestUtils.js";
 import { ErrorLike, JsonPlayObject } from "../core/Atomic.js";
 import {examplePlay, lastfmErrorExample} from './storyUtils.js';
 import {playWithLifecycleScrobble, generatePlayWithLifecycle} from '../core/tests/utils/fixtures'
+import { generateArray } from "../core/DataUtils.js";
+import dayjs from "dayjs";
 
 const stack = "Scrobble Submit Error: Failed to submit to Listenbrainz (listen_type single)\n    at ListenbrainzApiClient.submitListen (/app/src/backend/common/vendor/ListenbrainzApiClient.ts:246:19)\n    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)\n    at async ListenbrainzScrobbler.doScrobble (/app/src/backend/scrobblers/ListenbrainzScrobbler.ts:87:28)\n    at async ListenbrainzScrobbler.scrobble (/app/src/backend/scrobblers/AbstractScrobbleClient.ts:679:28)\n    at async ListenbrainzScrobbler.processDeadLetterScrobble (/app/src/backend/scrobblers/AbstractScrobbleClient.ts:920:39)\n    at async ListenbrainzScrobbler.processDeadLetterQueue (/app/src/backend/scrobblers/AbstractScrobbleClient.ts:894:43)\n    at async PromisePoolExecutor.handler (/app/src/backend/tasks/heartbeatClients.ts:35:21)\n    at async PromisePoolExecutor.waitForActiveTaskToFinish (/app/node_modules/@supercharge/promise-pool/dist/promise-pool-executor.js:375:9)\n    at async PromisePoolExecutor.waitForProcessingSlot (/app/node_modules/@supercharge/promise-pool/dist/promise-pool-executor.js:368:13)\n    at async PromisePoolExecutor.process (/app/node_modules/@supercharge/promise-pool/dist/promise-pool-executor.js:354:13)";
 
@@ -30,7 +32,7 @@ const errorExample: ErrorLike = {
 // More on how to set up stories at: https://storybook.js.org/docs/writing-stories#default-export
 const meta = preview.meta({
   title: 'Examples/ActivityLog',
-  component: CList,
+  component: PlayList,
   parameters: {
     // Optional parameter to center the component in the Canvas. More info: https://storybook.js.org/docs/configure/story-layout
     layout: 'padded',
@@ -40,12 +42,9 @@ const meta = preview.meta({
   // More on argTypes: https://storybook.js.org/docs/api/argtypes
   args: {
      data:[
-    //   ...generateJsonPlays(2).map((x) => ({play: x, status: 'queued'})),
-    //   {play: examplePlay(), status: 'scrobbled'},
-    //   {play: lastfmErrorExample(), status: 'error'}
       ] ,
   },
-  render: function Render(args, { loaded: { data } }) { return (<CList {...args} data={data ?? []}/>) },
+  render: function Render(args, { loaded: { data } }) { return (<PlayList {...args} data={data ?? []}/>) },
 decorators: [
     (Story) => (<Provider><Container maxWidth="4xl"><Story/></Container></Provider>),
   ]
@@ -56,13 +55,19 @@ decorators: [
 export const List = meta.story({
     loaders: [
     async () => {
-      const queued = await generatePlayWithLifecycle();
+      const queued = normalizePlays(generateArray(7,() => generatePlayWithLifecycle()), {endDate: dayjs()}).map(x => ({play: x, status: 'queued'}));
+
       const scrobbled = await playWithLifecycleScrobble(generatePlayWithLifecycle({lifecycleSteps: {preCompare: [true, 'skipped', true]}}));
       const scrobbleError = await playWithLifecycleScrobble(generatePlayWithLifecycle(), {error: true});
+
+      const promisedScrobbled = generateArray(10,() => playWithLifecycleScrobble(generatePlayWithLifecycle({lifecycleSteps: {preCompare: [true, 'skipped', true]}})));
+      const promised = await Promise.all(promisedScrobbled);
+      const yesterdayScrobbled = normalizePlays(promised, {endDate: dayjs().subtract(1, 'd').subtract(100, 'm')}).map((x) => ({play: x, status: 'scrobbled'}));
       return {data: [
-        {play: queued, status: 'queued'},
+        ...queued,
         {play: scrobbled, status: 'scrobbled'},
-        {play: scrobbleError, status: 'error'}
+        {play: scrobbleError, status: 'error'},
+        ...yesterdayScrobbled
       ]};
     }
   ],

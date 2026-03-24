@@ -1,9 +1,10 @@
 import { PlayPlatformId } from "../backend/common/infrastructure/Atomic.js";
-import { PlayObject, PlayObjectLifecycleless } from "./Atomic.js";
+import { AmbPlayObject, DateLike, PlayObject, PlayObjectLifecycleless } from "./Atomic.js";
+import dayjs from "dayjs";
 
 
 /** sorts playObj formatted objects by playDate in descending (newest first) order */
-export const sortByNewestPlayDate = (a: PlayObject, b: PlayObject) => {
+export const sortByNewestPlayDate = (a: AmbPlayObject<DateLike>, b: AmbPlayObject<DateLike>) => {
     const {
         data: {
             playDate: aPlayDate
@@ -23,10 +24,16 @@ export const sortByNewestPlayDate = (a: PlayObject, b: PlayObject) => {
     if (bPlayDate === undefined) {
         return -1;
     }
-    return aPlayDate.isBefore(bPlayDate) ? 1 : -1;
-};export const genGroupIdStr = (id: PlayPlatformId) => {
+    
+    const realA = typeof aPlayDate === 'string' ? dayjs(aPlayDate) : aPlayDate;
+    const realB = typeof bPlayDate === 'string' ? dayjs(bPlayDate) : bPlayDate;
+    return realA.isBefore(realB) ? 1 : -1;
+};
+
+export const genGroupIdStr = (id: PlayPlatformId) => {
     return `${id[0]}-${id[1]}`;
 };
+
 export const lifecyclelessInvariantTransform = (play: PlayObject): PlayObjectLifecycleless => {
     const {
         meta: {

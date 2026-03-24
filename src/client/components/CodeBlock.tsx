@@ -4,20 +4,21 @@ import { useColorMode } from "./Color-Mode";
 import { ComponentProps, PropsWithChildren, useMemo } from "react";
 import { safeStringify } from "../../core/StringUtils";
 import { MarkOptional } from "ts-essentials";
+import { shikiAdapter } from "./shikiAdapter";
 
-const shikiAdapter = createShikiAdapter<HighlighterGeneric<any, any>>({
-  async load() {
-    const { createHighlighter } = await import("shiki")
-    return createHighlighter({
-      langs: ["json", "plaintext"],
-      themes: ["github-dark", "github-light"],
-    })
-  },
-  theme: {
-    light: "github-light",
-    dark: "github-dark",
-  },
-});
+// const shikiAdapter = createShikiAdapter<HighlighterGeneric<any, any>>({
+//   async load() {
+//     const { createHighlighter } = await import("shiki")
+//     return createHighlighter({
+//       langs: ["json", "plaintext"],
+//       themes: ["github-dark", "github-light"],
+//     })
+//   },
+//   theme: {
+//     light: "github-light",
+//     dark: "github-dark",
+//   },
+// });
 
 export interface ChakraCodeBaseProps {
   language?: string
