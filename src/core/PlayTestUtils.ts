@@ -154,13 +154,15 @@ export const generatePlay = (data: ObjectPlayData = {}, meta: MarkOptional<PlayM
         playDateCompleted = false
     } = opts;
 
+    const duration = faker.number.int({min: 30, max: 300});
     const play: PlayObject = {
         data: {
             track: faker.music.songName(),
             artists: faker.helpers.multiple(faker.music.artist, {count: {min: 1, max: 3}}),
-            duration: faker.number.int({min: 30, max: 300}),
+            duration,
             playDate: dayjs().subtract(faker.number.int({min: 1, max: 800})),
             album: faker.music.album(),
+            listenedFor: faker.number.int({min: duration * 0.5, max: duration}),
             ...data
         },
         meta: {
@@ -172,7 +174,10 @@ export const generatePlay = (data: ObjectPlayData = {}, meta: MarkOptional<PlayM
                     meta: {}
                 },
                 steps: []
-            }
+            },
+            url: {
+                origin: 'https://example.com'
+            },
         }
     }
 

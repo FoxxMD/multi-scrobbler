@@ -21,7 +21,8 @@ import {
 } from "../utils.js";
 import { genGroupIdStr } from '../../core/PlayUtils.js';
 import { formatNumber } from '../../core/DataUtils.js';
-import { timePassesScrobbleThreshold, timeToHumanTimestamp } from "../utils/TimeUtils.js";
+import { timePassesScrobbleThreshold } from "../utils/TimeUtils.js";
+import { timeToHumanTimestamp } from "../../core/TimeUtils.js";
 import { PromisePool } from "@supercharge/promise-pool";
 import AbstractSource from "./AbstractSource.js";
 import { AbstractPlayerState, createPlayerOptions, PlayerStateOptions } from "./PlayerState/AbstractPlayerState.js";

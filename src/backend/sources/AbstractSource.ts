@@ -33,7 +33,7 @@ import {
 } from "../utils.js";
 import { sortByNewestPlayDate } from '../../core/PlayUtils.js';
 import { formatNumber } from '../../core/DataUtils.js';
-import { timeToHumanTimestamp } from "../utils/TimeUtils.js";
+import { timeToHumanTimestamp } from "../../core/TimeUtils.js";
 import { todayAwareFormat } from "../../core/TimeUtils.js";
 import { getRoot } from '../ioc.js';
 import { componentFileLogger } from '../common/logging.js';

@@ -5,12 +5,14 @@ import { fn } from 'storybook/test';
 import { PlayData } from "../client/components/PlayData.js";
 import {Provider} from "../client/components/Provider";
 import { Container } from '@chakra-ui/react';
-import { generateArtists, generateJsonPlay, generatePlay } from "../core/PlayTestUtils.js"
+import { generateArtists, generateJsonPlay, generatePlay, withBrainz } from "../core/PlayTestUtils.js"
 import clone from "clone";
+import { asJsonPlayObject } from "../core/tests/utils/fixtures.js";
 
 type PropsAndCustomArgs = React.ComponentProps<typeof PlayData> & {
   includeAlbumArtists?: boolean;
   defaultFinal?: boolean
+  brainz?: boolean
 };
 // More on how to set up stories at: https://storybook.js.org/docs/writing-stories#default-export
 const meta = preview.type<{args: PropsAndCustomArgs}>().meta({
@@ -29,7 +31,8 @@ args: {
     play: generateJsonPlay(),
     includeAlbumArtists: false,
     showCodeToggle: true,
-    defaultFinal: true
+    defaultFinal: true,
+    brainz: false
   },
   // Use `fn` to spy on the onClick arg, which will appear in the actions panel once invoked: https://storybook.js.org/docs/essentials/actions#story-args
 });
@@ -50,6 +53,11 @@ export const PlayInfoStory = meta.story({
       if(args.final !== undefined) {
         args.final.data.albumArtists = aa;
       }
+    }
+
+    if(args.brainz) {
+      // @ts-ignore
+      args.play = asJsonPlayObject(withBrainz(args.play, {include: ['album','track','artist']}));
     }
     return (<PlayData {...args}/>) 
   }
