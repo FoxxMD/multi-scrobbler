@@ -57,7 +57,7 @@ export const List = meta.story({
     loaders: [
     async () => {
       const queued = await generatePlayWithLifecycle();
-      const scrobbled = await playWithLifecycleScrobble(generatePlayWithLifecycle());
+      const scrobbled = await playWithLifecycleScrobble(generatePlayWithLifecycle({lifecycleSteps: {preCompare: [true, 'skipped', true]}}));
       const scrobbleError = await playWithLifecycleScrobble(generatePlayWithLifecycle(), {error: true});
       return {data: [
         {play: queued, status: 'queued'},

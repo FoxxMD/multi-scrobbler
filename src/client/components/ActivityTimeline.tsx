@@ -1,4 +1,4 @@
-import { ComponentProps, useState } from "react"
+import { ComponentProps, useState, Fragment } from "react"
 import { Accordion, Timeline, Icon, Span, Stack, Heading, Card, Box, Tabs } from '@chakra-ui/react';
 import { ErrorLike, JsonPlayObject, PlayActivity } from "../../core/Atomic";
 import { PlayData } from "./PlayData";
@@ -19,6 +19,7 @@ import { ScrobbleActionResult } from "./ScrobbleActionResult";
 import { ExpandCollapse } from "./ExpandCollapse";
 import { MSCollapsible } from "./MSCollapsible";
 import { TimelineErrorIcon } from "./timeline/TimelineIcon";
+import { Muted } from "./Typography";
 
 
 export interface ActivityDetailProps {
@@ -44,12 +45,28 @@ export const ActivityTimeline = (props: ActivityDetailProps) => {
                 scrobble: {
                     match,
                     payload,
-                    error
+                    error,
+                    warnings = []
                 } = {},
                 scrobble
             },
         } = {}
     } = play;
+
+    let scrobbleSummary: JSX.Element,
+        scrobbleIconProps: Record<string, any> = {
+            color: 'green.focusRing'
+        };
+    if (payload !== undefined) {
+        if (error !== undefined) {
+            scrobbleSummary = <Span>Scrobble attempt <Muted>to Client resulted in</Muted> <Span color="red.solid">an error.</Span></Span>
+        } else if (warnings.length > 0) {
+            scrobbleSummary = <Span>Scrobbled <Muted>to Client but response </Muted> <Span color="orange.solid">has warnings.</Span></Span>;
+            scrobbleIconProps.orange = 'orange.focusRing';
+        } else {
+            scrobbleSummary = <Span>Scrobbled <Muted>to Client</Muted> successfully.</Span>;
+        }
+    }
 
     return (
         <Timeline.Root variant="subtle" size="lg">
@@ -64,26 +81,31 @@ export const ActivityTimeline = (props: ActivityDetailProps) => {
                 </Timeline.Connector>
                 <Timeline.Content>
                     <Timeline.Title>
-                        Discovered <Span color="fg.muted">new (Play) activity from</Span>
-                        <Span fontWeight="medium">{capitalize(source)}</Span>
-                        <Span color="fg.muted">at {shortTodayAwareFormat(dayjs(playDate))}</Span>
+                        <MSCollapsible
+                            indicator={<Span>
+                                Discovered <Span color="fg.muted">new (Play) activity from</Span> <Span fontWeight="medium">{capitalize(source)}</Span> <Span color="fg.muted">at {shortTodayAwareFormat(dayjs(playDate))}</Span>
+                            </Span>}
+                            defaultOpen={collapsibleOpen}
+                            timeline
+                            disableUntil="md">
+                            <Card.Root bgColor="bg.muted" size="sm">
+                                <Card.Body textStyle="sm">
+                                    <Tabs.Root size="sm" variant="outline" defaultValue="play">
+                                        <Tabs.List>
+                                            <Tabs.Trigger value="play">Play</Tabs.Trigger>
+                                            <Tabs.Trigger value="source">Source Data</Tabs.Trigger>
+                                        </Tabs.List>
+                                        <Tabs.Content value="play">
+                                            <PlayData play={original} />
+                                        </Tabs.Content>
+                                        <Tabs.Content value="source">
+                                            <ChakraCodeBlockShort code={input} />
+                                        </Tabs.Content>
+                                    </Tabs.Root>
+                                </Card.Body>
+                            </Card.Root>
+                        </MSCollapsible>
                     </Timeline.Title>
-                    <Card.Root bgColor="bg.muted" size="sm" hideBelow="sm">
-                        <Card.Body textStyle="sm">
-                            <Tabs.Root size="sm" variant="outline" defaultValue="play">
-                                <Tabs.List>
-                                    <Tabs.Trigger value="play">Play</Tabs.Trigger>
-                                    <Tabs.Trigger value="source">Source Data</Tabs.Trigger>
-                                </Tabs.List>
-                                <Tabs.Content value="play">
-                                    <PlayData play={original} />
-                                </Tabs.Content>
-                                <Tabs.Content value="source">
-                                    <ChakraCodeBlockShort code={input} />
-                                </Tabs.Content>
-                            </Tabs.Root>
-                        </Card.Body>
-                    </Card.Root>
                 </Timeline.Content>
             </Timeline.Item>
             {steps.length > 0 ? (
@@ -98,16 +120,36 @@ export const ActivityTimeline = (props: ActivityDetailProps) => {
                     </Timeline.Connector>
                     <Timeline.Content gap="4">
                         <Timeline.Title>
-                            Transformed Play <Span color="fg.muted">using configured Rules</Span>
+                            <MSCollapsible
+                                indicator={<Span>Transformed Play <Span color="fg.muted">using configured Rules</Span></Span>}
+                                defaultOpen={collapsibleOpen}
+                                timeline>
+                                <Card.Root bgColor="bg.muted" size="sm">
+                                    <Card.Body textStyle="sm">
+                                        <TransformSteps steps={steps} original={original} collapsibleOpen={collapsibleOpen} />
+                                    </Card.Body>
+                                </Card.Root>
+                            </MSCollapsible>
                         </Timeline.Title>
-                        <Card.Root bgColor="bg.muted" size="sm">
-                            <Card.Body textStyle="sm">
-                                <TransformSteps steps={steps} original={original} collapsibleOpen={collapsibleOpen} />
-                            </Card.Body>
-                        </Card.Root>
                     </Timeline.Content>
                 </Timeline.Item>
-            ) : null}
+            ) : (
+                <Timeline.Item>
+                    <Timeline.Connector>
+                        <Timeline.Separator />
+                        <Timeline.Indicator>
+                            <Icon fontSize="lg">
+                                <BiWrench />
+                            </Icon>
+                        </Timeline.Indicator>
+                    </Timeline.Connector>
+                    <Timeline.Content gap="4">
+                        <Timeline.Title>
+                            Play <Muted>was</Muted> not transformed <Muted>because no</Muted> Transform Rules <Muted> were used/configured.</Muted>
+                        </Timeline.Title>
+                    </Timeline.Content>
+                </Timeline.Item>
+            )}
             {match !== undefined ? (
                 <Timeline.Item>
                     <Timeline.Connector>
@@ -120,15 +162,18 @@ export const ActivityTimeline = (props: ActivityDetailProps) => {
                     </Timeline.Connector>
                     <Timeline.Content gap="4">
                         <Timeline.Title>
-                            <Span color="fg.muted">Found </Span>{match.match ? <Span color="orange.solid"> a duplicate Scrobble</Span> : 'no duplicate Scrobbles'}
+                            <MSCollapsible
+                                indicator={<Span><Span color="fg.muted">Found </Span>{match.match ? <Span color="orange.solid"> a duplicate Scrobble</Span> : 'no duplicate Scrobbles'}</Span>}
+                                defaultOpen={collapsibleOpen}
+                                disableUntil="md"
+                                timeline>
+                                <Card.Root bgColor="bg.muted" size="sm">
+                                    <Card.Body textStyle="sm">
+                                        <ScrobbleMatchResult match={match} />
+                                    </Card.Body>
+                                </Card.Root>
+                            </MSCollapsible>
                         </Timeline.Title>
-                        <Card.Root bgColor="bg.muted" size="sm" hideBelow="sm">
-                            <Card.Body textStyle="sm">
-                                <MSCollapsible indicator="Show Details" defaultOpen={collapsibleOpen}>
-                                    <ScrobbleMatchResult match={match} />
-                                </MSCollapsible>
-                            </Card.Body>
-                        </Card.Root>
                     </Timeline.Content>
                 </Timeline.Item>
             ) : null}
@@ -138,7 +183,7 @@ export const ActivityTimeline = (props: ActivityDetailProps) => {
                         <Timeline.Separator />
                         <Timeline.Indicator>
                             {error !== undefined ? <TimelineErrorIcon /> : (
-                                <Icon fontSize="sm">
+                                <Icon fontSize="lg" {...scrobbleIconProps}>
                                     <TbDatabaseEdit />
                                 </Icon>
                             )}
@@ -146,13 +191,18 @@ export const ActivityTimeline = (props: ActivityDetailProps) => {
                     </Timeline.Connector>
                     <Timeline.Content gap="4">
                         <Timeline.Title>
-                            <Span color="fg.muted">Attmpted to</Span> Scrobble
+                            <MSCollapsible
+                                indicator={scrobbleSummary}
+                                defaultOpen={collapsibleOpen}
+                                timeline
+                                disableUntil="md">
+                                <Card.Root bgColor="bg.muted" size="sm">
+                                    <Card.Body textStyle="sm">
+                                        <ScrobbleActionResult result={scrobble} scrobbler="Koito" collapsibleOpen={collapsibleOpen} />
+                                    </Card.Body>
+                                </Card.Root>
+                            </MSCollapsible>
                         </Timeline.Title>
-                        <Card.Root bgColor="bg.muted" size="sm">
-                            <Card.Body textStyle="sm">
-                                <ScrobbleActionResult result={scrobble} scrobbler="Koito" collapsibleOpen={collapsibleOpen} />
-                            </Card.Body>
-                        </Card.Root>
                     </Timeline.Content>
                 </Timeline.Item>
             ) : null}

@@ -148,10 +148,12 @@ export const TransformSteps = (props: LifeycleStepsTimelineProps) => {
                     </Timeline.Connector>
                     <Timeline.Content>
                         <Timeline.Title>
-                            <Span color="fg.muted">{name} with</Span> {source} {summary}
-                        </Timeline.Title>
-                        <MSCollapsible indicator="Show Details" defaultOpen={collapsibleOpen} hideBelow="sm">
-                            {error !== undefined ? <ErrorAlert status={alertStatus} error={error}/> : null}
+                            <MSCollapsible
+                                indicator={<Span><Span color="fg.muted">{name} with</Span> {source} {summary}</Span>}
+                                defaultOpen={collapsibleOpen}
+                                disableUntil="md"
+                                timeline>
+                                {error !== undefined ? <ErrorAlert status={alertStatus} error={error}/> : null}
                             <Stack gap="2">
                                 {diffs[index] !== null ? (
                                     <Fragment>
@@ -167,7 +169,8 @@ export const TransformSteps = (props: LifeycleStepsTimelineProps) => {
                                             })}
                                         </Stack></Fragment>) : null}
                             </Stack>
-                        </MSCollapsible>
+                            </MSCollapsible>
+                        </Timeline.Title>
                     </Timeline.Content>
                 </Timeline.Item>
             })}
