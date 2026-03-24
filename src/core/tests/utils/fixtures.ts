@@ -296,7 +296,7 @@ export const generateLifecycleStep = (play: PlayObject, opts: GenerateLifecycleO
             return;
           }
           somethingModified = true;
-          if(ctx.key === 'brainz' && Object.keys(x).length === 0) {
+          if(ctx.key === 'brainz' && Object.keys(x ?? {}).length === 0) {
               ctx.update(generateBrainz(play, {include: ['album', 'artist', 'track']}), true);
           } else if (ctx.parent !== undefined && ctx.parent.key === 'brainz') {
             if (Array.isArray(x)) {
