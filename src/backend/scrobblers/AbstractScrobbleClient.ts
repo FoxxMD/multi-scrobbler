@@ -847,7 +847,7 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
     }
 
     queueScrobble = async (data: PlayObject | PlayObject[], source: string) => {
-        const plays = Array.isArray(data) ? data : [data];
+        const plays = (Array.isArray(data) ? data : [data]).map(x => ({...x, meta: {...x.meta, seenAt: dayjs()}}));
         const sm = staggerMapper<PlayObject, PlayObject>({concurrency: 2});
         for await(const play of pMapIterable(plays, sm(async x => await this.transformPlay(x, TRANSFORM_HOOK.preCompare)), {concurrency: 2})) {
             try {

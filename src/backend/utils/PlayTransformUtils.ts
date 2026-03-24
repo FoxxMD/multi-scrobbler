@@ -15,6 +15,7 @@ import {
     WhenConditionsConfig,
     WhenParts
 } from "../common/infrastructure/Transform.js";
+import dayjs from "dayjs";
 
 export const isWhenCondition = (val: unknown): val is WhenParts<string> => {
     if (val !== null && typeof val === 'object') {
@@ -173,11 +174,12 @@ export interface TransformPlayPartsOptions {
 }
 
 export const baseFormatPlayObj = (data: any, play: PlayObjectLifecycleless): PlayObject => {
-    return {
+    const basePlay =  {
         data: {
             ...play.data
         },
         meta: {
+            seenAt: dayjs(),
             ...play.meta,
             lifecycle: {
                 input: data,
@@ -186,6 +188,8 @@ export const baseFormatPlayObj = (data: any, play: PlayObjectLifecycleless): Pla
             }
         }
     }
+    basePlay.meta.lifecycle.original.meta.seenAt = basePlay.meta.seenAt;
+    return basePlay;
 }
 
 export const defaultLifecycle = (extra?: PlayLifecycle): PlayLifecycle => {
