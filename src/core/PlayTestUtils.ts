@@ -181,6 +181,7 @@ export const generatePlay = (data: ObjectPlayData = {}, meta: MarkOptional<PlayM
         },
         meta: {
             source: ['Spotify', 'Listenbrainz', 'Lastfm', 'Jellyfin', 'Plex'][faker.number.int({min: 0, max: 4})],
+            seenAt: dayjs(),
             ...meta,
             lifecycle: {
                 original: {

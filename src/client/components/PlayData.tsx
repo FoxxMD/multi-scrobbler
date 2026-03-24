@@ -222,7 +222,7 @@ export const PlayDatesStack = (props: { play: JsonPlayObject, dates: DisplayDate
             }
         }
         if (dates.includes('seen') || dates.includes('all')) {
-            dateElements.push((<TextMuted key="seen">{`Seen ${shortTodayAwareFormat(dayjs(play.data.playDate))}`}</TextMuted>));
+            dateElements.push((<TextMuted key="seen">{`Seen ${shortTodayAwareFormat(dayjs(play.meta.seenAt))}`}</TextMuted>));
         }
         datesItem = (
             <DataList.Item flexGrow="1">
@@ -255,8 +255,8 @@ export const PlayDatesFooter = (props: { play: JsonPlayObject, dates: DisplayDat
             playDate = <Text textStyle="xs" color="fg.muted">{`Played ${shortTodayAwareFormat(dayjs(play.data.playDate))}`}</Text>
         }
         // TODO implement seenAt for play data
-        if (play.data.playDateCompleted !== undefined && ['all', 'seen'].includes(dates)) {
-            seenDate = <Text textStyle="xs" color="fg.muted">{`Seen ${shortTodayAwareFormat(dayjs(play.data.playDateCompleted))}`}</Text>
+        if (play.meta.seenAt !== undefined && ['all', 'seen'].includes(dates)) {
+            seenDate = <Text textStyle="xs" color="fg.muted">{`Seen ${shortTodayAwareFormat(dayjs(play.meta.seenAt))}`}</Text>
         }
         if (playDate !== undefined && seenDate !== undefined) {
             dateElm = <HStack gap="1">{playDate}<Separator orientation="vertical" height="4" />{seenDate}</HStack>

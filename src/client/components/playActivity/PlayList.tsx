@@ -10,7 +10,7 @@ import doy from 'dayjs/plugin/dayOfYear.js';
 import { VscDebugRestart } from "react-icons/vsc";
 import { GroupedVirtuoso } from 'react-virtuoso'
 import { ActivityDetails } from '../ActivityDetail.js';
-import { sortByNewestPlayDate } from '../../../core/PlayUtils.js';
+import { sortByNewestPlayDate, sortByNewestSeenDate } from '../../../core/PlayUtils.js';
 import "./PlayList.scss";
 
 dayjs.extend(doy);
@@ -73,10 +73,15 @@ export const PlayList = (props: ActivityLogProps) => {
     render = 'accordian'
   } = props;
 
-  const sorted = useMemo(() => props.data.toSorted((a, b) => sortByNewestPlayDate(a.play, b.play)), [data, sortBy]);
+  const sorted = useMemo(() => props.data.toSorted((a, b) => {
+    if(sortBy === 'played') {
+      return sortByNewestPlayDate(a.play, b.play)
+    }
+    return sortByNewestSeenDate(a.play, b.play);
+  }), [data, sortBy]);
 
   if (render === 'accordian') {
-    return <PlainAccordian data={sorted} />
+    return <PlainAccordian data={sorted} sortBy={sortBy} />
   }
   if (render === 'virtCollapse') {
     return <VirtualizedCollapse data={sorted} />
@@ -285,8 +290,11 @@ const VirtualizedAccordian = (props: { data: PlayActivity[] }) => {
   );
 }
 
-const PlainAccordian = (props: { data: PlayActivity[] }) => {
-  const { data = [] } = props;
+const PlainAccordian = (props: { data: PlayActivity[], sortBy: 'played' | 'seen' }) => {
+  const { 
+    data = [],
+    sortBy
+   } = props;
   const groups = generateGroupPlays(data);
   return (
     <Stack gap="2">
@@ -325,7 +333,7 @@ const PlainAccordian = (props: { data: PlayActivity[] }) => {
                           <Span>{play.data.track}</Span>
                           <TextMuted truncate>{play.data.artists.join(' / ')}</TextMuted>
                           <HStack gap="1">
-                            <ShortDateDisplay date={play.data.playDate} prefix="Played" /><Separator orientation="vertical" height="4" />
+                            <ShortDateDisplay date={sortBy === 'played' ? play.data.playDate : play.meta?.seenAt} prefix={sortBy === 'played' ? 'Played' : 'Seen'} /><Separator orientation="vertical" height="4" />
                             <TextMuted>{play.meta?.source}</TextMuted>
                           </HStack>
                         </Stack>

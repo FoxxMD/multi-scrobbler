@@ -198,6 +198,8 @@ export interface PlayMeta<D extends DateLike = Dayjs> {
     source?: string
     sourceSOT?: SOURCE_SOT_TYPES
 
+    seenAt?: D
+
     /*
     * If applicable, the name of the Service providing the track (Spotify, Tidal, etc...)
     */
@@ -345,7 +347,7 @@ export type DateLike = Dayjs | string
 
 export interface AmbPlayObject<D extends DateLike = Dayjs> {
     data: PlayData<D>,
-    meta: PlayMeta<D> | MarkOptional<PlayMeta<D>, 'lifecycle'>
+    meta: PlayMeta<D> | Omit<PlayMeta<D>, 'lifecycle'>
 }
 
 export const isPlayObject = (obj: object): obj is PlayObject => {
