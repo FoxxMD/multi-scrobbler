@@ -40,7 +40,7 @@ import { componentFileLogger } from '../common/logging.js';
 import { WebhookPayload } from '../common/infrastructure/config/health/webhooks.js';
 import { messageWithCauses, messageWithCausesTruncatedDefault } from '../utils/ErrorUtils.js';
 import { genericSourcePlayMatch } from '../utils/PlayComparisonUtils.js';
-import { findAsync, staggerMapper } from '../utils/AsyncUtils.js';
+import { findAsync, staggerMapper, StaggerOptions } from '../utils/AsyncUtils.js';
 import pMap, {pMapIterable} from 'p-map';
 import prom, { Counter, Gauge } from 'prom-client';
 import { normalizeStr } from '../utils/StringUtils.js';
@@ -94,6 +94,8 @@ export default abstract class AbstractSource extends AbstractComponent implement
 
     protected discoveredCounter: Counter;
 
+    protected staggerOpts: Partial<StaggerOptions>;
+
     constructor(type: SourceType, name: string, config: SourceConfig, internal: InternalConfig, emitter: EventEmitter) {
         super(config);
         const {clients = [] } = config;
@@ -110,6 +112,7 @@ export default abstract class AbstractSource extends AbstractComponent implement
         this.emitter = emitter;
         
         this.discoveredCounter = getRoot().items.sourceMetics.discovered;
+        this.staggerOpts = getRoot().items.staggerOptions;
     }
 
     protected getIdentifier() {
@@ -219,7 +222,7 @@ export default abstract class AbstractSource extends AbstractComponent implement
     discover = async (plays: PlayObject[], options: { checkAll?: boolean, [key: string]: any } = {}): Promise<PlayObject[]> => {
         const newDiscoveredPlays: PlayObject[] = [];
 
-        const sm = staggerMapper<PlayObject, PlayObject>({concurrency: 2});
+        const sm = staggerMapper<PlayObject, PlayObject>({...this.staggerOpts, concurrency: 2});
         for await(const play of pMapIterable(plays, sm(async x => await this.transformPlay(x, TRANSFORM_HOOK.preCompare)), {concurrency: 2})) {
             if(!(await this.alreadyDiscovered(play, options))) {
                 this.addPlayToDiscovered(play);
@@ -251,7 +254,7 @@ export default abstract class AbstractSource extends AbstractComponent implement
                 return;
             }
             newDiscoveredPlays.sort(sortByOldestPlayDate);
-            const sm = staggerMapper<PlayObject, PlayObject>({concurrency: 2});
+            const sm = staggerMapper<PlayObject, PlayObject>({...this.staggerOpts, concurrency: 2});
             this.emitter.emit('discoveredToScrobble', {
                 data: await pMap(newDiscoveredPlays, sm(async (x) =>  await this.transformPlay(x, TRANSFORM_HOOK.postCompare)), {concurrency: 2}),
                 options: {

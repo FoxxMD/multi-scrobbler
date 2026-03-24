@@ -58,7 +58,7 @@ import { WebhookPayload } from "../common/infrastructure/config/health/webhooks.
 import { AsyncTask, SimpleIntervalJob, Task, ToadScheduler } from "toad-scheduler";
 import { getRoot } from "../ioc.js";
 import { rehydratePlay } from "../utils/CacheUtils.js";
-import { findAsyncSequential, staggerMapper } from "../utils/AsyncUtils.js";
+import { findAsyncSequential, staggerMapper, StaggerOptions } from "../utils/AsyncUtils.js";
 import pMap, { pMapIterable } from "p-map";
 import { comparePlayArtistsNormalized, comparePlayTracksNormalized, existingScrobble, ExistingScrobbleOpts } from "../utils/PlayComparisonUtils.js";
 import { lifecyclelessInvariantTransform } from "../../core/PlayUtils.js";
@@ -124,6 +124,8 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
     protected deadLetterGauge: Gauge;
     protected problemGauge: Gauge;
 
+    protected staggerOpts: Partial<StaggerOptions>;
+
     constructor(type: any, name: any, config: CommonClientConfig, notifier: Notifiers, emitter: EventEmitter, logger: Logger) {
         super(config);
         this.type = type;
@@ -187,7 +189,8 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
             transformPlay: this.transformPlay,
             existingSubmitted: this.findExistingSubmittedPlayObj
         }
-        this.existingScrobble = (playObjPre: PlayObject, existingScrobbles: PlayObject[], log?: boolean) => existingScrobble(playObjPre, existingScrobbles, existingScrobbleOpts, log)
+        this.existingScrobble = (playObjPre: PlayObject, existingScrobbles: PlayObject[], log?: boolean) => existingScrobble(playObjPre, existingScrobbles, existingScrobbleOpts, log);
+        this.staggerOpts = getRoot().items.staggerOptions;
     }
 
     protected getIdentifier() {
@@ -446,7 +449,7 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
 
         const playObj = await this.transformPlay(playObjPre, TRANSFORM_HOOK.candidate);
 
-        const sm = staggerMapper<ScrobbledPlayObject, ScrobbledPlayObject>({concurrency: 2});
+        const sm = staggerMapper<ScrobbledPlayObject, ScrobbledPlayObject>({...this.staggerOpts, concurrency: 2});
         const dtInvariantMatches = (await pMap(this.scrobbledPlayObjs.data, sm(async x => ({...x, play: await this.transformPlay(x.play, TRANSFORM_HOOK.existing)})), {concurrency: 2}))
             .filter(x => playObjDataMatch(playObj, x.play));
 
@@ -848,7 +851,7 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
 
     queueScrobble = async (data: PlayObject | PlayObject[], source: string) => {
         const plays = (Array.isArray(data) ? data : [data]).map(x => ({...x, meta: {...x.meta, seenAt: dayjs()}}));
-        const sm = staggerMapper<PlayObject, PlayObject>({concurrency: 2});
+        const sm = staggerMapper<PlayObject, PlayObject>({...this.staggerOpts, concurrency: 2});
         for await(const play of pMapIterable(plays, sm(async x => await this.transformPlay(x, TRANSFORM_HOOK.preCompare)), {concurrency: 2})) {
             try {
                 const existingQueued = await this.existingScrobble(play, this.queuedScrobbles.map(x => x.play), false);
@@ -1004,8 +1007,12 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
 
     protected updateQueuedScrobblesCache = () => {
         this.cache.cacheScrobble.set(`${this.getMachineId()}-queue`, this.queuedScrobbles)
-        .then(() => null)
-        .catch((e) => this.logger.warn(new Error('Error while updating queued scrobble cache', {cause: e})));
+        .then(() => {
+            return undefined;
+        })
+        .catch((e) => {
+            this.logger.warn(new Error('Error while updating queued scrobble cache', {cause: e}))
+    });
     }
 }
 
