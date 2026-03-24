@@ -360,7 +360,7 @@ export interface PlayActivity {
   status: string
   error?: ErrorLike
 }
-export type JsonPlayObject = AmbPlayObject<string>;
+export type JsonPlayObject = PlayObjectLifecycleless<string>;
 
 export interface ObjectPlayData extends PlayData {
     playDate?: Dayjs
