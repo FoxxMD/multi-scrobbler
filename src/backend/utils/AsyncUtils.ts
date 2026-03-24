@@ -47,7 +47,12 @@ export async function findIndexAsync<T>(
   return index;
 }
 
-export function staggerMapper<Element, NewElement>(options: { maxRandomStagger?: number, initialInterval?: number, concurrency: number }) {
+export interface StaggerOptions {
+   maxRandomStagger?: number, 
+   initialInterval?: number, 
+   concurrency: number 
+  }
+export function staggerMapper<Element, NewElement>(options: StaggerOptions) {
   const {
     initialInterval = 300,
     maxRandomStagger = 300,
@@ -60,7 +65,7 @@ export function staggerMapper<Element, NewElement>(options: { maxRandomStagger?:
       sleep(initialStagger);
       initialStagger += initialInterval;
     } else {
-      const s = Math.max((Math.random() * 1000), maxRandomStagger)
+      const s = Math.min((Math.random() * 1000), maxRandomStagger)
       await sleep(s);
     }
     return await mapper(x, index);
