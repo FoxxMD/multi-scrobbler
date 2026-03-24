@@ -1,4 +1,3 @@
-import { childLogger, Logger } from "@foxxmd/logging";
 import dayjs, { Dayjs } from "dayjs";
 import { SimpleIntervalJob, Task, ToadScheduler } from "toad-scheduler";
 

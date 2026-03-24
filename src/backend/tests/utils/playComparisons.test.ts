@@ -1,12 +1,9 @@
-import { loggerTest } from "@foxxmd/logging";
 import { assert, expect } from 'chai';
 import clone from "clone";
 import { describe, it } from 'mocha';
 import { genericSourcePlayMatch, playsAreAddedOnly, playsAreBumpedOnly, playsAreSortConsistent } from "../../utils/PlayComparisonUtils.js";
 import { generatePlay, generatePlays } from "../../../core/PlayTestUtils.js";
 import { PlayObject } from "../../../core/Atomic.js";
-
-const logger = loggerTest;
 
 const newPlay = generatePlay();
 

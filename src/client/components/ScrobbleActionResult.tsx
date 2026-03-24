@@ -15,7 +15,7 @@ import { MSCollapsible, MSCollapsibleExternalProps } from "./MSCollapsible";
 import { TimelineErrorIcon } from "./timeline/TimelineIcon";
 
 export interface ScrobbleActionResultProps extends MSCollapsibleExternalProps {
-    result: ScrobbleResult,
+    result: ScrobbleResult<string>,
     scrobbler?: string,
 }
 
@@ -63,11 +63,13 @@ export const ScrobbleActionResult = (props: ScrobbleActionResultProps) => {
                 </Timeline.Connector>
                 <Timeline.Content>
                     <Timeline.Title>
-                        <Span color="fg.muted">Sent</Span> Scrobble Payload{scrobbler !== undefined ? <Fragment><Span color="fg.muted">to</Span> {capitalize(scrobbler)}</Fragment> : null}
+                        <MSCollapsible indicator={<Fragment><Span color="fg.muted">Sent</Span> Scrobble Payload{scrobbler !== undefined ? <Fragment><Span color="fg.muted">to</Span> {capitalize(scrobbler)}</Fragment> : null}</Fragment>}
+                            defaultOpen={collapsibleOpen}
+                            disableUntil="md"
+                            timeline>
+                            <ChakraCodeBlockShort code={payload} language="json" maxLines={20} />
+                        </MSCollapsible>
                     </Timeline.Title>
-                    <MSCollapsible indicator="Show Payload" defaultOpen={collapsibleOpen} hideBelow="sm">
-                        <ChakraCodeBlockShort code={payload} language="json" maxLines={20} />
-                    </MSCollapsible>
                 </Timeline.Content>
             </Timeline.Item>
             {response !== undefined || error !== undefined ? (
@@ -84,27 +86,30 @@ export const ScrobbleActionResult = (props: ScrobbleActionResultProps) => {
                     </Timeline.Connector>
                     <Timeline.Content>
                         <Timeline.Title>
-                            <Span color="fg.muted">Received</Span> Response{scrobbler !== undefined ? <Fragment><Span color="fg.muted">from</Span> {capitalize(scrobbler)}</Fragment> : null}{responseSuffix !== undefined ? <Span> {responseSuffix}</Span> : null}
+                            <MSCollapsible
+                                indicator={<Fragment><Span color="fg.muted">Received</Span> Response{scrobbler !== undefined ? <Fragment><Span color="fg.muted">from</Span> {capitalize(scrobbler)}</Fragment> : null}{responseSuffix !== undefined ? <Span> {responseSuffix}</Span> : null}</Fragment>}
+                                timeline
+                                defaultOpen={collapsibleOpen}
+                                disableUntil="md">
+                                <Stack gap="4">
+                                    {error !== undefined ? <ErrorAlert error={error} /> : null}
+                                    {response !== undefined ? <ChakraCodeBlockShort code={response} language="json" maxLines={20} /> : null}
+                                    {warnings.length > 0 ? (
+                                        <Alert.Root status="warning">
+                                            <Alert.Indicator />
+                                            <Alert.Content>
+                                                <Alert.Title>Warnings in Response</Alert.Title>
+                                                <Alert.Description>
+                                                    <List.Root>
+                                                        {warnings.map((x) => <List.Item>{x}</List.Item>)}
+                                                    </List.Root>
+                                                </Alert.Description>
+                                            </Alert.Content>
+                                        </Alert.Root>
+                                    ) : null}
+                                </Stack>
+                            </MSCollapsible>
                         </Timeline.Title>
-                        <MSCollapsible indicator="Show Response" defaultOpen={collapsibleOpen} hideBelow="sm">
-                            <Stack gap="4">
-                                {error !== undefined ? <ErrorAlert error={error} /> : null}
-                                {response !== undefined ? <ChakraCodeBlockShort code={response} language="json" maxLines={20} /> : null}
-                                {warnings.length > 0 ? (
-                                    <Alert.Root status="warning">
-                                        <Alert.Indicator />
-                                        <Alert.Content>
-                                            <Alert.Title>Warnings in Response</Alert.Title>
-                                            <Alert.Description>
-                                                <List.Root>
-                                                    {warnings.map((x) => <List.Item>{x}</List.Item>)}
-                                                </List.Root>
-                                            </Alert.Description>
-                                        </Alert.Content>
-                                    </Alert.Root>
-                                ) : null}
-                            </Stack>
-                        </MSCollapsible>
                     </Timeline.Content>
                 </Timeline.Item>
             ) : null}

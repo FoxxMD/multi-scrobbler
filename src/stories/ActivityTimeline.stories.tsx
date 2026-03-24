@@ -8,6 +8,7 @@ import {Provider} from "../client/components/Provider";
 import { generateJsonPlays } from "../core/PlayTestUtils.js";
 import { ErrorLike, JsonPlayObject, PlayLifecycle } from "../core/Atomic.js";
 import { examplePlay, lastfmErrorExample } from "./storyUtils.js";
+import { generatePlayWithLifecycle, playWithLifecycleScrobble } from "../core/tests/utils/fixtures.js";
 
 // More on how to set up stories at: https://storybook.js.org/docs/writing-stories#default-export
 const meta = preview.meta({
@@ -23,6 +24,7 @@ const meta = preview.meta({
   args: {
      play: examplePlay()
   },
+  render: function Render(args, { loaded: { play } }) { return (<ActivityTimeline {...args} play={play}/>) },
 decorators: [
     (Story) => (<Provider><Container maxWidth="4xl"><Story/></Container></Provider>),
   ]
@@ -31,12 +33,79 @@ decorators: [
 
 // More on writing stories with args: https://storybook.js.org/docs/writing-stories/args
 export const ActivityTimelineStory = meta.story({
-  //render: function Render(args) { return (<ChakraProvider><MyList></MyList></ChakraProvider>) }
+    loaders: [
+    async () => {
+      const scrobbleError = await playWithLifecycleScrobble(generatePlayWithLifecycle(
+        {
+        lifecycleSteps: {
+          preCompare: 1,
+          postCompare: 1,
+        }
+      }
+      ))
+      return {play: scrobbleError};
+    }
+  ],
 });
 
 export const ScrobbleError = meta.story({
-  args: {
-    play: lastfmErrorExample()
-  }
+    loaders: [
+    async () => {
+      const scrobbleError = await playWithLifecycleScrobble(generatePlayWithLifecycle(), {error: true});
+      return {play: scrobbleError};
+    }
+  ],
 });
 
+export const TransformError = meta.story({
+    loaders: [
+    async () => {
+      const scrobbleError = await generatePlayWithLifecycle({
+        lifecycleSteps: {
+          preCompare: 2,
+          postCompare: [false],
+        }
+      });
+      return {play: scrobbleError};
+    }
+  ],
+});
+
+export const TransformSkip = meta.story({
+    loaders: [
+    async () => {
+      const play = await generatePlayWithLifecycle({
+        lifecycleSteps: {
+          preCompare: [true, 'skipped', true],
+        }
+      });
+      return {play};
+    }
+  ],
+});
+
+export const TransformPrereq = meta.story({
+    loaders: [
+    async () => {
+      const play = await generatePlayWithLifecycle({
+        lifecycleSteps: {
+          preCompare: [true, 'prereq'],
+        }
+      });
+      return {play};
+    }
+  ],
+});
+
+export const TransformStop = meta.story({
+    loaders: [
+    async () => {
+      const play = await generatePlayWithLifecycle({
+        lifecycleSteps: {
+          preCompare: [true, 'stop'],
+        }
+      });
+      return {play};
+    }
+  ],
+});

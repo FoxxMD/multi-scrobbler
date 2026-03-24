@@ -11,7 +11,7 @@ import { JsonDiffPatch } from "./JsonDiff";
 import { formatNumber, jdiff } from "../../core/DataUtils";
 
 export interface ScrobbleMatchResultProps {
-    match: PlayMatchResult
+    match: PlayMatchResult<string>
 }
 
 export const ScrobbleMatchResult = (props: ScrobbleMatchResultProps) => {
@@ -49,17 +49,17 @@ export const ScrobbleMatchResult = (props: ScrobbleMatchResultProps) => {
                         <DataList.ItemLabel flexShrink="1">Breakdown</DataList.ItemLabel>
                         <DataList.ItemValue>
                             <List.Root>
-                                {match.breakdowns.map((x) => {
+                                {match.breakdowns.map((x, index) => {
                                     if (x.includes('Time Detail')) {
                                         const sub = x.substring(15).split('|');
                                         return (
                                             <List.Root ps="5">
-                                                {sub.map((y) => <List.Item>{y}</List.Item>)}
+                                                {sub.map((y, index) => <List.Item key={index}>{y}</List.Item>)}
                                             </List.Root>
 
                                         )
                                     }
-                                    return <List.Item>{x}</List.Item>
+                                    return <List.Item key={index}>{x}</List.Item>
                                 })}
                             </List.Root>
                         </DataList.ItemValue>

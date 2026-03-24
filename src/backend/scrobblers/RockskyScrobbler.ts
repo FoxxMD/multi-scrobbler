@@ -3,10 +3,9 @@ import EventEmitter from "events";
 import { PlayObject, SourcePlayerObj } from "../../core/Atomic.js";
 import { buildTrackString, capitalize } from "../../core/StringUtils.js";
 import { isNodeNetworkException } from "../common/errors/NodeErrors.js";
-import { hasUpstreamError, UpstreamError } from "../common/errors/UpstreamError.js";
 import { FormatPlayObjectOptions } from "../common/infrastructure/Atomic.js";
-import { ListenBrainzClientConfig } from "../common/infrastructure/config/client/listenbrainz.js";
-import { ListenbrainzApiClient, playToListenPayload } from "../common/vendor/ListenbrainzApiClient.js";
+import { ListenbrainzApiClient } from "../common/vendor/ListenbrainzApiClient.js";
+import { playToListenPayload } from '../common/vendor/listenbrainz/lzUtils.js';
 import { ListenPayload } from '../common/vendor/listenbrainz/interfaces.js';
 import { Notifiers } from "../notifier/Notifiers.js";
 

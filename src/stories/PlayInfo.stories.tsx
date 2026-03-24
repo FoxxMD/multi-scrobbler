@@ -2,19 +2,22 @@ import preview from "../../.storybook/preview.js";
 import React from 'react';
 
 import { fn } from 'storybook/test';
-import { PlayData, PlayInfoContainer } from "../client/components/PlayData.js";
+import { PlayData } from "../client/components/PlayData.js";
 import {Provider} from "../client/components/Provider";
-import { generateArtists, generateJsonPlay, generatePlay } from "../core/PlayTestUtils.js"
+import { Container } from '@chakra-ui/react';
+import { generateArtists, generateJsonPlay, generatePlay, withBrainz } from "../core/PlayTestUtils.js"
 import clone from "clone";
+import { asJsonPlayObject } from "../core/tests/utils/fixtures.js";
 
 type PropsAndCustomArgs = React.ComponentProps<typeof PlayData> & {
   includeAlbumArtists?: boolean;
   defaultFinal?: boolean
+  brainz?: boolean
 };
 // More on how to set up stories at: https://storybook.js.org/docs/writing-stories#default-export
 const meta = preview.type<{args: PropsAndCustomArgs}>().meta({
   title: 'Examples/PlayInfo',
-  component: PlayInfoContainer,
+  component: PlayData,
   parameters: {
     // Optional parameter to center the component in the Canvas. More info: https://storybook.js.org/docs/configure/story-layout
     layout: 'padded',
@@ -22,13 +25,14 @@ const meta = preview.type<{args: PropsAndCustomArgs}>().meta({
   // This component will have an automatically generated Autodocs entry: https://storybook.js.org/docs/writing-docs/autodocs
   tags: ['autodocs'],
 decorators: [
-    (Story) => (<Provider><Story/></Provider>),
+    (Story) => (<Provider><Container maxWidth="2xl"><Story/></Container></Provider>),
   ],
 args: {
     play: generateJsonPlay(),
     includeAlbumArtists: false,
     showCodeToggle: true,
-    defaultFinal: true
+    defaultFinal: true,
+    brainz: false
   },
   // Use `fn` to spy on the onClick arg, which will appear in the actions panel once invoked: https://storybook.js.org/docs/essentials/actions#story-args
 });
@@ -50,6 +54,11 @@ export const PlayInfoStory = meta.story({
         args.final.data.albumArtists = aa;
       }
     }
-    return (<PlayInfoContainer {...args}/>) 
+
+    if(args.brainz) {
+      // @ts-ignore
+      args.play = asJsonPlayObject(withBrainz(args.play, {include: ['album','track','artist']}));
+    }
+    return (<PlayData {...args}/>) 
   }
 });

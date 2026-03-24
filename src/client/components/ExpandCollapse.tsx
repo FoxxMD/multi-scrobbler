@@ -7,9 +7,14 @@ export interface ExpandCollapseProps {
     size?: string
 }
 
-export const ExpandCollapse = (props: ExpandCollapseProps) => {
+export const ExpandCollapse = (props: ExpandCollapseProps & ComponentProps<typeof HStack>) => {
+    const {
+        onClick,
+        ...rest
+    } = props;
+
     return (
-        <HStack gap="1">
+        <HStack gap="1" {...rest}>
             <IconButton
                 aria-label="Collapse All"
                 variant="ghost"

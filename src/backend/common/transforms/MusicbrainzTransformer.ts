@@ -5,7 +5,7 @@ import { ExternalMetadataTerm, PlayTransformMetadataStage } from "../infrastruct
 import AtomicPartsTransformer from "./AtomicPartsTransformer.js";
 import { TransformerOptions } from "./AbstractTransformer.js";
 import { ARTIST_WEIGHT, DELIMITERS, MUSICBRAINZ_URL, MusicbrainzApiConfigData, TITLE_WEIGHT } from "../infrastructure/Atomic.js";
-import { MaybeLogger } from "../logging.js";
+import { MaybeLogger } from '../MaybeLogger.js';
 import { childLogger, Logger } from "@foxxmd/logging";
 import { MusicbrainzApiClient, MusicbrainzApiConfig, recordingToPlay, UsingTypes } from "../vendor/musicbrainz/MusicbrainzApiClient.js";
 import { IRecordingList, IRecordingMatch, IRelease, MusicBrainzApi } from "musicbrainz-api";

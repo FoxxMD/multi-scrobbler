@@ -24,18 +24,20 @@ export type JsonDiffPatchProps = MarkOptional<JsonDiffReactProps, 'right'> & {
 export const JsonDiffPatch = (props: JsonDiffPatchProps) => {
     const {
         right,
+        left,
         diff,
         ...rest
     } = props;
+    const detachedLeft = JSON.parse(JSON.stringify(left));
     let realRight: DiffableVal;
     if (right !== undefined) {
-        realRight = right;
+        realRight = JSON.parse(JSON.stringify(right));
     } else if (diff !== undefined) {
-        realRight = jdiff.patch(props.left, diff as Delta) as DiffableVal;
+        realRight = jdiff.patch(JSON.parse(JSON.stringify(left)), diff as Delta) as DiffableVal;
     } else {
         throw new Error(`must provide either 'right' or 'diff'`);
     }
     return <MSErrorBoundary>
-        <JsonDiffReact {...rest} right={realRight} />
+        <JsonDiffReact {...rest} left={detachedLeft} right={realRight} />
     </MSErrorBoundary>
 };

@@ -18,7 +18,8 @@ import { genGroupIdStr } from '../../../core/PlayUtils.js';
 import { formatNumber } from '../../../core/DataUtils.js';
 import { ListenProgress } from "./ListenProgress.js";
 import { ListenRange, ListenRangePositional } from "./ListenRange.js";
-import { closeToPlayEnd, closeToPlayStart, repeatDurationPlayed, timeToHumanTimestamp } from "../../utils/TimeUtils.js";
+import { closeToPlayEnd, closeToPlayStart, repeatDurationPlayed } from "../../utils/TimeUtils.js";
+import { timeToHumanTimestamp } from "../../../core/TimeUtils.js";
 import { todayAwareFormat } from "../../../core/TimeUtils.js";
 
 export interface PlayerStateIntervals {

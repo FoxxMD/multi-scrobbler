@@ -3,7 +3,7 @@ import { isPlayObject, PlayObject, SourcePlayerObj } from "../../../../core/Atom
 import { asPlayerStateData, SourceData } from "../../infrastructure/Atomic.js";
 import { GatewayActivity, GatewayOpcodes, PresenceUpdateStatus } from "discord.js";
 import { capitalize } from "../../../../core/StringUtils.js";
-import { urlToMusicService } from "../ListenbrainzApiClient.js";
+import { urlToMusicService } from '../listenbrainz/lzUtils.js';
 import { ACTIVITY_TYPE, ActivityData, ActivityTypes, DiscordData, DiscordStrongData, ActivityTypeString as MSActivityType, StatusType } from "../../infrastructure/config/client/discord.js";
 import { parseBool, removeUndefinedKeys } from "../../../utils.js";
 import { parseArrayFromMaybeString, parseBoolOrArrayFromMaybeString } from "../../../utils/StringUtils.js";

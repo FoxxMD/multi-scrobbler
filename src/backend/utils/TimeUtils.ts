@@ -318,18 +318,6 @@ export const parseDurationFromTimestamp = (timestamp: any) => {
 
 export type Milliseconds = number;
 
-export const timeToHumanTimestamp = (val: ReturnType<typeof dayjs.duration> | Milliseconds): string => {
-    const ms = dayjs.isDuration(val) ? Math.abs(val.asMilliseconds()) : val;
-
-    // less than one hour
-    if(ms < 3600000) {
-        // EX 14:07
-        return new Date(ms).toISOString().substring(14, 19)
-    }
-    // EX 01:15:45
-    return new Date(ms).toISOString().substring(11, 19);
-}
-
 /** Is Position earlier than X seconds or Y% percent of the start of a Play? */
 export const closeToPlayStart = (play: PlayObject, position: number, thresholds: {absolute?: number, percent?: number, hintPrefix?: boolean} = {}): [boolean, string] => {
     const {

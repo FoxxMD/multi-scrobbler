@@ -1,4 +1,3 @@
-import { getVersion } from "@foxxmd/get-version";
 import { Logger, loggerDebug, LogOptions } from "@foxxmd/logging";
 import { EventEmitter } from "events";
 import { createContainer } from "iti";
@@ -14,16 +13,10 @@ import TransformerManager from "./common/transforms/TransformerManager.js";
 import { TransformerCommonConfig } from "../core/Atomic.js";
 import prom, { Counter, Gauge } from 'prom-client';
 import { CoverArtApiClient } from "./common/vendor/musicbrainz/CoverArtApiClient.js";
-
-export let version: string = 'unknown';
-
-export const parseVersion = async () => {
-    version = await getVersion({priority: ['env', 'git', 'file']});
-    return version;
-}
+import { version } from "./version.js";
+import { StaggerOptions } from "./utils/AsyncUtils.js";
 
 let root: ReturnType<typeof createRoot>;
-
 export interface RootOptions {
     baseUrl?: string,
     port?: number
@@ -34,6 +27,7 @@ export interface RootOptions {
     cache?: CacheConfigOptions | MSCache | (() => MSCache)
     mbMap?: MusicBrainzSingletonMap | (() => MusicBrainzSingletonMap)
     transformers?: TransformerCommonConfig[]
+    staggerOptions?: Partial<StaggerOptions>
 }
 
 const discovered = new prom.Counter({
@@ -68,6 +62,7 @@ const createRoot = (options: RootOptions = {logger: loggerDebug}) => {
         cache,
         mbMap,
         transformers = [],
+        staggerOptions,
     } = options || {};
     const configDir = process.env.CONFIG_DIR || path.resolve(projectDir, `./config`);
     let disableWeb = dw;
@@ -154,7 +149,8 @@ const createRoot = (options: RootOptions = {logger: loggerDebug}) => {
         transformerManager,
         cache: () => maybeSingletonCache !== undefined ? () => maybeSingletonCache : cacheFunc,
         mbMap: () => maybeSingletonMb !== undefined ? () => maybeSingletonMb : mbFunc,
-        coverArtApi
+        coverArtApi,
+        staggerOptions: staggerOptions ?? {},
     }).add((items) => {
         const localUrl = generateBaseURL(baseUrl, items.port)
         return {

@@ -6,6 +6,7 @@ import { Delta } from 'jsondiffpatch';
 import { MarkOptional } from "ts-essentials";
 import { ErrorObject } from "serialize-error";
 import { PlayPlatformIdStr } from "../backend/common/infrastructure/Atomic.js";
+import { FlowControlTerm } from "../backend/common/infrastructure/Transform.js";
 
 export interface SourceStatusData {
     status: string;
@@ -84,8 +85,8 @@ export interface TrackStringOptions<T = string> {
     }
 }
 
-export interface PlayProgressAmb {
-    timestamp: string | Dayjs
+export interface PlayProgressAmb<D extends DateLike = Dayjs> {
+    timestamp: D
     position?: number
     positionPercent?: number
 }
@@ -175,15 +176,15 @@ export interface TrackData {
     isrc?: string
 }
 
-export interface PlayData extends TrackData {
+export interface PlayData<D extends DateLike = Dayjs> extends TrackData {
     /**
      * The date the track was played at
      * */
-    playDate?: Dayjs | string
+    playDate?: D
     /** Number of seconds the track was listened to */
     listenedFor?: number
     listenRanges?: ListenRangeData[]
-    playDateCompleted?: Dayjs | string
+    playDateCompleted?: D
     repeat?: boolean
 }
 
@@ -193,9 +194,11 @@ export interface ArtMeta {
     artist?: string
 }
 
-export interface PlayMeta {
+export interface PlayMeta<D extends DateLike = Dayjs> {
     source?: string
     sourceSOT?: SOURCE_SOT_TYPES
+
+    seenAt?: D
 
     /*
     * If applicable, the name of the Service providing the track (Spotify, Tidal, etc...)
@@ -269,7 +272,7 @@ export interface PlayMeta {
 
     comment?: string
 
-    lifecycle: PlayLifecycle
+    lifecycle: PlayLifecycle<D>
     lifecycleInputs?: LifecycleInput[]
 
     [key: string]: any
@@ -279,38 +282,38 @@ export interface LifecycleInput {
     type: string, input: (object | string)
 }
 
-export type PlayMetaLifecycleless = MarkOptional<PlayMeta, 'lifecycle'>;
+export type PlayMetaLifecycleless<D extends DateLike = Dayjs> = MarkOptional<PlayMeta<D>, 'lifecycle'>;
 
-export interface PlayObjectLifecycleless {
-    data: ObjectPlayData,
-    meta: PlayMetaLifecycleless
+export interface PlayObjectLifecycleless<D extends DateLike = Dayjs> {
+    data: PlayData<D>,
+    meta: PlayMetaLifecycleless<D>
 }
-
-// export interface PlayMetaLifecycled extends PlayMeta {
-//     lifecycle: PlayLifecycle
-// }
 
 export type ErrorLike = Error | ErrorObject;
 
-export interface ScrobbleResult {
-    match?: PlayMatchResult
+export interface ScrobbleResult<D extends DateLike = Dayjs> {
+    match?: PlayMatchResult<D>
     payload?: ScrobblePayload
     warnings?: string[]
     error?: Error | ErrorObject
     response?: ScrobbleResponse
-    mergedScrobble?: PlayObjectLifecycleless
+    mergedScrobble?: PlayObjectLifecycleless<D>
 }
 
-export interface PlayLifecycle {
+export interface PlayLifecycle<D extends DateLike = Dayjs> {
     input?: object
-    original: PlayObjectLifecycleless
+    original: PlayObjectLifecycleless<D>
     steps: LifecycleStep[]
-    scrobble?: ScrobbleResult
+    scrobble?: ScrobbleResult<D>
 }
 
 export interface LifecycleStep {
     name: string
     source: string
+    flowResult?: FlowControlTerm
+    flowReason?: string
+    flowKnownState?: 'skip' | 'prereq'
+    error?: ErrorLike
     patch?: Delta
     inputs?: LifecycleInput[]
 }
@@ -318,20 +321,20 @@ export interface LifecycleStep {
 export type ScrobblePayload = object | string;
 export type ScrobbleResponse = object | string;
 
-export interface ScrobbleActionResult {
+export interface ScrobbleActionResult<D extends DateLike = Dayjs> {
     payload: ScrobblePayload, 
     response?: ScrobbleResponse, 
-    mergedScrobble?: PlayObject
+    mergedScrobble?: AmbPlayObject<D>
     warnings?: string[]
 }
 
-export interface PlayMatchResult {
+export interface PlayMatchResult<D extends DateLike = Dayjs> {
     match: boolean
     score: number
     breakdowns: string[]
     reason?: string
-    closestMatchedPlay?: PlayObjectLifecycleless
-    transformedPlay?: PlayObjectLifecycleless
+    closestMatchedPlay?: PlayObjectLifecycleless<D>
+    transformedPlay?: PlayObjectLifecycleless<D>
     summary?: String
 }
 
@@ -340,38 +343,26 @@ export type ScrobbleTsSOC = 1 | 2;
 export const SCROBBLE_TS_SOC_START: ScrobbleTsSOC = 1;
 export const SCROBBLE_TS_SOC_END: ScrobbleTsSOC = 2;
 
-export interface AmbPlayObject {
-    data: PlayData,
-    meta: PlayMeta | MarkOptional<PlayMeta, 'lifecycle'>
+export type DateLike = Dayjs | string
+
+export interface AmbPlayObject<D extends DateLike = Dayjs> {
+    data: PlayData<D>,
+    meta: PlayMeta<D> | Omit<PlayMeta<D>, 'lifecycle'>
 }
 
 export const isPlayObject = (obj: object): obj is PlayObject => {
    return obj !== undefined && obj !== null &&  'data' in obj && typeof obj.data === 'object' && 'meta' in obj && typeof obj.meta === 'object';
 }
 
-export interface PlayObject extends AmbPlayObject {
-    data: ObjectPlayData,
-}
-
-// export interface PlayObjectLifecycled extends PlayObject {
-//     meta: PlayMetaLifecycled
-// }
-
+export type PlayObject = AmbPlayObject<Dayjs>;
 export interface PlayActivity {
   play: JsonPlayObject
   status: string
   error?: ErrorLike
 }
-export interface JsonPlayObject extends AmbPlayObject {
-    data: JsonPlayData
-}
+export type JsonPlayObject = PlayObjectLifecycleless<string>;
 
 export interface ObjectPlayData extends PlayData {
-    playDate?: Dayjs
-    playDateCompleted?: Dayjs
-}
-
-export interface JsonPlayData extends PlayData {
     playDate?: Dayjs
     playDateCompleted?: Dayjs
 }
@@ -382,9 +373,9 @@ export interface LogOutputConfig {
     limit: number
 }
 
-export interface SourcePlayerObj {
+export interface SourcePlayerObj<D extends DateLike = Dayjs> {
     platformId: PlayPlatformIdStr,
-    play?: PlayObject,
+    play?: AmbPlayObject<D>,
     playFirstSeenAt?: string,
     playLastUpdatedAt?: string,
     playerLastUpdatedAt: string
@@ -400,9 +391,7 @@ export interface SourcePlayerObj {
     }
 }
 
-export interface SourcePlayerJson extends Omit<SourcePlayerObj, 'play'> {
-    play?: JsonPlayObject
-}
+export type SourcePlayerJson = SourcePlayerObj<string>;
 
 export interface SourceScrobble<PlayType> {
     source: string
@@ -593,3 +582,8 @@ export interface numberFormatOptions {
         indicate?: boolean;
     };
 }
+/** Only checks for DateT since we can reasonbly sure if this exists its a date we can parse with dayjs
+ * 
+ * It needs to be cheap since we mostly use this when walking play objects to transform strings back to dayjs and there may be many strings to check
+ */
+export const REGEX_ISO8601_LOOSE = new RegExp(/\d{4}-[01]\d-[0-3]\dT/);

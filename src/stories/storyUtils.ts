@@ -1,6 +1,6 @@
 import { JsonPlayObject, PlayLifecycle } from "../core/Atomic.js";
 
-const exampleLifecycle = (): PlayLifecycle => ({
+const exampleLifecycle = (): PlayLifecycle<string> => ({
   "input": {
     "device": {
       "id": "3cc6dc47a8551498a70e519ee09cd8423ff9d48c",
@@ -1101,7 +1101,7 @@ export const examplePlay = (): JsonPlayObject => ({
       }
 });
 
-const lastfmErrorLifcycle: PlayLifecycle = {
+const lastfmErrorLifcycle: PlayLifecycle<string> = {
   "input": {
     "track": {
       "album": {

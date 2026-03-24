@@ -1,11 +1,13 @@
 import React, { Fragment, useMemo, useState } from 'react';
-import { EmptyState, DataList, HStack, Tag, Tabs, Wrap, Box, Flex, SegmentGroup, Stack, Text, Separator, IconButton, Container, SimpleGrid, Float } from "@chakra-ui/react"
-import { LuCode, LuText } from "react-icons/lu"
-import { JsonPlayObject } from '../../core/Atomic.js';
-import { shortTodayAwareFormat } from '../../core/TimeUtils.js';
+import { EmptyState, DataList, HStack, Tag, Tabs, Wrap, Box, Flex, SegmentGroup, Stack, Text, Separator, IconButton, Container, SimpleGrid, Float, Spacer, Icon, Link, Span, Show } from "@chakra-ui/react"
+import { LuCode, LuText, LuCheck, LuX } from "react-icons/lu"
+import { JsonPlayObject, PlayObjectLifecycleless } from '../../core/Atomic.js';
+import { shortTodayAwareFormat, timeToHumanTimestamp } from '../../core/TimeUtils.js';
 import dayjs from 'dayjs';
 import { ChakraCodeBlock } from './CodeBlock.js';
 import { TextMuted } from './TextMuted.js';
+import { formatNumber } from '../../core/DataUtils.js';
+import { Muted } from './Typography.js';
 
 const EmptyPlayData = () => {
     return (
@@ -23,7 +25,7 @@ const EmptyPlayData = () => {
 export type DisplayDates = false | 'all' | 'played' | 'seen';
 
 export interface PlayInfoProps {
-    play?: JsonPlayObject
+    play?: JsonPlayObject | PlayObjectLifecycleless<string>
     final?: JsonPlayObject
     showCodeToggle?: boolean
     showCompare?: boolean
@@ -97,7 +99,7 @@ export const PlayDataDataList = (props: { play: JsonPlayObject, dates: DisplayDa
 
     if (play.data.albumArtists !== undefined && play.data.albumArtists.length > 0) {
         albumArtistElm = (
-            <DataList.Item>
+            <DataList.Item flexGrow="1">
                 <DataList.ItemLabel>Album Artists</DataList.ItemLabel>
                 <DataList.ItemValue>
                     <HStack>{play.data.albumArtists.map((x, index) => {
@@ -114,43 +116,86 @@ export const PlayDataDataList = (props: { play: JsonPlayObject, dates: DisplayDa
 
     const {
         data: {
-            artists = []
+            track,
+            artists = [],
+            listenedFor,
+            duration,
+            repeat,
+            meta: {
+                brainz = {}
+            } = {}
+        } = {},
+        meta: {
+            url: {
+                web: webUrl,
+                origin: originUrl
+            } = {}
         } = {}
     } = play;
 
+    let titleElm: JSX.Element;
+    if(webUrl !== undefined || originUrl !== undefined) {
+        titleElm = <Link variant="underline" target="_blank" href={webUrl ?? originUrl}>{track}</Link>
+    } else {
+        titleElm = <Span>{track}</Span>;
+    }
+
     return (
-        <Flex gap="4" wrap="wrap">
-            <Box>
-                <DataList.Root>
-                    <DataList.Item>
-                        <DataList.ItemLabel flexShrink="1">Title</DataList.ItemLabel>
-                        <DataList.ItemValue>{play.data.track}</DataList.ItemValue>
-                    </DataList.Item>
-                    <DataList.Item>
-                        <DataList.ItemLabel>Artists</DataList.ItemLabel>
+        <Flex flexDirection="column" gap="4">
+            <DataList.Root flexWrap="wrap" flexDirection="row">
+                <DataList.Item flexGrow="1">
+                    <DataList.ItemLabel flexShrink="1">Title</DataList.ItemLabel>
+                    <DataList.ItemValue>{titleElm}</DataList.ItemValue>
+                </DataList.Item>
+                <DataList.Item flexGrow="1">
+                    <DataList.ItemLabel>Artists</DataList.ItemLabel>
+                    <DataList.ItemValue>
+                        {artists.length === 0 ? <Text color="fg.muted">(No Artists)</Text> :
+                            <HStack>{play.data.artists.map((x, index) => {
+                                return (
+                                    <Tag.Root key={index}>
+                                        <Tag.Label>{x}</Tag.Label>
+                                    </Tag.Root>
+                                );
+                            })}</HStack>}
+                    </DataList.ItemValue>
+                </DataList.Item>
+                {albumArtistElm}
+                <DataList.Item flexGrow="1">
+                    <DataList.ItemLabel>Album</DataList.ItemLabel>
+                    <DataList.ItemValue>{play.data.album}</DataList.ItemValue>
+                </DataList.Item>
+            </DataList.Root>
+            <DataList.Root flexWrap="wrap" flexDirection="row">
+                <PlayDatesStack play={play} dates={dates} />
+                <DataList.Item flexGrow="1" hideBelow="sm">
+                    <DataList.ItemLabel>Duration</DataList.ItemLabel>
+                    <DataList.ItemValue>
+                        <Stack gap="1">
+                            <Text textStyle="xs">Track Length: {timeToHumanTimestamp(dayjs.duration(duration, 's'))}</Text>
+                            {listenedFor !== undefined ? <Muted textStyle="xs">Listened For: {timeToHumanTimestamp(dayjs.duration(listenedFor, 's'))} ({formatNumber((listenedFor / duration) * 100)}%)</Muted> : null}
+                        </Stack>
+                    </DataList.ItemValue>
+                </DataList.Item>
+                <DataList.Item flexGrow="1" hideBelow="sm">
+                    <DataList.ItemLabel>Repeat?</DataList.ItemLabel>
+                    <DataList.ItemValue><Icon>{repeat ? <LuCheck/> : <LuX/>}</Icon></DataList.ItemValue>
+                </DataList.Item>
+            </DataList.Root>
+            <DataList.Root flexWrap="wrap" flexDirection="row" hideBelow="sm">
+                <Show when={Object.keys(brainz).length > 0}>
+                    <DataList.Item flexGrow="1">
+                        <DataList.ItemLabel>MBIDs</DataList.ItemLabel>
                         <DataList.ItemValue>
-                            {artists.length === 0 ? <Text color="fg.muted">(No Artists)</Text> :
-                                <HStack>{play.data.artists.map((x, index) => {
-                                    return (
-                                        <Tag.Root key={index}>
-                                            <Tag.Label>{x}</Tag.Label>
-                                        </Tag.Root>
-                                    );
-                                })}</HStack>}
+                            <Stack gap="1">
+                                <Show when={brainz.track !== undefined}><Text textStyle="xs"><Muted>Track:</Muted> {brainz.track}</Text></Show>
+                                <Show when={brainz.recording !== undefined}><Text textStyle="xs"><Muted>Recording</Muted>: {brainz.recording}</Text></Show>
+                                <Show when={brainz.album !== undefined}><Text textStyle="xs"><Muted>Album</Muted>: {brainz.album}</Text></Show>
+                            </Stack>
                         </DataList.ItemValue>
                     </DataList.Item>
-                    {albumArtistElm}
-                    <DataList.Item>
-                        <DataList.ItemLabel>Album</DataList.ItemLabel>
-                        <DataList.ItemValue>{play.data.album}</DataList.ItemValue>
-                    </DataList.Item>
-                </DataList.Root>
-            </Box>
-            <Box>
-                <DataList.Root>
-                    <PlayDatesStack play={play} dates={dates} />
-                </DataList.Root>
-            </Box>
+                </Show>
+            </DataList.Root>
         </Flex>
     )
 }
@@ -171,16 +216,16 @@ export const PlayDatesStack = (props: { play: JsonPlayObject, dates: DisplayDate
     } else {
         const dateElements = [];
         if (dates.includes('played') || dates.includes('all')) {
-            dateElements.push((<TextMuted>{`Played ${shortTodayAwareFormat(dayjs(play.data.playDate))}`}</TextMuted>));
+            dateElements.push((<Text textStyle="xs" key="playDate">{`Played ${shortTodayAwareFormat(dayjs(play.data.playDate))}`}</Text>));
             if (play.data.playDateCompleted !== undefined) {
-                dateElements.push((<TextMuted>{`Played Until ${shortTodayAwareFormat(dayjs(play.data.playDateCompleted))}`}</TextMuted>));
+                dateElements.push((<TextMuted key="playDateCompleted">{`Played Until ${shortTodayAwareFormat(dayjs(play.data.playDateCompleted))}`}</TextMuted>));
             }
         }
         if (dates.includes('seen') || dates.includes('all')) {
-            dateElements.push((<TextMuted>{`Seen ${shortTodayAwareFormat(dayjs(play.data.playDate))}`}</TextMuted>));
+            dateElements.push((<TextMuted key="seen">{`Seen ${shortTodayAwareFormat(dayjs(play.meta.seenAt))}`}</TextMuted>));
         }
         datesItem = (
-            <DataList.Item>
+            <DataList.Item flexGrow="1">
                 <DataList.ItemLabel>Dates</DataList.ItemLabel>
                 <DataList.ItemValue>
                     <Stack gap="1">
@@ -210,8 +255,8 @@ export const PlayDatesFooter = (props: { play: JsonPlayObject, dates: DisplayDat
             playDate = <Text textStyle="xs" color="fg.muted">{`Played ${shortTodayAwareFormat(dayjs(play.data.playDate))}`}</Text>
         }
         // TODO implement seenAt for play data
-        if (play.data.playDateCompleted !== undefined && ['all', 'seen'].includes(dates)) {
-            seenDate = <Text textStyle="xs" color="fg.muted">{`Seen ${shortTodayAwareFormat(dayjs(play.data.playDateCompleted))}`}</Text>
+        if (play.meta.seenAt !== undefined && ['all', 'seen'].includes(dates)) {
+            seenDate = <Text textStyle="xs" color="fg.muted">{`Seen ${shortTodayAwareFormat(dayjs(play.meta.seenAt))}`}</Text>
         }
         if (playDate !== undefined && seenDate !== undefined) {
             dateElm = <HStack gap="1">{playDate}<Separator orientation="vertical" height="4" />{seenDate}</HStack>

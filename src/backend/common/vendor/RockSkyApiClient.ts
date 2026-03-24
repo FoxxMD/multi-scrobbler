@@ -9,7 +9,7 @@ import AbstractApiClient from "./AbstractApiClient.js";
 import { isPortReachableConnect, joinedUrl, normalizeWebAddress } from '../../utils/NetworkUtils.js';
 import { unique } from '../../utils.js';
 import { ListenPayload, ListenResponse, ListenType, SubmitPayload } from './listenbrainz/interfaces.js';
-import { playToListenPayload } from './ListenbrainzApiClient.js';
+import { playToListenPayload } from './listenbrainz/lzUtils.js';
 import { RockskyScrobble } from './rocksky/interfaces.js';
 import { Handle } from "@atcute/lexicons";
 import { identifierToAtProtoHandle } from './bluesky/bsUtils.js';

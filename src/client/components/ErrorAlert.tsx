@@ -6,6 +6,7 @@ import { ChakraClip } from './ChakraClipboard';
 
 export interface ErrorAlertProps {
     error: ErrorLike
+    status?: "error" | "info" | "warning" | "success" | "neutral"
 }
 
 export const ErrorAlert = (props: ErrorAlertProps) => {
@@ -17,7 +18,7 @@ export const ErrorAlert = (props: ErrorAlertProps) => {
 
     return (
         <Box>
-        <Alert.Root status="error">
+        <Alert.Root status={props.status ?? 'error'}>
             <Alert.Indicator />
             <Alert.Content>
                 <Alert.Title>{props.error.name ?? 'Error'}</Alert.Title>

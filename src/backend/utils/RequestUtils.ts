@@ -7,7 +7,7 @@ import request, { Request, Response } from 'superagent';
 import pRetry, { RetryContext, Options } from 'p-retry';
 import { DEFAULT_RETRY_MULTIPLIER } from "../common/infrastructure/Atomic.js";
 import { SimpleError } from "../common/errors/MSErrors.js";
-import { loggerNoop } from "../common/logging.js";
+import { loggerNoop } from '../common/MaybeLogger.js';
 import { findCauseByFunc } from "./ErrorUtils.js";
 import { isSuperAgentResponseError } from "../common/errors/ErrorUtils.js";
 import { isNodeNetworkException, NodeNetworkException } from "../common/errors/NodeErrors.js";

@@ -3,9 +3,8 @@ import EventEmitter from "events";
 import { PlayObject, SourcePlayerObj } from "../../core/Atomic.js";
 import { buildTrackString, capitalize } from "../../core/StringUtils.js";
 import { isNodeNetworkException } from "../common/errors/NodeErrors.js";
-import { UpstreamError } from "../common/errors/UpstreamError.js";
 import { FormatPlayObjectOptions, TimeRangeListensFetcher } from "../common/infrastructure/Atomic.js";
-import { playToListenPayload } from "../common/vendor/ListenbrainzApiClient.js";
+import { playToListenPayload } from '../common/vendor/listenbrainz/lzUtils.js';
 import { Notifiers } from "../notifier/Notifiers.js";
 
 import AbstractScrobbleClient from "./AbstractScrobbleClient.js";
@@ -13,7 +12,6 @@ import { isDebugMode } from "../utils.js";
 import { KoitoClientConfig } from "../common/infrastructure/config/client/koito.js";
 import { KoitoApiClient, listenObjectResponseToPlay } from "../common/vendor/koito/KoitoApiClient.js";
 import { createGetScrobblesForTimeRangeFunc } from "../utils/ListenFetchUtils.js";
-import dayjs from "dayjs";
 
 export default class KoitoScrobbler extends AbstractScrobbleClient {
 

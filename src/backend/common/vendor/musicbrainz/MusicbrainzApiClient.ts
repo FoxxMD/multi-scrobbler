@@ -8,7 +8,8 @@ import { MusicBrainzApi, IRecording, IRecordingList, IRelease } from 'musicbrain
 import { difference, isDebugMode, isEmptyArrayOrUndefined, sleep } from "../../../utils.js";
 import {SequentialRoundRobin} from 'round-robin-js';
 import { Cacheable } from "cacheable";
-import { getRoot, version } from "../../../ioc.js";
+import { getRoot } from "../../../ioc.js";
+import { version } from "../../../version.js";
 import { hashObject } from "../../../utils/StringUtils.js";
 import { playContentInvariantTransform } from "../../../utils/PlayComparisonUtils.js";
 import { childLogger } from "@foxxmd/logging";;

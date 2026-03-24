@@ -1,4 +1,3 @@
-import { loggerTest } from "@foxxmd/logging";
 import EventEmitter from "events";
 import request from "superagent";
 import { PlayObject } from "../../../core/Atomic.js";
@@ -7,6 +6,7 @@ import AbstractScrobbleClient from "../../scrobblers/AbstractScrobbleClient.js";
 import { CommonClientConfig, CommonClientOptions, NowPlayingOptions } from "../../common/infrastructure/config/client/index.js";
 import clone from "clone";
 import { TimeRangeListensFetcher } from "../../common/infrastructure/Atomic.js";
+import { loggerNoop } from "../../common/MaybeLogger.js";
 
 export class TestScrobbler extends AbstractScrobbleClient {
 
@@ -14,7 +14,7 @@ export class TestScrobbler extends AbstractScrobbleClient {
     getScrobblesForTimeRange: TimeRangeListensFetcher;
 
     constructor(config: CommonClientConfig = {name: 'test'}) {
-        const logger = loggerTest;
+        const logger = loggerNoop;
         const notifier = new Notifiers(new EventEmitter(), new EventEmitter(), new EventEmitter(), logger);
         super('test', 'Test', {name: 'test', ...config}, notifier, new EventEmitter(), logger);
         this.supportsNowPlaying = false;
