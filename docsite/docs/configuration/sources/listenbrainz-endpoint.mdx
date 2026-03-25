@@ -9,7 +9,9 @@ import TabItem from '@theme/TabItem';
 import CodeBlock from '@theme/CodeBlock';
 import ListenbrainzEndpointConfig from '!!raw-loader!@site/../config/endpointlz.json.example';
 
-This Source enables multi-scrobbler to accept scrobbles from outside applications as if it was a Listenbrainz server.
+This Source enables multi-scrobbler to accept scrobbles from outside applications **as if it was a Listenbrainz server.**
+
+If your service/player has a "Scrobble to Listenbrainz" feature and there is an option to set the Listenbrainz URL then multi-scrobbler can accept scrobbles from that service/player by imitating a real Listenbrainz server.
 
 :::tip[Other Uses]
 
@@ -18,44 +20,91 @@ This Source enables multi-scrobbler to accept scrobbles from outside application
 
 :::
 
+## Setup
+
 ### URL
 
-If a **slug** is **not** provided in configuration then multi-scrobbler will accept Listenbrainz scrobbles at
+In general, you should use one of the following as the **base URL** when configuring your application to scrobble to multi-scrobbler:
+
+* `http://myMultiScrobblerIP:9078`
+* `http://myMultiScrobblerIP:9078/1/`
+
+<DetailsAdmo type="tip" summary="Default Scrobble Submit URL">
+
+If you are not using a [slug for multiple endpoints](#multiple-endpoints) then multi-scrobbler will accept Listenbrainz scrobbles at
 
 ```
 http://myMultiScrobblerIP:9078/1/submit-listens
 ```
 
-which is the "standard" Listenbrainz server path for scrobbling.
+which is the **standard** Listenbrainz server path for scrobbling.
 
-In general, you should use `http://myMultiScrobblerIP:9078/1/` as the **base path** when configuring your application to scrobble to multi-scrobbler.
+</DetailsAdmo>
 
-<details>
+<DetailsAdmo type="note" summary="Some Services Require HTTPS">
 
-<summary>URL Setup for Popular Apps</summary>
+Some services that can scrobble to a custom Listenbrainz URL may require the URL to have a real domain (`example.com`) and/or use SSL (`https://`). In this case you should setup multi-scrobbler behind a reverse proxy to support this functionality. It is out of the scope of this project to do this solely within multi-scrobbler.
 
-##### Navidrome
-
-Set the [**ListenBrainz.BaseURL**](https://www.navidrome.org/docs/usage/configuration-options/#advanced-configuration) (env `ND_LISTENBRAINZ_BASEURL`) to `http://myMultiScrobblerIP:9078/1/`
-
-</details>
-
-Use a slug only if you need to setup multiple Listenbrainz Endpoint sources and cannot use different tokens.
-
-If a slug is used then the URL will be:
-
-```
-http://myMultiScrobblerIP:9078/api/listenbrainz/mySlug
-```
-
-:::note
-    Some Listenbrainz applications may require custom Listenbrainz URLs to be a real domain (`example.com`) and/or use SSL (`https://`). In this case you should setup multi-scrobbler behind a reverse proxy to support this functionality. It is out of the scope of this project to do this solely within multi-scrobbler.
-:::
+</DetailsAdmo>
 
 ### Token
 
 Most Listenbrainz clients require a token (Authentication Token) to be provided during setup. This value can be anything you want, just make sure to use the same value for `token` in your multi-scrobbler configuration for the endpoint.
 
+### Multiple Endpoints
+
+If you are setting up multiple [Listenbrainz (Endpoint) Sources](/configuration/sources/listenbrainz-endpoint) MS can differentiate scrobbles based on [Token](#token) so that you can use the same endpoint for many users.
+
+However, if you cannot configure multiple tokens for your scenario you may also use a URL **Slug** to tell MS which Source belongs to a specific user.
+
+<details>
+
+<summary>Using a Slug</summary>
+
+When a **slug** is defined in ENV/File config MS will listen for listenbrainz routes using the slug as a the route path. Example:
+
+```
+LZE_SLUG=foobar
+```
+
+MS will accept calls to 
+
+```
+http://myMultiScrobblerIP:9078/api/listenbrainz/foobar
+```
+
+for scrobble submission.
+
+</details>
+
+## Setup for Popular Apps
+
+### Navidrome
+
+<details>
+
+Set the [**ListenBrainz.BaseURL**](https://www.navidrome.org/docs/usage/configuration-options/#advanced-configuration) (env `ND_LISTENBRAINZ_BASEURL`) to `http://myMultiScrobblerIP:9078/1/`
+
+</details>
+
+### Music Assistant
+
+<details>
+
+[Music Assistant Docs](https://www.music-assistant.io/plugins/listenbrainz_scrobble/)
+
+* In your Music Assistant UI navigate to **Settings** -> **Plugins**
+* Click **Add a plugin**
+  * Add **ListenBrainz Scrobbler**
+* In the ListenBrainz Scrobbler configuration screen:
+  * User Token is the [Token](#token) you configured
+  * Toggle **Show advanced settings**
+    * Base URL is the [URL](#url) you can configured, or the equivalent of `http://myMultiScrobblerIP:9078` for your MS instance
+* Save the configuration and you are ready to scrobble
+
+To troubleshoot any errors, and assuming you are using Home Assistant, view the Logs in the Music Assistant Add-ons. Please include these logs in any reported issue.
+
+</details>
 
 ## Configuration
 
