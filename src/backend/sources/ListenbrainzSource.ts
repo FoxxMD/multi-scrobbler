@@ -88,7 +88,7 @@ export default class ListenbrainzSource extends MemorySource {
 
     getUpstreamRecentlyPlayed = async (options: RecentlyPlayedOptions = {}): Promise<PlayObject[]> => {
         try {
-            return await this.getScrobblesForTimeRange({limit: 20});
+            return await this.getScrobblesForTimeRange({limit: 20, ...options});
         } catch (e) {
             throw e;
         }
@@ -98,7 +98,7 @@ export default class ListenbrainzSource extends MemorySource {
         return 'second';
     }
 
-    protected getBackloggedPlays = async (options: RecentlyPlayedOptions = {}) =>  await this.getRecentlyPlayed({formatted: true, ...options})
+    protected getBackloggedPlays = async (options: RecentlyPlayedOptions = {}) =>  await this.getUpstreamRecentlyPlayed({formatted: true, ...options})
 
     getNewPlayer = (logger: Logger, id: PlayPlatformId, opts: PlayerStateOptions) => new NowPlayingPlayerState(logger,  id, opts);
 }
