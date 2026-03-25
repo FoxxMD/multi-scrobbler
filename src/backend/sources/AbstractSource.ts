@@ -202,6 +202,7 @@ export default abstract class AbstractSource extends AbstractComponent implement
         list.add(play);
         this.recentDiscoveredPlays.set(platformId, list);
         this.tracksDiscovered++;
+        this.logger.trace(new Error('addPlayToDiscovered Call site trace'));
         this.logger.info(`Discovered => ${buildTrackString(play)}`);
         this.emitEvent('discovered', {play});
         this.discoveredCounter.labels(this.getPrometheusLabels()).inc();
@@ -262,6 +263,8 @@ export default abstract class AbstractSource extends AbstractComponent implement
     }
 
     discover = async (plays: PlayObject[], options: { checkAll?: boolean, [key: string]: any } = {}): Promise<PlayObject[]> => {
+
+        this.logger.trace(new Error('discover Call site trace'));
         const newDiscoveredPlays: PlayObject[] = [];
 
         for await(const play of pMapIterable(plays, this.staggerMappers.preCompare(async x => await this.transformPlay(x, TRANSFORM_HOOK.preCompare)), {concurrency: 2})) {
