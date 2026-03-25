@@ -32,7 +32,6 @@ export const createGetScrobblesForTimeRangeFunc = <T extends PaginatedTimeRangeS
             while (more) {
                 requestCount++;
                 const reqOptsHint: string[] = [
-                    `Between ${todayAwareFormat(dayjs(currOpts.from))} and ${todayAwareFormat(dayjs(currOpts.to))}`
                 ];
                 if(currOpts.to !== undefined && currOpts.from !== undefined) {
                     reqOptsHint.push(`Between ${todayAwareFormat(dayjs(currOpts.from))} and ${todayAwareFormat(dayjs(currOpts.to))}`);

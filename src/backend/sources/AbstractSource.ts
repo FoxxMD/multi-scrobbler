@@ -94,7 +94,10 @@ export default abstract class AbstractSource extends AbstractComponent implement
 
     protected discoveredCounter: Counter;
 
-    protected staggerOpts: Partial<StaggerOptions>;
+    protected staggerMappers = {
+        preCompare: staggerMapper<PlayObject, PlayObject>({concurrency: 2}),
+        postCompare: staggerMapper<PlayObject, PlayObject>({concurrency: 2})
+    }
 
     constructor(type: SourceType, name: string, config: SourceConfig, internal: InternalConfig, emitter: EventEmitter) {
         super(config);
@@ -112,7 +115,40 @@ export default abstract class AbstractSource extends AbstractComponent implement
         this.emitter = emitter;
         
         this.discoveredCounter = getRoot().items.sourceMetics.discovered;
-        this.staggerOpts = getRoot().items.staggerOptions;
+    }
+
+    protected async postCache(): Promise<void> {
+        await super.postCache();
+        this.generateStaggerMappers();
+    }
+
+    protected generateStaggerMappers() {
+        const {
+            preCompare = [],
+            postCompare = [],
+        } = this.transformRules;
+
+        if (preCompare.length > 0) {
+            let pcInits: number[] = [0],
+                pcMaxStagger: number[] = [0];
+            for (const hook of this.transformRules.preCompare) {
+                const t = this.transformManager.getTransformerByStage({ type: hook.type, name: hook.name });
+                pcInits.push(t.staggerOpts?.initialInterval ?? 0);
+                pcMaxStagger.push(t.staggerOpts?.maxRandomStagger ?? 0)
+            }
+            this.staggerMappers.preCompare = staggerMapper<PlayObject, PlayObject>({ initialInterval: Math.max(...pcInits), maxRandomStagger: Math.max(...pcMaxStagger), concurrency: 2 });
+        }
+
+        if (postCompare.length > 0) {
+            let postInits: number[] = [0],
+                postMaxStagger: number[] = [0];
+            for (const hook of this.transformRules.postCompare) {
+                const t = this.transformManager.getTransformerByStage({ type: hook.type, name: hook.name });
+                postInits.push(t.staggerOpts?.initialInterval ?? 0);
+                postMaxStagger.push(t.staggerOpts?.maxRandomStagger ?? 0)
+            }
+            this.staggerMappers.postCompare = staggerMapper<PlayObject, PlayObject>({ initialInterval: Math.max(...postInits), maxRandomStagger: Math.max(...postMaxStagger), concurrency: 2 });
+        }
     }
 
     protected getIdentifier() {
@@ -222,8 +258,7 @@ export default abstract class AbstractSource extends AbstractComponent implement
     discover = async (plays: PlayObject[], options: { checkAll?: boolean, [key: string]: any } = {}): Promise<PlayObject[]> => {
         const newDiscoveredPlays: PlayObject[] = [];
 
-        const sm = staggerMapper<PlayObject, PlayObject>({...this.staggerOpts, concurrency: 2});
-        for await(const play of pMapIterable(plays, sm(async x => await this.transformPlay(x, TRANSFORM_HOOK.preCompare)), {concurrency: 2})) {
+        for await(const play of pMapIterable(plays, this.staggerMappers.preCompare(async x => await this.transformPlay(x, TRANSFORM_HOOK.preCompare)), {concurrency: 2})) {
             if(!(await this.alreadyDiscovered(play, options))) {
                 this.addPlayToDiscovered(play);
                 newDiscoveredPlays.push(play);
@@ -254,9 +289,8 @@ export default abstract class AbstractSource extends AbstractComponent implement
                 return;
             }
             newDiscoveredPlays.sort(sortByOldestPlayDate);
-            const sm = staggerMapper<PlayObject, PlayObject>({...this.staggerOpts, concurrency: 2});
             this.emitter.emit('discoveredToScrobble', {
-                data: await pMap(newDiscoveredPlays, sm(async (x) =>  await this.transformPlay(x, TRANSFORM_HOOK.postCompare)), {concurrency: 2}),
+                data: await pMap(newDiscoveredPlays, this.staggerMappers.postCompare(async (x) =>  await this.transformPlay(x, TRANSFORM_HOOK.postCompare)), {concurrency: 2}),
                 options: {
                     ...options,
                     checkTime: newDiscoveredPlays[newDiscoveredPlays.length-1].data.playDate.add(2, 'second'),

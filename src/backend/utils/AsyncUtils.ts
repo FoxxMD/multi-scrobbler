@@ -54,8 +54,8 @@ export interface StaggerOptions {
   }
 export function staggerMapper<Element, NewElement>(options: StaggerOptions) {
   const {
-    initialInterval = 300,
-    maxRandomStagger = 300,
+    initialInterval = 0,
+    maxRandomStagger = 0,
     concurrency
   } = options;
   let initialStagger = 0;

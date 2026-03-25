@@ -125,6 +125,10 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
     protected problemGauge: Gauge;
 
     protected staggerOpts: Partial<StaggerOptions>;
+    protected staggerMappers = {
+        preCompare: staggerMapper<PlayObject, PlayObject>({concurrency: 2}),
+        existing: staggerMapper<ScrobbledPlayObject, ScrobbledPlayObject>({concurrency: 2})
+    }
 
     constructor(type: any, name: any, config: CommonClientConfig, notifier: Notifiers, emitter: EventEmitter, logger: Logger) {
         super(config);
@@ -190,7 +194,42 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
             existingSubmitted: this.findExistingSubmittedPlayObj
         }
         this.existingScrobble = (playObjPre: PlayObject, existingScrobbles: PlayObject[], log?: boolean) => existingScrobble(playObjPre, existingScrobbles, existingScrobbleOpts, log);
-        this.staggerOpts = getRoot().items.staggerOptions;
+    }
+
+    protected async postCache(): Promise<void> {
+        await super.postCache();
+        this.generateStaggerMappers();
+    }
+
+    protected generateStaggerMappers() {
+        const {
+            preCompare = [],
+            compare: {
+                existing = []
+            } = {}
+        } = this.transformRules;
+
+        if(preCompare.length > 0) {
+            let pcInits: number[] = [0],
+            pcMaxStagger: number[] = [];
+            for(const hook of this.transformRules.preCompare) {
+                const t = this.transformManager.getTransformerByStage({type: hook.type, name: hook.name});
+                pcInits.push(t.staggerOpts?.initialInterval ?? 0);
+                pcMaxStagger.push(t.staggerOpts?.maxRandomStagger ?? 0)
+            }
+            this.staggerMappers.preCompare = staggerMapper<PlayObject, PlayObject>({initialInterval: Math.max(...pcInits), maxRandomStagger: Math.max(...pcMaxStagger), concurrency: 2});
+        }
+
+        if(existing.length > 0) {
+            let eInits: number[] = [0],
+            eMaxStagger: number[] = [];
+            for(const hook of this.transformRules.postCompare) {
+                const t = this.transformManager.getTransformerByStage({type: hook.type, name: hook.name});
+                eInits.push(t.staggerOpts?.initialInterval ?? 0);
+                eMaxStagger.push(t.staggerOpts?.maxRandomStagger ?? 0)
+            }
+            this.staggerMappers.existing = staggerMapper<ScrobbledPlayObject, ScrobbledPlayObject>({initialInterval: Math.max(...eInits), maxRandomStagger: Math.max(...eMaxStagger), concurrency: 2});
+        }
     }
 
     protected getIdentifier() {
@@ -449,8 +488,7 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
 
         const playObj = await this.transformPlay(playObjPre, TRANSFORM_HOOK.candidate);
 
-        const sm = staggerMapper<ScrobbledPlayObject, ScrobbledPlayObject>({...this.staggerOpts, concurrency: 2});
-        const dtInvariantMatches = (await pMap(this.scrobbledPlayObjs.data, sm(async x => ({...x, play: await this.transformPlay(x.play, TRANSFORM_HOOK.existing)})), {concurrency: 2}))
+        const dtInvariantMatches = (await pMap(this.scrobbledPlayObjs.data, this.staggerMappers.existing(async x => ({...x, play: await this.transformPlay(x.play, TRANSFORM_HOOK.existing)})), {concurrency: 2}))
             .filter(x => playObjDataMatch(playObj, x.play));
 
         if (dtInvariantMatches.length === 0) {
@@ -851,8 +889,7 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
 
     queueScrobble = async (data: PlayObject | PlayObject[], source: string) => {
         const plays = (Array.isArray(data) ? data : [data]).map(x => ({...x, meta: {...x.meta, seenAt: dayjs()}}));
-        const sm = staggerMapper<PlayObject, PlayObject>({...this.staggerOpts, concurrency: 2});
-        for await(const play of pMapIterable(plays, sm(async x => await this.transformPlay(x, TRANSFORM_HOOK.preCompare)), {concurrency: 2})) {
+        for await(const play of pMapIterable(plays, this.staggerMappers.preCompare(async x => await this.transformPlay(x, TRANSFORM_HOOK.preCompare)), {concurrency: 2})) {
             try {
                 const existingQueued = await this.existingScrobble(play, this.queuedScrobbles.map(x => x.play), false);
                 // want to be very confident of this

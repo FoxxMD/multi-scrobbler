@@ -9,6 +9,7 @@ import { hashObject } from "../../utils/StringUtils.js";
 import { playContentInvariantTransform } from "../../utils/PlayComparisonUtils.js";
 import { isSimpleError, SkipTransformStageError, StagePrerequisiteError } from "../errors/MSErrors.js";
 import { capitalize } from "../../../core/StringUtils.js";
+import { StaggerOptions } from "../../utils/AsyncUtils.js";
 
 export interface TransformerOptions {
         logger: Logger
@@ -33,6 +34,8 @@ export default abstract class AbstractTransformer<T = any, Y extends StageConfig
     cache: Cacheable;
 
     name: string;
+
+    public staggerOpts: Partial<StaggerOptions> = { initialInterval: 0, maxRandomStagger: 0};
 
     public constructor(config: TransformerCommon, options: TransformerOptions) {
         super(config);
