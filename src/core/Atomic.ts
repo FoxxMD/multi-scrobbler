@@ -310,6 +310,7 @@ export interface PlayLifecycle<D extends DateLike = Dayjs> {
 export interface LifecycleStep {
     name: string
     source: string
+    cached?: boolean
     flowResult?: FlowControlTerm
     flowReason?: string
     flowKnownState?: 'skip' | 'prereq'
@@ -347,7 +348,7 @@ export type DateLike = Dayjs | string
 
 export interface AmbPlayObject<D extends DateLike = Dayjs> {
     data: PlayData<D>,
-    meta: PlayMeta<D> | Omit<PlayMeta<D>, 'lifecycle'>
+    meta: PlayMetaLifecycleless
 }
 
 export const isPlayObject = (obj: object): obj is PlayObject => {

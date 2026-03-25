@@ -191,6 +191,7 @@ export const generatePlay = (data: ObjectPlayData = {}, meta: MarkOptional<PlayM
                 steps: []
             },
             url: {
+                web: 'https://example.com',
                 origin: 'https://example.com'
             },
         }

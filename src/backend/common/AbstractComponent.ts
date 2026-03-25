@@ -202,10 +202,7 @@ export default abstract class AbstractComponent extends AbstractInitializable {
             const transformHash = `playTransform-${hashObject(hook)}-${hashObject(playContentInvariantTransform(play))}`;
             const cachedTransformPlay = await this.cache.cacheTransform.get<PlayObject>(transformHash);
             if(cachedTransformPlay !== undefined) {
-                // if(shouldLog) {
-                //     logger.debug(`Used cached Transform for => ${buildTrackString(play)}`);
-                // }
-                //logger.debug(`Cache hit ${transformHash}`);
+                logger.trace(`Cache hit ${transformHash}`);
                 return cachedTransformPlay;
             }
 
@@ -213,6 +210,7 @@ export default abstract class AbstractComponent extends AbstractInitializable {
             let transformedPlay: PlayObject = play;
             let transformHistory: TransformResult[] = [];
             let shouldBreak = false;
+            let cacheOk: boolean = true;
             for(const hookItem of hook) {
 
                 const {
@@ -230,8 +228,7 @@ export default abstract class AbstractComponent extends AbstractInitializable {
 
                 let newTransformedPlay: PlayObject,
                 stageName: string = 'Unnamed',
-                err: Error,
-                cacheOk: boolean = true;
+                err: Error;
                 try {
                     [newTransformedPlay, stageName] = await this.transformManager.handleStage(hookItem, transformedPlay, asyncId);
                 } catch (e) {
@@ -260,34 +257,42 @@ export default abstract class AbstractComponent extends AbstractInitializable {
                         if(onSkip === 'stop') {
                             shouldBreak = true;
                         }
-                    } else if(onFailure === 'continue') {
-                        logger.warn(merged, 'Transform encountered an error but continuing due to onFailure: continue');
-                        step.flowReason = 'Transform encountered an error but continuing due to onFailure: continue';
-                        step.flowResult = onFailure;
                     } else {
                         step.flowResult = onFailure;
+                        let reason: string;
+
                         const reqError = findCauseByReference(err, StagePrerequisiteError);
                         if(reqError !== undefined) {
-                            const prereqMsg = 'Transform could not be completed due to prerequisite failure';
-                            logger.warn(merged, prereqMsg);
+                            reason = 'Transform could not be completed due to prerequisite failure';
                             step.flowKnownState = 'prereq';
-                            step.flowReason = prereqMsg;
                         } else {
-                            logger.error(merged, 'Transform encountered an error');
+                            reason = 'Transform encountered an error';
                             cacheOk = false;
-                            step.flowReason = 'Transform encountered an error';
                         }
 
-                        if(!failureReturnPartial) {
-                            // rewind to original play so we don't return partial transform
-                            transformedPlay = play;
-                            transformHistory = [];
-                        } else if(transformHistory.length > 0) {
-                            step.flowReason += ' | Preserving play transformations up to this point due to failureReturnPartial=true'
+                        if(onFailure === 'continue') {
+                            reason += ' but will continue due to onFailure: continue';
+                            logger.warn(merged, reason);
+                        } else {
+                            logger[reqError !== undefined  ? 'warn' : 'error'](merged, reason);
+
+                            if(!failureReturnPartial) {
+                                // rewind to original play so we don't return partial transform
+                                transformedPlay = play;
+                                transformHistory = [];
+                            } else if(transformHistory.length > 0) {
+                                cacheOk = true;
+                                step.flowReason += ' | Preserving play transformations up to this point due to failureReturnPartial=true'
+                            }
+                            shouldBreak = true;
                         }
-                        shouldBreak = true;
+
+                        step.flowReason = reason;
                     }
                 } else {
+                    // reset cache state
+                    // in the event it was false due to previous step error but onFailure: continue
+                    cacheOk = true;
                     step.flowResult = onSuccess;
 
                     if(!deepEqual(play, newTransformedPlay)) {
@@ -364,7 +369,10 @@ export default abstract class AbstractComponent extends AbstractInitializable {
                 }
             }
 
-            await this.cache.cacheTransform.set<PlayObject>(transformHash, transformedPlay, '10m');
+            if(cacheOk) {
+                await this.cache.cacheTransform.set<PlayObject>(transformHash, transformedPlay, '10m');
+            }
+
             return transformedPlay;
         } catch (e) {
             logger.warn(new Error(`Unexpected error occurred, returning original play.`, {cause: e}));
