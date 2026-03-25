@@ -16,6 +16,8 @@ import { Cacheable } from "cacheable";
 import { TransformerCommonConfig } from "../../../core/Atomic.js";
 import TransformerManager from "../../common/transforms/TransformerManager.js";
 import { transientCache } from "../utils/CacheTestUtils.js";
+import dayjs from "dayjs";
+import clone from "clone";
 
 chai.use(asPromised);
 
@@ -634,6 +636,49 @@ describe('Play Transforms', function () {
             const transformed = await component.transformPlay(play, TRANSFORM_HOOK.preCompare);
             expect(transformed.data.track).equal('My cool bar track');
             expect(transformed.data.artists).eql(primaries.concat(secondaries));
+        });
+
+    });
+
+    describe("Stage Caching", function () {
+
+        it('Re-uses steps without modifying other Play properties', async function () {
+            component.config = {
+                options: {
+                    playTransform: {
+                        preCompare: [
+                            {
+                                name: "barChange",
+                                title: [
+                                    {
+                                        search: "something",
+                                        replace: "bar"
+                                    }
+                                ]
+                            },
+                            {
+                                type: 'native'
+                            }
+                        ]
+                    }
+                }
+            }
+
+            const [str, primaries, secondaries] = generateArtistsStr({primary: {max: 3, ambiguousJoinedNames: true, trailingAmpersand: true, finalJoiner: false}});
+
+            component.buildTransformRules();
+            const play = generatePlay({ track: 'My cool something track', artists: [str], playDate: dayjs().subtract(10, 'm') });
+            const transformed = await component.transformPlay(play, TRANSFORM_HOOK.preCompare, 'all');
+            expect(transformed.data.track).equal('My cool bar track');
+            expect(transformed.data.artists).eql(primaries.concat(secondaries));
+
+            const cachablePlay = clone(play);
+            const laterDate = dayjs().subtract(5, 'm');
+            cachablePlay.data.playDate = laterDate;
+            const cacheTransformed = await component.transformPlay(cachablePlay, TRANSFORM_HOOK.preCompare, 'all');
+            expect(cacheTransformed.data.track).equal('My cool bar track');
+            expect(cacheTransformed.data.artists).eql(primaries.concat(secondaries));
+            expect(cacheTransformed.data.playDate.isSame(cachablePlay.data.playDate));
         });
 
     });

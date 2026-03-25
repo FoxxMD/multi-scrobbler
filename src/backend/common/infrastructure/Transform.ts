@@ -50,6 +50,10 @@ export interface Whennable {
 }
 
 export type FlowControlTerm = 'continue' | 'stop'
+export const FLOW_CONTROL_TERM = {
+    continue: 'continue',
+    stop: 'stop'
+} as const satisfies Record<string, FlowControlTerm>;
 
 export interface FlowControl {
     onSuccess: FlowControlTerm

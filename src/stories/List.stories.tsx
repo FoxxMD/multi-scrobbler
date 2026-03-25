@@ -8,7 +8,7 @@ import {Provider} from "../client/components/Provider";
 import { generateJsonPlays, normalizePlays } from "../core/PlayTestUtils.js";
 import { ErrorLike, JsonPlayObject } from "../core/Atomic.js";
 import {examplePlay, lastfmErrorExample} from './storyUtils.js';
-import {playWithLifecycleScrobble, generatePlayWithLifecycle} from '../core/tests/utils/fixtures'
+import {playWithLifecycleScrobble, generatePlayWithLifecycle, asJsonPlayObject} from '../core/tests/utils/fixtures'
 import { generateArray } from "../core/DataUtils.js";
 import dayjs from "dayjs";
 
@@ -55,14 +55,14 @@ decorators: [
 export const List = meta.story({
     loaders: [
     async () => {
-      const queued = normalizePlays(generateArray(7,() => generatePlayWithLifecycle()), {endDate: dayjs()}).map(x => ({play: x, status: 'queued'}));
+      const queued = normalizePlays(generateArray(7,() => generatePlayWithLifecycle()), {endDate: dayjs()}).map(x => ({play: asJsonPlayObject(x), status: 'queued'}));
 
-      const scrobbled = await playWithLifecycleScrobble(generatePlayWithLifecycle({lifecycleSteps: {preCompare: [true, 'skipped', true]}}));
-      const scrobbleError = await playWithLifecycleScrobble(generatePlayWithLifecycle(), {error: true});
+      const scrobbled = asJsonPlayObject(await playWithLifecycleScrobble(generatePlayWithLifecycle({lifecycleSteps: {preCompare: [true, 'skipped', true]}})));
+      const scrobbleError = asJsonPlayObject(await playWithLifecycleScrobble(generatePlayWithLifecycle(), {error: true}));
 
       const promisedScrobbled = generateArray(10,() => playWithLifecycleScrobble(generatePlayWithLifecycle({lifecycleSteps: {preCompare: [true, 'skipped', true]}})));
       const promised = await Promise.all(promisedScrobbled);
-      const yesterdayScrobbled = normalizePlays(promised, {endDate: dayjs().subtract(1, 'd').subtract(100, 'm')}).map((x) => ({play: x, status: 'scrobbled'}));
+      const yesterdayScrobbled = normalizePlays(promised, {endDate: dayjs().subtract(1, 'd').subtract(100, 'm')}).map((x) => ({play: asJsonPlayObject(x), status: 'scrobbled'}));
       return {data: [
         ...queued,
         {play: scrobbled, status: 'scrobbled'},

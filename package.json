@@ -110,7 +110,7 @@
     "icecast-metadata-stats": "^0.1.12",
     "iso-websocket": "^0.3.0",
     "iti": "^0.7.0",
-    "jest-diff": "^30.2.0",
+    "json-diff-ts": "^5.0.0-alpha.2",
     "json5": "^2.2.3",
     "jsondiffpatch": "^0.7.3",
     "jsondiffpatch-react": "^1.0.8",
