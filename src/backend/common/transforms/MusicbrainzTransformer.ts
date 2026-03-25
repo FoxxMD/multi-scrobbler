@@ -355,6 +355,10 @@ export default class MusicbrainzTransformer extends AtomicPartsTransformer<Exter
     public constructor(config: MusicbrainzTransformerConfig, options: TransformerOptions & {clientCache?: Cacheable}) {
         super(config, options);
         this.clientCache = options.clientCache;
+        this.staggerOpts = {
+            initialInterval: 300,
+            maxRandomStagger: 300
+        }
     }
 
     protected async doBuildInitData(): Promise<true | string | undefined> {

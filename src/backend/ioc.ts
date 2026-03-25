@@ -27,7 +27,6 @@ export interface RootOptions {
     cache?: CacheConfigOptions | MSCache | (() => MSCache)
     mbMap?: MusicBrainzSingletonMap | (() => MusicBrainzSingletonMap)
     transformers?: TransformerCommonConfig[]
-    staggerOptions?: Partial<StaggerOptions>
 }
 
 const discovered = new prom.Counter({
@@ -61,8 +60,7 @@ const createRoot = (options: RootOptions = {logger: loggerDebug}) => {
         logger,
         cache,
         mbMap,
-        transformers = [],
-        staggerOptions,
+        transformers = []
     } = options || {};
     const configDir = process.env.CONFIG_DIR || path.resolve(projectDir, `./config`);
     let disableWeb = dw;
@@ -150,7 +148,6 @@ const createRoot = (options: RootOptions = {logger: loggerDebug}) => {
         cache: () => maybeSingletonCache !== undefined ? () => maybeSingletonCache : cacheFunc,
         mbMap: () => maybeSingletonMb !== undefined ? () => maybeSingletonMb : mbFunc,
         coverArtApi,
-        staggerOptions: staggerOptions ?? {},
     }).add((items) => {
         const localUrl = generateBaseURL(baseUrl, items.port)
         return {

@@ -110,7 +110,11 @@ export default class TransformerManager {
         return this.transformers.has(type);
     }
 
-    protected getTransformerByStage(data: StageConfig): AbstractTransformer {
+    public getTransformerType(type: string): AbstractTransformer[] | undefined {
+        return this.transformers.get(type);
+    }
+
+    public getTransformerByStage(data: StageConfig): AbstractTransformer {
         const list = this.transformers.get(data.type);
         if (list === undefined || list.length === 0) {
             throw new Error(`No transformer of type '${data.type}' is registered.`);
@@ -143,27 +147,7 @@ export default class TransformerManager {
     }
 
     public async handleStage(data: StageConfig, play: PlayObject, asyncId: string = nanoid(6)): Promise<[PlayObject, string]> {
-        const list = this.transformers.get(data.type);
-        if (list === undefined || list.length === 0) {
-            throw new Error(`No transformer of type '${data.type}' is registered.`);
-        }
-
-        let t: AbstractTransformer;
-        if (list.length > 1) {
-            if(data.name === undefined) {
-                this.logger.warn(`More than one '${data.type}' transformer but name was not specified, using first registered`);
-                t = list[0];
-            } else {
-               const named = list.find(x => x.name === data.name);
-               if(named === undefined) {
-                throw new Error(`No ${data.type} transformer with name '${data.name}'`)
-               }
-               t = named;
-            }
-        } else {
-            t = list[0];
-        }
-
+        const t: AbstractTransformer = this.getTransformerByStage(data);
         try {
             const transformedPlay = await this.asyncStore.run(asyncId, async () => {
                 return await t.handle(data, play);
