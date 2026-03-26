@@ -8,7 +8,7 @@ import { MarkOptional } from 'ts-essentials';
 import { generateBrainz, generateMbid, generatePlay, GeneratePlayOpts, generatePlays } from '../../PlayTestUtils.js';
 import { lifecyclelessInvariantTransform } from '../../PlayUtils.js';
 import clone from 'clone';
-import { jdiff } from '../../DataUtils.js';
+import { diffObjects } from '../../DataUtils.js';
 import { existingScrobble } from '../../../backend/utils/PlayComparisonUtils.js';
 import { UpstreamError } from '../../../backend/common/errors/UpstreamError.js';
 import { playToListenPayload } from '../../../backend/common/vendor/listenbrainz/lzUtils.js';
@@ -312,7 +312,7 @@ export const generateLifecycleStep = (play: PlayObject, opts: GenerateLifecycleO
     });
   }
 
-  step.patch = jdiff.diff(play, modifiedPlay);
+  step.patch = diffObjects(play.data, modifiedPlay.data);// jdiff.diff(play, modifiedPlay);
 
   return [step, modifiedPlay];
 }

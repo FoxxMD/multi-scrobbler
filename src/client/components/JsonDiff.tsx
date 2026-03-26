@@ -1,10 +1,10 @@
 import React, { ComponentProps } from 'react';
 import JsonDiffReact from 'jsondiffpatch-react';
 import { MSErrorBoundary } from './ErrorBoundary';
-import { Delta } from 'jsondiffpatch';
 import { MarkOptional } from 'ts-essentials';
-import { jdiff } from '../../core/DataUtils';
+import { patchObject } from '../../core/DataUtils';
 import './JsonDiff.css';
+import { IJsonDelta } from 'json-diff-ts';
 
 type DiffableVal = [] | object | string;
 
@@ -18,7 +18,7 @@ export interface JsonDiffReactProps {
 }
 
 export type JsonDiffPatchProps = MarkOptional<JsonDiffReactProps, 'right'> & {
-    diff?: Delta | object
+    diff?: IJsonDelta
 }
 
 export const JsonDiffPatch = (props: JsonDiffPatchProps) => {
@@ -31,9 +31,9 @@ export const JsonDiffPatch = (props: JsonDiffPatchProps) => {
     const detachedLeft = JSON.parse(JSON.stringify(left));
     let realRight: DiffableVal;
     if (right !== undefined) {
-        realRight = JSON.parse(JSON.stringify(right));
+        realRight = structuredClone(right);
     } else if (diff !== undefined) {
-        realRight = jdiff.patch(JSON.parse(JSON.stringify(left)), diff as Delta) as DiffableVal;
+        realRight = patchObject(left, diff);
     } else {
         throw new Error(`must provide either 'right' or 'diff'`);
     }

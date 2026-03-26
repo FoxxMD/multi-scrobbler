@@ -8,7 +8,7 @@ import {Provider} from "../client/components/Provider";
 import { generateJsonPlays } from "../core/PlayTestUtils.js";
 import { ErrorLike, JsonPlayObject, PlayLifecycle } from "../core/Atomic.js";
 import { examplePlay, lastfmErrorExample } from "./storyUtils.js";
-import { generatePlayWithLifecycle, playWithLifecycleScrobble } from "../core/tests/utils/fixtures.js";
+import { asJsonPlayObject, generatePlayWithLifecycle, playWithLifecycleScrobble } from "../core/tests/utils/fixtures.js";
 
 // More on how to set up stories at: https://storybook.js.org/docs/writing-stories#default-export
 const meta = preview.meta({
@@ -35,14 +35,14 @@ decorators: [
 export const ActivityTimelineStory = meta.story({
     loaders: [
     async () => {
-      const scrobbleError = await playWithLifecycleScrobble(generatePlayWithLifecycle(
+      const scrobbleError = asJsonPlayObject(await playWithLifecycleScrobble(generatePlayWithLifecycle(
         {
         lifecycleSteps: {
           preCompare: 1,
           postCompare: 1,
         }
       }
-      ))
+      )))
       return {play: scrobbleError};
     }
   ],
@@ -51,7 +51,7 @@ export const ActivityTimelineStory = meta.story({
 export const ScrobbleError = meta.story({
     loaders: [
     async () => {
-      const scrobbleError = await playWithLifecycleScrobble(generatePlayWithLifecycle(), {error: true});
+      const scrobbleError = asJsonPlayObject(await playWithLifecycleScrobble(generatePlayWithLifecycle(), {error: true}));
       return {play: scrobbleError};
     }
   ],
@@ -60,12 +60,12 @@ export const ScrobbleError = meta.story({
 export const TransformError = meta.story({
     loaders: [
     async () => {
-      const scrobbleError = await generatePlayWithLifecycle({
+      const scrobbleError = asJsonPlayObject(await generatePlayWithLifecycle({
         lifecycleSteps: {
           preCompare: 2,
           postCompare: [false],
         }
-      });
+      }));
       return {play: scrobbleError};
     }
   ],
@@ -74,11 +74,11 @@ export const TransformError = meta.story({
 export const TransformSkip = meta.story({
     loaders: [
     async () => {
-      const play = await generatePlayWithLifecycle({
+      const play = asJsonPlayObject(await generatePlayWithLifecycle({
         lifecycleSteps: {
           preCompare: [true, 'skipped', true],
         }
-      });
+      }));
       return {play};
     }
   ],
@@ -87,11 +87,11 @@ export const TransformSkip = meta.story({
 export const TransformPrereq = meta.story({
     loaders: [
     async () => {
-      const play = await generatePlayWithLifecycle({
+      const play = asJsonPlayObject(await generatePlayWithLifecycle({
         lifecycleSteps: {
           preCompare: [true, 'prereq'],
         }
-      });
+      }));
       return {play};
     }
   ],
@@ -100,11 +100,11 @@ export const TransformPrereq = meta.story({
 export const TransformStop = meta.story({
     loaders: [
     async () => {
-      const play = await generatePlayWithLifecycle({
+      const play = asJsonPlayObject(await generatePlayWithLifecycle({
         lifecycleSteps: {
           preCompare: [true, 'stop'],
         }
-      });
+      }));
       return {play};
     }
   ],

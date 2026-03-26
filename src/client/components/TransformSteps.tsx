@@ -12,7 +12,7 @@ import { FaStop } from "react-icons/fa";
 import { MdMusicNote } from "react-icons/md";
 import { ChakraCodeBlockShort, ChakraPlainBlockShort } from "./CodeBlock";
 import { JsonDiffPatch } from "./JsonDiff";
-import { jdiff } from "../../core/DataUtils";
+import { jdiff, patchObject } from "../../core/DataUtils";
 import { MSCollapsible, MSCollapsibleExternalProps } from "./MSCollapsible";
 import { Muted } from "./Typography";
 
@@ -23,7 +23,7 @@ export interface LifeycleStepsTimelineProps extends MSCollapsibleExternalProps {
 
 const diffElements = (original: JsonPlayObject, steps: LifecycleStep[]): [JSX.Element[], JsonPlayObject?] => {
 
-    let currentPlay: JsonPlayObject = JSON.parse(JSON.stringify(original));
+    let currentPlay: JsonPlayObject = structuredClone(original); // JSON.parse(JSON.stringify(original));
     let patchFailed = false;
 
     const diffElements: JSX.Element[] | null = [];
@@ -49,7 +49,7 @@ const diffElements = (original: JsonPlayObject, steps: LifecycleStep[]): [JSX.El
             diffElements.push(<ChakraCodeBlockShort key={`diffblockfallback-${index}`} title="Diff Patch" code={patch} />);
             continue;
         }
-        let left: JsonPlayObject = JSON.parse(JSON.stringify(currentPlay));
+        let left: JsonPlayObject = structuredClone(currentPlay); // JSON.parse(JSON.stringify(currentPlay));
         left.data.meta = {
             ...(left.data.meta ?? {}),
             brainz: {
@@ -64,10 +64,10 @@ const diffElements = (original: JsonPlayObject, steps: LifecycleStep[]): [JSX.El
         }
 
         try {
-            currentPlay = jdiff.patch(currentPlay, patch) as JsonPlayObject;
+            currentPlay.data = patchObject(currentPlay.data, patch)// jdiff.patch(currentPlay, patch) as JsonPlayObject;
             diffElements.push(
-                <ChakraPlainBlockShort title="Play Diff" key={`diffblock-${index}`} code={left}>
-                    <JsonDiffPatch key={`diff-${index}`} left={left} right={JSON.parse(JSON.stringify(currentPlay))} />
+                <ChakraPlainBlockShort title="Play Diff" key={`diffblock-${index}`} code={left.data}>
+                    <JsonDiffPatch key={`diff-${index}`} left={left.data} right={currentPlay.data} />
                 </ChakraPlainBlockShort>
             )
         } catch (e) {
