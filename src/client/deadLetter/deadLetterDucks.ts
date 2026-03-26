@@ -92,40 +92,54 @@ export const deadSlice = createSlice({
             }
         )
         builder.addMatcher(
-            (action) => deadApi.endpoints.getDead.matchFulfilled(action) || deadApi.endpoints.processDead.matchFulfilled(action) || deadApi.endpoints.removeDead.matchFulfilled(action),
+            (action) => deadApi.endpoints.getDead.matchFulfilled(action) || deadApi.endpoints.removeDead.matchFulfilled(action),
             (state, action) => {
                 deadAdapter.setAll(state, action.payload);
             }
         )
-            .addMatcher(
-                (action) => deadApi.endpoints.removeDeadSingle.matchFulfilled(action),
-                (state, action) => {
-                    deadAdapter.removeOne(state, action.meta.arg.originalArgs.id)
-                }
-            )
-            .addMatcher(
-                (action) => deadApi.endpoints.processDeadSingle.matchFulfilled(action),
-                (state, action) => {
-                    if (action.payload === undefined) {
-                        deadAdapter.removeOne(state, action.meta.arg.originalArgs.id);
-                    } else {
-                        state.entities[action.meta.arg.originalArgs.id] = action.payload;
-                        //deadAdapter.updateOne(state, action.meta.arg.originalArgs.id);
-                    }
-                }
-            )
+            // .addMatcher(
+            //     (action) => deadApi.endpoints.removeDeadSingle.matchFulfilled(action),
+            //     (state, action) => {
+            //         deadAdapter.removeOne(state, action.meta.arg.originalArgs.id)
+            //     }
+            // )
+            // .addMatcher(
+            //     (action) => deadApi.endpoints.processDeadSingle.matchFulfilled(action),
+            //     (state, action) => {
+            //         if (action.payload === undefined) {
+            //             deadAdapter.removeOne(state, action.meta.arg.originalArgs.id);
+            //         } else {
+            //             state.entities[action.meta.arg.originalArgs.id] = action.payload;
+            //             //deadAdapter.updateOne(state, action.meta.arg.originalArgs.id);
+            //         }
+            //     }
+            // )
             .addMatcher(
                 (action) => clearDead.match(action),
                 (state, action) => {
                     state = deadAdapter.getInitialState();
                 }
             )
-            /*.addMatcher(
+            .addMatcher(
                 (action) => clientUpdate.match(action) && action.payload.event === 'deadLetter',
                 (state, action) => {
                     state.entities[(action.payload as ApiEventPayload).data.dead.id] = (action.payload as ApiEventPayload).data.dead;
+                    state.ids.push((action.payload as ApiEventPayload).data.dead.id);
                 }
-            )*/
+            )
+            .addMatcher(
+                (action) => clientUpdate.match(action) && action.payload.event === 'removeDeadLetter',
+                (state, action) => {
+                    delete state.entities[(action.payload as ApiEventPayload).data.dead.id];
+                    state.ids = state.ids.filter(x => x !== (action.payload as ApiEventPayload).data.dead.id);
+                }
+            )
+            .addMatcher(
+                (action) => clientUpdate.match(action) && action.payload.event === 'updateDeadLetter',
+                (state, action) => {
+                    state.entities[(action.payload as ApiEventPayload).data.dead.id] = (action.payload as ApiEventPayload).data.dead;
+                }
+            )
     }
 });
 

@@ -21,6 +21,7 @@ import { defaultLifecycle } from '../../utils/PlayTransformUtils.js';
 import { shuffleArray } from '../../utils/DataUtils.js';
 import { DEFAULT_CONSOLIDATE_DURATION, DEFAULT_GROUP_DURATION, groupPlaysToTimeRanges } from '../../utils/ListenFetchUtils.js';
 import { asPlay } from '../../../core/tests/utils/fixtures.js';
+import { nanoid } from 'nanoid';
 
 chai.use(asPromised);
 
@@ -592,6 +593,24 @@ describe('Upstream Scrobbles', function() {
         await emptied2;
         scrobbler.tryStopScrobbling().then(() => null);
         expect(sp.calledTwice).is.true;
+    });
+
+});
+
+describe('Dead Scrobbles', function() {
+
+    it('Processes all dead scrobbles', async function () {
+        testScrobbler = generateTestScrobbler();
+        await testScrobbler.initialize();
+        testScrobbler.testRecentScrobbles = [];
+
+        const deadPlays = generatePlays(3);
+        for(const dead of deadPlays) {
+            testScrobbler.addDeadLetterScrobble({source: 'test', play: dead, id: nanoid()});
+        }
+        await testScrobbler.processDeadLetterQueue();
+        await testScrobbler.tryStopScrobbling()
+        expect(testScrobbler.deadLetterScrobbles.length).eq(0);
     });
 
 });
