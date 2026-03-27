@@ -109,12 +109,13 @@ export class MSCache {
         this.cacheClientScrobbles.stats.enabled = true;
     }
 
-    init = async () => {
+    init = async (enableCollectors: boolean = false) => {
         await this.initMetadataCache();
         await this.initScrobbleCache();
         await this.initAuthCache();
-        this.enableCollectors();
-        //this.cacheTransform = await this.initCacheable({provider: false, memory: {lruSize: 500}}, 'transform');
+        if(enableCollectors) {
+            this.enableCollectors();
+        }
     }
 
     protected enableCollectors = () => {
