@@ -1,4 +1,4 @@
-import { Cacheable, createKeyv, Keyv, KeyvStoreAdapter, KeyvOptions, CacheableOptions } from 'cacheable';
+import { Cacheable, createKeyv, Keyv, KeyvStoreAdapter, KeyvOptions, CacheableOptions, KeyvCacheableMemory } from 'cacheable';
 import { FlatCache, FlatCacheOptions } from 'flat-cache';
 import KeyvValkey from '@keyv/valkey';
 import dayjs, { Dayjs } from 'dayjs';
@@ -59,7 +59,7 @@ export class MSCache {
     cacheMisses: Gauge;
     cacheSets: Gauge;
     cacheCount: Gauge;
-    cacheVSize: Gauge;
+    //cacheVSize: Gauge;
 
     constructor(logger: Logger, config: CacheConfigOptions = {}) {
         this.logger = childLogger(logger, 'Cache');
@@ -186,17 +186,17 @@ export class MSCache {
             }
         });
 
-        this.cacheVSize = new prom.Gauge({
-            name: 'multiscrobbler_cache_vsize',
-            help: 'estimated byte size of values in cache',
-            labelNames: ['cacheType', 'tier'],
-            collect() {
-                for(const set of collectors) {
-                    const [primary] = getStat(set.cache, 'vsize', false);
-                    this.labels({cacheType: set.name, tier: 'primary'}).set(primary);
-                }
-            }
-        });
+        // this.cacheVSize = new prom.Gauge({
+        //     name: 'multiscrobbler_cache_vsize',
+        //     help: 'estimated byte size of values in cache',
+        //     labelNames: ['cacheType', 'tier'],
+        //     collect() {
+        //         for(const set of collectors) {
+        //             const [primary] = getStat(set.cache, 'vsize', false);
+        //             this.labels({cacheType: set.name, tier: 'primary'}).set(primary);
+        //         }
+        //     }
+        // });
     }
 
     protected initCacheable = async (config: CacheConfig, cacheFor: string) => {
@@ -286,6 +286,8 @@ export const initMemoryCache = <T = any>(opts: Parameters<typeof createKeyv>[0] 
     const memory = createKeyv({
         ttl,
         lruSize,
+        // millisecond interval before checking for expired keys and deleting
+        checkInterval: 10000,
         ...restOpts,
         useClone: false,
     });
@@ -415,7 +417,10 @@ const typesonMarshalling: Pick<KeyvOptions, 'serialize' | 'deserialize'> = {
 }
 
 const getStat = (cache: Cacheable, statName: string, getSecondary: boolean = true): [number, number?] => {
-    const primary = cache.stats[statName];
+    let primary = cache.stats[statName];
+    if(statName === 'count' && cache.primary.store instanceof KeyvCacheableMemory) {
+        primary = cache.primary.store.store.size;
+    }
     let secondary: number;
     if(getSecondary && cache.secondary !== undefined) {
         secondary = cache.secondary.stats[statName];
