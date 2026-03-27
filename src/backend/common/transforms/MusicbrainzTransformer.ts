@@ -754,7 +754,7 @@ export const filterByValidReleaseStatus = <T extends IRecordingMatch[]>(list: T,
     const releaseFiltered = list.map(x => {
         return {
             ...x,
-            releases: x.releases.filter(y => {
+            releases: x.releases === undefined ? [] : x.releases.filter(y => {
                 if(releaseStatusAllow.length > 0) {
                     return releaseStatusAllow.includes(y.status?.toLocaleLowerCase() as MBReleaseStatus)
                 }
@@ -763,7 +763,7 @@ export const filterByValidReleaseStatus = <T extends IRecordingMatch[]>(list: T,
         }
     });
     return releaseFiltered.filter(x => (
-        list.find(y => y.id === x.id).releases.length === 0 
+        (list.find(y => y.id === x.id).releases ?? []).length === 0 
         && releaseAllowEmpty
     ) 
     || x.releases.length > 0);
@@ -781,7 +781,7 @@ export const filterByValidReleaseGroupPrimary = <T extends IRecordingMatch[]>(li
     const releaseFiltered = list.map(x => {
         return {
             ...x,
-            releases: x.releases.filter(y => {
+            releases: x.releases === undefined ? [] : x.releases.filter(y => {
                 if(releaseGroupPrimaryTypeAllow.length > 0) {
                     return releaseGroupPrimaryTypeAllow.includes(y["release-group"]?.["primary-type"]?.toLocaleLowerCase() as MBReleaseGroupPrimaryType)
                 }
@@ -790,7 +790,7 @@ export const filterByValidReleaseGroupPrimary = <T extends IRecordingMatch[]>(li
         }
     });
     return releaseFiltered.filter(x => (
-        list.find(y => y.id === x.id).releases.length === 0 
+        (list.find(y => y.id === x.id).releases ?? []).length === 0 
         && releaseAllowEmpty
     ) 
     || x.releases.length > 0);
@@ -808,7 +808,7 @@ export const filterByValidReleaseGroupSecondary = (list: IRecordingMatch[], stag
     const releaseFiltered = list.map(x => {
         return {
             ...x,
-            releases: x.releases.filter(y => {
+            releases: x.releases === undefined ? [] : x.releases.filter(y => {
                 if(releaseGroupSecondaryTypeAllow.length > 0) {
                     return intersect(releaseGroupSecondaryTypeAllow, (y["release-group"]?.["secondary-types"] ?? []).map(x => x.toLocaleLowerCase()) as MBReleaseGroupSecondaryType[]).length > 0;
                 }
@@ -817,7 +817,7 @@ export const filterByValidReleaseGroupSecondary = (list: IRecordingMatch[], stag
         }
     });
     return releaseFiltered.filter(x => (
-        list.find(y => y.id === x.id).releases.length === 0 
+        (list.find(y => y.id === x.id).releases ?? []).length === 0 
         && releaseAllowEmpty
     )
     || x.releases.length > 0);
@@ -835,7 +835,7 @@ export const filterByValidReleaseCountry = (list: IRecordingMatch[], stageConfig
     const releaseFiltered = list.map(x => {
         return {
             ...x,
-            releases: x.releases.filter(y => {
+            releases: x.releases === undefined ? [] : x.releases.filter(y => {
                 if(releaseCountryAllow.length > 0) {
                     return releaseCountryAllow.includes(y.country?.toLocaleLowerCase())
                 }
@@ -844,7 +844,7 @@ export const filterByValidReleaseCountry = (list: IRecordingMatch[], stageConfig
         }
     });
     return releaseFiltered.filter(x => (
-        list.find(y => y.id === x.id).releases.length === 0 
+        (list.find(y => y.id === x.id).releases ?? []).length === 0 
         && releaseAllowEmpty
     ) 
     || x.releases.length > 0);
