@@ -20,6 +20,7 @@ import { builtin } from 'typeson-registry';
 import { loggerNoop } from './MaybeLogger.js';
 import { ListenProgressPositional, ListenProgressTS } from '../sources/PlayerState/ListenProgress.js';
 const configDir = process.env.CONFIG_DIR || path.resolve(projectDir, `./config`);
+import prom, { Gauge } from 'prom-client';
 
 dayjs.extend(utc)
 dayjs.extend(isBetween);
@@ -53,6 +54,12 @@ export class MSCache {
     cacheClientScrobbles: Cacheable;
 
     logger: Logger;
+
+    cacheHits: Gauge;
+    cacheMisses: Gauge;
+    cacheSets: Gauge;
+    cacheCount: Gauge;
+    cacheVSize: Gauge;
 
     constructor(logger: Logger, config: CacheConfigOptions = {}) {
         this.logger = childLogger(logger, 'Cache');
@@ -97,14 +104,98 @@ export class MSCache {
 
         this.regexCache = cacheFunctions(this.config.regex);
         this.cacheTransform = new Cacheable({primary: initMemoryCache({lruSize: 500})});
+        this.cacheTransform.stats.enabled = true;
         this.cacheClientScrobbles = new Cacheable({primary: initMemoryCache({lruSize: 100, ttl: '5m'})});
+        this.cacheClientScrobbles.stats.enabled = true;
     }
 
     init = async () => {
         await this.initMetadataCache();
         await this.initScrobbleCache();
         await this.initAuthCache();
+        this.enableCollectors();
         //this.cacheTransform = await this.initCacheable({provider: false, memory: {lruSize: 500}}, 'transform');
+    }
+
+    protected enableCollectors = () => {
+
+        const collectors: {cache: Cacheable, name: string}[] = [
+            { cache: this.cacheMetadata, name: 'metadata' },
+            { cache: this.cacheScrobble, name: 'queued_scrobbles' },
+            { cache: this.cacheTransform, name: 'transformer' },
+            { cache: this.cacheClientScrobbles, name: 'historical_scrobbles' }
+        ];
+
+        this.cacheHits = new prom.Gauge({
+            name: 'multiscrobbler_cache_hits',
+            help: 'cache hits',
+            labelNames: ['cacheType', 'tier'],
+            collect() {
+                for(const set of collectors) {
+                    const [primary, secondary] = getStat(set.cache, 'hits');
+                    this.labels({cacheType: set.name, tier: 'primary'}).set(primary);
+                    if(secondary !== undefined) {
+                        this.labels({cacheType: set.name, tier: 'secondary'}).set(secondary);
+                    }
+                }
+
+            }
+        });
+        this.cacheMisses = new prom.Gauge({
+            name: 'multiscrobbler_cache_misses',
+            help: 'cache misses',
+            labelNames: ['cacheType', 'tier'],
+            collect() {
+                for(const set of collectors) {
+                    const [primary, secondary] = getStat(set.cache, 'misses');
+                    this.labels({cacheType: set.name, tier: 'primary'}).set(primary);
+                    if(secondary !== undefined) {
+                        this.labels({cacheType: set.name, tier: 'secondary'}).set(secondary);
+                    }
+                }
+
+            }
+        });
+
+        this.cacheMisses = new prom.Gauge({
+            name: 'multiscrobbler_cache_sets',
+            help: 'cache sets',
+            labelNames: ['cacheType', 'tier'],
+            collect() {
+                for(const set of collectors) {
+                    const [primary, secondary] = getStat(set.cache, 'sets');
+                    this.labels({cacheType: set.name, tier: 'primary'}).set(primary);
+                    if(secondary !== undefined) {
+                        this.labels({cacheType: set.name, tier: 'secondary'}).set(secondary);
+                    }
+                }
+
+            }
+        });
+
+        this.cacheCount = new prom.Gauge({
+            name: 'multiscrobbler_cache_count',
+            help: 'number of keys in cache',
+            labelNames: ['cacheType', 'tier'],
+            collect() {
+                for(const set of collectors) {
+                    const [primary] = getStat(set.cache, 'count', false);
+                    this.labels({cacheType: set.name, tier: 'primary'}).set(primary);
+                }
+            }
+        });
+
+        this.cacheVSize = new prom.Gauge({
+            name: 'multiscrobbler_cache_vsize',
+            help: 'estimated byte size of values in cache',
+            labelNames: ['cacheType', 'tier'],
+            collect() {
+                for(const set of collectors) {
+                    const [primary] = getStat(set.cache, 'vsize', false);
+                    this.labels({cacheType: set.name, tier: 'primary'}).set(primary);
+                }
+            }
+        });
     }
 
     protected initCacheable = async (config: CacheConfig, cacheFor: string) => {
@@ -146,7 +237,9 @@ export class MSCache {
         if(secondaryCache !== undefined) {
             cacheOpts.secondary = secondaryCache;
         }
-        return new Cacheable(cacheOpts);
+        const cache = new Cacheable(cacheOpts);
+        cache.stats.enabled = true;
+        return cache;
 
     }
 
@@ -200,6 +293,7 @@ export const initMemoryCache = <T = any>(opts: Parameters<typeof createKeyv>[0] 
     memory.serialize = (data) => {
         return clone(data) as string;
     }
+    memory.stats.enabled = true;
     return memory;
 }
 
@@ -278,6 +372,7 @@ export const initFileCache = async (opts: FlatCacheOptions = {}, logger: Logger 
             throwOnErrors: true,
             ...typesonMarshalling
         });
+        cache.stats.enabled = true;
         return [cache, flatCache];
     } catch (e) {
         throw e;
@@ -293,6 +388,7 @@ export const valkeyCacheCreate = (ns: string, ...args: ConstructorParameters<typ
         namespace: ns,
         ...typesonMarshalling
     });
+    kv.stats.enabled = true;
     return kv;
 }
 
@@ -315,4 +411,13 @@ const typesonMarshalling: Pick<KeyvOptions, 'serialize' | 'deserialize'> = {
         const data = typeson.parseSync(str);
         return data;
     }
+}
+
+const getStat = (cache: Cacheable, statName: string, getSecondary: boolean = true): [number, number?] => {
+    const primary = cache.stats[statName];
+    let secondary: number;
+    if(getSecondary && cache.secondary !== undefined) {
+        secondary = cache.secondary.stats[statName];
+    }
+    return [primary, secondary];
 }
