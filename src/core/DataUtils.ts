@@ -7,6 +7,7 @@ import { diffDelta, applyDelta, IJsonDelta, DeltaOptions } from 'json-diff-ts';
 import chalk from 'chalk';
 import clone from "clone";
 import ConsoleFormatter from "jsondiffpatch/formatters/console";
+import assert from "node:assert";
 
 const console = new ConsoleFormatter();
 
@@ -85,3 +86,16 @@ export const generateArray = (size: number, gen: (index: number) => any) => {
     return Array.from(Array(size), (v,k) => gen(k));
 }
 
+/** Return an array in chunks
+ * 
+ * https://stackoverflow.com/a/8495740/1469797
+ */
+export const chunkArray = <T>(chunkSize: number, arr: T[]): T[][] => {
+    assert(chunkSize !== 0, 'chunkSize cannot be 0');
+    const chunks: T[][] = [];
+    for (let i = 0; i < arr.length; i += chunkSize) {
+        const chunk = arr.slice(i, i + chunkSize);
+        chunks.push(chunk);
+    }
+    return chunks;
+}
