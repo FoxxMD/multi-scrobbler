@@ -312,7 +312,7 @@ export default abstract class AbstractComponent extends AbstractInitializable {
             }
 
             if(cacheOk) {
-                await this.cache.cacheTransform.set<LifecycleStep[]>(transformHash, steps, '10m');
+                await this.cache.cacheTransform.set<LifecycleStep[]>(transformHash, steps, '2m');
             }
 
             return transformedPlay;
