@@ -727,3 +727,24 @@ It includes metrics for:
   * If any of these metrics is > 0 it means your Source/Client is not operating normally
 
 Additionally, general process metrics like cpu and memory usage can be enabled with the env `PROMETHEUS_FULL=true`
+
+<details>
+
+<summary>Example Usage</summary>
+
+Update your [Prometheus Configuration file](https://prometheus.io/docs/prometheus/latest/configuration/configuration/#configuration-file) (usually at `/etc/prometheus.yml`) to add a job to the `scrape_configs`[section](https://prometheus.io/docs/prometheus/latest/configuration/configuration/#scrape_config) like this:
+
+```yaml
+scrape_configs:
+  #
+  # ...your other jobs are here
+  # 
+  - job_name: multi-scrobbler
+    scrape_interval: 30s
+    metrics_path: '/api/metrics'
+    static_configs:
+      - targets: ['myMultiscrobblerIp:9078']
+```
+
+
+</details>

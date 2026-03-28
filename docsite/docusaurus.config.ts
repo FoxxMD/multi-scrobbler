@@ -252,4 +252,20 @@ if (process.env.RY_ANALYTICS !== undefined && process.env.RY_ANALYTICS !== '') {
   config.scripts.push(script)
 }
 
+if(process.env.NETLIFY === 'true') {
+  // @ts-ignore
+  config.themeConfig.footer.links.push({
+    title: 'Docs Powered By',
+    items: [
+      {
+        html: `
+          <a href="https://www.netlify.com">
+            <img src="https://www.netlify.com/assets/badges/netlify-badge-color-accent.svg" alt="Deploys by Netlify" />
+          </a>
+        `
+      }
+    ]
+  });
+}
+
 export default config;
