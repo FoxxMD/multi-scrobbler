@@ -512,7 +512,7 @@ export const existingScrobble = async (playObjPre: PlayObject, existingScrobbles
 
                 if (result.score <= score && score > 0) {
                     result.reason = confidence;
-                    result.closestMatchedPlay = x;
+                    result.closestMatchedPlay = lifecyclelessInvariantTransform(x);
                     result.match = score >= DUP_SCORE_THRESHOLD;
                     result.breakdowns = scoreBreakdowns;
                     result.score = score;
