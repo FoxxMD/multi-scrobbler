@@ -230,8 +230,21 @@ export interface CacheConfig<T extends CacheProvider = CacheProvider> {
     connection?: string;
     [key: string]: any
 }
+export interface CacheMemoryConfig extends CacheConfig<'memory'> {
+    lruSize?: number
+    ttl?: number
+}
+export interface CacheValkeyConfig extends CacheConfig<'valkey'> {
+}
+export interface CacheFileConfig extends CacheConfig<'file'> {
+}
+export interface CacheNoopConfig extends CacheConfig<false> {
+}
+
+export type CacheConfigType = CacheMemoryConfig | CacheValkeyConfig | CacheFileConfig | CacheNoopConfig;
+
 export type CacheMetadataProvider = CacheProvider;//Exclude<CacheProvider, 'file'>;
-export type CacheMetadataConfig = CacheConfig<CacheMetadataProvider>;
+export type CacheMetadataConfig = CacheConfigType;
 export const asCacheProvider = (val: boolean | string): val is CacheProvider => {
     if(typeof val === 'string') {
         return ['memory', 'valkey', 'file'].includes(val);
@@ -240,11 +253,11 @@ export const asCacheProvider = (val: boolean | string): val is CacheProvider => 
 }
 export const asCacheMetadataProvider = (val: any): val is CacheScrobbleProvider => asCacheProvider(val);
 export type CacheScrobbleProvider = CacheProvider;
-export type CacheScrobbleConfig = CacheConfig<CacheScrobbleProvider>;
+export type CacheScrobbleConfig = CacheConfigType;
 export const asCacheScrobbleProvider = (val: any): val is CacheScrobbleProvider => asCacheProvider(val);
 
 export type CacheAuthProvider = CacheProvider;
-export type CacheAuthConfig = CacheConfig<CacheAuthProvider>;
+export type CacheAuthConfig = CacheConfigType;
 export const asCacheAuthProvider = (val: any): val is CacheAuthProvider => asCacheProvider(val);
 export interface CacheConfigOptions {
     metadata?: CacheMetadataConfig;

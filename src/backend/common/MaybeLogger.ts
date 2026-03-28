@@ -48,7 +48,7 @@ export class MaybeLogger {
         }
     }
 }
-export const noopLog = (_: any, ...rest: any) => undefined;
+const noopLog = (_: any, ...rest: any) => undefined;
 
 export const loggerNoop: Logger = {
     trace: noopLog,
