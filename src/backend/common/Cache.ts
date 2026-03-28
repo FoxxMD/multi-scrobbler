@@ -1,6 +1,6 @@
 import { Cacheable, createKeyv, Keyv, KeyvStoreAdapter, KeyvOptions, CacheableOptions, KeyvCacheableMemory } from 'cacheable';
 import { FlatCache, FlatCacheOptions } from 'flat-cache';
-import KeyvValkey from '@keyv/valkey';
+import KeyvValkey, { KeyvValkeyOptions } from '@keyv/valkey';
 import dayjs, { Dayjs } from 'dayjs';
 import duration from 'dayjs/plugin/duration.js';
 import isBetween from 'dayjs/plugin/isBetween.js';
@@ -52,6 +52,8 @@ export class MSCache {
     regexCache: ReturnType<typeof cacheFunctions>;
     cacheTransform: Cacheable;
     cacheClientScrobbles: Cacheable;
+    cacheApi: Cacheable;
+    hasInit: boolean = false;
 
     logger: Logger;
 
@@ -66,7 +68,7 @@ export class MSCache {
 
         const {
             metadata: {
-                provider: mProvider = (process.env.CACHE_METADATA as (CacheMetadataProvider | undefined) ?? 'memory'),
+                provider: mProvider = (process.env.CACHE_METADATA as (CacheMetadataProvider | undefined) ?? false),
                 connection: mConn = process.env.CACHE_METADATA_CONN,
                 ...restMetadata
             } = {},
@@ -103,16 +105,29 @@ export class MSCache {
         };
 
         this.regexCache = cacheFunctions(this.config.regex);
-        this.cacheTransform = new Cacheable({primary: initMemoryCache({lruSize: 500})});
-        this.cacheTransform.stats.enabled = true;
-        this.cacheClientScrobbles = new Cacheable({primary: initMemoryCache({lruSize: 100, ttl: '5m'})});
-        this.cacheClientScrobbles.stats.enabled = true;
+
+        // for testing we default to in memory
+        const inMemory = new Cacheable({primary: initMemoryCache({lruSize: 500, ttl: '1m'})});
+        this.cacheTransform = inMemory;
+        this.cacheClientScrobbles = inMemory;
+        this.cacheMetadata = inMemory;
+        this.cacheAuth = inMemory;
+        this.cacheScrobble = inMemory;
+        this.cacheApi = inMemory;
     }
 
     init = async (enableCollectors: boolean = false) => {
         await this.initMetadataCache();
         await this.initScrobbleCache();
         await this.initAuthCache();
+
+        this.cacheClientScrobbles = await this.initCacheable('Historical Scrobbles', {provider: 'memory', ttl: '2m', lruSize: 50}, {...this.config.metadata, ttl: '10m'});
+        this.cacheClientScrobbles.stats.enabled = true;
+        this.cacheTransform = await this.initCacheable('Historical Scrobbles', {provider: 'memory', ttl: '2m', lruSize: 100}, {...this.config.metadata, ttl: '5m'});
+        this.cacheTransform.stats.enabled = true;
+        this.cacheApi = await this.initCacheable('External API Responses', {provider: 'memory', ttl: '30s', lruSize: 100}, {...this.config.metadata, ttl: '5m'});
+        this.cacheApi.stats.enabled = true;
+
         if(enableCollectors) {
             this.enableCollectors();
         }
@@ -124,7 +139,8 @@ export class MSCache {
             { cache: this.cacheMetadata, name: 'metadata' },
             { cache: this.cacheScrobble, name: 'queued_scrobbles' },
             { cache: this.cacheTransform, name: 'transformer' },
-            { cache: this.cacheClientScrobbles, name: 'historical_scrobbles' }
+            { cache: this.cacheClientScrobbles, name: 'historical_scrobbles' },
+            { cache: this.cacheApi, name: 'external_apis' }
         ];
 
         this.cacheHits = new prom.Gauge({
@@ -199,78 +215,107 @@ export class MSCache {
         // });
     }
 
-    protected initCacheable = async (config: CacheConfig, cacheFor: string) => {
+    protected initCacheable = async (cacheFor: string, primaryConfig: CacheConfig, secondaryConfig?: CacheConfig) => {
 
         let logger = childLogger(this.logger, cacheFor);
-        const providerHints = ['In-Memory (Primary)'];
-        if(config.provider !== false) {
-            providerHints.push(`${config.provider} (Secondary)`)
+        const providerHints = [];
+        if(primaryConfig.provider === false) {
+            const cache = new Cacheable({primary: noopKeyv});
+            cache.stats.enabled = true;
+            logger.verbose(`Cache Providers: Disabled`);
+            return cache;
         }
-        logger.verbose(`Cache Providers: ${providerHints.join(' | ')}`)
+
+        providerHints.push(`${primaryConfig.provider} (Primary)`)
+
+        if(secondaryConfig === undefined || secondaryConfig.provider !== false) {
+            providerHints.push(`Disabled (Secondary)`)
+        } else {
+            providerHints.push(`${secondaryConfig.provider} (Secondary)`);
+        }
+        logger.verbose(`Cache Providers: ${providerHints.join(' | ')}`);
 
         const ns = `ms-${cacheFor.toLocaleLowerCase()}`;
 
         const cacheOpts: CacheableOptions = {
-            primary: initMemoryCache({ namespace: ns, lruSize: config.memory?.lruSize, ttl: config.memory?.ttl })
+
         }
 
-        let secondaryCache: Keyv | KeyvStoreAdapter | undefined;
+        try {
+            cacheOpts.primary = await this.initCachableType(ns, primaryConfig, logger);
+        } catch (e) {
+            throw new Error('Could not init primary cache', {cause: e});
+        }
 
-        if (config.provider === 'valkey') {
-            logger.debug(`Building valkey cache from ${config.connection}`);
+        if(secondaryConfig !== undefined && secondaryConfig.provider !== false) {
             try {
-                secondaryCache = await initValkeyCache(ns, config.connection);
-                logger.debug('valkey cache connected');
+                cacheOpts.secondary = await this.initCachableType(ns, secondaryConfig, logger);
             } catch (e) {
                 this.logger.warn(e);
             }
-        } else if (config.provider === 'file') {
-            logger.debug(`Building file cache from ${path.join(config.connection, `${ns}.cache`)}`);
-
-            try {
-                const [keyvFile] = await initFileCache({ ...config, cacheDir: config.connection, cacheId: `${ns}.cache` }, logger);
-                secondaryCache = keyvFile;
-            } catch (e) {
-                logger.warn(e);
-            }
         }
 
-        if(secondaryCache !== undefined) {
-            cacheOpts.secondary = secondaryCache;
-        }
         const cache = new Cacheable(cacheOpts);
         cache.stats.enabled = true;
         return cache;
 
     }
 
+    protected initCachableType = async (namespace: string, config: CacheConfig, logger: Logger): Promise<Keyv<any> | KeyvStoreAdapter> => {
+
+        if (config.provider === 'memory') {
+            return initMemoryCache({ namespace, lruSize: config.lruSize, ttl: config.ttl });
+        }
+
+        if (config.provider === 'valkey') {
+            logger.debug(`Building valkey cache from ${config.connection}`);
+            try {
+                const cache = await initValkeyCache(namespace, config.connection, undefined, {ttl: config.ttl});
+                logger.debug('valkey cache connected');
+                return cache;
+            } catch (e) {
+                throw e;
+            }
+        }
+        if (config.provider === 'file') {
+            logger.debug(`Building file cache from ${path.join(config.connection, `${namespace}.cache`)}`);
+
+            try {
+                const [keyvFile] = await initFileCache({ ...config, cacheDir: config.connection, cacheId: `${namespace}.cache` }, {ttl: config.ttl}, logger);
+                return keyvFile;
+            } catch (e) {
+                throw e;
+            }
+        }
+    }
+
     initScrobbleCache = async () => {
-        if (this.cacheScrobble === undefined) {
+        if (!this.hasInit) {
             if (!asCacheScrobbleProvider(this.config.scrobble.provider)) {
                 throw new Error(`Cache Scrobble provider '${this.config.scrobble.provider}' must be one of: memory, valkey, file`);
             }
 
-            this.cacheScrobble = await this.initCacheable(this.config.scrobble, 'Scrobble');
+            this.cacheScrobble = await this.initCacheable('Scrobble', this.config.scrobble);
         }
     }
 
     initMetadataCache = async () => {
-        if (this.cacheMetadata === undefined) {
+        if (!this.hasInit) {
             if (!asCacheMetadataProvider(this.config.metadata.provider)) {
                 throw new Error(`Cache Metadata provider '${this.config.metadata.provider}' must be one of: memory, valkey`);
             }
 
-            this.cacheMetadata = await this.initCacheable(this.config.metadata, 'Metadata');
+            this.cacheMetadata = await this.initCacheable('Metadata', {provider: 'memory', lruSize: 100, ttl: '3m'}, {...this.config.metadata, ttl: '15m'});
         }
     }
 
     initAuthCache = async () => {
-        if (this.cacheAuth === undefined) {
+        if (!this.hasInit) {
             if (!asCacheAuthProvider(this.config.auth.provider)) {
                 throw new Error(`Cache Auth provider '${this.config.auth.provider}' must be one of: memory, valkey, file`);
             }
 
-            this.cacheAuth = await this.initCacheable(this.config.auth, 'Auth');
+            this.cacheAuth = await this.initCacheable('Auth', {provider: 'memory', ttl: '3m'}, this.config.auth);
         }
     }
 
@@ -279,7 +324,7 @@ export class MSCache {
 
 export const initMemoryCache = <T = any>(opts: Parameters<typeof createKeyv>[0] = {}): Keyv<T> | KeyvStoreAdapter => {
     const {
-        ttl = '1h',
+        ttl = '60s',
         lruSize = 200,
         ...restOpts
     } = opts;
@@ -359,7 +404,7 @@ export const flatCacheLoad = async (flatCache: FlatCache, logger: Logger = logge
     }
 }
 
-export const initFileCache = async (opts: FlatCacheOptions = {}, logger: Logger = loggerNoop): Promise<[Keyv | KeyvStoreAdapter | undefined, FlatCache | undefined]> => {
+export const initFileCache = async (opts: FlatCacheOptions = {}, keyvOpts: KeyvOptions = {}, logger: Logger = loggerNoop): Promise<[Keyv | KeyvStoreAdapter | undefined, FlatCache | undefined]> => {
     const flatCache = flatCacheCreate(opts);
     try {
         await flatCacheLoad(flatCache, logger);
@@ -373,7 +418,8 @@ export const initFileCache = async (opts: FlatCacheOptions = {}, logger: Logger 
         const cache = new Keyv({
             store: flatCache,
             throwOnErrors: true,
-            ...typesonMarshalling
+            ...typesonMarshalling,
+            ...keyvOpts
         });
         cache.stats.enabled = true;
         return [cache, flatCache];
@@ -382,26 +428,26 @@ export const initFileCache = async (opts: FlatCacheOptions = {}, logger: Logger 
     }
 }
 
-export const valkeyCacheCreate = (ns: string, ...args: ConstructorParameters<typeof KeyvValkey>): Keyv => {
-    const [connection, valkeyOpts = {}] = args;
+export const valkeyCacheCreate = (ns: string, connection: string, valkeyOpts: KeyvValkeyOptions = {}, keyvOpts: KeyvOptions = {}): Keyv => {
     const valkey = new KeyvValkey(connection, { maxRetriesPerRequest: 5, connectTimeout: 1100, ...valkeyOpts });
     const kv = new Keyv({
         store: valkey,
         throwOnErrors: true,
         namespace: ns,
-        ...typesonMarshalling
+        ...typesonMarshalling,
+        ...keyvOpts
     });
     kv.stats.enabled = true;
     return kv;
 }
 
-export const initValkeyCache = async (ns: string, ...args: ConstructorParameters<typeof KeyvValkey>): Promise<Keyv> => {
-    const kv = valkeyCacheCreate(ns, ...args);
+export const initValkeyCache = async (ns: string, connection: string, valkeyOpts: KeyvValkeyOptions = {}, keyvOpts: KeyvOptions = {}): Promise<Keyv> => {
+    const kv = valkeyCacheCreate(ns, connection, valkeyOpts, keyvOpts);
     try {
         await kv.get('test');
         return kv;
     } catch (e) {
-        throw new Error(`Unable to connect to cache ${args[0]}`, { cause: e })
+        throw new Error(`Unable to connect to cache ${connection}`, { cause: e })
     }
 }
 
@@ -426,4 +472,14 @@ const getStat = (cache: Cacheable, statName: string, getSecondary: boolean = tru
         secondary = cache.secondary.stats[statName];
     }
     return [primary, secondary];
+}
+
+const noopKeyv: KeyvStoreAdapter = {
+        opts: {},
+        namespace: 'noop',
+        get: (_) => undefined,
+        set: (_, __, ___) => undefined,
+        delete: (_) => undefined,
+        clear: () => Promise.resolve(),
+        on: (_, __) => undefined
 }

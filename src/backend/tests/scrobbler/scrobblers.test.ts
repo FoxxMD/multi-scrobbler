@@ -22,6 +22,8 @@ import { shuffleArray } from '../../utils/DataUtils.js';
 import { DEFAULT_CONSOLIDATE_DURATION, DEFAULT_GROUP_DURATION, groupPlaysToTimeRanges } from '../../utils/ListenFetchUtils.js';
 import { asPlay } from '../../../core/tests/utils/fixtures.js';
 import { nanoid } from 'nanoid';
+import { getRoot } from '../../ioc.js';
+import { transientCache } from '../utils/CacheTestUtils.js';
 
 chai.use(asPromised);
 
@@ -511,6 +513,8 @@ describe('Upstream Scrobbles', function() {
 
     afterEach(function () {
         MockDate.reset();
+        const root = getRoot();
+        root.upsert({ cache: () => transientCache });
     });
 
     it('Calls timerange func to get SOT scrobbles when none exists', async function() {
@@ -547,7 +551,7 @@ describe('Upstream Scrobbles', function() {
         scrobbler.startScrobbling().then(() => null);
         await emptied;
         scrobbler.tryStopScrobbling().then(() => null);
-        expect(sp.calledOnce).is.true;
+        expect(sp.callCount).to.eq(1);
     });
 
     it('Uses separate timerange calls when scrobbles are not closely grouped', async function() {
@@ -567,7 +571,7 @@ describe('Upstream Scrobbles', function() {
         scrobbler.startScrobbling().then(() => null);
         await emptied;
         scrobbler.tryStopScrobbling().then(() => null);
-        expect(sp.calledTwice).is.true;
+        expect(sp.callCount).to.eq(2);
     });
 
     it('Gets fresh timerange if TTL of staleAfter has passed', async function() {
