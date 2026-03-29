@@ -8,12 +8,24 @@ import ScrobbleSources from "../sources/ScrobbleSources.js";
 import { nonEmptyBody } from "./middleware.js";
 import { isDebugMode } from "../utils.js";
 
+const TEXT_WILDCARD_REGEX = new RegExp(/text\/.+/);
+
 export const setupLZEndpointRoutes = (app: ExpressWithAsync, parentLogger: Logger, scrobbleSources: ScrobbleSources) => {
 
     const logger = childLogger(parentLogger, ['Ingress', 'Listenbrainz']);
 
     const lzJsonParser = bodyParser.json({
-        type: ['text/*', 'application/json'],
+        type: (req) => {
+            // either Music Assistant, or the library it uses (libmusicbrainz),
+            // does not send a content-type header so we need to YOLO these requests
+            if(req.headers["content-type"] === undefined) {
+                return true;
+            }
+            if(TEXT_WILDCARD_REGEX.test(req.headers["content-type"]) || req.headers["content-type"].includes('application/json')) {
+                return true;
+            }
+            return false;
+        },
     });
     const nonEmptyCheck = nonEmptyBody(logger, 'LZ Endpoint');
 
