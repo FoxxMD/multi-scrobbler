@@ -303,6 +303,18 @@ export default abstract class AbstractSource extends AbstractComponent implement
 
     protected processBacklog = async () => {
         if (this.canBacklog) {
+
+            const {
+                options: {
+                    scrobbleBacklog = true
+                } = {}
+            } = this.config;
+
+            if(scrobbleBacklog === false) {
+                this.logger.info('Source is able to scrobble backlog but was it disabled by user.');
+                return;
+            }
+
             this.logger.info('Discovering backlogged tracks from recently played API...');
             let backlogPlays: PlayObject[] = [];
             const {
@@ -320,12 +332,6 @@ export default abstract class AbstractSource extends AbstractComponent implement
                 throw new Error('Error occurred while fetching backlogged plays', {cause: e});
             }
             const discovered = await this.discover(backlogPlays, {discoverLocation: 'backlog'});
-
-            const {
-                options: {
-                    scrobbleBacklog = true
-                } = {}
-            } = this.config;
 
             if (scrobbleBacklog) {
                 if (discovered.length > 0) {
