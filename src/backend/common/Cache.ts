@@ -14,7 +14,7 @@ import { projectDir } from './index.js';
 import path from 'path';
 import { cacheFunctions } from "@foxxmd/regex-buddy-core";
 import { fileOrDirectoryIsWriteable } from '../utils/FSUtils.js';
-import { asCacheAuthProvider, asCacheMetadataProvider, asCacheScrobbleProvider, CacheAuthProvider, CacheConfig, CacheConfigOptions, CacheMetadataProvider, CacheProvider, CacheScrobbleProvider } from './infrastructure/Atomic.js';
+import { asCacheAuthProvider, asCacheConfig, asCacheMetadataProvider, asCacheScrobbleProvider, CacheAuthProvider, CacheConfig, CacheConfigOptions, CacheMetadataProvider, CacheProvider, CacheScrobbleProvider } from './infrastructure/Atomic.js';
 import { Typeson } from 'typeson';
 import { builtin } from 'typeson-registry';
 import { loggerNoop } from './MaybeLogger.js';
@@ -120,13 +120,6 @@ export class MSCache {
         await this.initMetadataCache();
         await this.initScrobbleCache();
         await this.initAuthCache();
-
-        this.cacheClientScrobbles = await this.initCacheable('Historical Scrobbles', {provider: 'memory', ttl: '2m', lruSize: 50}, {...this.config.metadata, ttl: '10m'});
-        this.cacheClientScrobbles.stats.enabled = true;
-        this.cacheTransform = await this.initCacheable('Historical Scrobbles', {provider: 'memory', ttl: '2m', lruSize: 100}, {...this.config.metadata, ttl: '5m'});
-        this.cacheTransform.stats.enabled = true;
-        this.cacheApi = await this.initCacheable('External API Responses', {provider: 'memory', ttl: '30s', lruSize: 100}, {...this.config.metadata, ttl: '5m'});
-        this.cacheApi.stats.enabled = true;
 
         if(enableCollectors) {
             this.enableCollectors();
@@ -291,31 +284,53 @@ export class MSCache {
 
     initScrobbleCache = async () => {
         if (!this.hasInit) {
-            if (!asCacheScrobbleProvider(this.config.scrobble.provider)) {
-                throw new Error(`Cache Scrobble provider '${this.config.scrobble.provider}' must be one of: memory, valkey, file`);
+            let scrobbleConfig: CacheConfig | undefined;
+            try {
+                if(asCacheConfig(this.config.scrobble)) {
+                    scrobbleConfig = this.config.scrobble;
+                    this.cacheScrobble = await this.initCacheable('Scrobble', this.config.scrobble);
+                }
+            } catch (e) {
+                this.logger.warn(new Error('Could not validate scrobble config! No fallback is possible', {cause: e}));
+                this.cacheScrobble = await this.initCacheable('Scrobble', {provider: false});
             }
-
-            this.cacheScrobble = await this.initCacheable('Scrobble', this.config.scrobble);
         }
     }
 
     initMetadataCache = async () => {
         if (!this.hasInit) {
-            if (!asCacheMetadataProvider(this.config.metadata.provider)) {
-                throw new Error(`Cache Metadata provider '${this.config.metadata.provider}' must be one of: memory, valkey`);
+            let metadataConfig: CacheConfig | undefined;
+            try {
+                if(asCacheConfig(this.config.metadata)) {
+                    metadataConfig = this.config.metadata;
+                }
+            } catch (e) {
+                this.logger.warn(new Error('Could not validate metadata config, will fallback to memory cache only', {cause: e}));
             }
-
-            this.cacheMetadata = await this.initCacheable('Metadata', {provider: 'memory', lruSize: 100, ttl: '3m'}, {...this.config.metadata, ttl: '15m'});
+            this.cacheMetadata = await this.initCacheable('Metadata', {provider: 'memory', ttl: '3m', lruSize: 100}, metadataConfig === undefined ? undefined : {...this.config.metadata, ttl: '15m'});
+            this.cacheMetadata.stats.enabled = true;
+            this.cacheClientScrobbles = await this.initCacheable('Historical Scrobbles', {provider: 'memory', ttl: '2m', lruSize: 50}, metadataConfig === undefined ? undefined : {...this.config.metadata, ttl: '10m'});
+            this.cacheClientScrobbles.stats.enabled = true;
+            this.cacheTransform = await this.initCacheable('Transform Data', {provider: 'memory', ttl: '2m', lruSize: 100}, metadataConfig === undefined ? undefined : {...this.config.metadata, ttl: '5m'});
+            this.cacheTransform.stats.enabled = true;
+            this.cacheApi = await this.initCacheable('External API Responses', {provider: 'memory', ttl: '30s', lruSize: 100}, metadataConfig === undefined ? undefined : {...this.config.metadata, ttl: '20m'});
+            this.cacheApi.stats.enabled = true;
         }
     }
 
     initAuthCache = async () => {
         if (!this.hasInit) {
-            if (!asCacheAuthProvider(this.config.auth.provider)) {
-                throw new Error(`Cache Auth provider '${this.config.auth.provider}' must be one of: memory, valkey, file`);
+            let authConfig: CacheConfig | undefined;
+            try {
+                if(asCacheConfig(this.config.scrobble)) {
+                    authConfig = this.config.auth;
+                }
+            } catch (e) {
+                this.logger.warn(new Error('Could not validate auth config! will fallback to memory cache only', {cause: e}));
+                this.cacheScrobble = await this.initCacheable('Scrobble', {provider: false});
             }
 
-            this.cacheAuth = await this.initCacheable('Auth', {provider: 'memory', ttl: '3m'}, this.config.auth);
+            this.cacheAuth = await this.initCacheable('Auth', {provider: 'memory', ttl: '3m'}, authConfig);
         }
     }
 

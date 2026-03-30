@@ -8,6 +8,8 @@ import TupleMap from "../TupleMap.js";
 import { MusicBrainzApi } from 'musicbrainz-api';
 import { SourceType } from './config/source/sources.js';
 import { ClientType, clientTypes } from './config/client/clients.js';
+import assert, { AssertionError } from 'assert';
+import { SimpleError } from '../errors/MSErrors.js';
 
 export const lowGranularitySources: SourceType[] = ['subsonic', 'ytmusic'];
 
@@ -250,6 +252,24 @@ export const asCacheProvider = (val: boolean | string): val is CacheProvider => 
         return ['memory', 'valkey', 'file'].includes(val);
     }
     return val === false;
+}
+export const asCacheEphemeralConfig = (val: Record<string, any>): val is (CacheMemoryConfig | CacheNoopConfig) => {
+    return val.provider === false || val.provider === 'memory';
+}
+export const asCacheConnectableConfig = (val: Record<string, any>): val is (CacheValkeyConfig | CacheFileConfig) => {
+    if(!['valkey', 'file'].includes(val.provider)) {
+        return false;
+    }
+    return typeof val.connection === 'string';
+}
+export const asCacheConfig = (val: Record<string, any>): val is CacheConfigType => {
+    if(!asCacheProvider(val.provider)) {
+        assert(asCacheProvider(val.provider), `Cache provider must be one of: 'memory', 'valkey', 'file', or false`);
+    }
+    if(asCacheConnectableConfig(val) || asCacheEphemeralConfig(val)) {
+        return true;
+    }
+    throw new SimpleError(`${val.provider} must have a connection property that is a string`);
 }
 export const asCacheMetadataProvider = (val: any): val is CacheScrobbleProvider => asCacheProvider(val);
 export type CacheScrobbleProvider = CacheProvider;
