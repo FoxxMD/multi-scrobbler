@@ -24,7 +24,6 @@ const memorycache = () => new Cacheable({ primary: initMemoryCache({ ttl: '1ms' 
 
 const defaultApiConfig: MusicbrainzApiConfigData = {
     contact: 'contact@foxxmd.dev',
-    ttl: '1ms'
 };
 
 const createMbTransformer = (apis: MusicbrainzApiConfigData[] = [defaultApiConfig]) => {
@@ -33,9 +32,6 @@ const createMbTransformer = (apis: MusicbrainzApiConfigData[] = [defaultApiConfi
         type: 'musicbrainz',
         data: {
             apis
-        },
-        options: {
-            ttl: '1ms'
         }
     }, {
         logger: loggerTest,
