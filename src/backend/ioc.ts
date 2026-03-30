@@ -116,8 +116,8 @@ const createRoot = (options: RootOptions = {logger: loggerDebug}) => {
         transformerManager.register({type: 'native', name: 'MSDefault'});
     }
 
-    const metadataCache = (maybeSingletonCache !== undefined ? maybeSingletonCache : cacheFunc()).cacheMetadata;
-    const coverArtApi = new CoverArtApiClient('', {}, {logger, cache: metadataCache});
+    const cacheApi = (maybeSingletonCache !== undefined ? maybeSingletonCache : cacheFunc()).cacheApi;
+    const coverArtApi = new CoverArtApiClient('', {}, {logger, cache: cacheApi});
 
     const portVal: number | string = process.env.PORT ?? port;
 

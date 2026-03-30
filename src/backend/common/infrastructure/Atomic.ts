@@ -294,7 +294,6 @@ export interface MusicbrainzApiConfigData {
     url?: string
     rateLimit?: [number, number]
     contact: string,
-    ttl?: string
     apiKey?: string
     requestTimeout?: number
 }
