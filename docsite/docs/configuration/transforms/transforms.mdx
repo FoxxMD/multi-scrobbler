@@ -585,6 +585,47 @@ The output shows the diff between the previous stage (or original Play) and the 
 
 </details>
 
+## Best Practices
+
+### Caching
+
+MS uses [caching](/configuration/#caching) to reduce the number of API calls needed for stages like [Musicbrainz](/configuration/transforms/musicbrainz) and to speed up all transforms by caching steps and results. However, the default caching strategy uses a small cache size and very short [TTLs](https://en.wikipedia.org/wiki/Time_to_live) because it is *in-memory*.
+
+**If you are using any Transform stages you should configure [secondary caching with Valkey for Metadata](/configuration/?cacheType=valkey&cachedThings=metadata#secondary-caching-configuration)** to increase the cache size and lifetime of cached items. This will also reduce memory usage in MS.
+
+<details>
+
+<summary>Example</summary>
+
+Add valkey service to your [multi-scrobbler docker compose stack](/installation?runType=docker-compose#docker) and configure MS to use it for metadata:
+
+```yaml title="docker-compose.yml"
+services:
+  multi-scrobbler:
+    image: foxxmd/multi-scrobbler
+    # ...
+    environment:
+      # ...
+      // highlight-start
+      - CACHE_METADATA=valkey
+      - CACHE_METADATA_CONN=redis://valkey:6379
+      // highlight-end
+    # ...
+
+  // highlight-start
+  valkey:
+    image: valkey/valkey
+    volumes:
+      - valkeydata:/data
+
+volumes:
+    valkeydata:
+      driver: local
+  // highlight-end
+```
+
+</details>
+
 ## Examples
 
 See **Examples** sections in specific Stage docs (also in the sidebar):
