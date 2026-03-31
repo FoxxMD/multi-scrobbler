@@ -777,6 +777,10 @@ In the final sorting of Recordings, title score + artist score is combined with 
 
 ## Best Practices
 
+### Caching
+
+You **should** setup [metadata caching](/configuration/transforms#caching) to reduce API calls, improve transform performance, and reduce memory usage when using this stage.
+
 ### Sensible Default
 
 Generally, the Musicbrainz Stage can be used without any of the [optional configuration](#configuration) and you should still see good results from matches. The top [scored](#score) match is, anecdotally, good enough for correcting and filling in surface-level play data like Title and Artist names.
