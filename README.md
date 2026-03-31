@@ -30,6 +30,7 @@ A dockerized app that monitors your music listening activity from *everywhere* a
     * [MPD (Music Player Daemon)](https://foxxmd.github.io/multi-scrobbler/configuration/sources/mpd)
     * [MPRIS (Linux Desktop)](https://foxxmd.github.io/multi-scrobbler/configuration/sources/mpris)
     * [Musikcube](https://foxxmd.github.io/multi-scrobbler/configuration/sources/musikcube)
+    * [Music Assistant](https://foxxmd.github.io/multi-scrobbler/configuration/sources/listenbrainz-endpoint#music-assistant)
     * [Plex](https://foxxmd.github.io/multi-scrobbler/configuration/sources/plex)
     * [Rocksky](https://foxxmd.github.io/multi-scrobbler/configuration/sources/rocksky-source)
     * [Sonos](https://foxxmd.github.io/multi-scrobbler/configuration/sources/sonos)
