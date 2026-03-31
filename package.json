@@ -165,7 +165,6 @@
     "@eslint/js": "^8.56.0",
     "@faker-js/faker": "^9.0.1",
     "@gr2m/net-interceptor": "^1.0.0",
-    "@istanbuljs/nyc-config-typescript": "^1.0.2",
     "@storybook/addon-a11y": "10.1.11",
     "@storybook/addon-docs": "10.1.11",
     "@storybook/addon-onboarding": "10.1.11",
