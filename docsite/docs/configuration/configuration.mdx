@@ -725,6 +725,7 @@ It includes metrics for:
 * Count of Queued/Scrobbled/Deadletter scrobbles per [Client](/configuration/clients)
 * Number of issues per Source/Client
   * If any of these metrics is > 0 it means your Source/Client is not operating normally
+* Caching metrics
 
 Additionally, general process metrics like cpu and memory usage can be enabled with the env `PROMETHEUS_FULL=true`
 
@@ -748,3 +749,13 @@ scrape_configs:
 
 
 </details>
+
+<DetailsAdmo status="tip" summary="Grafana Dashboard">
+
+Github user [4rft5](https://github.com/FoxxMD/multi-scrobbler/issues/507#issuecomment-4144982295) created a Grafana dashboard that uses the Prometheus metrics from above.
+
+<img src={require('/img/grafana.png').default} height="800"/>
+
+Download the json dashboard here: [`multiscrobbler-dashboard.json`](/multiscrobbler-dashboard.json)
+
+</DetailsAdmo>
