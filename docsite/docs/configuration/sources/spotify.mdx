@@ -65,7 +65,7 @@ Use **one** of the following methods to specify a valid Redirect URI and complet
         
         In this scenario you can use `http://127.0.0.1:9078/callback` as the Spotify Redirect URI and multi-scrobbler `SPOTIFY_REDIRECT_URI` ENV.
         
-        After completing authentication, copy the contents of local multi-scrobbler's [configuration folder](/installation#storage) to the final location of where multi-scrobbler will be run.
+        After completing authentication, copy the contents of local multi-scrobbler's [configuration folder](/installation?dockerSetting=storage#recommended-settings) to the final location of where multi-scrobbler will be run.
     </TabItem>
     <TabItem value="echo" label="Echo">
         **Use a docker container on the same machine your browser is on to "intercept" the callback URL from Spotify authentication, then manually finish the process by changing the domain to your multi-scrobbler instance.**
