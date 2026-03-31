@@ -8,6 +8,8 @@ import TupleMap from "../TupleMap.js";
 import { MusicBrainzApi } from 'musicbrainz-api';
 import { SourceType } from './config/source/sources.js';
 import { ClientType, clientTypes } from './config/client/clients.js';
+import assert, { AssertionError } from 'assert';
+import { SimpleError } from '../errors/MSErrors.js';
 
 export const lowGranularitySources: SourceType[] = ['subsonic', 'ytmusic'];
 
@@ -230,21 +232,52 @@ export interface CacheConfig<T extends CacheProvider = CacheProvider> {
     connection?: string;
     [key: string]: any
 }
+export interface CacheMemoryConfig extends CacheConfig<'memory'> {
+    lruSize?: number
+    ttl?: number
+}
+export interface CacheValkeyConfig extends CacheConfig<'valkey'> {
+}
+export interface CacheFileConfig extends CacheConfig<'file'> {
+}
+export interface CacheNoopConfig extends CacheConfig<false> {
+}
+
+export type CacheConfigType = CacheMemoryConfig | CacheValkeyConfig | CacheFileConfig | CacheNoopConfig;
+
 export type CacheMetadataProvider = CacheProvider;//Exclude<CacheProvider, 'file'>;
-export type CacheMetadataConfig = CacheConfig<CacheMetadataProvider>;
+export type CacheMetadataConfig = CacheConfigType;
 export const asCacheProvider = (val: boolean | string): val is CacheProvider => {
     if(typeof val === 'string') {
         return ['memory', 'valkey', 'file'].includes(val);
     }
     return val === false;
 }
+export const asCacheEphemeralConfig = (val: Record<string, any>): val is (CacheMemoryConfig | CacheNoopConfig) => {
+    return val.provider === false || val.provider === 'memory';
+}
+export const asCacheConnectableConfig = (val: Record<string, any>): val is (CacheValkeyConfig | CacheFileConfig) => {
+    if(!['valkey', 'file'].includes(val.provider)) {
+        return false;
+    }
+    return typeof val.connection === 'string';
+}
+export const asCacheConfig = (val: Record<string, any>): val is CacheConfigType => {
+    if(!asCacheProvider(val.provider)) {
+        assert(asCacheProvider(val.provider), `Cache provider must be one of: 'memory', 'valkey', 'file', or false`);
+    }
+    if(asCacheConnectableConfig(val) || asCacheEphemeralConfig(val)) {
+        return true;
+    }
+    throw new SimpleError(`${val.provider} must have a connection property that is a string`);
+}
 export const asCacheMetadataProvider = (val: any): val is CacheScrobbleProvider => asCacheProvider(val);
 export type CacheScrobbleProvider = CacheProvider;
-export type CacheScrobbleConfig = CacheConfig<CacheScrobbleProvider>;
+export type CacheScrobbleConfig = CacheConfigType;
 export const asCacheScrobbleProvider = (val: any): val is CacheScrobbleProvider => asCacheProvider(val);
 
 export type CacheAuthProvider = CacheProvider;
-export type CacheAuthConfig = CacheConfig<CacheAuthProvider>;
+export type CacheAuthConfig = CacheConfigType;
 export const asCacheAuthProvider = (val: any): val is CacheAuthProvider => asCacheProvider(val);
 export interface CacheConfigOptions {
     metadata?: CacheMetadataConfig;
@@ -261,7 +294,6 @@ export interface MusicbrainzApiConfigData {
     url?: string
     rateLimit?: [number, number]
     contact: string,
-    ttl?: string
     apiKey?: string
     requestTimeout?: number
 }

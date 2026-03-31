@@ -109,7 +109,7 @@ const configDir = process.env.CONFIG_DIR || path.resolve(projectDir, `./config`)
         const scrobbleClients = new ScrobbleClients(root.get('clientEmitter'), root.get('sourceEmitter'), internalConfigOptional, root.get('logger'));
         const scrobbleSources = new ScrobbleSources(root.get('sourceEmitter'), internalConfigOptional, root.get('logger'));
 
-        await root.items.cache().init();
+        await root.items.cache().init(true);
 
         initServer(logger, appLoggerStream, output, scrobbleSources, scrobbleClients);
 

@@ -45,7 +45,6 @@ export interface SearchOptions {
     escapeCharacters?: boolean
     removeCharacters?: boolean,
     using?: UsingTypes[]
-    ttl?: string,
     freetext?: boolean
 }
 
@@ -61,7 +60,7 @@ export class MusicbrainzApiClient extends AbstractApiClient {
         super('Musicbrainz', name, config, options);
 
         this.asyncStore = new AsyncLocalStorage();
-        this.cache = options.cache ?? getRoot().items.cache().cacheMetadata;
+        this.cache = options.cache ?? getRoot().items.cache().cacheApi;
         const mbMap = getRoot().items.mbMap();
         const mbApis: Record<string, MusicbrainzApiConfig> = {};
         for(const mbConfig of this.config.apis) {
@@ -76,7 +75,7 @@ export class MusicbrainzApiClient extends AbstractApiClient {
                     rateLimit: mbConfig.rateLimit ?? [1,1],
                     preRequest: options.logUrl === true || isDebugMode() ? (method, url, headers) => {
                         const cacheKey = this.asyncStore.getStore() ?? nanoid();
-                        this.cache.set(`${cacheKey}-url`, `${method} - ${url}`, mbConfig.ttl ?? '1hr');
+                        this.cache.set(`${cacheKey}-url`, `${method} - ${url}`);
                         if(mbConfig.apiKey !== undefined) {
                             headers.set('X-Api_key', mbConfig.apiKey);
                         }
@@ -101,13 +100,12 @@ export class MusicbrainzApiClient extends AbstractApiClient {
         return 'API';
     }
 
-    callApi = async <T = Response>(func: (mb: MusicBrainzApi) => Promise<any>, options?: { timeout?: number, ttl?: string, cacheKey?: string }): Promise<T> => {
+    callApi = async <T = Response>(func: (mb: MusicBrainzApi) => Promise<any>, options?: { timeout?: number, cacheKey?: string }): Promise<T> => {
 
         let apiConfig = this.rrApis.next().value;
 
         const {
             timeout = 30000,
-            ttl = apiConfig.ttl ?? '1hr',
             cacheKey
         } = options || {};
 
@@ -132,7 +130,7 @@ export class MusicbrainzApiClient extends AbstractApiClient {
             try {
                 const res = await this.callApiEndpoint(apiConfig.api, func, options);
                 if(cacheKey !== undefined) {
-                    await this.cache.set(cacheKey, res, ttl);
+                    await this.cache.set(cacheKey, res);
                 }
                 return res as T;
             } catch (e) {
@@ -202,7 +200,6 @@ export class MusicbrainzApiClient extends AbstractApiClient {
             escapeCharacters = true,
             removeCharacters = false,
             using = ['album','artist','title'],
-            ttl,
             freetext
         } = options || {};
 
@@ -311,13 +308,12 @@ export class MusicbrainzApiClient extends AbstractApiClient {
 
 
             this.logger.debug(`Search Query => ${q}`);
-            this.cache.set(`${cacheKey}-qs`, q, '1hr');
+            this.cache.set(`${cacheKey}-qs`, q);
 
             return mb.search('recording', {
                 query: q
             });
         }, {
-            ttl,
             cacheKey
         });
 
