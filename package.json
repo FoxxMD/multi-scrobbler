@@ -150,7 +150,7 @@
     "toad-scheduler": "^3.0.0",
     "tough-cookie": "^5.1.2",
     "ts-json-schema-generator": "^2.3.0",
-    "tsx": "^4.7.0",
+    "tsx": "^4.21.0",
     "typeson": "^9.0.4",
     "typeson-registry": "^11.1.1",
     "undici": "7.24.6",
@@ -191,7 +191,7 @@
     "@types/spotify-web-api-node": "^5.0.7",
     "@types/superagent": "^8.1.9",
     "@types/xml2js": "^0.4.11",
-    "@vitejs/plugin-react": "^4.2.1",
+    "@vitejs/plugin-react": "^4.7.0",
     "chai": "^4.3.6",
     "chai-as-promised": "^7.1.1",
     "eslint": "^8.56.0",
@@ -209,7 +209,7 @@
     "ts-essentials": "^10.1.1",
     "typescript": "^5.9.3",
     "typescript-eslint": "^7.0.1",
-    "vite": "^5.4.21",
+    "vite": "^8.0.3",
     "with-local-tmp-dir": "^6.0.0"
   },
   "browserslist": {
