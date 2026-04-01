@@ -197,7 +197,7 @@
     "@types/superagent": "^8.1.9",
     "@types/xml2js": "^0.4.11",
     "@vitejs/plugin-react": "^4.2.1",
-    "@vitest/browser-playwright": "^4.1.0",
+    "@vitest/browser-playwright": "^4.1.2",
     "@vitest/coverage-v8": "^4.1.0",
     "chai": "^4.3.6",
     "chai-as-promised": "^7.1.1",
