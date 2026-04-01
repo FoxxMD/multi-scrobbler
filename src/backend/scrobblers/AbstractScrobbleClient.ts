@@ -94,6 +94,7 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
 
     scrobbleDelay: number = 1000;
     scrobbleSleep: number = 2000;
+    scrobbleWaitStopInterval: number = 2000;
     scrobbleRetries: number =  0;
     scrobbling: boolean = false;
     userScrobblingStopSignal: undefined | any;
@@ -626,11 +627,11 @@ export default abstract class AbstractScrobbleClient extends AbstractComponent i
             return;
         }
         this.userScrobblingStopSignal = true;
-        let secsPassed = 0;
-        while(this.userScrobblingStopSignal !== undefined && secsPassed < 10) {
-            await sleep(2000);
-            secsPassed += 2;
-            this.logger.verbose(`Waiting for scrobble processing stop signal to be acknowledged (waited ${secsPassed}s)`);
+        let timePasssed = 0;
+        while(this.userScrobblingStopSignal !== undefined && timePasssed < (this.scrobbleWaitStopInterval * 10)) {
+            await sleep(this.scrobbleWaitStopInterval);
+            timePasssed += this.scrobbleWaitStopInterval;
+            this.logger.verbose(`Waiting for scrobble processing stop signal to be acknowledged (waited ${timePasssed}ms)`);
         }
         if(this.userScrobblingStopSignal !== undefined) {
             this.logger.warn('Could not stop scrobble processing! Or signal was lost :(');

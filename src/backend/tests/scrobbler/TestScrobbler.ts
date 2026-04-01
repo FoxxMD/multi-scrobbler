@@ -21,6 +21,7 @@ export class TestScrobbler extends AbstractScrobbleClient {
         this.getScrobblesForTimeRange = async (_) =>  this.testRecentScrobbles;
         this.scrobbleDelay = 10;
         this.scrobbleSleep = 20;
+        this.scrobbleWaitStopInterval = 20;
     }
 
     doScrobble(playObj: PlayObject) {
