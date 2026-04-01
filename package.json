@@ -204,7 +204,7 @@
     "neotraverse": "^0.6.18",
     "nodemon": "^3.0.3",
     "playwright": "^1.58.2",
-    "sinon": "^21.0.2",
+    "sinon": "^21.0.3",
     "storybook": "10.2.0",
     "ts-essentials": "^10.1.1",
     "typescript": "^5.9.3",
